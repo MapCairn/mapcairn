@@ -6,7 +6,8 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=24.22.1",
+    "npm": ">=11.0.0"
   },
   "scripts": {
     "cache:clean": "tsx src/cleanCache.ts --all",

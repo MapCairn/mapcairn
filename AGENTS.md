@@ -8,6 +8,8 @@ Karta is a reusable SDK for building public-interest geospatial layer platforms:
 
 ## Commands
 
+Karta needs Node 24.22.1 or newer (Node 24 and 26 are the supported majors; `.node-version` says `24`) and npm 11 or newer. `package.json` pins `packageManager` to `npm@11.19.1`, which is how Cloudflare Workers Builds picks npm 11 instead of the npm 10 bundled with its Node.
+
 ```bash
 npm install
 npm test                # vitest across the npm workspaces under packages/*, plus data-pipeline (see vitest.config.ts projects)
@@ -21,7 +23,7 @@ npm run dev -w @karta/web
 
 Run a single test file: `npx vitest run path/to/file.test.ts` (or `npx vitest path/to/file.test.ts` to watch).
 
-CI (`.github/workflows/ci.yml`) runs, in order: a Paraglide freshness check (`npm run messages:compile -w @karta/web` then `git diff --exit-code -- packages/web/src/paraglide`; fails if compiled output wasn't committed after editing `messages/{en,af}.json`, see the `packages/web` entry below), `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run validate --prefix data-pipeline` (re-validates the committed pipeline output against its manifest/checksums, without re-running the pipeline), then `npm run build`. Lighthouse (`.github/workflows/lighthouse.yml`) and Playwright (`.github/workflows/playwright.yml`) run as separate workflows on every PR.
+CI (`.github/workflows/ci.yml`) runs one `build` job on a Node `[24, 26]` matrix (every other workflow reads `.node-version`), and each job that installs dependencies first runs `npm install --global npm@11`. The `build` job runs, in order: a Paraglide freshness check (`npm run messages:compile -w @karta/web` then `git diff --exit-code -- packages/web/src/paraglide`; fails if compiled output wasn't committed after editing `messages/{en,af}.json`, see the `packages/web` entry below), `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run validate --prefix data-pipeline` (re-validates the committed pipeline output against its manifest/checksums, without re-running the pipeline), then `npm run build`. Lighthouse (`.github/workflows/lighthouse.yml`) and Playwright (`.github/workflows/playwright.yml`) run as separate workflows on every PR.
 
 Dependabot (`.github/dependabot.yml`) must keep one entry per ecosystem and directory. GitHub rejects the whole file when two npm entries share a directory (the "Dependabot config file validation" check on the commit shows it), and Dependabot then keeps running the last valid copy, so new ignore rules silently stop applying. Use groups, listed critical first, to split one directory's updates.
 
@@ -70,6 +72,17 @@ Pre-commit (lefthook) runs biome (auto-fix staged files) and dependency-cruiser 
 
 Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) for every commit, with the subject format `<type>[optional scope][!]: <description>`. Use a recognised type such as `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci` or `chore`. Mark breaking changes with `!` and explain them in the body or a `BREAKING CHANGE:` footer.
 
+### Dependencies and lockfiles
+
+There are two lockfiles: the root `package-lock.json` (the `packages/*` workspaces) and `data-pipeline/package-lock.json` (a standalone project, not a workspace). npm 11 writes both, and npm 11 installs them in CI and on Cloudflare. A lockfile that installs under one npm major but not another is an environment mismatch, not a fault in the change.
+
+- After any `package.json` change, run a real `npm install` in the affected directory and commit `package.json` and its lockfile together. Do not use `--package-lock-only`: it keeps stale nested entries when a range or override changes. If `npm ls` then shows an `invalid` line, delete the stale nested entries from the lockfile and run `npm install` again; never hand-edit versions.
+- Check a lockfile change with a real `npm ci --ignore-scripts` in a throwaway clone, at the root and with `--prefix data-pipeline`. `npm ci --dry-run` has passed a lockfile that then failed a real install.
+- Pin prerelease versions exactly. A caret on a prerelease (such as `^7.1.0-beta`) resolves to nightly builds, and a prerelease does not satisfy a plain peer range such as `>=2.9`.
+- Dependabot owns its own lockfile changes. Touch a Dependabot lockfile only when a real `npm ci` under npm 11 fails, and push the fix to that PR branch.
+- Run the repo's own tools through `npm run` or `npx --no-install <tool>`, so a missing local binary cannot fetch an unrelated package with the same name.
+- Do not run installs in a working tree that someone else or another agent is using; use a throwaway clone.
+
 ### Code style
 
 - **JSDoc on every exported function, const, type, interface, class, and component** (TSDoc-compatible: `@param`, `@returns`, `@remarks`, `@example`): across every package, not just the SDK ones (`@karta/core`/`map`/`react`). Document the *why*/non-obvious behaviour, not just a restatement of the name; skip fields that are already self-evident from their name and type.
@@ -87,7 +100,7 @@ Run the checks for what you changed, read the output, and say so if any failed o
 - `messages/{en,af}.json` or the Paraglide config: `npm run messages:compile -w @karta/web` and commit the output, because CI diffs it.
 - Map, UI or basemap code: also `npm run test:e2e -w @karta/web` (chromium, mobile-chromium and webkit). WebKit emulation cannot reproduce an iOS GPU, so a change to the basemap code still needs a look on a real iPhone.
 - Pipeline data or config: `npm run validate --prefix data-pipeline`.
-- Dependency or lockfile change: regenerate the lockfile with npm 10 (`npx -y npm@10 install --package-lock-only --ignore-scripts`) and check `npm ci --dry-run` under npm 10 and npm 11, because Cloudflare Workers Builds runs npm 10.
+- Dependency or lockfile change: follow [Dependencies and lockfiles](#dependencies-and-lockfiles): a real `npm install` with npm 11 in the affected directory, then a real `npm ci --ignore-scripts` in a throwaway clone.
 
 ## Safety
 

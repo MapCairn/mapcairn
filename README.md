@@ -29,6 +29,8 @@ Karta is an SDK for public-interest map layer platforms. It provides a layer mod
 
 ## Contributing
 
+You need Node 24.22.1 or newer (24 and 26 are supported) and npm 11 or newer.
+
 ```bash
 npm install
 npm run dev -w @karta/web

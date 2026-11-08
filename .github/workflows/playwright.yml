@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -36,7 +36,9 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm install --global npm@11
+          npm ci
 
       - name: Install Playwright Chromium
         run: npm run playwright:install -w @karta/web

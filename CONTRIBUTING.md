@@ -16,6 +16,8 @@ participating, you agree to uphold those standards.
 
 ## Getting set up
 
+Install Node 24.22.1 or newer (24 and 26 are supported) and npm 11 or newer; `.node-version` and the `packageManager` field in `package.json` say which. After changing a dependency, run a real `npm install` and commit the lockfile with it. [`AGENTS.md`](AGENTS.md) has the lockfile rules.
+
 ```bash
 npm install
 npm test               # Vitest across the npm workspaces under packages/*, plus data-pipeline
