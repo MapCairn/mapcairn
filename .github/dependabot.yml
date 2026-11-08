@@ -34,14 +34,6 @@ updates:
       - dependency-name: "vite"
       - dependency-name: "react-router"
       - dependency-name: "zod"
-      # maplibre-gl@6+ rewrote worker loading to be ESM-only and silently
-      # breaks vector basemaps on real iOS hardware with no thrown error
-      # (maplibre/maplibre-gl-js#8002, unresolved upstream as of pinning).
-      # Pinned to 5.x in packages/map/package.json + the root `overrides`
-      # entry; only lift this once that regression is confirmed fixed
-      # upstream and re-verified on real iOS hardware, not just simulators.
-      - dependency-name: "maplibre-gl"
-        versions: [">=6.0.0"]
       # @inlang/paraglide-js@3 compiles to virtual:paraglide modules supplied
       # only by its Vite plugin, which breaks every web test that imports
       # messages. Needs a migration (vitest config, SSR middleware wiring)

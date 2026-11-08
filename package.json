@@ -35,9 +35,6 @@
     "vitest": "5.1.0",
     "wrangler": "4.157.0"
   },
-  "overrides": {
-    "maplibre-gl": "5.24.0"
-  },
   "allowScripts": {
     "@swc/core": true,
     "esbuild": true,

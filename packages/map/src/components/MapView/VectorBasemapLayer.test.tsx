@@ -16,7 +16,7 @@ vi.mock("maplibre-gl", () => ({
   setWorkerUrl: layerMocks.setWorkerUrl,
 }));
 
-vi.mock("maplibre-gl/dist/maplibre-gl-csp-worker.js?url", () => ({
+vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({
   default: "mock-maplibre-gl-worker-url",
 }));
 

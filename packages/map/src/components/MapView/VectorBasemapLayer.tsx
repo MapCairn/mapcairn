@@ -1,5 +1,5 @@
 import L from "leaflet";
-import maplibreGlWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
+import maplibreGlWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 
@@ -38,22 +38,18 @@ interface VectorBasemapLayerProps {
  * caching the result so every later call (e.g. a basemap switch re-running
  * `VectorBasemapLayer`'s effect) reuses the same settled promise instead of
  * re-importing and re-registering the worker URL from scratch.
- * @remarks MapLibre locates its tile-parsing Web Worker via a runtime
- *   `new Worker(...)` call whose target `maplibre-gl` itself leaves empty by
- *   default, so it must be set explicitly for a bundled build to find it.
- *   `maplibre-gl@6`'s own ESM-only worker (loaded as a `{type: "module"}`
- *   Worker) rendered fine on Chromium and desktop Safari but silently never
- *   requested a single tile on real iOS hardware (no thrown error either;
- *   see maplibre/maplibre-gl-js#8002, a real-device-only regression from the
- *   v6.0 ESM rewrite, closed upstream as "need more info"/unreproduced).
- *   Pinning to `maplibre-gl@5` and pointing `setWorkerUrl` at its
- *   `maplibre-gl-csp-worker.js` build sidesteps that entirely: that file is a
- *   classic (non-module) script MapLibre has shipped specifically for
- *   bundler/CSP-strict consumers since long before the v6 rewrite, so the
- *   worker it creates is a plain classic Worker, never a module Worker. This
- *   is coupled to `maplibre-gl`'s current internal file layout and
- *   `setWorkerUrl`'s existing signature; re-check both, and re-verify on
- *   real iOS hardware, before ever bumping past the v5 line.
+ * @remarks MapLibre locates its tile-parsing Web Worker from
+ *   `import.meta.url`, which inside a bundle points at the current chunk
+ *   instead of the worker file, so a bundled build must call `setWorkerUrl`
+ *   itself. Without it the worker never starts and the map renders nothing
+ *   and reports nothing (maplibre/maplibre-gl-js#8002). Vite's `?worker&url`
+ *   suffix is MapLibre's documented bundler setup: it builds the worker as a
+ *   self-contained, same-origin asset (the `iife` worker format Vite uses by
+ *   default), so `worker-src 'self'` in `public/_headers` is enough.
+ *   `maplibre-gl` 6.11 and later also report a worker that fails to start
+ *   through the map's `error` event, which `onError` below forwards so
+ *   `App` can fall back to another basemap. `e2e/vector-basemap.spec.ts`
+ *   fails if the worker does not come up.
  */
 let maplibreLoadPromise:
   | Promise<{

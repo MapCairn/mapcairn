@@ -39,6 +39,14 @@ export default defineConfig({
       name: "mobile-chromium",
       use: { ...devices["Pixel 7"], launchOptions: { executablePath } },
     },
+    // WebKit is the engine behind every iOS browser. It only runs the vector
+    // basemap spec: MapLibre's worker setup is the one place this app has
+    // misbehaved on iOS while passing on Chromium.
+    {
+      name: "webkit",
+      testMatch: /vector-basemap\.spec\.ts/,
+      use: { ...devices["iPhone 15"] },
+    },
   ],
   webServer: {
     command: "npm run build && npm run preview:e2e -- --port 4173",
