@@ -98,7 +98,7 @@ describe("normalizeAReYeng", () => {
   });
 });
 
-describe("normalizeAReYeng", () => {
+describe("normalizeAReYeng edge cases", () => {
   it("falls back to an 'unknown' id and 'Unnamed' name when properties are missing", () => {
     const raw = {
       type: "FeatureCollection" as const,
