@@ -72,7 +72,7 @@ function loadMaplibre() {
  * Renders a MapLibre GL vector-tile basemap as a Leaflet layer.
  * @remarks Must be rendered inside a `MapContainer`. Loads `maplibre-gl` and
  *   `@maplibre/maplibre-gl-leaflet` lazily (see `loadMaplibre`); `maplibre-gl`
- *   alone is a ~270KB gzipped dependency, and most sessions (on a raster
+ *   alone is a ~300KB gzipped dependency, and most sessions (on a raster
  *   basemap) never need it. `leaflet` itself is imported statically instead
  *   of dynamically alongside it: it's already a hard, eagerly-bundled
  *   dependency of this whole package (react-leaflet requires it regardless),

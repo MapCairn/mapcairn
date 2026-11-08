@@ -71,15 +71,14 @@ export default defineConfig(({ mode }) => {
       cssCodeSplit: true,
       /**
        * `maplibre-gl` (the vector-basemap renderer `VectorBasemapLayer`
-       * dynamically imports) is ~270KB gzipped on its own and dwarfs Vite's
+       * dynamically imports) is ~300KB gzipped on its own and dwarfs Vite's
        * default 500kB warning threshold no matter how it's split. It's
        * already isolated into its own async chunk (never part of the
-       * initial bundle, and never fetched at all unless a caller registers a
-       * vector-kind basemap (this app doesn't)) so raise the limit past its
-       * known size rather than let an expected, already-lazy chunk mask
-       * warnings about future eagerly-loaded bloat.
+       * initial bundle) so raise the limit past its known size rather than
+       * let an expected, already-lazy chunk mask warnings about future
+       * eagerly-loaded bloat.
        */
-      chunkSizeWarningLimit: 1100,
+      chunkSizeWarningLimit: 1200,
       rolldownOptions: {
         output: {
           entryFileNames: "assets/js/[name]-[hash].js",
