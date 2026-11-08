@@ -8,7 +8,7 @@ Karta is a reusable SDK for building public-interest geospatial layer platforms:
 
 ## Commands
 
-Karta needs Node 24.22.1 or newer (Node 24 and 26 are the supported majors; `.node-version` says `24`) and npm 11 or newer. `package.json` pins `packageManager` to `npm@11.19.1`, which is how Cloudflare Workers Builds picks npm 11 instead of the npm 10 bundled with its Node.
+Karta needs Node 24.22.1 or newer (Node 24 is the tested major and newer is allowed; `.node-version` says `24`) and npm 11 or newer. `package.json` pins `packageManager` to `npm@11.19.1`, which is how Cloudflare Workers Builds picks npm 11 instead of the npm 10 bundled with its Node.
 
 ```bash
 npm install
@@ -23,7 +23,7 @@ npm run dev -w @karta/web
 
 Run a single test file: `npx vitest run path/to/file.test.ts` (or `npx vitest path/to/file.test.ts` to watch).
 
-CI (`.github/workflows/ci.yml`) runs one `build` job on a Node `[24, 26]` matrix (every other workflow reads `.node-version`), and each job that installs dependencies first runs `npm install --global npm@11`. The `build` job runs, in order: a Paraglide freshness check (`npm run messages:compile -w @karta/web` then `git diff --exit-code -- packages/web/src/paraglide`; fails if compiled output wasn't committed after editing `messages/{en,af}.json`, see the `packages/web` entry below), `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run validate --prefix data-pipeline` (re-validates the committed pipeline output against its manifest/checksums, without re-running the pipeline), then `npm run build`. Lighthouse (`.github/workflows/lighthouse.yml`) and Playwright (`.github/workflows/playwright.yml`) run as separate workflows on every PR.
+CI (`.github/workflows/ci.yml`) runs one `build` job on Node 24 (every other workflow reads `.node-version` too), and each job that installs dependencies first runs `npm install --global npm@11`. The `build` job runs, in order: a Paraglide freshness check (`npm run messages:compile -w @karta/web` then `git diff --exit-code -- packages/web/src/paraglide`; fails if compiled output wasn't committed after editing `messages/{en,af}.json`, see the `packages/web` entry below), `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run validate --prefix data-pipeline` (re-validates the committed pipeline output against its manifest/checksums, without re-running the pipeline), then `npm run build`. Lighthouse (`.github/workflows/lighthouse.yml`) and Playwright (`.github/workflows/playwright.yml`) run as separate workflows on every PR.
 
 Dependabot (`.github/dependabot.yml`) must keep one entry per ecosystem and directory. GitHub rejects the whole file when two npm entries share a directory (the "Dependabot config file validation" check on the commit shows it), and Dependabot then keeps running the last valid copy, so new ignore rules silently stop applying. Use groups, listed critical first, to split one directory's updates.
 
