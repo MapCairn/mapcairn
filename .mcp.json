@@ -10,9 +10,6 @@
         "--config",
         "packages/web/playwright.config.ts"
       ]
-    },
-    "cloudflare-api": {
-      "url": "https://mcp.cloudflare.com/mcp"
     }
   }
 }
