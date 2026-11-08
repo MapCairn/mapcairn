@@ -74,12 +74,12 @@ Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
 
 ### Dependencies and lockfiles
 
-There are two lockfiles: the root `package-lock.json` (the `packages/*` workspaces) and `data-pipeline/package-lock.json` (a standalone project, not a workspace). npm 11 writes both, and npm 11 installs them in CI and on Cloudflare. A lockfile that installs under one npm major but not another is an environment mismatch, not a fault in the change.
+There are two lockfiles: the root `package-lock.json` (the `packages/*` workspaces) and `data-pipeline/package-lock.json` (a standalone project, not a workspace). CI and Cloudflare install with npm 11 here, but a lockfile should install under npm 10 as well: the owner's other Cloudflare projects run npm 10.9.2, and npm 11 can write a lockfile that npm 10 refuses, which is what Dependabot tends to do. Prove a lockfile under both majors.
 
 - After any `package.json` change, run a real `npm install` in the affected directory and commit `package.json` and its lockfile together. Do not use `--package-lock-only`: it keeps stale nested entries when a range or override changes. If `npm ls` then shows an `invalid` line, delete the stale nested entries from the lockfile and run `npm install` again; never hand-edit versions.
-- Check a lockfile change with a real `npm ci --ignore-scripts` in a throwaway clone, at the root and with `--prefix data-pipeline`. `npm ci --dry-run` has passed a lockfile that then failed a real install.
+- Check a lockfile change with a real `npm ci --ignore-scripts` in a throwaway clone, under `npx -y npm@10` and under npm 11, at the root and with `--prefix data-pipeline`. If npm 10 rejects it (`Missing: ... from lock file`), regenerate with `npx -y npm@10 install --package-lock-only --ignore-scripts`; npm 11 accepts an npm 10 lockfile. `npm ci --dry-run` has passed a lockfile that then failed a real install.
 - Pin prerelease versions exactly. A caret on a prerelease (such as `^7.1.0-beta`) resolves to nightly builds, and a prerelease does not satisfy a plain peer range such as `>=2.9`.
-- Dependabot owns its own lockfile changes. Touch a Dependabot lockfile only when a real `npm ci` under npm 11 fails, and push the fix to that PR branch.
+- Dependabot owns its own lockfile changes. Touch a Dependabot lockfile only when a real `npm ci` under npm 10 or 11 fails, and push the fix to that PR branch.
 - Run the repo's own tools through `npm run` or `npx --no-install <tool>`, so a missing local binary cannot fetch an unrelated package with the same name.
 - Do not run installs in a working tree that someone else or another agent is using; use a throwaway clone.
 
@@ -100,7 +100,7 @@ Run the checks for what you changed, read the output, and say so if any failed o
 - `messages/{en,af}.json` or the Paraglide config: `npm run messages:compile -w @karta/web` and commit the output, because CI diffs it.
 - Map, UI or basemap code: also `npm run test:e2e -w @karta/web` (chromium, mobile-chromium and webkit). WebKit emulation cannot reproduce an iOS GPU, so a change to the basemap code still needs a look on a real iPhone.
 - Pipeline data or config: `npm run validate --prefix data-pipeline`.
-- Dependency or lockfile change: follow [Dependencies and lockfiles](#dependencies-and-lockfiles): a real `npm install` with npm 11 in the affected directory, then a real `npm ci --ignore-scripts` in a throwaway clone.
+- Dependency or lockfile change: follow [Dependencies and lockfiles](#dependencies-and-lockfiles): a real `npm install` in the affected directory, then a real `npm ci --ignore-scripts` in a throwaway clone under npm 10 and npm 11.
 
 ## Safety
 
