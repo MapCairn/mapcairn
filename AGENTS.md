@@ -56,6 +56,39 @@ The pipeline calls public third-party APIs by default (`router.project-osrm.org`
 
 Pre-commit (lefthook) runs biome (auto-fix staged files) and dependency-cruiser (`npm run depcruise`). Unit tests run separately and in CI. The hook does **not** run typecheck, the Paraglide freshness check, or coverage thresholds, so a commit passing pre-commit can still fail CI.
 
+## Engineering principles
+
+- **Test first (TDD).** Write the failing test before the implementation, for bug fixes and new features alike: watch it fail for the right reason, make it pass, then refactor. The test is part of the change, not a follow-up, and a change without one is incomplete. Coverage is gated at 95% on statements, branches, functions and lines (`vitest.config.ts`) and the aim is 100%: close a gap by testing the behaviour, never by excluding code or weakening an assertion.
+- **SOLID.** *Open/closed* is the load-bearing one here: this is an SDK, so new domains, regions, and transit sources get added by writing config (`DomainConfig`, `RegionPipelineConfig`/`PipelineSource`, and the `REGIONS`/`METROS` registries; see Architecture above for where each lives), never by branching on an id inside `@karta/core`/`map`/`react`. *Dependency inversion* is why that works: those SDK packages depend only on the abstractions they define (`DomainConfig`, `Layer`), never on `packages/app`'s or `packages/web`'s concrete data. This isn't just a review convention: `.dependency-cruiser.cjs` (run via `npm run depcruise`, wired into `npm run lint` and therefore CI) mechanically forbids `packages/core`, `packages/react`, and `packages/theme` from importing anything outside themselves, `packages/map` from importing `packages/app`/`packages/web`, and `packages/app` from importing `packages/map`/`packages/react`/`packages/theme`/`packages/web`; so a layering inversion fails `npm run lint` before it reaches review. The rest follow the same instinct at smaller scale: one module keeps one reason to change (*single responsibility*), a `Layer`/`LayerGroup` implementation must work anywhere the contract is consumed with no id-based special-casing (*Liskov substitution*), and hook/component props stay narrow and domain-agnostic; e.g. `MapView`'s `bounds`/`renderFeaturePopup`; rather than a catch-all options object (*interface segregation*).
+- **DRY.** Shared logic belongs in `packages/core`/`map`/`react`, not duplicated per-app; a value hand-typed in more than one place (a font size, a colour, a duration) is a missing token, not a coincidence.
+- **KISS / YAGNI.** Prefer the simplest design that satisfies current requirements; don't build UI, abstractions, or config surface for a second domain/region/consumer that doesn't exist yet; extensibility here comes from the config shapes above being open to it, not from pre-building the thing that would use them.
+- **Stay on task.** Do not refactor or reformat what the change does not touch; mention a nearby problem instead of fixing it unless it blocks the work.
+
+## Conventions
+
+### Commit messages
+
+Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) for every commit, with the subject format `<type>[optional scope][!]: <description>`. Use a recognised type such as `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci` or `chore`. Mark breaking changes with `!` and explain them in the body or a `BREAKING CHANGE:` footer.
+
+### Code style
+
+- **JSDoc on every exported function, const, type, interface, class, and component** (TSDoc-compatible: `@param`, `@returns`, `@remarks`, `@example`): across every package, not just the SDK ones (`@karta/core`/`map`/`react`). Document the *why*/non-obvious behaviour, not just a restatement of the name; skip fields that are already self-evident from their name and type.
+- **No code comments** unless they capture a genuinely non-obvious *why* (a constraint, a workaround, an invariant); never restate what the code already says. A short comment in a config file is fine when it explains a constraint someone would otherwise undo, such as why Dependabot has one entry per directory.
+- **Expanded `if` statements with braces**, never single-line/braceless conditionals. Biome's `useBlockStatements: error` rule enforces this; don't disable it.
+- **Accessibility is a priority**, not an afterthought; semantic HTML, keyboard navigation, focus states, and contrast should be considered in every UI change, in step with the Lighthouse-100 bar above.
+- **British English spelling and grammar** in all user-facing copy (UI text, labels, error messages); not in code identifiers.
+- **Writing style.** Write docs, comments, commit messages and UI copy in plain, specific prose. No em dashes (use a full stop, colon, semicolon, comma or brackets); en dashes only for numeric ranges. Avoid the usual AI tells: puffery ("pivotal", "robust", "seamless", "comprehensive"), "not X but Y" and "it's not just X" constructions, reflexive groups of three, bold inline headers scattered through prose, Title Case headings, emoji, and closing summaries that restate what was just said. Say what the thing does and why, then stop.
+
+## Definition of done
+
+Run the checks for what you changed, read the output, and say so if any failed or were skipped.
+
+- Any code change: `npm run lint` (Biome plus dependency-cruiser), `npm run typecheck`, `npm run test:coverage` (the 95% gate) and `npm run build`.
+- `messages/{en,af}.json` or the Paraglide config: `npm run messages:compile -w @karta/web` and commit the output, because CI diffs it.
+- Map, UI or basemap code: also `npm run test:e2e -w @karta/web` (chromium, mobile-chromium and webkit). WebKit emulation cannot reproduce an iOS GPU, so a change to the basemap code still needs a look on a real iPhone.
+- Pipeline data or config: `npm run validate --prefix data-pipeline`.
+- Dependency or lockfile change: regenerate the lockfile with npm 10 (`npx -y npm@10 install --package-lock-only --ignore-scripts`) and check `npm ci --dry-run` under npm 10 and npm 11, because Cloudflare Workers Builds runs npm 10.
+
 ## Safety
 
 - **Never deploy `packages/web` to Cloudflare Workers production without explicit permission from the user.** Always ask first and wait for confirmation.
@@ -84,20 +117,6 @@ Pre-commit (lefthook) runs biome (auto-fix staged files) and dependency-cruiser 
 - **Testing**: vitest unit/component tests (gated in CI, 95% coverage thresholds; see Commands above) deliberately mock `react-leaflet`, so real Leaflet rendering, tile requests, and popup/tooltip binding are untested there by design. `packages/web/e2e/` fills that gap with Playwright, run against a built SSR preview under `wrangler.e2e.jsonc` (see Commands above) with basemap tile requests mocked to a 1x1 PNG so the suite doesn't depend on OSM/Esri availability.
 
 - **Docs**: `README.md`'s "Documentation" section is the index: `docs/building-a-domain.md`, `docs/adding-a-region.md`, `docs/adding-a-locale.md`, `docs/domains/spatial-apartheid-legacy.md`, `docs/design-system.md`, each package's `README.md`, and `docs/data/*-area-classification.md` (one per metro across both regions, giving the rationale for that metro's included township areas in `packages/app/src/constants/townships.ts`). Completed implementation plans have been deleted. `docs/plans/2026-08-01-domain-registry-architecture.md` and `docs/specs/2026-08-01-multi-domain-platform-design.md` remain as an unbuilt proposal (an in-app multi-domain switcher with a `/d/:domainId` route). They are not the current architecture: `layers/registry.ts` still hardcodes the single published `SPATIAL_APARTHEID_LEGACY_DOMAIN`, and `packages/app/src/domains/heritage-sites/` is deliberately unwired proof-of-concept data (see `docs/building-a-domain.md`).
-
-## Conventions
-
-- **Commit messages.** Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) for every commit, with the subject format `<type>[optional scope][!]: <description>`. Use a recognised type such as `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci` or `chore`. Mark breaking changes with `!` and explain them in the body or a `BREAKING CHANGE:` footer.
-- **TDD.** Write the failing test before implementation code, for both bug fixes and new features; the test is part of the change, not a follow-up, and a change without one is incomplete.
-- **SOLID.** *Open/closed* is the load-bearing one here: this is an SDK, so new domains, regions, and transit sources get added by writing config (`DomainConfig`, `RegionPipelineConfig`/`PipelineSource`, and the `REGIONS`/`METROS` registries; see Architecture above for where each lives), never by branching on an id inside `@karta/core`/`map`/`react`. *Dependency inversion* is why that works: those SDK packages depend only on the abstractions they define (`DomainConfig`, `Layer`), never on `packages/app`'s or `packages/web`'s concrete data. This isn't just a review convention: `.dependency-cruiser.cjs` (run via `npm run depcruise`, wired into `npm run lint` and therefore CI) mechanically forbids `packages/core`, `packages/react`, and `packages/theme` from importing anything outside themselves, `packages/map` from importing `packages/app`/`packages/web`, and `packages/app` from importing `packages/map`/`packages/react`/`packages/theme`/`packages/web`; so a layering inversion fails `npm run lint` before it reaches review. The rest follow the same instinct at smaller scale: one module keeps one reason to change (*single responsibility*), a `Layer`/`LayerGroup` implementation must work anywhere the contract is consumed with no id-based special-casing (*Liskov substitution*), and hook/component props stay narrow and domain-agnostic; e.g. `MapView`'s `bounds`/`renderFeaturePopup`; rather than a catch-all options object (*interface segregation*).
-- **DRY.** Shared logic belongs in `packages/core`/`map`/`react`, not duplicated per-app; a value hand-typed in more than one place (a font size, a colour, a duration) is a missing token, not a coincidence.
-- **KISS / YAGNI.** Prefer the simplest design that satisfies current requirements; don't build UI, abstractions, or config surface for a second domain/region/consumer that doesn't exist yet; extensibility here comes from the config shapes above being open to it, not from pre-building the thing that would use them.
-- **JSDoc on every exported function, const, type, interface, class, and component** (TSDoc-compatible: `@param`, `@returns`, `@remarks`, `@example`): across every package, not just the SDK ones (`@karta/core`/`map`/`react`). Document the *why*/non-obvious behaviour, not just a restatement of the name; skip fields that are already self-evident from their name and type.
-- **No code comments** unless they capture a genuinely non-obvious *why* (a constraint, a workaround, an invariant); never restate what the code already says.
-- **Expanded `if` statements with braces**, never single-line/braceless conditionals. Biome's `useBlockStatements: error` rule enforces this; don't disable it.
-- **Accessibility is a priority**, not an afterthought; semantic HTML, keyboard navigation, focus states, and contrast should be considered in every UI change, in step with the Lighthouse-100 bar above.
-- **British English spelling and grammar** in all user-facing copy (UI text, labels, error messages); not in code identifiers.
-- **Writing style.** Write docs, comments, commit messages and UI copy in plain, specific prose. No em dashes (use a full stop, colon, semicolon, comma or brackets); en dashes only for numeric ranges. Avoid the usual AI tells: puffery ("pivotal", "robust", "seamless", "comprehensive"), "not X but Y" and "it's not just X" constructions, reflexive groups of three, bold inline headers scattered through prose, Title Case headings, emoji, and closing summaries that restate what was just said. Say what the thing does and why, then stop.
 
 ## Design system
 
