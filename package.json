@@ -14,7 +14,7 @@
     "packages/*"
   ],
   "scripts": {
-    "lint": "biome check . && npm run depcruise",
+    "lint": "biome check --error-on-warnings . && npm run depcruise",
     "depcruise": "depcruise packages/*/src --config .dependency-cruiser.cjs",
     "format": "biome format --write .",
     "prepare": "lefthook install --force",
