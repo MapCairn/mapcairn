@@ -1,8 +1,9 @@
 version: 2
 updates:
-  # Security/crypto-relevant deps get a faster, separate weekly PR: the
-  # Cloudflare deploy tool, the SSR framework, the build tool, and the
-  # runtime GeoJSON validation boundary.
+  # One entry per directory: Dependabot rejects the whole file if two npm
+  # entries share a directory, and then silently keeps running on the last
+  # valid copy it saw. Within an entry a dependency goes to the first group
+  # it matches, so the critical group is listed first.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -10,30 +11,22 @@ updates:
       day: "saturday"
       time: "09:00"
       timezone: "Africa/Johannesburg"
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 7
     groups:
+      # Security/crypto-relevant deps: the Cloudflare deploy tool, the SSR
+      # framework, the build tool, and the runtime GeoJSON validation boundary.
       npm-critical:
         patterns:
-          - "*"
-    allow:
-      - dependency-name: "wrangler"
-      - dependency-name: "vite"
-      - dependency-name: "react-router"
-      - dependency-name: "zod"
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-      time: "09:00"
-      timezone: "Africa/Johannesburg"
-    groups:
+          - "wrangler"
+          - "vite"
+          - "react-router"
+          - "zod"
       npm:
         patterns:
           - "*"
     ignore:
-      - dependency-name: "wrangler"
-      - dependency-name: "vite"
-      - dependency-name: "react-router"
-      - dependency-name: "zod"
       # @inlang/paraglide-js@3 compiles to virtual:paraglide modules supplied
       # only by its Vite plugin, which breaks every web test that imports
       # messages. Needs a migration (vitest config, SSR middleware wiring)
@@ -41,7 +34,7 @@ updates:
       - dependency-name: "@inlang/paraglide-js"
         versions: [">=3.0.0"]
   # data-pipeline parses zip/shapefile data fetched from external sources
-  # (adm-zip, shapefile); kept on the faster critical tier too.
+  # (adm-zip, shapefile), so those two get their own group.
   - package-ecosystem: "npm"
     directory: "/data-pipeline"
     schedule:
@@ -49,26 +42,17 @@ updates:
       day: "saturday"
       time: "09:00"
       timezone: "Africa/Johannesburg"
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 7
     groups:
       npm-data-pipeline-critical:
         patterns:
-          - "*"
-    allow:
-      - dependency-name: "adm-zip"
-      - dependency-name: "shapefile"
-  - package-ecosystem: "npm"
-    directory: "/data-pipeline"
-    schedule:
-      interval: "monthly"
-      time: "09:00"
-      timezone: "Africa/Johannesburg"
-    groups:
+          - "adm-zip"
+          - "shapefile"
       npm-data-pipeline:
         patterns:
           - "*"
-    ignore:
-      - dependency-name: "adm-zip"
-      - dependency-name: "shapefile"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
