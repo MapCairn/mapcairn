@@ -42,6 +42,12 @@ updates:
       # upstream and re-verified on real iOS hardware, not just simulators.
       - dependency-name: "maplibre-gl"
         versions: [">=6.0.0"]
+      # @inlang/paraglide-js@3 compiles to virtual:paraglide modules supplied
+      # only by its Vite plugin, which breaks every web test that imports
+      # messages. Needs a migration (vitest config, SSR middleware wiring)
+      # rather than a bulk bump.
+      - dependency-name: "@inlang/paraglide-js"
+        versions: [">=3.0.0"]
   # data-pipeline parses zip/shapefile data fetched from external sources
   # (adm-zip, shapefile); kept on the faster critical tier too.
   - package-ecosystem: "npm"
