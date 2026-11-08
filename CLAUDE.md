@@ -6,6 +6,8 @@ The Playwright planner, generator and healer agents are in `.claude/agents/`. Pl
 
 ## Delegating to sub-agents
 
+Use sub-agents. They keep this conversation small and let independent work run in parallel, so reach for them by default instead of doing everything in one thread: wide searches across many files, independent changes in separate packages, tests written alongside the code they cover, long verification runs, and a fresh-eyes review of a diff before it is merged (for example the Playwright planner, generator and healer agents, independent package changes, or a fresh-eyes review of a map or basemap change). Do a small, strictly sequential task yourself. Brief each agent like a colleague who has not seen this conversation: the goal, the files or docs to read, what is already ruled out, and what to report back.
+
 Model tiers for any delegated work, covering both `Agent` tool calls and `agent()` calls inside a Workflow script. Set the `model` parameter explicitly on every call; never omit it, since omission silently inherits the session's model.
 
 | Tier | Use for |
