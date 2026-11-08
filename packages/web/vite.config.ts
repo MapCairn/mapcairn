@@ -57,8 +57,10 @@ export default defineConfig(({ mode }) => {
             paraglideVitePlugin({
               project: "./project.inlang",
               outdir: "./src/paraglide",
+              outputStructure: "message-modules",
               strategy: ["cookie", "preferredLanguage", "baseLocale"],
               isServer: "import.meta.env?.SSR ?? typeof window === 'undefined'",
+              isDevelopment: "import.meta.env?.DEV ?? false",
               emitTsDeclarations: true,
               emitGitIgnore: false,
               emitPrettierIgnore: false,

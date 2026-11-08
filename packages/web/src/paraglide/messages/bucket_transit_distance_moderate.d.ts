@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Bucket_Transit_Distance_ModerateInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Bucket_Transit_Distance_ModerateInputs */
 /**
 * | output |
 * | --- |
 * | "Moderate (1–3 km)" |
 *
-* @param {Bucket_Transit_Distance_ModerateInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const bucket_transit_distance_moderate: ((inputs?: Bucket_Transit_Distance_ModerateInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Bucket_Transit_Distance_ModerateInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const bucket_transit_distance_moderate: ((inputs?: Bucket_Transit_Distance_ModerateInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Bucket_Transit_Distance_ModerateInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Bucket_Transit_Distance_ModerateInputs = {};

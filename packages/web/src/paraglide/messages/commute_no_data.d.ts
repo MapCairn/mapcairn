@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Commute_No_DataInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Commute_No_DataInputs */
 /**
 * | output |
 * | --- |
 * | "No data" |
 *
-* @param {Commute_No_DataInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const commute_no_data: ((inputs?: Commute_No_DataInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Commute_No_DataInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const commute_no_data: ((inputs?: Commute_No_DataInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Commute_No_DataInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Commute_No_DataInputs = {};

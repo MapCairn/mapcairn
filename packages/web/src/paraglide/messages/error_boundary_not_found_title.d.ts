@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Error_Boundary_Not_Found_TitleInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Error_Boundary_Not_Found_TitleInputs */
 /**
 * | output |
 * | --- |
 * | "Page not found" |
 *
-* @param {Error_Boundary_Not_Found_TitleInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const error_boundary_not_found_title: ((inputs?: Error_Boundary_Not_Found_TitleInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Error_Boundary_Not_Found_TitleInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const error_boundary_not_found_title: ((inputs?: Error_Boundary_Not_Found_TitleInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Error_Boundary_Not_Found_TitleInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Error_Boundary_Not_Found_TitleInputs = {};

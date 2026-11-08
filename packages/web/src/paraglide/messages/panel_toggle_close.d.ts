@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Panel_Toggle_CloseInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Panel_Toggle_CloseInputs */
 /**
 * | output |
 * | --- |
 * | "Close" |
 *
-* @param {Panel_Toggle_CloseInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const panel_toggle_close: ((inputs?: Panel_Toggle_CloseInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Panel_Toggle_CloseInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const panel_toggle_close: ((inputs?: Panel_Toggle_CloseInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Panel_Toggle_CloseInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Panel_Toggle_CloseInputs = {};

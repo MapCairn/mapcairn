@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Webmcp_Set_Theme_DescriptionInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Webmcp_Set_Theme_DescriptionInputs */
 /**
 * | output |
 * | --- |
 * | "Switch the app's colour theme. \"system\" follows the OS preference." |
 *
-* @param {Webmcp_Set_Theme_DescriptionInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const webmcp_set_theme_description: ((inputs?: Webmcp_Set_Theme_DescriptionInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Set_Theme_DescriptionInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const webmcp_set_theme_description: ((inputs?: Webmcp_Set_Theme_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Webmcp_Set_Theme_DescriptionInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Webmcp_Set_Theme_DescriptionInputs = {};

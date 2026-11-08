@@ -1,20 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Legend_Active_Aria_LabelInputs = {
-    label: NonNullable<unknown>;
-};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{ label: NonNullable<unknown> }} Legend_Active_Aria_LabelInputs */
 /**
 * | output |
 * | --- |
 * | "Active map layers legend: {label}" |
 *
-* @param {Legend_Active_Aria_LabelInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const legend_active_aria_label: ((inputs: Legend_Active_Aria_LabelInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Legend_Active_Aria_LabelInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const legend_active_aria_label: ((inputs: Legend_Active_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Legend_Active_Aria_LabelInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Legend_Active_Aria_LabelInputs = { label: NonNullable<unknown> };

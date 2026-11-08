@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Webmcp_Measure_Area_DescriptionInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Webmcp_Measure_Area_DescriptionInputs */
 /**
 * | output |
 * | --- |
 * | "Measure the area enclosed by three or more named locations, and show it on the map's measuring tool." |
 *
-* @param {Webmcp_Measure_Area_DescriptionInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const webmcp_measure_area_description: ((inputs?: Webmcp_Measure_Area_DescriptionInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Measure_Area_DescriptionInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const webmcp_measure_area_description: ((inputs?: Webmcp_Measure_Area_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Webmcp_Measure_Area_DescriptionInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Webmcp_Measure_Area_DescriptionInputs = {};

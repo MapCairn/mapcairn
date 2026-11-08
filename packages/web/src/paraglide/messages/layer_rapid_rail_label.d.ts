@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Layer_Rapid_Rail_LabelInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Layer_Rapid_Rail_LabelInputs */
 /**
 * | output |
 * | --- |
 * | "Rapid rail" |
 *
-* @param {Layer_Rapid_Rail_LabelInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const layer_rapid_rail_label: ((inputs?: Layer_Rapid_Rail_LabelInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Layer_Rapid_Rail_LabelInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const layer_rapid_rail_label: ((inputs?: Layer_Rapid_Rail_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Layer_Rapid_Rail_LabelInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Layer_Rapid_Rail_LabelInputs = {};

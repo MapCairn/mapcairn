@@ -19,10 +19,6 @@ updates:
       npm:
         patterns:
           - "*"
-    ignore:
-      # Paraglide 3 compiles to virtual modules that break the web tests; it needs a migration, not a bulk bump.
-      - dependency-name: "@inlang/paraglide-js"
-        versions: [">=3.0.0"]
   - package-ecosystem: "npm"
     directory: "/data-pipeline"
     schedule:

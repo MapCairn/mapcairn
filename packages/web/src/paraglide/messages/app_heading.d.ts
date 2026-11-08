@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type App_HeadingInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} App_HeadingInputs */
 /**
 * | output |
 * | --- |
 * | "Karta: spatial legacy map of Gauteng and Cape Town" |
 *
-* @param {App_HeadingInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const app_heading: ((inputs?: App_HeadingInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<App_HeadingInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const app_heading: ((inputs?: App_HeadingInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<App_HeadingInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type App_HeadingInputs = {};

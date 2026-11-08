@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Domain_Story_TitleInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Domain_Story_TitleInputs */
 /**
 * | output |
 * | --- |
 * | "Why this map exists" |
 *
-* @param {Domain_Story_TitleInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const domain_story_title: ((inputs?: Domain_Story_TitleInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Domain_Story_TitleInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const domain_story_title: ((inputs?: Domain_Story_TitleInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Domain_Story_TitleInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Domain_Story_TitleInputs = {};

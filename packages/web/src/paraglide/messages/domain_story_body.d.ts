@@ -1,18 +1,9 @@
-export type LocalizedString = import('../runtime.js').LocalizedString;
-export type Domain_Story_BodyInputs = {};
-/** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
-/** @typedef {{}} Domain_Story_BodyInputs */
 /**
 * | output |
 * | --- |
 * | "South Africa's Group Areas Act (1950) segregated where people could live and used distance as policy. Black, Coloured and Indian communities were forcibly re..." |
 *
-* @param {Domain_Story_BodyInputs} inputs
-* @param {{ locale?: "en" | "af" }} options
-* @returns {LocalizedString}
 */
-export declare const domain_story_body: ((inputs?: Domain_Story_BodyInputs, options?: {
-    locale?: "en" | "af";
-}) => LocalizedString) & import('../runtime.js').MessageMetadata<Domain_Story_BodyInputs, {
-    locale?: "en" | "af";
-}, {}>;
+export const domain_story_body: ((inputs?: Domain_Story_BodyInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Domain_Story_BodyInputs, { locale?: "en" | "af" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Domain_Story_BodyInputs = {};

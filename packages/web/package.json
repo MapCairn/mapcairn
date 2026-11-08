@@ -19,13 +19,13 @@
     "test:e2e:ui": "playwright test --ui",
     "playwright:install": "playwright install --with-deps chromium webkit",
     "generate:og-image": "tsx scripts/generateOgImage.ts",
-    "messages:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy cookie preferredLanguage baseLocale --emit-ts-declarations --no-emit-git-ignore --no-emit-prettier-ignore --no-emit-readme --is-server \"import.meta.env?.SSR ?? typeof window === 'undefined'\""
+    "messages:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --output-structure message-modules --strategy cookie preferredLanguage baseLocale --emit-ts-declarations --no-emit-git-ignore --no-emit-prettier-ignore --no-emit-readme --is-server \"import.meta.env?.SSR ?? typeof window === 'undefined'\" --is-development \"import.meta.env?.DEV ?? false\""
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.67.0",
     "@fontsource-variable/public-sans": "5.3.0",
     "@fontsource-variable/source-serif-4": "5.3.1",
-    "@inlang/paraglide-js": "2.29.3",
+    "@inlang/paraglide-js": "3.1.0",
     "@inlang/plugin-message-format": "4.6.0",
     "@playwright/test": "1.64.1",
     "@react-router/dev": "8.5.1",
