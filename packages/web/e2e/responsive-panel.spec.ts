@@ -83,26 +83,19 @@ test.describe("responsive panel", () => {
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  test("provides one-tap map legend access on mobile without opening Explore", async ({
-    page,
-  }) => {
+  test("opens the active-layer legend from its map chip", async ({ page }) => {
     await page.goto("/");
 
-    const panelToggle = page.getByTestId(E2E.panelToggle);
-    await expect(panelToggle).toHaveAttribute("aria-expanded", "false");
+    await page.getByTestId(E2E.panelToggle).click();
+    await page.getByTestId(E2E.layerToggle.townships).check();
+    await page.getByTestId(E2E.panelToggle).click();
 
-    const legendTrigger = page.getByTestId(E2E.mobileLegendTrigger);
-    await expect(legendTrigger).toBeVisible();
-    await expect(legendTrigger).toHaveAttribute("aria-expanded", "false");
-
-    await legendTrigger.click();
-
-    await expect(legendTrigger).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByTestId(E2E.mobileLegendContent)).toBeVisible();
-
-    await legendTrigger.click();
-    await expect(page.getByTestId(E2E.mobileLegendContent)).toBeHidden();
-    await expect(legendTrigger).toHaveAttribute("aria-expanded", "false");
+    const legendChip = page.getByTestId(E2E.legendChip);
+    await expect(legendChip).toBeVisible();
+    await legendChip.click();
+    await expect(
+      page.getByRole("list", { name: /active map layers legend/i }),
+    ).toBeVisible();
   });
 
   test("lets mobile users expand and reduce the Explore sheet height", async ({
@@ -115,7 +108,7 @@ test.describe("responsive panel", () => {
     const panel = page.getByTestId(E2E.panelContainer);
     const handle = page.getByTestId(E2E.panelSheetHandle);
 
-    await expect(panel).toHaveAttribute("data-panel-size", "medium");
+    await expect(panel).toHaveAttribute("data-panel-size", "half");
     await expect(handle).toHaveAttribute("aria-pressed", "false");
 
     await handle.click();
@@ -125,7 +118,7 @@ test.describe("responsive panel", () => {
 
     await handle.click();
 
-    await expect(panel).toHaveAttribute("data-panel-size", "medium");
+    await expect(panel).toHaveAttribute("data-panel-size", "half");
     await expect(handle).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -162,7 +155,7 @@ test.describe("responsive panel", () => {
     await expect(handle).toHaveAttribute("aria-pressed", "true");
 
     await dragHandleBy(240);
-    await expect(panel).toHaveAttribute("data-panel-size", "medium");
+    await expect(panel).toHaveAttribute("data-panel-size", "half");
     await expect(handle).toHaveAttribute("aria-pressed", "false");
   });
 });

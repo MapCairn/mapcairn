@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { forwardRef, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,6 +29,7 @@ vi.mock("react-leaflet", () => ({
     invalidateSize: vi.fn(),
     getContainer: () => document.createElement("div"),
     getZoom: () => 9,
+    getCenter: () => ({ lat: -26, lng: 28 }),
     whenReady: (callback: () => void) => {
       mapReadyMocks.pendingReadyCallbacks.push(callback);
     },
@@ -100,6 +101,12 @@ describe("App choropleth data loading", () => {
 
   it("holds the township request back until the map reports it is ready", async () => {
     render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("panel-toggle")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    fireEvent.click(screen.getByTestId("layer-toggle-townships"));
 
     await waitFor(() => {
       expect(mapReadyMocks.pendingReadyCallbacks.length).toBeGreaterThan(0);

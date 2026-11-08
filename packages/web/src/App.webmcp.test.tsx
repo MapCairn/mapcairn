@@ -25,6 +25,7 @@ vi.mock("react-leaflet", () => ({
     invalidateSize: vi.fn(),
     getContainer: () => document.createElement("div"),
     getZoom: () => 9,
+    getCenter: () => ({ lat: -26, lng: 28 }),
     whenReady: (callback: () => void) => {
       callback();
     },
@@ -141,7 +142,7 @@ describe("App WebMCP tool wiring", () => {
     await storyTool?.execute({});
 
     expect(useMapUiStore.getState().panelView).toBe("story");
-    expect(useMapUiStore.getState().panelOpen).toBe(true);
+    expect(useMapUiStore.getState().activeSurface).toBe("explore");
 
     clearModelContext();
   });

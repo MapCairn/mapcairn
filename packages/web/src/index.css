@@ -1,5 +1,5 @@
 :root {
-  --font-display: "Source Serif 4 Variable", Georgia, serif;
+  --font-display: "Public Sans Variable", system-ui, sans-serif;
   /*
    * `--font-body` here through `--focus-ring-width` further below (typography,
    * spacing, control sizing, drag handles) fill `@karta/map`'s own documented
@@ -61,20 +61,22 @@
    * chips and round markers use the full radius. */
   --md-sys-shape-corner-none: 0px;
   --md-sys-shape-corner-extra-small: 2px;
-  --md-sys-shape-corner-small: 2px;
-  --md-sys-shape-corner-medium: 4px;
-  --md-sys-shape-corner-large: 4px;
-  --md-sys-shape-corner-extra-large: 4px;
+  --md-sys-shape-corner-small: 12px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 18px;
+  --md-sys-shape-corner-extra-large: 20px;
   --md-sys-shape-corner-full: 9999px;
 
   /* Panels sit on a 1px hairline rule rather than a drop shadow, like the
    * margin of a printed sheet. Level 3 adds a faint shadow for menus that
    * float over the map. */
-  --md-sys-elevation-shadow-1: 0 0 0 1px var(--md-sys-color-outline-variant);
-  --md-sys-elevation-shadow-2: 0 0 0 1px var(--md-sys-color-outline-variant);
+  --md-sys-elevation-shadow-1: 0 2px 8px 0
+    color-mix(in srgb, var(--md-sys-color-shadow) 10%, transparent);
+  --md-sys-elevation-shadow-2: 0 4px 14px 0
+    color-mix(in srgb, var(--md-sys-color-shadow) 12%, transparent);
   --md-sys-elevation-shadow-3:
-    0 0 0 1px var(--md-sys-color-outline-variant),
-    0 2px 6px 0 color-mix(in srgb, var(--md-sys-color-shadow) 12%, transparent);
+    0 8px 24px 0 color-mix(in srgb, var(--md-sys-color-shadow) 16%, transparent),
+    0 1px 3px 0 color-mix(in srgb, var(--md-sys-color-shadow) 8%, transparent);
 
   /* State layers: a flat tint over whatever surface they sit on, for
    * hover, pressed and selected states. */

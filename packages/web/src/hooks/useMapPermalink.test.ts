@@ -91,7 +91,7 @@ describe("parseMapPermalink", () => {
 
 describe("buildMapPermalinkSearch", () => {
   const defaults = {
-    visibleLayerIds: ["townships"],
+    visibleLayerIds: [],
     basemap: "positron",
     panelView: "layers" as const,
   };
@@ -100,7 +100,7 @@ describe("buildMapPermalinkSearch", () => {
   it("omits every field that matches the defaults", () => {
     const search = buildMapPermalinkSearch(
       {
-        visibleLayerIds: ["townships"],
+        visibleLayerIds: [],
         basemap: "positron",
         panelView: "layers",
         selectedFeatureId: null,
@@ -128,7 +128,7 @@ describe("buildMapPermalinkSearch", () => {
   it("includes basemap, panel view, and feature when they differ from defaults", () => {
     const search = buildMapPermalinkSearch(
       {
-        visibleLayerIds: ["townships"],
+        visibleLayerIds: [],
         basemap: "satellite",
         panelView: "story",
         selectedFeatureId: "abc",
@@ -216,7 +216,7 @@ describe("useMapPermalink", () => {
     });
 
     expect(new URLSearchParams(window.location.search).get("layers")).toBe(
-      "townships,rapid-rail",
+      "rapid-rail",
     );
     expect(pushStateSpy).not.toHaveBeenCalled();
   });

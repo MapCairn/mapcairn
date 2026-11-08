@@ -29,27 +29,21 @@ const STATIC_META_TAGS: MetaDescriptor[] = [
   { name: "twitter:image", content: OG_IMAGE_URL },
 ];
 
-/** Fields of the `Dataset` JSON-LD block that don't vary by route or locale. */
-const DATASET_JSON_LD_BASE = {
+/** Fields of the map application's JSON-LD block that don't vary by route or locale. */
+const WEB_APPLICATION_JSON_LD_BASE = {
   "@context": "https://schema.org",
-  "@type": "Dataset",
+  "@type": "WebApplication",
+  applicationCategory: "MappingApplication",
+  operatingSystem: "Any",
   license: "https://www.gnu.org/licenses/agpl-3.0.html",
   isAccessibleForFree: true,
   inLanguage: locales,
-  spatialCoverage: {
-    "@type": "Place",
-    name: "Gauteng and Western Cape, South Africa",
-  },
   keywords: [
-    "apartheid spatial planning",
-    "Gauteng",
-    "Western Cape",
-    "Cape Town",
-    "township",
-    "public transit access",
-    "commute time",
-    "South Africa",
-    "urban planning",
+    "interactive maps",
+    "geographic information systems",
+    "geospatial data",
+    "map layers",
+    "spatial analysis",
   ],
 } as const;
 
@@ -97,7 +91,7 @@ export function buildPageMeta({
     { name: "twitter:description", content: description },
     {
       "script:ld+json": {
-        ...DATASET_JSON_LD_BASE,
+        ...WEB_APPLICATION_JSON_LD_BASE,
         name: title,
         description,
         url,

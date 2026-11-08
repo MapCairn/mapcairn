@@ -13,11 +13,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mapMocks = vi.hoisted(() => ({
   fitBounds: vi.fn(),
   invalidateSize: vi.fn(),
+  locate: vi.fn(),
   tileErrorHandler: null as null | (() => void),
   tileLoadHandler: null as null | (() => void),
   tileEventHandlers: [] as unknown[],
   mapContextMenuHandler: null as null | ((event: unknown) => void),
   mapClickHandler: null as null | ((event: unknown) => void),
+  mapMouseMoveHandler: null as null | ((event: unknown) => void),
   featureLayers: [] as Array<{
     feature: { properties?: { id?: string } | null };
     bindPopup: ReturnType<typeof vi.fn>;
@@ -63,8 +65,10 @@ attributionCorner.appendChild(attributionContainer);
 const mapInstance = {
   fitBounds: mapMocks.fitBounds,
   invalidateSize: mapMocks.invalidateSize,
+  locate: mapMocks.locate,
   getContainer: () => document.createElement("div"),
   getZoom: () => mapMocks.zoom,
+  getCenter: () => ({ lat: -26, lng: 28 }),
   whenReady: (callback: () => void) => {
     callback();
   },
@@ -227,12 +231,17 @@ vi.mock("react-leaflet", () => ({
   useMapEvents: (handlers: {
     contextmenu?: (event: unknown) => void;
     click?: (event: unknown) => void;
+    mousemove?: (event: unknown) => void;
+    moveend?: () => void;
   }) => {
     if (handlers.contextmenu) {
       mapMocks.mapContextMenuHandler = handlers.contextmenu;
     }
     if (handlers.click) {
       mapMocks.mapClickHandler = handlers.click;
+    }
+    if (handlers.mousemove) {
+      mapMocks.mapMouseMoveHandler = handlers.mousemove;
     }
     return {};
   },
@@ -406,11 +415,13 @@ describe("MapView", () => {
   afterEach(() => {
     mapMocks.fitBounds.mockReset();
     mapMocks.invalidateSize.mockReset();
+    mapMocks.locate.mockReset();
     mapMocks.tileErrorHandler = null;
     mapMocks.tileLoadHandler = null;
     mapMocks.tileEventHandlers = [];
     mapMocks.mapContextMenuHandler = null;
     mapMocks.mapClickHandler = null;
+    mapMocks.mapMouseMoveHandler = null;
     mapMocks.featureLayers = [];
     mapMocks.geoJsonProps = {};
     mapMocks.zoom = 9;
@@ -453,6 +464,45 @@ describe("MapView", () => {
       "data-has-bounds",
       "true",
     );
+  });
+
+  it("reports pointer coordinates from the map", () => {
+    const onCoordinatesChange = vi.fn();
+    render(
+      withDomain(
+        <MapView
+          {...DEFAULT_MAP_VIEW_PROPS}
+          areas={[]}
+          visibleLayerIds={[]}
+          onCoordinatesChange={onCoordinatesChange}
+        />,
+      ),
+    );
+
+    mapMocks.mapMouseMoveHandler?.({ latlng: { lat: -26.2, lng: 28.1 } });
+
+    expect(onCoordinatesChange).toHaveBeenCalledWith({
+      latitude: -26.2,
+      longitude: 28.1,
+    });
+  });
+
+  it("requests geolocation only when given a locate request", () => {
+    render(
+      withDomain(
+        <MapView
+          {...DEFAULT_MAP_VIEW_PROPS}
+          areas={[]}
+          visibleLayerIds={[]}
+          locateRequest={1}
+        />,
+      ),
+    );
+
+    expect(mapMocks.locate).toHaveBeenCalledWith({
+      setView: true,
+      maxZoom: 12,
+    });
   });
 
   it("reports the visible selectable layer's features via onSelectableFeaturesChange", () => {
@@ -1847,6 +1897,7 @@ describe("MapView", () => {
   });
 
   it("shows the measurement toggle when measurementTool is set, and opens the panel on click", () => {
+    const onMeasurementActiveChange = vi.fn();
     render(
       withDomain(
         <MapView
@@ -1854,6 +1905,7 @@ describe("MapView", () => {
           areas={[]}
           visibleLayerIds={[]}
           measurementTool
+          onMeasurementActiveChange={onMeasurementActiveChange}
         />,
       ),
     );
@@ -1867,6 +1919,32 @@ describe("MapView", () => {
 
     expect(screen.getByTestId("measurement-control-panel")).toBeInTheDocument();
     expect(mapMocks.mapClickHandler).not.toBeNull();
+    expect(onMeasurementActiveChange).toHaveBeenCalledWith(true);
+  });
+
+  it("applies the requested opacity to a choropleth layer's configured fill", () => {
+    mapMocks.geoJsonProps = {};
+    render(
+      withNonSelectableDomain(
+        <MapView
+          {...DEFAULT_MAP_VIEW_PROPS}
+          areas={[
+            {
+              type: "Feature",
+              properties: { value: 20 },
+              geometry: { type: "Polygon", coordinates: [] },
+            },
+          ]}
+          visibleLayerIds={["custom-choropleth"]}
+          layerOpacity={{ "custom-choropleth": 0.4 }}
+        />,
+      ),
+    );
+
+    const style = mapMocks.geoJsonProps.areas?.style?.({
+      properties: { value: 20 },
+    });
+    expect(style?.fillOpacity).toBeCloseTo(0.2);
   });
 
   it("forwards measurementLabels to the internal MeasurementControl", () => {

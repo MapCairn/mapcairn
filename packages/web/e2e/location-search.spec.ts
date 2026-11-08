@@ -125,7 +125,7 @@ test.describe("location search", () => {
     expect(requestCount).toBe(2);
   });
 
-  test("shows an out-of-coverage message for a result outside South Africa, and clears it on a valid pick", async ({
+  test("shows an out-of-coverage message for a result outside the map coverage, and clears it on a valid pick", async ({
     page,
   }) => {
     await page.route(GEOCODER_SEARCH_PATTERN, (route) => {
@@ -152,7 +152,7 @@ test.describe("location search", () => {
     await londonResult.click();
 
     await expect(page.getByTestId(E2E.locationOutOfCoverage)).toHaveText(
-      `${LONDON_RESULT.display_name} is outside South Africa.`,
+      `${LONDON_RESULT.display_name} is outside the current map coverage.`,
     );
 
     await input.fill("soweto");

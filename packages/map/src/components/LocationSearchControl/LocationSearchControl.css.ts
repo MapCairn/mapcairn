@@ -5,8 +5,8 @@ import { eyebrowLabel, searchInput } from "../../shared.css";
 import { designTokens } from "../../theme/mapTokens";
 
 export const root = style({
-  display: "grid",
-  gap: "0.375rem",
+  position: "relative",
+  display: "block",
   width: "min(28rem, calc(100vw - 7rem))",
   "@media": {
     [`screen and (max-width: ${MOBILE_BREAKPOINT_PX}px)`]: {
@@ -18,17 +18,22 @@ export const root = style({
 export const label = style([
   eyebrowLabel,
   {
+    position: "absolute",
+    zIndex: 1,
+    top: "50%",
+    left: "0.875rem",
     display: "inline-flex",
-    alignItems: "center",
-    gap: "0.35rem",
+    transform: "translateY(-50%)",
     color: vars.color.onSurfaceVariant,
-    fontSize: designTokens.fontSizeMd,
+    fontSize: 0,
+    lineHeight: 0,
+    pointerEvents: "none",
   },
 ]);
 
 globalStyle(`.${label} svg`, {
-  width: "0.9rem",
-  height: "0.9rem",
+  width: "1.125rem",
+  height: "1.125rem",
 });
 
 export const inputRow = style({
@@ -38,7 +43,11 @@ export const inputRow = style({
 export const input = style([
   searchInput,
   {
-    padding: "0.5rem 3.25rem 0.5rem 0.625rem",
+    minHeight: "48px",
+    padding: "0.625rem 3.25rem 0.625rem 2.75rem",
+    border: 0,
+    borderRadius: vars.shape.cornerFull,
+    background: "transparent",
     letterSpacing: "0.004em",
     textOverflow: "ellipsis",
     selectors: {

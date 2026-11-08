@@ -1,29 +1,24 @@
-import type { TownshipFeature, TownshipProperties } from "@karta/app";
-import {
-  type DomainConfig,
-  type DomainStory as DomainStoryContent,
-  fetchFeatureCollection,
-  mergeFeatureCollections,
-  partitionSettled,
+import type {
+  DomainConfig,
+  DomainStory as DomainStoryContent,
+  Layer,
 } from "@karta/core";
 import {
+  BasemapToggle,
   ControlButton,
   createNominatimGeocoderProvider,
-  DesktopLegend,
   DomainProvider,
   FeatureBrowser,
+  IconButton,
+  Legend,
   LocationSearchControl,
   type LocationSearchResult,
   type MeasurementMode,
-  MobileLegend,
   type SelectableFeatureSearchEntry,
-  SettingsMenu,
-  useAbortController,
+  ThemeToggle,
   useDismissableOverlay,
-  useRafScheduledValue,
 } from "@karta/map";
 import {
-  MOBILE_BREAKPOINT_PX,
   setThemePreference,
   useDeferredReadyAttribute,
   useIsDesktopViewport,
@@ -31,14 +26,12 @@ import {
 } from "@karta/react";
 import { setElementVars } from "@vanilla-extract/dynamic";
 import clsx from "clsx";
-import type { Feature } from "geojson";
-import { Layers, X } from "lucide-react";
+import { Layers, LocateFixed, Settings, X } from "lucide-react";
 import {
   type AnimationEvent,
   type KeyboardEvent,
   lazy,
   memo,
-  type PointerEvent,
   type ReactNode,
   Suspense,
   useCallback,
@@ -52,11 +45,11 @@ import { DomainStory } from "./components/DomainStory/DomainStory";
 import { LanguageToggle } from "./components/LanguageToggle/LanguageToggle";
 import { LayerToggles } from "./components/LayerToggles/LayerToggles";
 import { PrivacyLink } from "./components/PrivacyLink/PrivacyLink";
-import { TownshipPopup } from "./components/TownshipPopup/TownshipPopup";
-import { fetchTownships } from "./data/fetchTownships";
-import { buildRegionDataUrls } from "./data/regionDataUrls";
 import { useMapModelContextTools } from "./hooks/useMapModelContextTools";
 import { useMapPermalink } from "./hooks/useMapPermalink";
+import { useSheetFocusTrap } from "./hooks/useSheetFocusTrap";
+import { useSheetGesture } from "./hooks/useSheetGesture";
+import { useTownshipData } from "./hooks/useTownshipData";
 import { getLayerGroups, getLayers, getStory } from "./layers/registry";
 import { m } from "./paraglide/messages.js";
 import { type PanelView, useMapUiStore } from "./stores/useMapUiStore";
@@ -124,11 +117,6 @@ const PANEL_VIEWPORT_PROPS = {
   "data-e2e": "panel-viewport",
 } as const;
 
-const SHEET_DRAG_THRESHOLD_PX = 36;
-const SHEET_DRAG_PREVIEW_LIMIT_PX = 96;
-const SHEET_PROJECTION_DECELERATION = 0.992;
-const SHEET_VELOCITY_SAMPLE_WINDOW_MS = 140;
-
 interface FocusLocationTarget {
   token: number;
   location: LocationSearchResult;
@@ -141,99 +129,29 @@ interface MeasurementRequest {
   points: { lat: number; lng: number }[];
 }
 
-interface PointerSample {
-  timestamp: number;
-  y: number;
-}
-
-function pruneStalePointerSamples(samples: PointerSample[], now: number) {
-  while (samples.length > 1) {
-    const oldest = samples[0];
-    /* v8 ignore next 3 -- unreachable: the length check above guarantees samples[0] exists */
-    if (!oldest) {
-      break;
-    }
-    if (now - oldest.timestamp <= SHEET_VELOCITY_SAMPLE_WINDOW_MS) {
-      break;
-    }
-    samples.shift();
-  }
-}
-
-/**
- * A completed sheet drag's net vertical delta, extended by a short-horizon
- * velocity projection so a fast-but-short swipe crosses the drag threshold
- * the same way a slower, longer one already does.
- */
-function projectSheetDragDelta(
-  delta: number,
-  firstSample: PointerSample,
-  lastSample: PointerSample,
-): number {
-  const elapsedMs = Math.max(1, lastSample.timestamp - firstSample.timestamp);
-  const velocityPxPerSecond =
-    ((lastSample.y - firstSample.y) / elapsedMs) * 1000;
-  return (
-    delta +
-    (velocityPxPerSecond / 1000) *
-      (SHEET_PROJECTION_DECELERATION / (1 - SHEET_PROJECTION_DECELERATION))
-  );
-}
-
-/** Whether a completed sheet drag's motion (actual or velocity-projected) cleared the minimum threshold to count as an intentional swipe rather than a stray tap or jitter. */
-function isDeliberateSheetDrag(delta: number, projectedDelta: number): boolean {
-  return (
-    Math.abs(delta) >= SHEET_DRAG_THRESHOLD_PX ||
-    Math.abs(projectedDelta) >= SHEET_DRAG_THRESHOLD_PX
-  );
-}
-
-type SheetDragOutcome = "expand" | "collapse" | "close";
-
-/** Which action a deliberate sheet drag should trigger: expand upward, collapse back to medium height downward from expanded, otherwise close the panel entirely. */
-function resolveSheetDragOutcome(
-  projectedDelta: number,
-  mobilePanelExpanded: boolean,
-): SheetDragOutcome {
-  if (projectedDelta < 0) {
-    return "expand";
-  }
-  return mobilePanelExpanded ? "collapse" : "close";
-}
-
-/** Carries out a resolved sheet drag outcome by calling the one setter/callback it needs. */
-function applySheetDragOutcome(
-  outcome: SheetDragOutcome,
-  setMobilePanelExpanded: (value: boolean) => void,
-  closePanel: () => void,
-): void {
-  switch (outcome) {
-    case "expand": {
-      setMobilePanelExpanded(true);
-      return;
-    }
-    case "collapse": {
-      setMobilePanelExpanded(false);
-      return;
-    }
-    case "close": {
-      closePanel();
-    }
-  }
-}
-
 /** Converts a boolean into the `"true"`/`"false"` string Karta's `data-*` boolean attributes (and their CSS/e2e selectors) expect. */
 function toBoolAttr(value: boolean): "true" | "false" {
   return value ? "true" : "false";
 }
 
-/** The mobile info panel's `data-panel-size` value for its current expanded/medium height. */
-function resolvePanelSizeAttr(expanded: boolean): "full" | "medium" {
-  return expanded ? "full" : "medium";
+/** Reads the configured colour ramp for a layer without substituting UI colours. */
+function getLayerRampColors(layer: Layer | undefined): string[] {
+  if (!layer) {
+    return [];
+  }
+  if (layer.style.kind === "choropleth") {
+    return layer.style.buckets.map((bucket) => bucket.color);
+  }
+  if (layer.style.kind === "line") {
+    return [layer.style.color];
+  }
+  return [];
 }
 
 interface PanelViewContentProps {
   panelView: PanelView;
+  basemap: string;
+  onBasemapChange: (basemap: string) => void;
   visibleLayerIds: string[];
   onToggle: (id: string) => void;
   failedLayerIds: string[];
@@ -241,6 +159,53 @@ interface PanelViewContentProps {
   selectableFeatures: SelectableFeatureSearchEntry[];
   selectedFeatureId: string | null;
   onSelectFeature: (featureId: string) => void;
+  opacityByLayer: Record<string, number>;
+  onOpacityChange: (id: string, opacity: number) => void;
+}
+
+/** Renders a feature's available properties without assuming a domain schema. */
+function FeatureDetails({
+  properties,
+}: {
+  properties: object | null | undefined;
+}) {
+  const featureProperties = properties as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  const attributes = Object.entries(featureProperties ?? {}).filter(
+    ([key]) => key !== "id" && key !== "name",
+  );
+  const title =
+    typeof featureProperties?.name === "string"
+      ? featureProperties.name
+      : m.feature_details_title();
+
+  return (
+    <section
+      className={styles.section}
+      data-testid="feature-details"
+      data-e2e="feature-details"
+    >
+      <h2 className={styles.sectionTitle}>{title}</h2>
+      {attributes.length > 0 ? (
+        <dl className={styles.featureAttributes}>
+          {attributes.map(([key, value]) => (
+            <div key={key}>
+              <dt>{key}</dt>
+              <dd>
+                {value === null || value === undefined
+                  ? "-"
+                  : typeof value === "object"
+                    ? JSON.stringify(value)
+                    : String(value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </section>
+  );
 }
 
 /**
@@ -253,12 +218,16 @@ interface PanelViewContentProps {
  */
 const PanelViewContent = memo(function PanelViewContent({
   panelView,
+  basemap,
+  onBasemapChange,
   visibleLayerIds,
   onToggle,
   failedLayerIds,
   story,
   selectableFeatures,
   selectedFeatureId,
+  opacityByLayer,
+  onOpacityChange,
   onSelectFeature,
 }: PanelViewContentProps) {
   let title: string;
@@ -281,11 +250,21 @@ const PanelViewContent = memo(function PanelViewContent({
   } else {
     title = m.panel_tab_layers();
     body = (
-      <LayerToggles
-        visibleLayerIds={visibleLayerIds}
-        onToggle={onToggle}
-        failedLayerIds={failedLayerIds}
-      />
+      <>
+        <BasemapToggle
+          basemap={basemap}
+          onChange={onBasemapChange}
+          label={m.settings_basemap_label()}
+          optionAriaLabel={(label) => m.basemap_option_aria_label({ label })}
+        />
+        <LayerToggles
+          visibleLayerIds={visibleLayerIds}
+          onToggle={onToggle}
+          opacityByLayer={opacityByLayer}
+          onOpacityChange={onOpacityChange}
+          failedLayerIds={failedLayerIds}
+        />
+      </>
     );
   }
   return (
@@ -363,22 +342,21 @@ const PanelViewContent = memo(function PanelViewContent({
  *   `data-panel-open` attribute are driven by the derived `panelVisuallyOpen`
  *   below, not raw `panelOpen`; see that constant's own doc comment for why.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: The shell coordinates mutually exclusive map surfaces and their shared controls.
 export function App() {
   const [hydrated, setHydrated] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [basemapVisuallyReady, setBasemapVisuallyReady] = useState(false);
-  const [townships, setTownships] = useState<TownshipFeature[]>([]);
-  const [townshipAreas, setTownshipAreas] = useState<Feature[]>([]);
-  const [dataError, setDataError] = useState(false);
   const [failedLayerIds, setFailedLayerIds] = useState<string[]>([]);
   const [selectableFeatures, setSelectableFeatures] = useState<
     SelectableFeatureSearchEntry[]
   >([]);
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [mobilePanelExpanded, setMobilePanelExpanded] = useState(false);
-  const [mobileSheetDragOffset, setMobileSheetDragOffset] = useState(0);
-  const [mobileSheetDragging, setMobileSheetDragging] = useState(false);
+  const [locateRequest, setLocateRequest] = useState<number | null>(null);
+  const [locateError, setLocateError] = useState(false);
+  const [mapCoordinates, setMapCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [mobileSheetClosing, setMobileSheetClosing] = useState(false);
   const [focusLocationTarget, setFocusLocationTarget] =
     useState<FocusLocationTarget | null>(null);
@@ -388,13 +366,23 @@ export function App() {
     string | null
   >(null);
   const visibleLayerIds = useMapUiStore((state) => state.visibleLayerIds);
+  const opacityByLayer = useMapUiStore((state) => state.opacityByLayer);
   const basemap = useMapUiStore((state) => state.basemap);
-  const panelOpen = useMapUiStore((state) => state.panelOpen);
+  const activeSurface = useMapUiStore((state) => state.activeSurface);
+  const sheetDetent = useMapUiStore((state) => state.sheetDetent);
+  const panelOpen =
+    activeSurface === "explore" ||
+    activeSurface === "feature" ||
+    activeSurface === "legend" ||
+    activeSurface === "settings";
+  const settingsOpen = activeSurface === "settings";
   const panelView = useMapUiStore((state) => state.panelView);
   const selectedFeatureId = useMapUiStore((state) => state.selectedFeatureId);
   const toggleLayer = useMapUiStore((state) => state.toggleLayer);
+  const setLayerOpacity = useMapUiStore((state) => state.setLayerOpacity);
   const setBasemap = useMapUiStore((state) => state.setBasemap);
-  const setPanelOpen = useMapUiStore((state) => state.setPanelOpen);
+  const setActiveSurface = useMapUiStore((state) => state.setActiveSurface);
+  const setSheetDetent = useMapUiStore((state) => state.setSheetDetent);
   const setPanelView = useMapUiStore((state) => state.setPanelView);
   const setSelectedFeatureId = useMapUiStore(
     (state) => state.setSelectedFeatureId,
@@ -409,6 +397,31 @@ export function App() {
     [],
   );
   const story = domain.story;
+  const activeLayers = useMemo(
+    () => domain.layers.filter((layer) => visibleLayerIds.includes(layer.id)),
+    [domain.layers, visibleLayerIds],
+  );
+  const hasVisibleChoropleth = useMemo(
+    () => activeLayers.some((layer) => layer.geometryKind === "choropleth"),
+    [activeLayers],
+  );
+  const {
+    townships,
+    townshipAreas,
+    dataError,
+    retry: retryTownshipData,
+  } = useTownshipData(mapReady, hasVisibleChoropleth);
+  const selectedFeature = useMemo(
+    () =>
+      townships.find((feature) => feature.properties.id === selectedFeatureId),
+    [selectedFeatureId, townships],
+  );
+  const activeLegendLayer = activeLayers[0];
+  const activeLegendRamp = useMemo(
+    () => getLayerRampColors(activeLegendLayer),
+    [activeLegendLayer],
+  );
+  const legendRampRef = useRef<HTMLSpanElement>(null);
   /**
    * Localized copy forwarded to both `DesktopLegend`/`MobileLegend`'s
    * internal `Legend`, computed fresh per render for the same per-request
@@ -439,6 +452,33 @@ export function App() {
     }),
     [],
   );
+  const settingsLabels = useMemo(
+    () => ({
+      openLabel: m.settings_open(),
+      closeLabel: m.settings_close(),
+      title: m.settings_title(),
+      basemapLabel: m.settings_basemap_label(),
+      basemapOptionAriaLabel: (label: string) =>
+        m.basemap_option_aria_label({ label }),
+      themeLabel: m.settings_theme_label(),
+      themeOptionLabels: {
+        system: {
+          label: m.theme_system(),
+          ariaLabel: m.theme_system_aria_label(),
+        },
+        light: {
+          label: m.theme_light(),
+          ariaLabel: m.theme_light_aria_label(),
+        },
+        dark: {
+          label: m.theme_dark(),
+          ariaLabel: m.theme_dark_aria_label(),
+        },
+      },
+      showBasemap: false,
+    }),
+    [],
+  );
   /** Localized copy forwarded to `MapView`'s internal `MeasurementControl`, memoized for the same reason as `legendLabels`. */
   const measurementLabels = useMemo(
     () => ({
@@ -458,6 +498,29 @@ export function App() {
   const formatSelectionAnnouncement = useCallback(
     (label: string) => m.map_selection_announcement({ label }),
     [],
+  );
+  useEffect(() => {
+    if (!legendRampRef.current || activeLegendRamp.length === 0) {
+      return;
+    }
+    const stops = activeLegendRamp
+      .map((color, index) => {
+        const start = (index / activeLegendRamp.length) * 100;
+        const end = ((index + 1) / activeLegendRamp.length) * 100;
+        return `${color} ${start}% ${end}%`;
+      })
+      .join(", ");
+    setElementVars(legendRampRef.current, {
+      [styles.legendRampBackground]: `linear-gradient(90deg, ${stops})`,
+    });
+  }, [activeLegendRamp]);
+  const handleFeatureSelect = useCallback(
+    (featureId: string) => {
+      setSelectedFeatureId(featureId);
+      setSheetDetent("half");
+      setActiveSurface("feature");
+    },
+    [setActiveSurface, setSelectedFeatureId, setSheetDetent],
   );
   /**
    * Whether the active domain declares any `interaction.selectable` layer at
@@ -500,144 +563,25 @@ export function App() {
   };
   const isDesktopViewport = useIsDesktopViewport();
   const panelTriggerRef = useRef<HTMLButtonElement>(null);
+  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
+  const surfaceTriggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const singleViewRef = useRef<HTMLDivElement>(null);
-  const suppressNextHandleClickRef = useRef(false);
-  const activeSheetPointerIdRef = useRef<number | null>(null);
-  /**
-   * Holds the in-progress sheet-drag gesture's own `cleanup` (in
-   * `handleSheetHandlePointerDown` below) for as long as one is active,
-   * `null` otherwise. That handler attaches its pointermove/up/cancel
-   * listeners directly to `window` rather than inside an effect, so they'd
-   * otherwise outlive an unmount that happens mid-drag; the mount-scoped
-   * effect below reaches that gesture's cleanup through this ref and runs
-   * it on unmount too, mirroring `@karta/map`'s `useSwipeToDismiss`.
-   */
-  const activeSheetGestureCleanupRef = useRef<(() => void) | null>(null);
-  const {
-    schedule: scheduleSheetDragOffset,
-    cancel: cancelScheduledSheetDragOffset,
-  } = useRafScheduledValue(setMobileSheetDragOffset);
   const {
     ref: appRef,
     markNotReady: markSheetEntranceNotReady,
     markReadyAfterPaint: markSheetEntranceReadyAfterPaint,
   } = useDeferredReadyAttribute<HTMLDivElement>("data-sheet-entrance-ready");
-  const { next: nextTownshipFetchSignal, abort: abortTownshipFetch } =
-    useAbortController();
-
-  /**
-   * Opens the desktop sidebar synchronously, in the same commit as
-   * `hydrated` (which also starts `MapView`'s own lazy-load and Leaflet
-   * mount); deliberately, not deferred. An earlier version deferred this
-   * (via `mapReady`, then via a couple of animation frames) specifically to
-   * stop the panel's entrance animation from visibly competing with that
-   * mount for frames, but *any* deferral of `panelOpen` itself (even a
-   * couple of frames) turned out to be unsafe: under real load (a
-   * throttled CPU, contended CI) the gap between a test/user's `mousedown`
-   * and the resulting `click` can outlast the deferral, so the auto-open
-   * could fire *in between*; flipping `panelOpen` to `true` while that
-   * click was still in flight, so by the time it landed, `handlePanelToggle`
-   * saw an already-open panel and closed it instead. `panelOpen` itself
-   * (and everything downstream of it; ARIA state, `useDismissableOverlay`'s
-   * Escape-stack position, what's clickable where on desktop) needs to be
-   * deterministic, not racing a side effect. The entrance *animation* is
-   * still deferred, just not through `panelOpen`; see the
-   * `data-entrance-ready` attribute below, which starts every
-   * `.panel`/`.panelViewport` animation paused at its first frame and only
-   * resumes it once `mapReady`, so nothing is actively ticking (and so
-   * nothing to visibly stutter) while `MapView`'s mount is still competing
-   * for frames.
-   */
   useEffect(() => {
     setHydrated(true);
-    if (window.innerWidth > MOBILE_BREAKPOINT_PX) {
-      setPanelOpen(true);
-    }
-  }, [setPanelOpen]);
-
-  useEffect(() => {
-    if (!mapReady) {
-      return;
-    }
-    let cancelled = false;
-    const signal = nextTownshipFetchSignal();
-    setDataError(false);
-    setTownships([]);
-    setTownshipAreas([]);
-    const cacheBust = loadAttempt > 0 ? `?retry=${loadAttempt}` : "";
-    const townshipUrls = buildRegionDataUrls(
-      `townships.display.v1.geojson${cacheBust}`,
-    );
-    const areaUrls = buildRegionDataUrls(
-      `township-areas.display.v1.geojson${cacheBust}`,
-    );
-
-    Promise.all([
-      Promise.allSettled(
-        townshipUrls.map((url) => fetchTownships(url, signal)),
-      ),
-      Promise.allSettled(
-        areaUrls.map((url) => fetchFeatureCollection(url, undefined, signal)),
-      ),
-    ]).then(([townshipResults, areaResults]) => {
-      if (cancelled) {
-        return;
-      }
-      const townships = partitionSettled(townshipResults);
-      const areas = partitionSettled(areaResults);
-
-      // A region failing to load here (e.g. its data hasn't been published
-      // yet, see docs/adding-a-region.md) shouldn't blank out every other
-      // region's already-working data; only surface the retry banner once
-      // every region's township data (the primary dataset the choropleth
-      // and popups key off; `townshipAreas` is a companion display layer
-      // with no useful properties of its own) failed to load.
-      if (townships.fulfilled.length === 0) {
-        setDataError(true);
-        return;
-      }
-
-      for (const reason of [...townships.rejected, ...areas.rejected]) {
-        console.error("Failed to load region map data", reason);
-      }
-      setTownships(townships.fulfilled.flat());
-      setTownshipAreas(mergeFeatureCollections(areas.fulfilled).features);
-    });
-    return () => {
-      cancelled = true;
-      abortTownshipFetch();
-    };
-  }, [loadAttempt, mapReady, nextTownshipFetchSignal, abortTownshipFetch]);
+  }, []);
 
   useEffect(() => {
     if (!panelOpen) {
-      setMobilePanelExpanded(false);
-      setMobileSheetDragging(false);
-      setMobileSheetDragOffset(0);
-      activeSheetPointerIdRef.current = null;
+      setSheetDetent("half");
     }
-  }, [panelOpen]);
-
-  useEffect(() => {
-    return () => {
-      cancelScheduledSheetDragOffset();
-    };
-  }, [cancelScheduledSheetDragOffset]);
-
-  useEffect(() => {
-    return () => {
-      activeSheetGestureCleanupRef.current?.();
-    };
-  }, []);
-
-  const mobileSheetDragDirection =
-    mobileSheetDragOffset < -4
-      ? "up"
-      : mobileSheetDragOffset > 4
-        ? "down"
-        : "none";
+  }, [panelOpen, setSheetDetent]);
   /**
    * `panelOpen` itself only flips to `false` once the mobile sheet's exit
    * animation has fully finished (see `finishClose`), so anything reactive
@@ -659,34 +603,9 @@ export function App() {
    * restriction, so setting it here, once mounted, keeps the panel
    * draggable under that CSP with no attribute in the initial markup.
    */
-  useEffect(() => {
-    if (panelRef.current) {
-      setElementVars(panelRef.current, {
-        [styles.panelDragOffset]: `${mobileSheetDragOffset}px`,
-      });
-    }
-  }, [mobileSheetDragOffset]);
-
   const handleMapReady = useCallback(() => setMapReady(true), []);
   const handleBasemapReady = useCallback(
     () => setBasemapVisuallyReady(true),
-    [],
-  );
-
-  /**
-   * Renders a selected township's popup markup for `MapView`.
-   * @remarks Memoised with no dependencies because nothing render-scoped is
-   *   captured here (`TownshipPopup` resolves its own translated copy when
-   *   the element it returns is actually rendered) so there's no reason to
-   *   hand `MapView` a fresh closure every render. `MapView` itself no
-   *   longer depends on this being stable for correctness (it reads the
-   *   latest value through its own ref internally), but keeping it stable
-   *   here still avoids the odd re-render doing pointless work for free.
-   */
-  const renderFeaturePopup = useCallback(
-    (properties: Record<string, unknown>) => (
-      <TownshipPopup properties={properties as unknown as TownshipProperties} />
-    ),
     [],
   );
 
@@ -705,6 +624,7 @@ export function App() {
     mode: MeasurementMode,
     points: { lat: number; lng: number }[],
   ) {
+    setActiveSurface("measure");
     setMeasurementRequest({ token: Date.now(), mode, points });
   }
 
@@ -713,7 +633,8 @@ export function App() {
     story,
     onShowStory: () => {
       setPanelView("story");
-      setPanelOpen(true);
+      setSheetDetent("half");
+      setActiveSurface("explore");
     },
     onRequestMeasurement: handleRequestMeasurement,
   });
@@ -738,9 +659,12 @@ export function App() {
    */
   const finishClose = useCallback(() => {
     setMobileSheetClosing(false);
-    setPanelOpen(false);
-    requestAnimationFrame(() => panelTriggerRef.current?.focus());
-  }, [setPanelOpen]);
+    if (activeSurface === "feature") {
+      setSelectedFeatureId(null);
+    }
+    setActiveSurface(null);
+    requestAnimationFrame(() => surfaceTriggerRef.current?.focus());
+  }, [activeSurface, setActiveSurface, setSelectedFeatureId]);
 
   const closePanel = useCallback(() => {
     const playsExitAnimation =
@@ -752,6 +676,27 @@ export function App() {
     }
     setMobileSheetClosing(true);
   }, [isDesktopViewport, finishClose]);
+
+  const {
+    dragOffset,
+    dragging: mobileSheetDragging,
+    dragDirection: mobileSheetDragDirection,
+    onHandleClick: handleSheetHeightToggle,
+    onHandlePointerDown: handleSheetHandlePointerDown,
+  } = useSheetGesture({
+    isDesktopViewport,
+    detent: sheetDetent,
+    setDetent: setSheetDetent,
+    close: closePanel,
+  });
+
+  useEffect(() => {
+    if (panelRef.current) {
+      setElementVars(panelRef.current, {
+        [styles.panelDragOffset]: `${dragOffset}px`,
+      });
+    }
+  }, [dragOffset]);
 
   /**
    * Closes the panel on Escape (from anywhere, matching `SettingsMenu`/
@@ -765,9 +710,14 @@ export function App() {
     open: panelOpen,
     onClose: closePanel,
     containerRef: panelRef,
-    triggerRef: panelTriggerRef,
+    triggerRef: surfaceTriggerRef,
     dismissOnOutsideClick: !isDesktopViewport,
   });
+
+  useSheetFocusTrap(
+    panelOpen && !isDesktopViewport && sheetDetent === "full",
+    panelRef,
+  );
 
   function handleSheetAnimationEnd(event: AnimationEvent<HTMLElement>) {
     // vanilla-extract hashes @keyframes names, so animationName can't be
@@ -799,9 +749,10 @@ export function App() {
       closePanel();
       return;
     }
-    setMobilePanelExpanded(false);
+    surfaceTriggerRef.current = panelTriggerRef.current;
+    setSheetDetent("half");
     markSheetEntranceNotReady();
-    setPanelOpen(true);
+    setActiveSurface("explore");
     markSheetEntranceReadyAfterPaint();
     requestAnimationFrame(() => {
       const activeTabIndex = panelViews.indexOf(panelView);
@@ -834,120 +785,50 @@ export function App() {
     tabRefs.current[nextIndex]?.focus();
   }
 
-  function handleSheetHeightToggle() {
-    if (suppressNextHandleClickRef.current) {
-      suppressNextHandleClickRef.current = false;
-      return;
-    }
-    if (isDesktopViewport) {
-      return;
-    }
-    setMobilePanelExpanded((value) => !value);
-  }
-
-  function handleSheetHandlePointerDown(
-    event: PointerEvent<HTMLButtonElement>,
-  ) {
-    if (isDesktopViewport) {
-      return;
-    }
-    if (event.pointerType === "mouse" && event.button !== 0) {
-      return;
-    }
-
-    const handleElement = event.currentTarget;
-    const startY = event.clientY;
-    let latestPointerY = startY;
-    const pointerSamples: PointerSample[] = [
-      { timestamp: performance.now(), y: startY },
-    ];
-    activeSheetPointerIdRef.current = event.pointerId;
-    setMobileSheetDragging(true);
-    scheduleSheetDragOffset(0);
-    handleElement.setPointerCapture(event.pointerId);
-
-    function handlePointerMove(pointerEvent: globalThis.PointerEvent) {
-      if (pointerEvent.pointerId !== activeSheetPointerIdRef.current) {
-        return;
-      }
-      latestPointerY = pointerEvent.clientY;
-      const now = performance.now();
-      pointerSamples.push({ timestamp: now, y: pointerEvent.clientY });
-      pruneStalePointerSamples(pointerSamples, now);
-      const delta = pointerEvent.clientY - startY;
-      const clampedDelta = Math.max(
-        -SHEET_DRAG_PREVIEW_LIMIT_PX,
-        Math.min(SHEET_DRAG_PREVIEW_LIMIT_PX, delta),
-      );
-      scheduleSheetDragOffset(clampedDelta);
-    }
-
-    function cleanup() {
-      activeSheetGestureCleanupRef.current = null;
-      setMobileSheetDragging(false);
-      scheduleSheetDragOffset(0);
-      activeSheetPointerIdRef.current = null;
-      window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointercancel", cleanup);
-      if (handleElement.hasPointerCapture(event.pointerId)) {
-        handleElement.releasePointerCapture(event.pointerId);
-      }
-    }
-
-    function handlePointerUp(pointerEvent: globalThis.PointerEvent) {
-      if (pointerEvent.pointerId !== activeSheetPointerIdRef.current) {
-        return;
-      }
-      const now = performance.now();
-      pointerSamples.push({ timestamp: now, y: pointerEvent.clientY });
-      pruneStalePointerSamples(pointerSamples, now);
-
-      const delta = latestPointerY - startY;
-      const firstSample = pointerSamples[0];
-      const lastSample = pointerSamples[pointerSamples.length - 1];
-      /* v8 ignore next 4 -- unreachable: pointerSamples is seeded with one entry on pointer down and the prune loop above always stops at length 1, so it's never empty here */
-      if (!firstSample || !lastSample) {
-        cleanup();
-        return;
-      }
-      const projectedDelta = projectSheetDragDelta(
-        delta,
-        firstSample,
-        lastSample,
-      );
-
-      if (!isDeliberateSheetDrag(delta, projectedDelta)) {
-        cleanup();
-        return;
-      }
-      suppressNextHandleClickRef.current = true;
-      const outcome = resolveSheetDragOutcome(
-        projectedDelta,
-        mobilePanelExpanded,
-      );
-      applySheetDragOutcome(outcome, setMobilePanelExpanded, closePanel);
-      cleanup();
-    }
-
-    activeSheetGestureCleanupRef.current = cleanup;
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointercancel", cleanup);
-  }
-
   const panelViewContent = (
     <PanelViewContent
       panelView={panelView}
+      basemap={basemap}
+      onBasemapChange={setBasemap}
       visibleLayerIds={visibleLayerIds}
+      opacityByLayer={opacityByLayer}
       onToggle={toggleLayer}
+      onOpacityChange={setLayerOpacity}
       failedLayerIds={failedLayerIds}
       story={story}
       selectableFeatures={selectableFeatures}
       selectedFeatureId={selectedFeatureId}
-      onSelectFeature={setSelectedFeatureId}
+      onSelectFeature={handleFeatureSelect}
     />
   );
+  const activePanelContent =
+    activeSurface === "feature" ? (
+      <FeatureDetails properties={selectedFeature?.properties} />
+    ) : activeSurface === "legend" ? (
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>{m.legend_title()}</h2>
+        <Legend
+          mode="active"
+          visibleLayerIds={visibleLayerIds}
+          compact
+          {...legendLabels}
+        />
+      </section>
+    ) : activeSurface === "settings" ? (
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>{m.settings_title()}</h2>
+        <ThemeToggle
+          preference={themePreference}
+          onChange={setThemePreference}
+          label={m.settings_theme_label()}
+          optionLabels={settingsLabels.themeOptionLabels}
+        />
+        <LanguageToggle />
+        <PrivacyLink />
+      </section>
+    ) : (
+      panelViewContent
+    );
 
   const panelToggleLabel = panelOpen
     ? m.panel_toggle_close()
@@ -959,7 +840,7 @@ export function App() {
         ref={appRef}
         className={styles.app}
         data-panel-open={toBoolAttr(panelVisuallyOpen)}
-        data-panel-size={resolvePanelSizeAttr(mobilePanelExpanded)}
+        data-panel-size={sheetDetent}
         data-panel-dragging={toBoolAttr(mobileSheetDragging)}
         data-panel-drag-direction={mobileSheetDragDirection}
         data-entrance-ready={toBoolAttr(mapReady)}
@@ -1005,10 +886,14 @@ export function App() {
                 areas={townships}
                 areaBoundaries={townshipAreas}
                 visibleLayerIds={visibleLayerIds}
+                layerOpacity={opacityByLayer}
                 basemap={basemap}
                 selectedFeatureId={selectedFeatureId}
                 focusLocationTarget={focusLocationTarget}
-                onFeatureSelect={setSelectedFeatureId}
+                locateRequest={locateRequest}
+                onLocateError={() => setLocateError(true)}
+                onCoordinatesChange={setMapCoordinates}
+                onFeatureSelect={handleFeatureSelect}
                 onSelectableFeaturesChange={setSelectableFeatures}
                 onLayerDataError={setFailedLayerIds}
                 onReady={handleMapReady}
@@ -1020,10 +905,15 @@ export function App() {
                 locationContextMenuLabels={locationContextMenuLabels}
                 measurementTool
                 measurementLabels={measurementLabels}
-                measurementPanelOpen={!isDesktopViewport && panelOpen}
-                onMeasurementPanelClose={closePanel}
+                measurementActive={activeSurface === "measure"}
+                onMeasurementActiveChange={(active) =>
+                  setActiveSurface(active ? "measure" : null)
+                }
+                measurementPanelOpen={
+                  activeSurface !== null && activeSurface !== "measure"
+                }
+                onMeasurementPanelClose={() => setActiveSurface("measure")}
                 measurementRequest={measurementRequest}
-                renderFeaturePopup={renderFeaturePopup}
               />
             </Suspense>
           )}
@@ -1039,7 +929,7 @@ export function App() {
                 type="button"
                 data-testid="retry-data-load"
                 data-e2e="retry-data-load"
-                onClick={() => setLoadAttempt((value) => value + 1)}
+                onClick={retryTownshipData}
               >
                 {m.retry()}
               </button>
@@ -1051,9 +941,6 @@ export function App() {
           className={clsx(styles.locationSearchControl, styles.surface)}
           aria-label={m.search_label()}
         >
-          <p className={styles.appName} data-testid="app-name">
-            {m.app_title()}
-          </p>
           <LocationSearchControl
             placeholder={m.search_placeholder()}
             label={m.search_label()}
@@ -1066,7 +953,7 @@ export function App() {
             onLocationSelect={handleLocationSelect}
             onQueryChange={() => setOutOfCoverageLocationLabel(null)}
             selectableFeatures={selectableFeatures}
-            onFeatureSelect={setSelectedFeatureId}
+            onFeatureSelect={handleFeatureSelect}
           />
           {outOfCoverageLocationLabel ? (
             <output
@@ -1080,6 +967,33 @@ export function App() {
             </output>
           ) : null}
         </search>
+
+        <IconButton
+          className={styles.locateControl}
+          label={m.locate_me()}
+          data-testid="locate-me"
+          data-e2e="locate-me"
+          onClick={() => {
+            setLocateError(false);
+            setLocateRequest((request) => (request ?? 0) + 1);
+          }}
+        >
+          <LocateFixed aria-hidden="true" />
+        </IconButton>
+        {locateError ? (
+          <output className={styles.locateError}>{m.locate_error()}</output>
+        ) : null}
+        {mapCoordinates ? (
+          <output
+            className={styles.coordinateReadout}
+            aria-label={m.map_coordinates_label()}
+            data-testid="map-coordinate-readout"
+            data-e2e="map-coordinate-readout"
+          >
+            {mapCoordinates.latitude.toFixed(4)},{" "}
+            {mapCoordinates.longitude.toFixed(4)}
+          </output>
+        ) : null}
 
         <ControlButton
           ref={panelTriggerRef}
@@ -1098,34 +1012,43 @@ export function App() {
           </span>
         </ControlButton>
 
-        {isDesktopViewport ? (
-          <DesktopLegend
-            visibleLayerIds={visibleLayerIds}
-            suppressed={settingsOpen}
-            title={m.legend_title()}
-            legendLabels={legendLabels}
-          />
-        ) : (
-          <MobileLegend
-            visibleLayerIds={visibleLayerIds}
-            suppressed={false}
-            panelOpen={panelVisuallyOpen}
-            panelExpanded={mobilePanelExpanded}
-            title={m.legend_title()}
-            openLabel={m.legend_open()}
-            closeLabel={m.legend_close()}
-            legendLabels={legendLabels}
-          />
-        )}
+        {activeLegendLayer && !panelVisuallyOpen ? (
+          <button
+            type="button"
+            className={styles.legendChip}
+            aria-label={m.legend_active_aria_label({
+              label: activeLegendLayer.label,
+            })}
+            data-testid="active-legend-chip"
+            data-e2e="active-legend-chip"
+            onClick={() => {
+              setSheetDetent("half");
+              setActiveSurface("legend");
+            }}
+          >
+            <span className={styles.legendChipLabel}>
+              {activeLegendLayer.label}
+              {activeLayers.length > 1 ? ` +${activeLayers.length - 1}` : ""}
+            </span>
+            <span
+              ref={legendRampRef}
+              className={styles.legendRamp}
+              aria-hidden="true"
+            />
+          </button>
+        ) : null}
 
         <aside
           id="map-controls"
+          role="dialog"
+          aria-modal={!isDesktopViewport && sheetDetent === "full"}
           aria-label={m.panel_tablist_aria_label()}
+          tabIndex={-1}
           ref={panelRef}
           className={clsx(styles.panel, styles.surface)}
           data-testid="panel-container"
           data-e2e="panel-container"
-          data-panel-size={resolvePanelSizeAttr(mobilePanelExpanded)}
+          data-panel-size={sheetDetent}
           data-panel-dragging={toBoolAttr(mobileSheetDragging)}
           data-panel-drag-direction={mobileSheetDragDirection}
           data-panel-closing={toBoolAttr(mobileSheetClosing)}
@@ -1139,9 +1062,9 @@ export function App() {
             data-e2e="panel-sheet-handle"
             data-dragging={toBoolAttr(mobileSheetDragging)}
             data-drag-direction={mobileSheetDragDirection}
-            aria-pressed={mobilePanelExpanded}
+            aria-pressed={sheetDetent === "full"}
             aria-label={
-              mobilePanelExpanded
+              sheetDetent === "full"
                 ? m.panel_reduce_height()
                 : m.panel_expand_height()
             }
@@ -1150,7 +1073,7 @@ export function App() {
           >
             <span className={styles.sheetHandle} aria-hidden="true" />
           </button>
-          {panelViews.length > 1 ? (
+          {activeSurface === "explore" && panelViews.length > 1 ? (
             <>
               <div
                 className={styles.panelTabs}
@@ -1189,31 +1112,40 @@ export function App() {
                 // biome-ignore lint/a11y/noNoninteractiveTabindex: WAI-ARIA APG recommends tabindex=0 on a tabpanel so keyboard users can reach panels (like Story) whose content has no focusable element of its own
                 tabIndex={0}
               >
-                {panelViewContent}
+                {activePanelContent}
               </div>
             </>
           ) : (
             <div {...PANEL_VIEWPORT_PROPS} ref={singleViewRef} tabIndex={-1}>
-              {panelViewContent}
+              {activePanelContent}
             </div>
           )}
         </aside>
 
-        <section
+        <IconButton
+          ref={settingsTriggerRef}
           className={styles.settingsControl}
-          aria-label={m.settings_region_label()}
+          label={settingsOpen ? m.settings_close() : m.settings_open()}
+          aria-expanded={settingsOpen}
+          aria-controls="map-controls"
+          data-testid="settings-menu-trigger"
+          data-e2e="settings-menu-trigger"
+          onClick={() => {
+            if (settingsOpen) {
+              setActiveSurface(null);
+              return;
+            }
+            surfaceTriggerRef.current = settingsTriggerRef.current;
+            setSheetDetent("half");
+            setActiveSurface("settings");
+          }}
         >
-          <SettingsMenu
-            basemap={basemap}
-            onBasemapChange={setBasemap}
-            themePreference={themePreference}
-            onThemePreferenceChange={setThemePreference}
-            onOpenChange={setSettingsOpen}
-          >
-            <LanguageToggle />
-            <PrivacyLink />
-          </SettingsMenu>
-        </section>
+          {settingsOpen ? (
+            <X aria-hidden="true" />
+          ) : (
+            <Settings aria-hidden="true" />
+          )}
+        </IconButton>
       </div>
     </DomainProvider>
   );

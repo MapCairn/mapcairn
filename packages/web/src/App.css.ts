@@ -7,10 +7,7 @@ import {
   keyframes,
   style,
 } from "@vanilla-extract/css";
-import {
-  eyebrowLabel,
-  visuallyHidden as sharedVisuallyHidden,
-} from "./shared.css";
+import { visuallyHidden as sharedVisuallyHidden } from "./shared.css";
 import { appVars } from "./theme/app.css";
 
 const mobileMediaQuery = `screen and (max-width: ${MOBILE_BREAKPOINT_PX}px)`;
@@ -26,6 +23,7 @@ const desktopMediaQuery = `screen and (min-width: ${MOBILE_BREAKPOINT_PX + 1}px)
  * would otherwise refuse to apply once parsed.
  */
 export const panelDragOffset = createVar();
+export const legendRampBackground = createVar();
 
 export const app = style({
   position: "relative",
@@ -77,8 +75,9 @@ export const app = style({
      * or resize itself around however much of the viewport the sheet is
      * currently covering.
      */
-    [appVars.mobileLayout.sheetHeightMedium]: "min(66dvh, 36rem)",
-    [appVars.mobileLayout.sheetHeightFull]: "min(84dvh, 45rem)",
+    [appVars.mobileLayout.sheetHeightPeek]: "min(18dvh, 10rem)",
+    [appVars.mobileLayout.sheetHeightHalf]: "min(50dvh, 36rem)",
+    [appVars.mobileLayout.sheetHeightFull]: "min(90dvh, 56rem)",
     /**
      * How far down the search box's whole rendered footprint reaches (see
      * MeasurementControl.css.ts's mobile `insetBlockStart`); shared so
@@ -231,8 +230,9 @@ export const visuallyHidden = sharedVisuallyHidden;
 export const surface = style({
   position: "relative",
   borderRadius: vars.shape.cornerLarge,
-  border: `1px solid ${vars.color.outline}`,
-  background: vars.color.surfaceContainerHigh,
+  border: 0,
+  background: `color-mix(in srgb, ${vars.color.surfaceContainerHigh} 94%, transparent)`,
+  backdropFilter: "blur(16px)",
   boxShadow: vars.elevation.shadow3,
 });
 
@@ -311,7 +311,7 @@ export const panel = style({
       bottom: 0,
       width: "auto",
       maxWidth: "none",
-      height: appVars.mobileLayout.sheetHeightMedium,
+      height: appVars.mobileLayout.sheetHeightHalf,
       maxHeight: "none",
       padding: "0.5rem 1rem max(1.25rem, env(safe-area-inset-bottom))",
       gap: "0.75rem",
@@ -320,7 +320,7 @@ export const panel = style({
       borderRadius: `${vars.shape.cornerLarge} ${vars.shape.cornerLarge} 0 0`,
       transform: `translateY(calc(${fallbackVar(panelDragOffset, "0px")} * 0.14))`,
       transformOrigin: "bottom",
-      transition: `height 320ms ${vars.motion.easeStandard}, transform ${vars.motion.durationMedium} ${vars.motion.easeDecelerate}, box-shadow ${vars.motion.durationMedium} ${vars.motion.easeStandard}`,
+      transition: `height 320ms ${vars.motion.easeSpring}, transform ${vars.motion.durationMedium} ${vars.motion.easeDecelerate}, box-shadow ${vars.motion.durationMedium} ${vars.motion.easeStandard}`,
       /**
        * The entrance itself (`panelIn`, above) is declared once,
        * unconditionally; this breakpoint only needs its own
@@ -368,6 +368,15 @@ globalStyle(`.${app}[data-sheet-entrance-ready="true"] .${panel}`, {
   },
 });
 
+globalStyle(`.${panel}`, {
+  "@media": {
+    "(prefers-reduced-motion: reduce)": {
+      transition: "none",
+      animationDuration: "1ms",
+    },
+  },
+});
+
 globalStyle(`.${panel}[data-panel-dragging="true"]`, {
   "@media": {
     [mobileMediaQuery]: {
@@ -390,6 +399,22 @@ globalStyle(`.${panel}[data-panel-size="full"]`, {
   "@media": {
     [mobileMediaQuery]: {
       height: appVars.mobileLayout.sheetHeightFull,
+    },
+  },
+});
+
+globalStyle(`.${panel}[data-panel-size="peek"]`, {
+  "@media": {
+    [mobileMediaQuery]: {
+      height: appVars.mobileLayout.sheetHeightPeek,
+    },
+  },
+});
+
+globalStyle(`.${panel}[data-panel-size="half"]`, {
+  "@media": {
+    [mobileMediaQuery]: {
+      height: appVars.mobileLayout.sheetHeightHalf,
     },
   },
 });
@@ -429,7 +454,7 @@ export const panelViewport = style({
    * don't get cut off at the edges.
    */
   paddingInline: "0.3125rem",
-  overflowY: "auto",
+  overflowY: "hidden",
   overscrollBehavior: "contain",
   WebkitOverflowScrolling: "touch",
   scrollbarColor: `${vars.color.outlineVariant} transparent`,
@@ -448,6 +473,10 @@ export const panelViewport = style({
       backgroundClip: "padding-box",
     },
   },
+});
+
+globalStyle(`.${panel}[data-panel-size="full"] .${panelViewport}`, {
+  overflowY: "auto",
 });
 
 export const sheetHandle = style({
@@ -546,6 +575,31 @@ export const sectionTitle = style({
   lineHeight: 1.25,
 });
 
+export const featureAttributes = style({
+  display: "grid",
+  gap: "0.5rem",
+  margin: 0,
+});
+
+globalStyle(`.${featureAttributes} > div`, {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr)",
+  gap: "0.75rem",
+  padding: "0.625rem 0",
+  borderBottom: `1px solid ${vars.color.outlineVariant}`,
+});
+globalStyle(`.${featureAttributes} dt`, {
+  color: vars.color.onSurfaceVariant,
+  fontSize: appVars.fontSize.md,
+});
+globalStyle(`.${featureAttributes} dd`, {
+  margin: 0,
+  color: vars.color.onSurface,
+  fontSize: appVars.fontSize.md,
+  fontVariantNumeric: "tabular-nums",
+  overflowWrap: "anywhere",
+});
+
 export const panelTrigger = style({
   position: "absolute",
   top: "1.25rem",
@@ -609,7 +663,7 @@ export const panelTriggerLabel = style({
 });
 
 globalStyle(
-  `.${app}[data-panel-open="true"][data-panel-size="medium"] .${panelTrigger}, .${app}[data-panel-open="true"][data-panel-size="full"] .${panelTrigger}`,
+  `.${app}[data-panel-open="true"][data-panel-size="peek"] .${panelTrigger}, .${app}[data-panel-open="true"][data-panel-size="half"] .${panelTrigger}, .${app}[data-panel-open="true"][data-panel-size="full"] .${panelTrigger}`,
   {
     "@media": {
       [mobileMediaQuery]: {
@@ -629,27 +683,23 @@ globalStyle(
   },
 );
 
-globalStyle(
-  `.${app}[data-panel-open="true"][data-panel-size="medium"] .${panelTrigger}`,
-  {
-    "@media": {
-      [mobileMediaQuery]: {
-        bottom: `calc(${appVars.mobileLayout.sheetHeightMedium} + 0.75rem + env(safe-area-inset-bottom))`,
-      },
+globalStyle(`.${app}[data-panel-open="true"] .${panelTrigger}`, {
+  "@media": {
+    [mobileMediaQuery]: {
+      bottom: `calc(var(--current-sheet-height) + 0.75rem + env(safe-area-inset-bottom))`,
     },
   },
-);
+});
 
-globalStyle(
-  `.${app}[data-panel-open="true"][data-panel-size="full"] .${panelTrigger}`,
-  {
-    "@media": {
-      [mobileMediaQuery]: {
-        bottom: `calc(${appVars.mobileLayout.sheetHeightFull} + 0.75rem + env(safe-area-inset-bottom))`,
-      },
-    },
-  },
-);
+globalStyle(`.${app}[data-panel-size="peek"]`, {
+  vars: { "--current-sheet-height": appVars.mobileLayout.sheetHeightPeek },
+});
+globalStyle(`.${app}[data-panel-size="half"]`, {
+  vars: { "--current-sheet-height": appVars.mobileLayout.sheetHeightHalf },
+});
+globalStyle(`.${app}[data-panel-size="full"]`, {
+  vars: { "--current-sheet-height": appVars.mobileLayout.sheetHeightFull },
+});
 
 globalStyle(`.${app}[data-panel-open="true"] .${panelTriggerLabel}`, {
   "@media": {
@@ -687,7 +737,14 @@ export const locationSearchControl = style({
   top: "1.25rem",
   left: "1.25rem",
   zIndex: appVars.floatingControlZIndex,
-  padding: "0.75rem 0.875rem",
+  padding: 0,
+  borderRadius: vars.shape.cornerFull,
+  selectors: {
+    "&:has(input:focus-visible)": {
+      outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
+      outlineOffset: 2,
+    },
+  },
   "@media": {
     [mobileMediaQuery]: {
       top: `calc(0.75rem + ${appVars.mobileLayout.safeTop})`,
@@ -695,28 +752,130 @@ export const locationSearchControl = style({
       right: `calc(${appVars.mobileLayout.controlEdge} + ${appVars.mobileLayout.controlSize} + 0.625rem)`,
       width: "auto",
       maxWidth: "none",
-      padding: "0.625rem 0.75rem",
+      padding: 0,
     },
   },
 });
 
-/**
- * The only visible app name/title in the whole layout; everything else
- * naming this app (the `<title>`, the page's own `<h1>`) is either in the
- * browser chrome or screen-reader-only, so a sighted first-time visitor had
- * no on-screen cue for what they were looking at. Placed inside the search
- * box's own surface rather than as new floating chrome, since every map
- * corner is already claimed by other controls (see MeasurementControl's
- * own note on this) and this box is already visible, already has padding,
- * and needs no new stacking context.
- */
-export const appName = style([
-  eyebrowLabel,
-  {
-    margin: "0 0 0.375rem",
-    fontWeight: 600,
+export const locateControl = style({
+  position: "absolute",
+  top: "5rem",
+  right: "1.25rem",
+  zIndex: appVars.floatingControlZIndex,
+  "@media": {
+    [mobileMediaQuery]: {
+      top: `calc(4.5rem + ${appVars.mobileLayout.safeTop})`,
+      right: appVars.mobileLayout.controlEdge,
+    },
   },
-]);
+});
+
+export const locateError = style({
+  position: "absolute",
+  top: "8rem",
+  right: "1.25rem",
+  zIndex: appVars.floatingControlZIndex,
+  maxWidth: "min(18rem, calc(100% - 2rem))",
+  padding: "0.625rem 0.875rem",
+  borderRadius: vars.shape.cornerMedium,
+  background: `color-mix(in srgb, ${vars.color.surfaceContainerHigh} 96%, transparent)`,
+  backdropFilter: "blur(12px)",
+  boxShadow: vars.elevation.shadow2,
+  color: vars.color.onSurface,
+  fontSize: appVars.fontSize.sm,
+  "@media": {
+    [mobileMediaQuery]: {
+      top: `calc(8rem + ${appVars.mobileLayout.safeTop})`,
+      right: appVars.mobileLayout.controlEdge,
+    },
+  },
+});
+
+export const coordinateReadout = style({
+  position: "absolute",
+  left: "1rem",
+  bottom: "3.25rem",
+  zIndex: appVars.floatingControlZIndex,
+  padding: "0.375rem 0.625rem",
+  borderRadius: vars.shape.cornerSmall,
+  background: `color-mix(in srgb, ${vars.color.surfaceContainerHigh} 92%, transparent)`,
+  backdropFilter: "blur(10px)",
+  boxShadow: vars.elevation.shadow1,
+  color: vars.color.onSurfaceVariant,
+  fontSize: appVars.fontSize.xs,
+  fontVariantNumeric: "tabular-nums",
+  pointerEvents: "none",
+  "@media": {
+    [mobileMediaQuery]: {
+      left: "0.75rem",
+      bottom: `calc(3.25rem + env(safe-area-inset-bottom))`,
+    },
+  },
+});
+
+globalStyle(`.${app} .leaflet-control-zoom`, {
+  "@media": {
+    [mobileMediaQuery]: { display: "none" },
+  },
+});
+
+globalStyle(`.${app} .leaflet-control-scale-line`, {
+  border: `1px solid ${vars.color.outlineVariant}`,
+  borderTop: `2px solid ${vars.color.onSurface}`,
+  borderRadius: vars.shape.cornerSmall,
+  background: `color-mix(in srgb, ${vars.color.surfaceContainerHigh} 92%, transparent)`,
+  boxShadow: vars.elevation.shadow1,
+  color: vars.color.onSurface,
+  fontSize: appVars.fontSize.xs,
+  fontVariantNumeric: "tabular-nums",
+});
+
+export const legendChip = style({
+  position: "absolute",
+  left: "50%",
+  bottom: `calc(1.25rem + env(safe-area-inset-bottom))`,
+  zIndex: appVars.floatingControlZIndex,
+  display: "flex",
+  alignItems: "center",
+  gap: "0.625rem",
+  width: "max-content",
+  maxWidth: "calc(100% - 2rem)",
+  minHeight: "48px",
+  padding: "0.625rem 0.875rem",
+  border: 0,
+  borderRadius: vars.shape.cornerFull,
+  background: `color-mix(in srgb, ${vars.color.surfaceContainerHigh} 94%, transparent)`,
+  backdropFilter: "blur(16px)",
+  boxShadow: vars.elevation.shadow2,
+  color: vars.color.onSurface,
+  font: "inherit",
+  cursor: "pointer",
+  transform: "translateX(-50%)",
+  selectors: {
+    "&:hover": { background: vars.color.surfaceContainerHover },
+    "&:focus-visible": {
+      outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
+      outlineOffset: 2,
+    },
+  },
+});
+
+export const legendChipLabel = style({
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  fontSize: appVars.fontSize.md,
+  fontWeight: 600,
+});
+
+export const legendRamp = style({
+  flexShrink: 0,
+  width: "3.25rem",
+  height: "0.625rem",
+  borderRadius: vars.shape.cornerFull,
+  background: fallbackVar(legendRampBackground, vars.color.primary),
+});
 
 export const outOfCoverage = style({
   display: "block",

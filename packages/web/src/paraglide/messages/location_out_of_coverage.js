@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "{location} is outside South Africa." |
+* | "{location} is outside the current map coverage." |
 *
 * @param {Location_Out_Of_CoverageInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -18,6 +18,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 */
 export const location_out_of_coverage = /** @type {((inputs: Location_Out_Of_CoverageInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Location_Out_Of_CoverageInputs, { locale?: "en" | "af" }, {}>} */ ((i, options = {}) => {
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ (`${i?.location} is buite Suid-Afrika.`)
-	return /** @type {LocalizedString} */ (`${i?.location} is outside South Africa.`)
+	if (locale === "af") return /** @type {LocalizedString} */ (`${i?.location} is buite die huidige kaartdekking.`)
+	return /** @type {LocalizedString} */ (`${i?.location} is outside the current map coverage.`)
 });

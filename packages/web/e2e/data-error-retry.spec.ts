@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 import { E2E } from "./selectors";
-import { mockFailOnceThenSucceed } from "./ui";
+import { ensurePanelOpen, mockFailOnceThenSucceed } from "./ui";
 
 const MAP_GEOMETRY_SELECTOR =
   ".leaflet-overlay-pane canvas, .leaflet-container path.leaflet-interactive";
@@ -15,6 +15,8 @@ test.describe("data load error and retry", () => {
     );
 
     await page.goto("/");
+    await ensurePanelOpen(page);
+    await page.getByTestId(E2E.layerToggle.townships).check();
 
     const alert = page.getByTestId(E2E.dataLoadError);
     await expect(alert).toBeVisible();

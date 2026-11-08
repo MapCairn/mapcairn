@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "Karta: spatial legacy map of Gauteng and Cape Town" |
+* | "Karta \| Interactive map" |
 *
 * @param {App_HeadingInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const app_heading = /** @type {((inputs?: App_HeadingInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<App_HeadingInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Karta: ruimtelike erfeniskaart van Gauteng en Kaapstad")
-	return /** @type {LocalizedString} */ ("Karta: spatial legacy map of Gauteng and Cape Town")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Karta | Interaktiewe kaart")
+	return /** @type {LocalizedString} */ ("Karta | Interactive map")
 });

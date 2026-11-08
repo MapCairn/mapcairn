@@ -2,7 +2,7 @@ type __ParaglideMessageMetadata<Inputs, Options, Markup extends import("../runti
 /**
 * | output |
 * | --- |
-* | "Karta: spatial legacy map of Gauteng and Cape Town" |
+* | "Karta \| Interactive map" |
 *
 */
 export const app_heading: ((inputs?: App_HeadingInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<App_HeadingInputs, { locale?: "en" | "af" }, {}>;
@@ -13,6 +13,13 @@ export const app_heading: ((inputs?: App_HeadingInputs, options?: { locale?: "en
 *
 */
 export const app_title: ((inputs?: App_TitleInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<App_TitleInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Use {label} basemap" |
+*
+*/
+export const basemap_option_aria_label: ((inputs: Basemap_Option_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Basemap_Option_Aria_LabelInputs, { locale?: "en" | "af" }, {}>;
 /**
 * | output |
 * | --- |
@@ -198,6 +205,13 @@ export const feature_browser_filter_placeholder: ((inputs?: Feature_Browser_Filt
 /**
 * | output |
 * | --- |
+* | "Feature details" |
+*
+*/
+export const feature_details_title: ((inputs?: Feature_Details_TitleInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Feature_Details_TitleInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Language" |
 *
 */
@@ -240,10 +254,38 @@ export const layer_download_aria_label: ((inputs: Layer_Download_Aria_LabelInput
 /**
 * | output |
 * | --- |
+* | "Download" |
+*
+*/
+export const layer_download_button: ((inputs?: Layer_Download_ButtonInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Download_ButtonInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "CSV" |
+*
+*/
+export const layer_download_csv: ((inputs?: Layer_Download_CsvInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Download_CsvInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Download {label} data (CSV)" |
 *
 */
 export const layer_download_csv_aria_label: ((inputs: Layer_Download_Csv_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Download_Csv_Aria_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "GeoJSON" |
+*
+*/
+export const layer_download_geojson: ((inputs?: Layer_Download_GeojsonInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Download_GeojsonInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Download options for {label}" |
+*
+*/
+export const layer_download_menu_label: ((inputs: Layer_Download_Menu_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Download_Menu_LabelInputs, { locale?: "en" | "af" }, {}>;
 /**
 * | output |
 * | --- |
@@ -275,6 +317,34 @@ export const layer_group_transit_networks_title: ((inputs?: Layer_Group_Transit_
 /**
 * | output |
 * | --- |
+* | "Geometry" |
+*
+*/
+export const layer_metadata_geometry: ((inputs?: Layer_Metadata_GeometryInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Metadata_GeometryInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Layer details" |
+*
+*/
+export const layer_metadata_label: ((inputs?: Layer_Metadata_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Metadata_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Legend values" |
+*
+*/
+export const layer_metadata_legend: ((inputs?: Layer_Metadata_LegendInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Metadata_LegendInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Styled by" |
+*
+*/
+export const layer_metadata_property: ((inputs?: Layer_Metadata_PropertyInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Metadata_PropertyInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Straight-line distance from each recognised township area to the nearest formal transit route." |
 *
 */
@@ -289,10 +359,38 @@ export const layer_nearest_transit_label: ((inputs?: Layer_Nearest_Transit_Label
 /**
 * | output |
 * | --- |
+* | "Opacity for {label}" |
+*
+*/
+export const layer_opacity_label: ((inputs: Layer_Opacity_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Opacity_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Rapid rail" |
 *
 */
 export const layer_rapid_rail_label: ((inputs?: Layer_Rapid_Rail_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Rapid_Rail_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "No layers match this search." |
+*
+*/
+export const layer_search_empty: ((inputs?: Layer_Search_EmptyInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Search_EmptyInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Filter layers" |
+*
+*/
+export const layer_search_label: ((inputs?: Layer_Search_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Search_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Search layers" |
+*
+*/
+export const layer_search_placeholder: ((inputs?: Layer_Search_PlaceholderInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Layer_Search_PlaceholderInputs, { locale?: "en" | "af" }, {}>;
 /**
 * | output |
 * | --- |
@@ -408,6 +506,20 @@ export const loading_map: ((inputs?: Loading_MapInputs, options?: { locale?: "en
 /**
 * | output |
 * | --- |
+* | "Your location could not be determined." |
+*
+*/
+export const locate_error: ((inputs?: Locate_ErrorInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Locate_ErrorInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Locate me" |
+*
+*/
+export const locate_me: ((inputs?: Locate_MeInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Locate_MeInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Map location actions" |
 *
 */
@@ -443,17 +555,24 @@ export const location_context_menu_search_here: ((inputs?: Location_Context_Menu
 /**
 * | output |
 * | --- |
-* | "{location} is outside South Africa." |
+* | "{location} is outside the current map coverage." |
 *
 */
 export const location_out_of_coverage: ((inputs: Location_Out_Of_CoverageInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Location_Out_Of_CoverageInputs, { locale?: "en" | "af" }, {}>;
 /**
 * | output |
 * | --- |
-* | "Map of South African township access to job centres" |
+* | "Interactive map" |
 *
 */
 export const map_aria_label: ((inputs?: Map_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Map_Aria_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Map coordinates" |
+*
+*/
+export const map_coordinates_label: ((inputs?: Map_Coordinates_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Map_Coordinates_LabelInputs, { locale?: "en" | "af" }, {}>;
 /**
 * | output |
 * | --- |
@@ -534,7 +653,7 @@ export const measurement_toggle: ((inputs?: Measurement_ToggleInputs, options?: 
 /**
 * | output |
 * | --- |
-* | "Visualising how apartheid-era spatial planning still shapes commute times and access to jobs in Gauteng and Cape Town." |
+* | "Explore geographic data on an interactive map. Choose layers, inspect features and compare map styles." |
 *
 */
 export const meta_description: ((inputs?: Meta_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Meta_DescriptionInputs, { locale?: "en" | "af" }, {}>;
@@ -632,7 +751,7 @@ export const search_no_results: ((inputs?: Search_No_ResultsInputs, options?: { 
 /**
 * | output |
 * | --- |
-* | "Search town, suburb or station" |
+* | "Search places" |
 *
 */
 export const search_placeholder: ((inputs?: Search_PlaceholderInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Search_PlaceholderInputs, { locale?: "en" | "af" }, {}>;
@@ -653,6 +772,27 @@ export const search_unavailable: ((inputs?: Search_UnavailableInputs, options?: 
 /**
 * | output |
 * | --- |
+* | "Basemap" |
+*
+*/
+export const settings_basemap_label: ((inputs?: Settings_Basemap_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Settings_Basemap_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Close map settings" |
+*
+*/
+export const settings_close: ((inputs?: Settings_CloseInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Settings_CloseInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Map settings" |
+*
+*/
+export const settings_open: ((inputs?: Settings_OpenInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Settings_OpenInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Privacy policy" |
 *
 */
@@ -667,10 +807,66 @@ export const settings_region_label: ((inputs?: Settings_Region_LabelInputs, opti
 /**
 * | output |
 * | --- |
+* | "Theme" |
+*
+*/
+export const settings_theme_label: ((inputs?: Settings_Theme_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Settings_Theme_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Map settings" |
+*
+*/
+export const settings_title: ((inputs?: Settings_TitleInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Settings_TitleInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Skip to map information" |
 *
 */
 export const skip_to_map_information: ((inputs?: Skip_To_Map_InformationInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Skip_To_Map_InformationInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Dark" |
+*
+*/
+export const theme_dark: ((inputs?: Theme_DarkInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Theme_DarkInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Dark theme" |
+*
+*/
+export const theme_dark_aria_label: ((inputs?: Theme_Dark_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Theme_Dark_Aria_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Light" |
+*
+*/
+export const theme_light: ((inputs?: Theme_LightInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Theme_LightInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "Light theme" |
+*
+*/
+export const theme_light_aria_label: ((inputs?: Theme_Light_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Theme_Light_Aria_LabelInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "System" |
+*
+*/
+export const theme_system: ((inputs?: Theme_SystemInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Theme_SystemInputs, { locale?: "en" | "af" }, {}>;
+/**
+* | output |
+* | --- |
+* | "System theme" |
+*
+*/
+export const theme_system_aria_label: ((inputs?: Theme_System_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Theme_System_Aria_LabelInputs, { locale?: "en" | "af" }, {}>;
 /**
 * | output |
 * | --- |
@@ -919,6 +1115,7 @@ export const webmcp_toggle_layer_unknown: ((inputs: Webmcp_Toggle_Layer_UnknownI
 export type LocalizedString = import("../runtime.js").LocalizedString;
 export type App_HeadingInputs = {};
 export type App_TitleInputs = {};
+export type Basemap_Option_Aria_LabelInputs = { label: NonNullable<unknown> };
 export type Bucket_Car_Time_LongInputs = {};
 export type Bucket_Car_Time_ModerateInputs = {};
 export type Bucket_Car_Time_ShortInputs = {};
@@ -945,20 +1142,33 @@ export type Error_Boundary_Not_Found_TitleInputs = {};
 export type Error_Boundary_ReloadInputs = {};
 export type Feature_Browser_Filter_LabelInputs = {};
 export type Feature_Browser_Filter_PlaceholderInputs = {};
+export type Feature_Details_TitleInputs = {};
 export type Language_Toggle_LabelInputs = {};
 export type Layer_Bus_LabelInputs = {};
 export type Layer_Bus_Rapid_Transit_LabelInputs = {};
 export type Layer_Commuter_Rail_LabelInputs = {};
 export type Layer_Csv_Export_ErrorInputs = {};
 export type Layer_Download_Aria_LabelInputs = { label: NonNullable<unknown> };
+export type Layer_Download_ButtonInputs = {};
+export type Layer_Download_CsvInputs = {};
 export type Layer_Download_Csv_Aria_LabelInputs = { label: NonNullable<unknown> };
+export type Layer_Download_GeojsonInputs = {};
+export type Layer_Download_Menu_LabelInputs = { label: NonNullable<unknown> };
 export type Layer_Failed_BadgeInputs = {};
 export type Layer_Group_Access_To_Opportunity_DescriptionInputs = {};
 export type Layer_Group_Access_To_Opportunity_TitleInputs = {};
 export type Layer_Group_Transit_Networks_TitleInputs = {};
+export type Layer_Metadata_GeometryInputs = {};
+export type Layer_Metadata_LabelInputs = {};
+export type Layer_Metadata_LegendInputs = {};
+export type Layer_Metadata_PropertyInputs = {};
 export type Layer_Nearest_Transit_DescriptionInputs = {};
 export type Layer_Nearest_Transit_LabelInputs = {};
+export type Layer_Opacity_LabelInputs = { label: NonNullable<unknown> };
 export type Layer_Rapid_Rail_LabelInputs = {};
+export type Layer_Search_EmptyInputs = {};
+export type Layer_Search_LabelInputs = {};
+export type Layer_Search_PlaceholderInputs = {};
 export type Layer_Spatial_Burden_DescriptionInputs = {};
 export type Layer_Spatial_Burden_LabelInputs = {};
 export type Layer_Townships_DescriptionInputs = {};
@@ -975,6 +1185,8 @@ export type Legend_TitleInputs = {};
 export type Legend_Transit_Colors_Aria_LabelInputs = {};
 export type Legend_Transit_RoutesInputs = {};
 export type Loading_MapInputs = {};
+export type Locate_ErrorInputs = {};
+export type Locate_MeInputs = {};
 export type Location_Context_Menu_Aria_LabelInputs = {};
 export type Location_Context_Menu_FailedInputs = {};
 export type Location_Context_Menu_LoadingInputs = {};
@@ -982,6 +1194,7 @@ export type Location_Context_Menu_No_AddressInputs = {};
 export type Location_Context_Menu_Search_HereInputs = {};
 export type Location_Out_Of_CoverageInputs = { location: NonNullable<unknown> };
 export type Map_Aria_LabelInputs = {};
+export type Map_Coordinates_LabelInputs = {};
 export type Map_Selection_AnnouncementInputs = { label: NonNullable<unknown> };
 export type Measurement_Aria_LabelInputs = {};
 export type Measurement_Back_To_MapInputs = {};
@@ -1010,9 +1223,20 @@ export type Search_No_ResultsInputs = {};
 export type Search_PlaceholderInputs = {};
 export type Search_SearchingInputs = {};
 export type Search_UnavailableInputs = {};
+export type Settings_Basemap_LabelInputs = {};
+export type Settings_CloseInputs = {};
+export type Settings_OpenInputs = {};
 export type Settings_Privacy_Link_LabelInputs = {};
 export type Settings_Region_LabelInputs = {};
+export type Settings_Theme_LabelInputs = {};
+export type Settings_TitleInputs = {};
 export type Skip_To_Map_InformationInputs = {};
+export type Theme_DarkInputs = {};
+export type Theme_Dark_Aria_LabelInputs = {};
+export type Theme_LightInputs = {};
+export type Theme_Light_Aria_LabelInputs = {};
+export type Theme_SystemInputs = {};
+export type Theme_System_Aria_LabelInputs = {};
 export type Township_Popup_Car_TimeInputs = {};
 export type Township_Popup_DistanceInputs = {};
 export type Township_Popup_Job_CenterInputs = {};

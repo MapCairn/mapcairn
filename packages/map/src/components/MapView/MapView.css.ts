@@ -186,6 +186,12 @@ export const areaLabelSecondary = style({
   opacity: 0.94,
 });
 
+export const areaLabelCollisionHidden = style({});
+
+globalStyle(`.${areaLabelCollisionHidden}`, {
+  display: "none !important",
+});
+
 /**
  * Marker classes toggled directly on the Leaflet map container's DOM
  * element (via `classList.toggle`, not a React `className` prop; see

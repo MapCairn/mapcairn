@@ -23,6 +23,12 @@ describe("LayerToggles", () => {
     vi.restoreAllMocks();
   });
 
+  function openDownloadMenu(layerId: string) {
+    fireEvent.click(
+      screen.getByTestId(`layer-toggle-${layerId}-download-menu-trigger`),
+    );
+  }
+
   it("marks an unavailable layer as unavailable and disabled, with a badge", () => {
     const unavailableLayer: Layer = {
       id: "myciti",
@@ -119,6 +125,56 @@ describe("LayerToggles", () => {
     expect(onToggle).toHaveBeenCalledWith("rapid-rail");
   });
 
+  it("filters layers by their labels and descriptions", () => {
+    render(<LayerToggles visibleLayerIds={[]} onToggle={vi.fn()} />);
+
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: /filter layers/i }),
+      {
+        target: { value: "job centre" },
+      },
+    );
+
+    expect(
+      screen.getByTestId("layer-toggle-townships-row"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("layer-toggle-rapid-rail-row"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("collapses a category group without changing other groups", () => {
+    render(<LayerToggles visibleLayerIds={[]} onToggle={vi.fn()} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /accessibility overlays/i }),
+    );
+
+    expect(
+      screen.queryByTestId("layer-toggle-townships-row"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("layer-toggle-rapid-rail-row"),
+    ).toBeInTheDocument();
+  });
+
+  it("forwards opacity changes for a layer", () => {
+    const onOpacityChange = vi.fn();
+    render(
+      <LayerToggles
+        visibleLayerIds={[]}
+        onToggle={vi.fn()}
+        onOpacityChange={onOpacityChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId("layer-toggle-rapid-rail-opacity"), {
+      target: { value: "0.5" },
+    });
+
+    expect(onOpacityChange).toHaveBeenCalledWith("rapid-rail", 0.5);
+  });
+
   it("shows a layer's description when it has one", () => {
     const layerWithDescription: Layer = {
       id: "townships",
@@ -207,6 +263,7 @@ describe("LayerToggles", () => {
 
   it("links to an available layer's data source as a GeoJSON download", () => {
     render(<LayerToggles visibleLayerIds={[]} onToggle={vi.fn()} />);
+    openDownloadMenu("rapid-rail");
 
     const download = screen.getByRole("link", {
       name: /download rapid rail data/i,
@@ -238,6 +295,7 @@ describe("LayerToggles", () => {
     vi.spyOn(registry, "getLayerGroups").mockReturnValue([group]);
 
     render(<LayerToggles visibleLayerIds={[]} onToggle={vi.fn()} />);
+    openDownloadMenu("combined");
 
     const downloads = screen.getAllByRole("link", {
       name: /download combined data/i,
@@ -277,6 +335,7 @@ describe("LayerToggles", () => {
   it("doesn't toggle the layer when its download link is clicked", () => {
     const onToggle = vi.fn();
     render(<LayerToggles visibleLayerIds={[]} onToggle={onToggle} />);
+    openDownloadMenu("rapid-rail");
 
     fireEvent.click(
       screen.getByRole("link", { name: /download rapid rail data/i }),
@@ -293,6 +352,7 @@ describe("LayerToggles", () => {
 
     it("shows a CSV download button alongside the GeoJSON download link", () => {
       render(<LayerToggles visibleLayerIds={[]} onToggle={vi.fn()} />);
+      openDownloadMenu("rapid-rail");
 
       expect(
         screen.getByRole("button", {
@@ -316,6 +376,7 @@ describe("LayerToggles", () => {
         .mockImplementation(() => {});
 
       render(<LayerToggles visibleLayerIds={[]} onToggle={vi.fn()} />);
+      openDownloadMenu("rapid-rail");
       fireEvent.click(
         screen.getByRole("button", {
           name: /download rapid rail data \(csv\)/i,
@@ -344,6 +405,7 @@ describe("LayerToggles", () => {
         .mockImplementation(() => {});
 
       render(<LayerToggles visibleLayerIds={[]} onToggle={vi.fn()} />);
+      openDownloadMenu("rapid-rail");
       fireEvent.click(
         screen.getByRole("button", {
           name: /download rapid rail data \(csv\)/i,
@@ -365,6 +427,7 @@ describe("LayerToggles", () => {
       coreMocks.fetchFeatureCollection.mockReturnValue(new Promise(() => {}));
 
       render(<LayerToggles visibleLayerIds={[]} onToggle={onToggle} />);
+      openDownloadMenu("rapid-rail");
       fireEvent.click(
         screen.getByRole("button", {
           name: /download rapid rail data \(csv\)/i,

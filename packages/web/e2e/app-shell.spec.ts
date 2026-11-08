@@ -2,10 +2,6 @@ import { expect, test } from "./fixtures";
 import { E2E } from "./selectors";
 import { ensurePanelOpen } from "./ui";
 
-const MAP_GEOMETRY_SELECTOR =
-  ".leaflet-overlay-pane canvas, .leaflet-container path.leaflet-interactive";
-const MOBILE_BREAKPOINT_PX = 768;
-
 test.describe("app shell", () => {
   test("loads with the expected landmarks and a rendered map", async ({
     page,
@@ -31,7 +27,9 @@ test.describe("app shell", () => {
     await expect(page.getByTestId(E2E.locationSearchInput)).toBeVisible();
 
     await expect(page.locator(".leaflet-container")).toBeVisible();
-    await expect(page.locator(MAP_GEOMETRY_SELECTOR).first()).toBeVisible();
+    await expect(page.locator(".leaflet-control-scale")).toBeVisible();
+    await expect(page.getByTestId(E2E.layerToggle.townships)).toBeHidden();
+    await expect(page.getByTestId(E2E.mapView)).toBeVisible();
     expect(
       consoleErrors.filter((message) =>
         /react error #418|hydration|did not match/i.test(message),
@@ -64,17 +62,33 @@ test.describe("app shell", () => {
 
     await ensurePanelOpen(page);
 
-    await expect(page.getByTestId(E2E.layerToggle.townships)).toBeChecked();
+    const townships = page.getByTestId(E2E.layerToggle.townships);
+    await expect(townships).not.toBeChecked();
+    await townships.check();
 
-    const width = page.viewportSize()?.width ?? 0;
-    if (width > MOBILE_BREAKPOINT_PX) {
-      await expect(page.getByTestId(E2E.desktopLegend)).toBeVisible();
-      return;
-    }
+    await page.getByTestId(E2E.panelToggle).click();
+    const legendChip = page.getByTestId(E2E.legendChip);
+    await expect(legendChip).toBeVisible();
+    await legendChip.click();
+    await expect(
+      page.getByRole("list", { name: /active map layers legend/i }),
+    ).toBeVisible();
+  });
 
-    const legendTrigger = page.getByTestId(E2E.mobileLegendTrigger);
-    await expect(legendTrigger).toBeVisible();
-    await legendTrigger.click();
-    await expect(page.getByTestId(E2E.mobileLegendContent)).toBeVisible();
+  test("keeps application chrome domain-neutral before a layer is selected", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Karta | Interactive map",
+    );
+    await expect(page.getByTestId(E2E.locationSearchInput)).toHaveAttribute(
+      "placeholder",
+      "Search places",
+    );
+    const visibleCopy = await page
+      .locator("body")
+      .evaluate((body) => body.innerText);
+    expect(visibleCopy).not.toMatch(/apartheid|gauteng|cape town|township/i);
   });
 });

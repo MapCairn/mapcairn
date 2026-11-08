@@ -7,14 +7,8 @@ test.describe("shareable map links", () => {
     page,
   }) => {
     await page.goto("/");
-
-    // Switched before the panel opens: on a mobile viewport the open panel
-    // is a bottom sheet that covers the settings trigger's corner.
-    await page.getByTestId(E2E.settingsMenuTrigger).click();
-    await page.getByTestId(E2E.basemapOption.satellite).click();
-    await page.keyboard.press("Escape");
-
     await ensurePanelOpen(page);
+    await page.getByTestId(E2E.basemapOption.satellite).click();
 
     const rapidRailCheckbox = page.getByTestId(E2E.layerToggle.rapidRail);
     await rapidRailCheckbox.check();
@@ -23,7 +17,7 @@ test.describe("shareable map links", () => {
 
     await expect
       .poll(() => new URL(page.url()).searchParams.get("layers"))
-      .toBe("townships,rapid-rail");
+      .toBe("rapid-rail");
     await expect
       .poll(() => new URL(page.url()).searchParams.get("basemap"))
       .toBe("satellite");
@@ -53,6 +47,10 @@ test.describe("shareable map links", () => {
   }) => {
     await page.goto("/");
 
+    await ensurePanelOpen(page);
+    await page.getByTestId(E2E.layerToggle.townships).check();
+    await page.getByTestId(E2E.panelToggle).click();
+
     const searchInput = page.getByTestId(E2E.locationSearchInput);
     await searchInput.focus();
     await searchInput.fill("Botshabelo");
@@ -66,9 +64,9 @@ test.describe("shareable map links", () => {
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
 
-    const popup = page.getByTestId(E2E.townshipPopup);
-    await expect(popup).toBeVisible();
-    await expect(popup.locator("h2")).toHaveText("Botshabelo");
+    const details = page.getByTestId(E2E.featureDetails);
+    await expect(details).toBeVisible();
+    await expect(details.locator("h2")).toHaveText("Botshabelo");
 
     await expect
       .poll(() => new URL(page.url()).searchParams.get("feature"))
@@ -77,9 +75,9 @@ test.describe("shareable map links", () => {
     const sharedUrl = page.url();
     await page.goto(sharedUrl);
 
-    const restoredPopup = page.getByTestId(E2E.townshipPopup);
-    await expect(restoredPopup).toBeVisible({ timeout: 15_000 });
-    await expect(restoredPopup.locator("h2")).toHaveText("Botshabelo");
+    const restoredDetails = page.getByTestId(E2E.featureDetails);
+    await expect(restoredDetails).toBeVisible({ timeout: 15_000 });
+    await expect(restoredDetails.locator("h2")).toHaveText("Botshabelo");
   });
 
   test("a plain visit with no query string carries no permalink params", async ({

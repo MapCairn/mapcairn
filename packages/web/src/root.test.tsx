@@ -88,7 +88,7 @@ describe("root meta", () => {
     const tags = meta({} as never);
 
     expect(tags).toContainEqual({
-      title: "Karta: spatial legacy map of Gauteng and Cape Town",
+      title: "Karta | Interactive map",
     });
     expect(tags).toContainEqual(
       expect.objectContaining({ name: "description" }),
@@ -146,7 +146,7 @@ describe("root meta", () => {
     });
   });
 
-  it("emits Dataset JSON-LD structured data describing the site", () => {
+  it("emits domain-neutral mapping-application JSON-LD", () => {
     const tags = meta({} as never);
     const jsonLdTag = tags.find((tag) => "script:ld+json" in tag) as
       | { "script:ld+json": Record<string, unknown> }
@@ -155,7 +155,8 @@ describe("root meta", () => {
     expect(jsonLdTag).toBeDefined();
     expect(jsonLdTag?.["script:ld+json"]).toMatchObject({
       "@context": "https://schema.org",
-      "@type": "Dataset",
+      "@type": "WebApplication",
+      applicationCategory: "MappingApplication",
       url: "https://karta.timothybrits.co.za",
     });
   });

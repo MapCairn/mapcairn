@@ -3,8 +3,8 @@ import {
   fetchFeatureCollection,
   type Layer,
 } from "@karta/core";
-import { Download, FileSpreadsheet } from "lucide-react";
-import { Fragment, memo, type ReactNode, useMemo, useState } from "react";
+import { ChevronDown, Download, FileSpreadsheet } from "lucide-react";
+import { Fragment, memo, useMemo, useState } from "react";
 import { getLayer, getLayerGroups } from "../../layers/registry";
 import { m } from "../../paraglide/messages.js";
 import * as styles from "./LayerToggles.css";
@@ -37,13 +37,263 @@ function downloadBlob(blob: Blob, fileName: string): void {
 interface LayerTogglesProps {
   visibleLayerIds: string[];
   onToggle: (id: string) => void;
+  opacityByLayer?: Record<string, number>;
+  onOpacityChange?: (id: string, opacity: number) => void;
   /** Ids of layers whose data failed to load, shown with a retry hint badge. */
   failedLayerIds?: string[];
+}
+
+type CsvExportStatus = Record<string, "loading" | "error">;
+
+function layerPropertyKey(layer: Layer): string | undefined {
+  if (layer.style.kind === "choropleth") {
+    return layer.style.propertyKey;
+  }
+  return layer.style.colorClassification?.propertyKey;
+}
+
+function LayerMetadata({ layer }: { layer: Layer }) {
+  const propertyKey = layerPropertyKey(layer);
+  return (
+    <dl>
+      <div>
+        <dt>{m.layer_metadata_geometry()}</dt>
+        <dd>{layer.geometryKind}</dd>
+      </div>
+      {propertyKey ? (
+        <div>
+          <dt>{m.layer_metadata_property()}</dt>
+          <dd>{propertyKey}</dd>
+        </div>
+      ) : null}
+      {layer.style.kind === "choropleth" ? (
+        <div>
+          <dt>{m.layer_metadata_legend()}</dt>
+          <dd>
+            {layer.style.buckets.map((bucket) => bucket.label).join(", ")}
+          </dd>
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
+function LayerDownloadMenu({
+  layer,
+  open,
+  status,
+  onCsvExport,
+}: {
+  layer: Layer;
+  open: boolean;
+  status: CsvExportStatus;
+  onCsvExport: (layer: Layer, sourceIndex: number, url: string) => void;
+}) {
+  return (
+    <>
+      {layer.dataSource.map((_url, sourceIndex) => {
+        const key = csvExportKey(layer, sourceIndex);
+        return status[key] === "error" ? (
+          <span
+            key={key}
+            className={styles.badgeError}
+            role="status"
+            data-testid={`layer-toggle-${layer.id}-csv-error`}
+            data-e2e={`layer-toggle-${layer.id}-csv-error`}
+          >
+            {m.layer_csv_export_error()}
+          </span>
+        ) : null;
+      })}
+      {open ? (
+        <fieldset
+          id={`layer-toggle-${layer.id}-download-menu`}
+          className={styles.downloadMenu}
+          aria-label={m.layer_download_menu_label({ label: layer.label })}
+        >
+          <legend>{m.layer_download_menu_label({ label: layer.label })}</legend>
+          {layer.dataSource.map((url, sourceIndex) => {
+            const key = csvExportKey(layer, sourceIndex);
+            const suffix =
+              layer.dataSource.length > 1 ? ` ${sourceIndex + 1}` : "";
+            return (
+              <Fragment key={url}>
+                <a
+                  href={url}
+                  download={downloadFileName(layer, sourceIndex, "geojson")}
+                  aria-label={m.layer_download_aria_label({
+                    label: layer.label,
+                  })}
+                  data-testid={`layer-toggle-${layer.id}-download`}
+                  data-e2e={`layer-toggle-${layer.id}-download`}
+                >
+                  {m.layer_download_geojson()}
+                  {suffix}
+                </a>
+                <button
+                  type="button"
+                  aria-label={m.layer_download_csv_aria_label({
+                    label: layer.label,
+                  })}
+                  data-testid={`layer-toggle-${layer.id}-download-csv`}
+                  data-e2e={`layer-toggle-${layer.id}-download-csv`}
+                  disabled={status[key] === "loading"}
+                  onClick={() => onCsvExport(layer, sourceIndex, url)}
+                >
+                  <FileSpreadsheet aria-hidden="true" />
+                  {m.layer_download_csv()}
+                  {suffix}
+                </button>
+              </Fragment>
+            );
+          })}
+        </fieldset>
+      ) : null}
+    </>
+  );
+}
+
+function LayerRow({
+  layer,
+  visible,
+  opacity,
+  failed,
+  downloadOpen,
+  metadataOpen,
+  csvExportStatus,
+  onToggle,
+  onOpacityChange,
+  onDownloadToggle,
+  onMetadataToggle,
+  onCsvExport,
+}: {
+  layer: Layer;
+  visible: boolean;
+  opacity: number;
+  failed: boolean;
+  downloadOpen: boolean;
+  metadataOpen: boolean;
+  csvExportStatus: CsvExportStatus;
+  onToggle: (id: string) => void;
+  onOpacityChange?: (id: string, opacity: number) => void;
+  onDownloadToggle: (id: string) => void;
+  onMetadataToggle: (id: string, open: boolean) => void;
+  onCsvExport: (layer: Layer, sourceIndex: number, url: string) => void;
+}) {
+  const testId = `layer-toggle-${layer.id}`;
+  const labelId = `${testId}-label`;
+  const descriptionId = `${testId}-description`;
+  return (
+    <li>
+      <div
+        className={styles.row}
+        data-unavailable={layer.available ? undefined : "true"}
+        data-testid={`${testId}-row`}
+        data-e2e={`${testId}-row`}
+      >
+        <div className={styles.rowMain}>
+          <label className={styles.rowLabel}>
+            <input
+              type="checkbox"
+              className={styles.checkbox}
+              data-testid={testId}
+              data-e2e={testId}
+              checked={visible}
+              disabled={!layer.available}
+              onChange={() => onToggle(layer.id)}
+              aria-labelledby={labelId}
+              aria-describedby={layer.description ? descriptionId : undefined}
+            />
+            <span className={styles.label} id={labelId}>
+              {layer.label}
+            </span>
+            {!layer.available ? (
+              <span className={styles.badge}>
+                {m.layer_unavailable_badge()}
+              </span>
+            ) : null}
+            {layer.available && failed ? (
+              <span
+                className={styles.badgeError}
+                role="status"
+                data-testid={`${testId}-error`}
+                data-e2e={`${testId}-error`}
+              >
+                {m.layer_failed_badge()}
+              </span>
+            ) : null}
+          </label>
+          {layer.available ? (
+            <button
+              type="button"
+              className={styles.downloadToggle}
+              aria-expanded={downloadOpen}
+              aria-controls={`${testId}-download-menu`}
+              data-testid={`${testId}-download-menu-trigger`}
+              data-e2e={`${testId}-download-menu-trigger`}
+              onClick={() => onDownloadToggle(layer.id)}
+            >
+              {m.layer_download_button()}
+              <Download aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+        {layer.description ? (
+          <p
+            className={styles.description}
+            id={descriptionId}
+            data-testid={descriptionId}
+            data-e2e={descriptionId}
+          >
+            {layer.description}
+          </p>
+        ) : null}
+        {layer.available ? (
+          <label className={styles.opacityControl}>
+            <span>{m.layer_opacity_label({ label: layer.label })}</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={opacity}
+              aria-label={m.layer_opacity_label({ label: layer.label })}
+              data-testid={`${testId}-opacity`}
+              data-e2e={`${testId}-opacity`}
+              onChange={(event) =>
+                onOpacityChange?.(layer.id, Number(event.currentTarget.value))
+              }
+            />
+          </label>
+        ) : null}
+        <details
+          className={styles.metadata}
+          open={metadataOpen}
+          onToggle={(event) =>
+            onMetadataToggle(layer.id, event.currentTarget.open)
+          }
+        >
+          <summary>{m.layer_metadata_label()}</summary>
+          <LayerMetadata layer={layer} />
+        </details>
+        {layer.available ? (
+          <LayerDownloadMenu
+            layer={layer}
+            open={downloadOpen}
+            status={csvExportStatus}
+            onCsvExport={onCsvExport}
+          />
+        ) : null}
+      </div>
+    </li>
+  );
 }
 
 function LayerTogglesComponent({
   visibleLayerIds,
   onToggle,
+  opacityByLayer = {},
+  onOpacityChange,
   failedLayerIds = [],
 }: LayerTogglesProps) {
   /**
@@ -73,6 +323,12 @@ function LayerTogglesComponent({
   const [csvExportStatus, setCsvExportStatus] = useState<
     Record<string, "loading" | "error">
   >({});
+  const [filter, setFilter] = useState("");
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<string[]>([]);
+  const [metadataLayerIds, setMetadataLayerIds] = useState<string[]>([]);
+  const [downloadMenuLayerId, setDownloadMenuLayerId] = useState<string | null>(
+    null,
+  );
 
   async function handleCsvExport(
     layer: Layer,
@@ -99,150 +355,105 @@ function LayerTogglesComponent({
     }
   }
 
-  function renderLayer(layerId: string) {
-    const layer = layersById.get(layerId);
-    /* v8 ignore next 3 -- unreachable: every layer group's layerIds is drawn from the same registry, so layersById always has a match */
-    if (!layer) {
-      return null;
-    }
-    const layerTestId = `layer-toggle-${layer.id}`;
-    const labelId = `${layerTestId}-label`;
-    const descriptionId = `${layerTestId}-description`;
-    const failed = failedLayerIds.includes(layer.id);
-
-    /**
-     * Built as two flat arrays (rather than nested inline `.map`s) so every
-     * source's download link + CSV button pair can be grouped inside one
-     * `.downloads` wrapper; `margin-left: auto` on that single wrapper
-     * pushes the whole group to the row's right edge, where the same rule
-     * applied to each icon individually split the row's free space between
-     * every auto margin instead, scattering the icons across the row.
-     * `csvErrors` stays outside that wrapper since it needs `.row`'s own
-     * `flex-wrap` (via `flex-basis: 100%`) to drop onto its own line.
-     */
-    const downloadControls: ReactNode[] = [];
-    const csvErrors: ReactNode[] = [];
-    if (layer.available) {
-      layer.dataSource.forEach((url, sourceIndex) => {
-        const csvKey = csvExportKey(layer, sourceIndex);
-        downloadControls.push(
-          <Fragment key={url}>
-            <a
-              className={styles.download}
-              href={url}
-              download={downloadFileName(layer, sourceIndex, "geojson")}
-              aria-label={m.layer_download_aria_label({ label: layer.label })}
-              data-testid={`${layerTestId}-download`}
-              data-e2e={`${layerTestId}-download`}
-            >
-              <Download aria-hidden="true" className={styles.downloadIcon} />
-            </a>
-            <button
-              type="button"
-              className={styles.download}
-              aria-label={m.layer_download_csv_aria_label({
-                label: layer.label,
-              })}
-              data-testid={`${layerTestId}-download-csv`}
-              data-e2e={`${layerTestId}-download-csv`}
-              disabled={csvExportStatus[csvKey] === "loading"}
-              onClick={() => handleCsvExport(layer, sourceIndex, url)}
-            >
-              <FileSpreadsheet
-                aria-hidden="true"
-                className={styles.downloadIcon}
-              />
-            </button>
-          </Fragment>,
-        );
-        if (csvExportStatus[csvKey] === "error") {
-          csvErrors.push(
-            <span
-              key={csvKey}
-              className={styles.badgeError}
-              role="status"
-              data-testid={`${layerTestId}-csv-error`}
-              data-e2e={`${layerTestId}-csv-error`}
-            >
-              {m.layer_csv_export_error()}
-            </span>,
-          );
-        }
-      });
-    }
-
+  function renderLayer(layer: Layer) {
     return (
-      <li key={layer.id}>
-        <div
-          className={styles.row}
-          data-unavailable={layer.available ? undefined : "true"}
-          data-testid={`${layerTestId}-row`}
-          data-e2e={`${layerTestId}-row`}
-        >
-          <label className={styles.rowLabel}>
-            <input
-              type="checkbox"
-              className={styles.checkbox}
-              data-testid={layerTestId}
-              data-e2e={layerTestId}
-              checked={visibleLayerIds.includes(layer.id)}
-              disabled={!layer.available}
-              onChange={() => onToggle(layer.id)}
-              aria-labelledby={labelId}
-              aria-describedby={layer.description ? descriptionId : undefined}
-            />
-            <span className={styles.label} id={labelId}>
-              {layer.label}
-            </span>
-            {layer.description ? (
-              <span
-                className={styles.description}
-                id={descriptionId}
-                data-testid={descriptionId}
-                data-e2e={descriptionId}
-              >
-                {layer.description}
-              </span>
-            ) : null}
-            {layer.available ? null : (
-              <span className={styles.badge}>
-                {m.layer_unavailable_badge()}
-              </span>
-            )}
-            {layer.available && failed ? (
-              <span
-                className={styles.badgeError}
-                role="status"
-                data-testid={`${layerTestId}-error`}
-                data-e2e={`${layerTestId}-error`}
-              >
-                {m.layer_failed_badge()}
-              </span>
-            ) : null}
-          </label>
-          <div className={styles.downloads}>{downloadControls}</div>
-          {csvErrors}
-        </div>
-      </li>
+      <LayerRow
+        key={layer.id}
+        layer={layer}
+        visible={visibleLayerIds.includes(layer.id)}
+        opacity={opacityByLayer[layer.id] ?? 1}
+        failed={failedLayerIds.includes(layer.id)}
+        downloadOpen={downloadMenuLayerId === layer.id}
+        metadataOpen={metadataLayerIds.includes(layer.id)}
+        csvExportStatus={csvExportStatus}
+        onToggle={onToggle}
+        onOpacityChange={onOpacityChange}
+        onDownloadToggle={(id) =>
+          setDownloadMenuLayerId(downloadMenuLayerId === id ? null : id)
+        }
+        onMetadataToggle={(id, open) =>
+          setMetadataLayerIds((current) =>
+            open
+              ? [...new Set([...current, id])]
+              : current.filter((existingId) => existingId !== id),
+          )
+        }
+        onCsvExport={handleCsvExport}
+      />
     );
   }
 
+  const filteredGroups = groups
+    .map((group) => ({
+      group,
+      layers: group.layerIds
+        .map((layerId) => layersById.get(layerId))
+        .filter((layer): layer is Layer => Boolean(layer))
+        .filter((layer) => {
+          const query = filter.trim().toLocaleLowerCase();
+          return (
+            query.length === 0 ||
+            `${layer.label} ${layer.description ?? ""}`
+              .toLocaleLowerCase()
+              .includes(query)
+          );
+        }),
+    }))
+    .filter(({ layers }) => layers.length > 0);
+
   return (
     <div className={styles.groups}>
-      {groups.map((group, index) => (
-        <Fragment key={group.id}>
-          {index > 0 ? (
-            <div className={styles.divider} aria-hidden="true" />
-          ) : null}
-          <section className={styles.group} aria-label={group.title}>
-            <h3 className={styles.groupTitle}>{group.title}</h3>
-            {group.description ? (
-              <p className={styles.groupHint}>{group.description}</p>
+      <label className={styles.searchLabel}>
+        {m.layer_search_label()}
+        <input
+          type="search"
+          value={filter}
+          placeholder={m.layer_search_placeholder()}
+          onChange={(event) => setFilter(event.currentTarget.value)}
+        />
+      </label>
+      {filteredGroups.length === 0 ? (
+        <p role="status" className={styles.groupHint}>
+          {m.layer_search_empty()}
+        </p>
+      ) : null}
+      {filteredGroups.map(({ group, layers }, index) => {
+        const collapsed = collapsedGroupIds.includes(group.id);
+        return (
+          <Fragment key={group.id}>
+            {index > 0 ? (
+              <div className={styles.divider} aria-hidden="true" />
             ) : null}
-            <ul className={styles.list}>{group.layerIds.map(renderLayer)}</ul>
-          </section>
-        </Fragment>
-      ))}
+            <section className={styles.group} aria-label={group.title}>
+              <h3 className={styles.groupTitle}>
+                <button
+                  type="button"
+                  aria-expanded={!collapsed}
+                  aria-controls={`layer-group-${group.id}`}
+                  onClick={() =>
+                    setCollapsedGroupIds((current) =>
+                      collapsed
+                        ? current.filter((id) => id !== group.id)
+                        : [...current, group.id],
+                    )
+                  }
+                >
+                  {group.title}
+                  <ChevronDown aria-hidden="true" />
+                </button>
+              </h3>
+              {group.description ? (
+                <p className={styles.groupHint}>{group.description}</p>
+              ) : null}
+              {!collapsed ? (
+                <ul className={styles.list} id={`layer-group-${group.id}`}>
+                  {layers.map((layer) => renderLayer(layer))}
+                </ul>
+              ) : null}
+            </section>
+          </Fragment>
+        );
+      })}
     </div>
   );
 }

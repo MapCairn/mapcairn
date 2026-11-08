@@ -17,10 +17,13 @@ test.describe("map feature keyboard accessibility", () => {
     await expect(searchInput).toHaveCSS("outline-style", "solid");
   });
 
-  test("searching by name and choosing a feature result opens that feature's popup, by keyboard or pointer", async ({
+  test("searching by name and choosing a feature result opens its details, by keyboard or pointer", async ({
     page,
   }) => {
     await page.goto("/");
+    await page.getByTestId(E2E.panelToggle).click();
+    await page.getByTestId(E2E.layerToggle.townships).check();
+    await page.getByTestId(E2E.panelToggle).click();
 
     const searchInput = page.getByTestId(E2E.locationSearchInput);
     await searchInput.focus();
@@ -37,7 +40,7 @@ test.describe("map feature keyboard accessibility", () => {
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
 
-    await expect(page.getByTestId(E2E.townshipPopup)).toBeVisible();
+    await expect(page.getByTestId(E2E.featureDetails)).toBeVisible();
 
     // Choosing by pointer is a separate path from the keys above. Several
     // real townships share a "Mabopane" prefix (Mabopane A, Mabopane M,
@@ -51,13 +54,9 @@ test.describe("map feature keyboard accessibility", () => {
     const selectedLabel = (await firstFeatureOption.textContent())?.trim();
     await firstFeatureOption.click();
 
-    // Leaflet's popup close animation leaves the previous (Botshabelo)
-    // popup element in the DOM for a moment after the new one is added, so
-    // `.last()`; the most recently appended, i.e. the new popup; avoids
-    // a strict-mode violation from briefly matching both.
-    await expect(
-      page.getByTestId(E2E.townshipPopup).last().locator("h2"),
-    ).toHaveText(selectedLabel ?? "");
+    await expect(page.getByTestId(E2E.featureDetails).locator("h2")).toHaveText(
+      selectedLabel ?? "",
+    );
     await expect(page.getByTestId(E2E.mapView).getByRole("status")).toHaveText(
       new RegExp(`${selectedLabel}.*selected`, "i"),
     );

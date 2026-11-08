@@ -5,14 +5,31 @@ import { type Basemap, getBasemapDefinition } from "../../constants/basemaps";
 import { useDismissableOverlay } from "../../hooks/useDismissableOverlay";
 import { BasemapToggle } from "../BasemapToggle/BasemapToggle";
 import { IconButton } from "../IconButton/IconButton";
-import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
+import {
+  ThemeToggle,
+  type ThemeToggleLabels,
+} from "../ThemeToggle/ThemeToggle";
 import * as styles from "./SettingsMenu.css";
 
+interface SettingsMenuLabels {
+  openLabel?: string;
+  closeLabel?: string;
+  title?: string;
+  basemapLabel?: string;
+  basemapOptionAriaLabel?: (label: string) => string;
+  themeLabel?: string;
+  themeOptionLabels?: ThemeToggleLabels["optionLabels"];
+  showBasemap?: boolean;
+}
+
 interface SettingsMenuProps {
+  /** Controlled visibility; omit to let the menu manage its own open state. */
+  open?: boolean;
   basemap: Basemap;
   onBasemapChange: (basemap: Basemap) => void;
   themePreference: ThemePreference;
   onThemePreferenceChange: (preference: ThemePreference) => void;
+  labels?: SettingsMenuLabels;
   /** Called whenever the menu opens or closes, e.g. so a caller can hide other overlays it would cover. */
   onOpenChange?: (open: boolean) => void;
   /**
@@ -26,14 +43,18 @@ interface SettingsMenuProps {
 
 /** A dropdown menu combining basemap and theme preference controls, plus any caller-supplied `children`. */
 export function SettingsMenu({
+  open: controlledOpen,
   basemap,
   onBasemapChange,
   themePreference,
   onThemePreferenceChange,
+  labels,
   onOpenChange,
   children,
 }: SettingsMenuProps) {
-  const [open, setOpen] = useState(false);
+  const showBasemap = labels?.showBasemap ?? true;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -41,10 +62,12 @@ export function SettingsMenu({
 
   const updateOpen = useCallback(
     (value: boolean) => {
-      setOpen(value);
+      if (controlledOpen === undefined) {
+        setInternalOpen(value);
+      }
       onOpenChangeRef.current?.(value);
     },
-    [onOpenChangeRef],
+    [controlledOpen, onOpenChangeRef],
   );
   const close = useCallback(() => updateOpen(false), [updateOpen]);
 
@@ -69,7 +92,11 @@ export function SettingsMenu({
         data-e2e="settings-menu-trigger"
         aria-expanded={open}
         aria-controls="map-settings-menu"
-        label={open ? "Close map settings" : "Map settings"}
+        label={
+          open
+            ? (labels?.closeLabel ?? "Close map settings")
+            : (labels?.openLabel ?? "Map settings")
+        }
         onClick={() => updateOpen(!open)}
       >
         {open ? <X aria-hidden="true" /> : <Settings aria-hidden="true" />}
@@ -88,19 +115,30 @@ export function SettingsMenu({
             ref={titleRef}
             tabIndex={-1}
           >
-            Map settings
+            {labels?.title ?? "Map settings"}
           </h2>
-          <BasemapToggle basemap={basemap} onChange={onBasemapChange} />
-          <p
-            className={styles.basemapHint}
-            data-testid="settings-basemap-hint"
-            aria-live="polite"
-          >
-            {getBasemapDefinition(basemap).description}
-          </p>
+          {showBasemap ? (
+            <>
+              <BasemapToggle
+                basemap={basemap}
+                onChange={onBasemapChange}
+                label={labels?.basemapLabel}
+                optionAriaLabel={labels?.basemapOptionAriaLabel}
+              />
+              <p
+                className={styles.basemapHint}
+                data-testid="settings-basemap-hint"
+                aria-live="polite"
+              >
+                {getBasemapDefinition(basemap).description}
+              </p>
+            </>
+          ) : null}
           <ThemeToggle
             preference={themePreference}
             onChange={onThemePreferenceChange}
+            label={labels?.themeLabel}
+            optionLabels={labels?.themeOptionLabels}
           />
           {children}
         </section>

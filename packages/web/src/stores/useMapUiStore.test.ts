@@ -11,9 +11,10 @@ describe("useMapUiStore", () => {
   it("initializes with default state", () => {
     const state = useMapUiStore.getState();
     expect(state).toMatchObject({
-      visibleLayerIds: ["townships"],
+      visibleLayerIds: [],
       basemap: "positron",
-      panelOpen: false,
+      activeSurface: null,
+      sheetDetent: "half",
       panelView: "layers",
       selectedFeatureId: null,
     });
@@ -31,6 +32,29 @@ describe("useMapUiStore", () => {
     expect(useMapUiStore.getState().panelView).toBe("layers");
   });
 
+  it("keeps map surfaces mutually exclusive", () => {
+    act(() => {
+      useMapUiStore.getState().setActiveSurface("settings");
+      useMapUiStore.getState().setActiveSurface("legend");
+    });
+    expect(useMapUiStore.getState().activeSurface).toBe("legend");
+  });
+
+  it.each([
+    ["peek", -80, "half"],
+    ["half", -80, "full"],
+    ["full", 80, "half"],
+    ["half", 80, "peek"],
+    ["peek", 80, null],
+    ["half", 0, "half"],
+  ] as const)(
+    "snaps from %s after a projected %s px drag to %s",
+    async (current, delta, expected) => {
+      const { resolveSheetDetent } = await import("./useMapUiStore");
+      expect(resolveSheetDetent(current, delta)).toBe(expected);
+    },
+  );
+
   it("toggles layer visibility", () => {
     act(() => {
       useMapUiStore.getState().toggleLayer("rapid-rail");
@@ -43,6 +67,17 @@ describe("useMapUiStore", () => {
     expect(useMapUiStore.getState().visibleLayerIds).not.toContain(
       "rapid-rail",
     );
+  });
+
+  it("stores layer opacity as a clamped value", () => {
+    act(() => {
+      useMapUiStore.getState().setLayerOpacity("townships", 0.4);
+      useMapUiStore.getState().setLayerOpacity("rapid-rail", 2);
+    });
+    expect(useMapUiStore.getState().opacityByLayer).toEqual({
+      townships: 0.4,
+      "rapid-rail": 1,
+    });
   });
 
   it("keeps modelled car time and nearest-transit mutually exclusive", () => {

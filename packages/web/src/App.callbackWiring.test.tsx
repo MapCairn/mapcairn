@@ -20,6 +20,7 @@ const mapViewMocks = vi.hoisted(() => ({
         onReady?: () => void;
         onBasemapReady?: () => void;
         onBasemapError?: (basemap: string, error: unknown) => void;
+        onFeatureSelect?: (featureId: string) => void;
         renderFeaturePopup?: (properties: unknown) => ReactNode;
         focusLocationTarget?: unknown;
         selectedFeatureId?: string | null;
@@ -175,6 +176,19 @@ describe("App map/location callback wiring", () => {
     expect(mapViewMocks.latestProps?.measurementTool).toBe(true);
   });
 
+  it("requests geolocation only after the locate control is activated", async () => {
+    render(<App />);
+
+    await waitFor(() => expect(mapViewMocks.latestProps).toBeDefined());
+    expect(mapViewMocks.latestProps?.locateRequest).toBeNull();
+
+    fireEvent.click(screen.getByTestId("locate-me"));
+
+    await waitFor(() =>
+      expect(mapViewMocks.latestProps?.locateRequest).toBeGreaterThan(0),
+    );
+  });
+
   it("keeps MapView's measurementPanelOpen in sync with the app's own panel state on mobile", async () => {
     const originalInnerWidth = window.innerWidth;
     Object.defineProperty(window, "innerWidth", {
@@ -212,7 +226,7 @@ describe("App map/location callback wiring", () => {
     }
   });
 
-  it("never opens measurementPanelOpen on desktop, since the sidebar is open there by default", async () => {
+  it("suppresses measurement while another surface is open on desktop", async () => {
     render(<App />);
 
     await waitFor(() => expect(mapViewMocks.latestProps).toBeDefined());
@@ -222,7 +236,7 @@ describe("App map/location callback wiring", () => {
     });
 
     await waitFor(() =>
-      expect(mapViewMocks.latestProps?.measurementPanelOpen).toBe(false),
+      expect(mapViewMocks.latestProps?.measurementPanelOpen).toBe(true),
     );
   });
 
@@ -278,43 +292,36 @@ describe("App map/location callback wiring", () => {
     }
   });
 
-  it("renders township popup content via renderFeaturePopup", async () => {
+  it("opens feature details in the shared sheet without a map popup renderer", async () => {
     render(<App />);
 
     await waitFor(() => expect(mapViewMocks.latestProps).toBeDefined());
+    expect(mapViewMocks.latestProps?.renderFeaturePopup).toBeUndefined();
 
-    const popup = mapViewMocks.latestProps?.renderFeaturePopup?.({
-      name: "Mamelodi",
-      commuteMinutes: 20,
-      nearestJobCenter: "Pretoria CBD",
-      distanceKm: null,
-      nearestTransitKm: null,
-    });
+    act(() => mapViewMocks.latestProps?.onFeatureSelect?.("feature-1"));
 
-    render(<div>{popup}</div>);
-
-    expect(screen.getByTestId("township-popup")).toHaveTextContent("Mamelodi");
+    expect(useMapUiStore.getState().activeSurface).toBe("feature");
+    expect(
+      screen.getByRole("heading", { name: "Feature details" }),
+    ).toBeVisible();
   });
 
-  it("always provides renderFeaturePopup, regardless of panel open state", async () => {
-    useMapUiStore.getState().setPanelOpen(true);
+  it("does not provide a popup renderer regardless of surface state", async () => {
+    useMapUiStore.getState().setActiveSurface("explore");
 
     render(<App />);
 
     await waitFor(() => expect(mapViewMocks.latestProps).toBeDefined());
 
-    expect(mapViewMocks.latestProps?.renderFeaturePopup).toBeInstanceOf(
-      Function,
-    );
+    expect(mapViewMocks.latestProps?.renderFeaturePopup).toBeUndefined();
   });
 
-  it("keeps renderFeaturePopup referentially stable across unrelated re-renders", async () => {
+  it("keeps feature selection handling stable across unrelated re-renders", async () => {
     render(<App />);
 
     await waitFor(() => expect(mapViewMocks.latestProps).toBeDefined());
-    const initialRenderFeaturePopup =
-      mapViewMocks.latestProps?.renderFeaturePopup;
-    expect(initialRenderFeaturePopup).toBeInstanceOf(Function);
+    const initialFeatureSelect = mapViewMocks.latestProps?.onFeatureSelect;
+    expect(initialFeatureSelect).toBeInstanceOf(Function);
 
     act(() => {
       useMapUiStore.getState().setPanelOpen(true);
@@ -323,8 +330,8 @@ describe("App map/location callback wiring", () => {
       useMapUiStore.getState().setPanelView("story");
     });
 
-    expect(mapViewMocks.latestProps?.renderFeaturePopup).toBe(
-      initialRenderFeaturePopup,
+    expect(mapViewMocks.latestProps?.onFeatureSelect).toBe(
+      initialFeatureSelect,
     );
   });
 
@@ -346,7 +353,7 @@ describe("App map/location callback wiring", () => {
     );
   });
 
-  it("shows a coverage message instead of moving the map for a result outside South Africa", async () => {
+  it("shows a coverage message instead of moving the map for an out-of-coverage result", async () => {
     render(<App />);
 
     await waitFor(() => expect(mapViewMocks.latestProps).toBeDefined());

@@ -8,6 +8,28 @@ export const groups = style({
   gap: "0.75rem",
 });
 
+export const searchLabel = style({
+  display: "grid",
+  gap: "0.375rem",
+  color: vars.color.onSurfaceVariant,
+  fontSize: appVars.fontSize.md,
+});
+
+globalStyle(`.${searchLabel} input`, {
+  minHeight: "44px",
+  padding: "0.5rem 0.75rem",
+  border: `1px solid ${vars.color.outlineVariant}`,
+  borderRadius: vars.shape.cornerSmall,
+  background: vars.color.surfaceContainerLowest,
+  color: vars.color.onSurface,
+  font: "inherit",
+});
+
+globalStyle(`.${searchLabel} input:focus-visible`, {
+  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
+  outlineOffset: 2,
+});
+
 export const group = style({
   display: "grid",
   gap: "0.25rem",
@@ -19,6 +41,29 @@ export const groupTitle = style([
     padding: "0 0.625rem",
   },
 ]);
+
+globalStyle(`.${groupTitle} button`, {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  width: "100%",
+  minHeight: "44px",
+  padding: "0 0.625rem",
+  border: 0,
+  borderRadius: vars.shape.cornerSmall,
+  background: "transparent",
+  color: "inherit",
+  font: "inherit",
+  textAlign: "left",
+  cursor: "pointer",
+});
+
+globalStyle(`.${groupTitle} button:focus-visible`, {
+  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
+  outlineOffset: 2,
+});
+
+globalStyle(`.${groupTitle} svg`, { width: "1rem", height: "1rem" });
 
 export const groupHint = style({
   margin: 0,
@@ -79,6 +124,14 @@ export const row = style({
       background: "transparent",
     },
   },
+});
+
+export const rowMain = style({
+  display: "flex",
+  alignItems: "center",
+  gap: "0.75rem",
+  width: "100%",
+  minHeight: "44px",
 });
 
 /**
@@ -154,10 +207,66 @@ export const label = style({
 
 export const description = style({
   flexBasis: "100%",
-  marginLeft: "2.875rem",
+  margin: "0.25rem 0 0 2.875rem",
   color: vars.color.onSurfaceVariant,
   fontSize: appVars.fontSize.sm,
   lineHeight: 1.35,
+});
+
+export const opacityControl = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(6rem, 9rem)",
+  alignItems: "center",
+  gap: "0.75rem",
+  width: "100%",
+  margin: "0.5rem 0 0 2.875rem",
+  color: vars.color.onSurfaceVariant,
+  fontSize: appVars.fontSize.sm,
+});
+
+globalStyle(`.${opacityControl} input`, {
+  width: "100%",
+  accentColor: vars.color.primary,
+});
+
+globalStyle(`.${opacityControl} input:focus-visible`, {
+  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
+  outlineOffset: 3,
+});
+
+export const metadata = style({
+  width: "100%",
+  margin: "0.375rem 0 0 2.875rem",
+  color: vars.color.onSurfaceVariant,
+  fontSize: appVars.fontSize.sm,
+});
+
+globalStyle(`.${metadata} summary`, {
+  minHeight: "44px",
+  display: "flex",
+  alignItems: "center",
+  width: "fit-content",
+  cursor: "pointer",
+});
+globalStyle(`.${metadata} summary:focus-visible`, {
+  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
+  outlineOffset: 2,
+});
+globalStyle(`.${metadata} dl`, {
+  display: "grid",
+  gap: "0.375rem",
+  margin: "0.25rem 0 0",
+});
+globalStyle(`.${metadata} dl > div`, {
+  display: "grid",
+  gridTemplateColumns: "minmax(5rem, 0.7fr) minmax(0, 1.3fr)",
+  gap: "0.5rem",
+});
+globalStyle(`.${metadata} dt`, { color: vars.color.onSurfaceVariant });
+globalStyle(`.${metadata} dd`, {
+  margin: 0,
+  color: vars.color.onSurface,
+  overflowWrap: "anywhere",
 });
 
 export const badge = style({
@@ -194,6 +303,80 @@ export const downloads = style({
   gap: "0.25rem",
   marginLeft: "auto",
 });
+
+export const downloadToggle = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "0.375rem",
+  minWidth: "44px",
+  minHeight: "44px",
+  padding: "0.5rem 0.625rem",
+  border: 0,
+  borderRadius: vars.shape.cornerSmall,
+  background: vars.color.surfaceContainer,
+  color: vars.color.onSurface,
+  font: "inherit",
+  fontSize: appVars.fontSize.sm,
+  cursor: "pointer",
+  selectors: {
+    "&:hover": { background: vars.state.hover },
+    "&:focus-visible": {
+      outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
+      outlineOffset: 2,
+    },
+  },
+});
+
+globalStyle(`.${downloadToggle} svg`, { width: "1rem", height: "1rem" });
+
+export const downloadMenu = style({
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "0.25rem",
+  width: "100%",
+  minWidth: 0,
+  margin: "0.25rem 0 0 2.875rem",
+  padding: "0.375rem",
+  border: 0,
+  borderRadius: vars.shape.cornerMedium,
+  background: vars.color.surfaceContainer,
+  boxShadow: vars.elevation.shadow1,
+});
+
+globalStyle(`.${downloadMenu} legend`, {
+  gridColumn: "1 / -1",
+  padding: "0.25rem 0.375rem",
+  color: vars.color.onSurfaceVariant,
+  fontSize: appVars.fontSize.sm,
+});
+
+globalStyle(`.${downloadMenu} a, .${downloadMenu} button`, {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "0.375rem",
+  minHeight: "44px",
+  padding: "0.5rem",
+  border: 0,
+  borderRadius: vars.shape.cornerSmall,
+  background: "transparent",
+  color: vars.color.onSurface,
+  font: "inherit",
+  fontSize: appVars.fontSize.sm,
+  textDecoration: "none",
+  cursor: "pointer",
+});
+globalStyle(`.${downloadMenu} a:hover, .${downloadMenu} button:hover`, {
+  background: vars.state.hover,
+});
+globalStyle(
+  `.${downloadMenu} a:focus-visible, .${downloadMenu} button:focus-visible`,
+  {
+    outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
+    outlineOffset: 1,
+  },
+);
 
 /**
  * `download` is shared by an `<a>` (the GeoJSON link) and a `<button>`

@@ -113,6 +113,9 @@ test.describe("layer toggles", () => {
   }) => {
     await page.goto("/");
     await ensurePanelOpen(page);
+    await page
+      .getByTestId(`${E2E.layerToggle.rapidRail}-download-menu-trigger`)
+      .click();
 
     const rapidRailCheckbox = page.getByTestId(E2E.layerToggle.rapidRail);
     const downloadLink = page.getByTestId(
@@ -142,6 +145,9 @@ test.describe("layer toggles", () => {
   }) => {
     await page.goto("/");
     await ensurePanelOpen(page);
+    await page
+      .getByTestId(`${E2E.layerToggle.rapidRail}-download-menu-trigger`)
+      .click();
 
     const rapidRailCheckbox = page.getByTestId(E2E.layerToggle.rapidRail);
     const csvDownloadButton = page.getByTestId(
@@ -174,6 +180,9 @@ test.describe("layer toggles", () => {
 
     await page.goto("/");
     await ensurePanelOpen(page);
+    await page
+      .getByTestId(`${E2E.layerToggle.rapidRail}-download-menu-trigger`)
+      .click();
 
     await page.getByTestId(`${E2E.layerToggle.rapidRail}-download-csv`).click();
 
@@ -193,7 +202,7 @@ test.describe("layer toggles", () => {
       E2E.layerToggle.nearestTransit,
     );
 
-    await expect(modeledCarTimeCheckbox).toBeChecked();
+    await expect(modeledCarTimeCheckbox).not.toBeChecked();
     await expect(nearestTransitCheckbox).not.toBeChecked();
 
     await nearestTransitCheckbox.check();

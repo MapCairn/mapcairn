@@ -3,11 +3,12 @@ import { E2E } from "./selectors";
 import { ensurePanelOpen } from "./ui";
 
 test.describe("browse tab", () => {
-  test("lists selectable features grouped by layer, and picking one opens its popup and updates the URL", async ({
+  test("lists selectable features grouped by layer, and picking one opens its details and updates the URL", async ({
     page,
   }) => {
     await page.goto("/");
     await ensurePanelOpen(page);
+    await page.getByTestId(E2E.layerToggle.townships).check();
 
     await page.getByTestId(E2E.panelTab.browser).click();
 
@@ -24,7 +25,7 @@ test.describe("browse tab", () => {
     await result.click();
 
     await expect(result).toHaveAttribute("aria-current", "true");
-    await expect(page.getByTestId(E2E.townshipPopup).locator("h2")).toHaveText(
+    await expect(page.getByTestId(E2E.featureDetails).locator("h2")).toHaveText(
       "Botshabelo",
     );
     await expect
@@ -37,6 +38,7 @@ test.describe("browse tab", () => {
   }) => {
     await page.goto("/");
     await ensurePanelOpen(page);
+    await page.getByTestId(E2E.layerToggle.townships).check();
 
     await page.getByTestId(E2E.panelTab.browser).click();
 

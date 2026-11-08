@@ -9,10 +9,7 @@ test.describe("language toggle", () => {
     await page.goto("/");
 
     const searchInput = page.getByTestId(E2E.locationSearchInput);
-    await expect(searchInput).toHaveAttribute(
-      "placeholder",
-      "Search town, suburb or station",
-    );
+    await expect(searchInput).toHaveAttribute("placeholder", "Search places");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
 
     await page.getByTestId(E2E.settingsMenuTrigger).click();
@@ -23,10 +20,7 @@ test.describe("language toggle", () => {
     ]);
 
     await expect(page.locator("html")).toHaveAttribute("lang", "af");
-    await expect(searchInput).toHaveAttribute(
-      "placeholder",
-      "Soek dorp, voorstad of stasie",
-    );
+    await expect(searchInput).toHaveAttribute("placeholder", "Soek plekke");
 
     const cookies = await page.context().cookies();
     const localeCookie = cookies.find(
@@ -37,10 +31,7 @@ test.describe("language toggle", () => {
     await page.reload();
 
     await expect(page.locator("html")).toHaveAttribute("lang", "af");
-    await expect(searchInput).toHaveAttribute(
-      "placeholder",
-      "Soek dorp, voorstad of stasie",
-    );
+    await expect(searchInput).toHaveAttribute("placeholder", "Soek plekke");
   });
 
   test("server-renders the locale cookie's language on the very first response, not just after client hydration corrects it", async ({

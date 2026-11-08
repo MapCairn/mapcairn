@@ -36,6 +36,7 @@ import {
   ScaleControl,
   TileLayer,
   useMap,
+  useMapEvents,
   ZoomControl,
 } from "react-leaflet";
 import {
@@ -63,6 +64,10 @@ import {
   LocationContextMenu,
   type LocationContextMenuLabels,
 } from "./LocationContextMenu";
+import {
+  type LabelCollisionPriority,
+  resolveNonOverlappingLabels,
+} from "./labelCollision";
 import * as styles from "./MapView.css";
 import { MeasurementLayer } from "./MeasurementLayer";
 import { VectorBasemapLayer } from "./VectorBasemapLayer";
@@ -109,6 +114,8 @@ export interface MapViewProps<
   areaBoundaries?: Feature[];
   /** Ids of the domain's layers to render, filtered against `getLayers()`'s own `available` flag. */
   visibleLayerIds: string[];
+  /** Per-layer opacity values between 0 and 1; unspecified layers remain fully opaque. */
+  layerOpacity?: Record<string, number>;
   /** Which registered basemap to render (see `constants/basemaps.ts`). Defaults to `"positron"`. */
   basemap?: Basemap;
   /** Id of the feature to highlight: fly the map to it and reopen its popup (see `SelectedFeatureHighlight`). `null`/`undefined` for no selection. */
@@ -124,6 +131,15 @@ export interface MapViewProps<
     token: number;
     location: LocationSearchResult;
   } | null;
+  /** A changing token that requests browser geolocation after explicit user action. */
+  locateRequest?: number | null;
+  /** Called when the browser denies or cannot resolve a geolocation request. */
+  onLocateError?: () => void;
+  /** Reports map-centre coordinates after movement and pointer coordinates on desktop. */
+  onCoordinatesChange?: (coordinates: {
+    latitude: number;
+    longitude: number;
+  }) => void;
   /** Called with a feature's id when the user clicks/taps a selectable feature on the map. */
   onFeatureSelect?: (featureId: string) => void;
   /**
@@ -180,6 +196,10 @@ export interface MapViewProps<
    * `false`.
    */
   measurementTool?: boolean;
+  /** Called when the user enters or exits measurement mode. */
+  onMeasurementActiveChange?: (active: boolean) => void;
+  /** Controls measurement mode when the host owns the active surface. */
+  measurementActive?: boolean;
   /** Overridable copy for that control, forwarded straight through to `MeasurementControl`. Every field defaults to English. */
   measurementLabels?: MeasurementControlLabels;
   /**
@@ -728,7 +748,13 @@ function CollapsibleAttribution() {
   return null;
 }
 
-function AreaLabelVisibility() {
+function AreaLabelVisibility({
+  enabled,
+  labelCount,
+}: {
+  enabled: boolean;
+  labelCount: number;
+}) {
   const map = useMap();
   const primaryLabelsClass = styles.showPrimaryLabels;
   const secondaryLabelsClass = styles.showSecondaryLabels;
@@ -738,6 +764,55 @@ function AreaLabelVisibility() {
     if (!primaryLabelsClass || !secondaryLabelsClass) {
       return;
     }
+    let collisionFrame: number | null = null;
+    const resolveCollisions = () => {
+      if (!enabled || labelCount === 0) {
+        return;
+      }
+      if (collisionFrame !== null) {
+        return;
+      }
+      collisionFrame = requestAnimationFrame(() => {
+        collisionFrame = null;
+        const labelElements = Array.from(
+          map
+            .getContainer()
+            .querySelectorAll<HTMLElement>(`.${styles.areaLabel}`),
+        );
+        for (const element of labelElements) {
+          element.classList.remove(styles.areaLabelCollisionHidden);
+        }
+        const candidates = labelElements
+          .filter((element) => element.getClientRects().length > 0)
+          .map((element, index) => {
+            const bounds = element.getBoundingClientRect();
+            const priority: LabelCollisionPriority = element.classList.contains(
+              styles.areaLabelMajor,
+            )
+              ? "major"
+              : element.classList.contains(styles.areaLabelPrimary)
+                ? "primary"
+                : "secondary";
+            return {
+              id: String(index),
+              element,
+              priority,
+              bounds: {
+                left: bounds.left,
+                right: bounds.right,
+                top: bounds.top,
+                bottom: bounds.bottom,
+              },
+            };
+          });
+        const visibleIds = new Set(resolveNonOverlappingLabels(candidates));
+        candidates.forEach(({ element }, index) => {
+          if (!visibleIds.has(String(index))) {
+            element.classList.add(styles.areaLabelCollisionHidden);
+          }
+        });
+      });
+    };
     const updateVisibility = () => {
       const zoom = map.getZoom();
       map
@@ -752,13 +827,20 @@ function AreaLabelVisibility() {
           secondaryLabelsClass,
           zoom >= SECONDARY_LABEL_REVEAL_ZOOM,
         );
+      resolveCollisions();
     };
     map.on("zoomend", updateVisibility);
+    map.on("moveend", resolveCollisions);
     updateVisibility();
+    resolveCollisions();
     return () => {
       map.off("zoomend", updateVisibility);
+      map.off("moveend", resolveCollisions);
+      if (collisionFrame !== null) {
+        cancelAnimationFrame(collisionFrame);
+      }
     };
-  }, [map]);
+  }, [map, enabled, labelCount]);
 
   return null;
 }
@@ -882,6 +964,79 @@ function FocusLocationTarget({
   return null;
 }
 
+/** Invokes Leaflet geolocation only when the host supplies a new request token. */
+function LocateTarget({
+  requestToken,
+  onError,
+}: {
+  requestToken: number | null;
+  onError?: () => void;
+}) {
+  const map = useMap();
+  const onErrorRef = useLatestRef(onError);
+
+  useEffect(() => {
+    if (requestToken === null) {
+      return;
+    }
+    const handleLocationError = () => onErrorRef.current?.();
+    map.on("locationerror", handleLocationError);
+    map.locate({ setView: true, maxZoom: 12 });
+    return () => {
+      map.off("locationerror", handleLocationError);
+    };
+  }, [map, requestToken, onErrorRef]);
+
+  return null;
+}
+
+/** Reports pointer coordinates and keeps a centre coordinate available on touch devices. */
+function MapCoordinateReporter({
+  onCoordinatesChange,
+}: {
+  onCoordinatesChange?: (coordinates: {
+    latitude: number;
+    longitude: number;
+  }) => void;
+}) {
+  const map = useMap();
+  const onCoordinatesChangeRef = useLatestRef(onCoordinatesChange);
+  const previousCoordinatesRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const report = useCallback(
+    (latitude: number, longitude: number) => {
+      const previous = previousCoordinatesRef.current;
+      if (previous?.latitude === latitude && previous.longitude === longitude) {
+        return;
+      }
+      previousCoordinatesRef.current = { latitude, longitude };
+      onCoordinatesChangeRef.current?.({ latitude, longitude });
+    },
+    [onCoordinatesChangeRef],
+  );
+  const eventHandlers = useMemo(
+    () => ({
+      mousemove: (event: LeafletMouseEvent) =>
+        report(event.latlng.lat, event.latlng.lng),
+      moveend: () => {
+        const centre = map.getCenter();
+        report(centre.lat, centre.lng);
+      },
+    }),
+    [map, report],
+  );
+  useMapEvents(eventHandlers);
+
+  useEffect(() => {
+    const centre = map.getCenter();
+    report(centre.lat, centre.lng);
+  }, [map, report]);
+
+  return null;
+}
+
 /**
  * Builds a tooltip content node whose text is set via `textContent` rather
  * than a string handed to Leaflet's tooltip content option.
@@ -973,6 +1128,33 @@ function resolveTileClassName(
     return styles.dimmedTile;
   }
   return undefined;
+}
+
+/** Scales a Leaflet layer configuration's stroke and fill opacity together. */
+function applyLayerOpacity(
+  config: LeafletLayerConfig,
+  opacity: number,
+): LeafletLayerConfig {
+  if (opacity === 1) {
+    return config;
+  }
+  const scale = (options: NonNullable<LeafletLayerConfig["pathOptions"]>) => ({
+    ...options,
+    opacity: (options.opacity ?? 1) * opacity,
+    fillOpacity: (options.fillOpacity ?? 1) * opacity,
+  });
+  const scaled: LeafletLayerConfig = {};
+  if (config.pathOptions) {
+    scaled.pathOptions = scale(config.pathOptions);
+  }
+  if (config.styleFn) {
+    scaled.styleFn = (feature) => scale(config.styleFn?.(feature) ?? {});
+  }
+  if (config.casingStyleFn) {
+    scaled.casingStyleFn = (feature) =>
+      scale(config.casingStyleFn?.(feature) ?? {});
+  }
+  return scaled;
 }
 
 /** Transit stop marker radius, coarser when zoomed out and finer once zoomed in enough to tell stops apart. */
@@ -1177,9 +1359,13 @@ function MapViewComponent<
   areas,
   areaBoundaries = [],
   visibleLayerIds,
+  layerOpacity = {},
   basemap = "positron",
   selectedFeatureId = null,
   focusLocationTarget = null,
+  locateRequest = null,
+  onLocateError,
+  onCoordinatesChange,
   onFeatureSelect,
   onSelectableFeaturesChange,
   renderFeaturePopup,
@@ -1190,6 +1376,8 @@ function MapViewComponent<
   locationContextMenuProvider,
   locationContextMenuLabels,
   measurementTool = false,
+  onMeasurementActiveChange,
+  measurementActive,
   measurementLabels,
   measurementPanelOpen = false,
   onMeasurementPanelClose,
@@ -1214,17 +1402,29 @@ function MapViewComponent<
       ),
     });
   }, [measurementRequest, measurementTool]);
+  useEffect(() => {
+    if (measurementActive === undefined) {
+      return;
+    }
+    setMeasurement((state) =>
+      state.active === measurementActive
+        ? state
+        : { ...state, active: measurementActive },
+    );
+  }, [measurementActive]);
   const measurementResultLabel = useMemo(
     () => formatMeasurementResult(measurement.mode, measurement.points),
     [measurement.mode, measurement.points],
   );
 
   function handleMeasurementToggleActive() {
+    const active = !measurement.active;
     setMeasurement((state) => ({
       ...state,
-      active: !state.active,
+      active,
       points: [],
     }));
+    onMeasurementActiveChange?.(active);
   }
 
   function handleMeasurementModeChange(mode: MeasurementMode) {
@@ -1423,10 +1623,13 @@ function MapViewComponent<
       new Map(
         visibleLayers.map((layer) => [
           layer.id,
-          createLayerConfig(layer, { dark: resolvedDark }),
+          applyLayerOpacity(
+            createLayerConfig(layer, { dark: resolvedDark }),
+            layerOpacity[layer.id] ?? 1,
+          ),
         ]),
       ),
-    [visibleLayers, resolvedDark],
+    [visibleLayers, resolvedDark, layerOpacity],
   );
   /**
    * @remarks Passed as the area-outline `GeoJSON`'s `style` prop, so it needs
@@ -1497,13 +1700,14 @@ function MapViewComponent<
                   pane: TRANSIT_PANE,
                   radius: transitStopRadius,
                   fillColor: config?.pathOptions?.color,
-                  fillOpacity: 1,
+                  fillOpacity: layerOpacity[layer.id] ?? 1,
+                  opacity: layerOpacity[layer.id] ?? 1,
                   weight: 1,
                 }),
             ] as const;
           }),
       ),
-    [layerConfigById, transitStopRadius, visibleLayers],
+    [layerConfigById, layerOpacity, transitStopRadius, visibleLayers],
   );
   /**
    * Each selectable layer's `onEachFeature` binder, memoised by layer id.
@@ -1641,7 +1845,12 @@ function MapViewComponent<
           renderFeaturePopupRef={renderFeaturePopupRef}
         />
         <FocusLocationTarget focusLocationTarget={focusLocationTarget} />
-        <AreaLabelVisibility />
+        <LocateTarget requestToken={locateRequest} onError={onLocateError} />
+        <MapCoordinateReporter onCoordinatesChange={onCoordinatesChange} />
+        <AreaLabelVisibility
+          enabled={showAreaLabels}
+          labelCount={areaBoundaryData.features.length}
+        />
         <CollapsibleAttribution />
         <MapReadyNotifier onReady={onReady} />
         <ResponsiveMapBounds bounds={bounds} />

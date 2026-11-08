@@ -1,29 +1,26 @@
 import { expect, test } from "./fixtures";
 import { E2E } from "./selectors";
+import { ensurePanelOpen } from "./ui";
 
 const THEME_STORAGE_KEY = "buffer-zones-theme";
 
 test.describe("settings menu", () => {
-  test("closes on Escape and outside click", async ({ page }) => {
+  test("closes on Escape and restores focus to its trigger", async ({
+    page,
+  }) => {
     await page.goto("/");
 
     const trigger = page.getByTestId(E2E.settingsMenuTrigger);
     await trigger.click();
 
-    const menu = page.getByTestId(E2E.settingsMenuContent);
-    await expect(menu).toBeVisible();
+    const panel = page.getByTestId(E2E.panelContainer);
+    await expect(panel).toBeVisible();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
 
     await page.keyboard.press("Escape");
-    await expect(menu).not.toBeVisible();
+    await expect(panel).not.toBeVisible();
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await expect(trigger).toBeFocused();
-
-    await trigger.click();
-    await expect(menu).toBeVisible();
-    await page.getByTestId(E2E.mapView).click({ position: { x: 8, y: 8 } });
-    await expect(menu).not.toBeVisible();
-    await expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
   test("switches the theme preference and reflects it on the document", async ({
@@ -120,7 +117,7 @@ test.describe("settings menu", () => {
       await page.goto("/");
       await expect(page.getByTestId(E2E.mapView)).toBeVisible();
 
-      await page.getByTestId(E2E.settingsMenuTrigger).click();
+      await ensurePanelOpen(page);
       await page.getByTestId(basemap).click();
 
       await expect
@@ -139,7 +136,7 @@ test.describe("settings menu", () => {
       await page.goto("/");
       await expect(page.getByTestId(E2E.mapView)).toBeVisible();
 
-      await page.getByTestId(E2E.settingsMenuTrigger).click();
+      await ensurePanelOpen(page);
       await page.getByTestId(basemap).click();
 
       await expect(
@@ -151,13 +148,11 @@ test.describe("settings menu", () => {
   test.describe("on a narrow (mobile) viewport", () => {
     test.use({ viewport: { width: 360, height: 740 } });
 
-    test("stays within the viewport width even with five language options", async ({
-      page,
-    }) => {
+    test("keeps the settings sheet within the viewport", async ({ page }) => {
       await page.goto("/");
       await page.getByTestId(E2E.settingsMenuTrigger).click();
 
-      const menu = page.getByTestId(E2E.settingsMenuContent);
+      const menu = page.getByTestId(E2E.panelContainer);
       await expect(menu).toBeVisible();
       await expect(
         page.getByTestId(`${E2E.languageToggle}-option-af`),

@@ -1,5 +1,5 @@
 import type { Layer } from "@karta/core";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { forwardRef, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -35,6 +35,7 @@ vi.mock("react-leaflet", () => ({
     invalidateSize: vi.fn(),
     getContainer: () => document.createElement("div"),
     getZoom: () => 9,
+    getCenter: () => ({ lat: -26, lng: 28 }),
     whenReady: (callback: () => void) => {
       callback();
     },
@@ -122,6 +123,9 @@ describe("App with a domain that has no story", () => {
   it("shows a Layers/Browse tablist with no Story tab, since the domain still has a selectable layer", async () => {
     render(<App />);
 
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    fireEvent.click(screen.getByTestId("layer-toggle-townships"));
+
     await waitFor(() =>
       expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
     );
@@ -138,6 +142,9 @@ describe("App with a domain that has no story", () => {
   it("renders layer toggles directly, with no tab UI, when the domain also has no selectable layer", async () => {
     registryOverrides.stripInteraction = true;
     render(<App />);
+
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    fireEvent.click(screen.getByTestId("layer-toggle-townships"));
 
     await waitFor(() =>
       expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),

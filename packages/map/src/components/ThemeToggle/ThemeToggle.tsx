@@ -1,7 +1,15 @@
 import type { ThemePreference } from "@karta/react";
 import { SegmentedControl } from "../SegmentedControl/SegmentedControl";
 
-interface ThemeToggleProps {
+/** Localised labels accepted by {@link ThemeToggle}. */
+export interface ThemeToggleLabels {
+  label?: string;
+  optionLabels?: Partial<
+    Record<ThemePreference, { label: string; ariaLabel: string }>
+  >;
+}
+
+interface ThemeToggleProps extends ThemeToggleLabels {
   preference: ThemePreference;
   onChange: (preference: ThemePreference) => void;
 }
@@ -17,11 +25,19 @@ const THEME_OPTIONS: {
 ];
 
 /** A `SegmentedControl` for choosing between system/light/dark theme preference. */
-export function ThemeToggle({ preference, onChange }: ThemeToggleProps) {
+export function ThemeToggle({
+  preference,
+  onChange,
+  label = "Theme",
+  optionLabels,
+}: ThemeToggleProps) {
   return (
     <SegmentedControl
-      label="Theme"
-      options={THEME_OPTIONS}
+      label={label}
+      options={THEME_OPTIONS.map((option) => ({
+        ...option,
+        ...optionLabels?.[option.id],
+      }))}
       value={preference}
       onChange={onChange}
       testId="theme"

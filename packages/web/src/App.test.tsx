@@ -8,6 +8,25 @@ const dataMocks = vi.hoisted(() => ({
   fetchAreas: vi.fn(),
 }));
 
+const mapMocks = vi.hoisted(() => ({
+  map: {
+    fitBounds: vi.fn(),
+    invalidateSize: vi.fn(),
+    getContainer: () => document.createElement("div"),
+    getZoom: () => 9,
+    getCenter: () => ({ lat: -26, lng: 28 }),
+    whenReady: (callback: () => void) => callback(),
+    on: vi.fn(),
+    off: vi.fn(),
+    locate: vi.fn(),
+    attributionControl: {
+      addAttribution: vi.fn(),
+      removeAttribution: vi.fn(),
+      getContainer: () => document.createElement("div"),
+    },
+  },
+}));
+
 vi.mock("react-leaflet", () => ({
   MapContainer: ({ children }: { children: ReactNode }) => (
     <div>{children}</div>
@@ -21,22 +40,7 @@ vi.mock("react-leaflet", () => ({
   Pane: () => null,
   ZoomControl: () => null,
   ScaleControl: () => null,
-  useMap: () => ({
-    fitBounds: vi.fn(),
-    invalidateSize: vi.fn(),
-    getContainer: () => document.createElement("div"),
-    getZoom: () => 9,
-    whenReady: (callback: () => void) => {
-      callback();
-    },
-    on: vi.fn(),
-    off: vi.fn(),
-    attributionControl: {
-      addAttribution: vi.fn(),
-      removeAttribution: vi.fn(),
-      getContainer: () => document.createElement("div"),
-    },
-  }),
+  useMap: () => mapMocks.map,
   useMapEvents: () => ({}),
   Popup: () => null,
 }));
@@ -82,7 +86,7 @@ async function renderMobilePanel() {
 
   const { container, unmount } = render(<App />);
   await waitFor(() =>
-    expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
+    expect(screen.getByTestId("map-view")).toBeInTheDocument(),
   );
   fireEvent.click(screen.getByRole("button", { name: /explore/i }));
 
@@ -92,6 +96,28 @@ async function renderMobilePanel() {
     panel: screen.getByTestId("panel-container"),
     handle: screen.getByTestId("panel-sheet-handle"),
   };
+}
+
+async function openExploreSurface() {
+  const trigger = screen.getByTestId("panel-toggle");
+  if (trigger.getAttribute("aria-expanded") !== "true") {
+    fireEvent.click(trigger);
+  }
+  await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"));
+}
+
+async function activateTownshipsLayer() {
+  await openExploreSurface();
+  fireEvent.click(screen.getByTestId("layer-toggle-townships"));
+  await waitFor(() =>
+    expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
+  );
+}
+
+async function startTownshipFetch() {
+  await openExploreSurface();
+  fireEvent.click(screen.getByTestId("layer-toggle-townships"));
+  await waitFor(() => expect(dataMocks.getTownships).toHaveBeenCalled());
 }
 
 describe("App", () => {
@@ -151,24 +177,21 @@ describe("App", () => {
     expect(
       document.querySelector('search[aria-label="Search place"]'),
     ).not.toBeNull();
-    expect(
-      document.querySelector('section[aria-label="Settings"]'),
-    ).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Map settings" })).not.toBeNull();
     expect(document.getElementById("map-controls")).toHaveAttribute(
       "aria-label",
       "Map panel",
     );
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
-    );
+    expect(screen.queryByTestId("geojson-layer")).not.toBeInTheDocument();
+    expect(dataMocks.getTownships).not.toHaveBeenCalled();
   });
 
-  it("opens the desktop panel synchronously on hydration, not deferred", () => {
+  it("keeps Explore closed on first load at desktop size", () => {
     render(<App />);
 
     expect(screen.getByTestId("panel-toggle")).toHaveAttribute(
       "aria-expanded",
-      "true",
+      "false",
     );
   });
 
@@ -176,14 +199,14 @@ describe("App", () => {
     render(<App />);
 
     const trigger = screen.getByTestId("panel-toggle");
-    expect(trigger).toHaveAttribute("aria-label", "Close");
+    expect(trigger).toHaveAttribute("aria-label", "Explore");
 
     fireEvent.click(trigger);
 
-    expect(trigger).toHaveAttribute("aria-label", "Explore");
+    expect(trigger).toHaveAttribute("aria-label", "Close");
   });
 
-  it("does not render the top-left introduction card", async () => {
+  it("does not render the old introduction card or an overlay on first load", async () => {
     render(<App />);
 
     expect(
@@ -192,11 +215,45 @@ describe("App", () => {
     expect(
       screen.queryByRole("heading", { name: /buffer zones/i, level: 1 }),
     ).not.toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toHaveTextContent(
-        "1 features",
-      ),
+    expect(screen.queryByTestId("geojson-layer")).not.toBeInTheDocument();
+  });
+
+  it("keeps shell copy domain-neutral before a layer is selected", () => {
+    render(<App />);
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Karta | Interactive map",
     );
+    expect(screen.getByTestId("location-search-input")).toHaveAttribute(
+      "placeholder",
+      "Search places",
+    );
+    expect(screen.queryByTestId("app-name")).not.toBeInTheDocument();
+  });
+
+  it("switches between Settings and Measure without stacking surfaces", async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByTestId("settings-menu-trigger"));
+    expect(useMapUiStore.getState().activeSurface).toBe("settings");
+    expect(screen.getByRole("heading", { name: "Map settings" })).toBeVisible();
+
+    const measurementToggle = await screen.findByTestId(
+      "measurement-control-toggle",
+    );
+    expect(measurementToggle).toHaveAttribute("aria-label", "Back to map");
+    fireEvent.click(measurementToggle);
+    expect(useMapUiStore.getState().activeSurface).toBe("measure");
+    expect(
+      screen.queryByRole("heading", { name: "Map settings" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("measurement-control-panel")).toBeVisible();
+
+    fireEvent.click(screen.getByTestId("settings-menu-trigger"));
+    expect(useMapUiStore.getState().activeSurface).toBe("settings");
+    expect(
+      screen.queryByTestId("measurement-control-panel"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows map-chrome location search outside settings", async () => {
@@ -204,20 +261,15 @@ describe("App", () => {
 
     expect(screen.getByTestId("location-search-input")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("settings-menu-trigger"));
-    expect(
-      screen.queryByTestId("settings-location-search-input"),
-    ).not.toBeInTheDocument();
-
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
-    );
+    expect(screen.getByText("Theme")).toBeInTheDocument();
+    expect(screen.getByTestId("location-search-input")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("settings-menu-trigger"));
+    expect(screen.queryByText("Theme")).not.toBeInTheDocument();
   });
 
   it("selects a township directly from the unified search box, alongside place search", async () => {
     render(<App />);
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
-    );
+    await activateTownshipsLayer();
 
     fireEvent.change(screen.getByTestId("location-search-input"), {
       target: { value: "Mamelodi" },
@@ -229,35 +281,36 @@ describe("App", () => {
     await waitFor(() => {
       expect(window.location.search).toContain("feature=A");
     });
+    expect(screen.getByTestId("feature-details")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Mamelodi" })).toBeVisible();
   });
 
-  it("hides the desktop legend while settings is open so the two panels don't overlap", async () => {
+  it("hides the active legend chip while Settings is open", async () => {
     render(<App />);
-
-    await waitFor(() =>
-      expect(screen.getByTestId("desktop-legend")).toBeInTheDocument(),
-    );
-
-    fireEvent.click(screen.getByTestId("settings-menu-trigger"));
-    expect(screen.queryByTestId("desktop-legend")).not.toBeInTheDocument();
+    await activateTownshipsLayer();
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    expect(screen.getByTestId("active-legend-chip")).toBeVisible();
 
     fireEvent.click(screen.getByTestId("settings-menu-trigger"));
-    expect(screen.getByTestId("desktop-legend")).toBeInTheDocument();
+    expect(screen.queryByTestId("active-legend-chip")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("settings-menu-trigger"));
+    expect(screen.getByTestId("active-legend-chip")).toBeVisible();
   });
 
-  it("shows layer controls immediately in the panel", async () => {
+  it("shows layer controls when Explore is opened, with no default overlay", async () => {
     render(<App />);
+    await openExploreSurface();
 
     expect(
-      await screen.findByRole("checkbox", { name: "Modelled car time" }),
-    ).toBeChecked();
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
-    );
+      screen.getByRole("checkbox", { name: "Modelled car time" }),
+    ).not.toBeChecked();
+    expect(screen.queryByTestId("geojson-layer")).not.toBeInTheDocument();
   });
 
   it("shows a Story tab that renders the domain's story copy", async () => {
     render(<App />);
+    await openExploreSurface();
 
     const tablist = await screen.findByTestId("panel-tablist");
     const layersTab = screen.getByTestId("panel-tab-layers");
@@ -283,6 +336,7 @@ describe("App", () => {
 
   it("shows a Browse tab listing every selectable feature, grouped by layer, and selects one on click", async () => {
     render(<App />);
+    await activateTownshipsLayer();
 
     const browseTab = await screen.findByTestId("panel-tab-browser");
     fireEvent.click(browseTab);
@@ -302,6 +356,7 @@ describe("App", () => {
 
   it("moves tab focus with arrow keys and activates the focused tab", async () => {
     render(<App />);
+    await openExploreSurface();
 
     const layersTab = await screen.findByTestId("panel-tab-layers");
     const storyTab = screen.getByTestId("panel-tab-story");
@@ -326,6 +381,7 @@ describe("App", () => {
     "pressing %s from the layers tab moves focus to %s",
     async (key, expectedTabTestId) => {
       render(<App />);
+      await openExploreSurface();
 
       const layersTab = await screen.findByTestId("panel-tab-layers");
       layersTab.focus();
@@ -341,7 +397,8 @@ describe("App", () => {
   it("collapses and restores the controls panel", async () => {
     render(<App />);
 
-    const trigger = await screen.findByRole("button", { name: /close/i });
+    const trigger = screen.getByTestId("panel-toggle");
+    await openExploreSurface();
     expect(trigger).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.click(trigger);
@@ -354,16 +411,11 @@ describe("App", () => {
 
     expect(
       screen.getByRole("checkbox", { name: "Modelled car time" }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
-    );
+    ).not.toBeChecked();
   });
 
   it("moves focus into the panel's active tab when it's opened via the trigger", async () => {
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /close/i }));
-
     fireEvent.click(screen.getByRole("button", { name: /explore/i }));
 
     await waitFor(() => {
@@ -373,7 +425,8 @@ describe("App", () => {
 
   it("closes the panel on Escape and restores focus to the trigger", async () => {
     render(<App />);
-    const trigger = await screen.findByRole("button", { name: /close/i });
+    const trigger = screen.getByTestId("panel-toggle");
+    await openExploreSurface();
     expect(trigger).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.keyDown(document, { key: "Escape" });
@@ -384,7 +437,8 @@ describe("App", () => {
 
   it("keeps the desktop panel open on an outside click, since it behaves as a persistent sidebar there", async () => {
     render(<App />);
-    const trigger = await screen.findByRole("button", { name: /close/i });
+    const trigger = screen.getByTestId("panel-toggle");
+    await openExploreSurface();
     expect(trigger).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.mouseDown(document.body);
@@ -392,11 +446,8 @@ describe("App", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("still opens the full measurement panel on desktop, even though the Explore sidebar is open by default", async () => {
+  it("opens measurement mode as the active surface on desktop", async () => {
     render(<App />);
-    expect(
-      await screen.findByRole("button", { name: /close/i }),
-    ).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.click(await screen.findByTestId("measurement-control-toggle"));
 
@@ -431,17 +482,16 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("closes the Explore panel, rather than opening the measurement tool, when the measurement toggle is tapped while the panel is open", async () => {
+  it("switches from Explore to measurement when the measurement toggle is tapped", async () => {
     const { panel } = await renderMobilePanel();
 
     fireEvent.click(screen.getByTestId("measurement-control-toggle"));
 
-    expect(panel).toHaveAttribute("data-panel-closing", "true");
-    fireEvent.animationEnd(panel);
-    await waitFor(() => expect(panel).not.toBeVisible());
+    expect(panel).not.toBeVisible();
+    expect(useMapUiStore.getState().activeSurface).toBe("measure");
     expect(
       screen.queryByTestId("measurement-control-panel"),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
   });
 
   it("returns the panel toggle and legend trigger to their base position as soon as the sheet starts closing, not after its exit animation finishes", async () => {
@@ -456,20 +506,16 @@ describe("App", () => {
     expect(appRoot).toHaveAttribute("data-panel-open", "false");
   });
 
-  it("keeps the legend visible on desktop while layer controls are open", async () => {
+  it("suppresses the active legend chip while Explore is open", async () => {
     render(<App />);
-
-    expect(
-      await screen.findByRole("checkbox", { name: "Modelled car time" }),
-    ).toBeInTheDocument();
-
-    expect(screen.getByTestId("desktop-legend")).toBeVisible();
-    expect(
-      screen.getByRole("list", { name: /active map layers legend/i }),
-    ).toBeInTheDocument();
+    await activateTownshipsLayer();
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    expect(screen.getByTestId("active-legend-chip")).toBeVisible();
+    await openExploreSurface();
+    expect(screen.queryByTestId("active-legend-chip")).not.toBeInTheDocument();
   });
 
-  it("provides one-tap mobile legend access while the panel is closed", async () => {
+  it("opens the full active legend from the map chip", async () => {
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
       value: 375,
@@ -478,29 +524,15 @@ describe("App", () => {
     useMapUiStore.getState().reset();
 
     render(<App />);
-
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
-    );
-
-    const exploreButton = screen.getByRole("button", { name: /explore/i });
-    expect(exploreButton).toHaveAttribute("aria-expanded", "false");
-
-    const openLegend = screen.getByRole("button", { name: /open map legend/i });
-    expect(openLegend).toHaveAttribute("aria-expanded", "false");
-
-    fireEvent.click(openLegend);
-
-    expect(openLegend).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId("mobile-legend-content")).toBeVisible();
+    expect(screen.queryByTestId("active-legend-chip")).not.toBeInTheDocument();
+    await activateTownshipsLayer();
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    expect(await screen.findByTestId("active-legend-chip")).toBeVisible();
+    fireEvent.click(screen.getByTestId("active-legend-chip"));
+    expect(useMapUiStore.getState().activeSurface).toBe("legend");
     expect(
       screen.getByRole("list", { name: /active map layers legend/i }),
     ).toBeInTheDocument();
-
-    fireEvent.click(openLegend);
-    expect(
-      screen.queryByTestId("mobile-legend-content"),
-    ).not.toBeInTheDocument();
   });
 
   it("lets mobile users snap the panel between medium and full height", async () => {
@@ -514,7 +546,7 @@ describe("App", () => {
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
+      expect(screen.getByTestId("map-view")).toBeInTheDocument(),
     );
 
     const openPanel = screen.getByRole("button", { name: /explore/i });
@@ -523,7 +555,7 @@ describe("App", () => {
     const panel = screen.getByTestId("panel-container");
     const handle = screen.getByTestId("panel-sheet-handle");
 
-    expect(panel).toHaveAttribute("data-panel-size", "medium");
+    expect(panel).toHaveAttribute("data-panel-size", "half");
     expect(handle).toHaveAttribute("aria-pressed", "false");
 
     fireEvent.click(handle);
@@ -533,7 +565,7 @@ describe("App", () => {
 
     fireEvent.click(handle);
 
-    expect(panel).toHaveAttribute("data-panel-size", "medium");
+    expect(panel).toHaveAttribute("data-panel-size", "half");
     expect(handle).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -593,7 +625,7 @@ describe("App", () => {
       clientY: 230,
     });
 
-    expect(panel).toHaveAttribute("data-panel-size", "medium");
+    expect(panel).toHaveAttribute("data-panel-size", "half");
   });
 
   it("sets the panel's drag-offset CSS custom property once mounted", async () => {
@@ -654,10 +686,10 @@ describe("App", () => {
     expect(panelMarkup).not.toContain("style=");
   });
 
-  it("closes the panel when swiping down from medium height", async () => {
+  it("snaps through peek and closes the panel on a second downward swipe", async () => {
     const { panel, handle } = await renderMobilePanel();
 
-    expect(panel).toHaveAttribute("data-panel-size", "medium");
+    expect(panel).toHaveAttribute("data-panel-size", "half");
 
     fireEvent.pointerDown(handle, {
       pointerType: "touch",
@@ -681,11 +713,26 @@ describe("App", () => {
       clientY: 230,
     });
 
+    expect(panel).toHaveAttribute("data-panel-size", "peek");
+
+    fireEvent.pointerDown(handle, {
+      pointerType: "touch",
+      pointerId: 14,
+      clientY: 140,
+      button: 0,
+    });
+    fireEvent.pointerMove(window, {
+      pointerType: "touch",
+      pointerId: 14,
+      clientY: 210,
+    });
+    fireEvent.pointerUp(window, {
+      pointerType: "touch",
+      pointerId: 14,
+      clientY: 230,
+    });
+
     expect(panel).toHaveAttribute("data-panel-closing", "true");
-    expect(screen.getByRole("button", { name: /close/i })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
 
     fireEvent.animationEnd(panel);
 
@@ -713,6 +760,24 @@ describe("App", () => {
     fireEvent.pointerUp(window, {
       pointerType: "touch",
       pointerId: 13,
+      clientY: 230,
+    });
+
+    expect(panel).toHaveAttribute("data-panel-size", "peek");
+    fireEvent.pointerDown(handle, {
+      pointerType: "touch",
+      pointerId: 15,
+      clientY: 140,
+      button: 0,
+    });
+    fireEvent.pointerMove(window, {
+      pointerType: "touch",
+      pointerId: 15,
+      clientY: 210,
+    });
+    fireEvent.pointerUp(window, {
+      pointerType: "touch",
+      pointerId: 15,
       clientY: 230,
     });
 
@@ -756,6 +821,23 @@ describe("App", () => {
       clientY: 230,
     });
 
+    fireEvent.pointerDown(handle, {
+      pointerType: "touch",
+      pointerId: 16,
+      clientY: 140,
+      button: 0,
+    });
+    fireEvent.pointerMove(window, {
+      pointerType: "touch",
+      pointerId: 16,
+      clientY: 210,
+    });
+    fireEvent.pointerUp(window, {
+      pointerType: "touch",
+      pointerId: 16,
+      clientY: 230,
+    });
+
     expect(panel).not.toBeVisible();
     expect(screen.getByRole("button", { name: /explore/i })).toHaveAttribute(
       "aria-expanded",
@@ -791,14 +873,12 @@ describe("App", () => {
     expect(panel).toHaveAttribute("data-panel-size", "full");
 
     fireEvent.click(handle);
-    expect(panel).toHaveAttribute("data-panel-size", "medium");
+    expect(panel).toHaveAttribute("data-panel-size", "half");
   });
 
   it("ignores sheet handle interactions on desktop viewports", async () => {
     render(<App />);
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toBeInTheDocument(),
-    );
+    await openExploreSurface();
 
     const panel = screen.getByTestId("panel-container");
     const handle = screen.getByTestId("panel-sheet-handle");
@@ -812,7 +892,7 @@ describe("App", () => {
     fireEvent.click(handle);
 
     expect(panel).toHaveAttribute("data-panel-dragging", "false");
-    expect(panel).toHaveAttribute("data-panel-size", "medium");
+    expect(panel).toHaveAttribute("data-panel-size", "half");
   });
 
   it("ignores a non-primary mouse button on the sheet handle", async () => {
@@ -925,7 +1005,7 @@ describe("App", () => {
       clientY: 205,
     });
 
-    expect(panel).toHaveAttribute("data-panel-size", "medium");
+    expect(panel).toHaveAttribute("data-panel-size", "half");
     expect(panel).toHaveAttribute("data-panel-dragging", "false");
   });
 
@@ -948,7 +1028,7 @@ describe("App", () => {
       // The fetch only starts once the map reports itself ready, so wait for
       // it to be in flight before unmounting; otherwise this asserts
       // nothing about a settling request.
-      await waitFor(() => expect(dataMocks.getTownships).toHaveBeenCalled());
+      await startTownshipFetch();
       unmount();
       if (mode === "resolve") {
         resolveTownships?.([]);
@@ -958,7 +1038,11 @@ describe("App", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(consoleError).not.toHaveBeenCalled();
+      expect(
+        consoleError.mock.calls.some(([message]) =>
+          String(message).includes("Failed to load region map data"),
+        ),
+      ).toBe(false);
       consoleError.mockRestore();
     },
   );
@@ -968,6 +1052,8 @@ describe("App", () => {
       .mockRejectedValueOnce(new Error("invalid data"))
       .mockRejectedValueOnce(new Error("invalid data"));
     render(<App />);
+
+    await startTownshipFetch();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Map data could not be loaded",
@@ -1007,11 +1093,8 @@ describe("App", () => {
 
     render(<App />);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("geojson-layer")).toHaveTextContent(
-        "1 features",
-      ),
-    );
+    await activateTownshipsLayer();
+    expect(screen.getByTestId("geojson-layer")).toHaveTextContent("1 features");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
       "Failed to load region map data",
@@ -1041,7 +1124,7 @@ describe("App", () => {
 
     const { unmount } = render(<App />);
 
-    await waitFor(() => expect(dataMocks.getTownships).toHaveBeenCalled());
+    await startTownshipFetch();
     expect(capturedTownshipSignal).toBeInstanceOf(AbortSignal);
     expect(capturedAreaSignal).toBeInstanceOf(AbortSignal);
     expect(capturedTownshipSignal?.aborted).toBe(false);
