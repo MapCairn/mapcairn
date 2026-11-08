@@ -24,3 +24,8 @@ packages/web/project.inlang/*
 
 # Cloudflare API token
 .env.cloudflare
+
+# Claude Code (local settings and vendored skills; skills-lock.json records the skills)
+.claude/settings.json
+.claude/skills/
+.playwright-mcp/
