@@ -16,8 +16,6 @@
   "search_searching": "Searching places...",
   "search_no_results": "Nothing matched that search.",
   "search_unavailable": "Search is unavailable right now. Please try again.",
-  "locate_me": "Locate me",
-  "locate_error": "Your location could not be determined.",
   "map_coordinates_label": "Map coordinates",
   "location_out_of_coverage": "{location} is outside the current map coverage.",
 

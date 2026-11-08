@@ -757,44 +757,10 @@ export const locationSearchControl = style({
   },
 });
 
-export const locateControl = style({
-  position: "absolute",
-  top: "5rem",
-  right: "1.25rem",
-  zIndex: appVars.floatingControlZIndex,
-  "@media": {
-    [mobileMediaQuery]: {
-      top: `calc(4.5rem + ${appVars.mobileLayout.safeTop})`,
-      right: appVars.mobileLayout.controlEdge,
-    },
-  },
-});
-
-export const locateError = style({
-  position: "absolute",
-  top: "8rem",
-  right: "1.25rem",
-  zIndex: appVars.floatingControlZIndex,
-  maxWidth: "min(18rem, calc(100% - 2rem))",
-  padding: "0.625rem 0.875rem",
-  borderRadius: vars.shape.cornerMedium,
-  background: `color-mix(in srgb, ${vars.color.surfaceContainerHigh} 96%, transparent)`,
-  backdropFilter: "blur(12px)",
-  boxShadow: vars.elevation.shadow2,
-  color: vars.color.onSurface,
-  fontSize: appVars.fontSize.sm,
-  "@media": {
-    [mobileMediaQuery]: {
-      top: `calc(8rem + ${appVars.mobileLayout.safeTop})`,
-      right: appVars.mobileLayout.controlEdge,
-    },
-  },
-});
-
 export const coordinateReadout = style({
   position: "absolute",
   left: "1rem",
-  bottom: "3.25rem",
+  bottom: "6.5rem",
   zIndex: appVars.floatingControlZIndex,
   padding: "0.375rem 0.625rem",
   borderRadius: vars.shape.cornerSmall,

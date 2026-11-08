@@ -66,6 +66,7 @@ import {
 } from "./LocationContextMenu";
 import {
   type LabelCollisionPriority,
+  labelIntersectsViewport,
   resolveNonOverlappingLabels,
 } from "./labelCollision";
 import * as styles from "./MapView.css";
@@ -779,6 +780,13 @@ function AreaLabelVisibility({
             .getContainer()
             .querySelectorAll<HTMLElement>(`.${styles.areaLabel}`),
         );
+        const mapBounds = map.getContainer().getBoundingClientRect();
+        const viewportBounds = {
+          left: mapBounds.left,
+          right: mapBounds.right,
+          top: mapBounds.top,
+          bottom: mapBounds.bottom,
+        };
         for (const element of labelElements) {
           element.classList.remove(styles.areaLabelCollisionHidden);
         }
@@ -804,10 +812,13 @@ function AreaLabelVisibility({
                 bottom: bounds.bottom,
               },
             };
-          });
+          })
+          .filter(({ bounds }) =>
+            labelIntersectsViewport(bounds, viewportBounds),
+          );
         const visibleIds = new Set(resolveNonOverlappingLabels(candidates));
-        candidates.forEach(({ element }, index) => {
-          if (!visibleIds.has(String(index))) {
+        candidates.forEach(({ element, id }) => {
+          if (!visibleIds.has(id)) {
             element.classList.add(styles.areaLabelCollisionHidden);
           }
         });
@@ -1005,34 +1016,73 @@ function MapCoordinateReporter({
     latitude: number;
     longitude: number;
   } | null>(null);
+  const pendingPointerCoordinatesRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const pointerFrameRef = useRef<number | null>(null);
   const report = useCallback(
     (latitude: number, longitude: number) => {
+      const rounded = {
+        latitude: Math.round(latitude * 10_000) / 10_000,
+        longitude: Math.round(longitude * 10_000) / 10_000,
+      };
       const previous = previousCoordinatesRef.current;
-      if (previous?.latitude === latitude && previous.longitude === longitude) {
+      if (
+        previous?.latitude === rounded.latitude &&
+        previous.longitude === rounded.longitude
+      ) {
         return;
       }
-      previousCoordinatesRef.current = { latitude, longitude };
-      onCoordinatesChangeRef.current?.({ latitude, longitude });
+      previousCoordinatesRef.current = rounded;
+      onCoordinatesChangeRef.current?.(rounded);
     },
     [onCoordinatesChangeRef],
   );
+  const queuePointerReport = useCallback(
+    (latitude: number, longitude: number) => {
+      pendingPointerCoordinatesRef.current = { latitude, longitude };
+      if (pointerFrameRef.current !== null) {
+        return;
+      }
+      pointerFrameRef.current = requestAnimationFrame(() => {
+        pointerFrameRef.current = null;
+        const coordinates = pendingPointerCoordinatesRef.current;
+        pendingPointerCoordinatesRef.current = null;
+        if (coordinates) {
+          report(coordinates.latitude, coordinates.longitude);
+        }
+      });
+    },
+    [report],
+  );
+  const reportMapCentre = useCallback(() => {
+    if (pointerFrameRef.current !== null) {
+      cancelAnimationFrame(pointerFrameRef.current);
+      pointerFrameRef.current = null;
+    }
+    pendingPointerCoordinatesRef.current = null;
+    const centre = map.getCenter();
+    report(centre.lat, centre.lng);
+  }, [map, report]);
   const eventHandlers = useMemo(
     () => ({
       mousemove: (event: LeafletMouseEvent) =>
-        report(event.latlng.lat, event.latlng.lng),
-      moveend: () => {
-        const centre = map.getCenter();
-        report(centre.lat, centre.lng);
-      },
+        queuePointerReport(event.latlng.lat, event.latlng.lng),
+      moveend: reportMapCentre,
     }),
-    [map, report],
+    [queuePointerReport, reportMapCentre],
   );
   useMapEvents(eventHandlers);
 
   useEffect(() => {
-    const centre = map.getCenter();
-    report(centre.lat, centre.lng);
-  }, [map, report]);
+    reportMapCentre();
+    return () => {
+      if (pointerFrameRef.current !== null) {
+        cancelAnimationFrame(pointerFrameRef.current);
+      }
+    };
+  }, [reportMapCentre]);
 
   return null;
 }
@@ -1116,6 +1166,8 @@ const INITIAL_MEASUREMENT_STATE: MeasurementState = {
   points: [],
 };
 
+const EMPTY_LAYER_OPACITY: Record<string, number> = {};
+
 /** The raster tile layer's CSS class for the current theme/basemap combination, or `undefined` for an unmodified basemap. */
 function resolveTileClassName(
   useDarkTiles: boolean,
@@ -1138,11 +1190,16 @@ function applyLayerOpacity(
   if (opacity === 1) {
     return config;
   }
-  const scale = (options: NonNullable<LeafletLayerConfig["pathOptions"]>) => ({
-    ...options,
-    opacity: (options.opacity ?? 1) * opacity,
-    fillOpacity: (options.fillOpacity ?? 1) * opacity,
-  });
+  const scale = (options: NonNullable<LeafletLayerConfig["pathOptions"]>) => {
+    const scaledOptions = {
+      ...options,
+      opacity: (options.opacity ?? 1) * opacity,
+    };
+    if (options.fillOpacity !== undefined) {
+      scaledOptions.fillOpacity = options.fillOpacity * opacity;
+    }
+    return scaledOptions;
+  };
   const scaled: LeafletLayerConfig = {};
   if (config.pathOptions) {
     scaled.pathOptions = scale(config.pathOptions);
@@ -1359,7 +1416,7 @@ function MapViewComponent<
   areas,
   areaBoundaries = [],
   visibleLayerIds,
-  layerOpacity = {},
+  layerOpacity = EMPTY_LAYER_OPACITY,
   basemap = "positron",
   selectedFeatureId = null,
   focusLocationTarget = null,

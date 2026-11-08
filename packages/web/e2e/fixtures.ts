@@ -11,15 +11,31 @@ const TRANSPARENT_PNG = Buffer.from(
 const TILE_HOST_PATTERN = /tile\.openstreetmap\.org|server\.arcgisonline\.com/;
 
 /**
- * A minimal, valid MapLibre GL style JSON (no sources, no layers) served
+ * A minimal MapLibre GL style JSON with one inline GeoJSON feature, served
  * in place of the real Positron/Liberty/Dark basemaps' OpenFreeMap style
- * requests (matched generically by path, so it covers all three). This is
- * enough for MapLibre to initialise and paint an (empty) canvas without the
- * suite depending on OpenFreeMap's network availability, and avoids needing
- * to additionally stub vector tile/glyph/sprite requests, since a style
- * with no sources never requests any.
+ * requests (matched generically by path, so it covers all three). The source
+ * exercises MapLibre's worker without external tile, glyph, or sprite
+ * requests, keeping the suite independent of OpenFreeMap availability.
  */
-const EMPTY_MAPLIBRE_STYLE = { version: 8, sources: {}, layers: [] };
+const EMPTY_MAPLIBRE_STYLE = {
+  version: 8,
+  sources: {
+    "worker-check": {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "Point", coordinates: [0, 0] },
+          },
+        ],
+      },
+    },
+  },
+  layers: [{ id: "worker-check", type: "circle", source: "worker-check" }],
+};
 
 const OPEN_FREE_MAP_STYLE_PATTERN = /tiles\.openfreemap\.org\/styles\//;
 

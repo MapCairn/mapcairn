@@ -179,8 +179,8 @@ describe("App", () => {
     ).not.toBeNull();
     expect(screen.getByRole("button", { name: "Map settings" })).not.toBeNull();
     expect(document.getElementById("map-controls")).toHaveAttribute(
-      "aria-label",
-      "Map panel",
+      "aria-labelledby",
+      "map-panel-heading",
     );
     expect(screen.queryByTestId("geojson-layer")).not.toBeInTheDocument();
     expect(dataMocks.getTownships).not.toHaveBeenCalled();
@@ -237,6 +237,7 @@ describe("App", () => {
     fireEvent.click(screen.getByTestId("settings-menu-trigger"));
     expect(useMapUiStore.getState().activeSurface).toBe("settings");
     expect(screen.getByRole("heading", { name: "Map settings" })).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Map settings" })).toBeVisible();
 
     const measurementToggle = await screen.findByTestId(
       "measurement-control-toggle",
@@ -535,6 +536,34 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("restores the legend ramp and focus after opening and closing its surface", async () => {
+    render(<App />);
+    await activateTownshipsLayer();
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+
+    const chip = screen.getByTestId("active-legend-chip");
+    const ramp = chip.querySelector(`.${appStyles.legendRamp}`) as HTMLElement;
+    await waitFor(() =>
+      expect(ramp.getAttribute("style")).toContain("linear-gradient"),
+    );
+    const background = ramp.getAttribute("style");
+
+    fireEvent.click(chip);
+    expect(screen.getByRole("dialog", { name: "Map legend" })).toBeVisible();
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+
+    const remountedChip = screen.getByTestId("active-legend-chip");
+    const remountedRamp = remountedChip.querySelector(
+      `.${appStyles.legendRamp}`,
+    ) as HTMLElement;
+    await waitFor(() =>
+      expect(remountedRamp.getAttribute("style")).toBe(background),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("panel-toggle")).toHaveFocus(),
+    );
+  }, 15_000);
+
   it("lets mobile users snap the panel between medium and full height", async () => {
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
@@ -637,6 +666,33 @@ describe("App", () => {
     await waitFor(() =>
       expect(panel.style.getPropertyValue(bareVarName)).toBe("0px"),
     );
+  });
+
+  it("does not suppress the next handle click when a drag produces no click", async () => {
+    const { panel, handle } = await renderMobilePanel();
+
+    fireEvent.pointerDown(handle, {
+      pointerType: "touch",
+      pointerId: 41,
+      clientY: 140,
+      button: 0,
+    });
+    fireEvent.pointerMove(window, {
+      pointerType: "touch",
+      pointerId: 41,
+      clientY: 210,
+    });
+    fireEvent.pointerUp(window, {
+      pointerType: "touch",
+      pointerId: 41,
+      clientY: 230,
+    });
+    expect(panel).toHaveAttribute("data-panel-size", "peek");
+
+    await new Promise((resolve) => window.setTimeout(resolve, 5));
+    fireEvent.click(handle);
+
+    expect(panel).toHaveAttribute("data-panel-size", "half");
   });
 
   it("removes the sheet drag's window pointer listeners on unmount mid-gesture", async () => {
@@ -790,6 +846,52 @@ describe("App", () => {
 
     fireEvent.animationEnd(panel);
     await waitFor(() => expect(panel).not.toBeVisible());
+  });
+
+  it("keeps a newly opened surface open when the previous sheet close animation ends", async () => {
+    const { panel, handle } = await renderMobilePanel();
+
+    fireEvent.pointerDown(handle, {
+      pointerType: "touch",
+      pointerId: 31,
+      clientY: 140,
+      button: 0,
+    });
+    fireEvent.pointerMove(window, {
+      pointerType: "touch",
+      pointerId: 31,
+      clientY: 210,
+    });
+    fireEvent.pointerUp(window, {
+      pointerType: "touch",
+      pointerId: 31,
+      clientY: 230,
+    });
+    fireEvent.pointerDown(handle, {
+      pointerType: "touch",
+      pointerId: 32,
+      clientY: 140,
+      button: 0,
+    });
+    fireEvent.pointerMove(window, {
+      pointerType: "touch",
+      pointerId: 32,
+      clientY: 210,
+    });
+    fireEvent.pointerUp(window, {
+      pointerType: "touch",
+      pointerId: 32,
+      clientY: 230,
+    });
+    expect(panel).toHaveAttribute("data-panel-closing", "true");
+
+    fireEvent.click(screen.getByTestId("settings-menu-trigger"));
+    expect(screen.getByText("Theme")).toBeVisible();
+
+    fireEvent.animationEnd(panel);
+
+    expect(panel).toBeVisible();
+    expect(screen.getByText("Theme")).toBeVisible();
   });
 
   it("closes the panel immediately under prefers-reduced-motion, skipping the exit animation", async () => {

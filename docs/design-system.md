@@ -15,8 +15,8 @@ below.
   with the data layers.
 - One accent. Ochre marks the current selection, focus and links. Data
   colours belong to the map layers, not the interface.
-- Hairlines over shadows. Panels sit on a 1px rule, like the margin of a
-  printed sheet.
+- Restrained elevation. Low-opacity shadows separate controls and panels
+  from the map without competing with the data.
 - Sentence case everywhere, including small labels. No uppercase or
   letter-spaced eyebrow labels.
 
@@ -87,8 +87,9 @@ The type scale for map chrome is compact and never goes below 12px:
 - **Shape:** 2px for controls (`corner-extra-small`, `corner-small`) and
   4px for panels (`corner-medium` and up). `corner-full` is only for chips,
   round markers and the drag handle.
-- **Elevation:** `--md-sys-elevation-shadow-1` and `-2` are a 1px hairline.
-  `-3` adds a faint shadow for menus that float over the map.
+- **Elevation:** `--md-sys-elevation-shadow-1` and `-2` are soft, low-opacity
+  shadows for controls and panels. `-3` adds a deeper shadow for menus that
+  float over the map.
 - **State:** `--state-hover` (8%) and `--state-pressed` (12%) tint with
   on-surface. `--state-selected` (12%) tints with the primary colour.
   `--md-sys-color-surface-container-hover` is an opaque hover colour for

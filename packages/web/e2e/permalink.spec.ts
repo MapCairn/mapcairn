@@ -58,14 +58,14 @@ test.describe("shareable map links", () => {
     // The feature list populates asynchronously after the search box itself
     // is already interactive, so wait for the option to appear before
     // driving it by keyboard; see map-feature-accessibility.spec.ts.
-    await expect(
-      page.getByRole("option", { name: "Botshabelo" }),
-    ).toBeVisible();
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("Enter");
+    await expect(page.getByRole("option", { name: "Botshabelo" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await searchInput.press("ArrowDown");
+    await searchInput.press("Enter");
 
     const details = page.getByTestId(E2E.featureDetails);
-    await expect(details).toBeVisible();
+    await expect(details).toBeVisible({ timeout: 15_000 });
     await expect(details.locator("h2")).toHaveText("Botshabelo");
 
     await expect

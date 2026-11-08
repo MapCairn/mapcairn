@@ -466,7 +466,7 @@ describe("MapView", () => {
     );
   });
 
-  it("reports pointer coordinates from the map", () => {
+  it("coalesces pointer coordinates to the displayed precision", async () => {
     const onCoordinatesChange = vi.fn();
     render(
       withDomain(
@@ -479,12 +479,22 @@ describe("MapView", () => {
       ),
     );
 
-    mapMocks.mapMouseMoveHandler?.({ latlng: { lat: -26.2, lng: 28.1 } });
-
-    expect(onCoordinatesChange).toHaveBeenCalledWith({
-      latitude: -26.2,
-      longitude: 28.1,
+    onCoordinatesChange.mockClear();
+    act(() => {
+      mapMocks.mapMouseMoveHandler?.({
+        latlng: { lat: -26.20001, lng: 28.10001 },
+      });
+      mapMocks.mapMouseMoveHandler?.({
+        latlng: { lat: -26.20009, lng: 28.10009 },
+      });
     });
+
+    await waitFor(() =>
+      expect(onCoordinatesChange).toHaveBeenCalledExactlyOnceWith({
+        latitude: -26.2001,
+        longitude: 28.1001,
+      }),
+    );
   });
 
   it("requests geolocation only when given a locate request", () => {

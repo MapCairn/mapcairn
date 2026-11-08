@@ -69,8 +69,8 @@ export function useSheetGesture({
 }: UseSheetGestureOptions) {
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [dragDirection, setDragDirection] = useState("none");
   const suppressNextClickRef = useRef(false);
+  const suppressClickTimerRef = useRef<number | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const { schedule, cancel } = useRafScheduledValue(setDragOffset);
@@ -80,16 +80,24 @@ export function useSheetGesture({
   }, [cancel]);
 
   useEffect(() => {
-    return () => cleanupRef.current?.();
+    return () => {
+      cleanupRef.current?.();
+      if (suppressClickTimerRef.current !== null) {
+        window.clearTimeout(suppressClickTimerRef.current);
+      }
+    };
   }, []);
 
-  useEffect(() => {
-    setDragDirection(dragOffset < -4 ? "up" : dragOffset > 4 ? "down" : "none");
-  }, [dragOffset]);
+  const dragDirection =
+    dragOffset < -4 ? "up" : dragOffset > 4 ? "down" : "none";
 
   function onHandleClick() {
     if (suppressNextClickRef.current) {
       suppressNextClickRef.current = false;
+      if (suppressClickTimerRef.current !== null) {
+        window.clearTimeout(suppressClickTimerRef.current);
+        suppressClickTimerRef.current = null;
+      }
       return;
     }
     if (isDesktopViewport) {
@@ -167,6 +175,10 @@ export function useSheetGesture({
         return;
       }
       suppressNextClickRef.current = true;
+      suppressClickTimerRef.current = window.setTimeout(() => {
+        suppressNextClickRef.current = false;
+        suppressClickTimerRef.current = null;
+      }, 0);
       const resolvedDetent = nextDetent(detent, projectedDelta);
       if (resolvedDetent === null) {
         close();

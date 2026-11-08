@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { E2E } from "./selectors";
+import { waitForMapReady } from "./ui";
 
 test.describe("map feature keyboard accessibility", () => {
   test("the location search box is visible up front and shows a visible focus ring", async ({
@@ -21,6 +22,7 @@ test.describe("map feature keyboard accessibility", () => {
     page,
   }) => {
     await page.goto("/");
+    await waitForMapReady(page);
     await page.getByTestId(E2E.panelToggle).click();
     await page.getByTestId(E2E.layerToggle.townships).check();
     await page.getByTestId(E2E.panelToggle).click();
@@ -34,13 +36,17 @@ test.describe("map feature keyboard accessibility", () => {
     // itself is already interactive, so wait for the option to actually
     // appear before driving it by keyboard; unlike a pointer click, the
     // keys below don't retry against a dropdown that isn't there yet.
-    await expect(
-      page.getByRole("option", { name: "Botshabelo" }),
-    ).toBeVisible();
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("Enter");
+    await expect(page.getByRole("option", { name: "Botshabelo" })).toBeVisible({
+      timeout: 15_000,
+    });
+    const featureOption = page.getByRole("option", { name: "Botshabelo" });
+    await searchInput.press("ArrowDown");
+    await expect(featureOption).toHaveAttribute("aria-selected", "true");
+    await searchInput.press("Enter");
 
-    await expect(page.getByTestId(E2E.featureDetails)).toBeVisible();
+    await expect(page.getByTestId(E2E.featureDetails)).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Choosing by pointer is a separate path from the keys above. Several
     // real townships share a "Mabopane" prefix (Mabopane A, Mabopane M,

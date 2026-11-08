@@ -1,4 +1,5 @@
 import "@fontsource-variable/public-sans/wght.css";
+import "@fontsource-variable/source-serif-4/wght.css";
 import {
   isRouteErrorResponse,
   Links,

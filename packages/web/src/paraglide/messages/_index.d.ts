@@ -506,20 +506,6 @@ export const loading_map: ((inputs?: Loading_MapInputs, options?: { locale?: "en
 /**
 * | output |
 * | --- |
-* | "Your location could not be determined." |
-*
-*/
-export const locate_error: ((inputs?: Locate_ErrorInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Locate_ErrorInputs, { locale?: "en" | "af" }, {}>;
-/**
-* | output |
-* | --- |
-* | "Locate me" |
-*
-*/
-export const locate_me: ((inputs?: Locate_MeInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & __ParaglideMessageMetadata<Locate_MeInputs, { locale?: "en" | "af" }, {}>;
-/**
-* | output |
-* | --- |
 * | "Map location actions" |
 *
 */
@@ -1185,8 +1171,6 @@ export type Legend_TitleInputs = {};
 export type Legend_Transit_Colors_Aria_LabelInputs = {};
 export type Legend_Transit_RoutesInputs = {};
 export type Loading_MapInputs = {};
-export type Locate_ErrorInputs = {};
-export type Locate_MeInputs = {};
 export type Location_Context_Menu_Aria_LabelInputs = {};
 export type Location_Context_Menu_FailedInputs = {};
 export type Location_Context_Menu_LoadingInputs = {};

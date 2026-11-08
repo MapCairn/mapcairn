@@ -7,6 +7,8 @@ import { E2E } from "./selectors";
  * viewport size.
  */
 export async function ensurePanelOpen(page: Page) {
+  await waitForMapReady(page);
+
   const panelToggle = page.getByTestId(E2E.panelToggle);
   await expect(panelToggle).toBeVisible();
 
@@ -14,6 +16,13 @@ export async function ensurePanelOpen(page: Page) {
     await panelToggle.click();
     await expect(panelToggle).toHaveAttribute("aria-expanded", "true");
   }
+}
+
+/** Waits for Leaflet's first painted frame before tests interact with map-backed data. */
+export async function waitForMapReady(page: Page) {
+  await expect(page.locator('[data-entrance-ready="true"]')).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 /**

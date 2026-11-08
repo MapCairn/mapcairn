@@ -22,6 +22,19 @@ const PRIORITY_RANK: Record<LabelCollisionPriority, number> = {
   secondary: 2,
 };
 
+/** Returns whether two pixel rectangles overlap with positive area. */
+export function labelIntersectsViewport(
+  bounds: LabelCollisionBounds,
+  viewport: LabelCollisionBounds,
+): boolean {
+  return (
+    bounds.left < viewport.right &&
+    bounds.right > viewport.left &&
+    bounds.top < viewport.bottom &&
+    bounds.bottom > viewport.top
+  );
+}
+
 /**
  * Returns label ids that can be shown without overlapping a higher-priority
  * label. Input order breaks ties, keeping placement stable across redraws.
@@ -39,12 +52,8 @@ export function resolveNonOverlappingLabels(
   const visible: LabelCollisionCandidate[] = [];
 
   for (const { candidate } of orderedCandidates) {
-    const overlaps = visible.some(
-      (placed) =>
-        candidate.bounds.left < placed.bounds.right &&
-        candidate.bounds.right > placed.bounds.left &&
-        candidate.bounds.top < placed.bounds.bottom &&
-        candidate.bounds.bottom > placed.bounds.top,
+    const overlaps = visible.some((placed) =>
+      labelIntersectsViewport(candidate.bounds, placed.bounds),
     );
     if (!overlaps) {
       visible.push(candidate);

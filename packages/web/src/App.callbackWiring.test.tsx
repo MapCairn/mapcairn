@@ -176,19 +176,6 @@ describe("App map/location callback wiring", () => {
     expect(mapViewMocks.latestProps?.measurementTool).toBe(true);
   });
 
-  it("requests geolocation only after the locate control is activated", async () => {
-    render(<App />);
-
-    await waitFor(() => expect(mapViewMocks.latestProps).toBeDefined());
-    expect(mapViewMocks.latestProps?.locateRequest).toBeNull();
-
-    fireEvent.click(screen.getByTestId("locate-me"));
-
-    await waitFor(() =>
-      expect(mapViewMocks.latestProps?.locateRequest).toBeGreaterThan(0),
-    );
-  });
-
   it("keeps MapView's measurementPanelOpen in sync with the app's own panel state on mobile", async () => {
     const originalInnerWidth = window.innerWidth;
     Object.defineProperty(window, "innerWidth", {

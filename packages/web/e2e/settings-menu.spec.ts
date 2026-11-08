@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 import { E2E } from "./selectors";
-import { ensurePanelOpen } from "./ui";
+import { ensurePanelOpen, waitForMapReady } from "./ui";
 
 const THEME_STORAGE_KEY = "buffer-zones-theme";
 
@@ -85,6 +85,7 @@ test.describe("settings menu", () => {
     });
 
     await page.goto("/");
+    await waitForMapReady(page);
     await expect
       .poll(() => styleRequests.some((url) => url.includes("/styles/positron")))
       .toBe(true);
@@ -115,6 +116,7 @@ test.describe("settings menu", () => {
       });
 
       await page.goto("/");
+      await waitForMapReady(page);
       await expect(page.getByTestId(E2E.mapView)).toBeVisible();
 
       await ensurePanelOpen(page);
@@ -134,6 +136,7 @@ test.describe("settings menu", () => {
       page,
     }) => {
       await page.goto("/");
+      await waitForMapReady(page);
       await expect(page.getByTestId(E2E.mapView)).toBeVisible();
 
       await ensurePanelOpen(page);

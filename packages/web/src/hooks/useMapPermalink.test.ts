@@ -183,7 +183,9 @@ describe("useMapPermalink", () => {
 
     rerender({ dataReady: true });
 
-    expect(useMapUiStore.getState().selectedFeatureId).toBe("abc123");
+    const state = useMapUiStore.getState();
+    expect(state.selectedFeatureId).toBe("abc123");
+    expect(state.activeSurface).toBe("feature");
   });
 
   it("drops a selectedFeatureId from the URL that isn't in knownFeatureIds", () => {

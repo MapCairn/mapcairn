@@ -146,13 +146,15 @@ describe("LayerToggles", () => {
   it("collapses a category group without changing other groups", () => {
     render(<LayerToggles visibleLayerIds={[]} onToggle={vi.fn()} />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /accessibility overlays/i }),
-    );
+    const groupButton = screen.getByRole("button", {
+      name: /accessibility overlays/i,
+    });
+    const controlledId = groupButton.getAttribute("aria-controls");
+    fireEvent.click(groupButton);
 
-    expect(
-      screen.queryByTestId("layer-toggle-townships-row"),
-    ).not.toBeInTheDocument();
+    const controlledList = document.getElementById(controlledId ?? "");
+    expect(controlledList).toBeInTheDocument();
+    expect(controlledList).not.toBeVisible();
     expect(
       screen.getByTestId("layer-toggle-rapid-rail-row"),
     ).toBeInTheDocument();
@@ -301,6 +303,18 @@ describe("LayerToggles", () => {
       name: /download combined data/i,
     });
     expect(downloads).toHaveLength(2);
+    expect(
+      screen.getByTestId("layer-toggle-combined-download-1"),
+    ).toHaveAccessibleName(/geojson 1, download combined data/i);
+    expect(
+      screen.getByTestId("layer-toggle-combined-download-2"),
+    ).toHaveAccessibleName(/geojson 2, download combined data/i);
+    expect(
+      screen.getByTestId("layer-toggle-combined-download-csv-1"),
+    ).toHaveAccessibleName(/csv 1, download combined data/i);
+    expect(
+      screen.getByTestId("layer-toggle-combined-download-csv-2"),
+    ).toHaveAccessibleName(/csv 2, download combined data/i);
     expect(downloads[0]).toHaveAttribute("href", "/data/a.geojson");
     expect(downloads[0]).toHaveAttribute("download", "combined-1.geojson");
     expect(downloads[1]).toHaveAttribute("href", "/data/b.geojson");

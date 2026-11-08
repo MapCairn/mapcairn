@@ -1,5 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { resolveNonOverlappingLabels } from "./labelCollision";
+import {
+  labelIntersectsViewport,
+  resolveNonOverlappingLabels,
+} from "./labelCollision";
+
+describe("labelIntersectsViewport", () => {
+  const viewport = { left: 0, right: 100, top: 0, bottom: 100 };
+
+  it("rejects labels outside the viewport and keeps partially visible labels", () => {
+    expect(
+      labelIntersectsViewport(
+        { left: -40, right: 0, top: 10, bottom: 20 },
+        viewport,
+      ),
+    ).toBe(false);
+    expect(
+      labelIntersectsViewport(
+        { left: -10, right: 10, top: 10, bottom: 20 },
+        viewport,
+      ),
+    ).toBe(true);
+  });
+});
 
 describe("resolveNonOverlappingLabels", () => {
   it("keeps the most important label when bounds overlap", () => {

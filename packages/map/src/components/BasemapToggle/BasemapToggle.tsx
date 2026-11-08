@@ -32,6 +32,7 @@ export function BasemapToggle({
               className={styles.option}
               data-basemap={id}
               data-testid={`basemap-option-${id}`}
+              data-e2e={`basemap-option-${id}`}
               aria-label={optionAriaLabel(definition.label)}
               aria-pressed={basemap === id}
               onClick={() => onChange(id)}

@@ -31,7 +31,7 @@ function downloadBlob(blob: Blob, fileName: string): void {
   anchor.href = url;
   anchor.download = fileName;
   anchor.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 interface LayerTogglesProps {
@@ -93,13 +93,15 @@ function LayerDownloadMenu({
     <>
       {layer.dataSource.map((_url, sourceIndex) => {
         const key = csvExportKey(layer, sourceIndex);
+        const sourceSuffix =
+          layer.dataSource.length > 1 ? `-${sourceIndex + 1}` : "";
         return status[key] === "error" ? (
           <span
             key={key}
             className={styles.badgeError}
             role="status"
-            data-testid={`layer-toggle-${layer.id}-csv-error`}
-            data-e2e={`layer-toggle-${layer.id}-csv-error`}
+            data-testid={`layer-toggle-${layer.id}-csv-error${sourceSuffix}`}
+            data-e2e={`layer-toggle-${layer.id}-csv-error${sourceSuffix}`}
           >
             {m.layer_csv_export_error()}
           </span>
@@ -116,27 +118,24 @@ function LayerDownloadMenu({
             const key = csvExportKey(layer, sourceIndex);
             const suffix =
               layer.dataSource.length > 1 ? ` ${sourceIndex + 1}` : "";
+            const sourceSuffix = suffix ? `-${sourceIndex + 1}` : "";
             return (
               <Fragment key={url}>
                 <a
                   href={url}
                   download={downloadFileName(layer, sourceIndex, "geojson")}
-                  aria-label={m.layer_download_aria_label({
-                    label: layer.label,
-                  })}
-                  data-testid={`layer-toggle-${layer.id}-download`}
-                  data-e2e={`layer-toggle-${layer.id}-download`}
+                  aria-label={`${m.layer_download_geojson()}${suffix}, ${m.layer_download_aria_label({ label: layer.label })}`}
+                  data-testid={`layer-toggle-${layer.id}-download${sourceSuffix}`}
+                  data-e2e={`layer-toggle-${layer.id}-download${sourceSuffix}`}
                 >
                   {m.layer_download_geojson()}
                   {suffix}
                 </a>
                 <button
                   type="button"
-                  aria-label={m.layer_download_csv_aria_label({
-                    label: layer.label,
-                  })}
-                  data-testid={`layer-toggle-${layer.id}-download-csv`}
-                  data-e2e={`layer-toggle-${layer.id}-download-csv`}
+                  aria-label={`${m.layer_download_csv()}${suffix}, ${m.layer_download_csv_aria_label({ label: layer.label })}`}
+                  data-testid={`layer-toggle-${layer.id}-download-csv${sourceSuffix}`}
+                  data-e2e={`layer-toggle-${layer.id}-download-csv${sourceSuffix}`}
                   disabled={status[key] === "loading"}
                   onClick={() => onCsvExport(layer, sourceIndex, url)}
                 >
@@ -445,11 +444,13 @@ function LayerTogglesComponent({
               {group.description ? (
                 <p className={styles.groupHint}>{group.description}</p>
               ) : null}
-              {!collapsed ? (
-                <ul className={styles.list} id={`layer-group-${group.id}`}>
-                  {layers.map((layer) => renderLayer(layer))}
-                </ul>
-              ) : null}
+              <ul
+                className={styles.list}
+                id={`layer-group-${group.id}`}
+                hidden={collapsed}
+              >
+                {layers.map((layer) => renderLayer(layer))}
+              </ul>
             </section>
           </Fragment>
         );

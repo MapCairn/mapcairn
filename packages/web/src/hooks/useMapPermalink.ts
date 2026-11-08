@@ -186,7 +186,9 @@ export function useMapPermalink({
       return;
     }
     if (knownFeatureIds.has(pendingFeatureId.current)) {
-      useMapUiStore.getState().setSelectedFeatureId(pendingFeatureId.current);
+      const state = useMapUiStore.getState();
+      state.setSelectedFeatureId(pendingFeatureId.current);
+      state.setActiveSurface("feature");
     }
     pendingFeatureId.current = undefined;
   }, [dataReady, knownFeatureIds]);

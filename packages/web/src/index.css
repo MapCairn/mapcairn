@@ -1,5 +1,5 @@
 :root {
-  --font-display: "Public Sans Variable", system-ui, sans-serif;
+  --font-display: "Source Serif 4 Variable", Georgia, serif;
   /*
    * `--font-body` here through `--focus-ring-width` further below (typography,
    * spacing, control sizing, drag handles) fill `@karta/map`'s own documented
@@ -67,9 +67,7 @@
   --md-sys-shape-corner-extra-large: 20px;
   --md-sys-shape-corner-full: 9999px;
 
-  /* Panels sit on a 1px hairline rule rather than a drop shadow, like the
-   * margin of a printed sheet. Level 3 adds a faint shadow for menus that
-   * float over the map. */
+  /* Restrained shadows separate floating controls and panels from the map. */
   --md-sys-elevation-shadow-1: 0 2px 8px 0
     color-mix(in srgb, var(--md-sys-color-shadow) 10%, transparent);
   --md-sys-elevation-shadow-2: 0 4px 14px 0

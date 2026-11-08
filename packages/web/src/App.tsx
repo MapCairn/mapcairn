@@ -26,7 +26,7 @@ import {
 } from "@karta/react";
 import { setElementVars } from "@vanilla-extract/dynamic";
 import clsx from "clsx";
-import { Layers, LocateFixed, Settings, X } from "lucide-react";
+import { Layers, Settings, X } from "lucide-react";
 import {
   type AnimationEvent,
   type KeyboardEvent,
@@ -52,7 +52,11 @@ import { useSheetGesture } from "./hooks/useSheetGesture";
 import { useTownshipData } from "./hooks/useTownshipData";
 import { getLayerGroups, getLayers, getStory } from "./layers/registry";
 import { m } from "./paraglide/messages.js";
-import { type PanelView, useMapUiStore } from "./stores/useMapUiStore";
+import {
+  type MapSurface,
+  type PanelView,
+  useMapUiStore,
+} from "./stores/useMapUiStore";
 
 // Leaflet's stylesheet loads with the map chunk, so routes without a map
 // (such as /privacy) don't block on it.
@@ -187,7 +191,9 @@ function FeatureDetails({
       data-testid="feature-details"
       data-e2e="feature-details"
     >
-      <h2 className={styles.sectionTitle}>{title}</h2>
+      <h2 id="map-panel-heading" className={styles.sectionTitle}>
+        {title}
+      </h2>
       {attributes.length > 0 ? (
         <dl className={styles.featureAttributes}>
           {attributes.map(([key, value]) => (
@@ -269,7 +275,9 @@ const PanelViewContent = memo(function PanelViewContent({
   }
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>{title}</h2>
+      <h2 id="map-panel-heading" className={styles.sectionTitle}>
+        {title}
+      </h2>
       {body}
     </section>
   );
@@ -351,8 +359,6 @@ export function App() {
   const [selectableFeatures, setSelectableFeatures] = useState<
     SelectableFeatureSearchEntry[]
   >([]);
-  const [locateRequest, setLocateRequest] = useState<number | null>(null);
-  const [locateError, setLocateError] = useState(false);
   const [mapCoordinates, setMapCoordinates] = useState<{
     latitude: number;
     longitude: number;
@@ -422,6 +428,12 @@ export function App() {
     [activeLegendLayer],
   );
   const legendRampRef = useRef<HTMLSpanElement>(null);
+  const panelTriggerRef = useRef<HTMLButtonElement>(null);
+  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
+  const surfaceTriggerRef = useRef<HTMLButtonElement>(null);
+  const legendChipVisible = Boolean(
+    activeLegendLayer && !(panelOpen && !mobileSheetClosing),
+  );
   /**
    * Localized copy forwarded to both `DesktopLegend`/`MobileLegend`'s
    * internal `Legend`, computed fresh per render for the same per-request
@@ -499,8 +511,24 @@ export function App() {
     (label: string) => m.map_selection_announcement({ label }),
     [],
   );
+  const openSurface = useCallback(
+    (
+      surface: Exclude<MapSurface, null>,
+      trigger: HTMLButtonElement | null = panelTriggerRef.current,
+    ) => {
+      setMobileSheetClosing(false);
+      surfaceTriggerRef.current = trigger;
+      setActiveSurface(surface);
+    },
+    [setActiveSurface],
+  );
   useEffect(() => {
-    if (!legendRampRef.current || activeLegendRamp.length === 0) {
+    const element = legendRampRef.current;
+    if (!element || !legendChipVisible) {
+      return;
+    }
+    if (activeLegendRamp.length === 0) {
+      element.style.removeProperty(styles.legendRampBackground);
       return;
     }
     const stops = activeLegendRamp
@@ -510,17 +538,17 @@ export function App() {
         return `${color} ${start}% ${end}%`;
       })
       .join(", ");
-    setElementVars(legendRampRef.current, {
+    setElementVars(element, {
       [styles.legendRampBackground]: `linear-gradient(90deg, ${stops})`,
     });
-  }, [activeLegendRamp]);
+  }, [activeLegendRamp, legendChipVisible]);
   const handleFeatureSelect = useCallback(
     (featureId: string) => {
       setSelectedFeatureId(featureId);
       setSheetDetent("half");
-      setActiveSurface("feature");
+      openSurface("feature");
     },
-    [setActiveSurface, setSelectedFeatureId, setSheetDetent],
+    [openSurface, setSelectedFeatureId, setSheetDetent],
   );
   /**
    * Whether the active domain declares any `interaction.selectable` layer at
@@ -562,9 +590,6 @@ export function App() {
     browser: m.panel_tab_browse(),
   };
   const isDesktopViewport = useIsDesktopViewport();
-  const panelTriggerRef = useRef<HTMLButtonElement>(null);
-  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
-  const surfaceTriggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const singleViewRef = useRef<HTMLDivElement>(null);
@@ -624,7 +649,7 @@ export function App() {
     mode: MeasurementMode,
     points: { lat: number; lng: number }[],
   ) {
-    setActiveSurface("measure");
+    openSurface("measure");
     setMeasurementRequest({ token: Date.now(), mode, points });
   }
 
@@ -634,7 +659,7 @@ export function App() {
     onShowStory: () => {
       setPanelView("story");
       setSheetDetent("half");
-      setActiveSurface("explore");
+      openSurface("explore");
     },
     onRequestMeasurement: handleRequestMeasurement,
   });
@@ -752,7 +777,7 @@ export function App() {
     surfaceTriggerRef.current = panelTriggerRef.current;
     setSheetDetent("half");
     markSheetEntranceNotReady();
-    setActiveSurface("explore");
+    openSurface("explore");
     markSheetEntranceReadyAfterPaint();
     requestAnimationFrame(() => {
       const activeTabIndex = panelViews.indexOf(panelView);
@@ -806,7 +831,9 @@ export function App() {
       <FeatureDetails properties={selectedFeature?.properties} />
     ) : activeSurface === "legend" ? (
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>{m.legend_title()}</h2>
+        <h2 id="map-panel-heading" className={styles.sectionTitle}>
+          {m.legend_title()}
+        </h2>
         <Legend
           mode="active"
           visibleLayerIds={visibleLayerIds}
@@ -816,7 +843,9 @@ export function App() {
       </section>
     ) : activeSurface === "settings" ? (
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>{m.settings_title()}</h2>
+        <h2 id="map-panel-heading" className={styles.sectionTitle}>
+          {m.settings_title()}
+        </h2>
         <ThemeToggle
           preference={themePreference}
           onChange={setThemePreference}
@@ -890,8 +919,6 @@ export function App() {
                 basemap={basemap}
                 selectedFeatureId={selectedFeatureId}
                 focusLocationTarget={focusLocationTarget}
-                locateRequest={locateRequest}
-                onLocateError={() => setLocateError(true)}
                 onCoordinatesChange={setMapCoordinates}
                 onFeatureSelect={handleFeatureSelect}
                 onSelectableFeaturesChange={setSelectableFeatures}
@@ -906,13 +933,17 @@ export function App() {
                 measurementTool
                 measurementLabels={measurementLabels}
                 measurementActive={activeSurface === "measure"}
-                onMeasurementActiveChange={(active) =>
-                  setActiveSurface(active ? "measure" : null)
-                }
+                onMeasurementActiveChange={(active) => {
+                  if (active) {
+                    openSurface("measure");
+                  } else {
+                    setActiveSurface(null);
+                  }
+                }}
                 measurementPanelOpen={
                   activeSurface !== null && activeSurface !== "measure"
                 }
-                onMeasurementPanelClose={() => setActiveSurface("measure")}
+                onMeasurementPanelClose={() => openSurface("measure")}
                 measurementRequest={measurementRequest}
               />
             </Suspense>
@@ -968,31 +999,16 @@ export function App() {
           ) : null}
         </search>
 
-        <IconButton
-          className={styles.locateControl}
-          label={m.locate_me()}
-          data-testid="locate-me"
-          data-e2e="locate-me"
-          onClick={() => {
-            setLocateError(false);
-            setLocateRequest((request) => (request ?? 0) + 1);
-          }}
-        >
-          <LocateFixed aria-hidden="true" />
-        </IconButton>
-        {locateError ? (
-          <output className={styles.locateError}>{m.locate_error()}</output>
-        ) : null}
         {mapCoordinates ? (
-          <output
+          <div
             className={styles.coordinateReadout}
-            aria-label={m.map_coordinates_label()}
+            aria-hidden="true"
             data-testid="map-coordinate-readout"
             data-e2e="map-coordinate-readout"
           >
             {mapCoordinates.latitude.toFixed(4)},{" "}
             {mapCoordinates.longitude.toFixed(4)}
-          </output>
+          </div>
         ) : null}
 
         <ControlButton
@@ -1012,18 +1028,18 @@ export function App() {
           </span>
         </ControlButton>
 
-        {activeLegendLayer && !panelVisuallyOpen ? (
+        {legendChipVisible ? (
           <button
             type="button"
             className={styles.legendChip}
-            aria-label={m.legend_active_aria_label({
+            aria-label={`${m.legend_active_aria_label({
               label: activeLegendLayer.label,
-            })}
+            })}${activeLayers.length > 1 ? ` +${activeLayers.length - 1}` : ""}`}
             data-testid="active-legend-chip"
             data-e2e="active-legend-chip"
             onClick={() => {
               setSheetDetent("half");
-              setActiveSurface("legend");
+              openSurface("legend");
             }}
           >
             <span className={styles.legendChipLabel}>
@@ -1042,7 +1058,7 @@ export function App() {
           id="map-controls"
           role="dialog"
           aria-modal={!isDesktopViewport && sheetDetent === "full"}
-          aria-label={m.panel_tablist_aria_label()}
+          aria-labelledby="map-panel-heading"
           tabIndex={-1}
           ref={panelRef}
           className={clsx(styles.panel, styles.surface)}
@@ -1135,9 +1151,8 @@ export function App() {
               setActiveSurface(null);
               return;
             }
-            surfaceTriggerRef.current = settingsTriggerRef.current;
             setSheetDetent("half");
-            setActiveSurface("settings");
+            openSurface("settings", settingsTriggerRef.current);
           }}
         >
           {settingsOpen ? (

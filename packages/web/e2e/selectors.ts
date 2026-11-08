@@ -49,6 +49,7 @@ export const E2E = {
   locationContextMenu: "location-context-menu",
   measurement: {
     toggle: "measurement-control-toggle",
+    panel: "measurement-control-panel",
     close: "measurement-control-close",
     hint: "measurement-control-hint",
     result: "measurement-control-result",

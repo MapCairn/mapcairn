@@ -22,8 +22,9 @@ export default defineConfig({
   // GL instance, which fetches its own worker script) has been observed to
   // overwhelm it under CI, crashing the server mid-run ("Connection reset by
   // peer") and cascading into unrelated test failures across the whole
-  // suite. Serialize CI runs to avoid that; local runs keep full parallelism.
-  workers: process.env.CI ? 1 : undefined,
+  // suite. CI runs serially; local runs use two workers to avoid delaying
+  // map-data readiness checks under full parallelism.
+  workers: process.env.CI ? 1 : 2,
   reporter: "list",
   use: {
     baseURL: "http://localhost:4173",

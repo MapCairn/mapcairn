@@ -37,6 +37,35 @@ test.describe("app shell", () => {
     ).toEqual([]);
   });
 
+  test("keeps the coordinate readout clear of Settings without announcing pointer updates", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    const readout = page.getByTestId("map-coordinate-readout");
+    const settings = page.getByTestId(E2E.settingsMenuTrigger);
+    await expect(readout).toBeVisible();
+    await expect(readout).toHaveAttribute("aria-hidden", "true");
+
+    const readoutBox = await readout.boundingBox();
+    const settingsBox = await settings.boundingBox();
+    expect(readoutBox).not.toBeNull();
+    expect(settingsBox).not.toBeNull();
+
+    if (!readoutBox || !settingsBox) {
+      throw new Error("Expected both coordinate and Settings bounds");
+    }
+
+    const overlapsHorizontally =
+      readoutBox.x < settingsBox.x + settingsBox.width &&
+      readoutBox.x + readoutBox.width > settingsBox.x;
+    const overlapsVertically =
+      readoutBox.y < settingsBox.y + settingsBox.height &&
+      readoutBox.y + readoutBox.height > settingsBox.y;
+
+    expect(overlapsHorizontally && overlapsVertically).toBe(false);
+  });
+
   test("the skip link is the first stop on Tab and moves focus into the map region", async ({
     page,
   }) => {
@@ -86,9 +115,17 @@ test.describe("app shell", () => {
       "placeholder",
       "Search places",
     );
-    const visibleCopy = await page
-      .locator("body")
-      .evaluate((body) => body.innerText);
+    const visibleCopy = await page.locator("body").evaluate((body) => {
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+      const visibleText: string[] = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode as Text;
+        if (node.parentElement?.getClientRects().length) {
+          visibleText.push(node.textContent ?? "");
+        }
+      }
+      return visibleText.join("");
+    });
     expect(visibleCopy).not.toMatch(/apartheid|gauteng|cape town|township/i);
   });
 });

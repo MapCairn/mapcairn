@@ -16,8 +16,6 @@
   "search_searching": "Deursoek plekke...",
   "search_no_results": "Niks het by daardie soektog gepas nie.",
   "search_unavailable": "Soek is tans nie beskikbaar nie. Probeer asseblief weer.",
-  "locate_me": "Vind my ligging",
-  "locate_error": "Jou ligging kon nie bepaal word nie.",
   "map_coordinates_label": "Kaartkoördinate",
   "location_out_of_coverage": "{location} is buite die huidige kaartdekking.",
 
