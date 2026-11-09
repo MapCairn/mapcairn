@@ -27,6 +27,12 @@ export default defineConfig(({ mode, command }) => {
             reactRouter(),
             FontaineTransform.vite({
               fallbacks: ["Arial", "sans-serif"],
+              // IBM Plex Sans has a hand-declared "IBM Plex Sans Fallback" in
+              // src/fonts/fonts.css, with metrics derived from the font file.
+              // Its @font-face names a bare package path that fontaine cannot
+              // resolve, so skip it rather than emit a second, unused face.
+              skipFontFaceGeneration: (name) =>
+                name === "IBM Plex Sans Variable fallback",
               resolvePath: (id) =>
                 new URL(`./node_modules/${id}`, import.meta.url),
             }),

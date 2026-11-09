@@ -1,0 +1,76 @@
+/*
+ * IBM Plex Sans, self-hosted through Fontsource. Only the variable "wght"
+ * axis for Latin and Latin Extended is declared, because the package's own
+ * wght.css bundles all six subsets and Vite would emit every file. The
+ * descriptors and unicode-range values are copied from
+ * @fontsource-variable/ibm-plex-sans/wght.css. The face is declared as
+ * 400 to 600 because the interface only uses weights 400 and 600; a request
+ * for 700 clamps to 600.
+ *
+ * The family name must match fontFamily in packages/theme/src/tokenValues.ts.
+ * Importing this file (and spreading fontPreloadLinks from ./fontPreload into
+ * a route's links) is how a route opts in.
+ */
+
+/* ibm-plex-sans-latin-ext-wght-normal */
+@font-face {
+  font-family: "IBM Plex Sans Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 600;
+  src: url("@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ibm-plex-sans-latin-wght-normal */
+@font-face {
+  font-family: "IBM Plex Sans Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 600;
+  src: url("@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * Metric-matched fallback, so the swap from Arial to Plex barely moves the
+ * layout. Every number is derived from real font metrics, not another font's
+ * preset.
+ *
+ * Plex (read from ibm-plex-sans-latin-wght-normal.woff2 with
+ * @capsizecss/unpack, which reads the head, hhea, OS/2 and hmtx tables):
+ *   unitsPerEm 1000, ascent 1025, descent -275, lineGap 0, xWidthAvg 451
+ *   (the Latin letter-frequency-weighted average advance), xHeight 516,
+ *   capHeight 698.
+ * Arial (@capsizecss/metrics, as shipped in fontaine):
+ *   unitsPerEm 2048, ascent 1854, descent -434, lineGap 67, xWidthAvg 913.
+ *
+ * size-adjust       = (451 / 1000) / (913 / 2048)        = 101.1663%
+ * ascent-override   = (1025 / 1000) / size-adjust         = 101.3184%
+ * descent-override  = (275 / 1000) / size-adjust          = 27.183%
+ * line-gap-override = 0 / 1000 / size-adjust              = 0%
+ *
+ * The overrides are divided by size-adjust because the browser applies them
+ * to the already adjusted size. They match what fontaine computes from the
+ * same file. The widths are measured at weight 400, so semibold text still
+ * shifts slightly. Liberation Sans is metric-compatible with Arial, so the
+ * same numbers hold for it where Arial is missing.
+ */
+@font-face {
+  font-family: "IBM Plex Sans Fallback";
+  src:
+    local("Arial"), local("Arial Regular"), local("Arial-Regular"),
+    local("ArialMT"), local("Liberation Sans");
+  size-adjust: 101.1663%;
+  ascent-override: 101.3184%;
+  descent-override: 27.183%;
+  line-gap-override: 0%;
+}
