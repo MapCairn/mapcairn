@@ -1,4 +1,5 @@
 import { FakeClipboard } from "../fakes/FakeClipboard";
+import { FakeDevicePreferences } from "../fakes/FakeDevicePreferences";
 import { FakeLocationProvider } from "../fakes/FakeLocationProvider";
 import { createFakeMapAdapterFactory } from "../fakes/FakeMapAdapter";
 import { FakeSearchProvider } from "../fakes/FakeSearchProvider";
@@ -8,6 +9,7 @@ import { MemoryUrlState } from "../fakes/MemoryUrlState";
 import { StaticLayerRegistry } from "../fakes/StaticLayerRegistry";
 import type { Services } from "../ports/services";
 import { runClipboardContract } from "./clipboard.contract";
+import { runDevicePreferencesContract } from "./devicePreferences.contract";
 import { runLayerRegistryContract } from "./layerRegistry.contract";
 import { runLocationProviderContract } from "./locationProvider.contract";
 import { runMapAdapterContract } from "./mapAdapter.contract";
@@ -30,6 +32,7 @@ export const PORT_NAMES = [
   "clipboard",
   "url",
   "theme",
+  "preferences",
   "layers",
 ] as const satisfies readonly (keyof Services)[];
 
@@ -50,6 +53,7 @@ export interface PortContractRunners {
   readonly clipboard: typeof runClipboardContract;
   readonly url: typeof runUrlStateContract;
   readonly theme: typeof runThemeSourceContract;
+  readonly preferences: typeof runDevicePreferencesContract;
   readonly layers: typeof runLayerRegistryContract;
 }
 
@@ -96,6 +100,10 @@ export const PORT_REGISTRY: PortRegistry = {
   theme: {
     createFake: () => new FakeThemeSource(),
     runContract: runThemeSourceContract,
+  },
+  preferences: {
+    createFake: () => new FakeDevicePreferences(),
+    runContract: runDevicePreferencesContract,
   },
   layers: {
     createFake: () => new StaticLayerRegistry(),

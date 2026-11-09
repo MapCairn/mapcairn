@@ -1,4 +1,5 @@
 export * from "./clipboard.contract";
+export * from "./devicePreferences.contract";
 export * from "./layerRegistry.contract";
 export * from "./locationProvider.contract";
 export * from "./mapAdapter.contract";

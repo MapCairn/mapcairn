@@ -1,5 +1,6 @@
 import type { Services } from "../ports/services";
 import { FakeClipboard } from "./FakeClipboard";
+import { FakeDevicePreferences } from "./FakeDevicePreferences";
 import { FakeLocationProvider } from "./FakeLocationProvider";
 import {
   createFakeMapAdapterFactory,
@@ -19,6 +20,7 @@ export interface FakeServiceHandles {
   readonly clipboard: FakeClipboard;
   readonly url: MemoryUrlState;
   readonly theme: FakeThemeSource;
+  readonly preferences: FakeDevicePreferences;
   readonly layers: StaticLayerRegistry;
   /** Every adapter `createMapAdapter` has built, oldest first. */
   readonly maps: FakeMapAdapter[];
@@ -52,6 +54,7 @@ export function createFakeServices(
     clipboard: new FakeClipboard(),
     url: new MemoryUrlState(),
     theme: new FakeThemeSource(),
+    preferences: new FakeDevicePreferences(),
     layers: new StaticLayerRegistry(),
     maps,
   };
@@ -65,6 +68,7 @@ export function createFakeServices(
     clipboard: fakes.clipboard,
     url: fakes.url,
     theme: fakes.theme,
+    preferences: fakes.preferences,
     layers: fakes.layers,
     ...overrides,
     fakes,

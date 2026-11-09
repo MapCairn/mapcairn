@@ -1,5 +1,6 @@
 export * from "./createFakeServices";
 export * from "./FakeClipboard";
+export * from "./FakeDevicePreferences";
 export * from "./FakeLocationProvider";
 export * from "./FakeMapAdapter";
 export * from "./FakeSearchProvider";

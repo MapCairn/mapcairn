@@ -2,6 +2,7 @@ import type { ClipboardPort } from "./clipboard";
 import type { LayerRegistry } from "./layers";
 import type { LocationProvider } from "./location";
 import type { MapAdapterFactory } from "./map";
+import type { DevicePreferences } from "./preferences";
 import type { SearchProvider } from "./search";
 import type { SettingsStore } from "./settings";
 import type { ThemeSource } from "./theme";
@@ -20,5 +21,6 @@ export interface Services {
   readonly clipboard: ClipboardPort;
   readonly url: UrlState;
   readonly theme: ThemeSource;
+  readonly preferences: DevicePreferences;
   readonly layers: LayerRegistry;
 }
