@@ -64,7 +64,7 @@ Where these differ from the instructions above, these win.
 
 - Read `AGENTS.md` first.
 - The tests live in `packages/web/e2e/` and import `test` and `expect` from `./fixtures`, never from
-  `@playwright/test`. Locate elements through `./selectors` (`data-e2e` ids) and the helpers in `./ui`.
+  `@playwright/test`. Locate elements through the page object in `./pages/MapPage` and the helpers in `./support`, by role and accessible name first, then `data-testid` (the configured `testIdAttribute`).
 - Start from `packages/web/e2e/seed.spec.ts`.
 - `generator_write_test` writes a file of its own: put it in `packages/web/e2e/`, then run
   `npx biome check --write` on it.

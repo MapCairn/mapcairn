@@ -10,7 +10,6 @@ Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use token
 2. Every control has one owner of its position (`MapChrome`) and one layer (a named z-index).
 3. Nothing is conveyed by colour alone.
 4. Nothing needs a gesture, a hover or a mouse. Every gesture has a keyboard or single-tap equivalent.
-5. The user cannot tell which map engine is running.
 
 ## Tokens
 
@@ -23,8 +22,8 @@ Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use token
 - **Size:** controls are 48px minimum, targets never below 44px, with at least 8px between neighbours.
 - **Icons:** `lucide-react` only, imported by name, 24px, one stroke-width token, through the `Icon` component.
 - **Focus ring:** two tones (an inner surface ring and an outer ring, 2px each) so it shows on any basemap. Every interactive element and the focused map use it.
-- **Motion:** 120, 200 and 320ms, one easing curve, one spring for the sheet. Only transform and opacity animate. `prefers-reduced-motion` turns motion off, including each engine's own animation.
-- **Z layers, bottom to top:** map, mapOverlay, chrome, chromeRaised, sheet, toolbar, popover, toast. Components name a layer and never write a number. The tokens file and the engine style file are the only places raw z-index values may appear.
+- **Motion:** 120, 200 and 320ms, one easing curve, one spring for the sheet. Only transform and opacity animate. `prefers-reduced-motion` turns motion off, including MapLibre's own animation.
+- **Z layers, bottom to top:** map, mapOverlay, chrome, chromeRaised, sheet, toolbar, popover, toast. Components name a layer and never write a number. The tokens file and the map engine style file are the only places raw z-index values may appear.
 
 ## Layout and slots
 
@@ -33,7 +32,7 @@ Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use token
 | Slot | Contents |
 | --- | --- |
 | top-start | search pill |
-| end-stack | compass (only when rotated), main control group (Map options, Measure, Locate me), zoom control group (when shown) |
+| end-stack | compass (when the map is rotated), main control group (Map options, Measure, Locate me), zoom control group (when shown) |
 | bottom-start | scale readout, cursor coordinates (desktop) |
 | bottom-end | attribution |
 | bottom-centre | measure toolbar, toasts, tile-error banner |
@@ -58,26 +57,16 @@ Native elements first. No tabindex above 0. Every interactive component has an a
 | `SkipLink` | First focusable element. Moves focus to the map region. |
 | `VisuallyHidden` | The one way to provide screen-reader-only text. |
 
-Map region: a focusable region named "Map", described by hidden keyboard instructions. Arrow keys pan, plus and minus zoom, Shift with arrows rotates where supported, Home or 0 resets north, P drops a pin, Escape closes the active surface.
+Map region: a focusable region named "Map", described by hidden keyboard instructions. Arrow keys pan, plus and minus zoom, Shift with left and right arrows rotates, Home or 0 resets north, P drops a pin, Escape closes the active surface.
 
-Gesture equivalents: long-press pin has "Drop pin at map centre" and the P key. Pinch and double-tap have the zoom buttons and +/-. Rotation has Shift with arrows and the compass. Sheet drag has the handle button. Measure taps have "Add point at map centre".
-
-## Engine parity
-
-| Capability | Leaflet | MapLibre |
-| --- | --- | --- |
-| Rotation and compass | no | yes |
-| Feature query on tap | no | yes |
-| Everything else | identical through the adapter | identical through the adapter |
-
-The UI hides unsupported features through capability flags.
+Gesture equivalents: long-press pin has "Drop pin at map centre" and the P key. Pinch and double-tap have the zoom buttons and +/-. Rotation has Shift with left and right arrows and the compass. Sheet drag has the handle button. Measure taps have "Add point at map centre".
 
 ## Exempt surfaces
 
 These surfaces hold raw values on purpose and are exempt from the harmony lint (`npm run lint:harmony`, `scripts/harmony`):
 
 - the tokens file (`packages/theme/src/tokens.css.ts`, `tokenValues.ts` and the contrast code and tests)
-- the engine style file (`packages/web/src/adapters/mapEngine.css.ts`), the only place engine selectors and raw engine z-index values may appear
+- the map engine style file (`packages/web/src/adapters/mapEngine.css.ts`), the only place MapLibre selectors (`.maplibregl-*`) and raw engine z-index values may appear
 - committed basemap assets and map style definitions (`packages/core/src/basemaps`)
 - tests, fixtures and test support
 - `node_modules` and build output
@@ -90,6 +79,6 @@ Two other lists exist, and each has one home. `scripts/harmony/allowlist.mjs` ho
 
 | Rule | Enforced by |
 | --- | --- |
-| Colour literals, off-scale radius, spacing, font size and weight, font family, raw z-index, literal motion durations, `outline: none` without `focusRing`, `position: absolute` and `fixed` outside floating surfaces, inline styles, engine selectors, `tabindex` above 0, pinch-zoom blocking, live regions outside `LiveRegion` and `StatusMessage`, icon sizing, icon-only buttons without a name, engine controls, module-level services | harmony scanner (`scripts/harmony`) |
+| Colour literals, off-scale radius, spacing, font size and weight, font family, raw z-index, literal motion durations, `outline: none` without `focusRing`, `position: absolute` and `fixed` outside floating surfaces, inline styles, MapLibre selectors, `tabindex` above 0, pinch-zoom blocking, live regions outside `LiveRegion` and `StatusMessage`, icon sizing, icon-only buttons without a name, MapLibre controls, module-level services | harmony scanner (`scripts/harmony`) |
 | Icon packages, namespace and default imports of `lucide-react`, accessibility rules, browser globals outside adapters, core purity, inline style attributes on DOM elements, `!important` in CSS | Biome (`biome.jsonc`) |
-| Engine libraries outside the engine adapters, Radix outside four primitives, adapters outside the composition root, ports as types only, core limited to pure packages | dependency-cruiser (`.dependency-cruiser.cjs`) |
+| `maplibre-gl` imports outside `packages/web/src/adapters/maplibre`, Radix outside four primitives, adapters outside the composition root, ports as types only, core limited to pure packages | dependency-cruiser (`.dependency-cruiser.cjs`) |

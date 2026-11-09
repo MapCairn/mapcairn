@@ -1,33 +1,36 @@
 # `@karta/theme`
 
-Typed access to Karta's design tokens, built with [vanilla-extract](https://vanilla-extract.style/)'s `createGlobalThemeContract`. It has no dependency on any other Karta package, Leaflet or React.
+Karta's design tokens, built with [vanilla-extract](https://vanilla-extract.style/). It has no dependency on another Karta package, a map engine or React. [`DESIGN.md`](../../DESIGN.md) describes the system and the rules for using it.
 
-## What's in it
+## Exports
 
-- **`vars`**: the colour, shape, elevation, state and motion tokens documented in `docs/design-system.md` (`vars.color.primary`, `vars.shape.cornerMedium`, `vars.elevation.shadow2`, `vars.state.hover`, `vars.motion.easeStandard` and so on).
-- **`mapLabelVars`**: the map label tokens built from those colours (`mapLabelVars.surface`, `.surfaceSecondary`, `.outline`, `.text`).
+| Export | Purpose |
+|---|---|
+| `tokens` | The token contract: `tokens.color.*`, `shadow`, `effect`, `space`, `radius`, `type`, `size`, `focus`, `motion` and `z`. Each is a typed CSS variable reference, so a typo in a `.css.ts` file is a type error. The values and the light and dark switching are defined in `src/tokens.css.ts`. |
+| `focusRing`, `blur`, `surfaceBlurStyle`, `surfaceBlurSupported` | Shared style fragments: the two-tone focus ring, and translucent surfaces with an opaque fallback. |
+| `zLayer(name)` | The z-index variable for a named layer (map, mapOverlay, chrome, chromeRaised, sheet, toolbar, popover, toast). Components name a layer and never write a number. |
+| `mapOverlayTokens` | Colours for everything drawn over the map: pin, measure line and fill, accuracy circle, scale bar and tile-error banner. |
+| `tokenValues` | The raw values (colour roles for both themes, spacing, radii, type scale, motion, z layers). Used by tests and the contrast checks, not by components. |
 
-`createGlobalThemeContract` declares no values and emits no CSS. The host app (`packages/web/src/index.css` in this repo) defines every value and handles light and dark switching. This package only means a `.css.ts` file can write `vars.color.primary` instead of `"var(--md-sys-color-primary)"`, so a typo fails at compile time instead of silently.
-
-None of these tokens has a fallback. `@karta/map`'s own typography, spacing and control sizing tokens (`packages/map/src/theme/mapTokens.ts`) do, because a missing control size has a sensible default and a missing colour doesn't.
+The token set and the contrast checks live in `src/tokens.css.ts`, `src/tokenValues.ts` and `src/contrast.ts`. The contrast tests compute every text and boundary pairing over the worst-case map backdrops in both themes.
 
 ```ts
 // Button.css.ts
-import { vars } from "@karta/theme";
+import { focusRing, tokens } from "@karta/theme";
 import { style } from "@vanilla-extract/css";
 
 export const button = style({
-  background: vars.color.surfaceContainer,
-  borderRadius: vars.shape.cornerMedium,
-  boxShadow: vars.elevation.shadow1,
+  backgroundColor: tokens.color.surfaceRaised,
+  borderRadius: tokens.radius.control,
+  ":focus-visible": focusRing,
 });
 ```
 
 ## Using it in a host app
 
-This package ships source with no build step. A host app has to register `@vanilla-extract/vite-plugin`'s `vanillaExtractPlugin()` in its Vite config and define every custom property that `vars` and `mapLabelVars` point to. See the "Styling" section of `packages/map/README.md` and "Styling implementation" in `docs/design-system.md`.
+This package ships source with no build step. A host registers `vanillaExtractPlugin()` from `@vanilla-extract/vite-plugin` in its Vite config. The package is side-effect free, so its token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does with `tokens` and `focusRing`.
 
 ## What doesn't belong here
 
-- Token values or light and dark switching. Those belong to the host app.
-- `@karta/map`'s own tokens (fonts, spacing, control sizing, z-index, mobile layout). They have fallbacks and live in `packages/map/src/theme/mapTokens.ts`.
+- App-specific values, copy or storage keys.
+- Raw colour, size or z-index literals outside `tokens.css.ts` and `tokenValues.ts`. The harmony scanner enforces this.

@@ -1,34 +1,37 @@
 # `@karta/core`
 
-Domain-agnostic layer contracts, classification, a registry and GeoJSON utilities. This package has no dependency on the web host, map components, React hooks or theme contract.
+The ports, pure logic and basemap definitions of Karta. It has no dependency on another Karta package, React, a map engine or a browser global, and it never reads the clock. The only runtime dependencies are `@turf` maths libraries.
+
+See [`ARCHITECTURE.md`](../../ARCHITECTURE.md) for how core fits with the other packages and the dependency rules that `npm run lint` enforces.
 
 ## Exports
 
-| API | Purpose |
-|---|---|
-| `Layer`, `LayerGroup`, `DomainConfig` | Describe layers, their styles, interactions and grouping without selecting a dataset. |
-| `resolveClassification` | Resolve feature properties to style values. |
-| `createLayerConfig`, `resolveThemedColor` | Produce Leaflet style configuration and theme-aware colours. |
-| `createRegistry` | Expose read-only layer and group accessors over a supplied configuration. |
-| `fetchFeatureCollection`, `mergeFeatureCollections` | Fetch, validate, cache and merge GeoJSON collections. |
-| GeoJSON schemas | Validate geometry and collection structure. |
-| `partitionSettled` | Split settled promises into successful values and errors. |
-| Measurement helpers in `spatial/measurement.ts` | Measure line length and polygon area, format results and create measurement geometry. |
+Everything is exported from `@karta/core`, apart from the contract suites, which come from `@karta/core/contracts`.
 
-The `spatial` directory name describes generic geographic measurement. These helpers remain because the map's distance and area tool uses them; they carry no dataset assumptions.
+| Area | Source | What it holds |
+|---|---|---|
+| Ports | `src/ports` | Types only, apart from small error classes. `Services` (the bundle the app is built from), `MapAdapter` and `MapAdapterFactory`, `SearchProvider`, `LocationProvider`, `SettingsStore`, `ClipboardPort`, `UrlState`, `ThemeSource`, `DevicePreferences`, `LayerRegistry`, `BasemapDefinition`, the geometry types (`LatLng`, `Bounds`, `ViewState`) and the typed errors (`SearchError`, `LocationError`, `MapEngineError`, `PortAbortError`). |
+| Basemaps | `src/basemaps` | `BASEMAPS` (OpenFreeMap Positron, Liberty and Dark, and OpenStreetMap Streets), `getBasemap`, `resolveBasemap`, `AUTO_BASEMAP_ID`, `buildAttribution`. The only place that names a tile source or a credit. |
+| Fakes | `src/fakes` | In-memory implementations of every port (`FakeMapAdapter`, `FakeSearchProvider`, `MemorySettingsStore` and so on) and `createFakeServices()`, for unit tests that run with no browser, WebGL or network. |
+| Contract suites | `src/contracts` (`@karta/core/contracts`) | One shared suite per port, run against the fake and the real adapter, so they cannot drift apart. `PORT_REGISTRY` lists them. |
+| Surface and sheet | `src/surface`, `src/sheet`, `src/layout` | The surface state machine (`surfaceReducer` and its actions), sheet detents and snapping, and the chrome layout rules. |
+| Map maths | `src/zoom`, `src/scale`, `src/format`, `src/units`, `src/spatial` | Zoom conversion (the app uses 256 px tile zoom, the engine zoom is one lower), metres per pixel, the scale bar, coordinate and number formatting, unit conversion, and line distance and polygon area measurement (`measureLineDistance`, `measurePolygonArea`). |
+| Keyboard, announcements and URL | `src/keyboard`, `src/announce`, `src/urlHash` | The map key bindings and their help text, the announcement strings for screen readers, and `#map=` parsing and serialising. |
+| Theme resolution | `src/theme` | `resolveTheme`, `parseThemeChoice` and `buildThemeBootstrapScript`, with the storage key and `<meta name="theme-color">` values. |
+| Other | `src/async` | `partitionSettled`. |
 
-Line and point styles support optional property-based classifications, with flat style values as fallbacks. Line styles also support dash patterns and casing.
+The `spatial` directory name describes generic geographic measurement and carries no dataset assumptions.
 
 ## Usage
 
-The current host uses an empty configuration. Consumers can supply their own layers through the same contract.
+Write unit tests against fakes, with no adapters:
 
 ```ts
-import { createRegistry, type DomainConfig } from "@karta/core";
+import { createFakeServices } from "@karta/core";
 
-const domain: DomainConfig = { layers: [], layerGroups: [] };
-const registry = createRegistry(domain);
-const layers = registry.getLayers();
+const services = createFakeServices();
 ```
 
-Rendering belongs in `@karta/map`; browser hooks belong in `@karta/react`. Consumer-specific data and presentation do not belong in this package.
+Add a new port by following "Adding an adapter" in `ARCHITECTURE.md`: the port here, a fake and a contract suite, then a real adapter in `packages/web`.
+
+Rendering belongs in `@karta/map`, browser hooks in `@karta/react`, and every adapter in `@karta/web`.

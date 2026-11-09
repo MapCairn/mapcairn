@@ -1,54 +1,66 @@
 # AGENTS.md
 
-Guidance for humans and AI working in this repository. `CLAUDE.md` imports this file with `@AGENTS.md` and adds its own workflow rules.
+Guidance for humans and AI working in this repository. `CLAUDE.md` imports this file with `@AGENTS.md` and adds its own workflow rules. `ARCHITECTURE.md` and `DESIGN.md` are the source of truth for architecture and design; this file does not repeat them.
 
 ## About
 
-Karta is a reusable SDK for public-interest geospatial layer platforms. Four SDK packages provide a domain-agnostic layer model, map rendering, React hooks and a typed design-token contract. `packages/web` is an SSR reference host with an empty map: basemaps, place search, distance and area measurement and theme settings. No datasets or domain-specific overlays are bundled.
+Karta is a reusable SDK for public-interest map platforms, with a reference host. Four SDK packages (`core`, `map`, `react`, `theme`) provide the map ports and pure logic, the map user interface, generic React hooks and the typed design tokens. `packages/web` is an SSR host with an empty map: basemaps, place search, distance and area measurement, a pin, and theme and unit settings. No datasets or domain-specific overlays are bundled. `docs/plans/` holds plans for work that is not built yet, such as the first data layers; do not describe a planned feature as existing.
+
+MapLibre GL JS is the only map engine. The app follows ports and adapters, described in `ARCHITECTURE.md`. The design system is tokens only, with IBM Plex Sans, Lucide icons and vanilla-extract, described in `DESIGN.md`. The app is English only (British English, `lang="en-GB"`), with its copy written inline in components.
 
 The published host runs on Cloudflare Workers. It has no accounts and no tracking beyond cookieless page views. Client error reports are logged as described in `PRIVACY.md`.
 
+The SDK packages (`core`, `map`, `react`, `theme`) are Apache-2.0 and carry their own `LICENSE` files. `packages/web` and the repository root are AGPL-3.0.
+
 ## Commands
 
-Use Node 24.22.1 or newer (Node 24 is tested) and npm 11 or newer. `.node-version` selects Node 24; `package.json` pins the package manager to npm 11.
+Use Node 24 or newer and npm 11 or newer. `.node-version` selects Node 24, `engines` in `package.json` requires `node >=24` and `npm >=11`, and `packageManager` pins `npm@11.19.1`. Cloudflare Workers Builds installs the `packageManager` version and ignores `engines.npm`.
 
 ```bash
 npm install
+npm run dev
 npm test
 npm run test:coverage
 npm run typecheck
-npm run build
 npm run lint
 npm run format
-npm run dev -w @karta/web
+npm run build
+npm run start
+npm run e2e
+npm run a11y
+npm run check
 ```
 
-`npm test` runs Vitest across `packages/*`. Coverage thresholds are 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has lower floors (about 70% statements and lines), because its layout and touch-gesture code is covered by Playwright. Aim for 100% behavioural coverage. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
+- `dev` runs the Vite SSR dev server on port 5173. It never touches Cloudflare.
+- `test` runs Vitest across `packages/*`. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
+- `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has lower floors (70% statements and lines, 65% functions, 50% branches), because its layout and touch-gesture code is covered by Playwright. Aim for 100% behavioural coverage.
+- `typecheck` checks every workspace, including web route types and the Playwright project.
+- `lint` runs Biome, dependency-cruiser and the harmony scanner (`scripts/harmony`, see `DESIGN.md`). Pre-commit runs the same three on staged files, but not typecheck, tests or coverage.
+- `build` builds every workspace. The web build then checks that the production bundle holds no browser test seam.
+- `start` builds the e2e-mode bundle and serves it on port 4173 through wrangler, with `wrangler.e2e.jsonc`. This build keeps the test seam, so it is not the production bundle. `wrangler.e2e.jsonc` omits production routes, so the old-hostname redirect is not exercised.
+- `check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence.
 
-`typecheck` checks every workspace, including web route types. `lint` runs Biome, dependency-cruiser and the harmony scanner (`npm run lint:harmony`, see DESIGN.md). Pre-commit runs Biome on staged files, dependency-cruiser and the harmony scanner, but does not run typecheck, tests or coverage.
-
-CI checks lint, typecheck, coverage and build. Lighthouse and Playwright have separate workflows.
+CI checks lint, typecheck, coverage and build. Playwright and Lighthouse have separate workflows.
 
 ### Browser tests
 
 ```bash
 npm run playwright:install -w @karta/web
-npm run test:e2e -w @karta/web
-npm run test:e2e:local -w @karta/web
-npm run test:e2e:mobile -w @karta/web
+npm run e2e
+npm run a11y
 ```
 
-Playwright builds and starts the preview itself on port 4173. `wrangler.e2e.jsonc` omits production routes so the old-hostname redirect is not exercised locally. The suite mocks basemap requests to avoid depending on external tile services.
+`e2e` runs every Playwright test except those tagged `@a11y`, and `a11y` runs only those. Playwright starts `npm run start` itself and reuses a server already running on port 4173. Page objects live in `packages/web/e2e/pages`, and shared helpers in `packages/web/e2e/support`. Locators use role and accessible name first, then `data-testid` (the configured `testIdAttribute`). The suite mocks basemap tiles, styles and Nominatim, so no test depends on a third-party service, and tests script geolocation, search, the clipboard, storage and the system theme through the test seam described in `ARCHITECTURE.md`.
 
-Projects cover desktop Chromium, mobile Chromium and iPhone WebKit. WebKit runs the vector-basemap spec because MapLibre worker startup can fail differently on iOS. Emulation cannot reproduce an iPhone GPU; basemap changes still need a real-device check.
+Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. WebKit runs only the basemap, keyboard, sheet and app-shell specs, because MapLibre worker startup and the bottom sheet can behave differently on iOS. Emulation cannot reproduce an iPhone GPU; basemap changes still need a real-device check.
 
 ## Engineering principles
 
 - Test first. Write a failing behavioural test, observe the intended failure, then implement the change. Do not weaken assertions or exclude code to satisfy coverage.
-- Follow SOLID. Keep SDK contracts domain-agnostic and pass configuration through props and context. New consumer layer ids must not require id-based branches in SDK code.
-- Follow DRY, KISS and YAGNI. Reuse shared logic and tokens, but do not build speculative features.
+- Follow SOLID. Depend on ports, not engines or browser APIs. Pass configuration through props and context.
+- Follow DRY, KISS and YAGNI. Reuse shared logic and tokens, but do not build speculative features. Add an interface only where a boundary has at least two implementations, counting the fake.
 - Stay on task. Avoid unrelated refactoring and formatting.
-- Treat accessibility as part of implementation: semantic HTML, keyboard support, visible focus and WCAG 2.2 AA contrast in both themes.
+- Treat accessibility as part of implementation: semantic HTML, keyboard support, visible focus and WCAG 2.2 AA contrast in both themes. Every gesture needs a keyboard or single-tap equivalent.
 
 ## Conventions
 
@@ -63,77 +75,49 @@ Projects cover desktop Chromium, mobile Chromium and iPhone WebKit. WebKit runs 
 
 ### Dependencies and lockfiles
 
-The npm workspaces share one root `package-lock.json`. Both npm 10 and npm 11 must accept it.
+The npm workspaces share one root `package-lock.json`.
 
 - After a manifest change, run a real `npm install` in an isolated working copy and include the manifest and lockfile together. Do not use `--package-lock-only` as the normal update procedure; stale nested entries can survive.
-- Check lockfile changes with real `npm ci --ignore-scripts` installs under npm 10 and npm 11 in separate disposable clones. A dry run is insufficient.
-- If npm 10 rejects a lockfile with missing entries, regenerate with `npx -y npm@10 install --package-lock-only --ignore-scripts`, then repeat real installs under both majors.
+- Check the result with one real `npm ci --ignore-scripts` under npm 11 in a disposable clone. A dry run is insufficient.
 - If `npm ls` reports invalid nested entries after a range change, remove those stale lockfile entries and run a real install again. Never hand-edit dependency versions.
 - Pin prerelease versions exactly.
-- Dependabot owns its own lockfile changes. Change one only when a real npm 10 or npm 11 install fails.
+- Dependabot owns its own lockfile changes. Change one only when a real install fails.
 - Do not install into a working tree another person or agent is using.
 - Run existing tools through `npm run` or `npx --no-install`, so missing binaries cannot fetch unrelated packages.
 - Keep one Dependabot entry per ecosystem and directory. Use groups to split updates; duplicate directories invalidate the whole configuration.
 
 ## Architecture
 
-### Package boundaries
+`ARCHITECTURE.md` has the layers, the ports table, the map adapter and how to add an adapter. The package boundaries are:
 
-- `packages/core` (`@karta/core`): layer and classification contracts, Leaflet style configuration, registry, GeoJSON fetching/validation/merging and measurement helpers. It must not import other Karta packages.
+- `packages/core` (`@karta/core`): the port interfaces, pure logic (surface state machine, sheet snapping, zoom, scale, formatting, announcements, URL hash, theme resolution, measurement), the basemap definitions, fakes and contract suites. It must not import other Karta packages, React or a browser global.
 - `packages/react` (`@karta/react`): generic React hooks. It must not import other Karta packages.
-- `packages/theme` (`@karta/theme`): typed design-token contracts. It must not import other Karta packages.
-- `packages/map` (`@karta/map`): map components, legend, basemap registry, search and measurement controls. It builds on core, react and theme, never web.
-- `packages/web` (`@karta/web`): the SSR host, which supplies empty layer and group arrays to the SDK and owns app-specific copy, bootstrap and headers.
+- `packages/theme` (`@karta/theme`): the typed token contract, `focusRing`, `zLayer` and the token values with their contrast maths. It must not import other Karta packages.
+- `packages/map` (`@karta/map`): the map user interface (chrome, sheet, panels, tools, primitives), the `MapView` host and `ServicesProvider`. It builds on core, react and theme, never web, and never imports an adapter or an engine.
+- `packages/web` (`@karta/web`): the SSR host. It owns the adapters (MapLibre, Nominatim, geolocation, storage, clipboard, URL hash, theme), the composition root `createServices()`, the engine CSS, app copy, routes and headers.
 
-`.dependency-cruiser.cjs` mechanically enforces these boundaries through `npm run depcruise`, included in lint.
-
-### Core and map
-
-`DomainConfig` describes `Layer` and `LayerGroup` arrays without assuming any dataset. `createRegistry` exposes their read-only accessors. `DomainProvider` wraps this registry for React; every consumer of `useDomain()` must be below it.
-
-`spatial/measurement.ts` contains generic geographic distance and area operations used by the measuring tool. The spatial terminology is intentional: it describes coordinate geometry, not an application domain. Keep generic APIs named for their function.
-
-`MapView` takes bounds, accessible copy and popup rendering from its caller. Import it from `@karta/map/MapView`, not the main barrel, so lazy-loading preserves its module boundary. Map data remains caller-configured; the current web host supplies no overlays.
-
-The basemap registry supports raster and vector definitions. Built-ins are OpenFreeMap Positron, Liberty and Dark, plus Esri Satellite and Topographic. UI theme and basemap choice are independent. Vector maps lazy-load MapLibre; its worker must remain compatible with iOS and the production CSP.
-
-`LocationSearchControl` accepts a geocoder provider, defaulting to Nominatim. Hosts own provider coverage and CSP allowlisting. Selecting a result changes the input query, so the control suppresses the next debounced query to prevent reopening its dropdown.
-
-### React and theme
-
-`initTheme({ storageKey, colors })` runs before hydration. It configures the shared preference store and re-reads the configured storage key. `useResolvedDarkTheme` combines stored preference and the OS setting. `useLatestRef` lets long-lived external listeners read the current value.
-
-`useModelContextTool` registers browser tools only where WebMCP is available. It reads current execution callbacks through a ref rather than re-registering on every render.
-
-`@karta/theme` declares CSS variable contracts, not values. `packages/web/src/index.css` supplies light and dark values. Map-specific fallback tokens live in `packages/map/src/theme/mapTokens.ts`.
+`npm run lint` enforces these boundaries through dependency-cruiser (`.dependency-cruiser.cjs`), Biome and the harmony scanner.
 
 ### Web host and deployment
 
-The host provides basemap selection, search, measurement and settings with no bundled datasets. It does not need storage or remote data bindings. `wrangler.jsonc` declares only the static `ASSETS` binding, routes and observability.
+`wrangler.jsonc` declares only the static `ASSETS` binding, routes and observability. `workers/app.ts` redirects the previous hostname to the current site and forwards requests to the built React Router server. The route table in `src/routes.ts` has the map, the privacy page, the `robots.txt`, `sitemap.xml` and `llms.txt` resource routes and `log-error`.
+`entry.client.tsx` installs client error reporting before hydration. Server rendering, the root error boundary and the Worker wrapper log server errors. `routes/log-error.ts` validates bounded client reports and logs them without a database.
 
-`workers/app.ts` redirects the previous hostname to the current site and forwards requests to the built React Router server.
+The inline theme bootstrap in `root.tsx` (source in `src/app/themeBootstrap.ts`) prevents a flash before hydration. If its source changes, recompute its exact SHA-256 CSP hash in `public/_headers`. Keep font and app CSS as module imports so font fallback metrics are applied by the build.
 
-The app is English only (British English, `lang="en-GB"`). Its copy is written inline in components, with no string table or translation library. The site sets no cookies.
-
-`entry.client.tsx` initialises theme and client error reporting before hydration. Server rendering, the root error boundary and the Worker wrapper log server errors. `routes/log-error.ts` validates bounded client reports and logs them without a database.
-
-The inline theme bootstrap in `root.tsx` prevents a flash before hydration. If its source changes, recompute its exact SHA-256 CSP hash in `public/_headers`. Keep font and app CSS as module imports so font fallback metrics are applied by the build.
-
-Production CSP permits no `unsafe-inline` script or stylesheet source. New basemap or geocoder origins must be allowed in `public/_headers`; local development does not apply those headers.
+Production CSP permits no `unsafe-inline` script or stylesheet source. New basemap or geocoder origins must be allowed in `public/_headers`; local development does not apply those headers. The MapLibre worker must stay compatible with iOS and the production CSP.
 
 ## Design system
 
-Karta uses paper, ink and an ochre accent, with Source Serif 4 headings and Public Sans body text. Fonts are self-hosted. Use `tabular-nums` for figures.
+`DESIGN.md` is the source of truth: tokens only, IBM Plex Sans, Lucide icons through the `Icon` component, one accent, and layout slots owned by `MapChrome`. Token values live in `packages/theme/src/tokens.css.ts` and `tokenValues.ts`. Components use vanilla-extract beside their implementations and may only use tokens. Use `tabular-nums` for figures. Do not introduce a second palette or arbitrary values. Do not add a Shadow DOM component library such as `@material/web`: its custom elements fail under Workers SSR.
 
-Handwritten values live in `packages/web/src/index.css`. Keep its light and both dark token blocks in step. `--md-sys-*` names are the token contract; do not introduce a second palette or arbitrary values.
-
-Components use vanilla-extract beside their implementations. SDK consumers must register `vanillaExtractPlugin()` and supply the theme variables. See `docs/design-system.md`.
+SDK consumers must register `vanillaExtractPlugin()` in their Vite config. `@karta/theme` is side-effect free, so its token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does.
 
 ## Definition of done
 
 - Code changes: run `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`.
-- Map or UI changes: also run `npm run test:e2e -w @karta/web`.
-- Dependency changes: perform the real install and cross-major lockfile checks above.
+- Map or UI changes: also run `npm run e2e` and `npm run a11y`.
+- Dependency changes: perform the real install and the `npm ci` check above.
 - Report checks that failed or were skipped.
 
 ## Safety
@@ -144,4 +128,4 @@ Adding a dataset is a separate, explicitly scoped decision. Do not reintroduce d
 
 ## Documentation
 
-`README.md` indexes package guides, `docs/building-a-domain.md` and `docs/design-system.md`. `CONTRIBUTING.md`, `SECURITY.md`, `ATTRIBUTIONS.md` and `PRIVACY.md` cover contribution, reporting, credits and privacy.
+`README.md` is the entry point and links the guides. `ARCHITECTURE.md` covers layers, ports and adapters, and `DESIGN.md` covers tokens, layout and accessibility contracts. Each package has a short `README.md`. `docs/plans/` holds numbered plans for work not yet built. `CONTRIBUTING.md`, `SECURITY.md`, `ATTRIBUTIONS.md` and `PRIVACY.md` cover contribution, reporting, credits and privacy. `PRIVACY.md` mirrors the privacy page in `packages/web/src/app/PrivacyPage.tsx`; change both together.

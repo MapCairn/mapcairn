@@ -58,9 +58,10 @@ Where these differ from the instructions above, these win.
 - Read `AGENTS.md` first.
 - The tests live in `packages/web/e2e/` and import `test` and `expect` from `./fixtures`, never from
   `@playwright/test`: the fixtures stub basemap tiles, MapLibre styles and the geocoder. Locate elements through
-  `./selectors` (`data-e2e` ids) and the helpers in `./ui`. `packages/web/playwright.config.ts` builds the app and
-  serves it with `wrangler dev` against `wrangler.e2e.jsonc` on port 4173; projects are `chromium` and
-  `mobile-chromium` (Pixel 7).
+  the page object in `./pages/MapPage` and the helpers in `./support`, by role and accessible name first, then
+  `data-testid` (the configured `testIdAttribute`). `packages/web/playwright.config.ts` runs `npm run start`, an
+  e2e-mode build served with `wrangler dev` against `wrangler.e2e.jsonc` on port 4173; projects are `chromium`,
+  `mobile-chromium` (Pixel 7) and `webkit` (iPhone 15, a few specs only).
 - Start from `packages/web/e2e/seed.spec.ts`.
 - Copy is British English and written inline in the components under `packages/web/src`; read the strings from there
   rather than guessing them, unless the test is about the wording itself.

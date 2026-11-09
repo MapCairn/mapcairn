@@ -1,32 +1,33 @@
 # Karta
 
-Karta is an SDK for public-interest map layer platforms. It provides a domain-agnostic layer model, React map components, hooks and typed design tokens.
+Karta is a reusable SDK for public-interest map platforms, with a reference host. The SDK is built on ports and adapters: the interface and the pure logic depend on small interfaces, and one place wires in the map engine and the browser services. MapLibre GL JS is the only map engine.
 
-`packages/web` is an empty-map reference host. It includes basemaps, place search, distance and area measurement and theme settings. No datasets or domain-specific overlays are bundled. The site has no accounts and no tracking beyond cookieless page views.
+`packages/web` is the reference host, an empty map with basemaps, place search, distance and area measurement, a pin, and theme and unit settings. No datasets or domain-specific overlays are bundled. The site has no accounts and no tracking beyond cookieless page views. [`docs/plans/`](docs/plans/README.md) holds plans for work that is not built yet, such as the first data layers.
 
 ## Documentation
 
 | Document | Covers |
 |---|---|
-| [`docs/building-a-domain.md`](docs/building-a-domain.md) | Supplying a layer configuration to the SDK |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter |
-| [`DESIGN.md`](DESIGN.md) | Tokens, layout slots and accessibility contracts |
-| [`docs/design-system.md`](docs/design-system.md) | Colours, typography, shape and map styling |
-| [`packages/core/README.md`](packages/core/README.md) | Layer model, registry, geodata utilities and measurement |
-| [`packages/map/README.md`](packages/map/README.md) | Map components and UI primitives |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
+| [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules |
+| [`docs/plans/`](docs/plans/README.md) | Numbered plans for work not yet built |
+| [`packages/core/README.md`](packages/core/README.md) | Ports, pure logic, basemaps, fakes and contract suites |
+| [`packages/map/README.md`](packages/map/README.md) | Map user interface, `MapView` and the services provider |
 | [`packages/react/README.md`](packages/react/README.md) | Generic React hooks |
-| [`packages/theme/README.md`](packages/theme/README.md) | Typed design-token contract |
+| [`packages/theme/README.md`](packages/theme/README.md) | Design tokens |
+| [`AGENTS.md`](AGENTS.md) | Guidance for people and AI working in the repository |
 
 ## Stack
 
 - Five npm workspaces: `@karta/core`, `@karta/map`, `@karta/react`, `@karta/theme` and `@karta/web`.
-- React, TypeScript, React Router framework mode, Vite, Leaflet and MapLibre.
-- Vanilla-extract styling and self-hosted fonts.
+- React, TypeScript, React Router framework mode, Vite and MapLibre GL JS.
+- Vanilla-extract styling, IBM Plex Sans (self-hosted) and Lucide icons.
 - Cloudflare Workers for server rendering and static assets.
+- English only (British English).
 
 ## Development
 
-Use Node 24.22.1 or newer (Node 24 is tested) and npm 11 or newer.
+Use Node 24 or newer and npm 11 or newer. `.node-version` selects Node 24.
 
 ```bash
 npm install
@@ -35,17 +36,44 @@ npm run dev
 
 | Script | Does |
 |---|---|
-| `npm run dev` | Dev server with hot reload at http://localhost:5173 |
-| `npm start` | Builds, then serves the production build locally at http://localhost:4173 |
+| `npm run dev` | Vite SSR dev server with hot reload at http://localhost:5173. It never touches Cloudflare |
+| `npm start` | Builds the e2e-mode bundle, then serves it through wrangler at http://localhost:4173. This is the server the end-to-end tests use |
 | `npm run build` | Production build of every workspace |
-| `npm run lint` | Biome and dependency-cruiser (layer and import rules) |
+| `npm run lint` | Biome, dependency-cruiser (layer and import rules) and the harmony scanner (style and markup rules) |
 | `npm run typecheck` | Type checks every workspace |
 | `npm test` | Unit tests (Vitest) |
+| `npm run test:coverage` | Unit tests with coverage thresholds |
 | `npm run e2e` | Playwright end-to-end tests, without the accessibility subset |
 | `npm run a11y` | The accessibility subset of the Playwright tests, tagged `@a11y` |
 | `npm run check` | Lint, typecheck, unit tests, build, e2e and a11y in sequence |
 
-Playwright starts its own server with `npm start` and reuses one that is already running on port 4173. Install browsers once with `npm run playwright:install -w @karta/web`.
+## How to
+
+### Run the tests
+
+```bash
+npm test                                  # unit tests, all packages
+npx --no-install vitest run path/to/file.test.ts   # one file
+npm run playwright:install -w @karta/web  # once, to install the browsers
+npm run e2e                               # end-to-end tests
+npm run a11y                              # accessibility tests
+```
+
+Playwright starts `npm start` itself and reuses a server already running on port 4173. The tests mock basemap tiles, styles and place search, so they need no network.
+
+### Add a basemap
+
+1. Add a `BasemapDefinition` to `BASEMAPS` in `packages/core/src/basemaps/basemaps.ts`. A `raster` source is a tile URL template with 256 px tiles, and a `vector` source is a MapLibre style URL. Set the zoom limits, the provider credits and `appearance`.
+2. Allow the provider's origins in the Content Security Policy in `packages/web/public/_headers` (`img-src` and `connect-src`).
+3. Render its picker preview with `node scripts/generateBasemapThumbnails.mjs <id>` and commit the image in `packages/web/public/basemaps/`.
+4. Record the provider in `ATTRIBUTIONS.md` and in the map tiles section of the privacy page (`packages/web/src/app/PrivacyPage.tsx`) and `PRIVACY.md`.
+5. Update the basemap constants in `packages/web/e2e/support/basemaps.ts` and the tests that count basemaps.
+
+### Add an adapter
+
+Define the port, write its fake and contract suite, write the real adapter in `packages/web/src/adapters` and register it in `createServices()`. [`ARCHITECTURE.md`](ARCHITECTURE.md#adding-an-adapter) has the steps.
+
+## Contributing, security and conduct
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`SECURITY.md`](SECURITY.md) for private vulnerability reporting and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
 

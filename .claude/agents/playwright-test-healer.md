@@ -50,8 +50,8 @@ Where these differ from the instructions above, these win.
 
 - Read `AGENTS.md` first.
 - The tests live in `packages/web/e2e/` and import `test` and `expect` from `./fixtures`, never from
-  `@playwright/test`. `packages/web/playwright.config.ts` builds the app and serves it with `wrangler dev` on
-  port 4173.
+  `@playwright/test`. `packages/web/playwright.config.ts` runs `npm run start`, which builds the app in e2e mode and serves it with
+  `wrangler dev` on port 4173. Page objects are in `./pages` and shared helpers in `./support`.
 - Never weaken an assertion, add a fixed wait (`waitForTimeout`, a sleep) or skip a test (`test.skip`, `test.fixme`)
   to make it pass. Fix the root cause in the test; if the test is right and the app is wrong, leave the test failing
   and report the failure and its cause.

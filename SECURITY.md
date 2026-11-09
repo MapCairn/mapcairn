@@ -1,6 +1,6 @@
 # Security policy
 
-_Last updated: 2026-07-29_
+_Last updated: 2026-11-09_
 
 ## Scope
 
@@ -49,7 +49,7 @@ ask otherwise.
 
 The following are not treated as vulnerabilities in this project:
 
-- Missing security headers on third-party hosts (tile providers, data sources)
+- Missing security headers on third-party hosts (tile providers and the place search service)
 - Reports generated solely by an automated scanner with no demonstrated impact
 - Denial of service against third-party basemap or geocoding APIs. These are
   not our infrastructure, and abusing them is explicitly discouraged

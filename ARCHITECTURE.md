@@ -6,7 +6,7 @@ Karta separates what the app does from what it runs on. The interface and the pu
 flowchart TD
   subgraph web["packages/web"]
     root["composition root<br/>createServices()"]
-    adapters["adapters<br/>leaflet, maplibre, search,<br/>location, settings, clipboard,<br/>url, theme"]
+    adapters["adapters<br/>maplibre, search,<br/>location, settings, clipboard,<br/>url, theme"]
     host["SSR host, routes, engine CSS"]
   end
   subgraph map["packages/map"]
@@ -46,11 +46,13 @@ flowchart TD
 
 ## Ports
 
-Add an interface only where a boundary has at least two implementations. Each port has a real adapter, a fake and a shared contract suite that runs against both.
+Add an interface only where a boundary has at least two implementations. The fake counts as the second implementation. Each port has a real adapter, a fake and a shared contract suite that runs against both.
+
+`MapAdapter` has one real implementation, MapLibre GL JS, and is kept for two reasons. It is the boundary between the ui and the engine, so the ui never imports `maplibre-gl`. It also lets unit tests run the ui against an in-memory fake, with no WebGL. The contract suite runs against both the fake and the MapLibre adapter, so the fake cannot drift from the real behaviour.
 
 | Port | Real adapter | Fake |
 | --- | --- | --- |
-| `MapAdapter` | Leaflet (raster), MapLibre GL JS (vector) | scripted in-memory map |
+| `MapAdapter` | MapLibre GL JS (vector and raster styles) | scripted in-memory map |
 | `SearchProvider` | Nominatim | scripted results and errors |
 | `LocationProvider` | browser geolocation | scripted fixes and errors |
 | `SettingsStore` | `localStorage` with in-memory fallback | in-memory |
@@ -59,20 +61,19 @@ Add an interface only where a boundary has at least two implementations. Each po
 | `ThemeSource` | `matchMedia` | scripted system preference |
 | `LayerRegistry` | empty registry for now | list of sample layers |
 
-`BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source, an attribution string or an engine.
+`BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source or an attribution string. A `raster` source is a tile URL template and a tile size, and a `vector` source is a style URL.
 
 Pure helpers (zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
 
 ## The map adapter
 
-The ui never sees Leaflet or MapLibre. `MapView` asks the services for an adapter that suits the active basemap, mounts it in a host element and wires events to the rest of the ui.
+MapLibre GL JS is the only map engine, and the ui never imports it. `MapView` takes an adapter factory (`() => MapAdapter`) from the services, mounts one adapter in a host element and wires events to the rest of the ui. Changing basemap calls `setBasemap` on that adapter. The adapter builds an inline raster style for a `raster` source and loads the style URL for a `vector` source.
 
-- **Zoom** is normalised to the 256 px tile convention (Leaflet and OpenStreetMap numbering). MapLibre zoom is the normalised value minus one. The URL, the saved view, the scale bar and the tests use the normalised value only.
-- **Capabilities** (`supportsRotation`, `supportsFeatureQuery`) replace engine checks. Leaflet has no rotation, so the compass never appears on it. The ui branches on capabilities, never on the engine name.
-- **Overlays** (pin, measure line, accuracy circle) are drawn once, in a single overlay layer positioned with `adapter.project`, so they look the same on both engines.
-- **Engine CSS** lives in one file, `packages/web/src/adapters/mapEngine.css.ts`. It hides engine controls, replaces fonts and focus rings, and sets the map background from the tokens.
-- **Switching engines** unmounts one engine and mounts the other with the same centre, zoom and bearing. The chrome stays mounted.
-- **Loading** is lazy. Each engine module imports its library dynamically the first time a basemap needs it.
+- **Zoom** is normalised to the 256 px tile convention (OpenStreetMap tile numbering). MapLibre counts 512 px tiles, so the engine zoom is the normalised zoom minus one. That offset is one constant, converted only inside the adapter. For the 256 px raster style, the tile level equals the normalised zoom. The URL, the saved view, the scale bar and the tests use the normalised value only.
+- **Overlays** (pin, measure line, accuracy circle) are drawn once, in a single overlay layer positioned with `adapter.project`.
+- **Engine CSS** lives in one file, `packages/web/src/adapters/mapEngine.css.ts`. It styles MapLibre only, scopes its rules under the host's `data-map-host` attribute, hides MapLibre's own controls, replaces fonts and focus rings, and sets the map background from the tokens.
+- **Loading** is lazy. The MapLibre module imports `maplibre-gl` dynamically the first time the map mounts.
+- **No WebGL** means no map. There is no fallback basemap. The app shows a plain message in place of the map ("Karta needs WebGL to draw the map.") with advice to try a different browser or turn on hardware acceleration. `MapUnavailable` draws it inside the map region, so the region and the skip link still work, and announces it once, assertively, through the shared announcer rather than being a live region itself. It has no Retry, because mounting again would fail the same way.
 
 ## Adding an adapter
 
