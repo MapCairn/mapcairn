@@ -11,6 +11,11 @@ const executablePath = existsSync(remoteSessionChromium)
   ? remoteSessionChromium
   : undefined;
 
+// Set KARTA_E2E_PORT to run beside another checkout's server. The `start`
+// script (scripts/startE2e.mjs) reads the same variable.
+const port = process.env.KARTA_E2E_PORT || "4173";
+const baseURL = `http://localhost:${port}`;
+
 // Specs that WebKit (iPhone) runs as well: MapLibre's worker startup, the
 // keyboard model and the bottom sheet are where iOS has behaved differently.
 // The layout and accessibility matrices stay on Chromium: they share CSS with
@@ -48,7 +53,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : 2,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:4173",
+    baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     testIdAttribute: "data-testid",
@@ -73,7 +78,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run start",
-    url: "http://localhost:4173",
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     // The e2e build runs before the server starts.
     timeout: 240_000,

@@ -9,7 +9,7 @@
     "dev": "react-router dev",
     "build": "react-router build && node scripts/verifyNoTestSeam.mjs",
     "build:e2e": "react-router build --mode e2e && node scripts/verifyNoTestSeam.mjs --expect-present",
-    "start": "npm run build:e2e && wrangler dev --config ../../wrangler.e2e.jsonc --port 4173",
+    "start": "node scripts/startE2e.mjs",
     "typecheck": "react-router typegen && tsc --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.playwright.json --noEmit",
     "preview": "wrangler dev --config ../../wrangler.jsonc",
     "preview:e2e": "wrangler dev --config ../../wrangler.e2e.jsonc",
