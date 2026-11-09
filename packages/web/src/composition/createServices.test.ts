@@ -1,6 +1,5 @@
 import {
   createFakeServices,
-  emptyLayerRegistry,
   FakeClipboard,
   FakeSearchProvider,
   type Services,
@@ -9,6 +8,7 @@ import {
 import { PORT_NAMES } from "@karta/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
+import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
 
 afterEach(() => {
@@ -31,13 +31,13 @@ describe("createServices", () => {
     expect(["light", "dark"]).toContain(services.theme.getSystemTheme());
     expect(services.settings.get().units).toBe("metric");
     expect(services.preferences.get()).toHaveProperty("reducedMotion");
-    expect(services.layers.list()).toEqual([]);
+    expect(services.layers.list()).toEqual(LAYER_DEFINITIONS);
     expect(services.url.read()).toEqual({});
   });
 
-  it("lists no layers, through the shared empty registry rather than a fake", () => {
+  it("lists the host's layer definitions, through a real registry rather than a fake", () => {
     const { layers } = createServices();
-    expect(layers).toBe(emptyLayerRegistry);
+    expect(layers.list().length).toBeGreaterThan(0);
     expect(layers).not.toBeInstanceOf(StaticLayerRegistry);
   });
 

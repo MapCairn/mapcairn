@@ -430,6 +430,22 @@ describe("validateLayerDefinition", () => {
       "source.filter:",
     ],
     [
+      "a cache time that is negative",
+      SAMPLE_FEED_LAYER,
+      (d) => {
+        (d.source as Json).cacheSeconds = -1;
+      },
+      "source.cacheSeconds:",
+    ],
+    [
+      "a cache time over an hour",
+      SAMPLE_FEED_LAYER,
+      (d) => {
+        (d.source as Json).cacheSeconds = 7200;
+      },
+      "source.cacheSeconds:",
+    ],
+    [
       "a tile URL that is not https",
       SAMPLE_TILE_LAYER,
       (d) => {

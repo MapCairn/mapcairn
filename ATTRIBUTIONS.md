@@ -1,6 +1,17 @@
 # Attributions
 
-The reference host bundles no datasets. Its basemaps use third-party map services.
+The reference host bundles no datasets. Its basemaps and its open data layers use third-party services, fetched by the browser only when someone turns a layer on.
+
+## Open data layers
+
+Each layer's definition in `packages/web/src/layers/definitions/` carries the credit below, and the map credits show it while the layer is on. A test fails if a definition's credit is missing here.
+
+| Layer | Source | Credit |
+|---|---|---|
+| Earthquakes | [USGS Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/) GeoJSON feeds, US public domain | Credit: U.S. Geological Survey |
+| Satellite imagery | [NASA GIBS](https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api), VIIRS NOAA-21 corrected reflectance | We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS). |
+
+The full GIBS acknowledgement wording is to be confirmed against the GIBS "Data Use Guidance and Acknowledgements" page before release.
 
 ## Basemaps
 

@@ -157,6 +157,21 @@ describe("FetchLayerSource", () => {
     expect(net.urls).toHaveLength(2);
   });
 
+  it("keeps a response for the definition's cache time when the provider sends no max-age", async () => {
+    let clock = now;
+    const net = scriptedFetch();
+    net.reply(geojson([point("a")]));
+    const source = new FetchLayerSource({ fetch: net.fetch, now: () => clock });
+    const definition = {
+      ...SAMPLE_FEED_LAYER,
+      source: { ...SAMPLE_FEED_LAYER.source, cacheSeconds: 300 },
+    };
+    await source.load({ definition, controls: {}, now });
+    clock += 299_000;
+    await source.load({ definition, controls: {}, now });
+    expect(net.urls).toHaveLength(1);
+  });
+
   it("never requests a detail URL off the declared origins", async () => {
     const net = scriptedFetch();
     const source = new FetchLayerSource({ fetch: net.fetch });

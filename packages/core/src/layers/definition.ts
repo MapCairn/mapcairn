@@ -129,6 +129,12 @@ export interface FeedSource {
   readonly decoder: string;
   readonly fields: FieldMap;
   readonly filter?: FeatureFilter;
+  /**
+   * The least time, in seconds (at most 3600), a response is reused in this
+   * page, for providers that send no `Cache-Control` max-age. Layers split
+   * from one feed then cost one request. Nothing is stored beyond the page.
+   */
+  readonly cacheSeconds?: number;
 }
 
 /** Raster tiles drawn as an overlay, such as WMTS imagery or a WMS map. */

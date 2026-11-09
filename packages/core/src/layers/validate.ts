@@ -647,6 +647,15 @@ function checkFeed(
     problems.add("source.decoder", "is not a registered decoder");
   }
   const fields = checkFields(problems, source.fields);
+  const { cacheSeconds } = source;
+  if (
+    cacheSeconds !== undefined &&
+    (typeof cacheSeconds !== "number" ||
+      cacheSeconds < 0 ||
+      cacheSeconds > 3600)
+  ) {
+    problems.add("source.cacheSeconds", "must be from 0 to 3600 seconds");
+  }
   const filter = source.filter;
   if (
     filter !== undefined &&

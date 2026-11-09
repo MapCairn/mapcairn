@@ -1,4 +1,4 @@
-import { emptyLayerRegistry, type Services } from "@karta/core";
+import type { Services } from "@karta/core";
 // The engine style file has no exports. Importing it here, in the one module
 // every page that builds services loads, puts its rules in the page before
 // the engine mounts, and keeps it out of the ui, which may not import adapters.
@@ -12,6 +12,7 @@ import { NominatimSearchProvider } from "../adapters/search/NominatimSearchProvi
 import { LocalStorageSettingsStore } from "../adapters/settings/LocalStorageSettingsStore";
 import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
+import { createHostLayerRegistry } from "../layers";
 import { readTestOverrides } from "./testSeam";
 
 /** Options for {@link createServices}. */
@@ -62,7 +63,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     url: new BrowserUrlState(),
     theme: new BrowserThemeSource(),
     preferences: new BrowserDevicePreferences(),
-    layers: emptyLayerRegistry,
+    layers: createHostLayerRegistry(),
     layerSource: new FetchLayerSource(),
   };
   const seam =

@@ -5,6 +5,7 @@ export * from "./emptyLayerRegistry";
 export * from "./feed";
 export * from "./filter";
 export * from "./formatters";
+export * from "./layerRegistry";
 export * from "./palette";
 export * from "./paths";
 export * from "./registry";

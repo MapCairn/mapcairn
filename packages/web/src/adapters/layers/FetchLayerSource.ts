@@ -5,6 +5,7 @@ import {
   decodeFeed,
   detailUrl,
   feedUrl,
+  isFeedLayer,
   type LayerDetailRequest,
   LayerError,
   type LayerFeature,
@@ -55,7 +56,14 @@ export class FetchLayerSource implements LayerSource {
 
   async load(request: LayerLoadRequest): Promise<readonly LayerFeature[]> {
     const { definition, controls, now, signal } = request;
-    const raw = await this.#get(feedUrl(definition, controls, now), signal);
+    const cacheSeconds = isFeedLayer(definition)
+      ? (definition.source.cacheSeconds ?? 0)
+      : 0;
+    const raw = await this.#get(
+      feedUrl(definition, controls, now),
+      signal,
+      cacheSeconds,
+    );
     return decodeFeed(definition, raw, this.#decoders);
   }
 
@@ -70,7 +78,11 @@ export class FetchLayerSource implements LayerSource {
     return decodeDetail(request.definition, raw, this.#decoders);
   }
 
-  #get(url: string, signal: AbortSignal | undefined): Promise<unknown> {
+  #get(
+    url: string,
+    signal: AbortSignal | undefined,
+    minimumSeconds = 0,
+  ): Promise<unknown> {
     return this.#cache.load(
       url,
       async (requestSignal) => {
@@ -101,8 +113,9 @@ export class FetchLayerSource implements LayerSource {
         }
         return {
           value,
-          maxAgeSeconds: maxAgeFromCacheControl(
-            response.headers.get("cache-control"),
+          maxAgeSeconds: Math.max(
+            minimumSeconds,
+            maxAgeFromCacheControl(response.headers.get("cache-control")),
           ),
         };
       },
