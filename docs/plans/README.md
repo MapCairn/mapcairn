@@ -8,3 +8,4 @@ Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository r
 | --- | --- | --- |
 | [0001 Open data layers](0001-open-data-layers.md) | done | [#157](https://github.com/mooship/karta/issues/157) |
 | [0002 Data saving and first paint](0002-data-saving-and-first-paint.md) | done | [#158](https://github.com/mooship/karta/issues/158) |
+| [0003 Drawing, styling and geometry tools](0003-drawing-styling-and-geometry.md) | proposed | [#159](https://github.com/mooship/karta/issues/159) |
