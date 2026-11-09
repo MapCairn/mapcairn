@@ -17,8 +17,11 @@ export interface Rgba {
 export type ColourInput = string | Rgba;
 
 const HEX_RE = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const RGB_RE = /^rgba?\(\s*([^)]*?)\s*\)$/i;
-const OKLCH_RE = /^oklch\(\s*([^)]*?)\s*\)$/i;
+// Padding inside the brackets is dropped by `splitArguments`, so the capture
+// takes everything up to the closing bracket. A lazy group between two `\s*`
+// runs backtracks quadratically on a long run of spaces.
+const RGB_RE = /^rgba?\(([^)]*)\)$/i;
+const OKLCH_RE = /^oklch\(([^)]*)\)$/i;
 
 /**
  * Parses a CSS alpha value written as a number (`0.5`) or a percentage

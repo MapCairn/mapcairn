@@ -140,8 +140,13 @@ describe("toHex", () => {
  */
 const AA_TEXT = 4.5;
 const AA_NON_TEXT = 3;
-const { white, black, lightMap, darkMap } = representativeBackdrops;
-const worstCaseBackdrops = { white, black };
+const { white, black, lightMap, darkMap, liberty } = representativeBackdrops;
+/**
+ * White and black bracket every map. Liberty, the default basemap in both
+ * themes, is checked by name as well, because a dark theme no longer implies
+ * a dark map beneath the chrome.
+ */
+const surfaceBackdrops = { white, black, liberty };
 const themeNames: ThemeName[] = ["light", "dark"];
 const colourSets = ["colour", "opaque", "contrastMore"] as const;
 
@@ -193,7 +198,7 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
   describe.each(colourSets)("%s set", (set) => {
     const roles = values[set];
 
-    describe.each(Object.entries(worstCaseBackdrops))(
+    describe.each(Object.entries(surfaceBackdrops))(
       "surface over %s",
       (_name, backdrop) => {
         for (const surfaceRole of ["surface", "surfaceRaised"] as const) {
@@ -280,6 +285,7 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
           black,
           lightMap,
           darkMap,
+          liberty,
         })) {
           expect(
             contrastRatio(roles[role], backdrop),
@@ -299,6 +305,35 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
     });
   });
 
+  it("paints the map before it loads in the default basemap's land colour, whatever the theme", () => {
+    for (const set of colourSets) {
+      expect(values[set].mapBackground, set).toBe(liberty);
+    }
+  });
+
+  it(`keeps text, muted text and links at ${AA_TEXT}:1 on full pages`, () => {
+    for (const set of colourSets) {
+      const roles = values[set];
+      for (const role of ["text", "textMuted", "accent"] as const) {
+        expect(
+          contrastRatio(roles[role], roles.pageBackground),
+          `${set}.${role}`,
+        ).toBeGreaterThanOrEqual(AA_TEXT);
+      }
+    }
+  });
+
+  it("keeps the page background in the theme's own lightness", () => {
+    const luminance = relativeLuminance(
+      parseColour(values.colour.pageBackground),
+    );
+    if (theme === "dark") {
+      expect(luminance).toBeLessThan(0.05);
+    } else {
+      expect(luminance).toBeGreaterThan(0.8);
+    }
+  });
+
   it("raises hairlines and chrome borders to 3:1 under prefers-contrast: more", () => {
     const roles = values.contrastMore;
     const surface = parseColour(roles.surface);
@@ -307,6 +342,31 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
     );
     expect(contrastRatio(roles.chromeBorder, surface)).toBeGreaterThanOrEqual(
       AA_NON_TEXT,
+    );
+  });
+});
+
+describe("parseColour on hostile input", () => {
+  const spaces = " ".repeat(40_000);
+
+  it.each([
+    ["oklch(", `oklch(${spaces}x`],
+    ["rgb(", `rgb(${spaces}x`],
+    ["rgba(", `rgba(${spaces}x`],
+  ])("rejects a long run of spaces after %s in linear time", (_name, input) => {
+    const start = performance.now();
+    expect(() => parseColour(input)).toThrow(/Cannot parse colour/);
+    expect(performance.now() - start).toBeLessThan(250);
+  });
+
+  it("still accepts padding inside the brackets", () => {
+    expect(parseColour("rgb(  10 ,  20 , 30  )")).toMatchObject({
+      r: 10,
+      g: 20,
+      b: 30,
+    });
+    expect(parseColour("oklch(  0.5   0.1   200  )").r).toBeGreaterThanOrEqual(
+      0,
     );
   });
 });
