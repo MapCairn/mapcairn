@@ -117,6 +117,193 @@ The Directions tool appears only when `services.routing` exists, and the SDK shi
 
 Leave `routing` out and the Directions button, panel and overlays are never mounted, so a host without a service carries no dead controls.
 
+### Style polygons and lines
+
+A feed of polygons or lines uses a `shapes` style. Colour is a rule over one field: `fixed`, `category`, `steps` (explicit class breaks) or `intervals` (equal classes between a `min` and a `max`, one ordinal colour per class). Each class may also set a `pattern` (`stripes`, `dots`, `crosshatch`), a `dash` and a `width`, and a label template draws text with a halo. The key is derived from the style. Colour is never the only signal, so validation asks for a different pattern, width or dash in every class, or a label that names the field. The colour names a palette slot, never a value.
+
+```ts
+import type { FeedLayerDefinition, ShapeStyle } from "@karta/core";
+
+const districts: FeedLayerDefinition<ShapeStyle> = {
+  id: "example-districts",
+  name: "Districts by density",
+  description: "Example districts shaded by people per square kilometre.",
+  group: "Boundaries",
+  dataCost: "about 60 KB",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [],
+  source: {
+    kind: "feed",
+    url: "https://data.example.org/districts.geojson",
+    decoder: "geojson",
+    fields: {
+      id: "properties.code",
+      title: "properties.name",
+      density: "properties.density",
+    },
+  },
+  style: {
+    kind: "shapes",
+    geometry: "area",
+    colour: {
+      kind: "intervals",
+      field: "density",
+      min: 0,
+      max: 300,
+      ramp: ["ordinal-1", "ordinal-3", "ordinal-5"],
+      unit: " per km²",
+      patterns: ["solid", "dots", "crosshatch"],
+    },
+    label: { template: "{title}", minzoom: 6 },
+  },
+  card: { title: "{title}", lines: ["About {density|number} per km²"] },
+  list: {
+    secondary: "About {density|number} per km²",
+    sorts: [{ id: "name", label: "Name", field: "title", direction: "asc" }],
+  },
+  emptyText: "No districts could be shown.",
+};
+
+export default districts;
+```
+
+Labels need a basemap with a glyph source, which the vector basemaps have. On a raster basemap the map draws the fills, patterns and outlines without text, and the list and card keep the words. `world-countries.ts` is a working example, from Natural Earth country outlines.
+
+### Add a heatmap
+
+A `heatmap` layer draws point density from a feed (or a query) and has no cards or list. The radius and intensity come from `range` controls so people can tune it, and the legend names each step of the ramp with a word.
+
+```ts
+import type { HeatmapLayerDefinition } from "@karta/core";
+
+const density: HeatmapLayerDefinition = {
+  id: "example-density",
+  name: "Event density",
+  description: "How dense the example events are.",
+  group: "Density",
+  dataCost: "about 40 KB",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [
+    { kind: "range", id: "radius", label: "Radius", min: 4, max: 80, step: 2, default: 20, unit: " px" },
+    { kind: "range", id: "intensity", label: "Intensity", min: 0.1, max: 5, step: 0.1, default: 1 },
+    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 },
+  ],
+  source: {
+    kind: "feed",
+    url: "https://data.example.org/events.geojson",
+    decoder: "geojson",
+    fields: { id: "id", title: "properties.name", weight: "properties.size" },
+  },
+  heatmap: {
+    weightField: "weight",
+    radius: { control: "radius" },
+    intensity: { control: "intensity" },
+    ramp: ["ordinal-1", "ordinal-3", "ordinal-5"],
+    words: ["Sparse", "Moderate", "Dense"],
+  },
+  emptyText: "No events to show.",
+};
+
+export default density;
+```
+
+### Add vector tiles
+
+A `vector-tiles` layer names a tile URL, a zoom window for the layer, and a style per source layer. Rules read tile properties by name, and a label template may name one property, such as `{name}`. A source layer can also be a `heatmap`. The source's `minzoom` and `maxzoom` are the tile levels the service has; the layer's and each source layer's `minzoom` and `maxzoom` are the zoom levels they are visible at. Features stay in the tiles, so the layer has a key and no cards.
+
+```ts
+import type { VectorTileLayerDefinition } from "@karta/core";
+
+const parks: VectorTileLayerDefinition = {
+  id: "example-areas",
+  name: "Parks and water",
+  description: "Example areas and roads from vector tiles.",
+  group: "Boundaries",
+  dataCost: "about 100 KB per screen",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [],
+  source: { kind: "vector-tiles", tiles: "https://tiles.example.org/{z}/{x}/{y}.pbf", maxzoom: 14 },
+  minzoom: 3,
+  sourceLayers: [
+    {
+      sourceLayer: "areas",
+      style: {
+        kind: "shapes",
+        geometry: "area",
+        colour: {
+          kind: "category",
+          field: "kind",
+          categories: [
+            { value: "park", label: "Park", colour: "bluish-green", pattern: "dots" },
+            { value: "water", label: "Water", colour: "sky-blue", pattern: "stripes" },
+          ],
+          other: { label: "Other area", colour: "orange" },
+        },
+      },
+    },
+    {
+      sourceLayer: "roads",
+      minzoom: 8,
+      style: {
+        kind: "shapes",
+        geometry: "line",
+        colour: {
+          kind: "steps",
+          field: "rank",
+          steps: [
+            { min: 0, label: "Minor road", colour: "ordinal-2", width: 1.5 },
+            { min: 5, label: "Major road", colour: "ordinal-4", width: 4, dash: "dashed" },
+          ],
+        },
+      },
+    },
+  ],
+};
+
+export default parks;
+```
+
+Tile origins go in `connect-src` and `img-src`, as for raster tiles.
+
+### Ask only for what is in view
+
+For a dataset too large to fetch whole, use a `query` source in place of a `feed`. The layer asks for the features inside the current view, after the map has been still for a moment, and asks again only when the view leaves the area it last asked for. It draws at most `maxFeatures`, says "Showing the first N. Zoom in to see more." when there are more, and below `minzoom` asks for nothing and says "Zoom in to load this layer." The URL must use `{west}`, `{south}`, `{east}` and `{north}`, and may use `{limit}`, which is `maxFeatures` plus one so the response shows that more exist.
+
+```ts
+import type { FeedLayerDefinition, PointStyle } from "@karta/core";
+
+const places: FeedLayerDefinition<PointStyle> = {
+  id: "example-places",
+  name: "Places in view",
+  description: "Example places, requested for the part of the map in view.",
+  group: "Places",
+  dataCost: "a few KB per screen",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [],
+  source: {
+    kind: "query",
+    url: "https://api.example.org/places?bbox={west},{south},{east},{north}&limit={limit}",
+    decoder: "geojson",
+    fields: { id: "id", title: "properties.name", kind: "properties.kind" },
+    maxFeatures: 500,
+    minzoom: 9,
+  },
+  style: { colour: { kind: "fixed", colour: "blue", label: "Place" } },
+  card: { title: "{title}", lines: ["{kind}"] },
+  list: {
+    secondary: "{kind}",
+    sorts: [{ id: "name", label: "Name", field: "title", direction: "asc" }],
+  },
+  emptyText: "No places in view.",
+};
+
+export default places;
+```
+
+### Save an image and choose between features
+
+The sheet's "Save image" button saves a PNG of the map with its layers and credits, made in the browser from what the map has already loaded. A tap that finds several features opens a list, and the `I` key opens the same list for the centre of the map. Neither needs configuration.
+
 ### Add an adapter
 
 Define the port, write its fake and contract suite, write the real adapter in `packages/web/src/adapters` and register it in `createServices()`. [`ARCHITECTURE.md`](ARCHITECTURE.md#adding-an-adapter) has the steps.
