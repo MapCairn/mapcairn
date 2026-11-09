@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "fill": "#bf4040",
+        "fillOpacity": 0.33,
+        "fillColor": "#bf4040",
+        "color": "#bf4040",
+        "contour": 10,
+        "opacity": 0.33,
+        "metric": "time"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [36.7819, -1.3321],
+            [36.8619, -1.3321],
+            [36.8619, -1.2521],
+            [36.7819, -1.2521],
+            [36.7819, -1.3321]
+          ]
+        ]
+      }
+    }
+  ]
+}

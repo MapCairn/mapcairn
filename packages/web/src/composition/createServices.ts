@@ -8,6 +8,7 @@ import { FetchLayerSource } from "../adapters/layers/FetchLayerSource";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
 import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { BrowserDevicePreferences } from "../adapters/preferences/BrowserDevicePreferences";
+import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
 import { NominatimSearchProvider } from "../adapters/search/NominatimSearchProvider";
 import { LocalStorageSettingsStore } from "../adapters/settings/LocalStorageSettingsStore";
 import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
@@ -65,6 +66,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     preferences: new BrowserDevicePreferences(),
     layers: createHostLayerRegistry(),
     layerSource: new FetchLayerSource(),
+    routing: new ValhallaRoutingProvider(),
   };
   const seam =
     import.meta.env.MODE !== "production" ? readTestOverrides() : undefined;

@@ -7,7 +7,7 @@ import {
   type SearchProvider,
   type SearchResult,
 } from "@karta/core";
-import { RequestSpacer } from "./RequestSpacer";
+import { RequestSpacer } from "../shared/RequestSpacer";
 
 const DEFAULT_ENDPOINT = "https://nominatim.openstreetmap.org";
 const DEFAULT_LIMIT = 6;

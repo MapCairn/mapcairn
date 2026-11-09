@@ -1,0 +1,28 @@
+{
+  "trip": {
+    "locations": [],
+    "legs": [
+      {
+        "shape": "o`~d|AocqnCnlag@ohfT~nyo@_{rc@~nyo@_{rc@~x_r@gpbx@",
+        "summary": {
+          "length": 465.9,
+          "time": 17020.5,
+          "min_lat": 0,
+          "min_lon": 0,
+          "max_lat": 0,
+          "max_lon": 0,
+          "has_toll": false
+        },
+        "maneuvers": []
+      }
+    ],
+    "summary": {
+      "length": 465.9,
+      "time": 17020.5
+    },
+    "status_message": "Found route between points",
+    "status": 0,
+    "units": "kilometers",
+    "language": "en-US"
+  }
+}

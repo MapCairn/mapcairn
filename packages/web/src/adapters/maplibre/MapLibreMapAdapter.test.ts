@@ -763,10 +763,7 @@ describe("MapLibreMapAdapter", () => {
         const geometries = [
           {
             type: "LineString" as const,
-            coordinates: [
-              [0, 0],
-              [1, 1],
-            ],
+            coordinates: [[0, 0] as const, [1, 1] as const],
           },
         ];
         adapter.setShapeLayer("plain", { geometries, colour: "#0072b2" });

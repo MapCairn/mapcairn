@@ -6,13 +6,10 @@ import {
   type Services,
   StaticLayerRegistry,
 } from "@karta/core";
-import {
-  OPTIONAL_PORT_NAMES,
-  PORT_NAMES,
-  type PortName,
-} from "@karta/core/contracts";
+import { PORT_NAMES, type PortName } from "@karta/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
+import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
 import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
 
@@ -23,22 +20,16 @@ afterEach(() => {
 });
 
 describe("createServices", () => {
-  it("returns a complete Services with every port the host must supply", () => {
+  it("returns a complete Services with every port, the optional routing port included", () => {
     const services = createServices();
-    const required: readonly string[] = PORT_NAMES.filter(
-      (name) => !(OPTIONAL_PORT_NAMES as readonly string[]).includes(name),
-    );
-    for (const name of required) {
+    for (const name of PORT_NAMES) {
       expect(services[name as PortName], name).toBeDefined();
     }
-    expect(Object.keys(services).sort()).toEqual([...required].sort());
+    expect(Object.keys(services).sort()).toEqual([...PORT_NAMES].sort());
   });
 
-  it("leaves out the optional ports, because no provider is built in", () => {
-    const services = createServices();
-    for (const name of OPTIONAL_PORT_NAMES) {
-      expect(services[name]).toBeUndefined();
-    }
+  it("builds the Valhalla routing provider, which sends nothing until a route is asked for", () => {
+    expect(createServices().routing).toBeInstanceOf(ValhallaRoutingProvider);
   });
 
   it("builds real adapters that answer without touching the network", () => {
@@ -77,6 +68,12 @@ describe("createServices", () => {
       const services = createServices({ overrides: { search } });
       expect(services.search).toBe(search);
       expect(services.settings.get().units).toBe("metric");
+    });
+
+    it("replaces the routing provider", () => {
+      const routing = new FakeRoutingProvider();
+      const services = createServices({ overrides: { routing } });
+      expect(services.routing).toBe(routing);
     });
 
     it("accepts every service, including the map adapter factory", () => {
@@ -123,7 +120,7 @@ describe("createServices", () => {
       );
     });
 
-    it("lets a browser test supply the optional routing provider", () => {
+    it("lets a browser test replace the routing provider", () => {
       const routing = new FakeRoutingProvider();
       window.__KARTA_TEST_SERVICES__ = { routing };
       vi.spyOn(console, "info").mockImplementation(() => undefined);
