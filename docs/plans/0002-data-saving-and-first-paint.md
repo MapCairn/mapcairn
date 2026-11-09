@@ -1,6 +1,6 @@
 # Plan 0002: data saving and first paint
 
-Status: proposed, not started. Written 2026-11-09.
+Status: in progress. Written 2026-11-09. The Save data mode (section 1) is deferred by the owner; the caching audit, the skeleton and the measurement go ahead.
 
 ## Why
 
@@ -21,7 +21,9 @@ Checked against the live site on 2026-11-09 and the review's build numbers (not 
 - Vector basemaps (Positron, Liberty, Dark) download much less than the raster Streets basemap, whose tiles are PNGs.
 - The server renders only a skip link, a hidden heading and a flat placeholder until the app mounts.
 
-## 1. Save data mode
+## 1. Save data mode (deferred)
+
+Deferred on 2026-11-09 to keep this pass short. The design below is kept for a later pass.
 
 - A Save data switch in the Settings section of the sheet, stored with the other settings (`SettingsStore`, key under `karta:`).
 - Its default comes from a signal when the browser has one: `navigator.connection.saveData`, or an effective connection type of `slow-2g` or `2g`. Chrome, Edge and Samsung Internet expose these. Safari on iOS does not, so the switch is what makes this work there. An explicit choice always wins over the signal.

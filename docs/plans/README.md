@@ -6,5 +6,5 @@ Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository r
 
 | Plan | Status |
 | --- | --- |
-| [0001 Earthquakes and satellite imagery](0001-earthquakes-and-satellite-imagery.md) | proposed |
-| [0002 Data saving and first paint](0002-data-saving-and-first-paint.md) | proposed |
+| [0001 Open data layers](0001-open-data-layers.md) | proposed |
+| [0002 Data saving and first paint](0002-data-saving-and-first-paint.md) | in progress (Save data deferred) |
