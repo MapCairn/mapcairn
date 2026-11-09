@@ -120,6 +120,26 @@ describe("PrivacyPage", () => {
     expect(text).toMatch(/Nominatim/);
   });
 
+  it("names the routing service and says what a route or area request sends, and when", () => {
+    render(<PrivacyPage />);
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Routes and travel-time areas",
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    const text = screen.getByText(/Valhalla routing service/).textContent ?? "";
+    expect(text).toContain("valhalla1.openstreetmap.de");
+    expect(text).toContain("FOSSGIS");
+    expect(text).toContain("OpenStreetMap");
+    expect(text).toMatch(/coordinates/);
+    expect(text).toMatch(/travel mode/);
+    expect(text).toMatch(/IP address/);
+    expect(text).toMatch(/Nothing is sent before you ask/);
+    expect(text).toMatch(/not saved or put in the page address/);
+  });
+
   it("links to the host's policy in a new tab, announced to screen readers", () => {
     render(<PrivacyPage />);
 

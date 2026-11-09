@@ -123,6 +123,17 @@ export function PrivacyPage() {
           log it with your IP address.
         </p>
 
+        <h2 className={styles.sectionTitle}>Routes and travel-time areas</h2>
+        <p className={styles.body}>
+          When you ask for a route or a travel-time area, the request goes to
+          the public Valhalla routing service at valhalla1.openstreetmap.de, run
+          by the FOSSGIS community and built on OpenStreetMap data. It sends the
+          route's coordinates (its stops, or the origin of a travel-time area)
+          and the travel mode, and the server may log them with your IP address.
+          Nothing is sent before you ask. Karta stores nothing about the
+          request, and the results are not saved or put in the page address.
+        </p>
+
         <h2 className={styles.sectionTitle}>Your location</h2>
         <p className={styles.body}>
           The Locate me button asks your browser for your position only when you
