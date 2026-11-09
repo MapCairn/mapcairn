@@ -274,6 +274,30 @@ test.describe("draw", () => {
     await expect(mapPage.drawStatus).toHaveText("Polygon 1, 3 points");
   });
 
+  test("drops an unfinished shape when another tool opens, but keeps it while the sheet is open over it", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(START);
+    await mapPage.startDrawing();
+    const taps = await triangleTaps(mapPage);
+    const twoTaps = [taps[0], taps[1]] as [
+      readonly [number, number],
+      readonly [number, number],
+    ];
+    await mapPage.tapMap(...twoTaps);
+    await expect(mapPage.drawStatus).toHaveText("Polygon 1, 2 points");
+    await mapPage.startMeasuring();
+    await mapPage.startDrawing();
+    await expect(mapPage.drawStatus).toHaveText("Nothing drawn yet");
+
+    await mapPage.tapMap(...twoTaps);
+    await mapPage.drawShapesButton.click();
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
+    await page.keyboard.press("Escape");
+    await expect(mapPage.drawStatus).toHaveText("Polygon 1, 2 points");
+  });
+
   test("cancels a shape that is being drawn", async ({ mapPage }) => {
     await mapPage.goto(START);
     await mapPage.startDrawing();

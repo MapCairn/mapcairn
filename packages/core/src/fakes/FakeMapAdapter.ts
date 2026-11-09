@@ -162,7 +162,9 @@ function wrapLongitude(lng: number): number {
  *   default) sets the pixel space used by `project` and `unproject`.
  * - Drive events with `simulateClick`, `simulateTileError`,
  *   `simulateLoading`, `simulateUserZoom` (a wheel, pinch or double-click)
- *   and `simulateFatalError` (the engine stopping after it loaded). Call
+ *   `simulateFatalError` (the engine stopping after it loaded), and
+ *   `simulatePointerDown`, `simulatePointerMove` and `simulatePointerUp` (a
+ *   mouse or finger on the map, which drive edit handles). Call
  *   `failNextBasemap` to make the next swap fail. `setView`, `zoomIn`, `panBy` and the rest emit real
  *   `move`, `zoom`, `rotate` and `moveEnd` events, and only when something
  *   changed.

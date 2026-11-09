@@ -284,8 +284,14 @@ export function useDraw({
   const draft = draftOf(state);
   const selected = selectedShape(state);
 
+  // Only a new event is announced: a change of units or of the shapes alone is not.
+  const unitsRef = useLatestRef(units);
   useEffect(() => {
-    const text = announceDrawEvent(lastEvent, shapes, units);
+    const text = announceDrawEvent(
+      lastEvent,
+      stateRef.current.shapes,
+      unitsRef.current,
+    );
     if (!text) {
       return;
     }
@@ -297,7 +303,7 @@ export function useDraw({
       });
     }, delay);
     return () => clearTimeout(timer);
-  }, [lastEvent, shapes, units, announceRef]);
+  }, [lastEvent, stateRef, unitsRef, announceRef]);
 
   // What was exported or copied no longer describes the shapes once they change.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the shapes are the trigger

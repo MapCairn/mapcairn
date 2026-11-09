@@ -32,28 +32,27 @@ export const DRAW_KEY_HELP: readonly { keys: string; description: string }[] = [
   {
     keys: "Space",
     description:
-      "While drawing, add a point at the map centre, or move the selected vertex there",
+      "While drawing, add a point at the map centre, or move the selected point there",
   },
   { keys: "Enter", description: "While drawing, finish the shape" },
   {
     keys: "Arrow keys",
-    description:
-      "With a vertex selected, move it a little; hold Shift for more",
+    description: "With a point selected, move it a little; hold Shift for more",
   },
   {
     keys: "Square bracket keys",
-    description: "Select the previous or next vertex",
+    description: "Select the previous or next point",
   },
   {
     keys: "Delete or Backspace",
     description:
-      "Remove the selected vertex or shape, or the last point while drawing",
+      "Remove the selected point or shape, or the last point while drawing",
   },
   { keys: "Control or Command with Z", description: "Undo; add Shift to redo" },
   {
     keys: "Escape",
     description:
-      "Step back: leave a vertex, cancel the shape, then close drawing",
+      "Step back: leave a point, cancel the shape, then close drawing",
   },
 ];
 
