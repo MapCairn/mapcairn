@@ -79,6 +79,11 @@ const PAIRS: readonly Pair[] = [
     live: (page) => page.getByRole("button", { name: "Directions" }),
   },
   {
+    name: "Draw shapes",
+    skeleton: (page) => button(page, "Draw shapes"),
+    live: (page) => page.getByRole("button", { name: "Draw shapes" }),
+  },
+  {
     name: "Locate me",
     skeleton: (page) => button(page, "Locate me"),
     live: (page) => page.getByRole("button", { name: "Locate me" }),

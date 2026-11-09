@@ -1,5 +1,6 @@
 import {
   createFakeServices,
+  DRAW_KEY_HELP,
   FakeDevicePreferences,
   MAP_KEY_HELP,
 } from "@karta/core";
@@ -53,14 +54,26 @@ describe("HelpSection", () => {
     it("lists every shortcut as a term and its description", () => {
       renderHelp();
       const entries = MAP_KEY_HELP;
-      const terms = screen.getAllByRole("term");
-      const definitions = screen.getAllByRole("definition");
+      const keyboard = within(screen.getByTestId("help-keyboard"));
+      const terms = keyboard.getAllByRole("term");
+      const definitions = keyboard.getAllByRole("definition");
       expect(terms.map((term) => term.textContent)).toEqual(
         entries.map((entry) => entry.keys),
       );
       expect(definitions.map((definition) => definition.textContent)).toEqual(
         entries.map((entry) => entry.description),
       );
+    });
+
+    it("lists the drawing shortcuts in their own subsection", () => {
+      renderHelp();
+      const drawing = within(screen.getByTestId("help-drawing"));
+      expect(
+        screen.getByRole("heading", { name: "Drawing", level: 4 }),
+      ).toBeInTheDocument();
+      expect(
+        drawing.getAllByRole("term").map((term) => term.textContent),
+      ).toEqual(DRAW_KEY_HELP.map((entry) => entry.keys));
     });
 
     it("lists the rotation shortcuts", () => {
@@ -83,6 +96,7 @@ describe("HelpSection", () => {
       expect(screen.queryByRole("term")).toBeNull();
       expect(screen.queryByText(/keyboard shortcuts/i)).toBeNull();
       expect(screen.queryByTestId("help-keyboard")).toBeNull();
+      expect(screen.queryByTestId("help-drawing")).toBeNull();
     });
 
     it("still states the accessibility target", () => {

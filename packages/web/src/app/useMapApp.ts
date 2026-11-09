@@ -21,8 +21,10 @@ import {
   type SurfaceState,
   setDetent,
   startDirections,
+  startDraw,
   startMeasure,
   stopDirections,
+  stopDraw,
   stopMeasure,
   surfaceReducer,
   type ViewState,
@@ -33,11 +35,13 @@ import {
   type MapLongPressEvent,
   REVEAL_DETENT,
   type UseDirections,
+  type UseDraw,
   type UseLocate,
   type UseMeasure,
   useAnnounce,
   useDataLayers,
   useDirections,
+  useDraw,
   useLocate,
   useMeasure,
   useSettings,
@@ -135,6 +139,15 @@ export interface MapApp {
   readonly finishMeasure: () => void;
   readonly addPointAtCentre: () => void;
 
+  /** The shapes: drawing state, selection and undo. Shapes outlive the tool. */
+  readonly draw: UseDraw;
+  readonly drawing: boolean;
+  readonly toggleDraw: () => void;
+  /** Closes the draw tool, dropping a shape that was not finished. */
+  readonly finishDraw: () => void;
+  /** Opens the sheet on the Shapes section, over the drawing. */
+  readonly openShapes: () => void;
+
   readonly locate: UseLocate;
 
   /** The directions tool: stops, travel mode and the route or area on the map. */
@@ -199,6 +212,11 @@ export function useMapApp(): MapApp {
   const measure = useMeasure(settings.units);
   const locate = useLocate(settings.units, { announceErrors: false });
   const directions = useDirections(settings.units);
+  const draw = useDraw({
+    units: settings.units,
+    active: state.surface === "draw",
+    getAdapter: () => mapRef.current?.adapter ?? null,
+  });
 
   const closeExplicitly = useCallback(
     (action: SurfaceAction = closeSurface()) => {
@@ -212,7 +230,10 @@ export function useMapApp(): MapApp {
 
   const flushFocusReturn = useCallback(
     (restore: (target: FocusTarget | null) => void) => {
-      if (!pendingFocusReturn.current || stateRef.current.surface !== "none") {
+      const { surface, returnFocusTo } = stateRef.current;
+      // Closing the sheet over a drawing goes back to the draw tool, not to nothing.
+      const resumed = surface === "draw" && returnFocusTo === "draw-shapes";
+      if (!pendingFocusReturn.current || (surface !== "none" && !resumed)) {
         return;
       }
       pendingFocusReturn.current = false;
@@ -291,6 +312,32 @@ export function useMapApp(): MapApp {
     }
   }, [closeExplicitly, stateRef]);
 
+  const finishDraw = useCallback(() => {
+    closeExplicitly(stopDraw());
+  }, [closeExplicitly]);
+
+  const toggleDraw = useCallback(() => {
+    if (stateRef.current.surface === "draw") {
+      finishDraw();
+    } else {
+      dispatch(startDraw());
+    }
+  }, [finishDraw, stateRef]);
+
+  const openShapes = useCallback(() => {
+    dispatch(openSheet("shapes"));
+  }, []);
+
+  // The shapes stay when the tool closes, but one that was not finished goes,
+  // unless the sheet is only open over the drawing.
+  const { discardDraft } = draw;
+  useEffect(() => {
+    const suspended = state.surface === "sheet" && state.resumeDraw;
+    if (state.surface !== "draw" && !suspended) {
+      discardDraft();
+    }
+  }, [state.surface, state.resumeDraw, discardDraft]);
+
   const addPointAtCentre = useCallback(() => {
     const position = centre();
     if (position) {
@@ -318,15 +365,18 @@ export function useMapApp(): MapApp {
   );
 
   const { addStop } = directions;
+  const onDrawClick = draw.onMapClick;
   const onMapClick = useCallback(
     (event: MapClickEvent) => {
       if (stateRef.current.surface === "measure") {
         addPoint(event.latlng);
       } else if (stateRef.current.surface === "directions") {
         addStop(event.latlng);
+      } else if (stateRef.current.surface === "draw") {
+        onDrawClick(event);
       }
     },
-    [addPoint, addStop, stateRef],
+    [addPoint, addStop, onDrawClick, stateRef],
   );
 
   const onLongPress = useCallback(
@@ -447,6 +497,11 @@ export function useMapApp(): MapApp {
     toggleMeasure,
     finishMeasure,
     addPointAtCentre,
+    draw,
+    drawing: state.surface === "draw",
+    toggleDraw,
+    finishDraw,
+    openShapes,
     locate,
     directions,
     directionsActive: state.surface === "directions",

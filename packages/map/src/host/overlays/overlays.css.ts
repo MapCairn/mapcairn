@@ -82,6 +82,72 @@ export const measureVertex = style({
   strokeWidth: outlineWidth,
 });
 
+/** A finished shape drawn with the draw tool. Translucent fill, outline in the measure colour. */
+export const drawLine = style([measureLine]);
+
+/** The selected shape, heavier than the others so selection never rests on colour alone. */
+export const drawLineSelected = style({
+  fill: "none",
+  stroke: mapOverlayTokens.measureLine,
+  strokeWidth: `calc(${lineWidth} + ${outlineWidth})`,
+  ...roundStroke,
+});
+
+/** The shape still being drawn: dashed, like the preview edge. */
+export const drawDraft = style([
+  measureLine,
+  { strokeDasharray: `${tokens.space.xs} ${tokens.space.xs}` },
+]);
+
+/** The fill of a finished or unfinished area. */
+export const drawFill = style({
+  fill: mapOverlayTokens.measureFill,
+  stroke: "none",
+});
+
+/** A point shape. */
+export const drawPoint = style({
+  fill: mapOverlayTokens.measureLine,
+  stroke: mapOverlayTokens.halo,
+  strokeWidth: outlineWidth,
+});
+
+/** The selected point shape, with a heavier edge. */
+export const drawPointSelected = style({
+  fill: mapOverlayTokens.measureLine,
+  stroke: mapOverlayTokens.halo,
+  strokeWidth: `calc(${outlineWidth} * 2)`,
+});
+
+/** A vertex handle. */
+export const drawVertex = style({
+  fill: mapOverlayTokens.halo,
+  stroke: mapOverlayTokens.measureLine,
+  strokeWidth: outlineWidth,
+});
+
+/** The selected vertex: larger and filled, so it differs by more than colour. */
+export const drawVertexSelected = style({
+  fill: mapOverlayTokens.measureLine,
+  stroke: mapOverlayTokens.halo,
+  strokeWidth: `calc(${outlineWidth} * 2)`,
+});
+
+/** A midpoint handle: small and hollow, because pressing it adds a vertex. */
+export const drawMidpoint = style({
+  fill: mapOverlayTokens.halo,
+  stroke: mapOverlayTokens.measureLine,
+  strokeWidth: outlineWidth,
+  opacity: 0.85,
+});
+
+/** A circle's radius handle: a square, so it is not mistaken for a vertex. */
+export const drawRadiusHandle = style({
+  fill: mapOverlayTokens.halo,
+  stroke: mapOverlayTokens.measureLine,
+  strokeWidth: outlineWidth,
+});
+
 /** The location accuracy circle. */
 export const accuracy = style({
   fill: mapOverlayTokens.accuracyFill,

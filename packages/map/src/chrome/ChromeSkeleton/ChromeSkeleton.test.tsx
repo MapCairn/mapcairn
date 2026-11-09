@@ -41,6 +41,14 @@ describe("ChromeSkeleton", () => {
     expect(skeleton.querySelector('[aria-label="Directions"]')).not.toBeNull();
   });
 
+  it("draws the Draw shapes button only for a host that offers drawing", () => {
+    const { rerender } = render(<ChromeSkeleton />);
+    const skeleton = screen.getByTestId("chrome-skeleton");
+    expect(skeleton.querySelector('[aria-label="Draw shapes"]')).toBeNull();
+    rerender(<ChromeSkeleton draw />);
+    expect(skeleton.querySelector('[aria-label="Draw shapes"]')).not.toBeNull();
+  });
+
   it("offers nothing to tab to or click, because it is rendered inert", () => {
     render(<ChromeSkeleton />);
     const skeleton = screen.getByTestId("chrome-skeleton");

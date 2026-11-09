@@ -2,12 +2,14 @@ import type { SheetSection } from "@karta/core";
 import { type ReactNode, useEffect, useRef } from "react";
 import { type DataLayers, LayersSection } from "../../layers";
 import { usePreferences } from "../../services";
+import type { UseDraw } from "../../tools/DrawToolbar";
 import { BasemapPicker } from "../BasemapPicker";
 import { ExportSection } from "../ExportSection";
 import { HelpSection } from "../HelpSection";
 import { PinSection } from "../PinSection";
 import { Section } from "../Section";
 import { SettingsSection } from "../SettingsSection";
+import { ShapesSection } from "../ShapesSection";
 import { content } from "./SheetContent.css";
 
 /** Props for {@link SheetContent}. */
@@ -34,6 +36,10 @@ export interface SheetContentProps {
    * registered, there is no Layers section.
    */
   readonly layers?: DataLayers;
+  /**
+   * The drawing, from `useDraw`. Without it there is no Shapes section.
+   */
+  readonly draw?: UseDraw;
   /** Called after "Show on map" in the Layers section, so the host can make room for the map. */
   readonly onShowOnMap?: () => void;
   /** The credits drawn into a saved map image (see `creditsLine`). */
@@ -44,8 +50,8 @@ export interface SheetContentProps {
 
 /**
  * Everything inside the options sheet, under the sheet's own h2 title: Basemap,
- * Pin, Layers (only when the host has layers), Settings and Help, each a
- * `section` named by an h3.
+ * Pin, Layers (only when the host has layers), Shapes (only when the host
+ * offers drawing), Settings and Help, each a `section` named by an h3.
  */
 export function SheetContent({
   basemapId,
@@ -55,6 +61,7 @@ export function SheetContent({
   section,
   pinCard,
   layers,
+  draw,
   onShowOnMap,
   imageCredits,
   privacyHref,
@@ -107,6 +114,9 @@ export function SheetContent({
           headingRef={headingRef("layers")}
           onShowOnMap={onShowOnMap}
         />
+      ) : null}
+      {draw ? (
+        <ShapesSection draw={draw} headingRef={headingRef("shapes")} />
       ) : null}
       <ExportSection credits={imageCredits} />
       <SettingsSection

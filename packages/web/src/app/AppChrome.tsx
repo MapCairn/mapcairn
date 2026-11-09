@@ -2,6 +2,7 @@ import { creditsLine, pressEscape } from "@karta/core";
 import {
   Attribution,
   DirectionsPanel,
+  DrawToolbar,
   EndStack,
   FocusRegistryProvider,
   MapChrome,
@@ -110,13 +111,20 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
 
   const showBanners = hasBanners(app, map);
   const centre =
-    app.measuring || showBanners ? (
+    app.measuring || app.drawing || showBanners ? (
       <div className={bottomCentre}>
         {app.measuring ? (
           <MeasureToolbar
             measure={app.measure}
             onAddPointAtCentre={app.addPointAtCentre}
             onDone={app.finishMeasure}
+          />
+        ) : null}
+        {app.drawing ? (
+          <DrawToolbar
+            draw={app.draw}
+            onDone={app.finishDraw}
+            onOpenShapes={app.openShapes}
           />
         ) : null}
         {showBanners ? <MapBanners app={app} /> : null}
@@ -153,6 +161,8 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
                 }
               : undefined
           }
+          drawing={app.drawing}
+          onDraw={app.toggleDraw}
           locating={app.locate.state === "locating"}
           onLocate={app.locate.locate}
           canZoomIn={map.canZoomIn}
@@ -205,6 +215,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               onDropPin={app.dropPinAtCentre}
               section={app.sheetSection}
               layers={app.layers}
+              draw={app.draw}
               onShowOnMap={app.revealMap}
               imageCredits={creditsLine(app.basemap, app.layers.credits)}
               pinCard={

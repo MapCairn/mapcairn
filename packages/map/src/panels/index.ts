@@ -4,4 +4,5 @@ export * from "./HelpSection";
 export * from "./PinSection";
 export * from "./Section";
 export * from "./SettingsSection";
+export * from "./ShapesSection";
 export * from "./SheetContent";

@@ -6,6 +6,7 @@ import {
   type MapClickEvent,
   type MapEngineError,
   type MapKeyAction,
+  type MapKeyHelpEntry,
   mapKeyAction,
   type ViewState,
 } from "@karta/core";
@@ -75,6 +76,18 @@ export interface MapViewProps {
   readonly onIdentifyKey?: () => void;
   /** The Escape key while the map has focus. */
   readonly onEscape?: () => void;
+  /**
+   * Runs before the map's own keys, with each key pressed on the map region.
+   * Return true to say the key was handled: the map then does nothing with it
+   * and its default is prevented. A tool uses this to take keys the map would
+   * otherwise use, such as the arrows that move a selected point.
+   */
+  readonly onKeyCommand?: (event: KeyboardEvent<HTMLElement>) => boolean;
+  /**
+   * Extra lines for the hidden keyboard instructions, after the map's own,
+   * for the keys a tool adds while it is open.
+   */
+  readonly keyHelp?: readonly MapKeyHelpEntry[];
   /** Defaults to `grab`. */
   readonly cursor?: MapCursor;
   /** Overlays and other content that reads the map through `useMap`. */
@@ -94,10 +107,16 @@ export interface MapViewProps {
 }
 
 /** The hidden keyboard instructions, as plain sentences. */
-const KEYBOARD_INSTRUCTIONS = MAP_KEY_HELP.map(
-  ({ keys, description }) =>
-    `${keys}: ${description.charAt(0).toLowerCase()}${description.slice(1)}.`,
-).join(" ");
+function keyboardInstructions(extra: readonly MapKeyHelpEntry[]): string {
+  return [...MAP_KEY_HELP, ...extra]
+    .map(
+      ({ keys, description }) =>
+        `${keys}: ${description.charAt(0).toLowerCase()}${description.slice(1)}.`,
+    )
+    .join(" ");
+}
+
+const KEYBOARD_INSTRUCTIONS = keyboardInstructions([]);
 
 /** Runs a key action against the adapter. */
 function runKeyAction(
@@ -167,6 +186,8 @@ export function MapView({
   onDropPinKey,
   onIdentifyKey,
   onEscape,
+  onKeyCommand,
+  keyHelp,
   cursor = "grab",
   children,
   id,
@@ -228,6 +249,10 @@ export function MapView({
     ) {
       return;
     }
+    if (onKeyCommand?.(event)) {
+      event.preventDefault();
+      return;
+    }
     const action = mapKeyAction(event);
     if (!action) {
       return;
@@ -280,7 +305,11 @@ export function MapView({
           </div>
         ) : null}
       </section>
-      <VisuallyHidden id={helpId}>{KEYBOARD_INSTRUCTIONS}</VisuallyHidden>
+      <VisuallyHidden id={helpId}>
+        {keyHelp && keyHelp.length > 0
+          ? keyboardInstructions(keyHelp)
+          : KEYBOARD_INSTRUCTIONS}
+      </VisuallyHidden>
     </>
   );
 

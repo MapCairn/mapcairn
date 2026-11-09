@@ -2,6 +2,7 @@ export * from "./describe";
 export * from "./export";
 export * from "./geo";
 export * from "./gesture";
+export * from "./handles";
 export * from "./hit";
 export * from "./keys";
 export * from "./reducer";

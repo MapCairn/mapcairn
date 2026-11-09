@@ -111,6 +111,8 @@ export type DrawAction =
       /** The new vertex takes this place, so the old one at it moves to the next. */
       readonly index: number;
       readonly at: LatLng;
+      /** Lets moves with the same key join this step, so dragging a midpoint is one undo. */
+      readonly coalesceKey?: string;
     }
   | {
       readonly type: "moveVertex";
@@ -417,19 +419,23 @@ function insertVertex(
     action.at,
     ...shape.vertices.slice(action.index),
   ];
-  return commit(state, {
-    shapes: replaceShape(state, shape.id, (current) => ({
-      ...current,
-      vertices,
-    })),
-    selection: { shapeId: shape.id, vertex: action.index },
-    lastEvent: {
-      type: "vertex-inserted",
-      shapeId: shape.id,
-      index: action.index,
-      count: vertices.length,
+  return commit(
+    state,
+    {
+      shapes: replaceShape(state, shape.id, (current) => ({
+        ...current,
+        vertices,
+      })),
+      selection: { shapeId: shape.id, vertex: action.index },
+      lastEvent: {
+        type: "vertex-inserted",
+        shapeId: shape.id,
+        index: action.index,
+        count: vertices.length,
+      },
     },
-  });
+    action.coalesceKey ?? null,
+  );
 }
 
 /** The fewest vertices a shape may keep: nothing while drawing, then what its kind needs. */

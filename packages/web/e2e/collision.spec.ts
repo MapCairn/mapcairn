@@ -16,7 +16,7 @@ import {
 // is the same with motion on.
 test.use({ reducedMotion: "reduce" });
 
-// Each test walks eighteen states on one page, so it gets more time.
+// Each test walks every chrome state in two themes on one page, so it gets more time.
 test.setTimeout(120_000);
 
 /**

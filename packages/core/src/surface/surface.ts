@@ -6,17 +6,26 @@ export type SurfaceKind =
   | "sheet"
   | "search"
   | "measure"
+  | "draw"
   | "pin"
   | "directions";
 
 /** The sections of the map options sheet. */
-export type SheetSection = "basemap" | "pin" | "settings" | "help" | "layers";
+export type SheetSection =
+  | "basemap"
+  | "pin"
+  | "settings"
+  | "help"
+  | "layers"
+  | "shapes";
 
 /** The control that should receive focus when a surface closes. */
 export type FocusTarget =
   | "map-options"
   | "search"
   | "measure"
+  | "draw"
+  | "draw-shapes"
   | "pin"
   | "directions";
 
@@ -41,6 +50,12 @@ export interface SurfaceState {
   readonly returnFocusTo: FocusTarget | null;
   /** Whether a pin is on the map, whether or not its card is open. */
   readonly hasPin: boolean;
+  /**
+   * True while the sheet is open over a drawing that was under way: closing
+   * the sheet then goes back to the draw tool, with focus on its Shapes
+   * button, rather than to nothing.
+   */
+  readonly resumeDraw: boolean;
 }
 
 /** Nothing is open, no pin is dropped and focus belongs to the map. */
@@ -50,6 +65,7 @@ export const initialSurfaceState: SurfaceState = {
   sheetSection: null,
   returnFocusTo: null,
   hasPin: false,
+  resumeDraw: false,
 };
 
 /** An event that may change which surface is open. */
@@ -59,6 +75,8 @@ export type SurfaceAction =
   | { readonly type: "openSearch" }
   | { readonly type: "startMeasure" }
   | { readonly type: "stopMeasure" }
+  | { readonly type: "startDraw" }
+  | { readonly type: "stopDraw" }
   | { readonly type: "startDirections" }
   | { readonly type: "stopDirections" }
   | { readonly type: "dropPin" }
@@ -95,6 +113,16 @@ export function stopMeasure(): SurfaceAction {
   return { type: "stopMeasure" };
 }
 
+/** Starts drawing shapes. It replaces any other surface, so one tool is active at a time. */
+export function startDraw(): SurfaceAction {
+  return { type: "startDraw" };
+}
+
+/** Stops drawing. Does nothing when draw is not the active surface. */
+export function stopDraw(): SurfaceAction {
+  return { type: "stopDraw" };
+}
+
 /** Opens the directions panel. */
 export function startDirections(): SurfaceAction {
   return { type: "startDirections" };
@@ -106,8 +134,8 @@ export function stopDirections(): SurfaceAction {
 }
 
 /**
- * Records a dropped pin. The pin card opens unless measure or directions is
- * active, in which case that tool stays the active surface.
+ * Records a dropped pin. The pin card opens unless measure, draw or
+ * directions is active, in which case that tool stays the active surface.
  */
 export function dropPin(): SurfaceAction {
   return { type: "dropPin" };
@@ -141,7 +169,11 @@ function open(
   surface: Exclude<SurfaceKind, "none" | "sheet">,
   focus: FocusTarget,
 ): SurfaceState {
-  if (state.surface === surface && state.returnFocusTo === focus) {
+  if (
+    state.surface === surface &&
+    state.returnFocusTo === focus &&
+    !state.resumeDraw
+  ) {
     return state;
   }
   return {
@@ -150,6 +182,7 @@ function open(
     sheetDetent: initialSurfaceState.sheetDetent,
     sheetSection: null,
     returnFocusTo: focus,
+    resumeDraw: false,
   };
 }
 
@@ -159,6 +192,16 @@ function close(
 ): SurfaceState {
   if (state.surface === "none") {
     return state;
+  }
+  if (state.surface === "sheet" && state.resumeDraw) {
+    return {
+      ...state,
+      surface: "draw",
+      sheetDetent: initialSurfaceState.sheetDetent,
+      sheetSection: null,
+      returnFocusTo: "draw-shapes",
+      resumeDraw: false,
+    };
   }
   return {
     ...state,
@@ -191,12 +234,16 @@ export function surfaceReducer(
         sheetDetent: initialSurfaceState.sheetDetent,
         sheetSection: action.section,
         returnFocusTo: "map-options",
+        // A drawing under way is picked up again when the sheet closes.
+        resumeDraw: state.surface === "draw",
       };
     }
     case "openSearch":
       return open(state, "search", "search");
     case "startMeasure":
       return open(state, "measure", "measure");
+    case "startDraw":
+      return open(state, "draw", "draw");
     case "startDirections":
       return open(state, "directions", "directions");
     case "stopDirections":
@@ -205,7 +252,11 @@ export function surfaceReducer(
       // The pin is data, so it is recorded even when a tool that takes the
       // map's taps keeps the surface to itself.
       const withPin = state.hasPin ? state : { ...state, hasPin: true };
-      if (state.surface === "measure" || state.surface === "directions") {
+      if (
+        state.surface === "measure" ||
+        state.surface === "draw" ||
+        state.surface === "directions"
+      ) {
         return withPin;
       }
       return open(withPin, "pin", "pin");
@@ -219,6 +270,8 @@ export function surfaceReducer(
     }
     case "stopMeasure":
       return state.surface === "measure" ? close(state) : state;
+    case "stopDraw":
+      return state.surface === "draw" ? close(state) : state;
     case "setDetent":
       if (state.surface !== "sheet" || state.sheetDetent === action.detent) {
         return state;

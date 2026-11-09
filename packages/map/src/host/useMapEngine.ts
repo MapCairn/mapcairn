@@ -47,7 +47,10 @@ export interface UseMapEngineOptions {
     kept: BasemapDefinition,
   ) => void;
   readonly onClick?: (event: MapClickEvent) => void;
-  /** Called on every `moveEnd`, before `onViewChange`. */
+  /**
+   * Called on every `moveEnd`, before `onViewChange`, and when a press starts
+   * on an edit handle. The host cancels a pending long-press with it.
+   */
   readonly onMoveEnd: () => void;
   /** Returns true when an engine click should be dropped (after a long-press). */
   readonly shouldDropClick: () => boolean;
@@ -245,6 +248,12 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
       next.on("click", (event) => {
         if (!latest.current.shouldDropClick()) {
           latest.current.onClick?.(event);
+        }
+      }),
+      next.on("handleDrag", (drag) => {
+        // A press held on an edit handle is not a long-press.
+        if (drag.phase === "start") {
+          latest.current.onMoveEnd();
         }
       }),
       next.on("load", () => {

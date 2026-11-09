@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PixelPoint } from "../ports/geometry";
+import { destinationPoint } from "./geo";
 import { hitTestHandle, pickShape } from "./hit";
 import type { DrawShape } from "./types";
 
@@ -80,6 +81,30 @@ describe("pickShape", () => {
   it("picks a polygon by its edge, just outside", () => {
     expect(pickShape([polygon], { x: 105, y: -50 }, project, 10)).toBe("poly");
     expect(pickShape([polygon], { x: 130, y: -50 }, project, 10)).toBeNull();
+  });
+
+  it("lets a tap inside an area pass through when the interior is off, but still picks its edge", () => {
+    expect(
+      pickShape([polygon], { x: 50, y: -50 }, project, 10, false),
+    ).toBeNull();
+    expect(pickShape([polygon], { x: 105, y: -50 }, project, 10, false)).toBe(
+      "poly",
+    );
+    const circle = shape({
+      kind: "circle",
+      id: "circle",
+      vertices: [p(0, 0)],
+      radiusMetres: 5_000_000,
+    });
+    const wide = (position: { lat: number; lng: number }): PixelPoint => ({
+      x: position.lng * 10,
+      y: -position.lat * 10,
+    });
+    expect(pickShape([circle], { x: 5, y: 5 }, wide, 4, false)).toBeNull();
+    const edge = wide(destinationPoint(p(0, 0), 90, 5_000_000));
+    expect(pickShape([circle], { x: edge.x + 2, y: 0 }, wide, 4, false)).toBe(
+      "circle",
+    );
   });
 
   it("picks a line only near it", () => {

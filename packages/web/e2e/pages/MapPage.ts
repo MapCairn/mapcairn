@@ -49,6 +49,7 @@ export class MapPage {
   readonly mapOptionsButton: Locator;
   readonly measureButton: Locator;
   readonly directionsButton: Locator;
+  readonly drawButton: Locator;
   readonly locateButton: Locator;
   readonly zoomControls: Locator;
   readonly zoomInButton: Locator;
@@ -83,6 +84,20 @@ export class MapPage {
   readonly measureClear: Locator;
   readonly measureDone: Locator;
   readonly measureOverlay: Locator;
+
+  readonly drawToolbar: Locator;
+  readonly drawStatus: Locator;
+  readonly drawMeasure: Locator;
+  readonly drawAddPoint: Locator;
+  readonly drawUndo: Locator;
+  readonly drawRedo: Locator;
+  readonly drawRemove: Locator;
+  readonly drawShapesButton: Locator;
+  readonly drawPrimary: Locator;
+  readonly drawIssue: Locator;
+  readonly drawShapes: Locator;
+  readonly drawHandles: Locator;
+  readonly shapesSection: Locator;
 
   readonly creditsButton: Locator;
   readonly creditsRegion: Locator;
@@ -119,6 +134,7 @@ export class MapPage {
       name: "Measure distance and area",
     });
     this.directionsButton = page.getByRole("button", { name: "Directions" });
+    this.drawButton = page.getByRole("button", { name: "Draw shapes" });
     this.locateButton = page.getByRole("button", { name: "Locate me" });
     this.zoomControls = page.getByRole("group", { name: "Zoom controls" });
     this.zoomInButton = page.getByRole("button", { name: "Zoom in" });
@@ -173,6 +189,22 @@ export class MapPage {
       name: "Done",
     });
     this.measureOverlay = page.getByTestId("measure-overlay");
+
+    this.drawToolbar = page.getByRole("toolbar", { name: "Draw" });
+    this.drawStatus = page.getByTestId("draw-status");
+    this.drawMeasure = page.getByTestId("draw-measure");
+    this.drawAddPoint = this.drawToolbar.getByTestId("draw-add-point");
+    this.drawUndo = this.drawToolbar.getByRole("button", { name: "Undo" });
+    this.drawRedo = this.drawToolbar.getByRole("button", { name: "Redo" });
+    this.drawRemove = this.drawToolbar.getByTestId("draw-remove");
+    this.drawShapesButton = this.drawToolbar.getByRole("button", {
+      name: "Shapes and export",
+    });
+    this.drawPrimary = this.drawToolbar.getByTestId("draw-done");
+    this.drawIssue = page.getByTestId("draw-issue");
+    this.drawShapes = page.getByTestId("draw-shape");
+    this.drawHandles = page.getByTestId("draw-handle");
+    this.shapesSection = page.getByTestId("sheet-section-shapes");
 
     this.creditsButton = page.getByRole("button", { name: "Map credits" });
     this.creditsRegion = page.getByRole("region", { name: "Map credits" });
@@ -284,6 +316,33 @@ export class MapPage {
   async startMeasuring(): Promise<void> {
     await this.measureButton.click();
     await expect(this.measureToolbar).toBeVisible();
+  }
+
+  /** Starts drawing and waits for the toolbar. */
+  async startDrawing(): Promise<void> {
+    await this.drawButton.click();
+    await expect(this.drawToolbar).toBeVisible();
+  }
+
+  /**
+   * Taps the map at points relative to its top-left, as a finger or a click
+   * would. Each tap waits for the toolbar to say the point was added.
+   */
+  async tapMap(
+    ...points: readonly (readonly [number, number])[]
+  ): Promise<void> {
+    for (const [x, y] of points) {
+      await this.host.click({ position: { x, y } });
+    }
+  }
+
+  /** The size of the map host, for placing taps. */
+  async mapSize(): Promise<{ width: number; height: number }> {
+    const box = await this.host.boundingBox();
+    if (!box) {
+      throw new Error("The map has no box.");
+    }
+    return { width: box.width, height: box.height };
   }
 
   /**

@@ -1,7 +1,6 @@
-import { useLatestRef } from "@karta/react";
 import { Crosshair, Trash2, Undo2 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { useChromeLayout } from "../../chrome/layoutContext";
+import { useEffect, useRef } from "react";
+import { useToolbarEdge } from "../../chrome/useToolbarEdge";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
 import { SegmentedControl } from "../../ui/SegmentedControl";
@@ -33,8 +32,8 @@ const MODE_OPTIONS = [
  *
  * On mount focus moves to its first button, because the person has just
  * chosen Measure and the next thing to do is here. The toolbar publishes its
- * top edge through `useChromeLayout().publishToolbarTop` so the slots below
- * it ride above, and publishes `null` when it unmounts.
+ * top edge with `useToolbarEdge` so the slots below it ride above, and
+ * publishes `null` when it unmounts.
  * @remarks The total is plain text. It is read out by the announcer after the
  *   points settle (see `useMeasure`), not by a live region of its own.
  *   The controls are all reachable with Tab rather than a single roving tab
@@ -49,47 +48,14 @@ export function MeasureToolbar({
   onDone,
 }: MeasureToolbarProps) {
   const { mode, points, readout, setMode, undo, clear } = measure;
-  const { publishToolbarTop, viewport } = useChromeLayout();
-  const publishRef = useLatestRef(publishToolbarTop);
   const rootRef = useRef<HTMLElement>(null);
-  const lastTop = useRef<number | null>(null);
   const empty = points.length === 0;
 
   useEffect(() => {
     rootRef.current?.querySelector("button")?.focus();
   }, []);
 
-  // Runs again when the container is resized, which can move the toolbar
-  // without changing its own size.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the viewport size is the trigger, not a value read in the effect
-  useLayoutEffect(() => {
-    const element = rootRef.current;
-    if (!element) {
-      return;
-    }
-    const publish = () => {
-      const top = Math.round(element.getBoundingClientRect().top);
-      if (top !== lastTop.current) {
-        lastTop.current = top;
-        publishRef.current(top);
-      }
-    };
-    publish();
-    if (typeof ResizeObserver === "undefined") {
-      return;
-    }
-    const observer = new ResizeObserver(publish);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [publishRef, viewport.width, viewport.height]);
-
-  useLayoutEffect(
-    () => () => {
-      lastTop.current = null;
-      publishRef.current(null);
-    },
-    [publishRef],
-  );
+  useToolbarEdge(rootRef);
 
   return (
     <section

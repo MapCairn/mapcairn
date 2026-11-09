@@ -448,6 +448,39 @@ describe("insertVertex", () => {
     });
   });
 
+  it("is one undo step with the moves of the same drag", () => {
+    const state = run(
+      [
+        {
+          type: "insertVertex",
+          shapeId: id,
+          index: 1,
+          at: p(0.005, 0),
+          coalesceKey: "drag:7",
+        },
+        {
+          type: "moveVertex",
+          shapeId: id,
+          index: 1,
+          to: p(0.005, -0.002),
+          coalesceKey: "drag:7",
+        },
+        {
+          type: "moveVertex",
+          shapeId: id,
+          index: 1,
+          to: p(0.005, -0.004),
+          coalesceKey: "drag:7",
+        },
+      ],
+      polygon,
+    );
+    expect(state.past.length).toBe(polygon.past.length + 1);
+    expect(
+      onlyShape(drawReducer(state, { type: "undo" })).vertices,
+    ).toHaveLength(3);
+  });
+
   it("inserts after the last vertex of a polygon, on its closing edge", () => {
     const state = drawReducer(polygon, {
       type: "insertVertex",

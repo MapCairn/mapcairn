@@ -1,4 +1,12 @@
-import { Layers, LocateFixed, Minus, Plus, Route, Ruler } from "lucide-react";
+import {
+  Layers,
+  LocateFixed,
+  Minus,
+  Pentagon,
+  Plus,
+  Route,
+  Ruler,
+} from "lucide-react";
 import { ControlGroup, IconButton } from "../../ui";
 import * as styles from "./EndStack.css";
 
@@ -6,6 +14,8 @@ import * as styles from "./EndStack.css";
 export interface EndStackSkeletonProps {
   /** Shows the Directions button, as the live stack does when the host offers directions. */
   readonly directions?: boolean;
+  /** Show the Draw shapes button, as the live stack does when its host offers drawing. */
+  readonly draw?: boolean;
 }
 
 /**
@@ -20,6 +30,7 @@ export interface EndStackSkeletonProps {
  */
 export function EndStackSkeleton({
   directions = false,
+  draw = false,
 }: EndStackSkeletonProps) {
   return (
     <div className={styles.skeletonStack} data-skeleton="end-stack">
@@ -36,6 +47,9 @@ export function EndStackSkeleton({
         />
         {directions ? (
           <IconButton label="Directions" icon={Route} tabIndex={-1} />
+        ) : null}
+        {draw ? (
+          <IconButton label="Draw shapes" icon={Pentagon} tabIndex={-1} />
         ) : null}
         <IconButton label="Locate me" icon={LocateFixed} tabIndex={-1} />
       </ControlGroup>

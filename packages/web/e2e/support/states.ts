@@ -8,6 +8,7 @@ export const CHROME_STATES = [
   "search open",
   "measure active",
   "directions open",
+  "draw active",
   "pin card",
   "attribution open",
 ] as const;
@@ -116,6 +117,14 @@ export async function enterState(
       ).toBeVisible();
       return;
     }
+    case "draw active":
+      await mapPage.startDrawing();
+      await mapPage.drawAddPoint.click();
+      await mapPage.focusMap();
+      await mapPage.page.keyboard.press("ArrowRight");
+      await mapPage.drawAddPoint.click();
+      await expect(mapPage.drawStatus).toHaveText("Polygon 1, 2 points");
+      return;
     case "pin card":
       await mapPage.focusMap();
       await mapPage.page.keyboard.press("p");
@@ -155,6 +164,11 @@ export async function leaveState(
         .click();
       await mapPage.sheetClose.click();
       break;
+    case "draw active":
+      await mapPage.drawRemove.click();
+      await mapPage.drawPrimary.click();
+      await expect(mapPage.drawToolbar).toHaveCount(0);
+      return;
     case "pin card":
       await mapPage.pinClearButton.click();
       break;

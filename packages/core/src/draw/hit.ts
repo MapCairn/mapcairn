@@ -108,6 +108,7 @@ function hits(
   at: PixelPoint,
   project: (position: LatLng) => PixelPoint,
   tolerancePx: number,
+  interior: boolean,
 ): boolean {
   const pixels = shape.vertices.map(project);
   const first = pixels[0];
@@ -115,15 +116,19 @@ function hits(
     return false;
   }
   if (shape.kind === "polygon" && pixels.length >= 3) {
-    return insideRing(at, pixels) || nearPath(at, pixels, true, tolerancePx);
+    return (
+      (interior && insideRing(at, pixels)) ||
+      nearPath(at, pixels, true, tolerancePx)
+    );
   }
   if (shape.kind === "circle" && shape.radiusMetres !== undefined) {
     const centre = shape.vertices[0] as LatLng;
     const edge = project(destinationPoint(centre, 90, shape.radiusMetres));
-    return (
-      Math.hypot(at.x - first.x, at.y - first.y) <=
-      Math.hypot(edge.x - first.x, edge.y - first.y) + tolerancePx
-    );
+    const radius = Math.hypot(edge.x - first.x, edge.y - first.y);
+    const distance = Math.hypot(at.x - first.x, at.y - first.y);
+    return interior
+      ? distance <= radius + tolerancePx
+      : Math.abs(distance - radius) <= tolerancePx;
   }
   if (pixels.length >= 2) {
     return nearPath(at, pixels, false, tolerancePx);
@@ -133,8 +138,10 @@ function hits(
 
 /**
  * The id of the topmost shape a tap at `at` lands on, or null. Later shapes
- * are on top. A polygon or circle is hit anywhere inside or near its edge, a
- * line near it and a point near it, within `tolerancePx`.
+ * are on top. A line, a point and the edge of a polygon or circle are hit
+ * within `tolerancePx`; with `interior` (the default) the inside of a polygon
+ * or circle is hit too, and without it a tap inside an area passes through,
+ * so a new shape can be started there.
  * @param project - Places a position on the screen, the map's `project`.
  */
 export function pickShape(
@@ -142,10 +149,11 @@ export function pickShape(
   at: PixelPoint,
   project: (position: LatLng) => PixelPoint,
   tolerancePx: number,
+  interior = true,
 ): string | null {
   for (let index = shapes.length - 1; index >= 0; index -= 1) {
     const shape = shapes[index] as DrawShape;
-    if (hits(shape, at, project, tolerancePx)) {
+    if (hits(shape, at, project, tolerancePx, interior)) {
       return shape.id;
     }
   }

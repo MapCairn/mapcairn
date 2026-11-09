@@ -4,6 +4,7 @@ import {
   LocateFixed,
   Minus,
   Navigation2,
+  Pentagon,
   Plus,
   Route,
   Ruler,
@@ -26,14 +27,18 @@ const HAIRLINE_PX = 1;
  * The height the end stack needs to show the zoom group under the main
  * group: three main controls, two zoom controls, the gap and the hairlines,
  * plus the compass and its gap while it shows, and one more control and
- * hairline while the Directions button shows. Below this, and only when the
- * user has not chosen to show zoom buttons, the zoom group yields.
+ * hairline while the Directions or Draw shapes button shows. Below this, and
+ * only when the user has not chosen to show zoom buttons, the zoom group
+ * yields.
  */
 export function endStackMinHeightForZoom(
   compassShown: boolean,
   directionsShown = false,
+  drawShown = false,
 ): number {
-  const extra = directionsShown ? CONTROL_PX + HAIRLINE_PX : 0;
+  const extra =
+    ((directionsShown ? 1 : 0) + (drawShown ? 1 : 0)) *
+    (CONTROL_PX + HAIRLINE_PX);
   const groups = 5 * CONTROL_PX + GAP_PX + 7 * HAIRLINE_PX + extra;
   return compassShown ? groups + CONTROL_PX + GAP_PX : groups;
 }
@@ -65,6 +70,11 @@ export interface EndStackProps {
    * the button is not shown, for a host with no routing service.
    */
   readonly directions?: EndStackDirections;
+   * Draw is on. With `onDraw`, the stack shows a Draw shapes button between
+   * Measure and Locate me; without it the button is left out.
+   */
+  readonly drawing?: boolean;
+  readonly onDraw?: () => void;
   /** A location request is in progress. Presses are ignored meanwhile. */
   readonly locating: boolean;
   readonly onLocate: () => void;
@@ -78,7 +88,7 @@ export interface EndStackProps {
  * The end-stack slot content, a landmark named "Map tools" holding, top to
  * bottom: the compass (only while the map
  * is rotated and the engine can rotate), the "Map controls" group (Map
- * options, Measure, Locate me) and the "Zoom controls" group. The zoom group
+ * options, Measure, Draw shapes when the host offers it, Locate me) and the "Zoom controls" group. The zoom group
  * is never placed anywhere else.
  *
  * @remarks The zoom group follows `shouldShowZoomButtons`: the user's
@@ -97,6 +107,8 @@ export function EndStack({
   measuring,
   onMeasure,
   directions,
+  drawing = false,
+  onDraw,
   locating,
   onLocate,
   canZoomIn,
@@ -108,6 +120,7 @@ export function EndStack({
   const registerMapOptions = useFocusTarget("map-options");
   const registerMeasure = useFocusTarget("measure");
   const registerDirections = useFocusTarget("directions");
+  const registerDraw = useFocusTarget("draw");
   const { settings } = useSettings();
   const { finePointer } = usePreferences();
   const { endStackMaxHeight } = useChromeSurface();
@@ -120,6 +133,7 @@ export function EndStack({
     minHeightForZoom: endStackMinHeightForZoom(
       showCompass,
       directions !== undefined,
+      onDraw !== undefined,
     ),
   });
 
@@ -134,8 +148,9 @@ export function EndStack({
       registerMapOptions(find("map-options"));
       registerMeasure(find("measure"));
       registerDirections(find("directions"));
+      registerDraw(find("draw"));
     },
-    [registerMapOptions, registerMeasure, registerDirections],
+    [registerMapOptions, registerMeasure, registerDirections, registerDraw],
   );
 
   useEffect(() => {
@@ -192,6 +207,15 @@ export function EndStack({
             controls={directions.controls}
             data-focus-target="directions"
             onClick={directions.onToggle}
+          />
+        ) : null}
+        {onDraw ? (
+          <IconButton
+            label="Draw shapes"
+            icon={Pentagon}
+            pressed={drawing}
+            data-focus-target="draw"
+            onClick={onDraw}
           />
         ) : null}
         <IconButton

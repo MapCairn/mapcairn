@@ -1,4 +1,4 @@
-import { MAP_KEY_HELP } from "@karta/core";
+import { DRAW_KEY_HELP, MAP_KEY_HELP } from "@karta/core";
 import type { Ref } from "react";
 import { usePreferences } from "../../services";
 import {
@@ -44,6 +44,19 @@ export function HelpSection({
           <Subheading level={subLevel}>Keyboard</Subheading>
           <dl className={shortcuts}>
             {MAP_KEY_HELP.map((entry) => (
+              <div key={entry.keys} className={shortcut}>
+                <dt className={keys}>{entry.keys}</dt>
+                <dd className={action}>{entry.description}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
+      {finePointer ? (
+        <div className={subsection} data-testid="help-drawing">
+          <Subheading level={subLevel}>Drawing</Subheading>
+          <dl className={shortcuts}>
+            {DRAW_KEY_HELP.map((entry) => (
               <div key={entry.keys} className={shortcut}>
                 <dt className={keys}>{entry.keys}</dt>
                 <dd className={action}>{entry.description}</dd>

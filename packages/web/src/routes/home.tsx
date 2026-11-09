@@ -40,7 +40,7 @@ export default function HomeRoute() {
             data-testid="map-placeholder"
           >
             <VisuallyHidden>Loading the map</VisuallyHidden>
-            <ChromeSkeleton directions />
+            <ChromeSkeleton directions draw />
           </main>
         }
       >

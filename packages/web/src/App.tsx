@@ -1,8 +1,15 @@
-import { type LatLng, pressEscape, startMeasure } from "@karta/core";
+import {
+  DRAW_KEY_HELP,
+  type LatLng,
+  pressEscape,
+  startMeasure,
+} from "@karta/core";
 import {
   AccuracyCircle,
   CentreCrosshair,
   DirectionsOverlay,
+  DrawMapBindings,
+  DrawOverlay,
   MapDataLayers,
   MapDirections,
   MapOverlayLayer,
@@ -61,7 +68,13 @@ export function App() {
       testId="map-host"
       initialView={app.initialView}
       basemap={app.basemap}
-      cursor={app.measuring || app.directionsActive ? "crosshair" : "grab"}
+      cursor={
+        app.measuring || app.directionsActive || app.drawing
+          ? "crosshair"
+          : "grab"
+      }
+      onKeyCommand={(event) => app.draw.keyCommand(event)}
+      keyHelp={app.drawing ? DRAW_KEY_HELP : undefined}
       onViewChange={app.onViewChange}
       onBasemapApplied={app.onBasemapApplied}
       onBasemapError={app.onBasemapError}
@@ -76,10 +89,20 @@ export function App() {
       <MapDataLayers
         layers={app.layers}
         onFeatureTap={app.openFeature}
-        ignoreTaps={app.measuring || app.directionsActive}
+        ignoreTaps={app.measuring || app.directionsActive || app.drawing}
       />
       <MapOverlayLayer testId="map-overlays">
         <SelectionMarker layers={app.layers} />
+        {app.draw.shapes.length > 0 ? (
+          <DrawOverlay
+            shapes={app.draw.shapes}
+            selection={app.draw.selection}
+            handles={app.draw.handles}
+            hoveredHandle={app.draw.hoveredHandle}
+            hover={app.drawing ? (app.cursor ?? undefined) : undefined}
+            testId="draw-overlay"
+          />
+        ) : null}
         {fix ? (
           <AccuracyCircle
             center={fix.position}
@@ -106,6 +129,7 @@ export function App() {
         {app.pin ? <PinMarker position={app.pin} testId="pin-marker" /> : null}
       </MapOverlayLayer>
       <MapDirections result={app.directions.result} />
+      <DrawMapBindings draw={app.draw} />
       <MapUnavailable />
     </MapView>
   );

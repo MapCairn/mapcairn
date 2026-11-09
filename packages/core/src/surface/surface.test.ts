@@ -30,6 +30,7 @@ describe("initial state", () => {
       sheetSection: null,
       returnFocusTo: null,
       hasPin: false,
+      resumeDraw: false,
     });
   });
 });

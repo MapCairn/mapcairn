@@ -10,6 +10,8 @@ export interface ChromeSkeletonProps {
    * offers directions, so the controls are in their final places on first paint.
    */
   readonly directions?: boolean;
+  /** Show the Draw shapes button, so the skeleton matches a host whose live chrome offers drawing. */
+  readonly draw?: boolean;
 }
 
 /**
@@ -28,7 +30,10 @@ export interface ChromeSkeletonProps {
  *   `style-src 'self'`), uses no hooks and needs no provider, and is the same
  *   in light and dark themes because it uses only theme tokens.
  */
-export function ChromeSkeleton({ directions = false }: ChromeSkeletonProps) {
+export function ChromeSkeleton({
+  directions = false,
+  draw = false,
+}: ChromeSkeletonProps) {
   return (
     <div
       className={styles.skeletonRoot}
@@ -40,7 +45,7 @@ export function ChromeSkeleton({ directions = false }: ChromeSkeletonProps) {
         <SearchPillSkeleton />
       </div>
       <div className={styles.endStack} data-skeleton-slot="end-stack">
-        <EndStackSkeleton directions={directions} />
+        <EndStackSkeleton directions={directions} draw={draw} />
       </div>
       <div className={styles.bottomEnd} data-skeleton-slot="bottom-end">
         <AttributionSkeleton />
