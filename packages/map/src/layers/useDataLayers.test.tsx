@@ -277,6 +277,26 @@ describe("useDataLayers", () => {
     );
   });
 
+  it("lists a credit shared by several layers that are on only once", () => {
+    const services = createFakeServices({
+      layers: new StaticLayerRegistry([
+        SAMPLE_TILE_LAYER,
+        { ...SAMPLE_TILE_LAYER, id: "sample-imagery-two", name: "Two" },
+      ]),
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>{children}</LiveRegionProvider>
+      </ServicesProvider>
+    );
+    const { result } = renderHook(() => useDataLayers({ now: () => NOW }), {
+      wrapper,
+    });
+    act(() => result.current.setEnabled("sample-imagery", true));
+    act(() => result.current.setEnabled("sample-imagery-two", true));
+    expect(result.current.credits).toEqual(SAMPLE_TILE_LAYER.attribution);
+  });
+
   it("collects the credits of the layers that are on", () => {
     const { result } = setup();
     expect(result.current.credits).toEqual([]);

@@ -9,6 +9,7 @@ import { type Ref, useId } from "react";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
+import { VisuallyHidden } from "../ui/VisuallyHidden";
 import * as styles from "./Layers.css";
 import { MarkerGlyph } from "./MarkerGlyph";
 import type { DataLayers, SelectedFeature } from "./useDataLayers";
@@ -116,6 +117,7 @@ export function FeatureCard({
           data-testid="feature-card-link"
         >
           {definition.card.link.label}
+          <VisuallyHidden> (opens in a new tab)</VisuallyHidden>
         </a>
       ) : null}
       {definition.disclaimer ? (

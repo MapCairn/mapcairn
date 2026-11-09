@@ -377,12 +377,16 @@ export class FakeMapLibreMap {
   }
   moveLayer(id: string): void {
     const layer = this.getLayer(id);
-    if (layer) {
-      this.styleLayers = [
-        ...this.styleLayers.filter((item) => item !== layer),
-        layer,
-      ];
+    if (!layer) {
+      // MapLibre throws this for a layer that is not in the style.
+      throw new Error(
+        `The layer '${id}' does not exist in the map's style and cannot be moved.`,
+      );
     }
+    this.styleLayers = [
+      ...this.styleLayers.filter((item) => item !== layer),
+      layer,
+    ];
   }
   setPaintProperty(id: string, name: string, value: unknown): void {
     this.record("setPaintProperty", [id, name, value]);

@@ -512,10 +512,18 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     [state.enabled, state.controls],
   );
 
-  const credits = useMemo(
-    () => state.enabled.flatMap((id) => byId.get(id)?.attribution ?? []),
-    [state.enabled, byId],
-  );
+  // Several layers can share a provider; its credit is listed once.
+  const credits = useMemo(() => {
+    const byText = new Map<string, LayerAttribution>();
+    for (const id of state.enabled) {
+      for (const credit of byId.get(id)?.attribution ?? []) {
+        if (!byText.has(credit.text)) {
+          byText.set(credit.text, credit);
+        }
+      }
+    }
+    return [...byText.values()];
+  }, [state.enabled, byId]);
 
   return {
     layers,

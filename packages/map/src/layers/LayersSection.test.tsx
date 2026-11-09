@@ -242,6 +242,9 @@ describe("LayersSection", () => {
       "rel",
       "noopener noreferrer",
     );
+    expect(screen.getByTestId("feature-card-link")).toHaveAccessibleName(
+      "Details at the source (opens in a new tab)",
+    );
     act(() => layers().select("sample-points", "b"));
     expect(screen.queryByTestId("feature-card-link")).toBeNull();
   });

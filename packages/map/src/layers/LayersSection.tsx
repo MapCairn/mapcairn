@@ -12,6 +12,7 @@ import {
   Section,
   Subheading,
 } from "../panels/Section";
+import { usePreferences } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import { FeatureCard } from "./FeatureCard";
 import { LayerItem } from "./LayerItem";
@@ -73,15 +74,24 @@ export function LayersSection({
   const announce = useAnnounce();
   const cardHeading = useRef<HTMLHeadingElement>(null);
   const { focusRequest } = layers;
+  const { reducedMotion } = usePreferences();
+  const motion = useRef(reducedMotion);
+  motion.current = reducedMotion;
 
   useEffect(() => {
     if (focusRequest === 0) {
       return;
     }
-    // After the sheet's effects, which focus the section heading.
+    // After the sheet's effects, which focus and smoothly scroll to the
+    // section heading. The card sits just below it; an instant scroll here
+    // would cut the sheet's smooth one short.
     queueMicrotask(() => {
-      cardHeading.current?.focus({ preventScroll: true });
-      cardHeading.current?.scrollIntoView?.({ block: "nearest" });
+      const heading = cardHeading.current;
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView?.({
+        block: "start",
+        behavior: motion.current ? "auto" : "smooth",
+      });
     });
   }, [focusRequest]);
 

@@ -660,7 +660,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   /** Draws one data layer afresh from what the adapter keeps, then restores the stacking order. */
-  private drawDataLayer(map: MapLibreMap, id: string): void {
+  private drawDataLayer(map: MapLibreMap, id: string, order = true): void {
     const layer = this.dataLayers.get(id) as DataLayer;
     this.eraseDataLayer(map, id);
     const ids = dataLayerEngineIds(id);
@@ -739,7 +739,9 @@ export class MapLibreMapAdapter implements MapAdapter {
         break;
       }
     }
-    this.orderDataLayers(map);
+    if (order) {
+      this.orderDataLayers(map);
+    }
   }
 
   /** Moves every data layer to the top, lowest kind first, keeping the order they were set in. */
@@ -750,17 +752,24 @@ export class MapLibreMapAdapter implements MapAdapter {
           continue;
         }
         for (const layerId of engineLayerIds(id, layer)) {
-          map.moveLayer(layerId);
+          if (map.getLayer(layerId)) {
+            map.moveLayer(layerId);
+          }
         }
       }
     }
   }
 
-  /** Draws every kept data layer again; a new style starts with none. */
+  /**
+   * Draws every kept data layer again, then orders them once; a new style
+   * starts with none, so ordering after each one would move layers that are
+   * not back yet.
+   */
   private restoreDataLayers(map: MapLibreMap): void {
     for (const id of this.dataLayers.keys()) {
-      this.drawDataLayer(map, id);
+      this.drawDataLayer(map, id, false);
     }
+    this.orderDataLayers(map);
   }
 
   /** The topmost drawn point within a fingertip of a tap, or null. */
@@ -879,8 +888,13 @@ export class MapLibreMapAdapter implements MapAdapter {
         this.pending.styleLoaded = true;
       }
       this.styleReady = true;
-      this.restoreDataLayers(map);
       this.settlePending("style.load");
+      try {
+        this.restoreDataLayers(map);
+      } catch (error) {
+        // The basemap works without them; never let a data layer break a swap.
+        console.error("Data layers could not be drawn again", error);
+      }
     });
     listen("load", () => {
       this.emitLoad();
