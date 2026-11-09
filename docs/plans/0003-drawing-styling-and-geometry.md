@@ -14,7 +14,7 @@ Round out the SDK with capabilities that open-source map SDKs commonly offer and
 4. **Several features under one tap:** a list of overlapping features, each with its own card.
 5. **Geometry helpers in `core`:** buffer, union, intersect, simplify, centroid, bounds, point in polygon, Web Mercator conversion, and WKT and GeoJSON conversion.
 6. **Export the view as an image**, and drawn shapes as GeoJSON or CSV.
-7. **A routing port:** a `RoutingProvider` interface with a fake and a contract suite, for routes and travel-time areas, with no provider built in.
+7. **A routing port:** a `RoutingProvider` interface with a fake and a contract suite, for routes and travel-time areas, with no provider built into the SDK, and one public-server adapter plus a Directions tool in the reference host.
 
 ## Ground rules
 
@@ -58,7 +58,8 @@ Round out the SDK with capabilities that open-source map SDKs commonly offer and
 
 ### Routing port
 
-- `RoutingProvider` in `core`: `route(stops, mode, signal)` and `reachableArea(origin, minutes, mode, signal)`, returning GeoJSON, with typed errors, a fake and a contract suite. No adapter ships: a host supplies one for its chosen service, and the privacy page lists what any adapter sends.
+- `RoutingProvider` in `core`: `route(stops, mode, signal)` and `reachableArea(origin, minutes, mode, signal)`, returning GeoJSON, with typed errors, a fake and a contract suite. The SDK ships no adapter: a host supplies one for its chosen service, and its privacy text lists what the adapter sends.
+- **Reference host:** `packages/web` supplies one adapter for the public Valhalla server run by the FOSSGIS community, which needs no key and allows browser requests. It supports routes and travel-time areas, spaces requests to at most one a second, and shows a clear message when the server is busy or down. A Directions tool in the interface appears only when the host provides a routing service, takes stops by tap or by search, offers drive, walk and cycle, and draws the route or the reachable area with its distance and time. Nothing is sent until the person asks, and the privacy page and the credits name the service and OpenStreetMap.
 
 ## Tests
 
@@ -76,4 +77,4 @@ Round out the SDK with capabilities that open-source map SDKs commonly offer and
 
 ## Out of scope
 
-Server-side rendering, a bundled routing or geocoding provider, chart markers, offline maps, printing layouts, and any shapefile or proprietary format.
+Server-side rendering, a routing or geocoding provider inside the SDK, chart markers, offline maps, printing layouts, and any shapefile or proprietary format.
