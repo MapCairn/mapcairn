@@ -1,6 +1,6 @@
+import { THEME_STORAGE_KEY } from "@karta/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { THEME_STORAGE_KEY } from "../constants/themeConfig";
 import { PRIVACY_POLICY_TITLE, PrivacyPage } from "./PrivacyPage";
 
 describe("PrivacyPage", () => {
@@ -24,7 +24,9 @@ describe("PrivacyPage", () => {
   it("names the local storage keys it really uses", () => {
     render(<PrivacyPage />);
 
-    expect(screen.getByText(THEME_STORAGE_KEY)).toBeInTheDocument();
+    expect(THEME_STORAGE_KEY).toBe("karta:theme");
+    expect(screen.getByText("karta:theme")).toBeInTheDocument();
+    expect(screen.queryByText("buffer-zones-theme")).not.toBeInTheDocument();
     expect(screen.getByText("karta:")).toBeInTheDocument();
   });
 
@@ -38,8 +40,8 @@ describe("PrivacyPage", () => {
   it("discloses the basemap tile and location-search third parties", () => {
     render(<PrivacyPage />);
 
-    expect(screen.getByText(/OpenStreetMap/)).toBeInTheDocument();
-    expect(screen.getByText(/Esri/)).toBeInTheDocument();
+    expect(screen.getByText(/OpenFreeMap/)).toBeInTheDocument();
+    expect(screen.getByText(/OpenStreetMap Foundation/)).toBeInTheDocument();
     expect(screen.getByText(/Nominatim/)).toBeInTheDocument();
   });
 

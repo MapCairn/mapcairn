@@ -106,6 +106,16 @@ describe("MeasureToolbar", () => {
       ).toBe("measure-toolbar");
     });
 
+    it("sits in a landmark named Measurement, so it is inside a landmark wherever it is placed", () => {
+      renderToolbar();
+      const region = screen.getByRole("region", { name: "Measurement" });
+      expect(region.tagName).toBe("SECTION");
+      expect(region).toHaveAttribute("data-chrome", "measure-toolbar");
+      expect(region).toContainElement(
+        screen.getByRole("toolbar", { name: "Measure" }),
+      );
+    });
+
     it("has a Distance and Area switch, with Distance chosen first", () => {
       renderToolbar();
       const group = screen.getByRole("radiogroup", { name: "Measure" });

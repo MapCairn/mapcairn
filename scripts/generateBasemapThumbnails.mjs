@@ -4,19 +4,22 @@
  *
  * @remarks
  * Run with `node scripts/generateBasemapThumbnails.mjs` after a basemap is
- * added or changes, then commit the images. It builds nothing. A throwaway
- * static server on port 4174 (never 4173, which Playwright's preview owns)
- * serves one HTML page and the installed `maplibre-gl` and `leaflet` files, and
- * headless Chromium loads the tile and style URLs defined in
+ * added or changes, then commit the images. Pass basemap ids
+ * (`node scripts/generateBasemapThumbnails.mjs osm`) to render only those. It
+ * builds nothing. A throwaway static server on port 4174 (never 4173, which
+ * Playwright's preview owns) serves one HTML page and the installed
+ * `maplibre-gl` files, and headless Chromium draws each basemap with MapLibre
+ * from the style and tile URLs defined in
  * `packages/core/src/basemaps/basemaps.ts`, so the previews cannot drift from
  * what the picker selects. Every view is the same: central Cape Town at 160 by
  * 120 CSS px, captured at twice that size.
  *
  * The images are small screenshots of OpenFreeMap (OpenMapTiles data and
- * OpenStreetMap contributors) and Esri World Imagery and World Topographic Map,
+ * OpenStreetMap contributors) and of the OpenStreetMap standard tile layer,
  * so they carry the credits recorded in `ATTRIBUTIONS.md`. The page needs the
- * network, and a GPU-less machine falls back to software WebGL for the vector
- * styles.
+ * network, and a GPU-less machine falls back to software WebGL. Chromium sends
+ * its own user agent and the page's Referer; nothing pretends to be another
+ * client, as the OpenStreetMap tile usage policy asks.
  */
 import {
   createReadStream,
@@ -54,11 +57,46 @@ const { BASEMAPS } = await import(
   pathToFileURL(join(ROOT, "packages/core/src/basemaps/basemaps.ts")).href
 );
 
-/** URL prefixes that map to the installed library folders, so each library finds its own sibling files. */
+/** The basemaps to render: those named on the command line, or all of them. */
+const REQUESTED = process.argv.slice(2);
+const SELECTED = REQUESTED.length
+  ? BASEMAPS.filter((basemap) => REQUESTED.includes(basemap.id))
+  : BASEMAPS;
+const UNKNOWN = REQUESTED.filter(
+  (id) => !BASEMAPS.some((basemap) => basemap.id === id),
+);
+if (UNKNOWN.length > 0) {
+  throw new Error(`Unknown basemap ids: ${UNKNOWN.join(", ")}`);
+}
+
+/** URL prefixes that map to the installed library folder, so MapLibre finds its own sibling files. */
 const VENDOR = {
   "/vendor/maplibre-gl/": "node_modules/maplibre-gl/dist/",
-  "/vendor/leaflet/": "node_modules/leaflet/dist/",
 };
+
+/**
+ * What MapLibre draws for a basemap, built the same way as `styleFor` in the
+ * MapLibre adapter: a vector basemap's style URL, or an inline style with one
+ * 256 px raster source for a raster basemap.
+ */
+function styleFor(basemap) {
+  const { source } = basemap;
+  if (source.kind === "vector") {
+    return source.styleUrl;
+  }
+  return {
+    version: 8,
+    sources: {
+      basemap: {
+        type: "raster",
+        tiles: [source.tileUrl],
+        tileSize: source.tileSize,
+        maxzoom: basemap.maxZoom,
+      },
+    },
+    layers: [{ id: "basemap", type: "raster", source: "basemap" }],
+  };
+}
 
 const MIME = {
   ".mjs": "text/javascript",
@@ -77,47 +115,23 @@ function pageFor(basemap, zoom) {
       html, body, #map { margin: 0; width: ${WIDTH}px; height: ${HEIGHT}px; overflow: hidden; }
     </style>`;
 
-  if (basemap.source.kind === "vector") {
-    return `<!doctype html><html><head>${common}
-      <link rel="stylesheet" href="/vendor/maplibre-gl/maplibre-gl.css" />
-    </head><body><div id="map"></div>
-    <script type="module">
-      import * as maplibregl from "/vendor/maplibre-gl/maplibre-gl.mjs";
-      const map = new maplibregl.Map({
-        container: "map",
-        style: ${JSON.stringify(basemap.source.styleUrl)},
-        center: [${CENTRE.lng}, ${CENTRE.lat}],
-        // MapLibre counts 512 px tiles, one zoom below the normalised value.
-        zoom: ${zoom - 1},
-        interactive: false,
-        attributionControl: false,
-        fadeDuration: 0,
-        canvasContextAttributes: { preserveDrawingBuffer: true },
-      });
-      map.on("idle", () => { window.__mapReady = true; });
-    </script></body></html>`;
-  }
-
   return `<!doctype html><html><head>${common}
-    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
-    <style>.leaflet-container { background: #ddd; } .leaflet-fade-anim .leaflet-tile { transition: none; }</style>
+    <link rel="stylesheet" href="/vendor/maplibre-gl/maplibre-gl.css" />
   </head><body><div id="map"></div>
-  <script src="/vendor/leaflet/leaflet.js"></script>
-  <script>
-    const map = L.map("map", {
-      center: [${CENTRE.lat}, ${CENTRE.lng}],
-      zoom: ${zoom},
-      zoomControl: false,
+  <script type="module">
+    import * as maplibregl from "/vendor/maplibre-gl/maplibre-gl.mjs";
+    const map = new maplibregl.Map({
+      container: "map",
+      style: ${JSON.stringify(styleFor(basemap))},
+      center: [${CENTRE.lng}, ${CENTRE.lat}],
+      // MapLibre counts 512 px tiles, one zoom below the normalised value.
+      zoom: ${zoom - 1},
+      interactive: false,
       attributionControl: false,
-      fadeAnimation: false,
-      zoomAnimation: false,
+      fadeDuration: 0,
+      canvasContextAttributes: { preserveDrawingBuffer: true },
     });
-    const layer = L.tileLayer(${JSON.stringify(basemap.source.tileUrl)}, {
-      tileSize: ${basemap.source.tileSize},
-      maxZoom: ${basemap.maxZoom},
-      detectRetina: true,
-    }).addTo(map);
-    layer.on("load", () => { window.__mapReady = true; });
+    map.on("idle", () => { window.__mapReady = true; });
   </script></body></html>`;
 }
 
@@ -193,7 +207,7 @@ try {
     deviceScaleFactor: SCALE,
     reducedMotion: "reduce",
   });
-  for (const basemap of BASEMAPS) {
+  for (const basemap of SELECTED) {
     const page = await context.newPage();
     try {
       const { image, quality } = await capture(page, basemap);

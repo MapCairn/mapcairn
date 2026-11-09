@@ -329,7 +329,6 @@ export function vectorBasemap(
   return {
     id: "test-vector",
     name: "Test vector",
-    engine: "maplibre",
     source: { kind: "vector", styleUrl: "https://tiles.test/style.json" },
     minZoom: 0,
     maxZoom: 22,
@@ -338,4 +337,18 @@ export function vectorBasemap(
     appearance: "light",
     ...overrides,
   };
+}
+
+/** Test-only 256 px raster basemap with an unreachable tile host. */
+export function rasterBasemap(): BasemapDefinition {
+  return vectorBasemap({
+    id: "test-raster",
+    name: "Test raster",
+    source: {
+      kind: "raster",
+      tileUrl: "https://tiles.test/{z}/{x}/{y}.png",
+      tileSize: 256,
+    },
+    maxZoom: 19,
+  });
 }

@@ -33,7 +33,6 @@ type FakeMap = FakeMapLibreMap;
 const POSITRON: BasemapDefinition = {
   id: "positron",
   name: "Positron",
-  engine: "maplibre",
   source: { kind: "vector", styleUrl: "https://tiles.example/positron" },
   minZoom: 0,
   maxZoom: 22,
@@ -51,12 +50,29 @@ const DARK: BasemapDefinition = {
   appearance: "dark",
 };
 
-const SATELLITE: BasemapDefinition = {
+const STREETS: BasemapDefinition = {
   ...POSITRON,
-  id: "satellite",
-  engine: "leaflet",
-  source: { kind: "raster", tileUrl: "https://x/{z}/{y}/{x}", tileSize: 256 },
-  maxZoom: 18,
+  id: "streets",
+  source: {
+    kind: "raster",
+    tileUrl: "https://tiles.example/{z}/{x}/{y}.png",
+    tileSize: 256,
+  },
+  maxZoom: 19,
+};
+
+/** The inline style the adapter builds for {@link STREETS}. */
+const STREETS_STYLE = {
+  version: 8,
+  sources: {
+    basemap: {
+      type: "raster",
+      tiles: ["https://tiles.example/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      maxzoom: 19,
+    },
+  },
+  layers: [{ id: "basemap", type: "raster", source: "basemap" }],
 };
 
 const MOUNT: MapMountOptions = {
@@ -105,13 +121,10 @@ afterEach(() => {
 });
 
 describe("MapLibreMapAdapter", () => {
-  it("is built by the factory and reports rotation and feature query", () => {
+  it("is built fresh by the factory", () => {
     const adapter = createMapLibreMapAdapter();
     expect(adapter).toBeInstanceOf(MapLibreMapAdapter);
-    expect(adapter.capabilities).toEqual({
-      supportsRotation: true,
-      supportsFeatureQuery: true,
-    });
+    expect(createMapLibreMapAdapter()).not.toBe(adapter);
   });
 
   describe("mount", () => {
@@ -271,12 +284,13 @@ describe("MapLibreMapAdapter", () => {
       expect(map.removed).toBe(false);
     });
 
-    it("rejects a raster basemap without loading the engine", async () => {
-      const adapter = new MapLibreMapAdapter();
-      await expect(
-        adapter.mount(createHost(), { ...MOUNT, basemap: SATELLITE }),
-      ).rejects.toMatchObject({ reason: "load-failed" });
-      expect(FakeMapLibreMap.instances).toHaveLength(0);
+    it("draws a raster basemap as an inline style of 256 px tiles, up to the provider's deepest level", async () => {
+      const { map, adapter } = await mounted({ basemap: STREETS });
+      expect(map.options.style).toEqual(STREETS_STYLE);
+      // The map's own limit is in MapLibre's 512 px zoom, one lower than the
+      // tile level, which MapLibre requests at its zoom plus one for 256 px tiles.
+      expect(map.options.maxZoom).toBe(18);
+      expect(adapter.getMaxZoom()).toBe(19);
     });
 
     it("rejects a second mount", async () => {
@@ -712,12 +726,23 @@ describe("MapLibreMapAdapter", () => {
       });
     });
 
-    it("rejects a raster basemap", async () => {
+    it("swaps between a vector style and a raster style both ways", async () => {
       const { adapter, map } = await mounted();
-      await expect(adapter.setBasemap(SATELLITE)).rejects.toMatchObject({
-        reason: "load-failed",
-      });
-      expect(map.callsOf("setStyle")).toHaveLength(0);
+      const toRaster = adapter.setBasemap(STREETS);
+      expect(map.callsOf("setStyle")[0]?.args).toEqual([
+        STREETS_STYLE,
+        { diff: false },
+      ]);
+      expect(map.maxZoom).toBe(18);
+      map.fire("style.load");
+      await expect(toRaster).resolves.toBeUndefined();
+      const toVector = adapter.setBasemap(DARK);
+      expect(map.callsOf("setStyle")[1]?.args).toEqual([
+        "https://tiles.example/dark",
+        { diff: false },
+      ]);
+      map.fire("style.load");
+      await expect(toVector).resolves.toBeUndefined();
     });
 
     it("rejects before mount", async () => {

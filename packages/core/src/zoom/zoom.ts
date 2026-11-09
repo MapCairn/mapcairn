@@ -1,4 +1,3 @@
-import type { BasemapEngineId } from "../ports/basemap";
 import type { LatLng, PixelPoint } from "../ports/geometry";
 
 /** Size in pixels of the tiles the normalised zoom number refers to. */
@@ -11,29 +10,23 @@ export const EQUATOR_METRES_PER_PIXEL_AT_ZOOM_0 = 156_543.033_928_040_97;
 export const MAX_MERCATOR_LATITUDE = 85.051_128_779_806_59;
 
 /**
- * Add this to a normalised zoom to get the engine's own zoom number.
- * @remarks Leaflet counts 256 px tiles, which is the normalised convention.
- *   MapLibre counts 512 px tiles, so the same visual scale is one lower.
+ * Add this to a normalised zoom to get MapLibre's own zoom number.
+ * @remarks The normalised zoom follows the 256 px tile convention used by
+ *   OpenStreetMap tile numbering, the URL and the saved view. MapLibre counts
+ *   512 px tiles, so the same visual scale is one lower. A 256 px raster
+ *   source in MapLibre still requests the tile level equal to the normalised
+ *   zoom, so nothing else needs converting.
  */
-export const ENGINE_ZOOM_OFFSET: Readonly<Record<BasemapEngineId, number>> = {
-  leaflet: 0,
-  maplibre: -1,
-};
+export const ENGINE_ZOOM_OFFSET = -1;
 
-/** Converts a normalised zoom to the zoom number an engine uses. */
-export function toEngineZoom(
-  normalisedZoom: number,
-  engine: BasemapEngineId,
-): number {
-  return normalisedZoom + ENGINE_ZOOM_OFFSET[engine];
+/** Converts a normalised zoom to MapLibre's zoom number. */
+export function toEngineZoom(normalisedZoom: number): number {
+  return normalisedZoom + ENGINE_ZOOM_OFFSET;
 }
 
-/** Converts an engine's own zoom number to the normalised zoom. */
-export function toNormalisedZoom(
-  engineZoom: number,
-  engine: BasemapEngineId,
-): number {
-  return engineZoom - ENGINE_ZOOM_OFFSET[engine];
+/** Converts MapLibre's zoom number to the normalised zoom. */
+export function toNormalisedZoom(engineZoom: number): number {
+  return engineZoom - ENGINE_ZOOM_OFFSET;
 }
 
 /** Limits `zoom` to the range `[min, max]`. */

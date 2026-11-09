@@ -11,6 +11,7 @@ import {
 import { X } from "lucide-react";
 import {
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
   useEffect,
@@ -72,6 +73,15 @@ interface Sample {
 
 interface Drag {
   readonly pointerId: number;
+  /**
+   * The element that was pressed, which holds pointer capture. Capturing on
+   * the pressed element rather than the header keeps the press and the
+   * release on one element, so the browser sends the click that ends a mouse
+   * press to the handle and not to the header.
+   */
+  readonly capture: Element;
+  /** Whether the press started on the handle, which receives the click after it. */
+  readonly fromHandle: boolean;
   readonly startY: number;
   readonly startHeight: number;
   height: number;
@@ -305,18 +315,18 @@ export function Sheet({
     });
   };
 
-  const endDrag = (target: Element, pointerId: number) => {
+  const endDrag = (drag: Drag) => {
     dragRef.current = null;
     sheetRef.current?.removeAttribute("data-dragging");
-    if (target.hasPointerCapture?.(pointerId)) {
-      target.releasePointerCapture(pointerId);
+    if (drag.capture.hasPointerCapture?.(drag.pointerId)) {
+      drag.capture.releasePointerCapture(drag.pointerId);
     }
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     const target = event.target as Element;
-    const onOtherButton =
-      target.closest("button") !== null && !handleRef.current?.contains(target);
+    const fromHandle = handleRef.current?.contains(target) === true;
+    const onOtherButton = target.closest("button") !== null && !fromHandle;
     if (
       !isSheet ||
       !open ||
@@ -326,9 +336,13 @@ export function Sheet({
     ) {
       return;
     }
-    event.currentTarget.setPointerCapture(event.pointerId);
+    // Capture on the pressed element, not the header: see `Drag.capture`.
+    // Moves and the release still bubble to the header's handlers.
+    target.setPointerCapture(event.pointerId);
     dragRef.current = {
       pointerId: event.pointerId,
+      capture: target,
+      fromHandle,
       startY: event.clientY,
       startHeight: heights[detent],
       height: heights[detent],
@@ -363,11 +377,13 @@ export function Sheet({
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
     }
-    endDrag(event.currentTarget, event.pointerId);
+    endDrag(drag);
     if (!drag.moved) {
       return;
     }
-    suppressClickRef.current = true;
+    // Only the handle gets a click after a drag; a flag set for a drag from
+    // the heading would never be consumed.
+    suppressClickRef.current = drag.fromHandle;
     const snapped = resolveSnap({
       heights,
       currentHeight: drag.height,
@@ -383,19 +399,27 @@ export function Sheet({
     }
   };
 
+  /**
+   * Abandons a live drag and settles back on the current detent. Used for
+   * `pointercancel` and for `lostpointercapture`, which also follows every
+   * normal release (by then there is no live drag, so it does nothing).
+   */
   const onPointerCancel = (event: PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
     }
-    endDrag(event.currentTarget, event.pointerId);
+    endDrag(drag);
     applyHeight(heights[detent]);
     publishSheetTop(viewport.height - heights[detent]);
   };
 
-  const onHandleClick = () => {
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false;
+  const onHandleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    const suppress = suppressClickRef.current;
+    suppressClickRef.current = false;
+    // A click with no pointer press (detail 0, from Enter or Space) always
+    // cycles, even when a drag left the flag set because no click followed it.
+    if (suppress && event.detail !== 0) {
       return;
     }
     onDetentChange(cycleDetent(detent));
@@ -461,6 +485,7 @@ export function Sheet({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
+        onLostPointerCapture={onPointerCancel}
       >
         {isSheet ? (
           <button

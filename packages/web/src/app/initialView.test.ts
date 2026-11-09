@@ -7,11 +7,8 @@ const saved = { center: { lat: -33.9, lng: 18.4 }, zoom: 11, bearing: 0 };
 describe("initialMapState", () => {
   it("starts from a shared link's view and basemap", () => {
     expect(
-      initialMapState(
-        { view: shared, basemapId: "satellite" },
-        { lastView: saved },
-      ),
-    ).toEqual({ view: shared, basemapId: "satellite" });
+      initialMapState({ view: shared, basemapId: "osm" }, { lastView: saved }),
+    ).toEqual({ view: shared, basemapId: "osm" });
   });
 
   it("falls back to the view saved last time", () => {

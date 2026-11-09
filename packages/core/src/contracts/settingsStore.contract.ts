@@ -66,14 +66,14 @@ export function runSettingsStoreContract(
         theme: "dark",
         units: "imperial",
         zoomButtons: true,
-        basemapId: "satellite",
+        basemapId: "osm",
         lastView,
       });
       expect(store.get()).toEqual({
         theme: "dark",
         units: "imperial",
         zoomButtons: true,
-        basemapId: "satellite",
+        basemapId: "osm",
         lastView,
       });
       store.set({ zoomButtons: null, lastView: null });

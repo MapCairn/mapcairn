@@ -23,8 +23,6 @@ export interface SheetContentProps {
   readonly hasPin: boolean;
   /** Drops a pin at the centre of the map. */
   readonly onDropPin: () => void;
-  /** Whether the map engine can rotate, which decides which shortcuts are listed. */
-  readonly supportsRotation: boolean;
   /**
    * The section to bring into view. When it changes, the section scrolls to
    * the top of the sheet and its heading takes focus. Choosing the same
@@ -51,7 +49,6 @@ export function SheetContent({
   onBasemapChange,
   hasPin,
   onDropPin,
-  supportsRotation,
   section,
   pinCard,
   privacyHref,
@@ -114,10 +111,7 @@ export function SheetContent({
         privacyHref={privacyHref}
         headingRef={headingRef("settings")}
       />
-      <HelpSection
-        supportsRotation={supportsRotation}
-        headingRef={headingRef("help")}
-      />
+      <HelpSection headingRef={headingRef("help")} />
     </div>
   );
 }

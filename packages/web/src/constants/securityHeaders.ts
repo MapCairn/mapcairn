@@ -45,9 +45,9 @@ export function buildContentSecurityPolicy(
     options.development
       ? "style-src 'self' 'unsafe-inline'"
       : "style-src 'self'",
-    "img-src 'self' data: blob: https://tile.openstreetmap.org https://server.arcgisonline.com https://tiles.openfreemap.org",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org",
     "font-src 'self'",
-    "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://tile.openstreetmap.org https://server.arcgisonline.com https://nominatim.openstreetmap.org https://tiles.openfreemap.org" +
+    "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://tile.openstreetmap.org https://nominatim.openstreetmap.org https://tiles.openfreemap.org" +
       (options.development ? " ws://localhost:* http://localhost:*" : ""),
     "worker-src 'self' blob:",
     "frame-src 'none'",

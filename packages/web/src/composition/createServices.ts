@@ -1,15 +1,9 @@
-import {
-  type BasemapDefinition,
-  type MapAdapter,
-  type Services,
-  StaticLayerRegistry,
-} from "@karta/core";
+import { type Services, StaticLayerRegistry } from "@karta/core";
 // The engine style file has no exports. Importing it here, in the one module
 // every page that builds services loads, puts its rules in the page before
-// any engine mounts, and keeps it out of the ui, which may not import adapters.
+// the engine mounts, and keeps it out of the ui, which may not import adapters.
 import "../adapters/mapEngine.css";
 import { BrowserClipboard } from "../adapters/clipboard/BrowserClipboard";
-import { createLeafletMapAdapter } from "../adapters/leaflet/LeafletMapAdapter";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
 import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { BrowserDevicePreferences } from "../adapters/preferences/BrowserDevicePreferences";
@@ -26,16 +20,6 @@ export interface CreateServicesOptions {
    * are ignored. These win over everything, including the browser test seam.
    */
   readonly overrides?: Partial<Services>;
-}
-
-/**
- * Builds the adapter for a basemap's engine. Each adapter loads its engine
- * library lazily, so choosing one costs nothing until it mounts.
- */
-function createMapAdapter(basemap: BasemapDefinition): MapAdapter {
-  return basemap.engine === "maplibre"
-    ? createMapLibreMapAdapter()
-    : createLeafletMapAdapter();
 }
 
 function definedEntries(
@@ -67,7 +51,9 @@ function definedEntries(
  */
 export function createServices(options: CreateServicesOptions = {}): Services {
   const real: Services = {
-    createMapAdapter,
+    // The adapter loads MapLibre lazily, so building one costs nothing
+    // until it mounts.
+    createMapAdapter: createMapLibreMapAdapter,
     search: new NominatimSearchProvider(),
     location: new BrowserLocationProvider(),
     settings: new LocalStorageSettingsStore(),

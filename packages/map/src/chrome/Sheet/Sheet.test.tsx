@@ -313,8 +313,8 @@ describe("Sheet in the sheet layout", () => {
       expect(sheet()).not.toHaveAttribute("data-dragging");
       expect(state.props.onDetentChange).toHaveBeenLastCalledWith("full");
       expect(offset()).toBe(0);
-      // The click that follows a drag does not also cycle.
-      fireEvent.click(handle());
+      // The pointer click that follows a drag does not also cycle.
+      fireEvent.click(handle(), { detail: 1 });
       expect(state.props.onDetentChange).toHaveBeenCalledOnce();
     });
 
@@ -421,6 +421,233 @@ describe("Sheet in the sheet layout", () => {
       expect(state.props.onDetentChange).toHaveBeenCalledExactlyOnceWith(
         "half",
       );
+    });
+  });
+
+  /**
+   * These tests model how a browser routes pointer events: while an element
+   * holds pointer capture, moves and the release go to it rather than to the
+   * element under the pointer, and a mouse click goes to the nearest common
+   * ancestor of the press and release targets. A touch tap's click goes to the
+   * tapped element.
+   */
+  describe("pointer clicks, taps and drags in a browser", () => {
+    let captured: Element | null;
+
+    beforeEach(() => {
+      captured = null;
+      Element.prototype.hasPointerCapture ??= () => false;
+      vi.spyOn(Element.prototype, "setPointerCapture").mockImplementation(
+        function (this: Element) {
+          captured = this;
+        },
+      );
+      vi.spyOn(Element.prototype, "releasePointerCapture").mockImplementation(
+        function (this: Element) {
+          if (captured === this) {
+            captured = null;
+          }
+        },
+      );
+      vi.spyOn(Element.prototype, "hasPointerCapture").mockImplementation(
+        function (this: Element) {
+          return captured === this;
+        },
+      );
+    });
+
+    function commonAncestor(a: Element, b: Element): Element {
+      let node: Element | null = a;
+      while (node && !node.contains(b)) {
+        node = node.parentElement;
+      }
+      return node ?? document.body;
+    }
+
+    type PointerType = "mouse" | "touch" | "pen";
+
+    /** Presses on `target`, moves over each of `path`, and releases over `over`. */
+    function gesture(
+      pointerType: PointerType,
+      target: Element,
+      startY: number,
+      path: readonly { readonly over: Element; readonly clientY: number }[],
+      release: { readonly over: Element; readonly clientY: number },
+    ): Element {
+      const init = { pointerId: 7, button: 0, pointerType };
+      fireEvent.pointerDown(target, { ...init, clientY: startY });
+      for (const step of path) {
+        now += 16;
+        fireEvent.pointerMove(captured ?? step.over, {
+          ...init,
+          clientY: step.clientY,
+        });
+      }
+      const upTarget = captured ?? release.over;
+      fireEvent.pointerUp(upTarget, { ...init, clientY: release.clientY });
+      return upTarget;
+    }
+
+    /** A mouse or pen click: press and release on `target`, then the click. */
+    function pointerClick(target: Element, pointerType: PointerType): void {
+      const upTarget = gesture(pointerType, target, 400, [], {
+        over: target,
+        clientY: 400,
+      });
+      fireEvent.click(commonAncestor(target, upTarget), { detail: 1 });
+    }
+
+    it("cycles once for a mouse click on the handle", () => {
+      const state = setup({ detent: "half" });
+      mount(state);
+      pointerClick(handle(), "mouse");
+      expect(state.props.onDetentChange).toHaveBeenCalledExactlyOnceWith(
+        "full",
+      );
+      expect(sheet()).not.toHaveAttribute("data-dragging");
+    });
+
+    it("cycles once for a mouse click on the handle's grabber bar", () => {
+      const state = setup({ detent: "peek" });
+      mount(state);
+      const grabber = handle().querySelector("span");
+      expect(grabber).not.toBeNull();
+      pointerClick(grabber as Element, "mouse");
+      expect(state.props.onDetentChange).toHaveBeenCalledExactlyOnceWith(
+        "half",
+      );
+    });
+
+    it("cycles once for a pen click on the handle", () => {
+      const state = setup({ detent: "half" });
+      mount(state);
+      pointerClick(handle(), "pen");
+      expect(state.props.onDetentChange).toHaveBeenCalledExactlyOnceWith(
+        "full",
+      );
+    });
+
+    it("cycles once for a touch tap on the handle", () => {
+      const state = setup({ detent: "full" });
+      mount(state);
+      gesture("touch", handle(), 400, [{ over: handle(), clientY: 402 }], {
+        over: handle(),
+        clientY: 402,
+      });
+      fireEvent.click(handle(), { detail: 1 });
+      expect(state.props.onDetentChange).toHaveBeenCalledExactlyOnceWith(
+        "peek",
+      );
+    });
+
+    it("drags with the mouse when the pointer leaves the header, and the click after it does not cycle", () => {
+      const state = setup({ detent: "half" });
+      mount(state);
+      fireEvent.pointerDown(handle(), {
+        pointerId: 7,
+        button: 0,
+        clientY: 400,
+        pointerType: "mouse",
+      });
+      now += 16;
+      fireEvent.pointerMove(captured ?? document.body, {
+        pointerId: 7,
+        clientY: 370,
+        pointerType: "mouse",
+      });
+      // The first move already leaves the header; the sheet still follows.
+      expect(offset()).toBe(HEIGHTS.full - HEIGHTS.half - 30);
+      fireEvent.pointerCancel(captured ?? document.body, {
+        pointerId: 7,
+        pointerType: "mouse",
+      });
+      expect(offset()).toBe(HEIGHTS.full - HEIGHTS.half);
+
+      // A long mouse drag up snaps to full, and its click does not cycle on.
+      const longUp = gesture(
+        "mouse",
+        handle(),
+        400,
+        [
+          { over: document.body, clientY: 300 },
+          { over: document.body, clientY: 120 },
+        ],
+        { over: document.body, clientY: 120 },
+      );
+      fireEvent.click(commonAncestor(handle(), longUp), { detail: 1 });
+      expect(state.props.onDetentChange).toHaveBeenCalledExactlyOnceWith(
+        "full",
+      );
+      expect(offset()).toBe(0);
+    });
+
+    it("still cycles from the keyboard after a drag that no click followed", () => {
+      const state = setup({ detent: "half" });
+      mount(state);
+      // A touch flick down, long enough that the browser sends no click.
+      gesture("touch", handle(), 400, [{ over: handle(), clientY: 430 }], {
+        over: handle(),
+        clientY: 430,
+      });
+      expect(state.props.onDetentChange).toHaveBeenCalledExactlyOnceWith(
+        "peek",
+      );
+      // Enter or Space on a button fires a click with no pointer press.
+      fireEvent.click(handle(), { detail: 0 });
+      expect(state.props.onDetentChange).toHaveBeenCalledTimes(2);
+      expect(state.props.onDetentChange).toHaveBeenLastCalledWith("full");
+    });
+
+    it("cycles on the next handle click after a drag from the heading", () => {
+      const state = setup({ detent: "half" });
+      mount(state);
+      const heading = screen.getByRole("heading");
+      const upTarget = gesture(
+        "mouse",
+        heading,
+        400,
+        [{ over: document.body, clientY: 430 }],
+        { over: document.body, clientY: 430 },
+      );
+      fireEvent.click(commonAncestor(heading, upTarget), { detail: 1 });
+      expect(state.props.onDetentChange).toHaveBeenCalledExactlyOnceWith(
+        "peek",
+      );
+      // Enter or Space on the handle still cycles.
+      fireEvent.click(handle(), { detail: 0 });
+      expect(state.props.onDetentChange).toHaveBeenCalledTimes(2);
+      expect(state.props.onDetentChange).toHaveBeenLastCalledWith("full");
+      pointerClick(handle(), "mouse");
+      expect(state.props.onDetentChange).toHaveBeenCalledTimes(3);
+    });
+
+    it("releases the capture it took when the press ends", () => {
+      const state = setup({ detent: "half" });
+      mount(state);
+      gesture("mouse", handle(), 400, [], { over: handle(), clientY: 400 });
+      expect(captured).toBeNull();
+    });
+
+    it("snaps back when it loses pointer capture mid-drag, and ignores a loss after release", () => {
+      const state = setup({ detent: "half" });
+      mount(state);
+      fireEvent.pointerDown(handle(), {
+        pointerId: 7,
+        button: 0,
+        clientY: 400,
+        pointerType: "touch",
+      });
+      now += 100;
+      fireEvent.pointerMove(handle(), { pointerId: 7, clientY: 300 });
+      expect(offset()).toBe(HEIGHTS.full - HEIGHTS.half - 100);
+      fireEvent.lostPointerCapture(handle(), { pointerId: 8 });
+      expect(sheet()).toHaveAttribute("data-dragging", "true");
+      fireEvent.lostPointerCapture(handle(), { pointerId: 7 });
+      expect(sheet()).not.toHaveAttribute("data-dragging");
+      expect(offset()).toBe(HEIGHTS.full - HEIGHTS.half);
+      fireEvent.lostPointerCapture(handle(), { pointerId: 7 });
+      fireEvent.pointerUp(handle(), { pointerId: 7, clientY: 300 });
+      expect(state.props.onDetentChange).not.toHaveBeenCalled();
     });
   });
 });

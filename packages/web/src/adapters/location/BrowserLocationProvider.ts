@@ -21,13 +21,18 @@ export interface BrowserLocationProviderOptions {
    * once, when the provider is built. Defaults to `navigator.geolocation`.
    */
   readonly getGeolocation?: () => GeolocationLike | undefined;
-  /** How long one `locate` may take when the caller gives no limit. Defaults to 10 000 ms. */
+  /** How long one `locate` may take when the caller gives no limit. Defaults to 20 000 ms. */
   readonly defaultTimeoutMs?: number;
-  /** Ask for the most accurate fix the device can give. Defaults to true. */
+  /** Ask for a GPS-grade fix. Defaults to false: a coarse fix arrives quickly everywhere, while GPS often times out on desktops. */
   readonly enableHighAccuracy?: boolean;
 }
 
-const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_TIMEOUT_MS = 20_000;
+
+// A fix up to this old is good enough for "Locate me". Together with the
+// coarse default accuracy it lets desktops without GPS answer from Wi-Fi or
+// network location instead of waiting for hardware that is not there.
+const LOCATE_MAXIMUM_AGE_MS = 30_000;
 
 // The numeric codes of GeolocationPositionError, which is not constructible in tests.
 const PERMISSION_DENIED = 1;
@@ -104,7 +109,7 @@ export class BrowserLocationProvider implements LocationProvider {
   constructor(options: BrowserLocationProviderOptions = {}) {
     this.#geolocation = (options.getGeolocation ?? defaultGeolocation)();
     this.#defaultTimeoutMs = options.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.#enableHighAccuracy = options.enableHighAccuracy ?? true;
+    this.#enableHighAccuracy = options.enableHighAccuracy ?? false;
     this.supportsWatch = this.#geolocation !== undefined;
     if (this.supportsWatch) {
       this.watch = (handlers, watchOptions) =>
@@ -140,7 +145,7 @@ export class BrowserLocationProvider implements LocationProvider {
           {
             enableHighAccuracy: this.#enableHighAccuracy,
             timeout: timeoutMs ?? this.#defaultTimeoutMs,
-            maximumAge: 0,
+            maximumAge: LOCATE_MAXIMUM_AGE_MS,
           },
         );
       } catch (error) {

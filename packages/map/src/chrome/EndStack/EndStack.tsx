@@ -36,8 +36,6 @@ export function endStackMinHeightForZoom(compassShown: boolean): number {
 export interface EndStackProps {
   /** Map bearing in degrees clockwise from north. */
   readonly bearing: number;
-  /** The engine can rotate. Without it the compass never shows. */
-  readonly supportsRotation: boolean;
   readonly onResetBearing: () => void;
   /** The map options sheet or panel is open. */
   readonly mapOptionsOpen: boolean;
@@ -57,7 +55,8 @@ export interface EndStackProps {
 }
 
 /**
- * The end-stack slot content, top to bottom: the compass (only while the map
+ * The end-stack slot content, a landmark named "Map tools" holding, top to
+ * bottom: the compass (only while the map
  * is rotated and the engine can rotate), the "Map controls" group (Map
  * options, Measure, Locate me) and the "Zoom controls" group. The zoom group
  * is never placed anywhere else.
@@ -71,7 +70,6 @@ export interface EndStackProps {
  */
 export function EndStack({
   bearing,
-  supportsRotation,
   onResetBearing,
   mapOptionsOpen,
   mapOptionsControls,
@@ -85,14 +83,14 @@ export function EndStack({
   onZoomIn,
   onZoomOut,
 }: EndStackProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
   const registerMapOptions = useFocusTarget("map-options");
   const registerMeasure = useFocusTarget("measure");
   const { settings } = useSettings();
   const { finePointer } = usePreferences();
   const { endStackMaxHeight } = useChromeSurface();
 
-  const showCompass = supportsRotation && bearing !== 0;
+  const showCompass = bearing !== 0;
   const zoom = shouldShowZoomButtons({
     setting: settings.zoomButtons,
     finePointer,
@@ -102,7 +100,7 @@ export function EndStack({
 
   // IconButton takes no ref, so the buttons are found through the stack.
   const setRoot = useCallback(
-    (root: HTMLDivElement | null) => {
+    (root: HTMLElement | null) => {
       rootRef.current = root;
       const find = (target: string) =>
         root
@@ -119,8 +117,9 @@ export function EndStack({
   }, [bearing]);
 
   return (
-    <div
+    <section
       ref={setRoot}
+      aria-label="Map tools"
       data-testid="end-stack"
       data-zoom-yielded={zoom.yieldedToHeight ? "true" : "false"}
       className={styles.stack}
@@ -186,6 +185,6 @@ export function EndStack({
           />
         </ControlGroup>
       ) : null}
-    </div>
+    </section>
   );
 }

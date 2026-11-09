@@ -1,10 +1,4 @@
-import type {
-  BasemapEngineId,
-  MapAdapter,
-  MapCapabilities,
-  MapEngineError,
-  ViewState,
-} from "@karta/core";
+import type { MapAdapter, MapEngineError, ViewState } from "@karta/core";
 import { createContext, useContext } from "react";
 
 /** What {@link useMap} returns: the live map, as seen by overlays and chrome. */
@@ -15,8 +9,8 @@ export interface MapContextValue {
    */
   readonly adapter: MapAdapter | null;
   /**
-   * The element the current engine is mounted in, or null with no mounted
-   * engine. A new element replaces it on every engine switch.
+   * The element the engine is mounted in, or null with no mounted engine.
+   * A new element replaces it when a failed mount is retried.
    */
   readonly hostElement: HTMLElement | null;
   /**
@@ -24,9 +18,6 @@ export interface MapContextValue {
    * moves, zooms or rotates, so overlays re-project without thrashing.
    */
   readonly view: ViewState;
-  /** The engine of the active basemap. Only for diagnostics; the ui branches on `capabilities`. */
-  readonly engine: BasemapEngineId;
-  readonly capabilities: MapCapabilities;
   /** Normalised zoom limits of the active basemap. */
   readonly minZoom: number;
   readonly maxZoom: number;

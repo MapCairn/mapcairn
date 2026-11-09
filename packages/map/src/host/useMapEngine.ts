@@ -1,8 +1,6 @@
 import {
   type BasemapDefinition,
-  type BasemapEngineId,
   type MapAdapter,
-  type MapCapabilities,
   type MapClickEvent,
   MapEngineError,
   type ViewState,
@@ -19,12 +17,6 @@ import {
 import { useMapAdapterFactory, usePreferences } from "../services";
 import type { MapContextValue } from "./MapContext";
 
-/** Capabilities assumed before any engine exists (server rendering, first paint). */
-const NO_CAPABILITIES: MapCapabilities = Object.freeze({
-  supportsRotation: false,
-  supportsFeatureQuery: false,
-});
-
 /** Zoom differences below this count as equal when deciding whether a limit is reached. */
 const ZOOM_EPSILON = 1e-6;
 
@@ -32,16 +24,15 @@ const ZOOM_EPSILON = 1e-6;
 export interface UseMapEngineOptions {
   /** The map region; it carries `data-zoom` and receives focus. */
   readonly hostRef: RefObject<HTMLElement | null>;
-  /** The element each engine element is appended to. */
+  /** The element the engine element is appended to. */
   readonly slotRef: RefObject<HTMLElement | null>;
   /** Written with the mounted adapter, or null, for event handlers outside this hook. */
   readonly adapterRef: RefObject<MapAdapter | null>;
-  /** Class name of each element an engine mounts into. */
+  /** Class name of the element the engine mounts into. */
   readonly engineClassName: string;
   readonly initialView: ViewState;
   readonly basemap: BasemapDefinition;
   readonly onViewChange?: (view: ViewState) => void;
-  readonly onEngineSwitch?: (basemap: BasemapDefinition) => void;
   readonly onEngineError?: (
     error: MapEngineError,
     basemap: BasemapDefinition,
@@ -66,22 +57,21 @@ function toEngineError(reason: unknown): MapEngineError {
 }
 
 /**
- * Owns the map engine's life: creates and mounts an adapter for the active
- * basemap, swaps basemaps on the same engine, replaces the engine when the
- * basemap needs the other one, and tracks view, loading and errors.
+ * Owns the map engine's life: creates and mounts one adapter, swaps
+ * basemaps on it with `setBasemap`, and tracks view, loading and errors.
  *
  * @remarks
- * - Each engine gets a fresh element, created here and appended to the slot,
- *   so React never renders into or reclasses engine DOM and no engine DOM is
- *   reused across engines.
- * - The view carried across an engine switch comes from the last view the old
- *   adapter reported (seeded from `initialView`), never from an adapter that
- *   had not finished mounting. The bearing is zeroed for an engine without
- *   rotation.
+ * - The engine gets a fresh element, created here and appended to the slot,
+ *   so React never renders into or reclasses engine DOM.
+ * - The engine mounts once, and again only after a failed mount is retried.
+ *   A new mount starts from the last view the previous adapter reported
+ *   (seeded from `initialView`), never from one that had not finished
+ *   mounting. A basemap chosen while the engine is still mounting is applied
+ *   as soon as the mount finishes.
  * - Every `mount` result is checked against a per-mount `cancelled` flag, so
- *   with rapid changes the last basemap wins and late mounts are ignored.
- *   Cleanup always destroys the adapter, mounted or not.
- * - If focus was inside the old engine element, it moves to the region before
+ *   late mounts are ignored. Cleanup always destroys the adapter, mounted or
+ *   not.
+ * - If focus was inside the engine element, it moves to the region before
  *   that element is removed, so it never falls back to the page body.
  * - Subscriptions are made before `mount`, because an engine may emit `load`
  *   while mounting.
@@ -98,12 +88,9 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
   const appliedBasemapRef = useRef<BasemapDefinition | null>(null);
   const basemapTokenRef = useRef(0);
   const cycleErrorRef = useRef(false);
-  const mountedEngineRef = useRef<BasemapEngineId | null>(null);
 
   const [adapter, setAdapter] = useState<MapAdapter | null>(null);
   const [hostElement, setHostElement] = useState<HTMLElement | null>(null);
-  const [capabilities, setCapabilities] =
-    useState<MapCapabilities>(NO_CAPABILITIES);
   const [view, setView] = useState(options.initialView);
   const [revision, setRevision] = useState(0);
   const [zoomLimits, setZoomLimits] = useState({ min: 0, max: 0 });
@@ -164,8 +151,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
     [adapterRef, latest],
   );
 
-  const engine = basemap.engine;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `engine` and `attempt` are the triggers; the basemap itself is read from `latest` so a same-engine change does not remount.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` is the trigger; the basemap is read from `latest` so a basemap change never remounts the engine.
   useEffect(() => {
     const slot = latest.current.slotRef.current;
     const host = latest.current.hostRef.current;
@@ -173,13 +159,12 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
       return;
     }
     const target = latest.current.basemap;
-    const next = createAdapter(target);
+    const next = createAdapter();
     const element = document.createElement("div");
     element.className = latest.current.engineClassName;
     slot.append(element);
     let cancelled = false;
     cycleErrorRef.current = false;
-    setCapabilities(next.capabilities);
     setLoaded(false);
     setBusy(false);
     setTileError(false);
@@ -227,12 +212,9 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
       }),
     ];
 
-    const startView = next.capabilities.supportsRotation
-      ? viewRef.current
-      : { ...viewRef.current, bearing: 0 };
     next
       .mount(element, {
-        view: startView,
+        view: viewRef.current,
         basemap: target,
         reducedMotion: reducedMotionRef.current,
       })
@@ -250,11 +232,6 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
           setZoomLimits({ min: next.getMinZoom(), max: next.getMaxZoom() });
           setAdapter(next);
           setHostElement(element);
-          const previousEngine = mountedEngineRef.current;
-          mountedEngineRef.current = target.engine;
-          if (previousEngine !== null && previousEngine !== target.engine) {
-            latest.current.onEngineSwitch?.(target);
-          }
         },
         (reason: unknown) => {
           if (cancelled) {
@@ -287,7 +264,6 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
     };
   }, [
     createAdapter,
-    engine,
     attempt,
     adapterRef,
     latest,
@@ -302,8 +278,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
       !adapter ||
       adapterRef.current !== adapter ||
       !applied ||
-      applied.id === basemap.id ||
-      applied.engine !== basemap.engine
+      applied.id === basemap.id
     ) {
       return;
     }
@@ -354,8 +329,6 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
       adapter,
       hostElement,
       view,
-      engine,
-      capabilities,
       minZoom,
       maxZoom,
       canZoomIn: view.zoom < maxZoom - ZOOM_EPSILON,
@@ -371,8 +344,6 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
       hostElement,
       view,
       revision,
-      engine,
-      capabilities,
       minZoom,
       maxZoom,
       loading,

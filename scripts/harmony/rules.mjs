@@ -467,7 +467,7 @@ function scanText(file, code, report) {
   );
   if (!isHtml) {
     eachMatch(
-      /\.(?:leaflet|maplibregl|maplibre)-[A-Za-z]/g,
+      /\.(?:maplibregl|maplibre)-[A-Za-z]/g,
       "engine-selector",
       (m) =>
         `Engine selector "${m[0]}…" belongs in packages/web/src/adapters/mapEngine.css.ts.`,

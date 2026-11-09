@@ -21,9 +21,8 @@ export interface Bounds {
 /**
  * The visible part of the map.
  * @remarks `zoom` is always the normalised zoom: the 256 px tile convention
- *   used by Leaflet and OpenStreetMap. A MapLibre engine, which counts 512 px
- *   tiles, adds one before talking to the engine and subtracts one on the way
- *   out, so one number means the same visual scale on every engine.
+ *   used by OpenStreetMap tile numbering. MapLibre counts 512 px tiles, so
+ *   its adapter subtracts one on the way in and adds one on the way out.
  *   `bearing` is degrees clockwise from north, in the range [0, 360).
  */
 export interface ViewState {

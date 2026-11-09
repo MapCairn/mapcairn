@@ -1,7 +1,7 @@
 {
   "name": "@karta/core",
   "version": "1.0.0",
-  "description": "Domain-agnostic layer model and geodata utilities",
+  "description": "Domain-agnostic ports, pure logic and basemap definitions for Karta",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",

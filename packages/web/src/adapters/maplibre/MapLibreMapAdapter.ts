@@ -3,7 +3,6 @@ import type {
   Bounds,
   LatLng,
   MapAdapter,
-  MapCapabilities,
   MapClickEvent,
   MapEvents,
   MapFitOptions,
@@ -25,13 +24,12 @@ import type {
   MapEventType,
   Map as MapLibreMap,
   MapOptions,
+  StyleSpecification,
   Subscription,
 } from "maplibre-gl";
 import { Emitter } from "../shared/emitter";
 
 type MapLibreModule = typeof import("maplibre-gl");
-
-const ENGINE = "maplibre";
 
 let engineLoader: Promise<MapLibreModule> | undefined;
 
@@ -98,10 +96,35 @@ function isTileOrSourceError(event: object): boolean {
   return tile !== undefined || sourceId !== undefined;
 }
 
-function isVector(basemap: BasemapDefinition): basemap is BasemapDefinition & {
-  source: { kind: "vector"; styleUrl: string };
-} {
-  return basemap.engine === ENGINE && basemap.source.kind === "vector";
+/** The id of the source and layer of an inline raster style. */
+const RASTER_ID = "basemap";
+
+/**
+ * What MapLibre draws for a basemap: a vector basemap's style URL, or an
+ * inline style with one raster source and layer for a raster basemap.
+ * @remarks `tileSize` must be passed: MapLibre assumes 512 px raster tiles
+ *   otherwise and would request the wrong level. The source `maxzoom` is a
+ *   tile level, which for 256 px tiles is the normalised zoom, so it is the
+ *   basemap's `maxZoom` unconverted; MapLibre overzooms nothing beyond it.
+ *   Credits are shown by the ui, so the source carries no attribution.
+ */
+function styleFor(basemap: BasemapDefinition): string | StyleSpecification {
+  const { source } = basemap;
+  if (source.kind === "vector") {
+    return source.styleUrl;
+  }
+  return {
+    version: 8,
+    sources: {
+      [RASTER_ID]: {
+        type: "raster",
+        tiles: [source.tileUrl],
+        tileSize: source.tileSize,
+        maxzoom: basemap.maxZoom,
+      },
+    },
+    layers: [{ id: RASTER_ID, type: "raster", source: RASTER_ID }],
+  };
 }
 
 function isElement(host: MapHostElement): host is MapHostElement & HTMLElement {
@@ -133,8 +156,9 @@ interface PendingLoad {
 }
 
 /**
- * The {@link MapAdapter} for vector basemaps, running `maplibre-gl` natively
- * with MapLibre owning every pointer and touch gesture.
+ * The {@link MapAdapter}, running `maplibre-gl` natively with MapLibre owning
+ * every pointer and touch gesture. Vector basemaps load their style URL;
+ * raster basemaps are drawn from an inline raster style.
  * @remarks The port speaks normalised (256 px tile) zoom, and MapLibre counts
  *   512 px tiles, so every zoom crossing the boundary goes through
  *   `toEngineZoom` and `toNormalisedZoom`. Pitch is locked at 0 because the
@@ -143,11 +167,6 @@ interface PendingLoad {
  *   `maplibre-gl` and its stylesheet are imported the first time `mount` runs.
  */
 export class MapLibreMapAdapter implements MapAdapter {
-  readonly capabilities: MapCapabilities = {
-    supportsRotation: true,
-    supportsFeatureQuery: true,
-  };
-
   private readonly emitter = new Emitter<MapEvents>();
   private map: MapLibreMap | undefined;
   private host: MapHostElement | undefined;
@@ -170,12 +189,6 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.started = true;
     const { basemap, view, reducedMotion } = options;
-    if (!isVector(basemap)) {
-      throw new MapEngineError(
-        "load-failed",
-        `The MapLibre adapter cannot show the ${basemap.source.kind} basemap "${basemap.id}".`,
-      );
-    }
     if (!isElement(host)) {
       throw new MapEngineError(
         "load-failed",
@@ -202,9 +215,7 @@ export class MapLibreMapAdapter implements MapAdapter {
 
     let map: MapLibreMap;
     try {
-      map = new maplibre.Map(
-        this.createOptions(host, basemap.source.styleUrl, view, reducedMotion),
-      );
+      map = new maplibre.Map(this.createOptions(host, view, reducedMotion));
     } catch (error) {
       // MapLibre does not export GPUInitializationError, so match its name.
       const reason =
@@ -255,7 +266,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     const center = map.getCenter();
     return {
       center: { lat: center.lat, lng: center.lng },
-      zoom: toNormalisedZoom(map.getZoom(), ENGINE),
+      zoom: toNormalisedZoom(map.getZoom()),
       bearing: normaliseBearing(map.getBearing()),
     };
   }
@@ -357,14 +368,6 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   setBasemap(basemap: BasemapDefinition): Promise<void> {
     const map = this.map;
-    if (!isVector(basemap)) {
-      return Promise.reject(
-        new MapEngineError(
-          "load-failed",
-          `The MapLibre adapter cannot show the ${basemap.source.kind} basemap "${basemap.id}".`,
-        ),
-      );
-    }
     if (!map || this.destroyed) {
       return Promise.reject(
         new MapEngineError("load-failed", "The map is not mounted."),
@@ -372,8 +375,8 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.settlePending();
     this.basemap = basemap;
-    const minZoom = toEngineZoom(basemap.minZoom, ENGINE);
-    const maxZoom = toEngineZoom(basemap.maxZoom, ENGINE);
+    const minZoom = toEngineZoom(basemap.minZoom);
+    const maxZoom = toEngineZoom(basemap.maxZoom);
     // MapLibre throws if a new minimum passes the current maximum, or the reverse.
     if (minZoom > map.getMaxZoom()) {
       map.setMaxZoom(maxZoom);
@@ -387,7 +390,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.pending = { settleOn: "style.load", resolve, reject };
     });
     // A diffed swap fires no "style.load", so the promise could never settle.
-    map.setStyle(basemap.source.styleUrl, { diff: false });
+    map.setStyle(styleFor(basemap), { diff: false });
     return swapped;
   }
 
@@ -424,24 +427,23 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   private createOptions(
     host: HTMLElement,
-    styleUrl: string,
     view: ViewState,
     reducedMotion: boolean,
   ): MapOptions {
     const basemap = this.basemap as BasemapDefinition;
     return {
       container: host,
-      style: styleUrl,
+      style: styleFor(basemap),
       center: [view.center.lng, view.center.lat],
       zoom: this.engineZoom(view.zoom),
       bearing: view.bearing,
       pitch: 0,
-      minZoom: toEngineZoom(basemap.minZoom, ENGINE),
-      maxZoom: toEngineZoom(basemap.maxZoom, ENGINE),
+      minZoom: toEngineZoom(basemap.minZoom),
+      maxZoom: toEngineZoom(basemap.maxZoom),
       maxPitch: 0,
       attributionControl: false,
       maplibreLogo: false,
-      // The ui implements keys once for both engines.
+      // The ui implements the keys itself.
       keyboard: false,
       cooperativeGestures: false,
       boxZoom: false,
@@ -577,7 +579,6 @@ export class MapLibreMapAdapter implements MapAdapter {
   private engineZoom(normalisedZoom: number): number {
     return toEngineZoom(
       clampZoom(normalisedZoom, this.getMinZoom(), this.getMaxZoom()),
-      ENGINE,
     );
   }
 
@@ -609,7 +610,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 }
 
-/** Builds the MapLibre adapter. Pass it to the composition root's adapter factory for vector basemaps. */
+/** Builds a fresh MapLibre adapter. The composition root's adapter factory. */
 export function createMapLibreMapAdapter(): MapAdapter {
   return new MapLibreMapAdapter();
 }

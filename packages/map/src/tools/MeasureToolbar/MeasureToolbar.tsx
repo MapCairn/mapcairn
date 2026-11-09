@@ -27,7 +27,9 @@ const MODE_OPTIONS = [
 
 /**
  * The measure toolbar: a Distance or Area switch, the running total, buttons
- * to add a point at the map centre, undo and clear, and Done.
+ * to add a point at the map centre, undo and clear, and Done. It sits in a
+ * landmark named "Measurement", so it is inside a landmark wherever the host
+ * places it.
  *
  * On mount focus moves to its first button, because the person has just
  * chosen Measure and the next thing to do is here. The toolbar publishes its
@@ -49,7 +51,7 @@ export function MeasureToolbar({
   const { mode, points, readout, setMode, undo, clear } = measure;
   const { publishToolbarTop, viewport } = useChromeLayout();
   const publishRef = useLatestRef(publishToolbarTop);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
   const lastTop = useRef<number | null>(null);
   const empty = points.length === 0;
 
@@ -90,7 +92,12 @@ export function MeasureToolbar({
   );
 
   return (
-    <div ref={rootRef} className={styles.root} data-chrome="measure-toolbar">
+    <section
+      ref={rootRef}
+      aria-label="Measurement"
+      className={styles.root}
+      data-chrome="measure-toolbar"
+    >
       <Surface
         role="toolbar"
         aria-label="Measure"
@@ -142,6 +149,6 @@ export function MeasureToolbar({
           Tap the map to add points, or use Add point at map centre.
         </p>
       </Surface>
-    </div>
+    </section>
   );
 }

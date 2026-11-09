@@ -15,7 +15,8 @@ export const links: LinksFunction = () => [
  * React Router route module export: the map page.
  *
  * @remarks The server renders a static shell only: the skip link (the first
- *   focusable element), the page's hidden h1 and a `main` in the map's
+ *   focusable element), the page's hidden h1 in a `header` (so it is inside
+ *   a landmark, like everything else on the page) and a `main` in the map's
  *   background colour. The app mounts after hydration, because it depends on
  *   stored settings and device preferences the server cannot know; rendering
  *   it on the server would make the two disagree. Its own `main` (inside
@@ -25,7 +26,9 @@ export default function HomeRoute() {
   return (
     <>
       <SkipLink targetId={MAP_REGION_ID} />
-      <VisuallyHidden as="h1">Karta</VisuallyHidden>
+      <header>
+        <VisuallyHidden as="h1">Karta</VisuallyHidden>
+      </header>
       <ClientOnly
         fallback={
           <main

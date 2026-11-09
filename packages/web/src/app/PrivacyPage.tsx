@@ -1,5 +1,5 @@
+import { THEME_STORAGE_KEY } from "@karta/core";
 import { VisuallyHidden } from "@karta/map";
-import { THEME_STORAGE_KEY } from "../constants/themeConfig";
 import * as styles from "./PrivacyPage.css";
 
 /** ISO date this policy's content was last reviewed for accuracy. */
@@ -10,7 +10,7 @@ export const PRIVACY_POLICY_TITLE = "Privacy policy";
 
 /**
  * The site's privacy policy.
- * @remarks Reads `THEME_STORAGE_KEY` from the module that sets it, so this
+ * @remarks Reads `THEME_STORAGE_KEY` from `@karta/core`, which the settings store and the pre-paint theme script also use, so this
  *   copy cannot drift from the key the app really uses. The content must stay
  *   in step with the root `PRIVACY.md`, which mirrors it for readers of the
  *   repository.
@@ -80,10 +80,11 @@ export function PrivacyPage() {
 
         <h2 className={styles.sectionTitle}>Map tiles and location search</h2>
         <p className={styles.body}>
-          The basemap tile providers, OpenFreeMap and Esri, may log tile
-          requests, including your IP address, as part of serving imagery. This
-          is standard for any web map. Typing in the search box sends your query
-          to OpenStreetMap's Nominatim geocoding service, which may likewise log
+          The basemap tile providers, OpenFreeMap and, when you choose the
+          Streets basemap, the OpenStreetMap Foundation, may log tile requests,
+          including your IP address, as part of serving the map. This is
+          standard for any web map. Typing in the search box sends your query to
+          OpenStreetMap's Nominatim geocoding service, which may likewise log
           the query and your IP address.
         </p>
 

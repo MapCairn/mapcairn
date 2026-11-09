@@ -10,6 +10,10 @@ export const root = style({
   position: "relative",
   display: "flex",
   justifyContent: "flex-end",
+  // The button is a 48 px target with a bare icon in its middle, so the icon
+  // looks well above the screen inset. Sinking the box by one step puts the
+  // icon near the corner while the target stays fully on screen.
+  marginBlockEnd: `calc(-1 * ${tokens.space.xs})`,
 });
 
 /**

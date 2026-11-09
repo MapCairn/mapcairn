@@ -4,8 +4,6 @@ import {
   FAKE_VECTOR_BASEMAP,
   FakeMapAdapter as FakeAdapter,
   type FakeServices,
-  LEAFLET_LIKE_CAPABILITIES,
-  MAPLIBRE_LIKE_CAPABILITIES,
   type MapAdapter,
   type MapAdapterFactory,
   MapEngineError,
@@ -151,13 +149,8 @@ function heldFactory(): {
     resolve: () => void;
     reject: (error: unknown) => void;
   }[] = [];
-  const factory: MapAdapterFactory = (basemap) => {
-    const adapter = new FakeAdapter({
-      capabilities:
-        basemap.engine === "leaflet"
-          ? LEAFLET_LIKE_CAPABILITIES
-          : MAPLIBRE_LIKE_CAPABILITIES,
-    });
+  const factory: MapAdapterFactory = () => {
+    const adapter = new FakeAdapter();
     const realMount = adapter.mount.bind(adapter);
     adapter.mount = (host, options: MapMountOptions) =>
       new Promise<void>((resolve, reject) => {
@@ -200,15 +193,13 @@ describe("mounting and accessibility", () => {
     expect(help?.textContent).toMatch(/Plus or minus: zoom in or out\./);
   });
 
-  it("leaves rotation out of the instructions on an engine without it, and adds it with one", async () => {
-    const { host, rerender } = await setup();
-    const help = () =>
-      document.getElementById(host().getAttribute("aria-describedby") as string)
-        ?.textContent;
-    expect(help()).not.toMatch(/rotate/i);
-    rerender({ basemap: FAKE_VECTOR_BASEMAP });
-    await settle();
-    expect(help()).toMatch(/rotate the map/i);
+  it("includes rotation and pointing north in the instructions", async () => {
+    const { host } = await setup();
+    const help = document.getElementById(
+      host().getAttribute("aria-describedby") as string,
+    )?.textContent;
+    expect(help).toMatch(/Shift with left or right arrow: rotate the map./);
+    expect(help).toMatch(/Home or 0: point the map north again./);
   });
 
   it("mounts the adapter into a child element with the initial view, basemap and motion preference", async () => {
@@ -231,9 +222,9 @@ describe("mounting and accessibility", () => {
     expect(adapter().animationEnabled).toBe(true);
   });
 
-  it("exposes the engine and normalised zoom as data attributes", async () => {
+  it("marks the map host and exposes the normalised zoom as data attributes", async () => {
     const { host, adapter } = await setup();
-    expect(host()).toHaveAttribute("data-engine", "leaflet");
+    expect(host()).toHaveAttribute("data-map-host", "");
     expect(host()).toHaveAttribute("data-zoom", "9.00");
     act(() => {
       adapter().setView({ zoom: 10.256 });
@@ -247,8 +238,6 @@ describe("mounting and accessibility", () => {
     const value = latest();
     expect(value.adapter).toBe(adapter());
     expect(value.view).toEqual(adapter().getView());
-    expect(value.engine).toBe("leaflet");
-    expect(value.capabilities).toEqual(LEAFLET_LIKE_CAPABILITIES);
     expect(value.minZoom).toBe(2);
     expect(value.maxZoom).toBe(12);
     expect(value.canZoomIn).toBe(true);
@@ -345,7 +334,7 @@ describe("mounting and accessibility", () => {
       </ServicesProvider>,
     );
     expect(html).not.toMatch(/style=/);
-    expect(html).toMatch(/data-engine="maplibre"/);
+    expect(html).toMatch(/data-map-host=""/);
     expect(html).toMatch(/aria-busy="true"/);
     expect(html).toMatch(/child/);
     expect(factory).not.toHaveBeenCalled();
@@ -478,9 +467,9 @@ describe("keyboard", () => {
     expect(prevented).toBe(true);
   });
 
-  it("pans further with Shift and an arrow on an engine without rotation", async () => {
-    const { spies } = await pressOn("ArrowLeft", { shiftKey: true });
-    expect(spies.panBy).toHaveBeenCalledWith(-240, 0);
+  it("pans further with Shift and up or down", async () => {
+    const { spies } = await pressOn("ArrowUp", { shiftKey: true });
+    expect(spies.panBy).toHaveBeenCalledWith(0, -240);
   });
 
   it.each([
@@ -494,12 +483,8 @@ describe("keyboard", () => {
     expect(prevented).toBe(true);
   });
 
-  it("rotates with Shift and left or right, and resets north with Home or 0, where supported", async () => {
-    const harness = await pressOn(
-      "ArrowRight",
-      { shiftKey: true },
-      { basemap: FAKE_VECTOR_BASEMAP },
-    );
+  it("rotates with Shift and left or right, and resets north with Home or 0", async () => {
+    const harness = await pressOn("ArrowRight", { shiftKey: true });
     expect(harness.spies.rotateBy).toHaveBeenCalledWith(15);
     fireEvent.keyDown(harness.host(), { key: "ArrowLeft", shiftKey: true });
     expect(harness.spies.rotateBy).toHaveBeenCalledWith(-15);
@@ -523,7 +508,6 @@ describe("keyboard", () => {
     const { host, spies } = await pressOn("a");
     expect(fireEvent.keyDown(host(), { key: "Tab" })).toBe(true);
     expect(fireEvent.keyDown(host(), { key: "+", ctrlKey: true })).toBe(true);
-    expect(fireEvent.keyDown(host(), { key: "Home" })).toBe(true);
     expect(spies.zoomIn).not.toHaveBeenCalled();
   });
 
@@ -774,25 +758,20 @@ describe("long-press", () => {
   });
 });
 
-describe("engine switch", () => {
-  it("swaps the basemap on the same engine without remounting", async () => {
+describe("basemap changes", () => {
+  it("swaps the basemap on the mounted engine without remounting", async () => {
     const other = { ...FAKE_RASTER_BASEMAP, id: "other-raster", maxZoom: 10 };
-    const onEngineSwitch = vi.fn();
-    const { adapter, rerender, services, latest } = await setup({
-      onEngineSwitch,
-    });
+    const { adapter, rerender, services, latest } = await setup();
     const setBasemap = vi.spyOn(adapter(), "setBasemap");
     rerender({ basemap: other });
     await settle();
     expect(setBasemap).toHaveBeenCalledWith(other);
     expect(services.fakes.maps).toHaveLength(1);
     expect(latest().maxZoom).toBe(10);
-    expect(onEngineSwitch).not.toHaveBeenCalled();
   });
 
-  it("mounts the other engine in a new element with the same view, keeping the host and children", async () => {
+  it("switches between raster and vector basemaps on the same engine, keeping the view, the host and children", async () => {
     const mount = vi.spyOn(FakeAdapter.prototype, "mount");
-    const onEngineSwitch = vi.fn();
     const {
       adapter,
       rerender,
@@ -800,125 +779,53 @@ describe("engine switch", () => {
       latest,
       services: { fakes },
     } = await setup(
-      { basemap: FAKE_VECTOR_BASEMAP, onEngineSwitch },
+      { basemap: FAKE_VECTOR_BASEMAP },
       createFakeServices(),
       <span data-testid="child">kept</span>,
     );
     const hostBefore = host();
     const child = screen.getByTestId("child");
+    const element = latest().hostElement;
     act(() => {
       adapter().setView({ zoom: 7.5, bearing: 30 });
     });
-    const first = adapter();
+    const before = adapter().getView();
     rerender({ basemap: FAKE_RASTER_BASEMAP });
-    expect(first.destroyed).toBe(true);
     await settle();
-    expect(fakes.maps).toHaveLength(2);
-    const [oldElement] = mount.mock.calls[0] as [HTMLElement];
-    const [newElement, options] = mount.mock.calls[1] as [
-      HTMLElement,
-      MapMountOptions,
-    ];
-    expect(newElement).not.toBe(oldElement);
-    expect(oldElement.isConnected).toBe(false);
-    expect(latest().hostElement).toBe(newElement);
-    expect(options.view).toEqual({
-      center: first.getView().center,
-      zoom: 7.5,
-      bearing: 0,
-    });
+    rerender({ basemap: FAKE_VECTOR_BASEMAP });
+    await settle();
+    expect(fakes.maps).toHaveLength(1);
+    expect(mount).toHaveBeenCalledTimes(1);
+    expect(adapter().destroyed).toBe(false);
+    expect(adapter().getView()).toEqual(before);
+    expect(latest().hostElement).toBe(element);
     expect(host()).toBe(hostBefore);
     expect(screen.getByTestId("child")).toBe(child);
-    expect(host()).toHaveAttribute("data-engine", "leaflet");
-    expect(latest().adapter).toBe(adapter());
-    expect(latest().capabilities).toEqual(LEAFLET_LIKE_CAPABILITIES);
-    expect(adapter().keyboardEnabled).toBe(false);
-    expect(onEngineSwitch).toHaveBeenCalledWith(FAKE_RASTER_BASEMAP);
   });
 
-  it("keeps the bearing only on an engine that can rotate", async () => {
-    const mount = vi.spyOn(FakeAdapter.prototype, "mount");
-    const { rerender } = await setup({
-      basemap: FAKE_VECTOR_BASEMAP,
-      initialView: { ...VIEW, bearing: 45 },
-    });
-    rerender({ basemap: FAKE_RASTER_BASEMAP });
-    await settle();
-    rerender({ basemap: FAKE_VECTOR_BASEMAP });
-    await settle();
-    expect(mount.mock.calls[0]?.[1].view.bearing).toBe(45);
-    expect(mount.mock.calls[1]?.[1].view.bearing).toBe(0);
-    expect(mount.mock.calls[2]?.[1].view.bearing).toBe(0);
-  });
-
-  it("restores focus to the region when focus was inside the old engine", async () => {
-    const mount = vi.spyOn(FakeAdapter.prototype, "mount");
-    const { rerender, host } = await setup();
-    const oldElement = mount.mock.calls[0]?.[0] as HTMLElement;
-    const focusable = document.createElement("button");
-    oldElement.append(focusable);
-    focusable.focus();
-    expect(document.activeElement).toBe(focusable);
-    rerender({ basemap: FAKE_VECTOR_BASEMAP });
-    await settle();
-    expect(document.activeElement).toBe(host());
-  });
-
-  it("leaves focus alone when it was elsewhere", async () => {
-    const outside = document.createElement("button");
-    document.body.append(outside);
-    const { rerender } = await setup();
-    outside.focus();
-    rerender({ basemap: FAKE_VECTOR_BASEMAP });
-    await settle();
-    expect(document.activeElement).toBe(outside);
-    outside.remove();
-  });
-
-  it("keeps the last change when engines switch rapidly, destroying stale mounts", async () => {
-    const held = heldFactory();
-    const onEngineSwitch = vi.fn();
-    const { rerender, latest, host } = await setup(
-      { onEngineSwitch },
-      createFakeServices({ createMapAdapter: held.factory }),
-    );
-    await held.release(0);
-    act(() => {
-      held.adapters[0]?.setView({ zoom: 6 });
-    });
+  it("keeps one adapter however fast the basemap changes", async () => {
+    const { adapter, rerender, services } = await setup();
+    const setBasemap = vi.spyOn(adapter(), "setBasemap");
+    const third = { ...FAKE_RASTER_BASEMAP, id: "third" };
     rerender({ basemap: FAKE_VECTOR_BASEMAP });
     rerender({ basemap: FAKE_RASTER_BASEMAP });
-    const thirdRaster = { ...FAKE_RASTER_BASEMAP, id: "third" };
-    rerender({ basemap: thirdRaster });
-    rerender({ basemap: FAKE_VECTOR_BASEMAP });
+    rerender({ basemap: third });
     await settle();
-    expect(held.adapters).toHaveLength(4);
-    expect(held.adapters.slice(0, 3).every((a) => a.destroyed)).toBe(true);
-    // The stale vector mount finishing late must not take over.
-    await held.release(1);
-    expect(latest().adapter).toBeNull();
-    expect(latest().hostElement).toBeNull();
-    expect(latest().loading).toBe(true);
-    await held.release(3);
-    const last = held.adapters[3] as FakeAdapter;
-    expect(latest().adapter).toBe(last);
-    expect(last.getView().zoom).toBe(6);
-    expect(host()).toHaveAttribute("data-engine", "maplibre");
-    expect(onEngineSwitch).toHaveBeenCalledTimes(1);
-    expect(onEngineSwitch).toHaveBeenCalledWith(FAKE_VECTOR_BASEMAP);
+    expect(services.fakes.maps).toHaveLength(1);
+    expect(setBasemap.mock.calls.at(-1)).toEqual([third]);
   });
 
-  it("applies a same-engine basemap chosen while the engine was still mounting", async () => {
+  it("applies a basemap chosen while the engine was still mounting", async () => {
     const held = heldFactory();
-    const other = { ...FAKE_RASTER_BASEMAP, id: "other-raster" };
     const { rerender } = await setup(
       {},
       createFakeServices({ createMapAdapter: held.factory }),
     );
     const setBasemap = vi.spyOn(held.adapters[0] as FakeAdapter, "setBasemap");
-    rerender({ basemap: other });
+    rerender({ basemap: FAKE_VECTOR_BASEMAP });
     await held.release(0);
-    expect(setBasemap).toHaveBeenCalledWith(other);
+    expect(held.adapters).toHaveLength(1);
+    expect(setBasemap).toHaveBeenCalledWith(FAKE_VECTOR_BASEMAP);
   });
 
   it("ignores a superseded basemap swap", async () => {
@@ -965,17 +872,32 @@ describe("engine errors", () => {
     expect(screen.getByTestId("map")).toHaveAttribute("data-state", "error");
   });
 
-  it("ignores a failure from a mount that was already replaced", async () => {
+  it("ignores a failure from a mount that was already torn down", async () => {
     const held = heldFactory();
     const onEngineError = vi.fn();
-    const { rerender, latest } = await setup(
+    const { unmount } = await setup(
       { onEngineError },
       createFakeServices({ createMapAdapter: held.factory }),
     );
-    rerender({ basemap: FAKE_VECTOR_BASEMAP });
+    unmount();
     await held.fail(0, new MapEngineError("load-failed"));
     expect(onEngineError).not.toHaveBeenCalled();
-    expect(latest().error).toBeNull();
+    expect(held.adapters[0]?.destroyed).toBe(true);
+  });
+
+  it("ignores a mount that finishes after the map was unmounted", async () => {
+    const held = heldFactory();
+    const onEngineError = vi.fn();
+    const { unmount } = await setup(
+      { onEngineError },
+      createFakeServices({ createMapAdapter: held.factory }),
+    );
+    const adapter = held.adapters[0] as FakeAdapter;
+    const setKeyboard = vi.spyOn(adapter, "setKeyboardEnabled");
+    unmount();
+    await held.release(0);
+    expect(setKeyboard).not.toHaveBeenCalled();
+    expect(onEngineError).not.toHaveBeenCalled();
   });
 
   it("wraps an unexpected rejection as a load failure", async () => {
@@ -993,32 +915,72 @@ describe("engine errors", () => {
     expect(latest().error).toBe(error);
   });
 
-  it("recovers when the app falls back to the other engine, with the original view", async () => {
-    const mount = vi.spyOn(FakeAdapter.prototype, "mount");
+  it("does not mount again when the basemap changes after an engine error", async () => {
+    const factory = vi.fn(
+      () => new FakeAdapter({ failMount: "webgl-unavailable" }),
+    );
+    const services = createFakeServices({ createMapAdapter: factory });
+    const { rerender, latest } = await setup({}, services);
+    rerender({ basemap: FAKE_VECTOR_BASEMAP });
+    await settle();
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(latest().error?.reason).toBe("webgl-unavailable");
+  });
+
+  it("restores focus to the region when focus was inside an engine element replaced on retry", async () => {
+    let fail = true;
     const services = createFakeServices();
-    const factory: MapAdapterFactory = (basemap) =>
-      basemap.engine === "maplibre"
-        ? new FakeAdapter({ failMount: "webgl-unavailable" })
-        : services.createMapAdapter(basemap);
-    const { rerender, latest } = await setup(
-      { basemap: FAKE_VECTOR_BASEMAP },
+    const factory: MapAdapterFactory = () =>
+      fail
+        ? new FakeAdapter({ failMount: "load-failed" })
+        : services.createMapAdapter();
+    const { latest, host } = await setup(
+      {},
       { ...services, createMapAdapter: factory },
     );
-    expect(latest().error).not.toBeNull();
-    rerender({ basemap: FAKE_RASTER_BASEMAP });
+    const failed = host().querySelector("div div") as HTMLElement;
+    const focusable = document.createElement("button");
+    failed.append(focusable);
+    focusable.focus();
+    fail = false;
+    act(() => {
+      latest().retry();
+    });
     await settle();
-    expect(latest().error).toBeNull();
-    expect(latest().adapter).not.toBeNull();
-    expect(mount.mock.calls.at(-1)?.[1].view).toEqual(VIEW);
+    expect(failed.isConnected).toBe(false);
+    expect(document.activeElement).toBe(host());
+  });
+
+  it("leaves focus alone on retry when it was elsewhere", async () => {
+    let fail = true;
+    const services = createFakeServices();
+    const factory: MapAdapterFactory = () =>
+      fail
+        ? new FakeAdapter({ failMount: "load-failed" })
+        : services.createMapAdapter();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    const { latest } = await setup(
+      {},
+      { ...services, createMapAdapter: factory },
+    );
+    outside.focus();
+    fail = false;
+    act(() => {
+      latest().retry();
+    });
+    await settle();
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
   });
 
   it("mounts again on retry after an engine error", async () => {
     let fail = true;
     const services = createFakeServices();
-    const factory: MapAdapterFactory = (basemap) =>
+    const factory: MapAdapterFactory = () =>
       fail
         ? new FakeAdapter({ failMount: "load-failed" })
-        : services.createMapAdapter(basemap);
+        : services.createMapAdapter();
     const { latest } = await setup(
       {},
       { ...services, createMapAdapter: factory },
@@ -1184,8 +1146,8 @@ describe("unmount", () => {
     const unsubscribed: string[] = [];
     const subscribed: string[] = [];
     const services = createFakeServices();
-    const factory: MapAdapterFactory = (basemap) => {
-      const adapter = services.createMapAdapter(basemap) as FakeAdapter;
+    const factory: MapAdapterFactory = () => {
+      const adapter = services.createMapAdapter() as FakeAdapter;
       const realOn = adapter.on.bind(adapter);
       adapter.on = ((event, handler) => {
         subscribed.push(event);

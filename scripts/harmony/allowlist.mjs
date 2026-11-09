@@ -33,11 +33,4 @@ export const ALLOW_LIST = [
     reason:
       "The document itself (html and body) is pinned to the viewport so the full-screen map never scrolls or rubber-bands. It is the page root, not a floating surface.",
   },
-  {
-    rule: "engine-selector",
-    file: "packages/web/src/adapters/leaflet/LeafletMapAdapter.ts",
-    contains: "leaflet-control-container",
-    reason:
-      "The adapter finds Leaflet's own control container to hide it from assistive technology. It reads the node, it does not style it.",
-  },
 ];

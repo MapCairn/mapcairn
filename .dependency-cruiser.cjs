@@ -43,16 +43,16 @@ const fromNotLegacy = (from) => {
 
 /**
  * npm packages that render a map or ship a map engine, plugin or type
- * declarations. Only `packages/web/src/adapters/{leaflet,maplibre}` may
- * import them. Matches the resolved path, so it also covers CSS files such as
- * `leaflet/dist/leaflet.css`, dynamic `import()` and `import type`.
+ * declarations. Only `packages/web/src/adapters/maplibre` may import them.
+ * Matches the resolved path, so it also covers CSS files such as
+ * `maplibre-gl/dist/maplibre-gl.css`, dynamic `import()` and `import type`.
  */
 const ENGINE_PACKAGES =
-  "(^|/)node_modules/(@types/)?(leaflet|leaflet\\.[^/]+|react-leaflet|react-leaflet-[^/]+|@react-leaflet|maplibre-gl|@maplibre|maplibre-gl-[^/]+)(/|$)";
+  "(^|/)node_modules/(@types/)?(maplibre-gl|@maplibre|maplibre-gl-[^/]+)(/|$)";
 
 /** The same packages as bare specifiers, for imports that do not resolve. */
 const ENGINE_SPECIFIERS =
-  "^(@types/)?(leaflet|leaflet\\.[^/]+|react-leaflet|react-leaflet-[^/]+|@react-leaflet|maplibre-gl|@maplibre|maplibre-gl-[^/]+)(/|$)";
+  "^(@types/)?(maplibre-gl|@maplibre|maplibre-gl-[^/]+)(/|$)";
 
 /** Icon libraries other than `lucide-react`, as package name patterns. */
 const OTHER_ICON_NAMES =
@@ -72,16 +72,15 @@ const CORE_ALLOWED_PACKAGES =
 const RADIX_WRAPPERS =
   "^packages/map/src/ui/(Switch|Slider|SegmentedControl|Tooltip)/";
 
-/** The engine adapters, the only place an engine library may be imported. */
-const ENGINE_ADAPTERS = "^packages/web/src/adapters/(leaflet|maplibre)/";
+/** The engine adapter, the only place an engine library may be imported. */
+const ENGINE_ADAPTERS = "^packages/web/src/adapters/maplibre/";
 
 module.exports = {
   forbidden: [
     {
       name: "core-is-dependency-free",
       severity: "error",
-      comment:
-        "The layer model must not depend on rendering, hooks or the host.",
+      comment: "Core must not depend on rendering, hooks or the host.",
       from: { path: "^packages/core/src" },
       to: { path: "^packages/(map|react|theme|web)/src" },
     },
@@ -190,7 +189,7 @@ module.exports = {
       name: "map-engine-libraries-only-in-engine-adapters",
       severity: "error",
       comment:
-        "Leaflet, MapLibre, their plugins, styles and types may be imported only from packages/web/src/adapters/leaflet and packages/web/src/adapters/maplibre. The ui and the host never see an engine.",
+        "MapLibre, its plugins, styles and types may be imported only from packages/web/src/adapters/maplibre. The ui and the host never see an engine.",
       from: fromNotLegacy({ path: "^packages/", pathNot: ENGINE_ADAPTERS }),
       to: { path: ENGINE_PACKAGES },
     },
@@ -248,5 +247,12 @@ module.exports = {
     // which the ports-are-types-only rule and engine type imports rely on.
     // The default parser transpiles first and loses them.
     parser: "swc",
+    // maplibre-gl publishes only an `import` condition in its exports map,
+    // so without it the bare specifier would not resolve and the
+    // resolved-path rules (core purity, engine imports) could not see it.
+    enhancedResolveOptions: {
+      exportsFields: ["exports"],
+      conditionNames: ["import", "require", "node", "default"],
+    },
   },
 };

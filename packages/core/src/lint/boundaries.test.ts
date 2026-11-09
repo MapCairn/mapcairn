@@ -54,8 +54,8 @@ describe("dependency-cruiser boundaries", () => {
     // core is pure.
     "packages/core/src/bad/importsReact.ts":
       'import { useState } from "react";\nexport const x = useState;\n',
-    "packages/core/src/bad/importsLeaflet.ts":
-      'import type L from "leaflet";\nexport type X = typeof L;\n',
+    "packages/core/src/bad/importsMaplibre.ts":
+      'import type { Map } from "maplibre-gl";\nexport type X = Map;\n',
     "packages/core/src/bad/importsUi.ts":
       'import { ui } from "../../../map/src/ui/index";\nexport const x = ui;\n',
     "packages/core/src/bad/importsNode.ts":
@@ -83,27 +83,21 @@ describe("dependency-cruiser boundaries", () => {
     "packages/web/src/adapters/clipboard/badRoot.ts":
       'import { x } from "../../composition/goodRoot";\nexport const y = x;\n',
 
-    // engine libraries stay in the engine adapters.
-    "packages/map/src/ui/badLeaflet.ts":
-      'import L from "leaflet";\nexport const x = L;\n',
-    "packages/map/src/ui/badLeafletType.ts":
-      'import type L from "leaflet";\nexport type X = typeof L;\n',
-    "packages/map/src/ui/badDynamicLeaflet.ts":
-      'export const load = () => import("leaflet");\n',
+    // the engine library stays in the engine adapter.
+    "packages/map/src/ui/badMaplibre.ts":
+      'import { Map } from "maplibre-gl";\nexport const x = Map;\n',
+    "packages/map/src/ui/badMaplibreType.ts":
+      'import type { Map } from "maplibre-gl";\nexport type X = Map;\n',
     "packages/map/src/ui/badDynamicMaplibre.ts":
       'export const load = () => import("maplibre-gl");\n',
-    "packages/map/src/ui/badLeafletCss.ts":
-      'import "leaflet/dist/leaflet.css";\nexport const x = 1;\n',
+    "packages/map/src/ui/badMaplibreCss.ts":
+      'import "maplibre-gl/dist/maplibre-gl.css";\nexport const x = 1;\n',
     "packages/map/src/ui/badPlugin.ts":
-      'import "leaflet.markercluster";\nexport const x = 1;\n',
-    "packages/map/src/ui/badReactLeaflet.ts":
-      'import { MapContainer } from "react-leaflet";\nexport const x = MapContainer;\n',
+      'import "maplibre-gl-draw";\nexport const x = 1;\n',
     "packages/map/src/ui/badMaplibrePlugin.ts":
-      'import { x } from "@maplibre/maplibre-gl-leaflet";\nexport const y = x;\n',
-    "packages/web/src/adapters/leaflet/goodLeaflet.ts":
-      'import L from "leaflet";\nimport "leaflet/dist/leaflet.css";\nexport const x = L;\n',
+      'import { x } from "@maplibre/maplibre-gl-geocoder";\nexport const y = x;\n',
     "packages/web/src/adapters/maplibre/goodMaplibre.ts":
-      'export const load = () => import("maplibre-gl");\n',
+      'import { Map } from "maplibre-gl";\nimport "maplibre-gl/dist/maplibre-gl.css";\nexport const x = Map;\nexport const load = () => import("maplibre-gl");\n',
 
     // one icon package.
     "packages/map/src/ui/badIcons.ts":
@@ -155,7 +149,10 @@ describe("dependency-cruiser boundaries", () => {
 
   it.each([
     ["core-uses-only-pure-packages", "packages/core/src/bad/importsReact.ts"],
-    ["core-uses-only-pure-packages", "packages/core/src/bad/importsLeaflet.ts"],
+    [
+      "core-uses-only-pure-packages",
+      "packages/core/src/bad/importsMaplibre.ts",
+    ],
     ["core-uses-only-pure-packages", "packages/core/src/bad/importsNode.ts"],
     ["core-is-dependency-free", "packages/core/src/bad/importsUi.ts"],
     ["ports-are-types-only", "packages/core/src/ports/badValue.ts"],
@@ -179,28 +176,20 @@ describe("dependency-cruiser boundaries", () => {
     ],
     [
       "map-engine-libraries-only-in-engine-adapters",
-      "packages/map/src/ui/badLeaflet.ts",
+      "packages/map/src/ui/badMaplibre.ts",
     ],
     [
       "map-engine-libraries-only-in-engine-adapters",
-      "packages/map/src/ui/badLeafletType.ts",
+      "packages/map/src/ui/badMaplibreType.ts",
     ],
     [
       "map-engine-libraries-only-in-engine-adapters",
-      "packages/map/src/ui/badDynamicLeaflet.ts",
+      "packages/map/src/ui/badMaplibreCss.ts",
     ],
-    [
-      "map-engine-libraries-only-in-engine-adapters",
-      "packages/map/src/ui/badLeafletCss.ts",
-    ],
-    // react-leaflet and the MapLibre Leaflet plugin are no longer installed, so
-    // these imports cannot resolve and the unresolved-specifier rule is the one
-    // that catches them. leaflet and maplibre-gl stay installed (the engine
-    // adapters use them), which keeps the resolved-path rule above exercised.
-    [
-      "map-engine-libraries-unresolved",
-      "packages/map/src/ui/badReactLeaflet.ts",
-    ],
+    // MapLibre plugins are not installed, so these imports cannot resolve and
+    // the unresolved-specifier rule is the one that catches them. maplibre-gl
+    // stays installed (the engine adapter uses it), which keeps the
+    // resolved-path rule above exercised.
     [
       "map-engine-libraries-unresolved",
       "packages/map/src/ui/badMaplibrePlugin.ts",
@@ -232,7 +221,6 @@ describe("dependency-cruiser boundaries", () => {
     "packages/core/src/good/importsZod.ts",
     "packages/core/src/ports/goodType.ts",
     "packages/web/src/composition/goodRoot.ts",
-    "packages/web/src/adapters/leaflet/goodLeaflet.ts",
     "packages/web/src/adapters/maplibre/goodMaplibre.ts",
     "packages/map/src/ui/goodLucide.ts",
     "packages/map/src/ui/Switch/goodRadix.ts",

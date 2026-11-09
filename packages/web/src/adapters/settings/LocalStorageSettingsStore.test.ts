@@ -129,14 +129,14 @@ describe("LocalStorageSettingsStore", () => {
       [THEME_STORAGE_KEY]: "light",
       "karta:units": '"imperial"',
       "karta:zoomButtons": "true",
-      "karta:basemapId": '"satellite"',
+      "karta:basemapId": '"osm"',
       "karta:lastView": JSON.stringify(VIEW),
     });
     expect(store.get()).toEqual({
       theme: "light",
       units: "imperial",
       zoomButtons: true,
-      basemapId: "satellite",
+      basemapId: "osm",
       lastView: VIEW,
     });
   });

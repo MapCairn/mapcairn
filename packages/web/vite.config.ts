@@ -91,11 +91,10 @@ export default defineConfig(({ mode, command }) => {
                 name: "ui-vendor",
                 test: /node_modules\/(lucide-react|zod)\//,
               },
-              // Leaflet and MapLibre have no group on purpose. Each engine
-              // adapter imports its library (and its stylesheet) dynamically,
-              // so each stays an async chunk fetched only when a basemap
-              // needs that engine; a named group would get a modulepreload
-              // and download both engines on every visit.
+              // MapLibre has no group on purpose. The engine adapter imports
+              // it (and its stylesheet) dynamically, so it stays an async
+              // chunk fetched when the map mounts; a named group would get a
+              // modulepreload and block the first paint of the page.
             ],
           },
         },

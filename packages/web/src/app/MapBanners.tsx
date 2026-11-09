@@ -1,15 +1,11 @@
 import { announceTileError } from "@karta/core";
-import { StatusMessage, useMap } from "@karta/map";
+import { type MapContextValue, StatusMessage, useMap } from "@karta/map";
 import { useEffect, useState } from "react";
 import { useReloadPage } from "./ErrorPage";
 import * as styles from "./MapBanners.css";
 import type { MapApp } from "./useMapApp";
 
-/** Shown after a vector basemap failed for lack of WebGL. */
-export const FALLBACK_NOTICE =
-  "This device cannot draw vector maps, so a simpler map is shown.";
-
-/** Shown when no engine could start. */
+/** Shown when the engine could not start for a reason other than missing WebGL. */
 export const ENGINE_FAILED_MESSAGE =
   "The map could not start. Reload the page to try again.";
 
@@ -24,20 +20,20 @@ export interface MapBannersProps {
  */
 export function hasBanners(
   app: MapApp,
-  map: { readonly tileError: boolean; readonly error: unknown },
+  map: Pick<MapContextValue, "tileError" | "error">,
 ): boolean {
-  return (
-    app.fallbackNotice ||
-    app.locate.state === "error" ||
-    map.tileError ||
-    map.error !== null
-  );
+  return app.locate.state === "error" || map.tileError || engineFailed(map);
+}
+
+/** The engine could not start for a reason a reload might fix. */
+function engineFailed(map: Pick<MapContextValue, "error">): boolean {
+  return map.error !== null && map.error.reason !== "webgl-unavailable";
 }
 
 /**
  * The status banners in the bottom-centre slot: a tile error with Retry, a
- * location error, the notice that a simpler map is shown, and a map that
- * could not start, with Reload.
+ * location error, and a map that could not start, with Reload. Missing WebGL
+ * is not a banner: `MapUnavailable` shows it in place of the map.
  *
  * @remarks Each banner is a `StatusMessage`, which is a live region itself
  *   (an alert for errors, a status for the notice). So nothing here is also
@@ -62,9 +58,6 @@ export function MapBanners({ app }: MapBannersProps) {
     }
   }, [map.error]);
 
-  const engineFailed =
-    map.error !== null && map.error.reason !== "webgl-unavailable";
-
   return (
     <div className={styles.stack} data-testid="map-banners">
       {map.tileError && !tileErrorDismissed ? (
@@ -87,16 +80,7 @@ export function MapBanners({ app }: MapBannersProps) {
           {app.locate.message}
         </StatusMessage>
       ) : null}
-      {app.fallbackNotice ? (
-        <StatusMessage
-          variant="info"
-          data-testid="engine-fallback"
-          onDismiss={app.dismissFallbackNotice}
-        >
-          {FALLBACK_NOTICE}
-        </StatusMessage>
-      ) : null}
-      {engineFailed && !engineErrorDismissed ? (
+      {engineFailed(map) && !engineErrorDismissed ? (
         <StatusMessage
           variant="error"
           data-testid="engine-error"

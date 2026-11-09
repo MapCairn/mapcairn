@@ -3,7 +3,6 @@ import {
   announceBasemap,
   announceCopied,
   announceDetent,
-  announceEngineSwitch,
   announceLocationError,
   announceLocationFound,
   announceMeasureTotal,
@@ -107,7 +106,7 @@ describe("measurement announcements", () => {
 
 describe("map and panel announcements", () => {
   it("names the basemap and the zoom level", () => {
-    expect(announceBasemap("Satellite")).toBe("Basemap changed to Satellite");
+    expect(announceBasemap("Streets")).toBe("Basemap changed to Streets");
     expect(announceZoom(12)).toBe("Zoom level 12");
     expect(announceZoom(12.46)).toBe("Zoom level 12.5");
   });
@@ -123,15 +122,12 @@ describe("map and panel announcements", () => {
     expect(announceSurfaceClosed("Settings")).toBe("Settings closed");
   });
 
-  it("reports connection and engine problems plainly", () => {
+  it("reports connection problems plainly", () => {
     expect(announceTileError()).toBe(
       "Some of the map could not load. Check your connection.",
     );
     expect(announceOffline()).toBe(
       "You are offline. Parts of the map may not load.",
-    );
-    expect(announceEngineSwitch("Liberty")).toBe(
-      "Switched to Liberty. Your position on the map is unchanged.",
     );
   });
 });

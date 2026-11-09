@@ -1,7 +1,7 @@
 {
   "name": "@karta/theme",
   "version": "1.0.0",
-  "description": "Typed vanilla-extract contract for Karta's Material 3 design tokens",
+  "description": "Typed vanilla-extract contract for Karta's design tokens",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",

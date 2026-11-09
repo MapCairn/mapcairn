@@ -2,7 +2,7 @@ import {
   createFakeServices,
   FakeMapAdapter,
   type FakeServices,
-  type MapAdapterFactory,
+  type MapMountOptions,
   MemorySettingsStore,
   type SearchResult,
 } from "@karta/core";
@@ -11,11 +11,14 @@ import {
   ServicesProvider,
   TooltipProvider,
 } from "@karta/map";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { createRoutesStub } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { FALLBACK_NOTICE } from "./app/MapBanners";
+import {
+  WEBGL_UNAVAILABLE_ADVICE,
+  WEBGL_UNAVAILABLE_TITLE,
+} from "./app/MapUnavailable";
 import { SAVE_VIEW_DELAY_MS } from "./app/useViewPersistence";
 
 // Each test mounts the whole app; under coverage instrumentation a cold one
@@ -86,7 +89,7 @@ describe("App", () => {
   it("mounts the map region with its chrome", async () => {
     await renderApp();
     expect(region()).toHaveAttribute("id", "map");
-    expect(region()).toHaveAttribute("data-engine", "maplibre");
+    expect(region()).toHaveAttribute("data-map-host", "");
     expect(region()).toHaveAttribute("data-zoom", "2.00");
     expect(
       screen.getByRole("combobox", { name: "Search places" }),
@@ -101,15 +104,17 @@ describe("App", () => {
   });
 
   it("starts from a shared link, then the saved view", async () => {
+    const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
     const services = createFakeServices();
     services.fakes.url.write({
       view: { center: { lat: 1, lng: 2 }, zoom: 7, bearing: 0 },
-      basemapId: "satellite",
+      basemapId: "osm",
     });
     services.fakes.settings.set({ basemapId: "positron" });
     await renderApp(services);
     expect(region()).toHaveAttribute("data-zoom", "7.00");
-    expect(region()).toHaveAttribute("data-engine", "leaflet");
+    const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
+    expect(options.basemap.id).toBe("osm");
     // The link's basemap is shown without replacing the saved choice.
     expect(services.fakes.settings.get().basemapId).toBe("positron");
   });
@@ -152,6 +157,28 @@ describe("surfaces", () => {
     fireEvent.click(mapOptions);
     expect(sheet()).toHaveAttribute("data-state", "open");
     fireEvent.keyDown(sheet(), { key: "Escape" });
+    expect(sheet()).toHaveAttribute("data-state", "closed");
+    expect(document.activeElement).toBe(mapOptions);
+  });
+
+  it("returns focus to Map options when the sheet closes at full height", async () => {
+    // As in a browser, an element inside an inert subtree cannot take focus.
+    const focus = HTMLElement.prototype.focus;
+    vi.spyOn(HTMLElement.prototype, "focus").mockImplementation(function (
+      this: HTMLElement,
+      options?: FocusOptions,
+    ) {
+      if (this.closest("[inert]") === null) {
+        focus.call(this, options);
+      }
+    });
+    await renderApp();
+    const mapOptions = screen.getByRole("button", { name: "Map options" });
+    fireEvent.click(mapOptions);
+    fireEvent.click(screen.getByRole("button", { name: "Resize panel" }));
+    expect(sheet()).toHaveAttribute("data-detent", "full");
+    expect(sheet()).toHaveAttribute("aria-modal", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(sheet()).toHaveAttribute("data-state", "closed");
     expect(document.activeElement).toBe(mapOptions);
   });
@@ -275,35 +302,68 @@ describe("locate", () => {
   });
 });
 
-describe("basemaps and engines", () => {
-  it("stores a basemap chosen in the sheet and switches engine", async () => {
+describe("basemaps", () => {
+  it("stores a basemap chosen in the sheet and swaps it on the same engine", async () => {
     const services = await renderApp();
+    const setBasemap = vi.spyOn(adapter(services), "setBasemap");
     fireEvent.click(screen.getByRole("button", { name: "Map options" }));
     fireEvent.click(
       screen
-        .getByTestId("basemap-option-satellite")
+        .getByTestId("basemap-option-osm")
         .querySelector("input") as HTMLInputElement,
     );
     await settle();
-    expect(services.fakes.settings.get().basemapId).toBe("satellite");
-    expect(region()).toHaveAttribute("data-engine", "leaflet");
-    await vi.waitFor(() => expect(polite()).toMatch(/^Switched to Satellite/));
+    expect(services.fakes.settings.get().basemapId).toBe("osm");
+    expect(setBasemap).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "osm", name: "Streets" }),
+    );
+    expect(services.fakes.maps).toHaveLength(1);
+    await vi.waitFor(() =>
+      expect(polite()).toMatch(/^Basemap changed to Streets/),
+    );
   });
 
-  it("falls back to a raster basemap when WebGL is missing, and says so", async () => {
+  it("treats a saved basemap that no longer exists as Auto", async () => {
+    const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
     const services = createFakeServices();
-    const real = services.createMapAdapter;
-    const factory: MapAdapterFactory = (basemap) =>
-      basemap.engine === "maplibre"
-        ? new FakeMapAdapter({ failMount: "webgl-unavailable" })
-        : real(basemap);
-    await renderApp({ ...services, createMapAdapter: factory });
+    services.fakes.settings.set({ basemapId: "retired-basemap" });
+    await renderApp(services);
+    const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
+    expect(options.basemap.id).toBe("positron");
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    expect(
+      screen.getByRole("switch", { name: /match the map to the theme/i }),
+    ).toBeChecked();
+  });
+
+  it("shows a message in place of the map when WebGL is missing, with no Retry or Reload", async () => {
+    const services = createFakeServices({
+      createMapAdapter: () =>
+        new FakeMapAdapter({ failMount: "webgl-unavailable" }),
+    });
+    await renderApp(services);
     await settle();
-    expect(region()).toHaveAttribute("data-engine", "leaflet");
-    expect(screen.getByTestId("engine-fallback")).toHaveTextContent(
-      FALLBACK_NOTICE,
+    const message = screen.getByTestId("webgl-unavailable");
+    expect(region()).toContainElement(message);
+    expect(message).toHaveTextContent(WEBGL_UNAVAILABLE_TITLE);
+    expect(message).toHaveTextContent(WEBGL_UNAVAILABLE_ADVICE);
+    expect(WEBGL_UNAVAILABLE_TITLE).toBe("Karta needs WebGL to draw the map.");
+    expect(WEBGL_UNAVAILABLE_ADVICE).toMatch(/different browser/);
+    expect(WEBGL_UNAVAILABLE_ADVICE).toMatch(/hardware acceleration/);
+    await vi.waitFor(() =>
+      expect(assertive()).toBe(
+        `${WEBGL_UNAVAILABLE_TITLE} ${WEBGL_UNAVAILABLE_ADVICE}`,
+      ),
     );
     expect(screen.queryByTestId("engine-error")).toBeNull();
+    expect(screen.queryByTestId("map-banners")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reload" })).toBeNull();
+  });
+
+  it("shows no WebGL message when the map starts", async () => {
+    await renderApp();
+    expect(screen.queryByTestId("webgl-unavailable")).toBeNull();
   });
 
   it("offers Reload when no engine can start", async () => {
@@ -315,6 +375,32 @@ describe("basemaps and engines", () => {
       "The map could not start.",
     );
     expect(screen.getByRole("button", { name: "Reload" })).toBeInTheDocument();
+  });
+
+  it("hides the engine error when dismissed", async () => {
+    const failing = createFakeServices({
+      createMapAdapter: () => new FakeMapAdapter({ failMount: "load-failed" }),
+    });
+    await renderApp(failing);
+    fireEvent.click(
+      within(screen.getByTestId("engine-error")).getByRole("button", {
+        name: "Dismiss",
+      }),
+    );
+    expect(screen.queryByTestId("engine-error")).toBeNull();
+  });
+
+  it("hides a tile error when dismissed", async () => {
+    const services = await renderApp();
+    act(() => {
+      adapter(services).simulateTileError();
+    });
+    fireEvent.click(
+      within(screen.getByTestId("tile-error")).getByRole("button", {
+        name: "Dismiss",
+      }),
+    );
+    expect(screen.queryByTestId("tile-error")).toBeNull();
   });
 
   it("shows a tile error with Retry, which re-applies the basemap", async () => {
@@ -419,10 +505,10 @@ describe("WebMCP tools", () => {
 
   it("sets the basemap and the theme", async () => {
     const { call, services } = await renderWithTools();
-    expect(await call("set-map-basemap", { basemap: "topo" })).toBe(
-      "Switched the basemap to topo.",
+    expect(await call("set-map-basemap", { basemap: "osm" })).toBe(
+      "Switched the basemap to osm.",
     );
-    expect(services.fakes.settings.get().basemapId).toBe("topo");
+    expect(services.fakes.settings.get().basemapId).toBe("osm");
     expect(await call("set-map-basemap", { basemap: "nope" })).toMatch(
       /Unknown basemap/,
     );

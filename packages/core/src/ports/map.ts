@@ -15,14 +15,6 @@ export interface MapHostElement {
   };
 }
 
-/** What a map engine can do. The ui branches on these, never on an engine name. */
-export interface MapCapabilities {
-  /** The map can be rotated, so a compass and rotation keys make sense. */
-  readonly supportsRotation: boolean;
-  /** Tapping the map can report the features under the pointer. */
-  readonly supportsFeatureQuery: boolean;
-}
-
 /** Everything the adapter needs when it mounts. */
 export interface MapMountOptions {
   readonly view: ViewState;
@@ -54,7 +46,7 @@ export interface MapFitOptions extends MapMoveOptions {
 export interface MapClickEvent {
   readonly latlng: LatLng;
   readonly point: PixelPoint;
-  /** Opaque feature descriptions, only when `supportsFeatureQuery`. */
+  /** Opaque descriptions of the rendered features under the pointer. */
   readonly features?: readonly Readonly<Record<string, unknown>>[];
 }
 
@@ -66,7 +58,7 @@ export interface MapEvents {
   moveEnd: ViewState;
   /** The normalised zoom changed. */
   zoom: ViewState;
-  /** The bearing changed. Only emitted when `supportsRotation`. */
+  /** The bearing changed. */
   rotate: ViewState;
   click: MapClickEvent;
   /** The first frame of the current basemap is ready. */
@@ -78,18 +70,16 @@ export interface MapEvents {
 }
 
 /**
- * One map engine, seen from the ui. Leaflet and MapLibre each implement this
- * in their own module, and nothing outside those two modules may name an
- * engine class, event or DOM node.
+ * The map engine, seen from the ui. The MapLibre adapter implements this in
+ * its own module, and nothing outside that module may name an engine class,
+ * event or DOM node. The port is the boundary between the ui and the engine,
+ * and lets the ui run against an in-memory fake in tests.
  *
  * @remarks Keyboard handling and long-press are implemented once in the ui and
- *   call the methods below, so both engines respond identically.
- *   {@link MapAdapter.setKeyboardEnabled} turns the engine's own key handling
- *   off for that reason. Capability flags describe real differences; the
- *   interface does not pretend the engines are equal.
+ *   call the methods below. {@link MapAdapter.setKeyboardEnabled} turns the
+ *   engine's own key handling off for that reason.
  */
 export interface MapAdapter {
-  readonly capabilities: MapCapabilities;
   /**
    * Creates the engine inside `host`. Rejects with a `MapEngineError` when the
    * engine cannot start (for example, no WebGL).
@@ -104,9 +94,9 @@ export interface MapAdapter {
   zoomOut(options?: MapMoveOptions): void;
   /** Moves the view by a number of screen pixels (positive x is right, positive y is down). */
   panBy(dx: number, dy: number, options?: MapMoveOptions): void;
-  /** Rotates by degrees clockwise. A no-op unless `supportsRotation`. */
+  /** Rotates by degrees clockwise. */
   rotateBy(degrees: number, options?: MapMoveOptions): void;
-  /** Sets the bearing to north. A no-op unless `supportsRotation`. */
+  /** Sets the bearing to north. */
   resetBearing(options?: MapMoveOptions): void;
   fitBounds(bounds: Bounds, options?: MapFitOptions): void;
 
@@ -119,7 +109,7 @@ export interface MapAdapter {
   /** Ground resolution at a latitude (defaults to the view centre) at the current zoom. */
   metresPerPixel(lat?: number): number;
 
-  /** Swaps the basemap on this engine. The caller mounts the other engine when `basemap.engine` differs. */
+  /** Swaps the basemap, keeping the view. */
   setBasemap(basemap: BasemapDefinition): Promise<void>;
   /** Turns every engine animation on or off (reduced motion). */
   setAnimationEnabled(enabled: boolean): void;
@@ -136,7 +126,7 @@ export interface MapAdapter {
 }
 
 /**
- * Builds a map adapter for a basemap. The composition root supplies this, so
- * the ui picks an engine without importing one.
+ * Builds a fresh, unmounted map adapter. The composition root supplies this,
+ * so the ui gets an engine without importing one.
  */
-export type MapAdapterFactory = (basemap: BasemapDefinition) => MapAdapter;
+export type MapAdapterFactory = () => MapAdapter;

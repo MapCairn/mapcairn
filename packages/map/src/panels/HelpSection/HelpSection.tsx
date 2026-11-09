@@ -1,4 +1,4 @@
-import { mapKeyHelp } from "@karta/core";
+import { MAP_KEY_HELP } from "@karta/core";
 import type { Ref } from "react";
 import { usePreferences } from "../../services";
 import {
@@ -12,11 +12,6 @@ import { action, keys, shortcut, shortcuts } from "./HelpSection.css";
 
 /** Props for {@link HelpSection}. */
 export interface HelpSectionProps {
-  /**
-   * Whether the map engine can rotate. Shortcuts for rotating and pointing
-   * north are listed only when it can.
-   */
-  readonly supportsRotation: boolean;
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
   readonly headingLevel?: HeadingLevel;
   /** Receives the heading, so the sheet can focus it. */
@@ -32,7 +27,6 @@ export interface HelpSectionProps {
  *   stay in the map's own hidden keyboard instructions.
  */
 export function HelpSection({
-  supportsRotation,
   headingLevel = 3,
   headingRef,
 }: HelpSectionProps) {
@@ -49,7 +43,7 @@ export function HelpSection({
         <div className={subsection} data-testid="help-keyboard">
           <Subheading level={subLevel}>Keyboard</Subheading>
           <dl className={shortcuts}>
-            {mapKeyHelp({ supportsRotation }).map((entry) => (
+            {MAP_KEY_HELP.map((entry) => (
               <div key={entry.keys} className={shortcut}>
                 <dt className={keys}>{entry.keys}</dt>
                 <dd className={action}>{entry.description}</dd>

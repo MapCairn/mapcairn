@@ -50,7 +50,6 @@ function renderContent({
     onBasemapChange,
     hasPin: false,
     onDropPin,
-    supportsRotation: true,
     ...props,
   };
   const view = render(tree(services, base));
@@ -104,8 +103,8 @@ describe("SheetContent structure", () => {
 
 describe("SheetContent basemap", () => {
   it("passes the stored basemap to the picker", () => {
-    renderContent({ props: { basemapId: "satellite" } });
-    expect(screen.getByRole("radio", { name: "Satellite" })).toBeChecked();
+    renderContent({ props: { basemapId: "osm" } });
+    expect(screen.getByRole("radio", { name: "Streets" })).toBeChecked();
     expect(
       screen.getByRole("switch", { name: "Match the map to the theme" }),
     ).toHaveAttribute("aria-checked", "false");
@@ -113,8 +112,8 @@ describe("SheetContent basemap", () => {
 
   it("reports a chosen basemap", () => {
     const { onBasemapChange } = renderContent();
-    fireEvent.click(screen.getByRole("radio", { name: "Topographic" }));
-    expect(onBasemapChange).toHaveBeenCalledWith("topo");
+    fireEvent.click(screen.getByRole("radio", { name: "Streets" }));
+    expect(onBasemapChange).toHaveBeenCalledWith("osm");
   });
 
   it("turns the match switch on when the stored id is auto, and marks the resolved basemap", () => {
@@ -197,11 +196,9 @@ describe("SheetContent pin, settings and help", () => {
     ).toHaveAttribute("href", "/privacy");
   });
 
-  it("lists rotation shortcuts only when the engine supports rotation", () => {
-    const { update } = renderContent({ props: { supportsRotation: true } });
+  it("lists the rotation shortcuts in Help", () => {
+    renderContent();
     expect(screen.getByText("Rotate the map")).toBeInTheDocument();
-    update({ supportsRotation: false });
-    expect(screen.queryByText("Rotate the map")).toBeNull();
   });
 });
 

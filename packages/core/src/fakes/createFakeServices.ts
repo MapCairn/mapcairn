@@ -39,9 +39,8 @@ export interface FakeServices extends Services {
  * `overrides`; the returned service then uses your object, and the matching
  * entry in `fakes` is left unused.
  *
- * The default `createMapAdapter` is {@link createFakeMapAdapterFactory}: the
- * capabilities follow the basemap's engine, and each adapter is recorded in
- * `fakes.maps`.
+ * The default `createMapAdapter` is {@link createFakeMapAdapterFactory}, and
+ * each adapter it builds is recorded in `fakes.maps`.
  */
 export function createFakeServices(
   overrides: Partial<Services> = {},

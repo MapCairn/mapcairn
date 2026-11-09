@@ -17,7 +17,6 @@ import {
 function props(overrides: Partial<EndStackProps> = {}): EndStackProps {
   return {
     bearing: 0,
-    supportsRotation: true,
     onResetBearing: vi.fn(),
     mapOptionsOpen: false,
     mapOptionsControls: "map-options-sheet",
@@ -87,6 +86,19 @@ describe("EndStack", () => {
     ).toBeTruthy();
     expect(main).toHaveAttribute("data-chrome", "end-stack-controls");
     expect(zoom).toHaveAttribute("data-chrome", "end-stack-zoom");
+  });
+
+  it("is a landmark named Map tools, so its controls sit inside a landmark", () => {
+    renderChrome(withRegistry(<EndStack {...props()} />));
+    const region = screen.getByRole("region", { name: "Map tools" });
+    expect(region.tagName).toBe("SECTION");
+    expect(region).toHaveAttribute("data-testid", "end-stack");
+    expect(
+      within(region).getByRole("group", { name: "Map controls" }),
+    ).toBeInTheDocument();
+    expect(
+      within(region).getByRole("group", { name: "Zoom controls" }),
+    ).toBeInTheDocument();
   });
 
   it("reflects state with aria attributes and calls back", () => {
@@ -162,17 +174,6 @@ describe("EndStack", () => {
   describe("compass", () => {
     it("is absent when the map points north", () => {
       renderChrome(withRegistry(<EndStack {...props({ bearing: 0 })} />));
-      expect(
-        screen.queryByRole("button", { name: "Reset bearing to north" }),
-      ).toBeNull();
-    });
-
-    it("is absent when the engine cannot rotate", () => {
-      renderChrome(
-        withRegistry(
-          <EndStack {...props({ bearing: 45, supportsRotation: false })} />,
-        ),
-      );
       expect(
         screen.queryByRole("button", { name: "Reset bearing to north" }),
       ).toBeNull();

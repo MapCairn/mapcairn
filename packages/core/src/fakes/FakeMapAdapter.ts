@@ -4,7 +4,6 @@ import type { Bounds, LatLng, PixelPoint, ViewState } from "../ports/geometry";
 import type {
   MapAdapter,
   MapAdapterFactory,
-  MapCapabilities,
   MapClickEvent,
   MapEvents,
   MapFitOptions,
@@ -19,18 +18,6 @@ import {
   metresPerPixel,
 } from "../zoom/zoom";
 
-/** Capabilities of a Leaflet-like engine: no rotation, no feature query. */
-export const LEAFLET_LIKE_CAPABILITIES: MapCapabilities = Object.freeze({
-  supportsRotation: false,
-  supportsFeatureQuery: false,
-});
-
-/** Capabilities of a MapLibre-like engine: rotation and feature query. */
-export const MAPLIBRE_LIKE_CAPABILITIES: MapCapabilities = Object.freeze({
-  supportsRotation: true,
-  supportsFeatureQuery: true,
-});
-
 /** The view a {@link FakeMapAdapter} starts with before it is mounted. */
 export const DEFAULT_FAKE_VIEW: ViewState = Object.freeze({
   center: Object.freeze({ lat: 0, lng: 0 }),
@@ -40,8 +27,6 @@ export const DEFAULT_FAKE_VIEW: ViewState = Object.freeze({
 
 /** Options for {@link FakeMapAdapter}. */
 export interface FakeMapAdapterOptions {
-  /** Overrides on top of {@link MAPLIBRE_LIKE_CAPABILITIES}. */
-  readonly capabilities?: Partial<MapCapabilities>;
   /** Makes `mount` reject with a `MapEngineError` of this reason. */
   readonly failMount?: MapEngineErrorReason;
 }
@@ -83,9 +68,6 @@ function wrapLongitude(lng: number): number {
  * A pure in-memory {@link MapAdapter}: no engine, no DOM, no timers.
  *
  * How to script it:
- * - Pass `capabilities` to change what the map can do. Defaults are
- *   {@link MAPLIBRE_LIKE_CAPABILITIES}; use {@link LEAFLET_LIKE_CAPABILITIES}
- *   for an engine without rotation or feature query.
  * - Pass `failMount: "webgl-unavailable"` (or `"load-failed"`) to make
  *   `mount` reject with a `MapEngineError`.
  * - Mount it into a {@link FakeMapHost}; the host's size (800 by 600 by
@@ -101,7 +83,6 @@ function wrapLongitude(lng: number): number {
  * immediate. `project` ignores the bearing.
  */
 export class FakeMapAdapter implements MapAdapter {
-  readonly capabilities: MapCapabilities;
   mountCount = 0;
   focusCount = 0;
   animationEnabled = true;
@@ -116,10 +97,6 @@ export class FakeMapAdapter implements MapAdapter {
   #listeners = new Map<keyof MapEvents, Set<Handler>>();
 
   constructor(options: FakeMapAdapterOptions = {}) {
-    this.capabilities = Object.freeze({
-      ...MAPLIBRE_LIKE_CAPABILITIES,
-      ...options.capabilities,
-    });
     this.#failMount = options.failMount;
   }
 
@@ -184,15 +161,11 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   rotateBy(degrees: number): void {
-    if (this.capabilities.supportsRotation) {
-      this.setView({ bearing: this.#view.bearing + degrees });
-    }
+    this.setView({ bearing: this.#view.bearing + degrees });
   }
 
   resetBearing(): void {
-    if (this.capabilities.supportsRotation) {
-      this.setView({ bearing: 0 });
-    }
+    this.setView({ bearing: 0 });
   }
 
   fitBounds(bounds: Bounds, options: MapFitOptions = {}): void {
@@ -287,7 +260,7 @@ export class FakeMapAdapter implements MapAdapter {
     };
   }
 
-  /** Emits a `click` at a position, with `features` only when queryable. */
+  /** Emits a `click` at a position, with the given `features`. */
   simulateClick(
     latlng: LatLng,
     features: MapClickEvent["features"] = [],
@@ -295,7 +268,7 @@ export class FakeMapAdapter implements MapAdapter {
     this.#emit("click", {
       latlng,
       point: this.project(latlng),
-      ...(this.capabilities.supportsFeatureQuery ? { features } : {}),
+      features,
     });
   }
 
@@ -319,9 +292,7 @@ export class FakeMapAdapter implements MapAdapter {
         lng: wrapLongitude(view.center.lng),
       },
       zoom: clampZoom(view.zoom, this.getMinZoom(), this.getMaxZoom()),
-      bearing: this.capabilities.supportsRotation
-        ? wrapBearing(view.bearing)
-        : 0,
+      bearing: wrapBearing(view.bearing),
     };
   }
 
@@ -355,22 +326,14 @@ export class FakeMapAdapter implements MapAdapter {
 }
 
 /**
- * Builds a `MapAdapterFactory` of fakes. Capabilities follow the basemap's
- * engine, as the real adapters do: `"leaflet"` gets
- * {@link LEAFLET_LIKE_CAPABILITIES} and any other engine gets
- * {@link MAPLIBRE_LIKE_CAPABILITIES}. `onCreate` receives each adapter built,
- * so a test can script it.
+ * Builds a `MapAdapterFactory` of fakes. `onCreate` receives each adapter
+ * built, so a test can script it.
  */
 export function createFakeMapAdapterFactory(
   onCreate?: (adapter: FakeMapAdapter) => void,
 ): MapAdapterFactory {
-  return (basemap) => {
-    const adapter = new FakeMapAdapter({
-      capabilities:
-        basemap.engine === "leaflet"
-          ? LEAFLET_LIKE_CAPABILITIES
-          : MAPLIBRE_LIKE_CAPABILITIES,
-    });
+  return () => {
+    const adapter = new FakeMapAdapter();
     onCreate?.(adapter);
     return adapter;
   };

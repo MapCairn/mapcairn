@@ -22,12 +22,15 @@ describe("home route server render", () => {
 
   it("has the hidden page heading and a map-coloured placeholder", () => {
     expect(html).toMatch(/<h1 class="[^"]+">Karta<\/h1>/);
+    // The heading sits in a banner landmark, so no page content is outside a
+    // landmark (axe best-practice rule "region").
+    expect(html).toMatch(/<header><h1 class="[^"]+">Karta<\/h1><\/header>/);
     expect(html).toMatch(/<main class="[^"]+" aria-busy="true"/);
     expect(html).toContain('data-testid="map-placeholder"');
   });
 
   it("renders no map, no settings and no style attribute", () => {
-    expect(html).not.toContain('data-engine="');
+    expect(html).not.toContain("data-map-host");
     expect(html).not.toContain("Map options");
     expect(html).not.toMatch(/style=/);
   });

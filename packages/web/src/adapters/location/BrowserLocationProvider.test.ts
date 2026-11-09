@@ -144,15 +144,15 @@ describe("BrowserLocationProvider", () => {
     expect(await provider.locate()).toEqual(FIX);
   });
 
-  it("asks for a fresh, accurate fix with the default or given timeout", async () => {
+  it("asks for a quick, coarse fix with the default or given timeout", async () => {
     const { fake, provider } = subject({ geolocation: true });
     fake.setMode({ kind: "fix", fix: FIX });
     await provider.locate();
     await provider.locate({ timeoutMs: 2500 });
     expect(fake.getCurrentPosition.mock.calls[0]?.[2]).toEqual({
-      enableHighAccuracy: true,
-      timeout: 10_000,
-      maximumAge: 0,
+      enableHighAccuracy: false,
+      timeout: 20_000,
+      maximumAge: 30_000,
     });
     expect(fake.getCurrentPosition.mock.calls[1]?.[2]).toMatchObject({
       timeout: 2500,
@@ -285,7 +285,7 @@ describe("BrowserLocationProvider", () => {
         { signal: new AbortController().signal },
       );
       expect(fake.watchPosition.mock.calls[0]?.[2]).toEqual({
-        enableHighAccuracy: true,
+        enableHighAccuracy: false,
         maximumAge: 0,
       });
     });

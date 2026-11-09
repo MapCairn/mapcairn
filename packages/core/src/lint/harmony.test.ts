@@ -244,9 +244,9 @@ const cases: readonly Case[] = [
   },
   {
     rule: "engine-selector",
-    name: "Leaflet selector",
+    name: "MapLibre selector in a style",
     file: CSS,
-    bad: css('  selectors: { ".leaflet-container &": { margin: 0 } },'),
+    bad: css('  selectors: { ".maplibregl-map &": { margin: 0 } },'),
     good: css('  selectors: { "&:hover": { margin: 0 } },'),
   },
   {

@@ -5,6 +5,7 @@ import {
   FAKE_VIEWPORT_HEIGHT,
   FAKE_VIEWPORT_WIDTH,
   FakeMapLibreMap,
+  rasterBasemap,
   vectorBasemap,
 } from "./maplibreTestEngine";
 
@@ -50,35 +51,40 @@ function latestMap(): FakeMapLibreMap {
   return map;
 }
 
-runMapAdapterContract("MapLibre", () => ({
-  adapter: new MapLibreMapAdapter(),
-  controls: {
-    host: createHost(),
-    hostSize: { width: FAKE_VIEWPORT_WIDTH, height: FAKE_VIEWPORT_HEIGHT },
-    basemap: vectorBasemap(),
-    settle: () => new Promise((resolve) => setTimeout(resolve, 0)),
-    simulateClick: (latlng) => {
-      const map = latestMap();
-      map.fire("click", {
-        lngLat: latlng,
-        point: map.project([latlng.lng, latlng.lat]),
-      });
+for (const [name, basemap] of [
+  ["MapLibre (vector style)", vectorBasemap],
+  ["MapLibre (raster style)", rasterBasemap],
+] as const) {
+  runMapAdapterContract(name, () => ({
+    adapter: new MapLibreMapAdapter(),
+    controls: {
+      host: createHost(),
+      hostSize: { width: FAKE_VIEWPORT_WIDTH, height: FAKE_VIEWPORT_HEIGHT },
+      basemap: basemap(),
+      settle: () => new Promise((resolve) => setTimeout(resolve, 0)),
+      simulateClick: (latlng) => {
+        const map = latestMap();
+        map.fire("click", {
+          lngLat: latlng,
+          point: map.project([latlng.lng, latlng.lat]),
+        });
+      },
+      simulateTileError: () => {
+        latestMap().fire("error", {
+          error: new Error("Tile failed"),
+          tile: {},
+          sourceId: "openmaptiles",
+        });
+      },
+      simulateLoading: (loading) => {
+        latestMap().fire(loading ? "dataloading" : "idle");
+      },
+      createFailingMount: () => {
+        const error = new Error("WebGL2 is required");
+        error.name = "GPUInitializationError";
+        FakeMapLibreMap.nextConstructError = error;
+        return new MapLibreMapAdapter();
+      },
     },
-    simulateTileError: () => {
-      latestMap().fire("error", {
-        error: new Error("Tile failed"),
-        tile: {},
-        sourceId: "openmaptiles",
-      });
-    },
-    simulateLoading: (loading) => {
-      latestMap().fire(loading ? "dataloading" : "idle");
-    },
-    createFailingMount: () => {
-      const error = new Error("WebGL2 is required");
-      error.name = "GPUInitializationError";
-      FakeMapLibreMap.nextConstructError = error;
-      return new MapLibreMapAdapter();
-    },
-  },
-}));
+  }));
+}

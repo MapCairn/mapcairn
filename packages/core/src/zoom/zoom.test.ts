@@ -11,23 +11,15 @@ import {
 } from "./zoom";
 
 describe("zoom normalisation", () => {
-  it("leaves Leaflet zoom unchanged", () => {
-    expect(toEngineZoom(10, "leaflet")).toBe(10);
-    expect(toNormalisedZoom(10, "leaflet")).toBe(10);
+  it("subtracts one for MapLibre because its zoom counts 512 px tiles", () => {
+    expect(ENGINE_ZOOM_OFFSET).toBe(-1);
+    expect(toEngineZoom(10)).toBe(9);
+    expect(toNormalisedZoom(9)).toBe(10);
   });
 
-  it("subtracts one for MapLibre because its tiles are 512 px", () => {
-    expect(toEngineZoom(10, "maplibre")).toBe(9);
-    expect(toNormalisedZoom(9, "maplibre")).toBe(10);
-  });
-
-  it("round-trips for every engine", () => {
-    for (const engine of Object.keys(ENGINE_ZOOM_OFFSET) as Array<
-      keyof typeof ENGINE_ZOOM_OFFSET
-    >) {
-      for (const zoom of [0, 3.25, 11, 18.5]) {
-        expect(toNormalisedZoom(toEngineZoom(zoom, engine), engine)).toBe(zoom);
-      }
+  it("round-trips", () => {
+    for (const zoom of [0, 3.25, 11, 18.5]) {
+      expect(toNormalisedZoom(toEngineZoom(zoom))).toBe(zoom);
     }
   });
 

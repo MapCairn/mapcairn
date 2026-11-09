@@ -1,5 +1,4 @@
 import {
-  BASEMAPS,
   createFakeServices,
   FakeClipboard,
   FakeSearchProvider,
@@ -7,6 +6,7 @@ import {
 } from "@karta/core";
 import { PORT_NAMES } from "@karta/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { createServices } from "./createServices";
 
 afterEach(() => {
@@ -14,14 +14,6 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
-
-function basemapFor(engine: "leaflet" | "maplibre") {
-  const basemap = BASEMAPS.find((candidate) => candidate.engine === engine);
-  if (basemap === undefined) {
-    throw new Error(`no ${engine} basemap`);
-  }
-  return basemap;
-}
 
 describe("createServices", () => {
   it("returns a complete Services with every port", () => {
@@ -49,22 +41,11 @@ describe("createServices", () => {
     expect(second.search).not.toBe(first.search);
   });
 
-  it("picks the Leaflet adapter for a raster basemap and MapLibre for a vector one", () => {
+  it("builds a new MapLibre adapter on every call", () => {
     const { createMapAdapter } = createServices();
-    expect(createMapAdapter(basemapFor("leaflet")).capabilities).toEqual({
-      supportsRotation: false,
-      supportsFeatureQuery: false,
-    });
-    expect(createMapAdapter(basemapFor("maplibre")).capabilities).toEqual({
-      supportsRotation: true,
-      supportsFeatureQuery: true,
-    });
-  });
-
-  it("builds a new map adapter for every basemap", () => {
-    const { createMapAdapter } = createServices();
-    const basemap = basemapFor("leaflet");
-    expect(createMapAdapter(basemap)).not.toBe(createMapAdapter(basemap));
+    const first = createMapAdapter();
+    expect(first).toBeInstanceOf(MapLibreMapAdapter);
+    expect(createMapAdapter()).not.toBe(first);
   });
 
   describe("overrides", () => {

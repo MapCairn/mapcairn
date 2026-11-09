@@ -1,7 +1,7 @@
 import {
   createFakeServices,
   FakeDevicePreferences,
-  mapKeyHelp,
+  MAP_KEY_HELP,
 } from "@karta/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -9,22 +9,15 @@ import { ServicesProvider } from "../../services";
 import { HelpSection } from "./HelpSection";
 
 function renderHelp(
-  options: {
-    finePointer?: boolean;
-    supportsRotation?: boolean;
-    headingLevel?: 3 | 4;
-  } = {},
+  options: { finePointer?: boolean; headingLevel?: 3 | 4 } = {},
 ) {
-  const { finePointer = true, supportsRotation = true, headingLevel } = options;
+  const { finePointer = true, headingLevel } = options;
   const services = createFakeServices({
     preferences: new FakeDevicePreferences({ finePointer }),
   });
   return render(
     <ServicesProvider services={services}>
-      <HelpSection
-        supportsRotation={supportsRotation}
-        headingLevel={headingLevel}
-      />
+      <HelpSection headingLevel={headingLevel} />
     </ServicesProvider>,
   );
 }
@@ -58,8 +51,8 @@ describe("HelpSection", () => {
 
   describe("with a fine pointer", () => {
     it("lists every shortcut as a term and its description", () => {
-      renderHelp({ supportsRotation: true });
-      const entries = mapKeyHelp({ supportsRotation: true });
+      renderHelp();
+      const entries = MAP_KEY_HELP;
       const terms = screen.getAllByRole("term");
       const definitions = screen.getAllByRole("definition");
       expect(terms.map((term) => term.textContent)).toEqual(
@@ -70,15 +63,10 @@ describe("HelpSection", () => {
       );
     });
 
-    it("lists rotation shortcuts only when the engine can rotate", () => {
-      const { unmount } = renderHelp({ supportsRotation: true });
+    it("lists the rotation shortcuts", () => {
+      renderHelp();
       expect(screen.getByText("Rotate the map")).toBeInTheDocument();
       expect(screen.getByText("Home or 0")).toBeInTheDocument();
-      unmount();
-      renderHelp({ supportsRotation: false });
-      expect(screen.queryByText("Rotate the map")).toBeNull();
-      expect(screen.queryByText("Home or 0")).toBeNull();
-      expect(screen.getByText("Shift with an arrow key")).toBeInTheDocument();
     });
 
     it("keeps the keyboard group in the Keyboard subsection", () => {

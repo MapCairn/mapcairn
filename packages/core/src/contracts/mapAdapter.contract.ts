@@ -91,12 +91,6 @@ export function runMapAdapterContract(
       return { ...subject, zoom };
     }
 
-    it("reports its capabilities as booleans", () => {
-      const { adapter } = create();
-      expect(typeof adapter.capabilities.supportsRotation).toBe("boolean");
-      expect(typeof adapter.capabilities.supportsFeatureQuery).toBe("boolean");
-    });
-
     it("mounts into the host with the requested view and valid zoom limits", async () => {
       const { adapter, zoom } = await mounted();
       const view = adapter.getView();
@@ -208,23 +202,17 @@ export function runMapAdapterContract(
       expect(after.y).toBeCloseTo(before.y - 50, 0);
     });
 
-    it("rotates with rotateBy and resetBearing only when it supports rotation", async () => {
+    it("rotates with rotateBy and resetBearing", async () => {
       const { adapter, controls } = await mounted();
       adapter.rotateBy(90, NO_ANIMATION);
       await controls.settle();
-      if (adapter.capabilities.supportsRotation) {
-        expect(adapter.getView().bearing).toBeCloseTo(90, 3);
-        adapter.rotateBy(-180, NO_ANIMATION);
-        await controls.settle();
-        expect(adapter.getView().bearing).toBeCloseTo(270, 3);
-        adapter.resetBearing(NO_ANIMATION);
-        await controls.settle();
-        expect(adapter.getView().bearing).toBeCloseTo(0, 3);
-      } else {
-        adapter.resetBearing(NO_ANIMATION);
-        await controls.settle();
-        expect(adapter.getView().bearing).toBe(0);
-      }
+      expect(adapter.getView().bearing).toBeCloseTo(90, 3);
+      adapter.rotateBy(-180, NO_ANIMATION);
+      await controls.settle();
+      expect(adapter.getView().bearing).toBeCloseTo(270, 3);
+      adapter.resetBearing(NO_ANIMATION);
+      await controls.settle();
+      expect(adapter.getView().bearing).toBeCloseTo(0, 3);
     });
 
     it("keeps the bearing in [0, 360)", async () => {
@@ -319,7 +307,7 @@ export function runMapAdapterContract(
       expect(seen.at(-1)).toBe("moveEnd");
     });
 
-    it("emits rotate only when it supports rotation", async () => {
+    it("emits rotate when the bearing changes", async () => {
       const { adapter, controls } = await mounted();
       let rotations = 0;
       adapter.on("rotate", () => {
@@ -327,7 +315,7 @@ export function runMapAdapterContract(
       });
       adapter.rotateBy(30, NO_ANIMATION);
       await controls.settle();
-      expect(rotations > 0).toBe(adapter.capabilities.supportsRotation);
+      expect(rotations).toBeGreaterThan(0);
     });
 
     it("stops calling a handler once it is unsubscribed, and unsubscribing twice is safe", async () => {
@@ -347,7 +335,7 @@ export function runMapAdapterContract(
       expect(moves).toBe(seen);
     });
 
-    it("emits click with the position and pixel, and features only when it can query them", async () => {
+    it("emits click with the position, the pixel and a list of features", async () => {
       const { adapter, controls } = await mounted();
       const clicks: MapEvents["click"][] = [];
       adapter.on("click", (event) => clicks.push(event));
@@ -357,9 +345,7 @@ export function runMapAdapterContract(
       expect(clicks[0]?.latlng.lat).toBeCloseTo(CENTRE.lat + 0.01, 3);
       expect(typeof clicks[0]?.point.x).toBe("number");
       expect(typeof clicks[0]?.point.y).toBe("number");
-      if (!adapter.capabilities.supportsFeatureQuery) {
-        expect(clicks[0]?.features).toBeUndefined();
-      }
+      expect(Array.isArray(clicks[0]?.features)).toBe(true);
     });
 
     it("emits loading and tileError", async () => {

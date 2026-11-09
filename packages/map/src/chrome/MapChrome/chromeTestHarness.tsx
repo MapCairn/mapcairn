@@ -3,7 +3,6 @@ import {
   DEFAULT_FAKE_VIEW,
   FakeMapAdapter,
   type FakeServices,
-  MAPLIBRE_LIKE_CAPABILITIES,
 } from "@karta/core";
 import { type RenderResult, render } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
@@ -25,8 +24,6 @@ export function testMapContext(
     adapter: new FakeMapAdapter(),
     hostElement: null,
     view: DEFAULT_FAKE_VIEW,
-    engine: "maplibre",
-    capabilities: MAPLIBRE_LIKE_CAPABILITIES,
     minZoom: 0,
     maxZoom: 18,
     canZoomIn: true,

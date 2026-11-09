@@ -11,8 +11,6 @@ import {
   FakeMapAdapter,
   type FakeMapAdapterOptions,
   FakeMapHost,
-  LEAFLET_LIKE_CAPABILITIES,
-  MAPLIBRE_LIKE_CAPABILITIES,
 } from "./FakeMapAdapter";
 import { FAKE_RASTER_BASEMAP, FAKE_VECTOR_BASEMAP } from "./fixtures";
 
@@ -44,11 +42,7 @@ function subjectFor(
   };
 }
 
-runMapAdapterContract("FakeMapAdapter (full capabilities)", subjectFor());
-runMapAdapterContract(
-  "FakeMapAdapter (Leaflet-like)",
-  subjectFor({ capabilities: LEAFLET_LIKE_CAPABILITIES }),
-);
+runMapAdapterContract("FakeMapAdapter", subjectFor());
 runMapAdapterContract(
   "FakeMapAdapter (no optional controls)",
   subjectFor({}, false),
@@ -61,20 +55,6 @@ const OPTIONS = {
 };
 
 describe("FakeMapAdapter", () => {
-  it("defaults to full capabilities and offers a Leaflet-like preset", () => {
-    expect(new FakeMapAdapter().capabilities).toEqual(
-      MAPLIBRE_LIKE_CAPABILITIES,
-    );
-    expect(
-      new FakeMapAdapter({ capabilities: { supportsRotation: false } })
-        .capabilities,
-    ).toEqual({ supportsRotation: false, supportsFeatureQuery: true });
-    expect(LEAFLET_LIKE_CAPABILITIES).toEqual({
-      supportsRotation: false,
-      supportsFeatureQuery: false,
-    });
-  });
-
   it("rejects mount with the scripted reason and does not count it", async () => {
     const adapter = new FakeMapAdapter({ failMount: "load-failed" });
     const error = await adapter
@@ -122,11 +102,13 @@ describe("FakeMapAdapter", () => {
     expect(zooms).toEqual([12]);
   });
 
-  it("wraps longitude, clamps latitude and zeroes the bearing without rotation", async () => {
-    const adapter = new FakeMapAdapter({
-      capabilities: LEAFLET_LIKE_CAPABILITIES,
-    });
+  it("wraps longitude and bearing and clamps latitude", async () => {
+    const adapter = new FakeMapAdapter();
     await adapter.mount(new FakeMapHost(), OPTIONS);
+    expect(adapter.getView().bearing).toBe(30);
+    adapter.rotateBy(-60);
+    expect(adapter.getView().bearing).toBe(330);
+    adapter.resetBearing();
     expect(adapter.getView().bearing).toBe(0);
     adapter.setView({ center: { lat: 95, lng: 190 } });
     expect(adapter.getView().center.lat).toBeCloseTo(85.0511, 3);
@@ -188,19 +170,15 @@ describe("FakeMapAdapter", () => {
     expect(adapter.getView().zoom).toBe(0);
   });
 
-  it("includes features in a click only when it can query them", async () => {
-    const full = new FakeMapAdapter();
-    const plain = new FakeMapAdapter({
-      capabilities: LEAFLET_LIKE_CAPABILITIES,
-    });
+  it("includes the scripted features in a click, or none", async () => {
+    const adapter = new FakeMapAdapter();
     const seen: MapEvents["click"][] = [];
-    for (const adapter of [full, plain]) {
-      await adapter.mount(new FakeMapHost(), OPTIONS);
-      adapter.on("click", (event) => seen.push(event));
-      adapter.simulateClick({ lat: 10, lng: 20 }, [{ name: "park" }]);
-    }
+    await adapter.mount(new FakeMapHost(), OPTIONS);
+    adapter.on("click", (event) => seen.push(event));
+    adapter.simulateClick({ lat: 10, lng: 20 }, [{ name: "park" }]);
+    adapter.simulateClick({ lat: 10, lng: 20 });
     expect(seen[0]?.features).toEqual([{ name: "park" }]);
-    expect(seen[1]).not.toHaveProperty("features");
+    expect(seen[1]?.features).toEqual([]);
   });
 
   it("records animation, keyboard and focus switches and focuses the host", async () => {
@@ -230,19 +208,15 @@ describe("FakeMapAdapter", () => {
     expect(moves).toBe(0);
   });
 
-  it("builds adapters whose capabilities follow the basemap engine", () => {
+  it("builds a fresh adapter on every call and reports each one", () => {
     const built: FakeMapAdapter[] = [];
     const factory = createFakeMapAdapterFactory((adapter) =>
       built.push(adapter),
     );
-    factory(FAKE_RASTER_BASEMAP);
-    factory(FAKE_VECTOR_BASEMAP);
-    expect(built.map((adapter) => adapter.capabilities)).toEqual([
-      LEAFLET_LIKE_CAPABILITIES,
-      MAPLIBRE_LIKE_CAPABILITIES,
-    ]);
-    expect(() =>
-      createFakeMapAdapterFactory()(FAKE_RASTER_BASEMAP),
-    ).not.toThrow();
+    const first = factory();
+    const second = factory();
+    expect(first).not.toBe(second);
+    expect(built).toEqual([first, second]);
+    expect(createFakeMapAdapterFactory()()).toBeInstanceOf(FakeMapAdapter);
   });
 });

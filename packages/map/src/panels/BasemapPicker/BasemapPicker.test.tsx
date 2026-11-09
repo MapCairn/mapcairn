@@ -89,9 +89,9 @@ describe("BasemapPicker", () => {
 
   it("calls onChange with the id when another tile is chosen", () => {
     const { onChange } = renderPicker();
-    fireEvent.click(radio("Satellite"));
+    fireEvent.click(radio("Streets"));
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith("satellite");
+    expect(onChange).toHaveBeenCalledWith("osm");
   });
 
   it("calls onChange once when the keyboard selects the next radio", () => {
@@ -114,9 +114,9 @@ describe("BasemapPicker", () => {
 
   it("announces the new basemap politely", () => {
     renderPicker();
-    fireEvent.click(radio("Topographic"));
+    fireEvent.click(radio("Dark"));
     expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
-      "Basemap changed to Topographic",
+      "Basemap changed to Dark",
     );
   });
 
@@ -132,8 +132,8 @@ describe("BasemapPicker", () => {
     });
 
     it("marks the stored basemap when no active id is given", () => {
-      renderPicker({ value: "topo", themeMatch: true });
-      expect(radio("Topographic")).toBeChecked();
+      renderPicker({ value: "osm", themeMatch: true });
+      expect(radio("Streets")).toBeChecked();
     });
 
     it("lets a click on the marked tile pin that basemap", () => {
@@ -153,9 +153,9 @@ describe("BasemapPicker", () => {
         themeMatch: true,
         activeBasemapId: "dark",
       });
-      fireEvent.click(radio("Satellite"));
+      fireEvent.click(radio("Streets"));
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChange).toHaveBeenCalledWith("satellite");
+      expect(onChange).toHaveBeenCalledWith("osm");
     });
   });
 

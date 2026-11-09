@@ -3,8 +3,7 @@ import { PORT_NAMES } from "../contracts/portRegistry";
 import type { Services } from "../ports/services";
 import { createFakeServices } from "./createFakeServices";
 import { FakeClipboard } from "./FakeClipboard";
-import { LEAFLET_LIKE_CAPABILITIES } from "./FakeMapAdapter";
-import { FAKE_RASTER_BASEMAP, FAKE_VECTOR_BASEMAP } from "./fixtures";
+import { FakeMapAdapter } from "./FakeMapAdapter";
 import { StaticLayerRegistry } from "./StaticLayerRegistry";
 
 describe("createFakeServices", () => {
@@ -41,13 +40,12 @@ describe("createFakeServices", () => {
     ).toBe(create);
   });
 
-  it("builds map adapters that follow the basemap engine and are recorded", () => {
+  it("builds fake map adapters and records them", () => {
     const services = createFakeServices();
-    const leaflet = services.createMapAdapter(FAKE_RASTER_BASEMAP);
-    const maplibre = services.createMapAdapter(FAKE_VECTOR_BASEMAP);
-    expect(leaflet.capabilities).toEqual(LEAFLET_LIKE_CAPABILITIES);
-    expect(maplibre.capabilities.supportsRotation).toBe(true);
-    expect(services.fakes.maps).toEqual([leaflet, maplibre]);
+    const first = services.createMapAdapter();
+    const second = services.createMapAdapter();
+    expect(first).toBeInstanceOf(FakeMapAdapter);
+    expect(services.fakes.maps).toEqual([first, second]);
   });
 
   it("gives each call fresh fakes", () => {

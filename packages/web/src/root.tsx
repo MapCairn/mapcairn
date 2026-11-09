@@ -43,8 +43,8 @@ export const meta: MetaFunction = () =>
 
 /**
  * React Router route module export: the font preload, icons, manifest and a
- * preconnect to the default basemap's tile host. Esri tiles are needed only
- * after the reader picks a raster basemap, so they get no preconnect.
+ * preconnect to the default basemap's tile host. OpenStreetMap tiles are
+ * needed only after the reader picks Streets, so they get no preconnect.
  */
 export const links: LinksFunction = () => [
   ...fontPreloadLinks,

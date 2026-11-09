@@ -52,7 +52,11 @@ export const updated = style([
   },
 ]);
 
+/** A standalone link: a full-size target (WCAG 2.5.8), its text centred in it. */
 export const link = style({
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: tokens.size.minTarget,
   color: tokens.color.accent,
   textUnderlineOffset: "0.2em",
 });

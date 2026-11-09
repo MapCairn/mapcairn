@@ -17,15 +17,10 @@ export interface MapKeyEvent {
   readonly altKey: boolean;
 }
 
-/** What the active map engine can do. */
-export interface MapKeyCapabilities {
-  readonly supportsRotation: boolean;
-}
-
 /** Pixels moved by one arrow key press. */
 export const KEY_PAN_STEP = 80;
 
-/** Pixels moved by an arrow key press with Shift held, where Shift does not rotate. */
+/** Pixels moved by Shift with the up or down arrow. */
 export const KEY_PAN_STEP_LARGE = 240;
 
 /** Degrees turned by Shift with left or right arrow. */
@@ -47,20 +42,17 @@ const ARROW_DIRECTIONS: Readonly<Record<string, { x: number; y: number }>> = {
  *   "+" and "_" need it on many keyboards.
  * @remarks For `pan`, `dx` and `dy` are screen pixels with y pointing down,
  *   and the map view moves the way the arrow points: ArrowRight shows more
- *   of the map to the right. Home and 0 do nothing on an engine without
- *   rotation, and Shift with left or right pans further there instead.
+ *   of the map to the right. Shift with left or right rotates; Shift with up
+ *   or down pans further.
  */
-export function mapKeyAction(
-  event: MapKeyEvent,
-  capabilities: MapKeyCapabilities,
-): MapKeyAction | null {
+export function mapKeyAction(event: MapKeyEvent): MapKeyAction | null {
   if (event.ctrlKey || event.metaKey || event.altKey) {
     return null;
   }
 
   const arrow = ARROW_DIRECTIONS[event.key];
   if (arrow !== undefined) {
-    if (event.shiftKey && capabilities.supportsRotation && arrow.y === 0) {
+    if (event.shiftKey && arrow.y === 0) {
       return { type: "rotate", degrees: arrow.x * KEY_ROTATE_STEP };
     }
     const step = event.shiftKey ? KEY_PAN_STEP_LARGE : KEY_PAN_STEP;
@@ -82,7 +74,7 @@ export function mapKeyAction(
       return { type: "zoomOut" };
     case "Home":
     case "0":
-      return capabilities.supportsRotation ? { type: "resetBearing" } : null;
+      return { type: "resetBearing" };
     case "p":
     case "P":
       return { type: "dropPin" };
@@ -99,57 +91,13 @@ export interface MapKeyHelpEntry {
   readonly description: string;
 }
 
-interface HelpRow extends MapKeyHelpEntry {
-  /** When the row applies: always, only with rotation, or only without. */
-  readonly when: "always" | "rotation" | "no-rotation";
-}
-
-const HELP_ROWS: readonly HelpRow[] = [
-  { when: "always", keys: "Arrow keys", description: "Pan the map" },
-  {
-    when: "rotation",
-    keys: "Shift with up or down arrow",
-    description: "Pan the map further",
-  },
-  {
-    when: "no-rotation",
-    keys: "Shift with an arrow key",
-    description: "Pan the map further",
-  },
-  {
-    when: "rotation",
-    keys: "Shift with left or right arrow",
-    description: "Rotate the map",
-  },
-  { when: "always", keys: "Plus or minus", description: "Zoom in or out" },
-  {
-    when: "rotation",
-    keys: "Home or 0",
-    description: "Point the map north again",
-  },
-  {
-    when: "always",
-    keys: "P",
-    description: "Drop a pin at the centre of the map",
-  },
-  { when: "always", keys: "Escape", description: "Close the open panel" },
+/** The keyboard shortcuts of the map region, in display order. */
+export const MAP_KEY_HELP: readonly MapKeyHelpEntry[] = [
+  { keys: "Arrow keys", description: "Pan the map" },
+  { keys: "Shift with up or down arrow", description: "Pan the map further" },
+  { keys: "Shift with left or right arrow", description: "Rotate the map" },
+  { keys: "Plus or minus", description: "Zoom in or out" },
+  { keys: "Home or 0", description: "Point the map north again" },
+  { keys: "P", description: "Drop a pin at the centre of the map" },
+  { keys: "Escape", description: "Close the open panel" },
 ];
-
-/**
- * The keyboard shortcuts to show in the Help section, in display order.
- * Entries about rotation and north are left out when the engine cannot rotate.
- */
-export function mapKeyHelp(
-  capabilities: MapKeyCapabilities,
-): readonly MapKeyHelpEntry[] {
-  return HELP_ROWS.filter(
-    (row) =>
-      row.when === "always" ||
-      (row.when === "rotation") === capabilities.supportsRotation,
-  ).map(({ keys, description }) => ({ keys, description }));
-}
-
-/** The full keyboard help, for an engine that supports rotation. */
-export const MAP_KEY_HELP: readonly MapKeyHelpEntry[] = mapKeyHelp({
-  supportsRotation: true,
-});

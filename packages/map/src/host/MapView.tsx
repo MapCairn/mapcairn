@@ -1,13 +1,12 @@
 import {
   type BasemapDefinition,
   type LatLng,
+  MAP_KEY_HELP,
   type MapAdapter,
-  type MapCapabilities,
   type MapClickEvent,
   type MapEngineError,
   type MapKeyAction,
   mapKeyAction,
-  mapKeyHelp,
   type ViewState,
 } from "@karta/core";
 import {
@@ -30,17 +29,15 @@ export type MapCursor = "grab" | "crosshair";
 
 /** Props for {@link MapView}. */
 export interface MapViewProps {
-  /** The view the first engine mounts with. Later changes are ignored. */
+  /** The view the engine mounts with. Later changes are ignored. */
   readonly initialView: ViewState;
-  /** The active basemap. Its `engine` decides which adapter is mounted. */
+  /** The active basemap. A change is applied to the mounted engine with `setBasemap`. */
   readonly basemap: BasemapDefinition;
   /** Called when the view stops changing (`moveEnd`), not on every frame. */
   readonly onViewChange?: (view: ViewState) => void;
-  /** Called after the other engine has mounted for a new basemap. */
-  readonly onEngineSwitch?: (basemap: BasemapDefinition) => void;
   /**
-   * Called when an engine cannot start or a basemap cannot be applied. The app
-   * decides the fallback, for example a raster basemap when WebGL is missing.
+   * Called when the engine cannot start or a basemap cannot be applied. The
+   * app decides what to show, for example a message when WebGL is missing.
    */
   readonly onEngineError?: (
     error: MapEngineError,
@@ -78,14 +75,10 @@ export interface MapViewProps {
 }
 
 /** The hidden keyboard instructions, as plain sentences. */
-function keyboardInstructions(capabilities: MapCapabilities): string {
-  return mapKeyHelp(capabilities)
-    .map(
-      ({ keys, description }) =>
-        `${keys}: ${description.charAt(0).toLowerCase()}${description.slice(1)}.`,
-    )
-    .join(" ");
-}
+const KEYBOARD_INSTRUCTIONS = MAP_KEY_HELP.map(
+  ({ keys, description }) =>
+    `${keys}: ${description.charAt(0).toLowerCase()}${description.slice(1)}.`,
+).join(" ");
 
 /** Runs a key action against the adapter. */
 function runKeyAction(
@@ -120,17 +113,15 @@ function runKeyAction(
 
 /**
  * The engine host: the map region and the single focus stop of the map. It
- * mounts the adapter that suits the active basemap, without knowing which
- * engine that is, and provides the live map to `children` through `useMap`.
+ * mounts the adapter the services build, without knowing which engine that
+ * is, and provides the live map to `children` through `useMap`.
  *
  * @remarks
- * - Keyboard and long-press are implemented here once, against the adapter,
- *   so both engines respond identically; the engine's own key handling is
- *   turned off.
- * - When the basemap needs the other engine, the old engine is destroyed and
- *   the new one mounts in a new element with the same centre, zoom and (where
- *   supported) bearing. This component, its children and the chrome around
- *   it stay mounted.
+ * - Keyboard and long-press are implemented here once, against the adapter;
+ *   the engine's own key handling is turned off.
+ * - A new basemap is swapped in on the mounted engine, keeping the centre,
+ *   zoom and bearing. This component, its children and the chrome around it
+ *   stay mounted.
  * - Server rendering produces the empty region only; no style attributes are
  *   rendered, so it works under `style-src 'self'`. `data-zoom` is written
  *   with `setAttribute` once the engine reports a zoom.
@@ -141,7 +132,6 @@ export function MapView({
   initialView,
   basemap,
   onViewChange,
-  onEngineSwitch,
   onEngineError,
   onClick,
   onLongPress,
@@ -172,7 +162,6 @@ export function MapView({
     initialView,
     basemap,
     onViewChange,
-    onEngineSwitch,
     onEngineError,
     onClick,
     onMoveEnd: longPress.cancel,
@@ -188,7 +177,7 @@ export function MapView({
     ) {
       return;
     }
-    const action = mapKeyAction(event, adapter.capabilities);
+    const action = mapKeyAction(event);
     if (!action) {
       return;
     }
@@ -210,7 +199,7 @@ export function MapView({
         aria-busy={map.loading}
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the map region is the keyboard target for panning, zooming and pins.
         tabIndex={0}
-        data-engine={basemap.engine}
+        data-map-host=""
         data-state={map.error ? "error" : undefined}
         data-testid={testId}
         className={styles.host[cursor]}
@@ -235,9 +224,7 @@ export function MapView({
           </div>
         ) : null}
       </section>
-      <VisuallyHidden id={helpId}>
-        {keyboardInstructions(map.capabilities)}
-      </VisuallyHidden>
+      <VisuallyHidden id={helpId}>{KEYBOARD_INSTRUCTIONS}</VisuallyHidden>
     </>
   );
 

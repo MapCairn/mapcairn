@@ -181,17 +181,19 @@ export interface MapReadoutProps
 
 /**
  * The bottom-start readout: the scale bar with the cursor coordinates under
- * it. One floating element, for the layout collision test.
+ * it. One floating element, for the layout collision test, and a landmark
+ * named "Map scale" so its content is inside a landmark.
  */
 export function MapReadout({ units, latlng }: MapReadoutProps) {
   return (
-    <div
+    <section
+      aria-label="Map scale"
       data-chrome="map-readout"
       data-testid="map-readout"
       className={styles.readout}
     >
       <ScaleBar units={units} />
       <CursorCoordinates latlng={latlng} />
-    </div>
+    </section>
   );
 }

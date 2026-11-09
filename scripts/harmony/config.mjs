@@ -35,7 +35,7 @@ export const EXEMPT_SURFACES = [
   {
     pattern: /^packages\/web\/src\/adapters\/mapEngine\.css\.ts$/,
     reason:
-      "The engine style file restyles Leaflet and MapLibre, which need engine selectors and raw z-index values.",
+      "The engine style file restyles MapLibre, which needs engine selectors and raw z-index values.",
   },
   {
     pattern: /^packages\/core\/src\/basemaps\//,

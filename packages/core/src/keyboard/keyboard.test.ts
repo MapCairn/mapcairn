@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAP_KEY_HELP, mapKeyAction, mapKeyHelp } from "./keyboard";
-
-const rotating = { supportsRotation: true };
-const fixed = { supportsRotation: false };
+import { MAP_KEY_HELP, mapKeyAction } from "./keyboard";
 
 function press(
   key: string,
@@ -25,85 +22,71 @@ function press(
 
 describe("panning", () => {
   it("pans 80px per arrow key press", () => {
-    expect(mapKeyAction(press("ArrowLeft"), rotating)).toEqual({
+    expect(mapKeyAction(press("ArrowLeft"))).toEqual({
       type: "pan",
       dx: -80,
       dy: 0,
     });
-    expect(mapKeyAction(press("ArrowRight"), rotating)).toEqual({
+    expect(mapKeyAction(press("ArrowRight"))).toEqual({
       type: "pan",
       dx: 80,
       dy: 0,
     });
-    expect(mapKeyAction(press("ArrowUp"), rotating)).toEqual({
+    expect(mapKeyAction(press("ArrowUp"))).toEqual({
       type: "pan",
       dx: 0,
       dy: -80,
     });
-    expect(mapKeyAction(press("ArrowDown"), rotating)).toEqual({
+    expect(mapKeyAction(press("ArrowDown"))).toEqual({
       type: "pan",
       dx: 0,
       dy: 80,
     });
   });
 
-  it("pans 240px with Shift and up or down, on every engine", () => {
-    for (const capabilities of [rotating, fixed]) {
-      expect(
-        mapKeyAction(press("ArrowUp", { shiftKey: true }), capabilities),
-      ).toEqual({ type: "pan", dx: 0, dy: -240 });
-      expect(
-        mapKeyAction(press("ArrowDown", { shiftKey: true }), capabilities),
-      ).toEqual({ type: "pan", dx: 0, dy: 240 });
-    }
-  });
-
-  it("pans 240px with Shift and left or right when rotation is unsupported", () => {
-    expect(mapKeyAction(press("ArrowLeft", { shiftKey: true }), fixed)).toEqual(
-      { type: "pan", dx: -240, dy: 0 },
-    );
-    expect(
-      mapKeyAction(press("ArrowRight", { shiftKey: true }), fixed),
-    ).toEqual({ type: "pan", dx: 240, dy: 0 });
+  it("pans 240px with Shift and up or down", () => {
+    expect(mapKeyAction(press("ArrowUp", { shiftKey: true }))).toEqual({
+      type: "pan",
+      dx: 0,
+      dy: -240,
+    });
+    expect(mapKeyAction(press("ArrowDown", { shiftKey: true }))).toEqual({
+      type: "pan",
+      dx: 0,
+      dy: 240,
+    });
   });
 });
 
 describe("rotating", () => {
-  it("rotates 15 degrees with Shift and left or right when supported", () => {
-    expect(
-      mapKeyAction(press("ArrowLeft", { shiftKey: true }), rotating),
-    ).toEqual({ type: "rotate", degrees: -15 });
-    expect(
-      mapKeyAction(press("ArrowRight", { shiftKey: true }), rotating),
-    ).toEqual({ type: "rotate", degrees: 15 });
-  });
-
-  it("resets the bearing with Home or 0 when supported", () => {
-    expect(mapKeyAction(press("Home"), rotating)).toEqual({
-      type: "resetBearing",
+  it("rotates 15 degrees with Shift and left or right", () => {
+    expect(mapKeyAction(press("ArrowLeft", { shiftKey: true }))).toEqual({
+      type: "rotate",
+      degrees: -15,
     });
-    expect(mapKeyAction(press("0"), rotating)).toEqual({
-      type: "resetBearing",
+    expect(mapKeyAction(press("ArrowRight", { shiftKey: true }))).toEqual({
+      type: "rotate",
+      degrees: 15,
     });
   });
 
-  it("ignores Home and 0 when rotation is unsupported", () => {
-    expect(mapKeyAction(press("Home"), fixed)).toBeNull();
-    expect(mapKeyAction(press("0"), fixed)).toBeNull();
+  it("resets the bearing with Home or 0", () => {
+    expect(mapKeyAction(press("Home"))).toEqual({ type: "resetBearing" });
+    expect(mapKeyAction(press("0"))).toEqual({ type: "resetBearing" });
   });
 });
 
 describe("zooming", () => {
   it("zooms in with plus and equals", () => {
-    expect(mapKeyAction(press("+", { shiftKey: true }), rotating)).toEqual({
+    expect(mapKeyAction(press("+", { shiftKey: true }))).toEqual({
       type: "zoomIn",
     });
-    expect(mapKeyAction(press("="), rotating)).toEqual({ type: "zoomIn" });
+    expect(mapKeyAction(press("="))).toEqual({ type: "zoomIn" });
   });
 
   it("zooms out with minus and underscore", () => {
-    expect(mapKeyAction(press("-"), rotating)).toEqual({ type: "zoomOut" });
-    expect(mapKeyAction(press("_", { shiftKey: true }), rotating)).toEqual({
+    expect(mapKeyAction(press("-"))).toEqual({ type: "zoomOut" });
+    expect(mapKeyAction(press("_", { shiftKey: true }))).toEqual({
       type: "zoomOut",
     });
   });
@@ -111,20 +94,20 @@ describe("zooming", () => {
 
 describe("other keys", () => {
   it("drops a pin with p or P", () => {
-    expect(mapKeyAction(press("p"), fixed)).toEqual({ type: "dropPin" });
-    expect(mapKeyAction(press("P", { shiftKey: true }), fixed)).toEqual({
+    expect(mapKeyAction(press("p"))).toEqual({ type: "dropPin" });
+    expect(mapKeyAction(press("P", { shiftKey: true }))).toEqual({
       type: "dropPin",
     });
   });
 
   it("escapes with Escape", () => {
-    expect(mapKeyAction(press("Escape"), fixed)).toEqual({ type: "escape" });
+    expect(mapKeyAction(press("Escape"))).toEqual({ type: "escape" });
   });
 
   it("ignores keys it does not own", () => {
-    expect(mapKeyAction(press("a"), rotating)).toBeNull();
-    expect(mapKeyAction(press("Tab"), rotating)).toBeNull();
-    expect(mapKeyAction(press("Enter"), rotating)).toBeNull();
+    expect(mapKeyAction(press("a"))).toBeNull();
+    expect(mapKeyAction(press("Tab"))).toBeNull();
+    expect(mapKeyAction(press("Enter"))).toBeNull();
   });
 });
 
@@ -145,9 +128,7 @@ describe("browser shortcuts", () => {
     ];
     for (const key of keys) {
       for (const modifier of ["ctrlKey", "metaKey", "altKey"] as const) {
-        expect(
-          mapKeyAction(press(key, { [modifier]: true }), rotating),
-        ).toBeNull();
+        expect(mapKeyAction(press(key, { [modifier]: true }))).toBeNull();
       }
     }
   });
@@ -160,23 +141,21 @@ describe("keyboard help", () => {
       expect(entry.keys.length).toBeGreaterThan(0);
       expect(entry.description.length).toBeGreaterThan(0);
     }
-    expect(MAP_KEY_HELP).toEqual(mapKeyHelp(rotating));
   });
 
-  it("mentions rotation only when it is supported", () => {
-    const text = (list: readonly { keys: string; description: string }[]) =>
-      list.map((entry) => `${entry.keys} ${entry.description}`).join("\n");
-    expect(text(mapKeyHelp(rotating))).toMatch(/rotate/i);
-    expect(text(mapKeyHelp(rotating))).toMatch(/north/i);
-    expect(text(mapKeyHelp(fixed))).not.toMatch(/rotate/i);
-    expect(text(mapKeyHelp(fixed))).not.toMatch(/north/i);
-  });
-
-  it("still documents panning, zooming, pins and Escape without rotation", () => {
-    const descriptions = mapKeyHelp(fixed).map((entry) => entry.description);
-    expect(descriptions.some((d) => /pan/i.test(d))).toBe(true);
-    expect(descriptions.some((d) => /zoom/i.test(d))).toBe(true);
-    expect(descriptions.some((d) => /pin/i.test(d))).toBe(true);
-    expect(descriptions.some((d) => /close/i.test(d))).toBe(true);
+  it("documents panning, rotation, north, zooming, pins and Escape", () => {
+    const text = MAP_KEY_HELP.map(
+      (entry) => `${entry.keys} ${entry.description}`,
+    ).join("\n");
+    for (const topic of [
+      /pan/i,
+      /rotate/i,
+      /north/i,
+      /zoom/i,
+      /pin/i,
+      /close/i,
+    ]) {
+      expect(text).toMatch(topic);
+    }
   });
 });

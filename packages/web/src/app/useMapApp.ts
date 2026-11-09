@@ -1,5 +1,4 @@
 import {
-  announceEngineSwitch,
   announcePinCleared,
   announcePinDropped,
   type BasemapDefinition,
@@ -11,7 +10,6 @@ import {
   initialSurfaceState,
   type LatLng,
   type MapClickEvent,
-  type MapEngineError,
   openSearch,
   openSheet,
   type ResolvedTheme,
@@ -85,14 +83,6 @@ export interface MapApp {
   readonly basemapChoice: string;
   readonly basemap: BasemapDefinition;
   readonly chooseBasemap: (id: string) => void;
-  /** The "simpler map" notice after a WebGL fallback is showing. */
-  readonly fallbackNotice: boolean;
-  readonly dismissFallbackNotice: () => void;
-  readonly onEngineSwitch: (basemap: BasemapDefinition) => void;
-  readonly onEngineError: (
-    error: MapEngineError,
-    basemap: BasemapDefinition,
-  ) => void;
 
   readonly sheetOpen: boolean;
   readonly sheetSection: SheetSection;
@@ -150,7 +140,6 @@ export function useMapApp(theme: ResolvedTheme): MapApp {
   const [pinFocusRequest, setPinFocusRequest] = useState(0);
   const [sheetModal, setSheetModal] = useState(false);
   const [cursor, setCursor] = useState<LatLng | null>(null);
-  const [fallbackNotice, setFallbackNotice] = useState(false);
   const measure = useMeasure(settings.units);
   const locate = useLocate(settings.units, { announceErrors: false });
 
@@ -296,30 +285,8 @@ export function useMapApp(theme: ResolvedTheme): MapApp {
     });
   }, [locate.fix]);
 
-  const { markVectorUnavailable } = basemaps;
-  const onEngineError = useCallback(
-    (error: MapEngineError, failed: BasemapDefinition) => {
-      if (
-        error.reason === "webgl-unavailable" &&
-        failed.engine === "maplibre"
-      ) {
-        markVectorUnavailable();
-        setFallbackNotice(true);
-      }
-    },
-    [markVectorUnavailable],
-  );
-
-  const onEngineSwitch = useCallback(
-    (switched: BasemapDefinition) => {
-      announce(announceEngineSwitch(switched.name));
-    },
-    [announce],
-  );
-
   const onSearchFocus = useCallback(() => dispatch(openSearch()), []);
   const onSearchBlur = useCallback(() => dispatch(blurSearch()), []);
-  const dismissFallbackNotice = useCallback(() => setFallbackNotice(false), []);
 
   const sheetOpen = state.surface === "sheet" || state.surface === "pin";
   return {
@@ -333,16 +300,15 @@ export function useMapApp(theme: ResolvedTheme): MapApp {
     basemapChoice: basemaps.choice,
     basemap: basemaps.basemap,
     chooseBasemap: basemaps.choose,
-    fallbackNotice,
-    dismissFallbackNotice,
-    onEngineSwitch,
-    onEngineError,
     sheetOpen,
     sheetSection:
       state.surface === "pin" ? "pin" : (state.sheetSection ?? "basemap"),
     sheetDetent: state.surface === "sheet" ? state.sheetDetent : pinDetent,
     onSheetDetentChange,
-    sheetModal,
+    // The sheet reports `false` from an effect after it closes, too late for
+    // the focus return in that same commit; derive it so the background stops
+    // being inert in the render that closes the sheet.
+    sheetModal: sheetModal && sheetOpen,
     setSheetModal,
     toggleMapOptions,
     pin,

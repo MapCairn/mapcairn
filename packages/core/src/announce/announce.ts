@@ -129,8 +129,3 @@ export function announceTileError(): string {
 export function announceOffline(): string {
   return "You are offline. Parts of the map may not load.";
 }
-
-/** Announced after the map engine changes to suit a new basemap. */
-export function announceEngineSwitch(basemapName: string): string {
-  return `Switched to ${basemapName}. Your position on the map is unchanged.`;
-}

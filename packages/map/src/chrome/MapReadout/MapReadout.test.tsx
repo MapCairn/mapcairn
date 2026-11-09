@@ -277,4 +277,13 @@ describe("MapReadout", () => {
     expect(readout).toContainElement(screen.getByRole("img"));
     expect(readout).toContainElement(screen.getByText(formatLatLng(latlng)));
   });
+
+  it("is a landmark named Map scale, so the readout sits inside a landmark", () => {
+    renderChrome(<MapReadout units="metric" latlng={null} />, {
+      map: testMapContext({ view: DEFAULT_FAKE_VIEW }),
+    });
+    const region = screen.getByRole("region", { name: "Map scale" });
+    expect(region.tagName).toBe("SECTION");
+    expect(region).toBe(screen.getByTestId("map-readout"));
+  });
 });

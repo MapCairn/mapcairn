@@ -21,13 +21,13 @@ describe("ListRow", () => {
     renderInList(
       <ListRow
         icon={Layers}
-        label="Satellite"
-        secondary="Esri imagery"
+        label="Streets"
+        secondary="OpenStreetMap tiles"
         trailing={<span>3 MB</span>}
       />,
     );
     const item = screen.getByRole("listitem");
-    expect(within(item).getByText("Esri imagery")).toBeTruthy();
+    expect(within(item).getByText("OpenStreetMap tiles")).toBeTruthy();
     expect(within(item).getByText("3 MB")).toBeTruthy();
     expect(item.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
   });

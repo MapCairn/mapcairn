@@ -163,7 +163,6 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
       endStack={
         <EndStack
           bearing={map.view.bearing}
-          supportsRotation={map.capabilities.supportsRotation}
           onResetBearing={() => map.adapter?.resetBearing()}
           mapOptionsOpen={state.surface === "sheet"}
           mapOptionsControls={SHEET_ID}
@@ -204,7 +203,6 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               onBasemapChange={app.chooseBasemap}
               hasPin={state.hasPin}
               onDropPin={app.dropPinAtCentre}
-              supportsRotation={map.capabilities.supportsRotation}
               section={app.sheetSection}
               pinCard={
                 app.pin ? (

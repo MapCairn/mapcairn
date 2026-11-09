@@ -13,6 +13,7 @@ import {
 import { useCallback } from "react";
 import { AppChrome } from "./app/AppChrome";
 import { MAP_REGION_ID } from "./app/initialView";
+import { MapUnavailable } from "./app/MapUnavailable";
 import { useMapApp } from "./app/useMapApp";
 import { useMapModelContextTools } from "./webmcp/useMapModelContextTools";
 
@@ -58,8 +59,6 @@ export function App() {
       basemap={app.basemap}
       cursor={app.measuring ? "crosshair" : "grab"}
       onViewChange={app.onViewChange}
-      onEngineSwitch={app.onEngineSwitch}
-      onEngineError={app.onEngineError}
       onClick={app.onMapClick}
       onLongPress={app.onLongPress}
       onPointerMove={app.setCursor}
@@ -88,6 +87,7 @@ export function App() {
         ) : null}
         {app.pin ? <PinMarker position={app.pin} testId="pin-marker" /> : null}
       </MapOverlayLayer>
+      <MapUnavailable />
     </MapView>
   );
 }

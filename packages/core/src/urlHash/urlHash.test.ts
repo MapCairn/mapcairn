@@ -28,8 +28,8 @@ describe("serialiseUrlHash", () => {
   });
 
   it("writes only the parts that are present", () => {
-    expect(serialiseUrlHash({ basemapId: "esri-satellite" })).toBe(
-      "#basemap=esri-satellite",
+    expect(serialiseUrlHash({ basemapId: "some-basemap" })).toBe(
+      "#basemap=some-basemap",
     );
     expect(
       serialiseUrlHash({
@@ -145,8 +145,8 @@ describe("parseUrlHash", () => {
   });
 
   it("keeps a valid basemap when the view is invalid, and the other way round", () => {
-    expect(parseUrlHash("#map=bad&basemap=esri-satellite")).toEqual({
-      basemapId: "esri-satellite",
+    expect(parseUrlHash("#map=bad&basemap=some-basemap")).toEqual({
+      basemapId: "some-basemap",
     });
     expect(parseUrlHash("#map=5/10/20&basemap=Bad Id")).toEqual({
       view: { center: { lat: 10, lng: 20 }, zoom: 5, bearing: 0 },
@@ -202,7 +202,7 @@ describe("round trip", () => {
           zoom: 3,
           bearing: 270,
         },
-        basemapId: "esri-topographic",
+        basemapId: "other-basemap",
       },
     ];
     for (const value of values) {

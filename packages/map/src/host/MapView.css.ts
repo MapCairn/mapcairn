@@ -46,7 +46,7 @@ const hostBase = style({
 /**
  * The region's class for each cursor. The host owns the cursor; the engine
  * style file makes engine elements inherit it, so measure mode shows a
- * crosshair on both engines.
+ * crosshair over the engine canvas too.
  */
 export const host = styleVariants({
   grab: [
@@ -66,8 +66,8 @@ export const engineSlot = style({
 });
 
 /**
- * Each element an engine mounts into. Its own stacking context, so engine
- * pane z-indexes (Leaflet uses 100 to 1000) stay below the overlay layer.
+ * The element the engine mounts into. Its own stacking context, so engine
+ * z-indexes stay below the overlay layer.
  */
 export const engineElement = style({
   width: "100%",
