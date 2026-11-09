@@ -20,25 +20,19 @@ const VIEWPORTS = [
 ] as const;
 
 /**
- * Serves the home page with every script removed except the pre-paint theme
- * script, so what renders is the server's HTML and nothing replaces it.
- * Returns a function that serves the page as normal again.
+ * Blocks the app's script files, so what renders is the server's HTML and
+ * nothing replaces it. The inline pre-paint theme script still runs, because
+ * it is part of the page, not a file. Returns a function that lets the files
+ * load again. Blocking requests, rather than rewriting the HTML with a regular
+ * expression, cannot miss a tag.
  */
 async function serveWithoutAppScripts(
   page: Page,
 ): Promise<() => Promise<void>> {
-  const isHome = (url: URL) => url.pathname === "/";
-  const serve: Parameters<Page["route"]>[1] = async (route) => {
-    const response = await route.fetch();
-    const html = (await response.text())
-      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, (script) =>
-        script.includes("prefers-color-scheme") ? script : "",
-      )
-      .replace(/<link\b[^>]*rel="modulepreload"[^>]*>/g, "");
-    await route.fulfill({ response, body: html });
-  };
-  await page.route(isHome, serve);
-  return () => page.unroute(isHome, serve);
+  const isScriptFile = (url: URL) => url.pathname.endsWith(".js");
+  const block: Parameters<Page["route"]>[1] = (route) => route.abort();
+  await page.route(isScriptFile, block);
+  return () => page.unroute(isScriptFile, block);
 }
 
 interface Pair {
