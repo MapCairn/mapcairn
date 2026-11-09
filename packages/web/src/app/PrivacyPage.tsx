@@ -109,6 +109,22 @@ export function PrivacyPage() {
           not sent to this site and is not stored.
         </p>
 
+        <h2 className={styles.sectionTitle}>Contact</h2>
+        <p className={styles.body}>
+          For a question or concern about privacy, write to{" "}
+          <a className={styles.link} href="mailto:karta@timothybrits.co.za">
+            karta@timothybrits.co.za
+          </a>
+          , or open an issue on{" "}
+          <a
+            className={styles.link}
+            href="https://github.com/mooship/karta/issues"
+          >
+            GitHub
+          </a>
+          .
+        </p>
+
         <a className={styles.link} href="/">
           Back to the map
         </a>

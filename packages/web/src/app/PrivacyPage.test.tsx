@@ -30,6 +30,13 @@ describe("PrivacyPage", () => {
     expect(screen.getByText("karta:")).toBeInTheDocument();
   });
 
+  it("gives a contact address for privacy questions", () => {
+    render(<PrivacyPage />);
+    expect(
+      screen.getByRole("link", { name: "karta@timothybrits.co.za" }),
+    ).toHaveAttribute("href", "mailto:karta@timothybrits.co.za");
+  });
+
   it("discloses Cloudflare Web Analytics as cookieless and aggregate-only", () => {
     render(<PrivacyPage />);
 

@@ -67,3 +67,7 @@ address.
 The Locate me button asks your browser for your position only when you press
 it. The position is used to show where you are on the map. It is not sent to
 this site and is not stored.
+
+## Contact
+
+For a question or concern about privacy, write to karta@timothybrits.co.za, or open an issue on [GitHub](https://github.com/mooship/karta/issues).

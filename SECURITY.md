@@ -32,6 +32,7 @@ Please **do not** open a public issue for a suspected vulnerability.
 
 Report it privately through GitHub's private vulnerability reporting:
 [github.com/mooship/karta/security/advisories/new](https://github.com/mooship/karta/security/advisories/new).
+If you cannot use GitHub, email karta@timothybrits.co.za instead.
 
 Helpful reports include:
 
