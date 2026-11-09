@@ -42,13 +42,12 @@ export default defineConfig(({ mode, command }) => {
       assetsInlineLimit: 0,
       cssCodeSplit: true,
       /**
-       * `maplibre-gl` (the vector-basemap renderer `VectorBasemapLayer`
-       * dynamically imports) is ~300KB gzipped on its own and dwarfs Vite's
-       * default 500kB warning threshold no matter how it's split. It's
-       * already isolated into its own async chunk (never part of the
-       * initial bundle) so raise the limit past its known size rather than
-       * let an expected, already-lazy chunk mask warnings about future
-       * eagerly-loaded bloat.
+       * `maplibre-gl` (which the MapLibre adapter imports dynamically) is
+       * about 300KB gzipped on its own and passes Vite's default 500kB
+       * warning threshold however it is split. It is an async chunk, never
+       * part of the initial bundle, so the limit sits above its known size
+       * rather than letting an expected lazy chunk hide warnings about
+       * future eagerly loaded bloat.
        */
       chunkSizeWarningLimit: 1200,
       rolldownOptions: {
@@ -89,17 +88,14 @@ export default defineConfig(({ mode, command }) => {
                 test: /node_modules\/(?:(?:react|scheduler)\/|react-dom\/(?!server|cjs\/react-dom-server))/,
               },
               {
-                name: "map-vendor",
-                test: /node_modules\/(leaflet|react-leaflet)\//,
-              },
-              {
                 name: "ui-vendor",
                 test: /node_modules\/(lucide-react|zustand|usehooks-ts|zod)\//,
               },
-              {
-                name: "maplibre-vendor",
-                test: /node_modules\/(maplibre-gl|@maplibre\/maplibre-gl-leaflet)\//,
-              },
+              // Leaflet and MapLibre have no group on purpose. Each engine
+              // adapter imports its library (and its stylesheet) dynamically,
+              // so each stays an async chunk fetched only when a basemap
+              // needs that engine; a named group would get a modulepreload
+              // and download both engines on every visit.
             ],
           },
         },

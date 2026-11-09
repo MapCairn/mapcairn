@@ -169,6 +169,11 @@ export const close = style({ gridArea: "close" });
 /**
  * The scrolling content. Overscroll stays inside so the page and the map do
  * not move, and the bottom padding clears the home indicator.
+ *
+ * In the sheet layout the sheet is always full height, moved down by
+ * `--sheet-offset`, so at peek and half its lower part is off screen. The
+ * bottom padding grows by that offset, so every section can still scroll up
+ * into the visible part (for example the pin card a long-press opens).
  */
 export const content = style({
   flex: "1 1 auto",
@@ -177,4 +182,9 @@ export const content = style({
   overscrollBehavior: "contain",
   paddingInline: tokens.space.md,
   paddingBlockEnd: `calc(${tokens.space.md} + ${safe.bottom})`,
+  selectors: {
+    [`${surface}[data-layout="sheet"] &`]: {
+      paddingBlockEnd: `calc(${tokens.space.md} + ${safe.bottom} + var(--sheet-offset, 0px))`,
+    },
+  },
 });

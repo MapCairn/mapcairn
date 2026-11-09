@@ -63,6 +63,17 @@ export interface MapViewProps {
   readonly cursor?: MapCursor;
   /** Overlays and other content that reads the map through `useMap`. */
   readonly children?: ReactNode;
+  /** The id of the map region, for example the target of a skip link. */
+  readonly id?: string;
+  /**
+   * Renders the chrome around the map, inside the map context. It receives
+   * the map region (with its hidden keyboard help) and returns the tree to
+   * render in its place, so controls that call `useMap`, such as the scale
+   * bar and the credits, can sit beside the map rather than inside it:
+   * `chrome={(map) => <MapChrome background={map} ... />}`. Called on every
+   * render; put hooks in the components it returns, not in the function.
+   */
+  readonly chrome?: (map: ReactNode) => ReactNode;
   readonly testId?: string;
 }
 
@@ -124,6 +135,7 @@ function runKeyAction(
  *   rendered, so it works under `style-src 'self'`. `data-zoom` is written
  *   with `setAttribute` once the engine reports a zoom.
  * - The host fills its parent; `MapChrome` owns its placement.
+ * - The whole output, including `chrome`, is inside the map context.
  */
 export function MapView({
   initialView,
@@ -138,6 +150,8 @@ export function MapView({
   onEscape,
   cursor = "grab",
   children,
+  id,
+  chrome,
   testId,
 }: MapViewProps) {
   const hostRef = useRef<HTMLElement>(null);
@@ -184,11 +198,12 @@ export function MapView({
 
   const motion = reducedMotion ? "static" : "animated";
 
-  return (
+  const region = (
     <>
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the focused map region is the one keyboard and pointer target for panning, zooming, pins and long-press; each gesture has a button or key equivalent. */}
       <section
         ref={hostRef}
+        id={id}
         aria-label="Map"
         aria-roledescription="map"
         aria-describedby={helpId}
@@ -208,7 +223,7 @@ export function MapView({
         onPointerLeave={pointer.onPointerLeave}
       >
         <div ref={slotRef} className={styles.engineSlot} />
-        <MapContext.Provider value={map}>{children}</MapContext.Provider>
+        {children}
         {map.loading ? (
           <div
             className={styles.loadingTrack[motion]}
@@ -224,5 +239,11 @@ export function MapView({
         {keyboardInstructions(map.capabilities)}
       </VisuallyHidden>
     </>
+  );
+
+  return (
+    <MapContext.Provider value={map}>
+      {chrome ? chrome(region) : region}
+    </MapContext.Provider>
   );
 }

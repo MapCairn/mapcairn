@@ -16,7 +16,7 @@ const OG_IMAGE_URL = `${SITE_URL}/og-image.png`;
 const STATIC_META_TAGS: MetaDescriptor[] = [
   {
     name: "viewport",
-    content: "width=device-width, initial-scale=1.0, viewport-fit=cover",
+    content: "width=device-width, initial-scale=1, viewport-fit=cover",
   },
   { property: "og:type", content: "website" },
   { property: "og:image", content: OG_IMAGE_URL },

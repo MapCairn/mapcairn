@@ -1,9 +1,9 @@
-import { initTheme } from "@karta/react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
-import { installClientErrorReporting } from "./clientErrorReporting";
-import { THEME_COLOR, THEME_STORAGE_KEY } from "./constants/themeConfig";
+import { installErrorReporting } from "./composition/errorReporting";
 
-installClientErrorReporting();
-initTheme({ storageKey: THEME_STORAGE_KEY, colors: THEME_COLOR });
+// Reporting starts before hydration, so an error while hydrating is caught.
+// The theme needs nothing here: the inline script in the head applied it
+// before first paint, and the ThemeSource service takes over in the app.
+installErrorReporting();
 hydrateRoot(document, <HydratedRouter />);

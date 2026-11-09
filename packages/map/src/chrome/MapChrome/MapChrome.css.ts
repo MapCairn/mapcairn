@@ -34,7 +34,10 @@ export const root = style({
   boxSizing: "border-box",
   width: "100%",
   height: "100%",
-  overflow: "hidden",
+  // `clip`, not `hidden`: a hidden box can still be scrolled by script, and
+  // `scrollIntoView` on a heading in the translated sheet scrolled the whole
+  // chrome off screen. `hidden` is the fallback where `clip` is unsupported.
+  overflow: ["hidden", "clip"],
   pointerEvents: "none",
   display: "grid",
   gap: tokens.space.sm,

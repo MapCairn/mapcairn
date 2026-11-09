@@ -1,6 +1,8 @@
-import type { Basemap } from "@karta/map";
 import { create } from "zustand";
 import { getLayerGroupStructure } from "../layers/registry";
+
+/** A basemap id. Declared here because `@karta/map` no longer exports the old basemap types. */
+type Basemap = string;
 
 function findGroupContaining(id: string) {
   return getLayerGroupStructure().find((group) => group.layerIds.includes(id));

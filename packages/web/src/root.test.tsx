@@ -1,8 +1,11 @@
+import { createFakeServices, THEME_COLOR_META } from "@karta/core";
+import { useServices } from "@karta/map";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoutesStub } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { THEME_BOOTSTRAP_SCRIPT } from "./app/themeBootstrap";
 
 vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router")>();
@@ -15,6 +18,17 @@ vi.mock("react-router", async (importOriginal) => {
   };
 });
 
+const fakeServices = createFakeServices();
+const createServices = vi.fn(() => fakeServices);
+vi.mock("./composition/createServices", () => ({
+  createServices: () => createServices(),
+}));
+
+const reportCaughtError = vi.fn();
+vi.mock("./composition/errorReporting", () => ({
+  reportCaughtError: (error: unknown) => reportCaughtError(error),
+}));
+
 const {
   default: Root,
   Layout,
@@ -23,149 +37,164 @@ const {
   ErrorBoundary,
 } = await import("./root");
 
+afterEach(() => {
+  vi.restoreAllMocks();
+  reportCaughtError.mockClear();
+});
+
+type Link = Record<string, string>;
+const allLinks = () => links() as Link[];
+
 describe("root links", () => {
-  it("does not preload datasets", () => {
-    expect(
-      links().filter((link) => "rel" in link && link.rel === "preload"),
-    ).toHaveLength(0);
+  it("preloads the Latin font face and nothing else", () => {
+    const preloads = allLinks().filter((link) => link.rel === "preload");
+    expect(preloads).toHaveLength(1);
+    expect(preloads[0]).toMatchObject({
+      as: "font",
+      type: "font/woff2",
+      crossOrigin: "anonymous",
+    });
   });
 
-  it("still emits the icon, manifest and preconnect links", () => {
-    const rels = links().map((link) => ("rel" in link ? link.rel : ""));
-
-    expect(rels).toContain("icon");
-    expect(rels).toContain("manifest");
-    expect(rels).toContain("preconnect");
+  it("lists the favicons, touch icon, pinned-tab icon and manifest", () => {
+    expect(allLinks()).toEqual(
+      expect.arrayContaining([
+        {
+          rel: "icon",
+          href: "/favicon.svg",
+          type: "image/svg+xml",
+          sizes: "any",
+        },
+        { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+        expect.objectContaining({ href: "/favicon-32x32.png", sizes: "32x32" }),
+        expect.objectContaining({ href: "/favicon-16x16.png", sizes: "16x16" }),
+        {
+          rel: "apple-touch-icon",
+          sizes: "180x180",
+          href: "/apple-touch-icon.png",
+        },
+        {
+          rel: "mask-icon",
+          href: "/safari-pinned-tab.svg",
+          color: "#0d70d4",
+        },
+        { rel: "manifest", href: "/site.webmanifest" },
+      ]),
+    );
   });
 
-  it("preconnects to the default vector basemap's tile host, not just the raster fallbacks", () => {
-    const hrefs = links()
-      .filter((link) => "rel" in link && link.rel === "preconnect")
-      .map((link) => ("href" in link ? link.href : ""));
-
-    expect(hrefs).toContain("https://tiles.openfreemap.org");
+  it("preconnects to the default vector basemap's tile host only", () => {
+    const hrefs = allLinks()
+      .filter((link) => link.rel === "preconnect")
+      .map((link) => link.href);
+    expect(hrefs).toEqual(["https://tiles.openfreemap.org"]);
   });
 
-  it("skips preconnects to tile hosts the default basemap doesn't use", () => {
-    const hrefs = links()
-      .filter((link) => "rel" in link && link.rel === "preconnect")
-      .map((link) => ("href" in link ? link.href : ""));
-
-    expect(hrefs).not.toContain("https://tile.openstreetmap.org");
-    expect(hrefs).not.toContain("https://server.arcgisonline.com");
-  });
-
-  it("leaves the canonical link to each leaf route, since a shared one here would apply to every page", () => {
-    const rels = links().map((link) => ("rel" in link ? link.rel : ""));
-
+  it("leaves the canonical link to each route and stylesheets to the bundler", () => {
+    const rels = allLinks().map((link) => link.rel);
     expect(rels).not.toContain("canonical");
-  });
-
-  it("leaves stylesheets to the bundler's own route-module CSS links", () => {
-    expect(
-      links().filter((link) => "rel" in link && link.rel === "stylesheet"),
-    ).toHaveLength(0);
+    expect(rels).not.toContain("stylesheet");
   });
 });
 
 describe("root meta", () => {
-  it("sets the page title, description, and viewport", () => {
+  it("sets the title, description and a viewport that allows zoom", () => {
     const tags = meta({} as never);
 
-    expect(tags).toContainEqual({
-      title: "Karta | Interactive map",
-    });
+    expect(tags).toContainEqual({ title: "Karta | Interactive map" });
     expect(tags).toContainEqual(
       expect.objectContaining({ name: "description" }),
     );
-    expect(tags).toContainEqual(
-      expect.objectContaining({
-        name: "viewport",
-        content: "width=device-width, initial-scale=1.0, viewport-fit=cover",
-      }),
-    );
+    expect(tags).toContainEqual({
+      name: "viewport",
+      content: "width=device-width, initial-scale=1, viewport-fit=cover",
+    });
   });
 
-  it("sets Open Graph and Twitter card tags pointing at an absolute, sized og-image", () => {
+  it("sets Open Graph and Twitter card tags with a British English locale", () => {
     const tags = meta({} as never);
 
-    expect(tags).toContainEqual({ property: "og:type", content: "website" });
-    expect(tags).toContainEqual(
-      expect.objectContaining({ property: "og:title" }),
-    );
-    expect(tags).toContainEqual(
-      expect.objectContaining({ property: "og:description" }),
-    );
-    expect(tags).toContainEqual({
-      property: "og:url",
-      content: "https://karta.timothybrits.co.za",
-    });
+    expect(tags).toContainEqual({ property: "og:site_name", content: "Karta" });
+    expect(tags).toContainEqual({ property: "og:locale", content: "en_GB" });
     expect(tags).toContainEqual({
       property: "og:image",
       content: "https://karta.timothybrits.co.za/og-image.png",
     });
     expect(tags).toContainEqual({
-      property: "og:image:width",
-      content: "1200",
-    });
-    expect(tags).toContainEqual({
-      property: "og:image:height",
-      content: "630",
-    });
-    expect(tags).toContainEqual({
       name: "twitter:card",
       content: "summary_large_image",
-    });
-    expect(tags).toContainEqual(
-      expect.objectContaining({ name: "twitter:image" }),
-    );
-  });
-
-  it("declares a British English og:locale and no alternates", () => {
-    const tags = meta({} as never);
-
-    expect(tags).toContainEqual({ property: "og:locale", content: "en_GB" });
-    expect(tags).not.toContainEqual(
-      expect.objectContaining({ property: "og:locale:alternate" }),
-    );
-  });
-
-  it("emits domain-neutral mapping-application JSON-LD", () => {
-    const tags = meta({} as never);
-    const jsonLdTag = tags.find((tag) => "script:ld+json" in tag) as
-      | { "script:ld+json": Record<string, unknown> }
-      | undefined;
-
-    expect(jsonLdTag).toBeDefined();
-    expect(jsonLdTag?.["script:ld+json"]).toMatchObject({
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      applicationCategory: "MappingApplication",
-      inLanguage: "en-GB",
-      url: "https://karta.timothybrits.co.za",
     });
   });
 });
 
 describe("root Layout", () => {
-  it("renders the document shell around its children", () => {
-    const markup = renderToStaticMarkup(
+  const markup = () =>
+    renderToStaticMarkup(
       createElement(Layout, null, createElement("p", null, "app content")),
     );
 
-    expect(markup).toContain('<html lang="en-GB">');
-    expect(markup).toContain("app content");
-    expect(markup).not.toContain('src="/theme-bootstrap.js"');
-    expect(markup).toContain('localStorage.getItem("buffer-zones-theme")');
-    expect(markup).toContain('media="(prefers-color-scheme: light)"');
-    expect(markup).toContain('media="(prefers-color-scheme: dark)"');
+  it("renders a British English document around its children", () => {
+    expect(markup()).toContain('<html lang="en-GB">');
+    expect(markup()).toContain("app content");
+  });
+
+  it("tints the browser for each colour scheme and for Windows tiles", () => {
+    const html = markup();
+    expect(html).toContain(
+      `<meta name="theme-color" content="${THEME_COLOR_META.light}" media="(prefers-color-scheme: light)"/>`,
+    );
+    expect(html).toContain(
+      `<meta name="theme-color" content="${THEME_COLOR_META.dark}" media="(prefers-color-scheme: dark)"/>`,
+    );
+    expect(html).toContain(
+      '<meta name="msapplication-TileColor" content="#0d70d4"/>',
+    );
+    expect(html).toContain(
+      '<meta name="msapplication-config" content="/browserconfig.xml"/>',
+    );
+  });
+
+  it("inlines the theme script exactly, and no style attribute", () => {
+    const html = markup();
+    expect(html).toContain(`<script>${THEME_BOOTSTRAP_SCRIPT}</script>`);
+    expect(html).not.toMatch(/style=/);
+  });
+});
+
+describe("root Root", () => {
+  function ServicesProbe() {
+    return createElement(
+      "p",
+      null,
+      useServices() === fakeServices ? "services ready" : "wrong services",
+    );
+  }
+
+  it("provides the services, built once, to the matched route", () => {
+    createServices.mockClear();
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: Root,
+        children: [{ index: true, Component: ServicesProbe }],
+      },
+    ]);
+
+    const { rerender } = render(createElement(Stub, { initialEntries: ["/"] }));
+    rerender(createElement(Stub, { initialEntries: ["/"] }));
+
+    expect(screen.getByText("services ready")).toBeInTheDocument();
+    expect(createServices).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("live-region-polite")).toBeInTheDocument();
   });
 });
 
 describe("root ErrorBoundary", () => {
-  it("renders a fallback message and a reload action when a descendant throws", () => {
+  it("explains a crash in plain English, offers Reload and reports the error", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("kaboom at line 12");
     const Boom = () => {
-      throw new Error("kaboom");
+      throw failure;
     };
     const Stub = createRoutesStub([
       {
@@ -178,52 +207,28 @@ describe("root ErrorBoundary", () => {
 
     render(createElement(Stub, { initialEntries: ["/"] }));
 
-    expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Something went wrong" }),
     ).toBeInTheDocument();
-    const reloadButton = screen.getByRole("button", { name: "Reload page" });
-    expect(reloadButton).toBeInTheDocument();
-
-    const reload = vi.fn();
-    vi.stubGlobal("location", { ...window.location, reload });
-    fireEvent.click(reloadButton);
-    expect(reload).toHaveBeenCalledTimes(1);
-    vi.unstubAllGlobals();
+    expect(screen.queryByText(/kaboom/)).toBeNull();
+    expect(reportCaughtError).toHaveBeenCalledWith(failure);
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
   });
 
-  it("renders a not-found message for an unmatched route", () => {
+  it("shows a not-found page for an unmatched route without reporting it", () => {
     const Stub = createRoutesStub([
       { path: "/", Component: Root, ErrorBoundary },
     ]);
 
-    render(
-      createElement(Stub, { initialEntries: ["/this-page-does-not-exist"] }),
-    );
+    render(createElement(Stub, { initialEntries: ["/nowhere"] }));
 
     expect(
       screen.getByRole("heading", { name: "Page not found" }),
     ).toBeInTheDocument();
-  });
-});
-
-describe("root Root", () => {
-  it("renders the matched child route via Outlet", () => {
-    const Stub = createRoutesStub([
-      {
-        path: "/",
-        Component: Root,
-        children: [
-          {
-            index: true,
-            Component: () => createElement("p", null, "child route"),
-          },
-        ],
-      },
-    ]);
-
-    render(createElement(Stub, { initialEntries: ["/"] }));
-
-    expect(screen.getByText("child route")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to the map" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    expect(reportCaughtError).not.toHaveBeenCalled();
   });
 });

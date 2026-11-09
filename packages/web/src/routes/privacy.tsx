@@ -5,6 +5,7 @@ import {
   PrivacyPolicy,
 } from "../components/PrivacyPolicy/PrivacyPolicy";
 import { SITE_URL } from "../constants/siteConfig";
+import { scrollPage } from "../global.css";
 
 /** This route's own meta description, distinct from the root route's site-wide one. */
 const PRIVACY_POLICY_DESCRIPTION =
@@ -33,5 +34,10 @@ export const links: LinksFunction = () => [
 
 /** React Router route module export: the `/privacy` route, rendering the site's privacy policy. */
 export default function PrivacyRoute() {
-  return <PrivacyPolicy />;
+  // The document is fixed for the full-screen map, so this page scrolls itself.
+  return (
+    <div className={scrollPage}>
+      <PrivacyPolicy />
+    </div>
+  );
 }

@@ -28,10 +28,6 @@
     "reason": "Old hooks tied to the old components."
   },
   {
-    "path": "packages/map/src/index.ts",
-    "reason": "Old barrel exporting the old components."
-  },
-  {
     "path": "packages/map/src/shared.css.ts",
     "reason": "Old shared styles."
   },
@@ -56,32 +52,8 @@
     "reason": "Old theme preference store; replaced by the SettingsStore and ThemeSource ports."
   },
   {
-    "path": "packages/web/src/App.css.ts",
-    "reason": "Old application shell styles."
-  },
-  {
-    "path": "packages/web/src/App.emptyCatalogue.test.tsx",
-    "reason": "Test of the old shell."
-  },
-  {
-    "path": "packages/web/src/App.tsx",
-    "reason": "Old application shell; rebuilt on the composition root."
-  },
-  {
-    "path": "packages/web/src/clientErrorReporting.ts",
-    "reason": "Calls fetch directly; rebuilt as an adapter-backed reporter in the app rebuild."
-  },
-  {
     "path": "packages/web/src/components/",
     "reason": "Old host components."
-  },
-  {
-    "path": "packages/web/src/entry.client.tsx",
-    "reason": "Boots the old theme store and client error reporter; rewritten in the app rebuild."
-  },
-  {
-    "path": "packages/web/src/hooks/",
-    "reason": "Old host hooks (permalink, sheet gestures)."
   },
   {
     "path": "packages/web/src/index.css",
@@ -90,18 +62,6 @@
   {
     "path": "packages/web/src/layers/",
     "reason": "Old layer registry stub."
-  },
-  {
-    "path": "packages/web/src/root.css.ts",
-    "reason": "Imports the old app theme; rewritten in the app rebuild."
-  },
-  {
-    "path": "packages/web/src/root.tsx",
-    "reason": "Document shell that imports the old root styles; rewritten in the app rebuild. Its viewport meta is still scanned (see the scanner header)."
-  },
-  {
-    "path": "packages/web/src/routes/home.tsx",
-    "reason": "Renders the old App shell; rewritten in the app rebuild."
   },
   {
     "path": "packages/web/src/routes/privacy.tsx",

@@ -27,6 +27,13 @@ export const ALLOW_LIST = [
       "The standard screen-reader-only clip pattern needs a -1px margin next to its 1px box.",
   },
   {
+    rule: "position",
+    file: "packages/web/src/global.css.ts",
+    contains: 'position: "fixed"',
+    reason:
+      "The document itself (html and body) is pinned to the viewport so the full-screen map never scrolls or rubber-bands. It is the page root, not a floating surface.",
+  },
+  {
     rule: "engine-selector",
     file: "packages/web/src/adapters/leaflet/LeafletMapAdapter.ts",
     contains: "leaflet-control-container",

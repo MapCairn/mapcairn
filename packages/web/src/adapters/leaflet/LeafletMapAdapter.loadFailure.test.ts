@@ -23,4 +23,6 @@ it("rejects mount with a load-failed MapEngineError when Leaflet cannot be loade
   await expect(result).rejects.toBeInstanceOf(MapEngineError);
   await expect(result).rejects.toMatchObject({ reason: "load-failed" });
   expect(host.childElementCount).toBe(0);
-});
+  // The module reset re-imports core and the adapter, which is slow when the
+  // whole suite runs in parallel, so the default 5s limit is too tight.
+}, 30_000);

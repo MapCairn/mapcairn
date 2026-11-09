@@ -84,11 +84,12 @@ describe("buildContentSecurityPolicy", () => {
     expect(policy).toContain("'nonce-test-nonce-value'");
   });
 
-  it("keeps the existing theme-bootstrap script hash alongside a nonce", () => {
+  // app/themeBootstrap.test.ts checks that the hash is the script's own.
+  it("keeps the theme-bootstrap script hash alongside a nonce", () => {
     const policy = buildContentSecurityPolicy("test-nonce-value");
 
-    expect(policy).toContain(
-      "'sha256-HG8PUaCswII51AFFCizfjxISB0x6tOe/Gqljp1vzDRw='",
+    expect(policy).toMatch(
+      /script-src 'self' 'sha256-[A-Za-z0-9+/=]+' 'nonce-test-nonce-value'/,
     );
   });
 });

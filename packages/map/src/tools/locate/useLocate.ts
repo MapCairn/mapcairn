@@ -22,6 +22,12 @@ export type LocateState = "idle" | "locating" | "found" | "error";
 export interface UseLocateOptions {
   /** Passed to the provider, which decides its own default when absent. */
   readonly timeoutMs?: number;
+  /**
+   * Whether to announce errors through the announcer. Defaults to true. Pass
+   * false when the app shows `message` in an error `StatusMessage`, which is
+   * an alert itself, so the error is spoken once. A fix is always announced.
+   */
+  readonly announceErrors?: boolean;
 }
 
 /** What {@link useLocate} returns. */
@@ -61,11 +67,12 @@ export interface UseLocate {
  * The outcome is announced through the app-wide announcer, and `message`
  * carries the same wording for the visible status.
  * @remarks Announcing and showing the same error means a screen reader may
- *   hear it twice if the app puts `message` in an alert `StatusMessage`.
+ *   hear it twice if the app puts `message` in an alert `StatusMessage`;
+ *   pass `announceErrors: false` in that case.
  */
 export function useLocate(
   units: UnitSystem,
-  { timeoutMs }: UseLocateOptions = {},
+  { timeoutMs, announceErrors = true }: UseLocateOptions = {},
 ): UseLocate {
   const provider = useLocationProvider();
   const announce = useAnnounce();
@@ -73,6 +80,7 @@ export function useLocate(
   const announceRef = useLatestRef(announce);
   const unitsRef = useLatestRef(units);
   const timeoutRef = useLatestRef(timeoutMs);
+  const announceErrorsRef = useLatestRef(announceErrors);
   const controller = useRef<AbortController | null>(null);
   const [state, setState] = useState<LocateState>("idle");
   const [fix, setFix] = useState<LocationFix | null>(null);
@@ -118,10 +126,19 @@ export function useLocate(
           setState("error");
           setError(kind);
           setMessage(text);
-          announceRef.current(text, { priority: "assertive" });
+          if (announceErrorsRef.current) {
+            announceRef.current(text, { priority: "assertive" });
+          }
         },
       );
-  }, [abort, providerRef, timeoutRef, unitsRef, announceRef]);
+  }, [
+    abort,
+    providerRef,
+    timeoutRef,
+    unitsRef,
+    announceRef,
+    announceErrorsRef,
+  ]);
 
   const cancel = useCallback(() => {
     abort();

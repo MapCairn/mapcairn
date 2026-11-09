@@ -4,6 +4,10 @@ import {
   type Services,
   StaticLayerRegistry,
 } from "@karta/core";
+// The engine style file has no exports. Importing it here, in the one module
+// every page that builds services loads, puts its rules in the page before
+// any engine mounts, and keeps it out of the ui, which may not import adapters.
+import "../adapters/mapEngine.css";
 import { BrowserClipboard } from "../adapters/clipboard/BrowserClipboard";
 import { createLeafletMapAdapter } from "../adapters/leaflet/LeafletMapAdapter";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
@@ -52,8 +56,10 @@ function definedEntries(
  *   are used, and tolerate its absence.
  *
  *   In builds whose Vite mode is not `production` (development, tests, the
- *   `e2e` mode), the result is merged with `window.__KARTA_TEST_SERVICES__`,
- *   so a Playwright `addInitScript` can script geolocation, search, the
+ *   `e2e` mode), the result is merged with the services a browser test puts
+ *   on the window (see `testSeam.ts`; the property name is kept out of this
+ *   file because the server bundle keeps comments and the seam check searches
+ *   for it), so a Playwright `addInitScript` can script geolocation, search, the
  *   clipboard, storage and the system theme. In a production build the mode
  *   is a constant, the branch is removed, and so is `testSeam.ts`;
  *   `scripts/verifyNoTestSeam.mjs` proves it from the build output.

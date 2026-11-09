@@ -1,76 +1,12 @@
-// `MapView` is intentionally NOT re-exported here: it pulls in Leaflet and
-// react-leaflet, and consumers that code-split it behind `lazy()`/`import()`
-// need `@karta/map/MapView` (see package.json `exports`) to keep that
-// bundle boundary; re-exporting it from this barrel would make it
-// statically reachable from any import of this module, defeating the split.
-export { BasemapToggle } from "./components/BasemapToggle/BasemapToggle";
-export type {
-  ControlButtonProps,
-  ControlButtonShape,
-  ControlButtonVariant,
-} from "./components/ControlButton/ControlButton";
-export { ControlButton } from "./components/ControlButton/ControlButton";
-export { DesktopLegend } from "./components/DesktopLegend/DesktopLegend";
-export { IconButton } from "./components/IconButton/IconButton";
-export type { LegendLabels } from "./components/Legend/Legend";
-export { Legend } from "./components/Legend/Legend";
-export type { SelectableFeatureSearchEntry } from "./components/LocationSearchControl/LocationSearchControl";
-export {
-  LocationSearchControl,
-  matchesFeatureLabel,
-} from "./components/LocationSearchControl/LocationSearchControl";
-export type { LocationContextMenuLabels } from "./components/MapView/LocationContextMenu";
-export { formatMeasurementResult } from "./components/MeasurementControl/formatMeasurementResult";
-export type {
-  MeasurementControlLabels,
-  MeasurementControlProps,
-  MeasurementMode,
-} from "./components/MeasurementControl/MeasurementControl";
-export { MeasurementControl } from "./components/MeasurementControl/MeasurementControl";
-export { MobileLegend } from "./components/MobileLegend/MobileLegend";
-export type { SegmentedControlOption } from "./components/SegmentedControl/SegmentedControl";
-export { SegmentedControl } from "./components/SegmentedControl/SegmentedControl";
-export { SettingsMenu } from "./components/SettingsMenu/SettingsMenu";
-export { ThemeToggle } from "./components/ThemeToggle/ThemeToggle";
-export type {
-  Basemap,
-  BasemapDefinition,
-  BasemapTileSource,
-  RasterBasemapDefinition,
-  VectorBasemapDefinition,
-} from "./constants/basemaps";
-export {
-  getBasemapDefinition,
-  getBasemapTileSources,
-  getRegisteredBasemapIds,
-  registerBasemap,
-  resetBasemapRegistry,
-  resolveTileScaleToken,
-} from "./constants/basemaps";
-export type { DesignTokenCssVar } from "./constants/designTokenDefaults";
-export { DESIGN_TOKEN_CSS_VAR_DEFAULTS } from "./constants/designTokenDefaults";
-export { AREA_OUTLINE } from "./constants/mapStyles";
-export type { MobileLayoutCssVar } from "./constants/mobileLayoutTokens";
-export { MOBILE_LAYOUT_CSS_VAR_DEFAULTS } from "./constants/mobileLayoutTokens";
-export type { ZIndexCssVar } from "./constants/zIndexTokens";
-export { Z_INDEX_CSS_VAR_DEFAULTS } from "./constants/zIndexTokens";
-export type { DomainRegistry } from "./context/DomainContext";
-export { DomainProvider, useDomain } from "./context/DomainContext";
-export type {
-  GeocoderProvider,
-  LocationSearchResult,
-  NominatimSearchOptions,
-} from "./data/locationSearch";
-export {
-  createNominatimGeocoderProvider,
-  fetchLocationSearchResults,
-  fetchReverseGeocodeResult,
-  nominatimGeocoderProvider,
-} from "./data/locationSearch";
-export { useAbortController } from "./hooks/useAbortController";
-export type { UseDismissableOverlayOptions } from "./hooks/useDismissableOverlay";
-export { useDismissableOverlay } from "./hooks/useDismissableOverlay";
-export type { LayerDataMap, LayerDataResult } from "./hooks/useLayerData";
-export { useLayerData } from "./hooks/useLayerData";
-export type { RafScheduledValue } from "./hooks/useRafScheduledValue";
-export { useRafScheduledValue } from "./hooks/useRafScheduledValue";
+/**
+ * The public surface of `@karta/map`: ui primitives, the chrome, the engine
+ * host and its overlays, the tools, the sheet panels and the services hooks.
+ * Nothing here imports a map engine; each adapter loads its engine lazily, so
+ * importing this barrel costs no engine download.
+ */
+export * from "./chrome";
+export * from "./host";
+export * from "./panels";
+export * from "./services";
+export * from "./tools";
+export * from "./ui";

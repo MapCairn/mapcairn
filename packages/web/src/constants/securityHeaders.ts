@@ -6,10 +6,10 @@
  *   `public/_headers` (static-asset responses have no per-request nonce)
  *   and by `workers/app.ts`'s 500 fallback (a plain-text body with nothing
  *   inline to allow).
- * @remarks The `sha256-` source keeps allowing `root.tsx`'s inlined
- *   `THEME_BOOTSTRAP_SCRIPT`; a genuinely static script authored directly
- *   in JSX, not one React injects itself, so a hash (not a nonce) is the
- *   right fit for it. A nonce, once supplied, additionally covers the
+ * @remarks The `sha256-` source allows the inline pre-paint theme script
+ *   (`app/themeBootstrap.ts`, rendered by `root.tsx`): a static script, not
+ *   one React injects itself, so a hash (not a nonce) is the right fit for
+ *   it. `app/themeBootstrap.test.ts` recomputes the hash from the script. A nonce, once supplied, additionally covers the
  *   streaming/hydration `<script>` tags React itself injects during SSR,
  *   which a hash can't: their content isn't static across requests.
  *   `entry.server.tsx` generates one nonce per request via {@link
@@ -34,7 +34,7 @@ export function buildContentSecurityPolicy(
 ): string {
   const scriptSources = [
     "'self'",
-    "'sha256-HG8PUaCswII51AFFCizfjxISB0x6tOe/Gqljp1vzDRw='",
+    "'sha256-ld7QeaT0+n82yprbsP4N6soh7Si4L5GjBd5aGUh4DDs='",
     ...(nonce ? [`'nonce-${nonce}'`] : []),
     "https://static.cloudflareinsights.com",
   ];

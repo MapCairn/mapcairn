@@ -286,6 +286,54 @@ describe("mounting and accessibility", () => {
     );
   });
 
+  it("puts the id on the map region, for a skip link to target", async () => {
+    await setup({ id: "map-region" });
+    expect(screen.getByRole("region", { name: "Map" })).toHaveAttribute(
+      "id",
+      "map-region",
+    );
+  });
+
+  it("renders the chrome around the region, inside the map context", async () => {
+    let fromChrome: MapContextValue | null = null;
+    const { adapter, host } = await setup({
+      chrome: (region) => (
+        <div data-testid="chrome">
+          <Probe
+            onValue={(value) => {
+              fromChrome = value;
+            }}
+          />
+          <div data-testid="background">{region}</div>
+        </div>
+      ),
+    });
+    const background = screen.getByTestId("background");
+    expect(screen.getByTestId("chrome")).toContainElement(background);
+    expect(background).toContainElement(host());
+    expect(fromChrome).not.toBeNull();
+    expect((fromChrome as MapContextValue | null)?.adapter).toBe(adapter());
+    const help = document.getElementById(
+      host().getAttribute("aria-describedby") as string,
+    );
+    expect(background).toContainElement(help);
+  });
+
+  it("server-renders the chrome around the empty host", () => {
+    const html = renderToString(
+      <ServicesProvider services={createFakeServices()}>
+        <MapView
+          initialView={VIEW}
+          basemap={FAKE_VECTOR_BASEMAP}
+          testId="map"
+          chrome={(region) => <div data-testid="chrome">{region}</div>}
+        />
+      </ServicesProvider>,
+    );
+    expect(html).toMatch(/data-testid="chrome"><section/);
+    expect(html).not.toMatch(/style=/);
+  });
+
   it("server-renders an empty host with no style attribute and no engine", () => {
     const services = createFakeServices();
     const factory = vi.fn(services.createMapAdapter);

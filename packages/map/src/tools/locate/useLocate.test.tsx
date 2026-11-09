@@ -10,11 +10,15 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services/ServicesProvider";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
-import { LOCATING_MESSAGE, useLocate } from "./useLocate";
+import {
+  LOCATING_MESSAGE,
+  type UseLocateOptions,
+  useLocate,
+} from "./useLocate";
 
 function setup(
   units: UnitSystem = "metric",
-  options?: { timeoutMs?: number },
+  options?: UseLocateOptions,
   services = createFakeServices(),
 ) {
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -139,6 +143,24 @@ describe("useLocate", () => {
       expect(polite()).toBe("");
     },
   );
+
+  it("leaves an error unannounced when the app shows it in an alert itself", async () => {
+    const { result, services } = setup("metric", { announceErrors: false });
+    services.fakes.location.failWith("denied");
+    act(() => result.current.locate());
+    await flush();
+    expect(result.current.state).toBe("error");
+    expect(result.current.message).toMatch(/Location access is blocked/);
+    expect(assertive()).toBe("");
+    expect(polite()).toBe("");
+  });
+
+  it("still announces a fix when errors are left to the app", async () => {
+    const { result } = setup("metric", { announceErrors: false });
+    act(() => result.current.locate());
+    await flush();
+    expect(polite()).toBe("Location found, accuracy about 25 metres");
+  });
 
   it("keeps an error until cancelled", async () => {
     const { result, services } = setup();
