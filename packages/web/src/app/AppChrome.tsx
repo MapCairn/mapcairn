@@ -1,6 +1,7 @@
 import { pressEscape } from "@karta/core";
 import {
   Attribution,
+  DirectionsPanel,
   EndStack,
   FocusRegistryProvider,
   MapChrome,
@@ -18,6 +19,7 @@ import {
   visibleBounds,
 } from "@karta/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
+import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
 import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
 import { bottomCentre } from "./MapBanners.css";
@@ -142,6 +144,15 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           onMapOptions={app.toggleMapOptions}
           measuring={app.measuring}
           onMeasure={app.toggleMeasure}
+          directions={
+            app.directions.available
+              ? {
+                  active: app.directionsActive,
+                  controls: SHEET_ID,
+                  onToggle: app.toggleDirections,
+                }
+              : undefined
+          }
           locating={app.locate.state === "locating"}
           onLocate={app.locate.locate}
           canZoomIn={map.canZoomIn}
@@ -157,14 +168,21 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
         />
       }
       bottomEnd={
-        <Attribution basemap={app.basemap} layerCredits={app.layers.credits} />
+        <Attribution
+          basemap={app.basemap}
+          layerCredits={
+            app.directions.result
+              ? [...app.layers.credits, ...ROUTING_CREDITS]
+              : app.layers.credits
+          }
+        />
       }
       bottomCentre={centre}
       sheet={
         <Sheet
           id={SHEET_ID}
           open={app.sheetOpen}
-          title="Map options"
+          title={app.directionsActive ? "Directions" : "Map options"}
           detent={app.sheetDetent}
           onDetentChange={app.onSheetDetentChange}
           onModalChange={app.setSheetModal}
@@ -172,7 +190,14 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           restoreFocus={() => flushFocusReturn(restoreFocus)}
           testId="map-options-sheet"
         >
-          {app.sheetOpen ? (
+          {app.directionsActive ? (
+            <DirectionsPanel
+              directions={app.directions}
+              pin={app.pin}
+              getBias={() => visibleBounds(map.adapter, map.hostElement)}
+              note={ROUTING_NOTE}
+            />
+          ) : app.sheetOpen ? (
             <SheetContent
               basemapId={app.basemapChoice}
               onBasemapChange={app.chooseBasemap}

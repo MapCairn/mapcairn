@@ -1,6 +1,12 @@
-import { Layers, LocateFixed, Minus, Plus, Ruler } from "lucide-react";
+import { Layers, LocateFixed, Minus, Plus, Route, Ruler } from "lucide-react";
 import { ControlGroup, IconButton } from "../../ui";
 import * as styles from "./EndStack.css";
+
+/** Props for {@link EndStackSkeleton}. */
+export interface EndStackSkeletonProps {
+  /** Shows the Directions button, as the live stack does when the host offers directions. */
+  readonly directions?: boolean;
+}
 
 /**
  * The end stack as a decorative stand-in for the server-rendered
@@ -12,7 +18,9 @@ import * as styles from "./EndStack.css";
  * @remarks Only ever rendered inside an `aria-hidden`, `inert` container. It
  *   uses no hooks and needs no provider.
  */
-export function EndStackSkeleton() {
+export function EndStackSkeleton({
+  directions = false,
+}: EndStackSkeletonProps) {
   return (
     <div className={styles.skeletonStack} data-skeleton="end-stack">
       <ControlGroup
@@ -26,6 +34,9 @@ export function EndStackSkeleton() {
           icon={Ruler}
           tabIndex={-1}
         />
+        {directions ? (
+          <IconButton label="Directions" icon={Route} tabIndex={-1} />
+        ) : null}
         <IconButton label="Locate me" icon={LocateFixed} tabIndex={-1} />
       </ControlGroup>
       <div className={styles.skeletonZoom}>

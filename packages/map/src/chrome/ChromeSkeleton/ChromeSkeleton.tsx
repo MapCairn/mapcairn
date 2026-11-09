@@ -3,6 +3,15 @@ import { AttributionSkeleton } from "../Attribution/AttributionSkeleton";
 import { EndStackSkeleton } from "../EndStack/EndStackSkeleton";
 import * as styles from "../MapChrome/MapChrome.css";
 
+/** Props for {@link ChromeSkeleton}. */
+export interface ChromeSkeletonProps {
+  /**
+   * Draws the Directions button, which the live chrome shows when the host
+   * offers directions, so the controls are in their final places on first paint.
+   */
+  readonly directions?: boolean;
+}
+
 /**
  * The server-rendered stand-in for `MapChrome`: the search pill, the map
  * controls, the zoom group on a device with a fine pointer and the credits
@@ -19,7 +28,7 @@ import * as styles from "../MapChrome/MapChrome.css";
  *   `style-src 'self'`), uses no hooks and needs no provider, and is the same
  *   in light and dark themes because it uses only theme tokens.
  */
-export function ChromeSkeleton() {
+export function ChromeSkeleton({ directions = false }: ChromeSkeletonProps) {
   return (
     <div
       className={styles.skeletonRoot}
@@ -31,7 +40,7 @@ export function ChromeSkeleton() {
         <SearchPillSkeleton />
       </div>
       <div className={styles.endStack} data-skeleton-slot="end-stack">
-        <EndStackSkeleton />
+        <EndStackSkeleton directions={directions} />
       </div>
       <div className={styles.bottomEnd} data-skeleton-slot="bottom-end">
         <AttributionSkeleton />

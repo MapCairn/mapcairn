@@ -5,6 +5,7 @@ import {
   type LocationProvider,
   type MapAdapterFactory,
   type ResolvedTheme,
+  type RoutingProvider,
   resolveTheme,
   type SearchProvider,
   type Settings,
@@ -23,6 +24,15 @@ export function useMapAdapterFactory(): MapAdapterFactory {
 /** The place search provider. Debounce and cancellation live in `useSearch`, not here. */
 export function useSearchProvider(): SearchProvider {
   return useServices().search;
+}
+
+/**
+ * The routing provider, or `undefined` when the host supplies none. The
+ * Directions tool needs it, so a host without one gets no such tool. Nothing
+ * is requested until a user action asks for a route or area.
+ */
+export function useRoutingProvider(): RoutingProvider | undefined {
+  return useServices().routing;
 }
 
 /** The location provider. Nothing is requested until a user action calls it. */

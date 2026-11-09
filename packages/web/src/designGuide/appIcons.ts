@@ -1,10 +1,15 @@
 import type { IconComponent } from "@karta/map";
 import {
+  Bike,
+  Car,
   Check,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   CircleCheck,
   Copy,
   Crosshair,
+  Footprints,
   Info,
   Layers,
   LoaderCircle,
@@ -15,6 +20,7 @@ import {
   Navigation2,
   Plus,
   RotateCw,
+  Route,
   Ruler,
   Search,
   Trash2,
@@ -29,11 +35,16 @@ import {
  * and fails when this list and the code disagree.
  */
 export const APP_ICONS: Readonly<Record<string, IconComponent>> = {
+  Bike,
+  Car,
   Check,
+  ChevronDown,
+  ChevronUp,
   ChevronRight,
   CircleCheck,
   Copy,
   Crosshair,
+  Footprints,
   Info,
   Layers,
   LoaderCircle,
@@ -44,6 +55,7 @@ export const APP_ICONS: Readonly<Record<string, IconComponent>> = {
   Navigation2,
   Plus,
   RotateCw,
+  Route,
   Ruler,
   Search,
   Trash2,

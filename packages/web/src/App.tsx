@@ -2,7 +2,9 @@ import { type LatLng, pressEscape, startMeasure } from "@karta/core";
 import {
   AccuracyCircle,
   CentreCrosshair,
+  DirectionsOverlay,
   MapDataLayers,
+  MapDirections,
   MapOverlayLayer,
   MapView,
   type MeasureMode,
@@ -59,7 +61,7 @@ export function App() {
       testId="map-host"
       initialView={app.initialView}
       basemap={app.basemap}
-      cursor={app.measuring ? "crosshair" : "grab"}
+      cursor={app.measuring || app.directionsActive ? "crosshair" : "grab"}
       onViewChange={app.onViewChange}
       onBasemapApplied={app.onBasemapApplied}
       onBasemapError={app.onBasemapError}
@@ -73,7 +75,7 @@ export function App() {
       <MapDataLayers
         layers={app.layers}
         onFeatureTap={app.openFeature}
-        ignoreTaps={app.measuring}
+        ignoreTaps={app.measuring || app.directionsActive}
       />
       <MapOverlayLayer testId="map-overlays">
         <SelectionMarker layers={app.layers} />
@@ -95,8 +97,14 @@ export function App() {
             <CentreCrosshair testId="centre-crosshair" />
           </>
         ) : null}
+        <DirectionsOverlay
+          stops={app.directions.stops}
+          showCrosshair={app.directionsActive}
+          testId="directions-overlay"
+        />
         {app.pin ? <PinMarker position={app.pin} testId="pin-marker" /> : null}
       </MapOverlayLayer>
+      <MapDirections result={app.directions.result} />
       <MapUnavailable />
     </MapView>
   );

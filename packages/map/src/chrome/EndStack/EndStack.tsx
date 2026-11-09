@@ -5,6 +5,7 @@ import {
   Minus,
   Navigation2,
   Plus,
+  Route,
   Ruler,
 } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
@@ -24,12 +25,26 @@ const HAIRLINE_PX = 1;
 /**
  * The height the end stack needs to show the zoom group under the main
  * group: three main controls, two zoom controls, the gap and the hairlines,
- * plus the compass and its gap while it shows. Below this, and only when the
+ * plus the compass and its gap while it shows, and one more control and
+ * hairline while the Directions button shows. Below this, and only when the
  * user has not chosen to show zoom buttons, the zoom group yields.
  */
-export function endStackMinHeightForZoom(compassShown: boolean): number {
-  const groups = 5 * CONTROL_PX + GAP_PX + 7 * HAIRLINE_PX;
+export function endStackMinHeightForZoom(
+  compassShown: boolean,
+  directionsShown = false,
+): number {
+  const extra = directionsShown ? CONTROL_PX + HAIRLINE_PX : 0;
+  const groups = 5 * CONTROL_PX + GAP_PX + 7 * HAIRLINE_PX + extra;
   return compassShown ? groups + CONTROL_PX + GAP_PX : groups;
+}
+
+/** The Directions button, shown only when the host offers directions. */
+export interface EndStackDirections {
+  /** The directions panel is open. */
+  readonly active: boolean;
+  /** The id of the sheet or panel that Directions opens. */
+  readonly controls: string;
+  readonly onToggle: () => void;
 }
 
 /** Props for {@link EndStack}. The app passes map state from `useMap()`. */
@@ -45,6 +60,11 @@ export interface EndStackProps {
   /** Measuring is on. */
   readonly measuring: boolean;
   readonly onMeasure: () => void;
+  /**
+   * The Directions button, between Measure and Locate me. Leave it out and
+   * the button is not shown, for a host with no routing service.
+   */
+  readonly directions?: EndStackDirections;
   /** A location request is in progress. Presses are ignored meanwhile. */
   readonly locating: boolean;
   readonly onLocate: () => void;
@@ -76,6 +96,7 @@ export function EndStack({
   onMapOptions,
   measuring,
   onMeasure,
+  directions,
   locating,
   onLocate,
   canZoomIn,
@@ -86,6 +107,7 @@ export function EndStack({
   const rootRef = useRef<HTMLElement>(null);
   const registerMapOptions = useFocusTarget("map-options");
   const registerMeasure = useFocusTarget("measure");
+  const registerDirections = useFocusTarget("directions");
   const { settings } = useSettings();
   const { finePointer } = usePreferences();
   const { endStackMaxHeight } = useChromeSurface();
@@ -95,7 +117,10 @@ export function EndStack({
     setting: settings.zoomButtons,
     finePointer,
     availableHeight: endStackMaxHeight ?? Number.POSITIVE_INFINITY,
-    minHeightForZoom: endStackMinHeightForZoom(showCompass),
+    minHeightForZoom: endStackMinHeightForZoom(
+      showCompass,
+      directions !== undefined,
+    ),
   });
 
   // IconButton takes no ref, so the buttons are found through the stack.
@@ -108,8 +133,9 @@ export function EndStack({
           : null;
       registerMapOptions(find("map-options"));
       registerMeasure(find("measure"));
+      registerDirections(find("directions"));
     },
-    [registerMapOptions, registerMeasure],
+    [registerMapOptions, registerMeasure, registerDirections],
   );
 
   useEffect(() => {
@@ -158,6 +184,16 @@ export function EndStack({
           data-focus-target="measure"
           onClick={onMeasure}
         />
+        {directions ? (
+          <IconButton
+            label="Directions"
+            icon={Route}
+            pressed={directions.active}
+            controls={directions.controls}
+            data-focus-target="directions"
+            onClick={directions.onToggle}
+          />
+        ) : null}
         <IconButton
           label="Locate me"
           icon={LocateFixed}

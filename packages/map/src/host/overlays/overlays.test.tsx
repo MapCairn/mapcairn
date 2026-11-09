@@ -283,4 +283,11 @@ describe("CentreCrosshair", () => {
     expect(Number(lines[0]?.getAttribute("y1"))).toBeCloseTo(centre.y, 1);
     expect(Number(lines[1]?.getAttribute("x1"))).toBeCloseTo(centre.x, 1);
   });
+
+  it("crosses where it is told to when part of the map is covered", async () => {
+    await renderOverlays(<CentreCrosshair at={{ x: 120, y: 80 }} testId="x" />);
+    const lines = screen.getByTestId("x").querySelectorAll("line");
+    expect(Number(lines[0]?.getAttribute("y1"))).toBe(80);
+    expect(Number(lines[1]?.getAttribute("x1"))).toBe(120);
+  });
 });

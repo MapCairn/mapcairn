@@ -19,7 +19,9 @@ import {
   type SurfaceAction,
   type SurfaceState,
   setDetent,
+  startDirections,
   startMeasure,
+  stopDirections,
   stopMeasure,
   surfaceReducer,
   type ViewState,
@@ -29,10 +31,12 @@ import {
   type MapContextValue,
   type MapLongPressEvent,
   REVEAL_DETENT,
+  type UseDirections,
   type UseLocate,
   type UseMeasure,
   useAnnounce,
   useDataLayers,
+  useDirections,
   useLocate,
   useMeasure,
   useSettings,
@@ -132,6 +136,13 @@ export interface MapApp {
 
   readonly locate: UseLocate;
 
+  /** The directions tool: stops, travel mode and the route or area on the map. */
+  readonly directions: UseDirections;
+  /** Directions is the open surface, so taps on the map add stops. */
+  readonly directionsActive: boolean;
+  /** Opens the directions panel, or closes it when it is open. */
+  readonly toggleDirections: () => void;
+
   readonly cursor: LatLng | null;
   readonly setCursor: (position: LatLng | null) => void;
 
@@ -174,12 +185,13 @@ export function useMapApp(): MapApp {
   const pendingFocusReturn = useRef(false);
 
   const [pin, setPin] = useState<LatLng | null>(null);
-  const [pinDetent, setPinDetent] = useState<SheetDetent>("half");
+  const [panelDetent, setPanelDetent] = useState<SheetDetent>("half");
   const [pinFocusRequest, setPinFocusRequest] = useState(0);
   const [sheetModal, setSheetModal] = useState(false);
   const [cursor, setCursor] = useState<LatLng | null>(null);
   const measure = useMeasure(settings.units);
   const locate = useLocate(settings.units, { announceErrors: false });
+  const directions = useDirections(settings.units);
 
   const closeExplicitly = useCallback(
     (action: SurfaceAction = closeSurface()) => {
@@ -209,12 +221,18 @@ export function useMapApp(): MapApp {
 
   const dropPinAt = useCallback(
     (position: LatLng) => {
-      const measuring = stateRef.current.surface === "measure";
+      // Measure and directions keep the surface to themselves, so the pin
+      // card does not open and takes no focus.
+      const keepsSurface =
+        stateRef.current.surface === "measure" ||
+        stateRef.current.surface === "directions";
       setPin(position);
-      setPinDetent("half");
+      if (!keepsSurface) {
+        setPanelDetent("half");
+      }
       dispatch(dropPin());
       announce(announcePinDropped(position));
-      if (!measuring) {
+      if (!keepsSurface) {
         setPinFocusRequest((count) => count + 1);
       }
     },
@@ -257,6 +275,15 @@ export function useMapApp(): MapApp {
     }
   }, [finishMeasure, stateRef]);
 
+  const toggleDirections = useCallback(() => {
+    if (stateRef.current.surface === "directions") {
+      closeExplicitly(stopDirections());
+    } else {
+      setPanelDetent("half");
+      dispatch(startDirections());
+    }
+  }, [closeExplicitly, stateRef]);
+
   const addPointAtCentre = useCallback(() => {
     const position = centre();
     if (position) {
@@ -277,19 +304,22 @@ export function useMapApp(): MapApp {
       if (stateRef.current.surface === "sheet") {
         dispatch(setDetent(detent));
       } else {
-        setPinDetent(detent);
+        setPanelDetent(detent);
       }
     },
     [stateRef],
   );
 
+  const { addStop } = directions;
   const onMapClick = useCallback(
     (event: MapClickEvent) => {
       if (stateRef.current.surface === "measure") {
         addPoint(event.latlng);
+      } else if (stateRef.current.surface === "directions") {
+        addStop(event.latlng);
       }
     },
-    [addPoint, stateRef],
+    [addPoint, addStop, stateRef],
   );
 
   const onLongPress = useCallback(
@@ -355,7 +385,10 @@ export function useMapApp(): MapApp {
   const onSearchFocus = useCallback(() => dispatch(openSearch()), []);
   const onSearchBlur = useCallback(() => dispatch(blurSearch()), []);
 
-  const sheetOpen = state.surface === "sheet" || state.surface === "pin";
+  const sheetOpen =
+    state.surface === "sheet" ||
+    state.surface === "pin" ||
+    state.surface === "directions";
   return {
     state,
     dispatch,
@@ -374,7 +407,7 @@ export function useMapApp(): MapApp {
     sheetOpen,
     sheetSection:
       state.surface === "pin" ? "pin" : (state.sheetSection ?? "basemap"),
-    sheetDetent: state.surface === "sheet" ? state.sheetDetent : pinDetent,
+    sheetDetent: state.surface === "sheet" ? state.sheetDetent : panelDetent,
     onSheetDetentChange,
     // The sheet reports `false` from an effect after it closes, too late for
     // the focus return in that same commit; derive it so the background stops
@@ -393,6 +426,9 @@ export function useMapApp(): MapApp {
     finishMeasure,
     addPointAtCentre,
     locate,
+    directions,
+    directionsActive: state.surface === "directions",
+    toggleDirections,
     cursor,
     setCursor,
     onMapClick,

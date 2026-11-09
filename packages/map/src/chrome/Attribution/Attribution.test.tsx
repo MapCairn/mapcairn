@@ -68,6 +68,26 @@ describe("Attribution", () => {
     ).toHaveAttribute("href", "https://sample.test/");
   });
 
+  it("lists a layer credit the map already gives only once", () => {
+    renderChrome(
+      <Attribution
+        basemap={BASEMAP}
+        layerCredits={[
+          { text: "OpenStreetMap contributors", url: "https://osm.example/" },
+          { text: "Plain layer credit" },
+        ]}
+      />,
+      { map: SETTLED },
+    );
+    const items = [...open().querySelectorAll("li")].map(
+      (li) => li.textContent,
+    );
+    expect(
+      items.filter((text) => text === "OpenStreetMap contributors"),
+    ).toHaveLength(1);
+    expect(items).toContain("Plain layer credit");
+  });
+
   it("is a collapsed Map credits button that controls a hidden region", () => {
     const { container } = renderChrome(<Attribution basemap={BASEMAP} />, {
       map: SETTLED,

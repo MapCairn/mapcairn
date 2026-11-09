@@ -52,6 +52,27 @@ export function coveredPadding(geometry: RevealGeometry): Padding | null {
 }
 
 /**
+ * The middle of the part of the map the sheet (at {@link REVEAL_DETENT}) or
+ * the side panel leaves free, in pixels from the map's top left. A tool that
+ * works "at the map centre" uses it, so its target is never under the sheet.
+ * @returns `null` while the map has no size, so the caller falls back to the
+ *   centre of the whole map.
+ */
+export function freeCentre(
+  geometry: RevealGeometry,
+): { readonly x: number; readonly y: number } | null {
+  const padding = coveredPadding(geometry);
+  if (!padding) {
+    return null;
+  }
+  const { width, height } = geometry.viewport;
+  return {
+    x: (padding.left + width - padding.right) / 2,
+    y: (padding.top + height - padding.bottom) / 2,
+  };
+}
+
+/**
  * How far to pan the map so a point shows clear of the sheet or side panel.
  * @param point - Where the point is now, in pixels from the map's top left.
  * @returns The pan in pixels that puts the point in the middle of the free

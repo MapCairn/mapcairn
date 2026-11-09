@@ -105,9 +105,15 @@ export function Attribution({
   const regionRef = useRef<HTMLElement>(null);
   const openedOnView = useRef(view);
   const introShown = useRef(false);
+  // A credit the basemap already gives, such as OpenStreetMap's, is listed once.
+  const basemapEntries = buildAttribution(basemap);
   const entries = [
-    ...buildAttribution(basemap),
-    ...layerCredits.map((credit) => ({ text: credit.text, href: credit.url })),
+    ...basemapEntries,
+    ...layerCredits
+      .filter(
+        (credit) => !basemapEntries.some((entry) => entry.text === credit.text),
+      )
+      .map((credit) => ({ text: credit.text, href: credit.url })),
   ];
 
   const close = useCallback(() => {

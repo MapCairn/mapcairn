@@ -33,6 +33,14 @@ describe("ChromeSkeleton", () => {
     ).not.toBeNull();
   });
 
+  it("draws the Directions button only when the host offers directions", () => {
+    const { rerender } = render(<ChromeSkeleton />);
+    const skeleton = screen.getByTestId("chrome-skeleton");
+    expect(skeleton.querySelector('[aria-label="Directions"]')).toBeNull();
+    rerender(<ChromeSkeleton directions />);
+    expect(skeleton.querySelector('[aria-label="Directions"]')).not.toBeNull();
+  });
+
   it("offers nothing to tab to or click, because it is rendered inert", () => {
     render(<ChromeSkeleton />);
     const skeleton = screen.getByTestId("chrome-skeleton");

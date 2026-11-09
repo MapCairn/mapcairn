@@ -66,6 +66,73 @@ function withRegistry(children: ReactNode, maxHeight: number | null = null) {
   );
 }
 
+describe("EndStack directions button", () => {
+  const directions = (overrides = {}) => ({
+    active: false,
+    controls: "map-options-sheet",
+    onToggle: vi.fn(),
+    ...overrides,
+  });
+
+  it("is absent unless the host offers directions", () => {
+    renderChrome(withRegistry(<EndStack {...props()} />));
+    expect(screen.queryByRole("button", { name: "Directions" })).toBeNull();
+  });
+
+  it("sits between Measure and Locate me, and toggles", () => {
+    const onToggle = vi.fn();
+    renderChrome(
+      withRegistry(
+        <EndStack {...props({ directions: directions({ onToggle }) })} />,
+      ),
+    );
+    const main = screen.getByRole("group", { name: "Map controls" });
+    expect(
+      within(main)
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual([
+      "Map options",
+      "Measure distance and area",
+      "Directions",
+      "Locate me",
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Directions" }));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows it is on and what it controls", () => {
+    renderChrome(
+      withRegistry(
+        <EndStack {...props({ directions: directions({ active: true }) })} />,
+      ),
+    );
+    const button = screen.getByRole("button", { name: "Directions" });
+    expect(button).toHaveAttribute("aria-pressed", "true");
+    expect(button).toHaveAttribute("aria-controls", "map-options-sheet");
+  });
+
+  it("needs one more control of room before the zoom buttons show", () => {
+    expect(endStackMinHeightForZoom(false, true)).toBeGreaterThan(
+      endStackMinHeightForZoom(false),
+    );
+    renderChrome(
+      withRegistry(
+        <EndStack {...props({ directions: directions() })} />,
+        endStackMinHeightForZoom(false),
+      ),
+    );
+    expect(screen.queryByRole("group", { name: "Zoom controls" })).toBeNull();
+  });
+
+  it("is where focus returns when its panel closes", () => {
+    renderChrome(
+      withRegistry(<EndStack {...props({ directions: directions() })} />),
+    );
+    expect(screen.getByRole("button", { name: "Directions" })).toBeTruthy();
+  });
+});
+
 describe("EndStack", () => {
   it("groups the main controls and the zoom controls, top to bottom", () => {
     renderChrome(withRegistry(<EndStack {...props()} />));

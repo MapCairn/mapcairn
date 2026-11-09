@@ -2,6 +2,7 @@ import { computeDetentHeights } from "@karta/core";
 import { describe, expect, it } from "vitest";
 import {
   coveredPadding,
+  freeCentre,
   REVEAL_CLEARANCE,
   REVEAL_DETENT,
   type RevealGeometry,
@@ -51,6 +52,29 @@ describe("coveredPadding", () => {
       coveredPadding({ ...PHONE, viewport: { width: 0, height: 0 } }),
     ).toBeNull();
     expect(coveredPadding({ ...DESKTOP, panelEdge: 1280 })).toBeNull();
+  });
+});
+
+describe("freeCentre", () => {
+  it("is the middle of the map above the bottom sheet", () => {
+    const heights = computeDetentHeights({
+      viewportHeight: 844,
+      insetBottom: 0,
+    });
+    expect(freeCentre(PHONE)).toEqual({
+      x: 195,
+      y: (844 - heights[REVEAL_DETENT]) / 2,
+    });
+  });
+
+  it("is the middle of the map beside the side panel", () => {
+    expect(freeCentre(DESKTOP)).toEqual({ x: (412 + 1280) / 2, y: 360 });
+  });
+
+  it("is null before the map has a size", () => {
+    expect(
+      freeCentre({ ...PHONE, viewport: { width: 0, height: 0 } }),
+    ).toBeNull();
   });
 });
 
