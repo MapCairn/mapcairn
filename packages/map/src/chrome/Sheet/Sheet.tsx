@@ -431,6 +431,9 @@ export function Sheet({
     }
     endDrag(drag);
     if (!drag.moved) {
+      // The wobble under the slop already moved the sheet; put it back.
+      applyHeight(heights[detent]);
+      publishSheetTop(viewport.height - heights[detent]);
       return;
     }
     // Only the handle gets a click after a drag; a flag set for a drag from

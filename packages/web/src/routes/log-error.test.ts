@@ -187,6 +187,42 @@ describe("/log-error route action", () => {
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
+  it("logs only the origin and path of the page, dropping any query or hash a client sends", async () => {
+    const response = await action(
+      makeRequest({
+        ...VALID_REPORT,
+        url: "https://karta.timothybrits.co.za/map?at=1#map=18/-33.92530/18.42410",
+      }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[client-error]",
+      expect.objectContaining({
+        url: "https://karta.timothybrits.co.za/map",
+      }),
+    );
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain(
+      "-33.92530",
+    );
+  });
+
+  it("drops a query or hash even from a url that is not absolute", async () => {
+    await action(makeRequest({ ...VALID_REPORT, url: "/map#map=18/1/2" }));
+    await action(makeRequest({ ...VALID_REPORT, url: "/map?x=1#y" }));
+
+    expect(consoleErrorSpy).toHaveBeenNthCalledWith(
+      1,
+      "[client-error]",
+      expect.objectContaining({ url: "/map" }),
+    );
+    expect(consoleErrorSpy).toHaveBeenNthCalledWith(
+      2,
+      "[client-error]",
+      expect.objectContaining({ url: "/map" }),
+    );
+  });
+
   it("strips control characters from logged fields before writing to Workers Logs", async () => {
     const response = await action(
       makeRequest({

@@ -1,8 +1,10 @@
 import {
   createFakeServices,
+  emptyLayerRegistry,
   FakeClipboard,
   FakeSearchProvider,
   type Services,
+  StaticLayerRegistry,
 } from "@karta/core";
 import { PORT_NAMES } from "@karta/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -31,6 +33,12 @@ describe("createServices", () => {
     expect(services.preferences.get()).toHaveProperty("reducedMotion");
     expect(services.layers.list()).toEqual([]);
     expect(services.url.read()).toEqual({});
+  });
+
+  it("lists no layers, through the shared empty registry rather than a fake", () => {
+    const { layers } = createServices();
+    expect(layers).toBe(emptyLayerRegistry);
+    expect(layers).not.toBeInstanceOf(StaticLayerRegistry);
   });
 
   it("returns a fresh object, with fresh adapters, on every call", () => {

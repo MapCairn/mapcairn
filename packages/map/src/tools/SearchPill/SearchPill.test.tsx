@@ -5,7 +5,6 @@ import { FocusRegistryProvider, useFocusReturn } from "../../chrome";
 import { ServicesProvider } from "../../services/ServicesProvider";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { SearchPill, type SearchPillProps } from "./SearchPill";
-import { SEARCH_DEBOUNCE_MS } from "./useSearch";
 
 const CAPE_TOWN: SearchResult = {
   id: "ct",
@@ -56,16 +55,19 @@ const input = () => screen.getByTestId("location-search-input");
 const listbox = () => screen.getByTestId("location-search-results");
 const options = () => within(listbox()).queryAllByRole("option");
 
-async function type(text: string) {
-  fireEvent.change(input(), { target: { value: text } });
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
-  });
-}
+const searchButton = () => screen.getByRole("button", { name: "Search" });
 
 /** Returns false when the key's default action was prevented. */
 function press(key: string, init: KeyboardEventInit = {}): boolean {
   return fireEvent.keyDown(input(), { key, ...init });
+}
+
+/** Types the text and presses Enter, then lets the search settle. */
+async function search(text: string) {
+  fireEvent.change(input(), { target: { value: text } });
+  await act(async () => {
+    press("Enter");
+  });
 }
 
 describe("SearchPill", () => {
@@ -111,7 +113,7 @@ describe("SearchPill", () => {
     it("adds no live regions of its own", async () => {
       const { services } = setup();
       services.fakes.search.failWith("failed");
-      await type("cape");
+      await search("cape");
       expect(screen.getAllByRole("status")).toHaveLength(1);
       expect(screen.getAllByRole("alert")).toHaveLength(1);
     });
@@ -119,7 +121,7 @@ describe("SearchPill", () => {
     it("sets no inline styles", async () => {
       const { container, services } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN]);
-      await type("cape");
+      await search("cape");
       expect(container.querySelectorAll("[style]")).toHaveLength(0);
     });
 
@@ -135,7 +137,7 @@ describe("SearchPill", () => {
     it("lists labels and secondary labels as options and expands the combobox", async () => {
       const { services } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN, CAPRICORN]);
-      await type("cap");
+      await search("cap");
       expect(input().getAttribute("aria-expanded")).toBe("true");
       const found = options();
       expect(found).toHaveLength(2);
@@ -152,7 +154,7 @@ describe("SearchPill", () => {
       const { services } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN, CAPRICORN]);
       input().focus();
-      await type("cap");
+      await search("cap");
       press("ArrowDown");
       press("ArrowDown");
       expect(document.activeElement).toBe(input());
@@ -168,8 +170,8 @@ describe("SearchPill", () => {
       const { services } = setup();
       const first = services.fakes.search.holdNext();
       const second = services.fakes.search.holdNext();
-      await type("ca");
-      await type("cap");
+      await search("ca");
+      await search("cap");
       await act(async () => second.resolve([CAPRICORN]));
       await act(async () => first.resolve([CAPE_TOWN]));
       expect(options().map((o) => o.textContent)).toEqual(["Capricorn"]);
@@ -178,17 +180,91 @@ describe("SearchPill", () => {
     it("announces the number of results", async () => {
       const { services } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN, CAPRICORN]);
-      await type("cap");
+      await search("cap");
       expect(screen.getByTestId("live-region-polite").textContent).toBe(
         "2 results",
       );
     });
 
-    it("passes the bias to the search", async () => {
+    it("passes the bias, read when the search is submitted, to the provider", async () => {
       const bias = { south: -34, west: 18, north: -33, east: 19 };
-      const { services } = setup({ bias });
-      await type("cap");
+      const getBias = vi.fn(() => bias);
+      const { services } = setup({ getBias });
+      fireEvent.change(input(), { target: { value: "cap" } });
+      expect(getBias).not.toHaveBeenCalled();
+      await act(async () => {
+        press("Enter");
+      });
+      expect(getBias).toHaveBeenCalledTimes(1);
       expect(services.fakes.search.searchCalls[0]?.options?.bias).toBe(bias);
+    });
+  });
+
+  describe("submitting", () => {
+    it("sends nothing while the user types, and keeps the panel closed", async () => {
+      const { services } = setup();
+      input().focus();
+      fireEvent.change(input(), { target: { value: "ca" } });
+      fireEvent.change(input(), { target: { value: "cape" } });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(services.fakes.search.searchCalls).toHaveLength(0);
+      expect(input().getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("Enter with no active option searches for the text and opens the list", async () => {
+      const { services } = setup();
+      services.fakes.search.setDefaultResults([CAPE_TOWN]);
+      input().focus();
+      fireEvent.change(input(), { target: { value: "cape" } });
+      let notPrevented = true;
+      await act(async () => {
+        notPrevented = press("Enter");
+      });
+      expect(notPrevented).toBe(false);
+      expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
+        "cape",
+      ]);
+      expect(input().getAttribute("aria-expanded")).toBe("true");
+      expect(options()).toHaveLength(1);
+    });
+
+    it("has a named Search button after the input that searches and keeps focus in the input", async () => {
+      const { services } = setup();
+      services.fakes.search.setDefaultResults([CAPE_TOWN]);
+      input().focus();
+      fireEvent.change(input(), { target: { value: "cape" } });
+      const button = searchButton();
+      expect(
+        input().compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(fireEvent.mouseDown(button)).toBe(false);
+      await act(async () => {
+        fireEvent.click(button);
+      });
+      expect(services.fakes.search.searchCalls).toHaveLength(1);
+      expect(input().getAttribute("aria-expanded")).toBe("true");
+      expect(document.activeElement).toBe(input());
+    });
+
+    it("marks the Search button unavailable until there is enough text", () => {
+      setup();
+      expect(searchButton().getAttribute("aria-disabled")).toBe("true");
+      fireEvent.change(input(), { target: { value: "c" } });
+      expect(searchButton().getAttribute("aria-disabled")).toBe("true");
+      fireEvent.change(input(), { target: { value: "ca" } });
+      expect(searchButton().getAttribute("aria-disabled")).not.toBe("true");
+    });
+
+    it("hides the old results as soon as the text changes", async () => {
+      const { services } = setup();
+      services.fakes.search.setDefaultResults([CAPE_TOWN]);
+      input().focus();
+      await search("cape");
+      fireEvent.change(input(), { target: { value: "capr" } });
+      expect(input().getAttribute("aria-expanded")).toBe("false");
     });
   });
 
@@ -196,7 +272,7 @@ describe("SearchPill", () => {
     it("says Searching... while waiting", async () => {
       const { services } = setup();
       services.fakes.search.holdNext();
-      await type("cape");
+      await search("cape");
       expect(input().getAttribute("aria-expanded")).toBe("true");
       expect(screen.getByText("Searching...")).toBeTruthy();
       expect(options()).toHaveLength(0);
@@ -204,7 +280,7 @@ describe("SearchPill", () => {
 
     it("says when nothing matched", async () => {
       setup();
-      await type("zzzz");
+      await search("zzzz");
       expect(screen.getByText("Nothing matched that search.")).toBeTruthy();
       expect(screen.queryByText("Searching...")).toBeNull();
     });
@@ -214,7 +290,7 @@ describe("SearchPill", () => {
       async (kind) => {
         const { services } = setup();
         services.fakes.search.failWith(kind);
-        await type("cape");
+        await search("cape");
         expect(
           screen.getByText(
             "Search is unavailable right now. Please try again.",
@@ -230,7 +306,7 @@ describe("SearchPill", () => {
       const { services } = setup();
       services.fakes.search.failWith("failed");
       input().focus();
-      await type("cape");
+      await search("cape");
       services.fakes.search.clearFailure();
       services.fakes.search.setDefaultResults([CAPE_TOWN]);
       const retry = screen.getByTestId("location-search-retry");
@@ -248,7 +324,7 @@ describe("SearchPill", () => {
       const { services } = setup();
       services.fakes.search.failWith("failed");
       input().focus();
-      await type("cape");
+      await search("cape");
       const retry = screen.getByTestId("location-search-retry");
       act(() => retry.focus());
       expect(screen.getByTestId("location-search-retry")).toBe(retry);
@@ -265,7 +341,7 @@ describe("SearchPill", () => {
         CAPE_AGULHAS,
       ]);
       input().focus();
-      await type("cap");
+      await search("cap");
       return view;
     }
 
@@ -322,7 +398,7 @@ describe("SearchPill", () => {
 
     it("ArrowDown opens the text panel when the search found nothing, without an active option", async () => {
       setup();
-      await type("zzzz");
+      await search("zzzz");
       press("Escape");
       expect(press("ArrowDown")).toBe(false);
       expect(input().getAttribute("aria-expanded")).toBe("true");
@@ -380,23 +456,32 @@ describe("SearchPill", () => {
       press("ArrowDown");
       press("Enter");
       const before = services.fakes.search.searchCalls.length;
-      await type("Cape Towns");
+      await search("Cape Towns");
       expect(services.fakes.search.searchCalls).toHaveLength(before + 1);
     });
 
-    it("Enter does nothing with no active option", async () => {
-      const { onSelect } = await withResults();
-      expect(press("Enter")).toBe(true);
+    it("Enter with no active option selects nothing and does not search the same text again", async () => {
+      const { onSelect, services } = await withResults();
+      await act(async () => {
+        press("Enter");
+      });
       expect(onSelect).not.toHaveBeenCalled();
+      expect(services.fakes.search.searchCalls).toHaveLength(1);
       expect(input().getAttribute("aria-expanded")).toBe("true");
     });
 
-    it("Enter does nothing while the list is closed", async () => {
-      const { onSelect } = await withResults();
+    it("Enter reopens a list closed with Escape, without selecting or searching", async () => {
+      const { onSelect, services } = await withResults();
       press("ArrowDown");
       press("Escape");
-      press("Enter");
+      expect(input().getAttribute("aria-expanded")).toBe("false");
+      await act(async () => {
+        press("Enter");
+      });
       expect(onSelect).not.toHaveBeenCalled();
+      expect(services.fakes.search.searchCalls).toHaveLength(1);
+      expect(input().getAttribute("aria-expanded")).toBe("true");
+      expect(input().getAttribute("aria-activedescendant")).toBeNull();
     });
 
     it("ignores keys pressed during IME composition", async () => {
@@ -440,7 +525,7 @@ describe("SearchPill", () => {
       const { services } = await withResults();
       press("ArrowDown");
       services.fakes.search.setDefaultResults([CAPRICORN]);
-      await type("capr");
+      await search("capr");
       expect(options()).toHaveLength(1);
       expect(input().getAttribute("aria-activedescendant")).toBeNull();
     });
@@ -457,7 +542,7 @@ describe("SearchPill", () => {
       const { services, onSelect } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN, CAPRICORN]);
       input().focus();
-      await type("cap");
+      await search("cap");
       const option = options()[1] as HTMLElement;
       expect(fireEvent.mouseDown(option)).toBe(false);
       fireEvent.click(option);
@@ -478,7 +563,7 @@ describe("SearchPill", () => {
     it("empties the box, closes the list and returns focus to the input", async () => {
       const { services } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN]);
-      await type("cape");
+      await search("cape");
       const clear = screen.getByRole("button", { name: "Clear search" });
       expect(fireEvent.mouseDown(clear)).toBe(false);
       fireEvent.click(clear);
@@ -505,7 +590,7 @@ describe("SearchPill", () => {
       const { services } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN]);
       input().focus();
-      await type("cape");
+      await search("cape");
       expect(input().getAttribute("aria-expanded")).toBe("true");
       act(() => screen.getByTestId("outside").focus());
       expect(input().getAttribute("aria-expanded")).toBe("false");
@@ -515,7 +600,7 @@ describe("SearchPill", () => {
       const { services } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN]);
       input().focus();
-      await type("cape");
+      await search("cape");
       act(() => screen.getByRole("button", { name: "Clear search" }).focus());
       expect(input().getAttribute("aria-expanded")).toBe("true");
     });
@@ -524,7 +609,7 @@ describe("SearchPill", () => {
       const { services } = setup();
       services.fakes.search.setDefaultResults([CAPE_TOWN]);
       input().focus();
-      await type("cape");
+      await search("cape");
       act(() => screen.getByTestId("outside").focus());
       act(() => input().focus());
       expect(input().getAttribute("aria-expanded")).toBe("true");

@@ -16,6 +16,8 @@ const engine = vi.hoisted(() => ({
 
 vi.mock("maplibre-gl", async () => ({
   Map: (await import("./maplibreTestEngine")).FakeMapLibreMap,
+  GPUInitializationError: (await import("./maplibreTestEngine"))
+    .FakeGPUInitializationError,
   setWorkerUrl: engine.setWorkerUrl,
 }));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
@@ -26,7 +28,18 @@ vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({
 import {
   createMapLibreMapAdapter,
   MapLibreMapAdapter,
+  WORKER_FAILURE_GRACE_MS,
 } from "./MapLibreMapAdapter";
+import { FakeGPUInitializationError } from "./maplibreTestEngine";
+
+/** The exact error maplibre-gl 6.17 fires from `createActors` for any worker `error` event. */
+function workerFailure(): Record<string, unknown> {
+  return {
+    error: new Error(
+      "Worker failed to load. Check that the worker URL is correct.",
+    ),
+  };
+}
 
 type FakeMap = FakeMapLibreMap;
 
@@ -96,8 +109,10 @@ function createHost(): HTMLDivElement {
   return host;
 }
 
-async function mounted(options: Partial<MapMountOptions> = {}) {
-  const adapter = new MapLibreMapAdapter();
+async function mounted(
+  options: Partial<MapMountOptions> = {},
+  adapter = new MapLibreMapAdapter(),
+) {
   const host = createHost();
   const before = FakeMapLibreMap.instances.length;
   const mounting = adapter.mount(host, { ...MOUNT, ...options });
@@ -116,6 +131,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
@@ -202,14 +218,22 @@ describe("MapLibreMapAdapter", () => {
     });
 
     it("rejects with webgl-unavailable when MapLibre cannot create a GPU context", async () => {
-      const error = new Error("WebGL2 is required");
-      error.name = "GPUInitializationError";
-      FakeMapLibreMap.nextConstructError = error;
+      FakeMapLibreMap.nextConstructError = new FakeGPUInitializationError();
       const adapter = new MapLibreMapAdapter();
       const result = adapter.mount(createHost(), MOUNT);
       await expect(result).rejects.toBeInstanceOf(MapEngineError);
       await expect(result).rejects.toMatchObject({
         reason: "webgl-unavailable",
+      });
+    });
+
+    it("recognises MapLibre's GPU error by its class, not by its name", async () => {
+      const lookalike = new Error("WebGL2 is required");
+      lookalike.name = "GPUInitializationError";
+      FakeMapLibreMap.nextConstructError = lookalike;
+      const adapter = new MapLibreMapAdapter();
+      await expect(adapter.mount(createHost(), MOUNT)).rejects.toMatchObject({
+        reason: "load-failed",
       });
     });
 
@@ -261,6 +285,40 @@ describe("MapLibreMapAdapter", () => {
       await expect(result).rejects.toMatchObject({ reason: "load-failed" });
       expect(map.removed).toBe(true);
       expect(map.listenerCount()).toBe(0);
+    });
+
+    it("keeps waiting when the sprite fails after the style document loaded", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const adapter = new MapLibreMapAdapter();
+      const tileError = vi.fn();
+      adapter.on("tileError", tileError);
+      const result = adapter.mount(createHost(), MOUNT);
+      await vi.waitFor(() => {
+        expect(FakeMapLibreMap.instances).toHaveLength(1);
+      });
+      const map = latestMap();
+      map.fire("style.load");
+      // Style._loadSprite fires an ErrorEvent with only the error: no tile, no source.
+      map.fire("error", { error: new Error("Unable to load sprite") });
+      expect(tileError).toHaveBeenCalledTimes(1);
+      map.fire("load");
+      await expect(result).resolves.toBeUndefined();
+      expect(map.removed).toBe(false);
+    });
+
+    it("rejects the mount when a worker fails after the style document loaded", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const adapter = new MapLibreMapAdapter();
+      const fatalError = vi.fn();
+      adapter.on("fatalError", fatalError);
+      const result = adapter.mount(createHost(), MOUNT);
+      await vi.waitFor(() => {
+        expect(FakeMapLibreMap.instances).toHaveLength(1);
+      });
+      latestMap().fire("style.load");
+      latestMap().fire("error", workerFailure());
+      await expect(result).rejects.toMatchObject({ reason: "load-failed" });
+      expect(fatalError).not.toHaveBeenCalled();
     });
 
     it("keeps waiting when only a tile fails before the first load", async () => {
@@ -664,27 +722,82 @@ describe("MapLibreMapAdapter", () => {
       expect(log).toHaveBeenCalledTimes(2);
     });
 
-    it("reports a worker that fails after load as fatal, not as a tile error", async () => {
-      const log = vi.spyOn(console, "error").mockImplementation(() => {});
-      const { adapter, map } = await mounted();
-      const tileError = vi.fn();
-      const fatalError = vi.fn();
-      adapter.on("tileError", tileError);
-      adapter.on("fatalError", fatalError);
-      // maplibre-gl 6.17 fires exactly this, with no tile or source, from
-      // createActors (src/util/actor.ts) when a worker fails.
-      map.fire("error", {
-        error: new Error(
-          "Worker failed to load. Check that the worker URL is correct.",
-        ),
+    describe("a worker error after load", () => {
+      async function watched() {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const subject = await mounted();
+        vi.useFakeTimers();
+        const tileError = vi.fn();
+        const fatalError = vi.fn();
+        subject.adapter.on("tileError", tileError);
+        subject.adapter.on("fatalError", fatalError);
+        return { ...subject, tileError, fatalError };
+      }
+
+      it("is fatal when nothing has loaded by the end of the grace period", async () => {
+        const { map, tileError, fatalError } = await watched();
+        map.loadedState = false;
+        map.fire("error", workerFailure());
+        vi.advanceTimersByTime(WORKER_FAILURE_GRACE_MS - 1);
+        expect(fatalError).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(1);
+        expect(tileError).not.toHaveBeenCalled();
+        expect(fatalError).toHaveBeenCalledTimes(1);
+        expect(fatalError.mock.calls[0]?.[0]).toMatchObject({
+          name: "MapEngineError",
+          reason: "stopped",
+        });
       });
-      expect(tileError).not.toHaveBeenCalled();
-      expect(fatalError).toHaveBeenCalledTimes(1);
-      expect(fatalError.mock.calls[0]?.[0]).toMatchObject({
-        name: "MapEngineError",
-        reason: "stopped",
+
+      it("is not fatal when the map goes idle during the grace period", async () => {
+        const { map, tileError, fatalError } = await watched();
+        map.loadedState = false;
+        map.fire("error", workerFailure());
+        map.fire("idle");
+        vi.advanceTimersByTime(WORKER_FAILURE_GRACE_MS);
+        expect(fatalError).not.toHaveBeenCalled();
+        expect(tileError).toHaveBeenCalledTimes(1);
       });
-      expect(log).toHaveBeenCalledTimes(1);
+
+      it("is not fatal when the map has everything loaded at the end of the grace period", async () => {
+        const { map, tileError, fatalError } = await watched();
+        map.fire("error", workerFailure());
+        vi.advanceTimersByTime(WORKER_FAILURE_GRACE_MS);
+        expect(fatalError).not.toHaveBeenCalled();
+        expect(tileError).toHaveBeenCalledTimes(1);
+      });
+
+      it("checks once for a burst of worker errors", async () => {
+        const { map, fatalError } = await watched();
+        map.loadedState = false;
+        map.fire("error", workerFailure());
+        map.fire("error", workerFailure());
+        vi.advanceTimersByTime(WORKER_FAILURE_GRACE_MS);
+        expect(fatalError).toHaveBeenCalledTimes(1);
+      });
+
+      it("stops checking when the adapter is destroyed", async () => {
+        const { adapter, map } = await watched();
+        map.fire("error", workerFailure());
+        expect(vi.getTimerCount()).toBe(1);
+        adapter.destroy();
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it("waits for as long as the adapter was told to", async () => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const { adapter, map } = await mounted(
+          {},
+          new MapLibreMapAdapter({ workerFailureGraceMs: 10 }),
+        );
+        vi.useFakeTimers();
+        const fatalError = vi.fn();
+        adapter.on("fatalError", fatalError);
+        map.loadedState = false;
+        map.fire("error", workerFailure());
+        vi.advanceTimersByTime(10);
+        expect(fatalError).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("keeps errors without a tile or source that leave the map working as tile errors", async () => {
@@ -802,6 +915,59 @@ describe("MapLibreMapAdapter", () => {
       });
       // Reported once, through the promise, not also as a tile error.
       expect(tileError).not.toHaveBeenCalled();
+    });
+
+    it("puts the previous basemap back when the new style fails", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const { adapter, map } = await mounted();
+      const load = vi.fn();
+      adapter.on("load", load);
+      const swapping = adapter.setBasemap(DARK);
+      map.fire("error", { error: new Error("404 style") });
+      await expect(swapping).rejects.toBeInstanceOf(MapEngineError);
+      expect(adapter.getMinZoom()).toBe(0);
+      expect(adapter.getMaxZoom()).toBe(22);
+      expect(map.minZoom).toBe(-1);
+      expect(map.maxZoom).toBe(21);
+      expect(map.callsOf("setStyle").at(-1)?.args).toEqual([
+        "https://tiles.example/positron",
+        { diff: false },
+      ]);
+      // The restored style reports load like any other.
+      map.fire("style.load");
+      map.fire("idle");
+      expect(load).toHaveBeenCalledTimes(1);
+    });
+
+    it("puts back the last basemap that loaded, not one that was superseded", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const { adapter, map } = await mounted();
+      const first = adapter.setBasemap(DARK);
+      map.fire("style.load");
+      await expect(first).resolves.toBeUndefined();
+      void adapter.setBasemap(POSITRON);
+      const failing = adapter.setBasemap(STREETS);
+      map.fire("error", { error: new Error("404 style") });
+      await expect(failing).rejects.toBeInstanceOf(MapEngineError);
+      expect(adapter.getMinZoom()).toBe(2);
+      expect(adapter.getMaxZoom()).toBe(14);
+      expect(map.callsOf("setStyle").at(-1)?.args).toEqual([
+        "https://tiles.example/dark",
+        { diff: false },
+      ]);
+    });
+
+    it("treats a sprite failure after the new style loaded as a tile error", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const { adapter, map } = await mounted();
+      const tileError = vi.fn();
+      adapter.on("tileError", tileError);
+      const swapping = adapter.setBasemap(DARK);
+      map.fire("style.load");
+      map.fire("error", { error: new Error("Unable to load sprite") });
+      await expect(swapping).resolves.toBeUndefined();
+      expect(tileError).toHaveBeenCalledTimes(1);
+      expect(adapter.getMaxZoom()).toBe(14);
     });
 
     it("swaps between a vector style and a raster style both ways", async () => {

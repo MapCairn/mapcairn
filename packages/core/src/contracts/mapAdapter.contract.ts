@@ -44,6 +44,11 @@ export interface MapAdapterControls {
    * example by hiding WebGL. Optional because some engines cannot fail.
    */
   createFailingMount?(): MapAdapter;
+  /**
+   * Makes the next `setBasemap` fail to load its style, for example by
+   * failing the style request. Optional because some engines cannot fail.
+   */
+  failNextBasemap?(): void;
 }
 
 /** One map adapter under test, with its controls. */
@@ -429,6 +434,37 @@ export function runMapAdapterContract(
       await adapter.setBasemap(controls.basemap);
       await controls.settle();
       expect(adapter.getMinZoom()).toBeLessThan(adapter.getMaxZoom());
+    });
+
+    it("keeps the previous basemap when a swap fails, and swaps again afterwards", async () => {
+      const { adapter, controls } = await mounted();
+      if (controls.failNextBasemap === undefined) {
+        return;
+      }
+      const { basemap } = controls;
+      const narrower: BasemapDefinition = {
+        ...basemap,
+        id: `${basemap.id}-narrower`,
+        minZoom: basemap.minZoom + 1,
+        maxZoom: basemap.maxZoom - 1,
+      };
+      let fatalErrors = 0;
+      adapter.on("fatalError", () => {
+        fatalErrors += 1;
+      });
+      controls.failNextBasemap();
+      await expect(adapter.setBasemap(narrower)).rejects.toBeInstanceOf(
+        MapEngineError,
+      );
+      await controls.settle();
+      expect(adapter.getMinZoom()).toBe(basemap.minZoom);
+      expect(adapter.getMaxZoom()).toBe(basemap.maxZoom);
+      expect(fatalErrors).toBe(0);
+
+      await adapter.setBasemap(narrower);
+      await controls.settle();
+      expect(adapter.getMinZoom()).toBe(narrower.minZoom);
+      expect(adapter.getMaxZoom()).toBe(narrower.maxZoom);
     });
 
     it("never throws from the animation, keyboard and focus switches", async () => {

@@ -39,6 +39,36 @@ export const MATRIX_VIEWPORTS = [
 ] as const;
 
 /**
+ * How long the credits may take to collapse after they show by themselves on
+ * first load: the app's five seconds, plus their fade and some slack.
+ */
+export const CREDITS_COLLAPSE_TIMEOUT_MS = 10_000;
+
+/**
+ * Waits until the credits, which show by themselves once the map has started
+ * (the OpenStreetMap attribution guidelines), have collapsed: the button says
+ * it is collapsed and the popover is hidden. Waits on those signals, never a
+ * fixed sleep.
+ */
+export async function waitForCreditsCollapsed(mapPage: MapPage): Promise<void> {
+  // The credits start collapsed, before the map exists: wait for the first
+  // showing to start, or a collapsed button would pass this check too early.
+  await expect(
+    mapPage.page.locator('[data-chrome="attribution"]'),
+  ).toHaveAttribute("data-intro-started", "true", {
+    timeout: CREDITS_COLLAPSE_TIMEOUT_MS,
+  });
+  await expect(mapPage.creditsButton).toHaveAttribute(
+    "aria-expanded",
+    "false",
+    { timeout: CREDITS_COLLAPSE_TIMEOUT_MS },
+  );
+  await expect(mapPage.creditsRegion).toBeHidden({
+    timeout: CREDITS_COLLAPSE_TIMEOUT_MS,
+  });
+}
+
+/**
  * Brings the chrome into a state from rest. The page must have scripted
  * search (see `scriptSearch`), so "search open" has results to show.
  */
@@ -48,6 +78,8 @@ export async function enterState(
 ): Promise<void> {
   switch (state) {
     case "rest":
+      // At rest the credits are collapsed, once their first showing is over.
+      await waitForCreditsCollapsed(mapPage);
       return;
     case "sheet open":
       await mapPage.openMapOptions();

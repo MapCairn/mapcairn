@@ -59,6 +59,8 @@ export function App() {
       basemap={app.basemap}
       cursor={app.measuring ? "crosshair" : "grab"}
       onViewChange={app.onViewChange}
+      onBasemapApplied={app.onBasemapApplied}
+      onBasemapError={app.onBasemapError}
       onClick={app.onMapClick}
       onLongPress={app.onLongPress}
       onPointerMove={app.setCursor}

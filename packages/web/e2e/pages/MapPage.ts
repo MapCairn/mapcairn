@@ -43,6 +43,7 @@ export class MapPage {
   readonly searchOptions: Locator;
   readonly searchPanel: Locator;
   readonly searchRetry: Locator;
+  readonly searchSubmit: Locator;
 
   readonly mapControls: Locator;
   readonly mapOptionsButton: Locator;
@@ -65,6 +66,11 @@ export class MapPage {
   readonly pinHeading: Locator;
   readonly pinCoordinates: Locator;
   readonly pinAddress: Locator;
+  readonly pinLookupButton: Locator;
+  readonly pinLookupNote: Locator;
+  readonly pinLookupRetryButton: Locator;
+  readonly pinAddressLoading: Locator;
+  readonly pinAddressError: Locator;
   readonly pinCopyButton: Locator;
   readonly pinClearButton: Locator;
   readonly pinCopyFeedback: Locator;
@@ -102,6 +108,10 @@ export class MapPage {
     this.searchOptions = this.searchList.getByRole("option");
     this.searchPanel = page.getByTestId("location-search-panel");
     this.searchRetry = page.getByTestId("location-search-retry");
+    this.searchSubmit = this.searchLandmark.getByRole("button", {
+      name: "Search",
+      exact: true,
+    });
 
     this.mapControls = page.getByRole("group", { name: "Map controls" });
     this.mapOptionsButton = page.getByRole("button", { name: "Map options" });
@@ -138,6 +148,15 @@ export class MapPage {
     this.pinHeading = page.getByRole("heading", { name: "Dropped pin" });
     this.pinCoordinates = page.getByTestId("pin-coordinates");
     this.pinAddress = page.getByTestId("pin-address");
+    this.pinLookupButton = page.getByRole("button", {
+      name: "Look up address",
+    });
+    this.pinLookupNote = page.getByTestId("pin-lookup-note");
+    this.pinLookupRetryButton = page.getByRole("button", {
+      name: "Try again",
+    });
+    this.pinAddressLoading = page.getByTestId("pin-address-loading");
+    this.pinAddressError = page.getByTestId("pin-address-error");
     this.pinCopyButton = page.getByRole("button", {
       name: "Copy coordinates",
     });
@@ -254,9 +273,13 @@ export class MapPage {
     ).toBeChecked();
   }
 
-  /** Types into the search box, which searches after a short pause. */
+  /**
+   * Fills the search box and presses Enter. Typing alone never searches; the
+   * search runs only when it is submitted.
+   */
   async search(query: string): Promise<void> {
     await this.searchInput.fill(query);
+    await this.searchInput.press("Enter");
   }
 
   /** Starts measuring and waits for the toolbar. */

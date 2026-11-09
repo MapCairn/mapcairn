@@ -52,10 +52,35 @@ function fakeWindow(query: MediaQueryLike | undefined) {
 afterEach(() => {
   document.documentElement.removeAttribute(THEME_ATTRIBUTE);
   document.documentElement.style.removeProperty("color-scheme");
-  document.head
-    .querySelector(`meta[name="${THEME_COLOR_META_NAME}"]`)
-    ?.remove();
+  for (const meta of document.head.querySelectorAll(
+    `meta[name="${THEME_COLOR_META_NAME}"]`,
+  )) {
+    meta.remove();
+  }
 });
+
+/** A head like `root.tsx`'s: one `theme-color` tag per colour scheme, each with its own media query. */
+function addMediaThemeColorMetas(): HTMLMetaElement[] {
+  return (["light", "dark"] as const).map((scheme) => {
+    const meta = document.createElement("meta");
+    meta.name = THEME_COLOR_META_NAME;
+    meta.media = `(prefers-color-scheme: ${scheme})`;
+    meta.content = THEME_COLOR_META[scheme];
+    document.head.append(meta);
+    return meta;
+  });
+}
+
+/** Runs the real inline script in a sandbox over the real document with the given stored choice and OS scheme. */
+function runBootstrapScript(stored: string | null, systemDark: boolean): void {
+  runInNewContext(buildThemeBootstrapScript(), {
+    document,
+    localStorage: {
+      getItem: (key: string) => (key === THEME_STORAGE_KEY ? stored : null),
+    },
+    matchMedia: () => ({ matches: systemDark }),
+  });
+}
 
 runThemeSourceContract("BrowserThemeSource", () => {
   const query = new FakeMediaQuery(false);
@@ -186,6 +211,24 @@ describe("BrowserThemeSource", () => {
     expect(existing.getAttribute("content")).toBe(THEME_COLOR_META.light);
   });
 
+  it("updates every media-specific theme-color tag, so an explicit theme beats the OS", () => {
+    const metas = addMediaThemeColorMetas();
+    const source = new BrowserThemeSource();
+    source.apply("light");
+    expect(metas.map((meta) => meta.getAttribute("content"))).toEqual([
+      THEME_COLOR_META.light,
+      THEME_COLOR_META.light,
+    ]);
+    source.apply("dark");
+    expect(metas.map((meta) => meta.getAttribute("content"))).toEqual([
+      THEME_COLOR_META.dark,
+      THEME_COLOR_META.dark,
+    ]);
+    expect(
+      document.head.querySelectorAll(`meta[name="${THEME_COLOR_META_NAME}"]`),
+    ).toHaveLength(2);
+  });
+
   it("never throws when the document is missing or blocked", () => {
     expect(() =>
       new BrowserThemeSource({ getDocument: () => undefined }).apply("dark"),
@@ -200,6 +243,39 @@ describe("BrowserThemeSource", () => {
   });
 });
 
+describe("the inline pre-paint script on a head with a theme-color tag per media query", () => {
+  it("leaves both tags light for a stored Light choice on a dark OS", () => {
+    const metas = addMediaThemeColorMetas();
+    runBootstrapScript("light", true);
+    expect(metas.map((meta) => meta.getAttribute("content"))).toEqual([
+      THEME_COLOR_META.light,
+      THEME_COLOR_META.light,
+    ]);
+    expect(document.documentElement.getAttribute(THEME_ATTRIBUTE)).toBe(
+      "light",
+    );
+  });
+
+  it("leaves both tags dark for a stored Dark choice on a light OS", () => {
+    const metas = addMediaThemeColorMetas();
+    runBootstrapScript("dark", false);
+    expect(metas.map((meta) => meta.getAttribute("content"))).toEqual([
+      THEME_COLOR_META.dark,
+      THEME_COLOR_META.dark,
+    ]);
+    expect(document.documentElement.getAttribute(THEME_ATTRIBUTE)).toBe("dark");
+  });
+
+  it("adds a single tag when the page has none", () => {
+    runBootstrapScript(null, true);
+    const metas = document.head.querySelectorAll(
+      `meta[name="${THEME_COLOR_META_NAME}"]`,
+    );
+    expect(metas).toHaveLength(1);
+    expect(metas[0]?.getAttribute("content")).toBe(THEME_COLOR_META.dark);
+  });
+});
+
 type Stored = string | null | "throws";
 type System = "light" | "dark" | "missing" | "throws";
 
@@ -210,12 +286,12 @@ interface FakeMeta extends ThemeMetaElement {
 interface Result {
   attributes: Record<string, string>;
   colorScheme: string | undefined;
-  meta: FakeMeta | null;
+  metas: FakeMeta[];
 }
 
 /** One fake page that both the inline script and the adapter can run against. */
 function fakePage(stored: Stored, system: System) {
-  const result: Result = { attributes: {}, colorScheme: undefined, meta: null };
+  const result: Result = { attributes: {}, colorScheme: undefined, metas: [] };
   const makeMeta = (): FakeMeta => {
     const meta: FakeMeta = {
       name: "",
@@ -239,10 +315,10 @@ function fakePage(stored: Stored, system: System) {
     },
     head: {
       appendChild(node: FakeMeta) {
-        result.meta = node;
+        result.metas.push(node);
       },
     },
-    querySelector: () => result.meta,
+    querySelectorAll: () => [...result.metas],
     createElement: () => makeMeta(),
   };
   const matchMedia =
@@ -326,11 +402,14 @@ describe("parity with the inline pre-paint script", () => {
 
         expect(app.result.attributes).toEqual(script.result.attributes);
         expect(app.result.colorScheme).toBe(script.result.colorScheme);
-        expect(app.result.meta?.name).toBe(script.result.meta?.name);
-        expect(app.result.meta?.attributes).toEqual(
-          script.result.meta?.attributes,
+        expect(app.result.metas.map((meta) => meta.name)).toEqual(
+          script.result.metas.map((meta) => meta.name),
         );
-        expect(app.result.meta?.attributes.content).toBeDefined();
+        expect(app.result.metas.map((meta) => meta.attributes)).toEqual(
+          script.result.metas.map((meta) => meta.attributes),
+        );
+        expect(app.result.metas).toHaveLength(1);
+        expect(app.result.metas[0]?.attributes.content).toBeDefined();
       });
     }
   }

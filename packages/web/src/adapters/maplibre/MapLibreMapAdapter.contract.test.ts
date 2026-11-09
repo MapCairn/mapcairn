@@ -4,6 +4,7 @@ import { MapLibreMapAdapter } from "./MapLibreMapAdapter";
 import {
   FAKE_VIEWPORT_HEIGHT,
   FAKE_VIEWPORT_WIDTH,
+  FakeGPUInitializationError,
   FakeMapLibreMap,
   rasterBasemap,
   vectorBasemap,
@@ -13,6 +14,8 @@ import {
 // The same adapter is checked against real MapLibre in Playwright.
 vi.mock("maplibre-gl", async () => ({
   Map: (await import("./maplibreTestEngine")).FakeMapLibreMap,
+  GPUInitializationError: (await import("./maplibreTestEngine"))
+    .FakeGPUInitializationError,
   setWorkerUrl: () => {},
 }));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
@@ -56,7 +59,8 @@ for (const [name, basemap] of [
   ["MapLibre (raster style)", rasterBasemap],
 ] as const) {
   runMapAdapterContract(name, () => ({
-    adapter: new MapLibreMapAdapter(),
+    // No grace period, so `settle` (one macrotask) sees the worker verdict.
+    adapter: new MapLibreMapAdapter({ workerFailureGraceMs: 0 }),
     controls: {
       host: createHost(),
       hostSize: { width: FAKE_VIEWPORT_WIDTH, height: FAKE_VIEWPORT_HEIGHT },
@@ -84,19 +88,23 @@ for (const [name, basemap] of [
         latestMap().gesture({ zoom: zoom - 1 }, new WheelEvent("wheel"));
       },
       simulateFatalError: () => {
-        // The exact event maplibre-gl 6.17 fires when a worker fails to load
-        // (createActors in src/util/actor.ts): no tile and no source.
-        latestMap().fire("error", {
+        // The exact event maplibre-gl 6.17 fires when a worker fails
+        // (createActors in src/util/actor.ts): no tile and no source. A dead
+        // worker leaves tiles loading, so the map never reports loaded.
+        const map = latestMap();
+        map.loadedState = false;
+        map.fire("error", {
           error: new Error(
             "Worker failed to load. Check that the worker URL is correct.",
           ),
         });
       },
       createFailingMount: () => {
-        const error = new Error("WebGL2 is required");
-        error.name = "GPUInitializationError";
-        FakeMapLibreMap.nextConstructError = error;
+        FakeMapLibreMap.nextConstructError = new FakeGPUInitializationError();
         return new MapLibreMapAdapter();
+      },
+      failNextBasemap: () => {
+        FakeMapLibreMap.nextStyleError = new Error("Style 404");
       },
     },
   }));

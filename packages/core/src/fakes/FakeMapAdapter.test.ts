@@ -37,6 +37,7 @@ function subjectFor(
           ? {
               createFailingMount: () =>
                 new FakeMapAdapter({ failMount: "webgl-unavailable" }),
+              failNextBasemap: () => adapter.failNextBasemap(),
             }
           : {}),
       },
@@ -102,6 +103,25 @@ describe("FakeMapAdapter", () => {
     expect(adapter.getMaxZoom()).toBe(12);
     expect(adapter.getView().zoom).toBe(12);
     expect(zooms).toEqual([12]);
+  });
+
+  it("fails only the next swap, keeping the basemap, the view and its zoom limits", async () => {
+    const adapter = new FakeMapAdapter();
+    await adapter.mount(new FakeMapHost(), OPTIONS);
+    const events: string[] = [];
+    adapter.on("load", () => events.push("load"));
+    adapter.on("zoom", () => events.push("zoom"));
+    adapter.failNextBasemap();
+    const error = await adapter
+      .setBasemap(FAKE_RASTER_BASEMAP)
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(MapEngineError);
+    expect((error as MapEngineError).reason).toBe("load-failed");
+    expect(adapter.getMaxZoom()).toBe(FAKE_VECTOR_BASEMAP.maxZoom);
+    expect(adapter.getView().zoom).toBe(6);
+    expect(events).toEqual([]);
+    await adapter.setBasemap(FAKE_RASTER_BASEMAP);
+    expect(adapter.getMaxZoom()).toBe(FAKE_RASTER_BASEMAP.maxZoom);
   });
 
   it("wraps longitude and bearing and clamps latitude", async () => {

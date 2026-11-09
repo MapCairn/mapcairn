@@ -7,10 +7,14 @@ import {
   RASTER_BASEMAP_NAME,
 } from "./support/basemaps";
 import {
+  LIBERTY_STYLE_PATTERN,
   MAPLIBRE_WORKER_PATTERN,
+  MINIMAL_VECTOR_STYLE,
   RASTER_TILE_PATTERN,
+  SPRITE_PATTERN,
   VECTOR_STYLE_PATTERN,
 } from "./support/network";
+import { waitForCreditsCollapsed } from "./support/states";
 
 const START = "#map=8.00/-33.90000/18.40000/30";
 
@@ -154,6 +158,7 @@ test.describe("basemaps", () => {
     mapPage,
   }) => {
     await mapPage.goto(`#basemap=${RASTER_BASEMAP_ID}`);
+    await waitForCreditsCollapsed(mapPage);
     await mapPage.creditsButton.click();
     await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
       RASTER_BASEMAP_CREDIT,
@@ -162,6 +167,7 @@ test.describe("basemaps", () => {
     await mapPage.page.keyboard.press("Escape");
 
     await mapPage.goto(`#basemap=${DEFAULT_VECTOR_BASEMAP_ID}`);
+    await waitForCreditsCollapsed(mapPage);
     await mapPage.creditsButton.click();
     await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
       "© OpenStreetMap contributors",
@@ -238,6 +244,80 @@ test.describe("basemaps", () => {
     // The rest of the app still works: the map options open.
     await mapPage.openMapOptions();
     await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
+  });
+
+  test("a sprite that cannot load does not stop the map starting", async ({
+    page,
+    mapPage,
+  }) => {
+    const spriteRequests: string[] = [];
+    await page.route(SPRITE_PATTERN, (route) => {
+      spriteRequests.push(route.request().url());
+      return route.fulfill({ status: 404, body: "" });
+    });
+    await page.route(VECTOR_STYLE_PATTERN, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...MINIMAL_VECTOR_STYLE,
+          sprite: "https://tiles.openfreemap.org/sprites/missing",
+        }),
+      }),
+    );
+    await mapPage.goto();
+    expect(spriteRequests.length).toBeGreaterThan(0);
+    await expect(page.locator("canvas.maplibregl-canvas")).toHaveCount(1);
+    await expect(mapPage.host).not.toHaveAttribute("data-state", "error");
+    await expect(page.getByTestId("engine-error")).toHaveCount(0);
+  });
+
+  test("a basemap whose style cannot load keeps the previous one, and is not saved", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await page.route(LIBERTY_STYLE_PATTERN, (route) =>
+      route.fulfill({ status: 404, body: "" }),
+    );
+    const canvas = page.locator("canvas.maplibregl-canvas");
+    await canvas.evaluate((element) => {
+      element.dataset.testOriginal = "yes";
+    });
+    await mapPage.openMapOptions();
+    await mapPage.chooseBasemap("Liberty");
+    // The banners ride above a sheet at peek or half and hide at full; close
+    // it so the banner is on screen in every layout.
+    await mapPage.sheetClose.click();
+
+    const banner = page.getByTestId("basemap-error");
+    await expect(banner).toContainText("That basemap could not be loaded.", {
+      timeout: 20_000,
+    });
+    await expect(banner.getByRole("button", { name: "Reload" })).toHaveCount(0);
+    await expect(page.getByTestId("engine-error")).toHaveCount(0);
+    await expect(mapPage.host).not.toHaveAttribute("data-state", "error");
+    // The same engine goes on drawing the previous basemap.
+    await expect(canvas).toHaveAttribute("data-test-original", "yes");
+    await mapPage.waitForMap();
+    expect(await mapPage.hashBasemap()).not.toBe("liberty");
+
+    await banner.getByRole("button", { name: "Use previous basemap" }).click();
+    await expect(banner).toHaveCount(0);
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", { name: "Positron" }),
+    ).toBeChecked();
+
+    // A reload starts from the basemap that worked, not the one that failed.
+    await page.reload();
+    await mapPage.waitForMap();
+    await expect(page.getByTestId("engine-error")).toHaveCount(0);
+    await expect(page.getByTestId("basemap-error")).toHaveCount(0);
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", { name: "Positron" }),
+    ).toBeChecked();
   });
 
   test("a basemap that cannot load says so and offers Retry", async ({

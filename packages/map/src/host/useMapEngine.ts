@@ -37,6 +37,14 @@ export interface UseMapEngineOptions {
     error: MapEngineError,
     basemap: BasemapDefinition,
   ) => void;
+  /** Called when a basemap swap has loaded. */
+  readonly onBasemapApplied?: (basemap: BasemapDefinition) => void;
+  /** Called when a basemap swap failed; the map keeps `kept`. */
+  readonly onBasemapError?: (
+    error: MapEngineError,
+    failed: BasemapDefinition,
+    kept: BasemapDefinition,
+  ) => void;
   readonly onClick?: (event: MapClickEvent) => void;
   /** Called on every `moveEnd`, before `onViewChange`. */
   readonly onMoveEnd: () => void;
@@ -85,6 +93,11 @@ function toEngineError(reason: unknown): MapEngineError {
  *   while mounting.
  * - An engine that stops after it loaded (`fatalError`) is reported like a
  *   failed mount, through `error` and `onEngineError`.
+ * - A basemap swap that fails is not an engine error: the adapter keeps the
+ *   basemap that last loaded, so `error` stays null and `onBasemapError`
+ *   names both. That kept basemap counts as applied again, so a caller that
+ *   goes back to it causes no swap. Only the latest swap is reported, through
+ *   `onBasemapApplied` or `onBasemapError`.
  */
 export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
   const createAdapter = useMapAdapterFactory();
@@ -96,6 +109,8 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
   const viewRef = useRef(options.initialView);
   const frameRef = useRef(0);
   const appliedBasemapRef = useRef<BasemapDefinition | null>(null);
+  /** The basemap the engine last loaded: what a failed swap leaves on screen. */
+  const loadedBasemapRef = useRef<BasemapDefinition | null>(null);
   const basemapTokenRef = useRef(0);
   const cycleErrorRef = useRef(false);
 
@@ -143,18 +158,26 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
       target.setBasemap(next).then(
         () => {
           if (isCurrent()) {
+            loadedBasemapRef.current = next;
             setZoomLimits({
               min: target.getMinZoom(),
               max: target.getMaxZoom(),
             });
+            latest.current.onBasemapApplied?.(next);
           }
         },
         (reason: unknown) => {
-          if (isCurrent()) {
-            const engineError = toEngineError(reason);
-            setError(engineError);
-            latest.current.onEngineError?.(engineError, next);
+          if (!isCurrent()) {
+            return;
           }
+          // Set by the mount, which always finishes before the first swap.
+          const kept = loadedBasemapRef.current as BasemapDefinition;
+          appliedBasemapRef.current = kept;
+          // The kept basemap was already drawn; the adapter reports its
+          // reload through `loading`.
+          setLoaded(true);
+          setZoomLimits({ min: target.getMinZoom(), max: target.getMaxZoom() });
+          latest.current.onBasemapError?.(toEngineError(reason), next, kept);
         },
       );
     },
@@ -245,6 +268,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
           }
           adapterRef.current = next;
           appliedBasemapRef.current = target;
+          loadedBasemapRef.current = target;
           next.setKeyboardEnabled(false);
           viewRef.current = next.getView();
           writeZoom(viewRef.current.zoom);

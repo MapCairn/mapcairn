@@ -97,22 +97,34 @@ function isTileOrSourceError(event: object): boolean {
 }
 
 /**
- * The message maplibre-gl (6.17) gives the `error` event it fires when a web
- * worker fails (`createActors` in `src/util/actor.ts`). The event has no
- * type, tile or source of its own, so the message is the only way to tell it
- * from errors that leave the map working, such as a missing sprite or a style
- * layer naming a source layer the tiles lack.
+ * The message maplibre-gl (6.17) gives the `error` event it fires for any
+ * `error` event of a web worker (`createActors` in `src/util/actor.ts`): a
+ * worker script that never loaded, but also an uncaught exception inside a
+ * running worker. The event has no type, tile or source of its own, so the
+ * message is the only way to tell it from other source-less errors.
  */
 const WORKER_FAILED_MESSAGE = "Worker failed to load.";
 
-/** Whether an engine `error` event means the engine itself has stopped. */
-function isEngineFailure(event: object): boolean {
+/** Whether an engine `error` event came from a web worker. */
+function isWorkerFailure(event: object): boolean {
   const { error } = event as { error?: unknown };
   return (
     !isTileOrSourceError(event) &&
     error instanceof Error &&
     error.message.startsWith(WORKER_FAILED_MESSAGE)
   );
+}
+
+/**
+ * How long, after a worker error on a loaded map, the adapter waits for signs
+ * that the engine still works before it reports `fatalError`.
+ */
+export const WORKER_FAILURE_GRACE_MS = 5000;
+
+/** Options for {@link MapLibreMapAdapter}. */
+export interface MapLibreMapAdapterOptions {
+  /** Overrides {@link WORKER_FAILURE_GRACE_MS}, for example 0 in a test. */
+  readonly workerFailureGraceMs?: number;
 }
 
 /** Whether a camera event came from the person (a gesture), not from code. */
@@ -177,6 +189,18 @@ interface PendingLoad {
   readonly settleOn: "load" | "style.load";
   readonly resolve: () => void;
   readonly reject: (error: MapEngineError) => void;
+  /**
+   * True once the style document of this load has been parsed
+   * (`style.load`). MapLibre fetches the sprite and glyphs only after that,
+   * so a source-less error from then on is not the style document's.
+   */
+  styleLoaded: boolean;
+}
+
+/** A running check of whether the engine survived a worker error. */
+interface WorkerCheck {
+  readonly timer: ReturnType<typeof setTimeout>;
+  readonly idle: Subscription;
 }
 
 /**
@@ -189,20 +213,44 @@ interface PendingLoad {
  *   app is a flat 2D map; rotation is supported. The adapter adds no controls,
  *   markers, popups or layers: overlays are drawn by the ui from `project()`.
  *   `maplibre-gl` and its stylesheet are imported the first time `mount` runs.
+ *
+ *   Engine `error` events are classified once:
+ *   - a tile or source failure leaves the map working (`tileError`);
+ *   - a source-less error before the pending style document has loaded
+ *     (`style.load`) means that document failed: it rejects the pending
+ *     mount or swap, and a failed swap puts the last basemap that loaded
+ *     back. A worker error also rejects a pending mount, which could never
+ *     finish without its workers;
+ *   - a worker error on a loaded map starts a grace check of
+ *     `workerFailureGraceMs`: if the map goes idle meanwhile, or has
+ *     everything loaded when it ends, the engine still works and the error
+ *     is a `tileError`; otherwise it is a `fatalError`. MapLibre reports an
+ *     uncaught exception inside a running worker with the same message as a
+ *     worker that never started, so the message alone cannot tell them apart;
+ *   - anything else, such as a missing sprite or glyph, is a `tileError`.
  */
 export class MapLibreMapAdapter implements MapAdapter {
   private readonly emitter = new Emitter<MapEvents>();
+  private readonly workerFailureGraceMs: number;
   private map: MapLibreMap | undefined;
   private host: MapHostElement | undefined;
   private basemap: BasemapDefinition | undefined;
+  /** The basemap whose style document last loaded: what a failed swap goes back to. */
+  private committedBasemap: BasemapDefinition | undefined;
   private mountView: ViewState | undefined;
   private subscriptions: Subscription[] = [];
   private pending: PendingLoad | undefined;
+  private workerCheck: WorkerCheck | undefined;
   private started = false;
   private destroyed = false;
   private animationEnabled = true;
   private loadEmitted = false;
   private loading = false;
+
+  constructor(options: MapLibreMapAdapterOptions = {}) {
+    this.workerFailureGraceMs =
+      options.workerFailureGraceMs ?? WORKER_FAILURE_GRACE_MS;
+  }
 
   async mount(host: MapHostElement, options: MapMountOptions): Promise<void> {
     if (this.started || this.destroyed) {
@@ -241,9 +289,10 @@ export class MapLibreMapAdapter implements MapAdapter {
     try {
       map = new maplibre.Map(this.createOptions(host, view, reducedMotion));
     } catch (error) {
-      // MapLibre does not export GPUInitializationError, so match its name.
+      // MapLibre throws its exported GPUInitializationError when it cannot
+      // create a WebGL2 context.
       const reason =
-        error instanceof Error && error.name === "GPUInitializationError"
+        error instanceof maplibre.GPUInitializationError
           ? "webgl-unavailable"
           : "load-failed";
       throw new MapEngineError(
@@ -256,7 +305,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.applyInertia();
 
     const loaded = new Promise<void>((resolve, reject) => {
-      this.pending = { settleOn: "load", resolve, reject };
+      this.pending = { settleOn: "load", resolve, reject, styleLoaded: false };
     });
     this.subscribe(map);
     // The constructor already fired "dataloading" for the style, before these listeners existed.
@@ -398,23 +447,15 @@ export class MapLibreMapAdapter implements MapAdapter {
       );
     }
     this.settlePending();
-    this.basemap = basemap;
-    const minZoom = toEngineZoom(basemap.minZoom);
-    const maxZoom = toEngineZoom(basemap.maxZoom);
-    // MapLibre throws if a new minimum passes the current maximum, or the reverse.
-    if (minZoom > map.getMaxZoom()) {
-      map.setMaxZoom(maxZoom);
-      map.setMinZoom(minZoom);
-    } else {
-      map.setMinZoom(minZoom);
-      map.setMaxZoom(maxZoom);
-    }
-    this.loadEmitted = false;
     const swapped = new Promise<void>((resolve, reject) => {
-      this.pending = { settleOn: "style.load", resolve, reject };
+      this.pending = {
+        settleOn: "style.load",
+        resolve,
+        reject,
+        styleLoaded: false,
+      };
     });
-    // A diffed swap fires no "style.load", so the promise could never settle.
-    map.setStyle(styleFor(basemap), { diff: false });
+    this.drawBasemap(map, basemap);
     return swapped;
   }
 
@@ -522,6 +563,9 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.setLoading(true);
     });
     listen("style.load", () => {
+      if (this.pending) {
+        this.pending.styleLoaded = true;
+      }
       this.settlePending("style.load");
     });
     listen("load", () => {
@@ -532,36 +576,105 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.setLoading(false);
       this.emitLoad();
     });
-    // Errors are classified once: a tile or source failure leaves the map
-    // working (tileError); any other failure while a mount or basemap swap is
-    // waiting rejects that promise; a failed worker after load stops the
-    // engine (fatalError); anything else is reported like a tile failure.
+    // The classification is described on the class.
     listen("error", (event) => {
       // Listening to "error" silences MapLibre's own console logging.
       console.error("MapLibre basemap error", event.error);
-      if (!isTileOrSourceError(event) && this.pending) {
-        const { reject } = this.pending;
-        this.pending = undefined;
-        reject(
-          new MapEngineError(
-            "load-failed",
-            `The basemap style could not be loaded: ${String(event.error)}`,
-          ),
-        );
+      if (isTileOrSourceError(event)) {
+        this.emitter.emit("tileError", undefined);
         return;
       }
-      if (isEngineFailure(event)) {
-        this.emitter.emit(
-          "fatalError",
-          new MapEngineError(
-            "stopped",
-            `The map engine stopped working: ${String(event.error)}`,
-          ),
-        );
+      const workerFailed = isWorkerFailure(event);
+      const pending = this.pending;
+      if (
+        pending &&
+        (!pending.styleLoaded || (workerFailed && pending.settleOn === "load"))
+      ) {
+        this.failPending(pending, event.error);
+        return;
+      }
+      if (workerFailed) {
+        this.checkEngineAfterWorkerError(map);
         return;
       }
       this.emitter.emit("tileError", undefined);
     });
+  }
+
+  /** Sets a basemap's zoom limits and style on the engine. */
+  private drawBasemap(map: MapLibreMap, basemap: BasemapDefinition): void {
+    this.basemap = basemap;
+    const minZoom = toEngineZoom(basemap.minZoom);
+    const maxZoom = toEngineZoom(basemap.maxZoom);
+    // MapLibre throws if a new minimum passes the current maximum, or the reverse.
+    if (minZoom > map.getMaxZoom()) {
+      map.setMaxZoom(maxZoom);
+      map.setMinZoom(minZoom);
+    } else {
+      map.setMinZoom(minZoom);
+      map.setMaxZoom(maxZoom);
+    }
+    this.loadEmitted = false;
+    // A diffed swap fires no "style.load", so a swap could never settle.
+    map.setStyle(styleFor(basemap), { diff: false });
+  }
+
+  /**
+   * Rejects a mount or swap whose style could not load. MapLibre has already
+   * dropped the old style for the failed one, so a failed swap draws the last
+   * basemap that loaded again; the map keeps working on it.
+   */
+  private failPending(pending: PendingLoad, error: unknown): void {
+    this.pending = undefined;
+    const map = this.map;
+    const previous = this.committedBasemap;
+    if (pending.settleOn === "style.load" && map && previous) {
+      this.drawBasemap(map, previous);
+    }
+    pending.reject(
+      new MapEngineError(
+        "load-failed",
+        `The basemap style could not be loaded: ${String(error)}`,
+      ),
+    );
+  }
+
+  /**
+   * Decides whether a worker error on a loaded map stopped the engine. One
+   * check runs at a time; a burst of errors is judged once.
+   */
+  private checkEngineAfterWorkerError(map: MapLibreMap): void {
+    if (this.workerCheck) {
+      return;
+    }
+    const finish = (stopped: boolean) => {
+      this.clearWorkerCheck();
+      if (stopped) {
+        this.emitter.emit(
+          "fatalError",
+          new MapEngineError(
+            "stopped",
+            "The map engine stopped working: its worker failed.",
+          ),
+        );
+      } else {
+        this.emitter.emit("tileError", undefined);
+      }
+    };
+    this.workerCheck = {
+      idle: map.on("idle", () => finish(false)),
+      timer: setTimeout(() => finish(!map.loaded()), this.workerFailureGraceMs),
+    };
+  }
+
+  private clearWorkerCheck(): void {
+    const check = this.workerCheck;
+    if (!check) {
+      return;
+    }
+    this.workerCheck = undefined;
+    clearTimeout(check.timer);
+    check.idle.unsubscribe();
   }
 
   private featuresAt(x: number, y: number): Record<string, unknown>[] {
@@ -591,17 +704,25 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.emitter.emit("loading", loading);
   }
 
-  /** Resolves the waiting mount or swap; with `event`, only if it waits for that event. */
+  /**
+   * Resolves the waiting mount or swap; with `event`, only if it waits for
+   * that event, and then its basemap becomes the one a failed swap goes back
+   * to. Without one (superseded or destroyed) nothing has loaded.
+   */
   private settlePending(event?: PendingLoad["settleOn"]): void {
     const pending = this.pending;
     if (!pending || (event !== undefined && pending.settleOn !== event)) {
       return;
     }
     this.pending = undefined;
+    if (event !== undefined) {
+      this.committedBasemap = this.basemap;
+    }
     pending.resolve();
   }
 
   private teardownMap(): void {
+    this.clearWorkerCheck();
     for (const subscription of this.subscriptions) {
       subscription.unsubscribe();
     }

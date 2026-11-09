@@ -15,10 +15,10 @@ Everything is exported from `@karta/core`, apart from the contract suites, which
 | Fakes | `src/fakes` | In-memory implementations of every port (`FakeMapAdapter`, `FakeSearchProvider`, `MemorySettingsStore` and so on) and `createFakeServices()`, for unit tests that run with no browser, WebGL or network. |
 | Contract suites | `src/contracts` (`@karta/core/contracts`) | One shared suite per port, run against the fake and the real adapter, so they cannot drift apart. `PORT_REGISTRY` lists them. |
 | Surface and sheet | `src/surface`, `src/sheet`, `src/layout` | The surface state machine (`surfaceReducer` and its actions), sheet detents and snapping, and the chrome layout rules. |
-| Map maths | `src/zoom`, `src/scale`, `src/format`, `src/units`, `src/spatial` | Zoom conversion (the app uses 256 px tile zoom, the engine zoom is one lower), metres per pixel, the scale bar, coordinate and number formatting, unit conversion, and line distance and polygon area measurement (`measureLineDistance`, `measurePolygonArea`). |
+| Map maths | `src/zoom`, `src/scale`, `src/format`, `src/units`, `src/spatial` | Zoom conversion (the app uses 256 px tile zoom, the engine zoom is one lower), metres per pixel, the scale bar, coordinate and number formatting, unit conversion, and line distance and polygon area measurement (`measureLineDistance`, `measurePolygonArea`), the bounds of a set of points (`boundsOfPoints`) and rounding a position before a reverse lookup (`roundForLookup`). |
 | Keyboard, announcements and URL | `src/keyboard`, `src/announce`, `src/urlHash` | The map key bindings and their help text, the announcement strings for screen readers, and `#map=` parsing and serialising. |
 | Theme resolution | `src/theme` | `resolveTheme`, `parseThemeChoice` and `buildThemeBootstrapScript`, with the storage key and `<meta name="theme-color">` values. |
-| Other | `src/async` | `partitionSettled`. |
+| Layers | `src/layers` | `emptyLayerRegistry`, the real registry the app uses while it ships no layers. |
 
 The `spatial` directory name describes generic geographic measurement and carries no dataset assumptions.
 

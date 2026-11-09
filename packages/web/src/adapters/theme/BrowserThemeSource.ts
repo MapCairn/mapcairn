@@ -31,7 +31,7 @@ export interface ThemeDocument {
     readonly style: { colorScheme: string };
   };
   readonly head: { appendChild(node: ThemeMetaElement): unknown };
-  querySelector(selector: string): ThemeElement | null;
+  querySelectorAll(selector: string): ArrayLike<ThemeElement>;
   createElement(tag: "meta"): ThemeMetaElement;
 }
 
@@ -62,7 +62,9 @@ function defaultDocument(): ThemeDocument | undefined {
  *
  *   `apply` mirrors the inline script in `root.tsx` exactly: it sets
  *   `data-theme` on the root element, sets its `color-scheme` style, and
- *   creates or updates `<meta name="theme-color">`. A parity test runs the
+ *   updates every `<meta name="theme-color">` (the page has one per colour
+ *   scheme, and the browser uses the one whose media query matches the OS),
+ *   or creates one if there is none. A parity test runs the
  *   script and this method against the same fake document. `apply` never
  *   throws, and never notifies subscribers.
  */
@@ -107,14 +109,18 @@ export class BrowserThemeSource implements ThemeSource {
       const root = doc.documentElement;
       root.setAttribute(THEME_ATTRIBUTE, theme);
       root.style.colorScheme = theme;
-      let meta = doc.querySelector(`meta[name="${THEME_COLOR_META_NAME}"]`);
-      if (meta === null) {
+      let metas = Array.from(
+        doc.querySelectorAll(`meta[name="${THEME_COLOR_META_NAME}"]`),
+      );
+      if (metas.length === 0) {
         const created = doc.createElement("meta");
         created.name = THEME_COLOR_META_NAME;
         doc.head.appendChild(created);
-        meta = created;
+        metas = [created];
       }
-      meta.setAttribute("content", THEME_COLOR_META[theme]);
+      for (const meta of metas) {
+        meta.setAttribute("content", THEME_COLOR_META[theme]);
+      }
     } catch {
       // A blocked document leaves the page as it was; there is nothing to report to the user.
     }

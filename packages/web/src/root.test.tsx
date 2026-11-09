@@ -89,10 +89,17 @@ describe("root links", () => {
   });
 
   it("preconnects to the default vector basemap's tile host only", () => {
-    const hrefs = allLinks()
-      .filter((link) => link.rel === "preconnect")
-      .map((link) => link.href);
-    expect(hrefs).toEqual(["https://tiles.openfreemap.org"]);
+    const preconnects = allLinks().filter((link) => link.rel === "preconnect");
+    expect(preconnects.map((link) => link.href)).toEqual([
+      "https://tiles.openfreemap.org",
+    ]);
+  });
+
+  it("makes the tile host preconnect a CORS one, as MapLibre fetches with CORS", () => {
+    const preconnects = allLinks().filter((link) => link.rel === "preconnect");
+    expect(preconnects).toEqual([
+      expect.objectContaining({ crossOrigin: "anonymous" }),
+    ]);
   });
 
   it("leaves the canonical link to each route and stylesheets to the bundler", () => {

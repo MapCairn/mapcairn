@@ -7,6 +7,7 @@ import {
   type SearchProvider,
   type SearchResult,
 } from "@karta/core";
+import { RequestSpacer } from "./RequestSpacer";
 
 const DEFAULT_ENDPOINT = "https://nominatim.openstreetmap.org";
 const DEFAULT_LIMIT = 6;
@@ -43,7 +44,16 @@ export interface NominatimSearchProviderOptions {
    * "failed" after a network error. Defaults to `navigator.onLine`.
    */
   readonly isOnline?: () => boolean;
+  /**
+   * The least time between the starts of two requests, searches and reverse
+   * lookups alike. Defaults to 1000, Nominatim's published limit of one
+   * request per second.
+   */
+  readonly minIntervalMs?: number;
 }
+
+/** Nominatim's usage policy allows at most one request per second. */
+const DEFAULT_MIN_INTERVAL_MS = 1000;
 
 function browserIsOnline(): boolean {
   return typeof navigator === "undefined" || navigator.onLine !== false;
@@ -127,8 +137,13 @@ function toSearchResult(item: NominatimItem): SearchResult | null {
  * @remarks Privacy: every search sends the query text to the OpenStreetMap
  *   Nominatim service, and the browser sends the user's IP address and user
  *   agent with it. A reverse lookup sends the position instead. Nothing is
- *   sent until the user searches or long-presses the map. The page's CSP must
- *   allow `connect-src https://nominatim.openstreetmap.org`.
+ *   sent until the user submits a search or asks for a pin's address. The
+ *   page's CSP must allow `connect-src https://nominatim.openstreetmap.org`.
+ *
+ *   Every request waits its turn in one queue per provider, so two starts
+ *   are always at least `minIntervalMs` apart (one second by default), as
+ *   the OpenStreetMap Foundation's Nominatim usage policy requires. A signal
+ *   that fires while a request is queued abandons it without sending it.
  *
  *   Errors follow the port: a network failure is `SearchError("offline")`
  *   when `navigator.onLine` is false and `"failed"` otherwise, HTTP 429 is
@@ -143,8 +158,12 @@ export class NominatimSearchProvider implements SearchProvider {
   readonly #countryCodes: string | undefined;
   readonly #defaultLimit: number;
   readonly #isOnline: () => boolean;
+  readonly #spacer: RequestSpacer;
 
   constructor(options: NominatimSearchProviderOptions = {}) {
+    this.#spacer = new RequestSpacer(
+      options.minIntervalMs ?? DEFAULT_MIN_INTERVAL_MS,
+    );
     this.#fetch = options.fetch ?? defaultFetch;
     this.#endpoint = (options.endpoint ?? DEFAULT_ENDPOINT).replace(/\/$/, "");
     this.#countryCodes = options.countryCodes;
@@ -206,6 +225,9 @@ export class NominatimSearchProvider implements SearchProvider {
     params: URLSearchParams,
     signal: AbortSignal | undefined,
   ): Promise<unknown> {
+    await this.#spacer.wait(signal);
+    // The signal may have fired between the turn and this line.
+    throwIfAborted(signal);
     let response: Response;
     try {
       response = await this.#fetch(`${this.#endpoint}/${path}?${params}`, {

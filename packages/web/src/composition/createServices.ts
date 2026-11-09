@@ -1,4 +1,4 @@
-import { type Services, StaticLayerRegistry } from "@karta/core";
+import { emptyLayerRegistry, type Services } from "@karta/core";
 // The engine style file has no exports. Importing it here, in the one module
 // every page that builds services loads, puts its rules in the page before
 // the engine mounts, and keeps it out of the ui, which may not import adapters.
@@ -61,7 +61,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     url: new BrowserUrlState(),
     theme: new BrowserThemeSource(),
     preferences: new BrowserDevicePreferences(),
-    layers: new StaticLayerRegistry(),
+    layers: emptyLayerRegistry,
   };
   const seam =
     import.meta.env.MODE !== "production" ? readTestOverrides() : undefined;

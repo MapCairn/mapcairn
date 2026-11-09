@@ -105,9 +105,11 @@ export function SettingsSection({
         <Subheading level={subLevel}>Privacy</Subheading>
         <p className={prose}>
           Karta has no accounts, sets no cookies and counts page views without
-          tracking you. Map tiles come from the map provider you choose. Search
-          text is sent to OpenStreetMap's Nominatim service. Your settings stay
-          on this device.
+          tracking you. Map tiles come from the map provider you choose.
+          Searching sends your query to OpenStreetMap's Nominatim service, and
+          Look up address on a pin sends the pin's position, to about 11 m, to
+          the same service. Nothing is sent to it until you do one of those.
+          Your settings stay on this device.
         </p>
         <p className={prose}>
           <a className={link} href={privacyHref}>

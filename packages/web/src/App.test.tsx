@@ -1,4 +1,5 @@
 import {
+  boundsAroundPoint,
   createFakeServices,
   FakeMapAdapter,
   type FakeServices,
@@ -11,7 +12,14 @@ import {
   ServicesProvider,
   TooltipProvider,
 } from "@karta/map";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { createRoutesStub } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -19,6 +27,7 @@ import {
   WEBGL_UNAVAILABLE_ADVICE,
   WEBGL_UNAVAILABLE_TITLE,
 } from "./app/MapUnavailable";
+import { LOCATE_MAX_FIT_RADIUS_METRES, LOCATE_ZOOM } from "./app/useMapApp";
 import { SAVE_VIEW_DELAY_MS } from "./app/useViewPersistence";
 
 // Each test mounts the whole app; under coverage instrumentation a cold one
@@ -292,13 +301,61 @@ describe("locate", () => {
     expect(screen.queryByTestId("locate-error")).toBeNull();
   });
 
+  /** Gives every element an 800 by 600 box, so the fake map has room to fit a fix in. */
+  function sizeTheMap(): void {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ width: 800, height: 600 }),
+    );
+  }
+
   it("flies to a fix and draws its accuracy", async () => {
+    sizeTheMap();
     const services = await renderApp();
     fireEvent.click(screen.getByRole("button", { name: "Locate me" }));
     await settle();
     expect(screen.getByTestId("accuracy-circle")).toBeInTheDocument();
     expect(adapter(services).getView().zoom).toBeGreaterThanOrEqual(15);
     expect(polite()).toMatch(/^Location found/);
+  });
+
+  describe("a coarse fix", () => {
+    async function locateWithAccuracy(accuracyMetres: number) {
+      sizeTheMap();
+      const services = createFakeServices();
+      services.fakes.location.setFix({
+        position: { lat: -33.92, lng: 18.42 },
+        accuracyMetres,
+        timestamp: 0,
+      });
+      await renderApp(services);
+      fireEvent.click(screen.getByRole("button", { name: "Locate me" }));
+      await settle();
+      return adapter(services);
+    }
+
+    it("shows the whole accuracy circle, so it does not fill the screen", async () => {
+      const map = await locateWithAccuracy(5000);
+      const view = map.getView();
+      expect(view.zoom).toBeLessThan(LOCATE_ZOOM);
+      expect(view.center.lat).toBeCloseTo(-33.92, 6);
+      expect(view.center.lng).toBeCloseTo(18.42, 6);
+      const circle = boundsAroundPoint({ lat: -33.92, lng: 18.42 }, 5000);
+      const southWest = map.project({ lat: circle.south, lng: circle.west });
+      const northEast = map.project({ lat: circle.north, lng: circle.east });
+      expect(southWest.x).toBeGreaterThanOrEqual(0);
+      expect(northEast.y).toBeGreaterThanOrEqual(0);
+      expect(northEast.x).toBeLessThanOrEqual(800);
+      expect(southWest.y).toBeLessThanOrEqual(600);
+    });
+
+    it("zooms out no further than for a fix of LOCATE_MAX_FIT_RADIUS_METRES", async () => {
+      const capped = (
+        await locateWithAccuracy(LOCATE_MAX_FIT_RADIUS_METRES)
+      ).getView().zoom;
+      cleanup();
+      const coarser = (await locateWithAccuracy(500_000)).getView().zoom;
+      expect(coarser).toBeCloseTo(capped, 6);
+    });
   });
 });
 
@@ -321,6 +378,90 @@ describe("basemaps", () => {
     await vi.waitFor(() =>
       expect(polite()).toMatch(/^Basemap changed to Streets/),
     );
+  });
+
+  describe("a basemap that cannot load", () => {
+    async function chooseFailingStreets() {
+      const services = await renderApp();
+      services.fakes.settings.set({ basemapId: "positron" });
+      adapter(services).failNextBasemap();
+      fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+      fireEvent.click(radio("osm"));
+      await settle();
+      return services;
+    }
+
+    function radio(id: string): HTMLInputElement {
+      return screen
+        .getByTestId(`basemap-option-${id}`)
+        .querySelector("input") as HTMLInputElement;
+    }
+
+    it("says so, keeps the previous basemap and saves nothing", async () => {
+      const services = await chooseFailingStreets();
+      const banner = screen.getByTestId("basemap-error");
+      expect(within(banner).getByRole("alert")).toHaveTextContent(
+        "That basemap could not be loaded.",
+      );
+      expect(
+        within(banner).queryByRole("button", { name: "Reload" }),
+      ).toBeNull();
+      expect(screen.queryByTestId("engine-error")).toBeNull();
+      expect(region()).not.toHaveAttribute("data-state", "error");
+      expect(services.fakes.settings.get().basemapId).toBe("positron");
+      expect(services.fakes.url.read().basemapId).not.toBe("osm");
+      expect(services.fakes.maps).toHaveLength(1);
+    });
+
+    it("goes back to the previous basemap in the picker, without another swap", async () => {
+      const services = await chooseFailingStreets();
+      const setBasemap = vi.spyOn(adapter(services), "setBasemap");
+      fireEvent.click(
+        screen.getByRole("button", { name: "Use previous basemap" }),
+      );
+      await settle();
+      expect(screen.queryByTestId("basemap-error")).toBeNull();
+      expect(radio("positron")).toBeChecked();
+      expect(radio("osm")).not.toBeChecked();
+      expect(setBasemap).not.toHaveBeenCalled();
+      expect(services.fakes.settings.get().basemapId).toBe("positron");
+    });
+
+    it("goes back to the previous basemap when the message is dismissed", async () => {
+      const services = await chooseFailingStreets();
+      const setBasemap = vi.spyOn(adapter(services), "setBasemap");
+      fireEvent.click(
+        within(screen.getByTestId("basemap-error")).getByRole("button", {
+          name: "Dismiss",
+        }),
+      );
+      await settle();
+      expect(screen.queryByTestId("basemap-error")).toBeNull();
+      expect(radio("positron")).toBeChecked();
+      expect(setBasemap).not.toHaveBeenCalled();
+    });
+
+    it("saves the basemap once a later attempt loads", async () => {
+      const services = await chooseFailingStreets();
+      fireEvent.click(radio("liberty"));
+      await settle();
+      expect(screen.queryByTestId("basemap-error")).toBeNull();
+      expect(services.fakes.settings.get().basemapId).toBe("liberty");
+      expect(services.fakes.url.read().basemapId).toBe("liberty");
+    });
+  });
+
+  it("saves a choice that needs no swap at once", async () => {
+    const services = await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    // Auto resolves to Positron in the light theme, so pinning it changes nothing on screen.
+    fireEvent.click(
+      screen
+        .getByTestId("basemap-option-positron")
+        .querySelector("input") as HTMLInputElement,
+    );
+    await settle();
+    expect(services.fakes.settings.get().basemapId).toBe("positron");
   });
 
   it("treats a saved basemap that no longer exists as Auto", async () => {
@@ -501,13 +642,25 @@ describe("search", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const services = createFakeServices();
     services.fakes.search.setDefaultResults([CAPE_TOWN]);
+    // happy-dom does no layout; give the map host a size so it has bounds.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: 0, width: 800, height: 600 }),
+    );
     await renderApp(services);
     const input = screen.getByRole("combobox", { name: "Search places" });
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: "Cape" } });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
+      fireEvent.keyDown(input, { key: "Enter" });
     });
+    // The visible map reaches the provider as the search bias.
+    const bias = services.fakes.search.searchCalls[0]?.options?.bias;
+    expect(bias).toBeDefined();
+    const centre = adapter(services).getView().center;
+    expect(bias?.south).toBeLessThan(centre.lat);
+    expect(bias?.north).toBeGreaterThan(centre.lat);
+    expect(bias?.west).toBeLessThan(centre.lng);
+    expect(bias?.east).toBeGreaterThan(centre.lng);
     fireEvent.click(screen.getByRole("option", { name: /Cape Town/ }));
     expectNear(adapter(services).getView().center, CAPE_TOWN.centre);
     expect(adapter(services).getView().zoom).toBe(14);

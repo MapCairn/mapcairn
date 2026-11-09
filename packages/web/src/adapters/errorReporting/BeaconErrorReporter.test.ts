@@ -1,6 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from "vitest";
 import { CLIENT_ERROR_REPORT_PATH } from "../../constants/clientErrorReporting";
-import { BeaconErrorReporter } from "./BeaconErrorReporter";
+import {
+  BeaconErrorReporter,
+  type ErrorReportingWindow,
+  MAX_REPORTS_PER_PAGE,
+} from "./BeaconErrorReporter";
 
 async function readBeaconBody(blob: unknown): Promise<Record<string, unknown>> {
   const text = await (blob as Blob).text();
@@ -8,11 +20,13 @@ async function readBeaconBody(blob: unknown): Promise<Record<string, unknown>> {
 }
 
 describe("BeaconErrorReporter", () => {
-  let sendBeacon: ReturnType<typeof vi.fn>;
+  let sendBeacon: Mock<(url: string, data: Blob) => boolean>;
   let uninstall: (() => void) | undefined;
 
   beforeEach(() => {
-    sendBeacon = vi.fn().mockReturnValue(true);
+    sendBeacon = vi
+      .fn<(url: string, data: Blob) => boolean>()
+      .mockReturnValue(true);
     vi.stubGlobal("navigator", { ...navigator, sendBeacon });
   });
 
@@ -33,8 +47,73 @@ describe("BeaconErrorReporter", () => {
       const body = await readBeaconBody(blob);
       expect(body.message).toBe("boom");
       expect(body.stack).toContain("boom");
-      expect(body.url).toBe(window.location.href);
+      expect(body.url).toBe(
+        `${window.location.origin}${window.location.pathname}`,
+      );
       expect(body.source).toBe("error");
+    });
+
+    it("sends only the origin and path, never the query or the hash that can hold the user's position", async () => {
+      // A real Location also carries the query and hash; the reporter must ignore them.
+      const location = {
+        href: "https://karta.example/map?q=home#map=18/-33.92530/18.42410",
+        search: "?q=home",
+        hash: "#map=18/-33.92530/18.42410",
+        origin: "https://karta.example",
+        pathname: "/map",
+      };
+      const target: ErrorReportingWindow = {
+        location,
+        navigator: {
+          sendBeacon,
+        },
+        fetch: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      };
+      const reporter = new BeaconErrorReporter({ getWindow: () => target });
+
+      reporter.report(new Error("boom"), "error");
+
+      const body = await readBeaconBody(sendBeacon.mock.calls[0]?.[1]);
+      expect(body.url).toBe("https://karta.example/map");
+      expect(JSON.stringify(body)).not.toContain("-33.92530");
+    });
+
+    it("sends the same error at most once per page load", () => {
+      const reporter = new BeaconErrorReporter();
+      const error = new Error("repeat");
+
+      const sameAgain = new Error("repeat");
+      sameAgain.stack = error.stack;
+
+      reporter.report(error, "error");
+      reporter.report(error, "error");
+      reporter.report(sameAgain, "unhandledrejection");
+
+      expect(sendBeacon).toHaveBeenCalledTimes(1);
+    });
+
+    it("treats the same message with a different stack as a different error", () => {
+      const reporter = new BeaconErrorReporter();
+      const first = new Error("same");
+      const second = new Error("same");
+      second.stack = "Error: same\n    at elsewhere";
+
+      reporter.report(first, "error");
+      reporter.report(second, "error");
+
+      expect(sendBeacon).toHaveBeenCalledTimes(2);
+    });
+
+    it(`stops sending after ${MAX_REPORTS_PER_PAGE} distinct reports per page load`, () => {
+      const reporter = new BeaconErrorReporter();
+
+      for (let index = 0; index < MAX_REPORTS_PER_PAGE + 3; index += 1) {
+        reporter.report(new Error(`error ${index}`), "error");
+      }
+
+      expect(sendBeacon).toHaveBeenCalledTimes(MAX_REPORTS_PER_PAGE);
     });
 
     it("stringifies a reason that is not an Error, with no stack", async () => {

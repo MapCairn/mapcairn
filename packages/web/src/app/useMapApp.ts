@@ -3,6 +3,7 @@ import {
   announcePinDropped,
   type BasemapDefinition,
   blurSearch,
+  boundsAroundPoint,
   clearPin,
   closeSurface,
   dropPin,
@@ -54,8 +55,18 @@ export const RESULT_ZOOM = 14;
 /** The closest a fit to a search result's bounds zooms in. */
 export const RESULT_MAX_ZOOM = 16;
 
-/** The zoom the map zooms in to, at least, for a location fix. */
+/** The closest a location fix is shown at, however precise it is. */
 export const LOCATE_ZOOM = 15;
+
+/**
+ * The widest accuracy circle a location fix is fitted to. A coarser fix (a
+ * desktop located by its network can be off by tens of kilometres) is shown
+ * as if it were this precise, so the map never zooms out to a whole region.
+ */
+export const LOCATE_MAX_FIT_RADIUS_METRES = 25_000;
+
+/** Room kept around the accuracy circle when a fix is fitted, in pixels. */
+const LOCATE_FIT_PADDING_PX = 32;
 
 /** Everything the app's chrome and overlays need, from one place. */
 export interface MapApp {
@@ -83,6 +94,18 @@ export interface MapApp {
   readonly basemapChoice: string;
   readonly basemap: BasemapDefinition;
   readonly chooseBasemap: (id: string) => void;
+  /** The name of a basemap that could not load, until the person goes back, or null. */
+  readonly basemapFailure: string | null;
+  /** Goes back to the basemap the map kept after a swap failed. */
+  readonly restorePreviousBasemap: () => void;
+  /** Pass to `MapView`'s `onBasemapApplied`. */
+  readonly onBasemapApplied: (basemap: BasemapDefinition) => void;
+  /** Pass to `MapView`'s `onBasemapError`. */
+  readonly onBasemapError: (
+    error: unknown,
+    failed: BasemapDefinition,
+    kept: BasemapDefinition,
+  ) => void;
 
   readonly sheetOpen: boolean;
   readonly sheetSection: SheetSection;
@@ -129,7 +152,7 @@ export function useMapApp(theme: ResolvedTheme): MapApp {
   const announce = useAnnounce();
   const [initial] = useState(() => initialMapState(url.read(), settings));
   const basemaps = useBasemapChoice(initial.basemapId, theme);
-  const persistence = useViewPersistence(initial.view, basemaps.choice);
+  const persistence = useViewPersistence(initial.view, basemaps.savedChoice);
   const [state, dispatch] = useReducer(surfaceReducer, initialSurfaceState);
   const stateRef = useLatestRef(state);
   const mapRef = useRef<MapContextValue | null>(null);
@@ -273,16 +296,30 @@ export function useMapApp(theme: ResolvedTheme): MapApp {
     }
   }, []);
 
-  // Fly to each new location fix.
+  // Fit each new location fix's accuracy circle, so a coarse fix shows its
+  // whole circle rather than filling the screen with it.
   useEffect(() => {
-    const map = mapRef.current;
-    if (!locate.fix || !map?.adapter) {
+    const adapter = mapRef.current?.adapter;
+    if (!locate.fix || !adapter) {
       return;
     }
-    map.adapter.setView({
-      center: locate.fix.position,
-      zoom: Math.min(Math.max(map.view.zoom, LOCATE_ZOOM), map.maxZoom),
-    });
+    const { position, accuracyMetres } = locate.fix;
+    const padding = LOCATE_FIT_PADDING_PX;
+    adapter.fitBounds(
+      boundsAroundPoint(
+        position,
+        Math.min(accuracyMetres, LOCATE_MAX_FIT_RADIUS_METRES),
+      ),
+      {
+        maxZoom: LOCATE_ZOOM,
+        padding: {
+          top: padding,
+          right: padding,
+          bottom: padding,
+          left: padding,
+        },
+      },
+    );
   }, [locate.fix]);
 
   const onSearchFocus = useCallback(() => dispatch(openSearch()), []);
@@ -300,6 +337,10 @@ export function useMapApp(theme: ResolvedTheme): MapApp {
     basemapChoice: basemaps.choice,
     basemap: basemaps.basemap,
     chooseBasemap: basemaps.choose,
+    basemapFailure: basemaps.failure?.name ?? null,
+    restorePreviousBasemap: basemaps.goBack,
+    onBasemapApplied: basemaps.applied,
+    onBasemapError: basemaps.failed,
     sheetOpen,
     sheetSection:
       state.surface === "pin" ? "pin" : (state.sheetSection ?? "basemap"),

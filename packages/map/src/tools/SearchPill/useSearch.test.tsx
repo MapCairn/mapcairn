@@ -10,7 +10,7 @@ import { ServicesProvider } from "../../services/ServicesProvider";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import {
   MIN_SEARCH_LENGTH,
-  SEARCH_DEBOUNCE_MS,
+  type UseSearch,
   type UseSearchOptions,
   useSearch,
 } from "./useSearch";
@@ -46,6 +46,12 @@ async function advance(ms: number) {
   });
 }
 
+/** Types the text, then submits it, as Enter or the Search button does. */
+async function searchFor(result: { current: UseSearch }, text: string) {
+  act(() => result.current.setQuery(text));
+  await act(async () => result.current.submit());
+}
+
 describe("useSearch", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -62,63 +68,83 @@ describe("useSearch", () => {
     expect(result.current.state).toEqual({ status: "idle" });
   });
 
-  it("waits for the debounce before searching", async () => {
+  it("never searches while the text is only typed", async () => {
     const { result, services } = setup();
-    services.fakes.search.setResults("ca", [CAPE_TOWN]);
     act(() => result.current.setQuery("ca"));
-    expect(result.current.query).toBe("ca");
-    await advance(SEARCH_DEBOUNCE_MS - 1);
+    act(() => result.current.setQuery("cap"));
+    act(() => result.current.setQuery("cape"));
+    await advance(10_000);
+    expect(result.current.query).toBe("cape");
     expect(services.fakes.search.searchCalls).toHaveLength(0);
-    await advance(1);
-    expect(services.fakes.search.searchCalls).toHaveLength(1);
+    expect(result.current.state).toEqual({ status: "idle" });
+  });
+
+  it("searches once for the text when it is submitted", async () => {
+    const { result, services } = setup();
+    services.fakes.search.setResults("cape", [CAPE_TOWN]);
+    await searchFor(result, "cape");
+    expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
+      "cape",
+    ]);
     expect(result.current.state).toEqual({
       status: "results",
       results: [CAPE_TOWN],
     });
   });
 
-  it("restarts the debounce on every keystroke and searches once", async () => {
-    const { result, services } = setup();
-    act(() => result.current.setQuery("ca"));
-    await advance(200);
-    act(() => result.current.setQuery("cap"));
-    await advance(200);
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
-    expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
-      "cape",
-    ]);
-  });
-
   it("does not search for fewer than two characters, ignoring spaces", async () => {
     const { result, services } = setup();
     expect(MIN_SEARCH_LENGTH).toBe(2);
-    act(() => result.current.setQuery("c"));
-    act(() => result.current.setQuery(" c "));
-    await advance(1000);
+    await searchFor(result, "c");
+    await searchFor(result, " c ");
     expect(services.fakes.search.searchCalls).toHaveLength(0);
     expect(result.current.state).toEqual({ status: "idle" });
   });
 
-  it("searches for the trimmed text and passes the bias", async () => {
-    const bias = { south: -34, west: 18, north: -33, east: 19 };
-    const { result, services } = setup({ bias });
-    act(() => result.current.setQuery("  cape  "));
-    await advance(SEARCH_DEBOUNCE_MS);
+  it("searches for the trimmed text and reads the bias when it submits", async () => {
+    const first = { south: -34, west: 18, north: -33, east: 19 };
+    const second = { south: -35, west: 17, north: -32, east: 20 };
+    let bias = first;
+    const { result, services } = setup({ getBias: () => bias });
+    bias = second;
+    await searchFor(result, "  cape  ");
     const [call] = services.fakes.search.searchCalls;
     expect(call?.query).toBe("cape");
-    expect(call?.options?.bias).toBe(bias);
+    expect(call?.options?.bias).toBe(second);
     expect(call?.options?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("goes back to idle, and cancels the request, when the text becomes too short", async () => {
+  it("sends no bias when there is none", async () => {
+    const { result, services } = setup({ getBias: () => undefined });
+    await searchFor(result, "cape");
+    expect(services.fakes.search.searchCalls[0]?.options?.bias).toBeUndefined();
+  });
+
+  it("does not search again when the same text is submitted while its results show", async () => {
+    const { result, services } = setup();
+    services.fakes.search.setDefaultResults([CAPE_TOWN]);
+    await searchFor(result, "cape");
+    await act(async () => result.current.submit());
+    expect(services.fakes.search.searchCalls).toHaveLength(1);
+    expect(result.current.state.status).toBe("results");
+  });
+
+  it("searches again when the same text is submitted after a failure", async () => {
+    const { result, services } = setup();
+    services.fakes.search.failWith("failed");
+    await searchFor(result, "cape");
+    services.fakes.search.clearFailure();
+    await act(async () => result.current.submit());
+    expect(services.fakes.search.searchCalls).toHaveLength(2);
+  });
+
+  it("goes back to idle, and cancels the request, when the text changes", async () => {
     const { result, services } = setup();
     const held = services.fakes.search.holdNext();
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     expect(result.current.state).toEqual({ status: "loading" });
     const signal = services.fakes.search.searchCalls[0]?.options?.signal;
-    act(() => result.current.setQuery("c"));
+    act(() => result.current.setQuery("cape t"));
     expect(signal?.aborted).toBe(true);
     expect(result.current.state).toEqual({ status: "idle" });
     await act(async () => held.resolve([CAPE_TOWN]));
@@ -126,12 +152,20 @@ describe("useSearch", () => {
     expect(polite()).toBe("");
   });
 
+  it("hides results for older text as soon as the text changes", async () => {
+    const { result, services } = setup();
+    services.fakes.search.setDefaultResults([CAPE_TOWN]);
+    await searchFor(result, "cape");
+    act(() => result.current.setQuery("capr"));
+    expect(result.current.state).toEqual({ status: "idle" });
+  });
+
   it("shows loading while a request is pending", async () => {
     const { result, services } = setup();
     services.fakes.search.holdNext();
     act(() => result.current.setQuery("cape"));
     expect(result.current.state).toEqual({ status: "idle" });
-    await advance(SEARCH_DEBOUNCE_MS);
+    await act(async () => result.current.submit());
     expect(result.current.state).toEqual({ status: "loading" });
   });
 
@@ -139,10 +173,8 @@ describe("useSearch", () => {
     const { result, services } = setup();
     const first = services.fakes.search.holdNext();
     const second = services.fakes.search.holdNext();
-    act(() => result.current.setQuery("ca"));
-    await advance(SEARCH_DEBOUNCE_MS);
-    act(() => result.current.setQuery("cap"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "ca");
+    await searchFor(result, "cap");
     const [firstCall, secondCall] = services.fakes.search.searchCalls;
     expect(firstCall?.options?.signal?.aborted).toBe(true);
     expect(secondCall?.options?.signal?.aborted).toBe(false);
@@ -160,10 +192,8 @@ describe("useSearch", () => {
     const { result, services } = setup();
     const first = services.fakes.search.holdNext();
     services.fakes.search.holdNext();
-    act(() => result.current.setQuery("ca"));
-    await advance(SEARCH_DEBOUNCE_MS);
-    act(() => result.current.setQuery("cap"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "ca");
+    await searchFor(result, "cap");
     await act(async () => first.reject(new Error("late")));
     expect(result.current.state).toEqual({ status: "loading" });
     expect(assertive()).toBe("");
@@ -172,15 +202,13 @@ describe("useSearch", () => {
   it("announces the result count once the search settles", async () => {
     const { result, services } = setup();
     services.fakes.search.setResults("cape", [CAPE_TOWN, CAPRICORN]);
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     expect(polite()).toBe("2 results");
   });
 
   it("announces no results", async () => {
     const { result } = setup();
-    act(() => result.current.setQuery("zzzz"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "zzzz");
     expect(result.current.state).toEqual({ status: "empty" });
     expect(polite()).toBe("No results");
   });
@@ -188,22 +216,19 @@ describe("useSearch", () => {
   it("does not announce while still loading", async () => {
     const { result, services } = setup();
     services.fakes.search.holdNext();
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     expect(polite()).toBe("");
   });
 
   it("does not announce an identical state twice in a row", async () => {
     const { result, services } = setup();
     services.fakes.search.setDefaultResults([CAPE_TOWN]);
-    act(() => result.current.setQuery("ca"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "ca");
     expect(polite()).toBe("1 result");
     services.fakes.search.setDefaultResults([CAPRICORN]);
     // Past the announcer's own de-duplication window, so only the hook can suppress.
     await advance(5000);
-    act(() => result.current.setQuery("cap"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cap");
     expect(result.current.state).toEqual({
       status: "results",
       results: [CAPRICORN],
@@ -215,13 +240,11 @@ describe("useSearch", () => {
   it("announces again after the box has been emptied", async () => {
     const { result, services } = setup();
     services.fakes.search.setDefaultResults([CAPE_TOWN]);
-    act(() => result.current.setQuery("ca"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "ca");
     act(() => result.current.clear());
     services.fakes.search.setDefaultResults([CAPE_TOWN, CAPRICORN]);
     await advance(3000);
-    act(() => result.current.setQuery("cap"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cap");
     expect(polite()).toBe("2 results");
   });
 
@@ -240,8 +263,7 @@ describe("useSearch", () => {
     async (kind, message) => {
       const { result, services } = setup();
       services.fakes.search.failWith(kind);
-      act(() => result.current.setQuery("cape"));
-      await advance(SEARCH_DEBOUNCE_MS);
+      await searchFor(result, "cape");
       expect(result.current.state).toEqual({ status: "error", kind });
       expect(assertive()).toBe(message);
       expect(polite()).toBe("");
@@ -256,8 +278,7 @@ describe("useSearch", () => {
       },
     });
     const { result } = setup(undefined, services);
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     expect(result.current.state).toEqual({ status: "error", kind: "failed" });
   });
 
@@ -269,8 +290,7 @@ describe("useSearch", () => {
       },
     });
     const { result } = setup(undefined, services);
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     expect(result.current.state).toEqual({ status: "loading" });
     expect(assertive()).toBe("");
   });
@@ -287,8 +307,7 @@ describe("useSearch", () => {
       },
     });
     const { result } = setup(undefined, services);
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     act(() => result.current.clear());
     await act(async () => deliver([CAPE_TOWN]));
     expect(result.current.state).toEqual({ status: "idle" });
@@ -298,8 +317,7 @@ describe("useSearch", () => {
   it("retries the current query at once", async () => {
     const { result, services } = setup();
     services.fakes.search.failWith("failed");
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     expect(result.current.state).toEqual({ status: "error", kind: "failed" });
     services.fakes.search.clearFailure();
     services.fakes.search.setResults("cape", [CAPE_TOWN]);
@@ -320,57 +338,48 @@ describe("useSearch", () => {
     expect(services.fakes.search.searchCalls).toHaveLength(0);
   });
 
-  it("settle fills the box without searching, and the next keystroke searches", async () => {
+  it("settle fills the box without searching, and the next submit searches", async () => {
     const { result, services } = setup();
     services.fakes.search.setDefaultResults([CAPE_TOWN]);
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     act(() => result.current.settle("Cape Town"));
     expect(result.current.query).toBe("Cape Town");
     expect(result.current.state).toEqual({ status: "idle" });
     await advance(1000);
     expect(services.fakes.search.searchCalls).toHaveLength(1);
 
-    // The label equals the text, the case that stuck the old boolean flag.
-    act(() => result.current.settle("Cape Town"));
-    act(() => result.current.setQuery("Cape Towns"));
-    await advance(SEARCH_DEBOUNCE_MS);
-    expect(services.fakes.search.searchCalls).toHaveLength(2);
+    await act(async () => result.current.submit());
+    expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
+      "cape",
+      "Cape Town",
+    ]);
   });
 
-  it("settle cancels a search that is waiting or in flight", async () => {
+  it("settle cancels a search in flight", async () => {
     const { result, services } = setup();
     services.fakes.search.holdNext();
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     const signal = services.fakes.search.searchCalls[0]?.options?.signal;
-    act(() => result.current.setQuery("cape t"));
     act(() => result.current.settle("Cape Town"));
     expect(signal?.aborted).toBe(true);
-    await advance(1000);
-    expect(services.fakes.search.searchCalls).toHaveLength(1);
+    expect(result.current.state).toEqual({ status: "idle" });
   });
 
   it("clear empties the box and returns to idle", async () => {
     const { result, services } = setup();
     services.fakes.search.setDefaultResults([CAPE_TOWN]);
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     act(() => result.current.clear());
     expect(result.current.query).toBe("");
     expect(result.current.state).toEqual({ status: "idle" });
   });
 
-  it("aborts the request and drops the timer on unmount", async () => {
+  it("aborts the request on unmount", async () => {
     const { result, services, unmount } = setup();
     services.fakes.search.holdNext();
-    act(() => result.current.setQuery("cape"));
-    await advance(SEARCH_DEBOUNCE_MS);
+    await searchFor(result, "cape");
     const signal = services.fakes.search.searchCalls[0]?.options?.signal;
-    act(() => result.current.setQuery("cape town"));
     unmount();
     expect(signal?.aborted).toBe(true);
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(services.fakes.search.searchCalls).toHaveLength(1);
   });
 });

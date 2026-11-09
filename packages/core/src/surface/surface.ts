@@ -1,24 +1,13 @@
 import type { SheetDetent } from "../sheet/sheet";
 
 /** The one surface that is open over the map, or `"none"`. */
-export type SurfaceKind =
-  | "none"
-  | "sheet"
-  | "search"
-  | "measure"
-  | "pin"
-  | "feature";
+export type SurfaceKind = "none" | "sheet" | "search" | "measure" | "pin";
 
 /** The sections of the map options sheet. */
 export type SheetSection = "basemap" | "pin" | "settings" | "help" | "data";
 
 /** The control that should receive focus when a surface closes. */
-export type FocusTarget =
-  | "map-options"
-  | "search"
-  | "measure"
-  | "pin"
-  | "feature";
+export type FocusTarget = "map-options" | "search" | "measure" | "pin";
 
 /**
  * Everything the chrome needs to know about which surface is open.
@@ -61,7 +50,6 @@ export type SurfaceAction =
   | { readonly type: "stopMeasure" }
   | { readonly type: "dropPin" }
   | { readonly type: "clearPin" }
-  | { readonly type: "selectFeature" }
   | { readonly type: "setDetent"; readonly detent: SheetDetent }
   | { readonly type: "escape" }
   | { readonly type: "blurSearch" };
@@ -105,11 +93,6 @@ export function dropPin(): SurfaceAction {
 /** Removes the pin, and closes its card if that is the active surface. */
 export function clearPin(): SurfaceAction {
   return { type: "clearPin" };
-}
-
-/** Opens the details of a feature the user selected on the map. */
-export function selectFeature(): SurfaceAction {
-  return { type: "selectFeature" };
 }
 
 /** Moves the sheet to a detent. Ignored unless the sheet is open. */
@@ -191,8 +174,6 @@ export function surfaceReducer(
       return open(state, "search", "search");
     case "startMeasure":
       return open(state, "measure", "measure");
-    case "selectFeature":
-      return open(state, "feature", "feature");
     case "dropPin": {
       // The pin is data, so it is recorded even when measure keeps the
       // surface to itself.
@@ -225,25 +206,4 @@ export function surfaceReducer(
     default:
       return state;
   }
-}
-
-/**
- * Whether the open surface is modal: the sheet at the full detent covers the
- * map, so the background must be inert.
- */
-export function isModal(state: SurfaceState): boolean {
-  return state.surface === "sheet" && state.sheetDetent === "full";
-}
-
-const SURFACE_LABELS: Readonly<Record<Exclude<SurfaceKind, "none">, string>> = {
-  sheet: "Map options",
-  search: "Search results",
-  measure: "Measure",
-  pin: "Pin",
-  feature: "Feature details",
-};
-
-/** A human label for the active surface, for announcements. Null when none. */
-export function activeSurfaceLabel(state: SurfaceState): string | null {
-  return state.surface === "none" ? null : SURFACE_LABELS[state.surface];
 }

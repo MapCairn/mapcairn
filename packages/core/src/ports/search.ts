@@ -21,7 +21,9 @@ export interface SearchOptions {
 /**
  * Finds places by name. Implementations throw `SearchError` for offline,
  * rate-limited or failed requests and `PortAbortError` when the signal fires.
- * Debounce and cancellation live in one ui hook, never in an implementation.
+ * When a search runs, and cancelling a superseded one, belong to one ui hook.
+ * A service's own usage limits (such as Nominatim's one request per second)
+ * belong to its implementation, since every caller shares them.
  */
 export interface SearchProvider {
   search(

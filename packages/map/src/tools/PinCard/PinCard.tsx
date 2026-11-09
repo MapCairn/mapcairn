@@ -1,6 +1,13 @@
-import { announceCopied, formatLatLng, type LatLng } from "@karta/core";
-import { Check, Copy, Trash2, TriangleAlert, X } from "lucide-react";
-import { type Ref, useEffect, useRef, useState } from "react";
+import {
+  announceAddressError,
+  announceAddressFound,
+  announceAddressNotFound,
+  announceCopied,
+  formatLatLng,
+  type LatLng,
+} from "@karta/core";
+import { Check, Copy, MapPinned, Trash2, TriangleAlert, X } from "lucide-react";
+import { type Ref, useEffect, useId, useRef, useState } from "react";
 import { useClipboard } from "../../services/hooks";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -30,14 +37,19 @@ type CopyStatus = "idle" | "copied" | "failed";
 
 /**
  * The content of the pin surface: a heading, the coordinates as selectable
- * text, "Copy coordinates" and "Clear pin" buttons, and the address when the
- * search provider can name the place.
+ * text, "Copy coordinates" and "Clear pin" buttons, and an address lookup
+ * that the user starts.
+ *
+ * The lookup sends the pin's position, rounded to about 11 m, to a third
+ * party, so nothing is sent until "Look up address" is pressed. While it
+ * runs the button is busy; the address, "No address found here." or an error
+ * with "Try again" follows, and the announcer says the same. Moving the pin
+ * puts the card back to not looked up.
  *
  * The card has no position or surface of its own; the sheet or peek that
  * holds it provides both. Copying shows "Copied" or "Could not copy" inline
  * with an icon, and the announcer says the same, so neither relies on colour
- * or on sight alone. The address stays out of the way while loading and
- * after an error.
+ * or on sight alone.
  */
 export function PinCard({
   position,
@@ -48,7 +60,9 @@ export function PinCard({
 }: PinCardProps) {
   const clipboard = useClipboard();
   const announce = useAnnounce();
-  const address = useReverseAddress(position);
+  const { state: address, lookUp } = useReverseAddress(position);
+  const noteId = useId();
+  const addressRef = useRef<HTMLParagraphElement>(null);
   const [copy, setCopy] = useState<CopyStatus>("idle");
   const latest = useRef(0);
   const { lat, lng } = position;
@@ -64,6 +78,28 @@ export function PinCard({
       latest.current += 1;
     };
   }, [lat, lng]);
+
+  const { status: addressStatus } = address;
+  const addressText = address.status === "found" ? address.text : "";
+  // The lookup button gives way to the address. When focus was on it, focus
+  // moves to the address, which a screen reader reads, so only a person whose
+  // focus is elsewhere needs the announcement.
+  useEffect(() => {
+    if (addressStatus === "found" || addressStatus === "none") {
+      if (document.activeElement === document.body && addressRef.current) {
+        addressRef.current.focus();
+      } else {
+        announce(
+          addressStatus === "found"
+            ? announceAddressFound(addressText)
+            : announceAddressNotFound(),
+          { priority: "polite" },
+        );
+      }
+    } else if (addressStatus === "error") {
+      announce(announceAddressError(), { priority: "assertive" });
+    }
+  }, [addressStatus, addressText, announce]);
 
   const handleCopy = async () => {
     latest.current += 1;
@@ -102,15 +138,49 @@ export function PinCard({
       <p className={styles.coordinates} data-testid="pin-coordinates">
         {coordinates}
       </p>
-      {address.status === "found" ? (
-        <p className={styles.address} data-testid="pin-address">
-          {address.text}
+      {address.status === "found" || address.status === "none" ? (
+        <p
+          ref={addressRef}
+          tabIndex={-1}
+          className={styles.address}
+          data-testid="pin-address"
+        >
+          {address.status === "found" ? address.text : "No address found here."}
         </p>
       ) : null}
-      {address.status === "none" ? (
-        <p className={styles.address} data-testid="pin-address">
-          No address found here.
-        </p>
+      {address.status === "idle" ||
+      address.status === "loading" ||
+      address.status === "error" ? (
+        <div className={styles.lookup}>
+          <Button
+            variant="secondary"
+            icon={MapPinned}
+            busy={address.status === "loading"}
+            aria-describedby={noteId}
+            data-testid={
+              address.status === "error" ? "pin-lookup-retry" : "pin-lookup"
+            }
+            onClick={lookUp}
+          >
+            {address.status === "error" ? "Try again" : "Look up address"}
+          </Button>
+          {address.status === "loading" ? (
+            <p className={styles.address} data-testid="pin-address-loading">
+              Looking up the address
+            </p>
+          ) : null}
+          {address.status === "error" ? (
+            <p className={styles.feedback} data-testid="pin-address-error">
+              <Icon icon={TriangleAlert} className={styles.feedbackError} />
+              Could not look up the address. Check your connection and try
+              again.
+            </p>
+          ) : null}
+          <p className={styles.note} id={noteId} data-testid="pin-lookup-note">
+            Sends the pin's position, to about 11 m, to OpenStreetMap's
+            Nominatim service.
+          </p>
+        </div>
       ) : null}
       <div className={styles.actions}>
         <Button

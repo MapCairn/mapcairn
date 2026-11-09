@@ -74,7 +74,8 @@ function wrapLongitude(lng: number): number {
  *   default) sets the pixel space used by `project` and `unproject`.
  * - Drive events with `simulateClick`, `simulateTileError`,
  *   `simulateLoading`, `simulateUserZoom` (a wheel, pinch or double-click)
- *   and `simulateFatalError` (the engine stopping after it loaded). `setView`, `zoomIn`, `panBy` and the rest emit real
+ *   and `simulateFatalError` (the engine stopping after it loaded). Call
+ *   `failNextBasemap` to make the next swap fail. `setView`, `zoomIn`, `panBy` and the rest emit real
  *   `move`, `zoom`, `rotate` and `moveEnd` events, and only when something
  *   changed.
  * - Inspect `mountCount`, `destroyed`, `animationEnabled`, `keyboardEnabled`
@@ -90,6 +91,7 @@ export class FakeMapAdapter implements MapAdapter {
   keyboardEnabled = true;
 
   #failMount: MapEngineErrorReason | undefined;
+  #failNextBasemap = false;
   #view: ViewState = DEFAULT_FAKE_VIEW;
   #basemap: BasemapDefinition | null = null;
   #host: MapHostElement | null = null;
@@ -231,6 +233,13 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   async setBasemap(basemap: BasemapDefinition): Promise<void> {
+    if (this.#failNextBasemap) {
+      this.#failNextBasemap = false;
+      throw new MapEngineError(
+        "load-failed",
+        "The fake basemap style could not be loaded.",
+      );
+    }
     this.#basemap = basemap;
     this.#applyView(this.#view);
     this.#emit("load", undefined);
@@ -289,6 +298,15 @@ export class FakeMapAdapter implements MapAdapter {
    */
   simulateUserZoom(zoom: number): void {
     this.#applyView({ ...this.#view, zoom }, true);
+  }
+
+  /**
+   * Makes the next `setBasemap` reject with a `load-failed` `MapEngineError`,
+   * leaving the current basemap, its zoom limits and the view as they were,
+   * as a real engine does when a new style cannot load.
+   */
+  failNextBasemap(): void {
+    this.#failNextBasemap = true;
   }
 
   /** Emits `fatalError`, as an engine that stopped working after it loaded. */

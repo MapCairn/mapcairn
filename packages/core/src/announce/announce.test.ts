@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  announceAddressError,
+  announceAddressFound,
+  announceAddressNotFound,
   announceBasemap,
   announceCopied,
   announceDetent,
@@ -84,6 +87,24 @@ describe("coordinate and pin announcements", () => {
       "Pin dropped at -26.20410, 28.04730",
     );
     expect(announcePinCleared()).toBe("Pin removed");
+  });
+});
+
+describe("address lookup announcements", () => {
+  it("says the address that was found", () => {
+    expect(announceAddressFound("1 Main Street, Johannesburg")).toBe(
+      "Address found: 1 Main Street, Johannesburg",
+    );
+  });
+
+  it("says when there is no address", () => {
+    expect(announceAddressNotFound()).toBe("No address found here");
+  });
+
+  it("says what went wrong and what to do next", () => {
+    expect(announceAddressError()).toBe(
+      "Could not look up the address. Check your connection and try again.",
+    );
   });
 });
 

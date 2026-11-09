@@ -129,3 +129,18 @@ export function announceTileError(): string {
 export function announceOffline(): string {
   return "You are offline. Parts of the map may not load.";
 }
+
+/** Announced when an address lookup finds the address at a pin. */
+export function announceAddressFound(address: string): string {
+  return `Address found: ${address}`;
+}
+
+/** Announced when an address lookup finds no address at a pin. */
+export function announceAddressNotFound(): string {
+  return "No address found here";
+}
+
+/** Says an address lookup failed and what to do next. */
+export function announceAddressError(): string {
+  return "Could not look up the address. Check your connection and try again.";
+}

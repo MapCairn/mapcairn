@@ -32,7 +32,7 @@ function makeMeta(): FakeMeta {
 interface Run {
   attributes: Record<string, string>;
   colorScheme: string | undefined;
-  meta: FakeMeta | null;
+  metas: FakeMeta[];
   queriedSelector: string | undefined;
   readKey: string | undefined;
   queriedMedia: string | undefined;
@@ -41,12 +41,12 @@ interface Run {
 function run(
   stored: Stored,
   system: System,
-  options: { existingMeta?: boolean; documentThrows?: boolean } = {},
+  options: { existingMetas?: number; documentThrows?: boolean } = {},
 ): Run {
   const result: Run = {
     attributes: {},
     colorScheme: undefined,
-    meta: options.existingMeta ? makeMeta() : null,
+    metas: Array.from({ length: options.existingMetas ?? 0 }, makeMeta),
     queriedSelector: undefined,
     readKey: undefined,
     queriedMedia: undefined,
@@ -65,12 +65,12 @@ function run(
     documentElement: root,
     head: {
       appendChild(node: FakeMeta) {
-        result.meta = node;
+        result.metas.push(node);
       },
     },
-    querySelector(selector: string) {
+    querySelectorAll(selector: string) {
       result.queriedSelector = selector;
-      return result.meta;
+      return [...result.metas];
     },
     createElement(tag: string) {
       expect(tag).toBe("meta");
@@ -140,8 +140,9 @@ describe("buildThemeBootstrapScript", () => {
         const result = run(stored, system);
         expect(result.attributes[THEME_ATTRIBUTE]).toBe(expected);
         expect(result.colorScheme).toBe(expected);
-        expect(result.meta?.name).toBe(THEME_COLOR_META_NAME);
-        expect(result.meta?.attributes.content).toBe(
+        expect(result.metas).toHaveLength(1);
+        expect(result.metas[0]?.name).toBe(THEME_COLOR_META_NAME);
+        expect(result.metas[0]?.attributes.content).toBe(
           THEME_COLOR_META[expected],
         );
       });
@@ -158,9 +159,23 @@ describe("buildThemeBootstrapScript", () => {
   });
 
   it("updates an existing theme-color tag instead of adding another", () => {
-    const result = run("light", "dark", { existingMeta: true });
-    expect(result.meta?.name).toBe("");
-    expect(result.meta?.attributes.content).toBe(THEME_COLOR_META.light);
+    const result = run("light", "dark", { existingMetas: 1 });
+    expect(result.metas).toHaveLength(1);
+    expect(result.metas[0]?.name).toBe("");
+    expect(result.metas[0]?.attributes.content).toBe(THEME_COLOR_META.light);
+  });
+
+  it("updates every theme-color tag, so an explicit theme beats the OS on media-specific tags", () => {
+    const light = run("light", "dark", { existingMetas: 2 });
+    expect(light.metas).toHaveLength(2);
+    for (const meta of light.metas) {
+      expect(meta.attributes.content).toBe(THEME_COLOR_META.light);
+    }
+    const dark = run("dark", "light", { existingMetas: 2 });
+    expect(dark.metas).toHaveLength(2);
+    for (const meta of dark.metas) {
+      expect(meta.attributes.content).toBe(THEME_COLOR_META.dark);
+    }
   });
 
   it("never throws when the document is blocked", () => {

@@ -13,6 +13,9 @@ export const ENGINE_FAILED_MESSAGE =
 export const ENGINE_STOPPED_MESSAGE =
   "The map stopped working. Reload the page to try again.";
 
+/** Shown when a chosen basemap could not load; the map keeps the previous one. */
+export const BASEMAP_FAILED_MESSAGE = "That basemap could not be loaded.";
+
 /** Props for {@link MapBanners}. */
 export interface MapBannersProps {
   readonly app: MapApp;
@@ -26,7 +29,12 @@ export function hasBanners(
   app: MapApp,
   map: Pick<MapContextValue, "tileError" | "error">,
 ): boolean {
-  return app.locate.state === "error" || map.tileError || engineFailed(map);
+  return (
+    app.locate.state === "error" ||
+    app.basemapFailure !== null ||
+    map.tileError ||
+    engineFailed(map)
+  );
 }
 
 /** The engine could not start for a reason a reload might fix. */
@@ -36,7 +44,10 @@ function engineFailed(map: Pick<MapContextValue, "error">): boolean {
 
 /**
  * The status banners in the bottom-centre slot: a tile error with Retry, a
- * location error, and a map that could not start or stopped working, with
+ * location error, a basemap that could not load (the map keeps the previous
+ * one, so it offers to go back to it rather than Reload, and dismissing it
+ * goes back too, so the picker always matches the map), and a map that could
+ * not start or stopped working, with
  * Reload. Reload rather than a remount: the engine stops when its worker
  * script fails to load (a wrong URL, or one the CSP blocks), and a new map
  * would fetch the same script and fail the same way. Missing WebGL
@@ -85,6 +96,19 @@ export function MapBanners({ app }: MapBannersProps) {
           onDismiss={app.locate.cancel}
         >
           {app.locate.message}
+        </StatusMessage>
+      ) : null}
+      {app.basemapFailure !== null ? (
+        <StatusMessage
+          variant="error"
+          data-testid="basemap-error"
+          action={{
+            label: "Use previous basemap",
+            onClick: app.restorePreviousBasemap,
+          }}
+          onDismiss={app.restorePreviousBasemap}
+        >
+          {BASEMAP_FAILED_MESSAGE}
         </StatusMessage>
       ) : null}
       {engineFailed(map) && !engineErrorDismissed ? (

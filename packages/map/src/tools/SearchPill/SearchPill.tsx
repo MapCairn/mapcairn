@@ -17,14 +17,21 @@ import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
 import { Surface } from "../../ui/Surface";
 import * as styles from "./SearchPill.css";
-import { SEARCH_UNAVAILABLE_MESSAGE, useSearch } from "./useSearch";
+import {
+  MIN_SEARCH_LENGTH,
+  SEARCH_UNAVAILABLE_MESSAGE,
+  useSearch,
+} from "./useSearch";
 
 /** Props for {@link SearchPill}. */
 export interface SearchPillProps {
   /** Called when the user picks a result, by click, tap or Enter. */
   readonly onSelect: (result: SearchResult) => void;
-  /** Favour results inside this box, usually the visible map. */
-  readonly bias?: Bounds;
+  /**
+   * Returns the box to favour results inside, usually the visible map. Read
+   * once when each search is submitted.
+   */
+  readonly getBias?: () => Bounds | undefined;
   /** Passed through from the input, for example to open the search surface. */
   readonly onFocus?: FocusEventHandler<HTMLInputElement>;
   /** Passed through from the input, for example to close the search surface. */
@@ -39,22 +46,28 @@ function keepFocus(event: MouseEvent) {
 }
 
 /**
- * The floating search pill: a 48px pill holding an ARIA 1.2 combobox, with the
- * results in a listbox just below it. It must be rendered inside a
- * `FocusRegistryProvider`, which it tells where the input is so that closing
- * the search surface can return focus to it.
+ * The floating search pill: a 48px pill holding an ARIA 1.2 combobox and a
+ * Search button, with the results in a listbox just below it. It must be
+ * rendered inside a `FocusRegistryProvider`, which it tells where the input is
+ * so that closing the search surface can return focus to it.
  *
- * Keyboard, following the WAI-ARIA Authoring Practices "list autocomplete"
- * combobox:
- * - Typing searches after a short pause. Results never take focus: the input
- *   keeps focus and `aria-activedescendant` names the active option.
+ * Searching happens only on submit (Enter, or the Search button), never as
+ * the user types, because the OpenStreetMap Foundation's Nominatim policy
+ * forbids client-side autocomplete. Editing the text hides any results for
+ * the old text.
+ *
+ * Keyboard, following the WAI-ARIA Authoring Practices "list" combobox, with
+ * the listbox filled by a submitted search:
+ * - Results never take focus: the input keeps focus and
+ *   `aria-activedescendant` names the active option.
  * - ArrowDown and ArrowUp move the active option, wrapping at the ends, and
  *   open a closed list that has something to show. They are the only keys
  *   that move between options.
  * - Home and End are left to the browser, so they move the caret as in any
  *   text field. When an option is active they also hand visual focus back to
  *   the text box (the active option is cleared), as the pattern describes.
- * - Enter selects the active option. With no active option it does nothing.
+ * - Enter selects the active option. With no active option it submits the
+ *   text, or reopens the list when it already holds that text's results.
  * - Escape closes the list. With the list already closed, a second Escape
  *   clears the text, and a third reaches the page (closing the surface).
  *
@@ -66,11 +79,11 @@ function keepFocus(event: MouseEvent) {
  */
 export function SearchPill({
   onSelect,
-  bias,
+  getBias,
   onFocus,
   onBlur,
 }: SearchPillProps) {
-  const search = useSearch({ bias });
+  const search = useSearch({ getBias });
   const { query, state } = search;
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -109,6 +122,12 @@ export function SearchPill({
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     search.setQuery(event.target.value);
+    setActive(null);
+  };
+
+  /** Searches for the text, or shows the outcome already found for it. */
+  const submit = () => {
+    search.submit();
     setListOpen(true);
     setActive(null);
   };
@@ -146,10 +165,12 @@ export function SearchPill({
         setActive(null);
         return;
       case "Enter": {
+        event.preventDefault();
         const result = expanded ? results[activeIndex] : undefined;
         if (result) {
-          event.preventDefault();
           select(result);
+        } else {
+          submit();
         }
         return;
       }
@@ -188,6 +209,11 @@ export function SearchPill({
     inputRef.current?.focus();
   };
 
+  const handleSubmitClick = () => {
+    submit();
+    inputRef.current?.focus();
+  };
+
   const handleRetry = () => {
     search.retry();
     inputRef.current?.focus();
@@ -205,7 +231,6 @@ export function SearchPill({
       onBlur={handleRootBlur}
     >
       <Surface radius="pill" className={styles.pill}>
-        <Icon icon={Search} className={styles.searchIcon} />
         <input
           ref={setInputRef}
           className={styles.input}
@@ -240,6 +265,16 @@ export function SearchPill({
             onClick={handleClear}
           />
         ) : null}
+        <IconButton
+          label="Search"
+          icon={Search}
+          size="compact"
+          disabled={query.trim().length < MIN_SEARCH_LENGTH}
+          busy={state.status === "loading"}
+          data-testid="location-search-submit"
+          onMouseDown={keepFocus}
+          onClick={handleSubmitClick}
+        />
       </Surface>
       <Surface
         variant="floating"

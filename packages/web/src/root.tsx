@@ -23,11 +23,9 @@ import { THEME_BOOTSTRAP_SCRIPT } from "./app/themeBootstrap";
 import { buildPageMeta } from "./buildPageMeta";
 import { createServices } from "./composition/createServices";
 import { reportCaughtError } from "./composition/errorReporting";
+import { BRAND_COLOUR } from "./constants/brandColour";
 import { SITE_URL } from "./constants/siteConfig";
 import { fontPreloadLinks } from "./fonts/fontPreload";
-
-/** The brand colour for pinned tabs and Windows tiles, matching the favicon. */
-const BRAND_COLOUR = "#0d70d4";
 
 /**
  * React Router route module export: the page title and meta tags, including
@@ -70,7 +68,11 @@ export const links: LinksFunction = () => [
   { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
   { rel: "mask-icon", href: "/safari-pinned-tab.svg", color: BRAND_COLOUR },
   { rel: "manifest", href: "/site.webmanifest" },
-  { rel: "preconnect", href: "https://tiles.openfreemap.org" },
+  {
+    rel: "preconnect",
+    href: "https://tiles.openfreemap.org",
+    crossOrigin: "anonymous",
+  },
 ];
 
 /**

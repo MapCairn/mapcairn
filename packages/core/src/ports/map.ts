@@ -125,7 +125,12 @@ export interface MapAdapter {
   /** Ground resolution at a latitude (defaults to the view centre) at the current zoom. */
   metresPerPixel(lat?: number): number;
 
-  /** Swaps the basemap, keeping the view. */
+  /**
+   * Swaps the basemap, keeping the view. Resolves once the new basemap's
+   * style has loaded. If it cannot load, rejects with a `MapEngineError` and
+   * leaves the previous basemap and its zoom limits in place, so the map
+   * keeps working.
+   */
   setBasemap(basemap: BasemapDefinition): Promise<void>;
   /** Turns every engine animation on or off (reduced motion). */
   setAnimationEnabled(enabled: boolean): void;

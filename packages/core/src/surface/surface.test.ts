@@ -1,18 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  activeSurfaceLabel,
   blurSearch,
   clearPin,
   closeSurface,
   dropPin,
   initialSurfaceState,
-  isModal,
   openSearch,
   openSheet,
   pressEscape,
   type SurfaceAction,
   type SurfaceState,
-  selectFeature,
   setDetent,
   startMeasure,
   stopMeasure,
@@ -98,13 +95,6 @@ describe("one surface at a time", () => {
       surface: "measure",
       sheetSection: null,
       returnFocusTo: "measure",
-    });
-  });
-
-  it("replaces anything with a selected feature", () => {
-    expect(run(openSearch(), selectFeature())).toMatchObject({
-      surface: "feature",
-      returnFocusTo: "feature",
     });
   });
 
@@ -209,12 +199,7 @@ describe("closing", () => {
   });
 
   it("closes whichever surface is active on Escape", () => {
-    for (const open of [
-      openSearch(),
-      startMeasure(),
-      dropPin(),
-      selectFeature(),
-    ]) {
+    for (const open of [openSearch(), startMeasure(), dropPin()]) {
       expect(run(open, pressEscape()).surface).toBe("none");
     }
   });
@@ -256,26 +241,5 @@ describe("unknown actions", () => {
     expect(
       surfaceReducer(state, { type: "nonsense" } as unknown as SurfaceAction),
     ).toBe(state);
-  });
-});
-
-describe("isModal", () => {
-  it("is true only for the sheet at the full detent", () => {
-    expect(isModal(run(openSheet(), setDetent("full")))).toBe(true);
-    expect(isModal(run(openSheet(), setDetent("half")))).toBe(false);
-    expect(isModal(run(openSheet(), setDetent("peek")))).toBe(false);
-    expect(isModal(initialSurfaceState)).toBe(false);
-    expect(isModal(run(openSearch()))).toBe(false);
-  });
-});
-
-describe("activeSurfaceLabel", () => {
-  it("names each surface for announcements", () => {
-    expect(activeSurfaceLabel(initialSurfaceState)).toBeNull();
-    expect(activeSurfaceLabel(run(openSheet()))).toBe("Map options");
-    expect(activeSurfaceLabel(run(openSearch()))).toBe("Search results");
-    expect(activeSurfaceLabel(run(startMeasure()))).toBe("Measure");
-    expect(activeSurfaceLabel(run(dropPin()))).toBe("Pin");
-    expect(activeSurfaceLabel(run(selectFeature()))).toBe("Feature details");
   });
 });

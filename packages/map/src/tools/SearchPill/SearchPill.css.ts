@@ -13,7 +13,7 @@ export const root = style({
   minWidth: 0,
 });
 
-/** The 48px pill row: icon, input, clear button. */
+/** The 48px pill row: input, clear button, Search button. */
 export const pill = style({
   display: "flex",
   alignItems: "center",
@@ -25,12 +25,6 @@ export const pill = style({
   selectors: {
     "&:has(> input:focus-visible)": focusRing,
   },
-});
-
-/** The leading search icon. It never takes pointer events away from the input. */
-export const searchIcon = style({
-  flexShrink: 0,
-  color: tokens.color.textMuted,
 });
 
 /**

@@ -57,6 +57,13 @@ export const popover = style({
   fontWeight: tokens.type.weight.regular,
   selectors: {
     "&[hidden]": { display: "none" },
+    // The fade after the credits' first showing. The duration token drops to
+    // near zero under prefers-reduced-motion, and the component skips the
+    // fade altogether when reduced motion is on.
+    '&[data-closing="true"]': {
+      opacity: 0,
+      transition: `opacity ${tokens.motion.duration.base} ${tokens.motion.easing}`,
+    },
     "&:focus-visible": focusRing,
     '&[data-placement="beside"]': {
       insetInlineEnd: besideOffset,

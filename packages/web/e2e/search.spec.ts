@@ -30,6 +30,17 @@ test.describe("search", () => {
 
     await input.focus();
     await page.keyboard.type("cape");
+    // Typing alone sends nothing (Nominatim forbids autocomplete). Absence
+    // has no event to wait for, so wait well past any debounce first.
+    await expect(mapPage.searchSubmit).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await page.waitForTimeout(600);
+    expect(await searchedQueries(page)).toEqual([]);
+    await expect(input).toHaveAttribute("aria-expanded", "false");
+
+    await page.keyboard.press("Enter");
     await expect(mapPage.searchOptions).toHaveText([
       /Cape Town/,
       /Cape Coast/,
@@ -137,11 +148,47 @@ test.describe("search", () => {
     });
     await mapPage.goto();
     await mapPage.search("cape");
-    await page.waitForTimeout(400);
+    await expect(mapPage.searchPanel).toContainText("Searching...");
     await mapPage.search("cape t");
     await expect(mapPage.searchOptions).toHaveText([/Cape Town/]);
+    expect(await searchedQueries(page)).toEqual(["cape", "cape t"]);
     await page.waitForTimeout(1_000);
     await expect(mapPage.searchOptions).toHaveCount(1);
+  });
+
+  test("the Search button searches, and Enter on the same text only reopens the list", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptSearch(page);
+    await mapPage.goto();
+    await expect(mapPage.searchSubmit).toHaveAttribute("aria-disabled", "true");
+    await mapPage.searchInput.fill("cape");
+    await mapPage.searchSubmit.click();
+    await expect(mapPage.searchOptions).toHaveCount(3);
+    await expect(mapPage.searchInput).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(mapPage.searchInput).toHaveAttribute("aria-expanded", "false");
+    await page.keyboard.press("Enter");
+    await expect(mapPage.searchInput).toHaveAttribute("aria-expanded", "true");
+    expect(await searchedQueries(page)).toEqual(["cape"]);
+  });
+
+  test("the Search button is reachable from the box with Tab", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptSearch(page);
+    await mapPage.goto();
+    await mapPage.searchInput.fill("cape");
+    // The Clear button comes first, then Search.
+    await page.keyboard.press("Tab");
+    await expect(mapPage.searchClear).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(mapPage.searchSubmit).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(mapPage.searchOptions).toHaveCount(3);
   });
 
   test("says when nothing matched", async ({ page, mapPage }) => {
@@ -182,11 +229,24 @@ test.describe("search", () => {
   });
 
   test.describe("through the real Nominatim adapter", () => {
-    test("finds places anywhere, with no coverage restriction", async ({
+    test("finds places anywhere, with no coverage restriction, favouring the visible map", async ({
+      page,
       mapPage,
     }) => {
-      await mapPage.goto();
+      // Open on a known view: the address is only written when the map moves.
+      await mapPage.goto("#map=6/-26.2/28");
+      const view = { lat: -26.2, lng: 28 };
+      const request = page.waitForRequest(GEOCODER_SEARCH_PATTERN);
       await mapPage.search("Soweto");
+      // The visible map is sent as a viewbox bias: west,north,east,south.
+      const viewbox = new URL((await request).url()).searchParams.get(
+        "viewbox",
+      );
+      const [west, north, east, south] = (viewbox ?? "").split(",").map(Number);
+      expect(west).toBeLessThan(view.lng);
+      expect(east).toBeGreaterThan(view.lng);
+      expect(south).toBeLessThan(view.lat);
+      expect(north).toBeGreaterThan(view.lat);
       await expect(mapPage.searchOptions).toHaveCount(1);
       await expect(mapPage.searchOptions.first()).toContainText("Soweto");
       await mapPage.searchOptions.first().click();

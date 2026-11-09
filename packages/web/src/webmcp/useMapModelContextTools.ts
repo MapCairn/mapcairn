@@ -56,23 +56,32 @@ function describeTotal(
 }
 
 /**
- * Finds the best match for each place name, all at once.
+ * The most places one measure tool call may name. Each is a separate lookup,
+ * and the search service allows about one request a second.
+ */
+export const MAX_MEASURE_LOCATIONS = 10;
+
+/**
+ * Finds the best match for each place name, one after another, so the
+ * lookups queue behind each other rather than arriving at the search service
+ * together. Stops at the first name with no match, which saves the rest.
  * @returns The matches in the given order, or the first name with no match.
  */
-async function geocodeAll(
+export async function geocodeAll(
   provider: SearchProvider,
   names: readonly string[],
 ): Promise<
   { readonly found: readonly SearchResult[] } | { readonly missing: string }
 > {
-  const matches = await Promise.all(
-    names.map(async (name) => (await provider.search(name, { limit: 1 }))[0]),
-  );
-  const missing = names.find((_, index) => matches[index] === undefined);
-  if (missing !== undefined) {
-    return { missing };
+  const found: SearchResult[] = [];
+  for (const name of names) {
+    const [best] = await provider.search(name, { limit: 1 });
+    if (!best) {
+      return { missing: name };
+    }
+    found.push(best);
   }
-  return { found: matches as SearchResult[] };
+  return { found };
 }
 
 /** Options for {@link useMapModelContextTools}: the app's own actions. */
@@ -199,6 +208,12 @@ export function useMapModelContextTools({
   const measureTool =
     (mode: MeasureMode) =>
     async ({ locations }: MeasureInput) => {
+      // A browser agent may not validate the input schema, so check here too.
+      if (locations.length > MAX_MEASURE_LOCATIONS) {
+        return textResult(
+          `Give at most ${MAX_MEASURE_LOCATIONS} places to measure.`,
+        );
+      }
       if (locations.length < MIN_POINTS[mode]) {
         return textResult(
           mode === "distance"
@@ -232,7 +247,8 @@ export function useMapModelContextTools({
           type: "array",
           items: { type: "string" },
           minItems: MIN_POINTS.distance,
-          description: "Place names in path order, at least two.",
+          maxItems: MAX_MEASURE_LOCATIONS,
+          description: `Place names in path order, from two to ${MAX_MEASURE_LOCATIONS}.`,
         },
       },
       required: ["locations"],
@@ -252,7 +268,8 @@ export function useMapModelContextTools({
           type: "array",
           items: { type: "string" },
           minItems: MIN_POINTS.area,
-          description: "Place names in outline order, at least three.",
+          maxItems: MAX_MEASURE_LOCATIONS,
+          description: `Place names in outline order, from three to ${MAX_MEASURE_LOCATIONS}.`,
         },
       },
       required: ["locations"],

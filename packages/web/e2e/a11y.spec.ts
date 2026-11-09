@@ -14,6 +14,7 @@ import {
   leaveState,
   MATRIX_VIEWPORTS,
   viewportDetails,
+  waitForCreditsCollapsed,
   waitForStableLayout,
 } from "./support/states";
 
@@ -103,6 +104,7 @@ test.describe("focus @a11y", () => {
     expect(result.missing).toEqual([]);
 
     await mapPage.goto();
+    await waitForCreditsCollapsed(mapPage);
     await mapPage.creditsButton.click();
     result = await findMissingFocusRings(page);
     expect(result.missing).toEqual([]);

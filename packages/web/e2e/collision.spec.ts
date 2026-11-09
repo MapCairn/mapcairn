@@ -8,6 +8,7 @@ import {
   leaveState,
   MATRIX_VIEWPORTS,
   viewportDetails,
+  waitForCreditsCollapsed,
   waitForStableLayout,
 } from "./support/states";
 
@@ -73,6 +74,7 @@ for (const viewport of MATRIX_VIEWPORTS) {
             });
           }
           await mapPage.goto();
+          await waitForCreditsCollapsed(mapPage);
           await mapPage.creditsButton.click();
           await expect(mapPage.creditsRegion).toBeVisible();
           await waitForStableLayout(page);

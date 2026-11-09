@@ -9,3 +9,4 @@ export {
   type UseLongPressOptions,
   useLongPress,
 } from "./useLongPress";
+export { visibleBounds } from "./visibleBounds";

@@ -15,6 +15,7 @@ import {
   useMap,
   usePreferences,
   useSettings,
+  visibleBounds,
 } from "@karta/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
 import { SHEET_ID } from "./initialView";
@@ -127,6 +128,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
       topStart={
         <SearchPill
           onSelect={app.flyTo}
+          getBias={() => visibleBounds(map.adapter, map.hostElement)}
           onFocus={app.onSearchFocus}
           onBlur={app.onSearchBlur}
         />

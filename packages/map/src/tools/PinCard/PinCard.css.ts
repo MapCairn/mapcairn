@@ -46,11 +46,32 @@ export const coordinates = style({
   overflowWrap: "anywhere",
 });
 
-/** The address line, when there is one. */
+/**
+ * The address line, or the loading text, under the coordinates. The address
+ * takes focus by script when the lookup button it replaces had it.
+ */
 export const address = style({
   margin: 0,
   color: tokens.color.textMuted,
   overflowWrap: "anywhere",
+  selectors: { "&:focus-visible": focusRing },
+});
+
+/** The address lookup: its button, its state and the note on what is sent. */
+export const lookup = style({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: tokens.space.xs,
+});
+
+/** The note under the lookup button, saying what is sent and to whom. */
+export const note = style({
+  margin: 0,
+  color: tokens.color.textMuted,
+  fontSize: tokens.type.small.size,
+  lineHeight: tokens.type.small.lineHeight,
+  letterSpacing: tokens.type.small.tracking,
 });
 
 /** The two buttons. They wrap on a narrow card. */

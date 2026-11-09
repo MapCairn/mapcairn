@@ -444,6 +444,20 @@ describe("Sheet in the sheet layout", () => {
       expect(offset()).toBe(HEIGHTS.full - HEIGHTS.half - 10);
     });
 
+    it("puts the sheet back on its detent after a press that wobbles under the drag slop", () => {
+      const state = setup({ detent: "half" });
+      mount(state);
+      press(handle(), 400);
+      move(397);
+      flushFrames();
+      fireEvent.pointerUp(handle(), { pointerId: 1, clientY: 397 });
+      expect(state.props.onDetentChange).not.toHaveBeenCalled();
+      expect(offset()).toBe(HEIGHTS.full - HEIGHTS.half);
+      expect(state.layout.publishSheetTop).toHaveBeenLastCalledWith(
+        VIEWPORT.height - HEIGHTS.half,
+      );
+    });
+
     it("treats a press that does not move as a tap, which cycles", () => {
       const state = setup({ detent: "peek" });
       mount(state);

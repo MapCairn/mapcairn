@@ -1,6 +1,6 @@
 /**
  * Path of the resource route client-side error reports are POSTed to (see
- * `routes/log-error.ts`). Shared between `clientErrorReporting.ts` (the
+ * `routes/log-error.ts`). Shared between `BeaconErrorReporter` (the
  * sender) and that route (the receiver) so the two can't drift apart.
  */
 export const CLIENT_ERROR_REPORT_PATH = "/log-error";

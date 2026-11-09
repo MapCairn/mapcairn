@@ -995,21 +995,77 @@ describe("engine errors", () => {
     expect(latest().adapter).toBe(services.fakes.maps[0]);
   });
 
-  it("reports a failed same-engine basemap swap", async () => {
+  it("reports a failed basemap swap as a basemap failure, not an engine error", async () => {
     const onEngineError = vi.fn();
-    const other = { ...FAKE_RASTER_BASEMAP, id: "other" };
-    const { adapter, rerender, latest } = await setup({ onEngineError });
-    vi.spyOn(adapter(), "setBasemap").mockRejectedValue(
-      new MapEngineError("load-failed"),
-    );
+    const onBasemapError = vi.fn();
+    const onBasemapApplied = vi.fn();
+    const other = { ...FAKE_VECTOR_BASEMAP, id: "other" };
+    const { adapter, rerender, latest } = await setup({
+      onEngineError,
+      onBasemapError,
+      onBasemapApplied,
+    });
+    adapter().failNextBasemap();
     rerender({ basemap: other });
     await settle();
-    expect(onEngineError).toHaveBeenCalledWith(
+    expect(onBasemapError).toHaveBeenCalledWith(
       expect.objectContaining({ reason: "load-failed" }),
       other,
+      FAKE_RASTER_BASEMAP,
     );
-    expect(latest().error?.reason).toBe("load-failed");
+    expect(onEngineError).not.toHaveBeenCalled();
+    expect(onBasemapApplied).not.toHaveBeenCalled();
+    expect(latest().error).toBeNull();
     expect(latest().loading).toBe(false);
+    expect(latest().maxZoom).toBe(FAKE_RASTER_BASEMAP.maxZoom);
+  });
+
+  it("does not swap again when the basemap goes back to the one the map kept", async () => {
+    const other = { ...FAKE_VECTOR_BASEMAP, id: "other" };
+    const { adapter, rerender } = await setup();
+    adapter().failNextBasemap();
+    rerender({ basemap: other });
+    await settle();
+    const setBasemap = vi.spyOn(adapter(), "setBasemap");
+    rerender({ basemap: FAKE_RASTER_BASEMAP });
+    await settle();
+    expect(setBasemap).not.toHaveBeenCalled();
+    // Choosing the failed basemap again tries it again.
+    rerender({ basemap: other });
+    await settle();
+    expect(setBasemap).toHaveBeenCalledWith(other);
+  });
+
+  it("ignores a superseded basemap swap that fails late", async () => {
+    const onBasemapError = vi.fn();
+    const first = { ...FAKE_RASTER_BASEMAP, id: "first" };
+    const { adapter, rerender, latest } = await setup({ onBasemapError });
+    let failFirst: () => void = () => undefined;
+    const real = adapter().setBasemap.bind(adapter());
+    vi.spyOn(adapter(), "setBasemap").mockImplementation((basemap) =>
+      basemap.id === "first"
+        ? new Promise<void>((_resolve, reject) => {
+            failFirst = () => reject(new MapEngineError("load-failed"));
+          })
+        : real(basemap),
+    );
+    rerender({ basemap: first });
+    rerender({ basemap: FAKE_VECTOR_BASEMAP });
+    await settle();
+    failFirst();
+    await settle();
+    expect(onBasemapError).not.toHaveBeenCalled();
+    expect(latest().maxZoom).toBe(FAKE_VECTOR_BASEMAP.maxZoom);
+  });
+
+  it("reports each basemap swap that loaded, but not a superseded one", async () => {
+    const onBasemapApplied = vi.fn();
+    const first = { ...FAKE_RASTER_BASEMAP, id: "first" };
+    const { rerender } = await setup({ onBasemapApplied });
+    rerender({ basemap: first });
+    rerender({ basemap: FAKE_VECTOR_BASEMAP });
+    await settle();
+    expect(onBasemapApplied.mock.calls).toEqual([[FAKE_VECTOR_BASEMAP]]);
   });
 });
 

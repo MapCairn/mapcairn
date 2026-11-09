@@ -6,7 +6,7 @@ import { designGuideRoutes } from "./designGuideRoutes";
  * the only routes with UI in production; `robots.txt.ts`/`sitemap.xml.ts`/`llms.txt.ts`
  * are resource routes serving static text built once at module scope, with
  * no loader logic that varies per request; `log-error.ts` is the only route
- * with a real per-request `action` (see `clientErrorReporting.ts`). The
+ * with a real per-request `action` (see `adapters/errorReporting/BeaconErrorReporter.ts`). The
  * style guide at `/design` exists only in development and e2e builds (see
  * `designGuideRoutes.ts`).
  */

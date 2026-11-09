@@ -42,7 +42,9 @@ describe("PrivacyPage", () => {
 
     expect(screen.getByText(/OpenFreeMap/)).toBeInTheDocument();
     expect(screen.getByText(/OpenStreetMap Foundation/)).toBeInTheDocument();
-    expect(screen.getByText(/Nominatim/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/OpenStreetMap's Nominatim geocoding service/),
+    ).toBeInTheDocument();
   });
 
   it("says the device location is used only on request and is not sent", () => {
@@ -61,6 +63,40 @@ describe("PrivacyPage", () => {
     expect(
       screen.getByText(/Cloudflare's operational logs/),
     ).toBeInTheDocument();
+  });
+
+  it("lists exactly what an error report carries, and that it never carries your position", () => {
+    render(<PrivacyPage />);
+
+    const text = screen.getByText(/diagnostic report/).textContent ?? "";
+    expect(text).toMatch(
+      /error message, a stack trace, the page's address without its query or the part after #/,
+    );
+    expect(text).toMatch(
+      /whether it was an uncaught error or a rejected promise/,
+    );
+    expect(text).toMatch(/never includes the map's position or yours/);
+    expect(text).not.toMatch(/page URL/);
+  });
+
+  it("says search sends the query only when you search, not as you type", () => {
+    render(<PrivacyPage />);
+
+    const text = screen.getByText(/Nominatim geocoding service/).textContent;
+    expect(text).toMatch(/When you search/);
+    expect(text).not.toMatch(/Typing/);
+  });
+
+  it("discloses that Look up address sends the pin's rounded position, only when pressed", () => {
+    render(<PrivacyPage />);
+
+    expect(
+      screen.getByRole("heading", { name: "Pin addresses", level: 2 }),
+    ).toBeInTheDocument();
+    const text = screen.getByText(/Look up address/).textContent;
+    expect(text).toMatch(/only when you press/);
+    expect(text).toMatch(/about 11 m/);
+    expect(text).toMatch(/Nominatim/);
   });
 
   it("links to the host's policy in a new tab, announced to screen readers", () => {

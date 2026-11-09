@@ -10,7 +10,7 @@ import { SITE_URL } from "../constants/siteConfig";
 const SITE_ORIGIN = new URL(SITE_URL).origin;
 
 /**
- * Shape of a client error report POSTed by `clientErrorReporting.ts`. Every
+ * Shape of a client error report POSTed by `BeaconErrorReporter`. Every
  * string field is bounded by `CLIENT_ERROR_REPORT_MAX_FIELD_LENGTH` so a
  * malformed or malicious payload can't write unbounded text into Workers
  * Logs.
@@ -24,8 +24,9 @@ const clientErrorReportSchema = z.object({
 
 /**
  * React Router resource route action: the server-side half of client error
- * reporting. Accepts a `POST` from `clientErrorReporting.ts`'s
- * `installClientErrorReporting()`, validates it, and logs it via
+ * reporting. Accepts a `POST` from `BeaconErrorReporter` (started by
+ * `installErrorReporting()` in `composition/errorReporting.ts`), validates
+ * it, and logs it via
  * `console.error` so it reaches Cloudflare Workers Logs the same way
  * server-side rendering errors already do (see `root.tsx`'s `ErrorBoundary`
  * and `entry.server.tsx`'s `onError`); this is the only place an
@@ -34,7 +35,11 @@ const clientErrorReportSchema = z.object({
  * @remarks Deliberately stores nothing and returns no body: this app keeps
  *   no server-side database of visitor data (see `PRIVACY.md`), and a
  *   transient log line is the full extent of what this endpoint does.
- * @remarks `navigator.sendBeacon` (`clientErrorReporting.ts`'s primary send
+ * @remarks The page address is logged as origin and path only. Any query or
+ *   hash is dropped ({@link stripQueryAndHash}) even though the app's own
+ *   reporter never sends one, because the hash holds the map view, which
+ *   after Locate me is the visitor's position.
+ * @remarks `navigator.sendBeacon` (`BeaconErrorReporter`'s primary send
  *   path) is exempt from CORS preflight even cross-origin, so an `Origin`
  *   check is this route's only defence against a third-party page beaconing
  *   arbitrary text into this app's Workers Logs; a request carrying an
@@ -83,12 +88,20 @@ export async function action({
       message: sanitizeForLog(report.message),
       stack:
         report.stack === undefined ? undefined : sanitizeForLog(report.stack),
-      url: sanitizeForLog(report.url),
+      url: sanitizeForLog(stripQueryAndHash(report.url)),
     });
     return new Response(null, { status: 204 });
   } catch {
     return new Response(null, { status: 400 });
   }
+}
+
+/**
+ * Cuts a page address at its first `?` or `#`, leaving origin and path. Works
+ * on text rather than `URL`, so a relative or malformed address is cut too.
+ */
+function stripQueryAndHash(url: string): string {
+  return url.split(/[?#]/, 1)[0] ?? "";
 }
 
 /**

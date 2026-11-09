@@ -1,12 +1,25 @@
 import { BeaconErrorReporter } from "../adapters/errorReporting/BeaconErrorReporter";
 
 /**
+ * The one reporter for this page load, created on first use. Sharing it
+ * keeps de-duplication and the per-page cap across the window listeners and
+ * errors React catches. On the server it is never asked to send anything,
+ * since it does nothing without a window.
+ */
+let pageReporter: BeaconErrorReporter | undefined;
+
+function getPageReporter(): BeaconErrorReporter {
+  pageReporter ??= new BeaconErrorReporter();
+  return pageReporter;
+}
+
+/**
  * Starts reporting uncaught client errors and unhandled rejections to
  * `/log-error`. Called once from `entry.client.tsx`, before hydration.
  * @returns A function that stops reporting.
  */
 export function installErrorReporting(): () => void {
-  return new BeaconErrorReporter().install();
+  return getPageReporter().install();
 }
 
 /**
@@ -15,5 +28,5 @@ export function installErrorReporting(): () => void {
  * server rendering, where the error is logged by the server instead.
  */
 export function reportCaughtError(error: unknown): void {
-  new BeaconErrorReporter().report(error, "error");
+  getPageReporter().report(error, "error");
 }

@@ -15,6 +15,12 @@ export const RASTER_TILE_PATTERN = /tile\.openstreetmap\.org/;
 /** OpenFreeMap style documents (Positron, Liberty and Dark). */
 export const VECTOR_STYLE_PATTERN = /tiles\.openfreemap\.org\/styles\//;
 
+/** The OpenFreeMap Liberty style document. */
+export const LIBERTY_STYLE_PATTERN = /tiles\.openfreemap\.org\/styles\/liberty/;
+
+/** OpenFreeMap sprite sheets: their JSON index and their images. */
+export const SPRITE_PATTERN = /tiles\.openfreemap\.org\/sprites\//;
+
 /** A Nominatim place search. */
 export const GEOCODER_SEARCH_PATTERN = /nominatim\.openstreetmap\.org\/search/;
 
@@ -32,7 +38,7 @@ export const MAPLIBRE_WORKER_PATTERN =
  * so the suite still exercises the worker without tile, glyph or sprite
  * requests.
  */
-const MINIMAL_VECTOR_STYLE = {
+export const MINIMAL_VECTOR_STYLE = {
   version: 8,
   sources: {
     "worker-check": {

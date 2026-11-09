@@ -37,12 +37,28 @@ export interface MapViewProps {
   /** Called when the view stops changing (`moveEnd`), not on every frame. */
   readonly onViewChange?: (view: ViewState) => void;
   /**
-   * Called when the engine cannot start or a basemap cannot be applied. The
+   * Called when the engine cannot start or stops working. The
    * app decides what to show, for example a message when WebGL is missing.
    */
   readonly onEngineError?: (
     error: MapEngineError,
     basemap: BasemapDefinition,
+  ) => void;
+  /**
+   * Called when a change of `basemap` has loaded on the mounted engine, so
+   * the app can save the choice only once it is known to work.
+   */
+  readonly onBasemapApplied?: (basemap: BasemapDefinition) => void;
+  /**
+   * Called when a change of `basemap` could not load. The map keeps drawing
+   * `kept`, the basemap that last loaded, and this is not an engine error:
+   * `useMap().error` stays null. Passing `kept` back as `basemap` causes no
+   * second swap.
+   */
+  readonly onBasemapError?: (
+    error: MapEngineError,
+    failed: BasemapDefinition,
+    kept: BasemapDefinition,
   ) => void;
   /** A click or tap on the map. Not called for the click that ends a long-press. */
   readonly onClick?: (event: MapClickEvent) => void;
@@ -138,6 +154,8 @@ export function MapView({
   basemap,
   onViewChange,
   onEngineError,
+  onBasemapApplied,
+  onBasemapError,
   onClick,
   onLongPress,
   onPointerMove,
@@ -183,6 +201,8 @@ export function MapView({
     basemap,
     onViewChange,
     onEngineError,
+    onBasemapApplied,
+    onBasemapError,
     onClick,
     onMoveEnd: longPress.cancel,
     shouldDropClick: longPress.consumeClick,

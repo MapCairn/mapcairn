@@ -97,6 +97,7 @@ function setup(
   const provider = new NominatimSearchProvider({
     fetch: scripted.fetchMock as unknown as typeof fetch,
     isOnline: scripted.isOnline,
+    minIntervalMs: 0,
     ...options,
   });
   return { scripted, provider };
@@ -303,7 +304,10 @@ describe("NominatimSearchProvider", () => {
 
   it("reports offline from navigator.onLine by default", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("boom"));
-    const provider = new NominatimSearchProvider({ fetch: fetchMock });
+    const provider = new NominatimSearchProvider({
+      fetch: fetchMock,
+      minIntervalMs: 0,
+    });
     const onLine = vi.spyOn(navigator, "onLine", "get");
     onLine.mockReturnValue(false);
     const offline = await provider.search("x").catch((e: unknown) => e);
@@ -336,6 +340,52 @@ describe("NominatimSearchProvider", () => {
     await expect(
       provider.search("x", { signal: controller.signal }),
     ).rejects.toBeInstanceOf(PortAbortError);
+  });
+
+  it("starts requests at least a second apart by default, as Nominatim's usage policy requires", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(jsonResponse([])));
+      const provider = new NominatimSearchProvider({ fetch: fetchMock });
+
+      void provider.search("first");
+      void provider.reverse({ lat: 1, lng: 2 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(999);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("abandons a queued request without sending it when its signal fires", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(jsonResponse([])));
+      const provider = new NominatimSearchProvider({ fetch: fetchMock });
+      await provider.search("first");
+      const controller = new AbortController();
+
+      const queued = provider
+        .search("second", { signal: controller.signal })
+        .catch((error: unknown) => error);
+      controller.abort();
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(await queued).toBeInstanceOf(PortAbortError);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reads globalThis.fetch lazily when none is injected", async () => {

@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { waitForCreditsCollapsed } from "./support/states";
 
 test.describe("map credits", () => {
   test.use({ reducedMotion: "reduce" });
@@ -8,6 +9,7 @@ test.describe("map credits", () => {
     mapPage,
   }) => {
     await mapPage.goto();
+    await waitForCreditsCollapsed(mapPage);
     const button = mapPage.creditsButton;
     await expect(button).toHaveAttribute("aria-expanded", "false");
     const regionId = await button.getAttribute("aria-controls");
@@ -42,6 +44,7 @@ test.describe("map credits", () => {
     mapPage,
   }) => {
     await mapPage.goto();
+    await waitForCreditsCollapsed(mapPage);
     await mapPage.creditsButton.click();
     await mapPage.creditsButton.click();
     await expect(mapPage.creditsRegion).toBeHidden();
@@ -58,5 +61,47 @@ test.describe("map credits", () => {
     await expect(mapPage.creditsRegion).toBeVisible();
     await page.keyboard.press("+");
     await expect(mapPage.creditsRegion).toBeHidden();
+  });
+
+  test("are shown on first load without taking focus, then collapse by themselves", async ({
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    // The OpenStreetMap attribution guidelines: shown before they may collapse.
+    await expect(mapPage.creditsButton).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(mapPage.creditsRegion).toBeVisible();
+    await expect(
+      mapPage.creditsRegion.getByRole("link", {
+        name: "© OpenStreetMap contributors",
+      }),
+    ).toBeVisible();
+    await expect(mapPage.creditsButton).not.toBeFocused();
+    await expect(
+      mapPage.creditsRegion.getByRole("link").first(),
+    ).not.toBeFocused();
+
+    await waitForCreditsCollapsed(mapPage);
+    await expect(mapPage.creditsButton).not.toBeFocused();
+  });
+
+  test("collapse on the first zoom, before their time is up", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await expect(mapPage.creditsRegion).toBeVisible();
+    await mapPage.focusMap();
+    await expect(mapPage.creditsRegion).toBeVisible();
+    await page.keyboard.press("+");
+    // Well inside the five seconds the credits would otherwise stay.
+    await expect(mapPage.creditsButton).toHaveAttribute(
+      "aria-expanded",
+      "false",
+      { timeout: 2_000 },
+    );
+    await expect(mapPage.creditsRegion).toBeHidden({ timeout: 2_000 });
   });
 });

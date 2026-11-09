@@ -1,7 +1,11 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { RASTER_BASEMAP_ID } from "./support/basemaps";
-import { SAMPLE_RESULTS, scriptSearch } from "./support/services";
+import {
+  SAMPLE_RESULTS,
+  scriptSearch,
+  searchedQueries,
+} from "./support/services";
 
 declare global {
   interface Window {
@@ -154,5 +158,35 @@ test.describe("WebMCP tools", () => {
     expect(
       await callTool(page, "measure-distance", { locations: ["Cape Town"] }),
     ).toBe("Give at least two places to measure a distance.");
+  });
+
+  test("measure tools look places up one at a time and cap how many", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await callTool(page, "measure-area", {
+      locations: ["Cape Town", "Cape Coast", "Cape Cod"],
+    });
+    expect(await searchedQueries(page)).toEqual([
+      "Cape Town",
+      "Cape Coast",
+      "Cape Cod",
+    ]);
+
+    const maxItems = await page.evaluate(() =>
+      ["measure-distance", "measure-area"].map((name) => {
+        const tool = window.__kartaTools?.get(name) as unknown as {
+          inputSchema: { properties: { locations: { maxItems?: number } } };
+        };
+        return tool.inputSchema.properties.locations.maxItems;
+      }),
+    );
+    expect(maxItems).toEqual([10, 10]);
+    expect(
+      await callTool(page, "measure-distance", {
+        locations: Array.from({ length: 11 }, () => "Cape Town"),
+      }),
+    ).toBe("Give at most 10 places to measure.");
   });
 });

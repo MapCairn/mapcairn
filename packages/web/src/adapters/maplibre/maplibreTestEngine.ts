@@ -29,6 +29,17 @@ function rotate(point: PixelPoint, degrees: number): PixelPoint {
 }
 
 /**
+ * A test-only stand-in for `maplibre-gl`'s `GPUInitializationError`, which
+ * the `Map` constructor throws when it cannot create a WebGL2 context.
+ */
+export class FakeGPUInitializationError extends Error {
+  constructor() {
+    super("WebGL2 is required to display this map.");
+    this.name = "GPUInitializationError";
+  }
+}
+
+/**
  * A test-only stand-in for `maplibre-gl`'s `Map`, for happy-dom, which has no
  * WebGL. It keeps a real Web Mercator camera in MapLibre's 512 px zoom, so
  * projection, panning, zoom limits and fitting behave like the engine, and it
@@ -41,12 +52,19 @@ export class FakeMapLibreMap {
   static nextConstructError: Error | undefined;
   /** When true, the map fires `load`, `style.load` and `idle` by itself. */
   static autoLoad = false;
+  /**
+   * With `autoLoad`, the next `setStyle` fails the way MapLibre reports a
+   * style document it could not fetch: an `error` event with no tile or
+   * source, and no `style.load`. Then cleared.
+   */
+  static nextStyleError: Error | undefined;
 
   /** Clears the static state between tests. */
   static reset(): void {
     FakeMapLibreMap.instances = [];
     FakeMapLibreMap.nextConstructError = undefined;
     FakeMapLibreMap.autoLoad = false;
+    FakeMapLibreMap.nextStyleError = undefined;
   }
 
   readonly options: Record<string, unknown>;
@@ -68,6 +86,8 @@ export class FakeMapLibreMap {
   minZoom: number;
   maxZoom: number;
   removed = false;
+  /** What `loaded()` answers: whether the style and every tile have loaded. */
+  loadedState = true;
   features: unknown[] = [];
   queryError: Error | undefined;
 
@@ -278,11 +298,20 @@ export class FakeMapLibreMap {
   setStyle(style: unknown, options?: unknown): void {
     this.record("setStyle", [style, options]);
     if (FakeMapLibreMap.autoLoad) {
+      const error = FakeMapLibreMap.nextStyleError;
+      FakeMapLibreMap.nextStyleError = undefined;
       queueMicrotask(() => {
+        if (error) {
+          this.fire("error", { error });
+          return;
+        }
         this.fire("style.load");
         this.fire("idle");
       });
     }
+  }
+  loaded(): boolean {
+    return this.loadedState;
   }
   getCanvas(): HTMLCanvasElement {
     return this.canvas;
