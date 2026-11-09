@@ -1,4 +1,9 @@
-import { createFakeServices, StaticLayerRegistry } from "@karta/core";
+import {
+  createFakeServices,
+  SAMPLE_FEED_LAYER,
+  SAMPLE_TILE_LAYER,
+  StaticLayerRegistry,
+} from "@karta/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../../services";
@@ -36,10 +41,7 @@ describe("DataSection", () => {
   });
 
   describe("with layers", () => {
-    const layers = [
-      { id: "rivers", name: "Rivers" },
-      { id: "roads", name: "Roads" },
-    ];
+    const layers = [SAMPLE_FEED_LAYER, SAMPLE_TILE_LAYER];
 
     it("is a region named Data with an h3", () => {
       renderData(layers);
@@ -63,8 +65,8 @@ describe("DataSection", () => {
       const list = screen.getByRole("list");
       const items = within(list).getAllByRole("listitem");
       expect(items.map((item) => item.textContent)).toEqual([
-        "Rivers",
-        "Roads",
+        "Sample points",
+        "Sample imagery",
       ]);
     });
   });

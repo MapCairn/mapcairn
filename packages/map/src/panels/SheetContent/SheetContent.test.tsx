@@ -1,7 +1,9 @@
 import {
   createFakeServices,
   FakeDevicePreferences,
+  type LayerDefinition,
   MemorySettingsStore,
+  SAMPLE_FEED_LAYER,
   StaticLayerRegistry,
 } from "@karta/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -12,7 +14,7 @@ import { SheetContent, type SheetContentProps } from "./SheetContent";
 
 interface Options {
   readonly props?: Partial<SheetContentProps>;
-  readonly layers?: { id: string; name: string }[];
+  readonly layers?: LayerDefinition[];
   readonly reducedMotion?: boolean;
   readonly theme?: "system" | "light" | "dark";
 }
@@ -73,7 +75,7 @@ describe("SheetContent structure", () => {
   });
 
   it("adds Data between Pin and Settings when the host has layers", () => {
-    renderContent({ layers: [{ id: "rivers", name: "Rivers" }] });
+    renderContent({ layers: [SAMPLE_FEED_LAYER] });
     const headings = within(screen.getByTestId("sheet-content"))
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
@@ -93,7 +95,7 @@ describe("SheetContent structure", () => {
   });
 
   it("makes each section a named region", () => {
-    renderContent({ layers: [{ id: "rivers", name: "Rivers" }] });
+    renderContent({ layers: [SAMPLE_FEED_LAYER] });
     for (const name of ["Basemap", "Pin", "Data", "Settings", "Help"]) {
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
@@ -234,14 +236,14 @@ describe("SheetContent section focus", () => {
 
   it("focuses the Data heading when layers exist", () => {
     renderContent({
-      props: { section: "data" },
-      layers: [{ id: "rivers", name: "Rivers" }],
+      props: { section: "layers" },
+      layers: [SAMPLE_FEED_LAYER],
     });
     expect(heading("Data")).toHaveFocus();
   });
 
   it("does nothing for the Data section when there are no layers", () => {
-    renderContent({ props: { section: "data" } });
+    renderContent({ props: { section: "layers" } });
     expect(scrollIntoView).not.toHaveBeenCalled();
     expect(document.body).toHaveFocus();
   });

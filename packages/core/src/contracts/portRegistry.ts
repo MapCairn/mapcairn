@@ -1,5 +1,6 @@
 import { FakeClipboard } from "../fakes/FakeClipboard";
 import { FakeDevicePreferences } from "../fakes/FakeDevicePreferences";
+import { FakeLayerSource } from "../fakes/FakeLayerSource";
 import { FakeLocationProvider } from "../fakes/FakeLocationProvider";
 import { createFakeMapAdapterFactory } from "../fakes/FakeMapAdapter";
 import { FakeSearchProvider } from "../fakes/FakeSearchProvider";
@@ -11,6 +12,7 @@ import type { Services } from "../ports/services";
 import { runClipboardContract } from "./clipboard.contract";
 import { runDevicePreferencesContract } from "./devicePreferences.contract";
 import { runLayerRegistryContract } from "./layerRegistry.contract";
+import { runLayerSourceContract } from "./layerSource.contract";
 import { runLocationProviderContract } from "./locationProvider.contract";
 import { runMapAdapterContract } from "./mapAdapter.contract";
 import { runSearchProviderContract } from "./searchProvider.contract";
@@ -34,6 +36,7 @@ export const PORT_NAMES = [
   "theme",
   "preferences",
   "layers",
+  "layerSource",
 ] as const satisfies readonly (keyof Services)[];
 
 /** The name of one port, as it appears on `Services`. */
@@ -55,6 +58,7 @@ export interface PortContractRunners {
   readonly theme: typeof runThemeSourceContract;
   readonly preferences: typeof runDevicePreferencesContract;
   readonly layers: typeof runLayerRegistryContract;
+  readonly layerSource: typeof runLayerSourceContract;
 }
 
 /** What the registry holds for one port. */
@@ -108,5 +112,9 @@ export const PORT_REGISTRY: PortRegistry = {
   layers: {
     createFake: () => new StaticLayerRegistry(),
     runContract: runLayerRegistryContract,
+  },
+  layerSource: {
+    createFake: () => new FakeLayerSource(),
+    runContract: runLayerSourceContract,
   },
 };

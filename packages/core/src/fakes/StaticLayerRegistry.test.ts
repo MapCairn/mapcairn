@@ -3,11 +3,12 @@ import {
   type LayerRegistrySubject,
   runLayerRegistryContract,
 } from "../contracts/layerRegistry.contract";
-import type { LayerSummary } from "../ports/layers";
+import type { LayerDefinition } from "../layers/definition";
+import { SAMPLE_FEED_LAYER, SAMPLE_TILE_LAYER } from "./layerFixtures";
 import { StaticLayerRegistry } from "./StaticLayerRegistry";
 
 function subjectFor(
-  layers?: readonly LayerSummary[],
+  layers?: readonly LayerDefinition[],
 ): () => LayerRegistrySubject {
   return () => ({
     registry: new StaticLayerRegistry(layers),
@@ -18,10 +19,7 @@ function subjectFor(
 runLayerRegistryContract("StaticLayerRegistry (empty)", subjectFor());
 runLayerRegistryContract(
   "StaticLayerRegistry (layers)",
-  subjectFor([
-    { id: "parks", name: "Parks" },
-    { id: "rivers", name: "Rivers" },
-  ]),
+  subjectFor([SAMPLE_FEED_LAYER, SAMPLE_TILE_LAYER]),
 );
 
 describe("StaticLayerRegistry", () => {
@@ -30,10 +28,10 @@ describe("StaticLayerRegistry", () => {
   });
 
   it("copies the list it is given, so later changes to the input do not leak in", () => {
-    const input: LayerSummary[] = [{ id: "a", name: "A" }];
+    const input: LayerDefinition[] = [SAMPLE_FEED_LAYER];
     const registry = new StaticLayerRegistry(input);
-    input.push({ id: "b", name: "B" });
-    expect(registry.list()).toEqual([{ id: "a", name: "A" }]);
+    input.push(SAMPLE_TILE_LAYER);
+    expect(registry.list()).toEqual([SAMPLE_FEED_LAYER]);
     expect(Object.isFrozen(registry.list())).toBe(true);
   });
 });

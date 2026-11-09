@@ -67,10 +67,10 @@ describe("opening the sheet", () => {
       openSheet(),
       setDetent("full"),
       openSearch(),
-      openSheet("data"),
+      openSheet("layers"),
     );
     expect(state.sheetDetent).toBe("half");
-    expect(state.sheetSection).toBe("data");
+    expect(state.sheetSection).toBe("layers");
   });
 });
 

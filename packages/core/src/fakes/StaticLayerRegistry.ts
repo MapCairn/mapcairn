@@ -1,4 +1,5 @@
-import type { LayerRegistry, LayerSummary } from "../ports/layers";
+import type { LayerDefinition } from "../layers/definition";
+import type { LayerRegistry } from "../ports/layers";
 
 /**
  * A {@link LayerRegistry} over a fixed list.
@@ -7,13 +8,13 @@ import type { LayerRegistry, LayerSummary } from "../ports/layers";
  * matches the host in this release). The list is copied and frozen.
  */
 export class StaticLayerRegistry implements LayerRegistry {
-  readonly #layers: readonly LayerSummary[];
+  readonly #layers: readonly LayerDefinition[];
 
-  constructor(layers: readonly LayerSummary[] = []) {
+  constructor(layers: readonly LayerDefinition[] = []) {
     this.#layers = Object.freeze([...layers]);
   }
 
-  list(): readonly LayerSummary[] {
+  list(): readonly LayerDefinition[] {
     return this.#layers;
   }
 }

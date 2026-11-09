@@ -4,6 +4,7 @@ import { emptyLayerRegistry, type Services } from "@karta/core";
 // the engine mounts, and keeps it out of the ui, which may not import adapters.
 import "../adapters/mapEngine.css";
 import { BrowserClipboard } from "../adapters/clipboard/BrowserClipboard";
+import { FetchLayerSource } from "../adapters/layers/FetchLayerSource";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
 import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { BrowserDevicePreferences } from "../adapters/preferences/BrowserDevicePreferences";
@@ -62,6 +63,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     theme: new BrowserThemeSource(),
     preferences: new BrowserDevicePreferences(),
     layers: emptyLayerRegistry,
+    layerSource: new FetchLayerSource(),
   };
   const seam =
     import.meta.env.MODE !== "production" ? readTestOverrides() : undefined;

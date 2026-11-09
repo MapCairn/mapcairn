@@ -4,6 +4,7 @@ import type { Services } from "../ports/services";
 import { createFakeServices } from "./createFakeServices";
 import { FakeClipboard } from "./FakeClipboard";
 import { FakeMapAdapter } from "./FakeMapAdapter";
+import { SAMPLE_FEED_LAYER } from "./layerFixtures";
 import { StaticLayerRegistry } from "./StaticLayerRegistry";
 
 describe("createFakeServices", () => {
@@ -23,7 +24,7 @@ describe("createFakeServices", () => {
 
   it("uses an override instead of the fake, leaving the fake available", () => {
     const clipboard = new FakeClipboard();
-    const layers = new StaticLayerRegistry([{ id: "a", name: "A" }]);
+    const layers = new StaticLayerRegistry([SAMPLE_FEED_LAYER]);
     const services = createFakeServices({ clipboard, layers });
     expect(services.clipboard).toBe(clipboard);
     expect(services.layers).toBe(layers);

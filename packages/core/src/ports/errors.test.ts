@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  LayerError,
   LocationError,
   MapEngineError,
   PortAbortError,
@@ -7,6 +8,15 @@ import {
 } from "./errors";
 
 describe("port errors", () => {
+  it("carries the layer error kind and a default message", () => {
+    const error = new LayerError("empty");
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("LayerError");
+    expect(error.kind).toBe("empty");
+    expect(error.message).toContain("empty");
+    expect(new LayerError("network", "Offline.").message).toBe("Offline.");
+  });
+
   it("carries the search error kind and a default message", () => {
     const error = new SearchError("rate-limited");
     expect(error).toBeInstanceOf(Error);

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { LayerRegistry, LayerSummary } from "../ports/layers";
+import type { LayerDefinition } from "../layers/definition";
+import type { LayerRegistry } from "../ports/layers";
 
 /** What the layer contract needs besides the registry itself. */
 export interface LayerRegistryControls {
   /** The layers the registry was built to list, in order. May be empty. */
-  readonly layers: readonly LayerSummary[];
+  readonly layers: readonly LayerDefinition[];
 }
 
 /** One layer registry under test, with its controls. */

@@ -1,10 +1,11 @@
-import type { LayerRegistry, LayerSummary } from "../ports/layers";
+import type { LayerRegistry } from "../ports/layers";
+import type { LayerDefinition } from "./definition";
 
-const NO_LAYERS: readonly LayerSummary[] = Object.freeze([]);
+const NO_LAYERS: readonly LayerDefinition[] = Object.freeze([]);
 
 /**
  * The {@link LayerRegistry} for a host that supplies no data layers, so the
- * sheet's Data section stays hidden. Frozen and stateless, so one instance
+ * sheet's Layers section stays hidden. Frozen and stateless, so one instance
  * can be shared safely; a host with layers supplies its own registry.
  */
 export const emptyLayerRegistry: LayerRegistry = Object.freeze({

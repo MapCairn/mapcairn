@@ -1,5 +1,5 @@
 import type { ClipboardPort } from "./clipboard";
-import type { LayerRegistry } from "./layers";
+import type { LayerRegistry, LayerSource } from "./layers";
 import type { LocationProvider } from "./location";
 import type { MapAdapterFactory } from "./map";
 import type { DevicePreferences } from "./preferences";
@@ -23,4 +23,6 @@ export interface Services {
   readonly theme: ThemeSource;
   readonly preferences: DevicePreferences;
   readonly layers: LayerRegistry;
+  /** Loads any feed layer's features and details, reading everything from its definition. */
+  readonly layerSource: LayerSource;
 }

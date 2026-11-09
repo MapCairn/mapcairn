@@ -4,7 +4,7 @@ import type { SheetDetent } from "../sheet/sheet";
 export type SurfaceKind = "none" | "sheet" | "search" | "measure" | "pin";
 
 /** The sections of the map options sheet. */
-export type SheetSection = "basemap" | "pin" | "settings" | "help" | "data";
+export type SheetSection = "basemap" | "pin" | "settings" | "help" | "layers";
 
 /** The control that should receive focus when a surface closes. */
 export type FocusTarget = "map-options" | "search" | "measure" | "pin";

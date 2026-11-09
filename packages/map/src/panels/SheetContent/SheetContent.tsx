@@ -88,7 +88,7 @@ export function SheetContent({
       >
         {pinCard}
       </PinSection>
-      <DataSection headingRef={headingRef("data")} />
+      <DataSection headingRef={headingRef("layers")} />
       <SettingsSection
         privacyHref={privacyHref}
         headingRef={headingRef("settings")}

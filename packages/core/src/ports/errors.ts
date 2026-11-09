@@ -39,6 +39,24 @@ export class LocationError extends Error {
 }
 
 /**
+ * Why a layer could not load: the request failed (`network`), the response
+ * could not be decoded (`invalid`), it held no features (`empty`), or the
+ * caller cancelled it (`aborted`, which callers ignore).
+ */
+export type LayerErrorKind = "network" | "invalid" | "empty" | "aborted";
+
+/** The only error a layer source rejects with. */
+export class LayerError extends Error {
+  readonly kind: LayerErrorKind;
+
+  constructor(kind: LayerErrorKind, message?: string) {
+    super(message ?? `The layer could not load: ${kind}.`);
+    this.name = "LayerError";
+    this.kind = kind;
+  }
+}
+
+/**
  * Why a map engine failed: it could not start without WebGL, it could not
  * load, or it `stopped` working after it had loaded.
  */

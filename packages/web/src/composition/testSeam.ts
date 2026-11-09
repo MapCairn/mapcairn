@@ -28,6 +28,7 @@ const SERVICE_KEYS = [
   "theme",
   "preferences",
   "layers",
+  "layerSource",
 ] as const satisfies readonly (keyof Services)[];
 
 /** Fails to compile when a `Services` key is missing from {@link SERVICE_KEYS}. */
