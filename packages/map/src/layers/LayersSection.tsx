@@ -67,7 +67,7 @@ function byGroup(layers: readonly DataLayerState[]) {
  * host has no layers.
  *
  * @remarks A tap on the map asks for the card to take focus
- *   (`layers.focusRequest`); the focus moves after the sheet's own focus
+ *   (`layers.focusPending`); the focus moves after the sheet's own focus
  *   effects, so the card heading wins over the section heading.
  */
 export function LayersSection({
@@ -81,36 +81,60 @@ export function LayersSection({
   const adapter = useContext(MapContext)?.adapter ?? null;
   const announce = useAnnounce();
   const cardHeading = useRef<HTMLHeadingElement>(null);
-  const { focusRequest } = layers;
+  const { focusPending, consumeFocus } = layers;
   const { reducedMotion } = usePreferences();
   const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
   const { layout, viewport, panelEdge } = useChromeLayout();
   const [cardRequest, setCardRequest] = useState(0);
-  const keptClear = useRef(0);
   const { selected } = layers;
 
-  // A tap on the map selected a point: the sheet or side panel that opened
-  // for its card must not hide it. A point that shows stays where it is. The
-  // side panel publishes its edge after it opens, so wait for that.
+  // A tap on the map selected a point and opened its card: the card takes
+  // focus, and the sheet or side panel that opened for it must not hide the
+  // point (one that shows stays where it is). The side panel publishes its
+  // edge after it opens, so wait for that. Acted on once: the section is
+  // unmounted when the sheet closes, and reopening must not repeat this.
   useEffect(() => {
     if (
-      !adapter ||
+      !focusPending ||
       !selected ||
-      focusRequest === keptClear.current ||
       (layout === "panel" && panelEdge === null)
     ) {
       return;
     }
-    keptClear.current = focusRequest;
-    const position = featurePosition(selected.feature);
-    const offset = position
-      ? revealOffset(adapter.project(position), { layout, viewport, panelEdge })
-      : null;
-    if (offset) {
+    consumeFocus();
+    // After the sheet's effects, which focus and smoothly scroll to the
+    // section heading. The card sits just below it; an instant scroll here
+    // would cut the sheet's smooth one short.
+    queueMicrotask(() => {
+      const heading = cardHeading.current;
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView?.({
+        block: "start",
+        behavior: motion.current ? "auto" : "smooth",
+      });
+    });
+    const position = adapter ? featurePosition(selected.feature) : null;
+    const offset =
+      adapter && position
+        ? revealOffset(adapter.project(position), {
+            layout,
+            viewport,
+            panelEdge,
+          })
+        : null;
+    if (adapter && offset) {
       adapter.panBy(offset.dx, offset.dy);
     }
-  }, [adapter, selected, focusRequest, layout, viewport, panelEdge]);
+  }, [
+    adapter,
+    selected,
+    focusPending,
+    consumeFocus,
+    layout,
+    viewport,
+    panelEdge,
+  ]);
 
   // "Show on map" lowers the sheet to a detent that shows the map as well as
   // the card, but the card sits above wherever the list was scrolled to.
@@ -123,23 +147,6 @@ export function LayersSection({
       behavior: motion.current ? "auto" : "smooth",
     });
   }, [cardRequest]);
-
-  useEffect(() => {
-    if (focusRequest === 0) {
-      return;
-    }
-    // After the sheet's effects, which focus and smoothly scroll to the
-    // section heading. The card sits just below it; an instant scroll here
-    // would cut the sheet's smooth one short.
-    queueMicrotask(() => {
-      const heading = cardHeading.current;
-      heading?.focus({ preventScroll: true });
-      heading?.scrollIntoView?.({
-        block: "start",
-        behavior: motion.current ? "auto" : "smooth",
-      });
-    });
-  }, [focusRequest]);
 
   if (layers.layers.length === 0) {
     return null;

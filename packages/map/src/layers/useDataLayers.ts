@@ -72,6 +72,15 @@ export interface DataLayers {
   readonly detail: DetailState | null;
   /** Grows each time a selection asks for its card to take focus (a tap on the map). */
   readonly focusRequest: number;
+  /**
+   * True from a request for the card to take focus until
+   * {@link DataLayers.consumeFocus}. The section that shows the card is
+   * unmounted whenever the sheet closes, so what has been acted on is kept
+   * here: reopening the sheet later must not repeat it.
+   */
+  readonly focusPending: boolean;
+  /** Marks the latest focus request as acted on. */
+  readonly consumeFocus: () => void;
   /** The layers part of the permalink. */
   readonly urlValue: LayersUrlState;
   /** The credits of the layers that are on, for the map credits. */
@@ -115,6 +124,8 @@ interface State {
     readonly featureId: string;
   } | null;
   readonly focusRequest: number;
+  /** The `focusRequest` that has been acted on. */
+  readonly focusHandled: number;
   readonly detail: DetailState | null;
 }
 
@@ -139,6 +150,7 @@ function initialState(
     retries: {},
     selection: null,
     focusRequest: 0,
+    focusHandled: 0,
     detail: null,
   };
 }
@@ -411,6 +423,14 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     [],
   );
 
+  const consumeFocus = useCallback(() => {
+    setState((previous) =>
+      previous.focusHandled === previous.focusRequest
+        ? previous
+        : { ...previous, focusHandled: previous.focusRequest },
+    );
+  }, []);
+
   const hideDetail = useCallback(() => {
     detailRequest.current?.abort();
     detailRequest.current = null;
@@ -533,6 +553,8 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     selected,
     detail: state.detail,
     focusRequest: state.focusRequest,
+    focusPending: state.focusRequest > state.focusHandled,
+    consumeFocus,
     urlValue,
     credits,
     now,

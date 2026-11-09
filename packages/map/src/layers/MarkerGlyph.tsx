@@ -5,6 +5,9 @@ import { paletteColour } from "./mapFeatures";
 
 const { edge, halo, edgeWidth, haloWidth } = tokenValues.dataMarker;
 
+/** How far a shape's corners reach past its radius. */
+const SHAPE_REACH = 1.15;
+
 /** Props for {@link MarkerGlyph}. */
 export interface MarkerGlyphProps {
   readonly shape: MarkerShape;
@@ -44,7 +47,8 @@ function ShapePath({ shape, r }: { shape: MarkerShape; r: number }) {
  * the Content-Security-Policy.
  */
 export function MarkerGlyph({ shape, colour, radius }: MarkerGlyphProps) {
-  const extent = Math.ceil(radius + edgeWidth + haloWidth);
+  // A diamond's and a triangle's corners reach past the radius.
+  const extent = Math.ceil(radius * SHAPE_REACH + edgeWidth + haloWidth);
   const size = extent * 2;
   return (
     <svg

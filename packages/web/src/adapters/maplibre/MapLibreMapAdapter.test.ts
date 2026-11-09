@@ -701,9 +701,11 @@ describe("MapLibreMapAdapter", () => {
         expect(taps).not.toHaveBeenCalled();
       });
 
-      it("adds one marker image per shape and colour", async () => {
+      it("adds one marker image per shape, colour and radius", async () => {
         const { map } = await withPoints();
-        expect([...map.images.keys()]).toEqual(["karta-marker:square:#e69f00"]);
+        expect([...map.images.keys()]).toEqual([
+          "karta-marker:square:#e69f00:6",
+        ]);
       });
 
       it("reports no tap when the query fails", async () => {

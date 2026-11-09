@@ -34,7 +34,6 @@ import type {
 } from "maplibre-gl";
 import { Emitter } from "../shared/emitter";
 import {
-  MARKER_BASE_RADIUS,
   MARKER_PIXEL_RATIO,
   markerImage,
   markerImageName,
@@ -204,8 +203,7 @@ function pointCollection(id: string, features: readonly MapFeature[]) {
       properties: {
         "karta:layer": id,
         "karta:id": feature.id,
-        icon: markerImageName(feature.shape, feature.colour),
-        size: feature.radius / MARKER_BASE_RADIUS,
+        icon: markerImageName(feature.shape, feature.colour, feature.radius),
         // Larger points are drawn first, so smaller ones stay on top and tappable.
         sort: -feature.radius,
       },
@@ -667,11 +665,17 @@ export class MapLibreMapAdapter implements MapAdapter {
     switch (layer.kind) {
       case "features": {
         for (const feature of layer.features) {
-          const name = markerImageName(feature.shape, feature.colour);
+          const name = markerImageName(
+            feature.shape,
+            feature.colour,
+            feature.radius,
+          );
           if (!map.hasImage(name)) {
-            map.addImage(name, markerImage(feature.shape, feature.colour), {
-              pixelRatio: MARKER_PIXEL_RATIO,
-            });
+            map.addImage(
+              name,
+              markerImage(feature.shape, feature.colour, feature.radius),
+              { pixelRatio: MARKER_PIXEL_RATIO },
+            );
           }
         }
         map.addSource(ids.source, {
@@ -684,7 +688,6 @@ export class MapLibreMapAdapter implements MapAdapter {
           source: ids.source,
           layout: {
             "icon-image": ["get", "icon"],
-            "icon-size": ["get", "size"],
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
             "symbol-sort-key": ["get", "sort"],

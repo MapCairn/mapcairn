@@ -16,6 +16,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ChromeLayoutProvider } from "../chrome/layoutContext";
 import {
@@ -40,10 +41,16 @@ function setup(
   const adapter = new FakeMapAdapter();
   const onShowOnMap = vi.fn();
   const handle: { current: DataLayers | null } = { current: null };
+  const visible: { set: (shown: boolean) => void } = { set: () => {} };
   function Harness() {
     const layers = useDataLayers({ now: () => NOW });
+    const [shown, setShown] = useState(true);
     handle.current = layers;
-    return <LayersSection layers={layers} onShowOnMap={onShowOnMap} />;
+    visible.set = setShown;
+    // The app unmounts the section whenever the sheet closes.
+    return shown ? (
+      <LayersSection layers={layers} onShowOnMap={onShowOnMap} />
+    ) : null;
   }
   const tree = (layout: typeof chrome) => (
     <ServicesProvider services={services}>
@@ -65,6 +72,8 @@ function setup(
     ...view,
     /** Re-renders with new chrome facts, such as the side panel having measured. */
     withChrome: (next: typeof chrome) => view.rerender(tree(next)),
+    /** Shows or hides the section, as the sheet opening and closing does. */
+    showSection: (shown: boolean) => act(() => visible.set(shown)),
     adapter,
     onShowOnMap,
     source: services.fakes.layerSource,
@@ -504,6 +513,24 @@ describe("LayersSection", () => {
       await waitFor(() => expect(pan).toHaveBeenCalledWith(0, 300 - 150));
     });
 
+    it("acts on a tap once: reopening the sheet later does not move the map or the focus again", async () => {
+      const { adapter, layers, showSection } = await withPoint(PHONE, [10, 20]);
+      adapter.setView({ center: { lat: 20, lng: 10 }, zoom: 5 });
+      const pan = vi.spyOn(adapter, "panBy");
+      act(() => layers().select("sample-points", "a", { focus: true }));
+      await waitFor(() =>
+        expect(screen.getByTestId("feature-card-heading")).toHaveFocus(),
+      );
+      expect(pan).toHaveBeenCalledTimes(1);
+      showSection(false);
+      adapter.setView({ center: { lat: 50, lng: 60 }, zoom: 5 });
+      pan.mockClear();
+      showSection(true);
+      await act(async () => {});
+      expect(pan).not.toHaveBeenCalled();
+      expect(screen.getByTestId("feature-card-heading")).not.toHaveFocus();
+    });
+
     it("leaves a tapped point that already shows where it is", async () => {
       const { adapter, layers, source } = setup(SAMPLE_LAYERS, PHONE);
       const high = adapter.unproject({ x: 400, y: 100 });
@@ -528,13 +555,16 @@ describe("LayersSection", () => {
       adapter.setView({ center: { lat: 20, lng: 10 }, zoom: 5 });
       const pan = vi.spyOn(adapter, "panBy");
       act(() => layers().select("sample-points", "a", { focus: true }));
-      await waitFor(() =>
-        expect(screen.getByTestId("feature-card-heading")).toHaveFocus(),
-      );
+      await act(async () => {});
       expect(pan).not.toHaveBeenCalled();
+      expect(layers().focusPending).toBe(true);
       // Now it knows the panel covers the left 500px, so the point at 400 is behind it.
       withChrome({ ...PANEL, panelEdge: 500 });
       await waitFor(() => expect(pan).toHaveBeenCalledWith(400 - 650, 0));
+      await waitFor(() =>
+        expect(screen.getByTestId("feature-card-heading")).toHaveFocus(),
+      );
+      expect(layers().focusPending).toBe(false);
     });
   });
 

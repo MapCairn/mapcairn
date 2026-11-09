@@ -206,6 +206,25 @@ describe("useDataLayers", () => {
     expect(result.current.selected).toBeNull();
   });
 
+  it("keeps a request for the card to take focus until it is acted on, and only once", async () => {
+    const { result, source } = setup();
+    source.setFeatures("sample-points", [samplePoint("a")]);
+    act(() => result.current.setEnabled("sample-points", true));
+    await waitFor(() =>
+      expect(layer(result, "sample-points").features).toHaveLength(1),
+    );
+    expect(result.current.focusPending).toBe(false);
+    act(() => result.current.select("sample-points", "a"));
+    expect(result.current.focusPending).toBe(false);
+    act(() => result.current.select("sample-points", "a", { focus: true }));
+    expect(result.current.focusPending).toBe(true);
+    act(() => result.current.consumeFocus());
+    act(() => result.current.consumeFocus());
+    expect(result.current.focusPending).toBe(false);
+    act(() => result.current.select("sample-points", "a", { focus: true }));
+    expect(result.current.focusPending).toBe(true);
+  });
+
   it("sorts the list by the layer's sort options", async () => {
     const { result, source } = setup();
     source.setFeatures("sample-points", [
