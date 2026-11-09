@@ -4,6 +4,8 @@ import {
   LocationError,
   MapEngineError,
   PortAbortError,
+  RoutingError,
+  type RoutingErrorKind,
   SearchError,
 } from "./errors";
 
@@ -30,6 +32,25 @@ describe("port errors", () => {
     expect(error.name).toBe("LocationError");
     expect(error.kind).toBe("denied");
     expect(error.message).toBe("No permission.");
+  });
+
+  it("carries the routing error kind and a default message", () => {
+    const kinds: RoutingErrorKind[] = [
+      "network",
+      "invalid",
+      "no-route",
+      "rate-limited",
+      "aborted",
+      "unsupported",
+    ];
+    for (const kind of kinds) {
+      const error = new RoutingError(kind);
+      expect(error).toBeInstanceOf(Error);
+      expect(error.name).toBe("RoutingError");
+      expect(error.kind).toBe(kind);
+      expect(error.message).toContain(kind);
+    }
+    expect(new RoutingError("network", "Offline.").message).toBe("Offline.");
   });
 
   it("carries the map engine error reason", () => {

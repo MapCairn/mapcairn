@@ -1,11 +1,16 @@
 import {
   createFakeServices,
   FakeClipboard,
+  FakeRoutingProvider,
   FakeSearchProvider,
   type Services,
   StaticLayerRegistry,
 } from "@karta/core";
-import { PORT_NAMES } from "@karta/core/contracts";
+import {
+  OPTIONAL_PORT_NAMES,
+  PORT_NAMES,
+  type PortName,
+} from "@karta/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { LAYER_DEFINITIONS } from "../layers";
@@ -18,12 +23,22 @@ afterEach(() => {
 });
 
 describe("createServices", () => {
-  it("returns a complete Services with every port", () => {
+  it("returns a complete Services with every port the host must supply", () => {
     const services = createServices();
-    for (const name of PORT_NAMES) {
-      expect(services[name], name).toBeDefined();
+    const required: readonly string[] = PORT_NAMES.filter(
+      (name) => !(OPTIONAL_PORT_NAMES as readonly string[]).includes(name),
+    );
+    for (const name of required) {
+      expect(services[name as PortName], name).toBeDefined();
     }
-    expect(Object.keys(services).sort()).toEqual([...PORT_NAMES].sort());
+    expect(Object.keys(services).sort()).toEqual([...required].sort());
+  });
+
+  it("leaves out the optional ports, because no provider is built in", () => {
+    const services = createServices();
+    for (const name of OPTIONAL_PORT_NAMES) {
+      expect(services[name]).toBeUndefined();
+    }
   });
 
   it("builds real adapters that answer without touching the network", () => {
@@ -106,6 +121,13 @@ describe("createServices", () => {
       expect(createServices({ overrides: { search: fromCode } }).search).toBe(
         fromCode,
       );
+    });
+
+    it("lets a browser test supply the optional routing provider", () => {
+      const routing = new FakeRoutingProvider();
+      window.__KARTA_TEST_SERVICES__ = { routing };
+      vi.spyOn(console, "info").mockImplementation(() => undefined);
+      expect(createServices().routing).toBe(routing);
     });
 
     it("accepts a map adapter factory function", () => {

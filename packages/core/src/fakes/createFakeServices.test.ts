@@ -22,6 +22,25 @@ describe("createFakeServices", () => {
     expect(services.layers).toBe(services.fakes.layers);
   });
 
+  it("provides a scriptable routing provider", async () => {
+    const services = createFakeServices();
+    expect(services.routing).toBe(services.fakes.routing);
+    const result = await services.fakes.routing.route({
+      stops: [
+        { lat: 48.8566, lng: 2.3522 },
+        { lat: 48.8584, lng: 2.2945 },
+      ],
+      mode: "walk",
+    });
+    expect(result.features).toHaveLength(1);
+  });
+
+  it("leaves routing out when told to, as a host may", () => {
+    const services = createFakeServices({ routing: undefined });
+    expect(services.routing).toBeUndefined();
+    expect(services.fakes.routing).toBeDefined();
+  });
+
   it("uses an override instead of the fake, leaving the fake available", () => {
     const clipboard = new FakeClipboard();
     const layers = new StaticLayerRegistry([SAMPLE_FEED_LAYER]);

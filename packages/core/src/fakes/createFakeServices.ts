@@ -7,6 +7,7 @@ import {
   createFakeMapAdapterFactory,
   type FakeMapAdapter,
 } from "./FakeMapAdapter";
+import { FakeRoutingProvider } from "./FakeRoutingProvider";
 import { FakeSearchProvider } from "./FakeSearchProvider";
 import { FakeThemeSource } from "./FakeThemeSource";
 import { MemorySettingsStore } from "./MemorySettingsStore";
@@ -24,6 +25,7 @@ export interface FakeServiceHandles {
   readonly preferences: FakeDevicePreferences;
   readonly layers: StaticLayerRegistry;
   readonly layerSource: FakeLayerSource;
+  readonly routing: FakeRoutingProvider;
   /** Every adapter `createMapAdapter` has built, oldest first. */
   readonly maps: FakeMapAdapter[];
 }
@@ -43,6 +45,9 @@ export interface FakeServices extends Services {
  *
  * The default `createMapAdapter` is {@link createFakeMapAdapterFactory}, and
  * each adapter it builds is recorded in `fakes.maps`.
+ *
+ * `routing` is optional on `Services`, but the fakes include it so a test can
+ * script routes. To test the ui without it, pass `{ routing: undefined }`.
  */
 export function createFakeServices(
   overrides: Partial<Services> = {},
@@ -58,6 +63,7 @@ export function createFakeServices(
     preferences: new FakeDevicePreferences(),
     layers: new StaticLayerRegistry(),
     layerSource: new FakeLayerSource(),
+    routing: new FakeRoutingProvider(),
     maps,
   };
   return {
@@ -73,6 +79,7 @@ export function createFakeServices(
     preferences: fakes.preferences,
     layers: fakes.layers,
     layerSource: fakes.layerSource,
+    routing: fakes.routing,
     ...overrides,
     fakes,
   };

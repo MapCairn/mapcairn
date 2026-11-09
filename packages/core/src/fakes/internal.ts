@@ -37,22 +37,24 @@ export function createDeferred<T>(): Deferred<T> {
  * at once, without calling `start`, so a fake does not consume a scripted
  * outcome for a request nobody wants. A signal that fires while the promise
  * from `start` is pending rejects with a {@link PortAbortError}. Whichever
- * happens first wins.
+ * happens first wins. A port whose abort is a typed error of its own, such as
+ * the routing port, passes `abortError` to build it.
  */
 export function abortable<T>(
   start: () => Promise<T>,
   signal: AbortSignal | undefined,
+  abortError: () => Error = () => new PortAbortError(),
 ): Promise<T> {
   if (signal === undefined) {
     return start();
   }
   if (signal.aborted) {
-    return Promise.reject(new PortAbortError());
+    return Promise.reject(abortError());
   }
   const promise = start();
   return new Promise<T>((resolve, reject) => {
     const onAbort = (): void => {
-      reject(new PortAbortError());
+      reject(abortError());
     };
     signal.addEventListener("abort", onAbort, { once: true });
     promise.then(

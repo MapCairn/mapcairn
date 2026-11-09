@@ -3,6 +3,7 @@ import { FakeDevicePreferences } from "../fakes/FakeDevicePreferences";
 import { FakeLayerSource } from "../fakes/FakeLayerSource";
 import { FakeLocationProvider } from "../fakes/FakeLocationProvider";
 import { createFakeMapAdapterFactory } from "../fakes/FakeMapAdapter";
+import { FakeRoutingProvider } from "../fakes/FakeRoutingProvider";
 import { FakeSearchProvider } from "../fakes/FakeSearchProvider";
 import { FakeThemeSource } from "../fakes/FakeThemeSource";
 import { MemorySettingsStore } from "../fakes/MemorySettingsStore";
@@ -15,6 +16,7 @@ import { runLayerRegistryContract } from "./layerRegistry.contract";
 import { runLayerSourceContract } from "./layerSource.contract";
 import { runLocationProviderContract } from "./locationProvider.contract";
 import { runMapAdapterContract } from "./mapAdapter.contract";
+import { runRoutingProviderContract } from "./routingProvider.contract";
 import { runSearchProviderContract } from "./searchProvider.contract";
 import { runSettingsStoreContract } from "./settingsStore.contract";
 import { runThemeSourceContract } from "./themeSource.contract";
@@ -37,10 +39,20 @@ export const PORT_NAMES = [
   "preferences",
   "layers",
   "layerSource",
+  "routing",
 ] as const satisfies readonly (keyof Services)[];
 
 /** The name of one port, as it appears on `Services`. */
 export type PortName = (typeof PORT_NAMES)[number];
+
+/**
+ * The ports a host may leave out. Each is an optional key of `Services`, so
+ * the ui must work without it. The composition root builds only the other
+ * ports, and a host adds these when it has an adapter.
+ */
+export const OPTIONAL_PORT_NAMES = [
+  "routing",
+] as const satisfies readonly PortName[];
 
 type AssertNever<T extends never> = T;
 
@@ -59,12 +71,13 @@ export interface PortContractRunners {
   readonly preferences: typeof runDevicePreferencesContract;
   readonly layers: typeof runLayerRegistryContract;
   readonly layerSource: typeof runLayerSourceContract;
+  readonly routing: typeof runRoutingProviderContract;
 }
 
 /** What the registry holds for one port. */
 export interface PortEntry<K extends PortName> {
   /** Builds the fake for this port. */
-  readonly createFake: () => Services[K];
+  readonly createFake: () => NonNullable<Services[K]>;
   /** Registers the shared contract suite for this port. */
   readonly runContract: PortContractRunners[K];
 }
@@ -116,5 +129,9 @@ export const PORT_REGISTRY: PortRegistry = {
   layerSource: {
     createFake: () => new FakeLayerSource(),
     runContract: runLayerSourceContract,
+  },
+  routing: {
+    createFake: () => new FakeRoutingProvider(),
+    runContract: runRoutingProviderContract,
   },
 };

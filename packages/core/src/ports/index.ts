@@ -6,6 +6,7 @@ export * from "./layers";
 export * from "./location";
 export * from "./map";
 export * from "./preferences";
+export * from "./routing";
 export * from "./search";
 export * from "./services";
 export * from "./settings";

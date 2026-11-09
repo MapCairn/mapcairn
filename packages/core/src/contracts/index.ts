@@ -5,6 +5,7 @@ export * from "./layerSource.contract";
 export * from "./locationProvider.contract";
 export * from "./mapAdapter.contract";
 export * from "./portRegistry";
+export * from "./routingProvider.contract";
 export * from "./searchProvider.contract";
 export * from "./settingsStore.contract";
 export * from "./themeSource.contract";

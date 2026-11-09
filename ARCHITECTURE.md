@@ -64,8 +64,11 @@ Add an interface only where a boundary has at least two implementations. The fak
 | `ThemeSource` | `matchMedia` | scripted system preference |
 | `LayerRegistry` | the host's definitions, validated at start-up (`createLayerRegistry`) | `StaticLayerRegistry` over sample definitions |
 | `LayerSource` | `FetchLayerSource` (`fetch`, shared response cache) | `FakeLayerSource`, scripted per layer id |
+| `RoutingProvider` (optional) | none shipped; a host supplies one | `FakeRoutingProvider`, scripted routes, areas, errors and delays |
 
 `BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source or an attribution string. A `raster` source is a tile URL template and a tile size, and a `vector` source is a style URL. `DEFAULT_BASEMAP_ID` (Liberty) is the basemap in both themes when nothing is saved or linked, and an unknown id, including the "auto" and the removed "dark" of earlier versions, resolves to it. `DEFAULT_BASEMAP_BACKGROUND` is its land colour; the `mapBackground` token carries the same value (a test in `packages/web` keeps them equal), so the server-rendered placeholder and the map host match Liberty before it draws. The placeholder also holds the decorative `ChromeSkeleton`, so the chrome is in its final place on the first paint.
+
+`RoutingProvider` is the one optional service: `Services.routing` may be absent, and the ui must work without it. `route({ stops, mode, signal })` returns one GeoJSON line feature for each leg with its distance (metres) and duration (seconds), and `reachableArea({ origin, minutes, mode, signal })` returns polygon features. Both reject only with a typed `RoutingError` (`network`, `invalid`, `no-route`, `rate-limited`, `aborted`, `unsupported`).
 
 Pure helpers (layer templates, decoders and style evaluation, zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
 

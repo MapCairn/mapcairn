@@ -57,6 +57,32 @@ export class LayerError extends Error {
 }
 
 /**
+ * Why a route or a travel-time area could not be found: the request failed
+ * (`network`), it was not valid (`invalid`), no route links the stops
+ * (`no-route`), the service refused for now (`rate-limited`), the caller
+ * cancelled it (`aborted`, which callers ignore), or the provider does not
+ * offer what was asked, such as a travel mode (`unsupported`).
+ */
+export type RoutingErrorKind =
+  | "network"
+  | "invalid"
+  | "no-route"
+  | "rate-limited"
+  | "aborted"
+  | "unsupported";
+
+/** The only error a routing provider rejects with. */
+export class RoutingError extends Error {
+  readonly kind: RoutingErrorKind;
+
+  constructor(kind: RoutingErrorKind, message?: string) {
+    super(message ?? `Routing failed: ${kind}.`);
+    this.name = "RoutingError";
+    this.kind = kind;
+  }
+}
+
+/**
  * Why a map engine failed: it could not start without WebGL, it could not
  * load, or it `stopped` working after it had loaded.
  */

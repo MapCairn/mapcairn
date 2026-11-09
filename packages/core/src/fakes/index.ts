@@ -4,6 +4,7 @@ export * from "./FakeDevicePreferences";
 export * from "./FakeLayerSource";
 export * from "./FakeLocationProvider";
 export * from "./FakeMapAdapter";
+export * from "./FakeRoutingProvider";
 export * from "./FakeSearchProvider";
 export * from "./FakeThemeSource";
 export * from "./fixtures";
