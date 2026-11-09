@@ -104,9 +104,20 @@ describe("LayersSection", () => {
     for (const name of ["Sample points", "Sample alerts", "Sample imagery"]) {
       expect(screen.getByRole("switch", { name })).not.toBeChecked();
     }
+    // The data cost is only worth a line when someone is saving data.
     expect(
-      within(item("sample-points")).getByText(/Uses about 30 KB/),
+      within(item("sample-points")).queryByText(/Uses about 30 KB/),
+    ).toBeNull();
+  });
+
+  it("shows what a layer uses while Save data is on", () => {
+    const { services } = setup();
+    expect(screen.queryByText(/Uses about 30 KB/)).toBeNull();
+    act(() => services.fakes.preferences.set({ saveData: true }));
+    expect(
+      within(item("sample-points")).getByText("Uses about 30 KB."),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/only while it is on/)).toBeNull();
   });
 
   it("shows the status, controls and legend of a layer while it is on", async () => {

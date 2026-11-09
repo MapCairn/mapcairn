@@ -12,7 +12,7 @@ type OwnParts = "id" | "name" | "description" | "group" | "emptyText";
  * only when someone asks for it.
  */
 export const GDACS_ALERTS: Omit<FeedLayerDefinition, OwnParts> = {
-  dataCost: "about 135 KB, shared by every GDACS layer",
+  dataCost: "about 135 KB",
   attribution: [
     {
       text: "Global Disaster Alert and Coordination System, GDACS",

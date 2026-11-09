@@ -11,6 +11,7 @@ import {
 } from "@karta/core";
 import { RotateCw, TriangleAlert } from "lucide-react";
 import { useState } from "react";
+import { useSaveData } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { SegmentedControl } from "../ui/SegmentedControl";
@@ -262,6 +263,8 @@ export function LayerItem({
   onShow,
 }: LayerItemProps) {
   const { definition, enabled, status } = layer;
+  // Only worth a line for someone who is saving data.
+  const saveData = useSaveData();
   const emptyText = isFeedLayer(definition) ? definition.emptyText : "";
   const text = statusText(status, emptyText);
   return (
@@ -272,9 +275,9 @@ export function LayerItem({
         checked={enabled}
         onCheckedChange={(checked) => layers.setEnabled(definition.id, checked)}
       />
-      <p className={styles.muted}>
-        Uses {definition.dataCost}, only while it is on.
-      </p>
+      {saveData ? (
+        <p className={styles.muted}>Uses {definition.dataCost}.</p>
+      ) : null}
       {enabled ? (
         <div className={styles.details}>
           {text ? (
