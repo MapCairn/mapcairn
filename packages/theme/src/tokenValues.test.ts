@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parseColour } from "./contrast";
+import { compositeOver, contrastRatio, parseColour } from "./contrast";
 import {
   accent,
+  dataMarker,
   dataPalette,
   fontFamily,
   fontWeight,
@@ -9,10 +10,12 @@ import {
   motion,
   neutral,
   radius,
+  representativeBackdrops,
   size,
   space,
   spring,
   themeColor,
+  themeValues,
   typeScale,
   type ZLayerName,
   zIndex,
@@ -42,6 +45,52 @@ describe("data palette", () => {
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     });
     expect(lightness).toEqual([...lightness].sort((a, b) => b - a));
+  });
+});
+
+describe("data marker edge", () => {
+  const { edge, halo } = dataMarker;
+  const lightSurfaces = [
+    representativeBackdrops.liberty,
+    representativeBackdrops.lightMap,
+    representativeBackdrops.white,
+    themeValues.light.opaque.surface,
+    themeValues.light.opaque.surfaceRaised,
+  ];
+  const darkSurfaces = [
+    compositeOver(themeValues.dark.colour.surface, "#000000"),
+    themeValues.dark.opaque.surface,
+    themeValues.dark.opaque.surfaceRaised,
+    themeValues.dark.contrastMore.surface,
+  ];
+
+  it("is two plain hex colours: a dark edge inside a white halo", () => {
+    expect(edge).toMatch(/^#[0-9a-f]{6}$/);
+    expect(halo).toBe("#ffffff");
+  });
+
+  it("shows its dark edge, at 3:1 or better, on every light map and surface", () => {
+    for (const backdrop of lightSurfaces) {
+      expect(contrastRatio(edge, backdrop)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("shows its white halo, at 3:1 or better, on every dark surface and a black map", () => {
+    for (const backdrop of [...darkSurfaces, "#000000"]) {
+      expect(contrastRatio(halo, backdrop)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("sets every palette colour off from its edge or its halo by 3:1 or better", () => {
+    // The lightest steps (yellow, ordinal-1) vanish against the halo and the
+    // darkest (ordinal-5) against the edge; each has the other to show against.
+    for (const [slot, colour] of Object.entries(dataPalette)) {
+      const best = Math.max(
+        contrastRatio(colour, edge),
+        contrastRatio(colour, halo),
+      );
+      expect(best, slot).toBeGreaterThanOrEqual(3);
+    }
   });
 });
 

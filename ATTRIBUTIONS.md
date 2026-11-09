@@ -10,11 +10,11 @@ Each layer's definition in `packages/web/src/layers/definitions/` carries the cr
 |---|---|---|
 | Earthquakes | [USGS Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/) GeoJSON feeds, US public domain | Credit: U.S. Geological Survey |
 | Fire, flood, tropical cyclone, volcano and drought alerts | [GDACS](https://www.gdacs.org/) event feed, a joint initiative of the United Nations and the European Commission, under CC BY 4.0 | Global Disaster Alert and Coordination System, GDACS |
-| Flood hazard map | [GloFAS](https://www.globalfloods.eu/), Copernicus Emergency Management Service, `FloodHazard100y` | Generated using Copernicus Emergency Management Service information 2026 |
+| Flood hazard map | [GloFAS](https://www.globalfloods.eu/), Copernicus Emergency Management Service, `FloodHazard100y` | Generated using Copernicus Emergency Management Service information {year} |
 | Fire hotspots | [NASA GIBS](https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api), MODIS Terra and VIIRS NOAA-21 thermal anomalies | We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS). |
 | Satellite imagery | [NASA GIBS](https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api), VIIRS NOAA-21 corrected reflectance | We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS). |
 
-The full GIBS acknowledgement wording is to be confirmed against the GIBS "Data Use Guidance and Acknowledgements" page before release. GDACS alerts are automatic model outputs and the app says so on every card. The Copernicus CEMS-FLOODS licence asks for "Generated using Copernicus Emergency Management Service information [Year]" and says the data is for information only; confirm both texts, and the year, on the current licence pages before release.
+The full GIBS acknowledgement wording is to be confirmed against the GIBS "Data Use Guidance and Acknowledgements" page before release. GDACS alerts are automatic model outputs and the app says so on every card. The Copernicus CEMS-FLOODS licence asks for "Generated using Copernicus Emergency Management Service information [Year]" and says the data is for information only. In the definition `{year}` stands for the current year, filled in when the credit is shown; confirm both texts on the current licence pages before release.
 
 ## Basemaps
 

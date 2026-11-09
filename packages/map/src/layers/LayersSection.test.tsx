@@ -2,6 +2,7 @@ import {
   createFakeServices,
   FakeMapAdapter,
   type LayerDefinition,
+  type LayerFeature,
   SAMPLE_ALERT_LAYER,
   SAMPLE_LAYERS,
   StaticLayerRegistry,
@@ -16,16 +17,23 @@ import {
   within,
 } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { testMapContext } from "../chrome/MapChrome/chromeTestHarness";
+import { ChromeLayoutProvider } from "../chrome/layoutContext";
+import {
+  testChromeLayout,
+  testMapContext,
+} from "../chrome/MapChrome/chromeTestHarness";
 import { MapContext } from "../host";
 import { ServicesProvider } from "../services";
 import { LiveRegionProvider } from "../ui/LiveRegion";
-import { LayersSection } from "./LayersSection";
+import { LayersSection, SHOW_ON_MAP_MIN_ZOOM } from "./LayersSection";
 import { type DataLayers, useDataLayers } from "./useDataLayers";
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 
-function setup(definitions: readonly LayerDefinition[] = SAMPLE_LAYERS) {
+function setup(
+  definitions: readonly LayerDefinition[] = SAMPLE_LAYERS,
+  chrome?: Parameters<typeof testChromeLayout>[0],
+) {
   const services = createFakeServices({
     layers: new StaticLayerRegistry(definitions),
   });
@@ -37,20 +45,30 @@ function setup(definitions: readonly LayerDefinition[] = SAMPLE_LAYERS) {
     handle.current = layers;
     return <LayersSection layers={layers} onShowOnMap={onShowOnMap} />;
   }
-  const view = render(
+  const tree = (layout: typeof chrome) => (
     <ServicesProvider services={services}>
       <LiveRegionProvider>
         <MapContext.Provider value={testMapContext({ adapter })}>
-          <Harness />
+          {layout ? (
+            <ChromeLayoutProvider value={testChromeLayout(layout)}>
+              <Harness />
+            </ChromeLayoutProvider>
+          ) : (
+            <Harness />
+          )}
         </MapContext.Provider>
       </LiveRegionProvider>
-    </ServicesProvider>,
+    </ServicesProvider>
   );
+  const view = render(tree(chrome));
   return {
     ...view,
+    /** Re-renders with new chrome facts, such as the side panel having measured. */
+    withChrome: (next: typeof chrome) => view.rerender(tree(next)),
     adapter,
     onShowOnMap,
     source: services.fakes.layerSource,
+    services,
     layers: () => handle.current as DataLayers,
   };
 }
@@ -307,6 +325,217 @@ describe("LayersSection", () => {
     await waitFor(() =>
       expect(screen.getByTestId("feature-card-heading")).toHaveFocus(),
     );
+  });
+
+  it("shows a feature that is not a point without moving the map", async () => {
+    const { source, adapter, onShowOnMap } = setup();
+    const area: LayerFeature = {
+      ...samplePoint("zone", { title: "Zone" }),
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 0],
+          ],
+        ],
+      },
+    };
+    source.setFeatures("sample-points", [area]);
+    toggle("sample-points", "Sample points");
+    const before = adapter.getView();
+    fireEvent.click(await screen.findByTestId("layer-list-row"));
+    expect(adapter.getView()).toEqual(before);
+    expect(onShowOnMap).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("feature-card-heading")).toHaveTextContent(
+      "Zone",
+    );
+  });
+
+  it("names a feature with no title by its layer, on the card and in the announcement", async () => {
+    const { source } = setup();
+    source.setFeatures("sample-points", [samplePoint("a", { title: null })]);
+    toggle("sample-points", "Sample points");
+    fireEvent.click(await screen.findByTestId("layer-list-row"));
+    expect(screen.getByTestId("feature-card-heading")).toHaveTextContent(
+      "Sample points",
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+        "Showing the feature on the map.",
+      ),
+    );
+  });
+
+  it("says when the provider sent something unexpected", async () => {
+    const { source } = setup();
+    source.fail("sample-points", "invalid");
+    toggle("sample-points", "Sample points");
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("layer-status-sample-points"),
+      ).toHaveTextContent("Could not load: the provider sent something"),
+    );
+  });
+
+  it("works with no map and no chrome around it, as in a guide or a test", async () => {
+    const services = createFakeServices({
+      layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+    });
+    services.fakes.layerSource.setFeatures("sample-points", [
+      samplePoint("a", { title: "Alpha" }),
+    ]);
+    function Harness() {
+      const layers = useDataLayers({ now: () => NOW });
+      return <LayersSection layers={layers} />;
+    }
+    render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <Harness />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    toggle("sample-points", "Sample points");
+    fireEvent.click(await screen.findByTestId("layer-list-row"));
+    expect(
+      within(screen.getByTestId("feature-card")).getByRole("heading", {
+        name: "Alpha",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  describe("making room for the sheet", () => {
+    // The fake map is 800 by 600; the half sheet covers the lower 300.
+    const PHONE = {
+      layout: "sheet",
+      viewport: { width: 800, height: 600 },
+    } as const;
+    const PANEL = {
+      layout: "panel",
+      viewport: { width: 800, height: 600 },
+      panelEdge: 300,
+    } as const;
+
+    async function withPoint(
+      chrome: Parameters<typeof testChromeLayout>[0],
+      position: [number, number],
+    ) {
+      const rendered = setup(SAMPLE_LAYERS, chrome);
+      rendered.source.setFeatures("sample-points", [
+        samplePoint("a", { title: "Alpha" }, position),
+      ]);
+      toggle("sample-points", "Sample points");
+      await screen.findByTestId("layer-list-sample-points");
+      return rendered;
+    }
+
+    it("shows a feature clear of the half sheet, not behind it", async () => {
+      const { adapter } = await withPoint(PHONE, [10, 20]);
+      const fit = vi.spyOn(adapter, "fitBounds");
+      fireEvent.click(screen.getByTestId("layer-list-row"));
+      expect(fit).toHaveBeenCalledTimes(1);
+      expect(fit.mock.calls[0]?.[1]).toEqual({
+        maxZoom: SHOW_ON_MAP_MIN_ZOOM,
+        padding: { top: 0, right: 0, bottom: 300, left: 0 },
+      });
+      expect(adapter.getView().center.lat).toBeCloseTo(20);
+    });
+
+    it("keeps a closer zoom, and shows a feature clear of the side panel", async () => {
+      const { adapter } = await withPoint(PANEL, [10, 20]);
+      adapter.setView({ zoom: 9 });
+      const fit = vi.spyOn(adapter, "fitBounds");
+      fireEvent.click(screen.getByTestId("layer-list-row"));
+      expect(fit.mock.calls[0]?.[1]).toEqual({
+        maxZoom: 9,
+        padding: { top: 0, right: 0, bottom: 0, left: 300 },
+      });
+    });
+
+    it("scrolls the card to the top of the sheet, smoothly", async () => {
+      const scrollIntoView = vi.fn();
+      Element.prototype.scrollIntoView = scrollIntoView;
+      await withPoint(PHONE, [10, 20]);
+      fireEvent.click(screen.getByTestId("layer-list-row"));
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+      expect(scrollIntoView.mock.instances[0]).toBe(
+        screen.getByTestId("feature-card-heading"),
+      );
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        block: "start",
+        behavior: "smooth",
+      });
+    });
+
+    it("scrolls at once for a person who prefers reduced motion", async () => {
+      const scrollIntoView = vi.fn();
+      Element.prototype.scrollIntoView = scrollIntoView;
+      const { services, source, layers } = setup(SAMPLE_LAYERS, PHONE);
+      services.fakes.preferences.set({ reducedMotion: true });
+      source.setFeatures("sample-points", [samplePoint("a")]);
+      toggle("sample-points", "Sample points");
+      await screen.findByTestId("layer-list-sample-points");
+      fireEvent.click(screen.getByTestId("layer-list-row"));
+      await waitFor(() =>
+        expect(scrollIntoView).toHaveBeenCalledWith({
+          block: "start",
+          behavior: "auto",
+        }),
+      );
+      scrollIntoView.mockClear();
+      act(() => layers().select("sample-points", "a", { focus: true }));
+      await waitFor(() =>
+        expect(scrollIntoView).toHaveBeenCalledWith({
+          block: "start",
+          behavior: "auto",
+        }),
+      );
+    });
+
+    it("pans a tapped point from behind the sheet, to the middle of what shows", async () => {
+      const { adapter, layers } = await withPoint(PHONE, [10, 20]);
+      adapter.setView({ center: { lat: 20, lng: 10 }, zoom: 5 });
+      const pan = vi.spyOn(adapter, "panBy");
+      act(() => layers().select("sample-points", "a", { focus: true }));
+      // The point is at the map's middle, 300px down: under the sheet's top edge.
+      await waitFor(() => expect(pan).toHaveBeenCalledWith(0, 300 - 150));
+    });
+
+    it("leaves a tapped point that already shows where it is", async () => {
+      const { adapter, layers, source } = setup(SAMPLE_LAYERS, PHONE);
+      const high = adapter.unproject({ x: 400, y: 100 });
+      source.setFeatures("sample-points", [
+        samplePoint("a", { title: "Alpha" }, [high.lng, high.lat]),
+      ]);
+      toggle("sample-points", "Sample points");
+      await screen.findByTestId("layer-list-sample-points");
+      const pan = vi.spyOn(adapter, "panBy");
+      act(() => layers().select("sample-points", "a", { focus: true }));
+      await waitFor(() =>
+        expect(screen.getByTestId("feature-card-heading")).toHaveFocus(),
+      );
+      expect(pan).not.toHaveBeenCalled();
+    });
+
+    it("waits for the side panel to say where it ends before moving a tapped point", async () => {
+      const { adapter, layers, withChrome } = await withPoint(
+        { ...PANEL, panelEdge: null },
+        [10, 20],
+      );
+      adapter.setView({ center: { lat: 20, lng: 10 }, zoom: 5 });
+      const pan = vi.spyOn(adapter, "panBy");
+      act(() => layers().select("sample-points", "a", { focus: true }));
+      await waitFor(() =>
+        expect(screen.getByTestId("feature-card-heading")).toHaveFocus(),
+      );
+      expect(pan).not.toHaveBeenCalled();
+      // Now it knows the panel covers the left 500px, so the point at 400 is behind it.
+      withChrome({ ...PANEL, panelEdge: 500 });
+      await waitFor(() => expect(pan).toHaveBeenCalledWith(400 - 650, 0));
+    });
   });
 
   it("changes a tile layer's date and opacity through its controls", () => {

@@ -1,3 +1,4 @@
+import { tokenValues } from "@karta/theme";
 import { describe, expect, it } from "vitest";
 import {
   MARKER_BASE_RADIUS,
@@ -32,7 +33,9 @@ describe("markerImageName", () => {
 });
 
 describe("markerImage", () => {
-  const size = (MARKER_BASE_RADIUS + 2) * 2 * 2;
+  // The dark edge (1px) and white halo (1.5px) add 2.5px to the base radius.
+  const size = (MARKER_BASE_RADIUS + 2.5) * 2 * 2;
+  const rgb = (hex: string) => [...parseHexColour(hex)];
 
   it("is a square RGBA bitmap at twice the base size, for sharp edges on dense screens", () => {
     const image = markerImage("circle", "#e69f00");
@@ -48,13 +51,17 @@ describe("markerImage", () => {
     expect(pixel(image, 0, 0)[3]).toBe(0);
   });
 
-  it("rings the shape with a white halo, so it reads on any basemap", () => {
-    const image = markerImage("circle", "#0072b2");
+  it("sets the fill off with a dark edge, then a white halo, so it reads on a light map or a dark surface", () => {
+    const image = markerImage("circle", "#fde725");
     const middle = size / 2;
-    const edge = middle + MARKER_BASE_RADIUS * 2 + 1;
-    const [red, green, blue, alpha] = pixel(image, edge, middle);
-    expect([red, green, blue]).toEqual([255, 255, 255]);
-    expect(alpha).toBeGreaterThan(250);
+    // The fill ends 21.5 device pixels from the centre; the edge is 2 wide, the halo 3.
+    const edge = pixel(image, middle + 22, middle);
+    expect(edge.slice(0, 3)).toEqual(rgb(tokenValues.dataMarker.edge));
+    expect(edge[3]).toBe(255);
+    const halo = pixel(image, middle + 24, middle);
+    expect(halo.slice(0, 3)).toEqual(rgb(tokenValues.dataMarker.halo));
+    expect(halo[3]).toBe(255);
+    expect(pixel(image, middle + 27, middle)[3]).toBe(0);
   });
 
   it("draws different shapes differently", () => {

@@ -17,6 +17,7 @@ describe("useChromeLayout", () => {
       layout: "panel" as const,
       viewport: { width: 1280, height: 720 },
       finePointer: false,
+      panelEdge: 412,
       publishSheetTop,
       publishToolbarTop: vi.fn(),
     };
@@ -25,6 +26,7 @@ describe("useChromeLayout", () => {
     );
     const { result } = renderHook(() => useChromeLayout(), { wrapper });
     expect(result.current.layout).toBe("panel");
+    expect(result.current.panelEdge).toBe(412);
     result.current.publishSheetTop(42);
     expect(publishSheetTop).toHaveBeenCalledWith(42);
   });

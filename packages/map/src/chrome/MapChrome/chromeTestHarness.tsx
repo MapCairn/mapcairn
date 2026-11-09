@@ -46,6 +46,7 @@ export function testChromeLayout(
     layout: "sheet",
     viewport: { width: 390, height: 800 },
     finePointer: true,
+    panelEdge: null,
     publishSheetTop: () => {},
     publishToolbarTop: () => {},
     ...overrides,

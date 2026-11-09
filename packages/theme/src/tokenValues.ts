@@ -65,7 +65,7 @@ const red = {
  * The categorical colours are Okabe-Ito (without black, which vanishes on a
  * dark basemap). The ordinal ramp runs light to dark in the manner of
  * viridis, for ordered values such as magnitude. Every marker also has a
- * white halo and a shape or size, so colour is never the only signal.
+ * dark edge and white halo (`dataMarker`) and a shape or size, so colour is never the only signal.
  */
 export const dataPalette = {
   orange: "#e69f00",
@@ -80,6 +80,23 @@ export const dataPalette = {
   "ordinal-3": "#21918c",
   "ordinal-4": "#3b528b",
   "ordinal-5": "#440154",
+} as const;
+
+/**
+ * The two-tone edge of a data marker: a dark line just outside the fill, and
+ * a white halo outside that. The same in both themes and on every basemap,
+ * because a marker looks the same wherever it is drawn. On a light map the
+ * dark edge shows the pale colours (yellow, the lightest ramp step); on a
+ * dark surface the halo shows the dark ones (the darkest step). Plain hex,
+ * because the map engine draws markers as bitmaps.
+ */
+export const dataMarker = {
+  edge: "#1c2733",
+  halo: "#ffffff",
+  /** Width of the dark edge, in CSS pixels. */
+  edgeWidth: 1,
+  /** Width of the white halo outside the edge, in CSS pixels. */
+  haloWidth: 1.5,
 } as const;
 
 /**

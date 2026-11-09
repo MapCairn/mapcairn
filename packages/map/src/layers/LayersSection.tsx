@@ -1,11 +1,13 @@
 import {
   announceShowingFeature,
+  boundsAroundPoint,
   createFormatterRegistry,
   type FormatterRegistry,
   formatTemplate,
   type LayerFeature,
 } from "@karta/core";
-import { type Ref, useContext, useEffect, useRef } from "react";
+import { type Ref, useContext, useEffect, useRef, useState } from "react";
+import { useChromeLayout } from "../chrome/layoutContext";
 import { MapContext } from "../host";
 import {
   type HeadingLevel,
@@ -19,10 +21,14 @@ import { FeatureCard } from "./FeatureCard";
 import { LayerItem } from "./LayerItem";
 import * as styles from "./Layers.css";
 import { featurePosition } from "./mapFeatures";
+import { coveredPadding, revealOffset } from "./reveal";
 import type { DataLayerState, DataLayers } from "./useDataLayers";
 
 /** The closest "Show on map" zooms out to: far enough to see the region. */
 export const SHOW_ON_MAP_MIN_ZOOM = 5;
+
+/** Half the side, in metres, of the box "Show on map" fits around a point. Small enough that the fit always ends at the zoom cap. */
+const SHOW_ON_MAP_RADIUS_METRES = 50;
 
 const DEFAULT_FORMATTERS = createFormatterRegistry();
 
@@ -36,7 +42,8 @@ export interface LayersSectionProps {
   readonly formatters?: FormatterRegistry;
   /**
    * Called after "Show on map" has centred a feature, so the host can make
-   * room for the map, for example by lowering the sheet.
+   * room for the map: the section keeps the feature clear of the sheet at
+   * `REVEAL_DETENT`, so the host should bring the sheet to that detent.
    */
   readonly onShowOnMap?: () => void;
 }
@@ -78,6 +85,44 @@ export function LayersSection({
   const { reducedMotion } = usePreferences();
   const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
+  const { layout, viewport, panelEdge } = useChromeLayout();
+  const [cardRequest, setCardRequest] = useState(0);
+  const keptClear = useRef(0);
+  const { selected } = layers;
+
+  // A tap on the map selected a point: the sheet or side panel that opened
+  // for its card must not hide it. A point that shows stays where it is. The
+  // side panel publishes its edge after it opens, so wait for that.
+  useEffect(() => {
+    if (
+      !adapter ||
+      !selected ||
+      focusRequest === keptClear.current ||
+      (layout === "panel" && panelEdge === null)
+    ) {
+      return;
+    }
+    keptClear.current = focusRequest;
+    const position = featurePosition(selected.feature);
+    const offset = position
+      ? revealOffset(adapter.project(position), { layout, viewport, panelEdge })
+      : null;
+    if (offset) {
+      adapter.panBy(offset.dx, offset.dy);
+    }
+  }, [adapter, selected, focusRequest, layout, viewport, panelEdge]);
+
+  // "Show on map" lowers the sheet to a detent that shows the map as well as
+  // the card, but the card sits above wherever the list was scrolled to.
+  useEffect(() => {
+    if (cardRequest === 0) {
+      return;
+    }
+    cardHeading.current?.scrollIntoView?.({
+      block: "start",
+      behavior: motion.current ? "auto" : "smooth",
+    });
+  }, [cardRequest]);
 
   useEffect(() => {
     if (focusRequest === 0) {
@@ -104,11 +149,19 @@ export function LayersSection({
     const position = featurePosition(feature);
     layers.select(layerId, feature.id);
     if (adapter && position) {
-      adapter.setView({
-        center: position,
-        zoom: Math.max(adapter.getView().zoom, SHOW_ON_MAP_MIN_ZOOM),
-      });
+      const zoom = Math.max(adapter.getView().zoom, SHOW_ON_MAP_MIN_ZOOM);
+      const padding = coveredPadding({ layout, viewport, panelEdge });
+      if (padding) {
+        // A fit with padding centres the point in what the sheet leaves free.
+        adapter.fitBounds(
+          boundsAroundPoint(position, SHOW_ON_MAP_RADIUS_METRES),
+          { maxZoom: zoom, padding },
+        );
+      } else {
+        adapter.setView({ center: position, zoom });
+      }
     }
+    setCardRequest((count) => count + 1);
     const layer = layers.layers.find((item) => item.definition.id === layerId);
     const title =
       layer && "card" in layer.definition
@@ -135,16 +188,15 @@ export function LayersSection({
       headingRef={headingRef}
       data-testid="sheet-section-layers"
     >
-      {layers.selected ? (
+      {selected ? (
         <FeatureCard
           layers={layers}
-          selected={layers.selected}
+          selected={selected}
           formatters={formatters}
           headingLevel={groupLevel as 3 | 4 | 5 | 6}
           headingRef={cardHeading}
           onShowOnMap={() =>
-            layers.selected &&
-            show(layers.selected.layer.definition.id, layers.selected.feature)
+            show(selected.layer.definition.id, selected.feature)
           }
         />
       ) : null}

@@ -21,11 +21,9 @@ export const selectionRing = style({
   strokeWidth: tokens.space.xxs,
 });
 
-/** A marker glyph's white edge, the same as on the map. */
+/** A marker glyph. Its edge and halo are drawn in the SVG, the same as on the map. */
 export const glyph = style({
   flexShrink: 0,
-  stroke: mapOverlayTokens.halo,
-  strokeWidth: tokens.focus.innerWidth,
 });
 
 /** Groups of layers, stacked. */

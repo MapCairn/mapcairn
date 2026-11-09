@@ -12,6 +12,10 @@
 
 /** A credit line a provider asks for. */
 export interface LayerAttribution {
+  /**
+   * The credit. `{year}` stands for the current year, for a provider whose
+   * notice asks for it, so the credit is never out of date.
+   */
   readonly text: string;
   /** An `https` link to the provider or its terms. */
   readonly url?: string;

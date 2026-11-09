@@ -360,6 +360,16 @@ describe("MapChrome layout", () => {
     expect(cssVar(chromeVars.bottomLift)).toBe("0px");
   });
 
+  it("tells the surfaces where the side panel ends", () => {
+    mount();
+    resize(1024, 768);
+    expect(layoutValue.panelEdge).toBeNull();
+    act(() => {
+      surfaceValue.publishPanelEdge(372);
+    });
+    expect(layoutValue.panelEdge).toBe(372);
+  });
+
   it("observes slots that appear later and re-measures when one goes", () => {
     const { rerenderChrome } = mount({ bottomCentre: undefined });
     resize(390, 800);

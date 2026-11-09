@@ -14,7 +14,7 @@ const floodHazard: TileLayerDefinition = {
   dataCost: "about 5 to 50 KB per screen",
   attribution: [
     {
-      text: "Generated using Copernicus Emergency Management Service information 2026",
+      text: "Generated using Copernicus Emergency Management Service information {year}",
       url: "https://www.globalfloods.eu/",
     },
   ],

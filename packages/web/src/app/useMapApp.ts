@@ -28,6 +28,7 @@ import {
   type DataLayers,
   type MapContextValue,
   type MapLongPressEvent,
+  REVEAL_DETENT,
   type UseLocate,
   type UseMeasure,
   useAnnounce,
@@ -144,7 +145,7 @@ export interface MapApp {
   readonly layers: DataLayers;
   /** Opens the Layers section after a tap on a point has selected it. */
   readonly openFeature: () => void;
-  /** Lowers the sheet to its peek height so the map shows, after "Show on map". */
+  /** Brings the sheet to the detent that shows the card and the map together, after "Show on map". */
   readonly revealMap: () => void;
 }
 
@@ -336,11 +337,18 @@ export function useMapApp(): MapApp {
     );
   }, [locate.fix]);
 
-  const openFeature = useCallback(() => dispatch(openSheet("layers")), []);
+  // The card and the map share the screen at REVEAL_DETENT. A peeking sheet
+  // is too short to show the card, and a full one covers the map.
+  const openFeature = useCallback(() => {
+    dispatch(openSheet("layers"));
+    if (stateRef.current.sheetDetent === "peek") {
+      dispatch(setDetent(REVEAL_DETENT));
+    }
+  }, [stateRef]);
 
   const revealMap = useCallback(() => {
     if (stateRef.current.surface === "sheet") {
-      dispatch(setDetent("peek"));
+      dispatch(setDetent(REVEAL_DETENT));
     }
   }, [stateRef]);
 

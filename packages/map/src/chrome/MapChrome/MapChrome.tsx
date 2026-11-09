@@ -361,10 +361,11 @@ export function MapChrome({
       layout,
       viewport,
       finePointer,
+      panelEdge,
       publishSheetTop,
       publishToolbarTop,
     }),
-    [layout, viewport, finePointer],
+    [layout, viewport, finePointer, panelEdge],
   );
   const surfaceValue = useMemo<ChromeSurfaceValue>(
     () => ({ publishSheetDetent, publishPanelEdge, endStackMaxHeight }),

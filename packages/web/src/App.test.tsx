@@ -153,6 +153,53 @@ describe("App data layers", () => {
     ).toBeInTheDocument();
   });
 
+  describe("keeping the card and the map on screen together", () => {
+    async function openCardAtPeek() {
+      const services = servicesWithLayers();
+      services.fakes.layerSource.setFeatures("sample-points", [
+        samplePoint("a", { title: "Alpha" }),
+        samplePoint("b", { title: "Beta" }, [30, 40]),
+      ]);
+      services.fakes.url.write({
+        layers: { enabled: ["sample-points"], controls: {} },
+      });
+      await renderApp(services);
+      await settle();
+      act(() => adapter(services).simulateFeatureTap("sample-points", "a"));
+      expect(sheet()).toHaveAttribute("data-detent", "half");
+      const resize = screen.getByRole("button", { name: "Resize panel" });
+      fireEvent.click(resize);
+      fireEvent.click(resize);
+      expect(sheet()).toHaveAttribute("data-detent", "peek");
+      return services;
+    }
+
+    it("raises a peeking sheet to half when Show on map is pressed, so the card stays in view", async () => {
+      await openCardAtPeek();
+      fireEvent.click(screen.getByTestId("feature-card-show"));
+      expect(sheet()).toHaveAttribute("data-detent", "half");
+    });
+
+    it("lowers a full sheet to half, so the map shows", async () => {
+      await openCardAtPeek();
+      fireEvent.click(screen.getByRole("button", { name: "Resize panel" }));
+      expect(sheet()).toHaveAttribute("data-detent", "half");
+      fireEvent.click(screen.getByRole("button", { name: "Resize panel" }));
+      expect(sheet()).toHaveAttribute("data-detent", "full");
+      fireEvent.click(screen.getByTestId("feature-card-show"));
+      expect(sheet()).toHaveAttribute("data-detent", "half");
+    });
+
+    it("raises a peeking sheet to half when another point is tapped", async () => {
+      const services = await openCardAtPeek();
+      act(() => adapter(services).simulateFeatureTap("sample-points", "b"));
+      expect(sheet()).toHaveAttribute("data-detent", "half");
+      expect(
+        within(sheet()).getByRole("heading", { name: "Beta" }),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("ignores taps on points while measuring", async () => {
     const services = servicesWithLayers();
     services.fakes.layerSource.setFeatures("sample-points", [samplePoint("a")]);

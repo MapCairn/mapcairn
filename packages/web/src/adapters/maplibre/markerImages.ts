@@ -1,4 +1,5 @@
 import type { MarkerShape } from "@karta/core";
+import { tokenValues } from "@karta/theme";
 
 /**
  * The radius, in CSS pixels, a marker image is drawn at. The adapter scales
@@ -7,8 +8,8 @@ import type { MarkerShape } from "@karta/core";
  */
 export const MARKER_BASE_RADIUS = 12;
 
-/** The white ring around every marker, in CSS pixels at the base radius. */
-const HALO = 2;
+/** The dark edge and the white halo outside it, in CSS pixels at the base radius. */
+const { edgeWidth: EDGE, haloWidth: HALO } = tokenValues.dataMarker;
 
 /** Images are drawn at this many device pixels per CSS pixel. */
 export const MARKER_PIXEL_RATIO = 2;
@@ -73,16 +74,20 @@ function coverage(signedDistance: number): number {
 }
 
 /**
- * Draws one marker: the shape filled with `colour`, ringed with white so it
- * reads over imagery and dark basemaps, antialiased, at
- * {@link MARKER_PIXEL_RATIO}. Pure, so it runs in tests without a canvas.
+ * Draws one marker: the shape filled with `colour`, set off by a dark edge
+ * and then a white halo, so it reads on a pale map (the edge shows yellow) and
+ * over imagery or a dark map (the halo shows the darkest colours), antialiased,
+ * at {@link MARKER_PIXEL_RATIO}. Pure, so it runs in tests without a canvas.
  */
 export function markerImage(shape: MarkerShape, colour: string): MarkerBitmap {
-  const [red, green, blue] = parseHexColour(colour);
+  const fillColour = parseHexColour(colour);
+  const edgeColour = parseHexColour(tokenValues.dataMarker.edge);
+  const haloColour = parseHexColour(tokenValues.dataMarker.halo);
   const ratio = MARKER_PIXEL_RATIO;
   const radius = MARKER_BASE_RADIUS * ratio;
+  const edge = EDGE * ratio;
   const halo = HALO * ratio;
-  const size = (MARKER_BASE_RADIUS + HALO) * 2 * ratio;
+  const size = (MARKER_BASE_RADIUS + EDGE + HALO) * 2 * ratio;
   const data = new Uint8Array(size * size * 4);
   for (let row = 0; row < size; row += 1) {
     for (let column = 0; column < size; column += 1) {
@@ -90,15 +95,22 @@ export function markerImage(shape: MarkerShape, colour: string): MarkerBitmap {
         shape,
         column + 0.5 - size / 2,
         row + 0.5 - size / 2,
-        radius - halo / 2,
+        radius - (edge + halo) / 2,
       );
       const fill = coverage(d);
-      const ring = coverage(d - halo);
+      const edgeRing = coverage(d - edge);
+      const outer = coverage(d - edge - halo);
       const offset = (row * size + column) * 4;
-      data[offset] = Math.round(red * fill + 255 * (1 - fill));
-      data[offset + 1] = Math.round(green * fill + 255 * (1 - fill));
-      data[offset + 2] = Math.round(blue * fill + 255 * (1 - fill));
-      data[offset + 3] = Math.round(255 * ring);
+      for (let channel = 0; channel < 3; channel += 1) {
+        // Fill over edge over halo, each antialiased into the next.
+        const ring =
+          (edgeColour[channel] as number) * edgeRing +
+          (haloColour[channel] as number) * (1 - edgeRing);
+        data[offset + channel] = Math.round(
+          (fillColour[channel] as number) * fill + ring * (1 - fill),
+        );
+      }
+      data[offset + 3] = Math.round(255 * outer);
     }
   }
   return { width: size, height: size, data };

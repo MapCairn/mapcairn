@@ -1,7 +1,9 @@
 import {
   createFakeServices,
   FakeMapAdapter,
+  type LayerDefinition,
   SAMPLE_LAYERS,
+  SAMPLE_TILE_LAYER,
   StaticLayerRegistry,
   samplePoint,
 } from "@karta/core";
@@ -17,9 +19,16 @@ import { type DataLayers, useDataLayers } from "./useDataLayers";
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 
-function setup(props: { ignoreTaps?: boolean } = {}) {
+function setup(
+  props: {
+    ignoreTaps?: boolean;
+    definitions?: readonly LayerDefinition[];
+    /** Render with no map engine yet, as before the map has started. */
+    mapless?: boolean;
+  } = {},
+) {
   const services = createFakeServices({
-    layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+    layers: new StaticLayerRegistry(props.definitions ?? SAMPLE_LAYERS),
   });
   const adapter = new FakeMapAdapter();
   const onFeatureTap = vi.fn();
@@ -43,7 +52,9 @@ function setup(props: { ignoreTaps?: boolean } = {}) {
   const view = render(
     <ServicesProvider services={services}>
       <LiveRegionProvider>
-        <MapContext.Provider value={testMapContext({ adapter })}>
+        <MapContext.Provider
+          value={testMapContext({ adapter: props.mapless ? null : adapter })}
+        >
           <Harness />
         </MapContext.Provider>
       </LiveRegionProvider>
@@ -178,6 +189,32 @@ describe("MapDataLayers", () => {
     expect(adapter.drawnLayers().map((layer) => layer.id)).toEqual([
       "sample-alerts",
     ]);
+  });
+
+  it("draws a tile layer with no opacity control at full opacity", () => {
+    const opaque: LayerDefinition = {
+      ...SAMPLE_TILE_LAYER,
+      controls: SAMPLE_TILE_LAYER.controls.filter(
+        (control) => control.kind !== "opacity",
+      ),
+    };
+    const { adapter, layers } = setup({ definitions: [opaque] });
+    act(() => layers().setEnabled(opaque.id, true));
+    expect(adapter.drawnLayers()).toMatchObject([
+      { id: "sample-imagery", opacity: 1 },
+    ]);
+  });
+
+  it("waits for the map before it draws or listens, and draws no ring without one", async () => {
+    const { adapter, layers, source, container } = setup({ mapless: true });
+    source.setFeatures("sample-points", [samplePoint("a")]);
+    act(() => layers().setEnabled("sample-points", true));
+    await waitFor(() => expect(layers().layers[0]?.features).toHaveLength(1));
+    act(() => layers().select("sample-points", "a"));
+    expect(adapter.drawnLayers()).toEqual([]);
+    expect(
+      container.querySelector("[data-testid='selection-marker']"),
+    ).toBeNull();
   });
 
   it("rings the selected point in the overlay layer", async () => {

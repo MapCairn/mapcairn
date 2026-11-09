@@ -1,6 +1,9 @@
 import type { MarkerShape, PaletteSlot } from "@karta/core";
+import { tokenValues } from "@karta/theme";
 import * as styles from "./Layers.css";
 import { paletteColour } from "./mapFeatures";
+
+const { edge, halo, edgeWidth, haloWidth } = tokenValues.dataMarker;
 
 /** Props for {@link MarkerGlyph}. */
 export interface MarkerGlyphProps {
@@ -34,12 +37,14 @@ function ShapePath({ shape, r }: { shape: MarkerShape; r: number }) {
 
 /**
  * The marker a layer draws for a feature, as a small picture for the legend,
- * the list and the card, so words and map look the same. Decorative: the
- * words beside it carry the meaning. The colour is an SVG `fill` attribute,
- * not a style, so it needs nothing from the Content-Security-Policy.
+ * the list and the card, so words and map look the same: the fill over a
+ * dark edge over a white halo, which shows on a light surface (the edge) and
+ * a dark one (the halo) alike. Decorative: the words beside it carry the
+ * meaning. Colours are SVG attributes, not styles, so they need nothing from
+ * the Content-Security-Policy.
  */
 export function MarkerGlyph({ shape, colour, radius }: MarkerGlyphProps) {
-  const extent = Math.ceil(radius + 2);
+  const extent = Math.ceil(radius + edgeWidth + haloWidth);
   const size = extent * 2;
   return (
     <svg
@@ -47,11 +52,19 @@ export function MarkerGlyph({ shape, colour, radius }: MarkerGlyphProps) {
       width={size}
       height={size}
       viewBox={`${-extent} ${-extent} ${size} ${size}`}
-      fill={paletteColour(colour)}
       aria-hidden="true"
       focusable="false"
+      strokeLinejoin="round"
     >
-      <ShapePath shape={shape} r={radius} />
+      <g fill={halo} stroke={halo} strokeWidth={2 * (edgeWidth + haloWidth)}>
+        <ShapePath shape={shape} r={radius} />
+      </g>
+      <g fill={edge} stroke={edge} strokeWidth={2 * edgeWidth}>
+        <ShapePath shape={shape} r={radius} />
+      </g>
+      <g fill={paletteColour(colour)}>
+        <ShapePath shape={shape} r={radius} />
+      </g>
     </svg>
   );
 }

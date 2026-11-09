@@ -1,6 +1,7 @@
 import {
   createFakeServices,
   type FakeServices,
+  type LayerDefinition,
   LayerError,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
@@ -20,9 +21,12 @@ const NOW = Date.UTC(2026, 10, 9, 12);
 const polite = () => screen.getByTestId("live-region-polite").textContent;
 const assertive = () => screen.getByTestId("live-region-assertive").textContent;
 
-function setup(options: UseDataLayersOptions = {}) {
+function setup(
+  options: UseDataLayersOptions = {},
+  definitions: readonly LayerDefinition[] = SAMPLE_LAYERS,
+) {
   const services: FakeServices = createFakeServices({
-    layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+    layers: new StaticLayerRegistry(definitions),
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ServicesProvider services={services}>
@@ -226,6 +230,189 @@ describe("useDataLayers", () => {
     ]);
   });
 
+  describe("sorting the list", () => {
+    /** The sample feed with sorts on a text field, a time and a number. */
+    const sortable: LayerDefinition = {
+      ...SAMPLE_FEED_LAYER,
+      list: {
+        ...SAMPLE_FEED_LAYER.list,
+        sorts: [
+          { id: "name", label: "Name", field: "title", direction: "asc" },
+          { id: "seen", label: "Seen", field: "time", direction: "desc" },
+          { id: "size", label: "Size", field: "value", direction: "asc" },
+        ],
+      },
+    };
+
+    async function sorted(
+      features: ReturnType<typeof samplePoint>[],
+      sortId?: string,
+      definition: LayerDefinition = sortable,
+    ) {
+      const { result, source } = setup({}, [definition]);
+      source.setFeatures("sample-points", features);
+      act(() => result.current.setEnabled("sample-points", true));
+      await waitFor(() =>
+        expect(layer(result, "sample-points").features).toHaveLength(
+          features.length,
+        ),
+      );
+      if (sortId) {
+        act(() => result.current.setSort("sample-points", sortId));
+      }
+      return layer(result, "sample-points").sorted.map((f) => f.id);
+    }
+
+    it("orders text alphabetically, and keeps what has no value last", async () => {
+      const features = [
+        samplePoint("none", { title: null }),
+        samplePoint("b", { title: "Bravo" }),
+        samplePoint("a", { title: "Alpha" }),
+      ];
+      expect(await sorted(features)).toEqual(["a", "b", "none"]);
+    });
+
+    it("orders readable times as times, not as text, and keeps what has none last when descending", async () => {
+      const features = [
+        samplePoint("none", {}),
+        samplePoint("early", { time: "2026-02-01T00:00:00Z" }),
+        samplePoint("late", { time: "2026-11-01T00:00:00Z" }),
+        samplePoint("number", { time: 5 }),
+      ];
+      expect(await sorted(features, "seen")).toEqual([
+        "late",
+        "early",
+        "number",
+        "none",
+      ]);
+    });
+
+    it("orders numbers ascending, and a value that is neither a number nor text counts as missing", async () => {
+      const features = [
+        samplePoint("flag", { value: true }),
+        samplePoint("big", { value: 9 }),
+        samplePoint("small", { value: 1 }),
+        samplePoint("none", { value: null }),
+      ];
+      const order = await sorted(features, "size");
+      expect(order.slice(0, 2)).toEqual(["small", "big"]);
+      expect(new Set(order.slice(2))).toEqual(new Set(["flag", "none"]));
+    });
+
+    it("falls back to the first sort for an id the layer does not have", async () => {
+      const features = [
+        samplePoint("b", { title: "Bravo" }),
+        samplePoint("a", { title: "Alpha" }),
+      ];
+      expect(await sorted(features, "unheard-of")).toEqual(["a", "b"]);
+    });
+
+    it("leaves the order alone for a layer with no sorts", async () => {
+      const unsorted: LayerDefinition = {
+        ...SAMPLE_FEED_LAYER,
+        list: { ...SAMPLE_FEED_LAYER.list, sorts: [] },
+      };
+      const features = [
+        samplePoint("b", { title: "Bravo" }),
+        samplePoint("a", { title: "Alpha" }),
+      ];
+      expect(await sorted(features, undefined, unsorted)).toEqual(["b", "a"]);
+    });
+  });
+
+  it("uses the system clock when it is given none", () => {
+    const { result } = setup({ now: undefined });
+    expect(Math.abs(result.current.now() - Date.now())).toBeLessThan(5000);
+  });
+
+  it("ignores turning on a layer twice, an unknown layer, and turning off one that is off", () => {
+    const { result, source } = setup();
+    act(() => result.current.setEnabled("sample-points", true));
+    act(() => result.current.setEnabled("sample-points", true));
+    act(() => result.current.setEnabled("not-a-layer", true));
+    act(() => result.current.setEnabled("sample-alerts", false));
+    expect(result.current.urlValue.enabled).toEqual(["sample-points"]);
+    expect(source.requests).toHaveLength(1);
+  });
+
+  it("keeps a layer's request going while another layer is turned on", async () => {
+    const { result, source } = setup();
+    const release = source.hold();
+    act(() => result.current.setEnabled("sample-points", true));
+    act(() => result.current.setEnabled("sample-alerts", true));
+    expect(source.requests.map((request) => request.url)).toEqual([
+      "https://sample.test/feed/big_day.json",
+      "https://alerts.test/events",
+    ]);
+    expect(source.requests[0]?.signal?.aborted).toBe(false);
+    release();
+    await act(async () => {});
+  });
+
+  it("forgets its affected area, and stops loading it, when its layer is turned off", async () => {
+    const { result, source } = setup();
+    source.setFeatures("sample-alerts", [
+      samplePoint("e1", { area: "https://alerts.test/area" }),
+    ]);
+    act(() => result.current.setEnabled("sample-alerts", true));
+    await waitFor(() =>
+      expect(layer(result, "sample-alerts").features).toHaveLength(1),
+    );
+    act(() => result.current.showDetail("sample-alerts", "e1"));
+    expect(result.current.detail?.status).toBe("loading");
+    act(() => result.current.setEnabled("sample-alerts", false));
+    expect(result.current.detail).toBeNull();
+    expect(source.detailRequests[0]?.signal?.aborted).toBe(true);
+  });
+
+  it("keeps the affected area of another layer when one layer is turned off", async () => {
+    const { result, source } = setup();
+    source.setFeatures("sample-alerts", [
+      samplePoint("e1", { area: "https://alerts.test/area" }),
+    ]);
+    act(() => result.current.setEnabled("sample-alerts", true));
+    act(() => result.current.setEnabled("sample-points", true));
+    await waitFor(() =>
+      expect(layer(result, "sample-alerts").features).toHaveLength(1),
+    );
+    act(() => result.current.showDetail("sample-alerts", "e1"));
+    act(() => result.current.setEnabled("sample-points", false));
+    expect(result.current.detail?.layerId).toBe("sample-alerts");
+  });
+
+  it("asks for no affected area for a feature or layer that is not there", async () => {
+    const { result, source } = setup();
+    source.setFeatures("sample-alerts", [samplePoint("e1")]);
+    act(() => result.current.setEnabled("sample-alerts", true));
+    await waitFor(() =>
+      expect(layer(result, "sample-alerts").features).toHaveLength(1),
+    );
+    act(() => result.current.showDetail("sample-alerts", "missing"));
+    act(() => result.current.showDetail("not-a-layer", "e1"));
+    expect(result.current.detail).toBeNull();
+    expect(source.detailRequests).toHaveLength(0);
+  });
+
+  it("says nothing when an affected area is given up on before it loads", async () => {
+    const { result, source } = setup();
+    source.setFeatures("sample-alerts", [
+      samplePoint("e1", { area: "https://alerts.test/area" }),
+    ]);
+    act(() => result.current.setEnabled("sample-alerts", true));
+    await waitFor(() =>
+      expect(layer(result, "sample-alerts").features).toHaveLength(1),
+    );
+    const release = source.hold();
+    act(() => result.current.showDetail("sample-alerts", "e1"));
+    act(() => result.current.hideDetail());
+    release();
+    await act(async () => {});
+    expect(result.current.detail).toBeNull();
+    expect(
+      screen.getByTestId("live-region-assertive").textContent,
+    ).not.toContain("affected area");
+  });
+
   it("loads a selected feature's affected area on request, and hides it", async () => {
     const { result, source } = setup();
     const feature = samplePoint("e1", {
@@ -295,6 +482,34 @@ describe("useDataLayers", () => {
     act(() => result.current.setEnabled("sample-imagery", true));
     act(() => result.current.setEnabled("sample-imagery-two", true));
     expect(result.current.credits).toEqual(SAMPLE_TILE_LAYER.attribution);
+  });
+
+  it("fills {year} in a credit from the clock, so it is never out of date", () => {
+    const dated = {
+      ...SAMPLE_TILE_LAYER,
+      attribution: [{ text: "Provider information {year}" }],
+    };
+    const services = createFakeServices({
+      layers: new StaticLayerRegistry([dated]),
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>{children}</LiveRegionProvider>
+      </ServicesProvider>
+    );
+    const credits = (when: number) => {
+      const { result } = renderHook(() => useDataLayers({ now: () => when }), {
+        wrapper,
+      });
+      act(() => result.current.setEnabled(dated.id, true));
+      return result.current.credits.map((credit) => credit.text);
+    };
+    expect(credits(Date.UTC(2026, 10, 9))).toEqual([
+      "Provider information 2026",
+    ]);
+    expect(credits(Date.UTC(2031, 0, 1))).toEqual([
+      "Provider information 2031",
+    ]);
   });
 
   it("collects the credits of the layers that are on", () => {

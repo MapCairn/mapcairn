@@ -512,18 +512,21 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     [state.enabled, state.controls],
   );
 
-  // Several layers can share a provider; its credit is listed once.
+  // Several layers can share a provider; its credit is listed once. A
+  // provider's notice that asks for the year gets the current one.
+  const year = String(new Date(now()).getUTCFullYear());
   const credits = useMemo(() => {
     const byText = new Map<string, LayerAttribution>();
     for (const id of state.enabled) {
       for (const credit of byId.get(id)?.attribution ?? []) {
-        if (!byText.has(credit.text)) {
-          byText.set(credit.text, credit);
+        const text = credit.text.replaceAll("{year}", year);
+        if (!byText.has(text)) {
+          byText.set(text, { ...credit, text });
         }
       }
     }
     return [...byText.values()];
-  }, [state.enabled, byId]);
+  }, [state.enabled, byId, year]);
 
   return {
     layers,

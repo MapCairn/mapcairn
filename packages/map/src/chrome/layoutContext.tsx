@@ -9,6 +9,8 @@ export interface ChromeLayoutValue {
   readonly viewport: { readonly width: number; readonly height: number };
   /** The primary input is a fine pointer, so zoom buttons and keyboard help make sense by default. */
   readonly finePointer: boolean;
+  /** The open side panel's right edge, in px from the left of the container. Null in the sheet layout, or before the panel has measured. */
+  readonly panelEdge: number | null;
   /**
    * The sheet publishes its current top edge (px from the top of the chrome
    * container) so the bottom slots can ride above it. Pass null when closed.
@@ -23,6 +25,7 @@ const defaultValue: ChromeLayoutValue = {
   layout: "sheet",
   viewport: { width: 0, height: 0 },
   finePointer: true,
+  panelEdge: null,
   publishSheetTop() {},
   publishToolbarTop() {},
 };
