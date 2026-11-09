@@ -1,90 +1,75 @@
 import { expect, test } from "./fixtures";
-import { E2E } from "./selectors";
-import { ensurePanelOpen } from "./ui";
+import { RASTER_BASEMAP_NAME } from "./support/basemaps";
 
 test.describe("app shell", () => {
-  test("loads with the expected landmarks and a rendered map", async ({
+  test("loads the map with its landmarks and no hydration errors", async ({
     page,
+    mapPage,
+    consoleMessages,
   }) => {
-    const consoleErrors: string[] = [];
-    page.on("console", (message) => {
-      if (message.type() !== "error") {
-        return;
-      }
-      consoleErrors.push(message.text());
-    });
-
-    await page.goto("/");
+    await mapPage.goto();
 
     await expect(page).toHaveTitle(/karta/i);
-    await expect(
-      page.getByRole("link", { name: /skip to map information/i }),
-    ).toHaveAttribute("href", "#map-information");
-    await expect(page.getByRole("main")).toHaveAttribute(
-      "id",
-      "map-information",
-    );
-    await expect(page.getByTestId(E2E.locationSearchInput)).toBeVisible();
-
-    await expect(page.locator(".leaflet-container")).toBeVisible();
-    await expect(page.locator(".leaflet-control-scale")).toBeVisible();
-    await expect(page.getByTestId(E2E.mapView)).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en-GB");
+    await expect(mapPage.heading).toHaveText("Karta");
+    await expect(page.getByRole("main")).toHaveCount(1);
+    await expect(mapPage.searchLandmark).toBeVisible();
+    await expect(mapPage.region).toBeVisible();
+    await expect(mapPage.region).toHaveAttribute("aria-roledescription", "map");
+    await expect(mapPage.mapControls).toBeVisible();
+    await expect(mapPage.creditsButton).toBeVisible();
     expect(
-      consoleErrors.filter((message) =>
-        /react error #418|hydration|did not match/i.test(message),
+      consoleMessages.filter((message) =>
+        /react error #4(18|19|21|23|25)|hydrat|did not match/i.test(message),
       ),
     ).toEqual([]);
   });
 
-  test("keeps the coordinate readout clear of Settings without announcing pointer updates", async ({
+  test("the skip link is the first tab stop and moves focus to the map region", async ({
     page,
+    mapPage,
+    browserName,
   }) => {
-    await page.goto("/");
+    await mapPage.goto();
 
-    const readout = page.getByTestId("map-coordinate-readout");
-    const settings = page.getByTestId(E2E.settingsMenuTrigger);
-    await expect(readout).toBeVisible();
-    await expect(readout).toHaveAttribute("aria-hidden", "true");
-
-    const readoutBox = await readout.boundingBox();
-    const settingsBox = await settings.boundingBox();
-    expect(readoutBox).not.toBeNull();
-    expect(settingsBox).not.toBeNull();
-
-    if (!readoutBox || !settingsBox) {
-      throw new Error("Expected both coordinate and Settings bounds");
+    if (browserName === "webkit") {
+      // WebKit leaves links out of the Tab order unless the user turns on
+      // "Press Tab to highlight each item", and Playwright's WebKit has no
+      // Option+Tab, so prove the order from the document instead: nothing
+      // focusable comes before the link.
+      const firstFocusable = await page.evaluate(() => {
+        const candidates = document.querySelectorAll<HTMLElement>(
+          'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        return [...candidates].find((element) => !element.closest("[inert]"))
+          ?.textContent;
+      });
+      expect(firstFocusable).toBe("Skip to map");
+      await mapPage.skipLink.focus();
+    } else {
+      await page.keyboard.press("Tab");
     }
-
-    const overlapsHorizontally =
-      readoutBox.x < settingsBox.x + settingsBox.width &&
-      readoutBox.x + readoutBox.width > settingsBox.x;
-    const overlapsVertically =
-      readoutBox.y < settingsBox.y + settingsBox.height &&
-      readoutBox.y + readoutBox.height > settingsBox.y;
-
-    expect(overlapsHorizontally && overlapsVertically).toBe(false);
-  });
-
-  test("the skip link is the first stop on Tab and moves focus into the map region", async ({
-    page,
-  }) => {
-    await page.goto("/");
-
-    const skipLink = page.getByRole("link", {
-      name: /skip to map information/i,
-    });
-    const main = page.getByRole("main");
-
-    await page.keyboard.press("Tab");
-    await expect(skipLink).toBeFocused();
+    await expect(mapPage.skipLink).toBeFocused();
+    await expect(mapPage.skipLink).toBeVisible();
 
     await page.keyboard.press("Enter");
-
-    await expect(main).toBeFocused();
+    await expect(mapPage.region).toBeFocused();
+    await expect(page.locator(":focus")).toHaveAttribute("aria-label", "Map");
   });
 
-  test("shows basemaps without dataset controls, tabs or data requests", async ({
+  test("the map region describes its keyboard controls", async ({
+    mapPage,
+  }) => {
+    await mapPage.goto();
+
+    await expect(mapPage.region).toHaveAccessibleDescription(
+      /Arrow keys: pan the map\..*P: drop a pin at the centre of the map\..*Escape: close the open panel\./,
+    );
+  });
+
+  test("ships no dataset controls or data requests", async ({
     page,
+    mapPage,
   }) => {
     const dataRequests: string[] = [];
     page.on("request", (request) => {
@@ -92,37 +77,35 @@ test.describe("app shell", () => {
         dataRequests.push(request.url());
       }
     });
-    await page.goto("/");
 
-    await ensurePanelOpen(page);
+    await mapPage.goto();
+    await mapPage.openMapOptions();
 
-    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await expect(page.getByTestId("sheet-section-data")).toHaveCount(0);
     await expect(page.getByRole("tablist")).toHaveCount(0);
-    await expect(page.getByTestId(E2E.basemapOption.satellite)).toBeVisible();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", { name: RASTER_BASEMAP_NAME }),
+    ).toBeAttached();
     expect(dataRequests).toEqual([]);
   });
 
-  test("keeps application chrome domain-neutral before a layer is selected", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Karta | Interactive map",
-    );
-    await expect(page.getByTestId(E2E.locationSearchInput)).toHaveAttribute(
+  test("keeps the chrome copy domain-neutral", async ({ page, mapPage }) => {
+    await mapPage.goto();
+
+    await expect(mapPage.searchInput).toHaveAttribute(
       "placeholder",
       "Search places",
     );
     const visibleCopy = await page.locator("body").evaluate((body) => {
       const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
-      const visibleText: string[] = [];
+      const visible: string[] = [];
       while (walker.nextNode()) {
         const node = walker.currentNode as Text;
         if (node.parentElement?.getClientRects().length) {
-          visibleText.push(node.textContent ?? "");
+          visible.push(node.textContent ?? "");
         }
       }
-      return visibleText.join("");
+      return visible.join(" ");
     });
     expect(visibleCopy).not.toMatch(/apartheid|gauteng|cape town|township/i);
   });

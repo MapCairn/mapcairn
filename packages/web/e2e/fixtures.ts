@@ -1,115 +1,83 @@
 import { test as base, expect } from "@playwright/test";
+import { MapPage } from "./pages/MapPage";
+import { mockThirdPartyServices } from "./support/network";
 
-// A 1x1 transparent PNG, served in place of real raster basemap tile
-// requests so the suite doesn't depend on OpenStreetMap/Esri network
-// availability or rate limits.
-const TRANSPARENT_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-  "base64",
-);
+/** The string `testSeam.ts` logs when it accepts scripted services. */
+const SEAM_MARKER = "KARTA_TEST_SEAM_MARKER";
 
-const TILE_HOST_PATTERN = /tile\.openstreetmap\.org|server\.arcgisonline\.com/;
+/** The fixtures every spec gets. */
+export interface KartaFixtures {
+  /** The map page object. `mapPage.goto()` loads the app and waits for the map. */
+  readonly mapPage: MapPage;
+  /** Console messages from the page, in order. */
+  readonly consoleMessages: string[];
+}
 
 /**
- * A minimal MapLibre GL style JSON with one inline GeoJSON feature, served
- * in place of the real Positron/Liberty/Dark basemaps' OpenFreeMap style
- * requests (matched generically by path, so it covers all three). The source
- * exercises MapLibre's worker without external tile, glyph, or sprite
- * requests, keeping the suite independent of OpenFreeMap availability.
+ * Records every message the app's announcer speaks, in order, on
+ * `window.__kartaAnnouncements`. The announcer clears and rewrites its live
+ * regions, so reading them at one moment can miss a message.
  */
-const EMPTY_MAPLIBRE_STYLE = {
-  version: 8,
-  sources: {
-    "worker-check": {
-      type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: {},
-            geometry: { type: "Point", coordinates: [0, 0] },
-          },
-        ],
-      },
-    },
+function recordAnnouncements() {
+  const spoken: string[] = [];
+  window.__kartaAnnouncements = spoken;
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      const node =
+        mutation.target instanceof Element
+          ? mutation.target
+          : mutation.target.parentElement;
+      const region = node?.closest('[data-testid^="live-region-"]');
+      const text = region?.textContent?.trim();
+      if (text && spoken[spoken.length - 1] !== text) {
+        spoken.push(text);
+      }
+    }
+  });
+  observer.observe(document, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+  });
+}
+
+/**
+ * Playwright's `test`, extended so that every page:
+ *
+ * - has every third-party request stubbed (tiles, styles, Nominatim);
+ * - records announcer messages and console output;
+ * - fails `mapPage.waitForMap()` when a test scripted services through the
+ *   seam but the build ignored them (for example, a production build).
+ */
+export const test = base.extend<KartaFixtures>({
+  consoleMessages: async ({ page }, use) => {
+    const messages: string[] = [];
+    page.on("console", (message) => {
+      messages.push(`${message.type()}: ${message.text()}`);
+    });
+    await use(messages);
   },
-  layers: [{ id: "worker-check", type: "circle", source: "worker-check" }],
-};
-
-const OPEN_FREE_MAP_STYLE_PATTERN = /tiles\.openfreemap\.org\/styles\//;
-
-/** Matches a Nominatim place-search request, for tests that override the default geocoder stub below. */
-export const GEOCODER_SEARCH_PATTERN = /nominatim\.openstreetmap\.org\/search/;
-
-/** Matches a Nominatim reverse-geocode request, for tests that override the default geocoder stub below. */
-export const GEOCODER_REVERSE_PATTERN =
-  /nominatim\.openstreetmap\.org\/reverse/;
-
-/**
- * The single place hit that every location search in the suite resolves to,
- * served in place of real Nominatim requests for the same reason the tile
- * stub above exists: OpenStreetMap's geocoder is a third party with a
- * one-request-per-second rate limit.
- */
-export const GEOCODER_RESULT = {
-  place_id: 26262288,
-  display_name: "Soweto, City of Johannesburg, Gauteng, South Africa",
-  lat: "-26.2678",
-  lon: "27.8586",
-  boundingbox: ["-26.35", "-26.20", "27.75", "27.95"],
-};
-
-/** The reverse-geocode result served in place of real Nominatim `/reverse` requests, for the same reason `GEOCODER_RESULT` exists. */
-export const GEOCODER_REVERSE_RESULT = {
-  place_id: 26262500,
-  display_name:
-    "Diepkloof, Soweto, City of Johannesburg, Gauteng, South Africa",
-  lat: "-26.25",
-  lon: "27.94",
-};
-
-/**
- * Playwright's `test`, extended to stub every third-party network request
- * (basemap tiles, OpenFreeMap vector styles, Nominatim search/reverse-geocode)
- * on every page, so the suite runs deterministically without depending on
- * those services' availability or rate limits.
- */
-export const test = base.extend({
-  baseURL: [
-    process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4173",
-    { option: true },
-  ],
   page: async ({ page }, use) => {
-    await page.route(TILE_HOST_PATTERN, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "image/png",
-        body: TRANSPARENT_PNG,
-      }),
-    );
-    await page.route(OPEN_FREE_MAP_STYLE_PATTERN, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(EMPTY_MAPLIBRE_STYLE),
-      }),
-    );
-    await page.route(GEOCODER_SEARCH_PATTERN, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([GEOCODER_RESULT]),
-      }),
-    );
-    await page.route(GEOCODER_REVERSE_PATTERN, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(GEOCODER_REVERSE_RESULT),
-      }),
-    );
+    await mockThirdPartyServices(page);
+    await page.addInitScript(recordAnnouncements);
     await use(page);
+  },
+  mapPage: async ({ page, consoleMessages }, use) => {
+    const mapPage = new MapPage(page);
+    const waitForMap = mapPage.waitForMap.bind(mapPage);
+    mapPage.waitForMap = async () => {
+      await waitForMap();
+      const scripted = await page.evaluate(
+        () => window.__KARTA_TEST_SERVICES__ !== undefined,
+      );
+      if (scripted) {
+        expect(
+          consoleMessages.some((message) => message.includes(SEAM_MARKER)),
+          "the app should report that it took the scripted services",
+        ).toBe(true);
+      }
+    };
+    await use(mapPage);
   },
 });
 

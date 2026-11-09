@@ -11,6 +11,27 @@ const executablePath = existsSync(remoteSessionChromium)
   ? remoteSessionChromium
   : undefined;
 
+// Specs that WebKit (iPhone) runs as well: MapLibre's worker startup, the
+// keyboard model and the bottom sheet are where iOS has behaved differently.
+// The layout and accessibility matrices stay on Chromium: they share CSS with
+// WebKit and would more than double the run time.
+const WEBKIT_SPECS = /(basemap|keyboard|sheet|app-shell)\.spec\.ts$/;
+
+/**
+ * End-to-end and accessibility suites for the web host.
+ *
+ * - Tests run against a production build made with `--mode e2e`
+ *   (`npm run build:e2e`), the only build that keeps the browser test seam
+ *   (`window.__KARTA_TEST_SERVICES__`, see `src/composition/testSeam.ts`).
+ *   The build script proves the seam is there; `npm run build` proves a
+ *   plain build has none.
+ * - `npm run e2e` runs everything except titles tagged `@a11y`;
+ *   `npm run a11y` runs only those.
+ * - Basemap tiles, styles and Nominatim are mocked in `e2e/fixtures.ts`, so
+ *   no test depends on a third-party service.
+ * - Locators use `data-testid` (every interactive component renders one),
+ *   but role and accessible-name locators come first wherever they exist.
+ */
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -29,7 +50,8 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:4173",
     trace: "on-first-retry",
-    testIdAttribute: "data-e2e",
+    screenshot: "only-on-failure",
+    testIdAttribute: "data-testid",
   },
   projects: [
     {
@@ -38,12 +60,14 @@ export default defineConfig({
     },
     {
       name: "mobile-chromium",
+      // Desktop-sized viewports in the layout and accessibility matrices run
+      // on the desktop project only (DESKTOP_VIEWPORT_TAG in e2e/support/states.ts).
+      grepInvert: /@desktop-viewport/,
       use: { ...devices["Pixel 7"], launchOptions: { executablePath } },
     },
-    // WebKit runs only the vector basemap spec: MapLibre's worker setup is where this app has failed on iOS but not on Chromium.
     {
       name: "webkit",
-      testMatch: /vector-basemap\.spec\.ts/,
+      testMatch: WEBKIT_SPECS,
       use: { ...devices["iPhone 15"] },
     },
   ],
@@ -51,6 +75,7 @@ export default defineConfig({
     command: "npm run start",
     url: "http://localhost:4173",
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    // The e2e build runs before the server starts.
+    timeout: 240_000,
   },
 });
