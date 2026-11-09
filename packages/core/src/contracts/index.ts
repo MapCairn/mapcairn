@@ -1,5 +1,6 @@
 export * from "./clipboard.contract";
 export * from "./devicePreferences.contract";
+export * from "./fileSaver.contract";
 export * from "./layerRegistry.contract";
 export * from "./layerSource.contract";
 export * from "./locationProvider.contract";

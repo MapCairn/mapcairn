@@ -13,7 +13,7 @@ export interface UrlStateTimers {
 
 /** The slice of `window` the adapter reads and writes. */
 export interface UrlStateWindow {
-  readonly location: Pick<Location, "hash" | "pathname" | "search">;
+  readonly location: Pick<Location, "hash" | "origin" | "pathname" | "search">;
   readonly history: Pick<History, "replaceState" | "state">;
   addEventListener(type: "pagehide", listener: () => void): void;
   removeEventListener(type: "pagehide", listener: () => void): void;
@@ -110,6 +110,14 @@ export class BrowserUrlState implements UrlState {
       this.#hasTimer = false;
       this.flush();
     }, this.#debounceMs);
+  }
+
+  link(value: UrlStateValue): string {
+    const location = this.#getWindow()?.location;
+    const base = location
+      ? `${location.origin}${location.pathname}${location.search}`
+      : "";
+    return `${base}${serialiseUrlHash(value)}`;
   }
 
   /** Applies a pending write to the address now. Does nothing when none is pending. */

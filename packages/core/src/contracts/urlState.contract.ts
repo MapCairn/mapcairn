@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { UrlState } from "../ports/url";
+import { serialiseUrlHash } from "../urlHash/urlHash";
 
 /** What the url contract needs besides the port itself. */
 export interface UrlStateControls {
@@ -74,6 +75,32 @@ export function runUrlStateContract(
       url.write({});
       await controls.settle();
       expect(url.read()).toEqual({});
+    });
+
+    it("builds a link that ends in the hash of a value, without writing it", async () => {
+      const { url, controls } = create();
+      url.write({ basemapId: "positron" });
+      await controls.settle();
+      const link = url.link({ view: VIEW, shapes: "pAAAA" });
+      expect(link).toBe(
+        `${link.slice(0, link.indexOf("#"))}${serialiseUrlHash({ view: VIEW, shapes: "pAAAA" })}`,
+      );
+      expect(link).toContain("#map=12.00/-33.92490/18.42410");
+      expect(link).toContain("&shapes=pAAAA");
+      await controls.settle();
+      expect(url.read()).toEqual({ basemapId: "positron" });
+    });
+
+    it("reads shapes back from a hash that carries them", async () => {
+      const { url, controls } = create();
+      url.write({ basemapId: "positron", shapes: "pAAAA" });
+      await controls.settle();
+      expect(url.read().shapes).toBe("pAAAA");
+    });
+
+    it("builds a link with no hash for an empty value", () => {
+      const { url } = create();
+      expect(url.link({})).not.toContain("#");
     });
 
     it("keeps the last of several rapid writes", async () => {

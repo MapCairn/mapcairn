@@ -1,6 +1,7 @@
 import {
   type ClipboardPort,
   type DevicePreferencesValue,
+  type FileSaver,
   type LayerRegistry,
   type LocationProvider,
   type MapAdapterFactory,
@@ -43,6 +44,11 @@ export function useLocationProvider(): LocationProvider {
 /** The clipboard port. */
 export function useClipboard(): ClipboardPort {
   return useServices().clipboard;
+}
+
+/** The file saver, which offers a file the ui built as a download. */
+export function useFileSaver(): FileSaver {
+  return useServices().fileSaver;
 }
 
 /** The shareable URL state port. */

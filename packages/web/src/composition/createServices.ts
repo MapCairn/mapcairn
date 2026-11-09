@@ -4,6 +4,7 @@ import type { Services } from "@karta/core";
 // the engine mounts, and keeps it out of the ui, which may not import adapters.
 import "../adapters/mapEngine.css";
 import { BrowserClipboard } from "../adapters/clipboard/BrowserClipboard";
+import { BrowserFileSaver } from "../adapters/files/BrowserFileSaver";
 import { FetchLayerSource } from "../adapters/layers/FetchLayerSource";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
 import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
@@ -61,6 +62,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     location: new BrowserLocationProvider(),
     settings: new LocalStorageSettingsStore(),
     clipboard: new BrowserClipboard(),
+    fileSaver: new BrowserFileSaver(),
     url: new BrowserUrlState(),
     theme: new BrowserThemeSource(),
     preferences: new BrowserDevicePreferences(),

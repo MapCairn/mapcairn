@@ -13,6 +13,13 @@ export interface UrlStateValue {
   readonly view?: ViewState;
   readonly basemapId?: string;
   readonly layers?: LayersUrlState;
+  /**
+   * Drawn shapes in the compact link encoding (`encodeShapes`). Untrusted
+   * until decoded. The app never writes it to the address bar: it is read
+   * from a link someone shared, and written only into the link that
+   * {@link UrlState.link} builds when the person chooses to share shapes.
+   */
+  readonly shapes?: string;
 }
 
 /**
@@ -23,4 +30,10 @@ export interface UrlStateValue {
 export interface UrlState {
   read(): UrlStateValue;
   write(value: UrlStateValue): void;
+  /**
+   * The full address that would show `value`: this page's address with its
+   * hash replaced by the one `value` makes. It changes nothing, so a link can
+   * carry more than the address bar does.
+   */
+  link(value: UrlStateValue): string;
 }

@@ -1,3 +1,4 @@
+import { SHARE_PATTERN } from "../draw/share";
 import { formatFixed } from "../format/format";
 import type { ViewState } from "../ports/geometry";
 import type { LayersUrlState, UrlStateValue } from "../ports/url";
@@ -123,10 +124,12 @@ export function parseUrlHash(hash: string): UrlStateValue {
   const basemap = params.get("basemap") ?? "";
   const basemapId = BASEMAP_ID_PATTERN.test(basemap) ? basemap : undefined;
   const layers = parseLayers(params);
+  const shapes = params.get("shapes") ?? "";
   return {
     ...(view ? { view } : {}),
     ...(basemapId ? { basemapId } : {}),
     ...(layers ? { layers } : {}),
+    ...(SHARE_PATTERN.test(shapes) ? { shapes } : {}),
   };
 }
 
@@ -168,5 +171,8 @@ export function serialiseUrlHash(value: UrlStateValue): string {
     params.push(`basemap=${value.basemapId}`);
   }
   params.push(...serialiseLayers(value.layers));
+  if (value.shapes !== undefined && SHARE_PATTERN.test(value.shapes)) {
+    params.push(`shapes=${value.shapes}`);
+  }
   return params.length > 0 ? `#${params.join("&")}` : "";
 }

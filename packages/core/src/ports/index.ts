@@ -1,6 +1,7 @@
 export * from "./basemap";
 export * from "./clipboard";
 export * from "./errors";
+export * from "./files";
 export * from "./geometry";
 export * from "./layers";
 export * from "./location";

@@ -1,4 +1,5 @@
 import type { ClipboardPort } from "./clipboard";
+import type { FileSaver } from "./files";
 import type { LayerRegistry, LayerSource } from "./layers";
 import type { LocationProvider } from "./location";
 import type { MapAdapterFactory } from "./map";
@@ -20,6 +21,8 @@ export interface Services {
   readonly location: LocationProvider;
   readonly settings: SettingsStore;
   readonly clipboard: ClipboardPort;
+  /** Offers a file the ui built, such as exported shapes, as a download. */
+  readonly fileSaver: FileSaver;
   readonly url: UrlState;
   readonly theme: ThemeSource;
   readonly preferences: DevicePreferences;

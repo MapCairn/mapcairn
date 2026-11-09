@@ -1,4 +1,8 @@
 import type { UrlState, UrlStateValue } from "../ports/url";
+import { serialiseUrlHash } from "../urlHash/urlHash";
+
+/** The address {@link MemoryUrlState.link} puts links on. */
+export const MEMORY_URL_BASE = "https://karta.example/";
 
 /**
  * An in-memory {@link UrlState}.
@@ -23,5 +27,9 @@ export class MemoryUrlState implements UrlState {
   write(value: UrlStateValue): void {
     this.writes.push(value);
     this.#value = value;
+  }
+
+  link(value: UrlStateValue): string {
+    return `${MEMORY_URL_BASE}${serialiseUrlHash(value)}`;
   }
 }
