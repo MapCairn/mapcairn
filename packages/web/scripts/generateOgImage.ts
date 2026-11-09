@@ -9,7 +9,7 @@
  * bundled Chromium already is, so this reuses it as a one-shot HTML-to-PNG
  * renderer rather than adding a new dependency for the same job. Uses the
  * same self-hosted Source Serif 4 and Public Sans font files, `SITE_URL`, brand copy
- * (`m.app_title()`/`m.meta_description()`) and colour tokens in
+ * (the `TITLE` and `TAGLINE` constants below) and colour tokens in
  * `src/index.css` as the live app, so the card can't drift from what a
  * visitor sees after clicking through.
  */
@@ -22,7 +22,6 @@ import {
   OG_IMAGE_WIDTH,
   SITE_URL,
 } from "../src/constants/siteConfig";
-import { m } from "../src/paraglide/messages.js";
 
 const SERIF_FONT_PATH = fileURLToPath(
   import.meta.resolve(
@@ -41,8 +40,9 @@ const INDEX_CSS_PATH = fileURLToPath(
   new URL("../src/index.css", import.meta.url),
 );
 
-const TITLE = m.app_title();
-const TAGLINE = m.meta_description();
+const TITLE = "Karta";
+const TAGLINE =
+  "Explore an interactive map. Search places, compare basemaps and measure distances or areas.";
 const URL_LABEL = SITE_URL.replace(/^https?:\/\//, "");
 
 /**

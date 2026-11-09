@@ -157,9 +157,6 @@ test.describe("settings menu", () => {
 
       const menu = page.getByTestId(E2E.panelContainer);
       await expect(menu).toBeVisible();
-      await expect(
-        page.getByTestId(`${E2E.languageToggle}-option-af`),
-      ).toBeVisible();
 
       const menuBox = await menu.boundingBox();
       if (!menuBox) {

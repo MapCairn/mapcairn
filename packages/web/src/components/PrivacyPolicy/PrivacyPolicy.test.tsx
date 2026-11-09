@@ -11,10 +11,10 @@ describe("PrivacyPolicy", () => {
     ).toBeInTheDocument();
   });
 
-  it("discloses the locale cookie by name, correcting the old 'no cookies' claim", () => {
+  it("states that the site sets no cookies", () => {
     render(<PrivacyPolicy />);
 
-    expect(screen.getByText(/PARAGLIDE_LOCALE/)).toBeInTheDocument();
+    expect(screen.getByText(/sets no cookies/)).toBeInTheDocument();
   });
 
   it("discloses the theme preference stored in localStorage", () => {

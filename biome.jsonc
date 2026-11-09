@@ -69,12 +69,6 @@
     }
   ],
   "files": {
-    "includes": [
-      "**",
-      "!**/dist",
-      "!**/node_modules",
-      "!**/packages/web/src/paraglide",
-      "!**/.claude"
-    ]
+    "includes": ["**", "!**/dist", "!**/node_modules", "!**/.claude"]
   }
 }

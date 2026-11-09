@@ -1,25 +1,20 @@
 import { THEME_STORAGE_KEY } from "../../constants/themeConfig";
-import { cookieName as LOCALE_COOKIE_NAME } from "../../paraglide/runtime.js";
 import { visuallyHidden } from "../../shared.css";
 import * as styles from "./PrivacyPolicy.css";
 
 /** ISO date this policy's content was last reviewed for accuracy. */
-const LAST_UPDATED = "2026-08-25";
+const LAST_UPDATED = "2026-11-09";
 
 /** This page's title, shared with `routes/privacy.tsx`'s `<title>` so the two can't drift apart. */
 export const PRIVACY_POLICY_TITLE = "Privacy policy";
 
 /**
  * The site's privacy policy page content.
- * @remarks Deliberately English-only, unlike the rest of this app's UI copy
- *   (see `messages/*.json`). Legal text carries more risk from an
- *   inaccurate machine translation than the benefit of matching the site's
- *   usual localisation, so it stays in one language everywhere. Reads
- *   `THEME_STORAGE_KEY`/`cookieName` from the modules that actually set
- *   them rather than repeating those strings as literals, so this copy
- *   can't silently drift out of sync with what the app actually stores.
- *   Content here must stay in sync with the root `PRIVACY.md`, which
- *   mirrors it for readers browsing the repository directly.
+ * @remarks Reads `THEME_STORAGE_KEY` from the module that actually sets it
+ *   rather than repeating the string as a literal, so this copy can't
+ *   silently drift out of sync with what the app actually stores. Content
+ *   here must stay in sync with the root `PRIVACY.md`, which mirrors it for
+ *   readers browsing the repository directly.
  */
 export function PrivacyPolicy() {
   return (
@@ -35,11 +30,8 @@ export function PrivacyPolicy() {
 
       <h2 className={styles.sectionTitle}>Cookies</h2>
       <p className={styles.body}>
-        The site sets one first-party cookie, <code>{LOCALE_COOKIE_NAME}</code>,
-        when you manually pick a language from the language switcher. It stores
-        only that language code, contains no personal data, and is used solely
-        to serve the page in your chosen language on later visits. It is not
-        used for tracking or analytics.
+        The site sets no cookies. Preferences such as your theme are kept in
+        local storage on your device instead, as described below.
       </p>
 
       <h2 className={styles.sectionTitle}>Local storage</h2>

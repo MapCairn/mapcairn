@@ -4,7 +4,7 @@ Guidance for humans and AI working in this repository. `CLAUDE.md` imports this 
 
 ## About
 
-Karta is a reusable SDK for public-interest geospatial layer platforms. Four SDK packages provide a domain-agnostic layer model, map rendering, React hooks and a typed design-token contract. `packages/web` is an SSR reference host with an empty map: basemaps, place search, distance and area measurement, theme settings and language selection. No datasets or domain-specific overlays are bundled.
+Karta is a reusable SDK for public-interest geospatial layer platforms. Four SDK packages provide a domain-agnostic layer model, map rendering, React hooks and a typed design-token contract. `packages/web` is an SSR reference host with an empty map: basemaps, place search, distance and area measurement and theme settings. No datasets or domain-specific overlays are bundled.
 
 The published host runs on Cloudflare Workers. It has no accounts and no tracking beyond cookieless page views. Client error reports are logged as described in `PRIVACY.md`.
 
@@ -25,9 +25,9 @@ npm run dev -w @karta/web
 
 `npm test` runs Vitest across `packages/*`. Coverage thresholds are 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has lower floors (about 70% statements and lines), because its layout and touch-gesture code is covered by Playwright. Aim for 100% behavioural coverage. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
 
-`typecheck` checks every workspace, including web route types. `lint` runs Biome and dependency-cruiser. Pre-commit runs Biome on staged files and dependency-cruiser, but does not run typecheck, tests, coverage or the Paraglide freshness check.
+`typecheck` checks every workspace, including web route types. `lint` runs Biome and dependency-cruiser. Pre-commit runs Biome on staged files and dependency-cruiser, but does not run typecheck, tests or coverage.
 
-CI checks generated Paraglide messages, lint, typecheck, coverage and build. Lighthouse and Playwright have separate workflows.
+CI checks lint, typecheck, coverage and build. Lighthouse and Playwright have separate workflows.
 
 ### Browser tests
 
@@ -111,9 +111,9 @@ The basemap registry supports raster and vector definitions. Built-ins are OpenF
 
 The host provides basemap selection, search, measurement and settings with no bundled datasets. It does not need storage or remote data bindings. `wrangler.jsonc` declares only the static `ASSETS` binding, routes and observability.
 
-`workers/app.ts` redirects the previous hostname to the current site and forwards requests to the built React Router server. Keep request-locale middleware in `entry.server.tsx`, not the Worker wrapper: Vite and Wrangler produce separate runtime copies, so setting locale storage in one does not populate the other.
+`workers/app.ts` redirects the previous hostname to the current site and forwards requests to the built React Router server.
 
-The app's own copy comes from `messages/{en,af}.json`, compiled into checked-in `src/paraglide/`. Compile message changes with `npm run messages:compile -w @karta/web`. CI checks the generated files for freshness. Never cache request-local translated strings at Worker module scope.
+The app is English only (British English, `lang="en-GB"`). Its copy is written inline in components, with no string table or translation library. The site sets no cookies.
 
 `entry.client.tsx` initialises theme and client error reporting before hydration. Server rendering, the root error boundary and the Worker wrapper log server errors. `routes/log-error.ts` validates bounded client reports and logs them without a database.
 
@@ -133,7 +133,6 @@ Components use vanilla-extract beside their implementations. SDK consumers must 
 
 - Code changes: run `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`.
 - Map or UI changes: also run `npm run test:e2e -w @karta/web`.
-- Message or Paraglide configuration changes: compile and include generated output.
 - Dependency changes: perform the real install and cross-major lockfile checks above.
 - Report checks that failed or were skipped.
 
@@ -145,4 +144,4 @@ Adding a dataset is a separate, explicitly scoped decision. Do not reintroduce d
 
 ## Documentation
 
-`README.md` indexes package guides, `docs/building-a-domain.md`, `docs/adding-a-locale.md` and `docs/design-system.md`. `CONTRIBUTING.md`, `SECURITY.md`, `ATTRIBUTIONS.md` and `PRIVACY.md` cover contribution, reporting, credits and privacy.
+`README.md` indexes package guides, `docs/building-a-domain.md` and `docs/design-system.md`. `CONTRIBUTING.md`, `SECURITY.md`, `ATTRIBUTIONS.md` and `PRIVACY.md` cover contribution, reporting, credits and privacy.

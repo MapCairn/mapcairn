@@ -1,6 +1,5 @@
 import { memo, useState } from "react";
 import { getLayer, getLayerGroups } from "../../layers/registry";
-import { m } from "../../paraglide/messages.js";
 import * as styles from "./LayerToggles.css";
 
 interface LayerTogglesProps {
@@ -24,7 +23,7 @@ function LayerOpacity({
 }) {
   return (
     <label>
-      {m.layer_opacity_label({ label })}
+      {`Opacity for ${label}`}
       <input
         type="range"
         min={0}
@@ -50,11 +49,11 @@ export const LayerToggles = memo(function LayerToggles({
   return (
     <div>
       <label className={styles.searchLabel}>
-        {m.layer_search_label()}
+        Filter layers
         <input
           type="search"
           value={query}
-          placeholder={m.layer_search_placeholder()}
+          placeholder="Search layers"
           onChange={(event) => setQuery(event.target.value)}
         />
       </label>
@@ -98,9 +97,7 @@ export const LayerToggles = memo(function LayerToggles({
                         {layer.label}
                       </span>
                       {!layer.available ? (
-                        <span className={styles.badge}>
-                          {m.layer_unavailable_badge()}
-                        </span>
+                        <span className={styles.badge}>Not yet available</span>
                       ) : null}
                     </label>
                     {layer.description ? (
@@ -113,7 +110,7 @@ export const LayerToggles = memo(function LayerToggles({
                     ) : null}
                     {failedLayerIds.includes(layer.id) ? (
                       <span role="status" className={styles.badgeError}>
-                        {m.layer_failed_badge()}
+                        Failed to load. Turn the layer off and on to retry.
                       </span>
                     ) : null}
                     {visible && onOpacityChange ? (

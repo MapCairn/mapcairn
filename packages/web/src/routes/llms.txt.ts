@@ -1,10 +1,9 @@
 import { SITE_URL } from "../constants/siteConfig";
-import { m } from "../paraglide/messages.js";
 import { staticTextResponse } from "./staticTextResponse";
 
-const LLMS_TXT_BODY = `# ${m.app_title()}
+const LLMS_TXT_BODY = `# Karta
 
-> ${m.meta_description()}
+> Explore an interactive map. Search places, compare basemaps and measure distances or areas.
 
 ## Pages
 

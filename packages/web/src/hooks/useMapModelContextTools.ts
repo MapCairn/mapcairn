@@ -12,7 +12,6 @@ import {
   useModelContextTool,
 } from "@karta/react";
 import { getLayer, getLayers } from "../layers/registry";
-import { m } from "../paraglide/messages.js";
 import { useMapUiStore } from "../stores/useMapUiStore";
 
 /** Wraps `text` as a single-block WebMCP tool result. */
@@ -117,9 +116,7 @@ async function executeMeasurementTool(
   }
   const resolved = await resolveMeasurementLocations(locations);
   if ("notFoundQuery" in resolved) {
-    return textResult(
-      m.webmcp_search_location_not_found({ query: resolved.notFoundQuery }),
-    );
+    return textResult(`No place found for "${resolved.notFoundQuery}".`);
   }
   const points = resolved.locations.map(({ lat, lng }) => ({ lat, lng }));
   onRequestMeasurement(config.mode, points);
@@ -179,7 +176,8 @@ export function useMapModelContextTools({
 }: UseMapModelContextToolsOptions): void {
   useModelContextTool<Record<string, never>>({
     name: "list-map-layers",
-    description: m.webmcp_list_layers_description(),
+    description:
+      "List this map's layers, each with its id, label, and whether it's currently visible.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -191,26 +189,29 @@ export function useMapModelContextTools({
         .filter((layer) => layer.available)
         .map((layer) => {
           const visibility = visibleLayerIds.includes(layer.id)
-            ? m.webmcp_layer_state_visible()
-            : m.webmcp_layer_state_hidden();
+            ? "visible"
+            : "hidden";
           const description = layer.description ? `: ${layer.description}` : "";
           return `${layer.id}: ${layer.label}${description} (${visibility})`;
         });
       return textResult(
-        lines.length > 0 ? lines.join("\n") : m.webmcp_list_layers_empty(),
+        lines.length > 0
+          ? lines.join("\n")
+          : "This map has no layers available.",
       );
     },
   });
 
   useModelContextTool<ToggleLayerInput>({
     name: "toggle-map-layer",
-    description: m.webmcp_toggle_layer_description(),
+    description:
+      "Show or hide a map layer by id. Call list-map-layers first to find valid ids.",
     inputSchema: {
       type: "object",
       properties: {
         layerId: {
           type: "string",
-          description: m.webmcp_toggle_layer_input_layer_id(),
+          description: "The layer's id, as returned by list-map-layers.",
         },
       },
       required: ["layerId"],
@@ -219,12 +220,12 @@ export function useMapModelContextTools({
     execute: ({ layerId }) => {
       const layer = getLayer(layerId);
       if (!layer) {
-        return textResult(m.webmcp_toggle_layer_unknown({ layerId }));
+        return textResult(
+          `No layer with id "${layerId}". Call list-map-layers to see valid ids.`,
+        );
       }
       if (!layer.available) {
-        return textResult(
-          m.webmcp_toggle_layer_unavailable({ label: layer.label }),
-        );
+        return textResult(`Layer "${layer.label}" isn't available yet.`);
       }
       useMapUiStore.getState().toggleLayer(layerId);
       const nowVisible = useMapUiStore
@@ -232,21 +233,22 @@ export function useMapModelContextTools({
         .visibleLayerIds.includes(layerId);
       return textResult(
         nowVisible
-          ? m.webmcp_toggle_layer_now_visible({ label: layer.label })
-          : m.webmcp_toggle_layer_now_hidden({ label: layer.label }),
+          ? `Layer "${layer.label}" is now visible.`
+          : `Layer "${layer.label}" is now hidden.`,
       );
     },
   });
 
   useModelContextTool<SearchLocationInput>({
     name: "search-map-location",
-    description: m.webmcp_search_location_description(),
+    description:
+      "Search for a place by name and fly the map to the best match.",
     inputSchema: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: m.webmcp_search_location_input_query(),
+          description: "Free-text place name to search for.",
         },
       },
       required: ["query"],
@@ -256,7 +258,7 @@ export function useMapModelContextTools({
       const results = await fetchLocationSearchResults(query);
       const [best] = results;
       if (!best) {
-        return textResult(m.webmcp_search_location_not_found({ query }));
+        return textResult(`No place found for "${query}".`);
       }
       return textResult(onLocationSelect(best));
     },
@@ -264,14 +266,14 @@ export function useMapModelContextTools({
 
   useModelContextTool<SetBasemapInput>({
     name: "set-map-basemap",
-    description: m.webmcp_set_basemap_description(),
+    description: "Switch the map's basemap.",
     inputSchema: {
       type: "object",
       properties: {
         basemap: {
           type: "string",
           enum: getRegisteredBasemapIds(),
-          description: m.webmcp_set_basemap_input_basemap(),
+          description: "A registered basemap id.",
         },
       },
       required: ["basemap"],
@@ -279,16 +281,16 @@ export function useMapModelContextTools({
     },
     execute: ({ basemap }) => {
       if (!getRegisteredBasemapIds().includes(basemap)) {
-        return textResult(m.webmcp_set_basemap_unknown({ basemap }));
+        return textResult(`Unknown basemap "${basemap}".`);
       }
       useMapUiStore.getState().setBasemap(basemap);
-      return textResult(m.webmcp_set_basemap_switched({ basemap }));
+      return textResult(`Switched basemap to ${basemap}.`);
     },
   });
 
   useModelContextTool<SetThemeInput>({
     name: "set-app-theme",
-    description: m.webmcp_set_theme_description(),
+    description: "Set the app's colour theme: system, light or dark.",
     inputSchema: {
       type: "object",
       properties: {
@@ -302,16 +304,17 @@ export function useMapModelContextTools({
     },
     execute: ({ theme }) => {
       if (!THEME_PREFERENCES.includes(theme as ThemePreference)) {
-        return textResult(m.webmcp_set_theme_unknown({ theme }));
+        return textResult(`Unknown theme "${theme}".`);
       }
       setThemePreference(theme as ThemePreference);
-      return textResult(m.webmcp_set_theme_switched({ theme }));
+      return textResult(`Switched theme to ${theme}.`);
     },
   });
 
   useModelContextTool<MeasureLocationsInput>({
     name: "measure-distance",
-    description: m.webmcp_measure_distance_description(),
+    description:
+      "Measure a straight-line distance along named places and plot it on the map.",
     inputSchema: {
       type: "object",
       properties: {
@@ -319,7 +322,8 @@ export function useMapModelContextTools({
           type: "array",
           items: { type: "string" },
           minItems: MEASURE_DISTANCE_MIN_LOCATIONS,
-          description: m.webmcp_measure_distance_input_locations(),
+          description:
+            "Place names in path order, with at least two locations.",
         },
       },
       required: ["locations"],
@@ -331,9 +335,11 @@ export function useMapModelContextTools({
         {
           mode: "distance",
           minLocations: MEASURE_DISTANCE_MIN_LOCATIONS,
-          tooFewLocationsMessage: m.webmcp_measure_distance_too_few(),
+          tooFewLocationsMessage:
+            "Provide at least two locations to measure a distance.",
           joinSeparator: " → ",
-          buildResultMessage: m.webmcp_measure_distance_result,
+          buildResultMessage: ({ locations, result }) =>
+            `Distance along ${locations}: ${result}`,
         },
         onRequestMeasurement,
       ),
@@ -341,7 +347,8 @@ export function useMapModelContextTools({
 
   useModelContextTool<MeasureLocationsInput>({
     name: "measure-area",
-    description: m.webmcp_measure_area_description(),
+    description:
+      "Measure the area enclosed by named places and plot it on the map.",
     inputSchema: {
       type: "object",
       properties: {
@@ -349,7 +356,8 @@ export function useMapModelContextTools({
           type: "array",
           items: { type: "string" },
           minItems: MEASURE_AREA_MIN_LOCATIONS,
-          description: m.webmcp_measure_area_input_locations(),
+          description:
+            "Place names in outline order, with at least three locations.",
         },
       },
       required: ["locations"],
@@ -361,9 +369,11 @@ export function useMapModelContextTools({
         {
           mode: "area",
           minLocations: MEASURE_AREA_MIN_LOCATIONS,
-          tooFewLocationsMessage: m.webmcp_measure_area_too_few(),
+          tooFewLocationsMessage:
+            "Provide at least three locations to measure an area.",
           joinSeparator: ", ",
-          buildResultMessage: m.webmcp_measure_area_result,
+          buildResultMessage: ({ locations, result }) =>
+            `Area enclosed by ${locations}: ${result}`,
         },
         onRequestMeasurement,
       ),

@@ -15,8 +15,6 @@ import { buildPageMeta } from "./buildPageMeta";
 import { SITE_URL } from "./constants/siteConfig";
 import { THEME_COLOR, THEME_STORAGE_KEY } from "./constants/themeConfig";
 import "./index.css";
-import { m } from "./paraglide/messages.js";
-import { getLocale, getTextDirection } from "./paraglide/runtime.js";
 import * as styles from "./root.css";
 
 /**
@@ -38,15 +36,12 @@ const THEME_BOOTSTRAP_SCRIPT = `(() => {
  * React Router route module export: page `<title>`/`<meta>` tags, including
  * Open Graph, Twitter card, and `Dataset` JSON-LD structured data, all
  * derived by `buildPageMeta` from this route's own title/description/URL.
- * @remarks Runs per request rather than once at module scope, like
- *   `layers/registry.ts`'s getters; `buildPageMeta`'s `getLocale()` call
- *   and every `m.*()` call below must reflect the current request's locale,
- *   not whichever locale first touched this Cloudflare Workers isolate.
  */
 export const meta: MetaFunction = () =>
   buildPageMeta({
-    title: m.app_heading(),
-    description: m.meta_description(),
+    title: "Karta | Interactive map",
+    description:
+      "Explore an interactive map. Search places, compare basemaps and measure distances or areas.",
     url: SITE_URL,
   });
 
@@ -89,19 +84,15 @@ export const links: LinksFunction = () => [
  * React Router route module export: the document shell (`<html>`/`<head>`/`<body>`)
  * wrapping every route. Sets the pre-hydration `theme-color` meta tags and
  * inlines `THEME_BOOTSTRAP_SCRIPT` to apply the stored theme before paint.
- * `lang`/`dir` read `getLocale()`/`getTextDirection()` rather than a fixed
- * `"en"`; on the server that's resolved by `paraglideMiddleware` from the
- * request's locale cookie/`Accept-Language` header, and on the client from
- * the same cookie, so the two agree and there's nothing to hydrate around.
+ * The document language is fixed to British English.
  * `<Scripts>`/`<ScrollRestoration>` need no explicit `nonce` prop here: they
  * read it themselves from react-router's own framework context, populated
  * by `entry.server.tsx`'s `<ServerRouter nonce={nonce}>` further up this
  * same tree.
  */
 export function Layout({ children }: { children: React.ReactNode }) {
-  const locale = getLocale();
   return (
-    <html lang={locale} dir={getTextDirection(locale)}>
+    <html lang="en-GB">
       <head>
         <meta charSet="utf-8" />
         <meta
@@ -149,12 +140,13 @@ export function ErrorBoundary() {
   const isNotFound = isRouteErrorResponse(error) && error.status === 404;
   const { title, message } = isNotFound
     ? {
-        title: m.error_boundary_not_found_title(),
-        message: m.error_boundary_not_found_message(),
+        title: "Page not found",
+        message: "The page you're looking for doesn't exist.",
       }
     : {
-        title: m.error_boundary_generic_title(),
-        message: m.error_boundary_generic_message(),
+        title: "Something went wrong",
+        message:
+          "An unexpected error occurred. Reloading the page usually fixes it.",
       };
 
   return (
@@ -162,7 +154,7 @@ export function ErrorBoundary() {
       <h1>{title}</h1>
       <p>{message}</p>
       <button type="button" onClick={() => window.location.reload()}>
-        {m.error_boundary_reload()}
+        Reload page
       </button>
     </div>
   );

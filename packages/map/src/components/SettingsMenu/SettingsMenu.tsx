@@ -34,7 +34,7 @@ interface SettingsMenuProps {
   onOpenChange?: (open: boolean) => void;
   /**
    * Extra controls rendered after the built-in basemap/theme ones, e.g. a
-   * caller-specific language switcher. Kept as a generic slot rather than
+   * caller-specific control. Kept as a generic slot rather than
    * a named prop so this domain-agnostic component doesn't need to know
    * what any particular caller wants to put here.
    */

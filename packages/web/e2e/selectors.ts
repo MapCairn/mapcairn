@@ -10,7 +10,6 @@ export const E2E = {
   panelViewport: "panel-viewport",
   legendChip: "active-legend-chip",
   settingsMenuTrigger: "settings-menu-trigger",
-  languageToggle: "language",
   mapView: "map-view",
   locationSearchInput: "location-search-input",
   locationSearchResults: "location-search-results",

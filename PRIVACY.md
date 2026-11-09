@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 2026-08-25_
+_Last updated: 2026-11-09_
 
 _This mirrors the policy on the site at `/privacy`
 (`packages/web/src/components/PrivacyPolicy/PrivacyPolicy.tsx`). Keep both in
@@ -12,10 +12,8 @@ following.
 
 ## Cookies
 
-The site sets one first-party cookie, `PARAGLIDE_LOCALE`, when you pick a
-language from the language switcher. It stores only that language code,
-contains no personal data, and is used only to serve the page in your chosen
-language on later visits. It is not used for tracking or analytics.
+The site sets no cookies. Preferences such as your theme are kept in local
+storage on your device instead, as described below.
 
 ## Local storage
 

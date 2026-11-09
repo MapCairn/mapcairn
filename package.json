@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "lint": "biome check --error-on-warnings . && npm run depcruise",
-    "depcruise": "depcruise packages/*/src --config .dependency-cruiser.cjs",
+    "depcruise": "node scripts/depcruise.mjs",
     "format": "biome format --write .",
     "prepare": "lefthook install --force",
     "test": "vitest run",
@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.5",
-    "@inlang/plugin-message-format": "4.6.0",
+    "@swc/core": "1.16.21",
     "@vitest/coverage-v8": "5.1.0",
     "dependency-cruiser": "18.7.2",
     "lefthook": "2.2.2",

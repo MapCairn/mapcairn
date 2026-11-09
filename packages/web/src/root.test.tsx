@@ -121,14 +121,13 @@ describe("root meta", () => {
     );
   });
 
-  it("declares an og:locale for the current locale, and an alternate for every other configured locale", () => {
+  it("declares a British English og:locale and no alternates", () => {
     const tags = meta({} as never);
 
-    expect(tags).toContainEqual({ property: "og:locale", content: "en_ZA" });
-    expect(tags).toContainEqual({
-      property: "og:locale:alternate",
-      content: "af_ZA",
-    });
+    expect(tags).toContainEqual({ property: "og:locale", content: "en_GB" });
+    expect(tags).not.toContainEqual(
+      expect.objectContaining({ property: "og:locale:alternate" }),
+    );
   });
 
   it("emits domain-neutral mapping-application JSON-LD", () => {
@@ -142,6 +141,7 @@ describe("root meta", () => {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       applicationCategory: "MappingApplication",
+      inLanguage: "en-GB",
       url: "https://karta.timothybrits.co.za",
     });
   });
@@ -153,7 +153,7 @@ describe("root Layout", () => {
       createElement(Layout, null, createElement("p", null, "app content")),
     );
 
-    expect(markup).toContain('<html lang="en" dir="ltr">');
+    expect(markup).toContain('<html lang="en-GB">');
     expect(markup).toContain("app content");
     expect(markup).not.toContain('src="/theme-bootstrap.js"');
     expect(markup).toContain('localStorage.getItem("buffer-zones-theme")');

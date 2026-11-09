@@ -2,14 +2,13 @@
 
 Karta is an SDK for public-interest map layer platforms. It provides a domain-agnostic layer model, React map components, hooks and typed design tokens.
 
-`packages/web` is an empty-map reference host. It includes basemaps, place search, distance and area measurement, theme settings and language selection. No datasets or domain-specific overlays are bundled. The site has no accounts and no tracking beyond cookieless page views.
+`packages/web` is an empty-map reference host. It includes basemaps, place search, distance and area measurement and theme settings. No datasets or domain-specific overlays are bundled. The site has no accounts and no tracking beyond cookieless page views.
 
 ## Documentation
 
 | Document | Covers |
 |---|---|
 | [`docs/building-a-domain.md`](docs/building-a-domain.md) | Supplying a layer configuration to the SDK |
-| [`docs/adding-a-locale.md`](docs/adding-a-locale.md) | Adding a UI language to the web host |
 | [`docs/design-system.md`](docs/design-system.md) | Colours, typography, shape and map styling |
 | [`packages/core/README.md`](packages/core/README.md) | Layer model, registry, geodata utilities and measurement |
 | [`packages/map/README.md`](packages/map/README.md) | Map components and UI primitives |

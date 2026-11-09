@@ -20,13 +20,6 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm install --global npm@11
       - run: npm ci
-      - name: Verify compiled Paraglide messages are up to date
-        run: |
-          npm run messages:compile -w @karta/web
-          git diff --exit-code -- packages/web/src/paraglide || {
-            echo "::error::packages/web/src/paraglide is out of date. Run 'npm run messages:compile -w @karta/web' and commit the result.";
-            exit 1;
-          }
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:coverage

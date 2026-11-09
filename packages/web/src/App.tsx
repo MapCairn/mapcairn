@@ -34,7 +34,6 @@ import {
   useState,
 } from "react";
 import * as styles from "./App.css";
-import { LanguageToggle } from "./components/LanguageToggle/LanguageToggle";
 import { LayerToggles } from "./components/LayerToggles/LayerToggles";
 import { PrivacyLink } from "./components/PrivacyLink/PrivacyLink";
 import { useMapModelContextTools } from "./hooks/useMapModelContextTools";
@@ -42,7 +41,6 @@ import { useMapPermalink } from "./hooks/useMapPermalink";
 import { useSheetFocusTrap } from "./hooks/useSheetFocusTrap";
 import { useSheetGesture } from "./hooks/useSheetGesture";
 import { getLayerGroups, getLayers } from "./layers/registry";
-import { m } from "./paraglide/messages.js";
 import { type MapSurface, useMapUiStore } from "./stores/useMapUiStore";
 
 // Leaflet's stylesheet loads with the map chunk, so routes without a map
@@ -130,13 +128,13 @@ const PanelViewContent = memo(function PanelViewContent({
   return (
     <section className={styles.section}>
       <h2 id="map-panel-heading" className={styles.sectionTitle}>
-        {m.map_controls_title()}
+        Map controls
       </h2>
       <BasemapToggle
         basemap={basemap}
         onChange={onBasemapChange}
-        label={m.settings_basemap_label()}
-        optionAriaLabel={(label) => m.basemap_option_aria_label({ label })}
+        label="Basemap"
+        optionAriaLabel={(label) => `Use ${label} basemap`}
       />
       {hasLayers ? (
         <LayerToggles
@@ -205,53 +203,52 @@ export function App() {
   const legendChipVisible = Boolean(
     activeLegendLayer && !(panelOpen && !mobileSheetClosing),
   );
-  /** Resolve localised copy inside render so SSR requests cannot share a frozen locale. */
+  /** Copy forwarded to the map's legend components, memoized so the labels object stays referentially stable. */
   const legendLabels = useMemo(
     () => ({
-      noDataLabel: m.legend_no_data(),
-      lineLayersLabel: m.legend_line_layers(),
-      lineColorsAriaLabel: m.legend_line_colors_aria_label(),
-      emptyMessage: m.legend_empty(),
-      lineAndPointsNote: m.legend_line_and_points_note(),
-      lineOnlyNote: m.legend_line_only_note(),
+      noDataLabel: "No data",
+      lineLayersLabel: "Line layers",
+      lineColorsAriaLabel: "Line layer colours",
+      emptyMessage: "Turn on layers to view their legend.",
+      lineAndPointsNote: " · line + points",
+      lineOnlyNote: " · line only",
       formatActiveAriaLabel: (label: string) =>
-        m.legend_active_aria_label({ label }),
+        `Active map layers legend: ${label}`,
     }),
     [],
   );
-  /** Localized copy forwarded to `MapView`'s internal `LocationContextMenu`, memoized for the same reason as `legendLabels`. */
+  /** Copy forwarded to `MapView`'s internal `LocationContextMenu`, memoized for the same reason as `legendLabels`. */
   const locationContextMenuLabels = useMemo(
     () => ({
-      ariaLabel: m.location_context_menu_aria_label(),
-      searchHereLabel: m.location_context_menu_search_here(),
-      loadingLabel: m.location_context_menu_loading(),
-      failedLabel: m.location_context_menu_failed(),
-      noAddressLabel: m.location_context_menu_no_address(),
-      retryLabel: m.retry(),
+      ariaLabel: "Map location actions",
+      searchHereLabel: "Search this location",
+      loadingLabel: "Looking up address…",
+      failedLabel: "Couldn't look up this address.",
+      noAddressLabel: "No address found here.",
+      retryLabel: "Retry",
     }),
     [],
   );
   const settingsLabels = useMemo(
     () => ({
-      openLabel: m.settings_open(),
-      closeLabel: m.settings_close(),
-      title: m.settings_title(),
-      basemapLabel: m.settings_basemap_label(),
-      basemapOptionAriaLabel: (label: string) =>
-        m.basemap_option_aria_label({ label }),
-      themeLabel: m.settings_theme_label(),
+      openLabel: "Map settings",
+      closeLabel: "Close map settings",
+      title: "Map settings",
+      basemapLabel: "Basemap",
+      basemapOptionAriaLabel: (label: string) => `Use ${label} basemap`,
+      themeLabel: "Theme",
       themeOptionLabels: {
         system: {
-          label: m.theme_system(),
-          ariaLabel: m.theme_system_aria_label(),
+          label: "System",
+          ariaLabel: "System theme",
         },
         light: {
-          label: m.theme_light(),
-          ariaLabel: m.theme_light_aria_label(),
+          label: "Light",
+          ariaLabel: "Light theme",
         },
         dark: {
-          label: m.theme_dark(),
-          ariaLabel: m.theme_dark_aria_label(),
+          label: "Dark",
+          ariaLabel: "Dark theme",
         },
       },
       showBasemap: false,
@@ -261,16 +258,16 @@ export function App() {
   /** Localized copy forwarded to `MapView`'s internal `MeasurementControl`, memoized for the same reason as `legendLabels`. */
   const measurementLabels = useMemo(
     () => ({
-      toggleLabel: m.measurement_toggle(),
-      backToMapLabel: m.measurement_back_to_map(),
-      ariaLabel: m.measurement_aria_label(),
-      title: m.measurement_title(),
-      stopLabel: m.measurement_stop(),
-      modeLabel: m.measurement_mode_label(),
-      distanceModeLabel: m.measurement_mode_distance(),
-      areaModeLabel: m.measurement_mode_area(),
-      hint: m.measurement_hint(),
-      clearLabel: m.measurement_clear(),
+      toggleLabel: "Measure distance and area",
+      backToMapLabel: "Back to map",
+      ariaLabel: "Measurement tool",
+      title: "Measure",
+      stopLabel: "Stop measuring",
+      modeLabel: "Measurement mode",
+      distanceModeLabel: "Distance",
+      areaModeLabel: "Area",
+      hint: "Click the map to start measuring.",
+      clearLabel: "Clear",
     }),
     [],
   );
@@ -351,7 +348,7 @@ export function App() {
 
   function handleLocationSelect(location: LocationSearchResult): string {
     setFocusLocationTarget({ token: Date.now(), location });
-    return m.webmcp_search_location_flew_to({ location: location.label });
+    return `Moved the map to ${location.label}.`;
   }
 
   function handleRequestMeasurement(
@@ -492,7 +489,7 @@ export function App() {
     activeSurface === "legend" ? (
       <section className={styles.section}>
         <h2 id="map-panel-heading" className={styles.sectionTitle}>
-          {m.legend_title()}
+          Map legend
         </h2>
         <Legend
           mode="active"
@@ -504,24 +501,21 @@ export function App() {
     ) : activeSurface === "settings" ? (
       <section className={styles.section}>
         <h2 id="map-panel-heading" className={styles.sectionTitle}>
-          {m.settings_title()}
+          Map settings
         </h2>
         <ThemeToggle
           preference={themePreference}
           onChange={setThemePreference}
-          label={m.settings_theme_label()}
+          label="Theme"
           optionLabels={settingsLabels.themeOptionLabels}
         />
-        <LanguageToggle />
         <PrivacyLink />
       </section>
     ) : (
       panelViewContent
     );
 
-  const panelToggleLabel = panelOpen
-    ? m.panel_toggle_close()
-    : m.panel_toggle_explore();
+  const panelToggleLabel = panelOpen ? "Close" : "Explore";
 
   return (
     <DomainProvider domain={domain}>
@@ -535,11 +529,11 @@ export function App() {
         data-entrance-ready={toBoolAttr(mapReady)}
       >
         <a className={styles.skipLink} href="#map-information">
-          {m.skip_to_map_information()}
+          Skip to map information
         </a>
 
         <header className={styles.visuallyHidden}>
-          <h1>{m.app_heading()}</h1>
+          <h1>Karta | Interactive map</h1>
         </header>
 
         <main id="map-information" tabIndex={-1}>
@@ -565,14 +559,14 @@ export function App() {
             className={styles.mapLoading}
             aria-hidden={mapReady && basemapVisuallyReady}
           >
-            {m.loading_map()}
+            Loading map
           </output>
           {hydrated && (
             <Suspense fallback={null}>
               <MapView
                 bounds={INITIAL_BOUNDS}
                 areas={EMPTY_FEATURES}
-                ariaLabel={m.map_aria_label()}
+                ariaLabel="Interactive map"
                 visibleLayerIds={visibleLayerIds}
                 layerOpacity={opacityByLayer}
                 basemap={basemap}
@@ -607,16 +601,16 @@ export function App() {
 
         <search
           className={clsx(styles.locationSearchControl, styles.surface)}
-          aria-label={m.search_label()}
+          aria-label="Search place"
         >
           <LocationSearchControl
-            placeholder={m.search_placeholder()}
-            label={m.search_label()}
-            ariaLabel={m.search_aria_label()}
-            clearButtonLabel={m.search_clear()}
-            searchingLabel={m.search_searching()}
-            noResultsLabel={m.search_no_results()}
-            unavailableMessage={m.search_unavailable()}
+            placeholder="Search places"
+            label="Search place"
+            ariaLabel="Location search"
+            clearButtonLabel="Clear search"
+            searchingLabel="Searching places..."
+            noResultsLabel="Nothing matched that search."
+            unavailableMessage="Search is unavailable right now. Please try again."
             provider={locationSearchProvider}
             onLocationSelect={handleLocationSelect}
           />
@@ -655,9 +649,7 @@ export function App() {
           <button
             type="button"
             className={styles.legendChip}
-            aria-label={`${m.legend_active_aria_label({
-              label: activeLegendLayer.label,
-            })}${activeLayers.length > 1 ? ` +${activeLayers.length - 1}` : ""}`}
+            aria-label={`Active map layers legend: ${activeLegendLayer.label}${activeLayers.length > 1 ? ` +${activeLayers.length - 1}` : ""}`}
             data-testid="active-legend-chip"
             data-e2e="active-legend-chip"
             onClick={() => {
@@ -704,8 +696,8 @@ export function App() {
             aria-pressed={sheetDetent === "full"}
             aria-label={
               sheetDetent === "full"
-                ? m.panel_reduce_height()
-                : m.panel_expand_height()
+                ? "Reduce panel height"
+                : "Expand panel height"
             }
             onPointerDown={handleSheetHandlePointerDown}
             onClick={handleSheetHeightToggle}
@@ -720,7 +712,7 @@ export function App() {
         <IconButton
           ref={settingsTriggerRef}
           className={styles.settingsControl}
-          label={settingsOpen ? m.settings_close() : m.settings_open()}
+          label={settingsOpen ? "Close map settings" : "Map settings"}
           aria-expanded={settingsOpen}
           aria-controls="map-controls"
           data-testid="settings-menu-trigger"

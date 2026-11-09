@@ -125,9 +125,8 @@ function resultOptionId(combined: CombinedResult): string {
  *   plus the existing `placeholder`) is an overridable prop defaulting to
  *   English,
  *   the same pattern `placeholder` already used; this package can't
- *   depend on an app-specific message catalogue, but a caller with one
- *   (like the reference app's paraglide messages) can still localise every
- *   string this control renders.
+ *   depend on an app-specific message catalogue, but a caller with one can
+ *   still localise every string this control renders.
  */
 export function LocationSearchControl({
   onLocationSelect,

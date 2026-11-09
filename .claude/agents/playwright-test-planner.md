@@ -62,6 +62,6 @@ Where these differ from the instructions above, these win.
   serves it with `wrangler dev` against `wrangler.e2e.jsonc` on port 4173; projects are `chromium` and
   `mobile-chromium` (Pixel 7).
 - Start from `packages/web/e2e/seed.spec.ts`.
-- Copy is British English and comes from `packages/web/messages/{en,af}.json`; take strings from there rather than
-  writing them out, unless the test is about the wording itself.
+- Copy is British English and written inline in the components under `packages/web/src`; read the strings from there
+  rather than guessing them, unless the test is about the wording itself.
 - Save plans in `specs/`.
