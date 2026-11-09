@@ -116,6 +116,12 @@ Production CSP permits no `unsafe-inline` script or stylesheet source. New basem
 
 SDK consumers must register `vanillaExtractPlugin()` in their Vite config. `@karta/theme` is side-effect free, so its token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does.
 
+## Issues and pull requests
+
+Work is tracked in GitHub Issues, and every plan in `docs/plans/` has a tracking issue linked from its file. AI agents manage the issues: create one for any new piece of work worth tracking, label it (`map`, `search`, `layers`, `design-system`, `a11y`, `performance`, `privacy`, `plan`, plus `bug` or `enhancement`), put it in a milestone when one fits, tick its task list as steps land, and close it when the work is merged and verified. Do not file an issue for a gap that can be fixed in the same session; fix it. Issues are public, so write plain project facts only, never emails, keys or private details.
+
+Changes reach `main` through pull requests: a branch named for the change, a Conventional Commit title, `Fixes #123` or `Part of #123` in the description, and the `build` and `e2e` checks green before merge. The repository ruleset requires both. Pushing straight to `main` is not the workflow.
+
 ## Definition of done
 
 - Code changes: run `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`.

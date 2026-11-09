@@ -2,6 +2,8 @@
 
 Status: proposed, not started. Written 2026-11-09; endpoints and terms verified the same day.
 
+Tracking issue: [#157](https://github.com/mooship/karta/issues/157).
+
 ## Goal
 
 Add open data layers to the reference host, and build the layer system so that **adding a layer is data, not code**. The first layers prove it:
@@ -28,7 +30,7 @@ All are keyless and need no pipeline. The browser fetches them at runtime, and n
 
 ## Verified on 2026-11-09
 
-Checked with live requests and the providers' own pages. Items marked "to confirm" are for the person who builds each layer.
+Checked with live requests and the providers' own pages. Items marked "to confirm" are for the person who builds the layer, and the terms and credit wording below are confirmed.
 
 ### USGS earthquakes
 
@@ -42,7 +44,7 @@ Checked with live requests and the providers' own pages. Items marked "to confir
 - `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`: row before column, 256 px tiles, `Access-Control-Allow-Origin: *`, an `ETag` and an `Expires` in 1970 (so every tile is revalidated). `Layer-Time-Actual` names the day a tile shows.
 - Maximum zoom is 9 (level 10 returns 400), so the source declares `maxzoom: 9` and MapLibre scales beyond it.
 - Use `VIIRS_NOAA21_CorrectedReflectance_TrueColor`. The Suomi NPP layer returns 404 because that satellite no longer delivers data. NOAA-21 runs daily from 2024-02-29 (gaps in 2023). Dates before that and in the future return a 404 HTML page, so the date control must stay inside the range. The default is yesterday (UTC), because today is partial.
-- Terms: NASA asks for an acknowledgement. The opening is "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS)", then a clause naming ESDIS. Copy the full wording from the GIBS "Data Use Guidance and Acknowledgements" section before release (to confirm). No rate limit is stated.
+- Terms (confirmed): NASA asks anyone who uses GIBS in a client to include this acknowledgement, verbatim: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS)." The page states no rate limit or request-volume guidance, and says "NASA supports full and open sharing of data." Questions go to earthdata-support@nasa.gov.
 
 ### Active fires
 
@@ -63,7 +65,7 @@ Checked with live requests and the providers' own pages. Items marked "to confir
   - `alertlevel` is Green, Orange or Red, based on exposed population. All 100 events were Green today, so the legend must also work when nothing is Orange or Red. Also present: `country`, `iso3`, `affectedcountries`, `fromdate`, `todate`, `glide` and a report link.
   - GDACS also defines volcanoes (`VO`) and droughts (`DR`), but neither appeared in today's feed (to confirm the codes when one does).
   - The earthquake events overlap USGS. USGS stays the earthquake layer because it is richer and more current. GDACS's alert level is worth showing for significant quakes only if it proves useful.
-- Terms. GDACS: EU material under CC BY 4.0 with credit ("Global Disaster Alert and Coordination System, GDACS"). Its alerts are automatic model outputs and must not drive decisions without confirmation, so the card says so. GloFAS: the CEMS-FLOODS licence asks for "Generated using Copernicus Emergency Management Service information [Year]", or "Contains modified Copernicus Emergency Management Service information [Year]" if adapted, and says the data is for information only. Confirm both texts on the current licence pages before release (to confirm).
+- Terms (confirmed). **GDACS:** the Commission's reuse policy applies, which the feed metadata states as EU CC BY 4.0, so reuse is allowed with credit. The credit line GDACS's API quickstart asks for is "Global Disaster Alert and Coordination System, GDACS". Its Terms of Use say the earthquake, tsunami and tropical cyclone notifications are "automatic, produced by algorithms and not reviewed by human experts before being issued", the data "should not be used for decision making without prior confirmation of their validity", and the service is "not meant to substitute nor to override any official information or alert message" from national or local authorities. No rate limit is stated. Cards therefore carry the disclaimer "Automatic estimate. Check official sources before acting." **GloFAS (CEMS-FLOODS licence):** free access to reproduce, distribute, communicate to the public and adapt the data, subject to the notice "Generated using Copernicus Emergency Management Service information [Year]", or "Contains modified Copernicus Emergency Management Service information [Year]" when adapted. The data is "provided for information purposes only", "does not constitute in any way a flood warning" (only national or regional institutions may issue those) and is provided "as is". The licence covers only CEMS EFAS and GloFAS data. The hazard card says the same in plain words. Restricted data needs registration, but the public WMS layers used here are not restricted.
 
 ## Data-driven design
 

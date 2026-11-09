@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in Karta is wrong or broken
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did and what went wrong. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: A short numbered list. Include the address bar link if the map state matters, but remove anything you do not want to share, because the link can hold map coordinates.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device, browser and version
+      placeholder: iPhone 15, Safari on iOS 26
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Map
+        - Search
+        - Layers
+        - Settings or sheet
+        - Accessibility
+        - Performance or data use
+        - Privacy
+        - Other

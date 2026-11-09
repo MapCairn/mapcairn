@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest something Karta should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that Karta makes hard?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+    validations:
+      required: true
+  - type: textarea
+    id: access
+    attributes:
+      label: Accessibility and data use
+      description: How would it work with a keyboard or a screen reader, and what would it cost in data on a slow connection?

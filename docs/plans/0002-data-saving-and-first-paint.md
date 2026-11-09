@@ -2,6 +2,8 @@
 
 Status: in progress. Written 2026-11-09. The Save data mode (section 1) is deferred by the owner; the caching audit, the skeleton and the measurement go ahead.
 
+Tracking issue: [#158](https://github.com/mooship/karta/issues/158).
+
 ## Why
 
 Karta is for everyone, and much of the world pays dearly for mobile data or has a slow connection. The aim is the best experience for every visitor on a good connection, while staying kind to people with little data: few bytes by default, something useful on screen quickly, and a way to say "spend less". Saving data is never allowed to make the default experience worse for everyone else. This plan covers three agreed pieces and one measurement that keeps them honest:
