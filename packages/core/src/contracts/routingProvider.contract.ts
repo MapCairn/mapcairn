@@ -35,9 +35,9 @@ export interface RoutingProviderSubject {
   readonly controls: RoutingProviderControls;
 }
 
-const LOUVRE: LatLng = { lat: 48.8606, lng: 2.3376 };
-const NOTRE_DAME: LatLng = { lat: 48.853, lng: 2.3499 };
-const EIFFEL_TOWER: LatLng = { lat: 48.8584, lng: 2.2945 };
+const PARIS: LatLng = { lat: 48.8566, lng: 2.3522 };
+const LYON: LatLng = { lat: 45.764, lng: 4.8357 };
+const MARSEILLE: LatLng = { lat: 43.2965, lng: 5.3698 };
 
 const ROUTE: RouteResult = {
   features: [
@@ -46,27 +46,27 @@ const ROUTE: RouteResult = {
       geometry: {
         type: "LineString",
         coordinates: [
-          [2.3376, 48.8606],
-          [2.3499, 48.853],
+          [2.3522, 48.8566],
+          [4.8357, 45.764],
         ],
       },
-      properties: { distance: 1400, duration: 300 },
+      properties: { distance: 465000, duration: 16200 },
     },
     {
       type: "Feature",
       geometry: {
         type: "LineString",
         coordinates: [
-          [2.3499, 48.853],
-          [2.3, 48.856],
-          [2.2945, 48.8584],
+          [4.8357, 45.764],
+          [4.85, 44.9],
+          [5.3698, 43.2965],
         ],
       },
-      properties: { distance: 4200, duration: 900 },
+      properties: { distance: 315000, duration: 12600 },
     },
   ],
-  distance: 5600,
-  duration: 1200,
+  distance: 780000,
+  duration: 28800,
 };
 
 const AREA: ReachableAreaResult = {
@@ -132,7 +132,7 @@ export function runRoutingProviderContract(
         const { provider, controls } = create();
         controls.willReturnRoute(ROUTE);
         const result = await provider.route({
-          stops: [LOUVRE, NOTRE_DAME, EIFFEL_TOWER],
+          stops: [PARIS, LYON, MARSEILLE],
           mode: "walk",
         });
         expect(result.features.length).toBeGreaterThan(0);
@@ -156,7 +156,7 @@ export function runRoutingProviderContract(
         const { provider, controls } = create();
         controls.willReturnRoute(ROUTE);
         const result = await provider.route({
-          stops: [LOUVRE, NOTRE_DAME, EIFFEL_TOWER],
+          stops: [PARIS, LYON, MARSEILLE],
           mode: "drive",
         });
         const distance = result.features.reduce(
@@ -176,7 +176,7 @@ export function runRoutingProviderContract(
           const { provider, controls } = create();
           controls.willReturnRoute(ROUTE);
           const outcome = await provider
-            .route({ stops: [LOUVRE, EIFFEL_TOWER], mode })
+            .route({ stops: [PARIS, MARSEILLE], mode })
             .then(
               () => "resolved",
               (reason: unknown) => reason,
@@ -193,7 +193,7 @@ export function runRoutingProviderContract(
         controls.willReturnRoute(ROUTE);
         const kind = await failureKind(
           provider.route({
-            stops: [LOUVRE, EIFFEL_TOWER],
+            stops: [PARIS, MARSEILLE],
             mode: "teleport" as TravelMode,
           }),
         );
@@ -207,7 +207,7 @@ export function runRoutingProviderContract(
           await failureKind(provider.route({ stops: [], mode: "walk" })),
         ).toBe("invalid");
         expect(
-          await failureKind(provider.route({ stops: [LOUVRE], mode: "walk" })),
+          await failureKind(provider.route({ stops: [PARIS], mode: "walk" })),
         ).toBe("invalid");
       });
 
@@ -217,7 +217,7 @@ export function runRoutingProviderContract(
         for (const bad of NOT_ON_THE_GLOBE) {
           expect(
             await failureKind(
-              provider.route({ stops: [LOUVRE, bad], mode: "walk" }),
+              provider.route({ stops: [PARIS, bad], mode: "walk" }),
             ),
           ).toBe("invalid");
         }
@@ -229,7 +229,7 @@ export function runRoutingProviderContract(
           controls.willFail(kind);
           expect(
             await failureKind(
-              provider.route({ stops: [LOUVRE, EIFFEL_TOWER], mode: "walk" }),
+              provider.route({ stops: [PARIS, MARSEILLE], mode: "walk" }),
             ),
           ).toBe(kind);
         });
@@ -241,7 +241,7 @@ export function runRoutingProviderContract(
         expect(
           await failureKind(
             provider.route({
-              stops: [LOUVRE, EIFFEL_TOWER],
+              stops: [PARIS, MARSEILLE],
               mode: "walk",
               signal: AbortSignal.abort(),
             }),
@@ -254,7 +254,7 @@ export function runRoutingProviderContract(
         controls.hold();
         const controller = new AbortController();
         const pending = provider.route({
-          stops: [LOUVRE, EIFFEL_TOWER],
+          stops: [PARIS, MARSEILLE],
           mode: "walk",
           signal: controller.signal,
         });
@@ -268,7 +268,7 @@ export function runRoutingProviderContract(
         const { provider, controls } = create();
         controls.willReturnArea(AREA);
         const result = await provider.reachableArea({
-          origin: LOUVRE,
+          origin: PARIS,
           minutes: 10,
           mode: "walk",
         });
@@ -287,7 +287,7 @@ export function runRoutingProviderContract(
           const { provider, controls } = create();
           controls.willReturnArea(AREA);
           const outcome = await provider
-            .reachableArea({ origin: LOUVRE, minutes: 10, mode })
+            .reachableArea({ origin: PARIS, minutes: 10, mode })
             .then(
               () => "resolved",
               (reason: unknown) => reason,
@@ -305,7 +305,7 @@ export function runRoutingProviderContract(
         expect(
           await failureKind(
             provider.reachableArea({
-              origin: LOUVRE,
+              origin: PARIS,
               minutes: 10,
               mode: "teleport" as TravelMode,
             }),
@@ -319,7 +319,7 @@ export function runRoutingProviderContract(
         for (const minutes of [0, -5, Number.NaN, Number.POSITIVE_INFINITY]) {
           expect(
             await failureKind(
-              provider.reachableArea({ origin: LOUVRE, minutes, mode: "walk" }),
+              provider.reachableArea({ origin: PARIS, minutes, mode: "walk" }),
             ),
           ).toBe("invalid");
         }
@@ -344,7 +344,7 @@ export function runRoutingProviderContract(
           expect(
             await failureKind(
               provider.reachableArea({
-                origin: LOUVRE,
+                origin: PARIS,
                 minutes: 10,
                 mode: "walk",
               }),
@@ -359,7 +359,7 @@ export function runRoutingProviderContract(
         expect(
           await failureKind(
             provider.reachableArea({
-              origin: LOUVRE,
+              origin: PARIS,
               minutes: 10,
               mode: "walk",
               signal: AbortSignal.abort(),
@@ -373,7 +373,7 @@ export function runRoutingProviderContract(
         controls.hold();
         const controller = new AbortController();
         const pending = provider.reachableArea({
-          origin: LOUVRE,
+          origin: PARIS,
           minutes: 10,
           mode: "walk",
           signal: controller.signal,

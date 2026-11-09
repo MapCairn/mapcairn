@@ -33,8 +33,8 @@ runRoutingProviderContract(
 );
 
 const NAIROBI = { lat: -1.2921, lng: 36.8219 };
-const WESTLANDS = { lat: -1.2676, lng: 36.8108 };
-const KAREN = { lat: -1.3197, lng: 36.7076 };
+const MOMBASA = { lat: -4.0435, lng: 39.6682 };
+const KISUMU = { lat: -0.0917, lng: 34.768 };
 
 const SCRIPTED_ROUTE: RouteResult = {
   features: [
@@ -44,7 +44,7 @@ const SCRIPTED_ROUTE: RouteResult = {
         type: "LineString",
         coordinates: [
           [36.8219, -1.2921],
-          [36.8108, -1.2676],
+          [39.6682, -4.0435],
         ],
       },
       properties: { distance: 10, duration: 20 },
@@ -78,31 +78,31 @@ describe("FakeRoutingProvider route", () => {
   it("draws a straight leg between each pair of stops", async () => {
     const provider = new FakeRoutingProvider();
     const result = await provider.route({
-      stops: [NAIROBI, WESTLANDS, KAREN],
+      stops: [NAIROBI, MOMBASA, KISUMU],
       mode: "drive",
     });
     expect(result.features).toHaveLength(2);
     expect(result.features[0]?.geometry.coordinates).toEqual([
       [NAIROBI.lng, NAIROBI.lat],
-      [WESTLANDS.lng, WESTLANDS.lat],
+      [MOMBASA.lng, MOMBASA.lat],
     ]);
     expect(result.features[1]?.geometry.coordinates).toEqual([
-      [WESTLANDS.lng, WESTLANDS.lat],
-      [KAREN.lng, KAREN.lat],
+      [MOMBASA.lng, MOMBASA.lat],
+      [KISUMU.lng, KISUMU.lat],
     ]);
   });
 
   it("measures each leg in metres and totals them", async () => {
     const provider = new FakeRoutingProvider();
     const result = await provider.route({
-      stops: [NAIROBI, WESTLANDS, KAREN],
+      stops: [NAIROBI, MOMBASA, KISUMU],
       mode: "drive",
     });
     const first = result.features[0];
     const expected =
       (measureLineDistance([
         [NAIROBI.lng, NAIROBI.lat],
-        [WESTLANDS.lng, WESTLANDS.lat],
+        [MOMBASA.lng, MOMBASA.lat],
       ]) ?? 0) * 1000;
     expect(first?.properties.distance).toBeCloseTo(expected, 6);
     const legs = result.features.reduce(
@@ -114,7 +114,7 @@ describe("FakeRoutingProvider route", () => {
 
   it("takes longer on foot than by bicycle than by car", async () => {
     const provider = new FakeRoutingProvider();
-    const stops = [NAIROBI, KAREN];
+    const stops = [NAIROBI, KISUMU];
     const durations: Record<TravelMode, number> = {
       drive: (await provider.route({ stops, mode: "drive" })).duration,
       cycle: (await provider.route({ stops, mode: "cycle" })).duration,
@@ -128,7 +128,7 @@ describe("FakeRoutingProvider route", () => {
   it("returns what it was told to, until told to stop", async () => {
     const provider = new FakeRoutingProvider();
     provider.setRoute(SCRIPTED_ROUTE);
-    const stops = [NAIROBI, WESTLANDS];
+    const stops = [NAIROBI, MOMBASA];
     expect(await provider.route({ stops, mode: "walk" })).toBe(SCRIPTED_ROUTE);
     provider.setRoute(null);
     expect(
@@ -140,7 +140,7 @@ describe("FakeRoutingProvider route", () => {
   it("rejects a mode it was told not to offer", async () => {
     const provider = new FakeRoutingProvider();
     provider.setSupportedModes(["walk"]);
-    const stops = [NAIROBI, WESTLANDS];
+    const stops = [NAIROBI, MOMBASA];
     await provider.route({ stops, mode: "walk" });
     await expect(
       provider.route({ stops, mode: "drive" }),
@@ -149,7 +149,7 @@ describe("FakeRoutingProvider route", () => {
 
   it("fails until the failure is cleared", async () => {
     const provider = new FakeRoutingProvider();
-    const stops = [NAIROBI, WESTLANDS];
+    const stops = [NAIROBI, MOMBASA];
     provider.failWith("rate-limited");
     await expect(
       provider.route({ stops, mode: "walk" }),
@@ -174,7 +174,7 @@ describe("FakeRoutingProvider route", () => {
     const held = provider.holdNextRoute();
     let settled = false;
     const pending = provider
-      .route({ stops: [NAIROBI, WESTLANDS], mode: "walk" })
+      .route({ stops: [NAIROBI, MOMBASA], mode: "walk" })
       .then((result) => {
         settled = true;
         return result;
@@ -184,7 +184,7 @@ describe("FakeRoutingProvider route", () => {
     held.resolve(SCRIPTED_ROUTE);
     expect(await pending).toBe(SCRIPTED_ROUTE);
     const next = await provider.route({
-      stops: [NAIROBI, WESTLANDS],
+      stops: [NAIROBI, MOMBASA],
       mode: "walk",
     });
     expect(next).not.toBe(SCRIPTED_ROUTE);
@@ -195,7 +195,7 @@ describe("FakeRoutingProvider route", () => {
     const held = provider.holdNextRoute();
     held.reject(new RoutingError("network"));
     await expect(
-      provider.route({ stops: [NAIROBI, WESTLANDS], mode: "walk" }),
+      provider.route({ stops: [NAIROBI, MOMBASA], mode: "walk" }),
     ).rejects.toMatchObject({ kind: "network" });
   });
 
@@ -204,7 +204,7 @@ describe("FakeRoutingProvider route", () => {
     const held = provider.holdNextRoute();
     const controller = new AbortController();
     const pending = provider.route({
-      stops: [NAIROBI, WESTLANDS],
+      stops: [NAIROBI, MOMBASA],
       mode: "walk",
       signal: controller.signal,
     });
@@ -212,7 +212,7 @@ describe("FakeRoutingProvider route", () => {
     await expect(pending).rejects.toMatchObject({ kind: "aborted" });
     held.resolve(SCRIPTED_ROUTE);
     expect(
-      await provider.route({ stops: [NAIROBI, WESTLANDS], mode: "walk" }),
+      await provider.route({ stops: [NAIROBI, MOMBASA], mode: "walk" }),
     ).not.toBe(SCRIPTED_ROUTE);
   });
 
@@ -221,13 +221,13 @@ describe("FakeRoutingProvider route", () => {
     const held = provider.holdNextRoute();
     await expect(
       provider.route({
-        stops: [NAIROBI, WESTLANDS],
+        stops: [NAIROBI, MOMBASA],
         mode: "walk",
         signal: AbortSignal.abort(),
       }),
     ).rejects.toMatchObject({ kind: "aborted" });
     const pending = provider.route({
-      stops: [NAIROBI, WESTLANDS],
+      stops: [NAIROBI, MOMBASA],
       mode: "walk",
     });
     held.resolve(SCRIPTED_ROUTE);
@@ -238,7 +238,7 @@ describe("FakeRoutingProvider route", () => {
     const provider = new FakeRoutingProvider();
     const error = await provider
       .route({
-        stops: [NAIROBI, WESTLANDS],
+        stops: [NAIROBI, MOMBASA],
         mode: "walk",
         signal: AbortSignal.abort(),
       })
@@ -252,7 +252,7 @@ describe("FakeRoutingProvider route", () => {
     const held = provider.holdNextRoute();
     const controller = new AbortController();
     const pending = provider.route({
-      stops: [NAIROBI, WESTLANDS],
+      stops: [NAIROBI, MOMBASA],
       mode: "walk",
       signal: controller.signal,
     });
@@ -262,7 +262,7 @@ describe("FakeRoutingProvider route", () => {
 
   it("records every request", async () => {
     const provider = new FakeRoutingProvider();
-    const request = { stops: [NAIROBI, WESTLANDS], mode: "cycle" } as const;
+    const request = { stops: [NAIROBI, MOMBASA], mode: "cycle" } as const;
     await provider.route(request);
     expect(provider.routeCalls).toEqual([request]);
     expect(provider.reachableAreaCalls).toEqual([]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_MERCATOR_LATITUDE } from "../zoom/zoom";
+import { MAX_MERCATOR_LATITUDE, mercatorProject } from "../zoom/zoom";
 import { GeometryError } from "./errors";
 import {
   WEB_MERCATOR_HALF_WORLD,
@@ -24,10 +24,32 @@ describe("wgs84ToWebMercator", () => {
     expect(point.y).toBeCloseTo(0, 6);
   });
 
-  it("matches known values for Paris", () => {
-    const point = wgs84ToWebMercator({ lat: 48.8566, lng: 2.3522 });
-    expect(point.x).toBeCloseTo(261845.8, 0);
-    expect(point.y).toBeCloseTo(6250564.35, 0);
+  it("agrees with the pixel projection the map uses, at zoom 0", () => {
+    const next = sequence(99);
+    for (let i = 0; i < 500; i += 1) {
+      const position = {
+        lat: (next() * 2 - 1) * MAX_MERCATOR_LATITUDE,
+        lng: (next() * 2 - 1) * 180,
+      };
+      const pixel = mercatorProject(position, 0);
+      const metres = wgs84ToWebMercator(position);
+      expect(metres.x).toBeCloseTo(
+        (pixel.x / 256 - 0.5) * 2 * WEB_MERCATOR_HALF_WORLD,
+        4,
+      );
+      expect(metres.y).toBeCloseTo(
+        (0.5 - pixel.y / 256) * 2 * WEB_MERCATOR_HALF_WORLD,
+        4,
+      );
+    }
+  });
+
+  it("gives the easting of a longitude as a share of the world width", () => {
+    // Paris is 2.3522 degrees east, which is 2.3522 / 180 of half the world.
+    expect(wgs84ToWebMercator({ lat: 48.8566, lng: 2.3522 }).x).toBeCloseTo(
+      (2.3522 / 180) * WEB_MERCATOR_HALF_WORLD,
+      6,
+    );
   });
 
   it("maps the antimeridian to the edge of the world square", () => {
