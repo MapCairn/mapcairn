@@ -22,6 +22,7 @@
     "messages:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --output-structure message-modules --strategy cookie preferredLanguage baseLocale --emit-ts-declarations --no-emit-git-ignore --no-emit-prettier-ignore --no-emit-readme --is-server \"import.meta.env?.SSR ?? typeof window === 'undefined'\" --is-development \"import.meta.env?.DEV ?? false\""
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@cloudflare/vite-plugin": "1.67.0",
     "@fontsource-variable/public-sans": "5.3.0",
     "@fontsource-variable/source-serif-4": "5.3.1",
@@ -48,6 +49,7 @@
     "vitest": "5.1.0"
   },
   "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "5.3.0",
     "@karta/core": "file:../core",
     "@karta/map": "file:../map",
     "@karta/react": "file:../react",
