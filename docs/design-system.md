@@ -44,7 +44,7 @@ both modes, and outlines used as control boundaries meet 3:1. Check any
 new pairing before adding it.
 
 `error` and `error-container` are used for failure and warning states,
-such as a layer that failed to load or a search outside the covered area.
+such as a failed place search.
 
 App-specific tokens are built from these roles with `color-mix()`, so they
 follow the theme: `--color-map-label-surface`,
@@ -53,16 +53,14 @@ follow the theme: `--color-map-label-surface`,
 
 ### Map layer colours
 
-Layer colours are set per domain in `layers.ts`, not in `index.css`.
+The reference host has no overlay layers. Consumers define layer colours
+in their `Layer` configuration, not in the host's UI token stylesheet.
 
-- Sequential layers (travel times) use ordered single-hue ramps that run
-  light to dark, so more always means darker.
-- Transit lines are told apart by pattern and weight as well as colour:
-  rapid rail is a solid ink line, commuter rail is dashed, buses are a
-  fine dotted grey line, and BRT routes have a paper casing so they hold
-  up against both basemaps.
-- Line colours are checked for 3:1 against the light basemap. Lines with
-  a `darkColor` switch in dark mode.
+- Sequential classifications use ordered single-hue ramps that run light
+  to dark.
+- Distinguish line layers by pattern and weight as well as colour.
+- Check line contrast against the chosen basemap. A style's optional
+  `darkColor` provides a separate value for dark UI mode.
 
 ## Typography
 
@@ -159,7 +157,7 @@ config.
 - Every control works from the keyboard and shows a visible focus ring.
 - Text meets 4.5:1 and UI boundaries and map lines meet 3:1, in both
   themes.
-- Map layers never rely on colour alone: transit lines also differ by
+- Map layers never rely on colour alone: line layers also differ by
   pattern, and every value shown on the map is also available in the
   popup and the Browse list.
 - `prefers-reduced-motion` collapses animation and transition durations.

@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const measurement_stop = /** @type {((inputs?: Measurement_StopInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Measurement_StopInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Stop met meet")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Hou op meet")
 	return /** @type {LocalizedString} */ ("Stop measuring")
 });

@@ -14,7 +14,6 @@
  * visitor sees after clicking through.
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
@@ -168,7 +167,9 @@ const TEMPLATE = `<!doctype html>
  *   Chromium as usual.
  */
 async function generateOgImage(): Promise<void> {
-  const tempDir = mkdtempSync(join(tmpdir(), "karta-og-image-"));
+  const tempDir = mkdtempSync(
+    join(fileURLToPath(new URL("..", import.meta.url)), ".og-image-"),
+  );
   const tempHtmlPath = join(tempDir, "og-image.html");
   writeFileSync(tempHtmlPath, TEMPLATE);
 

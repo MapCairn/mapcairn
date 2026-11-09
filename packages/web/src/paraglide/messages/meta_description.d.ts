@@ -1,7 +1,7 @@
 /**
 * | output |
 * | --- |
-* | "Explore geographic data on an interactive map. Choose layers, inspect features and compare map styles." |
+* | "Explore an interactive map. Search places, compare basemaps and measure distances or areas." |
 *
 */
 export const meta_description: ((inputs?: Meta_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Meta_DescriptionInputs, { locale?: "en" | "af" }, {}>;

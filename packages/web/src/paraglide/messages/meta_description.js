@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "Explore geographic data on an interactive map. Choose layers, inspect features and compare map styles." |
+* | "Explore an interactive map. Search places, compare basemaps and measure distances or areas." |
 *
 * @param {Meta_DescriptionInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const meta_description = /** @type {((inputs?: Meta_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Meta_DescriptionInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Verken geografiese data op 'n interaktiewe kaart. Kies lae, ondersoek kenmerke en vergelyk kaartstyle.")
-	return /** @type {LocalizedString} */ ("Explore geographic data on an interactive map. Choose layers, inspect features and compare map styles.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Verken 'n interaktiewe kaart. Soek plekke, vergelyk basiskaarte en meet afstande of oppervlaktes.")
+	return /** @type {LocalizedString} */ ("Explore an interactive map. Search places, compare basemaps and measure distances or areas.")
 });

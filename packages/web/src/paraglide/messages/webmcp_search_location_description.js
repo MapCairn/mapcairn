@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "Search for a place by name and fly the map to the best match, e.g. a town, suburb or station." |
+* | "Search for a place by name and fly the map to the best match." |
 *
 * @param {Webmcp_Search_Location_DescriptionInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const webmcp_search_location_description = /** @type {((inputs?: Webmcp_Search_Location_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Search_Location_DescriptionInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Soek 'n plek op naam en beweeg die kaart na die beste passing, bv. 'n dorp, voorstad of stasie.")
-	return /** @type {LocalizedString} */ ("Search for a place by name and fly the map to the best match, e.g. a town, suburb or station.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Soek 'n plek volgens naam en beweeg die kaart na die beste resultaat.")
+	return /** @type {LocalizedString} */ ("Search for a place by name and fly the map to the best match.")
 });

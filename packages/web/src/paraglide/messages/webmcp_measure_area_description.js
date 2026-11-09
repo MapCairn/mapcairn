@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "Measure the area enclosed by three or more named locations, and show it on the map's measuring tool." |
+* | "Measure the area enclosed by named places and plot it on the map." |
 *
 * @param {Webmcp_Measure_Area_DescriptionInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const webmcp_measure_area_description = /** @type {((inputs?: Webmcp_Measure_Area_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Measure_Area_DescriptionInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Meet die area wat deur drie of meer benoemde plekke omsluit word, en wys dit op die kaart se meetnutsding.")
-	return /** @type {LocalizedString} */ ("Measure the area enclosed by three or more named locations, and show it on the map's measuring tool.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Meet die oppervlakte wat deur benoemde plekke omsluit word en teken dit op die kaart.")
+	return /** @type {LocalizedString} */ ("Measure the area enclosed by named places and plot it on the map.")
 });

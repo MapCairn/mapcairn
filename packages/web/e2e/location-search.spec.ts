@@ -6,7 +6,7 @@ import {
 } from "./fixtures";
 import { E2E } from "./selectors";
 
-/** Outside `SEARCH_COVERAGE_BOUNDS` (mainland South Africa), see `App.tsx`. */
+/** A distant result verifies that search has no dataset coverage restriction. */
 const LONDON_RESULT = {
   place_id: 26262999,
   display_name: "London, Greater London, England, United Kingdom",
@@ -125,7 +125,7 @@ test.describe("location search", () => {
     expect(requestCount).toBe(2);
   });
 
-  test("shows an out-of-coverage message for a result outside the map coverage, and clears it on a valid pick", async ({
+  test("accepts places anywhere without a coverage restriction", async ({
     page,
   }) => {
     await page.route(GEOCODER_SEARCH_PATTERN, (route) => {
@@ -151,9 +151,8 @@ test.describe("location search", () => {
     await expect(londonResult).toHaveText(LONDON_RESULT.display_name);
     await londonResult.click();
 
-    await expect(page.getByTestId(E2E.locationOutOfCoverage)).toHaveText(
-      `${LONDON_RESULT.display_name} is outside the current map coverage.`,
-    );
+    await expect(input).toHaveValue(LONDON_RESULT.display_name);
+    await expect(page.getByTestId(E2E.locationSearchResults)).toHaveCount(0);
 
     await input.fill("soweto");
     const sowetoResult = page
@@ -163,6 +162,6 @@ test.describe("location search", () => {
     await expect(sowetoResult).toHaveText(GEOCODER_RESULT.display_name);
     await sowetoResult.click();
 
-    await expect(page.getByTestId(E2E.locationOutOfCoverage)).toHaveCount(0);
+    await expect(input).toHaveValue(GEOCODER_RESULT.display_name);
   });
 });

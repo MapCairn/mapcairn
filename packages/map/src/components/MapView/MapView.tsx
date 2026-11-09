@@ -109,7 +109,7 @@ export interface MapViewProps<
   bounds: [[number, number], [number, number]];
   /** The accessible name for the map region, e.g. "Map of flood risk near Cape Town". */
   ariaLabel: string;
-  /** Features for the domain's choropleth layer, e.g. one polygon per township/area. Rendered only once a visible layer has `geometryKind: "choropleth"`. */
+  /** Features for the domain's choropleth layer. Rendered only once a visible layer has `geometryKind: "choropleth"`. */
   areas: Feature[];
   /** Optional outline polygons rendered as unstyled, unfilled labels-only boundaries (see {@link bindAreaBoundaryLabel}), shown when any visible layer declares `interaction.labelField`. Defaults to `[]`. */
   areaBoundaries?: Feature[];
@@ -267,7 +267,7 @@ const DEFAULT_FORMAT_SELECTION_ANNOUNCEMENT = (label: string) =>
 
 const AREA_PANE = "areas";
 const AREA_OUTLINE_PANE = "area-outlines";
-const TRANSIT_PANE = "transit";
+const OVERLAY_PANE = "overlay";
 /** Constant, so react-leaflet doesn't re-apply it to every outline layer on each render. */
 const AREA_OUTLINE_PATH_OPTIONS = {
   pane: AREA_OUTLINE_PANE,
@@ -1094,8 +1094,8 @@ function MapCoordinateReporter({
  *   content value as HTML (`node.innerHTML = content`) with no escaping,
  *   but appends anything else (an `HTMLElement`, per its `Content` type) as
  *   a child node instead. `name` here comes straight from fetched GeoJSON
- *   feature properties; public, sometimes externally-editable data (e.g.
- *   OSM/Overpass-derived transit names) that a malicious or careless
+ *   feature properties; public, sometimes externally-editable data
+ *   that a malicious or careless
  *   contributor could seed with markup; so building a plain element with
  *   `textContent` keeps any such markup inert, visible text rather than
  *   letting it execute as HTML. This mirrors {@link bindSelectedFeaturePopup}'s
@@ -1214,8 +1214,8 @@ function applyLayerOpacity(
   return scaled;
 }
 
-/** Transit stop marker radius, coarser when zoomed out and finer once zoomed in enough to tell stops apart. */
-function resolveTransitStopRadius(
+/** Overlay point marker radius, coarser when zoomed out and finer once zoomed in enough to tell stops apart. */
+function resolveOverlayPointRadius(
   isOverviewZoom: boolean,
   isDetailZoom: boolean,
 ): number {
@@ -1253,7 +1253,7 @@ interface RenderVisibleLayerParams {
   layerConfigById: Map<string, LeafletLayerConfig>;
   layerPathOptionsById: Map<string, GeoJSONProps["pathOptions"]>;
   onEachSelectableFeatureByLayerId: Map<string, GeoJSONProps["onEachFeature"]>;
-  transitPointToLayerById: Map<string, GeoJSONProps["pointToLayer"]>;
+  overlayPointToLayerById: Map<string, GeoJSONProps["pointToLayer"]>;
 }
 
 /**
@@ -1267,7 +1267,7 @@ function renderVisibleLayer({
   layerConfigById,
   layerPathOptionsById,
   onEachSelectableFeatureByLayerId,
-  transitPointToLayerById,
+  overlayPointToLayerById,
 }: RenderVisibleLayerParams): ReactNode {
   const config = layerConfigById.get(layer.id);
   /* v8 ignore next 3 -- unreachable: layerConfigById is built from this same visibleLayers list, so every layer.id here always has an entry */
@@ -1295,7 +1295,7 @@ function renderVisibleLayer({
           : undefined
       }
       pointToLayer={
-        isChoropleth ? undefined : transitPointToLayerById.get(layer.id)
+        isChoropleth ? undefined : overlayPointToLayerById.get(layer.id)
       }
     />
   );
@@ -1316,7 +1316,7 @@ function renderVisibleLayer({
   ];
 }
 
-const CASING_PATH_OPTIONS = { pane: TRANSIT_PANE, interactive: false };
+const CASING_PATH_OPTIONS = { pane: OVERLAY_PANE, interactive: false };
 
 /** Keeps stop and station points out of a line layer's casing. */
 function isNotPointFeature(feature: Feature): boolean {
@@ -1607,7 +1607,7 @@ function MapViewComponent<
   );
   const isOverviewZoom = mapZoom < OVERVIEW_ZOOM_THRESHOLD;
   const isDetailZoom = mapZoom >= DETAIL_ZOOM_THRESHOLD;
-  const transitStopRadius = resolveTransitStopRadius(
+  const overlayPointRadius = resolveOverlayPointRadius(
     isOverviewZoom,
     isDetailZoom,
   );
@@ -1734,14 +1734,14 @@ function MapViewComponent<
             {
               ...config?.pathOptions,
               pane:
-                layer.geometryKind === "choropleth" ? AREA_PANE : TRANSIT_PANE,
+                layer.geometryKind === "choropleth" ? AREA_PANE : OVERLAY_PANE,
             },
           ] as const;
         }),
       ),
     [layerConfigById, visibleLayers],
   );
-  const transitPointToLayerById = useMemo(
+  const overlayPointToLayerById = useMemo(
     () =>
       new Map(
         visibleLayers
@@ -1754,8 +1754,8 @@ function MapViewComponent<
                 circleMarker(latlng, {
                   ...config?.pathOptions,
                   dashArray: undefined,
-                  pane: TRANSIT_PANE,
-                  radius: transitStopRadius,
+                  pane: OVERLAY_PANE,
+                  radius: overlayPointRadius,
                   fillColor: config?.pathOptions?.color,
                   fillOpacity: layerOpacity[layer.id] ?? 1,
                   opacity: layerOpacity[layer.id] ?? 1,
@@ -1764,7 +1764,7 @@ function MapViewComponent<
             ] as const;
           }),
       ),
-    [layerConfigById, layerOpacity, transitStopRadius, visibleLayers],
+    [layerConfigById, layerOpacity, overlayPointRadius, visibleLayers],
   );
   /**
    * Each selectable layer's `onEachFeature` binder, memoised by layer id.
@@ -1879,7 +1879,7 @@ function MapViewComponent<
         ) : null}
         <Pane name={AREA_PANE} style={{ zIndex: 400 }} />
         <Pane name={AREA_OUTLINE_PANE} style={{ zIndex: 425 }} />
-        <Pane name={TRANSIT_PANE} style={{ zIndex: 450 }} />
+        <Pane name={OVERLAY_PANE} style={{ zIndex: 450 }} />
         <AreaBoundaryLabels
           showAreaLabels={showAreaLabels}
           areaBoundaryData={areaBoundaryData}
@@ -1893,7 +1893,7 @@ function MapViewComponent<
             layerConfigById,
             layerPathOptionsById,
             onEachSelectableFeatureByLayerId,
-            transitPointToLayerById,
+            overlayPointToLayerById,
           }),
         )}
         <SelectedFeatureHighlight
@@ -1932,20 +1932,19 @@ function MapViewComponent<
 
 /**
  * Renders the interactive Leaflet map for a domain: tile basemap, choropleth
- * and transit overlays resolved from the active `DomainProvider`, area
+ * and line overlays resolved from the active `DomainProvider`, area
  * boundary outline labels, feature selection/keyboard interaction, and
  * location-search fly-to behaviour.
  * @remarks Must be rendered inside a `DomainProvider`. `renderFeaturePopup`
  *   is invoked to produce the popup markup for a selectable feature; when
  *   omitted, clicking or selecting a feature will not show a popup.
  * @example
- * <DomainProvider domain={SPATIAL_APARTHEID_LEGACY_DOMAIN}>
+ * <DomainProvider domain={domain}>
  *   <MapView
  *     bounds={[[-27.15, 27.1], [-25.3, 28.75]]}
- *     ariaLabel="Map of South African township access to job centres"
- *     areas={townships}
- *     visibleLayerIds={["townships"]}
- *     renderFeaturePopup={(props) => <TownshipPopup properties={props} />}
+ *     ariaLabel="Map"
+ *     areas={districts}
+ *     visibleLayerIds={["districts"]}
  *   />
  * </DomainProvider>
  */

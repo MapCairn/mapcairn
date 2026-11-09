@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const location_context_menu_loading = /** @type {((inputs?: Location_Context_Menu_LoadingInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Location_Context_Menu_LoadingInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Soek adres...")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Soek tans adres…")
 	return /** @type {LocalizedString} */ ("Looking up address…")
 });

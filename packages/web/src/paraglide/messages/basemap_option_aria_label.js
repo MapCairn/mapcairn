@@ -18,6 +18,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 */
 export const basemap_option_aria_label = /** @type {((inputs: Basemap_Option_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Basemap_Option_Aria_LabelInputs, { locale?: "en" | "af" }, {}>} */ ((i, options = {}) => {
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ (`Gebruik ${i?.label} as basiskaart`)
+	if (locale === "af") return /** @type {LocalizedString} */ (`Gebruik ${i?.label}-basiskaart`)
 	return /** @type {LocalizedString} */ (`Use ${i?.label} basemap`)
 });

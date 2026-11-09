@@ -3,7 +3,6 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoutesStub } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import { getLayers } from "./layers/registry";
 
 vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router")>();
@@ -25,21 +24,7 @@ const {
 } = await import("./root");
 
 describe("root links", () => {
-  it("does not preload any layer GeoJSON, so it never competes with render-critical requests", () => {
-    const layerDataUrls = new Set(
-      getLayers().flatMap((layer) =>
-        layer.companionSource
-          ? [...layer.dataSource, layer.companionSource]
-          : layer.dataSource,
-      ),
-    );
-
-    expect(layerDataUrls.size).toBeGreaterThan(0);
-
-    const hrefs = links().map((link) => ("href" in link ? link.href : ""));
-    for (const url of layerDataUrls) {
-      expect(hrefs).not.toContain(url);
-    }
+  it("does not preload datasets", () => {
     expect(
       links().filter((link) => "rel" in link && link.rel === "preload"),
     ).toHaveLength(0);

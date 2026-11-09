@@ -18,6 +18,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 */
 export const legend_active_aria_label = /** @type {((inputs: Legend_Active_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Legend_Active_Aria_LabelInputs, { locale?: "en" | "af" }, {}>} */ ((i, options = {}) => {
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ (`Aktiewe kaartlae-legende: ${i?.label}`)
+	if (locale === "af") return /** @type {LocalizedString} */ (`Aktiewe kaartlae se legende: ${i?.label}`)
 	return /** @type {LocalizedString} */ (`Active map layers legend: ${i?.label}`)
 });

@@ -2,8 +2,7 @@ import type { DomainConfig } from "@karta/core";
 
 /**
  * A small, self-contained `DomainConfig` used only by `@karta/map`'s own
- * tests, so this package's test suite doesn't depend on a concrete downstream
- * domain (`@karta/app`) to verify its own generic rendering logic.
+ * tests, so the suite verifies generic rendering without a downstream dataset.
  */
 export const TEST_DOMAIN: DomainConfig = {
   layers: [

@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "Place names forming the area's outline, in order, e.g. [\"Sandton\", \"Soweto\", \"Midrand\"]." |
+* | "Place names in outline order, with at least three locations." |
 *
 * @param {Webmcp_Measure_Area_Input_LocationsInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const webmcp_measure_area_input_locations = /** @type {((inputs?: Webmcp_Measure_Area_Input_LocationsInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Measure_Area_Input_LocationsInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Pleknname wat die area se buitelyn vorm, in volgorde, bv. [\"Sandton\", \"Soweto\", \"Midrand\"].")
-	return /** @type {LocalizedString} */ ("Place names forming the area's outline, in order, e.g. [\"Sandton\", \"Soweto\", \"Midrand\"].")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Plekname in omtrekvolgorde, met minstens drie liggings.")
+	return /** @type {LocalizedString} */ ("Place names in outline order, with at least three locations.")
 });

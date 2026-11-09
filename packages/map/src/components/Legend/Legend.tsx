@@ -18,17 +18,17 @@ import * as styles from "./Legend.css";
 export interface LegendLabels {
   /** Fallback bucket label for a choropleth value outside every configured bucket. Defaults to `"No data"`. */
   noDataLabel?: string;
-  /** Heading above the transit-route entries. Defaults to `"Transit routes"`. */
-  transitRoutesLabel?: string;
-  /** `aria-label` on the transit entries' own list. Defaults to `"Transit route colours"`. */
-  transitColorsAriaLabel?: string;
+  /** Heading above the line-layer entries. Defaults to `"Line layers"`. */
+  lineLayersLabel?: string;
+  /** `aria-label` on the line entries' own list. Defaults to `"Line layer colours"`. */
+  lineColorsAriaLabel?: string;
   /** Shown in place of any legend sections when `mode="active"` and no layer is visible. Defaults to `"Turn on layers to view their legend."`. */
   emptyMessage?: string;
-  /** Appended to a transit entry that has station markers as well as a route line. Defaults to `" · line + stations"`. */
-  lineAndStationsNote?: string;
-  /** Appended to a transit entry that has a route line only. Defaults to `" · route only"`. */
-  routeOnlyNote?: string;
-  /** Builds a legend section's `aria-label` when `mode="active"`, from that section's own heading text (a choropleth layer's label, or the transit-routes heading). Defaults to `` (label) => `Active map layers legend: ${label}` ``. */
+  /** Appended to a line entry that also has point markers. Defaults to `" · line + points"`. */
+  lineAndPointsNote?: string;
+  /** Appended to a line entry that has a route line only. Defaults to `" · line only"`. */
+  lineOnlyNote?: string;
+  /** Builds a legend section's `aria-label` when `mode="active"`, from that section's own heading text (a choropleth layer's label, or the line-layers heading). Defaults to `` (label) => `Active map layers legend: ${label}` ``. */
   formatActiveAriaLabel?: (label: string) => string;
 }
 
@@ -39,11 +39,11 @@ interface LegendProps extends LegendLabels {
 }
 
 const DEFAULT_NO_DATA_LABEL = "No data";
-const DEFAULT_TRANSIT_ROUTES_LABEL = "Transit routes";
-const DEFAULT_TRANSIT_COLORS_ARIA_LABEL = "Transit route colours";
+const DEFAULT_LINE_LAYERS_LABEL = "Line layers";
+const DEFAULT_LINE_COLORS_ARIA_LABEL = "Line layer colours";
 const DEFAULT_EMPTY_MESSAGE = "Turn on layers to view their legend.";
-const DEFAULT_LINE_AND_STATIONS_NOTE = " · line + stations";
-const DEFAULT_ROUTE_ONLY_NOTE = " · route only";
+const DEFAULT_LINE_AND_POINTS_NOTE = " · line + points";
+const DEFAULT_LINE_ONLY_NOTE = " · line only";
 const DEFAULT_FORMAT_ACTIVE_ARIA_LABEL = (label: string) =>
   `Active map layers legend: ${label}`;
 
@@ -88,7 +88,7 @@ function choroplethLegends(
   });
 }
 
-function getTransitEntries(
+function getLineEntries(
   layers: readonly Layer[],
   visibleLayerIds: string[] | undefined,
   dark: boolean,
@@ -103,7 +103,7 @@ function getTransitEntries(
     }
 
     const { style } = layer;
-    const hasStations = layer.hasPointGeometry === true;
+    const hasPoints = layer.hasPointGeometry === true;
     const pattern = {
       dashArray: style.dashArray,
       casingColor: style.casing
@@ -115,7 +115,7 @@ function getTransitEntries(
       return style.colorClassification.stops.map((stop) => ({
         label: stop.label,
         color: stop.value,
-        hasStations,
+        hasPoints,
         ...pattern,
       }));
     }
@@ -124,7 +124,7 @@ function getTransitEntries(
       {
         label: style.legendLabel,
         color: resolveThemedColor(style.color, style.darkColor, dark),
-        hasStations,
+        hasPoints,
         ...pattern,
       },
     ];
@@ -132,7 +132,7 @@ function getTransitEntries(
 }
 
 /**
- * A short sample of a transit line, drawn as SVG so the legend shows the
+ * A short sample of an overlay line, drawn as SVG so the legend shows the
  * same dash pattern and casing as the map.
  */
 function LineSwatch({
@@ -190,11 +190,11 @@ function LegendComponent({
   visibleLayerIds = [],
   compact = false,
   noDataLabel = DEFAULT_NO_DATA_LABEL,
-  transitRoutesLabel = DEFAULT_TRANSIT_ROUTES_LABEL,
-  transitColorsAriaLabel = DEFAULT_TRANSIT_COLORS_ARIA_LABEL,
+  lineLayersLabel = DEFAULT_LINE_LAYERS_LABEL,
+  lineColorsAriaLabel = DEFAULT_LINE_COLORS_ARIA_LABEL,
   emptyMessage = DEFAULT_EMPTY_MESSAGE,
-  lineAndStationsNote = DEFAULT_LINE_AND_STATIONS_NOTE,
-  routeOnlyNote = DEFAULT_ROUTE_ONLY_NOTE,
+  lineAndPointsNote = DEFAULT_LINE_AND_POINTS_NOTE,
+  lineOnlyNote = DEFAULT_LINE_ONLY_NOTE,
   formatActiveAriaLabel = DEFAULT_FORMAT_ACTIVE_ARIA_LABEL,
 }: LegendProps) {
   const { getLayers } = useDomain();
@@ -214,12 +214,12 @@ function LegendComponent({
     () => choroplethLegends(layers, activeLayerIds, resolvedDark, noDataLabel),
     [layers, activeLayerIds, resolvedDark, noDataLabel],
   );
-  const transitEntries = useMemo(
-    () => getTransitEntries(layers, activeLayerIds, resolvedDark),
+  const lineEntries = useMemo(
+    () => getLineEntries(layers, activeLayerIds, resolvedDark),
     [layers, activeLayerIds, resolvedDark],
   );
   const hasAnyLegendSection =
-    choroplethSections.length > 0 || transitEntries.length > 0;
+    choroplethSections.length > 0 || lineEntries.length > 0;
 
   return (
     <div className={styles.groups} data-compact={compact ? "true" : undefined}>
@@ -247,18 +247,18 @@ function LegendComponent({
           </ul>
         </div>
       ))}
-      {transitEntries.length > 0 ? (
+      {lineEntries.length > 0 ? (
         <div className={styles.fullWidthGroup}>
-          <h3 className={styles.groupTitle}>{transitRoutesLabel}</h3>
+          <h3 className={styles.groupTitle}>{lineLayersLabel}</h3>
           <ul
             className={styles.legend}
             aria-label={getLegendAriaLabel(
               mode,
-              transitColorsAriaLabel,
+              lineColorsAriaLabel,
               formatActiveAriaLabel,
             )}
           >
-            {transitEntries.map((entry) => (
+            {lineEntries.map((entry) => (
               <li key={entry.label} className={styles.entry}>
                 <span className={styles.symbolGroup} aria-hidden="true">
                   <LineSwatch
@@ -266,7 +266,7 @@ function LegendComponent({
                     dashArray={entry.dashArray}
                     casingColor={entry.casingColor}
                   />
-                  {entry.hasStations ? (
+                  {entry.hasPoints ? (
                     <span
                       className={styles.dotSwatch}
                       style={{ backgroundColor: entry.color }}
@@ -276,7 +276,7 @@ function LegendComponent({
                 <span className={styles.label}>
                   {entry.label}
                   <span className={styles.symbolNote}>
-                    {entry.hasStations ? lineAndStationsNote : routeOnlyNote}
+                    {entry.hasPoints ? lineAndPointsNote : lineOnlyNote}
                   </span>
                 </span>
               </li>
@@ -292,15 +292,15 @@ function LegendComponent({
 }
 
 /**
- * Renders choropleth and transit layer legend entries for a map domain.
+ * Renders choropleth and overlay layer legend entries for a map domain.
  * @remarks Must be rendered inside a `DomainProvider`. Choropleth swatches
  *   resolve each bucket's `darkColor` over `color` while dark theme is
  *   active, matching the fill `MapView` renders for the same theme. Memoized
  *   like `MapView` itself, since it renders inside the same panel/bottom-sheet
  *   tree that re-renders on unrelated parent state (drag frames, menu toggles).
  * @example
- * <DomainProvider domain={SPATIAL_APARTHEID_LEGACY_DOMAIN}>
- *   <Legend mode="active" visibleLayerIds={["townships"]} />
+ * <DomainProvider domain={domain}>
+ *   <Legend mode="active" visibleLayerIds={["areas"]} />
  * </DomainProvider>
  */
 export const Legend = memo(LegendComponent);

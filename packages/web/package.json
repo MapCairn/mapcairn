@@ -48,7 +48,6 @@
     "vitest": "5.1.0"
   },
   "dependencies": {
-    "@karta/app": "file:../app",
     "@karta/core": "file:../core",
     "@karta/map": "file:../map",
     "@karta/react": "file:../react",

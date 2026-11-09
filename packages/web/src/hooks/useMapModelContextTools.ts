@@ -1,4 +1,3 @@
-import type { DomainStory as DomainStoryContent } from "@karta/core";
 import {
   fetchLocationSearchResults,
   formatMeasurementResult,
@@ -142,16 +141,11 @@ export interface UseMapModelContextToolsOptions {
    * returning a human-readable outcome for the calling agent.
    */
   onLocationSelect: (location: LocationSearchResult) => string;
-  /** The active domain's story copy, or `undefined` if it has none; gates whether a story-reading tool is registered at all. */
-  story: DomainStoryContent | undefined;
-  /** Switches the info panel to the story view and opens it, so a sighted user watching the screen sees what the agent just read. */
-  onShowStory: () => void;
   /**
    * Plots a measurement (a line for `"distance"`, a polygon for `"area"`)
    * through `points`, in order, on the map's own measuring tool, mirroring
    * `MapView`'s `measurementRequest` prop; so a sighted user watching the
-   * screen sees what the agent just measured, the same way `onShowStory`
-   * opens the Story panel for a read-map-story call.
+   * screen sees what the agent just measured.
    */
   onRequestMeasurement: (
     mode: MeasurementMode,
@@ -162,14 +156,14 @@ export interface UseMapModelContextToolsOptions {
 /**
  * Registers this app's capabilities as WebMCP tools via `document.modelContext`
  * (see `useModelContextTool`), so an in-browser AI agent can list and toggle
- * map layers, search for a place, switch the basemap or theme, read the
- * domain's story, and measure the distance or area across named locations;
+ * map layers, search for a place, switch the basemap or theme,
+ * and measure the distance or area across named locations;
  * without reverse-engineering the UI.
  * @remarks A no-op wherever WebMCP is unsupported; `useModelContextTool`
  *   handles that feature detection. Layer, basemap, and theme tools read and
  *   write `useMapUiStore`/the layer registry/`setThemePreference` directly
  *   rather than through props, since all three are already stable, globally
- *   reachable APIs; `onLocationSelect`/`onShowStory`/`onRequestMeasurement`
+ *   reachable APIs; `onLocationSelect`/`onRequestMeasurement`
  *   stay props because they close over `App`'s own local component state
  *   (the search focus target, the panel's open/view state, the measurement
  *   request token) that isn't in the shared store. `measure-distance`/
@@ -181,8 +175,6 @@ export interface UseMapModelContextToolsOptions {
  */
 export function useMapModelContextTools({
   onLocationSelect,
-  story,
-  onShowStory,
   onRequestMeasurement,
 }: UseMapModelContextToolsOptions): void {
   useModelContextTool<Record<string, never>>({
@@ -316,24 +308,6 @@ export function useMapModelContextTools({
       return textResult(m.webmcp_set_theme_switched({ theme }));
     },
   });
-
-  useModelContextTool(
-    story
-      ? {
-          name: "read-map-story",
-          description: m.webmcp_read_story_description(),
-          inputSchema: {
-            type: "object",
-            properties: {},
-            additionalProperties: false,
-          },
-          execute: () => {
-            onShowStory();
-            return textResult(`${story.title}\n\n${story.body}`);
-          },
-        }
-      : null,
-  );
 
   useModelContextTool<MeasureLocationsInput>({
     name: "measure-distance",

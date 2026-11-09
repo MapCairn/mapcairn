@@ -12,7 +12,7 @@ const DomainContext = createContext<DomainRegistry | null>(null);
  * @remarks Any component that calls `useDomain()` must be a descendant of
  *   `DomainProvider`. Wrap the app root once with the domain configuration.
  * @example
- * <DomainProvider domain={SPATIAL_APARTHEID_LEGACY_DOMAIN}>
+ * <DomainProvider domain={{ layers: [], layerGroups: [] }}>
  *   <App />
  * </DomainProvider>
  */

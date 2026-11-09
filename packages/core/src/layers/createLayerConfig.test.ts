@@ -7,7 +7,7 @@ function lineLayer(style: LineLayerStyle): Layer {
   return {
     id: "corridors",
     label: "Corridors",
-    dataSource: ["/data/gauteng/corridors.v1.geojson"],
+    dataSource: ["/data/example/corridors.v1.geojson"],
     geometryKind: "line",
     defaultVisible: false,
     available: true,
@@ -19,7 +19,7 @@ function pointLayer(style: PointLayerStyle): Layer {
   return {
     id: "stations",
     label: "Stations",
-    dataSource: ["/data/gauteng/stations.v1.geojson"],
+    dataSource: ["/data/example/stations.v1.geojson"],
     geometryKind: "point",
     defaultVisible: false,
     available: true,
@@ -29,15 +29,15 @@ function pointLayer(style: PointLayerStyle): Layer {
 
 function choroplethLayer(overrides: Partial<Layer> = {}): Layer {
   return {
-    id: "townships",
-    label: "Modeled car time",
-    dataSource: ["/data/gauteng/townships.v1.geojson"],
+    id: "districts",
+    label: "Coverage",
+    dataSource: ["/data/example/districts.v1.geojson"],
     geometryKind: "choropleth",
     defaultVisible: true,
     available: true,
     style: {
       kind: "choropleth",
-      propertyKey: "commuteMinutes",
+      propertyKey: "value",
       buckets: [
         {
           max: 20,
@@ -55,18 +55,18 @@ function choroplethLayer(overrides: Partial<Layer> = {}): Layer {
       ],
       baseOpacity: 0.18,
       emphasisOpacity: 0.78,
-      resolveEmphasis: (properties) => properties?.name === "Mamelodi Ext 17",
+      resolveEmphasis: (properties) => properties?.name === "District A",
     },
     ...overrides,
   };
 }
 
 describe("createLayerConfig", () => {
-  it("produces a styleFn for a choropleth layer that colors by commuteMinutes", () => {
+  it("produces a styleFn for a choropleth layer that colors by value", () => {
     const config = createLayerConfig(choroplethLayer());
     const feature = {
       type: "Feature",
-      properties: { commuteMinutes: 15 },
+      properties: { value: 15 },
       geometry: null,
     } as unknown as Feature;
 
@@ -81,7 +81,7 @@ describe("createLayerConfig", () => {
     const config = createLayerConfig(choroplethLayer());
     const feature = {
       type: "Feature",
-      properties: { commuteMinutes: null },
+      properties: { value: null },
       geometry: null,
     } as unknown as Feature;
 
@@ -94,7 +94,7 @@ describe("createLayerConfig", () => {
     const config = createLayerConfig(choroplethLayer(), { dark: true });
     const feature = {
       type: "Feature",
-      properties: { commuteMinutes: null },
+      properties: { value: null },
       geometry: null,
     } as unknown as Feature;
 
@@ -114,7 +114,7 @@ describe("createLayerConfig", () => {
     });
     const feature = {
       type: "Feature",
-      properties: { commuteMinutes: null },
+      properties: { value: null },
       geometry: null,
     } as unknown as Feature;
 
@@ -130,7 +130,7 @@ describe("createLayerConfig", () => {
     const config = createLayerConfig(choroplethLayer(), { dark: true });
     const feature = {
       type: "Feature",
-      properties: { commuteMinutes: 15 },
+      properties: { value: 15 },
       geometry: null,
     } as unknown as Feature;
 
@@ -141,7 +141,7 @@ describe("createLayerConfig", () => {
     const config = createLayerConfig(choroplethLayer(), { dark: true });
     const feature = {
       type: "Feature",
-      properties: { commuteMinutes: 35 },
+      properties: { value: 35 },
       geometry: null,
     } as unknown as Feature;
 
@@ -152,7 +152,7 @@ describe("createLayerConfig", () => {
     const config = createLayerConfig(choroplethLayer());
     const feature = {
       type: "Feature",
-      properties: { name: "Mamelodi Ext 17", commuteMinutes: 35 },
+      properties: { name: "District A", value: 35 },
       geometry: null,
     } as unknown as Feature;
 
@@ -173,7 +173,7 @@ describe("createLayerConfig", () => {
     );
     const feature = {
       type: "Feature",
-      properties: { name: "Mamelodi Ext 17", commuteMinutes: 35 },
+      properties: { name: "District A", value: 35 },
       geometry: null,
     } as unknown as Feature;
 
@@ -187,7 +187,7 @@ describe("createLayerConfig", () => {
       choroplethLayer({
         style: {
           kind: "choropleth",
-          propertyKey: "commuteMinutes",
+          propertyKey: "value",
           buckets: [
             {
               max: Number.POSITIVE_INFINITY,
@@ -204,7 +204,7 @@ describe("createLayerConfig", () => {
     );
     const feature = {
       type: "Feature",
-      properties: { commuteMinutes: 15 },
+      properties: { value: 15 },
       geometry: null,
     } as unknown as Feature;
 
@@ -213,15 +213,15 @@ describe("createLayerConfig", () => {
     });
   });
 
-  it("produces a styleFn for a choropleth layer that colors by nearestTransitKm", () => {
+  it("produces a styleFn for a choropleth layer that colors by elevation", () => {
     const config = createLayerConfig(
       choroplethLayer({
-        id: "nearest-transit",
-        label: "Distance to Nearest Transit",
+        id: "elevation",
+        label: "Elevation",
         defaultVisible: false,
         style: {
           kind: "choropleth",
-          propertyKey: "nearestTransitKm",
+          propertyKey: "elevation",
           buckets: [
             { max: 1, color: "#CFE3F5", label: "Near (≤ 1 km)" },
             { max: 3, color: "#7FB2E5", label: "Moderate (1–3 km)" },
@@ -239,7 +239,7 @@ describe("createLayerConfig", () => {
     );
     const feature = {
       type: "Feature",
-      properties: { nearestTransitKm: 30 },
+      properties: { elevation: 30 },
       geometry: null,
     } as unknown as Feature;
 
@@ -250,9 +250,9 @@ describe("createLayerConfig", () => {
 
   it("produces static pathOptions for a line layer", () => {
     const layer: Layer = {
-      id: "gautrain",
-      label: "Gautrain",
-      dataSource: ["/data/gauteng/gautrain.v1.geojson"],
+      id: "trail",
+      label: "Trail",
+      dataSource: ["/data/example/trail.v1.geojson"],
       geometryKind: "line",
       defaultVisible: false,
       available: true,
@@ -260,7 +260,7 @@ describe("createLayerConfig", () => {
         kind: "line",
         color: "#A87FE0",
         weight: 3,
-        legendLabel: "Gautrain",
+        legendLabel: "Trail",
       },
     };
 
@@ -334,7 +334,7 @@ describe("createLayerConfig", () => {
         weightClassification: {
           kind: "categorized",
           propertyKey: "operator",
-          stops: [{ match: "gautrain", value: 5, label: "Gautrain" }],
+          stops: [{ match: "trail", value: 5, label: "Trail" }],
           fallback: 1,
         },
       }),
@@ -342,7 +342,7 @@ describe("createLayerConfig", () => {
     );
     const feature = {
       type: "Feature",
-      properties: { operator: "gautrain" },
+      properties: { operator: "trail" },
       geometry: null,
     } as unknown as Feature;
 
@@ -355,9 +355,9 @@ describe("createLayerConfig", () => {
 
   it("produces static pathOptions for a point layer", () => {
     const layer: Layer = {
-      id: "gautrain",
-      label: "Gautrain",
-      dataSource: ["/data/gauteng/gautrain.v1.geojson"],
+      id: "trail",
+      label: "Trail",
+      dataSource: ["/data/example/trail.v1.geojson"],
       geometryKind: "point",
       defaultVisible: false,
       available: true,
@@ -365,7 +365,7 @@ describe("createLayerConfig", () => {
         kind: "point",
         color: "#A87FE0",
         radius: 4,
-        legendLabel: "Gautrain",
+        legendLabel: "Trail",
       },
     };
 
@@ -427,7 +427,7 @@ describe("createLayerConfig", () => {
       weightClassification: {
         kind: "categorized",
         propertyKey: "operator",
-        stops: [{ match: "gautrain", value: 5, label: "Gautrain" }],
+        stops: [{ match: "trail", value: 5, label: "Trail" }],
         fallback: 1,
       },
     });
@@ -435,7 +435,7 @@ describe("createLayerConfig", () => {
     const config = createLayerConfig(layer);
     const feature = {
       type: "Feature",
-      properties: { operator: "gautrain" },
+      properties: { operator: "trail" },
       geometry: null,
     } as unknown as Feature;
 
@@ -454,7 +454,7 @@ describe("createLayerConfig", () => {
       colorClassification: {
         kind: "categorized",
         propertyKey: "operator",
-        stops: [{ match: "gautrain", value: "#E69F00", label: "Gautrain" }],
+        stops: [{ match: "trail", value: "#E69F00", label: "Trail" }],
         fallback: "#A87FE0",
       },
       radiusClassification: {
@@ -468,7 +468,7 @@ describe("createLayerConfig", () => {
     const config = createLayerConfig(layer);
     const feature = {
       type: "Feature",
-      properties: { operator: "gautrain", isInterchange: "true" },
+      properties: { operator: "trail", isInterchange: "true" },
       geometry: null,
     } as unknown as Feature;
 

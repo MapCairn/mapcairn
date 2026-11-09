@@ -1,16 +1,15 @@
 # `@karta/map`
 
-Map rendering and UI components (React and Leaflet) for Karta, built on `@karta/core`, `@karta/react` and `@karta/theme`. It has no dependency on `@karta/app` or `@karta/web`. Components get their `DomainConfig` and `Layer` values from context or props, never from a hardcoded domain.
+Map rendering and UI components (React and Leaflet) for Karta, built on `@karta/core`, `@karta/react` and `@karta/theme`. It has no dependency on `@karta/web`. Components get their `DomainConfig` and `Layer` values from context or props, never from a hardcoded domain.
 
 ## What belongs here
 
 | Export | Purpose |
 |---|---|
 | `DomainProvider({ domain, children })`, `useDomain()` | React context around `createRegistry` from `@karta/core` (`context/DomainContext.tsx`). `useDomain()` throws outside a `DomainProvider`. |
-| `MapView` | The Leaflet map: basemap, choropleth and transit overlays from the active domain, area outline labels, feature selection with keyboard support, and fly-to for location search. Exported from the `@karta/map/MapView` subpath (see below). |
-| `Legend`, `DesktopLegend`, `MobileLegend` | Legend entries for choropleth and transit layers, read from `useDomain()`. |
+| `MapView` | The Leaflet map: basemap, caller-supplied overlays, area outline labels, feature selection with keyboard support, and fly-to for location search. Exported from the `@karta/map/MapView` subpath (see below). |
+| `Legend`, `DesktopLegend`, `MobileLegend` | Legend entries for choropleth, line and point layers, read from `useDomain()`. |
 | `LocationSearchControl` | Debounced place search with keyboard navigation. Takes a `placeholder` and an optional `GeocoderProvider`, defaulting to OpenStreetMap Nominatim. |
-| `FeatureBrowser` | Filterable list of every selectable feature, grouped by the domain's layers. The caller wires `onSelect` to its own selected-feature state. |
 | `MeasurementControl`, `MeasurementLayer` | The distance and area tool inside `MapView`: the floating panel and the preview line or polygon. Driven by `MapView`'s `measurementTool`, `measurementPanelOpen` and `onMeasurementPanelClose` props. |
 | UI primitives | `IconButton`, `SegmentedControl`, `ControlButton`, `ThemeToggle`, `BasemapToggle`, `SettingsMenu`. |
 | Basemap registry | `constants/basemaps.ts`: `registerBasemap`, `getBasemapDefinition`, `getRegisteredBasemapIds`, `getBasemapTileSources`, `Basemap`, `BasemapDefinition`. |
@@ -25,9 +24,9 @@ The registry ships five free, key-less basemaps. `positron`, `liberty` and `dark
 
 ## What doesn't belong here
 
-- Domain-specific components such as a township popup or browser. They read properties (`nearestJobCenter`, `commuteMinutes` and so on) that a generic `Layer` doesn't have. Pass a `renderFeaturePopup` callback into `MapView` instead.
+- Consumer-specific feature content. Pass a `renderFeaturePopup` callback into `MapView` rather than importing application property types.
 - Domain-specific accessible copy. `MapView` takes `ariaLabel` because what the map shows depends on the domain.
-- The reference domain's data (`SPATIAL_APARTHEID_LEGACY_DOMAIN`, metros, townships). See `@karta/app`.
+- Application datasets. The reference host supplies no overlays.
 
 ## Setup
 
@@ -67,21 +66,23 @@ If `MapView`, or even its type, is imported from the main barrel, the bundler ca
 
 ```tsx
 import { DomainProvider, Legend } from "@karta/map";
-import { SPATIAL_APARTHEID_LEGACY_DOMAIN } from "@karta/app";
+import { lazy } from "react";
+
+const domain = { layers: [], layerGroups: [] };
 
 const MapView = lazy(async () => {
   const { MapView } = await import("@karta/map/MapView");
   return { default: MapView };
 });
 
-<DomainProvider domain={SPATIAL_APARTHEID_LEGACY_DOMAIN}>
+<DomainProvider domain={domain}>
   <MapView
-    bounds={[[-27.15, 27.1], [-25.3, 28.75]]}
-    ariaLabel="Map of South African township access to job centres"
-    areas={townships}
-    visibleLayerIds={["townships"]}
-    renderFeaturePopup={(props) => <MyPopup properties={props} />}
+    bounds={[[-60, -170], [75, 170]]}
+    ariaLabel="Interactive map"
+    areas={{ type: "FeatureCollection", features: [] }}
+    visibleLayerIds={[]}
+    renderFeaturePopup={() => null}
   />
-  <Legend mode="active" visibleLayerIds={["townships"]} />
+  <Legend mode="active" visibleLayerIds={[]} />
 </DomainProvider>;
 ```

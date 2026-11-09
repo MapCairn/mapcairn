@@ -50,7 +50,7 @@ const WEB_APPLICATION_JSON_LD_BASE = {
 /**
  * Builds the full `<title>`/`<meta>` tag set for one route from its own
  * title, description, and canonical URL; including every Open Graph,
- * Twitter card, and Dataset JSON-LD tag derived from those three values.
+ * Twitter card, and application JSON-LD tag derived from those three values.
  * @remarks Every route calls this directly with its own values, rather than
  *   exporting a `meta()` that only sets `title`/`description` and inheriting
  *   the rest from the root route via `matches`: React Router's per-route

@@ -56,9 +56,7 @@ export function clearFeatureCollectionCache(): void {
  *   full, bounding memory in a long-lived session with many layers/domains.
  *   Failed requests are not cached, so a later call can retry. A second call
  *   for a `url` already in flight (not yet resolved into `cache`) awaits the
- *   same underlying request rather than firing a duplicate `fetch`; e.g.
- *   `MapView` and `FeatureBrowser` both requesting an uncached layer's data
- *   in the same render pass.
+ *   same underlying request rather than firing a duplicate `fetch`.
  */
 export async function fetchFeatureCollection(
   url: string,

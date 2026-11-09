@@ -9,15 +9,12 @@ export const E2E = {
   panelSheetHandle: "panel-sheet-handle",
   panelViewport: "panel-viewport",
   legendChip: "active-legend-chip",
-  dataLoadError: "data-load-error",
-  retryDataLoad: "retry-data-load",
   settingsMenuTrigger: "settings-menu-trigger",
   languageToggle: "language",
   mapView: "map-view",
   locationSearchInput: "location-search-input",
   locationSearchResults: "location-search-results",
   locationSearchRetry: "location-search-retry",
-  locationOutOfCoverage: "location-out-of-coverage",
   basemapOption: {
     positron: "basemap-option-positron",
     liberty: "basemap-option-liberty",
@@ -30,22 +27,6 @@ export const E2E = {
     light: "theme-option-light",
     dark: "theme-option-dark",
   },
-  layerToggle: {
-    townships: "layer-toggle-townships",
-    townshipsDescription: "layer-toggle-townships-description",
-    nearestTransit: "layer-toggle-nearest-transit",
-    rapidRail: "layer-toggle-rapid-rail",
-    rapidRailError: "layer-toggle-rapid-rail-error",
-  },
-  panelTab: {
-    layers: "panel-tab-layers",
-    story: "panel-tab-story",
-    browser: "panel-tab-browser",
-  },
-  featureBrowser: {
-    filter: "feature-browser-filter",
-  },
-  featureDetails: "feature-details",
   locationContextMenu: "location-context-menu",
   measurement: {
     toggle: "measurement-control-toggle",

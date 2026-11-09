@@ -1,7 +1,7 @@
 /**
 * | output |
 * | --- |
-* | "Place names forming the area's outline, in order, e.g. [\"Sandton\", \"Soweto\", \"Midrand\"]." |
+* | "Place names in outline order, with at least three locations." |
 *
 */
 export const webmcp_measure_area_input_locations: ((inputs?: Webmcp_Measure_Area_Input_LocationsInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Webmcp_Measure_Area_Input_LocationsInputs, { locale?: "en" | "af" }, {}>;

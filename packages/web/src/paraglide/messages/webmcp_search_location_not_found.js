@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "No location found matching \"{query}\"." |
+* | "No place found for \"{query}\"." |
 *
 * @param {Webmcp_Search_Location_Not_FoundInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -18,6 +18,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 */
 export const webmcp_search_location_not_found = /** @type {((inputs: Webmcp_Search_Location_Not_FoundInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Search_Location_Not_FoundInputs, { locale?: "en" | "af" }, {}>} */ ((i, options = {}) => {
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ (`Geen plek gevind wat by "${i?.query}" pas nie.`)
-	return /** @type {LocalizedString} */ (`No location found matching "${i?.query}".`)
+	if (locale === "af") return /** @type {LocalizedString} */ (`Geen plek gevind vir "${i?.query}" nie.`)
+	return /** @type {LocalizedString} */ (`No place found for "${i?.query}".`)
 });

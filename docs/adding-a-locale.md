@@ -61,7 +61,7 @@ npm run messages:compile -w @karta/web
 ```
 
 This regenerates `packages/web/src/paraglide/` (the `m.*` message
-functions `layerTranslations.ts` and every component call, plus the
+functions used by components, plus the
 runtime's locale/text-direction logic) from `project.inlang/settings.json`
 and `messages/*.json`. Commit the regenerated files. CI's "Verify compiled
 Paraglide messages are up to date" step
@@ -70,10 +70,6 @@ Paraglide messages are up to date" step
 
 ## 5. What you don't need to touch
 
-- Layer and story translations. The `LAYER_TEXT` and `LAYER_GROUP_TEXT`
-  tables in `layerTranslations.ts` call `m.<message_id>()` functions, which
-  resolve against the locale active at request time. Once the new locale's
-  JSON has every key (step 2), the existing entries pick it up.
 - Right-to-left layout. `root.tsx`'s `Layout` reads `getTextDirection(locale)`
   from paraglide's runtime for the document's `dir` attribute, so the library
   handles RTL locales.

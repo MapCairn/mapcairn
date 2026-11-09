@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "Flew to {location}." |
+* | "Moved the map to {location}." |
 *
 * @param {Webmcp_Search_Location_Flew_ToInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -18,6 +18,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 */
 export const webmcp_search_location_flew_to = /** @type {((inputs: Webmcp_Search_Location_Flew_ToInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Search_Location_Flew_ToInputs, { locale?: "en" | "af" }, {}>} */ ((i, options = {}) => {
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ (`Na ${i?.location} beweeg.`)
-	return /** @type {LocalizedString} */ (`Flew to ${i?.location}.`)
+	if (locale === "af") return /** @type {LocalizedString} */ (`Kaart na ${i?.location} verskuif.`)
+	return /** @type {LocalizedString} */ (`Moved the map to ${i?.location}.`)
 });

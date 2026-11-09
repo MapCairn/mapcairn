@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const webmcp_toggle_layer_description = /** @type {((inputs?: Webmcp_Toggle_Layer_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Toggle_Layer_DescriptionInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Wys of versteek 'n kaartlaag volgens id. Roep eers list-map-layers om geldige id's te vind.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Wys of versteek 'n kaartlaag volgens id. Gebruik eers list-map-layers.")
 	return /** @type {LocalizedString} */ ("Show or hide a map layer by id. Call list-map-layers first to find valid ids.")
 });

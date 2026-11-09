@@ -9,7 +9,7 @@ accounts and no authentication. The only data accepted from users is the
 automatic error report described in [`PRIVACY.md`](PRIVACY.md), which is
 written to Cloudflare's logs and not stored anywhere else. Everything else
 the Worker serves is either rendered HTML or a static asset (JS, CSS, fonts
-and GeoJSON).
+and images).
 
 The security surface is small. Reports are most useful when they concern:
 
@@ -19,8 +19,6 @@ The security surface is small. Reports are most useful when they concern:
   (`packages/web/public/_headers`)
 - Supply-chain issues in dependencies that actually reach the shipped bundle
 - Deployment or hosting misconfiguration (`wrangler.jsonc`)
-- Data integrity problems in the offline pipeline (`data-pipeline`) that could
-  cause untrusted remote content to be committed into the published GeoJSON
 
 ## Supported versions
 
@@ -53,13 +51,11 @@ The following are not treated as vulnerabilities in this project:
 
 - Missing security headers on third-party hosts (tile providers, data sources)
 - Reports generated solely by an automated scanner with no demonstrated impact
-- Denial of service against public third-party APIs used by the offline pipeline
-  (OSRM, Overpass). These are not our infrastructure, and abusing them is
-  explicitly discouraged
+- Denial of service against third-party basemap or geocoding APIs. These are
+  not our infrastructure, and abusing them is explicitly discouraged
 - Rate limiting, brute force or account enumeration, since there are no accounts
 - Volumetric denial of service against the static host
-- Inaccuracy or staleness of the mapped data itself; that is a data quality
-  issue, so please open a normal issue instead
+- Inaccuracy or staleness of third-party basemaps or search results
 
 ## Handling data responsibly
 

@@ -1,11 +1,6 @@
 /**
- * Enforces the SDK package dependency direction documented in AGENTS.md's
- * "Architecture" section: `packages/core`, `packages/react`, and
- * `packages/theme` are dependency-free foundations, `packages/map` builds on
- * `core`/`react`/`theme` only, and `packages/app` builds on `core` only;
- * none of the five may reach into `packages/web` (the reference app) or
- * "downstream" of themselves.
- * Run via `npm run depcruise`; wired into CI as part of `npm run lint`.
+ * Keeps SDK packages independent of the web host and enforces the foundational
+ * packages' separation. Run through `npm run depcruise`, part of `npm run lint`.
  */
 module.exports = {
   forbidden: [
@@ -13,49 +8,35 @@ module.exports = {
       name: "core-is-dependency-free",
       severity: "error",
       comment:
-        "packages/core is the SDK's foundational, domain-agnostic package -- CLAUDE.md states it 'has no dependency on packages/app, packages/web, or packages/map ... or React'. An import from here into any of those means the layering has inverted. packages/theme is a styling concern core has no reason to touch either.",
+        "The layer model must not depend on rendering, hooks or the host.",
       from: { path: "^packages/core/src" },
-      to: { path: "^packages/(app|map|react|theme|web)/src" },
+      to: { path: "^packages/(map|react|theme|web)/src" },
     },
     {
       name: "react-is-dependency-free",
       severity: "error",
-      comment:
-        "packages/react holds generic hooks with no map/domain dependency, and no dependency on packages/core either (see its own package.json). It must stay a leaf package other SDK packages build on, not the other way round. packages/theme is a styling concern react has no reason to touch either.",
+      comment: "Generic React hooks must not depend on map or host concerns.",
       from: { path: "^packages/react/src" },
-      to: { path: "^packages/(app|core|map|theme|web)/src" },
+      to: { path: "^packages/(core|map|theme|web)/src" },
     },
     {
       name: "theme-is-dependency-free",
       severity: "error",
-      comment:
-        "packages/theme is a typed wrapper around Material 3 CSS custom property names, built only on @vanilla-extract/css -- it has no reason to depend on any other Karta package, and must stay a leaf other SDK packages build on.",
+      comment: "The token contract must remain independent of its consumers.",
       from: { path: "^packages/theme/src" },
-      to: { path: "^packages/(app|core|map|react|web)/src" },
+      to: { path: "^packages/(core|map|react|web)/src" },
     },
     {
-      name: "map-has-no-app-or-web-dependency",
+      name: "map-has-no-web-dependency",
       severity: "error",
       comment:
-        "packages/map is generic map rendering built on packages/core, packages/react, and packages/theme only -- CLAUDE.md states it 'still has no dependency on packages/app or packages/web', taking DomainConfig/Layer values as props/context instead.",
+        "Map components receive configuration rather than import the host.",
       from: { path: "^packages/map/src" },
-      to: { path: "^packages/(app|web)/src" },
-    },
-    {
-      name: "app-has-no-map-react-theme-or-web-dependency",
-      severity: "error",
-      comment:
-        "packages/app wires up Gauteng-specific domain data on top of packages/core only (see its package.json) -- it must not reach into packages/map, packages/react, packages/theme, or packages/web.",
-      from: { path: "^packages/app/src" },
-      to: { path: "^packages/(map|react|theme|web)/src" },
+      to: { path: "^packages/web/src" },
     },
   ],
   options: {
-    doNotFollow: {
-      path: "node_modules",
-    },
-    exclude: {
-      path: "\\.test\\.(ts|tsx)$",
-    },
+    doNotFollow: { path: "node_modules" },
+    exclude: { path: "\\.test\\.(ts|tsx)$" },
   },
 };

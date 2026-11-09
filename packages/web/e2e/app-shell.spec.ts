@@ -28,7 +28,6 @@ test.describe("app shell", () => {
 
     await expect(page.locator(".leaflet-container")).toBeVisible();
     await expect(page.locator(".leaflet-control-scale")).toBeVisible();
-    await expect(page.getByTestId(E2E.layerToggle.townships)).toBeHidden();
     await expect(page.getByTestId(E2E.mapView)).toBeVisible();
     expect(
       consoleErrors.filter((message) =>
@@ -84,24 +83,23 @@ test.describe("app shell", () => {
     await expect(main).toBeFocused();
   });
 
-  test("shows layer controls in the panel and keeps legend toggle available", async ({
+  test("shows basemaps without dataset controls, tabs or data requests", async ({
     page,
   }) => {
+    const dataRequests: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname.startsWith("/data/")) {
+        dataRequests.push(request.url());
+      }
+    });
     await page.goto("/");
 
     await ensurePanelOpen(page);
 
-    const townships = page.getByTestId(E2E.layerToggle.townships);
-    await expect(townships).not.toBeChecked();
-    await townships.check();
-
-    await page.getByTestId(E2E.panelToggle).click();
-    const legendChip = page.getByTestId(E2E.legendChip);
-    await expect(legendChip).toBeVisible();
-    await legendChip.click();
-    await expect(
-      page.getByRole("list", { name: /active map layers legend/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await expect(page.getByRole("tablist")).toHaveCount(0);
+    await expect(page.getByTestId(E2E.basemapOption.satellite)).toBeVisible();
+    expect(dataRequests).toEqual([]);
   });
 
   test("keeps application chrome domain-neutral before a layer is selected", async ({

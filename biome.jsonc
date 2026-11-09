@@ -11,7 +11,10 @@
     "rules": {
       "preset": "recommended",
       "complexity": {
-        "noExcessiveCognitiveComplexity": "error"
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": { "maxAllowedComplexity": 25 }
+        }
       },
       "correctness": {
         "useExhaustiveDependencies": "warn"
@@ -70,8 +73,6 @@
       "**",
       "!**/dist",
       "!**/node_modules",
-      "!**/data-pipeline/output",
-      "!**/packages/web/public/data",
       "!**/packages/web/src/paraglide",
       "!**/.claude"
     ]

@@ -677,19 +677,19 @@ describe("LocationSearchControl", () => {
         <LocationSearchControl
           onLocationSelect={vi.fn()}
           selectableFeatures={[
-            { id: "A", label: "Mamelodi", layerId: "townships" },
-            { id: "B", label: "Soshanguve", layerId: "townships" },
+            { id: "A", label: "Meadow", layerId: "districts" },
+            { id: "B", label: "Seaside", layerId: "districts" },
           ]}
           onFeatureSelect={vi.fn()}
         />,
       );
       fireEvent.change(screen.getByTestId("location-search-input"), {
-        target: { value: "Mame" },
+        target: { value: "Mead" },
       });
 
       const options = await screen.findAllByRole("option");
       expect(options).toHaveLength(1);
-      expect(options[0]).toHaveTextContent("Mamelodi");
+      expect(options[0]).toHaveTextContent("Meadow");
     });
 
     it("selects the feature via onFeatureSelect, not onLocationSelect, when a feature result is chosen", async () => {
@@ -701,46 +701,44 @@ describe("LocationSearchControl", () => {
         <LocationSearchControl
           onLocationSelect={onLocationSelect}
           selectableFeatures={[
-            { id: "A", label: "Mamelodi", layerId: "townships" },
+            { id: "A", label: "Meadow", layerId: "districts" },
           ]}
           onFeatureSelect={onFeatureSelect}
         />,
       );
       fireEvent.change(screen.getByTestId("location-search-input"), {
-        target: { value: "Mame" },
+        target: { value: "Mead" },
       });
 
-      const option = await screen.findByRole("option", { name: "Mamelodi" });
+      const option = await screen.findByRole("option", { name: "Meadow" });
       fireEvent.click(option);
 
       expect(onFeatureSelect).toHaveBeenCalledWith("A");
       expect(onLocationSelect).not.toHaveBeenCalled();
-      expect(screen.getByTestId("location-search-input")).toHaveValue(
-        "Mamelodi",
-      );
+      expect(screen.getByTestId("location-search-input")).toHaveValue("Meadow");
     });
 
     it("lists feature results ahead of place results, and moves through both with ArrowDown as one sequence", async () => {
       searchMocks.fetchLocationSearchResults.mockResolvedValue([
-        { id: "p1", label: "Mamelodi West", latitude: 0, longitude: 0 },
+        { id: "p1", label: "Meadow West", latitude: 0, longitude: 0 },
       ]);
 
       render(
         <LocationSearchControl
           onLocationSelect={vi.fn()}
           selectableFeatures={[
-            { id: "f1", label: "Mamelodi", layerId: "townships" },
+            { id: "f1", label: "Meadow", layerId: "districts" },
           ]}
           onFeatureSelect={vi.fn()}
         />,
       );
       const input = screen.getByTestId("location-search-input");
-      fireEvent.change(input, { target: { value: "Mamelodi" } });
-      await screen.findByRole("option", { name: "Mamelodi West" });
+      fireEvent.change(input, { target: { value: "Meadow" } });
+      await screen.findByRole("option", { name: "Meadow West" });
 
       const options = screen.getAllByRole("option");
-      expect(options[0]).toHaveTextContent("Mamelodi");
-      expect(options[1]).toHaveTextContent("Mamelodi West");
+      expect(options[0]).toHaveTextContent("Meadow");
+      expect(options[1]).toHaveTextContent("Meadow West");
 
       fireEvent.keyDown(input, { key: "ArrowDown" });
       expect(options[0]).toHaveAttribute("aria-selected", "true");
@@ -756,15 +754,15 @@ describe("LocationSearchControl", () => {
         <LocationSearchControl
           onLocationSelect={vi.fn()}
           selectableFeatures={[
-            { id: "A", label: "Mamelodi", layerId: "townships" },
+            { id: "A", label: "Meadow", layerId: "districts" },
           ]}
           onFeatureSelect={vi.fn()}
         />,
       );
       fireEvent.change(screen.getByTestId("location-search-input"), {
-        target: { value: "Mame" },
+        target: { value: "Mead" },
       });
-      await screen.findByRole("option", { name: "Mamelodi" });
+      await screen.findByRole("option", { name: "Meadow" });
 
       expect(
         screen.queryByText("Nothing matched that search."),

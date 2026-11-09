@@ -19,27 +19,12 @@ function groupSiblings(id: string): string[] {
   return group.layerIds.filter((sibling) => sibling !== id);
 }
 
-/**
- * Every valid `PanelView`, the single source of truth `PanelView` derives
- * from; so a caller needing the runtime value set (e.g. validating a
- * permalink's `?panel=` query param) doesn't hand-maintain a second copy of
- * this list that could drift from the type.
- */
-export const PANEL_VIEWS = ["layers", "story", "browser"] as const;
-
-/**
- * Which view the info panel shows: layer toggles, the domain's story copy,
- * or a browsable list of the domain's selectable features.
- */
-export type PanelView = (typeof PANEL_VIEWS)[number];
-
 /** The one map surface that may be open above the map at a time. */
 export const MAP_SURFACES = [
   "explore",
   "measure",
   "settings",
   "legend",
-  "feature",
 ] as const;
 
 /** A mutually exclusive map surface, or `null` when the map is unobstructed. */
@@ -88,16 +73,12 @@ interface MapUiState {
   basemap: Basemap;
   activeSurface: MapSurface;
   sheetDetent: SheetDetent;
-  panelView: PanelView;
-  selectedFeatureId: string | null;
   toggleLayer: (id: string) => void;
   setLayerOpacity: (id: string, opacity: number) => void;
   setBasemap: (basemap: Basemap) => void;
   setActiveSurface: (surface: MapSurface) => void;
   setSheetDetent: (detent: SheetDetent) => void;
   setPanelOpen: (open: boolean) => void;
-  setPanelView: (view: PanelView) => void;
-  setSelectedFeatureId: (id: string | null) => void;
   reset: () => void;
 }
 
@@ -113,8 +94,6 @@ export function getDefaultMapUiState() {
     basemap: "positron" as const,
     activeSurface: null,
     sheetDetent: "half" as const,
-    panelView: "layers" as const,
-    selectedFeatureId: null,
   };
 }
 
@@ -161,7 +140,5 @@ export const useMapUiStore = create<MapUiState>()((set) => ({
   setActiveSurface: (activeSurface) => set({ activeSurface }),
   setSheetDetent: (sheetDetent) => set({ sheetDetent }),
   setPanelOpen: (open) => set({ activeSurface: open ? "explore" : null }),
-  setPanelView: (panelView) => set({ panelView }),
-  setSelectedFeatureId: (selectedFeatureId) => set({ selectedFeatureId }),
   reset: () => set(getDefaultMapUiState()),
 }));

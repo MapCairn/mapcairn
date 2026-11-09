@@ -19,10 +19,7 @@ import * as styles from "./LocationSearchControl.css";
 /**
  * One selectable map feature's search-index entry: its id, accessible label,
  * and the id of the layer it came from.
- * @remarks `layerId` is unused by this component (it matches on `label`
- *   alone) but is carried through so another consumer; e.g. a feature
- *   browser grouping results by layer; doesn't need a second, parallel
- *   index over the same features just to know which layer each belongs to.
+ * @remarks `layerId` preserves the source layer for selection consumers.
  */
 export interface SelectableFeatureSearchEntry {
   id: string;
@@ -32,12 +29,6 @@ export interface SelectableFeatureSearchEntry {
 
 /**
  * Case-insensitive substring match of `query` against `feature.label`.
- * @remarks Shared by this component's own feature search and by
- *   `FeatureBrowser`'s filter box; both need the identical "does this
- *   query match this feature's label" check, just under different
- *   surrounding policy (this component also gates on a minimum query length
- *   and caps the result count; `FeatureBrowser` does neither), so only the
- *   match predicate itself is factored out here.
  */
 export function matchesFeatureLabel(
   feature: Pick<SelectableFeatureSearchEntry, "label">,
@@ -67,7 +58,7 @@ interface LocationSearchControlProps {
   onQueryChange?: (query: string) => void;
   /**
    * Selectable map features to search by name alongside place results (e.g.
-   * townships already loaded on the map), matched locally and instantly
+   * districts already loaded on the map), matched locally and instantly
    * with no network round trip. Omit (or pass an empty array) to search
    * places only.
    */

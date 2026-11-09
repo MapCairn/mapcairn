@@ -83,19 +83,15 @@ test.describe("responsive panel", () => {
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  test("opens the active-layer legend from its map chip", async ({ page }) => {
+  test("does not show an active-layer legend without configured layers", async ({
+    page,
+  }) => {
     await page.goto("/");
 
     await page.getByTestId(E2E.panelToggle).click();
-    await page.getByTestId(E2E.layerToggle.townships).check();
     await page.getByTestId(E2E.panelToggle).click();
 
-    const legendChip = page.getByTestId(E2E.legendChip);
-    await expect(legendChip).toBeVisible();
-    await legendChip.click();
-    await expect(
-      page.getByRole("list", { name: /active map layers legend/i }),
-    ).toBeVisible();
+    await expect(page.getByTestId(E2E.legendChip)).toHaveCount(0);
   });
 
   test("lets mobile users expand and reduce the Explore sheet height", async ({

@@ -8,11 +8,6 @@ coverage
 .wrangler
 *.log
 .tmp-*
-data-pipeline/downloads/
-data-pipeline/osm-data/
-data-pipeline/osrm-data/
-data-pipeline/.cache/
-packages/web/public/data/*.__staging__*/
 *.tsbuildinfo
 lighthouse-report*.json
 test-results/

@@ -1,40 +1,34 @@
 # `@karta/core`
 
-The layer model and geodata utilities for Karta. It has no dependency on `@karta/app`, `@karta/map`, `@karta/react`, `@karta/web` or React. It was the first package split out of the app on the way to a reusable SDK.
+Domain-agnostic layer contracts, classification, a registry and GeoJSON utilities. This package has no dependency on the web host, map components, React hooks or theme contract.
 
-## What belongs here
+## Exports
 
-| Export | Where | Purpose |
-|---|---|---|
-| Layer and domain types | `types/layer.ts` | `Layer`, `LayerGroup`, `DomainConfig`, `DomainStory` and the style config types (`ChoroplethLayerStyle`, `LineLayerStyle`, `PointLayerStyle`, `ColorBucket`, `LayerInteraction`, `LayerGroupSelectionMode`). |
-| `resolveClassification(classification, properties)` | `layers/classification.ts` | Resolves a feature's properties through a `Classification<T>` to a style value. |
-| `createLayerConfig(layer, options?)` | `layers/createLayerConfig.ts` | Turns a `Layer` into Leaflet `pathOptions` or a `styleFn`. |
-| `resolveThemedColor(color, darkColor, dark)` | `layers/createLayerConfig.ts` | Picks `darkColor` in dark mode, so legend swatches match the fills they label. |
-| `createRegistry(domain)` | `layers/createRegistry.ts` | Read-only `getLayers`, `getLayer`, `getLayerGroups` and `getStory` over a `DomainConfig`. |
-| Geodata utilities | `data/` | `fetchFeatureCollection` (with a 50-entry LRU cache), `mergeFeatureCollections`, `featureCollectionToCsv` and the Zod schemas in `geoJsonSchemas.ts`. |
-| Spatial primitives | `spatial/` | Turf and proj4 helpers: nearest-feature distance, point in polygon, bounding boxes, line and area measurement, and reprojection to WGS84. |
-| `partitionSettled(results)` | `async/partitionSettled.ts` | Splits `Promise.allSettled` results into values and errors, so a caller can render whichever sources loaded. |
+| API | Purpose |
+|---|---|
+| `Layer`, `LayerGroup`, `DomainConfig` | Describe layers, their styles, interactions and grouping without selecting a dataset. |
+| `resolveClassification` | Resolve feature properties to style values. |
+| `createLayerConfig`, `resolveThemedColor` | Produce Leaflet style configuration and theme-aware colours. |
+| `createRegistry` | Expose read-only layer and group accessors over a supplied configuration. |
+| `fetchFeatureCollection`, `mergeFeatureCollections` | Fetch, validate, cache and merge GeoJSON collections. |
+| GeoJSON schemas | Validate geometry and collection structure. |
+| `partitionSettled` | Split settled promises into successful values and errors. |
+| Measurement helpers in `spatial/measurement.ts` | Measure line length and polygon area, format results and create measurement geometry. |
 
-A few details worth knowing:
+The `spatial` directory name describes generic geographic measurement. These helpers remain because the map's distance and area tool uses them; they carry no dataset assumptions.
 
-- `LineLayerStyle` and `PointLayerStyle` accept an optional `Classification<T>` on `colorClassification`, `weightClassification` and `radiusClassification`, so any geometry kind can be styled from its data. The flat `color`, `weight` and `radius` fields are still required as the fallback.
-- `LineLayerStyle` also takes an optional `dashArray` and `casing`, so line layers can be told apart by pattern as well as colour.
-- `story` is optional on `DomainConfig`.
-- `featureCollectionToCsv` writes one row per feature and one column per property, plus `centroid_lon` and `centroid_lat` columns.
-
-## What doesn't belong here
-
-- React or Leaflet rendering code (see `@karta/map`).
-- Anything specific to the reference domain, such as job centres, township names, transit operators or a particular map's colours (see `@karta/app`).
-- Browser-only hooks like dark-mode and theme detection (see `@karta/react`).
+Line and point styles support optional property-based classifications, with flat style values as fallbacks. Line styles also support dash patterns and casing.
 
 ## Usage
 
-```ts
-import { createRegistry, createLayerConfig } from "@karta/core";
-import { SPATIAL_APARTHEID_LEGACY_DOMAIN } from "@karta/app";
+The current host uses an empty configuration. Consumers can supply their own layers through the same contract.
 
-const registry = createRegistry(SPATIAL_APARTHEID_LEGACY_DOMAIN);
-const layer = registry.getLayer("townships");
-const { styleFn } = createLayerConfig(layer);
+```ts
+import { createRegistry, type DomainConfig } from "@karta/core";
+
+const domain: DomainConfig = { layers: [], layerGroups: [] };
+const registry = createRegistry(domain);
+const layers = registry.getLayers();
 ```
+
+Rendering belongs in `@karta/map`; browser hooks belong in `@karta/react`. Consumer-specific data and presentation do not belong in this package.

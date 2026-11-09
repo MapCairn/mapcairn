@@ -1,7 +1,7 @@
 /**
 * | output |
 * | --- |
-* | "Distance along {locations}: {result}." |
+* | "Distance along {locations}: {result}" |
 *
 */
 export const webmcp_measure_distance_result: ((inputs: Webmcp_Measure_Distance_ResultInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Webmcp_Measure_Distance_ResultInputs, { locale?: "en" | "af" }, {}>;

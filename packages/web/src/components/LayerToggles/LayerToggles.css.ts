@@ -1,20 +1,14 @@
 import { vars } from "@karta/theme";
-import { globalStyle, keyframes, style } from "@vanilla-extract/css";
-import { eyebrowLabel } from "../../shared.css";
+import { globalStyle, style } from "@vanilla-extract/css";
 import { appVars } from "../../theme/app.css";
 
-export const groups = style({
-  display: "grid",
-  gap: "0.75rem",
-});
-
+/** Search fields retain a visible keyboard focus ring in either theme. */
 export const searchLabel = style({
   display: "grid",
   gap: "0.375rem",
   color: vars.color.onSurfaceVariant,
   fontSize: appVars.fontSize.md,
 });
-
 globalStyle(`.${searchLabel} input`, {
   minHeight: "44px",
   padding: "0.5rem 0.75rem",
@@ -24,400 +18,69 @@ globalStyle(`.${searchLabel} input`, {
   color: vars.color.onSurface,
   font: "inherit",
 });
-
 globalStyle(`.${searchLabel} input:focus-visible`, {
   outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
   outlineOffset: 2,
 });
 
+/** Group boundaries are semantic rather than decorative. */
 export const group = style({
   display: "grid",
   gap: "0.25rem",
-});
-
-export const groupTitle = style([
-  eyebrowLabel,
-  {
-    padding: "0 0.625rem",
-  },
-]);
-
-globalStyle(`.${groupTitle} button`, {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  width: "100%",
-  minHeight: "44px",
-  padding: "0 0.625rem",
+  margin: 0,
+  padding: "0.75rem 0",
   border: 0,
-  borderRadius: vars.shape.cornerSmall,
-  background: "transparent",
-  color: "inherit",
-  font: "inherit",
-  textAlign: "left",
-  cursor: "pointer",
 });
 
-globalStyle(`.${groupTitle} button:focus-visible`, {
-  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
-  outlineOffset: 2,
-});
+/** Removes browser list spacing from the control stack. */
+export const list = style({ listStyle: "none", margin: 0, padding: 0 });
 
-globalStyle(`.${groupTitle} svg`, { width: "1rem", height: "1rem" });
-
-export const groupHint = style({
-  margin: 0,
-  padding: "0 0.625rem",
-  color: vars.color.onSurfaceVariant,
-  fontSize: appVars.fontSize.sm,
-  lineHeight: 1.35,
-});
-
-export const divider = style({
-  height: "1px",
-  margin: "0.125rem 0.625rem",
-  background: `color-mix(in srgb, ${vars.color.outlineVariant} 45%, transparent)`,
-});
-
-export const list = style({
-  listStyle: "none",
-  margin: 0,
-  padding: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.125rem",
-});
-
-const layerRowIn = keyframes({
-  from: { opacity: 0, transform: "translateY(4px)" },
-  to: { opacity: 1, transform: "translateY(0)" },
-});
-
+/** Keeps each control large enough for touch interaction. */
 export const row = style({
-  display: "flex",
-  flexWrap: "wrap",
-  alignItems: "center",
-  gap: "0.25rem 0.625rem",
+  display: "grid",
+  gap: "0.375rem",
   padding: "0.5rem 0.625rem",
   minHeight: "48px",
   borderRadius: vars.shape.cornerSmall,
   fontSize: appVars.fontSize.base,
-  transition: `background-color ${vars.motion.durationShort} ${vars.motion.easeStandard}`,
-  /**
-   * Runs once as each row mounts (each group's own list, on first render)
-   * -- a checkbox toggle re-renders the same DOM node rather than
-   * remounting it, so this doesn't replay on every click, only on genuine
-   * entrance.
-   */
-  animationName: layerRowIn,
-  animationDuration: vars.motion.durationMedium,
-  animationTimingFunction: vars.motion.easeDecelerate,
-  animationFillMode: "backwards",
-  selectors: {
-    "&:hover": {
-      background: vars.state.hover,
-    },
-    '&[data-unavailable="true"]': {
-      color: vars.color.onSurfaceVariant,
-    },
-    '&[data-unavailable="true"]:hover': {
-      background: "transparent",
-    },
-  },
 });
 
-export const rowMain = style({
+/** The visible label and checkbox share a single hit target. */
+export const rowLabel = style({
   display: "flex",
   alignItems: "center",
-  gap: "0.75rem",
-  width: "100%",
-  minHeight: "44px",
-});
-
-/**
- * 40ms per row, capped after four; the same stagger rhythm as
- * @karta/map's Legend (Legend.css.ts's `entry` rules), so cascading lists
- * read as one motion language across the app rather than two independently
- * hand-tuned timings. Ancestor-qualified (`.list .row`, not just `.row`)
- * matching the original; `row` only ever renders inside `list` today, but
- * the qualifier is preserved rather than dropped as part of this migration.
- */
-globalStyle(`.${list} .${row}:nth-child(2)`, { animationDelay: "40ms" });
-globalStyle(`.${list} .${row}:nth-child(3)`, { animationDelay: "80ms" });
-globalStyle(`.${list} .${row}:nth-child(4)`, { animationDelay: "120ms" });
-globalStyle(`.${list} .${row}:nth-child(n + 5)`, { animationDelay: "160ms" });
-
-/**
- * `display: contents` drops this label's own box so its children keep
- * participating directly in `.row`'s flex layout, exactly as when the
- * label wrapped the whole row; while still scoping the label's native
- * click-to-toggle behaviour to just these children, not the download link
- * rendered as `.row`'s other child.
- */
-export const rowLabel = style({
-  display: "contents",
+  gap: "0.625rem",
   cursor: "pointer",
 });
 
-globalStyle(`.${row}[data-unavailable="true"] .${rowLabel}`, {
-  cursor: "not-allowed",
-});
-
+/** Uses the shared accent rather than a browser-specific checkbox colour. */
 export const checkbox = style({
-  appearance: "none",
-  position: "relative",
-  flexShrink: 0,
-  width: "2.25rem",
+  width: "1.25rem",
   height: "1.25rem",
-  margin: 0,
-  borderRadius: vars.shape.cornerFull,
-  background: `color-mix(in srgb, ${vars.color.outlineVariant} 42%, transparent)`,
-  cursor: "pointer",
-  transition: `background-color ${vars.motion.durationShort} ${vars.motion.easeStandard}`,
-  selectors: {
-    "&::before": {
-      content: "",
-      position: "absolute",
-      top: "2px",
-      left: "2px",
-      width: "1rem",
-      height: "1rem",
-      borderRadius: vars.shape.cornerFull,
-      background: vars.color.onSurface,
-      transition: `transform ${vars.motion.durationShort} ${vars.motion.easeDecelerate}`,
-    },
-    "&:checked": {
-      background: vars.color.primary,
-    },
-    "&:checked::before": {
-      transform: "translateX(1rem)",
-      background: vars.color.onPrimary,
-    },
-    "&:disabled": {
-      cursor: "not-allowed",
-      opacity: 0.4,
-    },
-  },
-});
-
-export const label = style({
-  flex: "1 1 auto",
-  minWidth: 0,
-});
-
-export const description = style({
-  flexBasis: "100%",
-  margin: "0.25rem 0 0 2.875rem",
-  color: vars.color.onSurfaceVariant,
-  fontSize: appVars.fontSize.sm,
-  lineHeight: 1.35,
-});
-
-export const opacityControl = style({
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(6rem, 9rem)",
-  alignItems: "center",
-  gap: "0.75rem",
-  width: "100%",
-  margin: "0.5rem 0 0 2.875rem",
-  color: vars.color.onSurfaceVariant,
-  fontSize: appVars.fontSize.sm,
-});
-
-globalStyle(`.${opacityControl} input`, {
-  width: "100%",
   accentColor: vars.color.primary,
 });
 
-globalStyle(`.${opacityControl} input:focus-visible`, {
-  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
-  outlineOffset: 3,
-});
-
-export const metadata = style({
-  width: "100%",
-  margin: "0.375rem 0 0 2.875rem",
-  color: vars.color.onSurfaceVariant,
-  fontSize: appVars.fontSize.sm,
-});
-
-globalStyle(`.${metadata} summary`, {
-  minHeight: "44px",
-  display: "flex",
-  alignItems: "center",
-  width: "fit-content",
-  cursor: "pointer",
-});
-globalStyle(`.${metadata} summary:focus-visible`, {
-  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
-  outlineOffset: 2,
-});
-globalStyle(`.${metadata} dl`, {
-  display: "grid",
-  gap: "0.375rem",
-  margin: "0.25rem 0 0",
-});
-globalStyle(`.${metadata} dl > div`, {
-  display: "grid",
-  gridTemplateColumns: "minmax(5rem, 0.7fr) minmax(0, 1.3fr)",
-  gap: "0.5rem",
-});
-globalStyle(`.${metadata} dt`, { color: vars.color.onSurfaceVariant });
-globalStyle(`.${metadata} dd`, {
-  margin: 0,
+/** Layer labels wrap rather than clip on narrow screens. */
+export const label = style({
   color: vars.color.onSurface,
   overflowWrap: "anywhere",
 });
 
+/** Secondary copy remains separate from the control's accessible name. */
+export const description = style({
+  margin: 0,
+  color: vars.color.onSurfaceVariant,
+  fontSize: appVars.fontSize.sm,
+});
+
+/** Marks configured layers which are not available yet. */
 export const badge = style({
-  flexShrink: 0,
-  marginLeft: "2.875rem",
   fontSize: appVars.fontSize.sm,
-  fontWeight: 600,
-  whiteSpace: "nowrap",
   color: vars.color.onSurfaceVariant,
-  border: `1px solid ${vars.color.outlineVariant}`,
-  borderRadius: vars.shape.cornerSmall,
-  padding: "0.125rem 0.375rem",
 });
 
+/** Load failures use the theme's error colour. */
 export const badgeError = style({
-  flexBasis: "100%",
-  marginLeft: "2.875rem",
   fontSize: appVars.fontSize.sm,
-  lineHeight: 1.35,
   color: vars.color.error,
-});
-
-/**
- * Groups every dataSource's download link + CSV button pair and pushes the
- * whole group to the row's right edge with a single `marginLeft: "auto"`;
- * applying that to each `.download` icon individually (the previous
- * approach) split the row's free space between every auto margin instead,
- * scattering the icons across the row rather than clustering them.
- */
-export const downloads = style({
-  display: "flex",
-  flexShrink: 0,
-  alignItems: "center",
-  gap: "0.25rem",
-  marginLeft: "auto",
-});
-
-export const downloadToggle = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "0.375rem",
-  minWidth: "44px",
-  minHeight: "44px",
-  padding: "0.5rem 0.625rem",
-  border: 0,
-  borderRadius: vars.shape.cornerSmall,
-  background: vars.color.surfaceContainer,
-  color: vars.color.onSurface,
-  font: "inherit",
-  fontSize: appVars.fontSize.sm,
-  cursor: "pointer",
-  selectors: {
-    "&:hover": { background: vars.state.hover },
-    "&:focus-visible": {
-      outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
-      outlineOffset: 2,
-    },
-  },
-});
-
-globalStyle(`.${downloadToggle} svg`, { width: "1rem", height: "1rem" });
-
-export const downloadMenu = style({
-  display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "0.25rem",
-  width: "100%",
-  minWidth: 0,
-  margin: "0.25rem 0 0 2.875rem",
-  padding: "0.375rem",
-  border: 0,
-  borderRadius: vars.shape.cornerMedium,
-  background: vars.color.surfaceContainer,
-  boxShadow: vars.elevation.shadow1,
-});
-
-globalStyle(`.${downloadMenu} legend`, {
-  gridColumn: "1 / -1",
-  padding: "0.25rem 0.375rem",
-  color: vars.color.onSurfaceVariant,
-  fontSize: appVars.fontSize.sm,
-});
-
-globalStyle(`.${downloadMenu} a, .${downloadMenu} button`, {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "0.375rem",
-  minHeight: "44px",
-  padding: "0.5rem",
-  border: 0,
-  borderRadius: vars.shape.cornerSmall,
-  background: "transparent",
-  color: vars.color.onSurface,
-  font: "inherit",
-  fontSize: appVars.fontSize.sm,
-  textDecoration: "none",
-  cursor: "pointer",
-});
-globalStyle(`.${downloadMenu} a:hover, .${downloadMenu} button:hover`, {
-  background: vars.state.hover,
-});
-globalStyle(
-  `.${downloadMenu} a:focus-visible, .${downloadMenu} button:focus-visible`,
-  {
-    outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
-    outlineOffset: 1,
-  },
-);
-
-/**
- * `download` is shared by an `<a>` (the GeoJSON link) and a `<button>`
- * (the CSV export trigger) so they read as one visual family; the reset
- * properties below (`border`/`background`/`padding`/`font`/`cursor`) only
- * affect the `<button>` in practice, since a plain `<a>` has no default
- * browser chrome to begin with, but without them the button showed its
- * native outline and background instead of matching the link.
- */
-export const download = style({
-  display: "flex",
-  flexShrink: 0,
-  alignItems: "center",
-  justifyContent: "center",
-  width: appVars.controlHeight,
-  height: appVars.controlHeight,
-  border: 0,
-  borderRadius: vars.shape.cornerFull,
-  background: "transparent",
-  padding: 0,
-  color: vars.color.onSurfaceVariant,
-  font: "inherit",
-  cursor: "pointer",
-  transition: `background-color ${vars.motion.durationShort} ${vars.motion.easeStandard}`,
-  selectors: {
-    "&:hover": {
-      background: vars.state.hover,
-    },
-    "&:disabled": {
-      cursor: "not-allowed",
-      opacity: 0.5,
-    },
-  },
-});
-
-globalStyle(`.${checkbox}:focus-visible, .${download}:focus-visible`, {
-  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
-  outlineOffset: 2,
-});
-
-export const downloadIcon = style({
-  width: "1.125rem",
-  height: "1.125rem",
 });

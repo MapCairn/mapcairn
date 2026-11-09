@@ -9,7 +9,7 @@ describe("resolveClassification", () => {
   describe("graduated", () => {
     const classification: GraduatedClassification<string> = {
       kind: "graduated",
-      propertyKey: "commuteMinutes",
+      propertyKey: "value",
       stops: [
         { max: 20, value: "#7A9B6E", label: "Short" },
         { max: 40, value: "#C9A227", label: "Moderate" },
@@ -19,15 +19,15 @@ describe("resolveClassification", () => {
     };
 
     it("resolves the stop whose max first covers the value", () => {
-      expect(
-        resolveClassification(classification, { commuteMinutes: 15 }),
-      ).toBe("#7A9B6E");
-      expect(
-        resolveClassification(classification, { commuteMinutes: 40 }),
-      ).toBe("#C9A227");
-      expect(
-        resolveClassification(classification, { commuteMinutes: 1000 }),
-      ).toBe("#C1502E");
+      expect(resolveClassification(classification, { value: 15 })).toBe(
+        "#7A9B6E",
+      );
+      expect(resolveClassification(classification, { value: 40 })).toBe(
+        "#C9A227",
+      );
+      expect(resolveClassification(classification, { value: 1000 })).toBe(
+        "#C1502E",
+      );
     });
 
     it("resolves correctly even when stops are declared out of ascending order", () => {
@@ -35,9 +35,7 @@ describe("resolveClassification", () => {
         ...classification,
         stops: [...classification.stops].reverse(),
       };
-      expect(resolveClassification(unordered, { commuteMinutes: 15 })).toBe(
-        "#7A9B6E",
-      );
+      expect(resolveClassification(unordered, { value: 15 })).toBe("#7A9B6E");
     });
 
     it("returns the fallback when the property is missing", () => {
@@ -47,26 +45,26 @@ describe("resolveClassification", () => {
     });
 
     it("returns the fallback when the property is not a number", () => {
-      expect(
-        resolveClassification(classification, { commuteMinutes: "fast" }),
-      ).toBe("#8A93A5");
+      expect(resolveClassification(classification, { value: "fast" })).toBe(
+        "#8A93A5",
+      );
     });
 
     it("returns the fallback when the classified value is NaN, rather than the highest-severity stop", () => {
-      expect(
-        resolveClassification(classification, { commuteMinutes: Number.NaN }),
-      ).toBe("#8A93A5");
+      expect(resolveClassification(classification, { value: Number.NaN })).toBe(
+        "#8A93A5",
+      );
     });
 
     it("returns the fallback when the classified value is Infinity", () => {
       expect(
         resolveClassification(classification, {
-          commuteMinutes: Number.POSITIVE_INFINITY,
+          value: Number.POSITIVE_INFINITY,
         }),
       ).toBe("#8A93A5");
       expect(
         resolveClassification(classification, {
-          commuteMinutes: Number.NEGATIVE_INFINITY,
+          value: Number.NEGATIVE_INFINITY,
         }),
       ).toBe("#8A93A5");
     });
@@ -74,7 +72,7 @@ describe("resolveClassification", () => {
     it("clamps to the last stop's value when the value exceeds every stop's max", () => {
       const noOverflowStop: GraduatedClassification<string> = {
         kind: "graduated",
-        propertyKey: "commuteMinutes",
+        propertyKey: "value",
         stops: [
           { max: 20, value: "#7A9B6E", label: "Short" },
           { max: 40, value: "#C9A227", label: "Moderate" },
@@ -82,22 +80,20 @@ describe("resolveClassification", () => {
         fallback: "#8A93A5",
       };
 
-      expect(
-        resolveClassification(noOverflowStop, { commuteMinutes: 1000 }),
-      ).toBe("#C9A227");
+      expect(resolveClassification(noOverflowStop, { value: 1000 })).toBe(
+        "#C9A227",
+      );
     });
 
     it("returns the fallback when the classification has no stops at all", () => {
       const noStops: GraduatedClassification<string> = {
         kind: "graduated",
-        propertyKey: "commuteMinutes",
+        propertyKey: "value",
         stops: [],
         fallback: "#8A93A5",
       };
 
-      expect(resolveClassification(noStops, { commuteMinutes: 15 })).toBe(
-        "#8A93A5",
-      );
+      expect(resolveClassification(noStops, { value: 15 })).toBe("#8A93A5");
     });
   });
 
@@ -106,16 +102,16 @@ describe("resolveClassification", () => {
       kind: "categorized",
       propertyKey: "operator",
       stops: [
-        { match: "gautrain", value: 4, label: "Gautrain" },
+        { match: "trail", value: 4, label: "Trail" },
         { match: "prasa", value: 2, label: "PRASA" },
       ],
       fallback: 1,
     };
 
     it("resolves the stop matching the property value exactly", () => {
-      expect(
-        resolveClassification(classification, { operator: "gautrain" }),
-      ).toBe(4);
+      expect(resolveClassification(classification, { operator: "trail" })).toBe(
+        4,
+      );
       expect(resolveClassification(classification, { operator: "prasa" })).toBe(
         2,
       );
@@ -138,15 +134,15 @@ describe("resolveClassification", () => {
         kind: "categorized",
         propertyKey: "operator",
         stops: [
-          { match: "gautrain", value: 4, label: "Gautrain" },
-          { match: "gautrain", value: 99, label: "Gautrain (duplicate)" },
+          { match: "trail", value: 4, label: "Trail" },
+          { match: "trail", value: 99, label: "Trail (duplicate)" },
         ],
         fallback: 1,
       };
 
-      expect(
-        resolveClassification(duplicateMatch, { operator: "gautrain" }),
-      ).toBe(4);
+      expect(resolveClassification(duplicateMatch, { operator: "trail" })).toBe(
+        4,
+      );
     });
   });
 });

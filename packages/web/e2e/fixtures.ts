@@ -51,8 +51,6 @@ export const GEOCODER_REVERSE_PATTERN =
  * served in place of real Nominatim requests for the same reason the tile
  * stub above exists: OpenStreetMap's geocoder is a third party with a
  * one-request-per-second rate limit.
- * @remarks Inside `SEARCH_COVERAGE_BOUNDS` (see `App.tsx`), so picking it
- *   moves the map rather than reporting an out-of-coverage result.
  */
 export const GEOCODER_RESULT = {
   place_id: 26262288,

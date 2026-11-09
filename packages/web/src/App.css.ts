@@ -156,55 +156,6 @@ export const mapLoading = style({
   },
 });
 
-const dataErrorIn = keyframes({
-  from: { opacity: 0, transform: "translate(-50%, -50%) scale(0.96)" },
-  to: { opacity: 1, transform: "translate(-50%, -50%) scale(1)" },
-});
-
-export const dataError = style({
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  zIndex: 1300,
-  display: "grid",
-  gap: "0.75rem",
-  width: "min(22rem, calc(100% - 2rem))",
-  padding: "1rem",
-  border: `1px solid ${vars.color.error}`,
-  borderRadius: vars.shape.cornerMedium,
-  background: vars.color.surfaceContainerLow,
-  color: vars.color.onSurface,
-  boxShadow: vars.elevation.shadow3,
-  transform: "translate(-50%, -50%)",
-  animationName: dataErrorIn,
-  animationDuration: vars.motion.durationMedium,
-  animationTimingFunction: vars.motion.easeDecelerate,
-});
-
-globalStyle(`.${dataError} p`, {
-  margin: 0,
-});
-
-globalStyle(`.${dataError} button`, {
-  minHeight: "48px",
-  border: `1px solid ${vars.color.outlineVariant}`,
-  borderRadius: vars.shape.cornerSmall,
-  background: "transparent",
-  color: vars.color.onSurface,
-  font: "inherit",
-  cursor: "pointer",
-  transition: `background-color ${vars.motion.durationShort} ${vars.motion.easeStandard}`,
-});
-
-globalStyle(`.${dataError} button:hover`, {
-  background: vars.state.hover,
-});
-
-globalStyle(`.${dataError} button:focus-visible`, {
-  outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
-  outlineOffset: 2,
-});
-
 export const skipLink = style({
   position: "absolute",
   top: "0.5rem",
@@ -521,45 +472,6 @@ globalStyle(
   },
 );
 
-export const panelTabs = style({
-  display: "grid",
-  gridAutoFlow: "column",
-  gridAutoColumns: "minmax(0, 1fr)",
-  flexShrink: 0,
-  borderBottom: `1px solid ${vars.color.outline}`,
-});
-
-export const panelTab = style({
-  minHeight: "44px",
-  padding: "0.625rem 0.75rem",
-  border: 0,
-  borderBottom: "3px solid transparent",
-  borderRadius: `${vars.shape.cornerSmall} ${vars.shape.cornerSmall} 0 0`,
-  background: "transparent",
-  color: vars.color.onSurfaceVariant,
-  fontFamily: appVars.font.body,
-  fontSize: appVars.fontSize.base,
-  fontWeight: 600,
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  selectors: {
-    "&:hover": {
-      background: vars.state.hover,
-    },
-    '&[aria-selected="true"]': {
-      borderBottomColor: vars.color.primary,
-      background: vars.state.selected,
-      color: vars.color.onSurface,
-    },
-    "&:focus-visible": {
-      outline: `${appVars.focusRingWidth} solid ${vars.color.onSurface}`,
-      outlineOffset: -2,
-    },
-  },
-});
-
 export const section = style({
   display: "flex",
   flexDirection: "column",
@@ -573,31 +485,6 @@ export const sectionTitle = style({
   fontSize: appVars.fontSize.lg,
   fontWeight: 600,
   lineHeight: 1.25,
-});
-
-export const featureAttributes = style({
-  display: "grid",
-  gap: "0.5rem",
-  margin: 0,
-});
-
-globalStyle(`.${featureAttributes} > div`, {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr)",
-  gap: "0.75rem",
-  padding: "0.625rem 0",
-  borderBottom: `1px solid ${vars.color.outlineVariant}`,
-});
-globalStyle(`.${featureAttributes} dt`, {
-  color: vars.color.onSurfaceVariant,
-  fontSize: appVars.fontSize.md,
-});
-globalStyle(`.${featureAttributes} dd`, {
-  margin: 0,
-  color: vars.color.onSurface,
-  fontSize: appVars.fontSize.md,
-  fontVariantNumeric: "tabular-nums",
-  overflowWrap: "anywhere",
 });
 
 export const panelTrigger = style({
@@ -841,11 +728,4 @@ export const legendRamp = style({
   height: "0.625rem",
   borderRadius: vars.shape.cornerFull,
   background: fallbackVar(legendRampBackground, vars.color.primary),
-});
-
-export const outOfCoverage = style({
-  display: "block",
-  margin: "0.5rem 0 0",
-  color: vars.color.onSurfaceVariant,
-  fontSize: appVars.fontSize.md,
 });

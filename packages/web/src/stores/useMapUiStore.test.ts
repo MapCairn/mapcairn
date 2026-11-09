@@ -1,107 +1,66 @@
-import { act } from "@testing-library/react";
-import { useMapUiStore } from "./useMapUiStore";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-describe("useMapUiStore", () => {
-  beforeEach(() => {
-    act(() => {
-      useMapUiStore.getState().reset();
-    });
-  });
+vi.mock("../layers/registry", () => ({
+  getLayerGroupStructure: () => [
+    { id: "exclusive", layerIds: ["one", "two"], selectionMode: "exclusive" },
+    { id: "independent", layerIds: ["other"], selectionMode: "independent" },
+  ],
+}));
 
-  it("initializes with default state", () => {
-    const state = useMapUiStore.getState();
-    expect(state).toMatchObject({
+import { resolveSheetDetent, useMapUiStore } from "./useMapUiStore";
+
+describe("map UI store", () => {
+  beforeEach(() => useMapUiStore.getState().reset());
+
+  it("starts without overlays or dataset selection state", () => {
+    expect(useMapUiStore.getState()).toMatchObject({
       visibleLayerIds: [],
       basemap: "positron",
       activeSurface: null,
       sheetDetent: "half",
-      panelView: "layers",
-      selectedFeatureId: null,
     });
+    expect(useMapUiStore.getState()).not.toHaveProperty("panelView");
+    expect(useMapUiStore.getState()).not.toHaveProperty("selectedFeatureId");
   });
 
-  it("sets the panel view", () => {
-    act(() => {
-      useMapUiStore.getState().setPanelView("story");
-    });
-    expect(useMapUiStore.getState().panelView).toBe("story");
-
-    act(() => {
-      useMapUiStore.getState().setPanelView("layers");
-    });
-    expect(useMapUiStore.getState().panelView).toBe("layers");
+  it("retains config-driven exclusive and independent groups", () => {
+    const state = useMapUiStore.getState();
+    state.toggleLayer("one");
+    state.toggleLayer("other");
+    state.toggleLayer("two");
+    expect(useMapUiStore.getState().visibleLayerIds).toEqual(["other", "two"]);
+    state.toggleLayer("two");
+    expect(useMapUiStore.getState().visibleLayerIds).toEqual(["other"]);
   });
 
-  it("keeps map surfaces mutually exclusive", () => {
-    act(() => {
-      useMapUiStore.getState().setActiveSurface("settings");
-      useMapUiStore.getState().setActiveSurface("legend");
+  it("stores clamped layer opacity and map controls", () => {
+    const state = useMapUiStore.getState();
+    state.setLayerOpacity("one", -1);
+    state.setLayerOpacity("two", 2);
+    state.setBasemap("satellite");
+    state.setSheetDetent("full");
+    state.setPanelOpen(true);
+    expect(useMapUiStore.getState()).toMatchObject({
+      opacityByLayer: { one: 0, two: 1 },
+      basemap: "satellite",
+      sheetDetent: "full",
+      activeSurface: "explore",
     });
-    expect(useMapUiStore.getState().activeSurface).toBe("legend");
+    state.setActiveSurface("measure");
+    expect(useMapUiStore.getState().activeSurface).toBe("measure");
+    state.setPanelOpen(false);
+    expect(useMapUiStore.getState().activeSurface).toBeNull();
   });
 
   it.each([
     ["peek", -80, "half"],
     ["half", -80, "full"],
+    ["full", -80, "full"],
     ["full", 80, "half"],
     ["half", 80, "peek"],
     ["peek", 80, null],
     ["half", 0, "half"],
-  ] as const)(
-    "snaps from %s after a projected %s px drag to %s",
-    async (current, delta, expected) => {
-      const { resolveSheetDetent } = await import("./useMapUiStore");
-      expect(resolveSheetDetent(current, delta)).toBe(expected);
-    },
-  );
-
-  it("toggles layer visibility", () => {
-    act(() => {
-      useMapUiStore.getState().toggleLayer("rapid-rail");
-    });
-    expect(useMapUiStore.getState().visibleLayerIds).toContain("rapid-rail");
-
-    act(() => {
-      useMapUiStore.getState().toggleLayer("rapid-rail");
-    });
-    expect(useMapUiStore.getState().visibleLayerIds).not.toContain(
-      "rapid-rail",
-    );
-  });
-
-  it("stores layer opacity as a clamped value", () => {
-    act(() => {
-      useMapUiStore.getState().setLayerOpacity("townships", 0.4);
-      useMapUiStore.getState().setLayerOpacity("rapid-rail", 2);
-    });
-    expect(useMapUiStore.getState().opacityByLayer).toEqual({
-      townships: 0.4,
-      "rapid-rail": 1,
-    });
-  });
-
-  it("keeps modelled car time and nearest-transit mutually exclusive", () => {
-    act(() => {
-      useMapUiStore.getState().toggleLayer("nearest-transit");
-    });
-    expect(useMapUiStore.getState().visibleLayerIds).toContain(
-      "nearest-transit",
-    );
-    expect(useMapUiStore.getState().visibleLayerIds).not.toContain("townships");
-
-    act(() => {
-      useMapUiStore.getState().toggleLayer("townships");
-    });
-    expect(useMapUiStore.getState().visibleLayerIds).toContain("townships");
-    expect(useMapUiStore.getState().visibleLayerIds).not.toContain(
-      "nearest-transit",
-    );
-  });
-
-  it("sets the basemap", () => {
-    act(() => {
-      useMapUiStore.getState().setBasemap("satellite");
-    });
-    expect(useMapUiStore.getState().basemap).toBe("satellite");
+  ] as const)("snaps %s after %s pixels to %s", (current, delta, expected) => {
+    expect(resolveSheetDetent(current, delta)).toBe(expected);
   });
 });

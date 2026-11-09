@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const webmcp_list_layers_empty = /** @type {((inputs?: Webmcp_List_Layers_EmptyInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_List_Layers_EmptyInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Hierdie kaart het geen lae beskikbaar nie.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Hierdie kaart het geen beskikbare lae nie.")
 	return /** @type {LocalizedString} */ ("This map has no layers available.")
 });

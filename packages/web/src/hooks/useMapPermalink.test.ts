@@ -1,29 +1,5 @@
-import type { Layer } from "@karta/core";
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const registryMocks = vi.hoisted(() => ({
-  getLayers: vi.fn(() => []),
-  getLayerGroups: vi.fn(() => []),
-  getLayerGroupStructure: vi.fn(() => []),
-  getLayerStructure: vi.fn(() => []),
-}));
-
-vi.mock("../layers/registry", () => ({
-  getLayers: registryMocks.getLayers,
-  getLayerGroups: registryMocks.getLayerGroups,
-  getLayerGroupStructure: registryMocks.getLayerGroupStructure,
-  getLayerStructure: registryMocks.getLayerStructure,
-}));
-
-vi.mock("@karta/map", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@karta/map")>();
-  return {
-    ...actual,
-    getRegisteredBasemapIds: () => ["positron", "satellite"],
-  };
-});
-
+import { beforeEach, describe, expect, it } from "vitest";
 import { useMapUiStore } from "../stores/useMapUiStore";
 import {
   buildMapPermalinkSearch,
@@ -31,209 +7,48 @@ import {
   useMapPermalink,
 } from "./useMapPermalink";
 
-function layer(id: string, defaultVisible: boolean): Layer {
-  return {
-    id,
-    label: id,
-    dataSource: [`/data/${id}.geojson`],
-    geometryKind: "line",
-    defaultVisible,
-    available: true,
-    style: { kind: "line", color: "#000", weight: 2 },
-  };
-}
-
-const LAYERS: Layer[] = [
-  layer("townships", true),
-  layer("rapid-rail", false),
-  layer("bus", false),
-];
-
-function setUrl(search: string) {
-  window.history.replaceState(null, "", `/${search}`);
-}
-
-describe("parseMapPermalink", () => {
-  it("returns known layer ids, basemap, panel view, and feature id", () => {
-    const parsed = parseMapPermalink(
-      "?layers=rapid-rail,bus&basemap=satellite&panel=story&feature=abc",
-      ["townships", "rapid-rail", "bus"],
-    );
-    expect(parsed).toEqual({
-      visibleLayerIds: ["rapid-rail", "bus"],
-      basemap: "satellite",
-      panelView: "story",
-      selectedFeatureId: "abc",
-    });
-  });
-
-  it("ignores unknown layer ids, basemaps, and panel views", () => {
-    const parsed = parseMapPermalink(
-      "?layers=bogus,rapid-rail&basemap=bogus&panel=bogus",
-      ["townships", "rapid-rail", "bus"],
-    );
-    expect(parsed).toEqual({ visibleLayerIds: ["rapid-rail"] });
-  });
-
-  it("returns an empty object for an empty query string", () => {
-    expect(parseMapPermalink("", ["townships"])).toEqual({});
-  });
-
-  it("omits visibleLayerIds entirely when every id in the layers param is unknown", () => {
-    const parsed = parseMapPermalink("?layers=bogus,also-bogus", [
-      "townships",
-      "rapid-rail",
-      "bus",
-    ]);
-    expect(parsed).toEqual({});
-  });
-});
-
-describe("buildMapPermalinkSearch", () => {
-  const defaults = {
-    visibleLayerIds: [],
-    basemap: "positron",
-    panelView: "layers" as const,
-  };
-  const layerOrder = ["townships", "rapid-rail", "bus"];
-
-  it("omits every field that matches the defaults", () => {
-    const search = buildMapPermalinkSearch(
-      {
-        visibleLayerIds: [],
-        basemap: "positron",
-        panelView: "layers",
-        selectedFeatureId: null,
-      },
-      defaults,
-      layerOrder,
-    );
-    expect(search).toBe("");
-  });
-
-  it("includes layers in registry order when they differ from the default set", () => {
-    const search = buildMapPermalinkSearch(
-      {
-        visibleLayerIds: ["bus", "rapid-rail"],
-        basemap: "positron",
-        panelView: "layers",
-        selectedFeatureId: null,
-      },
-      defaults,
-      layerOrder,
-    );
-    expect(new URLSearchParams(search).get("layers")).toBe("rapid-rail,bus");
-  });
-
-  it("includes basemap, panel view, and feature when they differ from defaults", () => {
-    const search = buildMapPermalinkSearch(
-      {
-        visibleLayerIds: [],
-        basemap: "satellite",
-        panelView: "story",
-        selectedFeatureId: "abc",
-      },
-      defaults,
-      layerOrder,
-    );
-    const params = new URLSearchParams(search);
-    expect(params.get("basemap")).toBe("satellite");
-    expect(params.get("panel")).toBe("story");
-    expect(params.get("feature")).toBe("abc");
-    expect(params.has("layers")).toBe(false);
-  });
-});
-
-describe("useMapPermalink", () => {
+describe("map permalinks", () => {
   beforeEach(() => {
-    registryMocks.getLayers.mockReturnValue(LAYERS);
-    registryMocks.getLayerStructure.mockReturnValue(LAYERS);
-    act(() => {
-      useMapUiStore.getState().reset();
+    useMapUiStore.getState().reset();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("validates configured layers and basemaps only", () => {
+    expect(
+      parseMapPermalink(
+        "?layers=one,missing&basemap=topo&panel=removed&feature=removed",
+        ["one"],
+      ),
+    ).toEqual({ visibleLayerIds: ["one"], basemap: "topo" });
+    expect(parseMapPermalink("?basemap=missing", [])).toEqual({});
+    expect(parseMapPermalink("?layers=missing", [])).toEqual({
+      visibleLayerIds: [],
     });
-    setUrl("");
   });
 
-  it("applies visible layers, basemap, and panel view from the URL on mount", () => {
-    setUrl("?layers=rapid-rail&basemap=satellite&panel=story");
-
-    renderHook(() =>
-      useMapPermalink({ dataReady: true, knownFeatureIds: new Set() }),
-    );
-
-    const state = useMapUiStore.getState();
-    expect(state.visibleLayerIds).toEqual(["rapid-rail"]);
-    expect(state.basemap).toBe("satellite");
-    expect(state.panelView).toBe("story");
+  it("serialises non-default layers in catalogue order", () => {
+    const defaults = { visibleLayerIds: [], basemap: "positron" };
+    expect(
+      buildMapPermalinkSearch(
+        { visibleLayerIds: ["two", "one"], basemap: "topo" },
+        defaults,
+        ["one", "two"],
+      ),
+    ).toBe("layers=one%2Ctwo&basemap=topo");
+    expect(buildMapPermalinkSearch(defaults, defaults, [])).toBe("");
   });
 
-  it("defers applying the selected feature until data is ready", () => {
-    setUrl("?feature=abc123");
-
-    const { rerender } = renderHook(
-      ({ dataReady }) =>
-        useMapPermalink({
-          dataReady,
-          knownFeatureIds: new Set(["abc123"]),
-        }),
-      { initialProps: { dataReady: false } },
+  it("restores a basemap and drops obsolete parameters without a dataset load", () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?basemap=topo&panel=removed&feature=removed#map",
     );
-
-    expect(useMapUiStore.getState().selectedFeatureId).toBeNull();
-
-    rerender({ dataReady: true });
-
-    const state = useMapUiStore.getState();
-    expect(state.selectedFeatureId).toBe("abc123");
-    expect(state.activeSurface).toBe("feature");
-  });
-
-  it("drops a selectedFeatureId from the URL that isn't in knownFeatureIds", () => {
-    setUrl("?feature=does-not-exist");
-
-    const { rerender } = renderHook(
-      ({ dataReady }) =>
-        useMapPermalink({
-          dataReady,
-          knownFeatureIds: new Set(["abc123"]),
-        }),
-      { initialProps: { dataReady: false } },
-    );
-
-    rerender({ dataReady: true });
-
-    expect(useMapUiStore.getState().selectedFeatureId).toBeNull();
-  });
-
-  it("writes non-default state back to the URL without pushing a new history entry", () => {
-    const pushStateSpy = vi.spyOn(window.history, "pushState");
-    renderHook(() =>
-      useMapPermalink({ dataReady: true, knownFeatureIds: new Set() }),
-    );
-
+    renderHook(() => useMapPermalink());
+    expect(useMapUiStore.getState().basemap).toBe("topo");
+    expect(window.location.search).toBe("?basemap=topo");
+    expect(window.location.hash).toBe("#map");
+    act(() => useMapUiStore.getState().setBasemap("positron"));
     expect(window.location.search).toBe("");
-
-    act(() => {
-      useMapUiStore.getState().toggleLayer("rapid-rail");
-    });
-
-    expect(new URLSearchParams(window.location.search).get("layers")).toBe(
-      "rapid-rail",
-    );
-    expect(pushStateSpy).not.toHaveBeenCalled();
-  });
-
-  it("reflects the selected feature in the URL once applied", () => {
-    renderHook(() =>
-      useMapPermalink({ dataReady: true, knownFeatureIds: new Set() }),
-    );
-
-    act(() => {
-      useMapUiStore.getState().setSelectedFeatureId("xyz");
-    });
-
-    expect(new URLSearchParams(window.location.search).get("feature")).toBe(
-      "xyz",
-    );
   });
 });

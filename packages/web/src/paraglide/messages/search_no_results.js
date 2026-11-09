@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const search_no_results = /** @type {((inputs?: Search_No_ResultsInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Search_No_ResultsInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Niks het by daardie soektog gepas nie.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Geen resultate vir hierdie soektog nie.")
 	return /** @type {LocalizedString} */ ("Nothing matched that search.")
 });

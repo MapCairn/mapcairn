@@ -27,10 +27,7 @@ describe("public/_headers", () => {
     expect(getBlock("/*")).toMatch(/Strict-Transport-Security:\s*max-age=\d+/);
   });
 
-  it("caches /data/* longer than the previous 5-minute window", () => {
-    const cacheControl = getHeader(getBlock("/data/*"), "Cache-Control") ?? "";
-    const maxAge = Number(cacheControl.match(/max-age=(\d+)/)?.[1] ?? 0);
-
-    expect(maxAge).toBeGreaterThan(300);
+  it("has no dataset-specific cache configuration", () => {
+    expect(getBlock("/data/*")).toBe("");
   });
 });

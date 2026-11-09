@@ -1,7 +1,7 @@
 /**
 * | output |
 * | --- |
-* | "Search for a place by name and fly the map to the best match, e.g. a town, suburb or station." |
+* | "Search for a place by name and fly the map to the best match." |
 *
 */
 export const webmcp_search_location_description: ((inputs?: Webmcp_Search_Location_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Webmcp_Search_Location_DescriptionInputs, { locale?: "en" | "af" }, {}>;

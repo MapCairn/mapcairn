@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const measurement_mode_area = /** @type {((inputs?: Measurement_Mode_AreaInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Measurement_Mode_AreaInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Area")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Oppervlakte")
 	return /** @type {LocalizedString} */ ("Area")
 });

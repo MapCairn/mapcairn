@@ -206,7 +206,7 @@ export interface Layer {
   style: LayerStyleConfig;
   interaction?: LayerInteraction;
   /**
-   * When `true`, this layer includes Point geometry (station/stop markers)
+   * When `true`, this layer includes Point geometry (location markers)
    * in addition to its primary geometry. Controls the dot icon in the
    * `@karta/map` Legend component.
    */
@@ -226,20 +226,8 @@ export interface LayerGroup {
   layerIds: string[];
 }
 
-/**
- * Narrative "why this map exists" copy for a domain, surfaced by consumers
- * as a Story view alongside layer controls.
- * @remarks Optional: a domain with nothing to say here simply omits `story`
- *   from its `DomainConfig`, and callers should treat that as "no story view".
- */
-export interface DomainStory {
-  title: string;
-  body: string;
-}
-
 /** Minimal domain configuration consumed by `createRegistry`. */
 export interface DomainConfig {
   layers: readonly Layer[];
   layerGroups: readonly LayerGroup[];
-  story?: DomainStory;
 }

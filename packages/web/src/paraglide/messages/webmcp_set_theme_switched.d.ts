@@ -1,7 +1,7 @@
 /**
 * | output |
 * | --- |
-* | "Theme switched to \"{theme}\"." |
+* | "Switched theme to {theme}." |
 *
 */
 export const webmcp_set_theme_switched: ((inputs: Webmcp_Set_Theme_SwitchedInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Webmcp_Set_Theme_SwitchedInputs, { locale?: "en" | "af" }, {}>;

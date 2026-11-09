@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const measurement_aria_label = /** @type {((inputs?: Measurement_Aria_LabelInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Measurement_Aria_LabelInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Meetnutsding")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Meetinstrument")
 	return /** @type {LocalizedString} */ ("Measurement tool")
 });

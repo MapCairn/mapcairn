@@ -47,11 +47,8 @@ export const visuallyHidden = style({
 });
 
 /**
- * Text-input chrome shared by `LocationSearchControl`'s place/feature
- * search box and `FeatureBrowser`'s filter box; each composes this and
- * adds only its own padding (the search box reserves room for its clear
- * button; the filter box doesn't need one) plus any input-specific
- * touches.
+ * Text-input chrome for location search. The component adds padding
+ * to reserve room for its clear button.
  */
 export const searchInput = style({
   width: "100%",

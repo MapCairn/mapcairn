@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const webmcp_search_location_input_query = /** @type {((inputs?: Webmcp_Search_Location_Input_QueryInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Search_Location_Input_QueryInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Vrye teks-pleknaam om na te soek.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Pleknaam om voor te soek.")
 	return /** @type {LocalizedString} */ ("Free-text place name to search for.")
 });

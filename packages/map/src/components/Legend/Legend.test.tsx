@@ -86,28 +86,28 @@ describe("Legend", () => {
     }
   });
 
-  it("renders one transit entry per line layer with label and color", () => {
+  it("renders one line entry per line layer with label and color", () => {
     render(withDomain(<Legend />));
     expect(screen.getByText("Rail")).toBeInTheDocument();
     expect(screen.getByText("Rail").closest("li")).toHaveTextContent(
-      "line + stations",
+      "line + points",
     );
     expect(screen.getByText("Bus").closest("li")).toHaveTextContent(
-      "route only",
+      "line only",
     );
   });
 
-  it("marks rail and shuttle as line + stations via hasPointGeometry", () => {
+  it("marks rail and shuttle as line + points via hasPointGeometry", () => {
     render(withDomain(<Legend />));
     expect(screen.getByText("Shuttle").closest("li")).toHaveTextContent(
-      "line + stations",
+      "line + points",
     );
     expect(screen.getByText("North Line").closest("li")).toHaveTextContent(
-      "route only",
+      "line only",
     );
   });
 
-  it("draws each transit swatch as an SVG line with the layer's dash, casing and themed colour", () => {
+  it("draws each line swatch as an SVG line with the layer's dash, casing and themed colour", () => {
     const patternDomain: DomainConfig = {
       layers: [
         {
@@ -221,15 +221,15 @@ describe("Legend", () => {
     ).toBeInTheDocument();
   });
 
-  it("uses custom copy for the no-data label, transit heading, notes, empty message and active aria-label when given", () => {
+  it("uses custom copy for the no-data label, line heading, notes, empty message and active aria-label when given", () => {
     render(
       withDomain(
         <Legend
           noDataLabel="Geen data"
-          transitRoutesLabel="Vervoerroetes"
-          transitColorsAriaLabel="Vervoerroetekleure"
-          lineAndStationsNote=" · lyn + stasies"
-          routeOnlyNote=" · net roete"
+          lineLayersLabel="Vervoerroetes"
+          lineColorsAriaLabel="Vervoerroetekleure"
+          lineAndPointsNote=" · lyn + stasies"
+          lineOnlyNote=" · net roete"
           formatActiveAriaLabel={(label) =>
             `Aktiewe kaartlae-legende: ${label}`
           }

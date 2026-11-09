@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const search_unavailable = /** @type {((inputs?: Search_UnavailableInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Search_UnavailableInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Soek is tans nie beskikbaar nie. Probeer asseblief weer.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Soektog is tans nie beskikbaar nie. Probeer asseblief weer.")
 	return /** @type {LocalizedString} */ ("Search is unavailable right now. Please try again.")
 });

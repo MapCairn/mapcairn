@@ -1,143 +1,62 @@
 # Contributing to Karta
 
-Karta is an SDK for public-interest map layer platforms. Its reference
-implementation, Spatial apartheid legacy, maps the legacy of apartheid-era
-planning in South African cities. Contributions to the SDK and to the
-reference app are welcome, including better data sources, accessibility
-fixes and corrections to how areas are classified or described.
-
-Please read [`README.md`](README.md) first for what the project is and where
-the documentation lives, and
-[`docs/domains/spatial-apartheid-legacy.md`](docs/domains/spatial-apartheid-legacy.md)
-for what the reference data can and can't show yet.
-
-This project follows [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). By
-participating, you agree to uphold those standards.
+Karta provides a reusable mapping SDK and an empty-map web host. Contributions to map tools, accessibility, SDK contracts and documentation are welcome. Read [`README.md`](README.md) and follow [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## Getting set up
 
-Install Node 24.22.1 or newer (Node 24 is the one tested) and npm 11 or newer; `.node-version` and the `packageManager` field in `package.json` say which. After changing a dependency, run a real `npm install` and commit the lockfile with it. [`AGENTS.md`](AGENTS.md) has the lockfile rules.
+Use Node 24.22.1 or newer and npm 11 or newer. Node 24 is the tested major. `.node-version` and `package.json` record the supported versions.
 
 ```bash
 npm install
-npm test               # Vitest across the npm workspaces under packages/*, plus data-pipeline
-npm run test:coverage # same scope, with a coverage report
-npm run typecheck     # tsc --noEmit for @karta/core, @karta/app, @karta/theme, @karta/map, @karta/react + web build + data-pipeline typecheck
-npm run lint          # biome check . && dependency-cruiser (architecture boundaries between packages, see .dependency-cruiser.cjs)
-npm run format        # biome format --write .
+npm test
+npm run test:coverage
+npm run typecheck
+npm run lint
+npm run build
 npm run dev -w @karta/web
 ```
 
-Run a single test file with `npx vitest run path/to/file.test.ts`.
+Run one test file with `npx --no-install vitest run path/to/file.test.ts`. Coverage must reach 95% for statements, branches, functions and lines. Aim for complete behavioural coverage rather than exclusions.
 
-`data-pipeline/` is a standalone project rather than an npm workspace, so it has
-its own install step:
+For UI or map changes, also run `npm run test:e2e -w @karta/web`. Playwright builds and starts the preview itself. Install its browsers once with `npm run playwright:install -w @karta/web`. Basemap changes also need a real iPhone check because WebKit emulation cannot reproduce its GPU.
 
-```bash
-cd data-pipeline
-npm install
-npm run run        # full pipeline: boundaries, transit, OSRM routing, join, write output
-npm run display    # legacy helper: rebuilds compact display files for per-metro source directories when present
-```
+The pre-commit hook runs Biome and dependency-cruiser, not typecheck or tests. CI runs lint, typecheck, coverage and build. Separate workflows run Playwright and Lighthouse.
 
-See [`data-pipeline/README.md`](data-pipeline/README.md) before running the full
-pipeline. It calls public third-party APIs.
+## Architecture
 
-A lefthook pre-commit hook runs Biome on staged files and dependency-cruiser
-(architecture boundaries between packages) on every commit. Run the tests
-yourself before pushing. CI runs lint, typecheck, test, and build on
-every pull request, and Playwright end-to-end tests run in a dedicated
-workflow.
+- `packages/core`: layer contracts, classification, registry, GeoJSON utilities and distance/area measurement.
+- `packages/map`: generic map rendering and controls, built on core, react and theme.
+- `packages/react`: generic React hooks, independent of mapping and host state.
+- `packages/theme`: typed design-token contract.
+- `packages/web`: the SSR host, with no bundled datasets.
 
-## How the project is put together
-
-Data flows in one direction: `data-pipeline` (run manually, offline) → static
-GeoJSON committed to `packages/web/public/data/` → `packages/web`, which only
-fetches those static files at runtime. `packages/app` holds the domain-specific
-types and constants both ends agree on, built on the domain-agnostic model in
-`packages/core`. There are no runtime API calls.
-
-The codebase is split into six packages: `packages/core` (domain-agnostic
-layer model, Leaflet config factory, registry factory, geodata utils),
-`packages/map` (generic map rendering components and UI primitives, built on
-`packages/core`, `packages/react`, and `packages/theme`), `packages/react`
-(generic React hooks for dark-mode detection and theme preference),
-`packages/theme` (a typed, compile-time-checked view of the design tokens), `packages/app` (the reference domain's data and constants,
-built on `packages/core`), and `packages/web` (the SSR app that wires the
-other five together for the published `spatial-apartheid-legacy` domain).
-`.dependency-cruiser.cjs` (run via `npm run depcruise`, part of `npm run lint`)
-enforces that dependency direction. See the SOLID convention in AGENTS.md.
-
-Two things follow from this:
-
-- Adding a transit layer usually means one new adapter in
-  `data-pipeline/src/adapters/`, wired into a `PipelineSource` entry in that
-  region's config (e.g. `data-pipeline/src/regions/gautengPipelineConfig.ts`),
-  one new `Layer` entry in `packages/app/src/domains/spatial-apartheid-legacy/layers.ts`,
-  and a pipeline re-run. Map rendering code should not need edits.
-- Any new field added to GeoJSON properties must be optional or defaulted in the
-  Zod schemas, because a CDN or browser may still be serving the previous payload
-  shape after a deploy.
+`.dependency-cruiser.cjs` enforces the SDK dependency direction. Supply configuration through props and context rather than importing host code into SDK packages. [`docs/building-a-domain.md`](docs/building-a-domain.md) describes the layer contract for consumers.
 
 ## Conventions
 
-These are enforced in review, and some in CI:
+- Write a failing test before implementing a feature or bug fix.
+- Keep changes focused. Prefer SOLID, DRY, KISS and YAGNI over speculative abstractions.
+- Document exported APIs with JSDoc. Add code comments only for non-obvious constraints or invariants.
+- Use expanded, braced `if` statements.
+- Use semantic HTML, keyboard navigation, visible focus states and WCAG 2.2 AA contrast in both themes.
+- Use British English in user-facing copy and docs. Keep prose plain and specific, without em dashes.
+- Use the tokens in [`docs/design-system.md`](docs/design-system.md), not ad hoc colours or fonts.
+- Use Conventional Commits for commit messages.
 
-- Write the failing test before the implementation, for bug fixes as well as
-  features.
-- Follow SOLID, DRY, KISS and YAGNI. Prefer the simplest design that meets the
-  current requirement, and don't build for hypothetical future needs.
-- Only comment code to explain a non-obvious *why*, such as a constraint, a
-  workaround or an invariant. Never restate what the code says.
-- Write braced, expanded `if` statements, never single-line or braceless ones.
-  Biome's `useBlockStatements` rule enforces this; don't disable it.
-- Accessibility is required: semantic HTML, keyboard navigation, visible focus
-  states and WCAG 2.2 AA colour contrast are part of every UI change. The
-  project holds a Lighthouse accessibility score of 100.
-- Use British English in user-facing copy (UI text, labels, error messages) and
-  docs. Code identifiers stay as they are.
-- Use the existing design system. Colours are `--md-sys-color-*` CSS custom
-  properties with hand-picked light and dark values in
-  `packages/web/src/index.css` (see `docs/design-system.md`). Fonts are Public
-  Sans and Source Serif 4, self-hosted. Don't add ad hoc colours or fonts.
+## Dependencies
 
-## Contributing data or claims
+After changing a manifest, run a real `npm install` and include the root lockfile. Do not use `--package-lock-only` as the normal update procedure. Pin prerelease versions exactly.
 
-This project is careful about what it asserts. When a change affects the map's
-meaning rather than its code:
-
-- State the source, its licence, and its vintage. Add it to
-  [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
-- Prefer sources that can be fetched by script, so the pipeline stays
-  reproducible.
-- Changes to which areas count as included township areas belong in
-  `packages/app/src/constants/townships.ts`, and the reasoning belongs in
-  that metro's `docs/data/<metro>-area-classification.md` doc. See
-  [`docs/domains/spatial-apartheid-legacy.md`](docs/domains/spatial-apartheid-legacy.md#area-classification-by-metro)
-  for the full list, one per metro across both published regions.
-- Don't overstate what the data supports. Keep copy within the limits
-  [`docs/domains/spatial-apartheid-legacy.md`](docs/domains/spatial-apartheid-legacy.md)
-  already sets out.
-- Never contribute personally identifying or household-level data.
+Prove lockfile changes with real `npm ci --ignore-scripts` installs under npm 10 and npm 11 in separate disposable clones. Do not install into a working tree another person or agent is using. See [`AGENTS.md`](AGENTS.md) for lockfile recovery guidance.
 
 ## Pull requests
 
-- Open an issue first for anything large or for a change in what the map claims.
-  Small fixes can go straight to a pull request.
-- Keep each pull request to one logical change.
-- Describe what changed and why. If it's a visual change, include a screenshot in
-  both light and dark themes.
-- Make sure `npm run lint`, `npm run typecheck`, `npm test`, and
-  `npm run build` all pass locally.
-- If you regenerated pipeline output, say which command you ran and why the data
-  diff is what it is.
+Open an issue first for large changes. Keep each pull request to one logical change and explain why it is needed. Include light and dark screenshots for visual changes. Run the checks above and report anything skipped or failing.
 
-## Security
+The host intentionally starts without datasets. Adding a real dataset is a separate, explicitly scoped change requiring source provenance, publication rights and privacy review. Never contribute identifying or household-level data.
 
-Please don't report suspected vulnerabilities in a public issue. See
-[`SECURITY.md`](SECURITY.md) for how to report privately.
+Do not deploy the production Worker without explicit permission.
 
-## Licence
+## Security and licence
 
-The project is licensed under [AGPL-3.0](LICENSE). By contributing, you agree
-your contribution is licensed under the same terms.
+Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). Contributions are licensed under [AGPL-3.0](LICENSE).

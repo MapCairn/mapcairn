@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "Switch the app's colour theme. \"system\" follows the OS preference." |
+* | "Set the app's colour theme: system, light or dark." |
 *
 * @param {Webmcp_Set_Theme_DescriptionInputs} inputs
 * @param {{ locale?: "en" | "af" }} options
@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const webmcp_set_theme_description = /** @type {((inputs?: Webmcp_Set_Theme_DescriptionInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Set_Theme_DescriptionInputs, { locale?: "en" | "af" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ ("Verander die app se kleurtema. \"system\" volg die bedryfstelsel se voorkeur.")
-	return /** @type {LocalizedString} */ ("Switch the app's colour theme. \"system\" follows the OS preference.")
+	if (locale === "af") return /** @type {LocalizedString} */ ("Stel die toepassing se kleurtema: system, light of dark.")
+	return /** @type {LocalizedString} */ ("Set the app's colour theme: system, light or dark.")
 });

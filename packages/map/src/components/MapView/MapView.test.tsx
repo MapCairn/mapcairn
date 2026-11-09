@@ -394,7 +394,7 @@ function testRenderFeaturePopup(properties: Record<string, unknown>) {
 const areas = [
   {
     type: "Feature",
-    properties: { id: "A", name: "Mamelodi", commuteMinutes: 10 },
+    properties: { id: "A", name: "Meadow", value: 10 },
     geometry: null,
   },
 ] as never;
@@ -466,6 +466,21 @@ describe("MapView", () => {
     );
   });
 
+  it("renders a basemap with an empty catalogue without fetching layer data", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <DomainProvider domain={{ layers: [], layerGroups: [] }}>
+        <MapView {...DEFAULT_MAP_VIEW_PROPS} areas={[]} visibleLayerIds={[]} />
+      </DomainProvider>,
+    );
+
+    expect(screen.getByTestId("map-container")).toBeInTheDocument();
+    expect(screen.getByTestId("vector-basemap-layer")).toBeInTheDocument();
+    expect(screen.queryAllByTestId("geojson-layer")).toHaveLength(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("coalesces pointer coordinates to the displayed precision", async () => {
     const onCoordinatesChange = vi.fn();
     render(
@@ -530,7 +545,7 @@ describe("MapView", () => {
     );
 
     expect(onSelectableFeaturesChange).toHaveBeenLastCalledWith([
-      { id: "A", label: "Mamelodi", layerId: "areas" },
+      { id: "A", label: "Meadow", layerId: "areas" },
     ]);
   });
 
@@ -566,7 +581,7 @@ describe("MapView", () => {
     );
 
     expect(onSelectableFeaturesChange).toHaveBeenLastCalledWith([
-      { id: "A", label: "Mamelodi", layerId: "areas" },
+      { id: "A", label: "Meadow", layerId: "areas" },
     ]);
 
     rerender(
@@ -629,7 +644,7 @@ describe("MapView", () => {
       ),
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Mamelodi selected");
+    expect(screen.getByRole("status")).toHaveTextContent("Meadow selected");
   });
 
   it("uses a custom selection-announcement formatter when given", () => {
@@ -645,7 +660,7 @@ describe("MapView", () => {
       ),
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Mamelodi gekies");
+    expect(screen.getByRole("status")).toHaveTextContent("Meadow gekies");
   });
 
   it("does not open a stale selection's popup once its markup resolves after that selection was superseded", async () => {
@@ -713,7 +728,7 @@ describe("MapView", () => {
     await vi.advanceTimersByTimeAsync(220);
 
     expect(renderFeaturePopup).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "A", name: "Mamelodi" }),
+      expect.objectContaining({ id: "A", name: "Meadow" }),
     );
   });
 
@@ -1281,12 +1296,12 @@ describe("MapView", () => {
     const twoAreas = [
       {
         type: "Feature",
-        properties: { id: "A", name: "Mamelodi", commuteMinutes: 10 },
+        properties: { id: "A", name: "Meadow", value: 10 },
         geometry: null,
       },
       {
         type: "Feature",
-        properties: { id: "B", name: "Soweto", commuteMinutes: 20 },
+        properties: { id: "B", name: "Soweto", value: 20 },
         geometry: null,
       },
     ] as never;
@@ -1307,7 +1322,7 @@ describe("MapView", () => {
       expect(mapMocks.featureLayers[0]?.openPopup).toHaveBeenCalledTimes(1);
     });
     expect(mapMocks.fitBounds).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/mamelodi selected/i)).toBeInTheDocument();
+    expect(screen.getByText(/meadow selected/i)).toBeInTheDocument();
 
     rerender(
       withDomain(
@@ -1326,7 +1341,7 @@ describe("MapView", () => {
     });
     expect(mapMocks.fitBounds).toHaveBeenCalledTimes(2);
     expect(screen.getByText(/soweto selected/i)).toBeInTheDocument();
-    expect(screen.queryByText(/mamelodi selected/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/meadow selected/i)).not.toBeInTheDocument();
   });
 
   it("renders no GeoJSON layers when visibleLayerIds is empty", () => {
@@ -1411,7 +1426,7 @@ describe("MapView", () => {
     });
   });
 
-  it("renders choropleth GeoJSON with exact geometry and transit overlays with smoothing", async () => {
+  it("renders choropleth GeoJSON with exact geometry and line overlays with smoothing", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -1446,7 +1461,7 @@ describe("MapView", () => {
     );
 
     expect(await screen.findByText("1 features")).toBeInTheDocument();
-    expect(mapMocks.geoJsonProps.transit?.smoothFactor).toBe(1);
+    expect(mapMocks.geoJsonProps.overlay?.smoothFactor).toBe(1);
   });
 
   it("draws a cased line layer's casing beneath it, leaving stop points out", async () => {
@@ -1493,14 +1508,14 @@ describe("MapView", () => {
     );
 
     expect(await screen.findAllByText("1 features")).toHaveLength(2);
-    const casing = mapMocks.geoJsonProps["transit:casing"];
+    const casing = mapMocks.geoJsonProps["overlay:casing"];
     expect(casing?.style?.()).toMatchObject({ color: "#F6F2E9", weight: 5 });
     expect(
       casing?.filter?.({ geometry: { type: "LineString", coordinates: [] } }),
     ).toBe(true);
     expect(casing?.filter?.({ geometry: { type: "Point" } })).toBe(false);
     expect(casing?.filter?.({ geometry: { type: "MultiPoint" } })).toBe(false);
-    const marker = mapMocks.geoJsonProps.transit?.pointToLayer?.(
+    const marker = mapMocks.geoJsonProps.overlay?.pointToLayer?.(
       { type: "Feature", properties: {}, geometry: null },
       { lat: 0, lng: 0 },
     ) as { options: Record<string, unknown> } | undefined;
@@ -1521,7 +1536,7 @@ describe("MapView", () => {
     expect(screen.queryByTestId("geojson-layer")).not.toBeInTheDocument();
   });
 
-  it("fetches and renders overlay data for a visible transit layer", async () => {
+  it("fetches and renders overlay data for a visible overlay layer", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -1545,7 +1560,7 @@ describe("MapView", () => {
 
     expect(await screen.findByText("1 features")).toHaveAttribute(
       "data-pane",
-      "transit",
+      "overlay",
     );
     expect(fetch).toHaveBeenCalledWith(
       "/data/example/rail.display.v1.geojson",
@@ -1553,7 +1568,7 @@ describe("MapView", () => {
     );
   });
 
-  it("keeps area polygons in the pane below transit overlays", () => {
+  it("keeps area polygons in the pane below line overlays", () => {
     render(
       withDomain(
         <MapView
@@ -1574,7 +1589,7 @@ describe("MapView", () => {
     const areaBoundaries = [
       {
         type: "Feature",
-        properties: { name: "Mamelodi" },
+        properties: { name: "Meadow" },
         geometry: null,
       },
     ] as never;
@@ -1601,7 +1616,7 @@ describe("MapView", () => {
     const areaBoundaries = [
       {
         type: "Feature",
-        properties: { name: "Mamelodi" },
+        properties: { name: "Meadow" },
         geometry: null,
       },
     ] as never;
@@ -2068,7 +2083,7 @@ describe("MapView", () => {
     await vi.advanceTimersByTimeAsync(220);
 
     expect(renderFeaturePopup).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "A", name: "Mamelodi" }),
+      expect.objectContaining({ id: "A", name: "Meadow" }),
     );
     expect(onFeatureSelect).toHaveBeenCalled();
 
@@ -2518,7 +2533,7 @@ describe("MapView", () => {
             [
               {
                 type: "Feature",
-                properties: { name: "Mamelodi", labelOffset: [5, -10] },
+                properties: { name: "Meadow", labelOffset: [5, -10] },
                 geometry: null,
               },
             ] as never
@@ -2531,7 +2546,7 @@ describe("MapView", () => {
     const [tooltipContent, tooltipOptions] =
       mapMocks.featureLayers[0]?.bindTooltip.mock.calls[0] ?? [];
     expect(tooltipContent).toBeInstanceOf(HTMLElement);
-    expect((tooltipContent as HTMLElement).textContent).toBe("Mamelodi");
+    expect((tooltipContent as HTMLElement).textContent).toBe("Meadow");
     expect(tooltipOptions).toEqual(
       expect.objectContaining({ offset: [5, -10] }),
     );
@@ -2579,7 +2594,7 @@ describe("MapView", () => {
               {
                 type: "Feature",
                 properties: {
-                  name: "Rest of Mamelodi",
+                  name: "Rest of Meadow",
                   labelPriority: "secondary",
                 },
                 geometry: null,
@@ -2593,9 +2608,7 @@ describe("MapView", () => {
 
     const [tooltipContent, tooltipOptions] =
       mapMocks.featureLayers[0]?.bindTooltip.mock.calls[0] ?? [];
-    expect((tooltipContent as HTMLElement).textContent).toBe(
-      "Rest of Mamelodi",
-    );
+    expect((tooltipContent as HTMLElement).textContent).toBe("Rest of Meadow");
     expect(tooltipOptions).toEqual(
       expect.objectContaining({
         className: expect.stringContaining("areaLabelSecondary"),
@@ -2662,7 +2675,7 @@ describe("MapView", () => {
     );
   });
 
-  it("builds a circle marker for a transit point feature using the layer's resolved style", async () => {
+  it("builds a circle marker for a overlay point feature using the layer's resolved style", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -2686,7 +2699,7 @@ describe("MapView", () => {
 
     await screen.findByText("1 features");
 
-    const pointToLayer = mapMocks.geoJsonProps.transit?.pointToLayer;
+    const pointToLayer = mapMocks.geoJsonProps.overlay?.pointToLayer;
     expect(pointToLayer).toBeDefined();
 
     const marker = pointToLayer?.(
@@ -2830,7 +2843,7 @@ describe("MapView", () => {
           geometryKind: "choropleth",
           defaultVisible: true,
           available: true,
-          interaction: { selectable: true, labelField: "commuteMinutes" },
+          interaction: { selectable: true, labelField: "value" },
           style: {
             kind: "choropleth",
             propertyKey: "value",
@@ -2851,12 +2864,12 @@ describe("MapView", () => {
             [
               {
                 type: "Feature",
-                properties: { id: "A", name: "Mamelodi", commuteMinutes: 15 },
+                properties: { id: "A", name: "Meadow", value: 15 },
                 geometry: null,
               },
               {
                 type: "Feature",
-                properties: { id: "B", commuteMinutes: 20 },
+                properties: { id: "B", value: 20 },
                 geometry: null,
               },
             ] as never
@@ -2867,10 +2880,10 @@ describe("MapView", () => {
       </DomainProvider>,
     );
 
-    // Feature "B" has neither a string commuteMinutes nor a name, so it
+    // Feature "B" has neither a string value nor a name, so it
     // resolves to an empty label.
     expect(onSelectableFeaturesChange).toHaveBeenLastCalledWith([
-      { id: "A", label: "Mamelodi", layerId: "numeric-label-field" },
+      { id: "A", label: "Meadow", layerId: "numeric-label-field" },
       { id: "B", label: "", layerId: "numeric-label-field" },
     ]);
   });
@@ -2946,7 +2959,7 @@ describe("MapView", () => {
     expect(() => firstLayer?.__handlers.dblclick?.()).not.toThrow();
   });
 
-  it("gives transit point markers a larger radius at detail zoom levels", async () => {
+  it("gives overlay point markers a larger radius at detail zoom levels", async () => {
     mapMocks.zoom = 12;
     vi.stubGlobal(
       "fetch",
@@ -2971,7 +2984,7 @@ describe("MapView", () => {
 
     await screen.findByText("1 features");
 
-    const pointToLayer = mapMocks.geoJsonProps.transit?.pointToLayer;
+    const pointToLayer = mapMocks.geoJsonProps.overlay?.pointToLayer;
     const marker = pointToLayer?.(
       { type: "Feature", properties: {}, geometry: null },
       { lat: -26.2, lng: 28.0 },

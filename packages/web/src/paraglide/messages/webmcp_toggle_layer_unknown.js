@@ -18,6 +18,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 */
 export const webmcp_toggle_layer_unknown = /** @type {((inputs: Webmcp_Toggle_Layer_UnknownInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Webmcp_Toggle_Layer_UnknownInputs, { locale?: "en" | "af" }, {}>} */ ((i, options = {}) => {
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "af") return /** @type {LocalizedString} */ (`Geen laag met id "${i?.layerId}" nie. Roep list-map-layers om geldige id's te sien.`)
+	if (locale === "af") return /** @type {LocalizedString} */ (`Geen laag met id "${i?.layerId}" nie. Gebruik list-map-layers om geldige ids te sien.`)
 	return /** @type {LocalizedString} */ (`No layer with id "${i?.layerId}". Call list-map-layers to see valid ids.`)
 });
