@@ -200,17 +200,23 @@ export async function findMissingFocusRings(
         );
       }
       // A ring may be drawn on the element or on its ::after layer (the map
-      // region draws it there, above the engine canvas).
+      // region draws it there, above the engine canvas). A slider thumb's box
+      // is its 44px hit area, so `Slider` rings the visible circle inside it.
       const ringed = (style: CSSStyleDeclaration) =>
         (style.outlineStyle !== "none" &&
           Number.parseFloat(style.outlineWidth) >= 2) ||
         (style.boxShadow !== "none" && style.boxShadow !== "");
+      const thumbCircle =
+        element.getAttribute("role") === "slider"
+          ? element.firstElementChild
+          : null;
       return {
         key: path.join("/"),
         label: `${element.tagName.toLowerCase()} "${(element.getAttribute("aria-label") ?? element.textContent ?? "").trim().slice(0, 40)}"`,
         visible:
           ringed(getComputedStyle(element)) ||
-          ringed(getComputedStyle(element, "::after")),
+          ringed(getComputedStyle(element, "::after")) ||
+          (thumbCircle !== null && ringed(getComputedStyle(thumbCircle))),
       };
     });
     if (focused === null) {

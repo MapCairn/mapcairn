@@ -9,7 +9,7 @@ Karta is a reusable SDK for public-interest map platforms, with a reference host
 | Document | Covers |
 |---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
-| [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules |
+| [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules. The living style guide is at `/design` in development and e2e builds only |
 | [`docs/plans/`](docs/plans/README.md) | Numbered plans for work not yet built |
 | [`packages/core/README.md`](packages/core/README.md) | Ports, pure logic, basemaps, fakes and contract suites |
 | [`packages/map/README.md`](packages/map/README.md) | Map user interface, `MapView` and the services provider |

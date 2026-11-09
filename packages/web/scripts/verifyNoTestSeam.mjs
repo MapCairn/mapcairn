@@ -1,14 +1,18 @@
-// Proves the browser test seam is absent from a production build.
+// Proves the development-only code is absent from a production build: the
+// browser test seam and the living style guide at /design.
 //
 // Usage, from packages/web after `react-router build`:
-//   node scripts/verifyNoTestSeam.mjs                   exits 1 if the seam is found
-//   node scripts/verifyNoTestSeam.mjs --expect-present  exits 1 if the seam is missing (for the e2e build)
+//   node scripts/verifyNoTestSeam.mjs                   exits 1 if any marker is found
+//   node scripts/verifyNoTestSeam.mjs --expect-present  exits 1 unless every group is found (for the e2e build)
 //
 // `--root <dir>` searches <dir>/build/client and <dir>/build/server instead of
 // this package, which is how its test runs it.
 //
-// It searches build/client and build/server for the marker string in
-// src/composition/testSeam.ts and for the window property it reads.
+// It searches build/client and build/server for each group's strings:
+// - test seam: the marker in src/composition/testSeam.ts and the window
+//   property it reads;
+// - design guide: the marker the style guide page renders
+//   (src/designGuide/DesignGuide.tsx).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -20,7 +24,13 @@ const root =
     ? join(dirname(fileURLToPath(import.meta.url)), "..")
     : (process.argv[rootFlag + 1] ?? ".");
 const directories = ["build/client", "build/server"];
-const needles = ["KARTA_TEST_SEAM_MARKER", "__KARTA_TEST_SERVICES__"];
+const groups = [
+  {
+    name: "test seam",
+    needles: ["KARTA_TEST_SEAM_MARKER", "__KARTA_TEST_SERVICES__"],
+  },
+  { name: "design guide", needles: ["KARTA_DESIGN_GUIDE_MARKER"] },
+];
 const expectPresent = process.argv.includes("--expect-present");
 
 function* walk(directory) {
@@ -35,7 +45,8 @@ function* walk(directory) {
 }
 
 const missing = [];
-const found = [];
+/** Matches per group name, as `file: needle` lines. */
+const found = new Map(groups.map((group) => [group.name, []]));
 let filesChecked = 0;
 for (const directory of directories) {
   const absolute = join(root, directory);
@@ -48,9 +59,11 @@ for (const directory of directories) {
   for (const file of walk(absolute)) {
     filesChecked += 1;
     const text = readFileSync(file, "utf8");
-    for (const needle of needles) {
-      if (text.includes(needle)) {
-        found.push(`${relative(root, file)}: ${needle}`);
+    for (const group of groups) {
+      for (const needle of group.needles) {
+        if (text.includes(needle)) {
+          found.get(group.name).push(`${relative(root, file)}: ${needle}`);
+        }
       }
     }
   }
@@ -63,18 +76,31 @@ if (missing.length > 0 || filesChecked === 0) {
   process.exit(2);
 }
 
+const report = (names) =>
+  names.map((name) => `${name}:\n  ${found.get(name).join("\n  ")}`).join("\n");
+
 if (expectPresent) {
-  if (found.length === 0) {
+  const absent = groups
+    .map((group) => group.name)
+    .filter((name) => found.get(name).length === 0);
+  if (absent.length > 0) {
     console.error(
-      `The test seam is missing from ${filesChecked} build files, but this build should keep it.`,
+      `Missing from ${filesChecked} build files, but this build should keep it: ${absent.join(", ")}.`,
     );
     process.exit(1);
   }
-  console.log(`The test seam is present, as expected:\n${found.join("\n")}`);
+  console.log(
+    `Present, as expected:\n${report(groups.map((group) => group.name))}`,
+  );
 } else {
-  if (found.length > 0) {
-    console.error(`The test seam leaked into the build:\n${found.join("\n")}`);
+  const leaked = groups
+    .map((group) => group.name)
+    .filter((name) => found.get(name).length > 0);
+  if (leaked.length > 0) {
+    console.error(`Leaked into the build:\n${report(leaked)}`);
     process.exit(1);
   }
-  console.log(`The test seam is absent from ${filesChecked} build files.`);
+  console.log(
+    `The test seam and the design guide are absent from ${filesChecked} build files.`,
+  );
 }

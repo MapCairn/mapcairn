@@ -76,12 +76,43 @@ describe("verifyNoTestSeam", () => {
     expect(result.stderr).toContain("Run the build first");
   });
 
-  it("with --expect-present, passes only when the seam is there", () => {
-    const withSeam = fakeBuild({
+  it("fails when the design guide marker is in the server build", () => {
+    const root = fakeBuild({
+      "client/assets/app.js": "",
+      "server/index.js": '"data-design-guide":"KARTA_DESIGN_GUIDE_MARKER"',
+    });
+    const result = run(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("KARTA_DESIGN_GUIDE_MARKER");
+    expect(result.stderr).toContain("index.js");
+  });
+
+  it("with --expect-present, passes when the seam and the design guide are both there", () => {
+    const root = fakeBuild({
+      "client/assets/app.js": "window.__KARTA_TEST_SERVICES__",
+      "client/assets/design.js": '"KARTA_DESIGN_GUIDE_MARKER"',
+    });
+    const result = run(root, "--expect-present");
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("test seam");
+    expect(result.stdout).toContain("design guide");
+  });
+
+  it("with --expect-present, fails when the seam is missing", () => {
+    const root = fakeBuild({
+      "client/assets/design.js": '"KARTA_DESIGN_GUIDE_MARKER"',
+    });
+    const result = run(root, "--expect-present");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("test seam");
+  });
+
+  it("with --expect-present, fails when the design guide is missing", () => {
+    const root = fakeBuild({
       "client/assets/app.js": "window.__KARTA_TEST_SERVICES__",
     });
-    expect(run(withSeam, "--expect-present").status).toBe(0);
-    const without = fakeBuild({ "client/assets/app.js": "" });
-    expect(run(without, "--expect-present").status).toBe(1);
+    const result = run(root, "--expect-present");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("design guide");
   });
 });

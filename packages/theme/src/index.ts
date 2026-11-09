@@ -1,3 +1,10 @@
+export {
+  compositeOver,
+  contrastRatio,
+  parseColour,
+  type Rgba,
+  toHex,
+} from "./contrast";
 export { mapOverlayTokens } from "./mapOverlayTokens";
 export {
   blur,

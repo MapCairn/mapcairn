@@ -4,6 +4,10 @@ The map is the hero and the chrome recedes. Karta is calm, neutral and precise, 
 
 Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use tokens, so an off-scale value fails typecheck, and a lint test is the backstop for raw literals.
 
+## Living style guide
+
+`/design` renders every token and every primitive from the real code: colour roles with light and dark hex values and their contrast pairs, the type scale, spacing, radii, elevation, motion, z layers, the Lucide icons the app imports, each component in each state, and a font check that proves IBM Plex Sans is rendering. Open http://localhost:5173/design with `npm run dev`, or http://localhost:4173/design with `npm start` (the e2e build). The route exists only in development and in the `--mode e2e` build (`packages/web/src/designGuideRoutes.ts`); `npm run build` fails if the page's marker reaches the production bundle, and `e2e/design.spec.ts` covers it in the browser.
+
 ## Principles
 
 1. One of everything: one family, one accent, one icon set, one stroke, one radius per role.
