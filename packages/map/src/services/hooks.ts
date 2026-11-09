@@ -56,7 +56,7 @@ export function usePreferences(): DevicePreferencesValue {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-/** The data layer registry. Empty in this release. */
+/** The data layer registry: the host's layer definitions, or none. */
 export function useLayers(): LayerRegistry {
   return useServices().layers;
 }

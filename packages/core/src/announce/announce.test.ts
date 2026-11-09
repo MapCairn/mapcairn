@@ -21,6 +21,7 @@ import {
   announcePinDropped,
   announceSearchError,
   announceSearchResults,
+  announceShowingFeature,
   announceSurfaceClosed,
   announceSurfaceOpened,
   announceTileError,
@@ -184,6 +185,12 @@ describe("layer announcements", () => {
     );
     expect(announceLayerError("Earthquakes", "invalid")).toBe(
       "Earthquakes could not load: the provider sent something unexpected. Try again later.",
+    );
+  });
+
+  it("says which feature the map now shows", () => {
+    expect(announceShowingFeature("Flood in Portugal")).toBe(
+      "Showing Flood in Portugal on the map.",
     );
   });
 

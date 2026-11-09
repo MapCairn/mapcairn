@@ -61,6 +61,11 @@ export function announceLayerError(
     : `${name} could not load: the provider sent something unexpected. Try again later.`;
 }
 
+/** "Show on map" centred the map on a feature. */
+export function announceShowingFeature(title: string): string {
+  return `Showing ${title} on the map.`;
+}
+
 /** A feature's affected area is on the map. */
 export function announceDetailShown(title: string): string {
   return `Affected area of ${title} shown on the map.`;

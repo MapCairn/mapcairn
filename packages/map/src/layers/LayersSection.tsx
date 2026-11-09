@@ -1,4 +1,5 @@
 import {
+  announceShowingFeature,
   createFormatterRegistry,
   type FormatterRegistry,
   formatTemplate,
@@ -120,7 +121,7 @@ export function LayersSection({
             },
           )
         : null;
-    announce(`Showing ${title ?? "the feature"} on the map.`, {
+    announce(announceShowingFeature(title ?? "the feature"), {
       priority: "polite",
     });
     onShowOnMap?.();
