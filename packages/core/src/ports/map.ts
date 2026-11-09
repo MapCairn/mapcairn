@@ -94,6 +94,8 @@ export interface MapShapes {
   readonly geometries: readonly LayerGeometry[];
   /** A hex colour for the lines and a translucent fill. */
   readonly colour: string;
+  /** The width of lines and outlines, in CSS pixels. Defaults to 2. */
+  readonly lineWidth?: number;
 }
 
 /** A tap or click on a point of a feed layer. */

@@ -180,6 +180,9 @@ const TAP_TOLERANCE_PX = 16;
 /** The translucent fill of a shape layer, so the map under it stays readable. */
 const SHAPE_FILL_OPACITY = 0.18;
 
+/** The width of a shape layer's lines, in CSS pixels, unless the caller sets one. */
+const SHAPE_LINE_WIDTH = 2;
+
 /** The engine style layers of a data layer, bottom first. */
 function engineLayerIds(id: string, layer: DataLayer): string[] {
   const ids = dataLayerEngineIds(id);
@@ -728,7 +731,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         break;
       }
       case "shapes": {
-        const { colour } = layer.shapes;
+        const { colour, lineWidth = SHAPE_LINE_WIDTH } = layer.shapes;
         map.addSource(ids.source, {
           type: "geojson",
           // The port's positions are readonly tuples; the engine only reads them.
@@ -753,7 +756,8 @@ export class MapLibreMapAdapter implements MapAdapter {
           id: ids.line,
           type: "line",
           source: ids.source,
-          paint: { "line-color": colour, "line-width": 2 },
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": colour, "line-width": lineWidth },
         });
         break;
       }

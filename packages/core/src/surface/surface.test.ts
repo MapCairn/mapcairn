@@ -11,7 +11,9 @@ import {
   type SurfaceAction,
   type SurfaceState,
   setDetent,
+  startDirections,
   startMeasure,
+  stopDirections,
   stopMeasure,
   surfaceReducer,
 } from "./surface";
@@ -113,6 +115,54 @@ describe("measure", () => {
 
   it("keeps the measure focus target after stopping so focus can be restored", () => {
     expect(run(startMeasure(), stopMeasure()).returnFocusTo).toBe("measure");
+  });
+});
+
+describe("directions", () => {
+  it("opens as the one active surface and takes its own focus target", () => {
+    expect(run(startDirections())).toMatchObject({
+      surface: "directions",
+      sheetDetent: "half",
+      sheetSection: null,
+      returnFocusTo: "directions",
+    });
+  });
+
+  it("replaces measure, the sheet and search, and is replaced by them", () => {
+    expect(run(startMeasure(), startDirections()).surface).toBe("directions");
+    expect(run(openSheet(), startDirections()).surface).toBe("directions");
+    expect(run(openSearch(), startDirections()).surface).toBe("directions");
+    expect(run(startDirections(), startMeasure()).surface).toBe("measure");
+    expect(run(startDirections(), openSheet()).surface).toBe("sheet");
+  });
+
+  it("is idempotent while it is open", () => {
+    const open = run(startDirections());
+    expect(surfaceReducer(open, startDirections())).toBe(open);
+  });
+
+  it("stops only when directions is the active surface", () => {
+    expect(run(startDirections(), stopDirections()).surface).toBe("none");
+    const measuring = run(startMeasure());
+    expect(surfaceReducer(measuring, stopDirections())).toBe(measuring);
+  });
+
+  it("keeps the directions focus target after stopping so focus can be restored", () => {
+    expect(run(startDirections(), stopDirections()).returnFocusTo).toBe(
+      "directions",
+    );
+  });
+
+  it("stays active when a pin is dropped, and still records the pin", () => {
+    const state = run(startDirections(), dropPin());
+    expect(state.surface).toBe("directions");
+    expect(state.hasPin).toBe(true);
+  });
+
+  it("closes on Escape and leaves the pin", () => {
+    const state = run(dropPin(), startDirections(), pressEscape());
+    expect(state.surface).toBe("none");
+    expect(state.hasPin).toBe(true);
   });
 });
 

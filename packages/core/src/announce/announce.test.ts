@@ -3,11 +3,13 @@ import {
   announceAddressError,
   announceAddressFound,
   announceAddressNotFound,
+  announceAreaFound,
   announceBasemap,
   announceCopied,
   announceDetailError,
   announceDetailShown,
   announceDetent,
+  announceDirectionsCleared,
   announceLayerEmpty,
   announceLayerError,
   announceLayerLoaded,
@@ -19,9 +21,15 @@ import {
   announceOffline,
   announcePinCleared,
   announcePinDropped,
+  announceRouteFound,
+  announceRoutingCancelled,
+  announceRoutingError,
   announceSearchError,
   announceSearchResults,
   announceShowingFeature,
+  announceStopAdded,
+  announceStopMoved,
+  announceStopRemoved,
   announceSurfaceClosed,
   announceSurfaceOpened,
   announceTileError,
@@ -201,5 +209,43 @@ describe("layer announcements", () => {
     expect(announceDetailError()).toBe(
       "The affected area could not load. Try again.",
     );
+  });
+});
+
+describe("directions announcements", () => {
+  it("names the stop that was added, moved or removed by its letter", () => {
+    expect(announceStopAdded(0, 1)).toBe("Stop A added, 1 stop");
+    expect(announceStopAdded(2, 3)).toBe("Stop C added, 3 stops");
+    expect(announceStopRemoved(1)).toBe("Stop B removed");
+    expect(announceStopMoved(0, 3)).toBe(
+      "Stop moved to position 1 of 3, now stop A",
+    );
+  });
+
+  it("gives a route's distance, time and mode in words", () => {
+    expect(announceRouteFound(12_400, 1080, "drive", "metric")).toBe(
+      "Route found, 12.4 kilometres, 18 minutes driving",
+    );
+    expect(announceRouteFound(1609.344, 3900, "walk", "imperial")).toBe(
+      "Route found, 1 mile, 1 hour 5 minutes walking",
+    );
+  });
+
+  it("gives an area's time, mode and size in words", () => {
+    expect(announceAreaFound(15, 3_200_000, "cycle", "metric")).toBe(
+      "Area reachable within 15 minutes cycling found, covering 3.2 square kilometres",
+    );
+    expect(announceAreaFound(1, 3_200_000, "cycle", "metric")).toContain(
+      "within 1 minute cycling",
+    );
+  });
+
+  it("repeats the visible error text", () => {
+    expect(announceRoutingError("rate-limited", "route")).toMatch(/busy/);
+  });
+
+  it("confirms a cancel and a clear", () => {
+    expect(announceRoutingCancelled()).toBe("Cancelled");
+    expect(announceDirectionsCleared()).toBe("Directions cleared");
   });
 });

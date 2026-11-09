@@ -757,6 +757,32 @@ describe("MapLibreMapAdapter", () => {
         expect(taps).not.toHaveBeenCalled();
       });
 
+      it("draws shape lines two pixels wide unless the caller sets a width", async () => {
+        const { adapter, map } = await mounted();
+        map.fire("style.load");
+        const geometries = [
+          {
+            type: "LineString" as const,
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        ];
+        adapter.setShapeLayer("plain", { geometries, colour: "#0072b2" });
+        adapter.setShapeLayer("wide", {
+          geometries,
+          colour: "#0072b2",
+          lineWidth: 6,
+        });
+        const width = (id: string) =>
+          ((map.getLayer(id)?.paint ?? {}) as Record<string, unknown>)[
+            "line-width"
+          ];
+        expect(width("karta:plain:line")).toBe(2);
+        expect(width("karta:wide:line")).toBe(6);
+      });
+
       it("changes only the paint when a tile overlay's opacity changes", async () => {
         const { adapter, map } = await mounted();
         map.fire("style.load");

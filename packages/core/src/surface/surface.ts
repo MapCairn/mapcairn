@@ -1,13 +1,24 @@
 import type { SheetDetent } from "../sheet/sheet";
 
 /** The one surface that is open over the map, or `"none"`. */
-export type SurfaceKind = "none" | "sheet" | "search" | "measure" | "pin";
+export type SurfaceKind =
+  | "none"
+  | "sheet"
+  | "search"
+  | "measure"
+  | "pin"
+  | "directions";
 
 /** The sections of the map options sheet. */
 export type SheetSection = "basemap" | "pin" | "settings" | "help" | "layers";
 
 /** The control that should receive focus when a surface closes. */
-export type FocusTarget = "map-options" | "search" | "measure" | "pin";
+export type FocusTarget =
+  | "map-options"
+  | "search"
+  | "measure"
+  | "pin"
+  | "directions";
 
 /**
  * Everything the chrome needs to know about which surface is open.
@@ -48,6 +59,8 @@ export type SurfaceAction =
   | { readonly type: "openSearch" }
   | { readonly type: "startMeasure" }
   | { readonly type: "stopMeasure" }
+  | { readonly type: "startDirections" }
+  | { readonly type: "stopDirections" }
   | { readonly type: "dropPin" }
   | { readonly type: "clearPin" }
   | { readonly type: "setDetent"; readonly detent: SheetDetent }
@@ -82,9 +95,19 @@ export function stopMeasure(): SurfaceAction {
   return { type: "stopMeasure" };
 }
 
+/** Opens the directions panel. */
+export function startDirections(): SurfaceAction {
+  return { type: "startDirections" };
+}
+
+/** Closes the directions panel. Does nothing when directions is not the active surface. */
+export function stopDirections(): SurfaceAction {
+  return { type: "stopDirections" };
+}
+
 /**
- * Records a dropped pin. The pin card opens unless measure is active, in
- * which case measure stays the active surface.
+ * Records a dropped pin. The pin card opens unless measure or directions is
+ * active, in which case that tool stays the active surface.
  */
 export function dropPin(): SurfaceAction {
   return { type: "dropPin" };
@@ -174,11 +197,15 @@ export function surfaceReducer(
       return open(state, "search", "search");
     case "startMeasure":
       return open(state, "measure", "measure");
+    case "startDirections":
+      return open(state, "directions", "directions");
+    case "stopDirections":
+      return state.surface === "directions" ? close(state) : state;
     case "dropPin": {
-      // The pin is data, so it is recorded even when measure keeps the
-      // surface to itself.
+      // The pin is data, so it is recorded even when a tool that takes the
+      // map's taps keeps the surface to itself.
       const withPin = state.hasPin ? state : { ...state, hasPin: true };
-      if (state.surface === "measure") {
+      if (state.surface === "measure" || state.surface === "directions") {
         return withPin;
       }
       return open(withPin, "pin", "pin");

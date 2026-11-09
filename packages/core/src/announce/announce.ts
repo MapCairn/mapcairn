@@ -1,7 +1,19 @@
+import {
+  type RoutingRequestKind,
+  routingErrorMessage,
+  stopLetter,
+  travelModeParticiple,
+} from "../directions/directions";
 import { formatLatLng, formatNumber, formatZoom } from "../format/format";
-import type { LocationErrorKind, SearchErrorKind } from "../ports/errors";
+import type {
+  LocationErrorKind,
+  RoutingErrorKind,
+  SearchErrorKind,
+} from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
+import type { TravelMode } from "../ports/routing";
 import type { UnitSystem } from "../ports/settings";
+import { describeDuration } from "../units/duration";
 import {
   describeArea,
   describeDistance,
@@ -183,4 +195,57 @@ export function announceAddressNotFound(): string {
 /** Says an address lookup failed and what to do next. */
 export function announceAddressError(): string {
   return "Could not look up the address. Check your connection and try again.";
+}
+
+/** Announced when a stop is added to the directions. `index` counts from zero. */
+export function announceStopAdded(index: number, total: number): string {
+  return `Stop ${stopLetter(index)} added, ${total} ${pluralise(total, ["stop", "stops"])}`;
+}
+
+/** Announced when a stop is removed from the directions. `index` counts from zero. */
+export function announceStopRemoved(index: number): string {
+  return `Stop ${stopLetter(index)} removed`;
+}
+
+/** Announced when a stop moves to a new place in the list. `index` counts from zero. */
+export function announceStopMoved(index: number, total: number): string {
+  return `Stop moved to position ${index + 1} of ${total}, now stop ${stopLetter(index)}`;
+}
+
+/** Announced when a route is found: how far, how long, and how it is travelled. */
+export function announceRouteFound(
+  metres: number,
+  seconds: number,
+  mode: TravelMode,
+  units: UnitSystem,
+): string {
+  return `Route found, ${describeDistance(metres, units)}, ${describeDuration(seconds)} ${travelModeParticiple(mode)}`;
+}
+
+/** Announced when a reachable area is found: how long it is for, the mode and its size. */
+export function announceAreaFound(
+  minutes: number,
+  squareMetres: number,
+  mode: TravelMode,
+  units: UnitSystem,
+): string {
+  return `Area reachable within ${minutes} ${pluralise(minutes, ["minute", "minutes"])} ${travelModeParticiple(mode)} found, covering ${describeArea(squareMetres, units)}`;
+}
+
+/** Announced when a route or area request fails, saying what to do next. */
+export function announceRoutingError(
+  kind: Exclude<RoutingErrorKind, "aborted">,
+  request: RoutingRequestKind,
+): string {
+  return routingErrorMessage(kind, request);
+}
+
+/** Announced when the person cancels a route or area request. */
+export function announceRoutingCancelled(): string {
+  return "Cancelled";
+}
+
+/** Announced when the stops and the route or area are cleared. */
+export function announceDirectionsCleared(): string {
+  return "Directions cleared";
 }
