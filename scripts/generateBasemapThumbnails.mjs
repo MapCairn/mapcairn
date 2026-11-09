@@ -11,8 +11,8 @@
  * `maplibre-gl` files, and headless Chromium draws each basemap with MapLibre
  * from the style and tile URLs defined in
  * `packages/core/src/basemaps/basemaps.ts`, so the previews cannot drift from
- * what the picker selects. Every view is the same: central Cape Town at 160 by
- * 120 CSS px, captured at twice that size.
+ * what the picker selects. Every view is the same: the Cape Town Waterfront at
+ * 160 by 120 CSS px, captured at twice that size.
  *
  * The images are small screenshots of OpenFreeMap (OpenMapTiles data and
  * OpenStreetMap contributors) and of the OpenStreetMap standard tile layer,
@@ -41,10 +41,14 @@ const WIDTH = 160;
 const HEIGHT = 120;
 const SCALE = 2;
 
-/** Central Cape Town, where Table Bay, the street grid and the mountain all fit. */
-const CENTRE = { lat: -33.917, lng: 18.425 };
-/** Normalised (256 px tile) zoom, the convention `BasemapDefinition` uses. */
-const DEFAULT_ZOOM = 12;
+/**
+ * The Cape Town Waterfront, where the harbour, the shoreline and the street
+ * grid all fit. It sits away from the city's own place label, which every
+ * style draws far too large for a preview this small.
+ */
+const CENTRE = { lat: -33.907, lng: 18.428 };
+/** Normalised (256 px tile) zoom, the convention `BasemapDefinition` uses. Close enough that labels stay small. */
+const DEFAULT_ZOOM = 13;
 /** Per-basemap zoom where the default does not read well at this size. */
 const ZOOM_OVERRIDES = {};
 

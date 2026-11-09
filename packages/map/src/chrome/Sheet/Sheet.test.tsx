@@ -229,12 +229,46 @@ describe("Sheet in the sheet layout", () => {
     expect(fireEvent.keyDown(handle(), { key: "Tab" })).toBe(true);
   });
 
+  it("wraps focus at full through sentinels at both ends, for browsers whose Tab skips links and buttons", () => {
+    const state = setup({ detent: "full" });
+    mount(state);
+    const sentinels = sheet().querySelectorAll<HTMLElement>(
+      "[data-focus-sentinel]",
+    );
+    expect(sentinels).toHaveLength(2);
+    const [start, end] = sentinels;
+    if (!start || !end) {
+      throw new Error("No sentinels");
+    }
+    expect(sheet().firstElementChild).toBe(start);
+    expect(sheet().lastElementChild).toBe(end);
+    for (const sentinel of [start, end]) {
+      expect(sentinel.tabIndex).toBe(0);
+    }
+
+    // Safari's default Tab passes the last link and reaches the end sentinel,
+    // which hands focus to the first control.
+    end.focus();
+    expect(document.activeElement).toBe(handle());
+    // Shift+Tab past the first control reaches the start sentinel, which
+    // hands focus to the last control.
+    start.focus();
+    expect(document.activeElement).toBe(screen.getByText("Last option"));
+
+    // The sentinels are not ends of the keyboard loop themselves.
+    const last = screen.getByText("Last option");
+    last.focus();
+    fireEvent.keyDown(last, { key: "Tab" });
+    expect(document.activeElement).toBe(handle());
+  });
+
   it("leaves Tab alone below full", () => {
     const state = setup({ detent: "half" });
     mount(state);
     const last = screen.getByText("Last option");
     last.focus();
     expect(fireEvent.keyDown(last, { key: "Tab" })).toBe(true);
+    expect(sheet().querySelector("[data-focus-sentinel]")).toBeNull();
   });
 
   it("announces detent changes, but not the first opening", () => {

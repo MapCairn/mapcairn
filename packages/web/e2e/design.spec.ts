@@ -279,32 +279,7 @@ test.describe("design guide accessibility @a11y", () => {
             expect(controls.unnamed).toEqual([]);
             expect(controls.positiveTabindex).toEqual([]);
             expect(controls.tooSmall).toEqual([]);
-            // A switch's track is 56x32, but its label sits in a row at
-            // least 48px tall and toggles it too, so the row is the target.
-            // Prove that, then hold every other control to 44px.
-            const switchIds = await page
-              .getByRole("switch")
-              .evaluateAll((switches) =>
-                switches.map((element) => {
-                  const row = element.parentElement?.getBoundingClientRect();
-                  return {
-                    id: element.id,
-                    rowHeight: row?.height ?? 0,
-                    labelled:
-                      (element as HTMLButtonElement).labels?.length === 1,
-                  };
-                }),
-              );
-            for (const entry of switchIds) {
-              expect(entry.labelled, entry.id).toBe(true);
-              expect(entry.rowHeight, entry.id).toBeGreaterThanOrEqual(44);
-            }
-            expect(
-              controls.under44.filter(
-                (line) =>
-                  !switchIds.some((entry) => line.includes(`#${entry.id} `)),
-              ),
-            ).toEqual([]);
+            expect(controls.under44).toEqual([]);
           });
         }
       },

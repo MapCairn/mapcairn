@@ -16,8 +16,15 @@ export const chromeVars = {
   topStartBottom: "--chrome-top-start-bottom",
   /** The tallest the end stack may be before it scrolls. */
   endStackMaxHeight: "--chrome-end-stack-max-height",
+  /** Width of the end stack, zero when it is absent. */
+  endStackWidth: "--chrome-end-stack-width",
   /** Vertical room above the bottom-end slot that stays clear of the end stack. */
   bottomEndRoom: "--chrome-bottom-end-room",
+  /**
+   * Vertical room above the bottom-end slot for something placed beside the
+   * end stack rather than under it: from the gap below the top-start slot.
+   */
+  bottomEndBesideRoom: "--chrome-bottom-end-beside-room",
   /** Vertical shift of the bottom-start and bottom-end slots (zero or negative). */
   bottomLift: "--chrome-bottom-lift",
   /** Horizontal shift of the bottom-start slot (zero or positive). */

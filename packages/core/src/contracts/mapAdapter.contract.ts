@@ -12,7 +12,7 @@ import type {
 /**
  * What the map contract needs besides the adapter itself. A real adapter
  * supplies its own: a host in jsdom or a browser, and ways to make its engine
- * report clicks, loading and tile errors.
+ * report clicks, loading, tile errors, zoom gestures and a failure after load.
  */
 export interface MapAdapterControls {
   /** The element the adapter mounts into. */
@@ -30,6 +30,13 @@ export interface MapAdapterControls {
   simulateClick(latlng: LatLng): void;
   /** Makes the engine report a failed tile or style request. */
   simulateTileError(): void;
+  /**
+   * Makes the engine report a zoom gesture it handles itself (a wheel, a
+   * pinch or a double-click) that leaves the view at the normalised `zoom`.
+   */
+  simulateUserZoom(zoom: number): void;
+  /** Makes the engine fail after it has loaded, the way a crashed worker does. */
+  simulateFatalError(): void;
   /** Makes the engine report that loading started or finished. */
   simulateLoading(loading: boolean): void;
   /**
@@ -348,13 +355,17 @@ export function runMapAdapterContract(
       expect(Array.isArray(clicks[0]?.features)).toBe(true);
     });
 
-    it("emits loading and tileError", async () => {
+    it("emits loading and tileError, and a tile error is not fatal", async () => {
       const { adapter, controls } = await mounted();
       const loading: boolean[] = [];
       let tileErrors = 0;
+      let fatalErrors = 0;
       adapter.on("loading", (state) => loading.push(state));
       adapter.on("tileError", () => {
         tileErrors += 1;
+      });
+      adapter.on("fatalError", () => {
+        fatalErrors += 1;
       });
       controls.simulateLoading(true);
       controls.simulateLoading(false);
@@ -362,6 +373,55 @@ export function runMapAdapterContract(
       await controls.settle();
       expect(loading).toEqual([true, false]);
       expect(tileErrors).toBe(1);
+      expect(fatalErrors).toBe(0);
+    });
+
+    it("emits fatalError, and not tileError, when the engine fails after loading", async () => {
+      const { adapter, controls } = await mounted();
+      const fatal: MapEvents["fatalError"][] = [];
+      let tileErrors = 0;
+      adapter.on("fatalError", (error) => fatal.push(error));
+      adapter.on("tileError", () => {
+        tileErrors += 1;
+      });
+      controls.simulateFatalError();
+      await controls.settle();
+      expect(fatal).toHaveLength(1);
+      expect(fatal[0]).toBeInstanceOf(MapEngineError);
+      expect(fatal[0]?.reason).toBe("stopped");
+      expect(tileErrors).toBe(0);
+    });
+
+    it("emits userZoom for a zoom gesture, with the new view", async () => {
+      const { adapter, controls, zoom } = await mounted();
+      const zooms: number[] = [];
+      adapter.on("userZoom", (view) => zooms.push(view.zoom));
+      controls.simulateUserZoom(zoom + 1);
+      await controls.settle();
+      expect(zooms.length).toBeGreaterThan(0);
+      expect(zooms.at(-1)).toBeCloseTo(zoom + 1, 3);
+      expect(adapter.getView().zoom).toBeCloseTo(zoom + 1, 3);
+    });
+
+    it("never emits userZoom for a change made in code", async () => {
+      const { adapter, controls, zoom } = await mounted();
+      let userZooms = 0;
+      adapter.on("userZoom", () => {
+        userZooms += 1;
+      });
+      adapter.setView({ zoom: zoom + 1 }, NO_ANIMATION);
+      adapter.zoomIn(NO_ANIMATION);
+      adapter.zoomOut(NO_ANIMATION);
+      adapter.panBy(40, -20, NO_ANIMATION);
+      adapter.rotateBy(30, NO_ANIMATION);
+      adapter.resetBearing(NO_ANIMATION);
+      adapter.fitBounds(
+        { south: -34.1, west: 18.3, north: -33.8, east: 18.7 },
+        { ...NO_ANIMATION, maxZoom: 12 },
+      );
+      await adapter.setBasemap(controls.basemap);
+      await controls.settle();
+      expect(userZooms).toBe(0);
     });
 
     it("swaps the basemap and keeps valid zoom limits", async () => {

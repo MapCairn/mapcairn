@@ -55,37 +55,59 @@ export const description = style({
 });
 
 /**
- * The track. Its edge is `controlBoundary` so the control is identifiable at
- * 3:1 against the surface in both states; on shows an accent fill as well.
- * `forced-color-adjust: none` keeps the mapped system colours, otherwise the
- * thumb would vanish into the track.
+ * The control itself, a Radix button, is the hit area: as wide as the track
+ * and at least the minimum target tall, so the pointer target is 44px high
+ * while the track keeps its size. It sits inside the row, which is taller
+ * still, so the larger box never reaches a neighbour. The visible track
+ * inside it carries the focus ring.
  */
-export const track = style({
+export const control = style({
   appearance: "none",
   boxSizing: "border-box",
   display: "flex",
   alignItems: "center",
   flexShrink: 0,
   width: trackWidth,
+  minHeight: tokens.size.minTarget,
+  margin: 0,
+  padding: 0,
+  border: "none",
+  backgroundColor: "transparent",
+  cursor: "pointer",
+  selectors: {
+    "&:focus-visible": { outline: "none" },
+    "&:disabled": { cursor: "not-allowed", opacity: 0.5 },
+  },
+});
+
+/**
+ * The visible track. Its edge is `controlBoundary` so the control is
+ * identifiable at 3:1 against the surface in both states; on shows an accent
+ * fill as well. `forced-color-adjust: none` keeps the mapped system colours,
+ * otherwise the thumb would vanish into the track.
+ */
+export const track = style({
+  boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  width: trackWidth,
   height: trackHeight,
   padding: trackInset,
   border: `2px solid ${tokens.color.controlBoundary}`,
   borderRadius: tokens.radius.pill,
   backgroundColor: tokens.color.surfaceRaised,
-  cursor: "pointer",
   forcedColorAdjust: "none",
   selectors: {
-    '&[data-state="checked"]': {
+    [`${control}[data-state="checked"] > &`]: {
       backgroundColor: tokens.color.accent,
       borderColor: tokens.color.accent,
     },
-    "&:focus-visible": focusRing,
-    "&:disabled": { cursor: "not-allowed", opacity: 0.5 },
+    [`${control}:focus-visible > &`]: focusRing,
   },
   "@media": {
     "(hover: hover)": {
       selectors: {
-        '&:hover:not(:disabled)[data-state="unchecked"]': {
+        [`${control}:hover:not(:disabled)[data-state="unchecked"] > &`]: {
           backgroundColor: tokens.color.accentTint,
         },
       },

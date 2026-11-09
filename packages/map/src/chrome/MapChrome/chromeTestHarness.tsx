@@ -33,6 +33,7 @@ export function testMapContext(
     error: null,
     retry: () => {},
     focusMap: () => {},
+    onUserZoom: () => () => {},
     ...overrides,
   };
 }

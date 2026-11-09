@@ -45,6 +45,7 @@
   "allowScripts": {
     "esbuild": true,
     "lefthook": true,
-    "workerd": true
+    "workerd": true,
+    "@swc/core": false
   }
 }

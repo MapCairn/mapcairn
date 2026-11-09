@@ -23,7 +23,7 @@ Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use token
 - **Radii:** pill 24, sheet 20, control and card 14, inner 10. Fully circular elements use 50%.
 - **Elevation:** two shadows, floating and sheet, each with light and dark values. No borders on floating elements. Hairlines only inside lists and between grouped controls.
 - **Type:** IBM Plex Sans only, self-hosted through Fontsource (variable, Latin and Latin Extended), weights 400 and 600. Sizes 13, 15, 17 and 22, defined in rem with a line height and tracking each. Nothing below 13px. Numbers use `tabular-nums`. Inputs are 17px, never below 16px. The fallback stack is `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`, which also covers non-Latin place names.
-- **Size:** controls are 48px minimum, targets never below 44px, with at least 8px between neighbours.
+- **Size:** controls are 48px minimum, targets never below 44px, switches and slider thumbs included (their hit area is larger than what they draw), with at least 8px between neighbours.
 - **Icons:** `lucide-react` only, imported by name, 24px, one stroke-width token, through the `Icon` component.
 - **Focus ring:** two tones (an inner surface ring and an outer ring, 2px each) so it shows on any basemap. Every interactive element and the focused map use it.
 - **Motion:** 120, 200 and 320ms, one easing curve, one spring for the sheet. Only transform and opacity animate. `prefers-reduced-motion` turns motion off, including MapLibre's own animation.
@@ -53,8 +53,8 @@ Native elements first. No tabindex above 0. Every interactive component has an a
 | `IconButton` | A `button` named for the action ("Zoom in"). Visible labels are contained in the name. |
 | `ControlGroup` | Stacked icon buttons with hairline dividers. A group, not a toolbar. |
 | `SearchPill` | `role="search"` with an ARIA 1.2 combobox: `aria-expanded`, `aria-controls`, `aria-activedescendant`. Results never take focus. |
-| `Sheet` | A labelled dialog. Non-modal at peek and half. At full it is modal, the background is `inert` and Escape closes it. The handle is a button that cycles detents with Enter or Space and moves with the arrow keys. On desktop it is a labelled complementary region. |
-| `Attribution` | A "Map credits" button with `aria-expanded` and `aria-controls`. The popover is a labelled region with real links and returns focus on close. |
+| `Sheet` | A labelled dialog. Non-modal at peek and half. At full it is modal, the background is `inert`, Tab wraps inside it (with a focus sentinel at each end for Safari, whose Tab skips links and buttons) and Escape closes it. The handle is a button that cycles detents with Enter or Space and moves with the arrow keys. On desktop it is a labelled complementary region. |
+| `Attribution` | A "Map credits" button with `aria-expanded` and `aria-controls`. The popover is a labelled region with real links and returns focus on close. It opens above the button, or beside the end stack when the links would have to scroll there (a short landscape phone). |
 | `Switch`, `Slider`, `SegmentedControl` | Radix primitives wrapped in our own components, with visible labels and values. |
 | `Tooltip` | Supplements a name, never replaces one. Opens on focus and hover, closes on Escape, absent on touch. |
 | `LiveRegion` | The one announcer: a polite and an assertive region mounted once, throttled and de-duplicated. Nothing else creates live regions. |
@@ -83,6 +83,6 @@ Two other lists exist, and each has one home. `scripts/harmony/allowlist.mjs` ho
 
 | Rule | Enforced by |
 | --- | --- |
-| Colour literals, off-scale radius, spacing, font size and weight, font family, raw z-index, literal motion durations, `outline: none` without `focusRing`, `position: absolute` and `fixed` outside floating surfaces, inline styles, MapLibre selectors, `tabindex` above 0, pinch-zoom blocking, live regions outside `LiveRegion` and `StatusMessage`, icon sizing, icon-only buttons without a name, MapLibre controls, module-level services | harmony scanner (`scripts/harmony`) |
+| Colour literals, off-scale radius, spacing, font size and weight, font family, raw z-index, literal motion durations, `outline: none` without `focusRing` (in the same rule, or on the visible part inside a larger hit area), `position: absolute` and `fixed` outside floating surfaces, inline styles, MapLibre selectors, `tabindex` above 0, pinch-zoom blocking, live regions outside `LiveRegion` and `StatusMessage`, icon sizing, icon-only buttons without a name, MapLibre controls, module-level services | harmony scanner (`scripts/harmony`) |
 | Icon packages, namespace and default imports of `lucide-react`, accessibility rules, browser globals outside adapters, core purity, inline style attributes on DOM elements, `!important` in CSS | Biome (`biome.jsonc`) |
 | `maplibre-gl` imports outside `packages/web/src/adapters/maplibre`, Radix outside four primitives, adapters outside the composition root, ports as types only, core limited to pure packages | dependency-cruiser (`.dependency-cruiser.cjs`) |

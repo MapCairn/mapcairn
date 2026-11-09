@@ -3,19 +3,53 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const script = join(
   dirname(fileURLToPath(import.meta.url)),
   "../../scripts/verifyNoTestSeam.mjs",
 );
 
-const roots: string[] = [];
+/**
+ * Each case spawns Node, which a loaded machine can take a few seconds to
+ * start. The child gets a bounded time of its own, and the test a little more.
+ */
+const CHILD_TIMEOUT_MS = 15_000;
+const TEST_TIMEOUT_MS = 20_000;
+
+/**
+ * This file's own directory, created once and removed once. Every case works
+ * in a fresh numbered folder inside it, so no two cases (and no other test or
+ * process using the system temp folder) share a path. Windows can briefly
+ * hold newly written files open, so removal retries rather than failing.
+ */
+let base = "";
+let cases = 0;
+
+beforeAll(() => {
+  base = mkdtempSync(join(tmpdir(), "karta-seam-"));
+});
+
+afterAll(() => {
+  rmSync(base, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
+});
+
+/** A new, empty folder for one case. */
+function caseRoot(): string {
+  cases += 1;
+  const root = join(base, `case-${cases}`);
+  mkdirSync(root);
+  return root;
+}
 
 /** Makes a fake package whose build output holds the given files. */
 function fakeBuild(files: Record<string, string>): string {
-  const root = mkdtempSync(join(tmpdir(), "karta-seam-"));
-  roots.push(root);
+  const root = caseRoot();
   mkdirSync(join(root, "build/client/assets"), { recursive: true });
   mkdirSync(join(root, "build/server"), { recursive: true });
   for (const [path, content] of Object.entries(files)) {
@@ -25,18 +59,18 @@ function fakeBuild(files: Record<string, string>): string {
 }
 
 function run(root: string, ...flags: string[]) {
-  return spawnSync(process.execPath, [script, "--root", root, ...flags], {
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    process.execPath,
+    [script, "--root", root, ...flags],
+    { encoding: "utf8", timeout: CHILD_TIMEOUT_MS },
+  );
+  if (result.error) {
+    throw result.error;
+  }
+  return result;
 }
 
-afterEach(() => {
-  for (const root of roots.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
-describe("verifyNoTestSeam", () => {
+describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
   it("passes for a build without the seam", () => {
     const root = fakeBuild({
       "client/assets/app.js": "console.log('hello')",
@@ -69,8 +103,7 @@ describe("verifyNoTestSeam", () => {
   });
 
   it("cannot verify, and says so, when there is no build", () => {
-    const root = mkdtempSync(join(tmpdir(), "karta-seam-"));
-    roots.push(root);
+    const root = caseRoot();
     const result = run(root);
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("Run the build first");

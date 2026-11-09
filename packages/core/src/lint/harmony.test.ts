@@ -20,6 +20,13 @@ const TS = "packages/map/src/host/example.ts";
 const css = (body: string): string =>
   `import { style } from "@vanilla-extract/css";\nimport { focusRing, tokens } from "@karta/theme";\nexport const a = style({\n${body}\n});\n`;
 
+/**
+ * A hit-area style `a` that removes its own outline, and a style `b` for the
+ * visible part inside it, styled by `inner` while `a` has keyboard focus.
+ */
+const delegatedRing = (inner: string): string =>
+  `${css('  selectors: { "&:focus-visible": { outline: "none" } },')}export const b = style({\n  selectors: { [\`\${a}:focus-visible > &\`]: ${inner} },\n});\n`;
+
 const cases: readonly Case[] = [
   {
     rule: "colour-literal",
@@ -204,6 +211,13 @@ const cases: readonly Case[] = [
     good: css(
       '  selectors: { "&:focus": { outline: "none" }, "&:focus-visible": focusRing },',
     ),
+  },
+  {
+    rule: "outline",
+    name: "outline none on a hit area whose visible part carries the ring",
+    file: CSS,
+    bad: delegatedRing("{ backgroundColor: tokens.color.accent }"),
+    good: delegatedRing("focusRing"),
   },
   {
     rule: "outline",

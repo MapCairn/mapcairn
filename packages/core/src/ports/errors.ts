@@ -38,10 +38,19 @@ export class LocationError extends Error {
   }
 }
 
-/** Why a map engine could not start. */
-export type MapEngineErrorReason = "webgl-unavailable" | "load-failed";
+/**
+ * Why a map engine failed: it could not start without WebGL, it could not
+ * load, or it `stopped` working after it had loaded.
+ */
+export type MapEngineErrorReason =
+  | "webgl-unavailable"
+  | "load-failed"
+  | "stopped";
 
-/** The only error a map adapter rejects with when its engine cannot start. */
+/**
+ * The only error a map adapter rejects with when its engine cannot start, and
+ * the payload of its `fatalError` event when the engine stops later.
+ */
 export class MapEngineError extends Error {
   readonly reason: MapEngineErrorReason;
 

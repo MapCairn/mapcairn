@@ -94,7 +94,7 @@ function slot(name: string): HTMLElement {
 }
 
 /** Fakes the layout box of a slot, relative to the chrome root. */
-function place(name: string, top: number, height: number) {
+function place(name: string, top: number, height: number, width = 0) {
   const element = root().querySelector(`[data-chrome="${name}"]`);
   if (!element) {
     return;
@@ -107,13 +107,17 @@ function place(name: string, top: number, height: number) {
     value: height,
     configurable: true,
   });
+  Object.defineProperty(element, "offsetWidth", {
+    value: width,
+    configurable: true,
+  });
 }
 
 /** Sizes the container, lays the slots out like a phone and reports a resize. */
 function resize(width: number, height: number) {
   mockRect(root(), { left: 0, top: 0, width, height });
   place("top-start", 12, 48);
-  place("end-stack", 72, 300);
+  place("end-stack", 72, 300, 48);
   place("bottom-start", height - 12 - 30, 30);
   place("bottom-end", height - 12 - 44, 44);
   place("bottom-centre", height - 12, 0);
@@ -139,12 +143,13 @@ describe("MapChrome structure", () => {
       slot("bottom-centre"),
       slot("bottom-end"),
     ];
-    for (let index = 1; index < order.length; index += 1) {
+    order.reduce((earlier, later) => {
       expect(
-        order[index - 1].compareDocumentPosition(order[index]) &
+        earlier.compareDocumentPosition(later) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
-    }
+      return later;
+    });
     expect(screen.getByRole("main")).toContainElement(
       screen.getByTestId("map"),
     );
@@ -258,6 +263,18 @@ describe("MapChrome layout", () => {
     // Room for the credits popover: from the stack's bottom (372) to the
     // bottom-end slot's top, less the gap.
     expect(cssVar(chromeVars.bottomEndRoom)).toBe(`${744 - 12 - 372}px`);
+  });
+
+  it("publishes the room beside the end stack, for credits that do not fit above", () => {
+    mount();
+    // A short landscape phone: the end stack (72 to 372) reaches past the
+    // bottom-end slot's top (390 - 12 - 44 = 334), so there is no room above.
+    resize(844, 390);
+    expect(cssVar(chromeVars.bottomEndRoom)).toBe("0px");
+    // Beside the stack the credits may rise to the gap below the search row
+    // (12 + 48 = 60).
+    expect(cssVar(chromeVars.bottomEndBesideRoom)).toBe(`${334 - 12 - 60}px`);
+    expect(cssVar(chromeVars.endStackWidth)).toBe("48px");
   });
 
   it("lifts the bottom slots above the sheet and hides them at full", () => {

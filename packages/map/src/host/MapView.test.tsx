@@ -1013,6 +1013,58 @@ describe("engine errors", () => {
   });
 });
 
+describe("engine failure after load", () => {
+  it("exposes a fatal error, stops loading and reports it", async () => {
+    const onEngineError = vi.fn();
+    const { adapter, latest } = await setup({ onEngineError });
+    act(() => {
+      adapter().simulateLoading(true);
+      adapter().simulateFatalError();
+    });
+    expect(latest().error?.reason).toBe("stopped");
+    expect(latest().loading).toBe(false);
+    expect(latest().tileError).toBe(false);
+    expect(onEngineError).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "stopped" }),
+      FAKE_RASTER_BASEMAP,
+    );
+    expect(screen.getByTestId("map")).toHaveAttribute("data-state", "error");
+  });
+});
+
+describe("user zoom", () => {
+  it("tells subscribers about zoom keys and engine gestures, not zooms made in code", async () => {
+    const { adapter, latest, host } = await setup();
+    const listener = vi.fn();
+    const unsubscribe = latest().onUserZoom(listener);
+
+    act(() => {
+      adapter().setView({ zoom: 8 });
+      adapter().zoomIn();
+    });
+    expect(listener).not.toHaveBeenCalled();
+
+    act(() => {
+      adapter().simulateUserZoom(5);
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(host(), { key: "+" });
+    fireEvent.keyDown(host(), { key: "-" });
+    expect(listener).toHaveBeenCalledTimes(3);
+
+    // Other keys move the map without zooming.
+    fireEvent.keyDown(host(), { key: "ArrowLeft" });
+    expect(listener).toHaveBeenCalledTimes(3);
+
+    unsubscribe();
+    act(() => {
+      adapter().simulateUserZoom(6);
+    });
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+});
+
 describe("tile errors", () => {
   it("raises tileError and keeps it through a load that also failed", async () => {
     const { adapter, latest } = await setup();

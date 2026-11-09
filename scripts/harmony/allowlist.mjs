@@ -13,13 +13,6 @@
  */
 export const ALLOW_LIST = [
   {
-    rule: "outline",
-    file: "packages/map/src/ui/Slider/Slider.css.ts",
-    contains: '"&:focus-visible": { outline: "none" }',
-    reason:
-      "The thumb box is the hit area. The visible thumb circle inside it carries the focusRing token (see the `:focus-visible > &` rule below).",
-  },
-  {
     rule: "spacing",
     file: "packages/map/src/ui/VisuallyHidden/VisuallyHidden.css.ts",
     contains: "margin: -1",

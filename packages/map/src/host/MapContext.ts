@@ -27,7 +27,10 @@ export interface MapContextValue {
   readonly loading: boolean;
   /** True after a tile or style request failed, until a later load succeeds without one. */
   readonly tileError: boolean;
-  /** Why the engine could not start, or null. The app decides the fallback. */
+  /**
+   * Why the engine could not start, or why it stopped after it loaded
+   * (reason `stopped`), or null. The app decides the fallback.
+   */
   readonly error: MapEngineError | null;
   /**
    * Re-applies the active basemap after a tile error. After an engine error it
@@ -36,6 +39,14 @@ export interface MapContextValue {
   readonly retry: () => void;
   /** Moves keyboard focus to the map region without scrolling. */
   readonly focusMap: () => void;
+  /**
+   * Calls `listener` each time the person zooms the map itself: with the
+   * zoom keys on the map region, or with a gesture the engine handles (a
+   * wheel, a pinch, a double-click). Zooms made in code, such as restoring a
+   * permalink or applying a basemap's limits, never call it. Returns the
+   * function that unsubscribes.
+   */
+  readonly onUserZoom: (listener: () => void) => () => void;
 }
 
 /** The map context. Provided by `MapView`; read it with {@link useMap}. */

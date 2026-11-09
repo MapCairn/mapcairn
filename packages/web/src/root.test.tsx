@@ -43,7 +43,12 @@ afterEach(() => {
 });
 
 type Link = Record<string, string>;
-const allLinks = () => links() as Link[];
+const allLinks = (): Link[] =>
+  links().map((link) =>
+    Object.fromEntries(
+      Object.entries(link).map(([key, value]) => [key, String(value)]),
+    ),
+  );
 
 describe("root links", () => {
   it("preloads the Latin font face and nothing else", () => {

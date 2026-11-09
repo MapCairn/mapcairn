@@ -248,9 +248,9 @@ function checkOutline({ decl, code, report }) {
   const removes =
     (decl.prop === "outline" && /^(?:none|0|0px)(?:\s|$)/.test(value)) ||
     (decl.prop === "outlineStyle" && value === "none");
-  const replaced = /\bfocusRing\b/.test(
-    code.slice(decl.ruleStart, decl.ruleEnd),
-  );
+  const replaced =
+    /\bfocusRing\b/.test(code.slice(decl.ruleStart, decl.ruleEnd)) ||
+    ringDelegated(code, decl.ruleStart);
   if (removes && !replaced) {
     report(
       "outline",
@@ -258,6 +258,27 @@ function checkOutline({ decl, code, report }) {
       `${decl.prop}: ${value} removes the focus indicator. Keep the outline, or replace it with the focusRing token in the same style rule.`,
     );
   }
+}
+
+/**
+ * Whether the style whose rule opens at `ruleStart` hands its focus ring to
+ * the visible part inside it: a hit area larger than what it draws (a slider
+ * thumb, a switch) whose child style carries the `focusRing` token under a
+ * `${name}:focus-visible > &` selector in the same file.
+ *
+ * @param {string} code
+ * @param {number} ruleStart
+ * @returns {boolean}
+ */
+function ringDelegated(code, ruleStart) {
+  const name = /\bconst\s+(\w+)\s*=\s*style\(\s*$/.exec(
+    code.slice(0, ruleStart),
+  )?.[1];
+  if (name === undefined) {
+    return false;
+  }
+  const selector = `\\[\\s*\`\\$\\{${name}\\}:focus-visible\\s*>\\s*&\`\\s*\\]`;
+  return new RegExp(`${selector}\\s*:\\s*focusRing\\b`).test(code);
 }
 
 /** @param {DeclarationContext} c */

@@ -1,4 +1,5 @@
 import type { BasemapDefinition } from "./basemap";
+import type { MapEngineError } from "./errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "./geometry";
 
 /**
@@ -58,6 +59,14 @@ export interface MapEvents {
   moveEnd: ViewState;
   /** The normalised zoom changed. */
   zoom: ViewState;
+  /**
+   * The person zoomed with a gesture the engine handles itself: a wheel or
+   * trackpad, a pinch, or a double-click or double-tap. Fires as the zoom
+   * changes, with the new view, as well as `zoom`. A change made in code
+   * (`setView`, `zoomIn`, `fitBounds`, `setBasemap` and the rest) never
+   * fires it.
+   */
+  userZoom: ViewState;
   /** The bearing changed. */
   rotate: ViewState;
   click: MapClickEvent;
@@ -65,8 +74,15 @@ export interface MapEvents {
   load: undefined;
   /** True while tiles or the style are loading, false when everything has loaded. */
   loading: boolean;
-  /** A tile or style request failed. */
+  /** A tile or style request failed. The map still works. */
   tileError: undefined;
+  /**
+   * The engine stopped working after it had loaded (for example its worker
+   * failed), so the map can no longer draw. The error's reason is
+   * `stopped`. A failed tile or source is a `tileError` instead, and a
+   * failed `mount` or `setBasemap` rejects its promise.
+   */
+  fatalError: MapEngineError;
 }
 
 /**

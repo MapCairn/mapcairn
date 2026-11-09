@@ -60,8 +60,10 @@ describe("dependency-cruiser boundaries", () => {
       'import { ui } from "../../../map/src/ui/index";\nexport const x = ui;\n',
     "packages/core/src/bad/importsNode.ts":
       'import { readFileSync } from "node:fs";\nexport const x = readFileSync;\n',
-    "packages/core/src/good/importsZod.ts":
+    "packages/core/src/bad/importsZod.ts":
       'import { z } from "zod";\nexport const x = z;\n',
+    "packages/core/src/good/importsTurf.ts":
+      'import area from "@turf/area";\nexport const x = area;\n',
 
     // ports are types only.
     "packages/core/src/ports/badValue.ts":
@@ -154,6 +156,7 @@ describe("dependency-cruiser boundaries", () => {
       "packages/core/src/bad/importsMaplibre.ts",
     ],
     ["core-uses-only-pure-packages", "packages/core/src/bad/importsNode.ts"],
+    ["core-uses-only-pure-packages", "packages/core/src/bad/importsZod.ts"],
     ["core-is-dependency-free", "packages/core/src/bad/importsUi.ts"],
     ["ports-are-types-only", "packages/core/src/ports/badValue.ts"],
     ["ports-import-no-packages", "packages/core/src/ports/badNpm.ts"],
@@ -218,7 +221,7 @@ describe("dependency-cruiser boundaries", () => {
   });
 
   it.each([
-    "packages/core/src/good/importsZod.ts",
+    "packages/core/src/good/importsTurf.ts",
     "packages/core/src/ports/goodType.ts",
     "packages/web/src/composition/goodRoot.ts",
     "packages/web/src/adapters/maplibre/goodMaplibre.ts",

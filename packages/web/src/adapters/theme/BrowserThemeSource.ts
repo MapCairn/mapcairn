@@ -10,7 +10,7 @@ import {
   type MediaQueryWindow,
   observeMediaQuery,
   readMediaQuery,
-} from "./mediaQuery";
+} from "../shared/mediaQuery";
 
 /** The slice of a DOM element the theme adapter writes to. */
 export interface ThemeElement {

@@ -4,7 +4,7 @@ import {
   type MediaQueryWindow,
   observeMediaQuery,
   readMediaQuery,
-} from "../theme/mediaQuery";
+} from "../shared/mediaQuery";
 
 /** Options for {@link BrowserDevicePreferences}. */
 export interface BrowserDevicePreferencesOptions {

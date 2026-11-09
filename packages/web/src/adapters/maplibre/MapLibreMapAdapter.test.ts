@@ -664,6 +664,80 @@ describe("MapLibreMapAdapter", () => {
       expect(log).toHaveBeenCalledTimes(2);
     });
 
+    it("reports a worker that fails after load as fatal, not as a tile error", async () => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { adapter, map } = await mounted();
+      const tileError = vi.fn();
+      const fatalError = vi.fn();
+      adapter.on("tileError", tileError);
+      adapter.on("fatalError", fatalError);
+      // maplibre-gl 6.17 fires exactly this, with no tile or source, from
+      // createActors (src/util/actor.ts) when a worker fails.
+      map.fire("error", {
+        error: new Error(
+          "Worker failed to load. Check that the worker URL is correct.",
+        ),
+      });
+      expect(tileError).not.toHaveBeenCalled();
+      expect(fatalError).toHaveBeenCalledTimes(1);
+      expect(fatalError.mock.calls[0]?.[0]).toMatchObject({
+        name: "MapEngineError",
+        reason: "stopped",
+      });
+      expect(log).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps errors without a tile or source that leave the map working as tile errors", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const { adapter, map } = await mounted();
+      const tileError = vi.fn();
+      const fatalError = vi.fn();
+      adapter.on("tileError", tileError);
+      adapter.on("fatalError", fatalError);
+      map.fire("error", {
+        error: new Error(
+          'Source layer "roads" does not exist on source "openmaptiles" as specified by style layer "road".',
+        ),
+      });
+      map.fire("error", { error: new Error("Unable to load sprite") });
+      expect(tileError).toHaveBeenCalledTimes(2);
+      expect(fatalError).not.toHaveBeenCalled();
+    });
+
+    it("rejects a mount when the worker fails while it loads, rather than reporting it as fatal", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const adapter = new MapLibreMapAdapter();
+      const fatalError = vi.fn();
+      adapter.on("fatalError", fatalError);
+      const result = adapter.mount(createHost(), MOUNT);
+      await vi.waitFor(() => {
+        expect(FakeMapLibreMap.instances).toHaveLength(1);
+      });
+      latestMap().fire("error", {
+        error: new Error(
+          "Worker failed to load. Check that the worker URL is correct.",
+        ),
+      });
+      await expect(result).rejects.toMatchObject({ reason: "load-failed" });
+      expect(fatalError).not.toHaveBeenCalled();
+    });
+
+    it("reports a zoom that carries the person's input event as userZoom, and no other", async () => {
+      const { adapter, map } = await mounted();
+      const userZoom = vi.fn();
+      const zoom = vi.fn();
+      adapter.on("userZoom", userZoom);
+      adapter.on("zoom", zoom);
+      map.gesture({ zoom: 6 }, new WheelEvent("wheel"));
+      expect(userZoom).toHaveBeenCalledTimes(1);
+      expect(userZoom.mock.calls[0]?.[0]).toMatchObject({ zoom: 7 });
+      expect(zoom).toHaveBeenCalledTimes(1);
+      adapter.setView({ zoom: 9 }, { animate: false });
+      adapter.zoomIn();
+      expect(zoom).toHaveBeenCalledTimes(3);
+      expect(userZoom).toHaveBeenCalledTimes(1);
+    });
+
     it("unsubscribes a handler", async () => {
       const { adapter, map } = await mounted();
       const move = vi.fn();
@@ -719,11 +793,15 @@ describe("MapLibreMapAdapter", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       const { adapter, map } = await mounted();
       const swapping = adapter.setBasemap(DARK);
+      const tileError = vi.fn();
+      adapter.on("tileError", tileError);
       map.fire("error", { error: new Error("404 style") });
       await expect(swapping).rejects.toMatchObject({
         name: "MapEngineError",
         reason: "load-failed",
       });
+      // Reported once, through the promise, not also as a tile error.
+      expect(tileError).not.toHaveBeenCalled();
     });
 
     it("swaps between a vector style and a raster style both ways", async () => {

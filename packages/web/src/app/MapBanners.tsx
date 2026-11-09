@@ -9,6 +9,10 @@ import type { MapApp } from "./useMapApp";
 export const ENGINE_FAILED_MESSAGE =
   "The map could not start. Reload the page to try again.";
 
+/** Shown when the engine stopped working after it had loaded (a worker failed). */
+export const ENGINE_STOPPED_MESSAGE =
+  "The map stopped working. Reload the page to try again.";
+
 /** Props for {@link MapBanners}. */
 export interface MapBannersProps {
   readonly app: MapApp;
@@ -32,7 +36,10 @@ function engineFailed(map: Pick<MapContextValue, "error">): boolean {
 
 /**
  * The status banners in the bottom-centre slot: a tile error with Retry, a
- * location error, and a map that could not start, with Reload. Missing WebGL
+ * location error, and a map that could not start or stopped working, with
+ * Reload. Reload rather than a remount: the engine stops when its worker
+ * script fails to load (a wrong URL, or one the CSP blocks), and a new map
+ * would fetch the same script and fail the same way. Missing WebGL
  * is not a banner: `MapUnavailable` shows it in place of the map.
  *
  * @remarks Each banner is a `StatusMessage`, which is a live region itself
@@ -87,7 +94,9 @@ export function MapBanners({ app }: MapBannersProps) {
           action={{ label: "Reload", onClick: reload }}
           onDismiss={() => setEngineErrorDismissed(true)}
         >
-          {ENGINE_FAILED_MESSAGE}
+          {map.error?.reason === "stopped"
+            ? ENGINE_STOPPED_MESSAGE
+            : ENGINE_FAILED_MESSAGE}
         </StatusMessage>
       ) : null}
     </div>

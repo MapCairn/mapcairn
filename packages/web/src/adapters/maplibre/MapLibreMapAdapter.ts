@@ -96,6 +96,30 @@ function isTileOrSourceError(event: object): boolean {
   return tile !== undefined || sourceId !== undefined;
 }
 
+/**
+ * The message maplibre-gl (6.17) gives the `error` event it fires when a web
+ * worker fails (`createActors` in `src/util/actor.ts`). The event has no
+ * type, tile or source of its own, so the message is the only way to tell it
+ * from errors that leave the map working, such as a missing sprite or a style
+ * layer naming a source layer the tiles lack.
+ */
+const WORKER_FAILED_MESSAGE = "Worker failed to load.";
+
+/** Whether an engine `error` event means the engine itself has stopped. */
+function isEngineFailure(event: object): boolean {
+  const { error } = event as { error?: unknown };
+  return (
+    !isTileOrSourceError(event) &&
+    error instanceof Error &&
+    error.message.startsWith(WORKER_FAILED_MESSAGE)
+  );
+}
+
+/** Whether a camera event came from the person (a gesture), not from code. */
+function isUserEvent(event: object): boolean {
+  return (event as { originalEvent?: unknown }).originalEvent !== undefined;
+}
+
 /** The id of the source and layer of an inline raster style. */
 const RASTER_ID = "basemap";
 
@@ -469,13 +493,19 @@ export class MapLibreMapAdapter implements MapAdapter {
     ) => {
       this.subscriptions.push(map.on(type, listener));
     };
-    const emitView = (event: "move" | "moveEnd" | "zoom" | "rotate") => () => {
+    const emitView = (event: "move" | "moveEnd" | "rotate") => () => {
       this.emitter.emit(event, this.getView());
     };
 
     listen("move", emitView("move"));
     listen("moveend", emitView("moveEnd"));
-    listen("zoom", emitView("zoom"));
+    listen("zoom", (event) => {
+      const view = this.getView();
+      this.emitter.emit("zoom", view);
+      if (isUserEvent(event)) {
+        this.emitter.emit("userZoom", view);
+      }
+    });
     listen("rotate", emitView("rotate"));
     listen("click", (event) => {
       const click: MapClickEvent = {
@@ -502,6 +532,10 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.setLoading(false);
       this.emitLoad();
     });
+    // Errors are classified once: a tile or source failure leaves the map
+    // working (tileError); any other failure while a mount or basemap swap is
+    // waiting rejects that promise; a failed worker after load stops the
+    // engine (fatalError); anything else is reported like a tile failure.
     listen("error", (event) => {
       // Listening to "error" silences MapLibre's own console logging.
       console.error("MapLibre basemap error", event.error);
@@ -514,6 +548,17 @@ export class MapLibreMapAdapter implements MapAdapter {
             `The basemap style could not be loaded: ${String(event.error)}`,
           ),
         );
+        return;
+      }
+      if (isEngineFailure(event)) {
+        this.emitter.emit(
+          "fatalError",
+          new MapEngineError(
+            "stopped",
+            `The map engine stopped working: ${String(event.error)}`,
+          ),
+        );
+        return;
       }
       this.emitter.emit("tileError", undefined);
     });

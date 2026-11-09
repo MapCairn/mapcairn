@@ -11,12 +11,12 @@ import {
 import { runThemeSourceContract } from "@karta/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocalStorageSettingsStore } from "../settings/LocalStorageSettingsStore";
+import type { MediaQueryLike } from "../shared/mediaQuery";
 import {
   BrowserThemeSource,
   type ThemeDocument,
   type ThemeMetaElement,
 } from "./BrowserThemeSource";
-import type { MediaQueryLike } from "./mediaQuery";
 
 /** A `MediaQueryList` that fires `change` when told to. */
 class FakeMediaQuery implements MediaQueryLike {

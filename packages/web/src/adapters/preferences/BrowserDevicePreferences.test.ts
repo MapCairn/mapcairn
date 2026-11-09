@@ -1,7 +1,7 @@
 import type { DevicePreferencesValue } from "@karta/core";
 import { runDevicePreferencesContract } from "@karta/core/contracts";
 import { describe, expect, it, vi } from "vitest";
-import type { MediaQueryLike } from "../theme/mediaQuery";
+import type { MediaQueryLike } from "../shared/mediaQuery";
 import { BrowserDevicePreferences } from "./BrowserDevicePreferences";
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";

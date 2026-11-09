@@ -13,7 +13,7 @@ OpenStreetMap data is available under the [Open Database Licence](https://openda
 
 ### Basemap previews
 
-The basemap picker previews in `packages/web/public/basemaps/` are small images of central Cape Town, rendered with MapLibre GL JS from the providers' own tiles by `scripts/generateBasemapThumbnails.mjs`. They carry the same credits as the maps they show:
+The basemap picker previews in `packages/web/public/basemaps/` are small images of the Cape Town Waterfront, rendered with MapLibre GL JS from the providers' own tiles by `scripts/generateBasemapThumbnails.mjs`. They carry the same credits as the maps they show:
 
 | Preview | Source | Credit |
 |---|---|---|

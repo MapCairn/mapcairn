@@ -5,12 +5,20 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
 import { useMap } from "../../host";
 import { IconButton } from "../../ui";
 import * as styles from "./Attribution.css";
+
+/**
+ * Where the credits popover sits: straight above the button, or, when the
+ * list would have to scroll there, beside the end stack where there is more
+ * height (a short landscape phone).
+ */
+type Placement = "above" | "beside";
 
 /** Props for {@link Attribution}. */
 export interface AttributionProps {
@@ -23,7 +31,10 @@ export interface AttributionProps {
  * (a 44 px target around a small info glyph) that expands into a labelled
  * region of credit links built with `buildAttribution`.
  *
- * @remarks Opening moves focus to the first link. The popover closes on
+ * @remarks The popover opens above the button. If the credits would scroll
+ *   there, it moves beside the end stack before it is painted, where
+ *   `MapChrome` measures more room; it scrolls only if that is not enough
+ *   either. Opening moves focus to the first link. The popover closes on
  *   Escape, on a second press of the button, on a pointer down outside it,
  *   and when the map moves; if focus was inside it, focus goes back to the
  *   button with an explicit `focus()` (Safari does not focus buttons on
@@ -34,6 +45,7 @@ export interface AttributionProps {
 export function Attribution({ basemap }: AttributionProps) {
   const { view } = useMap();
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<Placement>("above");
   const regionId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const regionRef = useRef<HTMLElement>(null);
@@ -56,8 +68,23 @@ export function Attribution({ basemap }: AttributionProps) {
       return;
     }
     openedOnView.current = view;
+    setPlacement("above");
     setOpen(true);
   };
+
+  // Before the first paint of an open popover: if the credits overflow the
+  // room above the button, use the room beside the end stack instead.
+  useLayoutEffect(() => {
+    const region = regionRef.current;
+    if (
+      open &&
+      placement === "above" &&
+      region !== null &&
+      region.scrollHeight > region.clientHeight
+    ) {
+      setPlacement("beside");
+    }
+  }, [open, placement]);
 
   // Focus moves into the popover once it is shown.
   useEffect(() => {
@@ -125,6 +152,7 @@ export function Attribution({ basemap }: AttributionProps) {
         tabIndex={-1}
         hidden={!open}
         data-chrome="attribution-popover"
+        data-placement={placement}
         className={styles.popover}
       >
         <ul className={styles.list}>

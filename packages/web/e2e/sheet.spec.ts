@@ -100,12 +100,9 @@ test.describe("map options sheet on a phone", () => {
     );
     expect(coveredBySheet).toBe(true);
 
-    // WebKit's default Tab order skips buttons and links (Safari needs
-    // Option+Tab), so past the last form control the next Tab goes to the
-    // browser itself and `activeElement` is the body. That is the platform's
-    // behaviour, and the inert background still cannot take focus. Every
-    // other browser must keep focus inside the sheet on every press.
-    const mayLeaveToBrowser = test.info().project.name === "webkit";
+    // Every browser keeps focus inside the sheet on every press. WebKit's
+    // default Tab order skips links (and, in Safari, buttons), so there the
+    // sheet's focus sentinels, not the keydown loop, wrap it round.
     await mapPage.sheetClose.focus();
     for (let presses = 0; presses < 40; presses += 1) {
       await page.keyboard.press("Tab");
@@ -119,9 +116,9 @@ test.describe("map options sheet on a phone", () => {
           : "background";
       });
       expect(
-        where === "sheet" || (mayLeaveToBrowser && where === "browser"),
+        where,
         `focus went to the ${where} after ${presses + 1} presses`,
-      ).toBe(true);
+      ).toBe("sheet");
     }
     await page.keyboard.press("Shift+Tab");
     await expect(page.locator(":focus")).toBeAttached();

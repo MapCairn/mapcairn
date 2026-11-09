@@ -16,13 +16,21 @@ export const root = style({
   marginBlockEnd: `calc(-1 * ${tokens.space.xs})`,
 });
 
+/** The end stack's width plus the gap after it: how far a beside popover moves inwards. */
+const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tokens.space.sm})`;
+
 /**
  * The credits popover. It grows upwards and inwards from the button, on the
  * `chromeRaised` layer. Its width is capped at the chrome width minus both
  * insets, and its height at the room `MapChrome` measures between the end
  * stack and this slot, so it never covers the end stack above it or the
  * scale bar beside the button (which it clears by sitting above the bottom
- * row). Anything longer scrolls inside it.
+ * row).
+ *
+ * With `data-placement="beside"` (chosen when the list would scroll above the
+ * button) its end edge moves a gap clear of the end stack's start edge, and
+ * it may rise to the gap below the search row. Its width then also leaves the
+ * side panel's room. Anything that still does not fit scrolls inside it.
  */
 export const popover = style({
   ...surfaceBlurStyle,
@@ -50,6 +58,11 @@ export const popover = style({
   selectors: {
     "&[hidden]": { display: "none" },
     "&:focus-visible": focusRing,
+    '&[data-placement="beside"]': {
+      insetInlineEnd: besideOffset,
+      maxWidth: `calc(${chromeVar(chromeVars.width, "100vw")} - 2 * ${tokens.space.inset} - ${besideOffset} - ${chromeVar(chromeVars.bottomStartX, "0px")})`,
+      maxHeight: chromeVar(chromeVars.bottomEndBesideRoom, "none"),
+    },
   },
 });
 

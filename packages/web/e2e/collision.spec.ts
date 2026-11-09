@@ -53,6 +53,63 @@ async function walkStates(
 }
 
 /*
+ * The credits popover must be usable on every screen, the short landscape
+ * phone above all, where the end stack leaves little room above the button:
+ * every credit link is shown in full, nothing scrolls, and the open popover
+ * still collides with nothing. With the zoom buttons switched on, the end
+ * stack is at its tallest.
+ */
+for (const viewport of MATRIX_VIEWPORTS) {
+  test(
+    `the credits show every link without scrolling at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage }) => {
+      await page.setViewportSize(viewport);
+      for (const zoomButtons of ["default", "on"] as const) {
+        await test.step(`zoom buttons ${zoomButtons}`, async () => {
+          if (zoomButtons === "on") {
+            await page.addInitScript(() => {
+              localStorage.setItem("karta:zoomButtons", "true");
+            });
+          }
+          await mapPage.goto();
+          await mapPage.creditsButton.click();
+          await expect(mapPage.creditsRegion).toBeVisible();
+          await waitForStableLayout(page);
+          const fit = await mapPage.creditsRegion.evaluate((region) => {
+            const box = region.getBoundingClientRect();
+            const links = [...region.querySelectorAll("a[href]")];
+            return {
+              scrolls: region.scrollHeight > region.clientHeight + 1,
+              links: links.length,
+              clipped: links
+                .filter((link) => {
+                  const own = link.getBoundingClientRect();
+                  return (
+                    own.top < box.top - 0.5 ||
+                    own.bottom > box.bottom + 0.5 ||
+                    own.left < box.left - 0.5 ||
+                    own.right > box.right + 0.5
+                  );
+                })
+                .map((link) => link.textContent),
+            };
+          });
+          expect(fit.links).toBeGreaterThan(0);
+          expect(fit.clipped).toEqual([]);
+          expect(fit.scrolls).toBe(false);
+          const report = await inspectChromeLayout(page);
+          const context = JSON.stringify(report.boxes);
+          expect(report.overlaps, context).toEqual([]);
+          expect(report.outside, context).toEqual([]);
+          expect(report.obscured, context).toEqual([]);
+        });
+      }
+    },
+  );
+}
+
+/*
  * The layout collision test (DESIGN.md, "Layout and slots"). For every
  * viewport, theme and chrome state, no two floating elements overlap,
  * none leaves the viewport (apart from the bottom sheet's documented

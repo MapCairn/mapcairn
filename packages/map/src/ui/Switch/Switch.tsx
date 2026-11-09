@@ -28,7 +28,8 @@ export interface SwitchProps {
  *
  * The on state is shown three ways: the thumb slides, the track fills with the
  * accent, and the thumb carries a tick, so it never relies on colour alone.
- * The row is at least 48px tall.
+ * The row is at least 48px tall, and the control itself, not only its row,
+ * is a target at least 44px tall around the smaller visible track.
  */
 export function Switch({
   label,
@@ -59,18 +60,20 @@ export function Switch({
       </div>
       <RadixSwitch.Root
         id={id}
-        className={styles.track}
+        className={styles.control}
         checked={checked}
         onCheckedChange={onCheckedChange}
         disabled={disabled}
         aria-describedby={description ? descriptionId : undefined}
         data-testid={testId}
       >
-        <RadixSwitch.Thumb className={styles.thumb}>
-          {checked ? (
-            <Check aria-hidden="true" className={styles.tick} />
-          ) : null}
-        </RadixSwitch.Thumb>
+        <span className={styles.track}>
+          <RadixSwitch.Thumb className={styles.thumb}>
+            {checked ? (
+              <Check aria-hidden="true" className={styles.tick} />
+            ) : null}
+          </RadixSwitch.Thumb>
+        </span>
       </RadixSwitch.Root>
     </div>
   );

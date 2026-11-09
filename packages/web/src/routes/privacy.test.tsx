@@ -37,7 +37,7 @@ describe("privacy route meta", () => {
       content: "Privacy policy | Karta",
     });
 
-    const jsonLdTag = tags.find((tag) => "script:ld+json" in tag) as
+    const jsonLdTag = tags?.find((tag) => "script:ld+json" in tag) as
       | { "script:ld+json": Record<string, unknown> }
       | undefined;
     expect(jsonLdTag?.["script:ld+json"]).toMatchObject({

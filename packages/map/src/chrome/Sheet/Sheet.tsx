@@ -14,6 +14,7 @@ import {
   type MouseEvent,
   type PointerEvent,
   type ReactNode,
+  type RefObject,
   useEffect,
   useId,
   useLayoutEffect,
@@ -31,14 +32,17 @@ const DRAG_SLOP_PX = 4;
 /** The window, in ms, over which release velocity is measured. */
 const VELOCITY_WINDOW_MS = 100;
 
-/** Everything that can take keyboard focus inside the sheet, in tab order. */
+/**
+ * Everything that can take keyboard focus inside the sheet, in tab order,
+ * apart from the focus sentinels.
+ */
 const TABBABLE = [
   "a[href]",
   "button:not([disabled])",
   "input:not([disabled])",
   "select:not([disabled])",
   "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
+  '[tabindex]:not([tabindex="-1"]):not([data-focus-sentinel])',
 ].join(", ");
 
 /** Props for {@link Sheet}. */
@@ -107,12 +111,17 @@ function releaseVelocity(samples: readonly Sample[], release: Sample): number {
   return elapsed > 0 ? ((first.y - release.y) / elapsed) * 1000 : 0;
 }
 
+/** The controls in the sheet that Tab can reach, in order. */
+function tabbableIn(container: HTMLElement): HTMLElement[] {
+  return [...container.querySelectorAll<HTMLElement>(TABBABLE)];
+}
+
 /**
  * Moves Tab and Shift+Tab around the ends of the sheet, so focus cannot
  * leave it. Returns true when it moved focus.
  */
 function loopFocus(container: HTMLElement, backwards: boolean): boolean {
-  const tabbable = [...container.querySelectorAll<HTMLElement>(TABBABLE)];
+  const tabbable = tabbableIn(container);
   const first = tabbable[0];
   const last = tabbable[tabbable.length - 1];
   if (!first || !last) {
@@ -133,6 +142,46 @@ function loopFocus(container: HTMLElement, backwards: boolean): boolean {
 }
 
 /**
+ * Focuses the first or last control in the sheet. A focus sentinel calls it
+ * when it receives focus.
+ */
+function focusEnd(container: HTMLElement | null, end: "first" | "last"): void {
+  if (!container) {
+    return;
+  }
+  const tabbable = tabbableIn(container);
+  (end === "first" ? tabbable[0] : tabbable[tabbable.length - 1])?.focus();
+}
+
+/**
+ * An empty element at one end of the modal sheet that is in the Tab order
+ * only to catch focus about to leave the sheet. It never keeps focus: the
+ * start sentinel hands it to the last control and the end sentinel to the
+ * first. It is a `span` because Safari's default Tab skips buttons.
+ */
+function FocusSentinel({
+  at,
+  sheetRef,
+}: {
+  readonly at: "start" | "end";
+  readonly sheetRef: RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: it only forwards focus, at once, to a real control.
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: it only forwards focus, at once, to a real control.
+    <span
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: a focus sentinel must be in the Tab order to catch focus leaving the modal sheet.
+      tabIndex={0}
+      data-focus-sentinel={at}
+      className={styles.sentinel}
+      onFocus={() =>
+        focusEnd(sheetRef.current, at === "start" ? "last" : "first")
+      }
+    />
+  );
+}
+
+/**
  * The map options surface: a bottom sheet with peek, half and full detents on
  * narrow screens, and a floating side panel in the panel layout. Rendered by
  * the app into `MapChrome`'s `sheet` slot, outside the inert wrapper.
@@ -141,7 +190,10 @@ function loopFocus(container: HTMLElement, backwards: boolean): boolean {
  * Sheet layout: a `dialog` labelled by its heading. It is non-modal at peek
  * and half, so the map stays usable. At full it sets `aria-modal`, reports
  * `onModalChange(true)` (the app makes the rest of the chrome inert) and
- * loops Tab inside itself. The handle is a "Resize panel" button: Enter or
+ * loops Tab inside itself. Safari's default Tab skips links and buttons, so
+ * the keydown loop cannot see focus reach the last control there; at full
+ * the sheet also has an empty focus sentinel at each end, and the browser's
+ * own Tab landing on one sends focus round to the other end. The handle is a "Resize panel" button: Enter or
  * Space cycles detents, the arrow keys step them, and the handle and header
  * can be dragged, with rubber-banding past the ends and a velocity-aware
  * snap on release. Detent changes are announced. The top edge and detent are
@@ -479,6 +531,7 @@ export function Sheet({
       className={styles.surface}
       onKeyDown={onKeyDown}
     >
+      {modal ? <FocusSentinel at="start" sheetRef={sheetRef} /> : null}
       <div
         className={styles.header}
         onPointerDown={onPointerDown}
@@ -511,6 +564,7 @@ export function Sheet({
         />
       </div>
       <div className={styles.content}>{children}</div>
+      {modal ? <FocusSentinel at="end" sheetRef={sheetRef} /> : null}
     </div>
   );
 }

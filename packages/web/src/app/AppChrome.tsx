@@ -1,4 +1,4 @@
-import { announceZoom, pressEscape } from "@karta/core";
+import { pressEscape } from "@karta/core";
 import {
   Attribution,
   EndStack,
@@ -11,20 +11,17 @@ import {
   SearchPill,
   Sheet,
   SheetContent,
-  useAnnounce,
   useFocusReturn,
   useMap,
   usePreferences,
   useSettings,
 } from "@karta/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
-import { MAP_REGION_ID, SHEET_ID } from "./initialView";
+import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
 import { bottomCentre } from "./MapBanners.css";
 import type { MapApp } from "./useMapApp";
-
-/** How long the zoom must settle before its level is announced. */
-export const ZOOM_ANNOUNCE_DELAY_MS = 600;
+import { useZoomAnnouncement } from "./useZoomAnnouncement";
 
 /** Props for {@link AppChrome}. */
 export interface AppChromeProps {
@@ -59,32 +56,6 @@ export function AppChrome({ app, background }: AppChromeProps) {
 
 interface ChromeContentProps extends AppChromeProps {
   readonly map: MapContextValue;
-}
-
-/**
- * Announces the settled zoom level after a zoom button press or a zoom from
- * the keyboard on the map region, so keyboard and screen reader users hear
- * where they are. Pinch and wheel zooms are not announced.
- */
-function useZoomAnnouncement(map: MapContextValue): () => void {
-  const announce = useAnnounce();
-  const requested = useRef(false);
-  const zoom = map.view.zoom;
-  useEffect(() => {
-    const active = map.hostElement?.ownerDocument.activeElement;
-    const fromMapKeys = active?.id === MAP_REGION_ID;
-    if (!requested.current && !fromMapKeys) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      requested.current = false;
-      announce(announceZoom(zoom));
-    }, ZOOM_ANNOUNCE_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [zoom, map.hostElement, announce]);
-  return () => {
-    requested.current = true;
-  };
 }
 
 function ChromeContent({ app, map, background }: ChromeContentProps) {

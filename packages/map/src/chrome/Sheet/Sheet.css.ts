@@ -188,3 +188,15 @@ export const content = style({
     },
   },
 });
+
+/**
+ * A focus sentinel at either end of the modal sheet: an empty, zero-size box
+ * that takes no room in the column and draws nothing.
+ */
+export const sentinel = style({
+  display: "block",
+  flex: "none",
+  width: 0,
+  height: 0,
+  overflow: "hidden",
+});

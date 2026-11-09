@@ -29,7 +29,10 @@ export function fontFamilies(): { primary: string; fallback: string } {
 
 /** What {@link checkFontGate} needs from the browser, injected so it can be tested. */
 export interface FontGateDeps {
-  readonly fonts: Pick<FontFaceSet, "load" | "check" | "ready">;
+  /** `document.fonts`. Only the settling of `ready` is used, not its value. */
+  readonly fonts: Pick<FontFaceSet, "load" | "check"> & {
+    readonly ready: PromiseLike<unknown>;
+  };
   /** Width of `text` in `font` (CSS font shorthand), or undefined when it cannot be measured. */
   readonly measure: (font: string, text: string) => number | undefined;
 }

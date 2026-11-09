@@ -14,11 +14,12 @@ import {
   type ReactNode,
   useCallback,
   useId,
+  useMemo,
   useRef,
 } from "react";
 import { usePreferences } from "../services";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
-import { MapContext } from "./MapContext";
+import { MapContext, type MapContextValue } from "./MapContext";
 import * as styles from "./MapView.css";
 import { type MapLongPressEvent, useLongPress } from "./useLongPress";
 import { useMapEngine } from "./useMapEngine";
@@ -84,7 +85,9 @@ const KEYBOARD_INSTRUCTIONS = MAP_KEY_HELP.map(
 function runKeyAction(
   adapter: MapAdapter,
   action: MapKeyAction,
-  props: Pick<MapViewProps, "onDropPinKey" | "onEscape">,
+  props: Pick<MapViewProps, "onDropPinKey" | "onEscape"> & {
+    readonly onUserZoom: () => void;
+  },
 ): void {
   switch (action.type) {
     case "pan":
@@ -92,9 +95,11 @@ function runKeyAction(
       break;
     case "zoomIn":
       adapter.zoomIn();
+      props.onUserZoom();
       break;
     case "zoomOut":
       adapter.zoomOut();
+      props.onUserZoom();
       break;
     case "rotate":
       adapter.rotateBy(action.degrees);
@@ -154,7 +159,22 @@ export function MapView({
   const longPress = useLongPress({ hostRef, getAdapter, onLongPress });
   const pointer = usePointerPosition({ hostRef, getAdapter, onPointerMove });
 
-  const map = useMapEngine({
+  // Listeners for zooms the person makes on the map itself. A set in a ref,
+  // not state: a gesture reports many steps, and none should re-render.
+  const userZoomListeners = useRef(new Set<() => void>());
+  const notifyUserZoom = useCallback(() => {
+    for (const listener of [...userZoomListeners.current]) {
+      listener();
+    }
+  }, []);
+  const onUserZoom = useCallback((listener: () => void) => {
+    userZoomListeners.current.add(listener);
+    return () => {
+      userZoomListeners.current.delete(listener);
+    };
+  }, []);
+
+  const engine = useMapEngine({
     hostRef,
     slotRef,
     adapterRef,
@@ -166,7 +186,12 @@ export function MapView({
     onClick,
     onMoveEnd: longPress.cancel,
     shouldDropClick: longPress.consumeClick,
+    onUserZoom: notifyUserZoom,
   });
+  const map = useMemo<MapContextValue>(
+    () => ({ ...engine, onUserZoom }),
+    [engine, onUserZoom],
+  );
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     const adapter = adapterRef.current;
@@ -182,7 +207,11 @@ export function MapView({
       return;
     }
     event.preventDefault();
-    runKeyAction(adapter, action, { onDropPinKey, onEscape });
+    runKeyAction(adapter, action, {
+      onDropPinKey,
+      onEscape,
+      onUserZoom: notifyUserZoom,
+    });
   };
 
   const motion = reducedMotion ? "static" : "animated";

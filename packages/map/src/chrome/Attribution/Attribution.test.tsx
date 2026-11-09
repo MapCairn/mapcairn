@@ -136,4 +136,48 @@ describe("Attribution", () => {
     open();
     expect(screen.getByRole("link", { name: "MapLibre" })).toBeInTheDocument();
   });
+
+  /** Gives the (still hidden) region a content height and a visible height. */
+  function sizeRegion(
+    container: HTMLElement,
+    size: { content: number; visible: number },
+  ) {
+    const region = container.querySelector<HTMLElement>(
+      '[data-chrome="attribution-popover"]',
+    );
+    if (!region) {
+      throw new Error("No credits region");
+    }
+    Object.defineProperty(region, "scrollHeight", {
+      get: () => size.content,
+      configurable: true,
+    });
+    Object.defineProperty(region, "clientHeight", {
+      get: () => size.visible,
+      configurable: true,
+    });
+  }
+
+  it("opens above the button when the credits fit there", () => {
+    const { container } = renderChrome(<Attribution basemap={BASEMAP} />);
+    sizeRegion(container, { content: 120, visible: 120 });
+    expect(open()).toHaveAttribute("data-placement", "above");
+  });
+
+  it("moves beside the end stack when the credits would scroll above the button", () => {
+    const { container } = renderChrome(<Attribution basemap={BASEMAP} />);
+    const size = { content: 140, visible: 48 };
+    sizeRegion(container, size);
+    const region = open();
+    expect(region).toHaveAttribute("data-placement", "beside");
+    // Focus still lands on the first link.
+    expect(document.activeElement).toBe(
+      screen.getByRole("link", { name: "OpenStreetMap contributors" }),
+    );
+
+    // Closed and opened again with room above, it goes back above.
+    fireEvent.click(button());
+    size.visible = 140;
+    expect(open()).toHaveAttribute("data-placement", "above");
+  });
 });

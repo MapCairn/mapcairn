@@ -1,6 +1,9 @@
 # AGENTS.md
 
-Guidance for humans and AI working in this repository. `CLAUDE.md` imports this file with `@AGENTS.md` and adds its own workflow rules. `ARCHITECTURE.md` and `DESIGN.md` are the source of truth for architecture and design; this file does not repeat them.
+Guidance for humans and AI working in this repository. `CLAUDE.md` imports this file with `@AGENTS.md` and adds its own workflow rules. `ARCHITECTURE.md` and `DESIGN.md` are the source of truth for architecture and design; this file imports them below and does not repeat them.
+
+@ARCHITECTURE.md
+@DESIGN.md
 
 ## About
 

@@ -79,6 +79,19 @@ for (const [name, basemap] of [
       simulateLoading: (loading) => {
         latestMap().fire(loading ? "dataloading" : "idle");
       },
+      simulateUserZoom: (zoom) => {
+        // MapLibre zooms by 512 px tiles: one level below the normalised zoom.
+        latestMap().gesture({ zoom: zoom - 1 }, new WheelEvent("wheel"));
+      },
+      simulateFatalError: () => {
+        // The exact event maplibre-gl 6.17 fires when a worker fails to load
+        // (createActors in src/util/actor.ts): no tile and no source.
+        latestMap().fire("error", {
+          error: new Error(
+            "Worker failed to load. Check that the worker URL is correct.",
+          ),
+        });
+      },
       createFailingMount: () => {
         const error = new Error("WebGL2 is required");
         error.name = "GPUInitializationError";

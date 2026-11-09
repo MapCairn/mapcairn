@@ -42,7 +42,15 @@ export interface UseMapEngineOptions {
   readonly onMoveEnd: () => void;
   /** Returns true when an engine click should be dropped (after a long-press). */
   readonly shouldDropClick: () => boolean;
+  /** Called while the person zooms with a gesture the engine handles. */
+  readonly onUserZoom: () => void;
 }
+
+/**
+ * What {@link useMapEngine} tracks: the map context apart from the user zoom
+ * subscription, which `MapView` adds because it also owns the zoom keys.
+ */
+export type MapEngineState = Omit<MapContextValue, "onUserZoom">;
 
 /** Turns any mount or basemap failure into the typed engine error. */
 function toEngineError(reason: unknown): MapEngineError {
@@ -75,8 +83,10 @@ function toEngineError(reason: unknown): MapEngineError {
  *   that element is removed, so it never falls back to the page body.
  * - Subscriptions are made before `mount`, because an engine may emit `load`
  *   while mounting.
+ * - An engine that stops after it loaded (`fatalError`) is reported like a
+ *   failed mount, through `error` and `onEngineError`.
  */
-export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
+export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
   const createAdapter = useMapAdapterFactory();
   const { reducedMotion } = usePreferences();
   const latest = useLatestRef(options);
@@ -210,6 +220,16 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
         cycleErrorRef.current = true;
         setTileError(true);
       }),
+      next.on("userZoom", () => {
+        latest.current.onUserZoom();
+      }),
+      next.on("fatalError", (engineError) => {
+        if (cancelled) {
+          return;
+        }
+        setError(engineError);
+        latest.current.onEngineError?.(engineError, latest.current.basemap);
+      }),
     ];
 
     next
@@ -324,7 +344,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapContextValue {
   const loading = error === null && (adapter === null || !loaded || busy);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `revision` forces a new value when the projection changes without a new view (resize).
-  return useMemo<MapContextValue>(
+  return useMemo<MapEngineState>(
     () => ({
       adapter,
       hostElement,

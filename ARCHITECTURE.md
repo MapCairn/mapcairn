@@ -73,13 +73,15 @@ MapLibre GL JS is the only map engine, and the ui never imports it. `MapView` ta
 - **Overlays** (pin, measure line, accuracy circle) are drawn once, in a single overlay layer positioned with `adapter.project`.
 - **Engine CSS** lives in one file, `packages/web/src/adapters/mapEngine.css.ts`. It styles MapLibre only, scopes its rules under the host's `data-map-host` attribute, hides MapLibre's own controls, replaces fonts and focus rings, and sets the map background from the tokens.
 - **Loading** is lazy. The MapLibre module imports `maplibre-gl` dynamically the first time the map mounts.
+- **User zoom.** The adapter emits `userZoom` only for zoom gestures the engine handles (wheel, pinch, double-click), which MapLibre marks with the input event. `MapView` adds the zoom keys and exposes both as `onUserZoom`, so the app announces the settled level after every zoom the person makes and never after one made in code.
+- **Failure after load.** Tile and source failures are `tileError`, and the map keeps working. A failed mount or basemap swap rejects its promise. A worker that fails after load is `fatalError` (reason `stopped`): MapLibre gives that error no type, so the adapter recognises its message. The app then shows "The map stopped working" with Reload, as an alert.
 - **No WebGL** means no map. There is no fallback basemap. The app shows a plain message in place of the map ("Karta needs WebGL to draw the map.") with advice to try a different browser or turn on hardware acceleration. `MapUnavailable` draws it inside the map region, so the region and the skip link still work, and announces it once, assertively, through the shared announcer rather than being a live region itself. It has no Retry, because mounting again would fail the same way.
 
 ## Adding an adapter
 
 1. Define or extend the port in `packages/core/src/ports`, with typed errors and an `AbortSignal` on async calls.
 2. Write the fake in `packages/core/src/fakes` and the contract suite in `packages/core/src/contracts`.
-3. Write the real adapter in `packages/web/src/adapters`, passing the same suite.
+3. Write the real adapter in `packages/web/src/adapters`, passing the same suite. Helpers that more than one adapter uses (the event emitter, reading media queries) live in `packages/web/src/adapters/shared`.
 4. Register it in `createServices()`.
 5. Read it in the ui through a typed hook (`useSettings`, `useSearch` and so on).
 

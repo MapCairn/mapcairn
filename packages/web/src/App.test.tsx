@@ -377,6 +377,23 @@ describe("basemaps", () => {
     expect(screen.getByRole("button", { name: "Reload" })).toBeInTheDocument();
   });
 
+  it("says the map stopped, as an alert with Reload, when the engine fails after loading", async () => {
+    const services = await renderApp();
+    act(() => {
+      adapter(services).simulateFatalError();
+    });
+    const banner = screen.getByTestId("engine-error");
+    expect(banner).toHaveTextContent(
+      "The map stopped working. Reload the page to try again.",
+    );
+    expect(within(banner).getByRole("alert")).toBeInTheDocument();
+    expect(
+      within(banner).getByRole("button", { name: "Reload" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("tile-error")).toBeNull();
+    expect(screen.queryByTestId("webgl-unavailable")).toBeNull();
+  });
+
   it("hides the engine error when dismissed", async () => {
     const failing = createFakeServices({
       createMapAdapter: () => new FakeMapAdapter({ failMount: "load-failed" }),
@@ -439,6 +456,43 @@ describe("zoom", () => {
     expect(polite()).toMatch(/^Zoom level 3/);
     fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
     expect(adapter(services).getView().zoom).toBe(2);
+  });
+
+  it("announces the settled level after a pinch or wheel on the map", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const services = await renderApp();
+    act(() => {
+      adapter(services).simulateUserZoom(4);
+      adapter(services).simulateUserZoom(5);
+    });
+    // The view reaches the chrome on the next animation frame.
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(polite()).toMatch(/^Zoom level 5/);
+  });
+
+  it("does not announce a zoom made in code while the map has focus", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const services = await renderApp();
+    region().focus();
+    act(() => {
+      adapter(services).setView({ zoom: 7 });
+    });
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(polite()).not.toMatch(/Zoom level/);
   });
 });
 

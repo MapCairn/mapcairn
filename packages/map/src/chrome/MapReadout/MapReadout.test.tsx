@@ -149,12 +149,14 @@ describe("ScaleBar", () => {
     const inner = document.createElement("button");
     host.append(inner);
     document.body.append(host);
-    host.matches = (selector: string) => {
-      if (focusVisible === "unsupported") {
-        throw new SyntaxError(`Unsupported selector ${selector}`);
-      }
-      return selector === ":focus-visible" ? focusVisible : false;
-    };
+    Object.defineProperty(host, "matches", {
+      value: (selector: string): boolean => {
+        if (focusVisible === "unsupported") {
+          throw new SyntaxError(`Unsupported selector ${selector}`);
+        }
+        return selector === ":focus-visible" ? focusVisible : false;
+      },
+    });
     const adapter = adapterAtZoom(12);
     renderChrome(<ScaleBar units="metric" />, {
       map: testMapContext({

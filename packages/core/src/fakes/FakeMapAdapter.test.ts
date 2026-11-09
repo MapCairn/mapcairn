@@ -31,6 +31,8 @@ function subjectFor(
         simulateClick: (latlng) => adapter.simulateClick(latlng),
         simulateTileError: () => adapter.simulateTileError(),
         simulateLoading: (loading) => adapter.simulateLoading(loading),
+        simulateUserZoom: (zoom) => adapter.simulateUserZoom(zoom),
+        simulateFatalError: () => adapter.simulateFatalError(),
         ...(withOptionalControls
           ? {
               createFailingMount: () =>

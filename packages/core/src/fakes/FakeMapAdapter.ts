@@ -72,8 +72,9 @@ function wrapLongitude(lng: number): number {
  *   `mount` reject with a `MapEngineError`.
  * - Mount it into a {@link FakeMapHost}; the host's size (800 by 600 by
  *   default) sets the pixel space used by `project` and `unproject`.
- * - Drive events with `simulateClick`, `simulateTileError` and
- *   `simulateLoading`. `setView`, `zoomIn`, `panBy` and the rest emit real
+ * - Drive events with `simulateClick`, `simulateTileError`,
+ *   `simulateLoading`, `simulateUserZoom` (a wheel, pinch or double-click)
+ *   and `simulateFatalError` (the engine stopping after it loaded). `setView`, `zoomIn`, `panBy` and the rest emit real
  *   `move`, `zoom`, `rotate` and `moveEnd` events, and only when something
  *   changed.
  * - Inspect `mountCount`, `destroyed`, `animationEnabled`, `keyboardEnabled`
@@ -282,6 +283,22 @@ export class FakeMapAdapter implements MapAdapter {
     this.#emit("loading", loading);
   }
 
+  /**
+   * Zooms to `zoom` the way a gesture the engine handles would: the view
+   * events fire as for `setView`, and `userZoom` fires with them.
+   */
+  simulateUserZoom(zoom: number): void {
+    this.#applyView({ ...this.#view, zoom }, true);
+  }
+
+  /** Emits `fatalError`, as an engine that stopped working after it loaded. */
+  simulateFatalError(): void {
+    this.#emit(
+      "fatalError",
+      new MapEngineError("stopped", "The fake map engine stopped working."),
+    );
+  }
+
   #normalise(view: ViewState): ViewState {
     return {
       center: {
@@ -296,7 +313,7 @@ export class FakeMapAdapter implements MapAdapter {
     };
   }
 
-  #applyView(requested: ViewState): void {
+  #applyView(requested: ViewState, byUser = false): void {
     const previous = this.#view;
     const next = this.#normalise(requested);
     const moved =
@@ -311,6 +328,9 @@ export class FakeMapAdapter implements MapAdapter {
     this.#emit("move", next);
     if (zoomed) {
       this.#emit("zoom", next);
+      if (byUser) {
+        this.#emit("userZoom", next);
+      }
     }
     if (rotated) {
       this.#emit("rotate", next);

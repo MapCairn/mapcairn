@@ -65,8 +65,7 @@ const OTHER_ICON_PACKAGES = `(^|/)node_modules/${OTHER_ICON_NAMES}`;
 const OTHER_ICON_SPECIFIERS = `^${OTHER_ICON_NAMES}`;
 
 /** The only npm packages `packages/core` may import. */
-const CORE_ALLOWED_PACKAGES =
-  "(^|/)node_modules/(@turf|zod|@types/geojson)(/|$)";
+const CORE_ALLOWED_PACKAGES = "(^|/)node_modules/(@turf|@types/geojson)(/|$)";
 
 /** The `ui` primitives that may wrap Radix. */
 const RADIX_WRAPPERS =
@@ -110,7 +109,7 @@ module.exports = {
       name: "core-uses-only-pure-packages",
       severity: "error",
       comment:
-        "core is pure logic. It may import only maths and validation libraries (@turf/*, zod, @types/geojson): no React, map engine, DOM library or Node built-in.",
+        "core is pure logic. It may import only maths libraries (@turf/*, @types/geojson): no React, map engine, DOM library or Node built-in.",
       from: fromNotLegacy({
         path: "^packages/core/src",
         // Contract suites are test code shipped as modules and import vitest.

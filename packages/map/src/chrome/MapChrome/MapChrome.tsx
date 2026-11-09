@@ -59,6 +59,7 @@ interface Measurements {
   readonly topStartBottom: number;
   readonly endStackTop: number;
   readonly endStackBottom: number;
+  readonly endStackWidth: number;
   /** Top of the bottom row (bottom-start and bottom-end) before any lift. */
   readonly bottomRowTop: number;
   /** Top of the bottom-end slot before any lift. */
@@ -80,7 +81,11 @@ type SlotName =
 function box(slots: Map<SlotName, HTMLElement>, name: SlotName) {
   const element = slots.get(name);
   return element
-    ? { top: element.offsetTop, height: element.offsetHeight }
+    ? {
+        top: element.offsetTop,
+        height: element.offsetHeight,
+        width: element.offsetWidth,
+      }
     : null;
 }
 
@@ -96,7 +101,7 @@ function measure(
   const bottomCentre = box(slots, "bottom-centre");
   const restingBottom = height - INSET_PX;
   const shown = [bottomStart, bottomEnd].filter(
-    (slot): slot is { top: number; height: number } =>
+    (slot): slot is NonNullable<typeof slot> =>
       slot !== null && slot.height > 0,
   );
   const rowBottom =
@@ -109,6 +114,7 @@ function measure(
     topStartBottom: topStart ? topStart.top + topStart.height : INSET_PX,
     endStackTop: endStack?.top ?? INSET_PX,
     endStackBottom: endStack ? endStack.top + endStack.height : INSET_PX,
+    endStackWidth: endStack?.width ?? 0,
     bottomRowTop:
       shown.length > 0 ? Math.min(...shown.map((slot) => slot.top)) : rowBottom,
     bottomEndTop: bottomEnd && bottomEnd.height > 0 ? bottomEnd.top : rowBottom,
@@ -122,7 +128,8 @@ function measure(
  * Vertical room between the end stack and the bottom row, once the bottom row
  * has been lifted by `lift` (zero or negative). The end stack stops a gap
  * above that row, and the credits popover, which grows up from bottom-end,
- * stops a gap below the end stack.
+ * stops a gap below the end stack. Placed beside the end stack instead, the
+ * popover may rise to a gap below the top-start slot.
  */
 function verticalRoom(m: Measurements, lift: number) {
   const liftedRowTop = m.bottomRowTop + lift;
@@ -136,6 +143,10 @@ function verticalRoom(m: Measurements, lift: number) {
     bottomEndRoom: Math.max(
       0,
       m.bottomEndTop + lift - GAP_PX - m.endStackBottom,
+    ),
+    bottomEndBesideRoom: Math.max(
+      0,
+      m.bottomEndTop + lift - GAP_PX - m.topStartBottom,
     ),
   };
 }
@@ -310,6 +321,7 @@ export function MapChrome({
     : null;
   const endStackMaxHeight = room?.endStackMaxHeight ?? null;
   const bottomEndRoom = room?.bottomEndRoom ?? null;
+  const bottomEndBesideRoom = room?.bottomEndBesideRoom ?? null;
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -317,7 +329,8 @@ export function MapChrome({
       !root ||
       !measurements ||
       endStackMaxHeight === null ||
-      bottomEndRoom === null
+      bottomEndRoom === null ||
+      bottomEndBesideRoom === null
     ) {
       return;
     }
@@ -327,7 +340,9 @@ export function MapChrome({
     set(chromeVars.width, measurements.width);
     set(chromeVars.topStartBottom, measurements.topStartBottom);
     set(chromeVars.endStackMaxHeight, endStackMaxHeight);
+    set(chromeVars.endStackWidth, measurements.endStackWidth);
     set(chromeVars.bottomEndRoom, bottomEndRoom);
+    set(chromeVars.bottomEndBesideRoom, bottomEndBesideRoom);
     set(chromeVars.bottomLift, bottom.bottomEndTranslateY);
     set(chromeVars.bottomStartX, bottom.bottomStartTranslateX);
     set(chromeVars.bottomCentreLift, sheetOnly.bottomStartTranslateY);
@@ -335,6 +350,7 @@ export function MapChrome({
     measurements,
     endStackMaxHeight,
     bottomEndRoom,
+    bottomEndBesideRoom,
     bottom.bottomEndTranslateY,
     bottom.bottomStartTranslateX,
     sheetOnly.bottomStartTranslateY,

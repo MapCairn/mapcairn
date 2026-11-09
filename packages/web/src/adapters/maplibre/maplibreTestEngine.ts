@@ -119,6 +119,14 @@ export class FakeMapLibreMap {
     };
   }
 
+  /**
+   * Moves the camera the way one of MapLibre's own gesture handlers does:
+   * every camera event carries the person's input as `originalEvent`.
+   */
+  gesture(camera: Camera, originalEvent: Event): void {
+    this.apply(camera, { originalEvent });
+  }
+
   /** Fires an engine event at the adapter. */
   fire(type: string, event: Record<string, unknown> = {}): void {
     for (const listener of [...(this.listeners.get(type) ?? [])]) {
@@ -297,7 +305,7 @@ export class FakeMapLibreMap {
     return mercatorProject(position, this.zoom + 1);
   }
 
-  private apply(camera: Camera): void {
+  private apply(camera: Camera, event: Record<string, unknown> = {}): void {
     const zoomBefore = this.zoom;
     const bearingBefore = this.bearing;
     if (camera.center) {
@@ -310,15 +318,15 @@ export class FakeMapLibreMap {
     if (camera.bearing !== undefined) {
       this.bearing = camera.bearing;
     }
-    this.fire("movestart");
-    this.fire("move");
+    this.fire("movestart", event);
+    this.fire("move", event);
     if (this.zoom !== zoomBefore) {
-      this.fire("zoom");
+      this.fire("zoom", event);
     }
     if (this.bearing !== bearingBefore) {
-      this.fire("rotate");
+      this.fire("rotate", event);
     }
-    this.fire("moveend");
+    this.fire("moveend", event);
   }
 }
 
