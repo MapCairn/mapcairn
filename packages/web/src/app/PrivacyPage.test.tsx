@@ -94,6 +94,20 @@ describe("PrivacyPage", () => {
     expect(text).not.toMatch(/Typing/);
   });
 
+  it("names every data layer provider and says nothing is sent until a layer is on", () => {
+    render(<PrivacyPage />);
+
+    expect(
+      screen.getByRole("heading", { name: "Data layers", level: 2 }),
+    ).toBeInTheDocument();
+    const text = screen.getByText(/Every data layer is off/).textContent;
+    expect(text).toMatch(/nothing is requested before\s+that/);
+    for (const provider of ["USGS", "NASA", "GDACS", "Copernicus"]) {
+      expect(text).toContain(provider);
+    }
+    expect(text).toMatch(/IP address/);
+  });
+
   it("discloses that Look up address sends the pin's rounded position, only when pressed", () => {
     render(<PrivacyPage />);
 

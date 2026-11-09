@@ -19,6 +19,7 @@ Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use token
 
 - **Colour roles:** surface, surface-raised, text, text-muted, accent, accent-tint, hairline, danger, scrim, focus-ring, page-background, map-background. The neutral ramp is OKLCH with a faint cool tint. The accent is one clear blue. Page-background follows the theme and sits behind full pages such as the privacy policy. Map-background is the default basemap's land colour in both themes, so the map region before the map draws matches the map that follows.
 - **Basemap:** Liberty is the default in both themes. The basemap never follows the light or dark theme. The picker offers Liberty, Positron and Streets; there is no dark basemap, and a saved or linked "dark" (or the old "auto") opens on Liberty.
+- **Data palette:** the one set of colours data layers draw with, separate from the interface roles. Seven Okabe-Ito categorical colours (without black) and a five-step ordered ramp, light to dark, in `tokenValues.dataPalette`. Definitions name a slot (`vermillion`, `ordinal-3`), never a value; categories must use categorical slots and steps ordinal ones. Every marker has a white halo, and validation refuses a colour rule with no shape, size or words beside it.
 - **Surfaces:** translucent with backdrop blur, with an opaque fallback and the `-webkit-` prefix. `prefers-contrast: more` and `prefers-reduced-transparency` make them opaque and remove blur. Contrast is computed over the worst-case backdrops (pure white and pure black map) and over Liberty's land colour, because a dark theme no longer means a dark map.
 - **Spacing:** 4, 8, 12, 16, 24, 32. Screen inset is 12.
 - **Radii:** pill 24, sheet 20, control and card 14, inner 10. Fully circular elements use 50%.
@@ -41,7 +42,7 @@ Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use token
 | bottom-start | scale readout, cursor coordinates (desktop) |
 | bottom-end | attribution |
 | bottom-centre | measure toolbar, toasts, tile-error banner |
-| sheet or side panel | basemap, pin, settings, help |
+| sheet or side panel | basemap, pin, layers (with the open feature card at the top), settings, help |
 
 Slots use flow layout with gaps from the spacing scale, so neighbours push apart instead of overlapping. On narrow screens the sheet is a bottom sheet with peek, half and full detents. From 768px wide, and on any screen shorter than about 500px, it is a floating side panel on the left. The bottom slots ride above the sheet and hide at the full detent. A layout collision test checks every viewport and state.
 
@@ -58,13 +59,17 @@ Native elements first. No tabindex above 0. Every interactive component has an a
 | `Attribution` | A "Map credits" button with `aria-expanded` and `aria-controls`. The popover is a labelled region with real links and returns focus on close. It shows by itself once the map has started, without taking focus, and collapses on the first map interaction or after five seconds (fading, unless reduced motion is on), because the OpenStreetMap attribution guidelines allow credits to collapse only after they have been shown. It opens above the button, or beside the end stack when the links would have to scroll there (a short landscape phone). |
 | `Switch`, `Slider`, `SegmentedControl` | Radix primitives wrapped in our own components, with visible labels and values. |
 | `Tooltip` | Supplements a name, never replaces one. Opens on focus and hover, closes on Escape, absent on touch. |
+| `LayersSection` | A region named "Layers" with an h4 per group and a list of layers. Each layer is a `Switch` (name and description) with its data cost in words. While it is on: a status line (Loading, "Updated 14:05, 43 shown", the layer's empty text, or an error with an icon, words and Try again), its controls (segmented, switch, a native date input bounded by `min` and `max`, an opacity slider), a legend list named "Key for ..." with the same glyphs as the map, the disclaimer with an icon, and a `details` list of what loaded. Controls whose condition is not met are disabled, not hidden. Loads, empty feeds and failures are announced once each through `LiveRegion`. |
+| Feature list | Rows are full-width buttons named by the feature and ", show on map"; a row centres the map on the feature, rings it and opens its card, the keyboard and screen-reader equivalent of tapping the point. Sorts are a segmented control; long lists show 50 rows and "Show all". |
+| `FeatureCard` | An article named by its heading, which takes focus when a tap on the map opened it. Shows the layer, the colour's words with its glyph, the template lines, an `https` provider link that says it opens in a new tab, the disclaimer, "Show on map" and, for layers with a detail source, "Show affected area" with its cost, "Hide affected area" once shown and Try again on failure. Close is an icon button named "Close card". |
+| `MarkerGlyph` | The marker shape and colour as a decorative SVG (`aria-hidden`); words beside it carry the meaning. Its colour is a `fill` attribute, so it needs no inline style. |
 | `LiveRegion` | The one announcer: a polite and an assertive region mounted once, throttled and de-duplicated. Nothing else creates live regions. |
 | `SkipLink` | First focusable element. Moves focus to the map region. |
 | `VisuallyHidden` | The one way to provide screen-reader-only text. |
 
 Map region: a focusable region named "Map", described by hidden keyboard instructions. Arrow keys pan, plus and minus zoom, Shift with left and right arrows rotates, Home or 0 resets north, P drops a pin, Escape closes the active surface.
 
-Gesture equivalents: long-press pin has "Drop pin at map centre" and the P key. Pinch and double-tap have the zoom buttons and +/-. Rotation has Shift with left and right arrows and the compass. Sheet drag has the handle button. Measure taps have "Add point at map centre".
+Gesture equivalents: tapping a data point has the layer's list and its "Show on map" rows. Long-press pin has "Drop pin at map centre" and the P key. Pinch and double-tap have the zoom buttons and +/-. Rotation has Shift with left and right arrows and the compass. Sheet drag has the handle button. Measure taps have "Add point at map centre".
 
 ## Exempt surfaces
 

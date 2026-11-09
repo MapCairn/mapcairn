@@ -55,6 +55,22 @@ search (by pressing Enter or the Search button), your query is sent to
 OpenStreetMap's Nominatim geocoding service, which may likewise log the query
 and your IP address. Nothing is sent while you type.
 
+## Data layers
+
+Every data layer is off until you turn it on, and nothing is requested before
+that. Turning a layer on, changing its controls or pressing Try again sends a
+request from your browser straight to that layer's provider, which may log it
+with your IP address: the US Geological Survey (USGS) for earthquakes, NASA's
+Global Imagery Browse Services for satellite imagery and fire hotspots, the
+Global Disaster Alert and Coordination System (GDACS) for fire, flood,
+tropical cyclone, volcano and drought alerts, and Copernicus (the Global Flood
+Awareness System) for the flood hazard map. Show affected area sends one more
+request to GDACS for that event only. Tile layers request images for the part
+of the map you are looking at, so the provider can tell roughly where you are
+looking. Nothing passes through this site, and nothing is stored beyond the
+page you have open. The layers you turn on are written into the page address
+so a link can be shared; they are not sent anywhere else.
+
 ## Pin addresses
 
 Dropping a pin sends nothing. A pin's address is looked up only when you press

@@ -2,7 +2,7 @@
 
 Karta is a reusable SDK for public-interest map platforms, with a reference host. The SDK is built on ports and adapters: the interface and the pure logic depend on small interfaces, and one place wires in the map engine and the browser services. MapLibre GL JS is the only map engine.
 
-`packages/web` is the reference host, an empty map with basemaps, place search, distance and area measurement, a pin, and theme and unit settings. No datasets or domain-specific overlays are bundled. The site has no accounts and no tracking beyond cookieless page views. [`docs/plans/`](docs/plans/README.md) holds plans for work that is not built yet, such as the first data layers.
+`packages/web` is the reference host: a map with basemaps, place search, distance and area measurement, a pin, theme and unit settings, and open data layers (earthquakes, satellite imagery, fire hotspots, GDACS fire, flood, cyclone, volcano and drought alerts, and a flood hazard map). Every layer is off until someone turns it on, and the browser then fetches it straight from its public provider; nothing is stored or proxied. The site has no accounts and no tracking beyond cookieless page views. [`docs/plans/`](docs/plans/README.md) holds plans for larger work.
 
 ## Documentation
 
@@ -70,6 +70,41 @@ Playwright starts `npm start` itself and reuses a server already running on port
 5. Update the basemap constants in `packages/web/e2e/support/basemaps.ts` and the tests that count basemaps.
 
 Liberty is the default basemap in both themes; the basemap never follows the light or dark theme. To change the default, change `DEFAULT_BASEMAP_ID` and `DEFAULT_BASEMAP_BACKGROUND` (the new style's `background` layer colour) in `basemaps.ts`, and the matching `liberty` backdrop in `packages/theme/src/tokenValues.ts`. A test in `packages/web` fails until the two colours agree.
+
+### Add a data layer
+
+A layer is data, not code: one definition file, one recorded fixture (feeds only) and the provider's origins in the Content Security Policy. Nothing in the code names a layer, a provider or a response shape.
+
+1. Add `packages/web/src/layers/definitions/<id>.ts` with a default export of a `LayerDefinition` (types in `packages/core/src/layers/definition.ts`). It is picked up by `import.meta.glob`, so no list needs editing. A feed names its decoder (`geojson`, or one you register in `packages/web/src/layers/index.ts`), maps fields by dotted path, and describes its style, card and list with templates such as `{time|relative}`. A colour rule needs a shape, a size or the field named on the card, so colour is never the only signal.
+2. For a feed, record a small sample response in `packages/web/src/layers/fixtures/` and add it to `manifest.json` with the number of features it should decode to (and a detail fixture if the layer has `detail`).
+3. Add the provider's origins to `public/_headers` and `src/constants/securityHeaders.ts`: feeds in `connect-src`, tiles in `connect-src` and `img-src`.
+4. Add the provider's credit to `ATTRIBUTIONS.md` and name the provider in the privacy page and `PRIVACY.md`.
+
+Run `npx --no-install vitest run packages/web/src/layers`: the definition-loop test checks the schema, the fixture, the CSP and the credit, and names the line to add for anything missing. A minimal tile layer:
+
+```ts
+import type { TileLayerDefinition } from "@karta/core";
+
+const example: TileLayerDefinition = {
+  id: "example-overlay",
+  name: "Example overlay",
+  description: "What the overlay shows, in one sentence.",
+  group: "Imagery",
+  dataCost: "about 100 KB per screen",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [{ kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 }],
+  source: {
+    kind: "tiles",
+    tiles: "https://tiles.example.org/{z}/{x}/{y}.png",
+    tileSize: 256,
+    maxzoom: 12,
+  },
+};
+
+export default example;
+```
+
+The fire, flood, cyclone, volcano and drought layers were added this way, in one commit with no code change.
 
 ### Add an adapter
 

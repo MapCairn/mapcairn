@@ -6,7 +6,8 @@ Karta separates what the app does from what it runs on. The interface and the pu
 flowchart TD
   subgraph web["packages/web"]
     root["composition root<br/>createServices()"]
-    adapters["adapters<br/>maplibre, search,<br/>location, settings, clipboard,<br/>url, theme"]
+    adapters["adapters<br/>maplibre, search, layers,<br/>location, settings, clipboard,<br/>url, theme"]
+    definitions["layer definitions<br/>(data)"]
     host["SSR host, routes, engine CSS"]
   end
   subgraph map["packages/map"]
@@ -20,6 +21,7 @@ flowchart TD
   theme["packages/theme<br/>tokens, contrast maths"]
   react["packages/react<br/>generic hooks"]
   root --> adapters
+  root --> definitions
   root --> ui
   adapters --> ports
   adapters --> logic
@@ -59,23 +61,35 @@ Add an interface only where a boundary has at least two implementations. The fak
 | `ClipboardPort` | `navigator.clipboard` with a legacy fallback | recording fake |
 | `UrlState` | location hash and `history.replaceState` | in-memory |
 | `ThemeSource` | `matchMedia` | scripted system preference |
-| `LayerRegistry` | empty registry for now | list of sample layers |
+| `LayerRegistry` | the host's definitions, validated at start-up (`createLayerRegistry`) | `StaticLayerRegistry` over sample definitions |
+| `LayerSource` | `FetchLayerSource` (`fetch`, shared response cache) | `FakeLayerSource`, scripted per layer id |
 
 `BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source or an attribution string. A `raster` source is a tile URL template and a tile size, and a `vector` source is a style URL. `DEFAULT_BASEMAP_ID` (Liberty) is the basemap in both themes when nothing is saved or linked, and an unknown id, including the "auto" and the removed "dark" of earlier versions, resolves to it. `DEFAULT_BASEMAP_BACKGROUND` is its land colour; the `mapBackground` token carries the same value (a test in `packages/web` keeps them equal), so the server-rendered placeholder and the map host match Liberty before it draws.
 
-Pure helpers (zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
+Pure helpers (layer templates, decoders and style evaluation, zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
 
 ## The map adapter
 
 MapLibre GL JS is the only map engine, and the ui never imports it. `MapView` takes an adapter factory (`() => MapAdapter`) from the services, mounts one adapter in a host element and wires events to the rest of the ui. Changing basemap calls `setBasemap` on that adapter. The adapter builds an inline raster style for a `raster` source and loads the style URL for a `vector` source.
 
 - **Zoom** is normalised to the 256 px tile convention (OpenStreetMap tile numbering). MapLibre counts 512 px tiles, so the engine zoom is the normalised zoom minus one. That offset is one constant, converted only inside the adapter. For the 256 px raster style, the tile level equals the normalised zoom. The URL, the saved view, the scale bar and the tests use the normalised value only.
-- **Overlays** (pin, measure line, accuracy circle) are drawn once, in a single overlay layer positioned with `adapter.project`.
+- **Overlays** (pin, measure line, accuracy circle, the selected feature's ring) are drawn once, in a single overlay layer positioned with `adapter.project`.
+- **Data layers** are the exception, because hundreds of points or a tiled image belong in the engine. `setFeatureLayer` draws points whose colour, size and shape the ui has already worked out, `setTileLayer` draws raster or WMS tiles (`{bbox-epsg-3857}` is filled by MapLibre) and changes opacity in place, `setShapeLayer` draws an affected area, and `removeLayer` removes any of them. They stack tiles, then shapes, then points, above the basemap, may be set before mount, and are drawn again after every `style.load`, because a full style swap drops them. Points are symbols whose images are rasterised in `markerImages.ts`, so squares and triangles carry meaning beside colour. A tap within a fingertip of a point emits `featureTap` before `click`.
 - **Engine CSS** lives in one file, `packages/web/src/adapters/mapEngine.css.ts`. It styles MapLibre only, scopes its rules under the host's `data-map-host` attribute, hides MapLibre's own controls, replaces fonts and focus rings, and sets the map background from the tokens.
 - **Loading** is lazy. The MapLibre module imports `maplibre-gl` dynamically the first time the map mounts.
 - **User zoom.** The adapter emits `userZoom` only for zoom gestures the engine handles (wheel, pinch, double-click), which MapLibre marks with the input event. `MapView` adds the zoom keys and exposes both as `onUserZoom`, so the app announces the settled level after every zoom the person makes and never after one made in code.
 - **Failures.** Tile and source failures are `tileError`, and the map keeps working. A source-less error before the pending style document has loaded (`style.load`) is that document failing, and rejects the mount or basemap swap; a sprite or glyph failure comes after it and is a `tileError`. A failed swap puts the last basemap that loaded back, so the map keeps working: `MapView` reports it through `onBasemapError`, not as an engine error, and the app saves a basemap choice only once it has loaded, then shows "That basemap could not be loaded." with "Use previous basemap". MapLibre reports every worker `error` event with one message, whether the worker never started or threw while running, so after load the adapter waits up to five seconds: if the map goes idle or has everything loaded, it is a `tileError`; otherwise `fatalError` (reason `stopped`), and the app shows "The map stopped working" with Reload, as an alert. A worker error during the first load rejects the mount. A missing WebGL2 context is recognised by MapLibre's exported `GPUInitializationError`.
 - **No WebGL** means no map. There is no fallback basemap. The app shows a plain message in place of the map ("Karta needs WebGL to draw the map.") with advice to try a different browser or turn on hardware acceleration. `MapUnavailable` draws it inside the map region, so the region and the skip link still work, and announces it once, assertively, through the shared announcer rather than being a live region itself. It has no Retry, because mounting again would fail the same way.
+
+## Data layers
+
+Plan 0001 makes a data layer typed data: a `LayerDefinition` in `packages/web/src/layers/definitions/`, one file each, collected with `import.meta.glob`. Nothing in the code branches on a layer id, a provider or a response shape.
+
+- **Core** (`packages/core/src/layers`) holds the definition types and a hand-written schema check (`validateLayerDefinition`; core stays free of schema libraries), URL and card templates (`{window}`, `{time|relative}`; the engine's `{z}`, `{x}`, `{y}` and `{bbox-epsg-3857}` are left alone), derived URL variables looked up from control values, filters, a decoder registry with the built-in `geojson` decoder (fields mapped by dotted path, so USGS and GDACS share it), a formatter registry (`relative`, `number`, `km`, `date`), style evaluation with a legend derived from the style, palette slot names, and `SharedResponseCache`, which reuses a response for its `max-age` (or the definition's `cacheSeconds`) and shares a request in flight, so layers split from one feed cost one request.
+- **The `LayerSource` port** loads any feed definition with `load({ definition, controls, now, signal })` and an on-request `loadDetail`, and rejects only with a typed `LayerError` (`network`, `invalid`, `empty`, `aborted`). A detail URL comes from the provider's data, so it is requested only when it is `https` on an origin the definition declares.
+- **Map** (`packages/map/src/layers`) has `useDataLayers` (state, loading, cancellation, announcements, the permalink value), `MapDataLayers` (draws through the adapter, turns taps into selections), `SelectionMarker`, and the generic `LayersSection`, card and list. The data palette values live in `@karta/theme` (`tokenValues.dataPalette`).
+- **Web** registers the definitions and `FetchLayerSource` in `createServices()`. A loop test (`src/layers/layers.test.ts`) checks every definition against the schema, the production CSP, `ATTRIBUTIONS.md` and a recorded fixture, and names what is missing.
+- **Permalink.** `UrlStateValue.layers` is written as `#layers=earthquakes,imagery&earthquakes.window=day`, together with the view, so neither drops the other. Values are resolved against the definition when read, so a hand-edited link cannot reach an unknown control or value.
 
 ## Adding an adapter
 
@@ -87,4 +101,4 @@ MapLibre GL JS is the only map engine, and the ui never imports it. `MapView` ta
 
 ## How tests substitute services
 
-Unit tests wrap components in `ServicesProvider` with fakes. In non-production builds, `createServices()` accepts overrides from `window.__KARTA_TEST_SERVICES__`, set with Playwright `addInitScript`, so end-to-end tests script geolocation, search, clipboard, storage and the system theme. The seam is compiled out of production builds, and a test searches the build output to prove it.
+Unit tests wrap components in `ServicesProvider` with fakes. In non-production builds, `createServices()` accepts overrides from `window.__KARTA_TEST_SERVICES__`, set with Playwright `addInitScript`, so end-to-end tests script geolocation, search, clipboard, storage and the system theme. Layer providers are answered from the committed fixtures with `page.route` (`e2e/support/layers.ts`), so the e2e tests exercise the real fetch source and decoders. The seam is compiled out of production builds, and a test searches the build output to prove it.
