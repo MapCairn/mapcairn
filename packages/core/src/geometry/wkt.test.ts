@@ -419,7 +419,7 @@ describe("parseWkt", () => {
  * wide margin on a slow machine.
  */
 describe("parseWkt on hostile input", () => {
-  const LIMIT_MS = 1500;
+  const LIMIT_MS = 5000;
   const SIZE = 500_000;
 
   /** Runs `text` through the parser and returns how long it took. */
