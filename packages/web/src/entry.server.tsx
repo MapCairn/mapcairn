@@ -34,7 +34,7 @@ export default async function handleRequest(
   const nonce = generateNonce();
   responseHeaders.set(
     "Content-Security-Policy",
-    buildContentSecurityPolicy(nonce),
+    buildContentSecurityPolicy(nonce, { development: import.meta.env.DEV }),
   );
 
   const body = await renderToReadableStream(

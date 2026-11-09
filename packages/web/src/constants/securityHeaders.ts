@@ -1,5 +1,6 @@
 /**
  * Builds this app's Content-Security-Policy directive string.
+ * @param options - `development` relaxes `style-src` and `connect-src` for the Vite dev server, which injects <style> tags and a hot-reload socket. Production never sets it.
  * @param nonce - When given, added to `script-src` as `'nonce-<value>'`,
  *   alongside the static hash below. Omit for the static default used by
  *   `public/_headers` (static-asset responses have no per-request nonce)
@@ -27,7 +28,10 @@
  *   (covering both framing *and* worker sources) unintentionally narrowing
  *   `frame-src` to whatever `child-src` allows for workers.
  */
-export function buildContentSecurityPolicy(nonce?: string): string {
+export function buildContentSecurityPolicy(
+  nonce?: string,
+  options: { development?: boolean } = {},
+): string {
   const scriptSources = [
     "'self'",
     "'sha256-HG8PUaCswII51AFFCizfjxISB0x6tOe/Gqljp1vzDRw='",
@@ -38,10 +42,13 @@ export function buildContentSecurityPolicy(nonce?: string): string {
   return [
     "default-src 'self'",
     `script-src ${scriptSources.join(" ")}`,
-    "style-src 'self'",
+    options.development
+      ? "style-src 'self' 'unsafe-inline'"
+      : "style-src 'self'",
     "img-src 'self' data: blob: https://tile.openstreetmap.org https://server.arcgisonline.com https://tiles.openfreemap.org",
     "font-src 'self'",
-    "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://tile.openstreetmap.org https://server.arcgisonline.com https://nominatim.openstreetmap.org https://tiles.openfreemap.org",
+    "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://tile.openstreetmap.org https://server.arcgisonline.com https://nominatim.openstreetmap.org https://tiles.openfreemap.org" +
+      (options.development ? " ws://localhost:* http://localhost:*" : ""),
     "worker-src 'self' blob:",
     "frame-src 'none'",
     "object-src 'none'",

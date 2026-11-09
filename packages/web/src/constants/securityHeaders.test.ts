@@ -64,6 +64,16 @@ describe("buildContentSecurityPolicy", () => {
     );
   });
 
+  it("allows inline styles and the hot-reload socket only in development", () => {
+    const development = buildContentSecurityPolicy(undefined, {
+      development: true,
+    });
+    expect(development).toContain("style-src 'self' 'unsafe-inline'");
+    expect(development).toContain("ws://localhost:*");
+    expect(buildContentSecurityPolicy()).not.toContain("unsafe-inline");
+    expect(buildContentSecurityPolicy()).not.toContain("ws://localhost");
+  });
+
   it("has no nonce token in the static default", () => {
     expect(buildContentSecurityPolicy()).not.toContain("'nonce-");
   });

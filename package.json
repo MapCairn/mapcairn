@@ -14,15 +14,20 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "npm run dev -w @karta/web",
+    "start": "npm run start -w @karta/web",
+    "build": "npm run build --workspaces --if-present",
     "lint": "biome check --error-on-warnings . && npm run depcruise",
     "depcruise": "node scripts/depcruise.mjs",
     "format": "biome format --write .",
     "prepare": "lefthook install --force",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "e2e": "npm run e2e -w @karta/web",
     "test:e2e": "npm run test:e2e -w @karta/web",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "a11y": "npm run a11y -w @karta/web",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run e2e && npm run a11y"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.5",

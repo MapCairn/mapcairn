@@ -5,8 +5,11 @@ import react from "@vitejs/plugin-react";
 import { FontaineTransform } from "fontaine";
 import { defineConfig } from "vite";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const isTest = mode === "test" || process.env.VITEST === "true";
+  // The Worker entry imports the built server bundle, so the Cloudflare plugin
+  // only applies to production builds. Dev serves the app with plain Vite SSR.
+  const useCloudflare = command === "build";
 
   return {
     cacheDir: "node_modules/.vite",
@@ -18,9 +21,9 @@ export default defineConfig(({ mode }) => {
       ...(isTest
         ? [react()]
         : [
-            cloudflare({
-              viteEnvironment: { name: "ssr" },
-            }),
+            ...(useCloudflare
+              ? [cloudflare({ viteEnvironment: { name: "ssr" } })]
+              : []),
             reactRouter(),
             FontaineTransform.vite({
               fallbacks: ["Arial", "sans-serif"],
