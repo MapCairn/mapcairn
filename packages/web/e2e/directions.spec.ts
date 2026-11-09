@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { axeViolations } from "./support/a11y";
 import { mockRoutingService, type RoutingScript } from "./support/routing";
-import { waitForStableLayout } from "./support/states";
+import { viewportDetails, waitForStableLayout } from "./support/states";
 
 /*
  * Directions: stops from the map, the map centre, a place search and the
@@ -74,245 +74,253 @@ const stopRows = (page: Page): Locator =>
   page.getByTestId("directions-stop-row");
 
 for (const viewport of VIEWPORTS) {
-  test.describe(`directions in the ${viewport.name}`, () => {
-    test.use({ viewport: { width: viewport.width, height: viewport.height } });
-
-    let routing: RoutingScript;
-
-    test.beforeEach(async ({ page }) => {
-      routing = await mockRoutingService(page);
-    });
-
-    test("opens a labelled panel with focus inside, and sends nothing until asked", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await expect(mapPage.directionsButton).toHaveAttribute(
-        "aria-pressed",
-        "false",
-      );
-      await openDirections(mapPage);
-      await expect(mapPage.directionsButton).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
-      await expect(panel(page)).toContainText("Tap the map to add a stop");
-      await expect(getRoute(page)).toHaveAttribute("aria-disabled", "true");
-      await expect(page.getByTestId("directions-note")).toContainText(
-        "Nothing is sent until you ask",
-      );
-      await addTwoStopsAtCentre(page, mapPage);
-      expect(routing.requests).toEqual([]);
-    });
-
-    test("takes stops from taps on the map and finds a route", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      await tapTwoStops(mapPage);
-      await expect(stopRows(page)).toHaveCount(2);
-      await expect(page.getByTestId("directions-stop")).toHaveCount(2);
-      await expect(mapPage.host).toHaveCSS("cursor", "crosshair");
-
-      await getRoute(page).click();
-      await expect(page.getByTestId("directions-figures")).toHaveText(
-        /^[\d.,]+ km, \d+ h \d+ min$/,
-      );
-      expect(routing.requests).toHaveLength(1);
-      expect(routing.requests[0]?.endpoint).toBe("route");
-      expect(routing.requests[0]?.body).toMatchObject({ costing: "auto" });
-      expect(routing.requests[0]?.body.locations).toHaveLength(2);
-      await expect
-        .poll(() => mapPage.announcements())
-        .toContainEqual(expect.stringMatching(/^Route found, .+ driving$/));
-    });
-
-    test("names the service and OpenStreetMap in the credits only while a result is on the map", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      await addTwoStopsAtCentre(page, mapPage);
-      await mapPage.creditsButton.click();
-      await expect(
-        mapPage.creditsRegion.getByRole("link", { name: /Valhalla/ }),
-      ).toHaveCount(0);
-      await page.keyboard.press("Escape");
-
-      await getRoute(page).click();
-      await expect(page.getByTestId("directions-result")).toBeVisible();
-      await mapPage.creditsButton.click();
-      await expect(
-        mapPage.creditsRegion.getByRole("link", { name: /Valhalla/ }),
-      ).toBeVisible();
-      await expect(
-        mapPage.creditsRegion.getByRole("link", {
-          name: "© OpenStreetMap contributors",
-        }),
-      ).toHaveCount(1);
-    });
-
-    test("sends the chosen travel mode", async ({ page, mapPage }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      await addTwoStopsAtCentre(page, mapPage);
-      await page.getByRole("radio", { name: "Walk" }).click();
-      await getRoute(page).click();
-      await expect(page.getByTestId("directions-result")).toBeVisible();
-      expect(routing.requests[0]?.body).toMatchObject({
-        costing: "pedestrian",
+  test.describe(
+    `directions in the ${viewport.name}`,
+    viewportDetails(viewport),
+    () => {
+      test.use({
+        viewport: { width: viewport.width, height: viewport.height },
       });
-      await page.getByRole("radio", { name: "Cycle" }).click();
-      // A different mode clears a result that was found for the old one.
-      await expect(page.getByTestId("directions-result")).toHaveCount(0);
-      await getRoute(page).click();
-      await expect(page.getByTestId("directions-result")).toBeVisible();
-      expect(routing.requests[1]?.body).toMatchObject({ costing: "bicycle" });
-    });
 
-    test("shows each leg of a route through three stops", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      await addAtCentre(page).click();
-      for (let stop = 0; stop < 2; stop += 1) {
-        await mapPage.focusMap();
-        await page.keyboard.press("ArrowRight");
-        await page.keyboard.press("ArrowRight");
+      let routing: RoutingScript;
+
+      test.beforeEach(async ({ page }) => {
+        routing = await mockRoutingService(page);
+      });
+
+      test("opens a labelled panel with focus inside, and sends nothing until asked", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await expect(mapPage.directionsButton).toHaveAttribute(
+          "aria-pressed",
+          "false",
+        );
+        await openDirections(mapPage);
+        await expect(mapPage.directionsButton).toHaveAttribute(
+          "aria-pressed",
+          "true",
+        );
+        await expect(panel(page)).toContainText("Tap the map to add a stop");
+        await expect(getRoute(page)).toHaveAttribute("aria-disabled", "true");
+        await expect(page.getByTestId("directions-note")).toContainText(
+          "Nothing is sent until you ask",
+        );
+        await addTwoStopsAtCentre(page, mapPage);
+        expect(routing.requests).toEqual([]);
+      });
+
+      test("takes stops from taps on the map and finds a route", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        await tapTwoStops(mapPage);
+        await expect(stopRows(page)).toHaveCount(2);
+        await expect(page.getByTestId("directions-stop")).toHaveCount(2);
+        await expect(mapPage.host).toHaveCSS("cursor", "crosshair");
+
+        await getRoute(page).click();
+        await expect(page.getByTestId("directions-figures")).toHaveText(
+          /^[\d.,]+ km, \d+ h \d+ min$/,
+        );
+        expect(routing.requests).toHaveLength(1);
+        expect(routing.requests[0]?.endpoint).toBe("route");
+        expect(routing.requests[0]?.body).toMatchObject({ costing: "auto" });
+        expect(routing.requests[0]?.body.locations).toHaveLength(2);
+        await expect
+          .poll(() => mapPage.announcements())
+          .toContainEqual(expect.stringMatching(/^Route found, .+ driving$/));
+      });
+
+      test("names the service and OpenStreetMap in the credits only while a result is on the map", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        await addTwoStopsAtCentre(page, mapPage);
+        await mapPage.creditsButton.click();
+        await expect(
+          mapPage.creditsRegion.getByRole("link", { name: /Valhalla/ }),
+        ).toHaveCount(0);
+        await page.keyboard.press("Escape");
+
+        await getRoute(page).click();
+        await expect(page.getByTestId("directions-result")).toBeVisible();
+        await mapPage.creditsButton.click();
+        await expect(
+          mapPage.creditsRegion.getByRole("link", { name: /Valhalla/ }),
+        ).toBeVisible();
+        await expect(
+          mapPage.creditsRegion.getByRole("link", {
+            name: "© OpenStreetMap contributors",
+          }),
+        ).toHaveCount(1);
+      });
+
+      test("sends the chosen travel mode", async ({ page, mapPage }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        await addTwoStopsAtCentre(page, mapPage);
+        await page.getByRole("radio", { name: "Walk" }).click();
+        await getRoute(page).click();
+        await expect(page.getByTestId("directions-result")).toBeVisible();
+        expect(routing.requests[0]?.body).toMatchObject({
+          costing: "pedestrian",
+        });
+        await page.getByRole("radio", { name: "Cycle" }).click();
+        // A different mode clears a result that was found for the old one.
+        await expect(page.getByTestId("directions-result")).toHaveCount(0);
+        await getRoute(page).click();
+        await expect(page.getByTestId("directions-result")).toBeVisible();
+        expect(routing.requests[1]?.body).toMatchObject({ costing: "bicycle" });
+      });
+
+      test("shows each leg of a route through three stops", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
         await addAtCentre(page).click();
-      }
-      await expect(stopRows(page)).toHaveCount(3);
-      await getRoute(page).click();
-      await expect(page.getByTestId("directions-leg")).toHaveCount(2);
-      await expect(page.getByTestId("directions-leg").first()).toContainText(
-        "A to B:",
-      );
-    });
-
-    test("adds a stop by place search, only when asked", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      const input = page.getByTestId("directions-search-input");
-      await input.fill("Soweto");
-      await expect(page.getByTestId("directions-search-results")).toHaveCount(
-        0,
-      );
-      await input.press("Enter");
-      await page
-        .getByRole("button", { name: /^Add Soweto/ })
-        .first()
-        .click();
-      await expect(stopRows(page)).toHaveCount(1);
-      await expect(stopRows(page).first()).toContainText("Soweto");
-    });
-
-    test("offers the dropped pin as a stop", async ({ page, mapPage }) => {
-      await mapPage.goto(START);
-      await mapPage.focusMap();
-      await page.keyboard.press("p");
-      await expect(mapPage.pinCard).toBeVisible();
-      await mapPage.pinClearButton.click();
-      await mapPage.focusMap();
-      await page.keyboard.press("p");
-      await expect(mapPage.pinMarker).toHaveCount(1);
-      await mapPage.directionsButton.click();
-      await expect(mapPage.pinCard).toHaveCount(0);
-      await button(page, "Add dropped pin").click();
-      await expect(stopRows(page).first()).toContainText("Dropped pin");
-    });
-
-    test("reorders and removes stops, with focus kept", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      await addTwoStopsAtCentre(page, mapPage);
-      const before = await stopRows(page).allTextContents();
-      await button(page, "Move stop A down").click();
-      const after = await stopRows(page).allTextContents();
-      expect(after[0]?.replace(/^A/, "").replace(/^Stop A: /, "")).toContain(
-        before[1]?.replace(/^B/, "").replace(/^Stop B: /, "") ?? "",
-      );
-      await button(page, "Remove stop B").click();
-      await expect(stopRows(page)).toHaveCount(1);
-      await expect(page.getByRole("heading", { name: "Stops" })).toBeFocused();
-      await button(page, "Clear directions").click();
-      await expect(stopRows(page)).toHaveCount(0);
-    });
-
-    test("shows the travel time area for the first stop, with its size", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      await addAtCentre(page).click();
-      await button(page, "Show the area reachable within 15 minutes").click();
-      await expect(page.getByTestId("directions-figures")).toHaveText(
-        "15 min driving",
-      );
-      await expect(page.getByTestId("directions-area")).toHaveText(
-        /[\d.,]+ (m²|ha|km²)/,
-      );
-      expect(routing.requests[0]?.endpoint).toBe("isochrone");
-      expect(routing.requests[0]?.body).toMatchObject({
-        costing: "auto",
-        polygons: true,
-        contours: [{ time: 15 }],
+        for (let stop = 0; stop < 2; stop += 1) {
+          await mapPage.focusMap();
+          await page.keyboard.press("ArrowRight");
+          await page.keyboard.press("ArrowRight");
+          await addAtCentre(page).click();
+        }
+        await expect(stopRows(page)).toHaveCount(3);
+        await getRoute(page).click();
+        await expect(page.getByTestId("directions-leg")).toHaveCount(2);
+        await expect(page.getByTestId("directions-leg").first()).toContainText(
+          "A to B:",
+        );
       });
-      await expect(page.getByTestId("directions-area-15")).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
-    });
 
-    test("keeps stops and results out of the address", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      await addTwoStopsAtCentre(page, mapPage);
-      await getRoute(page).click();
-      await expect(page.getByTestId("directions-result")).toBeVisible();
-      const hash = await page.evaluate(() => window.location.hash);
-      expect(hash).not.toMatch(/stop|route|direction|locations/i);
-    });
+      test("adds a stop by place search, only when asked", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        const input = page.getByTestId("directions-search-input");
+        await input.fill("Soweto");
+        await expect(page.getByTestId("directions-search-results")).toHaveCount(
+          0,
+        );
+        await input.press("Enter");
+        await page
+          .getByRole("button", { name: /^Add Soweto/ })
+          .first()
+          .click();
+        await expect(stopRows(page)).toHaveCount(1);
+        await expect(stopRows(page).first()).toContainText("Soweto");
+      });
 
-    test("Measure and Directions take turns, and the pin keeps the panel open", async ({
-      page,
-      mapPage,
-    }) => {
-      await mapPage.goto(START);
-      await openDirections(mapPage);
-      await addTwoStopsAtCentre(page, mapPage);
-      await mapPage.startMeasuring();
-      await expect(mapPage.directionsButton).toHaveAttribute(
-        "aria-pressed",
-        "false",
-      );
-      await expect(panel(page)).toHaveCount(0);
-      // The stops stay on the map.
-      await expect(page.getByTestId("directions-stop")).toHaveCount(2);
-      await mapPage.measureDone.click();
-      await mapPage.directionsButton.click();
-      await expect(stopRows(page)).toHaveCount(2);
-      await mapPage.focusMap();
-      await page.keyboard.press("p");
-      await expect(panel(page)).toBeVisible();
-      await expect(mapPage.pinCard).toHaveCount(0);
-    });
-  });
+      test("offers the dropped pin as a stop", async ({ page, mapPage }) => {
+        await mapPage.goto(START);
+        await mapPage.focusMap();
+        await page.keyboard.press("p");
+        await expect(mapPage.pinCard).toBeVisible();
+        await mapPage.pinClearButton.click();
+        await mapPage.focusMap();
+        await page.keyboard.press("p");
+        await expect(mapPage.pinMarker).toHaveCount(1);
+        await mapPage.directionsButton.click();
+        await expect(mapPage.pinCard).toHaveCount(0);
+        await button(page, "Add dropped pin").click();
+        await expect(stopRows(page).first()).toContainText("Dropped pin");
+      });
+
+      test("reorders and removes stops, with focus kept", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        await addTwoStopsAtCentre(page, mapPage);
+        const before = await stopRows(page).allTextContents();
+        await button(page, "Move stop A down").click();
+        const after = await stopRows(page).allTextContents();
+        expect(after[0]?.replace(/^A/, "").replace(/^Stop A: /, "")).toContain(
+          before[1]?.replace(/^B/, "").replace(/^Stop B: /, "") ?? "",
+        );
+        await button(page, "Remove stop B").click();
+        await expect(stopRows(page)).toHaveCount(1);
+        await expect(
+          page.getByRole("heading", { name: "Stops" }),
+        ).toBeFocused();
+        await button(page, "Clear directions").click();
+        await expect(stopRows(page)).toHaveCount(0);
+      });
+
+      test("shows the travel time area for the first stop, with its size", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        await addAtCentre(page).click();
+        await button(page, "Show the area reachable within 15 minutes").click();
+        await expect(page.getByTestId("directions-figures")).toHaveText(
+          "15 min driving",
+        );
+        await expect(page.getByTestId("directions-area")).toHaveText(
+          /[\d.,]+ (m²|ha|km²)/,
+        );
+        expect(routing.requests[0]?.endpoint).toBe("isochrone");
+        expect(routing.requests[0]?.body).toMatchObject({
+          costing: "auto",
+          polygons: true,
+          contours: [{ time: 15 }],
+        });
+        await expect(page.getByTestId("directions-area-15")).toHaveAttribute(
+          "aria-pressed",
+          "true",
+        );
+      });
+
+      test("keeps stops and results out of the address", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        await addTwoStopsAtCentre(page, mapPage);
+        await getRoute(page).click();
+        await expect(page.getByTestId("directions-result")).toBeVisible();
+        const hash = await page.evaluate(() => window.location.hash);
+        expect(hash).not.toMatch(/stop|route|direction|locations/i);
+      });
+
+      test("Measure and Directions take turns, and the pin keeps the panel open", async ({
+        page,
+        mapPage,
+      }) => {
+        await mapPage.goto(START);
+        await openDirections(mapPage);
+        await addTwoStopsAtCentre(page, mapPage);
+        await mapPage.startMeasuring();
+        await expect(mapPage.directionsButton).toHaveAttribute(
+          "aria-pressed",
+          "false",
+        );
+        await expect(panel(page)).toHaveCount(0);
+        // The stops stay on the map.
+        await expect(page.getByTestId("directions-stop")).toHaveCount(2);
+        await mapPage.measureDone.click();
+        await mapPage.directionsButton.click();
+        await expect(stopRows(page)).toHaveCount(2);
+        await mapPage.focusMap();
+        await page.keyboard.press("p");
+        await expect(panel(page)).toBeVisible();
+        await expect(mapPage.pinCard).toHaveCount(0);
+      });
+    },
+  );
 }
 
 test.describe("directions failures", () => {

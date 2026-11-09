@@ -197,8 +197,7 @@ export function DirectionsPanel({
           Stops
         </Heading>
         <p className={styles.hint}>
-          Tap the map to add a stop, or use Add stop at map centre. Routes go
-          through the stops in order.
+          Tap the map to add a stop, or use Add stop at map centre.
         </p>
         {stops.length > 0 ? (
           <ol className={styles.stopList} data-testid="directions-stops">
@@ -273,6 +272,53 @@ export function DirectionsPanel({
             another.
           </p>
         ) : null}
+      </section>
+
+      <section className={styles.group} aria-labelledby="directions-route">
+        {/* The controls name themselves, and the room matters on a half-height sheet. */}
+        <VisuallyHidden as={Heading} id="directions-route">
+          Route
+        </VisuallyHidden>
+        <SegmentedControl
+          label="Travel mode"
+          options={TRAVEL_MODES.map((value) => ({
+            value,
+            label: travelModeLabel(value),
+            icon: <Icon icon={MODE_ICONS[value]} />,
+          }))}
+          value={mode}
+          onValueChange={(next) => directions.setMode(next as TravelMode)}
+          data-testid="directions-mode"
+        />
+        <div className={styles.actions}>
+          <Button
+            icon={Route}
+            disabled={needsTwo}
+            busy={state.status === "loading" && state.request === "route"}
+            data-testid="directions-get-route"
+            onClick={directions.requestRoute}
+          >
+            Get route
+          </Button>
+          {busy ? (
+            <Button
+              variant="quiet"
+              data-testid="directions-cancel"
+              onClick={directions.cancel}
+            >
+              Cancel
+            </Button>
+          ) : null}
+        </div>
+        {needsTwo ? (
+          <p className={styles.hint}>Add at least two stops to get a route.</p>
+        ) : null}
+      </section>
+
+      <section className={styles.group} aria-labelledby="directions-search">
+        <Heading id="directions-search" className={styles.groupHeading}>
+          Add a stop by search
+        </Heading>
         <form
           aria-label="Search for a stop"
           className={styles.group}
@@ -340,46 +386,6 @@ export function DirectionsPanel({
             </ul>
           ) : null}
         </form>
-      </section>
-
-      <section className={styles.group} aria-labelledby="directions-route">
-        <Heading id="directions-route" className={styles.groupHeading}>
-          Route
-        </Heading>
-        <SegmentedControl
-          label="Travel mode"
-          options={TRAVEL_MODES.map((value) => ({
-            value,
-            label: travelModeLabel(value),
-            icon: <Icon icon={MODE_ICONS[value]} />,
-          }))}
-          value={mode}
-          onValueChange={(next) => directions.setMode(next as TravelMode)}
-          data-testid="directions-mode"
-        />
-        <div className={styles.actions}>
-          <Button
-            icon={Route}
-            disabled={needsTwo}
-            busy={state.status === "loading" && state.request === "route"}
-            data-testid="directions-get-route"
-            onClick={directions.requestRoute}
-          >
-            Get route
-          </Button>
-          {busy ? (
-            <Button
-              variant="quiet"
-              data-testid="directions-cancel"
-              onClick={directions.cancel}
-            >
-              Cancel
-            </Button>
-          ) : null}
-        </div>
-        {needsTwo ? (
-          <p className={styles.hint}>Add at least two stops to get a route.</p>
-        ) : null}
       </section>
 
       <section className={styles.group} aria-labelledby="directions-area">

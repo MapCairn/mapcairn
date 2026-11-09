@@ -3,7 +3,7 @@ import { style } from "@vanilla-extract/css";
 
 /** A stop's disc on the map. */
 export const stopDisc = style({
-  fill: mapOverlayTokens.measureLine,
+  fill: tokens.color.accent,
   stroke: mapOverlayTokens.halo,
   strokeWidth: tokens.focus.outerWidth,
 });
