@@ -295,7 +295,8 @@ test.describe("draw", () => {
     await mapPage.drawShapesButton.click();
     await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
     await page.keyboard.press("Escape");
-    await expect(mapPage.drawStatus).toHaveText("Polygon 1, 2 points");
+    // The dropped shape used up Polygon 1, so this one is Polygon 2.
+    await expect(mapPage.drawStatus).toHaveText("Polygon 2, 2 points");
   });
 
   test("cancels a shape that is being drawn", async ({ mapPage }) => {

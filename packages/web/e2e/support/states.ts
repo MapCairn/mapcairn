@@ -123,7 +123,8 @@ export async function enterState(
       await mapPage.focusMap();
       await mapPage.page.keyboard.press("ArrowRight");
       await mapPage.drawAddPoint.click();
-      await expect(mapPage.drawStatus).toHaveText("Polygon 1, 2 points");
+      // The number grows each time the state is walked, so it is not pinned.
+      await expect(mapPage.drawStatus).toHaveText(/^Polygon \d+, 2 points$/);
       return;
     case "pin card":
       await mapPage.focusMap();
