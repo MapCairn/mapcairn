@@ -5,5 +5,7 @@ export * from "./data/mergeFeatureCollections";
 export * from "./layers/classification";
 export * from "./layers/createLayerConfig";
 export * from "./layers/createRegistry";
+export * from "./ports";
 export * from "./spatial/measurement";
 export * from "./types/layer";
+export * from "./zoom/zoom";
