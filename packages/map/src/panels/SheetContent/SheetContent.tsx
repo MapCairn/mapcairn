@@ -1,8 +1,8 @@
 import type { SheetSection } from "@karta/core";
 import { type ReactNode, useEffect, useRef } from "react";
+import { type DataLayers, LayersSection } from "../../layers";
 import { usePreferences } from "../../services";
 import { BasemapPicker } from "../BasemapPicker";
-import { DataSection } from "../DataSection";
 import { HelpSection } from "../HelpSection";
 import { PinSection } from "../PinSection";
 import { Section } from "../Section";
@@ -28,13 +28,20 @@ export interface SheetContentProps {
   readonly section?: SheetSection;
   /** The pin's details, shown inside the Pin section. */
   readonly pinCard?: ReactNode;
+  /**
+   * The data layers, from `useDataLayers`. Without it, or with no layers
+   * registered, there is no Layers section.
+   */
+  readonly layers?: DataLayers;
+  /** Called after "Show on map" in the Layers section, so the host can make room for the map. */
+  readonly onShowOnMap?: () => void;
   /** Where the privacy policy is. Defaults to `/privacy`. */
   readonly privacyHref?: string;
 }
 
 /**
  * Everything inside the options sheet, under the sheet's own h2 title: Basemap,
- * Pin, Data (only when the host has layers), Settings and Help, each a
+ * Pin, Layers (only when the host has layers), Settings and Help, each a
  * `section` named by an h3.
  */
 export function SheetContent({
@@ -44,6 +51,8 @@ export function SheetContent({
   onDropPin,
   section,
   pinCard,
+  layers,
+  onShowOnMap,
   privacyHref,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
@@ -88,7 +97,13 @@ export function SheetContent({
       >
         {pinCard}
       </PinSection>
-      <DataSection headingRef={headingRef("layers")} />
+      {layers ? (
+        <LayersSection
+          layers={layers}
+          headingRef={headingRef("layers")}
+          onShowOnMap={onShowOnMap}
+        />
+      ) : null}
       <SettingsSection
         privacyHref={privacyHref}
         headingRef={headingRef("settings")}

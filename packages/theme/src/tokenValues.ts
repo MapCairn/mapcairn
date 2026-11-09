@@ -58,6 +58,31 @@ const red = {
 } as const;
 
 /**
+ * The data palette: the colours data layers draw with, named by the slots
+ * `@karta/core` lets a layer definition use (`PALETTE_SLOTS`). Six-digit hex,
+ * because the map engine and SVG `fill` attributes read it directly.
+ *
+ * The categorical colours are Okabe-Ito (without black, which vanishes on a
+ * dark basemap). The ordinal ramp runs light to dark in the manner of
+ * viridis, for ordered values such as magnitude. Every marker also has a
+ * white halo and a shape or size, so colour is never the only signal.
+ */
+export const dataPalette = {
+  orange: "#e69f00",
+  "sky-blue": "#56b4e9",
+  "bluish-green": "#009e73",
+  yellow: "#f0e442",
+  blue: "#0072b2",
+  vermillion: "#d55e00",
+  "reddish-purple": "#cc79a7",
+  "ordinal-1": "#fde725",
+  "ordinal-2": "#5ec962",
+  "ordinal-3": "#21918c",
+  "ordinal-4": "#3b528b",
+  "ordinal-5": "#440154",
+} as const;
+
+/**
  * Backdrops that surface contrast is measured over. A translucent surface
  * takes on whatever map is under it, so tests composite over both extremes,
  * plus the light basemaps for the things drawn on the map. Every built-in

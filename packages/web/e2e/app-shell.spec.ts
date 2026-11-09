@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { RASTER_BASEMAP_NAME } from "./support/basemaps";
+import { LAYER_PROVIDER_ORIGINS } from "./support/layers";
 
 test.describe("app shell", () => {
   test("loads the map with its landmarks and no hydration errors", async ({
@@ -67,13 +68,17 @@ test.describe("app shell", () => {
     );
   });
 
-  test("ships no dataset controls or data requests", async ({
+  test("lists the data layers off, and requests no layer data until one is on", async ({
     page,
     mapPage,
   }) => {
     const dataRequests: string[] = [];
     page.on("request", (request) => {
-      if (new URL(request.url()).pathname.startsWith("/data/")) {
+      const url = new URL(request.url());
+      if (
+        url.pathname.startsWith("/data/") ||
+        LAYER_PROVIDER_ORIGINS.includes(url.origin)
+      ) {
         dataRequests.push(request.url());
       }
     });
@@ -81,7 +86,11 @@ test.describe("app shell", () => {
     await mapPage.goto();
     await mapPage.openMapOptions();
 
-    await expect(page.getByTestId("sheet-section-data")).toHaveCount(0);
+    const layers = page.getByTestId("sheet-section-layers");
+    await expect(layers).toBeAttached();
+    for (const toggle of await layers.getByRole("switch").all()) {
+      await expect(toggle).not.toBeChecked();
+    }
     await expect(page.getByRole("tablist")).toHaveCount(0);
     await expect(
       mapPage.basemapPicker.getByRole("radio", { name: RASTER_BASEMAP_NAME }),

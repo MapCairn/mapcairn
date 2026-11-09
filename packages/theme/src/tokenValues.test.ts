@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseColour } from "./contrast";
 import {
   accent,
+  dataPalette,
   fontFamily,
   fontWeight,
   inset,
@@ -23,6 +24,26 @@ function lightnessAndChroma(value: string): [number, number] {
   const match = /^oklch\(([\d.]+) ([\d.]+) /.exec(value);
   return [Number(match?.[1]), Number(match?.[2])];
 }
+
+describe("data palette", () => {
+  it("is six-digit hex the map engine can read, with no colour used twice", () => {
+    const values = Object.values(dataPalette);
+    for (const value of values) {
+      expect(value).toMatch(/^#[0-9a-f]{6}$/);
+    }
+    expect(new Set(values).size).toBe(values.length);
+  });
+
+  it("orders the ordinal ramp from light to dark", () => {
+    const lightness = [1, 2, 3, 4, 5].map((step) => {
+      const { r, g, b } = parseColour(
+        dataPalette[`ordinal-${step}` as keyof typeof dataPalette],
+      );
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    });
+    expect(lightness).toEqual([...lightness].sort((a, b) => b - a));
+  });
+});
 
 describe("palette ramps", () => {
   it("steps the neutral ramp from light to dark with a faint cool tint", () => {

@@ -1,4 +1,4 @@
-import type { ViewState } from "@karta/core";
+import type { LayersUrlState, ViewState } from "@karta/core";
 import { useSettings, useUrlState } from "@karta/map";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -17,18 +17,21 @@ export interface ViewPersistence {
  * Keeps the shareable link and the saved view in step with the map.
  *
  * @remarks Every settled view and every basemap choice is written to the
- *   link through `UrlState`, which debounces and uses `replaceState`. The
+ *   link through `UrlState`, which debounces and uses `replaceState`, with the
+ *   data layers that are on, so moving the map never drops them. The
  *   view is also saved as `lastView`, after {@link SAVE_VIEW_DELAY_MS} of
  *   quiet, and at once when the app unmounts.
  */
 export function useViewPersistence(
   initialView: ViewState,
   basemapChoice: string,
+  layers?: LayersUrlState,
 ): ViewPersistence {
   const url = useUrlState();
   const { update } = useSettings();
   const viewRef = useRef(initialView);
   const choiceRef = useRef(basemapChoice);
+  const layersRef = useRef(layers);
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const save = useCallback(() => {
@@ -39,7 +42,11 @@ export function useViewPersistence(
   const onViewChange = useCallback(
     (view: ViewState) => {
       viewRef.current = view;
-      url.write({ view, basemapId: choiceRef.current });
+      url.write({
+        view,
+        basemapId: choiceRef.current,
+        layers: layersRef.current,
+      });
       if (pending.current !== null) {
         clearTimeout(pending.current);
       }
@@ -53,8 +60,24 @@ export function useViewPersistence(
       return;
     }
     choiceRef.current = basemapChoice;
-    url.write({ view: viewRef.current, basemapId: basemapChoice });
+    url.write({
+      view: viewRef.current,
+      basemapId: basemapChoice,
+      layers: layersRef.current,
+    });
   }, [url, basemapChoice]);
+
+  useEffect(() => {
+    if (layersRef.current === layers) {
+      return;
+    }
+    layersRef.current = layers;
+    url.write({
+      view: viewRef.current,
+      basemapId: choiceRef.current,
+      layers,
+    });
+  }, [url, layers]);
 
   useEffect(
     () => () => {

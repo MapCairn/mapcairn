@@ -1,6 +1,7 @@
 import {
   type BasemapDefinition,
   buildAttribution,
+  type LayerAttribution,
   type ViewState,
 } from "@karta/core";
 import { Info } from "lucide-react";
@@ -47,10 +48,14 @@ function sameView(a: ViewState, b: ViewState): boolean {
   );
 }
 
+const NO_CREDITS: readonly LayerAttribution[] = [];
+
 /** Props for {@link Attribution}. */
 export interface AttributionProps {
   /** The active basemap. Its credits, plus the engine's, are listed. */
   readonly basemap: BasemapDefinition;
+  /** Credits of the data layers that are on, listed after the map's own. */
+  readonly layerCredits?: readonly LayerAttribution[];
 }
 
 /**
@@ -79,7 +84,10 @@ export interface AttributionProps {
  *   button; nothing here hides or removes them. Reads the map with
  *   `useMap()`, so it must sit inside the map context.
  */
-export function Attribution({ basemap }: AttributionProps) {
+export function Attribution({
+  basemap,
+  layerCredits = NO_CREDITS,
+}: AttributionProps) {
   const { adapter, view, onUserZoom } = useMap();
   const { reducedMotion } = usePreferences();
   const [open, setOpen] = useState(false);
@@ -97,7 +105,10 @@ export function Attribution({ basemap }: AttributionProps) {
   const regionRef = useRef<HTMLElement>(null);
   const openedOnView = useRef(view);
   const introShown = useRef(false);
-  const entries = buildAttribution(basemap);
+  const entries = [
+    ...buildAttribution(basemap),
+    ...layerCredits.map((credit) => ({ text: credit.text, href: credit.url })),
+  ];
 
   const close = useCallback(() => {
     const root = rootRef.current;

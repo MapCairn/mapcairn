@@ -215,3 +215,96 @@ describe("round trip", () => {
     expect(serialiseUrlHash(parseUrlHash(hash))).toBe(hash);
   });
 });
+
+describe("layers in the hash", () => {
+  it("writes the layers that are on and their control values", () => {
+    expect(
+      serialiseUrlHash({
+        basemapId: "liberty",
+        layers: {
+          enabled: ["earthquakes", "imagery"],
+          controls: {
+            earthquakes: { window: "day", small: "false" },
+            imagery: { date: "2026-11-08", opacity: "0.85" },
+          },
+        },
+      }),
+    ).toBe(
+      "#basemap=liberty&layers=earthquakes,imagery&earthquakes.window=day&earthquakes.small=false&imagery.date=2026-11-08&imagery.opacity=0.85",
+    );
+  });
+
+  it("writes nothing for no layers, and no values for layers that are off", () => {
+    expect(serialiseUrlHash({ layers: { enabled: [], controls: {} } })).toBe(
+      "",
+    );
+    expect(
+      serialiseUrlHash({
+        layers: { enabled: ["a"], controls: { b: { window: "day" } } },
+      }),
+    ).toBe("#layers=a");
+  });
+
+  it("leaves out ids and values it could not read back", () => {
+    expect(
+      serialiseUrlHash({
+        layers: {
+          enabled: ["Bad Id", "ok"],
+          controls: {
+            ok: { window: "a&b", "Bad Key": "x", date: "2026-11-08" },
+          },
+        },
+      }),
+    ).toBe("#layers=ok&ok.date=2026-11-08");
+  });
+
+  it("reads layers and their control values", () => {
+    expect(
+      parseUrlHash(
+        "#layers=earthquakes,imagery&earthquakes.window=week&imagery.date=2026-11-08",
+      ),
+    ).toEqual({
+      layers: {
+        enabled: ["earthquakes", "imagery"],
+        controls: {
+          earthquakes: { window: "week" },
+          imagery: { date: "2026-11-08" },
+        },
+      },
+    });
+  });
+
+  it("drops bad ids, duplicates, values for layers that are off and odd values", () => {
+    expect(
+      parseUrlHash(
+        "#layers=quakes,Bad!,quakes,,fires&quakes.window=%3Cb%3E&quakes.small=true&other.window=day&fires=1",
+      ),
+    ).toEqual({
+      layers: {
+        enabled: ["quakes", "fires"],
+        controls: { quakes: { small: "true" } },
+      },
+    });
+  });
+
+  it("reads no layers from an empty list", () => {
+    expect(parseUrlHash("#layers=")).toEqual({});
+  });
+
+  it("keeps at most 20 layers", () => {
+    const ids = Array.from({ length: 25 }, (_, index) => `l${index}`);
+    expect(
+      parseUrlHash(`#layers=${ids.join(",")}`).layers?.enabled,
+    ).toHaveLength(20);
+  });
+
+  it("round-trips", () => {
+    const value: UrlStateValue = {
+      layers: {
+        enabled: ["imagery"],
+        controls: { imagery: { date: "2026-11-08", opacity: "0.5" } },
+      },
+    };
+    expect(parseUrlHash(serialiseUrlHash(value))).toEqual(value);
+  });
+});

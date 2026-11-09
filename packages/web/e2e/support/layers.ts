@@ -1,0 +1,85 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { Page } from "@playwright/test";
+
+const FIXTURES = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../src/layers/fixtures",
+);
+
+/** A 1x1 transparent PNG, for every tile overlay. */
+const TRANSPARENT_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  "base64",
+);
+
+/**
+ * Every origin a layer definition requests. A test fails if the app reaches
+ * one before a layer is on; `mockLayerProviders` answers all of them.
+ */
+export const LAYER_PROVIDER_ORIGINS: readonly string[] = [
+  "https://earthquake.usgs.gov",
+  "https://gibs.earthdata.nasa.gov",
+  "https://www.gdacs.org",
+  "https://ows.globalfloods.eu",
+];
+
+/** The recorded responses, by the URL pattern they answer. Tiles get an empty PNG. */
+const FEEDS: readonly { readonly pattern: RegExp; readonly file: string }[] = [
+  {
+    pattern: /earthquake\.usgs\.gov\/earthquakes\/feed\//,
+    file: "usgs-2.5_day.json",
+  },
+  {
+    pattern: /www\.gdacs\.org\/gdacsapi\/api\/events\//,
+    file: "gdacs-events.json",
+  },
+  {
+    pattern: /www\.gdacs\.org\/gdacsapi\/api\/polygons\//,
+    file: "gdacs-tc-geometry.json",
+  },
+];
+
+const TILE_PATTERN = /gibs\.earthdata\.nasa\.gov|ows\.globalfloods\.eu/;
+
+/** Every request the suite saw for a layer provider, in order. */
+export interface LayerRequests {
+  readonly urls: string[];
+}
+
+/**
+ * Answers every layer provider from the committed fixtures, so layer tests
+ * exercise the real fetch source and decoders without a live service, and
+ * records what was asked. A fixture the folder lacks answers 404.
+ */
+export async function mockLayerProviders(page: Page): Promise<LayerRequests> {
+  const requests: LayerRequests = { urls: [] };
+  for (const { pattern, file } of FEEDS) {
+    await page.route(pattern, (route) => {
+      requests.urls.push(route.request().url());
+      let body: string;
+      try {
+        body = readFileSync(resolve(FIXTURES, file), "utf8");
+      } catch {
+        return route.fulfill({ status: 404, body: "" });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "access-control-allow-origin": "*" },
+        body,
+      });
+    });
+  }
+  await page.route(TILE_PATTERN, (route) => {
+    requests.urls.push(route.request().url());
+    return route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      headers: { "access-control-allow-origin": "*" },
+      body: TRANSPARENT_PNG,
+    });
+  });
+  return requests;
+}

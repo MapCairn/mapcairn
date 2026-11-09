@@ -156,7 +156,9 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           latlng={finePointer ? app.cursor : null}
         />
       }
-      bottomEnd={<Attribution basemap={app.basemap} />}
+      bottomEnd={
+        <Attribution basemap={app.basemap} layerCredits={app.layers.credits} />
+      }
       bottomCentre={centre}
       sheet={
         <Sheet
@@ -177,6 +179,8 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               hasPin={state.hasPin}
               onDropPin={app.dropPinAtCentre}
               section={app.sheetSection}
+              layers={app.layers}
+              onShowOnMap={app.revealMap}
               pinCard={
                 app.pin ? (
                   <PinCard

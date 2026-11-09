@@ -5,7 +5,13 @@ import {
   announceAddressNotFound,
   announceBasemap,
   announceCopied,
+  announceDetailError,
+  announceDetailShown,
   announceDetent,
+  announceLayerEmpty,
+  announceLayerError,
+  announceLayerLoaded,
+  announceLayerOn,
   announceLocationError,
   announceLocationFound,
   announceMeasureTotal,
@@ -149,6 +155,44 @@ describe("map and panel announcements", () => {
     );
     expect(announceOffline()).toBe(
       "You are offline. Parts of the map may not load.",
+    );
+  });
+});
+
+describe("layer announcements", () => {
+  it("says how many features loaded, by layer", () => {
+    expect(announceLayerLoaded("Earthquakes", 43)).toBe(
+      "Earthquakes: 43 shown on the map.",
+    );
+  });
+
+  it("says a tile layer is on", () => {
+    expect(announceLayerOn("Satellite imagery")).toBe(
+      "Satellite imagery is on.",
+    );
+  });
+
+  it("passes the layer's own empty text through", () => {
+    expect(
+      announceLayerEmpty("Volcano alerts", "No volcano alerts right now."),
+    ).toBe("Volcano alerts: No volcano alerts right now.");
+  });
+
+  it("says a layer failed and what to do", () => {
+    expect(announceLayerError("Earthquakes", "network")).toBe(
+      "Earthquakes could not load. Check your connection and try again.",
+    );
+    expect(announceLayerError("Earthquakes", "invalid")).toBe(
+      "Earthquakes could not load: the provider sent something unexpected. Try again later.",
+    );
+  });
+
+  it("says when an affected area is shown or failed", () => {
+    expect(announceDetailShown("Flood in Portugal")).toBe(
+      "Affected area of Flood in Portugal shown on the map.",
+    );
+    expect(announceDetailError()).toBe(
+      "The affected area could not load. Try again.",
     );
   });
 });

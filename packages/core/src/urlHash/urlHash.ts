@@ -1,10 +1,59 @@
 import { formatFixed } from "../format/format";
 import type { ViewState } from "../ports/geometry";
-import type { UrlStateValue } from "../ports/url";
+import type { LayersUrlState, UrlStateValue } from "../ports/url";
 
 const NUMBER_PATTERN = /^-?\d+(?:\.\d+)?$/;
 const BASEMAP_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 const MAX_ZOOM = 24;
+const LAYER_ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
+const CONTROL_KEY_PATTERN = /^([a-z][a-z0-9-]{0,63})\.([a-z][a-z0-9-]{0,63})$/;
+const CONTROL_VALUE_PATTERN = /^[a-z0-9._-]{1,32}$/;
+const MAX_LAYERS = 20;
+
+/** Reads `layers=a,b` and the `a.control=value` pairs for layers that are on. */
+function parseLayers(params: Map<string, string>): LayersUrlState | undefined {
+  const enabled = [
+    ...new Set(
+      (params.get("layers") ?? "")
+        .split(",")
+        .filter((id) => LAYER_ID_PATTERN.test(id)),
+    ),
+  ].slice(0, MAX_LAYERS);
+  if (enabled.length === 0) {
+    return undefined;
+  }
+  const controls: Record<string, Record<string, string>> = {};
+  for (const [key, value] of params) {
+    const match = CONTROL_KEY_PATTERN.exec(key);
+    const layer = match?.[1] as string;
+    if (match && enabled.includes(layer) && CONTROL_VALUE_PATTERN.test(value)) {
+      controls[layer] = { ...controls[layer], [match[2] as string]: value };
+    }
+  }
+  return { enabled, controls };
+}
+
+/** Writes the layers that are on, then their control values, leaving out anything unreadable. */
+function serialiseLayers(layers: LayersUrlState | undefined): string[] {
+  const enabled = (layers?.enabled ?? []).filter((id) =>
+    LAYER_ID_PATTERN.test(id),
+  );
+  if (enabled.length === 0) {
+    return [];
+  }
+  const params = [`layers=${enabled.join(",")}`];
+  for (const id of enabled) {
+    for (const [control, value] of Object.entries(layers?.controls[id] ?? {})) {
+      if (
+        CONTROL_KEY_PATTERN.test(`${id}.${control}`) &&
+        CONTROL_VALUE_PATTERN.test(value)
+      ) {
+        params.push(`${id}.${control}=${value}`);
+      }
+    }
+  }
+  return params;
+}
 
 function wrapBearing(bearing: number): number {
   return ((bearing % 360) + 360) % 360;
@@ -73,9 +122,11 @@ export function parseUrlHash(hash: string): UrlStateValue {
   const view = parseView(params.get("map") ?? "");
   const basemap = params.get("basemap") ?? "";
   const basemapId = BASEMAP_ID_PATTERN.test(basemap) ? basemap : undefined;
+  const layers = parseLayers(params);
   return {
     ...(view ? { view } : {}),
     ...(basemapId ? { basemapId } : {}),
+    ...(layers ? { layers } : {}),
   };
 }
 
@@ -116,5 +167,6 @@ export function serialiseUrlHash(value: UrlStateValue): string {
   ) {
     params.push(`basemap=${value.basemapId}`);
   }
+  params.push(...serialiseLayers(value.layers));
   return params.length > 0 ? `#${params.join("&")}` : "";
 }

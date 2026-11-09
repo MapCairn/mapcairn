@@ -1,9 +1,18 @@
 import type { ViewState } from "./geometry";
 
+/** The data layers in a link: which are on, and their control values. */
+export interface LayersUrlState {
+  /** Layer ids, in the order they were turned on. */
+  readonly enabled: readonly string[];
+  /** Control values by layer id, then control id. Untrusted until resolved. */
+  readonly controls: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
 /** The shareable parts of the app state. Every field is optional. */
 export interface UrlStateValue {
   readonly view?: ViewState;
   readonly basemapId?: string;
+  readonly layers?: LayersUrlState;
 }
 
 /**

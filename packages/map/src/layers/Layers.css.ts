@@ -1,0 +1,319 @@
+import { focusRing, mapOverlayTokens, tokens } from "@karta/theme";
+import { style } from "@vanilla-extract/css";
+
+const small = {
+  fontSize: tokens.type.small.size,
+  lineHeight: tokens.type.small.lineHeight,
+  letterSpacing: tokens.type.small.tracking,
+} as const;
+
+/** The halo under the selection ring, so it reads on any basemap. */
+export const selectionHalo = style({
+  fill: "none",
+  stroke: mapOverlayTokens.halo,
+  strokeWidth: `calc(${tokens.space.xxs} + 2 * ${tokens.focus.innerWidth})`,
+});
+
+/** The ring around the selected point. */
+export const selectionRing = style({
+  fill: "none",
+  stroke: mapOverlayTokens.pin,
+  strokeWidth: tokens.space.xxs,
+});
+
+/** A marker glyph's white edge, the same as on the map. */
+export const glyph = style({
+  flexShrink: 0,
+  stroke: mapOverlayTokens.halo,
+  strokeWidth: tokens.focus.innerWidth,
+});
+
+/** Groups of layers, stacked. */
+export const groups = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.md,
+});
+
+/** One group: its heading, then its layers. */
+export const group = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xs,
+});
+
+/** The plain list of layers in a group. */
+export const layerList = style({
+  display: "flex",
+  flexDirection: "column",
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+});
+
+/** One layer, separated from the next by a hairline. */
+export const layerItem = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.sm,
+  paddingBlock: tokens.space.sm,
+  selectors: {
+    "& + &": { borderBlockStart: `1px solid ${tokens.color.hairline}` },
+  },
+});
+
+/** Muted supporting text: data cost, status, notes. */
+export const muted = style({
+  margin: 0,
+  color: tokens.color.textMuted,
+  ...small,
+  fontVariantNumeric: "tabular-nums",
+});
+
+/** The text above the layers, saying nothing loads until a layer is on. */
+export const intro = style({
+  margin: 0,
+  color: tokens.color.textMuted,
+  ...small,
+});
+
+/** The status line with an optional Retry button. */
+export const status = style({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: tokens.space.xs,
+  margin: 0,
+  color: tokens.color.textMuted,
+  ...small,
+  fontVariantNumeric: "tabular-nums",
+});
+
+/** The error part of a status line, in the danger colour beside its icon. */
+export const statusError = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: tokens.space.xxs,
+  color: tokens.color.danger,
+});
+
+/** A layer's controls and everything shown while it is on. */
+export const details = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.sm,
+});
+
+/** A labelled control: the visible label, then the control. */
+export const field = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xxs,
+  color: tokens.color.textMuted,
+  fontWeight: tokens.type.weight.semibold,
+  ...small,
+});
+
+/** The native date input, as tall as every other control. */
+export const dateInput = style({
+  boxSizing: "border-box",
+  minHeight: tokens.size.minTarget,
+  paddingInline: tokens.space.sm,
+  border: `1px solid ${tokens.color.controlBoundary}`,
+  borderRadius: tokens.radius.inner,
+  backgroundColor: tokens.color.surfaceRaised,
+  color: tokens.color.text,
+  fontFamily: tokens.type.family,
+  fontWeight: tokens.type.weight.regular,
+  fontSize: tokens.type.large.size,
+  lineHeight: tokens.type.large.lineHeight,
+  fontVariantNumeric: "tabular-nums",
+  selectors: {
+    "&:focus-visible": focusRing,
+    "&:disabled": { opacity: 0.5 },
+  },
+});
+
+/** The legend: one entry per colour, each with its words. */
+export const legend = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: tokens.space.xs,
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+  color: tokens.color.text,
+  ...small,
+});
+
+/** One legend entry: the glyph and its label. */
+export const legendEntry = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: tokens.space.xxs,
+  marginInlineEnd: tokens.space.sm,
+});
+
+/** The hazard note, with its icon. */
+export const disclaimer = style({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: tokens.space.xs,
+  margin: 0,
+  color: tokens.color.text,
+  ...small,
+});
+
+/** The collapsible list of loaded features. */
+export const featureList = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xs,
+});
+
+/** The summary that opens the list: a full target with a focus ring. */
+export const listSummary = style({
+  display: "flex",
+  alignItems: "center",
+  minHeight: tokens.size.minTarget,
+  cursor: "pointer",
+  color: tokens.color.accent,
+  fontWeight: tokens.type.weight.semibold,
+  fontSize: tokens.type.body.size,
+  lineHeight: tokens.type.body.lineHeight,
+  selectors: { "&:focus-visible": focusRing },
+});
+
+/** The rows of the list. */
+export const rows = style({
+  display: "flex",
+  flexDirection: "column",
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+});
+
+/** One row's list item, with a hairline between rows. */
+export const rowItem = style({
+  margin: 0,
+  padding: 0,
+  selectors: {
+    "& + &": { borderBlockStart: `1px solid ${tokens.color.hairline}` },
+  },
+});
+
+/** A row: a full-width button that shows the feature on the map. */
+export const row = style({
+  display: "flex",
+  alignItems: "center",
+  gap: tokens.space.sm,
+  boxSizing: "border-box",
+  width: "100%",
+  minHeight: tokens.size.control,
+  margin: 0,
+  paddingBlock: tokens.space.xs,
+  paddingInline: tokens.space.xs,
+  border: "none",
+  backgroundColor: "transparent",
+  color: tokens.color.text,
+  fontFamily: tokens.type.family,
+  textAlign: "start",
+  cursor: "pointer",
+  selectors: {
+    "&:focus-visible": focusRing,
+    "&:active": { backgroundColor: tokens.color.hairline },
+  },
+  "@media": {
+    "(hover: hover)": {
+      selectors: { "&:hover": { backgroundColor: tokens.color.hairline } },
+    },
+  },
+});
+
+/** The row's two lines of text. */
+export const rowText = style({
+  display: "flex",
+  flexDirection: "column",
+  minWidth: 0,
+});
+
+/** The row's first line. */
+export const rowTitle = style({
+  fontSize: tokens.type.body.size,
+  lineHeight: tokens.type.body.lineHeight,
+  letterSpacing: tokens.type.body.tracking,
+  overflowWrap: "anywhere",
+});
+
+/** The row's second line. */
+export const rowSecondary = style({
+  color: tokens.color.textMuted,
+  ...small,
+  fontVariantNumeric: "tabular-nums",
+});
+
+/** The feature card. The sheet or panel provides the surface. */
+export const card = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xs,
+  paddingBlockEnd: tokens.space.sm,
+  borderBlockEnd: `1px solid ${tokens.color.hairline}`,
+  color: tokens.color.text,
+  fontSize: tokens.type.body.size,
+  lineHeight: tokens.type.body.lineHeight,
+  letterSpacing: tokens.type.body.tracking,
+});
+
+/** The card heading and its close button. */
+export const cardHeader = style({
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: tokens.space.sm,
+});
+
+/** The card heading. It takes focus by script when a tap opens the card. */
+export const cardHeading = style({
+  margin: 0,
+  fontSize: tokens.type.large.size,
+  fontWeight: tokens.type.weight.semibold,
+  lineHeight: tokens.type.large.lineHeight,
+  letterSpacing: tokens.type.large.tracking,
+  overflowWrap: "anywhere",
+  selectors: {
+    "&:focus-visible": focusRing,
+    "&:focus:not(:focus-visible)": { outline: "none" },
+  },
+});
+
+/** A line of the card. */
+export const cardLine = style({
+  margin: 0,
+  overflowWrap: "anywhere",
+  fontVariantNumeric: "tabular-nums",
+});
+
+/** The category or step of the feature: its glyph and words. */
+export const cardLevel = style({
+  display: "flex",
+  alignItems: "center",
+  gap: tokens.space.xs,
+  margin: 0,
+  fontWeight: tokens.type.weight.semibold,
+});
+
+/** The link to the provider's page. */
+export const cardLink = style({
+  alignSelf: "flex-start",
+  color: tokens.color.accent,
+  selectors: { "&:focus-visible": focusRing },
+});
+
+/** The card's buttons. They wrap on a narrow sheet. */
+export const cardActions = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: tokens.space.xs,
+  marginBlockStart: tokens.space.xs,
+});

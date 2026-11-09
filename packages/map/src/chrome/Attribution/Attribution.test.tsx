@@ -44,6 +44,30 @@ describe("Attribution", () => {
     expect(button().className.split(" ")).toContain(onMapIcon);
   });
 
+  it("adds the credits of the data layers that are on, after the map's", () => {
+    renderChrome(
+      <Attribution
+        basemap={BASEMAP}
+        layerCredits={[
+          { text: "Credit: Sample provider", url: "https://sample.test/" },
+          { text: "Plain layer credit" },
+        ]}
+      />,
+      { map: SETTLED },
+    );
+    const items = [...open().querySelectorAll("li")].map(
+      (li) => li.textContent,
+    );
+    expect(items).toEqual([
+      ...buildAttribution(BASEMAP).map((entry) => entry.text),
+      "Credit: Sample provider",
+      "Plain layer credit",
+    ]);
+    expect(
+      screen.getByRole("link", { name: "Credit: Sample provider" }),
+    ).toHaveAttribute("href", "https://sample.test/");
+  });
+
   it("is a collapsed Map credits button that controls a hidden region", () => {
     const { container } = renderChrome(<Attribution basemap={BASEMAP} />, {
       map: SETTLED,

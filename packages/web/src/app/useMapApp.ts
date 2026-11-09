@@ -25,11 +25,13 @@ import {
   type ViewState,
 } from "@karta/core";
 import {
+  type DataLayers,
   type MapContextValue,
   type MapLongPressEvent,
   type UseLocate,
   type UseMeasure,
   useAnnounce,
+  useDataLayers,
   useLocate,
   useMeasure,
   useSettings,
@@ -137,6 +139,13 @@ export interface MapApp {
   readonly onSearchFocus: () => void;
   readonly onSearchBlur: () => void;
   readonly flyTo: (result: SearchResult) => void;
+
+  /** The data layers: which are on, what loaded, the open card. */
+  readonly layers: DataLayers;
+  /** Opens the Layers section after a tap on a point has selected it. */
+  readonly openFeature: () => void;
+  /** Lowers the sheet to its peek height so the map shows, after "Show on map". */
+  readonly revealMap: () => void;
 }
 
 /**
@@ -149,9 +158,15 @@ export function useMapApp(): MapApp {
   const { settings } = useSettings();
   const url = useUrlState();
   const announce = useAnnounce();
-  const [initial] = useState(() => initialMapState(url.read(), settings));
+  const [link] = useState(() => url.read());
+  const [initial] = useState(() => initialMapState(link, settings));
+  const layers = useDataLayers({ initial: link.layers });
   const basemaps = useBasemapChoice(initial.basemapId);
-  const persistence = useViewPersistence(initial.view, basemaps.savedChoice);
+  const persistence = useViewPersistence(
+    initial.view,
+    basemaps.savedChoice,
+    layers.urlValue,
+  );
   const [state, dispatch] = useReducer(surfaceReducer, initialSurfaceState);
   const stateRef = useLatestRef(state);
   const mapRef = useRef<MapContextValue | null>(null);
@@ -321,6 +336,14 @@ export function useMapApp(): MapApp {
     );
   }, [locate.fix]);
 
+  const openFeature = useCallback(() => dispatch(openSheet("layers")), []);
+
+  const revealMap = useCallback(() => {
+    if (stateRef.current.surface === "sheet") {
+      dispatch(setDetent("peek"));
+    }
+  }, [stateRef]);
+
   const onSearchFocus = useCallback(() => dispatch(openSearch()), []);
   const onSearchBlur = useCallback(() => dispatch(blurSearch()), []);
 
@@ -369,5 +392,8 @@ export function useMapApp(): MapApp {
     onSearchFocus,
     onSearchBlur,
     flyTo,
+    layers,
+    openFeature,
+    revealMap,
   };
 }

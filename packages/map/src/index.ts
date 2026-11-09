@@ -6,6 +6,7 @@
  */
 export * from "./chrome";
 export * from "./host";
+export * from "./layers";
 export * from "./panels";
 export * from "./services";
 export * from "./tools";

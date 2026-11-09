@@ -36,6 +36,41 @@ const DETENT_MESSAGES = {
   full: "Panel full height",
 } as const;
 
+/** A feed layer loaded: "Earthquakes: 43 shown on the map." */
+export function announceLayerLoaded(name: string, count: number): string {
+  return `${name}: ${formatNumber(count)} shown on the map.`;
+}
+
+/** A tile layer was turned on. */
+export function announceLayerOn(name: string): string {
+  return `${name} is on.`;
+}
+
+/** A feed layer loaded with nothing in it, in the layer's own words. */
+export function announceLayerEmpty(name: string, emptyText: string): string {
+  return `${name}: ${emptyText}`;
+}
+
+/** A layer could not load, and what to do next. */
+export function announceLayerError(
+  name: string,
+  kind: "network" | "invalid",
+): string {
+  return kind === "network"
+    ? `${name} could not load. Check your connection and try again.`
+    : `${name} could not load: the provider sent something unexpected. Try again later.`;
+}
+
+/** A feature's affected area is on the map. */
+export function announceDetailShown(title: string): string {
+  return `Affected area of ${title} shown on the map.`;
+}
+
+/** A feature's affected area could not load. */
+export function announceDetailError(): string {
+  return "The affected area could not load. Try again.";
+}
+
 /** "3 results" or "1 result". */
 export function announceSearchResults(count: number): string {
   return `${formatNumber(count)} ${pluralise(count, ["result", "results"])}`;

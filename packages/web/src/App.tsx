@@ -2,11 +2,13 @@ import { type LatLng, pressEscape, startMeasure } from "@karta/core";
 import {
   AccuracyCircle,
   CentreCrosshair,
+  MapDataLayers,
   MapOverlayLayer,
   MapView,
   type MeasureMode,
   MeasureOverlay,
   PinMarker,
+  SelectionMarker,
   useSettings,
   useTheme,
 } from "@karta/map";
@@ -68,7 +70,13 @@ export function App() {
       onEscape={() => closeExplicitly(pressEscape())}
       chrome={(map) => <AppChrome app={app} background={map} />}
     >
+      <MapDataLayers
+        layers={app.layers}
+        onFeatureTap={app.openFeature}
+        ignoreTaps={app.measuring}
+      />
       <MapOverlayLayer testId="map-overlays">
+        <SelectionMarker layers={app.layers} />
         {fix ? (
           <AccuracyCircle
             center={fix.position}

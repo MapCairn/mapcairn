@@ -8,6 +8,7 @@ import {
 } from "@karta/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useDataLayers } from "../../layers";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { SheetContent, type SheetContentProps } from "./SheetContent";
@@ -19,6 +20,12 @@ interface Options {
   readonly theme?: "system" | "light" | "dark";
 }
 
+/** The sheet content with the data layers the services register. */
+function WithLayers(props: SheetContentProps) {
+  const layers = useDataLayers();
+  return <SheetContent {...props} layers={layers} />;
+}
+
 function tree(
   services: ReturnType<typeof createFakeServices>,
   props: SheetContentProps,
@@ -27,7 +34,7 @@ function tree(
     <ServicesProvider services={services}>
       <LiveRegionProvider>
         <h2>Map options</h2>
-        <SheetContent {...props} />
+        <WithLayers {...props} />
       </LiveRegionProvider>
     </ServicesProvider>
   );
@@ -71,15 +78,15 @@ describe("SheetContent structure", () => {
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
     expect(headings).toEqual(["Basemap", "Pin", "Settings", "Help"]);
-    expect(screen.queryByRole("heading", { name: "Data" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Layers" })).toBeNull();
   });
 
-  it("adds Data between Pin and Settings when the host has layers", () => {
+  it("adds Layers between Pin and Settings when the host has layers", () => {
     renderContent({ layers: [SAMPLE_FEED_LAYER] });
     const headings = within(screen.getByTestId("sheet-content"))
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
-    expect(headings).toEqual(["Basemap", "Pin", "Data", "Settings", "Help"]);
+    expect(headings).toEqual(["Basemap", "Pin", "Layers", "Settings", "Help"]);
   });
 
   it("keeps the section headings at h3, below the sheet's h2", () => {
@@ -96,7 +103,7 @@ describe("SheetContent structure", () => {
 
   it("makes each section a named region", () => {
     renderContent({ layers: [SAMPLE_FEED_LAYER] });
-    for (const name of ["Basemap", "Pin", "Data", "Settings", "Help"]) {
+    for (const name of ["Basemap", "Pin", "Layers", "Settings", "Help"]) {
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
   });
@@ -234,15 +241,15 @@ describe("SheetContent section focus", () => {
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
   });
 
-  it("focuses the Data heading when layers exist", () => {
+  it("focuses the Layers heading when layers exist", () => {
     renderContent({
       props: { section: "layers" },
       layers: [SAMPLE_FEED_LAYER],
     });
-    expect(heading("Data")).toHaveFocus();
+    expect(heading("Layers")).toHaveFocus();
   });
 
-  it("does nothing for the Data section when there are no layers", () => {
+  it("does nothing for the Layers section when there are no layers", () => {
     renderContent({ props: { section: "layers" } });
     expect(scrollIntoView).not.toHaveBeenCalled();
     expect(document.body).toHaveFocus();
