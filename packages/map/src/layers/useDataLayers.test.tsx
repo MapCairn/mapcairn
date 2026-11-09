@@ -5,7 +5,9 @@ import {
   LayerError,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
+  SAMPLE_HEATMAP_LAYER,
   SAMPLE_LAYERS,
+  SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   StaticLayerRegistry,
   samplePoint,
@@ -87,6 +89,27 @@ describe("useDataLayers", () => {
       enabled: ["sample-points"],
       controls: { "sample-points": { window: "day", small: "false" } },
     });
+  });
+
+  it("does not reload a loaded layer when another layer is turned on or off", async () => {
+    const { result, source } = setup();
+    source.setFeatures("sample-points", [samplePoint("a")]);
+    source.setFeatures("sample-alerts", [samplePoint("b")]);
+    act(() => result.current.setEnabled("sample-points", true));
+    await waitFor(() =>
+      expect(layer(result, "sample-points").status.kind).toBe("ready"),
+    );
+    act(() => result.current.setEnabled("sample-alerts", true));
+    await waitFor(() =>
+      expect(layer(result, "sample-alerts").status.kind).toBe("ready"),
+    );
+    act(() => result.current.setEnabled("sample-alerts", false));
+    expect(layer(result, "sample-points").status.kind).toBe("ready");
+    expect(layer(result, "sample-points").features).toHaveLength(1);
+    expect(source.requests.map((request) => request.definition.id)).toEqual([
+      "sample-points",
+      "sample-alerts",
+    ]);
   });
 
   it("reports an empty feed in the layer's own words", async () => {
@@ -547,6 +570,238 @@ describe("useDataLayers", () => {
     release();
     await act(async () => {});
     expect(layer(result, SAMPLE_FEED_LAYER.id).status.kind).toBe("off");
+  });
+
+  describe("heatmap layers", () => {
+    it("loads points like a feed and reports how many are drawn", async () => {
+      const { result, source } = setup({}, [SAMPLE_HEATMAP_LAYER]);
+      source.setFeatures("sample-heat", [samplePoint("a"), samplePoint("b")]);
+      act(() => result.current.setEnabled("sample-heat", true));
+      await waitFor(() =>
+        expect(layer(result, "sample-heat").status).toMatchObject({
+          kind: "ready",
+          count: 2,
+        }),
+      );
+      expect(layer(result, "sample-heat").controls).toEqual({
+        radius: "20",
+        intensity: "1",
+        opacity: "0.8",
+      });
+      act(() => result.current.setControl("sample-heat", "radius", "40"));
+      expect(layer(result, "sample-heat").controls.radius).toBe("40");
+      // Tuning how it is drawn asks for nothing again.
+      expect(source.requests).toHaveLength(1);
+    });
+  });
+
+  describe("query layers", () => {
+    const AREA = { west: 2.2, south: 48.8, east: 2.5, north: 48.95 };
+    const items = (count: number) =>
+      Array.from({ length: count }, (_, index) =>
+        samplePoint(`p${index}`, { title: `Item ${index}`, value: index }),
+      );
+    const query = (options: UseDataLayersOptions = {}) =>
+      setup(options, [SAMPLE_QUERY_LAYER]);
+
+    it("asks for nothing until it knows the view, and says it is loading", () => {
+      const { result, source } = query();
+      act(() => result.current.setEnabled("sample-query", true));
+      expect(layer(result, "sample-query").status.kind).toBe("loading");
+      expect(source.requests).toHaveLength(0);
+    });
+
+    it("asks for nothing below its zoom, and says to zoom in", () => {
+      const { result, source } = query();
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 3));
+      expect(layer(result, "sample-query").status).toEqual({
+        kind: "zoom-in",
+      });
+      expect(source.requests).toHaveLength(0);
+    });
+
+    it("asks only for the window around the view, and announces the first load once", async () => {
+      const { result, source } = query();
+      source.setFeatures("sample-query", items(2));
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").status).toMatchObject({
+          kind: "ready",
+          count: 2,
+        }),
+      );
+      const [request] = source.requests;
+      expect(request?.url).toMatch(
+        /^https:\/\/query\.test\/items\?bbox=[\d.]+,[\d.]+,[\d.]+,[\d.]+&limit=4$/,
+      );
+      const area = request?.area;
+      expect(area?.west).toBeLessThanOrEqual(AREA.west);
+      expect(area?.north).toBeGreaterThanOrEqual(AREA.north);
+      await waitFor(() =>
+        expect(polite()).toBe("Sample query: 2 shown on the map."),
+      );
+    });
+
+    it("does not ask again while the view stays inside the window", async () => {
+      const { result, source } = query();
+      source.setFeatures("sample-query", items(1));
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").status.kind).toBe("ready"),
+      );
+      act(() =>
+        result.current.setView(
+          { ...AREA, west: AREA.west + 0.02, east: AREA.east + 0.02 },
+          12,
+        ),
+      );
+      expect(source.requests).toHaveLength(1);
+    });
+
+    it("keeps what is drawn while the next window loads, and shows the new one when it arrives", async () => {
+      const { result, source } = query();
+      source.setFeatures("sample-query", items(1));
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").features).toHaveLength(1),
+      );
+      const release = source.hold();
+      source.setFeatures("sample-query", items(2));
+      act(() =>
+        result.current.setView(
+          { west: 9, south: 40, east: 9.3, north: 40.15 },
+          12,
+        ),
+      );
+      expect(layer(result, "sample-query").status.kind).toBe("loading");
+      expect(layer(result, "sample-query").features).toHaveLength(1);
+      release();
+      await waitFor(() =>
+        expect(layer(result, "sample-query").features).toHaveLength(2),
+      );
+      // Panning to a new window is not announced again.
+      expect(polite()).toBe("Sample query: 1 shown on the map.");
+    });
+
+    it("cancels the request for a window the view has already left", async () => {
+      const { result, source } = query();
+      const release = source.hold();
+      source.setFeatures("sample-query", items(1));
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() => expect(source.requests).toHaveLength(1));
+      act(() =>
+        result.current.setView(
+          { west: 9, south: 40, east: 9.3, north: 40.15 },
+          12,
+        ),
+      );
+      await waitFor(() => expect(source.requests).toHaveLength(2));
+      expect(source.requests[0]?.signal?.aborted).toBe(true);
+      expect(source.requests[1]?.signal?.aborted).toBe(false);
+      release();
+      await act(async () => {});
+    });
+
+    it("draws the first features up to its cap, says to zoom in, and announces it once", async () => {
+      const { result, source } = query();
+      source.setFeatures("sample-query", items(4));
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").status).toMatchObject({
+          kind: "ready",
+          count: 3,
+          capped: true,
+        }),
+      );
+      expect(layer(result, "sample-query").features).toHaveLength(3);
+      await waitFor(() =>
+        expect(polite()).toBe(
+          "Sample query: showing the first 3. Zoom in to see more.",
+        ),
+      );
+    });
+
+    it("clears the layer and says to zoom in when the view moves out below its zoom", async () => {
+      const { result, source } = query();
+      source.setFeatures("sample-query", items(1));
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").status.kind).toBe("ready"),
+      );
+      act(() =>
+        result.current.setView(
+          { west: -30, south: 30, east: 30, north: 60 },
+          3,
+        ),
+      );
+      expect(layer(result, "sample-query").status).toEqual({
+        kind: "zoom-in",
+      });
+      expect(layer(result, "sample-query").features).toEqual([]);
+      await waitFor(() =>
+        expect(polite()).toBe("Sample query: zoom in to load this layer."),
+      );
+    });
+
+    it("keeps the open card when a refresh no longer includes its feature", async () => {
+      const { result, source } = query();
+      source.setFeatures("sample-query", items(2));
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").features).toHaveLength(2),
+      );
+      act(() => result.current.select("sample-query", "p1"));
+      source.setFeatures("sample-query", [samplePoint("other")]);
+      act(() =>
+        result.current.setView(
+          { west: 9, south: 40, east: 9.3, north: 40.15 },
+          12,
+        ),
+      );
+      await waitFor(() =>
+        expect(layer(result, "sample-query").features).toHaveLength(1),
+      );
+      expect(result.current.selected?.feature.id).toBe("p1");
+    });
+
+    it("forgets its window when it is turned off, and asks again when turned on", async () => {
+      const { result, source } = query();
+      source.setFeatures("sample-query", items(1));
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").status.kind).toBe("ready"),
+      );
+      act(() => result.current.setEnabled("sample-query", false));
+      act(() => result.current.setEnabled("sample-query", true));
+      await waitFor(() => expect(source.requests).toHaveLength(2));
+    });
+
+    it("reports a failed request and loads again on retry", async () => {
+      const { result, source } = query();
+      source.fail("sample-query", "network");
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 12));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").status).toEqual({
+          kind: "error",
+          error: "network",
+        }),
+      );
+      source.setFeatures("sample-query", items(1));
+      act(() => result.current.retry("sample-query"));
+      await waitFor(() =>
+        expect(layer(result, "sample-query").status.kind).toBe("ready"),
+      );
+    });
   });
 
   it("treats an unexpected rejection as invalid", async () => {

@@ -1,5 +1,6 @@
 import {
   announceShowingFeature,
+  type Bounds,
   boundsAroundPoint,
   createFormatterRegistry,
   type FormatterRegistry,
@@ -18,9 +19,10 @@ import {
 import { usePreferences } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import { FeatureCard } from "./FeatureCard";
+import { FeatureChoices } from "./FeatureChoices";
 import { LayerItem } from "./LayerItem";
 import * as styles from "./Layers.css";
-import { featurePosition } from "./mapFeatures";
+import { featureBounds, featurePosition } from "./mapFeatures";
 import { coveredPadding, revealOffset } from "./reveal";
 import type { DataLayerState, DataLayers } from "./useDataLayers";
 
@@ -29,6 +31,14 @@ export const SHOW_ON_MAP_MIN_ZOOM = 5;
 
 /** Half the side, in metres, of the box "Show on map" fits around a point. Small enough that the fit always ends at the zoom cap. */
 const SHOW_ON_MAP_RADIUS_METRES = 50;
+
+/** Space in pixels kept around a polygon or line that "Show on map" fits into view. */
+const SHOW_ON_MAP_MARGIN = 24;
+
+/** Whether a box has any width or height, so a single point is not fitted as a shape. */
+function hasExtent(bounds: Bounds): boolean {
+  return bounds.east > bounds.west || bounds.north > bounds.south;
+}
 
 const DEFAULT_FORMATTERS = createFormatterRegistry();
 
@@ -87,7 +97,8 @@ export function LayersSection({
   motion.current = reducedMotion;
   const { layout, viewport, panelEdge } = useChromeLayout();
   const [cardRequest, setCardRequest] = useState(0);
-  const { selected } = layers;
+  const { selected, choices } = layers;
+  const choicesHeading = useRef<HTMLHeadingElement>(null);
 
   // A tap on the map selected a point and opened its card: the card takes
   // focus, and the sheet or side panel that opened for it must not hide the
@@ -97,7 +108,7 @@ export function LayersSection({
   useEffect(() => {
     if (
       !focusPending ||
-      !selected ||
+      (!selected && !choices) ||
       (layout === "panel" && panelEdge === null)
     ) {
       return;
@@ -105,16 +116,18 @@ export function LayersSection({
     consumeFocus();
     // After the sheet's effects, which focus and smoothly scroll to the
     // section heading. The card sits just below it; an instant scroll here
-    // would cut the sheet's smooth one short.
+    // would cut the sheet's smooth one short. The card wins over the list it
+    // was opened from.
     queueMicrotask(() => {
-      const heading = cardHeading.current;
+      const heading = (selected ? cardHeading : choicesHeading).current;
       heading?.focus({ preventScroll: true });
       heading?.scrollIntoView?.({
         block: "start",
         behavior: motion.current ? "auto" : "smooth",
       });
     });
-    const position = adapter ? featurePosition(selected.feature) : null;
+    const position =
+      adapter && selected ? featurePosition(selected.feature) : null;
     const offset =
       adapter && position
         ? revealOffset(adapter.project(position), {
@@ -129,6 +142,7 @@ export function LayersSection({
   }, [
     adapter,
     selected,
+    choices,
     focusPending,
     consumeFocus,
     layout,
@@ -154,8 +168,20 @@ export function LayersSection({
 
   const show = (layerId: string, feature: LayerFeature) => {
     const position = featurePosition(feature);
+    const bounds = featureBounds(feature);
     layers.select(layerId, feature.id);
-    if (adapter && position) {
+    if (adapter && bounds && hasExtent(bounds)) {
+      // A polygon or line is shown whole, clear of the sheet or side panel.
+      const covered = coveredPadding({ layout, viewport, panelEdge });
+      adapter.fitBounds(bounds, {
+        padding: {
+          top: (covered?.top ?? 0) + SHOW_ON_MAP_MARGIN,
+          right: (covered?.right ?? 0) + SHOW_ON_MAP_MARGIN,
+          bottom: (covered?.bottom ?? 0) + SHOW_ON_MAP_MARGIN,
+          left: (covered?.left ?? 0) + SHOW_ON_MAP_MARGIN,
+        },
+      });
+    } else if (adapter && position) {
       const zoom = Math.max(adapter.getView().zoom, SHOW_ON_MAP_MIN_ZOOM);
       const padding = coveredPadding({ layout, viewport, panelEdge });
       if (padding) {
@@ -205,6 +231,14 @@ export function LayersSection({
           onShowOnMap={() =>
             show(selected.layer.definition.id, selected.feature)
           }
+        />
+      ) : choices ? (
+        <FeatureChoices
+          layers={layers}
+          choices={choices}
+          formatters={formatters}
+          headingLevel={groupLevel as 3 | 4 | 5 | 6}
+          headingRef={choicesHeading}
         />
       ) : null}
       <p className={styles.intro}>

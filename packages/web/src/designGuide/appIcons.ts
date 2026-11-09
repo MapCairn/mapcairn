@@ -1,5 +1,6 @@
 import type { IconComponent } from "@karta/map";
 import {
+  ArrowLeft,
   Bike,
   Car,
   Check,
@@ -9,6 +10,7 @@ import {
   CircleCheck,
   Copy,
   Crosshair,
+  Download,
   Footprints,
   Info,
   Layers,
@@ -37,6 +39,7 @@ import {
 export const APP_ICONS: Readonly<Record<string, IconComponent>> = {
   Bike,
   Car,
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronUp,
@@ -45,6 +48,7 @@ export const APP_ICONS: Readonly<Record<string, IconComponent>> = {
   Copy,
   Crosshair,
   Footprints,
+  Download,
   Info,
   Layers,
   LoaderCircle,

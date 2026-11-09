@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   SAMPLE_ALERT_LAYER,
+  SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
+  SAMPLE_LINE_LAYER,
   SAMPLE_TILE_LAYER,
   samplePoint,
 } from "../fakes/layerFixtures";
@@ -210,6 +212,34 @@ describe("decodeFeed", () => {
   it("rejects with an empty error when nothing is left", () => {
     expect(() =>
       decodeFeed(SAMPLE_FEED_LAYER, { features: [] }, decoders),
+    ).toThrow(expect.objectContaining({ kind: "empty" }));
+  });
+
+  it("keeps only polygons for an area style, and only lines for a line style", () => {
+    const polygon = {
+      id: "p",
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 0],
+          ],
+        ],
+      },
+      properties: { name: "Square" },
+    };
+    const mixed = { features: [point("a", {}), polygon, doc.features[2]] };
+    expect(
+      decodeFeed(SAMPLE_AREA_LAYER, mixed, decoders).map((f) => f.id),
+    ).toEqual(["p"]);
+    expect(
+      decodeFeed(SAMPLE_LINE_LAYER, mixed, decoders).map((f) => f.id),
+    ).toEqual(["c"]);
+    expect(() =>
+      decodeFeed(SAMPLE_AREA_LAYER, { features: [point("a", {})] }, decoders),
     ).toThrow(expect.objectContaining({ kind: "empty" }));
   });
 

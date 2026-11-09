@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
+  SAMPLE_HEATMAP_LAYER,
   SAMPLE_TILE_LAYER,
 } from "../fakes/layerFixtures";
 import {
@@ -84,6 +85,23 @@ describe("resolveControlValues", () => {
         "2026-11-08",
       );
     }
+  });
+
+  it("accepts a range value between its bounds and replaces anything else", () => {
+    const radius = (value: string) =>
+      resolveControlValues(SAMPLE_HEATMAP_LAYER, { radius: value }, NOW).radius;
+    expect(radius("40")).toBe("40");
+    expect(radius("4")).toBe("4");
+    expect(radius("80")).toBe("80");
+    expect(radius("3")).toBe("20");
+    expect(radius("81")).toBe("20");
+    expect(radius("wide")).toBe("20");
+    expect(radius("")).toBe("20");
+    expect(defaultControlValues(SAMPLE_HEATMAP_LAYER, NOW)).toEqual({
+      radius: "20",
+      intensity: "1",
+      opacity: "0.8",
+    });
   });
 
   it("accepts an opacity from 0.1 to 1 and replaces anything else", () => {

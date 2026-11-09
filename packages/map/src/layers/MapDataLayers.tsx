@@ -1,5 +1,11 @@
 import {
+  createFormatterRegistry,
+  type FormatterRegistry,
   isFeedLayer,
+  isHeatmapLayer,
+  isQueryLayer,
+  isShapeStyle,
+  isVectorTileLayer,
   type LayerFeature,
   type MapAdapter,
   type MapFeatureTap,
@@ -10,14 +16,28 @@ import { useEffect, useRef } from "react";
 import { useMap } from "../host";
 import { roundPixel } from "../host/overlays/geometry";
 import * as styles from "./Layers.css";
-import { featurePosition, paletteColour, toMapFeatures } from "./mapFeatures";
+import {
+  featureOutlines,
+  featurePosition,
+  paletteColour,
+  toMapFeatures,
+  toMapHeatmap,
+  toMapVector,
+  toStyledShapes,
+  toVectorHeatmaps,
+} from "./mapFeatures";
 import type { DataLayerState, DataLayers } from "./useDataLayers";
+
+const DEFAULT_FORMATTERS = createFormatterRegistry();
 
 /**
  * The map id of the affected area. Definition ids cannot contain a colon,
  * so it never meets a layer's own id.
  */
 export const DETAIL_LAYER_ID = ":detail";
+
+/** How long the map must stay still, in milliseconds, before query layers ask for its view. */
+export const VIEW_SETTLE_MS = 400;
 
 /** Props for {@link MapDataLayers}. */
 export interface MapDataLayersProps {
@@ -26,13 +46,25 @@ export interface MapDataLayersProps {
   readonly onFeatureTap?: (tap: MapFeatureTap) => void;
   /** True while taps on the map mean something else, such as measuring. */
   readonly ignoreTaps?: boolean;
+  /** The formatters label templates may name. Defaults to the built-ins. */
+  readonly formatters?: FormatterRegistry;
 }
 
-/** What was last handed to the adapter for one layer, to skip redrawing it unchanged. */
+/** What was last handed to the adapter under one map id, to skip redrawing it unchanged. */
 interface Drawn {
   readonly features?: readonly LayerFeature[];
   readonly tiles?: string;
   readonly opacity?: number;
+  /** The control values a heatmap or vector layer was drawn with. */
+  readonly controls?: DataLayerState["controls"];
+}
+
+/**
+ * The map id of one heatmap source layer of a vector tile definition. Ids
+ * with a colon never meet a layer's own id.
+ */
+function heatmapId(layerId: string, index: number): string {
+  return `${layerId}:heatmap:${index}`;
 }
 
 function opacityOf(layer: DataLayerState): number {
@@ -41,29 +73,87 @@ function opacityOf(layer: DataLayerState): number {
   return Number.isFinite(value) ? value : 1;
 }
 
-/** Hands one enabled layer to the adapter, unless it is unchanged. Returns what was drawn, or null. */
+/**
+ * Hands one enabled layer to the adapter, unless it is unchanged. Returns
+ * what is drawn, by map id: one id for most layers, and one more for each
+ * heatmap source layer of a vector tile layer.
+ */
 function draw(
   adapter: MapAdapter,
   layer: DataLayerState,
-  previous: Drawn | undefined,
+  previous: (id: string) => Drawn | undefined,
   now: number,
-): Drawn | null {
+  formatters: FormatterRegistry,
+): [string, Drawn][] {
   const { definition } = layer;
-  if (isFeedLayer(definition)) {
+  const own = previous(definition.id);
+  if (isHeatmapLayer(definition)) {
     if (layer.features.length === 0) {
-      return null;
+      return [];
     }
-    if (previous?.features !== layer.features) {
-      adapter.setFeatureLayer(
+    if (own?.features !== layer.features || own.controls !== layer.controls) {
+      adapter.setHeatmapLayer(
         definition.id,
-        toMapFeatures(definition.style, layer.features),
+        toMapHeatmap(definition, layer.features, layer.controls),
       );
     }
-    return { features: layer.features };
+    return [
+      [definition.id, { features: layer.features, controls: layer.controls }],
+    ];
+  }
+  if (isVectorTileLayer(definition)) {
+    if (own?.controls !== layer.controls) {
+      adapter.setVectorLayer(
+        definition.id,
+        toMapVector(definition, layer.controls, now),
+      );
+    }
+    const heatmaps = toVectorHeatmaps(definition, layer.controls, now);
+    let index = 0;
+    const drawnHeatmaps = definition.sourceLayers.flatMap(
+      (sourceLayer, position): [string, Drawn][] => {
+        if (!("heatmap" in sourceLayer)) {
+          return [];
+        }
+        const id = heatmapId(definition.id, position);
+        const heatmap = heatmaps[index];
+        index += 1;
+        if (heatmap && previous(id)?.controls !== layer.controls) {
+          adapter.setHeatmapLayer(id, heatmap);
+        }
+        return [[id, { controls: layer.controls }]];
+      },
+    );
+    return [[definition.id, { controls: layer.controls }], ...drawnHeatmaps];
+  }
+  if (isFeedLayer(definition)) {
+    if (layer.features.length === 0) {
+      return [];
+    }
+    if (own?.features !== layer.features) {
+      const { style } = definition;
+      if (isShapeStyle(style)) {
+        adapter.setStyledShapes(
+          definition.id,
+          toStyledShapes(
+            { ...definition, style },
+            layer.features,
+            formatters,
+            now,
+          ),
+        );
+      } else {
+        adapter.setFeatureLayer(
+          definition.id,
+          toMapFeatures(style, layer.features),
+        );
+      }
+    }
+    return [[definition.id, { features: layer.features }]];
   }
   const tiles = tileUrl(definition, layer.controls, now);
   const opacity = opacityOf(layer);
-  if (previous?.tiles !== tiles || previous.opacity !== opacity) {
+  if (own?.tiles !== tiles || own.opacity !== opacity) {
     adapter.setTileLayer(definition.id, {
       tiles,
       tileSize: definition.source.tileSize,
@@ -71,7 +161,7 @@ function draw(
       opacity,
     });
   }
-  return { tiles, opacity };
+  return [[definition.id, { tiles, opacity }]];
 }
 
 /**
@@ -84,6 +174,7 @@ export function MapDataLayers({
   layers,
   onFeatureTap,
   ignoreTaps = false,
+  formatters = DEFAULT_FORMATTERS,
 }: MapDataLayersProps) {
   const { adapter } = useMap();
   const drawn = useRef(new Map<string, Drawn>());
@@ -95,11 +186,17 @@ export function MapDataLayers({
     }
     const next = new Map<string, Drawn>();
     for (const layer of states) {
-      const id = layer.definition.id;
-      const result = layer.enabled
-        ? draw(adapter, layer, drawn.current.get(id), now())
-        : null;
-      if (result) {
+      if (!layer.enabled) {
+        continue;
+      }
+      const results = draw(
+        adapter,
+        layer,
+        (id) => drawn.current.get(id),
+        now(),
+        formatters,
+      );
+      for (const [id, result] of results) {
         next.set(id, result);
       }
     }
@@ -128,7 +225,7 @@ export function MapDataLayers({
       adapter.removeLayer(DETAIL_LAYER_ID);
     }
     drawn.current = next;
-  }, [adapter, states, detail, now]);
+  }, [adapter, states, detail, now, formatters]);
 
   useEffect(
     () => () => {
@@ -141,7 +238,8 @@ export function MapDataLayers({
   );
 
   const latest = useLatestRef({
-    select: layers.select,
+    choose: layers.choose,
+    setView: layers.setView,
     onFeatureTap,
     ignoreTaps,
   });
@@ -154,12 +252,52 @@ export function MapDataLayers({
       if (current.ignoreTaps) {
         return;
       }
-      current.select(tap.layerId, tap.featureId, { focus: true });
+      // One feature opens its card; several open a list to choose from.
+      current.choose(tap.hits, { focus: true });
       current.onFeatureTap?.(tap);
     });
   }, [adapter, latest]);
 
+  // Query layers ask for what is in view, so they are told once the map has
+  // settled (and straight away when one is turned on), never while it moves.
+  const hasQuery = states.some(
+    (layer) => layer.enabled && isQueryLayer(layer.definition),
+  );
+  useEffect(() => {
+    if (!adapter || !hasQuery) {
+      return;
+    }
+    const report = () => {
+      latest.current.setView(adapter.getBounds(), adapter.getView().zoom);
+    };
+    report();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stop = adapter.on("moveEnd", () => {
+      clearTimeout(timer);
+      timer = setTimeout(report, VIEW_SETTLE_MS);
+    });
+    return () => {
+      clearTimeout(timer);
+      stop();
+    };
+  }, [adapter, hasQuery, latest]);
+
   return null;
+}
+
+/** An SVG path along a polygon's rings or a line, in map pixels, or null when it has none. */
+function outlinePath(
+  adapter: MapAdapter,
+  feature: LayerFeature,
+): string | null {
+  const parts = featureOutlines(feature).map(({ points, closed }) => {
+    const pixels = points.map((point) => {
+      const { x, y } = adapter.project(point);
+      return `${roundPixel(x)},${roundPixel(y)}`;
+    });
+    return `M${pixels.join(" L")}${closed ? " Z" : ""}`;
+  });
+  return parts.length > 0 ? parts.join(" ") : null;
 }
 
 /** Props for {@link SelectionMarker}. */
@@ -174,10 +312,21 @@ export interface SelectionMarkerProps {
  */
 export function SelectionMarker({ layers }: SelectionMarkerProps) {
   const { adapter } = useMap();
-  const position = layers.selected
-    ? featurePosition(layers.selected.feature)
-    : null;
-  if (!adapter || !position) {
+  const feature = layers.selected?.feature;
+  if (!adapter || !feature) {
+    return null;
+  }
+  if (feature.geometry.type !== "Point") {
+    const path = outlinePath(adapter, feature);
+    return path ? (
+      <g data-testid="selection-marker">
+        <path className={styles.selectionHalo} d={path} />
+        <path className={styles.selectionRing} d={path} />
+      </g>
+    ) : null;
+  }
+  const position = featurePosition(feature);
+  if (!position) {
     return null;
   }
   const { x, y } = adapter.project(position);

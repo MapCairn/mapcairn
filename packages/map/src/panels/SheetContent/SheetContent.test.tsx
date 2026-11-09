@@ -77,7 +77,13 @@ describe("SheetContent structure", () => {
     const headings = within(content)
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
-    expect(headings).toEqual(["Basemap", "Pin", "Settings", "Help"]);
+    expect(headings).toEqual([
+      "Basemap",
+      "Pin",
+      "Save image",
+      "Settings",
+      "Help",
+    ]);
     expect(screen.queryByRole("heading", { name: "Layers" })).toBeNull();
   });
 
@@ -86,7 +92,14 @@ describe("SheetContent structure", () => {
     const headings = within(screen.getByTestId("sheet-content"))
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
-    expect(headings).toEqual(["Basemap", "Pin", "Layers", "Settings", "Help"]);
+    expect(headings).toEqual([
+      "Basemap",
+      "Pin",
+      "Layers",
+      "Save image",
+      "Settings",
+      "Help",
+    ]);
   });
 
   it("keeps the section headings at h3, below the sheet's h2", () => {

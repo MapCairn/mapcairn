@@ -1,4 +1,5 @@
 import {
+  announceNoFeaturesHere,
   announcePinCleared,
   announcePinDropped,
   type BasemapDefinition,
@@ -156,6 +157,12 @@ export interface MapApp {
   readonly layers: DataLayers;
   /** Opens the Layers section after a tap on a point has selected it. */
   readonly openFeature: () => void;
+  /**
+   * The keyboard route to what a tap finds: opens the card of the one feature
+   * at the centre of the map, or the list when there are several, and says so
+   * when there are none.
+   */
+  readonly identifyAtCentre: () => void;
   /** Brings the sheet to the detent that shows the card and the map together, after "Show on map". */
   readonly revealMap: () => void;
 }
@@ -376,6 +383,21 @@ export function useMapApp(): MapApp {
     }
   }, [stateRef]);
 
+  const { choose } = layers;
+  const identifyAtCentre = useCallback(() => {
+    const adapter = mapRef.current?.adapter;
+    if (!adapter) {
+      return;
+    }
+    const hits = adapter.featuresAt(adapter.project(adapter.getView().center));
+    if (hits.length === 0) {
+      announce(announceNoFeaturesHere());
+      return;
+    }
+    choose(hits, { focus: true });
+    openFeature();
+  }, [announce, choose, openFeature]);
+
   const revealMap = useCallback(() => {
     if (stateRef.current.surface === "sheet") {
       dispatch(setDetent(REVEAL_DETENT));
@@ -438,6 +460,7 @@ export function useMapApp(): MapApp {
     flyTo,
     layers,
     openFeature,
+    identifyAtCentre,
     revealMap,
   };
 }

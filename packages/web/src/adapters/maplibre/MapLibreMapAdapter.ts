@@ -7,13 +7,18 @@ import type {
   MapClickEvent,
   MapEvents,
   MapFeature,
+  MapFeatureHit,
   MapFeatureTap,
   MapFitOptions,
+  MapHeatmap,
   MapHostElement,
+  MapImageOptions,
   MapMountOptions,
   MapMoveOptions,
   MapShapes,
+  MapStyledShapes,
   MapTileOverlay,
+  MapVectorTiles,
   PixelPoint,
   ViewState,
 } from "@karta/core";
@@ -25,21 +30,41 @@ import {
   toEngineZoom,
   toNormalisedZoom,
 } from "@karta/core";
+import { tokenValues } from "@karta/theme";
 import type {
   AnimationOptions,
   GeoJSONSourceSpecification,
+  LayerSpecification,
   MapEventType,
   Map as MapLibreMap,
   MapOptions,
+  SourceSpecification,
   StyleSpecification,
   Subscription,
 } from "maplibre-gl";
 import { Emitter } from "../shared/emitter";
+import { heatmapLayer } from "./heatmapLayer";
+import { propertyLook, ruleLook } from "./lookExpressions";
 import {
   MARKER_PIXEL_RATIO,
   markerImage,
   markerImageName,
+  rgbaColour,
 } from "./markerImages";
+import {
+  PATTERN_NAMES,
+  PATTERN_PIXEL_RATIO,
+  patternImage,
+  patternImageName,
+} from "./patternImages";
+import {
+  areaLayers,
+  type EngineLayer,
+  engineWindow,
+  labelLayer,
+  lineLayers,
+  type ShapeSource,
+} from "./shapeLayers";
 
 type MapLibreModule = typeof import("maplibre-gl");
 
@@ -150,6 +175,9 @@ const RASTER_ID = "basemap";
 /**
  * The engine ids for one data layer: its source and the style layers drawn
  * from it. All start with `karta:` so they never meet a basemap's own ids.
+ * Styled shapes, vector tiles and heatmaps own several style layers each
+ * (their ids are `karta:<id>:<part>`, and the part never has a colon), which
+ * the adapter lists as it draws them.
  */
 export function dataLayerEngineIds(id: string) {
   return {
@@ -158,6 +186,7 @@ export function dataLayerEngineIds(id: string) {
     tiles: `karta:${id}:tiles`,
     fill: `karta:${id}:fill`,
     line: `karta:${id}:line`,
+    heat: `karta:${id}:heat`,
   } as const;
 }
 
@@ -165,12 +194,18 @@ export function dataLayerEngineIds(id: string) {
 type DataLayer =
   | { readonly kind: "features"; readonly features: readonly MapFeature[] }
   | { readonly kind: "tiles"; readonly overlay: MapTileOverlay }
-  | { readonly kind: "shapes"; readonly shapes: MapShapes };
+  | { readonly kind: "shapes"; readonly shapes: MapShapes }
+  | { readonly kind: "styled"; readonly layer: MapStyledShapes }
+  | { readonly kind: "vector"; readonly tiles: MapVectorTiles }
+  | { readonly kind: "heatmap"; readonly heatmap: MapHeatmap };
 
-/** Lowest first: imagery under shapes under points. */
+/** Lowest first: imagery, vector tiles, styled shapes, detail shapes, heatmaps, then points. */
 const DATA_KIND_ORDER: readonly DataLayer["kind"][] = [
   "tiles",
+  "vector",
+  "styled",
   "shapes",
+  "heatmap",
   "features",
 ];
 
@@ -183,17 +218,162 @@ const SHAPE_FILL_OPACITY = 0.18;
 /** The width of a shape layer's lines, in CSS pixels, unless the caller sets one. */
 const SHAPE_LINE_WIDTH = 2;
 
-/** The engine style layers of a data layer, bottom first. */
-function engineLayerIds(id: string, layer: DataLayer): string[] {
-  const ids = dataLayerEngineIds(id);
-  switch (layer.kind) {
-    case "features":
-      return [ids.points];
-    case "tiles":
-      return [ids.tiles];
-    case "shapes":
-      return [ids.fill, ids.line];
+/**
+ * How long `toImage` waits for the map to finish loading, and then for a
+ * frame, before it goes on with what is there or gives up.
+ */
+export const IMAGE_WAIT_MS = 3000;
+
+/** The size of an exported image's credit text, in CSS pixels. */
+const ATTRIBUTION_SIZE_PX = 11;
+
+/** The opacity of the strip behind an exported image's credit text. */
+const ATTRIBUTION_STRIP_OPACITY = 0.8;
+
+/**
+ * What the engine holds for one data layer: its source and style layers
+ * (bottom first), and which of them a tap can land on. Kept so a layer is
+ * erased and stacked without searching the style.
+ */
+interface DrawnEngineLayers {
+  readonly source: string;
+  readonly layers: string[];
+  readonly points: readonly string[];
+  readonly lines: readonly string[];
+  readonly polygons: readonly string[];
+}
+
+/** What a data layer needs to be drawn, before any engine call. */
+interface DrawPlan {
+  readonly source: Record<string, unknown>;
+  readonly layers: readonly EngineLayer[];
+  readonly points?: readonly string[];
+  readonly lines?: readonly string[];
+  readonly polygons?: readonly string[];
+}
+
+/** The GeoJSON geometry types each kind of styled shape layer draws. */
+const STYLED_GEOMETRY_TYPES = {
+  area: ["Polygon", "MultiPolygon"],
+  line: ["LineString", "MultiLineString"],
+} as const;
+
+/**
+ * A literal font stack from a style layer's `text-font`, or undefined when
+ * the layout has none (it may be an expression, which cannot be reused).
+ * @remarks A stack of font names and a short expression such as
+ *   `["get", "font"]` are both arrays of strings. An expression starts with
+ *   an operator, which is all lower case with no space, and a font name the
+ *   glyph servers in use hold is not, so such a start means an expression.
+ */
+function literalFont(layout: unknown): readonly string[] | undefined {
+  const font = (layout as { "text-font"?: unknown } | undefined)?.["text-font"];
+  const stack =
+    Array.isArray(font) && font[0] === "literal" ? (font[1] as unknown) : font;
+  return Array.isArray(stack) &&
+    stack.length > 0 &&
+    stack.every((name) => typeof name === "string") &&
+    !/^[a-z][a-z-]*$/.test(stack[0] as string)
+    ? (stack as string[])
+    : undefined;
+}
+
+/**
+ * The font stack for labels: the first one a symbol layer of the loaded
+ * basemap names, which its glyph server is known to have. Undefined when the
+ * basemap has no glyph server, such as an inline raster style, because a
+ * label cannot be drawn then and no other glyph host may be assumed.
+ */
+function basemapFont(map: MapLibreMap): readonly string[] | undefined {
+  const style = map.getStyle();
+  if (!style.glyphs) {
+    return undefined;
   }
+  for (const layer of style.layers as {
+    type?: string;
+    layout?: unknown;
+  }[]) {
+    if (layer.type === "symbol") {
+      const font = literalFont(layer.layout);
+      if (font) {
+        return font;
+      }
+    }
+  }
+  return undefined;
+}
+
+/** A copy of the map's canvas, and the 2D context it was drawn with. */
+interface Frame {
+  readonly canvas: HTMLCanvasElement;
+  readonly context: CanvasRenderingContext2D;
+}
+
+/**
+ * Copies a canvas, pixel for pixel, onto a new 2D canvas, which keeps its
+ * pixels after the engine clears its own drawing buffer. Must run inside the
+ * frame that drew the source.
+ */
+function copyCanvas(source: HTMLCanvasElement): Frame {
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new MapEngineError(
+      "export-failed",
+      "The browser could not make a canvas to draw the image on.",
+    );
+  }
+  context.drawImage(source, 0, 0);
+  return { canvas, context };
+}
+
+/** Waits for the page's fonts, so credit text is drawn in the right one. A font set that fails only costs the web font. */
+async function fontsReady(): Promise<void> {
+  try {
+    await document.fonts?.ready;
+  } catch {
+    // Draw in whatever font the page falls back to.
+  }
+}
+
+function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(
+          new MapEngineError(
+            "export-failed",
+            "The browser could not encode the map as an image.",
+          ),
+        );
+      }
+    }, "image/png");
+  });
+}
+
+/**
+ * Turns whatever went wrong while saving into the port's error. A tainted
+ * canvas throws a `SecurityError` when it is read, which means a layer on the
+ * map came from a server that does not allow it to be copied.
+ */
+function toExportError(error: unknown): MapEngineError {
+  if (error instanceof MapEngineError) {
+    return error;
+  }
+  if ((error as { name?: unknown } | null)?.name === "SecurityError") {
+    return new MapEngineError(
+      "export-failed",
+      "The browser blocked reading the map, so it cannot be saved as an image.",
+    );
+  }
+  return new MapEngineError(
+    "export-failed",
+    `The map could not be saved as an image: ${String(error)}`,
+  );
 }
 
 function pointCollection(id: string, features: readonly MapFeature[]) {
@@ -224,6 +404,60 @@ function shapeCollection(shapes: MapShapes) {
       geometry,
       properties: {},
     })),
+  };
+}
+
+/**
+ * The styled shapes of the layer's geometry kind, each carrying its look as
+ * properties the engine layers read per feature. Shapes of the other kind are
+ * left out.
+ */
+function styledCollection(id: string, layer: MapStyledShapes) {
+  const types: readonly string[] = STYLED_GEOMETRY_TYPES[layer.geometry];
+  return {
+    type: "FeatureCollection" as const,
+    features: layer.shapes
+      .filter((shape) => types.includes(shape.geometry.type))
+      .map((shape) => ({
+        type: "Feature" as const,
+        geometry: shape.geometry,
+        properties: {
+          "karta:layer": id,
+          "karta:id": shape.id,
+          colour: shape.look.colour,
+          fillOpacity: shape.look.fillOpacity,
+          pattern: shape.look.pattern,
+          dash: shape.look.dash,
+          width: shape.look.width,
+          label: shape.label ?? "",
+        },
+      })),
+  };
+}
+
+function weightedPoints(
+  heatmap: Extract<MapHeatmap["source"], { kind: "points" }>,
+) {
+  return {
+    type: "FeatureCollection" as const,
+    features: heatmap.points.map((point) => ({
+      type: "Feature" as const,
+      geometry: {
+        type: "Point" as const,
+        coordinates: [point.position.lng, point.position.lat],
+      },
+      properties: { weight: point.weight ?? 1 },
+    })),
+  };
+}
+
+/** The engine's vector tile source for a port vector source. Its zoom limits are tile levels, so they are not converted. */
+function vectorSource(source: MapVectorTiles["source"]) {
+  return {
+    type: "vector",
+    tiles: [source.tiles],
+    minzoom: source.minzoom,
+    maxzoom: source.maxzoom,
   };
 }
 
@@ -364,6 +598,10 @@ export class MapLibreMapAdapter implements MapAdapter {
   private readonly dataLayers = new Map<string, DataLayer>();
   /** True between a style's `style.load` and the next swap: only then can sources be added. */
   private styleReady = false;
+  /** What the engine holds for each data layer, by id. */
+  private readonly drawn = new Map<string, DrawnEngineLayers>();
+  /** The label font of the loaded style: undefined until read, null when it has none. */
+  private labelFontCache: readonly string[] | null | undefined;
 
   constructor(options: MapLibreMapAdapterOptions = {}) {
     this.workerFailureGraceMs =
@@ -641,6 +879,58 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.setDataLayer(id, { kind: "shapes", shapes });
   }
 
+  setStyledShapes(id: string, layer: MapStyledShapes): void {
+    this.setDataLayer(id, { kind: "styled", layer });
+  }
+
+  setVectorLayer(id: string, tiles: MapVectorTiles): void {
+    this.setDataLayer(id, { kind: "vector", tiles });
+  }
+
+  setHeatmapLayer(id: string, heatmap: MapHeatmap): void {
+    this.setDataLayer(id, { kind: "heatmap", heatmap });
+  }
+
+  featuresAt(point: PixelPoint): readonly MapFeatureHit[] {
+    return this.hitsAt(point.x, point.y);
+  }
+
+  getBounds(): Bounds {
+    const map = this.map;
+    if (!map) {
+      return { west: -180, south: -85.0511, east: 180, north: 85.0511 };
+    }
+    const bounds = map.getBounds();
+    return {
+      west: bounds.getWest(),
+      south: bounds.getSouth(),
+      east: bounds.getEast(),
+      north: bounds.getNorth(),
+    };
+  }
+
+  /**
+   * Draws the map as a PNG without asking MapLibre to keep its drawing
+   * buffer, which would cost every frame. The buffer is only readable in the
+   * frame that has just been drawn, so a repaint is asked for and the canvas
+   * is copied inside its `render` event, before the browser clears it.
+   */
+  async toImage(options: MapImageOptions = {}): Promise<Blob> {
+    const map = this.map;
+    if (!map || this.destroyed) {
+      throw new MapEngineError("export-failed", "The map is not mounted.");
+    }
+    try {
+      await this.untilLoaded(map);
+      const frame = await this.captureFrame(map);
+      await fontsReady();
+      this.drawAttribution(frame, options.attribution);
+      return await encodePng(frame.canvas);
+    } catch (error) {
+      throw toExportError(error);
+    }
+  }
+
   removeLayer(id: string): void {
     if (!this.dataLayers.delete(id)) {
       return;
@@ -665,21 +955,47 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   private eraseDataLayer(map: MapLibreMap, id: string): void {
-    const ids = dataLayerEngineIds(id);
-    for (const layerId of [ids.points, ids.tiles, ids.line, ids.fill]) {
+    const drawn = this.drawn.get(id);
+    this.drawn.delete(id);
+    if (!drawn) {
+      return;
+    }
+    for (const layerId of drawn.layers) {
       if (map.getLayer(layerId)) {
         map.removeLayer(layerId);
       }
     }
-    if (map.getSource(ids.source)) {
-      map.removeSource(ids.source);
+    if (map.getSource(drawn.source)) {
+      map.removeSource(drawn.source);
     }
   }
 
-  /** Draws one data layer afresh from what the adapter keeps, then restores the stacking order. */
-  private drawDataLayer(map: MapLibreMap, id: string, order = true): void {
-    const layer = this.dataLayers.get(id) as DataLayer;
-    this.eraseDataLayer(map, id);
+  /** The labels' font stack for the loaded style, read once per style. */
+  private labelFont(map: MapLibreMap): readonly string[] | undefined {
+    if (this.labelFontCache === undefined) {
+      this.labelFontCache = basemapFont(map) ?? null;
+    }
+    return this.labelFontCache ?? undefined;
+  }
+
+  /** Adds the fill pattern images a style does not have yet; a style swap drops them. */
+  private ensurePatternImages(map: MapLibreMap): void {
+    for (const pattern of PATTERN_NAMES) {
+      const name = patternImageName(pattern);
+      if (!map.hasImage(name)) {
+        map.addImage(name, patternImage(pattern), {
+          pixelRatio: PATTERN_PIXEL_RATIO,
+        });
+      }
+    }
+  }
+
+  /** Works out the source and style layers of a data layer, without touching the engine. */
+  private planDataLayer(
+    map: MapLibreMap,
+    id: string,
+    layer: DataLayer,
+  ): DrawPlan {
     const ids = dataLayerEngineIds(id);
     switch (layer.kind) {
       case "features": {
@@ -697,70 +1013,236 @@ export class MapLibreMapAdapter implements MapAdapter {
             );
           }
         }
-        map.addSource(ids.source, {
-          type: "geojson",
-          data: pointCollection(id, layer.features),
-        });
-        map.addLayer({
-          id: ids.points,
-          type: "symbol",
-          source: ids.source,
-          layout: {
-            "icon-image": ["get", "icon"],
-            "icon-allow-overlap": true,
-            "icon-ignore-placement": true,
-            "symbol-sort-key": ["get", "sort"],
+        return {
+          source: {
+            type: "geojson",
+            data: pointCollection(id, layer.features),
           },
-        });
-        break;
+          layers: [
+            {
+              id: ids.points,
+              type: "symbol",
+              source: ids.source,
+              layout: {
+                "icon-image": ["get", "icon"],
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true,
+                "symbol-sort-key": ["get", "sort"],
+              },
+            },
+          ],
+          points: [ids.points],
+        };
       }
       case "tiles": {
         const { tiles, tileSize, maxzoom, opacity } = layer.overlay;
-        map.addSource(ids.source, {
-          type: "raster",
-          tiles: [tiles],
-          tileSize,
-          maxzoom,
-        });
-        map.addLayer({
-          id: ids.tiles,
-          type: "raster",
-          source: ids.source,
-          paint: { "raster-opacity": opacity },
-        });
-        break;
+        return {
+          source: { type: "raster", tiles: [tiles], tileSize, maxzoom },
+          layers: [
+            {
+              id: ids.tiles,
+              type: "raster",
+              source: ids.source,
+              paint: { "raster-opacity": opacity },
+            },
+          ],
+        };
       }
       case "shapes": {
         const { colour, lineWidth = SHAPE_LINE_WIDTH } = layer.shapes;
-        map.addSource(ids.source, {
-          type: "geojson",
-          // The port's positions are readonly tuples; the engine only reads them.
-          data: shapeCollection(
-            layer.shapes,
-          ) as unknown as GeoJSONSourceSpecification["data"],
-        });
-        map.addLayer({
-          id: ids.fill,
-          type: "fill",
-          source: ids.source,
-          filter: [
-            "match",
-            ["geometry-type"],
-            ["Polygon", "MultiPolygon"],
-            true,
-            false,
+        return {
+          source: {
+            type: "geojson",
+            // The port's positions are readonly tuples; the engine only reads them.
+            data: shapeCollection(layer.shapes),
+          },
+          layers: [
+            {
+              id: ids.fill,
+              type: "fill",
+              source: ids.source,
+              filter: [
+                "match",
+                ["geometry-type"],
+                ["Polygon", "MultiPolygon"],
+                true,
+                false,
+              ],
+              paint: {
+                "fill-color": colour,
+                "fill-opacity": SHAPE_FILL_OPACITY,
+              },
+            },
+            {
+              id: ids.line,
+              type: "line",
+              source: ids.source,
+              layout: { "line-cap": "round", "line-join": "round" },
+              paint: { "line-color": colour, "line-width": lineWidth },
+            },
           ],
-          paint: { "fill-color": colour, "fill-opacity": SHAPE_FILL_OPACITY },
-        });
-        map.addLayer({
-          id: ids.line,
-          type: "line",
-          source: ids.source,
-          layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": colour, "line-width": lineWidth },
-        });
-        break;
+        };
       }
+      case "styled":
+        return this.planStyledShapes(map, id, layer.layer);
+      case "vector":
+        return this.planVectorLayer(map, id, layer.tiles);
+      case "heatmap":
+        return this.planHeatmap(id, layer.heatmap);
+    }
+  }
+
+  private planStyledShapes(
+    map: MapLibreMap,
+    id: string,
+    styled: MapStyledShapes,
+  ): DrawPlan {
+    const source = dataLayerEngineIds(id).source;
+    const collection = styledCollection(id, styled);
+    const shape: ShapeSource = {
+      prefix: `karta:${id}:styled-`,
+      source,
+      zoom: {},
+    };
+    const look = propertyLook();
+    const isArea = styled.geometry === "area";
+    const layers = isArea ? areaLayers(shape, look) : lineLayers(shape, look);
+    const font = this.labelFont(map);
+    const labelled = collection.features.some(
+      (feature) => feature.properties.label !== "",
+    );
+    if (font && labelled) {
+      layers.push(
+        labelLayer(shape, {
+          text: ["get", "label"],
+          font,
+          along: !isArea,
+          zoom: engineWindow({ minzoom: styled.labelMinZoom }),
+          filter: ["!=", ["get", "label"], ""],
+        }),
+      );
+    }
+    const ofKind = (part: string) =>
+      layers
+        .map((layer) => layer.id)
+        .filter((layerId) => layerId.startsWith(`${shape.prefix}${part}`));
+    return {
+      // The port's positions are readonly tuples; the engine only reads them.
+      source: {
+        type: "geojson",
+        data: collection as unknown as GeoJSONSourceSpecification["data"],
+      },
+      layers,
+      lines: isArea ? [] : ofKind("line-"),
+      polygons: isArea ? ofKind("fill") : [],
+    };
+  }
+
+  private planVectorLayer(
+    map: MapLibreMap,
+    id: string,
+    vector: MapVectorTiles,
+  ): DrawPlan {
+    const source = dataLayerEngineIds(id).source;
+    const font = this.labelFont(map);
+    const layers: EngineLayer[] = [];
+    vector.layers.forEach((sourceLayer, index) => {
+      const look = ruleLook(sourceLayer.rule);
+      if (!look) {
+        return;
+      }
+      const shape: ShapeSource = {
+        prefix: `karta:${id}:v${index}-`,
+        source,
+        sourceLayer: sourceLayer.sourceLayer,
+        zoom: engineWindow(vector, sourceLayer),
+        only: sourceLayer.geometry,
+      };
+      const isArea = sourceLayer.geometry === "area";
+      layers.push(
+        ...(isArea ? areaLayers(shape, look) : lineLayers(shape, look)),
+      );
+      if (font && sourceLayer.label) {
+        const text = ["to-string", ["get", sourceLayer.label.field]];
+        layers.push(
+          labelLayer(shape, {
+            text,
+            font,
+            along: !isArea,
+            zoom: engineWindow(vector, sourceLayer, sourceLayer.label),
+            filter: ["!=", text, ""],
+          }),
+        );
+      }
+    });
+    return { source: vectorSource(vector.source), layers };
+  }
+
+  private planHeatmap(id: string, heatmap: MapHeatmap): DrawPlan {
+    const ids = dataLayerEngineIds(id);
+    const { source, style } = heatmap;
+    if (source.kind === "points") {
+      return {
+        source: {
+          type: "geojson",
+          data: weightedPoints(source),
+        },
+        layers: [
+          heatmapLayer(
+            {
+              id: ids.heat,
+              source: ids.source,
+              weight: ["get", "weight"],
+              zoom: {},
+            },
+            style,
+          ),
+        ],
+      };
+    }
+    return {
+      source: vectorSource(source.source),
+      layers: [
+        heatmapLayer(
+          {
+            id: ids.heat,
+            source: ids.source,
+            sourceLayer: source.sourceLayer,
+            weight: source.weightField
+              ? ["to-number", ["get", source.weightField], 1]
+              : 1,
+            zoom: engineWindow(source),
+          },
+          style,
+        ),
+      ],
+    };
+  }
+
+  /** Draws one data layer afresh from what the adapter keeps, then restores the stacking order. */
+  private drawDataLayer(map: MapLibreMap, id: string, order = true): void {
+    const layer = this.dataLayers.get(id) as DataLayer;
+    this.eraseDataLayer(map, id);
+    const plan = this.planDataLayer(map, id, layer);
+    if (
+      plan.layers.some((engineLayer) => engineLayer.id.endsWith("-pattern"))
+    ) {
+      this.ensurePatternImages(map);
+    }
+    const source = dataLayerEngineIds(id).source;
+    // Tracked before the first engine call, so a failure part way is still erased next time.
+    const drawn: DrawnEngineLayers = {
+      source,
+      layers: [],
+      points: plan.points ?? [],
+      lines: plan.lines ?? [],
+      polygons: plan.polygons ?? [],
+    };
+    this.drawn.set(id, drawn);
+    map.addSource(source, plan.source as unknown as SourceSpecification);
+    for (const engineLayer of plan.layers) {
+      drawn.layers.push(engineLayer.id);
+      map.addLayer(engineLayer as unknown as LayerSpecification);
     }
     if (order) {
       this.orderDataLayers(map);
@@ -774,7 +1256,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         if (layer.kind !== kind) {
           continue;
         }
-        for (const layerId of engineLayerIds(id, layer)) {
+        for (const layerId of this.drawn.get(id)?.layers ?? []) {
           if (map.getLayer(layerId)) {
             map.moveLayer(layerId);
           }
@@ -795,38 +1277,71 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.orderDataLayers(map);
   }
 
-  /** The topmost drawn point within a fingertip of a tap, or null. */
-  private featureTapAt(x: number, y: number): MapFeatureTap | null {
+  /** The drawn engine layers of one kind of tappable feature that the style has now. */
+  private tappable(
+    map: MapLibreMap,
+    kind: "points" | "lines" | "polygons",
+  ): string[] {
+    return [...this.drawn.values()]
+      .flatMap((drawn) => drawn[kind])
+      .filter((layerId) => map.getLayer(layerId) !== undefined);
+  }
+
+  /**
+   * Every tappable feature under a pixel, topmost first and once each: points
+   * and lines within a fingertip, then polygons exactly. A vector tile
+   * repeats a feature in each tile it crosses, so the same feature can come
+   * back more than once. Empty when the map is not ready to be queried.
+   */
+  private hitsAt(x: number, y: number): MapFeatureHit[] {
     const map = this.readyMap();
     if (!map) {
-      return null;
-    }
-    const layers = [...this.dataLayers]
-      .filter(([, layer]) => layer.kind === "features")
-      .map(([id]) => dataLayerEngineIds(id).points)
-      .filter((layerId) => map.getLayer(layerId) !== undefined);
-    if (layers.length === 0) {
-      return null;
+      return [];
     }
     const reach = TAP_TOLERANCE_PX;
-    let hits: { properties?: unknown }[];
+    const box: [[number, number], [number, number]] = [
+      [x - reach, y - reach],
+      [x + reach, y + reach],
+    ];
+    const hits: MapFeatureHit[] = [];
+    const seen = new Set<string>();
     try {
-      hits = map.queryRenderedFeatures(
-        [
-          [x - reach, y - reach],
-          [x + reach, y + reach],
-        ],
-        { layers },
-      );
+      for (const [kind, geometry] of [
+        ["points", box],
+        ["lines", box],
+        ["polygons", [x, y] as [number, number]],
+      ] as const) {
+        const layers = this.tappable(map, kind);
+        if (layers.length === 0) {
+          continue;
+        }
+        for (const feature of map.queryRenderedFeatures(geometry, { layers })) {
+          const properties = toPropertyBag(feature.properties);
+          const layerId = properties["karta:layer"];
+          const featureId = properties["karta:id"];
+          const key = `${String(layerId)}\u0000${String(featureId)}`;
+          if (
+            typeof layerId === "string" &&
+            typeof featureId === "string" &&
+            !seen.has(key)
+          ) {
+            seen.add(key);
+            hits.push({ layerId, featureId });
+          }
+        }
+      }
     } catch {
       // Querying can throw while a style is still loading; nothing is tapped then.
-      return null;
+      return [];
     }
-    const properties = toPropertyBag(hits[0]?.properties);
-    const layerId = properties["karta:layer"];
-    const featureId = properties["karta:id"];
-    return typeof layerId === "string" && typeof featureId === "string"
-      ? { layerId, featureId }
+    return hits;
+  }
+
+  /** The tap the topmost of `hits` makes, or null when there are none. */
+  private featureTapOf(hits: readonly MapFeatureHit[]): MapFeatureTap | null {
+    const top = hits[0];
+    return top
+      ? { layerId: top.layerId, featureId: top.featureId, hits }
       : null;
   }
 
@@ -889,14 +1404,14 @@ export class MapLibreMapAdapter implements MapAdapter {
     });
     listen("rotate", emitView("rotate"));
     listen("click", (event) => {
-      const tap = this.featureTapAt(event.point.x, event.point.y);
+      const tap = this.featureTapOf(this.hitsAt(event.point.x, event.point.y));
       if (tap) {
         this.emitter.emit("featureTap", tap);
       }
       const click: MapClickEvent = {
         latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
         point: { x: event.point.x, y: event.point.y },
-        features: this.featuresAt(event.point.x, event.point.y),
+        features: this.renderedProperties(event.point.x, event.point.y),
       };
       this.emitter.emit("click", click);
     });
@@ -912,6 +1427,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         this.pending.styleLoaded = true;
       }
       this.styleReady = true;
+      this.labelFontCache = undefined;
       this.settlePending("style.load");
       try {
         this.restoreDataLayers(map);
@@ -1061,7 +1577,93 @@ export class MapLibreMapAdapter implements MapAdapter {
     check.idle.unsubscribe();
   }
 
-  private featuresAt(x: number, y: number): Record<string, unknown>[] {
+  /** Resolves once the map has loaded everything, or after {@link IMAGE_WAIT_MS}, so a stuck tile cannot stall an export. */
+  private untilLoaded(map: MapLibreMap): Promise<void> {
+    if (map.loaded()) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        idle.unsubscribe();
+        resolve();
+      };
+      const timer = setTimeout(done, IMAGE_WAIT_MS);
+      const idle = map.on("idle", done);
+    });
+  }
+
+  /**
+   * Asks for a repaint and copies the canvas inside the `render` event that
+   * follows, the only moment its drawing buffer can be read.
+   */
+  private captureFrame(map: MapLibreMap): Promise<Frame> {
+    return new Promise((resolve, reject) => {
+      const stop = () => {
+        clearTimeout(timer);
+        render.unsubscribe();
+      };
+      const timer = setTimeout(() => {
+        stop();
+        reject(
+          new MapEngineError(
+            "export-failed",
+            "The map did not draw a frame to save.",
+          ),
+        );
+      }, IMAGE_WAIT_MS);
+      const render = map.on("render", () => {
+        stop();
+        try {
+          resolve(copyCanvas(map.getCanvas()));
+        } catch (error) {
+          reject(error);
+        }
+      });
+      map.triggerRepaint();
+    });
+  }
+
+  /**
+   * Draws the credit text on a semi-opaque strip along the bottom edge, in the
+   * page's own font and the palette's ink, sized to the map's CSS size so it
+   * reads the same on a high-density screen. Text too long for the image is
+   * scaled down to fit.
+   */
+  private drawAttribution(frame: Frame, attribution: string | undefined): void {
+    const text = attribution?.trim();
+    if (!text) {
+      return;
+    }
+    const { canvas, context } = frame;
+    const cssWidth =
+      this.map?.getCanvas().clientWidth ||
+      canvas.width / (window.devicePixelRatio || 1);
+    const scale = cssWidth > 0 ? canvas.width / cssWidth : 1;
+    const padding = 4 * scale;
+    const family = getComputedStyle(document.body).fontFamily || "sans-serif";
+    let size = ATTRIBUTION_SIZE_PX * scale;
+    context.font = `${size}px ${family}`;
+    const room = canvas.width - 2 * padding;
+    const width = context.measureText(text).width;
+    if (width > room && room > 0) {
+      size *= room / width;
+      context.font = `${size}px ${family}`;
+    }
+    const height = size + 2 * padding;
+    context.fillStyle = rgbaColour(
+      tokenValues.dataMarker.halo,
+      ATTRIBUTION_STRIP_OPACITY,
+    );
+    context.fillRect(0, canvas.height - height, canvas.width, height);
+    context.fillStyle = tokenValues.dataMarker.edge;
+    context.textAlign = "right";
+    context.textBaseline = "middle";
+    context.fillText(text, canvas.width - padding, canvas.height - height / 2);
+  }
+
+  /** Plain property bags of every rendered feature at a pixel, for the click event. */
+  private renderedProperties(x: number, y: number): Record<string, unknown>[] {
     try {
       return (this.map?.queryRenderedFeatures([x, y]) ?? []).map((feature) =>
         toPropertyBag(feature.properties),

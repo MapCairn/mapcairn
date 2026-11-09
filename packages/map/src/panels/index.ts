@@ -1,4 +1,5 @@
 export * from "./BasemapPicker";
+export * from "./ExportSection";
 export * from "./HelpSection";
 export * from "./PinSection";
 export * from "./Section";

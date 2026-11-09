@@ -103,6 +103,12 @@ export class FakeMapLibreMap {
   styleLayers: Record<string, unknown>[] = [];
   /** Images the adapter added, by name. */
   readonly images = new Map<string, unknown>();
+  /** The glyph URL of the loaded style; an inline raster style has none, as in MapLibre. */
+  glyphs: string | undefined;
+  /** The loaded basemap's own layers, always below the ones the adapter added. */
+  basemapLayers: Record<string, unknown>[] = [];
+  /** When true, `triggerRepaint` is followed by a `render` event, as a visible map does. */
+  rendersOnRepaint = true;
 
   constructor(options: Record<string, unknown>) {
     const error = FakeMapLibreMap.nextConstructError;
@@ -111,6 +117,7 @@ export class FakeMapLibreMap {
       throw error;
     }
     this.options = options;
+    this.loadBasemapStyle(options.style);
     const [lng, lat] = options.center as [number, number];
     this.center = { lng, lat };
     this.minZoom = options.minZoom as number;
@@ -408,6 +415,7 @@ export class FakeMapLibreMap {
     this.record("setStyle", [style, options]);
     // A full style swap drops every source, layer and image the adapter added.
     this.styleLoaded = false;
+    this.loadBasemapStyle(style);
     this.sources.clear();
     this.styleLayers = [];
     this.images.clear();
@@ -424,8 +432,40 @@ export class FakeMapLibreMap {
       });
     }
   }
-  getStyle(): { layers: Record<string, unknown>[] } {
-    return { layers: this.styleLayers };
+  getStyle(): { glyphs?: string; layers: Record<string, unknown>[] } {
+    return {
+      ...(this.glyphs === undefined ? {} : { glyphs: this.glyphs }),
+      layers: [...this.basemapLayers, ...this.styleLayers],
+    };
+  }
+  getBounds(): {
+    getWest(): number;
+    getSouth(): number;
+    getEast(): number;
+    getNorth(): number;
+  } {
+    const corners = [
+      [0, 0],
+      [FAKE_VIEWPORT_WIDTH, 0],
+      [FAKE_VIEWPORT_WIDTH, FAKE_VIEWPORT_HEIGHT],
+      [0, FAKE_VIEWPORT_HEIGHT],
+    ].map(([x, y]) => this.unproject([x as number, y as number]));
+    const lngs = corners.map((corner) => corner.lng);
+    const lats = corners.map((corner) => corner.lat);
+    return {
+      getWest: () => Math.min(...lngs),
+      getSouth: () => Math.min(...lats),
+      getEast: () => Math.max(...lngs),
+      getNorth: () => Math.max(...lats),
+    };
+  }
+  triggerRepaint(): void {
+    this.record("triggerRepaint", []);
+    if (this.rendersOnRepaint) {
+      queueMicrotask(() => {
+        this.fire("render");
+      });
+    }
   }
   loaded(): boolean {
     return this.loadedState;
@@ -440,6 +480,31 @@ export class FakeMapLibreMap {
     this.record("remove", []);
     this.removed = true;
     this.canvasContainer.remove();
+  }
+
+  /**
+   * A style URL stands for a vector basemap, which brings glyphs and a text
+   * layer with a literal font stack; an inline raster style has neither.
+   */
+  private loadBasemapStyle(style: unknown): void {
+    if (typeof style === "string") {
+      this.glyphs = "https://tiles.test/fonts/{fontstack}/{range}.pbf";
+      this.basemapLayers = [
+        { id: "background", type: "background" },
+        {
+          id: "place-label",
+          type: "symbol",
+          source: "openmaptiles",
+          layout: {
+            "text-field": "{name}",
+            "text-font": ["Test Sans Regular"],
+          },
+        },
+      ];
+    } else {
+      this.glyphs = undefined;
+      this.basemapLayers = [];
+    }
   }
 
   /** MapLibre throws this way when a source, layer or image is added mid-swap. */
@@ -487,31 +552,51 @@ export class FakeMapLibreMap {
 export interface EngineFeature {
   readonly geometry: {
     readonly type: string;
-    readonly coordinates: [number, number];
+    readonly coordinates: unknown;
   };
   readonly properties: Record<string, unknown>;
 }
 
 /**
+ * The part of an engine layer id after `karta:<id>:`. Parts never contain a
+ * colon, so the data layer id is everything before the last one.
+ */
+const ENGINE_ID = /^karta:(.+):([^:]+)$/;
+
+/** The first longitude and latitude of any GeoJSON coordinates. */
+function firstPosition(coordinates: unknown): [number, number] {
+  let current = coordinates;
+  while (Array.isArray(current) && Array.isArray(current[0])) {
+    current = current[0];
+  }
+  return Array.isArray(current) ? (current as [number, number]) : [0, 0];
+}
+
+/**
  * Describes the data layers the adapter added to a test engine, lowest
- * first, in the map adapter contract's terms. Engine ids are
- * `karta:<id>:<part>`, and a shape layer's fill and line count once.
+ * first, in the map adapter contract's terms. A data layer owns several
+ * engine layers (`karta:<id>:<part>`) over one source `karta:<id>`, so each
+ * is described once, from its first engine layer.
  */
 export function describeDataLayers(map: FakeMapLibreMap): DrawnLayer[] {
   const drawn: DrawnLayer[] = [];
+  const seen = new Set<string>();
   for (const layer of map.styleLayers) {
-    const match = /^karta:(.+):(points|tiles|fill|line)$/.exec(
-      String(layer.id),
-    );
-    if (!match || match[2] === "line") {
+    const match = ENGINE_ID.exec(String(layer.id));
+    if (!match || seen.has(String(layer.source))) {
       continue;
     }
+    seen.add(String(layer.source));
     const id = match[1] as string;
+    const part = match[2] as string;
     const source = map.sources.get(layer.source as string) ?? {};
     const count =
       (source.data as { features?: unknown[] } | undefined)?.features?.length ??
       0;
-    if (match[2] === "tiles") {
+    const ofSource = map.styleLayers.filter(
+      (item) => item.source === layer.source,
+    );
+    if (part === "tiles") {
       drawn.push({
         id,
         kind: "tiles",
@@ -520,16 +605,178 @@ export function describeDataLayers(map: FakeMapLibreMap): DrawnLayer[] {
           "raster-opacity"
         ] as number,
       });
+    } else if (part.startsWith("styled-")) {
+      const isArea = ofSource.some(
+        (item) => item.id === `karta:${id}:styled-fill`,
+      );
+      drawn.push({
+        id,
+        kind: "styled",
+        geometry: isArea ? "area" : "line",
+        count,
+      });
+    } else if (/^v\d+-/.test(part)) {
+      const sourceLayers = [
+        ...new Set(ofSource.map((item) => String(item["source-layer"]))),
+      ];
+      drawn.push({
+        id,
+        kind: "vector",
+        tiles: (source.tiles as string[])[0] as string,
+        sourceLayers,
+      });
+    } else if (part === "heat") {
+      drawn.push({
+        id,
+        kind: "heatmap",
+        source: source.type === "geojson" ? "points" : "vector",
+        count,
+      });
     } else {
       drawn.push({
         id,
-        kind: match[2] === "fill" ? "shapes" : "features",
+        kind: part === "fill" ? "shapes" : "features",
         count,
       });
     }
   }
   return drawn;
 }
+
+/**
+ * The engine layer a tap on one drawn feature lands on: its point layer, or
+ * its polygon fill, or its coloured line. Undefined when the feature is not
+ * drawn.
+ */
+function tappableEngineLayer(
+  map: FakeMapLibreMap,
+  layerId: string,
+  featureId: string,
+): { layer: string; feature: EngineFeature } | undefined {
+  const source = map.sources.get(`karta:${layerId}`);
+  const feature = (
+    (source?.data as { features?: EngineFeature[] } | undefined)?.features ?? []
+  ).find((item) => item.properties["karta:id"] === featureId);
+  const layer = map.styleLayers.find(
+    (item) =>
+      item.source === `karta:${layerId}` &&
+      /:(points|styled-fill|styled-line-[a-z]+)$/.test(String(item.id)),
+  );
+  return feature && layer ? { layer: String(layer.id), feature } : undefined;
+}
+
+/**
+ * Makes the test engine report one click that lands on every named feature
+ * that is drawn, in the order given, at the position of the first. What the
+ * engine returns for a query is filtered by the layers the adapter asks for,
+ * as MapLibre does.
+ */
+export function simulateFeatureHits(
+  map: FakeMapLibreMap,
+  hits: readonly { layerId: string; featureId: string }[],
+): void {
+  const found = hits.flatMap(({ layerId, featureId }) => {
+    const hit = tappableEngineLayer(map, layerId, featureId);
+    return hit ? [hit] : [];
+  });
+  map.features = found.map(({ layer, feature }) => ({
+    layer: { id: layer },
+    ...feature,
+  }));
+  const [lng, lat] = firstPosition(found[0]?.feature.geometry.coordinates);
+  map.fire("click", {
+    lngLat: { lng, lat },
+    point: map.project([lng, lat]),
+  });
+}
+
+/** One call a test canvas context recorded, such as `fillText`. */
+export interface CanvasCall {
+  readonly method: string;
+  readonly args: readonly unknown[];
+}
+
+/**
+ * Stands in for the `<canvas>` features happy-dom lacks, so the image export
+ * can run: a 2D context that records its calls, and a `toBlob` that yields a
+ * PNG blob. Install it in a test and call the returned function to restore.
+ */
+export const canvasStub = {
+  /** Every canvas a 2D context was asked of, oldest first, with its calls. */
+  contexts: [] as {
+    readonly canvas: HTMLCanvasElement;
+    readonly calls: CanvasCall[];
+    font: string;
+    fillStyle: string;
+  }[],
+  /** When true, the next `toBlob` yields null, as a canvas the browser cannot encode does. */
+  failNext: false,
+  /** When set, the next `toBlob` throws it, as a tainted canvas does. */
+  throwNext: undefined as Error | undefined,
+  /** Clears what the stub recorded. */
+  reset(): void {
+    canvasStub.contexts = [];
+    canvasStub.failNext = false;
+    canvasStub.throwNext = undefined;
+  },
+  /** Installs the stub on `HTMLCanvasElement` and returns the function that removes it. */
+  install(): () => void {
+    const proto = HTMLCanvasElement.prototype as unknown as Record<
+      string,
+      unknown
+    >;
+    const original = {
+      getContext: proto.getContext,
+      toBlob: proto.toBlob,
+    };
+    canvasStub.reset();
+    proto.getContext = function getContext(this: HTMLCanvasElement) {
+      const calls: CanvasCall[] = [];
+      const context: Record<string, unknown> = {
+        font: "",
+        fillStyle: "",
+        textAlign: "",
+        textBaseline: "",
+      };
+      for (const method of [
+        "drawImage",
+        "fillRect",
+        "fillText",
+        "save",
+        "restore",
+      ]) {
+        context[method] = (...args: unknown[]) => {
+          calls.push({ method, args });
+        };
+      }
+      context.measureText = (text: string) => ({ width: text.length * 6 });
+      canvasStub.contexts.push(
+        Object.assign(context, { canvas: this, calls }) as never,
+      );
+      return context;
+    };
+    proto.toBlob = function toBlob(
+      callback: (blob: Blob | null) => void,
+      type?: string,
+    ) {
+      if (canvasStub.throwNext) {
+        const error = canvasStub.throwNext;
+        canvasStub.throwNext = undefined;
+        throw error;
+      }
+      if (canvasStub.failNext) {
+        canvasStub.failNext = false;
+        callback(null);
+        return;
+      }
+      callback(new Blob([new Uint8Array([137, 80, 78, 71])], { type }));
+    };
+    return () => {
+      proto.getContext = original.getContext;
+      proto.toBlob = original.toBlob;
+    };
+  },
+};
 
 /** Test-only vector basemap with an unreachable style host. */
 export function vectorBasemap(

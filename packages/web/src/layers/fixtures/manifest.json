@@ -24,5 +24,6 @@
     "file": "gdacs-events.json",
     "features": 0,
     "detail": { "file": "gdacs-tc-geometry.json", "shapes": 2 }
-  }
+  },
+  "world-countries": { "file": "world-countries.json", "features": 6 }
 }

@@ -505,6 +505,14 @@ describe("keyboard", () => {
     expect(onEscape).toHaveBeenCalledTimes(1);
   });
 
+  it("asks to list the features at the centre with I", async () => {
+    const onIdentifyKey = vi.fn();
+    const { host } = await setup({ onIdentifyKey });
+    expect(fireEvent.keyDown(host(), { key: "i" })).toBe(false);
+    expect(fireEvent.keyDown(host(), { key: "I", shiftKey: true })).toBe(false);
+    expect(onIdentifyKey).toHaveBeenCalledTimes(2);
+  });
+
   it("leaves other keys and browser shortcuts alone", async () => {
     const { host, spies } = await pressOn("a");
     expect(fireEvent.keyDown(host(), { key: "Tab" })).toBe(true);

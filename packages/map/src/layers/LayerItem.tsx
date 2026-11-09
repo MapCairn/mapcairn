@@ -1,5 +1,4 @@
 import {
-  evaluatePointStyle,
   type FormatterRegistry,
   formatTemplate,
   isControlEnabled,
@@ -7,6 +6,7 @@ import {
   type LayerControlDefinition,
   type LayerFeature,
   legendFor,
+  loadsFeatures,
   resolveDateBound,
 } from "@karta/core";
 import { RotateCw, TriangleAlert } from "lucide-react";
@@ -18,8 +18,8 @@ import { SegmentedControl } from "../ui/SegmentedControl";
 import { Slider } from "../ui/Slider";
 import { Switch } from "../ui/Switch";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
+import { FeatureGlyph, LegendGlyph } from "./FeatureGlyph";
 import * as styles from "./Layers.css";
-import { MarkerGlyph } from "./MarkerGlyph";
 import type { DataLayerState, DataLayers, LayerStatus } from "./useDataLayers";
 
 /** How many rows the list shows before "Show all". */
@@ -40,7 +40,11 @@ function statusText(status: LayerStatus, emptyText: string): string | null {
     case "loading":
       return "Loading";
     case "ready":
-      return `Updated ${TIME.format(status.updatedAt)}, ${status.count.toLocaleString("en-GB")} shown`;
+      return status.capped
+        ? `Updated ${TIME.format(status.updatedAt)}. Showing the first ${status.count.toLocaleString("en-GB")}. Zoom in to see more.`
+        : `Updated ${TIME.format(status.updatedAt)}, ${status.count.toLocaleString("en-GB")} shown`;
+    case "zoom-in":
+      return "Zoom in to load this layer.";
     case "empty":
       return `Updated ${TIME.format(status.updatedAt)}. ${emptyText}`;
     default:
@@ -108,6 +112,23 @@ function LayerControl({ layer, control, layers }: ControlProps) {
         </label>
       );
     }
+    case "range":
+      return (
+        <div data-testid={testId}>
+          <Slider
+            label={control.label}
+            min={control.min}
+            max={control.max}
+            step={control.step}
+            value={Number(value)}
+            formatValue={(next) => `${next}${control.unit ?? ""}`}
+            onValueChange={(next) =>
+              change(String(Math.round(next * 1000) / 1000))
+            }
+            disabled={disabled}
+          />
+        </div>
+      );
     case "opacity":
       return (
         <div data-testid={testId}>
@@ -142,11 +163,7 @@ function LayerLegend({ layer }: { layer: DataLayerState }) {
     >
       {entries.map((entry) => (
         <li key={entry.label} className={styles.legendEntry}>
-          <MarkerGlyph
-            shape={entry.shape}
-            colour={entry.colour}
-            radius={entry.radius}
-          />
+          <LegendGlyph entry={entry} />
           {entry.label}
         </li>
       ))}
@@ -195,7 +212,6 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
       ) : null}
       <ul className={styles.rows}>
         {rows.map((feature) => {
-          const marker = evaluatePointStyle(definition.style, feature.fields);
           const title =
             formatTemplate(
               definition.card.title,
@@ -217,10 +233,10 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
                 data-testid="layer-list-row"
                 onClick={() => onShow(feature)}
               >
-                <MarkerGlyph
-                  shape={marker.shape}
-                  colour={marker.colour}
-                  radius={Math.min(marker.radius, 8)}
+                <FeatureGlyph
+                  definition={definition}
+                  fields={feature.fields}
+                  maxRadius={8}
                 />
                 <span className={styles.rowText}>
                   <span className={styles.rowTitle}>{title}</span>
@@ -265,7 +281,7 @@ export function LayerItem({
   const { definition, enabled, status } = layer;
   // Only worth a line for someone who is saving data.
   const saveData = useSaveData();
-  const emptyText = isFeedLayer(definition) ? definition.emptyText : "";
+  const emptyText = loadsFeatures(definition) ? definition.emptyText : "";
   const text = statusText(status, emptyText);
   return (
     <li className={styles.layerItem} data-testid={`layer-${definition.id}`}>

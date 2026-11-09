@@ -69,6 +69,7 @@ export function App() {
       onLongPress={app.onLongPress}
       onPointerMove={app.setCursor}
       onDropPinKey={app.dropPinAtCentre}
+      onIdentifyKey={app.identifyAtCentre}
       onEscape={() => closeExplicitly(pressEscape())}
       chrome={(map) => <AppChrome app={app} background={map} />}
     >

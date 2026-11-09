@@ -1,4 +1,4 @@
-import type { MarkerShape } from "../layers/definition";
+import type { FillPattern, LineDash, MarkerShape } from "../layers/definition";
 import type { BasemapDefinition } from "./basemap";
 import type { MapEngineError } from "./errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "./geometry";
@@ -98,17 +98,170 @@ export interface MapShapes {
   readonly lineWidth?: number;
 }
 
-/** A tap or click on a point of a feed layer. */
-export interface MapFeatureTap {
+/**
+ * How one polygon or line is drawn, already worked out from its layer's
+ * style. The adapter fills `colour` at `fillOpacity` (polygons) or strokes
+ * with it (lines), draws a polygon's outline in the palette's ink, hatches
+ * with `pattern` in that ink, and dashes with `dash`.
+ */
+export interface MapShapeLook {
+  /** A hex colour, such as `#e69f00`. */
+  readonly colour: string;
+  /** From 0 to 1. Polygons only. */
+  readonly fillOpacity: number;
+  readonly pattern: FillPattern;
+  readonly dash: LineDash;
+  /** Line width, or outline width for a polygon, in CSS pixels. */
+  readonly width: number;
+}
+
+/** One polygon or line of a styled shape layer. */
+export interface MapStyledShape {
+  readonly id: string;
+  readonly geometry: LayerGeometry;
+  readonly look: MapShapeLook;
+  /** Text drawn on the shape, when the layer has labels and the engine can draw them. */
+  readonly label?: string;
+}
+
+/**
+ * Polygons or lines drawn with a per-shape look, such as a choropleth. A
+ * layer draws one kind of geometry; the other kind is ignored. Shapes can be
+ * tapped like points.
+ */
+export interface MapStyledShapes {
+  readonly geometry: "area" | "line";
+  readonly shapes: readonly MapStyledShape[];
+  /** Labels appear from this normalised zoom. */
+  readonly labelMinZoom?: number;
+}
+
+/** A source of vector tiles. */
+export interface MapVectorSource {
+  /** A tile URL template with `{z}`, `{x}` and `{y}`. */
+  readonly tiles: string;
+  /** The shallowest and deepest tile levels the service has; the engine scales beyond them. */
+  readonly minzoom: number;
+  readonly maxzoom: number;
+}
+
+/**
+ * How a vector tile layer picks the look of each of its features from one
+ * property. The engine evaluates it, because the features are in the tiles
+ * and the ui never sees them.
+ */
+export type MapLookRule =
+  | { readonly kind: "fixed"; readonly look: MapShapeLook }
+  | {
+      readonly kind: "category";
+      readonly field: string;
+      readonly cases: readonly {
+        readonly value: string | number;
+        readonly look: MapShapeLook;
+      }[];
+      /** For a value no case names, and for a missing one. */
+      readonly fallback: MapShapeLook;
+    }
+  | {
+      readonly kind: "steps";
+      readonly field: string;
+      /** Ascending. The first look applies to everything below the second minimum, and to a missing value. */
+      readonly steps: readonly {
+        readonly min: number;
+        readonly look: MapShapeLook;
+      }[];
+    };
+
+/** One layer of a vector tile source, drawn as polygons or lines. */
+export interface MapVectorSourceLayer {
+  /** The layer's name inside the tiles. */
+  readonly sourceLayer: string;
+  readonly geometry: "area" | "line";
+  readonly rule: MapLookRule;
+  /** Visible from and to these normalised zoom levels. */
+  readonly minzoom?: number;
+  readonly maxzoom?: number;
+  /** Draws the property's value on each feature. */
+  readonly label?: { readonly field: string; readonly minzoom?: number };
+}
+
+/** A vector tile layer: one source, drawn from one or more of its source layers. */
+export interface MapVectorTiles {
+  readonly source: MapVectorSource;
+  readonly layers: readonly MapVectorSourceLayer[];
+  /** Normalised zoom levels the whole layer is visible between. */
+  readonly minzoom?: number;
+  readonly maxzoom?: number;
+}
+
+/** How a heatmap is drawn. */
+export interface MapHeatmapStyle {
+  /** Pixels each point spreads over. */
+  readonly radius: number;
+  /** Multiplies every point's weight. */
+  readonly intensity: number;
+  /** From 0 to 1. */
+  readonly opacity: number;
+  /** Hex colours from the lowest density to the highest. At least two. */
+  readonly ramp: readonly string[];
+}
+
+/** What a heatmap is made from: loaded points, or a vector tile source layer of points. */
+export type MapHeatmapSource =
+  | {
+      readonly kind: "points";
+      readonly points: readonly {
+        readonly position: LatLng;
+        /** Defaults to 1. */
+        readonly weight?: number;
+      }[];
+    }
+  | {
+      readonly kind: "vector";
+      readonly source: MapVectorSource;
+      readonly sourceLayer: string;
+      /** The property that weights each point. Each counts 1 without it. */
+      readonly weightField?: string;
+      readonly minzoom?: number;
+      readonly maxzoom?: number;
+    };
+
+/** Point density drawn as a heatmap. It has no tappable features. */
+export interface MapHeatmap {
+  readonly source: MapHeatmapSource;
+  readonly style: MapHeatmapStyle;
+}
+
+/** One feature of a data layer under a tap. */
+export interface MapFeatureHit {
   readonly layerId: string;
   readonly featureId: string;
+}
+
+/**
+ * A tap or click on a point, polygon or line of a feed layer: the topmost
+ * feature, and every feature under the tap (it included), topmost first
+ * and listed once each.
+ */
+export interface MapFeatureTap extends MapFeatureHit {
+  readonly hits: readonly MapFeatureHit[];
+}
+
+/** Options for {@link MapAdapter.toImage}. */
+export interface MapImageOptions {
+  /**
+   * Credit text drawn along the bottom edge of the image, so a saved image
+   * keeps its sources. Nothing is drawn when it is empty or omitted.
+   */
+  readonly attribution?: string;
 }
 
 /** The events a map adapter emits, with their payloads. */
 export interface MapEvents {
   /**
-   * A tap or click landed on a point of a feed layer. Fires before the
-   * `click` for the same tap, with the topmost point within a finger's reach.
+   * A tap or click landed on a point, polygon or line of a feed layer. Fires
+   * before the `click` for the same tap, with the topmost feature within a
+   * finger's reach and every feature found there.
    */
   featureTap: MapFeatureTap;
   /** The view is changing (fires continuously while moving). */
@@ -213,8 +366,42 @@ export interface MapAdapter {
   setTileLayer(id: string, overlay: MapTileOverlay): void;
   /** Draws polygons and lines under `id`, replacing what was drawn under that id. */
   setShapeLayer(id: string, shapes: MapShapes): void;
+  /**
+   * Draws polygons or lines with a look each under `id`, replacing what was
+   * drawn under that id. They sit between tile overlays and points, and
+   * survive `setBasemap` like the other data layers.
+   */
+  setStyledShapes(id: string, layer: MapStyledShapes): void;
+  /**
+   * Draws a vector tile layer under `id`, replacing what was drawn under that
+   * id. Its features are not tappable, because the ui never receives them.
+   */
+  setVectorLayer(id: string, layer: MapVectorTiles): void;
+  /**
+   * Draws point density as a heatmap under `id`, replacing what was drawn
+   * under that id. A heatmap sits above styled shapes and below points.
+   */
+  setHeatmapLayer(id: string, heatmap: MapHeatmap): void;
   /** Removes whatever is drawn under `id`. Does nothing for an unknown id. */
   removeLayer(id: string): void;
+
+  /**
+   * Every tappable feature of the data layers at a pixel of the map (a
+   * fingertip's reach for points and lines, exactly for polygons), topmost
+   * first, each listed once. Empty when nothing is there or the map is not
+   * ready. The ui calls it for the keyboard route to the list a multi-feature
+   * tap opens.
+   */
+  featuresAt(point: PixelPoint): readonly MapFeatureHit[];
+  /** The box of latitudes and longitudes the map shows now, covering a rotated map. */
+  getBounds(): Bounds;
+  /**
+   * Draws the map as it is now, with its data layers, as a PNG. It never
+   * requests anything the map has not already loaded. Rejects with a
+   * `MapEngineError` whose reason is `export-failed` when the engine cannot
+   * produce an image.
+   */
+  toImage(options?: MapImageOptions): Promise<Blob>;
 
   /** Subscribes to an event. Returns the unsubscribe function. */
   on<K extends keyof MapEvents>(

@@ -100,6 +100,13 @@ describe("other keys", () => {
     });
   });
 
+  it("lists the features at the centre with i or I", () => {
+    expect(mapKeyAction(press("i"))).toEqual({ type: "identify" });
+    expect(mapKeyAction(press("I", { shiftKey: true }))).toEqual({
+      type: "identify",
+    });
+  });
+
   it("escapes with Escape", () => {
     expect(mapKeyAction(press("Escape"))).toEqual({ type: "escape" });
   });
@@ -124,6 +131,8 @@ describe("browser shortcuts", () => {
       "0",
       "p",
       "P",
+      "i",
+      "I",
       "Escape",
     ];
     for (const key of keys) {

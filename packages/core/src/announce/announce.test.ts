@@ -10,13 +10,19 @@ import {
   announceDetailShown,
   announceDetent,
   announceDirectionsCleared,
+  announceFeaturesFound,
+  announceImageFailed,
+  announceImageSaved,
+  announceLayerCapped,
   announceLayerEmpty,
   announceLayerError,
   announceLayerLoaded,
   announceLayerOn,
+  announceLayerZoomIn,
   announceLocationError,
   announceLocationFound,
   announceMeasureTotal,
+  announceNoFeaturesHere,
   announceNoResults,
   announceOffline,
   announcePinCleared,
@@ -185,6 +191,34 @@ describe("layer announcements", () => {
     expect(
       announceLayerEmpty("Volcano alerts", "No volcano alerts right now."),
     ).toBe("Volcano alerts: No volcano alerts right now.");
+  });
+
+  it("says whether the map image was saved", () => {
+    expect(announceImageSaved()).toBe("Map image saved.");
+    expect(announceImageFailed()).toBe(
+      "The map image could not be saved. Try again.",
+    );
+  });
+
+  it("says when the keyboard route finds nothing", () => {
+    expect(announceNoFeaturesHere()).toBe(
+      "No features at the centre of the map.",
+    );
+  });
+
+  it("says several features were found together and a list opened", () => {
+    expect(announceFeaturesFound(3)).toBe(
+      "3 features here. Choose one from the list.",
+    );
+  });
+
+  it("says a query layer is capped and what to do about it", () => {
+    expect(announceLayerCapped("Places", 1500)).toBe(
+      "Places: showing the first 1,500. Zoom in to see more.",
+    );
+    expect(announceLayerZoomIn("Places")).toBe(
+      "Places: zoom in to load this layer.",
+    );
   });
 
   it("says a layer failed and what to do", () => {

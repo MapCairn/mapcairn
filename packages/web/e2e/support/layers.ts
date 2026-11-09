@@ -23,6 +23,7 @@ export const LAYER_PROVIDER_ORIGINS: readonly string[] = [
   "https://gibs.earthdata.nasa.gov",
   "https://www.gdacs.org",
   "https://ows.globalfloods.eu",
+  "https://cdn.jsdelivr.net",
 ];
 
 /** The recorded responses, by the URL pattern they answer. Tiles get an empty PNG. */
@@ -38,6 +39,10 @@ const FEEDS: readonly { readonly pattern: RegExp; readonly file: string }[] = [
   {
     pattern: /www\.gdacs\.org\/gdacsapi\/api\/polygons\//,
     file: "gdacs-tc-geometry.json",
+  },
+  {
+    pattern: /cdn\.jsdelivr\.net\/gh\/nvkelso\/natural-earth-vector@/,
+    file: "world-countries.json",
   },
 ];
 

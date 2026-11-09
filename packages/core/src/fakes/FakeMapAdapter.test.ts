@@ -34,6 +34,7 @@ function subjectFor(
         simulateUserZoom: (zoom) => adapter.simulateUserZoom(zoom),
         simulateFeatureTap: (layerId, featureId) =>
           adapter.simulateFeatureTap(layerId, featureId),
+        simulateFeatureHits: (hits) => adapter.simulateFeatureHits(hits),
         drawnLayers: () => adapter.drawnLayers(),
         simulateFatalError: () => adapter.simulateFatalError(),
         ...(withOptionalControls
@@ -41,6 +42,7 @@ function subjectFor(
               createFailingMount: () =>
                 new FakeMapAdapter({ failMount: "webgl-unavailable" }),
               failNextBasemap: () => adapter.failNextBasemap(),
+              failNextImage: () => adapter.failNextImage(),
             }
           : {}),
       },

@@ -37,6 +37,12 @@ export function parseHexColour(hex: string): [number, number, number] {
   ];
 }
 
+/** A hex colour as a CSS `rgba(...)` value at the given opacity, from 0 to 1. */
+export function rgbaColour(hex: string, alpha: number): string {
+  const [red, green, blue] = parseHexColour(hex);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
 /** The radius, in whole CSS pixels, a marker image is drawn at. */
 function wholeRadius(radius: number): number {
   return Math.max(1, Math.round(radius));

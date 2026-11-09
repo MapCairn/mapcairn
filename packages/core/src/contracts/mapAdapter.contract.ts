@@ -8,10 +8,14 @@ import type {
   MapEvents,
   MapFeature,
   MapFeatureTap,
+  MapHeatmap,
   MapHostElement,
   MapMountOptions,
+  MapShapeLook,
   MapShapes,
+  MapStyledShapes,
   MapTileOverlay,
+  MapVectorTiles,
 } from "../ports/map";
 
 /**
@@ -50,6 +54,20 @@ export interface MapAdapterControls {
    * nothing.
    */
   simulateFeatureTap(layerId: string, featureId: string): void;
+  /**
+   * Makes the engine report one tap that lands on several drawn features,
+   * topmost first (a point, polygon or line each). The same features are what
+   * `featuresAt` finds under the pointer afterwards. A feature that is not
+   * drawn is not under the tap.
+   */
+  simulateFeatureHits(
+    hits: readonly { readonly layerId: string; readonly featureId: string }[],
+  ): void;
+  /**
+   * Makes the next `toImage` fail, such as a canvas the browser will not
+   * read. Optional because some engines cannot fail.
+   */
+  failNextImage?(): void;
   /** Describes the data layers the engine draws, lowest first. */
   drawnLayers(): readonly DrawnLayer[];
   /**
@@ -603,15 +621,355 @@ export function runMapAdapterContract(
         adapter.setFeatureLayer("quakes", [POINT_A, POINT_B]);
         await controls.settle();
         controls.simulateFeatureTap("quakes", "b");
-        expect(taps).toEqual([{ layerId: "quakes", featureId: "b" }]);
+        expect(taps).toEqual([
+          {
+            layerId: "quakes",
+            featureId: "b",
+            hits: [{ layerId: "quakes", featureId: "b" }],
+          },
+        ]);
         adapter.removeLayer("quakes");
         await controls.settle();
         controls.simulateFeatureTap("quakes", "b");
         expect(taps).toHaveLength(1);
       });
+
+      it("draws styled polygons and lines, replaces them and removes them", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        adapter.setStyledShapes("routes", STYLED_LINES);
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "regions", kind: "styled", geometry: "area", count: 2 },
+          { id: "routes", kind: "styled", geometry: "line", count: 1 },
+        ]);
+        adapter.setStyledShapes("regions", {
+          ...STYLED_AREAS,
+          shapes: STYLED_AREAS.shapes.slice(0, 1),
+        });
+        adapter.removeLayer("routes");
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "regions", kind: "styled", geometry: "area", count: 1 },
+        ]);
+      });
+
+      it("draws a vector tile layer with its source layers", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setVectorLayer("districts", VECTOR);
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          {
+            id: "districts",
+            kind: "vector",
+            tiles: VECTOR.source.tiles,
+            sourceLayers: ["areas", "borders"],
+          },
+        ]);
+        adapter.removeLayer("districts");
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([]);
+      });
+
+      it("draws a heatmap from points or from vector tiles", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setHeatmapLayer("density", HEATMAP_POINTS);
+        adapter.setHeatmapLayer("tile-density", HEATMAP_VECTOR);
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "density", kind: "heatmap", source: "points", count: 2 },
+          { id: "tile-density", kind: "heatmap", source: "vector", count: 0 },
+        ]);
+        adapter.setHeatmapLayer("density", {
+          ...HEATMAP_POINTS,
+          style: { ...HEATMAP_POINTS.style, radius: 40 },
+        });
+        await controls.settle();
+        expect(controls.drawnLayers()).toHaveLength(2);
+      });
+
+      it("stacks imagery, vector tiles, styled shapes, shapes, heatmaps and points in that order", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setFeatureLayer("quakes", [POINT_A]);
+        adapter.setHeatmapLayer("density", HEATMAP_POINTS);
+        adapter.setShapeLayer("area", SHAPES);
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        adapter.setVectorLayer("districts", VECTOR);
+        adapter.setTileLayer("imagery", TILES);
+        await controls.settle();
+        expect(controls.drawnLayers().map((layer) => layer.id)).toEqual([
+          "imagery",
+          "districts",
+          "regions",
+          "area",
+          "density",
+          "quakes",
+        ]);
+      });
+
+      it("keeps styled, vector and heatmap layers through a basemap swap", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setVectorLayer("districts", VECTOR);
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        adapter.setHeatmapLayer("density", HEATMAP_POINTS);
+        await adapter.setBasemap(controls.basemap);
+        await controls.settle();
+        expect(controls.drawnLayers().map((layer) => layer.kind)).toEqual([
+          "vector",
+          "styled",
+          "heatmap",
+        ]);
+      });
+
+      it("reports a tap on a styled polygon like a tap on a point", async () => {
+        const { adapter, controls } = await mounted();
+        const taps: MapFeatureTap[] = [];
+        adapter.on("featureTap", (tap) => taps.push(tap));
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        await controls.settle();
+        controls.simulateFeatureTap("regions", "south");
+        expect(taps.map((tap) => tap.featureId)).toEqual(["south"]);
+      });
+
+      it("reports every feature under a tap, topmost first and once each", async () => {
+        const { adapter, controls } = await mounted();
+        const taps: MapFeatureTap[] = [];
+        adapter.on("featureTap", (tap) => taps.push(tap));
+        adapter.setFeatureLayer("quakes", [POINT_A, POINT_B]);
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        await controls.settle();
+        controls.simulateFeatureHits([
+          { layerId: "quakes", featureId: "a" },
+          { layerId: "regions", featureId: "south" },
+          { layerId: "quakes", featureId: "a" },
+          { layerId: "regions", featureId: "not-drawn" },
+        ]);
+        expect(taps).toEqual([
+          {
+            layerId: "quakes",
+            featureId: "a",
+            hits: [
+              { layerId: "quakes", featureId: "a" },
+              { layerId: "regions", featureId: "south" },
+            ],
+          },
+        ]);
+      });
+
+      it("finds the features under a pixel, and none where nothing is drawn", async () => {
+        const { adapter, controls } = await mounted();
+        const centre = adapter.project(CENTRE);
+        expect(adapter.featuresAt(centre)).toEqual([]);
+        adapter.setFeatureLayer("quakes", [POINT_A]);
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        await controls.settle();
+        controls.simulateFeatureHits([
+          { layerId: "quakes", featureId: "a" },
+          { layerId: "regions", featureId: "south" },
+        ]);
+        expect(adapter.featuresAt(centre)).toEqual([
+          { layerId: "quakes", featureId: "a" },
+          { layerId: "regions", featureId: "south" },
+        ]);
+        adapter.removeLayer("quakes");
+        await controls.settle();
+        expect(adapter.featuresAt(centre)).toEqual([
+          { layerId: "regions", featureId: "south" },
+        ]);
+      });
+    });
+
+    describe("view bounds", () => {
+      it("reports the box the map shows, around the view centre", async () => {
+        const { adapter } = await mounted();
+        const bounds = adapter.getBounds();
+        expect(bounds.west).toBeLessThan(CENTRE.lng);
+        expect(bounds.east).toBeGreaterThan(CENTRE.lng);
+        expect(bounds.south).toBeLessThan(CENTRE.lat);
+        expect(bounds.north).toBeGreaterThan(CENTRE.lat);
+      });
+
+      it("shrinks as the map zooms in, and follows the centre", async () => {
+        const { adapter, controls, zoom } = await mounted();
+        const wide = adapter.getBounds();
+        adapter.setView({ zoom: zoom + 2 }, NO_ANIMATION);
+        await controls.settle();
+        const tight = adapter.getBounds();
+        expect(tight.east - tight.west).toBeLessThan(wide.east - wide.west);
+        expect(tight.north - tight.south).toBeLessThan(wide.north - wide.south);
+        adapter.setView({ center: { lat: 10, lng: 20 } }, NO_ANIMATION);
+        await controls.settle();
+        const moved = adapter.getBounds();
+        expect(moved.west).toBeLessThan(20);
+        expect(moved.east).toBeGreaterThan(20);
+      });
+    });
+
+    describe("image export", () => {
+      it("returns the map as a PNG blob, with credit text when given", async () => {
+        const { adapter } = await mounted();
+        const plain = await adapter.toImage();
+        expect(plain.type).toBe("image/png");
+        expect(plain.size).toBeGreaterThan(0);
+        const credited = await adapter.toImage({
+          attribution: "© Example contributors",
+        });
+        expect(credited.type).toBe("image/png");
+      });
+
+      it("rejects with an export-failed engine error when it cannot produce an image", async () => {
+        const { adapter, controls } = await mounted();
+        if (controls.failNextImage === undefined) {
+          return;
+        }
+        controls.failNextImage();
+        await expect(adapter.toImage()).rejects.toMatchObject({
+          name: "MapEngineError",
+          reason: "export-failed",
+        });
+        const again = await adapter.toImage();
+        expect(again.type).toBe("image/png");
+      });
+
+      it("rejects when the map is not mounted", async () => {
+        const subject = create();
+        live.push(subject.adapter);
+        await expect(subject.adapter.toImage()).rejects.toBeInstanceOf(
+          MapEngineError,
+        );
+      });
     });
   });
 }
+
+const LOOK: MapShapeLook = {
+  colour: "#0072b2",
+  fillOpacity: 0.55,
+  pattern: "solid",
+  dash: "solid",
+  width: 1.5,
+};
+
+const STYLED_AREAS: MapStyledShapes = {
+  geometry: "area",
+  shapes: [
+    {
+      id: "north",
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [18.3, -33.8],
+            [18.6, -33.8],
+            [18.6, -33.7],
+            [18.3, -33.8],
+          ],
+        ],
+      },
+      look: LOOK,
+      label: "North",
+    },
+    {
+      id: "south",
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [18.3, -34],
+            [18.6, -34],
+            [18.6, -33.85],
+            [18.3, -34],
+          ],
+        ],
+      },
+      look: { ...LOOK, colour: "#d55e00", pattern: "dots" },
+    },
+  ],
+  labelMinZoom: 3,
+};
+
+const STYLED_LINES: MapStyledShapes = {
+  geometry: "line",
+  shapes: [
+    {
+      id: "main",
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [18.3, -34],
+          [18.6, -33.8],
+        ],
+      },
+      look: { ...LOOK, dash: "dashed", width: 4 },
+    },
+  ],
+};
+
+const VECTOR_SOURCE = {
+  tiles: "https://vector.test/{z}/{x}/{y}.pbf",
+  minzoom: 0,
+  maxzoom: 14,
+} as const;
+
+const VECTOR: MapVectorTiles = {
+  source: VECTOR_SOURCE,
+  minzoom: 2,
+  maxzoom: 16,
+  layers: [
+    {
+      sourceLayer: "areas",
+      geometry: "area",
+      rule: {
+        kind: "category",
+        field: "kind",
+        cases: [{ value: "park", look: LOOK }],
+        fallback: { ...LOOK, colour: "#e69f00" },
+      },
+      label: { field: "name", minzoom: 6 },
+    },
+    {
+      sourceLayer: "borders",
+      geometry: "line",
+      rule: {
+        kind: "steps",
+        field: "rank",
+        steps: [
+          { min: 0, look: LOOK },
+          { min: 5, look: { ...LOOK, dash: "dashed", width: 3 } },
+        ],
+      },
+      minzoom: 4,
+    },
+  ],
+};
+
+const HEATMAP_STYLE = {
+  radius: 20,
+  intensity: 1,
+  opacity: 0.8,
+  ramp: ["#440154", "#21918c", "#fde725"],
+} as const;
+
+const HEATMAP_POINTS: MapHeatmap = {
+  source: {
+    kind: "points",
+    points: [
+      { position: CENTRE, weight: 3 },
+      { position: { lat: -33.95, lng: 18.5 } },
+    ],
+  },
+  style: HEATMAP_STYLE,
+};
+
+const HEATMAP_VECTOR: MapHeatmap = {
+  source: {
+    kind: "vector",
+    source: VECTOR_SOURCE,
+    sourceLayer: "events",
+    weightField: "size",
+  },
+  style: HEATMAP_STYLE,
+};
 
 const POINT_A: MapFeature = {
   id: "a",

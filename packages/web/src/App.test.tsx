@@ -200,6 +200,67 @@ describe("App data layers", () => {
     });
   });
 
+  describe("several features under one tap", () => {
+    async function openWithTwo() {
+      const services = servicesWithLayers();
+      services.fakes.layerSource.setFeatures("sample-points", [
+        samplePoint("a", { title: "Alpha" }),
+        samplePoint("b", { title: "Beta" }, [30, 40]),
+      ]);
+      services.fakes.url.write({
+        layers: { enabled: ["sample-points"], controls: {} },
+      });
+      await renderApp(services);
+      await settle();
+      return services;
+    }
+
+    it("opens a list to choose from, and each row opens its card", async () => {
+      const services = await openWithTwo();
+      act(() =>
+        adapter(services).simulateFeatureHits([
+          { layerId: "sample-points", featureId: "a" },
+          { layerId: "sample-points", featureId: "b" },
+        ]),
+      );
+      expect(sheet()).toHaveAttribute("data-state", "open");
+      const list = within(sheet()).getByTestId("feature-choices");
+      expect(within(list).getAllByTestId("feature-choices-row")).toHaveLength(
+        2,
+      );
+      fireEvent.click(within(list).getByRole("button", { name: /Beta/ }));
+      expect(
+        within(sheet()).getByRole("heading", { name: "Beta" }),
+      ).toBeInTheDocument();
+      fireEvent.click(within(sheet()).getByTestId("feature-card-back"));
+      expect(
+        within(sheet()).getByTestId("feature-choices"),
+      ).toBeInTheDocument();
+    });
+
+    it("opens the same list from the keyboard with I, and says when nothing is there", async () => {
+      const services = await openWithTwo();
+      fireEvent.keyDown(region(), { key: "i" });
+      expect(sheet()).toHaveAttribute("data-state", "closed");
+      await vi.waitFor(() =>
+        expect(polite()).toBe("No features at the centre of the map."),
+      );
+      act(() =>
+        adapter(services).simulateFeatureHits([
+          { layerId: "sample-points", featureId: "a" },
+          { layerId: "sample-points", featureId: "b" },
+        ]),
+      );
+      fireEvent.keyDown(region(), { key: "Escape" });
+      expect(sheet()).toHaveAttribute("data-state", "closed");
+      fireEvent.keyDown(region(), { key: "i" });
+      expect(sheet()).toHaveAttribute("data-state", "open");
+      expect(
+        within(sheet()).getByTestId("feature-choices-heading"),
+      ).toHaveTextContent("2 features here");
+    });
+  });
+
   it("ignores taps on points while measuring", async () => {
     const services = servicesWithLayers();
     services.fakes.layerSource.setFeatures("sample-points", [samplePoint("a")]);

@@ -84,12 +84,14 @@ export class RoutingError extends Error {
 
 /**
  * Why a map engine failed: it could not start without WebGL, it could not
- * load, or it `stopped` working after it had loaded.
+ * load, it `stopped` working after it had loaded, or `toImage` could not
+ * produce an image (`export-failed`).
  */
 export type MapEngineErrorReason =
   | "webgl-unavailable"
   | "load-failed"
-  | "stopped";
+  | "stopped"
+  | "export-failed";
 
 /**
  * The only error a map adapter rejects with when its engine cannot start, and

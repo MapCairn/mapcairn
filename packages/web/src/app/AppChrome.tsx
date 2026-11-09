@@ -1,4 +1,4 @@
-import { pressEscape } from "@karta/core";
+import { creditsLine, pressEscape } from "@karta/core";
 import {
   Attribution,
   DirectionsPanel,
@@ -206,6 +206,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               section={app.sheetSection}
               layers={app.layers}
               onShowOnMap={app.revealMap}
+              imageCredits={creditsLine(app.basemap, app.layers.credits)}
               pinCard={
                 app.pin ? (
                   <PinCard

@@ -71,6 +71,8 @@ export interface MapViewProps {
   readonly onPointerMove?: (latlng: LatLng | null) => void;
   /** The P key, which drops a pin at the centre of the map. */
   readonly onDropPinKey?: () => void;
+  /** The I key, which lists the features at the centre of the map. */
+  readonly onIdentifyKey?: () => void;
   /** The Escape key while the map has focus. */
   readonly onEscape?: () => void;
   /** Defaults to `grab`. */
@@ -101,7 +103,7 @@ const KEYBOARD_INSTRUCTIONS = MAP_KEY_HELP.map(
 function runKeyAction(
   adapter: MapAdapter,
   action: MapKeyAction,
-  props: Pick<MapViewProps, "onDropPinKey" | "onEscape"> & {
+  props: Pick<MapViewProps, "onDropPinKey" | "onIdentifyKey" | "onEscape"> & {
     readonly onUserZoom: () => void;
   },
 ): void {
@@ -125,6 +127,9 @@ function runKeyAction(
       break;
     case "dropPin":
       props.onDropPinKey?.();
+      break;
+    case "identify":
+      props.onIdentifyKey?.();
       break;
     case "escape":
       props.onEscape?.();
@@ -160,6 +165,7 @@ export function MapView({
   onLongPress,
   onPointerMove,
   onDropPinKey,
+  onIdentifyKey,
   onEscape,
   cursor = "grab",
   children,
@@ -229,6 +235,7 @@ export function MapView({
     event.preventDefault();
     runKeyAction(adapter, action, {
       onDropPinKey,
+      onIdentifyKey,
       onEscape,
       onUserZoom: notifyUserZoom,
     });

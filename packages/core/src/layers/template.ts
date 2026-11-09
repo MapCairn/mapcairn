@@ -12,6 +12,15 @@ export const ENGINE_PLACEHOLDERS: readonly string[] = [
   "bbox-epsg-3857",
 ];
 
+/** The four edges of the box a query layer's URL asks for. */
+export const QUERY_BOX: readonly string[] = ["west", "south", "east", "north"];
+
+/**
+ * Placeholders only a query layer's URL may use: the box and `limit`. They
+ * are filled from the view, so no control stands behind them.
+ */
+export const QUERY_PLACEHOLDERS: readonly string[] = [...QUERY_BOX, "limit"];
+
 /** One `{name}` or `{name|formatter}` in a template. */
 export interface TemplatePlaceholder {
   readonly name: string;

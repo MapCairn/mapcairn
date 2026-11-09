@@ -1,4 +1,5 @@
 import type { LayerDefinition } from "../layers/definition";
+import type { Bounds } from "./geometry";
 
 /** A decoded field value. Anything else in a response is dropped. */
 export type FieldValue = string | number | boolean | null;
@@ -40,8 +41,13 @@ export type ControlValues = Readonly<Record<string, string>>;
 
 /** What {@link LayerSource.load} needs. */
 export interface LayerLoadRequest {
-  /** A feed layer. Tile layers have nothing to load. */
+  /** A feed, query or heatmap layer. Tile layers have nothing to load. */
   readonly definition: LayerDefinition;
+  /**
+   * The box of the map a query layer asks for (see `queryWindow`). Required
+   * for a query layer and ignored for any other.
+   */
+  readonly area?: Bounds;
   /** Every control's value, already resolved (see `resolveControlValues`). */
   readonly controls: ControlValues;
   /** Today, as epoch milliseconds, for relative dates. */

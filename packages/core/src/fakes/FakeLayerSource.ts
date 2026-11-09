@@ -63,8 +63,11 @@ export class FakeLayerSource implements LayerSource {
   }
 
   async load(request: LayerLoadRequest): Promise<readonly LayerFeature[]> {
-    const { definition, controls, now, signal } = request;
-    this.requests.push({ ...request, url: feedUrl(definition, controls, now) });
+    const { definition, controls, now, signal, area } = request;
+    this.requests.push({
+      ...request,
+      url: feedUrl(definition, controls, now, area),
+    });
     await this.#wait(signal);
     const outcome = this.#outcomes.get(definition.id);
     if (outcome?.kind === "failure") {

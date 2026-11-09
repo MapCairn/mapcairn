@@ -53,6 +53,36 @@ export function announceLayerLoaded(name: string, count: number): string {
   return `${name}: ${formatNumber(count)} shown on the map.`;
 }
 
+/** The map image was handed to the browser to save. */
+export function announceImageSaved(): string {
+  return "Map image saved.";
+}
+
+/** The map image could not be made. */
+export function announceImageFailed(): string {
+  return "The map image could not be saved. Try again.";
+}
+
+/** The keyboard route found no feature at the centre of the map. */
+export function announceNoFeaturesHere(): string {
+  return "No features at the centre of the map.";
+}
+
+/** A tap or the keyboard found several features together, and a list opened to choose one. */
+export function announceFeaturesFound(count: number): string {
+  return `${formatNumber(count)} features here. Choose one from the list.`;
+}
+
+/** A query layer drew only the first of more features than it shows. */
+export function announceLayerCapped(name: string, shown: number): string {
+  return `${name}: showing the first ${formatNumber(shown)}. Zoom in to see more.`;
+}
+
+/** A query layer is too far out to ask for features. */
+export function announceLayerZoomIn(name: string): string {
+  return `${name}: zoom in to load this layer.`;
+}
+
 /** A tile layer was turned on. */
 export function announceLayerOn(name: string): string {
   return `${name} is on.`;

@@ -8,11 +8,16 @@ import type {
   MapClickEvent,
   MapEvents,
   MapFeature,
+  MapFeatureHit,
   MapFitOptions,
+  MapHeatmap,
   MapHostElement,
+  MapImageOptions,
   MapMountOptions,
   MapShapes,
+  MapStyledShapes,
   MapTileOverlay,
+  MapVectorTiles,
 } from "../ports/map";
 import {
   clampZoom,
@@ -63,7 +68,10 @@ type Handler = (payload: never) => void;
 type DataLayer =
   | { readonly kind: "features"; readonly features: readonly MapFeature[] }
   | { readonly kind: "tiles"; readonly overlay: MapTileOverlay }
-  | { readonly kind: "shapes"; readonly shapes: MapShapes };
+  | { readonly kind: "shapes"; readonly shapes: MapShapes }
+  | { readonly kind: "styled"; readonly layer: MapStyledShapes }
+  | { readonly kind: "vector"; readonly layer: MapVectorTiles }
+  | { readonly kind: "heatmap"; readonly heatmap: MapHeatmap };
 
 /**
  * A data layer as an engine draws it, lowest first, for tests and the map
@@ -80,13 +88,52 @@ export type DrawnLayer =
       readonly kind: "tiles";
       readonly tiles: string;
       readonly opacity: number;
+    }
+  | {
+      readonly id: string;
+      readonly kind: "styled";
+      readonly geometry: "area" | "line";
+      readonly count: number;
+    }
+  | {
+      readonly id: string;
+      readonly kind: "vector";
+      readonly tiles: string;
+      readonly sourceLayers: readonly string[];
+    }
+  | {
+      readonly id: string;
+      readonly kind: "heatmap";
+      readonly source: "points" | "vector";
+      /** The points drawn, or 0 for a vector source. */
+      readonly count: number;
     };
 
+/** Stacking order, lowest first: imagery, vector tiles, styled shapes, detail shapes, heatmaps, points. */
 const KIND_ORDER: Readonly<Record<DataLayer["kind"], number>> = {
   tiles: 0,
-  shapes: 1,
-  features: 2,
+  vector: 1,
+  styled: 2,
+  shapes: 3,
+  heatmap: 4,
+  features: 5,
 };
+
+function firstPosition(
+  geometry: MapStyledShapes["shapes"][number]["geometry"],
+): readonly [number, number] | null {
+  switch (geometry.type) {
+    case "Point":
+      return geometry.coordinates;
+    case "LineString":
+      return geometry.coordinates[0] ?? null;
+    case "MultiLineString":
+    case "Polygon":
+      return geometry.coordinates[0]?.[0] ?? null;
+    case "MultiPolygon":
+      return geometry.coordinates[0]?.[0]?.[0] ?? null;
+  }
+}
 
 function wrapBearing(degrees: number): number {
   return ((degrees % 360) + 360) % 360;
@@ -133,6 +180,10 @@ export class FakeMapAdapter implements MapAdapter {
   #destroyed = false;
   #listeners = new Map<keyof MapEvents, Set<Handler>>();
   #dataLayers = new Map<string, DataLayer>();
+  #hitsAtPointer: readonly MapFeatureHit[] = [];
+  #failNextImage = false;
+  /** The options of every `toImage` call, in order. */
+  readonly imageRequests: (MapImageOptions | undefined)[] = [];
 
   constructor(options: FakeMapAdapterOptions = {}) {
     this.#failMount = options.failMount;
@@ -325,11 +376,78 @@ export class FakeMapAdapter implements MapAdapter {
     this.#dataLayers.set(id, { kind: "shapes", shapes });
   }
 
+  setStyledShapes(id: string, layer: MapStyledShapes): void {
+    this.#dataLayers.delete(id);
+    this.#dataLayers.set(id, { kind: "styled", layer });
+  }
+
+  setVectorLayer(id: string, layer: MapVectorTiles): void {
+    this.#dataLayers.delete(id);
+    this.#dataLayers.set(id, { kind: "vector", layer });
+  }
+
+  setHeatmapLayer(id: string, heatmap: MapHeatmap): void {
+    this.#dataLayers.delete(id);
+    this.#dataLayers.set(id, { kind: "heatmap", heatmap });
+  }
+
   removeLayer(id: string): void {
     this.#dataLayers.delete(id);
   }
 
-  /** The data layers drawn, lowest first: tiles, then shapes, then points. */
+  /**
+   * The features most recently scripted under the pointer with
+   * `simulateFeatureHits` or `simulateFeatureTap`, still drawn, in the order
+   * scripted. A real engine finds them by position; the fake cannot, so a
+   * test says what is there.
+   */
+  featuresAt(_point: PixelPoint): readonly MapFeatureHit[] {
+    return this.#hitsAtPointer.filter((hit) => this.#hasFeature(hit));
+  }
+
+  getBounds(): Bounds {
+    const { width, height } = this.#hostSize;
+    const corners = [
+      this.unproject({ x: 0, y: 0 }),
+      this.unproject({ x: width, y: 0 }),
+      this.unproject({ x: 0, y: height }),
+      this.unproject({ x: width, y: height }),
+    ];
+    const lats = corners.map((corner) => corner.lat);
+    const lngs = corners.map((corner) => corner.lng);
+    return {
+      west: Math.min(...lngs),
+      south: Math.min(...lats),
+      east: Math.max(...lngs),
+      north: Math.max(...lats),
+    };
+  }
+
+  async toImage(options?: MapImageOptions): Promise<Blob> {
+    this.imageRequests.push(options);
+    if (this.#failNextImage) {
+      this.#failNextImage = false;
+      throw new MapEngineError(
+        "export-failed",
+        "The fake map could not produce an image.",
+      );
+    }
+    if (this.#host === null) {
+      throw new MapEngineError("export-failed", "The map is not mounted.");
+    }
+    // The PNG signature, so the blob is recognisably an image without an encoder.
+    return new Blob(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      { type: "image/png" },
+    );
+  }
+
+  /** Makes the next `toImage` reject with an `export-failed` `MapEngineError`. */
+  failNextImage(): void {
+    this.#failNextImage = true;
+  }
+
+  /** The data layers drawn, lowest first: imagery, vector tiles, styled shapes, detail shapes, heatmaps, then points. */
   drawnLayers(): DrawnLayer[] {
     return [...this.#dataLayers]
       .sort(([, a], [, b]) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind])
@@ -340,6 +458,31 @@ export class FakeMapAdapter implements MapAdapter {
         if (layer.kind === "shapes") {
           return { id, kind: "shapes", count: layer.shapes.geometries.length };
         }
+        if (layer.kind === "styled") {
+          return {
+            id,
+            kind: "styled",
+            geometry: layer.layer.geometry,
+            count: layer.layer.shapes.length,
+          };
+        }
+        if (layer.kind === "vector") {
+          return {
+            id,
+            kind: "vector",
+            tiles: layer.layer.source.tiles,
+            sourceLayers: layer.layer.layers.map((item) => item.sourceLayer),
+          };
+        }
+        if (layer.kind === "heatmap") {
+          const { source } = layer.heatmap;
+          return {
+            id,
+            kind: "heatmap",
+            source: source.kind,
+            count: source.kind === "points" ? source.points.length : 0,
+          };
+        }
         return {
           id,
           kind: "tiles",
@@ -349,6 +492,35 @@ export class FakeMapAdapter implements MapAdapter {
       });
   }
 
+  /** The polygons or lines drawn for a styled layer, or undefined when none is drawn under `id`. */
+  styledShapesOf(id: string): MapStyledShapes | undefined {
+    const layer = this.#dataLayers.get(id);
+    return layer?.kind === "styled" ? layer.layer : undefined;
+  }
+
+  /** The vector tile layer drawn under `id`, or undefined. */
+  vectorLayerOf(id: string): MapVectorTiles | undefined {
+    const layer = this.#dataLayers.get(id);
+    return layer?.kind === "vector" ? layer.layer : undefined;
+  }
+
+  /** The heatmap drawn under `id`, or undefined. */
+  heatmapOf(id: string): MapHeatmap | undefined {
+    const layer = this.#dataLayers.get(id);
+    return layer?.kind === "heatmap" ? layer.heatmap : undefined;
+  }
+
+  #hasFeature(hit: MapFeatureHit): boolean {
+    const layer = this.#dataLayers.get(hit.layerId);
+    if (layer?.kind === "features") {
+      return layer.features.some((feature) => feature.id === hit.featureId);
+    }
+    if (layer?.kind === "styled") {
+      return layer.layer.shapes.some((shape) => shape.id === hit.featureId);
+    }
+    return false;
+  }
+
   /** The points drawn for a feed layer, or undefined when none is drawn under `id`. */
   featuresOf(id: string): readonly MapFeature[] | undefined {
     const layer = this.#dataLayers.get(id);
@@ -356,16 +528,54 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   /**
-   * Emits `featureTap` and then `click` for a tap on a drawn point, as an
-   * engine does. A point that is not drawn gets nothing.
+   * Emits `featureTap` and then `click` for a tap on a drawn point, polygon or
+   * line, as an engine does. A feature that is not drawn gets nothing.
    */
   simulateFeatureTap(layerId: string, featureId: string): void {
-    const feature = this.featuresOf(layerId)?.find((f) => f.id === featureId);
-    if (!feature) {
+    this.simulateFeatureHits([{ layerId, featureId }]);
+  }
+
+  /**
+   * Emits `featureTap` for a tap that lands on several features at once,
+   * topmost first, and then `click`. Only features that are drawn count, each
+   * once; with none drawn nothing is emitted. They are also what
+   * `featuresAt` then reports.
+   */
+  simulateFeatureHits(hits: readonly MapFeatureHit[]): void {
+    const seen = new Set<string>();
+    const drawn = hits.filter((hit) => {
+      const key = `${hit.layerId}\u0000${hit.featureId}`;
+      if (seen.has(key) || !this.#hasFeature(hit)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+    this.#hitsAtPointer = drawn;
+    const [top] = drawn;
+    if (!top) {
       return;
     }
-    this.#emit("featureTap", { layerId, featureId });
-    this.simulateClick(feature.position);
+    this.#emit("featureTap", { ...top, hits: drawn });
+    this.simulateClick(this.#centreOf(top));
+  }
+
+  #centreOf(hit: MapFeatureHit): LatLng {
+    const layer = this.#dataLayers.get(hit.layerId);
+    if (layer?.kind === "features") {
+      const feature = layer.features.find((f) => f.id === hit.featureId);
+      if (feature) {
+        return feature.position;
+      }
+    }
+    if (layer?.kind === "styled") {
+      const shape = layer.layer.shapes.find((s) => s.id === hit.featureId);
+      const first = shape ? firstPosition(shape.geometry) : null;
+      if (first) {
+        return { lng: first[0], lat: first[1] };
+      }
+    }
+    return this.#view.center;
   }
 
   /** Emits a `click` at a position, with the given `features`. */

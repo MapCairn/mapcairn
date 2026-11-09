@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BASEMAPS,
   buildAttribution,
+  creditsLine,
   DEFAULT_BASEMAP_BACKGROUND,
   DEFAULT_BASEMAP_ID,
   getBasemap,
@@ -173,6 +174,16 @@ describe("DEFAULT_BASEMAP_BACKGROUND", () => {
   it("is the Liberty style's background colour, in the style's own format", () => {
     expect(DEFAULT_BASEMAP_BACKGROUND).toMatch(/^#[0-9a-f]{6}$/);
     expect(DEFAULT_BASEMAP_BACKGROUND).toBe("#f8f4f0");
+  });
+});
+
+describe("creditsLine", () => {
+  it("joins the basemap's credits, MapLibre's and the layers' on one line", () => {
+    const osm = resolveBasemap("osm");
+    expect(creditsLine(osm, [{ text: "Sample provider" }])).toBe(
+      "© OpenStreetMap contributors | MapLibre | Sample provider",
+    );
+    expect(creditsLine(osm)).toBe("© OpenStreetMap contributors | MapLibre");
   });
 });
 

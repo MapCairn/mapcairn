@@ -1,42 +1,34 @@
 import { isIsoDate } from "./controls";
-import type { DecoderRegistry } from "./decoders";
 import type { LayerDefinition } from "./definition";
-import type { FormatterRegistry } from "./formatters";
-import { isCategoricalSlot, isOrdinalSlot, isPaletteSlot } from "./palette";
-import { ENGINE_PLACEHOLDERS, parseTemplate } from "./template";
+import { isCategoricalSlot } from "./palette";
+import { parseTemplate } from "./template";
+import {
+  checkHeatmapLayer,
+  checkQuerySource,
+  checkRange,
+  checkVectorTiles,
+} from "./validateKinds";
+import { checkShapeStyle } from "./validateShapes";
+import {
+  checkColourSlot,
+  checkFields,
+  checkTemplate,
+  checkUrl,
+  ID,
+  isHttpsOrigin,
+  isHttpsUrl,
+  isObject,
+  isText,
+  type Json,
+  list,
+  MAX_RADIUS,
+  OPTION_VALUE,
+  Problems,
+  SHAPES,
+  type ValidationOptions,
+} from "./validateSupport";
 
-/** What validation checks names against. */
-export interface ValidationOptions {
-  readonly decoders: DecoderRegistry;
-  readonly formatters: FormatterRegistry;
-}
-
-type Json = Readonly<Record<string, unknown>>;
-
-const ID = /^[a-z][a-z0-9-]*$/;
-const OPTION_VALUE = /^[a-z0-9._-]+$/;
-const SHAPES = ["circle", "square", "triangle", "diamond"];
-const MAX_RADIUS = 24;
-
-function isObject(value: unknown): value is Json {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isText(value: unknown): value is string {
-  return typeof value === "string" && value.trim() !== "";
-}
-
-function isHttpsUrl(value: unknown): boolean {
-  return (
-    typeof value === "string" &&
-    URL.canParse(value) &&
-    new URL(value).protocol === "https:"
-  );
-}
-
-function isHttpsOrigin(value: unknown): boolean {
-  return isHttpsUrl(value) && new URL(value as string).origin === value;
-}
+export type { ValidationOptions } from "./validateSupport";
 
 function isDateBound(value: unknown): boolean {
   if (isObject(value)) {
@@ -46,54 +38,6 @@ function isDateBound(value: unknown): boolean {
     );
   }
   return isIsoDate(value);
-}
-
-function list(value: unknown): readonly unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-/** Collects problems as `path: message` lines. */
-class Problems {
-  readonly lines: string[] = [];
-
-  add(path: string, message: string): void {
-    this.lines.push(`${path}: ${message}`);
-  }
-
-  text(value: unknown, path: string): void {
-    if (!isText(value)) {
-      this.add(path, "must be non-empty text");
-    }
-  }
-
-  list(value: unknown, path: string, allowEmpty = false): value is unknown[] {
-    if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) {
-      this.add(
-        path,
-        allowEmpty ? "must be a list" : "must be a non-empty list",
-      );
-      return false;
-    }
-    return true;
-  }
-
-  object(value: unknown, path: string): value is Json {
-    if (!isObject(value)) {
-      this.add(path, "must be an object");
-      return false;
-    }
-    return true;
-  }
-
-  unique(values: readonly unknown[], path: (index: number) => string): void {
-    const seen = new Set<unknown>();
-    values.forEach((value, index) => {
-      if (seen.has(value)) {
-        this.add(path(index), `duplicate ${String(value)}`);
-      }
-      seen.add(value);
-    });
-  }
 }
 
 /** The values a segmented or switch control can take, or null for others. */
@@ -172,6 +116,7 @@ const CONTROL_CHECKS: Readonly<
   switch: checkSwitch,
   date: checkDate,
   opacity: checkOpacity,
+  range: checkRange,
 };
 
 function checkControl(
@@ -193,7 +138,10 @@ function checkControl(
   if (check) {
     check(problems, control, path);
   } else {
-    problems.add(`${path}.kind`, "must be segmented, switch, date or opacity");
+    problems.add(
+      `${path}.kind`,
+      "must be segmented, switch, date, opacity or range",
+    );
   }
   if (control.enabledWhen !== undefined) {
     checkCondition(
@@ -279,63 +227,6 @@ function checkVariables(
       }
     }
   });
-}
-
-/** Checks a URL template: https, and every placeholder known. */
-function checkUrl(
-  problems: Problems,
-  url: unknown,
-  path: string,
-  known: readonly string[],
-  allowEngine: boolean,
-): void {
-  if (!isText(url) || !isHttpsUrl(url.replace(/[{}]/g, ""))) {
-    problems.add(path, "must be an https URL template");
-    return;
-  }
-  for (const { name } of parseTemplate(url)) {
-    const engine = ENGINE_PLACEHOLDERS.includes(name);
-    if (engine ? !allowEngine : !known.includes(name)) {
-      problems.add(path, `{${name}} has no control or variable`);
-    }
-  }
-}
-
-/** Checks a card or list template against the decoded fields and formatters. */
-function checkTemplate(
-  problems: Problems,
-  template: unknown,
-  path: string,
-  fields: readonly string[],
-  options: ValidationOptions,
-): void {
-  if (!isText(template)) {
-    problems.add(path, "must be non-empty text");
-    return;
-  }
-  for (const { name, formatter } of parseTemplate(template)) {
-    if (!fields.includes(name)) {
-      problems.add(path, `{${name}} is not a field`);
-    }
-    if (formatter && !options.formatters.has(formatter)) {
-      problems.add(path, `formatter ${formatter} is not registered`);
-    }
-  }
-}
-
-function checkColourSlot(
-  problems: Problems,
-  value: unknown,
-  path: string,
-  kind?: "categorical" | "ordinal",
-): void {
-  if (!isPaletteSlot(value)) {
-    problems.add(path, "must name a palette colour");
-  } else if (kind === "ordinal" && !isOrdinalSlot(value)) {
-    problems.add(path, "use an ordinal colour for ordered steps");
-  } else if (kind === "categorical" && !isCategoricalSlot(value)) {
-    problems.add(path, "use a categorical colour for categories");
-  }
 }
 
 /** Whether a card names a field, so the words carry what the colour does. */
@@ -480,9 +371,14 @@ function checkStyle(
   problems: Problems,
   definition: Json,
   fields: readonly string[],
+  options: ValidationOptions,
 ): void {
   const style = definition.style;
   if (!problems.object(style, "style")) {
+    return;
+  }
+  if (style.kind === "shapes") {
+    checkShapeStyle(problems, style, fields, options);
     return;
   }
   if (style.shape !== undefined && !SHAPES.includes(style.shape as string)) {
@@ -517,25 +413,6 @@ function checkStyleField(
   if (!fields.includes(field as string)) {
     problems.add("style.colour.field", "is not a field");
   }
-}
-
-/** Checks the field map and returns the decoded field names. */
-function checkFields(problems: Problems, value: unknown): string[] {
-  if (!problems.object(value, "source.fields")) {
-    return [];
-  }
-  const fields = Object.keys(value);
-  for (const required of ["id", "title"]) {
-    if (!fields.includes(required)) {
-      problems.add(`source.fields.${required}`, "is required");
-    }
-  }
-  for (const [name, path] of Object.entries(value)) {
-    if (!isText(path)) {
-      problems.add(`source.fields.${name}`, "must be a dotted path");
-    }
-  }
-  return fields;
 }
 
 function checkCard(
@@ -635,14 +512,18 @@ function checkDetail(
   problems.text(detail.dataCost, "detail.dataCost");
 }
 
-function checkFeed(
+/** Checks a feed or query source, and returns the decoded field names. */
+function checkFeedSource(
   problems: Problems,
-  definition: Json,
   source: Json,
   known: readonly string[],
   options: ValidationOptions,
-): void {
-  checkUrl(problems, source.url, "source.url", known, false);
+): string[] {
+  if (source.kind === "query") {
+    checkQuerySource(problems, source, known);
+  } else {
+    checkUrl(problems, source.url, "source.url", known);
+  }
   if (!options.decoders.has(source.decoder as string)) {
     problems.add("source.decoder", "is not a registered decoder");
   }
@@ -650,11 +531,17 @@ function checkFeed(
   const { cacheSeconds } = source;
   if (
     cacheSeconds !== undefined &&
-    (typeof cacheSeconds !== "number" ||
+    (source.kind === "query" ||
+      typeof cacheSeconds !== "number" ||
       cacheSeconds < 0 ||
       cacheSeconds > 3600)
   ) {
-    problems.add("source.cacheSeconds", "must be from 0 to 3600 seconds");
+    problems.add(
+      "source.cacheSeconds",
+      source.kind === "query"
+        ? "is for feeds: a query changes with the view"
+        : "must be from 0 to 3600 seconds",
+    );
   }
   const filter = source.filter;
   if (
@@ -665,7 +552,18 @@ function checkFeed(
   ) {
     problems.add("source.filter", "must name a field and at least one value");
   }
-  checkStyle(problems, definition, fields);
+  return fields;
+}
+
+function checkFeed(
+  problems: Problems,
+  definition: Json,
+  source: Json,
+  known: readonly string[],
+  options: ValidationOptions,
+): void {
+  const fields = checkFeedSource(problems, source, known, options);
+  checkStyle(problems, definition, fields, options);
   checkCard(problems, definition.card, fields, options);
   checkList(problems, definition.list, fields, options);
   problems.text(definition.emptyText, "emptyText");
@@ -678,7 +576,7 @@ function checkTiles(
   source: Json,
   known: readonly string[],
 ): void {
-  checkUrl(problems, source.tiles, "source.tiles", known, true);
+  checkUrl(problems, source.tiles, "source.tiles", known, { engine: true });
   if (source.tileSize !== 256 && source.tileSize !== 512) {
     problems.add("source.tileSize", "must be 256 or 512");
   }
@@ -768,12 +666,23 @@ export function validateLayerDefinition(
   if (!problems.object(source, "source")) {
     return problems.lines;
   }
-  if (source.kind === "feed") {
+  const isHeatmap = value.heatmap !== undefined;
+  const feeds = source.kind === "feed" || source.kind === "query";
+  if (isHeatmap) {
+    if (feeds) {
+      const fields = checkFeedSource(problems, source, known, options);
+      checkHeatmapLayer(problems, value, fields, controls);
+    } else {
+      problems.add("source.kind", "a heatmap needs a feed or query source");
+    }
+  } else if (feeds) {
     checkFeed(problems, value, source, known, options);
   } else if (source.kind === "tiles") {
     checkTiles(problems, value, source, known);
+  } else if (source.kind === "vector-tiles") {
+    checkVectorTiles(problems, value, source, known, controls, options);
   } else {
-    problems.add("source.kind", "must be feed or tiles");
+    problems.add("source.kind", "must be feed, query, tiles or vector-tiles");
   }
   return problems.lines;
 }

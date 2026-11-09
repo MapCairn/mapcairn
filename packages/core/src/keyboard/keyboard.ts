@@ -6,6 +6,7 @@ export type MapKeyAction =
   | { type: "rotate"; degrees: number }
   | { type: "resetBearing" }
   | { type: "dropPin" }
+  | { type: "identify" }
   | { type: "escape" };
 
 /** The parts of a keyboard event the map shortcuts read. */
@@ -78,6 +79,9 @@ export function mapKeyAction(event: MapKeyEvent): MapKeyAction | null {
     case "p":
     case "P":
       return { type: "dropPin" };
+    case "i":
+    case "I":
+      return { type: "identify" };
     case "Escape":
       return { type: "escape" };
     default:
@@ -99,5 +103,6 @@ export const MAP_KEY_HELP: readonly MapKeyHelpEntry[] = [
   { keys: "Plus or minus", description: "Zoom in or out" },
   { keys: "Home or 0", description: "Point the map north again" },
   { keys: "P", description: "Drop a pin at the centre of the map" },
+  { keys: "I", description: "List the features at the centre of the map" },
   { keys: "Escape", description: "Close the open panel" },
 ];

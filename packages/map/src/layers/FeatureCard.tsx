@@ -1,17 +1,16 @@
 import {
-  evaluatePointStyle,
   type FeedLayerDefinition,
   type FormatterRegistry,
   formatTemplate,
 } from "@karta/core";
-import { Crosshair, Layers, TriangleAlert, X } from "lucide-react";
+import { ArrowLeft, Crosshair, Layers, TriangleAlert, X } from "lucide-react";
 import { type Ref, useId } from "react";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
+import { FeatureGlyph, featureClass } from "./FeatureGlyph";
 import * as styles from "./Layers.css";
-import { MarkerGlyph } from "./MarkerGlyph";
 import type { DataLayers, SelectedFeature } from "./useDataLayers";
 
 /** Props for {@link FeatureCard}. */
@@ -55,7 +54,6 @@ export function FeatureCard({
   const fill = (template: string) =>
     formatTemplate(template, feature.fields, formatters, context);
   const title = fill(definition.card.title) ?? definition.name;
-  const marker = evaluatePointStyle(definition.style, feature.fields);
   const lines = definition.card.lines
     .map(fill)
     .filter((line): line is string => line !== null && line.trim() !== "");
@@ -98,8 +96,12 @@ export function FeatureCard({
       </div>
       <p className={styles.muted}>{definition.name}</p>
       <p className={styles.cardLevel}>
-        <MarkerGlyph shape={marker.shape} colour={marker.colour} radius={6} />
-        {marker.label}
+        <FeatureGlyph
+          definition={definition}
+          fields={feature.fields}
+          radius={6}
+        />
+        {featureClass(definition, feature.fields)}
       </p>
       {lines.map((line, index) => (
         // Lines come from the definition in a fixed order.
@@ -127,6 +129,16 @@ export function FeatureCard({
         </p>
       ) : null}
       <div className={styles.cardActions}>
+        {layers.choices ? (
+          <Button
+            variant="quiet"
+            icon={ArrowLeft}
+            data-testid="feature-card-back"
+            onClick={() => layers.backToChoices({ focus: true })}
+          >
+            Back to list
+          </Button>
+        ) : null}
         <Button
           variant="secondary"
           icon={Crosshair}

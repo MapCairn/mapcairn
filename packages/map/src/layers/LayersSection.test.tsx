@@ -2,10 +2,17 @@ import {
   createFakeServices,
   FakeMapAdapter,
   type LayerDefinition,
-  type LayerFeature,
   SAMPLE_ALERT_LAYER,
+  SAMPLE_AREA_LAYER,
+  SAMPLE_FEED_LAYER,
+  SAMPLE_HEATMAP_LAYER,
   SAMPLE_LAYERS,
+  SAMPLE_LINE_LAYER,
+  SAMPLE_QUERY_LAYER,
+  SAMPLE_VECTOR_LAYER,
   StaticLayerRegistry,
+  sampleArea,
+  sampleLine,
   samplePoint,
 } from "@karta/core";
 import {
@@ -347,31 +354,250 @@ describe("LayersSection", () => {
     );
   });
 
-  it("shows a feature that is not a point without moving the map", async () => {
-    const { source, adapter, onShowOnMap } = setup();
-    const area: LayerFeature = {
-      ...samplePoint("zone", { title: "Zone" }),
-      geometry: {
-        type: "Polygon",
-        coordinates: [
-          [
-            [0, 0],
-            [1, 0],
-            [1, 1],
-            [0, 0],
-          ],
-        ],
-      },
-    };
-    source.setFeatures("sample-points", [area]);
-    toggle("sample-points", "Sample points");
-    const before = adapter.getView();
+  it("fits the map to a polygon when it is shown, and keeps the whole shape in view", async () => {
+    const { source, adapter, onShowOnMap } = setup([SAMPLE_AREA_LAYER]);
+    source.setFeatures("sample-areas", [
+      sampleArea("zone", { title: "Zone", density: 10 }, [2.35, 48.85], 2),
+    ]);
+    toggle("sample-areas", "Sample areas");
     fireEvent.click(await screen.findByTestId("layer-list-row"));
-    expect(adapter.getView()).toEqual(before);
+    const view = adapter.getView();
+    expect(view.center.lng).toBeCloseTo(2.35, 3);
+    expect(view.center.lat).toBeCloseTo(48.85, 3);
+    // Four degrees across fits in a window, so the fit is a regional zoom.
+    expect(view.zoom).toBeGreaterThan(3);
+    expect(view.zoom).toBeLessThan(8);
+    const bounds = adapter.getBounds();
+    expect(bounds.west).toBeLessThanOrEqual(0.35);
+    expect(bounds.east).toBeGreaterThanOrEqual(4.35);
     expect(onShowOnMap).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("feature-card-heading")).toHaveTextContent(
       "Zone",
     );
+    expect(screen.getByTestId("feature-card")).toHaveTextContent(
+      "Density 10 per km²",
+    );
+  });
+
+  it("draws an area layer's key from its style: words, hatching and the outline each class has", async () => {
+    setup([SAMPLE_AREA_LAYER]);
+    toggle("sample-areas", "Sample areas");
+    const key = await screen.findByTestId("layer-legend-sample-areas");
+    expect(within(key).getAllByRole("listitem")).toHaveLength(3);
+    expect(key).toHaveTextContent("Up to 100 per km²");
+    expect(key).toHaveTextContent("200 per km² and above");
+    expect(
+      [...key.querySelectorAll("svg")].map((svg) =>
+        svg.getAttribute("data-pattern"),
+      ),
+    ).toEqual([null, "dots", "crosshatch"]);
+  });
+
+  it("tells a line layer's classes apart by width and dash as well as colour", async () => {
+    setup([SAMPLE_LINE_LAYER]);
+    toggle("sample-lines", "Sample lines");
+    const key = await screen.findByTestId("layer-legend-sample-lines");
+    const lines = [...key.querySelectorAll("[data-part='line']")];
+    expect(lines.map((line) => line.getAttribute("stroke-width"))).toEqual([
+      "5",
+      "3",
+      "2.5",
+    ]);
+    expect(lines.map((line) => line.getAttribute("stroke-dasharray"))).toEqual([
+      null,
+      "4 3",
+      "1 3",
+    ]);
+  });
+
+  it("names a polygon's class on its card, with the same swatch as the key", async () => {
+    const { source } = setup([SAMPLE_AREA_LAYER]);
+    source.setFeatures("sample-areas", [
+      sampleArea("zone", { title: "Zone", density: 150 }),
+    ]);
+    toggle("sample-areas", "Sample areas");
+    fireEvent.click(await screen.findByTestId("layer-list-row"));
+    const card = screen.getByTestId("feature-card");
+    expect(card).toHaveTextContent("100 to 200 per km²");
+    expect(card.querySelector("svg[data-pattern]")).toHaveAttribute(
+      "data-pattern",
+      "dots",
+    );
+  });
+
+  describe("layer kinds", () => {
+    it("offers a heatmap's radius, intensity and opacity, and names its density steps in words", async () => {
+      const { source, layers } = setup([SAMPLE_HEATMAP_LAYER]);
+      source.setFeatures("sample-heat", [samplePoint("a"), samplePoint("b")]);
+      toggle("sample-heat", "Sample density");
+      await screen.findByTestId("layer-legend-sample-heat");
+      const key = screen.getByTestId("layer-legend-sample-heat");
+      expect(
+        within(key)
+          .getAllByRole("listitem")
+          .map((entry) => entry.textContent),
+      ).toEqual(["Sparse", "Moderate", "Dense"]);
+      const radius = screen.getByTestId("layer-control-sample-heat-radius");
+      expect(radius).toHaveTextContent("Radius");
+      expect(radius).toHaveTextContent("20 px");
+      fireEvent.keyDown(within(radius).getByRole("slider"), {
+        key: "ArrowRight",
+      });
+      await waitFor(() =>
+        expect(layers().layers[0]?.controls.radius).toBe("22"),
+      );
+      expect(screen.getByTestId("layer-status-sample-heat")).toHaveTextContent(
+        "2 shown",
+      );
+      // A heatmap has no features to list or open.
+      expect(screen.queryByTestId("layer-list-sample-heat")).toBeNull();
+    });
+
+    it("lists a vector tile layer's source layers in its key, with no list", () => {
+      setup([SAMPLE_VECTOR_LAYER]);
+      toggle("sample-districts", "Sample districts");
+      const key = screen.getByTestId("layer-legend-sample-districts");
+      expect(within(key).getAllByRole("listitem")).toHaveLength(8);
+      expect(key).toHaveTextContent("Major road");
+      expect(key).toHaveTextContent("Many events");
+      expect(screen.queryByTestId("layer-list-sample-districts")).toBeNull();
+    });
+
+    it("says to zoom in below a query layer's zoom, and when it shows only the first", async () => {
+      const { source, layers, adapter } = setup([SAMPLE_QUERY_LAYER]);
+      toggle("sample-query", "Sample query");
+      act(() =>
+        layers().setView({ west: 0, south: 0, east: 50, north: 50 }, 3),
+      );
+      expect(screen.getByTestId("layer-status-sample-query")).toHaveTextContent(
+        "Zoom in to load this layer.",
+      );
+      source.setFeatures("sample-query", [
+        samplePoint("a"),
+        samplePoint("b"),
+        samplePoint("c"),
+        samplePoint("d"),
+      ]);
+      act(() => adapter.setView({ zoom: 12 }));
+      act(() =>
+        layers().setView(
+          { west: 2.2, south: 48.8, east: 2.5, north: 48.95 },
+          12,
+        ),
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("layer-status-sample-query"),
+        ).toHaveTextContent("Showing the first 3. Zoom in to see more."),
+      );
+    });
+  });
+
+  describe("several features found together", () => {
+    async function twoFeatures() {
+      const view = setup([SAMPLE_FEED_LAYER, SAMPLE_AREA_LAYER]);
+      view.source.setFeatures("sample-points", [
+        samplePoint("a", { title: "Point A", value: 4 }),
+      ]);
+      view.source.setFeatures("sample-areas", [
+        sampleArea("zone", { title: "Zone", density: 150 }),
+      ]);
+      toggle("sample-points", "Sample points");
+      toggle("sample-areas", "Sample areas");
+      await waitFor(() =>
+        expect(view.layers().layers[1]?.features).toHaveLength(1),
+      );
+      await waitFor(() =>
+        expect(view.layers().layers[0]?.features).toHaveLength(1),
+      );
+      act(() =>
+        view.layers().choose(
+          [
+            { layerId: "sample-points", featureId: "a" },
+            { layerId: "sample-areas", featureId: "zone" },
+          ],
+          { focus: true },
+        ),
+      );
+      return view;
+    }
+
+    it("shows a list with each feature and its layer, and focuses its heading", async () => {
+      await twoFeatures();
+      const list = await screen.findByTestId("feature-choices");
+      expect(within(list).getByRole("heading")).toHaveTextContent(
+        "2 features here",
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("feature-choices-heading")).toHaveFocus(),
+      );
+      const rows = within(list).getAllByTestId("feature-choices-row");
+      expect(rows[0]).toHaveTextContent("Point A");
+      expect(rows[0]).toHaveTextContent("Sample points");
+      expect(rows[1]).toHaveTextContent("Zone");
+      expect(rows[1]).toHaveTextContent("Sample areas");
+      expect(screen.queryByTestId("feature-card")).toBeNull();
+    });
+
+    it("opens a row's card with a way back to the list, and the card takes focus", async () => {
+      await twoFeatures();
+      fireEvent.click(
+        within(await screen.findByTestId("feature-choices")).getAllByTestId(
+          "feature-choices-row",
+        )[1] as HTMLElement,
+      );
+      expect(screen.getByTestId("feature-card-heading")).toHaveTextContent(
+        "Zone",
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("feature-card-heading")).toHaveFocus(),
+      );
+      expect(screen.queryByTestId("feature-choices")).toBeNull();
+      fireEvent.click(screen.getByTestId("feature-card-back"));
+      expect(screen.queryByTestId("feature-card")).toBeNull();
+      expect(await screen.findByTestId("feature-choices")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByTestId("feature-choices-heading")).toHaveFocus(),
+      );
+    });
+
+    it("offers no way back for a card opened on its own, and closes the list from its button", async () => {
+      const view = await twoFeatures();
+      fireEvent.click(screen.getByTestId("feature-choices-close"));
+      expect(screen.queryByTestId("feature-choices")).toBeNull();
+      act(() => view.layers().select("sample-points", "a"));
+      expect(screen.queryByTestId("feature-card-back")).toBeNull();
+    });
+
+    it("drops a layer's features from the list when it is turned off", async () => {
+      await twoFeatures();
+      toggle("sample-areas", "Sample areas");
+      // One feature left is still a list until it is dealt with, with only what remains.
+      expect(
+        within(screen.getByTestId("feature-choices")).getAllByTestId(
+          "feature-choices-row",
+        ),
+      ).toHaveLength(1);
+    });
+  });
+
+  it("fits a line the same way, from end to end", async () => {
+    const { source, adapter } = setup([SAMPLE_LINE_LAYER]);
+    source.setFeatures("sample-lines", [
+      sampleLine(
+        "route",
+        { title: "Route", kind: "main" },
+        [2.35, 48.85],
+        [4.83, 45.76],
+      ),
+    ]);
+    toggle("sample-lines", "Sample lines");
+    fireEvent.click(await screen.findByTestId("layer-list-row"));
+    const bounds = adapter.getBounds();
+    expect(bounds.west).toBeLessThanOrEqual(2.35);
+    expect(bounds.east).toBeGreaterThanOrEqual(4.83);
+    expect(bounds.south).toBeLessThanOrEqual(45.76);
+    expect(bounds.north).toBeGreaterThanOrEqual(48.85);
   });
 
   it("names a feature with no title by its layer, on the card and in the announcement", async () => {

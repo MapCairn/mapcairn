@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useRef } from "react";
 import { type DataLayers, LayersSection } from "../../layers";
 import { usePreferences } from "../../services";
 import { BasemapPicker } from "../BasemapPicker";
+import { ExportSection } from "../ExportSection";
 import { HelpSection } from "../HelpSection";
 import { PinSection } from "../PinSection";
 import { Section } from "../Section";
@@ -35,6 +36,8 @@ export interface SheetContentProps {
   readonly layers?: DataLayers;
   /** Called after "Show on map" in the Layers section, so the host can make room for the map. */
   readonly onShowOnMap?: () => void;
+  /** The credits drawn into a saved map image (see `creditsLine`). */
+  readonly imageCredits?: string;
   /** Where the privacy policy is. Defaults to `/privacy`. */
   readonly privacyHref?: string;
 }
@@ -53,6 +56,7 @@ export function SheetContent({
   pinCard,
   layers,
   onShowOnMap,
+  imageCredits,
   privacyHref,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
@@ -104,6 +108,7 @@ export function SheetContent({
           onShowOnMap={onShowOnMap}
         />
       ) : null}
+      <ExportSection credits={imageCredits} />
       <SettingsSection
         privacyHref={privacyHref}
         headingRef={headingRef("settings")}

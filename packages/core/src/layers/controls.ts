@@ -69,6 +69,15 @@ function resolveValue(
       return value === "true" || value === "false" ? value : undefined;
     case "date":
       return resolveDate(control, value, now);
+    case "range": {
+      const number = Number(value);
+      return value.trim() !== "" &&
+        Number.isFinite(number) &&
+        number >= control.min &&
+        number <= control.max
+        ? value
+        : undefined;
+    }
     case "opacity": {
       const opacity = Number(value);
       return value.trim() !== "" && opacity >= MIN_OPACITY && opacity <= 1

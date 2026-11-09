@@ -1,14 +1,15 @@
 import { runMapAdapterContract } from "@karta/core/contracts";
 import { afterEach, beforeEach, vi } from "vitest";
-import { dataLayerEngineIds, MapLibreMapAdapter } from "./MapLibreMapAdapter";
+import { MapLibreMapAdapter } from "./MapLibreMapAdapter";
 import {
+  canvasStub,
   describeDataLayers,
-  type EngineFeature,
   FAKE_VIEWPORT_HEIGHT,
   FAKE_VIEWPORT_WIDTH,
   FakeGPUInitializationError,
   FakeMapLibreMap,
   rasterBasemap,
+  simulateFeatureHits,
   vectorBasemap,
 } from "./maplibreTestEngine";
 
@@ -25,13 +26,17 @@ vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({
   default: "mock-maplibre-worker-url",
 }));
 
+let restoreCanvas = () => {};
+
 beforeEach(() => {
   FakeMapLibreMap.reset();
   FakeMapLibreMap.autoLoad = true;
+  restoreCanvas = canvasStub.install();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
+  restoreCanvas();
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
@@ -102,21 +107,13 @@ for (const [name, basemap] of [
         });
       },
       simulateFeatureTap: (layerId, featureId) => {
-        const map = latestMap();
-        const ids = dataLayerEngineIds(layerId);
-        const source = map.sources.get(ids.source);
-        const features = map.getLayer(ids.points)
-          ? ((source?.data as { features?: EngineFeature[] })?.features ?? [])
-          : [];
-        const hit = features.find(
-          (feature) => feature.properties["karta:id"] === featureId,
-        );
-        map.features = hit ? [{ layer: { id: ids.points }, ...hit }] : [];
-        const [lng, lat] = hit?.geometry.coordinates ?? [0, 0];
-        map.fire("click", {
-          lngLat: { lng, lat },
-          point: map.project([lng, lat]),
-        });
+        simulateFeatureHits(latestMap(), [{ layerId, featureId }]);
+      },
+      simulateFeatureHits: (hits) => {
+        simulateFeatureHits(latestMap(), hits);
+      },
+      failNextImage: () => {
+        canvasStub.failNext = true;
       },
       drawnLayers: () => describeDataLayers(latestMap()),
       createFailingMount: () => {

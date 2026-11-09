@@ -5,12 +5,12 @@ import {
   decodeFeed,
   detailUrl,
   feedUrl,
-  isFeedLayer,
   type LayerDetailRequest,
   LayerError,
   type LayerFeature,
   type LayerLoadRequest,
   type LayerSource,
+  loadsFeatures,
   maxAgeFromCacheControl,
   SharedResponseCache,
 } from "@karta/core";
@@ -55,12 +55,13 @@ export class FetchLayerSource implements LayerSource {
   }
 
   async load(request: LayerLoadRequest): Promise<readonly LayerFeature[]> {
-    const { definition, controls, now, signal } = request;
-    const cacheSeconds = isFeedLayer(definition)
-      ? (definition.source.cacheSeconds ?? 0)
-      : 0;
+    const { definition, controls, now, signal, area } = request;
+    const cacheSeconds =
+      loadsFeatures(definition) && definition.source.kind === "feed"
+        ? (definition.source.cacheSeconds ?? 0)
+        : 0;
     const raw = await this.#get(
-      feedUrl(definition, controls, now),
+      feedUrl(definition, controls, now, area),
       signal,
       cacheSeconds,
     );

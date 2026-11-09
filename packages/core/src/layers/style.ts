@@ -1,11 +1,20 @@
 import type { FieldValue } from "../ports/layers";
 import {
+  type FillPattern,
+  type HeatmapSpec,
   isFeedLayer,
+  isHeatmapLayer,
+  isShapeStyle,
+  isVectorTileLayer,
   type LayerDefinition,
+  type LineDash,
   type MarkerShape,
   type PaletteSlot,
   type PointStyle,
+  type ShapeStyle,
 } from "./definition";
+import { stepFor, toNumber } from "./numbers";
+import { shapeClasses } from "./shapeStyle";
 
 /** The radius in pixels of a marker whose style has no size rule. */
 export const DEFAULT_MARKER_RADIUS = 6;
@@ -25,40 +34,20 @@ export interface LegendEntry {
   readonly colour: PaletteSlot;
   readonly shape: MarkerShape;
   readonly radius: number;
+  /**
+   * What the swatch draws. A marker (the default) uses `shape` and `radius`;
+   * an area or a line also uses `pattern`, `dash` and `width`, so the key
+   * shows every signal the map does.
+   */
+  readonly swatch?: "marker" | "area" | "line" | "density";
+  readonly pattern?: FillPattern;
+  readonly dash?: LineDash;
+  readonly width?: number;
 }
 
 /** A layer's legend, derived from its style so the two cannot disagree. */
 export interface Legend {
   readonly entries: readonly LegendEntry[];
-}
-
-function toNumber(value: FieldValue | undefined): number | null {
-  if (typeof value === "number") {
-    return value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const number = Number(value);
-    return Number.isNaN(number) ? null : number;
-  }
-  return null;
-}
-
-/** The last item whose minimum is at or below `value`, or the first. */
-function stepFor<T>(
-  items: readonly T[],
-  minimum: (item: T) => number,
-  value: number | null,
-): T {
-  let chosen = items[0] as T;
-  if (value === null) {
-    return chosen;
-  }
-  for (const item of items) {
-    if (minimum(item) <= value) {
-      chosen = item;
-    }
-  }
-  return chosen;
 }
 
 function radiusFor(style: PointStyle, value: number | null): number {
@@ -149,6 +138,29 @@ function pointLegend(style: PointStyle): LegendEntry[] {
   }
 }
 
+function heatmapLegend(heatmap: HeatmapSpec): LegendEntry[] {
+  return heatmap.ramp.map((colour, index) => ({
+    label: heatmap.words[index] ?? "",
+    colour,
+    shape: "square" as const,
+    radius: DEFAULT_MARKER_RADIUS,
+    swatch: "density" as const,
+  }));
+}
+
+function shapeLegend(style: ShapeStyle): LegendEntry[] {
+  return shapeClasses(style).map((item) => ({
+    label: item.label,
+    colour: item.colour,
+    shape: "square" as const,
+    radius: DEFAULT_MARKER_RADIUS,
+    swatch: style.geometry,
+    pattern: item.pattern,
+    dash: item.dash,
+    width: item.width,
+  }));
+}
+
 /**
  * A layer's legend. For a feed it lists each colour with its words, its
  * shape and the size it draws; for a tile layer it is the definition's own
@@ -156,7 +168,22 @@ function pointLegend(style: PointStyle): LegendEntry[] {
  */
 export function legendFor(definition: LayerDefinition): Legend {
   if (isFeedLayer(definition)) {
-    return { entries: pointLegend(definition.style) };
+    const { style } = definition;
+    return {
+      entries: isShapeStyle(style) ? shapeLegend(style) : pointLegend(style),
+    };
+  }
+  if (isHeatmapLayer(definition)) {
+    return { entries: heatmapLegend(definition.heatmap) };
+  }
+  if (isVectorTileLayer(definition)) {
+    return {
+      entries: definition.sourceLayers.flatMap((layer) =>
+        "heatmap" in layer
+          ? heatmapLegend(layer.heatmap)
+          : shapeLegend(layer.style),
+      ),
+    };
   }
   return {
     entries: (definition.legend ?? []).map((entry) => ({

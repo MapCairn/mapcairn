@@ -1,19 +1,26 @@
 import {
   announceDetailError,
   announceDetailShown,
+  announceFeaturesFound,
+  announceLayerCapped,
   announceLayerEmpty,
   announceLayerError,
   announceLayerLoaded,
   announceLayerOn,
+  announceLayerZoomIn,
+  type Bounds,
   type ControlValues,
   type FieldValue,
   feedUrl,
   isFeedLayer,
+  isQueryLayer,
   type LayerAttribution,
   type LayerDefinition,
   LayerError,
   type LayerFeature,
   type LayersUrlState,
+  loadsFeatures,
+  nextQueryWindow,
   parseTime,
   resolveControlValues,
 } from "@karta/core";
@@ -22,16 +29,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 
-/** Where a layer is: off, on (tiles), loading, loaded, empty or failed. */
+/**
+ * Where a layer is: off, on (tiles), loading, loaded, empty, failed, or (a
+ * query layer) too far out to ask for features.
+ */
 export type LayerStatus =
   | { readonly kind: "off" }
   | { readonly kind: "on" }
   | { readonly kind: "loading" }
   | {
       readonly kind: "ready";
+      /** How many are drawn. */
       readonly count: number;
       readonly updatedAt: number;
+      /** True when the query had more than its cap, so only the first are drawn. */
+      readonly capped?: boolean;
     }
+  | { readonly kind: "zoom-in" }
   | { readonly kind: "empty"; readonly updatedAt: number }
   | { readonly kind: "error"; readonly error: "network" | "invalid" };
 
@@ -69,6 +83,12 @@ export interface DataLayers {
   /** Every registered layer, in registry order. */
   readonly layers: readonly DataLayerState[];
   readonly selected: SelectedFeature | null;
+  /**
+   * The features a tap or the keyboard found together, when there were
+   * several, so one can be chosen. Null when no list is open. The open card
+   * offers a way back to it while it is.
+   */
+  readonly choices: readonly SelectedFeature[] | null;
   readonly detail: DetailState | null;
   /** Grows each time a selection asks for its card to take focus (a tap on the map). */
   readonly focusRequest: number;
@@ -91,11 +111,37 @@ export interface DataLayers {
   setControl(id: string, controlId: string, value: string): void;
   setSort(id: string, sortId: string): void;
   retry(id: string): void;
+  /**
+   * Opens a feature's card, or closes it (and any list) with `null`. A card
+   * opened without `keepChoices` also closes the list of features found
+   * together.
+   */
   select(
     layerId: string,
     featureId: string | null,
+    options?: {
+      readonly focus?: boolean;
+      /** Keeps the list of features found together open behind the card. */
+      readonly keepChoices?: boolean;
+    },
+  ): void;
+  /**
+   * Handles several features found at once (a tap or the keyboard route):
+   * with one it opens its card, with more it opens the list to choose from,
+   * and with none it does nothing. Features no loaded layer has are dropped.
+   */
+  choose(
+    hits: readonly { readonly layerId: string; readonly featureId: string }[],
     options?: { readonly focus?: boolean },
   ): void;
+  /** Closes the open card and returns to the list of features found together. */
+  backToChoices(options?: { readonly focus?: boolean }): void;
+  /**
+   * Tells query layers what the map shows, once it has settled: the visible
+   * box and the normalised zoom. A query layer asks for the features in a
+   * window around it, and says to zoom in below its own `minzoom`.
+   */
+  setView(area: Bounds, zoom: number): void;
   showDetail(layerId: string, featureId: string): void;
   hideDetail(): void;
 }
@@ -119,10 +165,20 @@ interface State {
   readonly sorts: Readonly<Record<string, string>>;
   readonly results: Readonly<Record<string, LoadResult>>;
   readonly retries: Readonly<Record<string, number>>;
+  /**
+   * The open card's feature. Its snapshot keeps the card open when a query
+   * layer refreshes for another part of the map and no longer lists it.
+   */
   readonly selection: {
     readonly layerId: string;
     readonly featureId: string;
+    readonly snapshot?: LayerFeature;
   } | null;
+  readonly choices:
+    | readonly { readonly layerId: string; readonly featureId: string }[]
+    | null;
+  /** What the map last showed, for query layers. */
+  readonly view: { readonly area: Bounds; readonly zoom: number } | null;
   readonly focusRequest: number;
   /** The `focusRequest` that has been acted on. */
   readonly focusHandled: number;
@@ -130,6 +186,9 @@ interface State {
 }
 
 const OFF: LoadResult = { status: { kind: "off" }, features: [] };
+
+/** A layer id, the key of the request it wants, and (for a query layer) the area it asks for. */
+type WantedRequest = readonly [string, string, Bounds | undefined];
 
 function initialState(
   definitions: readonly LayerDefinition[],
@@ -149,6 +208,8 @@ function initialState(
     results: {},
     retries: {},
     selection: null,
+    choices: null,
+    view: null,
     focusRequest: 0,
     focusHandled: 0,
     detail: null,
@@ -230,6 +291,17 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   const requests = useRef(
     new Map<string, { key: string; controller: AbortController }>(),
   );
+  /** The request key each layer last settled for, so a settled layer is not loaded again. */
+  const loadedKeys = useRef(new Map<string, string>());
+  /** The window each query layer last asked for. */
+  const queryWindows = useRef(new Map<string, Bounds>());
+  /**
+   * What each query layer last said aloud, so a refresh for another part of
+   * the map is not announced again, only a change in what it shows.
+   */
+  const announcedStates = useRef(
+    new Map<string, "ready" | "capped" | "empty" | "error" | "zoom-in">(),
+  );
   const detailRequest = useRef<AbortController | null>(null);
 
   const byId = useMemo(
@@ -238,27 +310,77 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   );
 
   // The key of each enabled feed layer's request; a change starts a new load.
-  const wanted = state.enabled.flatMap((id) => {
+  // A query layer asks for a window around the map's view, kept while the
+  // view stays inside it, and for nothing until the map has said where it is.
+  const wanted = state.enabled.flatMap((id): WantedRequest[] => {
     const definition = byId.get(id);
-    if (!definition || !isFeedLayer(definition)) {
+    if (!definition || !loadsFeatures(definition)) {
       return [];
     }
-    const url = feedUrl(definition, state.controls[id] ?? {}, now());
-    return [[id, `${url}#${state.retries[id] ?? 0}`] as const];
+    const controls = state.controls[id] ?? {};
+    const retries = state.retries[id] ?? 0;
+    if (isQueryLayer(definition)) {
+      const { view } = state;
+      if (!view || view.zoom < (definition.source.minzoom ?? 0)) {
+        queryWindows.current.delete(id);
+        return [];
+      }
+      const area = nextQueryWindow(
+        queryWindows.current.get(id) ?? null,
+        view.area,
+      );
+      queryWindows.current.set(id, area);
+      const url = feedUrl(definition, controls, now(), area);
+      return [[id, `${url}#${retries}`, area]];
+    }
+    const url = feedUrl(definition, controls, now());
+    return [[id, `${url}#${retries}`, undefined]];
   });
   const signature = wanted.map(([id, key]) => `${id} ${key}`).join("\n");
 
+  // Query layers that are too far out, so each is told once to zoom in.
+  const tooFar = state.enabled.filter((id) => {
+    const definition = byId.get(id);
+    return (
+      definition !== undefined &&
+      isQueryLayer(definition) &&
+      state.view !== null &&
+      state.view.zoom < (definition.source.minzoom ?? 0)
+    );
+  });
+  const tooFarSignature = tooFar.join(" ");
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the signatures are the triggers; everything else is read through refs or is stable.
+  useEffect(() => {
+    for (const id of tooFar) {
+      if (announcedStates.current.get(id) !== "zoom-in") {
+        announcedStates.current.set(id, "zoom-in");
+        announce(announceLayerZoomIn((byId.get(id) as LayerDefinition).name), {
+          priority: "polite",
+        });
+      }
+    }
+  }, [tooFarSignature]);
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: the signature is the trigger; everything else is read through refs or is stable.
   useEffect(() => {
-    const keys = new Map(wanted);
+    const keys = new Map(wanted.map(([id, key]) => [id, key]));
+    const areas = new Map(wanted.map(([id, , area]) => [id, area]));
     for (const [id, request] of requests.current) {
       if (keys.get(id) !== request.key) {
         request.controller.abort();
         requests.current.delete(id);
       }
     }
+    for (const [id, key] of loadedKeys.current) {
+      if (keys.get(id) !== key) {
+        loadedKeys.current.delete(id);
+      }
+    }
     for (const [id, key] of keys) {
-      if (requests.current.has(id)) {
+      // A layer that has settled for this request is not loaded again because
+      // another layer was turned on or off.
+      if (requests.current.has(id) || loadedKeys.current.get(id) === key) {
         continue;
       }
       const definition = byId.get(id) as LayerDefinition;
@@ -269,16 +391,34 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           return;
         }
         requests.current.delete(id);
+        loadedKeys.current.set(id, key);
         setState((current) => ({
           ...current,
           results: { ...current.results, [id]: result },
         }));
       };
+      const query = isQueryLayer(definition) ? definition : null;
+      // A query layer says each state once: a pan to another window is not news.
+      const say = (
+        announced: "ready" | "capped" | "empty" | "error",
+        message: string,
+        priority: "polite" | "assertive",
+      ) => {
+        if (query && announcedStates.current.get(id) === announced) {
+          return;
+        }
+        announcedStates.current.set(id, announced);
+        announce(message, { priority });
+      };
       setState((current) => ({
         ...current,
         results: {
           ...current.results,
-          [id]: { status: { kind: "loading" }, features: [] },
+          // A query layer keeps what it draws while the next window loads.
+          [id]: {
+            status: { kind: "loading" },
+            features: query ? (current.results[id]?.features ?? []) : [],
+          },
         },
       }));
       layerSource
@@ -287,20 +427,31 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           controls: stateRef.current.controls[id] ?? {},
           now: now(),
           signal: controller.signal,
+          ...(areas.get(id) ? { area: areas.get(id) } : {}),
         })
         .then(
-          (features) => {
+          (loaded) => {
+            const capped =
+              query !== null && loaded.length > query.source.maxFeatures;
+            const features = capped
+              ? loaded.slice(0, query.source.maxFeatures)
+              : loaded;
             settle({
               status: {
                 kind: "ready",
                 count: features.length,
                 updatedAt: now(),
+                ...(capped ? { capped: true } : {}),
               },
               features,
             });
-            announce(announceLayerLoaded(definition.name, features.length), {
-              priority: "polite",
-            });
+            say(
+              capped ? "capped" : "ready",
+              capped
+                ? announceLayerCapped(definition.name, features.length)
+                : announceLayerLoaded(definition.name, features.length),
+              "polite",
+            );
           },
           (error: unknown) => {
             const kind = errorKind(error);
@@ -312,20 +463,21 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
                 status: { kind: "empty", updatedAt: now() },
                 features: [],
               });
-              if (isFeedLayer(definition)) {
-                announce(
+              if (loadsFeatures(definition)) {
+                say(
+                  "empty",
                   announceLayerEmpty(definition.name, definition.emptyText),
-                  {
-                    priority: "polite",
-                  },
+                  "polite",
                 );
               }
               return;
             }
             settle({ status: { kind: "error", error: kind }, features: [] });
-            announce(announceLayerError(definition.name, kind), {
-              priority: "assertive",
-            });
+            say(
+              "error",
+              announceLayerError(definition.name, kind),
+              "assertive",
+            );
           },
         );
     }
@@ -352,9 +504,13 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       if (!enabled && current.detail?.layerId === id) {
         detailRequest.current?.abort();
       }
+      announcedStates.current.delete(id);
+      queryWindows.current.delete(id);
       setState((previous) => {
         const results = { ...previous.results };
         delete results[id];
+        const choices =
+          previous.choices?.filter((choice) => choice.layerId !== id) ?? null;
         return {
           ...previous,
           enabled: enabled
@@ -363,10 +519,11 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           results,
           selection:
             previous.selection?.layerId === id ? null : previous.selection,
+          choices: choices && choices.length > 0 ? choices : null,
           detail: previous.detail?.layerId === id ? null : previous.detail,
         };
       });
-      if (enabled && !isFeedLayer(definition)) {
+      if (enabled && !loadsFeatures(definition)) {
         announce(announceLayerOn(definition.name), { priority: "polite" });
       }
     },
@@ -412,16 +569,103 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     (
       layerId: string,
       featureId: string | null,
-      selectOptions: { readonly focus?: boolean } = {},
+      selectOptions: {
+        readonly focus?: boolean;
+        readonly keepChoices?: boolean;
+      } = {},
     ) => {
-      setState((previous) => ({
-        ...previous,
-        selection: featureId === null ? null : { layerId, featureId },
-        focusRequest: previous.focusRequest + (selectOptions.focus ? 1 : 0),
-      }));
+      setState((previous) => {
+        const snapshot =
+          featureId === null
+            ? undefined
+            : previous.results[layerId]?.features.find(
+                (item) => item.id === featureId,
+              );
+        return {
+          ...previous,
+          selection:
+            featureId === null
+              ? null
+              : { layerId, featureId, ...(snapshot ? { snapshot } : {}) },
+          choices:
+            featureId !== null && selectOptions.keepChoices
+              ? previous.choices
+              : null,
+          focusRequest: previous.focusRequest + (selectOptions.focus ? 1 : 0),
+        };
+      });
     },
     [],
   );
+
+  const choose = useCallback(
+    (
+      hits: readonly { readonly layerId: string; readonly featureId: string }[],
+      chooseOptions: { readonly focus?: boolean } = {},
+    ) => {
+      const { results } = stateRef.current;
+      const seen = new Set<string>();
+      const found = hits.filter((hit) => {
+        const key = `${hit.layerId}\u0000${hit.featureId}`;
+        if (
+          seen.has(key) ||
+          !results[hit.layerId]?.features.some(
+            (item) => item.id === hit.featureId,
+          )
+        ) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      const [only] = found;
+      if (!only) {
+        return;
+      }
+      if (found.length === 1) {
+        select(only.layerId, only.featureId, chooseOptions);
+        return;
+      }
+      setState((previous) => ({
+        ...previous,
+        selection: null,
+        choices: found,
+        focusRequest: previous.focusRequest + (chooseOptions.focus ? 1 : 0),
+      }));
+      announce(announceFeaturesFound(found.length), { priority: "polite" });
+    },
+    [announce, select, stateRef],
+  );
+
+  const backToChoices = useCallback(
+    (backOptions: { readonly focus?: boolean } = {}) => {
+      setState((previous) =>
+        previous.choices
+          ? {
+              ...previous,
+              selection: null,
+              detail: null,
+              focusRequest: previous.focusRequest + (backOptions.focus ? 1 : 0),
+            }
+          : previous,
+      );
+    },
+    [],
+  );
+
+  const setView = useCallback((area: Bounds, zoom: number) => {
+    setState((previous) => {
+      const last = previous.view;
+      return last &&
+        last.zoom === zoom &&
+        last.area.west === area.west &&
+        last.area.south === area.south &&
+        last.area.east === area.east &&
+        last.area.north === area.north
+        ? previous
+        : { ...previous, view: { area, zoom } };
+    });
+  }, []);
 
   const consumeFocus = useCallback(() => {
     setState((previous) =>
@@ -489,12 +733,21 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       definitions.map((definition): DataLayerState => {
         const id = definition.id;
         const enabled = state.enabled.includes(id);
-        const result = enabled
-          ? (state.results[id] ??
-            (isFeedLayer(definition)
-              ? { status: { kind: "loading" } as const, features: [] }
-              : { status: { kind: "on" } as const, features: [] }))
-          : OFF;
+        const farOut =
+          enabled &&
+          isQueryLayer(definition) &&
+          state.view !== null &&
+          state.view.zoom < (definition.source.minzoom ?? 0);
+        let result = OFF;
+        if (farOut) {
+          result = { status: { kind: "zoom-in" }, features: [] };
+        } else if (enabled) {
+          result =
+            state.results[id] ??
+            (loadsFeatures(definition)
+              ? { status: { kind: "loading" }, features: [] }
+              : { status: { kind: "on" }, features: [] });
+        }
         const sortId =
           state.sorts[id] ??
           (isFeedLayer(definition) ? (definition.list.sorts[0]?.id ?? "") : "");
@@ -516,11 +769,31 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     const layer = layers.find(
       (item) => item.definition.id === selection?.layerId,
     );
-    const feature = layer?.features.find(
-      (item) => item.id === selection?.featureId,
-    );
+    // A query layer's card stays open when a refresh for another part of the
+    // map no longer lists its feature. Other layers close it, as they reload.
+    const feature =
+      layer?.features.find((item) => item.id === selection?.featureId) ??
+      (layer?.enabled && isQueryLayer(layer.definition)
+        ? selection?.snapshot
+        : undefined);
     return layer && feature ? { layer, feature } : null;
   }, [layers, state.selection]);
+
+  const choices = useMemo<readonly SelectedFeature[] | null>(() => {
+    if (!state.choices) {
+      return null;
+    }
+    const found = state.choices.flatMap((choice) => {
+      const layer = layers.find(
+        (item) => item.definition.id === choice.layerId,
+      );
+      const feature = layer?.features.find(
+        (item) => item.id === choice.featureId,
+      );
+      return layer && feature ? [{ layer, feature }] : [];
+    });
+    return found.length > 0 ? found : null;
+  }, [layers, state.choices]);
 
   const urlValue = useMemo<LayersUrlState>(
     () => ({
@@ -551,6 +824,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   return {
     layers,
     selected,
+    choices,
     detail: state.detail,
     focusRequest: state.focusRequest,
     focusPending: state.focusRequest > state.focusHandled,
@@ -563,6 +837,9 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     setSort,
     retry,
     select,
+    choose,
+    backToChoices,
+    setView,
     showDetail,
     hideDetail,
   };

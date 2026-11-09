@@ -106,13 +106,14 @@ export function PrivacyPage() {
           for satellite imagery and fire hotspots, the Global Disaster Alert and
           Coordination System (GDACS) for fire, flood, tropical cyclone, volcano
           and drought alerts, and Copernicus (the Global Flood Awareness System)
-          for the flood hazard map. Show affected area sends one more request to
-          GDACS for that event only. Tile layers request images for the part of
-          the map you are looking at, so the provider can tell roughly where you
-          are looking. Nothing passes through this site, and nothing is stored
-          beyond the page you have open. The layers you turn on are written into
-          the page address so a link can be shared; they are not sent anywhere
-          else.
+          for the flood hazard map, and the jsDelivr content delivery network
+          for the country boundaries. Show affected area sends one more request
+          to GDACS for that event only. Tile layers request images for the part
+          of the map you are looking at, so the provider can tell roughly where
+          you are looking. Nothing passes through this site, and nothing is
+          stored beyond the page you have open. The layers you turn on are
+          written into the page address so a link can be shared; they are not
+          sent anywhere else.
         </p>
 
         <h2 className={styles.sectionTitle}>Pin addresses</h2>

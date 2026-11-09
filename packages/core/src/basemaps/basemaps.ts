@@ -117,6 +117,19 @@ export function omittedLayers(
   return saveData ? (basemap.saveDataOmitLayers ?? []) : [];
 }
 
+/**
+ * The credits of a basemap and the layers drawn over it as one line of
+ * text, for a saved image that keeps its sources.
+ */
+export function creditsLine(
+  basemap: BasemapDefinition,
+  layerCredits: readonly { readonly text: string }[] = [],
+): string {
+  return [...buildAttribution(basemap), ...layerCredits]
+    .map((credit) => credit.text)
+    .join(" | ");
+}
+
 /** The credit for MapLibre GL JS, which draws every basemap. */
 export const MAPLIBRE_CREDIT: BasemapAttributionEntry = {
   text: "MapLibre",

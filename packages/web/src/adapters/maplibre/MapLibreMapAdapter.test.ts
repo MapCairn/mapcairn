@@ -1,10 +1,20 @@
-import type { BasemapDefinition, MapMountOptions } from "@karta/core";
+import type {
+  BasemapDefinition,
+  MapHeatmap,
+  MapMountOptions,
+  MapShapeLook,
+  MapStyledShapes,
+  MapVectorTiles,
+} from "@karta/core";
 import { MapEngineError, metresPerPixel } from "@karta/core";
+import { tokenValues } from "@karta/theme";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  canvasStub,
   FAKE_VIEWPORT_HEIGHT,
   FAKE_VIEWPORT_WIDTH,
   FakeMapLibreMap,
+  simulateFeatureHits,
 } from "./maplibreTestEngine";
 
 // happy-dom has no WebGL, so these tests drive a scripted engine and cover
@@ -27,6 +37,7 @@ vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({
 
 import {
   createMapLibreMapAdapter,
+  IMAGE_WAIT_MS,
   MapLibreMapAdapter,
   WORKER_FAILURE_GRACE_MS,
 } from "./MapLibreMapAdapter";
@@ -1289,6 +1300,1052 @@ describe("MapLibreMapAdapter", () => {
       await expect(adapter.mount(createHost(), MOUNT)).rejects.toMatchObject({
         reason: "load-failed",
       });
+    });
+  });
+});
+
+const LOOK: MapShapeLook = {
+  colour: "#0072b2",
+  fillOpacity: 0.55,
+  pattern: "solid",
+  dash: "solid",
+  width: 1.5,
+};
+
+const polygon = (west: number) => ({
+  type: "Polygon" as const,
+  coordinates: [
+    [
+      [west, 0],
+      [west + 1, 0],
+      [west + 1, 1],
+      [west, 0],
+    ],
+  ] as const,
+});
+
+const STYLED_AREAS: MapStyledShapes = {
+  geometry: "area",
+  shapes: [
+    {
+      id: "north",
+      geometry: polygon(2.3),
+      look: { ...LOOK, pattern: "dots", dash: "dashed" },
+      label: "North",
+    },
+    { id: "south", geometry: polygon(4), look: LOOK },
+    {
+      id: "route",
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [2, 48],
+          [3, 49],
+        ],
+      },
+      look: LOOK,
+    },
+  ],
+  labelMinZoom: 5,
+};
+
+const STYLED_LINES: MapStyledShapes = {
+  geometry: "line",
+  shapes: [
+    {
+      id: "main",
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [2, 48],
+          [3, 49],
+        ],
+      },
+      look: { ...LOOK, dash: "dotted", width: 4 },
+      label: "Main",
+    },
+    { id: "lake", geometry: polygon(1), look: LOOK },
+  ],
+};
+
+const TILE_SOURCE = {
+  tiles: "https://vector.test/{z}/{x}/{y}.pbf",
+  minzoom: 0,
+  maxzoom: 14,
+} as const;
+
+const VECTOR: MapVectorTiles = {
+  source: TILE_SOURCE,
+  minzoom: 3,
+  maxzoom: 17,
+  layers: [
+    {
+      sourceLayer: "areas",
+      geometry: "area",
+      rule: {
+        kind: "category",
+        field: "kind",
+        cases: [{ value: "park", look: { ...LOOK, pattern: "stripes" } }],
+        fallback: { ...LOOK, colour: "#e69f00" },
+      },
+      label: { field: "name", minzoom: 8 },
+    },
+    {
+      sourceLayer: "borders",
+      geometry: "line",
+      minzoom: 5,
+      rule: {
+        kind: "steps",
+        field: "rank",
+        steps: [
+          { min: 0, look: LOOK },
+          { min: 5, look: { ...LOOK, width: 3, dash: "dashed" } },
+        ],
+      },
+    },
+  ],
+};
+
+const HEAT_STYLE = {
+  radius: 20,
+  intensity: 1.5,
+  opacity: 0.8,
+  ramp: ["#440154", "#21918c", "#fde725"],
+} as const;
+
+const HEAT_POINTS: MapHeatmap = {
+  source: {
+    kind: "points",
+    points: [
+      { position: { lat: 48.86, lng: 2.35 }, weight: 3 },
+      { position: { lat: -1.29, lng: 36.82 } },
+    ],
+  },
+  style: HEAT_STYLE,
+};
+
+const HEAT_VECTOR: MapHeatmap = {
+  source: {
+    kind: "vector",
+    source: TILE_SOURCE,
+    sourceLayer: "events",
+    weightField: "size",
+    minzoom: 6,
+    maxzoom: 12,
+  },
+  style: HEAT_STYLE,
+};
+
+/** An engine spec or GeoJSON object the tests walk into; it is untyped JSON. */
+// biome-ignore lint/suspicious/noExplicitAny: nested untyped JSON
+type Spec = Record<string, any>;
+
+describe("MapLibreMapAdapter data layers", () => {
+  let restoreCanvas = () => {};
+
+  beforeEach(() => {
+    restoreCanvas = canvasStub.install();
+  });
+
+  afterEach(() => {
+    restoreCanvas();
+  });
+
+  /** A mounted map with its first style loaded. */
+  async function ready(basemap: BasemapDefinition = POSITRON) {
+    const subject = await mounted({ basemap });
+    subject.map.fire("style.load");
+    return subject;
+  }
+
+  const spec = (map: FakeMap, id: string): Spec => {
+    const found = map.getLayer(id);
+    if (!found) {
+      throw new Error(`No layer ${id}`);
+    }
+    return found as Spec;
+  };
+
+  const idsOf = (map: FakeMap, prefix: string) =>
+    layerIds(map).filter((id) => String(id).startsWith(prefix));
+
+  describe("styled shapes", () => {
+    it("draws an area layer bottom to top: fill, pattern, then one outline per dash style", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      expect(layerIds(map)).toEqual([
+        "karta:regions:styled-fill",
+        "karta:regions:styled-pattern",
+        "karta:regions:styled-outline-solid",
+        "karta:regions:styled-outline-dashed",
+        "karta:regions:styled-outline-dotted",
+      ]);
+      expect(spec(map, "karta:regions:styled-fill").paint).toEqual({
+        "fill-color": ["get", "colour"],
+        "fill-opacity": ["get", "fillOpacity"],
+      });
+    });
+
+    it("puts the look on each shape as properties and leaves out the other geometry kind", async () => {
+      const { adapter, map } = await ready();
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      const { data } = map.sources.get("karta:regions") as Spec;
+      expect(data.features.map((f: Spec) => f.properties)).toEqual([
+        {
+          "karta:layer": "regions",
+          "karta:id": "north",
+          colour: "#0072b2",
+          fillOpacity: 0.55,
+          pattern: "dots",
+          dash: "dashed",
+          width: 1.5,
+          label: "North",
+        },
+        expect.objectContaining({ "karta:id": "south", label: "" }),
+      ]);
+      adapter.setStyledShapes("routes", STYLED_LINES);
+      const lines = map.sources.get("karta:routes") as Spec;
+      expect(lines.data.features).toHaveLength(1);
+    });
+
+    it("hatches only the shapes with a pattern, from named images", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      const pattern = spec(map, "karta:regions:styled-pattern");
+      expect(pattern.filter).toEqual(["!=", ["get", "pattern"], "solid"]);
+      expect(pattern.paint).toEqual({
+        "fill-pattern": ["concat", "karta-pattern:", ["get", "pattern"]],
+      });
+    });
+
+    it("adds each pattern image once, as a power of two at pixel ratio 2", async () => {
+      const { adapter, map } = await ready();
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      expect([...map.images.keys()]).toEqual([
+        "karta-pattern:stripes",
+        "karta-pattern:dots",
+        "karta-pattern:crosshatch",
+      ]);
+      const { image, options } = map.images.get("karta-pattern:dots") as Spec;
+      expect(options).toEqual({ pixelRatio: 2 });
+      expect(image.width).toBe(16);
+      expect(image.data).toHaveLength(16 * 16 * 4);
+    });
+
+    it("outlines polygons in the ink colour, with a literal dash array per style", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      const solid = spec(map, "karta:regions:styled-outline-solid");
+      const dashed = spec(map, "karta:regions:styled-outline-dashed");
+      const dotted = spec(map, "karta:regions:styled-outline-dotted");
+      expect(solid.filter).toEqual(["==", ["get", "dash"], "solid"]);
+      expect(dashed.filter).toEqual(["==", ["get", "dash"], "dashed"]);
+      expect(solid.paint).toEqual({
+        "line-color": tokenValues.dataMarker.edge,
+        "line-width": ["get", "width"],
+      });
+      expect(dashed.paint["line-dasharray"]).toEqual([3, 2]);
+      expect(dotted.paint["line-dasharray"]).toEqual([1, 2]);
+    });
+
+    it("draws a line under a wider casing, one layer per dash style each", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setStyledShapes("routes", STYLED_LINES);
+      expect(layerIds(map)).toEqual([
+        "karta:routes:styled-casing-solid",
+        "karta:routes:styled-casing-dashed",
+        "karta:routes:styled-casing-dotted",
+        "karta:routes:styled-line-solid",
+        "karta:routes:styled-line-dashed",
+        "karta:routes:styled-line-dotted",
+      ]);
+      const casing = spec(map, "karta:routes:styled-casing-dotted");
+      expect(casing.paint["line-color"]).toBe(tokenValues.dataMarker.halo);
+      expect(casing.paint["line-width"]).toEqual([
+        "+",
+        ["get", "width"],
+        2 * tokenValues.dataMarker.haloWidth,
+      ]);
+      expect(casing.paint["line-dasharray"]).toEqual([1, 2]);
+      expect(
+        spec(map, "karta:routes:styled-line-dotted").paint["line-color"],
+      ).toEqual(["get", "colour"]);
+    });
+
+    describe("labels", () => {
+      it("draws them with the basemap's own font when it has a glyph source", async () => {
+        const { adapter, map } = await ready(POSITRON);
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        const label = spec(map, "karta:regions:styled-label");
+        expect(label.type).toBe("symbol");
+        expect(label.layout).toMatchObject({
+          "text-field": ["get", "label"],
+          "text-font": ["Test Sans Regular"],
+        });
+        expect(label.layout["symbol-placement"]).toBeUndefined();
+        expect(label.paint["text-halo-color"]).toBe(
+          tokenValues.dataMarker.halo,
+        );
+        // Normalised zoom 5 is MapLibre zoom 4.
+        expect(label.minzoom).toBe(4);
+        expect(label.filter).toEqual(["!=", ["get", "label"], ""]);
+      });
+
+      it("places a line's label along the line", async () => {
+        const { adapter, map } = await ready(POSITRON);
+        adapter.setStyledShapes("routes", STYLED_LINES);
+        const label = spec(map, "karta:routes:styled-label");
+        expect(label.layout["symbol-placement"]).toBe("line");
+        expect(label.minzoom).toBeUndefined();
+      });
+
+      it("draws none on a raster basemap, which has no glyph source", async () => {
+        const { adapter, map } = await ready(STREETS);
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        expect(map.glyphs).toBeUndefined();
+        expect(idsOf(map, "karta:regions:styled-label")).toEqual([]);
+      });
+
+      it("draws none when no symbol layer names a literal font", async () => {
+        const { adapter, map } = await ready(POSITRON);
+        map.basemapLayers = [
+          {
+            id: "labels",
+            type: "symbol",
+            layout: { "text-font": ["get", "font"] },
+          },
+        ];
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        expect(idsOf(map, "karta:regions:styled-label")).toEqual([]);
+      });
+
+      it("reads a font given as a literal expression, skipping a layer without one", async () => {
+        const { adapter, map } = await ready(POSITRON);
+        map.basemapLayers = [
+          { id: "road", type: "line" },
+          { id: "plain", type: "symbol", layout: {} },
+          {
+            id: "names",
+            type: "symbol",
+            layout: { "text-font": ["literal", ["Test Bold"]] },
+          },
+        ];
+        adapter.setStyledShapes("regions", STYLED_AREAS);
+        expect(
+          spec(map, "karta:regions:styled-label").layout["text-font"],
+        ).toEqual(["Test Bold"]);
+      });
+
+      it("draws none when no shape has a label", async () => {
+        const { adapter, map } = await ready(POSITRON);
+        adapter.setStyledShapes("regions", {
+          ...STYLED_AREAS,
+          shapes: [{ id: "south", geometry: polygon(4), look: LOOK }],
+        });
+        expect(idsOf(map, "karta:regions:styled-label")).toEqual([]);
+      });
+    });
+  });
+
+  describe("vector tiles", () => {
+    it("keeps the source's zoom limits as tile levels", async () => {
+      const { adapter, map } = await ready();
+      adapter.setVectorLayer("districts", VECTOR);
+      expect(map.sources.get("karta:districts")).toEqual({
+        type: "vector",
+        tiles: ["https://vector.test/{z}/{x}/{y}.pbf"],
+        minzoom: 0,
+        maxzoom: 14,
+      });
+    });
+
+    it("converts the layer windows to engine zoom, using the narrower of each", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setVectorLayer("districts", VECTOR);
+      // The whole layer shows from normalised zoom 3 to 17: engine 2 to 16.
+      expect(spec(map, "karta:districts:v0-fill")).toMatchObject({
+        "source-layer": "areas",
+        minzoom: 2,
+        maxzoom: 16,
+      });
+      // The source layer's own minimum of 5 is narrower: engine 4.
+      expect(spec(map, "karta:districts:v1-line-solid")).toMatchObject({
+        "source-layer": "borders",
+        minzoom: 4,
+        maxzoom: 16,
+      });
+    });
+
+    it("compiles a category rule into a match with a fallback", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setVectorLayer("districts", VECTOR);
+      expect(spec(map, "karta:districts:v0-fill").paint["fill-color"]).toEqual([
+        "match",
+        ["get", "kind"],
+        "park",
+        "#0072b2",
+        "#e69f00",
+      ]);
+    });
+
+    it("compiles a steps rule into a step on the number, the first look below the second minimum", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setVectorLayer("districts", VECTOR);
+      const line = spec(map, "karta:districts:v1-line-solid");
+      expect(line.paint["line-width"]).toEqual([
+        "step",
+        ["to-number", ["get", "rank"], 0],
+        1.5,
+        5,
+        3,
+      ]);
+      expect(line.filter).toEqual([
+        "all",
+        [
+          "match",
+          ["geometry-type"],
+          ["LineString", "MultiLineString"],
+          true,
+          false,
+        ],
+        [
+          "==",
+          ["step", ["to-number", ["get", "rank"], 0], "solid", 5, "dashed"],
+          "solid",
+        ],
+      ]);
+    });
+
+    it("hatches by the compiled pattern and keeps solid features out of the pattern layer", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setVectorLayer("districts", VECTOR);
+      const compiled = ["match", ["get", "kind"], "park", "stripes", "solid"];
+      const pattern = spec(map, "karta:districts:v0-pattern");
+      expect(pattern.paint["fill-pattern"]).toEqual([
+        "concat",
+        "karta-pattern:",
+        compiled,
+      ]);
+      expect(pattern.filter).toEqual([
+        "all",
+        ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+        ["!=", compiled, "solid"],
+      ]);
+      expect(map.hasImage("karta-pattern:stripes")).toBe(true);
+    });
+
+    it("skips the pattern and dash filters when a fixed look needs none", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setVectorLayer("districts", {
+        source: TILE_SOURCE,
+        layers: [
+          {
+            sourceLayer: "areas",
+            geometry: "area",
+            rule: { kind: "fixed", look: { ...LOOK, dash: "dotted" } },
+          },
+          {
+            sourceLayer: "lines",
+            geometry: "line",
+            rule: {
+              kind: "fixed",
+              look: { ...LOOK, pattern: "crosshatch" },
+            },
+          },
+        ],
+      });
+      expect(idsOf(map, "karta:districts:v0-")).toEqual([
+        "karta:districts:v0-fill",
+        "karta:districts:v0-outline-dotted",
+      ]);
+      expect(spec(map, "karta:districts:v0-fill").paint["fill-color"]).toBe(
+        "#0072b2",
+      );
+      expect(idsOf(map, "karta:districts:v1-")).toEqual([
+        "karta:districts:v1-casing-solid",
+        "karta:districts:v1-line-solid",
+      ]);
+      expect(spec(map, "karta:districts:v0-fill").minzoom).toBeUndefined();
+    });
+
+    it("draws a pattern for a fixed look that has one, without a filter on it", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setVectorLayer("districts", {
+        source: TILE_SOURCE,
+        layers: [
+          {
+            sourceLayer: "areas",
+            geometry: "area",
+            rule: { kind: "fixed", look: { ...LOOK, pattern: "crosshatch" } },
+          },
+        ],
+      });
+      const pattern = spec(map, "karta:districts:v0-pattern");
+      expect(pattern.paint["fill-pattern"]).toBe("karta-pattern:crosshatch");
+      // No pattern condition, only the guard that keeps other geometry out.
+      expect(pattern.filter).toEqual([
+        "match",
+        ["geometry-type"],
+        ["Polygon", "MultiPolygon"],
+        true,
+        false,
+      ]);
+    });
+
+    it("draws labels from a property on a vector basemap only", async () => {
+      const vector = await ready(POSITRON);
+      vector.adapter.setVectorLayer("districts", VECTOR);
+      const label = spec(vector.map, "karta:districts:v0-label");
+      expect(label.layout["text-field"]).toEqual([
+        "to-string",
+        ["get", "name"],
+      ]);
+      // The label's own minimum of 8 beats the layer's 3: engine 7.
+      expect(label.minzoom).toBe(7);
+      expect(label.maxzoom).toBe(16);
+      expect(idsOf(vector.map, "karta:districts:v1-label")).toEqual([]);
+
+      const raster = await ready(STREETS);
+      raster.adapter.setVectorLayer("districts", VECTOR);
+      expect(idsOf(raster.map, "karta:districts:v0-label")).toEqual([]);
+    });
+
+    it("leaves out a source layer with a step rule that has no steps", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setVectorLayer("districts", {
+        source: TILE_SOURCE,
+        layers: [
+          {
+            sourceLayer: "empty",
+            geometry: "area",
+            rule: { kind: "steps", field: "rank", steps: [] },
+          },
+        ],
+      });
+      expect(layerIds(map)).toEqual([]);
+      expect(map.sources.has("karta:districts")).toBe(true);
+    });
+
+    it("is not tappable", async () => {
+      const { adapter, map } = await ready();
+      adapter.setVectorLayer("districts", VECTOR);
+      expect(adapter.featuresAt({ x: 10, y: 10 })).toEqual([]);
+      expect(map.callsOf("queryRenderedFeatures")).toEqual([]);
+    });
+  });
+
+  describe("heatmaps", () => {
+    it("draws loaded points as a weighted GeoJSON source", async () => {
+      const { adapter, map } = await ready();
+      adapter.setHeatmapLayer("density", HEAT_POINTS);
+      const { data } = map.sources.get("karta:density") as Spec;
+      expect(data.features.map((f: Spec) => f.properties)).toEqual([
+        { weight: 3 },
+        { weight: 1 },
+      ]);
+      expect(data.features[0].geometry.coordinates).toEqual([2.35, 48.86]);
+      const heat = spec(map, "karta:density:heat");
+      expect(heat.type).toBe("heatmap");
+      expect(heat.paint).toMatchObject({
+        "heatmap-weight": ["get", "weight"],
+        "heatmap-radius": 20,
+        "heatmap-intensity": 1.5,
+        "heatmap-opacity": 0.8,
+      });
+    });
+
+    it("ramps the colour from clear at no density to the last colour at full density", async () => {
+      const { adapter, map } = await ready();
+      adapter.setHeatmapLayer("density", HEAT_POINTS);
+      expect(spec(map, "karta:density:heat").paint["heatmap-color"]).toEqual([
+        "interpolate",
+        ["linear"],
+        ["heatmap-density"],
+        0,
+        "rgba(68, 1, 84, 0)",
+        1 / 3,
+        "rgba(68, 1, 84, 1)",
+        2 / 3,
+        "rgba(33, 145, 140, 1)",
+        1,
+        "rgba(253, 231, 37, 1)",
+      ]);
+    });
+
+    it("draws a vector source layer weighted by a field, with zoom windows converted", async () => {
+      const { adapter, map } = await ready();
+      adapter.setHeatmapLayer("events", HEAT_VECTOR);
+      expect(map.sources.get("karta:events")).toMatchObject({
+        type: "vector",
+        minzoom: 0,
+        maxzoom: 14,
+      });
+      expect(spec(map, "karta:events:heat")).toMatchObject({
+        "source-layer": "events",
+        minzoom: 5,
+        maxzoom: 11,
+      });
+      expect(spec(map, "karta:events:heat").paint["heatmap-weight"]).toEqual([
+        "to-number",
+        ["get", "size"],
+        1,
+      ]);
+    });
+
+    it("counts each vector point once without a weight field", async () => {
+      const { adapter, map } = await ready();
+      adapter.setHeatmapLayer("events", {
+        ...HEAT_VECTOR,
+        source: {
+          kind: "vector",
+          source: TILE_SOURCE,
+          sourceLayer: "events",
+        },
+      });
+      const heat = spec(map, "karta:events:heat");
+      expect(heat.paint["heatmap-weight"]).toBe(1);
+      expect(heat.minzoom).toBeUndefined();
+    });
+
+    it("is not tappable", async () => {
+      const { adapter, map } = await ready();
+      adapter.setHeatmapLayer("density", HEAT_POINTS);
+      expect(adapter.featuresAt({ x: 10, y: 10 })).toEqual([]);
+      expect(map.callsOf("queryRenderedFeatures")).toEqual([]);
+    });
+  });
+
+  describe("stacking and lifetime", () => {
+    const point = {
+      id: "a",
+      position: { lat: 48.86, lng: 2.35 },
+      colour: "#e69f00",
+      radius: 6,
+      shape: "circle" as const,
+    };
+
+    it("stacks tiles, vector, styled, shapes, heatmaps and points bottom to top", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setFeatureLayer("pts", [point]);
+      adapter.setHeatmapLayer("heat", HEAT_POINTS);
+      adapter.setShapeLayer("area", {
+        geometries: [polygon(1)],
+        colour: "#d55e00",
+      });
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      adapter.setVectorLayer("districts", VECTOR);
+      adapter.setTileLayer("imagery", {
+        tiles: "https://t.test/{z}/{x}/{y}.png",
+        tileSize: 256,
+        maxzoom: 9,
+        opacity: 1,
+      });
+      const order = layerIds(map).map((id) => String(id).split(":")[1]);
+      const firstOf = (name: string) => order.indexOf(name);
+      const lastOf = (name: string) => order.lastIndexOf(name);
+      expect(lastOf("imagery")).toBeLessThan(firstOf("districts"));
+      expect(lastOf("districts")).toBeLessThan(firstOf("regions"));
+      expect(lastOf("regions")).toBeLessThan(firstOf("area"));
+      expect(lastOf("area")).toBeLessThan(firstOf("heat"));
+      expect(lastOf("heat")).toBeLessThan(firstOf("pts"));
+    });
+
+    it("removes every engine layer and the source of a layer that owns many", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      adapter.setStyledShapes("other", STYLED_AREAS);
+      adapter.removeLayer("regions");
+      expect(idsOf(map, "karta:regions:")).toEqual([]);
+      expect(map.sources.has("karta:regions")).toBe(false);
+      expect(idsOf(map, "karta:other:")).toHaveLength(5);
+    });
+
+    it("replaces a layer with another kind under the same id", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setStyledShapes("x", STYLED_AREAS);
+      adapter.setHeatmapLayer("x", HEAT_POINTS);
+      expect(layerIds(map)).toEqual(["karta:x:heat"]);
+    });
+
+    it("draws layers set before mount once the first style loads", async () => {
+      const adapter = new MapLibreMapAdapter();
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      adapter.setVectorLayer("districts", VECTOR);
+      adapter.setHeatmapLayer("density", HEAT_POINTS);
+      const { map } = await mounted({ basemap: POSITRON }, adapter);
+      expect(layerIds(map)).toEqual([]);
+      map.fire("style.load");
+      expect(idsOf(map, "karta:districts:").length).toBeGreaterThan(0);
+      expect(idsOf(map, "karta:regions:").length).toBeGreaterThan(0);
+      expect(idsOf(map, "karta:density:")).toEqual(["karta:density:heat"]);
+    });
+
+    it("draws them all again, images included, after a basemap swap", async () => {
+      const { adapter, map } = await ready(STREETS);
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      adapter.setVectorLayer("districts", VECTOR);
+      adapter.setHeatmapLayer("density", HEAT_POINTS);
+      const before = layerIds(map);
+      void adapter.setBasemap(POSITRON);
+      expect(layerIds(map)).toEqual([]);
+      expect(map.images.size).toBe(0);
+      map.fire("style.load");
+      expect(map.hasImage("karta-pattern:dots")).toBe(true);
+      // The new basemap has glyphs, so the labels join the layers that were there.
+      expect(layerIds(map)).toEqual(expect.arrayContaining(before as string[]));
+      expect(idsOf(map, "karta:regions:styled-label")).toHaveLength(1);
+    });
+
+    it("reads the label font again for the new style after a swap", async () => {
+      const { adapter, map } = await ready(POSITRON);
+      adapter.setStyledShapes("regions", STYLED_AREAS);
+      expect(idsOf(map, "karta:regions:styled-label")).toHaveLength(1);
+      void adapter.setBasemap(STREETS);
+      map.fire("style.load");
+      expect(idsOf(map, "karta:regions:styled-label")).toEqual([]);
+    });
+  });
+
+  describe("tap hits", () => {
+    const point = {
+      id: "a",
+      position: { lat: 48.86, lng: 2.35 },
+      colour: "#e69f00",
+      radius: 6,
+      shape: "circle" as const,
+    };
+
+    async function withAll() {
+      const subject = await ready(STREETS);
+      subject.adapter.setFeatureLayer("pts", [point]);
+      subject.adapter.setStyledShapes("regions", STYLED_AREAS);
+      subject.adapter.setStyledShapes("routes", STYLED_LINES);
+      subject.adapter.setVectorLayer("districts", VECTOR);
+      return subject;
+    }
+
+    it("queries points and lines within a fingertip and polygons at the exact point, in that order", async () => {
+      const { adapter, map } = await withAll();
+      adapter.featuresAt({ x: 50, y: 40 });
+      const box = [
+        [34, 24],
+        [66, 56],
+      ];
+      expect(
+        map.callsOf("queryRenderedFeatures").map((call) => call.args),
+      ).toEqual([
+        [box, { layers: ["karta:pts:points"] }],
+        [
+          box,
+          {
+            layers: [
+              "karta:routes:styled-line-solid",
+              "karta:routes:styled-line-dashed",
+              "karta:routes:styled-line-dotted",
+            ],
+          },
+        ],
+        [[50, 40], { layers: ["karta:regions:styled-fill"] }],
+      ]);
+    });
+
+    it("returns points, then lines, then polygons, each feature once", async () => {
+      const { adapter, map } = await withAll();
+      simulateFeatureHits(map, [
+        { layerId: "regions", featureId: "north" },
+        { layerId: "routes", featureId: "main" },
+        { layerId: "pts", featureId: "a" },
+        { layerId: "pts", featureId: "a" },
+      ]);
+      // A tile edge repeats a feature: the same hit twice in one query.
+      const [first] = map.features as Spec[];
+      map.features = [...map.features, { ...first }];
+      expect(adapter.featuresAt({ x: 1, y: 1 })).toEqual([
+        { layerId: "pts", featureId: "a" },
+        { layerId: "routes", featureId: "main" },
+        { layerId: "regions", featureId: "north" },
+      ]);
+    });
+
+    it("tells the same feature id on two layers apart", async () => {
+      const { adapter, map } = await withAll();
+      adapter.setStyledShapes("others", STYLED_AREAS);
+      simulateFeatureHits(map, [
+        { layerId: "regions", featureId: "north" },
+        { layerId: "others", featureId: "north" },
+      ]);
+      expect(adapter.featuresAt({ x: 1, y: 1 })).toEqual([
+        { layerId: "regions", featureId: "north" },
+        { layerId: "others", featureId: "north" },
+      ]);
+    });
+
+    it("emits the topmost hit with the whole list on a tap, then the click", async () => {
+      const { adapter, map } = await withAll();
+      const order: string[] = [];
+      const tap = vi.fn(() => order.push("featureTap"));
+      adapter.on("featureTap", tap);
+      adapter.on("click", () => order.push("click"));
+      simulateFeatureHits(map, [
+        { layerId: "pts", featureId: "a" },
+        { layerId: "regions", featureId: "south" },
+      ]);
+      expect(tap).toHaveBeenCalledWith({
+        layerId: "pts",
+        featureId: "a",
+        hits: [
+          { layerId: "pts", featureId: "a" },
+          { layerId: "regions", featureId: "south" },
+        ],
+      });
+      expect(order).toEqual(["featureTap", "click"]);
+    });
+
+    it("finds nothing when the style is not ready or the query throws", async () => {
+      const { adapter, map } = await withAll();
+      map.queryError = new Error("style not loaded");
+      expect(adapter.featuresAt({ x: 1, y: 1 })).toEqual([]);
+      map.queryError = undefined;
+      const unmounted = new MapLibreMapAdapter();
+      expect(unmounted.featuresAt({ x: 1, y: 1 })).toEqual([]);
+      void adapter.setBasemap(DARK);
+      expect(adapter.featuresAt({ x: 1, y: 1 })).toEqual([]);
+    });
+  });
+
+  describe("getBounds", () => {
+    it("reports the box the engine shows", async () => {
+      const { adapter } = await ready();
+      const { west, south, east, north } = adapter.getBounds();
+      expect(west).toBeLessThan(MOUNT.view.center.lng);
+      expect(east).toBeGreaterThan(MOUNT.view.center.lng);
+      expect(south).toBeLessThan(MOUNT.view.center.lat);
+      expect(north).toBeGreaterThan(MOUNT.view.center.lat);
+    });
+
+    it("covers the whole world before the map is mounted", () => {
+      const bounds = new MapLibreMapAdapter().getBounds();
+      expect(bounds.west).toBe(-180);
+      expect(bounds.east).toBe(180);
+      expect(bounds.south).toBeLessThan(-80);
+      expect(bounds.north).toBeGreaterThan(80);
+    });
+  });
+
+  describe("toImage", () => {
+    it("never asks the engine to keep its drawing buffer", async () => {
+      const { adapter, map } = await ready();
+      await adapter.toImage();
+      expect(map.options).not.toHaveProperty("preserveDrawingBuffer");
+      expect(JSON.stringify(map.options)).not.toContain(
+        "preserveDrawingBuffer",
+      );
+    });
+
+    it("repaints, copies the canvas inside the render event, and encodes a PNG", async () => {
+      const { adapter, map } = await ready();
+      map.rendersOnRepaint = false;
+      const image = adapter.toImage();
+      await vi.waitFor(() => {
+        expect(map.callsOf("triggerRepaint")).toHaveLength(1);
+      });
+      // Nothing is copied until the engine has drawn the frame.
+      expect(canvasStub.contexts).toEqual([]);
+      map.fire("render");
+      expect(canvasStub.contexts).toHaveLength(1);
+      expect(canvasStub.contexts[0]?.calls[0]).toMatchObject({
+        method: "drawImage",
+        args: [map.getCanvas(), 0, 0],
+      });
+      const blob = await image;
+      expect(blob.type).toBe("image/png");
+      expect(blob.size).toBeGreaterThan(0);
+    });
+
+    it("copies at the map canvas's pixel size", async () => {
+      const { adapter, map } = await ready();
+      map.getCanvas().width = 1600;
+      map.getCanvas().height = 1200;
+      await adapter.toImage();
+      const copy = canvasStub.contexts[0]?.canvas;
+      expect([copy?.width, copy?.height]).toEqual([1600, 1200]);
+    });
+
+    it("draws the credit text on a strip along the bottom edge, scaled to the screen", async () => {
+      const { adapter, map } = await ready();
+      const canvas = map.getCanvas();
+      canvas.width = 1600;
+      canvas.height = 1200;
+      Object.defineProperty(canvas, "clientWidth", { value: 800 });
+      await adapter.toImage({ attribution: "© Example contributors" });
+      const { calls } = canvasStub.contexts[0] as { calls: Spec[] };
+      const strip = calls.find((call) => call.method === "fillRect");
+      const [x, y, width, height] = (strip?.args ?? []) as [
+        number,
+        number,
+        number,
+        number,
+      ];
+      // The canvas has twice the CSS pixels: 22 px of text and 8 px of padding each side.
+      expect([x, width, height]).toEqual([0, 1600, 38]);
+      expect(y + height).toBe(1200);
+      const text = calls.find((call) => call.method === "fillText");
+      expect(text?.args[0]).toBe("© Example contributors");
+      const context = canvasStub.contexts[0];
+      expect(context?.font).toMatch(/^22px /);
+    });
+
+    it("draws the strip with tokens, and shrinks text that does not fit", async () => {
+      const { adapter, map } = await ready();
+      map.getCanvas().width = 100;
+      await adapter.toImage({ attribution: "A very long credit line indeed" });
+      const context = canvasStub.contexts[0];
+      expect(context?.fillStyle).toBe(tokenValues.dataMarker.edge);
+      const size = Number.parseFloat(context?.font ?? "");
+      expect(size).toBeLessThan(11);
+    });
+
+    it("draws no strip without credit text", async () => {
+      const { adapter } = await ready();
+      await adapter.toImage();
+      await adapter.toImage({ attribution: "   " });
+      for (const { calls } of canvasStub.contexts) {
+        expect(calls.map((call) => call.method)).toEqual(["drawImage"]);
+      }
+    });
+
+    it("waits for the map to finish loading before it draws", async () => {
+      const { adapter, map } = await ready();
+      map.loadedState = false;
+      const image = adapter.toImage();
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      expect(map.callsOf("triggerRepaint")).toHaveLength(0);
+      map.fire("idle");
+      await image;
+      expect(map.callsOf("triggerRepaint")).toHaveLength(1);
+    });
+
+    it("goes on with what is drawn after three seconds of loading", async () => {
+      const { adapter, map } = await ready();
+      vi.useFakeTimers();
+      map.loadedState = false;
+      const image = adapter.toImage();
+      await vi.advanceTimersByTimeAsync(IMAGE_WAIT_MS);
+      await expect(image).resolves.toBeInstanceOf(Blob);
+      expect(map.listenerCount()).toBeGreaterThan(0);
+    });
+
+    it("gives up when the map never draws a frame", async () => {
+      const { adapter, map } = await ready();
+      vi.useFakeTimers();
+      map.rendersOnRepaint = false;
+      const image = adapter.toImage();
+      const failed = expect(image).rejects.toMatchObject({
+        name: "MapEngineError",
+        reason: "export-failed",
+      });
+      await vi.advanceTimersByTimeAsync(IMAGE_WAIT_MS);
+      await failed;
+      // The render listener is gone, so a late frame does nothing.
+      map.fire("render");
+      expect(canvasStub.contexts).toEqual([]);
+    });
+
+    it("rejects with export-failed when the map is not mounted or was destroyed", async () => {
+      await expect(new MapLibreMapAdapter().toImage()).rejects.toMatchObject({
+        reason: "export-failed",
+      });
+      const { adapter } = await ready();
+      adapter.destroy();
+      await expect(adapter.toImage()).rejects.toMatchObject({
+        reason: "export-failed",
+      });
+    });
+
+    it("rejects with export-failed when the browser gives no image", async () => {
+      const { adapter } = await ready();
+      canvasStub.failNext = true;
+      await expect(adapter.toImage()).rejects.toMatchObject({
+        name: "MapEngineError",
+        reason: "export-failed",
+        message: expect.stringContaining("encode"),
+      });
+    });
+
+    it("says the browser blocked reading the map when the canvas is tainted", async () => {
+      const { adapter } = await ready();
+      canvasStub.throwNext = new DOMException(
+        "The canvas has been tainted",
+        "SecurityError",
+      );
+      const error = await adapter.toImage().catch((reason: unknown) => reason);
+      expect(error).toBeInstanceOf(MapEngineError);
+      expect(error).toMatchObject({
+        reason: "export-failed",
+        message: expect.stringContaining("browser blocked reading the map"),
+      });
+    });
+
+    it("maps any other failure to export-failed, with its cause", async () => {
+      const { adapter } = await ready();
+      canvasStub.throwNext = new Error("out of memory");
+      await expect(adapter.toImage()).rejects.toMatchObject({
+        reason: "export-failed",
+        message: expect.stringContaining("out of memory"),
+      });
+    });
+
+    it("fails when the browser cannot make a canvas to copy onto", async () => {
+      const { adapter } = await ready();
+      restoreCanvas();
+      vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+      await expect(adapter.toImage()).rejects.toMatchObject({
+        reason: "export-failed",
+      });
+    });
+
+    it("waits for the page's fonts before it draws credit text", async () => {
+      const { adapter } = await ready();
+      let release = () => {};
+      const fonts = {
+        ready: new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+      };
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: fonts,
+      });
+      try {
+        const image = adapter.toImage({ attribution: "Credit" });
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        const drawn = () =>
+          canvasStub.contexts[0]?.calls.some(
+            (call) => call.method === "fillText",
+          );
+        expect(drawn()).toBe(false);
+        release();
+        await image;
+        expect(drawn()).toBe(true);
+      } finally {
+        Reflect.deleteProperty(document, "fonts");
+      }
+    });
+
+    it("still draws when the font set fails", async () => {
+      const { adapter } = await ready();
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: { ready: Promise.reject(new Error("no fonts")) },
+      });
+      try {
+        await expect(
+          adapter.toImage({ attribution: "Credit" }),
+        ).resolves.toBeInstanceOf(Blob);
+      } finally {
+        Reflect.deleteProperty(document, "fonts");
+      }
     });
   });
 });

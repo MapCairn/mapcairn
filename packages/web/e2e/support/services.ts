@@ -167,6 +167,24 @@ export async function searchedQueries(page: Page): Promise<string[]> {
 }
 
 /**
+ * Replaces the layer registry with these definitions, which are plain data,
+ * so a test can offer layers of any kind. Their URLs must still be on an
+ * origin the production policy allows, and the test answers them with
+ * `page.route`.
+ */
+export async function scriptLayers(
+  page: Page,
+  definitions: readonly object[],
+): Promise<void> {
+  await page.addInitScript((layers: readonly object[]) => {
+    window.__KARTA_TEST_SERVICES__ = Object.assign(
+      (window.__KARTA_TEST_SERVICES__ as object | undefined) ?? {},
+      { layers: { list: () => layers } },
+    );
+  }, definitions);
+}
+
+/**
  * Replaces the clipboard with a recording fake. It succeeds unless `ok` is
  * false, in which case it reports the copy as denied.
  */
