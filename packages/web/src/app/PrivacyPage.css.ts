@@ -1,0 +1,58 @@
+import { tokens } from "@karta/theme";
+import { style } from "@vanilla-extract/css";
+
+/** The scrolling page: the document is fixed for the map, so this scrolls itself. */
+export const scroller = style({
+  height: "100%",
+  overflowY: "auto",
+  overscrollBehavior: "contain",
+  backgroundColor: tokens.color.mapBackground,
+});
+
+/** The reading column. */
+export const page = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.md,
+  maxWidth: "42rem",
+  margin: "0 auto",
+  padding: `${tokens.space.xl} ${tokens.space.inset}`,
+  color: tokens.color.text,
+});
+
+export const heading = style({
+  margin: 0,
+  fontSize: tokens.type.title.size,
+  lineHeight: tokens.type.title.lineHeight,
+  letterSpacing: tokens.type.title.tracking,
+  fontWeight: tokens.type.weight.semibold,
+});
+
+export const sectionTitle = style({
+  margin: 0,
+  paddingTop: tokens.space.sm,
+  fontSize: tokens.type.large.size,
+  lineHeight: tokens.type.large.lineHeight,
+  letterSpacing: tokens.type.large.tracking,
+  fontWeight: tokens.type.weight.semibold,
+});
+
+export const body = style({
+  margin: 0,
+  fontSize: tokens.type.body.size,
+  lineHeight: tokens.type.body.lineHeight,
+  letterSpacing: tokens.type.body.tracking,
+});
+
+export const updated = style([
+  body,
+  {
+    color: tokens.color.textMuted,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
+
+export const link = style({
+  color: tokens.color.accent,
+  textUnderlineOffset: "0.2em",
+});

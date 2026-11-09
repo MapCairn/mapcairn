@@ -1,15 +1,11 @@
 import type { LinksFunction, MetaFunction } from "react-router";
+import { PRIVACY_POLICY_TITLE, PrivacyPage } from "../app/PrivacyPage";
 import { buildPageMeta } from "../buildPageMeta";
-import {
-  PRIVACY_POLICY_TITLE,
-  PrivacyPolicy,
-} from "../components/PrivacyPolicy/PrivacyPolicy";
 import { SITE_URL } from "../constants/siteConfig";
-import { scrollPage } from "../global.css";
 
 /** This route's own meta description, distinct from the root route's site-wide one. */
 const PRIVACY_POLICY_DESCRIPTION =
-  "Karta's privacy policy: a static-content map with no accounts, no forms, and no server-side database of visitor data.";
+  "Karta's privacy policy: a map with no accounts, no forms, and no server-side database of visitor data.";
 
 /** Canonical URL of this route, shared by its `meta` and `links` exports. */
 const PRIVACY_URL = `${SITE_URL}/privacy`;
@@ -17,8 +13,8 @@ const PRIVACY_URL = `${SITE_URL}/privacy`;
 /**
  * React Router route module export: the `/privacy` route's `<title>`/`<meta>`
  * tags, via the same `buildPageMeta` the root route uses, so this page's
- * Open Graph/Twitter/JSON-LD tags describe itself rather than inheriting
- * the root route's Gauteng-map-specific ones.
+ * Open Graph, Twitter and JSON-LD tags describe itself rather than inheriting
+ * the root route's.
  */
 export const meta: MetaFunction = () =>
   buildPageMeta({
@@ -32,12 +28,7 @@ export const links: LinksFunction = () => [
   { rel: "canonical", href: PRIVACY_URL },
 ];
 
-/** React Router route module export: the `/privacy` route, rendering the site's privacy policy. */
+/** React Router route module export: the `/privacy` route, rendering the privacy policy. */
 export default function PrivacyRoute() {
-  // The document is fixed for the full-screen map, so this page scrolls itself.
-  return (
-    <div className={scrollPage}>
-      <PrivacyPolicy />
-    </div>
-  );
+  return <PrivacyPage />;
 }

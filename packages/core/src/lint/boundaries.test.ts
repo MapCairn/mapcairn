@@ -193,12 +193,16 @@ describe("dependency-cruiser boundaries", () => {
       "map-engine-libraries-only-in-engine-adapters",
       "packages/map/src/ui/badLeafletCss.ts",
     ],
+    // react-leaflet and the MapLibre Leaflet plugin are no longer installed, so
+    // these imports cannot resolve and the unresolved-specifier rule is the one
+    // that catches them. leaflet and maplibre-gl stay installed (the engine
+    // adapters use them), which keeps the resolved-path rule above exercised.
     [
-      "map-engine-libraries-only-in-engine-adapters",
+      "map-engine-libraries-unresolved",
       "packages/map/src/ui/badReactLeaflet.ts",
     ],
     [
-      "map-engine-libraries-only-in-engine-adapters",
+      "map-engine-libraries-unresolved",
       "packages/map/src/ui/badMaplibrePlugin.ts",
     ],
     ["map-engine-libraries-unresolved", "packages/map/src/ui/badPlugin.ts"],

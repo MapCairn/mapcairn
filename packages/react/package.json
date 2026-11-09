@@ -12,8 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "19.3.1",
-    "usehooks-ts": "3.1.1"
+    "react": "19.3.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "7.0.1",

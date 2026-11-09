@@ -8,36 +8,31 @@
  * dependency tree (no `sharp`/`satori`/`resvg`), but `@playwright/test`'s
  * bundled Chromium already is, so this reuses it as a one-shot HTML-to-PNG
  * renderer rather than adding a new dependency for the same job. Uses the
- * same self-hosted Source Serif 4 and Public Sans font files, `SITE_URL`, brand copy
- * (the `TITLE` and `TAGLINE` constants below) and colour tokens in
- * `src/index.css` as the live app, so the card can't drift from what a
+ * same self-hosted IBM Plex Sans file, `SITE_URL`, brand copy (the `TITLE`
+ * and `TAGLINE` constants below) and the light theme's colour values from
+ * `@karta/theme` as the live app, so the card can't drift from what a
  * visitor sees after clicking through.
  */
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
+// Read from the source file, not the `@karta/theme` barrel, because the barrel
+// loads vanilla-extract style files that only the Vite plugin can evaluate.
+import { themeValues } from "../../theme/src/tokenValues";
 import {
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
   SITE_URL,
 } from "../src/constants/siteConfig";
 
-const SERIF_FONT_PATH = fileURLToPath(
+const FONT_PATH = fileURLToPath(
   import.meta.resolve(
-    "@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2",
-  ),
-);
-const SANS_FONT_PATH = fileURLToPath(
-  import.meta.resolve(
-    "@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2",
+    "@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2",
   ),
 );
 const OUTPUT_PATH = fileURLToPath(
   new URL("../public/og-image.png", import.meta.url),
-);
-const INDEX_CSS_PATH = fileURLToPath(
-  new URL("../src/index.css", import.meta.url),
 );
 
 const TITLE = "Karta";
@@ -45,33 +40,11 @@ const TAGLINE =
   "Explore an interactive map. Search places, compare basemaps and measure distances or areas.";
 const URL_LABEL = SITE_URL.replace(/^https?:\/\//, "");
 
-/**
- * Reads one `--md-sys-color-<role>` hex value out of `index.css`'s
- * light colour token block, so the card uses the app's own palette rather
- * than a second copy of the hex values that could drift.
- */
-function readM3LightColor(indexCss: string, role: string): string {
-  const startMarker = "/* LIGHT COLOUR TOKENS";
-  const endMarker = "/* END LIGHT COLOUR TOKENS */";
-  const start = indexCss.indexOf(startMarker);
-  const end = indexCss.indexOf(endMarker, start);
-  const block = indexCss.slice(start, end);
-  const match = block.match(
-    new RegExp(`--md-sys-color-${role}:\\s*(#[0-9a-fA-F]{3,8});`),
-  );
-  if (!match) {
-    throw new Error(
-      `Could not find --md-sys-color-${role} in index.css's light colour tokens`,
-    );
-  }
-  return match[1];
-}
-
-const indexCss = readFileSync(INDEX_CSS_PATH, "utf8");
-const surfaceColor = readM3LightColor(indexCss, "surface");
-const primaryColor = readM3LightColor(indexCss, "primary");
-const onSurfaceColor = readM3LightColor(indexCss, "on-surface");
-const secondaryColor = readM3LightColor(indexCss, "secondary");
+const colour = themeValues.light.opaque;
+const surfaceColor = colour.surfaceRaised;
+const accentColor = colour.accent;
+const textColor = colour.text;
+const mutedColor = colour.textMuted;
 
 const TEMPLATE = `<!doctype html>
 <html>
@@ -79,14 +52,9 @@ const TEMPLATE = `<!doctype html>
 <meta charset="utf-8" />
 <style>
   @font-face {
-    font-family: "Source Serif 4 Variable";
-    src: url("${pathToFileURL(SERIF_FONT_PATH).href}") format("woff2");
-    font-weight: 200 900;
-  }
-  @font-face {
-    font-family: "Public Sans Variable";
-    src: url("${pathToFileURL(SANS_FONT_PATH).href}") format("woff2");
-    font-weight: 100 900;
+    font-family: "IBM Plex Sans Variable";
+    src: url("${pathToFileURL(FONT_PATH).href}") format("woff2");
+    font-weight: 100 700;
   }
   * {
     margin: 0;
@@ -97,14 +65,14 @@ const TEMPLATE = `<!doctype html>
     width: ${OG_IMAGE_WIDTH}px;
     height: ${OG_IMAGE_HEIGHT}px;
     background: ${surfaceColor};
-    font-family: "Public Sans Variable", sans-serif;
+    font-family: "IBM Plex Sans Variable", sans-serif;
     position: relative;
     overflow: hidden;
   }
   .frame {
     position: absolute;
     inset: 40px;
-    border: 2px solid ${onSurfaceColor};
+    border: 2px solid ${textColor};
   }
   .content {
     position: relative;
@@ -115,17 +83,16 @@ const TEMPLATE = `<!doctype html>
     padding: 96px;
   }
   .title {
-    font-family: "Source Serif 4 Variable", serif;
     font-size: 112px;
     font-weight: 600;
-    color: ${onSurfaceColor};
+    color: ${textColor};
     line-height: 1;
   }
   .rule {
     margin-top: 36px;
     width: 160px;
     height: 6px;
-    background: ${primaryColor};
+    background: ${accentColor};
   }
   .tagline {
     margin-top: 32px;
@@ -133,7 +100,7 @@ const TEMPLATE = `<!doctype html>
     font-size: 34px;
     font-weight: 400;
     line-height: 1.35;
-    color: ${onSurfaceColor};
+    color: ${textColor};
   }
   .url {
     position: absolute;
@@ -141,7 +108,7 @@ const TEMPLATE = `<!doctype html>
     bottom: 72px;
     font-size: 26px;
     font-weight: 500;
-    color: ${secondaryColor};
+    color: ${mutedColor};
   }
 </style>
 </head>

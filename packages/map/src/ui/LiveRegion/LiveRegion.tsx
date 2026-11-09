@@ -19,7 +19,7 @@ export type { Announce, AnnounceOptions, AnnouncePriority } from "./announcer";
  * Ambient and type-only: this package has no dependency on `@types/node`, and
  * bundlers replace the literal `process.env.NODE_ENV`, so production builds
  * drop the development warnings. Outside a bundler the guard keeps the check
- * from throwing. Same idiom as `useThemePreference` in `@karta/react`.
+ * from throwing.
  */
 declare const process: { env?: { NODE_ENV?: string } } | undefined;
 

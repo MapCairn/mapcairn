@@ -95,7 +95,7 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   "X-Frame-Options": "DENY",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Permissions-Policy":
-    "geolocation=(), camera=(), microphone=(), interest-cohort=(), browsing-topics=()",
+    "geolocation=(self), camera=(), microphone=(), interest-cohort=(), browsing-topics=()",
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "same-origin",
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",

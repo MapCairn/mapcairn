@@ -70,7 +70,7 @@ function getStopsByMatch<T>(
 /**
  * Resolves a feature property through a `Classification` to its style output value.
  * @param classification - Graduated (numeric range) or categorized (exact match) rules.
- * @param properties - The feature's properties, as passed to a Leaflet `styleFn`.
+ * @param properties - The feature's properties, as read from a GeoJSON feature.
  * @returns The matching stop's `value`. `classification.fallback` is used
  *   when the property is missing, the wrong type, or (graduated only) `NaN`/`Infinity`
  * (neither is a value any stop's `max` can meaningfully cover) or

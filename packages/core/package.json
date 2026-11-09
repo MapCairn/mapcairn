@@ -19,9 +19,7 @@
   "dependencies": {
     "@turf/area": "7.4.0",
     "@turf/helpers": "7.4.0",
-    "@turf/length": "7.4.0",
-    "@types/leaflet": "1.9.22",
-    "zod": "4.6.7"
+    "@turf/length": "7.4.0"
   },
   "devDependencies": {
     "@types/geojson": "7946.0.16"

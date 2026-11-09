@@ -57,6 +57,15 @@ describe("SECURITY_HEADERS stays in sync with public/_headers", () => {
   });
 });
 
+describe("Permissions-Policy", () => {
+  it("lets this origin use geolocation for Locate me and blocks camera and microphone", () => {
+    const policy = SECURITY_HEADERS["Permissions-Policy"];
+    expect(policy).toContain("geolocation=(self)");
+    expect(policy).toContain("camera=()");
+    expect(policy).toContain("microphone=()");
+  });
+});
+
 describe("buildContentSecurityPolicy", () => {
   it("matches SECURITY_HEADERS' static default when called with no nonce", () => {
     expect(buildContentSecurityPolicy()).toBe(

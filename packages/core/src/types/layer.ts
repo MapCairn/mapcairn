@@ -177,7 +177,7 @@ export interface LayerInteraction {
 
 /**
  * Platform-generic layer descriptor.
- * @remarks One `Layer` maps to one GeoJSON data source and one Leaflet layer.
+ * @remarks One `Layer` maps to one GeoJSON data source and one map layer.
  */
 export interface Layer {
   id: string;

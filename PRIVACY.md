@@ -3,23 +3,23 @@
 _Last updated: 2026-11-09_
 
 _This mirrors the policy on the site at `/privacy`
-(`packages/web/src/components/PrivacyPolicy/PrivacyPolicy.tsx`). Keep both in
-sync when either changes._
+(`packages/web/src/app/PrivacyPage.tsx`). Keep both in sync when either
+changes._
 
-Karta is a static-content map. There are no user accounts, no forms and no
-server-side database of visitor data. The site stores or sends only the
-following.
+Karta has no user accounts, no forms and no server-side database of visitor
+data. The site stores or sends only the following.
 
 ## Cookies
 
-The site sets no cookies. Preferences such as your theme are kept in local
-storage on your device instead, as described below.
+The site sets no cookies. Your settings are kept in local storage on your
+device instead, as described below.
 
 ## Local storage
 
-Your browser's `localStorage`, under the key `buffer-zones-theme`, stores your
-light or dark theme preference. It stays on your device and is never sent to a
-server.
+Your browser's `localStorage` keeps your settings: your light or dark theme
+(under the key `buffer-zones-theme`), your units, whether the zoom buttons
+show, your chosen basemap and where the map was last left. The other keys
+start with `karta:`. These stay on your device and are never sent to a server.
 
 ## Analytics
 
@@ -49,7 +49,8 @@ including your IP address, as part of serving imagery. Location search
 queries go to OpenStreetMap's Nominatim geocoding service, which may also log
 the query and your IP address. This is standard for any web map.
 
-## No location tracking
+## Your location
 
-The browser's geolocation API is not used, and it is disabled at the
-HTTP-header level with `Permissions-Policy`.
+The Locate me button asks your browser for your position only when you press
+it. The position is used to show where you are on the map. It is not sent to
+this site and is not stored.

@@ -104,9 +104,10 @@ export function SettingsSection({
       <div className={subsection}>
         <Subheading level={subLevel}>Privacy</Subheading>
         <p className={prose}>
-          Karta has no accounts, no analytics and sets no cookies. Map tiles
-          come from the map provider you choose. Search text is sent to
-          OpenStreetMap's Nominatim service. Your settings stay on this device.
+          Karta has no accounts, sets no cookies and counts page views without
+          tracking you. Map tiles come from the map provider you choose. Search
+          text is sent to OpenStreetMap's Nominatim service. Your settings stay
+          on this device.
         </p>
         <p className={prose}>
           <a className={link} href={privacyHref}>

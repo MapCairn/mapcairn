@@ -89,7 +89,7 @@ export default defineConfig(({ mode, command }) => {
               },
               {
                 name: "ui-vendor",
-                test: /node_modules\/(lucide-react|zustand|usehooks-ts|zod)\//,
+                test: /node_modules\/(lucide-react|zod)\//,
               },
               // Leaflet and MapLibre have no group on purpose. Each engine
               // adapter imports its library (and its stylesheet) dynamically,

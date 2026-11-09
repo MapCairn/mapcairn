@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveThemedColor } from "./createLayerConfig";
+import { resolveThemedColor } from "./resolveThemedColor";
 
 describe("resolveThemedColor", () => {
   it("returns color when dark is false, even if darkColor is set", () => {

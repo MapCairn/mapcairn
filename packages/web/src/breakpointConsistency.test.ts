@@ -1,26 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { MOBILE_BREAKPOINT_PX } from "@karta/react";
+import { PANEL_MIN_WIDTH } from "@karta/core";
 import { describe, expect, it } from "vitest";
 
-/**
- * Every `@media (max-width: ...)` breakpoint declared as a literal pixel
- * value across this app's own `index.css`/`.css.ts` files, alongside the
- * file it came from.
- * @remarks `packages/web` has zero `.module.css` files left (the CSS
- *   Modules -> vanilla-extract migration is complete); this scan now
- *   covers only `index.css` (out of scope for that migration; it stays
- *   plain CSS) and `.css.ts` files. CSS custom properties can't be
- *   referenced inside a media query condition, so `index.css` stays
- *   literal pixel values rather than `var(...)` references to
- *   `MOBILE_BREAKPOINT_PX` (App.tsx's own single source of truth,
- *   re-exported from `@karta/react`); this scan is what actually guards
- *   against it silently drifting from that constant instead of a code
- *   comment alone. A `.css.ts` file has no such excuse; it's real
- *   TypeScript, so it should build its breakpoint from
- *   `MOBILE_BREAKPOINT_PX` directly (see the test below) rather than a
- *   literal, and so should never show up in this scan at all.
- */
 /** Every `.css.ts` (vanilla-extract) file under this app's own `src`. */
 function findVanillaExtractFiles(): string[] {
   const srcDir = path.join(__dirname);
@@ -32,50 +14,24 @@ function findVanillaExtractFiles(): string[] {
     .map((entry) => path.join(srcDir, entry));
 }
 
-function findMobileBreakpointDeclarations(): Array<{
-  file: string;
-  breakpointPx: number;
-}> {
-  const srcDir = path.join(__dirname);
-  const indexCssFiles = readdirSync(srcDir, { recursive: true })
-    .filter(
-      (entry): entry is string =>
-        typeof entry === "string" && entry.endsWith("index.css"),
-    )
-    .map((entry) => path.join(srcDir, entry));
-  const styleFiles = [...indexCssFiles, ...findVanillaExtractFiles()];
-
-  const declarations: Array<{ file: string; breakpointPx: number }> = [];
-  for (const file of styleFiles) {
-    const css = readFileSync(file, "utf8");
-    for (const match of css.matchAll(/@media\s*\(max-width:\s*(\d+)px\)/g)) {
-      declarations.push({ file, breakpointPx: Number(match[1]) });
-    }
-  }
-  return declarations;
-}
-
-describe("mobile breakpoint consistency", () => {
-  it("finds at least one @media (max-width) declaration to check", () => {
-    expect(findMobileBreakpointDeclarations().length).toBeGreaterThan(0);
+/**
+ * The layout switch between the bottom sheet and the side panel is made once,
+ * in JavaScript, by `chooseLayout` in `@karta/core` (from `PANEL_MIN_WIDTH`).
+ * A width media query in a style file would be a second, drifting copy.
+ */
+describe("layout breakpoint", () => {
+  it("finds style files to check", () => {
+    expect(findVanillaExtractFiles().length).toBeGreaterThan(0);
   });
 
-  it("never declares a mobile breakpoint that disagrees with MOBILE_BREAKPOINT_PX", () => {
-    for (const { file, breakpointPx } of findMobileBreakpointDeclarations()) {
-      expect(breakpointPx, `${file} declares ${breakpointPx}px`).toBe(
-        MOBILE_BREAKPOINT_PX,
-      );
-    }
-  });
-
-  it("never hardcodes a pixel breakpoint literal in a .css.ts file", () => {
+  it("is not repeated as a width media query in any .css.ts file", () => {
     const srcDir = path.join(__dirname);
 
     for (const file of findVanillaExtractFiles()) {
       const source = readFileSync(file, "utf8");
       expect(
         source,
-        `${path.relative(srcDir, file)} should build its breakpoint from MOBILE_BREAKPOINT_PX, not a literal`,
+        `${path.relative(srcDir, file)} should not declare a width breakpoint; use chooseLayout (panel from ${PANEL_MIN_WIDTH}px)`,
       ).not.toMatch(/\((?:max|min)-width:\s*\d+px\)/);
     }
   });
