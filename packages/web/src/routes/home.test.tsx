@@ -29,9 +29,33 @@ describe("home route server render", () => {
     expect(html).toContain('data-testid="map-placeholder"');
   });
 
-  it("renders no map, no settings and no style attribute", () => {
+  it("gives the skip link a target before the app mounts", () => {
+    expect(html).toMatch(/<main[^>]* id="map"/);
+  });
+
+  it("renders no map, no settings sheet and no style attribute", () => {
     expect(html).not.toContain("data-map-host");
-    expect(html).not.toContain("Map options");
+    expect(html).not.toContain("map-options-sheet");
+    expect(html).not.toContain("sheet-section-settings");
     expect(html).not.toMatch(/style=/);
+  });
+
+  it("draws the chrome as a decorative skeleton inside the busy main landmark", () => {
+    const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+    expect(main).toContain(">Loading the map<");
+    const skeleton = main.slice(main.indexOf('data-testid="chrome-skeleton"'));
+    expect(skeleton).toContain('aria-hidden="true"');
+    expect(skeleton).toMatch(/\sinert(=""|\s|>)/);
+    for (const control of [
+      "Search places",
+      "Map options",
+      "Measure distance and area",
+      "Locate me",
+      "Zoom in",
+      "Zoom out",
+      "Map credits",
+    ]) {
+      expect(skeleton).toContain(control);
+    }
   });
 });

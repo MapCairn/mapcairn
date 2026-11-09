@@ -7,7 +7,7 @@ import type {
  * Scripted {@link DevicePreferences}.
  *
  * How to script it: pass the starting values (no reduced motion, fine pointer
- * by default) and call `set(patch)` to change them. Subscribers are notified
+ * and no save-data request by default) and call `set(patch)` to change them. Subscribers are notified
  * only when a value actually changes, and `get()` returns the same object
  * until then.
  */
@@ -16,7 +16,12 @@ export class FakeDevicePreferences implements DevicePreferences {
   #listeners = new Set<(value: DevicePreferencesValue) => void>();
 
   constructor(initial: Partial<DevicePreferencesValue> = {}) {
-    this.#value = { reducedMotion: false, finePointer: true, ...initial };
+    this.#value = {
+      reducedMotion: false,
+      finePointer: true,
+      saveData: false,
+      ...initial,
+    };
   }
 
   /** Changes preferences and notifies subscribers if anything differs. */
@@ -24,7 +29,8 @@ export class FakeDevicePreferences implements DevicePreferences {
     const next = { ...this.#value, ...patch };
     if (
       next.reducedMotion === this.#value.reducedMotion &&
-      next.finePointer === this.#value.finePointer
+      next.finePointer === this.#value.finePointer &&
+      next.saveData === this.#value.saveData
     ) {
       return;
     }

@@ -6,6 +6,7 @@ import {
   DEFAULT_BASEMAP_ID,
   getBasemap,
   MAPLIBRE_CREDIT,
+  omittedLayers,
   resolveBasemap,
 } from "./basemaps";
 
@@ -197,5 +198,36 @@ describe("buildAttribution", () => {
     const before = positron.attribution.length;
     buildAttribution(positron);
     expect(positron.attribution.length).toBe(before);
+  });
+});
+
+describe("omittedLayers", () => {
+  const liberty = resolveBasemap("liberty");
+
+  it("lists the layers a basemap leaves out in Save data mode, and only then", () => {
+    expect(omittedLayers(liberty, true)).toEqual(["natural_earth"]);
+    expect(omittedLayers(liberty, false)).toEqual([]);
+  });
+
+  it("is empty for a basemap that names no such layers", () => {
+    for (const basemap of BASEMAPS) {
+      if (basemap.saveDataOmitLayers === undefined) {
+        expect(omittedLayers(basemap, true)).toEqual([]);
+      }
+    }
+    expect(omittedLayers(resolveBasemap("positron"), true)).toEqual([]);
+    expect(omittedLayers(resolveBasemap("osm"), true)).toEqual([]);
+  });
+
+  // Checked against https://tiles.openfreemap.org/styles/liberty on 2026-11-09:
+  // the one raster layer, "natural_earth" (Natural Earth shaded relief, 933 KB
+  // of the first view's 2,689 KB, drawn from zoom 0 to 7).
+  it("names only vector basemaps, which have a style to take layers from", () => {
+    for (const basemap of BASEMAPS) {
+      if (basemap.saveDataOmitLayers !== undefined) {
+        expect(basemap.source.kind).toBe("vector");
+        expect(basemap.saveDataOmitLayers.length).toBeGreaterThan(0);
+      }
+    }
   });
 });

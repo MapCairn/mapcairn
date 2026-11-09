@@ -58,19 +58,20 @@ Add an interface only where a boundary has at least two implementations. The fak
 | `SearchProvider` | Nominatim | scripted results and errors |
 | `LocationProvider` | browser geolocation | scripted fixes and errors |
 | `SettingsStore` | `localStorage` with in-memory fallback | in-memory |
+| `DevicePreferences` | `matchMedia` (reduced motion, fine pointer) and `navigator.connection` (save data, where the browser has it) | scripted values |
 | `ClipboardPort` | `navigator.clipboard` with a legacy fallback | recording fake |
 | `UrlState` | location hash and `history.replaceState` | in-memory |
 | `ThemeSource` | `matchMedia` | scripted system preference |
 | `LayerRegistry` | the host's definitions, validated at start-up (`createLayerRegistry`) | `StaticLayerRegistry` over sample definitions |
 | `LayerSource` | `FetchLayerSource` (`fetch`, shared response cache) | `FakeLayerSource`, scripted per layer id |
 
-`BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source or an attribution string. A `raster` source is a tile URL template and a tile size, and a `vector` source is a style URL. `DEFAULT_BASEMAP_ID` (Liberty) is the basemap in both themes when nothing is saved or linked, and an unknown id, including the "auto" and the removed "dark" of earlier versions, resolves to it. `DEFAULT_BASEMAP_BACKGROUND` is its land colour; the `mapBackground` token carries the same value (a test in `packages/web` keeps them equal), so the server-rendered placeholder and the map host match Liberty before it draws.
+`BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source or an attribution string. A `raster` source is a tile URL template and a tile size, and a `vector` source is a style URL. `DEFAULT_BASEMAP_ID` (Liberty) is the basemap in both themes when nothing is saved or linked, and an unknown id, including the "auto" and the removed "dark" of earlier versions, resolves to it. `DEFAULT_BASEMAP_BACKGROUND` is its land colour; the `mapBackground` token carries the same value (a test in `packages/web` keeps them equal), so the server-rendered placeholder and the map host match Liberty before it draws. The placeholder also holds the decorative `ChromeSkeleton`, so the chrome is in its final place on the first paint.
 
 Pure helpers (layer templates, decoders and style evaluation, zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
 
 ## The map adapter
 
-MapLibre GL JS is the only map engine, and the ui never imports it. `MapView` takes an adapter factory (`() => MapAdapter`) from the services, mounts one adapter in a host element and wires events to the rest of the ui. Changing basemap calls `setBasemap` on that adapter. The adapter builds an inline raster style for a `raster` source and loads the style URL for a `vector` source.
+MapLibre GL JS is the only map engine, and the ui never imports it. `MapView` takes an adapter factory (`() => MapAdapter`) from the services, mounts one adapter in a host element and wires events to the rest of the ui. Changing basemap calls `setBasemap` on that adapter, with the Save data mode (`useSaveData`: the stored choice, else the device preference), so the adapter can leave out the layers the basemap's `saveDataOmitLayers` lists. It removes those layers, and any source only they use, in its `style.load` handler, before data layers are drawn again, so a Save data change never loses them. It avoids `transformStyle` because a swap with it set waits for the current style, so a failed swap could not put the last basemap back. The adapter builds an inline raster style for a `raster` source and loads the style URL for a `vector` source.
 
 - **Zoom** is normalised to the 256 px tile convention (OpenStreetMap tile numbering). MapLibre counts 512 px tiles, so the engine zoom is the normalised zoom minus one. That offset is one constant, converted only inside the adapter. For the 256 px raster style, the tile level equals the normalised zoom. The URL, the saved view, the scale bar and the tests use the normalised value only.
 - **Overlays** (pin, measure line, accuracy circle, the selected feature's ring) are drawn once, in a single overlay layer positioned with `adapter.project`.

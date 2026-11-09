@@ -4,6 +4,7 @@ import type { Bounds, LatLng, PixelPoint, ViewState } from "../ports/geometry";
 import type {
   MapAdapter,
   MapAdapterFactory,
+  MapBasemapOptions,
   MapClickEvent,
   MapEvents,
   MapFeature,
@@ -120,6 +121,8 @@ export class FakeMapAdapter implements MapAdapter {
   focusCount = 0;
   animationEnabled = true;
   keyboardEnabled = true;
+  /** Whether the last `mount` or `setBasemap` asked for Save data mode. */
+  saveData = false;
 
   #failMount: MapEngineErrorReason | undefined;
   #failNextBasemap = false;
@@ -150,6 +153,7 @@ export class FakeMapAdapter implements MapAdapter {
     this.#basemap = options.basemap;
     this.#view = this.#normalise(options.view);
     this.animationEnabled = !options.reducedMotion;
+    this.saveData = options.saveData ?? false;
     this.#destroyed = false;
     this.mountCount += 1;
     this.#emit("load", undefined);
@@ -264,7 +268,10 @@ export class FakeMapAdapter implements MapAdapter {
     return metresPerPixel(lat, this.#view.zoom);
   }
 
-  async setBasemap(basemap: BasemapDefinition): Promise<void> {
+  async setBasemap(
+    basemap: BasemapDefinition,
+    options: MapBasemapOptions = {},
+  ): Promise<void> {
     if (this.#failNextBasemap) {
       this.#failNextBasemap = false;
       throw new MapEngineError(
@@ -273,6 +280,7 @@ export class FakeMapAdapter implements MapAdapter {
       );
     }
     this.#basemap = basemap;
+    this.saveData = options.saveData ?? false;
     this.#applyView(this.#view);
     this.#emit("load", undefined);
   }

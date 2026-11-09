@@ -495,6 +495,7 @@ describe("basemaps", () => {
     expect(services.fakes.settings.get().basemapId).toBe("osm");
     expect(setBasemap).toHaveBeenCalledWith(
       expect.objectContaining({ id: "osm", name: "Streets" }),
+      { saveData: false },
     );
     expect(services.fakes.maps).toHaveLength(1);
     await vi.waitFor(() =>

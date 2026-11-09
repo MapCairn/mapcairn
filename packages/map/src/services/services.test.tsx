@@ -8,6 +8,7 @@ import {
   useLocationProvider,
   useMapAdapterFactory,
   usePreferences,
+  useSaveData,
   useSearchProvider,
   useSettings,
   useTheme,
@@ -101,6 +102,37 @@ describe("usePreferences", () => {
       services.fakes.preferences.set({ reducedMotion: true });
     });
     expect(result.current.reducedMotion).toBe(true);
+  });
+});
+
+describe("useSaveData", () => {
+  it("follows the device when the person has not chosen", () => {
+    const { services, wrapper } = wrapperFor();
+    const { result } = renderHook(() => useSaveData(), { wrapper });
+    expect(result.current).toBe(false);
+    act(() => {
+      services.fakes.preferences.set({ saveData: true });
+    });
+    expect(result.current).toBe(true);
+  });
+
+  it("lets an explicit choice win over the device in both directions", () => {
+    const { services, wrapper } = wrapperFor();
+    const { result } = renderHook(() => useSaveData(), { wrapper });
+    act(() => {
+      services.fakes.preferences.set({ saveData: true });
+      services.fakes.settings.set({ saveData: false });
+    });
+    expect(result.current).toBe(false);
+    act(() => {
+      services.fakes.preferences.set({ saveData: false });
+      services.fakes.settings.set({ saveData: true });
+    });
+    expect(result.current).toBe(true);
+    act(() => {
+      services.fakes.settings.set({ saveData: null });
+    });
+    expect(result.current).toBe(false);
   });
 });
 

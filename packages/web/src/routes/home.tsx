@@ -1,4 +1,4 @@
-import { SkipLink, VisuallyHidden } from "@karta/map";
+import { ChromeSkeleton, SkipLink, VisuallyHidden } from "@karta/map";
 import type { LinksFunction } from "react-router";
 import { App } from "../App";
 import { ClientOnly } from "../app/ClientOnly";
@@ -17,10 +17,12 @@ export const links: LinksFunction = () => [
  * @remarks The server renders a static shell only: the skip link (the first
  *   focusable element), the page's hidden h1 in a `header` (so it is inside
  *   a landmark, like everything else on the page) and a `main` in the map's
- *   background colour. The app mounts after hydration, because it depends on
- *   stored settings and device preferences the server cannot know; rendering
- *   it on the server would make the two disagree. Its own `main` (inside
- *   `MapChrome`) then replaces the placeholder.
+ *   background colour, holding the decorative `ChromeSkeleton` (the search
+ *   pill, map controls and credits button in their final places). The app
+ *   mounts after hydration, because it depends on stored settings and device
+ *   preferences the server cannot know; rendering it on the server would make
+ *   the two disagree. Its own `main` (inside `MapChrome`) then replaces the
+ *   placeholder and the skeleton in the same boxes.
  */
 export default function HomeRoute() {
   return (
@@ -34,9 +36,11 @@ export default function HomeRoute() {
           <main
             className={mapPlaceholder}
             aria-busy="true"
+            id={MAP_REGION_ID}
             data-testid="map-placeholder"
           >
             <VisuallyHidden>Loading the map</VisuallyHidden>
+            <ChromeSkeleton />
           </main>
         }
       >

@@ -18,8 +18,11 @@ device instead, as described below.
 
 Your browser's `localStorage` keeps your settings: your light or dark theme
 (under the key `karta:theme`), your units, whether the zoom buttons
-show, your chosen basemap and where the map was last left. The other keys
-start with `karta:`. These stay on your device and are never sent to a server.
+show, whether Save data is on, your chosen basemap and where the map was last
+left. The other keys start with `karta:`. These stay on your device and are
+never sent to a server. Where your browser reports a data saver or a very slow
+connection, the page reads that locally to choose the default for Save data.
+Nothing about it is sent anywhere.
 
 ## Analytics
 

@@ -9,6 +9,9 @@
  *     npm run preview -w @karta/web -- --port 4173
  *     node scripts/measureTransfer.mjs http://localhost:4173
  *
+ * Add `--save-data` to store the Save data choice before the first load, to
+ * measure the same four cases with the mode on.
+ *
  * The base URL defaults to http://localhost:4173. Nothing is mocked: the map
  * loads its styles, sprites, glyphs and tiles from the real providers, so the
  * numbers move with their data and their CDNs. Run it more than once and read
@@ -48,7 +51,10 @@
 import { brotliCompressSync, constants } from "node:zlib";
 import { chromium } from "@playwright/test";
 
-const BASE_URL = process.argv[2] ?? "http://localhost:4173";
+const SAVE_DATA = process.argv.includes("--save-data");
+const BASE_URL =
+  process.argv.slice(2).find((argument) => !argument.startsWith("--")) ??
+  "http://localhost:4173";
 const APP_ORIGIN = new URL(BASE_URL).origin;
 const QUIET_MS = 3000;
 const CASE_TIMEOUT_MS = 180_000;
@@ -243,6 +249,19 @@ const context = await browser.newContext({
   deviceScaleFactor: 3,
   isMobile: true,
   hasTouch: true,
+  // The stored choice is in place before the first load, as after the person
+  // had switched Save data on in an earlier visit.
+  storageState: SAVE_DATA
+    ? {
+        cookies: [],
+        origins: [
+          {
+            origin: APP_ORIGIN,
+            localStorage: [{ name: "karta:saveData", value: "true" }],
+          },
+        ],
+      }
+    : undefined,
 });
 const page = await context.newPage();
 const network = await recordNetwork(page);
@@ -285,4 +304,6 @@ results.push({
 });
 
 await browser.close();
-console.log(JSON.stringify({ baseUrl: BASE_URL, results }, null, 2));
+console.log(
+  JSON.stringify({ baseUrl: BASE_URL, saveData: SAVE_DATA, results }, null, 2),
+);

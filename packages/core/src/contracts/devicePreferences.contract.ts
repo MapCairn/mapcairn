@@ -28,11 +28,12 @@ export function runDevicePreferencesContract(
   create: () => DevicePreferencesSubject,
 ): void {
   describe(`DevicePreferences contract: ${name}`, () => {
-    it("reports both preferences as booleans", () => {
+    it("reports every preference as a boolean", () => {
       const { preferences } = create();
       const value = preferences.get();
       expect(typeof value.reducedMotion).toBe("boolean");
       expect(typeof value.finePointer).toBe("boolean");
+      expect(typeof value.saveData).toBe("boolean");
     });
 
     it("returns the same object until a preference changes", () => {
@@ -46,11 +47,28 @@ export function runDevicePreferencesContract(
 
     it("reflects a changed preference", () => {
       const { preferences, controls } = create();
-      controls.set({ reducedMotion: true, finePointer: false });
+      controls.set({
+        reducedMotion: true,
+        finePointer: false,
+        saveData: true,
+      });
       expect(preferences.get()).toEqual({
         reducedMotion: true,
         finePointer: false,
+        saveData: true,
       });
+    });
+
+    it("notifies subscribers when the device starts asking to save data", () => {
+      const { preferences, controls } = create();
+      controls.set({ saveData: false });
+      const seen: DevicePreferencesValue[] = [];
+      preferences.subscribe((value) => seen.push(value));
+      controls.set({ saveData: true });
+      expect(seen).toHaveLength(1);
+      expect(seen[0]?.saveData).toBe(true);
+      controls.set({ saveData: true });
+      expect(seen).toHaveLength(1);
     });
 
     it("notifies subscribers with the new value, only on real changes", () => {

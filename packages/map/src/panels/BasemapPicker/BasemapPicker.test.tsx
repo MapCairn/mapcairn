@@ -1,14 +1,27 @@
-import { BASEMAPS, createFakeServices } from "@karta/core";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  BASEMAPS,
+  createFakeServices,
+  FakeDevicePreferences,
+  MemorySettingsStore,
+  type Settings,
+} from "@karta/core";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { BasemapPicker, type BasemapPickerProps } from "./BasemapPicker";
 
-function renderPicker(props: Partial<BasemapPickerProps> = {}) {
+function renderPicker(
+  props: Partial<BasemapPickerProps> = {},
+  device: { saveData?: boolean; settings?: Partial<Settings> } = {},
+) {
   const onChange = vi.fn();
+  const services = createFakeServices({
+    preferences: new FakeDevicePreferences({ saveData: device.saveData }),
+    settings: new MemorySettingsStore({ initial: device.settings }),
+  });
   const view = render(
-    <ServicesProvider services={createFakeServices()}>
+    <ServicesProvider services={services}>
       <LiveRegionProvider>
         <BasemapPicker value="positron" onChange={onChange} {...props} />
       </LiveRegionProvider>
@@ -165,5 +178,81 @@ describe("BasemapPicker", () => {
         screen.getByTestId("basemap-selected-liberty"),
       ).toBeInTheDocument();
     });
+  });
+});
+
+describe("BasemapPicker in Save data mode", () => {
+  it("shows a thumbnail for every basemap when Save data is off", () => {
+    const { container } = renderPicker();
+    expect(container.querySelectorAll("img")).toHaveLength(BASEMAPS.length);
+    expect(screen.queryByTestId("basemap-data-note-osm")).toBeNull();
+  });
+
+  it("requests no thumbnail and keeps every name, radio and the selection badge", () => {
+    const { container } = renderPicker(
+      { value: "liberty" },
+      { saveData: true },
+    );
+    expect(container.querySelectorAll("img")).toHaveLength(0);
+    for (const basemap of BASEMAPS) {
+      expect(
+        screen.getByRole("radio", { name: new RegExp(`^${basemap.name}`) }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId(`basemap-swatch-${basemap.id}`),
+      ).toBeInTheDocument();
+    }
+    expect(radio("Liberty")).toBeChecked();
+    expect(screen.getByTestId("basemap-selected-liberty")).toBeInTheDocument();
+  });
+
+  it("notes that the raster basemap uses more data, and no other", () => {
+    renderPicker({}, { saveData: true });
+    const note = screen.getByTestId("basemap-data-note-osm");
+    expect(note).toHaveTextContent("Uses more data");
+    expect(
+      screen.getByRole("radio", { name: "Streets Uses more data" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("basemap-data-note-liberty")).toBeNull();
+    expect(screen.queryByTestId("basemap-data-note-positron")).toBeNull();
+  });
+
+  it("still chooses a basemap, including the one that uses more data", () => {
+    const { onChange } = renderPicker({}, { saveData: true });
+    fireEvent.click(screen.getByRole("radio", { name: /^Streets/ }));
+    expect(onChange).toHaveBeenCalledWith("osm");
+  });
+
+  it("swaps previews for swatches, and back, as the setting changes", () => {
+    const settings = new MemorySettingsStore();
+    const services = createFakeServices({ settings });
+    const { container } = render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <BasemapPicker value="liberty" onChange={vi.fn()} />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    expect(container.querySelectorAll("img")).toHaveLength(BASEMAPS.length);
+    act(() => settings.set({ saveData: true }));
+    expect(container.querySelectorAll("img")).toHaveLength(0);
+    expect(screen.getByTestId("basemap-swatch-liberty")).toBeInTheDocument();
+    act(() => settings.set({ saveData: false }));
+    expect(container.querySelectorAll("img")).toHaveLength(BASEMAPS.length);
+    expect(screen.queryByTestId("basemap-swatch-liberty")).toBeNull();
+  });
+
+  it("follows an explicit choice over the device signal", () => {
+    const off = renderPicker(
+      {},
+      { saveData: true, settings: { saveData: false } },
+    );
+    expect(off.container.querySelectorAll("img")).toHaveLength(BASEMAPS.length);
+    off.unmount();
+    const on = renderPicker(
+      {},
+      { saveData: false, settings: { saveData: true } },
+    );
+    expect(on.container.querySelectorAll("img")).toHaveLength(0);
   });
 });

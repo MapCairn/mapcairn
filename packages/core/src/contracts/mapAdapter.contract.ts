@@ -449,6 +449,16 @@ export function runMapAdapterContract(
       expect(adapter.getMinZoom()).toBeLessThan(adapter.getMaxZoom());
     });
 
+    it("swaps the basemap in Save data mode and back, keeping valid zoom limits", async () => {
+      const { adapter, controls } = await mounted();
+      await adapter.setBasemap(controls.basemap, { saveData: true });
+      await controls.settle();
+      expect(adapter.getMinZoom()).toBeLessThan(adapter.getMaxZoom());
+      await adapter.setBasemap(controls.basemap, { saveData: false });
+      await controls.settle();
+      expect(adapter.getMinZoom()).toBeLessThan(adapter.getMaxZoom());
+    });
+
     it("keeps the previous basemap when a swap fails, and swaps again afterwards", async () => {
       const { adapter, controls } = await mounted();
       if (controls.failNextBasemap === undefined) {

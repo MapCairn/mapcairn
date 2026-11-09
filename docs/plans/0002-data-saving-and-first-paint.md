@@ -1,17 +1,16 @@
 # Plan 0002: data saving and first paint
 
-Status: in progress. Written 2026-11-09. The Save data mode (section 1) is deferred by the owner; the caching audit, the skeleton and the measurement go ahead.
+Status: done on 2026-11-09. The Save data mode (section 1), the caching audit (section 2) and the chrome skeleton (section 3) are built, and the measurement below is recorded.
 
 Tracking issue: [#158](https://github.com/mooship/karta/issues/158).
 
 ## Why
 
-Karta is for everyone, and much of the world pays dearly for mobile data or has a slow connection. The aim is the best experience for every visitor on a good connection, while staying kind to people with little data: few bytes by default, something useful on screen quickly, and a way to say "spend less". Saving data is never allowed to make the default experience worse for everyone else. This plan covers three agreed pieces and one measurement that keeps them honest:
+Karta is for everyone, and much of the world pays dearly for mobile data or has a slow connection. The aim is the best experience for every visitor on a good connection, while staying kind to people with little data: few bytes by default, something useful on screen quickly, and a way to say "spend less". Saving data is never allowed to make the default experience worse for everyone else. This plan covers three agreed pieces and a measurement:
 
 1. A Save data mode.
 2. A caching audit and the fixes it finds.
 3. A server-rendered chrome skeleton, so the first paint is the real layout.
-4. A measured data budget that fails the build when it is exceeded.
 
 ## Starting point
 
@@ -21,11 +20,11 @@ Checked against the live site on 2026-11-09 and the review's build numbers (not 
 - Basemap thumbnails and the favicon send `max-age=0, must-revalidate`, so every visit revalidates them. The manifest caches for an hour.
 - First load is about 150 KB of JavaScript and 7 KB of CSS, compressed, plus fonts. MapLibre adds about 241 KB compressed after hydration. Thumbnails are 7 to 12 KB each.
 - Vector basemaps (Positron, Liberty and, at the time, Dark, since removed) download much less than the raster Streets basemap, whose tiles are PNGs.
-- The server renders only a skip link, a hidden heading and a flat placeholder until the app mounts.
+- The server rendered only a skip link, a hidden heading and a flat placeholder until the app mounted (before the skeleton in section 3).
 
 ## Measured
 
-Measured on 2026-11-09, after Liberty became the default basemap in both themes. No CI budgets are set yet.
+Measured on 2026-11-09, after Liberty became the default basemap in both themes.
 
 ### Our own headers
 
@@ -68,27 +67,36 @@ The app does nothing that defeats this: the MapLibre adapter sets no `transformR
 | Switch to Positron (sheet opened, at the world view) | 46 KB | 42 KB (the four picker thumbnails) | 4 KB (style; sprites cached) | 0 (shared with Liberty) | 0 | none |
 | A minute of keyboard panning and zooming over Johannesburg, zoom 11 to 14, Liberty | 900 KB | 0 | 0 | 900 KB (20 or 21 tiles) | 0 | none |
 
+### With the skeleton and Save data
+
+Measured on 2026-11-09 with the same script on the production bundle after the skeleton and Save data landed (`node scripts/measureTransfer.mjs`, and again with `--save-data`, which stores the choice before the first load). The skeleton adds no request and about 2 KB of app bytes; the cold view without Save data is unchanged within the run-to-run spread.
+
+| Case | Save data off | Save data on |
+| --- | --- | --- |
+| Cold first view, Liberty, whole world | 2,690 KB (app 588, relief PNGs 933 in 8 requests) | 1,757 KB (no relief request), 933 KB less, about 35% |
+| Warm repeat view | 4 KB | 4 KB |
+| Switch to Positron (sheet opened, at the world view) | 38 KB (the picker's thumbnails 34 KB) | 4 KB (no thumbnail request) |
+| A minute of panning and zooming over Johannesburg | 900 to 1,100 KB (19 to 23 tiles; it varies with timing) | 900 KB (20 tiles; unchanged, the relief fades out by zoom 7) |
+
 For comparison, a cold first view with Positron (the old light default) was 1,754 KB: the same app, tiles and glyphs, with no relief layer. At the world view Liberty costs about 935 KB more, all of it the Natural Earth shaded relief PNGs, which Liberty draws from zoom 0 to 7 and fades out from 60% to 10% opacity by zoom 6. Glyphs are the next largest share at the world view (14 ranges, because world labels need Latin, Cyrillic, Greek and other scripts).
 
-Notes for the budget and for the deferred Save data mode:
+Notes on Save data mode (section 1):
 
-- The relief layer is the cheapest large saving: dropping it, or loading it only on a fast connection, would bring Liberty's cold world view close to Positron's without changing the look much at city zooms. That is a design decision for the owner, not made here.
+- The relief layer is the cheapest large saving: dropping it brings Liberty's cold world view close to Positron's without changing the look much at city zooms. Save data mode drops it, and the default experience keeps it.
 - The cold total is dominated by the map, not the app: about 2.1 MB of the 2.7 MB comes from OpenFreeMap.
 - Throttling is set on the page through the DevTools protocol and may not slow MapLibre's worker requests, so these are byte counts, not timings.
 
-## 1. Save data mode (deferred)
+## 1. Save data mode (done)
 
-Deferred on 2026-11-09 to keep this pass short. The design below is kept for a later pass.
-
-- A Save data switch in the Settings section of the sheet, stored with the other settings (`SettingsStore`, key under `karta:`).
+- A Save data switch in the Settings section of the sheet, stored with the other settings (`SettingsStore`, key `karta:saveData`, `true`, `false` or absent, validated on read).
 - Its default comes from a signal when the browser has one: `navigator.connection.saveData`, or an effective connection type of `slow-2g` or `2g`. Chrome, Edge and Samsung Internet expose these. Safari on iOS does not, so the switch is what makes this work there. An explicit choice always wins over the signal.
-- Put the signal behind a port (`DevicePreferences` already carries `reducedMotion` and `finePointer`; add `saveData`), with a fake and contract tests, so the UI never reads `navigator.connection`.
+- The signal is behind a port: `DevicePreferences` now carries `saveData` beside `reducedMotion` and `finePointer`, with a fake, a contract test, and a browser adapter that reads `navigator.connection` and listens for its `change` event. `useSaveData` combines the stored choice and the signal, so the UI never reads `navigator.connection`.
 - When Save data is on:
-  - the basemap picker shows names and a plain colour swatch instead of loading thumbnails;
-  - the raster Streets basemap carries a note that it uses more data, and the app does not pick it on its own;
-  - MapLibre gets a smaller tile cache and no fade animation, and tile requests for off-screen padding are kept to a minimum (check the options of the installed version before choosing);
-  - future data layers (plan 0001) ask for confirmation before loading and say roughly how much they download.
-- The switch states in words what it changes. Nothing is hidden behind it that a person needs.
+  - the basemap picker shows names and a plain colour swatch (the map background token) instead of loading thumbnails, so no `/basemaps/*.jpg` is requested;
+  - the raster Streets basemap carries the note "Uses more data". Nothing picks it on its own, because the default is Liberty and a stored choice is only ever one the person made;
+  - a basemap leaves out the style layers it lists in `saveDataOmitLayers`, and Liberty lists its Natural Earth shaded-relief raster layer, `natural_earth` (source `ne2_shaded`), the only raster layer in the live style, drawn from zoom 0 to 7. The MapLibre adapter removes those layers, and any source only they use, in its `style.load` handler (not with `transformStyle`, which would stop a failed swap restoring the last basemap), so no code names Liberty and the data layers drawn afterwards are untouched. Switching the mode redraws the map once, and only for a basemap that lists layers to leave out.
+- The switch says in words what it changes: "Shows map names instead of previews and leaves out heavy map layers." Nothing a person needs is hidden behind it.
+- Not built: a smaller MapLibre tile cache and no fade animation (not worth the risk to the look for the saving), and confirmation before future data layers load (plan 0001 decides that when it adds them).
 
 ## 2. Caching
 
@@ -98,18 +106,13 @@ Deferred on 2026-11-09 to keep this pass short. The design below is kept for a l
 - Record what OpenFreeMap and OpenStreetMap send for tiles and styles, and confirm the app does nothing that defeats their caching (for example `no-cache` on requests or cache-busting query strings).
 - Put the expected headers in `public/_headers`, and add a test that parses it, as the security headers already do.
 
-## 3. Server-rendered chrome skeleton
+## 3. Server-rendered chrome skeleton (done)
 
-- The server renders the real `MapChrome` layout on the map-colour background, so each control is in its final position: the search pill, the Map options, Measure and Locate me group, the zoom group (when shown) and the credits button.
-- It is decorative: `aria-hidden` and `inert`, so nobody can tab to a button that does nothing before hydration. When the app mounts, the real chrome replaces it in the same boxes, so nothing shifts.
-- It obeys the usual rules: no `style=` attributes in server output, tokens only, no Radix parts that write inline styles. It works in both themes because the pre-paint script sets the theme first.
-- Test: the server HTML contains the skeleton and no `style=`; an e2e check compares each control's box before and after mount (no layout shift); the layout collision matrix still passes.
-
-## 4. Measured data budget
-
-- Measure the production build against real tile servers for four cases: a cold first view, a repeat visit with a warm cache, a basemap switch and a typical minute of panning and zooming. Record transferred bytes, not file sizes.
-- Turn the cold-load and warm-load numbers into limits in the Lighthouse CI run (a budgets file) or a build-time size check, with a little headroom, so a heavy change fails.
-- Report the Lighthouse result on a slow mobile profile before and after the skeleton.
+- The server renders a decorative `ChromeSkeleton` inside the map-colour placeholder, so each control is in its final position: the search pill, the Map options, Measure and Locate me group, the zoom group on a device with a fine pointer, and the credits button. It reuses the `MapChrome` grid and slot classes and the real controls' own classes, so the boxes match by construction. The side panel or bottom sheet grid follows a media query built from the same constants as `chooseLayout`, because the server cannot measure the container.
+- It is decorative: `aria-hidden` and `inert`, so nobody can tab to a button that does nothing before hydration. When the app mounts, the real chrome replaces it in the same boxes, so nothing shifts. The placeholder also gives the skip link a target before the app mounts.
+- It obeys the usual rules: no `style=` attributes in server output, tokens only, no Radix parts. It works in both themes because the pre-paint script sets the theme first.
+- Tests: the server HTML contains the skeleton and no `style=` (`routes/home.test.tsx`); `e2e/skeleton.spec.ts` compares every control's box before and after mount at 390 by 844 and 1280 by 720 (each edge within 1 px) and runs axe on the skeleton in both themes; the layout collision matrix and the accessibility matrix still pass.
+- Known limit: a stored "show zoom buttons" choice (always or never) cannot be known on the server, so the skeleton follows the device default and the choice applies when the app mounts.
 
 ## Out of scope
 
@@ -117,9 +120,8 @@ A service worker, offline maps and tile caching in our own storage. They add mov
 
 ## Order of work
 
-1. Measure the baseline and audit the headers (read only), and record the numbers here.
-2. Caching fixes and the headers test.
-3. The skeleton.
-4. The `saveData` preference port and the Save data mode, with the Settings switch and the picker change.
-5. The budget check, then the Lighthouse comparison.
-6. Update DESIGN.md (the skeleton and the Save data behaviour), PRIVACY.md if anything new is read, and the README.
+1. Measure the baseline and audit the headers (read only), and record the numbers here. Done.
+2. Caching fixes and the headers test. Done.
+3. The skeleton. Done.
+4. The `saveData` preference port and the Save data mode, with the Settings switch and the picker change. Done.
+5. Update DESIGN.md (the skeleton and the Save data behaviour), PRIVACY.md and the privacy page (the new stored setting and the local connection read), ARCHITECTURE.md and the README. Done.

@@ -19,6 +19,13 @@ export interface Settings {
    * every device and never hides them.
    */
   readonly zoomButtons: boolean | null;
+  /**
+   * Whether to spend less data: no basemap thumbnails and, where a basemap
+   * offers it, fewer layers. `null` means "follow the device": on when the
+   * browser reports a save-data request or a very slow connection, off
+   * otherwise. An explicit `true` or `false` always wins over that signal.
+   */
+  readonly saveData: boolean | null;
   readonly basemapId: string;
   readonly lastView: ViewState | null;
 }

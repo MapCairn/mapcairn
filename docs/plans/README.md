@@ -7,4 +7,4 @@ Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository r
 | Plan | Status | Issue |
 | --- | --- | --- |
 | [0001 Open data layers](0001-open-data-layers.md) | in progress (steps 1 to 5 built; e2e and live checks to run) | [#157](https://github.com/mooship/karta/issues/157) |
-| [0002 Data saving and first paint](0002-data-saving-and-first-paint.md) | in progress (Save data deferred) | [#158](https://github.com/mooship/karta/issues/158) |
+| [0002 Data saving and first paint](0002-data-saving-and-first-paint.md) | done | [#158](https://github.com/mooship/karta/issues/158) |

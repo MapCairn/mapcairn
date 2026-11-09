@@ -13,6 +13,7 @@ const DEFAULTS: Settings = Object.freeze({
   theme: "system",
   units: "metric",
   zoomButtons: null,
+  saveData: null,
   basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
 });
@@ -28,6 +29,7 @@ const SETTING_NAMES: readonly SettingName[] = [
   "theme",
   "units",
   "zoomButtons",
+  "saveData",
   "basemapId",
   "lastView",
 ];
@@ -41,7 +43,8 @@ function parseUnits(raw: unknown): UnitSystem {
   return raw === "imperial" ? "imperial" : DEFAULTS.units;
 }
 
-function parseZoomButtons(raw: unknown): boolean | null {
+/** An explicit choice is a boolean; anything else means "follow the device". */
+function parseOptionalBoolean(raw: unknown): boolean | null {
   return typeof raw === "boolean" ? raw : null;
 }
 
@@ -123,7 +126,9 @@ function parseSetting(
     case "units":
       return parseUnits(parseJson(raw));
     case "zoomButtons":
-      return parseZoomButtons(parseJson(raw));
+      return parseOptionalBoolean(parseJson(raw));
+    case "saveData":
+      return parseOptionalBoolean(parseJson(raw));
     case "basemapId":
       return parseBasemapId(parseJson(raw));
     case "lastView":

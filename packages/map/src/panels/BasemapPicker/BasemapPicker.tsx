@@ -7,15 +7,18 @@ import {
 } from "@karta/core";
 import { Check } from "lucide-react";
 import { useCallback, useId, useState } from "react";
+import { useSaveData } from "../../services";
 import { Icon } from "../../ui/Icon";
 import { useAnnounce } from "../../ui/LiveRegion";
 import { visuallyHidden } from "../../ui/VisuallyHidden/VisuallyHidden.css";
 import {
   badge,
   badgeIcon,
+  dataNote,
   grid,
   image,
   name,
+  swatch,
   thumb,
   tile,
 } from "./BasemapPicker.css";
@@ -46,11 +49,18 @@ export interface BasemapPickerProps {
  * relies on colour. A preview that fails to load disappears and leaves a
  * neutral tile, with the name still visible. The basemap does not follow the
  * interface theme: Dark is an ordinary choice.
+ *
+ * @remarks In Save data mode (`useSaveData`) no preview image is requested:
+ *   each tile shows the same frame with a plain colour swatch, and a raster
+ *   basemap, whose tiles are images, carries the note "Uses more data". Names,
+ *   the radios and the selection badge are unchanged, and every basemap can
+ *   still be chosen.
  */
 export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
   const groupName = useId();
   const announce = useAnnounce();
   const shownId = getBasemap(value) ? value : DEFAULT_BASEMAP_ID;
+  const saveData = useSaveData();
 
   const choose = (basemap: BasemapDefinition) => {
     announce(announceBasemap(basemap.name));
@@ -70,6 +80,7 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
           basemap={basemap}
           groupName={groupName}
           selected={basemap.id === shownId}
+          saveData={saveData}
           onChoose={() => choose(basemap)}
         />
       ))}
@@ -81,6 +92,8 @@ interface BasemapTileProps {
   readonly basemap: BasemapDefinition;
   readonly groupName: string;
   readonly selected: boolean;
+  /** Save data mode: a swatch instead of the preview, and a note on raster basemaps. */
+  readonly saveData: boolean;
   /** Called when this tile is chosen. */
   readonly onChoose: () => void;
 }
@@ -89,6 +102,7 @@ function BasemapTile({
   basemap,
   groupName,
   selected,
+  saveData,
   onChoose,
 }: BasemapTileProps) {
   const [failed, setFailed] = useState(false);
@@ -113,7 +127,13 @@ function BasemapTile({
         onChange={onChoose}
       />
       <span className={thumb({ selected })}>
-        {failed ? null : (
+        {saveData ? (
+          <span
+            className={swatch}
+            data-testid={`basemap-swatch-${basemap.id}`}
+          />
+        ) : null}
+        {saveData || failed ? null : (
           <img
             className={image}
             src={basemap.thumbnail}
@@ -135,6 +155,14 @@ function BasemapTile({
         ) : null}
       </span>
       <span className={name({ selected })}>{basemap.name}</span>
+      {saveData && basemap.source.kind === "raster" ? (
+        <span
+          className={dataNote}
+          data-testid={`basemap-data-note-${basemap.id}`}
+        >
+          Uses more data
+        </span>
+      ) : null}
     </label>
   );
 }

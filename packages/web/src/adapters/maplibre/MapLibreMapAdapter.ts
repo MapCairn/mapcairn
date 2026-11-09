@@ -3,6 +3,7 @@ import type {
   Bounds,
   LatLng,
   MapAdapter,
+  MapBasemapOptions,
   MapClickEvent,
   MapEvents,
   MapFeature,
@@ -20,6 +21,7 @@ import {
   clampZoom,
   MapEngineError,
   metresPerPixel,
+  omittedLayers,
   toEngineZoom,
   toNormalisedZoom,
 } from "@karta/core";
@@ -314,6 +316,13 @@ interface WorkerCheck {
  *   squares and triangles carry meaning beside colour.
  *   `maplibre-gl` and its stylesheet are imported the first time `mount` runs.
  *
+ *   In Save data mode each style that loads has the basemap's
+ *   `saveDataOmitLayers` removed in the `style.load` handler (see
+ *   `omitSaveDataLayers`), so no code here names a basemap. MapLibre's
+ *   `transformStyle` option is avoided on purpose: with it set, a style swap
+ *   waits for the current style to load, so after a failed swap the last good
+ *   basemap would never be put back.
+ *
  *   Engine `error` events are classified once:
  *   - a tile or source failure leaves the map working (`tileError`);
  *   - a source-less error before the pending style document has loaded
@@ -344,6 +353,8 @@ export class MapLibreMapAdapter implements MapAdapter {
   private started = false;
   private destroyed = false;
   private animationEnabled = true;
+  /** Whether the basemap's `saveDataOmitLayers` are left out of its style. */
+  private saveData = false;
   private loadEmitted = false;
   private loading = false;
   /** Data layers by id, in the order they were first set. */
@@ -375,6 +386,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.basemap = basemap;
     this.mountView = view;
     this.animationEnabled = !reducedMotion;
+    this.saveData = options.saveData ?? false;
 
     let maplibre: MapLibreModule;
     try {
@@ -543,7 +555,10 @@ export class MapLibreMapAdapter implements MapAdapter {
     return metresPerPixel(lat ?? view.center.lat, view.zoom);
   }
 
-  setBasemap(basemap: BasemapDefinition): Promise<void> {
+  setBasemap(
+    basemap: BasemapDefinition,
+    options: MapBasemapOptions = {},
+  ): Promise<void> {
     const map = this.map;
     if (!map || this.destroyed) {
       return Promise.reject(
@@ -551,6 +566,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       );
     }
     this.settlePending();
+    this.saveData = options.saveData ?? false;
     const swapped = new Promise<void>((resolve, reject) => {
       this.pending = {
         settleOn: "style.load",
@@ -887,6 +903,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.setLoading(true);
     });
     listen("style.load", () => {
+      this.omitSaveDataLayers(map);
       if (this.pending) {
         this.pending.styleLoaded = true;
       }
@@ -930,6 +947,37 @@ export class MapLibreMapAdapter implements MapAdapter {
       }
       this.emitter.emit("tileError", undefined);
     });
+  }
+
+  /**
+   * Removes the active basemap's `saveDataOmitLayers` from the style that has
+   * just loaded, and any source only those layers drew from, while Save data
+   * is on. It runs in `style.load`, before the first frame, so no tile of the
+   * layers is requested; a layer or source the style does not have is skipped.
+   */
+  private omitSaveDataLayers(map: MapLibreMap): void {
+    const ids = this.basemap ? omittedLayers(this.basemap, this.saveData) : [];
+    const sources = new Set<string>();
+    for (const id of ids) {
+      const layer = map.getLayer(id);
+      if (layer) {
+        sources.add(layer.source);
+        map.removeLayer(id);
+      }
+    }
+    if (sources.size === 0) {
+      return;
+    }
+    for (const { source } of map.getStyle().layers as { source?: string }[]) {
+      if (source !== undefined) {
+        sources.delete(source);
+      }
+    }
+    for (const source of sources) {
+      if (map.getSource(source)) {
+        map.removeSource(source);
+      }
+    }
   }
 
   /** Sets a basemap's zoom limits and style on the engine. */

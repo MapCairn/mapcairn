@@ -24,6 +24,14 @@ export interface MapMountOptions {
   readonly basemap: BasemapDefinition;
   /** When true, the engine's own animation (zoom, fade, fly, inertia) is off. */
   readonly reducedMotion: boolean;
+  /** Save data mode: leave out the basemap's `saveDataOmitLayers`. Defaults to false. */
+  readonly saveData?: boolean;
+}
+
+/** Options for {@link MapAdapter.setBasemap}. */
+export interface MapBasemapOptions {
+  /** Save data mode: leave out the basemap's `saveDataOmitLayers`. Defaults to false. */
+  readonly saveData?: boolean;
 }
 
 /** Options for moving the view. */
@@ -177,9 +185,14 @@ export interface MapAdapter {
    * Swaps the basemap, keeping the view. Resolves once the new basemap's
    * style has loaded. If it cannot load, rejects with a `MapEngineError` and
    * leaves the previous basemap and its zoom limits in place, so the map
-   * keeps working.
+   * keeps working. With `saveData`, the layers the basemap lists in
+   * `saveDataOmitLayers` are left out of the style, and every later swap
+   * decides again.
    */
-  setBasemap(basemap: BasemapDefinition): Promise<void>;
+  setBasemap(
+    basemap: BasemapDefinition,
+    options?: MapBasemapOptions,
+  ): Promise<void>;
   /** Turns every engine animation on or off (reduced motion). */
   setAnimationEnabled(enabled: boolean): void;
   /** Turns the engine's own keyboard handling on or off. */

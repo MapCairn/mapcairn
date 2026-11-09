@@ -28,6 +28,12 @@ export const stack = style({
   },
 });
 
+/**
+ * The skeleton's stack: the live stack's box with nothing to scroll, so it
+ * does not clip the groups' shadows (a hard edge shows on a flat background).
+ */
+export const skeletonStack = style([stack, { overflowY: "visible" }]);
+
 /** The compass surface, the same shape as a one-button control group. */
 export const compassSurface = style({
   display: "flex",
@@ -47,3 +53,16 @@ globalStyle(`${compass} svg`, {
 
 /** Keeps a group at its natural height inside the scrolling column. */
 export const group = style({ flexShrink: 0 });
+
+/**
+ * Wraps the skeleton's zoom group. It takes no box of its own and shows only
+ * where the live stack shows zoom buttons by default, a fine pointer that can
+ * hover (the query `BrowserDevicePreferences` uses). A stored "always" or
+ * "never" cannot be known on the server, so the skeleton follows the default.
+ */
+export const skeletonZoom = style({
+  display: "none",
+  "@media": {
+    "(hover: hover) and (pointer: fine)": { display: "contents" },
+  },
+});

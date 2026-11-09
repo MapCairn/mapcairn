@@ -32,6 +32,7 @@ export function runSettingsStoreContract(
         theme: "system",
         units: "metric",
         zoomButtons: null,
+        saveData: null,
         basemapId: "liberty",
         lastView: null,
       });
@@ -66,6 +67,7 @@ export function runSettingsStoreContract(
         theme: "dark",
         units: "imperial",
         zoomButtons: true,
+        saveData: true,
         basemapId: "osm",
         lastView,
       });
@@ -73,11 +75,13 @@ export function runSettingsStoreContract(
         theme: "dark",
         units: "imperial",
         zoomButtons: true,
+        saveData: true,
         basemapId: "osm",
         lastView,
       });
-      store.set({ zoomButtons: null, lastView: null });
+      store.set({ zoomButtons: null, saveData: null, lastView: null });
       expect(store.get().zoomButtons).toBeNull();
+      expect(store.get().saveData).toBeNull();
       expect(store.get().lastView).toBeNull();
     });
 

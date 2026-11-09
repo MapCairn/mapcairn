@@ -44,4 +44,12 @@ export interface BasemapDefinition {
   readonly attribution: readonly BasemapAttributionEntry[];
   /** Whether the basemap itself is light or dark, used for chrome contrast. */
   readonly appearance: "light" | "dark";
+  /**
+   * Ids of style layers a vector basemap leaves out in Save data mode, for
+   * example a shaded-relief raster layer drawn at low zoom. The engine adapter
+   * drops them, and any source only they use, when it sets the style, so
+   * their tiles are never requested. Leave unset when nothing is worth
+   * dropping. Ignored for a raster basemap, which has no style layers.
+   */
+  readonly saveDataOmitLayers?: readonly string[];
 }

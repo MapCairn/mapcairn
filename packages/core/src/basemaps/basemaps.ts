@@ -47,6 +47,10 @@ const LIBERTY: BasemapDefinition = {
   thumbnail: "/basemaps/liberty.jpg",
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "light",
+  // The Natural Earth shaded relief raster layer (source "ne2_shaded"), drawn
+  // from zoom 0 to 7. It is 933 KB of a 2.7 MB first view of the world, and
+  // the vector layers carry the same map without it.
+  saveDataOmitLayers: ["natural_earth"],
 };
 
 /** Every built-in basemap, in the order the picker shows them, the default first. */
@@ -100,6 +104,17 @@ export function getBasemap(id: string): BasemapDefinition | undefined {
  */
 export function resolveBasemap(choiceId: string): BasemapDefinition {
   return getBasemap(choiceId) ?? LIBERTY;
+}
+
+/**
+ * The style layer ids a basemap leaves out, given whether Save data is on.
+ * Empty when it is off, or when the basemap names none.
+ */
+export function omittedLayers(
+  basemap: BasemapDefinition,
+  saveData: boolean,
+): readonly string[] {
+  return saveData ? (basemap.saveDataOmitLayers ?? []) : [];
 }
 
 /** The credit for MapLibre GL JS, which draws every basemap. */

@@ -345,6 +345,7 @@ export class FakeMapLibreMap {
     );
   }
   removeSource(id: string): void {
+    this.record("removeSource", [id]);
     this.checkLoaded();
     if (this.styleLayers.some((layer) => layer.source === id)) {
       throw new Error(
@@ -372,6 +373,7 @@ export class FakeMapLibreMap {
     return this.styleLayers.find((layer) => layer.id === id);
   }
   removeLayer(id: string): void {
+    this.record("removeLayer", [id]);
     this.checkLoaded();
     this.styleLayers = this.styleLayers.filter((layer) => layer.id !== id);
   }
@@ -421,6 +423,9 @@ export class FakeMapLibreMap {
         this.fire("idle");
       });
     }
+  }
+  getStyle(): { layers: Record<string, unknown>[] } {
+    return { layers: this.styleLayers };
   }
   loaded(): boolean {
     return this.loadedState;

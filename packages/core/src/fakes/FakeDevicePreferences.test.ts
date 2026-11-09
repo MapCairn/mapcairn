@@ -17,10 +17,11 @@ runDevicePreferencesContract(
 );
 
 describe("FakeDevicePreferences", () => {
-  it("defaults to a fine pointer and no reduced motion", () => {
+  it("defaults to a fine pointer, no reduced motion and no save-data request", () => {
     expect(new FakeDevicePreferences().get()).toEqual({
       reducedMotion: false,
       finePointer: true,
+      saveData: false,
     });
   });
 
@@ -29,7 +30,8 @@ describe("FakeDevicePreferences", () => {
       new FakeDevicePreferences({
         reducedMotion: true,
         finePointer: false,
+        saveData: true,
       }).get(),
-    ).toEqual({ reducedMotion: true, finePointer: false });
+    ).toEqual({ reducedMotion: true, finePointer: false, saveData: true });
   });
 });

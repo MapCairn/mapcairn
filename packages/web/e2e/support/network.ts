@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test";
  * A 1x1 transparent PNG, served in place of every raster basemap tile so the
  * suite never depends on a tile provider's availability or rate limits.
  */
-const TRANSPARENT_PNG = Buffer.from(
+export const TRANSPARENT_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   "base64",
 );

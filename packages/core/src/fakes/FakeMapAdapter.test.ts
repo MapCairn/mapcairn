@@ -92,6 +92,19 @@ describe("FakeMapAdapter", () => {
     expect(adapter.destroyed).toBe(false);
   });
 
+  it("records whether Save data was asked for, at mount and on each swap", async () => {
+    const adapter = new FakeMapAdapter();
+    await adapter.mount(new FakeMapHost(), OPTIONS);
+    expect(adapter.saveData).toBe(false);
+    await adapter.setBasemap(FAKE_RASTER_BASEMAP, { saveData: true });
+    expect(adapter.saveData).toBe(true);
+    await adapter.setBasemap(FAKE_RASTER_BASEMAP);
+    expect(adapter.saveData).toBe(false);
+    adapter.destroy();
+    await adapter.mount(new FakeMapHost(), { ...OPTIONS, saveData: true });
+    expect(adapter.saveData).toBe(true);
+  });
+
   it("takes zoom limits from the mounted basemap and reclamps on setBasemap", async () => {
     const adapter = new FakeMapAdapter();
     await adapter.mount(new FakeMapHost(), {

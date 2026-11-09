@@ -113,11 +113,13 @@ describe("LocalStorageSettingsStore", () => {
     store.set({
       units: "imperial",
       zoomButtons: false,
+      saveData: true,
       basemapId: "positron",
       lastView: VIEW,
     });
     expect(storage.getItem("karta:units")).toBe('"imperial"');
     expect(storage.getItem("karta:zoomButtons")).toBe("false");
+    expect(storage.getItem("karta:saveData")).toBe("true");
     expect(storage.getItem("karta:basemapId")).toBe('"positron"');
     expect(JSON.parse(storage.getItem("karta:lastView") ?? "null")).toEqual(
       VIEW,
@@ -129,6 +131,7 @@ describe("LocalStorageSettingsStore", () => {
       [THEME_STORAGE_KEY]: "light",
       "karta:units": '"imperial"',
       "karta:zoomButtons": "true",
+      "karta:saveData": "false",
       "karta:basemapId": '"osm"',
       "karta:lastView": JSON.stringify(VIEW),
     });
@@ -136,6 +139,7 @@ describe("LocalStorageSettingsStore", () => {
       theme: "light",
       units: "imperial",
       zoomButtons: true,
+      saveData: false,
       basemapId: "osm",
       lastView: VIEW,
     });
@@ -146,6 +150,7 @@ describe("LocalStorageSettingsStore", () => {
       [THEME_STORAGE_KEY]: '"dark"',
       "karta:units": '"furlongs"',
       "karta:zoomButtons": '"yes"',
+      "karta:saveData": '"yes"',
       "karta:basemapId": '"Not A Basemap!"',
       "karta:lastView": '{"center":{"lat":200,"lng":0},"zoom":3,"bearing":0}',
     });
@@ -153,6 +158,7 @@ describe("LocalStorageSettingsStore", () => {
       theme: "system",
       units: "metric",
       zoomButtons: null,
+      saveData: null,
       basemapId: "liberty",
       lastView: null,
     });

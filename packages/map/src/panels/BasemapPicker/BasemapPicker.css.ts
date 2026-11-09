@@ -80,6 +80,21 @@ export const image = style({
 });
 
 /**
+ * A plain colour in place of the preview in Save data mode, the map's own
+ * background colour, so no image is requested and the tile keeps its size.
+ * The hairline keeps it visible against a sheet of a similar colour.
+ */
+export const swatch = style({
+  display: "block",
+  gridArea: "1 / 1",
+  boxSizing: "border-box",
+  width: "100%",
+  height: "100%",
+  border: `1px solid ${tokens.color.hairline}`,
+  backgroundColor: tokens.color.mapBackground,
+});
+
+/**
  * The check badge in the corner of the selected preview: an accent disc with
  * a ring in the raised surface colour. Over a light preview the accent
  * contrasts; over a dark one the ring does. The tick is a shape, so the state
@@ -110,6 +125,16 @@ export const badgeIcon = style({
   padding: tokens.space.xxs,
   boxSizing: "border-box",
   strokeWidth: tokens.size.iconStroke,
+});
+
+/** The short note under a name, such as "Uses more data" in Save data mode. */
+export const dataNote = style({
+  display: "block",
+  textAlign: "center",
+  color: tokens.color.textMuted,
+  fontSize: tokens.type.small.size,
+  lineHeight: tokens.type.small.lineHeight,
+  letterSpacing: tokens.type.small.tracking,
 });
 
 /** The basemap name under the preview. */

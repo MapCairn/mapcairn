@@ -45,7 +45,7 @@ export function useThemeSource(): ThemeSource {
   return useServices().theme;
 }
 
-/** Device and accessibility preferences (reduced motion, fine pointer), updating live. */
+/** Device and accessibility preferences (reduced motion, fine pointer, save data), updating live. */
 export function usePreferences(): DevicePreferencesValue {
   const { preferences } = useServices();
   const subscribe = useCallback(
@@ -54,6 +54,17 @@ export function usePreferences(): DevicePreferencesValue {
   );
   const getSnapshot = useCallback(() => preferences.get(), [preferences]);
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/**
+ * Whether Save data mode is on: the person's own choice from Settings when
+ * they made one, otherwise the device's signal (a data saver or a very slow
+ * connection, where the browser reports one). Re-renders when either changes.
+ */
+export function useSaveData(): boolean {
+  const { settings } = useSettings();
+  const { saveData } = usePreferences();
+  return settings.saveData ?? saveData;
 }
 
 /** The data layer registry: the host's layer definitions, or none. */

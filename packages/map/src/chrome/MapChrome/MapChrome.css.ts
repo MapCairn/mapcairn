@@ -1,3 +1,4 @@
+import { PANEL_MAX_HEIGHT_EXCLUSIVE, PANEL_MIN_WIDTH } from "@karta/core";
 import { tokens, zLayer } from "@karta/theme";
 import { style } from "@vanilla-extract/css";
 import { chromeVar, chromeVars } from "./chromeVars";
@@ -14,6 +15,19 @@ const slideTransition = [
   `opacity ${tokens.motion.duration.base} ${tokens.motion.easing}`,
   `visibility 0s linear 0s`,
 ].join(", ");
+
+/** The grid of the panel layout: search in a first column as wide as the side panel. */
+const panelGrid = {
+  gridTemplateColumns: `minmax(0, ${panelWidth}) minmax(0, 1fr) auto`,
+  gridTemplateAreas: '"top . end" ". . end" "start . end-bottom"',
+} as const;
+
+/**
+ * The media query that matches the panel layout `chooseLayout` picks, built
+ * from the same constants. The server-rendered skeleton uses it because the
+ * server cannot measure the container; the live chrome chooses in script.
+ */
+export const panelLayoutQuery = `(min-width: ${PANEL_MIN_WIDTH}px), (height < ${PANEL_MAX_HEIGHT_EXCLUSIVE}px)`;
 
 /**
  * The chrome container. It fills its parent, is its own stacking context, and
@@ -49,12 +63,19 @@ export const root = style({
   gridTemplateRows: "auto minmax(0, 1fr) auto",
   gridTemplateAreas: '"top top" ". end" "start end-bottom"',
   selectors: {
-    '&[data-layout="panel"]': {
-      gridTemplateColumns: `minmax(0, ${panelWidth}) minmax(0, 1fr) auto`,
-      gridTemplateAreas: '"top . end" ". . end" "start . end-bottom"',
-    },
+    '&[data-layout="panel"]': panelGrid,
   },
 });
+
+/**
+ * The container of the server-rendered skeleton: {@link root} with the same
+ * grid, padding and slot classes, but the layout chosen by a media query
+ * instead of by measurement.
+ */
+export const skeletonRoot = style([
+  root,
+  { "@media": { [panelLayoutQuery]: panelGrid } },
+]);
 
 /**
  * The map, full-bleed behind every slot. It is the page's `main` landmark and
