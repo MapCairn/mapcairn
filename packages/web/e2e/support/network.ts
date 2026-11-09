@@ -84,6 +84,9 @@ export const GEOCODER_REVERSE_RESULT = {
  * which Playwright tries first.
  */
 export async function mockThirdPartyServices(page: Page): Promise<void> {
+  // Nothing may reach the routing service unless a test scripts it (a test's
+  // own route is tried first), because a route is sent only when asked for.
+  await page.route(/valhalla1\.openstreetmap\.de/, (route) => route.abort());
   await page.route(RASTER_TILE_PATTERN, (route) =>
     route.fulfill({
       status: 200,

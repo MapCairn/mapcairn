@@ -48,6 +48,7 @@ export class MapPage {
   readonly mapControls: Locator;
   readonly mapOptionsButton: Locator;
   readonly measureButton: Locator;
+  readonly directionsButton: Locator;
   readonly locateButton: Locator;
   readonly zoomControls: Locator;
   readonly zoomInButton: Locator;
@@ -117,6 +118,7 @@ export class MapPage {
     this.measureButton = page.getByRole("button", {
       name: "Measure distance and area",
     });
+    this.directionsButton = page.getByRole("button", { name: "Directions" });
     this.locateButton = page.getByRole("button", { name: "Locate me" });
     this.zoomControls = page.getByRole("group", { name: "Zoom controls" });
     this.zoomInButton = page.getByRole("button", { name: "Zoom in" });

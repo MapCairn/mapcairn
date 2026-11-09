@@ -74,6 +74,11 @@ const PAIRS: readonly Pair[] = [
       page.getByRole("button", { name: "Measure distance and area" }),
   },
   {
+    name: "Directions",
+    skeleton: (page) => button(page, "Directions"),
+    live: (page) => page.getByRole("button", { name: "Directions" }),
+  },
+  {
     name: "Locate me",
     skeleton: (page) => button(page, "Locate me"),
     live: (page) => page.getByRole("button", { name: "Locate me" }),

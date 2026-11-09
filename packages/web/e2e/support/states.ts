@@ -7,6 +7,7 @@ export const CHROME_STATES = [
   "sheet open",
   "search open",
   "measure active",
+  "directions open",
   "pin card",
   "attribution open",
 ] as const;
@@ -97,6 +98,24 @@ export async function enterState(
       await mapPage.measureAddPoint.click();
       await expect(mapPage.measureUndo).toBeEnabled();
       return;
+    case "directions open": {
+      const addStop = mapPage.page.getByRole("button", {
+        name: "Add stop at map centre",
+      });
+      await mapPage.directionsButton.click();
+      await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
+      await expect(
+        mapPage.sheet.getByRole("heading", { name: "Directions", level: 2 }),
+      ).toBeFocused();
+      await addStop.click();
+      await mapPage.focusMap();
+      await mapPage.page.keyboard.press("ArrowRight");
+      await addStop.click();
+      await expect(
+        mapPage.page.getByRole("button", { name: "Remove stop B" }),
+      ).toBeVisible();
+      return;
+    }
     case "pin card":
       await mapPage.focusMap();
       await mapPage.page.keyboard.press("p");
@@ -130,6 +149,12 @@ export async function leaveState(
       await mapPage.measureDone.click();
       await expect(mapPage.measureToolbar).toHaveCount(0);
       return;
+    case "directions open":
+      await mapPage.page
+        .getByRole("button", { name: "Clear directions" })
+        .click();
+      await mapPage.sheetClose.click();
+      break;
     case "pin card":
       await mapPage.pinClearButton.click();
       break;

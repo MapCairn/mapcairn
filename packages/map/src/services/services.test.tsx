@@ -8,6 +8,7 @@ import {
   useLocationProvider,
   useMapAdapterFactory,
   usePreferences,
+  useRoutingProvider,
   useSaveData,
   useSearchProvider,
   useSettings,
@@ -68,6 +69,16 @@ describe("ServicesProvider", () => {
     expect(renderHook(() => useLayers(), { wrapper }).result.current).toBe(
       services.layers,
     );
+    expect(
+      renderHook(() => useRoutingProvider(), { wrapper }).result.current,
+    ).toBe(services.routing);
+  });
+
+  it("gives no routing provider when the host supplies none", () => {
+    const { wrapper } = wrapperFor(createFakeServices({ routing: undefined }));
+    expect(
+      renderHook(() => useRoutingProvider(), { wrapper }).result.current,
+    ).toBeUndefined();
   });
 });
 
