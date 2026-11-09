@@ -97,7 +97,7 @@ The npm workspaces share one root `package-lock.json`.
 - `packages/react` (`@karta/react`): generic React hooks. It must not import other Karta packages.
 - `packages/theme` (`@karta/theme`): the typed token contract, `focusRing`, `zLayer` and the token values with their contrast maths. It must not import other Karta packages.
 - `packages/map` (`@karta/map`): the map user interface (chrome, sheet, panels, tools, primitives), the `MapView` host and `ServicesProvider`. It builds on core, react and theme, never web, and never imports an adapter or an engine.
-- `packages/web` (`@karta/web`): the SSR host. It owns the adapters (MapLibre, Nominatim, geolocation, storage, clipboard, URL hash, theme), the composition root `createServices()`, the engine CSS, app copy, routes and headers.
+- `packages/web` (`@karta/web`): the SSR host. It owns the adapters (MapLibre, Nominatim, Valhalla routing, geolocation, storage, clipboard, URL hash, theme), the composition root `createServices()`, the engine CSS, app copy, routes and headers.
 
 `npm run lint` enforces these boundaries through dependency-cruiser (`.dependency-cruiser.cjs`), Biome and the harmony scanner.
 

@@ -106,6 +106,17 @@ export default example;
 
 The fire, flood, cyclone, volcano and drought layers were added this way, in one commit with no code change.
 
+### Add a routing provider
+
+The Directions tool appears only when `services.routing` exists, and the SDK ships no provider. To offer directions, write one adapter and register it:
+
+1. Implement `RoutingProvider` from `@karta/core` in `packages/web/src/adapters/routing`. `route({ stops, mode, signal })` returns one line feature for each leg with its distance in metres and time in seconds, and `reachableArea({ origin, minutes, mode, signal })` returns polygon features. Reject only with `RoutingError` (`network`, `invalid`, `no-route`, `rate-limited`, `aborted`, `unsupported`), and honour the `AbortSignal`. Keep to the service's usage limits inside the adapter, for example with `RequestSpacer` from `adapters/shared`, and send no cookies or referrer.
+2. Run `runRoutingProviderContract` against it with a scripted `fetch`, as `ValhallaRoutingProvider.test.ts` does, and add recorded sample responses as fixtures.
+3. Register it as `routing` in `createServices()`. Nothing else in the app names it.
+4. Allow its origin in `connect-src` in `packages/web/public/_headers` and `constants/securityHeaders.ts`, name the service on the privacy page and in `PRIVACY.md` and `ATTRIBUTIONS.md`, and pass its credit and a note about what a request sends to the Directions panel (`ROUTING_CREDITS` and `ROUTING_NOTE` in `packages/web/src/constants/routingCredits.ts`).
+
+Leave `routing` out and the Directions button, panel and overlays are never mounted, so a host without a service carries no dead controls.
+
 ### Add an adapter
 
 Define the port, write its fake and contract suite, write the real adapter in `packages/web/src/adapters` and register it in `createServices()`. [`ARCHITECTURE.md`](ARCHITECTURE.md#adding-an-adapter) has the steps.

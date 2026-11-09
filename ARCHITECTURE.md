@@ -6,7 +6,7 @@ Karta separates what the app does from what it runs on. The interface and the pu
 flowchart TD
   subgraph web["packages/web"]
     root["composition root<br/>createServices()"]
-    adapters["adapters<br/>maplibre, search, layers,<br/>location, settings, clipboard,<br/>url, theme"]
+    adapters["adapters<br/>maplibre, search, routing, layers,<br/>location, settings, clipboard,<br/>url, theme"]
     definitions["layer definitions<br/>(data)"]
     host["SSR host, routes, engine CSS"]
   end
@@ -64,11 +64,13 @@ Add an interface only where a boundary has at least two implementations. The fak
 | `ThemeSource` | `matchMedia` | scripted system preference |
 | `LayerRegistry` | the host's definitions, validated at start-up (`createLayerRegistry`) | `StaticLayerRegistry` over sample definitions |
 | `LayerSource` | `FetchLayerSource` (`fetch`, shared response cache) | `FakeLayerSource`, scripted per layer id |
-| `RoutingProvider` (optional) | none shipped; a host supplies one | `FakeRoutingProvider`, scripted routes, areas, errors and delays |
+| `RoutingProvider` (optional) | `ValhallaRoutingProvider`, the reference host's one adapter, for a public Valhalla server; the SDK ships none | `FakeRoutingProvider`, scripted routes, areas, errors and delays |
 
 `BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source or an attribution string. A `raster` source is a tile URL template and a tile size, and a `vector` source is a style URL. `DEFAULT_BASEMAP_ID` (Liberty) is the basemap in both themes when nothing is saved or linked, and an unknown id, including the "auto" and the removed "dark" of earlier versions, resolves to it. `DEFAULT_BASEMAP_BACKGROUND` is its land colour; the `mapBackground` token carries the same value (a test in `packages/web` keeps them equal), so the server-rendered placeholder and the map host match Liberty before it draws. The placeholder also holds the decorative `ChromeSkeleton`, so the chrome is in its final place on the first paint.
 
 `RoutingProvider` is the one optional service: `Services.routing` may be absent, and the ui must work without it. `route({ stops, mode, signal })` returns one GeoJSON line feature for each leg with its distance (metres) and duration (seconds), and `reachableArea({ origin, minutes, mode, signal })` returns polygon features. Both reject only with a typed `RoutingError` (`network`, `invalid`, `no-route`, `rate-limited`, `aborted`, `unsupported`).
+
+The reference host's `ValhallaRoutingProvider` (`packages/web/src/adapters/routing`) calls a public Valhalla server with `GET /route` and `GET /isochrone`, decodes the encoded polyline shape itself, maps HTTP and network failures to those kinds, starts at most one request a second through the shared `RequestSpacer`, and sends no cookies or referrer. `packages/map` holds only the generic Directions tool (`tools/Directions`): `useDirections` keeps the stops, mode and result and cancels superseded requests, `DirectionsPanel` is the interface, `MapDirections` draws the result through `setShapeLayer` and fits the map clear of the sheet, and `DirectionsOverlay` draws the lettered stops. None of them names a provider; the host passes the credit and the privacy note, and mounts the button only when `services.routing` exists.
 
 Pure helpers (layer templates, decoders and style evaluation, zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
 
