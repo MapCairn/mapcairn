@@ -1,4 +1,5 @@
 import {
+  DEFAULT_BASEMAP_ID,
   parseThemeChoice,
   type Settings,
   type SettingsStore,
@@ -12,7 +13,7 @@ const DEFAULTS: Settings = Object.freeze({
   theme: "system",
   units: "metric",
   zoomButtons: null,
-  basemapId: "auto",
+  basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
 });
 

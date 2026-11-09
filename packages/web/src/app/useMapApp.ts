@@ -13,7 +13,6 @@ import {
   type MapClickEvent,
   openSearch,
   openSheet,
-  type ResolvedTheme,
   type SearchResult,
   type SheetDetent,
   type SheetSection,
@@ -146,12 +145,12 @@ export interface MapApp {
  * context, so it reaches the live map through `mapRef`, which the chrome
  * fills in from `useMap()`.
  */
-export function useMapApp(theme: ResolvedTheme): MapApp {
+export function useMapApp(): MapApp {
   const { settings } = useSettings();
   const url = useUrlState();
   const announce = useAnnounce();
   const [initial] = useState(() => initialMapState(url.read(), settings));
-  const basemaps = useBasemapChoice(initial.basemapId, theme);
+  const basemaps = useBasemapChoice(initial.basemapId);
   const persistence = useViewPersistence(initial.view, basemaps.savedChoice);
   const [state, dispatch] = useReducer(surfaceReducer, initialSurfaceState);
   const stateRef = useLatestRef(state);

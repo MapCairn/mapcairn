@@ -13,6 +13,7 @@ import {
   ATTRIBUTION_INTRO_MS,
   Attribution,
 } from "./Attribution";
+import { onMapIcon } from "./Attribution.css";
 
 const BASEMAP: BasemapDefinition = {
   ...FAKE_VECTOR_BASEMAP,
@@ -38,6 +39,11 @@ function open(): HTMLElement {
 }
 
 describe("Attribution", () => {
+  it("draws its bare icon with the map halo, so it shows on a light map in a dark theme", () => {
+    renderChrome(<Attribution basemap={BASEMAP} />, { map: SETTLED });
+    expect(button().className.split(" ")).toContain(onMapIcon);
+  });
+
   it("is a collapsed Map credits button that controls a hidden region", () => {
     const { container } = renderChrome(<Attribution basemap={BASEMAP} />, {
       map: SETTLED,

@@ -36,7 +36,7 @@ globalStyle("html, body", {
 
 globalStyle("html", {
   colorScheme: "light",
-  backgroundColor: tokens.color.mapBackground,
+  backgroundColor: tokens.color.pageBackground,
   WebkitTextSizeAdjust: "100%",
   textSizeAdjust: "100%",
   // Pinch zoom stays available; this only removes the double-tap delay. The
@@ -70,7 +70,7 @@ globalStyle("body", {
   letterSpacing: tokens.type.body.tracking,
   fontWeight: tokens.type.weight.regular,
   color: tokens.color.text,
-  backgroundColor: tokens.color.mapBackground,
+  backgroundColor: tokens.color.pageBackground,
   WebkitFontSmoothing: "antialiased",
   MozOsxFontSmoothing: "grayscale",
 });

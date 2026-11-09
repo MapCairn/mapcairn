@@ -1,4 +1,8 @@
 import { expect, test } from "./fixtures";
+import {
+  DEFAULT_VECTOR_BASEMAP_BACKGROUND,
+  DEFAULT_VECTOR_BASEMAP_ID,
+} from "./support/basemaps";
 import { seedStoredSettings } from "./support/services";
 
 declare global {
@@ -82,11 +86,11 @@ test.describe("theme", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   });
 
-  test("the automatic basemap follows the theme, a chosen one does not", async ({
+  test("the default basemap is the same in both themes, and the theme never changes the basemap", async ({
     page,
     mapPage,
   }) => {
-    await page.emulateMedia({ colorScheme: "light" });
+    await page.emulateMedia({ colorScheme: "dark" });
     const styles: string[] = [];
     page.on("request", (request) => {
       const match = /\/styles\/(\w+)$/.exec(request.url());
@@ -95,18 +99,61 @@ test.describe("theme", () => {
       }
     });
     await mapPage.goto();
-    expect(styles).toContain("positron");
+    expect(styles).toEqual([DEFAULT_VECTOR_BASEMAP_ID]);
 
-    await page.emulateMedia({ colorScheme: "dark" });
-    await expect.poll(() => styles).toContain("dark");
-
-    await mapPage.openMapOptions();
-    await mapPage.chooseBasemap("Liberty");
-    await expect.poll(() => styles).toContain("liberty");
-    const before = styles.length;
     await page.emulateMedia({ colorScheme: "light" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    // Nothing should load, so there is no event to wait for; give a swap
+    // time to start if one were going to.
     await page.waitForTimeout(500);
-    expect(styles.length).toBe(before);
+    expect(styles).toEqual([DEFAULT_VECTOR_BASEMAP_ID]);
   });
+
+  test("a basemap saved as auto by an earlier version starts on the default, and stays saved as it was", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await seedStoredSettings(page, { basemapId: "auto" });
+    const styles: string[] = [];
+    page.on("request", (request) => {
+      const match = /\/styles\/(\w+)$/.exec(request.url());
+      if (match?.[1]) {
+        styles.push(match[1]);
+      }
+    });
+    await mapPage.goto();
+    expect(styles).toEqual([DEFAULT_VECTOR_BASEMAP_ID]);
+    // The address is written when the map settles after a move.
+    await mapPage.focusMap();
+    await page.keyboard.press("+");
+    await expect
+      .poll(() => mapPage.hashBasemap())
+      .toBe(DEFAULT_VECTOR_BASEMAP_ID);
+    expect(
+      await page.evaluate(() => localStorage.getItem("karta:basemapId")),
+    ).toBe('"auto"');
+  });
+});
+
+test.describe("map background before the app runs", () => {
+  test.use({ javaScriptEnabled: false });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`is the default basemap's land colour in a ${colorScheme} theme`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.goto("/");
+      const placeholder = page.getByTestId("map-placeholder");
+      await expect(placeholder).toBeVisible();
+      expect(
+        await placeholder.evaluate(
+          (element) => getComputedStyle(element).backgroundColor,
+        ),
+      ).toBe(DEFAULT_VECTOR_BASEMAP_BACKGROUND);
+    });
+  }
 });

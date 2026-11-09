@@ -1,3 +1,4 @@
+import { DEFAULT_BASEMAP_ID } from "../basemaps/basemaps";
 import type { Settings, SettingsStore } from "../ports/settings";
 
 /** What a fresh {@link MemorySettingsStore} holds. */
@@ -5,7 +6,7 @@ export const DEFAULT_FAKE_SETTINGS: Settings = Object.freeze({
   theme: "system",
   units: "metric",
   zoomButtons: null,
-  basemapId: "auto",
+  basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
 });
 

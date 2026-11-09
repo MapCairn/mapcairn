@@ -13,17 +13,29 @@ export const RASTER_BASEMAP_NAME = "Streets";
 /** Matches its provider credit (the first link in the credits, before "MapLibre"). */
 export const RASTER_BASEMAP_CREDIT = /OpenStreetMap/;
 
-/** The default vector basemap, which "Auto" shows in a light theme. */
-export const DEFAULT_VECTOR_BASEMAP_ID = "positron";
-
-/** Another light vector basemap, for choosing one explicitly. */
-export const OTHER_VECTOR_BASEMAP_ID = "liberty";
+/** The default basemap, in both interface themes. */
+export const DEFAULT_VECTOR_BASEMAP_ID = "liberty";
 
 /** Its name in the picker. */
-export const OTHER_VECTOR_BASEMAP_NAME = "Liberty";
+export const DEFAULT_VECTOR_BASEMAP_NAME = "Liberty";
 
-/** The dark vector basemap, which "Auto" shows in a dark theme. */
-export const DARK_VECTOR_BASEMAP_NAME = "Dark";
+/**
+ * The default basemap's land colour as computed CSS, which the map region
+ * shows before the map draws, in both themes.
+ */
+export const DEFAULT_VECTOR_BASEMAP_BACKGROUND = "rgb(248, 244, 240)";
+
+/** Another light vector basemap, for choosing one explicitly. */
+export const OTHER_VECTOR_BASEMAP_ID = "positron";
+
+/** Its name in the picker. */
+export const OTHER_VECTOR_BASEMAP_NAME = "Positron";
+
+/**
+ * The id of the Dark basemap, which has been removed. A saved or linked
+ * value from an earlier visit must open on the default basemap.
+ */
+export const REMOVED_BASEMAP_ID = "dark";
 
 /** How many basemaps the picker offers. */
-export const BASEMAP_COUNT = 4;
+export const BASEMAP_COUNT = 3;

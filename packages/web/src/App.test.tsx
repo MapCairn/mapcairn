@@ -135,7 +135,7 @@ describe("App", () => {
       adapter(services).setView({ zoom: 5 });
     });
     expect(services.fakes.url.read().view?.zoom).toBe(5);
-    expect(services.fakes.url.read().basemapId).toBe("auto");
+    expect(services.fakes.url.read().basemapId).toBe("liberty");
     expect(services.fakes.settings.get().lastView).toBeNull();
     act(() => {
       vi.advanceTimersByTime(SAVE_VIEW_DELAY_MS);
@@ -382,8 +382,9 @@ describe("basemaps", () => {
 
   describe("a basemap that cannot load", () => {
     async function chooseFailingStreets() {
-      const services = await renderApp();
+      const services = createFakeServices();
       services.fakes.settings.set({ basemapId: "positron" });
+      await renderApp(services);
       adapter(services).failNextBasemap();
       fireEvent.click(screen.getByRole("button", { name: "Map options" }));
       fireEvent.click(radio("osm"));
@@ -451,30 +452,47 @@ describe("basemaps", () => {
     });
   });
 
-  it("saves a choice that needs no swap at once", async () => {
-    const services = await renderApp();
-    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
-    // Auto resolves to Positron in the light theme, so pinning it changes nothing on screen.
-    fireEvent.click(
-      screen
-        .getByTestId("basemap-option-positron")
-        .querySelector("input") as HTMLInputElement,
-    );
-    await settle();
-    expect(services.fakes.settings.get().basemapId).toBe("positron");
+  it("starts on Liberty in a dark theme as well as a light one", async () => {
+    for (const theme of ["light", "dark"] as const) {
+      const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
+      const services = createFakeServices();
+      services.fakes.settings.set({ theme });
+      await renderApp(services);
+      const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
+      expect(options.basemap.id, theme).toBe("liberty");
+      cleanup();
+      vi.restoreAllMocks();
+    }
   });
 
-  it("treats a saved basemap that no longer exists as Auto", async () => {
+  it("keeps a chosen basemap whatever the theme", async () => {
     const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
     const services = createFakeServices();
-    services.fakes.settings.set({ basemapId: "retired-basemap" });
+    services.fakes.settings.set({ theme: "dark", basemapId: "positron" });
     await renderApp(services);
     const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
     expect(options.basemap.id).toBe("positron");
-    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
-    expect(
-      screen.getByRole("switch", { name: /match the map to the theme/i }),
-    ).toBeChecked();
+  });
+
+  it("treats a saved auto, dark or retired basemap as Liberty, and leaves the saved value alone", async () => {
+    for (const stored of ["auto", "dark", "retired-basemap"]) {
+      const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
+      const services = createFakeServices();
+      services.fakes.settings.set({ theme: "dark", basemapId: stored });
+      await renderApp(services);
+      const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
+      expect(options.basemap.id, stored).toBe("liberty");
+      fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+      expect(
+        screen.getByTestId("basemap-option-liberty").querySelector("input"),
+      ).toBeChecked();
+      expect(
+        screen.queryByRole("switch", { name: /match the map/i }),
+      ).toBeNull();
+      expect(services.fakes.settings.get().basemapId).toBe(stored);
+      cleanup();
+      vi.restoreAllMocks();
+    }
   });
 
   it("shows a message in place of the map when WebGL is missing, with no Retry or Reload", async () => {
@@ -710,6 +728,18 @@ describe("WebMCP tools", () => {
     ]);
   });
 
+  it("saves a basemap that is already on screen at once, replacing a saved auto choice", async () => {
+    const services = createFakeServices();
+    services.fakes.settings.set({ basemapId: "auto" });
+    const { call } = await renderWithTools(services);
+    const setBasemap = vi.spyOn(adapter(services), "setBasemap");
+    expect(await call("set-map-basemap", { basemap: "liberty" })).toBe(
+      "Switched the basemap to liberty.",
+    );
+    expect(services.fakes.settings.get().basemapId).toBe("liberty");
+    expect(setBasemap).not.toHaveBeenCalled();
+  });
+
   it("sets the basemap and the theme", async () => {
     const { call, services } = await renderWithTools();
     expect(await call("set-map-basemap", { basemap: "osm" })).toBe(
@@ -719,6 +749,10 @@ describe("WebMCP tools", () => {
     expect(await call("set-map-basemap", { basemap: "nope" })).toMatch(
       /Unknown basemap/,
     );
+    expect(await call("set-map-basemap", { basemap: "auto" })).toBe(
+      'Unknown basemap "auto".',
+    );
+    expect(services.fakes.settings.get().basemapId).toBe("osm");
     expect(await call("set-app-theme", { theme: "dark" })).toBe(
       "Switched the theme to dark.",
     );

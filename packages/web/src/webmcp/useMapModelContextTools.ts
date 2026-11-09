@@ -1,5 +1,4 @@
 import {
-  AUTO_BASEMAP_ID,
   BASEMAPS,
   formatArea,
   formatDistance,
@@ -21,11 +20,10 @@ export const THEME_CHOICES: readonly ThemeChoice[] = [
   "dark",
 ];
 
-/** Every basemap id an agent may choose, "auto" first. */
-export const BASEMAP_CHOICES: readonly string[] = [
-  AUTO_BASEMAP_ID,
-  ...BASEMAPS.map((basemap) => basemap.id),
-];
+/** Every basemap id an agent may choose, in picker order. */
+export const BASEMAP_CHOICES: readonly string[] = BASEMAPS.map(
+  (basemap) => basemap.id,
+);
 
 const MIN_POINTS: Readonly<Record<MeasureMode, number>> = {
   distance: 2,
@@ -162,7 +160,7 @@ export function useMapModelContextTools({
   useModelContextTool<BasemapInput>({
     name: "set-map-basemap",
     description:
-      'Switch the map\'s basemap. "auto" follows the light or dark theme.',
+      "Switch the map's basemap. The basemap does not change with the theme.",
     inputSchema: {
       type: "object",
       properties: {

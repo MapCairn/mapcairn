@@ -341,7 +341,7 @@ function StatusMessageDemo() {
 }
 
 function SwitchDemo() {
-  const [match, setMatch] = useState(false);
+  const [example, setExample] = useState(false);
   const [zoom, setZoom] = useState(true);
   return (
     <Demo
@@ -353,9 +353,9 @@ function SwitchDemo() {
           <State label="Off" wide>
             <Switch
               className={styles.fullWidth}
-              label="Match the map to the theme"
-              checked={match}
-              onCheckedChange={setMatch}
+              label="Example option"
+              checked={example}
+              onCheckedChange={setExample}
             />
           </State>
           <State label="On, with a description" wide>

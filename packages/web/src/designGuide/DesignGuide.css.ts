@@ -14,7 +14,7 @@ export const scroller = style({
   overflowY: "auto",
   overscrollBehavior: "contain",
   scrollPaddingTop: `calc(${NAV_HEIGHT} + ${tokens.space.md})`,
-  backgroundColor: tokens.color.mapBackground,
+  backgroundColor: tokens.color.pageBackground,
   color: tokens.color.text,
 });
 
@@ -67,7 +67,7 @@ export const navBar = style({
   position: "sticky",
   top: 0,
   zIndex: zLayer("chrome"),
-  backgroundColor: tokens.color.mapBackground,
+  backgroundColor: tokens.color.pageBackground,
   borderBottom: `1px solid ${tokens.color.hairline}`,
   "@media": {
     "(forced-colors: active)": {
@@ -221,7 +221,7 @@ export const swatchPair = style({
 export const swatchFrame = style({
   padding: tokens.space.xxs,
   borderRadius: tokens.radius.inner,
-  backgroundColor: tokens.color.mapBackground,
+  backgroundColor: tokens.color.pageBackground,
   border: `1px solid ${tokens.color.controlBoundary}`,
   forcedColorAdjust: "none",
 });

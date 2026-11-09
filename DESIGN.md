@@ -17,8 +17,9 @@ Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use token
 
 ## Tokens
 
-- **Colour roles:** surface, surface-raised, text, text-muted, accent, accent-tint, hairline, danger, scrim, focus-ring, map-background. The neutral ramp is OKLCH with a faint cool tint. The accent is one clear blue.
-- **Surfaces:** translucent with backdrop blur, with an opaque fallback and the `-webkit-` prefix. `prefers-contrast: more` and `prefers-reduced-transparency` make them opaque and remove blur. Contrast is computed over the worst-case backdrops (pure white and pure black map).
+- **Colour roles:** surface, surface-raised, text, text-muted, accent, accent-tint, hairline, danger, scrim, focus-ring, page-background, map-background. The neutral ramp is OKLCH with a faint cool tint. The accent is one clear blue. Page-background follows the theme and sits behind full pages such as the privacy policy. Map-background is the default basemap's land colour in both themes, so the map region before the map draws matches the map that follows.
+- **Basemap:** Liberty is the default in both themes. The basemap never follows the light or dark theme. The picker offers Liberty, Positron and Streets; there is no dark basemap, and a saved or linked "dark" (or the old "auto") opens on Liberty.
+- **Surfaces:** translucent with backdrop blur, with an opaque fallback and the `-webkit-` prefix. `prefers-contrast: more` and `prefers-reduced-transparency` make them opaque and remove blur. Contrast is computed over the worst-case backdrops (pure white and pure black map) and over Liberty's land colour, because a dark theme no longer means a dark map.
 - **Spacing:** 4, 8, 12, 16, 24, 32. Screen inset is 12.
 - **Radii:** pill 24, sheet 20, control and card 14, inner 10. Fully circular elements use 50%.
 - **Elevation:** two shadows, floating and sheet, each with light and dark values. No borders on floating elements. Hairlines only inside lists and between grouped controls.

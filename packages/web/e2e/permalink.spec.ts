@@ -1,5 +1,11 @@
 import { expect, test } from "./fixtures";
-import { RASTER_BASEMAP_ID, RASTER_BASEMAP_NAME } from "./support/basemaps";
+import {
+  DEFAULT_VECTOR_BASEMAP_ID,
+  DEFAULT_VECTOR_BASEMAP_NAME,
+  RASTER_BASEMAP_ID,
+  RASTER_BASEMAP_NAME,
+  REMOVED_BASEMAP_ID,
+} from "./support/basemaps";
 
 test.describe("permalink", () => {
   test.use({ reducedMotion: "reduce" });
@@ -58,8 +64,34 @@ test.describe("permalink", () => {
     await mapPage.goto("#map=99/500/abc&basemap=Not_A_Map&layers=removed");
     await expect(mapPage.host).toHaveAttribute("data-zoom", "2.00");
     await mapPage.openMapOptions();
-    await expect(mapPage.themeMatchSwitch).toBeChecked();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: DEFAULT_VECTOR_BASEMAP_NAME,
+      }),
+    ).toBeChecked();
   });
+
+  for (const retired of ["auto", REMOVED_BASEMAP_ID]) {
+    test(`a link to the retired ${retired} basemap opens on the default basemap`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme: "dark" });
+      await mapPage.goto(`#map=5.00/10.00000/20.00000&basemap=${retired}`);
+      // The address is rewritten when the map next settles.
+      await mapPage.focusMap();
+      await page.keyboard.press("+");
+      await expect
+        .poll(() => mapPage.hashBasemap())
+        .toBe(DEFAULT_VECTOR_BASEMAP_ID);
+      await mapPage.openMapOptions();
+      await expect(
+        mapPage.basemapPicker.getByRole("radio", {
+          name: DEFAULT_VECTOR_BASEMAP_NAME,
+        }),
+      ).toBeChecked();
+    });
+  }
 
   test("without a link the last view is restored", async ({
     page,

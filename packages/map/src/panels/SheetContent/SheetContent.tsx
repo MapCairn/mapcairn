@@ -1,10 +1,6 @@
-import {
-  AUTO_BASEMAP_ID,
-  resolveBasemap,
-  type SheetSection,
-} from "@karta/core";
+import type { SheetSection } from "@karta/core";
 import { type ReactNode, useEffect, useRef } from "react";
-import { usePreferences, useTheme } from "../../services";
+import { usePreferences } from "../../services";
 import { BasemapPicker } from "../BasemapPicker";
 import { DataSection } from "../DataSection";
 import { HelpSection } from "../HelpSection";
@@ -15,9 +11,9 @@ import { content } from "./SheetContent.css";
 
 /** Props for {@link SheetContent}. */
 export interface SheetContentProps {
-  /** The stored basemap choice: a basemap id, or `AUTO_BASEMAP_ID`. */
+  /** The chosen basemap id. */
   readonly basemapId: string;
-  /** Called with the basemap id or `AUTO_BASEMAP_ID` the user chose. */
+  /** Called with the basemap id the user chose. */
   readonly onBasemapChange: (id: string) => void;
   /** Whether a pin is on the map. */
   readonly hasPin: boolean;
@@ -40,9 +36,6 @@ export interface SheetContentProps {
  * Everything inside the options sheet, under the sheet's own h2 title: Basemap,
  * Pin, Data (only when the host has layers), Settings and Help, each a
  * `section` named by an h3.
- * @remarks Switching "Match the map to the theme" on stores `AUTO_BASEMAP_ID`.
- *   Switching it off keeps the basemap that was showing, so the map does not
- *   change under the person.
  */
 export function SheetContent({
   basemapId,
@@ -53,16 +46,13 @@ export function SheetContent({
   pinCard,
   privacyHref,
 }: SheetContentProps) {
-  const { resolved } = useTheme();
   const { reducedMotion } = usePreferences();
   const headings = useRef<Partial<Record<SheetSection, HTMLElement | null>>>(
     {},
   );
-  const activeBasemapId = resolveBasemap(basemapId, resolved).id;
-  const themeMatch = basemapId === AUTO_BASEMAP_ID;
 
   // Only a change of section moves focus and scroll, not a change in motion
-  // preference or theme, so those are read through the render that ran it.
+  // preference, so it is read through the render that ran it.
   const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
   useEffect(() => {
@@ -89,15 +79,7 @@ export function SheetContent({
         headingRef={headingRef("basemap")}
         data-testid="sheet-section-basemap"
       >
-        <BasemapPicker
-          value={basemapId}
-          onChange={onBasemapChange}
-          themeMatch={themeMatch}
-          onThemeMatchChange={(next) =>
-            onBasemapChange(next ? AUTO_BASEMAP_ID : activeBasemapId)
-          }
-          activeBasemapId={activeBasemapId}
-        />
+        <BasemapPicker value={basemapId} onChange={onBasemapChange} />
       </Section>
       <PinSection
         hasPin={hasPin}

@@ -54,6 +54,7 @@ function pair(
  */
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   pair("text-surface", "Text on surface", "text", "surface", "text"),
+  pair("text-page", "Text on a full page", "text", "pageBackground", "text"),
   pair(
     "muted-surface",
     "Muted text on surface",
@@ -171,6 +172,7 @@ export const ROLE_PAIRS: Readonly<Record<ColourRole, string | ExemptRole>> = {
   scrim: { exempt: "Veil behind a modal, carries no content" },
   focusRing: "ring-surface",
   focusRingInner: "ring-inner",
+  pageBackground: "text-page",
   mapBackground: { exempt: "Backdrop before tiles load, carries no content" },
   mapPin: "pin-basemap",
   mapMeasureLine: "line-halo",

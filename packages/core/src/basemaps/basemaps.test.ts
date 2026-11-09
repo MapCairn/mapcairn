@@ -1,21 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
-  AUTO_BASEMAP_ID,
   BASEMAPS,
   buildAttribution,
+  DEFAULT_BASEMAP_BACKGROUND,
   DEFAULT_BASEMAP_ID,
   getBasemap,
-  isKnownBasemapChoice,
   MAPLIBRE_CREDIT,
   resolveBasemap,
 } from "./basemaps";
 
 describe("BASEMAPS", () => {
-  it("contains the four built-in basemaps in picker order", () => {
+  it("contains the three built-in basemaps in picker order, the default first", () => {
     expect(BASEMAPS.map((basemap) => basemap.id)).toEqual([
-      "positron",
       "liberty",
-      "dark",
+      "positron",
       "osm",
     ]);
   });
@@ -40,16 +38,6 @@ describe("BASEMAPS", () => {
         if (entry.href !== undefined) {
           expect(entry.href).toMatch(/^https:\/\//);
         }
-      }
-    }
-  });
-
-  it("references only dark variants that exist and are dark", () => {
-    for (const basemap of BASEMAPS) {
-      if (basemap.darkVariantId !== undefined) {
-        const variant = getBasemap(basemap.darkVariantId);
-        expect(variant).toBeDefined();
-        expect(variant?.appearance).toBe("dark");
       }
     }
   });
@@ -105,10 +93,6 @@ describe("BASEMAPS", () => {
       kind: "vector",
       styleUrl: "https://tiles.openfreemap.org/styles/liberty",
     });
-    expect(sources.dark).toEqual({
-      kind: "vector",
-      styleUrl: "https://tiles.openfreemap.org/styles/dark",
-    });
     expect(sources.osm).toEqual({
       kind: "raster",
       tileSize: 256,
@@ -121,7 +105,7 @@ describe("BASEMAPS", () => {
   });
 
   it("credits OpenStreetMap, OpenFreeMap and OpenMapTiles on the vector styles", () => {
-    for (const id of ["positron", "liberty", "dark"]) {
+    for (const id of ["positron", "liberty"]) {
       const text = getBasemap(id)
         ?.attribution.map((entry) => entry.text)
         .join(" ");
@@ -140,23 +124,17 @@ describe("BASEMAPS", () => {
     ]);
   });
 
-  it("marks the dark basemap as dark and the rest as light", () => {
-    const appearances = Object.fromEntries(
-      BASEMAPS.map((basemap) => [basemap.id, basemap.appearance]),
-    );
-    expect(appearances).toEqual({
-      positron: "light",
-      liberty: "light",
-      dark: "dark",
-      osm: "light",
-    });
+  it("has no dark basemap: every built-in basemap is light", () => {
+    expect(getBasemap("dark")).toBeUndefined();
+    for (const basemap of BASEMAPS) {
+      expect(basemap.appearance, basemap.id).toBe("light");
+    }
   });
 
-  it("links positron and liberty to the dark basemap", () => {
-    expect(getBasemap("positron")?.darkVariantId).toBe("dark");
-    expect(getBasemap("liberty")?.darkVariantId).toBe("dark");
-    expect(getBasemap("dark")?.darkVariantId).toBeUndefined();
-    expect(getBasemap("osm")?.darkVariantId).toBeUndefined();
+  it("has no basemap that swaps itself for another in a dark theme", () => {
+    for (const basemap of BASEMAPS) {
+      expect(Object.keys(basemap)).not.toContain("darkVariantId");
+    }
   });
 });
 
@@ -168,53 +146,32 @@ describe("getBasemap", () => {
   });
 });
 
-describe("isKnownBasemapChoice", () => {
-  it("accepts auto and every built-in id", () => {
-    expect(isKnownBasemapChoice(AUTO_BASEMAP_ID)).toBe(true);
+describe("resolveBasemap", () => {
+  it("makes Liberty the default basemap", () => {
+    expect(DEFAULT_BASEMAP_ID).toBe("liberty");
+    expect(getBasemap(DEFAULT_BASEMAP_ID)?.name).toBe("Liberty");
+  });
+
+  it("returns an explicit choice", () => {
     for (const basemap of BASEMAPS) {
-      expect(isKnownBasemapChoice(basemap.id)).toBe(true);
+      expect(resolveBasemap(basemap.id)).toBe(basemap);
     }
   });
 
-  it("rejects the id of a basemap that no longer exists, and anything else", () => {
-    expect(isKnownBasemapChoice("removed-basemap")).toBe(false);
-    expect(isKnownBasemapChoice("")).toBe(false);
-    expect(isKnownBasemapChoice("__proto__")).toBe(false);
+  it("falls back to the default for an unknown id, including the retired auto and dark choices", () => {
+    for (const id of ["auto", "dark", "missing", "", "__proto__"]) {
+      expect(resolveBasemap(id).id).toBe("liberty");
+    }
   });
 });
 
-describe("resolveBasemap", () => {
-  it("exports the default and auto ids", () => {
-    expect(DEFAULT_BASEMAP_ID).toBe("positron");
-    expect(AUTO_BASEMAP_ID).toBe("auto");
-    expect(getBasemap(DEFAULT_BASEMAP_ID)).toBeDefined();
-  });
-
-  it("auto follows the theme: positron in light, its dark variant in dark", () => {
-    expect(resolveBasemap("auto", "light").id).toBe("positron");
-    expect(resolveBasemap("auto", "dark").id).toBe("dark");
-  });
-
-  it("keeps auto in step with the default basemap's declared dark variant", () => {
-    const variantId = getBasemap(DEFAULT_BASEMAP_ID)?.darkVariantId;
-    expect(variantId).toBeDefined();
-    expect(resolveBasemap("auto", "dark")).toBe(getBasemap(variantId ?? ""));
-    expect(resolveBasemap("auto", "light")).toBe(
-      getBasemap(DEFAULT_BASEMAP_ID),
-    );
-  });
-
-  it("returns an explicit choice whatever the theme", () => {
-    for (const theme of ["light", "dark"] as const) {
-      expect(resolveBasemap("liberty", theme).id).toBe("liberty");
-      expect(resolveBasemap("osm", theme).id).toBe("osm");
-    }
-  });
-
-  it("falls back to the default for unknown ids", () => {
-    expect(resolveBasemap("missing", "light").id).toBe("positron");
-    expect(resolveBasemap("missing", "dark").id).toBe("positron");
-    expect(resolveBasemap("", "light").id).toBe("positron");
+describe("DEFAULT_BASEMAP_BACKGROUND", () => {
+  // Copied from the `background` layer's `background-color` in
+  // https://tiles.openfreemap.org/styles/liberty (checked 2026-11-09). The
+  // style writes it as six-digit lowercase hex, and so does this constant.
+  it("is the Liberty style's background colour, in the style's own format", () => {
+    expect(DEFAULT_BASEMAP_BACKGROUND).toMatch(/^#[0-9a-f]{6}$/);
+    expect(DEFAULT_BASEMAP_BACKGROUND).toBe("#f8f4f0");
   });
 });
 
@@ -233,12 +190,12 @@ describe("buildAttribution", () => {
   });
 
   it("never mutates the basemap's own list", () => {
-    const dark = getBasemap("dark");
-    if (dark === undefined) {
-      throw new Error("missing basemap dark");
+    const positron = getBasemap("positron");
+    if (positron === undefined) {
+      throw new Error("missing basemap positron");
     }
-    const before = dark.attribution.length;
-    buildAttribution(dark);
-    expect(dark.attribution.length).toBe(before);
+    const before = positron.attribution.length;
+    buildAttribution(positron);
+    expect(positron.attribution.length).toBe(before);
   });
 });

@@ -60,15 +60,21 @@ const red = {
 /**
  * Backdrops that surface contrast is measured over. A translucent surface
  * takes on whatever map is under it, so tests composite over both extremes,
- * plus a typical light and dark basemap for the things drawn on the map.
+ * plus the light basemaps for the things drawn on the map. Every built-in
+ * basemap is light; pure black stands in for any dark map a host adds.
  */
 export const representativeBackdrops = {
   white: "#ffffff",
   black: "#000000",
   /** Close to a light OpenStreetMap or Positron land colour. */
   lightMap: "#f2efe9",
-  /** Close to the OpenFreeMap Dark land colour. */
-  darkMap: "#1d2024",
+  /**
+   * The land (background layer) colour of OpenFreeMap Liberty, the default
+   * basemap in both themes. It must equal `DEFAULT_BASEMAP_BACKGROUND` in
+   * `@karta/core`, which this package cannot import; a test in
+   * `packages/web` checks that they agree.
+   */
+  liberty: "#f8f4f0",
 } as const;
 
 /** The semantic colour roles. Components use these and never a ramp step. */
@@ -103,7 +109,16 @@ export interface ColourRoles {
   focusRing: string;
   /** Inner tone of the focus ring, in the surface colour. */
   focusRingInner: string;
-  /** Colour of the map element before tiles load. */
+  /**
+   * Full pages that are not the map (privacy, errors, the style guide) and
+   * the document behind everything. Follows the theme.
+   */
+  pageBackground: string;
+  /**
+   * Colour of the map region before the map draws: the default basemap's
+   * land colour, the same in both themes, so the first view does not flash a
+   * different colour before the basemap appears.
+   */
   mapBackground: string;
   /** Dropped pin. */
   mapPin: string;
@@ -138,6 +153,7 @@ export const colourRoleNames = [
   "scrim",
   "focusRing",
   "focusRingInner",
+  "pageBackground",
   "mapBackground",
   "mapPin",
   "mapMeasureLine",
@@ -185,7 +201,8 @@ const lightColour: ColourRoles = {
   scrim: "oklch(0 0 0 / 0.4)",
   focusRing: accent[600],
   focusRingInner: "oklch(1 0 0)",
-  mapBackground: "oklch(0.95 0.008 85)",
+  pageBackground: "oklch(0.95 0.008 85)",
+  mapBackground: representativeBackdrops.liberty,
   mapPin: accent[600],
   mapMeasureLine: accent[600],
   mapMeasureFill: "oklch(0.55 0.175 255 / 0.18)",
@@ -211,7 +228,8 @@ const darkColour: ColourRoles = {
   scrim: "oklch(0 0 0 / 0.6)",
   focusRing: accent[500],
   focusRingInner: "oklch(0.19 0.008 250)",
-  mapBackground: "oklch(0.24 0.008 250)",
+  pageBackground: "oklch(0.24 0.008 250)",
+  mapBackground: representativeBackdrops.liberty,
   mapPin: accent[600],
   mapMeasureLine: accent[600],
   mapMeasureFill: "oklch(0.55 0.175 255 / 0.28)",
@@ -294,25 +312,26 @@ export const forcedColors: Partial<ColourRoles> = {
   dangerTint: "Canvas",
   focusRing: "Highlight",
   focusRingInner: "Canvas",
+  pageBackground: "Canvas",
   mapBackground: "Canvas",
 };
 
 /**
  * Opaque colours for the `theme-color` meta tag: the default surface
- * flattened over each theme's own map background, so the browser chrome
- * matches the floating UI beneath it.
+ * flattened over each theme's page background, so the browser chrome keeps
+ * the theme's own lightness above the map and on every other page.
  */
 export const themeColor: Record<ThemeName, string> = {
   light: toHex(
     compositeOver(
       themeValues.light.colour.surface,
-      themeValues.light.colour.mapBackground,
+      themeValues.light.colour.pageBackground,
     ),
   ),
   dark: toHex(
     compositeOver(
       themeValues.dark.colour.surface,
-      themeValues.dark.colour.mapBackground,
+      themeValues.dark.colour.pageBackground,
     ),
   ),
 };

@@ -6,7 +6,7 @@ export const scroller = style({
   height: "100%",
   overflowY: "auto",
   overscrollBehavior: "contain",
-  backgroundColor: tokens.color.mapBackground,
+  backgroundColor: tokens.color.pageBackground,
 });
 
 /** The reading column. */

@@ -1,4 +1,10 @@
-import { focusRing, surfaceBlurStyle, tokens, zLayer } from "@karta/theme";
+import {
+  focusRing,
+  mapOverlayTokens,
+  surfaceBlurStyle,
+  tokens,
+  zLayer,
+} from "@karta/theme";
 import { style } from "@vanilla-extract/css";
 import { chromeVar, chromeVars } from "../MapChrome/chromeVars";
 
@@ -14,6 +20,19 @@ export const root = style({
   // looks well above the screen inset. Sinking the box by one step puts the
   // icon near the corner while the target stays fully on screen.
   marginBlockEnd: `calc(-1 * ${tokens.space.xs})`,
+});
+
+/**
+ * The credits button is a bare icon on the map, with no surface behind it.
+ * The map is Liberty in both themes, so a dark theme's light icon would sit
+ * on a light map; the map halo (dark in a dark theme, light in a light one)
+ * outlines it, as the scale readout's text is outlined.
+ */
+export const onMapIcon = style({
+  filter: [
+    `drop-shadow(0 0 calc(${tokens.space.xxs} / 2) ${mapOverlayTokens.halo})`,
+    `drop-shadow(0 0 calc(${tokens.space.xxs} / 2) ${mapOverlayTokens.halo})`,
+  ].join(" "),
 });
 
 /** The end stack's width plus the gap after it: how far a beside popover moves inwards. */

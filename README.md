@@ -69,6 +69,8 @@ Playwright starts `npm start` itself and reuses a server already running on port
 4. Record the provider in `ATTRIBUTIONS.md` and in the map tiles section of the privacy page (`packages/web/src/app/PrivacyPage.tsx`) and `PRIVACY.md`.
 5. Update the basemap constants in `packages/web/e2e/support/basemaps.ts` and the tests that count basemaps.
 
+Liberty is the default basemap in both themes; the basemap never follows the light or dark theme. To change the default, change `DEFAULT_BASEMAP_ID` and `DEFAULT_BASEMAP_BACKGROUND` (the new style's `background` layer colour) in `basemaps.ts`, and the matching `liberty` backdrop in `packages/theme/src/tokenValues.ts`. A test in `packages/web` fails until the two colours agree.
+
 ### Add an adapter
 
 Define the port, write its fake and contract suite, write the real adapter in `packages/web/src/adapters` and register it in `createServices()`. [`ARCHITECTURE.md`](ARCHITECTURE.md#adding-an-adapter) has the steps.

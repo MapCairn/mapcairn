@@ -9,7 +9,6 @@ import { Check } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { Icon } from "../../ui/Icon";
 import { useAnnounce } from "../../ui/LiveRegion";
-import { Switch } from "../../ui/Switch";
 import { visuallyHidden } from "../../ui/VisuallyHidden/VisuallyHidden.css";
 import {
   badge,
@@ -17,7 +16,6 @@ import {
   grid,
   image,
   name,
-  picker,
   thumb,
   tile,
 } from "./BasemapPicker.css";
@@ -29,30 +27,16 @@ const THUMB_HEIGHT = 120;
 /** Props for {@link BasemapPicker}. */
 export interface BasemapPickerProps {
   /**
-   * The stored choice: a basemap id, or `AUTO_BASEMAP_ID` while the map
-   * follows the theme. An unknown id is shown as the default basemap.
+   * The chosen basemap id. An id that names no built-in basemap is shown as
+   * the default basemap.
    */
   readonly value: string;
-  /**
-   * Called with the id of the tile the user chose. It is also called when the
-   * user clicks the tile that is already shown while the map follows the
-   * theme, because that is how they pin the map to that basemap.
-   */
+  /** Called with the id of the tile the user chose. */
   readonly onChange: (id: string) => void;
-  /** Whether the map follows the theme. */
-  readonly themeMatch: boolean;
-  /** Called with the next state of the "Match the map to the theme" switch. */
-  readonly onThemeMatchChange: (themeMatch: boolean) => void;
-  /**
-   * The basemap currently on screen. While `themeMatch` is on this is the
-   * tile that is marked, because the stored choice is only "auto".
-   */
-  readonly activeBasemapId?: string;
 }
 
 /**
- * Chooses the basemap: a three-across grid of previews as a radio group,
- * then a switch to follow the interface theme.
+ * Chooses the basemap: a three-across grid of previews as a radio group.
  *
  * Each tile is a native radio input, visually hidden and drawn through its
  * label. Native radios give one tab stop for the group, arrow keys that move
@@ -60,21 +44,13 @@ export interface BasemapPickerProps {
  * direction) and the radio role in every screen reader, with no script. The
  * selected tile has an accent outline and a check badge, so selection never
  * relies on colour. A preview that fails to load disappears and leaves a
- * neutral tile, with the name still visible.
- * @remarks The stored id is `AUTO_BASEMAP_ID` while `themeMatch` is on, so the
- *   caller passes `activeBasemapId` to say which tile that resolves to.
+ * neutral tile, with the name still visible. The basemap does not follow the
+ * interface theme: Dark is an ordinary choice.
  */
-export function BasemapPicker({
-  value,
-  onChange,
-  themeMatch,
-  onThemeMatchChange,
-  activeBasemapId,
-}: BasemapPickerProps) {
+export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
   const groupName = useId();
   const announce = useAnnounce();
-  const candidate = themeMatch ? (activeBasemapId ?? value) : value;
-  const shownId = getBasemap(candidate) ? candidate : DEFAULT_BASEMAP_ID;
+  const shownId = getBasemap(value) ? value : DEFAULT_BASEMAP_ID;
 
   const choose = (basemap: BasemapDefinition) => {
     announce(announceBasemap(basemap.name));
@@ -82,30 +58,21 @@ export function BasemapPicker({
   };
 
   return (
-    <div className={picker}>
-      <div
-        role="radiogroup"
-        aria-label="Basemap"
-        className={grid}
-        data-testid="basemap-picker"
-      >
-        {BASEMAPS.map((basemap) => (
-          <BasemapTile
-            key={basemap.id}
-            basemap={basemap}
-            groupName={groupName}
-            selected={basemap.id === shownId}
-            onChoose={() => choose(basemap)}
-            pinOnClick={themeMatch}
-          />
-        ))}
-      </div>
-      <Switch
-        label="Match the map to the theme"
-        checked={themeMatch}
-        onCheckedChange={onThemeMatchChange}
-        data-testid="basemap-theme-match"
-      />
+    <div
+      role="radiogroup"
+      aria-label="Basemap"
+      className={grid}
+      data-testid="basemap-picker"
+    >
+      {BASEMAPS.map((basemap) => (
+        <BasemapTile
+          key={basemap.id}
+          basemap={basemap}
+          groupName={groupName}
+          selected={basemap.id === shownId}
+          onChoose={() => choose(basemap)}
+        />
+      ))}
     </div>
   );
 }
@@ -116,8 +83,6 @@ interface BasemapTileProps {
   readonly selected: boolean;
   /** Called when this tile is chosen. */
   readonly onChoose: () => void;
-  /** Whether clicking the tile that is already selected also counts as a choice. */
-  readonly pinOnClick: boolean;
 }
 
 function BasemapTile({
@@ -125,7 +90,6 @@ function BasemapTile({
   groupName,
   selected,
   onChoose,
-  pinOnClick,
 }: BasemapTileProps) {
   const [failed, setFailed] = useState(false);
   // A ref callback with a listener, not an onError prop, which the a11y lint
@@ -147,7 +111,6 @@ function BasemapTile({
         value={basemap.id}
         checked={selected}
         onChange={onChoose}
-        onClick={selected && pinOnClick ? onChoose : undefined}
       />
       <span className={thumb({ selected })}>
         {failed ? null : (

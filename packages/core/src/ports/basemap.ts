@@ -25,8 +25,8 @@ export type BasemapSource =
 
 /**
  * A basemap, as data. This is the single source for the picker, the
- * attribution content, the thumbnails and the "Auto follows theme" logic.
- * Nothing else may name a tile URL or an attribution string.
+ * attribution content and the thumbnails. Nothing else may name a tile URL or
+ * an attribution string.
  */
 export interface BasemapDefinition {
   readonly id: string;
@@ -44,6 +44,4 @@ export interface BasemapDefinition {
   readonly attribution: readonly BasemapAttributionEntry[];
   /** Whether the basemap itself is light or dark, used for chrome contrast. */
   readonly appearance: "light" | "dark";
-  /** The basemap to use instead when the interface theme is dark and "Auto" is chosen. */
-  readonly darkVariantId?: string;
 }

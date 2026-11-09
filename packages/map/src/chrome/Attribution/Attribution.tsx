@@ -248,6 +248,7 @@ export function Attribution({ basemap }: AttributionProps) {
         label="Map credits"
         icon={Info}
         size="compact"
+        className={styles.onMapIcon}
         expanded={open && !fading}
         controls={regionId}
         onClick={toggle}

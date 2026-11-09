@@ -1,8 +1,7 @@
 import {
-  AUTO_BASEMAP_ID,
   type BasemapDefinition,
-  isKnownBasemapChoice,
-  type ResolvedTheme,
+  DEFAULT_BASEMAP_ID,
+  getBasemap,
   resolveBasemap,
 } from "@karta/core";
 import { useSettings } from "@karta/map";
@@ -18,7 +17,7 @@ export interface BasemapFailure {
 
 /** What {@link useBasemapChoice} returns. */
 export interface BasemapChoice {
-  /** The choice the picker shows: a basemap id or `AUTO_BASEMAP_ID`. */
+  /** The basemap id the picker shows as chosen. */
   readonly choice: string;
   /**
    * The choice that is saved, or named by a shared link: the last one known
@@ -26,7 +25,7 @@ export interface BasemapChoice {
    * basemap that failed.
    */
   readonly savedChoice: string;
-  /** The basemap to draw, after "Auto" is applied. */
+  /** The basemap to draw. */
   readonly basemap: BasemapDefinition;
   /** The swap that could not load, until the person goes back. */
   readonly failure: BasemapFailure | null;
@@ -50,9 +49,11 @@ export interface BasemapChoice {
 /**
  * The basemap choice: a basemap named by a shared link wins once, at load,
  * without overwriting the saved choice; after that the saved setting decides.
- * A saved or linked id that names no built-in basemap (for example one that
- * has been removed) counts as "Auto", so the picker always has a checked
- * option that matches the map.
+ * A saved or linked id that names no built-in basemap (one that has been
+ * removed, or the "auto" choice of earlier versions, which followed the
+ * theme) counts as the default basemap, Liberty, so the picker always has a
+ * checked option that matches the map. Nothing is saved until the person
+ * picks a basemap. The basemap never depends on the interface theme.
  *
  * @remarks A new choice is held as pending and saved only when the map
  *   reports that it loaded, so a basemap that fails is never saved or written
@@ -62,7 +63,6 @@ export interface BasemapChoice {
  */
 export function useBasemapChoice(
   linkedBasemapId: string | undefined,
-  theme: ResolvedTheme,
 ): BasemapChoice {
   const { settings, update } = useSettings();
   const [linked, setLinked] = useState(linkedBasemapId);
@@ -70,11 +70,9 @@ export function useBasemapChoice(
   const [failure, setFailure] = useState<BasemapFailure | null>(null);
 
   const requested = linked ?? settings.basemapId;
-  const savedChoice = isKnownBasemapChoice(requested)
-    ? requested
-    : AUTO_BASEMAP_ID;
+  const savedChoice = getBasemap(requested) ? requested : DEFAULT_BASEMAP_ID;
   const choice = pending ?? savedChoice;
-  const basemap = failure ? failure.kept : resolveBasemap(choice, theme);
+  const basemap = failure ? failure.kept : resolveBasemap(choice);
 
   const save = useCallback(
     (id: string) => {
@@ -90,28 +88,22 @@ export function useBasemapChoice(
       setFailure(null);
       // Saved at once only when nothing is loading: while a swap is in
       // flight, `basemap` is the one asked for, not yet the one drawn.
-      if (
-        pending === undefined &&
-        resolveBasemap(id, theme).id === basemap.id
-      ) {
+      if (pending === undefined && resolveBasemap(id).id === basemap.id) {
         save(id);
       } else {
         setPending(id);
       }
     },
-    [basemap.id, pending, save, theme],
+    [basemap.id, pending, save],
   );
 
   const applied = useCallback(
     (loaded: BasemapDefinition) => {
-      if (
-        pending !== undefined &&
-        resolveBasemap(pending, theme).id === loaded.id
-      ) {
+      if (pending !== undefined && resolveBasemap(pending).id === loaded.id) {
         save(pending);
       }
     },
-    [pending, save, theme],
+    [pending, save],
   );
 
   const failed = useCallback(

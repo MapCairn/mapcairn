@@ -1,4 +1,4 @@
-import { AUTO_BASEMAP_ID, BASEMAPS, createFakeServices } from "@karta/core";
+import { BASEMAPS, createFakeServices } from "@karta/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services";
@@ -7,21 +7,14 @@ import { BasemapPicker, type BasemapPickerProps } from "./BasemapPicker";
 
 function renderPicker(props: Partial<BasemapPickerProps> = {}) {
   const onChange = vi.fn();
-  const onThemeMatchChange = vi.fn();
   const view = render(
     <ServicesProvider services={createFakeServices()}>
       <LiveRegionProvider>
-        <BasemapPicker
-          value="positron"
-          onChange={onChange}
-          themeMatch={false}
-          onThemeMatchChange={onThemeMatchChange}
-          {...props}
-        />
+        <BasemapPicker value="positron" onChange={onChange} {...props} />
       </LiveRegionProvider>
     </ServicesProvider>,
   );
-  return { ...view, onChange, onThemeMatchChange };
+  return { ...view, onChange };
 }
 
 const radio = (name: string) => screen.getByRole("radio", { name });
@@ -77,14 +70,26 @@ describe("BasemapPicker", () => {
     expect(selectedThumb?.className).not.toBe(otherThumb?.className);
   });
 
-  it("falls back to the default basemap for an unknown id", () => {
+  it("falls back to Liberty, the default basemap, for an unknown id", () => {
     renderPicker({ value: "nowhere" });
-    expect(radio("Positron")).toBeChecked();
+    expect(radio("Liberty")).toBeChecked();
   });
 
-  it("falls back to the default basemap when the stored id is auto but the picker is not matching", () => {
-    renderPicker({ value: AUTO_BASEMAP_ID });
-    expect(radio("Positron")).toBeChecked();
+  it("falls back to Liberty for the retired auto choice", () => {
+    renderPicker({ value: "auto" });
+    expect(radio("Liberty")).toBeChecked();
+    expect(screen.getAllByRole("radio", { checked: true })).toHaveLength(1);
+  });
+
+  it("offers no dark basemap", () => {
+    renderPicker();
+    expect(screen.queryByRole("radio", { name: "Dark" })).toBeNull();
+  });
+
+  it("offers no switch to match the map to the theme", () => {
+    renderPicker();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByText(/match the map/i)).toBeNull();
   });
 
   it("calls onChange with the id when another tile is chosen", () => {
@@ -106,7 +111,7 @@ describe("BasemapPicker", () => {
     expect(onChange).toHaveBeenCalledWith("liberty");
   });
 
-  it("does not call onChange when the selected tile is clicked and the map does not follow the theme", () => {
+  it("does not call onChange when the selected tile is clicked", () => {
     const { onChange } = renderPicker();
     fireEvent.click(radio("Positron"));
     expect(onChange).not.toHaveBeenCalled();
@@ -114,81 +119,10 @@ describe("BasemapPicker", () => {
 
   it("announces the new basemap politely", () => {
     renderPicker();
-    fireEvent.click(radio("Dark"));
+    fireEvent.click(radio("Streets"));
     expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
-      "Basemap changed to Dark",
+      "Basemap changed to Streets",
     );
-  });
-
-  describe("while the map follows the theme", () => {
-    it("marks the basemap that is on screen", () => {
-      renderPicker({
-        value: AUTO_BASEMAP_ID,
-        themeMatch: true,
-        activeBasemapId: "dark",
-      });
-      expect(radio("Dark")).toBeChecked();
-      expect(screen.getByTestId("basemap-selected-dark")).toBeInTheDocument();
-    });
-
-    it("marks the stored basemap when no active id is given", () => {
-      renderPicker({ value: "osm", themeMatch: true });
-      expect(radio("Streets")).toBeChecked();
-    });
-
-    it("lets a click on the marked tile pin that basemap", () => {
-      const { onChange } = renderPicker({
-        value: AUTO_BASEMAP_ID,
-        themeMatch: true,
-        activeBasemapId: "dark",
-      });
-      fireEvent.click(radio("Dark"));
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChange).toHaveBeenCalledWith("dark");
-    });
-
-    it("calls onChange once, not twice, when a different tile is chosen", () => {
-      const { onChange } = renderPicker({
-        value: AUTO_BASEMAP_ID,
-        themeMatch: true,
-        activeBasemapId: "dark",
-      });
-      fireEvent.click(radio("Streets"));
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChange).toHaveBeenCalledWith("osm");
-    });
-  });
-
-  describe("the match switch", () => {
-    it("is a switch named Match the map to the theme", () => {
-      renderPicker();
-      const control = screen.getByRole("switch", {
-        name: "Match the map to the theme",
-      });
-      expect(control).toHaveAttribute("aria-checked", "false");
-      expect(control).toBe(screen.getByTestId("basemap-theme-match"));
-    });
-
-    it("reflects themeMatch", () => {
-      renderPicker({ themeMatch: true });
-      expect(screen.getByRole("switch")).toHaveAttribute(
-        "aria-checked",
-        "true",
-      );
-    });
-
-    it("reports the next state when toggled", () => {
-      const { onThemeMatchChange } = renderPicker();
-      fireEvent.click(screen.getByRole("switch"));
-      expect(onThemeMatchChange).toHaveBeenCalledTimes(1);
-      expect(onThemeMatchChange).toHaveBeenLastCalledWith(true);
-    });
-
-    it("reports false when toggled off", () => {
-      const { onThemeMatchChange } = renderPicker({ themeMatch: true });
-      fireEvent.click(screen.getByRole("switch"));
-      expect(onThemeMatchChange).toHaveBeenLastCalledWith(false);
-    });
   });
 
   describe("previews", () => {

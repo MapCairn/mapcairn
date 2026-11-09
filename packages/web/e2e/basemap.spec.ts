@@ -2,14 +2,17 @@ import { expect, test } from "./fixtures";
 import {
   BASEMAP_COUNT,
   DEFAULT_VECTOR_BASEMAP_ID,
+  DEFAULT_VECTOR_BASEMAP_NAME,
+  OTHER_VECTOR_BASEMAP_ID,
+  OTHER_VECTOR_BASEMAP_NAME,
   RASTER_BASEMAP_CREDIT,
   RASTER_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
 } from "./support/basemaps";
 import {
-  LIBERTY_STYLE_PATTERN,
   MAPLIBRE_WORKER_PATTERN,
   MINIMAL_VECTOR_STYLE,
+  OTHER_VECTOR_STYLE_PATTERN,
   RASTER_TILE_PATTERN,
   SPRITE_PATTERN,
   VECTOR_STYLE_PATTERN,
@@ -47,29 +50,40 @@ test.describe("basemaps", () => {
     );
   });
 
-  test("the picker is a radio group that follows the theme until a basemap is chosen", async ({
-    mapPage,
-  }) => {
-    await mapPage.goto();
-    await mapPage.openMapOptions();
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`the picker is a radio group that starts on the default basemap in a ${colorScheme} theme`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto();
+      await mapPage.openMapOptions();
 
-    const radios = mapPage.basemapPicker.getByRole("radio");
-    await expect(radios).toHaveCount(BASEMAP_COUNT);
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: "Positron" }),
-    ).toBeChecked();
-    await expect(mapPage.themeMatchSwitch).toBeChecked();
+      const radios = mapPage.basemapPicker.getByRole("radio");
+      await expect(radios).toHaveCount(BASEMAP_COUNT);
+      await expect(
+        mapPage.basemapPicker.getByRole("radio", {
+          name: DEFAULT_VECTOR_BASEMAP_NAME,
+        }),
+      ).toBeChecked();
+      await expect(
+        mapPage.sheet.getByRole("switch", { name: /match the map/i }),
+      ).toHaveCount(0);
 
-    await mapPage.chooseBasemap("Liberty");
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: "Liberty" }),
-    ).toBeChecked();
-    await expect(mapPage.themeMatchSwitch).not.toBeChecked();
-    await expect
-      .poll(() => mapPage.announcements())
-      .toContain("Basemap changed to Liberty");
-    await expect.poll(() => mapPage.hashBasemap()).toBe("liberty");
-  });
+      await mapPage.chooseBasemap(OTHER_VECTOR_BASEMAP_NAME);
+      await expect(
+        mapPage.basemapPicker.getByRole("radio", {
+          name: OTHER_VECTOR_BASEMAP_NAME,
+        }),
+      ).toBeChecked();
+      await expect
+        .poll(() => mapPage.announcements())
+        .toContain(`Basemap changed to ${OTHER_VECTOR_BASEMAP_NAME}`);
+      await expect
+        .poll(() => mapPage.hashBasemap())
+        .toBe(OTHER_VECTOR_BASEMAP_ID);
+    });
+  }
 
   test("arrow keys move through the basemaps in one tab stop", async ({
     page,
@@ -78,17 +92,16 @@ test.describe("basemaps", () => {
     await mapPage.goto();
     await mapPage.openMapOptions();
     await mapPage.basemapPicker
-      .getByRole("radio", { name: "Positron" })
+      .getByRole("radio", { name: DEFAULT_VECTOR_BASEMAP_NAME })
       .focus();
     await page.keyboard.press("ArrowRight");
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: "Liberty" }),
-    ).toBeChecked();
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: "Liberty" }),
-    ).toBeFocused();
+    const next = mapPage.basemapPicker.getByRole("radio", {
+      name: OTHER_VECTOR_BASEMAP_NAME,
+    });
+    await expect(next).toBeChecked();
+    await expect(next).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(mapPage.themeMatchSwitch).toBeFocused();
+    await expect(mapPage.dropPinButton).toBeFocused();
   });
 
   test("switching between the raster and vector styles keeps the map, the view and the bearing", async ({
@@ -127,7 +140,7 @@ test.describe("basemaps", () => {
     // The sheet stays put while the basemap underneath changes.
     await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
 
-    await mapPage.chooseBasemap("Dark");
+    await mapPage.chooseBasemap(OTHER_VECTOR_BASEMAP_NAME);
     await mapPage.waitForMap();
     await expect(canvas).toHaveAttribute("data-test-original", "yes");
     await expect(mapPage.host).toHaveAttribute("data-zoom", "8.00");
@@ -135,9 +148,11 @@ test.describe("basemaps", () => {
     expect(view?.lat).toBeCloseTo(-33.9, 3);
     expect(view?.lng).toBeCloseTo(18.4, 3);
     expect(view?.bearing).toBe(30);
-    expect(styleRequests.some((url) => url.endsWith("/styles/dark"))).toBe(
-      true,
-    );
+    expect(
+      styleRequests.some((url) =>
+        url.endsWith(`/styles/${OTHER_VECTOR_BASEMAP_ID}`),
+      ),
+    ).toBe(true);
   });
 
   test("the raster basemap zooms to OpenStreetMap's deepest tile level and no further", async ({
@@ -277,7 +292,7 @@ test.describe("basemaps", () => {
     mapPage,
   }) => {
     await mapPage.goto();
-    await page.route(LIBERTY_STYLE_PATTERN, (route) =>
+    await page.route(OTHER_VECTOR_STYLE_PATTERN, (route) =>
       route.fulfill({ status: 404, body: "" }),
     );
     const canvas = page.locator("canvas.maplibregl-canvas");
@@ -285,7 +300,7 @@ test.describe("basemaps", () => {
       element.dataset.testOriginal = "yes";
     });
     await mapPage.openMapOptions();
-    await mapPage.chooseBasemap("Liberty");
+    await mapPage.chooseBasemap(OTHER_VECTOR_BASEMAP_NAME);
     // The banners ride above a sheet at peek or half and hide at full; close
     // it so the banner is on screen in every layout.
     await mapPage.sheetClose.click();
@@ -300,13 +315,15 @@ test.describe("basemaps", () => {
     // The same engine goes on drawing the previous basemap.
     await expect(canvas).toHaveAttribute("data-test-original", "yes");
     await mapPage.waitForMap();
-    expect(await mapPage.hashBasemap()).not.toBe("liberty");
+    expect(await mapPage.hashBasemap()).not.toBe(OTHER_VECTOR_BASEMAP_ID);
 
     await banner.getByRole("button", { name: "Use previous basemap" }).click();
     await expect(banner).toHaveCount(0);
     await mapPage.openMapOptions();
     await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: "Positron" }),
+      mapPage.basemapPicker.getByRole("radio", {
+        name: DEFAULT_VECTOR_BASEMAP_NAME,
+      }),
     ).toBeChecked();
 
     // A reload starts from the basemap that worked, not the one that failed.
@@ -316,7 +333,9 @@ test.describe("basemaps", () => {
     await expect(page.getByTestId("basemap-error")).toHaveCount(0);
     await mapPage.openMapOptions();
     await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: "Positron" }),
+      mapPage.basemapPicker.getByRole("radio", {
+        name: DEFAULT_VECTOR_BASEMAP_NAME,
+      }),
     ).toBeChecked();
   });
 

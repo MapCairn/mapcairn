@@ -1,5 +1,4 @@
 import {
-  AUTO_BASEMAP_ID,
   createFakeServices,
   FakeDevicePreferences,
   MemorySettingsStore,
@@ -105,9 +104,6 @@ describe("SheetContent basemap", () => {
   it("passes the stored basemap to the picker", () => {
     renderContent({ props: { basemapId: "osm" } });
     expect(screen.getByRole("radio", { name: "Streets" })).toBeChecked();
-    expect(
-      screen.getByRole("switch", { name: "Match the map to the theme" }),
-    ).toHaveAttribute("aria-checked", "false");
   });
 
   it("reports a chosen basemap", () => {
@@ -116,46 +112,21 @@ describe("SheetContent basemap", () => {
     expect(onBasemapChange).toHaveBeenCalledWith("osm");
   });
 
-  it("turns the match switch on when the stored id is auto, and marks the resolved basemap", () => {
-    renderContent({ props: { basemapId: AUTO_BASEMAP_ID }, theme: "light" });
-    expect(
-      screen.getByRole("switch", { name: "Match the map to the theme" }),
-    ).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("radio", { name: "Positron" })).toBeChecked();
+  it("keeps the chosen basemap in a dark theme, with no switch to match the map to the theme", () => {
+    renderContent({ props: { basemapId: "liberty" }, theme: "dark" });
+    expect(screen.getByRole("radio", { name: "Liberty" })).toBeChecked();
+    expect(screen.queryByRole("switch", { name: /match the map/i })).toBeNull();
   });
 
-  it("marks the dark basemap for auto in a dark theme", () => {
-    renderContent({ props: { basemapId: AUTO_BASEMAP_ID }, theme: "dark" });
-    const picker = screen.getByRole("radiogroup", { name: "Basemap" });
-    expect(within(picker).getByRole("radio", { name: "Dark" })).toBeChecked();
-  });
-
-  it("stores auto when the match switch is turned on", () => {
-    const { onBasemapChange } = renderContent();
-    fireEvent.click(
-      screen.getByRole("switch", { name: "Match the map to the theme" }),
-    );
-    expect(onBasemapChange).toHaveBeenCalledWith(AUTO_BASEMAP_ID);
-  });
-
-  it("keeps the basemap on screen when the match switch is turned off", () => {
-    const { onBasemapChange } = renderContent({
-      props: { basemapId: AUTO_BASEMAP_ID },
-      theme: "dark",
-    });
-    fireEvent.click(
-      screen.getByRole("switch", { name: "Match the map to the theme" }),
-    );
-    expect(onBasemapChange).toHaveBeenCalledWith("dark");
-  });
-
-  it("pins the marked basemap when its tile is clicked during matching", () => {
-    const { onBasemapChange } = renderContent({
-      props: { basemapId: AUTO_BASEMAP_ID },
-      theme: "light",
-    });
-    fireEvent.click(screen.getByRole("radio", { name: "Positron" }));
-    expect(onBasemapChange).toHaveBeenCalledWith("positron");
+  it("shows the retired auto choice as Liberty in either theme", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const { unmount } = renderContent({
+        props: { basemapId: "auto" },
+        theme,
+      });
+      expect(screen.getByRole("radio", { name: "Liberty" })).toBeChecked();
+      unmount();
+    }
   });
 });
 

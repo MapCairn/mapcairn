@@ -59,7 +59,6 @@ export class MapPage {
   readonly sheetHandle: Locator;
   readonly sheetClose: Locator;
   readonly basemapPicker: Locator;
-  readonly themeMatchSwitch: Locator;
   readonly dropPinButton: Locator;
 
   readonly pinCard: Locator;
@@ -137,9 +136,6 @@ export class MapPage {
       exact: true,
     });
     this.basemapPicker = page.getByRole("radiogroup", { name: "Basemap" });
-    this.themeMatchSwitch = page.getByRole("switch", {
-      name: "Match the map to the theme",
-    });
     this.dropPinButton = page.getByRole("button", {
       name: "Drop pin at map centre",
     });

@@ -8,7 +8,7 @@ export const page = style({
   height: "100%",
   padding: tokens.space.inset,
   overflowY: "auto",
-  backgroundColor: tokens.color.mapBackground,
+  backgroundColor: tokens.color.pageBackground,
 });
 
 /** The message card: opaque, so it reads the same over any background. */

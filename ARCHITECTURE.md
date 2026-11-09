@@ -61,7 +61,7 @@ Add an interface only where a boundary has at least two implementations. The fak
 | `ThemeSource` | `matchMedia` | scripted system preference |
 | `LayerRegistry` | empty registry for now | list of sample layers |
 
-`BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source or an attribution string. A `raster` source is a tile URL template and a tile size, and a `vector` source is a style URL.
+`BasemapDefinition` is a typed data module, not a port. It is the only place that names a tile source or an attribution string. A `raster` source is a tile URL template and a tile size, and a `vector` source is a style URL. `DEFAULT_BASEMAP_ID` (Liberty) is the basemap in both themes when nothing is saved or linked, and an unknown id, including the "auto" and the removed "dark" of earlier versions, resolves to it. `DEFAULT_BASEMAP_BACKGROUND` is its land colour; the `mapBackground` token carries the same value (a test in `packages/web` keeps them equal), so the server-rendered placeholder and the map host match Liberty before it draws.
 
 Pure helpers (zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
 

@@ -25,9 +25,9 @@ import { useMapModelContextTools } from "./webmcp/useMapModelContextTools";
  * preferences that the server cannot know.
  */
 export function App() {
-  const { resolved, setChoice } = useTheme();
+  const { setChoice } = useTheme();
   const { settings } = useSettings();
-  const app = useMapApp(resolved);
+  const app = useMapApp();
   const { dispatch, measure, closeExplicitly } = app;
 
   const showMeasurement = useCallback(

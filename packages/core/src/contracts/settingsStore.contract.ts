@@ -32,7 +32,7 @@ export function runSettingsStoreContract(
         theme: "system",
         units: "metric",
         zoomButtons: null,
-        basemapId: "auto",
+        basemapId: "liberty",
         lastView: null,
       });
       expect(typeof store.persistent).toBe("boolean");
@@ -51,7 +51,7 @@ export function runSettingsStoreContract(
       expect(after).not.toBe(before);
       expect(after.units).toBe("imperial");
       expect(after.theme).toBe("system");
-      expect(after.basemapId).toBe("auto");
+      expect(after.basemapId).toBe("liberty");
       expect(before.units).toBe("metric");
     });
 

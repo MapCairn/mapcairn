@@ -2,13 +2,6 @@ import { focusRing, tokens } from "@karta/theme";
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 
-/** The picker: the tile grid, then the theme-match switch. */
-export const picker = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: tokens.space.md,
-});
-
 /** Three tiles across, with token gaps. */
 export const grid = style({
   display: "grid",
@@ -51,7 +44,7 @@ export const thumb = recipe({
     overflow: "hidden",
     border: "2px solid transparent",
     borderRadius: tokens.radius.inner,
-    backgroundColor: tokens.color.mapBackground,
+    backgroundColor: tokens.color.pageBackground,
     forcedColorAdjust: "none",
   },
   variants: {

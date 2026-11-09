@@ -113,12 +113,12 @@ describe("LocalStorageSettingsStore", () => {
     store.set({
       units: "imperial",
       zoomButtons: false,
-      basemapId: "liberty",
+      basemapId: "positron",
       lastView: VIEW,
     });
     expect(storage.getItem("karta:units")).toBe('"imperial"');
     expect(storage.getItem("karta:zoomButtons")).toBe("false");
-    expect(storage.getItem("karta:basemapId")).toBe('"liberty"');
+    expect(storage.getItem("karta:basemapId")).toBe('"positron"');
     expect(JSON.parse(storage.getItem("karta:lastView") ?? "null")).toEqual(
       VIEW,
     );
@@ -153,7 +153,7 @@ describe("LocalStorageSettingsStore", () => {
       theme: "system",
       units: "metric",
       zoomButtons: null,
-      basemapId: "auto",
+      basemapId: "liberty",
       lastView: null,
     });
   });

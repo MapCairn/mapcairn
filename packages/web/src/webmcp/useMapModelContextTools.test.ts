@@ -1,10 +1,22 @@
 import {
+  BASEMAPS,
   FakeSearchProvider,
   type SearchProvider,
   type SearchResult,
 } from "@karta/core";
 import { describe, expect, it, vi } from "vitest";
-import { geocodeAll, MAX_MEASURE_LOCATIONS } from "./useMapModelContextTools";
+import {
+  BASEMAP_CHOICES,
+  geocodeAll,
+  MAX_MEASURE_LOCATIONS,
+} from "./useMapModelContextTools";
+
+describe("BASEMAP_CHOICES", () => {
+  it("offers exactly the built-in basemaps, with no auto choice", () => {
+    expect(BASEMAP_CHOICES).toEqual(BASEMAPS.map((basemap) => basemap.id));
+    expect(BASEMAP_CHOICES).not.toContain("auto");
+  });
+});
 
 function place(id: string): SearchResult {
   return { id, label: id, centre: { lat: 0, lng: 0 } };
