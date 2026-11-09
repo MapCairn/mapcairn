@@ -48,6 +48,14 @@ describe("entry.server handleRequest", () => {
     renderToReadableStreamMock.mockClear();
   });
 
+  it("asks browsers to revalidate the page on every visit, so a deploy reaches people at once", async () => {
+    const { response } = await handleOnce();
+
+    // `no-cache`, not `no-store`, which would keep the page out of the
+    // back/forward cache.
+    expect(response.headers.get("Cache-Control")).toBe("no-cache");
+  });
+
   it("sets a Content-Security-Policy header carrying a nonce", async () => {
     const { response } = await handleOnce();
 

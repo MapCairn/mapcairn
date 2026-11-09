@@ -49,6 +49,10 @@ export default async function handleRequest(
   );
 
   responseHeaders.set("Content-Type", "text/html");
+  // Pages link hashed assets, so a stale page would point at old bundles.
+  // `no-cache` revalidates every visit; `no-store` would also bar the
+  // back/forward cache.
+  responseHeaders.set("Cache-Control", "no-cache");
 
   return new Response(body, {
     headers: responseHeaders,
