@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Karta</title>
+  <!--
+    Source of truth for the Karta mark. 512 unit grid.
+    Tile: accent 600, oklch(0.55 0.175 255) = #0d70d4. Glyph: white.
+    A location pin (teardrop, circular hole) sits slightly above the centre of a
+    folded map: a lighter middle panel between two parallel creases.
+  -->
+  <defs>
+    <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0d70d4"/>
+  <g clip-path="url(#tile)">
+    <path d="M180 0H350L320 512H150Z" fill="#fff" fill-opacity=".1"/>
+    <path d="M180 0L150 512M350 0L320 512" stroke="#fff" stroke-opacity=".22" stroke-width="6" fill="none"/>
+  </g>
+  <path fill="#fff" fill-rule="evenodd" d="M256 394L350 274.9A119.6 119.6 0 1 0 162 274.9ZM302 200.8A46 46 0 1 1 210 200.8A46 46 0 1 1 302 200.8Z"/>
+</svg>

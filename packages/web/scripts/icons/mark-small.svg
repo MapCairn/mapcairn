@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Karta</title>
+  <!-- Reduced mark for 16 px: no creases, larger pin and hole. -->
+  <rect width="512" height="512" rx="112" fill="#0d70d4"/>
+  <path fill="#fff" fill-rule="evenodd" d="M256 398L349.2 291.8A124 124 0 1 0 162.8 291.8ZM306 210A50 50 0 1 1 206 210A50 50 0 1 1 306 210Z"/>
+</svg>

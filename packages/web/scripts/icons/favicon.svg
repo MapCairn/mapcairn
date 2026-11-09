@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Karta</title>
+  <!-- Adaptive favicon. Light: #0d70d4 tile (oklch(0.55 0.175 255)), white pin. Dark: #94c1fa tile (oklch(0.80 0.095 255)), #062d59 pin. -->
+  <style>
+    .tile { fill: #0d70d4; }
+    .pin { fill: #fff; }
+    .panel { fill: #fff; fill-opacity: 0.1; }
+    .crease { stroke: #fff; stroke-opacity: 0.22; }
+    @media (prefers-color-scheme: dark) {
+      .tile { fill: #94c1fa; }
+      .pin { fill: #062d59; }
+      .panel { fill: #062d59; fill-opacity: 0.1; }
+      .crease { stroke: #062d59; stroke-opacity: 0.2; }
+    }
+  </style>
+  <defs>
+    <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
+  </defs>
+  <rect class="tile" width="512" height="512" rx="112"/>
+  <g clip-path="url(#tile)">
+    <path class="panel" d="M180 0H350L320 512H150Z"/>
+    <path class="crease" d="M180 0L150 512M350 0L320 512" stroke-width="6" fill="none"/>
+  </g>
+  <path class="pin" fill-rule="evenodd" d="M256 394L350 274.9A119.6 119.6 0 1 0 162 274.9ZM302 200.8A46 46 0 1 1 210 200.8A46 46 0 1 1 302 200.8Z"/>
+</svg>
