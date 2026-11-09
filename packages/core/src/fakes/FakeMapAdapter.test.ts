@@ -32,6 +32,9 @@ function subjectFor(
         simulateTileError: () => adapter.simulateTileError(),
         simulateLoading: (loading) => adapter.simulateLoading(loading),
         simulateUserZoom: (zoom) => adapter.simulateUserZoom(zoom),
+        simulateFeatureTap: (layerId, featureId) =>
+          adapter.simulateFeatureTap(layerId, featureId),
+        drawnLayers: () => adapter.drawnLayers(),
         simulateFatalError: () => adapter.simulateFatalError(),
         ...(withOptionalControls
           ? {

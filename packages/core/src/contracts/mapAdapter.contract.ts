@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it } from "vitest";
+import type { DrawnLayer } from "../fakes/FakeMapAdapter";
 import type { BasemapDefinition } from "../ports/basemap";
 import { MapEngineError } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
 import type {
   MapAdapter,
   MapEvents,
+  MapFeature,
+  MapFeatureTap,
   MapHostElement,
   MapMountOptions,
+  MapShapes,
+  MapTileOverlay,
 } from "../ports/map";
 
 /**
@@ -39,6 +44,14 @@ export interface MapAdapterControls {
   simulateFatalError(): void;
   /** Makes the engine report that loading started or finished. */
   simulateLoading(loading: boolean): void;
+  /**
+   * Makes the engine report a tap on the drawn point `featureId` of the
+   * feed layer `layerId`. If no such point is drawn, the tap lands on
+   * nothing.
+   */
+  simulateFeatureTap(layerId: string, featureId: string): void;
+  /** Describes the data layers the engine draws, lowest first. */
+  drawnLayers(): readonly DrawnLayer[];
   /**
    * Builds an adapter whose `mount` rejects with a `MapEngineError`, for
    * example by hiding WebGL. Optional because some engines cannot fail.
@@ -484,5 +497,155 @@ export function runMapAdapterContract(
       adapter.destroy();
       expect(() => adapter.destroy()).not.toThrow();
     });
+
+    describe("data layers", () => {
+      it("draws a feed layer's points and replaces them on the next call", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setFeatureLayer("quakes", [POINT_A, POINT_B]);
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "quakes", kind: "features", count: 2 },
+        ]);
+        adapter.setFeatureLayer("quakes", [POINT_A]);
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "quakes", kind: "features", count: 1 },
+        ]);
+      });
+
+      it("draws a tile overlay, and changes its opacity in place", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setTileLayer("imagery", TILES);
+        adapter.setTileLayer("imagery", { ...TILES, opacity: 0.4 });
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "imagery", kind: "tiles", tiles: TILES.tiles, opacity: 0.4 },
+        ]);
+        adapter.setTileLayer("imagery", {
+          ...TILES,
+          tiles: "https://tiles.test/2026-11-07/{z}/{y}/{x}.jpg",
+        });
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          {
+            id: "imagery",
+            kind: "tiles",
+            tiles: "https://tiles.test/2026-11-07/{z}/{y}/{x}.jpg",
+            opacity: 0.8,
+          },
+        ]);
+      });
+
+      it("draws shapes, and removes any layer by id", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setShapeLayer("area", SHAPES);
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "area", kind: "shapes", count: 2 },
+        ]);
+        adapter.removeLayer("area");
+        adapter.removeLayer("never-drawn");
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([]);
+      });
+
+      it("keeps tile overlays lowest, then shapes, then points, whatever the order of calls", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setFeatureLayer("quakes", [POINT_A]);
+        adapter.setShapeLayer("area", SHAPES);
+        adapter.setTileLayer("imagery", TILES);
+        await controls.settle();
+        expect(controls.drawnLayers().map((layer) => layer.id)).toEqual([
+          "imagery",
+          "area",
+          "quakes",
+        ]);
+      });
+
+      it("keeps every data layer through a basemap swap", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setTileLayer("imagery", TILES);
+        adapter.setFeatureLayer("quakes", [POINT_A, POINT_B]);
+        await adapter.setBasemap(controls.basemap);
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "imagery", kind: "tiles", tiles: TILES.tiles, opacity: 0.8 },
+          { id: "quakes", kind: "features", count: 2 },
+        ]);
+      });
+
+      it("draws layers set before it was mounted", async () => {
+        const subject = create();
+        live.push(subject.adapter);
+        const { adapter, controls } = subject;
+        adapter.setFeatureLayer("quakes", [POINT_A]);
+        await adapter.mount(controls.host, mountOptions(controls, 5));
+        await controls.settle();
+        expect(controls.drawnLayers()).toEqual([
+          { id: "quakes", kind: "features", count: 1 },
+        ]);
+      });
+
+      it("reports a tap on a drawn point, and nothing once its layer is gone", async () => {
+        const { adapter, controls } = await mounted();
+        const taps: MapFeatureTap[] = [];
+        adapter.on("featureTap", (tap) => taps.push(tap));
+        adapter.setFeatureLayer("quakes", [POINT_A, POINT_B]);
+        await controls.settle();
+        controls.simulateFeatureTap("quakes", "b");
+        expect(taps).toEqual([{ layerId: "quakes", featureId: "b" }]);
+        adapter.removeLayer("quakes");
+        await controls.settle();
+        controls.simulateFeatureTap("quakes", "b");
+        expect(taps).toHaveLength(1);
+      });
+    });
   });
 }
+
+const POINT_A: MapFeature = {
+  id: "a",
+  position: CENTRE,
+  colour: "#e69f00",
+  radius: 6,
+  shape: "circle",
+};
+
+const POINT_B: MapFeature = {
+  id: "b",
+  position: { lat: -33.95, lng: 18.5 },
+  colour: "#0072b2",
+  radius: 9,
+  shape: "triangle",
+};
+
+const TILES: MapTileOverlay = {
+  tiles: "https://tiles.test/2026-11-08/{z}/{y}/{x}.jpg",
+  tileSize: 256,
+  maxzoom: 9,
+  opacity: 0.8,
+};
+
+const SHAPES: MapShapes = {
+  colour: "#d55e00",
+  geometries: [
+    {
+      type: "Polygon",
+      coordinates: [
+        [
+          [18.3, -34],
+          [18.6, -34],
+          [18.6, -33.8],
+          [18.3, -34],
+        ],
+      ],
+    },
+    {
+      type: "LineString",
+      coordinates: [
+        [18.3, -34],
+        [18.6, -33.8],
+      ],
+    },
+  ],
+};

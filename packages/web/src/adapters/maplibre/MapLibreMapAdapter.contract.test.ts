@@ -1,7 +1,9 @@
 import { runMapAdapterContract } from "@karta/core/contracts";
 import { afterEach, beforeEach, vi } from "vitest";
-import { MapLibreMapAdapter } from "./MapLibreMapAdapter";
+import { dataLayerEngineIds, MapLibreMapAdapter } from "./MapLibreMapAdapter";
 import {
+  describeDataLayers,
+  type EngineFeature,
   FAKE_VIEWPORT_HEIGHT,
   FAKE_VIEWPORT_WIDTH,
   FakeGPUInitializationError,
@@ -99,6 +101,24 @@ for (const [name, basemap] of [
           ),
         });
       },
+      simulateFeatureTap: (layerId, featureId) => {
+        const map = latestMap();
+        const ids = dataLayerEngineIds(layerId);
+        const source = map.sources.get(ids.source);
+        const features = map.getLayer(ids.points)
+          ? ((source?.data as { features?: EngineFeature[] })?.features ?? [])
+          : [];
+        const hit = features.find(
+          (feature) => feature.properties["karta:id"] === featureId,
+        );
+        map.features = hit ? [{ layer: { id: ids.points }, ...hit }] : [];
+        const [lng, lat] = hit?.geometry.coordinates ?? [0, 0];
+        map.fire("click", {
+          lngLat: { lng, lat },
+          point: map.project([lng, lat]),
+        });
+      },
+      drawnLayers: () => describeDataLayers(latestMap()),
       createFailingMount: () => {
         FakeMapLibreMap.nextConstructError = new FakeGPUInitializationError();
         return new MapLibreMapAdapter();

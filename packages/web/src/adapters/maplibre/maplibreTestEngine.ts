@@ -1,4 +1,9 @@
-import type { BasemapDefinition, LatLng, PixelPoint } from "@karta/core";
+import type {
+  BasemapDefinition,
+  DrawnLayer,
+  LatLng,
+  PixelPoint,
+} from "@karta/core";
 import { mercatorProject, mercatorUnproject } from "@karta/core";
 
 /** Test-only width of the fake engine's viewport, in pixels. */
@@ -90,6 +95,14 @@ export class FakeMapLibreMap {
   loadedState = true;
   features: unknown[] = [];
   queryError: Error | undefined;
+  /** True from `style.load` until the next `setStyle`, as `isStyleLoaded()` reports. */
+  styleLoaded = false;
+  /** Sources the adapter added, by id, with any data set on them. */
+  readonly sources = new Map<string, Record<string, unknown>>();
+  /** Layers the adapter added, bottom first. */
+  styleLayers: Record<string, unknown>[] = [];
+  /** Images the adapter added, by name. */
+  readonly images = new Map<string, unknown>();
 
   constructor(options: Record<string, unknown>) {
     const error = FakeMapLibreMap.nextConstructError;
@@ -147,8 +160,11 @@ export class FakeMapLibreMap {
     this.apply(camera, { originalEvent });
   }
 
-  /** Fires an engine event at the adapter. */
+  /** Fires an engine event at the adapter. `style.load` also marks the style as loaded. */
   fire(type: string, event: Record<string, unknown> = {}): void {
+    if (type === "style.load") {
+      this.styleLoaded = true;
+    }
     for (const listener of [...(this.listeners.get(type) ?? [])]) {
       listener({ type, ...event });
     }
@@ -288,15 +304,107 @@ export class FakeMapLibreMap {
       this.zoom + 1,
     );
   }
-  queryRenderedFeatures(point: unknown): unknown[] {
-    this.record("queryRenderedFeatures", [point]);
+  queryRenderedFeatures(
+    geometry: unknown,
+    options?: { layers?: string[] },
+  ): unknown[] {
+    this.record(
+      "queryRenderedFeatures",
+      options ? [geometry, options] : [geometry],
+    );
     if (this.queryError) {
       throw this.queryError;
     }
-    return this.features;
+    const only = options?.layers;
+    return only
+      ? this.features.filter((feature) =>
+          only.includes(
+            (feature as { layer?: { id?: string } }).layer?.id ?? "",
+          ),
+        )
+      : this.features;
+  }
+  isStyleLoaded(): boolean {
+    return this.styleLoaded;
+  }
+  addSource(id: string, spec: Record<string, unknown>): void {
+    this.checkLoaded();
+    if (this.sources.has(id)) {
+      throw new Error(`There is already a source with ID "${id}".`);
+    }
+    this.sources.set(id, { ...spec });
+  }
+  getSource(id: string): { setData(data: unknown): void } | undefined {
+    const source = this.sources.get(id);
+    return (
+      source && {
+        setData: (data: unknown) => {
+          source.data = data;
+        },
+      }
+    );
+  }
+  removeSource(id: string): void {
+    this.checkLoaded();
+    if (this.styleLayers.some((layer) => layer.source === id)) {
+      throw new Error(
+        `Source "${id}" cannot be removed while a layer uses it.`,
+      );
+    }
+    this.sources.delete(id);
+  }
+  addLayer(spec: Record<string, unknown>, beforeId?: string): void {
+    this.checkLoaded();
+    if (!this.sources.has(spec.source as string)) {
+      throw new Error(`Source "${String(spec.source)}" does not exist.`);
+    }
+    const layer = { ...spec, paint: { ...(spec.paint as object) } };
+    const index = beforeId
+      ? this.styleLayers.findIndex((item) => item.id === beforeId)
+      : -1;
+    if (index < 0) {
+      this.styleLayers.push(layer);
+    } else {
+      this.styleLayers.splice(index, 0, layer);
+    }
+  }
+  getLayer(id: string): Record<string, unknown> | undefined {
+    return this.styleLayers.find((layer) => layer.id === id);
+  }
+  removeLayer(id: string): void {
+    this.checkLoaded();
+    this.styleLayers = this.styleLayers.filter((layer) => layer.id !== id);
+  }
+  moveLayer(id: string): void {
+    const layer = this.getLayer(id);
+    if (layer) {
+      this.styleLayers = [
+        ...this.styleLayers.filter((item) => item !== layer),
+        layer,
+      ];
+    }
+  }
+  setPaintProperty(id: string, name: string, value: unknown): void {
+    this.record("setPaintProperty", [id, name, value]);
+    const layer = this.getLayer(id);
+    if (layer) {
+      (layer.paint as Record<string, unknown>)[name] = value;
+    }
+  }
+  hasImage(name: string): boolean {
+    return this.images.has(name);
+  }
+  addImage(name: string, image: unknown, options?: unknown): void {
+    this.checkLoaded();
+    this.images.set(name, { image, options });
   }
   setStyle(style: unknown, options?: unknown): void {
     this.record("setStyle", [style, options]);
+    // A full style swap drops every source, layer and image the adapter added.
+    this.styleLoaded = false;
+    this.sources.clear();
+    this.styleLayers = [];
+    this.images.clear();
     if (FakeMapLibreMap.autoLoad) {
       const error = FakeMapLibreMap.nextStyleError;
       FakeMapLibreMap.nextStyleError = undefined;
@@ -323,6 +431,13 @@ export class FakeMapLibreMap {
     this.record("remove", []);
     this.removed = true;
     this.canvasContainer.remove();
+  }
+
+  /** MapLibre throws this way when a source, layer or image is added mid-swap. */
+  private checkLoaded(): void {
+    if (!this.styleLoaded) {
+      throw new Error("Style is not done loading.");
+    }
   }
 
   private record(method: string, args: unknown[]): void {
@@ -357,6 +472,54 @@ export class FakeMapLibreMap {
     }
     this.fire("moveend", event);
   }
+}
+
+/** A GeoJSON feature as the adapter puts it in a source. */
+export interface EngineFeature {
+  readonly geometry: {
+    readonly type: string;
+    readonly coordinates: [number, number];
+  };
+  readonly properties: Record<string, unknown>;
+}
+
+/**
+ * Describes the data layers the adapter added to a test engine, lowest
+ * first, in the map adapter contract's terms. Engine ids are
+ * `karta:<id>:<part>`, and a shape layer's fill and line count once.
+ */
+export function describeDataLayers(map: FakeMapLibreMap): DrawnLayer[] {
+  const drawn: DrawnLayer[] = [];
+  for (const layer of map.styleLayers) {
+    const match = /^karta:(.+):(points|tiles|fill|line)$/.exec(
+      String(layer.id),
+    );
+    if (!match || match[2] === "line") {
+      continue;
+    }
+    const id = match[1] as string;
+    const source = map.sources.get(layer.source as string) ?? {};
+    const count =
+      (source.data as { features?: unknown[] } | undefined)?.features?.length ??
+      0;
+    if (match[2] === "tiles") {
+      drawn.push({
+        id,
+        kind: "tiles",
+        tiles: (source.tiles as string[])[0] as string,
+        opacity: (layer.paint as Record<string, number>)[
+          "raster-opacity"
+        ] as number,
+      });
+    } else {
+      drawn.push({
+        id,
+        kind: match[2] === "fill" ? "shapes" : "features",
+        count,
+      });
+    }
+  }
+  return drawn;
 }
 
 /** Test-only vector basemap with an unreachable style host. */

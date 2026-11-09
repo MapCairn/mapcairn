@@ -1,6 +1,8 @@
+import type { MarkerShape } from "../layers/definition";
 import type { BasemapDefinition } from "./basemap";
 import type { MapEngineError } from "./errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "./geometry";
+import type { LayerGeometry } from "./layers";
 
 /**
  * The part of an HTML element the map adapters need. A structural subset of
@@ -51,8 +53,54 @@ export interface MapClickEvent {
   readonly features?: readonly Readonly<Record<string, unknown>>[];
 }
 
+/**
+ * One point of a feed layer, with its look already worked out from the
+ * layer's style, so the adapter draws without knowing any style rule.
+ */
+export interface MapFeature {
+  readonly id: string;
+  readonly position: LatLng;
+  /** A hex colour, such as `#e69f00`. */
+  readonly colour: string;
+  /** Radius in CSS pixels. */
+  readonly radius: number;
+  readonly shape: MarkerShape;
+}
+
+/** Raster tiles drawn over the basemap, such as satellite imagery or a WMS map. */
+export interface MapTileOverlay {
+  /**
+   * The tile URL template. The adapter fills `{z}`, `{x}` and `{y}`, or
+   * `{bbox-epsg-3857}` for a WMS GetMap URL.
+   */
+  readonly tiles: string;
+  readonly tileSize: 256 | 512;
+  /** The deepest tile level the service has; the engine scales beyond it. */
+  readonly maxzoom: number;
+  /** From 0 to 1. */
+  readonly opacity: number;
+}
+
+/** Polygons and lines drawn on request, such as an event's affected area. */
+export interface MapShapes {
+  readonly geometries: readonly LayerGeometry[];
+  /** A hex colour for the lines and a translucent fill. */
+  readonly colour: string;
+}
+
+/** A tap or click on a point of a feed layer. */
+export interface MapFeatureTap {
+  readonly layerId: string;
+  readonly featureId: string;
+}
+
 /** The events a map adapter emits, with their payloads. */
 export interface MapEvents {
+  /**
+   * A tap or click landed on a point of a feed layer. Fires before the
+   * `click` for the same tap, with the topmost point within a finger's reach.
+   */
+  featureTap: MapFeatureTap;
   /** The view is changing (fires continuously while moving). */
   move: ViewState;
   /** The view stopped changing. */
@@ -138,6 +186,20 @@ export interface MapAdapter {
   setKeyboardEnabled(enabled: boolean): void;
   /** Moves keyboard focus to the map host. */
   focus(): void;
+
+  /**
+   * Draws a feed layer's points under `id`, replacing what was drawn under
+   * that id. Data layers are drawn above the basemap in a fixed order: tile
+   * overlays lowest, then shapes, then points. They survive `setBasemap`, and
+   * may be set before `mount`, which draws them once the map has loaded.
+   */
+  setFeatureLayer(id: string, features: readonly MapFeature[]): void;
+  /** Draws or updates a tile overlay under `id`. An opacity change alone costs no request. */
+  setTileLayer(id: string, overlay: MapTileOverlay): void;
+  /** Draws polygons and lines under `id`, replacing what was drawn under that id. */
+  setShapeLayer(id: string, shapes: MapShapes): void;
+  /** Removes whatever is drawn under `id`. Does nothing for an unknown id. */
+  removeLayer(id: string): void;
 
   /** Subscribes to an event. Returns the unsubscribe function. */
   on<K extends keyof MapEvents>(

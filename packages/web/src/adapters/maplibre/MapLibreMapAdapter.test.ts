@@ -666,6 +666,85 @@ describe("MapLibreMapAdapter", () => {
       expect(Object.getPrototypeOf(event.features[0])).toBe(Object.prototype);
     });
 
+    describe("feature taps", () => {
+      const point = {
+        id: "a",
+        position: { lat: 0, lng: 0 },
+        colour: "#e69f00",
+        radius: 6,
+        shape: "square" as const,
+      };
+
+      async function withPoints() {
+        const subject = await mounted();
+        subject.map.fire("style.load");
+        subject.adapter.setFeatureLayer("quakes", [point]);
+        const taps = vi.fn();
+        subject.adapter.on("featureTap", taps);
+        return { ...subject, taps };
+      }
+
+      it("looks for points within a fingertip of the tap, in data layers only", async () => {
+        const { map, taps } = await withPoints();
+        map.features = [];
+        map.fire("click", {
+          lngLat: { lng: 0, lat: 0 },
+          point: { x: 50, y: 40 },
+        });
+        expect(map.callsOf("queryRenderedFeatures")[0]?.args).toEqual([
+          [
+            [34, 24],
+            [66, 56],
+          ],
+          { layers: ["karta:quakes:points"] },
+        ]);
+        expect(taps).not.toHaveBeenCalled();
+      });
+
+      it("adds one marker image per shape and colour", async () => {
+        const { map } = await withPoints();
+        expect([...map.images.keys()]).toEqual(["karta-marker:square:#e69f00"]);
+      });
+
+      it("reports no tap when the query fails", async () => {
+        const { map, taps } = await withPoints();
+        map.queryError = new Error("style not loaded");
+        map.fire("click", {
+          lngLat: { lng: 0, lat: 0 },
+          point: { x: 1, y: 1 },
+        });
+        expect(taps).not.toHaveBeenCalled();
+      });
+
+      it("ignores a hit without the adapter's own ids", async () => {
+        const { map, taps } = await withPoints();
+        map.features = [
+          { layer: { id: "karta:quakes:points" }, properties: {} },
+        ];
+        map.fire("click", {
+          lngLat: { lng: 0, lat: 0 },
+          point: { x: 1, y: 1 },
+        });
+        expect(taps).not.toHaveBeenCalled();
+      });
+
+      it("changes only the paint when a tile overlay's opacity changes", async () => {
+        const { adapter, map } = await mounted();
+        map.fire("style.load");
+        const overlay = {
+          tiles: "https://t.test/{z}/{x}/{y}.png",
+          tileSize: 256 as const,
+          maxzoom: 9,
+          opacity: 1,
+        };
+        adapter.setTileLayer("imagery", overlay);
+        adapter.setTileLayer("imagery", { ...overlay, opacity: 0.5 });
+        expect(
+          map.callsOf("setPaintProperty").map((call) => call.args),
+        ).toEqual([["karta:imagery:tiles", "raster-opacity", 0.5]]);
+      });
+    });
+
     it("emits an empty feature list when the query fails", async () => {
       const { adapter, map } = await mounted();
       const click = vi.fn();

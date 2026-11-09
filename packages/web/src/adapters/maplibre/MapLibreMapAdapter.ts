@@ -5,10 +5,14 @@ import type {
   MapAdapter,
   MapClickEvent,
   MapEvents,
+  MapFeature,
+  MapFeatureTap,
   MapFitOptions,
   MapHostElement,
   MapMountOptions,
   MapMoveOptions,
+  MapShapes,
+  MapTileOverlay,
   PixelPoint,
   ViewState,
 } from "@karta/core";
@@ -21,6 +25,7 @@ import {
 } from "@karta/core";
 import type {
   AnimationOptions,
+  GeoJSONSourceSpecification,
   MapEventType,
   Map as MapLibreMap,
   MapOptions,
@@ -28,6 +33,12 @@ import type {
   Subscription,
 } from "maplibre-gl";
 import { Emitter } from "../shared/emitter";
+import {
+  MARKER_BASE_RADIUS,
+  MARKER_PIXEL_RATIO,
+  markerImage,
+  markerImageName,
+} from "./markerImages";
 
 type MapLibreModule = typeof import("maplibre-gl");
 
@@ -136,6 +147,90 @@ function isUserEvent(event: object): boolean {
 const RASTER_ID = "basemap";
 
 /**
+ * The engine ids for one data layer: its source and the style layers drawn
+ * from it. All start with `karta:` so they never meet a basemap's own ids.
+ */
+export function dataLayerEngineIds(id: string) {
+  return {
+    source: `karta:${id}`,
+    points: `karta:${id}:points`,
+    tiles: `karta:${id}:tiles`,
+    fill: `karta:${id}:fill`,
+    line: `karta:${id}:line`,
+  } as const;
+}
+
+/** A data layer the adapter keeps, so it can draw it again after a basemap swap. */
+type DataLayer =
+  | { readonly kind: "features"; readonly features: readonly MapFeature[] }
+  | { readonly kind: "tiles"; readonly overlay: MapTileOverlay }
+  | { readonly kind: "shapes"; readonly shapes: MapShapes };
+
+/** Lowest first: imagery under shapes under points. */
+const DATA_KIND_ORDER: readonly DataLayer["kind"][] = [
+  "tiles",
+  "shapes",
+  "features",
+];
+
+/** How far from a tap, in CSS pixels, a point still counts as tapped (a fingertip). */
+const TAP_TOLERANCE_PX = 16;
+
+/** The translucent fill of a shape layer, so the map under it stays readable. */
+const SHAPE_FILL_OPACITY = 0.18;
+
+/** The engine style layers of a data layer, bottom first. */
+function engineLayerIds(id: string, layer: DataLayer): string[] {
+  const ids = dataLayerEngineIds(id);
+  switch (layer.kind) {
+    case "features":
+      return [ids.points];
+    case "tiles":
+      return [ids.tiles];
+    case "shapes":
+      return [ids.fill, ids.line];
+  }
+}
+
+function pointCollection(id: string, features: readonly MapFeature[]) {
+  return {
+    type: "FeatureCollection" as const,
+    features: features.map((feature) => ({
+      type: "Feature" as const,
+      geometry: {
+        type: "Point" as const,
+        coordinates: [feature.position.lng, feature.position.lat],
+      },
+      properties: {
+        "karta:layer": id,
+        "karta:id": feature.id,
+        icon: markerImageName(feature.shape, feature.colour),
+        size: feature.radius / MARKER_BASE_RADIUS,
+        // Larger points are drawn first, so smaller ones stay on top and tappable.
+        sort: -feature.radius,
+      },
+    })),
+  };
+}
+
+function shapeCollection(shapes: MapShapes) {
+  return {
+    type: "FeatureCollection" as const,
+    features: shapes.geometries.map((geometry) => ({
+      type: "Feature" as const,
+      geometry,
+      properties: {},
+    })),
+  };
+}
+
+function sameTiles(a: MapTileOverlay, b: MapTileOverlay): boolean {
+  return (
+    a.tiles === b.tiles && a.tileSize === b.tileSize && a.maxzoom === b.maxzoom
+  );
+}
+
+/**
  * What MapLibre draws for a basemap: a vector basemap's style URL, or an
  * inline style with one raster source and layer for a raster basemap.
  * @remarks `tileSize` must be passed: MapLibre assumes 512 px raster tiles
@@ -211,7 +306,14 @@ interface WorkerCheck {
  *   512 px tiles, so every zoom crossing the boundary goes through
  *   `toEngineZoom` and `toNormalisedZoom`. Pitch is locked at 0 because the
  *   app is a flat 2D map; rotation is supported. The adapter adds no controls,
- *   markers, popups or layers: overlays are drawn by the ui from `project()`.
+ *   markers or popups: the pin, measure line and other overlays are drawn by
+ *   the ui from `project()`. Data layers (feed points, tile overlays, detail
+ *   shapes) are the exception, because hundreds of points or a tiled image
+ *   belong in the engine: each is kept by id, drawn as `karta:<id>` sources
+ *   and layers above the basemap (tiles, then shapes, then points), and drawn
+ *   again after every `style.load`, because a full style swap drops them.
+ *   Points are symbols whose images are rasterised in `markerImages.ts`, so
+ *   squares and triangles carry meaning beside colour.
  *   `maplibre-gl` and its stylesheet are imported the first time `mount` runs.
  *
  *   Engine `error` events are classified once:
@@ -246,6 +348,10 @@ export class MapLibreMapAdapter implements MapAdapter {
   private animationEnabled = true;
   private loadEmitted = false;
   private loading = false;
+  /** Data layers by id, in the order they were first set. */
+  private readonly dataLayers = new Map<string, DataLayer>();
+  /** True between a style's `style.load` and the next swap: only then can sources be added. */
+  private styleReady = false;
 
   constructor(options: MapLibreMapAdapterOptions = {}) {
     this.workerFailureGraceMs =
@@ -490,6 +596,208 @@ export class MapLibreMapAdapter implements MapAdapter {
     return this.emitter.on(event, handler);
   }
 
+  setFeatureLayer(id: string, features: readonly MapFeature[]): void {
+    this.setDataLayer(id, { kind: "features", features: [...features] });
+  }
+
+  setTileLayer(id: string, overlay: MapTileOverlay): void {
+    const previous = this.dataLayers.get(id);
+    this.dataLayers.set(id, { kind: "tiles", overlay });
+    const map = this.readyMap();
+    const tilesId = dataLayerEngineIds(id).tiles;
+    if (
+      map &&
+      previous?.kind === "tiles" &&
+      sameTiles(previous.overlay, overlay) &&
+      map.getLayer(tilesId)
+    ) {
+      // Only the opacity changed: no tile is requested again.
+      map.setPaintProperty(tilesId, "raster-opacity", overlay.opacity);
+      return;
+    }
+    if (map) {
+      this.drawDataLayer(map, id);
+    }
+  }
+
+  setShapeLayer(id: string, shapes: MapShapes): void {
+    this.setDataLayer(id, { kind: "shapes", shapes });
+  }
+
+  removeLayer(id: string): void {
+    if (!this.dataLayers.delete(id)) {
+      return;
+    }
+    const map = this.readyMap();
+    if (map) {
+      this.eraseDataLayer(map, id);
+    }
+  }
+
+  private setDataLayer(id: string, layer: DataLayer): void {
+    this.dataLayers.set(id, layer);
+    const map = this.readyMap();
+    if (map) {
+      this.drawDataLayer(map, id);
+    }
+  }
+
+  /** The map, when its style can take sources and layers; otherwise undefined. */
+  private readyMap(): MapLibreMap | undefined {
+    return this.styleReady ? this.map : undefined;
+  }
+
+  private eraseDataLayer(map: MapLibreMap, id: string): void {
+    const ids = dataLayerEngineIds(id);
+    for (const layerId of [ids.points, ids.tiles, ids.line, ids.fill]) {
+      if (map.getLayer(layerId)) {
+        map.removeLayer(layerId);
+      }
+    }
+    if (map.getSource(ids.source)) {
+      map.removeSource(ids.source);
+    }
+  }
+
+  /** Draws one data layer afresh from what the adapter keeps, then restores the stacking order. */
+  private drawDataLayer(map: MapLibreMap, id: string): void {
+    const layer = this.dataLayers.get(id) as DataLayer;
+    this.eraseDataLayer(map, id);
+    const ids = dataLayerEngineIds(id);
+    switch (layer.kind) {
+      case "features": {
+        for (const feature of layer.features) {
+          const name = markerImageName(feature.shape, feature.colour);
+          if (!map.hasImage(name)) {
+            map.addImage(name, markerImage(feature.shape, feature.colour), {
+              pixelRatio: MARKER_PIXEL_RATIO,
+            });
+          }
+        }
+        map.addSource(ids.source, {
+          type: "geojson",
+          data: pointCollection(id, layer.features),
+        });
+        map.addLayer({
+          id: ids.points,
+          type: "symbol",
+          source: ids.source,
+          layout: {
+            "icon-image": ["get", "icon"],
+            "icon-size": ["get", "size"],
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true,
+            "symbol-sort-key": ["get", "sort"],
+          },
+        });
+        break;
+      }
+      case "tiles": {
+        const { tiles, tileSize, maxzoom, opacity } = layer.overlay;
+        map.addSource(ids.source, {
+          type: "raster",
+          tiles: [tiles],
+          tileSize,
+          maxzoom,
+        });
+        map.addLayer({
+          id: ids.tiles,
+          type: "raster",
+          source: ids.source,
+          paint: { "raster-opacity": opacity },
+        });
+        break;
+      }
+      case "shapes": {
+        const { colour } = layer.shapes;
+        map.addSource(ids.source, {
+          type: "geojson",
+          // The port's positions are readonly tuples; the engine only reads them.
+          data: shapeCollection(
+            layer.shapes,
+          ) as unknown as GeoJSONSourceSpecification["data"],
+        });
+        map.addLayer({
+          id: ids.fill,
+          type: "fill",
+          source: ids.source,
+          filter: [
+            "match",
+            ["geometry-type"],
+            ["Polygon", "MultiPolygon"],
+            true,
+            false,
+          ],
+          paint: { "fill-color": colour, "fill-opacity": SHAPE_FILL_OPACITY },
+        });
+        map.addLayer({
+          id: ids.line,
+          type: "line",
+          source: ids.source,
+          paint: { "line-color": colour, "line-width": 2 },
+        });
+        break;
+      }
+    }
+    this.orderDataLayers(map);
+  }
+
+  /** Moves every data layer to the top, lowest kind first, keeping the order they were set in. */
+  private orderDataLayers(map: MapLibreMap): void {
+    for (const kind of DATA_KIND_ORDER) {
+      for (const [id, layer] of this.dataLayers) {
+        if (layer.kind !== kind) {
+          continue;
+        }
+        for (const layerId of engineLayerIds(id, layer)) {
+          map.moveLayer(layerId);
+        }
+      }
+    }
+  }
+
+  /** Draws every kept data layer again; a new style starts with none. */
+  private restoreDataLayers(map: MapLibreMap): void {
+    for (const id of this.dataLayers.keys()) {
+      this.drawDataLayer(map, id);
+    }
+  }
+
+  /** The topmost drawn point within a fingertip of a tap, or null. */
+  private featureTapAt(x: number, y: number): MapFeatureTap | null {
+    const map = this.readyMap();
+    if (!map) {
+      return null;
+    }
+    const layers = [...this.dataLayers]
+      .filter(([, layer]) => layer.kind === "features")
+      .map(([id]) => dataLayerEngineIds(id).points)
+      .filter((layerId) => map.getLayer(layerId) !== undefined);
+    if (layers.length === 0) {
+      return null;
+    }
+    const reach = TAP_TOLERANCE_PX;
+    let hits: { properties?: unknown }[];
+    try {
+      hits = map.queryRenderedFeatures(
+        [
+          [x - reach, y - reach],
+          [x + reach, y + reach],
+        ],
+        { layers },
+      );
+    } catch {
+      // Querying can throw while a style is still loading; nothing is tapped then.
+      return null;
+    }
+    const properties = toPropertyBag(hits[0]?.properties);
+    const layerId = properties["karta:layer"];
+    const featureId = properties["karta:id"];
+    return typeof layerId === "string" && typeof featureId === "string"
+      ? { layerId, featureId }
+      : null;
+  }
+
   private createOptions(
     host: HTMLElement,
     view: ViewState,
@@ -549,6 +857,10 @@ export class MapLibreMapAdapter implements MapAdapter {
     });
     listen("rotate", emitView("rotate"));
     listen("click", (event) => {
+      const tap = this.featureTapAt(event.point.x, event.point.y);
+      if (tap) {
+        this.emitter.emit("featureTap", tap);
+      }
       const click: MapClickEvent = {
         latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
         point: { x: event.point.x, y: event.point.y },
@@ -566,6 +878,8 @@ export class MapLibreMapAdapter implements MapAdapter {
       if (this.pending) {
         this.pending.styleLoaded = true;
       }
+      this.styleReady = true;
+      this.restoreDataLayers(map);
       this.settlePending("style.load");
     });
     listen("load", () => {
@@ -615,6 +929,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       map.setMaxZoom(maxZoom);
     }
     this.loadEmitted = false;
+    this.styleReady = false;
     // A diffed swap fires no "style.load", so a swap could never settle.
     map.setStyle(styleFor(basemap), { diff: false });
   }
@@ -722,6 +1037,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   private teardownMap(): void {
+    this.styleReady = false;
     this.clearWorkerCheck();
     for (const subscription of this.subscriptions) {
       subscription.unsubscribe();

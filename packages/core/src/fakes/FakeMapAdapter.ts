@@ -6,9 +6,12 @@ import type {
   MapAdapterFactory,
   MapClickEvent,
   MapEvents,
+  MapFeature,
   MapFitOptions,
   MapHostElement,
   MapMountOptions,
+  MapShapes,
+  MapTileOverlay,
 } from "../ports/map";
 import {
   clampZoom,
@@ -56,6 +59,34 @@ export class FakeMapHost implements MapHostElement {
 
 type Handler = (payload: never) => void;
 
+type DataLayer =
+  | { readonly kind: "features"; readonly features: readonly MapFeature[] }
+  | { readonly kind: "tiles"; readonly overlay: MapTileOverlay }
+  | { readonly kind: "shapes"; readonly shapes: MapShapes };
+
+/**
+ * A data layer as an engine draws it, lowest first, for tests and the map
+ * adapter contract to compare adapters by.
+ */
+export type DrawnLayer =
+  | {
+      readonly id: string;
+      readonly kind: "features" | "shapes";
+      readonly count: number;
+    }
+  | {
+      readonly id: string;
+      readonly kind: "tiles";
+      readonly tiles: string;
+      readonly opacity: number;
+    };
+
+const KIND_ORDER: Readonly<Record<DataLayer["kind"], number>> = {
+  tiles: 0,
+  shapes: 1,
+  features: 2,
+};
+
 function wrapBearing(degrees: number): number {
   return ((degrees % 360) + 360) % 360;
 }
@@ -98,6 +129,7 @@ export class FakeMapAdapter implements MapAdapter {
   #hostSize = { width: 800, height: 600 };
   #destroyed = false;
   #listeners = new Map<keyof MapEvents, Set<Handler>>();
+  #dataLayers = new Map<string, DataLayer>();
 
   constructor(options: FakeMapAdapterOptions = {}) {
     this.#failMount = options.failMount;
@@ -268,6 +300,64 @@ export class FakeMapAdapter implements MapAdapter {
     return () => {
       handlers.delete(handler as Handler);
     };
+  }
+
+  setFeatureLayer(id: string, features: readonly MapFeature[]): void {
+    this.#dataLayers.delete(id);
+    this.#dataLayers.set(id, { kind: "features", features: [...features] });
+  }
+
+  setTileLayer(id: string, overlay: MapTileOverlay): void {
+    this.#dataLayers.delete(id);
+    this.#dataLayers.set(id, { kind: "tiles", overlay });
+  }
+
+  setShapeLayer(id: string, shapes: MapShapes): void {
+    this.#dataLayers.delete(id);
+    this.#dataLayers.set(id, { kind: "shapes", shapes });
+  }
+
+  removeLayer(id: string): void {
+    this.#dataLayers.delete(id);
+  }
+
+  /** The data layers drawn, lowest first: tiles, then shapes, then points. */
+  drawnLayers(): DrawnLayer[] {
+    return [...this.#dataLayers]
+      .sort(([, a], [, b]) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind])
+      .map(([id, layer]): DrawnLayer => {
+        if (layer.kind === "features") {
+          return { id, kind: "features", count: layer.features.length };
+        }
+        if (layer.kind === "shapes") {
+          return { id, kind: "shapes", count: layer.shapes.geometries.length };
+        }
+        return {
+          id,
+          kind: "tiles",
+          tiles: layer.overlay.tiles,
+          opacity: layer.overlay.opacity,
+        };
+      });
+  }
+
+  /** The points drawn for a feed layer, or undefined when none is drawn under `id`. */
+  featuresOf(id: string): readonly MapFeature[] | undefined {
+    const layer = this.#dataLayers.get(id);
+    return layer?.kind === "features" ? layer.features : undefined;
+  }
+
+  /**
+   * Emits `featureTap` and then `click` for a tap on a drawn point, as an
+   * engine does. A point that is not drawn gets nothing.
+   */
+  simulateFeatureTap(layerId: string, featureId: string): void {
+    const feature = this.featuresOf(layerId)?.find((f) => f.id === featureId);
+    if (!feature) {
+      return;
+    }
+    this.#emit("featureTap", { layerId, featureId });
+    this.simulateClick(feature.position);
   }
 
   /** Emits a `click` at a position, with the given `features`. */
