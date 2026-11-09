@@ -828,6 +828,33 @@ export function runMapAdapterContract(
         expect(credited.type).toBe("image/png");
       });
 
+      it("draws the ui's own marks into the image, and still makes a PNG", async () => {
+        const { adapter } = await mounted();
+        const image = await adapter.toImage({
+          attribution: "© Example contributors",
+          drawing: {
+            colour: "#1a73c8",
+            halo: "#ffffff",
+            marks: [
+              {
+                kind: "path",
+                positions: [
+                  CENTRE,
+                  { lat: -33.95, lng: 18.5 },
+                  { lat: -33.85, lng: 18.45 },
+                ],
+                closed: true,
+                fill: true,
+                dashed: false,
+              },
+              { kind: "dot", position: CENTRE },
+            ],
+          },
+        });
+        expect(image.type).toBe("image/png");
+        expect(image.size).toBeGreaterThan(0);
+      });
+
       it("rejects with an export-failed engine error when it cannot produce an image", async () => {
         const { adapter, controls } = await mounted();
         if (controls.failNextImage === undefined) {

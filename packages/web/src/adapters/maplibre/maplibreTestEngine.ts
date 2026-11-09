@@ -744,6 +744,14 @@ export const canvasStub = {
         "fillText",
         "save",
         "restore",
+        "beginPath",
+        "moveTo",
+        "lineTo",
+        "closePath",
+        "arc",
+        "fill",
+        "stroke",
+        "setLineDash",
       ]) {
         context[method] = (...args: unknown[]) => {
           calls.push({ method, args });

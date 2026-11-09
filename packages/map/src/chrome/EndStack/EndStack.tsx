@@ -70,6 +70,7 @@ export interface EndStackProps {
    * the button is not shown, for a host with no routing service.
    */
   readonly directions?: EndStackDirections;
+  /**
    * Draw is on. With `onDraw`, the stack shows a Draw shapes button between
    * Measure and Locate me; without it the button is left out.
    */

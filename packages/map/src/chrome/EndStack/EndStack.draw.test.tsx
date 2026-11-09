@@ -100,14 +100,10 @@ describe("EndStack with drawing", () => {
   });
 
   it("needs room for the extra button before the zoom group shows", () => {
-    expect(endStackMinHeightForZoom(false, 4)).toBeGreaterThan(
-      endStackMinHeightForZoom(false, 3),
-    );
-    expect(endStackMinHeightForZoom(false, 4)).toBe(
-      endStackMinHeightForZoom(false, 3) + 48 + 1,
-    );
-    expect(endStackMinHeightForZoom(false)).toBe(
-      endStackMinHeightForZoom(false, 3),
+    const plain = endStackMinHeightForZoom(false);
+    expect(endStackMinHeightForZoom(false, false, true)).toBe(plain + 48 + 1);
+    expect(endStackMinHeightForZoom(false, true, true)).toBe(
+      plain + 2 * (48 + 1),
     );
   });
 });

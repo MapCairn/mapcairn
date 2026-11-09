@@ -15,6 +15,7 @@ import type {
   MapFitOptions,
   MapHeatmap,
   MapHostElement,
+  MapImageDrawing,
   MapImageOptions,
   MapMountOptions,
   MapMoveOptions,
@@ -233,6 +234,13 @@ export const IMAGE_WAIT_MS = 3000;
 
 /** The size of an exported image's credit text, in CSS pixels. */
 const ATTRIBUTION_SIZE_PX = 11;
+
+/** The sizes of drawn shapes in an exported image, in CSS pixels, as on screen. */
+const MARK_LINE_PX = 4;
+const MARK_HALO_PX = 4;
+const MARK_DASH_PX = 8;
+const MARK_DOT_RADIUS_PX = 7;
+const MARK_FILL_OPACITY = 0.18;
 
 /** The opacity of the strip behind an exported image's credit text. */
 const ATTRIBUTION_STRIP_OPACITY = 0.8;
@@ -945,6 +953,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       await this.untilLoaded(map);
       const frame = await this.captureFrame(map);
       await fontsReady();
+      this.drawMarks(frame, options.drawing);
       this.drawAttribution(frame, options.attribution);
       return await encodePng(frame.canvas);
     } catch (error) {
@@ -1750,6 +1759,73 @@ export class MapLibreMapAdapter implements MapAdapter {
    * reads the same on a high-density screen. Text too long for the image is
    * scaled down to fit.
    */
+  /**
+   * Draws the ui's own marks (drawn shapes) over the copied map, at the
+   * image's scale: translucent fills, a halo under each outline and dots.
+   */
+  private drawMarks(frame: Frame, drawing: MapImageDrawing | undefined): void {
+    const map = this.map;
+    if (!drawing || drawing.marks.length === 0 || !map) {
+      return;
+    }
+    const { canvas, context } = frame;
+    const cssWidth =
+      map.getCanvas().clientWidth ||
+      canvas.width / (window.devicePixelRatio || 1);
+    const scale = cssWidth > 0 ? canvas.width / cssWidth : 1;
+    const place = (position: LatLng) => {
+      const point = map.project([position.lng, position.lat]);
+      return { x: point.x * scale, y: point.y * scale };
+    };
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    for (const mark of drawing.marks) {
+      if (mark.kind === "dot") {
+        const at = place(mark.position);
+        context.beginPath();
+        context.arc(at.x, at.y, MARK_DOT_RADIUS_PX * scale, 0, 2 * Math.PI);
+        context.fillStyle = drawing.colour;
+        context.fill();
+        context.lineWidth = MARK_HALO_PX * scale;
+        context.strokeStyle = drawing.halo;
+        context.stroke();
+        continue;
+      }
+      const points = mark.positions.map(place);
+      const [first, ...rest] = points;
+      if (!first || rest.length === 0) {
+        continue;
+      }
+      const trace = () => {
+        context.beginPath();
+        context.moveTo(first.x, first.y);
+        for (const point of rest) {
+          context.lineTo(point.x, point.y);
+        }
+        if (mark.closed) {
+          context.closePath();
+        }
+      };
+      if (mark.fill) {
+        trace();
+        context.fillStyle = rgbaColour(drawing.colour, MARK_FILL_OPACITY);
+        context.fill();
+      }
+      context.setLineDash(
+        mark.dashed ? [MARK_DASH_PX * scale, MARK_DASH_PX * scale] : [],
+      );
+      trace();
+      context.lineWidth = (MARK_LINE_PX + MARK_HALO_PX) * scale;
+      context.strokeStyle = drawing.halo;
+      context.stroke();
+      trace();
+      context.lineWidth = MARK_LINE_PX * scale;
+      context.strokeStyle = drawing.colour;
+      context.stroke();
+    }
+    context.setLineDash([]);
+  }
+
   private drawAttribution(frame: Frame, attribution: string | undefined): void {
     const text = attribution?.trim();
     if (!text) {

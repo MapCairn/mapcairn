@@ -247,8 +247,38 @@ export interface MapFeatureTap extends MapFeatureHit {
   readonly hits: readonly MapFeatureHit[];
 }
 
+/**
+ * One thing the ui draws over the map itself, in positions, for an image to
+ * include. The engine never holds it, so the adapter draws it from this.
+ */
+export type MapImageMark =
+  | {
+      readonly kind: "path";
+      readonly positions: readonly LatLng[];
+      /** Joins the last position back to the first. */
+      readonly closed: boolean;
+      /** Fills the inside, translucently. */
+      readonly fill: boolean;
+      readonly dashed: boolean;
+    }
+  | { readonly kind: "dot"; readonly position: LatLng };
+
+/** Marks to draw over the map in an image, with the two hex colours they use. */
+export interface MapImageDrawing {
+  /** The colour of lines, fills and dots. */
+  readonly colour: string;
+  /** The colour of the outline that separates a mark from the map beneath. */
+  readonly halo: string;
+  readonly marks: readonly MapImageMark[];
+}
+
 /** Options for {@link MapAdapter.toImage}. */
 export interface MapImageOptions {
+  /**
+   * What the ui draws over the map (such as shapes a person has drawn), put
+   * into the image above the data layers and below the credit text.
+   */
+  readonly drawing?: MapImageDrawing;
   /**
    * Credit text drawn along the bottom edge of the image, so a saved image
    * keeps its sources. Nothing is drawn when it is empty or omitted.

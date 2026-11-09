@@ -302,7 +302,7 @@ export default places;
 
 ### Save an image and choose between features
 
-The sheet's "Save image" button saves a PNG of the map with its layers and credits, made in the browser from what the map has already loaded. A tap that finds several features opens a list, and the `I` key opens the same list for the centre of the map. Neither needs configuration.
+The sheet's "Save image" button saves a PNG of the map with its layers, any drawn shapes and credits, made in the browser from what the map has already loaded. A tap that finds several features opens a list, and the `I` key opens the same list for the centre of the map. Neither needs configuration.
 
 ### Draw and export shapes
 

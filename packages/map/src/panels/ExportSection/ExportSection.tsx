@@ -1,4 +1,8 @@
-import { announceImageFailed, announceImageSaved } from "@karta/core";
+import {
+  announceImageFailed,
+  announceImageSaved,
+  type MapImageDrawing,
+} from "@karta/core";
 import { Download } from "lucide-react";
 import { type Ref, useContext, useState } from "react";
 import { MapContext } from "../../host";
@@ -14,6 +18,8 @@ export interface ExportSectionProps {
    * basemap's and those of the layers that are on (see `creditsLine`).
    */
   readonly credits?: string;
+  /** Shapes drawn over the map, put into the image because the engine does not hold them. */
+  readonly drawing?: MapImageDrawing;
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
   readonly headingLevel?: HeadingLevel;
   readonly headingRef?: Ref<HTMLHeadingElement>;
@@ -48,6 +54,7 @@ function filenameFor(date: Date): string {
  */
 export function ExportSection({
   credits,
+  drawing,
   headingLevel = 3,
   headingRef,
 }: ExportSectionProps) {
@@ -64,8 +71,12 @@ export function ExportSection({
     setBusy(true);
     setFailed(false);
     try {
+      const options = {
+        ...(credits ? { attribution: credits } : {}),
+        ...(drawing ? { drawing } : {}),
+      };
       const image = await adapter.toImage(
-        credits ? { attribution: credits } : undefined,
+        Object.keys(options).length > 0 ? options : undefined,
       );
       saveBlob(image, filenameFor(new Date()));
       announce(announceImageSaved(), { priority: "polite" });

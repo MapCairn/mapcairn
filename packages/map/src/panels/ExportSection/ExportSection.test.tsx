@@ -16,7 +16,15 @@ import { ExportSection } from "./ExportSection";
 const polite = () => screen.getByTestId("live-region-polite").textContent;
 const assertive = () => screen.getByTestId("live-region-assertive").textContent;
 
-function setup(props: { mapless?: boolean; credits?: string } = {}) {
+const DRAWING = {
+  colour: "#1a73c8",
+  halo: "#ffffff",
+  marks: [{ kind: "dot" as const, position: { lat: 1, lng: 2 } }],
+};
+
+function setup(
+  props: { mapless?: boolean; credits?: string; drawing?: typeof DRAWING } = {},
+) {
   const adapter = new FakeMapAdapter();
   void adapter.mount(new FakeMapHost(), {
     basemap: FAKE_VECTOR_BASEMAP,
@@ -29,7 +37,10 @@ function setup(props: { mapless?: boolean; credits?: string } = {}) {
         <MapContext.Provider
           value={testMapContext({ adapter: props.mapless ? null : adapter })}
         >
-          <ExportSection credits={props.credits ?? "© Example | MapLibre"} />
+          <ExportSection
+            credits={props.credits ?? "© Example | MapLibre"}
+            drawing={props.drawing}
+          />
         </MapContext.Provider>
       </LiveRegionProvider>
     </ServicesProvider>,
@@ -77,6 +88,15 @@ describe("ExportSection", () => {
     expect(clicks[0]?.download).toMatch(/^map-\d{4}-\d{2}-\d{2}\.png$/);
     await waitFor(() => expect(polite()).toBe("Map image saved."));
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:saved-image");
+  });
+
+  it("puts drawn shapes into the image, because the engine does not hold them", async () => {
+    const { adapter } = setup({ drawing: DRAWING });
+    fireEvent.click(screen.getByRole("button", { name: "Save image" }));
+    await waitFor(() => expect(clicks).toHaveLength(1));
+    expect(adapter.imageRequests).toEqual([
+      { attribution: "© Example | MapLibre", drawing: DRAWING },
+    ]);
   });
 
   it("works from the keyboard", async () => {

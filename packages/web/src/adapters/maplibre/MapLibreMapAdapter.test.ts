@@ -2305,6 +2305,90 @@ describe("MapLibreMapAdapter data layers", () => {
       expect(size).toBeLessThan(11);
     });
 
+    describe("drawing", () => {
+      const DRAWING = {
+        colour: "#1a73c8",
+        halo: "#ffffff",
+        marks: [
+          {
+            kind: "path" as const,
+            positions: [
+              { lat: -26.2, lng: 28.05 },
+              { lat: -26.3, lng: 28.15 },
+              { lat: -26.25, lng: 28.0 },
+            ],
+            closed: true,
+            fill: true,
+            dashed: false,
+          },
+          {
+            kind: "path" as const,
+            positions: [
+              { lat: -26.2, lng: 28.05 },
+              { lat: -26.1, lng: 28.1 },
+            ],
+            closed: false,
+            fill: false,
+            dashed: true,
+          },
+          { kind: "dot" as const, position: { lat: -26.15, lng: 28.07 } },
+        ],
+      };
+
+      it("draws shapes over the map at the image's scale, before the credits", async () => {
+        const { adapter, map } = await ready();
+        const canvas = map.getCanvas();
+        canvas.width = 1600;
+        canvas.height = 1200;
+        Object.defineProperty(canvas, "clientWidth", { value: 800 });
+        await adapter.toImage({
+          drawing: DRAWING,
+          attribution: "Credit",
+        });
+        const { calls } = canvasStub.contexts[0] as { calls: Spec[] };
+        const methods = calls.map((call) => call.method);
+        expect(methods.filter((method) => method === "fill")).toHaveLength(2);
+        expect(methods.filter((method) => method === "stroke")).toHaveLength(
+          2 * 2 + 1,
+        );
+        expect(methods.indexOf("arc")).toBeGreaterThan(-1);
+        expect(methods.lastIndexOf("stroke")).toBeLessThan(
+          methods.indexOf("fillRect"),
+        );
+        const first = map.project([28.05, -26.2]);
+        const moveTo = calls.find((call) => call.method === "moveTo");
+        expect(moveTo?.args).toEqual([first.x * 2, first.y * 2]);
+        const dashes = calls
+          .filter((call) => call.method === "setLineDash")
+          .map((call) => call.args[0]);
+        expect(dashes).toContainEqual([16, 16]);
+        expect(dashes.at(-1)).toEqual([]);
+      });
+
+      it("draws nothing for an empty drawing, one-position paths or no drawing", async () => {
+        const { adapter } = await ready();
+        await adapter.toImage({ drawing: { ...DRAWING, marks: [] } });
+        await adapter.toImage({
+          drawing: {
+            ...DRAWING,
+            marks: [
+              {
+                kind: "path",
+                positions: [{ lat: 0, lng: 0 }],
+                closed: false,
+                fill: false,
+                dashed: false,
+              },
+            ],
+          },
+        });
+        await adapter.toImage();
+        for (const { calls } of canvasStub.contexts) {
+          expect(calls.map((call) => call.method)).not.toContain("stroke");
+        }
+      });
+    });
+
     it("draws no strip without credit text", async () => {
       const { adapter } = await ready();
       await adapter.toImage();

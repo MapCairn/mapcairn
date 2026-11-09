@@ -212,6 +212,18 @@ function close(
   };
 }
 
+/** The surfaces that take the map's taps, so a dropped pin leaves them open. */
+const TAP_TOOLS: readonly SurfaceKind[] = ["measure", "draw", "directions"];
+
+function dropPinState(state: SurfaceState): SurfaceState {
+  // The pin is data, so it is recorded even when a tool that takes the
+  // map's taps keeps the surface to itself.
+  const withPin = state.hasPin ? state : { ...state, hasPin: true };
+  return TAP_TOOLS.includes(state.surface)
+    ? withPin
+    : open(withPin, "pin", "pin");
+}
+
 /**
  * Applies an action to the surface state. Pure: unchanged states are
  * returned by reference so React can skip re-rendering.
@@ -248,19 +260,8 @@ export function surfaceReducer(
       return open(state, "directions", "directions");
     case "stopDirections":
       return state.surface === "directions" ? close(state) : state;
-    case "dropPin": {
-      // The pin is data, so it is recorded even when a tool that takes the
-      // map's taps keeps the surface to itself.
-      const withPin = state.hasPin ? state : { ...state, hasPin: true };
-      if (
-        state.surface === "measure" ||
-        state.surface === "draw" ||
-        state.surface === "directions"
-      ) {
-        return withPin;
-      }
-      return open(withPin, "pin", "pin");
-    }
+    case "dropPin":
+      return dropPinState(state);
     case "clearPin": {
       if (!state.hasPin) {
         return state;

@@ -2,7 +2,7 @@ import type { SheetSection } from "@karta/core";
 import { type ReactNode, useEffect, useRef } from "react";
 import { type DataLayers, LayersSection } from "../../layers";
 import { usePreferences } from "../../services";
-import type { UseDraw } from "../../tools/DrawToolbar";
+import { drawingForImage, type UseDraw } from "../../tools/DrawToolbar";
 import { BasemapPicker } from "../BasemapPicker";
 import { ExportSection } from "../ExportSection";
 import { HelpSection } from "../HelpSection";
@@ -118,7 +118,10 @@ export function SheetContent({
       {draw ? (
         <ShapesSection draw={draw} headingRef={headingRef("shapes")} />
       ) : null}
-      <ExportSection credits={imageCredits} />
+      <ExportSection
+        credits={imageCredits}
+        drawing={draw ? drawingForImage(draw.shapes) : undefined}
+      />
       <SettingsSection
         privacyHref={privacyHref}
         headingRef={headingRef("settings")}
