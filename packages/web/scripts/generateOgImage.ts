@@ -19,7 +19,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
 // Read from the source file, not the `@karta/theme` barrel, because the barrel
 // loads vanilla-extract style files that only the Vite plugin can evaluate.
-import { themeValues } from "../../theme/src/tokenValues";
+import { accent, neutral, themeValues } from "../../theme/src/tokenValues";
 import {
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
@@ -42,9 +42,103 @@ const URL_LABEL = SITE_URL.replace(/^https?:\/\//, "");
 
 const colour = themeValues.light.opaque;
 const surfaceColor = colour.surfaceRaised;
-const accentColor = colour.accent;
+const accentColor = accent[600];
+const onAccent = colour.accentContrast;
+const accentTint = accent[100];
+const accentSoft = accent[200];
 const textColor = colour.text;
-const mutedColor = colour.textMuted;
+const lineColor = neutral[300];
+const fineLineColor = neutral[200];
+const roadColor = neutral[300];
+
+/** Where the contour rings are centred, near the lower right of the card. */
+const HILL = { x: 960, y: 420 };
+
+/** The favicon's pin outline, in its 512 unit square. */
+const PIN_PATH =
+  "M256 394L350 274.9A119.6 119.6 0 1 0 162 274.9ZM302 200.8A46 46 0 1 1 210 200.8A46 46 0 1 1 302 200.8Z";
+
+/**
+ * The Karta mark, drawn as the favicon is: a rounded accent tile with a faint
+ * folded-map panel behind a white pin. Colours come from the light theme.
+ */
+const MARK_SVG = `<svg viewBox="0 0 512 512" width="156" height="156" aria-hidden="true">
+  <defs><clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath></defs>
+  <rect width="512" height="512" rx="112" fill="${accentColor}"/>
+  <g clip-path="url(#tile)">
+    <path d="M180 0H350L320 512H150Z" fill="${onAccent}" fill-opacity="0.1"/>
+    <path d="M180 0L150 512M350 0L320 512" stroke="${onAccent}" stroke-opacity="0.22" stroke-width="6" fill="none"/>
+  </g>
+  <path fill="${onAccent}" fill-rule="evenodd" d="${PIN_PATH}"/>
+</svg>`;
+
+/**
+ * A closed, wobbling ring around {@link HILL}, like one contour line of a
+ * hill. The wobble is a fixed sum of sine waves, so the output is stable.
+ * @param radius - Mean radius in pixels.
+ * @param seed - Shifts the wobble phase so neighbouring rings drift apart.
+ */
+function contourPath(radius: number, seed: number): string {
+  const steps = 160;
+  const points: string[] = [];
+  for (let step = 0; step < steps; step += 1) {
+    const angle = (step / steps) * Math.PI * 2;
+    const wobble =
+      1 +
+      0.1 * Math.sin(3 * angle + seed * 0.45) +
+      0.05 * Math.sin(5 * angle + seed * 0.8) +
+      0.03 * Math.sin(2 * angle - seed * 0.3);
+    const x = HILL.x + radius * 1.35 * wobble * Math.cos(angle);
+    const y = HILL.y + radius * 0.9 * wobble * Math.sin(angle);
+    points.push(`${step === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`);
+  }
+  return `${points.join("")}Z`;
+}
+
+const CONTOURS = Array.from({ length: 11 }, (_, index) => {
+  const radius = 30 + index * 34;
+  const major = index % 5 === 4;
+  return `<path d="${contourPath(radius, index)}" fill="none" stroke="${lineColor}" stroke-width="${major ? 2 : 1.25}" opacity="${major ? 0.85 : 0.6}"/>`;
+}).join("\n    ");
+
+/** Evenly spaced parallel streets, rotated as a block, for a city-grid texture. */
+const GRID = (() => {
+  const lines: string[] = [];
+  for (let offset = -900; offset <= 900; offset += 56) {
+    lines.push(
+      `<line x1="${offset}" y1="-900" x2="${offset}" y2="900" stroke="${fineLineColor}" stroke-width="2"/>`,
+      `<line x1="-900" y1="${offset}" x2="900" y2="${offset}" stroke="${fineLineColor}" stroke-width="2"/>`,
+    );
+  }
+  return lines.join("");
+})();
+
+/**
+ * The map motif: a bay in the top corner, a street grid, two arterial roads,
+ * contour rings and a dropped-pin accuracy halo. It fades out towards the text
+ * through a horizontal mask, so the left of the card stays clean.
+ */
+const MOTIF_SVG = `<svg viewBox="0 0 ${OG_IMAGE_WIDTH} ${OG_IMAGE_HEIGHT}" width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" aria-hidden="true">
+  <defs>
+    <linearGradient id="fade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0.3" stop-color="${onAccent}" stop-opacity="0"/>
+      <stop offset="0.62" stop-color="${onAccent}" stop-opacity="1"/>
+    </linearGradient>
+    <mask id="reveal"><rect width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" fill="url(#fade)"/></mask>
+    <clipPath id="land"><path d="M0 0H${OG_IMAGE_WIDTH}V${OG_IMAGE_HEIGHT}H0Z"/></clipPath>
+  </defs>
+  <g mask="url(#reveal)">
+    <g transform="translate(900 360) rotate(-24)" opacity="0.55">${GRID}</g>
+    <path d="M520 0C640 60 700 150 800 170C900 190 1000 130 1080 190C1140 235 1170 300 1200 320V0Z" fill="${accentTint}"/>
+    <path d="M520 0C640 60 700 150 800 170C900 190 1000 130 1080 190C1140 235 1170 300 1200 320" fill="none" stroke="${accentSoft}" stroke-width="3"/>
+    <path d="M610 ${OG_IMAGE_HEIGHT}C700 520 760 470 860 440S1040 330 1200 300" fill="none" stroke="${roadColor}" stroke-width="9" stroke-linecap="round"/>
+    <path d="M610 ${OG_IMAGE_HEIGHT}C700 520 760 470 860 440S1040 330 1200 300" fill="none" stroke="${surfaceColor}" stroke-width="4" stroke-linecap="round"/>
+    <path d="M760 ${OG_IMAGE_HEIGHT}C800 560 880 540 940 480S1010 340 1080 ${OG_IMAGE_HEIGHT}" fill="none" stroke="${roadColor}" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
+    ${CONTOURS}
+    <circle cx="${HILL.x}" cy="${HILL.y}" r="76" fill="${accentColor}" fill-opacity="0.1" stroke="${accentColor}" stroke-opacity="0.35" stroke-width="2"/>
+    <circle cx="${HILL.x}" cy="${HILL.y}" r="18" fill="${accentColor}" stroke="${onAccent}" stroke-width="6"/>
+  </g>
+</svg>`;
 
 const TEMPLATE = `<!doctype html>
 <html>
@@ -69,10 +163,17 @@ const TEMPLATE = `<!doctype html>
     position: relative;
     overflow: hidden;
   }
-  .frame {
+  .motif {
     position: absolute;
-    inset: 40px;
-    border: 2px solid ${textColor};
+    inset: 0;
+  }
+  .bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 10px;
+    background: ${accentColor};
   }
   .content {
     position: relative;
@@ -80,46 +181,51 @@ const TEMPLATE = `<!doctype html>
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 96px;
+    padding: 0 88px 24px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+  }
+  .brand svg {
+    display: block;
+    border-radius: 35px;
+    box-shadow: 0 10px 28px color-mix(in oklch, ${accentColor} 28%, transparent);
   }
   .title {
-    font-size: 112px;
+    font-size: 120px;
     font-weight: 600;
+    letter-spacing: -0.02em;
     color: ${textColor};
     line-height: 1;
   }
-  .rule {
-    margin-top: 36px;
-    width: 160px;
-    height: 6px;
-    background: ${accentColor};
-  }
   .tagline {
-    margin-top: 32px;
-    max-width: 820px;
-    font-size: 34px;
+    margin-top: 44px;
+    max-width: 640px;
+    font-size: 36px;
     font-weight: 400;
-    line-height: 1.35;
+    line-height: 1.38;
     color: ${textColor};
   }
   .url {
     position: absolute;
-    left: 96px;
-    bottom: 72px;
+    left: 88px;
+    bottom: 56px;
     font-size: 26px;
-    font-weight: 500;
-    color: ${mutedColor};
+    font-weight: 600;
+    color: ${accent[700]};
   }
 </style>
 </head>
 <body>
-  <div class="frame"></div>
+  <div class="motif">${MOTIF_SVG}</div>
   <div class="content">
-    <div class="title">${TITLE}</div>
-    <div class="rule"></div>
+    <div class="brand">${MARK_SVG}<div class="title">${TITLE}</div></div>
     <div class="tagline">${TAGLINE}</div>
   </div>
   <div class="url">${URL_LABEL}</div>
+  <div class="bar"></div>
 </body>
 </html>`;
 
