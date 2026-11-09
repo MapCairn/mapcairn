@@ -1,3 +1,28 @@
 {
-  "earthquakes": { "file": "usgs-2.5_day.json", "features": 5 }
+  "earthquakes": { "file": "usgs-2.5_day.json", "features": 5 },
+  "fire-alerts": {
+    "file": "gdacs-events.json",
+    "features": 3,
+    "detail": { "file": "gdacs-tc-geometry.json", "shapes": 2 }
+  },
+  "flood-alerts": {
+    "file": "gdacs-events.json",
+    "features": 2,
+    "detail": { "file": "gdacs-tc-geometry.json", "shapes": 2 }
+  },
+  "cyclones": {
+    "file": "gdacs-events.json",
+    "features": 2,
+    "detail": { "file": "gdacs-tc-geometry.json", "shapes": 2 }
+  },
+  "volcano-alerts": {
+    "file": "gdacs-events.json",
+    "features": 0,
+    "detail": { "file": "gdacs-tc-geometry.json", "shapes": 2 }
+  },
+  "drought-alerts": {
+    "file": "gdacs-events.json",
+    "features": 0,
+    "detail": { "file": "gdacs-tc-geometry.json", "shapes": 2 }
+  }
 }

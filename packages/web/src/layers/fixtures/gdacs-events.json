@@ -1,0 +1,411 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "bbox": [74.3713, -28.1856, 74.3713, -28.1856],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [74.3713, -28.1856]
+      },
+      "properties": {
+        "eventtype": "EQ",
+        "eventid": 1576447,
+        "episodeid": 1745598,
+        "eventname": "",
+        "glide": "",
+        "name": "Earthquake in Mid-Indian Ridge",
+        "description": "Earthquake in Mid-Indian Ridge",
+        "htmldescription": "Green M 4.9 Earthquake in Mid-Indian Ridge at: 09 Nov 2026 15:04:33.",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/EQ.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/EQ.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=EQ&eventid=1576447&episodeid=1745598",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1576447&episodeid=1745598&eventtype=EQ",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=EQ&eventid=1576447"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 0,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "Mid-Indian Ridge",
+        "fromdate": "2026-11-09T15:04:33",
+        "todate": "2026-11-09T15:04:33",
+        "datemodified": "2026-11-09T15:25:07",
+        "iso3": "",
+        "source": "NEIC",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "affectedcountries": [],
+        "severitydata": {
+          "severity": 4.9,
+          "severitytext": "Magnitude 4.9M, Depth:10km",
+          "severityunit": "M"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [-159.5, 11.4, -159.5, 11.4],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-159.5, 11.4]
+      },
+      "properties": {
+        "eventtype": "TC",
+        "eventid": 1001348,
+        "episodeid": 12,
+        "eventname": "PENA-26",
+        "glide": "",
+        "name": "Tropical Cyclone PENA-26",
+        "description": "Tropical Cyclone PENA-26",
+        "htmldescription": "Green Tropical Cyclone PENA-26 off-shore from: 06 Nov 2026  to: 09 Nov 2026 .",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/TC.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/TC.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=TC&eventid=1001348&episodeid=12",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1001348&episodeid=12&eventtype=TC",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=TC&eventid=1001348"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 1,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "",
+        "fromdate": "2026-11-06T21:00:00",
+        "todate": "2026-11-09T15:00:00",
+        "datemodified": "2026-11-09T14:50:48",
+        "iso3": "",
+        "source": "NOAA",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "countryonland": "",
+        "affectedcountries": [],
+        "severitydata": {
+          "severity": 92.592,
+          "severitytext": "Tropical Storm (maximum wind speed of 93 km/h)",
+          "severityunit": "km/h"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [135.3, 24.3, 135.3, 24.3],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [135.3, 24.3]
+      },
+      "properties": {
+        "eventtype": "TC",
+        "eventid": 1001347,
+        "episodeid": 14,
+        "eventname": "CEMPAKA-26",
+        "glide": "",
+        "name": "Tropical Cyclone CEMPAKA-26",
+        "description": "Tropical Cyclone CEMPAKA-26",
+        "htmldescription": "Green Tropical Cyclone CEMPAKA-26 in Japan from: 06 Nov 2026  to: 09 Nov 2026 .",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/TC.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/TC.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=TC&eventid=1001347&episodeid=14",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1001347&episodeid=14&eventtype=TC",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=TC&eventid=1001347"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 1,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "Japan",
+        "fromdate": "2026-11-06T06:00:00",
+        "todate": "2026-11-09T12:00:00",
+        "datemodified": "2026-11-09T15:20:03",
+        "iso3": "JPN",
+        "source": "JTWC",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "countryonland": "",
+        "affectedcountries": [
+          {
+            "iso2": "JP",
+            "iso3": "JPN",
+            "countryname": "Japan"
+          }
+        ],
+        "severitydata": {
+          "severity": 166.6656,
+          "severitytext": "Hurricane/Typhoon > 74 mph (maximum wind speed of 167 km/h)",
+          "severityunit": "km/h"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [-16.89, 32.6473, -16.89, 32.6473],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-16.89, 32.6473]
+      },
+      "properties": {
+        "eventtype": "FL",
+        "eventid": 1104276,
+        "episodeid": 1,
+        "eventname": "",
+        "glide": "",
+        "name": "Flood in Portugal",
+        "description": "Flood in Portugal",
+        "htmldescription": "Green Flood in Portugal from: 07 Nov 2026 01 to: 09 Nov 2026 01.",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/FL.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/FL.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=FL&eventid=1104276&episodeid=1",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1104276&episodeid=1&eventtype=FL",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=FL&eventid=1104276"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 0.5,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "Portugal",
+        "fromdate": "2026-11-07T01:00:00",
+        "todate": "2026-11-09T01:00:00",
+        "datemodified": "2026-11-09T11:16:35",
+        "iso3": "PRT",
+        "source": "GLOFAS",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "affectedcountries": [
+          {
+            "iso2": "PT",
+            "iso3": "PRT",
+            "countryname": "Portugal"
+          }
+        ],
+        "severitydata": {
+          "severity": 0,
+          "severitytext": "Magnitude 0 ",
+          "severityunit": ""
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [-67.9194, 10.1756, -67.9194, 10.1756],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-67.9194, 10.1756]
+      },
+      "properties": {
+        "eventtype": "FL",
+        "eventid": 1104275,
+        "episodeid": 1,
+        "eventname": "",
+        "glide": "",
+        "name": "Flood in Venezuela",
+        "description": "Flood in Venezuela",
+        "htmldescription": "Green Flood in Venezuela from: 07 Nov 2026 01 to: 09 Nov 2026 01.",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/FL.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/FL.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=FL&eventid=1104275&episodeid=1",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1104275&episodeid=1&eventtype=FL",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=FL&eventid=1104275"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 0.5,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "Venezuela",
+        "fromdate": "2026-11-07T01:00:00",
+        "todate": "2026-11-09T01:00:00",
+        "datemodified": "2026-11-09T09:58:31",
+        "iso3": "VEN",
+        "source": "GLOFAS",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "affectedcountries": [
+          {
+            "iso2": "VE",
+            "iso3": "VEN",
+            "countryname": "Venezuela"
+          }
+        ],
+        "severitydata": {
+          "severity": 0,
+          "severitytext": "Magnitude 0 ",
+          "severityunit": ""
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [143.3537, -13.0415, 143.3537, -13.0415],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [143.3537, -13.0415]
+      },
+      "properties": {
+        "eventtype": "WF",
+        "eventid": 1033669,
+        "episodeid": 1,
+        "eventname": "",
+        "glide": "",
+        "name": "Forest fires in Australia",
+        "description": "Forest fires in Australia",
+        "htmldescription": "Green Forest fires in Australia from: 31 Oct 2026 to: 09 Nov 2026.",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/WF.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/WF.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=WF&eventid=1033669&episodeid=1",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1033669&episodeid=1&eventtype=WF",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=WF&eventid=1033669"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 0.5,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "Australia",
+        "fromdate": "2026-10-31T00:00:00",
+        "todate": "2026-11-09T00:00:00",
+        "datemodified": "2026-11-09T13:17:20",
+        "iso3": "AUS",
+        "source": "GWIS",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "affectedcountries": [
+          {
+            "iso2": "AU",
+            "iso3": "AUS",
+            "countryname": "Australia"
+          }
+        ],
+        "severitydata": {
+          "severity": 5036,
+          "severitytext": "Green impact for forestfire in 5036 ha",
+          "severityunit": "ha"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [144.5764, -15.4681, 144.5764, -15.4681],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [144.5764, -15.4681]
+      },
+      "properties": {
+        "eventtype": "WF",
+        "eventid": 1033668,
+        "episodeid": 1,
+        "eventname": "",
+        "glide": "",
+        "name": "Forest fires in Australia",
+        "description": "Forest fires in Australia",
+        "htmldescription": "Green Forest fires in Australia from: 02 Nov 2026 to: 09 Nov 2026.",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/WF.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/WF.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=WF&eventid=1033668&episodeid=1",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1033668&episodeid=1&eventtype=WF",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=WF&eventid=1033668"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 0.5,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "Australia",
+        "fromdate": "2026-11-02T00:00:00",
+        "todate": "2026-11-09T00:00:00",
+        "datemodified": "2026-11-09T12:57:45",
+        "iso3": "AUS",
+        "source": "GWIS",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "affectedcountries": [
+          {
+            "iso2": "AU",
+            "iso3": "AUS",
+            "countryname": "Australia"
+          }
+        ],
+        "severitydata": {
+          "severity": 5182,
+          "severitytext": "Green impact for forestfire in 5182 ha",
+          "severityunit": "ha"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [128.0379, -18.7955, 128.0379, -18.7955],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [128.0379, -18.7955]
+      },
+      "properties": {
+        "eventtype": "WF",
+        "eventid": 1033667,
+        "episodeid": 1,
+        "eventname": "",
+        "glide": "",
+        "name": "Forest fires in Australia",
+        "description": "Forest fires in Australia",
+        "htmldescription": "Green Forest fires in Australia from: 07 Nov 2026 to: 09 Nov 2026.",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/WF.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/WF.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=WF&eventid=1033667&episodeid=1",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1033667&episodeid=1&eventtype=WF",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=WF&eventid=1033667"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 0.5,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "Australia",
+        "fromdate": "2026-11-07T00:00:00",
+        "todate": "2026-11-09T00:00:00",
+        "datemodified": "2026-11-09T12:08:52",
+        "iso3": "AUS",
+        "source": "GWIS",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "affectedcountries": [
+          {
+            "iso2": "AU",
+            "iso3": "AUS",
+            "countryname": "Australia"
+          }
+        ],
+        "severitydata": {
+          "severity": 7030,
+          "severitytext": "Green impact for forestfire in 7030 ha",
+          "severityunit": "ha"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "bbox": [-159.5, 11.4, -159.5, 11.4],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-159.5, 11.4]
+      },
+      "properties": {
+        "eventtype": "TC",
+        "eventid": 1001348,
+        "episodeid": 12,
+        "eventname": "PENA-26",
+        "glide": "",
+        "name": "Tropical Cyclone PENA-26",
+        "description": "Tropical Cyclone PENA-26",
+        "htmldescription": "Green Tropical Cyclone PENA-26 off-shore from: 06 Nov 2026  to: 09 Nov 2026 .",
+        "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/TC.png",
+        "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/TC.png",
+        "url": {
+          "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=TC&eventid=1001348&episodeid=12",
+          "report": "https://www.gdacs.org/report.aspx?eventid=1001348&episodeid=12&eventtype=TC",
+          "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=TC&eventid=1001348"
+        },
+        "alertlevel": "Green",
+        "alertscore": 1,
+        "episodealertlevel": "Green",
+        "episodealertscore": 1,
+        "istemporary": "false",
+        "iscurrent": "true",
+        "country": "",
+        "fromdate": "2026-11-06T21:00:00",
+        "todate": "2026-11-09T15:00:00",
+        "datemodified": "2026-11-09T14:50:48",
+        "iso3": "",
+        "source": "NOAA",
+        "sourceid": "",
+        "polygonlabel": "Centroid",
+        "Class": "Point_Centroid",
+        "countryonland": "",
+        "affectedcountries": [],
+        "severitydata": {
+          "severity": 92.592,
+          "severitytext": "Tropical Storm (maximum wind speed of 93 km/h)",
+          "severityunit": "km/h"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [-154.6693, 11.234, -154.3307, 11.566],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-154.5, 11.234],
+            [-154.459, 11.239],
+            [-154.42, 11.253],
+            [-154.387, 11.277],
+            [-154.36, 11.307],
+            [-154.341, 11.343],
+            [-154.332, 11.383],
+            [-154.332, 11.423],
+            [-154.343, 11.462],
+            [-154.363, 11.498],
+            [-154.391, 11.527],
+            [-154.426, 11.549],
+            [-154.465, 11.562],
+            [-154.506, 11.566],
+            [-154.547, 11.56],
+            [-154.585, 11.544],
+            [-154.618, 11.519],
+            [-154.644, 11.488],
+            [-154.661, 11.451],
+            [-154.669, 11.412],
+            [-154.667, 11.371],
+            [-154.655, 11.333],
+            [-154.633, 11.298],
+            [-154.604, 11.269],
+            [-154.569, 11.248],
+            [-154.529, 11.237],
+            [-154.5, 11.234]
+          ]
+        ]
+      },
+      "properties": {
+        "Class": "Poly_Orange",
+        "name": "Tropical Cyclone PENA-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "bbox": [-151.1, 11.2, -150.1, 11.3],
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[-150.1, 11.3], [-151.1, 11.2]]
+      },
+      "properties": {
+        "Class": "Line_Line_0",
+        "name": "Tropical Cyclone PENA-26"
+      }
+    }
+  ]
+}

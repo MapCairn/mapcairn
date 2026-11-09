@@ -45,9 +45,9 @@ export function buildContentSecurityPolicy(
     options.development
       ? "style-src 'self' 'unsafe-inline'"
       : "style-src 'self'",
-    "img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://gibs.earthdata.nasa.gov",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://gibs.earthdata.nasa.gov https://ows.globalfloods.eu",
     "font-src 'self'",
-    "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://tile.openstreetmap.org https://nominatim.openstreetmap.org https://tiles.openfreemap.org https://earthquake.usgs.gov https://gibs.earthdata.nasa.gov" +
+    "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://tile.openstreetmap.org https://nominatim.openstreetmap.org https://tiles.openfreemap.org https://earthquake.usgs.gov https://gibs.earthdata.nasa.gov https://www.gdacs.org https://ows.globalfloods.eu" +
       (options.development ? " ws://localhost:* http://localhost:*" : ""),
     "worker-src 'self' blob:",
     "frame-src 'none'",
