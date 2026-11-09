@@ -61,6 +61,27 @@ function latestMap(): FakeMapLibreMap {
   return map;
 }
 
+/** Fires a MapLibre mouse or touch event at a position, the way the engine hands it to listeners. */
+function firePointer(
+  type:
+    | "mousedown"
+    | "mousemove"
+    | "mouseup"
+    | "touchstart"
+    | "touchmove"
+    | "touchend",
+  latlng: { lat: number; lng: number },
+): void {
+  const map = latestMap();
+  const point = map.project([latlng.lng, latlng.lat]);
+  map.fire(type, {
+    lngLat: latlng,
+    point,
+    points: type.startsWith("touch") ? [point] : [],
+    preventDefault: () => {},
+  });
+}
+
 for (const [name, basemap] of [
   ["MapLibre (vector style)", vectorBasemap],
   ["MapLibre (raster style)", rasterBasemap],
@@ -115,6 +136,12 @@ for (const [name, basemap] of [
       failNextImage: () => {
         canvasStub.failNext = true;
       },
+      pointerDown: (latlng, pointer = "mouse") =>
+        firePointer(pointer === "touch" ? "touchstart" : "mousedown", latlng),
+      pointerMove: (latlng, pointer = "mouse") =>
+        firePointer(pointer === "touch" ? "touchmove" : "mousemove", latlng),
+      pointerUp: (latlng, pointer = "mouse") =>
+        firePointer(pointer === "touch" ? "touchend" : "mouseup", latlng),
       drawnLayers: () => describeDataLayers(latestMap()),
       createFailingMount: () => {
         FakeMapLibreMap.nextConstructError = new FakeGPUInitializationError();

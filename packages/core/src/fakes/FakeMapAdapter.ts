@@ -1,3 +1,11 @@
+import {
+  dragHandle,
+  type HandleGesture,
+  type HandlePointer,
+  handleReach,
+  pressHandle,
+} from "../draw/gesture";
+import { hitTestHandle, type ProjectedHandle } from "../draw/hit";
 import type { BasemapDefinition } from "../ports/basemap";
 import { MapEngineError, type MapEngineErrorReason } from "../ports/errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "../ports/geometry";
@@ -6,6 +14,7 @@ import type {
   MapAdapterFactory,
   MapBasemapOptions,
   MapClickEvent,
+  MapEditHandle,
   MapEvents,
   MapFeature,
   MapFeatureHit,
@@ -184,6 +193,10 @@ export class FakeMapAdapter implements MapAdapter {
   #failNextImage = false;
   /** The options of every `toImage` call, in order. */
   readonly imageRequests: (MapImageOptions | undefined)[] = [];
+  #handles: readonly MapEditHandle[] = [];
+  #gesture: HandleGesture | null = null;
+  #hovered: string | null = null;
+  #swallowClick = false;
 
   constructor(options: FakeMapAdapterOptions = {}) {
     this.#failMount = options.failMount;
@@ -447,6 +460,106 @@ export class FakeMapAdapter implements MapAdapter {
     this.#failNextImage = true;
   }
 
+  setEditHandles(handles: readonly MapEditHandle[]): void {
+    this.#handles = [...handles];
+    if (this.#hovered !== null && !this.#hasHandle(this.#hovered)) {
+      this.#hovered = null;
+      this.#emit("handleHover", null);
+    }
+  }
+
+  /** The edit handles last set. */
+  editHandles(): readonly MapEditHandle[] {
+    return this.#handles;
+  }
+
+  /**
+   * A mouse or finger going down at a position. On a handle it starts a
+   * `handleDrag`; anywhere else it starts nothing.
+   */
+  simulatePointerDown(latlng: LatLng, pointer: HandlePointer = "mouse"): void {
+    this.#swallowClick = false;
+    const gesture = pressHandle(
+      this.#projectedHandles(),
+      this.project(latlng),
+      pointer,
+    );
+    this.#gesture = gesture;
+    if (gesture) {
+      this.#emit("handleDrag", {
+        id: gesture.id,
+        phase: "start",
+        latlng,
+        moved: false,
+      });
+    }
+  }
+
+  /**
+   * The pointer moving to a position. During a press on a handle, once it
+   * has left the click tolerance, it reports `move`; otherwise a mouse
+   * reports `handleHover` as it crosses handles.
+   */
+  simulatePointerMove(latlng: LatLng, pointer: HandlePointer = "mouse"): void {
+    const point = this.project(latlng);
+    if (this.#gesture) {
+      this.#gesture = dragHandle(this.#gesture, point);
+      if (this.#gesture.moved) {
+        this.#emit("handleDrag", {
+          id: this.#gesture.id,
+          phase: "move",
+          latlng,
+          moved: true,
+        });
+      }
+      return;
+    }
+    if (pointer !== "mouse") {
+      return;
+    }
+    const hit = hitTestHandle(
+      this.#projectedHandles(),
+      point,
+      handleReach("mouse"),
+    );
+    const id = hit?.id ?? null;
+    if (id !== this.#hovered) {
+      this.#hovered = id;
+      this.#emit("handleHover", id);
+    }
+  }
+
+  /**
+   * The pointer going up at a position. It ends a press on a handle, and the
+   * `click` that would follow it is then dropped, as an engine's is.
+   */
+  simulatePointerUp(latlng: LatLng): void {
+    const gesture = this.#gesture;
+    this.#gesture = null;
+    if (!gesture) {
+      return;
+    }
+    this.#swallowClick = true;
+    this.#emit("handleDrag", {
+      id: gesture.id,
+      phase: "end",
+      latlng,
+      moved: gesture.moved,
+    });
+  }
+
+  #hasHandle(id: string): boolean {
+    return this.#handles.some((handle) => handle.id === id);
+  }
+
+  #projectedHandles(): ProjectedHandle[] {
+    return this.#handles.map((handle) => ({
+      id: handle.id,
+      kind: handle.kind,
+      point: this.project(handle.position),
+    }));
+  }
+
   /** The data layers drawn, lowest first: imagery, vector tiles, styled shapes, detail shapes, heatmaps, then points. */
   drawnLayers(): DrawnLayer[] {
     return [...this.#dataLayers]
@@ -583,6 +696,10 @@ export class FakeMapAdapter implements MapAdapter {
     latlng: LatLng,
     features: MapClickEvent["features"] = [],
   ): void {
+    if (this.#swallowClick) {
+      this.#swallowClick = false;
+      return;
+    }
     this.#emit("click", {
       latlng,
       point: this.project(latlng),

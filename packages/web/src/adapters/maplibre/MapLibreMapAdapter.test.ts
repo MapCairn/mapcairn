@@ -1274,6 +1274,105 @@ describe("MapLibreMapAdapter", () => {
     });
   });
 
+  describe("edit handles", () => {
+    const HANDLE = {
+      id: "v0",
+      position: { lat: -26.2, lng: 28.05 },
+      kind: "vertex" as const,
+    };
+
+    function pointerEvent(
+      map: FakeMap,
+      position: { lat: number; lng: number },
+      extra: Record<string, unknown> = {},
+    ) {
+      const point = map.project([position.lng, position.lat]);
+      return {
+        lngLat: position,
+        point,
+        points: [point],
+        preventDefault: vi.fn(),
+        ...extra,
+      };
+    }
+
+    it("stops the engine panning for a mouse press on a handle, and only then", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const onHandle = pointerEvent(map, HANDLE.position);
+      map.fire("mousedown", onHandle);
+      expect(onHandle.preventDefault).toHaveBeenCalledTimes(1);
+      map.fire("mouseup", onHandle);
+
+      const away = pointerEvent(map, { lat: -26.5, lng: 28.5 });
+      map.fire("mousedown", away);
+      expect(away.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it("stops the engine panning for a one-finger press on a handle", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const press = pointerEvent(map, HANDLE.position);
+      map.fire("touchstart", press);
+      expect(press.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it("leaves a two-finger press to the engine", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const handlers = vi.fn();
+      adapter.on("handleDrag", handlers);
+      const point = map.project([HANDLE.position.lng, HANDLE.position.lat]);
+      const pinch = {
+        ...pointerEvent(map, HANDLE.position),
+        points: [point, { x: point.x + 90, y: point.y }],
+      };
+      map.fire("touchstart", pinch);
+      expect(pinch.preventDefault).not.toHaveBeenCalled();
+      expect(handlers).not.toHaveBeenCalled();
+    });
+
+    it("ends a press when the touch is cancelled", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const phases: string[] = [];
+      adapter.on("handleDrag", (drag) => phases.push(drag.phase));
+      map.fire("touchstart", pointerEvent(map, HANDLE.position));
+      map.fire("touchcancel", pointerEvent(map, HANDLE.position));
+      expect(phases).toEqual(["start", "end"]);
+    });
+
+    it("drops the click after a press on a handle but not a later one", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const click = vi.fn();
+      adapter.on("click", click);
+      map.fire("mousedown", pointerEvent(map, HANDLE.position));
+      map.fire("mouseup", pointerEvent(map, HANDLE.position));
+      map.fire("click", pointerEvent(map, HANDLE.position));
+      expect(click).not.toHaveBeenCalled();
+      map.fire("mousedown", pointerEvent(map, { lat: -26.5, lng: 28.5 }));
+      map.fire("click", pointerEvent(map, { lat: -26.5, lng: 28.5 }));
+      expect(click).toHaveBeenCalledTimes(1);
+    });
+
+    it("does nothing with the mouse when no handles are set", async () => {
+      const { adapter, map } = await mounted();
+      const hover = vi.fn();
+      adapter.on("handleHover", hover);
+      map.fire("mousemove", pointerEvent(map, HANDLE.position));
+      expect(hover).not.toHaveBeenCalled();
+    });
+
+    it("forgets a press in progress when the map is torn down", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      map.fire("mousedown", pointerEvent(map, HANDLE.position));
+      adapter.destroy();
+      expect(() => adapter.setEditHandles([])).not.toThrow();
+    });
+  });
+
   describe("destroy", () => {
     it("removes the map and every listener, and is safe to call twice", async () => {
       const { adapter, map } = await mounted();

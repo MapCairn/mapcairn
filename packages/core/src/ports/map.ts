@@ -256,8 +256,52 @@ export interface MapImageOptions {
   readonly attribution?: string;
 }
 
+/** What a draggable handle on the map stands for. */
+export type MapEditHandleKind = "vertex" | "midpoint" | "radius";
+
+/**
+ * A point the person can press and drag, such as the vertex of a shape being
+ * edited. The ui draws the handle itself; the adapter only owns the gesture,
+ * because only the engine can stop a press from also panning the map.
+ */
+export interface MapEditHandle {
+  /** Names the handle in `handleDrag` and `handleHover`. Unique among the handles set. */
+  readonly id: string;
+  readonly position: LatLng;
+  readonly kind: MapEditHandleKind;
+}
+
+/**
+ * One step of a press on an edit handle. A press that starts on a handle
+ * never pans the map and never produces a `click`.
+ */
+export interface MapHandleDrag {
+  /** The handle that was pressed, as it was when the press began. */
+  readonly id: string;
+  /**
+   * `start` when the pointer goes down on the handle, `move` while it travels
+   * (only once it has left the click tolerance), `end` when it is released
+   * or cancelled.
+   */
+  readonly phase: "start" | "move" | "end";
+  /** Where the pointer is. */
+  readonly latlng: LatLng;
+  /**
+   * True once the pointer has travelled beyond the click tolerance since it
+   * went down. An `end` with `moved` false is a tap on the handle.
+   */
+  readonly moved: boolean;
+}
+
 /** The events a map adapter emits, with their payloads. */
 export interface MapEvents {
+  /** A press on an edit handle moved, or started or ended. See {@link MapHandleDrag}. */
+  handleDrag: MapHandleDrag;
+  /**
+   * A mouse or pen moved over an edit handle (its id) or off every handle
+   * (null). Not emitted for touch, which has no hover.
+   */
+  handleHover: string | null;
   /**
    * A tap or click landed on a point, polygon or line of a feed layer. Fires
    * before the `click` for the same tap, with the topmost feature within a
@@ -402,6 +446,16 @@ export interface MapAdapter {
    * produce an image.
    */
   toImage(options?: MapImageOptions): Promise<Blob>;
+
+  /**
+   * Replaces the handles the person can press and drag. A press within reach
+   * of a handle (12 px for a mouse, 22 px for a finger, the nearest wins) is
+   * reported as `handleDrag` and does not pan the map or produce a `click`.
+   * An empty list turns handle gestures off. Handles belong to the adapter,
+   * not to the style, so they survive `setBasemap`. A press already in
+   * progress carries on with the handle it began on.
+   */
+  setEditHandles(handles: readonly MapEditHandle[]): void;
 
   /** Subscribes to an event. Returns the unsubscribe function. */
   on<K extends keyof MapEvents>(

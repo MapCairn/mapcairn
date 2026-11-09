@@ -5,9 +5,11 @@ import { MapEngineError } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
 import type {
   MapAdapter,
+  MapEditHandle,
   MapEvents,
   MapFeature,
   MapFeatureTap,
+  MapHandleDrag,
   MapHeatmap,
   MapHostElement,
   MapMountOptions,
@@ -68,6 +70,15 @@ export interface MapAdapterControls {
    * read. Optional because some engines cannot fail.
    */
   failNextImage?(): void;
+  /**
+   * Makes the engine report a pointer going down at a position, as a mouse
+   * or pen (`mouse`, the default) or as a finger (`touch`).
+   */
+  pointerDown(latlng: LatLng, pointer?: "mouse" | "touch"): void;
+  /** Makes the engine report the pointer moving to a position. */
+  pointerMove(latlng: LatLng, pointer?: "mouse" | "touch"): void;
+  /** Makes the engine report the pointer going up at a position. */
+  pointerUp(latlng: LatLng, pointer?: "mouse" | "touch"): void;
   /** Describes the data layers the engine draws, lowest first. */
   drawnLayers(): readonly DrawnLayer[];
   /**
@@ -837,6 +848,192 @@ export function runMapAdapterContract(
         await expect(subject.adapter.toImage()).rejects.toBeInstanceOf(
           MapEngineError,
         );
+      });
+    });
+
+    describe("edit handles", () => {
+      /** The position `dx` pixels to the right of a position, on screen. */
+      function beside(adapter: MapAdapter, at: LatLng, dx: number): LatLng {
+        const point = adapter.project(at);
+        return adapter.unproject({ x: point.x + dx, y: point.y });
+      }
+
+      function record(adapter: MapAdapter) {
+        const drags: MapHandleDrag[] = [];
+        const hovers: (string | null)[] = [];
+        const clicks: LatLng[] = [];
+        adapter.on("handleDrag", (drag) => drags.push(drag));
+        adapter.on("handleHover", (id) => hovers.push(id));
+        adapter.on("click", (click) => clicks.push(click.latlng));
+        return { drags, hovers, clicks };
+      }
+
+      const HANDLE: MapEditHandle = {
+        id: "v0",
+        position: CENTRE,
+        kind: "vertex",
+      };
+
+      it("reports a press on a handle as start, move and end, and never as a click", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags, clicks } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        const target = beside(adapter, CENTRE, 60);
+        controls.pointerDown(CENTRE);
+        controls.pointerMove(beside(adapter, CENTRE, 30));
+        controls.pointerMove(target);
+        controls.pointerUp(target);
+        controls.simulateClick(target);
+        expect(drags.map((drag) => drag.phase)).toEqual([
+          "start",
+          "move",
+          "move",
+          "end",
+        ]);
+        expect(drags.every((drag) => drag.id === "v0")).toBe(true);
+        expect(drags.at(-1)?.moved).toBe(true);
+        expect(drags.at(-2)?.latlng.lng).toBeCloseTo(target.lng, 4);
+        expect(clicks).toEqual([]);
+      });
+
+      it("reports a press that does not travel as a tap, still without a click", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags, clicks } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        controls.pointerDown(CENTRE);
+        controls.pointerUp(CENTRE);
+        controls.simulateClick(CENTRE);
+        expect(drags.map((drag) => drag.phase)).toEqual(["start", "end"]);
+        expect(drags[1]?.moved).toBe(false);
+        expect(clicks).toEqual([]);
+      });
+
+      it("lets the next click through after a press on a handle", async () => {
+        const { adapter, controls } = await mounted();
+        const { clicks } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        controls.pointerDown(CENTRE);
+        controls.pointerUp(CENTRE);
+        controls.simulateClick(CENTRE);
+        controls.pointerDown(beside(adapter, CENTRE, 200));
+        controls.pointerUp(beside(adapter, CENTRE, 200));
+        controls.simulateClick(beside(adapter, CENTRE, 200));
+        expect(clicks).toHaveLength(1);
+      });
+
+      it("ignores a press away from every handle", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags, clicks } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        const away = beside(adapter, CENTRE, 100);
+        controls.pointerDown(away);
+        controls.pointerMove(beside(adapter, CENTRE, 140));
+        controls.pointerUp(away);
+        controls.simulateClick(away);
+        expect(drags).toEqual([]);
+        expect(clicks).toHaveLength(1);
+      });
+
+      it("reaches further for a finger than for a mouse", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        const near = beside(adapter, CENTRE, 18);
+        controls.pointerDown(near, "mouse");
+        controls.pointerUp(near, "mouse");
+        expect(drags).toEqual([]);
+        controls.pointerDown(near, "touch");
+        controls.pointerUp(near, "touch");
+        expect(drags.map((drag) => drag.phase)).toEqual(["start", "end"]);
+      });
+
+      it("turns gestures off when the list is emptied", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        adapter.setEditHandles([]);
+        controls.pointerDown(CENTRE);
+        controls.pointerUp(CENTRE);
+        expect(drags).toEqual([]);
+      });
+
+      it("picks the nearest of two handles", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags } = record(adapter);
+        adapter.setEditHandles([
+          HANDLE,
+          { id: "v1", position: beside(adapter, CENTRE, 16), kind: "vertex" },
+        ]);
+        controls.pointerDown(beside(adapter, CENTRE, 12));
+        controls.pointerUp(beside(adapter, CENTRE, 12));
+        expect(drags[0]?.id).toBe("v1");
+      });
+
+      it("carries on a press with the handle it began on when the handles change", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        controls.pointerDown(CENTRE);
+        adapter.setEditHandles([]);
+        const target = beside(adapter, CENTRE, 50);
+        controls.pointerMove(target);
+        controls.pointerUp(target);
+        expect(drags.map((drag) => drag.phase)).toEqual([
+          "start",
+          "move",
+          "end",
+        ]);
+        expect(drags.every((drag) => drag.id === "v0")).toBe(true);
+      });
+
+      it("reports hover for a mouse over a handle and off it again", async () => {
+        const { adapter, controls } = await mounted();
+        const { hovers } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        controls.pointerMove(beside(adapter, CENTRE, 4));
+        controls.pointerMove(beside(adapter, CENTRE, 6));
+        controls.pointerMove(beside(adapter, CENTRE, 80));
+        expect(hovers).toEqual(["v0", null]);
+      });
+
+      it("reports no hover for a finger", async () => {
+        const { adapter, controls } = await mounted();
+        const { hovers } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        controls.pointerMove(beside(adapter, CENTRE, 4), "touch");
+        expect(hovers).toEqual([]);
+      });
+
+      it("clears the hover when the hovered handle goes", async () => {
+        const { adapter, controls } = await mounted();
+        const { hovers } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        controls.pointerMove(beside(adapter, CENTRE, 2));
+        adapter.setEditHandles([]);
+        expect(hovers).toEqual(["v0", null]);
+      });
+
+      it("keeps the handles through a basemap change", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        await adapter.setBasemap(controls.basemap);
+        await controls.settle();
+        controls.pointerDown(CENTRE);
+        controls.pointerUp(CENTRE);
+        expect(drags.map((drag) => drag.phase)).toEqual(["start", "end"]);
+      });
+
+      it("stops reporting after destroy", async () => {
+        const { adapter, controls } = await mounted();
+        const { drags } = record(adapter);
+        adapter.setEditHandles([HANDLE]);
+        adapter.destroy();
+        expect(() => {
+          adapter.setEditHandles([HANDLE]);
+          controls.pointerDown(CENTRE);
+        }).not.toThrow();
+        expect(drags).toEqual([]);
       });
     });
   });

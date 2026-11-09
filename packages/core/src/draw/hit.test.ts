@@ -1,0 +1,155 @@
+import { describe, expect, it } from "vitest";
+import type { PixelPoint } from "../ports/geometry";
+import { hitTestHandle, pickShape } from "./hit";
+import type { DrawShape } from "./types";
+
+const project = (position: { lat: number; lng: number }): PixelPoint => ({
+  x: position.lng * 100,
+  y: -position.lat * 100,
+});
+
+const p = (lng: number, lat: number) => ({ lat, lng });
+
+describe("hitTestHandle", () => {
+  const handles = [
+    { id: "a", point: { x: 100, y: 100 }, kind: "vertex" as const },
+    { id: "b", point: { x: 110, y: 100 }, kind: "vertex" as const },
+    { id: "m", point: { x: 112, y: 100 }, kind: "midpoint" as const },
+  ];
+
+  it("returns the nearest handle within the tolerance", () => {
+    expect(hitTestHandle(handles, { x: 103, y: 100 }, 12)?.id).toBe("a");
+    expect(hitTestHandle(handles, { x: 108, y: 101 }, 12)?.id).toBe("b");
+  });
+
+  it("returns null when every handle is out of reach", () => {
+    expect(hitTestHandle(handles, { x: 300, y: 300 }, 12)).toBeNull();
+    expect(hitTestHandle([], { x: 0, y: 0 }, 12)).toBeNull();
+  });
+
+  it("includes a handle exactly at the tolerance", () => {
+    expect(hitTestHandle(handles, { x: 88, y: 100 }, 12)?.id).toBe("a");
+  });
+
+  it("prefers a vertex to a midpoint at the same distance", () => {
+    const tied = [
+      { id: "m", point: { x: 10, y: 0 }, kind: "midpoint" as const },
+      { id: "v", point: { x: -10, y: 0 }, kind: "vertex" as const },
+    ];
+    expect(hitTestHandle(tied, { x: 0, y: 0 }, 12)?.id).toBe("v");
+  });
+
+  it("prefers the later handle when kind and distance are equal", () => {
+    const tied = [
+      { id: "first", point: { x: 10, y: 0 }, kind: "vertex" as const },
+      { id: "last", point: { x: -10, y: 0 }, kind: "vertex" as const },
+    ];
+    expect(hitTestHandle(tied, { x: 0, y: 0 }, 12)?.id).toBe("last");
+  });
+});
+
+function shape(
+  partial: Partial<DrawShape> & Pick<DrawShape, "kind">,
+): DrawShape {
+  return {
+    id: partial.id ?? partial.kind,
+    label: "Shape",
+    done: true,
+    vertices: [],
+    ...partial,
+  };
+}
+
+describe("pickShape", () => {
+  const polygon = shape({
+    kind: "polygon",
+    id: "poly",
+    vertices: [p(0, 0), p(1, 0), p(1, 1), p(0, 1)],
+  });
+  const line = shape({
+    kind: "line",
+    id: "line",
+    vertices: [p(2, 0), p(3, 0)],
+  });
+  const point = shape({ kind: "point", id: "point", vertices: [p(4, 0)] });
+
+  it("picks a polygon by its inside", () => {
+    expect(pickShape([polygon], { x: 50, y: -50 }, project, 10)).toBe("poly");
+  });
+
+  it("picks a polygon by its edge, just outside", () => {
+    expect(pickShape([polygon], { x: 105, y: -50 }, project, 10)).toBe("poly");
+    expect(pickShape([polygon], { x: 130, y: -50 }, project, 10)).toBeNull();
+  });
+
+  it("picks a line only near it", () => {
+    expect(pickShape([line], { x: 250, y: 4 }, project, 10)).toBe("line");
+    expect(pickShape([line], { x: 250, y: 30 }, project, 10)).toBeNull();
+    expect(pickShape([line], { x: 390, y: 0 }, project, 10)).toBeNull();
+  });
+
+  it("picks a point near it", () => {
+    expect(pickShape([point], { x: 405, y: 5 }, project, 10)).toBe("point");
+    expect(pickShape([point], { x: 430, y: 5 }, project, 10)).toBeNull();
+  });
+
+  it("picks the topmost of overlapping shapes, which is the last drawn", () => {
+    const over = shape({
+      kind: "polygon",
+      id: "over",
+      vertices: [p(0.2, -0.2), p(0.8, -0.2), p(0.5, 0.8)],
+    });
+    expect(pickShape([polygon, over], { x: 50, y: -30 }, project, 10)).toBe(
+      "over",
+    );
+  });
+
+  it("picks a circle by its inside, using its radius on screen", () => {
+    const circle = shape({
+      kind: "circle",
+      id: "circle",
+      vertices: [p(0, 0)],
+      radiusMetres: 5_000_000,
+    });
+    // The radius in pixels comes from projecting a point on the circle.
+    const wide = (position: { lat: number; lng: number }): PixelPoint => ({
+      x: position.lng * 10,
+      y: -position.lat * 10,
+    });
+    expect(pickShape([circle], { x: 5, y: 5 }, wide, 4)).toBe("circle");
+    expect(pickShape([circle], { x: 900, y: 900 }, wide, 4)).toBeNull();
+  });
+
+  it("treats a circle with no radius yet as a point at its centre", () => {
+    const circle = shape({
+      kind: "circle",
+      id: "c",
+      vertices: [p(0, 0)],
+      done: false,
+    });
+    expect(pickShape([circle], { x: 3, y: 3 }, project, 10)).toBe("c");
+    expect(pickShape([circle], { x: 100, y: 100 }, project, 10)).toBeNull();
+  });
+
+  it("treats a polygon draft of two vertices as a line", () => {
+    const draft = shape({
+      kind: "polygon",
+      id: "draft",
+      done: false,
+      vertices: [p(0, 0), p(1, 0)],
+    });
+    expect(pickShape([draft], { x: 50, y: 3 }, project, 10)).toBe("draft");
+  });
+
+  it("returns null for nothing", () => {
+    expect(pickShape([], { x: 0, y: 0 }, project, 10)).toBeNull();
+    expect(
+      pickShape(
+        [shape({ kind: "line", vertices: [] })],
+        { x: 0, y: 0 },
+        project,
+        10,
+      ),
+    ).toBeNull();
+  });
+});

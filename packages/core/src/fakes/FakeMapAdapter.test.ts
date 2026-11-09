@@ -35,6 +35,11 @@ function subjectFor(
         simulateFeatureTap: (layerId, featureId) =>
           adapter.simulateFeatureTap(layerId, featureId),
         simulateFeatureHits: (hits) => adapter.simulateFeatureHits(hits),
+        pointerDown: (latlng, pointer) =>
+          adapter.simulatePointerDown(latlng, pointer),
+        pointerMove: (latlng, pointer) =>
+          adapter.simulatePointerMove(latlng, pointer),
+        pointerUp: (latlng) => adapter.simulatePointerUp(latlng),
         drawnLayers: () => adapter.drawnLayers(),
         simulateFatalError: () => adapter.simulateFatalError(),
         ...(withOptionalControls
@@ -234,6 +239,18 @@ describe("FakeMapAdapter", () => {
     expect(adapter.keyboardEnabled).toBe(false);
     expect(adapter.focusCount).toBe(2);
     expect(host.focusCalls).toEqual([{ preventScroll: true }]);
+  });
+
+  it("keeps a copy of the edit handles it was given", () => {
+    const adapter = new FakeMapAdapter();
+    const handles = [
+      { id: "v0", position: { lat: 1, lng: 2 }, kind: "vertex" as const },
+    ];
+    adapter.setEditHandles(handles);
+    handles.length = 0;
+    expect(adapter.editHandles()).toHaveLength(1);
+    adapter.setEditHandles([]);
+    expect(adapter.editHandles()).toEqual([]);
   });
 
   it("drops its listeners on destroy", async () => {

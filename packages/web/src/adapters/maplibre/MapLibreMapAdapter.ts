@@ -1,10 +1,13 @@
 import type {
   BasemapDefinition,
   Bounds,
+  HandleGesture,
+  HandlePointer,
   LatLng,
   MapAdapter,
   MapBasemapOptions,
   MapClickEvent,
+  MapEditHandle,
   MapEvents,
   MapFeature,
   MapFeatureHit,
@@ -24,9 +27,13 @@ import type {
 } from "@karta/core";
 import {
   clampZoom,
+  dragHandle,
+  handleReach,
+  hitTestHandle,
   MapEngineError,
   metresPerPixel,
   omittedLayers,
+  pressHandle,
   toEngineZoom,
   toNormalisedZoom,
 } from "@karta/core";
@@ -517,6 +524,13 @@ function neutraliseEngineAccessibility(map: MapLibreMap): void {
   canvas.setAttribute("aria-hidden", "true");
 }
 
+/** The parts of a MapLibre mouse or touch event the edit handle gestures read. */
+interface PointerLikeEvent {
+  readonly point: { readonly x: number; readonly y: number };
+  readonly lngLat: { readonly lat: number; readonly lng: number };
+  preventDefault(): void;
+}
+
 interface PendingLoad {
   readonly settleOn: "load" | "style.load";
   readonly resolve: () => void;
@@ -602,6 +616,13 @@ export class MapLibreMapAdapter implements MapAdapter {
   private readonly drawn = new Map<string, DrawnEngineLayers>();
   /** The label font of the loaded style: undefined until read, null when it has none. */
   private labelFontCache: readonly string[] | null | undefined;
+  /** The edit handles the ui last set. They live here, not in the style, so a swap keeps them. */
+  private editHandles: readonly MapEditHandle[] = [];
+  /** The press on an edit handle that has not been released. */
+  private handleGesture: HandleGesture | null = null;
+  private hoveredHandle: string | null = null;
+  /** True after a press on a handle ends, until the next press: the click that follows it is dropped. */
+  private swallowClick = false;
 
   constructor(options: MapLibreMapAdapterOptions = {}) {
     this.workerFailureGraceMs =
@@ -939,6 +960,90 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (map) {
       this.eraseDataLayer(map, id);
     }
+  }
+
+  setEditHandles(handles: readonly MapEditHandle[]): void {
+    this.editHandles = [...handles];
+    if (
+      this.hoveredHandle !== null &&
+      !this.editHandles.some((handle) => handle.id === this.hoveredHandle)
+    ) {
+      this.hoveredHandle = null;
+      this.emitter.emit("handleHover", null);
+    }
+  }
+
+  private projectedHandles() {
+    return this.editHandles.map((handle) => ({
+      id: handle.id,
+      kind: handle.kind,
+      point: this.project(handle.position),
+    }));
+  }
+
+  /**
+   * A press on the map. When it lands on an edit handle it is the handle's:
+   * `preventDefault` stops MapLibre starting a pan or rotate for this press,
+   * and the click that follows it is dropped.
+   */
+  private pressAt(event: PointerLikeEvent, pointer: HandlePointer): void {
+    this.swallowClick = false;
+    this.handleGesture = pressHandle(
+      this.projectedHandles(),
+      { x: event.point.x, y: event.point.y },
+      pointer,
+    );
+    if (!this.handleGesture) {
+      return;
+    }
+    event.preventDefault();
+    this.emitter.emit("handleDrag", {
+      id: this.handleGesture.id,
+      phase: "start",
+      latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
+      moved: false,
+    });
+  }
+
+  private moveTo(event: PointerLikeEvent, pointer: HandlePointer): void {
+    const point = { x: event.point.x, y: event.point.y };
+    if (this.handleGesture) {
+      this.handleGesture = dragHandle(this.handleGesture, point);
+      if (this.handleGesture.moved) {
+        this.emitter.emit("handleDrag", {
+          id: this.handleGesture.id,
+          phase: "move",
+          latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
+          moved: true,
+        });
+      }
+      return;
+    }
+    if (pointer !== "mouse" || this.editHandles.length === 0) {
+      return;
+    }
+    const id =
+      hitTestHandle(this.projectedHandles(), point, handleReach("mouse"))?.id ??
+      null;
+    if (id !== this.hoveredHandle) {
+      this.hoveredHandle = id;
+      this.emitter.emit("handleHover", id);
+    }
+  }
+
+  private releaseAt(event: PointerLikeEvent): void {
+    const gesture = this.handleGesture;
+    this.handleGesture = null;
+    if (!gesture) {
+      return;
+    }
+    this.swallowClick = true;
+    this.emitter.emit("handleDrag", {
+      id: gesture.id,
+      phase: "end",
+      latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
+      moved: gesture.moved,
+    });
   }
 
   private setDataLayer(id: string, layer: DataLayer): void {
@@ -1403,7 +1508,22 @@ export class MapLibreMapAdapter implements MapAdapter {
       }
     });
     listen("rotate", emitView("rotate"));
+    listen("mousedown", (event) => this.pressAt(event, "mouse"));
+    listen("touchstart", (event) => {
+      if (event.points.length === 1) {
+        this.pressAt(event, "touch");
+      }
+    });
+    listen("mousemove", (event) => this.moveTo(event, "mouse"));
+    listen("touchmove", (event) => this.moveTo(event, "touch"));
+    listen("mouseup", (event) => this.releaseAt(event));
+    listen("touchend", (event) => this.releaseAt(event));
+    listen("touchcancel", (event) => this.releaseAt(event));
     listen("click", (event) => {
+      if (this.swallowClick) {
+        this.swallowClick = false;
+        return;
+      }
       const tap = this.featureTapOf(this.hitsAt(event.point.x, event.point.y));
       if (tap) {
         this.emitter.emit("featureTap", tap);
@@ -1709,6 +1829,8 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   private teardownMap(): void {
     this.styleReady = false;
+    this.handleGesture = null;
+    this.hoveredHandle = null;
     this.clearWorkerCheck();
     for (const subscription of this.subscriptions) {
       subscription.unsubscribe();
