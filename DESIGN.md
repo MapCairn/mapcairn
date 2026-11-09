@@ -1,0 +1,77 @@
+# Design system
+
+The map is the hero and the chrome recedes. Karta is calm, neutral and precise, with grouped controls, a floating search pill and a bottom sheet, in the way people already expect from a good maps app. Light and dark are equally polished. The target is WCAG 2.2 AA, built in from the first component.
+
+Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use tokens, so an off-scale value fails typecheck, and a lint test is the backstop for raw literals.
+
+## Principles
+
+1. One of everything: one family, one accent, one icon set, one stroke, one radius per role.
+2. Every control has one owner of its position (`MapChrome`) and one layer (a named z-index).
+3. Nothing is conveyed by colour alone.
+4. Nothing needs a gesture, a hover or a mouse. Every gesture has a keyboard or single-tap equivalent.
+5. The user cannot tell which map engine is running.
+
+## Tokens
+
+- **Colour roles:** surface, surface-raised, text, text-muted, accent, accent-tint, hairline, danger, scrim, focus-ring, map-background. The neutral ramp is OKLCH with a faint cool tint. The accent is one clear blue.
+- **Surfaces:** translucent with backdrop blur, with an opaque fallback and the `-webkit-` prefix. `prefers-contrast: more` and `prefers-reduced-transparency` make them opaque and remove blur. Contrast is computed over the worst-case backdrops (pure white and pure black map).
+- **Spacing:** 4, 8, 12, 16, 24, 32. Screen inset is 12.
+- **Radii:** pill 24, sheet 20, control and card 14, inner 10. Fully circular elements use 50%.
+- **Elevation:** two shadows, floating and sheet, each with light and dark values. No borders on floating elements. Hairlines only inside lists and between grouped controls.
+- **Type:** IBM Plex Sans only, self-hosted through Fontsource (variable, Latin and Latin Extended), weights 400 and 600. Sizes 13, 15, 17 and 22, defined in rem with a line height and tracking each. Nothing below 13px. Numbers use `tabular-nums`. Inputs are 17px, never below 16px. The fallback stack is `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`, which also covers non-Latin place names.
+- **Size:** controls are 48px minimum, targets never below 44px, with at least 8px between neighbours.
+- **Icons:** `lucide-react` only, imported by name, 24px, one stroke-width token, through the `Icon` component.
+- **Focus ring:** two tones (an inner surface ring and an outer ring, 2px each) so it shows on any basemap. Every interactive element and the focused map use it.
+- **Motion:** 120, 200 and 320ms, one easing curve, one spring for the sheet. Only transform and opacity animate. `prefers-reduced-motion` turns motion off, including each engine's own animation.
+- **Z layers, bottom to top:** map, mapOverlay, chrome, chromeRaised, sheet, toolbar, popover, toast. Components name a layer and never write a number. The tokens file and the engine style file are the only places raw z-index values may appear.
+
+## Layout and slots
+
+`MapChrome` owns the position of everything floating over the map. It is `pointer-events: none`, and each slot's contents are `pointer-events: auto`.
+
+| Slot | Contents |
+| --- | --- |
+| top-start | search pill |
+| end-stack | compass (only when rotated), main control group (Map options, Measure, Locate me), zoom control group (when shown) |
+| bottom-start | scale readout, cursor coordinates (desktop) |
+| bottom-end | attribution |
+| bottom-centre | measure toolbar, toasts, tile-error banner |
+| sheet or side panel | basemap, pin, settings, help |
+
+Slots use flow layout with gaps from the spacing scale, so neighbours push apart instead of overlapping. On narrow screens the sheet is a bottom sheet with peek, half and full detents. From 768px wide, and on any screen shorter than about 500px, it is a floating side panel on the left. The bottom slots ride above the sheet and hide at the full detent. A layout collision test checks every viewport and state.
+
+## Components and accessibility contracts
+
+Native elements first. No tabindex above 0. Every interactive component has an accessible name and a stable `data-testid`, and every floating element has `data-chrome`.
+
+| Component | Contract |
+| --- | --- |
+| `IconButton` | A `button` named for the action ("Zoom in"). Visible labels are contained in the name. |
+| `ControlGroup` | Stacked icon buttons with hairline dividers. A group, not a toolbar. |
+| `SearchPill` | `role="search"` with an ARIA 1.2 combobox: `aria-expanded`, `aria-controls`, `aria-activedescendant`. Results never take focus. |
+| `Sheet` | A labelled dialog. Non-modal at peek and half. At full it is modal, the background is `inert` and Escape closes it. The handle is a button that cycles detents with Enter or Space and moves with the arrow keys. On desktop it is a labelled complementary region. |
+| `Attribution` | A "Map credits" button with `aria-expanded` and `aria-controls`. The popover is a labelled region with real links and returns focus on close. |
+| `Switch`, `Slider`, `SegmentedControl` | Radix primitives wrapped in our own components, with visible labels and values. |
+| `Tooltip` | Supplements a name, never replaces one. Opens on focus and hover, closes on Escape, absent on touch. |
+| `LiveRegion` | The one announcer: a polite and an assertive region mounted once, throttled and de-duplicated. Nothing else creates live regions. |
+| `SkipLink` | First focusable element. Moves focus to the map region. |
+| `VisuallyHidden` | The one way to provide screen-reader-only text. |
+
+Map region: a focusable region named "Map", described by hidden keyboard instructions. Arrow keys pan, plus and minus zoom, Shift with arrows rotates where supported, Home or 0 resets north, P drops a pin, Escape closes the active surface.
+
+Gesture equivalents: long-press pin has "Drop pin at map centre" and the P key. Pinch and double-tap have the zoom buttons and +/-. Rotation has Shift with arrows and the compass. Sheet drag has the handle button. Measure taps have "Add point at map centre".
+
+## Engine parity
+
+| Capability | Leaflet | MapLibre |
+| --- | --- | --- |
+| Rotation and compass | no | yes |
+| Feature query on tap | no | yes |
+| Everything else | identical through the adapter | identical through the adapter |
+
+The UI hides unsupported features through capability flags.
+
+## Exempt surfaces
+
+The tokens file, the engine style file, committed basemap assets and map style definitions are exempt from the harmony lint. Text baked into basemap tiles comes from the tile source and keeps its own typeface.

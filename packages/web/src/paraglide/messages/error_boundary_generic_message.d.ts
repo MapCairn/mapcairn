@@ -1,9 +1,0 @@
-/**
-* | output |
-* | --- |
-* | "An unexpected error occurred. Reloading the page usually fixes it." |
-*
-*/
-export const error_boundary_generic_message: ((inputs?: Error_Boundary_Generic_MessageInputs, options?: { locale?: "en" | "af" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Error_Boundary_Generic_MessageInputs, { locale?: "en" | "af" }, {}>;
-export type LocalizedString = import("../runtime.js").LocalizedString;
-export type Error_Boundary_Generic_MessageInputs = {};
