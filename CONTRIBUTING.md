@@ -59,4 +59,4 @@ Do not deploy the production Worker without explicit permission.
 
 ## Security and licence
 
-Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). Contributions are licensed under [AGPL-3.0](LICENSE).
+Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). Contributions are licensed under the licence of the part they change: [Apache-2.0](packages/core/LICENSE) for `packages/core`, `packages/map`, `packages/react` and `packages/theme`, and [AGPL-3.0](LICENSE) for everything else.

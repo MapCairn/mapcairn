@@ -18,6 +18,6 @@ Place search and reverse geocoding use [OpenStreetMap Nominatim](https://nominat
 
 ## Software
 
-Karta is licensed under [AGPL-3.0](LICENSE). Dependency licences are recorded in the installed packages' licence files.
+The Karta SDK packages (`core`, `map`, `react` and `theme`) are licensed under [Apache-2.0](packages/core/LICENSE). The reference host in `packages/web` is licensed under [AGPL-3.0](LICENSE). Dependency licences are recorded in the installed packages' licence files.
 
 Public Sans and Source Serif 4 are self-hosted under the SIL Open Font License 1.1.

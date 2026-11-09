@@ -51,4 +51,11 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`SECURITY.
 
 ## Licence
 
-Licensed under [AGPL-3.0](LICENSE). If you host a modified version, you must publish its source. See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.
+Karta is licensed in two parts.
+
+| Part | Licence |
+|---|---|
+| SDK packages: `packages/core`, `packages/map`, `packages/react`, `packages/theme` | [Apache-2.0](packages/core/LICENSE), so you can use them in open or closed source projects |
+| Reference host: `packages/web` and the rest of the repository | [AGPL-3.0](LICENSE). If you host a modified version, you must publish its source |
+
+See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.

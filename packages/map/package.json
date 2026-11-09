@@ -2,7 +2,7 @@
   "name": "@karta/map",
   "version": "1.0.0",
   "description": "Generic map rendering and UI components for Karta",
-  "license": "AGPL-3.0-only",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
