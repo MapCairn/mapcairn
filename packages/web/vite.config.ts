@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { reactRouter } from "@react-router/dev/vite";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
@@ -101,6 +102,13 @@ export default defineConfig(({ mode, command }) => {
       },
     },
     test: {
+      // The worker imports the built server bundle; tests use a stand-in so
+      // they pass on a fresh checkout, before any build.
+      alias: {
+        "../build/server/index.js": fileURLToPath(
+          new URL("./workers/testServerBuild.ts", import.meta.url),
+        ),
+      },
       environment: "happy-dom",
       setupFiles: ["./vitest.setup.ts"],
       globals: true,
