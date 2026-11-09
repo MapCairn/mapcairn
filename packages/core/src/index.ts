@@ -2,6 +2,7 @@ export * from "./announce";
 export * from "./basemaps";
 export * from "./fakes";
 export * from "./format";
+export * from "./geometry";
 export * from "./keyboard";
 export * from "./layers";
 export * from "./layout";
