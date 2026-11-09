@@ -74,4 +74,22 @@ The UI hides unsupported features through capability flags.
 
 ## Exempt surfaces
 
-The tokens file, the engine style file, committed basemap assets and map style definitions are exempt from the harmony lint. Text baked into basemap tiles comes from the tile source and keeps its own typeface.
+These surfaces hold raw values on purpose and are exempt from the harmony lint (`npm run lint:harmony`, `scripts/harmony`):
+
+- the tokens file (`packages/theme/src/tokens.css.ts`, `tokenValues.ts` and the contrast code and tests)
+- the engine style file (`packages/web/src/adapters/mapEngine.css.ts`), the only place engine selectors and raw engine z-index values may appear
+- committed basemap assets and map style definitions (`packages/core/src/basemaps`)
+- tests, fixtures and test support
+- `node_modules` and build output
+
+Text baked into basemap tiles comes from the tile source and keeps its own typeface. The inline theme script in `packages/web/src/root.tsx` is a string, so no rule reads it. The scanner's header and `scripts/harmony/config.mjs` list the same surfaces.
+
+Two other lists exist, and each has one home. `scripts/harmony/allowlist.mjs` holds one-off, justified exceptions (rule, file, snippet and reason), and a stale entry fails the lint. `scripts/harmony/legacyPaths.json` holds the old code that the app rebuild deletes. It is the only exemption for legacy code, and `biome.jsonc` mirrors it, checked by a test. Empty it when the old code is gone.
+
+## What the lint checks, and where
+
+| Rule | Enforced by |
+| --- | --- |
+| Colour literals, off-scale radius, spacing, font size and weight, font family, raw z-index, literal motion durations, `outline: none` without `focusRing`, `position: absolute` and `fixed` outside floating surfaces, inline styles, engine selectors, `tabindex` above 0, pinch-zoom blocking, live regions outside `LiveRegion` and `StatusMessage`, icon sizing, icon-only buttons without a name, engine controls, module-level services | harmony scanner (`scripts/harmony`) |
+| Icon packages, namespace and default imports of `lucide-react`, accessibility rules, browser globals outside adapters, core purity, inline style attributes on DOM elements, `!important` in CSS | Biome (`biome.jsonc`) |
+| Engine libraries outside the engine adapters, Radix outside four primitives, adapters outside the composition root, ports as types only, core limited to pure packages | dependency-cruiser (`.dependency-cruiser.cjs`) |

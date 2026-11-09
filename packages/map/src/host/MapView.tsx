@@ -186,6 +186,7 @@ export function MapView({
 
   return (
     <>
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the focused map region is the one keyboard and pointer target for panning, zooming, pins and long-press; each gesture has a button or key equivalent. */}
       <section
         ref={hostRef}
         aria-label="Map"

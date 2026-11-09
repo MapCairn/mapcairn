@@ -1,0 +1,122 @@
+[
+  {
+    "path": "packages/core/src/data/",
+    "reason": "Old GeoJSON loader that calls fetch directly."
+  },
+  {
+    "path": "packages/core/src/layers/createLayerConfig.ts",
+    "reason": "Old Leaflet style configuration; imports Leaflet types."
+  },
+  {
+    "path": "packages/map/src/components/",
+    "reason": "Old map components; replaced by ui, chrome, tools and panels."
+  },
+  {
+    "path": "packages/map/src/constants/",
+    "reason": "Old basemap and token constants; replaced by core basemaps and theme tokens."
+  },
+  {
+    "path": "packages/map/src/context/",
+    "reason": "Old DomainProvider context."
+  },
+  {
+    "path": "packages/map/src/data/",
+    "reason": "Old Nominatim and location search code that calls fetch directly."
+  },
+  {
+    "path": "packages/map/src/hooks/",
+    "reason": "Old hooks tied to the old components."
+  },
+  {
+    "path": "packages/map/src/index.ts",
+    "reason": "Old barrel exporting the old components."
+  },
+  {
+    "path": "packages/map/src/shared.css.ts",
+    "reason": "Old shared styles."
+  },
+  {
+    "path": "packages/map/src/testFixtures/",
+    "reason": "Fixtures for the old DomainProvider."
+  },
+  {
+    "path": "packages/map/src/theme/",
+    "reason": "Old map token fallbacks."
+  },
+  {
+    "path": "packages/react/src/hooks/safeStorage.ts",
+    "reason": "Direct localStorage access for the old theme preference hook."
+  },
+  {
+    "path": "packages/react/src/hooks/useResolvedDarkTheme.ts",
+    "reason": "Reads the old theme preference store."
+  },
+  {
+    "path": "packages/react/src/hooks/useThemePreference.ts",
+    "reason": "Old theme preference store; replaced by the SettingsStore and ThemeSource ports."
+  },
+  {
+    "path": "packages/web/src/App.css.ts",
+    "reason": "Old application shell styles."
+  },
+  {
+    "path": "packages/web/src/App.emptyCatalogue.test.tsx",
+    "reason": "Test of the old shell."
+  },
+  {
+    "path": "packages/web/src/App.tsx",
+    "reason": "Old application shell; rebuilt on the composition root."
+  },
+  {
+    "path": "packages/web/src/clientErrorReporting.ts",
+    "reason": "Calls fetch directly; rebuilt as an adapter-backed reporter in the app rebuild."
+  },
+  {
+    "path": "packages/web/src/components/",
+    "reason": "Old host components."
+  },
+  {
+    "path": "packages/web/src/entry.client.tsx",
+    "reason": "Boots the old theme store and client error reporter; rewritten in the app rebuild."
+  },
+  {
+    "path": "packages/web/src/hooks/",
+    "reason": "Old host hooks (permalink, sheet gestures)."
+  },
+  {
+    "path": "packages/web/src/index.css",
+    "reason": "Old global stylesheet with hand-written Leaflet overrides and token values; the engine rules now live in adapters/mapEngine.css.ts."
+  },
+  {
+    "path": "packages/web/src/layers/",
+    "reason": "Old layer registry stub."
+  },
+  {
+    "path": "packages/web/src/root.css.ts",
+    "reason": "Imports the old app theme; rewritten in the app rebuild."
+  },
+  {
+    "path": "packages/web/src/root.tsx",
+    "reason": "Document shell that imports the old root styles; rewritten in the app rebuild. Its viewport meta is still scanned (see the scanner header)."
+  },
+  {
+    "path": "packages/web/src/routes/home.tsx",
+    "reason": "Renders the old App shell; rewritten in the app rebuild."
+  },
+  {
+    "path": "packages/web/src/routes/privacy.tsx",
+    "reason": "Renders the old PrivacyPolicy component; rewritten in the app rebuild."
+  },
+  {
+    "path": "packages/web/src/shared.css.ts",
+    "reason": "Old shared styles."
+  },
+  {
+    "path": "packages/web/src/stores/",
+    "reason": "Old zustand UI store."
+  },
+  {
+    "path": "packages/web/src/theme/",
+    "reason": "Old app theme contract."
+  }
+]

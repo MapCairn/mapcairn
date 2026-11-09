@@ -5,3 +5,5 @@ pre-commit:
       stage_fixed: true
     depcruise:
       run: npm run depcruise
+    harmony:
+      run: npm run lint:harmony

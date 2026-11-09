@@ -42,7 +42,7 @@ flowchart TD
 | adapters | `packages/web/src/adapters` | ports, core | be imported by anything except the composition root |
 | composition root | `packages/web/src/composition` | everything | be imported as a singleton; it exposes `createServices()` only |
 
-`npm run lint` enforces these rules with dependency-cruiser (layers, engine imports), Biome (restricted imports and globals, accessibility rules) and source-scanning Vitest tests (harmony rules). A violation fails the build.
+`npm run lint` enforces these rules with dependency-cruiser (layers, engine imports), Biome (restricted imports and globals, accessibility rules) and the harmony scanner in `scripts/harmony` (style, markup and wiring rules), whose rules are proven by Vitest tests in `packages/core/src/lint`. A violation fails the build.
 
 ## Ports
 

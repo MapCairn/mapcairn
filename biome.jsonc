@@ -10,16 +10,230 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "correctness": {
+        "useExhaustiveDependencies": "warn"
+      },
+      "a11y": {
+        "noAriaHiddenOnFocusable": "error",
+        "noNoninteractiveElementInteractions": "error",
+        "noNoninteractiveTabindex": "error",
+        "noPositiveTabindex": "error",
+        "noStaticElementInteractions": "error",
+        "useButtonType": "error",
+        "useFocusableInteractive": "error",
+        "useKeyWithClickEvents": "error",
+        "useSemanticElements": "error"
+      },
       "complexity": {
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": { "maxAllowedComplexity": 25 }
-        }
+        },
+        "noImportantStyles": "error"
       },
-      "correctness": {
-        "useExhaustiveDependencies": "warn"
+      "nursery": {
+        "noJsRestrictedProperties": {
+          "level": "error",
+          "options": {
+            "entries": [
+              {
+                "object": "navigator",
+                "property": "geolocation",
+                "message": "Geolocation belongs in an adapter behind the LocationProvider port. Use the useLocation hook."
+              },
+              {
+                "object": "navigator",
+                "property": "clipboard",
+                "message": "The clipboard belongs in an adapter behind the ClipboardPort. Use the useClipboard hook."
+              },
+              {
+                "object": "window",
+                "property": "localStorage",
+                "message": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook."
+              },
+              {
+                "object": "globalThis",
+                "property": "localStorage",
+                "message": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook."
+              },
+              {
+                "object": "self",
+                "property": "localStorage",
+                "message": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook."
+              },
+              {
+                "object": "window",
+                "property": "sessionStorage",
+                "message": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook."
+              },
+              {
+                "object": "globalThis",
+                "property": "sessionStorage",
+                "message": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook."
+              },
+              {
+                "object": "self",
+                "property": "sessionStorage",
+                "message": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook."
+              },
+              {
+                "object": "window",
+                "property": "matchMedia",
+                "message": "Media queries belong in an adapter (ThemeSource or DevicePreferences). Use the matching hook."
+              },
+              {
+                "object": "globalThis",
+                "property": "matchMedia",
+                "message": "Media queries belong in an adapter (ThemeSource or DevicePreferences). Use the matching hook."
+              },
+              {
+                "object": "self",
+                "property": "matchMedia",
+                "message": "Media queries belong in an adapter (ThemeSource or DevicePreferences). Use the matching hook."
+              },
+              {
+                "object": "window",
+                "property": "fetch",
+                "message": "Network access belongs in packages/web/src/adapters behind a port such as SearchProvider."
+              },
+              {
+                "object": "globalThis",
+                "property": "fetch",
+                "message": "Network access belongs in packages/web/src/adapters behind a port such as SearchProvider."
+              },
+              {
+                "object": "self",
+                "property": "fetch",
+                "message": "Network access belongs in packages/web/src/adapters behind a port such as SearchProvider."
+              },
+              {
+                "object": "window",
+                "property": "location",
+                "message": "URL state belongs in the UrlState adapter. Use the useUrlState hook."
+              },
+              {
+                "object": "globalThis",
+                "property": "location",
+                "message": "URL state belongs in the UrlState adapter. Use the useUrlState hook."
+              },
+              {
+                "object": "self",
+                "property": "location",
+                "message": "URL state belongs in the UrlState adapter. Use the useUrlState hook."
+              },
+              {
+                "object": "window",
+                "property": "history",
+                "message": "URL state belongs in the UrlState adapter. Use the useUrlState hook."
+              },
+              {
+                "object": "globalThis",
+                "property": "history",
+                "message": "URL state belongs in the UrlState adapter. Use the useUrlState hook."
+              },
+              {
+                "object": "self",
+                "property": "history",
+                "message": "URL state belongs in the UrlState adapter. Use the useUrlState hook."
+              },
+              {
+                "object": "document",
+                "property": "location",
+                "message": "URL state belongs in the UrlState adapter. Use the useUrlState hook."
+              }
+            ]
+          }
+        },
+        "noNonScalableViewport": "error"
+      },
+      "suspicious": {
+        "noDocumentCookie": "error"
       },
       "style": {
+        "noInlineStyles": "error",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "localStorage": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook.",
+              "sessionStorage": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook.",
+              "matchMedia": "Media queries belong in an adapter (ThemeSource or DevicePreferences). Use the matching hook.",
+              "fetch": "Network access belongs in packages/web/src/adapters behind a port such as SearchProvider.",
+              "location": "URL state belongs in the UrlState adapter. Use the useUrlState hook.",
+              "history": "URL state belongs in the UrlState adapter. Use the useUrlState hook."
+            }
+          }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "lucide-react": {
+                "importNames": ["default"],
+                "message": "Import lucide icons by name from the package root: import { Search } from \"lucide-react\"."
+              }
+            },
+            "patterns": [
+              {
+                "group": ["lucide-react"],
+                "importNamePattern": "([*]|default)",
+                "message": "Import lucide icons by name from the package root: import { Search } from \"lucide-react\". Namespace and default imports defeat tree shaking."
+              },
+              {
+                "group": [
+                  "lucide-react/*",
+                  "lucide",
+                  "lucide/*",
+                  "lucide-static",
+                  "lucide-static/*",
+                  "lucide-vue*",
+                  "lucide-svelte",
+                  "lucide-solid",
+                  "lucide-preact",
+                  "lucide-angular"
+                ],
+                "message": "Only the root of lucide-react is allowed: no dynamic, deep or sibling icon packages."
+              },
+              {
+                "group": [
+                  "react-icons",
+                  "react-icons/*",
+                  "@heroicons/*",
+                  "heroicons",
+                  "@tabler/icons*",
+                  "@phosphor-icons/*",
+                  "phosphor-react",
+                  "@fortawesome/*",
+                  "@mui/icons-material",
+                  "@mui/icons-material/*",
+                  "@radix-ui/react-icons",
+                  "react-feather",
+                  "feather-icons",
+                  "@iconify/*",
+                  "@iconify-icons/*",
+                  "@primer/octicons*",
+                  "@carbon/icons*",
+                  "@ant-design/icons*",
+                  "bootstrap-icons",
+                  "react-bootstrap-icons",
+                  "remixicon",
+                  "@remixicon/*",
+                  "ionicons",
+                  "ionicons/*",
+                  "@fluentui/react-icons",
+                  "material-icons",
+                  "@material-design-icons/*",
+                  "@material-symbols/*",
+                  "boxicons",
+                  "simple-icons",
+                  "@iconscout/*",
+                  "grommet-icons"
+                ],
+                "message": "lucide-react is the only icon package."
+              }
+            ]
+          }
+        },
         "useBlockStatements": "error",
         "useConst": "error"
       }
@@ -58,12 +272,161 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx"],
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/vitest.setup.ts",
+        "packages/web/e2e/**"
+      ],
       "linter": {
         "rules": {
           "correctness": {
             "noComponentHookFactories": "off"
+          },
+          "nursery": { "noJsRestrictedProperties": "off" },
+          "style": { "noRestrictedGlobals": "off", "noInlineStyles": "off" }
+        }
+      }
+    },
+    {
+      "includes": ["packages/core/src/**"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noJsRestrictedProperties": {
+              "level": "error",
+              "options": {
+                "entries": [
+                  {
+                    "object": "window",
+                    "message": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead."
+                  },
+                  {
+                    "object": "globalThis",
+                    "message": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead."
+                  },
+                  {
+                    "object": "document",
+                    "message": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead."
+                  },
+                  {
+                    "object": "navigator",
+                    "message": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead."
+                  },
+                  {
+                    "object": "self",
+                    "message": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead."
+                  }
+                ]
+              }
+            }
+          },
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "window": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "document": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "navigator": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "localStorage": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "sessionStorage": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "location": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "history": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "matchMedia": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "fetch": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "self": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "requestAnimationFrame": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "cancelAnimationFrame": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "XMLHttpRequest": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "WebSocket": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "indexedDB": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "HTMLElement": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "Element": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "Node": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead.",
+                  "Event": "packages/core is pure logic and must not touch the DOM, the browser or the network. Take a port instead."
+                }
+              }
+            }
           }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/core/src/**/*.test.ts",
+        "packages/core/src/**/*.test.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "nursery": { "noJsRestrictedProperties": "off" },
+          "style": { "noRestrictedGlobals": "off" }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/harmony/lex.mjs"],
+      "linter": {
+        "rules": {
+          "complexity": { "noExcessiveCognitiveComplexity": "off" }
+        }
+      }
+    },
+    {
+      "includes": ["packages/core/src/lint/**"],
+      "linter": {
+        "rules": {
+          "suspicious": { "noTemplateCurlyInString": "off" }
+        }
+      }
+    },
+    {
+      "includes": ["packages/web/src/adapters/**"],
+      "linter": {
+        "rules": {
+          "nursery": { "noJsRestrictedProperties": "off" },
+          "style": { "noRestrictedGlobals": "off" }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/core/src/data/**",
+        "packages/core/src/layers/createLayerConfig.ts",
+        "packages/map/src/components/**",
+        "packages/map/src/constants/**",
+        "packages/map/src/context/**",
+        "packages/map/src/data/**",
+        "packages/map/src/hooks/**",
+        "packages/map/src/index.ts",
+        "packages/map/src/shared.css.ts",
+        "packages/map/src/testFixtures/**",
+        "packages/map/src/theme/**",
+        "packages/react/src/hooks/safeStorage.ts",
+        "packages/react/src/hooks/useResolvedDarkTheme.ts",
+        "packages/react/src/hooks/useThemePreference.ts",
+        "packages/web/src/App.css.ts",
+        "packages/web/src/App.emptyCatalogue.test.tsx",
+        "packages/web/src/App.tsx",
+        "packages/web/src/clientErrorReporting.ts",
+        "packages/web/src/components/**",
+        "packages/web/src/entry.client.tsx",
+        "packages/web/src/hooks/**",
+        "packages/web/src/index.css",
+        "packages/web/src/layers/**",
+        "packages/web/src/root.css.ts",
+        "packages/web/src/root.tsx",
+        "packages/web/src/routes/home.tsx",
+        "packages/web/src/routes/privacy.tsx",
+        "packages/web/src/shared.css.ts",
+        "packages/web/src/stores/**",
+        "packages/web/src/theme/**"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": { "noNoninteractiveElementInteractions": "off" },
+          "nursery": { "noJsRestrictedProperties": "off" },
+          "style": { "noInlineStyles": "off", "noRestrictedGlobals": "off" }
         }
       }
     }

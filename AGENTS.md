@@ -25,7 +25,7 @@ npm run dev -w @karta/web
 
 `npm test` runs Vitest across `packages/*`. Coverage thresholds are 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has lower floors (about 70% statements and lines), because its layout and touch-gesture code is covered by Playwright. Aim for 100% behavioural coverage. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
 
-`typecheck` checks every workspace, including web route types. `lint` runs Biome and dependency-cruiser. Pre-commit runs Biome on staged files and dependency-cruiser, but does not run typecheck, tests or coverage.
+`typecheck` checks every workspace, including web route types. `lint` runs Biome, dependency-cruiser and the harmony scanner (`npm run lint:harmony`, see DESIGN.md). Pre-commit runs Biome on staged files, dependency-cruiser and the harmony scanner, but does not run typecheck, tests or coverage.
 
 CI checks lint, typecheck, coverage and build. Lighthouse and Playwright have separate workflows.
 
