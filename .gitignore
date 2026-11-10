@@ -18,4 +18,7 @@ playwright/.cache/
 # Cloudflare API token
 .env.cloudflare
 
+# npm token
+.env.npm
+
 .playwright-mcp/
