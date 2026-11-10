@@ -15,6 +15,7 @@ import { LocalStorageSettingsStore } from "../adapters/settings/LocalStorageSett
 import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
 import { BASEMAP_CATALOGUE } from "../basemaps";
+import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
 import { createHostLayerRegistry } from "../layers";
 import { readTestOverrides } from "./testSeam";
 
@@ -58,7 +59,8 @@ export function createServices(options: CreateServicesOptions = {}): Services {
   const real: Services = {
     // The adapter loads MapLibre lazily, so building one costs nothing
     // until it mounts.
-    createMapAdapter: createMapLibreMapAdapter,
+    createMapAdapter: () =>
+      createMapLibreMapAdapter({ workerCacheKey: WORKER_CACHE_KEY }),
     search: new NominatimSearchProvider(),
     location: new BrowserLocationProvider(),
     settings: new LocalStorageSettingsStore(),

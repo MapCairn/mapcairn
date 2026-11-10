@@ -50,6 +50,7 @@ import type {
   StyleSpecification,
   Subscription,
 } from "maplibre-gl";
+import { withCacheKey } from "../../constants/workerCacheKey";
 import { Emitter } from "../shared/emitter";
 import { heatmapLayer } from "./heatmapLayer";
 import { propertyLook, ruleLook } from "./lookExpressions";
@@ -92,15 +93,26 @@ let engineLoader: Promise<MapLibreModule> | undefined;
  *   engine with this module. A rejected load is not cached, so a chunk that
  *   failed to download (for example offline) is fetched again on the next
  *   mount.
+ * @remarks A worker script enforces the Content Security Policy of its own
+ *   response, and the hashed worker file is cached as immutable, so a copy
+ *   fetched before the policy changed would keep the old policy for a year.
+ *   `workerCacheKey` is added to the worker URL so that a changed policy is a
+ *   new address and every device fetches the worker again.
+ * @param workerCacheKey - Names the policy the worker is served with; the
+ *   worker URL is left as it is when this is absent.
  */
-function loadEngine(): Promise<MapLibreModule> {
+export function loadEngine(workerCacheKey?: string): Promise<MapLibreModule> {
   engineLoader ??= Promise.all([
     import("maplibre-gl"),
     import("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"),
     import("maplibre-gl/dist/maplibre-gl.css"),
   ])
     .then(([maplibre, worker]) => {
-      maplibre.setWorkerUrl(worker.default);
+      maplibre.setWorkerUrl(
+        workerCacheKey === undefined
+          ? worker.default
+          : withCacheKey(worker.default, workerCacheKey),
+      );
       return maplibre;
     })
     .catch((error: unknown) => {
@@ -170,6 +182,11 @@ export const WORKER_FAILURE_GRACE_MS = 5000;
 export interface MapLibreMapAdapterOptions {
   /** Overrides {@link WORKER_FAILURE_GRACE_MS}, for example 0 in a test. */
   readonly workerFailureGraceMs?: number;
+  /**
+   * Added to the engine worker's URL, so a worker cached under an older
+   * Content Security Policy is fetched again when the policy changes.
+   */
+  readonly workerCacheKey?: string;
 }
 
 /** Whether a camera event came from the person (a gesture), not from code. */
@@ -600,6 +617,7 @@ interface WorkerCheck {
 export class MapLibreMapAdapter implements MapAdapter {
   private readonly emitter = new Emitter<MapEvents>();
   private readonly workerFailureGraceMs: number;
+  private readonly workerCacheKey: string | undefined;
   private map: MapLibreMap | undefined;
   private host: MapHostElement | undefined;
   private basemap: BasemapDefinition | undefined;
@@ -635,6 +653,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   constructor(options: MapLibreMapAdapterOptions = {}) {
     this.workerFailureGraceMs =
       options.workerFailureGraceMs ?? WORKER_FAILURE_GRACE_MS;
+    this.workerCacheKey = options.workerCacheKey;
   }
 
   async mount(host: MapHostElement, options: MapMountOptions): Promise<void> {
@@ -660,7 +679,7 @@ export class MapLibreMapAdapter implements MapAdapter {
 
     let maplibre: MapLibreModule;
     try {
-      maplibre = await loadEngine();
+      maplibre = await loadEngine(this.workerCacheKey);
     } catch (error) {
       throw new MapEngineError(
         "load-failed",
@@ -1991,6 +2010,8 @@ export class MapLibreMapAdapter implements MapAdapter {
 }
 
 /** Builds a fresh MapLibre adapter. The composition root's adapter factory. */
-export function createMapLibreMapAdapter(): MapAdapter {
-  return new MapLibreMapAdapter();
+export function createMapLibreMapAdapter(
+  options: MapLibreMapAdapterOptions = {},
+): MapAdapter {
+  return new MapLibreMapAdapter(options);
 }
