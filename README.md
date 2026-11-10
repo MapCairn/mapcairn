@@ -23,7 +23,6 @@ Karta is a reusable SDK for public-interest map platforms, with a reference host
 - React, TypeScript, React Router framework mode, Vite and MapLibre GL JS.
 - Vanilla-extract styling, IBM Plex Sans (self-hosted) and Lucide icons.
 - Cloudflare Workers for server rendering and static assets.
-- English only (British English).
 
 ## Development
 
@@ -103,8 +102,6 @@ const example: TileLayerDefinition = {
 
 export default example;
 ```
-
-The fire, flood, cyclone, volcano and drought layers were added this way, in one commit with no code change.
 
 ### Add a routing provider
 
