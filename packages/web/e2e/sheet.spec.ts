@@ -186,7 +186,7 @@ test.describe("settings sheet on a phone", () => {
     await expect(mapPage.chrome).toHaveAttribute("data-layout", "sheet");
   });
 
-  test("opens from the Settings button as a sheet titled Settings holding only Settings and Help", async ({
+  test("opens from the Settings button as a sheet titled Settings and help holding only Settings and Help", async ({
     page,
     mapPage,
   }) => {
@@ -200,7 +200,9 @@ test.describe("settings sheet on a phone", () => {
     );
     await mapPage.openSettings();
 
-    await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "Settings and help" }),
+    ).toBeVisible();
     await expect(mapPage.settingsButton).toHaveAttribute(
       "aria-expanded",
       "true",
@@ -211,6 +213,10 @@ test.describe("settings sheet on a phone", () => {
     );
     await expect(page.getByRole("region", { name: "Settings" })).toBeAttached();
     await expect(page.getByRole("region", { name: "Help" })).toBeAttached();
+    // The sheet title and the Settings section must not share a name.
+    await expect(
+      mapPage.sheet.getByRole("heading", { name: "Settings", exact: true }),
+    ).toHaveCount(1);
     await expect(mapPage.basemapPicker).toHaveCount(0);
   });
 
@@ -333,7 +339,7 @@ test.describe("map options panel on a desktop", () => {
     await expect(mapPage.locateButton).toBeFocused();
   });
 
-  test("Settings opens the same side panel, titled Settings", async ({
+  test("Settings opens the same side panel, titled Settings and help", async ({
     page,
     mapPage,
   }) => {
@@ -341,7 +347,7 @@ test.describe("map options panel on a desktop", () => {
     await mapPage.openSettings();
 
     await expect(
-      page.getByRole("complementary", { name: "Settings" }),
+      page.getByRole("complementary", { name: "Settings and help" }),
     ).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(mapPage.settingsButton).toBeFocused();

@@ -6,9 +6,9 @@ const title = (sheetSection: SheetSection, directionsActive = false) =>
   sheetTitle({ sheetSection, directionsActive });
 
 describe("sheetTitle", () => {
-  it("is Settings for the settings and help sections", () => {
-    expect(title("settings")).toBe("Settings");
-    expect(title("help")).toBe("Settings");
+  it("is Settings and help for the settings and help sections", () => {
+    expect(title("settings")).toBe("Settings and help");
+    expect(title("help")).toBe("Settings and help");
   });
 
   it("is Map options for every other section, the pin card included", () => {

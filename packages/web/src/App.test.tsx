@@ -419,10 +419,14 @@ describe("Settings button", () => {
 
     fireEvent.click(settings());
     expect(sheet()).toHaveAttribute("data-state", "open");
-    expect(title()).toHaveTextContent("Settings");
+    expect(title()).toHaveTextContent("Settings and help");
     expect(
       within(sheet()).getByRole("region", { name: "Settings" }),
     ).toBeInTheDocument();
+    // The sheet title and the Settings section must not share a name.
+    expect(
+      within(sheet()).getAllByRole("heading", { name: "Settings" }),
+    ).toHaveLength(1);
     expect(
       within(sheet()).getByRole("region", { name: "Help" }),
     ).toBeInTheDocument();
@@ -475,7 +479,7 @@ describe("Settings button", () => {
 
     fireEvent.click(settings());
     expect(sheet()).toHaveAttribute("data-state", "open");
-    expect(title()).toHaveTextContent("Settings");
+    expect(title()).toHaveTextContent("Settings and help");
     expect(settings()).toHaveAttribute("aria-expanded", "true");
     expect(options()).toHaveAttribute("aria-expanded", "false");
 
@@ -523,7 +527,7 @@ describe("Settings over other surfaces", () => {
     fireEvent.click(settings());
     fireEvent.keyDown(sheet(), { key: "Escape" });
     expect(sheet()).toHaveAttribute("data-state", "closed");
-    expect(title(true)).toHaveTextContent("Settings");
+    expect(title(true)).toHaveTextContent("Settings and help");
     fireEvent.click(options());
     expect(title()).toHaveTextContent("Map options");
     fireEvent.keyDown(sheet(), { key: "Escape" });
@@ -544,7 +548,7 @@ describe("Settings over other surfaces", () => {
     it("keeps the points and returns to the tool, with focus on Measure", async () => {
       const readout = await measureTwoPoints();
       fireEvent.click(settings());
-      expect(title()).toHaveTextContent("Settings");
+      expect(title()).toHaveTextContent("Settings and help");
       expect(screen.queryByTestId("measure-toolbar")).toBeNull();
       expect(measureButton()).toHaveAttribute("aria-pressed", "false");
 
@@ -600,7 +604,7 @@ describe("Settings over other surfaces", () => {
     it("resumes the unfinished shape with focus on Shapes", async () => {
       await drawTwoPoints();
       fireEvent.click(settings());
-      expect(title()).toHaveTextContent("Settings");
+      expect(title()).toHaveTextContent("Settings and help");
       expect(screen.queryByTestId("draw-toolbar")).toBeNull();
       fireEvent.keyDown(sheet(), { key: "Escape" });
       expect(screen.getByTestId("draw-status")).toHaveTextContent(
@@ -636,7 +640,7 @@ describe("Settings over other surfaces", () => {
       fireEvent.click(screen.getByRole("button", { name: "Directions" }));
       expect(title()).toHaveTextContent("Directions");
       fireEvent.click(settings());
-      expect(title()).toHaveTextContent("Settings");
+      expect(title()).toHaveTextContent("Settings and help");
       expect(
         within(sheet()).getByRole("region", { name: "Settings" }),
       ).toBeInTheDocument();
@@ -653,7 +657,7 @@ describe("Settings over other surfaces", () => {
       fireEvent.focus(screen.getByRole("combobox", { name: "Search places" }));
       fireEvent.click(settings());
       expect(sheet()).toHaveAttribute("data-state", "open");
-      expect(title()).toHaveTextContent("Settings");
+      expect(title()).toHaveTextContent("Settings and help");
       fireEvent.keyDown(sheet(), { key: "Escape" });
       expect(document.activeElement).toBe(settings());
     });

@@ -156,7 +156,7 @@ export class MapPage {
       level: 2,
     });
     this.settingsHeading = this.sheet.getByRole("heading", {
-      name: "Settings",
+      name: "Settings and help",
       level: 2,
     });
     this.sheetHandle = page.getByRole("button", { name: "Resize panel" });
