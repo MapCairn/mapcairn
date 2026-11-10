@@ -47,8 +47,15 @@ jobs:
         run: |
           npm ci
 
-      - name: Install Playwright Chromium
-        run: npm run playwright:install -w @karta/web
+      # The apt step inside `playwright install --with-deps` sometimes stalls
+      # for many minutes on one runner, so each try is bounded and retried.
+      - name: Install Playwright browsers
+        run: |
+          for attempt in 1 2 3; do
+            timeout 300 npm run playwright:install -w @karta/web && exit 0
+            echo "Browser install attempt ${attempt} did not finish; trying again."
+          done
+          exit 1
 
       - name: Run Playwright tests (shard ${{ matrix.shard }} of 4)
         run: npm run test:e2e:all -w @karta/web -- --shard=${{ matrix.shard }}/4
