@@ -27,7 +27,7 @@
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "@cloudflare/vite-plugin": "1.67.0",
-    "@playwright/test": "1.64.1",
+    "@playwright/test": "1.65.0",
     "@react-router/dev": "8.5.1",
     "@react-router/node": "8.5.1",
     "@testing-library/jest-dom": "7.0.1",
@@ -51,7 +51,7 @@
     "@karta/react": "file:../react",
     "@karta/theme": "file:../theme",
     "@vanilla-extract/css": "1.21.3",
-    "lucide-react": "1.69.0",
+    "lucide-react": "1.70.0",
     "maplibre-gl": "6.17.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",

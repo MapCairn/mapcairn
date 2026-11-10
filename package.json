@@ -31,8 +31,8 @@
     "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run e2e && npm run a11y"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.5",
-    "@swc/core": "1.16.21",
+    "@biomejs/biome": "2.6.6",
+    "@swc/core": "1.16.22",
     "@vitest/coverage-v8": "5.1.0",
     "dependency-cruiser": "18.7.2",
     "lefthook": "2.2.2",

@@ -24,7 +24,7 @@
     "@radix-ui/react-tooltip": "1.4.1",
     "@vanilla-extract/css": "1.21.3",
     "@vanilla-extract/recipes": "0.5.7",
-    "lucide-react": "1.69.0"
+    "lucide-react": "1.70.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",
