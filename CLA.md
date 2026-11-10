@@ -6,7 +6,7 @@ MapCairn is licensed under [AGPL-3.0](LICENSE), and its author may also agree ot
 
 ## Definitions
 
-- **Project** means MapCairn (called Karta before version 1.1), the software in the repository at https://github.com/mooship/karta.
+- **Project** means MapCairn (called Karta before version 1.1), the software in the repository at https://github.com/MapCairn/mapcairn.
 - **Owner** means Timothy Brits, the owner of the Project, and anyone the Owner transfers the Project to.
 - **Contribution** means any work you submit to the Project, for example through a pull request, issue, patch or comment, that you have not marked "Not a contribution" in writing.
 - **You** means the person submitting the Contribution. If you submit it for an employer or another organisation, "You" also means that organisation, and you confirm you have its authority to agree to these terms.

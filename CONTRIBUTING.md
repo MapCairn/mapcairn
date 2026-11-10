@@ -57,7 +57,7 @@ Prove a lockfile change with one real `npm ci --ignore-scripts` under npm 11 in 
 
 ## Pull requests
 
-Work is tracked in [GitHub Issues](https://github.com/mooship/karta/issues), and every change reaches `main` through a pull request. Open an issue first for large changes, use the bug and feature forms, and link the issue from the pull request (`Fixes #123`). Branch from `main`, name the branch for the change (`feat/...`, `fix/...`, `docs/...`), use a Conventional Commit as the pull request title, and merge once the `build` and `e2e` checks pass. Keep each pull request to one logical change and explain why it is needed. Include light and dark screenshots for visual changes. Run the checks above and report anything skipped or failing.
+Work is tracked in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues), and every change reaches `main` through a pull request. Open an issue first for large changes, use the bug and feature forms, and link the issue from the pull request (`Fixes #123`). Branch from `main`, name the branch for the change (`feat/...`, `fix/...`, `docs/...`), use a Conventional Commit as the pull request title, and merge once the `build` and `e2e` checks pass. Keep each pull request to one logical change and explain why it is needed. Include light and dark screenshots for visual changes. Run the checks above and report anything skipped or failing.
 
 The host intentionally starts without datasets. Adding a real dataset is a separate, explicitly scoped change requiring source provenance, publication rights and privacy review. Plans for larger changes live in [`docs/plans/`](docs/plans/README.md). Never contribute identifying or household-level data.
 

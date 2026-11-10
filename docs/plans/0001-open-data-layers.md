@@ -4,7 +4,7 @@ Status: done on 2026-11-09 (phase 1: steps 1 to 5, live on main and checked agai
 
 Progress (2026-11-09): steps 1 to 5 are built on `feat/open-data-layers`, and the step 7 documentation is written. Step 5 landed as definitions, fixtures, CSP lines and credits only, with no code change. Not done yet: step 6 (the e2e, accessibility and visual passes; `e2e/layers.spec.ts` is written but has not been run), the manual check against the live services, and the items marked "to confirm" below. Resolved while building: GDACS sends no `max-age`, so feed definitions gained an optional `cacheSeconds` so its layers share one request; GDACS dates have no zone and are read as UTC; the fire hotspots use the GIBS WMS endpoint as decided.
 
-Tracking issue: [#157](https://github.com/mooship/karta/issues/157).
+Tracking issue: [#157](https://github.com/MapCairn/mapcairn/issues/157).
 
 ## Goal
 

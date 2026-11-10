@@ -125,4 +125,4 @@ this site and is not stored.
 
 ## Contact
 
-For a question or concern about privacy, write to mapcairn@timothybrits.co.za, or open an issue on [GitHub](https://github.com/mooship/karta/issues).
+For a question or concern about privacy, write to mapcairn@timothybrits.co.za, or open an issue on [GitHub](https://github.com/MapCairn/mapcairn/issues).

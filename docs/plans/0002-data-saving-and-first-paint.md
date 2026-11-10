@@ -2,7 +2,7 @@
 
 Status: done on 2026-11-09. The Save data mode (section 1), the caching audit (section 2) and the chrome skeleton (section 3) are built, and the measurement below is recorded.
 
-Tracking issue: [#158](https://github.com/mooship/karta/issues/158).
+Tracking issue: [#158](https://github.com/MapCairn/mapcairn/issues/158).
 
 ## Why
 

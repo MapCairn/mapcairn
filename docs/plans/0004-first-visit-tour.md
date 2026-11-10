@@ -2,7 +2,7 @@
 
 Status: proposed, and not to be started on 2026-11-10 (the owner asked to leave it for today); it may be picked up on a later day. Nothing is built. Written 2026-11-10, reworked the same day so the tour is replaceable.
 
-Tracking issue: [#179](https://github.com/mooship/karta/issues/179).
+Tracking issue: [#179](https://github.com/MapCairn/mapcairn/issues/179).
 
 ## Goal
 

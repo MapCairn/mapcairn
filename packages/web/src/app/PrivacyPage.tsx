@@ -202,7 +202,7 @@ export function PrivacyPage() {
           , or open an issue on{" "}
           <a
             className={styles.link}
-            href="https://github.com/mooship/mapcairn/issues"
+            href="https://github.com/MapCairn/mapcairn/issues"
           >
             GitHub
           </a>

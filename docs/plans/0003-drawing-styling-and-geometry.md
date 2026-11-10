@@ -2,7 +2,7 @@
 
 Status: done. Written 2026-11-09, built the same day.
 
-Tracking issue: [#159](https://github.com/mooship/karta/issues/159).
+Tracking issue: [#159](https://github.com/MapCairn/mapcairn/issues/159).
 
 ## Goal
 

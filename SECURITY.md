@@ -31,7 +31,7 @@ there.
 Please **do not** open a public issue for a suspected vulnerability.
 
 Report it privately through GitHub's private vulnerability reporting:
-[github.com/mooship/karta/security/advisories/new](https://github.com/mooship/karta/security/advisories/new).
+[github.com/MapCairn/mapcairn/security/advisories/new](https://github.com/MapCairn/mapcairn/security/advisories/new).
 If you cannot use GitHub, email mapcairn@timothybrits.co.za instead.
 
 Helpful reports include:
