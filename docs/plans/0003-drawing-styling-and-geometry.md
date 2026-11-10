@@ -1,6 +1,6 @@
 # Plan 0003: drawing, styling and geometry tools
 
-Status: proposed, not started. Written 2026-11-09.
+Status: done. Written 2026-11-09, built the same day.
 
 Tracking issue: [#159](https://github.com/mooship/karta/issues/159).
 

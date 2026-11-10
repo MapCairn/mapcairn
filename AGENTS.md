@@ -7,7 +7,7 @@ Guidance for humans and AI working in this repository. `CLAUDE.md` imports this 
 
 ## About
 
-Karta is a reusable SDK for public-interest map platforms, with a reference host. Four SDK packages (`core`, `map`, `react`, `theme`) provide the map ports and pure logic, the map user interface, generic React hooks and the typed design tokens. `packages/web` is an SSR host: basemaps, place search, distance and area measurement, a pin, theme and unit settings, and open data layers defined as data in `packages/web/src/layers/definitions` (plan 0001). Every layer is off until turned on; the browser then fetches it from its public provider. `docs/plans/` holds plans for larger work; do not describe a planned feature as existing.
+Karta is a reusable SDK for public-interest map platforms, with a reference host. Four SDK packages (`core`, `map`, `react`, `theme`) provide the map ports and pure logic, the map user interface, generic React hooks and the typed design tokens. `packages/web` is an SSR host: basemaps, place search, distance and area measurement, drawing and editing shapes, directions (a public routing server, used only when asked), a pin, theme and unit settings, and open data layers defined as data in `packages/web/src/layers/definitions` (plan 0001). Every layer is off until turned on; the browser then fetches it from its public provider. `docs/plans/` holds plans for larger work; do not describe a planned feature as existing.
 
 MapLibre GL JS is the only map engine. The app follows ports and adapters, described in `ARCHITECTURE.md`. The design system is tokens only, with IBM Plex Sans, Lucide icons and vanilla-extract, described in `DESIGN.md`. The app is English only (British English, `lang="en-GB"`), with its copy written inline in components.
 
