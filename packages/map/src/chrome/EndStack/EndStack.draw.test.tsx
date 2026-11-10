@@ -6,12 +6,9 @@ import {
   type ChromeSurfaceValue,
 } from "../MapChrome/chromeSurface";
 import { renderChrome } from "../MapChrome/chromeTestHarness";
-import {
-  EndStack,
-  type EndStackProps,
-  endStackMinHeightForZoom,
-} from "./EndStack";
+import { EndStack, type EndStackProps } from "./EndStack";
 import { EndStackSkeleton } from "./EndStackSkeleton";
+import { endStackMinHeightForZoom } from "./endStackHeight";
 
 function props(overrides: Partial<EndStackProps> = {}): EndStackProps {
   return {
@@ -20,6 +17,9 @@ function props(overrides: Partial<EndStackProps> = {}): EndStackProps {
     mapOptionsOpen: false,
     mapOptionsControls: "map-options-sheet",
     onMapOptions: vi.fn(),
+    settingsOpen: false,
+    settingsControls: "map-options-sheet",
+    onSettings: vi.fn(),
     measuring: false,
     onMeasure: vi.fn(),
     locating: false,
@@ -76,6 +76,7 @@ describe("EndStack with drawing", () => {
       "Measure distance and area",
       "Draw shapes",
       "Locate me",
+      "Settings",
     ]);
   });
 
@@ -123,6 +124,7 @@ describe("EndStackSkeleton with drawing", () => {
       "Measure distance and area",
       "Draw shapes",
       "Locate me",
+      "Settings",
     ]);
   });
 });

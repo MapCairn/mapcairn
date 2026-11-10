@@ -404,6 +404,303 @@ describe("surfaces", () => {
   });
 });
 
+describe("Settings button", () => {
+  const options = () => screen.getByRole("button", { name: "Map options" });
+  const settings = () => screen.getByRole("button", { name: "Settings" });
+  const title = () => within(sheet()).getByRole("heading", { level: 2 });
+
+  it("sits last in the main control group and opens the sheet on Settings and Help", async () => {
+    await renderApp();
+    const labels = within(screen.getByRole("group", { name: "Map controls" }))
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label"));
+    expect(labels.at(-1)).toBe("Settings");
+    expect(settings()).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(settings());
+    expect(sheet()).toHaveAttribute("data-state", "open");
+    expect(title()).toHaveTextContent("Settings");
+    expect(
+      within(sheet()).getByRole("region", { name: "Settings" }),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet()).getByRole("region", { name: "Help" }),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet()).queryByRole("region", { name: "Basemap" }),
+    ).toBeNull();
+    expect(settings()).toHaveAttribute("aria-expanded", "true");
+    expect(options()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("leaves Settings and Help out of the Map options sheet", async () => {
+    await renderApp();
+    fireEvent.click(options());
+    expect(title()).toHaveTextContent("Map options");
+    expect(
+      within(sheet()).getByRole("region", { name: "Basemap" }),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet()).queryByRole("region", { name: "Settings" }),
+    ).toBeNull();
+    expect(within(sheet()).queryByRole("region", { name: "Help" })).toBeNull();
+    expect(options()).toHaveAttribute("aria-expanded", "true");
+    expect(settings()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes when pressed again, and returns focus to it", async () => {
+    await renderApp();
+    fireEvent.click(settings());
+    fireEvent.click(settings());
+    expect(sheet()).toHaveAttribute("data-state", "closed");
+    expect(document.activeElement).toBe(settings());
+  });
+
+  it("returns focus to it when Escape closes the sheet", async () => {
+    await renderApp();
+    fireEvent.click(settings());
+    fireEvent.keyDown(sheet(), { key: "Escape" });
+    expect(sheet()).toHaveAttribute("data-state", "closed");
+    expect(document.activeElement).toBe(settings());
+  });
+
+  it("switches between the two sheets without closing, keeping focus on the opener last used", async () => {
+    await renderApp();
+    fireEvent.click(settings());
+    fireEvent.click(options());
+    expect(sheet()).toHaveAttribute("data-state", "open");
+    expect(title()).toHaveTextContent("Map options");
+    expect(options()).toHaveAttribute("aria-expanded", "true");
+    expect(settings()).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(settings());
+    expect(sheet()).toHaveAttribute("data-state", "open");
+    expect(title()).toHaveTextContent("Settings");
+    expect(settings()).toHaveAttribute("aria-expanded", "true");
+    expect(options()).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.keyDown(sheet(), { key: "Escape" });
+    expect(document.activeElement).toBe(settings());
+  });
+
+  it("returns focus to Map options when the sheet was last switched to it", async () => {
+    await renderApp();
+    fireEvent.click(settings());
+    fireEvent.click(options());
+    fireEvent.keyDown(sheet(), { key: "Escape" });
+    expect(sheet()).toHaveAttribute("data-state", "closed");
+    expect(document.activeElement).toBe(options());
+  });
+
+  it("moves to the options group when a pin is dropped from the settings sheet", async () => {
+    await renderApp();
+    fireEvent.click(settings());
+    fireEvent.keyDown(region(), { key: "p" });
+    expect(title()).toHaveTextContent("Map options");
+    expect(screen.getByTestId("pin-card")).toBeInTheDocument();
+    expect(settings()).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
+describe("Settings over other surfaces", () => {
+  const options = () => screen.getByRole("button", { name: "Map options" });
+  const settings = () => screen.getByRole("button", { name: "Settings" });
+  const measureButton = () =>
+    screen.getByRole("button", { name: "Measure distance and area" });
+  const title = (hidden = false) =>
+    within(sheet()).getByRole("heading", { level: 2, hidden });
+
+  it("closes with its Close button and returns focus to Settings", async () => {
+    await renderApp();
+    fireEvent.click(settings());
+    fireEvent.click(within(sheet()).getByRole("button", { name: "Close" }));
+    expect(sheet()).toHaveAttribute("data-state", "closed");
+    expect(document.activeElement).toBe(settings());
+  });
+
+  it("keeps the Settings title while the sheet closes", async () => {
+    await renderApp();
+    fireEvent.click(settings());
+    fireEvent.keyDown(sheet(), { key: "Escape" });
+    expect(sheet()).toHaveAttribute("data-state", "closed");
+    expect(title(true)).toHaveTextContent("Settings");
+    fireEvent.click(options());
+    expect(title()).toHaveTextContent("Map options");
+    fireEvent.keyDown(sheet(), { key: "Escape" });
+    expect(title(true)).toHaveTextContent("Map options");
+  });
+
+  describe("over measuring", () => {
+    async function measureTwoPoints() {
+      const services = await renderApp();
+      fireEvent.click(measureButton());
+      act(() => adapter(services).simulateClick({ lat: 1, lng: 1 }));
+      act(() => adapter(services).simulateClick({ lat: 1, lng: 2 }));
+      const readout = screen.getByTestId("measure-readout").textContent ?? "";
+      expect(readout).not.toBe("0 m");
+      return readout;
+    }
+
+    it("keeps the points and returns to the tool, with focus on Measure", async () => {
+      const readout = await measureTwoPoints();
+      fireEvent.click(settings());
+      expect(title()).toHaveTextContent("Settings");
+      expect(screen.queryByTestId("measure-toolbar")).toBeNull();
+      expect(measureButton()).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.keyDown(sheet(), { key: "Escape" });
+      expect(screen.getByTestId("measure-toolbar")).toBeInTheDocument();
+      expect(screen.getByTestId("measure-readout")).toHaveTextContent(readout);
+      expect(measureButton()).toHaveAttribute("aria-pressed", "true");
+      expect(document.activeElement).toBe(measureButton());
+    });
+
+    it("does the same after switching to Map options and closing with Close", async () => {
+      const readout = await measureTwoPoints();
+      fireEvent.click(settings());
+      fireEvent.click(options());
+      expect(title()).toHaveTextContent("Map options");
+      fireEvent.click(within(sheet()).getByRole("button", { name: "Close" }));
+      expect(screen.getByTestId("measure-readout")).toHaveTextContent(readout);
+      expect(document.activeElement).toBe(measureButton());
+    });
+
+    it("returns to the measurement when Measure is pressed with the sheet open", async () => {
+      const readout = await measureTwoPoints();
+      fireEvent.click(settings());
+      fireEvent.click(measureButton());
+      expect(sheet()).toHaveAttribute("data-state", "closed");
+      expect(screen.getByTestId("measure-readout")).toHaveTextContent(readout);
+    });
+
+    it("loses the measurement when Done was pressed first", async () => {
+      await measureTwoPoints();
+      fireEvent.click(screen.getByTestId("measure-done"));
+      fireEvent.click(settings());
+      fireEvent.keyDown(sheet(), { key: "Escape" });
+      expect(screen.queryByTestId("measure-toolbar")).toBeNull();
+      fireEvent.click(measureButton());
+      expect(screen.getByTestId("measure-readout")).toHaveTextContent("0 m");
+    });
+  });
+
+  describe("over drawing", () => {
+    async function drawTwoPoints() {
+      const services = await renderApp();
+      fireEvent.click(screen.getByRole("button", { name: "Draw shapes" }));
+      act(() => adapter(services).simulateClick({ lat: 1, lng: 1 }));
+      act(() => adapter(services).simulateClick({ lat: 1, lng: 2 }));
+      expect(screen.getByTestId("draw-status")).toHaveTextContent(
+        "Polygon 1, 2 points",
+      );
+    }
+    const shapesButton = () =>
+      screen.getByRole("button", { name: "Shapes and export" });
+
+    it("resumes the unfinished shape with focus on Shapes", async () => {
+      await drawTwoPoints();
+      fireEvent.click(settings());
+      expect(title()).toHaveTextContent("Settings");
+      expect(screen.queryByTestId("draw-toolbar")).toBeNull();
+      fireEvent.keyDown(sheet(), { key: "Escape" });
+      expect(screen.getByTestId("draw-status")).toHaveTextContent(
+        "Polygon 1, 2 points",
+      );
+      expect(document.activeElement).toBe(shapesButton());
+    });
+
+    it("resumes it after switching to Map options too", async () => {
+      await drawTwoPoints();
+      fireEvent.click(settings());
+      fireEvent.click(options());
+      fireEvent.click(within(sheet()).getByRole("button", { name: "Close" }));
+      expect(screen.getByTestId("draw-status")).toHaveTextContent(
+        "Polygon 1, 2 points",
+      );
+      expect(document.activeElement).toBe(shapesButton());
+    });
+
+    it("opens Map options, not Settings, from Shapes and export, and resumes", async () => {
+      await drawTwoPoints();
+      fireEvent.click(shapesButton());
+      expect(title()).toHaveTextContent("Map options");
+      expect(settings()).toHaveAttribute("aria-expanded", "false");
+      fireEvent.keyDown(sheet(), { key: "Escape" });
+      expect(document.activeElement).toBe(shapesButton());
+    });
+  });
+
+  describe("over directions and search", () => {
+    it("replaces the directions panel, titled Settings, and returns focus to Settings", async () => {
+      await renderApp();
+      fireEvent.click(screen.getByRole("button", { name: "Directions" }));
+      expect(title()).toHaveTextContent("Directions");
+      fireEvent.click(settings());
+      expect(title()).toHaveTextContent("Settings");
+      expect(
+        within(sheet()).getByRole("region", { name: "Settings" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Directions" }),
+      ).toHaveAttribute("aria-pressed", "false");
+      fireEvent.keyDown(sheet(), { key: "Escape" });
+      expect(sheet()).toHaveAttribute("data-state", "closed");
+      expect(document.activeElement).toBe(settings());
+    });
+
+    it("replaces search, titled Settings, and returns focus to Settings", async () => {
+      await renderApp();
+      fireEvent.focus(screen.getByRole("combobox", { name: "Search places" }));
+      fireEvent.click(settings());
+      expect(sheet()).toHaveAttribute("data-state", "open");
+      expect(title()).toHaveTextContent("Settings");
+      fireEvent.keyDown(sheet(), { key: "Escape" });
+      expect(document.activeElement).toBe(settings());
+    });
+  });
+
+  describe("paths that open Map options from the Settings sheet", () => {
+    it("lands a dropped pin card in the Map options group, and Escape leaves focus on the map", async () => {
+      await renderApp();
+      fireEvent.click(settings());
+      fireEvent.keyDown(region(), { key: "p" });
+      expect(title()).toHaveTextContent("Map options");
+      expect(screen.getByTestId("pin-card")).toBeInTheDocument();
+      expect(
+        within(sheet()).queryByRole("region", { name: "Settings" }),
+      ).toBeNull();
+      fireEvent.keyDown(sheet(), { key: "Escape" });
+      expect(sheet()).toHaveAttribute("data-state", "closed");
+      expect(document.activeElement).toBe(region());
+    });
+
+    it("lands a tapped feature in Map options, and Escape returns focus to Map options", async () => {
+      const services = createFakeServices({
+        layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+      });
+      services.fakes.layerSource.setFeatures("sample-points", [
+        samplePoint("a"),
+      ]);
+      services.fakes.url.write({
+        layers: { enabled: ["sample-points"], controls: {} },
+      });
+      await renderApp(services);
+      await settle();
+      fireEvent.click(settings());
+      act(() => adapter(services).simulateFeatureTap("sample-points", "a"));
+      expect(title()).toHaveTextContent("Map options");
+      expect(
+        within(sheet()).getByRole("region", { name: "Layers" }),
+      ).toBeInTheDocument();
+      expect(
+        within(sheet()).queryByRole("region", { name: "Help" }),
+      ).toBeNull();
+      fireEvent.keyDown(sheet(), { key: "Escape" });
+      expect(document.activeElement).toBe(options());
+    });
+  });
+});
+
 describe("pins", () => {
   it("drops a pin at the centre with P, shows the card and focuses its heading", async () => {
     const services = await renderApp();

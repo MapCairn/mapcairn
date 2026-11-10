@@ -10,6 +10,7 @@ import {
   dropPin,
   type FocusTarget,
   initialSurfaceState,
+  isSettingsSection,
   type LatLng,
   type MapClickEvent,
   openSearch,
@@ -124,7 +125,18 @@ export interface MapApp {
   readonly onSheetDetentChange: (detent: SheetDetent) => void;
   readonly sheetModal: boolean;
   readonly setSheetModal: (modal: boolean) => void;
+  /**
+   * The sheet that Map options opens is the open surface (Basemap, Pin,
+   * Layers, Shapes, Save image). False while Settings is open, and while a pin
+   * card or Directions is shown in the sheet.
+   */
+  readonly mapOptionsOpen: boolean;
+  /** Settings is the open sheet (Settings and Help). */
+  readonly settingsOpen: boolean;
+  /** Opens Map options, closes it when it is open, or switches to it from Settings. */
   readonly toggleMapOptions: () => void;
+  /** Opens Settings, closes it when it is open, or switches to it from Map options. */
+  readonly toggleSettings: () => void;
 
   readonly pin: LatLng | null;
   /** Increases each time a pin card opens, so the chrome can focus its heading. */
@@ -231,8 +243,11 @@ export function useMapApp(): MapApp {
   const flushFocusReturn = useCallback(
     (restore: (target: FocusTarget | null) => void) => {
       const { surface, returnFocusTo } = stateRef.current;
-      // Closing the sheet over a drawing goes back to the draw tool, not to nothing.
-      const resumed = surface === "draw" && returnFocusTo === "draw-shapes";
+      // Closing the sheet over a drawing or a measurement goes back to that
+      // tool, not to nothing.
+      const resumed =
+        (surface === "draw" && returnFocusTo === "draw-shapes") ||
+        (surface === "measure" && returnFocusTo === "measure");
       if (!pendingFocusReturn.current || (surface !== "none" && !resumed)) {
         return;
       }
@@ -283,13 +298,15 @@ export function useMapApp(): MapApp {
     announce(announcePinCleared());
   }, [announce, stateRef]);
 
-  // A measurement belongs to the measure surface: it goes when that closes.
+  // A measurement belongs to the measure surface: it goes when that closes,
+  // unless the sheet is only open over it.
   const { clear: clearMeasure, addPoint } = measure;
   useEffect(() => {
-    if (state.surface !== "measure") {
+    const suspended = state.surface === "sheet" && state.resumeMeasure;
+    if (state.surface !== "measure" && !suspended) {
       clearMeasure();
     }
-  }, [state.surface, clearMeasure]);
+  }, [state.surface, state.resumeMeasure, clearMeasure]);
 
   const finishMeasure = useCallback(() => {
     closeExplicitly(stopMeasure());
@@ -346,10 +363,20 @@ export function useMapApp(): MapApp {
   }, [centre, addPoint]);
 
   const toggleMapOptions = useCallback(() => {
-    if (stateRef.current.surface === "sheet") {
+    const { surface, sheetSection } = stateRef.current;
+    if (surface === "sheet" && !isSettingsSection(sheetSection)) {
       closeExplicitly();
     } else {
       dispatch(openSheet());
+    }
+  }, [closeExplicitly, stateRef]);
+
+  const toggleSettings = useCallback(() => {
+    const { surface, sheetSection } = stateRef.current;
+    if (surface === "sheet" && isSettingsSection(sheetSection)) {
+      closeExplicitly();
+    } else {
+      dispatch(openSheet("settings"));
     }
   }, [closeExplicitly, stateRef]);
 
@@ -461,6 +488,8 @@ export function useMapApp(): MapApp {
     state.surface === "sheet" ||
     state.surface === "pin" ||
     state.surface === "directions";
+  const settingsOpen =
+    state.surface === "sheet" && isSettingsSection(state.sheetSection);
   return {
     state,
     dispatch,
@@ -486,7 +515,10 @@ export function useMapApp(): MapApp {
     // being inert in the render that closes the sheet.
     sheetModal: sheetModal && sheetOpen,
     setSheetModal,
+    mapOptionsOpen: state.surface === "sheet" && !settingsOpen,
+    settingsOpen,
     toggleMapOptions,
+    toggleSettings,
     pin,
     pinFocusRequest,
     dropPinAt,

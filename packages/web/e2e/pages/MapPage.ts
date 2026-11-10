@@ -51,6 +51,7 @@ export class MapPage {
   readonly directionsButton: Locator;
   readonly drawButton: Locator;
   readonly locateButton: Locator;
+  readonly settingsButton: Locator;
   readonly zoomControls: Locator;
   readonly zoomInButton: Locator;
   readonly zoomOutButton: Locator;
@@ -58,6 +59,8 @@ export class MapPage {
 
   readonly sheet: Locator;
   readonly sheetHeading: Locator;
+  /** The sheet's h2 while Settings (Settings and Help) is the open sheet. */
+  readonly settingsHeading: Locator;
   readonly sheetHandle: Locator;
   readonly sheetClose: Locator;
   readonly basemapPicker: Locator;
@@ -136,6 +139,10 @@ export class MapPage {
     this.directionsButton = page.getByRole("button", { name: "Directions" });
     this.drawButton = page.getByRole("button", { name: "Draw shapes" });
     this.locateButton = page.getByRole("button", { name: "Locate me" });
+    this.settingsButton = page.getByRole("button", {
+      name: "Settings",
+      exact: true,
+    });
     this.zoomControls = page.getByRole("group", { name: "Zoom controls" });
     this.zoomInButton = page.getByRole("button", { name: "Zoom in" });
     this.zoomOutButton = page.getByRole("button", { name: "Zoom out" });
@@ -146,6 +153,10 @@ export class MapPage {
     this.sheet = page.getByTestId("map-options-sheet");
     this.sheetHeading = this.sheet.getByRole("heading", {
       name: "Map options",
+      level: 2,
+    });
+    this.settingsHeading = this.sheet.getByRole("heading", {
+      name: "Settings",
       level: 2,
     });
     this.sheetHandle = page.getByRole("button", { name: "Resize panel" });
@@ -279,6 +290,36 @@ export class MapPage {
     await this.mapOptionsButton.click();
     await expect(this.sheet).toHaveAttribute("data-state", "open");
     await expect(this.sheetHeading).toBeFocused();
+  }
+
+  /**
+   * Opens the settings sheet (Settings and Help) from the end stack's
+   * Settings button.
+   */
+  async openSettings(): Promise<void> {
+    await this.settingsButton.click();
+    await expect(this.sheet).toHaveAttribute("data-state", "open");
+    await expect(this.settingsHeading).toBeFocused();
+  }
+
+  /**
+   * Switches the open sheet to Map options with its button, without closing
+   * it. Focus goes to the Basemap heading rather than the sheet's title.
+   */
+  async switchToMapOptions(): Promise<void> {
+    await this.mapOptionsButton.click();
+    await expect(this.sheetHeading).toBeVisible();
+    await expect(this.mapOptionsButton).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  }
+
+  /** Switches the open sheet to Settings with its button, without closing it. */
+  async switchToSettings(): Promise<void> {
+    await this.settingsButton.click();
+    await expect(this.settingsHeading).toBeVisible();
+    await expect(this.settingsButton).toHaveAttribute("aria-expanded", "true");
   }
 
   /** The current detent, or null in the side panel layout. */

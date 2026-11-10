@@ -119,6 +119,31 @@ test.describe("measure", () => {
     await expect(mapPage.measureButton).toBeFocused();
   });
 
+  test("keeps its points when Settings opens over it, and goes back to the tool with focus on Measure", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(START);
+    await mapPage.startMeasuring();
+    await mapPage.measureAddPoint.click();
+    await mapPage.focusMap();
+    await page.keyboard.press("Shift+ArrowDown");
+    await mapPage.measureAddPoint.click();
+    await expect(mapPage.measureReadout).toHaveText(/^[\d.,]+ (m|km)$/);
+    const readout = await mapPage.measureReadout.textContent();
+
+    await mapPage.settingsButton.click();
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
+    await expect(mapPage.settingsHeading).toBeVisible();
+    await expect(mapPage.measureToolbar).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+    await expect(mapPage.measureToolbar).toBeVisible();
+    await expect(mapPage.measureReadout).toHaveText(readout ?? "");
+    await expect(mapPage.measureOverlay).toBeVisible();
+    await expect(mapPage.measureButton).toBeFocused();
+  });
+
   test("uses imperial units when they are chosen", async ({
     page,
     mapPage,

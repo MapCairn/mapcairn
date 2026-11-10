@@ -5,6 +5,7 @@ import {
   closeSurface,
   dropPin,
   initialSurfaceState,
+  isSettingsSection,
   openSearch,
   openSheet,
   pressEscape,
@@ -12,6 +13,7 @@ import {
   type SurfaceState,
   setDetent,
   startDirections,
+  startDraw,
   startMeasure,
   stopDirections,
   stopMeasure,
@@ -31,6 +33,7 @@ describe("initial state", () => {
       returnFocusTo: null,
       hasPin: false,
       resumeDraw: false,
+      resumeMeasure: false,
     });
   });
 });
@@ -49,15 +52,35 @@ describe("opening the sheet", () => {
     expect(run(openSheet("settings")).sheetSection).toBe("settings");
   });
 
+  it("returns focus to the Settings button for the settings and help sections", () => {
+    expect(run(openSheet("settings")).returnFocusTo).toBe("settings");
+    expect(run(openSheet("help")).returnFocusTo).toBe("settings");
+    expect(run(openSheet("layers")).returnFocusTo).toBe("map-options");
+    expect(run(openSheet("shapes")).returnFocusTo).toBe("map-options");
+    expect(run(openSheet("pin")).returnFocusTo).toBe("map-options");
+  });
+
   it("switches section without resetting the detent the user chose", () => {
     const state = run(
       openSheet("basemap"),
       setDetent("full"),
-      openSheet("help"),
+      openSheet("layers"),
     );
-    expect(state.sheetSection).toBe("help");
+    expect(state.sheetSection).toBe("layers");
     expect(state.sheetDetent).toBe("full");
     expect(state.returnFocusTo).toBe("map-options");
+  });
+
+  it("moves the focus target when the sheet switches between the two groups", () => {
+    const toSettings = run(openSheet("basemap"), openSheet("settings"));
+    expect(toSettings).toMatchObject({
+      sheetSection: "settings",
+      returnFocusTo: "settings",
+    });
+    expect(surfaceReducer(toSettings, openSheet("basemap"))).toMatchObject({
+      sheetSection: "basemap",
+      returnFocusTo: "map-options",
+    });
   });
 
   it("returns the same state when the open section is requested again", () => {
@@ -234,6 +257,11 @@ describe("closing", () => {
     expect(run(openSheet("help"), closeSurface())).toMatchObject({
       surface: "none",
       sheetSection: null,
+      returnFocusTo: "settings",
+    });
+    expect(run(openSheet("layers"), closeSurface())).toMatchObject({
+      surface: "none",
+      sheetSection: null,
       returnFocusTo: "map-options",
     });
   });
@@ -292,5 +320,86 @@ describe("unknown actions", () => {
     expect(
       surfaceReducer(state, { type: "nonsense" } as unknown as SurfaceAction),
     ).toBe(state);
+  });
+});
+
+describe("isSettingsSection", () => {
+  it("is true for settings and help only", () => {
+    expect(isSettingsSection("settings")).toBe(true);
+    expect(isSettingsSection("help")).toBe(true);
+    for (const section of ["basemap", "pin", "layers", "shapes"] as const) {
+      expect(isSettingsSection(section)).toBe(false);
+    }
+    expect(isSettingsSection(null)).toBe(false);
+  });
+});
+
+describe("the sheet over a measurement", () => {
+  it("picks the measurement up again when the sheet closes, with focus on Measure", () => {
+    for (const section of ["settings", "basemap", "layers"] as const) {
+      const open = run(startMeasure(), openSheet(section));
+      expect(open).toMatchObject({
+        surface: "sheet",
+        sheetSection: section,
+        resumeMeasure: true,
+        resumeDraw: false,
+      });
+      for (const close of [closeSurface(), pressEscape()]) {
+        expect(surfaceReducer(open, close)).toMatchObject({
+          surface: "measure",
+          returnFocusTo: "measure",
+          sheetSection: null,
+          resumeMeasure: false,
+        });
+      }
+    }
+  });
+
+  it("keeps resuming while the sheet switches between Settings and Map options", () => {
+    const state = run(
+      startMeasure(),
+      openSheet("settings"),
+      openSheet("basemap"),
+      openSheet("settings"),
+    );
+    expect(state.resumeMeasure).toBe(true);
+    expect(surfaceReducer(state, closeSurface()).surface).toBe("measure");
+  });
+
+  it("does not resume when the sheet was opened from nothing or from another surface", () => {
+    expect(run(openSheet("settings")).resumeMeasure).toBe(false);
+    expect(run(openSearch(), openSheet("settings")).resumeMeasure).toBe(false);
+    expect(run(startDirections(), openSheet("settings")).resumeMeasure).toBe(
+      false,
+    );
+    expect(
+      surfaceReducer(run(openSheet("settings")), closeSurface()).surface,
+    ).toBe("none");
+  });
+
+  it("forgets the measurement when another tool or surface takes over", () => {
+    const base = run(startMeasure(), openSheet("settings"));
+    expect(surfaceReducer(base, startDraw())).toMatchObject({
+      surface: "draw",
+      resumeMeasure: false,
+    });
+    expect(surfaceReducer(base, openSearch())).toMatchObject({
+      surface: "search",
+      resumeMeasure: false,
+    });
+    expect(surfaceReducer(base, startDirections())).toMatchObject({
+      surface: "directions",
+      resumeMeasure: false,
+    });
+    expect(surfaceReducer(base, dropPin())).toMatchObject({
+      surface: "pin",
+      resumeMeasure: false,
+    });
+  });
+
+  it("returns to the measure tool, not the sheet, when measure is started again", () => {
+    expect(
+      run(startMeasure(), openSheet("settings"), startMeasure()),
+    ).toMatchObject({ surface: "measure", resumeMeasure: false });
   });
 });

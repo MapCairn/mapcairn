@@ -102,6 +102,13 @@ describe("the sheet over a drawing", () => {
     expect(fromPin).toMatchObject({ surface: "pin", resumeDraw: false });
   });
 
+  it("never resumes both tools, and measure's flag stays off over a drawing", () => {
+    expect(run(startDraw(), openSheet("settings"))).toMatchObject({
+      resumeDraw: true,
+      resumeMeasure: false,
+    });
+  });
+
   it("returns to the draw tool, not the sheet, when draw is started again", () => {
     const state = run(startDraw(), openSheet("shapes"), startDraw());
     expect(state).toMatchObject({ surface: "draw", resumeDraw: false });

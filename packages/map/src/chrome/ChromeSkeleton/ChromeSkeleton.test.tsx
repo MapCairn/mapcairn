@@ -33,6 +33,21 @@ describe("ChromeSkeleton", () => {
     ).not.toBeNull();
   });
 
+  it("always draws the Settings button, last in the main group after Locate me", () => {
+    render(<ChromeSkeleton />);
+    const labels = [
+      ...screen
+        .getByTestId("chrome-skeleton")
+        .querySelectorAll('[data-skeleton="controls"] button'),
+    ].map((button) => button.getAttribute("aria-label"));
+    expect(labels).toEqual([
+      "Map options",
+      "Measure distance and area",
+      "Locate me",
+      "Settings",
+    ]);
+  });
+
   it("draws the Directions button only when the host offers directions", () => {
     const { rerender } = render(<ChromeSkeleton />);
     const skeleton = screen.getByTestId("chrome-skeleton");

@@ -8,6 +8,7 @@ import {
   Plus,
   Route,
   Ruler,
+  Settings,
 } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { usePreferences, useSettings } from "../../services";
@@ -15,33 +16,7 @@ import { ControlGroup, IconButton, Surface } from "../../ui";
 import { useFocusTarget } from "../focusRegistry";
 import { useChromeSurface } from "../MapChrome/chromeSurface";
 import * as styles from "./EndStack.css";
-
-/** Height of one control, in CSS pixels (the 48 px `size.control` token). */
-const CONTROL_PX = 48;
-/** The gap between groups (the 12 px `space.sm` token). */
-const GAP_PX = 12;
-/** One hairline between grouped buttons, plus the surface border. */
-const HAIRLINE_PX = 1;
-
-/**
- * The height the end stack needs to show the zoom group under the main
- * group: three main controls, two zoom controls, the gap and the hairlines,
- * plus the compass and its gap while it shows, and one more control and
- * hairline while the Directions or Draw shapes button shows. Below this, and
- * only when the user has not chosen to show zoom buttons, the zoom group
- * yields.
- */
-export function endStackMinHeightForZoom(
-  compassShown: boolean,
-  directionsShown = false,
-  drawShown = false,
-): number {
-  const extra =
-    ((directionsShown ? 1 : 0) + (drawShown ? 1 : 0)) *
-    (CONTROL_PX + HAIRLINE_PX);
-  const groups = 5 * CONTROL_PX + GAP_PX + 7 * HAIRLINE_PX + extra;
-  return compassShown ? groups + CONTROL_PX + GAP_PX : groups;
-}
+import { endStackMinHeightForZoom } from "./endStackHeight";
 
 /** The Directions button, shown only when the host offers directions. */
 export interface EndStackDirections {
@@ -57,11 +32,20 @@ export interface EndStackProps {
   /** Map bearing in degrees clockwise from north. */
   readonly bearing: number;
   readonly onResetBearing: () => void;
-  /** The map options sheet or panel is open. */
+  /**
+   * The sheet or panel that Map options opens is the open surface. False
+   * while Settings is open, and while a pin card or Directions is shown in the
+   * sheet.
+   */
   readonly mapOptionsOpen: boolean;
   /** The id of the sheet or panel that Map options opens. */
   readonly mapOptionsControls: string;
   readonly onMapOptions: () => void;
+  /** The settings sheet or panel (Settings and Help) is open. */
+  readonly settingsOpen: boolean;
+  /** The id of the sheet or panel that Settings opens. */
+  readonly settingsControls: string;
+  readonly onSettings: () => void;
   /** Measuring is on. */
   readonly measuring: boolean;
   readonly onMeasure: () => void;
@@ -87,17 +71,18 @@ export interface EndStackProps {
 
 /**
  * The end-stack slot content, a landmark named "Map tools" holding, top to
- * bottom: the compass (only while the map
- * is rotated and the engine can rotate), the "Map controls" group (Map
- * options, Measure, Draw shapes when the host offers it, Locate me) and the "Zoom controls" group. The zoom group
- * is never placed anywhere else.
+ * bottom: the compass (only while the map is rotated and the engine can
+ * rotate), the "Map controls" group (Map options, Measure, Directions and Draw
+ * shapes when the host offers them, Locate me, Settings) and the "Zoom
+ * controls" group. The zoom group is never placed anywhere else.
  *
  * @remarks The zoom group follows `shouldShowZoomButtons`: the user's
  *   setting wins; otherwise it shows for a fine pointer unless the height
  *   `MapChrome` measured for the stack is too short. At a zoom limit the
- *   button is `aria-disabled` but stays focusable. Map options and Measure
- *   register as focus targets, so closing their surfaces returns focus to
- *   them. The stack does not read the map; the app passes its state in.
+ *   button is `aria-disabled` but stays focusable. Map options, Measure,
+ *   Directions, Draw shapes and Settings register as focus targets, so
+ *   closing their surfaces returns focus to them. The stack does not read the
+ *   map; the app passes its state in.
  */
 export function EndStack({
   bearing,
@@ -105,6 +90,9 @@ export function EndStack({
   mapOptionsOpen,
   mapOptionsControls,
   onMapOptions,
+  settingsOpen,
+  settingsControls,
+  onSettings,
   measuring,
   onMeasure,
   directions,
@@ -119,6 +107,7 @@ export function EndStack({
 }: EndStackProps) {
   const rootRef = useRef<HTMLElement>(null);
   const registerMapOptions = useFocusTarget("map-options");
+  const registerSettings = useFocusTarget("settings");
   const registerMeasure = useFocusTarget("measure");
   const registerDirections = useFocusTarget("directions");
   const registerDraw = useFocusTarget("draw");
@@ -150,8 +139,15 @@ export function EndStack({
       registerMeasure(find("measure"));
       registerDirections(find("directions"));
       registerDraw(find("draw"));
+      registerSettings(find("settings"));
     },
-    [registerMapOptions, registerMeasure, registerDirections, registerDraw],
+    [
+      registerMapOptions,
+      registerMeasure,
+      registerDirections,
+      registerDraw,
+      registerSettings,
+    ],
   );
 
   useEffect(() => {
@@ -224,6 +220,14 @@ export function EndStack({
           icon={LocateFixed}
           busy={locating}
           onClick={onLocate}
+        />
+        <IconButton
+          label="Settings"
+          icon={Settings}
+          expanded={settingsOpen}
+          controls={settingsControls}
+          data-focus-target="settings"
+          onClick={onSettings}
         />
       </ControlGroup>
       {zoom.show ? (

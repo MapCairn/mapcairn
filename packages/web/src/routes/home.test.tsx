@@ -51,6 +51,7 @@ describe("home route server render", () => {
       "Map options",
       "Measure distance and area",
       "Locate me",
+      "Settings",
       "Zoom in",
       "Zoom out",
       "Map credits",

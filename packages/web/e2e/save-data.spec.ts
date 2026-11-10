@@ -112,11 +112,11 @@ test.describe("save data", () => {
     const { relief } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
     await mapPage.goto();
-    await mapPage.openMapOptions();
-
+    await mapPage.openSettings();
     await expect(
       page.getByRole("switch", { name: "Save data" }),
     ).not.toBeChecked();
+    await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(3);
     await expect.poll(() => thumbnails.length).toBeGreaterThan(0);
     expect(relief.length).toBeGreaterThan(0);
@@ -130,9 +130,9 @@ test.describe("save data", () => {
     const { relief } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
     await mapPage.goto();
-    await mapPage.openMapOptions();
-
+    await mapPage.openSettings();
     await expect(page.getByRole("switch", { name: "Save data" })).toBeChecked();
+    await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(0);
     for (const name of [DEFAULT_VECTOR_BASEMAP_NAME, RASTER_BASEMAP_NAME]) {
       await expect(
@@ -157,7 +157,7 @@ test.describe("save data", () => {
     const { relief, styles } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
     await mapPage.goto();
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     const saveData = page.getByRole("switch", { name: "Save data" });
     await expect(saveData).toHaveAccessibleDescription(
       /instead of previews.*heavy map layers/,
@@ -170,6 +170,7 @@ test.describe("save data", () => {
     expect(
       await page.evaluate(() => localStorage.getItem("karta:saveData")),
     ).toBe("true");
+    await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(0);
     // The map draws the basemap again: wait for its style to be fetched, then
     // for it to finish loading, before saying no relief tile was asked for.
@@ -177,11 +178,13 @@ test.describe("save data", () => {
     await mapPage.waitForMap();
     expect(relief, "relief tiles after the redraw").toEqual([]);
 
+    await mapPage.switchToSettings();
     await saveData.click();
     await expect(saveData).not.toBeChecked();
     expect(
       await page.evaluate(() => localStorage.getItem("karta:saveData")),
     ).toBe("false");
+    await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(3);
     await expect.poll(() => relief.length).toBeGreaterThan(0);
     expect(thumbnails.length).toBeGreaterThan(0);
@@ -194,13 +197,14 @@ test.describe("save data", () => {
     await reportConnection(page, { saveData: true, effectiveType: "4g" });
     const { relief } = await serveRelief(page);
     await mapPage.goto();
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     const saveData = page.getByRole("switch", { name: "Save data" });
     await expect(saveData).toBeChecked();
     expect(relief).toEqual([]);
 
     await saveData.click();
     await expect(saveData).not.toBeChecked();
+    await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(3);
     await expect.poll(() => relief.length).toBeGreaterThan(0);
   });
@@ -208,7 +212,7 @@ test.describe("save data", () => {
   test("starts on for a 2g connection", async ({ page, mapPage }) => {
     await reportConnection(page, { effectiveType: "2g" });
     await mapPage.goto();
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     await expect(page.getByRole("switch", { name: "Save data" })).toBeChecked();
   });
 
@@ -218,7 +222,7 @@ test.describe("save data", () => {
   }) => {
     await reportConnection(page, { effectiveType: "3g" });
     await mapPage.goto();
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     await expect(
       page.getByRole("switch", { name: "Save data" }),
     ).not.toBeChecked();
@@ -227,7 +231,7 @@ test.describe("save data", () => {
     await reportConnection(page, { effectiveType: "slow-2g" });
     await page.reload();
     await mapPage.waitForMap();
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     await expect(
       page.getByRole("switch", { name: "Save data" }),
     ).not.toBeChecked();

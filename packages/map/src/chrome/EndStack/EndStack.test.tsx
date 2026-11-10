@@ -8,11 +8,8 @@ import {
   type ChromeSurfaceValue,
 } from "../MapChrome/chromeSurface";
 import { renderChrome } from "../MapChrome/chromeTestHarness";
-import {
-  EndStack,
-  type EndStackProps,
-  endStackMinHeightForZoom,
-} from "./EndStack";
+import { EndStack, type EndStackProps } from "./EndStack";
+import { endStackMinHeightForZoom } from "./endStackHeight";
 
 function props(overrides: Partial<EndStackProps> = {}): EndStackProps {
   return {
@@ -21,6 +18,9 @@ function props(overrides: Partial<EndStackProps> = {}): EndStackProps {
     mapOptionsOpen: false,
     mapOptionsControls: "map-options-sheet",
     onMapOptions: vi.fn(),
+    settingsOpen: false,
+    settingsControls: "map-options-sheet",
+    onSettings: vi.fn(),
     measuring: false,
     onMeasure: vi.fn(),
     locating: false,
@@ -50,6 +50,9 @@ function Restorers() {
       </button>
       <button type="button" onClick={() => restore("measure")}>
         back to measure
+      </button>
+      <button type="button" onClick={() => restore("settings")}>
+        back to settings
       </button>
     </>
   );
@@ -96,6 +99,7 @@ describe("EndStack directions button", () => {
       "Measure distance and area",
       "Directions",
       "Locate me",
+      "Settings",
     ]);
     fireEvent.click(screen.getByRole("button", { name: "Directions" }));
     expect(onToggle).toHaveBeenCalledTimes(1);
@@ -142,7 +146,12 @@ describe("EndStack", () => {
       within(main)
         .getAllByRole("button")
         .map((button) => button.getAttribute("aria-label")),
-    ).toEqual(["Map options", "Measure distance and area", "Locate me"]);
+    ).toEqual([
+      "Map options",
+      "Measure distance and area",
+      "Locate me",
+      "Settings",
+    ]);
     expect(
       within(zoom)
         .getAllByRole("button")
@@ -190,6 +199,7 @@ describe("EndStack", () => {
     fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
     fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
     expect(callbacks.onMapOptions).toHaveBeenCalledOnce();
+    expect(callbacks.onSettings).not.toHaveBeenCalled();
     expect(callbacks.onMeasure).toHaveBeenCalledOnce();
     expect(callbacks.onZoomIn).toHaveBeenCalledOnce();
     expect(callbacks.onZoomOut).toHaveBeenCalledOnce();
@@ -226,8 +236,37 @@ describe("EndStack", () => {
     expect(callbacks.onZoomOut).not.toHaveBeenCalled();
   });
 
-  it("registers Map options and Measure as focus targets", () => {
+  it("gives Settings its own expanded state, controls and callback", () => {
+    const callbacks = props({
+      settingsOpen: true,
+      settingsControls: "the-sheet",
+    });
+    renderChrome(withRegistry(<EndStack {...callbacks} />));
+    const settings = screen.getByRole("button", { name: "Settings" });
+    expect(settings).toHaveAttribute("aria-expanded", "true");
+    expect(settings).toHaveAttribute("aria-controls", "the-sheet");
+    expect(screen.getByRole("button", { name: "Map options" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    fireEvent.click(settings);
+    expect(callbacks.onSettings).toHaveBeenCalledOnce();
+    expect(callbacks.onMapOptions).not.toHaveBeenCalled();
+  });
+
+  it("needs one more control of room than before Settings joined the group", () => {
+    // Four main controls (Map options, Measure, Locate me, Settings), two
+    // zoom controls, the 12 px gap between the groups and the eight hairlines
+    // the function counts.
+    expect(endStackMinHeightForZoom(false)).toBe(6 * 48 + 12 + 8);
+  });
+
+  it("registers Map options, Measure and Settings as focus targets", () => {
     renderChrome(withRegistry(<EndStack {...props()} />));
+    fireEvent.click(screen.getByText("back to settings"));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Settings" }),
+    );
     fireEvent.click(screen.getByText("back to options"));
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Map options" }),

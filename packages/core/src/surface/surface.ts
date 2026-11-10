@@ -10,7 +10,10 @@ export type SurfaceKind =
   | "pin"
   | "directions";
 
-/** The sections of the map options sheet. */
+/**
+ * The sections of the sheet. `settings` and `help` open from the Settings
+ * button and the rest from Map options, so each sheet shows only its own.
+ */
 export type SheetSection =
   | "basemap"
   | "pin"
@@ -19,9 +22,18 @@ export type SheetSection =
   | "layers"
   | "shapes";
 
+/**
+ * Whether a section belongs to the Settings sheet (Settings and Help) rather
+ * than the Map options sheet. A closed sheet (`null`) is not a settings one.
+ */
+export function isSettingsSection(section: SheetSection | null): boolean {
+  return section === "settings" || section === "help";
+}
+
 /** The control that should receive focus when a surface closes. */
 export type FocusTarget =
   | "map-options"
+  | "settings"
   | "search"
   | "measure"
   | "draw"
@@ -56,6 +68,12 @@ export interface SurfaceState {
    * button, rather than to nothing.
    */
   readonly resumeDraw: boolean;
+  /**
+   * True while the sheet is open over a measurement that was under way:
+   * closing the sheet then goes back to the measure tool, with its points
+   * kept and focus on the Measure button, rather than to nothing.
+   */
+  readonly resumeMeasure: boolean;
 }
 
 /** Nothing is open, no pin is dropped and focus belongs to the map. */
@@ -66,6 +84,7 @@ export const initialSurfaceState: SurfaceState = {
   returnFocusTo: null,
   hasPin: false,
   resumeDraw: false,
+  resumeMeasure: false,
 };
 
 /** An event that may change which surface is open. */
@@ -86,7 +105,11 @@ export type SurfaceAction =
   | { readonly type: "blurSearch" };
 
 /**
- * Opens the map options sheet at the half detent.
+ * Opens the sheet at the half detent. Focus returns to Settings for the
+ * `settings` and `help` sections and to Map options for the rest, except that
+ * closing a sheet opened over a drawing goes back to the draw tool with focus
+ * on its Shapes button, and over a measurement back to the measure tool with
+ * focus on the Measure button.
  * @param section - The section to show. Defaults to the basemap picker.
  */
 export function openSheet(section: SheetSection = "basemap"): SurfaceAction {
@@ -164,6 +187,10 @@ export function blurSearch(): SurfaceAction {
   return { type: "blurSearch" };
 }
 
+function sheetFocusTarget(section: SheetSection): FocusTarget {
+  return isSettingsSection(section) ? "settings" : "map-options";
+}
+
 function open(
   state: SurfaceState,
   surface: Exclude<SurfaceKind, "none" | "sheet">,
@@ -172,7 +199,8 @@ function open(
   if (
     state.surface === surface &&
     state.returnFocusTo === focus &&
-    !state.resumeDraw
+    !state.resumeDraw &&
+    !state.resumeMeasure
   ) {
     return state;
   }
@@ -183,6 +211,7 @@ function open(
     sheetSection: null,
     returnFocusTo: focus,
     resumeDraw: false,
+    resumeMeasure: false,
   };
 }
 
@@ -201,6 +230,16 @@ function close(
       sheetSection: null,
       returnFocusTo: "draw-shapes",
       resumeDraw: false,
+    };
+  }
+  if (state.surface === "sheet" && state.resumeMeasure) {
+    return {
+      ...state,
+      surface: "measure",
+      sheetDetent: initialSurfaceState.sheetDetent,
+      sheetSection: null,
+      returnFocusTo: "measure",
+      resumeMeasure: false,
     };
   }
   return {
@@ -238,16 +277,22 @@ export function surfaceReducer(
         if (state.sheetSection === action.section) {
           return state;
         }
-        return { ...state, sheetSection: action.section };
+        return {
+          ...state,
+          sheetSection: action.section,
+          returnFocusTo: sheetFocusTarget(action.section),
+        };
       }
       return {
         ...state,
         surface: "sheet",
         sheetDetent: initialSurfaceState.sheetDetent,
         sheetSection: action.section,
-        returnFocusTo: "map-options",
-        // A drawing under way is picked up again when the sheet closes.
+        returnFocusTo: sheetFocusTarget(action.section),
+        // A drawing or measurement under way is picked up again when the
+        // sheet closes.
         resumeDraw: state.surface === "draw",
+        resumeMeasure: state.surface === "measure",
       };
     }
     case "openSearch":

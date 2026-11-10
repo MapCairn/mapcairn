@@ -71,52 +71,83 @@ function renderContent({
 }
 
 describe("SheetContent structure", () => {
-  it("lists Basemap, Pin, Settings and Help in order when there are no layers", () => {
-    renderContent();
-    const content = screen.getByTestId("sheet-content");
-    const headings = within(content)
+  const sectionHeadings = () =>
+    within(screen.getByTestId("sheet-content"))
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
-    expect(headings).toEqual([
-      "Basemap",
-      "Pin",
-      "Save image",
-      "Settings",
-      "Help",
-    ]);
+
+  it("lists Basemap, Pin and Save image in order when there are no layers", () => {
+    renderContent();
+    expect(sectionHeadings()).toEqual(["Basemap", "Pin", "Save image"]);
     expect(screen.queryByRole("heading", { name: "Layers" })).toBeNull();
   });
 
-  it("adds Layers between Pin and Settings when the host has layers", () => {
+  it("adds Layers between Pin and Save image when the host has layers", () => {
     renderContent({ layers: [SAMPLE_FEED_LAYER] });
-    const headings = within(screen.getByTestId("sheet-content"))
-      .getAllByRole("heading", { level: 3 })
-      .map((heading) => heading.textContent);
-    expect(headings).toEqual([
+    expect(sectionHeadings()).toEqual([
       "Basemap",
       "Pin",
       "Layers",
       "Save image",
-      "Settings",
-      "Help",
     ]);
   });
 
-  it("keeps the section headings at h3, below the sheet's h2", () => {
-    renderContent();
-    const levels = within(screen.getByTestId("sheet-content"))
-      .getAllByRole("heading")
-      .map((heading) => Number(heading.tagName.slice(1)));
-    expect(Math.min(...levels)).toBe(3);
-    expect(Math.max(...levels)).toBe(4);
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "Map options",
-    );
+  it("shows only Settings and Help for the settings and help sections", () => {
+    for (const section of ["settings", "help"] as const) {
+      const { unmount } = renderContent({
+        props: { section },
+        layers: [SAMPLE_FEED_LAYER],
+      });
+      expect(sectionHeadings()).toEqual(["Settings", "Help"]);
+      unmount();
+    }
+  });
+
+  it("shows no Settings or Help for any other section", () => {
+    for (const section of ["basemap", "pin", "layers", "shapes"] as const) {
+      const { unmount } = renderContent({
+        props: { section },
+        layers: [SAMPLE_FEED_LAYER],
+      });
+      expect(sectionHeadings()).not.toContain("Settings");
+      expect(sectionHeadings()).not.toContain("Help");
+      expect(sectionHeadings()).toContain("Basemap");
+      unmount();
+    }
+  });
+
+  it("swaps the groups when the section moves between them", () => {
+    const { update } = renderContent({ props: { section: "basemap" } });
+    update({ section: "settings" });
+    expect(sectionHeadings()).toEqual(["Settings", "Help"]);
+    expect(screen.getByRole("heading", { name: "Settings" })).toHaveFocus();
+    update({ section: "basemap" });
+    expect(sectionHeadings()).toEqual(["Basemap", "Pin", "Save image"]);
+    expect(screen.getByRole("heading", { name: "Basemap" })).toHaveFocus();
+  });
+
+  it("keeps the section headings at h3, with subheadings no deeper than h4", () => {
+    // Help has h4 subheadings; the options sections have none.
+    const deepest = { basemap: 3, help: 4 } as const;
+    for (const section of ["basemap", "help"] as const) {
+      const { unmount } = renderContent({ props: { section } });
+      const levels = within(screen.getByTestId("sheet-content"))
+        .getAllByRole("heading")
+        .map((heading) => Number(heading.tagName.slice(1)));
+      expect(Math.min(...levels)).toBe(3);
+      expect(Math.max(...levels)).toBe(deepest[section]);
+      unmount();
+    }
   });
 
   it("makes each section a named region", () => {
-    renderContent({ layers: [SAMPLE_FEED_LAYER] });
-    for (const name of ["Basemap", "Pin", "Layers", "Settings", "Help"]) {
+    const { unmount } = renderContent({ layers: [SAMPLE_FEED_LAYER] });
+    for (const name of ["Basemap", "Pin", "Layers", "Save image"]) {
+      expect(screen.getByRole("region", { name })).toBeInTheDocument();
+    }
+    unmount();
+    renderContent({ props: { section: "settings" } });
+    for (const name of ["Settings", "Help"]) {
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
   });
@@ -176,21 +207,23 @@ describe("SheetContent pin, settings and help", () => {
   });
 
   it("passes the privacy address to Settings", () => {
-    renderContent({ props: { privacyHref: "/af/privacy" } });
+    renderContent({
+      props: { section: "settings", privacyHref: "/af/privacy" },
+    });
     expect(
       screen.getByRole("link", { name: "Read the privacy policy" }),
     ).toHaveAttribute("href", "/af/privacy");
   });
 
   it("uses /privacy when none is given", () => {
-    renderContent();
+    renderContent({ props: { section: "settings" } });
     expect(
       screen.getByRole("link", { name: "Read the privacy policy" }),
     ).toHaveAttribute("href", "/privacy");
   });
 
   it("lists the rotation shortcuts in Help", () => {
-    renderContent();
+    renderContent({ props: { section: "help" } });
     expect(screen.getByText("Rotate the map")).toBeInTheDocument();
   });
 });

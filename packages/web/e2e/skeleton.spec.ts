@@ -89,6 +89,11 @@ const PAIRS: readonly Pair[] = [
     live: (page) => page.getByRole("button", { name: "Locate me" }),
   },
   {
+    name: "Settings",
+    skeleton: (page) => button(page, "Settings"),
+    live: (page) => page.getByRole("button", { name: "Settings", exact: true }),
+  },
+  {
     name: "zoom controls",
     skeleton: (page) => inSkeleton(page).locator('[data-skeleton="zoom"]'),
     live: (page) => page.getByRole("group", { name: "Zoom controls" }),

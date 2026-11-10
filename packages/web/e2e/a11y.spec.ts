@@ -83,6 +83,8 @@ test.describe("axe and control checks @a11y", () => {
 
 test.describe("focus @a11y", () => {
   test("every control shows a focus ring @a11y", async ({ page, mapPage }) => {
+    // Four surfaces are walked on one page, each a full tab cycle.
+    test.setTimeout(90_000);
     await scriptSearch(page);
     await mapPage.goto();
     let result = await findMissingFocusRings(page);
@@ -91,13 +93,25 @@ test.describe("focus @a11y", () => {
 
     await mapPage.openMapOptions();
     result = await findMissingFocusRings(page, 120);
-    // A phone has 15 stops here (no zoom buttons with a coarse pointer).
-    expect(result.visited).toBeGreaterThanOrEqual(15);
+    // The walk starts in the open sheet, then goes round the chrome. Measured:
+    // 34 stops on a phone and 36 with a mouse (which has the zoom buttons),
+    // the sheet's Basemap, Pin, Layers, Shapes and Save image controls
+    // included. Settings and Help moved to their own sheet.
+    expect(result.visited).toBeGreaterThanOrEqual(34);
     expect(result.missing).toEqual([]);
 
     // Each walk wraps round to the search box, and focusing it opens search,
     // which closes the open surface (one at a time). So every surface starts
     // from a freshly loaded page.
+    await mapPage.goto();
+    await mapPage.openSettings();
+    result = await findMissingFocusRings(page, 120);
+    // Measured: 17 stops on a phone and 19 with a mouse. Six are in the sheet:
+    // Close, the theme and units groups, the two switches and the privacy
+    // link. Help has no controls.
+    expect(result.visited).toBeGreaterThanOrEqual(17);
+    expect(result.missing).toEqual([]);
+
     await mapPage.goto();
     await mapPage.startMeasuring();
     result = await findMissingFocusRings(page);

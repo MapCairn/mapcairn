@@ -1,3 +1,4 @@
+import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { inspectChromeLayout } from "./support/layout";
@@ -20,9 +21,83 @@ test.use({ reducedMotion: "reduce" });
 test.setTimeout(120_000);
 
 /**
+ * Checks the end stack at rest with "Show zoom buttons" switched on, the
+ * stack at its tallest (every button, the zoom group, no compass).
+ *
+ * The stack's content height must be what `endStackMinHeightForZoom` says,
+ * plus the stack's own padding, so the number the app decides with is the one
+ * the browser lays out. Then either everything fits and both zoom buttons are
+ * on screen and not covered, or the stack scrolls (DESIGN.md, "Layout and
+ * slots"): both zoom buttons are then on screen or scrolled away inside it,
+ * and scrolling to the end brings both of them and the Settings button fully
+ * into the stack's visible box.
+ */
+async function checkEndStackAtRest(
+  mapPage: MapPage,
+  report: Awaited<ReturnType<typeof inspectChromeLayout>>,
+  context: string,
+): Promise<void> {
+  const stack = mapPage.page.getByTestId("end-stack");
+  const measured = await stack.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      padding:
+        Number.parseFloat(style.paddingTop) +
+        Number.parseFloat(style.paddingBottom),
+    };
+  });
+  const contentHeight = measured.scrollHeight - measured.padding;
+  expect(
+    Math.abs(contentHeight - endStackMinHeightForZoom(false, true, true)),
+    `content ${contentHeight}px against endStackMinHeightForZoom`,
+  ).toBeLessThanOrEqual(1);
+
+  expect(
+    report.zoomButtonsChecked + report.zoomButtonsScrolledAway,
+    context,
+  ).toBe(2);
+  if (measured.scrollHeight <= measured.clientHeight + 1) {
+    expect(report.zoomButtonsChecked, context).toBe(2);
+    return;
+  }
+
+  await stack.evaluate((element) => {
+    element.scrollTo({ top: element.scrollHeight });
+  });
+  const stackBox = await stack.boundingBox();
+  if (!stackBox) {
+    throw new Error("The end stack has no box.");
+  }
+  for (const button of [
+    mapPage.zoomInButton,
+    mapPage.zoomOutButton,
+    mapPage.settingsButton,
+  ]) {
+    const box = await button.boundingBox();
+    if (!box) {
+      throw new Error("A control has no box after scrolling the end stack.");
+    }
+    expect(
+      box.y,
+      "top of a control in the scrolled stack",
+    ).toBeGreaterThanOrEqual(stackBox.y - 1);
+    expect(
+      box.y + box.height,
+      "bottom of a control in the scrolled stack",
+    ).toBeLessThanOrEqual(stackBox.y + stackBox.height + 1);
+  }
+  await stack.evaluate((element) => {
+    element.scrollTo({ top: 0 });
+  });
+}
+
+/**
  * Walks every chrome state and checks the layout in each one. With
- * `zoomForcedOn`, the zoom group must be on screen at rest and, in every
- * state, either on screen or scrolled inside the end stack, never gone.
+ * `zoomForcedOn`, the end stack is checked at rest (see
+ * {@link checkEndStackAtRest}) and, in every state, the zoom group is either
+ * on screen or scrolled inside the end stack, never gone.
  */
 async function walkStates(
   mapPage: MapPage,
@@ -40,12 +115,13 @@ async function walkStates(
       expect(report.obscured, context).toEqual([]);
       if (zoomForcedOn) {
         await expect(mapPage.zoomControls).toBeAttached();
-        expect(
-          report.zoomButtonsChecked + report.zoomButtonsScrolledAway,
-          context,
-        ).toBe(2);
         if (state === "rest") {
-          expect(report.zoomButtonsChecked, context).toBe(2);
+          await checkEndStackAtRest(mapPage, report, context);
+        } else {
+          expect(
+            report.zoomButtonsChecked + report.zoomButtonsScrolledAway,
+            context,
+          ).toBe(2);
         }
       }
       await leaveState(mapPage, state);

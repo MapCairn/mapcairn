@@ -178,6 +178,102 @@ test.describe("map options sheet on a phone", () => {
   });
 });
 
+test.describe("settings sheet on a phone", () => {
+  test.use({ reducedMotion: "reduce", viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ mapPage }) => {
+    await mapPage.goto();
+    await expect(mapPage.chrome).toHaveAttribute("data-layout", "sheet");
+  });
+
+  test("opens from the Settings button as a sheet titled Settings holding only Settings and Help", async ({
+    page,
+    mapPage,
+  }) => {
+    await expect(mapPage.settingsButton).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(mapPage.settingsButton).toHaveAttribute(
+      "aria-controls",
+      "map-options",
+    );
+    await mapPage.openSettings();
+
+    await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
+    await expect(mapPage.settingsButton).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(mapPage.mapOptionsButton).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(page.getByRole("region", { name: "Settings" })).toBeAttached();
+    await expect(page.getByRole("region", { name: "Help" })).toBeAttached();
+    await expect(mapPage.basemapPicker).toHaveCount(0);
+  });
+
+  test("leaves Settings and Help out of the Map options sheet", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.openMapOptions();
+    await expect(mapPage.basemapPicker).toBeAttached();
+    await expect(page.getByRole("region", { name: "Settings" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Help" })).toHaveCount(0);
+  });
+
+  test("pressing Settings again closes it and hands focus back to Settings", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.openSettings();
+    await mapPage.settingsButton.click();
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+    await expect(mapPage.settingsButton).toBeFocused();
+
+    await mapPage.openSettings();
+    await page.keyboard.press("Escape");
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+    await expect(mapPage.settingsButton).toBeFocused();
+  });
+
+  test("the Close button hands focus back to Settings", async ({ mapPage }) => {
+    await mapPage.openSettings();
+    await mapPage.sheetClose.click();
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+    await expect(mapPage.settingsButton).toBeFocused();
+
+    await mapPage.openSettings();
+    await mapPage.sheetHandle.click();
+    await expect(mapPage.sheet).toHaveAttribute("data-detent", "full");
+    await mapPage.sheetClose.click();
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+    await expect(mapPage.settingsButton).toBeFocused();
+  });
+
+  test("each button switches the open sheet to its own without closing it", async ({
+    mapPage,
+  }) => {
+    await mapPage.openSettings();
+    await mapPage.switchToMapOptions();
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
+    await expect(mapPage.basemapPicker).toBeAttached();
+    await expect(mapPage.settingsButton).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    await mapPage.switchToSettings();
+    await expect(mapPage.basemapPicker).toHaveCount(0);
+    await expect(mapPage.mapOptionsButton).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+});
+
 test.describe("map options panel on a desktop", () => {
   test.use({ reducedMotion: "reduce", viewport: { width: 1280, height: 720 } });
 
@@ -197,6 +293,58 @@ test.describe("map options panel on a desktop", () => {
     await expect(page.getByRole("main")).not.toHaveAttribute("inert", /.*/);
     await page.keyboard.press("Escape");
     await expect(mapPage.mapOptionsButton).toBeFocused();
+  });
+
+  test("Enter and Space toggle Settings, and it is last in its group's tab order", async ({
+    page,
+    mapPage,
+    isMobile,
+  }) => {
+    await mapPage.goto();
+    await mapPage.settingsButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(mapPage.settingsHeading).toBeVisible();
+    await expect(mapPage.settingsButton).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await mapPage.settingsButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+
+    await mapPage.settingsButton.focus();
+    await page.keyboard.press("Space");
+    await expect(mapPage.settingsHeading).toBeVisible();
+    await mapPage.settingsButton.focus();
+    await page.keyboard.press("Space");
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+
+    await mapPage.locateButton.focus();
+    await page.keyboard.press("Tab");
+    await expect(mapPage.settingsButton).toBeFocused();
+    // The zoom group follows Settings where it shows (a mouse); on a touch
+    // device the map region is next.
+    const next = isMobile ? mapPage.region : mapPage.zoomInButton;
+    await page.keyboard.press("Tab");
+    await expect(next).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(mapPage.settingsButton).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(mapPage.locateButton).toBeFocused();
+  });
+
+  test("Settings opens the same side panel, titled Settings", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await mapPage.openSettings();
+
+    await expect(
+      page.getByRole("complementary", { name: "Settings" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(mapPage.settingsButton).toBeFocused();
   });
 
   test("a short landscape phone also gets the side panel", async ({

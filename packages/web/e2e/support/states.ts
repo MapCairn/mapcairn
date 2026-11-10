@@ -5,6 +5,7 @@ import type { MapPage } from "../pages/MapPage";
 export const CHROME_STATES = [
   "rest",
   "sheet open",
+  "settings open",
   "search open",
   "measure active",
   "directions open",
@@ -86,6 +87,9 @@ export async function enterState(
     case "sheet open":
       await mapPage.openMapOptions();
       return;
+    case "settings open":
+      await mapPage.openSettings();
+      return;
     case "search open":
       await mapPage.search("cape");
       await expect(mapPage.searchOptions).toHaveCount(3);
@@ -148,6 +152,7 @@ export async function leaveState(
     case "rest":
       return;
     case "sheet open":
+    case "settings open":
       await mapPage.sheetClose.click();
       break;
     case "search open":

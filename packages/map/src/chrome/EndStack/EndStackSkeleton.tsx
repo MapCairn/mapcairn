@@ -6,6 +6,7 @@ import {
   Plus,
   Route,
   Ruler,
+  Settings,
 } from "lucide-react";
 import { ControlGroup, IconButton } from "../../ui";
 import * as styles from "./EndStack.css";
@@ -21,9 +22,9 @@ export interface EndStackSkeletonProps {
 /**
  * The end stack as a decorative stand-in for the server-rendered
  * `ChromeSkeleton`: the same column, groups and buttons as {@link EndStack},
- * with the Map options, Measure and Locate me group and, on a device with a
- * fine pointer, the zoom group. No compass, because the map starts facing
- * north.
+ * with the Map options, Measure, Locate me and Settings group (and Directions
+ * and Draw shapes when the host sets them) and, on a device with a fine
+ * pointer, the zoom group. No compass, because the map starts facing north.
  *
  * @remarks Only ever rendered inside an `aria-hidden`, `inert` container. It
  *   uses no hooks and needs no provider.
@@ -52,6 +53,7 @@ export function EndStackSkeleton({
           <IconButton label="Draw shapes" icon={Pentagon} tabIndex={-1} />
         ) : null}
         <IconButton label="Locate me" icon={LocateFixed} tabIndex={-1} />
+        <IconButton label="Settings" icon={Settings} tabIndex={-1} />
       </ControlGroup>
       <div className={styles.skeletonZoom}>
         <ControlGroup

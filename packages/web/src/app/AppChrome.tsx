@@ -24,6 +24,7 @@ import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
 import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
 import { bottomCentre } from "./MapBanners.css";
+import { sheetTitle } from "./sheetTitle";
 import type { MapApp } from "./useMapApp";
 import { useZoomAnnouncement } from "./useZoomAnnouncement";
 
@@ -69,6 +70,14 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
   const requestZoomAnnouncement = useZoomAnnouncement(map);
   const pinHeadingRef = useRef<HTMLHeadingElement>(null);
   const { state, closeExplicitly, flushFocusReturn } = app;
+
+  // The title follows the open sheet. Once it closes, the app state no longer
+  // says which sheet it was, so the last title stays while it slides away.
+  const currentTitle = sheetTitle(app);
+  const shownTitle = useRef(currentTitle);
+  if (app.sheetOpen) {
+    shownTitle.current = currentTitle;
+  }
 
   // Focus goes back to the opener once an explicitly closed surface is gone.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the surface is the trigger; flushFocusReturn reads the current state through a ref.
@@ -147,9 +156,12 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
         <EndStack
           bearing={map.view.bearing}
           onResetBearing={() => map.adapter?.resetBearing()}
-          mapOptionsOpen={state.surface === "sheet"}
+          mapOptionsOpen={app.mapOptionsOpen}
           mapOptionsControls={SHEET_ID}
           onMapOptions={app.toggleMapOptions}
+          settingsOpen={app.settingsOpen}
+          settingsControls={SHEET_ID}
+          onSettings={app.toggleSettings}
           measuring={app.measuring}
           onMeasure={app.toggleMeasure}
           directions={
@@ -192,12 +204,18 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
         <Sheet
           id={SHEET_ID}
           open={app.sheetOpen}
-          title={app.directionsActive ? "Directions" : "Map options"}
+          title={shownTitle.current}
           detent={app.sheetDetent}
           onDetentChange={app.onSheetDetentChange}
           onModalChange={app.setSheetModal}
           onClose={() => closeExplicitly()}
-          restoreFocus={() => flushFocusReturn(restoreFocus)}
+          restoreFocus={() => {
+            // A resumed measure toolbar takes focus as it mounts, so the
+            // effect above puts it back on Measure once that has happened.
+            if (state.surface !== "measure") {
+              flushFocusReturn(restoreFocus);
+            }
+          }}
           testId="map-options-sheet"
         >
           {app.directionsActive ? (

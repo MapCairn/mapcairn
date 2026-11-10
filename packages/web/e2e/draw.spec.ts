@@ -16,12 +16,36 @@ async function centreOf(locator: Locator): Promise<{ x: number; y: number }> {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-/** Three taps that make a triangle in the middle of the map, clear of the chrome. */
+/**
+ * How far from the right edge the drag of a handle to the right may reach
+ * before it runs under the end stack, which runs down that edge to about the
+ * middle of a phone: the stack's width and inset, and the 60 px a handle
+ * keeps from it, with room for the farthest drag the tests make.
+ */
+const END_STACK_ROOM = 300;
+
+/**
+ * The x of the middle of a triangle, clear of the chrome: at least 150 px in,
+ * so its left vertex (90 px to the left) is 60 px from the edge, and on a
+ * phone left of centre so that dragging the right vertex stays out from under
+ * the end stack.
+ */
+const triangleCentreX = (width: number): number =>
+  Math.min(width / 2, Math.max(150, width - END_STACK_ROOM));
+
+/**
+ * The x of a circle's centre: 60 px in at least, and on a phone left of
+ * centre, because its radius handle sits to the right and is dragged farther.
+ */
+const circleCentreX = (width: number): number =>
+  Math.min(width / 2, Math.max(60, width - END_STACK_ROOM));
+
+/** Three taps that make a triangle near the middle of the map, clear of the chrome. */
 async function triangleTaps(
   mapPage: MapPage,
 ): Promise<(readonly [number, number])[]> {
   const { width, height } = await mapPage.mapSize();
-  const cx = width / 2;
+  const cx = triangleCentreX(width);
   const cy = height * 0.4;
   return [
     [cx - 90, cy + 60],
@@ -346,7 +370,7 @@ test.describe("draw", () => {
     await mapPage.startDrawing();
     await page.getByRole("radio", { name: "Circle" }).click();
     const { width, height } = await mapPage.mapSize();
-    const cx = width / 2;
+    const cx = circleCentreX(width);
     const cy = height * 0.4;
     await mapPage.tapMap([cx, cy], [cx + 110, cy]);
     await expect(mapPage.drawStatus).toHaveText("Circle 1");
@@ -433,6 +457,26 @@ test.describe("draw", () => {
       await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
       await expect(mapPage.drawToolbar).toBeVisible();
       await expect(mapPage.drawShapesButton).toBeFocused();
+    });
+
+    test("Settings over an unfinished shape resumes it with focus on Shapes", async ({
+      page,
+      mapPage,
+    }) => {
+      await mapPage.goto(START);
+      await mapPage.startDrawing();
+      const taps = await triangleTaps(mapPage);
+      await mapPage.tapMap(...taps.slice(0, 2));
+      await expect(mapPage.drawStatus).toHaveText("Polygon 1, 2 points");
+
+      await mapPage.settingsButton.click();
+      await expect(mapPage.settingsHeading).toBeVisible();
+      await expect(mapPage.drawToolbar).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+      await expect(mapPage.drawStatus).toHaveText("Polygon 1, 2 points");
+      await expect(mapPage.drawShapesButton).toBeFocused();
+      await expect(mapPage.drawShapes).toHaveCount(1);
     });
 
     test("selects a shape from the list and edits it", async ({

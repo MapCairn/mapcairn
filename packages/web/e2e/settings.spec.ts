@@ -10,7 +10,7 @@ test.describe("settings", () => {
   }) => {
     await mapPage.goto("#map=12.00/51.50000/-0.12000");
     await expect(mapPage.scaleBar).toHaveAccessibleName(/(metre|kilometre)/);
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     const units = page.getByRole("radiogroup", { name: "Units" });
     await expect(units.getByRole("radio", { name: "Metric" })).toBeChecked();
     await units.getByRole("radio", { name: "Imperial" }).click();
@@ -31,7 +31,7 @@ test.describe("settings", () => {
     const html = page.locator("html");
     await expect(html).toHaveAttribute("data-theme", "light");
 
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     const theme = page.getByRole("radiogroup", { name: "Theme" });
     await expect(theme.getByRole("radio", { name: "System" })).toBeChecked();
     await theme.getByRole("radio", { name: "Dark" }).click();
@@ -44,7 +44,7 @@ test.describe("settings", () => {
     await expect(html).toHaveAttribute("data-theme", "dark");
     await mapPage.waitForMap();
 
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     await theme.getByRole("radio", { name: "System" }).click();
     await expect(html).toHaveAttribute("data-theme", "light");
     await page.emulateMedia({ colorScheme: "dark" });
@@ -57,7 +57,7 @@ test.describe("settings", () => {
     isMobile,
   }) => {
     await mapPage.goto();
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     const zoomSwitch = page.getByRole("switch", { name: "Show zoom buttons" });
     // On by default with a mouse, off on touch screens.
     if (isMobile) {
@@ -78,7 +78,7 @@ test.describe("settings", () => {
   test("says when changes cannot be remembered", async ({ page, mapPage }) => {
     await scriptMemorySettings(page);
     await mapPage.goto();
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     await expect(page.getByTestId("settings-not-saved")).toHaveText(
       "Changes will not be remembered on this device.",
     );
@@ -92,7 +92,7 @@ test.describe("settings", () => {
 
   test("links to the privacy policy", async ({ page, mapPage }) => {
     await mapPage.goto();
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     await page.getByRole("link", { name: "Read the privacy policy" }).click();
     await expect(page).toHaveURL(/\/privacy$/);
     await expect(
@@ -110,7 +110,7 @@ test.describe("reduced motion", () => {
     await mapPage.goto();
     await page.waitForTimeout(2_500);
     await expect(mapPage.scaleBar).toHaveAttribute("data-idle", "false");
-    await mapPage.openMapOptions();
+    await mapPage.openSettings();
     const durations = await mapPage.sheet.evaluate((sheet) =>
       getComputedStyle(sheet)
         .transitionDuration.split(",")

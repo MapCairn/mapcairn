@@ -1,4 +1,4 @@
-import type { SheetSection } from "@karta/core";
+import { isSettingsSection, type SheetSection } from "@karta/core";
 import { type ReactNode, useEffect, useRef } from "react";
 import { type DataLayers, LayersSection } from "../../layers";
 import { usePreferences } from "../../services";
@@ -23,10 +23,12 @@ export interface SheetContentProps {
   /** Drops a pin at the centre of the map. */
   readonly onDropPin: () => void;
   /**
-   * The section to bring into view. When it changes, the section scrolls to
-   * the top of the sheet and its heading takes focus. Choosing the same
-   * section again while this component stays mounted does nothing, so the
-   * caller should unmount the content when the sheet closes.
+   * The section to bring into view, which also picks what the sheet holds:
+   * Settings and Help for `settings` and `help`, and Basemap, Pin, Layers,
+   * Shapes and Save image for any other section or none. When it changes, the
+   * section scrolls to the top of the sheet and its heading takes focus.
+   * Choosing the same section again while this component stays mounted does
+   * nothing, so the caller should unmount the content when the sheet closes.
    */
   readonly section?: SheetSection;
   /** The pin's details, shown inside the Pin section. */
@@ -49,9 +51,10 @@ export interface SheetContentProps {
 }
 
 /**
- * Everything inside the options sheet, under the sheet's own h2 title: Basemap,
- * Pin, Layers (only when the host has layers), Shapes (only when the host
- * offers drawing), Settings and Help, each a `section` named by an h3.
+ * Everything inside the sheet, under its own h2 title, each part a `section`
+ * named by an h3. For the `settings` and `help` sections that is Settings
+ * and Help. Otherwise it is Basemap, Pin, Layers (only when the host has
+ * layers), Shapes (only when the host offers drawing) and Save image.
  */
 export function SheetContent({
   basemapId,
@@ -92,6 +95,18 @@ export function SheetContent({
       headings.current[target] = element;
     };
 
+  if (isSettingsSection(section ?? null)) {
+    return (
+      <div className={content} data-testid="sheet-content">
+        <SettingsSection
+          privacyHref={privacyHref}
+          headingRef={headingRef("settings")}
+        />
+        <HelpSection headingRef={headingRef("help")} />
+      </div>
+    );
+  }
+
   return (
     <div className={content} data-testid="sheet-content">
       <Section
@@ -122,11 +137,6 @@ export function SheetContent({
         credits={imageCredits}
         drawing={draw ? drawingForImage(draw.shapes) : undefined}
       />
-      <SettingsSection
-        privacyHref={privacyHref}
-        headingRef={headingRef("settings")}
-      />
-      <HelpSection headingRef={headingRef("help")} />
     </div>
   );
 }
