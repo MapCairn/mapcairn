@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { findAdministrators } from "../../../../scripts/cla/admins.mjs";
 import {
   AGREEMENT_SENTENCE,
   BOT_LOGIN,
@@ -81,6 +82,10 @@ type World = {
   contentShape?: "array" | "not-base64";
   /** Stores comments with Windows line endings, as GitHub can. */
   crlf?: boolean;
+  /** The repository permission GitHub reports for a login; "none" if unlisted. */
+  permissions?: Record<string, string>;
+  /** Logins whose permission lookup fails with the given HTTP status. */
+  permissionErrors?: Record<string, number>;
 };
 
 /** An in-memory stand-in for the parts of Octokit the check uses. */
@@ -203,6 +208,15 @@ function makeWorld(init: World = {}) {
       state.file = Buffer.from(String(params.content), "base64").toString();
       state.sha += 1;
       return { data: {} };
+    },
+    getCollaboratorPermissionLevel: async (params: Params) => {
+      enter("repos.getCollaboratorPermissionLevel", params);
+      const login = String(params.username);
+      const failure = init.permissionErrors?.[login];
+      if (failure !== undefined) {
+        throw httpError(failure);
+      }
+      return { data: { permission: init.permissions?.[login] ?? "none" } };
     },
     listCommitStatusesForRef: async (params: Params) => {
       enter("repos.listCommitStatusesForRef", params);
@@ -377,6 +391,184 @@ describe("run: pull request opened", () => {
     expect(
       String(named(world.calls, "issues.createComment")[0]?.params.body),
     ).toMatch(/could not be identified/);
+  });
+});
+
+const permissionCalls = (world: WorldHandle) =>
+  named(world.calls, "repos.getCollaboratorPermissionLevel");
+
+describe("run: repository administrators", () => {
+  it("passes an administrator's pull request with no comment and no signature", async () => {
+    const world = makeWorld({ permissions: { ada: "admin" } });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("success");
+    expect(named(world.calls, "issues.createComment")).toEqual([]);
+    expect(named(world.calls, "git.createRef")).toEqual([]);
+    expect(permissionCalls(world)[0]?.params).toEqual({
+      owner: "mooship",
+      repo: "karta",
+      username: "ada",
+    });
+  });
+
+  it.each(["write", "maintain", "triage", "read", "none"])(
+    "still needs an author whose permission is %s",
+    async (permission) => {
+      const world = makeWorld({ permissions: { ada: permission } });
+      await run({ ...world, context: pullRequestEvent });
+      expect(lastState(world)).toBe("failure");
+      expect(named(world.calls, "issues.createComment")).toHaveLength(1);
+    },
+  );
+
+  it("exempts an administrator's commits but still needs a co-author", async () => {
+    const world = makeWorld({
+      commits: [commit(ada), commit(grace)],
+      permissions: { ada: "admin" },
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("failure");
+    const description = String(statuses(world)[0]?.params.description);
+    expect(description).toContain("grace");
+    expect(description).not.toContain("ada");
+  });
+
+  it("leaves a person required, and warns, when the lookup fails", async () => {
+    const world = makeWorld({ permissionErrors: { ada: 500 } });
+    await expect(
+      run({ ...world, context: pullRequestEvent }),
+    ).resolves.toBeDefined();
+    expect(lastState(world)).toBe("failure");
+    expect(world.logs.warnings.join(" ")).toContain("ada");
+    expect(world.logs.failed).toEqual([]);
+  });
+
+  it("does not let one failed lookup stop another person being exempt", async () => {
+    const world = makeWorld({
+      commits: [commit(ada), commit(grace)],
+      permissions: { grace: "admin" },
+      permissionErrors: { ada: 403 },
+      comments: [agreement(ada, 10)],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("success");
+    expect(world.logs.warnings).toHaveLength(1);
+  });
+
+  it("never exempts anyone when every lookup is refused on a bot's pull request", async () => {
+    const world = makeWorld({
+      pullAuthor: dependabot,
+      commits: [commit(dependabot), commit(grace)],
+      permissionErrors: { grace: 403 },
+      failOn: { "repos.createCommitStatus": { status: 403 } },
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(world.logs.warnings.join(" ")).toContain("grace");
+    expect(statuses(world)[0]?.params.state).toBe("failure");
+    expect(world.logs.notices).toHaveLength(1);
+    expect(world.logs.failed).toEqual([]);
+  });
+
+  it("does not look up bots", async () => {
+    const world = makeWorld({
+      pullAuthor: dependabot,
+      commits: [commit(dependabot), commit(bot)],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("success");
+    expect(permissionCalls(world)).toEqual([]);
+  });
+
+  it("still exempts the owner's login without a lookup", async () => {
+    const world = makeWorld({ pullAuthor: owner, commits: [commit(owner)] });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("success");
+    expect(permissionCalls(world)).toEqual([]);
+  });
+
+  it("looks each distinct login up once, whatever its case", async () => {
+    const world = makeWorld({
+      commits: [
+        commit(ada),
+        commit(grace),
+        commit({ ...ada, login: "ADA" }),
+        commit(grace),
+      ],
+      pullCommits: 4,
+      comments: [agreement(ada, 10), agreement(grace, 11)],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(
+      permissionCalls(world)
+        .map((c) => String(c.params.username).toLowerCase())
+        .sort(),
+    ).toEqual(["ada", "grace"]);
+  });
+});
+
+describe("findAdministrators", () => {
+  const target = { owner: "mooship", repo: "karta" };
+  const fake = (levels: Record<string, string | Error>) => ({
+    rest: {
+      repos: {
+        getCollaboratorPermissionLevel: async ({
+          username,
+        }: {
+          username: string;
+        }) => {
+          const level = levels[username];
+          if (level instanceof Error) {
+            throw level;
+          }
+          return { data: { permission: level } };
+        },
+      },
+    },
+  });
+
+  it("returns only the logins GitHub reports as admin", async () => {
+    const warnings: string[] = [];
+    const found = await findAdministrators({
+      github: fake({ ada: "admin", grace: "write" }),
+      repo: target,
+      logins: ["ada", "grace"],
+      core: { warning: (m: string) => warnings.push(m) },
+    });
+    expect(found).toEqual(["ada"]);
+    expect(warnings).toEqual([]);
+  });
+
+  it("treats a missing or unexpected permission as not an administrator", async () => {
+    const found = await findAdministrators({
+      github: fake({ ada: undefined as never, grace: "ADMIN" }),
+      repo: target,
+      logins: ["ada", "grace"],
+      core: { warning: () => undefined },
+    });
+    expect(found).toEqual([]);
+  });
+
+  it("warns and leaves out a login whose lookup throws", async () => {
+    const warnings: string[] = [];
+    const found = await findAdministrators({
+      github: fake({ ada: new Error("boom"), grace: "admin" }),
+      repo: target,
+      logins: ["ada", "grace"],
+      core: { warning: (m: string) => warnings.push(m) },
+    });
+    expect(found).toEqual(["grace"]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("ada");
+  });
+
+  it("makes no call for no logins", async () => {
+    const found = await findAdministrators({
+      github: {},
+      repo: target,
+      logins: [],
+      core: { warning: () => undefined },
+    });
+    expect(found).toEqual([]);
   });
 });
 

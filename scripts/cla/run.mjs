@@ -9,6 +9,7 @@
  * request's code. Everything it reads from the pull request is data: it is
  * compared and printed, never evaluated or passed to a shell.
  */
+import { findAdministrators } from "./admins.mjs";
 import {
   addSignatures,
   BOT_LOGIN,
@@ -18,6 +19,7 @@ import {
   evaluate,
   isAgreementComment,
   parseSignatures,
+  requiredContributors,
   SIGNATURES_BRANCH,
   SIGNATURES_PATH,
   STATUS_CONTEXT,
@@ -235,6 +237,11 @@ async function branchExists(github, { owner, repo }) {
  * it fails the run so the owner sees it. A failure to post the explanatory
  * comment is only a warning, because it does not change who has agreed.
  *
+ * Repository administrators (including the owners of the organisation that
+ * holds the repository) are exempt. Their permission is looked up once for each
+ * distinct contributor who is not a bot, and a failed lookup only warns and
+ * leaves that person required to agree.
+ *
  * When a bot's pull request (Dependabot's) gets a read-only token, the run ends
  * with a notice instead of a failure, and no status is set.
  * @param {Environment} environment
@@ -313,8 +320,21 @@ async function check({ github, context, core }, pull) {
     readSignatures(github, target),
   ]);
 
+  const { required } = requiredContributors({
+    ownerLogin: owner,
+    pullAuthor: pull.user,
+    commits,
+  });
+  const exemptLogins = await findAdministrators({
+    github,
+    repo: target,
+    logins: required.map((person) => person.login),
+    core,
+  });
+
   const evaluation = evaluate({
     ownerLogin: owner,
+    exemptLogins,
     pullAuthor: pull.user,
     commits,
     commitTotal: pull.commits,

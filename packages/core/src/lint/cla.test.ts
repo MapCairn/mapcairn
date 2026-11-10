@@ -311,6 +311,45 @@ describe("who needs to agree", () => {
     expect(result.agreed).toBe(true);
   });
 
+  it("exempts a login on the exempt list, in any case", () => {
+    const result = evaluateWith({
+      pullAuthor: ada,
+      commits: [commit({ ...ada, login: "ADA" })],
+      exemptLogins: ["Ada"],
+    });
+    expect(result.required).toEqual([]);
+    expect(result.agreed).toBe(true);
+  });
+
+  it("exempts a listed commit author but still needs an unlisted co-author", () => {
+    const result = evaluateWith({
+      pullAuthor: ada,
+      commits: [commit(ada), commit(grace)],
+      commitTotal: 2,
+      exemptLogins: ["ada"],
+    });
+    expect(result.required.map((r: User) => r.login)).toEqual(["grace"]);
+    expect(result.missing.map((r: User) => r.login)).toEqual(["grace"]);
+    expect(result.authorMissing).toBe(false);
+    expect(result.agreed).toBe(false);
+  });
+
+  it("needs everyone when the exempt list is empty or left out", () => {
+    expect(evaluateWith({ exemptLogins: [] }).required).toHaveLength(1);
+    expect(evaluateWith().required).toHaveLength(1);
+  });
+
+  it("still exempts the owner and bots beside an exempt list", () => {
+    const dependabot = user("dependabot[bot]", 49699333, "Bot");
+    const result = evaluateWith({
+      pullAuthor: owner,
+      commits: [commit(owner), commit(dependabot), commit(ada)],
+      commitTotal: 3,
+      exemptLogins: ["someone-else"],
+    });
+    expect(result.required.map((r: User) => r.login)).toEqual(["ada"]);
+  });
+
   it("still needs a human who committed on a bot's pull request", () => {
     const dependabot = user("dependabot[bot]", 49699333, "Bot");
     const result = evaluateWith({
@@ -885,5 +924,12 @@ describe("the explanatory comment", () => {
       evaluateWith({ pullAuthor: owner, commits: [commit(owner)] }),
     );
     expect(text).toMatch(/no agreement is needed/i);
+  });
+
+  it("names administrators, not only the owner, as exempt", () => {
+    const text = build(
+      evaluateWith({ pullAuthor: owner, commits: [commit(owner)] }),
+    );
+    expect(text).toMatch(/repository administrators or from bots/);
   });
 });

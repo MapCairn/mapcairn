@@ -187,12 +187,14 @@ function sameLogin(left, right) {
 
 /**
  * Works out who has to agree: the pull request author and every distinct
- * commit author with a GitHub account, minus the repository owner and bots.
+ * commit author with a GitHub account, minus the repository owner, bots and any
+ * login in `exemptLogins` (repository administrators, found by the caller).
  * A commit whose author matches no account is reported in `unresolved`, and a
  * pull request author with no login or id in `authorUnresolved`, so neither is
  * ever dropped silently.
  * @param {{
  *   ownerLogin: string,
+ *   exemptLogins?: string[],
  *   pullAuthor: Account | null | undefined,
  *   commits: Array<{
  *     sha: string,
@@ -206,7 +208,13 @@ function sameLogin(left, right) {
  *   authorUnresolved: boolean,
  * }}
  */
-export function requiredContributors({ ownerLogin, pullAuthor, commits }) {
+export function requiredContributors({
+  ownerLogin,
+  exemptLogins = [],
+  pullAuthor,
+  commits,
+}) {
+  const exempt = new Set(exemptLogins.map((login) => login.toLowerCase()));
   /** @type {Map<string, { login: string, id: number }>} */
   const byLogin = new Map();
   /** @type {Array<{ sha: string, name: string }>} */
@@ -217,10 +225,14 @@ export function requiredContributors({ ownerLogin, pullAuthor, commits }) {
     if (!account?.login || typeof account.id !== "number") {
       return false;
     }
-    if (account.type === "Bot" || sameLogin(account.login, ownerLogin)) {
+    const key = account.login.toLowerCase();
+    if (
+      account.type === "Bot" ||
+      sameLogin(account.login, ownerLogin) ||
+      exempt.has(key)
+    ) {
       return true;
     }
-    const key = account.login.toLowerCase();
     if (!byLogin.has(key)) {
       byLogin.set(key, { login: account.login, id: account.id });
     }
@@ -250,6 +262,7 @@ export function requiredContributors({ ownerLogin, pullAuthor, commits }) {
  * wrote themselves.
  * @param {{
  *   ownerLogin: string,
+ *   exemptLogins?: string[],
  *   pullAuthor: Account | null | undefined,
  *   commits: Parameters<typeof requiredContributors>[0]["commits"],
  *   commitTotal: number,
@@ -269,6 +282,7 @@ export function requiredContributors({ ownerLogin, pullAuthor, commits }) {
  */
 export function evaluate({
   ownerLogin,
+  exemptLogins,
   pullAuthor,
   commits,
   commitTotal,
@@ -278,6 +292,7 @@ export function evaluate({
 }) {
   const { required, unresolved, authorUnresolved } = requiredContributors({
     ownerLogin,
+    exemptLogins,
     pullAuthor,
     commits,
   });
@@ -471,7 +486,7 @@ export function buildComment(evaluation, { claUrl }) {
 
   if (evaluation.agreed) {
     if (evaluation.required.length === 0) {
-      return `${heading}\nNo agreement is needed for this pull request, because it comes only from the repository owner or from bots.\n`;
+      return `${heading}\nNo agreement is needed for this pull request, because it comes only from repository administrators or from bots.\n`;
     }
     const names = evaluation.required
       .map((person) => code(person.login))
