@@ -128,6 +128,8 @@ Changes reach `main` through pull requests: a branch named for the change, a Con
 
 Everything agents post on GitHub (issues, comments and pull requests) appears under the maintainer's own account, so write it as plain project facts in a neutral voice: "On hold for today", "Decided 2026-11-10: ...", not "the owner asked". No personal opinions or claims in the maintainer's name, no `@mentions` of people (commands to a bot such as Dependabot are fine), no employer or private references, and no attribution lines naming an AI tool. Check the text with `.claude/local/voice-check.cjs` where it exists, and brief every sub-agent the same way.
 
+This project may have other contributors at any time, so no instruction file, agent definition, brief, document, code comment, test or GitHub post may name the maintainer personally. Say "the maintainer" or describe the decision. The only intended places a person is named are the legal definition of the Owner in `CLA.md`, the deployed hostname and contact address, and the git author of a commit.
+
 ## Definition of done
 
 - Code changes: run `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`.
