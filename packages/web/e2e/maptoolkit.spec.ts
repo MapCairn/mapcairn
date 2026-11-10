@@ -15,11 +15,11 @@ import {
 import { scriptGeolocation, scriptSearch } from "./support/services";
 import {
   type ChromeState,
+  collapseCredits,
   enterState,
   leaveState,
   MATRIX_VIEWPORTS,
   viewportDetails,
-  waitForCreditsCollapsed,
   waitForStableLayout,
 } from "./support/states";
 
@@ -134,6 +134,8 @@ test.describe("Maptoolkit Dark", () => {
 });
 
 test.describe("the permanent credit", () => {
+  test.use({ fastCredits: true });
+
   test.beforeEach(async ({ mapPage }) => {
     await mapPage.goto(ON_MAPTOOLKIT);
   });
@@ -175,11 +177,7 @@ test.describe("the permanent credit", () => {
     mapPage,
   }) => {
     await expect(mapPage.creditsButton).toBeVisible();
-    await expect(mapPage.creditsButton).toHaveAttribute(
-      "aria-expanded",
-      "false",
-      { timeout: 10_000 },
-    );
+    await collapseCredits(mapPage);
     await mapPage.focusMap();
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("+");
@@ -189,7 +187,7 @@ test.describe("the permanent credit", () => {
   test("keeps the other credits one button away: the collapsing credits still list the layers' and MapLibre's", async ({
     mapPage,
   }) => {
-    await waitForCreditsCollapsed(mapPage);
+    await collapseCredits(mapPage);
     await mapPage.creditsButton.click();
     await expect(mapPage.creditsRegion).toContainText("MapLibre");
   });
@@ -350,7 +348,7 @@ async function expectCreditUnobstructed(
 
 for (const viewport of CREDIT_VIEWPORTS) {
   test.describe(`credit at ${viewport.width} x ${viewport.height}`, () => {
-    test.use({ viewport });
+    test.use({ viewport, fastCredits: true });
     test.setTimeout(120_000);
 
     test(

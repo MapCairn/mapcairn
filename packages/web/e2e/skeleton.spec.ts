@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { axeViolations } from "./support/a11y";
-import { viewportDetails, waitForCreditsCollapsed } from "./support/states";
+import { collapseCredits, viewportDetails } from "./support/states";
 
 /*
  * The server-rendered chrome skeleton: the page as the server sends it, with
@@ -139,7 +139,7 @@ async function boxes(
 
 for (const viewport of VIEWPORTS) {
   test.describe(`chrome skeleton at ${viewport.width}x${viewport.height}`, () => {
-    test.use({ viewport });
+    test.use({ viewport, fastCredits: true });
 
     test(
       "puts every control where the live chrome puts it",
@@ -159,7 +159,7 @@ for (const viewport of VIEWPORTS) {
         await expect(inSkeleton(page)).toHaveCount(0);
         // The credits show themselves once; the button does not move for it,
         // but wait for the first showing to end so the layout is at rest.
-        await waitForCreditsCollapsed(mapPage);
+        await collapseCredits(mapPage);
         const after = await boxes(page, (pair) => pair.live);
 
         for (const pair of PAIRS) {

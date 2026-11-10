@@ -41,7 +41,7 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   // The `wrangler dev` preview server backing `webServer` below is a single
   // local process, not Cloudflare's real distributed edge; running many
   // basemap-switching tests concurrently (each spinning up its own MapLibre

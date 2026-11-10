@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { waitForStableLayout } from "./support/states";
 
 test.describe("map options sheet on a phone", () => {
   test.use({ reducedMotion: "reduce", viewport: { width: 390, height: 844 } });
@@ -85,7 +86,9 @@ test.describe("map options sheet on a phone", () => {
     await expect(page.getByRole("main")).toHaveAttribute("inert", "");
     await expect(mapPage.chrome).toHaveAttribute("data-hide-bottom", "true");
 
-    // Nothing behind the sheet shows through where the search pill sits.
+    // Nothing behind the sheet shows through where the search pill sits, once
+    // the sheet and the layout around it have stopped moving.
+    await waitForStableLayout(page);
     const pill = await page
       .locator('[data-chrome="search-pill"]')
       .boundingBox();

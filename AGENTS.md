@@ -55,6 +55,8 @@ npm run a11y
 
 `e2e` runs every Playwright test except those tagged `@a11y`, and `a11y` runs only those. Playwright starts `npm run start` itself and reuses a server already running on that port (4173, or `KARTA_E2E_PORT`, which lets two checkouts run suites side by side). Page objects live in `packages/web/e2e/pages`, and shared helpers in `packages/web/e2e/support`. Locators use role and accessible name first, then `data-testid` (the configured `testIdAttribute`). The suite mocks basemap tiles, styles and Nominatim, so no test depends on a third-party service, and tests script geolocation, search, the clipboard, storage and the system theme through the test seam described in `ARCHITECTURE.md`.
 
+The credits show themselves for five seconds after the map starts. A spec that only needs them out of the way sets the `fastCredits` option (`test.use({ fastCredits: true })`), which installs Playwright's clock before the page loads, and calls `collapseCredits` from `e2e/support/states.ts`, which jumps that clock past the intro. The first-showing tests in `attribution.spec.ts` leave the option off and wait out the real timer.
+
 Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. WebKit runs only the basemap, keyboard, sheet and app-shell specs, because MapLibre worker startup and the bottom sheet can behave differently on iOS. Emulation cannot reproduce an iPhone GPU; basemap changes still need a real-device check.
 
 ## Engineering principles

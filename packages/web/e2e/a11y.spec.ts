@@ -11,11 +11,11 @@ import { inspectChromeLayout } from "./support/layout";
 import { scriptSearch } from "./support/services";
 import {
   CHROME_STATES,
+  collapseCredits,
   enterState,
   leaveState,
   MATRIX_VIEWPORTS,
   viewportDetails,
-  waitForCreditsCollapsed,
   waitForStableLayout,
 } from "./support/states";
 
@@ -26,7 +26,7 @@ import {
  * `npm run a11y` runs these and `npm run e2e` leaves them out.
  */
 
-test.use({ reducedMotion: "reduce" });
+test.use({ reducedMotion: "reduce", fastCredits: true });
 
 /** Runs axe and the control checks in every chrome state. */
 async function auditStates(mapPage: MapPage, label: string): Promise<void> {
@@ -162,7 +162,7 @@ test.describe("focus @a11y", () => {
     expect(result.missing).toEqual([]);
 
     await mapPage.goto();
-    await waitForCreditsCollapsed(mapPage);
+    await collapseCredits(mapPage);
     await mapPage.creditsButton.click();
     result = await findMissingFocusRings(page);
     expect(result.missing).toEqual([]);

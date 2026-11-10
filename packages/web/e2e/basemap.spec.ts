@@ -20,7 +20,7 @@ import {
   VECTOR_STYLE_PATTERN,
 } from "./support/network";
 import { seedStoredSettings } from "./support/services";
-import { waitForCreditsCollapsed } from "./support/states";
+import { collapseCredits } from "./support/states";
 
 const START = "#map=8.00/-33.90000/18.40000/30";
 
@@ -192,27 +192,31 @@ test.describe("basemaps", () => {
     await expect(mapPage.host).toHaveAttribute("data-zoom", "19.00");
   });
 
-  test("the credits follow the basemap and name MapLibre", async ({
-    mapPage,
-  }) => {
-    await mapPage.goto(`#basemap=${RASTER_BASEMAP_ID}`);
-    await waitForCreditsCollapsed(mapPage);
-    await mapPage.creditsButton.click();
-    await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
-      RASTER_BASEMAP_CREDIT,
-      "MapLibre",
-    ]);
-    await mapPage.page.keyboard.press("Escape");
+  test.describe("credits", () => {
+    test.use({ fastCredits: true });
 
-    await mapPage.goto(`#basemap=${DEFAULT_VECTOR_BASEMAP_ID}`);
-    await waitForCreditsCollapsed(mapPage);
-    await mapPage.creditsButton.click();
-    await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
-      "© OpenStreetMap contributors",
-      "OpenFreeMap",
-      "OpenMapTiles",
-      "MapLibre",
-    ]);
+    test("the credits follow the basemap and name MapLibre", async ({
+      mapPage,
+    }) => {
+      await mapPage.goto(`#basemap=${RASTER_BASEMAP_ID}`);
+      await collapseCredits(mapPage);
+      await mapPage.creditsButton.click();
+      await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
+        RASTER_BASEMAP_CREDIT,
+        "MapLibre",
+      ]);
+      await mapPage.page.keyboard.press("Escape");
+
+      await mapPage.goto(`#basemap=${DEFAULT_VECTOR_BASEMAP_ID}`);
+      await collapseCredits(mapPage);
+      await mapPage.creditsButton.click();
+      await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
+        "© OpenStreetMap contributors",
+        "OpenFreeMap",
+        "OpenMapTiles",
+        "MapLibre",
+      ]);
+    });
   });
 
   test("the raster tiles load under the production content security policy", async ({

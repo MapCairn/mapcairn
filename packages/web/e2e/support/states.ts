@@ -47,28 +47,62 @@ export const MATRIX_VIEWPORTS = [
  */
 export const CREDITS_COLLAPSE_TIMEOUT_MS = 10_000;
 
+/** How long {@link collapseCredits} lets one jump of the clock take effect before it jumps again. */
+const CREDITS_FADE_CHECK_MS = 1_000;
+
 /**
- * Waits until the credits, which show by themselves once the map has started
- * (the OpenStreetMap attribution guidelines), have collapsed: the button says
- * it is collapsed and the popover is hidden. Waits on those signals, never a
- * fixed sleep.
+ * Waits for the credits' first showing to start. They begin collapsed, before
+ * the map exists, so a collapsed button would otherwise pass a check for
+ * "collapsed" too early.
  */
-export async function waitForCreditsCollapsed(mapPage: MapPage): Promise<void> {
-  // The credits start collapsed, before the map exists: wait for the first
-  // showing to start, or a collapsed button would pass this check too early.
+async function waitForCreditsIntro(mapPage: MapPage): Promise<void> {
   await expect(
     mapPage.page.locator('[data-chrome="attribution"]'),
   ).toHaveAttribute("data-intro-started", "true", {
     timeout: CREDITS_COLLAPSE_TIMEOUT_MS,
   });
+}
+
+/** Expects the button to say the credits are collapsed and the popover to be hidden. */
+async function expectCreditsCollapsed(
+  mapPage: MapPage,
+  timeout: number,
+): Promise<void> {
   await expect(mapPage.creditsButton).toHaveAttribute(
     "aria-expanded",
     "false",
-    { timeout: CREDITS_COLLAPSE_TIMEOUT_MS },
+    { timeout },
   );
-  await expect(mapPage.creditsRegion).toBeHidden({
-    timeout: CREDITS_COLLAPSE_TIMEOUT_MS,
-  });
+  await expect(mapPage.creditsRegion).toBeHidden({ timeout });
+}
+
+/**
+ * Waits until the credits, which show by themselves once the map has started
+ * (the OpenStreetMap attribution guidelines), have collapsed on their own
+ * timer: the button says it is collapsed and the popover is hidden. Waits on
+ * those signals, never a fixed sleep, and so takes the app's real five
+ * seconds. Only the test of that timer needs this; the rest use
+ * {@link collapseCredits}.
+ */
+export async function waitForCreditsCollapsed(mapPage: MapPage): Promise<void> {
+  await waitForCreditsIntro(mapPage);
+  await expectCreditsCollapsed(mapPage, CREDITS_COLLAPSE_TIMEOUT_MS);
+}
+
+/**
+ * Collapses the credits after their first showing without waiting out the
+ * app's real timer: jumps the page's clock forward, so the app's own timer
+ * and fade run as they would after five seconds. The test must set the
+ * `fastCredits` option, which installs that clock before the page loads.
+ */
+export async function collapseCredits(mapPage: MapPage): Promise<void> {
+  await waitForCreditsIntro(mapPage);
+  // The app sets its timer just after the first showing appears, and the fade
+  // that follows is a second timer, so jump again until the credits are away.
+  await expect(async () => {
+    await mapPage.page.clock.fastForward(CREDITS_COLLAPSE_TIMEOUT_MS);
+    await expectCreditsCollapsed(mapPage, CREDITS_FADE_CHECK_MS);
+  }).toPass({ timeout: CREDITS_COLLAPSE_TIMEOUT_MS });
 }
 
 /**
@@ -82,7 +116,7 @@ export async function enterState(
   switch (state) {
     case "rest":
       // At rest the credits are collapsed, once their first showing is over.
-      await waitForCreditsCollapsed(mapPage);
+      await collapseCredits(mapPage);
       return;
     case "sheet open":
       await mapPage.openMapOptions();

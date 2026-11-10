@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 import { mockLayerProviders } from "./support/layers";
-import { waitForCreditsCollapsed } from "./support/states";
+import { collapseCredits } from "./support/states";
 
 const TILE_URL =
   /gibs\.earthdata\.nasa\.gov\/wmts\/epsg3857\/best\/IMERG_Precipitation_Rate\/default\/(\d{4}-\d{2}-\d{2})\/GoogleMapsCompatible_Level6\/\d+\/\d+\/\d+\.png/;
@@ -19,7 +19,7 @@ function daysAgo(days: number): string {
 }
 
 test.describe("rainfall layer", () => {
-  test.use({ reducedMotion: "reduce" });
+  test.use({ reducedMotion: "reduce", fastCredits: true });
 
   test("asks NASA for nothing until it is on, then for the newest day, and again for a chosen day", async ({
     page,
@@ -69,7 +69,7 @@ test.describe("rainfall layer", () => {
     await expect(item).toContainText("Not a forecast");
     await expect(item).toContainText("not for warnings");
 
-    await waitForCreditsCollapsed(mapPage);
+    await collapseCredits(mapPage);
     await mapPage.creditsButton.click();
     await expect(mapPage.creditsRegion).toContainText(
       "Global Imagery Browse Services (GIBS)",

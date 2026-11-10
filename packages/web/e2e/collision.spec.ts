@@ -5,17 +5,17 @@ import { inspectChromeLayout } from "./support/layout";
 import { scriptSearch } from "./support/services";
 import {
   CHROME_STATES,
+  collapseCredits,
   enterState,
   leaveState,
   MATRIX_VIEWPORTS,
   viewportDetails,
-  waitForCreditsCollapsed,
   waitForStableLayout,
 } from "./support/states";
 
 // Reduced motion so the sheet and the slots land at once; the layout itself
 // is the same with motion on.
-test.use({ reducedMotion: "reduce" });
+test.use({ reducedMotion: "reduce", fastCredits: true });
 
 // Each test walks every chrome state in two themes on one page, so it gets more time.
 test.setTimeout(120_000);
@@ -150,7 +150,7 @@ for (const viewport of MATRIX_VIEWPORTS) {
             });
           }
           await mapPage.goto();
-          await waitForCreditsCollapsed(mapPage);
+          await collapseCredits(mapPage);
           await mapPage.creditsButton.click();
           await expect(mapPage.creditsRegion).toBeVisible();
           await waitForStableLayout(page);
