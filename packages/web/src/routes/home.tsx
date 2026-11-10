@@ -1,4 +1,4 @@
-import { ChromeSkeleton, SkipLink, VisuallyHidden } from "@karta/map";
+import { ChromeSkeleton, SkipLink, VisuallyHidden } from "@mapcairn/map";
 import type { LinksFunction } from "react-router";
 import { App } from "../App";
 import { ClientOnly } from "../app/ClientOnly";
@@ -29,7 +29,7 @@ export default function HomeRoute() {
     <>
       <SkipLink targetId={MAP_REGION_ID} />
       <header>
-        <VisuallyHidden as="h1">Karta</VisuallyHidden>
+        <VisuallyHidden as="h1">MapCairn</VisuallyHidden>
       </header>
       <ClientOnly
         fallback={

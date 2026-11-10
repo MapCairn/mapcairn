@@ -1,6 +1,6 @@
 {
-  "name": "Karta",
-  "short_name": "Karta",
+  "name": "MapCairn",
+  "short_name": "MapCairn",
   "description": "Search places, compare basemaps and measure distances or areas on an interactive map.",
   "start_url": "/",
   "scope": "/",

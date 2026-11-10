@@ -1,4 +1,4 @@
-import type { MapAdapter, MapEngineError, ViewState } from "@karta/core";
+import type { MapAdapter, MapEngineError, ViewState } from "@mapcairn/core";
 import { createContext, useContext } from "react";
 
 /** What {@link useMap} returns: the live map, as seen by overlays and chrome. */

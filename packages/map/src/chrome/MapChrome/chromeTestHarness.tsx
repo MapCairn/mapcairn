@@ -3,7 +3,7 @@ import {
   DEFAULT_FAKE_VIEW,
   FakeMapAdapter,
   type FakeServices,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { type RenderResult, render } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { vi } from "vitest";

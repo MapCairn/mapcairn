@@ -1,6 +1,6 @@
 /**
  * The names of the data palette's colours. Definitions name a colour by slot
- * and never write a value; `@karta/theme` holds the values
+ * and never write a value; `@mapcairn/theme` holds the values
  * (`dataPalette` in `tokenValues.ts`).
  *
  * Categorical slots are the Okabe-Ito colours. Black is left out because it

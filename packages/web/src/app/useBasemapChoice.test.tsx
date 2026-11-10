@@ -6,8 +6,8 @@ import {
   FAKE_CREDITED_BASEMAP,
   getBasemap,
   MapEngineError,
-} from "@karta/core";
-import { ServicesProvider } from "@karta/map";
+} from "@mapcairn/core";
+import { ServicesProvider } from "@mapcairn/map";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";

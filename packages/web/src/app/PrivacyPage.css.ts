@@ -1,4 +1,4 @@
-import { tokens } from "@karta/theme";
+import { tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** The scrolling page: the document is fixed for the map, so this scrolls itself. */

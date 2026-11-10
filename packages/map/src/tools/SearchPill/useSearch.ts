@@ -7,8 +7,8 @@ import {
   SearchError,
   type SearchErrorKind,
   type SearchResult,
-} from "@karta/core";
-import { useLatestRef } from "@karta/react";
+} from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";

@@ -7,7 +7,7 @@ Guidance for humans and AI working in this repository. `CLAUDE.md` imports this 
 
 ## About
 
-Karta is a reusable SDK for public-interest map platforms, with a reference host. Four SDK packages (`core`, `map`, `react`, `theme`) provide the map ports and pure logic, the map user interface, generic React hooks and the typed design tokens. `packages/web` is an SSR host: basemaps, place search, distance and area measurement, drawing and editing shapes, directions (a public routing server, used only when asked), a pin, theme and unit settings, and open data layers defined as data in `packages/web/src/layers/definitions` (plan 0001). Every layer is off until turned on; the browser then fetches it from its public provider. `docs/plans/` holds plans for larger work; do not describe a planned feature as existing.
+MapCairn is a reusable SDK for public-interest map platforms, with a reference host. Four SDK packages (`core`, `map`, `react`, `theme`) provide the map ports and pure logic, the map user interface, generic React hooks and the typed design tokens. `packages/web` is an SSR host: basemaps, place search, distance and area measurement, drawing and editing shapes, directions (a public routing server, used only when asked), a pin, theme and unit settings, and open data layers defined as data in `packages/web/src/layers/definitions` (plan 0001). Every layer is off until turned on; the browser then fetches it from its public provider. `docs/plans/` holds plans for larger work; do not describe a planned feature as existing.
 
 MapLibre GL JS is the only map engine. The app follows ports and adapters, described in `ARCHITECTURE.md`. The design system is tokens only, with IBM Plex Sans, Lucide icons and vanilla-extract, described in `DESIGN.md`. The app is English only (British English, `lang="en-GB"`), with its copy written inline in components.
 
@@ -40,7 +40,7 @@ npm run check
 - `typecheck` checks every workspace, including web route types and the Playwright project.
 - `lint` runs Biome, dependency-cruiser and the harmony scanner (`scripts/harmony`, see `DESIGN.md`). Pre-commit runs the same three on staged files, but not typecheck, tests or coverage.
 - `build` builds every workspace. The web build then checks that the production bundle holds no browser test seam.
-- `start` builds the e2e-mode bundle and serves it on port 4173 (or `KARTA_E2E_PORT`) through wrangler, with `wrangler.e2e.jsonc`. This build keeps the test seam, so it is not the production bundle. `wrangler.e2e.jsonc` omits production routes, so the old-hostname redirect is not exercised.
+- `start` builds the e2e-mode bundle and serves it on port 4173 (or `MAPCAIRN_E2E_PORT`) through wrangler, with `wrangler.e2e.jsonc`. This build keeps the test seam, so it is not the production bundle. `wrangler.e2e.jsonc` omits production routes, so the old-hostname redirect is not exercised.
 - `check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence.
 
 CI checks lint, typecheck, coverage and build. Playwright and Lighthouse have separate workflows.
@@ -48,12 +48,12 @@ CI checks lint, typecheck, coverage and build. Playwright and Lighthouse have se
 ### Browser tests
 
 ```bash
-npm run playwright:install -w @karta/web
+npm run playwright:install -w @mapcairn/web
 npm run e2e
 npm run a11y
 ```
 
-`e2e` runs every Playwright test except those tagged `@a11y`, and `a11y` runs only those. Playwright starts `npm run start` itself and reuses a server already running on that port (4173, or `KARTA_E2E_PORT`, which lets two checkouts run suites side by side). Page objects live in `packages/web/e2e/pages`, and shared helpers in `packages/web/e2e/support`. Locators use role and accessible name first, then `data-testid` (the configured `testIdAttribute`). The suite mocks basemap tiles, styles and Nominatim, so no test depends on a third-party service, and tests script geolocation, search, the clipboard, storage and the system theme through the test seam described in `ARCHITECTURE.md`.
+`e2e` runs every Playwright test except those tagged `@a11y`, and `a11y` runs only those. Playwright starts `npm run start` itself and reuses a server already running on that port (4173, or `MAPCAIRN_E2E_PORT`, which lets two checkouts run suites side by side). Page objects live in `packages/web/e2e/pages`, and shared helpers in `packages/web/e2e/support`. Locators use role and accessible name first, then `data-testid` (the configured `testIdAttribute`). The suite mocks basemap tiles, styles and Nominatim, so no test depends on a third-party service, and tests script geolocation, search, the clipboard, storage and the system theme through the test seam described in `ARCHITECTURE.md`.
 
 The credits show themselves for five seconds after the map starts. A spec that only needs them out of the way sets the `fastCredits` option (`test.use({ fastCredits: true })`), which installs Playwright's clock before the page loads, and calls `collapseCredits` from `e2e/support/states.ts`, which jumps that clock past the intro. The first-showing tests in `attribution.spec.ts` leave the option off and wait out the real timer.
 
@@ -97,11 +97,11 @@ The npm workspaces share one root `package-lock.json`.
 
 `ARCHITECTURE.md` has the layers, the ports table, the map adapter and how to add an adapter. The package boundaries are:
 
-- `packages/core` (`@karta/core`): the port interfaces, pure logic (surface state machine, sheet snapping, zoom, scale, formatting, announcements, URL hash, theme resolution, measurement), the basemap definitions, fakes and contract suites. It must not import other Karta packages, React or a browser global.
-- `packages/react` (`@karta/react`): generic React hooks. It must not import other Karta packages.
-- `packages/theme` (`@karta/theme`): the typed token contract, `focusRing`, `zLayer` and the token values with their contrast maths. It must not import other Karta packages.
-- `packages/map` (`@karta/map`): the map user interface (chrome, sheet, panels, tools, primitives), the `MapView` host and `ServicesProvider`. It builds on core, react and theme, never web, and never imports an adapter or an engine.
-- `packages/web` (`@karta/web`): the SSR host. It owns the adapters (MapLibre, Nominatim, Valhalla routing, geolocation, storage, clipboard, URL hash, theme), the composition root `createServices()`, the engine CSS, app copy, routes and headers.
+- `packages/core` (`@mapcairn/core`): the port interfaces, pure logic (surface state machine, sheet snapping, zoom, scale, formatting, announcements, URL hash, theme resolution, measurement), the basemap definitions, fakes and contract suites. It must not import other MapCairn packages, React or a browser global.
+- `packages/react` (`@mapcairn/react`): generic React hooks. It must not import other MapCairn packages.
+- `packages/theme` (`@mapcairn/theme`): the typed token contract, `focusRing`, `zLayer` and the token values with their contrast maths. It must not import other MapCairn packages.
+- `packages/map` (`@mapcairn/map`): the map user interface (chrome, sheet, panels, tools, primitives), the `MapView` host and `ServicesProvider`. It builds on core, react and theme, never web, and never imports an adapter or an engine.
+- `packages/web` (`@mapcairn/web`): the SSR host. It owns the adapters (MapLibre, Nominatim, Valhalla routing, geolocation, storage, clipboard, URL hash, theme), the composition root `createServices()`, the engine CSS, app copy, routes and headers.
 
 `npm run lint` enforces these boundaries through dependency-cruiser (`.dependency-cruiser.cjs`), Biome and the harmony scanner.
 
@@ -110,7 +110,7 @@ The npm workspaces share one root `package-lock.json`.
 `wrangler.jsonc` declares only the static `ASSETS` binding, routes and observability. `workers/app.ts` forwards requests to the built React Router server. The route table in `src/routes.ts` has the map, the privacy page, the `robots.txt`, `sitemap.xml` and `llms.txt` resource routes and `log-error`.
 `entry.client.tsx` installs client error reporting before hydration. Server rendering, the root error boundary and the Worker wrapper log server errors. `routes/log-error.ts` validates bounded client reports and logs them without a database.
 
-The inline theme bootstrap in `root.tsx` (source in `src/app/themeBootstrap.ts`) prevents a flash before hydration. If its source changes, recompute its exact SHA-256 CSP hash in `public/_headers`. Keep font and app CSS as module imports so font fallback metrics are applied by the build.
+The inline theme bootstrap in `root.tsx` (source in `src/app/themeBootstrap.ts`) prevents a flash before hydration. If its source changes, recompute its exact SHA-256 CSP hash in `public/_headers` and `src/constants/securityHeaders.ts`. The script also reads the pre-rename key `karta:theme` when `mapcairn:theme` is empty, so a returning visitor sees no flash. Keep font and app CSS as module imports so font fallback metrics are applied by the build.
 
 Production CSP permits no `unsafe-inline` script or stylesheet source. New basemap or geocoder origins must be allowed in `public/_headers`; local development does not apply those headers. The MapLibre worker must stay compatible with iOS and the production CSP.
 
@@ -118,7 +118,7 @@ Production CSP permits no `unsafe-inline` script or stylesheet source. New basem
 
 `DESIGN.md` is the source of truth: tokens only, IBM Plex Sans, Lucide icons through the `Icon` component, one accent, and layout slots owned by `MapChrome`. Token values live in `packages/theme/src/tokens.css.ts` and `tokenValues.ts`. Components use vanilla-extract beside their implementations and may only use tokens. Use `tabular-nums` for figures. Do not introduce a second palette or arbitrary values. Do not add a Shadow DOM component library such as `@material/web`: its custom elements fail under Workers SSR.
 
-SDK consumers must register `vanillaExtractPlugin()` in their Vite config. `@karta/theme` is side-effect free, so its token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does.
+SDK consumers must register `vanillaExtractPlugin()` in their Vite config. `@mapcairn/theme` is side-effect free, so its token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does.
 
 ## Issues and pull requests
 

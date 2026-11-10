@@ -56,10 +56,10 @@ describe("BeaconErrorReporter", () => {
     it("sends only the origin and path, never the query or the hash that can hold the user's position", async () => {
       // A real Location also carries the query and hash; the reporter must ignore them.
       const location = {
-        href: "https://karta.example/map?q=home#map=18/-33.92530/18.42410",
+        href: "https://mapcairn.example/map?q=home#map=18/-33.92530/18.42410",
         search: "?q=home",
         hash: "#map=18/-33.92530/18.42410",
-        origin: "https://karta.example",
+        origin: "https://mapcairn.example",
         pathname: "/map",
       };
       const target: ErrorReportingWindow = {
@@ -76,7 +76,7 @@ describe("BeaconErrorReporter", () => {
       reporter.report(new Error("boom"), "error");
 
       const body = await readBeaconBody(sendBeacon.mock.calls[0]?.[1]);
-      expect(body.url).toBe("https://karta.example/map");
+      expect(body.url).toBe("https://mapcairn.example/map");
       expect(JSON.stringify(body)).not.toContain("-33.92530");
     });
 

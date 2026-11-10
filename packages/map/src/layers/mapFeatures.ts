@@ -31,13 +31,13 @@ import {
   shapeEvaluator,
   tileUrl,
   type VectorTileLayerDefinition,
-} from "@karta/core";
-import { tokenValues } from "@karta/theme";
+} from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 
 const PALETTE: Readonly<Record<string, string>> = tokenValues.dataPalette;
 
 /**
- * The hex value of a palette slot. Definitions name slots, `@karta/theme`
+ * The hex value of a palette slot. Definitions name slots, `@mapcairn/theme`
  * holds the values, and the definition schema only accepts slots that exist,
  * so a missing value is a wiring bug.
  */

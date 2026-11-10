@@ -3,7 +3,7 @@ import type {
   LineDash,
   MapLookRule,
   MapShapeLook,
-} from "@karta/core";
+} from "@mapcairn/core";
 
 /**
  * An engine expression, or a literal value an engine property accepts. It is

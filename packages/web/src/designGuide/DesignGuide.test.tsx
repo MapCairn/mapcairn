@@ -2,13 +2,13 @@ import {
   createFakeServices,
   FakeDevicePreferences,
   type FakeServices,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   LiveRegionProvider,
   ServicesProvider,
   TooltipProvider,
-} from "@karta/map";
-import { tokenValues } from "@karta/theme";
+} from "@mapcairn/map";
+import { tokenValues } from "@mapcairn/theme";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
@@ -78,7 +78,7 @@ describe("DesignGuide", () => {
 
   it("renders the marker the build check looks for", async () => {
     await renderGuide();
-    expect(DESIGN_GUIDE_MARKER).toBe("KARTA_DESIGN_GUIDE_MARKER");
+    expect(DESIGN_GUIDE_MARKER).toBe("MAPCAIRN_DESIGN_GUIDE_MARKER");
     expect(screen.getByRole("main")).toHaveAttribute(
       "data-design-guide",
       DESIGN_GUIDE_MARKER,

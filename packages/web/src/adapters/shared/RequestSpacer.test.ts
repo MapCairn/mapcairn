@@ -1,4 +1,4 @@
-import { PortAbortError } from "@karta/core";
+import { PortAbortError } from "@mapcairn/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RequestSpacer } from "./RequestSpacer";
 

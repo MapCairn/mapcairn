@@ -36,9 +36,9 @@ test.describe("settings", () => {
     await expect(theme.getByRole("radio", { name: "System" })).toBeChecked();
     await theme.getByRole("radio", { name: "Dark" }).click();
     await expect(html).toHaveAttribute("data-theme", "dark");
-    expect(await page.evaluate(() => localStorage.getItem("karta:theme"))).toBe(
-      "dark",
-    );
+    expect(
+      await page.evaluate(() => localStorage.getItem("mapcairn:theme")),
+    ).toBe("dark");
 
     await page.reload();
     await expect(html).toHaveAttribute("data-theme", "dark");

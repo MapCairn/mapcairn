@@ -1,4 +1,4 @@
-import { tokenValues } from "@karta/theme";
+import { tokenValues } from "@mapcairn/theme";
 
 /**
  * Text measured to tell IBM Plex Sans from its fallback. The fallback is

@@ -1,4 +1,4 @@
-import { shouldShowZoomButtons } from "@karta/core";
+import { shouldShowZoomButtons } from "@mapcairn/core";
 import {
   Layers,
   LocateFixed,

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { BASEMAPS } from "@karta/core";
-import { compositeOver, contrastRatio, tokenValues } from "@karta/theme";
+import { BASEMAPS } from "@mapcairn/core";
+import { compositeOver, contrastRatio, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy } from "../constants/securityHeaders";
 import {

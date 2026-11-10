@@ -1,4 +1,4 @@
-import type { ChromeLayout } from "@karta/core";
+import type { ChromeLayout } from "@mapcairn/core";
 import { createContext, type ReactNode, useContext } from "react";
 
 /** What {@link MapChrome} tells the surfaces and slots inside it. */

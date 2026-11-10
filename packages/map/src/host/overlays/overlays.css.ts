@@ -1,4 +1,4 @@
-import { mapOverlayTokens, tokens, zLayer } from "@karta/theme";
+import { mapOverlayTokens, tokens, zLayer } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** Width of a measure line or crosshair stroke. */

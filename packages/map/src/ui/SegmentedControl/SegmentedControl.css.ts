@@ -1,4 +1,4 @@
-import { focusRing, tokens } from "@karta/theme";
+import { focusRing, tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 
 /** The group: a raised track holding the items side by side. */

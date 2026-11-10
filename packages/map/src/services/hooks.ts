@@ -15,7 +15,7 @@ import {
   type ThemeChoice,
   type ThemeSource,
   type UrlState,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useServices } from "./ServicesProvider";
 

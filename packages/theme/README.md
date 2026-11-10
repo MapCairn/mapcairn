@@ -1,6 +1,6 @@
-# `@karta/theme`
+# `@mapcairn/theme`
 
-Karta's design tokens, built with [vanilla-extract](https://vanilla-extract.style/). It has no dependency on another Karta package, a map engine or React. [`DESIGN.md`](../../DESIGN.md) describes the system and the rules for using it.
+MapCairn's design tokens, built with [vanilla-extract](https://vanilla-extract.style/). It has no dependency on another MapCairn package, a map engine or React. [`DESIGN.md`](../../DESIGN.md) describes the system and the rules for using it.
 
 ## Exports
 
@@ -16,7 +16,7 @@ The token set and the contrast checks live in `src/tokens.css.ts`, `src/tokenVal
 
 ```ts
 // Button.css.ts
-import { focusRing, tokens } from "@karta/theme";
+import { focusRing, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 export const button = style({

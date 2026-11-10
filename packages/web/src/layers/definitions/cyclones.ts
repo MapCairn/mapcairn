@@ -1,4 +1,4 @@
-import type { FeedLayerDefinition } from "@karta/core";
+import type { FeedLayerDefinition } from "@mapcairn/core";
 import { GDACS_ALERTS } from "./gdacs/alerts";
 
 /** GDACS tropical cyclone alerts (event type `TC`), with wind speed in the severity text. */

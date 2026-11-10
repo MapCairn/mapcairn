@@ -3,7 +3,7 @@ import {
   FakeSearchProvider,
   type SearchProvider,
   type SearchResult,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { describe, expect, it, vi } from "vitest";
 import {
   BASEMAP_CHOICES,

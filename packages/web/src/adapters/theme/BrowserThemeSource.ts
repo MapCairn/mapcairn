@@ -4,7 +4,7 @@ import {
   THEME_COLOR_META,
   THEME_COLOR_META_NAME,
   type ThemeSource,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   defaultMediaQueryWindow,
   type MediaQueryWindow,

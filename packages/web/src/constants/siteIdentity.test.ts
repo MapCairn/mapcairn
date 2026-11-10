@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { contrastRatio, parseColour, tokenValues } from "@karta/theme";
+import { contrastRatio, parseColour, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import { BRAND_COLOUR } from "./brandColour";
 

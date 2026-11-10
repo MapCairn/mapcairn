@@ -1,6 +1,6 @@
-import type { LineDash } from "@karta/core";
-import { toEngineZoom } from "@karta/core";
-import { tokenValues } from "@karta/theme";
+import type { LineDash } from "@mapcairn/core";
+import { toEngineZoom } from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import type { EngineValue, LookExpressions } from "./lookExpressions";
 import { PATTERN_IMAGE_PREFIX } from "./patternImages";
 
@@ -62,7 +62,7 @@ const CASING_EXTRA = 2 * tokenValues.dataMarker.haloWidth;
 
 /** What every layer of one data source layer shares. */
 export interface ShapeSource {
-  /** Starts every engine layer id: `karta:<id>:<prefix>`. */
+  /** Starts every engine layer id: `mapcairn:<id>:<prefix>`. */
   readonly prefix: string;
   /** The engine source's id. */
   readonly source: string;

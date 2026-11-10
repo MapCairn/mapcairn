@@ -1,5 +1,5 @@
-import { Icon } from "@karta/map";
-import { tokenValues } from "@karta/theme";
+import { Icon } from "@mapcairn/map";
+import { tokenValues } from "@mapcairn/theme";
 import { Check, TriangleAlert } from "lucide-react";
 import { APP_ICONS } from "./appIcons";
 import * as styles from "./DesignGuide.css";

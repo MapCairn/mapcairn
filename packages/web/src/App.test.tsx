@@ -12,12 +12,12 @@ import {
   type SearchResult,
   StaticLayerRegistry,
   samplePoint,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   LiveRegionProvider,
   ServicesProvider,
   TooltipProvider,
-} from "@karta/map";
+} from "@mapcairn/map";
 import {
   act,
   cleanup,
@@ -1014,7 +1014,9 @@ describe("basemaps", () => {
     expect(region()).toContainElement(message);
     expect(message).toHaveTextContent(WEBGL_UNAVAILABLE_TITLE);
     expect(message).toHaveTextContent(WEBGL_UNAVAILABLE_ADVICE);
-    expect(WEBGL_UNAVAILABLE_TITLE).toBe("Karta needs WebGL to draw the map.");
+    expect(WEBGL_UNAVAILABLE_TITLE).toBe(
+      "MapCairn needs WebGL to draw the map.",
+    );
     expect(WEBGL_UNAVAILABLE_ADVICE).toMatch(/different browser/);
     expect(WEBGL_UNAVAILABLE_ADVICE).toMatch(/hardware acceleration/);
     await vi.waitFor(() =>

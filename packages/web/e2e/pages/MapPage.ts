@@ -403,12 +403,14 @@ export class MapPage {
 
   /** Every message the announcer has spoken since the page loaded (see `fixtures.ts`). */
   announcements(): Promise<string[]> {
-    return this.page.evaluate(() => [...(window.__kartaAnnouncements ?? [])]);
+    return this.page.evaluate(() => [
+      ...(window.__mapcairnAnnouncements ?? []),
+    ]);
   }
 }
 
 declare global {
   interface Window {
-    __kartaAnnouncements?: string[];
+    __mapcairnAnnouncements?: string[];
   }
 }

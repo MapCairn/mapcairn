@@ -1,5 +1,5 @@
-import { THEME_STORAGE_KEY } from "@karta/core";
-import { VisuallyHidden } from "@karta/map";
+import { THEME_STORAGE_KEY } from "@mapcairn/core";
+import { VisuallyHidden } from "@mapcairn/map";
 import { SITE_URL } from "../constants/siteConfig";
 import * as styles from "./PrivacyPage.css";
 
@@ -14,7 +14,7 @@ export const PRIVACY_POLICY_TITLE = "Privacy policy";
 
 /**
  * The site's privacy policy.
- * @remarks Reads `THEME_STORAGE_KEY` from `@karta/core`, which the settings store and the pre-paint theme script also use, so this
+ * @remarks Reads `THEME_STORAGE_KEY` from `@mapcairn/core`, which the settings store and the pre-paint theme script also use, so this
  *   copy cannot drift from the key the app really uses. The content must stay
  *   in step with the root `PRIVACY.md`, which mirrors it for readers of the
  *   repository.
@@ -27,7 +27,7 @@ export function PrivacyPage() {
         <p className={styles.updated}>Last updated: {LAST_UPDATED}</p>
 
         <p className={styles.body}>
-          Karta has no user accounts, no forms and no server-side database of
+          MapCairn has no user accounts, no forms and no server-side database of
           visitor data. The site stores or sends only the following.
         </p>
 
@@ -43,7 +43,7 @@ export function PrivacyPage() {
           light or dark theme (under the key <code>{THEME_STORAGE_KEY}</code>),
           your units, whether the zoom buttons show, whether Save data is on,
           your chosen basemap and where the map was last left. The other keys
-          start with <code>karta:</code>. These stay on your device and are
+          start with <code>mapcairn:</code>. These stay on your device and are
           never sent to a server. Where your browser reports a data saver or a
           very slow connection, the page reads that locally to choose the
           default for Save data. Nothing about it is sent anywhere.
@@ -182,7 +182,7 @@ export function PrivacyPage() {
           by the FOSSGIS community and built on OpenStreetMap data. It sends the
           route's coordinates (its stops, or the origin of a travel-time area)
           and the travel mode, and the server may log them with your IP address.
-          Nothing is sent before you ask. Karta stores nothing about the
+          Nothing is sent before you ask. MapCairn stores nothing about the
           request, and the results are not saved or put in the page address.
         </p>
 
@@ -202,7 +202,7 @@ export function PrivacyPage() {
           , or open an issue on{" "}
           <a
             className={styles.link}
-            href="https://github.com/mooship/karta/issues"
+            href="https://github.com/mooship/mapcairn/issues"
           >
             GitHub
           </a>

@@ -1,4 +1,4 @@
-import { Button } from "@karta/map";
+import { Button } from "@mapcairn/map";
 import { RotateCw } from "lucide-react";
 import { useNavigate } from "react-router";
 import * as styles from "./ErrorPage.css";
@@ -17,7 +17,7 @@ const COPY: Readonly<
   unexpected: {
     title: "Something went wrong",
     message:
-      "Karta stopped because of an unexpected problem. Reload the page to start again. Your settings are kept.",
+      "MapCairn stopped because of an unexpected problem. Reload the page to start again. Your settings are kept.",
   },
 };
 

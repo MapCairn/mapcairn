@@ -1,4 +1,4 @@
-import { runUrlStateContract } from "@karta/core/contracts";
+import { runUrlStateContract } from "@mapcairn/core/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BrowserUrlState,

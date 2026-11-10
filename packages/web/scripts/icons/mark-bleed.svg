@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <title>Karta</title>
+  <title>MapCairn</title>
   <!-- Full-bleed square for apple-touch-icon and the maskable icon. No rounded corners and no transparency: the platform applies its own mask. The pin sits well inside the central 80 percent safe zone. -->
   <rect width="512" height="512" fill="#0d70d4"/>
   <path d="M180 0H350L320 512H150Z" fill="#fff" fill-opacity=".1"/>

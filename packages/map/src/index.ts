@@ -1,5 +1,5 @@
 /**
- * The public surface of `@karta/map`: ui primitives, the chrome, the engine
+ * The public surface of `@mapcairn/map`: ui primitives, the chrome, the engine
  * host and its overlays, the tools, the sheet panels and the services hooks.
  * Nothing here imports a map engine; each adapter loads its engine lazily, so
  * importing this barrel costs no engine download.

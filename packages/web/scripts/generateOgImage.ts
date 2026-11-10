@@ -3,21 +3,21 @@
  * used by `root.tsx`'s `meta()`, from a small self-contained HTML template.
  *
  * @remarks
- * Run with `npm run generate:og-image -w @karta/web` after brand
+ * Run with `npm run generate:og-image -w @mapcairn/web` after brand
  * copy or colours change. There's no image-generation library in the
  * dependency tree (no `sharp`/`satori`/`resvg`), but `@playwright/test`'s
  * bundled Chromium already is, so this reuses it as a one-shot HTML-to-PNG
  * renderer rather than adding a new dependency for the same job. Uses the
  * same self-hosted IBM Plex Sans file, `SITE_URL`, brand copy (the `TITLE`
  * and `TAGLINE` constants below) and the light theme's colour values from
- * `@karta/theme` as the live app, so the card can't drift from what a
+ * `@mapcairn/theme` as the live app, so the card can't drift from what a
  * visitor sees after clicking through.
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
-// Read from the source file, not the `@karta/theme` barrel, because the barrel
+// Read from the source file, not the `@mapcairn/theme` barrel, because the barrel
 // loads vanilla-extract style files that only the Vite plugin can evaluate.
 import { accent, neutral, themeValues } from "../../theme/src/tokenValues";
 import {
@@ -31,11 +31,14 @@ const FONT_PATH = fileURLToPath(
     "@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2",
   ),
 );
+const FAVICON_PATH = fileURLToPath(
+  new URL("../public/favicon.svg", import.meta.url),
+);
 const OUTPUT_PATH = fileURLToPath(
   new URL("../public/og-image.png", import.meta.url),
 );
 
-const TITLE = "Karta";
+const TITLE = "MapCairn";
 const TAGLINE =
   "Explore an interactive map. Search places, compare basemaps and measure distances or areas.";
 const URL_LABEL = SITE_URL.replace(/^https?:\/\//, "");
@@ -54,23 +57,12 @@ const roadColor = neutral[300];
 /** Where the contour rings are centred, near the lower right of the card. */
 const HILL = { x: 960, y: 420 };
 
-/** The favicon's pin outline, in its 512 unit square. */
-const PIN_PATH =
-  "M256 394L350 274.9A119.6 119.6 0 1 0 162 274.9ZM302 200.8A46 46 0 1 1 210 200.8A46 46 0 1 1 302 200.8Z";
-
 /**
- * The Karta mark, drawn as the favicon is: a rounded accent tile with a faint
- * folded-map panel behind a white pin. Colours come from the light theme.
+ * The MapCairn mark: the cairn on the accent tile, drawn from `public/favicon.svg`
+ * itself (its light variant, since the page renders in the light scheme), so the
+ * card cannot drift from the icon.
  */
-const MARK_SVG = `<svg viewBox="0 0 512 512" width="156" height="156" aria-hidden="true">
-  <defs><clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath></defs>
-  <rect width="512" height="512" rx="112" fill="${accentColor}"/>
-  <g clip-path="url(#tile)">
-    <path d="M180 0H350L320 512H150Z" fill="${onAccent}" fill-opacity="0.1"/>
-    <path d="M180 0L150 512M350 0L320 512" stroke="${onAccent}" stroke-opacity="0.22" stroke-width="6" fill="none"/>
-  </g>
-  <path fill="${onAccent}" fill-rule="evenodd" d="${PIN_PATH}"/>
-</svg>`;
+const MARK_SVG = `<img src="${pathToFileURL(FAVICON_PATH).href}" width="156" height="156" alt="" />`;
 
 /**
  * A closed, wobbling ring around {@link HILL}, like one contour line of a
@@ -188,7 +180,7 @@ const TEMPLATE = `<!doctype html>
     align-items: center;
     gap: 36px;
   }
-  .brand svg {
+  .brand img {
     display: block;
     border-radius: 35px;
     box-shadow: 0 10px 28px color-mix(in oklch, ${accentColor} 28%, transparent);
@@ -254,9 +246,15 @@ async function generateOgImage(): Promise<void> {
   try {
     const page = await browser.newPage({
       viewport: { width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT },
+      colorScheme: "light",
     });
     await page.goto(pathToFileURL(tempHtmlPath).href);
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() =>
+      Promise.all([
+        document.fonts.ready,
+        ...[...document.images].map((image) => image.decode()),
+      ]),
+    );
     await page.screenshot({ path: OUTPUT_PATH });
   } finally {
     await browser.close();

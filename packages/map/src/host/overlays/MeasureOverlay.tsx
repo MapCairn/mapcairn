@@ -1,4 +1,4 @@
-import type { LatLng, PixelPoint } from "@karta/core";
+import type { LatLng, PixelPoint } from "@mapcairn/core";
 import { useMap } from "../MapContext";
 import { projectPoints, roundPixel, toSvgPoints } from "./geometry";
 import * as styles from "./overlays.css";

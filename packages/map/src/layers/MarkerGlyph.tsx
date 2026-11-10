@@ -1,5 +1,5 @@
-import type { MarkerShape, PaletteSlot } from "@karta/core";
-import { tokenValues } from "@karta/theme";
+import type { MarkerShape, PaletteSlot } from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import * as styles from "./Layers.css";
 import { paletteColour } from "./mapFeatures";
 

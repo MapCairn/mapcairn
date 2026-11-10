@@ -3,7 +3,7 @@ import {
   computeDetentHeights,
   type MapFitOptions,
   type SheetDetent,
-} from "@karta/core";
+} from "@mapcairn/core";
 
 /**
  * The detent a bottom sheet rests at when a feature is shown, so its card and

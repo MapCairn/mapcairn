@@ -1,12 +1,12 @@
 # Contributor licence agreement
 
-Version 1.0
+Version 1.1
 
-Karta is licensed under [AGPL-3.0](LICENSE), and its author may also agree other licence terms by arrangement, for example for closed-source use. To make both possible, everyone who contributes code, documentation or other material to Karta agrees to the terms below. You keep the copyright in your contribution. You give the project owner the rights needed to distribute it under both kinds of licence.
+MapCairn is licensed under [AGPL-3.0](LICENSE), and its author may also agree other licence terms by arrangement, for example for closed-source use. To make both possible, everyone who contributes code, documentation or other material to MapCairn agrees to the terms below. You keep the copyright in your contribution. You give the project owner the rights needed to distribute it under both kinds of licence.
 
 ## Definitions
 
-- **Project** means Karta, the software in the repository at https://github.com/mooship/karta.
+- **Project** means MapCairn (called Karta before version 1.1), the software in the repository at https://github.com/mooship/karta.
 - **Owner** means Timothy Brits, the owner of the Project, and anyone the Owner transfers the Project to.
 - **Contribution** means any work you submit to the Project, for example through a pull request, issue, patch or comment, that you have not marked "Not a contribution" in writing.
 - **You** means the person submitting the Contribution. If you submit it for an employer or another organisation, "You" also means that organisation, and you confirm you have its authority to agree to these terms.
@@ -48,6 +48,11 @@ The Owner will keep the Project available to the public under the AGPL-3.0, or u
 
 On your first pull request, add this comment, with the sentence on a line of its own:
 
-> I have read the contributor licence agreement in CLA.md at the time of this pull request and I agree to it for this and all my future contributions to Karta.
+> I have read the contributor licence agreement in CLA.md at the time of this pull request and I agree to it for this and all my future contributions to MapCairn.
 
 A pull request is not merged until the comment is there. The `CLA` check on the pull request turns green shortly after you add it, and your agreement is recorded in `signatures.json` on the `cla-signatures` branch, so you do not need to comment again. If you contribute for an organisation, say which one in the same comment, on another line. The Owner may ask you to confirm again if the agreement changes.
+
+## Changes
+
+- **1.1:** the Project was renamed from Karta to MapCairn, and the agreement sentence now names MapCairn. The terms are unchanged. People who agreed to version 1.0, with the sentence that named Karta, have agreed to these terms for the same Project and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
+- **1.0:** the first version.

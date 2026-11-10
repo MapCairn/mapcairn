@@ -1,4 +1,4 @@
-import { tokens } from "@karta/theme";
+import { tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** Banners stack in flow, newest last, with the standard gap. */

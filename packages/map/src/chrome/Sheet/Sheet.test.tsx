@@ -3,7 +3,7 @@ import {
   computeDetentHeights,
   createFakeServices,
   type SheetDetent,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

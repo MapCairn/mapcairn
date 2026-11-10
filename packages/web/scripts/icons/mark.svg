@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <title>Karta</title>
+  <title>MapCairn</title>
   <!--
-    Source of truth for the Karta mark. 512 unit grid.
+    Source of truth for the MapCairn mark. 512 unit grid.
     Tile: accent 600, oklch(0.55 0.175 255) = #0d70d4. Glyph: white.
     A location pin (teardrop, circular hole) sits slightly above the centre of a
     folded map: a lighter middle panel between two parallel creases.

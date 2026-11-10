@@ -7,7 +7,7 @@ import { checkDocumentFont } from "../designGuide/FontSection";
  * search engines. The route exists only in development and e2e builds.
  */
 export const meta: MetaFunction = () => [
-  { title: "Design system | Karta" },
+  { title: "Design system | MapCairn" },
   { name: "robots", content: "noindex" },
 ];
 

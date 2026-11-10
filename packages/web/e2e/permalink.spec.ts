@@ -29,7 +29,7 @@ test.describe("permalink", () => {
       mapPage.basemapPicker.getByRole("radio", { name: LIBERTY_BASEMAP_NAME }),
     ).toBeChecked();
     expect(
-      await page.evaluate(() => localStorage.getItem("karta:basemapId")),
+      await page.evaluate(() => localStorage.getItem("mapcairn:basemapId")),
     ).toBeNull();
   });
 
@@ -111,7 +111,7 @@ test.describe("permalink", () => {
     await expect
       .poll(async () => {
         const saved = await page.evaluate(() =>
-          localStorage.getItem("karta:lastView"),
+          localStorage.getItem("mapcairn:lastView"),
         );
         const lat = saved ? JSON.parse(saved).center.lat : Number.NaN;
         return Math.abs(lat - 48.85) < 1e-6;

@@ -1,5 +1,5 @@
 /**
- * Enforces Karta's package boundaries and the layers described in
+ * Enforces MapCairn's package boundaries and the layers described in
  * ARCHITECTURE.md. Run through `npm run depcruise`, part of `npm run lint`.
  *
  * Legacy code (`scripts/harmony/legacyPaths.json`) is exempt from the rules

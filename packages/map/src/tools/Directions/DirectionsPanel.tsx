@@ -14,7 +14,7 @@ import {
   travelModeLabel,
   travelModeParticiple,
   type UnitSystem,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   Bike,
   Car,

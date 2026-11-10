@@ -1,4 +1,4 @@
-import { tokenValues } from "@karta/theme";
+import { tokenValues } from "@mapcairn/theme";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
 import type { ReactElement, ReactNode } from "react";
 import { usePreferences } from "../../services";

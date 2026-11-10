@@ -1,4 +1,4 @@
-import { focusRing, tokens } from "@karta/theme";
+import { focusRing, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** The whole control: header line with label and value, then the slider. */

@@ -1,4 +1,4 @@
-import type { FeedLayerDefinition } from "@karta/core";
+import type { FeedLayerDefinition } from "@mapcairn/core";
 import { GDACS_ALERTS } from "./gdacs/alerts";
 
 /** GDACS wildfire alerts (event type `WF`). */

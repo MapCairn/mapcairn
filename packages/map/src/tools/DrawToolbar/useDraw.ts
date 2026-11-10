@@ -32,8 +32,8 @@ import {
   shapesToGeoJson,
   type UnitSystem,
   validateShape,
-} from "@karta/core";
-import { useLatestRef } from "@karta/react";
+} from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import {
   useCallback,
   useEffect,
@@ -52,10 +52,10 @@ export const DRAW_ANNOUNCE_DELAY_MS = 800;
 export const SHAPE_PICK_TOLERANCE_PX = 12;
 
 /** The name of the GeoJSON file, and the stem of the CSV one. */
-export const GEOJSON_FILENAME = "karta-shapes.geojson";
+export const GEOJSON_FILENAME = "mapcairn-shapes.geojson";
 
 /** The name of the CSV file. */
-export const CSV_FILENAME = "karta-shapes.csv";
+export const CSV_FILENAME = "mapcairn-shapes.csv";
 
 /** The outcome of an export or a copy, shown beside the buttons and announced. */
 export interface DrawFeedback {

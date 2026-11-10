@@ -1,4 +1,4 @@
-import { mapOverlayTokens, tokens, zLayer } from "@karta/theme";
+import { mapOverlayTokens, tokens, zLayer } from "@mapcairn/theme";
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 
 /**

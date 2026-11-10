@@ -89,6 +89,19 @@ describe("the CLA text", () => {
   it("states the version the signatures record", () => {
     expect(claText).toContain(`Version ${CLA_VERSION}`);
   });
+
+  it("is version 1.1, the first to name the project MapCairn", () => {
+    expect(CLA_VERSION).toBe("1.1");
+    expect(AGREEMENT_SENTENCE.endsWith("contributions to MapCairn.")).toBe(
+      true,
+    );
+  });
+
+  it("says that people who agreed to version 1.0 stay covered", () => {
+    expect(claText).toContain("agreed to version 1.0");
+    expect(claText).toContain("do not need to comment again");
+    expect(claText).toContain("Karta");
+  });
 });
 
 describe("isAgreementComment", () => {
@@ -506,6 +519,24 @@ describe("who has agreed", () => {
     const result = evaluateWith({ signatures: [signature("ada", 2)] });
     expect(result.agreed).toBe(true);
     expect(result.newSignatures).toEqual([]);
+  });
+
+  it("keeps a signature recorded for version 1.0 valid under the current version, and leaves it as it is", () => {
+    const earlier = signature("ada", 2);
+    expect(earlier.claVersion).toBe("1.0");
+    expect(CLA_VERSION).not.toBe(earlier.claVersion);
+    const result = evaluateWith({ signatures: [earlier] });
+    expect(result.agreed).toBe(true);
+    expect(result.newSignatures).toEqual([]);
+    expect(addSignatures([earlier], result.newSignatures)).toEqual([earlier]);
+  });
+
+  it("does not take the version 1.0 sentence, which names Karta, as a new agreement", () => {
+    const earlierSentence = AGREEMENT_SENTENCE.replace("MapCairn", "Karta");
+    expect(earlierSentence).not.toBe(AGREEMENT_SENTENCE);
+    expect(isAgreementComment(earlierSentence)).toBe(false);
+    const result = evaluateWith({ comments: [comment(ada, earlierSentence)] });
+    expect(result.agreed).toBe(false);
   });
 
   it("recognises a renamed account by id", () => {

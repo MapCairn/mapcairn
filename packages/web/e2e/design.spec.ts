@@ -90,7 +90,7 @@ test.describe("design guide", () => {
     expect(policy).not.toContain("unsafe-inline");
     const html = await response.text();
     expect(html).toContain('lang="en-GB"');
-    expect(html).toContain("KARTA_DESIGN_GUIDE_MARKER");
+    expect(html).toContain("MAPCAIRN_DESIGN_GUIDE_MARKER");
     expect(html).not.toMatch(/<[^>]*\sstyle=/);
   });
 
@@ -101,7 +101,7 @@ test.describe("design guide", () => {
     await recordCspViolations(page);
     const design = new DesignPage(page);
     await design.goto();
-    await expect(page).toHaveTitle("Design system | Karta");
+    await expect(page).toHaveTitle("Design system | MapCairn");
     await expect(page.locator("html")).toHaveAttribute("lang", "en-GB");
     await expect(design.heading).toHaveCount(1);
     await expect(design.heading).toHaveText("Design system");

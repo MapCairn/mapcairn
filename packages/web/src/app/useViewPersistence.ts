@@ -1,5 +1,5 @@
-import type { LayersUrlState, ViewState } from "@karta/core";
-import { useSettings, useUrlState } from "@karta/map";
+import type { LayersUrlState, ViewState } from "@mapcairn/core";
+import { useSettings, useUrlState } from "@mapcairn/map";
 import { useCallback, useEffect, useRef } from "react";
 
 /** Quiet time after the map stops before the view is saved for next time. */

@@ -127,6 +127,16 @@ describe("/log-error route action", () => {
     expect(response.status).toBe(204);
   });
 
+  it("accepts a matching Origin from the new address while both addresses serve the site", async () => {
+    const response = await action(
+      makeRequest(VALID_REPORT, "POST", undefined, {
+        Origin: "https://mapcairn.timothybrits.co.za",
+      }),
+    );
+
+    expect(response.status).toBe(204);
+  });
+
   it("accepts a request with no Origin header at all", async () => {
     const response = await action(makeRequest(VALID_REPORT));
 

@@ -1,4 +1,4 @@
-import { Icon } from "@karta/map";
+import { Icon } from "@mapcairn/map";
 import { CircleCheck, LoaderCircle, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as styles from "./DesignGuide.css";

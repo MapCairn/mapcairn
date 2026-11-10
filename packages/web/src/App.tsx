@@ -3,7 +3,7 @@ import {
   type LatLng,
   pressEscape,
   startMeasure,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   AccuracyCircle,
   CentreCrosshair,
@@ -20,7 +20,7 @@ import {
   SelectionMarker,
   useSettings,
   useTheme,
-} from "@karta/map";
+} from "@mapcairn/map";
 import { useCallback } from "react";
 import { AppChrome } from "./app/AppChrome";
 import { MAP_REGION_ID } from "./app/initialView";

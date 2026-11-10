@@ -1,5 +1,5 @@
-import type { ThemeChoice } from "@karta/core";
-import { SegmentedControl, SkipLink, useTheme } from "@karta/map";
+import type { ThemeChoice } from "@mapcairn/core";
+import { SegmentedControl, SkipLink, useTheme } from "@mapcairn/map";
 import { ClientOnly } from "../app/ClientOnly";
 import { ComponentsSection } from "./ComponentSections";
 import * as styles from "./DesignGuide.css";
@@ -25,7 +25,7 @@ export { COMPONENT_NAMES } from "./ComponentSections";
  * build that contains it and an e2e build that does not, so renaming it
  * means updating that script.
  */
-export const DESIGN_GUIDE_MARKER = "KARTA_DESIGN_GUIDE_MARKER";
+export const DESIGN_GUIDE_MARKER = "MAPCAIRN_DESIGN_GUIDE_MARKER";
 
 /** The id of the `main` element the skip link moves focus to. */
 const MAIN_ID = "design-guide-main";
@@ -92,7 +92,7 @@ export function DesignGuide({ checkFont }: DesignGuideProps) {
         <div className={styles.headerText}>
           <h1 className={styles.title}>Design system</h1>
           <p className={styles.prose}>
-            Karta's tokens and components, rendered from the code. This page
+            MapCairn's tokens and components, rendered from the code. This page
             exists only in development and test builds.
           </p>
         </div>

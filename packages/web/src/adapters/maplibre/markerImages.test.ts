@@ -1,4 +1,4 @@
-import { tokenValues } from "@karta/theme";
+import { tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import {
   MARKER_PIXEL_RATIO,
@@ -28,7 +28,7 @@ describe("parseHexColour", () => {
 describe("markerImageName", () => {
   it("names one image per shape, colour and whole-pixel radius", () => {
     expect(markerImageName("circle", "#E69F00", 6)).toBe(
-      "karta-marker:circle:#e69f00:6",
+      "mapcairn-marker:circle:#e69f00:6",
     );
     expect(markerImageName("circle", "#E69F00", 6.4)).toBe(
       markerImageName("circle", "#e69f00", 6),

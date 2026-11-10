@@ -221,7 +221,7 @@ function checkZIndex({ decl, bare, report }) {
     report(
       "z-index",
       decl.line,
-      `Raw z-index "${decl.text}". Name a layer with zLayer("chrome") from @karta/theme.`,
+      `Raw z-index "${decl.text}". Name a layer with zLayer("chrome") from @mapcairn/theme.`,
     );
   }
 }
@@ -528,7 +528,7 @@ function scanScriptText(file, code, report, eachMatch, lineAt) {
     /\bL\.control\b|\.addControl\s*\(|\b(?:Navigation|Scale|Attribution|Geolocate|Fullscreen|Terrain|Globe)Control\b/g,
     "engine-control",
     (m) =>
-      `"${m[0].trim()}" adds an engine-drawn control. Every control is a Karta component inside MapChrome.`,
+      `"${m[0].trim()}" adds an engine-drawn control. Every control is a MapCairn component inside MapChrome.`,
   );
   if (insideAny(file, ADAPTER_WIRING_DIRS)) {
     return;

@@ -3,7 +3,7 @@ import {
   formatLatLng,
   type LatLng,
   type UnitSystem,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap } from "../../host";
 import { usePreferences } from "../../services";

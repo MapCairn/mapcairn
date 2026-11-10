@@ -3,7 +3,7 @@ import {
   type BasemapCatalogue,
   createBasemapCatalogue,
   DEFAULT_BASEMAP_ID,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { MAPTOOLKIT_DARK } from "./maptoolkit";
 
 export { MAPTOOLKIT_DARK, MAPTOOLKIT_DARK_ID } from "./maptoolkit";

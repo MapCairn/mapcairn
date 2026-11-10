@@ -1,4 +1,4 @@
-import type { FeedLayerDefinition } from "@karta/core";
+import type { FeedLayerDefinition } from "@mapcairn/core";
 
 /**
  * USGS earthquakes from the live GeoJSON summary feeds. The feed file name

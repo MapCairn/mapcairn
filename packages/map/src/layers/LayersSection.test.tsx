@@ -14,7 +14,7 @@ import {
   sampleArea,
   sampleLine,
   samplePoint,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   act,
   fireEvent,

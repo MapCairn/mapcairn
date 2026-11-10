@@ -59,7 +59,7 @@ const red = {
 
 /**
  * The data palette: the colours data layers draw with, named by the slots
- * `@karta/core` lets a layer definition use (`PALETTE_SLOTS`). Six-digit hex,
+ * `@mapcairn/core` lets a layer definition use (`PALETTE_SLOTS`). Six-digit hex,
  * because the map engine and SVG `fill` attributes read it directly.
  *
  * The categorical colours are Okabe-Ito (without black, which vanishes on a
@@ -113,7 +113,7 @@ export const representativeBackdrops = {
   /**
    * The land (background layer) colour of OpenFreeMap Bright, the default
    * basemap in both themes. It must equal `DEFAULT_BASEMAP_BACKGROUND` in
-   * `@karta/core`, which this package cannot import; a test in
+   * `@mapcairn/core`, which this package cannot import; a test in
    * `packages/web` checks that they agree.
    */
   defaultBasemap: "#f8f4f0",

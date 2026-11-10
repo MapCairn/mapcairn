@@ -11,7 +11,7 @@ import {
   RoutingError,
   type RoutingProvider,
   type TravelMode,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { RequestSpacer } from "../shared/RequestSpacer";
 import { decodePolyline } from "./polyline";
 

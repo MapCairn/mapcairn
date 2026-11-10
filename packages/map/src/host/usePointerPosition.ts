@@ -1,5 +1,5 @@
-import type { LatLng, MapAdapter } from "@karta/core";
-import { useLatestRef } from "@karta/react";
+import type { LatLng, MapAdapter } from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,

@@ -1,4 +1,4 @@
-import type { Services } from "@karta/core";
+import type { Services } from "@mapcairn/core";
 import { createContext, type ReactNode, useContext } from "react";
 
 const ServicesContext = createContext<Services | null>(null);

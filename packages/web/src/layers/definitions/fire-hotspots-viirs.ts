@@ -1,4 +1,4 @@
-import type { TileLayerDefinition } from "@karta/core";
+import type { TileLayerDefinition } from "@mapcairn/core";
 
 /**
  * NASA GIBS thermal anomalies from VIIRS on NOAA-21 at 375 m, through the

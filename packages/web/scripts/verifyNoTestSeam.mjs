@@ -27,9 +27,9 @@ const directories = ["build/client", "build/server"];
 const groups = [
   {
     name: "test seam",
-    needles: ["KARTA_TEST_SEAM_MARKER", "__KARTA_TEST_SERVICES__"],
+    needles: ["MAPCAIRN_TEST_SEAM_MARKER", "__MAPCAIRN_TEST_SERVICES__"],
   },
-  { name: "design guide", needles: ["KARTA_DESIGN_GUIDE_MARKER"] },
+  { name: "design guide", needles: ["MAPCAIRN_DESIGN_GUIDE_MARKER"] },
 ];
 const expectPresent = process.argv.includes("--expect-present");
 

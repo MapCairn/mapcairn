@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Karta is wrong or broken
+description: Something in MapCairn is wrong or broken
 labels: [bug]
 body:
   - type: textarea

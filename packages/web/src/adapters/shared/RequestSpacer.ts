@@ -1,4 +1,4 @@
-import { PortAbortError } from "@karta/core";
+import { PortAbortError } from "@mapcairn/core";
 
 interface Waiter {
   readonly resolve: () => void;

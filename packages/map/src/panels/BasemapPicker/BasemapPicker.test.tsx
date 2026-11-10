@@ -8,7 +8,7 @@ import {
   FakeDevicePreferences,
   MemorySettingsStore,
   type Settings,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services";

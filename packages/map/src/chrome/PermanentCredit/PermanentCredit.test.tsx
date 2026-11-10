@@ -1,4 +1,4 @@
-import { FAKE_CREDITED_BASEMAP } from "@karta/core";
+import { FAKE_CREDITED_BASEMAP } from "@mapcairn/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PermanentCredit } from "./PermanentCredit";

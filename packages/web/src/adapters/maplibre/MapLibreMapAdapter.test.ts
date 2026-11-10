@@ -5,9 +5,9 @@ import type {
   MapShapeLook,
   MapStyledShapes,
   MapVectorTiles,
-} from "@karta/core";
-import { MapEngineError, metresPerPixel } from "@karta/core";
-import { tokenValues } from "@karta/theme";
+} from "@mapcairn/core";
+import { MapEngineError, metresPerPixel } from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   canvasStub,
@@ -734,7 +734,7 @@ describe("MapLibreMapAdapter", () => {
             [34, 24],
             [66, 56],
           ],
-          { layers: ["karta:quakes:points"] },
+          { layers: ["mapcairn:quakes:points"] },
         ]);
         expect(taps).not.toHaveBeenCalled();
       });
@@ -742,7 +742,7 @@ describe("MapLibreMapAdapter", () => {
       it("adds one marker image per shape, colour and radius", async () => {
         const { map } = await withPoints();
         expect([...map.images.keys()]).toEqual([
-          "karta-marker:square:#e69f00:6",
+          "mapcairn-marker:square:#e69f00:6",
         ]);
       });
 
@@ -759,7 +759,7 @@ describe("MapLibreMapAdapter", () => {
       it("ignores a hit without the adapter's own ids", async () => {
         const { map, taps } = await withPoints();
         map.features = [
-          { layer: { id: "karta:quakes:points" }, properties: {} },
+          { layer: { id: "mapcairn:quakes:points" }, properties: {} },
         ];
         map.fire("click", {
           lngLat: { lng: 0, lat: 0 },
@@ -787,8 +787,8 @@ describe("MapLibreMapAdapter", () => {
           ((map.getLayer(id)?.paint ?? {}) as Record<string, unknown>)[
             "line-width"
           ];
-        expect(width("karta:plain:line")).toBe(2);
-        expect(width("karta:wide:line")).toBe(6);
+        expect(width("mapcairn:plain:line")).toBe(2);
+        expect(width("mapcairn:wide:line")).toBe(6);
       });
 
       it("changes only the paint when a tile overlay's opacity changes", async () => {
@@ -804,7 +804,7 @@ describe("MapLibreMapAdapter", () => {
         adapter.setTileLayer("imagery", { ...overlay, opacity: 0.5 });
         expect(
           map.callsOf("setPaintProperty").map((call) => call.args),
-        ).toEqual([["karta:imagery:tiles", "raster-opacity", 0.5]]);
+        ).toEqual([["mapcairn:imagery:tiles", "raster-opacity", 0.5]]);
       });
     });
 
@@ -1100,14 +1100,20 @@ describe("MapLibreMapAdapter", () => {
       await saving;
       expect(layerIds(map)).not.toContain("relief");
       expect(layerIds(map)).toEqual(
-        expect.arrayContaining(["karta:quakes:points", "karta:imagery:tiles"]),
+        expect.arrayContaining([
+          "mapcairn:quakes:points",
+          "mapcairn:imagery:tiles",
+        ]),
       );
       const full = adapter.setBasemap(WITH_RELIEF, { saveData: false });
       loadReliefStyle(map);
       await full;
       expect(layerIds(map)).toContain("relief");
       expect(layerIds(map)).toEqual(
-        expect.arrayContaining(["karta:quakes:points", "karta:imagery:tiles"]),
+        expect.arrayContaining([
+          "mapcairn:quakes:points",
+          "mapcairn:imagery:tiles",
+        ]),
       );
     });
 
@@ -1573,13 +1579,13 @@ describe("MapLibreMapAdapter data layers", () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setStyledShapes("regions", STYLED_AREAS);
       expect(layerIds(map)).toEqual([
-        "karta:regions:styled-fill",
-        "karta:regions:styled-pattern",
-        "karta:regions:styled-outline-solid",
-        "karta:regions:styled-outline-dashed",
-        "karta:regions:styled-outline-dotted",
+        "mapcairn:regions:styled-fill",
+        "mapcairn:regions:styled-pattern",
+        "mapcairn:regions:styled-outline-solid",
+        "mapcairn:regions:styled-outline-dashed",
+        "mapcairn:regions:styled-outline-dotted",
       ]);
-      expect(spec(map, "karta:regions:styled-fill").paint).toEqual({
+      expect(spec(map, "mapcairn:regions:styled-fill").paint).toEqual({
         "fill-color": ["get", "colour"],
         "fill-opacity": ["get", "fillOpacity"],
       });
@@ -1588,11 +1594,11 @@ describe("MapLibreMapAdapter data layers", () => {
     it("puts the look on each shape as properties and leaves out the other geometry kind", async () => {
       const { adapter, map } = await ready();
       adapter.setStyledShapes("regions", STYLED_AREAS);
-      const { data } = map.sources.get("karta:regions") as Spec;
+      const { data } = map.sources.get("mapcairn:regions") as Spec;
       expect(data.features.map((f: Spec) => f.properties)).toEqual([
         {
-          "karta:layer": "regions",
-          "karta:id": "north",
+          "mapcairn:layer": "regions",
+          "mapcairn:id": "north",
           colour: "#0072b2",
           fillOpacity: 0.55,
           pattern: "dots",
@@ -1600,20 +1606,20 @@ describe("MapLibreMapAdapter data layers", () => {
           width: 1.5,
           label: "North",
         },
-        expect.objectContaining({ "karta:id": "south", label: "" }),
+        expect.objectContaining({ "mapcairn:id": "south", label: "" }),
       ]);
       adapter.setStyledShapes("routes", STYLED_LINES);
-      const lines = map.sources.get("karta:routes") as Spec;
+      const lines = map.sources.get("mapcairn:routes") as Spec;
       expect(lines.data.features).toHaveLength(1);
     });
 
     it("hatches only the shapes with a pattern, from named images", async () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setStyledShapes("regions", STYLED_AREAS);
-      const pattern = spec(map, "karta:regions:styled-pattern");
+      const pattern = spec(map, "mapcairn:regions:styled-pattern");
       expect(pattern.filter).toEqual(["!=", ["get", "pattern"], "solid"]);
       expect(pattern.paint).toEqual({
-        "fill-pattern": ["concat", "karta-pattern:", ["get", "pattern"]],
+        "fill-pattern": ["concat", "mapcairn-pattern:", ["get", "pattern"]],
       });
     });
 
@@ -1622,11 +1628,13 @@ describe("MapLibreMapAdapter data layers", () => {
       adapter.setStyledShapes("regions", STYLED_AREAS);
       adapter.setStyledShapes("regions", STYLED_AREAS);
       expect([...map.images.keys()]).toEqual([
-        "karta-pattern:stripes",
-        "karta-pattern:dots",
-        "karta-pattern:crosshatch",
+        "mapcairn-pattern:stripes",
+        "mapcairn-pattern:dots",
+        "mapcairn-pattern:crosshatch",
       ]);
-      const { image, options } = map.images.get("karta-pattern:dots") as Spec;
+      const { image, options } = map.images.get(
+        "mapcairn-pattern:dots",
+      ) as Spec;
       expect(options).toEqual({ pixelRatio: 2 });
       expect(image.width).toBe(16);
       expect(image.data).toHaveLength(16 * 16 * 4);
@@ -1635,9 +1643,9 @@ describe("MapLibreMapAdapter data layers", () => {
     it("outlines polygons in the ink colour, with a literal dash array per style", async () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setStyledShapes("regions", STYLED_AREAS);
-      const solid = spec(map, "karta:regions:styled-outline-solid");
-      const dashed = spec(map, "karta:regions:styled-outline-dashed");
-      const dotted = spec(map, "karta:regions:styled-outline-dotted");
+      const solid = spec(map, "mapcairn:regions:styled-outline-solid");
+      const dashed = spec(map, "mapcairn:regions:styled-outline-dashed");
+      const dotted = spec(map, "mapcairn:regions:styled-outline-dotted");
       expect(solid.filter).toEqual(["==", ["get", "dash"], "solid"]);
       expect(dashed.filter).toEqual(["==", ["get", "dash"], "dashed"]);
       expect(solid.paint).toEqual({
@@ -1652,14 +1660,14 @@ describe("MapLibreMapAdapter data layers", () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setStyledShapes("routes", STYLED_LINES);
       expect(layerIds(map)).toEqual([
-        "karta:routes:styled-casing-solid",
-        "karta:routes:styled-casing-dashed",
-        "karta:routes:styled-casing-dotted",
-        "karta:routes:styled-line-solid",
-        "karta:routes:styled-line-dashed",
-        "karta:routes:styled-line-dotted",
+        "mapcairn:routes:styled-casing-solid",
+        "mapcairn:routes:styled-casing-dashed",
+        "mapcairn:routes:styled-casing-dotted",
+        "mapcairn:routes:styled-line-solid",
+        "mapcairn:routes:styled-line-dashed",
+        "mapcairn:routes:styled-line-dotted",
       ]);
-      const casing = spec(map, "karta:routes:styled-casing-dotted");
+      const casing = spec(map, "mapcairn:routes:styled-casing-dotted");
       expect(casing.paint["line-color"]).toBe(tokenValues.dataMarker.halo);
       expect(casing.paint["line-width"]).toEqual([
         "+",
@@ -1668,7 +1676,7 @@ describe("MapLibreMapAdapter data layers", () => {
       ]);
       expect(casing.paint["line-dasharray"]).toEqual([1, 2]);
       expect(
-        spec(map, "karta:routes:styled-line-dotted").paint["line-color"],
+        spec(map, "mapcairn:routes:styled-line-dotted").paint["line-color"],
       ).toEqual(["get", "colour"]);
     });
 
@@ -1676,7 +1684,7 @@ describe("MapLibreMapAdapter data layers", () => {
       it("draws them with the basemap's own font when it has a glyph source", async () => {
         const { adapter, map } = await ready(POSITRON);
         adapter.setStyledShapes("regions", STYLED_AREAS);
-        const label = spec(map, "karta:regions:styled-label");
+        const label = spec(map, "mapcairn:regions:styled-label");
         expect(label.type).toBe("symbol");
         expect(label.layout).toMatchObject({
           "text-field": ["get", "label"],
@@ -1694,7 +1702,7 @@ describe("MapLibreMapAdapter data layers", () => {
       it("places a line's label along the line", async () => {
         const { adapter, map } = await ready(POSITRON);
         adapter.setStyledShapes("routes", STYLED_LINES);
-        const label = spec(map, "karta:routes:styled-label");
+        const label = spec(map, "mapcairn:routes:styled-label");
         expect(label.layout["symbol-placement"]).toBe("line");
         expect(label.minzoom).toBeUndefined();
       });
@@ -1703,7 +1711,7 @@ describe("MapLibreMapAdapter data layers", () => {
         const { adapter, map } = await ready(STREETS);
         adapter.setStyledShapes("regions", STYLED_AREAS);
         expect(map.glyphs).toBeUndefined();
-        expect(idsOf(map, "karta:regions:styled-label")).toEqual([]);
+        expect(idsOf(map, "mapcairn:regions:styled-label")).toEqual([]);
       });
 
       it("draws none when no symbol layer names a literal font", async () => {
@@ -1716,7 +1724,7 @@ describe("MapLibreMapAdapter data layers", () => {
           },
         ];
         adapter.setStyledShapes("regions", STYLED_AREAS);
-        expect(idsOf(map, "karta:regions:styled-label")).toEqual([]);
+        expect(idsOf(map, "mapcairn:regions:styled-label")).toEqual([]);
       });
 
       it("reads a font given as a literal expression, skipping a layer without one", async () => {
@@ -1732,7 +1740,7 @@ describe("MapLibreMapAdapter data layers", () => {
         ];
         adapter.setStyledShapes("regions", STYLED_AREAS);
         expect(
-          spec(map, "karta:regions:styled-label").layout["text-font"],
+          spec(map, "mapcairn:regions:styled-label").layout["text-font"],
         ).toEqual(["Test Bold"]);
       });
 
@@ -1742,7 +1750,7 @@ describe("MapLibreMapAdapter data layers", () => {
           ...STYLED_AREAS,
           shapes: [{ id: "south", geometry: polygon(4), look: LOOK }],
         });
-        expect(idsOf(map, "karta:regions:styled-label")).toEqual([]);
+        expect(idsOf(map, "mapcairn:regions:styled-label")).toEqual([]);
       });
     });
   });
@@ -1751,7 +1759,7 @@ describe("MapLibreMapAdapter data layers", () => {
     it("keeps the source's zoom limits as tile levels", async () => {
       const { adapter, map } = await ready();
       adapter.setVectorLayer("districts", VECTOR);
-      expect(map.sources.get("karta:districts")).toEqual({
+      expect(map.sources.get("mapcairn:districts")).toEqual({
         type: "vector",
         tiles: ["https://vector.test/{z}/{x}/{y}.pbf"],
         minzoom: 0,
@@ -1763,13 +1771,13 @@ describe("MapLibreMapAdapter data layers", () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setVectorLayer("districts", VECTOR);
       // The whole layer shows from normalised zoom 3 to 17: engine 2 to 16.
-      expect(spec(map, "karta:districts:v0-fill")).toMatchObject({
+      expect(spec(map, "mapcairn:districts:v0-fill")).toMatchObject({
         "source-layer": "areas",
         minzoom: 2,
         maxzoom: 16,
       });
       // The source layer's own minimum of 5 is narrower: engine 4.
-      expect(spec(map, "karta:districts:v1-line-solid")).toMatchObject({
+      expect(spec(map, "mapcairn:districts:v1-line-solid")).toMatchObject({
         "source-layer": "borders",
         minzoom: 4,
         maxzoom: 16,
@@ -1779,19 +1787,15 @@ describe("MapLibreMapAdapter data layers", () => {
     it("compiles a category rule into a match with a fallback", async () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setVectorLayer("districts", VECTOR);
-      expect(spec(map, "karta:districts:v0-fill").paint["fill-color"]).toEqual([
-        "match",
-        ["get", "kind"],
-        "park",
-        "#0072b2",
-        "#e69f00",
-      ]);
+      expect(
+        spec(map, "mapcairn:districts:v0-fill").paint["fill-color"],
+      ).toEqual(["match", ["get", "kind"], "park", "#0072b2", "#e69f00"]);
     });
 
     it("compiles a steps rule into a step on the number, the first look below the second minimum", async () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setVectorLayer("districts", VECTOR);
-      const line = spec(map, "karta:districts:v1-line-solid");
+      const line = spec(map, "mapcairn:districts:v1-line-solid");
       expect(line.paint["line-width"]).toEqual([
         "step",
         ["to-number", ["get", "rank"], 0],
@@ -1820,10 +1824,10 @@ describe("MapLibreMapAdapter data layers", () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setVectorLayer("districts", VECTOR);
       const compiled = ["match", ["get", "kind"], "park", "stripes", "solid"];
-      const pattern = spec(map, "karta:districts:v0-pattern");
+      const pattern = spec(map, "mapcairn:districts:v0-pattern");
       expect(pattern.paint["fill-pattern"]).toEqual([
         "concat",
-        "karta-pattern:",
+        "mapcairn-pattern:",
         compiled,
       ]);
       expect(pattern.filter).toEqual([
@@ -1831,7 +1835,7 @@ describe("MapLibreMapAdapter data layers", () => {
         ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
         ["!=", compiled, "solid"],
       ]);
-      expect(map.hasImage("karta-pattern:stripes")).toBe(true);
+      expect(map.hasImage("mapcairn-pattern:stripes")).toBe(true);
     });
 
     it("skips the pattern and dash filters when a fixed look needs none", async () => {
@@ -1854,18 +1858,18 @@ describe("MapLibreMapAdapter data layers", () => {
           },
         ],
       });
-      expect(idsOf(map, "karta:districts:v0-")).toEqual([
-        "karta:districts:v0-fill",
-        "karta:districts:v0-outline-dotted",
+      expect(idsOf(map, "mapcairn:districts:v0-")).toEqual([
+        "mapcairn:districts:v0-fill",
+        "mapcairn:districts:v0-outline-dotted",
       ]);
-      expect(spec(map, "karta:districts:v0-fill").paint["fill-color"]).toBe(
+      expect(spec(map, "mapcairn:districts:v0-fill").paint["fill-color"]).toBe(
         "#0072b2",
       );
-      expect(idsOf(map, "karta:districts:v1-")).toEqual([
-        "karta:districts:v1-casing-solid",
-        "karta:districts:v1-line-solid",
+      expect(idsOf(map, "mapcairn:districts:v1-")).toEqual([
+        "mapcairn:districts:v1-casing-solid",
+        "mapcairn:districts:v1-line-solid",
       ]);
-      expect(spec(map, "karta:districts:v0-fill").minzoom).toBeUndefined();
+      expect(spec(map, "mapcairn:districts:v0-fill").minzoom).toBeUndefined();
     });
 
     it("draws a pattern for a fixed look that has one, without a filter on it", async () => {
@@ -1880,8 +1884,8 @@ describe("MapLibreMapAdapter data layers", () => {
           },
         ],
       });
-      const pattern = spec(map, "karta:districts:v0-pattern");
-      expect(pattern.paint["fill-pattern"]).toBe("karta-pattern:crosshatch");
+      const pattern = spec(map, "mapcairn:districts:v0-pattern");
+      expect(pattern.paint["fill-pattern"]).toBe("mapcairn-pattern:crosshatch");
       // No pattern condition, only the guard that keeps other geometry out.
       expect(pattern.filter).toEqual([
         "match",
@@ -1895,7 +1899,7 @@ describe("MapLibreMapAdapter data layers", () => {
     it("draws labels from a property on a vector basemap only", async () => {
       const vector = await ready(POSITRON);
       vector.adapter.setVectorLayer("districts", VECTOR);
-      const label = spec(vector.map, "karta:districts:v0-label");
+      const label = spec(vector.map, "mapcairn:districts:v0-label");
       expect(label.layout["text-field"]).toEqual([
         "to-string",
         ["get", "name"],
@@ -1903,11 +1907,11 @@ describe("MapLibreMapAdapter data layers", () => {
       // The label's own minimum of 8 beats the layer's 3: engine 7.
       expect(label.minzoom).toBe(7);
       expect(label.maxzoom).toBe(16);
-      expect(idsOf(vector.map, "karta:districts:v1-label")).toEqual([]);
+      expect(idsOf(vector.map, "mapcairn:districts:v1-label")).toEqual([]);
 
       const raster = await ready(STREETS);
       raster.adapter.setVectorLayer("districts", VECTOR);
-      expect(idsOf(raster.map, "karta:districts:v0-label")).toEqual([]);
+      expect(idsOf(raster.map, "mapcairn:districts:v0-label")).toEqual([]);
     });
 
     it("leaves out a source layer with a step rule that has no steps", async () => {
@@ -1923,7 +1927,7 @@ describe("MapLibreMapAdapter data layers", () => {
         ],
       });
       expect(layerIds(map)).toEqual([]);
-      expect(map.sources.has("karta:districts")).toBe(true);
+      expect(map.sources.has("mapcairn:districts")).toBe(true);
     });
 
     it("is not tappable", async () => {
@@ -1938,13 +1942,13 @@ describe("MapLibreMapAdapter data layers", () => {
     it("draws loaded points as a weighted GeoJSON source", async () => {
       const { adapter, map } = await ready();
       adapter.setHeatmapLayer("density", HEAT_POINTS);
-      const { data } = map.sources.get("karta:density") as Spec;
+      const { data } = map.sources.get("mapcairn:density") as Spec;
       expect(data.features.map((f: Spec) => f.properties)).toEqual([
         { weight: 3 },
         { weight: 1 },
       ]);
       expect(data.features[0].geometry.coordinates).toEqual([2.35, 48.86]);
-      const heat = spec(map, "karta:density:heat");
+      const heat = spec(map, "mapcairn:density:heat");
       expect(heat.type).toBe("heatmap");
       expect(heat.paint).toMatchObject({
         "heatmap-weight": ["get", "weight"],
@@ -1957,39 +1961,39 @@ describe("MapLibreMapAdapter data layers", () => {
     it("ramps the colour from clear at no density to the last colour at full density", async () => {
       const { adapter, map } = await ready();
       adapter.setHeatmapLayer("density", HEAT_POINTS);
-      expect(spec(map, "karta:density:heat").paint["heatmap-color"]).toEqual([
-        "interpolate",
-        ["linear"],
-        ["heatmap-density"],
-        0,
-        "rgba(68, 1, 84, 0)",
-        1 / 3,
-        "rgba(68, 1, 84, 1)",
-        2 / 3,
-        "rgba(33, 145, 140, 1)",
-        1,
-        "rgba(253, 231, 37, 1)",
-      ]);
+      expect(spec(map, "mapcairn:density:heat").paint["heatmap-color"]).toEqual(
+        [
+          "interpolate",
+          ["linear"],
+          ["heatmap-density"],
+          0,
+          "rgba(68, 1, 84, 0)",
+          1 / 3,
+          "rgba(68, 1, 84, 1)",
+          2 / 3,
+          "rgba(33, 145, 140, 1)",
+          1,
+          "rgba(253, 231, 37, 1)",
+        ],
+      );
     });
 
     it("draws a vector source layer weighted by a field, with zoom windows converted", async () => {
       const { adapter, map } = await ready();
       adapter.setHeatmapLayer("events", HEAT_VECTOR);
-      expect(map.sources.get("karta:events")).toMatchObject({
+      expect(map.sources.get("mapcairn:events")).toMatchObject({
         type: "vector",
         minzoom: 0,
         maxzoom: 14,
       });
-      expect(spec(map, "karta:events:heat")).toMatchObject({
+      expect(spec(map, "mapcairn:events:heat")).toMatchObject({
         "source-layer": "events",
         minzoom: 5,
         maxzoom: 11,
       });
-      expect(spec(map, "karta:events:heat").paint["heatmap-weight"]).toEqual([
-        "to-number",
-        ["get", "size"],
-        1,
-      ]);
+      expect(spec(map, "mapcairn:events:heat").paint["heatmap-weight"]).toEqual(
+        ["to-number", ["get", "size"], 1],
+      );
     });
 
     it("counts each vector point once without a weight field", async () => {
@@ -2002,7 +2006,7 @@ describe("MapLibreMapAdapter data layers", () => {
           sourceLayer: "events",
         },
       });
-      const heat = spec(map, "karta:events:heat");
+      const heat = spec(map, "mapcairn:events:heat");
       expect(heat.paint["heatmap-weight"]).toBe(1);
       expect(heat.minzoom).toBeUndefined();
     });
@@ -2055,16 +2059,16 @@ describe("MapLibreMapAdapter data layers", () => {
       adapter.setStyledShapes("regions", STYLED_AREAS);
       adapter.setStyledShapes("other", STYLED_AREAS);
       adapter.removeLayer("regions");
-      expect(idsOf(map, "karta:regions:")).toEqual([]);
-      expect(map.sources.has("karta:regions")).toBe(false);
-      expect(idsOf(map, "karta:other:")).toHaveLength(5);
+      expect(idsOf(map, "mapcairn:regions:")).toEqual([]);
+      expect(map.sources.has("mapcairn:regions")).toBe(false);
+      expect(idsOf(map, "mapcairn:other:")).toHaveLength(5);
     });
 
     it("replaces a layer with another kind under the same id", async () => {
       const { adapter, map } = await ready(STREETS);
       adapter.setStyledShapes("x", STYLED_AREAS);
       adapter.setHeatmapLayer("x", HEAT_POINTS);
-      expect(layerIds(map)).toEqual(["karta:x:heat"]);
+      expect(layerIds(map)).toEqual(["mapcairn:x:heat"]);
     });
 
     it("draws layers set before mount once the first style loads", async () => {
@@ -2075,9 +2079,11 @@ describe("MapLibreMapAdapter data layers", () => {
       const { map } = await mounted({ basemap: POSITRON }, adapter);
       expect(layerIds(map)).toEqual([]);
       map.fire("style.load");
-      expect(idsOf(map, "karta:districts:").length).toBeGreaterThan(0);
-      expect(idsOf(map, "karta:regions:").length).toBeGreaterThan(0);
-      expect(idsOf(map, "karta:density:")).toEqual(["karta:density:heat"]);
+      expect(idsOf(map, "mapcairn:districts:").length).toBeGreaterThan(0);
+      expect(idsOf(map, "mapcairn:regions:").length).toBeGreaterThan(0);
+      expect(idsOf(map, "mapcairn:density:")).toEqual([
+        "mapcairn:density:heat",
+      ]);
     });
 
     it("draws them all again, images included, after a basemap swap", async () => {
@@ -2090,19 +2096,19 @@ describe("MapLibreMapAdapter data layers", () => {
       expect(layerIds(map)).toEqual([]);
       expect(map.images.size).toBe(0);
       map.fire("style.load");
-      expect(map.hasImage("karta-pattern:dots")).toBe(true);
+      expect(map.hasImage("mapcairn-pattern:dots")).toBe(true);
       // The new basemap has glyphs, so the labels join the layers that were there.
       expect(layerIds(map)).toEqual(expect.arrayContaining(before as string[]));
-      expect(idsOf(map, "karta:regions:styled-label")).toHaveLength(1);
+      expect(idsOf(map, "mapcairn:regions:styled-label")).toHaveLength(1);
     });
 
     it("reads the label font again for the new style after a swap", async () => {
       const { adapter, map } = await ready(POSITRON);
       adapter.setStyledShapes("regions", STYLED_AREAS);
-      expect(idsOf(map, "karta:regions:styled-label")).toHaveLength(1);
+      expect(idsOf(map, "mapcairn:regions:styled-label")).toHaveLength(1);
       void adapter.setBasemap(STREETS);
       map.fire("style.load");
-      expect(idsOf(map, "karta:regions:styled-label")).toEqual([]);
+      expect(idsOf(map, "mapcairn:regions:styled-label")).toEqual([]);
     });
   });
 
@@ -2134,18 +2140,18 @@ describe("MapLibreMapAdapter data layers", () => {
       expect(
         map.callsOf("queryRenderedFeatures").map((call) => call.args),
       ).toEqual([
-        [box, { layers: ["karta:pts:points"] }],
+        [box, { layers: ["mapcairn:pts:points"] }],
         [
           box,
           {
             layers: [
-              "karta:routes:styled-line-solid",
-              "karta:routes:styled-line-dashed",
-              "karta:routes:styled-line-dotted",
+              "mapcairn:routes:styled-line-solid",
+              "mapcairn:routes:styled-line-dashed",
+              "mapcairn:routes:styled-line-dotted",
             ],
           },
         ],
-        [[50, 40], { layers: ["karta:regions:styled-fill"] }],
+        [[50, 40], { layers: ["mapcairn:regions:styled-fill"] }],
       ]);
     });
 

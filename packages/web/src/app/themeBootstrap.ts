@@ -1,4 +1,4 @@
-import { buildThemeBootstrapScript } from "@karta/core";
+import { buildThemeBootstrapScript } from "@mapcairn/core";
 
 /**
  * The inline pre-paint theme script that `root.tsx` puts in the head. It is

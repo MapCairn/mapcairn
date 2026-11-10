@@ -4,7 +4,7 @@ import {
   surfaceBlurStyle,
   tokens,
   zLayer,
-} from "@karta/theme";
+} from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 import { chromeVar, chromeVars } from "../MapChrome/chromeVars";
 

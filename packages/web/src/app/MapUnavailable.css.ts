@@ -1,4 +1,4 @@
-import { tokens, zLayer } from "@karta/theme";
+import { tokens, zLayer } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** Fills the map region's one grid cell, above the empty engine slot, and centres the card. */

@@ -4,10 +4,7 @@ import {
   CLIENT_ERROR_REPORT_MAX_BODY_BYTES,
   CLIENT_ERROR_REPORT_MAX_FIELD_LENGTH,
 } from "../constants/clientErrorReporting";
-import { SITE_URL } from "../constants/siteConfig";
-
-/** This app's own origin, parsed once rather than on every request; see `action`'s Origin check. */
-const SITE_ORIGIN = new URL(SITE_URL).origin;
+import { SITE_ORIGINS } from "../constants/siteConfig";
 
 /**
  * Shape of a client error report POSTed by `BeaconErrorReporter`. Every
@@ -64,7 +61,7 @@ export async function action({
   }
 
   const origin = request.headers.get("Origin");
-  if (origin !== null && origin !== SITE_ORIGIN) {
+  if (origin !== null && !SITE_ORIGINS.includes(origin)) {
     return new Response(null, { status: 403 });
   }
 

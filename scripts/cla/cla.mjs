@@ -14,10 +14,15 @@
 
 /** The sentence a person comments to agree, as written in `CLA.md`. */
 export const AGREEMENT_SENTENCE =
-  "I have read the contributor licence agreement in CLA.md at the time of this pull request and I agree to it for this and all my future contributions to Karta.";
+  "I have read the contributor licence agreement in CLA.md at the time of this pull request and I agree to it for this and all my future contributions to MapCairn.";
 
-/** The version of `CLA.md` that new signatures record. */
-export const CLA_VERSION = "1.0";
+/**
+ * The version of `CLA.md` that new signatures record. A signature recorded for
+ * an earlier version stays valid and is never rewritten, because accounts are
+ * matched by id whatever version they signed. Version 1.1 only renamed the
+ * project from Karta to MapCairn.
+ */
+export const CLA_VERSION = "1.1";
 
 /** Hidden marker that identifies the one explanatory comment the check owns. */
 export const COMMENT_MARKER = "<!-- cla-bot -->";

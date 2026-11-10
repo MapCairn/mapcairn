@@ -1,4 +1,4 @@
-import type { ClipboardPort, ClipboardResult } from "@karta/core";
+import type { ClipboardPort, ClipboardResult } from "@mapcairn/core";
 
 /** The slice of `navigator` the clipboard adapter reads. */
 export interface ClipboardNavigator {

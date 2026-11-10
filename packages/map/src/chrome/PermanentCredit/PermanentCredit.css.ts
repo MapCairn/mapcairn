@@ -1,4 +1,4 @@
-import { focusRing, surfaceBlurStyle, tokens } from "@karta/theme";
+import { focusRing, surfaceBlurStyle, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /**

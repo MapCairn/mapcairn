@@ -7,8 +7,8 @@ import {
   THEME_COLOR_META,
   THEME_COLOR_META_NAME,
   THEME_STORAGE_KEY,
-} from "@karta/core";
-import { runThemeSourceContract } from "@karta/core/contracts";
+} from "@mapcairn/core";
+import { runThemeSourceContract } from "@mapcairn/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocalStorageSettingsStore } from "../settings/LocalStorageSettingsStore";
 import type { MediaQueryLike } from "../shared/mediaQuery";

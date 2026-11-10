@@ -1,4 +1,4 @@
-import { focusRing, surfaceBlurStyle, tokens, zLayer } from "@karta/theme";
+import { focusRing, surfaceBlurStyle, tokens, zLayer } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 import { chromeVar, chromeVars } from "../MapChrome/chromeVars";
 

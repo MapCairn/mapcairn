@@ -1,4 +1,4 @@
-import { THEME_STORAGE_KEY } from "@karta/core";
+import { THEME_STORAGE_KEY } from "@mapcairn/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PRIVACY_POLICY_TITLE, PrivacyPage } from "./PrivacyPage";
@@ -24,10 +24,10 @@ describe("PrivacyPage", () => {
   it("names the local storage keys it really uses", () => {
     render(<PrivacyPage />);
 
-    expect(THEME_STORAGE_KEY).toBe("karta:theme");
-    expect(screen.getByText("karta:theme")).toBeInTheDocument();
+    expect(THEME_STORAGE_KEY).toBe("mapcairn:theme");
+    expect(screen.getByText("mapcairn:theme")).toBeInTheDocument();
     expect(screen.queryByText("buffer-zones-theme")).not.toBeInTheDocument();
-    expect(screen.getByText("karta:")).toBeInTheDocument();
+    expect(screen.getByText("mapcairn:")).toBeInTheDocument();
   });
 
   it("gives a contact address for privacy questions", () => {

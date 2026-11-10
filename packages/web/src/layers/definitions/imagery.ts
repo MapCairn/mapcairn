@@ -1,4 +1,4 @@
-import type { TileLayerDefinition } from "@karta/core";
+import type { TileLayerDefinition } from "@mapcairn/core";
 
 /**
  * NASA GIBS daily true-colour imagery from VIIRS on NOAA-21, as WMTS tiles.

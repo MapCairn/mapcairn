@@ -3,8 +3,8 @@ import {
   type LocationErrorKind,
   type LocationFix,
   PortAbortError,
-} from "@karta/core";
-import { runLocationProviderContract } from "@karta/core/contracts";
+} from "@mapcairn/core";
+import { runLocationProviderContract } from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";
 import {
   BrowserLocationProvider,

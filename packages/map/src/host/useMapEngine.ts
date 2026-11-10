@@ -5,8 +5,8 @@ import {
   MapEngineError,
   omittedLayers,
   type ViewState,
-} from "@karta/core";
-import { useLatestRef } from "@karta/react";
+} from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import {
   type RefObject,
   useCallback,

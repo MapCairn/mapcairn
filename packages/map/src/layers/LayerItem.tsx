@@ -8,7 +8,7 @@ import {
   legendFor,
   loadsFeatures,
   resolveDateBound,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { RotateCw, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { useSaveData } from "../services";

@@ -1,4 +1,4 @@
-import { tokenValues } from "@karta/theme";
+import { tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import { parseHexColour } from "./markerImages";
 import {
@@ -25,7 +25,7 @@ function inked(data: Uint8Array): number {
 
 describe("patternImages", () => {
   it("names images by pattern and sizes them as a power of two", () => {
-    expect(patternImageName("stripes")).toBe("karta-pattern:stripes");
+    expect(patternImageName("stripes")).toBe("mapcairn-pattern:stripes");
     expect(PATTERN_NAMES).toEqual(["stripes", "dots", "crosshatch"]);
     expect(Math.log2(PATTERN_SIZE) % 1).toBe(0);
     expect(PATTERN_PIXEL_RATIO).toBe(2);

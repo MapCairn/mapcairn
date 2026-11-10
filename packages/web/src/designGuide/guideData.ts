@@ -5,7 +5,7 @@ import {
   type Rgba,
   toHex,
   tokenValues,
-} from "@karta/theme";
+} from "@mapcairn/theme";
 
 type ColourRoles = tokenValues.ColourRoles;
 type ColourRole = keyof ColourRoles;

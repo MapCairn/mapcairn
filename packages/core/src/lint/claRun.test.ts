@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AGREEMENT_SENTENCE,
   BOT_LOGIN,
+  CLA_VERSION,
   COMMENT_MARKER,
   parseSignatures,
   serialiseSignatures,
@@ -471,7 +472,7 @@ describe("run: agreement comment", () => {
       login: "ada",
       id: 2,
       pullRequest: 7,
-      claVersion: "1.0",
+      claVersion: CLA_VERSION,
     });
     expect(statuses(world)[0]?.params).toMatchObject({
       sha: HEAD,

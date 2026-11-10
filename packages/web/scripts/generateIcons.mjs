@@ -1,5 +1,5 @@
 /**
- * Renders the Karta icon set in `public/` from the hand-written master SVGs
+ * Renders the MapCairn icon set in `public/` from the hand-written master SVGs
  * in `scripts/icons/`.
  *
  * @remarks

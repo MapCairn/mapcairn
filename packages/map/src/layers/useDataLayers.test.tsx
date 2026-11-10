@@ -11,7 +11,7 @@ import {
   SAMPLE_TILE_LAYER,
   StaticLayerRegistry,
   samplePoint,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, renderHook, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";

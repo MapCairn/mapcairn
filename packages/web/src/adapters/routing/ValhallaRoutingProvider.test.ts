@@ -5,8 +5,8 @@ import {
   RoutingError,
   type RoutingErrorKind,
   type TravelMode,
-} from "@karta/core";
-import { runRoutingProviderContract } from "@karta/core/contracts";
+} from "@mapcairn/core";
+import { runRoutingProviderContract } from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";
 import errorNoPath from "./fixtures/error-no-path.json";
 import errorTooFar from "./fixtures/error-too-far.json";

@@ -2,7 +2,7 @@ import {
   type FeedLayerDefinition,
   type FormatterRegistry,
   formatTemplate,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { ArrowLeft, Crosshair, Layers, TriangleAlert, X } from "lucide-react";
 import { type Ref, useId } from "react";
 import { Button } from "../ui/Button";

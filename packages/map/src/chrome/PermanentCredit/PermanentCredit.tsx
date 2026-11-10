@@ -1,4 +1,4 @@
-import type { BasemapCredit } from "@karta/core";
+import type { BasemapCredit } from "@mapcairn/core";
 import type { ReactNode } from "react";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import * as styles from "./PermanentCredit.css";

@@ -4,7 +4,7 @@ import {
   announceImageSaved,
   MapEngineError,
   type MapImageDrawing,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { Download } from "lucide-react";
 import {
   type Ref,

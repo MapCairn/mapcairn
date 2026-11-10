@@ -1,14 +1,14 @@
 import { spawnSync } from "node:child_process";
 
 /**
- * Builds the e2e bundle and serves it with `wrangler dev` on `KARTA_E2E_PORT`
+ * Builds the e2e bundle and serves it with `wrangler dev` on `MAPCAIRN_E2E_PORT`
  * (default 4173), so parallel runs in separate working copies cannot collide.
  * `playwright.config.ts` reads the same variable. A script rather than an
  * npm one-liner because `${VAR:-default}` is not portable to Windows.
  */
-const port = process.env.KARTA_E2E_PORT || "4173";
+const port = process.env.MAPCAIRN_E2E_PORT || "4173";
 if (!/^\d+$/.test(port)) {
-  console.error(`KARTA_E2E_PORT must be a port number, got "${port}".`);
+  console.error(`MAPCAIRN_E2E_PORT must be a port number, got "${port}".`);
   process.exit(1);
 }
 

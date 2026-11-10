@@ -1,4 +1,4 @@
-import type { TileLayerDefinition } from "@karta/core";
+import type { TileLayerDefinition } from "@mapcairn/core";
 
 /**
  * Gridded Population of the World (GPWv4) population density for 2020, served

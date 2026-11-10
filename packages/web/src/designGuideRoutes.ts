@@ -26,7 +26,7 @@ export function isDesignGuideEnabled(mode: string | undefined): boolean {
  *   the route module is never bundled, so a production request for `/design`
  *   falls through to the ordinary not-found page, and
  *   `scripts/verifyNoTestSeam.mjs` proves the page's marker is absent from
- *   the production build. This module must stay free of `@karta/*` and
+ *   the production build. This module must stay free of `@mapcairn/*` and
  *   `.css.ts` imports: the config loader runs it with no Vite plugins.
  */
 export function designGuideRoutes(

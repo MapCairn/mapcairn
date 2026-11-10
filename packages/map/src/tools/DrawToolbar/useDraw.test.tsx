@@ -7,7 +7,7 @@ import {
   type FakeServices,
   type LatLng,
   type UnitSystem,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -532,12 +532,12 @@ describe("useDraw", () => {
         await rig.result.current.exportGeoJson();
       });
       const file = rig.services.fakes.fileSaver.saved[0];
-      expect(file?.filename).toBe("karta-shapes.geojson");
+      expect(file?.filename).toBe("mapcairn-shapes.geojson");
       expect(file?.mimeType).toBe("application/geo+json");
       expect(JSON.parse(file?.content ?? "{}").features).toHaveLength(1);
       expect(rig.result.current.feedback).toEqual({
         kind: "success",
-        text: "Saved 1 shape as karta-shapes.geojson.",
+        text: "Saved 1 shape as mapcairn-shapes.geojson.",
       });
     });
 
@@ -547,7 +547,7 @@ describe("useDraw", () => {
         await rig.result.current.exportCsv();
       });
       const file = rig.services.fakes.fileSaver.saved[0];
-      expect(file?.filename).toBe("karta-shapes.csv");
+      expect(file?.filename).toBe("mapcairn-shapes.csv");
       expect(file?.mimeType).toBe("text/csv;charset=utf-8");
       expect(
         file?.content.startsWith("id,type,area_m2,length_m,geometry"),

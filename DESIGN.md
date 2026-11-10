@@ -1,6 +1,6 @@
 # Design system
 
-The map is the hero and the chrome recedes. Karta is calm, neutral and precise, with grouped controls, a floating search pill and a bottom sheet, in the way people already expect from a good maps app. Light and dark are equally polished. The target is WCAG 2.2 AA, built in from the first component.
+The map is the hero and the chrome recedes. MapCairn is calm, neutral and precise, with grouped controls, a floating search pill and a bottom sheet, in the way people already expect from a good maps app. Light and dark are equally polished. The target is WCAG 2.2 AA, built in from the first component.
 
 Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use tokens, so an off-scale value fails typecheck, and a lint test is the backstop for raw literals.
 

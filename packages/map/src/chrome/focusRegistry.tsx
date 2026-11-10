@@ -1,4 +1,4 @@
-import type { FocusTarget } from "@karta/core";
+import type { FocusTarget } from "@mapcairn/core";
 import {
   createContext,
   type ReactNode,

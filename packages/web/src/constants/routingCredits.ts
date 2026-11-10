@@ -1,4 +1,4 @@
-import type { LayerAttribution } from "@karta/core";
+import type { LayerAttribution } from "@mapcairn/core";
 
 /**
  * What a request sends and to whom, shown under the Directions buttons. It

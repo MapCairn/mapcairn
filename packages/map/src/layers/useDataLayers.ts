@@ -23,8 +23,8 @@ import {
   nextQueryWindow,
   parseTime,
   resolveControlValues,
-} from "@karta/core";
-import { useLatestRef } from "@karta/react";
+} from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";

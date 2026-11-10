@@ -6,7 +6,7 @@ import {
   type SearchOptions,
   type SearchProvider,
   type SearchResult,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { RequestSpacer } from "../shared/RequestSpacer";
 
 const DEFAULT_ENDPOINT = "https://nominatim.openstreetmap.org";

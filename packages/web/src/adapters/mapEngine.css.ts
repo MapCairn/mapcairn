@@ -23,7 +23,7 @@
  * Cursor: `MapView` owns the cursor (grab, grabbing while pressed, crosshair
  * while measuring), so engine elements inherit it instead of setting their own.
  */
-import { mapOverlayTokens, tokens } from "@karta/theme";
+import { mapOverlayTokens, tokens } from "@mapcairn/theme";
 import { globalStyle } from "@vanilla-extract/css";
 
 /** The map region attribute every selector starts from. */

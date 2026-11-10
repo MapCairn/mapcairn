@@ -7,7 +7,7 @@ import {
   nextDetent,
   resolveSnap,
   type SheetDetent,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { X } from "lucide-react";
 import {
   type KeyboardEvent,

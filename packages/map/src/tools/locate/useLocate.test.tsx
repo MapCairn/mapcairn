@@ -4,7 +4,7 @@ import {
   LocationError,
   PortAbortError,
   type UnitSystem,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

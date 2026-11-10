@@ -1,4 +1,4 @@
-import { type FormatterRegistry, formatTemplate } from "@karta/core";
+import { type FormatterRegistry, formatTemplate } from "@mapcairn/core";
 import { X } from "lucide-react";
 import { type Ref, useId } from "react";
 import { IconButton } from "../ui/IconButton";

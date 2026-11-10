@@ -13,7 +13,7 @@ import {
   loadsFeatures,
   maxAgeFromCacheControl,
   SharedResponseCache,
-} from "@karta/core";
+} from "@mapcairn/core";
 
 /** Options for {@link FetchLayerSource}. */
 export interface FetchLayerSourceOptions {

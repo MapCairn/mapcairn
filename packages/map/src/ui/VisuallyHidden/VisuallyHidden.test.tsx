@@ -13,11 +13,11 @@ describe("VisuallyHidden", () => {
     expect(screen.getByText("text").tagName).toBe("SPAN");
     rerender(
       <VisuallyHidden as="h1" id="title">
-        Karta
+        MapCairn
       </VisuallyHidden>,
     );
     expect(
-      screen.getByRole("heading", { level: 1, name: "Karta" }),
+      screen.getByRole("heading", { level: 1, name: "MapCairn" }),
     ).toBeTruthy();
   });
 

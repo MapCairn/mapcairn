@@ -1,4 +1,4 @@
-import type { ThemeChoice, UnitSystem } from "@karta/core";
+import type { ThemeChoice, UnitSystem } from "@mapcairn/core";
 import { Info } from "lucide-react";
 import type { Ref } from "react";
 import {
@@ -121,8 +121,8 @@ export function SettingsSection({
       <div className={subsection}>
         <Subheading level={subLevel}>Privacy</Subheading>
         <p className={prose}>
-          Karta has no accounts, sets no cookies and counts page views without
-          tracking you. Map tiles come from the map provider you choose.
+          MapCairn has no accounts, sets no cookies and counts page views
+          without tracking you. Map tiles come from the map provider you choose.
           Searching sends your query to OpenStreetMap's Nominatim service, and
           Look up address on a pin sends the pin's position, to about 11 m, to
           the same service. Nothing is sent to it until you do one of those. A

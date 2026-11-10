@@ -3,7 +3,7 @@ import {
   FAKE_VECTOR_BASEMAP,
   type FakeMapAdapter,
   type FakeServices,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../services";

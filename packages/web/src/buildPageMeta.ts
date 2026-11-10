@@ -71,7 +71,7 @@ export function buildPageMeta({
     { title },
     { name: "description", content: description },
     ...STATIC_META_TAGS,
-    { property: "og:site_name", content: "Karta" },
+    { property: "og:site_name", content: "MapCairn" },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { property: "og:url", content: url },

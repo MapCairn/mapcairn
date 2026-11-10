@@ -1,4 +1,4 @@
-import { formatShapeMeasure } from "@karta/core";
+import { formatShapeMeasure } from "@mapcairn/core";
 import {
   CircleCheck,
   Download,

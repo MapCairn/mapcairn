@@ -1,4 +1,4 @@
-import { tokens } from "@karta/theme";
+import { tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** A labelled control: the visible label, then the control. */

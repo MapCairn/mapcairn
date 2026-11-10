@@ -1,4 +1,4 @@
-import type { MapLookRule, MapShapeLook } from "@karta/core";
+import type { MapLookRule, MapShapeLook } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { propertyLook, ruleLook } from "./lookExpressions";
 

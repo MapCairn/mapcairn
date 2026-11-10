@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <title>Karta</title>
+  <title>MapCairn</title>
   <!-- Adaptive favicon: a cairn. Light: #0d70d4 tile, white stones. Dark: #94c1fa tile, #062d59 stones.
        Each stone rests on the one below; a halo in the tile colour draws the thin line between them. -->
   <style>

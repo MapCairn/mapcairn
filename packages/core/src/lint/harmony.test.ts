@@ -18,7 +18,7 @@ const TSX = "packages/map/src/ui/Example/Example.tsx";
 const TS = "packages/map/src/host/example.ts";
 
 const css = (body: string): string =>
-  `import { style } from "@vanilla-extract/css";\nimport { focusRing, tokens } from "@karta/theme";\nexport const a = style({\n${body}\n});\n`;
+  `import { style } from "@vanilla-extract/css";\nimport { focusRing, tokens } from "@mapcairn/theme";\nexport const a = style({\n${body}\n});\n`;
 
 /**
  * A hit-area style `a` that removes its own outline, and a style `b` for the
@@ -268,7 +268,7 @@ const cases: readonly Case[] = [
     name: "MapLibre selector in a script",
     file: TS,
     bad: `export const sel = ".maplibregl-canvas";`,
-    good: `export const sel = ".karta-canvas";`,
+    good: `export const sel = ".mapcairn-canvas";`,
   },
   {
     rule: "inline-style",

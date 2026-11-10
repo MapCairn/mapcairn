@@ -6,8 +6,8 @@ import {
   measureLineDistance,
   measurePolygonArea,
   type UnitSystem,
-} from "@karta/core";
-import { useLatestRef } from "@karta/react";
+} from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAnnounce } from "../../ui/LiveRegion";
 

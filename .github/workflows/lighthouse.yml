@@ -31,7 +31,7 @@ jobs:
           npm ci
 
       - name: Build
-        run: npm run build -w @karta/web
+        run: npm run build -w @mapcairn/web
 
       # lighthouserc.json's startServerCommand/startServerReadyPattern start
       # and wait for the preview server itself (lhci autorun), so there's no

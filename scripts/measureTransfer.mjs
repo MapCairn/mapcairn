@@ -1,12 +1,12 @@
 /**
- * Measures how many bytes Karta transfers over the network, for plan 0002
+ * Measures how many bytes MapCairn transfers over the network, for plan 0002
  * (`docs/plans/0002-data-saving-and-first-paint.md`, "Measured").
  *
  * @remarks
  * Build and serve the production bundle first, then run the script against it:
  *
  *     npm run build
- *     npm run preview -w @karta/web -- --port 4173
+ *     npm run preview -w @mapcairn/web -- --port 4173
  *     node scripts/measureTransfer.mjs http://localhost:4173
  *
  * Add `--save-data` to store the Save data choice before the first load, to
@@ -257,7 +257,7 @@ const context = await browser.newContext({
         origins: [
           {
             origin: APP_ORIGIN,
-            localStorage: [{ name: "karta:saveData", value: "true" }],
+            localStorage: [{ name: "mapcairn:saveData", value: "true" }],
           },
         ],
       }

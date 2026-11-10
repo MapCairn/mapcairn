@@ -1,4 +1,4 @@
-import type { SheetSection } from "@karta/core";
+import type { SheetSection } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { sheetTitle } from "./sheetTitle";
 

@@ -1,11 +1,11 @@
-import { DEFAULT_BASEMAP_BACKGROUND } from "@karta/core";
-import { parseColour, toHex, tokenValues } from "@karta/theme";
+import { DEFAULT_BASEMAP_BACKGROUND } from "@mapcairn/core";
+import { parseColour, toHex, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 
 const { representativeBackdrops, themeValues } = tokenValues;
 
 /**
- * `@karta/theme` may not import `@karta/core`, so the default basemap's land
+ * `@mapcairn/theme` may not import `@mapcairn/core`, so the default basemap's land
  * colour is written in both: as `DEFAULT_BASEMAP_BACKGROUND` beside the
  * basemap definitions, and as the default-basemap backdrop that the `mapBackground`
  * token and the contrast tests use. This package sees both, so it checks that

@@ -3,10 +3,10 @@ import { MapPage } from "./pages/MapPage";
 import { mockThirdPartyServices } from "./support/network";
 
 /** The string `testSeam.ts` logs when it accepts scripted services. */
-const SEAM_MARKER = "KARTA_TEST_SEAM_MARKER";
+const SEAM_MARKER = "MAPCAIRN_TEST_SEAM_MARKER";
 
 /** The options a spec sets with `test.use`. */
-export interface KartaOptions {
+export interface MapCairnOptions {
   /**
    * Installs a controllable page clock before the app loads, so a test can
    * jump past the credits' five-second first showing with
@@ -18,7 +18,7 @@ export interface KartaOptions {
 }
 
 /** The fixtures every spec gets. */
-export interface KartaFixtures {
+export interface MapCairnFixtures {
   /** The map page object. `mapPage.goto()` loads the app and waits for the map. */
   readonly mapPage: MapPage;
   /** Console messages from the page, in order. */
@@ -27,12 +27,12 @@ export interface KartaFixtures {
 
 /**
  * Records every message the app's announcer speaks, in order, on
- * `window.__kartaAnnouncements`. The announcer clears and rewrites its live
+ * `window.__mapcairnAnnouncements`. The announcer clears and rewrites its live
  * regions, so reading them at one moment can miss a message.
  */
 function recordAnnouncements() {
   const spoken: string[] = [];
-  window.__kartaAnnouncements = spoken;
+  window.__mapcairnAnnouncements = spoken;
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       const node =
@@ -61,7 +61,7 @@ function recordAnnouncements() {
  * - fails `mapPage.waitForMap()` when a test scripted services through the
  *   seam but the build ignored them (for example, a production build).
  */
-export const test = base.extend<KartaFixtures & KartaOptions>({
+export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
   fastCredits: [false, { option: true }],
   consoleMessages: async ({ page }, use) => {
     const messages: string[] = [];
@@ -84,7 +84,7 @@ export const test = base.extend<KartaFixtures & KartaOptions>({
     mapPage.waitForMap = async () => {
       await waitForMap();
       const scripted = await page.evaluate(
-        () => window.__KARTA_TEST_SERVICES__ !== undefined,
+        () => window.__MAPCAIRN_TEST_SERVICES__ !== undefined,
       );
       if (scripted) {
         expect(

@@ -1,4 +1,4 @@
-import type { SheetDetent } from "@karta/core";
+import type { SheetDetent } from "@mapcairn/core";
 import { createContext, useContext } from "react";
 
 /**

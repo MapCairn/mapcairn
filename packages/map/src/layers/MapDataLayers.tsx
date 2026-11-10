@@ -10,8 +10,8 @@ import {
   type MapAdapter,
   type MapFeatureTap,
   tileUrl,
-} from "@karta/core";
-import { useLatestRef } from "@karta/react";
+} from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import { useEffect, useRef } from "react";
 import { useMap } from "../host";
 import { roundPixel } from "../host/overlays/geometry";

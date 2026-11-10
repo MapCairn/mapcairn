@@ -10,9 +10,9 @@ test.describe("app shell", () => {
   }) => {
     await mapPage.goto();
 
-    await expect(page).toHaveTitle(/karta/i);
+    await expect(page).toHaveTitle(/mapcairn/i);
     await expect(page.locator("html")).toHaveAttribute("lang", "en-GB");
-    await expect(mapPage.heading).toHaveText("Karta");
+    await expect(mapPage.heading).toHaveText("MapCairn");
     await expect(page.getByRole("main")).toHaveCount(1);
     await expect(mapPage.searchLandmark).toBeVisible();
     await expect(mapPage.region).toBeVisible();

@@ -29,7 +29,7 @@ import {
   stopMeasure,
   surfaceReducer,
   type ViewState,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   type DataLayers,
   type MapContextValue,
@@ -47,8 +47,8 @@ import {
   useMeasure,
   useSettings,
   useUrlState,
-} from "@karta/map";
-import { useLatestRef } from "@karta/react";
+} from "@mapcairn/map";
+import { useLatestRef } from "@mapcairn/react";
 import {
   type RefObject,
   useCallback,

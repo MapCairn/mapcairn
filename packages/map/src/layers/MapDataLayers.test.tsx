@@ -14,8 +14,8 @@ import {
   sampleArea,
   sampleLine,
   samplePoint,
-} from "@karta/core";
-import { tokenValues } from "@karta/theme";
+} from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import { act, render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { testMapContext } from "../chrome/MapChrome/chromeTestHarness";

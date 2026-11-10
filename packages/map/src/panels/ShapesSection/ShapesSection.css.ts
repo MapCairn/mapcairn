@@ -1,4 +1,4 @@
-import { tokens } from "@karta/theme";
+import { tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** The list of shapes: no bullets, rows separated by hairlines inside the rows themselves. */

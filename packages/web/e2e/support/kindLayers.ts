@@ -1,4 +1,4 @@
-import type { LayerDefinition } from "@karta/core";
+import type { LayerDefinition } from "@mapcairn/core";
 import type { Page } from "@playwright/test";
 
 /*

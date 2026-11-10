@@ -1,5 +1,5 @@
-import { type LayerGeometry, routeBounds } from "@karta/core";
-import { tokenValues } from "@karta/theme";
+import { type LayerGeometry, routeBounds } from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import { useEffect } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { useMap } from "../../host";

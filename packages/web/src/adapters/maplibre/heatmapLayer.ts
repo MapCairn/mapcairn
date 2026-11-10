@@ -1,4 +1,4 @@
-import type { MapHeatmapStyle } from "@karta/core";
+import type { MapHeatmapStyle } from "@mapcairn/core";
 import { rgbaColour as rgba } from "./markerImages";
 import type { EngineLayer, ZoomWindow } from "./shapeLayers";
 

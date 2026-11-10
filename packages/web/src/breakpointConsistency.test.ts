@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { PANEL_MIN_WIDTH } from "@karta/core";
+import { PANEL_MIN_WIDTH } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 
 /** Every `.css.ts` (vanilla-extract) file under this app's own `src`. */
@@ -16,7 +16,7 @@ function findVanillaExtractFiles(): string[] {
 
 /**
  * The layout switch between the bottom sheet and the side panel is made once,
- * in JavaScript, by `chooseLayout` in `@karta/core` (from `PANEL_MIN_WIDTH`).
+ * in JavaScript, by `chooseLayout` in `@mapcairn/core` (from `PANEL_MIN_WIDTH`).
  * A width media query in a style file would be a second, drifting copy.
  */
 describe("layout breakpoint", () => {

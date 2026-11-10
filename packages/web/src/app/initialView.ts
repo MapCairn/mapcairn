@@ -1,4 +1,4 @@
-import type { Settings, UrlStateValue, ViewState } from "@karta/core";
+import type { Settings, UrlStateValue, ViewState } from "@mapcairn/core";
 
 /** The id of the map region, which the skip link moves focus to. */
 export const MAP_REGION_ID = "map";

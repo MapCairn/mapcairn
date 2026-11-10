@@ -1,7 +1,7 @@
 import { SITE_URL } from "../constants/siteConfig";
 import { staticTextResponse } from "./staticTextResponse";
 
-const LLMS_TXT_BODY = `# Karta
+const LLMS_TXT_BODY = `# MapCairn
 
 > Explore an interactive map. Search places, compare basemaps and measure distances or areas.
 

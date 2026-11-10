@@ -1,4 +1,4 @@
-import type { LatLng, PixelPoint } from "@karta/core";
+import type { LatLng, PixelPoint } from "@mapcairn/core";
 import { useCallback } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { useMap } from "../../host";

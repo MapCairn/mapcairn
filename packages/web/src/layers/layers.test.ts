@@ -12,7 +12,7 @@ import {
   parseTemplate,
   tileUrl,
   validateLayerDefinition,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy } from "../constants/securityHeaders";
 import {

@@ -1,9 +1,9 @@
-import { useAnnounce, useMap } from "@karta/map";
+import { useAnnounce, useMap } from "@mapcairn/map";
 import { useEffect } from "react";
 import * as styles from "./MapUnavailable.css";
 
 /** The headline shown in place of the map when the browser has no WebGL. */
-export const WEBGL_UNAVAILABLE_TITLE = "Karta needs WebGL to draw the map.";
+export const WEBGL_UNAVAILABLE_TITLE = "MapCairn needs WebGL to draw the map.";
 
 /** What the person can do about it. */
 export const WEBGL_UNAVAILABLE_ADVICE =

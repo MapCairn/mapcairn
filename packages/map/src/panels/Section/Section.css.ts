@@ -1,4 +1,4 @@
-import { focusRing, tokens } from "@karta/theme";
+import { focusRing, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** One titled block of the sheet: a heading, then its content, stacked. */

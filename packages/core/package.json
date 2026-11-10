@@ -1,7 +1,7 @@
 {
-  "name": "@karta/core",
+  "name": "@mapcairn/core",
   "version": "1.0.0",
-  "description": "Domain-agnostic ports, pure logic and basemap definitions for Karta",
+  "description": "Domain-agnostic ports, pure logic and basemap definitions for MapCairn",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",

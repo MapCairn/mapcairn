@@ -1,6 +1,6 @@
-# `@karta/react`
+# `@mapcairn/react`
 
-Generic React hooks for Karta apps. No map-engine, domain-data or theme dependency, and no import of another Karta package.
+Generic React hooks for MapCairn apps. No map-engine, domain-data or theme dependency, and no import of another MapCairn package.
 
 ## Exports
 
@@ -16,9 +16,9 @@ Notes:
 - `useLatestRef` assigns `ref.current` during render rather than in an effect, so a listener never reads a stale value.
 - `markReadyAfterPaint()` waits two animation frames before setting `attribute="true"`. A CSS animation's clock starts when it is attached to the element, not when it is first painted, so without the wait an animation can look as if it has already run ahead. It writes to the DOM directly because the CSS rule is the only consumer.
 
-Theme and system-preference handling is not here. The theme choice is a `SettingsStore` and `ThemeSource` port in `@karta/core`, read in the interface through `useTheme` in `@karta/map`.
+Theme and system-preference handling is not here. The theme choice is a `SettingsStore` and `ThemeSource` port in `@mapcairn/core`, read in the interface through `useTheme` in `@mapcairn/map`.
 
 ## What doesn't belong here
 
-- A map engine, map rendering, or any dependency on `@karta/map`, `@karta/core` or `@karta/theme`.
+- A map engine, map rendering, or any dependency on `@mapcairn/map`, `@mapcairn/core` or `@mapcairn/theme`.
 - Domain data or app-specific values such as colours and storage keys.

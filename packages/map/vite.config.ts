@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [vanillaExtractPlugin(), react()],
   test: {
-    name: "@karta/map",
+    name: "@mapcairn/map",
     environment: "happy-dom",
     setupFiles: ["./vitest.setup.ts"],
     globals: true,

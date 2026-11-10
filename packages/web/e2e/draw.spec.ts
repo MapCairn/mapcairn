@@ -423,7 +423,7 @@ test.describe("draw", () => {
       const geojson = page.waitForEvent("download");
       await page.getByRole("button", { name: "Download GeoJSON" }).click();
       const geojsonFile = await geojson;
-      expect(geojsonFile.suggestedFilename()).toBe("karta-shapes.geojson");
+      expect(geojsonFile.suggestedFilename()).toBe("mapcairn-shapes.geojson");
       const collection = JSON.parse(
         await readFile((await geojsonFile.path()) as string, "utf8"),
       );
@@ -435,12 +435,12 @@ test.describe("draw", () => {
       const csv = page.waitForEvent("download");
       await page.getByRole("button", { name: "Download CSV" }).click();
       const csvFile = await csv;
-      expect(csvFile.suggestedFilename()).toBe("karta-shapes.csv");
+      expect(csvFile.suggestedFilename()).toBe("mapcairn-shapes.csv");
       const text = await readFile((await csvFile.path()) as string, "utf8");
       expect(text.split("\r\n")[0]).toBe("id,type,area_m2,length_m,geometry");
       expect(text.split("\r\n")[1]).toMatch(/^shape-1,polygon,[\d.]+,[\d.]+,"/);
       await expect(page.getByTestId("shapes-feedback")).toContainText(
-        "karta-shapes.csv",
+        "mapcairn-shapes.csv",
       );
     });
 

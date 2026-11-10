@@ -1,4 +1,4 @@
-import { tokens } from "@karta/theme";
+import { tokens } from "@mapcairn/theme";
 import { keyframes, style } from "@vanilla-extract/css";
 
 const spin = keyframes({

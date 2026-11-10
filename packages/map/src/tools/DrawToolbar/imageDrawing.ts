@@ -2,8 +2,8 @@ import {
   type DrawShape,
   imageMarksFor,
   type MapImageDrawing,
-} from "@karta/core";
-import { parseColour, toHex, tokenValues } from "@karta/theme";
+} from "@mapcairn/core";
+import { parseColour, toHex, tokenValues } from "@mapcairn/theme";
 
 /**
  * The shapes as a drawing for a saved map image, in the overlay's colours for

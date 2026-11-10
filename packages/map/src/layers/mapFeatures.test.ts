@@ -11,8 +11,8 @@ import {
   sampleArea,
   sampleLine,
   samplePoint,
-} from "@karta/core";
-import { tokenValues } from "@karta/theme";
+} from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import {
   featureBounds,

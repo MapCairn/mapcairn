@@ -1,4 +1,4 @@
-import { tokenValues } from "@karta/theme";
+import { tokenValues } from "@mapcairn/theme";
 import { describe, expect, it, vi } from "vitest";
 import {
   checkFontGate,

@@ -1,6 +1,6 @@
-import { announceZoom } from "@karta/core";
-import { type MapContextValue, useAnnounce } from "@karta/map";
-import { useLatestRef } from "@karta/react";
+import { announceZoom } from "@mapcairn/core";
+import { type MapContextValue, useAnnounce } from "@mapcairn/map";
+import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useRef } from "react";
 
 /** How long the zoom must settle before its level is announced. */

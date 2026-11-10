@@ -1,4 +1,4 @@
-import type { Bounds, SearchResult } from "@karta/core";
+import type { Bounds, SearchResult } from "@mapcairn/core";
 import { ChevronRight, Search, X } from "lucide-react";
 import {
   type ChangeEvent,

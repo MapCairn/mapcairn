@@ -5,7 +5,7 @@ import {
   type FakeServices,
   type LatLng,
   type ViewState,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";

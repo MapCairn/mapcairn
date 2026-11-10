@@ -10,7 +10,7 @@ import {
 declare global {
   interface Window {
     /** Tools the page registered with the stubbed `document.modelContext`. */
-    __kartaTools?: Map<
+    __mapcairnTools?: Map<
       string,
       { description: string; execute: (input: unknown) => Promise<unknown> }
     >;
@@ -25,7 +25,7 @@ declare global {
 async function stubModelContext(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const tools = new Map();
-    window.__kartaTools = tools;
+    window.__mapcairnTools = tools;
     Object.defineProperty(document, "modelContext", {
       configurable: true,
       value: {
@@ -50,7 +50,7 @@ async function stubModelContext(page: Page): Promise<void> {
 function callTool(page: Page, name: string, input: unknown): Promise<string> {
   return page.evaluate(
     async ({ tool, args }) => {
-      const registered = window.__kartaTools?.get(tool);
+      const registered = window.__mapcairnTools?.get(tool);
       if (!registered) {
         throw new Error(`No tool named ${tool}.`);
       }
@@ -85,7 +85,7 @@ test.describe("WebMCP tools", () => {
     await mapPage.goto();
     await expect
       .poll(() =>
-        page.evaluate(() => [...(window.__kartaTools?.keys() ?? [])].sort()),
+        page.evaluate(() => [...(window.__mapcairnTools?.keys() ?? [])].sort()),
       )
       .toEqual([
         "measure-area",
@@ -176,7 +176,7 @@ test.describe("WebMCP tools", () => {
 
     const maxItems = await page.evaluate(() =>
       ["measure-distance", "measure-area"].map((name) => {
-        const tool = window.__kartaTools?.get(name) as unknown as {
+        const tool = window.__mapcairnTools?.get(name) as unknown as {
           inputSchema: { properties: { locations: { maxItems?: number } } };
         };
         return tool.inputSchema.properties.locations.maxItems;

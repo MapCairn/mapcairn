@@ -1,4 +1,4 @@
-import type { LatLng } from "@karta/core";
+import type { LatLng } from "@mapcairn/core";
 import { useMap } from "../MapContext";
 import { roundPixel, screenRadiusForMetres } from "./geometry";
 import * as styles from "./overlays.css";

@@ -6,7 +6,7 @@ import {
   type LocationProvider,
   type LocationWatchHandlers,
   PortAbortError,
-} from "@karta/core";
+} from "@mapcairn/core";
 
 /** The slice of `Geolocation` the provider uses. */
 export type GeolocationLike = Pick<

@@ -4,7 +4,7 @@ import {
   buildAttribution,
   type LayerAttribution,
   type ViewState,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { Info } from "lucide-react";
 import {
   type KeyboardEvent,

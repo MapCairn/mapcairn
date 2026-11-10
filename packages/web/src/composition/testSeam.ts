@@ -1,11 +1,11 @@
-import type { Services } from "@karta/core";
+import type { Services } from "@mapcairn/core";
 
 /**
  * A unique string that appears in the build output only when this module is
  * bundled. `packages/web/scripts/verifyNoTestSeam.mjs` searches the production
  * build for it, so renaming it means updating that script.
  */
-export const TEST_SEAM_MARKER = "KARTA_TEST_SEAM_MARKER";
+export const TEST_SEAM_MARKER = "MAPCAIRN_TEST_SEAM_MARKER";
 
 declare global {
   interface Window {
@@ -14,7 +14,7 @@ declare global {
      * the page loads. Typed `unknown` because it is outside input: it is
      * checked before use.
      */
-    __KARTA_TEST_SERVICES__?: unknown;
+    __MAPCAIRN_TEST_SERVICES__?: unknown;
   }
 }
 
@@ -47,7 +47,7 @@ function isPlausible(key: (typeof SERVICE_KEYS)[number], value: unknown) {
 }
 
 /**
- * Reads the services a browser test put on `window.__KARTA_TEST_SERVICES__`.
+ * Reads the services a browser test put on `window.__MAPCAIRN_TEST_SERVICES__`.
  *
  * @remarks Never call this directly. `createServices` reaches it only through
  *   `import.meta.env.MODE !== "production"`, which the build replaces with a
@@ -61,7 +61,7 @@ export function readTestOverrides(): Partial<Services> | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }
-  const raw = window.__KARTA_TEST_SERVICES__;
+  const raw = window.__MAPCAIRN_TEST_SERVICES__;
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     return undefined;
   }

@@ -269,17 +269,19 @@ test.describe("basemaps", () => {
     await page.goto("/");
 
     const message = page.getByTestId("webgl-unavailable");
-    await expect(message).toContainText("Karta needs WebGL to draw the map.");
+    await expect(message).toContainText(
+      "MapCairn needs WebGL to draw the map.",
+    );
     await expect(message).toContainText("Try a different browser");
     await expect(message).toContainText("hardware acceleration");
     await expect(mapPage.region).toContainText(
-      "Karta needs WebGL to draw the map.",
+      "MapCairn needs WebGL to draw the map.",
     );
     await expect(mapPage.host).toHaveAttribute("data-state", "error");
     await expect
       .poll(() => mapPage.announcements())
       .toContainEqual(
-        expect.stringContaining("Karta needs WebGL to draw the map."),
+        expect.stringContaining("MapCairn needs WebGL to draw the map."),
       );
     await expect(page.getByTestId("engine-error")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Reload" })).toHaveCount(0);

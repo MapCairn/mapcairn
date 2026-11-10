@@ -1,4 +1,4 @@
-import type { Services } from "@karta/core";
+import type { Services } from "@mapcairn/core";
 // The engine style file has no exports. Importing it here, in the one module
 // every page that builds services loads, puts its rules in the page before
 // the engine mounts, and keeps it out of the ui, which may not import adapters.

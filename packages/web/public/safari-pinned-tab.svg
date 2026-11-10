@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <title>Karta</title>
+  <title>MapCairn</title>
   <!-- Single-colour glyph for Safari's mask-icon. Safari recolours it using the colour in the link tag.
        The stones are drawn a little smaller than in the favicon so thin gaps stay open without a halo. -->
   <g transform="translate(256 256) scale(1.25) translate(-258 -323)" fill="#000" stroke="#000" stroke-width="6" stroke-linejoin="round">

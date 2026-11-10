@@ -11,9 +11,9 @@ const executablePath = existsSync(remoteSessionChromium)
   ? remoteSessionChromium
   : undefined;
 
-// Set KARTA_E2E_PORT to run beside another checkout's server. The `start`
+// Set MAPCAIRN_E2E_PORT to run beside another checkout's server. The `start`
 // script (scripts/startE2e.mjs) reads the same variable.
-const port = process.env.KARTA_E2E_PORT || "4173";
+const port = process.env.MAPCAIRN_E2E_PORT || "4173";
 const baseURL = `http://localhost:${port}`;
 
 // Specs that WebKit (iPhone) runs as well: MapLibre's worker startup, the
@@ -27,7 +27,7 @@ const WEBKIT_SPECS = /(basemap|keyboard|sheet|app-shell)\.spec\.ts$/;
  *
  * - Tests run against a production build made with `--mode e2e`
  *   (`npm run build:e2e`), the only build that keeps the browser test seam
- *   (`window.__KARTA_TEST_SERVICES__`, see `src/composition/testSeam.ts`).
+ *   (`window.__MAPCAIRN_TEST_SERVICES__`, see `src/composition/testSeam.ts`).
  *   The build script proves the seam is there; `npm run build` proves a
  *   plain build has none.
  * - `npm run e2e` runs everything except titles tagged `@a11y`;

@@ -1,5 +1,5 @@
-import { createFakeServices, THEME_COLOR_META } from "@karta/core";
-import { useServices } from "@karta/map";
+import { createFakeServices, THEME_COLOR_META } from "@mapcairn/core";
+import { useServices } from "@mapcairn/map";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -113,7 +113,7 @@ describe("root meta", () => {
   it("sets the title, description and a viewport that allows zoom", () => {
     const tags = meta({} as never);
 
-    expect(tags).toContainEqual({ title: "Karta | Interactive map" });
+    expect(tags).toContainEqual({ title: "MapCairn | Interactive map" });
     expect(tags).toContainEqual(
       expect.objectContaining({ name: "description" }),
     );
@@ -126,7 +126,10 @@ describe("root meta", () => {
   it("sets Open Graph and Twitter card tags with a British English locale", () => {
     const tags = meta({} as never);
 
-    expect(tags).toContainEqual({ property: "og:site_name", content: "Karta" });
+    expect(tags).toContainEqual({
+      property: "og:site_name",
+      content: "MapCairn",
+    });
     expect(tags).toContainEqual({ property: "og:locale", content: "en_GB" });
     expect(tags).toContainEqual({
       property: "og:image",

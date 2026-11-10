@@ -4,7 +4,7 @@ import {
   createLayerRegistry,
   type LayerDefinition,
   type LayerRegistry,
-} from "@karta/core";
+} from "@mapcairn/core";
 
 /**
  * The decoders the host's definitions may name. The built-in `geojson`

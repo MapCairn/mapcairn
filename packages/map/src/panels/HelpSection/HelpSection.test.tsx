@@ -3,7 +3,7 @@ import {
   DRAW_KEY_HELP,
   FakeDevicePreferences,
   MAP_KEY_HELP,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../../services";
@@ -110,7 +110,7 @@ describe("HelpSection", () => {
   it("states the accessibility aim plainly and gives no contact address", () => {
     renderHelp();
     const text =
-      "Karta aims to meet WCAG 2.2 level AA. Every action that uses a gesture, such as a long press or a drag, also has a button or a keyboard shortcut.";
+      "MapCairn aims to meet WCAG 2.2 level AA. Every action that uses a gesture, such as a long press or a drag, also has a button or a keyboard shortcut.";
     expect(screen.getByText(text)).toBeInTheDocument();
     const region = screen.getByTestId("sheet-section-help");
     expect(region.querySelector("a")).toBeNull();

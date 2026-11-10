@@ -1,4 +1,7 @@
-import type { BasemapAttributionEntry, BasemapDefinition } from "@karta/core";
+import type {
+  BasemapAttributionEntry,
+  BasemapDefinition,
+} from "@mapcairn/core";
 
 /** The id of Maptoolkit Dark, a manual choice that never follows the theme. */
 export const MAPTOOLKIT_DARK_ID = "maptoolkit-dark";

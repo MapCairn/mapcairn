@@ -4,10 +4,10 @@ import type { Page } from "@playwright/test";
  * Scripted services for end-to-end tests.
  *
  * The e2e build keeps a test seam: `createServices()` merges whatever is on
- * `window.__KARTA_TEST_SERVICES__` over the real adapters (see
+ * `window.__MAPCAIRN_TEST_SERVICES__` over the real adapters (see
  * `src/composition/testSeam.ts`). Each helper here adds one service to that
  * object with `addInitScript`, so it is in place before the app boots, and
- * keeps its script on a `window.__karta*` object a test can change later.
+ * keeps its script on a `window.__mapcairn*` object a test can change later.
  *
  * Two things are scripted outside the seam on purpose:
  *
@@ -80,10 +80,10 @@ export const SAMPLE_RESULTS: ScriptedSearchResult[] = [
 
 declare global {
   interface Window {
-    __KARTA_TEST_SERVICES__?: unknown;
-    __kartaSearch?: SearchScript;
-    __kartaClipboard?: { ok: boolean; written: string[] };
-    __kartaGeolocation?: GeolocationScript;
+    __MAPCAIRN_TEST_SERVICES__?: unknown;
+    __mapcairnSearch?: SearchScript;
+    __mapcairnClipboard?: { ok: boolean; written: string[] };
+    __mapcairnGeolocation?: GeolocationScript;
   }
 }
 
@@ -106,7 +106,7 @@ export async function scriptSearch(
     ...script,
   };
   await page.addInitScript((config: SearchScript) => {
-    window.__kartaSearch = config;
+    window.__mapcairnSearch = config;
     const wait = (ms: number, signal?: AbortSignal) =>
       new Promise<void>((resolve, reject) => {
         const timer = setTimeout(resolve, ms);
@@ -123,7 +123,7 @@ export async function scriptSearch(
       });
     const search = {
       async search(query: string, options?: { signal?: AbortSignal }) {
-        const current = window.__kartaSearch as SearchScript;
+        const current = window.__mapcairnSearch as SearchScript;
         current.queries.push(query);
         await wait(current.delayMs, options?.signal);
         if (current.fail) {
@@ -139,13 +139,13 @@ export async function scriptSearch(
         return current.byQuery[normalised] ?? current.results;
       },
       async reverse(_position: unknown, options?: { signal?: AbortSignal }) {
-        const current = window.__kartaSearch as SearchScript;
+        const current = window.__mapcairnSearch as SearchScript;
         await wait(current.delayMs, options?.signal);
         return current.reverse;
       },
     };
-    window.__KARTA_TEST_SERVICES__ = Object.assign(
-      (window.__KARTA_TEST_SERVICES__ as object | undefined) ?? {},
+    window.__MAPCAIRN_TEST_SERVICES__ = Object.assign(
+      (window.__MAPCAIRN_TEST_SERVICES__ as object | undefined) ?? {},
       { search },
     );
   }, initial);
@@ -157,13 +157,13 @@ export async function updateSearchScript(
   patch: Partial<Omit<SearchScript, "queries">>,
 ): Promise<void> {
   await page.evaluate((next) => {
-    Object.assign(window.__kartaSearch as SearchScript, next);
+    Object.assign(window.__mapcairnSearch as SearchScript, next);
   }, patch);
 }
 
 /** The queries the scripted search provider has received, in order. */
 export async function searchedQueries(page: Page): Promise<string[]> {
-  return page.evaluate(() => [...(window.__kartaSearch?.queries ?? [])]);
+  return page.evaluate(() => [...(window.__mapcairnSearch?.queries ?? [])]);
 }
 
 /**
@@ -177,8 +177,8 @@ export async function scriptLayers(
   definitions: readonly object[],
 ): Promise<void> {
   await page.addInitScript((layers: readonly object[]) => {
-    window.__KARTA_TEST_SERVICES__ = Object.assign(
-      (window.__KARTA_TEST_SERVICES__ as object | undefined) ?? {},
+    window.__MAPCAIRN_TEST_SERVICES__ = Object.assign(
+      (window.__MAPCAIRN_TEST_SERVICES__ as object | undefined) ?? {},
       { layers: { list: () => layers } },
     );
   }, definitions);
@@ -190,10 +190,10 @@ export async function scriptLayers(
  */
 export async function scriptClipboard(page: Page, ok = true): Promise<void> {
   await page.addInitScript((succeed: boolean) => {
-    window.__kartaClipboard = { ok: succeed, written: [] };
+    window.__mapcairnClipboard = { ok: succeed, written: [] };
     const clipboard = {
       async writeText(text: string) {
-        const state = window.__kartaClipboard as {
+        const state = window.__mapcairnClipboard as {
           ok: boolean;
           written: string[];
         };
@@ -204,8 +204,8 @@ export async function scriptClipboard(page: Page, ok = true): Promise<void> {
         return { ok: true };
       },
     };
-    window.__KARTA_TEST_SERVICES__ = Object.assign(
-      (window.__KARTA_TEST_SERVICES__ as object | undefined) ?? {},
+    window.__MAPCAIRN_TEST_SERVICES__ = Object.assign(
+      (window.__MAPCAIRN_TEST_SERVICES__ as object | undefined) ?? {},
       { clipboard },
     );
   }, ok);
@@ -213,7 +213,7 @@ export async function scriptClipboard(page: Page, ok = true): Promise<void> {
 
 /** Everything the recording clipboard was asked to copy. */
 export async function copiedText(page: Page): Promise<string[]> {
-  return page.evaluate(() => [...(window.__kartaClipboard?.written ?? [])]);
+  return page.evaluate(() => [...(window.__mapcairnClipboard?.written ?? [])]);
 }
 
 /** Stored settings, as the `SettingsStore` port describes them. */
@@ -266,8 +266,8 @@ export async function scriptMemorySettings(
         };
       },
     };
-    window.__KARTA_TEST_SERVICES__ = Object.assign(
-      (window.__KARTA_TEST_SERVICES__ as object | undefined) ?? {},
+    window.__MAPCAIRN_TEST_SERVICES__ = Object.assign(
+      (window.__MAPCAIRN_TEST_SERVICES__ as object | undefined) ?? {},
       { settings },
     );
   }, initial);
@@ -276,7 +276,7 @@ export async function scriptMemorySettings(
 /**
  * Writes settings to `localStorage` before the app boots, in the format the
  * real `LocalStorageSettingsStore` reads: the theme as a plain string under
- * `karta:theme`, everything else as JSON under `karta:<name>`.
+ * `mapcairn:theme`, everything else as JSON under `mapcairn:<name>`.
  */
 export async function seedStoredSettings(
   page: Page,
@@ -285,13 +285,13 @@ export async function seedStoredSettings(
   await page.addInitScript((seed: Partial<ScriptedSettings>) => {
     // Only on the first document of the test, so a reload keeps what the
     // app stored since.
-    if (sessionStorage.getItem("karta-e2e:seeded") === "true") {
+    if (sessionStorage.getItem("mapcairn-e2e:seeded") === "true") {
       return;
     }
-    sessionStorage.setItem("karta-e2e:seeded", "true");
+    sessionStorage.setItem("mapcairn-e2e:seeded", "true");
     for (const [name, value] of Object.entries(seed)) {
       localStorage.setItem(
-        name === "theme" ? "karta:theme" : `karta:${name}`,
+        name === "theme" ? "mapcairn:theme" : `mapcairn:${name}`,
         name === "theme" ? String(value) : JSON.stringify(value),
       );
     }
@@ -324,14 +324,14 @@ export async function scriptGeolocation(
   script: GeolocationScript,
 ): Promise<void> {
   await page.addInitScript((config: GeolocationScript) => {
-    window.__kartaGeolocation = config;
+    window.__mapcairnGeolocation = config;
     const codes = { denied: 1, unavailable: 2, timeout: 3 } as const;
     const geolocation = {
       getCurrentPosition(
         success: (position: unknown) => void,
         failure: (error: unknown) => void,
       ) {
-        const current = window.__kartaGeolocation as GeolocationScript;
+        const current = window.__mapcairnGeolocation as GeolocationScript;
         if (current.outcome === "absent") {
           return;
         }
@@ -371,6 +371,6 @@ export async function updateGeolocationScript(
   script: GeolocationScript,
 ): Promise<void> {
   await page.evaluate((next) => {
-    window.__kartaGeolocation = next;
+    window.__mapcairnGeolocation = next;
   }, script);
 }

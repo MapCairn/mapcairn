@@ -1,4 +1,4 @@
-import type { LatLng, UnitSystem } from "@karta/core";
+import type { LatLng, UnitSystem } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {

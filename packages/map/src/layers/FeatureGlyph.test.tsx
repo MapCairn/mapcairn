@@ -3,8 +3,8 @@ import {
   SAMPLE_ALERT_LAYER,
   SAMPLE_AREA_LAYER,
   SAMPLE_LINE_LAYER,
-} from "@karta/core";
-import { tokenValues } from "@karta/theme";
+} from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FeatureGlyph, featureClass, LegendGlyph } from "./FeatureGlyph";

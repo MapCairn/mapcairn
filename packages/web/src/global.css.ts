@@ -4,10 +4,10 @@
  * HTML and the first paint already has the theme's colours and type.
  *
  * Importing `tokens` here (and using it) also pulls the token stylesheet into
- * the page, because `@karta/theme` is side-effect free and only a used import
+ * the page, because `@mapcairn/theme` is side-effect free and only a used import
  * keeps its CSS.
  */
-import { focusRing, tokens } from "@karta/theme";
+import { focusRing, tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 
 const DARK = ':root[data-theme="dark"]';

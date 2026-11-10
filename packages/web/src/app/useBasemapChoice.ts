@@ -1,5 +1,5 @@
-import type { BasemapDefinition, MapEngineError } from "@karta/core";
-import { useBasemaps, useSettings } from "@karta/map";
+import type { BasemapDefinition, MapEngineError } from "@mapcairn/core";
+import { useBasemaps, useSettings } from "@mapcairn/map";
 import { useCallback, useState } from "react";
 
 /** A basemap swap that could not load. */

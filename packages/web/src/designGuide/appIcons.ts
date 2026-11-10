@@ -1,4 +1,4 @@
-import type { IconComponent } from "@karta/map";
+import type { IconComponent } from "@mapcairn/map";
 import {
   ArrowLeft,
   Bike,

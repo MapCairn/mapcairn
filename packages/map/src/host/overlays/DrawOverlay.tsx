@@ -7,7 +7,7 @@ import {
   type MapEditHandle,
   type PixelPoint,
   shapeRing,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { useMap } from "../MapContext";
 import { projectPoints, roundPixel, toSvgPoints } from "./geometry";
 import * as styles from "./overlays.css";

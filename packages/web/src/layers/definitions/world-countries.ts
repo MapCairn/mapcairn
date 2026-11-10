@@ -1,4 +1,4 @@
-import type { FeedLayerDefinition, ShapeStyle } from "@karta/core";
+import type { FeedLayerDefinition, ShapeStyle } from "@mapcairn/core";
 
 /**
  * Country outlines from Natural Earth, shaded by estimated population in

@@ -9,7 +9,7 @@ import {
   type MapKeyHelpEntry,
   mapKeyAction,
   type ViewState,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   type KeyboardEvent,
   type ReactNode,

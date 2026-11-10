@@ -1,4 +1,4 @@
-import type { FileSaveResult, FileSaver, SavedFile } from "@karta/core";
+import type { FileSaveResult, FileSaver, SavedFile } from "@mapcairn/core";
 
 /** The slice of the `URL` class the adapter uses. */
 export interface ObjectUrlApi {

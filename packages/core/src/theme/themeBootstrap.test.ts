@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseThemeChoice, resolveTheme } from "./theme";
 import { buildThemeBootstrapScript } from "./themeBootstrap";
 import {
+  LEGACY_THEME_STORAGE_KEY,
   THEME_ATTRIBUTE,
   THEME_COLOR_META,
   THEME_COLOR_META_NAME,
@@ -41,7 +42,11 @@ interface Run {
 function run(
   stored: Stored,
   system: System,
-  options: { existingMetas?: number; documentThrows?: boolean } = {},
+  options: {
+    existingMetas?: number;
+    documentThrows?: boolean;
+    items?: Record<string, string>;
+  } = {},
 ): Run {
   const result: Run = {
     attributes: {},
@@ -97,7 +102,7 @@ function run(
     sandbox.localStorage = {
       getItem(key: string) {
         result.readKey = key;
-        return stored;
+        return options.items ? (options.items[key] ?? null) : stored;
       },
     };
   }
@@ -156,6 +161,29 @@ describe("buildThemeBootstrapScript", () => {
     expect(result.queriedSelector).toBe(
       `meta[name="${THEME_COLOR_META_NAME}"]`,
     );
+  });
+
+  it("falls back to the key an earlier version used, so a returning visitor sees no flash", () => {
+    const result = run(null, "light", {
+      items: { [LEGACY_THEME_STORAGE_KEY]: "dark" },
+    });
+    expect(result.attributes[THEME_ATTRIBUTE]).toBe("dark");
+    expect(result.colorScheme).toBe("dark");
+  });
+
+  it("prefers the current key over the earlier one", () => {
+    const result = run(null, "dark", {
+      items: {
+        [THEME_STORAGE_KEY]: "light",
+        [LEGACY_THEME_STORAGE_KEY]: "dark",
+      },
+    });
+    expect(result.attributes[THEME_ATTRIBUTE]).toBe("light");
+  });
+
+  it("follows the system when neither key is stored", () => {
+    const result = run(null, "dark", { items: {} });
+    expect(result.attributes[THEME_ATTRIBUTE]).toBe("dark");
   });
 
   it("updates an existing theme-color tag instead of adding another", () => {

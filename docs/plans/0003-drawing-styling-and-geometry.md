@@ -6,7 +6,7 @@ Tracking issue: [#159](https://github.com/mooship/karta/issues/159).
 
 ## Goal
 
-Round out the SDK with capabilities that open-source map SDKs commonly offer and that Karta lacks today, so people can mark up a map, see data as areas and density, and work with shapes in code:
+Round out the SDK with capabilities that open-source map SDKs commonly offer and that MapCairn lacks today, so people can mark up a map, see data as areas and density, and work with shapes in code:
 
 1. **Draw and edit tools:** draw polygons, circles (by radius) and lines, edit their vertices, and get the result as GeoJSON with its area and length.
 2. **Thematic styling for areas and lines:** graduated and categorised colouring of polygons and lines, outlines and text labels, driven by the layer definition, as points are today.

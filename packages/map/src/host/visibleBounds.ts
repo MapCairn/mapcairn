@@ -3,7 +3,7 @@ import {
   boundsOfPoints,
   type MapAdapter,
   type MapHostElement,
-} from "@karta/core";
+} from "@mapcairn/core";
 
 /**
  * The latitude and longitude box the map shows now, from its four corners, so

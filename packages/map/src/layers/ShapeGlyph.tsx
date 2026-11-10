@@ -1,5 +1,5 @@
-import type { FillPattern, LineDash, PaletteSlot } from "@karta/core";
-import { tokenValues } from "@karta/theme";
+import type { FillPattern, LineDash, PaletteSlot } from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import { useId } from "react";
 import * as styles from "./Layers.css";
 import { paletteColour } from "./mapFeatures";
@@ -74,7 +74,7 @@ export function ShapeGlyph({
   dash = "solid",
   width,
 }: ShapeGlyphProps) {
-  const patternId = `karta-hatch-${useId().replaceAll(":", "")}`;
+  const patternId = `mapcairn-hatch-${useId().replaceAll(":", "")}`;
   const fill = paletteColour(colour);
   const stroke = Math.min(width ?? (swatch === "area" ? 1.5 : 3), MAX_STROKE);
   const dashArray = DASH_ARRAY[dash];

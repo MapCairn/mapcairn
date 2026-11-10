@@ -1,4 +1,4 @@
-import type { TileLayerDefinition } from "@karta/core";
+import type { TileLayerDefinition } from "@mapcairn/core";
 
 /**
  * NASA GIBS thermal anomalies from MODIS on Terra, rendered by the GIBS WMS

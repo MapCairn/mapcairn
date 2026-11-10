@@ -1,7 +1,7 @@
 {
-  "name": "@karta/react",
+  "name": "@mapcairn/react",
   "version": "1.0.0",
-  "description": "Generic React hooks for Karta applications",
+  "description": "Generic React hooks for MapCairn applications",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",

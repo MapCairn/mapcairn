@@ -25,7 +25,7 @@ import type {
   MapVectorTiles,
   PixelPoint,
   ViewState,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   clampZoom,
   dragHandle,
@@ -37,8 +37,8 @@ import {
   pressHandle,
   toEngineZoom,
   toNormalisedZoom,
-} from "@karta/core";
-import { tokenValues } from "@karta/theme";
+} from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import type {
   AnimationOptions,
   GeoJSONSourceSpecification,
@@ -199,19 +199,19 @@ const RASTER_ID = "basemap";
 
 /**
  * The engine ids for one data layer: its source and the style layers drawn
- * from it. All start with `karta:` so they never meet a basemap's own ids.
+ * from it. All start with `mapcairn:` so they never meet a basemap's own ids.
  * Styled shapes, vector tiles and heatmaps own several style layers each
- * (their ids are `karta:<id>:<part>`, and the part never has a colon), which
+ * (their ids are `mapcairn:<id>:<part>`, and the part never has a colon), which
  * the adapter lists as it draws them.
  */
 export function dataLayerEngineIds(id: string) {
   return {
-    source: `karta:${id}`,
-    points: `karta:${id}:points`,
-    tiles: `karta:${id}:tiles`,
-    fill: `karta:${id}:fill`,
-    line: `karta:${id}:line`,
-    heat: `karta:${id}:heat`,
+    source: `mapcairn:${id}`,
+    points: `mapcairn:${id}:points`,
+    tiles: `mapcairn:${id}:tiles`,
+    fill: `mapcairn:${id}:fill`,
+    line: `mapcairn:${id}:line`,
+    heat: `mapcairn:${id}:heat`,
   } as const;
 }
 
@@ -418,8 +418,8 @@ function pointCollection(id: string, features: readonly MapFeature[]) {
         coordinates: [feature.position.lng, feature.position.lat],
       },
       properties: {
-        "karta:layer": id,
-        "karta:id": feature.id,
+        "mapcairn:layer": id,
+        "mapcairn:id": feature.id,
         icon: markerImageName(feature.shape, feature.colour, feature.radius),
         // Larger points are drawn first, so smaller ones stay on top and tappable.
         sort: -feature.radius,
@@ -454,8 +454,8 @@ function styledCollection(id: string, layer: MapStyledShapes) {
         type: "Feature" as const,
         geometry: shape.geometry,
         properties: {
-          "karta:layer": id,
-          "karta:id": shape.id,
+          "mapcairn:layer": id,
+          "mapcairn:id": shape.id,
           colour: shape.look.colour,
           fillOpacity: shape.look.fillOpacity,
           pattern: shape.look.pattern,
@@ -585,7 +585,7 @@ interface WorkerCheck {
  *   markers or popups: the pin, measure line and other overlays are drawn by
  *   the ui from `project()`. Data layers (feed points, tile overlays, detail
  *   shapes) are the exception, because hundreds of points or a tiled image
- *   belong in the engine: each is kept by id, drawn as `karta:<id>` sources
+ *   belong in the engine: each is kept by id, drawn as `mapcairn:<id>` sources
  *   and layers above the basemap (tiles, then shapes, then points), and drawn
  *   again after every `style.load`, because a full style swap drops them.
  *   Points are symbols whose images are rasterised in `markerImages.ts`, so
@@ -1237,7 +1237,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     const source = dataLayerEngineIds(id).source;
     const collection = styledCollection(id, styled);
     const shape: ShapeSource = {
-      prefix: `karta:${id}:styled-`,
+      prefix: `mapcairn:${id}:styled-`,
       source,
       zoom: {},
     };
@@ -1289,7 +1289,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         return;
       }
       const shape: ShapeSource = {
-        prefix: `karta:${id}:v${index}-`,
+        prefix: `mapcairn:${id}:v${index}-`,
         source,
         sourceLayer: sourceLayer.sourceLayer,
         zoom: engineWindow(vector, sourceLayer),
@@ -1454,8 +1454,8 @@ export class MapLibreMapAdapter implements MapAdapter {
         }
         for (const feature of map.queryRenderedFeatures(geometry, { layers })) {
           const properties = toPropertyBag(feature.properties);
-          const layerId = properties["karta:layer"];
-          const featureId = properties["karta:id"];
+          const layerId = properties["mapcairn:layer"];
+          const featureId = properties["mapcairn:id"];
           const key = `${String(layerId)}\u0000${String(featureId)}`;
           if (
             typeof layerId === "string" &&

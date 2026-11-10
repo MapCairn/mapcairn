@@ -1,10 +1,11 @@
-import { THEME_STORAGE_KEY } from "@karta/core";
-import { runSettingsStoreContract } from "@karta/core/contracts";
+import { LEGACY_THEME_STORAGE_KEY, THEME_STORAGE_KEY } from "@mapcairn/core";
+import { runSettingsStoreContract } from "@mapcairn/core/contracts";
 import { describe, expect, it } from "vitest";
 import {
   LocalStorageSettingsStore,
   type StorageEventTarget,
 } from "./LocalStorageSettingsStore";
+import { LEGACY_KEY_PREFIX } from "./migrateLegacyStorage";
 
 /** A Storage that behaves like the real one and can be told to throw. */
 class FakeStorage implements Storage {
@@ -117,23 +118,96 @@ describe("LocalStorageSettingsStore", () => {
       basemapId: "positron",
       lastView: VIEW,
     });
-    expect(storage.getItem("karta:units")).toBe('"imperial"');
-    expect(storage.getItem("karta:zoomButtons")).toBe("false");
-    expect(storage.getItem("karta:saveData")).toBe("true");
-    expect(storage.getItem("karta:basemapId")).toBe('"positron"');
-    expect(JSON.parse(storage.getItem("karta:lastView") ?? "null")).toEqual(
+    expect(storage.getItem("mapcairn:units")).toBe('"imperial"');
+    expect(storage.getItem("mapcairn:zoomButtons")).toBe("false");
+    expect(storage.getItem("mapcairn:saveData")).toBe("true");
+    expect(storage.getItem("mapcairn:basemapId")).toBe('"positron"');
+    expect(JSON.parse(storage.getItem("mapcairn:lastView") ?? "null")).toEqual(
       VIEW,
     );
+  });
+
+  describe("settings saved before the rename from Karta", () => {
+    it("shares its theme key with the pre-paint script's fallback", () => {
+      expect(LEGACY_THEME_STORAGE_KEY).toBe(`${LEGACY_KEY_PREFIX}theme`);
+    });
+
+    it("keeps every saved setting and moves it to the current keys", () => {
+      const { store, storage } = setup({
+        [LEGACY_THEME_STORAGE_KEY]: "dark",
+        [`${LEGACY_KEY_PREFIX}units`]: '"imperial"',
+        [`${LEGACY_KEY_PREFIX}zoomButtons`]: "true",
+        [`${LEGACY_KEY_PREFIX}saveData`]: "false",
+        [`${LEGACY_KEY_PREFIX}basemapId`]: '"positron"',
+        [`${LEGACY_KEY_PREFIX}lastView`]: JSON.stringify(VIEW),
+      });
+      expect(store.get()).toEqual({
+        theme: "dark",
+        units: "imperial",
+        zoomButtons: true,
+        saveData: false,
+        basemapId: "positron",
+        lastView: VIEW,
+      });
+      expect(storage.keys().sort()).toEqual(
+        [
+          THEME_STORAGE_KEY,
+          "mapcairn:units",
+          "mapcairn:zoomButtons",
+          "mapcairn:saveData",
+          "mapcairn:basemapId",
+          "mapcairn:lastView",
+        ].sort(),
+      );
+      expect(storage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+    });
+
+    it("prefers a value saved under the current key", () => {
+      const { store, storage } = setup({
+        [LEGACY_THEME_STORAGE_KEY]: "dark",
+        [THEME_STORAGE_KEY]: "light",
+        [`${LEGACY_KEY_PREFIX}units`]: '"imperial"',
+        "mapcairn:units": '"metric"',
+      });
+      expect(store.get().theme).toBe("light");
+      expect(store.get().units).toBe("metric");
+      expect(storage.keys().sort()).toEqual(
+        [THEME_STORAGE_KEY, "mapcairn:units"].sort(),
+      );
+    });
+
+    it("migrates only once: a second store finds the same settings", () => {
+      const first = setup({ [LEGACY_THEME_STORAGE_KEY]: "dark" });
+      const second = new LocalStorageSettingsStore({
+        getStorage: () => first.storage,
+        events: undefined,
+      });
+      expect(second.get().theme).toBe("dark");
+      expect(first.storage.keys()).toEqual([THEME_STORAGE_KEY]);
+    });
+
+    it("keeps working, and keeps the earlier values, when storage refuses writes", () => {
+      const storage = new FakeStorage();
+      storage.put(LEGACY_THEME_STORAGE_KEY, "dark");
+      storage.failWrites = true;
+      const store = new LocalStorageSettingsStore({
+        getStorage: () => storage,
+        events: undefined,
+      });
+      expect(store.persistent).toBe(false);
+      expect(store.get().theme).toBe("system");
+      expect(storage.getItem(LEGACY_THEME_STORAGE_KEY)).toBe("dark");
+    });
   });
 
   it("reads back what an earlier visit stored", () => {
     const { store } = setup({
       [THEME_STORAGE_KEY]: "light",
-      "karta:units": '"imperial"',
-      "karta:zoomButtons": "true",
-      "karta:saveData": "false",
-      "karta:basemapId": '"osm"',
-      "karta:lastView": JSON.stringify(VIEW),
+      "mapcairn:units": '"imperial"',
+      "mapcairn:zoomButtons": "true",
+      "mapcairn:saveData": "false",
+      "mapcairn:basemapId": '"osm"',
+      "mapcairn:lastView": JSON.stringify(VIEW),
     });
     expect(store.get()).toEqual({
       theme: "light",
@@ -146,7 +220,7 @@ describe("LocalStorageSettingsStore", () => {
   });
 
   it("keeps a Liberty choice saved before Bright became the default", () => {
-    const { store } = setup({ "karta:basemapId": '"liberty"' });
+    const { store } = setup({ "mapcairn:basemapId": '"liberty"' });
     expect(store.get().basemapId).toBe("liberty");
   });
 
@@ -154,17 +228,18 @@ describe("LocalStorageSettingsStore", () => {
     const { store, storage } = setup({});
     expect(store.get().basemapId).toBe("bright");
     store.set({ units: "imperial" });
-    expect(storage.getItem("karta:basemapId")).toBeNull();
+    expect(storage.getItem("mapcairn:basemapId")).toBeNull();
   });
 
   it("replaces invalid stored values with the defaults", () => {
     const { store } = setup({
       [THEME_STORAGE_KEY]: '"dark"',
-      "karta:units": '"furlongs"',
-      "karta:zoomButtons": '"yes"',
-      "karta:saveData": '"yes"',
-      "karta:basemapId": '"Not A Basemap!"',
-      "karta:lastView": '{"center":{"lat":200,"lng":0},"zoom":3,"bearing":0}',
+      "mapcairn:units": '"furlongs"',
+      "mapcairn:zoomButtons": '"yes"',
+      "mapcairn:saveData": '"yes"',
+      "mapcairn:basemapId": '"Not A Basemap!"',
+      "mapcairn:lastView":
+        '{"center":{"lat":200,"lng":0},"zoom":3,"bearing":0}',
     });
     expect(store.get()).toEqual({
       theme: "system",
@@ -185,7 +260,7 @@ describe("LocalStorageSettingsStore", () => {
       '{"center":{"lat":0,"lng":0},"zoom":99,"bearing":0}',
       '{"center":{"lat":0,"lng":0},"zoom":3,"bearing":"north"}',
     ]) {
-      const { store } = setup({ "karta:lastView": lastView });
+      const { store } = setup({ "mapcairn:lastView": lastView });
       expect(store.get().lastView).toBeNull();
     }
   });
@@ -206,7 +281,7 @@ describe("LocalStorageSettingsStore", () => {
   it("writes only the keys that changed", () => {
     const { store, storage } = setup();
     store.set({ units: "imperial" });
-    expect(storage.keys()).toEqual(["karta:units"]);
+    expect(storage.keys()).toEqual(["mapcairn:units"]);
   });
 
   it("does not remember changes, and says so, when the write probe fails", () => {
@@ -224,7 +299,7 @@ describe("LocalStorageSettingsStore", () => {
 
   it("still reads stored values when only writes are blocked", () => {
     const storage = new FakeStorage();
-    storage.put("karta:units", '"imperial"');
+    storage.put("mapcairn:units", '"imperial"');
     storage.failWrites = true;
     const store = new LocalStorageSettingsStore({
       getStorage: () => storage,
@@ -297,8 +372,8 @@ describe("LocalStorageSettingsStore", () => {
       const { store, storage, events } = setup();
       const seen: string[] = [];
       store.subscribe((settings) => seen.push(settings.units));
-      storage.put("karta:units", '"imperial"');
-      events.fire("karta:units", storage);
+      storage.put("mapcairn:units", '"imperial"');
+      events.fire("mapcairn:units", storage);
       expect(store.get().units).toBe("imperial");
       expect(seen).toEqual(["imperial"]);
     });
@@ -312,7 +387,9 @@ describe("LocalStorageSettingsStore", () => {
     });
 
     it("resets to the defaults when another tab clears storage", () => {
-      const { store, storage, events } = setup({ "karta:units": '"imperial"' });
+      const { store, storage, events } = setup({
+        "mapcairn:units": '"imperial"',
+      });
       store.subscribe(() => undefined);
       storage.clear();
       events.fire(null, storage);
@@ -325,13 +402,13 @@ describe("LocalStorageSettingsStore", () => {
       store.subscribe(() => {
         calls += 1;
       });
-      storage.put("karta:units", '"imperial"');
+      storage.put("mapcairn:units", '"imperial"');
       events.fire("something-else", storage);
-      events.fire("karta:units", new FakeStorage());
+      events.fire("mapcairn:units", new FakeStorage());
       expect(calls).toBe(0);
-      events.fire("karta:units", storage);
+      events.fire("mapcairn:units", storage);
       expect(calls).toBe(1);
-      events.fire("karta:units", storage);
+      events.fire("mapcairn:units", storage);
       expect(calls).toBe(1);
     });
 
@@ -340,7 +417,7 @@ describe("LocalStorageSettingsStore", () => {
       store.set({ units: "imperial" });
       store.subscribe(() => undefined);
       storage.failReads = true;
-      events.fire("karta:units", storage);
+      events.fire("mapcairn:units", storage);
       expect(store.get().units).toBe("imperial");
     });
   });

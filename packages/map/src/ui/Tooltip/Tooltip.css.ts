@@ -1,4 +1,4 @@
-import { surfaceBlurStyle, tokens, zLayer } from "@karta/theme";
+import { surfaceBlurStyle, tokens, zLayer } from "@mapcairn/theme";
 import { keyframes, style } from "@vanilla-extract/css";
 
 const fadeIn = keyframes({

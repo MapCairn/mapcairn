@@ -1,4 +1,4 @@
-import { type DrawKind, type DrawShape, hintFor } from "@karta/core";
+import { type DrawKind, type DrawShape, hintFor } from "@mapcairn/core";
 import {
   Check,
   ChevronLeft,

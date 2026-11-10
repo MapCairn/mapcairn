@@ -1,11 +1,11 @@
 import "./fonts/fonts.css";
 import "./global.css";
-import { THEME_COLOR_META } from "@karta/core";
+import { THEME_COLOR_META } from "@mapcairn/core";
 import {
   LiveRegionProvider,
   ServicesProvider,
   TooltipProvider,
-} from "@karta/map";
+} from "@mapcairn/map";
 import { type ReactNode, useEffect, useState } from "react";
 import {
   isRouteErrorResponse,
@@ -33,7 +33,7 @@ import { fontPreloadLinks } from "./fonts/fontPreload";
  */
 export const meta: MetaFunction = () =>
   buildPageMeta({
-    title: "Karta | Interactive map",
+    title: "MapCairn | Interactive map",
     description:
       "Explore an interactive map. Search places, compare basemaps and measure distances or areas.",
     url: SITE_URL,

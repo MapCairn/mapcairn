@@ -1,4 +1,4 @@
-import { isSettingsSection, type SheetSection } from "@karta/core";
+import { isSettingsSection, type SheetSection } from "@mapcairn/core";
 import { type ReactNode, useEffect, useRef } from "react";
 import { type DataLayers, LayersSection } from "../../layers";
 import { usePreferences } from "../../services";

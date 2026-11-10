@@ -1,5 +1,5 @@
-import { announceTileError } from "@karta/core";
-import { type MapContextValue, StatusMessage, useMap } from "@karta/map";
+import { announceTileError } from "@mapcairn/core";
+import { type MapContextValue, StatusMessage, useMap } from "@mapcairn/map";
 import { useEffect, useState } from "react";
 import { useReloadPage } from "./ErrorPage";
 import * as styles from "./MapBanners.css";

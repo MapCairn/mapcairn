@@ -1,4 +1,4 @@
-import type { TileLayerDefinition } from "@karta/core";
+import type { TileLayerDefinition } from "@mapcairn/core";
 
 /**
  * Rainfall estimated from satellites: the NASA GPM IMERG daily precipitation

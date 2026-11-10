@@ -8,7 +8,7 @@ import { seedStoredSettings } from "./support/services";
 declare global {
   interface Window {
     /** The theme on `<html>` when the body first appeared, before any app script ran. */
-    __kartaFirstPaintTheme?: string | null;
+    __mapcairnFirstPaintTheme?: string | null;
   }
 }
 
@@ -20,7 +20,7 @@ declare global {
 function recordFirstPaintTheme() {
   const observer = new MutationObserver(() => {
     if (document.body) {
-      window.__kartaFirstPaintTheme =
+      window.__mapcairnFirstPaintTheme =
         document.documentElement.getAttribute("data-theme");
       observer.disconnect();
     }
@@ -38,7 +38,7 @@ test.describe("theme", () => {
       await page.addInitScript(recordFirstPaintTheme);
       await mapPage.goto();
 
-      expect(await page.evaluate(() => window.__kartaFirstPaintTheme)).toBe(
+      expect(await page.evaluate(() => window.__mapcairnFirstPaintTheme)).toBe(
         colorScheme,
       );
       const html = page.locator("html");
@@ -80,10 +80,35 @@ test.describe("theme", () => {
     await seedStoredSettings(page, { theme: "dark" });
     await page.addInitScript(recordFirstPaintTheme);
     await mapPage.goto();
-    expect(await page.evaluate(() => window.__kartaFirstPaintTheme)).toBe(
+    expect(await page.evaluate(() => window.__mapcairnFirstPaintTheme)).toBe(
       "dark",
     );
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
+  test("a dark choice saved before the rename paints dark first and moves to the current key", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem("mapcairn-e2e:seeded") !== "true") {
+        sessionStorage.setItem("mapcairn-e2e:seeded", "true");
+        localStorage.setItem("karta:theme", "dark");
+      }
+    });
+    await page.addInitScript(recordFirstPaintTheme);
+    await mapPage.goto();
+    expect(await page.evaluate(() => window.__mapcairnFirstPaintTheme)).toBe(
+      "dark",
+    );
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    expect(
+      await page.evaluate(() => ({
+        current: localStorage.getItem("mapcairn:theme"),
+        legacy: localStorage.getItem("karta:theme"),
+      })),
+    ).toEqual({ current: "dark", legacy: null });
   });
 
   test("the default basemap is the same in both themes, and the theme never changes the basemap", async ({
@@ -133,7 +158,7 @@ test.describe("theme", () => {
       .poll(() => mapPage.hashBasemap())
       .toBe(DEFAULT_VECTOR_BASEMAP_ID);
     expect(
-      await page.evaluate(() => localStorage.getItem("karta:basemapId")),
+      await page.evaluate(() => localStorage.getItem("mapcairn:basemapId")),
     ).toBe('"auto"');
   });
 });

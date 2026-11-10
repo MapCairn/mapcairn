@@ -1,4 +1,4 @@
-import { useLatestRef } from "@karta/react";
+import { useLatestRef } from "@mapcairn/react";
 import { type RefObject, useLayoutEffect, useRef } from "react";
 import { useChromeLayout } from "./layoutContext";
 

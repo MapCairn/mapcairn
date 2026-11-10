@@ -1,5 +1,5 @@
-import { SAMPLE_ALERT_LAYER, SAMPLE_FEED_LAYER } from "@karta/core";
-import { runLayerSourceContract } from "@karta/core/contracts";
+import { SAMPLE_ALERT_LAYER, SAMPLE_FEED_LAYER } from "@mapcairn/core";
+import { runLayerSourceContract } from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { FetchLayerSource } from "./FetchLayerSource";
 

@@ -5,7 +5,7 @@ import {
   announceCopied,
   formatLatLng,
   type LatLng,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { Check, Copy, MapPinned, Trash2, TriangleAlert, X } from "lucide-react";
 import { type Ref, useEffect, useId, useRef, useState } from "react";
 import { useClipboard } from "../../services/hooks";

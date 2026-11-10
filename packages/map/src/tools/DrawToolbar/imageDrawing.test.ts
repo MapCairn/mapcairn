@@ -1,4 +1,4 @@
-import type { DrawShape } from "@karta/core";
+import type { DrawShape } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { drawingForImage } from "./imageDrawing";
 

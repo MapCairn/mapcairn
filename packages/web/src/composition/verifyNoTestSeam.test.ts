@@ -1,9 +1,17 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { DESIGN_GUIDE_MARKER } from "../designGuide/DesignGuide";
+import { TEST_SEAM_MARKER } from "./testSeam";
 
 const script = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -27,7 +35,7 @@ let base = "";
 let cases = 0;
 
 beforeAll(() => {
-  base = mkdtempSync(join(tmpdir(), "karta-seam-"));
+  base = mkdtempSync(join(tmpdir(), "mapcairn-seam-"));
 });
 
 afterAll(() => {
@@ -83,23 +91,42 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("fails and names the file when the marker is in the client build", () => {
     const root = fakeBuild({
-      "client/assets/app.js": 'console.info("KARTA_TEST_SEAM_MARKER")',
+      "client/assets/app.js": 'console.info("MAPCAIRN_TEST_SEAM_MARKER")',
       "server/index.js": "export default {}",
     });
     const result = run(root);
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("KARTA_TEST_SEAM_MARKER");
+    expect(result.stderr).toContain("MAPCAIRN_TEST_SEAM_MARKER");
     expect(result.stderr).toContain("app.js");
   });
 
   it("fails when the window property is in the server build", () => {
     const root = fakeBuild({
       "client/assets/app.js": "",
-      "server/index.js": "window.__KARTA_TEST_SERVICES__",
+      "server/index.js": "window.__MAPCAIRN_TEST_SERVICES__",
     });
     const result = run(root);
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("__KARTA_TEST_SERVICES__");
+    expect(result.stderr).toContain("__MAPCAIRN_TEST_SERVICES__");
+  });
+
+  it("looks for the markers the source defines, so a rename cannot make it pass vacuously", () => {
+    const seamSource = readFileSync(
+      join(dirname(script), "../src/composition/testSeam.ts"),
+      "utf8",
+    );
+    const windowProperty = /__[A-Z]+_TEST_SERVICES__/.exec(seamSource)?.[0];
+    expect(windowProperty).toBeDefined();
+    for (const marker of [
+      TEST_SEAM_MARKER,
+      windowProperty as string,
+      DESIGN_GUIDE_MARKER,
+    ]) {
+      const root = fakeBuild({ "client/assets/app.js": marker });
+      const result = run(root);
+      expect(result.status, marker).toBe(1);
+      expect(result.stderr).toContain(marker);
+    }
   });
 
   it("cannot verify, and says so, when there is no build", () => {
@@ -112,18 +139,18 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
   it("fails when the design guide marker is in the server build", () => {
     const root = fakeBuild({
       "client/assets/app.js": "",
-      "server/index.js": '"data-design-guide":"KARTA_DESIGN_GUIDE_MARKER"',
+      "server/index.js": '"data-design-guide":"MAPCAIRN_DESIGN_GUIDE_MARKER"',
     });
     const result = run(root);
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("KARTA_DESIGN_GUIDE_MARKER");
+    expect(result.stderr).toContain("MAPCAIRN_DESIGN_GUIDE_MARKER");
     expect(result.stderr).toContain("index.js");
   });
 
   it("with --expect-present, passes when the seam and the design guide are both there", () => {
     const root = fakeBuild({
-      "client/assets/app.js": "window.__KARTA_TEST_SERVICES__",
-      "client/assets/design.js": '"KARTA_DESIGN_GUIDE_MARKER"',
+      "client/assets/app.js": "window.__MAPCAIRN_TEST_SERVICES__",
+      "client/assets/design.js": '"MAPCAIRN_DESIGN_GUIDE_MARKER"',
     });
     const result = run(root, "--expect-present");
     expect(result.status).toBe(0);
@@ -133,7 +160,7 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("with --expect-present, fails when the seam is missing", () => {
     const root = fakeBuild({
-      "client/assets/design.js": '"KARTA_DESIGN_GUIDE_MARKER"',
+      "client/assets/design.js": '"MAPCAIRN_DESIGN_GUIDE_MARKER"',
     });
     const result = run(root, "--expect-present");
     expect(result.status).toBe(1);
@@ -142,7 +169,7 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("with --expect-present, fails when the design guide is missing", () => {
     const root = fakeBuild({
-      "client/assets/app.js": "window.__KARTA_TEST_SERVICES__",
+      "client/assets/app.js": "window.__MAPCAIRN_TEST_SERVICES__",
     });
     const result = run(root, "--expect-present");
     expect(result.status).toBe(1);

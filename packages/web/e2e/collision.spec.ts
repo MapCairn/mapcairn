@@ -146,7 +146,7 @@ for (const viewport of MATRIX_VIEWPORTS) {
         await test.step(`zoom buttons ${zoomButtons}`, async () => {
           if (zoomButtons === "on") {
             await page.addInitScript(() => {
-              localStorage.setItem("karta:zoomButtons", "true");
+              localStorage.setItem("mapcairn:zoomButtons", "true");
             });
           }
           await mapPage.goto();
@@ -217,7 +217,7 @@ for (const viewport of MATRIX_VIEWPORTS) {
       }
 
       await page.evaluate(() =>
-        localStorage.setItem("karta:zoomButtons", "true"),
+        localStorage.setItem("mapcairn:zoomButtons", "true"),
       );
       await page.reload();
       await mapPage.waitForMap();

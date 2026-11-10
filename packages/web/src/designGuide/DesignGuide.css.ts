@@ -1,4 +1,4 @@
-import { tokens, tokenValues, zLayer } from "@karta/theme";
+import { tokens, tokenValues, zLayer } from "@mapcairn/theme";
 import { style, styleVariants } from "@vanilla-extract/css";
 
 /** Height of the sticky nav: one row of 44px links with a little air. */

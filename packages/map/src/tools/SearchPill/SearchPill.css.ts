@@ -1,4 +1,4 @@
-import { focusRing, tokens, zLayer } from "@karta/theme";
+import { focusRing, tokens, zLayer } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 
 /**

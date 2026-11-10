@@ -1,4 +1,4 @@
-import { announceBasemap, type BasemapDefinition } from "@karta/core";
+import { announceBasemap, type BasemapDefinition } from "@mapcairn/core";
 import { Check } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { useBasemaps, useSaveData } from "../../services";

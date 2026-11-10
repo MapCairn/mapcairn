@@ -4,7 +4,7 @@ import {
   computeBottomSlotLayout,
   computeEndStackMaxHeight,
   type SheetDetent,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   type ReactNode,
   useCallback,

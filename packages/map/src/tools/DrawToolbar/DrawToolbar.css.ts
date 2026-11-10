@@ -1,4 +1,4 @@
-import { tokens } from "@karta/theme";
+import { tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 
 /** The outer box, measured for the edge it publishes. The slot places it. */

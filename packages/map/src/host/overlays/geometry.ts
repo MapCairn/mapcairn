@@ -1,4 +1,4 @@
-import type { LatLng, MapAdapter, PixelPoint } from "@karta/core";
+import type { LatLng, MapAdapter, PixelPoint } from "@mapcairn/core";
 
 /**
  * The on-screen radius, in pixels, of a distance on the ground.

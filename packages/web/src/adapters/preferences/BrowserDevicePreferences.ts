@@ -1,4 +1,4 @@
-import type { DevicePreferences, DevicePreferencesValue } from "@karta/core";
+import type { DevicePreferences, DevicePreferencesValue } from "@mapcairn/core";
 import {
   defaultMediaQueryWindow,
   type MediaQueryWindow,

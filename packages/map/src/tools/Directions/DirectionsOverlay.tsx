@@ -1,4 +1,4 @@
-import { type DirectionStop, stopLetter } from "@karta/core";
+import { type DirectionStop, stopLetter } from "@mapcairn/core";
 import { useMap } from "../../host";
 import { CentreCrosshair } from "../../host/overlays/CentreCrosshair";
 import { roundPixel } from "../../host/overlays/geometry";

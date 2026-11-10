@@ -1,4 +1,4 @@
-import { createFakeServices } from "@karta/core";
+import { createFakeServices } from "@mapcairn/core";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";

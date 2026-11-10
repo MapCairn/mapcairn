@@ -5,7 +5,7 @@ import {
   MemorySettingsStore,
   SAMPLE_FEED_LAYER,
   StaticLayerRegistry,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useDataLayers } from "../../layers";

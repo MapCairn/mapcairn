@@ -1,4 +1,4 @@
-import { focusRing, tokens } from "@karta/theme";
+import { focusRing, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** Space reserved between the track edge and the thumb. */

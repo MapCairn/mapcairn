@@ -1,4 +1,4 @@
-import type { TileLayerDefinition } from "@karta/core";
+import type { TileLayerDefinition } from "@mapcairn/core";
 
 /**
  * The GloFAS 100-year flood hazard map (Copernicus CEMS), a static WMS layer

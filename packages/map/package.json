@@ -1,7 +1,7 @@
 {
-  "name": "@karta/map",
+  "name": "@mapcairn/map",
   "version": "1.0.0",
-  "description": "Generic map rendering and UI components for Karta",
+  "description": "Generic map rendering and UI components for MapCairn",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
@@ -15,9 +15,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@karta/core": "file:../core",
-    "@karta/react": "file:../react",
-    "@karta/theme": "file:../theme",
+    "@mapcairn/core": "file:../core",
+    "@mapcairn/react": "file:../react",
+    "@mapcairn/theme": "file:../theme",
     "@radix-ui/react-slider": "1.6.1",
     "@radix-ui/react-switch": "1.4.1",
     "@radix-ui/react-toggle-group": "1.2.1",

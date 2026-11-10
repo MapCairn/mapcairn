@@ -1,5 +1,5 @@
 {
-  "name": "karta",
+  "name": "mapcairn",
   "version": "1.0.0",
   "description": "Reusable SDK for public-interest geospatial layer platforms",
   "license": "AGPL-3.0-only",
@@ -14,8 +14,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w @karta/web",
-    "start": "npm run start -w @karta/web",
+    "dev": "npm run dev -w @mapcairn/web",
+    "start": "npm run start -w @mapcairn/web",
     "build": "npm run build --workspaces --if-present",
     "lint": "biome check --error-on-warnings . && npm run depcruise && npm run lint:harmony",
     "depcruise": "node scripts/depcruise.mjs",
@@ -25,9 +25,9 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "e2e": "npm run e2e -w @karta/web",
-    "test:e2e": "npm run test:e2e -w @karta/web",
-    "a11y": "npm run a11y -w @karta/web",
+    "e2e": "npm run e2e -w @mapcairn/web",
+    "test:e2e": "npm run test:e2e -w @mapcairn/web",
+    "a11y": "npm run a11y -w @mapcairn/web",
     "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run e2e && npm run a11y"
   },
   "devDependencies": {

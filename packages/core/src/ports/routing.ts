@@ -82,7 +82,7 @@ export interface ReachableAreaResult {
  * `unsupported`, or `aborted` when the signal fires first). The ui treats
  * `aborted` as "ignore this result".
  *
- * Karta ships no provider. A host supplies one for the service it chooses,
+ * MapCairn ships no provider. A host supplies one for the service it chooses,
  * and lists on its privacy page what the provider sends: the stops or the
  * origin, and the mode. A service's own usage limits belong to its
  * implementation, since every caller shares them. The service is optional:

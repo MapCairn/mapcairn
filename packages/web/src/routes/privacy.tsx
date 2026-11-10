@@ -5,7 +5,7 @@ import { SITE_URL } from "../constants/siteConfig";
 
 /** This route's own meta description, distinct from the root route's site-wide one. */
 const PRIVACY_POLICY_DESCRIPTION =
-  "Karta's privacy policy: a map with no accounts, no forms, and no server-side database of visitor data.";
+  "MapCairn's privacy policy: a map with no accounts, no forms, and no server-side database of visitor data.";
 
 /** Canonical URL of this route, shared by its `meta` and `links` exports. */
 const PRIVACY_URL = `${SITE_URL}/privacy`;
@@ -18,7 +18,7 @@ const PRIVACY_URL = `${SITE_URL}/privacy`;
  */
 export const meta: MetaFunction = () =>
   buildPageMeta({
-    title: `${PRIVACY_POLICY_TITLE} | Karta`,
+    title: `${PRIVACY_POLICY_TITLE} | MapCairn`,
     description: PRIVACY_POLICY_DESCRIPTION,
     url: PRIVACY_URL,
   });

@@ -1,12 +1,12 @@
 name: Feature request
-description: Suggest something Karta should do
+description: Suggest something MapCairn should do
 labels: [enhancement]
 body:
   - type: textarea
     id: problem
     attributes:
       label: The problem
-      description: What are you trying to do that Karta makes hard?
+      description: What are you trying to do that MapCairn makes hard?
     validations:
       required: true
   - type: textarea

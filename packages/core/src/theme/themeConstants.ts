@@ -1,7 +1,15 @@
 import type { ResolvedTheme } from "../ports/settings";
 
 /** The `localStorage` key holding the theme choice as a plain string. */
-export const THEME_STORAGE_KEY = "karta:theme";
+export const THEME_STORAGE_KEY = "mapcairn:theme";
+
+/**
+ * The key the theme choice was stored under before the project was renamed
+ * from Karta. The pre-paint script reads it when the current key is absent, so
+ * a returning visitor sees no flash, and the settings store moves it to
+ * {@link THEME_STORAGE_KEY} on the first visit.
+ */
+export const LEGACY_THEME_STORAGE_KEY = "karta:theme";
 
 /** The attribute on the root element that carries the resolved theme. */
 export const THEME_ATTRIBUTE = "data-theme";

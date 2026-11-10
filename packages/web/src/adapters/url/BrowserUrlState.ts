@@ -3,7 +3,7 @@ import {
   serialiseUrlHash,
   type UrlState,
   type UrlStateValue,
-} from "@karta/core";
+} from "@mapcairn/core";
 
 /** The timer functions the adapter debounces with, injectable for tests. */
 export interface UrlStateTimers {

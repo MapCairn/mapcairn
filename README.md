@@ -1,6 +1,6 @@
-# Karta
+# MapCairn
 
-Karta is a reusable SDK for public-interest map platforms, with a reference host. The SDK is built on ports and adapters: the interface and the pure logic depend on small interfaces, and one place wires in the map engine and the browser services. MapLibre GL JS is the only map engine.
+MapCairn is a reusable SDK for public-interest map platforms, with a reference host. The SDK is built on ports and adapters: the interface and the pure logic depend on small interfaces, and one place wires in the map engine and the browser services. MapLibre GL JS is the only map engine.
 
 `packages/web` is the reference host: a map with basemaps, place search, distance and area measurement, drawing and editing shapes, directions (drive, walk and cycle, from a public routing server, only when asked), saving the map as an image, a pin, theme and unit settings, and open data layers (earthquakes, satellite imagery, rainfall, fire hotspots, GDACS fire, flood, cyclone, volcano and drought alerts, a flood hazard map and a countries-by-population example). Every layer is off until someone turns it on, and the browser then fetches it straight from its public provider; nothing is stored or proxied. The site has no accounts and no tracking beyond cookieless page views. [`docs/plans/`](docs/plans/README.md) holds plans for larger work.
 
@@ -19,7 +19,7 @@ Karta is a reusable SDK for public-interest map platforms, with a reference host
 
 ## Stack
 
-- Five npm workspaces: `@karta/core`, `@karta/map`, `@karta/react`, `@karta/theme` and `@karta/web`.
+- Five npm workspaces: `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react`, `@mapcairn/theme` and `@mapcairn/web`.
 - React, TypeScript, React Router framework mode, Vite and MapLibre GL JS.
 - Vanilla-extract styling, IBM Plex Sans (self-hosted) and Lucide icons.
 - Cloudflare Workers for server rendering and static assets.
@@ -53,7 +53,7 @@ npm run dev
 ```bash
 npm test                                  # unit tests, all packages
 npx --no-install vitest run path/to/file.test.ts   # one file
-npm run playwright:install -w @karta/web  # once, to install the browsers
+npm run playwright:install -w @mapcairn/web  # once, to install the browsers
 npm run e2e                               # end-to-end tests
 npm run a11y                              # accessibility tests
 ```
@@ -84,7 +84,7 @@ A layer is data, not code: one definition file, one recorded fixture (feeds only
 Run `npx --no-install vitest run packages/web/src/layers`: the definition-loop test checks the schema, the fixture, the CSP and the credit, and names the line to add for anything missing. A minimal tile layer:
 
 ```ts
-import type { TileLayerDefinition } from "@karta/core";
+import type { TileLayerDefinition } from "@mapcairn/core";
 
 const example: TileLayerDefinition = {
   id: "example-overlay",
@@ -109,7 +109,7 @@ export default example;
 
 The Directions tool appears only when `services.routing` exists, and the SDK ships no provider. To offer directions, write one adapter and register it:
 
-1. Implement `RoutingProvider` from `@karta/core` in `packages/web/src/adapters/routing`. `route({ stops, mode, signal })` returns one line feature for each leg with its distance in metres and time in seconds, and `reachableArea({ origin, minutes, mode, signal })` returns polygon features. Reject only with `RoutingError` (`network`, `invalid`, `no-route`, `rate-limited`, `aborted`, `unsupported`), and honour the `AbortSignal`. Keep to the service's usage limits inside the adapter, for example with `RequestSpacer` from `adapters/shared`, and send no cookies or referrer.
+1. Implement `RoutingProvider` from `@mapcairn/core` in `packages/web/src/adapters/routing`. `route({ stops, mode, signal })` returns one line feature for each leg with its distance in metres and time in seconds, and `reachableArea({ origin, minutes, mode, signal })` returns polygon features. Reject only with `RoutingError` (`network`, `invalid`, `no-route`, `rate-limited`, `aborted`, `unsupported`), and honour the `AbortSignal`. Keep to the service's usage limits inside the adapter, for example with `RequestSpacer` from `adapters/shared`, and send no cookies or referrer.
 2. Run `runRoutingProviderContract` against it with a scripted `fetch`, as `ValhallaRoutingProvider.test.ts` does, and add recorded sample responses as fixtures.
 3. Register it as `routing` in `createServices()`. Nothing else in the app names it.
 4. Allow its origin in `connect-src` in `packages/web/public/_headers` and `constants/securityHeaders.ts`, name the service on the privacy page and in `PRIVACY.md` and `ATTRIBUTIONS.md`, and pass its credit and a note about what a request sends to the Directions panel (`ROUTING_CREDITS` and `ROUTING_NOTE` in `packages/web/src/constants/routingCredits.ts`).
@@ -121,7 +121,7 @@ Leave `routing` out and the Directions button, panel and overlays are never moun
 A feed of polygons or lines uses a `shapes` style. Colour is a rule over one field: `fixed`, `category`, `steps` (explicit class breaks) or `intervals` (equal classes between a `min` and a `max`, one ordinal colour per class). Each class may also set a `pattern` (`stripes`, `dots`, `crosshatch`), a `dash` and a `width`, and a label template draws text with a halo. The key is derived from the style. Colour is never the only signal, so validation asks for a different pattern, width or dash in every class, or a label that names the field. The colour names a palette slot, never a value.
 
 ```ts
-import type { FeedLayerDefinition, ShapeStyle } from "@karta/core";
+import type { FeedLayerDefinition, ShapeStyle } from "@mapcairn/core";
 
 const districts: FeedLayerDefinition<ShapeStyle> = {
   id: "example-districts",
@@ -173,7 +173,7 @@ Labels need a basemap with a glyph source, which the vector basemaps have. On a 
 A `heatmap` layer draws point density from a feed (or a query) and has no cards or list. The radius and intensity come from `range` controls so people can tune it, and the legend names each step of the ramp with a word.
 
 ```ts
-import type { HeatmapLayerDefinition } from "@karta/core";
+import type { HeatmapLayerDefinition } from "@mapcairn/core";
 
 const density: HeatmapLayerDefinition = {
   id: "example-density",
@@ -211,7 +211,7 @@ export default density;
 A `vector-tiles` layer names a tile URL, a zoom window for the layer, and a style per source layer. Rules read tile properties by name, and a label template may name one property, such as `{name}`. A source layer can also be a `heatmap`. The source's `minzoom` and `maxzoom` are the tile levels the service has; the layer's and each source layer's `minzoom` and `maxzoom` are the zoom levels they are visible at. Features stay in the tiles, so the layer has a key and no cards.
 
 ```ts
-import type { VectorTileLayerDefinition } from "@karta/core";
+import type { VectorTileLayerDefinition } from "@mapcairn/core";
 
 const parks: VectorTileLayerDefinition = {
   id: "example-areas",
@@ -269,7 +269,7 @@ Tile origins go in `connect-src` and `img-src`, as for raster tiles.
 For a dataset too large to fetch whole, use a `query` source in place of a `feed`. The layer asks for the features inside the current view, after the map has been still for a moment, and asks again only when the view leaves the area it last asked for. It draws at most `maxFeatures`, says "Showing the first N. Zoom in to see more." when there are more, and below `minzoom` asks for nothing and says "Zoom in to load this layer." The URL must use `{west}`, `{south}`, `{east}` and `{north}`, and may use `{limit}`, which is `maxFeatures` plus one so the response shows that more exist.
 
 ```ts
-import type { FeedLayerDefinition, PointStyle } from "@karta/core";
+import type { FeedLayerDefinition, PointStyle } from "@mapcairn/core";
 
 const places: FeedLayerDefinition<PointStyle> = {
   id: "example-places",
@@ -307,7 +307,7 @@ The sheet's "Save image" button saves a PNG of the map with its layers, any draw
 
 Choose **Draw shapes** in the control group beside the map. Pick Point, Line, Polygon or Circle, then tap the map to place points, or use **Add point at map centre** (or Space) after panning. A circle takes its centre first and its radius from the second tap. **Finish** (or Enter) closes the shape; a polygon needs three points and no crossing edges. Tap a shape's edge or choose it in the **Shapes** list to edit it: drag a point, drag a small midpoint handle to add one, or select a point with Previous point and Next point and move it with the arrow keys. Undo and Redo cover every edit.
 
-**Shapes and export** opens the list. **Download GeoJSON** and **Download CSV** build a file on your device from the finished shapes (the CSV has `id`, `type`, `area_m2`, `length_m` and the GeoJSON geometry as text). Shapes are not stored and are not in the address bar. **Copy link with shapes** copies a link that carries them in a compact encoding of up to 2,000 characters; anyone who opens it sees the shapes, and moving the map in their window drops them from the address. In code, the pure rules are in `packages/core/src/draw`, the state hook is `useDraw`, the toolbar and overlay are `DrawToolbar` and `DrawOverlay` in `@karta/map`, and a host adds drawing by passing `onDraw` to `EndStack` and `draw` to `SheetContent`.
+**Shapes and export** opens the list. **Download GeoJSON** and **Download CSV** build a file on your device from the finished shapes (the CSV has `id`, `type`, `area_m2`, `length_m` and the GeoJSON geometry as text). Shapes are not stored and are not in the address bar. **Copy link with shapes** copies a link that carries them in a compact encoding of up to 2,000 characters; anyone who opens it sees the shapes, and moving the map in their window drops them from the address. In code, the pure rules are in `packages/core/src/draw`, the state hook is `useDraw`, the toolbar and overlay are `DrawToolbar` and `DrawOverlay` in `@mapcairn/map`, and a host adds drawing by passing `onDraw` to `EndStack` and `draw` to `SheetContent`.
 
 ### Add an adapter
 
@@ -319,7 +319,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`SECURITY.
 
 ## Licence
 
-Karta is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/core`, `packages/map`, `packages/react` and `packages/theme`) carries its own copy. If you ship the SDK in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence.
+MapCairn is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/core`, `packages/map`, `packages/react` and `packages/theme`) carries its own copy. If you ship the SDK in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence.
 
 There is no commercial licence on offer yet, but the author is open to discussing other terms for closed-source use. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
 

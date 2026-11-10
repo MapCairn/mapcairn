@@ -1,4 +1,4 @@
-import { computeDetentHeights } from "@karta/core";
+import { computeDetentHeights } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import {
   coveredPadding,

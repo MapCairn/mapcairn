@@ -1,9 +1,9 @@
-import type { FillPattern } from "@karta/core";
-import { tokenValues } from "@karta/theme";
+import type { FillPattern } from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 import { type MarkerBitmap, parseHexColour } from "./markerImages";
 
 /** The engine image name of a fill pattern, as a data-driven `fill-pattern` builds it. */
-export const PATTERN_IMAGE_PREFIX = "karta-pattern:";
+export const PATTERN_IMAGE_PREFIX = "mapcairn-pattern:";
 
 /** Patterns are drawn at this many device pixels per CSS pixel. */
 export const PATTERN_PIXEL_RATIO = 2;

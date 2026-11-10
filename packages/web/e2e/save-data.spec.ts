@@ -90,7 +90,7 @@ function watchThumbnails(page: Page): string[] {
 /** Stores an explicit Save data choice before the page loads. */
 function storeChoice(page: Page, value: boolean) {
   return page.addInitScript((stored) => {
-    localStorage.setItem("karta:saveData", JSON.stringify(stored));
+    localStorage.setItem("mapcairn:saveData", JSON.stringify(stored));
   }, value);
 }
 
@@ -173,7 +173,7 @@ test.describe("save data", () => {
     await saveData.click();
     await expect(saveData).toBeChecked();
     expect(
-      await page.evaluate(() => localStorage.getItem("karta:saveData")),
+      await page.evaluate(() => localStorage.getItem("mapcairn:saveData")),
     ).toBe("true");
     await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(0);
@@ -187,7 +187,7 @@ test.describe("save data", () => {
     await saveData.click();
     await expect(saveData).not.toBeChecked();
     expect(
-      await page.evaluate(() => localStorage.getItem("karta:saveData")),
+      await page.evaluate(() => localStorage.getItem("mapcairn:saveData")),
     ).toBe("false");
     await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(4);

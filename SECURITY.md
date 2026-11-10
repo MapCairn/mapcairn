@@ -4,7 +4,7 @@ _Last updated: 2026-11-09_
 
 ## Scope
 
-Karta is server-rendered on Cloudflare Workers. There is no database, no
+MapCairn is server-rendered on Cloudflare Workers. There is no database, no
 accounts and no authentication. The only data accepted from users is the
 automatic error report described in [`PRIVACY.md`](PRIVACY.md), which is
 written to Cloudflare's logs and not stored anywhere else. Everything else

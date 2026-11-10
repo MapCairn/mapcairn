@@ -1,5 +1,5 @@
-import type { DevicePreferencesValue } from "@karta/core";
-import { runDevicePreferencesContract } from "@karta/core/contracts";
+import type { DevicePreferencesValue } from "@mapcairn/core";
+import { runDevicePreferencesContract } from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { MediaQueryLike } from "../shared/mediaQuery";
 import {

@@ -1,4 +1,4 @@
-import { tokenValues } from "@karta/theme";
+import { tokenValues } from "@mapcairn/theme";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { MarkerGlyph } from "./MarkerGlyph";

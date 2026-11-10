@@ -6,7 +6,7 @@ Tracking issue: [#158](https://github.com/mooship/karta/issues/158).
 
 ## Why
 
-Karta is for everyone, and much of the world pays dearly for mobile data or has a slow connection. The aim is the best experience for every visitor on a good connection, while staying kind to people with little data: few bytes by default, something useful on screen quickly, and a way to say "spend less". Saving data is never allowed to make the default experience worse for everyone else. This plan covers three agreed pieces and a measurement:
+MapCairn is for everyone, and much of the world pays dearly for mobile data or has a slow connection. The aim is the best experience for every visitor on a good connection, while staying kind to people with little data: few bytes by default, something useful on screen quickly, and a way to say "spend less". Saving data is never allowed to make the default experience worse for everyone else. This plan covers three agreed pieces and a measurement:
 
 1. A Save data mode.
 2. A caching audit and the fixes it finds.
@@ -28,7 +28,7 @@ Measured on 2026-11-09, after Liberty became the default basemap in both themes.
 
 ### Our own headers
 
-Checked on the e2e-mode preview (`npm start`) and, for the production bundle, `npm run preview -w @karta/web`, both through `wrangler dev`, then compared with the live site.
+Checked on the e2e-mode preview (`npm start`) and, for the production bundle, `npm run preview -w @mapcairn/web`, both through `wrangler dev`, then compared with the live site.
 
 | Response | Before (live) | Now (`public/_headers`, `entry.server.tsx`) |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ The app does nothing that defeats this: the MapLibre adapter sets no `transformR
 
 ### Transferred bytes
 
-`node scripts/measureTransfer.mjs` against the production bundle served locally (`npm run build`, then `npm run preview -w @karta/web -- --port 4173`), real providers, Chromium at 390 by 844 (DPR 3, mobile), the page throttled to Lighthouse's slow 4G. Three runs agreed to within 1 KB except where noted. Local `wrangler dev` sends the app's own text files uncompressed over plain http, so the app figure is the script's Brotli (quality 11) estimate of what Cloudflare sends; the raw local figure is 1,787 KB.
+`node scripts/measureTransfer.mjs` against the production bundle served locally (`npm run build`, then `npm run preview -w @mapcairn/web -- --port 4173`), real providers, Chromium at 390 by 844 (DPR 3, mobile), the page throttled to Lighthouse's slow 4G. Three runs agreed to within 1 KB except where noted. Local `wrangler dev` sends the app's own text files uncompressed over plain http, so the app figure is the script's Brotli (quality 11) estimate of what Cloudflare sends; the raw local figure is 1,787 KB.
 
 | Case | Total | App | Style and sprites | Vector tiles | Glyphs | Relief PNGs |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ Notes on Save data mode (section 1):
 
 ## 1. Save data mode (done)
 
-- A Save data switch in the Settings section of the sheet, stored with the other settings (`SettingsStore`, key `karta:saveData`, `true`, `false` or absent, validated on read).
+- A Save data switch in the Settings section of the sheet, stored with the other settings (`SettingsStore`, key `mapcairn:saveData`, `true`, `false` or absent, validated on read).
 - Its default comes from a signal when the browser has one: `navigator.connection.saveData`, or an effective connection type of `slow-2g` or `2g`. Chrome, Edge and Samsung Internet expose these. Safari on iOS does not, so the switch is what makes this work there. An explicit choice always wins over the signal.
 - The signal is behind a port: `DevicePreferences` now carries `saveData` beside `reducedMotion` and `finePointer`, with a fake, a contract test, and a browser adapter that reads `navigator.connection` and listens for its `change` event. `useSaveData` combines the stored choice and the signal, so the UI never reads `navigator.connection`.
 - When Save data is on:

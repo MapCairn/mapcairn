@@ -5,7 +5,7 @@ import {
   DEFAULT_FAKE_VIEW,
   FAKE_CREDITED_BASEMAP,
   FAKE_VECTOR_BASEMAP,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderChrome, testMapContext } from "../MapChrome/chromeTestHarness";

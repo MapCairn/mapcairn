@@ -4,7 +4,7 @@ import {
   DEFAULT_FAKE_VIEW,
   FakeMapAdapter,
   formatLatLng,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -3,7 +3,7 @@ import {
   FakeMapAdapter,
   FakeMapHost,
   type LatLng,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FocusRegistryProvider } from "../../chrome/focusRegistry";

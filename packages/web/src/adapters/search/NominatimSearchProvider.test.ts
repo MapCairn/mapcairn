@@ -3,8 +3,8 @@ import {
   SearchError,
   type SearchErrorKind,
   type SearchResult,
-} from "@karta/core";
-import { runSearchProviderContract } from "@karta/core/contracts";
+} from "@mapcairn/core";
+import { runSearchProviderContract } from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { NominatimSearchProvider } from "./NominatimSearchProvider";
 

@@ -1,5 +1,5 @@
-import { PANEL_MAX_HEIGHT_EXCLUSIVE, PANEL_MIN_WIDTH } from "@karta/core";
-import { tokens, zLayer } from "@karta/theme";
+import { PANEL_MAX_HEIGHT_EXCLUSIVE, PANEL_MIN_WIDTH } from "@mapcairn/core";
+import { tokens, zLayer } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 import { chromeVar, chromeVars } from "./chromeVars";
 

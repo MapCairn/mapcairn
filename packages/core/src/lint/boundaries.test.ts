@@ -119,7 +119,7 @@ describe("dependency-cruiser boundaries", () => {
   };
 
   beforeAll(() => {
-    root = mkdtempSync(path.join(tmpdir(), "karta-depcruise-"));
+    root = mkdtempSync(path.join(tmpdir(), "mapcairn-depcruise-"));
     writeTree(root, files);
     symlinkSync(
       path.join(REPO, "node_modules"),
@@ -293,7 +293,7 @@ describe("Biome rules", () => {
   };
 
   beforeAll(() => {
-    root = mkdtempSync(path.join(tmpdir(), "karta-biome-"));
+    root = mkdtempSync(path.join(tmpdir(), "mapcairn-biome-"));
     writeTree(root, files);
     const config = JSON.parse(
       readFileSync(path.join(REPO, "biome.jsonc"), "utf8"),

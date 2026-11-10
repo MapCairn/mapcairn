@@ -19,7 +19,7 @@ function getJsonLd(
 }
 
 describe("buildPageMeta", () => {
-  it("describes Karta as a domain-neutral mapping application", () => {
+  it("describes MapCairn as a domain-neutral mapping application", () => {
     const jsonLd = getJsonLd(
       buildPageMeta({
         title: "Test title",

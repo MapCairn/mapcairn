@@ -1,4 +1,4 @@
-import { BASEMAPS, FakeMapAdapter } from "@karta/core";
+import { BASEMAPS, FakeMapAdapter } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { visibleBounds } from "./visibleBounds";
 

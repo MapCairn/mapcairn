@@ -1,4 +1,4 @@
-import { isSettingsSection, type SheetSection } from "@karta/core";
+import { isSettingsSection, type SheetSection } from "@mapcairn/core";
 
 /** What {@link sheetTitle} reads from the app's state. */
 export interface SheetTitleState {

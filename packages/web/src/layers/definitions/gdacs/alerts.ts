@@ -1,4 +1,4 @@
-import type { FeedLayerDefinition } from "@karta/core";
+import type { FeedLayerDefinition } from "@mapcairn/core";
 
 /** The parts every GDACS alert layer adds for itself. */
 type OwnParts = "id" | "name" | "description" | "group" | "emptyText";

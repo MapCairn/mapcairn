@@ -9,9 +9,12 @@ import {
   type SearchResult,
   type ThemeChoice,
   type UnitSystem,
-} from "@karta/core";
-import { type MeasureMode, useSearchProvider } from "@karta/map";
-import { type ModelContextToolResult, useModelContextTool } from "@karta/react";
+} from "@mapcairn/core";
+import { type MeasureMode, useSearchProvider } from "@mapcairn/map";
+import {
+  type ModelContextToolResult,
+  useModelContextTool,
+} from "@mapcairn/react";
 
 /** The theme choices an agent may set. */
 export const THEME_CHOICES: readonly ThemeChoice[] = [

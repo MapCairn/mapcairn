@@ -2,7 +2,7 @@ import {
   createFakeServices,
   type FakeServices,
   type LatLng,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../../services";
@@ -119,16 +119,16 @@ describe("ShapesSection", () => {
       fireEvent.click(screen.getByTestId("shapes-export-geojson"));
     });
     expect(services.fakes.fileSaver.saved[0]?.filename).toBe(
-      "karta-shapes.geojson",
+      "mapcairn-shapes.geojson",
     );
     expect(screen.getByTestId("shapes-feedback")).toHaveTextContent(
-      "Saved 1 shape as karta-shapes.geojson.",
+      "Saved 1 shape as mapcairn-shapes.geojson.",
     );
     await act(async () => {
       fireEvent.click(screen.getByTestId("shapes-export-csv"));
     });
     expect(services.fakes.fileSaver.saved[1]?.filename).toBe(
-      "karta-shapes.csv",
+      "mapcairn-shapes.csv",
     );
   });
 

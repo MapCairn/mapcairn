@@ -3,7 +3,7 @@ import {
   imageExportBlockedBy,
   permanentCredit,
   pressEscape,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   Attribution,
   DirectionsPanel,
@@ -24,7 +24,7 @@ import {
   usePreferences,
   useSettings,
   visibleBounds,
-} from "@karta/map";
+} from "@mapcairn/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
 import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
 import { SHEET_ID } from "./initialView";

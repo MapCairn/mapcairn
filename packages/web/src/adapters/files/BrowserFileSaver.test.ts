@@ -1,5 +1,5 @@
-import type { SavedFile } from "@karta/core";
-import { runFileSaverContract } from "@karta/core/contracts";
+import type { SavedFile } from "@mapcairn/core";
+import { runFileSaverContract } from "@mapcairn/core/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BrowserFileSaver } from "./BrowserFileSaver";
 

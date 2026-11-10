@@ -5,7 +5,7 @@ import {
   type FieldValue,
   isShapeStyle,
   type LegendEntry,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { MarkerGlyph } from "./MarkerGlyph";
 import { ShapeGlyph } from "./ShapeGlyph";
 

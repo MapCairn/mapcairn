@@ -1,4 +1,4 @@
-import { surfaceBlurStyle, tokens } from "@karta/theme";
+import { surfaceBlurStyle, tokens } from "@mapcairn/theme";
 import { recipe } from "@vanilla-extract/recipes";
 
 /**

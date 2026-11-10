@@ -31,7 +31,7 @@ export interface Services {
   /** Loads any feed layer's features and details, reading everything from its definition. */
   readonly layerSource: LayerSource;
   /**
-   * Finds routes and travel-time areas. Optional: Karta ships no provider, so
+   * Finds routes and travel-time areas. Optional: MapCairn ships no provider, so
    * a host that supplies none gets no routing, and the ui must not require it.
    */
   readonly routing?: RoutingProvider;

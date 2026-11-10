@@ -1,6 +1,6 @@
-# Contributing to Karta
+# Contributing to MapCairn
 
-Karta provides a reusable mapping SDK and an empty-map web host. Contributions to map tools, accessibility, ports and adapters, and documentation are welcome. Read [`README.md`](README.md) and follow [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+MapCairn provides a reusable mapping SDK and an empty-map web host. Contributions to map tools, accessibility, ports and adapters, and documentation are welcome. Read [`README.md`](README.md) and follow [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## Getting set up
 
@@ -24,7 +24,7 @@ npm run a11y
 
 `npm run check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence. Run one unit test file with `npx --no-install vitest run path/to/file.test.ts`. Coverage must reach 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. Aim for complete behavioural coverage rather than exclusions.
 
-For UI or map changes, run the Playwright suites. Install the browsers once with `npm run playwright:install -w @karta/web`. Playwright starts `npm start` itself, an e2e-mode build served on port 4173 (or `KARTA_E2E_PORT`), and the tests mock basemap tiles and place search. Basemap changes also need a real iPhone check, because WebKit emulation cannot reproduce its GPU.
+For UI or map changes, run the Playwright suites. Install the browsers once with `npm run playwright:install -w @mapcairn/web`. Playwright starts `npm start` itself, an e2e-mode build served on port 4173 (or `MAPCAIRN_E2E_PORT`), and the tests mock basemap tiles and place search. Basemap changes also need a real iPhone check, because WebKit emulation cannot reproduce its GPU.
 
 The pre-commit hook runs Biome, dependency-cruiser and the harmony scanner, not typecheck or tests. CI runs lint, typecheck, coverage and build. Separate workflows run Playwright and Lighthouse.
 
@@ -65,7 +65,7 @@ Do not deploy the production Worker without explicit permission.
 
 ## Security and licence
 
-Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). Karta is licensed under [AGPL-3.0](LICENSE), and its author may agree other licence terms by arrangement.
+Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). MapCairn is licensed under [AGPL-3.0](LICENSE), and its author may agree other licence terms by arrangement.
 
 ### Contributor licence agreement
 

@@ -1,4 +1,4 @@
-import { focusRing, mapOverlayTokens, tokens } from "@karta/theme";
+import { focusRing, mapOverlayTokens, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** A stop's disc on the map. */

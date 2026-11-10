@@ -13,7 +13,7 @@ import {
   Switch,
   Tooltip,
   VisuallyHidden,
-} from "@karta/map";
+} from "@mapcairn/map";
 import {
   ChevronRight,
   Copy,
@@ -549,7 +549,7 @@ function VisuallyHiddenDemo() {
   );
 }
 
-/** Every primitive from `@karta/map`, in every state it has. */
+/** Every primitive from `@mapcairn/map`, in every state it has. */
 export function ComponentsSection() {
   return (
     <GuideSection

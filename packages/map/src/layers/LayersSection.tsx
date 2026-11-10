@@ -6,7 +6,7 @@ import {
   type FormatterRegistry,
   formatTemplate,
   type LayerFeature,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { type Ref, useContext, useEffect, useRef, useState } from "react";
 import { useChromeLayout } from "../chrome/layoutContext";
 import { MapContext } from "../host";

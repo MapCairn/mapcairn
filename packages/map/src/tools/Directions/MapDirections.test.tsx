@@ -1,4 +1,4 @@
-import { FakeMapAdapter, type RouteLeg } from "@karta/core";
+import { FakeMapAdapter, type RouteLeg } from "@mapcairn/core";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ChromeLayoutProvider } from "../../chrome/layoutContext";

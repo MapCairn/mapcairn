@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <title>Karta</title>
+  <title>MapCairn</title>
   <!-- Adaptive favicon. Light: #0d70d4 tile (oklch(0.55 0.175 255)), white pin. Dark: #94c1fa tile (oklch(0.80 0.095 255)), #062d59 pin. -->
   <style>
     .tile { fill: #0d70d4; }

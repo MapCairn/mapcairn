@@ -1,5 +1,5 @@
-import type { MarkerShape } from "@karta/core";
-import { tokenValues } from "@karta/theme";
+import type { MarkerShape } from "@mapcairn/core";
+import { tokenValues } from "@mapcairn/theme";
 
 /**
  * How far a shape's points reach past its nominal radius (a diamond's and a
@@ -57,7 +57,7 @@ export function markerImageName(
   colour: string,
   radius: number,
 ): string {
-  return `karta-marker:${shape}:${colour.toLowerCase()}:${wholeRadius(radius)}`;
+  return `mapcairn-marker:${shape}:${colour.toLowerCase()}:${wholeRadius(radius)}`;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { parseThemeChoice, resolveTheme } from "./theme";
 import {
+  LEGACY_THEME_STORAGE_KEY,
   THEME_ATTRIBUTE,
   THEME_COLOR_META,
   THEME_COLOR_META_NAME,
@@ -17,6 +18,9 @@ import {
  *   and the script never throws. It rewrites every `theme-color` tag, because
  *   a page may carry one per `prefers-color-scheme` media query and the
  *   browser uses the tag whose media matches the OS, not the chosen theme.
+ *   When the current storage key holds nothing it reads
+ *   {@link LEGACY_THEME_STORAGE_KEY}, because the settings store only moves
+ *   that value once React has started, after this script has run.
  *   The output is deterministic: the host hashes
  *   it for its content security policy. Whitespace is collapsed, nothing else.
  */
@@ -26,7 +30,7 @@ var parse=${parseThemeChoice.toString()};
 var resolve=${resolveTheme.toString()};
 var colors=${JSON.stringify(THEME_COLOR_META)};
 var stored,dark;
-try{stored=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})}catch(e){}
+try{stored=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(stored===null)stored=localStorage.getItem(${JSON.stringify(LEGACY_THEME_STORAGE_KEY)})}catch(e){}
 try{dark=matchMedia("(prefers-color-scheme: dark)").matches}catch(e){}
 var theme=resolve(parse(stored),dark?"dark":"light");
 try{

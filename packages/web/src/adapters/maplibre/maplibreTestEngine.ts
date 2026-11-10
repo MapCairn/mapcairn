@@ -3,8 +3,8 @@ import type {
   DrawnLayer,
   LatLng,
   PixelPoint,
-} from "@karta/core";
-import { mercatorProject, mercatorUnproject } from "@karta/core";
+} from "@mapcairn/core";
+import { mercatorProject, mercatorUnproject } from "@mapcairn/core";
 
 /** Test-only width of the fake engine's viewport, in pixels. */
 export const FAKE_VIEWPORT_WIDTH = 800;
@@ -558,10 +558,10 @@ export interface EngineFeature {
 }
 
 /**
- * The part of an engine layer id after `karta:<id>:`. Parts never contain a
+ * The part of an engine layer id after `mapcairn:<id>:`. Parts never contain a
  * colon, so the data layer id is everything before the last one.
  */
-const ENGINE_ID = /^karta:(.+):([^:]+)$/;
+const ENGINE_ID = /^mapcairn:(.+):([^:]+)$/;
 
 /** The first longitude and latitude of any GeoJSON coordinates. */
 function firstPosition(coordinates: unknown): [number, number] {
@@ -575,7 +575,7 @@ function firstPosition(coordinates: unknown): [number, number] {
 /**
  * Describes the data layers the adapter added to a test engine, lowest
  * first, in the map adapter contract's terms. A data layer owns several
- * engine layers (`karta:<id>:<part>`) over one source `karta:<id>`, so each
+ * engine layers (`mapcairn:<id>:<part>`) over one source `mapcairn:<id>`, so each
  * is described once, from its first engine layer.
  */
 export function describeDataLayers(map: FakeMapLibreMap): DrawnLayer[] {
@@ -607,7 +607,7 @@ export function describeDataLayers(map: FakeMapLibreMap): DrawnLayer[] {
       });
     } else if (part.startsWith("styled-")) {
       const isArea = ofSource.some(
-        (item) => item.id === `karta:${id}:styled-fill`,
+        (item) => item.id === `mapcairn:${id}:styled-fill`,
       );
       drawn.push({
         id,
@@ -653,13 +653,13 @@ function tappableEngineLayer(
   layerId: string,
   featureId: string,
 ): { layer: string; feature: EngineFeature } | undefined {
-  const source = map.sources.get(`karta:${layerId}`);
+  const source = map.sources.get(`mapcairn:${layerId}`);
   const feature = (
     (source?.data as { features?: EngineFeature[] } | undefined)?.features ?? []
-  ).find((item) => item.properties["karta:id"] === featureId);
+  ).find((item) => item.properties["mapcairn:id"] === featureId);
   const layer = map.styleLayers.find(
     (item) =>
-      item.source === `karta:${layerId}` &&
+      item.source === `mapcairn:${layerId}` &&
       /:(points|styled-fill|styled-line-[a-z]+)$/.test(String(item.id)),
   );
   return feature && layer ? { layer: String(layer.id), feature } : undefined;

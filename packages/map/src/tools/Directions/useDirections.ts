@@ -23,8 +23,8 @@ import {
   canAddStop as stopsHaveRoom,
   type TravelMode,
   type UnitSystem,
-} from "@karta/core";
-import { useLatestRef } from "@karta/react";
+} from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRoutingProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";

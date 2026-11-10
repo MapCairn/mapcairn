@@ -1,5 +1,5 @@
-import { DEFAULT_FAKE_VIEW } from "@karta/core";
-import type { MapContextValue } from "@karta/map";
+import { DEFAULT_FAKE_VIEW } from "@mapcairn/core";
+import type { MapContextValue } from "@mapcairn/map";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -8,8 +8,8 @@ import {
 } from "./useZoomAnnouncement";
 
 const announce = vi.fn();
-vi.mock("@karta/map", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@karta/map")>()),
+vi.mock("@mapcairn/map", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@mapcairn/map")>()),
   useAnnounce: () => announce,
 }));
 

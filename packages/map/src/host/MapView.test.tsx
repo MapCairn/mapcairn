@@ -9,7 +9,7 @@ import {
   MapEngineError,
   type MapMountOptions,
   type ViewState,
-} from "@karta/core";
+} from "@mapcairn/core";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";

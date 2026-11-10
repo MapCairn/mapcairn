@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { compositeOver, contrastRatio, tokenValues } from "@karta/theme";
+import { compositeOver, contrastRatio, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import { APP_ICONS } from "./appIcons";
 import {

@@ -5,7 +5,7 @@ import {
   FakeMapAdapter,
   FakeMapHost,
   MapEngineError,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testMapContext } from "../../chrome/MapChrome/chromeTestHarness";

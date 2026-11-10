@@ -3,7 +3,7 @@ import {
   FAKE_VECTOR_BASEMAP,
   type FakeMapAdapter,
   type LatLng,
-} from "@karta/core";
+} from "@mapcairn/core";
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MapView } from "../../host/MapView";

@@ -1,4 +1,4 @@
-import { focusRing, tokens } from "@karta/theme";
+import { focusRing, tokens } from "@mapcairn/theme";
 import { recipe } from "@vanilla-extract/recipes";
 
 const notDisabled = ':not([aria-disabled="true"])';

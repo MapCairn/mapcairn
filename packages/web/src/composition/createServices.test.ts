@@ -5,12 +5,12 @@ import {
   FakeSearchProvider,
   type Services,
   StaticLayerRegistry,
-} from "@karta/core";
+} from "@mapcairn/core";
 import {
   DATA_SERVICE_NAMES,
   PORT_NAMES,
   type PortName,
-} from "@karta/core/contracts";
+} from "@mapcairn/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
@@ -19,7 +19,7 @@ import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
 
 afterEach(() => {
-  Reflect.deleteProperty(window, "__KARTA_TEST_SERVICES__");
+  Reflect.deleteProperty(window, "__MAPCAIRN_TEST_SERVICES__");
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
@@ -109,10 +109,10 @@ describe("createServices", () => {
   });
 
   describe("test seam", () => {
-    it("merges window.__KARTA_TEST_SERVICES__ over the real services", () => {
+    it("merges window.__MAPCAIRN_TEST_SERVICES__ over the real services", () => {
       const search = new FakeSearchProvider();
       const clipboard = new FakeClipboard();
-      window.__KARTA_TEST_SERVICES__ = { search, clipboard };
+      window.__MAPCAIRN_TEST_SERVICES__ = { search, clipboard };
       const info = vi
         .spyOn(console, "info")
         .mockImplementation(() => undefined);
@@ -121,14 +121,14 @@ describe("createServices", () => {
       expect(services.clipboard).toBe(clipboard);
       expect(services.settings.get().units).toBe("metric");
       expect(info).toHaveBeenCalledWith(
-        expect.stringContaining("KARTA_TEST_SEAM_MARKER"),
+        expect.stringContaining("MAPCAIRN_TEST_SEAM_MARKER"),
       );
     });
 
     it("lets explicit overrides win over the seam", () => {
       const fromSeam = new FakeSearchProvider();
       const fromCode = new FakeSearchProvider();
-      window.__KARTA_TEST_SERVICES__ = { search: fromSeam };
+      window.__MAPCAIRN_TEST_SERVICES__ = { search: fromSeam };
       vi.spyOn(console, "info").mockImplementation(() => undefined);
       expect(createServices({ overrides: { search: fromCode } }).search).toBe(
         fromCode,
@@ -137,14 +137,14 @@ describe("createServices", () => {
 
     it("lets a browser test replace the routing provider", () => {
       const routing = new FakeRoutingProvider();
-      window.__KARTA_TEST_SERVICES__ = { routing };
+      window.__MAPCAIRN_TEST_SERVICES__ = { routing };
       vi.spyOn(console, "info").mockImplementation(() => undefined);
       expect(createServices().routing).toBe(routing);
     });
 
     it("accepts a map adapter factory function", () => {
       const factory = vi.fn();
-      window.__KARTA_TEST_SERVICES__ = { createMapAdapter: factory };
+      window.__MAPCAIRN_TEST_SERVICES__ = { createMapAdapter: factory };
       vi.spyOn(console, "info").mockImplementation(() => undefined);
       expect(createServices().createMapAdapter).toBe(factory);
     });
@@ -159,14 +159,14 @@ describe("createServices", () => {
         true,
         [new FakeSearchProvider()],
       ]) {
-        window.__KARTA_TEST_SERVICES__ = malformed;
+        window.__MAPCAIRN_TEST_SERVICES__ = malformed;
         expect(createServices().search.constructor).toBe(real);
       }
     });
 
     it("drops entries of the wrong kind and unknown keys, and keeps the good ones", () => {
       const clipboard = new FakeClipboard();
-      window.__KARTA_TEST_SERVICES__ = {
+      window.__MAPCAIRN_TEST_SERVICES__ = {
         search: "not a service",
         location: null,
         createMapAdapter: { not: "a function" },
@@ -184,7 +184,7 @@ describe("createServices", () => {
     });
 
     it("stays quiet when nothing in the seam is usable", () => {
-      window.__KARTA_TEST_SERVICES__ = { search: "nope" };
+      window.__MAPCAIRN_TEST_SERVICES__ = { search: "nope" };
       const info = vi.spyOn(console, "info");
       createServices();
       expect(info).not.toHaveBeenCalled();
@@ -193,7 +193,7 @@ describe("createServices", () => {
     it("is ignored in a production build", () => {
       vi.stubEnv("MODE", "production");
       const search = new FakeSearchProvider();
-      window.__KARTA_TEST_SERVICES__ = { search };
+      window.__MAPCAIRN_TEST_SERVICES__ = { search };
       expect(createServices().search).not.toBe(search);
     });
 
@@ -201,7 +201,7 @@ describe("createServices", () => {
       for (const mode of ["e2e", "development"]) {
         vi.stubEnv("MODE", mode);
         const search = new FakeSearchProvider();
-        window.__KARTA_TEST_SERVICES__ = { search };
+        window.__MAPCAIRN_TEST_SERVICES__ = { search };
         vi.spyOn(console, "info").mockImplementation(() => undefined);
         expect(createServices().search).toBe(search);
       }

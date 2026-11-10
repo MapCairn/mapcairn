@@ -40,7 +40,7 @@ Maptoolkit Dark is served from the Maptoolkit community tile server under the [M
 - Section 11, styles stay Maptoolkit's: the style is loaded from Maptoolkit's own address and is not copied into this repository. `packages/web/src/basemaps/fixtures/maptoolkit-dark-requests.json` records only the addresses it requests, so a test can check each against the production Content Security Policy.
 - Section 9, fair use: unregistered use is limited to 10 uncached requests a second. Nothing here registers or sends a key.
 
-The logo is `packages/web/public/basemaps/maptoolkit-logo.svg`, the artwork of `@maptoolkit/maplibre-logo-control` 1.1.2 (the logo control Maptoolkit publishes on [GitHub](https://github.com/maptoolkit/maplibre-logo-control)), copied unchanged with a title element added. That package is licensed under BSD-3-Clause, Copyright (c) 2026, Maptoolkit - Toursprung GmbH. The full licence text is in `packages/web/public/basemaps/maptoolkit-logo.LICENSE.txt`, served beside the logo, and the SVG carries a one-line notice. The [licence](https://github.com/maptoolkit/maplibre-logo-control/blob/HEAD/LICENSE) requires redistributions to retain the copyright notice, the conditions and the disclaimer, and does not allow the name Maptoolkit to be used to endorse this project without permission. Karta is not endorsed by Maptoolkit.
+The logo is `packages/web/public/basemaps/maptoolkit-logo.svg`, the artwork of `@maptoolkit/maplibre-logo-control` 1.1.2 (the logo control Maptoolkit publishes on [GitHub](https://github.com/maptoolkit/maplibre-logo-control)), copied unchanged with a title element added. That package is licensed under BSD-3-Clause, Copyright (c) 2026, Maptoolkit - Toursprung GmbH. The full licence text is in `packages/web/public/basemaps/maptoolkit-logo.LICENSE.txt`, served beside the logo, and the SVG carries a one-line notice. The [licence](https://github.com/maptoolkit/maplibre-logo-control/blob/HEAD/LICENSE) requires redistributions to retain the copyright notice, the conditions and the disclaimer, and does not allow the name Maptoolkit to be used to endorse this project without permission. MapCairn is not endorsed by Maptoolkit.
 
 ### Basemap previews
 
@@ -65,7 +65,7 @@ Routes and travel-time areas come from the public [Valhalla](https://valhalla.gi
 
 ## Software
 
-Karta is licensed under [AGPL-3.0](LICENSE). Each SDK package (`core`, `map`, `react` and `theme`) carries its own copy, and the reference host is in `packages/web`. Dependency licences are recorded in the installed packages' licence files.
+MapCairn is licensed under [AGPL-3.0](LICENSE). Each SDK package (`core`, `map`, `react` and `theme`) carries its own copy, and the reference host is in `packages/web`. Dependency licences are recorded in the installed packages' licence files.
 
 Maps are drawn with [MapLibre GL JS](https://maplibre.org), which is licensed under the BSD 3-Clause licence.
 

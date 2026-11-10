@@ -1,4 +1,4 @@
-import { DRAW_KEY_HELP, MAP_KEY_HELP } from "@karta/core";
+import { DRAW_KEY_HELP, MAP_KEY_HELP } from "@mapcairn/core";
 import type { Ref } from "react";
 import { usePreferences } from "../../services";
 import {
@@ -68,7 +68,7 @@ export function HelpSection({
       <div className={subsection}>
         <Subheading level={subLevel}>Accessibility</Subheading>
         <p className={prose}>
-          Karta aims to meet WCAG 2.2 level AA. Every action that uses a
+          MapCairn aims to meet WCAG 2.2 level AA. Every action that uses a
           gesture, such as a long press or a drag, also has a button or a
           keyboard shortcut.
         </p>
