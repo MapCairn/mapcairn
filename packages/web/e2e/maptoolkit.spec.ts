@@ -432,6 +432,7 @@ for (const viewport of CREDIT_VIEWPORTS) {
           await expect(mapPage.sheet).toHaveAttribute("data-detent", detent);
           await expectCreditUnobstructed(page, `sheet at ${detent}`);
           await expectSheetStopsAboveCredit(page);
+          await expectSheetEdgeFinished(page);
         }
         // At full height the sheet is modal; the credit must still be usable.
         await mapPage.sheetHandle.focus();
@@ -443,9 +444,34 @@ for (const viewport of CREDIT_VIEWPORTS) {
         );
         await expectCreditUnobstructed(page, "modal sheet at full");
         await expectSheetStopsAboveCredit(page);
+        await expectSheetEdgeFinished(page);
       },
     );
   });
+}
+
+/**
+ * Where the sheet stops above the credit, the cut has the sheet's rounded
+ * corners and a one pixel edge, so the panel ends as a finished card. A plain
+ * rectangular slice through its content made the credit look as if it sat
+ * behind the panel.
+ */
+async function expectSheetEdgeFinished(page: Page): Promise<void> {
+  const edge = await page.evaluate(() => {
+    const sheet = document.querySelector<HTMLElement>('[data-chrome="sheet"]');
+    if (!sheet) {
+      return null;
+    }
+    const after = getComputedStyle(sheet, "::after");
+    return {
+      clipPath: getComputedStyle(sheet).clipPath,
+      edgeHeight: after.height,
+      edgeContent: after.content,
+    };
+  });
+  expect(edge?.clipPath).toContain("round");
+  expect(edge?.edgeHeight).toBe("1px");
+  expect(edge?.edgeContent).not.toBe("none");
 }
 
 /** The side panel's box and the credit's do not touch. */
