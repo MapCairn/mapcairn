@@ -1,0 +1,68 @@
+name: CLA
+
+# Enforces CLA.md. Every pull request author and commit author must have commented
+# the agreement sentence on a pull request, or be in signatures.json on the
+# cla-signatures branch. The result is the `CLA` commit status on the head commit.
+#
+# Security: this workflow runs with a write token on pull requests from forks, so
+# it never checks out or runs the pull request's code. It checks out the default
+# branch only, and everything it reads from the pull request (logins, commit names,
+# comment text) is data that is compared and printed, never evaluated or put in a
+# shell command. The script body below has no expressions at all, for that reason.
+# The decision logic is in scripts/cla/cla.mjs and the API calls in scripts/cla/run.mjs.
+#
+# Dependabot: GitHub gives Dependabot-triggered runs a read-only token even on
+# pull_request_target, so for its pull requests the status cannot be written. The run
+# ends with a notice and no failure, and those pull requests get no `CLA` status.
+# So `CLA` must not be made a required status on main until Dependabot pull requests
+# are handled (a ruleset bypass for them, or a different required-check design).
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+# One run at a time for each pull request, so the explanatory comment is created
+# once and signatures are not written twice. A later run supersedes a waiting one,
+# and each run reads the current state, so nothing is lost. A comment that cannot
+# change the result (not the agreement sentence, not by the pull request author)
+# gets a group of its own, so it can never displace a waiting run. The words test
+# is a cheap superset of the exact check in scripts/cla/run.mjs.
+concurrency:
+  group: cla-${{ github.event.pull_request.number || github.event.issue.number }}${{ github.event_name == 'issue_comment' && !contains(github.event.comment.body, 'contributor licence agreement') && github.event.comment.user.id != github.event.issue.user.id && format('-ignored-{0}', github.run_id) || '' }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check CLA agreement
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event.issue.pull_request &&
+      (contains(github.event.comment.body, 'contributor licence agreement') ||
+      github.event.comment.user.id == github.event.issue.user.id))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # only used to write signatures.json on the cla-signatures branch
+      pull-requests: write # the explanatory comment
+      statuses: write # the CLA commit status
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: scripts/cla
+
+      - name: Check agreement and set the CLA status
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { pathToFileURL } = require("node:url");
+            const { join } = require("node:path");
+            const file = join(process.env.GITHUB_WORKSPACE, "scripts", "cla", "run.mjs");
+            const { run } = await import(pathToFileURL(file).href);
+            await run({ github, context, core });

@@ -65,4 +65,10 @@ Do not deploy the production Worker without explicit permission.
 
 ## Security and licence
 
-Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). Contributions are licensed under [AGPL-3.0](LICENSE).
+Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). Karta is licensed under [AGPL-3.0](LICENSE), and its author also offers a commercial licence.
+
+### Contributor licence agreement
+
+You keep the copyright in what you contribute, and you agree to [`CLA.md`](CLA.md), which lets the owner distribute it under both licences. Add the comment given at the end of that file to your first pull request, from your own account and with the sentence on a line of its own. A pull request is not merged until it is there.
+
+The `CLA` workflow (`.github/workflows/cla.yml`) checks this on every pull request. It needs an agreement from the pull request author and from every commit author, so commit with an email address linked to your GitHub account, or the check cannot find you. The repository owner and bots such as Dependabot are exempt. The `CLA` status turns green shortly after the comment, and your agreement is recorded in `signatures.json` on the `cla-signatures` branch, so you only comment once. If the check is stuck after you fix an email address, close and reopen the pull request or push a commit. Type or paste the sentence as its own comment: a quote reply to the bot's comment does not count, and nor does a sentence inside a code block. GitHub gives Dependabot's runs a read-only token, so Dependabot pull requests get no `CLA` status, and the run ends with a notice instead of a failure. For that reason `CLA` must not be made a required status on `main` until Dependabot pull requests are handled, for example by a ruleset bypass for Dependabot or a different required-check design. The decision logic is in `scripts/cla`, with its tests in `packages/core/src/lint`, and it runs only from the default branch, never from a pull request's own code.

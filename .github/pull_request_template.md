@@ -6,6 +6,7 @@
 
 - [ ] `npm run lint`, `npm run typecheck` and `npm run test:coverage` pass
 - [ ] `npm run e2e` and `npm run a11y` pass for map or interface changes
+- [ ] I have agreed to [`CLA.md`](../CLA.md) in a comment on this or an earlier pull request
 - [ ] Copy is in British English and the docs match the change
 - [ ] Anything the change sends over the network is in `PRIVACY.md` and the privacy page
 
