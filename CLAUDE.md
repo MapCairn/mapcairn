@@ -11,7 +11,7 @@ Use sub-agents. They keep this conversation small and let independent work run i
 Hard limits on sub-agents, which the owner set because many agents at once make their machine too slow to talk to Claude:
 
 - Run at most two sub-agents at the same time, and prefer one. Never start a third while two are running; queue the work instead. This counts agents started through a Workflow script too.
-- Never kill or stop a sub-agent that is already running, unless the owner asks.
+- Do not stop a sub-agent that is already running just to get under the limit, because that wastes its work. Stopping one that is stuck, hung, redundant or no longer needed is fine.
 - Every agent must clean up after itself: stop each dev server, wrangler instance, browser and other process it starts, and confirm with a port or process check that none is left running before it reports. Put this in every brief. Whoever delegated checks again when the agent finishes and stops anything left behind.
 - While agents are running, prefer targeted checks over full local suites (CI runs the full suite on `main`), and use a different port for each e2e or dev server.
 
