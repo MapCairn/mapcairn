@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Karta is licensed under [AGPL-3.0](LICENSE), and its author also offers a commercial licence for closed-source use. To make both possible, everyone who contributes code, documentation or other material to Karta agrees to the terms below. You keep the copyright in your contribution. You give the project owner the rights needed to distribute it under both kinds of licence.
+Karta is licensed under [AGPL-3.0](LICENSE), and its author may also agree other licence terms by arrangement, for example for closed-source use. To make both possible, everyone who contributes code, documentation or other material to Karta agrees to the terms below. You keep the copyright in your contribution. You give the project owner the rights needed to distribute it under both kinds of licence.
 
 ## Definitions
 

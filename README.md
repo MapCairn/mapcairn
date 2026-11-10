@@ -319,6 +319,6 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`SECURITY.
 
 Karta is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/core`, `packages/map`, `packages/react` and `packages/theme`) carries its own copy. If you ship the SDK in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence.
 
-A commercial licence is available for use in closed-source products. Contact the author through [github.com/mooship](https://github.com/mooship).
+There is no commercial licence on offer yet, but the author is open to discussing other terms for closed-source use. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
 
 See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.

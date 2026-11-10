@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 2026-11-09_
+_Last updated: 2026-11-10_
 
 _This mirrors the policy on the site at `/privacy`
 (`packages/web/src/app/PrivacyPage.tsx`). Keep both in sync when either
@@ -102,4 +102,4 @@ this site and is not stored.
 
 ## Contact
 
-For a question or concern about privacy, write to karta@timothybrits.co.za, or open an issue on [GitHub](https://github.com/mooship/karta/issues).
+For a question or concern about privacy, write to mapcairn@timothybrits.co.za, or open an issue on [GitHub](https://github.com/mooship/karta/issues).

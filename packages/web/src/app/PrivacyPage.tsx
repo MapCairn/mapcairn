@@ -4,7 +4,7 @@ import { SITE_URL } from "../constants/siteConfig";
 import * as styles from "./PrivacyPage.css";
 
 /** ISO date this policy's content was last reviewed for accuracy. */
-const LAST_UPDATED = "2026-11-09";
+const LAST_UPDATED = "2026-11-10";
 
 /** The page's title, shared with the route's `<title>` so the two cannot drift apart. */
 export const PRIVACY_POLICY_TITLE = "Privacy policy";
@@ -147,8 +147,8 @@ export function PrivacyPage() {
         <h2 className={styles.sectionTitle}>Contact</h2>
         <p className={styles.body}>
           For a question or concern about privacy, write to{" "}
-          <a className={styles.link} href="mailto:karta@timothybrits.co.za">
-            karta@timothybrits.co.za
+          <a className={styles.link} href="mailto:mapcairn@timothybrits.co.za">
+            mapcairn@timothybrits.co.za
           </a>
           , or open an issue on{" "}
           <a

@@ -65,7 +65,7 @@ Do not deploy the production Worker without explicit permission.
 
 ## Security and licence
 
-Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). Karta is licensed under [AGPL-3.0](LICENSE), and its author also offers a commercial licence.
+Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md). Karta is licensed under [AGPL-3.0](LICENSE), and its author may agree other licence terms by arrangement.
 
 ### Contributor licence agreement
 

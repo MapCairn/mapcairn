@@ -13,7 +13,7 @@ MapLibre GL JS is the only map engine. The app follows ports and adapters, descr
 
 The published host runs on Cloudflare Workers. It has no accounts and no tracking beyond cookieless page views. Client error reports are logged as described in `PRIVACY.md`.
 
-The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `theme`) are AGPL-3.0, and each SDK package carries its own `LICENSE` file. A commercial licence for closed-source use is offered separately, so the SDK packages must not contain anything that needs a licence agreement of its own, such as a provider's terms or non-commercial data.
+The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `theme`) are AGPL-3.0, and each SDK package carries its own `LICENSE` file. No commercial licence is on offer yet, but other terms for closed-source use can be discussed with the author, so the SDK packages must not contain anything that needs a licence agreement of its own, such as a provider's terms or non-commercial data.
 
 ## Commands
 
