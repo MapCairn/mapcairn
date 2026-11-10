@@ -37,7 +37,7 @@ If the app hits an unexpected error in your browser, it sends a short
 diagnostic report to this site's own server, where it is written to
 Cloudflare's operational logs so the fault can be fixed. The report holds the
 error message, a stack trace, the page's address without its query or the part
-after # (for example `https://karta.timothybrits.co.za/`), and whether it was
+after # (for example `https://mapcairn.timothybrits.co.za/`), and whether it was
 an uncaught error or a rejected promise. It never includes the map's position
 or yours. No cookies, personal data or persistent identifiers are attached to
 the report, and it is not stored in any database. One page load sends at most

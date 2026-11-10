@@ -1,5 +1,6 @@
 import { createRequestHandler } from "react-router";
 import { SECURITY_HEADERS } from "../src/constants/securityHeaders";
+import { PREVIOUS_HOSTNAME, SITE_URL } from "../src/constants/siteConfig";
 
 const requestHandler = createRequestHandler(
   () => import("../build/server/index.js"),
@@ -7,9 +8,28 @@ const requestHandler = createRequestHandler(
 );
 
 /**
- * The Cloudflare Workers entry point. Delegates every request to the built
- * React Router server bundle. There are no Cloudflare bindings to
- * thread through, so the request is passed on with no `RouterContextProvider`.
+ * Permanently redirects a page request on the previous hostname to the same
+ * path and query on the current one, or returns null for any other request.
+ * @remarks The address carries no fragment, so the browser keeps the
+ *   visitor's own (the map view, basemap and layers live in it). Only GET and
+ *   HEAD are redirected: a report from a page still open on the previous
+ *   address is a POST, which the app accepts from both origins.
+ */
+function redirectFromPreviousHostname(request: Request): Response | null {
+  const url = new URL(request.url);
+  const isPageRequest = request.method === "GET" || request.method === "HEAD";
+  if (url.hostname !== PREVIOUS_HOSTNAME || !isPageRequest) {
+    return null;
+  }
+  const target = new URL(url.pathname + url.search, SITE_URL);
+  return Response.redirect(target.toString(), 301);
+}
+
+/**
+ * The Cloudflare Workers entry point. Redirects the previous hostname to the
+ * current one, then delegates every other request to the built React Router
+ * server bundle. There are no Cloudflare bindings to thread through, so the
+ * request is passed on with no `RouterContextProvider`.
  * @remarks The `try`/`catch` around `requestHandler` is a last-resort net,
  *   not the primary error path; `entry.server.tsx`'s `onError` and
  *   `root.tsx`'s `ErrorBoundary` catch render/loader/action errors and log
@@ -21,6 +41,10 @@ const requestHandler = createRequestHandler(
  */
 export default {
   async fetch(request: Request): Promise<Response> {
+    const redirect = redirectFromPreviousHostname(request);
+    if (redirect) {
+      return redirect;
+    }
     try {
       return withSecurityHeaders(await requestHandler(request));
     } catch (error) {

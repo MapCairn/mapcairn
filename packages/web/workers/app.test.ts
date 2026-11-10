@@ -17,14 +17,14 @@ describe("worker fetch handler", () => {
 
   it("passes requests on the new domain through to the request handler unchanged", async () => {
     const workerModule = await import("./app");
-    const request = new Request("https://karta.timothybrits.co.za/");
+    const request = new Request("https://mapcairn.timothybrits.co.za/");
     const response = await workerModule.default.fetch(request);
     expect(response.status).toBe(200);
   });
 
   it("passes the request through to the request handler unmodified", async () => {
     const workerModule = await import("./app");
-    const request = new Request("https://karta.timothybrits.co.za/");
+    const request = new Request("https://mapcairn.timothybrits.co.za/");
 
     await workerModule.default.fetch(request);
 
@@ -38,7 +38,7 @@ describe("worker fetch handler", () => {
       .mockImplementation(() => {});
     requestHandlerMock.mockRejectedValueOnce(new Error("boom"));
     const workerModule = await import("./app");
-    const request = new Request("https://karta.timothybrits.co.za/");
+    const request = new Request("https://mapcairn.timothybrits.co.za/");
 
     const response = await workerModule.default.fetch(request);
 
@@ -52,7 +52,7 @@ describe("worker fetch handler", () => {
       "../src/constants/securityHeaders"
     );
     const workerModule = await import("./app");
-    const request = new Request("https://karta.timothybrits.co.za/");
+    const request = new Request("https://mapcairn.timothybrits.co.za/");
 
     const response = await workerModule.default.fetch(request);
 
@@ -72,7 +72,7 @@ describe("worker fetch handler", () => {
       }),
     );
     const workerModule = await import("./app");
-    const request = new Request("https://karta.timothybrits.co.za/");
+    const request = new Request("https://mapcairn.timothybrits.co.za/");
 
     const response = await workerModule.default.fetch(request);
 
@@ -88,7 +88,7 @@ describe("worker fetch handler", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     requestHandlerMock.mockRejectedValueOnce(new Error("boom"));
     const workerModule = await import("./app");
-    const request = new Request("https://karta.timothybrits.co.za/");
+    const request = new Request("https://mapcairn.timothybrits.co.za/");
 
     const response = await workerModule.default.fetch(request);
 
@@ -99,5 +99,57 @@ describe("worker fetch handler", () => {
       SECURITY_HEADERS["Content-Security-Policy"],
     );
     vi.restoreAllMocks();
+  });
+});
+
+describe("worker fetch handler on the previous hostname", () => {
+  beforeEach(() => {
+    requestHandlerMock.mockClear();
+  });
+
+  it("redirects a page permanently to the same path and query on the current hostname", async () => {
+    const workerModule = await import("./app");
+    const request = new Request("https://karta.timothybrits.co.za/privacy?x=1");
+
+    const response = await workerModule.default.fetch(request);
+
+    expect(response.status).toBe(301);
+    expect(response.headers.get("Location")).toBe(
+      "https://mapcairn.timothybrits.co.za/privacy?x=1",
+    );
+    expect(requestHandlerMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves the fragment out of the address, so the browser keeps the visitor's own", async () => {
+    const workerModule = await import("./app");
+    const request = new Request("https://karta.timothybrits.co.za/");
+
+    const response = await workerModule.default.fetch(request);
+
+    expect(response.headers.get("Location")).not.toContain("#");
+  });
+
+  it("redirects a HEAD request the same way", async () => {
+    const workerModule = await import("./app");
+    const request = new Request("https://karta.timothybrits.co.za/", {
+      method: "HEAD",
+    });
+
+    const response = await workerModule.default.fetch(request);
+
+    expect(response.status).toBe(301);
+  });
+
+  it("does not redirect a POST, so a report from a page still open on the previous address is received", async () => {
+    const workerModule = await import("./app");
+    const request = new Request("https://karta.timothybrits.co.za/log-error", {
+      method: "POST",
+      body: "{}",
+    });
+
+    const response = await workerModule.default.fetch(request);
+
+    expect(response.status).toBe(200);
+    expect(requestHandlerMock).toHaveBeenCalledTimes(1);
   });
 });

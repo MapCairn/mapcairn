@@ -6,7 +6,7 @@ describe("home route links", () => {
   it("sets a canonical link to the site root", () => {
     expect(links()).toContainEqual({
       rel: "canonical",
-      href: "https://karta.timothybrits.co.za",
+      href: "https://mapcairn.timothybrits.co.za",
     });
   });
 });

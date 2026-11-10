@@ -24,7 +24,7 @@ vi.mock("react-dom/server", () => ({
 async function handleOnce() {
   const handleRequest = (await import("./entry.server")).default;
   const response = await handleRequest(
-    new Request("https://karta.timothybrits.co.za/"),
+    new Request("https://mapcairn.timothybrits.co.za/"),
     200,
     new Headers(),
     {} as never,
