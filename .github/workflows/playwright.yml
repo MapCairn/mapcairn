@@ -14,9 +14,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  e2e:
+  # The suite runs on one worker per job: the `wrangler dev` server behind the
+  # tests crashes under parallel load (see workers in packages/web/playwright.config.ts).
+  # Sharding gets the speed back by giving each shard its own runner and server.
+  shard:
+    name: e2e shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,14 +50,14 @@ jobs:
       - name: Install Playwright Chromium
         run: npm run playwright:install -w @karta/web
 
-      - name: Run Playwright tests
-        run: npm run test:e2e:all -w @karta/web
+      - name: Run Playwright tests (shard ${{ matrix.shard }} of 4)
+        run: npm run test:e2e:all -w @karta/web -- --shard=${{ matrix.shard }}/4
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: packages/web/playwright-report/
           if-no-files-found: ignore
           retention-days: 14
@@ -58,7 +66,23 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-test-results
+          name: playwright-test-results-${{ matrix.shard }}
           path: packages/web/test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+  # The required check on `main` is named `e2e`, so this job keeps that name and
+  # passes only when every shard passed.
+  e2e:
+    name: e2e
+    needs: shard
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every shard passed
+        env:
+          SHARDS: ${{ needs.shard.result }}
+        run: |
+          echo "Shard result: $SHARDS"
+          test "$SHARDS" = "success"
