@@ -1,6 +1,6 @@
 # Plan 0004: first-visit tour
 
-Status: proposed. Written 2026-11-10, reworked the same day so the tour is replaceable.
+Status: shelved by the owner on 2026-11-10, so nothing is built and it is not to be picked up. Written 2026-11-10, reworked the same day so the tour is replaceable.
 
 Tracking issue: [#179](https://github.com/mooship/karta/issues/179).
 
