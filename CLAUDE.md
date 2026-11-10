@@ -8,6 +8,13 @@ The Playwright planner, generator and healer agents are in `.claude/agents/`. Pl
 
 Use sub-agents. They keep this conversation small and let independent work run in parallel, so reach for them by default instead of doing everything in one thread: wide searches across many files, independent changes in separate packages, tests written alongside the code they cover, long verification runs, and a fresh-eyes review of a diff before it is merged (for example the Playwright planner, generator and healer agents, independent package changes, or a fresh-eyes review of a map or basemap change). Do a small, strictly sequential task yourself. Brief each agent like a colleague who has not seen this conversation: the goal, the files or docs to read, what is already ruled out, and what to report back.
 
+Hard limits on sub-agents, which the owner set because many agents at once make their machine too slow to talk to Claude:
+
+- Run at most two sub-agents at the same time, and prefer one. Never start a third while two are running; queue the work instead. This counts agents started through a Workflow script too.
+- Never kill or stop a sub-agent that is already running, unless the owner asks.
+- Every agent must clean up after itself: stop each dev server, wrangler instance, browser and other process it starts, and confirm with a port or process check that none is left running before it reports. Put this in every brief. Whoever delegated checks again when the agent finishes and stops anything left behind.
+- While agents are running, prefer targeted checks over full local suites (CI runs the full suite on `main`), and use a different port for each e2e or dev server.
+
 Model tiers for any delegated work, covering both `Agent` tool calls and `agent()` calls inside a Workflow script. Set the `model` parameter explicitly on every call; never omit it, since omission silently inherits the session's model.
 
 | Tier | Use for |
