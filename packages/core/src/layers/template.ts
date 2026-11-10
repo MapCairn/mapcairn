@@ -51,7 +51,7 @@ export function fillUrlTemplate(
     if (ENGINE_PLACEHOLDERS.includes(name)) {
       return whole;
     }
-    const value = values[name];
+    const value = Object.hasOwn(values, name) ? values[name] : undefined;
     if (value === undefined) {
       throw new Error(`The URL template has no value for {${name}}.`);
     }
@@ -78,7 +78,7 @@ export function formatTemplate(
     PLACEHOLDER,
     (_whole, name: string, formatterName?: string) => {
       placeholders += 1;
-      const value = fields[name] ?? null;
+      const value = Object.hasOwn(fields, name) ? (fields[name] ?? null) : null;
       if (value === null) {
         return "";
       }

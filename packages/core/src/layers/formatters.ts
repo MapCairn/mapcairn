@@ -19,16 +19,20 @@ export type Formatter = (
 /** Formatters by name, as card and list templates use them (`{time|relative}`). */
 export type FormatterRegistry = NamedRegistry<Formatter>;
 
+/** The latest instant, either side of 1970, that a JavaScript date can hold. */
+const MAX_DATE_MILLISECONDS = 8_640_000_000_000_000;
+
 const ISO_WITHOUT_ZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/;
 
 /**
  * Reads a time as epoch milliseconds: a number is taken as milliseconds, and
  * an ISO string is parsed, reading one with a time but no zone as UTC (GDACS
- * writes its dates that way). Returns null for anything else.
+ * writes its dates that way). Returns null for anything else, including a
+ * number past the range a date can hold, which no formatter could show.
  */
 export function parseTime(value: FieldValue): number | null {
   if (typeof value === "number") {
-    return Number.isFinite(value) ? value : null;
+    return Math.abs(value) <= MAX_DATE_MILLISECONDS ? value : null;
   }
   if (typeof value !== "string") {
     return null;

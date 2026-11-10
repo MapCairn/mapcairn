@@ -30,6 +30,7 @@
     "@turf/union": "7.4.0"
   },
   "devDependencies": {
-    "@types/geojson": "7946.0.16"
+    "@types/geojson": "7946.0.16",
+    "fast-check": "4.10.2"
   }
 }

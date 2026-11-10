@@ -75,6 +75,12 @@ describe("fillUrlTemplate", () => {
       /missing/,
     );
   });
+
+  it("does not take a value from what every object inherits", () => {
+    expect(() => fillUrlTemplate("https://a.test/{constructor}", {})).toThrow(
+      /constructor/,
+    );
+  });
 });
 
 describe("formatTemplate", () => {
@@ -118,6 +124,10 @@ describe("formatTemplate", () => {
 
   it("returns plain text unchanged", () => {
     expect(formatTemplate("Fixed", {}, formatters, context)).toBe("Fixed");
+  });
+
+  it("does not take a field from what every object inherits", () => {
+    expect(formatTemplate("{constructor}", {}, formatters, context)).toBeNull();
   });
 
   it("falls back to text when a formatter is not registered", () => {

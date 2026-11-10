@@ -112,8 +112,9 @@ module.exports = {
         "core is pure logic. It may import only maths libraries (@turf/*, @types/geojson): no React, map engine, DOM library or Node built-in.",
       from: fromNotLegacy({
         path: "^packages/core/src",
-        // Contract suites are test code shipped as modules and import vitest.
-        pathNot: "^packages/core/src/contracts/",
+        // Contract suites and property-test generators are test code shipped
+        // as modules, and import vitest or fast-check.
+        pathNot: "^packages/core/src/(contracts|propertyTesting)/",
       }),
       to: {
         dependencyTypes: [

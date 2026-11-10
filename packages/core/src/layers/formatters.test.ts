@@ -33,6 +33,12 @@ describe("parseTime", () => {
     expect(parseTime("2026-11-06T21:00:00")).toBe(Date.UTC(2026, 10, 6, 21));
   });
 
+  it("returns null for a number past the range a date can hold", () => {
+    expect(parseTime(8_640_000_000_000_001)).toBeNull();
+    expect(parseTime(-8_640_000_000_000_001)).toBeNull();
+    expect(format("date", 1e300)).toBeNull();
+  });
+
   it("returns null for anything else", () => {
     expect(parseTime("not a date")).toBeNull();
     expect(parseTime(null)).toBeNull();
