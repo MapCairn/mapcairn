@@ -949,8 +949,12 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (!map || this.destroyed) {
       throw new MapEngineError("export-failed", "The map is not mounted.");
     }
+    this.refuseExport();
     try {
       await this.untilLoaded(map);
+      // A swap can start, or a failed one can put a basemap back, while the
+      // map finishes loading.
+      this.refuseExport();
       const frame = await this.captureFrame(map);
       await fontsReady();
       this.drawMarks(frame, options.drawing);
@@ -1706,6 +1710,30 @@ export class MapLibreMapAdapter implements MapAdapter {
     check.idle.unsubscribe();
   }
 
+  /**
+   * Throws when an image of the map must not be made now: the terms of the
+   * basemap being loaded, or of the one a failed swap would put back, forbid
+   * it (either may be on screen when the pixels are copied), or a swap is
+   * still loading, so the pixels would be of neither basemap alone.
+   */
+  private refuseExport(): void {
+    if (
+      this.basemap?.allowsImageExport === false ||
+      this.committedBasemap?.allowsImageExport === false
+    ) {
+      throw new MapEngineError(
+        "export-blocked",
+        "The basemap's terms do not allow saving an image of the map.",
+      );
+    }
+    if (this.pending) {
+      throw new MapEngineError(
+        "export-failed",
+        "The basemap is still loading, so the map cannot be saved yet.",
+      );
+    }
+  }
+
   /** Resolves once the map has loaded everything, or after {@link IMAGE_WAIT_MS}, so a stuck tile cannot stall an export. */
   private untilLoaded(map: MapLibreMap): Promise<void> {
     if (map.loaded()) {
@@ -1744,6 +1772,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       const render = map.on("render", () => {
         stop();
         try {
+          this.refuseExport();
           resolve(copyCanvas(map.getCanvas()));
         } catch (error) {
           reject(error);

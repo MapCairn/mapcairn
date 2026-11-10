@@ -23,8 +23,13 @@ export interface FreeCentre {
  */
 export function useFreeCentre(): FreeCentre {
   const { adapter, view } = useMap();
-  const { layout, viewport, panelEdge } = useChromeLayout();
-  const covered = freeCentre({ layout, viewport, panelEdge });
+  const { layout, viewport, panelEdge, bottomReserve } = useChromeLayout();
+  const covered = freeCentre({
+    layout,
+    viewport,
+    panelEdge,
+    bottomReserve,
+  });
   const pixel = adapter ? (covered ?? adapter.project(view.center)) : null;
   const position = useCallback(
     () => (adapter && pixel ? adapter.unproject(pixel) : null),

@@ -2,6 +2,13 @@ import { focusRing, tokens } from "@karta/theme";
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 
+/**
+ * The custom property that carries a basemap's own swatch colour (see
+ * `BasemapDefinition.swatch`). It is set on the element with CSSOM, never as
+ * an inline `style` attribute, which the production CSP refuses.
+ */
+export const swatchColourVar = "--basemap-swatch";
+
 /** Three tiles across, with token gaps. */
 export const grid = style({
   display: "grid",
@@ -80,9 +87,10 @@ export const image = style({
 });
 
 /**
- * A plain colour in place of the preview in Save data mode, the map's own
- * background colour, so no image is requested and the tile keeps its size.
- * The hairline keeps it visible against a sheet of a similar colour.
+ * A plain colour in place of the preview, for a basemap with no preview and
+ * in Save data mode: the basemap's own swatch colour when it has one, else the
+ * map's background colour, so no image is requested and the tile keeps its
+ * size. The hairline keeps it visible against a sheet of a similar colour.
  */
 export const swatch = style({
   display: "block",
@@ -91,7 +99,7 @@ export const swatch = style({
   width: "100%",
   height: "100%",
   border: `1px solid ${tokens.color.hairline}`,
-  backgroundColor: tokens.color.mapBackground,
+  backgroundColor: `var(${swatchColourVar}, ${tokens.color.mapBackground})`,
 });
 
 /**

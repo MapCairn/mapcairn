@@ -63,10 +63,12 @@ Playwright starts `npm start` itself and reuses a server already running on port
 ### Add a basemap
 
 1. Add a `BasemapDefinition` to `BASEMAPS` in `packages/core/src/basemaps/basemaps.ts`. A `raster` source is a tile URL template with 256 px tiles, and a `vector` source is a MapLibre style URL. Set the zoom limits, the provider credits and `appearance`. For a heavy layer that a vector style can do without (a shaded-relief raster, say), list its style layer id in `saveDataOmitLayers`; Save data mode then leaves it, and any source only it uses, out of the style.
-2. Allow the provider's origins in the Content Security Policy in `packages/web/public/_headers` (`img-src` and `connect-src`).
+2. Allow the provider's origins in the Content Security Policy (`img-src` and `connect-src`) in `packages/web/src/constants/securityHeaders.ts` and, identically, `packages/web/public/_headers`; a test keeps the two in step. Read the style and its tile sets to find every host they request (sprite, glyphs, terrain), and add only those.
 3. Render its picker preview with `node scripts/generateBasemapThumbnails.mjs <id>` and commit the image in `packages/web/public/basemaps/`.
 4. Record the provider in `ATTRIBUTIONS.md` and in the map tiles section of the privacy page (`packages/web/src/app/PrivacyPage.tsx`) and `PRIVACY.md`.
 5. Update the basemap constants in `packages/web/e2e/support/basemaps.ts` and the tests that count basemaps.
+
+A provider whose licence the reusable SDK packages must not carry, such as Maptoolkit, is not added to `BASEMAPS`. Define it in `packages/web/src/basemaps` instead and add it to the catalogue there, which the composition root passes as `Services.basemaps` (see `ARCHITECTURE.md`, host-supplied basemaps). Its definition can set `credit` (a permanent, non-collapsing credit with a logo) and `allowsImageExport: false` (Save image off), and leave out `thumbnail` when it has no right to a preview image (set `swatch`, a hex colour of your own, so its picker tile does not look like the default).
 
 Liberty is the default basemap in both themes; the basemap never follows the light or dark theme. To change the default, change `DEFAULT_BASEMAP_ID` and `DEFAULT_BASEMAP_BACKGROUND` (the new style's `background` layer colour) in `basemaps.ts`, and the matching `liberty` backdrop in `packages/theme/src/tokenValues.ts`. A test in `packages/web` fails until the two colours agree.
 

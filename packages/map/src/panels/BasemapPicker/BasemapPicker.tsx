@@ -1,13 +1,7 @@
-import {
-  announceBasemap,
-  BASEMAPS,
-  type BasemapDefinition,
-  DEFAULT_BASEMAP_ID,
-  getBasemap,
-} from "@karta/core";
+import { announceBasemap, type BasemapDefinition } from "@karta/core";
 import { Check } from "lucide-react";
 import { useCallback, useId, useState } from "react";
-import { useSaveData } from "../../services";
+import { useBasemaps, useSaveData } from "../../services";
 import { Icon } from "../../ui/Icon";
 import { useAnnounce } from "../../ui/LiveRegion";
 import { visuallyHidden } from "../../ui/VisuallyHidden/VisuallyHidden.css";
@@ -19,6 +13,7 @@ import {
   image,
   name,
   swatch,
+  swatchColourVar,
   thumb,
   tile,
 } from "./BasemapPicker.css";
@@ -30,7 +25,7 @@ const THUMB_HEIGHT = 120;
 /** Props for {@link BasemapPicker}. */
 export interface BasemapPickerProps {
   /**
-   * The chosen basemap id. An id that names no built-in basemap is shown as
+   * The chosen basemap id. An id that names no basemap on offer is shown as
    * the default basemap.
    */
   readonly value: string;
@@ -39,7 +34,8 @@ export interface BasemapPickerProps {
 }
 
 /**
- * Chooses the basemap: a three-across grid of previews as a radio group.
+ * Chooses the basemap: a three-across grid of previews as a radio group, one
+ * tile for each basemap the host offers (`useBasemaps`).
  *
  * Each tile is a native radio input, visually hidden and drawn through its
  * label. Native radios give one tab stop for the group, arrow keys that move
@@ -48,18 +44,21 @@ export interface BasemapPickerProps {
  * selected tile has an accent outline and a check badge, so selection never
  * relies on colour. A preview that fails to load disappears and leaves a
  * neutral tile, with the name still visible. The basemap does not follow the
- * interface theme: Dark is an ordinary choice.
+ * interface theme: A host's dark basemap is an ordinary choice, as the others are.
  *
- * @remarks In Save data mode (`useSaveData`) no preview image is requested:
- *   each tile shows the same frame with a plain colour swatch, and a raster
- *   basemap, whose tiles are images, carries the note "Uses more data". Names,
+ * @remarks In Save data mode (`useSaveData`), and for a basemap that has no
+ *   preview image, no preview is requested: the tile shows the same frame
+ *   with a plain colour swatch, the basemap's own `swatch` colour or else the
+ *   map background. A raster basemap, whose tiles are images, carries the
+ *   note "Uses more data". Names,
  *   the radios and the selection badge are unchanged, and every basemap can
  *   still be chosen.
  */
 export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
   const groupName = useId();
   const announce = useAnnounce();
-  const shownId = getBasemap(value) ? value : DEFAULT_BASEMAP_ID;
+  const catalogue = useBasemaps();
+  const shownId = catalogue.resolve(value).id;
   const saveData = useSaveData();
 
   const choose = (basemap: BasemapDefinition) => {
@@ -74,7 +73,7 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
       className={grid}
       data-testid="basemap-picker"
     >
-      {BASEMAPS.map((basemap) => (
+      {catalogue.basemaps.map((basemap) => (
         <BasemapTile
           key={basemap.id}
           basemap={basemap}
@@ -106,6 +105,7 @@ function BasemapTile({
   onChoose,
 }: BasemapTileProps) {
   const [failed, setFailed] = useState(false);
+  const preview = saveData ? undefined : basemap.thumbnail;
   // A ref callback with a listener, not an onError prop, which the a11y lint
   // rejects on a non-interactive element.
   const watchImage = useCallback((image: HTMLImageElement | null) => {
@@ -116,6 +116,21 @@ function BasemapTile({
     image.addEventListener("error", fail);
     return () => image.removeEventListener("error", fail);
   }, []);
+  // The basemap's own swatch colour, through a custom property.
+  const swatchColour = basemap.swatch;
+  const paintSwatch = useCallback(
+    (element: HTMLElement | null) => {
+      if (!element) {
+        return;
+      }
+      if (swatchColour === undefined) {
+        element.style.removeProperty(swatchColourVar);
+      } else {
+        element.style.setProperty(swatchColourVar, swatchColour);
+      }
+    },
+    [swatchColour],
+  );
   return (
     <label className={tile} data-testid={`basemap-option-${basemap.id}`}>
       <input
@@ -127,16 +142,17 @@ function BasemapTile({
         onChange={onChoose}
       />
       <span className={thumb({ selected })}>
-        {saveData ? (
+        {preview === undefined ? (
           <span
             className={swatch}
+            ref={paintSwatch}
             data-testid={`basemap-swatch-${basemap.id}`}
           />
         ) : null}
-        {saveData || failed ? null : (
+        {preview === undefined || failed ? null : (
           <img
             className={image}
-            src={basemap.thumbnail}
+            src={preview}
             alt=""
             width={THUMB_WIDTH}
             height={THUMB_HEIGHT}

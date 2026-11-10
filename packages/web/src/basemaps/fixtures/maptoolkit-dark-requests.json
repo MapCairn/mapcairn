@@ -1,0 +1,15 @@
+{
+  "recorded": "2026-11-10",
+  "note": "Only the addresses the Maptoolkit Dark style and its tile sets make requests to, read from https://styles.maptoolkit.org/dark.json and the TileJSON documents it names. The style itself is the provider's and is not copied here.",
+  "urls": [
+    "https://styles.maptoolkit.org/dark.json",
+    "https://tiles.maptoolkit.org/mtk.json",
+    "https://tiles.maptoolkit.org/raster_bathymetry.json",
+    "https://tiles.maptoolkit.org/terrainrgb.json",
+    "https://tiles.maptoolkit.org/v09112026/mtk/{z}/{x}/{y}.mvt",
+    "https://tiles.maptoolkit.org/v01072026/raster_bathymetry/{z}/{x}/{y}.webp",
+    "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp",
+    "https://icons.maptoolkit.org/sprite",
+    "https://fonts.maptoolkit.org/{fontstack}/{range}.pbf"
+  ]
+}

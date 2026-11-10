@@ -74,6 +74,11 @@ export class FakeMapHost implements MapHostElement {
 
 type Handler = (payload: never) => void;
 
+/** What a deferred basemap swap waits on (see `FakeMapAdapter.deferNextBasemap`). */
+interface SwapGate {
+  readonly promise: Promise<void>;
+}
+
 type DataLayer =
   | { readonly kind: "features"; readonly features: readonly MapFeature[] }
   | { readonly kind: "tiles"; readonly overlay: MapTileOverlay }
@@ -184,6 +189,10 @@ export class FakeMapAdapter implements MapAdapter {
 
   #failMount: MapEngineErrorReason | undefined;
   #failNextBasemap = false;
+  /** The next swap waits on this until the test settles it. */
+  #nextSwapGate: SwapGate | null = null;
+  /** The basemap a swap in flight is loading, until it has loaded or failed. */
+  #swapTarget: BasemapDefinition | null = null;
   #view: ViewState = DEFAULT_FAKE_VIEW;
   #basemap: BasemapDefinition | null = null;
   #host: MapHostElement | null = null;
@@ -345,10 +354,56 @@ export class FakeMapAdapter implements MapAdapter {
         "The fake basemap style could not be loaded.",
       );
     }
+    this.#swapTarget = basemap;
+    const gate = this.#nextSwapGate;
+    this.#nextSwapGate = null;
+    if (gate) {
+      try {
+        await gate.promise;
+      } catch (error) {
+        if (this.#swapTarget === basemap) {
+          this.#swapTarget = null;
+        }
+        throw error;
+      }
+    }
+    if (this.#swapTarget !== basemap) {
+      // A newer swap took over while this one waited: nothing loaded.
+      return;
+    }
+    this.#swapTarget = null;
     this.#basemap = basemap;
     this.saveData = options.saveData ?? false;
     this.#applyView(this.#view);
     this.#emit("load", undefined);
+  }
+
+  /**
+   * Makes the next `setBasemap` wait, as a real style that is still
+   * downloading does, until `resolve` (the swap loads) or `reject` (it fails
+   * with a `load-failed` `MapEngineError` and the last basemap stays). While
+   * it waits the basemap is the old one, and `toImage` refuses.
+   */
+  deferNextBasemap(): {
+    readonly resolve: () => void;
+    readonly reject: () => void;
+  } {
+    let resolve = () => {};
+    let reject = () => {};
+    const promise = new Promise<void>((done, fail) => {
+      resolve = done;
+      reject = () =>
+        fail(
+          new MapEngineError(
+            "load-failed",
+            "The fake basemap style could not be loaded.",
+          ),
+        );
+    });
+    // The caller may never settle a deferred swap it no longer needs.
+    promise.catch(() => {});
+    this.#nextSwapGate = { promise };
+    return { resolve, reject };
   }
 
   setAnimationEnabled(enabled: boolean): void {
@@ -450,11 +505,37 @@ export class FakeMapAdapter implements MapAdapter {
     if (this.#host === null) {
       throw new MapEngineError("export-failed", "The map is not mounted.");
     }
+    this.#refuseExport();
+    // A real engine waits for its tiles here, and a swap can start meanwhile.
+    await Promise.resolve();
+    this.#refuseExport();
     // The PNG signature, so the blob is recognisably an image without an encoder.
     return new Blob(
       [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
       { type: "image/png" },
     );
+  }
+
+  /**
+   * Refuses an image while the terms of the basemap on screen, or of the one
+   * a swap is loading, forbid it, and while a swap is loading at all.
+   */
+  #refuseExport(): void {
+    if (
+      this.#basemap?.allowsImageExport === false ||
+      this.#swapTarget?.allowsImageExport === false
+    ) {
+      throw new MapEngineError(
+        "export-blocked",
+        "The basemap's terms do not allow saving an image of the map.",
+      );
+    }
+    if (this.#swapTarget !== null) {
+      throw new MapEngineError(
+        "export-failed",
+        "The basemap is still loading, so the map cannot be saved yet.",
+      );
+    }
   }
 
   /** Makes the next `toImage` reject with an `export-failed` `MapEngineError`. */

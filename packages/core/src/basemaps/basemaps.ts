@@ -1,5 +1,6 @@
 import type {
   BasemapAttributionEntry,
+  BasemapCredit,
   BasemapDefinition,
 } from "../ports/basemap";
 
@@ -104,6 +105,83 @@ export function getBasemap(id: string): BasemapDefinition | undefined {
  */
 export function resolveBasemap(choiceId: string): BasemapDefinition {
   return getBasemap(choiceId) ?? LIBERTY;
+}
+
+/**
+ * The basemaps a host offers, with the one used when nothing, or nothing
+ * known, has been chosen. Plain data: a host builds one with
+ * {@link createBasemapCatalogue} and passes it as `Services.basemaps`.
+ */
+export interface BasemapCatalogue {
+  /** Every basemap, in the order the picker shows them. */
+  readonly basemaps: readonly BasemapDefinition[];
+  /** The id of the default basemap, which is in `basemaps`. */
+  readonly defaultId: string;
+  /** Finds a basemap by id. */
+  get(id: string): BasemapDefinition | undefined;
+  /**
+   * Turns a stored or linked id into a basemap. An id that names none (a
+   * removed one, or the retired "auto" and "dark" choices) gives the default.
+   */
+  resolve(id: string): BasemapDefinition;
+}
+
+/**
+ * Builds a {@link BasemapCatalogue}.
+ * @param basemaps - At least one basemap, with unique ids.
+ * @param defaultId - The default basemap's id. Defaults to the first basemap.
+ * @throws When the list is empty, repeats an id, or does not hold `defaultId`.
+ */
+export function createBasemapCatalogue(
+  basemaps: readonly BasemapDefinition[],
+  defaultId: string | undefined = basemaps[0]?.id,
+): BasemapCatalogue {
+  const byId = new Map<string, BasemapDefinition>();
+  for (const basemap of basemaps) {
+    if (byId.has(basemap.id)) {
+      throw new Error(`The basemap id "${basemap.id}" is used twice.`);
+    }
+    byId.set(basemap.id, basemap);
+  }
+  const fallback = defaultId === undefined ? undefined : byId.get(defaultId);
+  if (fallback === undefined) {
+    throw new Error(
+      defaultId === undefined
+        ? "A basemap catalogue needs at least one basemap."
+        : `The default basemap "${defaultId}" is not in the catalogue.`,
+    );
+  }
+  return {
+    basemaps,
+    defaultId: fallback.id,
+    get: (id) => byId.get(id),
+    resolve: (id) => byId.get(id) ?? fallback,
+  };
+}
+
+/** The catalogue of the built-in basemaps, Liberty the default. */
+export const BUILT_IN_BASEMAP_CATALOGUE: BasemapCatalogue =
+  createBasemapCatalogue(BASEMAPS, DEFAULT_BASEMAP_ID);
+
+/**
+ * The permanent credit to show for the basemaps in use, or undefined when
+ * none of them has one. A caller passes both the basemap asked for and the
+ * one still drawn, so the credit never lapses during a swap.
+ */
+export function permanentCredit(
+  basemaps: readonly BasemapDefinition[],
+): BasemapCredit | undefined {
+  return basemaps.find((basemap) => basemap.credit !== undefined)?.credit;
+}
+
+/**
+ * The first of the basemaps in use whose terms forbid saving an image of the
+ * map, or undefined when saving one is allowed.
+ */
+export function imageExportBlockedBy(
+  basemaps: readonly BasemapDefinition[],
+): BasemapDefinition | undefined {
+  return basemaps.find((basemap) => basemap.allowsImageExport === false);
 }
 
 /**

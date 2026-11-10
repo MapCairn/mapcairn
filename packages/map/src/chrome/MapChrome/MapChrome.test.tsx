@@ -474,3 +474,134 @@ describe("MapChrome with a real Sheet", () => {
     );
   });
 });
+
+describe("MapChrome credit row", () => {
+  const CREDIT_HEIGHT = 32;
+
+  /** A phone with a credit row under the bottom row: the credit rests at the inset. */
+  function resizeWithCredit(width: number, height: number) {
+    mockRect(root(), { left: 0, top: 0, width, height });
+    const creditTop = height - 12 - CREDIT_HEIGHT;
+    const rowBottom = creditTop - 12;
+    place("top-start", 12, 48);
+    place("end-stack", 72, 300, 48);
+    place("bottom-start", rowBottom - 30, 30);
+    place("bottom-end", rowBottom - 44, 44);
+    place("bottom-centre", rowBottom, 0);
+    place("credit", creditTop, CREDIT_HEIGHT);
+    act(() => {
+      observers.trigger();
+    });
+  }
+
+  it("renders the credit last, after every other slot, only when one is given", () => {
+    const { rerenderChrome } = mount();
+    expect(root().querySelector('[data-chrome="credit"]')).toBeNull();
+    expect(root()).not.toHaveAttribute("data-credit");
+    rerenderChrome({ credit: <div>provider credit</div> });
+    expect(root()).toHaveAttribute("data-credit", "true");
+    expect(slot("credit")).toHaveTextContent("provider credit");
+    expect(
+      slot("bottom-end").compareDocumentPosition(slot("credit")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("keeps the credit usable while the sheet is modal, unlike every other slot", () => {
+    mount({ credit: <div>provider credit</div>, modal: true });
+    expect(slot("bottom-end")).toHaveAttribute("inert");
+    expect(slot("credit")).not.toHaveAttribute("inert");
+    expect(slot("credit").closest("[inert]")).toBeNull();
+  });
+
+  it("publishes how far the sheet's bottom edge sits above the container's, to clear the credit", () => {
+    mount({ credit: <div>provider credit</div> });
+    resizeWithCredit(390, 800);
+    // The credit's top is at 756; the sheet stops a 12 px gap above it.
+    const reserve = 800 - 756 + 12;
+    expect(layoutValue.bottomReserve).toBe(reserve);
+    expect(cssVar(chromeVars.creditReserve)).toBe(`${reserve}px`);
+  });
+
+  it("reserves nothing without a credit", () => {
+    mount();
+    resize(390, 800);
+    expect(layoutValue.bottomReserve).toBe(0);
+    expect(cssVar(chromeVars.creditReserve)).toBe("0px");
+  });
+
+  it("keeps the bottom slots the usual gap above a sheet that itself sits above the credit", () => {
+    mount({ credit: <div>provider credit</div> });
+    resizeWithCredit(390, 800);
+    const reserve = 56;
+    const heights = computeDetentHeights({
+      viewportHeight: 800 - reserve,
+      insetBottom: 0,
+    });
+    const top = 800 - reserve - heights.half;
+    act(() => {
+      layoutValue.publishSheetTop(top);
+      surfaceValue.publishSheetDetent("half");
+    });
+    // The slots rest 56 px above the bottom edge (credit row, gap and inset)
+    // but keep only the 12 px inset above the sheet.
+    const expected = computeBottomSlotLayout({
+      layout: "sheet",
+      viewportWidth: 390,
+      viewportHeight: 800,
+      sheetTopEdge: top,
+      sheetDetent: "half",
+      panelRightEdge: null,
+      measureToolbarTop: null,
+      inset: 12,
+      restingInset: 56,
+    });
+    expect(cssVar(chromeVars.bottomLift)).toBe(
+      `${expected.bottomEndTranslateY}px`,
+    );
+    expect(expected.bottomEndTranslateY).toBe(-(12 + heights.half));
+  });
+
+  it("never hides the credit with the other bottom slots at the full detent", () => {
+    mount({ credit: <div>provider credit</div> });
+    resizeWithCredit(390, 800);
+    act(() => {
+      layoutValue.publishSheetTop(12);
+      surfaceValue.publishSheetDetent("full");
+    });
+    expect(root()).toHaveAttribute("data-hide-bottom", "true");
+    expect(slot("credit")).toBeInTheDocument();
+    expect(slot("credit")).toHaveTextContent("provider credit");
+  });
+
+  it("sizes the sheet it renders from the room above the credit", () => {
+    function Harness({ detent }: { detent: SheetDetent }) {
+      return (
+        <Sheet
+          id="options"
+          open
+          title="Map options"
+          detent={detent}
+          onClose={() => {}}
+          onDetentChange={() => {}}
+        >
+          content
+        </Sheet>
+      );
+    }
+    mount({
+      credit: <div>provider credit</div>,
+      sheet: <Harness detent="full" />,
+    });
+    resizeWithCredit(390, 800);
+    const heights = computeDetentHeights({
+      viewportHeight: 800 - 56,
+      insetBottom: 0,
+    });
+    expect(
+      screen
+        .getByRole("dialog", { name: "Map options" })
+        .style.getPropertyValue("--sheet-full-height"),
+    ).toBe(`${heights.full}px`);
+  });
+});

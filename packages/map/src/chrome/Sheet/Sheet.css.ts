@@ -55,7 +55,9 @@ export const surface = style({
   selectors: {
     '&[data-layout="sheet"]': {
       insetInline: 0,
-      insetBlockEnd: 0,
+      // Zero, unless a credit row sits at the bottom: then the sheet ends
+      // a gap above it.
+      insetBlockEnd: chromeVar(chromeVars.creditReserve, "0px"),
       height: `var(--sheet-full-height, calc(100% - ${tokens.space.inset}))`,
       borderStartStartRadius: tokens.radius.sheet,
       borderStartEndRadius: tokens.radius.sheet,
@@ -66,6 +68,13 @@ export const surface = style({
     },
     '&[data-layout="sheet"][data-dragging="true"]': {
       transition: "none",
+    },
+    // With a credit row under the sheet, the part of the sheet that is
+    // translated below its detent would show over that row, so it is cut off
+    // at the detent: the bottom `--sheet-offset` px of the box are not drawn
+    // or hit. The top is left open so the shadow still shows.
+    '[data-credit] &[data-layout="sheet"]': {
+      clipPath: `inset(calc(-2 * ${tokens.space.xl}) 0 var(--sheet-offset, 0px) 0)`,
     },
     '&[data-layout="sheet"][data-state="closed"]': {
       ...closedVisibility,

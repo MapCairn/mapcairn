@@ -57,10 +57,24 @@ export const OPTIONAL_PORT_NAMES = [
   "routing",
 ] as const satisfies readonly PortName[];
 
+/**
+ * The `Services` entries that are plain data a host supplies, not ports: they
+ * have one shape and no second implementation, so they have no fake and no
+ * contract suite. The basemaps a host offers are the one so far.
+ */
+export const DATA_SERVICE_NAMES = [
+  "basemaps",
+] as const satisfies readonly (keyof Services)[];
+
 type AssertNever<T extends never> = T;
 
-/** Fails to compile when a `Services` key is missing from {@link PORT_NAMES}. */
-export type PortsAreExhaustive = AssertNever<Exclude<keyof Services, PortName>>;
+/**
+ * Fails to compile when a `Services` key is neither in {@link PORT_NAMES} nor
+ * in {@link DATA_SERVICE_NAMES}.
+ */
+export type PortsAreExhaustive = AssertNever<
+  Exclude<keyof Services, PortName | (typeof DATA_SERVICE_NAMES)[number]>
+>;
 
 /** The contract runner for each port, with its exact subject type. */
 export interface PortContractRunners {

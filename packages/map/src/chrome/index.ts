@@ -5,4 +5,5 @@ export * from "./focusRegistry";
 export * from "./layoutContext";
 export * from "./MapChrome";
 export * from "./MapReadout";
+export * from "./PermanentCredit";
 export * from "./Sheet";

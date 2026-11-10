@@ -1,6 +1,10 @@
 import {
   BASEMAPS,
+  createBasemapCatalogue,
   createFakeServices,
+  FAKE_CREDITED_BASEMAP,
+  FAKE_RASTER_BASEMAP,
+  FAKE_VECTOR_BASEMAP,
   FakeDevicePreferences,
   MemorySettingsStore,
   type Settings,
@@ -254,5 +258,123 @@ describe("BasemapPicker in Save data mode", () => {
       { saveData: false, settings: { saveData: true } },
     );
     expect(on.container.querySelectorAll("img")).toHaveLength(0);
+  });
+});
+
+describe("BasemapPicker swatch colours", () => {
+  const SWATCHED = {
+    ...FAKE_VECTOR_BASEMAP,
+    id: "fake-swatched",
+    name: "Fake swatched",
+    swatch: "#22262c",
+  };
+  const catalogue = createBasemapCatalogue([
+    FAKE_VECTOR_BASEMAP,
+    FAKE_CREDITED_BASEMAP,
+    SWATCHED,
+  ]);
+
+  function renderSwatched(saveData: boolean) {
+    const services = createFakeServices({
+      basemaps: catalogue,
+      preferences: new FakeDevicePreferences({ saveData }),
+    });
+    return render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <BasemapPicker value="fake-vector" onChange={vi.fn()} />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+  }
+
+  const colourOf = (id: string) =>
+    screen
+      .getByTestId(`basemap-swatch-${id}`)
+      .style.getPropertyValue("--basemap-swatch");
+
+  it("paints a basemap's own swatch colour, and leaves the default colour to one without", () => {
+    renderSwatched(false);
+    // This basemap has a preview, so no swatch yet; the one without has no colour.
+    expect(screen.queryByTestId("basemap-swatch-fake-swatched")).toBeNull();
+    expect(colourOf("fake-credited")).toBe("");
+  });
+
+  it("shows the same swatch colour in Save data mode, where every basemap is a swatch", () => {
+    renderSwatched(true);
+    expect(colourOf("fake-swatched")).toBe("#22262c");
+    expect(colourOf("fake-vector")).toBe("");
+  });
+
+  it("paints the swatch of a basemap that has no preview image", () => {
+    const services = createFakeServices({
+      basemaps: createBasemapCatalogue([
+        FAKE_VECTOR_BASEMAP,
+        { ...SWATCHED, thumbnail: undefined },
+      ]),
+    });
+    render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <BasemapPicker value="fake-vector" onChange={vi.fn()} />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    expect(colourOf("fake-swatched")).toBe("#22262c");
+  });
+});
+
+describe("BasemapPicker with a host's basemaps", () => {
+  const catalogue = createBasemapCatalogue([
+    FAKE_VECTOR_BASEMAP,
+    FAKE_CREDITED_BASEMAP,
+    FAKE_RASTER_BASEMAP,
+  ]);
+
+  function renderHosted(value: string, onChange = vi.fn()) {
+    const services = createFakeServices({ basemaps: catalogue });
+    const view = render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <BasemapPicker value={value} onChange={onChange} />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    return { ...view, onChange };
+  }
+
+  it("offers the host's basemaps in its order instead of the built-in ones", () => {
+    renderHosted("fake-vector");
+    expect(
+      screen.getAllByRole("radio").map((item) => item.getAttribute("value")),
+    ).toEqual(["fake-vector", "fake-credited", "fake-raster"]);
+    expect(screen.queryByRole("radio", { name: "Liberty" })).toBeNull();
+  });
+
+  it("shows the host's default for an unknown, retired or built-in id", () => {
+    for (const id of ["liberty", "dark", "auto"]) {
+      const { unmount } = renderHosted(id);
+      expect(screen.getByRole("radio", { name: "Fake vector" })).toBeChecked();
+      unmount();
+    }
+  });
+
+  it("chooses a host basemap by its id", () => {
+    const { onChange } = renderHosted("fake-vector");
+    fireEvent.click(screen.getByRole("radio", { name: "Fake credited" }));
+    expect(onChange).toHaveBeenCalledWith("fake-credited");
+  });
+
+  it("draws a plain swatch, and requests no image, for a basemap with no preview", () => {
+    renderHosted("fake-vector");
+    const tile = screen.getByTestId("basemap-option-fake-credited");
+    expect(tile.querySelector("img")).toBeNull();
+    expect(
+      screen.getByTestId("basemap-swatch-fake-credited"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("basemap-option-fake-vector").querySelector("img"),
+    ).not.toBeNull();
+    expect(screen.queryByTestId("basemap-swatch-fake-vector")).toBeNull();
   });
 });

@@ -110,6 +110,11 @@ function toEngineError(reason: unknown): MapEngineError {
  *   while mounting.
  * - An engine that stops after it loaded (`fatalError`) is reported like a
  *   failed mount, through `error` and `onEngineError`.
+ * - A mount that failed to load its basemap (`load-failed`, not a missing
+ *   WebGL) is mounted again as soon as the caller asks for a different
+ *   basemap, so a host can fall back from a basemap that cannot start to one
+ *   that can. The same basemap is never mounted again by itself: that is
+ *   `retry`.
  * - A basemap swap that fails is not an engine error: the adapter keeps the
  *   basemap that last loaded, so `error` stays null and `onBasemapError`
  *   names both. That kept basemap counts as applied again, so a caller that
@@ -133,6 +138,8 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
   /** The basemap the engine last loaded: what a failed swap leaves on screen. */
   const loadedBasemapRef = useRef<BasemapDefinition | null>(null);
   const basemapTokenRef = useRef(0);
+  /** The basemap a failed mount was asked to draw, until a different one is asked for. */
+  const failedMountRef = useRef<BasemapDefinition | null>(null);
   const cycleErrorRef = useRef(false);
 
   const [adapter, setAdapter] = useState<MapAdapter | null>(null);
@@ -315,6 +322,8 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
             return;
           }
           const engineError = toEngineError(reason);
+          failedMountRef.current =
+            engineError.reason === "load-failed" ? target : null;
           setError(engineError);
           latest.current.onEngineError?.(engineError, target);
         },
@@ -380,6 +389,15 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
       observer.disconnect();
     };
   }, [latest, scheduleView]);
+
+  // A different basemap after a mount that could not load one starts over.
+  useEffect(() => {
+    const failed = failedMountRef.current;
+    if (error !== null && failed !== null && failed.id !== basemap.id) {
+      failedMountRef.current = null;
+      setAttempt((value) => value + 1);
+    }
+  }, [error, basemap.id]);
 
   const retry = useCallback(() => {
     if (error) {

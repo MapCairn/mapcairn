@@ -1,6 +1,9 @@
 import {
+  BASEMAPS,
   boundsAroundPoint,
+  createBasemapCatalogue,
   createFakeServices,
+  FAKE_CREDITED_BASEMAP,
   FakeMapAdapter,
   type FakeServices,
   type MapMountOptions,
@@ -1285,5 +1288,228 @@ describe("WebMCP tools", () => {
     expect(await call("measure-area", { locations: ["a", "b"] })).toMatch(
       /at least three/,
     );
+  });
+});
+
+describe("a basemap whose provider sets terms", () => {
+  const catalogue = createBasemapCatalogue([
+    ...BASEMAPS,
+    FAKE_CREDITED_BASEMAP,
+  ]);
+
+  async function renderCredited(saved = "fake-credited") {
+    const services = createFakeServices({ basemaps: catalogue });
+    services.fakes.settings.set({ basemapId: saved });
+    await renderApp(services);
+    return services;
+  }
+
+  const radio = (id: string) =>
+    screen
+      .getByTestId(`basemap-option-${id}`)
+      .querySelector("input") as HTMLInputElement;
+
+  it("shows the provider's permanent credit, and keeps the collapsing credits button for everything else", async () => {
+    await renderCredited();
+    const credit = screen.getByTestId("permanent-credit");
+    expect(credit).toBeVisible();
+    expect(
+      within(credit).getByRole("link", { name: /^Fake provider/ }),
+    ).toHaveAttribute("href", "https://provider.example/");
+    expect(
+      screen.getByRole("button", { name: "Map credits" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not list the provider's credit again in the collapsing credits, which keep the rest", async () => {
+    await renderCredited();
+    await settle();
+    // The credits show by themselves once the map has started.
+    if (!screen.queryByRole("region", { name: "Map credits" })) {
+      fireEvent.click(screen.getByRole("button", { name: "Map credits" }));
+    }
+    const credits = screen.getByRole("region", { name: "Map credits" });
+    expect(credits).not.toHaveTextContent("Fake provider");
+    expect(credits).toHaveTextContent("MapLibre");
+    // The permanent credit still says it.
+    expect(screen.getByTestId("permanent-credit")).toHaveTextContent(
+      "Fake provider",
+    );
+  });
+
+  it("shows no permanent credit on the other basemaps", async () => {
+    await renderCredited("liberty");
+    expect(screen.queryByTestId("permanent-credit")).toBeNull();
+  });
+
+  it("turns Save image off, with the reason, while the basemap is shown", async () => {
+    await renderCredited();
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    expect(screen.getByTestId("save-image-button")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByTestId("export-blocked")).toHaveTextContent(
+      "The terms of Fake credited do not allow saving images of its map.",
+    );
+  });
+
+  it("offers Save image on the other basemaps", async () => {
+    await renderCredited("liberty");
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    expect(screen.getByTestId("save-image-button")).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("puts the credit up as soon as the basemap is chosen, and takes it down once the next one has loaded", async () => {
+    await renderCredited("liberty");
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    fireEvent.click(radio("fake-credited"));
+    expect(screen.getByTestId("permanent-credit")).toBeVisible();
+    await settle();
+    expect(screen.getByTestId("permanent-credit")).toBeVisible();
+
+    fireEvent.click(radio("liberty"));
+    await settle();
+    expect(screen.queryByTestId("permanent-credit")).toBeNull();
+    expect(screen.getByTestId("save-image-button")).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("keeps the credit and the Save image block when the swap away from the basemap fails", async () => {
+    const services = await renderCredited();
+    adapter(services).failNextBasemap();
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    fireEvent.click(radio("liberty"));
+    await settle();
+    expect(screen.getByTestId("basemap-error")).toBeInTheDocument();
+    expect(screen.getByTestId("permanent-credit")).toBeVisible();
+    expect(screen.getByTestId("save-image-button")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  it("shows no credit and offers Save image when the swap to the credited basemap fails, which leaves the old one", async () => {
+    const services = await renderCredited("liberty");
+    adapter(services).failNextBasemap();
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    fireEvent.click(radio("fake-credited"));
+    await settle();
+    expect(screen.getByTestId("basemap-error")).toBeInTheDocument();
+    expect(screen.queryByTestId("permanent-credit")).toBeNull();
+    expect(screen.getByTestId("save-image-button")).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("holds the credit and the Save image block for the whole of a swap towards a credited basemap, and keeps them once it has loaded", async () => {
+    const services = await renderCredited("liberty");
+    const swap = adapter(services).deferNextBasemap();
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    fireEvent.click(radio("fake-credited"));
+    await settle();
+    // Still loading: the old map is drawn, and the new terms already hold.
+    expect(screen.getByTestId("permanent-credit")).toBeVisible();
+    expect(screen.getByTestId("save-image-button")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await act(async () => {
+      swap.resolve();
+    });
+    await settle();
+    expect(screen.getByTestId("permanent-credit")).toBeVisible();
+    expect(screen.getByTestId("save-image-button")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  it("holds the credit and the Save image block for the whole of a swap away from a credited basemap, and drops them once it has loaded", async () => {
+    const services = await renderCredited();
+    const swap = adapter(services).deferNextBasemap();
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    fireEvent.click(radio("liberty"));
+    await settle();
+    // Still loading: the credited basemap is the one on screen.
+    expect(screen.getByTestId("permanent-credit")).toBeVisible();
+    expect(screen.getByTestId("save-image-button")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await act(async () => {
+      swap.resolve();
+    });
+    await settle();
+    expect(screen.queryByTestId("permanent-credit")).toBeNull();
+    expect(screen.getByTestId("save-image-button")).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("keeps the credit and the block when a deferred swap away from the credited basemap fails at last", async () => {
+    const services = await renderCredited();
+    const swap = adapter(services).deferNextBasemap();
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    fireEvent.click(radio("liberty"));
+    await settle();
+    await act(async () => {
+      swap.reject();
+    });
+    await settle();
+    expect(screen.getByTestId("basemap-error")).toBeInTheDocument();
+    expect(screen.getByTestId("permanent-credit")).toBeVisible();
+  });
+
+  describe("when the saved basemap cannot start the map", () => {
+    async function renderFailing() {
+      const base = createFakeServices({ basemaps: catalogue });
+      let first = true;
+      const services = {
+        ...base,
+        createMapAdapter: () => {
+          const failing = first;
+          first = false;
+          return failing
+            ? new FakeMapAdapter({ failMount: "load-failed" })
+            : base.createMapAdapter();
+        },
+      };
+      services.fakes.settings.set({ basemapId: "fake-credited" });
+      await renderApp(services);
+      return services;
+    }
+
+    it("falls back to the default basemap and says which one could not be loaded", async () => {
+      const services = await renderFailing();
+      await settle();
+      expect(screen.getByTestId("map-host")).toBeInTheDocument();
+      expect(screen.getByTestId("basemap-error")).toHaveTextContent(
+        "That basemap could not be loaded.",
+      );
+      expect(screen.queryByTestId("engine-error")).toBeNull();
+      expect(screen.queryByTestId("permanent-credit")).toBeNull();
+      // The map drew the default one, and nothing was saved by the failure.
+      expect(services.fakes.maps.at(-1)?.destroyed).toBe(false);
+      expect(services.fakes.settings.get().basemapId).toBe("fake-credited");
+    });
+
+    it("saves the default when the person goes back to it, so the picker follows the map", async () => {
+      const services = await renderFailing();
+      await settle();
+      fireEvent.click(
+        within(screen.getByTestId("basemap-error")).getByRole("button", {
+          name: "Use previous basemap",
+        }),
+      );
+      await settle();
+      expect(screen.queryByTestId("basemap-error")).toBeNull();
+      expect(services.fakes.settings.get().basemapId).toBe("liberty");
+      fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+      expect(radio("liberty")).toBeChecked();
+    });
   });
 });

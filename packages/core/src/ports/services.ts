@@ -1,3 +1,4 @@
+import type { BasemapCatalogue } from "../basemaps/basemaps";
 import type { ClipboardPort } from "./clipboard";
 import type { FileSaver } from "./files";
 import type { LayerRegistry, LayerSource } from "./layers";
@@ -34,4 +35,10 @@ export interface Services {
    * a host that supplies none gets no routing, and the ui must not require it.
    */
   readonly routing?: RoutingProvider;
+  /**
+   * The basemaps the host offers, with their default. Optional: without it
+   * the ui offers the built-in basemaps. A host adds a provider whose terms
+   * it, and not the SDK, accepts by building a catalogue that includes it.
+   */
+  readonly basemaps?: BasemapCatalogue;
 }

@@ -13,6 +13,39 @@ export const FAKE_VECTOR_BASEMAP: BasemapDefinition =
     appearance: "light",
   });
 
+/**
+ * A vector basemap whose provider asks for a permanent credit and does not
+ * allow saved images, with no preview image (so the picker shows a swatch).
+ */
+export const FAKE_CREDITED_BASEMAP: BasemapDefinition =
+  Object.freeze<BasemapDefinition>({
+    id: "fake-credited",
+    name: "Fake credited",
+    source: {
+      kind: "vector",
+      styleUrl: "https://tiles.example/credited.json",
+    },
+    minZoom: 0,
+    maxZoom: 18,
+    attribution: [
+      { text: "© Fake provider", href: "https://provider.example/legal" },
+    ],
+    appearance: "dark",
+    allowsImageExport: false,
+    credit: {
+      kind: "permanent",
+      logo: {
+        src: "/basemaps/fake-provider.svg",
+        href: "https://provider.example/",
+        label: "Fake provider",
+        minHeight: 24,
+      },
+      lines: [
+        { text: "© Fake provider", href: "https://provider.example/legal" },
+      ],
+    },
+  });
+
 /** A raster basemap, with zoom limits 2 to 12. */
 export const FAKE_RASTER_BASEMAP: BasemapDefinition =
   Object.freeze<BasemapDefinition>({

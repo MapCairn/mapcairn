@@ -38,9 +38,9 @@ export const EXEMPT_SURFACES = [
       "The engine style file restyles MapLibre, which needs engine selectors and raw z-index values.",
   },
   {
-    pattern: /^packages\/core\/src\/basemaps\//,
+    pattern: /^packages\/(core|web)\/src\/basemaps\//,
     reason:
-      "Committed basemap assets and map style definitions carry their own colours and fonts.",
+      "Basemap definitions are data: committed basemap assets and map style definitions carry their own colours and fonts, in the SDK and in the host.",
   },
 ];
 

@@ -1,4 +1,6 @@
 import {
+  type BasemapCatalogue,
+  BUILT_IN_BASEMAP_CATALOGUE,
   type ClipboardPort,
   type DevicePreferencesValue,
   type FileSaver,
@@ -81,6 +83,14 @@ export function useSaveData(): boolean {
   const { settings } = useSettings();
   const { saveData } = usePreferences();
   return settings.saveData ?? saveData;
+}
+
+/**
+ * The basemaps on offer: the host's catalogue, or the built-in basemaps when
+ * it supplies none.
+ */
+export function useBasemaps(): BasemapCatalogue {
+  return useServices().basemaps ?? BUILT_IN_BASEMAP_CATALOGUE;
 }
 
 /** The data layer registry: the host's layer definitions, or none. */

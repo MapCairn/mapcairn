@@ -44,7 +44,7 @@ export interface MapDirectionsProps {
  */
 export function MapDirections({ result }: MapDirectionsProps) {
   const { adapter } = useMap();
-  const { layout, viewport, panelEdge } = useChromeLayout();
+  const { layout, viewport, panelEdge, bottomReserve } = useChromeLayout();
 
   useEffect(() => {
     if (!adapter || !result) {
@@ -93,7 +93,12 @@ export function MapDirections({ result }: MapDirectionsProps) {
     if (!bounds) {
       return;
     }
-    const covered = coveredPadding({ layout, viewport, panelEdge }) ?? {
+    const covered = coveredPadding({
+      layout,
+      viewport,
+      panelEdge,
+      bottomReserve,
+    }) ?? {
       top: 0,
       right: 0,
       bottom: 0,

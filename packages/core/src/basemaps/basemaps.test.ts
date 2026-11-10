@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { FAKE_RASTER_BASEMAP, FAKE_VECTOR_BASEMAP } from "../fakes/fixtures";
+import type { BasemapDefinition } from "../ports/basemap";
 import {
   BASEMAPS,
+  BUILT_IN_BASEMAP_CATALOGUE,
   buildAttribution,
+  createBasemapCatalogue,
   creditsLine,
   DEFAULT_BASEMAP_BACKGROUND,
   DEFAULT_BASEMAP_ID,
   getBasemap,
+  imageExportBlockedBy,
   MAPLIBRE_CREDIT,
   omittedLayers,
+  permanentCredit,
   resolveBasemap,
 } from "./basemaps";
 
@@ -240,5 +246,107 @@ describe("omittedLayers", () => {
         expect(basemap.saveDataOmitLayers.length).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe("createBasemapCatalogue", () => {
+  const credited: BasemapDefinition = {
+    ...FAKE_VECTOR_BASEMAP,
+    id: "credited",
+    name: "Credited",
+  };
+
+  it("lists the basemaps in the order given and finds them by id", () => {
+    const catalogue = createBasemapCatalogue([
+      FAKE_VECTOR_BASEMAP,
+      FAKE_RASTER_BASEMAP,
+      credited,
+    ]);
+    expect(catalogue.basemaps.map((basemap) => basemap.id)).toEqual([
+      "fake-vector",
+      "fake-raster",
+      "credited",
+    ]);
+    expect(catalogue.get("credited")).toBe(credited);
+    expect(catalogue.get("nope")).toBeUndefined();
+    expect(catalogue.get("__proto__")).toBeUndefined();
+  });
+
+  it("makes the first basemap the default unless another is named", () => {
+    const list = [FAKE_VECTOR_BASEMAP, FAKE_RASTER_BASEMAP];
+    expect(createBasemapCatalogue(list).defaultId).toBe("fake-vector");
+    expect(createBasemapCatalogue(list, "fake-raster").defaultId).toBe(
+      "fake-raster",
+    );
+  });
+
+  it("resolves an unknown id to the default basemap", () => {
+    const catalogue = createBasemapCatalogue(
+      [FAKE_VECTOR_BASEMAP, FAKE_RASTER_BASEMAP],
+      "fake-raster",
+    );
+    expect(catalogue.resolve("fake-vector")).toBe(FAKE_VECTOR_BASEMAP);
+    for (const id of ["dark", "auto", "", "__proto__"]) {
+      expect(catalogue.resolve(id)).toBe(FAKE_RASTER_BASEMAP);
+    }
+  });
+
+  it("refuses an empty list, a repeated id and an unknown default", () => {
+    expect(() => createBasemapCatalogue([])).toThrow(/at least one/);
+    expect(() =>
+      createBasemapCatalogue([FAKE_VECTOR_BASEMAP, FAKE_VECTOR_BASEMAP]),
+    ).toThrow(/fake-vector/);
+    expect(() =>
+      createBasemapCatalogue([FAKE_VECTOR_BASEMAP], "missing"),
+    ).toThrow(/missing/);
+  });
+
+  it("is what the built-in basemaps make: Liberty the default, then Positron and Streets", () => {
+    expect(BUILT_IN_BASEMAP_CATALOGUE.basemaps).toBe(BASEMAPS);
+    expect(BUILT_IN_BASEMAP_CATALOGUE.defaultId).toBe(DEFAULT_BASEMAP_ID);
+    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("dark").id).toBe("liberty");
+  });
+
+  it("names no provider whose terms the SDK would have to carry", () => {
+    for (const basemap of BASEMAPS) {
+      expect(basemap.credit, basemap.id).toBeUndefined();
+      expect(basemap.allowsImageExport, basemap.id).toBeUndefined();
+    }
+  });
+});
+
+describe("basemap terms", () => {
+  const permanent: BasemapDefinition = {
+    ...FAKE_VECTOR_BASEMAP,
+    id: "permanent",
+    name: "Permanent",
+    allowsImageExport: false,
+    credit: {
+      kind: "permanent",
+      logo: {
+        src: "/logo.svg",
+        href: "https://provider.example/",
+        label: "Provider",
+      },
+      lines: [{ text: "© Provider", href: "https://provider.example/legal" }],
+    },
+  };
+
+  it("finds the permanent credit of the first basemap that has one", () => {
+    expect(permanentCredit([FAKE_VECTOR_BASEMAP, permanent])).toBe(
+      permanent.credit,
+    );
+    expect(permanentCredit([FAKE_VECTOR_BASEMAP, FAKE_RASTER_BASEMAP])).toBe(
+      undefined,
+    );
+    expect(permanentCredit([])).toBeUndefined();
+  });
+
+  it("blocks image export when any basemap in use forbids it", () => {
+    expect(imageExportBlockedBy([FAKE_VECTOR_BASEMAP])).toBeUndefined();
+    expect(imageExportBlockedBy([FAKE_VECTOR_BASEMAP, permanent])).toBe(
+      permanent,
+    );
+    expect(imageExportBlockedBy([])).toBeUndefined();
   });
 });

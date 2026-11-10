@@ -57,6 +57,7 @@ const layout: ChromeLayoutValue = {
   viewport: { width: 400, height: 800 },
   finePointer: true,
   panelEdge: null,
+  bottomReserve: 0,
   publishSheetTop: () => undefined,
   publishToolbarTop: vi.fn(),
 };

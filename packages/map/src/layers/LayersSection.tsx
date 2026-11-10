@@ -95,7 +95,7 @@ export function LayersSection({
   const { reducedMotion } = usePreferences();
   const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
-  const { layout, viewport, panelEdge } = useChromeLayout();
+  const { layout, viewport, panelEdge, bottomReserve } = useChromeLayout();
   const [cardRequest, setCardRequest] = useState(0);
   const { selected, choices } = layers;
   const choicesHeading = useRef<HTMLHeadingElement>(null);
@@ -134,6 +134,7 @@ export function LayersSection({
             layout,
             viewport,
             panelEdge,
+            bottomReserve,
           })
         : null;
     if (adapter && offset) {
@@ -148,6 +149,7 @@ export function LayersSection({
     layout,
     viewport,
     panelEdge,
+    bottomReserve,
   ]);
 
   // "Show on map" lowers the sheet to a detent that shows the map as well as
@@ -172,7 +174,12 @@ export function LayersSection({
     layers.select(layerId, feature.id);
     if (adapter && bounds && hasExtent(bounds)) {
       // A polygon or line is shown whole, clear of the sheet or side panel.
-      const covered = coveredPadding({ layout, viewport, panelEdge });
+      const covered = coveredPadding({
+        layout,
+        viewport,
+        panelEdge,
+        bottomReserve,
+      });
       adapter.fitBounds(bounds, {
         padding: {
           top: (covered?.top ?? 0) + SHOW_ON_MAP_MARGIN,
@@ -183,7 +190,12 @@ export function LayersSection({
       });
     } else if (adapter && position) {
       const zoom = Math.max(adapter.getView().zoom, SHOW_ON_MAP_MIN_ZOOM);
-      const padding = coveredPadding({ layout, viewport, panelEdge });
+      const padding = coveredPadding({
+        layout,
+        viewport,
+        panelEdge,
+        bottomReserve,
+      });
       if (padding) {
         // A fit with padding centres the point in what the sheet leaves free.
         adapter.fitBounds(

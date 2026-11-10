@@ -39,6 +39,12 @@ export interface MapChromeProps {
   /** Measure toolbar, toasts and the tile-error banner. */
   readonly bottomCentre?: ReactNode;
   /**
+   * A credit a basemap's provider requires to stay visible (`PermanentCredit`).
+   * It gets a row of its own under the bottom row, which the bottom sheet and
+   * every other slot stay clear of, and it is never hidden or made inert.
+   */
+  readonly credit?: ReactNode;
+  /**
    * The `Sheet` (bottom sheet or side panel). Rendered outside every inert
    * group, so it stays operable while the rest of the chrome is inert.
    */
@@ -68,6 +74,10 @@ interface Measurements {
   readonly bottomInset: number;
   /** Top of the bottom-centre slot before any lift, or null while it is empty. */
   readonly bottomCentreTop: number | null;
+  /** Top of the credit row, or null while there is none. */
+  readonly creditTop: number | null;
+  /** Height of the credit row, zero while there is none. */
+  readonly creditHeight: number;
 }
 
 type SlotName =
@@ -75,7 +85,8 @@ type SlotName =
   | "end-stack"
   | "bottom-start"
   | "bottom-centre"
-  | "bottom-end";
+  | "bottom-end"
+  | "credit";
 
 /** Layout box of a slot, ignoring transforms (which only lift or shift it). */
 function box(slots: Map<SlotName, HTMLElement>, name: SlotName) {
@@ -99,7 +110,10 @@ function measure(
   const bottomStart = box(slots, "bottom-start");
   const bottomEnd = box(slots, "bottom-end");
   const bottomCentre = box(slots, "bottom-centre");
-  const restingBottom = height - INSET_PX;
+  const credit = box(slots, "credit");
+  const creditShown = credit !== null && credit.height > 0;
+  // With a credit row the bottom row rests a gap above it.
+  const restingBottom = creditShown ? credit.top - GAP_PX : height - INSET_PX;
   const shown = [bottomStart, bottomEnd].filter(
     (slot): slot is NonNullable<typeof slot> =>
       slot !== null && slot.height > 0,
@@ -121,6 +135,8 @@ function measure(
     bottomInset: Math.max(0, height - rowBottom),
     bottomCentreTop:
       bottomCentre && bottomCentre.height > 0 ? bottomCentre.top : null,
+    creditTop: creditShown ? credit.top : null,
+    creditHeight: creditShown ? credit.height : 0,
   };
 }
 
@@ -194,6 +210,7 @@ export function MapChrome({
   bottomStart,
   bottomEnd,
   bottomCentre,
+  credit,
   sheet,
   modal,
   onViewportChange,
@@ -246,6 +263,7 @@ export function MapChrome({
       "bottom-start": make("bottom-start"),
       "bottom-centre": make("bottom-centre"),
       "bottom-end": make("bottom-end"),
+      credit: make("credit"),
     } satisfies Record<SlotName, (element: HTMLElement | null) => void>;
   }, [update]);
 
@@ -286,7 +304,18 @@ export function MapChrome({
     }
   }, [viewport, measurements]);
 
-  const inset = measurements?.bottomInset ?? INSET_PX;
+  // Where the bottom row rests above the bottom edge. With a credit row that
+  // is the credit's height and a gap more than the inset, which is still the
+  // gap kept above a sheet or toolbar.
+  const restingInset = measurements?.bottomInset ?? INSET_PX;
+  const creditBlock =
+    measurements?.creditTop == null ? 0 : measurements.creditHeight + GAP_PX;
+  const inset = Math.max(0, restingInset - creditBlock);
+  // How far the bottom sheet's bottom edge stands above the container's.
+  const bottomReserve =
+    measurements?.creditTop == null
+      ? 0
+      : measurements.height - measurements.creditTop + GAP_PX;
   const sheetOnly = computeBottomSlotLayout({
     layout,
     viewportWidth: width,
@@ -296,6 +325,7 @@ export function MapChrome({
     panelRightEdge: panelEdge,
     measureToolbarTop: null,
     inset,
+    restingInset,
   });
   const centreTop =
     measurements?.bottomCentreTop == null
@@ -314,6 +344,7 @@ export function MapChrome({
     measureToolbarTop:
       obstructions.length > 0 ? Math.min(...obstructions) : null,
     inset,
+    restingInset,
   });
 
   const room = measurements
@@ -346,8 +377,10 @@ export function MapChrome({
     set(chromeVars.bottomLift, bottom.bottomEndTranslateY);
     set(chromeVars.bottomStartX, bottom.bottomStartTranslateX);
     set(chromeVars.bottomCentreLift, sheetOnly.bottomStartTranslateY);
+    set(chromeVars.creditReserve, bottomReserve);
   }, [
     measurements,
+    bottomReserve,
     endStackMaxHeight,
     bottomEndRoom,
     bottomEndBesideRoom,
@@ -362,16 +395,23 @@ export function MapChrome({
       viewport,
       finePointer,
       panelEdge,
+      bottomReserve,
       publishSheetTop,
       publishToolbarTop,
     }),
-    [layout, viewport, finePointer, panelEdge],
+    [layout, viewport, finePointer, panelEdge, bottomReserve],
   );
   const surfaceValue = useMemo<ChromeSurfaceValue>(
-    () => ({ publishSheetDetent, publishPanelEdge, endStackMaxHeight }),
+    () => ({
+      publishSheetDetent,
+      publishPanelEdge,
+      endStackMaxHeight,
+    }),
     [endStackMaxHeight],
   );
 
+  // The credit is the one slot that stays operable while the sheet is modal:
+  // a provider's credit must remain visible and usable at all times.
   const slot = (
     name: SlotName,
     className: string,
@@ -382,7 +422,7 @@ export function MapChrome({
         ref={slotRefs[name]}
         data-chrome={name}
         className={className}
-        inert={modal}
+        inert={modal && name !== "credit"}
       >
         {content}
       </div>
@@ -397,6 +437,7 @@ export function MapChrome({
           data-testid="map-chrome"
           data-layout={layout}
           data-hide-bottom={bottom.hideBottomSlots ? "true" : "false"}
+          data-credit={credit == null ? undefined : "true"}
           className={styles.root}
         >
           {slot("top-start", styles.topStart, topStart)}
@@ -408,6 +449,7 @@ export function MapChrome({
           {slot("bottom-start", styles.bottomStart, bottomStart)}
           {slot("bottom-centre", styles.bottomCentre, bottomCentre)}
           {slot("bottom-end", styles.bottomEnd, bottomEnd)}
+          {slot("credit", styles.credit, credit)}
         </div>
       </ChromeSurfaceContext.Provider>
     </ChromeLayoutProvider>

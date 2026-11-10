@@ -58,7 +58,7 @@ import {
   useState,
 } from "react";
 import { initialMapState } from "./initialView";
-import { useBasemapChoice } from "./useBasemapChoice";
+import { type BasemapChoice, useBasemapChoice } from "./useBasemapChoice";
 import { useViewPersistence } from "./useViewPersistence";
 
 /** The zoom a single search result without bounds is shown at. */
@@ -105,6 +105,11 @@ export interface MapApp {
 
   readonly basemapChoice: string;
   readonly basemap: BasemapDefinition;
+  /**
+   * Every basemap on screen or about to be (see `useBasemapChoice`), which
+   * the permanent credit and the Save image block follow.
+   */
+  readonly basemapsInUse: readonly BasemapDefinition[];
   readonly chooseBasemap: (id: string) => void;
   /** The name of a basemap that could not load, until the person goes back, or null. */
   readonly basemapFailure: string | null;
@@ -112,6 +117,8 @@ export interface MapApp {
   readonly restorePreviousBasemap: () => void;
   /** Pass to `MapView`'s `onBasemapApplied`. */
   readonly onBasemapApplied: (basemap: BasemapDefinition) => void;
+  /** Pass to `MapView`'s `onEngineError`: falls back from a basemap that could not start the map. */
+  readonly onEngineError: BasemapChoice["mountFailed"];
   /** Pass to `MapView`'s `onBasemapError`. */
   readonly onBasemapError: (
     error: unknown,
@@ -500,11 +507,13 @@ export function useMapApp(): MapApp {
     mapRef,
     basemapChoice: basemaps.choice,
     basemap: basemaps.basemap,
+    basemapsInUse: basemaps.inUse,
     chooseBasemap: basemaps.choose,
     basemapFailure: basemaps.failure?.name ?? null,
     restorePreviousBasemap: basemaps.goBack,
     onBasemapApplied: basemaps.applied,
     onBasemapError: basemaps.failed,
+    onEngineError: basemaps.mountFailed,
     sheetOpen,
     sheetSection:
       state.surface === "pin" ? "pin" : (state.sheetSection ?? "basemap"),

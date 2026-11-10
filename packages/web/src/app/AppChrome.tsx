@@ -1,4 +1,9 @@
-import { creditsLine, pressEscape } from "@karta/core";
+import {
+  creditsLine,
+  imageExportBlockedBy,
+  permanentCredit,
+  pressEscape,
+} from "@karta/core";
 import {
   Attribution,
   DirectionsPanel,
@@ -9,6 +14,7 @@ import {
   type MapContextValue,
   MapReadout,
   MeasureToolbar,
+  PermanentCredit,
   PinCard,
   SearchPill,
   Sheet,
@@ -118,6 +124,10 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
     }
   };
 
+  // Terms that follow a basemap while any of its pixels are, or are about to
+  // be, on screen: its permanent credit, and a ban on saved images.
+  const credit = permanentCredit(app.basemapsInUse);
+  const imageBlockedBy = imageExportBlockedBy(app.basemapsInUse)?.name;
   const showBanners = hasBanners(app, map);
   const centre =
     app.measuring || app.drawing || showBanners ? (
@@ -192,6 +202,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
       bottomEnd={
         <Attribution
           basemap={app.basemap}
+          permanentCredit={credit}
           layerCredits={
             app.directions.result
               ? [...app.layers.credits, ...ROUTING_CREDITS]
@@ -200,6 +211,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
         />
       }
       bottomCentre={centre}
+      credit={credit ? <PermanentCredit credit={credit} /> : undefined}
       sheet={
         <Sheet
           id={SHEET_ID}
@@ -236,6 +248,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               draw={app.draw}
               onShowOnMap={app.revealMap}
               imageCredits={creditsLine(app.basemap, app.layers.credits)}
+              imageBlockedBy={imageBlockedBy}
               pinCard={
                 app.pin ? (
                   <PinCard

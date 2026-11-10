@@ -1,4 +1,5 @@
 import {
+  computeDetentHeights,
   createFakeServices,
   FakeMapAdapter,
   formatLatLng,
@@ -353,6 +354,25 @@ describe("the map centre the panel uses", () => {
     // At the half detent the sheet covers the lower 400 px of an 800 px map.
     expect(screen.getByTestId("directions-stop-row")).toHaveTextContent(
       formatLatLng(adapter.unproject({ x: 195, y: 200 })),
+    );
+  });
+
+  it("is the middle of what a bottom sheet that stands above a credit row leaves free", () => {
+    const adapter = new FakeMapAdapter();
+    renderChrome(<Harness />, {
+      map: testMapContext({ adapter }),
+      layout: testChromeLayout({
+        viewport: { width: 390, height: 800 },
+        bottomReserve: 56,
+      }),
+    });
+    click("Add stop at map centre");
+    const { half } = computeDetentHeights({
+      viewportHeight: 800 - 56,
+      insetBottom: 0,
+    });
+    expect(screen.getByTestId("directions-stop-row")).toHaveTextContent(
+      formatLatLng(adapter.unproject({ x: 195, y: (800 - 56 - half) / 2 })),
     );
   });
 

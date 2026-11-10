@@ -22,6 +22,18 @@ export const OTHER_VECTOR_STYLE_PATTERN =
 /** OpenFreeMap sprite sheets: their JSON index and their images. */
 export const SPRITE_PATTERN = /tiles\.openfreemap\.org\/sprites\//;
 
+/** The Maptoolkit Dark style document. */
+export const MAPTOOLKIT_STYLE_PATTERN =
+  /^https:\/\/styles\.maptoolkit\.org\/dark\.json/;
+
+/**
+ * Every host the Maptoolkit Dark style and its tile sets read from: the
+ * style, the tiles and tile descriptions, the sprite, the glyphs and the
+ * terrain tiles the provider's style uses.
+ */
+export const MAPTOOLKIT_HOSTS_PATTERN =
+  /^https:\/\/((styles|tiles|icons|fonts)\.maptoolkit\.org|tiles\.mapterhorn\.com)\//;
+
 /** A Nominatim place search. */
 export const GEOCODER_SEARCH_PATTERN = /nominatim\.openstreetmap\.org\/search/;
 
@@ -100,6 +112,23 @@ export async function mockThirdPartyServices(page: Page): Promise<void> {
       contentType: "application/json",
       body: JSON.stringify(MINIMAL_VECTOR_STYLE),
     }),
+  );
+  // Maptoolkit: its style is answered with the minimal one, and any other
+  // request to its hosts is refused, so nothing in the suite reaches the real
+  // service (a test that needs to see a request listens for it, which sees
+  // the request before this route answers it). `dark.json` is answered with a
+  // minimal style, not the real one, so this suite never sees the real
+  // style's sources. The recorded request-URL list the CSP test reads
+  // (`src/basemaps/fixtures/maptoolkit-dark-requests.json`) must be
+  // re-recorded whenever the real style changes.
+  await page.route(MAPTOOLKIT_HOSTS_PATTERN, (route) =>
+    MAPTOOLKIT_STYLE_PATTERN.test(route.request().url())
+      ? route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(MINIMAL_VECTOR_STYLE),
+        })
+      : route.abort(),
   );
   await page.route(GEOCODER_SEARCH_PATTERN, (route) =>
     route.fulfill({

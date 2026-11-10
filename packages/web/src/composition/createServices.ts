@@ -14,6 +14,7 @@ import { NominatimSearchProvider } from "../adapters/search/NominatimSearchProvi
 import { LocalStorageSettingsStore } from "../adapters/settings/LocalStorageSettingsStore";
 import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
+import { BASEMAP_CATALOGUE } from "../basemaps";
 import { createHostLayerRegistry } from "../layers";
 import { readTestOverrides } from "./testSeam";
 
@@ -69,6 +70,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     layers: createHostLayerRegistry(),
     layerSource: new FetchLayerSource(),
     routing: new ValhallaRoutingProvider(),
+    basemaps: BASEMAP_CATALOGUE,
   };
   const seam =
     import.meta.env.MODE !== "production" ? readTestOverrides() : undefined;

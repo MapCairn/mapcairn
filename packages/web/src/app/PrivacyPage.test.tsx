@@ -140,6 +140,73 @@ describe("PrivacyPage", () => {
     expect(text).toMatch(/not saved or put in the page address/);
   });
 
+  it("says what the Maptoolkit Dark basemap sends, to whom, and only once it is chosen", () => {
+    render(<PrivacyPage />);
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Maptoolkit Dark basemap",
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    const text =
+      screen.getByText(/Nothing is sent to Maptoolkit unless/).textContent ??
+      "";
+    expect(text).toContain("Toursprung GmbH");
+    for (const host of [
+      "styles.maptoolkit.org",
+      "tiles.maptoolkit.org",
+      "icons.maptoolkit.org",
+      "fonts.maptoolkit.org",
+      "tiles.mapterhorn.com",
+    ]) {
+      expect(text, host).toContain(host);
+    }
+    expect(text).toMatch(/choose the Maptoolkit Dark basemap/);
+    expect(text).toMatch(/opening a link that names it/);
+    expect(text).toMatch(/opening the site again/);
+    expect(text).toMatch(/IP address/);
+    expect(text).toMatch(/user agent/);
+    expect(text).toMatch(/up to 30 days/);
+    expect(text).toMatch(/no tracking cookies/);
+    expect(text).toMatch(/Mapterhorn/);
+    expect(text).toMatch(/Save image is off/);
+  });
+
+  it("links to Maptoolkit's privacy policy in a new tab, announced to screen readers", () => {
+    render(<PrivacyPage />);
+
+    const link = screen.getByRole("link", {
+      name: /Maptoolkit's privacy policy/,
+    });
+    expect(link).toHaveAttribute("href", "https://www.maptoolkit.com/privacy/");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAccessibleName(/opens in a new tab/);
+  });
+
+  it("links to Mapterhorn's privacy policy in a new tab, announced to screen readers", () => {
+    render(<PrivacyPage />);
+
+    const link = screen.getByRole("link", {
+      name: /Mapterhorn's privacy policy/,
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://mapterhorn.com/privacy-policy/",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAccessibleName(/opens in a new tab/);
+  });
+
+  it("names Maptoolkit and Mapterhorn among the tile providers that may log requests", () => {
+    render(<PrivacyPage />);
+
+    const text = screen.getByText(/The basemap tile providers/).textContent;
+    expect(text).toMatch(
+      /Maptoolkit and Mapterhorn\s+when you choose Maptoolkit Dark \(see below\)/,
+    );
+  });
+
   it("links to the host's policy in a new tab, announced to screen readers", () => {
     render(<PrivacyPage />);
 

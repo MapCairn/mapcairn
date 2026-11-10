@@ -3,6 +3,7 @@ import {
   buildAttribution,
   createFakeServices,
   DEFAULT_FAKE_VIEW,
+  FAKE_CREDITED_BASEMAP,
   FAKE_VECTOR_BASEMAP,
 } from "@karta/core";
 import { act, fireEvent, screen } from "@testing-library/react";
@@ -37,6 +38,77 @@ function open(): HTMLElement {
   fireEvent.click(button());
   return screen.getByRole("region", { name: "Map credits" });
 }
+
+describe("Attribution beside a permanent credit", () => {
+  const credit = FAKE_CREDITED_BASEMAP.credit;
+  const items = () =>
+    [...open().querySelectorAll("li")].map((li) => li.textContent);
+
+  it("leaves out the lines the permanent credit already shows, and keeps MapLibre and the layers' credits", () => {
+    renderChrome(
+      <Attribution
+        basemap={FAKE_CREDITED_BASEMAP}
+        permanentCredit={credit}
+        layerCredits={[{ text: "Layer credit", url: "https://layer.test/" }]}
+      />,
+      { map: SETTLED },
+    );
+    const listed = items();
+    expect(listed.some((text) => text?.includes("Fake provider"))).toBe(false);
+    expect(listed.some((text) => text?.includes("MapLibre"))).toBe(true);
+    expect(listed.some((text) => text?.includes("Layer credit"))).toBe(true);
+  });
+
+  it("is left with MapLibre alone when nothing else is on", () => {
+    renderChrome(
+      <Attribution basemap={FAKE_CREDITED_BASEMAP} permanentCredit={credit} />,
+      { map: SETTLED },
+    );
+    const listed = items();
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toContain("MapLibre");
+  });
+
+  it("keeps a line that has the same text but another link, or another text, than the permanent credit's", () => {
+    renderChrome(
+      <Attribution
+        basemap={{
+          ...FAKE_CREDITED_BASEMAP,
+          attribution: [
+            { text: "© Fake provider", href: "https://other.example/legal" },
+            { text: "© Extra", href: "https://provider.example/legal" },
+          ],
+        }}
+        permanentCredit={credit}
+      />,
+      { map: SETTLED },
+    );
+    const listed = items();
+    expect(listed.some((text) => text?.includes("Fake provider"))).toBe(true);
+    expect(listed.some((text) => text?.includes("Extra"))).toBe(true);
+  });
+
+  it("lists the provider's credits as before when no permanent credit is on screen", () => {
+    renderChrome(<Attribution basemap={FAKE_CREDITED_BASEMAP} />, {
+      map: SETTLED,
+    });
+    expect(items().some((text) => text?.includes("Fake provider"))).toBe(true);
+  });
+
+  it("leaves out a layer credit the permanent credit shows too", () => {
+    renderChrome(
+      <Attribution
+        basemap={FAKE_VECTOR_BASEMAP}
+        permanentCredit={credit}
+        layerCredits={[
+          { text: "© Fake provider", url: "https://provider.example/legal" },
+        ]}
+      />,
+      { map: SETTLED },
+    );
+    expect(items().some((text) => text?.includes("Fake provider"))).toBe(false);
+  });
+});
 
 describe("Attribution", () => {
   it("draws its bare icon with the map halo, so it shows on a light map in a dark theme", () => {

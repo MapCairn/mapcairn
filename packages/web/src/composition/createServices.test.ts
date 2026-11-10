@@ -6,10 +6,15 @@ import {
   type Services,
   StaticLayerRegistry,
 } from "@karta/core";
-import { PORT_NAMES, type PortName } from "@karta/core/contracts";
+import {
+  DATA_SERVICE_NAMES,
+  PORT_NAMES,
+  type PortName,
+} from "@karta/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
+import { BASEMAP_CATALOGUE } from "../basemaps";
 import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
 
@@ -25,7 +30,17 @@ describe("createServices", () => {
     for (const name of PORT_NAMES) {
       expect(services[name as PortName], name).toBeDefined();
     }
-    expect(Object.keys(services).sort()).toEqual([...PORT_NAMES].sort());
+    // `basemaps` is plain data, the host's catalogue, not a port.
+    expect(Object.keys(services).sort()).toEqual(
+      [...PORT_NAMES, ...DATA_SERVICE_NAMES].sort(),
+    );
+  });
+
+  it("offers the host's basemaps, Maptoolkit Dark among them, with Liberty the default", () => {
+    const { basemaps } = createServices();
+    expect(basemaps).toBe(BASEMAP_CATALOGUE);
+    expect(basemaps?.get("maptoolkit-dark")?.name).toBe("Maptoolkit Dark");
+    expect(basemaps?.defaultId).toBe("liberty");
   });
 
   it("builds the Valhalla routing provider, which sends nothing until a route is asked for", () => {

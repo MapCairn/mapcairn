@@ -51,12 +51,35 @@ policy.
 
 ## Map tiles and location search
 
-The basemap tile providers, OpenFreeMap and, when you choose the Streets
-basemap, the OpenStreetMap Foundation, may log tile requests, including your IP
-address, as part of serving the map. This is standard for any web map. When you
+The basemap tile providers, OpenFreeMap, the OpenStreetMap Foundation when you
+choose the Streets basemap, and Maptoolkit and Mapterhorn when you choose
+Maptoolkit Dark (see below), may log tile requests, including your IP address,
+as part of serving the map. This is standard for any web map. When you
 search (by pressing Enter or the Search button), your query is sent to
 OpenStreetMap's Nominatim geocoding service, which may likewise log the query
 and your IP address. Nothing is sent while you type.
+
+## Maptoolkit Dark basemap
+
+Nothing is sent to Maptoolkit unless you choose the Maptoolkit Dark basemap.
+Choosing it, opening a link that names it, or opening the site again after you
+chose it makes your browser load the map from Maptoolkit's servers, run by
+Toursprung GmbH in Vienna: styles.maptoolkit.org, tiles.maptoolkit.org,
+icons.maptoolkit.org and fonts.maptoolkit.org. Its style also takes terrain
+tiles from tiles.mapterhorn.com, run by Mapterhorn, a separate service. They
+receive your IP address and the headers your browser always sends, such as its
+user agent and this site's origin (no page path). The tiles you ask for show
+roughly where you are looking. Maptoolkit says it shortens your IP address
+before processing it, keeps the shortened address in log files for up to 30
+days, relies on its legitimate interest, and sets no tracking cookies.
+This site sets none either. Mapterhorn says it keeps request logs, including IP
+addresses, for up to 30 days. The Maptoolkit logo and credit stay on screen
+while the basemap is shown, as its licence requires, and its licence does not
+allow saving images of its map, so Save image is off while it is shown.
+
+Read [Maptoolkit's privacy policy](https://www.maptoolkit.com/privacy/) and
+[Mapterhorn's privacy policy](https://mapterhorn.com/privacy-policy/) for the
+details.
 
 ## Data layers
 

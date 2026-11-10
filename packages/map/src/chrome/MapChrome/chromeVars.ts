@@ -31,6 +31,11 @@ export const chromeVars = {
   bottomStartX: "--chrome-bottom-start-x",
   /** Vertical shift of the bottom-centre slot, from the sheet alone (zero or negative). */
   bottomCentreLift: "--chrome-bottom-centre-lift",
+  /**
+   * How far the bottom sheet's bottom edge sits above the container's, so
+   * the sheet stops a gap above the credit row. Zero without a credit.
+   */
+  creditReserve: "--chrome-credit-reserve",
 } as const;
 
 /** Reads a chrome variable in a stylesheet, with a fallback. */

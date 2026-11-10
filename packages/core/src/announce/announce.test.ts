@@ -11,6 +11,7 @@ import {
   announceDetent,
   announceDirectionsCleared,
   announceFeaturesFound,
+  announceImageBlocked,
   announceImageFailed,
   announceImageSaved,
   announceLayerCapped,
@@ -197,6 +198,15 @@ describe("layer announcements", () => {
     expect(announceImageSaved()).toBe("Map image saved.");
     expect(announceImageFailed()).toBe(
       "The map image could not be saved. Try again.",
+    );
+  });
+
+  it("says when the terms of a basemap refused the map image", () => {
+    expect(announceImageBlocked("Fake credited")).toBe(
+      "The map image was not saved. The terms of Fake credited do not allow saving images of its map.",
+    );
+    expect(announceImageBlocked()).toBe(
+      "The map image was not saved. The terms of the basemap do not allow saving images of its map.",
     );
   });
 

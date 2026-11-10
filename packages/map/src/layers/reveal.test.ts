@@ -13,11 +13,13 @@ const PHONE: RevealGeometry = {
   layout: "sheet",
   viewport: { width: 390, height: 844 },
   panelEdge: null,
+  bottomReserve: 0,
 };
 const DESKTOP: RevealGeometry = {
   layout: "panel",
   viewport: { width: 1280, height: 720 },
   panelEdge: 412,
+  bottomReserve: 0,
 };
 
 describe("coveredPadding", () => {
@@ -32,6 +34,26 @@ describe("coveredPadding", () => {
       bottom: heights[REVEAL_DETENT],
       left: 0,
     });
+  });
+
+  it("adds the credit row's reserve to a sheet that ends above it, whose detents fit what is left", () => {
+    const RESERVE = 56;
+    const room = computeDetentHeights({
+      viewportHeight: 844 - RESERVE,
+      insetBottom: 0,
+    });
+    expect(coveredPadding({ ...PHONE, bottomReserve: RESERVE })).toEqual({
+      top: 0,
+      right: 0,
+      bottom: RESERVE + room[REVEAL_DETENT],
+      left: 0,
+    });
+  });
+
+  it("ignores the reserve in the side panel layout", () => {
+    expect(coveredPadding({ ...DESKTOP, bottomReserve: 56 })).toEqual(
+      coveredPadding(DESKTOP),
+    );
   });
 
   it("keeps clear of the side panel's right edge", () => {
@@ -56,6 +78,15 @@ describe("coveredPadding", () => {
 });
 
 describe("freeCentre", () => {
+  it("is the middle of the map above a sheet that stands above the credit row", () => {
+    const RESERVE = 56;
+    const covered = coveredPadding({ ...PHONE, bottomReserve: RESERVE });
+    expect(freeCentre({ ...PHONE, bottomReserve: RESERVE })).toEqual({
+      x: 195,
+      y: (844 - (covered?.bottom ?? 0)) / 2,
+    });
+  });
+
   it("is the middle of the map above the bottom sheet", () => {
     const heights = computeDetentHeights({
       viewportHeight: 844,
@@ -99,6 +130,20 @@ describe("revealOffset", () => {
     expect(offset).toEqual({ dx: 100 - (412 + 1280) / 2, dy: 0 });
   });
 
+  it("moves a point that the credit row's reserve pushes the sheet over", () => {
+    const RESERVE = 56;
+    const covered = (reserve: number) =>
+      coveredPadding({ ...PHONE, bottomReserve: reserve })?.bottom ?? 0;
+    // Just inside the free part when there is no reserve, and inside the
+    // clearance margin of the smaller free part that the reserve leaves.
+    const point = { x: 195, y: 844 - covered(0) - REVEAL_CLEARANCE - 1 };
+    expect(revealOffset(point, PHONE)).toBeNull();
+    expect(covered(RESERVE)).toBeGreaterThan(covered(0) + 2);
+    expect(
+      revealOffset(point, { ...PHONE, bottomReserve: RESERVE })?.dy,
+    ).toBeGreaterThan(0);
+  });
+
   it("moves a point past the right or top edge back in", () => {
     expect(revealOffset({ x: 388, y: 200 }, PHONE)?.dx).toBeGreaterThan(0);
     expect(revealOffset({ x: 195, y: 4 }, PHONE)?.dy).toBeLessThan(0);
@@ -118,6 +163,7 @@ describe("revealOffset", () => {
       layout: "sheet",
       viewport: { width: 100, height: 100 },
       panelEdge: null,
+      bottomReserve: 0,
     };
     // Half of 100 is 50px of map above the sheet; 64px clearance cannot fit.
     expect(revealOffset({ x: 50, y: 25 }, small)).toBeNull();

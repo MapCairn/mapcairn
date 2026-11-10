@@ -18,6 +18,7 @@ describe("useChromeLayout", () => {
       viewport: { width: 1280, height: 720 },
       finePointer: false,
       panelEdge: 412,
+      bottomReserve: 0,
       publishSheetTop,
       publishToolbarTop: vi.fn(),
     };

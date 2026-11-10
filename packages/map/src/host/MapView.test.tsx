@@ -938,6 +938,39 @@ describe("engine errors", () => {
     expect(latest().error?.reason).toBe("webgl-unavailable");
   });
 
+  it("mounts again with a different basemap that is asked for after a mount that could not load one, and not with the same one", async () => {
+    const services = createFakeServices();
+    const asked: string[] = [];
+    let fail = true;
+    const factory: MapAdapterFactory = () => {
+      const adapter = fail
+        ? new FakeAdapter({ failMount: "load-failed" })
+        : services.createMapAdapter();
+      const mount = adapter.mount.bind(adapter);
+      adapter.mount = (host, options) => {
+        asked.push(options.basemap.id);
+        return mount(host, options);
+      };
+      return adapter;
+    };
+    const { rerender, latest } = await setup(
+      {},
+      { ...services, createMapAdapter: factory },
+    );
+    expect(latest().error?.reason).toBe("load-failed");
+    const first = asked.length;
+    rerender({});
+    await settle();
+    expect(asked).toHaveLength(first);
+
+    fail = false;
+    rerender({ basemap: { ...FAKE_VECTOR_BASEMAP, id: "fallback" } });
+    await settle();
+    expect(asked.at(-1)).toBe("fallback");
+    expect(latest().error).toBeNull();
+    expect(latest().adapter).not.toBeNull();
+  });
+
   it("restores focus to the region when focus was inside an engine element replaced on retry", async () => {
     let fail = true;
     const services = createFakeServices();

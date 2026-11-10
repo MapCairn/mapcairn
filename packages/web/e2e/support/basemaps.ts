@@ -38,4 +38,14 @@ export const OTHER_VECTOR_BASEMAP_NAME = "Positron";
 export const REMOVED_BASEMAP_ID = "dark";
 
 /** How many basemaps the picker offers. */
-export const BASEMAP_COUNT = 3;
+export const BASEMAP_COUNT = 4;
+
+/**
+ * The Maptoolkit Dark basemap: a manual choice with a permanent credit and
+ * no saved images, whose style, tiles, sprite and glyphs come from the
+ * provider's own hosts (never reached by the suite; see `network.ts`).
+ */
+export const MAPTOOLKIT_BASEMAP_ID = "maptoolkit-dark";
+
+/** Its name in the picker and in announcements. */
+export const MAPTOOLKIT_BASEMAP_NAME = "Maptoolkit Dark";

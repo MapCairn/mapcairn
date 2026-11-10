@@ -64,6 +64,17 @@ export const root = style({
   gridTemplateAreas: '"top top" ". end" "start end-bottom"',
   selectors: {
     '&[data-layout="panel"]': panelGrid,
+    // A credit gets a fourth row of its own, under the bottom row, so no
+    // other slot can sit on it. In the panel layout it starts after the
+    // panel's column, so the side panel cannot cover it either.
+    "&[data-credit]": {
+      gridTemplateRows: "auto minmax(0, 1fr) auto auto",
+      gridTemplateAreas: '"top top" ". end" "start end-bottom" "credit credit"',
+    },
+    '&[data-layout="panel"][data-credit]': {
+      gridTemplateAreas:
+        '"top . end" ". . end" "start . end-bottom" ". credit credit"',
+    },
   },
 });
 
@@ -154,6 +165,21 @@ export const bottomCentre = style({
   maxWidth: `calc(100% - ${chromeVar(chromeVars.bottomStartX, "0px")})`,
   transform: `translate(calc(${chromeVar(chromeVars.bottomStartX, "0px")} / 2), ${chromeVar(chromeVars.bottomCentreLift, "0px")})`,
   selectors: { [whenHidden]: hidden },
+});
+
+/**
+ * A basemap provider's required credit: the last row, at the end edge. It
+ * does not ride above anything and is not in the hide rule, so it stays
+ * where it is at every detent. The bottom sheet ends above it
+ * (`--chrome-credit-reserve`), and it takes the `toolbar` layer, above the
+ * sheet, so a closing or rubber-banded sheet can never pass over it.
+ */
+export const credit = style({
+  ...slotBase,
+  zIndex: zLayer("toolbar"),
+  gridArea: "credit",
+  alignSelf: "end",
+  justifySelf: "end",
 });
 
 /** Attribution. Rides above the sheet with bottom-start. */

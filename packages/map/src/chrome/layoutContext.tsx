@@ -12,6 +12,14 @@ export interface ChromeLayoutValue {
   /** The open side panel's right edge, in px from the left of the container. Null in the sheet layout, or before the panel has measured. */
   readonly panelEdge: number | null;
   /**
+   * How far above the container's bottom edge the bottom sheet ends, in px,
+   * so it stays clear of a basemap provider's credit row (see `MapChrome`'s
+   * `credit` slot). Zero when there is no credit row and before the first
+   * measurement. Only the bottom sheet uses it; the side panel ignores it.
+   * Whatever places something by the bottom sheet's height adds it.
+   */
+  readonly bottomReserve: number;
+  /**
    * The sheet publishes its current top edge (px from the top of the chrome
    * container) so the bottom slots can ride above it. Pass null when closed.
    */
@@ -26,6 +34,7 @@ const defaultValue: ChromeLayoutValue = {
   viewport: { width: 0, height: 0 },
   finePointer: true,
   panelEdge: null,
+  bottomReserve: 0,
   publishSheetTop() {},
   publishToolbarTop() {},
 };

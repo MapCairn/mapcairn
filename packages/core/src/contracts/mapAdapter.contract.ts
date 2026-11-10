@@ -876,6 +876,86 @@ export function runMapAdapterContract(
           MapEngineError,
         );
       });
+
+      const blocked = (basemap: BasemapDefinition): BasemapDefinition => ({
+        ...basemap,
+        id: `${basemap.id}-no-images`,
+        allowsImageExport: false,
+      });
+
+      it("refuses to make an image of a basemap whose terms forbid it, and makes one again after a swap to another", async () => {
+        const { adapter, controls } = await mounted();
+        await adapter.setBasemap(blocked(controls.basemap));
+        await controls.settle();
+        await expect(adapter.toImage()).rejects.toMatchObject({
+          name: "MapEngineError",
+          reason: "export-blocked",
+        });
+        await adapter.setBasemap(controls.basemap);
+        await controls.settle();
+        const image = await adapter.toImage();
+        expect(image.type).toBe("image/png");
+      });
+
+      it("refuses to make an image when it was mounted with a basemap whose terms forbid it", async () => {
+        const subject = create();
+        live.push(subject.adapter);
+        const { adapter, controls } = subject;
+        await adapter.mount(controls.host, {
+          ...mountOptions(controls, 6),
+          basemap: blocked(controls.basemap),
+        });
+        await controls.settle();
+        await expect(adapter.toImage()).rejects.toMatchObject({
+          reason: "export-blocked",
+        });
+      });
+
+      it("still refuses after a swap away from such a basemap fails, which puts it back", async () => {
+        const { adapter, controls } = await mounted();
+        if (controls.failNextBasemap === undefined) {
+          return;
+        }
+        await adapter.setBasemap(blocked(controls.basemap));
+        await controls.settle();
+        controls.failNextBasemap();
+        await expect(
+          adapter.setBasemap(controls.basemap),
+        ).rejects.toBeInstanceOf(MapEngineError);
+        await controls.settle();
+        await expect(adapter.toImage()).rejects.toMatchObject({
+          reason: "export-blocked",
+        });
+      });
+
+      it("allows an image again after a swap to such a basemap fails, which leaves the old one", async () => {
+        const { adapter, controls } = await mounted();
+        if (controls.failNextBasemap === undefined) {
+          return;
+        }
+        controls.failNextBasemap();
+        await expect(
+          adapter.setBasemap(blocked(controls.basemap)),
+        ).rejects.toBeInstanceOf(MapEngineError);
+        await controls.settle();
+        const image = await adapter.toImage();
+        expect(image.type).toBe("image/png");
+      });
+
+      it("refuses an image in flight when a swap to a basemap whose terms forbid it starts before the pixels are copied", async () => {
+        const { adapter, controls } = await mounted();
+        const image = adapter.toImage();
+        const swap = adapter.setBasemap(blocked(controls.basemap));
+        await expect(image).rejects.toMatchObject({
+          name: "MapEngineError",
+          reason: "export-blocked",
+        });
+        await swap;
+        await controls.settle();
+        await expect(adapter.toImage()).rejects.toMatchObject({
+          reason: "export-blocked",
+        });
+      });
     });
 
     describe("edit handles", () => {
