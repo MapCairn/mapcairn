@@ -47,15 +47,25 @@ jobs:
         run: |
           npm ci
 
-      # The apt step inside `playwright install --with-deps` sometimes stalls
-      # for many minutes on one runner, so each try is bounded and retried.
-      - name: Install Playwright browsers
+      # The runner's Ubuntu mirror is sometimes very slow, so apt gives up on a
+      # stalled download and retries it, rather than the whole step hanging.
+      - name: Make apt downloads fail fast and retry
         run: |
-          for attempt in 1 2 3; do
-            timeout 300 npm run playwright:install -w @karta/web && exit 0
-            echo "Browser install attempt ${attempt} did not finish; trying again."
-          done
-          exit 1
+          printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' \
+            | sudo tee /etc/apt/apt.conf.d/80-ci-retries >/dev/null
+
+      # WebKit pulls in about 185 system packages (gstreamer, libav), and only
+      # the shard that holds the WebKit tests needs them.
+      - name: Install Playwright browsers
+        working-directory: packages/web
+        timeout-minutes: 15
+        run: |
+          if npx --no-install playwright test --list --shard=${{ matrix.shard }}/4 | grep -q '\[webkit\]'; then
+            browsers="chromium webkit"
+          else
+            browsers="chromium"
+          fi
+          npx --no-install playwright install --with-deps ${browsers}
 
       - name: Run Playwright tests (shard ${{ matrix.shard }} of 4)
         run: npm run test:e2e:all -w @karta/web -- --shard=${{ matrix.shard }}/4
