@@ -8,13 +8,14 @@ import type {
  * The basemap shown when nobody has chosen one, in both interface themes, and
  * the one an unknown or retired id (such as the old "auto" or "dark") falls back to.
  */
-export const DEFAULT_BASEMAP_ID = "liberty";
+export const DEFAULT_BASEMAP_ID = "bright";
 
 /**
  * The default basemap's background (land) colour: the `background` layer of
- * the OpenFreeMap Liberty style, written as that style writes it. The server
- * paints the map region in this colour before the map loads, in both themes,
- * so the first view does not flash a different colour before Liberty draws.
+ * the OpenFreeMap Bright style, written as that style writes it (Liberty's is
+ * the same). The server paints the map region in this colour before the map
+ * loads, in both themes, so the first view does not flash a different colour
+ * before Bright draws.
  */
 export const DEFAULT_BASEMAP_BACKGROUND = "#f8f4f0";
 
@@ -39,6 +40,20 @@ const VECTOR_MAX_ZOOM = 22;
 // The standard OpenStreetMap tile layer serves levels 0 to 19.
 const OSM_MAX_ZOOM = 19;
 
+const BRIGHT: BasemapDefinition = {
+  id: "bright",
+  name: "Bright",
+  source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/bright` },
+  minZoom: 0,
+  maxZoom: VECTOR_MAX_ZOOM,
+  thumbnail: "/basemaps/bright.jpg",
+  attribution: OPEN_FREE_MAP_CREDITS,
+  appearance: "light",
+  // Nothing to leave out in Save data mode: the style names the Natural Earth
+  // raster source but draws no raster layer from it, so every byte of its first
+  // view is vector tiles, glyphs and the sprite.
+};
+
 const LIBERTY: BasemapDefinition = {
   id: "liberty",
   name: "Liberty",
@@ -56,6 +71,7 @@ const LIBERTY: BasemapDefinition = {
 
 /** Every built-in basemap, in the order the picker shows them, the default first. */
 export const BASEMAPS: readonly BasemapDefinition[] = [
+  BRIGHT,
   LIBERTY,
   {
     id: "positron",
@@ -104,7 +120,7 @@ export function getBasemap(id: string): BasemapDefinition | undefined {
  *   "auto" choice from an earlier version) gives the default basemap.
  */
 export function resolveBasemap(choiceId: string): BasemapDefinition {
-  return getBasemap(choiceId) ?? LIBERTY;
+  return getBasemap(choiceId) ?? BRIGHT;
 }
 
 /**
@@ -159,7 +175,7 @@ export function createBasemapCatalogue(
   };
 }
 
-/** The catalogue of the built-in basemaps, Liberty the default. */
+/** The catalogue of the built-in basemaps, Bright the default. */
 export const BUILT_IN_BASEMAP_CATALOGUE: BasemapCatalogue =
   createBasemapCatalogue(BASEMAPS, DEFAULT_BASEMAP_ID);
 

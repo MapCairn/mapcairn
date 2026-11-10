@@ -127,7 +127,7 @@ describe("public/_headers cache rules", () => {
 
   it("gives every static file exactly one cache rule: a week for images and icons, a day for the manifest and security.txt", () => {
     const paths = publicPaths();
-    expect(paths).toContain("/basemaps/liberty.jpg");
+    expect(paths).toContain("/basemaps/bright.jpg");
     expect(paths).toContain("/favicon.svg");
     for (const served of paths) {
       const expected = DAILY.has(served) ? [A_DAY] : [A_WEEK];

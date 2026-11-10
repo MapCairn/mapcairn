@@ -245,7 +245,7 @@ export async function scriptMemorySettings(
       theme: "system",
       units: "metric",
       zoomButtons: null,
-      basemapId: "liberty",
+      basemapId: "bright",
       lastView: null,
       ...seed,
     });

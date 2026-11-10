@@ -18,8 +18,9 @@ import {
 } from "./basemaps";
 
 describe("BASEMAPS", () => {
-  it("contains the three built-in basemaps in picker order, the default first", () => {
+  it("contains the four built-in basemaps in picker order, the default first", () => {
     expect(BASEMAPS.map((basemap) => basemap.id)).toEqual([
+      "bright",
       "liberty",
       "positron",
       "osm",
@@ -93,6 +94,10 @@ describe("BASEMAPS", () => {
     const sources = Object.fromEntries(
       BASEMAPS.map((basemap) => [basemap.id, basemap.source]),
     );
+    expect(sources.bright).toEqual({
+      kind: "vector",
+      styleUrl: "https://tiles.openfreemap.org/styles/bright",
+    });
     expect(sources.positron).toEqual({
       kind: "vector",
       styleUrl: "https://tiles.openfreemap.org/styles/positron",
@@ -113,7 +118,7 @@ describe("BASEMAPS", () => {
   });
 
   it("credits OpenStreetMap, OpenFreeMap and OpenMapTiles on the vector styles", () => {
-    for (const id of ["positron", "liberty"]) {
+    for (const id of ["bright", "positron", "liberty"]) {
       const text = getBasemap(id)
         ?.attribution.map((entry) => entry.text)
         .join(" ");
@@ -155,9 +160,15 @@ describe("getBasemap", () => {
 });
 
 describe("resolveBasemap", () => {
-  it("makes Liberty the default basemap", () => {
-    expect(DEFAULT_BASEMAP_ID).toBe("liberty");
-    expect(getBasemap(DEFAULT_BASEMAP_ID)?.name).toBe("Liberty");
+  it("makes Bright the default basemap, and the first one the picker lists", () => {
+    expect(DEFAULT_BASEMAP_ID).toBe("bright");
+    expect(getBasemap(DEFAULT_BASEMAP_ID)?.name).toBe("Bright");
+    expect(BASEMAPS[0]?.id).toBe(DEFAULT_BASEMAP_ID);
+  });
+
+  it("still resolves a saved or linked liberty to Liberty, not to the new default", () => {
+    expect(resolveBasemap("liberty").name).toBe("Liberty");
+    expect(resolveBasemap("liberty").id).not.toBe(DEFAULT_BASEMAP_ID);
   });
 
   it("returns an explicit choice", () => {
@@ -168,16 +179,17 @@ describe("resolveBasemap", () => {
 
   it("falls back to the default for an unknown id, including the retired auto and dark choices", () => {
     for (const id of ["auto", "dark", "missing", "", "__proto__"]) {
-      expect(resolveBasemap(id).id).toBe("liberty");
+      expect(resolveBasemap(id).id).toBe("bright");
     }
   });
 });
 
 describe("DEFAULT_BASEMAP_BACKGROUND", () => {
   // Copied from the `background` layer's `background-color` in
-  // https://tiles.openfreemap.org/styles/liberty (checked 2026-11-09). The
-  // style writes it as six-digit lowercase hex, and so does this constant.
-  it("is the Liberty style's background colour, in the style's own format", () => {
+  // https://tiles.openfreemap.org/styles/bright (checked 2026-11-10; Liberty's
+  // is the same). The style writes it as six-digit lowercase hex, and so does
+  // this constant.
+  it("is the Bright style's background colour, in the style's own format", () => {
     expect(DEFAULT_BASEMAP_BACKGROUND).toMatch(/^#[0-9a-f]{6}$/);
     expect(DEFAULT_BASEMAP_BACKGROUND).toBe("#f8f4f0");
   });
@@ -226,12 +238,16 @@ describe("omittedLayers", () => {
     expect(omittedLayers(liberty, false)).toEqual([]);
   });
 
+  // Checked against https://tiles.openfreemap.org/styles/bright on 2026-11-10:
+  // it declares the Natural Earth raster source but draws no raster layer
+  // from it, so its first view has no relief image to leave out.
   it("is empty for a basemap that names no such layers", () => {
     for (const basemap of BASEMAPS) {
       if (basemap.saveDataOmitLayers === undefined) {
         expect(omittedLayers(basemap, true)).toEqual([]);
       }
     }
+    expect(omittedLayers(resolveBasemap("bright"), true)).toEqual([]);
     expect(omittedLayers(resolveBasemap("positron"), true)).toEqual([]);
     expect(omittedLayers(resolveBasemap("osm"), true)).toEqual([]);
   });
@@ -301,10 +317,11 @@ describe("createBasemapCatalogue", () => {
     ).toThrow(/missing/);
   });
 
-  it("is what the built-in basemaps make: Liberty the default, then Positron and Streets", () => {
+  it("is what the built-in basemaps make: Bright the default, then Liberty, Positron and Streets", () => {
     expect(BUILT_IN_BASEMAP_CATALOGUE.basemaps).toBe(BASEMAPS);
     expect(BUILT_IN_BASEMAP_CATALOGUE.defaultId).toBe(DEFAULT_BASEMAP_ID);
-    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("dark").id).toBe("liberty");
+    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("dark").id).toBe("bright");
+    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").id).toBe("liberty");
   });
 
   it("names no provider whose terms the SDK would have to carry", () => {

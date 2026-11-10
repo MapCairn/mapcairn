@@ -321,7 +321,7 @@ describe("App", () => {
       adapter(services).setView({ zoom: 5 });
     });
     expect(services.fakes.url.read().view?.zoom).toBe(5);
-    expect(services.fakes.url.read().basemapId).toBe("liberty");
+    expect(services.fakes.url.read().basemapId).toBe("bright");
     expect(services.fakes.settings.get().lastView).toBeNull();
     act(() => {
       vi.advanceTimersByTime(SAVE_VIEW_DELAY_MS);
@@ -940,14 +940,14 @@ describe("basemaps", () => {
     });
   });
 
-  it("starts on Liberty in a dark theme as well as a light one", async () => {
+  it("starts on Bright in a dark theme as well as a light one", async () => {
     for (const theme of ["light", "dark"] as const) {
       const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
       const services = createFakeServices();
       services.fakes.settings.set({ theme });
       await renderApp(services);
       const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
-      expect(options.basemap.id, theme).toBe("liberty");
+      expect(options.basemap.id, theme).toBe("bright");
       cleanup();
       vi.restoreAllMocks();
     }
@@ -962,17 +962,37 @@ describe("basemaps", () => {
     expect(options.basemap.id).toBe("positron");
   });
 
-  it("treats a saved auto, dark or retired basemap as Liberty, and leaves the saved value alone", async () => {
+  it("keeps a saved or linked Liberty on Liberty, now that Bright is the default", async () => {
+    const choices = [
+      { saved: "liberty", linked: undefined },
+      { saved: "positron", linked: "liberty" },
+    ];
+    for (const { saved, linked } of choices) {
+      const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
+      const services = createFakeServices();
+      services.fakes.settings.set({ basemapId: saved });
+      if (linked !== undefined) {
+        services.fakes.url.write({ basemapId: linked });
+      }
+      await renderApp(services);
+      const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
+      expect(options.basemap.id, `${saved} ${linked}`).toBe("liberty");
+      cleanup();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("treats a saved auto, dark or retired basemap as Bright, and leaves the saved value alone", async () => {
     for (const stored of ["auto", "dark", "retired-basemap"]) {
       const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
       const services = createFakeServices();
       services.fakes.settings.set({ theme: "dark", basemapId: stored });
       await renderApp(services);
       const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
-      expect(options.basemap.id, stored).toBe("liberty");
+      expect(options.basemap.id, stored).toBe("bright");
       fireEvent.click(screen.getByRole("button", { name: "Map options" }));
       expect(
-        screen.getByTestId("basemap-option-liberty").querySelector("input"),
+        screen.getByTestId("basemap-option-bright").querySelector("input"),
       ).toBeChecked();
       expect(
         screen.queryByRole("switch", { name: /match the map/i }),
@@ -1221,10 +1241,10 @@ describe("WebMCP tools", () => {
     services.fakes.settings.set({ basemapId: "auto" });
     const { call } = await renderWithTools(services);
     const setBasemap = vi.spyOn(adapter(services), "setBasemap");
-    expect(await call("set-map-basemap", { basemap: "liberty" })).toBe(
-      "Switched the basemap to liberty.",
+    expect(await call("set-map-basemap", { basemap: "bright" })).toBe(
+      "Switched the basemap to bright.",
     );
-    expect(services.fakes.settings.get().basemapId).toBe("liberty");
+    expect(services.fakes.settings.get().basemapId).toBe("bright");
     expect(setBasemap).not.toHaveBeenCalled();
   });
 
@@ -1507,9 +1527,9 @@ describe("a basemap whose provider sets terms", () => {
       );
       await settle();
       expect(screen.queryByTestId("basemap-error")).toBeNull();
-      expect(services.fakes.settings.get().basemapId).toBe("liberty");
+      expect(services.fakes.settings.get().basemapId).toBe("bright");
       fireEvent.click(screen.getByRole("button", { name: "Map options" }));
-      expect(radio("liberty")).toBeChecked();
+      expect(radio("bright")).toBeChecked();
     });
   });
 });

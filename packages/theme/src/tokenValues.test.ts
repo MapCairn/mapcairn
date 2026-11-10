@@ -51,7 +51,7 @@ describe("data palette", () => {
 describe("data marker edge", () => {
   const { edge, halo } = dataMarker;
   const lightSurfaces = [
-    representativeBackdrops.liberty,
+    representativeBackdrops.defaultBasemap,
     representativeBackdrops.lightMap,
     representativeBackdrops.white,
     themeValues.light.opaque.surface,

@@ -23,7 +23,7 @@
  * one browser context, so the HTTP cache carries over as it would for a
  * returning visitor:
  *
- * 1. cold: the first view of the default basemap (Liberty, whole world) with
+ * 1. cold: the first view of the default basemap (Bright, whole world) with
  *    an empty cache;
  * 2. warm: the same page loaded again;
  * 3. switch: choosing Positron in the basemap picker;
@@ -270,9 +270,7 @@ const results = [];
 let mark = network.mark();
 await page.goto(`${BASE_URL}/`);
 await waitForMap(page, network);
-results.push(
-  summarise("cold first view (Liberty, world)", network.since(mark)),
-);
+results.push(summarise("cold first view (Bright, world)", network.since(mark)));
 
 mark = network.mark();
 await page.goto("about:blank");
@@ -289,7 +287,7 @@ results.push(summarise("switch to Positron (world)", network.since(mark)));
 
 // The minute starts on the default basemap over a city, once it has loaded.
 await page.goto("about:blank");
-await page.goto(`${BASE_URL}/#map=11.00/-26.20000/28.04000&basemap=liberty`);
+await page.goto(`${BASE_URL}/#map=11.00/-26.20000/28.04000&basemap=bright`);
 await waitForMap(page, network);
 mark = network.mark();
 const started = Date.now();
@@ -297,7 +295,7 @@ await panAndZoom(page);
 await network.quiet();
 results.push({
   ...summarise(
-    "a minute of panning and zooming (Liberty, Johannesburg, zoom 11 to 14)",
+    "a minute of panning and zooming (Bright, Johannesburg, zoom 11 to 14)",
     network.since(mark),
   ),
   seconds: Math.round((Date.now() - started) / 1000),

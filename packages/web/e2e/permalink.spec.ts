@@ -2,6 +2,8 @@ import { expect, test } from "./fixtures";
 import {
   DEFAULT_VECTOR_BASEMAP_ID,
   DEFAULT_VECTOR_BASEMAP_NAME,
+  LIBERTY_BASEMAP_ID,
+  LIBERTY_BASEMAP_NAME,
   RASTER_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
   REMOVED_BASEMAP_ID,
@@ -14,7 +16,9 @@ test.describe("permalink", () => {
     page,
     mapPage,
   }) => {
-    await mapPage.goto("#map=10.00/-33.92000/18.42000/30&basemap=liberty");
+    await mapPage.goto(
+      `#map=10.00/-33.92000/18.42000/30&basemap=${LIBERTY_BASEMAP_ID}`,
+    );
     await expect(mapPage.host).toHaveAttribute("data-zoom", "10.00");
     const view = await mapPage.hashView();
     expect(view).toEqual({ zoom: 10, lat: -33.92, lng: 18.42, bearing: 30 });
@@ -22,7 +26,7 @@ test.describe("permalink", () => {
 
     await mapPage.openMapOptions();
     await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: "Liberty" }),
+      mapPage.basemapPicker.getByRole("radio", { name: LIBERTY_BASEMAP_NAME }),
     ).toBeChecked();
     expect(
       await page.evaluate(() => localStorage.getItem("karta:basemapId")),

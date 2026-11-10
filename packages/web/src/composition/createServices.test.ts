@@ -36,11 +36,11 @@ describe("createServices", () => {
     );
   });
 
-  it("offers the host's basemaps, Maptoolkit Dark among them, with Liberty the default", () => {
+  it("offers the host's basemaps, Maptoolkit Dark among them, with Bright the default", () => {
     const { basemaps } = createServices();
     expect(basemaps).toBe(BASEMAP_CATALOGUE);
     expect(basemaps?.get("maptoolkit-dark")?.name).toBe("Maptoolkit Dark");
-    expect(basemaps?.defaultId).toBe("liberty");
+    expect(basemaps?.defaultId).toBe("bright");
   });
 
   it("builds the Valhalla routing provider, which sends nothing until a route is asked for", () => {

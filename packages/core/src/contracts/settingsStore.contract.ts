@@ -33,7 +33,7 @@ export function runSettingsStoreContract(
         units: "metric",
         zoomButtons: null,
         saveData: null,
-        basemapId: "liberty",
+        basemapId: "bright",
         lastView: null,
       });
       expect(typeof store.persistent).toBe("boolean");
@@ -52,7 +52,7 @@ export function runSettingsStoreContract(
       expect(after).not.toBe(before);
       expect(after.units).toBe("imperial");
       expect(after.theme).toBe("system");
-      expect(after.basemapId).toBe("liberty");
+      expect(after.basemapId).toBe("bright");
       expect(before.units).toBe("metric");
     });
 

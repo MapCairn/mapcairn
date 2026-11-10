@@ -14,16 +14,26 @@ export const RASTER_BASEMAP_NAME = "Streets";
 export const RASTER_BASEMAP_CREDIT = /OpenStreetMap/;
 
 /** The default basemap, in both interface themes. */
-export const DEFAULT_VECTOR_BASEMAP_ID = "liberty";
+export const DEFAULT_VECTOR_BASEMAP_ID = "bright";
 
 /** Its name in the picker. */
-export const DEFAULT_VECTOR_BASEMAP_NAME = "Liberty";
+export const DEFAULT_VECTOR_BASEMAP_NAME = "Bright";
 
 /**
  * The default basemap's land colour as computed CSS, which the map region
  * shows before the map draws, in both themes.
  */
 export const DEFAULT_VECTOR_BASEMAP_BACKGROUND = "rgb(248, 244, 240)";
+
+/**
+ * Liberty, the default before Bright. It stays in the picker, a saved or
+ * linked "liberty" still opens on it, and its style lists a shaded-relief
+ * layer to leave out in Save data mode, which Bright does not.
+ */
+export const LIBERTY_BASEMAP_ID = "liberty";
+
+/** Its name in the picker. */
+export const LIBERTY_BASEMAP_NAME = "Liberty";
 
 /** Another light vector basemap, for choosing one explicitly. */
 export const OTHER_VECTOR_BASEMAP_ID = "positron";
@@ -38,7 +48,7 @@ export const OTHER_VECTOR_BASEMAP_NAME = "Positron";
 export const REMOVED_BASEMAP_ID = "dark";
 
 /** How many basemaps the picker offers. */
-export const BASEMAP_COUNT = 4;
+export const BASEMAP_COUNT = 5;
 
 /**
  * The Maptoolkit Dark basemap: a manual choice with a permanent credit and

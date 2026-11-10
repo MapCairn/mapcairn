@@ -12,7 +12,7 @@ export const TRANSPARENT_PNG = Buffer.from(
 /** The raster tile host of the built-in Streets basemap. */
 export const RASTER_TILE_PATTERN = /tile\.openstreetmap\.org/;
 
-/** OpenFreeMap style documents (Liberty, the default, and Positron). */
+/** OpenFreeMap style documents (Bright, the default, Liberty and Positron). */
 export const VECTOR_STYLE_PATTERN = /tiles\.openfreemap\.org\/styles\//;
 
 /** The OpenFreeMap Positron style document, a basemap that is not the default. */

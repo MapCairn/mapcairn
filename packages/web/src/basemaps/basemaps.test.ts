@@ -11,8 +11,9 @@ import {
 } from "./index";
 
 describe("the host's basemap catalogue", () => {
-  it("offers Liberty, Positron, Streets and Maptoolkit Dark, in that order", () => {
+  it("offers Bright, Liberty, Positron, Streets and Maptoolkit Dark, in that order", () => {
     expect(BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.name)).toEqual([
+      "Bright",
       "Liberty",
       "Positron",
       "Streets",
@@ -20,8 +21,9 @@ describe("the host's basemap catalogue", () => {
     ]);
   });
 
-  it("keeps Liberty the default, and every built-in basemap as it was", () => {
-    expect(BASEMAP_CATALOGUE.defaultId).toBe("liberty");
+  it("makes Bright the default, and keeps Liberty and every other built-in basemap", () => {
+    expect(BASEMAP_CATALOGUE.defaultId).toBe("bright");
+    expect(BASEMAP_CATALOGUE.resolve("liberty").name).toBe("Liberty");
     expect(BASEMAP_CATALOGUE.basemaps.slice(0, BASEMAPS.length)).toEqual(
       BASEMAPS,
     );
@@ -32,9 +34,9 @@ describe("the host's basemap catalogue", () => {
     expect(BASEMAP_CATALOGUE.resolve("maptoolkit-dark")).toBe(MAPTOOLKIT_DARK);
   });
 
-  it("still opens on Liberty for the removed dark id and the retired auto choice", () => {
+  it("still opens on Bright for the removed dark id and the retired auto choice", () => {
     for (const id of ["dark", "auto", "maptoolkit", "Maptoolkit-Dark"]) {
-      expect(BASEMAP_CATALOGUE.resolve(id).id, id).toBe("liberty");
+      expect(BASEMAP_CATALOGUE.resolve(id).id, id).toBe("bright");
     }
   });
 });
@@ -57,7 +59,7 @@ describe("Maptoolkit Dark", () => {
   it("has a neutral dark swatch of its own, so its picker tile is not the default's pale land colour", () => {
     expect(MAPTOOLKIT_DARK.swatch).toMatch(/^#[0-9a-f]{6}$/);
     expect(MAPTOOLKIT_DARK.swatch).not.toBe(
-      tokenValues.representativeBackdrops.liberty,
+      tokenValues.representativeBackdrops.defaultBasemap,
     );
     // Dark enough to read as a dark map beside the pale ones, and neutral.
     expect(

@@ -140,13 +140,13 @@ describe("toHex", () => {
  */
 const AA_TEXT = 4.5;
 const AA_NON_TEXT = 3;
-const { white, black, lightMap, liberty } = representativeBackdrops;
+const { white, black, lightMap, defaultBasemap } = representativeBackdrops;
 /**
- * White and black bracket every map. Liberty, the default basemap in both
+ * White and black bracket every map. The default basemap (Bright), in both
  * themes, is checked by name as well, because a dark theme no longer implies
  * a dark map beneath the chrome.
  */
-const surfaceBackdrops = { white, black, liberty };
+const surfaceBackdrops = { white, black, defaultBasemap };
 const themeNames: ThemeName[] = ["light", "dark"];
 const colourSets = ["colour", "opaque", "contrastMore"] as const;
 
@@ -284,7 +284,7 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
           white,
           black,
           lightMap,
-          liberty,
+          defaultBasemap,
         })) {
           expect(
             contrastRatio(roles[role], backdrop),
@@ -312,7 +312,7 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
 
   it("paints the map before it loads in the default basemap's land colour, whatever the theme", () => {
     for (const set of colourSets) {
-      expect(values[set].mapBackground, set).toBe(liberty);
+      expect(values[set].mapBackground, set).toBe(defaultBasemap);
     }
   });
 

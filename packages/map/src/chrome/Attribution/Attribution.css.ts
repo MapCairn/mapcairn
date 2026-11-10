@@ -24,8 +24,8 @@ export const root = style({
 
 /**
  * The credits button is a bare icon on the map, with no surface behind it.
- * The map is Liberty in both themes, so a dark theme's light icon would sit
- * on a light map; the map halo (dark in a dark theme, light in a light one)
+ * The default map is Bright in both themes, so a dark theme's light icon would
+ * sit on a light map; the map halo (dark in a dark theme, light in a light one)
  * outlines it, as the scale readout's text is outlined.
  */
 export const onMapIcon = style({

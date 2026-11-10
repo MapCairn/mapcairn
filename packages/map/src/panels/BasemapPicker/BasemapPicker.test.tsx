@@ -87,14 +87,14 @@ describe("BasemapPicker", () => {
     expect(selectedThumb?.className).not.toBe(otherThumb?.className);
   });
 
-  it("falls back to Liberty, the default basemap, for an unknown id", () => {
+  it("falls back to Bright, the default basemap, for an unknown id", () => {
     renderPicker({ value: "nowhere" });
-    expect(radio("Liberty")).toBeChecked();
+    expect(radio("Bright")).toBeChecked();
   });
 
-  it("falls back to Liberty for the retired auto choice", () => {
+  it("falls back to Bright for the retired auto choice", () => {
     renderPicker({ value: "auto" });
-    expect(radio("Liberty")).toBeChecked();
+    expect(radio("Bright")).toBeChecked();
     expect(screen.getAllByRole("radio", { checked: true })).toHaveLength(1);
   });
 

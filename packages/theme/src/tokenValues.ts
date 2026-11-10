@@ -111,12 +111,12 @@ export const representativeBackdrops = {
   /** Close to a light OpenStreetMap or Positron land colour. */
   lightMap: "#f2efe9",
   /**
-   * The land (background layer) colour of OpenFreeMap Liberty, the default
+   * The land (background layer) colour of OpenFreeMap Bright, the default
    * basemap in both themes. It must equal `DEFAULT_BASEMAP_BACKGROUND` in
    * `@karta/core`, which this package cannot import; a test in
    * `packages/web` checks that they agree.
    */
-  liberty: "#f8f4f0",
+  defaultBasemap: "#f8f4f0",
 } as const;
 
 /** The semantic colour roles. Components use these and never a ramp step. */
@@ -244,7 +244,7 @@ const lightColour: ColourRoles = {
   focusRing: accent[600],
   focusRingInner: "oklch(1 0 0)",
   pageBackground: "oklch(0.95 0.008 85)",
-  mapBackground: representativeBackdrops.liberty,
+  mapBackground: representativeBackdrops.defaultBasemap,
   mapPin: accent[600],
   mapMeasureLine: accent[600],
   mapMeasureFill: "oklch(0.55 0.175 255 / 0.18)",
@@ -271,7 +271,7 @@ const darkColour: ColourRoles = {
   focusRing: accent[500],
   focusRingInner: "oklch(0.19 0.008 250)",
   pageBackground: "oklch(0.24 0.008 250)",
-  mapBackground: representativeBackdrops.liberty,
+  mapBackground: representativeBackdrops.defaultBasemap,
   mapPin: accent[600],
   mapMeasureLine: accent[600],
   mapMeasureFill: "oklch(0.55 0.175 255 / 0.28)",

@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import {
   DEFAULT_VECTOR_BASEMAP_NAME,
+  LIBERTY_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
 } from "./support/basemaps";
 import {
@@ -12,11 +13,15 @@ import {
 
 /*
  * Save data mode: a stored choice or the browser's signal turns it on, and
- * while it is on the picker requests no thumbnail and the default basemap
- * leaves out its shaded-relief raster layer. The real Liberty style is
- * replaced by a small one with a layer of the same id, "natural_earth", drawn
- * from a relief source, so the test can count relief tile requests.
+ * while it is on the picker requests no thumbnail and a basemap that lists
+ * layers to leave out (Liberty, its shaded-relief raster layer) leaves them
+ * out. The default, Bright, lists none. The real Liberty style is replaced by
+ * a small one with a layer of the same id, "natural_earth", drawn from a
+ * relief source, so the test can count relief tile requests.
  */
+
+/** The hash that opens the map on Liberty, the basemap whose relief layer Save data leaves out. */
+const ON_LIBERTY = `#basemap=${LIBERTY_BASEMAP_ID}`;
 
 const RELIEF_TILES = /\/natural_earth\/ne2sr\//;
 const THUMBNAILS = /\/basemaps\/[\w-]+\.jpg/;
@@ -111,13 +116,13 @@ test.describe("save data", () => {
   }) => {
     const { relief } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
-    await mapPage.goto();
+    await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     await expect(
       page.getByRole("switch", { name: "Save data" }),
     ).not.toBeChecked();
     await mapPage.switchToMapOptions();
-    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(3);
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(4);
     await expect.poll(() => thumbnails.length).toBeGreaterThan(0);
     expect(relief.length).toBeGreaterThan(0);
   });
@@ -129,7 +134,7 @@ test.describe("save data", () => {
     await storeChoice(page, true);
     const { relief } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
-    await mapPage.goto();
+    await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     await expect(page.getByRole("switch", { name: "Save data" })).toBeChecked();
     await mapPage.switchToMapOptions();
@@ -156,7 +161,7 @@ test.describe("save data", () => {
   }) => {
     const { relief, styles } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
-    await mapPage.goto();
+    await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     const saveData = page.getByRole("switch", { name: "Save data" });
     await expect(saveData).toHaveAccessibleDescription(
@@ -185,9 +190,25 @@ test.describe("save data", () => {
       await page.evaluate(() => localStorage.getItem("karta:saveData")),
     ).toBe("false");
     await mapPage.switchToMapOptions();
-    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(3);
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(4);
     await expect.poll(() => relief.length).toBeGreaterThan(0);
     expect(thumbnails.length).toBeGreaterThan(0);
+  });
+
+  test("the default basemap lists nothing to leave out, so the switch does not redraw it", async ({
+    page,
+    mapPage,
+  }) => {
+    const { styles } = await serveRelief(page);
+    await mapPage.goto();
+    expect(styles).toHaveLength(1);
+    await mapPage.openSettings();
+    await page.getByRole("switch", { name: "Save data" }).click();
+    await expect(page.getByRole("switch", { name: "Save data" })).toBeChecked();
+    // Nothing should load, so there is no event to wait for; give a redraw
+    // time to start if one were going to.
+    await page.waitForTimeout(500);
+    expect(styles).toHaveLength(1);
   });
 
   test("starts on when the browser asks to save data, and an explicit choice still wins", async ({
@@ -196,7 +217,7 @@ test.describe("save data", () => {
   }) => {
     await reportConnection(page, { saveData: true, effectiveType: "4g" });
     const { relief } = await serveRelief(page);
-    await mapPage.goto();
+    await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     const saveData = page.getByRole("switch", { name: "Save data" });
     await expect(saveData).toBeChecked();
@@ -205,7 +226,7 @@ test.describe("save data", () => {
     await saveData.click();
     await expect(saveData).not.toBeChecked();
     await mapPage.switchToMapOptions();
-    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(3);
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(4);
     await expect.poll(() => relief.length).toBeGreaterThan(0);
   });
 

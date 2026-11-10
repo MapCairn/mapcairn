@@ -145,6 +145,18 @@ describe("LocalStorageSettingsStore", () => {
     });
   });
 
+  it("keeps a Liberty choice saved before Bright became the default", () => {
+    const { store } = setup({ "karta:basemapId": '"liberty"' });
+    expect(store.get().basemapId).toBe("liberty");
+  });
+
+  it("starts on the default basemap when nothing is saved, and saves nothing until a choice is made", () => {
+    const { store, storage } = setup({});
+    expect(store.get().basemapId).toBe("bright");
+    store.set({ units: "imperial" });
+    expect(storage.getItem("karta:basemapId")).toBeNull();
+  });
+
   it("replaces invalid stored values with the defaults", () => {
     const { store } = setup({
       [THEME_STORAGE_KEY]: '"dark"',
@@ -159,7 +171,7 @@ describe("LocalStorageSettingsStore", () => {
       units: "metric",
       zoomButtons: null,
       saveData: null,
-      basemapId: "liberty",
+      basemapId: "bright",
       lastView: null,
     });
   });

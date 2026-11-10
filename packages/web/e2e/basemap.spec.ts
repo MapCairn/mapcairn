@@ -3,6 +3,8 @@ import {
   BASEMAP_COUNT,
   DEFAULT_VECTOR_BASEMAP_ID,
   DEFAULT_VECTOR_BASEMAP_NAME,
+  LIBERTY_BASEMAP_ID,
+  LIBERTY_BASEMAP_NAME,
   OTHER_VECTOR_BASEMAP_ID,
   OTHER_VECTOR_BASEMAP_NAME,
   RASTER_BASEMAP_CREDIT,
@@ -17,6 +19,7 @@ import {
   SPRITE_PATTERN,
   VECTOR_STYLE_PATTERN,
 } from "./support/network";
+import { seedStoredSettings } from "./support/services";
 import { waitForCreditsCollapsed } from "./support/states";
 
 const START = "#map=8.00/-33.90000/18.40000/30";
@@ -96,12 +99,32 @@ test.describe("basemaps", () => {
       .focus();
     await page.keyboard.press("ArrowRight");
     const next = mapPage.basemapPicker.getByRole("radio", {
-      name: OTHER_VECTOR_BASEMAP_NAME,
+      name: LIBERTY_BASEMAP_NAME,
     });
     await expect(next).toBeChecked();
     await expect(next).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(mapPage.dropPinButton).toBeFocused();
+  });
+
+  test("a Liberty saved before Bright became the default still opens on Liberty", async ({
+    page,
+    mapPage,
+  }) => {
+    await seedStoredSettings(page, { basemapId: LIBERTY_BASEMAP_ID });
+    const styles: string[] = [];
+    page.on("request", (request) => {
+      const match = /\/styles\/(\w+)$/.exec(request.url());
+      if (match?.[1]) {
+        styles.push(match[1]);
+      }
+    });
+    await mapPage.goto();
+    expect(styles).toEqual([LIBERTY_BASEMAP_ID]);
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", { name: LIBERTY_BASEMAP_NAME }),
+    ).toBeChecked();
   });
 
   test("switching between the raster and vector styles keeps the map, the view and the bearing", async ({

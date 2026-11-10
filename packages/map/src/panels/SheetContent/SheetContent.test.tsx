@@ -192,13 +192,13 @@ describe("SheetContent basemap", () => {
     expect(screen.queryByRole("switch", { name: /match the map/i })).toBeNull();
   });
 
-  it("shows the retired auto choice as Liberty in either theme", () => {
+  it("shows the retired auto choice as Bright in either theme", () => {
     for (const theme of ["light", "dark"] as const) {
       const { unmount } = renderContent({
         props: { basemapId: "auto" },
         theme,
       });
-      expect(screen.getByRole("radio", { name: "Liberty" })).toBeChecked();
+      expect(screen.getByRole("radio", { name: "Bright" })).toBeChecked();
       unmount();
     }
   });

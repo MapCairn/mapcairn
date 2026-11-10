@@ -25,7 +25,7 @@ NASA data is openly shared; its data use guidance says NASA material may not be 
 
 | Source | Use | Credit |
 |---|---|---|
-| [OpenFreeMap](https://openfreemap.org) | Liberty and Positron vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors |
+| [OpenFreeMap](https://openfreemap.org) | Bright, Liberty and Positron vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors |
 | [OpenStreetMap](https://www.openstreetmap.org) | Streets raster tiles from `tile.openstreetmap.org` | © OpenStreetMap contributors, linked to [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright) |
 | [Maptoolkit](https://www.maptoolkit.org/) | Maptoolkit Dark vector style and tiles from `styles.maptoolkit.org`, `tiles.maptoolkit.org`, `icons.maptoolkit.org` and `fonts.maptoolkit.org`, with terrain tiles from `tiles.mapterhorn.com` that its style names | The Maptoolkit logo and "© Maptoolkit © Openstreetmap", always on screen while it is shown (see below) |
 
@@ -48,7 +48,7 @@ The basemap picker previews in `packages/web/public/basemaps/` are small images 
 
 | Preview | Source | Credit |
 |---|---|---|
-| `liberty.jpg`, `positron.jpg` | OpenFreeMap vector tiles and styles | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap |
+| `bright.jpg`, `liberty.jpg`, `positron.jpg` | OpenFreeMap vector tiles and styles | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap |
 | `osm.jpg` | OpenStreetMap standard tiles | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
 
 OpenFreeMap asks for this attribution wherever its maps appear in images or other media. Regenerate the previews with the script rather than editing them by hand, and keep this table in step with the basemap definitions in `packages/core/src/basemaps` and `packages/web/src/basemaps`. Maptoolkit Dark has no preview, for the reason above.
