@@ -17,12 +17,12 @@ import {
 } from "@karta/core";
 import {
   Bike,
-  Car,
+  CarFront,
   ChevronDown,
   ChevronUp,
   Crosshair,
-  Footprints,
   MapPin,
+  PersonStanding,
   Route,
   Search,
   Trash2,
@@ -45,9 +45,9 @@ import { useFreeCentre } from "./useFreeCentre";
 export const DEFAULT_DIRECTIONS_NOTE =
   "Nothing is sent until you ask. Get route sends the stops and the way of travelling to the routing service. A travel time area sends the first stop.";
 
-const MODE_ICONS: Readonly<Record<TravelMode, typeof Car>> = {
-  drive: Car,
-  walk: Footprints,
+const MODE_ICONS: Readonly<Record<TravelMode, typeof CarFront>> = {
+  drive: CarFront,
+  walk: PersonStanding,
   cycle: Bike,
 };
 
