@@ -127,6 +127,7 @@ Changes reach `main` through pull requests: a branch named for the change, a Con
 
 - Code changes: run `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`.
 - Map or UI changes: also run `npm run e2e` and `npm run a11y`.
+- Map or UI changes must also be confirmed visually. Look at the running app in screenshots at phone, tablet and desktop sizes, in both themes, and over more than one basemap where the map shows. The linters, the harmony scanner and the tests are stopgaps: they cannot tell you that something looks bad, is hard to use or breaks the harmony of the design. Say what looks wrong, fix it, and include the screenshots in the pull request. When you brief a sub-agent on UI work, tell it to do the same.
 - Dependency changes: perform the real install and the `npm ci` check above.
 - Report checks that failed or were skipped.
 
