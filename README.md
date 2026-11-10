@@ -317,11 +317,8 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`SECURITY.
 
 ## Licence
 
-Karta is licensed in two parts.
+Karta is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/core`, `packages/map`, `packages/react` and `packages/theme`) carries its own copy. If you ship the SDK in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence.
 
-| Part | Licence |
-|---|---|
-| SDK packages: `packages/core`, `packages/map`, `packages/react`, `packages/theme` | [Apache-2.0](packages/core/LICENSE), so you can use them in open or closed source projects |
-| Reference host: `packages/web` and the rest of the repository | [AGPL-3.0](LICENSE). If you host a modified version, you must publish its source |
+A commercial licence is available for use in closed-source products. Contact the author through [github.com/mooship](https://github.com/mooship).
 
 See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.

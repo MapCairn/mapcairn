@@ -2,7 +2,7 @@
   "name": "@karta/theme",
   "version": "1.0.0",
   "description": "Typed vanilla-extract contract for Karta's design tokens",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "main": "src/index.ts",

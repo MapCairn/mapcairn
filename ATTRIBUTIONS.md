@@ -52,7 +52,7 @@ Routes and travel-time areas come from the public [Valhalla](https://valhalla.gi
 
 ## Software
 
-The Karta SDK packages (`core`, `map`, `react` and `theme`) are licensed under [Apache-2.0](packages/core/LICENSE). The reference host in `packages/web` is licensed under [AGPL-3.0](LICENSE). Dependency licences are recorded in the installed packages' licence files.
+Karta is licensed under [AGPL-3.0](LICENSE). Each SDK package (`core`, `map`, `react` and `theme`) carries its own copy, and the reference host is in `packages/web`. Dependency licences are recorded in the installed packages' licence files.
 
 Maps are drawn with [MapLibre GL JS](https://maplibre.org), which is licensed under the BSD 3-Clause licence.
 
