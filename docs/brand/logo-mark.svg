@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Karta</title>
+  <!-- The cairn mark with four stones, no tile. Stones: #0d70d4 on light, #94c1fa on dark. The halo
+       colour must match the surface the mark sits on (#fff light, #1b1d22 dark here); change both together. -->
+  <style>
+    .stone { fill: #0d70d4; stroke: #0d70d4; }
+    .halo { fill: #fff; stroke: #fff; }
+    @media (prefers-color-scheme: dark) {
+      .stone { fill: #94c1fa; stroke: #94c1fa; }
+      .halo { fill: #1b1d22; stroke: #1b1d22; }
+    }
+  </style>
+  <g transform="translate(0 -35)" stroke-linejoin="round">
+    <g>
+      <polygon class="halo" stroke-width="30" points="80,430 96,384 150,368 330,376 410,372 436,420 410,452 110,456"/>
+      <polygon class="stone" stroke-width="16" points="80,430 96,384 150,368 330,376 410,372 436,420 410,452 110,456"/>
+    </g>
+    <g>
+      <polygon class="halo" stroke-width="30" points="206,350 192,306 230,274 322,258 378,274 396,316 380,352"/>
+      <polygon class="stone" stroke-width="16" points="206,350 192,306 230,274 322,258 378,274 396,316 380,352"/>
+    </g>
+    <g transform="translate(20 14)">
+      <polygon class="halo" stroke-width="30" points="166,238 152,208 184,182 290,176 318,200 310,238"/>
+      <polygon class="stone" stroke-width="16" points="166,238 152,208 184,182 290,176 318,200 310,238"/>
+    </g>
+    <g transform="translate(-8 22)">
+      <polygon class="halo" stroke-width="30" points="240,150 232,122 262,104 312,110 330,136 316,156"/>
+      <polygon class="stone" stroke-width="16" points="240,150 232,122 262,104 312,110 330,136 316,156"/>
+    </g>
+  </g>
+</svg>

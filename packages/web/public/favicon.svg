@@ -1,25 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <title>Karta</title>
-  <!-- Adaptive favicon. Light: #0d70d4 tile (oklch(0.55 0.175 255)), white pin. Dark: #94c1fa tile (oklch(0.80 0.095 255)), #062d59 pin. -->
+  <!-- Adaptive favicon: a cairn. Light: #0d70d4 tile, white stones. Dark: #94c1fa tile, #062d59 stones.
+       Each stone rests on the one below; a halo in the tile colour draws the thin line between them. -->
   <style>
     .tile { fill: #0d70d4; }
-    .pin { fill: #fff; }
-    .panel { fill: #fff; fill-opacity: 0.1; }
-    .crease { stroke: #fff; stroke-opacity: 0.22; }
+    .stone { fill: #fff; stroke: #fff; }
+    .halo { fill: #0d70d4; stroke: #0d70d4; }
     @media (prefers-color-scheme: dark) {
       .tile { fill: #94c1fa; }
-      .pin { fill: #062d59; }
-      .panel { fill: #062d59; fill-opacity: 0.1; }
-      .crease { stroke: #062d59; stroke-opacity: 0.2; }
+      .stone { fill: #062d59; stroke: #062d59; }
+      .halo { fill: #94c1fa; stroke: #94c1fa; }
     }
   </style>
-  <defs>
-    <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
-  </defs>
   <rect class="tile" width="512" height="512" rx="112"/>
-  <g clip-path="url(#tile)">
-    <path class="panel" d="M180 0H350L320 512H150Z"/>
-    <path class="crease" d="M180 0L150 512M350 0L320 512" stroke-width="6" fill="none"/>
+  <g transform="translate(256 256) scale(1.1) translate(-258 -323)" stroke-linejoin="round">
+    <g>
+      <polygon class="halo" stroke-width="32" points="80,430 96,384 150,368 330,376 410,372 436,420 410,452 110,456"/>
+      <polygon class="stone" stroke-width="18" points="80,430 96,384 150,368 330,376 410,372 436,420 410,452 110,456"/>
+    </g>
+    <g>
+      <polygon class="halo" stroke-width="32" points="206,350 192,306 230,274 322,258 378,274 396,316 380,352"/>
+      <polygon class="stone" stroke-width="18" points="206,350 192,306 230,274 322,258 378,274 396,316 380,352"/>
+    </g>
+    <g transform="translate(20 14)">
+      <polygon class="halo" stroke-width="32" points="166,238 152,208 184,182 290,176 318,200 310,238"/>
+      <polygon class="stone" stroke-width="18" points="166,238 152,208 184,182 290,176 318,200 310,238"/>
+    </g>
   </g>
-  <path class="pin" fill-rule="evenodd" d="M256 394L350 274.9A119.6 119.6 0 1 0 162 274.9ZM302 200.8A46 46 0 1 1 210 200.8A46 46 0 1 1 302 200.8Z"/>
 </svg>
