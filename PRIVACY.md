@@ -64,16 +64,18 @@ Every data layer is off until you turn it on, and nothing is requested before
 that. Turning a layer on, changing its controls or pressing Try again sends a
 request from your browser straight to that layer's provider, which may log it
 with your IP address: the US Geological Survey (USGS) for earthquakes, NASA's
-Global Imagery Browse Services for satellite imagery and fire hotspots, the
-Global Disaster Alert and Coordination System (GDACS) for fire, flood,
-tropical cyclone, volcano and drought alerts, and Copernicus (the Global Flood
-Awareness System) for the flood hazard map, and the jsDelivr content delivery
-network for the country boundaries. Show affected area sends one more
+Global Imagery Browse Services for satellite imagery, rainfall and fire
+hotspots, the Global Disaster Alert and Coordination System (GDACS) for fire,
+flood, tropical cyclone, volcano and drought alerts, and Copernicus (the Global
+Flood Awareness System) for the flood hazard map, and the jsDelivr content
+delivery network for the country boundaries. Show affected area sends one more
 request to GDACS for that event only. Tile layers request images for the part
 of the map you are looking at, so the provider can tell roughly where you are
 looking. Nothing passes through this site, and nothing is stored beyond the
 page you have open. The layers you turn on are written into the page address
-so a link can be shared; they are not sent anywhere else.
+so a link can be shared; they are not sent anywhere else. Opening a link that
+has layers turned on requests those layers straight away, because the link
+turns them on.
 
 ## Pin addresses
 
