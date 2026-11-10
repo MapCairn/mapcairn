@@ -124,7 +124,9 @@ SDK consumers must register `vanillaExtractPlugin()` in their Vite config. `@kar
 
 Work is tracked in GitHub Issues, and every plan in `docs/plans/` has a tracking issue linked from its file. AI agents manage the issues: create one for any new piece of work worth tracking, label it (`map`, `search`, `layers`, `design-system`, `a11y`, `performance`, `privacy`, `plan`, plus `bug` or `enhancement`), put it in a milestone when one fits, tick its task list as steps land, and close it when the work is merged and verified. Do not file an issue for a gap that can be fixed in the same session; fix it. Issues are public, so write plain project facts only, never emails, keys or private details.
 
-Changes reach `main` through pull requests: a branch named for the change, a Conventional Commit title, `Fixes #123` or `Part of #123` in the description, and the `build` and `e2e` checks green before merge. The repository ruleset requires both. Pushing straight to `main` is not the workflow.
+Changes reach `main` through pull requests: a branch named for the change, a Conventional Commit title, `Fixes #123` or `Part of #123` in the description, and the `build` and `e2e` checks green before merge. The repository ruleset requires both. Small changes (documentation, a CI tweak, a one-line fix) may go straight to `main` through a worktree with `git push origin HEAD:main`; anything larger, and anything that changes how the app looks or behaves in a way that needs review, goes through a pull request.
+
+Everything agents post on GitHub (issues, comments and pull requests) appears under the maintainer's own account, so write it as plain project facts in a neutral voice: "On hold for today", "Decided 2026-11-10: ...", not "the owner asked". No personal opinions or claims in the maintainer's name, no `@mentions` of people (commands to a bot such as Dependabot are fine), no employer or private references, and no attribution lines naming an AI tool. Check the text with `.claude/local/voice-check.cjs` where it exists, and brief every sub-agent the same way.
 
 ## Definition of done
 
