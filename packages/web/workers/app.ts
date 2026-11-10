@@ -1,9 +1,5 @@
 import { createRequestHandler } from "react-router";
 import { SECURITY_HEADERS } from "../src/constants/securityHeaders";
-import { SITE_URL } from "../src/constants/siteConfig";
-
-const OLD_HOSTNAME = "buffer-zones.timothybrits.co.za";
-const NEW_HOSTNAME = new URL(SITE_URL).hostname;
 
 const requestHandler = createRequestHandler(
   () => import("../build/server/index.js"),
@@ -11,9 +7,8 @@ const requestHandler = createRequestHandler(
 );
 
 /**
- * The Cloudflare Workers entry point. Permanently redirects requests for the
- * app's old hostname to its current one, then delegates everything else to
- * the built React Router server bundle. There are no Cloudflare bindings to
+ * The Cloudflare Workers entry point. Delegates every request to the built
+ * React Router server bundle. There are no Cloudflare bindings to
  * thread through, so the request is passed on with no `RouterContextProvider`.
  * @remarks The `try`/`catch` around `requestHandler` is a last-resort net,
  *   not the primary error path; `entry.server.tsx`'s `onError` and
@@ -26,11 +21,6 @@ const requestHandler = createRequestHandler(
  */
 export default {
   async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    if (url.hostname === OLD_HOSTNAME) {
-      url.hostname = NEW_HOSTNAME;
-      return Response.redirect(url.toString(), 301);
-    }
     try {
       return withSecurityHeaders(await requestHandler(request));
     } catch (error) {
