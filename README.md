@@ -1,5 +1,10 @@
 # MapCairn
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16543/badge)](https://www.bestpractices.dev/projects/16543)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MapCairn/mapcairn/badge)](https://scorecard.dev/viewer/?uri=github.com/MapCairn/mapcairn)
+[![CI](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml)
+[![Playwright E2E](https://github.com/MapCairn/mapcairn/actions/workflows/playwright.yml/badge.svg?branch=main)](https://github.com/MapCairn/mapcairn/actions/workflows/playwright.yml)
+
 MapCairn is a reusable SDK for public-interest map platforms, with a reference host. The SDK is built on ports and adapters: the interface and the pure logic depend on small interfaces, and one place wires in the map engine and the browser services. MapLibre GL JS is the only map engine.
 
 `packages/web` is the reference host: a map with basemaps, place search, distance and area measurement, drawing and editing shapes, directions (drive, walk and cycle, from a public routing server, only when asked), saving the map as an image, a pin, theme and unit settings, and open data layers (earthquakes, satellite imagery, rainfall, fire hotspots, GDACS fire, flood, cyclone, volcano and drought alerts, a flood hazard map and a countries-by-population example). Every layer is off until someone turns it on, and the browser then fetches it straight from its public provider; nothing is stored or proxied. The site has no accounts and no tracking beyond cookieless page views. [`docs/plans/`](docs/plans/README.md) holds plans for larger work.
