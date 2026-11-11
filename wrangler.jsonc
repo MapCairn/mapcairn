@@ -6,6 +6,8 @@
   "main": "./packages/web/workers/app.ts",
   "workers_dev": false,
   "preview_urls": true,
+  "previews": {},
+  "placement": { "mode": "smart" },
   "assets": {
     "directory": "./packages/web/build/client",
     "binding": "ASSETS"
