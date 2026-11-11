@@ -5,6 +5,7 @@ export * from "./gesture";
 export * from "./handles";
 export * from "./hit";
 export * from "./image";
+export * from "./import";
 export * from "./keys";
 export * from "./reducer";
 export * from "./shape";

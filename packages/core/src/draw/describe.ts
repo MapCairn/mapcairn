@@ -1,3 +1,4 @@
+import { formatNumber } from "../format/format";
 import type { UnitSystem } from "../ports/settings";
 import {
   describeArea,
@@ -6,6 +7,15 @@ import {
   formatDistance,
   pluralise,
 } from "../units/measurement";
+import {
+  MAX_IMPORT_BYTES,
+  MAX_IMPORT_POINTS,
+  MAX_IMPORT_SHAPE_POINTS,
+  MAX_IMPORT_SHAPES,
+  type ShapeImport,
+  type ShapeImportRefusal,
+  type ShapeImportSkip,
+} from "./import";
 import type { DrawEvent } from "./reducer";
 import { kindName, measureShape } from "./shape";
 import type { DrawIssue, DrawKind, DrawShape } from "./types";
@@ -193,5 +203,74 @@ export function announceDrawEvent(
       return "Redone.";
     case "loaded":
       return `${shapeCount(event.count)} loaded from the link.`;
+    case "imported":
+      // The import's own result says what it added and what it skipped.
+      return null;
   }
+}
+
+const BYTES_PER_MEGABYTE = 1_000_000;
+
+const IMPORT_REFUSALS: Readonly<Record<ShapeImportRefusal, string>> = {
+  empty: "The file is empty.",
+  "too-large": `The file is larger than ${formatNumber(MAX_IMPORT_BYTES / BYTES_PER_MEGABYTE)} MB. Split it into smaller files.`,
+  "too-deep":
+    "The file is nested too deeply to read. Check that it is GeoJSON.",
+  "not-recognised":
+    "This is not GeoJSON or a CSV of shapes from this map. Choose a .geojson, .json or .csv file.",
+  "too-many-shapes": `The file holds more than ${formatNumber(MAX_IMPORT_SHAPES)} shapes. Import at most ${formatNumber(MAX_IMPORT_SHAPES)} at a time.`,
+  "too-many-points": `The file holds more than ${formatNumber(MAX_IMPORT_POINTS)} points. Simplify the shapes or split the file.`,
+};
+
+/** What each skipped shape had wrong, after its count: "2 with edges that cross". */
+const IMPORT_SKIPS: Readonly<Record<ShapeImportSkip, string>> = {
+  "self-intersecting": "with edges that cross",
+  degenerate: "with no length or area",
+  "too-few-vertices": "with too few points",
+  "radius-missing": "with no radius",
+  "radius-too-large": "with a radius over 10,000 km",
+  "out-of-range": "with a position outside the world",
+  "too-many-points": `with more than ${formatNumber(MAX_IMPORT_SHAPE_POINTS)} points`,
+  malformed: "with coordinates that could not be read",
+  unsupported: "of a type that cannot be drawn",
+};
+
+function describeSkips(
+  skipped: Readonly<Partial<Record<ShapeImportSkip, number>>>,
+): string {
+  const parts: string[] = [];
+  let total = 0;
+  for (const [reason, words] of Object.entries(IMPORT_SKIPS)) {
+    const count = skipped[reason as ShapeImportSkip] ?? 0;
+    if (count > 0) {
+      parts.push(`${count} ${words}`);
+      total += count;
+    }
+  }
+  return total === 0 ? "" : ` ${total} skipped: ${parts.join(", ")}.`;
+}
+
+/**
+ * The words for what a file held, shown beside the Import button and
+ * announced: how many shapes were imported, how many were skipped and why,
+ * and whether holes were left out; or why the whole file was refused and
+ * what to do instead.
+ */
+export function describeShapeImport(result: ShapeImport): string {
+  if (!result.ok) {
+    return IMPORT_REFUSALS[result.refusal];
+  }
+  const skips = describeSkips(result.skipped);
+  if (result.shapes.length === 0 && skips === "") {
+    return "The file holds no shapes.";
+  }
+  const imported =
+    result.shapes.length === 0
+      ? "No shapes imported."
+      : `${shapeCount(result.shapes.length)} imported.`;
+  const holes =
+    result.holesDropped > 0
+      ? ` Holes in ${result.holesDropped} ${pluralise(result.holesDropped, ["polygon", "polygons"])} were left out.`
+      : "";
+  return `${imported}${skips}${holes}`;
 }

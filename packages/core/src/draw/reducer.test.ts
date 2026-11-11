@@ -846,3 +846,64 @@ describe("escapeAction", () => {
     expect(escapeAction(drawing)).toEqual({ type: "cancel" });
   });
 });
+
+describe("import", () => {
+  const SHAPES = [
+    { kind: "polygon" as const, vertices: [p(0, 0), p(1, 0), p(0, 1)] },
+    { kind: "point" as const, vertices: [p(2, 2)] },
+  ];
+
+  it("adds the shapes after those drawn, continuing ids and labels", () => {
+    const drawn = run([...TRIANGLE, { type: "finish" }]);
+    const imported = drawReducer(drawn, { type: "import", shapes: SHAPES });
+    expect(imported.shapes.map((shape) => [shape.id, shape.label])).toEqual([
+      ["shape-1", "Polygon 1"],
+      ["shape-2", "Polygon 2"],
+      ["shape-3", "Point 1"],
+    ]);
+    expect(imported.shapes.every((shape) => shape.done)).toBe(true);
+    expect(imported.nextId).toBe(4);
+    expect(imported.serials).toMatchObject({ polygon: 2, point: 1 });
+    expect(imported.selection).toEqual({ shapeId: "shape-2", vertex: null });
+    expect(imported.lastEvent).toEqual({
+      type: "imported",
+      shapeIds: ["shape-2", "shape-3"],
+    });
+  });
+
+  it("is one undo step, and redo brings every shape back", () => {
+    const drawn = run([...TRIANGLE, { type: "finish" }]);
+    const imported = drawReducer(drawn, { type: "import", shapes: SHAPES });
+    const undone = drawReducer(imported, { type: "undo" });
+    expect(undone.shapes).toEqual(drawn.shapes);
+    expect(undone.selection).toEqual(drawn.selection);
+    const redone = drawReducer(undone, { type: "redo" });
+    expect(redone.shapes).toEqual(imported.shapes);
+  });
+
+  it("puts the shapes before one still being drawn, which stays selected", () => {
+    const drafting = run([add(5, 5), add(5.01, 5)]);
+    const imported = drawReducer(drafting, { type: "import", shapes: SHAPES });
+    expect(imported.shapes.map((shape) => shape.label)).toEqual([
+      "Polygon 2",
+      "Point 1",
+      "Polygon 1",
+    ]);
+    expect(draftOf(imported)?.label).toBe("Polygon 1");
+    expect(imported.selection).toEqual(drafting.selection);
+  });
+
+  it("leaves out a shape that is not valid, and changes nothing when none is", () => {
+    const imported = drawReducer(initialDrawState, {
+      type: "import",
+      shapes: [{ kind: "line", vertices: [p(1, 1)] }, ...SHAPES],
+    });
+    expect(imported.shapes).toHaveLength(2);
+    expect(
+      drawReducer(initialDrawState, {
+        type: "import",
+        shapes: [{ kind: "line", vertices: [p(1, 1)] }],
+      }),
+    ).toBe(initialDrawState);
+  });
+});

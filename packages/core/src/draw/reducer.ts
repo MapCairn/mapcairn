@@ -48,7 +48,8 @@ export type DrawEvent =
     }
   | { readonly type: "undone" }
   | { readonly type: "redone" }
-  | { readonly type: "loaded"; readonly count: number };
+  | { readonly type: "loaded"; readonly count: number }
+  | { readonly type: "imported"; readonly shapeIds: readonly string[] };
 
 /** A shape as it is given to `load`: everything but the generated fields. */
 export interface DrawShapeInput {
@@ -145,7 +146,8 @@ export type DrawAction =
   | { readonly type: "clear" }
   | { readonly type: "undo" }
   | { readonly type: "redo" }
-  | { readonly type: "load"; readonly shapes: readonly DrawShapeInput[] };
+  | { readonly type: "load"; readonly shapes: readonly DrawShapeInput[] }
+  | { readonly type: "import"; readonly shapes: readonly DrawShapeInput[] };
 
 /** The shape that is still being drawn, or null. */
 export function draftOf(state: DrawState): DrawShape | null {
@@ -588,15 +590,23 @@ function redo(state: DrawState): DrawState {
   };
 }
 
-function load(state: DrawState, inputs: readonly DrawShapeInput[]): DrawState {
-  let nextId = 1;
-  const serials = { point: 0, line: 0, polygon: 0, circle: 0 };
+/**
+ * Names and finishes the valid shapes among `inputs`, numbering ids from
+ * `nextId` and labels from `serials`, and leaves out any that is not valid.
+ */
+function finishInputs(
+  inputs: readonly DrawShapeInput[],
+  from: Pick<DrawState, "nextId" | "serials">,
+): Pick<DrawState, "nextId" | "serials"> & { shapes: DrawShape[] } {
+  let nextId = from.nextId;
+  const serials = { ...from.serials };
   const shapes: DrawShape[] = [];
   for (const input of inputs) {
+    const serial = serials[input.kind] + 1;
     const candidate: DrawShape = {
       id: `shape-${nextId}`,
       kind: input.kind,
-      label: shapeLabel(input.kind, serials[input.kind] + 1),
+      label: shapeLabel(input.kind, serial),
       vertices: input.vertices,
       ...(input.radiusMetres === undefined
         ? {}
@@ -606,9 +616,14 @@ function load(state: DrawState, inputs: readonly DrawShapeInput[]): DrawState {
     if (validateShape(candidate) === null) {
       shapes.push(candidate);
       nextId += 1;
-      serials[input.kind] += 1;
+      serials[input.kind] = serial;
     }
   }
+  return { shapes, nextId, serials };
+}
+
+function load(state: DrawState, inputs: readonly DrawShapeInput[]): DrawState {
+  const { shapes, nextId, serials } = finishInputs(inputs, initialDrawState);
   if (shapes.length === 0 && state.shapes.length === 0) {
     return state;
   }
@@ -620,6 +635,32 @@ function load(state: DrawState, inputs: readonly DrawShapeInput[]): DrawState {
     serials,
     lastEvent: { type: "loaded", count: shapes.length },
   };
+}
+
+/**
+ * Adds shapes from a file after the ones drawn, as one undo step. Ids and
+ * labels continue from the drawing, so a file never names a shape. A shape
+ * still being drawn stays last and stays selected; otherwise the first
+ * imported shape is selected.
+ */
+function importShapes(
+  state: DrawState,
+  inputs: readonly DrawShapeInput[],
+): DrawState {
+  const { shapes: added, nextId, serials } = finishInputs(inputs, state);
+  const [first] = added;
+  if (!first) {
+    return state;
+  }
+  const draft = draftOf(state);
+  const finished = draft ? state.shapes.slice(0, -1) : state.shapes;
+  return commit(state, {
+    shapes: draft ? [...finished, ...added, draft] : [...finished, ...added],
+    selection: draft ? state.selection : { shapeId: first.id, vertex: null },
+    nextId,
+    serials,
+    lastEvent: { type: "imported", shapeIds: added.map((shape) => shape.id) },
+  });
 }
 
 /**
@@ -669,6 +710,8 @@ export function drawReducer(state: DrawState, action: DrawAction): DrawState {
       return redo(state);
     case "load":
       return load(state, action.shapes);
+    case "import":
+      return importShapes(state, action.shapes);
   }
 }
 
