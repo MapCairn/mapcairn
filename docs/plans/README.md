@@ -4,4 +4,4 @@ Plans and specs for larger changes live here, one file each, numbered in the ord
 
 Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository root, not here.
 
-No plan is open at the moment.
+No plan is open.
