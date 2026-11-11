@@ -7,7 +7,7 @@ import * as styles from "./PrivacyPage.css";
  * ISO date this policy's content was last reviewed for accuracy. The root
  * `PRIVACY.md` states the same date, and a test keeps the two equal.
  */
-export const LAST_UPDATED = "2026-11-11";
+export const LAST_UPDATED = "2026-11-12";
 
 /** The page's title, shared with the route's `<title>` so the two cannot drift apart. */
 export const PRIVACY_POLICY_TITLE = "Privacy policy";
@@ -42,15 +42,15 @@ export function PrivacyPage() {
           Your browser's <code>localStorage</code> keeps your settings: your
           light or dark theme (under the key <code>{THEME_STORAGE_KEY}</code>),
           your units, whether the zoom buttons show, whether Save data is on,
-          your chosen basemap, where the map was last left, and whether you have
-          answered the first-visit tour (a version number under{" "}
-          <code>mapcairn:tourSeen</code>). The other keys start with{" "}
-          <code>mapcairn:</code>. The tour itself sends nothing; a layer you
-          turn on during it loads from its provider as described below. These
-          stay on your device and are never sent to a server. Where your browser
-          reports a data saver or a very slow connection, the page reads that
-          locally to choose the default for Save data. Nothing about it is sent
-          anywhere.
+          whether the map is flat or a globe, your chosen basemap, where the map
+          was last left, and whether you have answered the first-visit tour (a
+          version number under <code>mapcairn:tourSeen</code>). The other keys
+          start with <code>mapcairn:</code>. The tour itself sends nothing; a
+          layer you turn on during it loads from its provider as described
+          below. These stay on your device and are never sent to a server. Where
+          your browser reports a data saver or a very slow connection, the page
+          reads that locally to choose the default for Save data. Nothing about
+          it is sent anywhere.
         </p>
 
         <h2 className={styles.sectionTitle}>Analytics</h2>
@@ -101,13 +101,20 @@ export function PrivacyPage() {
           serving the map. This is standard for any web map. Your browser makes
           those requests itself: they carry your IP address, its usual request
           headers (such as its user agent) and this site's address as the
-          referrer, and nothing this site has stored about you. When you search
-          (by pressing Enter or the Search button), your query is sent to
-          OpenStreetMap's Nominatim geocoding service, which may likewise log
-          the query and your IP address. Nothing is sent while you type. A
-          search that is only a pair of coordinates is read in your browser and
-          is not sent to the geocoder; showing the place requests map tiles for
-          that area, as any move of the map does.
+          referrer, and nothing this site has stored about you. Tiles are
+          requested for the part of the map on screen, so the basemap's
+          provider, and the provider of any tile layer you turn on, can tell
+          roughly which area you are looking at, and after Locate me roughly
+          where you are. When you search (by pressing Enter or the Search
+          button), your query is sent to OpenStreetMap's Nominatim geocoding
+          service, which may likewise log the query and your IP address. Nothing
+          is sent while you type. A search that is only a pair of coordinates is
+          read in your browser and is not sent to the geocoder; showing the
+          place requests map tiles for that area, as any move of the map does.
+          If an assistant in your browser uses this site's search or measuring
+          tools (through WebMCP), the place names it gives are sent to Nominatim
+          in the same way, and a pair of coordinates is again read in your
+          browser.
         </p>
 
         <h2 className={styles.sectionTitle}>Data layers</h2>
@@ -117,19 +124,20 @@ export function PrivacyPage() {
           again sends a request from your browser straight to that layer's
           provider, which may log it with your IP address: the US Geological
           Survey (USGS) for earthquakes, NASA's Global Imagery Browse Services
-          for satellite imagery, rainfall and fire hotspots, the Global Disaster
-          Alert and Coordination System (GDACS) for fire, flood, tropical
-          cyclone, volcano and drought alerts, and Copernicus (the Global Flood
-          Awareness System) for the flood hazard map, and the jsDelivr content
-          delivery network for the country boundaries. Show affected area sends
-          one more request to GDACS for that event only. Tile layers request
-          images for the part of the map you are looking at, so the provider can
-          tell roughly where you are looking. Nothing passes through this site,
-          and nothing is stored beyond the page you have open. The layers you
-          turn on are written into the page address so a link can be shared;
-          they are not sent anywhere else. Opening a link that has layers turned
-          on requests those layers straight away, because the link turns them
-          on.
+          for its imagery layers (satellite imagery, rainfall, fire hotspots,
+          where people live, Earth at night and sea temperature), the Global
+          Disaster Alert and Coordination System (GDACS) for fire, flood,
+          tropical cyclone, volcano and drought alerts, and Copernicus (the
+          Global Flood Awareness System) for the flood hazard map, and the
+          jsDelivr content delivery network for the country boundaries. Show
+          affected area sends one more request to GDACS for that event only.
+          Tile layers request images for the part of the map you are looking at,
+          so the provider can tell roughly where you are looking. Nothing passes
+          through this site, and nothing is stored beyond the page you have
+          open. The layers you turn on are written into the page address so a
+          link can be shared; they are not sent anywhere else. Opening a link
+          that has layers turned on requests those layers straight away, because
+          the link turns them on.
         </p>
 
         <h2 className={styles.sectionTitle}>Pin addresses</h2>

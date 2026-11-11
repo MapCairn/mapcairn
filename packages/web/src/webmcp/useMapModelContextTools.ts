@@ -1,5 +1,6 @@
 import {
   type BasemapCatalogue,
+  coordinateSearchResult,
   formatArea,
   formatDistance,
   type LatLng,
@@ -74,9 +75,28 @@ function describeTotal(
 export const MAX_MEASURE_LOCATIONS = 10;
 
 /**
- * Finds the best match for each place name, one after another, so the
- * lookups queue behind each other rather than arriving at the search service
- * together. Stops at the first name with no match, which saves the rest.
+ * Finds the place a search text names, as the search box does: text that is
+ * only a pair of coordinates is read here and never sent to the search
+ * service, which the privacy policy promises; any other text asks the service
+ * for its best match.
+ * @returns The place, or null when the service finds no match.
+ */
+export async function findPlace(
+  provider: SearchProvider,
+  text: string,
+): Promise<SearchResult | null> {
+  const coordinates = coordinateSearchResult(text);
+  if (coordinates !== null) {
+    return coordinates;
+  }
+  const [best] = await provider.search(text, { limit: 1 });
+  return best ?? null;
+}
+
+/**
+ * Finds the best match for each place name (see {@link findPlace}), one
+ * after another, so the lookups queue behind each other rather than arriving
+ * at the search service together. Stops at the first name with no match, which saves the rest.
  * @returns The matches in the given order, or the first name with no match.
  */
 export async function geocodeAll(
@@ -87,7 +107,7 @@ export async function geocodeAll(
 > {
   const found: SearchResult[] = [];
   for (const name of names) {
-    const [best] = await provider.search(name, { limit: 1 });
+    const best = await findPlace(provider, name);
     if (!best) {
       return { missing: name };
     }
@@ -132,10 +152,11 @@ interface MeasureInput {
  * theme, and measure along named places, through the same actions as the
  * interface. A no-op where WebMCP is unavailable.
  *
- * @remarks The layer tools of the old app are gone: there are no layers.
- *   Measuring geocodes each place with the search service, then opens the
- *   measure tool with those points, so the result is on screen as well as in
- *   the reply.
+ * @remarks The tools cover search, the basemap, the theme and measuring; no
+ *   data layer tool is offered. Coordinates are read in the browser, as in
+ *   the search box (see {@link findPlace}). Measuring looks up each place,
+ *   then opens the measure tool with those points, so the result is on screen
+ *   as well as in the reply.
  */
 export function useMapModelContextTools({
   flyTo,
@@ -149,20 +170,21 @@ export function useMapModelContextTools({
   useModelContextTool<SearchInput>({
     name: "search-map-location",
     description:
-      "Search for a place by name and move the map to the best match.",
+      "Search for a place by name and move the map to the best match. A pair of coordinates also works, and is read locally without a search.",
     inputSchema: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: "Free-text place name to search for.",
+          description:
+            "Free-text place name to search for, or a latitude and longitude pair.",
         },
       },
       required: ["query"],
       additionalProperties: false,
     },
     execute: async ({ query }) => {
-      const [best] = await provider.search(query, { limit: 1 });
+      const best = await findPlace(provider, query);
       if (!best) {
         return textResult(`No place found for "${query}".`);
       }
@@ -266,7 +288,7 @@ export function useMapModelContextTools({
           items: { type: "string" },
           minItems: MIN_POINTS.distance,
           maxItems: MAX_MEASURE_LOCATIONS,
-          description: `Place names in path order, from two to ${MAX_MEASURE_LOCATIONS}.`,
+          description: `Place names or coordinate pairs in path order, from two to ${MAX_MEASURE_LOCATIONS}. Coordinates are read locally without a search.`,
         },
       },
       required: ["locations"],
@@ -287,7 +309,7 @@ export function useMapModelContextTools({
           items: { type: "string" },
           minItems: MIN_POINTS.area,
           maxItems: MAX_MEASURE_LOCATIONS,
-          description: `Place names in outline order, from three to ${MAX_MEASURE_LOCATIONS}.`,
+          description: `Place names or coordinate pairs in outline order, from three to ${MAX_MEASURE_LOCATIONS}. Coordinates are read locally without a search.`,
         },
       },
       required: ["locations"],

@@ -12,7 +12,10 @@ export interface SearchResult {
 
 /** Options for a search or a reverse lookup. */
 export interface SearchOptions {
-  /** Favour results inside this box. */
+  /**
+   * Favour results inside this box. Optional: an adapter sends it to its
+   * service, so a host passes it only when its privacy text says so.
+   */
   readonly bias?: Bounds;
   readonly limit?: number;
   readonly signal?: AbortSignal;

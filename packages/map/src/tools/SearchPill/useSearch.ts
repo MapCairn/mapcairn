@@ -39,7 +39,9 @@ export interface UseSearchOptions {
   /**
    * Returns the box to favour results inside, usually the visible map. Called
    * once when each search starts, so the bias follows the map without the
-   * caller recomputing it on every frame.
+   * caller recomputing it on every frame. Leave it out to send only the
+   * query: a host that passes it sends that box to its geocoder with every
+   * search, which can show where the person is, so its privacy text must say so.
    */
   readonly getBias?: () => Bounds | undefined;
 }
