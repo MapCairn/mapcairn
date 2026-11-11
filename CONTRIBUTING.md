@@ -1,6 +1,6 @@
 # Contributing to MapCairn
 
-MapCairn provides a reusable mapping SDK and an empty-map web host. Contributions to map tools, accessibility, ports and adapters, and documentation are welcome. Read [`README.md`](README.md) and follow [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). [`GOVERNANCE.md`](GOVERNANCE.md) says who decides what and how, and [`ROADMAP.md`](ROADMAP.md) says what the project intends to do and what it will not.
+MapCairn provides a reusable mapping SDK and a reference web host. Contributions to map tools, accessibility, ports and adapters, and documentation are welcome. Read [`README.md`](README.md) and follow [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). [`GOVERNANCE.md`](GOVERNANCE.md) says who decides what and how, and [`ROADMAP.md`](ROADMAP.md) says what the project intends to do and what it will not.
 
 ## Getting set up
 
@@ -36,7 +36,7 @@ The pre-commit hook runs Biome, dependency-cruiser and the harmony scanner, not 
 - `packages/theme`: the design tokens.
 - `packages/web`: the SSR host, which holds the adapters and the composition root, with no bundled datasets.
 
-[`ARCHITECTURE.md`](ARCHITECTURE.md) describes the layers and the dependency rules, and how to add an adapter. `npm run lint` enforces the rules, so supply services through the composition root and `ServicesProvider` rather than importing an adapter or an engine into the user interface. [`DESIGN.md`](DESIGN.md) describes the tokens and the accessibility contracts. The [`README.md`](README.md#how-to) has short how-tos for running the tests, adding a basemap and adding an adapter.
+[`ARCHITECTURE.md`](ARCHITECTURE.md) describes the layers and the dependency rules, and how to add an adapter. `npm run lint` enforces the rules, so supply services through the composition root and `ServicesProvider` rather than importing an adapter or an engine into the user interface. [`DESIGN.md`](DESIGN.md) describes the tokens and the accessibility contracts. The [extending guide](docs/guides/extending.md) has short how-tos for adding a basemap, a data layer, a routing provider and an adapter.
 
 ## Conventions
 
