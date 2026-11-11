@@ -114,9 +114,10 @@ function place(name: string, top: number, height: number, width = 0) {
 }
 
 /** Sizes the container, lays the slots out like a phone and reports a resize. */
-function resize(width: number, height: number) {
+function resize(width: number, height: number, tourHeight = 0) {
   mockRect(root(), { left: 0, top: 0, width, height });
   place("top-start", 12, 48);
+  place("tour", 72, tourHeight);
   place("end-stack", 72, 300, 48);
   place("bottom-start", height - 12 - 30, 30);
   place("bottom-end", height - 12 - 44, 44);
@@ -324,6 +325,48 @@ describe("MapChrome layout", () => {
     });
     expect(cssVar(chromeVars.bottomLift)).toBe("0px");
     expect(root()).toHaveAttribute("data-hide-bottom", "false");
+  });
+
+  it("hides the tour card while it would run into the bottom row, and shows it again", () => {
+    mount({ tour: <div>tour</div> });
+    // A small phone: the welcome card (72 to 349) is clear of the bottom row
+    // at rest (568 - 12 - 44 = 512).
+    resize(320, 568, 277);
+    expect(slot("tour")).toHaveAttribute("data-crowded", "false");
+    expect(slot("tour")).not.toHaveAttribute("inert");
+
+    // At half the bottom row rides above the sheet, whose top is above the
+    // card's bottom edge, so the card gives way.
+    const heights = computeDetentHeights({
+      viewportHeight: 568,
+      insetBottom: 0,
+    });
+    act(() => {
+      layoutValue.publishSheetTop(568 - heights.half);
+      surfaceValue.publishSheetDetent("half");
+    });
+    expect(slot("tour")).toHaveAttribute("data-crowded", "true");
+    expect(slot("tour")).toHaveAttribute("inert");
+
+    act(() => {
+      layoutValue.publishSheetTop(null);
+      surfaceValue.publishSheetDetent(null);
+    });
+    expect(slot("tour")).toHaveAttribute("data-crowded", "false");
+  });
+
+  it("keeps the tour card when the bottom row clears it, even beside a sheet", () => {
+    mount({ tour: <div>tour</div> });
+    resize(390, 844, 190);
+    const heights = computeDetentHeights({
+      viewportHeight: 844,
+      insetBottom: 0,
+    });
+    act(() => {
+      layoutValue.publishSheetTop(844 - heights.half);
+      surfaceValue.publishSheetDetent("half");
+    });
+    expect(slot("tour")).toHaveAttribute("data-crowded", "false");
   });
 
   it("lifts the start and end slots above the measure toolbar, but not the toolbar", () => {

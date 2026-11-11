@@ -1,14 +1,17 @@
+import type { Locator } from "@playwright/test";
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { inspectChromeLayout } from "./support/layout";
 import { scriptSearch } from "./support/services";
 import {
+  advanceTourTo,
   CHROME_STATES,
   collapseCredits,
   enterState,
   leaveState,
   MATRIX_VIEWPORTS,
+  TOUR_STATES,
   viewportDetails,
   waitForStableLayout,
 } from "./support/states";
@@ -225,3 +228,157 @@ for (const viewport of MATRIX_VIEWPORTS) {
     },
   );
 }
+
+/** How the tour card should be on screen in a state, for {@link expectTourLayout}. */
+type TourPresence =
+  /** Shown. */
+  | "shown"
+  /** Gone: the sheet is full and modal. Everything else is behind the sheet, so only the card is checked. */
+  | "hidden"
+  /** Shown, or gone because the screen leaves it no room beside the sheet. */
+  | "shown if there is room";
+
+/**
+ * The one matrix viewport where the welcome card cannot sit above an open
+ * sheet: it is 277 px tall, and the scale bar that rides above the sheet
+ * leaves 154 px under the search pill at half and 274 px at peek. The card
+ * gives way there (`data-crowded`) and comes back when the sheet comes down,
+ * and it must not give way anywhere else.
+ */
+const NO_ROOM_BESIDE_SHEET = { width: 320, height: 568 } as const;
+
+/**
+ * Checks the floating elements in the state the page is in now: nothing
+ * overlaps, nothing leaves the viewport, no control is covered, and the tour
+ * card is among the shown elements as `presence` says.
+ */
+async function expectTourLayout(
+  mapPage: MapPage,
+  context: string,
+  presence: TourPresence,
+): Promise<void> {
+  await waitForStableLayout(mapPage.page);
+  const report = await inspectChromeLayout(mapPage.page);
+  const details = `${context}: ${JSON.stringify(report.boxes)}`;
+  const tourShown = report.boxes.some((box) => box.name === "tour");
+  if (presence === "hidden") {
+    expect(tourShown, details).toBe(false);
+    expect(
+      report.overlaps.filter((overlap) => overlap.includes("tour")),
+      details,
+    ).toEqual([]);
+    return;
+  }
+  expect(report.overlaps, details).toEqual([]);
+  expect(report.outside, details).toEqual([]);
+  expect(report.obscured, details).toEqual([]);
+  if (presence === "shown") {
+    expect(tourShown, details).toBe(true);
+  }
+}
+
+/**
+ * Walks the sheet conditions under the tour card that is showing: no sheet,
+ * Map options, Settings and, where the sheet is a bottom sheet, the full
+ * detent (the card hides, because the sheet is modal and covers the map), the
+ * peek detent and the half detent. The side panel has no detents, so those
+ * three are left out.
+ *
+ * @param roomBesideSheet - False for a screen too small for the card
+ *   above an open sheet, where the card may be gone while the sheet is open.
+ */
+async function walkSheetConditions(
+  mapPage: MapPage,
+  card: Locator,
+  label: string,
+  roomBesideSheet: boolean,
+): Promise<void> {
+  const withSheet: TourPresence = roomBesideSheet
+    ? "shown"
+    : "shown if there is room";
+  await expectTourLayout(mapPage, `${label}, no sheet`, "shown");
+
+  for (const open of [
+    () => mapPage.openMapOptions(),
+    () => mapPage.openSettings(),
+  ]) {
+    await open();
+    await expectTourLayout(mapPage, `${label}, sheet open`, withSheet);
+    await mapPage.sheetClose.click();
+    await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+    await expect(card).toBeVisible();
+  }
+
+  await mapPage.openMapOptions();
+  if ((await mapPage.detent()) !== null) {
+    await mapPage.sheetHandle.focus();
+    await mapPage.page.keyboard.press("Enter");
+    await expect(mapPage.sheet).toHaveAttribute("data-detent", "full");
+    await expect(card).toBeHidden();
+    await expectTourLayout(mapPage, `${label}, sheet at full`, "hidden");
+    await mapPage.page.keyboard.press("Enter");
+    await expect(mapPage.sheet).toHaveAttribute("data-detent", "peek");
+    await expectTourLayout(mapPage, `${label}, sheet at peek`, withSheet);
+    await mapPage.page.keyboard.press(" ");
+    await expect(mapPage.sheet).toHaveAttribute("data-detent", "half");
+    await expectTourLayout(mapPage, `${label}, sheet at half`, withSheet);
+  }
+  await mapPage.sheetClose.click();
+  await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+  await expect(card).toBeVisible();
+}
+
+/*
+ * The first-visit tour card in the layout collision test. For every viewport
+ * and theme, each card (the welcome card, the three steps and the ending)
+ * shares the screen with no other floating element, in the sheet and the side
+ * panel layouts and with the sheet closed, open on Map options or Settings,
+ * and at each detent. The credits' own first showing is collapsed first: the
+ * plan accepts their overlap with the card on a short landscape phone for
+ * those five seconds.
+ */
+test.describe("tour card", () => {
+  test.use({ firstVisit: true });
+
+  for (const viewport of MATRIX_VIEWPORTS) {
+    test(
+      `the tour card never collides at ${viewport.width}x${viewport.height}`,
+      viewportDetails(viewport),
+      async ({ page, mapPage }) => {
+        await page.setViewportSize(viewport);
+        const card = page.getByTestId("tour-card");
+        const roomBesideSheet = !(
+          viewport.width === NO_ROOM_BESIDE_SHEET.width &&
+          viewport.height === NO_ROOM_BESIDE_SHEET.height
+        );
+
+        for (const colorScheme of ["light", "dark"] as const) {
+          await page.emulateMedia({ colorScheme });
+          // A new first visit: the walk before stored that the tour was answered.
+          await page.addInitScript(() => {
+            localStorage.removeItem("mapcairn:tourSeen");
+          });
+          await mapPage.goto();
+          await expect(page.locator("html")).toHaveAttribute(
+            "data-theme",
+            colorScheme,
+          );
+          await expect(card).toBeVisible();
+          await collapseCredits(mapPage);
+
+          for (const state of TOUR_STATES) {
+            await advanceTourTo(mapPage, state);
+            await walkSheetConditions(
+              mapPage,
+              card,
+              `${colorScheme}, ${state}`,
+              roomBesideSheet,
+            );
+          }
+          await card.getByRole("button", { name: "Close" }).click();
+          await expect(card).toHaveCount(0);
+        }
+      },
+    );
+  }
+});

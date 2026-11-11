@@ -221,6 +221,48 @@ export async function leaveState(
 }
 
 /**
+ * The first-visit tour cards in the order a person meets them: the welcome
+ * card, each step and the ending. See {@link advanceTourTo}.
+ */
+export const TOUR_STATES = [
+  "welcome",
+  "step 1",
+  "step 2",
+  "step 3",
+  "ending",
+] as const;
+
+/** One of {@link TOUR_STATES}. */
+export type TourState = (typeof TOUR_STATES)[number];
+
+/** The button of the card before each state, which moves the tour on to it. */
+const TOUR_BUTTON_TO_REACH: Record<Exclude<TourState, "welcome">, string> = {
+  "step 1": "Take the tour",
+  "step 2": "Next",
+  "step 3": "Next",
+  ending: "Finish",
+};
+
+/**
+ * Moves the tour forward to the card for `state`, pressing the button of the
+ * card before it. The tour only runs forward, so call this with each state of
+ * {@link TOUR_STATES} in turn, from the welcome card of a first visit (the
+ * `firstVisit` option); "welcome" itself changes nothing.
+ */
+export async function advanceTourTo(
+  mapPage: MapPage,
+  state: TourState,
+): Promise<void> {
+  const card = mapPage.page.getByTestId("tour-card");
+  if (state !== "welcome") {
+    await card
+      .getByRole("button", { name: TOUR_BUTTON_TO_REACH[state], exact: true })
+      .click();
+  }
+  await expect(card).toBeVisible();
+}
+
+/**
  * Waits until no `[data-chrome]` box moves between two reads a frame apart
  * (with reduced motion the sheet and slots move without animation, but the
  * layout still settles over a few ResizeObserver rounds).
