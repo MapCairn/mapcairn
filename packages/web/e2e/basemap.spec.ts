@@ -317,6 +317,7 @@ test.describe("basemaps", () => {
     await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
       /^EOxCloudless https:\/\/cloudless\.eox\.at by EOX IT Services GmbH \(Contains modified Copernicus Sentinel data \d{4}\)$/,
       "CC BY-NC-SA 4.0",
+      "EOX::Maps",
       "© OpenStreetMap contributors",
       "OpenFreeMap",
       "OpenMapTiles",

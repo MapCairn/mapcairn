@@ -10,7 +10,7 @@ const imagery: TileLayerDefinition = {
   id: "imagery",
   name: "Satellite imagery",
   description:
-    "A daily true-colour picture of the whole Earth from the NOAA-21 satellite. Detail stops at about 300 m.",
+    "A daily true-colour picture of the whole Earth from the NOAA-21 satellite, with that day's clouds, unlike the Satellite basemap. Detail stops at about 300 m.",
   group: "Imagery",
   dataCost: "about 0.5 to 1 MB per screen",
   attribution: [
