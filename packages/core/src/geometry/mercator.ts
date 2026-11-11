@@ -1,3 +1,4 @@
+import { clamp } from "../numbers/clamp";
 import type { LatLng } from "../ports/geometry";
 import { MAX_MERCATOR_LATITUDE } from "../zoom/zoom";
 import { GeometryError } from "./errors";
@@ -23,7 +24,7 @@ function assertFinite(first: number, second: number, what: string): void {
 }
 
 function clampLatitude(lat: number): number {
-  return Math.min(MAX_MERCATOR_LATITUDE, Math.max(-MAX_MERCATOR_LATITUDE, lat));
+  return clamp(lat, -MAX_MERCATOR_LATITUDE, MAX_MERCATOR_LATITUDE);
 }
 
 /**
