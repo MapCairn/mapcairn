@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "karta",
+  "name": "mapcairn",
   "compatibility_date": "2026-09-08",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./packages/web/workers/app.ts",
