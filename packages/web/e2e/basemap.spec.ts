@@ -2,6 +2,7 @@ import { expect, test } from "./fixtures";
 import {
   BASEMAP_COLUMNS,
   BASEMAP_COUNT,
+  BASEMAP_ROWS,
   COLORFUL_BASEMAP_ID,
   COLORFUL_BASEMAP_NAME,
   DARK_VECTOR_BASEMAP_ID,
@@ -10,11 +11,15 @@ import {
   DEFAULT_VECTOR_BASEMAP_NAME,
   LIBERTY_BASEMAP_ID,
   LIBERTY_BASEMAP_NAME,
+  NEUTRAL_DARK_BASEMAP_ID,
+  NEUTRAL_DARK_BASEMAP_NAME,
   OTHER_VECTOR_BASEMAP_ID,
   OTHER_VECTOR_BASEMAP_NAME,
   RASTER_BASEMAP_CREDIT,
   RASTER_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
+  TOPOGRAPHIC_BASEMAP_ID,
+  TOPOGRAPHIC_BASEMAP_NAME,
 } from "./support/basemaps";
 import {
   COLORFUL_STYLE_PATTERN,
@@ -98,7 +103,7 @@ test.describe("basemaps", () => {
     { width: 390, height: 844 },
     { width: 1280, height: 720 },
   ]) {
-    test(`the picker lays its ${BASEMAP_COUNT} basemaps out in ${BASEMAP_COLUMNS} columns and ${BASEMAP_COUNT / BASEMAP_COLUMNS} rows at ${viewport.width} by ${viewport.height}`, async ({
+    test(`the picker lays its ${BASEMAP_COUNT} basemaps out in ${BASEMAP_COLUMNS} columns and ${BASEMAP_ROWS} rows at ${viewport.width} by ${viewport.height}`, async ({
       page,
       mapPage,
     }) => {
@@ -115,9 +120,7 @@ test.describe("basemaps", () => {
         }),
       );
       expect(new Set(boxes.map((box) => box.left)).size).toBe(BASEMAP_COLUMNS);
-      expect(new Set(boxes.map((box) => box.top)).size).toBe(
-        BASEMAP_COUNT / BASEMAP_COLUMNS,
-      );
+      expect(new Set(boxes.map((box) => box.top)).size).toBe(BASEMAP_ROWS);
       // Row by row, left to right: the order the arrow keys follow.
       expect(boxes.slice(0, BASEMAP_COLUMNS).map((box) => box.top)).toEqual(
         Array(BASEMAP_COLUMNS).fill(boxes[0]?.top),
@@ -206,6 +209,76 @@ test.describe("basemaps", () => {
     await expect(
       mapPage.basemapPicker.getByRole("radio", {
         name: DARK_VECTOR_BASEMAP_NAME,
+      }),
+    ).toBeChecked();
+  });
+
+  test("Dark, the second dark basemap, loads its own OpenFreeMap style, and a linked dark opens on it", async ({
+    page,
+    mapPage,
+  }) => {
+    const styles: string[] = [];
+    page.on("request", (request) => {
+      const match = /\/styles\/(\w+)$/.exec(request.url());
+      if (match?.[1]) {
+        styles.push(match[1]);
+      }
+    });
+    await mapPage.goto(START);
+    await mapPage.openMapOptions();
+    await mapPage.chooseBasemap(NEUTRAL_DARK_BASEMAP_NAME);
+    await expect
+      .poll(() => mapPage.hashBasemap())
+      .toBe(NEUTRAL_DARK_BASEMAP_ID);
+    expect(styles).toContain(NEUTRAL_DARK_BASEMAP_ID);
+    await expect(page.getByTestId("save-image-button")).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+
+    await mapPage.goto(`#basemap=${NEUTRAL_DARK_BASEMAP_ID}`);
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: NEUTRAL_DARK_BASEMAP_NAME,
+      }),
+    ).toBeChecked();
+  });
+
+  test("Topographic loads OpenTopoMap raster tiles, credits them in full and is saved", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(START);
+    await mapPage.openMapOptions();
+    const tileRequest = page.waitForRequest(/tile\.opentopomap\.org/);
+    await mapPage.chooseBasemap(TOPOGRAPHIC_BASEMAP_NAME);
+    await tileRequest;
+    await expect.poll(() => mapPage.hashBasemap()).toBe(TOPOGRAPHIC_BASEMAP_ID);
+    await expect(page.getByTestId("save-image-button")).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+
+    await collapseCredits(mapPage);
+    await mapPage.creditsButton.click();
+    await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
+      "© OpenStreetMap contributors",
+      "SRTM",
+      "© OpenTopoMap",
+      "CC-BY-SA",
+      "MapLibre",
+    ]);
+
+    await page.evaluate(() => {
+      history.replaceState(null, "", `${location.pathname}${location.search}`);
+    });
+    await page.reload();
+    await mapPage.waitForMap();
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: TOPOGRAPHIC_BASEMAP_NAME,
       }),
     ).toBeChecked();
   });

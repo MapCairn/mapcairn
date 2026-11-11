@@ -72,7 +72,7 @@ export interface BasemapChoice {
  * The basemap choice: a basemap named by a shared link wins once, at load,
  * without overwriting the saved choice; after that the saved setting decides.
  * A saved or linked id that names no basemap the host offers (one that has
- * been removed, such as "dark", or the "auto" choice of earlier versions,
+ * been removed, such as "maptoolkit-dark", or the "auto" choice of earlier versions,
  * which followed the theme) counts as the host's default basemap, so the
  * picker always has a checked option that matches the map. Nothing is saved
  * until the person picks a basemap. The basemap never depends on the interface

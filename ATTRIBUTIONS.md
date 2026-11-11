@@ -25,11 +25,12 @@ NASA data is openly shared; its data use guidance says NASA material may not be 
 
 | Source | Use | Credit |
 |---|---|---|
-| [OpenFreeMap](https://openfreemap.org) | Bright, Liberty, Positron and Fiord vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors |
+| [OpenFreeMap](https://openfreemap.org) | Bright, Liberty, Positron, Fiord and Dark vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors |
 | [VersaTiles](https://versatiles.org) | Colorful vector style and tiles from the public tile server at `tiles.versatiles.org` | © OpenStreetMap contributors, VersaTiles, © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium, CC BY 4.0 |
 | [OpenStreetMap](https://www.openstreetmap.org) | Streets raster tiles from `tile.openstreetmap.org` | © OpenStreetMap contributors, linked to [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright) |
+| [OpenTopoMap](https://opentopomap.org) | Topographic raster tiles from `tile.opentopomap.org`, under [CC-BY-SA](https://creativecommons.org/licenses/by-sa/3.0/), which allows commercial use with no fee | © OpenStreetMap contributors, SRTM, © OpenTopoMap, CC-BY-SA |
 
-OpenStreetMap data is available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/). Use of the OpenStreetMap tile servers follows the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). The map displays the active provider's attribution, followed by MapLibre's.
+OpenStreetMap data is available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/). Use of the OpenStreetMap tile servers follows the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). OpenTopoMap's [about page](https://opentopomap.org/about) allows its tiles to be used while the server is not overloaded by mass downloads, gives no availability guarantee and asks to be told of use; the maintainer sends that note, which is not a code change. The credit there reads "Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: © OpenTopoMap (CC-BY-SA)" and is shown in English. The map displays the active provider's attribution, followed by MapLibre's.
 
 ### VersaTiles Colorful
 
@@ -50,9 +51,10 @@ The basemap picker previews in `packages/web/public/basemaps/` are small images 
 
 | Preview | Source | Credit |
 |---|---|---|
-| `bright.jpg`, `liberty.jpg`, `positron.jpg`, `fiord.jpg` | OpenFreeMap vector tiles and styles | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap |
+| `bright.jpg`, `liberty.jpg`, `positron.jpg`, `fiord.jpg`, `dark.jpg` | OpenFreeMap vector tiles and styles | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap |
 | `colorful.jpg` | VersaTiles Colorful style and tiles | © OpenStreetMap contributors ([ODbL](https://opendatacommons.org/licenses/odbl/)), VersaTiles, ESA WorldCover project 2021 and modified Copernicus Sentinel data (2021) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)) |
 | `osm.jpg` | OpenStreetMap standard tiles | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
+| `topographic.jpg` | OpenTopoMap tiles | © OpenStreetMap contributors, SRTM, © OpenTopoMap ([CC-BY-SA](https://creativecommons.org/licenses/by-sa/3.0/)) |
 
 OpenFreeMap asks for this attribution wherever its maps appear in images or other media. Regenerate the previews with the script rather than editing them by hand, and keep this table in step with the basemap definitions in `packages/core/src/basemaps` and `packages/web/src/basemaps`.
 

@@ -18,15 +18,39 @@ import {
 } from "./basemaps";
 
 describe("BASEMAPS", () => {
-  it("contains the six built-in basemaps in picker order, the default first: the general-purpose styles, then the rest", () => {
+  it("contains the eight built-in basemaps in picker order, the default first: the general-purpose styles, then the light ones, then the dark ones", () => {
     expect(BASEMAPS.map((basemap) => basemap.id)).toEqual([
       "bright",
       "liberty",
       "colorful",
       "positron",
       "osm",
+      "topographic",
       "fiord",
+      "dark",
     ]);
+  });
+
+  // The SDK is free for commercial use, so every provider named here must allow
+  // that with no licence agreement. A new origin fails this test until someone
+  // has read its terms and added it, with the reason, to this list.
+  it("draws only from providers whose terms allow commercial use with no agreement", () => {
+    const commercialOrigins: Record<string, string> = {
+      "https://tiles.openfreemap.org": "OpenFreeMap: free, no key, credit",
+      "https://tiles.versatiles.org": "VersaTiles: free demo server, credit",
+      "https://tile.openstreetmap.org":
+        "OpenStreetMap Foundation tile policy: credit and a valid Referer",
+      "https://tile.opentopomap.org": "OpenTopoMap: CC BY-SA, credit",
+    };
+    for (const basemap of BASEMAPS) {
+      const url =
+        basemap.source.kind === "vector"
+          ? basemap.source.styleUrl
+          : basemap.source.tileUrl.replace(/\{[zxy]\}/g, "0");
+      expect(Object.keys(commercialOrigins), basemap.id).toContain(
+        new URL(url).origin,
+      );
+    }
   });
 
   it("has unique ids", () => {
@@ -79,10 +103,13 @@ describe("BASEMAPS", () => {
     expect(vectors).toBeGreaterThan(0);
   });
 
-  it("uses normalised zoom limits of 0 to 22 for vector styles and 0 to 19 for OpenStreetMap tiles", () => {
+  it("uses normalised zoom limits of 0 to 22 for vector styles and to the deepest level each raster provider serves", () => {
+    const rasterMaxZoom: Record<string, number> = { osm: 19, topographic: 17 };
     for (const basemap of BASEMAPS) {
       expect(basemap.minZoom).toBe(0);
-      expect(basemap.maxZoom).toBe(basemap.source.kind === "vector" ? 22 : 19);
+      expect(basemap.maxZoom, basemap.id).toBe(
+        basemap.source.kind === "vector" ? 22 : rasterMaxZoom[basemap.id],
+      );
     }
   });
 
@@ -92,7 +119,7 @@ describe("BASEMAPS", () => {
     }
   });
 
-  it("uses the OpenFreeMap style URLs, the VersaTiles Colorful style URL and the standard OpenStreetMap tile URL", () => {
+  it("uses the OpenFreeMap style URLs, the VersaTiles Colorful style URL, the standard OpenStreetMap tile URL and the OpenTopoMap tile URL", () => {
     const sources = Object.fromEntries(
       BASEMAPS.map((basemap) => [basemap.id, basemap.source]),
     );
@@ -112,6 +139,15 @@ describe("BASEMAPS", () => {
       kind: "vector",
       styleUrl: "https://tiles.openfreemap.org/styles/fiord",
     });
+    expect(sources.dark).toEqual({
+      kind: "vector",
+      styleUrl: "https://tiles.openfreemap.org/styles/dark",
+    });
+    expect(sources.topographic).toEqual({
+      kind: "raster",
+      tileSize: 256,
+      tileUrl: "https://tile.opentopomap.org/{z}/{x}/{y}.png",
+    });
     expect(sources.colorful).toEqual({
       kind: "vector",
       styleUrl:
@@ -129,7 +165,7 @@ describe("BASEMAPS", () => {
   });
 
   it("credits OpenStreetMap, OpenFreeMap and OpenMapTiles on the vector styles", () => {
-    for (const id of ["bright", "positron", "liberty", "fiord"]) {
+    for (const id of ["bright", "positron", "liberty", "fiord", "dark"]) {
       const text = getBasemap(id)
         ?.attribution.map((entry) => entry.text)
         .join(" ");
@@ -173,28 +209,46 @@ describe("BASEMAPS", () => {
     ]);
   });
 
-  it("has one dark basemap, Fiord, and no basemap called dark", () => {
-    expect(getBasemap("dark")).toBeUndefined();
+  it("has two dark basemaps, Fiord and Dark, both from OpenFreeMap", () => {
     for (const basemap of BASEMAPS) {
       expect(basemap.appearance, basemap.id).toBe(
-        basemap.id === "fiord" ? "dark" : "light",
+        ["fiord", "dark"].includes(basemap.id) ? "dark" : "light",
       );
     }
   });
 
-  it("names Fiord's own land colour as its picker swatch, so Save data mode shows a dark tile", () => {
+  it("names each dark basemap's own land colour as its picker swatch, so Save data mode shows a dark tile", () => {
     // Copied from the `background` layer's `background-color` in
-    // https://tiles.openfreemap.org/styles/fiord (checked 2026-11-10), in the
-    // style's own six-digit hex, lowercased.
+    // https://tiles.openfreemap.org/styles/fiord and .../dark (checked
+    // 2026-11-11), as six-digit lowercase hex. Dark writes it as rgb(12,12,12).
     expect(getBasemap("fiord")?.swatch).toBe("#45516e");
+    expect(getBasemap("dark")?.swatch).toBe("#0c0c0c");
   });
 
-  it("gives every other built-in basemap no swatch, so it shows the default land colour", () => {
+  it("gives every light built-in basemap no swatch, so it shows the default land colour", () => {
     for (const basemap of BASEMAPS) {
-      if (basemap.id !== "fiord") {
+      if (basemap.appearance === "light") {
         expect(basemap.swatch, basemap.id).toBeUndefined();
       }
     }
+  });
+
+  it("credits OpenStreetMap, SRTM and OpenTopoMap, with its licence, on Topographic", () => {
+    expect(getBasemap("topographic")?.attribution).toEqual([
+      {
+        text: "© OpenStreetMap contributors",
+        href: "https://www.openstreetmap.org/copyright",
+      },
+      {
+        text: "SRTM",
+        href: "https://www.earthdata.nasa.gov/data/instruments/srtm",
+      },
+      { text: "© OpenTopoMap", href: "https://opentopomap.org" },
+      {
+        text: "CC-BY-SA",
+        href: "https://creativecommons.org/licenses/by-sa/3.0/",
+      },
+    ]);
   });
 
   it("has no basemap that swaps itself for another in a dark theme", () => {
@@ -230,8 +284,8 @@ describe("resolveBasemap", () => {
     }
   });
 
-  it("falls back to the default for an unknown id, including the retired auto and dark choices", () => {
-    for (const id of ["auto", "dark", "missing", "", "__proto__"]) {
+  it("falls back to the default for an unknown id, including the retired auto choice", () => {
+    for (const id of ["auto", "maptoolkit-dark", "missing", "", "__proto__"]) {
       expect(resolveBasemap(id).id).toBe("bright");
     }
   });
@@ -363,7 +417,7 @@ describe("createBasemapCatalogue", () => {
       "fake-raster",
     );
     expect(catalogue.resolve("fake-vector")).toBe(FAKE_VECTOR_BASEMAP);
-    for (const id of ["dark", "auto", "", "__proto__"]) {
+    for (const id of ["auto", "maptoolkit-dark", "", "__proto__"]) {
       expect(catalogue.resolve(id)).toBe(FAKE_RASTER_BASEMAP);
     }
   });
@@ -378,7 +432,7 @@ describe("createBasemapCatalogue", () => {
     ).toThrow(/missing/);
   });
 
-  it("is what the built-in basemaps make: Bright the default, then Liberty, Colorful, Positron, Streets and Fiord", () => {
+  it("is what the built-in basemaps make: Bright the default, then Liberty, Colorful, Positron, Streets, Topographic, Fiord and Dark", () => {
     expect(BUILT_IN_BASEMAP_CATALOGUE.basemaps).toBe(BASEMAPS);
     expect(
       BUILT_IN_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.name),
@@ -388,16 +442,18 @@ describe("createBasemapCatalogue", () => {
       "Colorful",
       "Positron",
       "Streets",
+      "Topographic",
       "Fiord",
+      "Dark",
     ]);
     expect(BUILT_IN_BASEMAP_CATALOGUE.defaultId).toBe(DEFAULT_BASEMAP_ID);
     expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").id).toBe("liberty");
     expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord").name).toBe("Fiord");
   });
 
-  it("opens on the default for a retired id: dark, auto and Maptoolkit Dark", () => {
+  it("opens a saved or linked dark on Dark, and on the default for a retired id: auto and Maptoolkit Dark", () => {
+    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("dark").name).toBe("Dark");
     for (const id of [
-      "dark",
       "auto",
       "maptoolkit",
       "maptoolkit-dark",

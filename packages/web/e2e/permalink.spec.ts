@@ -6,7 +6,6 @@ import {
   LIBERTY_BASEMAP_NAME,
   RASTER_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
-  REMOVED_BASEMAP_ID,
   REMOVED_MAPTOOLKIT_BASEMAP_ID,
 } from "./support/basemaps";
 
@@ -76,11 +75,7 @@ test.describe("permalink", () => {
     ).toBeChecked();
   });
 
-  for (const retired of [
-    "auto",
-    REMOVED_BASEMAP_ID,
-    REMOVED_MAPTOOLKIT_BASEMAP_ID,
-  ]) {
+  for (const retired of ["auto", REMOVED_MAPTOOLKIT_BASEMAP_ID]) {
     test(`a link to the retired ${retired} basemap opens on the default basemap`, async ({
       page,
       mapPage,

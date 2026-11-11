@@ -141,12 +141,12 @@ describe("PrivacyPage", () => {
     expect(text).toMatch(/not saved or put in the page address/);
   });
 
-  it("names the basemap tile providers that may log requests: OpenFreeMap, VersaTiles for Colorful, and the OpenStreetMap Foundation for Streets", () => {
+  it("names the basemap tile providers that may log requests: OpenFreeMap, VersaTiles for Colorful, the OpenStreetMap Foundation for Streets, and OpenTopoMap for Topographic", () => {
     render(<PrivacyPage />);
 
     const text = screen.getByText(/The basemap tile providers/).textContent;
     expect(text).toMatch(
-      /OpenFreeMap, VersaTiles when you choose the Colorful basemap, and the OpenStreetMap Foundation when you choose the Streets basemap, may log tile requests, including your IP address/,
+      /OpenFreeMap, VersaTiles when you choose the Colorful basemap, the OpenStreetMap Foundation when you choose the Streets basemap, and OpenTopoMap when you choose the Topographic basemap, may log tile requests, including your IP address/,
     );
   });
 

@@ -6,7 +6,7 @@ import type {
 
 /**
  * The basemap shown when nobody has chosen one, in both interface themes, and
- * the one an unknown or retired id (such as the old "auto" or "dark") falls back to.
+ * the one an unknown or retired id (such as the old "auto") falls back to.
  */
 export const DEFAULT_BASEMAP_ID = "bright";
 
@@ -63,6 +63,29 @@ const VECTOR_MAX_ZOOM = 22;
 
 // The standard OpenStreetMap tile layer serves levels 0 to 19.
 const OSM_MAX_ZOOM = 19;
+
+// OpenTopoMap renders levels 0 to 17; the server answers a deeper request with
+// a blank placeholder tile (checked 2026-11-11), so the map stops at 17.
+const OPEN_TOPO_MAP_MAX_ZOOM = 17;
+
+// OpenTopoMap (opentopomap.org/about) is CC-BY-SA, "erlaubt deren kommerzielle
+// Nutzung" (allows commercial use), with no fee and no key. Its credit is
+// "Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: ©
+// OpenTopoMap (CC-BY-SA)", given here in English. It asks that the server is
+// not overloaded by mass downloads and gives no availability guarantee; it
+// would welcome a short note about use, which the maintainer sends, not code.
+const OPEN_TOPO_MAP_CREDITS: readonly BasemapAttributionEntry[] = [
+  OPEN_STREET_MAP_CREDIT,
+  {
+    text: "SRTM",
+    href: "https://www.earthdata.nasa.gov/data/instruments/srtm",
+  },
+  { text: "© OpenTopoMap", href: "https://opentopomap.org" },
+  {
+    text: "CC-BY-SA",
+    href: "https://creativecommons.org/licenses/by-sa/3.0/",
+  },
+];
 
 const BRIGHT: BasemapDefinition = {
   id: "bright",
@@ -131,6 +154,37 @@ const FIORD: BasemapDefinition = {
   // Natural Earth raster source but draws no raster layer from it.
 };
 
+const DARK: BasemapDefinition = {
+  id: "dark",
+  name: "Dark",
+  source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/dark` },
+  minZoom: 0,
+  maxZoom: VECTOR_MAX_ZOOM,
+  thumbnail: "/basemaps/dark.jpg",
+  attribution: OPEN_FREE_MAP_CREDITS,
+  appearance: "dark",
+  // Dark's own land colour (the `background` layer of its style, rgb(12,12,12)),
+  // so the plain tile Save data mode shows reads as a dark map.
+  swatch: "#0c0c0c",
+  // Nothing to leave out in Save data mode: the style names the Natural Earth
+  // raster source but draws no raster layer from it (checked 2026-11-11).
+};
+
+const TOPOGRAPHIC: BasemapDefinition = {
+  id: "topographic",
+  name: "Topographic",
+  source: {
+    kind: "raster",
+    tileUrl: "https://tile.opentopomap.org/{z}/{x}/{y}.png",
+    tileSize: 256,
+  },
+  minZoom: 0,
+  maxZoom: OPEN_TOPO_MAP_MAX_ZOOM,
+  thumbnail: "/basemaps/topographic.jpg",
+  attribution: OPEN_TOPO_MAP_CREDITS,
+  appearance: "light",
+};
+
 /** Every built-in basemap, in the order the picker shows them, the default first. */
 export const BASEMAPS: readonly BasemapDefinition[] = [
   BRIGHT,
@@ -164,7 +218,9 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
     attribution: [OPEN_STREET_MAP_CREDIT],
     appearance: "light",
   },
+  TOPOGRAPHIC,
   FIORD,
+  DARK,
 ];
 
 const BASEMAPS_BY_ID: ReadonlyMap<string, BasemapDefinition> = new Map(
@@ -180,7 +236,7 @@ export function getBasemap(id: string): BasemapDefinition | undefined {
  * Turns a stored or linked basemap id into a basemap.
  * @param choiceId - A basemap id.
  * @remarks The basemap does not depend on the interface theme. An id that
- *   names no built-in basemap (one that has been removed, such as "dark", or the retired
+ *   names no built-in basemap (one that has been removed, such as the retired
  *   "auto" choice from an earlier version) gives the default basemap.
  */
 export function resolveBasemap(choiceId: string): BasemapDefinition {
@@ -201,7 +257,7 @@ export interface BasemapCatalogue {
   get(id: string): BasemapDefinition | undefined;
   /**
    * Turns a stored or linked id into a basemap. An id that names none (a
-   * removed one, or the retired "auto" and "dark" choices) gives the default.
+   * removed one, or the retired "auto" choice) gives the default.
    */
   resolve(id: string): BasemapDefinition;
 }

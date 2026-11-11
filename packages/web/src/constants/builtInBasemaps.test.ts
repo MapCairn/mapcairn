@@ -15,9 +15,9 @@ function sourceOrigin(basemap: BasemapDefinition): string {
   ).origin;
 }
 
-describe("Fiord in the picker", () => {
-  const fiord = BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord");
-  const swatch = fiord.swatch as string;
+describe.each(["fiord", "dark"])("%s in the picker", (id) => {
+  const basemap = BUILT_IN_BASEMAP_CATALOGUE.resolve(id);
+  const swatch = basemap.swatch as string;
 
   it("has a dark swatch of its own, so its Save data tile is not the default's pale land colour", () => {
     expect(swatch).toMatch(/^#[0-9a-f]{6}$/);

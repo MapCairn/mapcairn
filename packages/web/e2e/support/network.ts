@@ -9,12 +9,12 @@ export const TRANSPARENT_PNG = Buffer.from(
   "base64",
 );
 
-/** The raster tile host of the built-in Streets basemap. */
-export const RASTER_TILE_PATTERN = /tile\.openstreetmap\.org/;
+/** The raster tile hosts of the built-in Streets and Topographic basemaps. */
+export const RASTER_TILE_PATTERN = /tile\.(?:openstreetmap|opentopomap)\.org/;
 
 /**
  * Vector style documents: OpenFreeMap's (Bright, the default, Liberty,
- * Positron and Fiord) and VersaTiles' (Colorful), so no test reaches either.
+ * Positron, Fiord and Dark) and VersaTiles' (Colorful), so no test reaches either.
  */
 export const VECTOR_STYLE_PATTERN =
   /tiles\.(?:openfreemap\.org\/styles|versatiles\.org\/assets\/styles)\//;

@@ -98,9 +98,10 @@ describe("BasemapPicker", () => {
     expect(screen.getAllByRole("radio", { checked: true })).toHaveLength(1);
   });
 
-  it("offers no dark basemap", () => {
+  it("offers both dark basemaps, Fiord and Dark, as manual choices", () => {
     renderPicker();
-    expect(screen.queryByRole("radio", { name: "Dark" })).toBeNull();
+    expect(screen.getByRole("radio", { name: "Fiord" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Dark" })).toBeInTheDocument();
   });
 
   it("offers no switch to match the map to the theme", () => {

@@ -42,12 +42,6 @@ export const OTHER_VECTOR_BASEMAP_ID = "positron";
 export const OTHER_VECTOR_BASEMAP_NAME = "Positron";
 
 /**
- * The id of the Dark basemap, which has been removed. A saved or linked
- * value from an earlier visit must open on the default basemap.
- */
-export const REMOVED_BASEMAP_ID = "dark";
-
-/**
  * The id of Maptoolkit Dark, which has been removed. A saved or linked value
  * from an earlier visit must open on the default basemap.
  */
@@ -65,8 +59,23 @@ export const DARK_VECTOR_BASEMAP_ID = "fiord";
 /** Its name in the picker. */
 export const DARK_VECTOR_BASEMAP_NAME = "Fiord";
 
-/** How many basemaps the picker offers: three columns of two rows. */
-export const BASEMAP_COUNT = 6;
+/** OpenFreeMap Dark, the second dark basemap. A saved or linked "dark" opens on it. */
+export const NEUTRAL_DARK_BASEMAP_ID = "dark";
 
-/** The picker's columns, which `BASEMAP_COUNT` fills in two whole rows. */
+/** Its name in the picker. */
+export const NEUTRAL_DARK_BASEMAP_NAME = "Dark";
+
+/** OpenTopoMap, a second raster basemap, from a provider other than OpenStreetMap. */
+export const TOPOGRAPHIC_BASEMAP_ID = "topographic";
+
+/** Its name in the picker. */
+export const TOPOGRAPHIC_BASEMAP_NAME = "Topographic";
+
+/** How many basemaps the picker offers. */
+export const BASEMAP_COUNT = 8;
+
+/** The picker's columns. */
 export const BASEMAP_COLUMNS = 3;
+
+/** The picker's rows: the last one may be short. */
+export const BASEMAP_ROWS = Math.ceil(BASEMAP_COUNT / BASEMAP_COLUMNS);

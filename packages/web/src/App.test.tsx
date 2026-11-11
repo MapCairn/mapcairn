@@ -982,8 +982,8 @@ describe("basemaps", () => {
     }
   });
 
-  it("treats a saved auto, dark or retired basemap as Bright, and leaves the saved value alone", async () => {
-    for (const stored of ["auto", "dark", "retired-basemap"]) {
+  it("treats a saved auto, Maptoolkit Dark or retired basemap as Bright, and leaves the saved value alone", async () => {
+    for (const stored of ["auto", "maptoolkit-dark", "retired-basemap"]) {
       const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
       const services = createFakeServices();
       services.fakes.settings.set({ theme: "dark", basemapId: stored });

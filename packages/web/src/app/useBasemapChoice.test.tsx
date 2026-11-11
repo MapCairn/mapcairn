@@ -44,9 +44,15 @@ describe("useBasemapChoice", () => {
     expect(hook.result.current.basemap.id).toBe("bright");
   });
 
-  it("treats a saved auto, dark or Maptoolkit Dark choice from an earlier version as Bright, without saving anything", () => {
+  it("opens a saved or linked dark on Dark", () => {
+    expect(setup("dark").hook.result.current.basemap.id).toBe("dark");
+    expect(setup("positron", "dark").hook.result.current.basemap.id).toBe(
+      "dark",
+    );
+  });
+
+  it("treats a saved auto or Maptoolkit Dark choice from an earlier version as Bright, without saving anything", () => {
     const { services, hook } = setup("auto");
-    expect(setup("dark").hook.result.current.basemap.id).toBe("bright");
     expect(setup("maptoolkit-dark").hook.result.current.basemap.id).toBe(
       "bright",
     );
@@ -56,13 +62,8 @@ describe("useBasemapChoice", () => {
     expect(services.fakes.settings.get().basemapId).toBe("auto");
   });
 
-  it("treats a linked auto, dark, Maptoolkit Dark or retired basemap as Bright", () => {
-    for (const linked of [
-      "auto",
-      "dark",
-      "maptoolkit-dark",
-      "retired-basemap",
-    ]) {
+  it("treats a linked auto, Maptoolkit Dark or retired basemap as Bright", () => {
+    for (const linked of ["auto", "maptoolkit-dark", "retired-basemap"]) {
       const { hook } = setup("positron", linked);
       expect(hook.result.current.savedChoice).toBe("bright");
       expect(hook.result.current.basemap.id).toBe("bright");
@@ -162,8 +163,10 @@ describe("useBasemapChoice with a basemap that has terms", () => {
     ).toBe("fake-credited");
   });
 
-  it("falls back to the host's default for the removed dark id", () => {
-    expect(setupCredited("dark").hook.result.current.basemap.id).toBe("bright");
+  it("falls back to the host's default for a removed id", () => {
+    expect(
+      setupCredited("maptoolkit-dark").hook.result.current.basemap.id,
+    ).toBe("bright");
   });
 
   it("has only the shown basemap in use when nothing is loading", () => {
