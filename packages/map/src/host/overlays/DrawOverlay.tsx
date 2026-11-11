@@ -5,18 +5,15 @@ import {
   distanceMetres,
   type LatLng,
   type MapEditHandle,
+  type MapPlacement,
   type PixelPoint,
+  type PlacedPath,
+  placePath,
+  placePoint,
   shapeRing,
-} from "@mapcairn/core";
-import { useMap } from "../MapContext";
-import {
-  type OverlayMap,
-  type ProjectedPath,
-  projectPath,
-  roundPixel,
-  toSvgPoints,
   visibleRuns,
-} from "./geometry";
+} from "@mapcairn/core";
+import { roundPixel, toSvgPoints, usePlacement } from "./geometry";
 import * as styles from "./overlays.css";
 
 /** Radius of a point shape's marker, in pixels. */
@@ -76,19 +73,11 @@ function HaloPath({
 }
 
 /**
- * An outline: the whole closed or open path while every point is in sight,
- * otherwise only the runs of visible points, each as an open line.
+ * An outline: the whole closed path while all of it is in sight, otherwise
+ * the runs of visible points, each as an open line.
  */
-function Outline({
-  path,
-  closed,
-  className,
-}: {
-  path: ProjectedPath;
-  closed: boolean;
-  className: string;
-}) {
-  if (closed && path.whole) {
+function Outline({ path, className }: { path: PlacedPath; className: string }) {
+  if (path.closed && path.whole) {
     return (
       <HaloPath points={path.pixels} closed={true} className={className} />
     );
@@ -118,11 +107,11 @@ function shapeClass(shape: DrawShape, selected: boolean): string {
 interface DrawnShapeProps {
   readonly shape: DrawShape;
   readonly selected: boolean;
-  readonly map: OverlayMap;
+  readonly placement: MapPlacement;
 }
 
 /** One shape: its fill, outline and, for a point, its marker. */
-function DrawnShape({ shape, selected, map }: DrawnShapeProps) {
+function DrawnShape({ shape, selected, placement }: DrawnShapeProps) {
   const className = shapeClass(shape, selected);
   const common = {
     "data-testid": "draw-shape",
@@ -136,10 +125,10 @@ function DrawnShape({ shape, selected, map }: DrawnShapeProps) {
     return null;
   }
   if (shape.kind === "point") {
-    if (!map.isVisible(first)) {
+    const at = placePoint(first, placement);
+    if (!at) {
       return null;
     }
-    const at = map.project(first);
     return (
       <circle
         {...common}
@@ -151,15 +140,17 @@ function DrawnShape({ shape, selected, map }: DrawnShapeProps) {
     );
   }
   if (shape.kind === "line") {
-    const path = projectPath(map, shape.vertices);
-    return path.pixels.length >= 2 ? (
+    return shape.vertices.length >= 2 ? (
       <g {...common}>
-        <Outline path={path} closed={false} className={className} />
+        <Outline
+          path={placePath(shape.vertices, false, placement)}
+          className={className}
+        />
       </g>
     ) : null;
   }
-  const ring = projectPath(map, shapeRing(shape));
   if (shape.kind === "circle") {
+    const ring = placePath(shapeRing(shape), true, placement);
     return ring.pixels.length >= 3 ? (
       <g {...common}>
         {ring.whole ? (
@@ -168,18 +159,21 @@ function DrawnShape({ shape, selected, map }: DrawnShapeProps) {
             points={toSvgPoints(ring.pixels)}
           />
         ) : null}
-        <Outline path={ring} closed={true} className={className} />
+        <Outline path={ring} className={className} />
       </g>
     ) : null;
   }
-  const path = projectPath(map, shape.vertices);
-  if (path.pixels.length < 3) {
-    return path.pixels.length === 2 ? (
+  if (shape.vertices.length < 3) {
+    return shape.vertices.length === 2 ? (
       <g {...common}>
-        <Outline path={path} closed={false} className={className} />
+        <Outline
+          path={placePath(shape.vertices, false, placement)}
+          className={className}
+        />
       </g>
     ) : null;
   }
+  const path = placePath(shape.vertices, true, placement);
   return (
     <g {...common}>
       {path.whole ? (
@@ -188,7 +182,7 @@ function DrawnShape({ shape, selected, map }: DrawnShapeProps) {
           points={toSvgPoints(path.pixels)}
         />
       ) : null}
-      <Outline path={path} closed={true} className={className} />
+      <Outline path={path} className={className} />
     </g>
   );
 }
@@ -197,11 +191,11 @@ function DrawnShape({ shape, selected, map }: DrawnShapeProps) {
 function Preview({
   draft,
   hover,
-  map,
+  placement,
 }: {
   draft: DrawShape;
   hover: LatLng;
-  map: OverlayMap;
+  placement: MapPlacement;
 }) {
   const last = draft.vertices.at(-1);
   const first = draft.vertices[0];
@@ -212,8 +206,11 @@ function Preview({
     const radius = distanceMetres(first, hover);
     return radius > 0 ? (
       <Outline
-        path={projectPath(map, circleRing(first, radius, PREVIEW_RING_STEPS))}
-        closed={true}
+        path={placePath(
+          circleRing(first, radius, PREVIEW_RING_STEPS),
+          true,
+          placement,
+        )}
         className={styles.measurePreview}
       />
     ) : null;
@@ -224,8 +221,7 @@ function Preview({
       : [last, hover];
   return (
     <Outline
-      path={projectPath(map, path)}
-      closed={false}
+      path={placePath(path, false, placement)}
       className={styles.measurePreview}
     />
   );
@@ -304,10 +300,10 @@ function selectedHandle(
  * the next edge, and the handles of the selected shape. Render it inside
  * `MapOverlayLayer`.
  *
- * @remarks On a globe, nothing beyond the horizon is drawn: a point, a handle
- *   or a segment with an end there is left out, and a closed shape's fill is
- *   drawn only while every vertex is in sight. Segments between visible
- *   points are straight on the screen, not curved along the globe.
+ * @remarks Edges go the short way across the antimeridian. On a globe each
+ *   edge follows its great circle and stops at the horizon: a point or
+ *   handle beyond it is left out, and a closed shape's fill is drawn only
+ *   while all of its outline is in sight.
  *   Selection is shown by weight, handles and a filled vertex as well
  *   as colour. The layer never takes the pointer: the adapter owns the press
  *   on a handle, and this only draws where the handles are.
@@ -320,8 +316,8 @@ export function DrawOverlay({
   hover,
   testId,
 }: DrawOverlayProps) {
-  const { adapter } = useMap();
-  if (!adapter) {
+  const placement = usePlacement();
+  if (!placement) {
     return null;
   }
   const draft = shapes.find((shape) => !shape.done);
@@ -329,10 +325,7 @@ export function DrawOverlay({
     ...shapes.filter((shape) => shape.id !== selection?.shapeId),
     ...shapes.filter((shape) => shape.id === selection?.shapeId),
   ];
-  const placed = projectPath(
-    adapter,
-    handles.map((handle) => handle.position),
-  );
+
   return (
     <g data-testid={testId}>
       {ordered.map((shape) => (
@@ -340,23 +333,24 @@ export function DrawOverlay({
           key={shape.id}
           shape={shape}
           selected={shape.id === selection?.shapeId}
-          map={adapter}
+          placement={placement}
         />
       ))}
       {draft && hover ? (
-        <Preview draft={draft} hover={hover} map={adapter} />
+        <Preview draft={draft} hover={hover} placement={placement} />
       ) : null}
-      {handles.map((handle, index) =>
-        placed.visible[index] ? (
+      {handles.map((handle) => {
+        const at = placePoint(handle.position, placement);
+        return at ? (
           <Handle
             key={handle.id}
             handle={handle}
-            at={placed.pixels[index] as PixelPoint}
+            at={at}
             selected={selectedHandle(handle, selection)}
             hovered={handle.id === hoveredHandle}
           />
-        ) : null,
-      )}
+        ) : null;
+      })}
     </g>
   );
 }

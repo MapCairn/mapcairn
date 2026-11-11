@@ -167,6 +167,7 @@ export const ROLE_PAIRS: Readonly<Record<ColourRole, string | ExemptRole>> = {
   focusRingInner: "ring-inner",
   pageBackground: "text-page",
   mapBackground: { exempt: "Backdrop before tiles load, carries no content" },
+  mapGlobeSpace: { exempt: "Space around the globe, carries no content" },
   mapPin: "pin-basemap",
   mapMeasureLine: "line-halo",
   mapMeasureFill: { exempt: "Translucent fill, its outline carries 3:1" },

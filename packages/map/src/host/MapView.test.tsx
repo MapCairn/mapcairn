@@ -1436,6 +1436,19 @@ describe("Map shape", () => {
     expect(setBasemap).not.toHaveBeenCalled();
   });
 
+  it("marks the host with the shape from its first render, before any engine, so a globe's space is painted at once", () => {
+    for (const projection of ["globe", "flat"] as const) {
+      const services = createFakeServices();
+      services.fakes.settings.set({ projection });
+      const html = renderToString(
+        <ServicesProvider services={services}>
+          <MapView initialView={VIEW} basemap={FAKE_VECTOR_BASEMAP} />
+        </ServicesProvider>,
+      );
+      expect(html).toContain(`data-projection="${projection}"`);
+    }
+  });
+
   it("draws the overlays again after the shape changes, because nothing else moved", async () => {
     const { adapter, services, latest } = await setup();
     const before = latest();

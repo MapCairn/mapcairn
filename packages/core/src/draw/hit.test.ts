@@ -1,13 +1,24 @@
 import { describe, expect, it } from "vitest";
-import type { PixelPoint } from "../ports/geometry";
+import type { MapPlacement } from "../globe/placement";
+import type { LatLng, PixelPoint } from "../ports/geometry";
 import { destinationPoint } from "./geo";
 import { hitTestHandle, pickShape } from "./hit";
 import type { DrawShape } from "./types";
 
-const project = (position: { lat: number; lng: number }): PixelPoint => ({
+/** A flat map centred on 0, 0 that places positions with `place`. */
+function flat(place: (position: LatLng) => PixelPoint): MapPlacement {
+  return {
+    projection: "flat",
+    view: { center: { lat: 0, lng: 0 }, zoom: 0 },
+    project: place,
+    isVisible: () => true,
+  };
+}
+
+const project = flat((position) => ({
   x: position.lng * 100,
   y: -position.lat * 100,
-});
+}));
 
 const p = (lng: number, lat: number) => ({ lat, lng });
 
@@ -96,12 +107,12 @@ describe("pickShape", () => {
       vertices: [p(0, 0)],
       radiusMetres: 5_000_000,
     });
-    const wide = (position: { lat: number; lng: number }): PixelPoint => ({
+    const wide = flat((position) => ({
       x: position.lng * 10,
       y: -position.lat * 10,
-    });
+    }));
     expect(pickShape([circle], { x: 5, y: 5 }, wide, 4, false)).toBeNull();
-    const edge = wide(destinationPoint(p(0, 0), 90, 5_000_000));
+    const edge = wide.project(destinationPoint(p(0, 0), 90, 5_000_000));
     expect(pickShape([circle], { x: edge.x + 2, y: 0 }, wide, 4, false)).toBe(
       "circle",
     );
@@ -136,11 +147,11 @@ describe("pickShape", () => {
       vertices: [p(0, 0)],
       radiusMetres: 5_000_000,
     });
-    // The radius in pixels comes from projecting a point on the circle.
-    const wide = (position: { lat: number; lng: number }): PixelPoint => ({
+    // The outline is the circle's ring, placed on the screen.
+    const wide = flat((position) => ({
       x: position.lng * 10,
       y: -position.lat * 10,
-    });
+    }));
     expect(pickShape([circle], { x: 5, y: 5 }, wide, 4)).toBe("circle");
     expect(pickShape([circle], { x: 900, y: 900 }, wide, 4)).toBeNull();
   });
@@ -176,5 +187,66 @@ describe("pickShape", () => {
         10,
       ),
     ).toBeNull();
+  });
+});
+
+describe("pickShape across the antimeridian and on a globe", () => {
+  /** One degree to ten pixels, with no wrapping, as the engine projects. */
+  const place = (position: LatLng): PixelPoint => ({
+    x: position.lng * 10,
+    y: -position.lat * 10,
+  });
+
+  it("finds a line where it is drawn, the short way across the antimeridian", () => {
+    const line = shape({
+      kind: "line",
+      vertices: [p(170, 10), p(-170, 10)],
+    });
+    const placement: MapPlacement = {
+      projection: "flat",
+      view: { center: p(178, 10), zoom: 2 },
+      project: place,
+      isVisible: () => true,
+    };
+    // Drawn from x 1700 to 1900, through the antimeridian at 1800.
+    expect(pickShape([line], { x: 1800, y: -100 }, placement, 4)).toBe("line");
+    expect(pickShape([line], { x: 0, y: -100 }, placement, 4)).toBeNull();
+  });
+
+  it("finds a long line on a globe where its great circle bends, not on the chord", () => {
+    const line = shape({
+      kind: "line",
+      vertices: [p(-0.1, 51.5), p(-74, 40.7)],
+    });
+    const placement: MapPlacement = {
+      projection: "globe",
+      view: { center: p(-40, 45), zoom: 2 },
+      project: place,
+      isVisible: () => true,
+    };
+    // The great circle passes 52.36 N at 41.28 W; the chord passes near 46 N.
+    expect(pickShape([line], place(p(-41.28, 52.36)), placement, 4)).toBe(
+      "line",
+    );
+    expect(pickShape([line], place(p(-37.05, 46.1)), placement, 4)).toBeNull();
+  });
+
+  it("finds nothing beyond the horizon, and no inside for an area partly hidden", () => {
+    const polygon = shape({
+      kind: "polygon",
+      vertices: [p(0, 0), p(40, 0), p(40, 30)],
+    });
+    const hideWest: MapPlacement = {
+      projection: "globe",
+      view: { center: p(60, 0), zoom: 2 },
+      project: place,
+      isVisible: (position) => position.lng >= 20,
+    };
+    // Inside the triangle, but its outline is cut by the horizon.
+    expect(pickShape([polygon], place(p(30, 5)), hideWest, 4)).toBeNull();
+    // On its eastern edge, which is in sight.
+    expect(pickShape([polygon], place(p(40, 15)), hideWest, 4)).toBe("polygon");
+    const point = shape({ kind: "point", vertices: [p(10, 10)] });
+    expect(pickShape([point], place(p(10, 10)), hideWest, 4)).toBeNull();
   });
 });

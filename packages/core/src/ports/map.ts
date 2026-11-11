@@ -425,7 +425,13 @@ export interface MapAdapter {
   getMinZoom(): number;
   getMaxZoom(): number;
 
+  /**
+   * The pixel of a position on the map host. On a flat map the longitude
+   * names the copy of the world: 190 is one world east of -170, so the ui
+   * picks the copy it draws (`placePoint`, `placePath`).
+   */
   project(latlng: LatLng): PixelPoint;
+  /** The position under a pixel, with its longitude in [-180, 180). */
   unproject(point: PixelPoint): LatLng;
   /**
    * Whether a place is on the side of the map the person can see. Always true
@@ -433,7 +439,11 @@ export interface MapAdapter {
    * where `project` still returns a pixel that must not be drawn.
    */
   isVisible(latlng: LatLng): boolean;
-  /** Ground resolution at a latitude (defaults to the view centre) at the current zoom. */
+  /**
+   * Ground resolution at a latitude (defaults to the view centre) at the
+   * current zoom. On a globe it is the view centre's resolution wherever
+   * asked, because the sphere has one scale (`mapMetresPerPixel`).
+   */
   metresPerPixel(lat?: number): number;
 
   /**

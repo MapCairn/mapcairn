@@ -329,6 +329,23 @@ export function runMapAdapterContract(
       expect(Math.abs(back.y - pixel.y)).toBeLessThan(1);
     });
 
+    it("reports positions east of the antimeridian with longitudes inside [-180, 180)", async () => {
+      const { adapter, controls } = await mounted();
+      adapter.setView({ center: { lat: 0, lng: 179.99 } }, NO_ANIMATION);
+      await controls.settle();
+      const east = adapter.unproject({
+        x: controls.hostSize.width,
+        y: controls.hostSize.height / 2,
+      });
+      expect(east.lng).toBeLessThan(-170);
+      expect(east.lng).toBeGreaterThanOrEqual(-180);
+      const clicks: LatLng[] = [];
+      adapter.on("click", (click) => clicks.push(click.latlng));
+      controls.simulateClick({ lat: 0, lng: 180.005 });
+      expect(clicks).toHaveLength(1);
+      expect(clicks[0]?.lng).toBeCloseTo(-179.995, 6);
+    });
+
     it("halves metres per pixel with every zoom level, within one percent", async () => {
       const { adapter, controls, zoom } = await mounted();
       const coarse = adapter.metresPerPixel(0);
@@ -574,6 +591,16 @@ export function runMapAdapterContract(
         await adapter.setBasemap(controls.basemap);
         await controls.settle();
         expect(adapter.isVisible(ANTIPODE)).toBe(false);
+      });
+
+      it("keeps the view centre's ground resolution across the whole globe", async () => {
+        const { adapter, controls } = await mounted();
+        const flatAtCentre = adapter.metresPerPixel();
+        adapter.setProjection("globe");
+        await controls.settle();
+        expect(adapter.metresPerPixel()).toBeCloseTo(flatAtCentre, 6);
+        expect(adapter.metresPerPixel(60)).toBeCloseTo(flatAtCentre, 6);
+        expect(adapter.metresPerPixel(0)).toBeCloseTo(flatAtCentre, 6);
       });
 
       it("mounts as a globe when asked, without the camera or zoom changing", async () => {
@@ -1056,6 +1083,32 @@ export function runMapAdapterContract(
         controls.pointerDown(CENTRE);
         controls.pointerUp(CENTRE);
         expect(drags).toEqual([]);
+      });
+
+      it("ignores a handle beyond the horizon of a globe, though a press lands where it would project", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setProjection("globe");
+        await controls.settle();
+        const { drags } = record(adapter);
+        const farSide: LatLng = { lat: -CENTRE.lat, lng: CENTRE.lng - 180 };
+        adapter.setEditHandles([{ ...HANDLE, position: farSide }]);
+        controls.pointerDown(farSide);
+        controls.pointerUp(farSide);
+        expect(drags).toEqual([]);
+      });
+
+      it("presses a handle across the antimeridian where the overlay draws it", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setView({ center: { lat: 0, lng: 179.99 } }, NO_ANIMATION);
+        await controls.settle();
+        const { drags } = record(adapter);
+        adapter.setEditHandles([
+          { ...HANDLE, position: { lat: 0, lng: -179.995 } },
+        ]);
+        // The copy of the world east of the antimeridian, beside the centre.
+        controls.pointerDown({ lat: 0, lng: 180.005 });
+        expect(drags.map((drag) => drag.phase)).toEqual(["start"]);
+        controls.pointerUp({ lat: 0, lng: 180.005 });
       });
 
       it("picks the nearest of two handles", async () => {

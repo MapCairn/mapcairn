@@ -669,5 +669,32 @@ describe("useDraw", () => {
       addAll(inactive, TRIANGLE);
       expect(inactive.result.current.handles).toEqual([]);
     });
+
+    it("puts a midpoint on the great circle on a globe, and a tap there adds the vertex on the curve", async () => {
+      const services = createFakeServices();
+      services.fakes.settings.set({ projection: "globe" });
+      const rig = await setup({ services });
+      act(() => rig.result.current.setMode("line"));
+      addAll(rig, [p(-0.1, 51.5), p(-74, 40.7)]);
+      act(() => rig.result.current.finish());
+      const id = rig.result.current.shapes[0]?.id ?? "";
+      const midpoint = rig.result.current.handles.find(
+        (h) => h.id === `${id}:m:1`,
+      );
+      // London to New York bows north to 52.36 N, not the 46.1 N average.
+      expectNear(midpoint?.position, { lat: 52.362_546, lng: -41.275_707 });
+      const at = midpoint?.position as LatLng;
+      for (const phase of ["start", "end"] as const) {
+        act(() =>
+          rig.result.current.onHandleDrag({
+            id: `${id}:m:1`,
+            phase,
+            latlng: at,
+            moved: false,
+          }),
+        );
+      }
+      expectNear(rig.result.current.shapes[0]?.vertices[1], at);
+    });
   });
 });

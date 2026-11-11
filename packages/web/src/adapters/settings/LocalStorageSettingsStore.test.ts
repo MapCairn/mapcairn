@@ -1,4 +1,4 @@
-import { THEME_STORAGE_KEY } from "@mapcairn/core";
+import { PROJECTION_STORAGE_KEY, THEME_STORAGE_KEY } from "@mapcairn/core";
 import { runSettingsStoreContract } from "@mapcairn/core/contracts";
 import { describe, expect, it } from "vitest";
 import {
@@ -122,6 +122,8 @@ describe("LocalStorageSettingsStore", () => {
     expect(storage.getItem("mapcairn:zoomButtons")).toBe("false");
     expect(storage.getItem("mapcairn:saveData")).toBe("true");
     expect(storage.getItem("mapcairn:projection")).toBe('"globe"');
+    // The pre-paint script reads the same key to paint a globe's placeholder.
+    expect(PROJECTION_STORAGE_KEY).toBe("mapcairn:projection");
     expect(storage.getItem("mapcairn:basemapId")).toBe('"positron"');
     expect(JSON.parse(storage.getItem("mapcairn:lastView") ?? "null")).toEqual(
       VIEW,

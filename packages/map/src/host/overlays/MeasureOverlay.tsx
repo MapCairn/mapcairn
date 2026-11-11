@@ -1,6 +1,10 @@
-import type { LatLng, PixelPoint } from "@mapcairn/core";
-import { useMap } from "../MapContext";
-import { projectPath, roundPixel, toSvgPoints, visibleRuns } from "./geometry";
+import {
+  type LatLng,
+  type PixelPoint,
+  placePath,
+  visibleRuns,
+} from "@mapcairn/core";
+import { roundPixel, toSvgPoints, usePlacement } from "./geometry";
 import * as styles from "./overlays.css";
 
 /** Radius of a measure vertex, in pixels. */
@@ -40,9 +44,11 @@ function HaloLine({
 /**
  * The measuring tool's drawing: vertices, the line between them and, for an
  * area, the closed polygon and its fill. Render it inside `MapOverlayLayer`.
- * @remarks On a globe, a vertex beyond the horizon is not drawn, and neither
- *   is a segment that ends at one. The fill and the closing edge of an area
- *   are drawn only while every vertex is in sight.
+ * @remarks Segments go the short way across the antimeridian. On a globe each
+ *   segment follows its great circle, the path the measured distance runs
+ *   along, and stops at the horizon: a vertex beyond it is not drawn, and the
+ *   fill and the closing edge of an area are drawn whole only while all of
+ *   the outline is in sight.
  */
 export function MeasureOverlay({
   points,
@@ -50,64 +56,75 @@ export function MeasureOverlay({
   hover,
   testId,
 }: MeasureOverlayProps) {
-  const { adapter } = useMap();
-  if (!adapter) {
+  const placement = usePlacement();
+  if (!placement) {
     return null;
   }
-  const path = projectPath(adapter, points);
-  const { pixels } = path;
-  const hoverPixel =
-    hover && adapter.isVisible(hover) ? adapter.project(hover) : null;
   const area = mode === "area";
-  const closed = area && pixels.length >= 3 && path.whole;
-  const fillPoints = hoverPixel ? [...pixels, hoverPixel] : pixels;
-  const last = pixels.at(-1);
-  const first = pixels[0];
-  const endsInSight = path.visible.at(-1) === true && path.visible[0] === true;
+  const path = placePath(points, area && points.length >= 3, placement);
+  const filled = area && path.whole && points.length >= 2;
+  const fill =
+    filled && hover
+      ? placePath([...points, hover], true, placement)
+      : filled
+        ? path
+        : null;
+  const last = points.at(-1);
+  const first = points[0];
   const preview =
-    hoverPixel && last && first && endsInSight
-      ? area && pixels.length >= 2
-        ? [last, hoverPixel, first]
-        : [last, hoverPixel]
+    hover && last && first
+      ? placePath(
+          area && points.length >= 2 ? [last, hover, first] : [last, hover],
+          false,
+          placement,
+        )
       : null;
-  const lines = closed ? [pixels] : visibleRuns(path);
+  const lines =
+    path.closed && path.whole
+      ? [{ points: path.pixels, closed: true }]
+      : visibleRuns(path).map((run) => ({ points: run, closed: false }));
 
   return (
     <g data-testid={testId} data-mode={mode}>
-      {area && path.whole && fillPoints.length >= 3 ? (
+      {fill?.whole && fill.pixels.length >= 3 ? (
         <polygon
           className={styles.measureFill}
-          points={toSvgPoints(fillPoints)}
+          points={toSvgPoints(fill.pixels)}
         />
       ) : null}
       {lines.map((line, index) => (
         <HaloLine
           // biome-ignore lint/suspicious/noArrayIndexKey: the order is the identity.
           key={index}
-          points={line}
-          closed={closed}
+          points={line.points}
+          closed={line.closed}
           className={styles.measureLine}
         />
       ))}
-      {preview ? (
-        <HaloLine
-          points={preview}
-          closed={false}
-          className={styles.measurePreview}
-        />
-      ) : null}
-      {pixels.map((pixel, index) =>
-        path.visible[index] ? (
+      {preview
+        ? visibleRuns(preview).map((run, index) => (
+            <HaloLine
+              // biome-ignore lint/suspicious/noArrayIndexKey: the order is the identity.
+              key={`preview-${index}`}
+              points={run}
+              closed={false}
+              className={styles.measurePreview}
+            />
+          ))
+        : null}
+      {path.vertices.map((pixelIndex, index) => {
+        const at = path.visible[pixelIndex] ? path.pixels[pixelIndex] : null;
+        return at ? (
           <circle
             // biome-ignore lint/suspicious/noArrayIndexKey: the order is the identity.
             key={index}
             className={styles.measureVertex}
-            cx={roundPixel(pixel.x)}
-            cy={roundPixel(pixel.y)}
+            cx={roundPixel(at.x)}
+            cy={roundPixel(at.y)}
             r={MEASURE_VERTEX_RADIUS_PX}
           />
-        ) : null,
-      )}
+        ) : null;
+      })}
     </g>
   );
 }

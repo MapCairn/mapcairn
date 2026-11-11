@@ -193,3 +193,20 @@ function encodeRaw(kind: string, numbers: readonly number[]): string {
   }
   return out;
 }
+
+describe("shapes across the antimeridian", () => {
+  it("round-trips a line from 170 E to 170 W exactly, longitudes untouched", () => {
+    const line: DrawShape = {
+      id: "a",
+      kind: "line",
+      label: "Line 1",
+      done: true,
+      vertices: [p(170, 10), p(-170, 10)],
+    };
+    const text = encodeShapes([line]);
+    expect(text).toBe("lgkh9BgkztgBA_nm7gC");
+    expect(decodeShapes(text ?? "")).toEqual([
+      { kind: "line", vertices: [p(170, 10), p(-170, 10)] },
+    ]);
+  });
+});

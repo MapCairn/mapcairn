@@ -162,6 +162,13 @@ export interface ColourRoles {
    * different colour before the basemap appears.
    */
   mapBackground: string;
+  /**
+   * The space around the sphere when the map is drawn as a globe, in place
+   * of `mapBackground`. Darker than every pale basemap's land, so the edge
+   * of the globe shows, and in the dark theme lighter and bluer than the
+   * near-black Dark basemap, so its edge shows too. A flat map never uses it.
+   */
+  mapGlobeSpace: string;
   /** Dropped pin. */
   mapPin: string;
   /** Measurement line. */
@@ -195,6 +202,7 @@ export const colourRoleNames = [
   "focusRingInner",
   "pageBackground",
   "mapBackground",
+  "mapGlobeSpace",
   "mapPin",
   "mapMeasureLine",
   "mapMeasureFill",
@@ -242,6 +250,7 @@ const lightColour: ColourRoles = {
   focusRingInner: "oklch(1 0 0)",
   pageBackground: "oklch(0.95 0.008 85)",
   mapBackground: representativeBackdrops.defaultBasemap,
+  mapGlobeSpace: "oklch(0.82 0.02 250)",
   mapPin: accent[600],
   mapMeasureLine: accent[600],
   mapMeasureFill: "oklch(0.55 0.175 255 / 0.18)",
@@ -268,6 +277,7 @@ const darkColour: ColourRoles = {
   focusRingInner: "oklch(0.19 0.008 250)",
   pageBackground: "oklch(0.24 0.008 250)",
   mapBackground: representativeBackdrops.defaultBasemap,
+  mapGlobeSpace: "oklch(0.25 0.025 255)",
   mapPin: accent[600],
   mapMeasureLine: accent[600],
   mapMeasureFill: "oklch(0.55 0.175 255 / 0.28)",
@@ -351,6 +361,7 @@ export const forcedColors: Partial<ColourRoles> = {
   focusRingInner: "Canvas",
   pageBackground: "Canvas",
   mapBackground: "Canvas",
+  mapGlobeSpace: "Canvas",
 };
 
 /**

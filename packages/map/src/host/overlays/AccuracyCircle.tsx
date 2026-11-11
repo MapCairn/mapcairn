@@ -1,6 +1,6 @@
-import type { LatLng } from "@mapcairn/core";
+import { type LatLng, placePoint } from "@mapcairn/core";
 import { useMap } from "../MapContext";
-import { roundPixel, screenRadiusForMetres } from "./geometry";
+import { roundPixel, screenRadiusForMetres, usePlacement } from "./geometry";
 import * as styles from "./overlays.css";
 
 /** The smallest radius drawn, so a very precise fix still shows a circle. */
@@ -16,8 +16,9 @@ export interface AccuracyCircleProps {
 
 /**
  * The circle around a found location, sized from the ground resolution at its
- * latitude so it matches the real accuracy at every zoom. Render it inside
- * `MapOverlayLayer`.
+ * latitude so it matches the real accuracy at every zoom (on a globe, the
+ * resolution at the view centre, which holds across the sphere). Render it
+ * inside `MapOverlayLayer`.
  */
 export function AccuracyCircle({
   center,
@@ -25,10 +26,12 @@ export function AccuracyCircle({
   testId,
 }: AccuracyCircleProps) {
   const { adapter } = useMap();
-  if (!adapter?.isVisible(center)) {
+  const placement = usePlacement();
+  const at = placement ? placePoint(center, placement) : null;
+  if (!adapter || !at) {
     return null;
   }
-  const { x, y } = adapter.project(center);
+  const { x, y } = at;
   const radius = screenRadiusForMetres(
     accuracyMetres,
     adapter.metresPerPixel(center.lat),

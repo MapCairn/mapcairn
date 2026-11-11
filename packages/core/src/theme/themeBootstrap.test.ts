@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { parseThemeChoice, resolveTheme } from "./theme";
 import { buildThemeBootstrapScript } from "./themeBootstrap";
 import {
+  MAP_SHAPE_ATTRIBUTE,
+  PROJECTION_STORAGE_KEY,
   THEME_ATTRIBUTE,
   THEME_COLOR_META,
   THEME_COLOR_META_NAME,
@@ -44,6 +46,8 @@ function run(
   options: {
     existingMetas?: number;
     documentThrows?: boolean;
+    /** What the map shape key holds. */
+    projection?: string | null;
   } = {},
 ): Run {
   const result: Run = {
@@ -99,8 +103,10 @@ function run(
   } else {
     sandbox.localStorage = {
       getItem(key: string) {
-        result.readKey = key;
-        return stored;
+        result.readKey ??= key;
+        return key === PROJECTION_STORAGE_KEY
+          ? (options.projection ?? null)
+          : stored;
       },
     };
   }
@@ -181,6 +187,21 @@ describe("buildThemeBootstrapScript", () => {
     }
   });
 
+  it("marks a stored globe on the root, so the placeholder paints the space around it", () => {
+    const globe = run("dark", "light", { projection: JSON.stringify("globe") });
+    expect(globe.attributes[MAP_SHAPE_ATTRIBUTE]).toBe("globe");
+    expect(globe.attributes[THEME_ATTRIBUTE]).toBe("dark");
+  });
+
+  it("marks nothing for a flat map, no setting or anything else stored", () => {
+    for (const projection of [JSON.stringify("flat"), null, "globe", "{"]) {
+      const result = run("light", "light", { projection });
+      expect(result.attributes, String(projection)).not.toHaveProperty(
+        MAP_SHAPE_ATTRIBUTE,
+      );
+    }
+  });
+
   it("never throws when the document is blocked", () => {
     expect(() => run("dark", "dark", { documentThrows: true })).not.toThrow();
   });
@@ -198,5 +219,7 @@ describe("buildThemeBootstrapScript", () => {
     expect(script).toContain(THEME_ATTRIBUTE);
     expect(script).toContain(THEME_COLOR_META.light);
     expect(script).toContain(THEME_COLOR_META.dark);
+    expect(script).toContain(PROJECTION_STORAGE_KEY);
+    expect(script).toContain(MAP_SHAPE_ATTRIBUTE);
   });
 });

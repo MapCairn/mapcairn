@@ -1,6 +1,5 @@
-import type { LatLng } from "@mapcairn/core";
-import { useMap } from "../MapContext";
-import { roundPixel } from "./geometry";
+import { type LatLng, placePoint } from "@mapcairn/core";
+import { roundPixel, usePlacement } from "./geometry";
 import * as styles from "./overlays.css";
 
 /**
@@ -28,14 +27,17 @@ export interface PinMarkerProps {
 
 /**
  * A dropped pin, drawn in the overlay layer and re-projected whenever the view
- * changes. It is not drawn while it is on the far side of a globe. Render it inside `MapOverlayLayer`.
+ * changes. It is not drawn while it is on the far side of a globe, and on a
+ * flat map it is drawn on the copy of the world nearest the view centre.
+ * Render it inside `MapOverlayLayer`.
  */
 export function PinMarker({ position, testId }: PinMarkerProps) {
-  const { adapter } = useMap();
-  if (!adapter?.isVisible(position)) {
+  const placement = usePlacement();
+  const at = placement ? placePoint(position, placement) : null;
+  if (!at) {
     return null;
   }
-  const { x, y } = adapter.project(position);
+  const { x, y } = at;
   return (
     <g
       transform={`translate(${roundPixel(x)} ${roundPixel(y)})`}

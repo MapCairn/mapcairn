@@ -195,3 +195,27 @@ describe("shapeLabel", () => {
     expect(shapeLabel("circle", 4)).toBe("Circle 4");
   });
 });
+
+describe("a polygon across the antimeridian", () => {
+  const across: DrawShape = {
+    id: "a",
+    kind: "polygon",
+    label: "Polygon 1",
+    done: true,
+    vertices: [p(170, 0), p(-170, 0), p(-170, 10), p(170, 10)],
+  };
+
+  it("is accepted", () => {
+    expect(validateShape(across)).toBeNull();
+  });
+
+  it("measures the short way round, like the same box elsewhere", () => {
+    const elsewhere = measureShape({
+      ...across,
+      vertices: [p(10, 0), p(30, 0), p(30, 10), p(10, 10)],
+    });
+    const measured = measureShape(across);
+    expect(measured.areaMetres).toBeCloseTo(elsewhere.areaMetres ?? 0, -3);
+    expect(measured.lengthMetres).toBeCloseTo(elsewhere.lengthMetres ?? 0, 3);
+  });
+});

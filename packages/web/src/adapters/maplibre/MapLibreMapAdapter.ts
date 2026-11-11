@@ -33,11 +33,16 @@ import {
   handleReach,
   hitTestHandle,
   MapEngineError,
-  metresPerPixel,
+  type MapPlacement,
+  mapMetresPerPixel,
   omittedLayers,
+  placePath,
+  placePoint,
   pressHandle,
   toEngineZoom,
   toNormalisedZoom,
+  visibleRuns,
+  wrapLongitude,
 } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
 import type {
@@ -149,6 +154,19 @@ function wrapLines(
 }
 
 /** Bearing in degrees clockwise, in the range [0, 360) and never -0. */
+
+/**
+ * A position MapLibre reports, with its longitude brought into [-180, 180).
+ * MapLibre does not wrap `unproject` or event positions, so on a flat map a
+ * press on the copy of the world east of the antimeridian reports 190, which
+ * would reach a drawn shape, an export or a link as it is.
+ */
+function positionOf(lngLat: {
+  readonly lat: number;
+  readonly lng: number;
+}): LatLng {
+  return { lat: lngLat.lat, lng: wrapLongitude(lngLat.lng) };
+}
 
 function normaliseBearing(bearing: number): number {
   const normalised = ((bearing % 360) + 360) % 360;
@@ -923,13 +941,27 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (!map) {
       return this.getView().center;
     }
-    const position = map.unproject([point.x, point.y]);
-    return { lat: position.lat, lng: position.lng };
+    return positionOf(map.unproject([point.x, point.y]));
   }
 
   metresPerPixel(lat?: number): number {
-    const view = this.getView();
-    return metresPerPixel(lat ?? view.center.lat, view.zoom);
+    const { center, zoom } = this.getView();
+    return mapMetresPerPixel(
+      this.projection,
+      lat ?? center.lat,
+      center.lat,
+      zoom,
+    );
+  }
+
+  /** How the ui places its overlay marks, so presses and the exported image agree with what it draws. */
+  private placement(): MapPlacement {
+    return {
+      projection: this.projection,
+      view: this.getView(),
+      project: (position) => this.project(position),
+      isVisible: (position) => this.isVisible(position),
+    };
   }
 
   setBasemap(
@@ -1093,12 +1125,13 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
   }
 
+  /** The handles that can be pressed: each where the overlay draws it, none beyond the horizon. */
   private projectedHandles() {
-    return this.editHandles.map((handle) => ({
-      id: handle.id,
-      kind: handle.kind,
-      point: this.project(handle.position),
-    }));
+    const placement = this.placement();
+    return this.editHandles.flatMap((handle) => {
+      const point = placePoint(handle.position, placement);
+      return point ? [{ id: handle.id, kind: handle.kind, point }] : [];
+    });
   }
 
   /**
@@ -1120,7 +1153,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.emitter.emit("handleDrag", {
       id: this.handleGesture.id,
       phase: "start",
-      latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
+      latlng: positionOf(event.lngLat),
       moved: false,
     });
   }
@@ -1133,7 +1166,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         this.emitter.emit("handleDrag", {
           id: this.handleGesture.id,
           phase: "move",
-          latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
+          latlng: positionOf(event.lngLat),
           moved: true,
         });
       }
@@ -1161,7 +1194,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.emitter.emit("handleDrag", {
       id: gesture.id,
       phase: "end",
-      latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
+      latlng: positionOf(event.lngLat),
       moved: gesture.moved,
     });
   }
@@ -1656,7 +1689,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         this.emitter.emit("featureTap", tap);
       }
       const click: MapClickEvent = {
-        latlng: { lat: event.lngLat.lat, lng: event.lngLat.lng },
+        latlng: positionOf(event.lngLat),
         point: { x: event.point.x, y: event.point.y },
         features: this.renderedProperties(event.point.x, event.point.y),
       };
@@ -1938,15 +1971,33 @@ export class MapLibreMapAdapter implements MapAdapter {
       map.getCanvas().clientWidth ||
       canvas.width / (window.devicePixelRatio || 1);
     const scale = cssWidth > 0 ? canvas.width / cssWidth : 1;
-    const place = (position: LatLng) => {
-      const point = map.project([position.lng, position.lat]);
-      return { x: point.x * scale, y: point.y * scale };
+    const placement = this.placement();
+    const toImage = (point: PixelPoint) => ({
+      x: point.x * scale,
+      y: point.y * scale,
+    });
+    const trace = (points: readonly PixelPoint[], closed: boolean) => {
+      context.beginPath();
+      points.forEach((point, index) => {
+        if (index === 0) {
+          context.moveTo(point.x, point.y);
+        } else {
+          context.lineTo(point.x, point.y);
+        }
+      });
+      if (closed) {
+        context.closePath();
+      }
     };
     context.lineJoin = "round";
     context.lineCap = "round";
     for (const mark of drawing.marks) {
       if (mark.kind === "dot") {
-        const at = place(mark.position);
+        const placed = placePoint(mark.position, placement);
+        if (!placed) {
+          continue;
+        }
+        const at = toImage(placed);
         context.beginPath();
         context.arc(at.x, at.y, MARK_DOT_RADIUS_PX * scale, 0, 2 * Math.PI);
         context.fillStyle = drawing.colour;
@@ -1956,37 +2007,31 @@ export class MapLibreMapAdapter implements MapAdapter {
         context.stroke();
         continue;
       }
-      const points = mark.positions.map(place);
-      const [first, ...rest] = points;
-      if (!first || rest.length === 0) {
-        continue;
-      }
-      const trace = () => {
-        context.beginPath();
-        context.moveTo(first.x, first.y);
-        for (const point of rest) {
-          context.lineTo(point.x, point.y);
-        }
-        if (mark.closed) {
-          context.closePath();
-        }
-      };
-      if (mark.fill) {
-        trace();
+      // The same curves, copy of the world and horizon as the overlay, so
+      // the image shows the shapes as the person saw them.
+      const path = placePath(mark.positions, mark.closed, placement);
+      const ring = mark.closed && path.whole;
+      const lines = ring
+        ? [path.pixels.map(toImage)]
+        : visibleRuns(path).map((run) => run.map(toImage));
+      if (mark.fill && ring && path.pixels.length >= 3) {
+        trace(lines[0] as PixelPoint[], true);
         context.fillStyle = rgbaColour(drawing.colour, MARK_FILL_OPACITY);
         context.fill();
       }
       context.setLineDash(
         mark.dashed ? [MARK_DASH_PX * scale, MARK_DASH_PX * scale] : [],
       );
-      trace();
-      context.lineWidth = (MARK_LINE_PX + MARK_HALO_PX) * scale;
-      context.strokeStyle = drawing.halo;
-      context.stroke();
-      trace();
-      context.lineWidth = MARK_LINE_PX * scale;
-      context.strokeStyle = drawing.colour;
-      context.stroke();
+      for (const line of lines) {
+        trace(line, ring);
+        context.lineWidth = (MARK_LINE_PX + MARK_HALO_PX) * scale;
+        context.strokeStyle = drawing.halo;
+        context.stroke();
+        trace(line, ring);
+        context.lineWidth = MARK_LINE_PX * scale;
+        context.strokeStyle = drawing.colour;
+        context.stroke();
+      }
     }
     context.setLineDash([]);
   }

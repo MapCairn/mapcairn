@@ -58,6 +58,14 @@ globalStyle(scoped(".maplibregl-map"), {
   WebkitTapHighlightColor: "transparent",
 });
 
+// On a globe MapLibre clears the canvas around the sphere to transparent and
+// draws no atmosphere unless a style asks for one (`sky`, whose default
+// `atmosphere-blend` is 0 when a style has none; `style/sky.ts` in 6.17), so
+// the space around the globe is this background.
+globalStyle(`${HOST}[data-projection="globe"] .maplibregl-map`, {
+  backgroundColor: mapOverlayTokens.globeSpace,
+});
+
 // Popups, should the engine ever draw one, use our type too.
 globalStyle(scoped(".maplibregl-popup-content"), {
   fontFamily: tokens.type.family,

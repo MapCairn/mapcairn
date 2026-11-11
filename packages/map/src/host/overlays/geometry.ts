@@ -1,4 +1,11 @@
-import type { LatLng, MapAdapter, PixelPoint } from "@mapcairn/core";
+import type {
+  MapAdapter,
+  MapPlacement,
+  MapProjection,
+  PixelPoint,
+  ViewState,
+} from "@mapcairn/core";
+import { useMap } from "../MapContext";
 
 /**
  * The on-screen radius, in pixels, of a distance on the ground.
@@ -17,60 +24,31 @@ export function screenRadiusForMetres(
   return Math.max(minimum, metres / metresPerPixel);
 }
 
-/** Projects geographic points to pixels on the map host, in order. */
-export function projectPoints(
-  map: Pick<MapAdapter, "project">,
-  points: readonly LatLng[],
-): PixelPoint[] {
-  return points.map((point) => map.project(point));
-}
-
 /** The part of the map port an overlay needs to place and hide its marks. */
 export type OverlayMap = Pick<MapAdapter, "project" | "isVisible">;
 
-/** Points projected to pixels, with whether each is on the visible side of a globe. */
-export interface ProjectedPath {
-  readonly pixels: readonly PixelPoint[];
-  readonly visible: readonly boolean[];
-  /** True when every point is visible (always, on a flat map). */
-  readonly whole: boolean;
-}
-
-/** Projects points in order and records which are on the visible side. */
-export function projectPath(
+/** How overlays place marks on a map of `projection` showing `view`. */
+export function overlayPlacement(
   map: OverlayMap,
-  points: readonly LatLng[],
-): ProjectedPath {
-  const visible = points.map((point) => map.isVisible(point));
+  view: Pick<ViewState, "center" | "zoom">,
+  projection: MapProjection,
+): MapPlacement {
   return {
-    pixels: projectPoints(map, points),
-    visible,
-    whole: visible.every(Boolean),
+    projection,
+    view,
+    project: (position) => map.project(position),
+    isVisible: (position) => map.isVisible(position),
   };
 }
 
 /**
- * The runs of consecutive visible points that make at least a segment. On a
- * globe a segment is drawn straight on the screen between two visible points,
- * and never to a point beyond the horizon.
+ * The placement every overlay uses: the live adapter, the current view and
+ * the map shape, or null before the map has mounted. Read it inside the map
+ * context.
  */
-export function visibleRuns(path: ProjectedPath): PixelPoint[][] {
-  const runs: PixelPoint[][] = [];
-  let run: PixelPoint[] = [];
-  path.pixels.forEach((pixel, index) => {
-    if (path.visible[index]) {
-      run.push(pixel);
-      return;
-    }
-    if (run.length >= 2) {
-      runs.push(run);
-    }
-    run = [];
-  });
-  if (run.length >= 2) {
-    runs.push(run);
-  }
-  return runs;
+export function usePlacement(): MapPlacement | null {
+  const { adapter, view, projection } = useMap();
+  return adapter ? overlayPlacement(adapter, view, projection) : null;
 }
 
 /** Rounds a pixel coordinate to two decimals, to keep SVG attributes short. */

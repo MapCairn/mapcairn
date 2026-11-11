@@ -5,6 +5,7 @@ export * from "./draw";
 export * from "./fakes";
 export * from "./format";
 export * from "./geometry";
+export * from "./globe";
 export * from "./keyboard";
 export * from "./layers";
 export * from "./layout";

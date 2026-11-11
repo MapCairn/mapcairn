@@ -58,6 +58,41 @@ test.describe("map shape", () => {
     await expect(mapPage.host).toHaveAttribute("data-projection", "flat");
   });
 
+  test("paints the space around a globe in its own colour, from the first paint after a reload", async ({
+    page,
+    mapPage,
+  }) => {
+    const colours = () =>
+      page.evaluate(() => {
+        const host = document.querySelector("[data-map-host]") as HTMLElement;
+        const engine = host.querySelector(".maplibregl-map") as HTMLElement;
+        return [
+          getComputedStyle(host).backgroundColor,
+          getComputedStyle(engine).backgroundColor,
+        ];
+      });
+    await mapPage.goto(VIEW);
+    const [flatHost, flatEngine] = await colours();
+    expect(flatEngine).toBe(flatHost);
+
+    await mapPage.openSettings();
+    await shapeGroup(page).getByRole("radio", { name: "Globe" }).click();
+    await expect.poll(async () => (await colours())[0]).not.toBe(flatHost);
+    const [globeHost, globeEngine] = await colours();
+    expect(globeEngine).toBe(globeHost);
+
+    // The pre-paint script marks a stored globe, so the placeholder that
+    // shows before the app mounts is already the globe's colour.
+    await page.reload();
+    expect(
+      await page.evaluate(() =>
+        document.documentElement.getAttribute("data-map-shape"),
+      ),
+    ).toBe("globe");
+    await mapPage.waitForMap();
+    expect((await colours())[0]).toBe(globeHost);
+  });
+
   test("a pin on the far side of a globe is not drawn", async ({
     page,
     mapPage,

@@ -1,7 +1,6 @@
-import { type DirectionStop, stopLetter } from "@mapcairn/core";
-import { useMap } from "../../host";
+import { type DirectionStop, placePoint, stopLetter } from "@mapcairn/core";
 import { CentreCrosshair } from "../../host/overlays/CentreCrosshair";
-import { roundPixel } from "../../host/overlays/geometry";
+import { roundPixel, usePlacement } from "../../host/overlays/geometry";
 import * as styles from "./Directions.css";
 import { useFreeCentre } from "./useFreeCentre";
 
@@ -32,18 +31,19 @@ export function DirectionsOverlay({
   showCrosshair,
   testId,
 }: DirectionsOverlayProps) {
-  const { adapter } = useMap();
+  const placement = usePlacement();
   const { pixel } = useFreeCentre();
-  if (!adapter) {
+  if (!placement) {
     return null;
   }
   return (
     <g data-testid={testId}>
       {stops.map((stop, index) => {
-        if (!adapter.isVisible(stop.position)) {
+        const at = placePoint(stop.position, placement);
+        if (!at) {
           return null;
         }
-        const { x, y } = adapter.project(stop.position);
+        const { x, y } = at;
         return (
           <g
             key={stop.id}

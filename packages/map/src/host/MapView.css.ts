@@ -24,6 +24,10 @@ const hostBase = style({
   WebkitTapHighlightColor: "transparent",
   outline: "none",
   selectors: {
+    // A globe floats in space; a flat map fills the region edge to edge.
+    '&[data-projection="globe"]': {
+      backgroundColor: mapOverlayTokens.globeSpace,
+    },
     // The focus ring is drawn inside the edge, on a layer above the engine
     // and the overlays: the map usually fills the viewport, so a ring outside
     // it would be off screen, and one on the host itself would sit under the

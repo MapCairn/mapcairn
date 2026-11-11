@@ -81,3 +81,58 @@ describe("chrome legibility over every basemap", () => {
     });
   });
 });
+
+/**
+ * Lowest contrast between the space around a globe and a basemap's land, so
+ * the edge of the sphere stays visible. The edge is decoration rather than a
+ * control, so WCAG asks for no ratio; this keeps it from fading away.
+ */
+const GLOBE_EDGE = 1.2;
+
+describe("the space around a globe", () => {
+  const siteLands = { ...basemapBackdrops, ...hostBasemapBackdrops };
+
+  describe.each(themes)("%s theme", (theme) => {
+    describe.each(colourSets)("%s colours", (set) => {
+      const roles = tokenValues.themeValues[theme][set];
+      const space = roles.mapGlobeSpace;
+
+      it(`keeps the scale readout, the coordinates and the credits button at ${AA_TEXT}:1 over it`, () => {
+        const surface = compositeOver(roles.surface, space);
+        for (const role of ["text", "textMuted"] as const) {
+          expect(
+            contrastRatio(compositeOver(roles[role], surface), surface),
+            role,
+          ).toBeGreaterThanOrEqual(AA_TEXT);
+        }
+      });
+
+      it.each(Object.entries(siteLands))(
+        `keeps the edge of the globe at ${GLOBE_EDGE}:1 against %s land`,
+        (_name, land) => {
+          expect(
+            contrastRatio(
+              compositeOver(space, land),
+              compositeOver(land, land),
+            ),
+          ).toBeGreaterThanOrEqual(GLOBE_EDGE);
+        },
+      );
+    });
+  });
+
+  it("is darker than the pale placeholder, and darkest in the dark theme", () => {
+    const { light, dark } = tokenValues.themeValues;
+    const lightness = (colour: string) =>
+      contrastRatio(
+        compositeOver(colour, "#ffffff"),
+        compositeOver("#ffffff", "#ffffff"),
+      );
+    expect(lightness(light.colour.mapGlobeSpace)).toBeGreaterThan(
+      lightness(light.colour.mapBackground),
+    );
+    expect(lightness(dark.colour.mapGlobeSpace)).toBeGreaterThan(
+      lightness(light.colour.mapGlobeSpace),
+    );
+  });
+});

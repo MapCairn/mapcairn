@@ -24,6 +24,7 @@ export function testMapContext(
     adapter: new FakeMapAdapter(),
     hostElement: null,
     view: DEFAULT_FAKE_VIEW,
+    projection: "flat",
     minZoom: 0,
     maxZoom: 18,
     canZoomIn: true,

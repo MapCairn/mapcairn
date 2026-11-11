@@ -173,3 +173,25 @@ describe("shapesToCsv", () => {
     expect(shapesToCsv([])).toBe("id,type,area_m2,length_m,geometry");
   });
 });
+
+describe("shapes across the antimeridian", () => {
+  it("exports the positions as they were drawn, without unwrapping them", () => {
+    const line: DrawShape = {
+      id: "a",
+      kind: "line",
+      label: "Line 1",
+      done: true,
+      vertices: [p(170, 10), p(-170, 10)],
+    };
+    expect(shapeGeometry(line)).toEqual({
+      type: "LineString",
+      coordinates: [
+        [170, 10],
+        [-170, 10],
+      ],
+    });
+    expect(shapesToCsv([line])).toContain(
+      '""coordinates"":[[170,10],[-170,10]]',
+    );
+  });
+});

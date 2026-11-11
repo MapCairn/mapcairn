@@ -362,4 +362,64 @@ describe("DrawOverlay on a globe", () => {
     expect(kinds).toContain("shape-1:v:0");
     expect(kinds).not.toContain("shape-1:v:2");
   });
+
+  it("bends a long edge along its great circle, the closing edge too, and fills the curved outline", async () => {
+    const big: DrawShape = {
+      ...POLYGON,
+      vertices: [p(0, 0), p(40, 0), p(40, 40)],
+    };
+    await renderOverlay(
+      <DrawOverlay shapes={[big]} selection={null} />,
+      globeServices(),
+    );
+    const [shape] = shapesIn();
+    const fill = shape?.querySelector("polygon")?.getAttribute("points") ?? "";
+    expect(fill.split(" ").length).toBeGreaterThan(3);
+  });
+
+  it("keeps a long edge straight on a flat map", async () => {
+    const big: DrawShape = {
+      ...POLYGON,
+      vertices: [p(0, 0), p(40, 0), p(40, 40)],
+    };
+    await renderOverlay(<DrawOverlay shapes={[big]} selection={null} />);
+    const [shape] = shapesIn();
+    const fill = shape?.querySelector("polygon")?.getAttribute("points") ?? "";
+    expect(fill.split(" ")).toHaveLength(3);
+  });
+});
+
+describe("DrawOverlay across the antimeridian on a flat map", () => {
+  it("draws a line and its handles the short way", async () => {
+    const across: DrawShape = {
+      ...LINE,
+      vertices: [p(170, 10), p(-170, 10)],
+    };
+    const selection = { shapeId: across.id, vertex: null };
+    await renderOverlay(
+      <DrawOverlay
+        shapes={[across]}
+        selection={selection}
+        handles={editHandlesFor([across], selection)}
+      />,
+    );
+    const xs = (
+      shapesIn()[0]?.querySelectorAll("polyline")[1]?.getAttribute("points") ??
+      ""
+    )
+      .split(" ")
+      .map((pair) => Number(pair.split(",")[0]));
+    // Twenty degrees east at zoom 6, where the world is 16,384 pixels wide.
+    const width = (16_384 * 20) / 360;
+    expect(xs).toHaveLength(2);
+    expect((xs[1] ?? 0) - (xs[0] ?? 0)).toBeCloseTo(width, 1);
+    const handles = screen
+      .getAllByTestId("draw-handle")
+      .map((handle) => Number(handle.getAttribute("cx")));
+    expect(handles).toHaveLength(3);
+    for (const x of handles) {
+      expect(x).toBeGreaterThanOrEqual((xs[0] ?? 0) - 0.01);
+      expect(x).toBeLessThanOrEqual((xs[1] ?? 0) + 0.01);
+    }
+  });
 });

@@ -7,6 +7,9 @@ import {
   pressHandle,
 } from "../draw/gesture";
 import { hitTestHandle, type ProjectedHandle } from "../draw/hit";
+import { wrapLongitude } from "../globe/longitude";
+import { placePoint } from "../globe/placement";
+import { mapMetresPerPixel } from "../globe/resolution";
 import type { BasemapDefinition } from "../ports/basemap";
 import { MapEngineError, type MapEngineErrorReason } from "../ports/errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "../ports/geometry";
@@ -35,7 +38,6 @@ import {
   MAX_MERCATOR_LATITUDE,
   mercatorProject,
   mercatorUnproject,
-  metresPerPixel,
 } from "../zoom/zoom";
 
 /** The view a {@link FakeMapAdapter} starts with before it is mounted. */
@@ -153,10 +155,6 @@ function firstPosition(
 
 function wrapBearing(degrees: number): number {
   return ((degrees % 360) + 360) % 360;
-}
-
-function wrapLongitude(lng: number): number {
-  return ((((lng + 180) % 360) + 360) % 360) - 180;
 }
 
 /**
@@ -348,17 +346,19 @@ export class FakeMapAdapter implements MapAdapter {
   unproject(point: PixelPoint): LatLng {
     const { center, zoom } = this.#view;
     const origin = mercatorProject(center, zoom);
-    return mercatorUnproject(
+    const position = mercatorUnproject(
       {
         x: point.x - this.#hostSize.width / 2 + origin.x,
         y: point.y - this.#hostSize.height / 2 + origin.y,
       },
       zoom,
     );
+    return { lat: position.lat, lng: wrapLongitude(position.lng) };
   }
 
   metresPerPixel(lat: number = this.#view.center.lat): number {
-    return metresPerPixel(lat, this.#view.zoom);
+    const { center, zoom } = this.#view;
+    return mapMetresPerPixel(this.projection, lat, center.lat, zoom);
   }
 
   async setBasemap(
@@ -641,12 +641,18 @@ export class FakeMapAdapter implements MapAdapter {
     return this.#handles.some((handle) => handle.id === id);
   }
 
+  /** The handles that can be pressed: each where the overlay draws it, none beyond the horizon. */
   #projectedHandles(): ProjectedHandle[] {
-    return this.#handles.map((handle) => ({
-      id: handle.id,
-      kind: handle.kind,
-      point: this.project(handle.position),
-    }));
+    const placement = {
+      projection: this.projection,
+      view: this.#view,
+      project: (position: LatLng) => this.project(position),
+      isVisible: (position: LatLng) => this.isVisible(position),
+    };
+    return this.#handles.flatMap((handle) => {
+      const point = placePoint(handle.position, placement);
+      return point ? [{ id: handle.id, kind: handle.kind, point }] : [];
+    });
   }
 
   /** The data layers drawn, lowest first: imagery, vector tiles, styled shapes, detail shapes, heatmaps, then points. */
@@ -790,7 +796,7 @@ export class FakeMapAdapter implements MapAdapter {
       return;
     }
     this.#emit("click", {
-      latlng,
+      latlng: { lat: latlng.lat, lng: wrapLongitude(latlng.lng) },
       point: this.project(latlng),
       features,
     });

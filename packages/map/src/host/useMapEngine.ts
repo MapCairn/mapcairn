@@ -407,13 +407,12 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
     if (!adapter) {
       return;
     }
-    latest.current.hostRef.current?.setAttribute("data-projection", projection);
     if (drawnProjectionRef.current !== projection) {
       drawnProjectionRef.current = projection;
       adapter.setProjection(projection);
       scheduleView();
     }
-  }, [adapter, latest, projection, scheduleView]);
+  }, [adapter, projection, scheduleView]);
 
   useEffect(() => {
     const host = latest.current.hostRef.current;
@@ -463,6 +462,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
       adapter,
       hostElement,
       view,
+      projection,
       minZoom,
       maxZoom,
       canZoomIn: view.zoom < maxZoom - ZOOM_EPSILON,
@@ -477,6 +477,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
       adapter,
       hostElement,
       view,
+      projection,
       revision,
       minZoom,
       maxZoom,

@@ -1,13 +1,31 @@
+import { greatCircleMidpoint } from "../globe/greatCircle";
+import { nearestLongitude, wrapLongitude } from "../globe/longitude";
 import type { LatLng } from "../ports/geometry";
-import type { MapEditHandle, MapEditHandleKind } from "../ports/map";
+import type {
+  MapEditHandle,
+  MapEditHandleKind,
+  MapProjection,
+} from "../ports/map";
 import { destinationPoint } from "./geo";
 import type { DrawSelection, DrawShape } from "./types";
 
-function midpoint(a: LatLng, b: LatLng): LatLng {
-  return { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
+/**
+ * Halfway along an edge as it is drawn: on a globe the middle of its great
+ * circle, on a flat map the average of its ends, taken the short way across
+ * the antimeridian.
+ */
+function midpoint(a: LatLng, b: LatLng, projection: MapProjection): LatLng {
+  if (projection === "globe") {
+    return greatCircleMidpoint(a, b);
+  }
+  const lng = (a.lng + nearestLongitude(b.lng, a.lng)) / 2;
+  return { lat: (a.lat + b.lat) / 2, lng: wrapLongitude(lng) };
 }
 
-function pathHandles(shape: DrawShape): MapEditHandle[] {
+function pathHandles(
+  shape: DrawShape,
+  projection: MapProjection,
+): MapEditHandle[] {
   const handles: MapEditHandle[] = shape.vertices.map((position, index) => ({
     id: `${shape.id}:v:${index}`,
     kind: "vertex",
@@ -25,7 +43,7 @@ function pathHandles(shape: DrawShape): MapEditHandle[] {
     handles.push({
       id: `${shape.id}:m:${index}`,
       kind: "midpoint",
-      position: midpoint(from, to),
+      position: midpoint(from, to, projection),
     });
   }
   return handles;
@@ -40,18 +58,20 @@ function pathHandles(shape: DrawShape): MapEditHandle[] {
  *
  * @remarks Ids are `<shape>:v:<index>`, `<shape>:m:<index>` (the vertex that
  *   would be inserted at that index) and `<shape>:r`; read them with
- *   {@link parseHandleId}.
+ *   {@link parseHandleId}. A midpoint sits on its edge as the overlay draws
+ *   it for the map's `projection` (flat, the default, or globe).
  */
 export function editHandlesFor(
   shapes: readonly DrawShape[],
   selection: DrawSelection | null,
+  projection: MapProjection = "flat",
 ): MapEditHandle[] {
   const shape = shapes.find((candidate) => candidate.id === selection?.shapeId);
   if (!shape) {
     return [];
   }
   if (shape.kind === "line" || shape.kind === "polygon") {
-    return pathHandles(shape);
+    return pathHandles(shape, projection);
   }
   const centre = shape.vertices[0];
   if (!centre) {

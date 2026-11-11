@@ -96,6 +96,9 @@ export function ScaleBar({ units }: ScaleBarProps) {
     if (!adapter) {
       return null;
     }
+    // At the view centre a globe and a flat map share one scale: MapLibre
+    // sizes the globe by 1 / cos(centre latitude) for exactly that reason
+    // (`getGlobeRadiusPixels`), so the bar needs no globe case.
     return computeScaleBar({
       metresPerPixel: adapter.metresPerPixel(latitude),
       maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,

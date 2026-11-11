@@ -1,13 +1,10 @@
+import { wrapLongitude } from "../globe/longitude";
 import type { LatLng } from "../ports/geometry";
 
 /** Mean radius of the Earth in metres, the sphere every draw measure uses. */
 export const EARTH_RADIUS_METRES = 6_371_008.8;
 
 const DEGREES = Math.PI / 180;
-
-function wrapLongitude(lng: number): number {
-  return ((((lng + 180) % 360) + 360) % 360) - 180;
-}
 
 /** The great-circle distance between two positions, in metres (haversine). */
 export function distanceMetres(from: LatLng, to: LatLng): number {

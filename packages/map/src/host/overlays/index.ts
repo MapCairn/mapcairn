@@ -3,11 +3,9 @@ export * from "./CentreCrosshair";
 export * from "./DrawOverlay";
 export {
   type OverlayMap,
-  type ProjectedPath,
-  projectPath,
-  projectPoints,
+  overlayPlacement,
   screenRadiusForMetres,
-  visibleRuns,
+  usePlacement,
 } from "./geometry";
 export * from "./MapOverlayLayer";
 export * from "./MeasureOverlay";

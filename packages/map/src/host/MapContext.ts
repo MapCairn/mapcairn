@@ -1,4 +1,9 @@
-import type { MapAdapter, MapEngineError, ViewState } from "@mapcairn/core";
+import type {
+  MapAdapter,
+  MapEngineError,
+  MapProjection,
+  ViewState,
+} from "@mapcairn/core";
 import { createContext, useContext } from "react";
 
 /** What {@link useMap} returns: the live map, as seen by overlays and chrome. */
@@ -18,6 +23,11 @@ export interface MapContextValue {
    * moves, zooms or rotates, so overlays re-project without thrashing.
    */
   readonly view: ViewState;
+  /**
+   * The shape the map is drawn as, from the settings: flat or a globe.
+   * Overlays read it to curve long lines and hide the far side.
+   */
+  readonly projection: MapProjection;
   /** Normalised zoom limits of the active basemap. */
   readonly minZoom: number;
   readonly maxZoom: number;

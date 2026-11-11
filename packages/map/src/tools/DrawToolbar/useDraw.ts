@@ -23,6 +23,7 @@ import {
   type MapClickEvent,
   type MapEditHandle,
   type MapHandleDrag,
+  type MapProjection,
   type ParsedHandleId,
   parseHandleId,
   pickShape,
@@ -42,7 +43,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { useClipboard, useFileSaver, useUrlState } from "../../services";
+import { overlayPlacement } from "../../host/overlays/geometry";
+import {
+  useClipboard,
+  useFileSaver,
+  useSettings,
+  useUrlState,
+} from "../../services";
 import { useAnnounce } from "../../ui/LiveRegion";
 
 /** How long a moved vertex must stay still before the new measure is announced, in milliseconds. */
@@ -172,11 +179,12 @@ function tapAction(
   current: DragSession,
   drag: MapHandleDrag,
   state: DrawState,
+  projection: MapProjection,
 ): DrawAction | null {
   if (drag.moved || current.kind !== "midpoint") {
     return null;
   }
-  const handle = editHandlesFor(state.shapes, state.selection).find(
+  const handle = editHandlesFor(state.shapes, state.selection, projection).find(
     (candidate) => candidate.id === drag.id,
   );
   return handle
@@ -274,6 +282,8 @@ export function useDraw({
   );
   const stateRef = useLatestRef(state);
   const getAdapterRef = useLatestRef(getAdapter);
+  const { projection } = useSettings().settings;
+  const projectionRef = useLatestRef(projection);
   const activeRef = useLatestRef(active);
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<DrawFeedback | null>(null);
@@ -487,7 +497,7 @@ export function useDraw({
         const hit = pickShape(
           current.shapes,
           event.point,
-          (position) => adapter.project(position),
+          overlayPlacement(adapter, adapter.getView(), projectionRef.current),
           SHAPE_PICK_TOLERANCE_PX,
           false,
         );
@@ -498,7 +508,7 @@ export function useDraw({
       }
       dispatch({ type: "addVertex", at: event.latlng });
     },
-    [activeRef, getAdapterRef, stateRef, select],
+    [activeRef, getAdapterRef, stateRef, select, projectionRef],
   );
 
   const onHandleDrag = useCallback(
@@ -528,13 +538,13 @@ export function useDraw({
       }
       const action =
         drag.phase === "end"
-          ? tapAction(current, drag, stateRef.current)
+          ? tapAction(current, drag, stateRef.current, projectionRef.current)
           : moveAction(current, drag, stateRef.current);
       if (action) {
         dispatch(action);
       }
     },
-    [stateRef],
+    [stateRef, projectionRef],
   );
 
   const keyCommand = useCallback(
@@ -645,8 +655,8 @@ export function useDraw({
   }, [clipboard, report, stateRef, url]);
 
   const handles = useMemo(
-    () => (active ? editHandlesFor(shapes, selection) : []),
-    [active, shapes, selection],
+    () => (active ? editHandlesFor(shapes, selection, projection) : []),
+    [active, shapes, selection, projection],
   );
 
   const issue = useMemo(

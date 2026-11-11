@@ -2588,6 +2588,46 @@ describe("MapLibreMapAdapter data layers", () => {
         expect(dashes.at(-1)).toEqual([]);
       });
 
+      it("on a globe, bends a long line along its great circle and leaves out marks beyond the horizon", async () => {
+        const { adapter } = await ready();
+        adapter.setProjection("globe");
+        const { center } = adapter.getView();
+        const farSide = { lat: -center.lat, lng: center.lng - 180 };
+        const distant = { lat: center.lat + 20, lng: center.lng + 40 };
+        await adapter.toImage({
+          drawing: {
+            ...DRAWING,
+            marks: [
+              { kind: "dot", position: farSide },
+              {
+                kind: "path",
+                positions: [center, distant],
+                closed: false,
+                fill: false,
+                dashed: false,
+              },
+              {
+                kind: "path",
+                positions: [center, distant, farSide],
+                closed: true,
+                fill: true,
+                dashed: false,
+              },
+            ],
+          },
+        });
+        const { calls } = canvasStub.contexts[0] as { calls: Spec[] };
+        const methods = calls.map((call) => call.method);
+        expect(methods).not.toContain("arc");
+        // The ring reaches over the horizon, so it has no fill.
+        expect(methods).not.toContain("fill");
+        // A straight segment would be one lineTo per stroke; the curve has many.
+        const strokes = methods.filter((method) => method === "stroke").length;
+        expect(
+          methods.filter((method) => method === "lineTo").length,
+        ).toBeGreaterThan(strokes * 4);
+      });
+
       it("draws nothing for an empty drawing, one-position paths or no drawing", async () => {
         const { adapter } = await ready();
         await adapter.toImage({ drawing: { ...DRAWING, marks: [] } });

@@ -6,6 +6,19 @@ export const THEME_STORAGE_KEY = "mapcairn:theme";
 /** The attribute on the root element that carries the resolved theme. */
 export const THEME_ATTRIBUTE = "data-theme";
 
+/**
+ * The `localStorage` key holding the map shape setting, as JSON (`"globe"`).
+ * The settings store writes it; the pre-paint script reads it.
+ */
+export const PROJECTION_STORAGE_KEY = "mapcairn:projection";
+
+/**
+ * The attribute the pre-paint script puts on the root element, with the value
+ * `globe`, when the stored map shape is a globe, so the placeholder painted
+ * before the app mounts already shows the space around a globe.
+ */
+export const MAP_SHAPE_ATTRIBUTE = "data-map-shape";
+
 /** The `name` of the meta tag that tints the browser chrome. */
 export const THEME_COLOR_META_NAME = "theme-color";
 

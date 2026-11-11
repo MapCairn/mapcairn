@@ -1,6 +1,12 @@
-import type { LatLng, PixelPoint } from "../ports/geometry";
+import {
+  type MapPlacement,
+  placePath,
+  placePoint,
+  visibleRuns,
+} from "../globe/placement";
+import type { PixelPoint } from "../ports/geometry";
 import type { MapEditHandleKind } from "../ports/map";
-import { destinationPoint } from "./geo";
+import { shapeRing } from "./shape";
 import type { DrawShape } from "./types";
 
 /** Reach, in CSS pixels, of a handle for a mouse or pen. */
@@ -74,13 +80,11 @@ function distanceToSegment(
 function nearPath(
   at: PixelPoint,
   path: readonly PixelPoint[],
-  closed: boolean,
   tolerancePx: number,
 ): boolean {
-  const count = closed ? path.length : path.length - 1;
-  for (let index = 0; index < count; index += 1) {
-    const a = path[index] as PixelPoint;
-    const b = path[(index + 1) % path.length] as PixelPoint;
+  for (let index = 1; index < path.length; index += 1) {
+    const a = path[index - 1] as PixelPoint;
+    const b = path[index] as PixelPoint;
     if (distanceToSegment(at, a, b) <= tolerancePx) {
       return true;
     }
@@ -106,34 +110,37 @@ function insideRing(at: PixelPoint, ring: readonly PixelPoint[]): boolean {
 function hits(
   shape: DrawShape,
   at: PixelPoint,
-  project: (position: LatLng) => PixelPoint,
+  placement: MapPlacement,
   tolerancePx: number,
   interior: boolean,
 ): boolean {
-  const pixels = shape.vertices.map(project);
-  const first = pixels[0];
+  const { vertices } = shape;
+  const first = vertices[0];
   if (!first) {
     return false;
   }
-  if (shape.kind === "polygon" && pixels.length >= 3) {
-    return (
-      (interior && insideRing(at, pixels)) ||
-      nearPath(at, pixels, true, tolerancePx)
+  const ring =
+    shape.kind === "circle" && shape.radiusMetres !== undefined
+      ? shapeRing(shape)
+      : shape.kind === "polygon" && vertices.length >= 3
+        ? vertices
+        : null;
+  if (ring) {
+    const path = placePath(ring, true, placement);
+    if (interior && path.whole && insideRing(at, path.pixels)) {
+      return true;
+    }
+    return visibleRuns(path).some((run) => nearPath(at, run, tolerancePx));
+  }
+  if (vertices.length >= 2) {
+    return visibleRuns(placePath(vertices, false, placement)).some((run) =>
+      nearPath(at, run, tolerancePx),
     );
   }
-  if (shape.kind === "circle" && shape.radiusMetres !== undefined) {
-    const centre = shape.vertices[0] as LatLng;
-    const edge = project(destinationPoint(centre, 90, shape.radiusMetres));
-    const radius = Math.hypot(edge.x - first.x, edge.y - first.y);
-    const distance = Math.hypot(at.x - first.x, at.y - first.y);
-    return interior
-      ? distance <= radius + tolerancePx
-      : Math.abs(distance - radius) <= tolerancePx;
-  }
-  if (pixels.length >= 2) {
-    return nearPath(at, pixels, false, tolerancePx);
-  }
-  return Math.hypot(at.x - first.x, at.y - first.y) <= tolerancePx;
+  const point = placePoint(first, placement);
+  return (
+    point !== null && Math.hypot(at.x - point.x, at.y - point.y) <= tolerancePx
+  );
 }
 
 /**
@@ -142,18 +149,21 @@ function hits(
  * within `tolerancePx`; with `interior` (the default) the inside of a polygon
  * or circle is hit too, and without it a tap inside an area passes through,
  * so a new shape can be started there.
- * @param project - Places a position on the screen, the map's `project`.
+ * @param placement - How the overlay places shapes on the screen, so a tap
+ *   meets the same curves, the same copy of the world and the same horizon
+ *   as the drawing. Nothing beyond the horizon of a globe is hit, and an
+ *   area's inside counts only while all of its outline is in sight.
  */
 export function pickShape(
   shapes: readonly DrawShape[],
   at: PixelPoint,
-  project: (position: LatLng) => PixelPoint,
+  placement: MapPlacement,
   tolerancePx: number,
   interior = true,
 ): string | null {
   for (let index = shapes.length - 1; index >= 0; index -= 1) {
     const shape = shapes[index] as DrawShape;
-    if (hits(shape, at, project, tolerancePx, interior)) {
+    if (hits(shape, at, placement, tolerancePx, interior)) {
       return shape.id;
     }
   }

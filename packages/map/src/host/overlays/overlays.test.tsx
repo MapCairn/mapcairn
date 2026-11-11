@@ -20,9 +20,7 @@ import {
   MeasureOverlay,
   MIN_ACCURACY_RADIUS_PX,
   PinMarker,
-  projectPoints,
   screenRadiusForMetres,
-  visibleRuns,
 } from ".";
 
 const VIEW: ViewState = { center: { lat: 10, lng: 20 }, zoom: 6, bearing: 0 };
@@ -98,16 +96,6 @@ describe("screenRadiusForMetres", () => {
     expect(screenRadiusForMetres(100, Number.NaN)).toBe(0);
     expect(screenRadiusForMetres(-5, 1, 2)).toBe(2);
     expect(screenRadiusForMetres(Number.POSITIVE_INFINITY, 1)).toBe(0);
-  });
-});
-
-describe("projectPoints", () => {
-  it("projects each point in order", () => {
-    const project = (point: LatLng) => ({ x: point.lng, y: point.lat });
-    expect(projectPoints({ project }, [A, B])).toEqual([
-      { x: 20, y: 10 },
-      { x: 20.5, y: 10.5 },
-    ]);
   });
 });
 
@@ -335,34 +323,95 @@ describe("on a globe", () => {
       globeServices(),
     );
     expect(container.querySelectorAll("circle")).toHaveLength(3);
-    // One run (A, B); C stands alone after the hidden point.
-    expect(container.querySelectorAll("polyline")).toHaveLength(2);
+    // Two runs, each drawn with a halo: A and B on to the horizon, and from
+    // the horizon back to C.
+    expect(container.querySelectorAll("polyline")).toHaveLength(4);
   });
 
-  it("draws no fill or closing edge for an area while a vertex is hidden", async () => {
+  it("draws no fill for an area while a vertex is hidden, and its outline up to the horizon", async () => {
     const { container } = await renderOverlays(
       <MeasureOverlay points={[A, B, FAR]} mode="area" testId="m" />,
       globeServices(),
     );
     expect(container.querySelector("polygon")).toBeNull();
-    expect(container.querySelectorAll("polyline")).toHaveLength(2);
+    // One run that passes through the closing edge: horizon, A, B, horizon.
+    const lines = container.querySelectorAll("polyline");
+    expect(lines).toHaveLength(2);
+    expect(
+      (lines[1]?.getAttribute("points") ?? "").split(" ").length,
+    ).toBeGreaterThan(3);
+  });
+
+  it("bends a long measure line along its great circle, and keeps a short one straight", async () => {
+    const services = globeServices();
+    const long = await renderOverlays(
+      <MeasureOverlay points={[A, { lat: 40, lng: 50 }]} mode="distance" />,
+      services,
+    );
+    const curve = long.container.querySelectorAll("polyline")[1];
+    expect(
+      (curve?.getAttribute("points") ?? "").split(" ").length,
+    ).toBeGreaterThan(10);
+    long.unmount();
+
+    const short = await renderOverlays(
+      <MeasureOverlay points={[A, B]} mode="distance" />,
+      services,
+    );
+    const line = short.container.querySelectorAll("polyline")[1];
+    expect((line?.getAttribute("points") ?? "").split(" ")).toHaveLength(2);
+  });
+
+  it("keeps long lines straight on a flat map", async () => {
+    const { container } = await renderOverlays(
+      <MeasureOverlay points={[A, { lat: 40, lng: 50 }]} mode="distance" />,
+    );
+    const line = container.querySelectorAll("polyline")[1];
+    expect((line?.getAttribute("points") ?? "").split(" ")).toHaveLength(2);
   });
 });
 
-describe("visibleRuns", () => {
-  const px = (x: number) => ({ x, y: 0 });
+describe("across the antimeridian on a flat map", () => {
+  const EAST: LatLng = { lat: 10, lng: 170 };
+  const WEST: LatLng = { lat: 10, lng: -170 };
 
-  it("splits a path at hidden points and keeps only runs of two or more", () => {
-    const pixels = [px(0), px(1), px(2), px(3), px(4)];
-    expect(
-      visibleRuns({
-        pixels,
-        visible: [true, true, false, true, false],
-        whole: false,
-      }),
-    ).toEqual([[px(0), px(1)]]);
-    expect(
-      visibleRuns({ pixels, visible: pixels.map(() => true), whole: true }),
-    ).toEqual([pixels]);
+  async function renderAt(lng: number, children: ReactNode) {
+    const rendered = await renderOverlays(children);
+    act(() => {
+      rendered.adapter.setView({ center: { lat: 10, lng }, zoom: 4 });
+    });
+    flushFrames();
+    return rendered;
+  }
+
+  it("draws a segment from 170 E to 170 W the short way, from either side", async () => {
+    for (const lng of [178, -178]) {
+      const { container, adapter, unmount } = await renderAt(
+        lng,
+        <MeasureOverlay points={[EAST, WEST]} mode="distance" />,
+      );
+      const [first, second] = (
+        container.querySelectorAll("polyline")[1]?.getAttribute("points") ?? ""
+      )
+        .split(" ")
+        .map((pair) => Number(pair.split(",")[0]));
+      // Twenty degrees of longitude at zoom 4 is 4096 / 18 pixels wide.
+      expect((second ?? 0) - (first ?? 0)).toBeCloseTo(4096 / 18, 1);
+      const centre = adapter.project(adapter.getView().center).x;
+      expect(Math.abs((first ?? 0) - centre)).toBeLessThan(4096 / 18);
+      unmount();
+    }
+  });
+
+  it("draws a pin just across the antimeridian beside the centre, not a world away", async () => {
+    const { adapter } = await renderAt(
+      178,
+      <PinMarker position={WEST} testId="pin" />,
+    );
+    const centre = adapter.project(adapter.getView().center);
+    const pin = screen.getByTestId("pin").getAttribute("transform") ?? "";
+    const x = Number(pin.replace("translate(", "").split(" ")[0]);
+    // 170 W is 12 degrees east of 178 E: 4096 * 12 / 360 pixels.
+    expect(x - centre.x).toBeCloseTo((4096 * 12) / 360, 1);
   });
 });

@@ -1,5 +1,7 @@
 import { parseThemeChoice, resolveTheme } from "./theme";
 import {
+  MAP_SHAPE_ATTRIBUTE,
+  PROJECTION_STORAGE_KEY,
   THEME_ATTRIBUTE,
   THEME_COLOR_META,
   THEME_COLOR_META_NAME,
@@ -8,7 +10,9 @@ import {
 
 /**
  * Builds the inline script that sets the theme before first paint, so a dark
- * theme never flashes light.
+ * theme never flashes light. It also marks a stored globe map shape on the
+ * root element ({@link MAP_SHAPE_ATTRIBUTE}), so the map placeholder starts in
+ * the colour of the space around a globe rather than the flat map's.
  *
  * @remarks The script embeds the real `parseThemeChoice` and `resolveTheme`
  *   through `Function.prototype.toString`, so it cannot drift from them, and
@@ -37,6 +41,7 @@ var metas=document.querySelectorAll('meta[name="${THEME_COLOR_META_NAME}"]');
 if(!metas.length){var made=document.createElement("meta");made.name=${JSON.stringify(THEME_COLOR_META_NAME)};document.head.appendChild(made);metas=[made]}
 for(var i=0;i<metas.length;i++){metas[i].setAttribute("content",colors[theme])}
 }catch(e){}
+try{if(localStorage.getItem(${JSON.stringify(PROJECTION_STORAGE_KEY)})===${JSON.stringify(JSON.stringify("globe"))})root.setAttribute(${JSON.stringify(MAP_SHAPE_ATTRIBUTE)},"globe")}catch(e){}
 })()`;
   return source.replace(/\s+/g, " ");
 }

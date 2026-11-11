@@ -289,6 +289,7 @@ export function MapView({
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the map region is the keyboard target for panning, zooming and pins.
         tabIndex={0}
         data-map-host=""
+        data-projection={map.projection}
         data-state={map.error ? "error" : undefined}
         data-testid={testId}
         className={styles.host[cursor]}

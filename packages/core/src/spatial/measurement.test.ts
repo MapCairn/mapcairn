@@ -32,6 +32,24 @@ describe("measureLineDistance", () => {
 });
 
 describe("measurePolygonArea", () => {
+  it("measures an area across the antimeridian the short way, as it measures one anywhere else", () => {
+    const across = measurePolygonArea([
+      [170, 0],
+      [-170, 0],
+      [-170, 10],
+      [170, 10],
+    ]);
+    const elsewhere = measurePolygonArea([
+      [10, 0],
+      [30, 0],
+      [30, 10],
+      [10, 10],
+    ]);
+    // Twenty degrees by ten at the equator: about 2.46 million square kilometres.
+    expect(elsewhere).toBeCloseTo(2.460_333_6e12, -7);
+    expect(across).toBeCloseTo(elsewhere ?? 0, -3);
+  });
+
   it("returns null for fewer than three positions", () => {
     expect(measurePolygonArea([])).toBeNull();
     expect(

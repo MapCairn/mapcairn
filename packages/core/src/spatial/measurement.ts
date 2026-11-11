@@ -2,6 +2,7 @@ import { area } from "@turf/area";
 import { lineString, polygon } from "@turf/helpers";
 import { length } from "@turf/length";
 import type { Position } from "geojson";
+import { nearestLongitude } from "../globe/longitude";
 
 /**
  * Measures the total length (kilometres) of a line drawn through `positions`,
@@ -38,12 +39,19 @@ export function measurePolygonArea(
     return null;
   }
 
-  const first = positions[0] as Position;
-  const last = positions[positions.length - 1] as Position;
+  // Each edge is taken the short way, so a ring across the antimeridian
+  // (170 to -170) is not measured as one that goes round the world.
+  let previous = (positions[0] as Position)[0] as number;
+  const unwrapped = positions.map(([lng, ...rest]): Position => {
+    previous = nearestLongitude(lng as number, previous);
+    return [previous, ...rest];
+  });
+  const first = unwrapped[0] as Position;
+  const last = unwrapped[unwrapped.length - 1] as Position;
   const ring =
     first[0] === last[0] && first[1] === last[1]
-      ? (positions as Position[])
-      : [...positions, first];
+      ? unwrapped
+      : [...unwrapped, first];
 
   return area(polygon([ring]));
 }

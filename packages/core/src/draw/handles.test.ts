@@ -69,6 +69,32 @@ describe("editHandlesFor", () => {
     ]);
   });
 
+  it("puts the midpoint of an edge across the antimeridian on that edge, not on the far side of the world", () => {
+    const across: DrawShape = {
+      ...LINE,
+      vertices: [p(170, 10), p(-170, 12)],
+    };
+    const [middle] = editHandlesFor([across], select(across)).filter(
+      (h) => h.kind === "midpoint",
+    );
+    expect(Math.abs(middle?.position.lng ?? 0)).toBe(180);
+    expect(middle?.position.lat).toBe(11);
+  });
+
+  it("puts a midpoint on the great circle on a globe, as the edge is drawn there", () => {
+    const long: DrawShape = {
+      ...LINE,
+      vertices: [p(-0.1, 51.5), p(-74, 40.7)],
+    };
+    const flat = editHandlesFor([long], select(long)).at(-1);
+    expect(flat?.position.lat).toBeCloseTo(46.1, 9);
+    expect(flat?.position.lng).toBeCloseTo(-37.05, 9);
+    const globe = editHandlesFor([long], select(long), "globe").at(-1);
+    expect(globe?.kind).toBe("midpoint");
+    expect(globe?.position.lat).toBeCloseTo(52.36255, 5);
+    expect(globe?.position.lng).toBeCloseTo(-41.27571, 5);
+  });
+
   it("leaves midpoints out while a shape is still being drawn", () => {
     const draft = { ...TRIANGLE, done: false };
     const handles = editHandlesFor([draft], select(draft));

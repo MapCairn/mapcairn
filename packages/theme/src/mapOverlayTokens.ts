@@ -13,6 +13,8 @@ import { tokens } from "./tokens.css";
 export const mapOverlayTokens = {
   /** The map element's colour before tiles load. */
   background: tokens.color.mapBackground,
+  /** The space around the sphere when the map is drawn as a globe. */
+  globeSpace: tokens.color.mapGlobeSpace,
   /** Dropped pin. */
   pin: tokens.color.mapPin,
   /** Outline that separates a pin or line from the map beneath. */
