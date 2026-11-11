@@ -1,6 +1,6 @@
 # Contributing to MapCairn
 
-MapCairn provides a reusable mapping SDK and an empty-map web host. Contributions to map tools, accessibility, ports and adapters, and documentation are welcome. Read [`README.md`](README.md) and follow [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+MapCairn provides a reusable mapping SDK and an empty-map web host. Contributions to map tools, accessibility, ports and adapters, and documentation are welcome. Read [`README.md`](README.md) and follow [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). [`GOVERNANCE.md`](GOVERNANCE.md) says who decides what and how, and [`ROADMAP.md`](ROADMAP.md) says what the project intends to do and what it will not.
 
 ## Getting set up
 
@@ -49,6 +49,15 @@ The pre-commit hook runs Biome, dependency-cruiser and the harmony scanner, not 
 - Use the tokens in [`DESIGN.md`](DESIGN.md), not ad hoc colours, fonts or icons.
 - Use Conventional Commits for commit messages.
 
+## Code style
+
+The coding standard is what the tools enforce, not a separate guide.
+
+- **Formatting and linting:** [Biome](https://biomejs.dev), configured in [`biome.jsonc`](biome.jsonc), formats and lints the code with the recommended rules plus the project's accessibility, complexity and restricted-import rules. Warnings fail the build (`--error-on-warnings`). Run `npm run format` to format and `npm run lint` to check.
+- **TypeScript:** the strict settings in [`tsconfig.base.json`](tsconfig.base.json) apply to every package: `strict`, `noUncheckedIndexedAccess` and `forceConsistentCasingInFileNames`. Run `npm run typecheck`.
+- **Project rules:** dependency-cruiser enforces the package and layer boundaries, and the harmony scanner in `scripts/harmony` enforces the design tokens, markup and wiring rules described in [`DESIGN.md`](DESIGN.md).
+- **Enforcement:** the pre-commit hook runs Biome, dependency-cruiser and the harmony scanner on staged files, and CI runs `npm run lint` and `npm run typecheck` on every pull request, so a change that breaks the standard cannot merge. The conventions below cover what the tools cannot check.
+
 ## Dependencies
 
 After changing a manifest, run a real `npm install` and include the root lockfile. Do not use `--package-lock-only` as the normal update procedure. Pin prerelease versions exactly.
@@ -62,6 +71,18 @@ Work is tracked in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues),
 The host intentionally starts without datasets. Adding a real dataset is a separate, explicitly scoped change requiring source provenance, publication rights and privacy review. Plans for larger changes live in [`docs/plans/`](docs/plans/README.md). Never contribute identifying or household-level data.
 
 Do not deploy the production Worker without explicit permission.
+
+## Review and acceptance
+
+Before a pull request is merged:
+
+- The `build` and `e2e` checks must pass. The repository ruleset requires them. `build` runs lint, typecheck, the unit tests with the coverage floors and the production build, and `e2e` runs the Playwright suites.
+- The `CLA` check must show that the author and every commit author have agreed to [`CLA.md`](CLA.md).
+- The maintainer reads the diff and the description, and checks the items in the pull request template: the checks above passed, the copy is in British English, the documents match the change and anything the change sends over the network is in `PRIVACY.md`. For a visible change the maintainer looks at the light and dark screenshots.
+- A new feature or a bug fix has tests. The tests are written first (see the conventions above) and a change that adds or changes behaviour is not accepted without them, unless the pull request says why none are needed, for example a documentation change.
+- Review threads are resolved. A change can be declined, or sent back for changes, with a reason.
+
+The project has one maintainer, so the maintainer's own pull requests are checked by the same required checks and the template, and have no second reviewer. See [`GOVERNANCE.md`](GOVERNANCE.md).
 
 ## Security and licence
 

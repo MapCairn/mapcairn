@@ -16,6 +16,9 @@ MapCairn is a reusable SDK for public-interest map platforms, with a reference h
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
 | [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules. The living style guide is at `/design` in development and e2e builds only |
 | [`docs/plans/`](docs/plans/README.md) | Numbered plans for work not yet built |
+| [`GOVERNANCE.md`](GOVERNANCE.md) | The maintainer role, how decisions are made, and what is not yet covered |
+| [`ROADMAP.md`](ROADMAP.md) | What the project intends to do in the next twelve months, and what it will not do |
+| [`docs/assurance-case.md`](docs/assurance-case.md) | Security requirements, trust boundaries, threat model and the evidence for each |
 | [`packages/core/README.md`](packages/core/README.md) | Ports, pure logic, basemaps, fakes and contract suites |
 | [`packages/map/README.md`](packages/map/README.md) | Map user interface, `MapView` and the services provider |
 | [`packages/react/README.md`](packages/react/README.md) | Generic React hooks |
@@ -320,7 +323,7 @@ Define the port, write its fake and contract suite, write the real adapter in `p
 
 ## Contributing, security and conduct
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`SECURITY.md`](SECURITY.md) for private vulnerability reporting and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`GOVERNANCE.md`](GOVERNANCE.md) for who decides what, [`ROADMAP.md`](ROADMAP.md) for what is planned and what is not, [`SECURITY.md`](SECURITY.md) for private vulnerability reporting (with the [assurance case](docs/assurance-case.md)) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
 
 ## Licence
 

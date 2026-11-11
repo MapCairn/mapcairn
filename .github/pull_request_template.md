@@ -5,6 +5,7 @@
 ## Checks
 
 - [ ] `npm run lint`, `npm run typecheck` and `npm run test:coverage` pass
+- [ ] Tests are added or changed for this change, or this description says why none are needed
 - [ ] `npm run e2e` and `npm run a11y` pass for map or interface changes
 - [ ] I have agreed to [`CLA.md`](../CLA.md) in a comment on this or an earlier pull request
 - [ ] Copy is in British English and the docs match the change
