@@ -65,7 +65,8 @@ Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. We
 - Follow SOLID, including the open-closed principle. Depend on ports, not engines or browser APIs. Pass configuration through props and context. Add behaviour by adding a definition, an adapter or a module, not by editing a branch in code that already works: a new layer is a new definition, a new provider a new adapter, a new tour a new `TourGuide`, and nothing switches on an id, a provider or a kind.
 - Write clean code. One job for each function and component, names that say what they do, no flag arguments that make a function do two things, no dead code or commented-out code, no magic numbers outside the tokens and named constants, and nesting kept shallow with early returns. Prefer a small, well-named function to a comment that explains a long one.
 - Follow DRY, KISS and YAGNI. Reuse shared logic and tokens, but do not build speculative features. Add an interface only where a boundary has at least two implementations, counting the fake.
-- Stay on task. Avoid unrelated refactoring and formatting.
+- Own the code. Agents are code owners, not guests. The best code is the code that is not written, so delete code, files and documents that nothing needs, and renovate when that is simpler than adapting; no structure is kept for its own sake. Keep each such change on its own, with its own issue and tests, so it stays reviewable. The fixed points are the licence and the legal terms, public commitments (the privacy position and the security policy) and the terms of the providers the site uses.
+- Stay on task. Avoid unrelated refactoring and formatting inside a change that is about something else.
 - Treat accessibility as part of implementation: semantic HTML, keyboard support, visible focus and WCAG 2.2 AA contrast in both themes. Every gesture needs a keyboard or single-tap equivalent.
 
 ## Conventions
