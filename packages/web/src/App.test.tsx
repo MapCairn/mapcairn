@@ -1267,7 +1267,8 @@ describe("search", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const services = createFakeServices();
     services.fakes.search.setDefaultResults([CAPE_TOWN]);
-    // happy-dom does no layout; give the map host a size so it has bounds.
+    // happy-dom does no layout; give the map host a size so it has bounds to
+    // leave out.
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
       DOMRect.fromRect({ x: 0, y: 0, width: 800, height: 600 }),
     );
@@ -1278,14 +1279,10 @@ describe("search", () => {
     await act(async () => {
       fireEvent.keyDown(input, { key: "Enter" });
     });
-    // The visible map reaches the provider as the search bias.
-    const bias = services.fakes.search.searchCalls[0]?.options?.bias;
-    expect(bias).toBeDefined();
-    const centre = adapter(services).getView().center;
-    expect(bias?.south).toBeLessThan(centre.lat);
-    expect(bias?.north).toBeGreaterThan(centre.lat);
-    expect(bias?.west).toBeLessThan(centre.lng);
-    expect(bias?.east).toBeGreaterThan(centre.lng);
+    // The privacy policy says only the query is sent, so the map has bounds
+    // here but they never reach the provider.
+    expect(services.fakes.search.searchCalls).toHaveLength(1);
+    expect(services.fakes.search.searchCalls[0]?.options?.bias).toBeUndefined();
     fireEvent.click(screen.getByRole("option", { name: /Cape Town/ }));
     expectNear(adapter(services).getView().center, CAPE_TOWN.centre);
     expect(adapter(services).getView().zoom).toBe(14);

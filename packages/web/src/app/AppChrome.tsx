@@ -17,7 +17,6 @@ import {
   useMap,
   usePreferences,
   useSettings,
-  visibleBounds,
 } from "@mapcairn/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
 import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
@@ -155,7 +154,6 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
       topStart={
         <SearchPill
           onSelect={app.flyTo}
-          getBias={() => visibleBounds(map.adapter, map.hostElement)}
           onFocus={app.onSearchFocus}
           onBlur={app.onSearchBlur}
         />
@@ -231,7 +229,6 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
             <DirectionsPanel
               directions={app.directions}
               pin={app.pin}
-              getBias={() => visibleBounds(map.adapter, map.hostElement)}
               note={ROUTING_NOTE}
             />
           ) : app.sheetOpen ? (

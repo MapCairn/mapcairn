@@ -29,7 +29,8 @@ export interface SearchPillProps {
   readonly onSelect: (result: SearchResult) => void;
   /**
    * Returns the box to favour results inside, usually the visible map. Read
-   * once when each search is submitted.
+   * once when each search is submitted. Optional, and passed to
+   * {@link useSearch}, whose note on what a bias sends applies.
    */
   readonly getBias?: () => Bounds | undefined;
   /** Passed through from the input, for example to open the search surface. */

@@ -57,7 +57,11 @@ export interface DirectionsPanelProps {
   readonly directions: UseDirections;
   /** The dropped pin, offered as a stop, or null when there is none. */
   readonly pin: LatLng | null;
-  /** Returns the box to favour in the place search, usually the visible map. */
+  /**
+   * Returns the box to favour in the place search, usually the visible map.
+   * Optional, and passed to {@link useSearch}, whose note on what a bias
+   * sends applies.
+   */
   readonly getBias?: () => Bounds | undefined;
   /**
    * What a request sends and to whom, shown under the buttons. Defaults to
