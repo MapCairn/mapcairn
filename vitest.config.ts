@@ -4,7 +4,8 @@ export default defineConfig({
   test: {
     // The example app runs its tests here but sits outside the coverage
     // include below: it proves the SDK can be embedded, and its own lines are
-    // not part of the SDK whose floors the thresholds guard.
+    // not part of the SDK whose floors the thresholds guard. Its test runs SDK
+    // code during the coverage run, but is not meant to cover it.
     projects: ["packages/*", "examples/*"],
     coverage: {
       provider: "v8",
