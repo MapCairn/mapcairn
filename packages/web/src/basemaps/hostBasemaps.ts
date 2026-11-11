@@ -6,21 +6,25 @@ import {
   getBasemap,
 } from "@mapcairn/core";
 import { OPEN_TOPO_MAP_BASEMAP } from "./openTopoMapBasemap";
+import { SATELLITE_BASEMAP } from "./satelliteBasemap";
 
 /**
  * The basemaps the host defines itself, which the SDK does not ship. Topographic
  * is here because OpenTopoMap is a volunteer-run server whose terms ask for
  * light use and a note about it: the host takes that on, and the SDK does not
- * send every app built on it there.
+ * send every app built on it there. Satellite is here because its imagery's
+ * licence is non-commercial, which the SDK must never carry.
  */
 export const HOST_OWN_BASEMAPS: readonly BasemapDefinition[] = [
   OPEN_TOPO_MAP_BASEMAP,
+  SATELLITE_BASEMAP,
 ];
 
 /**
  * The ids of the basemaps the reference host offers, in picker order, Bright
  * first. Four come from the SDK (`BASEMAPS` also holds Liberty, Colorful and
- * Fiord) and Topographic from {@link HOST_OWN_BASEMAPS}; the host offers fewer
+ * Fiord), and Topographic and Satellite from {@link HOST_OWN_BASEMAPS}. Six
+ * fill the picker's two rows of three. The host offers fewer
  * than the SDK holds, so it asks fewer volunteer-run servers for tiles and its
  * picker stays short.
  */
@@ -29,6 +33,7 @@ export const HOST_BASEMAP_IDS: readonly string[] = [
   "positron",
   "osm",
   "topographic",
+  "satellite",
   "dark",
 ];
 
@@ -56,7 +61,7 @@ export function selectBasemaps(
 }
 
 /**
- * The catalogue the reference host passes as `Services.basemaps`: the five
+ * The catalogue the reference host passes as `Services.basemaps`: the six
  * basemaps in {@link HOST_BASEMAP_IDS}, Bright the default. A saved or linked
  * id the host does not offer (such as `liberty`) opens on Bright.
  */

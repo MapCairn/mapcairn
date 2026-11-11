@@ -258,9 +258,123 @@ function idleBasemapTiles(): BasemapTiles {
   return { loaded: 0, failed: 0, reported: false };
 }
 
-/** Whether an engine source belongs to the basemap's own style, not to a data layer. */
-function isBasemapSource(sourceId: unknown): boolean {
-  return typeof sourceId === "string" && !sourceId.startsWith(ENGINE_ID_PREFIX);
+/** The id of the image source and layer under a hybrid basemap's labels. */
+const IMAGERY_ID = "basemap-imagery";
+
+/**
+ * Whether an engine source's tiles decide if a basemap is available: any of
+ * the basemap's own sources (never a data layer's), except that only the
+ * imagery counts for a hybrid basemap, whose labels can load while the
+ * imagery is down and would otherwise hide that it is.
+ */
+function decidesAvailability(
+  basemap: BasemapDefinition | undefined,
+  sourceId: unknown,
+): boolean {
+  if (typeof sourceId !== "string" || sourceId.startsWith(ENGINE_ID_PREFIX)) {
+    return false;
+  }
+  return basemap?.source.kind !== "hybrid" || sourceId === IMAGERY_ID;
+}
+
+/** The parts of a style layer the hybrid basemap reads. */
+interface StyleLayerLike {
+  readonly id: string;
+  readonly type?: string;
+  readonly source?: string;
+  readonly "source-layer"?: string;
+}
+
+/**
+ * Removes style layers, and any source only they drew from. A layer the
+ * style does not have is skipped.
+ * @returns The layers left in the style, bottom first.
+ */
+function removeStyleLayers(
+  map: MapLibreMap,
+  ids: readonly string[],
+): readonly StyleLayerLike[] {
+  const sources = new Set<string>();
+  for (const id of ids) {
+    const layer = map.getLayer(id);
+    if (layer) {
+      if (layer.source !== undefined) {
+        sources.add(layer.source);
+      }
+      map.removeLayer(id);
+    }
+  }
+  const remaining = map.getStyle().layers as StyleLayerLike[];
+  for (const { source } of remaining) {
+    if (source !== undefined) {
+      sources.delete(source);
+    }
+  }
+  for (const source of sources) {
+    if (map.getSource(source)) {
+      map.removeSource(source);
+    }
+  }
+  return remaining;
+}
+
+/** The id of the plain ground a hybrid basemap lays under its imagery. */
+const GROUND_ID = "basemap-ground";
+
+/** The kinds of layer a hybrid basemap keeps from its label style: lines and labels, never areas. */
+const LABEL_LAYER_TYPES: ReadonlySet<string> = new Set(["line", "symbol"]);
+
+/**
+ * Turns the label style a hybrid basemap loaded into the hybrid. It keeps only
+ * the line and symbol layers that draw from the basemap's `labelSourceLayers`,
+ * less any named in `labelOmitLayers`, so no area of the style (land, water,
+ * buildings, road areas) covers the imagery. It then adds the imagery as a
+ * raster source and layer under them, and under that a plain ground in the
+ * basemap's `swatch` colour, if it has one, so a dark map is not pale before
+ * its imagery draws. The imagery's `maxzoom` is the deepest tile level with
+ * real detail, so MapLibre enlarges those tiles further in and requests
+ * nothing deeper. Does nothing for another basemap.
+ * @remarks The thumbnail script (`scripts/generateBasemapThumbnails.mjs`)
+ *   mirrors this; change both together.
+ */
+function composeHybrid(
+  map: MapLibreMap,
+  basemap: BasemapDefinition | undefined,
+): void {
+  const source = basemap?.source;
+  if (source?.kind !== "hybrid") {
+    return;
+  }
+  const keep = new Set(source.labelSourceLayers);
+  const omit = new Set(source.labelOmitLayers);
+  const kept = (layer: StyleLayerLike) =>
+    LABEL_LAYER_TYPES.has(layer.type ?? "") &&
+    keep.has(layer["source-layer"] ?? "") &&
+    !omit.has(layer.id);
+  const remaining = removeStyleLayers(
+    map,
+    (map.getStyle().layers as StyleLayerLike[])
+      .filter((layer) => !kept(layer))
+      .map((layer) => layer.id),
+  );
+  const lowest = remaining[0]?.id;
+  map.addSource(IMAGERY_ID, {
+    type: "raster",
+    tiles: [source.tileUrl],
+    tileSize: source.tileSize,
+    maxzoom: source.maxTileZoom,
+  });
+  map.addLayer({ id: IMAGERY_ID, type: "raster", source: IMAGERY_ID }, lowest);
+  if (basemap?.swatch !== undefined) {
+    map.addLayer(
+      {
+        id: GROUND_ID,
+        type: "background",
+        paint: { "background-color": basemap.swatch },
+      },
+      IMAGERY_ID,
+    );
+  }
 }
 
 /**
@@ -569,8 +683,10 @@ function sameTiles(a: MapTileOverlay, b: MapTileOverlay): boolean {
 }
 
 /**
- * What MapLibre draws for a basemap: a vector basemap's style URL, or an
- * inline style with one raster source and layer for a raster basemap.
+ * What MapLibre draws for a basemap: a vector basemap's style URL, an
+ * imagery basemap's label style URL (`composeHybrid` adds the imagery once
+ * it loads), or an inline style with one raster source and layer for a
+ * raster basemap.
  * @remarks `tileSize` must be passed: MapLibre assumes 512 px raster tiles
  *   otherwise and would request the wrong level. The source `maxzoom` is a
  *   tile level, which for 256 px tiles is the normalised zoom, so it is the
@@ -581,6 +697,9 @@ function styleFor(basemap: BasemapDefinition): string | StyleSpecification {
   const { source } = basemap;
   if (source.kind === "vector") {
     return source.styleUrl;
+  }
+  if (source.kind === "hybrid") {
+    return source.labelStyleUrl;
   }
   return {
     version: 8,
@@ -1706,6 +1825,17 @@ export class MapLibreMapAdapter implements MapAdapter {
       // A style may ask for its own projection (VersaTiles Colorful asks for a
       // globe); the app's setting wins. See ARCHITECTURE.md.
       this.applyProjection(map);
+      try {
+        composeHybrid(map, this.basemap);
+      } catch (error) {
+        console.error("The hybrid basemap could not be put together", error);
+        // A pending mount or swap fails, so it never hangs and a swap puts
+        // the last basemap back; its style.load draws the data layers again.
+        if (this.pending) {
+          this.failPending(this.pending, error);
+          return;
+        }
+      }
       this.omitSaveDataLayers(map);
       if (this.pending) {
         this.pending.styleLoaded = true;
@@ -1734,7 +1864,10 @@ export class MapLibreMapAdapter implements MapAdapter {
         tile?: unknown;
         sourceId?: unknown;
       };
-      if (tile !== undefined && isBasemapSource(sourceId)) {
+      if (
+        tile !== undefined &&
+        decidesAvailability(this.basemapTiles.basemap, sourceId)
+      ) {
         this.basemapTiles.loaded += 1;
       }
     });
@@ -1743,7 +1876,12 @@ export class MapLibreMapAdapter implements MapAdapter {
       // Listening to "error" silences MapLibre's own console logging.
       console.error("MapLibre basemap error", event.error);
       if (isTileOrSourceError(event)) {
-        if (isBasemapSource((event as { sourceId?: unknown }).sourceId)) {
+        if (
+          decidesAvailability(
+            this.basemapTiles.basemap,
+            (event as { sourceId?: unknown }).sourceId,
+          )
+        ) {
           this.basemapTiles.failed += 1;
         }
         this.emitter.emit("tileError", undefined);
@@ -1787,28 +1925,10 @@ export class MapLibreMapAdapter implements MapAdapter {
    * layers is requested; a layer or source the style does not have is skipped.
    */
   private omitSaveDataLayers(map: MapLibreMap): void {
-    const ids = this.basemap ? omittedLayers(this.basemap, this.saveData) : [];
-    const sources = new Set<string>();
-    for (const id of ids) {
-      const layer = map.getLayer(id);
-      if (layer) {
-        sources.add(layer.source);
-        map.removeLayer(id);
-      }
-    }
-    if (sources.size === 0) {
-      return;
-    }
-    for (const { source } of map.getStyle().layers as { source?: string }[]) {
-      if (source !== undefined) {
-        sources.delete(source);
-      }
-    }
-    for (const source of sources) {
-      if (map.getSource(source)) {
-        map.removeSource(source);
-      }
-    }
+    removeStyleLayers(
+      map,
+      this.basemap ? omittedLayers(this.basemap, this.saveData) : [],
+    );
   }
 
   /** Sets a basemap's zoom limits and style on the engine. */

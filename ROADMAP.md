@@ -27,4 +27,5 @@ The project does not intend to do these, and a pull request that does one will b
 - **Another map engine.** MapLibre GL JS is the only engine. The interface depends on a port, so tests can use a fake, but no second engine is planned.
 - **Proxying layers.** The Worker does not fetch, cache or relay layer data, tiles, search or routing on behalf of visitors. Browsers talk to the providers directly.
 - **Live refresh of layers.** A layer loads when it is turned on, when its controls change or, for a layer that asks only for the view, when the map moves to a new area. It never refreshes on a timer or polls, because the providers are public services that nobody pays for, and polling from every open tab would load them for no gain.
-- **A satellite basemap.** No satellite or aerial imagery is offered as a basemap. Layers that show satellite-derived products, such as imagery or rainfall, are separate, optional layers and are not affected.
+
+A satellite basemap was a non-goal until 2026-11-11. It was dropped because a keyless source whose terms allow a public, non-commercial site was confirmed (EOX Sentinel-2 cloudless, CC BY-NC-SA 4.0), so the reference site now offers Satellite, defined in the host. The SDK still carries no satellite source, because that licence is non-commercial ([#13](https://github.com/MapCairn/mapcairn/issues/13)).

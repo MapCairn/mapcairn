@@ -1,4 +1,8 @@
-import { announceBasemap, type BasemapDefinition } from "@mapcairn/core";
+import {
+  announceBasemap,
+  type BasemapDefinition,
+  usesMoreData,
+} from "@mapcairn/core";
 import { Check } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
 import {
@@ -55,8 +59,8 @@ export interface BasemapPickerProps {
  * @remarks In Save data mode (`useSaveData`), and for a basemap that has no
  *   preview image, no preview is requested: the tile shows the same frame
  *   with a plain colour swatch, the basemap's own `swatch` colour or else the
- *   map background. A raster basemap, whose tiles are images, carries the
- *   note "Uses more data". Names,
+ *   map background. A basemap whose tiles are images (`usesMoreData`: a
+ *   raster map, or imagery under labels) carries the note "Uses more data". Names,
  *   the radios and the selection badge are unchanged, and every basemap can
  *   still be chosen.
  *
@@ -225,7 +229,7 @@ function BasemapTile({
           Not available right now
         </span>
       ) : null}
-      {saveData && basemap.source.kind === "raster" ? (
+      {saveData && usesMoreData(basemap) ? (
         <span
           className={dataNote}
           data-testid={`basemap-data-note-${basemap.id}`}

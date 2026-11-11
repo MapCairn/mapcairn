@@ -7,14 +7,16 @@ import {
   selectBasemaps,
 } from "./hostBasemaps";
 import { OPEN_TOPO_MAP_BASEMAP } from "./openTopoMapBasemap";
+import { SATELLITE_BASEMAP, SATELLITE_IMAGERY_YEAR } from "./satelliteBasemap";
 
 describe("the reference host's basemaps", () => {
-  it("offers five basemaps, in this order", () => {
+  it("offers six basemaps, two full rows of three, in this order", () => {
     expect(HOST_BASEMAP_IDS).toEqual([
       "bright",
       "positron",
       "osm",
       "topographic",
+      "satellite",
       "dark",
     ]);
     expect(
@@ -22,7 +24,14 @@ describe("the reference host's basemaps", () => {
     ).toEqual([...HOST_BASEMAP_IDS]);
     expect(
       HOST_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.name),
-    ).toEqual(["Bright", "Positron", "Streets", "Topographic", "Dark"]);
+    ).toEqual([
+      "Bright",
+      "Positron",
+      "Streets",
+      "Topographic",
+      "Satellite",
+      "Dark",
+    ]);
   });
 
   it("makes Bright the default", () => {
@@ -61,11 +70,20 @@ describe("the reference host's basemaps", () => {
   it("offers Topographic from the host's own definition, which the SDK does not have", () => {
     const topographic = HOST_BASEMAP_CATALOGUE.get("topographic");
     expect(topographic).toBe(OPEN_TOPO_MAP_BASEMAP);
-    expect(HOST_OWN_BASEMAPS).toEqual([OPEN_TOPO_MAP_BASEMAP]);
+    expect(HOST_OWN_BASEMAPS).toEqual([
+      OPEN_TOPO_MAP_BASEMAP,
+      SATELLITE_BASEMAP,
+    ]);
     expect(getBasemap("topographic")).toBeUndefined();
     expect(BASEMAPS.some((basemap) => basemap.id === "topographic")).toBe(
       false,
     );
+  });
+
+  it("offers Satellite from the host's own definition, which the SDK must never have", () => {
+    expect(HOST_BASEMAP_CATALOGUE.get("satellite")).toBe(SATELLITE_BASEMAP);
+    expect(getBasemap("satellite")).toBeUndefined();
+    expect(BASEMAPS.some((basemap) => basemap.nonCommercial)).toBe(false);
   });
 
   it("names the id when neither the host nor the SDK has such a basemap, rather than offering fewer", () => {
@@ -129,6 +147,68 @@ describe("the Topographic basemap", () => {
         text: "CC-BY-SA",
         href: "https://creativecommons.org/licenses/by-sa/3.0/",
       },
+    ]);
+  });
+});
+
+describe("the Satellite basemap", () => {
+  const year = SATELLITE_IMAGERY_YEAR;
+
+  it("draws EOX Sentinel-2 cloudless imagery, 256 px Web Mercator tiles in row then column order, with real detail to level 14", () => {
+    expect(SATELLITE_BASEMAP.id).toBe("satellite");
+    expect(SATELLITE_BASEMAP.name).toBe("Satellite");
+    expect(SATELLITE_BASEMAP.source).toMatchObject({
+      kind: "hybrid",
+      tileUrl: `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-${year}_3857/default/g/{z}/{y}/{x}.jpg`,
+      tileSize: 256,
+      maxTileZoom: 14,
+    });
+    expect(SATELLITE_BASEMAP.minZoom).toBe(0);
+    expect(SATELLITE_BASEMAP.maxZoom).toBe(17);
+    expect(SATELLITE_BASEMAP.thumbnail).toBe("/basemaps/satellite.jpg");
+  });
+
+  it("draws the place names, roads and borders of OpenFreeMap Bright over the imagery, without its ferry routes", () => {
+    expect(SATELLITE_BASEMAP.source).toMatchObject({
+      labelStyleUrl: "https://tiles.openfreemap.org/styles/bright",
+      labelSourceLayers: [
+        "transportation",
+        "transportation_name",
+        "boundary",
+        "place",
+        "water_name",
+        "aerodrome_label",
+      ],
+      labelOmitLayers: ["ferry"],
+    });
+  });
+
+  it("is a dark map with a dark swatch of the host's own, for Save data mode", () => {
+    expect(SATELLITE_BASEMAP.appearance).toBe("dark");
+    expect(SATELLITE_BASEMAP.swatch).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("is marked non-commercial, so no agent tool offers it", () => {
+    expect(SATELLITE_BASEMAP.nonCommercial).toBe(true);
+  });
+
+  it("gives EOX's credit in its own words, with the address in the text, the licence, the link back to EOX::Maps that its tile service asks for, and the label credits", () => {
+    expect(SATELLITE_BASEMAP.attribution).toEqual([
+      {
+        text: `EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data ${year})`,
+        href: "https://cloudless.eox.at",
+      },
+      {
+        text: "CC BY-NC-SA 4.0",
+        href: "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+      },
+      { text: "EOX::Maps", href: "https://maps.eox.at" },
+      {
+        text: "© OpenStreetMap contributors",
+        href: "https://www.openstreetmap.org/copyright",
+      },
+      { text: "OpenFreeMap", href: "https://openfreemap.org" },
+      { text: "OpenMapTiles", href: "https://openmaptiles.org" },
     ]);
   });
 });

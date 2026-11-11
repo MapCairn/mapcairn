@@ -187,7 +187,7 @@ export async function scriptLayers(
 }
 
 /**
- * Makes the app offer these basemaps instead of the site's five, with the
+ * Makes the app offer these basemaps instead of the site's six, with the
  * first the default. The SDK's list holds three the site does not offer
  * (Liberty, Colorful and Fiord), so a spec that needs one passes the SDK's
  * `BASEMAPS`, which is plain data.
