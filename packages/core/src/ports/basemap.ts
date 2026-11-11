@@ -21,6 +21,37 @@ export type BasemapSource =
       readonly kind: "vector";
       /** A MapLibre style document URL. */
       readonly styleUrl: string;
+    }
+  | {
+      /**
+       * Image tiles, such as satellite imagery, with the labels and roads of a
+       * vector style drawn over them: a hybrid map. The engine adapter loads
+       * the style, keeps only its line and symbol layers that draw from
+       * `labelSourceLayers` (so its land, water, buildings and road areas do
+       * not cover the imagery) and puts the imagery under them, over a plain
+       * ground in the basemap's `swatch` colour, if it has one, so the map is
+       * not pale before the imagery draws.
+       */
+      readonly kind: "hybrid";
+      /** A URL template with `{z}`, `{x}` and `{y}` placeholders. */
+      readonly tileUrl: string;
+      /** 256 px tiles, so a tile's `{z}` equals the normalised zoom. */
+      readonly tileSize: 256;
+      /**
+       * The deepest tile level with real detail. Deeper than this the engine
+       * enlarges that level's tiles and asks for none, so the map can zoom in
+       * further than the imagery for its labels and roads.
+       */
+      readonly maxTileZoom: number;
+      /** A MapLibre style document URL whose labels and roads are drawn over the imagery. */
+      readonly labelStyleUrl: string;
+      /** The vector source layers of that style to keep, such as `place` and `transportation`. */
+      readonly labelSourceLayers: readonly string[];
+      /**
+       * Ids of layers of that style to leave out although they draw from a
+       * kept source layer, such as ferry routes that would streak the sea.
+       */
+      readonly labelOmitLayers?: readonly string[];
     };
 
 /**
@@ -48,8 +79,9 @@ export interface BasemapDefinition {
    * basemap with no preview image, and every basemap in Save data mode, shows.
    * Without it the swatch is the interface's map background colour, the
    * default basemap's land colour. Set it for a basemap that is not light, so
-   * its tile does not look like the default one. It describes only the tile in
-   * the picker and is the host's choice. It may be the style's own land colour
+   * its tile does not look like the default one. It colours the tile in the
+   * picker, and a hybrid basemap's ground before its imagery draws, and is the
+   * host's choice. It may be the style's own land colour
    * where the provider's terms allow it, and is otherwise a colour of the
    * host's own, never one sampled from the provider's map or screenshots.
    */
@@ -66,4 +98,13 @@ export interface BasemapDefinition {
    * dropping. Ignored for a raster basemap, which has no style layers.
    */
   readonly saveDataOmitLayers?: readonly string[];
+  /**
+   * True when the provider's licence allows only non-commercial use. The SDK's
+   * own basemaps have none, so it stays free for commercial use; a host that
+   * accepts such terms may add one to its own catalogue. A host must leave
+   * such a basemap out of any tool an agent can call, as the reference
+   * host's `basemapChoices` does, because an agent must not accept a
+   * provider's licence on a person's behalf.
+   */
+  readonly nonCommercial?: boolean;
 }

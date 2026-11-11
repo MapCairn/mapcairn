@@ -6,7 +6,11 @@ import type {
   MapStyledShapes,
   MapVectorTiles,
 } from "@mapcairn/core";
-import { MapEngineError, metresPerPixel } from "@mapcairn/core";
+import {
+  FAKE_HYBRID_BASEMAP,
+  MapEngineError,
+  metresPerPixel,
+} from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -1299,6 +1303,234 @@ describe("MapLibreMapAdapter", () => {
       ]);
       loadReliefStyle(map);
       expect(layerIds(map)).not.toContain("relief");
+    });
+  });
+
+  describe("a hybrid basemap", () => {
+    /**
+     * Gives the fake engine the label style it "loaded": a background, a land
+     * fill, a water fill and a road-area fill to leave out, roads and place
+     * names to keep, ferry routes the basemap names to leave out, and a relief
+     * raster drawn from a source of its own.
+     */
+    function loadLabelStyle(map: FakeMap): void {
+      const planet = (id: string, type: string, sourceLayer: string) => ({
+        id,
+        type,
+        source: "planet",
+        "source-layer": sourceLayer,
+      });
+      map.basemapLayers = [];
+      map.styleLayers = [
+        { id: "background", type: "background" },
+        planet("park", "fill", "park"),
+        planet("water", "fill", "water"),
+        { id: "relief", type: "raster", source: "relief-source" },
+        planet("road-area", "fill", "transportation"),
+        planet("roads", "line", "transportation"),
+        planet("ferries", "line", "transportation"),
+        planet("towns", "symbol", "place"),
+      ];
+      map.sources.clear();
+      for (const id of ["planet", "relief-source"]) {
+        map.sources.set(id, {});
+      }
+      map.fire("style.load");
+    }
+
+    it("loads the label style", async () => {
+      const { map } = await mounted({ basemap: FAKE_HYBRID_BASEMAP });
+      expect(map.options.style).toBe("https://tiles.example/labels.json");
+    });
+
+    it("keeps only the line and symbol layers of the label source layers, less those it names to leave out, and draws the imagery under them", async () => {
+      const { map } = await mounted({ basemap: FAKE_HYBRID_BASEMAP });
+      loadLabelStyle(map);
+      // The road-area fill draws from a kept source layer, but would paint
+      // pale patches over the imagery.
+      expect(layerIds(map)).toEqual([
+        "basemap-ground",
+        "basemap-imagery",
+        "roads",
+        "towns",
+      ]);
+      expect(map.getLayer("basemap-imagery")).toMatchObject({
+        type: "raster",
+        source: "basemap-imagery",
+      });
+      expect(map.sources.get("basemap-imagery")).toEqual({
+        type: "raster",
+        tiles: ["https://imagery.example/{z}/{y}/{x}.jpg"],
+        tileSize: 256,
+        maxzoom: 14,
+      });
+      // The relief raster's own source goes with it; the shared one stays.
+      expect([...map.sources.keys()].sort()).toEqual([
+        "basemap-imagery",
+        "planet",
+      ]);
+    });
+
+    it("lays a plain ground in the basemap's swatch colour under the imagery, so a dark basemap is never pale before it draws", async () => {
+      const { map } = await mounted({ basemap: FAKE_HYBRID_BASEMAP });
+      loadLabelStyle(map);
+      expect(map.getLayer("basemap-ground")).toMatchObject({
+        type: "background",
+        paint: { "background-color": "#203024" },
+      });
+    });
+
+    it("lays no ground for a hybrid basemap with no swatch", async () => {
+      const { swatch: _swatch, ...withoutSwatch } = FAKE_HYBRID_BASEMAP;
+      const { map } = await mounted({ basemap: withoutSwatch });
+      loadLabelStyle(map);
+      expect(layerIds(map)[0]).toBe("basemap-imagery");
+      expect(map.getLayer("basemap-ground")).toBeUndefined();
+    });
+
+    it("puts the last basemap back, and draws the data layers again on it, when the hybrid cannot be put together", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const { adapter, map } = await mounted();
+      map.fire("style.load");
+      adapter.setFeatureLayer("quakes", [
+        {
+          id: "a",
+          position: { lat: 0, lng: 0 },
+          colour: "#e69f00",
+          radius: 6,
+          shape: "square" as const,
+        },
+      ]);
+      const addSource = map.addSource.bind(map);
+      const failing = vi.spyOn(map, "addSource").mockImplementationOnce(() => {
+        throw new Error("The engine refused the source.");
+      });
+      const swapping = adapter.setBasemap(FAKE_HYBRID_BASEMAP);
+      loadLabelStyle(map);
+      await expect(swapping).rejects.toBeInstanceOf(MapEngineError);
+      expect(map.callsOf("setStyle").at(-1)?.args).toEqual([
+        "https://tiles.example/positron",
+        { diff: false },
+      ]);
+      failing.mockImplementation(addSource);
+      map.fire("style.load");
+      expect(layerIds(map)).toContain("mapcairn:quakes:points");
+      expect(layerIds(map)).not.toContain("basemap-imagery");
+    });
+
+    it("still draws the data layers when the hybrid cannot be put together with nothing pending", async () => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { adapter, map } = await mounted({ basemap: FAKE_HYBRID_BASEMAP });
+      adapter.setFeatureLayer("quakes", [
+        {
+          id: "a",
+          position: { lat: 0, lng: 0 },
+          colour: "#e69f00",
+          radius: 6,
+          shape: "square" as const,
+        },
+      ]);
+      vi.spyOn(map, "addSource").mockImplementationOnce(() => {
+        throw new Error("The engine refused the source.");
+      });
+      loadLabelStyle(map);
+      expect(log).toHaveBeenCalledWith(
+        "The hybrid basemap could not be put together",
+        expect.any(Error),
+      );
+      expect(layerIds(map)).toContain("mapcairn:quakes:points");
+    });
+
+    it("rejects the mount, rather than leaving it pending, when the hybrid cannot be put together", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const adapter = new MapLibreMapAdapter();
+      const mounting = adapter.mount(createHost(), {
+        ...MOUNT,
+        basemap: FAKE_HYBRID_BASEMAP,
+      });
+      await vi.waitFor(() => {
+        expect(FakeMapLibreMap.instances.length).toBe(1);
+      });
+      const map = latestMap();
+      vi.spyOn(map, "addSource").mockImplementationOnce(() => {
+        throw new Error("The engine refused the source.");
+      });
+      loadLabelStyle(map);
+      await expect(mounting).rejects.toBeInstanceOf(MapEngineError);
+    });
+
+    it("lets the map zoom past the imagery's deepest level, for the labels", async () => {
+      const { map } = await mounted({ basemap: FAKE_HYBRID_BASEMAP });
+      // MapLibre counts 512 px tiles, one below the normalised zoom of 17.
+      expect(map.options.maxZoom).toBe(16);
+    });
+
+    it("composes the imagery again after a swap to it, and leaves other basemaps alone", async () => {
+      const { adapter, map } = await mounted();
+      loadLabelStyle(map);
+      expect(layerIds(map)).not.toContain("basemap-imagery");
+      expect(layerIds(map)).toContain("background");
+      const swapping = adapter.setBasemap(FAKE_HYBRID_BASEMAP);
+      expect(map.callsOf("setStyle").at(-1)?.args).toEqual([
+        "https://tiles.example/labels.json",
+        { diff: false },
+      ]);
+      loadLabelStyle(map);
+      await swapping;
+      expect(layerIds(map).slice(0, 2)).toEqual([
+        "basemap-ground",
+        "basemap-imagery",
+      ]);
+    });
+
+    it("draws data layers over the imagery", async () => {
+      const { adapter, map } = await mounted({ basemap: FAKE_HYBRID_BASEMAP });
+      adapter.setFeatureLayer("quakes", [
+        {
+          id: "a",
+          position: { lat: 0, lng: 0 },
+          colour: "#e69f00",
+          radius: 6,
+          shape: "square" as const,
+        },
+      ]);
+      loadLabelStyle(map);
+      expect(layerIds(map)[1]).toBe("basemap-imagery");
+      expect(layerIds(map).at(-1)).toBe("mapcairn:quakes:points");
+    });
+
+    describe("availability", () => {
+      async function watched() {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const { adapter, map } = await mounted({
+          basemap: FAKE_HYBRID_BASEMAP,
+        });
+        const unavailable = vi.fn();
+        adapter.on("basemapUnavailable", unavailable);
+        loadLabelStyle(map);
+        return { map, unavailable };
+      }
+      const tile = (map: FakeMap, sourceId: string, failed: boolean) =>
+        failed
+          ? map.fire("error", { error: new Error("tile"), tile: {}, sourceId })
+          : map.fire("sourcedata", { sourceId, tile: {} });
+
+      it("is reported when every imagery tile failed, even though the labels loaded", async () => {
+        const { map, unavailable } = await watched();
+        tile(map, "planet", false);
+        tile(map, "basemap-imagery", true);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledWith(FAKE_HYBRID_BASEMAP);
+      });
+
+      it("is not reported while some imagery loaded, whatever the labels do", async () => {
+        const { map, unavailable } = await watched();
+        tile(map, "planet", true);
+        tile(map, "basemap-imagery", true);
+        tile(map, "basemap-imagery", false);
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+      });
     });
   });
 

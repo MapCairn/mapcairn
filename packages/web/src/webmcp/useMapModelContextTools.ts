@@ -29,10 +29,14 @@ export const THEME_CHOICES: readonly ThemeChoice[] = [
 
 /**
  * Every basemap id an agent may choose: the ones the picker offers, in picker
- * order, so the tool and the interface never disagree.
+ * order, so the tool never offers one the interface does not, except a
+ * basemap whose licence is non-commercial (`nonCommercial`), because an agent
+ * must not accept a provider's licence on a person's behalf.
  */
 export function basemapChoices(catalogue: BasemapCatalogue): readonly string[] {
-  return catalogue.basemaps.map((basemap) => basemap.id);
+  return catalogue.basemaps
+    .filter((basemap) => basemap.nonCommercial !== true)
+    .map((basemap) => basemap.id);
 }
 
 const MIN_POINTS: Readonly<Record<MeasureMode, number>> = {
@@ -168,10 +172,10 @@ export function useMapModelContextTools({
   });
 
   // Offers the basemaps the host's catalogue offers, no others. An agent should
-  // not accept a provider's licence on a person's behalf. The reference host's
-  // five come from free providers whose terms ask for nothing to be accepted,
-  // so choosing one here is what tapping it in the picker does. A host that
-  // adds a basemap with terms to accept must not pass it to this tool.
+  // not accept a provider's licence on a person's behalf. Five of the reference
+  // host's six come from free providers whose terms ask for nothing to be
+  // accepted, so choosing one here is what tapping it in the picker does.
+  // Satellite's imagery is non-commercial, so `basemapChoices` leaves it out.
   const choices = basemapChoices(useBasemaps());
   useModelContextTool<BasemapInput>({
     name: "set-map-basemap",
