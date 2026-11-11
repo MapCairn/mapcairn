@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { axeViolations } from "./support/a11y";
 import { mockLayerProviders } from "./support/layers";
@@ -7,8 +7,12 @@ import { collapseCredits } from "./support/states";
 const LAYER = "rainfall-half-hourly";
 const TILE_URL =
   /gibs\.earthdata\.nasa\.gov\/wmts\/epsg3857\/best\/IMERG_Precipitation_Rate_30min\/default\/([^/]+)\/GoogleMapsCompatible_Level6\/\d+\/\d+\/\d+\.png/;
-const HALF_HOUR_MS = 30 * 60_000;
-const LATENCY_MS = 7 * 60 * 60_000;
+/**
+ * The page's clock: 20:14 UTC on 11 November 2026. The layer offers half
+ * hours up to seven hours back, so its newest slot is 13:00.
+ */
+const NOW = "2026-11-11T20:14:00Z";
+const NEWEST = "2026-11-11T13:00:00Z";
 
 /** The half hours the tiles were asked for, as GIBS names them, in request order. */
 function requestedTimes(urls: readonly string[]): string[] {
@@ -18,15 +22,40 @@ function requestedTimes(urls: readonly string[]): string[] {
   });
 }
 
-/** The newest half hour the layer offers at the page's own time, as GIBS names it. */
-async function newestOffered(page: Page): Promise<string> {
-  const now = await page.evaluate(() => Date.now());
-  const start = Math.floor((now - LATENCY_MS) / HALF_HOUR_MS) * HALF_HOUR_MS;
-  return `${new Date(start).toISOString().slice(0, 19)}Z`;
+/**
+ * Fixes the page's `Date` before it loads, so the newest slot cannot move
+ * across a half hour while a test runs. Timers keep running.
+ */
+async function freezeTime(page: Page): Promise<void> {
+  await page.clock.setFixedTime(NOW);
+}
+
+/**
+ * Moves focus to the year field of a native date input, whatever order the
+ * browser's locale puts the fields in: each field is nudged up and back, and
+ * the one that changes the year is the one wanted.
+ */
+async function focusYearField(page: Page, date: Locator): Promise<void> {
+  await date.focus();
+  for (let field = 0; field < 3; field += 1) {
+    const before = await date.inputValue();
+    await page.keyboard.press("ArrowUp");
+    const after = await date.inputValue();
+    await page.keyboard.press("ArrowDown");
+    if (after.slice(0, 4) !== before.slice(0, 4)) {
+      return;
+    }
+    await page.keyboard.press("ArrowRight");
+  }
+  throw new Error("The date input has no year field the keyboard can reach.");
 }
 
 test.describe("half-hourly rainfall layer", () => {
   test.use({ reducedMotion: "reduce" });
+
+  test.beforeEach(async ({ page }) => {
+    await freezeTime(page);
+  });
 
   test("asks NASA for nothing until it is on, then for the newest half hour, and again for a chosen one", async ({
     page,
@@ -38,22 +67,19 @@ test.describe("half-hourly rainfall layer", () => {
     expect(requestedTimes(requests.urls)).toEqual([]);
 
     const item = page.getByTestId(`layer-${LAYER}`);
-    const before = await newestOffered(page);
     await item.getByRole("switch", { name: /Rainfall, half-hourly/ }).click();
     await expect(page).toHaveURL(new RegExp(`layers=[^&]*${LAYER}`));
     await expect
-      .poll(() => requestedTimes(requests.urls).length)
-      .toBeGreaterThan(0);
-    const after = await newestOffered(page);
-    const times = [...new Set(requestedTimes(requests.urls))];
-    expect(times).toHaveLength(1);
-    // The newest half hour is fixed when the app mounts; allow for a half
-    // hour boundary passing while the test runs.
-    expect([before, after]).toContain(times[0]);
+      .poll(() => [...new Set(requestedTimes(requests.urls))])
+      .toEqual([NEWEST]);
 
     const group = item.getByRole("group", { name: "Half hour shown" });
-    await expect(group).toContainText("Newest available:");
-    await expect(group).toContainText("Later times are not out yet.");
+    await expect(group).toContainText(
+      "Showing 13:00 to 13:30 UTC on 11 November 2026.",
+    );
+    await expect(group).toContainText(
+      "Newest available: 13:00 UTC on 11 November 2026. Newer times may not be out yet, so they are not offered.",
+    );
 
     const count = requestedTimes(requests.urls).length;
     await group.getByLabel("Date (UTC)").fill("2026-06-15");
@@ -78,12 +104,35 @@ test.describe("half-hourly rainfall layer", () => {
     await mapPage.openMapOptions();
     const time = page.getByTestId(`layer-control-${LAYER}-time-time`);
     const date = page.getByTestId(`layer-control-${LAYER}-time-date`);
-    const newestDay = await date.getAttribute("max");
-    await expect(date).toHaveValue(newestDay as string);
+    await expect(date).toHaveAttribute("min", "1998-01-01");
+    await expect(date).toHaveAttribute("max", "2026-11-11");
+    await expect(date).toHaveValue("2026-11-11");
+    await expect(time).toHaveValue("2026-11-11t1300");
     const options = await time.locator("option").allTextContents();
-    const selected = await time.inputValue();
-    expect(options.at(-1)).toBe(
-      `${selected.slice(11, 13)}:${selected.slice(13, 15)}`,
+    expect(options).toHaveLength(27);
+    expect(options.at(-1)).toBe("13:00");
+  });
+
+  test("keeps the time of day while a year is typed digit by digit", async ({
+    page,
+    mapPage,
+  }) => {
+    const requests = await mockLayerProviders(page);
+    await mapPage.goto(`#layers=${LAYER}&${LAYER}.time=2026-11-05t2130`);
+    await mapPage.openMapOptions();
+    const date = page.getByTestId(`layer-control-${LAYER}-time-date`);
+    const time = page.getByTestId(`layer-control-${LAYER}-time-time`);
+    await expect(time).toHaveValue("2026-11-05t2130");
+    await focusYearField(page, date);
+    await page.keyboard.type("2025", { delay: 50 });
+    await expect(date).toHaveValue("2025-11-05");
+    await expect(time).toHaveValue("2025-11-05t2130");
+    await expect(page).toHaveURL(new RegExp(`${LAYER}\\.time=2025-11-05t2130`));
+    expect(
+      requestedTimes(requests.urls).filter((value) => value.startsWith("1998")),
+    ).toEqual([]);
+    await expect(page.getByTestId("live-region-polite")).not.toContainText(
+      "Time moved",
     );
   });
 
@@ -109,13 +158,9 @@ test.describe("half-hourly rainfall layer", () => {
   }) => {
     const requests = await mockLayerProviders(page);
     await mapPage.goto(`#layers=${LAYER}&${LAYER}.time=2099-01-01t0000`);
-    const before = await newestOffered(page);
     await expect
-      .poll(() => requestedTimes(requests.urls).length)
-      .toBeGreaterThan(0);
-    const after = await newestOffered(page);
-    expect([...new Set(requestedTimes(requests.urls))]).toHaveLength(1);
-    expect([before, after]).toContain(requestedTimes(requests.urls)[0]);
+      .poll(() => [...new Set(requestedTimes(requests.urls))])
+      .toEqual([NEWEST]);
   });
 
   test("passes axe with its date and time control open @a11y", async ({
@@ -135,14 +180,26 @@ test.describe("half-hourly rainfall layer", () => {
 test.describe("half-hourly rainfall credits", () => {
   test.use({ reducedMotion: "reduce", fastCredits: true });
 
-  test("carries the GIBS and IMERG credits", async ({ page, mapPage }) => {
+  test("carries the GIBS and IMERG credits, beside the daily layer's", async ({
+    page,
+    mapPage,
+  }) => {
+    await freezeTime(page);
     await mockLayerProviders(page);
-    await mapPage.goto(`#layers=${LAYER}`);
+    await mapPage.goto(`#layers=rainfall,${LAYER}`);
     await collapseCredits(mapPage);
     await mapPage.creditsButton.click();
-    await expect(mapPage.creditsRegion).toContainText(
+    const credits = mapPage.creditsRegion;
+    await expect(credits).toContainText(
       "Global Imagery Browse Services (GIBS)",
     );
-    await expect(mapPage.creditsRegion).toContainText("IMERG");
+    await expect(
+      credits.getByRole("link", {
+        name: /GPM IMERG half-hourly precipitation \(Early and Final runs\)/,
+      }),
+    ).toHaveAttribute("href", "https://gpm.nasa.gov/data/imerg");
+    await expect(
+      credits.getByRole("link", { name: /^GPM IMERG precipitation, Huffman/ }),
+    ).toHaveAttribute("href", "https://doi.org/10.5067/GPM/IMERG/3B-HH/07");
   });
 });

@@ -11,8 +11,13 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  * capabilities document lagged an hour behind the tiles, so the newest slot
  * offered is seven hours back, worked out from the clock, never from the
  * capabilities. Recent slots come from the IMERG Early run and
- * older ones from the Final run. Tiles answer back to 2000-06-01; a slot GIBS
- * lacks answers 404, which shows as tiles that fail to load.
+ * older ones from the Final run, so the credit links the IMERG page, which
+ * covers both, and its text differs from the daily layer's so that both stay
+ * in the credits when both layers are on (credits are de-duplicated by text).
+ * The first slot is 1998-01-01 00:00 UTC (re-probed on 2026-11-11: it and
+ * later 1998 slots answer, 1997-12-31 answers 404, although the capabilities
+ * list only 2026 onwards); a slot GIBS lacks answers 404, which shows as
+ * tiles that fail to load.
  */
 const rainfallHalfHourly: TileLayerDefinition = {
   id: "rainfall-half-hourly",
@@ -27,8 +32,8 @@ const rainfallHalfHourly: TileLayerDefinition = {
       url: "https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api",
     },
     {
-      text: "GPM IMERG precipitation, Huffman, G. J., Stocker, E. F., Bolvin, D. T., Nelkin, E. J., Tan, J., NASA GES DISC",
-      url: "https://doi.org/10.5067/GPM/IMERG/3B-HH-E/07",
+      text: "GPM IMERG half-hourly precipitation (Early and Final runs), Huffman, G. J., Stocker, E. F., Bolvin, D. T., Nelkin, E. J., Tan, J., NASA GES DISC",
+      url: "https://gpm.nasa.gov/data/imerg",
     },
   ],
   disclaimer:
@@ -41,7 +46,7 @@ const rainfallHalfHourly: TileLayerDefinition = {
       description:
         "A few half hours have no data. If tiles fail to load, try another time.",
       stepMinutes: 30,
-      min: "2000-06-01t0000",
+      min: "1998-01-01t0000",
       max: { minutesAgo: 420 },
       default: { minutesAgo: 420 },
     },
