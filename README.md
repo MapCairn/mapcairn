@@ -2,8 +2,6 @@
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16543/badge)](https://www.bestpractices.dev/projects/16543)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MapCairn/mapcairn/badge)](https://scorecard.dev/viewer/?uri=github.com/MapCairn/mapcairn)
-[![CI](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml)
-[![Playwright E2E](https://github.com/MapCairn/mapcairn/actions/workflows/playwright.yml/badge.svg?branch=main)](https://github.com/MapCairn/mapcairn/actions/workflows/playwright.yml)
 
 MapCairn is a reusable SDK for public-interest map platforms, with a reference host. The SDK is built on ports and adapters: the interface and the pure logic depend on small interfaces, and one place wires in the map engine and the browser services. MapLibre GL JS is the only map engine.
 
