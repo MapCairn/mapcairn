@@ -145,6 +145,19 @@ describe("adding a stop by search", () => {
     expect((input as HTMLInputElement).value).toBe("");
   });
 
+  it("adds a typed coordinate pair as a stop without asking the geocoder", async () => {
+    const { services } = setup();
+    const input = screen.getByTestId("directions-search-input");
+    fireEvent.change(input, { target: { value: "-26.2041, 28.0473" } });
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+    await flush();
+    expect(services.fakes.search.searchCalls).toHaveLength(0);
+    click("Add Coordinates 26.20410° S, 28.04730° E");
+    expect(screen.getByTestId("directions-stop-row")).toHaveTextContent(
+      "Coordinates 26.20410° S, 28.04730° E",
+    );
+  });
+
   it("will not search for a single character", () => {
     setup();
     fireEvent.change(screen.getByTestId("directions-search-input"), {

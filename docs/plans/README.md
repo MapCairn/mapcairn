@@ -4,6 +4,4 @@ Plans and specs for larger changes live here, one file each, numbered in the ord
 
 Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository root, not here.
 
-| Plan | Status | Issue |
-| --- | --- | --- |
-| [0006 Import GeoJSON and CSV into the draw tool](0006-draw-import.md) | in progress | [#10](https://github.com/MapCairn/mapcairn/issues/10) |
+No plan is open.

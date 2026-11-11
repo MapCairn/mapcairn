@@ -1,5 +1,6 @@
 export * from "./announce";
 export * from "./basemaps";
+export * from "./coordinates";
 export * from "./directions";
 export * from "./draw";
 export * from "./fakes";

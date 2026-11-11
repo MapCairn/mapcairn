@@ -124,6 +124,14 @@ export function announceSearchResults(count: number): string {
   return `${formatNumber(count)} ${pluralise(count, ["result", "results"])}`;
 }
 
+/**
+ * Announced when a search is answered by one pair of coordinates. It names the
+ * place, so a second pair is never mistaken for a repeat of the first.
+ */
+export function announceCoordinateResult(label: string): string {
+  return `${announceSearchResults(1)}, ${label}`;
+}
+
 /** Announced when a search finds nothing. */
 export function announceNoResults(): string {
   return "No results";
