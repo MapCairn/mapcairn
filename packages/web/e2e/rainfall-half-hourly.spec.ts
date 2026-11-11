@@ -8,7 +8,7 @@ const LAYER = "rainfall-half-hourly";
 const TILE_URL =
   /gibs\.earthdata\.nasa\.gov\/wmts\/epsg3857\/best\/IMERG_Precipitation_Rate_30min\/default\/([^/]+)\/GoogleMapsCompatible_Level6\/\d+\/\d+\/\d+\.png/;
 const HALF_HOUR_MS = 30 * 60_000;
-const LATENCY_MS = 6 * 60 * 60_000;
+const LATENCY_MS = 7 * 60 * 60_000;
 
 /** The half hours the tiles were asked for, as GIBS names them, in request order. */
 function requestedTimes(urls: readonly string[]): string[] {

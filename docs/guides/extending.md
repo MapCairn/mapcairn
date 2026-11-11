@@ -67,8 +67,8 @@ A product the provider names by timestamp, such as one image per half hour, take
   description: "A few half hours have no data. If tiles fail to load, try another time.",
   stepMinutes: 30,
   min: "2000-06-01t0000",
-  max: { minutesAgo: 360 },
-  default: { minutesAgo: 360 },
+  max: { minutesAgo: 420 },
+  default: { minutesAgo: 420 },
 }
 ```
 
