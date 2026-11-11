@@ -1,15 +1,19 @@
-import { formatShapeMeasure } from "@mapcairn/core";
+import { type Bounds, formatShapeMeasure } from "@mapcairn/core";
 import {
   CircleCheck,
   Download,
   FileSpreadsheet,
+  FileUp,
   Link,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import type { Ref } from "react";
-import { useSettings } from "../../services";
-import type { UseDraw } from "../../tools/DrawToolbar";
+import { type Ref, useContext } from "react";
+import { useChromeLayout } from "../../chrome/layoutContext";
+import { MapContext } from "../../host";
+import { FIT_MAX_ZOOM, fitPadding } from "../../layers/reveal";
+import { useFileOpener, useSettings } from "../../services";
+import type { DrawFeedback, UseDraw } from "../../tools/DrawToolbar";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { ListRow } from "../../ui/ListRow";
@@ -27,12 +31,54 @@ export interface ShapesSectionProps {
   readonly headingRef?: Ref<HTMLHeadingElement>;
 }
 
+/** The outcome of an import, export or copy, in words with an icon. */
+function Feedback({
+  feedback,
+  testId,
+}: {
+  readonly feedback: DrawFeedback | null;
+  readonly testId: string;
+}) {
+  if (!feedback) {
+    return null;
+  }
+  return (
+    <p className={note} data-testid={testId}>
+      <Icon
+        icon={feedback.kind === "error" ? TriangleAlert : CircleCheck}
+        className={noteIcon}
+      />
+      <span>{feedback.text}</span>
+    </p>
+  );
+}
+
+/**
+ * Fits the map to imported shapes in the part the sheet or side panel leaves
+ * free, as Show on map does for a feature.
+ */
+function useFitToImport(): (bounds: Bounds) => void {
+  const adapter = useContext(MapContext)?.adapter ?? null;
+  const { layout, viewport, panelEdge } = useChromeLayout();
+  return (bounds) => {
+    if (!adapter) {
+      return;
+    }
+    adapter.fitBounds(bounds, {
+      maxZoom: FIT_MAX_ZOOM,
+      padding: fitPadding({ layout, viewport, panelEdge }),
+    });
+  };
+}
+
 /**
  * The shapes the person has drawn: a list where each row selects a shape (so
  * it can be edited with the keyboard from the draw tool), buttons to delete
- * the selected shape or all of them, and the export buttons. Shapes are
- * saved to a file or into a link only when a button is pressed, and the note
- * says so.
+ * the selected shape or all of them, an import from a GeoJSON or CSV file
+ * (when the host supplies a file opener),
+ * and the export buttons. Shapes are saved to a file or into a link only when
+ * a button is pressed, a file is read only on this device, and the note says
+ * so. The map fits to what an import added.
  */
 export function ShapesSection({
   draw,
@@ -40,8 +86,18 @@ export function ShapesSection({
   headingRef,
 }: ShapesSectionProps) {
   const { settings } = useSettings();
-  const { shapes, selection, feedback } = draw;
+  const { shapes, selection, feedback, importFeedback } = draw;
   const subLevel = (headingLevel + 1) as HeadingLevel;
+  const fitToImport = useFitToImport();
+  const canImport = useFileOpener() !== undefined;
+  const importFile = () => {
+    // Called straight from the press, so the browser shows the picker.
+    void draw.importFile().then((bounds) => {
+      if (bounds) {
+        fitToImport(bounds);
+      }
+    });
+  };
   return (
     <Section
       title="Shapes"
@@ -91,6 +147,22 @@ export function ShapesSection({
           Delete all shapes
         </Button>
       </div>
+      {canImport ? (
+        <div className={subsection}>
+          <Subheading level={subLevel}>Import</Subheading>
+          <div className={actions}>
+            <Button
+              variant="secondary"
+              icon={FileUp}
+              data-testid="shapes-import"
+              onClick={importFile}
+            >
+              Import GeoJSON or CSV
+            </Button>
+          </div>
+          <Feedback feedback={importFeedback} testId="shapes-import-feedback" />
+        </div>
+      ) : null}
       <div className={subsection}>
         <Subheading level={subLevel}>Export</Subheading>
         <div className={actions}>
@@ -119,19 +191,11 @@ export function ShapesSection({
             Copy link with shapes
           </Button>
         </div>
-        {feedback ? (
-          <p className={note} data-testid="shapes-feedback">
-            <Icon
-              icon={feedback.kind === "error" ? TriangleAlert : CircleCheck}
-              className={noteIcon}
-            />
-            <span>{feedback.text}</span>
-          </p>
-        ) : null}
+        <Feedback feedback={feedback} testId="shapes-feedback" />
         <p className={prose}>
-          Shapes stay in this browser and are not saved. Files are made on your
-          device. A link with shapes holds them in its address, so anyone you
-          send it to can see them.
+          Shapes stay in this browser and are not saved. Files are made and read
+          on your device, and nothing is uploaded. A link with shapes holds them
+          in its address, so anyone you send it to can see them.
         </p>
       </div>
     </Section>

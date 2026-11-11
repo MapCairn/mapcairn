@@ -25,6 +25,7 @@ const SERVICE_KEYS = [
   "settings",
   "clipboard",
   "fileSaver",
+  "fileOpener",
   "url",
   "theme",
   "preferences",

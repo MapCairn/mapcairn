@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   announceDrawEvent,
   DRAW_ISSUE_MESSAGES,
+  describeShapeImport,
   describeShapeMeasure,
   formatShapeMeasure,
   hintFor,
@@ -190,6 +191,10 @@ describe("announceDrawEvent", () => {
     );
   });
 
+  it("leaves an import to the words of its own result", () => {
+    expect(say({ type: "imported" })).toBeNull();
+  });
+
   it("falls back to a plain sentence when the shape is gone", () => {
     expect(say({ type: "vertex-added", shapeId: "gone", count: 2 }, [])).toBe(
       "Point 2 added.",
@@ -204,6 +209,116 @@ describe("announceDrawEvent", () => {
     });
     expect(announceDrawEvent(state.lastEvent, state.shapes, "metric")).toBe(
       "Point 1 added to Polygon 1.",
+    );
+  });
+});
+
+describe("describeShapeImport", () => {
+  const point = { kind: "point" as const, vertices: [p(1, 1)] };
+
+  it("says how many shapes were imported", () => {
+    expect(
+      describeShapeImport({
+        ok: true,
+        shapes: [point],
+        skipped: {},
+        holesDropped: 0,
+      }),
+    ).toBe("1 shape imported.");
+    expect(
+      describeShapeImport({
+        ok: true,
+        shapes: [point, point, point],
+        skipped: {},
+        holesDropped: 0,
+      }),
+    ).toBe("3 shapes imported.");
+  });
+
+  it("says how many were skipped and why, and which holes were left out", () => {
+    expect(
+      describeShapeImport({
+        ok: true,
+        shapes: [point],
+        skipped: { "self-intersecting": 1, "out-of-range": 2 },
+        holesDropped: 2,
+      }),
+    ).toBe(
+      "1 shape imported. 3 skipped: 1 with edges that cross, 2 with a position outside the world. Holes in 2 polygons were left out.",
+    );
+  });
+
+  it("names every reason a shape is skipped", () => {
+    const reasons = [
+      "self-intersecting",
+      "degenerate",
+      "too-few-vertices",
+      "radius-missing",
+      "radius-too-large",
+      "out-of-range",
+      "too-many-points",
+      "malformed",
+      "unsupported",
+    ] as const;
+    for (const reason of reasons) {
+      const text = describeShapeImport({
+        ok: true,
+        shapes: [],
+        skipped: { [reason]: 1 },
+        holesDropped: 0,
+      });
+      expect(text).toMatch(/^No shapes imported\. 1 skipped: 1 (with|of) \w/);
+    }
+    expect(
+      describeShapeImport({
+        ok: true,
+        shapes: [],
+        skipped: { "too-many-points": 1 },
+        holesDropped: 0,
+      }),
+    ).toContain("more than 1,000 points");
+  });
+
+  it("says a file with no shapes holds none", () => {
+    expect(
+      describeShapeImport({
+        ok: true,
+        shapes: [],
+        skipped: {},
+        holesDropped: 0,
+      }),
+    ).toBe("The file holds no shapes.");
+    expect(
+      describeShapeImport({
+        ok: true,
+        shapes: [point],
+        skipped: {},
+        holesDropped: 1,
+      }),
+    ).toBe("1 shape imported. Holes in 1 polygon were left out.");
+  });
+
+  it("says why a file was refused and what to do", () => {
+    expect(describeShapeImport({ ok: false, refusal: "drawing-full" })).toBe(
+      "That would make more than 1,000 shapes. Delete some shapes first, or import a smaller file.",
+    );
+    expect(describeShapeImport({ ok: false, refusal: "empty" })).toBe(
+      "The file is empty.",
+    );
+    expect(describeShapeImport({ ok: false, refusal: "too-large" })).toBe(
+      "The file is larger than 1 MB. Split it into smaller files.",
+    );
+    expect(describeShapeImport({ ok: false, refusal: "too-deep" })).toBe(
+      "The file is nested too deeply to read. Check that it is GeoJSON.",
+    );
+    expect(describeShapeImport({ ok: false, refusal: "not-recognised" })).toBe(
+      "This is not GeoJSON or a CSV of shapes from this map. Choose a .geojson, .json or .csv file.",
+    );
+    expect(describeShapeImport({ ok: false, refusal: "too-many-shapes" })).toBe(
+      "The file holds more than 500 shapes. Import at most 500 at a time.",
+    );
+    expect(describeShapeImport({ ok: false, refusal: "too-many-points" })).toBe(
+      "The file holds more than 10,000 points. Simplify the shapes or split the file.",
     );
   });
 });

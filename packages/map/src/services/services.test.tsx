@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import {
   useClipboard,
+  useFileOpener,
   useLayers,
   useLocationProvider,
   useMapAdapterFactory,
@@ -60,6 +61,9 @@ describe("ServicesProvider", () => {
     expect(renderHook(() => useClipboard(), { wrapper }).result.current).toBe(
       services.clipboard,
     );
+    expect(renderHook(() => useFileOpener(), { wrapper }).result.current).toBe(
+      services.fileOpener,
+    );
     expect(renderHook(() => useUrlState(), { wrapper }).result.current).toBe(
       services.url,
     );
@@ -78,6 +82,15 @@ describe("ServicesProvider", () => {
     const { wrapper } = wrapperFor(createFakeServices({ routing: undefined }));
     expect(
       renderHook(() => useRoutingProvider(), { wrapper }).result.current,
+    ).toBeUndefined();
+  });
+
+  it("gives no file opener when the host supplies none", () => {
+    const { wrapper } = wrapperFor(
+      createFakeServices({ fileOpener: undefined }),
+    );
+    expect(
+      renderHook(() => useFileOpener(), { wrapper }).result.current,
     ).toBeUndefined();
   });
 });
