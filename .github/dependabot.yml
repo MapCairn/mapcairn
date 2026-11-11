@@ -10,12 +10,20 @@ updates:
       timezone: "Africa/Johannesburg"
     open-pull-requests-limit: 2
     groups:
+      # A pattern without `*` matches that exact name, so each package that must
+      # move with one of these is named, or matched with `*`, here. A dependency
+      # goes into the first group it matches, so these come before the catch-all.
       npm-critical:
         patterns:
           - "wrangler"
           - "vite"
           - "react-router"
           - "zod"
+          - "@react-router/*"
+          - "@vitejs/*"
+          - "@cloudflare/vite-plugin"
+          - "vitest"
+          - "@vitest/*"
       npm:
         patterns:
           - "*"
