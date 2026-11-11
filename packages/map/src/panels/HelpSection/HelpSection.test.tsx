@@ -40,6 +40,21 @@ describe("HelpSection", () => {
     ).toBeInTheDocument();
   });
 
+  it("says that search takes coordinates as well as place names", () => {
+    renderHelp();
+    expect(
+      screen.getByRole("heading", { name: "Search", level: 4 }),
+    ).toBeInTheDocument();
+    const search = screen.getByTestId("help-search");
+    expect(search).toHaveTextContent("a place name or a pair of coordinates");
+    expect(search).toHaveTextContent("-26.2041, 28.0473");
+    expect(search).toHaveTextContent("26.2041° S, 28.0473° E");
+    expect(search).toHaveTextContent("then press Enter or Search");
+    expect(search).toHaveTextContent("a decimal point or a degree sign");
+    expect(search).toHaveTextContent("not sent to the geocoder");
+    expect(search).toHaveTextContent("loads map tiles for that area");
+  });
+
   it("follows the heading level it is given", () => {
     renderHelp({ headingLevel: 4 });
     expect(

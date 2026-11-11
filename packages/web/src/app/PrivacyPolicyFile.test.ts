@@ -25,6 +25,12 @@ describe("PRIVACY.md mirrors the privacy page", () => {
     );
   });
 
+  it("says a search that is only coordinates is not sent to the geocoder", () => {
+    expect(policy).toContain(
+      "A search that is only a pair of coordinates is read in your browser and is not sent to the geocoder; showing the place requests map tiles for that area, as any move of the map does.",
+    );
+  });
+
   it("says the first-visit tour keeps one number and sends nothing", () => {
     expect(policy).toContain(
       "whether you have answered the first-visit tour (a version number under `mapcairn:tourSeen`)",
