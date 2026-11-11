@@ -1,6 +1,6 @@
+import { BUILT_IN_BASEMAP_CATALOGUE } from "@mapcairn/core";
 import { compositeOver, contrastRatio, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
-import { BASEMAP_CATALOGUE } from "./index";
 
 const AA_TEXT = 4.5;
 const AA_NON_TEXT = 3;
@@ -34,7 +34,7 @@ const colourSets = ["colour", "opaque", "contrastMore"] as const;
 describe("chrome legibility over every basemap", () => {
   it("has a backdrop for every basemap the host offers", () => {
     expect(Object.keys(basemapBackdrops).sort()).toEqual(
-      BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.id).sort(),
+      BUILT_IN_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.id).sort(),
     );
   });
 
