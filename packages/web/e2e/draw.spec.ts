@@ -437,7 +437,9 @@ test.describe("draw", () => {
       const csvFile = await csv;
       expect(csvFile.suggestedFilename()).toBe("mapcairn-shapes.csv");
       const text = await readFile((await csvFile.path()) as string, "utf8");
-      expect(text.split("\r\n")[0]).toBe("id,type,area_m2,length_m,geometry");
+      expect(text.split("\r\n")[0]).toBe(
+        "id,type,area_m2,length_m,geometry,radius_m,centre_lng,centre_lat",
+      );
       expect(text.split("\r\n")[1]).toMatch(/^shape-1,polygon,[\d.]+,[\d.]+,"/);
       await expect(page.getByTestId("shapes-feedback")).toContainText(
         "mapcairn-shapes.csv",

@@ -150,7 +150,9 @@ describe("shapesToCsv", () => {
   it("has a header and one row per shape, with CRLF line ends", () => {
     const csv = shapesToCsv([POINT, POLYGON]);
     const lines = csv.split("\r\n");
-    expect(lines[0]).toBe("id,type,area_m2,length_m,geometry");
+    expect(lines[0]).toBe(
+      "id,type,area_m2,length_m,geometry,radius_m,centre_lng,centre_lat",
+    );
     expect(lines).toHaveLength(3);
     expect(lines[1]?.startsWith("shape-1,point,,,")).toBe(true);
     expect(lines[2]?.startsWith("shape-3,polygon,")).toBe(true);
@@ -159,7 +161,7 @@ describe("shapesToCsv", () => {
   it("quotes the geometry text and doubles its quotes", () => {
     const row = shapesToCsv([POINT]).split("\r\n")[1] ?? "";
     expect(row).toBe(
-      'shape-1,point,,,"{""type"":""Point"",""coordinates"":[2.3522,48.8566]}"',
+      'shape-1,point,,,"{""type"":""Point"",""coordinates"":[2.3522,48.8566]}",,,',
     );
   });
 
@@ -169,8 +171,16 @@ describe("shapesToCsv", () => {
     expect(length).toMatch(/^\d+\.\d{1,2}$/);
   });
 
+  it("writes a circle's radius and centre after the geometry, so it can be read back", () => {
+    const row = shapesToCsv([CIRCLE]).split("\r\n")[1] ?? "";
+    expect(row.startsWith("shape-4,circle,")).toBe(true);
+    expect(row.endsWith('",500,36.8219,-1.2921')).toBe(true);
+  });
+
   it("is only the header when there is nothing to export", () => {
-    expect(shapesToCsv([])).toBe("id,type,area_m2,length_m,geometry");
+    expect(shapesToCsv([])).toBe(
+      "id,type,area_m2,length_m,geometry,radius_m,centre_lng,centre_lat",
+    );
   });
 });
 

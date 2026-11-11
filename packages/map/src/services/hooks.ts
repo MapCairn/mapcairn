@@ -3,6 +3,7 @@ import {
   BUILT_IN_BASEMAP_CATALOGUE,
   type ClipboardPort,
   type DevicePreferencesValue,
+  type FileOpener,
   type FileSaver,
   type LayerRegistry,
   type LocationProvider,
@@ -51,6 +52,15 @@ export function useClipboard(): ClipboardPort {
 /** The file saver, which offers a file the ui built as a download. */
 export function useFileSaver(): FileSaver {
   return useServices().fileSaver;
+}
+
+/**
+ * The file opener, which asks the person for a file and reads it in the
+ * browser, or `undefined` when the host supplies none. Shape import needs it,
+ * so a host without one gets no Import control.
+ */
+export function useFileOpener(): FileOpener | undefined {
+  return useServices().fileOpener;
 }
 
 /** The shareable URL state port. */

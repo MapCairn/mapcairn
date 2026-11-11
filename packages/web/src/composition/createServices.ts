@@ -4,6 +4,7 @@ import type { Services } from "@mapcairn/core";
 // the engine mounts, and keeps it out of the ui, which may not import adapters.
 import "../adapters/mapEngine.css";
 import { BrowserClipboard } from "../adapters/clipboard/BrowserClipboard";
+import { BrowserFileOpener } from "../adapters/files/BrowserFileOpener";
 import { BrowserFileSaver } from "../adapters/files/BrowserFileSaver";
 import { FetchLayerSource } from "../adapters/layers/FetchLayerSource";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
@@ -67,6 +68,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     settings: new LocalStorageSettingsStore(),
     clipboard: new BrowserClipboard(),
     fileSaver: new BrowserFileSaver(),
+    fileOpener: new BrowserFileOpener(),
     url: new BrowserUrlState(),
     theme: new BrowserThemeSource(),
     preferences: new BrowserDevicePreferences(),

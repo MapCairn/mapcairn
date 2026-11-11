@@ -38,3 +38,33 @@ export function unwrapLongitudes(
   }
   return unwrapped;
 }
+
+/**
+ * The narrowest run of longitude, going east from `west` to `east`, that
+ * holds every one of `lngs`: the circle of longitude less its widest empty
+ * gap. Across the antimeridian `east` goes past 180 (179 and -179 give 179
+ * to 181), so a fit takes the short way rather than the width of the world.
+ * @returns `undefined` when there are no longitudes.
+ */
+export function shortestLongitudeSpan(
+  lngs: readonly number[],
+): { readonly west: number; readonly east: number } | undefined {
+  const sorted = lngs.map(wrapLongitude).sort((a, b) => a - b);
+  const first = sorted[0];
+  const last = sorted.at(-1);
+  if (first === undefined || last === undefined) {
+    return undefined;
+  }
+  // The gap that wraps from the last longitude round to the first.
+  let gap = first + 360 - last;
+  let span = { west: first, east: last };
+  for (let index = 1; index < sorted.length; index += 1) {
+    const west = sorted[index] as number;
+    const east = sorted[index - 1] as number;
+    if (west - east > gap) {
+      gap = west - east;
+      span = { west, east: east + 360 };
+    }
+  }
+  return span;
+}

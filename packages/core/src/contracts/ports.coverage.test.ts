@@ -21,7 +21,7 @@ describe("port coverage", () => {
   });
 
   it("lists the optional services, each of which is a port", () => {
-    expect([...OPTIONAL_PORT_NAMES]).toEqual(["routing"]);
+    expect([...OPTIONAL_PORT_NAMES]).toEqual(["fileOpener", "routing"]);
     for (const name of OPTIONAL_PORT_NAMES) {
       expect(PORT_NAMES).toContain(name);
     }
