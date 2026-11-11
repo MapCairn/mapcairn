@@ -342,14 +342,24 @@ export class MapPage {
 
   /** Chooses a basemap in the open sheet by its visible name. */
   async chooseBasemap(name: string): Promise<void> {
+    await this.pressBasemapTile(name);
+    await expect(
+      this.basemapPicker.getByRole("radio", { name, exact: true }),
+    ).toBeChecked();
+  }
+
+  /**
+   * Presses a basemap's tile without waiting for the choice to stick. For a
+   * basemap whose provider is down: the map may already have gone back and
+   * renamed its radio ("Not available right now") by the time a check runs,
+   * so the caller asserts that outcome instead.
+   */
+  async pressBasemapTile(name: string): Promise<void> {
     // The native radio is visually hidden; a person clicks its tile (the label).
     await this.basemapPicker
       .locator("label")
       .filter({ has: this.page.getByRole("radio", { name, exact: true }) })
       .click();
-    await expect(
-      this.basemapPicker.getByRole("radio", { name, exact: true }),
-    ).toBeChecked();
   }
 
   /**
