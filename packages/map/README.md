@@ -32,7 +32,7 @@ export default defineConfig({
 });
 ```
 
-`@mapcairn/theme` carries its own token values, and its stylesheet reaches the page only through an import that is used (see `packages/web/src/global.css.ts`). The host also provides the engine styles for its map adapter; the MapLibre styles are in `packages/web/src/adapters/mapEngine.css.ts`.
+`@mapcairn/theme` carries its own token values, and its stylesheet reaches the page only through an import that is used (see `packages/web/src/global.css.ts`). `MapChrome` fills its container, so the host gives `html`, `body` and the element it renders into a height. The tokens name the IBM Plex Sans Variable font, which the host loads (for example from `@fontsource-variable/ibm-plex-sans`); without it the type falls back to the system font. The host also provides the engine styles for its map adapter; the MapLibre styles are in `packages/web/src/adapters/mapEngine.css.ts`. `examples/embed` is a minimal host that does all of this, described in [`docs/guides/extending.md`](../../docs/guides/extending.md).
 
 ## Usage
 

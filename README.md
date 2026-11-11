@@ -67,7 +67,7 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 |---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
 | [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules |
-| [`docs/guides/extending.md`](docs/guides/extending.md) | Adding a basemap, a data layer of each kind, a routing provider or an adapter |
+| [`docs/guides/extending.md`](docs/guides/extending.md) | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, a routing provider or an adapter |
 | [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Saving the map and drawing shapes |
 | [`docs/plans/`](docs/plans/README.md) | Numbered plans for work not yet built |
 | [`GOVERNANCE.md`](GOVERNANCE.md) | The maintainer role, how decisions are made, and what is not yet covered |
