@@ -11,7 +11,8 @@
     "npm": ">=11.0.0"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "scripts": {
     "dev": "npm run dev -w @mapcairn/web",

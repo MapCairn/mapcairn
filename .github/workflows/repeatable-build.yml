@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: First build
-        run: npm run build
+        run: npm run build -w @mapcairn/web
 
       - name: Hash the first build
         run: |
@@ -39,7 +39,7 @@ jobs:
       - name: Second build from clean
         run: |
           rm -rf packages/web/build
-          npm run build
+          npm run build -w @mapcairn/web
 
       - name: Hash the second build
         run: |
