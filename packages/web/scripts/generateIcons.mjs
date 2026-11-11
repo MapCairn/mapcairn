@@ -22,7 +22,7 @@ const PUBLIC_DIR = fileURLToPath(new URL("../public/", import.meta.url));
 const PNG_TARGETS = [
   {
     out: "favicon-16x16.png",
-    master: "mark-small.svg",
+    master: "mark.svg",
     size: 16,
     transparent: true,
   },
@@ -47,7 +47,7 @@ const PNG_TARGETS = [
   },
   {
     out: "maskable-icon-512x512.png",
-    master: "mark-bleed.svg",
+    master: "mark-maskable.svg",
     size: 512,
     transparent: false,
   },
@@ -59,9 +59,9 @@ const PNG_TARGETS = [
   },
 ];
 
-/** Entries of `favicon.ico`. The 16 px entry uses the reduced mark. */
+/** Entries of `favicon.ico`. */
 const ICO_TARGETS = [
-  { master: "mark-small.svg", size: 16 },
+  { master: "mark.svg", size: 16 },
   { master: "mark.svg", size: 32 },
   { master: "mark.svg", size: 48 },
 ];

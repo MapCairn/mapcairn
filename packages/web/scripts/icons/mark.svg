@@ -1,18 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <title>MapCairn</title>
-  <!--
-    Source of truth for the MapCairn mark. 512 unit grid.
-    Tile: accent 600, oklch(0.55 0.175 255) = #0d70d4. Glyph: white.
-    A location pin (teardrop, circular hole) sits slightly above the centre of a
-    folded map: a lighter middle panel between two parallel creases.
-  -->
-  <defs>
-    <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
-  </defs>
+  <!-- Light-theme cairn on the rounded #0d70d4 tile, for the 32, 48, 192 and 512 px icons. Geometry is the same as favicon.svg. Each stone rests on the one below, and a halo in the tile colour draws the thin line between them. -->
   <rect width="512" height="512" rx="112" fill="#0d70d4"/>
-  <g clip-path="url(#tile)">
-    <path d="M180 0H350L320 512H150Z" fill="#fff" fill-opacity=".1"/>
-    <path d="M180 0L150 512M350 0L320 512" stroke="#fff" stroke-opacity=".22" stroke-width="6" fill="none"/>
+  <g transform="translate(256 256) scale(1.1) translate(-258 -323)" stroke-linejoin="round">
+    <g>
+      <polygon fill="#0d70d4" stroke="#0d70d4" stroke-width="32" points="80,430 96,384 150,368 330,376 410,372 436,420 410,452 110,456"/>
+      <polygon fill="#fff" stroke="#fff" stroke-width="18" points="80,430 96,384 150,368 330,376 410,372 436,420 410,452 110,456"/>
+    </g>
+    <g>
+      <polygon fill="#0d70d4" stroke="#0d70d4" stroke-width="32" points="206,350 192,306 230,274 322,258 378,274 396,316 380,352"/>
+      <polygon fill="#fff" stroke="#fff" stroke-width="18" points="206,350 192,306 230,274 322,258 378,274 396,316 380,352"/>
+    </g>
+    <g transform="translate(20 14)">
+      <polygon fill="#0d70d4" stroke="#0d70d4" stroke-width="32" points="166,238 152,208 184,182 290,176 318,200 310,238"/>
+      <polygon fill="#fff" stroke="#fff" stroke-width="18" points="166,238 152,208 184,182 290,176 318,200 310,238"/>
+    </g>
   </g>
-  <path fill="#fff" fill-rule="evenodd" d="M256 394L350 274.9A119.6 119.6 0 1 0 162 274.9ZM302 200.8A46 46 0 1 1 210 200.8A46 46 0 1 1 302 200.8Z"/>
 </svg>
