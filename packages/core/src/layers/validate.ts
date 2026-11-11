@@ -1,5 +1,5 @@
 import { isIsoDate } from "./controls";
-import { MINUTES_PER_DAY, slotTime } from "./dateTime";
+import { MAX_MINUTES_AGO, MINUTES_PER_DAY, slotTime } from "./dateTime";
 import type { LayerDefinition } from "./definition";
 import { isCategoricalSlot } from "./palette";
 import { parseTemplate } from "./template";
@@ -112,18 +112,26 @@ function isStep(value: unknown): value is number {
   );
 }
 
-/** Whether a bound is a slot on the step or a whole number of minutes ago. */
+/** Whether a bound is a slot on the step or a whole number of minutes ago, up to about a hundred years. */
 function isTimeBound(value: unknown, step: number): boolean {
   if (isObject(value)) {
     const { minutesAgo } = value;
     return (
       typeof minutesAgo === "number" &&
       Number.isInteger(minutesAgo) &&
-      minutesAgo >= 0
+      minutesAgo >= 0 &&
+      minutesAgo <= MAX_MINUTES_AGO
     );
   }
   const time = slotTime(value);
   return time !== null && (time / 60_000) % step === 0;
+}
+
+/** A relative bound's minutes, or null for a fixed one. */
+function minutesAgo(bound: unknown): number | null {
+  return isObject(bound) && typeof bound.minutesAgo === "number"
+    ? bound.minutesAgo
+    : null;
 }
 
 function checkDateTime(problems: Problems, control: Json, path: string): void {
@@ -146,8 +154,15 @@ function checkDateTime(problems: Problems, control: Json, path: string): void {
   const [min, max, fallback] = [control.min, control.max, control.default].map(
     slotTime,
   );
-  if (min != null && max != null && min > max) {
+  const [minAgo, maxAgo] = [control.min, control.max].map(minutesAgo);
+  if (
+    (min != null && max != null && min > max) ||
+    (minAgo != null && maxAgo != null && minAgo < maxAgo)
+  ) {
     problems.add(path, "min is after max");
+  }
+  if (minAgo != null && max != null) {
+    problems.add(path, "min would pass max as time goes on");
   }
   const belowMin = min != null && fallback != null && fallback < min;
   const aboveMax = max != null && fallback != null && fallback > max;

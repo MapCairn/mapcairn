@@ -454,7 +454,9 @@ export const SAMPLE_TILE_LAYER: TileLayerDefinition = {
 
 /**
  * A raster overlay named by half hour, with a date and time control whose
- * newest slot is six hours back, and an opacity control.
+ * newest slot is six hours back, and an opacity control. It is kept out of
+ * {@link SAMPLE_LAYERS}, because suites that walk every sample layer expect
+ * fixed defaults and counts, while this one's newest slot moves with `now`.
  */
 export const SAMPLE_TIME_LAYER: TileLayerDefinition = {
   id: "sample-rain",

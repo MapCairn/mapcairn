@@ -9,6 +9,11 @@ import type { DateTimeBound, DateTimeControlDefinition } from "./definition";
 const MINUTE_MS = 60_000;
 /** Minutes in a day: a control's step must divide it. */
 export const MINUTES_PER_DAY = 1440;
+/**
+ * The furthest back a relative bound may reach, about a hundred years in
+ * minutes, so a slot is always a date `Date` can write.
+ */
+export const MAX_MINUTES_AGO = 52_596_000;
 const SLOT = /^(\d{4}-\d{2}-\d{2})t(\d{2})(\d{2})$/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -80,12 +85,31 @@ export function dateTimeRange(
   };
 }
 
-/** The control's default slot at `now`. */
+/** Rounds a time down to its slot and moves it inside the control's bounds at `now`. */
+function clampSlot(
+  control: DateTimeControlDefinition,
+  time: number,
+  now: number,
+): string {
+  const min = boundTime(control.min, control.stepMinutes, now);
+  const max = boundTime(control.max, control.stepMinutes, now);
+  const slot = floorToStep(time, control.stepMinutes);
+  return slotValue(Math.min(Math.max(slot, min), max));
+}
+
+/**
+ * The control's default slot at `now`, kept inside its bounds, since a
+ * relative default can pass a fixed bound as time goes on.
+ */
 export function defaultSlot(
   control: DateTimeControlDefinition,
   now: number,
 ): string {
-  return slotValue(boundTime(control.default, control.stepMinutes, now));
+  return clampSlot(
+    control,
+    boundTime(control.default, control.stepMinutes, now),
+    now,
+  );
 }
 
 /**
@@ -98,13 +122,7 @@ export function resolveSlot(
   now: number,
 ): string | undefined {
   const time = slotTime(value);
-  if (time === null) {
-    return undefined;
-  }
-  const min = boundTime(control.min, control.stepMinutes, now);
-  const max = boundTime(control.max, control.stepMinutes, now);
-  const slot = floorToStep(time, control.stepMinutes);
-  return slotValue(Math.min(Math.max(slot, min), max));
+  return time === null ? undefined : clampSlot(control, time, now);
 }
 
 /** One slot a day offers, with its start time as the label, such as `14:30`. */

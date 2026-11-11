@@ -327,6 +327,38 @@ describe("validateLayerDefinition", () => {
       "controls[0].default:",
     ],
     [
+      "a relative time range that is backwards",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        Object.assign((d.controls as Json[])[0], {
+          min: { minutesAgo: 60 },
+          max: { minutesAgo: 120 },
+          default: { minutesAgo: 120 },
+        });
+      },
+      "controls[0]: min is after max",
+    ],
+    [
+      "a relative first time with a fixed newest time",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        Object.assign((d.controls as Json[])[0], {
+          min: { minutesAgo: 600 },
+          max: "2026-01-01t0000",
+          default: "2026-01-01t0000",
+        });
+      },
+      "controls[0]: min would pass max",
+    ],
+    [
+      "a relative time over a hundred years",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[0].default = { minutesAgo: 1e15 };
+      },
+      "controls[0].default:",
+    ],
+    [
       "a fixed time range that is backwards",
       SAMPLE_TIME_LAYER,
       (d) => {

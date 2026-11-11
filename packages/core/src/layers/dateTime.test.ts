@@ -107,6 +107,18 @@ describe("resolveControlValues with a date and time", () => {
     expect(time("1999-12-31t2330")).toBe("2000-06-01t0000");
   });
 
+  it("keeps a relative default inside fixed bounds", () => {
+    const old: DateTimeControlDefinition = {
+      ...control,
+      max: "2020-01-01t1200",
+    };
+    const layer = { ...SAMPLE_TIME_LAYER, controls: [old] };
+    expect(defaultControlValues(layer, NOW).time).toBe("2020-01-01t1200");
+    expect(resolveControlValues(layer, { time: "noon" }, NOW).time).toBe(
+      "2020-01-01t1200",
+    );
+  });
+
   it("replaces an unreadable value with the default", () => {
     for (const value of ["2026-11-11", "noon", "2026-02-30t1200"]) {
       expect(time(value)).toBe("2026-11-11t1400");
