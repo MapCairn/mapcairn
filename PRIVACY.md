@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 2026-11-11_
+_Last updated: 2026-11-12_
 
 _This mirrors the policy on the site at `/privacy`
 (`packages/web/src/app/PrivacyPage.tsx`). Keep both in sync when either
@@ -18,9 +18,10 @@ device instead, as described below.
 
 Your browser's `localStorage` keeps your settings: your light or dark theme
 (under the key `mapcairn:theme`), your units, whether the zoom buttons
-show, whether Save data is on, your chosen basemap, where the map was last
-left, and whether you have answered the first-visit tour (a version number
-under `mapcairn:tourSeen`). The other keys start with `mapcairn:`. The tour
+show, whether Save data is on, whether the map is flat or a globe, your chosen
+basemap, where the map was last left, and whether you have answered the
+first-visit tour (a version number under `mapcairn:tourSeen`). The other keys
+start with `mapcairn:`. The tour
 itself sends nothing; a layer you turn on during it loads from its provider as
 described below. These stay on your device and are
 never sent to a server. Where your browser reports a data saver or a very slow

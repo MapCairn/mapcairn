@@ -7,7 +7,7 @@ import * as styles from "./PrivacyPage.css";
  * ISO date this policy's content was last reviewed for accuracy. The root
  * `PRIVACY.md` states the same date, and a test keeps the two equal.
  */
-export const LAST_UPDATED = "2026-11-11";
+export const LAST_UPDATED = "2026-11-12";
 
 /** The page's title, shared with the route's `<title>` so the two cannot drift apart. */
 export const PRIVACY_POLICY_TITLE = "Privacy policy";
@@ -42,15 +42,15 @@ export function PrivacyPage() {
           Your browser's <code>localStorage</code> keeps your settings: your
           light or dark theme (under the key <code>{THEME_STORAGE_KEY}</code>),
           your units, whether the zoom buttons show, whether Save data is on,
-          your chosen basemap, where the map was last left, and whether you have
-          answered the first-visit tour (a version number under{" "}
-          <code>mapcairn:tourSeen</code>). The other keys start with{" "}
-          <code>mapcairn:</code>. The tour itself sends nothing; a layer you
-          turn on during it loads from its provider as described below. These
-          stay on your device and are never sent to a server. Where your browser
-          reports a data saver or a very slow connection, the page reads that
-          locally to choose the default for Save data. Nothing about it is sent
-          anywhere.
+          whether the map is flat or a globe, your chosen basemap, where the map
+          was last left, and whether you have answered the first-visit tour (a
+          version number under <code>mapcairn:tourSeen</code>). The other keys
+          start with <code>mapcairn:</code>. The tour itself sends nothing; a
+          layer you turn on during it loads from its provider as described
+          below. These stay on your device and are never sent to a server. Where
+          your browser reports a data saver or a very slow connection, the page
+          reads that locally to choose the default for Save data. Nothing about
+          it is sent anywhere.
         </p>
 
         <h2 className={styles.sectionTitle}>Analytics</h2>
