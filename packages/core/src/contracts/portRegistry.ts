@@ -57,6 +57,7 @@ export type PortName = (typeof PORT_NAMES)[number];
  * ports, and a host adds these when it has an adapter.
  */
 export const OPTIONAL_PORT_NAMES = [
+  "fileOpener",
   "routing",
 ] as const satisfies readonly PortName[];
 

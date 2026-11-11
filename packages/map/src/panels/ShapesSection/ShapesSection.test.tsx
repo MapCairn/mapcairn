@@ -219,6 +219,13 @@ describe("ShapesSection", () => {
     expect(fit).not.toHaveBeenCalled();
   });
 
+  it("has no Import control when the host offers no file opener", () => {
+    renderSection(createFakeServices({ fileOpener: undefined }));
+    expect(screen.queryByRole("heading", { name: "Import" })).toBeNull();
+    expect(screen.queryByTestId("shapes-import")).toBeNull();
+    expect(screen.getByTestId("shapes-export-csv")).toBeInTheDocument();
+  });
+
   it("imports without a map, as during start-up", async () => {
     const services = renderSection();
     fireEvent.click(screen.getByTestId("shapes-import"));

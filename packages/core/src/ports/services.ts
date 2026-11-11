@@ -24,8 +24,12 @@ export interface Services {
   readonly clipboard: ClipboardPort;
   /** Offers a file the ui built, such as exported shapes, as a download. */
   readonly fileSaver: FileSaver;
-  /** Asks the person for a file, such as shapes to import, and reads it in the browser. */
-  readonly fileOpener: FileOpener;
+  /**
+   * Asks the person for a file, such as shapes to import, and reads it in the
+   * browser. Optional: a host that supplies none gets no import, and the ui
+   * must not require it.
+   */
+  readonly fileOpener?: FileOpener;
   readonly url: UrlState;
   readonly theme: ThemeSource;
   readonly preferences: DevicePreferences;

@@ -50,8 +50,9 @@ export interface FakeServices extends Services {
  * The default `createMapAdapter` is {@link createFakeMapAdapterFactory}, and
  * each adapter it builds is recorded in `fakes.maps`.
  *
- * `routing` is optional on `Services`, but the fakes include it so a test can
- * script routes. To test the ui without it, pass `{ routing: undefined }`.
+ * `routing` and `fileOpener` are optional on `Services`, but the fakes include
+ * them so a test can script routes and files. To test the ui without one,
+ * pass it as `undefined`, for example `{ routing: undefined }`.
  */
 export function createFakeServices(
   overrides: Partial<Services> = {},

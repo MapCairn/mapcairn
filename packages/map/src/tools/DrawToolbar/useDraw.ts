@@ -179,7 +179,7 @@ export interface UseDraw {
    * Asks the person for a GeoJSON or CSV file and adds its shapes as one undo
    * step. Call it straight from a press, so the browser shows the picker.
    * @returns The box holding the shapes it added, for the map to fit, or
-   *   null when it added none.
+   *   null when it added none, including when the host has no file opener.
    */
   readonly importFile: () => Promise<Bounds | null>;
 }
@@ -706,6 +706,9 @@ export function useDraw({
   );
 
   const importFile = useCallback(async (): Promise<Bounds | null> => {
+    if (!fileOpener) {
+      return null;
+    }
     importAbort.current?.abort();
     const controller = new AbortController();
     importAbort.current = controller;

@@ -12,7 +12,7 @@ import { type Ref, useContext } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { MapContext } from "../../host";
 import { fitPadding } from "../../layers/reveal";
-import { useSettings } from "../../services";
+import { useFileOpener, useSettings } from "../../services";
 import type { DrawFeedback, UseDraw } from "../../tools/DrawToolbar";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -77,7 +77,8 @@ function useFitToImport(): (bounds: Bounds) => void {
 /**
  * The shapes the person has drawn: a list where each row selects a shape (so
  * it can be edited with the keyboard from the draw tool), buttons to delete
- * the selected shape or all of them, an import from a GeoJSON or CSV file,
+ * the selected shape or all of them, an import from a GeoJSON or CSV file
+ * (when the host supplies a file opener),
  * and the export buttons. Shapes are saved to a file or into a link only when
  * a button is pressed, a file is read only on this device, and the note says
  * so. The map fits to what an import added.
@@ -91,6 +92,7 @@ export function ShapesSection({
   const { shapes, selection, feedback, importFeedback } = draw;
   const subLevel = (headingLevel + 1) as HeadingLevel;
   const fitToImport = useFitToImport();
+  const canImport = useFileOpener() !== undefined;
   const importFile = () => {
     // Called straight from the press, so the browser shows the picker.
     void draw.importFile().then((bounds) => {
@@ -148,20 +150,22 @@ export function ShapesSection({
           Delete all shapes
         </Button>
       </div>
-      <div className={subsection}>
-        <Subheading level={subLevel}>Import</Subheading>
-        <div className={actions}>
-          <Button
-            variant="secondary"
-            icon={FileUp}
-            data-testid="shapes-import"
-            onClick={importFile}
-          >
-            Import GeoJSON or CSV
-          </Button>
+      {canImport ? (
+        <div className={subsection}>
+          <Subheading level={subLevel}>Import</Subheading>
+          <div className={actions}>
+            <Button
+              variant="secondary"
+              icon={FileUp}
+              data-testid="shapes-import"
+              onClick={importFile}
+            >
+              Import GeoJSON or CSV
+            </Button>
+          </div>
+          <Feedback feedback={importFeedback} testId="shapes-import-feedback" />
         </div>
-        <Feedback feedback={importFeedback} testId="shapes-import-feedback" />
-      </div>
+      ) : null}
       <div className={subsection}>
         <Subheading level={subLevel}>Export</Subheading>
         <div className={actions}>

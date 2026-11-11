@@ -733,6 +733,18 @@ describe("useDraw", () => {
       );
     });
 
+    it("does nothing without a file opener", async () => {
+      const rig = await setup({
+        services: createFakeServices({ fileOpener: undefined }),
+      });
+      let bounds: unknown;
+      await act(async () => {
+        bounds = await rig.result.current.importFile();
+      });
+      expect(bounds).toBeNull();
+      expect(rig.result.current.importFeedback).toBeNull();
+    });
+
     it("notes that a link carries at most 50 shapes", async () => {
       const rig = await setup();
       const coordinates = Array.from({ length: 51 }, (_, index) => [

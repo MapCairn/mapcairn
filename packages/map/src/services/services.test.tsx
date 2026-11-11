@@ -84,6 +84,15 @@ describe("ServicesProvider", () => {
       renderHook(() => useRoutingProvider(), { wrapper }).result.current,
     ).toBeUndefined();
   });
+
+  it("gives no file opener when the host supplies none", () => {
+    const { wrapper } = wrapperFor(
+      createFakeServices({ fileOpener: undefined }),
+    );
+    expect(
+      renderHook(() => useFileOpener(), { wrapper }).result.current,
+    ).toBeUndefined();
+  });
 });
 
 describe("useSettings", () => {
