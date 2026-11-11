@@ -8,6 +8,7 @@ import {
   MAX_IMPORT_SHAPES,
   parseShapeFile,
   type ShapeImport,
+  shapeInputBounds,
 } from "./import";
 import type { DrawShapeInput } from "./reducer";
 import type { DrawShape } from "./types";
@@ -565,5 +566,22 @@ describe("export then import", () => {
     expect(shapesToGeoJson(read.map(finished))).toEqual(
       shapesToGeoJson(shapes),
     );
+  });
+});
+
+describe("shapeInputBounds", () => {
+  it("holds every vertex, and the whole of a circle", () => {
+    const bounds = shapeInputBounds([
+      { kind: "point", vertices: [p(1, 2)] },
+      { kind: "circle", vertices: [p(10, 0)], radiusMetres: 111_195 },
+    ]);
+    expect(bounds?.south).toBeCloseTo(-1, 3);
+    expect(bounds?.north).toBeCloseTo(2, 6);
+    expect(bounds?.west).toBeCloseTo(1, 6);
+    expect(bounds?.east).toBeCloseTo(11, 3);
+  });
+
+  it("is undefined with nothing to hold", () => {
+    expect(shapeInputBounds([])).toBeUndefined();
   });
 });

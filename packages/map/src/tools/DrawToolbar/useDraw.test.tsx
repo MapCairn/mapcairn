@@ -582,6 +582,185 @@ describe("useDraw", () => {
     });
   });
 
+  describe("import", () => {
+    const FILE = {
+      name: "shapes.geojson",
+      text: JSON.stringify({
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "Point", coordinates: [2.35, 48.85] },
+          },
+          {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: [[2.35, 48.85]] },
+          },
+        ],
+      }),
+    };
+
+    /** Starts an import, lets the person choose `file`, and returns what it gave. */
+    async function importFile(
+      rig: Rig,
+      file: { name: string; text: string } | null,
+    ) {
+      let done: Promise<unknown> = Promise.resolve();
+      act(() => {
+        done = rig.result.current.importFile();
+      });
+      await act(async () => {
+        if (file) {
+          rig.services.fakes.fileOpener.choose(file);
+        } else {
+          rig.services.fakes.fileOpener.cancel();
+        }
+        await done;
+      });
+      return done;
+    }
+
+    const assertive = () =>
+      screen.getByTestId("live-region-assertive").textContent;
+
+    it("opens the picker for GeoJSON and CSV within the size cap, and does nothing when cancelled", async () => {
+      const rig = await setup();
+      expect(await importFile(rig, null)).toBeNull();
+      const [options] = rig.services.fakes.fileOpener.opens;
+      expect(options?.accept).toEqual(
+        expect.arrayContaining([".geojson", ".json", ".csv"]),
+      );
+      expect(options?.maxBytes).toBe(1_000_000);
+      expect(rig.result.current.shapes).toEqual([]);
+      expect(rig.result.current.importFeedback).toBeNull();
+    });
+
+    it("adds the shapes, selects the first, says what the file held and gives their bounds", async () => {
+      const rig = await setup();
+      addAll(rig, TRIANGLE);
+      act(() => rig.result.current.finish());
+      const bounds = await importFile(rig, FILE);
+      expect(bounds).toEqual({
+        south: 48.85,
+        west: 2.35,
+        north: 48.85,
+        east: 2.35,
+      });
+      expect(rig.result.current.shapes.map((shape) => shape.label)).toEqual([
+        "Polygon 1",
+        "Point 1",
+      ]);
+      expect(rig.result.current.selected?.label).toBe("Point 1");
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "success",
+        text: "1 shape imported. 1 skipped: 1 with too few points.",
+      });
+      await advance(DRAW_ANNOUNCE_DELAY_MS);
+      expect(polite()).toBe(
+        "1 shape imported. 1 skipped: 1 with too few points.",
+      );
+      act(() => rig.result.current.undo());
+      expect(rig.result.current.shapes).toHaveLength(1);
+    });
+
+    it("keeps the result through its own change of shapes, and clears it on the next", async () => {
+      const rig = await setup();
+      addAll(rig, TRIANGLE);
+      act(() => rig.result.current.finish());
+      await act(async () => {
+        await rig.result.current.exportCsv();
+      });
+      await importFile(rig, FILE);
+      expect(rig.result.current.importFeedback).not.toBeNull();
+      expect(rig.result.current.feedback).toBeNull();
+      act(() => rig.result.current.clear());
+      expect(rig.result.current.importFeedback).toBeNull();
+    });
+
+    it("says why a file gave no shapes, assertively", async () => {
+      const rig = await setup();
+      expect(
+        await importFile(rig, { name: "a.txt", text: "hello" }),
+      ).toBeNull();
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "error",
+        text: "This is not GeoJSON or a CSV of shapes from this map. Choose a .geojson, .json or .csv file.",
+      });
+      await advance(DRAW_ANNOUNCE_DELAY_MS);
+      expect(assertive()).toContain("This is not GeoJSON");
+      await importFile(rig, {
+        name: "a.geojson",
+        text: '{"type":"FeatureCollection","features":[]}',
+      });
+      expect(rig.result.current.importFeedback?.text).toBe(
+        "The file holds no shapes.",
+      );
+    });
+
+    it("says when a file is too large, cannot be read, or cannot be opened at all", async () => {
+      const rig = await setup();
+      await importFile(rig, { name: "big.csv", text: "x".repeat(1_000_001) });
+      expect(rig.result.current.importFeedback?.text).toBe(
+        "The file is larger than 1 MB. Split it into smaller files.",
+      );
+      rig.services.fakes.fileOpener.failWith("unreadable");
+      await importFile(rig, FILE);
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "error",
+        text: "The file could not be read. Choose it again, or another file.",
+      });
+      rig.services.fakes.fileOpener.failWith("unsupported");
+      await act(async () => {
+        await rig.result.current.importFile();
+      });
+      expect(rig.result.current.importFeedback?.text).toBe(
+        "This browser cannot open files here.",
+      );
+    });
+
+    it("treats an opener that breaks its contract as a file that cannot be read", async () => {
+      const services = createFakeServices({
+        fileOpener: { open: () => Promise.reject(new Error("Broken.")) },
+      });
+      const rig = await setup({ services });
+      await act(async () => {
+        await rig.result.current.importFile();
+      });
+      expect(rig.result.current.importFeedback?.text).toBe(
+        "The file could not be read. Choose it again, or another file.",
+      );
+    });
+
+    it("notes that a link carries at most 50 shapes", async () => {
+      const rig = await setup();
+      const coordinates = Array.from({ length: 51 }, (_, index) => [
+        index / 1000,
+        1,
+      ]);
+      await importFile(rig, {
+        name: "points.geojson",
+        text: JSON.stringify({ type: "MultiPoint", coordinates }),
+      });
+      expect(rig.result.current.importFeedback?.text).toBe(
+        "51 shapes imported. A link carries at most 50 shapes, so download a file to share them all.",
+      );
+    });
+
+    it("cancels a waiting import when another starts", async () => {
+      const rig = await setup();
+      let first: Promise<unknown> = Promise.resolve();
+      act(() => {
+        first = rig.result.current.importFile();
+      });
+      const second = await importFile(rig, FILE);
+      expect(await first).toBeNull();
+      expect(second).not.toBeNull();
+      expect(rig.result.current.shapes).toHaveLength(1);
+    });
+  });
+
   describe("sharing", () => {
     it("copies a link that carries the shapes and the current address state", async () => {
       const services = createFakeServices();

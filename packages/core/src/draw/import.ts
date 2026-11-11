@@ -1,8 +1,22 @@
-import type { LatLng } from "../ports/geometry";
+import type { Bounds, LatLng } from "../ports/geometry";
+import { boundsOfPoints } from "../spatial/boundsOfPoints";
 import { SHAPES_CSV_HEADER } from "./export";
 import type { DrawShapeInput } from "./reducer";
-import { validateShape } from "./shape";
+import { shapeRing, validateShape } from "./shape";
 import type { DrawIssue } from "./types";
+
+/**
+ * The file types the import offers in the picker: GeoJSON and CSV, by
+ * extension and by media type.
+ */
+export const SHAPE_FILE_TYPES: readonly string[] = [
+  ".geojson",
+  ".json",
+  ".csv",
+  "application/geo+json",
+  "application/json",
+  "text/csv",
+];
 
 /** The largest file the draw tool imports: 1 MB. Longer text is refused before it is read. */
 export const MAX_IMPORT_BYTES = 1_000_000;
@@ -594,4 +608,20 @@ export function parseShapeFile(text: string): ShapeImport {
     skipped: collector.skipped,
     holesDropped: collector.holesDropped,
   };
+}
+
+/**
+ * The box that holds every shape in `inputs`: each vertex, and the whole
+ * of a circle's outline. Used to fit the map to what was imported.
+ * @returns `undefined` when there is nothing to hold.
+ */
+export function shapeInputBounds(
+  inputs: readonly DrawShapeInput[],
+): Bounds | undefined {
+  const points = inputs.flatMap((input) =>
+    input.kind === "circle"
+      ? shapeRing({ ...input, id: "bounds", label: "", done: true })
+      : input.vertices,
+  );
+  return boundsOfPoints(points);
 }
