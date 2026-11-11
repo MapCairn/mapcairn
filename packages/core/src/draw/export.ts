@@ -104,20 +104,36 @@ export function shapesToGeoJson(
   return { type: "FeatureCollection", features };
 }
 
-const CSV_HEADER = "id,type,area_m2,length_m,geometry";
+/** The header row of the CSV the draw tool writes, and reads back. */
+export const SHAPES_CSV_HEADER =
+  "id,type,area_m2,length_m,geometry,radius_m,centre_lng,centre_lat";
 
 function quote(text: string): string {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
+/** A circle's radius and centre, or three empty cells for any other shape. */
+function circleCells(shape: DrawShape): string[] {
+  if (shape.kind !== "circle") {
+    return ["", "", ""];
+  }
+  const [lng, lat] = position(shape.vertices[0] as LatLng);
+  return [
+    String(round(shape.radiusMetres ?? 0, MEASURE_DECIMALS)),
+    String(lng),
+    String(lat),
+  ];
+}
+
 /**
- * The shapes as CSV text: `id`, `type`, `area_m2`, `length_m` and the
- * GeoJSON geometry as quoted text. Rows end with CRLF between them, the
- * measures are rounded to two decimals and are empty where they do not
- * apply. Only {@link exportableShapes} are included.
+ * The shapes as CSV text: `id`, `type`, `area_m2`, `length_m`, the GeoJSON
+ * geometry as quoted text, and for a circle its `radius_m`, `centre_lng`
+ * and `centre_lat`, so a circle can be read back as a circle. Rows end with
+ * CRLF between them, the measures are rounded to two decimals and are empty
+ * where they do not apply. Only {@link exportableShapes} are included.
  */
 export function shapesToCsv(shapes: readonly DrawShape[]): string {
-  const rows = [CSV_HEADER];
+  const rows = [SHAPES_CSV_HEADER];
   for (const shape of exportableShapes(shapes)) {
     const geometry = shapeGeometry(shape);
     if (!geometry) {
@@ -133,6 +149,7 @@ export function shapesToCsv(shapes: readonly DrawShape[]): string {
           ? ""
           : String(round(lengthMetres, MEASURE_DECIMALS)),
         quote(JSON.stringify(geometry)),
+        ...circleCells(shape),
       ].join(","),
     );
   }
