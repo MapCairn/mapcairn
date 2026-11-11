@@ -42,7 +42,8 @@ export interface MapChromeProps {
    * The first-visit tour card. It sits in the free space at the top of the
    * map: under the search pill on a narrow screen, and between the search
    * column and the end stack in the panel layout. It hides, like the bottom
-   * slots, while the sheet is at full.
+   * slots, while the sheet is at full, and while the bottom row, lifted above
+   * the sheet or a toolbar, would run into it.
    */
   readonly tour?: ReactNode;
   /**
@@ -80,10 +81,13 @@ interface Measurements {
   readonly bottomInset: number;
   /** Top of the bottom-centre slot before any lift, or null while it is empty. */
   readonly bottomCentreTop: number | null;
+  /** Bottom edge of the tour card's slot, or null while it is empty. */
+  readonly tourBottom: number | null;
 }
 
 type SlotName =
   | "top-start"
+  | "tour"
   | "end-stack"
   | "bottom-start"
   | "bottom-centre"
@@ -111,6 +115,7 @@ function measure(
   const bottomStart = box(slots, "bottom-start");
   const bottomEnd = box(slots, "bottom-end");
   const bottomCentre = box(slots, "bottom-centre");
+  const tour = box(slots, "tour");
   const restingBottom = height - INSET_PX;
   const shown = [bottomStart, bottomEnd].filter(
     (slot): slot is NonNullable<typeof slot> =>
@@ -133,6 +138,7 @@ function measure(
     bottomInset: Math.max(0, height - rowBottom),
     bottomCentreTop:
       bottomCentre && bottomCentre.height > 0 ? bottomCentre.top : null,
+    tourBottom: tour && tour.height > 0 ? tour.top + tour.height : null,
   };
 }
 
@@ -177,7 +183,7 @@ function sameMeasurements(a: Measurements | null, b: Measurements): boolean {
  * toolbar.
  *
  * @remarks
- * - DOM order is reading order: top-start, end-stack, the sheet, the map
+ * - DOM order is reading order: top-start, tour, end-stack, the sheet, the map
  *   (`main`), then bottom-start, bottom-centre and bottom-end. The app renders
  *   the skip link before this component and the page's h1 itself.
  * - While `modal`, every group except the sheet gets `inert`. That is one
@@ -256,6 +262,7 @@ export function MapChrome({
     };
     return {
       "top-start": make("top-start"),
+      tour: make("tour"),
       "end-stack": make("end-stack"),
       "bottom-start": make("bottom-start"),
       "bottom-centre": make("bottom-centre"),
@@ -334,6 +341,15 @@ export function MapChrome({
   const room = measurements
     ? verticalRoom(measurements, bottom.bottomEndTranslateY)
     : null;
+  // The tour card does not shrink or scroll, so when the bottom row (lifted
+  // above the sheet or a toolbar) comes up to it, it gives way, as it does at
+  // the full detent, and returns when there is room. Only vertical edges are
+  // compared: in the panel layout the row can sit beside the card, so the card
+  // may hide where it would have fitted, which is accepted for the simpler rule.
+  const tourCrowded =
+    measurements?.tourBottom != null &&
+    measurements.tourBottom + GAP_PX >
+      measurements.bottomRowTop + bottom.bottomEndTranslateY;
   const endStackMaxHeight = room?.endStackMaxHeight ?? null;
   const bottomEndRoom = room?.bottomEndRoom ?? null;
   const bottomEndBesideRoom = room?.bottomEndBesideRoom ?? null;
@@ -382,13 +398,15 @@ export function MapChrome({
     }),
     [layout, viewport, finePointer, panelEdge],
   );
+  const tourHidden = modal || tourCrowded;
   const surfaceValue = useMemo<ChromeSurfaceValue>(
     () => ({
       publishSheetDetent,
       publishPanelEdge,
       endStackMaxHeight,
+      tourHidden,
     }),
-    [endStackMaxHeight],
+    [endStackMaxHeight, tourHidden],
   );
 
   const slot = (
@@ -421,10 +439,12 @@ export function MapChrome({
           {slot("top-start", styles.topStart, topStart)}
           {tour == null ? null : (
             <div
+              ref={slotRefs.tour}
               data-chrome="tour"
               data-side={tourSide}
+              data-crowded={tourCrowded ? "true" : "false"}
               className={styles.tour}
-              inert={modal}
+              inert={tourHidden}
             >
               {tour}
             </div>

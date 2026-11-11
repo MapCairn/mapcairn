@@ -38,6 +38,7 @@ function surface(endStackMaxHeight: number | null): ChromeSurfaceValue {
     publishSheetDetent: () => {},
     publishPanelEdge: () => {},
     endStackMaxHeight,
+    tourHidden: false,
   };
 }
 
