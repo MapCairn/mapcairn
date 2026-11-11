@@ -132,6 +132,33 @@ export const dateInput = style({
   },
 });
 
+/** A date and time control: a fieldset with no frame of its own. */
+export const timeField = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xs,
+  minWidth: 0,
+  margin: 0,
+  padding: 0,
+  border: "none",
+});
+
+/** The date and time control's visible name, styled as every control label. */
+export const timeLegend = style({
+  padding: 0,
+  marginBlockEnd: tokens.space.xs,
+  color: tokens.color.textMuted,
+  fontWeight: tokens.type.weight.semibold,
+  ...small,
+});
+
+/** The date and the time side by side, wrapping on a narrow sheet. */
+export const timeInputs = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: tokens.space.sm,
+});
+
 /** The legend: one entry per colour, each with its words. */
 export const legend = style({
   display: "flex",

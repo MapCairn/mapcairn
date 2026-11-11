@@ -1,4 +1,5 @@
 import type { ControlValues } from "../ports/layers";
+import { defaultSlot, resolveSlot, slotInstant } from "./dateTime";
 import type {
   DateBound,
   DateControlDefinition,
@@ -33,6 +34,8 @@ function defaultValue(control: LayerControlDefinition, now: number): string {
   switch (control.kind) {
     case "date":
       return resolveDateBound(control.default, now);
+    case "datetime":
+      return defaultSlot(control, now);
     default:
       return String(control.default);
   }
@@ -69,6 +72,8 @@ function resolveValue(
       return value === "true" || value === "false" ? value : undefined;
     case "date":
       return resolveDate(control, value, now);
+    case "datetime":
+      return resolveSlot(control, value, now);
     case "range": {
       const number = Number(value);
       return value.trim() !== "" &&
@@ -103,7 +108,8 @@ export function defaultControlValues(
 /**
  * A full set of control values from partial, untrusted ones (a permalink, a
  * change in the ui): values a control accepts are kept, a date outside its
- * bounds is moved to the nearest bound, anything else becomes the default,
+ * bounds is moved to the nearest bound (a date and time also
+ * rounded down to its step), anything else becomes the default,
  * and values for controls the layer lacks are dropped.
  */
 export function resolveControlValues(
@@ -135,7 +141,9 @@ export function isControlEnabled(
 }
 
 /**
- * The values a URL template can use: every control value plus each derived
+ * The values a URL template can use, from values already resolved with
+ * {@link resolveControlValues}: every control value (a date and time
+ * as its ISO instant, the form a provider names it by) plus each derived
  * variable, looked up in its table. A disabled control counts as its default
  * in a lookup, so a hidden choice never changes the request. A combination
  * missing from a table leaves its variable out, which validation prevents.
@@ -153,6 +161,12 @@ export function templateValues(
     ]),
   );
   const result: Record<string, string> = { ...values };
+  for (const control of definition.controls) {
+    const value = values[control.id];
+    if (control.kind === "datetime" && value !== undefined) {
+      result[control.id] = slotInstant(value);
+    }
+  }
   for (const variable of definition.variables ?? []) {
     const key = variable.from.map((id) => effective[id]).join("|");
     const value = variable.table[key];

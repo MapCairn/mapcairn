@@ -274,6 +274,16 @@ describe("layers in the hash", () => {
     });
   });
 
+  it("keeps a date and time value through a round trip", () => {
+    const hash =
+      "#layers=rainfall-half-hourly&rainfall-half-hourly.time=2026-11-11t1430";
+    const value = parseUrlHash(hash);
+    expect(value.layers?.controls["rainfall-half-hourly"]).toEqual({
+      time: "2026-11-11t1430",
+    });
+    expect(serialiseUrlHash(value)).toBe(hash);
+  });
+
   it("drops bad ids, duplicates, values for layers that are off and odd values", () => {
     expect(
       parseUrlHash(
