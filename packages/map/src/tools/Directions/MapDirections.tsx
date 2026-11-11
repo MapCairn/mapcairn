@@ -3,7 +3,7 @@ import { tokenValues } from "@mapcairn/theme";
 import { useEffect } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { useMap } from "../../host";
-import { fitPadding } from "../../layers/reveal";
+import { FIT_MAX_ZOOM, fitPadding } from "../../layers/reveal";
 import type { DirectionsOutcome } from "./useDirections";
 
 /** Map ids of what directions draws. Definition ids cannot contain a colon, so they never meet a layer's. */
@@ -12,9 +12,6 @@ export const ROUTE_CASING_LAYER_ID = ":route-casing";
 export const ROUTE_LAYER_ID = ":route";
 /** Map id of the travel-time area. */
 export const AREA_LAYER_ID = ":area";
-
-/** The widest a route fit zooms in, so a short route is not shown at street level. */
-export const ROUTE_FIT_MAX_ZOOM = 16;
 
 /** Width of the route line, in pixels, and of the white casing under it. */
 const ROUTE_WIDTH_PX = 5;
@@ -85,7 +82,7 @@ export function MapDirections({ result }: MapDirectionsProps) {
       return;
     }
     adapter.fitBounds(bounds, {
-      maxZoom: ROUTE_FIT_MAX_ZOOM,
+      maxZoom: FIT_MAX_ZOOM,
       padding: fitPadding({ layout, viewport, panelEdge }),
     });
   }, [adapter, result]);

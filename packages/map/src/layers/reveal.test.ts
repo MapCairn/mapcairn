@@ -2,6 +2,7 @@ import { computeDetentHeights } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import {
   coveredPadding,
+  FIT_MAX_ZOOM,
   fitPadding,
   freeCentre,
   REVEAL_CLEARANCE,
@@ -20,6 +21,12 @@ const DESKTOP: RevealGeometry = {
   viewport: { width: 1280, height: 720 },
   panelEdge: 412,
 };
+
+describe("FIT_MAX_ZOOM", () => {
+  it("keeps a fitted result at street level or wider", () => {
+    expect(FIT_MAX_ZOOM).toBe(16);
+  });
+});
 
 describe("fitPadding", () => {
   it("keeps room for the search pill and the end stack beyond what the panel covers", () => {

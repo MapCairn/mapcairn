@@ -26,6 +26,9 @@ export interface RevealGeometry {
 
 type Padding = NonNullable<MapFitOptions["padding"]>;
 
+/** The closest a fit to a result zooms, so a short route or a single point keeps its surroundings. */
+export const FIT_MAX_ZOOM = 16;
+
 /**
  * Room kept round a fitted result, in pixels: the search pill above it and the
  * end stack beside it are bigger than the plain margin, so nothing is drawn

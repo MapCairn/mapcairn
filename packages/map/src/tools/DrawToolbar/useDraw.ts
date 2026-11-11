@@ -22,6 +22,7 @@ import {
   formatShapeMeasure,
   initialDrawState,
   type LatLng,
+  MAX_DRAWING_SHAPES,
   MAX_IMPORT_BYTES,
   MAX_SHARE_SHAPES,
   type MapAdapter,
@@ -731,6 +732,16 @@ export function useDraw({
     const words = describeShapeImport(result);
     if (!result.ok || result.shapes.length === 0) {
       reportImport({ kind: "error", text: words });
+      return null;
+    }
+    if (
+      stateRef.current.shapes.length + result.shapes.length >
+      MAX_DRAWING_SHAPES
+    ) {
+      reportImport({
+        kind: "error",
+        text: describeShapeImport({ ok: false, refusal: "drawing-full" }),
+      });
       return null;
     }
     const total =

@@ -733,6 +733,29 @@ describe("useDraw", () => {
       );
     });
 
+    it("refuses, whole, an import that would pass 1,000 shapes", async () => {
+      const rig = await setup();
+      const points = (count: number) => ({
+        name: "points.geojson",
+        text: JSON.stringify({
+          type: "MultiPoint",
+          coordinates: Array.from({ length: count }, (_, index) => [
+            index / 1000,
+            1,
+          ]),
+        }),
+      });
+      await importFile(rig, points(500));
+      await importFile(rig, points(500));
+      expect(rig.result.current.shapes).toHaveLength(1000);
+      expect(await importFile(rig, points(1))).toBeNull();
+      expect(rig.result.current.shapes).toHaveLength(1000);
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "error",
+        text: "That would make more than 1,000 shapes. Delete some shapes first, or import a smaller file.",
+      });
+    });
+
     it("does nothing without a file opener", async () => {
       const rig = await setup({
         services: createFakeServices({ fileOpener: undefined }),

@@ -8,6 +8,7 @@ import {
   pluralise,
 } from "../units/measurement";
 import {
+  MAX_DRAWING_SHAPES,
   MAX_IMPORT_BYTES,
   MAX_IMPORT_POINTS,
   MAX_IMPORT_SHAPE_POINTS,
@@ -212,6 +213,7 @@ export function announceDrawEvent(
 const BYTES_PER_MEGABYTE = 1_000_000;
 
 const IMPORT_REFUSALS: Readonly<Record<ShapeImportRefusal, string>> = {
+  "drawing-full": `That would make more than ${formatNumber(MAX_DRAWING_SHAPES)} shapes. Delete some shapes first, or import a smaller file.`,
   empty: "The file is empty.",
   "too-large": `The file is larger than ${formatNumber(MAX_IMPORT_BYTES / BYTES_PER_MEGABYTE)} MB. Split it into smaller files.`,
   "too-deep":

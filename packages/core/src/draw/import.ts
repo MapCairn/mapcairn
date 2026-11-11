@@ -38,8 +38,15 @@ export const MAX_IMPORT_SHAPE_POINTS = 1_000;
 /** The most points one file may hold in all. */
 export const MAX_IMPORT_POINTS = 10_000;
 
-/** Why a whole file was refused. */
+/** The most shapes the drawing may hold. An import that would pass it is refused whole. */
+export const MAX_DRAWING_SHAPES = 1_000;
+
+/**
+ * Why a whole file was refused. `drawing-full` is the caller's, when the
+ * shapes would take the drawing past {@link MAX_DRAWING_SHAPES}.
+ */
 export type ShapeImportRefusal =
+  | "drawing-full"
   | "empty"
   | "too-large"
   | "too-deep"

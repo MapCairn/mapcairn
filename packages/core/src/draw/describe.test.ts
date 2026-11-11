@@ -299,6 +299,9 @@ describe("describeShapeImport", () => {
   });
 
   it("says why a file was refused and what to do", () => {
+    expect(describeShapeImport({ ok: false, refusal: "drawing-full" })).toBe(
+      "That would make more than 1,000 shapes. Delete some shapes first, or import a smaller file.",
+    );
     expect(describeShapeImport({ ok: false, refusal: "empty" })).toBe(
       "The file is empty.",
     );

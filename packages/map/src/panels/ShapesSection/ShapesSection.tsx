@@ -11,7 +11,7 @@ import {
 import { type Ref, useContext } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { MapContext } from "../../host";
-import { fitPadding } from "../../layers/reveal";
+import { FIT_MAX_ZOOM, fitPadding } from "../../layers/reveal";
 import { useFileOpener, useSettings } from "../../services";
 import type { DrawFeedback, UseDraw } from "../../tools/DrawToolbar";
 import { Button } from "../../ui/Button";
@@ -20,9 +20,6 @@ import { ListRow } from "../../ui/ListRow";
 import { type HeadingLevel, Section, Subheading } from "../Section";
 import { note, noteIcon, prose, subsection } from "../Section/Section.css";
 import { actions, list } from "./ShapesSection.css";
-
-/** The closest the map zooms to fit imported shapes, so a single point keeps its surroundings. */
-const IMPORT_FIT_MAX_ZOOM = 16;
 
 /** Props for {@link ShapesSection}. */
 export interface ShapesSectionProps {
@@ -68,7 +65,7 @@ function useFitToImport(): (bounds: Bounds) => void {
       return;
     }
     adapter.fitBounds(bounds, {
-      maxZoom: IMPORT_FIT_MAX_ZOOM,
+      maxZoom: FIT_MAX_ZOOM,
       padding: fitPadding({ layout, viewport, panelEdge }),
     });
   };

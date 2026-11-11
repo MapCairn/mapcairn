@@ -8,6 +8,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { testMapContext } from "../../chrome/MapChrome/chromeTestHarness";
 import { MapContext } from "../../host";
+import { FIT_MAX_ZOOM } from "../../layers/reveal";
 import { ServicesProvider } from "../../services";
 import { type UseDraw, useDraw } from "../../tools/DrawToolbar";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
@@ -201,7 +202,7 @@ describe("ShapesSection", () => {
     );
     expect(fit).toHaveBeenCalledWith(
       { south: 48.85, west: 2.35, north: 48.86, east: 2.36 },
-      expect.objectContaining({ maxZoom: 16 }),
+      expect.objectContaining({ maxZoom: FIT_MAX_ZOOM }),
     );
   });
 
