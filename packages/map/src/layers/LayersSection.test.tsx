@@ -1,5 +1,6 @@
 import {
   createFakeServices,
+  type DateTimeControlDefinition,
   FakeMapAdapter,
   type LayerDefinition,
   SAMPLE_ALERT_LAYER,
@@ -856,7 +857,7 @@ describe("LayersSection", () => {
         "Showing 06:00 to 06:30 UTC on 9 November 2026.",
       );
       expect(group).toHaveTextContent(
-        "Newest available: 06:00 UTC on 9 November 2026. Later times are not out yet.",
+        "Newest available: 06:00 UTC on 9 November 2026. Newer times may not be out yet, so they are not offered.",
       );
       expect(date).toHaveAccessibleDescription(/Showing 06:00 to 06:30 UTC/);
       expect(time).toHaveAccessibleDescription(
@@ -896,6 +897,40 @@ describe("LayersSection", () => {
       );
       fireEvent.change(date, { target: { value: "" } });
       expect(timeOf(layers)).toBe("2026-11-09t0600");
+    });
+
+    it("keeps a day being typed as a draft until it is one the provider has, and says nothing meanwhile", async () => {
+      const { time, date, layers } = open();
+      fireEvent.change(date, { target: { value: "2026-11-01" } });
+      fireEvent.change(time, { target: { value: "2026-11-01t2130" } });
+      fireEvent.focus(date);
+      // Typing a year digit by digit passes through years nobody means.
+      for (const draft of ["0002-11-05", "0020-11-05", "0202-11-05"]) {
+        fireEvent.change(date, { target: { value: draft } });
+        expect(date).toHaveValue(draft);
+        expect(timeOf(layers)).toBe("2026-11-01t2130");
+      }
+      fireEvent.change(date, { target: { value: "2025-11-05" } });
+      expect(timeOf(layers)).toBe("2025-11-05t2130");
+      fireEvent.change(date, { target: { value: "2029-11-05" } });
+      fireEvent.blur(date);
+      expect(date).toHaveValue("2025-11-05");
+      expect(timeOf(layers)).toBe("2025-11-05t2130");
+      expect(screen.getByTestId("live-region-polite")).not.toHaveTextContent(
+        "Time moved",
+      );
+    });
+
+    it("describes the inputs with the status alone when the control has no help line", () => {
+      const { description: _omitted, ...bare } = SAMPLE_TIME_LAYER
+        .controls[0] as DateTimeControlDefinition;
+      setup([{ ...SAMPLE_TIME_LAYER, controls: [bare] }]);
+      toggle("sample-rain", "Sample rain");
+      const group = screen.getByRole("group", { name: "Time shown" });
+      const time = within(group).getByRole("combobox", { name: "Time (UTC)" });
+      expect(time).toHaveAccessibleDescription(
+        "Showing 06:00 to 06:30 UTC on 9 November 2026. Newest available: 06:00 UTC on 9 November 2026. Newer times may not be out yet, so they are not offered.",
+      );
     });
 
     it("is disabled, not hidden, while its condition is not met", () => {
