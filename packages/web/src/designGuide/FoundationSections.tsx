@@ -1,6 +1,7 @@
 import { Icon } from "@mapcairn/map";
 import { tokenValues } from "@mapcairn/theme";
 import { Check, TriangleAlert } from "lucide-react";
+import { Brand } from "../app/Brand";
 import { APP_ICONS } from "./appIcons";
 import * as styles from "./DesignGuide.css";
 import { GuideSection } from "./GuideSection";
@@ -351,6 +352,21 @@ export function LayersSection() {
           </li>
         ))}
       </ol>
+    </GuideSection>
+  );
+}
+
+/** The brand lockup as the side menus show it, above the panel title. */
+export function BrandSection() {
+  return (
+    <GuideSection
+      id="brand"
+      title="Brand"
+      intro="The decorative mark and name at the top of the sheet and side panel, in a row above the title. The stones take the accent and the halo the map halo role, so it reads on the panel surface in both themes. The bottom sheet leaves the row out at its peek detent."
+    >
+      <div className={styles.brandRow}>
+        <Brand />
+      </div>
     </GuideSection>
   );
 }

@@ -120,7 +120,7 @@ export const surface = style({
 export const header = style({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) auto",
-  gridTemplateAreas: '"handle handle" "title close"',
+  gridTemplateAreas: '"handle handle" "brand brand" "title close"',
   alignItems: "center",
   columnGap: tokens.space.xs,
   paddingInline: `${tokens.space.md} ${tokens.space.xs}`,
@@ -167,6 +167,24 @@ export const grabber = style({
   height: tokens.space.xxs,
   borderRadius: tokens.radius.inner,
   backgroundColor: "currentColor",
+});
+
+/**
+ * The host's decorative brand, a small row above the title. It takes no
+ * room without a brand (an empty grid row has no height), and it is left out
+ * at the peek detent of the bottom sheet, which has no room for a row.
+ */
+export const brand = style({
+  gridArea: "brand",
+  display: "flex",
+  alignItems: "center",
+  gap: tokens.space.xs,
+  paddingBlockEnd: tokens.space.xs,
+  selectors: {
+    [`${surface}[data-layout="sheet"][data-detent="peek"] &`]: {
+      display: "none",
+    },
+  },
 });
 
 /** The title. Focus lands here when the surface opens. */

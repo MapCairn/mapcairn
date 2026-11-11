@@ -884,3 +884,41 @@ describe("Sheet server rendering", () => {
     expect(html).not.toMatch(/style=/);
   });
 });
+
+describe("Sheet brand", () => {
+  const brand = <svg data-testid="host-brand" />;
+
+  it("draws no brand row without a brand", () => {
+    mount(setup({}, { layout: "panel" }));
+    expect(screen.queryByTestId("sheet-brand")).toBeNull();
+  });
+
+  it("draws the host's brand in a decorative row above the title, in both layouts", () => {
+    for (const layout of ["panel", "sheet"] as const) {
+      const { unmount } = mount(setup({ brand }, { layout }));
+      const row = screen.getByTestId("sheet-brand");
+      expect(row).toContainElement(screen.getByTestId("host-brand"));
+      expect(row).toHaveAttribute("aria-hidden", "true");
+      expect(
+        row.compareDocumentPosition(screen.getByRole("heading")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it("leaves the accessible name to the title, with nothing to focus in the brand row", () => {
+    mount(setup({ brand }, { layout: "panel" }));
+    expect(
+      screen.getByRole("complementary", { name: "Map options" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("sheet-brand").querySelector("button, a, [tabindex]"),
+    ).toBeNull();
+  });
+
+  it("marks the detent on the surface, so the stylesheet can leave the row out at peek", () => {
+    mount(setup({ brand, detent: "peek" }));
+    expect(sheet()).toHaveAttribute("data-detent", "peek");
+  });
+});

@@ -102,6 +102,11 @@ export class MapPage {
   readonly drawHandles: Locator;
   readonly shapesSection: Locator;
 
+  /** The decorative brand row at the top of the sheet or side panel, with its mark and name. */
+  readonly sheetBrand: Locator;
+  readonly brandMark: Locator;
+  readonly brandName: Locator;
+
   readonly creditsButton: Locator;
   readonly creditsRegion: Locator;
 
@@ -217,6 +222,9 @@ export class MapPage {
     this.drawHandles = page.getByTestId("draw-handle");
     this.shapesSection = page.getByTestId("sheet-section-shapes");
 
+    this.sheetBrand = page.getByTestId("sheet-brand");
+    this.brandMark = page.getByTestId("brand-mark");
+    this.brandName = page.getByTestId("brand-name");
     this.creditsButton = page.getByRole("button", { name: "Map credits" });
     this.creditsRegion = page.getByRole("region", { name: "Map credits" });
 

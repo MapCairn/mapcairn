@@ -79,6 +79,13 @@ export interface SheetProps {
   readonly restoreFocus?: () => void;
   /** Sets `data-testid`. Defaults to the id. */
   readonly testId?: string;
+  /**
+   * A decorative brand (a host's mark and name) shown in a row above the
+   * title. It is `aria-hidden`, so the title stays the accessible name; pass
+   * nothing for no row. In the sheet layout the row is left out at the peek
+   * detent, where there is no room for it.
+   */
+  readonly brand?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -230,6 +237,7 @@ export function Sheet({
   onModalChange,
   restoreFocus,
   testId,
+  brand,
   children,
 }: SheetProps) {
   const { layout, viewport, bottomReserve, publishSheetTop } =
@@ -583,6 +591,15 @@ export function Sheet({
             <span className={styles.grabber} aria-hidden="true" />
           </button>
         ) : null}
+        {brand == null ? null : (
+          <div
+            aria-hidden="true"
+            className={styles.brand}
+            data-testid="sheet-brand"
+          >
+            {brand}
+          </div>
+        )}
         <h2 ref={titleRef} id={titleId} tabIndex={-1} className={styles.title}>
           {title}
         </h2>

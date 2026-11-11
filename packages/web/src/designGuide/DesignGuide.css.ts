@@ -425,6 +425,18 @@ export const layerItem = style({
   fontVariantNumeric: "tabular-nums",
 });
 
+/** The brand lockup on the panel surface, as the sheet draws it. */
+export const brandRow = style({
+  alignItems: "center",
+  display: "flex",
+  gap: tokens.space.xs,
+  width: "fit-content",
+  padding: tokens.space.md,
+  borderRadius: tokens.radius.control,
+  border: `1px solid ${tokens.color.hairline}`,
+  backgroundColor: tokens.color.surfaceRaised,
+});
+
 /** One component's demo, under its h3. */
 export const demo = style({
   display: "flex",

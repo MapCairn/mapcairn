@@ -27,6 +27,7 @@ import {
 } from "@mapcairn/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
 import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
+import { Brand } from "./Brand";
 import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
 import { bottomCentre } from "./MapBanners.css";
@@ -220,6 +221,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           detent={app.sheetDetent}
           onDetentChange={app.onSheetDetentChange}
           onModalChange={app.setSheetModal}
+          brand={<Brand />}
           onClose={() => closeExplicitly()}
           restoreFocus={() => {
             // A resumed measure toolbar takes focus as it mounts, so the

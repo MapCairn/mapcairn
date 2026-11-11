@@ -140,6 +140,20 @@ describe("DesignGuide", () => {
     ).toEqual([...tokenValues.zLayerOrder]);
   });
 
+  it("shows the brand mark and name, the mark decorative", async () => {
+    await renderGuide();
+    const brand = screen.getByRole("region", { name: "Brand" });
+    expect(within(brand).getAllByTestId("brand-mark").length).toBeGreaterThan(
+      0,
+    );
+    expect(within(brand).getAllByTestId("brand-name").length).toBeGreaterThan(
+      0,
+    );
+    for (const mark of within(brand).getAllByTestId("brand-mark")) {
+      expect(mark).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
   it("draws every icon the app uses, with its name", async () => {
     await renderGuide();
     const icons = screen.getByRole("region", { name: "Icons" });

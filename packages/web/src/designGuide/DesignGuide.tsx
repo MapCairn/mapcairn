@@ -5,6 +5,7 @@ import { ComponentsSection } from "./ComponentSections";
 import * as styles from "./DesignGuide.css";
 import { FontSection } from "./FontSection";
 import {
+  BrandSection,
   ColourSection,
   ContrastSection,
   ElevationSection,
@@ -41,6 +42,7 @@ export const GUIDE_SECTIONS = [
   { id: "elevation", title: "Elevation" },
   { id: "motion", title: "Motion" },
   { id: "layers", title: "Z layers" },
+  { id: "brand", title: "Brand" },
   { id: "icons", title: "Icons" },
   { id: "components", title: "Components" },
 ] as const;
@@ -134,6 +136,7 @@ export function DesignGuide({ checkFont }: DesignGuideProps) {
         <ElevationSection />
         <MotionSection />
         <LayersSection />
+        <BrandSection />
         <IconsSection />
         <ComponentsSection />
       </main>
