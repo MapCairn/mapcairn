@@ -1,6 +1,7 @@
 import { DRAW_KEY_HELP, MAP_KEY_HELP } from "@mapcairn/core";
 import type { Ref } from "react";
 import { usePreferences } from "../../services";
+import { Button } from "../../ui/Button";
 import {
   type HeadingLevel,
   nextHeadingLevel,
@@ -16,6 +17,8 @@ export interface HelpSectionProps {
   readonly headingLevel?: HeadingLevel;
   /** Receives the heading, so the sheet can focus it. */
   readonly headingRef?: Ref<HTMLHeadingElement>;
+  /** Starts the first-visit tour. Without it Help offers no tour. */
+  readonly onStartTour?: () => void;
 }
 
 /**
@@ -29,6 +32,7 @@ export interface HelpSectionProps {
 export function HelpSection({
   headingLevel = 3,
   headingRef,
+  onStartTour,
 }: HelpSectionProps) {
   const { finePointer } = usePreferences();
   const subLevel = nextHeadingLevel(headingLevel);
@@ -39,6 +43,19 @@ export function HelpSection({
       headingRef={headingRef}
       data-testid="sheet-section-help"
     >
+      {onStartTour ? (
+        <div className={subsection}>
+          <Subheading level={subLevel}>Tour</Subheading>
+          <p className={prose}>
+            A few short steps that show the main controls by using them.
+          </p>
+          <div>
+            <Button variant="secondary" onClick={onStartTour}>
+              Take the tour
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {finePointer ? (
         <div className={subsection} data-testid="help-keyboard">
           <Subheading level={subLevel}>Keyboard</Subheading>

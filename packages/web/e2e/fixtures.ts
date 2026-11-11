@@ -15,7 +15,16 @@ export interface MapCairnOptions {
    * credits out of the way. `attribution.spec` proves the real timer.
    */
   readonly fastCredits: boolean;
+  /**
+   * Leaves the first-visit tour unanswered, so the welcome card is offered.
+   * Off by default: every other spec starts as a returning visitor, so the
+   * card never sits in its tab order or its screenshots.
+   */
+  readonly firstVisit: boolean;
 }
+
+/** The tour version the app ships (`TOUR_VERSION` in `src/app/tourVersion.ts`). */
+export const TOUR_VERSION = 1;
 
 /** The fixtures every spec gets. */
 export interface MapCairnFixtures {
@@ -63,6 +72,7 @@ function recordAnnouncements() {
  */
 export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
   fastCredits: [false, { option: true }],
+  firstVisit: [false, { option: true }],
   consoleMessages: async ({ page }, use) => {
     const messages: string[] = [];
     page.on("console", (message) => {
@@ -70,9 +80,18 @@ export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
     });
     await use(messages);
   },
-  page: async ({ page, fastCredits }, use) => {
+  page: async ({ page, fastCredits, firstVisit }, use) => {
     if (fastCredits) {
       await page.clock.install();
+    }
+    if (!firstVisit) {
+      await page.addInitScript((version: number) => {
+        try {
+          localStorage.setItem("mapcairn:tourSeen", JSON.stringify(version));
+        } catch {
+          // Blocked storage: the app will not offer the tour anyway.
+        }
+      }, TOUR_VERSION);
     }
     await mockThirdPartyServices(page);
     await page.addInitScript(recordAnnouncements);

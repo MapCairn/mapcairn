@@ -28,6 +28,7 @@ describe("PrivacyPage", () => {
     expect(screen.getByText("mapcairn:theme")).toBeInTheDocument();
     expect(screen.queryByText("buffer-zones-theme")).not.toBeInTheDocument();
     expect(screen.getByText("mapcairn:")).toBeInTheDocument();
+    expect(screen.getByText("mapcairn:tourSeen")).toBeInTheDocument();
   });
 
   it("gives a contact address for privacy questions", () => {

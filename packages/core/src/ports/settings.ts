@@ -31,6 +31,12 @@ export interface Settings {
   readonly projection: MapProjection;
   readonly basemapId: string;
   readonly lastView: ViewState | null;
+  /**
+   * The version of the first-visit tour the person has answered (taken,
+   * skipped, or made unnecessary by turning a layer on), or `null` for a new
+   * visitor. A host that bumps its tour version offers the tour once more.
+   */
+  readonly tourSeen: number | null;
 }
 
 /**

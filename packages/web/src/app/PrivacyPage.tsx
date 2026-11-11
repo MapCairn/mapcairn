@@ -42,11 +42,15 @@ export function PrivacyPage() {
           Your browser's <code>localStorage</code> keeps your settings: your
           light or dark theme (under the key <code>{THEME_STORAGE_KEY}</code>),
           your units, whether the zoom buttons show, whether Save data is on,
-          your chosen basemap and where the map was last left. The other keys
-          start with <code>mapcairn:</code>. These stay on your device and are
-          never sent to a server. Where your browser reports a data saver or a
-          very slow connection, the page reads that locally to choose the
-          default for Save data. Nothing about it is sent anywhere.
+          your chosen basemap, where the map was last left, and whether you have
+          answered the first-visit tour (a version number under{" "}
+          <code>mapcairn:tourSeen</code>). The other keys start with{" "}
+          <code>mapcairn:</code>. The tour itself sends nothing; a layer you
+          turn on during it loads from its provider as described below. These
+          stay on your device and are never sent to a server. Where your browser
+          reports a data saver or a very slow connection, the page reads that
+          locally to choose the default for Save data. Nothing about it is sent
+          anywhere.
         </p>
 
         <h2 className={styles.sectionTitle}>Analytics</h2>

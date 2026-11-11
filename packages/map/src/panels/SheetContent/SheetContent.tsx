@@ -48,6 +48,8 @@ export interface SheetContentProps {
   readonly imageCredits?: string;
   /** Where the privacy policy is. Defaults to `/privacy`. */
   readonly privacyHref?: string;
+  /** Starts the first-visit tour from Help. Without it Help offers no tour. */
+  readonly onStartTour?: () => void;
 }
 
 /**
@@ -68,6 +70,7 @@ export function SheetContent({
   onShowOnMap,
   imageCredits,
   privacyHref,
+  onStartTour,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
   const headings = useRef<Partial<Record<SheetSection, HTMLElement | null>>>(
@@ -102,7 +105,10 @@ export function SheetContent({
           privacyHref={privacyHref}
           headingRef={headingRef("settings")}
         />
-        <HelpSection headingRef={headingRef("help")} />
+        <HelpSection
+          headingRef={headingRef("help")}
+          onStartTour={onStartTour}
+        />
       </div>
     );
   }

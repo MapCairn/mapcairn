@@ -21,6 +21,7 @@ import {
 } from "@mapcairn/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
 import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
+import { AppTour } from "./AppTour";
 import { Brand } from "./Brand";
 import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
@@ -145,6 +146,12 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
     <MapChrome
       background={background}
       modal={app.sheetModal}
+      tour={
+        app.tour.state.status === "off" || map.loading || map.error ? null : (
+          <AppTour tour={app.tour} />
+        )
+      }
+      tourSide={app.tour.step?.side ?? "start"}
       topStart={
         <SearchPill
           onSelect={app.flyTo}
@@ -237,6 +244,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               layers={app.layers}
               draw={app.draw}
               onShowOnMap={app.revealMap}
+              onStartTour={app.startTour}
               imageCredits={creditsLine(app.basemap, app.layers.credits)}
               pinCard={
                 app.pin ? (

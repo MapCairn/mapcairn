@@ -156,6 +156,35 @@ export const bottomCentre = style({
   selectors: { [whenHidden]: hidden },
 });
 
+/**
+ * The first-visit tour card, in a grid cell that is otherwise empty, so it
+ * never meets another slot. Sheet layout: under the search pill, beside the
+ * end stack, clear of the sheet at peek and half. Panel layout: the column
+ * between search (as wide as the panel) and the end stack, against either
+ * side as `data-side` says. It hides with the bottom slots at full.
+ */
+export const tour = style({
+  ...slotBase,
+  gridRow: 2,
+  gridColumn: 1,
+  alignSelf: "start",
+  justifySelf: "start",
+  width: "100%",
+  maxWidth: `calc(${tokens.space.xl} * 10)`,
+  opacity: 1,
+  transition: slideTransition,
+  selectors: {
+    [whenHidden]: hidden,
+    [`${root}[data-layout="panel"] &`]: {
+      gridColumn: 2,
+      gridRow: "1 / 3",
+    },
+    [`${root}[data-layout="panel"] &[data-side="end"]`]: {
+      justifySelf: "end",
+    },
+  },
+});
+
 /** Attribution. Rides above the sheet with bottom-start. */
 export const bottomEnd = style({
   ...bottomBase,

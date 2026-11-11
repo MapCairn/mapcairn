@@ -39,6 +39,18 @@ export interface MapChromeProps {
   /** Measure toolbar, toasts and the tile-error banner. */
   readonly bottomCentre?: ReactNode;
   /**
+   * The first-visit tour card. It sits in the free space at the top of the
+   * map: under the search pill on a narrow screen, and between the search
+   * column and the end stack in the panel layout. It hides, like the bottom
+   * slots, while the sheet is at full.
+   */
+  readonly tour?: ReactNode;
+  /**
+   * In the panel layout, whether the tour card sits against the search
+   * column and panel (`"start"`, the default) or against the end stack.
+   */
+  readonly tourSide?: "start" | "end";
+  /**
    * The `Sheet` (bottom sheet or side panel). Rendered outside every inert
    * group, so it stays operable while the rest of the chrome is inert.
    */
@@ -194,6 +206,8 @@ export function MapChrome({
   bottomStart,
   bottomEnd,
   bottomCentre,
+  tour,
+  tourSide = "start",
   sheet,
   modal,
   onViewportChange,
@@ -405,6 +419,16 @@ export function MapChrome({
           className={styles.root}
         >
           {slot("top-start", styles.topStart, topStart)}
+          {tour == null ? null : (
+            <div
+              data-chrome="tour"
+              data-side={tourSide}
+              className={styles.tour}
+              inert={modal}
+            >
+              {tour}
+            </div>
+          )}
           {slot("end-stack", styles.endStack, endStack)}
           {sheet}
           <main className={styles.background} inert={modal}>

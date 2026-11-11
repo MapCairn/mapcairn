@@ -139,6 +139,7 @@ describe("LocalStorageSettingsStore", () => {
       "mapcairn:projection": '"globe"',
       "mapcairn:basemapId": '"osm"',
       "mapcairn:lastView": JSON.stringify(VIEW),
+      "mapcairn:tourSeen": "1",
     });
     expect(store.get()).toEqual({
       theme: "light",
@@ -148,6 +149,7 @@ describe("LocalStorageSettingsStore", () => {
       projection: "globe",
       basemapId: "osm",
       lastView: VIEW,
+      tourSeen: 1,
     });
   });
 
@@ -182,7 +184,17 @@ describe("LocalStorageSettingsStore", () => {
       projection: "flat",
       basemapId: "bright",
       lastView: null,
+      tourSeen: null,
     });
+  });
+
+  it("reads a stored tour version, and treats anything but a positive whole number as unanswered", () => {
+    expect(setup({ "mapcairn:tourSeen": "2" }).store.get().tourSeen).toBe(2);
+    for (const raw of ['"1"', "-1", "0", "1.5", "true", "{not json"]) {
+      expect(setup({ "mapcairn:tourSeen": raw }).store.get().tourSeen).toBe(
+        null,
+      );
+    }
   });
 
   it("replaces unparseable and wrongly shaped JSON with the defaults", () => {

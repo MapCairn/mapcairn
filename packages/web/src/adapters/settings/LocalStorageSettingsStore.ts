@@ -18,6 +18,7 @@ const DEFAULTS: Settings = Object.freeze({
   projection: "flat",
   basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
+  tourSeen: null,
 });
 
 const KEY_PREFIX = "mapcairn:";
@@ -35,6 +36,7 @@ const SETTING_NAMES: readonly SettingName[] = [
   "projection",
   "basemapId",
   "lastView",
+  "tourSeen",
 ];
 
 /** The storage key for a setting. Theme is the one key shared with the pre-paint script. */
@@ -90,6 +92,13 @@ function parseLastView(raw: unknown): ViewState | null {
   };
 }
 
+/** A tour version is a positive whole number; anything else means "not answered". */
+function parseTourSeen(raw: unknown): number | null {
+  return typeof raw === "number" && Number.isInteger(raw) && raw > 0
+    ? raw
+    : null;
+}
+
 function viewsEqual(a: ViewState | null, b: ViewState | null): boolean {
   if (a === null || b === null) {
     return a === b;
@@ -143,6 +152,8 @@ function parseSetting(
       return parseBasemapId(parseJson(raw));
     case "lastView":
       return parseLastView(parseJson(raw));
+    case "tourSeen":
+      return parseTourSeen(parseJson(raw));
   }
 }
 

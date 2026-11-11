@@ -34,6 +34,7 @@ import {
   WEBGL_UNAVAILABLE_ADVICE,
   WEBGL_UNAVAILABLE_TITLE,
 } from "./app/MapUnavailable";
+import { TOUR_VERSION } from "./app/tourVersion";
 import { LOCATE_MAX_FIT_RADIUS_METRES, LOCATE_ZOOM } from "./app/useMapApp";
 import { SAVE_VIEW_DELAY_MS } from "./app/useViewPersistence";
 import { HOST_BASEMAP_CATALOGUE } from "./basemaps/hostBasemaps";
@@ -56,7 +57,15 @@ async function settle(): Promise<void> {
   });
 }
 
-async function renderApp(services: FakeServices = createFakeServices()) {
+async function renderApp(
+  services: FakeServices = createFakeServices(),
+  { firstVisit = false }: { readonly firstVisit?: boolean } = {},
+) {
+  // Every test but the tour's starts as a returning visitor, so the welcome
+  // card is not in its tree, its Tab order or its announcements.
+  if (!firstVisit && services.settings.get().tourSeen === null) {
+    services.settings.set({ tourSeen: TOUR_VERSION });
+  }
   // The app uses React Router for its Reload action, so it renders in a stub.
   const Stub = createRoutesStub([
     {
@@ -1549,5 +1558,76 @@ describe("the reference host's basemaps", () => {
       cleanup();
       vi.restoreAllMocks();
     }
+  });
+});
+
+describe("the first-visit tour", () => {
+  const tourCard = () => screen.queryByTestId("tour-card");
+
+  it("offers the welcome card on a first visit, after the search box, without taking focus", async () => {
+    await renderApp(createFakeServices(), { firstVisit: true });
+    const card = tourCard();
+    expect(card).toHaveAccessibleName("New to MapCairn?");
+    expect(card?.closest('[data-chrome="tour"]')).not.toBeNull();
+    expect(card?.contains(document.activeElement)).toBe(false);
+  });
+
+  it("is not offered to a returning visitor, on a shared link, or when storage forgets", async () => {
+    await renderApp(createFakeServices());
+    expect(tourCard()).toBeNull();
+    cleanup();
+
+    const shared = createFakeServices();
+    shared.fakes.url.write({
+      view: { center: { lat: 1, lng: 2 }, zoom: 7, bearing: 0 },
+    });
+    await renderApp(shared, { firstVisit: true });
+    expect(tourCard()).toBeNull();
+    cleanup();
+
+    const forgetful = createFakeServices({
+      settings: new MemorySettingsStore({ persistent: false }),
+    });
+    await renderApp(forgetful, { firstVisit: true });
+    expect(tourCard()).toBeNull();
+  });
+
+  it("opens Map options on Layers during the layer step, and advances when a layer is turned on", async () => {
+    const services = createFakeServices({
+      layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+    });
+    await renderApp(services, { firstVisit: true });
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+    expect(services.settings.get().tourSeen).toBe(TOUR_VERSION);
+    expect(screen.getByRole("button", { name: "Map options" })).toHaveAttribute(
+      "data-tour-highlight",
+      "true",
+    );
+    const scrolled: Element[] = [];
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (
+      this: Element,
+    ) {
+      scrolled.push(this);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    await settle();
+    expect(scrolled).toContain(screen.getByRole("heading", { name: "Layers" }));
+    const layersRegion = screen.getByTestId("sheet-section-layers");
+    fireEvent.click(within(layersRegion).getAllByRole("switch")[0] as Element);
+    await settle();
+    expect(
+      screen.getByRole("heading", { name: "Try the globe" }),
+    ).toBeInTheDocument();
+  });
+
+  it("restarts from Help, closing the sheet and focusing the first step", async () => {
+    await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await settle();
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+    await settle();
+    expect(document.activeElement).toBe(
+      screen.getByRole("heading", { name: "Turn on a layer" }),
+    );
   });
 });

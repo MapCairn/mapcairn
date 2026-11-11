@@ -18,6 +18,7 @@ export * from "./spatial/lookupPosition";
 export * from "./spatial/measurement";
 export * from "./surface";
 export * from "./theme";
+export * from "./tour";
 export * from "./units";
 export * from "./urlHash";
 export * from "./zoom/zoom";

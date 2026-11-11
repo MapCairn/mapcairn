@@ -14,6 +14,7 @@ export type FocusName = FocusTarget;
 interface FocusRegistryValue {
   register(name: FocusName, element: HTMLElement | null): void;
   restore(name: FocusName | null): void;
+  element(name: FocusName): HTMLElement | null;
 }
 
 const FocusRegistryContext = createContext<FocusRegistryValue | null>(null);
@@ -59,7 +60,15 @@ export function FocusRegistryProvider({
     focusMapRef.current();
   }, []);
 
-  const value = useMemo(() => ({ register, restore }), [register, restore]);
+  const element = useCallback((name: FocusName) => {
+    const found = elements.current.get(name);
+    return found?.isConnected ? found : null;
+  }, []);
+
+  const value = useMemo(
+    () => ({ register, restore, element }),
+    [register, restore, element],
+  );
   return (
     <FocusRegistryContext.Provider value={value}>
       {children}
@@ -99,4 +108,12 @@ export function useFocusTarget(
  */
 export function useFocusReturn(): (name: FocusName | null) => void {
   return useRegistry().restore;
+}
+
+/**
+ * Returns `element(name)`, the registered control in the document, or null.
+ * Read-only: the first-visit tour uses it to ring the control a step names.
+ */
+export function useFocusElement(): (name: FocusName) => HTMLElement | null {
+  return useRegistry().element;
 }

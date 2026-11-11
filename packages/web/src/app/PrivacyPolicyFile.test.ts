@@ -25,6 +25,15 @@ describe("PRIVACY.md mirrors the privacy page", () => {
     );
   });
 
+  it("says the first-visit tour keeps one number and sends nothing", () => {
+    expect(policy).toContain(
+      "whether you have answered the first-visit tour (a version number under `mapcairn:tourSeen`)",
+    );
+    expect(policy).toContain(
+      "The tour itself sends nothing; a layer you turn on during it loads from its provider as described below.",
+    );
+  });
+
   it("has no section or link for VersaTiles, Maptoolkit or Mapterhorn", () => {
     expect(policy).not.toMatch(/VersaTiles|Maptoolkit|Mapterhorn/);
   });

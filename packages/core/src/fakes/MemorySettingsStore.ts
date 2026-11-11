@@ -10,6 +10,7 @@ export const DEFAULT_FAKE_SETTINGS: Settings = Object.freeze({
   projection: "flat",
   basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
+  tourSeen: null,
 });
 
 /** Options for {@link MemorySettingsStore}. */

@@ -36,6 +36,7 @@ export function runSettingsStoreContract(
         projection: "flat",
         basemapId: "bright",
         lastView: null,
+        tourSeen: null,
       });
       expect(typeof store.persistent).toBe("boolean");
     });
@@ -72,6 +73,7 @@ export function runSettingsStoreContract(
         projection: "globe",
         basemapId: "osm",
         lastView,
+        tourSeen: 1,
       });
       expect(store.get()).toEqual({
         theme: "dark",
@@ -81,11 +83,18 @@ export function runSettingsStoreContract(
         projection: "globe",
         basemapId: "osm",
         lastView,
+        tourSeen: 1,
       });
-      store.set({ zoomButtons: null, saveData: null, lastView: null });
+      store.set({
+        zoomButtons: null,
+        saveData: null,
+        lastView: null,
+        tourSeen: null,
+      });
       expect(store.get().zoomButtons).toBeNull();
       expect(store.get().saveData).toBeNull();
       expect(store.get().lastView).toBeNull();
+      expect(store.get().tourSeen).toBeNull();
     });
 
     it("notifies subscribers with the new settings after a change", () => {

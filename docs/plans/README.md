@@ -6,4 +6,4 @@ Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository r
 
 | Plan | Status | Issue |
 | --- | --- | --- |
-| [0004 First-visit tour](0004-first-visit-tour.md) | proposed | [#179](https://github.com/MapCairn/mapcairn/issues/179) |
+| [0004 First-visit tour](0004-first-visit-tour.md) | in progress | [#179](https://github.com/MapCairn/mapcairn/issues/179) |

@@ -18,8 +18,11 @@ device instead, as described below.
 
 Your browser's `localStorage` keeps your settings: your light or dark theme
 (under the key `mapcairn:theme`), your units, whether the zoom buttons
-show, whether Save data is on, your chosen basemap and where the map was last
-left. The other keys start with `mapcairn:`. These stay on your device and are
+show, whether Save data is on, your chosen basemap, where the map was last
+left, and whether you have answered the first-visit tour (a version number
+under `mapcairn:tourSeen`). The other keys start with `mapcairn:`. The tour
+itself sends nothing; a layer you turn on during it loads from its provider as
+described below. These stay on your device and are
 never sent to a server. Where your browser reports a data saver or a very slow
 connection, the page reads that locally to choose the default for Save data.
 Nothing about it is sent anywhere.

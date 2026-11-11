@@ -21,6 +21,7 @@ import {
   type SurfaceAction,
   type SurfaceState,
   setDetent,
+  shouldOfferTour,
   startDirections,
   startDraw,
   startMeasure,
@@ -39,6 +40,7 @@ import {
   type UseDraw,
   type UseLocate,
   type UseMeasure,
+  type UseTour,
   useAnnounce,
   useDataLayers,
   useDirections,
@@ -46,6 +48,7 @@ import {
   useLocate,
   useMeasure,
   useSettings,
+  useTour,
   useUrlState,
 } from "@mapcairn/map";
 import { useLatestRef } from "@mapcairn/react";
@@ -57,7 +60,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { TOUR_STEPS } from "./AppTour";
 import { initialMapState } from "./initialView";
+import { TOUR_VERSION } from "./tourVersion";
 import { type BasemapChoice, useBasemapChoice } from "./useBasemapChoice";
 import { useViewPersistence } from "./useViewPersistence";
 
@@ -202,6 +207,10 @@ export interface MapApp {
   readonly identifyAtCentre: () => void;
   /** Brings the sheet to the detent that shows the card and the map together, after "Show on map". */
   readonly revealMap: () => void;
+  /** The first-visit tour. */
+  readonly tour: UseTour;
+  /** Closes the open surface and starts the tour at its first step (Help). */
+  readonly startTour: () => void;
 }
 
 /**
@@ -211,11 +220,19 @@ export interface MapApp {
  * fills in from `useMap()`.
  */
 export function useMapApp(): MapApp {
-  const { settings } = useSettings();
+  const { settings, persistent } = useSettings();
   const url = useUrlState();
   const announce = useAnnounce();
   const [link] = useState(() => url.read());
   const [initial] = useState(() => initialMapState(link, settings));
+  const [offerTour] = useState(() =>
+    shouldOfferTour({
+      seen: settings.tourSeen,
+      version: TOUR_VERSION,
+      link,
+      persistent,
+    }),
+  );
   const layers = useDataLayers({ initial: link.layers });
   const basemaps = useBasemapChoice(initial.basemapId);
   const persistence = useViewPersistence(
@@ -225,6 +242,22 @@ export function useMapApp(): MapApp {
   );
   const [state, dispatch] = useReducer(surfaceReducer, initialSurfaceState);
   const stateRef = useLatestRef(state);
+  const tour = useTour({
+    steps: TOUR_STEPS,
+    version: TOUR_VERSION,
+    offer: offerTour,
+    snapshot: {
+      layersOn: layers.layers.filter((layer) => layer.enabled).length,
+      projection: settings.projection,
+      surface: state.surface,
+    },
+  });
+  const tourStepRef = useLatestRef(tour.step?.id ?? null);
+  const { start: startTourSteps } = tour;
+  const startTour = useCallback(() => {
+    dispatch(closeSurface());
+    startTourSteps();
+  }, [startTourSteps]);
   const mapRef = useRef<MapContextValue | null>(null);
   const pendingFocusReturn = useRef(false);
 
@@ -379,9 +412,13 @@ export function useMapApp(): MapApp {
     if (surface === "sheet" && !isSettingsSection(sheetSection)) {
       closeExplicitly();
     } else {
-      dispatch(openSheet());
+      // During the tour's layer step, open where the step's action is, so
+      // no scroll is needed to reach it.
+      dispatch(
+        openSheet(tourStepRef.current === "layers" ? "layers" : "basemap"),
+      );
     }
-  }, [closeExplicitly, stateRef]);
+  }, [closeExplicitly, stateRef, tourStepRef]);
 
   const toggleSettings = useCallback(() => {
     const { surface, sheetSection } = stateRef.current;
@@ -569,5 +606,7 @@ export function useMapApp(): MapApp {
     openFeature,
     identifyAtCentre,
     revealMap,
+    tour,
+    startTour,
   };
 }
