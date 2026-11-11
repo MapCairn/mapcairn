@@ -35,6 +35,13 @@ const RADIX_WRAPPERS =
 /** The engine adapter, the only place an engine library may be imported. */
 const ENGINE_ADAPTERS = "^packages/web/src/adapters/maplibre/";
 
+/**
+ * The files the SDK's `package.json` entry points resolve to. Workspace
+ * imports resolve through the symlink to these real paths.
+ */
+const SDK_ENTRY_POINTS =
+  "^packages/((core|map|react|theme)/src/index|core/src/contracts/index)\\.ts$";
+
 module.exports = {
   forbidden: [
     {
@@ -184,6 +191,30 @@ module.exports = {
         "Radix primitives are wrapped once, in packages/map/src/ui/{Switch,Slider,SegmentedControl,Tooltip}. Everything else uses the wrapper.",
       from: { path: "^packages/", pathNot: RADIX_WRAPPERS },
       to: { path: "(^|/)node_modules/@radix-ui/" },
+    },
+    {
+      name: "examples-use-public-entry-points",
+      severity: "error",
+      comment:
+        "An example app uses the SDK as an outside app would: through the package entry points (`@mapcairn/core`, `@mapcairn/core/contracts`, `@mapcairn/map`, `@mapcairn/react`, `@mapcairn/theme`), never a file inside a package or the reference host.",
+      from: { path: "^examples/" },
+      to: { path: "^packages/", pathNot: SDK_ENTRY_POINTS },
+    },
+    {
+      name: "examples-import-packages-by-name",
+      severity: "error",
+      comment:
+        "An example app imports the SDK by package name, as an outside app must, never by a relative path into packages/, even to an entry point.",
+      from: { path: "^examples/" },
+      to: { path: "^packages/", dependencyTypes: ["local"] },
+    },
+    {
+      name: "packages-do-not-import-examples",
+      severity: "error",
+      comment:
+        "Examples use the packages; nothing in a package may depend on an example.",
+      from: { path: "^packages/" },
+      to: { path: "^examples/" },
     },
   ],
   options: {

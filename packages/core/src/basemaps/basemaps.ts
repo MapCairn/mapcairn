@@ -260,6 +260,14 @@ export function omittedLayers(
 }
 
 /**
+ * Whether a basemap draws image tiles (a raster map, or imagery under labels),
+ * which cost more data than vector tiles. The picker says so in Save data mode.
+ */
+export function usesMoreData(basemap: BasemapDefinition): boolean {
+  return basemap.source.kind !== "vector";
+}
+
+/**
  * The credits of a basemap and the layers drawn over it as one line of
  * text, for a saved image that keeps its sources.
  */

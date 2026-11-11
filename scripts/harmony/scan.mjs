@@ -30,7 +30,8 @@ const SKIP_DIRS = new Set([
 ]);
 
 /**
- * Every file the scanner reads: scripts, styles and html under `packages`.
+ * Every file the scanner reads: scripts, styles and html under `packages`,
+ * and under `examples`, whose apps follow the same design rules.
  * @param {string} root
  * @returns {string[]} Repository relative paths with forward slashes.
  */
@@ -51,6 +52,7 @@ export function listSourceFiles(root = REPO_ROOT) {
     }
   };
   walk("packages");
+  walk("examples");
   return out.sort();
 }
 

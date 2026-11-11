@@ -43,6 +43,9 @@ describe("dependency-cruiser boundaries", () => {
     "packages/core/src/format/helper.ts":
       "export const helper = 1;\nexport type Helper = number;\n",
     "packages/map/src/ui/index.ts": "export const ui = 1;\n",
+    "packages/map/src/index.ts": 'export * from "./ui/index";\n',
+    "packages/map/package.json":
+      '{ "name": "@mapcairn/map", "exports": { ".": "./src/index.ts" } }\n',
     "packages/web/src/adapters/clipboard/BrowserClipboard.ts":
       "export const clipboard = 1;\n",
 
@@ -111,6 +114,20 @@ describe("dependency-cruiser boundaries", () => {
       'import * as Switch from "@radix-ui/react-switch";\nexport const x = Switch;\n',
     "packages/map/src/ui/Tooltip/goodRadix.ts":
       'import * as T from "@radix-ui/react-tooltip";\nexport const x = T;\n',
+
+    // an example app reaches the SDK only through its public entry points.
+    "examples/demo/src/badDeep.ts":
+      'import { ui } from "../../../packages/map/src/ui/index";\nexport const x = ui;\n',
+    "examples/demo/src/badHost.ts":
+      'import { clipboard } from "../../../packages/web/src/adapters/clipboard/BrowserClipboard";\nexport const x = clipboard;\n',
+    "examples/demo/src/badRelativeEntry.ts":
+      'import { ui } from "../../../packages/map/src/index";\nexport const x = ui;\n',
+    "examples/demo/src/goodEntry.ts":
+      'import { ServicesProvider } from "@mapcairn/map";\nexport const x = ServicesProvider;\n',
+
+    // the SDK never depends on an example.
+    "packages/map/src/ui/badExample.ts":
+      'import { ui } from "../../../../examples/demo/src/badDeep";\nexport const x = ui;\n',
   };
 
   beforeAll(() => {
@@ -121,11 +138,22 @@ describe("dependency-cruiser boundaries", () => {
       path.join(root, "node_modules"),
       "junction",
     );
+    // The example finds the fixture's map package by name, through a link
+    // like the one an npm workspace makes.
+    mkdirSync(path.join(root, "examples/demo/node_modules/@mapcairn"), {
+      recursive: true,
+    });
+    symlinkSync(
+      path.join(root, "packages/map"),
+      path.join(root, "examples/demo/node_modules/@mapcairn/map"),
+      "junction",
+    );
     const result = spawnSync(
       process.execPath,
       [
         DEPCRUISE,
         "packages",
+        "examples",
         "--config",
         path.join(REPO, ".dependency-cruiser.cjs"),
         "--output-type",
@@ -195,6 +223,14 @@ describe("dependency-cruiser boundaries", () => {
     ["map-engine-libraries-unresolved", "packages/map/src/ui/badPlugin.ts"],
     ["icons-unresolved", "packages/map/src/ui/badIcons.ts"],
     ["radix-only-in-ui-primitives", "packages/map/src/ui/Button/badRadix.ts"],
+    ["examples-use-public-entry-points", "examples/demo/src/badDeep.ts"],
+    ["examples-use-public-entry-points", "examples/demo/src/badHost.ts"],
+    ["examples-import-packages-by-name", "examples/demo/src/badDeep.ts"],
+    [
+      "examples-import-packages-by-name",
+      "examples/demo/src/badRelativeEntry.ts",
+    ],
+    ["packages-do-not-import-examples", "packages/map/src/ui/badExample.ts"],
   ])("reports %s for %s", (rule, file) => {
     expect(findings).toContain(`${rule}: ${file}`);
   });
@@ -223,6 +259,7 @@ describe("dependency-cruiser boundaries", () => {
     "packages/map/src/ui/goodLucide.ts",
     "packages/map/src/ui/Switch/goodRadix.ts",
     "packages/map/src/ui/Tooltip/goodRadix.ts",
+    "examples/demo/src/goodEntry.ts",
   ])("accepts %s", (file) => {
     expect(findings.filter((f) => f.endsWith(file))).toEqual([]);
   });

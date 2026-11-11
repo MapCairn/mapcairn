@@ -277,7 +277,7 @@ const darkColour: ColourRoles = {
   focusRingInner: "oklch(0.19 0.008 250)",
   pageBackground: "oklch(0.24 0.008 250)",
   mapBackground: representativeBackdrops.defaultBasemap,
-  mapGlobeSpace: "oklch(0.25 0.025 255)",
+  mapGlobeSpace: "oklch(0.31 0.025 255)",
   mapPin: accent[600],
   mapMeasureLine: accent[600],
   mapMeasureFill: "oklch(0.55 0.175 255 / 0.28)",

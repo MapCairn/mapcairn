@@ -376,7 +376,11 @@ export class FakeMapLibreMap {
   }
   addLayer(spec: Record<string, unknown>, beforeId?: string): void {
     this.checkLoaded();
-    if (!this.sources.has(spec.source as string)) {
+    // A background layer draws from no source, as in MapLibre.
+    if (
+      spec.type !== "background" &&
+      !this.sources.has(spec.source as string)
+    ) {
       throw new Error(`Source "${String(spec.source)}" does not exist.`);
     }
     const layer = { ...spec, paint: { ...(spec.paint as object) } };

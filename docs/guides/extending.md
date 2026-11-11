@@ -1,6 +1,22 @@
 # Extending MapCairn
 
-Short how-tos for adding to the SDK and its reference host: a basemap, a data layer of each kind, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md).
+Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md).
+
+## Embed the SDK in an app of your own
+
+`examples/embed` is a one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. Run it with `npm run dev -w @mapcairn/example-embed` (add `-- --port <port>` to pick a port).
+
+It runs on the SDK's fakes (`createFakeServices()`), so it requests nothing and loads no map engine, and the map region shows only its background colour under the real chrome: the search pill, the end stack, the sheet with its basemap, pin, layers and settings sections, the measure toolbar, the scale bar and the credits. It adds one layer of its own (`src/cairnsLayer.ts`), answered from memory, a `ThemeSource` that writes the chosen theme onto the page, a WebMCP tool through `useModelContextTool`, and a basemap catalogue without the preview images, which are files the reference host serves.
+
+What it proves, on every pull request: `npm run typecheck` and `npm run build` fail if an entry point stops exporting what an app needs or the vanilla-extract step breaks, its Vitest test mounts the app and uses it, dependency-cruiser refuses an import from `examples/` into a file inside a package, into the reference host or by a relative path, and any import of an example from a package, and a test in `packages/core/src/lint/manifests.test.ts` checks that each SDK package declares every package its source imports, exports only its entry points and takes React as a peer, which the hoisted workspace would otherwise hide.
+
+What an app of your own provides:
+
+- `vanillaExtractPlugin()` from `@vanilla-extract/vite-plugin` in its Vite config, because the packages ship `.css.ts` source.
+- Base styles that give the map the whole page (a height on `html`, `body` and the root element) and use `tokens` from `@mapcairn/theme`, which brings the token stylesheet in (`src/page.css.ts`).
+- The IBM Plex Sans Variable font the tokens name, for example from `@fontsource-variable/ibm-plex-sans`. Without it the type falls back to the system font.
+- `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, and `FocusRegistryProvider` around `MapChrome`.
+- The services. Fakes are enough to see the interface; a real app writes an adapter for each port it needs. A map needs a `MapAdapter` over MapLibre GL JS with its engine styles: `packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts` and `packages/web/src/adapters/mapEngine.css.ts` are the reference, and `runMapAdapterContract` from `@mapcairn/core/contracts` checks yours against the port.
 
 ## Add a basemap
 
@@ -18,7 +34,7 @@ A host of your own builds a catalogue from `BASEMAPS`, or from its own definitio
 
 To take a basemap off the site while keeping it in the SDK, remove its id from `HOST_BASEMAP_IDS`, its origin from the Content Security Policy, its preview image, and its provider from `ATTRIBUTIONS.md`, `PRIVACY.md` and the privacy page, if nothing else the site offers uses them. A saved or linked id the site no longer offers opens on Bright.
 
-A provider whose licence the reusable SDK packages must not carry, or whose volunteer-run server should not be sent the traffic of every app built on the SDK, or that asks to be told of use, is not added to `BASEMAPS`. Define it in the host instead. Topographic is the worked example: `packages/web/src/basemaps/openTopoMapBasemap.ts` defines OpenTopoMap as a `BasemapDefinition` that imports types only, `hostBasemaps.ts` lists it in `HOST_OWN_BASEMAPS` and by id in `HOST_BASEMAP_IDS`, and `scripts/generateBasemapThumbnails.mjs` loads it beside the SDK's list. The host's catalogue is built with `createBasemapCatalogue` and passed by the composition root as `Services.basemaps` (see `ARCHITECTURE.md`, host-supplied basemaps). Its definition can leave out `thumbnail` when it has no right to a preview image (set `swatch`, a hex colour of your own, so its picker tile does not look like the default).
+A provider whose licence the reusable SDK packages must not carry, or whose volunteer-run server should not be sent the traffic of every app built on the SDK, or that asks to be told of use, is not added to `BASEMAPS`. Define it in the host instead. Topographic is the worked example: `packages/web/src/basemaps/openTopoMapBasemap.ts` defines OpenTopoMap as a `BasemapDefinition` that imports types only, `hostBasemaps.ts` lists it in `HOST_OWN_BASEMAPS` and by id in `HOST_BASEMAP_IDS`, and `scripts/generateBasemapThumbnails.mjs` loads it beside the SDK's list. Satellite (`satelliteBasemap.ts`) is the second: a `hybrid` source, image tiles under the lines and labels of a vector style, whose licence is non-commercial, so it sets `nonCommercial: true` and the WebMCP basemap tool leaves it out. The host's catalogue is built with `createBasemapCatalogue` and passed by the composition root as `Services.basemaps` (see `ARCHITECTURE.md`, host-supplied basemaps). Its definition can leave out `thumbnail` when it has no right to a preview image (set `swatch`, a hex colour of your own, so its picker tile does not look like the default).
 
 Bright is the default basemap in both themes; the basemap never follows the light or dark theme. To change the default, change `DEFAULT_BASEMAP_ID` and `DEFAULT_BASEMAP_BACKGROUND` (the new style's `background` layer colour) in `basemaps.ts`, and the matching `defaultBasemap` backdrop in `packages/theme/src/tokenValues.ts`. A test in `packages/web` fails until the two colours agree.
 
