@@ -26,7 +26,6 @@ import { AppChrome } from "./app/AppChrome";
 import { MAP_REGION_ID } from "./app/initialView";
 import { MapUnavailable } from "./app/MapUnavailable";
 import { useMapApp } from "./app/useMapApp";
-import { usePreloadMapEngine } from "./app/usePreloadMapEngine";
 import { useMapModelContextTools } from "./webmcp/useMapModelContextTools";
 
 /**
@@ -37,8 +36,6 @@ import { useMapModelContextTools } from "./webmcp/useMapModelContextTools";
  * preferences that the server cannot know.
  */
 export function App() {
-  // First, so the engine downloads while the rest of the app renders.
-  usePreloadMapEngine();
   const { setChoice } = useTheme();
   const { settings } = useSettings();
   const app = useMapApp();

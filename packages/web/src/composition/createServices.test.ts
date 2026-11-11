@@ -87,11 +87,6 @@ describe("createServices", () => {
     expect(createMapAdapter()).not.toBe(first);
   });
 
-  it("lets the app start loading MapLibre before the map mounts", () => {
-    const { createMapAdapter } = createServices();
-    expect(createMapAdapter.preload).toBeTypeOf("function");
-  });
-
   describe("overrides", () => {
     it("wins over the real services and leaves the others alone", () => {
       const search = new FakeSearchProvider();
