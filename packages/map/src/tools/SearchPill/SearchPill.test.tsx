@@ -658,7 +658,7 @@ describe("SearchPill", () => {
       setup();
       await search("-26.2041, 28.0473");
       expect(screen.getByTestId("live-region-polite").textContent).toBe(
-        "1 result",
+        "1 result, Coordinates 26.20410° S, 28.04730° E",
       );
     });
 

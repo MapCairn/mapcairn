@@ -18,7 +18,7 @@ describe("coordinateSearchResult", () => {
   });
 
   it("has no bounds, so the map centres on the point", () => {
-    expect(coordinateSearchResult("1 2")).not.toHaveProperty("bounds");
+    expect(coordinateSearchResult("1.5 2.5")).not.toHaveProperty("bounds");
   });
 
   it("returns null for text that is not a coordinate pair", () => {
@@ -27,13 +27,15 @@ describe("coordinateSearchResult", () => {
     expect(coordinateSearchResult("")).toBeNull();
   });
 
-  it("writes a label that reads back as the same place", () => {
-    const result = coordinateSearchResult("-26.2041, 28.0473");
-    expect(parseCoordinates(result?.label ?? "")).toEqual(result?.centre);
+  it("writes a label that reads back as the same place to about a metre", () => {
+    const result = coordinateSearchResult("-26.2041234, 28.0473456");
+    const readBack = parseCoordinates(result?.label ?? "");
+    expect(readBack?.lat).toBeCloseTo(-26.2041234, 5);
+    expect(readBack?.lng).toBeCloseTo(28.0473456, 5);
   });
 
   it("does not show a negative zero", () => {
-    expect(coordinateSearchResult("0 -0.000001")?.label).toBe(
+    expect(coordinateSearchResult("0.0 -0.000001")?.label).toBe(
       "Coordinates 0.00000° N, 0.00000° E",
     );
   });

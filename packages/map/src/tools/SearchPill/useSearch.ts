@@ -1,4 +1,5 @@
 import {
+  announceCoordinateResult,
   announceNoResults,
   announceSearchError,
   announceSearchResults,
@@ -125,9 +126,9 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
   );
 
   const showResults = useCallback(
-    (results: readonly SearchResult[]) => {
+    (results: readonly SearchResult[], message: string) => {
       setState({ status: "results", results });
-      announceOnce(announceSearchResults(results.length), "polite");
+      announceOnce(message, "polite");
     },
     [announceOnce],
   );
@@ -138,7 +139,7 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
       const coordinates = coordinateSearchResult(text);
       if (coordinates !== null) {
         controller.current = null;
-        showResults([coordinates]);
+        showResults([coordinates], announceCoordinateResult(coordinates.label));
         return;
       }
       const own = new AbortController();
@@ -156,7 +157,7 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
           setState({ status: "empty" });
           announceOnce(announceNoResults(), "polite");
         } else {
-          showResults(results);
+          showResults(results, announceSearchResults(results.length));
         }
       } catch (error) {
         if (own.signal.aborted || error instanceof PortAbortError) {

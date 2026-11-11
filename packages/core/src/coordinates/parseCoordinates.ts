@@ -20,7 +20,12 @@ type Axis = "lat" | "lng";
 type Unit = "degree" | "minute" | "second";
 
 type Token =
-  | { readonly kind: "number"; readonly value: number }
+  | {
+      readonly kind: "number";
+      readonly value: number;
+      /** Whether the number has a decimal point with digits after it. */
+      readonly decimal: boolean;
+    }
   | { readonly kind: "sign"; readonly negative: boolean }
   | {
       readonly kind: "hemisphere";
@@ -62,7 +67,7 @@ const WORDS: Readonly<Record<string, WordToken>> = {
 const DEGREE_SYMBOLS = "°º˚";
 const MINUTE_SYMBOLS = "'′’‘´`";
 const SECOND_SYMBOLS = '"″”“';
-const MINUS_SIGNS = "-−";
+const MINUS_SIGNS = "-−–";
 const SIGNS = `+${MINUS_SIGNS}`;
 const SEPARATORS = ",;";
 const WHITE_SPACE = /^\s$/;
@@ -95,14 +100,21 @@ function runEnd(
 function readNumber(
   text: string,
   from: number,
-): { readonly value: number; readonly end: number } | null {
+): {
+  readonly value: number;
+  readonly decimal: boolean;
+  readonly end: number;
+} | null {
   const wholeEnd = runEnd(text, from, isDigit);
   let end = wholeEnd;
   if (text[end] === ".") {
     end = runEnd(text, end + 1, isDigit);
   }
-  const hasDigits = wholeEnd > from || end > wholeEnd + 1;
-  return hasDigits ? { value: Number(text.slice(from, end)), end } : null;
+  const decimal = end > wholeEnd + 1;
+  const hasDigits = wholeEnd > from || decimal;
+  return hasDigits
+    ? { value: Number(text.slice(from, end)), decimal, end }
+    : null;
 }
 
 /** What one step of the tokeniser read: a token (or white space, which has none) and where it ended. */
@@ -136,10 +148,15 @@ function readTick(text: string, index: number): Read {
   };
 }
 
-/** A sign belongs to a number only when it touches it, so "26 - 28" is not a pair. */
+/**
+ * A sign starts a value only when it touches the number after it and does not
+ * touch a number before it, so "26 - 28" is not a pair and a postcode such as
+ * "02-123" or a range such as "12-14" is not a pair with a negative value.
+ */
 function readSign(text: string, index: number): Read | null {
   const next = text.charAt(index + 1);
-  if (!isDigit(next) && next !== ".") {
+  const before = text.charAt(index - 1);
+  if ((!isDigit(next) && next !== ".") || isDigit(before) || before === ".") {
     return null;
   }
   return {
@@ -152,7 +169,10 @@ function readCountedNumber(text: string, index: number): Read | null {
   const number = readNumber(text, index);
   return number === null
     ? null
-    : { token: { kind: "number", value: number.value }, end: number.end };
+    : {
+        token: { kind: "number", value: number.value, decimal: number.decimal },
+        end: number.end,
+      };
 }
 
 function readWord(text: string, index: number): Read | null {
@@ -301,7 +321,11 @@ function readPart(reader: TokenReader): Part | null {
     return null;
   }
   let degrees = number.value;
-  if (reader.takeUnit("degree")) {
+  const hasDegreeUnit = reader.takeUnit("degree");
+  if (!number.decimal && !hasDegreeUnit) {
+    return null;
+  }
+  if (hasDegreeUnit) {
     const extra = readMinutesAndSeconds(reader, degrees);
     if (extra === null) {
       return null;
@@ -354,7 +378,14 @@ function roundToCentimetre(degrees: number): number {
  *   in either order; a negative sign cannot be combined with a letter
  * - one comma or semicolon between the two values, or white space alone
  * - a leading "coordinates" or "coords", so the label of a coordinate result
- *   reads back as the same place
+ *   reads back as the same place to about a metre
+ *
+ * Every value must carry a mark that says it is a degree value: a decimal
+ * point with digits after it, or a degree sign or the word degrees. A bare
+ * whole number is not enough, so "12 34", "E1 6" and a postcode or house
+ * number go on to the place search. A minus sign (hyphen, en dash or the
+ * Unicode minus) starts a value only when it does not touch a number before
+ * it, so "02-123" and "12-14" are not pairs.
  *
  * A comma is never a decimal mark. Latitude must be within 90 degrees and
  * longitude within 180. Text longer than {@link MAX_COORDINATE_TEXT_LENGTH}

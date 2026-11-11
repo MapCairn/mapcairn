@@ -19,8 +19,8 @@ function coordinateId(position: LatLng): string {
  *
  * The label names the place in words, such as "Coordinates 26.20410° S,
  * 28.04730° E", using the app's coordinate formatters. It reads back through
- * {@link parseCoordinates} as the same place, so the box can show it after
- * the person picks it.
+ * {@link parseCoordinates} as the same place to about a metre (the label keeps
+ * five decimals), so the box can show it after the person picks it.
  */
 export function coordinateSearchResult(text: string): SearchResult | null {
   const position = parseCoordinates(text);

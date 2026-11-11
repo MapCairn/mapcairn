@@ -49,7 +49,10 @@ describe("HelpSection", () => {
     expect(search).toHaveTextContent("a place name or a pair of coordinates");
     expect(search).toHaveTextContent("-26.2041, 28.0473");
     expect(search).toHaveTextContent("26.2041° S, 28.0473° E");
-    expect(search).toHaveTextContent("sent nowhere");
+    expect(search).toHaveTextContent("then press Enter or Search");
+    expect(search).toHaveTextContent("a decimal point or a degree sign");
+    expect(search).toHaveTextContent("not sent to the geocoder");
+    expect(search).toHaveTextContent("loads map tiles for that area");
   });
 
   it("follows the heading level it is given", () => {

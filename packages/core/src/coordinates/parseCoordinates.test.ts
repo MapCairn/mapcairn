@@ -20,22 +20,25 @@ describe("parseCoordinates", () => {
       ["-26.2041 degrees, 28.0473 degrees", JOHANNESBURG],
       ["+26.2041, +28.0473", { lat: 26.2041, lng: 28.0473 }],
       ["−26.2041, 28.0473", JOHANNESBURG],
-      ["-26, 28", { lat: -26, lng: 28 }],
-      ["26,28", { lat: 26, lng: 28 }],
-      ["12 34", { lat: 12, lng: 34 }],
-      ["0 0", { lat: 0, lng: 0 }],
-      ["-0, -0", { lat: 0, lng: 0 }],
+      ["-26.0, 28.0", { lat: -26, lng: 28 }],
+      ["26.2 28.1", { lat: 26.2, lng: 28.1 }],
+      ["0.0 0.0", { lat: 0, lng: 0 }],
+      ["-0.0, -0.0", { lat: 0, lng: 0 }],
+      ["–26.2041, 28.0473", JOHANNESBURG],
+      ["26.2041 –28.0473", { lat: 26.2041, lng: -28.0473 }],
       ["51.5, -0.12", { lat: 51.5, lng: -0.12 }],
       [".5 .25", { lat: 0.5, lng: 0.25 }],
-      ["5. 6.", { lat: 5, lng: 6 }],
-      ["90, 180", { lat: 90, lng: 180 }],
-      ["-90, -180", { lat: -90, lng: -180 }],
+      ["90.0, 180.0", { lat: 90, lng: 180 }],
+      ["-90.0, -180.0", { lat: -90, lng: -180 }],
+      ["-26.2041,-28.0473", { lat: -26.2041, lng: -28.0473 }],
+      ["-26° -28°", { lat: -26, lng: -28 }],
+      ["26°-28°", { lat: 26, lng: -28 }],
     ])("reads %j", (text, expected) => {
       expect(parseCoordinates(text)).toEqual(expected);
     });
 
     it("keeps the sign of a value that is not zero", () => {
-      expect(parseCoordinates("-0.0000001 0")).toEqual({
+      expect(parseCoordinates("-0.0000001 0.0")).toEqual({
         lat: -0.0000001,
         lng: 0,
       });
@@ -74,11 +77,12 @@ describe("parseCoordinates", () => {
       ["26.2041 N 28.0473 W", { lat: 26.2041, lng: -28.0473 }],
       ["N26.2041 W28.0473", { lat: 26.2041, lng: -28.0473 }],
       ["51.5N 0.12W", { lat: 51.5, lng: -0.12 }],
-      ["26S 28E", { lat: -26, lng: 28 }],
-      ["90N 180E", { lat: 90, lng: 180 }],
-      ["90S 180W", { lat: -90, lng: -180 }],
-      ["0N 0E", { lat: 0, lng: 0 }],
-      ["0S 0W", { lat: 0, lng: 0 }],
+      ["26.0S 28.0E", { lat: -26, lng: 28 }],
+      ["26°S 28°E", { lat: -26, lng: 28 }],
+      ["90.0N 180.0E", { lat: 90, lng: 180 }],
+      ["90.0S 180.0W", { lat: -90, lng: -180 }],
+      ["0.0N 0.0E", { lat: 0, lng: 0 }],
+      ["0.0S 0.0W", { lat: 0, lng: 0 }],
     ])("reads %j", (text, expected) => {
       expect(parseCoordinates(text)).toEqual(expected);
     });
@@ -199,6 +203,32 @@ describe("parseCoordinates", () => {
       "Johannesburg 2000",
       "2000 Johannesburg",
       "26 28 30",
+      "12 34",
+      "3 4",
+      "+27 82",
+      "E1 6",
+      "S1 4",
+      "N3 E1",
+      "26,28",
+      "-26, 28",
+      "26S 28E",
+      "90N 180E",
+      "0 0",
+      "26.2 28",
+      "26 28.1",
+      "5. 6.",
+      "26.2041° 28",
+      "02-123",
+      "00-001",
+      "12-34",
+      "44-100",
+      "12-14",
+      "12–14",
+      "12−14",
+      "26.2-28.1",
+      "26.2–28.1",
+      "26.2041-28.0473",
+      "1.5.-2.5",
       "-26.2041, 28.0473, 1500",
       "1, 2, 3, 4",
       "2196 2000",
@@ -239,14 +269,14 @@ describe("parseCoordinates", () => {
         parseCoordinates(`1 ${"2".repeat(MAX_COORDINATE_TEXT_LENGTH)}`),
       ).toBeNull();
       expect(
-        parseCoordinates("1 2".padEnd(MAX_COORDINATE_TEXT_LENGTH + 1)),
+        parseCoordinates("1.5 2.5".padEnd(MAX_COORDINATE_TEXT_LENGTH + 1)),
       ).toBeNull();
     });
 
     it("accepts text exactly at the limit", () => {
-      const text = "1 2".padEnd(MAX_COORDINATE_TEXT_LENGTH);
+      const text = "1.5 2.5".padEnd(MAX_COORDINATE_TEXT_LENGTH);
       expect(text.length).toBe(MAX_COORDINATE_TEXT_LENGTH);
-      expect(parseCoordinates(text)).toEqual({ lat: 1, lng: 2 });
+      expect(parseCoordinates(text)).toEqual({ lat: 1.5, lng: 2.5 });
     });
 
     it("answers a megabyte of text at once", () => {
@@ -261,8 +291,22 @@ describe("parseCoordinates", () => {
 
     it("stays fast on the longest text the limit allows", () => {
       const started = performance.now();
-      for (const unit of ["1,", `°'"`, " ", "S", "9", "-", "1°", "1 S "]) {
-        parseCoordinates(unit.repeat(MAX_COORDINATE_TEXT_LENGTH));
+      for (const unit of [
+        "1,",
+        `°'"`,
+        " ",
+        "S",
+        "9",
+        "-",
+        "1°",
+        "1 S ",
+        "1.5 ",
+      ]) {
+        const text = unit
+          .repeat(MAX_COORDINATE_TEXT_LENGTH)
+          .slice(0, MAX_COORDINATE_TEXT_LENGTH);
+        expect(text).toHaveLength(MAX_COORDINATE_TEXT_LENGTH);
+        parseCoordinates(text);
       }
       expect(performance.now() - started).toBeLessThan(100);
     });

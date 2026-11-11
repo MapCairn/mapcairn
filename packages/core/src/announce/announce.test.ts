@@ -5,6 +5,7 @@ import {
   announceAddressNotFound,
   announceAreaFound,
   announceBasemap,
+  announceCoordinateResult,
   announceCopied,
   announceDetailError,
   announceDetailShown,
@@ -48,6 +49,12 @@ describe("search announcements", () => {
     expect(announceSearchResults(3)).toBe("3 results");
     expect(announceSearchResults(1)).toBe("1 result");
     expect(announceSearchResults(1200)).toBe("1,200 results");
+  });
+
+  it("names the place when the one result is a pair of coordinates", () => {
+    expect(
+      announceCoordinateResult("Coordinates 26.20410° S, 28.04730° E"),
+    ).toBe("1 result, Coordinates 26.20410° S, 28.04730° E");
   });
 
   it("says when there are none", () => {

@@ -422,11 +422,35 @@ describe("useSearch", () => {
       });
     });
 
-    it("announces the result the way a search does", async () => {
+    it("announces the result with its label, through the polite region", async () => {
       const { result } = setup();
       await searchFor(result, "-26.2041, 28.0473");
-      expect(polite()).toBe("1 result");
+      expect(polite()).toBe("1 result, Coordinates 26.20410° S, 28.04730° E");
     });
+
+    it("announces a second coordinate search for another place", async () => {
+      const { result } = setup();
+      await searchFor(result, "-26.2041, 28.0473");
+      await advance(5000);
+      await searchFor(result, "51.5, -0.12");
+      expect(polite()).toBe("1 result, Coordinates 51.50000° N, 0.12000° W");
+    });
+
+    it.each(["02-123", "00-001", "12-34", "44-100", "12-14", "12 34", "E1 6"])(
+      "sends %j to the geocoder, because it is not a coordinate pair",
+      async (text) => {
+        const { result, services } = setup();
+        services.fakes.search.setDefaultResults([CAPE_TOWN]);
+        await searchFor(result, text);
+        expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
+          text,
+        ]);
+        expect(result.current.state).toEqual({
+          status: "results",
+          results: [CAPE_TOWN],
+        });
+      },
+    );
 
     it("sends no request while the coordinates are only typed", async () => {
       const { result, services } = setup();
@@ -468,7 +492,7 @@ describe("useSearch", () => {
       await searchFor(result, "-26.2041, 28.0473");
       await act(async () => result.current.submit());
       expect(result.current.state.status).toBe("results");
-      expect(polite()).toBe("1 result");
+      expect(polite()).toBe("1 result, Coordinates 26.20410° S, 28.04730° E");
     });
 
     it("answers again on retry", async () => {

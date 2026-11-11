@@ -239,7 +239,9 @@ test.describe("search", () => {
       "Coordinates 26.20410° S, 28.04730° E",
     ]);
     await expect(mapPage.searchPanel).not.toContainText("Searching");
-    await expect.poll(() => mapPage.announcements()).toContain("1 result");
+    await expect
+      .poll(() => mapPage.announcements())
+      .toContain("1 result, Coordinates 26.20410° S, 28.04730° E");
 
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
@@ -281,8 +283,12 @@ test.describe("search", () => {
     await mapPage.goto();
     await mapPage.search("2196");
     await expect(mapPage.searchOptions).toHaveCount(3);
+    await mapPage.search("02-123");
+    await mapPage.search("12 34");
     await mapPage.search("95, 200");
-    await expect.poll(() => searchedQueries(page)).toEqual(["2196", "95, 200"]);
+    await expect
+      .poll(() => searchedQueries(page))
+      .toEqual(["2196", "02-123", "12 34", "95, 200"]);
   });
 
   test.describe("through the real Nominatim adapter", () => {
