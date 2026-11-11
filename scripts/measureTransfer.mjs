@@ -1,6 +1,5 @@
 /**
- * Measures how many bytes MapCairn transfers over the network, for plan 0002
- * (`docs/plans/0002-data-saving-and-first-paint.md`, "Measured").
+ * Measures how many bytes MapCairn transfers over the network.
  *
  * @remarks
  * Build and serve the production bundle first, then run the script against it:

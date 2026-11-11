@@ -1,4 +1,4 @@
-import type { Services } from "@mapcairn/core";
+import { BUILT_IN_BASEMAP_CATALOGUE, type Services } from "@mapcairn/core";
 // The engine style file has no exports. Importing it here, in the one module
 // every page that builds services loads, puts its rules in the page before
 // the engine mounts, and keeps it out of the ui, which may not import adapters.
@@ -14,7 +14,6 @@ import { NominatimSearchProvider } from "../adapters/search/NominatimSearchProvi
 import { LocalStorageSettingsStore } from "../adapters/settings/LocalStorageSettingsStore";
 import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
-import { BASEMAP_CATALOGUE } from "../basemaps";
 import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
 import { createHostLayerRegistry } from "../layers";
 import { readTestOverrides } from "./testSeam";
@@ -72,7 +71,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     layers: createHostLayerRegistry(),
     layerSource: new FetchLayerSource(),
     routing: new ValhallaRoutingProvider(),
-    basemaps: BASEMAP_CATALOGUE,
+    basemaps: BUILT_IN_BASEMAP_CATALOGUE,
   };
   const seam =
     import.meta.env.MODE !== "production" ? readTestOverrides() : undefined;

@@ -34,7 +34,7 @@ export function buildContentSecurityPolicy(
 ): string {
   const scriptSources = [
     "'self'",
-    "'sha256-ekY22CcRwTpFhlNJqAiA6uknx47FhNwuh0vXd3IRNjs='",
+    "'sha256-HDMuvq98LZwIukg++7waZ7LEfGTqVMuNKBzEVAi593Q='",
     ...(nonce ? [`'nonce-${nonce}'`] : []),
     "https://static.cloudflareinsights.com",
   ];

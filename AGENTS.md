@@ -112,7 +112,7 @@ The npm workspaces share one root `package-lock.json`.
 `wrangler.jsonc` declares only the static `ASSETS` binding, routes and observability. `workers/app.ts` forwards requests to the built React Router server. The route table in `src/routes.ts` has the map, the privacy page, the `robots.txt`, `sitemap.xml` and `llms.txt` resource routes and `log-error`.
 `entry.client.tsx` installs client error reporting before hydration. Server rendering, the root error boundary and the Worker wrapper log server errors. `routes/log-error.ts` validates bounded client reports and logs them without a database.
 
-The inline theme bootstrap in `root.tsx` (source in `src/app/themeBootstrap.ts`) prevents a flash before hydration. If its source changes, recompute its exact SHA-256 CSP hash in `public/_headers` and `src/constants/securityHeaders.ts`. The script also reads the pre-rename key `karta:theme` when `mapcairn:theme` is empty, so a returning visitor sees no flash. Keep font and app CSS as module imports so font fallback metrics are applied by the build.
+The inline theme bootstrap in `root.tsx` (source in `src/app/themeBootstrap.ts`) prevents a flash before hydration. If its source changes, recompute its exact SHA-256 CSP hash in `public/_headers` and `src/constants/securityHeaders.ts`. Keep font and app CSS as module imports so font fallback metrics are applied by the build.
 
 Production CSP permits no `unsafe-inline` script or stylesheet source. New basemap or geocoder origins must be allowed in `public/_headers`; local development does not apply those headers. The MapLibre worker must stay compatible with iOS and the production CSP.
 

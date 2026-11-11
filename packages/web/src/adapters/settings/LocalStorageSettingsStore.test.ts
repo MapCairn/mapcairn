@@ -1,11 +1,10 @@
-import { LEGACY_THEME_STORAGE_KEY, THEME_STORAGE_KEY } from "@mapcairn/core";
+import { THEME_STORAGE_KEY } from "@mapcairn/core";
 import { runSettingsStoreContract } from "@mapcairn/core/contracts";
 import { describe, expect, it } from "vitest";
 import {
   LocalStorageSettingsStore,
   type StorageEventTarget,
 } from "./LocalStorageSettingsStore";
-import { LEGACY_KEY_PREFIX } from "./migrateLegacyStorage";
 
 /** A Storage that behaves like the real one and can be told to throw. */
 class FakeStorage implements Storage {
@@ -125,79 +124,6 @@ describe("LocalStorageSettingsStore", () => {
     expect(JSON.parse(storage.getItem("mapcairn:lastView") ?? "null")).toEqual(
       VIEW,
     );
-  });
-
-  describe("settings saved before the rename from Karta", () => {
-    it("shares its theme key with the pre-paint script's fallback", () => {
-      expect(LEGACY_THEME_STORAGE_KEY).toBe(`${LEGACY_KEY_PREFIX}theme`);
-    });
-
-    it("keeps every saved setting and moves it to the current keys", () => {
-      const { store, storage } = setup({
-        [LEGACY_THEME_STORAGE_KEY]: "dark",
-        [`${LEGACY_KEY_PREFIX}units`]: '"imperial"',
-        [`${LEGACY_KEY_PREFIX}zoomButtons`]: "true",
-        [`${LEGACY_KEY_PREFIX}saveData`]: "false",
-        [`${LEGACY_KEY_PREFIX}basemapId`]: '"positron"',
-        [`${LEGACY_KEY_PREFIX}lastView`]: JSON.stringify(VIEW),
-      });
-      expect(store.get()).toEqual({
-        theme: "dark",
-        units: "imperial",
-        zoomButtons: true,
-        saveData: false,
-        basemapId: "positron",
-        lastView: VIEW,
-      });
-      expect(storage.keys().sort()).toEqual(
-        [
-          THEME_STORAGE_KEY,
-          "mapcairn:units",
-          "mapcairn:zoomButtons",
-          "mapcairn:saveData",
-          "mapcairn:basemapId",
-          "mapcairn:lastView",
-        ].sort(),
-      );
-      expect(storage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-    });
-
-    it("prefers a value saved under the current key", () => {
-      const { store, storage } = setup({
-        [LEGACY_THEME_STORAGE_KEY]: "dark",
-        [THEME_STORAGE_KEY]: "light",
-        [`${LEGACY_KEY_PREFIX}units`]: '"imperial"',
-        "mapcairn:units": '"metric"',
-      });
-      expect(store.get().theme).toBe("light");
-      expect(store.get().units).toBe("metric");
-      expect(storage.keys().sort()).toEqual(
-        [THEME_STORAGE_KEY, "mapcairn:units"].sort(),
-      );
-    });
-
-    it("migrates only once: a second store finds the same settings", () => {
-      const first = setup({ [LEGACY_THEME_STORAGE_KEY]: "dark" });
-      const second = new LocalStorageSettingsStore({
-        getStorage: () => first.storage,
-        events: undefined,
-      });
-      expect(second.get().theme).toBe("dark");
-      expect(first.storage.keys()).toEqual([THEME_STORAGE_KEY]);
-    });
-
-    it("keeps working, and keeps the earlier values, when storage refuses writes", () => {
-      const storage = new FakeStorage();
-      storage.put(LEGACY_THEME_STORAGE_KEY, "dark");
-      storage.failWrites = true;
-      const store = new LocalStorageSettingsStore({
-        getStorage: () => storage,
-        events: undefined,
-      });
-      expect(store.persistent).toBe(false);
-      expect(store.get().theme).toBe("system");
-      expect(storage.getItem(LEGACY_THEME_STORAGE_KEY)).toBe("dark");
-    });
   });
 
   it("reads back what an earlier visit stored", () => {

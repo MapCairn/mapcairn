@@ -96,7 +96,7 @@ These surfaces hold raw values on purpose and are exempt from the harmony lint (
 
 - the tokens file (`packages/theme/src/tokens.css.ts`, `tokenValues.ts` and the contrast code and tests)
 - the map engine style file (`packages/web/src/adapters/mapEngine.css.ts`), the only place MapLibre selectors (`.maplibregl-*`) and raw engine z-index values may appear
-- basemap definitions (`packages/core/src/basemaps` and the host's `packages/web/src/basemaps`): committed basemap assets and map style definitions are data, and carry their own colours, such as a picker swatch
+- basemap definitions (`packages/core/src/basemaps`): committed basemap assets and map style definitions are data, and carry their own colours, such as a picker swatch
 - tests, fixtures and test support
 - `node_modules` and build output
 

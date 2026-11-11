@@ -7,10 +7,6 @@ import {
   type UnitSystem,
   type ViewState,
 } from "@mapcairn/core";
-import {
-  legacySettingKeys,
-  migrateLegacyStorage,
-} from "./migrateLegacyStorage";
 
 /** The settings a store starts from, and falls back to for a bad stored value. */
 const DEFAULTS: Settings = Object.freeze({
@@ -180,9 +176,7 @@ export interface LocalStorageSettingsStoreOptions {
  *   exception is the theme, stored as a plain string under
  *   {@link THEME_STORAGE_KEY} so the inline pre-paint script can read it
  *   without parsing. Stored values are validated on read: anything invalid
- *   becomes the default for that setting. Keys saved before the project was
- *   renamed from Karta (`karta:<name>`) are moved to the current keys when the
- *   store starts; see {@link migrateLegacyStorage}.
+ *   becomes the default for that setting.
  *
  *   Every storage access is guarded. The values are held in memory as well, so
  *   when storage is blocked (Safari private mode, a "block all cookies"
@@ -209,7 +203,6 @@ export class LocalStorageSettingsStore implements SettingsStore {
       this.#events = typeof window === "undefined" ? undefined : window;
     }
     this.#persistent = this.#probe();
-    this.#migrateLegacyKeys();
     this.#settings = this.#readAll(DEFAULTS);
   }
 
@@ -270,19 +263,6 @@ export class LocalStorageSettingsStore implements SettingsStore {
       return this.#getStorage() ?? undefined;
     } catch {
       return undefined;
-    }
-  }
-
-  /** Moves settings saved under the keys of the Karta releases, when storage can be written. */
-  #migrateLegacyKeys(): void {
-    const storage = this.#persistent ? this.#storage() : undefined;
-    if (storage !== undefined) {
-      migrateLegacyStorage(
-        storage,
-        legacySettingKeys(SETTING_NAMES, (name) =>
-          storageKey(name as SettingName),
-        ),
-      );
     }
   }
 

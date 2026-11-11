@@ -86,31 +86,6 @@ test.describe("theme", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   });
 
-  test("a dark choice saved before the rename paints dark first and moves to the current key", async ({
-    page,
-    mapPage,
-  }) => {
-    await page.emulateMedia({ colorScheme: "light" });
-    await page.addInitScript(() => {
-      if (sessionStorage.getItem("mapcairn-e2e:seeded") !== "true") {
-        sessionStorage.setItem("mapcairn-e2e:seeded", "true");
-        localStorage.setItem("karta:theme", "dark");
-      }
-    });
-    await page.addInitScript(recordFirstPaintTheme);
-    await mapPage.goto();
-    expect(await page.evaluate(() => window.__mapcairnFirstPaintTheme)).toBe(
-      "dark",
-    );
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    expect(
-      await page.evaluate(() => ({
-        current: localStorage.getItem("mapcairn:theme"),
-        legacy: localStorage.getItem("karta:theme"),
-      })),
-    ).toEqual({ current: "dark", legacy: null });
-  });
-
   test("the default basemap is the same in both themes, and the theme never changes the basemap", async ({
     page,
     mapPage,

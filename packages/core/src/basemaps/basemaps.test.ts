@@ -380,9 +380,33 @@ describe("createBasemapCatalogue", () => {
 
   it("is what the built-in basemaps make: Bright the default, then Liberty, Colorful, Positron, Streets and Fiord", () => {
     expect(BUILT_IN_BASEMAP_CATALOGUE.basemaps).toBe(BASEMAPS);
+    expect(
+      BUILT_IN_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.name),
+    ).toEqual([
+      "Bright",
+      "Liberty",
+      "Colorful",
+      "Positron",
+      "Streets",
+      "Fiord",
+    ]);
     expect(BUILT_IN_BASEMAP_CATALOGUE.defaultId).toBe(DEFAULT_BASEMAP_ID);
-    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("dark").id).toBe("bright");
     expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").id).toBe("liberty");
+    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord").name).toBe("Fiord");
+  });
+
+  it("opens on the default for a retired id: dark, auto and Maptoolkit Dark", () => {
+    for (const id of [
+      "dark",
+      "auto",
+      "maptoolkit",
+      "maptoolkit-dark",
+      "Maptoolkit-Dark",
+    ]) {
+      expect(BUILT_IN_BASEMAP_CATALOGUE.resolve(id).id, id).toBe(
+        DEFAULT_BASEMAP_ID,
+      );
+    }
   });
 
   it("leaves out no layers for Colorful in Save data mode, whose style draws no raster layer", () => {

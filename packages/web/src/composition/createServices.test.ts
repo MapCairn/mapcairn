@@ -1,4 +1,5 @@
 import {
+  BUILT_IN_BASEMAP_CATALOGUE,
   createFakeServices,
   FakeClipboard,
   FakeRoutingProvider,
@@ -14,7 +15,6 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
-import { BASEMAP_CATALOGUE } from "../basemaps";
 import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
 
@@ -30,15 +30,15 @@ describe("createServices", () => {
     for (const name of PORT_NAMES) {
       expect(services[name as PortName], name).toBeDefined();
     }
-    // `basemaps` is plain data, the host's catalogue, not a port.
+    // `basemaps` is plain data, the built-in catalogue, not a port.
     expect(Object.keys(services).sort()).toEqual(
       [...PORT_NAMES, ...DATA_SERVICE_NAMES].sort(),
     );
   });
 
-  it("offers the host's basemaps, Fiord among them, with Bright the default", () => {
+  it("offers the built-in basemaps, Fiord among them, with Bright the default", () => {
     const { basemaps } = createServices();
-    expect(basemaps).toBe(BASEMAP_CATALOGUE);
+    expect(basemaps).toBe(BUILT_IN_BASEMAP_CATALOGUE);
     expect(basemaps?.get("fiord")?.name).toBe("Fiord");
     expect(basemaps?.defaultId).toBe("bright");
   });
