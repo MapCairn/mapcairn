@@ -22,6 +22,11 @@ const MAX_RING_CORNERS = 5;
 const MAX_RINGS = 2;
 const MAX_MEMBERS = 3;
 
+/** Turns -0 into 0 (adding zero does it), because text cannot tell them apart. */
+function withoutNegativeZero(value: number): number {
+  return value + 0;
+}
+
 /** A number of degrees on the grid, from `-limit` to `limit`. */
 export function degreesOnGrid(limit: number): fc.Arbitrary<number> {
   return fc
@@ -29,7 +34,7 @@ export function degreesOnGrid(limit: number): fc.Arbitrary<number> {
       min: -limit * GRID_UNITS_PER_DEGREE,
       max: limit * GRID_UNITS_PER_DEGREE,
     })
-    .map((units) => units / GRID_UNITS_PER_DEGREE);
+    .map((units) => withoutNegativeZero(units / GRID_UNITS_PER_DEGREE));
 }
 
 /** A position on the grid, anywhere in the world. */
@@ -38,13 +43,18 @@ export const positionOnGrid: fc.Arbitrary<LatLng> = fc.record({
   lng: degreesOnGrid(MAX_LONGITUDE),
 });
 
+/** The degrees on the grid nearest to `degrees`, never negative zero. */
+function snapDegreesToGrid(degrees: number): number {
+  return withoutNegativeZero(
+    Math.round(degrees * GRID_UNITS_PER_DEGREE) / GRID_UNITS_PER_DEGREE,
+  );
+}
+
 /** The position on the grid nearest to `position`. */
 export function snapToGrid(position: LatLng): LatLng {
   return {
-    lat:
-      Math.round(position.lat * GRID_UNITS_PER_DEGREE) / GRID_UNITS_PER_DEGREE,
-    lng:
-      Math.round(position.lng * GRID_UNITS_PER_DEGREE) / GRID_UNITS_PER_DEGREE,
+    lat: snapDegreesToGrid(position.lat),
+    lng: snapDegreesToGrid(position.lng),
   };
 }
 
