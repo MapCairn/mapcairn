@@ -65,14 +65,8 @@ export const NEUTRAL_DARK_BASEMAP_ID = "dark";
 /** Its name in the picker. */
 export const NEUTRAL_DARK_BASEMAP_NAME = "Dark";
 
-/** OpenTopoMap, a second raster basemap, from a provider other than OpenStreetMap. */
-export const TOPOGRAPHIC_BASEMAP_ID = "topographic";
-
-/** Its name in the picker. */
-export const TOPOGRAPHIC_BASEMAP_NAME = "Topographic";
-
 /** How many basemaps the picker offers. */
-export const BASEMAP_COUNT = 8;
+export const BASEMAP_COUNT = 7;
 
 /** The picker's columns. */
 export const BASEMAP_COLUMNS = 3;

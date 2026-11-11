@@ -18,8 +18,6 @@ import {
   RASTER_BASEMAP_CREDIT,
   RASTER_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
-  TOPOGRAPHIC_BASEMAP_ID,
-  TOPOGRAPHIC_BASEMAP_NAME,
 } from "./support/basemaps";
 import {
   COLORFUL_STYLE_PATTERN,
@@ -241,44 +239,6 @@ test.describe("basemaps", () => {
     await expect(
       mapPage.basemapPicker.getByRole("radio", {
         name: NEUTRAL_DARK_BASEMAP_NAME,
-      }),
-    ).toBeChecked();
-  });
-
-  test("Topographic loads OpenTopoMap raster tiles, credits them in full and is saved", async ({
-    page,
-    mapPage,
-  }) => {
-    await mapPage.goto(START);
-    await mapPage.openMapOptions();
-    const tileRequest = page.waitForRequest(/tile\.opentopomap\.org/);
-    await mapPage.chooseBasemap(TOPOGRAPHIC_BASEMAP_NAME);
-    await tileRequest;
-    await expect.poll(() => mapPage.hashBasemap()).toBe(TOPOGRAPHIC_BASEMAP_ID);
-    await expect(page.getByTestId("save-image-button")).not.toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-
-    await collapseCredits(mapPage);
-    await mapPage.creditsButton.click();
-    await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
-      "© OpenStreetMap contributors",
-      "SRTM",
-      "© OpenTopoMap",
-      "CC-BY-SA",
-      "MapLibre",
-    ]);
-
-    await page.evaluate(() => {
-      history.replaceState(null, "", `${location.pathname}${location.search}`);
-    });
-    await page.reload();
-    await mapPage.waitForMap();
-    await mapPage.openMapOptions();
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", {
-        name: TOPOGRAPHIC_BASEMAP_NAME,
       }),
     ).toBeChecked();
   });

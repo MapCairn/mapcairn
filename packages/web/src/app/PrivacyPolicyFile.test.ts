@@ -18,7 +18,7 @@ describe("PRIVACY.md mirrors the privacy page", () => {
 
   it("names every basemap tile provider that may log a request", () => {
     expect(policy).toContain(
-      "The basemap tile providers, OpenFreeMap, VersaTiles when you choose the Colorful basemap, the OpenStreetMap Foundation when you choose the Streets basemap, and OpenTopoMap when you choose the Topographic basemap, may log tile requests, including your IP address, as part of serving the map.",
+      "The basemap tile providers, OpenFreeMap, VersaTiles when you choose the Colorful basemap, and the OpenStreetMap Foundation when you choose the Streets basemap, may log tile requests, including your IP address, as part of serving the map.",
     );
     expect(policy).toContain(
       "Your browser makes those requests itself: they carry your IP address, its usual request headers (such as its user agent) and this site's address as the referrer, and nothing this site has stored about you. VersaTiles says it logs requests in anonymised form and uses the logs only to track down faults and detect misuse.",

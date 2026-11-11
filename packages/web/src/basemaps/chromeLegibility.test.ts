@@ -19,7 +19,6 @@ const basemapBackdrops: Record<string, string> = {
   osm: "#f2efe9",
   fiord: "#45516e",
   dark: "#0c0c0c",
-  topographic: "#f2efe9",
 };
 
 /** Colours that bracket any map a host might add. */

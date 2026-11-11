@@ -18,14 +18,13 @@ import {
 } from "./basemaps";
 
 describe("BASEMAPS", () => {
-  it("contains the eight built-in basemaps in picker order, the default first: the general-purpose styles, then the light ones, then the dark ones", () => {
+  it("contains the seven built-in basemaps in picker order, the default first: the general-purpose styles, then the light ones, then the dark ones", () => {
     expect(BASEMAPS.map((basemap) => basemap.id)).toEqual([
       "bright",
       "liberty",
       "colorful",
       "positron",
       "osm",
-      "topographic",
       "fiord",
       "dark",
     ]);
@@ -40,7 +39,6 @@ describe("BASEMAPS", () => {
       "https://tiles.versatiles.org": "VersaTiles: free demo server, credit",
       "https://tile.openstreetmap.org":
         "OpenStreetMap Foundation tile policy: credit and a valid Referer",
-      "https://tile.opentopomap.org": "OpenTopoMap: CC BY-SA, credit",
     };
     for (const basemap of BASEMAPS) {
       const url =
@@ -103,12 +101,11 @@ describe("BASEMAPS", () => {
     expect(vectors).toBeGreaterThan(0);
   });
 
-  it("uses normalised zoom limits of 0 to 22 for vector styles and to the deepest level each raster provider serves", () => {
-    const rasterMaxZoom: Record<string, number> = { osm: 19, topographic: 17 };
+  it("uses normalised zoom limits of 0 to 22 for vector styles and 0 to 19 for OpenStreetMap tiles", () => {
     for (const basemap of BASEMAPS) {
       expect(basemap.minZoom).toBe(0);
       expect(basemap.maxZoom, basemap.id).toBe(
-        basemap.source.kind === "vector" ? 22 : rasterMaxZoom[basemap.id],
+        basemap.source.kind === "vector" ? 22 : 19,
       );
     }
   });
@@ -119,7 +116,7 @@ describe("BASEMAPS", () => {
     }
   });
 
-  it("uses the OpenFreeMap style URLs, the VersaTiles Colorful style URL, the standard OpenStreetMap tile URL and the OpenTopoMap tile URL", () => {
+  it("uses the OpenFreeMap style URLs, the VersaTiles Colorful style URL and the standard OpenStreetMap tile URL", () => {
     const sources = Object.fromEntries(
       BASEMAPS.map((basemap) => [basemap.id, basemap.source]),
     );
@@ -142,11 +139,6 @@ describe("BASEMAPS", () => {
     expect(sources.dark).toEqual({
       kind: "vector",
       styleUrl: "https://tiles.openfreemap.org/styles/dark",
-    });
-    expect(sources.topographic).toEqual({
-      kind: "raster",
-      tileSize: 256,
-      tileUrl: "https://tile.opentopomap.org/{z}/{x}/{y}.png",
     });
     expect(sources.colorful).toEqual({
       kind: "vector",
@@ -231,24 +223,6 @@ describe("BASEMAPS", () => {
         expect(basemap.swatch, basemap.id).toBeUndefined();
       }
     }
-  });
-
-  it("credits OpenStreetMap, SRTM and OpenTopoMap, with its licence, on Topographic", () => {
-    expect(getBasemap("topographic")?.attribution).toEqual([
-      {
-        text: "© OpenStreetMap contributors",
-        href: "https://www.openstreetmap.org/copyright",
-      },
-      {
-        text: "SRTM",
-        href: "https://www.earthdata.nasa.gov/data/instruments/srtm",
-      },
-      { text: "© OpenTopoMap", href: "https://opentopomap.org" },
-      {
-        text: "CC-BY-SA",
-        href: "https://creativecommons.org/licenses/by-sa/3.0/",
-      },
-    ]);
   });
 
   it("has no basemap that swaps itself for another in a dark theme", () => {
@@ -432,7 +406,7 @@ describe("createBasemapCatalogue", () => {
     ).toThrow(/missing/);
   });
 
-  it("is what the built-in basemaps make: Bright the default, then Liberty, Colorful, Positron, Streets, Topographic, Fiord and Dark", () => {
+  it("is what the built-in basemaps make: Bright the default, then Liberty, Colorful, Positron, Streets, Fiord and Dark", () => {
     expect(BUILT_IN_BASEMAP_CATALOGUE.basemaps).toBe(BASEMAPS);
     expect(
       BUILT_IN_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.name),
@@ -442,7 +416,6 @@ describe("createBasemapCatalogue", () => {
       "Colorful",
       "Positron",
       "Streets",
-      "Topographic",
       "Fiord",
       "Dark",
     ]);

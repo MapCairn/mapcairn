@@ -64,29 +64,6 @@ const VECTOR_MAX_ZOOM = 22;
 // The standard OpenStreetMap tile layer serves levels 0 to 19.
 const OSM_MAX_ZOOM = 19;
 
-// OpenTopoMap renders levels 0 to 17; the server answers a deeper request with
-// a blank placeholder tile (checked 2026-11-11), so the map stops at 17.
-const OPEN_TOPO_MAP_MAX_ZOOM = 17;
-
-// OpenTopoMap (opentopomap.org/about) is CC-BY-SA, "erlaubt deren kommerzielle
-// Nutzung" (allows commercial use), with no fee and no key. Its credit is
-// "Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: ©
-// OpenTopoMap (CC-BY-SA)", given here in English. It asks that the server is
-// not overloaded by mass downloads and gives no availability guarantee; it
-// would welcome a short note about use, which the maintainer sends, not code.
-const OPEN_TOPO_MAP_CREDITS: readonly BasemapAttributionEntry[] = [
-  OPEN_STREET_MAP_CREDIT,
-  {
-    text: "SRTM",
-    href: "https://www.earthdata.nasa.gov/data/instruments/srtm",
-  },
-  { text: "© OpenTopoMap", href: "https://opentopomap.org" },
-  {
-    text: "CC-BY-SA",
-    href: "https://creativecommons.org/licenses/by-sa/3.0/",
-  },
-];
-
 const BRIGHT: BasemapDefinition = {
   id: "bright",
   name: "Bright",
@@ -170,21 +147,6 @@ const DARK: BasemapDefinition = {
   // raster source but draws no raster layer from it (checked 2026-11-11).
 };
 
-const TOPOGRAPHIC: BasemapDefinition = {
-  id: "topographic",
-  name: "Topographic",
-  source: {
-    kind: "raster",
-    tileUrl: "https://tile.opentopomap.org/{z}/{x}/{y}.png",
-    tileSize: 256,
-  },
-  minZoom: 0,
-  maxZoom: OPEN_TOPO_MAP_MAX_ZOOM,
-  thumbnail: "/basemaps/topographic.jpg",
-  attribution: OPEN_TOPO_MAP_CREDITS,
-  appearance: "light",
-};
-
 /** Every built-in basemap, in the order the picker shows them, the default first. */
 export const BASEMAPS: readonly BasemapDefinition[] = [
   BRIGHT,
@@ -218,7 +180,6 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
     attribution: [OPEN_STREET_MAP_CREDIT],
     appearance: "light",
   },
-  TOPOGRAPHIC,
   FIORD,
   DARK,
 ];
