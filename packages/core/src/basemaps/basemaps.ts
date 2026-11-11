@@ -83,9 +83,10 @@ const LIBERTY: BasemapDefinition = {
   source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/liberty` },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
-  thumbnail: "/basemaps/liberty.jpg",
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "light",
+  // No `thumbnail` and no `swatch`: the picker's plain tile takes the default
+  // land colour, which is Liberty's own.
   // The Natural Earth shaded relief raster layer (source "ne2_shaded"), drawn
   // from zoom 0 to 7. It is 933 KB of a 2.7 MB first view of the world, and
   // the vector layers carry the same map without it.
@@ -101,7 +102,6 @@ const COLORFUL: BasemapDefinition = {
   },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
-  thumbnail: "/basemaps/colorful.jpg",
   attribution: VERSATILES_CREDITS,
   appearance: "light",
   // Nothing is left out in Save data mode, on purpose. The style draws only
@@ -120,11 +120,11 @@ const FIORD: BasemapDefinition = {
   source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/fiord` },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
-  thumbnail: "/basemaps/fiord.jpg",
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "dark",
   // Fiord's own land colour (the `background` layer of its style), so the
-  // plain tile Save data mode shows reads as a dark map, not as Bright's.
+  // plain tile the picker shows (it names no `thumbnail`, and Save data mode
+  // shows one too) reads as a dark map, not as Bright's.
   swatch: "#45516e",
   // Nothing to leave out in Save data mode: like Bright, the style names the
   // Natural Earth raster source but draws no raster layer from it.

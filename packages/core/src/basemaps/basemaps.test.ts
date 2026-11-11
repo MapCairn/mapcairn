@@ -137,9 +137,19 @@ describe("BASEMAPS", () => {
     }
   });
 
-  it("points each thumbnail at its committed preview", () => {
+  it("names a preview only as the root-relative path of its own jpg, so a host that serves none shows the swatch", () => {
     for (const basemap of BASEMAPS) {
-      expect(basemap.thumbnail).toBe(`/basemaps/${basemap.id}.jpg`);
+      if (basemap.thumbnail !== undefined) {
+        expect(basemap.thumbnail, basemap.id).toBe(
+          `/basemaps/${basemap.id}.jpg`,
+        );
+      }
+    }
+  });
+
+  it("names no preview for Liberty, Colorful or Fiord, whose images the reference host does not ship", () => {
+    for (const id of ["liberty", "colorful", "fiord"]) {
+      expect(getBasemap(id)?.thumbnail, id).toBeUndefined();
     }
   });
 

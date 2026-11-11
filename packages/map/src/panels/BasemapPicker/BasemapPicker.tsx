@@ -52,8 +52,8 @@ export interface BasemapPickerProps {
  * and select in one step (wrapping at the ends and following the writing
  * direction) and the radio role in every screen reader, with no script. The
  * selected tile has an accent outline and a check badge, so selection never
- * relies on colour. A preview that fails to load disappears and leaves a
- * neutral tile, with the name still visible. The basemap does not follow the
+ * relies on colour. A preview that fails to load gives way to the basemap's
+ * swatch, as a basemap with no preview does, with the name still visible. The basemap does not follow the
  * interface theme: A host's dark basemap is an ordinary choice, as the others are.
  *
  * @remarks In Save data mode (`useSaveData`), and for a basemap that has no
@@ -155,6 +155,7 @@ function BasemapTile({
 }: BasemapTileProps) {
   const [failed, setFailed] = useState(false);
   const preview = saveData ? undefined : basemap.thumbnail;
+  const showSwatch = preview === undefined || failed;
   // A ref callback with a listener, not an onError prop, which the a11y lint
   // rejects on a non-interactive element.
   const watchImage = useCallback((image: HTMLImageElement | null) => {
@@ -192,14 +193,14 @@ function BasemapTile({
         onChange={onChoose}
       />
       <span className={thumb({ selected, unavailable })}>
-        {preview === undefined ? (
+        {showSwatch ? (
           <span
             className={swatch}
             ref={paintSwatch}
             data-testid={`basemap-swatch-${basemap.id}`}
           />
         ) : null}
-        {preview === undefined || failed ? null : (
+        {showSwatch ? null : (
           <img
             className={image}
             src={preview}
