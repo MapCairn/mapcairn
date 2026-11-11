@@ -1,0 +1,3 @@
+id,type,area_m2,length_m,geometry,radius_m,centre_lng,centre_lat
+shape-1,point,,,"{""type"":""Point"",""coordinates"":[2.3499,48.853]}",,,
+shape-2,circle,196349.54,1570.8,"{""type"":""Point"",""coordinates"":[2.3376,48.8606]}",250,2.3376,48.8606
