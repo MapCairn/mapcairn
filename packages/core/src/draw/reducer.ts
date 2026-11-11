@@ -49,7 +49,7 @@ export type DrawEvent =
   | { readonly type: "undone" }
   | { readonly type: "redone" }
   | { readonly type: "loaded"; readonly count: number }
-  | { readonly type: "imported"; readonly shapeIds: readonly string[] };
+  | { readonly type: "imported" };
 
 /** A shape as it is given to `load`: everything but the generated fields. */
 export interface DrawShapeInput {
@@ -659,7 +659,7 @@ function importShapes(
     selection: draft ? state.selection : { shapeId: first.id, vertex: null },
     nextId,
     serials,
-    lastEvent: { type: "imported", shapeIds: added.map((shape) => shape.id) },
+    lastEvent: { type: "imported" },
   });
 }
 

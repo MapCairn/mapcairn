@@ -192,7 +192,7 @@ describe("announceDrawEvent", () => {
   });
 
   it("leaves an import to the words of its own result", () => {
-    expect(say({ type: "imported", shapeIds: ["shape-1"] })).toBeNull();
+    expect(say({ type: "imported" })).toBeNull();
   });
 
   it("falls back to a plain sentence when the shape is gone", () => {

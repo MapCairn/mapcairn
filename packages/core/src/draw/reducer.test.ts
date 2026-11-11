@@ -865,10 +865,7 @@ describe("import", () => {
     expect(imported.nextId).toBe(4);
     expect(imported.serials).toMatchObject({ polygon: 2, point: 1 });
     expect(imported.selection).toEqual({ shapeId: "shape-2", vertex: null });
-    expect(imported.lastEvent).toEqual({
-      type: "imported",
-      shapeIds: ["shape-2", "shape-3"],
-    });
+    expect(imported.lastEvent).toEqual({ type: "imported" });
   });
 
   it("is one undo step, and redo brings every shape back", () => {

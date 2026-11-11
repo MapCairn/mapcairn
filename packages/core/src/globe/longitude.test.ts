@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { nearestLongitude, unwrapLongitudes, wrapLongitude } from "./longitude";
+import {
+  nearestLongitude,
+  shortestLongitudeSpan,
+  unwrapLongitudes,
+  wrapLongitude,
+} from "./longitude";
 
 describe("wrapLongitude", () => {
   it("leaves a longitude inside [-180, 180) alone", () => {
@@ -65,5 +70,37 @@ describe("unwrapLongitudes", () => {
       { lat: -33.9, lng: 18.4 },
     ]);
     expect(unwrapLongitudes([], 0)).toEqual([]);
+  });
+});
+
+describe("shortestLongitudeSpan", () => {
+  it("spans plain longitudes from west to east", () => {
+    expect(shortestLongitudeSpan([10, -20, 5])).toEqual({
+      west: -20,
+      east: 10,
+    });
+  });
+
+  it("goes the short way across the antimeridian, east beyond 180", () => {
+    expect(shortestLongitudeSpan([179, -179])).toEqual({
+      west: 179,
+      east: 181,
+    });
+    expect(shortestLongitudeSpan([170, -170, 175])).toEqual({
+      west: 170,
+      east: 190,
+    });
+  });
+
+  it("is a single longitude for one, and undefined for none", () => {
+    expect(shortestLongitudeSpan([42])).toEqual({ west: 42, east: 42 });
+    expect(shortestLongitudeSpan([])).toBeUndefined();
+  });
+
+  it("takes 180 as -180, so both ends of the world meet", () => {
+    expect(shortestLongitudeSpan([180, -179])).toEqual({
+      west: -180,
+      east: -179,
+    });
   });
 });

@@ -1,5 +1,5 @@
+import { shortestLongitudeSpan } from "../globe/longitude";
 import type { Bounds, LatLng } from "../ports/geometry";
-import { boundsOfPoints } from "../spatial/boundsOfPoints";
 import { SHAPES_CSV_HEADER } from "./export";
 import type { DrawShapeInput } from "./reducer";
 import { shapeRing, validateShape } from "./shape";
@@ -21,7 +21,12 @@ export const SHAPE_FILE_TYPES: readonly string[] = [
 /** The largest file the draw tool imports: 1 MB. Longer text is refused before it is read. */
 export const MAX_IMPORT_BYTES = 1_000_000;
 
-/** How deeply JSON may nest. GeoJSON needs eight levels; the rest is room for properties. */
+/**
+ * How deeply JSON may nest. The deepest GeoJSON the import reads, a
+ * MultiPolygon in a GeometryCollection in a FeatureCollection, needs ten
+ * levels; 32 leaves room for nested properties and is still a safe depth for
+ * any engine.
+ */
 export const MAX_IMPORT_DEPTH = 32;
 
 /** The most shapes one file may hold, counting those that are skipped. */
@@ -226,6 +231,10 @@ function addPolygon(collector: Collector, coordinates: unknown): void {
   }
   if (ring.length > 1 && samePosition(ring[0], ring.at(-1))) {
     ring.pop();
+  }
+  if (ring.length > MAX_IMPORT_SHAPE_POINTS) {
+    add(collector, "too-many-points");
+    return;
   }
   add(collector, { kind: "polygon", vertices: ring }, coordinates.length > 1);
 }
@@ -569,7 +578,8 @@ export function parseShapeFile(text: string): ShapeImport {
   if (text.length > MAX_IMPORT_BYTES) {
     return refuse("too-large");
   }
-  const body = text.replace(/^[﻿\s]+/, "");
+  // `\s` covers the byte order mark (U+FEFF) as well as white space.
+  const body = text.replace(/^\s+/, "");
   if (body === "") {
     return refuse("empty");
   }
@@ -612,7 +622,8 @@ export function parseShapeFile(text: string): ShapeImport {
 
 /**
  * The box that holds every shape in `inputs`: each vertex, and the whole
- * of a circle's outline. Used to fit the map to what was imported.
+ * of a circle's outline, taking the short way across the antimeridian (so
+ * `east` may pass 180). Used to fit the map to what was imported.
  * @returns `undefined` when there is nothing to hold.
  */
 export function shapeInputBounds(
@@ -623,5 +634,15 @@ export function shapeInputBounds(
       ? shapeRing({ ...input, id: "bounds", label: "", done: true })
       : input.vertices,
   );
-  return boundsOfPoints(points);
+  const span = shortestLongitudeSpan(points.map((point) => point.lng));
+  if (!span) {
+    return undefined;
+  }
+  const lats = points.map((point) => point.lat);
+  return {
+    south: Math.min(...lats),
+    west: span.west,
+    north: Math.max(...lats),
+    east: span.east,
+  };
 }

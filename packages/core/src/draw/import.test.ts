@@ -274,6 +274,29 @@ describe("parseShapeFile with GeoJSON", () => {
     });
   });
 
+  it("skips a polygon whose open ring has more points than one shape may have", () => {
+    const ring = Array.from(
+      { length: MAX_IMPORT_SHAPE_POINTS + 1 },
+      (_, index) => {
+        const angle = (2 * Math.PI * index) / (MAX_IMPORT_SHAPE_POINTS + 1);
+        return [Math.cos(angle), Math.sin(angle)];
+      },
+    );
+    expect(
+      parseShapeFile(json({ type: "Polygon", coordinates: [ring] })),
+    ).toMatchObject({
+      ok: true,
+      shapes: [],
+      skipped: { "too-many-points": 1 },
+    });
+    const closed = [...ring.slice(0, -1), ring[0]];
+    expect(
+      shapesOf(
+        parseShapeFile(json({ type: "Polygon", coordinates: [closed] })),
+      ),
+    ).toHaveLength(1);
+  });
+
   it("reads malformed positions as skips, never throws", () => {
     for (const coordinates of [
       null,
@@ -530,6 +553,11 @@ describe("parseShapeFile with CSV", () => {
     ]);
   });
 
+  it("reads a CSV that starts with a byte order mark", () => {
+    const text = `﻿${shapesToCsv(SHAPES.slice(0, 1))}`;
+    expect(shapesOf(parseShapeFile(text))).toHaveLength(1);
+  });
+
   it("reads quoted fields with commas, quotes and new lines", () => {
     const header = shapesToCsv([]);
     const text = `${header}\n"shape,""1""\nx",point,,,"{""type"":""Point"",""coordinates"":[1,2]}",,,`;
@@ -579,6 +607,12 @@ describe("shapeInputBounds", () => {
     expect(bounds?.north).toBeCloseTo(2, 6);
     expect(bounds?.west).toBeCloseTo(1, 6);
     expect(bounds?.east).toBeCloseTo(11, 3);
+  });
+
+  it("spans the antimeridian the short way", () => {
+    expect(
+      shapeInputBounds([{ kind: "line", vertices: [p(179, 1), p(-179, 2)] }]),
+    ).toEqual({ south: 1, west: 179, north: 2, east: 181 });
   });
 
   it("is undefined with nothing to hold", () => {
