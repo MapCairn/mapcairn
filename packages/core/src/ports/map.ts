@@ -542,4 +542,14 @@ export interface MapAdapter {
  * Builds a fresh, unmounted map adapter. The composition root supplies this,
  * so the ui gets an engine without importing one.
  */
-export type MapAdapterFactory = () => MapAdapter;
+export interface MapAdapterFactory {
+  (): MapAdapter;
+  /**
+   * Starts fetching the engine before the first adapter mounts, so the
+   * download runs while the app renders rather than after it. Optional: an
+   * engine that needs no loading leaves it out. Safe to call more than once;
+   * it never throws, and a failed fetch is left for the mount to retry and
+   * report.
+   */
+  readonly preload?: () => void;
+}

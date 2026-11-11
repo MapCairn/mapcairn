@@ -7,7 +7,7 @@ import { BrowserClipboard } from "../adapters/clipboard/BrowserClipboard";
 import { BrowserFileSaver } from "../adapters/files/BrowserFileSaver";
 import { FetchLayerSource } from "../adapters/layers/FetchLayerSource";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
-import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
+import { createMapLibreMapAdapterFactory } from "../adapters/maplibre/MapLibreMapAdapter";
 import { BrowserDevicePreferences } from "../adapters/preferences/BrowserDevicePreferences";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
 import { NominatimSearchProvider } from "../adapters/search/NominatimSearchProvider";
@@ -59,9 +59,10 @@ function definedEntries(
 export function createServices(options: CreateServicesOptions = {}): Services {
   const real: Services = {
     // The adapter loads MapLibre lazily, so building one costs nothing
-    // until it mounts.
-    createMapAdapter: () =>
-      createMapLibreMapAdapter({ workerCacheKey: WORKER_CACHE_KEY }),
+    // until it mounts or the app calls `preload`.
+    createMapAdapter: createMapLibreMapAdapterFactory({
+      workerCacheKey: WORKER_CACHE_KEY,
+    }),
     search: new NominatimSearchProvider(),
     location: new BrowserLocationProvider(),
     settings: new LocalStorageSettingsStore(),

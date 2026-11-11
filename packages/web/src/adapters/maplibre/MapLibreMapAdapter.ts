@@ -5,6 +5,7 @@ import type {
   HandlePointer,
   LatLng,
   MapAdapter,
+  MapAdapterFactory,
   MapBasemapOptions,
   MapClickEvent,
   MapEditHandle,
@@ -2179,9 +2180,26 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 }
 
-/** Builds a fresh MapLibre adapter. The composition root's adapter factory. */
+/** Builds a fresh MapLibre adapter. */
 export function createMapLibreMapAdapter(
   options: MapLibreMapAdapterOptions = {},
 ): MapAdapter {
   return new MapLibreMapAdapter(options);
+}
+
+/**
+ * The composition root's {@link MapAdapterFactory}: each call builds a fresh
+ * MapLibre adapter with `options`, and `preload` starts {@link loadEngine}
+ * early, so `maplibre-gl` downloads while the app renders. A mount awaits the
+ * same load. A failed preload is dropped here, because `loadEngine` forgets a
+ * rejected load and the mount then tries again and reports the failure.
+ */
+export function createMapLibreMapAdapterFactory(
+  options: MapLibreMapAdapterOptions = {},
+): MapAdapterFactory {
+  return Object.assign(() => createMapLibreMapAdapter(options), {
+    preload: () => {
+      loadEngine(options.workerCacheKey).catch(() => undefined);
+    },
+  });
 }

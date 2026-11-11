@@ -309,6 +309,30 @@ describe("App", () => {
     expect(sheet()).toHaveAttribute("data-state", "closed");
   });
 
+  it("starts loading the map engine once, before the map is built", async () => {
+    const calls: string[] = [];
+    const services = createFakeServices();
+    const build = services.createMapAdapter;
+    const preload = vi.fn(() => {
+      calls.push("preload");
+    });
+    const createMapAdapter = Object.assign(
+      () => {
+        calls.push("create");
+        return build();
+      },
+      { preload },
+    );
+    await renderApp({ ...services, createMapAdapter });
+
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    await settle();
+
+    expect(preload).toHaveBeenCalledOnce();
+    expect(calls[0]).toBe("preload");
+    expect(calls).toContain("create");
+  });
+
   it("starts from a shared link, then the saved view", async () => {
     const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
     const services = createFakeServices();
