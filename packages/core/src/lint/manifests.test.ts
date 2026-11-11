@@ -26,6 +26,8 @@ const TYPES_PACKAGES: Readonly<Record<string, string>> = {
 
 interface Manifest {
   readonly name: string;
+  /** Without it, any file in the package can be imported by path. */
+  readonly exports?: Readonly<Record<string, string>>;
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
 }
@@ -81,6 +83,13 @@ describe("SDK package manifests", () => {
         }
       }
       expect([...missing]).toEqual([]);
+    },
+  );
+
+  it.each(SDK_PACKAGES)(
+    "@mapcairn/%s exposes only its entry points",
+    (name) => {
+      expect(manifestOf(name).exports).toHaveProperty(".", "./src/index.ts");
     },
   );
 
