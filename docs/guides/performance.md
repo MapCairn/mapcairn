@@ -1,9 +1,8 @@
-# Plan 0005: Lighthouse improvements
+# Performance and Lighthouse
 
-Status: in progress. Measured; the two changes tried did not help and were reverted, and the findings and decisions are recorded here. Written 2026-11-11.
-Tracking issue: [#8](https://github.com/MapCairn/mapcairn/issues/8).
+What was measured on 2026-11-11, what was tried and what was left alone, so the same experiments are not repeated. Tracked in [#8](https://github.com/MapCairn/mapcairn/issues/8).
 
-## Goal and ground rules
+## Ground rules
 
 Improve the Lighthouse scores where the cause is real, and stop where the remaining gains would need tricks.
 
@@ -35,7 +34,7 @@ Accessibility, best practices and SEO are 100 everywhere. 24 requests to the sit
 5. **Render-blocking CSS.** Four stylesheets block the first paint: the shared component sheet (60 KB raw, 7.7 KB compressed), root, home and the error page's sheet (under 1 KB, loaded because the root error boundary imports it). All but the last are needed to draw the server-rendered skeleton, and the production CSP forbids inlining them.
 6. **No layout shift.** CLS is 0 in every run; the server-rendered skeleton holds the chrome's boxes.
 
-## Order of work
+## What was tried
 
 1. Start the engine download during the app's first render (finding 3), through an optional `preload` on the map adapter factory, so the ui still never imports the engine. Measure against `main`, interleaved, and keep it only if it separates.
 2. Try hydrating in a transition. Measure the same way.
