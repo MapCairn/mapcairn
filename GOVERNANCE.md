@@ -48,7 +48,7 @@ Taking on the Cloudflare account, the domain or the repository's administration 
 
 If the only maintainer were unavailable for any reason, the project could not continue with minimal interruption. This is the OpenSSF Best Practices silver criterion `access_continuity`, and it is not met.
 
-What is missing is a named, trusted second person who has access to the GitHub organisation, the Cloudflare account that serves the site and the domain, and who could keep the project going or hand it on. No such person is recorded here, and none will be invented to fill the gap. The work is tracked in [#182](https://github.com/MapCairn/mapcairn/issues/182). When it is done, this section will say who has access, without credentials or any secret.
+What is missing is a named, trusted second person who has access to the GitHub organisation, the Cloudflare account that serves the site and the domain, and who could keep the project going or hand it on. No such person is recorded here, and none will be invented to fill the gap. The work is tracked in [#4](https://github.com/MapCairn/mapcairn/issues/4). When it is done, this section will say who has access, without credentials or any secret.
 
 What does reduce the risk today: the code, the plans and the decisions are public, the licence lets anyone fork and run it, the site has no database or accounts to migrate, and the deployment is a Cloudflare Worker described by `wrangler.jsonc` in the repository.
 

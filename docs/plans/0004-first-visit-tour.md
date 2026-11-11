@@ -1,8 +1,7 @@
 # Plan 0004: first-visit tour
 
-Status: in progress. The setting, the card, the slot, the Help restart, the privacy text, the end-to-end tests (desktop Chromium and Pixel 7) and axe on the cards are built; the collision additions and the landscape and tablet screenshots are not yet done. Written 2026-11-10 and rewritten on 2026-11-11 to the smaller scope the maintainer decided on the tracking issue. The work it was queued behind (#222, #204) is closed.
-
-Tracking issue: [#179](https://github.com/MapCairn/mapcairn/issues/179).
+Status: in progress. The setting, the card, the slot, the Help restart, the privacy text, the end-to-end tests (desktop Chromium and Pixel 7) and axe on the cards are built; the collision additions and the landscape and tablet screenshots are not yet done. Written 2026-11-10 and rewritten on 2026-11-11 to the smaller scope the maintainer decided on the tracking issue.
+Tracking issue: [#3](https://github.com/MapCairn/mapcairn/issues/3).
 
 ## Goal and ground rules
 

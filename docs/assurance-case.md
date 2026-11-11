@@ -18,7 +18,7 @@ Links to code point at the `main` branch. Test names are quoted so they can be s
 4. **An error report carries no position.** If the app fails in the browser, a short report (message, stack, page origin and path, and a source) is logged. The query and the fragment are dropped before logging.
 5. **Pages cannot run unexpected scripts or be framed.** Production pages are served with a Content Security Policy that allows no `unsafe-inline` source, with origin allowlists, and with headers that stop framing, sniffing and downgrades.
 6. **Data from a provider is treated as data.** It is validated, and drawn as text or shapes by React and the map engine, never as markup. Links from a provider open only if they are `https`.
-7. **Cloud settings the project relies on.** Traffic is HTTPS only, with HSTS. The Cloudflare zone requires TLS 1.2 or later and uses Full (strict) encryption. These are settings in Cloudflare, not in this repository, and were checked from outside on 2026-11-10 (see [#182](https://github.com/MapCairn/mapcairn/issues/182)).
+7. **Cloud settings the project relies on.** Traffic is HTTPS only, with HSTS. The Cloudflare zone requires TLS 1.2 or later and uses Full (strict) encryption. These are settings in Cloudflare, not in this repository, and were checked from outside on 2026-11-10 (see [#4](https://github.com/MapCairn/mapcairn/issues/4)).
 
 ### What a visitor cannot expect
 
@@ -104,8 +104,8 @@ The fragment is read at load, so a hand-made link is untrusted input. The decode
 | A malicious or vulnerable dependency | A committed lockfile and `npm ci` in CI. Dependabot proposes updates weekly for npm and for GitHub Actions. Actions are pinned to commit hashes. | [`.github/dependabot.yml`](https://github.com/MapCairn/mapcairn/blob/main/.github/dependabot.yml); [`ci.yml`](https://github.com/MapCairn/mapcairn/blob/main/.github/workflows/ci.yml); `package-lock.json` |
 | A weak spot in repository practice | OpenSSF Scorecard runs weekly and uploads its result to code scanning | [`scorecard.yml`](https://github.com/MapCairn/mapcairn/blob/main/.github/workflows/scorecard.yml) |
 | An unreviewed or failing change reaching `main` | Changes go through pull requests, with the `build` and `e2e` checks required by the repository ruleset | [`ci.yml`](https://github.com/MapCairn/mapcairn/blob/main/.github/workflows/ci.yml), [`playwright.yml`](https://github.com/MapCairn/mapcairn/blob/main/.github/workflows/playwright.yml); [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
-| A secret committed by mistake | The Worker has no secret to commit. Secret scanning with push protection is turned on in the repository settings | `wrangler.jsonc` declares no binding but the assets; [#182](https://github.com/MapCairn/mapcairn/issues/182). The second part is a setting, not a test |
-| Account takeover | Two-factor authentication is required for the GitHub organisation | A setting, recorded in [#182](https://github.com/MapCairn/mapcairn/issues/182) |
+| A secret committed by mistake | The Worker has no secret to commit. Secret scanning with push protection is turned on in the repository settings | `wrangler.jsonc` declares no binding but the assets; [#4](https://github.com/MapCairn/mapcairn/issues/4). The second part is a setting, not a test |
+| Account takeover | Two-factor authentication is required for the GitHub organisation | A setting, recorded in [#4](https://github.com/MapCairn/mapcairn/issues/4) |
 
 ## Secure design arguments
 
