@@ -20,6 +20,7 @@ export const page = style({
   color: tokens.color.text,
 });
 
+/** The page's `h1`, in the title size. */
 export const heading = style({
   margin: 0,
   fontSize: tokens.type.title.size,
@@ -28,6 +29,7 @@ export const heading = style({
   fontWeight: tokens.type.weight.semibold,
 });
 
+/** Each section's `h2`, one size down from the heading, with a little space above to set the sections apart. */
 export const sectionTitle = style({
   margin: 0,
   paddingTop: tokens.space.sm,
@@ -37,6 +39,7 @@ export const sectionTitle = style({
   fontWeight: tokens.type.weight.semibold,
 });
 
+/** A paragraph of the policy. {@link updated} builds on it. */
 export const body = style({
   margin: 0,
   fontSize: tokens.type.body.size,
@@ -44,6 +47,7 @@ export const body = style({
   letterSpacing: tokens.type.body.tracking,
 });
 
+/** The "Last updated" line: a muted paragraph whose date figures keep a fixed width. */
 export const updated = style([
   body,
   {

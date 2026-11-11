@@ -20,7 +20,7 @@ What an app of your own provides:
 
 ## Add a basemap
 
-Defining a basemap in the SDK and offering it on a host are separate. `BASEMAPS` holds every basemap the SDK defines (seven today). The reference site does not offer them all: `packages/web/src/basemaps/hostBasemaps.ts` lists the ids it offers, in picker order (five today), and builds its catalogue from them and from the definitions the host owns. Defining a basemap does not put it on the site.
+Defining a basemap in the SDK and offering it on a host are separate. `BASEMAPS` holds every basemap the SDK defines (seven today). The reference site does not offer them all: `packages/web/src/basemaps/hostBasemaps.ts` lists the ids it offers, in picker order (six today), and builds its catalogue from them and from the definitions the host owns. Defining a basemap does not put it on the site.
 
 1. Add a `BasemapDefinition` to `BASEMAPS` in `packages/core/src/basemaps/basemaps.ts`. A `raster` source is a tile URL template with 256 px tiles, and a `vector` source is a MapLibre style URL. Set the zoom limits, the provider credits and `appearance`. For a heavy layer that a vector style can do without (a shaded-relief raster, say), list its style layer id in `saveDataOmitLayers`; Save data mode then leaves it, and any source only it uses, out of the style. The SDK's basemap test lists the tile origins whose terms allow commercial use with no agreement; it fails for a new origin until you have read that provider's terms and added the origin there with the reason.
 

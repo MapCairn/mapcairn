@@ -26,6 +26,7 @@ export const card = style({
   color: tokens.color.text,
 });
 
+/** The message's first line, a paragraph set in the title size and weight. */
 export const title = style({
   margin: 0,
   fontSize: tokens.type.title.size,
@@ -34,6 +35,7 @@ export const title = style({
   fontWeight: tokens.type.weight.semibold,
 });
 
+/** The advice under the title, in muted text so the title leads. */
 export const message = style({
   margin: 0,
   fontSize: tokens.type.body.size,

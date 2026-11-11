@@ -1,6 +1,6 @@
 # `@mapcairn/map`
 
-The map user interface of MapCairn: the chrome around the map, the sheet and its panels, the search, locate and measure tools, the accessible primitives and the `MapView` host. It is React with vanilla-extract styles, built on `@mapcairn/core`, `@mapcairn/react` and `@mapcairn/theme`. It has no dependency on `@mapcairn/web`.
+The map user interface of MapCairn: the chrome around the map, the sheet and its panels, the search, locate, measure, draw and directions tools, the first-visit tour, the accessible primitives and the `MapView` host. It is React with vanilla-extract styles, built on `@mapcairn/core`, `@mapcairn/react` and `@mapcairn/theme`. It has no dependency on `@mapcairn/web`.
 
 It never imports a map engine, an adapter or a browser service. Everything it needs comes from the `Services` bundle that `ServicesProvider` supplies, so the same components run against the real adapters in the host and against fakes in tests. See [`ARCHITECTURE.md`](../../ARCHITECTURE.md) and [`DESIGN.md`](../../DESIGN.md).
 
@@ -10,11 +10,11 @@ Everything is exported from `@mapcairn/map`.
 
 | Area | Source | What it holds |
 |---|---|---|
-| Services | `src/services` | `ServicesProvider` and `useServices`, with a typed hook per service: `useSearchProvider`, `useLocationProvider`, `useClipboard`, `useUrlState`, `useThemeSource`, `usePreferences`, `useLayers`, `useBasemaps` (the host's basemap catalogue, or the built-in one), `useMapAdapterFactory`, plus `useSettings` and `useTheme`. Throws outside a provider. |
+| Services | `src/services` | `ServicesProvider` and `useServices`, with a typed hook per service: `useSearchProvider`, `useRoutingProvider` and `useFileOpener` (both undefined when the host has none), `useLocationProvider`, `useClipboard`, `useFileSaver`, `useUrlState`, `useThemeSource`, `usePreferences`, `useSaveData`, `useLayers`, `useBasemaps` (the host's basemap catalogue, or the built-in one), `useMapAdapterFactory`, plus `useSettings` and `useTheme`. Throws outside a provider. |
 | Map host | `src/host` | `MapView`, which mounts one adapter from the services in a host element and wires its events, and `useMap` for components below it. It takes an `initialView`, the active `basemap`, event callbacks, overlay `children` and a `chrome` render prop. The overlays (`MapOverlayLayer`, `PinMarker`, `MeasureOverlay`, `AccuracyCircle`, `CentreCrosshair`), `useLongPress` and `usePointerPosition` live here too. |
 | Chrome | `src/chrome` | `MapChrome`, which owns the position of every control floating over the map, and its slot contents: `EndStack`, `MapReadout` (scale bar and cursor coordinates), `Attribution` and `Sheet` (bottom sheet or side panel). Also the layout and focus contexts. |
 | Panels | `src/panels` | The sheet content: `SheetContent` (Settings and Help for the `settings` and `help` sections, and the Map options sections otherwise), `BasemapPicker`, `SettingsSection`, `PinSection`, `HelpSection`, `ShapesSection` and `ExportSection`. `LayersSection` is in `src/layers` and renders only when the `LayerRegistry` has layers. |
-| Tools | `src/tools` | `SearchPill` with `useSearch`, `useLocate`, `MeasureToolbar` with `useMeasure`, and `PinCard` with `useReverseAddress`. |
+| Tools | `src/tools` | `SearchPill` with `useSearch`, `useLocate`, `MeasureToolbar` with `useMeasure`, `DrawToolbar` with `useDraw` and `DrawMapBindings`, `DirectionsPanel` with `useDirections`, `MapDirections` and `DirectionsOverlay` (a host mounts them only when it has a routing provider), `PinCard` with `useReverseAddress`, and `TourCard` with `useTour`. |
 | Primitives | `src/ui` | `Button`, `Chip`, `ControlGroup`, `EmptyState`, `Icon` (the one way to draw a Lucide icon), `IconButton`, `ListRow`, `LiveRegionProvider` with `useAnnounce` (the one announcer), `SegmentedControl`, `SkipLink`, `Slider`, `StatusMessage`, `Surface`, `Switch`, `Tooltip` and `VisuallyHidden`. |
 
 The `MapChrome` slots, the sheet detents and the accessibility contract of each component are in [`DESIGN.md`](../../DESIGN.md).

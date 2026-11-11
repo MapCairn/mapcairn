@@ -1,7 +1,7 @@
 {
   "name": "@mapcairn/web",
   "version": "1.0.0",
-  "description": "MapCairn web SPA map viewer",
+  "description": "MapCairn reference host: server-rendered map site on Cloudflare Workers",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
