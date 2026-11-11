@@ -296,3 +296,70 @@ describe("DrawOverlay", () => {
     });
   });
 });
+
+describe("DrawOverlay on a globe", () => {
+  const FAR = p(-160, -10);
+
+  function globeServices(): FakeServices {
+    const services = createFakeServices();
+    services.fakes.settings.set({ projection: "globe" });
+    return services;
+  }
+
+  it("leaves out a point on the far side and draws no line wholly there", async () => {
+    await renderOverlay(
+      <DrawOverlay
+        shapes={[
+          POINT,
+          { ...POINT, id: "far-point", vertices: [FAR] },
+          { ...LINE, id: "far-line", vertices: [FAR, p(-159, -9)] },
+        ]}
+        selection={null}
+      />,
+      globeServices(),
+    );
+    expect(shapesIn().map((el) => el.getAttribute("data-shape-id"))).toEqual([
+      "shape-3",
+      "far-line",
+    ]);
+    expect(
+      shapesIn().find((el) => el.getAttribute("data-shape-id") === "far-line")
+        ?.children,
+    ).toHaveLength(0);
+  });
+
+  it("draws no fill for a polygon with a hidden vertex, only its visible edges", async () => {
+    const polygon: DrawShape = {
+      ...POLYGON,
+      vertices: [p(20, 10), p(21, 10), FAR],
+    };
+    await renderOverlay(
+      <DrawOverlay shapes={[polygon]} selection={null} />,
+      globeServices(),
+    );
+    const [shape] = shapesIn();
+    expect(shape?.querySelector("polygon")).toBeNull();
+    expect(shape?.querySelectorAll("polyline").length).toBeGreaterThan(0);
+  });
+
+  it("draws only the handles on the near side", async () => {
+    const shape: DrawShape = {
+      ...POLYGON,
+      vertices: [p(20, 10), p(21, 10), FAR],
+    };
+    const selection = { shapeId: shape.id, vertex: null };
+    await renderOverlay(
+      <DrawOverlay
+        shapes={[shape]}
+        selection={selection}
+        handles={editHandlesFor([shape], selection)}
+      />,
+      globeServices(),
+    );
+    const kinds = screen
+      .getAllByTestId("draw-handle")
+      .map((el) => el.getAttribute("data-handle-id"));
+    expect(kinds).toContain("shape-1:v:0");
+    expect(kinds).not.toContain("shape-1:v:2");
+  });
+});

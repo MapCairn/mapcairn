@@ -15,7 +15,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { useMapAdapterFactory, usePreferences, useSaveData } from "../services";
+import {
+  useMapAdapterFactory,
+  usePreferences,
+  useSaveData,
+  useSettings,
+} from "../services";
 import type { MapContextValue } from "./MapContext";
 
 /** Zoom differences below this count as equal when deciding whether a limit is reached. */
@@ -128,6 +133,10 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
   const reducedMotionRef = useLatestRef(reducedMotion);
   const saveData = useSaveData();
   const saveDataRef = useLatestRef(saveData);
+  const { projection } = useSettings().settings;
+  const projectionRef = useLatestRef(projection);
+  /** The shape the engine was last given, so only a change redraws the overlays. */
+  const drawnProjectionRef = useRef(projection);
   const { basemap, adapterRef } = options;
 
   const viewRef = useRef(options.initialView);
@@ -224,6 +233,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
     const target = latest.current.basemap;
     // What this mount is asked for, not what Save data is by the time it ends.
     const mountedSaveData = saveDataRef.current;
+    const mountedProjection = projectionRef.current;
     const next = createAdapter();
     const element = document.createElement("div");
     element.className = latest.current.engineClassName;
@@ -299,6 +309,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
         basemap: target,
         reducedMotion: reducedMotionRef.current,
         saveData: mountedSaveData,
+        projection: mountedProjection,
       })
       .then(
         () => {
@@ -309,6 +320,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
           appliedBasemapRef.current = target;
           appliedKeyRef.current = drawKey(target, mountedSaveData);
           loadedBasemapRef.current = target;
+          drawnProjectionRef.current = mountedProjection;
           next.setKeyboardEnabled(false);
           viewRef.current = next.getView();
           writeZoom(viewRef.current.zoom);
@@ -355,6 +367,7 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
     latest,
     reducedMotionRef,
     saveDataRef,
+    projectionRef,
     scheduleView,
     writeZoom,
   ]);
@@ -375,6 +388,19 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
   useEffect(() => {
     adapter?.setAnimationEnabled(!reducedMotion);
   }, [adapter, reducedMotion]);
+
+  // A new shape moves no view event, so the overlays are told to project again.
+  useEffect(() => {
+    if (!adapter) {
+      return;
+    }
+    latest.current.hostRef.current?.setAttribute("data-projection", projection);
+    if (drawnProjectionRef.current !== projection) {
+      drawnProjectionRef.current = projection;
+      adapter.setProjection(projection);
+      scheduleView();
+    }
+  }, [adapter, latest, projection, scheduleView]);
 
   useEffect(() => {
     const host = latest.current.hostRef.current;

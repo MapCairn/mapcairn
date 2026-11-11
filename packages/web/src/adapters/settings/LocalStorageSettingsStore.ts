@@ -1,5 +1,6 @@
 import {
   DEFAULT_BASEMAP_ID,
+  type MapProjection,
   parseThemeChoice,
   type Settings,
   type SettingsStore,
@@ -14,6 +15,7 @@ const DEFAULTS: Settings = Object.freeze({
   units: "metric",
   zoomButtons: null,
   saveData: null,
+  projection: "flat",
   basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
 });
@@ -30,6 +32,7 @@ const SETTING_NAMES: readonly SettingName[] = [
   "units",
   "zoomButtons",
   "saveData",
+  "projection",
   "basemapId",
   "lastView",
 ];
@@ -37,6 +40,11 @@ const SETTING_NAMES: readonly SettingName[] = [
 /** The storage key for a setting. Theme is the one key shared with the pre-paint script. */
 function storageKey(name: SettingName): string {
   return name === "theme" ? THEME_STORAGE_KEY : `${KEY_PREFIX}${name}`;
+}
+
+/** Anything but a stored "globe" is the flat default. */
+function parseProjection(raw: unknown): MapProjection {
+  return raw === "globe" ? "globe" : DEFAULTS.projection;
 }
 
 function parseUnits(raw: unknown): UnitSystem {
@@ -129,6 +137,8 @@ function parseSetting(
       return parseOptionalBoolean(parseJson(raw));
     case "saveData":
       return parseOptionalBoolean(parseJson(raw));
+    case "projection":
+      return parseProjection(parseJson(raw));
     case "basemapId":
       return parseBasemapId(parseJson(raw));
     case "lastView":

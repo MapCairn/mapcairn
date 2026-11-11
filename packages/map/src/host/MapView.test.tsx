@@ -218,6 +218,7 @@ describe("mounting and accessibility", () => {
       basemap: FAKE_RASTER_BASEMAP,
       reducedMotion: false,
       saveData: false,
+      projection: "flat",
     });
     expect(adapter().keyboardEnabled).toBe(false);
     expect(adapter().animationEnabled).toBe(true);
@@ -1373,6 +1374,44 @@ function Counter({ onRender }: { onRender: () => void }) {
   onRender();
   return null;
 }
+
+describe("Map shape", () => {
+  it("mounts the engine as a globe when the stored setting says so", async () => {
+    const services = createFakeServices();
+    services.fakes.settings.set({ projection: "globe" });
+    const { adapter } = await setup({}, services);
+    expect(adapter().projection).toBe("globe");
+  });
+
+  it("switches the engine between flat and globe without remounting or swapping the basemap", async () => {
+    const mount = vi.spyOn(FakeAdapter.prototype, "mount");
+    const { adapter, services, host } = await setup();
+    const setBasemap = vi.spyOn(adapter(), "setBasemap");
+    act(() => {
+      services.fakes.settings.set({ projection: "globe" });
+    });
+    expect(adapter().projection).toBe("globe");
+    expect(host().getAttribute("data-projection")).toBe("globe");
+    act(() => {
+      services.fakes.settings.set({ projection: "flat" });
+    });
+    expect(adapter().projection).toBe("flat");
+    expect(host().getAttribute("data-projection")).toBe("flat");
+    expect(mount).toHaveBeenCalledTimes(1);
+    expect(setBasemap).not.toHaveBeenCalled();
+  });
+
+  it("draws the overlays again after the shape changes, because nothing else moved", async () => {
+    const { adapter, services, latest } = await setup();
+    const before = latest();
+    act(() => {
+      services.fakes.settings.set({ projection: "globe" });
+    });
+    flushFrames();
+    expect(adapter().projection).toBe("globe");
+    expect(latest()).not.toBe(before);
+  });
+});
 
 describe("Save data", () => {
   /** A vector basemap that leaves a layer out in Save data mode. */

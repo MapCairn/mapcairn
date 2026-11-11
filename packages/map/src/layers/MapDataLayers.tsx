@@ -290,7 +290,13 @@ function outlinePath(
   adapter: MapAdapter,
   feature: LayerFeature,
 ): string | null {
-  const parts = featureOutlines(feature).map(({ points, closed }) => {
+  const outlines = featureOutlines(feature);
+  if (
+    !outlines.every(({ points }) => points.every((p) => adapter.isVisible(p)))
+  ) {
+    return null;
+  }
+  const parts = outlines.map(({ points, closed }) => {
     const pixels = points.map((point) => {
       const { x, y } = adapter.project(point);
       return `${roundPixel(x)},${roundPixel(y)}`;
@@ -327,6 +333,9 @@ export function SelectionMarker({ layers }: SelectionMarkerProps) {
   }
   const position = featurePosition(feature);
   if (!position) {
+    return null;
+  }
+  if (!adapter.isVisible(position)) {
     return null;
   }
   const { x, y } = adapter.project(position);

@@ -19,6 +19,7 @@ vi.mock("maplibre-gl", async () => ({
   Map: (await import("./maplibreTestEngine")).FakeMapLibreMap,
   GPUInitializationError: (await import("./maplibreTestEngine"))
     .FakeGPUInitializationError,
+  LngLat: (await import("./maplibreTestEngine")).FakeLngLat,
   setWorkerUrl: () => {},
 }));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));

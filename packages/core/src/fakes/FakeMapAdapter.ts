@@ -1,3 +1,4 @@
+import { distanceMetres, EARTH_RADIUS_METRES } from "../draw/geo";
 import {
   dragHandle,
   type HandleGesture,
@@ -23,6 +24,7 @@ import type {
   MapHostElement,
   MapImageOptions,
   MapMountOptions,
+  MapProjection,
   MapShapes,
   MapStyledShapes,
   MapTileOverlay,
@@ -186,6 +188,8 @@ export class FakeMapAdapter implements MapAdapter {
   keyboardEnabled = true;
   /** Whether the last `mount` or `setBasemap` asked for Save data mode. */
   saveData = false;
+  /** The shape the map was last asked to draw. */
+  projection: MapProjection = "flat";
 
   #failMount: MapEngineErrorReason | undefined;
   #failNextBasemap = false;
@@ -229,6 +233,7 @@ export class FakeMapAdapter implements MapAdapter {
     this.#view = this.#normalise(options.view);
     this.animationEnabled = !options.reducedMotion;
     this.saveData = options.saveData ?? false;
+    this.projection = options.projection ?? "flat";
     this.#destroyed = false;
     this.mountCount += 1;
     this.#emit("load", undefined);
@@ -325,6 +330,19 @@ export class FakeMapAdapter implements MapAdapter {
       x: world.x - origin.x + this.#hostSize.width / 2,
       y: world.y - origin.y + this.#hostSize.height / 2,
     };
+  }
+
+  /** On a globe, a place more than a quarter of the way round from the centre is out of sight. */
+  isVisible(latlng: LatLng): boolean {
+    return (
+      this.projection === "flat" ||
+      distanceMetres(this.#view.center, latlng) <=
+        (Math.PI / 2) * EARTH_RADIUS_METRES
+    );
+  }
+
+  setProjection(projection: MapProjection): void {
+    this.projection = projection;
   }
 
   unproject(point: PixelPoint): LatLng {

@@ -28,6 +28,7 @@ vi.mock("maplibre-gl", async () => ({
   Map: (await import("./maplibreTestEngine")).FakeMapLibreMap,
   GPUInitializationError: (await import("./maplibreTestEngine"))
     .FakeGPUInitializationError,
+  LngLat: (await import("./maplibreTestEngine")).FakeLngLat,
   setWorkerUrl: engine.setWorkerUrl,
 }));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
@@ -1004,7 +1005,7 @@ describe("MapLibreMapAdapter", () => {
   });
 
   describe("projection", () => {
-    it("keeps the map flat when a style asks for a globe, on the first load and after every basemap swap", async () => {
+    it("keeps the map flat by default, whatever a style asks for, on the first load and after every basemap swap", async () => {
       const { map } = await mounted();
       map.projection = { type: "globe" };
       map.fire("style.load");
@@ -1014,6 +1015,49 @@ describe("MapLibreMapAdapter", () => {
       map.projection = { type: "globe" };
       map.fire("style.load");
       expect(map.projection).toEqual({ type: "mercator" });
+    });
+
+    it("draws a globe when mounted with one, and again after every style load, whatever the style asks for", async () => {
+      const { map } = await mounted({ projection: "globe" });
+      map.fire("style.load");
+      expect(map.projection).toEqual({ type: "globe" });
+
+      map.projection = { type: "mercator" };
+      map.fire("style.load");
+      expect(map.projection).toEqual({ type: "globe" });
+    });
+
+    it("switches the engine when the shape changes, and back", async () => {
+      const { adapter, map } = await mounted();
+      map.fire("style.load");
+      adapter.setProjection("globe");
+      expect(map.projection).toEqual({ type: "globe" });
+      adapter.setProjection("flat");
+      expect(map.projection).toEqual({ type: "mercator" });
+    });
+
+    it("holds a shape chosen while a style is loading until the style has loaded", async () => {
+      const { adapter, map } = await mounted();
+      void adapter.setBasemap(DARK);
+      map.callsOf("setProjection").length = 0;
+      adapter.setProjection("globe");
+      expect(map.callsOf("setProjection")).toHaveLength(0);
+      map.fire("style.load");
+      expect(map.projection).toEqual({ type: "globe" });
+    });
+
+    it("asks the engine's horizon test whether a place is visible, and only on a globe", async () => {
+      const { adapter, map } = await mounted({ projection: "globe" });
+      map.fire("style.load");
+      const view = adapter.getView().center;
+      expect(adapter.isVisible(view)).toBe(true);
+      expect(adapter.isVisible({ lat: -view.lat, lng: view.lng + 180 })).toBe(
+        false,
+      );
+      adapter.setProjection("flat");
+      expect(adapter.isVisible({ lat: -view.lat, lng: view.lng + 180 })).toBe(
+        true,
+      );
     });
   });
 

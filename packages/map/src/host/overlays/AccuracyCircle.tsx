@@ -25,7 +25,7 @@ export function AccuracyCircle({
   testId,
 }: AccuracyCircleProps) {
   const { adapter } = useMap();
-  if (!adapter) {
+  if (!adapter?.isVisible(center)) {
     return null;
   }
   const { x, y } = adapter.project(center);

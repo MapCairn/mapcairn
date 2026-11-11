@@ -136,6 +136,43 @@ describe("units", () => {
   });
 });
 
+describe("map shape", () => {
+  it("is a radio group named Map shape with Flat and Globe, flat by default", () => {
+    renderSettings();
+    const group = screen.getByRole("radiogroup", { name: "Map shape" });
+    expect(within(group).getAllByRole("radio")).toHaveLength(2);
+    expect(screen.getByTestId("projection-option-flat")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByTestId("projection-option-globe")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  it("stores the choice and announces it once, politely", () => {
+    const { settings } = renderSettings();
+    fireEvent.click(screen.getByTestId("projection-option-globe"));
+    expect(settings.get().projection).toBe("globe");
+    expect(screen.getByTestId("projection-option-globe")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+      "Map shape: globe",
+    );
+  });
+
+  it("announces a change back to flat", () => {
+    renderSettings({ initial: { projection: "globe" } });
+    fireEvent.click(screen.getByTestId("projection-option-flat"));
+    expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+      "Map shape: flat",
+    );
+  });
+});
+
 const saveDataSwitch = () => screen.getByRole("switch", { name: "Save data" });
 
 describe("save data", () => {
@@ -289,12 +326,12 @@ describe("markup rules", () => {
     ).toHaveLength(0);
   });
 
-  it("hides the visible Theme and Units labels from assistive technology, since the groups carry the names", () => {
+  it("hides the visible Theme, Units and Map shape labels from assistive technology, since the groups carry the names", () => {
     renderSettings();
     const region = screen.getByTestId("sheet-section-settings");
     const hidden = [...region.querySelectorAll('p[aria-hidden="true"]')].map(
       (item) => item.textContent,
     );
-    expect(hidden).toEqual(["Theme", "Units"]);
+    expect(hidden).toEqual(["Theme", "Units", "Map shape"]);
   });
 });

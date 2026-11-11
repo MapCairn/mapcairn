@@ -18,6 +18,14 @@ export interface MapHostElement {
   };
 }
 
+/**
+ * The shape the map is drawn in: a flat Web Mercator map, or a globe.
+ * @remarks The app's choice always wins: a basemap style that asks for a
+ *   different projection is ignored. Zoom, the address hash and the camera
+ *   (north-up, no pitch) mean the same in both.
+ */
+export type MapProjection = "flat" | "globe";
+
 /** Everything the adapter needs when it mounts. */
 export interface MapMountOptions {
   readonly view: ViewState;
@@ -26,6 +34,8 @@ export interface MapMountOptions {
   readonly reducedMotion: boolean;
   /** Save data mode: leave out the basemap's `saveDataOmitLayers`. Defaults to false. */
   readonly saveData?: boolean;
+  /** The map's shape, kept through every later basemap swap. Defaults to `"flat"`. */
+  readonly projection?: MapProjection;
 }
 
 /** Options for {@link MapAdapter.setBasemap}. */
@@ -407,6 +417,12 @@ export interface MapAdapter {
 
   project(latlng: LatLng): PixelPoint;
   unproject(point: PixelPoint): LatLng;
+  /**
+   * Whether a place is on the side of the map the person can see. Always true
+   * on a flat map. On a globe it is false for a place beyond the horizon,
+   * where `project` still returns a pixel that must not be drawn.
+   */
+  isVisible(latlng: LatLng): boolean;
   /** Ground resolution at a latitude (defaults to the view centre) at the current zoom. */
   metresPerPixel(lat?: number): number;
 
@@ -422,6 +438,12 @@ export interface MapAdapter {
     basemap: BasemapDefinition,
     options?: MapBasemapOptions,
   ): Promise<void>;
+  /**
+   * Draws the map flat or as a globe. The adapter applies it again after every
+   * style load, so a basemap swap keeps it and a style's own request for a
+   * different shape is ignored.
+   */
+  setProjection(projection: MapProjection): void;
   /** Turns every engine animation on or off (reduced motion). */
   setAnimationEnabled(enabled: boolean): void;
   /** Turns the engine's own keyboard handling on or off. */

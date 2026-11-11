@@ -7,6 +7,7 @@ export const DEFAULT_FAKE_SETTINGS: Settings = Object.freeze({
   units: "metric",
   zoomButtons: null,
   saveData: null,
+  projection: "flat",
   basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
 });

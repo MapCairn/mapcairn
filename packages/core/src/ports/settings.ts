@@ -1,4 +1,5 @@
 import type { ViewState } from "./geometry";
+import type { MapProjection } from "./map";
 
 /** The theme the user chose. "system" follows the operating system. */
 export type ThemeChoice = "system" | "light" | "dark";
@@ -26,6 +27,8 @@ export interface Settings {
    * otherwise. An explicit `true` or `false` always wins over that signal.
    */
   readonly saveData: boolean | null;
+  /** The shape of the map: `"flat"` (the default) or `"globe"`. */
+  readonly projection: MapProjection;
   readonly basemapId: string;
   readonly lastView: ViewState | null;
 }

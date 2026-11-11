@@ -19,6 +19,7 @@ import type {
   MapImageOptions,
   MapMountOptions,
   MapMoveOptions,
+  MapProjection,
   MapShapes,
   MapStyledShapes,
   MapTileOverlay,
@@ -661,6 +662,10 @@ export class MapLibreMapAdapter implements MapAdapter {
   private animationEnabled = true;
   /** Whether the basemap's `saveDataOmitLayers` are left out of its style. */
   private saveData = false;
+  /** The shape the ui chose. It wins over any projection a style asks for. */
+  private projection: MapProjection = "flat";
+  /** MapLibre's `LngLat`, kept from the engine load, for the occlusion test. */
+  private lngLat: MapLibreModule["LngLat"] | undefined;
   private loadEmitted = false;
   private loading = false;
   /** Data layers by id, in the order they were first set. */
@@ -705,6 +710,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.mountView = view;
     this.animationEnabled = !reducedMotion;
     this.saveData = options.saveData ?? false;
+    this.projection = options.projection ?? "flat";
 
     let maplibre: MapLibreModule;
     try {
@@ -718,6 +724,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (this.destroyed) {
       return;
     }
+    this.lngLat = maplibre.LngLat;
 
     let map: MapLibreMap;
     try {
@@ -857,6 +864,29 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     const point = map.project([latlng.lng, latlng.lat]);
     return { x: point.x, y: point.y };
+  }
+
+  /**
+   * Asks the engine's own horizon test, which hides a place when the planet
+   * lies between the camera and it. A flat map hides nothing.
+   */
+  isVisible(latlng: LatLng): boolean {
+    const map = this.map;
+    const LngLat = this.lngLat;
+    if (!map || !LngLat || this.projection === "flat") {
+      return true;
+    }
+    // `_camera.transform` is what MapLibre's own `Marker` asks. The public
+    // `map.transform` is gone from the 6.x typings, and no public call tests
+    // the horizon. The adapter contract suite covers it against the stand-in.
+    return !map._camera.transform.isLocationOccluded(
+      new LngLat(latlng.lng, latlng.lat),
+    );
+  }
+
+  setProjection(projection: MapProjection): void {
+    this.projection = projection;
+    this.applyProjection();
   }
 
   unproject(point: PixelPoint): LatLng {
@@ -1113,6 +1143,13 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (map) {
       this.drawDataLayer(map, id);
     }
+  }
+
+  /** Sets the chosen shape on the engine; a style that has not loaded gets it from its `style.load`. */
+  private applyProjection(map = this.readyMap()): void {
+    map?.setProjection({
+      type: this.projection === "globe" ? "globe" : "mercator",
+    });
   }
 
   /** The map, when its style can take sources and layers; otherwise undefined. */
@@ -1603,10 +1640,9 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.setLoading(true);
     });
     listen("style.load", () => {
-      // The overlays, the address hash and the shape tools assume a flat map,
-      // so a style that asks for a globe (VersaTiles Colorful does) is kept
-      // flat. See ARCHITECTURE.md.
-      map.setProjection({ type: "mercator" });
+      // A style may ask for its own projection (VersaTiles Colorful asks for a
+      // globe); the app's setting wins. See ARCHITECTURE.md.
+      this.applyProjection(map);
       this.omitSaveDataLayers(map);
       if (this.pending) {
         this.pending.styleLoaded = true;

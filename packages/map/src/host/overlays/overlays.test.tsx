@@ -22,6 +22,7 @@ import {
   PinMarker,
   projectPoints,
   screenRadiusForMetres,
+  visibleRuns,
 } from ".";
 
 const VIEW: ViewState = { center: { lat: 10, lng: 20 }, zoom: 6, bearing: 0 };
@@ -289,5 +290,79 @@ describe("CentreCrosshair", () => {
     const lines = screen.getByTestId("x").querySelectorAll("line");
     expect(Number(lines[0]?.getAttribute("y1"))).toBe(80);
     expect(Number(lines[1]?.getAttribute("x1"))).toBe(120);
+  });
+});
+
+describe("on a globe", () => {
+  /** Opposite the view centre, so a globe hides it. */
+  const FAR: LatLng = { lat: -10, lng: -160 };
+
+  function globeServices(): FakeServices {
+    const services = createFakeServices();
+    services.fakes.settings.set({ projection: "globe" });
+    return services;
+  }
+
+  it("draws the pin on the near side and leaves it out on the far side", async () => {
+    const services = globeServices();
+    const near = await renderOverlays(
+      <PinMarker position={B} testId="pin" />,
+      services,
+    );
+    expect(screen.getByTestId("pin")).toBeInTheDocument();
+    near.unmount();
+
+    await renderOverlays(<PinMarker position={FAR} testId="pin" />, services);
+    expect(screen.queryByTestId("pin")).not.toBeInTheDocument();
+  });
+
+  it("still draws a pin anywhere on a flat map", async () => {
+    await renderOverlays(<PinMarker position={FAR} testId="pin" />);
+    expect(screen.getByTestId("pin")).toBeInTheDocument();
+  });
+
+  it("leaves out the accuracy circle on the far side", async () => {
+    await renderOverlays(
+      <AccuracyCircle center={FAR} accuracyMetres={50} testId="accuracy" />,
+      globeServices(),
+    );
+    expect(screen.queryByTestId("accuracy")).not.toBeInTheDocument();
+  });
+
+  it("draws a measure line only between visible points, and no vertex beyond the horizon", async () => {
+    const { container } = await renderOverlays(
+      <MeasureOverlay points={[A, B, FAR, C]} mode="distance" testId="m" />,
+      globeServices(),
+    );
+    expect(container.querySelectorAll("circle")).toHaveLength(3);
+    // One run (A, B); C stands alone after the hidden point.
+    expect(container.querySelectorAll("polyline")).toHaveLength(2);
+  });
+
+  it("draws no fill or closing edge for an area while a vertex is hidden", async () => {
+    const { container } = await renderOverlays(
+      <MeasureOverlay points={[A, B, FAR]} mode="area" testId="m" />,
+      globeServices(),
+    );
+    expect(container.querySelector("polygon")).toBeNull();
+    expect(container.querySelectorAll("polyline")).toHaveLength(2);
+  });
+});
+
+describe("visibleRuns", () => {
+  const px = (x: number) => ({ x, y: 0 });
+
+  it("splits a path at hidden points and keeps only runs of two or more", () => {
+    const pixels = [px(0), px(1), px(2), px(3), px(4)];
+    expect(
+      visibleRuns({
+        pixels,
+        visible: [true, true, false, true, false],
+        whole: false,
+      }),
+    ).toEqual([[px(0), px(1)]]);
+    expect(
+      visibleRuns({ pixels, visible: pixels.map(() => true), whole: true }),
+    ).toEqual([pixels]);
   });
 });

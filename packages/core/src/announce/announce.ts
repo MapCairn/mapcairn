@@ -11,6 +11,7 @@ import type {
   SearchErrorKind,
 } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
+import type { MapProjection } from "../ports/map";
 import type { TravelMode } from "../ports/routing";
 import type { UnitSystem } from "../ports/settings";
 import { describeDuration } from "../units/duration";
@@ -188,6 +189,11 @@ export function announceMeasureTotal(
 /** Announced when the basemap changes. */
 export function announceBasemap(name: string): string {
   return `Basemap changed to ${name}`;
+}
+
+/** Announced when the map is switched between flat and globe. */
+export function announceProjection(projection: MapProjection): string {
+  return `Map shape: ${projection}`;
 }
 
 /** Announced when the zoom level settles. */

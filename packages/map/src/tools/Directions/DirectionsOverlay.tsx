@@ -40,6 +40,9 @@ export function DirectionsOverlay({
   return (
     <g data-testid={testId}>
       {stops.map((stop, index) => {
+        if (!adapter.isVisible(stop.position)) {
+          return null;
+        }
         const { x, y } = adapter.project(stop.position);
         return (
           <g

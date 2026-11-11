@@ -519,6 +519,59 @@ export function runMapAdapterContract(
       expect(adapter.getMaxZoom()).toBe(narrower.maxZoom);
     });
 
+    describe("projection", () => {
+      const ANTIPODE: LatLng = { lat: -CENTRE.lat, lng: CENTRE.lng - 180 };
+      const NEAR: LatLng = { lat: CENTRE.lat + 1, lng: CENTRE.lng + 1 };
+
+      it("sees every place on a flat map, by default", async () => {
+        const { adapter } = await mounted();
+        expect(adapter.isVisible(CENTRE)).toBe(true);
+        expect(adapter.isVisible(NEAR)).toBe(true);
+        expect(adapter.isVisible(ANTIPODE)).toBe(true);
+      });
+
+      it("hides the far side of a globe, and shows the near side", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setProjection("globe");
+        await controls.settle();
+        expect(adapter.isVisible(CENTRE)).toBe(true);
+        expect(adapter.isVisible(NEAR)).toBe(true);
+        expect(adapter.isVisible(ANTIPODE)).toBe(false);
+      });
+
+      it("sees every place again when set back to flat", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setProjection("globe");
+        adapter.setProjection("flat");
+        await controls.settle();
+        expect(adapter.isVisible(ANTIPODE)).toBe(true);
+      });
+
+      it("keeps the chosen shape through a basemap swap", async () => {
+        const { adapter, controls } = await mounted();
+        adapter.setProjection("globe");
+        await adapter.setBasemap(controls.basemap);
+        await controls.settle();
+        expect(adapter.isVisible(ANTIPODE)).toBe(false);
+      });
+
+      it("mounts as a globe when asked, without the camera or zoom changing", async () => {
+        const subject = create();
+        live.push(subject.adapter);
+        const { adapter, controls } = subject;
+        const zoom = controls.basemap.minZoom + 2;
+        await adapter.mount(controls.host, {
+          ...mountOptions(controls, zoom),
+          projection: "globe",
+        });
+        await controls.settle();
+        expect(adapter.isVisible(ANTIPODE)).toBe(false);
+        const view = adapter.getView();
+        expect(view.zoom).toBeCloseTo(zoom, 3);
+        expect(view.bearing).toBe(0);
+      });
+    });
+
     it("never throws from the animation, keyboard and focus switches", async () => {
       const { adapter } = await mounted();
       expect(() => {

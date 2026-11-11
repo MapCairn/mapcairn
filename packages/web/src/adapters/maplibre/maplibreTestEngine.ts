@@ -4,7 +4,12 @@ import type {
   LatLng,
   PixelPoint,
 } from "@mapcairn/core";
-import { mercatorProject, mercatorUnproject } from "@mapcairn/core";
+import {
+  distanceMetres,
+  EARTH_RADIUS_METRES,
+  mercatorProject,
+  mercatorUnproject,
+} from "@mapcairn/core";
 
 /** Test-only width of the fake engine's viewport, in pixels. */
 export const FAKE_VIEWPORT_WIDTH = 800;
@@ -31,6 +36,14 @@ function rotate(point: PixelPoint, degrees: number): PixelPoint {
     x: point.x * cos - point.y * sin,
     y: point.x * sin + point.y * cos,
   };
+}
+
+/** A test-only stand-in for `maplibre-gl`'s `LngLat`. */
+export class FakeLngLat {
+  constructor(
+    readonly lng: number,
+    readonly lat: number,
+  ) {}
 }
 
 /**
@@ -413,6 +426,15 @@ export class FakeMapLibreMap {
   }
   /** What the style (or `setProjection`) last asked for. A test sets it to stand in for a style's own `projection`. */
   projection: { type: string } = { type: "mercator" };
+  /** The engine's horizon test: on a globe, a place over a quarter of the way round from the centre is hidden. */
+  readonly _camera = {
+    transform: {
+      isLocationOccluded: (lngLat: { lng: number; lat: number }): boolean =>
+        this.projection.type === "globe" &&
+        distanceMetres(this.center, { lat: lngLat.lat, lng: lngLat.lng }) >
+          (Math.PI / 2) * EARTH_RADIUS_METRES,
+    },
+  };
   setProjection(projection: { type: string }): this {
     this.record("setProjection", [projection]);
     this.projection = projection;

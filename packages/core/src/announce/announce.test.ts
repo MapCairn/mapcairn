@@ -28,6 +28,7 @@ import {
   announceOffline,
   announcePinCleared,
   announcePinDropped,
+  announceProjection,
   announceRouteFound,
   announceRoutingCancelled,
   announceRoutingError,
@@ -150,6 +151,8 @@ describe("measurement announcements", () => {
 describe("map and panel announcements", () => {
   it("names the basemap and the zoom level", () => {
     expect(announceBasemap("Streets")).toBe("Basemap changed to Streets");
+    expect(announceProjection("globe")).toBe("Map shape: globe");
+    expect(announceProjection("flat")).toBe("Map shape: flat");
     expect(announceZoom(12)).toBe("Zoom level 12");
     expect(announceZoom(12.46)).toBe("Zoom level 12.5");
   });

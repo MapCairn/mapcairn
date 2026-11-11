@@ -1,4 +1,9 @@
-import type { ThemeChoice, UnitSystem } from "@mapcairn/core";
+import {
+  announceProjection,
+  type MapProjection,
+  type ThemeChoice,
+  type UnitSystem,
+} from "@mapcairn/core";
 import { Info } from "lucide-react";
 import type { Ref } from "react";
 import {
@@ -8,6 +13,7 @@ import {
   useTheme,
 } from "../../services";
 import { Icon } from "../../ui/Icon";
+import { useAnnounce } from "../../ui/LiveRegion";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { Switch } from "../../ui/Switch";
 import {
@@ -36,6 +42,11 @@ const UNIT_OPTIONS: readonly { value: UnitSystem; label: string }[] = [
   { value: "imperial", label: "Imperial" },
 ];
 
+const PROJECTION_OPTIONS: readonly { value: MapProjection; label: string }[] = [
+  { value: "flat", label: "Flat" },
+  { value: "globe", label: "Globe" },
+];
+
 /** Props for {@link SettingsSection}. */
 export interface SettingsSectionProps {
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
@@ -47,7 +58,7 @@ export interface SettingsSectionProps {
 }
 
 /**
- * The settings: theme, units, zoom buttons and Save data, a note when changes
+ * The settings: theme, units, map shape (flat or globe), zoom buttons and Save data, a note when changes
  * will not be remembered, and a short privacy statement with a link to the
  * policy.
  * @remarks The zoom switch shows the stored choice, or the device default
@@ -66,6 +77,7 @@ export function SettingsSection({
   const { settings, update, persistent } = useSettings();
   const { finePointer } = usePreferences();
   const saveData = useSaveData();
+  const announce = useAnnounce();
   const subLevel = nextHeadingLevel(headingLevel);
   return (
     <Section
@@ -96,6 +108,21 @@ export function SettingsSection({
           value={settings.units}
           onValueChange={(next) => update({ units: next as UnitSystem })}
           data-testid="units-option"
+        />
+      </div>
+      <div className={field}>
+        <p className={fieldLabel} aria-hidden="true">
+          Map shape
+        </p>
+        <SegmentedControl
+          label="Map shape"
+          options={PROJECTION_OPTIONS}
+          value={settings.projection}
+          onValueChange={(next) => {
+            update({ projection: next as MapProjection });
+            announce(announceProjection(next as MapProjection));
+          }}
+          data-testid="projection-option"
         />
       </div>
       <Switch

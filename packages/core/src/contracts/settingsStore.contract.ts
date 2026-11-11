@@ -33,6 +33,7 @@ export function runSettingsStoreContract(
         units: "metric",
         zoomButtons: null,
         saveData: null,
+        projection: "flat",
         basemapId: "bright",
         lastView: null,
       });
@@ -68,6 +69,7 @@ export function runSettingsStoreContract(
         units: "imperial",
         zoomButtons: true,
         saveData: true,
+        projection: "globe",
         basemapId: "osm",
         lastView,
       });
@@ -76,6 +78,7 @@ export function runSettingsStoreContract(
         units: "imperial",
         zoomButtons: true,
         saveData: true,
+        projection: "globe",
         basemapId: "osm",
         lastView,
       });

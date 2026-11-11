@@ -28,11 +28,11 @@ export interface PinMarkerProps {
 
 /**
  * A dropped pin, drawn in the overlay layer and re-projected whenever the view
- * changes. Render it inside `MapOverlayLayer`.
+ * changes. It is not drawn while it is on the far side of a globe. Render it inside `MapOverlayLayer`.
  */
 export function PinMarker({ position, testId }: PinMarkerProps) {
   const { adapter } = useMap();
-  if (!adapter) {
+  if (!adapter?.isVisible(position)) {
     return null;
   }
   const { x, y } = adapter.project(position);

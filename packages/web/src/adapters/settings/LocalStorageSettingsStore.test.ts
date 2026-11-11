@@ -114,12 +114,14 @@ describe("LocalStorageSettingsStore", () => {
       units: "imperial",
       zoomButtons: false,
       saveData: true,
+      projection: "globe",
       basemapId: "positron",
       lastView: VIEW,
     });
     expect(storage.getItem("mapcairn:units")).toBe('"imperial"');
     expect(storage.getItem("mapcairn:zoomButtons")).toBe("false");
     expect(storage.getItem("mapcairn:saveData")).toBe("true");
+    expect(storage.getItem("mapcairn:projection")).toBe('"globe"');
     expect(storage.getItem("mapcairn:basemapId")).toBe('"positron"');
     expect(JSON.parse(storage.getItem("mapcairn:lastView") ?? "null")).toEqual(
       VIEW,
@@ -132,6 +134,7 @@ describe("LocalStorageSettingsStore", () => {
       "mapcairn:units": '"imperial"',
       "mapcairn:zoomButtons": "true",
       "mapcairn:saveData": "false",
+      "mapcairn:projection": '"globe"',
       "mapcairn:basemapId": '"osm"',
       "mapcairn:lastView": JSON.stringify(VIEW),
     });
@@ -140,6 +143,7 @@ describe("LocalStorageSettingsStore", () => {
       units: "imperial",
       zoomButtons: true,
       saveData: false,
+      projection: "globe",
       basemapId: "osm",
       lastView: VIEW,
     });
@@ -163,6 +167,7 @@ describe("LocalStorageSettingsStore", () => {
       "mapcairn:units": '"furlongs"',
       "mapcairn:zoomButtons": '"yes"',
       "mapcairn:saveData": '"yes"',
+      "mapcairn:projection": '"cube"',
       "mapcairn:basemapId": '"Not A Basemap!"',
       "mapcairn:lastView":
         '{"center":{"lat":200,"lng":0},"zoom":3,"bearing":0}',
@@ -172,6 +177,7 @@ describe("LocalStorageSettingsStore", () => {
       units: "metric",
       zoomButtons: null,
       saveData: null,
+      projection: "flat",
       basemapId: "bright",
       lastView: null,
     });
