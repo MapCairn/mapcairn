@@ -1,6 +1,6 @@
 # Plan 0005: Lighthouse improvements
 
-Status: in progress. Written 2026-11-11.
+Status: in progress. The engine preload is built and measured; the pull request is open. Written 2026-11-11.
 Tracking issue: [#8](https://github.com/MapCairn/mapcairn/issues/8).
 
 ## Goal and ground rules
@@ -39,6 +39,24 @@ Accessibility, best practices and SEO are 100 everywhere. 24 requests to the sit
 
 1. Start the engine download during the app's first render (finding 3), through an optional `preload` on the map adapter factory, so the ui still never imports the engine. Measure.
 2. Re-measure and stop if the next candidates would only save bytes the audit overstates, or would delay something visible.
+
+## Results
+
+| Local preview, median (range) | Before | Engine preload |
+| --- | --- | --- |
+| Mobile performance | 27 (26 to 27) | 28 (27 to 28) |
+| Mobile LCP | 21.8 s | 20.1 s (19.9 to 21.2) |
+| Mobile LCP, observed without throttling | 5.1 s | 3.7 s |
+| Mobile Speed Index | 9.4 s | 8.0 s |
+| Mobile TBT | 7.8 s (6.9 to 8.4) | 5.0 s (4.7 to 7.8) |
+| Mobile FCP | 6.2 s | 6.1 s |
+| Desktop performance | 36 | 38 (37 to 39) |
+| Desktop TBT | 2.0 s | 1.4 s |
+| Requests to the site | 24 | 24 |
+
+Tried and reverted: hydrating inside `startTransition`, as React Router's default client entry does. It did not move FCP and made LCP (21.5 s) and TBT (7.9 s) worse on mobile, because the map then mounts later.
+
+That is where this plan stops. What is left is the engine itself, the first view's tiles and glyphs, and byte savings the audit overstates.
 
 ## Decided not to do
 
