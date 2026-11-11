@@ -369,6 +369,47 @@ describe("MapChrome layout", () => {
     expect(slot("tour")).toHaveAttribute("data-crowded", "false");
   });
 
+  it("hides the tour card while a tall measure toolbar lifts the bottom row to it, and shows it again", () => {
+    mount({ tour: <div>tour</div> });
+    resize(390, 800, 190);
+    act(() => {
+      layoutValue.publishToolbarTop(300);
+    });
+    expect(slot("tour")).toHaveAttribute("data-crowded", "true");
+    expect(surfaceValue.tourHidden).toBe(true);
+    act(() => {
+      layoutValue.publishToolbarTop(null);
+    });
+    expect(slot("tour")).toHaveAttribute("data-crowded", "false");
+    expect(surfaceValue.tourHidden).toBe(false);
+  });
+
+  it("hides the tour card while something tall in bottom-centre lifts the bottom row to it, and shows it again", () => {
+    mount({ tour: <div>tour</div> });
+    resize(390, 800, 190);
+    place("bottom-centre", 300, 40);
+    act(() => {
+      observers.trigger();
+    });
+    expect(slot("tour")).toHaveAttribute("data-crowded", "true");
+    expect(slot("tour")).toHaveAttribute("inert");
+    place("bottom-centre", 788, 0);
+    act(() => {
+      observers.trigger();
+    });
+    expect(slot("tour")).toHaveAttribute("data-crowded", "false");
+    expect(slot("tour")).not.toHaveAttribute("inert");
+  });
+
+  it("tells the tour card its slot is hidden while the sheet is modal, and shown again after", () => {
+    const view = mount({ tour: <div>tour</div>, modal: true });
+    resize(390, 800, 190);
+    expect(surfaceValue.tourHidden).toBe(true);
+    expect(slot("tour")).toHaveAttribute("inert");
+    view.rerenderChrome({ modal: false });
+    expect(surfaceValue.tourHidden).toBe(false);
+  });
+
   it("lifts the start and end slots above the measure toolbar, but not the toolbar", () => {
     mount();
     resize(390, 800);

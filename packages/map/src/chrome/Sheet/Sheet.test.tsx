@@ -96,6 +96,7 @@ function setup(
       publishSheetDetent: vi.fn(),
       publishPanelEdge: vi.fn(),
       endStackMaxHeight: null,
+      tourHidden: false,
     },
   };
 }

@@ -1,4 +1,3 @@
-import type { Locator } from "@playwright/test";
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
@@ -12,6 +11,7 @@ import {
   leaveState,
   MATRIX_VIEWPORTS,
   TOUR_STATES,
+  type TourState,
   viewportDetails,
   waitForStableLayout,
 } from "./support/states";
@@ -229,52 +229,116 @@ for (const viewport of MATRIX_VIEWPORTS) {
   );
 }
 
-/** How the tour card should be on screen in a state, for {@link expectTourLayout}. */
-type TourPresence =
-  /** Shown. */
-  | "shown"
-  /** Gone: the sheet is full and modal. Everything else is behind the sheet, so only the card is checked. */
-  | "hidden"
-  /** Shown, or gone because the screen leaves it no room beside the sheet. */
-  | "shown if there is room";
+/**
+ * How the tour card should be on screen in a state, for {@link expectTourLayout}:
+ *
+ * - `shown`: visible, its slot neither crowded nor inert, and the layout clear.
+ * - `crowded`: gone because the bottom row, lifted above the sheet or a
+ *   toolbar, has come up to it (`data-crowded`): its slot is inert and hidden.
+ * - `covered`: gone because the sheet is at full and modal. Everything else is
+ *   behind the sheet then, so only the card is checked.
+ * - `as it fits`: `shown` or `crowded`, whichever the page says, and then the
+ *   same checks, so a card that claims to be crowded must really be gone and
+ *   one that claims to fit must really be clear.
+ */
+type TourPresence = "shown" | "crowded" | "covered" | "as it fits";
+
+/** What the tour card does while the bottom sheet is open at each of its two lower detents. */
+interface PresenceBesideSheet {
+  readonly half: TourPresence;
+  readonly peek: TourPresence;
+}
 
 /**
- * The one matrix viewport where the welcome card cannot sit above an open
- * sheet: it is 277 px tall, and the scale bar that rides above the sheet
- * leaves 154 px under the search pill at half and 274 px at peek. The card
- * gives way there (`data-crowded`) and comes back when the sheet comes down,
- * and it must not give way anywhere else.
+ * Where the tour card sits beside an open bottom sheet. On a 320 by 568 screen
+ * the card (277 px tall for the welcome card, 203 to 269 px for the others)
+ * needs 12 px clear of the scale bar, which rides above the sheet: that leaves
+ * 154 px under the search pill at half, so every card gives way, and 274 px at
+ * peek, so only the welcome card does. Everywhere else it fits.
  */
-const NO_ROOM_BESIDE_SHEET = { width: 320, height: 568 } as const;
+function presenceBesideSheet(
+  viewport: { readonly width: number; readonly height: number },
+  state: TourState,
+): PresenceBesideSheet {
+  const smallPhone = viewport.width === 320 && viewport.height === 568;
+  if (!smallPhone) {
+    return { half: "shown", peek: "shown" };
+  }
+  return { half: "crowded", peek: state === "welcome" ? "crowded" : "shown" };
+}
+
+/**
+ * The credits popover sits above the tour card on the popover layer and, on a
+ * short landscape phone, rises beside the end stack into the card's cell (see
+ * the tour row of the slot table in DESIGN.md). That overlap is accepted, so
+ * a report that names only the card and the popover does not count against it.
+ */
+function withoutCreditsOverCard<
+  T extends {
+    readonly overlaps: readonly string[];
+    readonly obscured: readonly string[];
+  },
+>(report: T): T {
+  return {
+    ...report,
+    overlaps: report.overlaps.filter(
+      (overlap) =>
+        !(overlap.includes("tour") && overlap.includes("attribution-popover")),
+    ),
+    obscured: report.obscured.filter(
+      (entry) => !entry.endsWith("is covered by attribution-popover"),
+    ),
+  };
+}
 
 /**
  * Checks the floating elements in the state the page is in now: nothing
  * overlaps, nothing leaves the viewport, no control is covered, and the tour
- * card is among the shown elements as `presence` says.
+ * card is on screen as `presence` says. `creditsOpen` allows the accepted
+ * overlap of the credits popover over the card (see
+ * {@link withoutCreditsOverCard}).
  */
 async function expectTourLayout(
   mapPage: MapPage,
   context: string,
   presence: TourPresence,
+  creditsOpen = false,
 ): Promise<void> {
-  await waitForStableLayout(mapPage.page);
-  const report = await inspectChromeLayout(mapPage.page);
+  const page = mapPage.page;
+  const slot = page.locator('[data-chrome="tour"]');
+  const card = page.getByTestId("tour-card");
+  await waitForStableLayout(page);
+  let expected = presence;
+  if (expected === "as it fits") {
+    expected =
+      (await slot.getAttribute("data-crowded")) === "true"
+        ? "crowded"
+        : "shown";
+  }
+  const found = await inspectChromeLayout(page);
+  const report = creditsOpen ? withoutCreditsOverCard(found) : found;
   const details = `${context}: ${JSON.stringify(report.boxes)}`;
   const tourShown = report.boxes.some((box) => box.name === "tour");
-  if (presence === "hidden") {
+
+  if (expected === "shown") {
+    await expect(slot, details).toHaveAttribute("data-crowded", "false");
+    await expect(slot, details).not.toHaveAttribute("inert", /.*/);
+    await expect(card, details).toBeVisible();
+    expect(tourShown, details).toBe(true);
+  } else {
+    await expect(card, details).toBeHidden();
+    await expect(slot, details).toHaveAttribute("inert", /.*/);
     expect(tourShown, details).toBe(false);
-    expect(
-      report.overlaps.filter((overlap) => overlap.includes("tour")),
-      details,
-    ).toEqual([]);
+  }
+  if (expected === "crowded") {
+    await expect(slot, details).toHaveAttribute("data-crowded", "true");
+  }
+  if (expected === "covered") {
     return;
   }
   expect(report.overlaps, details).toEqual([]);
   expect(report.outside, details).toEqual([]);
   expect(report.obscured, details).toEqual([]);
-  if (presence === "shown") {
-    expect(tourShown, details).toBe(true);
-  }
 }
 
 /**
@@ -282,20 +346,15 @@ async function expectTourLayout(
  * Map options, Settings and, where the sheet is a bottom sheet, the full
  * detent (the card hides, because the sheet is modal and covers the map), the
  * peek detent and the half detent. The side panel has no detents, so those
- * three are left out.
+ * three are left out. After each close the card is back and clear.
  *
- * @param roomBesideSheet - False for a screen too small for the card
- *   above an open sheet, where the card may be gone while the sheet is open.
+ * @param beside - How the card should be beside the open bottom sheet.
  */
 async function walkSheetConditions(
   mapPage: MapPage,
-  card: Locator,
   label: string,
-  roomBesideSheet: boolean,
+  beside: PresenceBesideSheet,
 ): Promise<void> {
-  const withSheet: TourPresence = roomBesideSheet
-    ? "shown"
-    : "shown if there is room";
   await expectTourLayout(mapPage, `${label}, no sheet`, "shown");
 
   for (const open of [
@@ -303,10 +362,15 @@ async function walkSheetConditions(
     () => mapPage.openSettings(),
   ]) {
     await open();
-    await expectTourLayout(mapPage, `${label}, sheet open`, withSheet);
+    const isSheet = (await mapPage.detent()) !== null;
+    await expectTourLayout(
+      mapPage,
+      `${label}, sheet open`,
+      isSheet ? beside.half : "shown",
+    );
     await mapPage.sheetClose.click();
     await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
-    await expect(card).toBeVisible();
+    await expectTourLayout(mapPage, `${label}, sheet closed`, "shown");
   }
 
   await mapPage.openMapOptions();
@@ -314,18 +378,34 @@ async function walkSheetConditions(
     await mapPage.sheetHandle.focus();
     await mapPage.page.keyboard.press("Enter");
     await expect(mapPage.sheet).toHaveAttribute("data-detent", "full");
-    await expect(card).toBeHidden();
-    await expectTourLayout(mapPage, `${label}, sheet at full`, "hidden");
+    await expectTourLayout(mapPage, `${label}, sheet at full`, "covered");
     await mapPage.page.keyboard.press("Enter");
     await expect(mapPage.sheet).toHaveAttribute("data-detent", "peek");
-    await expectTourLayout(mapPage, `${label}, sheet at peek`, withSheet);
+    await expectTourLayout(mapPage, `${label}, sheet at peek`, beside.peek);
     await mapPage.page.keyboard.press(" ");
     await expect(mapPage.sheet).toHaveAttribute("data-detent", "half");
-    await expectTourLayout(mapPage, `${label}, sheet at half`, withSheet);
+    await expectTourLayout(mapPage, `${label}, sheet at half`, beside.half);
   }
   await mapPage.sheetClose.click();
   await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
-  await expect(card).toBeVisible();
+  await expectTourLayout(mapPage, `${label}, sheet closed again`, "shown");
+}
+
+/** Starts a new first visit in `colorScheme` and waits for the welcome card with the credits collapsed. */
+async function startFirstVisit(
+  mapPage: MapPage,
+  colorScheme: "light" | "dark",
+): Promise<void> {
+  const page = mapPage.page;
+  await page.emulateMedia({ colorScheme });
+  // The walk before stored that the tour was answered.
+  await page.addInitScript(() => {
+    localStorage.removeItem("mapcairn:tourSeen");
+  });
+  await mapPage.goto();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", colorScheme);
+  await expect(page.getByTestId("tour-card")).toBeVisible();
+  await collapseCredits(mapPage);
 }
 
 /*
@@ -333,9 +413,9 @@ async function walkSheetConditions(
  * and theme, each card (the welcome card, the three steps and the ending)
  * shares the screen with no other floating element, in the sheet and the side
  * panel layouts and with the sheet closed, open on Map options or Settings,
- * and at each detent. The credits' own first showing is collapsed first: the
- * plan accepts their overlap with the card on a short landscape phone for
- * those five seconds.
+ * and at each detent. The credits' own first showing is collapsed first; their
+ * accepted overlap with the card is described in DESIGN.md (the tour row of
+ * the slot table) and covered by the chrome-state walk below.
  */
 test.describe("tour card", () => {
   test.use({ firstVisit: true });
@@ -347,38 +427,67 @@ test.describe("tour card", () => {
       async ({ page, mapPage }) => {
         await page.setViewportSize(viewport);
         const card = page.getByTestId("tour-card");
-        const roomBesideSheet = !(
-          viewport.width === NO_ROOM_BESIDE_SHEET.width &&
-          viewport.height === NO_ROOM_BESIDE_SHEET.height
-        );
 
         for (const colorScheme of ["light", "dark"] as const) {
-          await page.emulateMedia({ colorScheme });
-          // A new first visit: the walk before stored that the tour was answered.
-          await page.addInitScript(() => {
-            localStorage.removeItem("mapcairn:tourSeen");
-          });
-          await mapPage.goto();
-          await expect(page.locator("html")).toHaveAttribute(
-            "data-theme",
-            colorScheme,
-          );
-          await expect(card).toBeVisible();
-          await collapseCredits(mapPage);
-
+          await startFirstVisit(mapPage, colorScheme);
           for (const state of TOUR_STATES) {
-            await advanceTourTo(mapPage, state);
-            await walkSheetConditions(
-              mapPage,
-              card,
-              `${colorScheme}, ${state}`,
-              roomBesideSheet,
-            );
+            await test.step(`${colorScheme}, ${state}`, async () => {
+              await advanceTourTo(mapPage, state);
+              await walkSheetConditions(
+                mapPage,
+                `${colorScheme}, ${state}`,
+                presenceBesideSheet(viewport, state),
+              );
+            });
           }
           await card.getByRole("button", { name: "Close" }).click();
           await expect(card).toHaveCount(0);
         }
       },
     );
+  }
+
+  /*
+   * The card in every chrome state (the measure and draw toolbars, a pin
+   * card, an open search, the credits and the rest). At 390 by 844 there is
+   * room for it in all of them. On a small phone and a short landscape one
+   * the bottom row comes up to it in some states, and it must then be gone
+   * and inert, not left under the toolbar.
+   */
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+  ] as const) {
+    test(`the tour card stays clear in every chrome state at ${viewport.width}x${viewport.height}`, async ({
+      page,
+      mapPage,
+    }) => {
+      test.setTimeout(240_000);
+      await page.setViewportSize(viewport);
+      await scriptSearch(page);
+      await startFirstVisit(mapPage, "light");
+      const roomy = viewport.height >= 800;
+
+      for (const state of TOUR_STATES) {
+        await advanceTourTo(mapPage, state);
+        for (const chromeState of CHROME_STATES) {
+          // Focusing the search field is what step 3 asks for, so it moves the tour on.
+          if (state === "step 3" && chromeState === "search open") {
+            continue;
+          }
+          await test.step(`${state}, ${chromeState}`, async () => {
+            await enterState(mapPage, chromeState);
+            await expectTourLayout(
+              mapPage,
+              `${state}, ${chromeState}`,
+              roomy || chromeState === "rest" ? "shown" : "as it fits",
+              chromeState === "attribution open",
+            );
+            await leaveState(mapPage, chromeState);
+          });
+        }
+      }
+    });
   }
 });
