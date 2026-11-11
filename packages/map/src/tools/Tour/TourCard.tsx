@@ -1,5 +1,13 @@
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useFocusElement, useFocusReturn } from "../../chrome/focusRegistry";
+import { useChromeSurface } from "../../chrome/MapChrome/chromeSurface";
 import { usePreferences } from "../../services";
 import { Button } from "../../ui/Button";
 import { useAnnounce } from "../../ui/LiveRegion";
@@ -33,8 +41,11 @@ export interface TourCardProps {
  *   restart from Help move focus to the heading; a step finished by doing it
  *   leaves focus with the person. Escape inside the card skips (or closes the
  *   ending) and prevents the default, so the app's own Escape does not also
- *   close a surface. When the card closes with focus inside it, focus goes to
- *   the map. While a step is current, its control carries
+ *   close a surface. When the card closes, or its slot hides because the sheet
+ *   is modal or the bottom row has come up to it, with focus inside it, focus
+ *   goes to the map. A request for focus made while the slot is hidden (a
+ *   restart from Help that closes a sheet in the same update) waits until the
+ *   slot shows, because an inert element cannot take it. While a step is current, its control carries
  *   `data-tour-highlight` and is scrolled into view.
  */
 export function TourCard({ tour, welcome, ending }: TourCardProps) {
@@ -46,6 +57,7 @@ export function TourCard({ tour, welcome, ending }: TourCardProps) {
   const elementFor = useFocusElement();
   const announce = useAnnounce();
   const { reducedMotion } = usePreferences();
+  const { tourHidden } = useChromeSurface();
   const { state, step, steps, focusRequest } = tour;
 
   useEffect(() => {
@@ -56,11 +68,26 @@ export function TourCard({ tour, welcome, ending }: TourCardProps) {
   }, [state.status, announced, announce, welcome.announcement]);
 
   useEffect(() => {
-    if (focusRequest > handledFocus.current) {
+    const heading = headingRef.current;
+    if (focusRequest <= handledFocus.current || tourHidden || !heading) {
+      return;
+    }
+    heading.focus();
+    if (heading.ownerDocument.activeElement === heading) {
       handledFocus.current = focusRequest;
-      headingRef.current?.focus();
     }
   });
+
+  // Runs before the browser applies `inert`, while focus is still in the card.
+  useLayoutEffect(() => {
+    if (!tourHidden) {
+      return;
+    }
+    const card = headingRef.current?.parentElement;
+    if (card?.contains(card.ownerDocument.activeElement)) {
+      restoreFocus(null);
+    }
+  }, [tourHidden, restoreFocus]);
 
   const target = step?.target;
   useEffect(() => {

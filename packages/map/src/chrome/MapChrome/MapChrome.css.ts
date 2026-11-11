@@ -161,7 +161,9 @@ export const bottomCentre = style({
  * never meets another slot. Sheet layout: under the search pill, beside the
  * end stack, clear of the sheet at peek and half. Panel layout: the column
  * between search (as wide as the panel) and the end stack, against either
- * side as `data-side` says. It hides with the bottom slots at full.
+ * side as `data-side` says. It hides with the bottom slots at full, and
+ * whenever the bottom row, lifted above the sheet or a toolbar, would reach
+ * it (`data-crowded`, set by `MapChrome` from its measurements).
  */
 export const tour = style({
   ...slotBase,
@@ -175,6 +177,7 @@ export const tour = style({
   transition: slideTransition,
   selectors: {
     [whenHidden]: hidden,
+    '&[data-crowded="true"]': hidden,
     [`${root}[data-layout="panel"] &`]: {
       gridColumn: 2,
       gridRow: "1 / 3",

@@ -22,12 +22,19 @@ export interface ChromeSurfaceValue {
   publishPanelEdge(px: number | null): void;
   /** The tallest the end stack may be, or null before the first measurement. */
   readonly endStackMaxHeight: number | null;
+  /**
+   * True while the tour card's slot is inert and hidden (the sheet is modal
+   * or the bottom row has come up to the card), so the card does not ask for
+   * focus it cannot take and gives focus up when it hides.
+   */
+  readonly tourHidden: boolean;
 }
 
 const defaultValue: ChromeSurfaceValue = {
   publishSheetDetent() {},
   publishPanelEdge() {},
   endStackMaxHeight: null,
+  tourHidden: false,
 };
 
 /** Provided by `MapChrome` only. */

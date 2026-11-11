@@ -131,6 +131,22 @@ test.describe("first-visit tour", () => {
     ).toBeFocused();
   });
 
+  test("Help starts the tour from the sheet on a screen too small for the card beside it, and focuses the step once the sheet is gone", async ({
+    page,
+    mapPage,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await mapPage.goto();
+    await expect(card(page)).toBeVisible();
+    await mapPage.openSettings();
+    await expect(card(page)).toBeHidden();
+    await page.getByRole("button", { name: "Take the tour" }).click();
+    await expect(mapPage.sheet).not.toHaveAttribute("data-state", "open");
+    await expect(
+      page.getByRole("heading", { name: "Turn on a layer" }),
+    ).toBeFocused();
+  });
+
   test("a shared link shows no card", async ({ page, mapPage }) => {
     await mapPage.goto("#map=12.00/51.50000/-0.12000");
     await expect(mapPage.region).toBeVisible();

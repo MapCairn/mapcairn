@@ -557,7 +557,10 @@ test.describe("basemaps", () => {
       });
       await mapPage.openMapOptions();
       const redrawn = page.waitForRequest(DEFAULT_STYLE_PATTERN);
-      await mapPage.chooseBasemap(RASTER_BASEMAP_NAME);
+      // Streets is down, so the map may take the choice back before a check
+      // that it is selected could run; the banner and the marked tile below
+      // show that it was chosen.
+      await mapPage.pressBasemapTile(RASTER_BASEMAP_NAME);
       await mapPage.sheetClose.click();
 
       const banner = page.getByTestId("basemap-error");

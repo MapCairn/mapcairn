@@ -36,6 +36,7 @@ const surface: ChromeSurfaceValue = {
   publishSheetDetent: () => {},
   publishPanelEdge: () => {},
   endStackMaxHeight: null,
+  tourHidden: false,
 };
 
 function Restorer() {

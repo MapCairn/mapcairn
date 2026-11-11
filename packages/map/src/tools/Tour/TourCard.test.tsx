@@ -6,9 +6,13 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { FocusRegistryProvider, useFocusTarget } from "../../chrome";
+import {
+  ChromeSurfaceContext,
+  useChromeSurface,
+} from "../../chrome/MapChrome/chromeSurface";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { TourCard } from "./TourCard";
@@ -80,14 +84,38 @@ function Harness({ offer }: { offer: boolean }) {
   );
 }
 
-function renderTour(options: { offer?: boolean; persistent?: boolean } = {}) {
+let setTourHidden: (hidden: boolean) => void = () => {};
+
+/** Plays the chrome's part: tells the card whether its slot is hidden. */
+function SurfaceHarness({
+  hidden,
+  children,
+}: {
+  hidden: boolean;
+  children: ReactNode;
+}) {
+  const [tourHidden, setHidden] = useState(hidden);
+  setTourHidden = setHidden;
+  const surface = useChromeSurface();
+  return (
+    <ChromeSurfaceContext.Provider value={{ ...surface, tourHidden }}>
+      {children}
+    </ChromeSurfaceContext.Provider>
+  );
+}
+
+function renderTour(
+  options: { offer?: boolean; persistent?: boolean; hidden?: boolean } = {},
+) {
   const services = createFakeServices();
   const focusMap = vi.fn();
   const view = render(
     <ServicesProvider services={services}>
       <LiveRegionProvider>
         <FocusRegistryProvider focusMap={focusMap}>
-          <Harness offer={options.offer ?? true} />
+          <SurfaceHarness hidden={options.hidden ?? false}>
+            <Harness offer={options.offer ?? true} />
+          </SurfaceHarness>
         </FocusRegistryProvider>
       </LiveRegionProvider>
     </ServicesProvider>,
@@ -209,6 +237,46 @@ describe("TourCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Turn a layer on" }));
     expect(card()).toBeNull();
     expect(services.settings.get().tourSeen).toBe(2);
+  });
+
+  it("keeps a focus request waiting while its slot is hidden, and focuses the heading once it shows", () => {
+    renderTour({ offer: false, hidden: true });
+    act(() => latestStart());
+    const heading = screen.getByRole("heading", { name: "Turn on a layer" });
+    expect(document.activeElement).toBe(document.body);
+
+    act(() => setTourHidden(false));
+    expect(document.activeElement).toBe(heading);
+  });
+
+  it("asks once, and does not take focus back later, after it was shown again", () => {
+    renderTour({ offer: false, hidden: true });
+    act(() => latestStart());
+    act(() => setTourHidden(false));
+    screen.getByRole("button", { name: "Map options" }).focus();
+    act(() => setTourHidden(true));
+    act(() => setTourHidden(false));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Map options" }),
+    );
+  });
+
+  it("sends focus to the map when its slot hides while focus is inside the card", () => {
+    const { focusMap } = renderTour();
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("heading", { name: "Turn on a layer" }),
+    );
+    act(() => setTourHidden(true));
+    expect(focusMap).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves focus alone when its slot hides while focus is elsewhere", () => {
+    const { focusMap } = renderTour();
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+    screen.getByRole("button", { name: "Map options" }).focus();
+    act(() => setTourHidden(true));
+    expect(focusMap).not.toHaveBeenCalled();
   });
 
   it("restarts at the first step and focuses it, even when it was never offered", () => {
