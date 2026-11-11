@@ -1,5 +1,6 @@
 import { FakeClipboard } from "../fakes/FakeClipboard";
 import { FakeDevicePreferences } from "../fakes/FakeDevicePreferences";
+import { FakeFileOpener } from "../fakes/FakeFileOpener";
 import { FakeFileSaver } from "../fakes/FakeFileSaver";
 import { FakeLayerSource } from "../fakes/FakeLayerSource";
 import { FakeLocationProvider } from "../fakes/FakeLocationProvider";
@@ -13,6 +14,7 @@ import { StaticLayerRegistry } from "../fakes/StaticLayerRegistry";
 import type { Services } from "../ports/services";
 import { runClipboardContract } from "./clipboard.contract";
 import { runDevicePreferencesContract } from "./devicePreferences.contract";
+import { runFileOpenerContract } from "./fileOpener.contract";
 import { runFileSaverContract } from "./fileSaver.contract";
 import { runLayerRegistryContract } from "./layerRegistry.contract";
 import { runLayerSourceContract } from "./layerSource.contract";
@@ -37,6 +39,7 @@ export const PORT_NAMES = [
   "settings",
   "clipboard",
   "fileSaver",
+  "fileOpener",
   "url",
   "theme",
   "preferences",
@@ -84,6 +87,7 @@ export interface PortContractRunners {
   readonly settings: typeof runSettingsStoreContract;
   readonly clipboard: typeof runClipboardContract;
   readonly fileSaver: typeof runFileSaverContract;
+  readonly fileOpener: typeof runFileOpenerContract;
   readonly url: typeof runUrlStateContract;
   readonly theme: typeof runThemeSourceContract;
   readonly preferences: typeof runDevicePreferencesContract;
@@ -131,6 +135,10 @@ export const PORT_REGISTRY: PortRegistry = {
   fileSaver: {
     createFake: () => new FakeFileSaver(),
     runContract: runFileSaverContract,
+  },
+  fileOpener: {
+    createFake: () => new FakeFileOpener(),
+    runContract: runFileOpenerContract,
   },
   url: {
     createFake: () => new MemoryUrlState(),

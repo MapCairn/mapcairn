@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import {
   useClipboard,
+  useFileOpener,
   useLayers,
   useLocationProvider,
   useMapAdapterFactory,
@@ -59,6 +60,9 @@ describe("ServicesProvider", () => {
     ).toBe(services.location);
     expect(renderHook(() => useClipboard(), { wrapper }).result.current).toBe(
       services.clipboard,
+    );
+    expect(renderHook(() => useFileOpener(), { wrapper }).result.current).toBe(
+      services.fileOpener,
     );
     expect(renderHook(() => useUrlState(), { wrapper }).result.current).toBe(
       services.url,

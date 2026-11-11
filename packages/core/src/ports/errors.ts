@@ -106,3 +106,26 @@ export class MapEngineError extends Error {
     this.reason = reason;
   }
 }
+
+/**
+ * Why no file was opened: the person closed the picker or the caller
+ * cancelled (`cancelled`, which callers ignore), the file was larger than
+ * allowed (`too-large`), it could not be read (`unreadable`), or the browser
+ * cannot open files (`unsupported`).
+ */
+export type FileOpenErrorKind =
+  | "cancelled"
+  | "too-large"
+  | "unreadable"
+  | "unsupported";
+
+/** The only error a file opener rejects with. */
+export class FileOpenError extends Error {
+  readonly kind: FileOpenErrorKind;
+
+  constructor(kind: FileOpenErrorKind, message?: string) {
+    super(message ?? `The file could not be opened: ${kind}.`);
+    this.name = "FileOpenError";
+    this.kind = kind;
+  }
+}

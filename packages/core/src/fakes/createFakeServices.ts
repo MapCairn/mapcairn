@@ -1,6 +1,7 @@
 import type { Services } from "../ports/services";
 import { FakeClipboard } from "./FakeClipboard";
 import { FakeDevicePreferences } from "./FakeDevicePreferences";
+import { FakeFileOpener } from "./FakeFileOpener";
 import { FakeFileSaver } from "./FakeFileSaver";
 import { FakeLayerSource } from "./FakeLayerSource";
 import { FakeLocationProvider } from "./FakeLocationProvider";
@@ -22,6 +23,7 @@ export interface FakeServiceHandles {
   readonly settings: MemorySettingsStore;
   readonly clipboard: FakeClipboard;
   readonly fileSaver: FakeFileSaver;
+  readonly fileOpener: FakeFileOpener;
   readonly url: MemoryUrlState;
   readonly theme: FakeThemeSource;
   readonly preferences: FakeDevicePreferences;
@@ -61,6 +63,7 @@ export function createFakeServices(
     settings: new MemorySettingsStore(),
     clipboard: new FakeClipboard(),
     fileSaver: new FakeFileSaver(),
+    fileOpener: new FakeFileOpener(),
     url: new MemoryUrlState(),
     theme: new FakeThemeSource(),
     preferences: new FakeDevicePreferences(),
@@ -78,6 +81,7 @@ export function createFakeServices(
     settings: fakes.settings,
     clipboard: fakes.clipboard,
     fileSaver: fakes.fileSaver,
+    fileOpener: fakes.fileOpener,
     url: fakes.url,
     theme: fakes.theme,
     preferences: fakes.preferences,

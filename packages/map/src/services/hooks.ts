@@ -3,6 +3,7 @@ import {
   BUILT_IN_BASEMAP_CATALOGUE,
   type ClipboardPort,
   type DevicePreferencesValue,
+  type FileOpener,
   type FileSaver,
   type LayerRegistry,
   type LocationProvider,
@@ -51,6 +52,11 @@ export function useClipboard(): ClipboardPort {
 /** The file saver, which offers a file the ui built as a download. */
 export function useFileSaver(): FileSaver {
   return useServices().fileSaver;
+}
+
+/** The file opener, which asks the person for a file and reads it in the browser. */
+export function useFileOpener(): FileOpener {
+  return useServices().fileOpener;
 }
 
 /** The shareable URL state port. */
