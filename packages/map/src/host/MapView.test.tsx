@@ -1040,6 +1040,41 @@ describe("engine errors", () => {
     expect(latest().adapter).toBe(services.fakes.maps[0]);
   });
 
+  it("tells the host which basemap is unavailable when the engine reports that none of its tiles load", async () => {
+    const onBasemapUnavailable = vi.fn();
+    const onEngineError = vi.fn();
+    const { adapter, latest } = await setup({
+      onBasemapUnavailable,
+      onEngineError,
+    });
+    adapter().simulateBasemapUnavailable();
+    expect(onBasemapUnavailable).toHaveBeenCalledTimes(1);
+    expect(onBasemapUnavailable).toHaveBeenCalledWith(FAKE_RASTER_BASEMAP);
+    expect(onEngineError).not.toHaveBeenCalled();
+    expect(latest().error).toBeNull();
+  });
+
+  it("tells the host when the engine finds the basemap unavailable before its mount has resolved", async () => {
+    // MapLibre fires `load` and the first `idle` in one render, so the report
+    // can come before anyone awaiting the mount has run.
+    const factory: MapAdapterFactory = () => {
+      const adapter = new FakeAdapter();
+      const realMount = adapter.mount.bind(adapter);
+      adapter.mount = async (host, options: MapMountOptions) => {
+        await realMount(host, options);
+        adapter.simulateBasemapUnavailable();
+      };
+      return adapter;
+    };
+    const onBasemapUnavailable = vi.fn();
+    await setup(
+      { onBasemapUnavailable },
+      createFakeServices({ createMapAdapter: factory }),
+    );
+    expect(onBasemapUnavailable).toHaveBeenCalledTimes(1);
+    expect(onBasemapUnavailable).toHaveBeenCalledWith(FAKE_RASTER_BASEMAP);
+  });
+
   it("reports a failed basemap swap as a basemap failure, not an engine error", async () => {
     const onEngineError = vi.fn();
     const onBasemapError = vi.fn();

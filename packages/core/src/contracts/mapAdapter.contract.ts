@@ -42,6 +42,11 @@ export interface MapAdapterControls {
   /** Makes the engine report a failed tile or style request. */
   simulateTileError(): void;
   /**
+   * Makes the engine settle with every tile of the basemap failed and none
+   * loaded, as when the provider is down.
+   */
+  simulateBasemapUnavailable(): void;
+  /**
    * Makes the engine report a zoom gesture it handles itself (a wheel, a
    * pinch or a double-click) that leaves the view at the normalised `zoom`.
    */
@@ -420,6 +425,22 @@ export function runMapAdapterContract(
       await controls.settle();
       expect(loading).toEqual([true, false]);
       expect(tileErrors).toBe(1);
+      expect(fatalErrors).toBe(0);
+    });
+
+    it("emits basemapUnavailable once, naming the basemap, when no tile of it loads, and it is not fatal", async () => {
+      const { adapter, controls } = await mounted();
+      const unavailable: MapEvents["basemapUnavailable"][] = [];
+      let fatalErrors = 0;
+      adapter.on("basemapUnavailable", (value) => unavailable.push(value));
+      adapter.on("fatalError", () => {
+        fatalErrors += 1;
+      });
+      controls.simulateBasemapUnavailable();
+      await controls.settle();
+      expect(unavailable.map((basemap) => basemap.id)).toEqual([
+        controls.basemap.id,
+      ]);
       expect(fatalErrors).toBe(0);
     });
 

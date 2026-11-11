@@ -124,6 +124,7 @@ describe("useBasemapChoice", () => {
       hook.result.current.failed(new Error("404"), basemap("osm"), positron),
     );
     expect(hook.result.current.failure?.name).toBe("Streets");
+    expect(hook.result.current.failure?.id).toBe("osm");
     expect(hook.result.current.basemap).toBe(positron);
     expect(hook.result.current.choice).toBe("osm");
 
@@ -322,6 +323,7 @@ describe("useBasemapChoice when the map cannot start on a basemap", () => {
     );
     expect(hook.result.current.basemap.id).toBe("bright");
     expect(hook.result.current.failure).toEqual({
+      id: "fake-credited",
       name: "Fake credited",
       kept: basemap("bright"),
       atMount: true,
@@ -374,5 +376,173 @@ describe("useBasemapChoice when the map cannot start on a basemap", () => {
     );
     expect(credited.hook.result.current.failure).toBeNull();
     expect(credited.hook.result.current.basemap.id).toBe("fake-credited");
+  });
+});
+
+describe("useBasemapChoice when every tile of a basemap fails", () => {
+  const streets = basemap("osm");
+  const liberty = basemap("liberty");
+  const bright = basemap("bright");
+
+  function drawn(
+    hook: ReturnType<typeof setup>["hook"],
+    loaded: BasemapDefinition,
+  ) {
+    act(() => hook.result.current.applied(loaded));
+  }
+
+  it("marks the basemap unavailable and goes back to the one drawn before it, naming the failure", () => {
+    const { hook } = setup("liberty");
+    drawn(hook, liberty);
+    act(() => hook.result.current.choose("osm"));
+    drawn(hook, streets);
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(hook.result.current.basemap.id).toBe("liberty");
+    expect(hook.result.current.failure).toEqual({
+      id: "osm",
+      name: "Streets",
+      kept: liberty,
+      unavailable: true,
+    });
+    expect(hook.result.current.inUse.map((item) => item.id)).toEqual([
+      "liberty",
+    ]);
+  });
+
+  it("falls back to the default when there is no earlier basemap, such as a saved one at start", () => {
+    const { hook } = setup("osm");
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(hook.result.current.basemap.id).toBe("bright");
+    expect(hook.result.current.failure?.kept).toBe(bright);
+  });
+
+  it("never falls back to a basemap that is itself unavailable", () => {
+    const { hook } = setup("liberty");
+    drawn(hook, liberty);
+    act(() => hook.result.current.choose("osm"));
+    drawn(hook, streets);
+    act(() => hook.result.current.unavailableNow(liberty));
+    act(() => hook.result.current.unavailableNow(streets));
+    // Liberty and Streets are both marked, so the default is what is left.
+    expect(hook.result.current.basemap.id).toBe("bright");
+  });
+
+  it("stays on the basemap, and says so, when nothing else is left to draw", () => {
+    const { hook } = setup("bright");
+    act(() => hook.result.current.unavailableNow(bright));
+    expect(hook.result.current.basemap.id).toBe("bright");
+    expect(hook.result.current.failure).toEqual({
+      id: "bright",
+      name: "Bright",
+      kept: bright,
+      unavailable: true,
+    });
+  });
+
+  it("never keeps a basemap chosen in this session that then turned out to be down: the earlier saved one comes back", () => {
+    const { services, hook } = setup("liberty");
+    drawn(hook, liberty);
+    act(() => hook.result.current.choose("osm"));
+    // Saved as soon as its style loaded, before any tile had failed.
+    drawn(hook, streets);
+    expect(services.fakes.settings.get().basemapId).toBe("osm");
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(services.fakes.settings.get().basemapId).toBe("liberty");
+    expect(hook.result.current.savedChoice).toBe("liberty");
+    // The picker shows the basemap the map went back to.
+    expect(hook.result.current.choice).toBe("liberty");
+    act(() => hook.result.current.goBack());
+    expect(services.fakes.settings.get().basemapId).toBe("liberty");
+    expect(hook.result.current.failure).toBeNull();
+  });
+
+  it("restores the earlier choice when the report comes before a render, as the engine can send it straight after the style loaded", () => {
+    const { services, hook } = setup("liberty");
+    drawn(hook, liberty);
+    act(() => hook.result.current.choose("osm"));
+    const { applied, unavailableNow } = hook.result.current;
+    act(() => {
+      applied(streets);
+      unavailableNow(streets);
+    });
+    expect(services.fakes.settings.get().basemapId).toBe("liberty");
+  });
+
+  it("restores the earlier saved choice even when the map had to fall back to the default", () => {
+    const { services, hook } = setup("liberty");
+    act(() => hook.result.current.unavailableNow(liberty));
+    act(() => hook.result.current.goBack());
+    expect(services.fakes.settings.get().basemapId).toBe("bright");
+    act(() => hook.result.current.choose("osm"));
+    drawn(hook, streets);
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(services.fakes.settings.get().basemapId).toBe("bright");
+  });
+
+  it("restores the choice saved before it when nothing had been chosen yet", () => {
+    const { services, hook } = setup(null);
+    act(() => hook.result.current.choose("osm"));
+    drawn(hook, streets);
+    expect(services.fakes.settings.get().basemapId).toBe("osm");
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(hook.result.current.savedChoice).toBe("bright");
+    expect(services.fakes.settings.get().basemapId).not.toBe("osm");
+  });
+
+  it("leaves a long-standing saved choice alone when its provider is down, until the person goes back", () => {
+    const { services, hook } = setup("osm");
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(hook.result.current.basemap.id).toBe("bright");
+    expect(services.fakes.settings.get().basemapId).toBe("osm");
+    act(() => hook.result.current.goBack());
+    expect(services.fakes.settings.get().basemapId).toBe("bright");
+  });
+
+  it("leaves a basemap named by a link alone, without saving anything", () => {
+    const { services, hook } = setup("positron", "osm");
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(hook.result.current.basemap.id).toBe("bright");
+    expect(services.fakes.settings.get().basemapId).toBe("positron");
+  });
+
+  it("restores only for the basemap that was chosen, not for an earlier choice reported late", () => {
+    const { services, hook } = setup("liberty");
+    drawn(hook, liberty);
+    act(() => hook.result.current.choose("osm"));
+    drawn(hook, streets);
+    act(() => hook.result.current.choose("positron"));
+    drawn(hook, basemap("positron"));
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(services.fakes.settings.get().basemapId).toBe("positron");
+    expect(hook.result.current.failure).toBeNull();
+  });
+
+  it("names the basemap that failed by id as well as by name", () => {
+    const { hook } = setup("liberty");
+    drawn(hook, liberty);
+    act(() => hook.result.current.choose("osm"));
+    drawn(hook, streets);
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(hook.result.current.failure?.id).toBe("osm");
+  });
+
+  it("only marks a basemap that is no longer the one asked for, and does not switch the map", () => {
+    const { hook } = setup("liberty");
+    drawn(hook, liberty);
+    act(() => hook.result.current.unavailableNow(streets));
+    expect(hook.result.current.basemap.id).toBe("liberty");
+    expect(hook.result.current.failure).toBeNull();
+  });
+
+  it("clears the mark once the basemap draws, so a recovered provider is trusted again", () => {
+    const { hook } = setup("bright");
+    act(() => hook.result.current.unavailableNow(liberty));
+    act(() => hook.result.current.choose("liberty"));
+    drawn(hook, liberty);
+    act(() => hook.result.current.choose("osm"));
+    drawn(hook, streets);
+    act(() => hook.result.current.unavailableNow(streets));
+    // Liberty drew again, so it is a valid place to go back to, not the default.
+    expect(hook.result.current.failure?.kept.id).toBe("liberty");
   });
 });

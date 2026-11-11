@@ -372,6 +372,16 @@ export interface MapEvents {
   /** A tile or style request failed. The map still works. */
   tileError: undefined;
   /**
+   * The basemap's own tiles all failed and none loaded, counted from its style
+   * loading to the moment the map settled: its provider is down or
+   * unreachable (an expired certificate looks like this too). Data layers do
+   * not count. It carries the basemap whose style those tiles belong to, so a
+   * report that arrives before a mount has resolved, or after another basemap
+   * was asked for, still names the right one. It is reported at most once each
+   * time a basemap's style loads, and never once any tile of it has loaded.
+   */
+  basemapUnavailable: BasemapDefinition;
+  /**
    * The engine stopped working after it had loaded (for example its worker
    * failed), so the map can no longer draw. The error's reason is
    * `stopped`. A failed tile or source is a `tileError` instead, and a

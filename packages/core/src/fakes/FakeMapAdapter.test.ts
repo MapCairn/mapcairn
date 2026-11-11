@@ -30,6 +30,7 @@ function subjectFor(
         settle: () => Promise.resolve(),
         simulateClick: (latlng) => adapter.simulateClick(latlng),
         simulateTileError: () => adapter.simulateTileError(),
+        simulateBasemapUnavailable: () => adapter.simulateBasemapUnavailable(),
         simulateLoading: (loading) => adapter.simulateLoading(loading),
         simulateUserZoom: (zoom) => adapter.simulateUserZoom(zoom),
         simulateFeatureTap: (layerId, featureId) =>

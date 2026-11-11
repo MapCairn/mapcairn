@@ -11,7 +11,11 @@ import {
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ServicesProvider } from "../../services";
+import {
+  type BasemapAvailability,
+  ServicesProvider,
+  useBasemapAvailability,
+} from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { BasemapPicker, type BasemapPickerProps } from "./BasemapPicker";
 
@@ -377,5 +381,105 @@ describe("BasemapPicker with a host's basemaps", () => {
       screen.getByTestId("basemap-option-fake-vector").querySelector("img"),
     ).not.toBeNull();
     expect(screen.queryByTestId("basemap-swatch-fake-vector")).toBeNull();
+  });
+});
+
+describe("BasemapPicker availability", () => {
+  /** Renders the picker beside a consumer that stays mounted, to mark basemaps. */
+  function renderMarked(
+    options: { value?: string; unavailable?: readonly string[] } = {},
+  ) {
+    const services = createFakeServices();
+    let availability: BasemapAvailability | null = null;
+    function Marks() {
+      availability = useBasemapAvailability();
+      return null;
+    }
+    const view = render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <Marks />
+          <BasemapPicker
+            value={options.value ?? "positron"}
+            onChange={vi.fn()}
+          />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    const marks = () => availability as unknown as BasemapAvailability;
+    act(() => {
+      for (const id of options.unavailable ?? []) {
+        marks().markUnavailable(id);
+      }
+    });
+    return { ...view, marks };
+  }
+
+  const streets = () => screen.getByRole("radio", { name: /^Streets/ });
+
+  it("disables the tile of an unavailable basemap and says why in words", () => {
+    renderMarked({ unavailable: ["osm"] });
+    expect(streets()).toBeDisabled();
+    const note = within(screen.getByTestId("basemap-option-osm")).getByText(
+      "Not available right now",
+    );
+    expect(note).toBeVisible();
+    // The note is inside the label, so it is part of the radio's name.
+    expect(streets()).toHaveAccessibleName("Streets Not available right now");
+    expect(radio("Bright")).not.toBeDisabled();
+    expect(
+      screen
+        .getAllByRole("radio")
+        .filter((item) => item.hasAttribute("disabled")),
+    ).toEqual([streets()]);
+  });
+
+  it("keeps the chosen basemap's radio enabled, so the group stays reachable, and still says it is unavailable", () => {
+    renderMarked({ value: "osm", unavailable: ["osm"] });
+    expect(
+      within(screen.getByTestId("basemap-option-osm")).getByText(
+        "Not available right now",
+      ),
+    ).toBeVisible();
+    expect(streets()).toBeChecked();
+    expect(streets()).not.toBeDisabled();
+  });
+
+  it("offers no Try again while every basemap is available", () => {
+    renderMarked();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.queryByText("Not available right now")).toBeNull();
+  });
+
+  it("puts Try again outside the radio group while a basemap is marked", () => {
+    renderMarked({ unavailable: ["osm"] });
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+    expect(
+      within(screen.getByTestId("basemap-picker")).queryByRole("button"),
+    ).toBeNull();
+  });
+
+  it("clears every mark on Try again and moves focus to the chosen radio", () => {
+    const { marks } = renderMarked({
+      value: "liberty",
+      unavailable: ["osm", "positron"],
+    });
+    const again = screen.getByRole("button", { name: "Try again" });
+    again.focus();
+    fireEvent.click(again);
+    expect(marks().unavailable.size).toBe(0);
+    expect(streets()).not.toBeDisabled();
+    expect(radio("Positron")).not.toBeDisabled();
+    expect(screen.queryByText("Not available right now")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(radio("Liberty")).toHaveFocus();
+  });
+
+  it("follows a mark that is cleared elsewhere", () => {
+    const { marks } = renderMarked({ unavailable: ["osm"] });
+    expect(streets()).toBeDisabled();
+    act(() => marks().clear("osm"));
+    expect(streets()).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 });

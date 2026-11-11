@@ -51,6 +51,11 @@ export interface UseMapEngineOptions {
     failed: BasemapDefinition,
     kept: BasemapDefinition,
   ) => void;
+  /**
+   * Called when every tile of the basemap the engine is drawing failed to
+   * load and none loaded. The engine keeps working.
+   */
+  readonly onBasemapUnavailable?: (basemap: BasemapDefinition) => void;
   readonly onClick?: (event: MapClickEvent) => void;
   /**
    * Called on every `moveEnd`, before `onViewChange`, and when a press starts
@@ -290,6 +295,14 @@ export function useMapEngine(options: UseMapEngineOptions): MapEngineState {
       next.on("tileError", () => {
         cycleErrorRef.current = true;
         setTileError(true);
+      }),
+      // The engine names the basemap, because the report can come before the
+      // mount has resolved (MapLibre fires `load` and the first `idle` in one
+      // render), when nothing here knows what is drawn yet.
+      next.on("basemapUnavailable", (unavailable) => {
+        if (!cancelled) {
+          latest.current.onBasemapUnavailable?.(unavailable);
+        }
       }),
       next.on("userZoom", () => {
         latest.current.onUserZoom();

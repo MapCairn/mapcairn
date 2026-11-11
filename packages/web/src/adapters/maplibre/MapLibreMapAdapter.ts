@@ -224,6 +224,27 @@ function isUserEvent(event: object): boolean {
 /** The id of the source and layer of an inline raster style. */
 const RASTER_ID = "basemap";
 
+/** The start of every engine id the adapter makes for a data layer. */
+const ENGINE_ID_PREFIX = "mapcairn:";
+
+/** Tile traffic of the basemap's own sources (see `MapLibreMapAdapter`). */
+interface BasemapTiles {
+  readonly basemap?: BasemapDefinition;
+  loaded: number;
+  failed: number;
+  reported: boolean;
+}
+
+/** Counters that blame no basemap, for before a style has loaded. */
+function idleBasemapTiles(): BasemapTiles {
+  return { loaded: 0, failed: 0, reported: false };
+}
+
+/** Whether an engine source belongs to the basemap's own style, not to a data layer. */
+function isBasemapSource(sourceId: unknown): boolean {
+  return typeof sourceId === "string" && !sourceId.startsWith(ENGINE_ID_PREFIX);
+}
+
 /**
  * The engine ids for one data layer: its source and the style layers drawn
  * from it. All start with `mapcairn:` so they never meet a basemap's own ids.
@@ -233,12 +254,12 @@ const RASTER_ID = "basemap";
  */
 export function dataLayerEngineIds(id: string) {
   return {
-    source: `mapcairn:${id}`,
-    points: `mapcairn:${id}:points`,
-    tiles: `mapcairn:${id}:tiles`,
-    fill: `mapcairn:${id}:fill`,
-    line: `mapcairn:${id}:line`,
-    heat: `mapcairn:${id}:heat`,
+    source: `${ENGINE_ID_PREFIX}${id}`,
+    points: `${ENGINE_ID_PREFIX}${id}:points`,
+    tiles: `${ENGINE_ID_PREFIX}${id}:tiles`,
+    fill: `${ENGINE_ID_PREFIX}${id}:fill`,
+    line: `${ENGINE_ID_PREFIX}${id}:line`,
+    heat: `${ENGINE_ID_PREFIX}${id}:heat`,
   } as const;
 }
 
@@ -656,6 +677,14 @@ export class MapLibreMapAdapter implements MapAdapter {
   private mountView: ViewState | undefined;
   private subscriptions: Subscription[] = [];
   private pending: PendingLoad | undefined;
+
+  /**
+   * Tile traffic of the basemap's own sources since its style last loaded:
+   * the basemap that style belongs to (none between a swap being asked for
+   * and its style loading), how many tiles loaded and how many failed, and
+   * whether `basemapUnavailable` has been reported for it.
+   */
+  private basemapTiles: BasemapTiles = idleBasemapTiles();
   private workerCheck: WorkerCheck | undefined;
   private started = false;
   private destroyed = false;
@@ -1640,6 +1669,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.setLoading(true);
     });
     listen("style.load", () => {
+      this.basemapTiles = { ...idleBasemapTiles(), basemap: this.basemap };
       // A style may ask for its own projection (VersaTiles Colorful asks for a
       // globe); the app's setting wins. See ARCHITECTURE.md.
       this.applyProjection(map);
@@ -1664,12 +1694,25 @@ export class MapLibreMapAdapter implements MapAdapter {
     listen("idle", () => {
       this.setLoading(false);
       this.emitLoad();
+      this.reportUnavailableBasemap();
+    });
+    listen("sourcedata", (event) => {
+      const { tile, sourceId } = event as {
+        tile?: unknown;
+        sourceId?: unknown;
+      };
+      if (tile !== undefined && isBasemapSource(sourceId)) {
+        this.basemapTiles.loaded += 1;
+      }
     });
     // The classification is described on the class.
     listen("error", (event) => {
       // Listening to "error" silences MapLibre's own console logging.
       console.error("MapLibre basemap error", event.error);
       if (isTileOrSourceError(event)) {
+        if (isBasemapSource((event as { sourceId?: unknown }).sourceId)) {
+          this.basemapTiles.failed += 1;
+        }
         this.emitter.emit("tileError", undefined);
         return;
       }
@@ -1688,6 +1731,20 @@ export class MapLibreMapAdapter implements MapAdapter {
       }
       this.emitter.emit("tileError", undefined);
     });
+  }
+
+  /**
+   * Reports `basemapUnavailable` once, when the map has settled with tiles
+   * of the basemap's own sources failed and none loaded. A basemap that has
+   * drawn any tile is not reported, however many tiles fail afterwards.
+   */
+  private reportUnavailableBasemap(): void {
+    const { basemap, loaded, failed, reported } = this.basemapTiles;
+    if (!basemap || reported || failed === 0 || loaded > 0) {
+      return;
+    }
+    this.basemapTiles.reported = true;
+    this.emitter.emit("basemapUnavailable", basemap);
   }
 
   /**
@@ -1736,6 +1793,8 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.loadEmitted = false;
     this.styleReady = false;
+    // Tiles from here on belong to no basemap until the new style has loaded.
+    this.basemapTiles = idleBasemapTiles();
     // A diffed swap fires no "style.load", so a swap could never settle.
     map.setStyle(styleFor(basemap), { diff: false });
   }

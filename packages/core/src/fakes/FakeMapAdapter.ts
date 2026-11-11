@@ -813,6 +813,17 @@ export class FakeMapAdapter implements MapAdapter {
     this.#emit("tileError", undefined);
   }
 
+  /**
+   * Emits `basemapUnavailable` for the basemap it draws, as an engine does
+   * when every tile of it failed and none loaded. Before `mount` it does
+   * nothing, because nothing is drawn.
+   */
+  simulateBasemapUnavailable(): void {
+    if (this.#basemap) {
+      this.#emit("basemapUnavailable", this.#basemap);
+    }
+  }
+
   /** Emits `loading` with the given state. */
   simulateLoading(loading: boolean): void {
     this.#emit("loading", loading);

@@ -865,6 +865,115 @@ describe("MapLibreMapAdapter", () => {
       expect(log).toHaveBeenCalledTimes(2);
     });
 
+    describe("an unavailable basemap", () => {
+      async function watched() {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const { adapter, map } = await mounted({ basemap: STREETS });
+        const unavailable = vi.fn();
+        adapter.on("basemapUnavailable", unavailable);
+        map.fire("style.load");
+        return { adapter, map, unavailable };
+      }
+
+      const tileFailed = (map: FakeMapLibreMap, sourceId = "basemap") =>
+        map.fire("error", { error: new Error("tile"), tile: {}, sourceId });
+      const tileLoaded = (map: FakeMapLibreMap, sourceId = "basemap") =>
+        map.fire("sourcedata", { sourceId, tile: {}, isSourceLoaded: false });
+
+      it("is reported with the basemap, even when the map loads and settles before the mount has resolved", async () => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const adapter = new MapLibreMapAdapter();
+        const unavailable = vi.fn();
+        adapter.on("basemapUnavailable", unavailable);
+        const mounting = adapter.mount(createHost(), {
+          ...MOUNT,
+          basemap: STREETS,
+        });
+        await vi.waitFor(() => {
+          expect(FakeMapLibreMap.instances.length).toBe(1);
+        });
+        const map = latestMap();
+        map.fire("style.load");
+        tileFailed(map);
+        // MapLibre fires `load` and the first `idle` in one render when
+        // nothing is left to draw, before anyone awaiting the mount runs.
+        map.fire("load");
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        expect(unavailable).toHaveBeenCalledWith(STREETS);
+        await mounting;
+      });
+
+      it("blames the basemap whose style loaded, not one asked for since", async () => {
+        const { adapter, map, unavailable } = await watched();
+        tileFailed(map);
+        void adapter.setBasemap(DARK).catch(() => undefined);
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+        map.fire("style.load");
+        tileFailed(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        expect(unavailable).toHaveBeenCalledWith(DARK);
+      });
+
+      it("is reported once the map settles with every tile of the basemap failed", async () => {
+        const { map, unavailable } = await watched();
+        tileFailed(map);
+        tileFailed(map);
+        expect(unavailable).not.toHaveBeenCalled();
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        expect(unavailable).toHaveBeenCalledWith(STREETS);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+      });
+
+      it("is not reported while some tile of the basemap loaded", async () => {
+        const { map, unavailable } = await watched();
+        tileFailed(map);
+        tileLoaded(map);
+        tileFailed(map);
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+      });
+
+      it("is not reported when nothing failed, and an idle with no tiles says nothing", async () => {
+        const { map, unavailable } = await watched();
+        map.fire("idle");
+        tileLoaded(map);
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+      });
+
+      it("counts a vector basemap's own sources and never a data layer's", async () => {
+        const { map, unavailable } = await watched();
+        tileFailed(map, "mapcairn:earthquakes");
+        tileLoaded(map, "mapcairn:earthquakes");
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+        tileFailed(map, "openmaptiles");
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+      });
+
+      it("starts counting again when the next basemap's style loads", async () => {
+        const { map, unavailable } = await watched();
+        tileFailed(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        map.fire("style.load");
+        tileLoaded(map);
+        tileFailed(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        map.fire("style.load");
+        tileFailed(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(2);
+      });
+    });
+
     describe("a worker error after load", () => {
       async function watched() {
         vi.spyOn(console, "error").mockImplementation(() => {});

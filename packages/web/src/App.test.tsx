@@ -940,6 +940,92 @@ describe("basemaps", () => {
     });
   });
 
+  describe("a basemap whose provider is down", () => {
+    function radio(id: string): HTMLInputElement {
+      return screen
+        .getByTestId(`basemap-option-${id}`)
+        .querySelector("input") as HTMLInputElement;
+    }
+
+    it("goes back to the previous basemap and says which one is not available, without the tile error", async () => {
+      const services = createFakeServices();
+      services.fakes.settings.set({ basemapId: "positron" });
+      await renderApp(services);
+      fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+      fireEvent.click(radio("osm"));
+      await settle();
+      const setBasemap = vi.spyOn(adapter(services), "setBasemap");
+      act(() => {
+        adapter(services).simulateTileError();
+        adapter(services).simulateBasemapUnavailable();
+      });
+      await settle();
+
+      const banner = screen.getByTestId("basemap-error");
+      expect(banner).toHaveTextContent("Streets is not available right now.");
+      expect(
+        within(banner).getByRole("button", { name: "Use previous basemap" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("tile-error")).toBeNull();
+      expect(setBasemap).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "positron" }),
+        { saveData: false },
+      );
+
+      fireEvent.click(
+        within(banner).getByRole("button", { name: "Use previous basemap" }),
+      );
+      await settle();
+      expect(screen.queryByTestId("basemap-error")).toBeNull();
+      expect(radio("positron")).toBeChecked();
+      expect(services.fakes.settings.get().basemapId).toBe("positron");
+    });
+
+    it("tells a fallback from staying put by id, so a fallback that shares the failed basemap's name still offers to go back", async () => {
+      // A host may offer two basemaps with one name, from different providers.
+      const services = createFakeServices({
+        basemaps: createBasemapCatalogue(
+          BASEMAPS.map((item) =>
+            item.id === "osm" ? { ...item, name: "Bright" } : item,
+          ),
+          "bright",
+        ),
+      });
+      services.fakes.settings.set({ basemapId: "osm" });
+      await renderApp(services);
+      act(() => {
+        adapter(services).simulateBasemapUnavailable();
+      });
+      await settle();
+
+      const banner = screen.getByTestId("basemap-error");
+      expect(banner).toHaveTextContent("Bright is not available right now.");
+      expect(
+        within(banner).getByRole("button", { name: "Use previous basemap" }),
+      ).toBeInTheDocument();
+    });
+
+    it("stays put with no Use previous basemap when no other basemap is left, and can be dismissed", async () => {
+      const services = await renderApp();
+      const setBasemap = vi.spyOn(adapter(services), "setBasemap");
+      act(() => {
+        adapter(services).simulateBasemapUnavailable();
+      });
+      await settle();
+
+      const banner = screen.getByTestId("basemap-error");
+      expect(banner).toHaveTextContent("Bright is not available right now.");
+      expect(
+        within(banner).queryByRole("button", { name: "Use previous basemap" }),
+      ).toBeNull();
+      expect(setBasemap).not.toHaveBeenCalled();
+
+      fireEvent.click(within(banner).getByRole("button", { name: "Dismiss" }));
+      await settle();
+      expect(screen.queryByTestId("basemap-error")).toBeNull();
+    });
+  });
+
   it("starts on Bright in a dark theme as well as a light one", async () => {
     for (const theme of ["light", "dark"] as const) {
       const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");

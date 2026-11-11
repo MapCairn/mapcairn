@@ -109,6 +109,16 @@ for (const [name, basemap] of [
           sourceId: "openmaptiles",
         });
       },
+      simulateBasemapUnavailable: () => {
+        const map = latestMap();
+        map.fire("style.load");
+        map.fire("error", {
+          error: new Error("Tile failed"),
+          tile: {},
+          sourceId: "basemap",
+        });
+        map.fire("idle");
+      },
       simulateLoading: (loading) => {
         latestMap().fire(loading ? "dataloading" : "idle");
       },

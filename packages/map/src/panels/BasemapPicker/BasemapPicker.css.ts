@@ -55,6 +55,11 @@ export const thumb = recipe({
     forcedColorAdjust: "none",
   },
   variants: {
+    unavailable: {
+      // Only the preview fades. The name and the note stay at full contrast.
+      true: { opacity: 0.5 },
+      false: {},
+    },
     selected: {
       true: {
         borderColor: tokens.color.surfaceRaised,
@@ -74,7 +79,14 @@ export const thumb = recipe({
       },
     },
   },
-  defaultVariants: { selected: false },
+  defaultVariants: { selected: false, unavailable: false },
+});
+
+/** The row under the grid that holds "Try again". */
+export const retry = style({
+  display: "flex",
+  justifyContent: "center",
+  marginTop: tokens.space.sm,
 });
 
 /** The preview image, filling the frame. */

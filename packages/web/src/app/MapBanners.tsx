@@ -16,6 +16,11 @@ export const ENGINE_STOPPED_MESSAGE =
 /** Shown when a chosen basemap could not load; the map keeps the previous one. */
 export const BASEMAP_FAILED_MESSAGE = "That basemap could not be loaded.";
 
+/** Shown when every tile of a basemap failed, which means its provider is down. */
+export function basemapUnavailableMessage(name: string): string {
+  return `${name} is not available right now.`;
+}
+
 /** Props for {@link MapBanners}. */
 export interface MapBannersProps {
   readonly app: MapApp;
@@ -78,7 +83,9 @@ export function MapBanners({ app }: MapBannersProps) {
 
   return (
     <div className={styles.stack} data-testid="map-banners">
-      {map.tileError && !tileErrorDismissed ? (
+      {map.tileError &&
+      !tileErrorDismissed &&
+      !app.basemapFailure?.unavailable ? (
         <StatusMessage
           variant="error"
           data-testid="tile-error"
@@ -102,13 +109,19 @@ export function MapBanners({ app }: MapBannersProps) {
         <StatusMessage
           variant="error"
           data-testid="basemap-error"
-          action={{
-            label: "Use previous basemap",
-            onClick: app.restorePreviousBasemap,
-          }}
+          action={
+            app.basemapFailure.stayed
+              ? undefined
+              : {
+                  label: "Use previous basemap",
+                  onClick: app.restorePreviousBasemap,
+                }
+          }
           onDismiss={app.restorePreviousBasemap}
         >
-          {BASEMAP_FAILED_MESSAGE}
+          {app.basemapFailure.unavailable
+            ? basemapUnavailableMessage(app.basemapFailure.name)
+            : BASEMAP_FAILED_MESSAGE}
         </StatusMessage>
       ) : null}
       {engineFailed(map) && !engineErrorDismissed ? (

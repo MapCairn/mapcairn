@@ -111,14 +111,24 @@ export interface MapApp {
    */
   readonly basemapsInUse: readonly BasemapDefinition[];
   readonly chooseBasemap: (id: string) => void;
-  /** The name of a basemap that could not load, until the person goes back, or null. */
-  readonly basemapFailure: string | null;
+  /**
+   * A basemap that could not load or whose provider is down, until the person
+   * goes back, or null. `stayed` is true when no other basemap was left to
+   * draw, so the map did not change.
+   */
+  readonly basemapFailure: {
+    readonly name: string;
+    readonly unavailable: boolean;
+    readonly stayed: boolean;
+  } | null;
   /** Goes back to the basemap the map kept after a swap failed. */
   readonly restorePreviousBasemap: () => void;
   /** Pass to `MapView`'s `onBasemapApplied`. */
   readonly onBasemapApplied: (basemap: BasemapDefinition) => void;
   /** Pass to `MapView`'s `onEngineError`: falls back from a basemap that could not start the map. */
   readonly onEngineError: BasemapChoice["mountFailed"];
+  /** Pass to `MapView`'s `onBasemapUnavailable`. */
+  readonly onBasemapUnavailable: BasemapChoice["unavailableNow"];
   /** Pass to `MapView`'s `onBasemapError`. */
   readonly onBasemapError: (
     error: unknown,
@@ -509,10 +519,17 @@ export function useMapApp(): MapApp {
     basemap: basemaps.basemap,
     basemapsInUse: basemaps.inUse,
     chooseBasemap: basemaps.choose,
-    basemapFailure: basemaps.failure?.name ?? null,
+    basemapFailure: basemaps.failure
+      ? {
+          name: basemaps.failure.name,
+          unavailable: basemaps.failure.unavailable === true,
+          stayed: basemaps.failure.kept.id === basemaps.failure.id,
+        }
+      : null,
     restorePreviousBasemap: basemaps.goBack,
     onBasemapApplied: basemaps.applied,
     onBasemapError: basemaps.failed,
+    onBasemapUnavailable: basemaps.unavailableNow,
     onEngineError: basemaps.mountFailed,
     sheetOpen,
     sheetSection:

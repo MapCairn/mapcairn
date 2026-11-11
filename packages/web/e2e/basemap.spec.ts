@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import type { MapPage } from "./pages/MapPage";
 import {
   BASEMAP_COLUMNS,
   BASEMAP_COUNT,
@@ -28,6 +29,7 @@ import {
   OTHER_VECTOR_STYLE_PATTERN,
   RASTER_TILE_PATTERN,
   SPRITE_PATTERN,
+  TRANSPARENT_PNG,
   VECTOR_STYLE_PATTERN,
 } from "./support/network";
 import { seedStoredSettings } from "./support/services";
@@ -536,6 +538,140 @@ test.describe("basemaps", () => {
     await expect(page.getByTestId("engine-error")).toHaveCount(0);
   });
 
+  test.describe("a basemap whose provider is down", () => {
+    /** The origin of the Streets tiles, which these tests take down. */
+    const STREETS_HOST = /tile\.openstreetmap\.org/;
+    /** The style of the default basemap, which the map goes back to. */
+    const DEFAULT_STYLE_PATTERN = new RegExp(
+      `tiles\\.openfreemap\\.org/styles/${DEFAULT_VECTOR_BASEMAP_ID}$`,
+    );
+    const streetsRadio = (mapPage: MapPage) =>
+      mapPage.basemapPicker.getByRole("radio", { name: /^Streets/ });
+
+    test("goes back to the previous basemap, says so, and marks the tile until Try again", async ({
+      page,
+      mapPage,
+    }) => {
+      await page.route(STREETS_HOST, (route) => route.abort("failed"));
+      await mapPage.goto(START);
+      const canvas = page.locator("canvas.maplibregl-canvas");
+      await canvas.evaluate((element) => {
+        element.dataset.testOriginal = "yes";
+      });
+      await mapPage.openMapOptions();
+      const redrawn = page.waitForRequest(DEFAULT_STYLE_PATTERN);
+      await mapPage.chooseBasemap(RASTER_BASEMAP_NAME);
+      await mapPage.sheetClose.click();
+
+      const banner = page.getByTestId("basemap-error");
+      await expect(banner).toContainText(
+        "Streets is not available right now.",
+        { timeout: 20_000 },
+      );
+      await expect(
+        banner.getByRole("button", { name: "Use previous basemap" }),
+      ).toBeVisible();
+      await redrawn;
+      await expect(mapPage.host).not.toHaveAttribute("data-state", "error");
+      // The same engine draws the previous basemap.
+      await expect(canvas).toHaveAttribute("data-test-original", "yes");
+      await mapPage.waitForMap();
+      await expect(page.getByTestId("tile-error")).toHaveCount(0);
+      // A basemap that turned out to be down is not kept as the choice.
+      await expect
+        .poll(() => mapPage.hashBasemap())
+        .toBe(DEFAULT_VECTOR_BASEMAP_ID);
+
+      await mapPage.openMapOptions();
+      await expect(streetsRadio(mapPage)).toBeDisabled();
+      await expect(
+        page.getByTestId(`basemap-unavailable-note-${RASTER_BASEMAP_ID}`),
+      ).toHaveText("Not available right now");
+
+      await banner
+        .getByRole("button", { name: "Use previous basemap" })
+        .click();
+      await expect(banner).toHaveCount(0);
+      const bright = mapPage.basemapPicker.getByRole("radio", {
+        name: DEFAULT_VECTOR_BASEMAP_NAME,
+      });
+      await expect(bright).toBeChecked();
+
+      await page.getByRole("button", { name: "Try again" }).click();
+      await expect(streetsRadio(mapPage)).toBeEnabled();
+      await expect(
+        page.getByTestId(`basemap-unavailable-note-${RASTER_BASEMAP_ID}`),
+      ).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(
+        0,
+      );
+      await expect(bright).toBeFocused();
+    });
+
+    test("is found at start-up, when a link opens on it", async ({
+      page,
+      mapPage,
+    }) => {
+      await page.route(STREETS_HOST, (route) => route.abort("failed"));
+      // Starting on Streets, the map asks for the default's style only when
+      // it falls back to it.
+      const fellBack = page.waitForRequest(DEFAULT_STYLE_PATTERN);
+      await mapPage.goto(`#basemap=${RASTER_BASEMAP_ID}`);
+
+      const banner = page.getByTestId("basemap-error");
+      await expect(banner).toContainText(
+        "Streets is not available right now.",
+        { timeout: 20_000 },
+      );
+      await fellBack;
+      await expect(page.getByTestId("tile-error")).toHaveCount(0);
+      await mapPage.waitForMap();
+      await expect(mapPage.host).not.toHaveAttribute("data-state", "error");
+
+      await banner
+        .getByRole("button", { name: "Use previous basemap" })
+        .click();
+      await expect(banner).toHaveCount(0);
+      await expect
+        .poll(() => mapPage.hashBasemap())
+        .toBe(DEFAULT_VECTOR_BASEMAP_ID);
+      await mapPage.openMapOptions();
+      await expect(
+        mapPage.basemapPicker.getByRole("radio", {
+          name: DEFAULT_VECTOR_BASEMAP_NAME,
+        }),
+      ).toBeChecked();
+      await expect(streetsRadio(mapPage)).toBeDisabled();
+    });
+
+    test("is not reported when only some of its tiles fail", async ({
+      page,
+      mapPage,
+    }) => {
+      let requests = 0;
+      await page.route(STREETS_HOST, (route) => {
+        requests += 1;
+        return requests === 2
+          ? route.abort("failed")
+          : route.fulfill({
+              status: 200,
+              contentType: "image/png",
+              body: TRANSPARENT_PNG,
+            });
+      });
+      await mapPage.goto(START);
+      await mapPage.openMapOptions();
+      await mapPage.chooseBasemap(RASTER_BASEMAP_NAME);
+      await mapPage.sheetClose.click();
+      await expect.poll(() => mapPage.hashBasemap()).toBe(RASTER_BASEMAP_ID);
+      await mapPage.waitForMap();
+      expect(requests).toBeGreaterThan(2);
+      await expect(page.getByTestId("basemap-error")).toHaveCount(0);
+      await mapPage.openMapOptions();
+      await expect(streetsRadio(mapPage)).toBeEnabled();
+    });
+  });
+
   test("a basemap whose style cannot load keeps the previous one, and is not saved", async ({
     page,
     mapPage,
@@ -588,12 +724,23 @@ test.describe("basemaps", () => {
     ).toBeChecked();
   });
 
-  test("a basemap that cannot load says so and offers Retry", async ({
+  test("a basemap some of whose tiles cannot load says so and offers Retry", async ({
     page,
   }) => {
-    await page.route(RASTER_TILE_PATTERN, (route) =>
-      route.fulfill({ status: 503, body: "" }),
-    );
+    // One tile loads, so the provider is up and the rest are ordinary tile
+    // errors. When every tile fails the basemap is reported as unavailable
+    // instead (see "a basemap whose provider is down").
+    let requests = 0;
+    await page.route(RASTER_TILE_PATTERN, (route) => {
+      requests += 1;
+      return requests === 1
+        ? route.fulfill({
+            status: 200,
+            contentType: "image/png",
+            body: TRANSPARENT_PNG,
+          })
+        : route.fulfill({ status: 503, body: "" });
+    });
     await page.goto(`/#basemap=${RASTER_BASEMAP_ID}`);
     const banner = page.getByTestId("tile-error");
     await expect(banner).toContainText(
@@ -601,5 +748,6 @@ test.describe("basemaps", () => {
       { timeout: 20_000 },
     );
     await expect(banner.getByRole("button", { name: "Retry" })).toBeVisible();
+    await expect(page.getByTestId("basemap-error")).toHaveCount(0);
   });
 });

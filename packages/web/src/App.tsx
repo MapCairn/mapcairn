@@ -78,6 +78,7 @@ export function App() {
       onViewChange={app.onViewChange}
       onBasemapApplied={app.onBasemapApplied}
       onBasemapError={app.onBasemapError}
+      onBasemapUnavailable={app.onBasemapUnavailable}
       onEngineError={app.onEngineError}
       onClick={app.onMapClick}
       onLongPress={app.onLongPress}

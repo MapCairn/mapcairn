@@ -9,6 +9,7 @@ import { recipe } from "@vanilla-extract/recipes";
 export const statusMessage = recipe({
   base: {
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: tokens.space.sm,
     paddingBlock: tokens.space.xs,
@@ -37,9 +38,13 @@ export const statusMessage = recipe({
   defaultVariants: { variant: "info" },
 });
 
-/** The message text. It takes the remaining width and wraps. */
+/**
+ * The message text. It takes the remaining width and wraps. On a narrow
+ * screen the action and dismiss controls drop to their own row instead of
+ * squeezing the words into a few letters a line.
+ */
 export const messageText = style({
-  flex: "1 1 auto",
+  flex: "1 1 40%",
   minWidth: 0,
   overflowWrap: "anywhere",
 });
@@ -62,4 +67,5 @@ export const controls = style({
   alignItems: "center",
   gap: tokens.space.xxs,
   flexShrink: 0,
+  marginInlineStart: "auto",
 });

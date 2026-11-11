@@ -61,6 +61,12 @@ export interface MapViewProps {
     failed: BasemapDefinition,
     kept: BasemapDefinition,
   ) => void;
+  /**
+   * Called when every tile of the basemap being drawn failed to load and none
+   * loaded, once the map settled (its provider is down). The map keeps
+   * working, so the host decides whether to draw another basemap instead.
+   */
+  readonly onBasemapUnavailable?: (basemap: BasemapDefinition) => void;
   /** A click or tap on the map. Not called for the click that ends a long-press. */
   readonly onClick?: (event: MapClickEvent) => void;
   /** A long-press (touch or mouse) or a right-click. */
@@ -180,6 +186,7 @@ export function MapView({
   onEngineError,
   onBasemapApplied,
   onBasemapError,
+  onBasemapUnavailable,
   onClick,
   onLongPress,
   onPointerMove,
@@ -230,6 +237,7 @@ export function MapView({
     onEngineError,
     onBasemapApplied,
     onBasemapError,
+    onBasemapUnavailable,
     onClick,
     onMoveEnd: longPress.cancel,
     shouldDropClick: longPress.consumeClick,

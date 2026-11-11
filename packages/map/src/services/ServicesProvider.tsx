@@ -1,5 +1,6 @@
 import type { Services } from "@mapcairn/core";
 import { createContext, type ReactNode, useContext } from "react";
+import { BasemapAvailabilityProvider } from "./basemapAvailability";
 
 const ServicesContext = createContext<Services | null>(null);
 
@@ -13,7 +14,8 @@ export interface ServicesProviderProps {
 /**
  * Makes the app's services available to every component below it. This is the
  * only way components reach adapters, browser APIs or map engines, so tests can
- * swap in fakes by wrapping a tree in this provider.
+ * swap in fakes by wrapping a tree in this provider. It also keeps which
+ * basemaps are not working (see `useBasemapAvailability`).
  */
 export function ServicesProvider({
   services,
@@ -21,7 +23,7 @@ export function ServicesProvider({
 }: ServicesProviderProps) {
   return (
     <ServicesContext.Provider value={services}>
-      {children}
+      <BasemapAvailabilityProvider>{children}</BasemapAvailabilityProvider>
     </ServicesContext.Provider>
   );
 }
