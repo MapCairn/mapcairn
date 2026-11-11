@@ -10,6 +10,7 @@ import {
   VECTOR,
 } from "./support/kindLayers";
 import { scriptLayers } from "./support/services";
+import { settleFrames, TIMER_SLACK_MS, VIEW_SETTLE_MS } from "./support/timers";
 
 /*
  * The layer kinds beyond points and rasters: heatmaps, vector tiles, queries
@@ -104,6 +105,7 @@ test.describe("layer kinds", () => {
       const requests = await mockKindData(page);
       const queries = () =>
         requests.urls.filter((url) => url.includes("/query"));
+      await page.clock.install();
       await mapPage.goto(`#layers=kind-query&${"map=8.00/30.00000/31.00000"}`);
       await mapPage.openMapOptions();
       await expect(page.getByTestId("layer-status-kind-query")).toContainText(
@@ -122,8 +124,15 @@ test.describe("layer kinds", () => {
 
       // A small pan stays inside the window: nothing more is asked for.
       await mapPage.region.focus();
+      const before = await mapPage.hashView();
       await page.keyboard.press("ArrowRight");
-      await page.waitForTimeout(1200);
+      // The address follows the map once it has stopped; then run the clock
+      // past the wait for the map to settle, after which a query would go.
+      await expect
+        .poll(async () => (await mapPage.hashView())?.lng)
+        .not.toBe(before?.lng);
+      await page.clock.runFor(VIEW_SETTLE_MS + TIMER_SLACK_MS);
+      await settleFrames(page);
       expect(queries()).toHaveLength(1);
 
       // A long pan leaves it: one more request, after the map settles.

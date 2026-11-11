@@ -1,5 +1,10 @@
 import { expect, test } from "./fixtures";
 import { scriptMemorySettings } from "./support/services";
+import {
+  SCALE_BAR_IDLE_MS,
+  settleFrames,
+  TIMER_SLACK_MS,
+} from "./support/timers";
 
 test.describe("settings", () => {
   test.use({ reducedMotion: "reduce" });
@@ -107,8 +112,11 @@ test.describe("reduced motion", () => {
     mapPage,
   }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.clock.install();
     await mapPage.goto();
-    await page.waitForTimeout(2_500);
+    // Run the clock past the scale bar's idle delay, after which it would fade.
+    await page.clock.runFor(SCALE_BAR_IDLE_MS + TIMER_SLACK_MS);
+    await settleFrames(page);
     await expect(mapPage.scaleBar).toHaveAttribute("data-idle", "false");
     await mapPage.openSettings();
     const durations = await mapPage.sheet.evaluate((sheet) =>

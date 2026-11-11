@@ -32,6 +32,11 @@ export interface RoutingScript {
   delayMs: number;
   /** Every request, in order: the endpoint and its decoded `json` parameter. */
   readonly requests: { endpoint: string; body: Record<string, unknown> }[];
+  /**
+   * How many requests have had their answer sent, after any delay, so a test
+   * can wait for a late answer to arrive instead of sleeping.
+   */
+  answered: number;
 }
 
 function fixture(name: string): string {
@@ -100,7 +105,18 @@ async function answer(route: Route, script: RoutingScript): Promise<void> {
  * records what was asked. Change `script.mode` to script a failure.
  */
 export async function mockRoutingService(page: Page): Promise<RoutingScript> {
-  const script: RoutingScript = { mode: "ok", delayMs: 0, requests: [] };
-  await page.route(ROUTING_PATTERN, (route) => answer(route, script));
+  const script: RoutingScript = {
+    mode: "ok",
+    delayMs: 0,
+    requests: [],
+    answered: 0,
+  };
+  await page.route(ROUTING_PATTERN, async (route) => {
+    try {
+      await answer(route, script);
+    } finally {
+      script.answered += 1;
+    }
+  });
   return script;
 }

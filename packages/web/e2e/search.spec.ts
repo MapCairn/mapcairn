@@ -6,6 +6,11 @@ import {
   searchedQueries,
   updateSearchScript,
 } from "./support/services";
+import {
+  ANY_DEBOUNCE_MS,
+  settleFrames,
+  TIMER_SLACK_MS,
+} from "./support/timers";
 
 test.describe("search", () => {
   test.use({ reducedMotion: "reduce" });
@@ -15,6 +20,7 @@ test.describe("search", () => {
     mapPage,
   }) => {
     await scriptSearch(page);
+    await page.clock.install();
     await mapPage.goto();
     const input = mapPage.searchInput;
 
@@ -31,12 +37,13 @@ test.describe("search", () => {
     await input.focus();
     await page.keyboard.type("cape");
     // Typing alone sends nothing (Nominatim forbids autocomplete). Absence
-    // has no event to wait for, so wait well past any debounce first.
+    // has no event to wait for, so run the clock well past any debounce first.
     await expect(mapPage.searchSubmit).not.toHaveAttribute(
       "aria-disabled",
       "true",
     );
-    await page.waitForTimeout(600);
+    await page.clock.runFor(ANY_DEBOUNCE_MS);
+    await settleFrames(page);
     expect(await searchedQueries(page)).toEqual([]);
     await expect(input).toHaveAttribute("aria-expanded", "false");
 
@@ -81,7 +88,8 @@ test.describe("search", () => {
     expect((await mapPage.hashView())?.zoom).toBe(14);
 
     // Filling the box with the label must not search for it again.
-    await page.waitForTimeout(600);
+    await page.clock.runFor(ANY_DEBOUNCE_MS);
+    await settleFrames(page);
     expect(await searchedQueries(page)).toEqual(["cape"]);
     await expect(mapPage.searchPanel).toBeHidden();
   });
@@ -142,17 +150,21 @@ test.describe("search", () => {
   });
 
   test("a newer query cancels an older one", async ({ page, mapPage }) => {
+    const delayMs = 800;
     await scriptSearch(page, {
-      delayMs: 800,
+      delayMs,
       byQuery: { "cape t": SAMPLE_RESULTS.slice(0, 1) },
     });
+    await page.clock.install();
     await mapPage.goto();
     await mapPage.search("cape");
     await expect(mapPage.searchPanel).toContainText("Searching...");
     await mapPage.search("cape t");
     await expect(mapPage.searchOptions).toHaveText([/Cape Town/]);
     expect(await searchedQueries(page)).toEqual(["cape", "cape t"]);
-    await page.waitForTimeout(1_000);
+    // Run the clock past the older search's answer, had it not been cancelled.
+    await page.clock.runFor(delayMs + TIMER_SLACK_MS);
+    await settleFrames(page);
     await expect(mapPage.searchOptions).toHaveCount(1);
   });
 
