@@ -1382,6 +1382,11 @@ describe("WebMCP tools", () => {
     expect(await call("set-map-basemap", { basemap: "fiord" })).toBe(
       'Unknown basemap "fiord".',
     );
+    // Satellite is in the picker, but its imagery's licence is non-commercial,
+    // and an agent must not accept a provider's licence for a person.
+    expect(await call("set-map-basemap", { basemap: "satellite" })).toBe(
+      'Unknown basemap "satellite".',
+    );
     expect(await call("set-map-basemap", { basemap: "topographic" })).toBe(
       "Switched the basemap to topographic.",
     );
@@ -1501,7 +1506,7 @@ describe("the reference host's basemaps", () => {
     return createFakeServices({ basemaps: HOST_BASEMAP_CATALOGUE });
   }
 
-  it("shows five basemaps in the picker, Bright first and checked", async () => {
+  it("shows six basemaps in the picker, Bright first and checked", async () => {
     await renderApp(hostServices());
     fireEvent.click(screen.getByRole("button", { name: "Map options" }));
     const names = within(screen.getByRole("radiogroup", { name: "Basemap" }))
@@ -1512,6 +1517,7 @@ describe("the reference host's basemaps", () => {
       "Positron",
       "Streets",
       "Topographic",
+      "Satellite",
       "Dark",
     ]);
     expect(radio("bright")).toBeChecked();

@@ -11,13 +11,15 @@
  * `maplibre-gl` files, and headless Chromium draws each basemap with MapLibre
  * from the style and tile URLs defined in
  * `packages/core/src/basemaps/basemaps.ts` and in the host's own
- * `packages/web/src/basemaps/openTopoMapBasemap.ts`, so the previews cannot
+ * `packages/web/src/basemaps/openTopoMapBasemap.ts` and
+ * `packages/web/src/basemaps/satelliteBasemap.ts`, so the previews cannot
  * drift from what the picker selects. Every view is the same: the Cape Town
  * Waterfront at 160 by 120 CSS px, captured at twice that size.
  *
  * The images are small screenshots of OpenFreeMap (OpenMapTiles data and
- * OpenStreetMap contributors), of the OpenStreetMap standard tile layer and of
- * OpenTopoMap, so they carry the credits recorded in `ATTRIBUTIONS.md`. The
+ * OpenStreetMap contributors), of the OpenStreetMap standard tile layer, of
+ * OpenTopoMap and of EOX's Sentinel-2 cloudless imagery, so they carry the
+ * credits and licences recorded in `ATTRIBUTIONS.md`. The
  * page needs the network, and a GPU-less machine falls back to software WebGL.
  * Chromium sends its own user agent and the page's Referer; nothing pretends
  * to be another client, as the OpenStreetMap tile usage policy asks.
@@ -66,8 +68,13 @@ const { OPEN_TOPO_MAP_BASEMAP } = await import(
     .href
 );
 
+const { SATELLITE_BASEMAP } = await import(
+  pathToFileURL(join(ROOT, "packages/web/src/basemaps/satelliteBasemap.ts"))
+    .href
+);
+
 /** The SDK's basemaps and those only the reference host defines, which import types only so plain Node loads them. */
-const BASEMAPS = [...SDK_BASEMAPS, OPEN_TOPO_MAP_BASEMAP];
+const BASEMAPS = [...SDK_BASEMAPS, OPEN_TOPO_MAP_BASEMAP, SATELLITE_BASEMAP];
 
 /** The basemaps to render: those named on the command line, or all of them. */
 const REQUESTED = process.argv.slice(2);
@@ -88,13 +95,17 @@ const VENDOR = {
 
 /**
  * What MapLibre draws for a basemap, built the same way as `styleFor` in the
- * MapLibre adapter: a vector basemap's style URL, or an inline style with one
- * 256 px raster source for a raster basemap.
+ * MapLibre adapter: a vector basemap's style URL, a hybrid basemap's label
+ * style URL (the page adds the imagery as `composeHybrid` in the adapter
+ * does), or an inline style with one 256 px raster source for a raster basemap.
  */
 function styleFor(basemap) {
   const { source } = basemap;
   if (source.kind === "vector") {
     return source.styleUrl;
+  }
+  if (source.kind === "hybrid") {
+    return source.labelStyleUrl;
   }
   return {
     version: 8,
@@ -142,6 +153,43 @@ function pageFor(basemap, zoom) {
       attributionControl: false,
       fadeDuration: 0,
       canvasContextAttributes: { preserveDrawingBuffer: true },
+    });
+    // A hybrid basemap. The source of truth is "composeHybrid" in
+    // packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts; this mirrors
+    // it, so change both together: keep the label style's line and symbol
+    // layers from the kept source layers (less those it names to leave out),
+    // put the imagery under them, capped at its deepest real level, and lay
+    // the basemap's swatch colour under that as a plain ground.
+    const hybrid = ${JSON.stringify(basemap.source.kind === "hybrid" ? { ...basemap.source, swatch: basemap.swatch } : null)};
+    map.on("style.load", () => {
+      if (!hybrid) {
+        return;
+      }
+      const keep = new Set(hybrid.labelSourceLayers);
+      const omit = new Set(hybrid.labelOmitLayers ?? []);
+      const types = new Set(["line", "symbol"]);
+      for (const layer of map.getStyle().layers) {
+        const kept = types.has(layer.type) && keep.has(layer["source-layer"] ?? "") && !omit.has(layer.id);
+        if (!kept) {
+          map.removeLayer(layer.id);
+        }
+      }
+      map.addSource("imagery", {
+        type: "raster",
+        tiles: [hybrid.tileUrl],
+        tileSize: hybrid.tileSize,
+        maxzoom: hybrid.maxTileZoom,
+      });
+      map.addLayer(
+        { id: "imagery", type: "raster", source: "imagery" },
+        map.getStyle().layers[0]?.id,
+      );
+      if (hybrid.swatch) {
+        map.addLayer(
+          { id: "ground", type: "background", paint: { "background-color": hybrid.swatch } },
+          "imagery",
+        );
+      }
     });
     map.on("idle", () => { window.__mapReady = true; });
   </script></body></html>`;

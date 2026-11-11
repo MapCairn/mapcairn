@@ -27,6 +27,22 @@ const basemapBackdrops: Record<string, string> = {
 /** The same for a basemap only the reference host defines, which the second test below checks. */
 const hostBasemapBackdrops: Record<string, string> = {
   topographic: "#f2efe9",
+  // Satellite has no single land colour: this is its dark ocean, the largest
+  // area of a world view. Its other surfaces are in `imageryBackdrops`.
+  satellite: "#111d35",
+};
+
+/**
+ * Typical colours of Satellite's Sentinel-2 cloudless imagery, from dark sea
+ * to snow, because chrome and markers sit on whichever is under them.
+ */
+const imageryBackdrops: Record<string, string> = {
+  imageryOcean: "#111d35",
+  imageryForest: "#2c3b23",
+  imageryFarmland: "#7a6f4c",
+  imageryUrban: "#8c8a85",
+  imageryDesert: "#d8c29a",
+  imagerySnow: "#f2f4f6",
 };
 
 /** Colours that bracket any map a host might add. */
@@ -39,6 +55,7 @@ const extremeBackdrops: Record<string, string> = {
 const allBackdrops = {
   ...basemapBackdrops,
   ...hostBasemapBackdrops,
+  ...imageryBackdrops,
   ...extremeBackdrops,
 };
 const themes = ["light", "dark"] as const;
@@ -80,6 +97,19 @@ describe("chrome legibility over every basemap", () => {
       });
     });
   });
+});
+
+describe("data markers over Satellite's imagery", () => {
+  const { edge, halo } = tokenValues.dataMarker;
+
+  it.each(Object.entries(imageryBackdrops))(
+    "set a marker off from %s by its dark edge or its white halo, at 3:1 or better",
+    (_name, ground) => {
+      expect(
+        Math.max(contrastRatio(edge, ground), contrastRatio(halo, ground)),
+      ).toBeGreaterThanOrEqual(AA_NON_TEXT);
+    },
+  );
 });
 
 /**
