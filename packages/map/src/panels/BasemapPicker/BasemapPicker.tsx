@@ -53,8 +53,9 @@ export interface BasemapPickerProps {
  * direction) and the radio role in every screen reader, with no script. The
  * selected tile has an accent outline and a check badge, so selection never
  * relies on colour. A preview that fails to load gives way to the basemap's
- * swatch, as a basemap with no preview does, with the name still visible. The basemap does not follow the
- * interface theme: A host's dark basemap is an ordinary choice, as the others are.
+ * swatch, as a basemap with no preview does, with the name still visible. The
+ * basemap does not follow the interface theme: a host's dark basemap is an
+ * ordinary choice, as the others are.
  *
  * @remarks In Save data mode (`useSaveData`), and for a basemap that has no
  *   preview image, no preview is requested: the tile shows the same frame

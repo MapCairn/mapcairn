@@ -31,7 +31,10 @@ import { scriptBasemaps } from "./support/services";
 /** The hash that opens the map on Liberty, the basemap whose relief layer Save data leaves out. */
 const ON_LIBERTY = `#basemap=${LIBERTY_BASEMAP_ID}`;
 
-/** How many previews the picker holds on a host that offers the SDK's whole list: Liberty, Colorful and Fiord name none. */
+/**
+ * How many previews the picker holds on a host that offers the SDK's whole
+ * list: Liberty, Colorful and Fiord name none.
+ */
 const SDK_PREVIEW_COUNT = BASEMAPS.filter(
   (basemap) => basemap.thumbnail !== undefined,
 ).length;

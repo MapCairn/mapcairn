@@ -1,4 +1,4 @@
-import { BASEMAPS } from "@mapcairn/core";
+import { BASEMAPS, getBasemap } from "@mapcairn/core";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { axeViolations } from "./support/a11y";
@@ -38,6 +38,14 @@ import { scriptBasemaps, seedStoredSettings } from "./support/services";
 import { collapseCredits } from "./support/states";
 
 const START = "#map=8.00/-33.90000/18.40000/30";
+
+/** A `#rrggbb` colour as the `rgb(r, g, b)` text the browser computes for it. */
+function hexToRgb(hex: string): string {
+  const [red, green, blue] = [1, 3, 5].map((start) =>
+    Number.parseInt(hex.slice(start, start + 2), 16),
+  );
+  return `rgb(${red}, ${green}, ${blue})`;
+}
 
 test.describe("basemaps", () => {
   test.use({ reducedMotion: "reduce" });
@@ -253,7 +261,10 @@ test.describe("basemaps", () => {
       const swatch = tile.getByTestId(`basemap-swatch-${DARK_BASEMAP_ID}`);
       await expect(swatch).toBeVisible();
       await expect(tile.locator("img")).toHaveCount(0);
-      await expect(swatch).toHaveCSS("background-color", "rgb(12, 12, 12)");
+      await expect(swatch).toHaveCSS(
+        "background-color",
+        hexToRgb(getBasemap(DARK_BASEMAP_ID)?.swatch ?? ""),
+      );
       await expect(
         tile.getByTestId(`basemap-selected-${DARK_BASEMAP_ID}`),
       ).toBeVisible();
@@ -275,9 +286,12 @@ test.describe("basemaps", () => {
       await page.emulateMedia({ colorScheme });
       await mapPage.goto(`#basemap=${DARK_BASEMAP_ID}`);
       await mapPage.openMapOptions();
-      await expect(
-        mapPage.basemapPicker.getByTestId(`basemap-swatch-${DARK_BASEMAP_ID}`),
-      ).toBeVisible();
+      const swatch = mapPage.basemapPicker.getByTestId(
+        `basemap-swatch-${DARK_BASEMAP_ID}`,
+      );
+      // Previews load lazily, so bring the tile into view before it is judged.
+      await swatch.scrollIntoViewIfNeeded();
+      await expect(swatch).toBeVisible();
       expect(await axeViolations(page)).toEqual([]);
     });
   }

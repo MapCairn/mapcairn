@@ -85,8 +85,9 @@ const LIBERTY: BasemapDefinition = {
   maxZoom: VECTOR_MAX_ZOOM,
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "light",
-  // No `thumbnail` and no `swatch`: the picker's plain tile takes the default
-  // land colour, which is Liberty's own.
+  // No `thumbnail` and no `swatch`: the `background` layer of its style is
+  // #f8f4f0, the default's land colour (checked 2026-11-12), so the picker's
+  // plain tile needs no colour of its own.
   // The Natural Earth shaded relief raster layer (source "ne2_shaded"), drawn
   // from zoom 0 to 7. It is 933 KB of a 2.7 MB first view of the world, and
   // the vector layers carry the same map without it.
