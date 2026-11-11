@@ -2367,14 +2367,36 @@ describe("MapLibreMapAdapter data layers", () => {
       expect(context?.font).toMatch(/^22px /);
     });
 
-    it("draws the strip with tokens, and shrinks text that does not fit", async () => {
+    it("draws the strip with tokens, and shrinks a word that does not fit", async () => {
       const { adapter, map } = await ready();
       map.getCanvas().width = 100;
-      await adapter.toImage({ attribution: "A very long credit line indeed" });
+      await adapter.toImage({ attribution: "Unbreakable-credit-word-indeed" });
       const context = canvasStub.contexts[0];
       expect(context?.fillStyle).toBe(tokenValues.dataMarker.edge);
       const size = Number.parseFloat(context?.font ?? "");
       expect(size).toBeLessThan(11);
+    });
+
+    it("wraps long credit text onto more lines and grows the strip to hold them", async () => {
+      const { adapter, map } = await ready();
+      // The stub measures 6 px a character, so 100 px holds about 15 characters.
+      map.getCanvas().width = 100;
+      await adapter.toImage({ attribution: "one two three four five six" });
+      const { calls } = canvasStub.contexts[0] as { calls: Spec[] };
+      const lines = calls
+        .filter((call) => call.method === "fillText")
+        .map((call) => call.args[0]);
+      expect(lines).toEqual(["one two three", "four five six"]);
+      const strip = calls.find((call) => call.method === "fillRect");
+      const [, y, , height] = (strip?.args ?? []) as [
+        number,
+        number,
+        number,
+        number,
+      ];
+      // Two lines of 11 px text at 1.2 spacing, plus 4 px of padding each side.
+      expect(height).toBeCloseTo(11 + 11 * 1.2 + 8);
+      expect(y + height).toBe(map.getCanvas().height);
     });
 
     describe("drawing", () => {

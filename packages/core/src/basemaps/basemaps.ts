@@ -37,17 +37,17 @@ const OPEN_FREE_MAP_STYLES = "https://tiles.openfreemap.org/styles";
 // to everyone, with no key and no registration, "without any guarantees". Its
 // guide says "Our pre-built styles already contain the required attribution":
 // OpenStreetMap contributors, and for the land cover tiles "ESA WorldCover 2021
-// (CC BY 4.0)". These entries are the Colorful style's own wording, with the
-// licence linked as CC BY 4.0 asks. The tilesets page gives the land cover a
-// longer credit (docs.versatiles.org/basics/tilesets.html), not used here
-// because the image export draws every credit on one line, and 200 characters
-// would shrink to nothing on a phone. VersaTiles asks for no credit of its own;
-// it is named as the provider.
+// (CC BY 4.0)". The land cover tiles also carry ESA's own wording, which the
+// tilesets page (docs.versatiles.org/basics/tilesets.html) and ESA's download
+// page give as the required credit when the data is shown in a map, so that
+// longer text is shown in full, with the licence linked as CC BY 4.0 asks. The
+// image export wraps long credits onto more lines. VersaTiles asks for no credit
+// of its own; it is named as the provider.
 const VERSATILES_CREDITS: readonly BasemapAttributionEntry[] = [
   OPEN_STREET_MAP_CREDIT,
   { text: "VersaTiles", href: "https://versatiles.org" },
   {
-    text: "ESA WorldCover 2021",
+    text: "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
     href: "https://esa-worldcover.org/en/data-access",
   },
   {

@@ -360,7 +360,7 @@ test.describe("basemaps", () => {
       await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
         "© OpenStreetMap contributors",
         "VersaTiles",
-        "ESA WorldCover 2021",
+        "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
         "CC BY 4.0",
         "MapLibre",
       ]);

@@ -143,8 +143,8 @@ describe("BASEMAPS", () => {
   // and https://docs.versatiles.org/basics/tilesets.html on 2026-11-11. The
   // style's two sources carry "© OpenStreetMap contributors" and "ESA
   // WorldCover 2021 (CC BY 4.0)", which the guide calls "the required
-  // attribution". The tilesets page gives the land cover a longer credit,
-  // left out so the image export's one-line credits stay legible. VersaTiles
+  // attribution". The tilesets page and ESA's download page give the land
+  // cover the longer credit used here, which the image export wraps. VersaTiles
   // asks for no credit of its own, and it is named here as the provider.
   it("credits OpenStreetMap, VersaTiles and the ESA WorldCover land cover, with its licence, on Colorful", () => {
     expect(getBasemap("colorful")?.attribution).toEqual([
@@ -154,7 +154,7 @@ describe("BASEMAPS", () => {
       },
       { text: "VersaTiles", href: "https://versatiles.org" },
       {
-        text: "ESA WorldCover 2021",
+        text: "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
         href: "https://esa-worldcover.org/en/data-access",
       },
       {

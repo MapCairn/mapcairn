@@ -122,7 +122,33 @@ export function loadEngine(workerCacheKey?: string): Promise<MapLibreModule> {
   return engineLoader;
 }
 
+/**
+ * Splits credit text into lines no wider than `room` at the context's current
+ * font, breaking only between words. A single word wider than `room` stays on
+ * its own line, and the caller shrinks the text to fit it.
+ */
+function wrapLines(
+  context: CanvasRenderingContext2D,
+  text: string,
+  room: number,
+): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(/\s+/)) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && context.measureText(candidate).width > room) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  lines.push(line);
+  return lines;
+}
+
 /** Bearing in degrees clockwise, in the range [0, 360) and never -0. */
+
 function normaliseBearing(bearing: number): number {
   const normalised = ((bearing % 360) + 360) % 360;
   return normalised === 0 ? 0 : normalised;
@@ -258,6 +284,9 @@ const MARK_HALO_PX = 4;
 const MARK_DASH_PX = 8;
 const MARK_DOT_RADIUS_PX = 7;
 const MARK_FILL_OPACITY = 0.18;
+
+/** The gap between lines of an exported image's credit text, as a multiple of the text size. */
+const ATTRIBUTION_LINE_SPACING = 1.2;
 
 /** The opacity of the strip behind an exported image's credit text. */
 const ATTRIBUTION_STRIP_OPACITY = 0.8;
@@ -1893,12 +1922,17 @@ export class MapLibreMapAdapter implements MapAdapter {
     let size = ATTRIBUTION_SIZE_PX * scale;
     context.font = `${size}px ${family}`;
     const room = canvas.width - 2 * padding;
-    const width = context.measureText(text).width;
-    if (width > room && room > 0) {
-      size *= room / width;
+    let lines = wrapLines(context, text, room);
+    const widest = Math.max(
+      ...lines.map((line) => context.measureText(line).width),
+    );
+    if (widest > room && room > 0) {
+      size *= room / widest;
       context.font = `${size}px ${family}`;
+      lines = wrapLines(context, text, room);
     }
-    const height = size + 2 * padding;
+    const lineHeight = size * ATTRIBUTION_LINE_SPACING;
+    const height = size + (lines.length - 1) * lineHeight + 2 * padding;
     context.fillStyle = rgbaColour(
       tokenValues.dataMarker.halo,
       ATTRIBUTION_STRIP_OPACITY,
@@ -1907,7 +1941,10 @@ export class MapLibreMapAdapter implements MapAdapter {
     context.fillStyle = tokenValues.dataMarker.edge;
     context.textAlign = "right";
     context.textBaseline = "middle";
-    context.fillText(text, canvas.width - padding, canvas.height - height / 2);
+    const top = canvas.height - height + padding + size / 2;
+    lines.forEach((line, index) => {
+      context.fillText(line, canvas.width - padding, top + index * lineHeight);
+    });
   }
 
   /** Plain property bags of every rendered feature at a pixel, for the click event. */
