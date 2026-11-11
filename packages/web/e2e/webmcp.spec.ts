@@ -112,6 +112,29 @@ test.describe("WebMCP tools", () => {
     ).toBe('No place found for "Atlantis".');
   });
 
+  // The privacy policy says a search that is only coordinates is read in the
+  // browser and not sent to the geocoder; the agent tools keep to that too.
+  test("search and measure tools read coordinates without asking the geocoder", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    expect(
+      await callTool(page, "search-map-location", {
+        query: "-26.2041, 28.0473",
+      }),
+    ).toMatch(/^Moved the map to Coordinates /);
+    await expect
+      .poll(async () => (await mapPage.hashView())?.lat ?? 0)
+      .toBeCloseTo(-26.2041, 2);
+    expect(
+      await callTool(page, "measure-distance", {
+        locations: ["Cape Town", "-26.2041, 28.0473"],
+      }),
+    ).toMatch(/^Distance along Cape Town → Coordinates .+: [\d,.]+ km$/);
+    expect(await searchedQueries(page)).toEqual(["Cape Town"]);
+  });
+
   test("set-map-basemap and set-app-theme change the map and the theme", async ({
     page,
     mapPage,
