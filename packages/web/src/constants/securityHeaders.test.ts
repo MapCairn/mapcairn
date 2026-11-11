@@ -57,6 +57,15 @@ describe("SECURITY_HEADERS stays in sync with public/_headers", () => {
   });
 });
 
+describe("tile origins", () => {
+  it("does not allow VersaTiles, which no basemap the site offers uses", () => {
+    expect(SECURITY_HEADERS["Content-Security-Policy"]).not.toMatch(
+      /versatiles/i,
+    );
+    expect(readFileSync(HEADERS_FILE_PATH, "utf8")).not.toMatch(/versatiles/i);
+  });
+});
+
 describe("Permissions-Policy", () => {
   it("lets this origin use geolocation for Locate me and blocks camera and microphone", () => {
     const policy = SECURITY_HEADERS["Permissions-Policy"];

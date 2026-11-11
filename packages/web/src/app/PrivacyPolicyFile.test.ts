@@ -18,14 +18,14 @@ describe("PRIVACY.md mirrors the privacy page", () => {
 
   it("names every basemap tile provider that may log a request", () => {
     expect(policy).toContain(
-      "The basemap tile providers, OpenFreeMap, VersaTiles when you choose the Colorful basemap, the OpenStreetMap Foundation when you choose the Streets basemap, and OpenStreetMap France when you choose the Topographic basemap, may log tile requests, including your IP address, as part of serving the map.",
+      "The basemap tile providers, OpenFreeMap, the OpenStreetMap Foundation when you choose the Streets basemap, and OpenStreetMap France when you choose the Topographic basemap, may log tile requests, including your IP address, as part of serving the map.",
     );
     expect(policy).toContain(
-      "Your browser makes those requests itself: they carry your IP address, its usual request headers (such as its user agent) and this site's address as the referrer, and nothing this site has stored about you. VersaTiles says it logs requests in anonymised form and uses the logs only to track down faults and detect misuse.",
+      "Your browser makes those requests itself: they carry your IP address, its usual request headers (such as its user agent) and this site's address as the referrer, and nothing this site has stored about you.",
     );
   });
 
-  it("has no section or link for Maptoolkit or Mapterhorn", () => {
-    expect(policy).not.toMatch(/Maptoolkit|Mapterhorn/);
+  it("has no section or link for VersaTiles, Maptoolkit or Mapterhorn", () => {
+    expect(policy).not.toMatch(/VersaTiles|Maptoolkit|Mapterhorn/);
   });
 });

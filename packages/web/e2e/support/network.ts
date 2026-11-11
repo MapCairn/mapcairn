@@ -14,15 +14,11 @@ export const RASTER_TILE_PATTERN =
   /(?:tile\.openstreetmap\.org|tile-cyclosm\.openstreetmap\.fr)/;
 
 /**
- * Vector style documents: OpenFreeMap's (Bright, the default, Liberty,
- * Positron, Fiord and Dark) and VersaTiles' (Colorful), so no test reaches either.
+ * Vector style documents from OpenFreeMap: Bright (the default), Positron and
+ * Dark on the site, and Liberty and Fiord for a host that offers the SDK's
+ * whole list. No test reaches OpenFreeMap.
  */
-export const VECTOR_STYLE_PATTERN =
-  /tiles\.(?:openfreemap\.org\/styles|versatiles\.org\/assets\/styles)\//;
-
-/** The VersaTiles Colorful style document. */
-export const COLORFUL_STYLE_PATTERN =
-  /tiles\.versatiles\.org\/assets\/styles\/colorful\/style\.json/;
+export const VECTOR_STYLE_PATTERN = /tiles\.openfreemap\.org\/styles\//;
 
 /** The OpenFreeMap Positron style document, a basemap that is not the default. */
 export const OTHER_VECTOR_STYLE_PATTERN =

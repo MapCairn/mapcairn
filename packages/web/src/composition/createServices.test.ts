@@ -15,6 +15,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
+import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
 
@@ -36,10 +37,19 @@ describe("createServices", () => {
     );
   });
 
-  it("offers the built-in basemaps, Fiord among them, with Bright the default", () => {
+  it("offers the site's five basemaps, not the SDK's eight, with Bright the default", () => {
     const { basemaps } = createServices();
-    expect(basemaps).toBe(BUILT_IN_BASEMAP_CATALOGUE);
-    expect(basemaps?.get("fiord")?.name).toBe("Fiord");
+    expect(basemaps).toBe(HOST_BASEMAP_CATALOGUE);
+    expect(basemaps).not.toBe(BUILT_IN_BASEMAP_CATALOGUE);
+    expect(basemaps?.basemaps.map((basemap) => basemap.id)).toEqual([
+      "bright",
+      "positron",
+      "osm",
+      "topographic",
+      "dark",
+    ]);
+    expect(basemaps?.get("fiord")).toBeUndefined();
+    expect(basemaps?.resolve("fiord").id).toBe("bright");
     expect(basemaps?.defaultId).toBe("bright");
   });
 
@@ -140,6 +150,14 @@ describe("createServices", () => {
       window.__MAPCAIRN_TEST_SERVICES__ = { routing };
       vi.spyOn(console, "info").mockImplementation(() => undefined);
       expect(createServices().routing).toBe(routing);
+    });
+
+    it("lets a browser test replace the basemap catalogue", () => {
+      window.__MAPCAIRN_TEST_SERVICES__ = {
+        basemaps: BUILT_IN_BASEMAP_CATALOGUE,
+      };
+      vi.spyOn(console, "info").mockImplementation(() => undefined);
+      expect(createServices().basemaps).toBe(BUILT_IN_BASEMAP_CATALOGUE);
     });
 
     it("accepts a map adapter factory function", () => {

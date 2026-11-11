@@ -1,20 +1,35 @@
 import {
-  BASEMAPS,
+  BUILT_IN_BASEMAP_CATALOGUE,
   FakeSearchProvider,
   type SearchProvider,
   type SearchResult,
 } from "@mapcairn/core";
 import { describe, expect, it, vi } from "vitest";
+import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import {
-  BASEMAP_CHOICES,
+  basemapChoices,
   geocodeAll,
   MAX_MEASURE_LOCATIONS,
 } from "./useMapModelContextTools";
 
-describe("BASEMAP_CHOICES", () => {
-  it("offers exactly the built-in basemaps, with no auto choice", () => {
-    expect(BASEMAP_CHOICES).toEqual(BASEMAPS.map((basemap) => basemap.id));
-    expect(BASEMAP_CHOICES).not.toContain("auto");
+describe("basemapChoices", () => {
+  it("offers exactly the basemaps the site's picker offers, in its order, with no auto choice", () => {
+    const choices = basemapChoices(HOST_BASEMAP_CATALOGUE);
+    expect(choices).toEqual([
+      "bright",
+      "positron",
+      "osm",
+      "topographic",
+      "dark",
+    ]);
+    expect(choices).not.toContain("auto");
+    for (const removed of ["liberty", "colorful", "fiord"]) {
+      expect(choices).not.toContain(removed);
+    }
+  });
+
+  it("follows whatever catalogue the host supplies", () => {
+    expect(basemapChoices(BUILT_IN_BASEMAP_CATALOGUE)).toHaveLength(8);
   });
 });
 

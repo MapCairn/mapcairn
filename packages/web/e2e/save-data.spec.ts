@@ -1,3 +1,4 @@
+import { BASEMAPS } from "@mapcairn/core";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import {
@@ -11,18 +12,25 @@ import {
   TRANSPARENT_PNG,
   VECTOR_STYLE_PATTERN,
 } from "./support/network";
+import { scriptBasemaps } from "./support/services";
 
 /*
  * Save data mode: a stored choice or the browser's signal turns it on, and
  * while it is on the picker requests no thumbnail and a basemap that lists
  * layers to leave out (Liberty, its shaded-relief raster layer) leaves them
- * out. The default, Bright, lists none. The real Liberty style is replaced by
- * a small one with a layer of the same id, "natural_earth", drawn from a
- * relief source, so the test can count relief tile requests.
+ * out. The default, Bright, lists none, and neither does any other basemap the
+ * site offers. Liberty is the SDK's, so these specs run on a host that offers
+ * the SDK's whole list (`scriptBasemaps`), which keeps the leave-out
+ * behaviour covered end to end. The real Liberty style is replaced by a small
+ * one with a layer of the same id, "natural_earth", drawn from a relief
+ * source, so the test can count relief tile requests.
  */
 
 /** The hash that opens the map on Liberty, the basemap whose relief layer Save data leaves out. */
 const ON_LIBERTY = `#basemap=${LIBERTY_BASEMAP_ID}`;
+
+/** How many previews the picker holds on a host that offers the SDK's whole list. */
+const SDK_BASEMAP_COUNT = BASEMAPS.length;
 
 const RELIEF_TILES = /\/natural_earth\/ne2sr\//;
 const THUMBNAILS = /\/basemaps\/[\w-]+\.jpg/;
@@ -117,6 +125,7 @@ test.describe("save data", () => {
   }) => {
     const { relief } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
+    await scriptBasemaps(page, BASEMAPS);
     await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     await expect(
@@ -124,10 +133,38 @@ test.describe("save data", () => {
     ).not.toBeChecked();
     await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
-      BASEMAP_COUNT,
+      SDK_BASEMAP_COUNT,
     );
     await expect.poll(() => thumbnails.length).toBeGreaterThan(0);
     expect(relief.length).toBeGreaterThan(0);
+  });
+
+  test("on the site's own five basemaps, Save data swaps the previews for plain tiles and back", async ({
+    page,
+    mapPage,
+  }) => {
+    const thumbnails = watchThumbnails(page);
+    await mapPage.goto();
+    await mapPage.openMapOptions();
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
+      BASEMAP_COUNT,
+    );
+    await expect.poll(() => thumbnails.length).toBeGreaterThan(0);
+
+    await mapPage.switchToSettings();
+    await page.getByRole("switch", { name: "Save data" }).click();
+    await mapPage.switchToMapOptions();
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(0);
+    await expect(mapPage.basemapPicker.getByRole("radio")).toHaveCount(
+      BASEMAP_COUNT,
+    );
+
+    await mapPage.switchToSettings();
+    await page.getByRole("switch", { name: "Save data" }).click();
+    await mapPage.switchToMapOptions();
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
+      BASEMAP_COUNT,
+    );
   });
 
   test("a stored choice leaves out the relief, the previews and the Streets download until chosen", async ({
@@ -137,6 +174,7 @@ test.describe("save data", () => {
     await storeChoice(page, true);
     const { relief } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
+    await scriptBasemaps(page, BASEMAPS);
     await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     await expect(page.getByRole("switch", { name: "Save data" })).toBeChecked();
@@ -164,6 +202,7 @@ test.describe("save data", () => {
   }) => {
     const { relief, styles } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
+    await scriptBasemaps(page, BASEMAPS);
     await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     const saveData = page.getByRole("switch", { name: "Save data" });
@@ -194,7 +233,7 @@ test.describe("save data", () => {
     ).toBe("false");
     await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
-      BASEMAP_COUNT,
+      SDK_BASEMAP_COUNT,
     );
     await expect.poll(() => relief.length).toBeGreaterThan(0);
     expect(thumbnails.length).toBeGreaterThan(0);
@@ -222,6 +261,7 @@ test.describe("save data", () => {
   }) => {
     await reportConnection(page, { saveData: true, effectiveType: "4g" });
     const { relief } = await serveRelief(page);
+    await scriptBasemaps(page, BASEMAPS);
     await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     const saveData = page.getByRole("switch", { name: "Save data" });
@@ -232,7 +272,7 @@ test.describe("save data", () => {
     await expect(saveData).not.toBeChecked();
     await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
-      BASEMAP_COUNT,
+      SDK_BASEMAP_COUNT,
     );
     await expect.poll(() => relief.length).toBeGreaterThan(0);
   });

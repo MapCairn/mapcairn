@@ -1,5 +1,5 @@
 import {
-  BASEMAPS,
+  type BasemapCatalogue,
   formatArea,
   formatDistance,
   type LatLng,
@@ -10,7 +10,11 @@ import {
   type ThemeChoice,
   type UnitSystem,
 } from "@mapcairn/core";
-import { type MeasureMode, useSearchProvider } from "@mapcairn/map";
+import {
+  type MeasureMode,
+  useBasemaps,
+  useSearchProvider,
+} from "@mapcairn/map";
 import {
   type ModelContextToolResult,
   useModelContextTool,
@@ -23,10 +27,13 @@ export const THEME_CHOICES: readonly ThemeChoice[] = [
   "dark",
 ];
 
-/** Every basemap id an agent may choose, in picker order. */
-export const BASEMAP_CHOICES: readonly string[] = BASEMAPS.map(
-  (basemap) => basemap.id,
-);
+/**
+ * Every basemap id an agent may choose: the ones the picker offers, in picker
+ * order, so the tool and the interface never disagree.
+ */
+export function basemapChoices(catalogue: BasemapCatalogue): readonly string[] {
+  return catalogue.basemaps.map((basemap) => basemap.id);
+}
 
 const MIN_POINTS: Readonly<Record<MeasureMode, number>> = {
   distance: 2,
@@ -160,9 +167,12 @@ export function useMapModelContextTools({
     },
   });
 
-  // Offers only the built-in basemaps (`BASEMAP_CHOICES`) on purpose: a host
-  // basemap can come with a provider licence, and an agent should not accept
-  // a licence on a person's behalf.
+  // Offers the basemaps the host's catalogue offers, no others. An agent should
+  // not accept a provider's licence on a person's behalf. The reference host's
+  // five come from free providers whose terms ask for nothing to be accepted,
+  // so choosing one here is what tapping it in the picker does. A host that
+  // adds a basemap with terms to accept must not pass it to this tool.
+  const choices = basemapChoices(useBasemaps());
   useModelContextTool<BasemapInput>({
     name: "set-map-basemap",
     description:
@@ -172,7 +182,7 @@ export function useMapModelContextTools({
       properties: {
         basemap: {
           type: "string",
-          enum: BASEMAP_CHOICES,
+          enum: choices,
           description: "A basemap id.",
         },
       },
@@ -180,7 +190,7 @@ export function useMapModelContextTools({
       additionalProperties: false,
     },
     execute: ({ basemap }) => {
-      if (!BASEMAP_CHOICES.includes(basemap)) {
+      if (!choices.includes(basemap)) {
         return textResult(`Unknown basemap "${basemap}".`);
       }
       chooseBasemap(basemap);

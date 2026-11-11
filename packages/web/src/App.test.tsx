@@ -35,6 +35,7 @@ import {
 } from "./app/MapUnavailable";
 import { LOCATE_MAX_FIT_RADIUS_METRES, LOCATE_ZOOM } from "./app/useMapApp";
 import { SAVE_VIEW_DELAY_MS } from "./app/useViewPersistence";
+import { HOST_BASEMAP_CATALOGUE } from "./basemaps/hostBasemaps";
 
 // Each test mounts the whole app; under coverage instrumentation a cold one
 // can pass the default 5 s.
@@ -1358,6 +1359,25 @@ describe("WebMCP tools", () => {
     );
   });
 
+  it("offers the basemaps of the catalogue the host supplies, so an agent cannot pick one the picker does not show", async () => {
+    const services = createFakeServices({ basemaps: HOST_BASEMAP_CATALOGUE });
+    const { tools, call } = await renderWithTools(services);
+    expect(
+      (
+        tools.get("set-map-basemap") as unknown as {
+          inputSchema: { properties: { basemap: { enum: string[] } } };
+        }
+      ).inputSchema.properties.basemap.enum,
+    ).toEqual(["bright", "positron", "osm", "topographic", "dark"]);
+    expect(await call("set-map-basemap", { basemap: "fiord" })).toBe(
+      'Unknown basemap "fiord".',
+    );
+    expect(await call("set-map-basemap", { basemap: "topographic" })).toBe(
+      "Switched the basemap to topographic.",
+    );
+    expect(services.fakes.settings.get().basemapId).toBe("topographic");
+  });
+
   it("searches and flies to the best match", async () => {
     const services = createFakeServices();
     services.fakes.search.setDefaultResults([CAPE_TOWN]);
@@ -1619,5 +1639,75 @@ describe("a basemap whose provider sets terms", () => {
       fireEvent.click(screen.getByRole("button", { name: "Map options" }));
       expect(radio("bright")).toBeChecked();
     });
+  });
+});
+
+describe("the reference host's basemaps", () => {
+  const radio = (id: string) =>
+    screen
+      .getByTestId(`basemap-option-${id}`)
+      .querySelector("input") as HTMLInputElement;
+
+  function hostServices() {
+    return createFakeServices({ basemaps: HOST_BASEMAP_CATALOGUE });
+  }
+
+  it("shows five basemaps in the picker, Bright first and checked", async () => {
+    await renderApp(hostServices());
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    const names = within(screen.getByRole("radiogroup", { name: "Basemap" }))
+      .getAllByRole("radio")
+      .map((option) => option.closest("label")?.textContent?.trim());
+    expect(names).toEqual([
+      "Bright",
+      "Positron",
+      "Streets",
+      "Topographic",
+      "Dark",
+    ]);
+    expect(radio("bright")).toBeChecked();
+    for (const absent of ["liberty", "colorful", "fiord"]) {
+      expect(
+        screen.queryByTestId(`basemap-option-${absent}`),
+        absent,
+      ).toBeNull();
+    }
+  });
+
+  it("opens a saved or linked Liberty, Colorful or Fiord on Bright, and leaves the saved value alone", async () => {
+    for (const id of ["liberty", "colorful", "fiord"]) {
+      for (const where of ["saved", "linked"] as const) {
+        const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
+        const services = hostServices();
+        if (where === "saved") {
+          services.fakes.settings.set({ basemapId: id });
+        } else {
+          services.fakes.url.write({ basemapId: id });
+        }
+        await renderApp(services);
+        const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
+        expect(options.basemap.id, `${where} ${id}`).toBe("bright");
+        fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+        expect(radio("bright"), `${where} ${id}`).toBeChecked();
+        if (where === "saved") {
+          expect(services.fakes.settings.get().basemapId).toBe(id);
+        }
+        cleanup();
+        vi.restoreAllMocks();
+      }
+    }
+  });
+
+  it("keeps a saved Dark or Topographic", async () => {
+    for (const id of ["dark", "topographic"]) {
+      const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
+      const services = hostServices();
+      services.fakes.settings.set({ basemapId: id });
+      await renderApp(services);
+      const [, options] = mount.mock.calls[0] as [unknown, MapMountOptions];
+      expect(options.basemap.id).toBe(id);
+      cleanup();
+      vi.restoreAllMocks();
+    }
   });
 });

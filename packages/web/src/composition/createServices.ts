@@ -1,4 +1,4 @@
-import { BUILT_IN_BASEMAP_CATALOGUE, type Services } from "@mapcairn/core";
+import type { Services } from "@mapcairn/core";
 // The engine style file has no exports. Importing it here, in the one module
 // every page that builds services loads, puts its rules in the page before
 // the engine mounts, and keeps it out of the ui, which may not import adapters.
@@ -14,6 +14,7 @@ import { NominatimSearchProvider } from "../adapters/search/NominatimSearchProvi
 import { LocalStorageSettingsStore } from "../adapters/settings/LocalStorageSettingsStore";
 import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
+import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
 import { createHostLayerRegistry } from "../layers";
 import { readTestOverrides } from "./testSeam";
@@ -49,7 +50,8 @@ function definedEntries(
  *   on the window (see `testSeam.ts`; the property name is kept out of this
  *   file because the server bundle keeps comments and the seam check searches
  *   for it), so a Playwright `addInitScript` can script geolocation, search, the
- *   clipboard, storage and the system theme. In a production build the mode
+ *   clipboard, storage, the system theme and the basemap catalogue. In a
+ *   production build the mode
  *   is a constant, the branch is removed, and so is `testSeam.ts`;
  *   `scripts/verifyNoTestSeam.mjs` proves it from the build output.
  *   Precedence, lowest first: real adapters, the test seam, `options.overrides`.
@@ -71,7 +73,8 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     layers: createHostLayerRegistry(),
     layerSource: new FetchLayerSource(),
     routing: new ValhallaRoutingProvider(),
-    basemaps: BUILT_IN_BASEMAP_CATALOGUE,
+    // A subset of the SDK's built-in basemaps, not the whole list.
+    basemaps: HOST_BASEMAP_CATALOGUE,
   };
   const seam =
     import.meta.env.MODE !== "production" ? readTestOverrides() : undefined;

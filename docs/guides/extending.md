@@ -4,11 +4,19 @@ Short how-tos for adding to the SDK and its reference host: a basemap, a data la
 
 ## Add a basemap
 
+Defining a basemap in the SDK and offering it on a host are separate. `BASEMAPS` holds every basemap the SDK defines (eight today). The reference site does not offer them all: `packages/web/src/basemaps/hostBasemaps.ts` lists the ids it offers, in picker order (five today), and builds its catalogue from them. Defining a basemap does not put it on the site.
+
 1. Add a `BasemapDefinition` to `BASEMAPS` in `packages/core/src/basemaps/basemaps.ts`. A `raster` source is a tile URL template with 256 px tiles, and a `vector` source is a MapLibre style URL. Set the zoom limits, the provider credits and `appearance`. For a heavy layer that a vector style can do without (a shaded-relief raster, say), list its style layer id in `saveDataOmitLayers`; Save data mode then leaves it, and any source only it uses, out of the style. The SDK's basemap test lists the tile origins whose terms allow commercial use with no agreement; it fails for a new origin until you have read that provider's terms and added the origin there with the reason.
+
+A host of your own builds a catalogue from `BASEMAPS`, or from its own definitions, and needs nothing more from this repository. To offer the basemap on the reference site as well:
+
+1. Add its id to `HOST_BASEMAP_IDS` in `packages/web/src/basemaps/hostBasemaps.ts`, where you want it in the picker. It fails at start-up, with the id in the message, if the SDK has no such basemap.
 2. Allow the provider's origins in the Content Security Policy (`img-src` and `connect-src`) in `packages/web/src/constants/securityHeaders.ts` and, identically, `packages/web/public/_headers`; a test keeps the two in step. Read the style and its tile sets to find every host they request (sprite, glyphs, terrain), and add only those.
 3. Render its picker preview with `node scripts/generateBasemapThumbnails.mjs <id>` and commit the image in `packages/web/public/basemaps/`.
 4. Record the provider in `ATTRIBUTIONS.md` and in the map tiles section of the privacy page (`packages/web/src/app/PrivacyPage.tsx`) and `PRIVACY.md`.
-5. Update the basemap constants in `packages/web/e2e/support/basemaps.ts` and the tests that count basemaps.
+5. Update the basemap constants in `packages/web/e2e/support/basemaps.ts` (`BASEMAP_COUNT` and the rest) and the tests that count basemaps, and the backdrop per basemap in `packages/web/src/basemaps/chromeLegibility.test.ts`. A spec that needs a basemap the site does not offer (the SDK's Liberty, for its Save data layer, say) runs on a host that offers the SDK's whole list, through `scriptBasemaps` in `packages/web/e2e/support/services.ts`.
+
+To take a basemap off the site while keeping it in the SDK, remove its id from `HOST_BASEMAP_IDS`, its origin from the Content Security Policy, its preview image, and its provider from `ATTRIBUTIONS.md`, `PRIVACY.md` and the privacy page, if nothing else the site offers uses them. A saved or linked id the site no longer offers opens on Bright.
 
 A provider whose licence the reusable SDK packages must not carry is not added to `BASEMAPS`. Define it in the host instead and add it to a catalogue built with `createBasemapCatalogue`, which the composition root passes as `Services.basemaps` (see `ARCHITECTURE.md`, host-supplied basemaps). Its definition can set `credit` (a permanent, non-collapsing credit with a logo) and `allowsImageExport: false` (Save image off), and leave out `thumbnail` when it has no right to a preview image (set `swatch`, a hex colour of your own, so its picker tile does not look like the default).
 

@@ -1,6 +1,6 @@
 /*
  * The basemaps the suite names. Specs use these constants and never spell a
- * basemap id or name themselves, so a change to the built-in basemaps is a
+ * basemap id or name themselves, so a change to the basemaps the site offers is a
  * change to this file only.
  */
 
@@ -26,13 +26,15 @@ export const DEFAULT_VECTOR_BASEMAP_NAME = "Bright";
 export const DEFAULT_VECTOR_BASEMAP_BACKGROUND = "rgb(248, 244, 240)";
 
 /**
- * Liberty, the default before Bright. It stays in the picker, a saved or
- * linked "liberty" still opens on it, and its style lists a shaded-relief
- * layer to leave out in Save data mode, which Bright does not.
+ * Liberty, the default before Bright. The SDK defines it and the site does not
+ * offer it, so a saved or linked "liberty" opens on the default. Its style
+ * lists a shaded-relief layer to leave out in Save data mode, which no basemap
+ * the site offers does, so the Save data specs reach it through a host that
+ * offers the SDK's whole list (`scriptBasemaps`).
  */
 export const LIBERTY_BASEMAP_ID = "liberty";
 
-/** Its name in the picker. */
+/** Its name in the picker of a host that offers it. */
 export const LIBERTY_BASEMAP_NAME = "Liberty";
 
 /** Another light vector basemap, for choosing one explicitly. */
@@ -47,23 +49,27 @@ export const OTHER_VECTOR_BASEMAP_NAME = "Positron";
  */
 export const REMOVED_MAPTOOLKIT_BASEMAP_ID = "maptoolkit-dark";
 
-/** VersaTiles Colorful, a light vector basemap from another provider than OpenFreeMap. */
+/** VersaTiles Colorful, which the SDK defines and the site does not offer. */
 export const COLORFUL_BASEMAP_ID = "colorful";
 
+/** OpenFreeMap Fiord, which the SDK defines and the site does not offer. */
+export const FIORD_BASEMAP_ID = "fiord";
+
+/**
+ * The SDK's basemaps that the site does not offer. A saved or linked one
+ * opens on the default basemap.
+ */
+export const UNOFFERED_BASEMAP_IDS: readonly string[] = [
+  LIBERTY_BASEMAP_ID,
+  COLORFUL_BASEMAP_ID,
+  FIORD_BASEMAP_ID,
+];
+
+/** OpenFreeMap Dark, the dark basemap. A saved or linked "dark" opens on it. */
+export const DARK_BASEMAP_ID = "dark";
+
 /** Its name in the picker. */
-export const COLORFUL_BASEMAP_NAME = "Colorful";
-
-/** The dark basemap, OpenFreeMap Fiord, which is in the SDK's built-in set. */
-export const DARK_VECTOR_BASEMAP_ID = "fiord";
-
-/** Its name in the picker. */
-export const DARK_VECTOR_BASEMAP_NAME = "Fiord";
-
-/** OpenFreeMap Dark, the second dark basemap. A saved or linked "dark" opens on it. */
-export const NEUTRAL_DARK_BASEMAP_ID = "dark";
-
-/** Its name in the picker. */
-export const NEUTRAL_DARK_BASEMAP_NAME = "Dark";
+export const DARK_BASEMAP_NAME = "Dark";
 
 /** CyclOSM, a second raster basemap, from a different host than OpenStreetMap's own. */
 export const TOPOGRAPHIC_BASEMAP_ID = "topographic";
@@ -71,11 +77,15 @@ export const TOPOGRAPHIC_BASEMAP_ID = "topographic";
 /** Its name in the picker. */
 export const TOPOGRAPHIC_BASEMAP_NAME = "Topographic";
 
-/** How many basemaps the picker offers. */
-export const BASEMAP_COUNT = 8;
+/** How many basemaps the site's picker offers. */
+export const BASEMAP_COUNT = 5;
 
 /** The picker's columns. */
 export const BASEMAP_COLUMNS = 3;
 
-/** The picker's rows: the last one may be short. */
+/** The picker's rows: the last one is short. */
 export const BASEMAP_ROWS = Math.ceil(BASEMAP_COUNT / BASEMAP_COLUMNS);
+
+/** How many tiles sit in the picker's last, short row. */
+export const BASEMAP_LAST_ROW_COUNT =
+  BASEMAP_COUNT - BASEMAP_COLUMNS * (BASEMAP_ROWS - 1);

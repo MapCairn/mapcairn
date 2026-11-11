@@ -2,11 +2,12 @@ import { expect, test } from "./fixtures";
 import {
   DEFAULT_VECTOR_BASEMAP_ID,
   DEFAULT_VECTOR_BASEMAP_NAME,
-  LIBERTY_BASEMAP_ID,
-  LIBERTY_BASEMAP_NAME,
+  OTHER_VECTOR_BASEMAP_ID,
+  OTHER_VECTOR_BASEMAP_NAME,
   RASTER_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
   REMOVED_MAPTOOLKIT_BASEMAP_ID,
+  UNOFFERED_BASEMAP_IDS,
 } from "./support/basemaps";
 
 test.describe("permalink", () => {
@@ -17,7 +18,7 @@ test.describe("permalink", () => {
     mapPage,
   }) => {
     await mapPage.goto(
-      `#map=10.00/-33.92000/18.42000/30&basemap=${LIBERTY_BASEMAP_ID}`,
+      `#map=10.00/-33.92000/18.42000/30&basemap=${OTHER_VECTOR_BASEMAP_ID}`,
     );
     await expect(mapPage.host).toHaveAttribute("data-zoom", "10.00");
     const view = await mapPage.hashView();
@@ -26,7 +27,9 @@ test.describe("permalink", () => {
 
     await mapPage.openMapOptions();
     await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: LIBERTY_BASEMAP_NAME }),
+      mapPage.basemapPicker.getByRole("radio", {
+        name: OTHER_VECTOR_BASEMAP_NAME,
+      }),
     ).toBeChecked();
     expect(
       await page.evaluate(() => localStorage.getItem("mapcairn:basemapId")),
@@ -75,8 +78,13 @@ test.describe("permalink", () => {
     ).toBeChecked();
   });
 
-  for (const retired of ["auto", REMOVED_MAPTOOLKIT_BASEMAP_ID]) {
-    test(`a link to the retired ${retired} basemap opens on the default basemap`, async ({
+  // The retired ids, and the SDK's basemaps that the site does not offer.
+  for (const retired of [
+    "auto",
+    REMOVED_MAPTOOLKIT_BASEMAP_ID,
+    ...UNOFFERED_BASEMAP_IDS,
+  ]) {
+    test(`a link to the ${retired} basemap, which the site does not offer, opens on the default basemap`, async ({
       page,
       mapPage,
     }) => {

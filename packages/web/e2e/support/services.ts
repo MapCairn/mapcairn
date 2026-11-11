@@ -1,4 +1,6 @@
+import type { BasemapDefinition } from "@mapcairn/core";
 import type { Page } from "@playwright/test";
+import { TRANSPARENT_PNG } from "./network";
 
 /*
  * Scripted services for end-to-end tests.
@@ -182,6 +184,47 @@ export async function scriptLayers(
       { layers: { list: () => layers } },
     );
   }, definitions);
+}
+
+/**
+ * Makes the app offer these basemaps instead of the site's five, with the
+ * first the default. The SDK's list holds three the site does not offer
+ * (Liberty, Colorful and Fiord), so a spec that needs one passes the SDK's
+ * `BASEMAPS`, which is plain data.
+ *
+ * @remarks The catalogue is rebuilt inside the page from the definitions,
+ *   because its `get` and `resolve` are functions and cannot cross from the
+ *   test to the page. It follows the rules of `createBasemapCatalogue`: an id
+ *   it does not hold resolves to the default. The previews of the three basemaps
+ *   the site does not offer are no longer in `public/basemaps`, so they are
+ *   answered with a blank image, as the picker would otherwise show a broken
+ *   one and the preview server would log a missing route for each.
+ */
+export async function scriptBasemaps(
+  page: Page,
+  basemaps: readonly BasemapDefinition[],
+): Promise<void> {
+  await page.route(/\/basemaps\/(?:liberty|colorful|fiord)\.jpg$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      body: TRANSPARENT_PNG,
+    }),
+  );
+  await page.addInitScript((definitions: readonly { id: string }[]) => {
+    const byId = new Map(definitions.map((basemap) => [basemap.id, basemap]));
+    const fallback = definitions[0];
+    const basemaps = {
+      basemaps: definitions,
+      defaultId: fallback?.id,
+      get: (id: string) => byId.get(id),
+      resolve: (id: string) => byId.get(id) ?? fallback,
+    };
+    window.__MAPCAIRN_TEST_SERVICES__ = Object.assign(
+      (window.__MAPCAIRN_TEST_SERVICES__ as object | undefined) ?? {},
+      { basemaps },
+    );
+  }, basemaps);
 }
 
 /**

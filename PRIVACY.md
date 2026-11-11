@@ -51,17 +51,15 @@ policy.
 
 ## Map tiles and location search
 
-The basemap tile providers, OpenFreeMap, VersaTiles when you choose the
-Colorful basemap, the OpenStreetMap Foundation when you choose the Streets
-basemap, and OpenStreetMap France when you choose the Topographic basemap, may log tile requests, including your IP address, as part of serving
-the map. This is standard for any web map. Your browser makes those requests
-itself: they carry your IP address, its usual request headers (such as its user
-agent) and this site's address as the referrer, and nothing this site has stored
-about you. VersaTiles says it logs requests in anonymised form and uses the logs
-only to track down faults and detect misuse. When you
-search (by pressing Enter or the Search button), your query is sent to
-OpenStreetMap's Nominatim geocoding service, which may likewise log the query
-and your IP address. Nothing is sent while you type.
+The basemap tile providers, OpenFreeMap, the OpenStreetMap Foundation when you
+choose the Streets basemap, and OpenStreetMap France when you choose the
+Topographic basemap, may log tile requests, including your IP address, as part
+of serving the map. This is standard for any web map. Your browser makes those
+requests itself: they carry your IP address, its usual request headers (such as
+its user agent) and this site's address as the referrer, and nothing this site
+has stored about you. When you search (by pressing Enter or the Search
+button), your query is sent to OpenStreetMap's Nominatim geocoding service,
+which may likewise log the query and your IP address. Nothing is sent while you type.
 
 ## Data layers
 

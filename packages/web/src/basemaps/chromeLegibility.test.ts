@@ -1,6 +1,7 @@
 import { BUILT_IN_BASEMAP_CATALOGUE } from "@mapcairn/core";
 import { compositeOver, contrastRatio, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
+import { HOST_BASEMAP_CATALOGUE } from "./hostBasemaps";
 
 const AA_TEXT = 4.5;
 const AA_NON_TEXT = 3;
@@ -8,8 +9,10 @@ const AA_NON_TEXT = 3;
 /**
  * The colour chrome that has no surface of its own would sit on, per basemap:
  * the land colour of its style, which is the largest area behind the bottom
- * corners. A new basemap needs one more entry here, and the first test below
- * fails until it has one.
+ * corners. It lists every built-in basemap, not only the five the site offers,
+ * so a host that offers Liberty, Colorful or Fiord is covered too. A new
+ * built-in basemap needs one more entry here, and the first test below fails
+ * until it has one.
  */
 const basemapBackdrops: Record<string, string> = {
   bright: "#f8f4f0",
@@ -34,10 +37,16 @@ const themes = ["light", "dark"] as const;
 const colourSets = ["colour", "opaque", "contrastMore"] as const;
 
 describe("chrome legibility over every basemap", () => {
-  it("has a backdrop for every basemap the host offers", () => {
+  it("has a backdrop for every built-in basemap, which a host may offer", () => {
     expect(Object.keys(basemapBackdrops).sort()).toEqual(
       BUILT_IN_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.id).sort(),
     );
+  });
+
+  it("covers every basemap the site offers", () => {
+    for (const basemap of HOST_BASEMAP_CATALOGUE.basemaps) {
+      expect(basemapBackdrops, basemap.id).toHaveProperty(basemap.id);
+    }
   });
 
   describe.each(themes)("%s chrome", (theme) => {

@@ -48,8 +48,8 @@ describe("PrivacyPage", () => {
     render(<PrivacyPage />);
 
     expect(screen.getByText(/OpenFreeMap/)).toBeInTheDocument();
-    expect(screen.getByText(/VersaTiles/)).toBeInTheDocument();
     expect(screen.getByText(/OpenStreetMap Foundation/)).toBeInTheDocument();
+    expect(screen.getByText(/OpenStreetMap France/)).toBeInTheDocument();
     expect(
       screen.getByText(/OpenStreetMap's Nominatim geocoding service/),
     ).toBeInTheDocument();
@@ -141,22 +141,19 @@ describe("PrivacyPage", () => {
     expect(text).toMatch(/not saved or put in the page address/);
   });
 
-  it("names the basemap tile providers that may log requests: OpenFreeMap, VersaTiles for Colorful, the OpenStreetMap Foundation for Streets, and OpenStreetMap France for Topographic", () => {
+  it("names the basemap tile providers that may log requests: OpenFreeMap, the OpenStreetMap Foundation for Streets, and OpenStreetMap France for Topographic", () => {
     render(<PrivacyPage />);
 
     const text = screen.getByText(/The basemap tile providers/).textContent;
     expect(text).toMatch(
-      /OpenFreeMap, VersaTiles when you choose the Colorful basemap, the OpenStreetMap Foundation when you choose the Streets basemap, and OpenStreetMap France when you choose the Topographic basemap, may log tile requests, including your IP address/,
+      /OpenFreeMap, the OpenStreetMap Foundation when you choose the Streets basemap, and OpenStreetMap France when you choose the Topographic basemap, may log tile requests, including your IP address/,
     );
   });
 
-  it("says what VersaTiles does with the requests it logs, in its own words", () => {
-    render(<PrivacyPage />);
+  it("does not mention VersaTiles, which the site no longer loads from", () => {
+    const { container } = render(<PrivacyPage />);
 
-    const text = screen.getByText(/The basemap tile providers/).textContent;
-    expect(text).toMatch(
-      /VersaTiles says it logs requests in anonymised form and uses the logs only to track down faults and detect misuse/,
-    );
+    expect(container.textContent).not.toMatch(/VersaTiles/);
   });
 
   it("has no section or link for Maptoolkit or Mapterhorn, which the site no longer loads from", () => {

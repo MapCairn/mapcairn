@@ -4,6 +4,7 @@ import {
 } from "@mapcairn/core";
 import { compositeOver, contrastRatio, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
+import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import { buildContentSecurityPolicy } from "./securityHeaders";
 
 /** The origin a basemap's style, or its raster tiles, are requested from. */
@@ -15,6 +16,8 @@ function sourceOrigin(basemap: BasemapDefinition): string {
   ).origin;
 }
 
+// Fiord is the SDK's dark basemap that the site does not offer; Dark is the
+// site's. Both need a swatch of their own for the picker's Save data tile.
 describe.each(["fiord", "dark"])("%s in the picker", (id) => {
   const basemap = BUILT_IN_BASEMAP_CATALOGUE.resolve(id);
   const swatch = basemap.swatch as string;
@@ -44,7 +47,7 @@ describe.each(["fiord", "dark"])("%s in the picker", (id) => {
   }
 });
 
-describe("the production CSP and the built-in basemaps", () => {
+describe("the production CSP and the site's basemaps", () => {
   const csp = new Map(
     buildContentSecurityPolicy()
       .split(";")
@@ -52,11 +55,31 @@ describe("the production CSP and the built-in basemaps", () => {
       .map(([name, ...sources]) => [name as string, sources]),
   );
 
-  for (const basemap of BUILT_IN_BASEMAP_CATALOGUE.basemaps) {
+  for (const basemap of HOST_BASEMAP_CATALOGUE.basemaps) {
     it(`allows the origin ${basemap.name} loads its style or tiles from`, () => {
       const origin = sourceOrigin(basemap);
       expect(csp.get("connect-src"), origin).toContain(origin);
       expect(csp.get("img-src"), origin).toContain(origin);
     });
   }
+
+  it("allows exactly the origins the five basemaps need, and none for a basemap the site does not offer", () => {
+    const origins = new Set(HOST_BASEMAP_CATALOGUE.basemaps.map(sourceOrigin));
+    expect([...origins].sort()).toEqual([
+      "https://a.tile-cyclosm.openstreetmap.fr",
+      "https://tile.openstreetmap.org",
+      "https://tiles.openfreemap.org",
+    ]);
+    const offered = new Set(HOST_BASEMAP_CATALOGUE.basemaps.map((b) => b.id));
+    for (const basemap of BUILT_IN_BASEMAP_CATALOGUE.basemaps) {
+      if (!offered.has(basemap.id) && !origins.has(sourceOrigin(basemap))) {
+        expect(csp.get("connect-src"), basemap.id).not.toContain(
+          sourceOrigin(basemap),
+        );
+        expect(csp.get("img-src"), basemap.id).not.toContain(
+          sourceOrigin(basemap),
+        );
+      }
+    }
+  });
 });
