@@ -4,13 +4,19 @@
  * modules, which would silently switch the architecture rules off.
  */
 import { spawnSync } from "node:child_process";
+import { readdirSync } from "node:fs";
+
+/** Every example app, so a new one is cruised without editing this list. */
+const examples = readdirSync("examples", { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => `examples/${entry.name}/src`);
 
 /** Every directory cruised; each must yield at least one module. */
 const roots = [
   ...["core", "map", "react", "theme", "web"].map(
     (name) => `packages/${name}/src`,
   ),
-  "examples/embed/src",
+  ...examples,
 ];
 
 const result = spawnSync(

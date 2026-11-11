@@ -200,6 +200,22 @@ module.exports = {
       from: { path: "^examples/" },
       to: { path: "^packages/", pathNot: SDK_ENTRY_POINTS },
     },
+    {
+      name: "examples-import-packages-by-name",
+      severity: "error",
+      comment:
+        "An example app imports the SDK by package name, as an outside app must, never by a relative path into packages/, even to an entry point.",
+      from: { path: "^examples/" },
+      to: { path: "^packages/", dependencyTypes: ["local"] },
+    },
+    {
+      name: "packages-do-not-import-examples",
+      severity: "error",
+      comment:
+        "Examples use the packages; nothing in a package may depend on an example.",
+      from: { path: "^packages/" },
+      to: { path: "^examples/" },
+    },
   ],
   options: {
     doNotFollow: { path: "node_modules" },
