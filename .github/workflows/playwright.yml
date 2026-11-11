@@ -60,6 +60,11 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
+      # The checkout belongs to another user inside the container, and git refuses
+      # it until it is trusted; the `prepare` script (lefthook install) needs git.
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Install dependencies
         run: |
           npm ci
