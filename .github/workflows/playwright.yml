@@ -14,13 +14,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The shards run in Playwright's own image, whose tag has to match the
+  # installed @playwright/test, so the version is read from the lockfile once.
+  playwright-version:
+    name: playwright version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read the Playwright version from the lockfile
+        id: read
+        run: |
+          version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
   # The suite runs on one worker per job: the `wrangler dev` server behind the
   # tests crashes under parallel load (see workers in packages/web/playwright.config.ts).
   # Sharding gets the speed back by giving each shard its own runner and server.
   shard:
     name: e2e shard ${{ matrix.shard }}
+    needs: playwright-version
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # The image carries the browsers and their system packages, so the job no
+    # longer downloads them from Ubuntu's mirrors, which are unreliable from the runners.
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-noble
+      options: --init --ipc=host
+    env:
+      HOME: /root
     strategy:
       fail-fast: false
       matrix:
@@ -35,37 +60,9 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - name: Install dependencies
         run: |
           npm ci
-
-      # The runner's Ubuntu mirror is sometimes very slow, so apt gives up on a
-      # stalled download and retries it, rather than the whole step hanging.
-      - name: Make apt downloads fail fast and retry
-        run: |
-          printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' \
-            | sudo tee /etc/apt/apt.conf.d/80-ci-retries >/dev/null
-
-      # WebKit pulls in about 185 system packages (gstreamer, libav), and only
-      # the shard that holds the WebKit tests needs them.
-      - name: Install Playwright browsers
-        working-directory: packages/web
-        timeout-minutes: 15
-        run: |
-          if npx --no-install playwright test --list --shard=${{ matrix.shard }}/4 | grep -q '\[webkit\]'; then
-            browsers="chromium webkit"
-          else
-            browsers="chromium"
-          fi
-          npx --no-install playwright install --with-deps ${browsers}
 
       - name: Run Playwright tests (shard ${{ matrix.shard }} of 4)
         run: npm run test:e2e -w @mapcairn/web -- --shard=${{ matrix.shard }}/4
