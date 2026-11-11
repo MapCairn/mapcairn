@@ -1320,6 +1320,7 @@ describe("MapLibreMapAdapter", () => {
         { id: "water", source: "planet", "source-layer": "water" },
         { id: "relief", source: "relief-source" },
         { id: "roads", source: "planet", "source-layer": "transportation" },
+        { id: "ferries", source: "planet", "source-layer": "transportation" },
         { id: "towns", source: "planet", "source-layer": "place" },
       ];
       map.sources.clear();
@@ -1334,7 +1335,7 @@ describe("MapLibreMapAdapter", () => {
       expect(map.options.style).toBe("https://tiles.example/labels.json");
     });
 
-    it("keeps only the label and road layers, and draws the imagery under them", async () => {
+    it("keeps only the label and road layers, less those it names to leave out, and draws the imagery under them", async () => {
       const { map } = await mounted({ basemap: FAKE_IMAGERY_BASEMAP });
       loadLabelStyle(map);
       expect(layerIds(map)).toEqual(["basemap-imagery", "roads", "towns"]);

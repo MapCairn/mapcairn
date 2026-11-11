@@ -73,6 +73,9 @@ export const SATELLITE_BASEMAP: BasemapDefinition = {
       "water_name",
       "aerodrome_label",
     ],
+    // Bright's dashed ferry routes (a `transportation` layer) streak the sea
+    // over imagery at every zoom, so they are left out.
+    labelOmitLayers: ["ferry"],
   },
   minZoom: 0,
   maxZoom: SATELLITE_MAX_ZOOM,

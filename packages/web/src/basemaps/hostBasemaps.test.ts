@@ -168,7 +168,7 @@ describe("the Satellite basemap", () => {
     expect(SATELLITE_BASEMAP.thumbnail).toBe("/basemaps/satellite.jpg");
   });
 
-  it("draws the place names, roads and borders of OpenFreeMap Bright over the imagery", () => {
+  it("draws the place names, roads and borders of OpenFreeMap Bright over the imagery, without its ferry routes", () => {
     expect(SATELLITE_BASEMAP.source).toMatchObject({
       labelStyleUrl: "https://tiles.openfreemap.org/styles/bright",
       labelSourceLayers: [
@@ -179,6 +179,7 @@ describe("the Satellite basemap", () => {
         "water_name",
         "aerodrome_label",
       ],
+      labelOmitLayers: ["ferry"],
     });
   });
 

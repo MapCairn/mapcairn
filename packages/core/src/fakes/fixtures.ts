@@ -46,6 +46,7 @@ export const FAKE_IMAGERY_BASEMAP: BasemapDefinition =
       maxTileZoom: 14,
       labelStyleUrl: "https://tiles.example/labels.json",
       labelSourceLayers: ["place", "transportation"],
+      labelOmitLayers: ["ferries"],
     },
     minZoom: 0,
     maxZoom: 17,

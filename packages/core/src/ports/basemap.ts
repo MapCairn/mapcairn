@@ -45,6 +45,11 @@ export type BasemapSource =
       readonly labelStyleUrl: string;
       /** The vector source layers of that style to keep, such as `place` and `transportation`. */
       readonly labelSourceLayers: readonly string[];
+      /**
+       * Ids of layers of that style to leave out although they draw from a
+       * kept source layer, such as ferry routes that would streak the sea.
+       */
+      readonly labelOmitLayers?: readonly string[];
     };
 
 /**

@@ -155,7 +155,8 @@ function pageFor(basemap, zoom) {
       canvasContextAttributes: { preserveDrawingBuffer: true },
     });
     // An imagery basemap, as "composeImagery" in the MapLibre adapter builds
-    // it: the label style's layers from the kept source layers only, over the
+    // it: the label style's layers from the kept source layers only (less
+    // those it names to leave out), over the
     // imagery as a raster source capped at its deepest real level.
     const imagery = ${JSON.stringify(basemap.source.kind === "imagery" ? basemap.source : null)};
     map.on("style.load", () => {
@@ -163,8 +164,9 @@ function pageFor(basemap, zoom) {
         return;
       }
       const keep = new Set(imagery.labelSourceLayers);
+      const omit = new Set(imagery.labelOmitLayers ?? []);
       for (const layer of map.getStyle().layers) {
-        if (!keep.has(layer["source-layer"] ?? "")) {
+        if (omit.has(layer.id) || !keep.has(layer["source-layer"] ?? "")) {
           map.removeLayer(layer.id);
         }
       }

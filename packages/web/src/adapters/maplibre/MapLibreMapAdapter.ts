@@ -309,8 +309,9 @@ function removeStyleLayers(map: MapLibreMap, ids: readonly string[]): void {
 
 /**
  * Turns the label style an imagery basemap loaded into the hybrid: it keeps
- * only the layers that draw from the basemap's `labelSourceLayers`, then adds
- * the imagery as a raster source and layer under them. Its `maxzoom` is the
+ * only the layers that draw from the basemap's `labelSourceLayers`, less any
+ * named in `labelOmitLayers`, then adds the imagery as a raster source and
+ * layer under them. Its `maxzoom` is the
  * deepest tile level with real detail, so MapLibre enlarges those tiles
  * further in and requests nothing deeper. Does nothing for another basemap.
  */
@@ -323,6 +324,7 @@ function composeImagery(
     return;
   }
   const keep = new Set(source.labelSourceLayers);
+  const omit = new Set(source.labelOmitLayers);
   const layers = map.getStyle().layers as {
     id: string;
     "source-layer"?: string;
@@ -330,7 +332,9 @@ function composeImagery(
   removeStyleLayers(
     map,
     layers
-      .filter((layer) => !keep.has(layer["source-layer"] ?? ""))
+      .filter(
+        (layer) => omit.has(layer.id) || !keep.has(layer["source-layer"] ?? ""),
+      )
       .map((layer) => layer.id),
   );
   map.addSource(IMAGERY_ID, {
