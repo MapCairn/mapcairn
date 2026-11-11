@@ -1,4 +1,5 @@
 import {
+  announceTimeMoved,
   type DateTimeControlDefinition,
   dateTimeRange,
   describeSlot,
@@ -65,9 +66,7 @@ export function DateTimeControl({
     const resolved = resolveSlot(control, requested, now) ?? requested;
     onChange(requested);
     if (resolved !== requested) {
-      announce(
-        `Time moved to ${describeSlotStart(resolved)}, the nearest available.`,
-      );
+      announce(announceTimeMoved(resolved));
     }
   };
   return (

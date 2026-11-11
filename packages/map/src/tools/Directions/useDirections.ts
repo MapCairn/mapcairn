@@ -6,6 +6,7 @@ import {
   announceRoutingCancelled,
   announceRoutingError,
   announceStopAdded,
+  announceStopLimit,
   announceStopMoved,
   announceStopRemoved,
   type DirectionStop,
@@ -225,10 +226,9 @@ export function useDirections(units: UnitSystem): UseDirections {
     (position: LatLng, label?: string) => {
       const current = stopsRef.current;
       if (!stopsHaveRoom(current)) {
-        announceRef.current(
-          `You can add up to ${MAX_DIRECTION_STOPS} stops. Remove one to add another.`,
-          { priority: "polite" },
-        );
+        announceRef.current(announceStopLimit(MAX_DIRECTION_STOPS), {
+          priority: "polite",
+        });
         return;
       }
       nextId.current += 1;
