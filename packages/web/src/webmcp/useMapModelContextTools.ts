@@ -94,9 +94,9 @@ export async function findPlace(
 }
 
 /**
- * Finds the best match for each place name (see {@link findPlace}), one after another, so the
- * lookups queue behind each other rather than arriving at the search service
- * together. Stops at the first name with no match, which saves the rest.
+ * Finds the best match for each place name (see {@link findPlace}), one
+ * after another, so the lookups queue behind each other rather than arriving
+ * at the search service together. Stops at the first name with no match, which saves the rest.
  * @returns The matches in the given order, or the first name with no match.
  */
 export async function geocodeAll(
@@ -170,13 +170,14 @@ export function useMapModelContextTools({
   useModelContextTool<SearchInput>({
     name: "search-map-location",
     description:
-      "Search for a place by name and move the map to the best match.",
+      "Search for a place by name and move the map to the best match. A pair of coordinates also works, and is read locally without a search.",
     inputSchema: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: "Free-text place name to search for.",
+          description:
+            "Free-text place name to search for, or a latitude and longitude pair.",
         },
       },
       required: ["query"],
@@ -287,7 +288,7 @@ export function useMapModelContextTools({
           items: { type: "string" },
           minItems: MIN_POINTS.distance,
           maxItems: MAX_MEASURE_LOCATIONS,
-          description: `Place names in path order, from two to ${MAX_MEASURE_LOCATIONS}.`,
+          description: `Place names or coordinate pairs in path order, from two to ${MAX_MEASURE_LOCATIONS}. Coordinates are read locally without a search.`,
         },
       },
       required: ["locations"],
@@ -308,7 +309,7 @@ export function useMapModelContextTools({
           items: { type: "string" },
           minItems: MIN_POINTS.area,
           maxItems: MAX_MEASURE_LOCATIONS,
-          description: `Place names in outline order, from three to ${MAX_MEASURE_LOCATIONS}.`,
+          description: `Place names or coordinate pairs in outline order, from three to ${MAX_MEASURE_LOCATIONS}. Coordinates are read locally without a search.`,
         },
       },
       required: ["locations"],
