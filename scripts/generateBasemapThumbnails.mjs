@@ -11,13 +11,15 @@
  * `maplibre-gl` files, and headless Chromium draws each basemap with MapLibre
  * from the style and tile URLs defined in
  * `packages/core/src/basemaps/basemaps.ts` and in the host's own
- * `packages/web/src/basemaps/openTopoMapBasemap.ts`, so the previews cannot
+ * `packages/web/src/basemaps/openTopoMapBasemap.ts` and
+ * `packages/web/src/basemaps/satelliteBasemap.ts`, so the previews cannot
  * drift from what the picker selects. Every view is the same: the Cape Town
  * Waterfront at 160 by 120 CSS px, captured at twice that size.
  *
  * The images are small screenshots of OpenFreeMap (OpenMapTiles data and
- * OpenStreetMap contributors), of the OpenStreetMap standard tile layer and of
- * OpenTopoMap, so they carry the credits recorded in `ATTRIBUTIONS.md`. The
+ * OpenStreetMap contributors), of the OpenStreetMap standard tile layer, of
+ * OpenTopoMap and of EOX's Sentinel-2 cloudless imagery, so they carry the
+ * credits and licences recorded in `ATTRIBUTIONS.md`. The
  * page needs the network, and a GPU-less machine falls back to software WebGL.
  * Chromium sends its own user agent and the page's Referer; nothing pretends
  * to be another client, as the OpenStreetMap tile usage policy asks.
@@ -66,8 +68,13 @@ const { OPEN_TOPO_MAP_BASEMAP } = await import(
     .href
 );
 
+const { SATELLITE_BASEMAP } = await import(
+  pathToFileURL(join(ROOT, "packages/web/src/basemaps/satelliteBasemap.ts"))
+    .href
+);
+
 /** The SDK's basemaps and those only the reference host defines, which import types only so plain Node loads them. */
-const BASEMAPS = [...SDK_BASEMAPS, OPEN_TOPO_MAP_BASEMAP];
+const BASEMAPS = [...SDK_BASEMAPS, OPEN_TOPO_MAP_BASEMAP, SATELLITE_BASEMAP];
 
 /** The basemaps to render: those named on the command line, or all of them. */
 const REQUESTED = process.argv.slice(2);
@@ -88,13 +95,17 @@ const VENDOR = {
 
 /**
  * What MapLibre draws for a basemap, built the same way as `styleFor` in the
- * MapLibre adapter: a vector basemap's style URL, or an inline style with one
- * 256 px raster source for a raster basemap.
+ * MapLibre adapter: a vector basemap's style URL, an imagery basemap's label
+ * style URL (the page adds the imagery as `composeImagery` in the adapter
+ * does), or an inline style with one 256 px raster source for a raster basemap.
  */
 function styleFor(basemap) {
   const { source } = basemap;
   if (source.kind === "vector") {
     return source.styleUrl;
+  }
+  if (source.kind === "imagery") {
+    return source.labelStyleUrl;
   }
   return {
     version: 8,
@@ -142,6 +153,31 @@ function pageFor(basemap, zoom) {
       attributionControl: false,
       fadeDuration: 0,
       canvasContextAttributes: { preserveDrawingBuffer: true },
+    });
+    // An imagery basemap, as "composeImagery" in the MapLibre adapter builds
+    // it: the label style's layers from the kept source layers only, over the
+    // imagery as a raster source capped at its deepest real level.
+    const imagery = ${JSON.stringify(basemap.source.kind === "imagery" ? basemap.source : null)};
+    map.on("style.load", () => {
+      if (!imagery) {
+        return;
+      }
+      const keep = new Set(imagery.labelSourceLayers);
+      for (const layer of map.getStyle().layers) {
+        if (!keep.has(layer["source-layer"] ?? "")) {
+          map.removeLayer(layer.id);
+        }
+      }
+      map.addSource("imagery", {
+        type: "raster",
+        tiles: [imagery.tileUrl],
+        tileSize: imagery.tileSize,
+        maxzoom: imagery.maxTileZoom,
+      });
+      map.addLayer(
+        { id: "imagery", type: "raster", source: "imagery" },
+        map.getStyle().layers[0]?.id,
+      );
     });
     map.on("idle", () => { window.__mapReady = true; });
   </script></body></html>`;

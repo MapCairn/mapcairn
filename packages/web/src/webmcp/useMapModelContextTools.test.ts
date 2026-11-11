@@ -1,5 +1,8 @@
 import {
   BUILT_IN_BASEMAP_CATALOGUE,
+  createBasemapCatalogue,
+  FAKE_IMAGERY_BASEMAP,
+  FAKE_VECTOR_BASEMAP,
   FakeSearchProvider,
   type SearchProvider,
   type SearchResult,
@@ -13,7 +16,7 @@ import {
 } from "./useMapModelContextTools";
 
 describe("basemapChoices", () => {
-  it("offers exactly the basemaps the site's picker offers, in its order, with no auto choice", () => {
+  it("offers the basemaps the site's picker offers, in its order, except Satellite, with no auto choice", () => {
     const choices = basemapChoices(HOST_BASEMAP_CATALOGUE);
     expect(choices).toEqual([
       "bright",
@@ -23,6 +26,7 @@ describe("basemapChoices", () => {
       "dark",
     ]);
     expect(choices).not.toContain("auto");
+    expect(choices).not.toContain("satellite");
     for (const removed of ["liberty", "colorful", "fiord"]) {
       expect(choices).not.toContain(removed);
     }
@@ -33,6 +37,14 @@ describe("basemapChoices", () => {
     expect(choices).toHaveLength(7);
     expect(choices).toContain("liberty");
     expect(choices).not.toContain("topographic");
+  });
+
+  // An agent must not accept a provider's licence on a person's behalf.
+  it("leaves out a basemap whose licence is non-commercial", () => {
+    const choices = basemapChoices(
+      createBasemapCatalogue([FAKE_VECTOR_BASEMAP, FAKE_IMAGERY_BASEMAP]),
+    );
+    expect(choices).toEqual([FAKE_VECTOR_BASEMAP.id]);
   });
 });
 

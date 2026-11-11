@@ -82,15 +82,25 @@ export const TOPOGRAPHIC_BASEMAP_ID = "topographic";
 /** Its name in the picker. */
 export const TOPOGRAPHIC_BASEMAP_NAME = "Topographic";
 
+/**
+ * Satellite, the site's hybrid: EOX imagery under the labels and roads of the
+ * default basemap's style. The reference host defines it, because the imagery's
+ * licence is non-commercial, and the SDK does not.
+ */
+export const SATELLITE_BASEMAP_ID = "satellite";
+
+/** Its name in the picker. */
+export const SATELLITE_BASEMAP_NAME = "Satellite";
+
 /** How many basemaps the site's picker offers. */
-export const BASEMAP_COUNT = 5;
+export const BASEMAP_COUNT = 6;
 
 /** The picker's columns. */
 export const BASEMAP_COLUMNS = 3;
 
-/** The picker's rows: the last one is short. */
+/** The picker's rows. */
 export const BASEMAP_ROWS = Math.ceil(BASEMAP_COUNT / BASEMAP_COLUMNS);
 
-/** How many tiles sit in the picker's last, short row. */
+/** How many tiles sit in the picker's last row: a full one with six basemaps. */
 export const BASEMAP_LAST_ROW_COUNT =
   BASEMAP_COUNT - BASEMAP_COLUMNS * (BASEMAP_ROWS - 1);

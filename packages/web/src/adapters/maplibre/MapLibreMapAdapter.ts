@@ -258,9 +258,92 @@ function idleBasemapTiles(): BasemapTiles {
   return { loaded: 0, failed: 0, reported: false };
 }
 
-/** Whether an engine source belongs to the basemap's own style, not to a data layer. */
-function isBasemapSource(sourceId: unknown): boolean {
-  return typeof sourceId === "string" && !sourceId.startsWith(ENGINE_ID_PREFIX);
+/** The id of the image source and layer under an imagery basemap's labels. */
+const IMAGERY_ID = "basemap-imagery";
+
+/**
+ * Whether an engine source's tiles decide if a basemap is available: any of
+ * the basemap's own sources (never a data layer's), except that only the
+ * imagery counts for an imagery basemap, whose labels can load while the
+ * imagery is down and would otherwise hide that it is.
+ */
+function decidesAvailability(
+  basemap: BasemapDefinition | undefined,
+  sourceId: unknown,
+): boolean {
+  if (typeof sourceId !== "string" || sourceId.startsWith(ENGINE_ID_PREFIX)) {
+    return false;
+  }
+  return basemap?.source.kind !== "imagery" || sourceId === IMAGERY_ID;
+}
+
+/**
+ * Removes style layers, and any source only they drew from. A layer the
+ * style does not have is skipped.
+ */
+function removeStyleLayers(map: MapLibreMap, ids: readonly string[]): void {
+  const sources = new Set<string>();
+  for (const id of ids) {
+    const layer = map.getLayer(id);
+    if (layer) {
+      if (layer.source !== undefined) {
+        sources.add(layer.source);
+      }
+      map.removeLayer(id);
+    }
+  }
+  if (sources.size === 0) {
+    return;
+  }
+  for (const { source } of map.getStyle().layers as { source?: string }[]) {
+    if (source !== undefined) {
+      sources.delete(source);
+    }
+  }
+  for (const source of sources) {
+    if (map.getSource(source)) {
+      map.removeSource(source);
+    }
+  }
+}
+
+/**
+ * Turns the label style an imagery basemap loaded into the hybrid: it keeps
+ * only the layers that draw from the basemap's `labelSourceLayers`, then adds
+ * the imagery as a raster source and layer under them. Its `maxzoom` is the
+ * deepest tile level with real detail, so MapLibre enlarges those tiles
+ * further in and requests nothing deeper. Does nothing for another basemap.
+ */
+function composeImagery(
+  map: MapLibreMap,
+  basemap: BasemapDefinition | undefined,
+): void {
+  const source = basemap?.source;
+  if (source?.kind !== "imagery") {
+    return;
+  }
+  const keep = new Set(source.labelSourceLayers);
+  const layers = map.getStyle().layers as {
+    id: string;
+    "source-layer"?: string;
+  }[];
+  removeStyleLayers(
+    map,
+    layers
+      .filter((layer) => !keep.has(layer["source-layer"] ?? ""))
+      .map((layer) => layer.id),
+  );
+  map.addSource(IMAGERY_ID, {
+    type: "raster",
+    tiles: [source.tileUrl],
+    tileSize: source.tileSize,
+    maxzoom: source.maxTileZoom,
+  });
+  const [lowest] = map.getStyle().layers;
+  map.addLayer(
+    { id: IMAGERY_ID, type: "raster", source: IMAGERY_ID },
+    lowest?.id,
+  );
 }
 
 /**
@@ -569,8 +652,10 @@ function sameTiles(a: MapTileOverlay, b: MapTileOverlay): boolean {
 }
 
 /**
- * What MapLibre draws for a basemap: a vector basemap's style URL, or an
- * inline style with one raster source and layer for a raster basemap.
+ * What MapLibre draws for a basemap: a vector basemap's style URL, an
+ * imagery basemap's label style URL (`composeImagery` adds the imagery once
+ * it loads), or an inline style with one raster source and layer for a
+ * raster basemap.
  * @remarks `tileSize` must be passed: MapLibre assumes 512 px raster tiles
  *   otherwise and would request the wrong level. The source `maxzoom` is a
  *   tile level, which for 256 px tiles is the normalised zoom, so it is the
@@ -581,6 +666,9 @@ function styleFor(basemap: BasemapDefinition): string | StyleSpecification {
   const { source } = basemap;
   if (source.kind === "vector") {
     return source.styleUrl;
+  }
+  if (source.kind === "imagery") {
+    return source.labelStyleUrl;
   }
   return {
     version: 8,
@@ -1706,6 +1794,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       // A style may ask for its own projection (VersaTiles Colorful asks for a
       // globe); the app's setting wins. See ARCHITECTURE.md.
       this.applyProjection(map);
+      composeImagery(map, this.basemap);
       this.omitSaveDataLayers(map);
       if (this.pending) {
         this.pending.styleLoaded = true;
@@ -1734,7 +1823,10 @@ export class MapLibreMapAdapter implements MapAdapter {
         tile?: unknown;
         sourceId?: unknown;
       };
-      if (tile !== undefined && isBasemapSource(sourceId)) {
+      if (
+        tile !== undefined &&
+        decidesAvailability(this.basemapTiles.basemap, sourceId)
+      ) {
         this.basemapTiles.loaded += 1;
       }
     });
@@ -1743,7 +1835,12 @@ export class MapLibreMapAdapter implements MapAdapter {
       // Listening to "error" silences MapLibre's own console logging.
       console.error("MapLibre basemap error", event.error);
       if (isTileOrSourceError(event)) {
-        if (isBasemapSource((event as { sourceId?: unknown }).sourceId)) {
+        if (
+          decidesAvailability(
+            this.basemapTiles.basemap,
+            (event as { sourceId?: unknown }).sourceId,
+          )
+        ) {
           this.basemapTiles.failed += 1;
         }
         this.emitter.emit("tileError", undefined);
@@ -1787,28 +1884,10 @@ export class MapLibreMapAdapter implements MapAdapter {
    * layers is requested; a layer or source the style does not have is skipped.
    */
   private omitSaveDataLayers(map: MapLibreMap): void {
-    const ids = this.basemap ? omittedLayers(this.basemap, this.saveData) : [];
-    const sources = new Set<string>();
-    for (const id of ids) {
-      const layer = map.getLayer(id);
-      if (layer) {
-        sources.add(layer.source);
-        map.removeLayer(id);
-      }
-    }
-    if (sources.size === 0) {
-      return;
-    }
-    for (const { source } of map.getStyle().layers as { source?: string }[]) {
-      if (source !== undefined) {
-        sources.delete(source);
-      }
-    }
-    for (const source of sources) {
-      if (map.getSource(source)) {
-        map.removeSource(source);
-      }
-    }
+    removeStyleLayers(
+      map,
+      this.basemap ? omittedLayers(this.basemap, this.saveData) : [],
+    );
   }
 
   /** Sets a basemap's zoom limits and style on the engine. */

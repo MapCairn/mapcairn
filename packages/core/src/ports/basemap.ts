@@ -21,6 +21,30 @@ export type BasemapSource =
       readonly kind: "vector";
       /** A MapLibre style document URL. */
       readonly styleUrl: string;
+    }
+  | {
+      /**
+       * Image tiles, such as satellite imagery, with the labels and roads of a
+       * vector style drawn over them: a hybrid map. The engine adapter loads
+       * the style, keeps only its layers that draw from `labelSourceLayers`
+       * (so its land, water and buildings do not cover the imagery) and puts
+       * the imagery under them.
+       */
+      readonly kind: "imagery";
+      /** A URL template with `{z}`, `{x}` and `{y}` placeholders. */
+      readonly tileUrl: string;
+      /** 256 px tiles, so a tile's `{z}` equals the normalised zoom. */
+      readonly tileSize: 256;
+      /**
+       * The deepest tile level with real detail. Deeper than this the engine
+       * enlarges that level's tiles and asks for none, so the map can zoom in
+       * further than the imagery for its labels and roads.
+       */
+      readonly maxTileZoom: number;
+      /** A MapLibre style document URL whose labels and roads are drawn over the imagery. */
+      readonly labelStyleUrl: string;
+      /** The vector source layers of that style to keep, such as `place` and `transportation`. */
+      readonly labelSourceLayers: readonly string[];
     };
 
 /**
@@ -66,4 +90,12 @@ export interface BasemapDefinition {
    * dropping. Ignored for a raster basemap, which has no style layers.
    */
   readonly saveDataOmitLayers?: readonly string[];
+  /**
+   * True when the provider's licence allows only non-commercial use. The SDK's
+   * own basemaps have none, so it stays free for commercial use; a host that
+   * accepts such terms may add one to its own catalogue. The ui never offers
+   * such a basemap to an agent tool, because an agent must not accept a
+   * provider's licence on a person's behalf.
+   */
+  readonly nonCommercial?: boolean;
 }

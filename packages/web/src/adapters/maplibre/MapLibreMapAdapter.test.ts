@@ -6,7 +6,11 @@ import type {
   MapStyledShapes,
   MapVectorTiles,
 } from "@mapcairn/core";
-import { MapEngineError, metresPerPixel } from "@mapcairn/core";
+import {
+  FAKE_IMAGERY_BASEMAP,
+  MapEngineError,
+  metresPerPixel,
+} from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -1299,6 +1303,127 @@ describe("MapLibreMapAdapter", () => {
       ]);
       loadReliefStyle(map);
       expect(layerIds(map)).not.toContain("relief");
+    });
+  });
+
+  describe("an imagery basemap", () => {
+    /**
+     * Gives the fake engine the label style it "loaded": a background, a land
+     * fill and a water fill to leave out, roads and place names to keep, and a
+     * relief raster drawn from a source of its own.
+     */
+    function loadLabelStyle(map: FakeMap): void {
+      map.basemapLayers = [];
+      map.styleLayers = [
+        { id: "background", type: "background" },
+        { id: "park", source: "planet", "source-layer": "park" },
+        { id: "water", source: "planet", "source-layer": "water" },
+        { id: "relief", source: "relief-source" },
+        { id: "roads", source: "planet", "source-layer": "transportation" },
+        { id: "towns", source: "planet", "source-layer": "place" },
+      ];
+      map.sources.clear();
+      for (const id of ["planet", "relief-source"]) {
+        map.sources.set(id, {});
+      }
+      map.fire("style.load");
+    }
+
+    it("loads the label style", async () => {
+      const { map } = await mounted({ basemap: FAKE_IMAGERY_BASEMAP });
+      expect(map.options.style).toBe("https://tiles.example/labels.json");
+    });
+
+    it("keeps only the label and road layers, and draws the imagery under them", async () => {
+      const { map } = await mounted({ basemap: FAKE_IMAGERY_BASEMAP });
+      loadLabelStyle(map);
+      expect(layerIds(map)).toEqual(["basemap-imagery", "roads", "towns"]);
+      expect(map.getLayer("basemap-imagery")).toMatchObject({
+        type: "raster",
+        source: "basemap-imagery",
+      });
+      expect(map.sources.get("basemap-imagery")).toEqual({
+        type: "raster",
+        tiles: ["https://imagery.example/{z}/{y}/{x}.jpg"],
+        tileSize: 256,
+        maxzoom: 14,
+      });
+      // The relief raster's own source goes with it; the shared one stays.
+      expect([...map.sources.keys()].sort()).toEqual([
+        "basemap-imagery",
+        "planet",
+      ]);
+    });
+
+    it("lets the map zoom past the imagery's deepest level, for the labels", async () => {
+      const { map } = await mounted({ basemap: FAKE_IMAGERY_BASEMAP });
+      // MapLibre counts 512 px tiles, one below the normalised zoom of 17.
+      expect(map.options.maxZoom).toBe(16);
+    });
+
+    it("composes the imagery again after a swap to it, and leaves other basemaps alone", async () => {
+      const { adapter, map } = await mounted();
+      loadLabelStyle(map);
+      expect(layerIds(map)).not.toContain("basemap-imagery");
+      expect(layerIds(map)).toContain("background");
+      const swapping = adapter.setBasemap(FAKE_IMAGERY_BASEMAP);
+      expect(map.callsOf("setStyle").at(-1)?.args).toEqual([
+        "https://tiles.example/labels.json",
+        { diff: false },
+      ]);
+      loadLabelStyle(map);
+      await swapping;
+      expect(layerIds(map)[0]).toBe("basemap-imagery");
+    });
+
+    it("draws data layers over the imagery", async () => {
+      const { adapter, map } = await mounted({ basemap: FAKE_IMAGERY_BASEMAP });
+      adapter.setFeatureLayer("quakes", [
+        {
+          id: "a",
+          position: { lat: 0, lng: 0 },
+          colour: "#e69f00",
+          radius: 6,
+          shape: "square" as const,
+        },
+      ]);
+      loadLabelStyle(map);
+      expect(layerIds(map)[0]).toBe("basemap-imagery");
+      expect(layerIds(map)).toContain("mapcairn:quakes:points");
+    });
+
+    describe("availability", () => {
+      async function watched() {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const { adapter, map } = await mounted({
+          basemap: FAKE_IMAGERY_BASEMAP,
+        });
+        const unavailable = vi.fn();
+        adapter.on("basemapUnavailable", unavailable);
+        loadLabelStyle(map);
+        return { map, unavailable };
+      }
+      const tile = (map: FakeMap, sourceId: string, failed: boolean) =>
+        failed
+          ? map.fire("error", { error: new Error("tile"), tile: {}, sourceId })
+          : map.fire("sourcedata", { sourceId, tile: {} });
+
+      it("is reported when every imagery tile failed, even though the labels loaded", async () => {
+        const { map, unavailable } = await watched();
+        tile(map, "planet", false);
+        tile(map, "basemap-imagery", true);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledWith(FAKE_IMAGERY_BASEMAP);
+      });
+
+      it("is not reported while some imagery loaded, whatever the labels do", async () => {
+        const { map, unavailable } = await watched();
+        tile(map, "planet", true);
+        tile(map, "basemap-imagery", true);
+        tile(map, "basemap-imagery", false);
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+      });
     });
   });
 

@@ -3,6 +3,7 @@ import {
   type BasemapDefinition,
   createBasemapCatalogue,
   createFakeServices,
+  FAKE_IMAGERY_BASEMAP,
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
   FakeDevicePreferences,
@@ -377,6 +378,31 @@ describe("BasemapPicker with a host's basemaps", () => {
     const { onChange } = renderHosted("fake-vector");
     fireEvent.click(screen.getByRole("radio", { name: "Fake plain" }));
     expect(onChange).toHaveBeenCalledWith("fake-plain");
+  });
+
+  it("notes in Save data mode that an imagery basemap uses more data, as a raster one does", () => {
+    const services = createFakeServices({
+      basemaps: createBasemapCatalogue([
+        FAKE_VECTOR_BASEMAP,
+        FAKE_RASTER_BASEMAP,
+        FAKE_IMAGERY_BASEMAP,
+      ]),
+      preferences: new FakeDevicePreferences({ saveData: true }),
+    });
+    render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <BasemapPicker value="fake-vector" onChange={vi.fn()} />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    expect(
+      screen.getByRole("radio", { name: "Fake imagery Uses more data" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("basemap-data-note-fake-raster"),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("basemap-data-note-fake-vector")).toBeNull();
   });
 
   it("draws a plain swatch, and requests no image, for a basemap with no preview", () => {

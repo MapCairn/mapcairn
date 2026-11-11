@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { FAKE_RASTER_BASEMAP, FAKE_VECTOR_BASEMAP } from "../fakes/fixtures";
+import {
+  FAKE_IMAGERY_BASEMAP,
+  FAKE_RASTER_BASEMAP,
+  FAKE_VECTOR_BASEMAP,
+} from "../fakes/fixtures";
 import type { BasemapDefinition } from "../ports/basemap";
 import {
   BASEMAPS,
@@ -12,7 +16,22 @@ import {
   getBasemap,
   MAPLIBRE_CREDIT,
   omittedLayers,
+  usesMoreData,
 } from "./basemaps";
+
+/** Every address a basemap's tiles or style come from, with the tile placeholders filled. */
+function sourceUrls(basemap: BasemapDefinition): readonly string[] {
+  const { source } = basemap;
+  const tile = (url: string) => url.replace(/\{[zxy]\}/g, "0");
+  switch (source.kind) {
+    case "vector":
+      return [source.styleUrl];
+    case "raster":
+      return [tile(source.tileUrl)];
+    case "imagery":
+      return [tile(source.tileUrl), source.labelStyleUrl];
+  }
+}
 
 describe("BASEMAPS", () => {
   it("contains the seven built-in basemaps in picker order, the default first: the general-purpose styles, then the light ones, then the dark ones", () => {
@@ -38,13 +57,23 @@ describe("BASEMAPS", () => {
         "OpenStreetMap Foundation tile policy: credit and a valid Referer",
     };
     for (const basemap of BASEMAPS) {
-      const url =
-        basemap.source.kind === "vector"
-          ? basemap.source.styleUrl
-          : basemap.source.tileUrl.replace(/\{[zxy]\}/g, "0");
-      expect(Object.keys(commercialOrigins), basemap.id).toContain(
-        new URL(url).origin,
-      );
+      for (const url of sourceUrls(basemap)) {
+        expect(Object.keys(commercialOrigins), basemap.id).toContain(
+          new URL(url).origin,
+        );
+      }
+    }
+  });
+
+  // A host may add a basemap whose licence is non-commercial, such as satellite
+  // imagery; the SDK's own list must never hold one.
+  it("holds no basemap whose licence is non-commercial", () => {
+    for (const basemap of BASEMAPS) {
+      expect(basemap.nonCommercial, basemap.id).toBeUndefined();
+      for (const entry of basemap.attribution) {
+        expect(entry.text, basemap.id).not.toMatch(/non-?commercial|\bNC\b/i);
+        expect(entry.href ?? "", basemap.id).not.toMatch(/by-nc/i);
+      }
     }
   });
 
@@ -227,6 +256,17 @@ describe("BASEMAPS", () => {
     for (const basemap of BASEMAPS) {
       expect(Object.keys(basemap)).not.toContain("darkVariantId");
     }
+  });
+});
+
+describe("usesMoreData", () => {
+  it("is true for a basemap drawn from image tiles: raster or imagery", () => {
+    expect(usesMoreData(FAKE_RASTER_BASEMAP)).toBe(true);
+    expect(usesMoreData(FAKE_IMAGERY_BASEMAP)).toBe(true);
+  });
+
+  it("is false for a vector basemap", () => {
+    expect(usesMoreData(FAKE_VECTOR_BASEMAP)).toBe(false);
   });
 });
 
