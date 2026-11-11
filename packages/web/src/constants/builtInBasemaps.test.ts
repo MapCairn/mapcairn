@@ -66,8 +66,8 @@ describe("the production CSP and the site's basemaps", () => {
   it("allows exactly the origins the five basemaps need, and none for a basemap the site does not offer", () => {
     const origins = new Set(HOST_BASEMAP_CATALOGUE.basemaps.map(sourceOrigin));
     expect([...origins].sort()).toEqual([
-      "https://a.tile-cyclosm.openstreetmap.fr",
       "https://tile.openstreetmap.org",
+      "https://tile.opentopomap.org",
       "https://tiles.openfreemap.org",
     ]);
     const offered = new Set(HOST_BASEMAP_CATALOGUE.basemaps.map((b) => b.id));

@@ -27,11 +27,11 @@ NASA data is openly shared; its data use guidance says NASA material may not be 
 |---|---|---|
 | [OpenFreeMap](https://openfreemap.org) | Bright, Positron and Dark vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors |
 | [OpenStreetMap](https://www.openstreetmap.org) | Streets raster tiles from `tile.openstreetmap.org` | © OpenStreetMap contributors, linked to [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright) |
-| [CyclOSM](https://www.cyclosm.org), hosted by [OpenStreetMap France](https://www.openstreetmap.fr) | Topographic raster tiles from `a.tile-cyclosm.openstreetmap.fr` | CyclOSM, © OpenStreetMap contributors, Tiles hosted by OpenStreetMap France |
+| [OpenTopoMap](https://opentopomap.org) | Topographic raster tiles from `tile.opentopomap.org`, under [CC-BY-SA](https://creativecommons.org/licenses/by-sa/3.0/), which allows commercial use with no fee | © OpenStreetMap contributors, SRTM, © OpenTopoMap, CC-BY-SA |
 
-OpenStreetMap data is available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/). Use of the OpenStreetMap tile servers follows the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). The CyclOSM [style repository](https://github.com/cyclosm/cyclosm-cartocss-style) says its tiles "can be reused under the general OpenStreetMap tile usage policy"; the style is BSD-3-Clause licensed, and the credit is the one cyclosm.org shows. The map displays the active provider's attribution, followed by MapLibre's.
+OpenStreetMap data is available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/). Use of the OpenStreetMap tile servers follows the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). OpenTopoMap's [about page](https://opentopomap.org/about) allows its tiles to be used while the server is not overloaded by mass downloads, gives no availability guarantee and asks to be told of use. The credit there reads "Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: © OpenTopoMap (CC-BY-SA)" and is shown in English. The map displays the active provider's attribution, followed by MapLibre's.
 
-The reference site offers these five basemaps: Bright, Positron, Streets, Topographic and Dark. The SDK in `packages/core` also defines Liberty and Fiord (OpenFreeMap) and Colorful (a pre-built style from [VersaTiles](https://versatiles.org)), which the site does not offer and does not load from. A host that offers Colorful carries VersaTiles' own credit terms, including the ESA WorldCover credit for its land cover tiles, which the SDK's definition holds.
+The reference site offers these five basemaps: Bright, Positron, Streets, Topographic and Dark. Topographic is defined by the host in `packages/web/src/basemaps`, not by the SDK, so an app built on the SDK sends no traffic to a volunteer-run server unless its own host chooses to. The SDK in `packages/core` defines seven basemaps: Bright, Positron, Dark, Liberty and Fiord (OpenFreeMap), Streets, and Colorful (a pre-built style from [VersaTiles](https://versatiles.org)), which the site does not offer and does not load from. A host that offers Colorful carries VersaTiles' own credit terms, including the ESA WorldCover credit for its land cover tiles, which the SDK's definition holds.
 
 ### Basemap previews
 
@@ -41,7 +41,7 @@ The basemap picker previews in `packages/web/public/basemaps/` are small images 
 |---|---|---|
 | `bright.jpg`, `positron.jpg`, `dark.jpg` | OpenFreeMap vector tiles and styles | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap |
 | `osm.jpg` | OpenStreetMap standard tiles | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
-| `topographic.jpg` | CyclOSM tiles | CyclOSM, © OpenStreetMap contributors ([ODbL](https://opendatacommons.org/licenses/odbl/)), tiles hosted by OpenStreetMap France |
+| `topographic.jpg` | OpenTopoMap tiles | © OpenStreetMap contributors, SRTM, © OpenTopoMap ([CC-BY-SA](https://creativecommons.org/licenses/by-sa/3.0/)) |
 
 OpenFreeMap asks for this attribution wherever its maps appear in images or other media. Regenerate the previews with the script rather than editing them by hand, and keep this table in step with the basemap definitions in `packages/core/src/basemaps` and `packages/web/src/basemaps`.
 

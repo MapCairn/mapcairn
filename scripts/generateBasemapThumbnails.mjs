@@ -10,16 +10,17 @@
  * Playwright's preview owns) serves one HTML page and the installed
  * `maplibre-gl` files, and headless Chromium draws each basemap with MapLibre
  * from the style and tile URLs defined in
- * `packages/core/src/basemaps/basemaps.ts`, so the previews cannot drift from
- * what the picker selects. Every view is the same: the Cape Town Waterfront at
- * 160 by 120 CSS px, captured at twice that size.
+ * `packages/core/src/basemaps/basemaps.ts` and in the host's own
+ * `packages/web/src/basemaps/openTopoMapBasemap.ts`, so the previews cannot
+ * drift from what the picker selects. Every view is the same: the Cape Town
+ * Waterfront at 160 by 120 CSS px, captured at twice that size.
  *
  * The images are small screenshots of OpenFreeMap (OpenMapTiles data and
- * OpenStreetMap contributors) and of the OpenStreetMap standard tile layer,
- * so they carry the credits recorded in `ATTRIBUTIONS.md`. The page needs the
- * network, and a GPU-less machine falls back to software WebGL. Chromium sends
- * its own user agent and the page's Referer; nothing pretends to be another
- * client, as the OpenStreetMap tile usage policy asks.
+ * OpenStreetMap contributors), of the OpenStreetMap standard tile layer and of
+ * OpenTopoMap, so they carry the credits recorded in `ATTRIBUTIONS.md`. The
+ * page needs the network, and a GPU-less machine falls back to software WebGL.
+ * Chromium sends its own user agent and the page's Referer; nothing pretends
+ * to be another client, as the OpenStreetMap tile usage policy asks.
  */
 import {
   createReadStream,
@@ -57,9 +58,16 @@ const START_QUALITY = 80;
 const MIN_QUALITY = 55;
 const BUDGET_BYTES = 15 * 1024;
 
-const { BASEMAPS } = await import(
+const { BASEMAPS: SDK_BASEMAPS } = await import(
   pathToFileURL(join(ROOT, "packages/core/src/basemaps/basemaps.ts")).href
 );
+const { OPEN_TOPO_MAP_BASEMAP } = await import(
+  pathToFileURL(join(ROOT, "packages/web/src/basemaps/openTopoMapBasemap.ts"))
+    .href
+);
+
+/** The SDK's basemaps and those only the reference host defines, which import types only so plain Node loads them. */
+const BASEMAPS = [...SDK_BASEMAPS, OPEN_TOPO_MAP_BASEMAP];
 
 /** The basemaps to render: those named on the command line, or all of them. */
 const REQUESTED = process.argv.slice(2);

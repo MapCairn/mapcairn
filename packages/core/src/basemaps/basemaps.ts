@@ -63,29 +63,6 @@ const VECTOR_MAX_ZOOM = 22;
 // The standard OpenStreetMap tile layer serves levels 0 to 19.
 const OSM_MAX_ZOOM = 19;
 
-// CyclOSM serves levels 0 to 20; level 21 answers 422 (checked 2026-11-11).
-const CYCLOSM_MAX_ZOOM = 20;
-
-// CyclOSM is OpenStreetMap France's free topographic-and-cycling map: contour
-// lines, shaded relief, land cover and paths drawn from OpenStreetMap data. The
-// style's repository says "Tiles can be reused under the general OpenStreetMap
-// tile usage policy", the same standing as the Streets basemap: credit, a valid
-// Referer, no heavy use, no availability guarantee. The style itself is BSD
-// licensed. The credit follows the one cyclosm.org gives: the style, the map
-// data and the host. It draws cycle routes more prominently than a plain
-// topographic map would.
-const CYCLOSM_CREDITS: readonly BasemapAttributionEntry[] = [
-  {
-    text: "CyclOSM",
-    href: "https://github.com/cyclosm/cyclosm-cartocss-style/releases",
-  },
-  OPEN_STREET_MAP_CREDIT,
-  {
-    text: "Tiles hosted by OpenStreetMap France",
-    href: "https://www.openstreetmap.fr",
-  },
-];
-
 const BRIGHT: BasemapDefinition = {
   id: "bright",
   name: "Bright",
@@ -169,21 +146,6 @@ const DARK: BasemapDefinition = {
   // raster source but draws no raster layer from it (checked 2026-11-11).
 };
 
-const TOPOGRAPHIC: BasemapDefinition = {
-  id: "topographic",
-  name: "Topographic",
-  source: {
-    kind: "raster",
-    tileUrl: "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png",
-    tileSize: 256,
-  },
-  minZoom: 0,
-  maxZoom: CYCLOSM_MAX_ZOOM,
-  thumbnail: "/basemaps/topographic.jpg",
-  attribution: CYCLOSM_CREDITS,
-  appearance: "light",
-};
-
 /** Every built-in basemap, in the order the picker shows them, the default first. */
 export const BASEMAPS: readonly BasemapDefinition[] = [
   BRIGHT,
@@ -217,7 +179,6 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
     attribution: [OPEN_STREET_MAP_CREDIT],
     appearance: "light",
   },
-  TOPOGRAPHIC,
   FIORD,
   DARK,
 ];

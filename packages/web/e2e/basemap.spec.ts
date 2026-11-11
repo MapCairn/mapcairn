@@ -247,13 +247,13 @@ test.describe("basemaps", () => {
     ).toBeChecked();
   });
 
-  test("Topographic loads CyclOSM raster tiles, credits them in full and is saved", async ({
+  test("Topographic loads OpenTopoMap raster tiles, credits them in full and is saved", async ({
     page,
     mapPage,
   }) => {
     await mapPage.goto(START);
     await mapPage.openMapOptions();
-    const tileRequest = page.waitForRequest(/tile-cyclosm\.openstreetmap\.fr/);
+    const tileRequest = page.waitForRequest(/tile\.opentopomap\.org/);
     await mapPage.chooseBasemap(TOPOGRAPHIC_BASEMAP_NAME);
     await tileRequest;
     await expect.poll(() => mapPage.hashBasemap()).toBe(TOPOGRAPHIC_BASEMAP_ID);
@@ -265,9 +265,10 @@ test.describe("basemaps", () => {
     await collapseCredits(mapPage);
     await mapPage.creditsButton.click();
     await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
-      "CyclOSM",
       "© OpenStreetMap contributors",
-      "Tiles hosted by OpenStreetMap France",
+      "SRTM",
+      "© OpenTopoMap",
+      "CC-BY-SA",
       "MapLibre",
     ]);
 

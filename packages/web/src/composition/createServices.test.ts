@@ -37,7 +37,7 @@ describe("createServices", () => {
     );
   });
 
-  it("offers the site's five basemaps, not the SDK's eight, with Bright the default", () => {
+  it("offers the site's five basemaps, not the SDK's seven, with Bright the default", () => {
     const { basemaps } = createServices();
     expect(basemaps).toBe(HOST_BASEMAP_CATALOGUE);
     expect(basemaps).not.toBe(BUILT_IN_BASEMAP_CATALOGUE);

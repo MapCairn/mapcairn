@@ -9,9 +9,9 @@ export const TRANSPARENT_PNG = Buffer.from(
   "base64",
 );
 
-/** The raster tile hosts of the built-in Streets and Topographic basemaps. */
+/** The raster tile hosts of the site's Streets and Topographic basemaps. */
 export const RASTER_TILE_PATTERN =
-  /(?:tile\.openstreetmap\.org|tile-cyclosm\.openstreetmap\.fr)/;
+  /(?:tile\.openstreetmap\.org|tile\.opentopomap\.org)/;
 
 /**
  * Vector style documents from OpenFreeMap: Bright (the default), Positron and

@@ -71,7 +71,12 @@ export const DARK_BASEMAP_ID = "dark";
 /** Its name in the picker. */
 export const DARK_BASEMAP_NAME = "Dark";
 
-/** CyclOSM, a second raster basemap, from a different host than OpenStreetMap's own. */
+/**
+ * OpenTopoMap, the site's Topographic basemap and a second raster basemap, from a
+ * different host than OpenStreetMap's own. The reference host defines it; the SDK
+ * does not, so a host that offers the SDK's whole list (`scriptBasemaps`) has no
+ * Topographic.
+ */
 export const TOPOGRAPHIC_BASEMAP_ID = "topographic";
 
 /** Its name in the picker. */

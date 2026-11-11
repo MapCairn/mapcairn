@@ -49,7 +49,7 @@ describe("PrivacyPage", () => {
 
     expect(screen.getByText(/OpenFreeMap/)).toBeInTheDocument();
     expect(screen.getByText(/OpenStreetMap Foundation/)).toBeInTheDocument();
-    expect(screen.getByText(/OpenStreetMap France/)).toBeInTheDocument();
+    expect(screen.getByText(/OpenTopoMap/)).toBeInTheDocument();
     expect(
       screen.getByText(/OpenStreetMap's Nominatim geocoding service/),
     ).toBeInTheDocument();
@@ -141,12 +141,12 @@ describe("PrivacyPage", () => {
     expect(text).toMatch(/not saved or put in the page address/);
   });
 
-  it("names the basemap tile providers that may log requests: OpenFreeMap, the OpenStreetMap Foundation for Streets, and OpenStreetMap France for Topographic", () => {
+  it("names the basemap tile providers that may log requests: OpenFreeMap, the OpenStreetMap Foundation for Streets, and OpenTopoMap for Topographic", () => {
     render(<PrivacyPage />);
 
     const text = screen.getByText(/The basemap tile providers/).textContent;
     expect(text).toMatch(
-      /OpenFreeMap, the OpenStreetMap Foundation when you choose the Streets basemap, and OpenStreetMap France when you choose the Topographic basemap, may log tile requests, including your IP address/,
+      /OpenFreeMap, the OpenStreetMap Foundation when you choose the Streets basemap, and OpenTopoMap when you choose the Topographic basemap, may log tile requests, including your IP address/,
     );
   });
 

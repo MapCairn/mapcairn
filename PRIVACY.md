@@ -52,7 +52,7 @@ policy.
 ## Map tiles and location search
 
 The basemap tile providers, OpenFreeMap, the OpenStreetMap Foundation when you
-choose the Streets basemap, and OpenStreetMap France when you choose the
+choose the Streets basemap, and OpenTopoMap when you choose the
 Topographic basemap, may log tile requests, including your IP address, as part
 of serving the map. This is standard for any web map. Your browser makes those
 requests itself: they carry your IP address, its usual request headers (such as

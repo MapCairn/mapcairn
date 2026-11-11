@@ -9,7 +9,7 @@ const AA_NON_TEXT = 3;
 /**
  * The colour chrome that has no surface of its own would sit on, per basemap:
  * the land colour of its style, which is the largest area behind the bottom
- * corners. It lists every built-in basemap, not only the five the site offers,
+ * corners. It lists every built-in basemap, not only the ones the site offers,
  * so a host that offers Liberty, Colorful or Fiord is covered too. A new
  * built-in basemap needs one more entry here, and the first test below fails
  * until it has one.
@@ -22,6 +22,10 @@ const basemapBackdrops: Record<string, string> = {
   osm: "#f2efe9",
   fiord: "#45516e",
   dark: "#0c0c0c",
+};
+
+/** The same for a basemap only the reference host defines, which the second test below checks. */
+const hostBasemapBackdrops: Record<string, string> = {
   topographic: "#f2efe9",
 };
 
@@ -32,7 +36,11 @@ const extremeBackdrops: Record<string, string> = {
   midGrey: "#808080",
 };
 
-const allBackdrops = { ...basemapBackdrops, ...extremeBackdrops };
+const allBackdrops = {
+  ...basemapBackdrops,
+  ...hostBasemapBackdrops,
+  ...extremeBackdrops,
+};
 const themes = ["light", "dark"] as const;
 const colourSets = ["colour", "opaque", "contrastMore"] as const;
 
@@ -45,7 +53,10 @@ describe("chrome legibility over every basemap", () => {
 
   it("covers every basemap the site offers", () => {
     for (const basemap of HOST_BASEMAP_CATALOGUE.basemaps) {
-      expect(basemapBackdrops, basemap.id).toHaveProperty(basemap.id);
+      expect(
+        { ...basemapBackdrops, ...hostBasemapBackdrops },
+        basemap.id,
+      ).toHaveProperty(basemap.id);
     }
   });
 

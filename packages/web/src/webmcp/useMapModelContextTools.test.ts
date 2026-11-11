@@ -29,7 +29,10 @@ describe("basemapChoices", () => {
   });
 
   it("follows whatever catalogue the host supplies", () => {
-    expect(basemapChoices(BUILT_IN_BASEMAP_CATALOGUE)).toHaveLength(8);
+    const choices = basemapChoices(BUILT_IN_BASEMAP_CATALOGUE);
+    expect(choices).toHaveLength(7);
+    expect(choices).toContain("liberty");
+    expect(choices).not.toContain("topographic");
   });
 });
 
