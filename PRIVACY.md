@@ -62,7 +62,7 @@ requests itself: they carry your IP address, its usual request headers (such as
 its user agent) and this site's address as the referrer, and nothing this site
 has stored about you. When you search (by pressing Enter or the Search
 button), your query is sent to OpenStreetMap's Nominatim geocoding service,
-which may likewise log the query and your IP address. Nothing is sent while you type.
+which may likewise log the query and your IP address. Nothing is sent while you type. A search that is only a pair of coordinates is read in your browser and sent nowhere.
 
 ## Data layers
 

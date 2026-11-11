@@ -3,6 +3,7 @@ import {
   announceSearchError,
   announceSearchResults,
   type Bounds,
+  coordinateSearchResult,
   PortAbortError,
   SearchError,
   type SearchErrorKind,
@@ -55,7 +56,8 @@ export interface UseSearch {
    */
   readonly setQuery: (query: string) => void;
   /**
-   * Searches for the current text, for Enter or the Search button. Does
+   * Searches for the current text, for Enter or the Search button. Answers a
+   * coordinate pair itself, without the provider. Does
    * nothing when the trimmed text is shorter than {@link MIN_SEARCH_LENGTH},
    * or when the text's own search is already loading or showing its outcome
    * (after a failure it searches again).
@@ -77,7 +79,10 @@ const IDLE: SearchState = { status: "idle" };
 
 /**
  * Cancellable place search over the services' `SearchProvider`, run only
- * when the user submits. Nothing is sent while they type, as the
+ * when the user submits. Text that is a coordinate pair, such as
+ * `-26.2041, 28.0473` or `26°12'14.8"S 28°02'50.3"E`, is answered here with
+ * one result for that place and never reaches the provider, so it sends no
+ * request. Nothing is sent while they type, as the
  * OpenStreetMap Foundation's Nominatim policy forbids client-side
  * autocomplete. This is the one place that owns the `AbortController`: each
  * search aborts the one before it, and an aborted request never changes state
@@ -119,9 +124,23 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
     [announceRef],
   );
 
+  const showResults = useCallback(
+    (results: readonly SearchResult[]) => {
+      setState({ status: "results", results });
+      announceOnce(announceSearchResults(results.length), "polite");
+    },
+    [announceOnce],
+  );
+
   const run = useCallback(
     async (text: string) => {
       controller.current?.abort();
+      const coordinates = coordinateSearchResult(text);
+      if (coordinates !== null) {
+        controller.current = null;
+        showResults([coordinates]);
+        return;
+      }
       const own = new AbortController();
       controller.current = own;
       setState({ status: "loading" });
@@ -137,8 +156,7 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
           setState({ status: "empty" });
           announceOnce(announceNoResults(), "polite");
         } else {
-          setState({ status: "results", results });
-          announceOnce(announceSearchResults(results.length), "polite");
+          showResults(results);
         }
       } catch (error) {
         if (own.signal.aborted || error instanceof PortAbortError) {
@@ -150,7 +168,7 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
         announceOnce(announceSearchError(kind), "assertive");
       }
     },
-    [providerRef, getBiasRef, announceOnce],
+    [providerRef, getBiasRef, announceOnce, showResults],
   );
 
   const setQuery = useCallback(

@@ -382,4 +382,113 @@ describe("useSearch", () => {
     unmount();
     expect(signal?.aborted).toBe(true);
   });
+
+  describe("coordinates", () => {
+    const JOHANNESBURG_RESULT: SearchResult = {
+      id: "coordinates:-26.20410,28.04730",
+      label: "Coordinates 26.20410° S, 28.04730° E",
+      centre: { lat: -26.2041, lng: 28.0473 },
+    };
+
+    it.each([
+      "-26.2041, 28.0473",
+      "-26.2041 28.0473",
+      "26.2041S 28.0473E",
+      "S26.2041 E28.0473",
+      `26°12'14.8"S 28°02'50.3"E`,
+    ])(
+      "answers %j with its own result and never asks the geocoder",
+      async (text) => {
+        const { result, services } = setup();
+        await searchFor(result, text);
+        expect(services.fakes.search.searchCalls).toHaveLength(0);
+        const state = result.current.state;
+        expect(state.status).toBe("results");
+        if (state.status === "results") {
+          expect(state.results).toHaveLength(1);
+          expect(state.results[0]?.centre.lat).toBeCloseTo(-26.2041, 4);
+          expect(state.results[0]?.centre.lng).toBeCloseTo(28.0473, 4);
+        }
+      },
+    );
+
+    it("never goes through a loading state", async () => {
+      const { result } = setup();
+      act(() => result.current.setQuery("-26.2041, 28.0473"));
+      act(() => result.current.submit());
+      expect(result.current.state).toEqual({
+        status: "results",
+        results: [JOHANNESBURG_RESULT],
+      });
+    });
+
+    it("announces the result the way a search does", async () => {
+      const { result } = setup();
+      await searchFor(result, "-26.2041, 28.0473");
+      expect(polite()).toBe("1 result");
+    });
+
+    it("sends no request while the coordinates are only typed", async () => {
+      const { result, services } = setup();
+      act(() => result.current.setQuery("-26.2041, 28.0473"));
+      await advance(10_000);
+      expect(result.current.state).toEqual({ status: "idle" });
+      expect(services.fakes.search.searchCalls).toHaveLength(0);
+    });
+
+    it("still searches for text that is not a coordinate pair", async () => {
+      const { result, services } = setup();
+      services.fakes.search.setResults("2196", [CAPE_TOWN]);
+      await searchFor(result, "2196");
+      expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
+        "2196",
+      ]);
+      await searchFor(result, "91, 200");
+      expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
+        "2196",
+        "91, 200",
+      ]);
+    });
+
+    it("cancels a search in flight when coordinates are submitted instead", async () => {
+      const { result, services } = setup();
+      services.fakes.search.holdNext();
+      await searchFor(result, "cape");
+      const signal = services.fakes.search.searchCalls[0]?.options?.signal;
+      await searchFor(result, "-26.2041, 28.0473");
+      expect(signal?.aborted).toBe(true);
+      expect(result.current.state).toEqual({
+        status: "results",
+        results: [JOHANNESBURG_RESULT],
+      });
+    });
+
+    it("does not answer again for the same text while its result shows", async () => {
+      const { result } = setup();
+      await searchFor(result, "-26.2041, 28.0473");
+      await act(async () => result.current.submit());
+      expect(result.current.state.status).toBe("results");
+      expect(polite()).toBe("1 result");
+    });
+
+    it("answers again on retry", async () => {
+      const { result, services } = setup();
+      await searchFor(result, "-26.2041, 28.0473");
+      act(() => result.current.retry());
+      expect(result.current.state).toEqual({
+        status: "results",
+        results: [JOHANNESBURG_RESULT],
+      });
+      expect(services.fakes.search.searchCalls).toHaveLength(0);
+    });
+
+    it("reads the label of its own result back, so the box can show it", async () => {
+      const { result, services } = setup();
+      await searchFor(result, "-26.2041, 28.0473");
+      act(() => result.current.settle(JOHANNESBURG_RESULT.label));
+      await act(async () => result.current.submit());
+      expect(result.current.state.status).toBe("results");
+      expect(services.fakes.search.searchCalls).toHaveLength(0);
+    });
+  });
 });

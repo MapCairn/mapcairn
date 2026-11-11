@@ -228,7 +228,87 @@ test.describe("search", () => {
     await expect(mapPage.searchRetry).toHaveCount(0);
   });
 
+  test("a coordinate pair is its own result, picked like any other", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptSearch(page);
+    await mapPage.goto();
+    await mapPage.search("-26.2041, 28.0473");
+    await expect(mapPage.searchOptions).toHaveText([
+      "Coordinates 26.20410° S, 28.04730° E",
+    ]);
+    await expect(mapPage.searchPanel).not.toContainText("Searching");
+    await expect.poll(() => mapPage.announcements()).toContain("1 result");
+
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(mapPage.searchInput).toHaveValue(
+      "Coordinates 26.20410° S, 28.04730° E",
+    );
+    await expect(mapPage.searchInput).toBeFocused();
+    await expect
+      .poll(async () => (await mapPage.hashView())?.lat)
+      .toBeCloseTo(-26.2041, 3);
+    const view = await mapPage.hashView();
+    expect(view?.lng).toBeCloseTo(28.0473, 3);
+    expect(view?.zoom).toBe(14);
+    expect(await searchedQueries(page)).toEqual([]);
+  });
+
+  test("degrees, minutes and seconds name the same place", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptSearch(page);
+    await mapPage.goto();
+    await mapPage.search(`26°12'14.8"S 28°02'50.3"E`);
+    await expect(mapPage.searchOptions).toHaveText([
+      "Coordinates 26.20411° S, 28.04731° E",
+    ]);
+    await mapPage.searchOptions.first().click();
+    await expect
+      .poll(async () => (await mapPage.hashView())?.lng)
+      .toBeCloseTo(28.0473, 3);
+    expect(await searchedQueries(page)).toEqual([]);
+  });
+
+  test("text that only looks like numbers is searched as a place", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptSearch(page);
+    await mapPage.goto();
+    await mapPage.search("2196");
+    await expect(mapPage.searchOptions).toHaveCount(3);
+    await mapPage.search("95, 200");
+    await expect.poll(() => searchedQueries(page)).toEqual(["2196", "95, 200"]);
+  });
+
   test.describe("through the real Nominatim adapter", () => {
+    test("a coordinate pair sends no request to the geocoder", async ({
+      page,
+      mapPage,
+    }) => {
+      const requests: string[] = [];
+      page.on("request", (request) => {
+        if (GEOCODER_SEARCH_PATTERN.test(request.url())) {
+          requests.push(request.url());
+        }
+      });
+      await mapPage.goto();
+      await mapPage.search("-26.2041, 28.0473");
+      await expect(mapPage.searchOptions).toHaveCount(1);
+      await mapPage.searchOptions.first().click();
+      await expect
+        .poll(async () => (await mapPage.hashView())?.lat)
+        .toBeCloseTo(-26.2041, 3);
+      await mapPage.search("Soweto");
+      await expect(mapPage.searchOptions).toHaveCount(1);
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toContain("Soweto");
+    });
+
     test("finds places anywhere, with no coverage restriction, favouring the visible map", async ({
       page,
       mapPage,
