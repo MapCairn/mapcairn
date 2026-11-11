@@ -65,8 +65,14 @@ export const NEUTRAL_DARK_BASEMAP_ID = "dark";
 /** Its name in the picker. */
 export const NEUTRAL_DARK_BASEMAP_NAME = "Dark";
 
+/** CyclOSM, a second raster basemap, from a different host than OpenStreetMap's own. */
+export const TOPOGRAPHIC_BASEMAP_ID = "topographic";
+
+/** Its name in the picker. */
+export const TOPOGRAPHIC_BASEMAP_NAME = "Topographic";
+
 /** How many basemaps the picker offers. */
-export const BASEMAP_COUNT = 7;
+export const BASEMAP_COUNT = 8;
 
 /** The picker's columns. */
 export const BASEMAP_COLUMNS = 3;

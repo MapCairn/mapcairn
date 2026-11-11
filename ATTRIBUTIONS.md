@@ -28,8 +28,9 @@ NASA data is openly shared; its data use guidance says NASA material may not be 
 | [OpenFreeMap](https://openfreemap.org) | Bright, Liberty, Positron, Fiord and Dark vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors |
 | [VersaTiles](https://versatiles.org) | Colorful vector style and tiles from the public tile server at `tiles.versatiles.org` | © OpenStreetMap contributors, VersaTiles, © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium, CC BY 4.0 |
 | [OpenStreetMap](https://www.openstreetmap.org) | Streets raster tiles from `tile.openstreetmap.org` | © OpenStreetMap contributors, linked to [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright) |
+| [CyclOSM](https://www.cyclosm.org), hosted by [OpenStreetMap France](https://www.openstreetmap.fr) | Topographic raster tiles from `a.tile-cyclosm.openstreetmap.fr` | CyclOSM, © OpenStreetMap contributors, Tiles hosted by OpenStreetMap France |
 
-OpenStreetMap data is available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/). Use of the OpenStreetMap tile servers follows the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). The map displays the active provider's attribution, followed by MapLibre's.
+OpenStreetMap data is available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/). Use of the OpenStreetMap tile servers follows the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). The CyclOSM [style repository](https://github.com/cyclosm/cyclosm-cartocss-style) says its tiles "can be reused under the general OpenStreetMap tile usage policy"; the style is BSD-3-Clause licensed, and the credit is the one cyclosm.org shows. The map displays the active provider's attribution, followed by MapLibre's.
 
 ### VersaTiles Colorful
 
@@ -53,6 +54,7 @@ The basemap picker previews in `packages/web/public/basemaps/` are small images 
 | `bright.jpg`, `liberty.jpg`, `positron.jpg`, `fiord.jpg`, `dark.jpg` | OpenFreeMap vector tiles and styles | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap |
 | `colorful.jpg` | VersaTiles Colorful style and tiles | © OpenStreetMap contributors ([ODbL](https://opendatacommons.org/licenses/odbl/)), VersaTiles, ESA WorldCover project 2021 and modified Copernicus Sentinel data (2021) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)) |
 | `osm.jpg` | OpenStreetMap standard tiles | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
+| `topographic.jpg` | CyclOSM tiles | CyclOSM, © OpenStreetMap contributors ([ODbL](https://opendatacommons.org/licenses/odbl/)), tiles hosted by OpenStreetMap France |
 
 OpenFreeMap asks for this attribution wherever its maps appear in images or other media. Regenerate the previews with the script rather than editing them by hand, and keep this table in step with the basemap definitions in `packages/core/src/basemaps` and `packages/web/src/basemaps`.
 
