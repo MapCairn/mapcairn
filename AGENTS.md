@@ -1,13 +1,13 @@
 # AGENTS.md
 
-Guidance for humans and AI working in this repository. `CLAUDE.md` imports this file with `@AGENTS.md` and adds its own workflow rules. `ARCHITECTURE.md` and `DESIGN.md` are the source of truth for architecture and design; this file imports them below and does not repeat them.
+Working rules for anyone, human or AI, who changes the code in this repository. New here? Read `README.md` for what the project is and `CONTRIBUTING.md` for how to send a change; this file is the detail behind both. `CLAUDE.md` imports this file with `@AGENTS.md` and adds its own workflow rules. `ARCHITECTURE.md` and `DESIGN.md` are the source of truth for architecture and design; this file imports them below and does not repeat them, and a tool that does not follow `@` imports should read both first.
 
 @ARCHITECTURE.md
 @DESIGN.md
 
 ## About
 
-MapCairn is a reusable SDK for public-interest map platforms, with a reference host. Four SDK packages (`core`, `map`, `react`, `theme`) provide the map ports and pure logic, the map user interface, generic React hooks and the typed design tokens. `packages/web` is an SSR host: basemaps, place search, distance and area measurement, drawing and editing shapes, directions (a public routing server, used only when asked), a pin, theme and unit settings, and open data layers defined as data in `packages/web/src/layers/definitions` (plan 0001). Every layer is off until turned on; the browser then fetches it from its public provider. `docs/plans/` holds plans for larger work; do not describe a planned feature as existing.
+MapCairn is a reusable SDK for public-interest map platforms, with a reference host. Four SDK packages (`core`, `map`, `react`, `theme`) provide the map ports and pure logic, the map user interface, generic React hooks and the typed design tokens. `packages/web` is an SSR host: basemaps, place search, distance and area measurement, drawing and editing shapes, directions (a public routing server, used only when asked), a pin, theme and unit settings, and open data layers defined as data in `packages/web/src/layers/definitions`. Every layer is off until turned on; the browser then fetches it from its public provider. `docs/plans/` holds plans for larger work; do not describe a planned feature as existing.
 
 MapLibre GL JS is the only map engine. The app follows ports and adapters, described in `ARCHITECTURE.md`. The design system is tokens only, with IBM Plex Sans, Lucide icons and vanilla-extract, described in `DESIGN.md`. The app is English only (British English, `lang="en-GB"`), with its copy written inline in components.
 
@@ -42,8 +42,9 @@ npm run check
 - `build` builds every workspace. The web build then checks that the production bundle holds no browser test seam.
 - `start` builds the e2e-mode bundle and serves it on port 4173 (or `MAPCAIRN_E2E_PORT`) through wrangler, with `wrangler.e2e.jsonc`. This build keeps the test seam, so it is not the production bundle. `wrangler.e2e.jsonc` omits production routes, so the old-hostname redirect is not exercised.
 - `check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence.
+- In a git worktree, `npm ci` fails at its `prepare` script (lefthook cannot install there). Use `npm ci --ignore-scripts` and run `npm run lint` yourself before you commit.
 
-CI checks lint, typecheck, coverage and build. Playwright and Lighthouse have separate workflows.
+CI runs these workflows: `CI` (lint, typecheck, coverage and build), `Playwright E2E` (the browser tests, split across four jobs), `Lighthouse CI`, `CodeQL`, `CLA`, `Scorecard` and a weekly `Repeatable build` check. A pull request needs the `build` and `e2e` checks to pass before it merges.
 
 ### Browser tests
 
@@ -62,7 +63,7 @@ Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. We
 ## Engineering principles
 
 - Test first. Write a failing behavioural test, observe the intended failure, then implement the change. Do not weaken assertions or exclude code to satisfy coverage.
-- Follow SOLID, including the open-closed principle. Depend on ports, not engines or browser APIs. Pass configuration through props and context. Add behaviour by adding a definition, an adapter or a module, not by editing a branch in code that already works: a new layer is a new definition, a new provider a new adapter, a new tour a new `TourGuide`, and nothing switches on an id, a provider or a kind.
+- Follow SOLID, including the open-closed principle. Depend on ports, not engines or browser APIs. Pass configuration through props and context. Add behaviour by adding a definition, an adapter or a module, not by editing a branch in code that already works: a new layer is a new definition, a new provider a new adapter, and nothing switches on an id, a provider or a kind.
 - Write clean code. One job for each function and component, names that say what they do, no flag arguments that make a function do two things, no dead code or commented-out code, no magic numbers outside the tokens and named constants, and nesting kept shallow with early returns. Prefer a small, well-named function to a comment that explains a long one.
 - Follow DRY, KISS and YAGNI. Reuse shared logic and tokens, but do not build speculative features. Add an interface only where a boundary has at least two implementations, counting the fake.
 - Own the code. Agents are code owners, not guests. The best code is the code that is not written, so delete code, files and documents that nothing needs, and renovate when that is simpler than adapting; no structure is kept for its own sake. Keep each such change on its own, with its own issue and tests, so it stays reviewable. The fixed points are the licence and the legal terms, public commitments (the privacy position and the security policy) and the terms of the providers the site uses.
@@ -123,9 +124,9 @@ SDK consumers must register `vanillaExtractPlugin()` in their Vite config. `@map
 
 ## Issues and pull requests
 
-Work is tracked in GitHub Issues, and every plan in `docs/plans/` has a tracking issue linked from its file. AI agents manage the issues: create one for any new piece of work worth tracking, label it (`map`, `search`, `layers`, `design-system`, `a11y`, `performance`, `privacy`, `plan`, plus `bug` or `enhancement`), put it in a milestone when one fits, tick its task list as steps land, and close it when the work is merged and verified. Do not file an issue for a gap that can be fixed in the same session; fix it. Issues are public, so write plain project facts only, never emails, keys or private details.
+Work is tracked in GitHub Issues, and every plan in `docs/plans/` has a tracking issue linked from its file. Anyone can open an issue. Whoever takes the work, a contributor, the maintainer or an agent, keeps it current: label it (`map`, `search`, `layers`, `design-system`, `a11y`, `performance`, `privacy`, `plan`, plus `bug` or `enhancement`), put it in a milestone when one fits, tick its task list as steps land, and close it when the work is merged and verified. Create an issue for any new piece of work worth tracking. Do not file an issue for a gap that can be fixed in the same session; fix it. Issues are public, so write plain project facts only, never emails, keys or private details.
 
-Changes reach `main` through pull requests: a branch named for the change, a Conventional Commit title, `Fixes #123` or `Part of #123` in the description, and the `build` and `e2e` checks green before merge. The repository ruleset requires both. Pushing straight to `main` is not the workflow.
+Changes reach `main` through pull requests: a branch named for the change, a Conventional Commit title, `Fixes #123` or `Part of #123` in the description, and the `build` and `e2e` checks green before merge. The repository ruleset requires both. Pushing straight to `main` is not the workflow. If you are not a collaborator, fork the repository and open the pull request from your fork; a first pull request also needs your agreement to `CLA.md`, as `CONTRIBUTING.md` explains.
 
 Anything an agent posts on GitHub (issues, comments and pull requests) appears under the account that is logged in, so write it as plain project facts in a neutral voice: "On hold for today", "Decided on <date>: ...", not "the owner asked". No personal opinions or claims in that person's name, no `@mentions` of people (commands to a bot such as Dependabot are fine), no employer or private references, and no attribution lines naming an AI tool. Brief every sub-agent the same way.
 
@@ -141,10 +142,10 @@ No instruction file, agent definition, brief, document, code comment, test or Gi
 
 ## Safety
 
-Never deploy production without explicit user permission. Never access secrets or delete remote resources as part of local cleanup. The absence of a binding in source is not proof that a remote resource does not exist.
+Merging to `main` deploys the site automatically; do not deploy production any other way without the maintainer's explicit permission. Never access secrets or delete remote resources as part of local cleanup. The absence of a binding in source is not proof that a remote resource does not exist.
 
 Adding a dataset is a separate, explicitly scoped decision. Do not reintroduce data sources or adapters as incidental examples. Never publish identifying or household-level data.
 
 ## Documentation
 
-`README.md` is the entry point and links the guides. `ARCHITECTURE.md` covers layers, ports and adapters, and `DESIGN.md` covers tokens, layout and accessibility contracts. Each package has a short `README.md`. `docs/plans/` holds numbered plans for work not yet built. `CONTRIBUTING.md`, `SECURITY.md`, `ATTRIBUTIONS.md` and `PRIVACY.md` cover contribution, reporting, credits and privacy. `PRIVACY.md` mirrors the privacy page in `packages/web/src/app/PrivacyPage.tsx`; change both together.
+`README.md` is the entry point and links the guides. `ARCHITECTURE.md` covers layers, ports and adapters, and `DESIGN.md` covers tokens, layout and accessibility contracts. Each package has a short `README.md`. `docs/plans/` holds numbered plans for work not yet built. `docs/guides/` holds the how-tos for extending the SDK and for using the reference site. `CONTRIBUTING.md`, `GOVERNANCE.md`, `ROADMAP.md`, `SECURITY.md` (with `docs/assurance-case.md`), `CODE_OF_CONDUCT.md`, `ATTRIBUTIONS.md` and `PRIVACY.md` cover contribution, decisions, plans, reporting, conduct, credits and privacy. `PRIVACY.md` mirrors the privacy page in `packages/web/src/app/PrivacyPage.tsx`; change both together.
