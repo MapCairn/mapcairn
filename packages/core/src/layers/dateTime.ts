@@ -46,7 +46,7 @@ export function slotValue(time: number): string {
   return `${iso.slice(0, 10)}t${iso.slice(11, 13)}${iso.slice(14, 16)}`;
 }
 
-/** The ISO instant a provider names a slot by, such as `2026-11-11T14:30:00Z`. */
+/** The ISO instant a provider names a slot by, such as `2026-11-11T14:30:00Z`. Expects a valid slot. */
 export function slotInstant(value: string): string {
   return `${new Date(startOf(value)).toISOString().slice(0, 19)}Z`;
 }
@@ -144,12 +144,12 @@ export function slotsOnDay(
   return slots;
 }
 
-/** Words for when a slot starts, with its time zone, such as "14:30 UTC on 11 November 2026". */
+/** Words for when a slot starts, with its time zone, such as "14:30 UTC on 11 November 2026". Expects a valid slot. */
 export function describeSlotStart(value: string): string {
   return `${timeLabel(value)} UTC on ${DAY_TEXT.format(startOf(value))}`;
 }
 
-/** Words for the slot shown, with its time zone, such as "14:30 to 15:00 UTC on 11 November 2026". */
+/** Words for the slot shown, with its time zone, such as "14:30 to 15:00 UTC on 11 November 2026". Expects a valid slot. */
 export function describeSlot(value: string, stepMinutes: number): string {
   const end = slotValue(startOf(value) + stepMinutes * MINUTE_MS);
   return `${timeLabel(value)} to ${timeLabel(end)} UTC on ${DAY_TEXT.format(startOf(value))}`;

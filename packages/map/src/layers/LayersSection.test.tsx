@@ -879,7 +879,7 @@ describe("LayersSection", () => {
       expect(labels().at(-1)).toBe("23:30");
     });
 
-    it("changes the time, and moves a time not out yet back to the newest", () => {
+    it("changes the time, and moves a time not out yet back to the newest, saying so", async () => {
       const { time, date, layers, group } = open();
       fireEvent.change(date, { target: { value: "2026-11-08" } });
       fireEvent.change(time, { target: { value: "2026-11-08t2130" } });
@@ -889,6 +889,11 @@ describe("LayersSection", () => {
       );
       fireEvent.change(date, { target: { value: "2026-11-09" } });
       expect(timeOf(layers)).toBe("2026-11-09t0600");
+      await waitFor(() =>
+        expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+          "Time moved to 06:00 UTC on 9 November 2026, the nearest available.",
+        ),
+      );
       fireEvent.change(date, { target: { value: "" } });
       expect(timeOf(layers)).toBe("2026-11-09t0600");
     });

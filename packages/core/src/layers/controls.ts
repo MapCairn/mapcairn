@@ -141,7 +141,8 @@ export function isControlEnabled(
 }
 
 /**
- * The values a URL template can use: every control value (a date and time
+ * The values a URL template can use, from values already resolved with
+ * {@link resolveControlValues}: every control value (a date and time
  * as its ISO instant, the form a provider names it by) plus each derived
  * variable, looked up in its table. A disabled control counts as its default
  * in a lookup, so a hidden choice never changes the request. A combination
