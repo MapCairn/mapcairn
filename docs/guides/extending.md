@@ -286,4 +286,4 @@ Leave `routing` out and the Directions button, panel and overlays are never moun
 
 ## Add an adapter
 
-Define the port, write its fake and contract suite, write the real adapter in `packages/web/src/adapters` and register it in `createServices()`. [`ARCHITECTURE.md`](../../ARCHITECTURE.md#adding-an-adapter) has the steps.
+Define the port, write its fake and contract suite, write the real adapter in `packages/web/src/adapters` and register it in `createServices()`. A host that builds its own `Services` may supply any adapter that passes the port's contract suite. `fileOpener` is optional, as `routing` is: leave it out and the Shapes section has no Import control, or supply one, for example a native app's own picker, that passes `runFileOpenerContract`. [`ARCHITECTURE.md`](../../ARCHITECTURE.md#adding-an-adapter) has the steps.

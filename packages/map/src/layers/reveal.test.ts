@@ -2,6 +2,8 @@ import { computeDetentHeights } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import {
   coveredPadding,
+  FIT_MAX_ZOOM,
+  fitPadding,
   freeCentre,
   REVEAL_CLEARANCE,
   REVEAL_DETENT,
@@ -19,6 +21,34 @@ const DESKTOP: RevealGeometry = {
   viewport: { width: 1280, height: 720 },
   panelEdge: 412,
 };
+
+describe("FIT_MAX_ZOOM", () => {
+  it("keeps a fitted result at street level or wider", () => {
+    expect(FIT_MAX_ZOOM).toBe(16);
+  });
+});
+
+describe("fitPadding", () => {
+  it("keeps room for the search pill and the end stack beyond what the panel covers", () => {
+    expect(
+      fitPadding({
+        layout: "panel",
+        viewport: { width: 1280, height: 800 },
+        panelEdge: 372,
+      }),
+    ).toEqual({ top: 88, right: 80, bottom: 32, left: 404 });
+  });
+
+  it("keeps the room alone while the map has no size", () => {
+    expect(
+      fitPadding({
+        layout: "sheet",
+        viewport: { width: 0, height: 0 },
+        panelEdge: null,
+      }),
+    ).toEqual({ top: 88, right: 80, bottom: 32, left: 32 });
+  });
+});
 
 describe("coveredPadding", () => {
   it("keeps clear of the bottom sheet at the detent a reveal raises it to", () => {

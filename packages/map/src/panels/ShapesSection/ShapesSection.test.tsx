@@ -1,10 +1,14 @@
 import {
   createFakeServices,
+  FakeMapAdapter,
   type FakeServices,
   type LatLng,
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { testMapContext } from "../../chrome/MapChrome/chromeTestHarness";
+import { MapContext } from "../../host";
+import { FIT_MAX_ZOOM } from "../../layers/reveal";
 import { ServicesProvider } from "../../services";
 import { type UseDraw, useDraw } from "../../tools/DrawToolbar";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
@@ -30,16 +34,30 @@ function Harness({ headingLevel }: { headingLevel?: 3 | 4 }) {
 function renderSection(
   services: FakeServices = createFakeServices(),
   headingLevel?: 3 | 4,
+  adapter: FakeMapAdapter | null = null,
 ) {
   render(
     <ServicesProvider services={services}>
       <LiveRegionProvider>
-        <Harness headingLevel={headingLevel} />
+        <MapContext.Provider value={testMapContext({ adapter })}>
+          <Harness headingLevel={headingLevel} />
+        </MapContext.Provider>
       </LiveRegionProvider>
     </ServicesProvider>,
   );
   return services;
 }
+
+const POINTS_FILE = {
+  name: "points.geojson",
+  text: JSON.stringify({
+    type: "MultiPoint",
+    coordinates: [
+      [2.35, 48.85],
+      [2.36, 48.86],
+    ],
+  }),
+};
 
 function finishTriangle() {
   for (const point of TRIANGLE) {
@@ -157,9 +175,64 @@ describe("ShapesSection", () => {
     );
   });
 
-  it("says plainly that nothing is stored and what a link holds", () => {
+  it("says plainly that nothing is stored or uploaded, and what a link holds", () => {
     renderSection();
     expect(screen.getByText(/not saved/)).toBeInTheDocument();
+    expect(screen.getByText(/nothing is uploaded/)).toBeInTheDocument();
     expect(screen.getByText(/holds them in its address/)).toBeInTheDocument();
+  });
+
+  it("imports a file from its button, lists the shapes and fits the map to them", async () => {
+    const adapter = new FakeMapAdapter();
+    const fit = vi.spyOn(adapter, "fitBounds");
+    const services = renderSection(createFakeServices(), undefined, adapter);
+    expect(
+      screen.getByRole("heading", { name: "Import", level: 4 }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Import GeoJSON or CSV" }),
+    );
+    expect(services.fakes.fileOpener.waiting).toBe(true);
+    await act(async () => {
+      services.fakes.fileOpener.choose(POINTS_FILE);
+    });
+    expect(screen.getAllByTestId("shapes-row")).toHaveLength(2);
+    expect(screen.getByTestId("shapes-import-feedback")).toHaveTextContent(
+      "2 shapes imported.",
+    );
+    expect(fit).toHaveBeenCalledWith(
+      { south: 48.85, west: 2.35, north: 48.86, east: 2.36 },
+      expect.objectContaining({ maxZoom: FIT_MAX_ZOOM }),
+    );
+  });
+
+  it("shows why a file was refused, and fits nothing", async () => {
+    const adapter = new FakeMapAdapter();
+    const fit = vi.spyOn(adapter, "fitBounds");
+    const services = renderSection(createFakeServices(), undefined, adapter);
+    fireEvent.click(screen.getByTestId("shapes-import"));
+    await act(async () => {
+      services.fakes.fileOpener.choose({ name: "a.txt", text: "hello" });
+    });
+    expect(screen.getByTestId("shapes-import-feedback")).toHaveTextContent(
+      "This is not GeoJSON",
+    );
+    expect(fit).not.toHaveBeenCalled();
+  });
+
+  it("has no Import control when the host offers no file opener", () => {
+    renderSection(createFakeServices({ fileOpener: undefined }));
+    expect(screen.queryByRole("heading", { name: "Import" })).toBeNull();
+    expect(screen.queryByTestId("shapes-import")).toBeNull();
+    expect(screen.getByTestId("shapes-export-csv")).toBeInTheDocument();
+  });
+
+  it("imports without a map, as during start-up", async () => {
+    const services = renderSection();
+    fireEvent.click(screen.getByTestId("shapes-import"));
+    await act(async () => {
+      services.fakes.fileOpener.choose(POINTS_FILE);
+    });
+    expect(screen.getAllByTestId("shapes-row")).toHaveLength(2);
   });
 });

@@ -1,6 +1,6 @@
 import type { BasemapCatalogue } from "../basemaps/basemaps";
 import type { ClipboardPort } from "./clipboard";
-import type { FileSaver } from "./files";
+import type { FileOpener, FileSaver } from "./files";
 import type { LayerRegistry, LayerSource } from "./layers";
 import type { LocationProvider } from "./location";
 import type { MapAdapterFactory } from "./map";
@@ -24,6 +24,12 @@ export interface Services {
   readonly clipboard: ClipboardPort;
   /** Offers a file the ui built, such as exported shapes, as a download. */
   readonly fileSaver: FileSaver;
+  /**
+   * Asks the person for a file, such as shapes to import, and reads it in the
+   * browser. Optional: a host that supplies none gets no import, and the ui
+   * must not require it.
+   */
+  readonly fileOpener?: FileOpener;
   readonly url: UrlState;
   readonly theme: ThemeSource;
   readonly preferences: DevicePreferences;

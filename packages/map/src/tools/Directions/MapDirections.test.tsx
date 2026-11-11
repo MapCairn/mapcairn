@@ -8,12 +8,12 @@ import {
 } from "../../chrome/MapChrome/chromeTestHarness";
 import { MapContext } from "../../host";
 import { MapOverlayLayer } from "../../host/overlays/MapOverlayLayer";
+import { FIT_MAX_ZOOM } from "../../layers/reveal";
 import { DirectionsOverlay } from "./DirectionsOverlay";
 import {
   AREA_LAYER_ID,
   MapDirections,
   ROUTE_CASING_LAYER_ID,
-  ROUTE_FIT_MAX_ZOOM,
   ROUTE_LAYER_ID,
 } from "./MapDirections";
 import type { AreaOutcome, RouteOutcome } from "./useDirections";
@@ -128,7 +128,7 @@ describe("MapDirections", () => {
   it("fits the map to the result, no closer than the route fit limit", () => {
     const { adapter } = renderIn(<MapDirections result={ROUTE} />);
     const view = adapter.getView();
-    expect(view.zoom).toBeLessThanOrEqual(ROUTE_FIT_MAX_ZOOM);
+    expect(view.zoom).toBeLessThanOrEqual(FIT_MAX_ZOOM);
     expect(view.center.lat).toBeCloseTo((48.8566 + 48.9) / 2, 3);
     expect(view.center.lng).toBeCloseTo((2.3522 + 2.4) / 2, 3);
   });

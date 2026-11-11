@@ -1,0 +1,65 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Notre-Dame" },
+      "geometry": { "type": "Point", "coordinates": [2.3499, 48.853] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Along the Seine" },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.3376, 48.8584],
+          [2.3445, 48.8563],
+          [2.3522, 48.8546]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Island with a courtyard" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [2.3456, 48.8551],
+            [2.3542, 48.8513],
+            [2.3567, 48.8527],
+            [2.3482, 48.8566],
+            [2.3456, 48.8551]
+          ],
+          [
+            [2.3495, 48.8545],
+            [2.3505, 48.854],
+            [2.351, 48.8545],
+            [2.3495, 48.8545]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "type": "circle", "radius_m": 250, "centre": [2.3376, 48.8606] },
+      "geometry": { "type": "Point", "coordinates": [2.3376, 48.8606] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Crossed edges" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [2.34, 48.85],
+            [2.35, 48.86],
+            [2.35, 48.85],
+            [2.34, 48.86],
+            [2.34, 48.85]
+          ]
+        ]
+      }
+    }
+  ]
+}

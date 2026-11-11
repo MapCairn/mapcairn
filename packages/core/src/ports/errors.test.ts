@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  FileOpenError,
   LayerError,
   LocationError,
   MapEngineError,
@@ -51,6 +52,17 @@ describe("port errors", () => {
       expect(error.message).toContain(kind);
     }
     expect(new RoutingError("network", "Offline.").message).toBe("Offline.");
+  });
+
+  it("carries the file open error kind and a default message", () => {
+    const error = new FileOpenError("too-large");
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("FileOpenError");
+    expect(error.kind).toBe("too-large");
+    expect(error.message).toContain("too-large");
+    expect(new FileOpenError("unreadable", "Bad file.").message).toBe(
+      "Bad file.",
+    );
   });
 
   it("carries the map engine error reason", () => {

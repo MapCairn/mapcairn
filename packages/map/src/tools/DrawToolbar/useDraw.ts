@@ -1,5 +1,6 @@
 import {
   announceDrawEvent,
+  type Bounds,
   DRAW_ISSUE_MESSAGES,
   type DrawAction,
   type DrawIssue,
@@ -9,6 +10,7 @@ import {
   type DrawShape,
   type DrawState,
   decodeShapes,
+  describeShapeImport,
   distanceMetres,
   draftOf,
   drawKeyCommand,
@@ -16,9 +18,13 @@ import {
   editHandlesFor,
   encodeShapes,
   exportableShapes,
+  FileOpenError,
   formatShapeMeasure,
   initialDrawState,
   type LatLng,
+  MAX_DRAWING_SHAPES,
+  MAX_IMPORT_BYTES,
+  MAX_SHARE_SHAPES,
   type MapAdapter,
   type MapClickEvent,
   type MapEditHandle,
@@ -26,9 +32,12 @@ import {
   type MapProjection,
   type ParsedHandleId,
   parseHandleId,
+  parseShapeFile,
   pickShape,
   pluralise,
+  SHAPE_FILE_TYPES,
   selectedShape,
+  shapeInputBounds,
   shapesToCsv,
   shapesToGeoJson,
   type UnitSystem,
@@ -46,6 +55,7 @@ import {
 import { overlayPlacement } from "../../host/overlays/geometry";
 import {
   useClipboard,
+  useFileOpener,
   useFileSaver,
   useSettings,
   useUrlState,
@@ -63,6 +73,18 @@ export const GEOJSON_FILENAME = "mapcairn-shapes.geojson";
 
 /** The name of the CSV file. */
 export const CSV_FILENAME = "mapcairn-shapes.csv";
+
+/** What to say when no file could be opened. A cancelled picker says nothing. */
+const FILE_OPEN_MESSAGES: Readonly<
+  Record<Exclude<FileOpenError["kind"], "cancelled">, string>
+> = {
+  "too-large": describeShapeImport({ ok: false, refusal: "too-large" }),
+  unreadable: "The file could not be read. Choose it again, or another file.",
+  unsupported: "This browser cannot open files here.",
+};
+
+/** Added to an import's result when the shapes are more than a link can carry. */
+const LINK_LIMIT_NOTE = `A link carries at most ${MAX_SHARE_SHAPES} shapes, so download a file to share them all.`;
 
 /** The outcome of an export or a copy, shown beside the buttons and announced. */
 export interface DrawFeedback {
@@ -106,6 +128,8 @@ export interface UseDraw {
   readonly hoveredHandle: string | null;
   /** The outcome of the last export or copy, until the shapes change. */
   readonly feedback: DrawFeedback | null;
+  /** What the last import added or why it added nothing, until the shapes change again. */
+  readonly importFeedback: DrawFeedback | null;
 
   readonly setMode: (kind: DrawKind) => void;
   /** Adds a point, or starts a shape, at a position. */
@@ -152,6 +176,13 @@ export interface UseDraw {
   readonly exportCsv: () => Promise<void>;
   /** Copies a link with the shapes in it, built from the current address. */
   readonly copyLink: () => Promise<void>;
+  /**
+   * Asks the person for a GeoJSON or CSV file and adds its shapes as one undo
+   * step. Call it straight from a press, so the browser shows the picker.
+   * @returns The box holding the shapes it added, for the map to fit, or
+   *   null when it added none, including when the host has no file opener.
+   */
+  readonly importFile: () => Promise<Bounds | null>;
 }
 
 /** A drag in progress: which handle it began on and which vertex it moves now. */
@@ -287,6 +318,11 @@ export function useDraw({
   const activeRef = useLatestRef(active);
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<DrawFeedback | null>(null);
+  const [importFeedback, setImportFeedback] = useState<DrawFeedback | null>(
+    null,
+  );
+  const fileOpener = useFileOpener();
+  const importAbort = useRef<AbortController | null>(null);
   const session = useRef<DragSession | null>(null);
   const dragCount = useRef(0);
 
@@ -315,11 +351,17 @@ export function useDraw({
     return () => clearTimeout(timer);
   }, [lastEvent, stateRef, unitsRef, announceRef]);
 
-  // What was exported or copied no longer describes the shapes once they change.
+  // What was exported or copied no longer describes the shapes once they
+  // change, and an import's result lasts only through the change it made.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the shapes are the trigger
   useEffect(() => {
     setFeedback(null);
+    if (lastEvent?.type !== "imported") {
+      setImportFeedback(null);
+    }
   }, [shapes]);
+
+  useEffect(() => () => importAbort.current?.abort(), []);
 
   const act = useCallback((action: DrawAction) => dispatch(action), []);
   const setMode = useCallback(
@@ -654,6 +696,64 @@ export function useDraw({
     );
   }, [clipboard, report, stateRef, url]);
 
+  const reportImport = useCallback(
+    (result: DrawFeedback) => {
+      setImportFeedback(result);
+      announceRef.current(result.text, {
+        priority: result.kind === "error" ? "assertive" : "polite",
+      });
+    },
+    [announceRef],
+  );
+
+  const importFile = useCallback(async (): Promise<Bounds | null> => {
+    if (!fileOpener) {
+      return null;
+    }
+    importAbort.current?.abort();
+    const controller = new AbortController();
+    importAbort.current = controller;
+    let text: string;
+    try {
+      // Opened before any await, so the browser still sees the press.
+      ({ text } = await fileOpener.open({
+        accept: SHAPE_FILE_TYPES,
+        maxBytes: MAX_IMPORT_BYTES,
+        signal: controller.signal,
+      }));
+    } catch (error) {
+      const kind = error instanceof FileOpenError ? error.kind : "unreadable";
+      if (kind !== "cancelled") {
+        reportImport({ kind: "error", text: FILE_OPEN_MESSAGES[kind] });
+      }
+      return null;
+    }
+    const result = parseShapeFile(text);
+    const words = describeShapeImport(result);
+    if (!result.ok || result.shapes.length === 0) {
+      reportImport({ kind: "error", text: words });
+      return null;
+    }
+    if (
+      stateRef.current.shapes.length + result.shapes.length >
+      MAX_DRAWING_SHAPES
+    ) {
+      reportImport({
+        kind: "error",
+        text: describeShapeImport({ ok: false, refusal: "drawing-full" }),
+      });
+      return null;
+    }
+    const total =
+      exportableShapes(stateRef.current.shapes).length + result.shapes.length;
+    dispatch({ type: "import", shapes: result.shapes });
+    reportImport({
+      kind: "success",
+      text: total > MAX_SHARE_SHAPES ? `${words} ${LINK_LIMIT_NOTE}` : words,
+    });
+    return shapeInputBounds(result.shapes) ?? null;
+  }, [fileOpener, reportImport, stateRef]);
+
   const handles = useMemo(
     () => (active ? editHandlesFor(shapes, selection, projection) : []),
     [active, shapes, selection, projection],
@@ -690,6 +790,7 @@ export function useDraw({
     handles,
     hoveredHandle,
     feedback,
+    importFeedback,
     setMode,
     addPoint,
     placeAtCentre,
@@ -717,5 +818,6 @@ export function useDraw({
     exportGeoJson,
     exportCsv,
     copyLink,
+    importFile,
   };
 }

@@ -13,6 +13,7 @@ import {
   type PortName,
 } from "@mapcairn/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { BrowserFileOpener } from "../adapters/files/BrowserFileOpener";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
 import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
@@ -52,6 +53,10 @@ describe("createServices", () => {
     expect(basemaps?.get("fiord")).toBeUndefined();
     expect(basemaps?.resolve("fiord").id).toBe("bright");
     expect(basemaps?.defaultId).toBe("bright");
+  });
+
+  it("builds the browser file opener, which shows nothing until it is asked", () => {
+    expect(createServices().fileOpener).toBeInstanceOf(BrowserFileOpener);
   });
 
   it("builds the Valhalla routing provider, which sends nothing until a route is asked for", () => {
