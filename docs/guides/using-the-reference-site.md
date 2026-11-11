@@ -2,6 +2,16 @@
 
 What the reference host offers for saving the map and for drawing, and how each works from the keyboard and a pointer.
 
+## Search by place name or coordinates
+
+The search box finds a place by name through the geocoder when you press Enter or the Search button. It also takes a pair of coordinates, and answers that one itself, in the browser, with no request to the geocoder: a single result named "Coordinates 26.20410° S, 28.04730° E" that you choose like any other result. It reads:
+
+- decimal degrees, latitude first: `-26.2041, 28.0473` or `-26.2041 28.0473`. Every value needs a decimal point with digits after it, or a degree sign or the word degrees
+- hemisphere letters (or the words north, south, east and west) before or after a value, in either order: `26.2041S 28.0473E`, `S26.2041 E28.0473`, `28.0473 E, 26.2041 S`
+- degrees, minutes and seconds with the usual symbols or words: `26°12'14.8"S 28°02'50.3"E`, `26 degrees 12 minutes 14.8 seconds south, 28 degrees 2 minutes 50.3 seconds east`
+
+A comma is only ever a separator, never a decimal mark, and a negative sign (hyphen, en dash or Unicode minus) cannot be mixed with a hemisphere letter. A bare whole number is not a coordinate, so `12 34`, `3 4`, `+27 82` and `E1 6` are searched as place names; so are `02-123` and `12-14`, because a minus sign that touches a number before it is not the start of a negative value. Text that is out of range (latitude beyond 90, longitude beyond 180), a lone number such as a postcode, or anything with extra text is treated as a place name and searched as usual. Showing a coordinate result sends nothing to the geocoder, but the map loads tiles for that area as it does for any move. The parser is `parseCoordinates` in `@mapcairn/core`, and `useSearch` uses it, so the Directions panel's place search reads coordinates too.
+
 ## Save an image and choose between features
 
 The sheet's "Save image" button saves a PNG of the map with its layers, any drawn shapes and credits, made in the browser from what the map has already loaded. A tap that finds several features opens a list, and the `I` key opens the same list for the centre of the map. Neither needs configuration.

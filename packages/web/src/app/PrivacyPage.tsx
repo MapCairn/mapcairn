@@ -104,7 +104,9 @@ export function PrivacyPage() {
           When you search (by pressing Enter or the Search button), your query
           is sent to OpenStreetMap's Nominatim geocoding service, which may
           likewise log the query and your IP address. Nothing is sent while you
-          type.
+          type. A search that is only a pair of coordinates is read in your
+          browser and is not sent to the geocoder; showing the place requests
+          map tiles for that area, as any move of the map does.
         </p>
 
         <h2 className={styles.sectionTitle}>Data layers</h2>

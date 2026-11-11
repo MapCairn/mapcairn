@@ -616,4 +616,58 @@ describe("SearchPill", () => {
       expect(options()).toHaveLength(1);
     });
   });
+
+  describe("coordinates", () => {
+    it("shows a coordinate pair as its own named row without asking the geocoder", async () => {
+      const { services } = setup();
+      await search("-26.2041, 28.0473");
+      expect(services.fakes.search.searchCalls).toHaveLength(0);
+      expect(options().map((option) => option.textContent)).toEqual([
+        "Coordinates 26.20410° S, 28.04730° E",
+      ]);
+      expect(input().getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("selects it like any other result", async () => {
+      const { onSelect } = setup();
+      await search("26.2041S 28.0473E");
+      fireEvent.click(options()[0] as HTMLElement);
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect(onSelect).toHaveBeenCalledWith({
+        id: "coordinates:-26.20410,28.04730",
+        label: "Coordinates 26.20410° S, 28.04730° E",
+        centre: { lat: -26.2041, lng: 28.0473 },
+      });
+      expect((input() as HTMLInputElement).value).toBe(
+        "Coordinates 26.20410° S, 28.04730° E",
+      );
+    });
+
+    it("selects it with the keyboard", async () => {
+      const { onSelect } = setup();
+      await search("-26.2041 28.0473");
+      press("ArrowDown");
+      expect(input().getAttribute("aria-activedescendant")).toBe(
+        options()[0]?.id,
+      );
+      press("Enter");
+      expect(onSelect).toHaveBeenCalledTimes(1);
+    });
+
+    it("is announced like a search result", async () => {
+      setup();
+      await search("-26.2041, 28.0473");
+      expect(screen.getByTestId("live-region-polite").textContent).toBe(
+        "1 result, Coordinates 26.20410° S, 28.04730° E",
+      );
+    });
+
+    it("does not say anything about searching or a missing match", async () => {
+      setup();
+      await search("-26.2041, 28.0473");
+      const panel = screen.getByTestId("location-search-panel");
+      expect(panel.textContent).not.toContain("Searching");
+      expect(panel.textContent).not.toContain("Nothing matched");
+    });
+  });
 });

@@ -22,7 +22,8 @@ export interface HelpSectionProps {
 }
 
 /**
- * Help: the keyboard shortcuts and a statement of the accessibility target.
+ * Help: what the search box accepts, the keyboard shortcuts and a statement
+ * of the accessibility target.
  * @remarks The Keyboard group is shown only when the primary pointer is fine
  *   (a mouse or trackpad), the signal this app uses for "has a keyboard". On a
  *   touch device it is left out entirely rather than replaced by a hint. A
@@ -56,6 +57,16 @@ export function HelpSection({
           </div>
         </div>
       ) : null}
+      <div className={subsection} data-testid="help-search">
+        <Subheading level={subLevel}>Search</Subheading>
+        <p className={prose}>
+          Type a place name or a pair of coordinates, such as -26.2041, 28.0473
+          or 26.2041° S, 28.0473° E, then press Enter or Search. Write each
+          value with a decimal point or a degree sign. Coordinates are read on
+          this device and not sent to the geocoder; the map then loads map tiles
+          for that area, as it does for any move.
+        </p>
+      </div>
       {finePointer ? (
         <div className={subsection} data-testid="help-keyboard">
           <Subheading level={subLevel}>Keyboard</Subheading>
