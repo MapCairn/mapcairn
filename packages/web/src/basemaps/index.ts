@@ -5,7 +5,7 @@ import {
 
 /**
  * The basemaps the reference host offers: the SDK's built-in basemaps (Bright,
- * Liberty, Positron, Streets and Fiord), with Bright the default. An id that
+ * Liberty, Colorful, Positron, Streets and Fiord), with Bright the default. An id that
  * names none of them (the removed "dark", the retired "auto" and
  * "maptoolkit-dark") opens on Bright. The composition root passes this as
  * `Services.basemaps`. A basemap added here instead of in the SDK would need

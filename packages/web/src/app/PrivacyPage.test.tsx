@@ -48,6 +48,7 @@ describe("PrivacyPage", () => {
     render(<PrivacyPage />);
 
     expect(screen.getByText(/OpenFreeMap/)).toBeInTheDocument();
+    expect(screen.getByText(/VersaTiles/)).toBeInTheDocument();
     expect(screen.getByText(/OpenStreetMap Foundation/)).toBeInTheDocument();
     expect(
       screen.getByText(/OpenStreetMap's Nominatim geocoding service/),
@@ -140,12 +141,21 @@ describe("PrivacyPage", () => {
     expect(text).toMatch(/not saved or put in the page address/);
   });
 
-  it("names the basemap tile providers that may log requests: OpenFreeMap, and the OpenStreetMap Foundation for Streets", () => {
+  it("names the basemap tile providers that may log requests: OpenFreeMap, VersaTiles for Colorful, and the OpenStreetMap Foundation for Streets", () => {
     render(<PrivacyPage />);
 
     const text = screen.getByText(/The basemap tile providers/).textContent;
     expect(text).toMatch(
-      /OpenFreeMap and the OpenStreetMap Foundation when you choose the Streets basemap, may log tile requests, including your IP address/,
+      /OpenFreeMap, VersaTiles when you choose the Colorful basemap, and the OpenStreetMap Foundation when you choose the Streets basemap, may log tile requests, including your IP address/,
+    );
+  });
+
+  it("says what VersaTiles does with the requests it logs, in its own words", () => {
+    render(<PrivacyPage />);
+
+    const text = screen.getByText(/The basemap tile providers/).textContent;
+    expect(text).toMatch(
+      /VersaTiles says it logs requests in anonymised form and uses the logs only to track down faults and detect misuse/,
     );
   });
 

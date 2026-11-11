@@ -1003,6 +1003,20 @@ describe("MapLibreMapAdapter", () => {
     });
   });
 
+  describe("projection", () => {
+    it("keeps the map flat when a style asks for a globe, on the first load and after every basemap swap", async () => {
+      const { map } = await mounted();
+      map.projection = { type: "globe" };
+      map.fire("style.load");
+      expect(map.projection).toEqual({ type: "mercator" });
+
+      // A swap loads a style that asks for a globe again.
+      map.projection = { type: "globe" };
+      map.fire("style.load");
+      expect(map.projection).toEqual({ type: "mercator" });
+    });
+  });
+
   describe("Save data", () => {
     it("takes the basemap's omitted layers and the source only they use out of the style that loads, when mounted in Save data mode", async () => {
       const { map } = await mounted({ basemap: WITH_RELIEF, saveData: true });

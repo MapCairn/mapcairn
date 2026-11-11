@@ -1,6 +1,9 @@
 import { expect, test } from "./fixtures";
 import {
+  BASEMAP_COLUMNS,
   BASEMAP_COUNT,
+  COLORFUL_BASEMAP_ID,
+  COLORFUL_BASEMAP_NAME,
   DARK_VECTOR_BASEMAP_ID,
   DARK_VECTOR_BASEMAP_NAME,
   DEFAULT_VECTOR_BASEMAP_ID,
@@ -14,6 +17,7 @@ import {
   RASTER_BASEMAP_NAME,
 } from "./support/basemaps";
 import {
+  COLORFUL_STYLE_PATTERN,
   MAPLIBRE_WORKER_PATTERN,
   MINIMAL_VECTOR_STYLE,
   OTHER_VECTOR_STYLE_PATTERN,
@@ -87,6 +91,37 @@ test.describe("basemaps", () => {
       await expect
         .poll(() => mapPage.hashBasemap())
         .toBe(OTHER_VECTOR_BASEMAP_ID);
+    });
+  }
+
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1280, height: 720 },
+  ]) {
+    test(`the picker lays its ${BASEMAP_COUNT} basemaps out in ${BASEMAP_COLUMNS} columns and ${BASEMAP_COUNT / BASEMAP_COLUMNS} rows at ${viewport.width} by ${viewport.height}`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.setViewportSize(viewport);
+      await mapPage.goto();
+      await mapPage.openMapOptions();
+      const tiles = mapPage.basemapPicker.locator("label");
+      await expect(tiles).toHaveCount(BASEMAP_COUNT);
+      await expect(tiles.last()).toBeVisible();
+      const boxes = await tiles.evaluateAll((labels) =>
+        labels.map((label) => {
+          const { left, top } = label.getBoundingClientRect();
+          return { left: Math.round(left), top: Math.round(top) };
+        }),
+      );
+      expect(new Set(boxes.map((box) => box.left)).size).toBe(BASEMAP_COLUMNS);
+      expect(new Set(boxes.map((box) => box.top)).size).toBe(
+        BASEMAP_COUNT / BASEMAP_COLUMNS,
+      );
+      // Row by row, left to right: the order the arrow keys follow.
+      expect(boxes.slice(0, BASEMAP_COLUMNS).map((box) => box.top)).toEqual(
+        Array(BASEMAP_COLUMNS).fill(boxes[0]?.top),
+      );
     });
   }
 
@@ -171,6 +206,49 @@ test.describe("basemaps", () => {
     await expect(
       mapPage.basemapPicker.getByRole("radio", {
         name: DARK_VECTOR_BASEMAP_NAME,
+      }),
+    ).toBeChecked();
+  });
+
+  test("Colorful is chosen from the picker, loads its style from VersaTiles, is saved, and leaves Save image on", async ({
+    page,
+    mapPage,
+  }) => {
+    const styles: string[] = [];
+    page.on("request", (request) => {
+      if (COLORFUL_STYLE_PATTERN.test(request.url())) {
+        styles.push(request.url());
+      }
+    });
+    await mapPage.goto(START);
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: COLORFUL_BASEMAP_NAME,
+      }),
+    ).not.toBeChecked();
+    await expect(
+      page.getByTestId(`basemap-option-${COLORFUL_BASEMAP_ID}`).locator("img"),
+    ).toHaveCount(1);
+    await mapPage.chooseBasemap(COLORFUL_BASEMAP_NAME);
+    await expect.poll(() => mapPage.hashBasemap()).toBe(COLORFUL_BASEMAP_ID);
+    expect(styles).toHaveLength(1);
+    await expect(page.getByTestId("save-image-button")).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await expect(page.getByTestId("export-blocked")).toHaveCount(0);
+    await expect(page.getByTestId("permanent-credit")).toHaveCount(0);
+
+    await page.evaluate(() => {
+      history.replaceState(null, "", `${location.pathname}${location.search}`);
+    });
+    await page.reload();
+    await mapPage.waitForMap();
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: COLORFUL_BASEMAP_NAME,
       }),
     ).toBeChecked();
   });
@@ -272,6 +350,18 @@ test.describe("basemaps", () => {
         "© OpenStreetMap contributors",
         "OpenFreeMap",
         "OpenMapTiles",
+        "MapLibre",
+      ]);
+      await mapPage.page.keyboard.press("Escape");
+
+      await mapPage.goto(`#basemap=${COLORFUL_BASEMAP_ID}`);
+      await collapseCredits(mapPage);
+      await mapPage.creditsButton.click();
+      await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
+        "© OpenStreetMap contributors",
+        "VersaTiles",
+        "ESA WorldCover 2021",
+        "CC BY 4.0",
         "MapLibre",
       ]);
     });

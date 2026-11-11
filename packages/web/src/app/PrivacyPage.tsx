@@ -7,7 +7,7 @@ import * as styles from "./PrivacyPage.css";
  * ISO date this policy's content was last reviewed for accuracy. The root
  * `PRIVACY.md` states the same date, and a test keeps the two equal.
  */
-export const LAST_UPDATED = "2026-11-10";
+export const LAST_UPDATED = "2026-11-11";
 
 /** The page's title, shared with the route's `<title>` so the two cannot drift apart. */
 export const PRIVACY_POLICY_TITLE = "Privacy policy";
@@ -90,13 +90,18 @@ export function PrivacyPage() {
 
         <h2 className={styles.sectionTitle}>Map tiles and location search</h2>
         <p className={styles.body}>
-          The basemap tile providers, OpenFreeMap and the OpenStreetMap
-          Foundation when you choose the Streets basemap, may log tile requests,
-          including your IP address, as part of serving the map. This is
-          standard for any web map. When you search (by pressing Enter or the
-          Search button), your query is sent to OpenStreetMap's Nominatim
-          geocoding service, which may likewise log the query and your IP
-          address. Nothing is sent while you type.
+          The basemap tile providers, OpenFreeMap, VersaTiles when you choose
+          the Colorful basemap, and the OpenStreetMap Foundation when you choose
+          the Streets basemap, may log tile requests, including your IP address,
+          as part of serving the map. This is standard for any web map. Your
+          browser makes those requests itself: they carry your IP address, its
+          usual request headers (such as its user agent) and this site's address
+          as the referrer, and nothing this site has stored about you.
+          VersaTiles says it logs requests in anonymised form and uses the logs
+          only to track down faults and detect misuse. When you search (by
+          pressing Enter or the Search button), your query is sent to
+          OpenStreetMap's Nominatim geocoding service, which may likewise log
+          the query and your IP address. Nothing is sent while you type.
         </p>
 
         <h2 className={styles.sectionTitle}>Data layers</h2>

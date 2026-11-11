@@ -53,11 +53,20 @@ export const REMOVED_BASEMAP_ID = "dark";
  */
 export const REMOVED_MAPTOOLKIT_BASEMAP_ID = "maptoolkit-dark";
 
+/** VersaTiles Colorful, a light vector basemap from another provider than OpenFreeMap. */
+export const COLORFUL_BASEMAP_ID = "colorful";
+
+/** Its name in the picker. */
+export const COLORFUL_BASEMAP_NAME = "Colorful";
+
 /** The dark basemap, OpenFreeMap Fiord, which is in the SDK's built-in set. */
 export const DARK_VECTOR_BASEMAP_ID = "fiord";
 
 /** Its name in the picker. */
 export const DARK_VECTOR_BASEMAP_NAME = "Fiord";
 
-/** How many basemaps the picker offers. */
-export const BASEMAP_COUNT = 5;
+/** How many basemaps the picker offers: three columns of two rows. */
+export const BASEMAP_COUNT = 6;
+
+/** The picker's columns, which `BASEMAP_COUNT` fills in two whole rows. */
+export const BASEMAP_COLUMNS = 3;

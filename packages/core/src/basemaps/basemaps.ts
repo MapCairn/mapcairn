@@ -32,6 +32,30 @@ const OPEN_FREE_MAP_CREDITS: readonly BasemapAttributionEntry[] = [
 
 const OPEN_FREE_MAP_STYLES = "https://tiles.openfreemap.org/styles";
 
+// The public VersaTiles tile server
+// (docs.versatiles.org/guides/use_tiles_versatiles_org.html) is free and open
+// to everyone, with no key and no registration, "without any guarantees". Its
+// guide says "Our pre-built styles already contain the required attribution":
+// OpenStreetMap contributors, and for the land cover tiles "ESA WorldCover 2021
+// (CC BY 4.0)". These entries are the Colorful style's own wording, with the
+// licence linked as CC BY 4.0 asks. The tilesets page gives the land cover a
+// longer credit (docs.versatiles.org/basics/tilesets.html), not used here
+// because the image export draws every credit on one line, and 200 characters
+// would shrink to nothing on a phone. VersaTiles asks for no credit of its own;
+// it is named as the provider.
+const VERSATILES_CREDITS: readonly BasemapAttributionEntry[] = [
+  OPEN_STREET_MAP_CREDIT,
+  { text: "VersaTiles", href: "https://versatiles.org" },
+  {
+    text: "ESA WorldCover 2021",
+    href: "https://esa-worldcover.org/en/data-access",
+  },
+  {
+    text: "CC BY 4.0",
+    href: "https://creativecommons.org/licenses/by/4.0/",
+  },
+];
+
 // Normalised (256 px) zoom limits. MapLibre's own maximum of 22 counts 512 px
 // tiles, which is 23 on this scale, so vector styles are capped at 22 here
 // to stay inside what the styles publish.
@@ -69,6 +93,28 @@ const LIBERTY: BasemapDefinition = {
   saveDataOmitLayers: ["natural_earth"],
 };
 
+const COLORFUL: BasemapDefinition = {
+  id: "colorful",
+  name: "Colorful",
+  source: {
+    kind: "vector",
+    styleUrl: "https://tiles.versatiles.org/assets/styles/colorful/style.json",
+  },
+  minZoom: 0,
+  maxZoom: VECTOR_MAX_ZOOM,
+  thumbnail: "/basemaps/colorful.jpg",
+  attribution: VERSATILES_CREDITS,
+  appearance: "light",
+  // Nothing is left out in Save data mode, on purpose. The style draws only
+  // vector layers, no raster. Its nine `landcover-*` fill layers read a second
+  // tileset that is 27 to 40 percent of the bytes of a typical zoom 4 to 6 tile
+  // pair (measured 2026-11-11), but they are the style's land colouring (forest,
+  // farmland, grass) at every zoom up to 12, so leaving them out would turn
+  // Colorful into a plain map. Its background, rgb(248,244,240), is the default
+  // land colour, so the plain tile Save data mode shows needs no swatch of its
+  // own.
+};
+
 const FIORD: BasemapDefinition = {
   id: "fiord",
   name: "Fiord",
@@ -89,6 +135,7 @@ const FIORD: BasemapDefinition = {
 export const BASEMAPS: readonly BasemapDefinition[] = [
   BRIGHT,
   LIBERTY,
+  COLORFUL,
   {
     id: "positron",
     name: "Positron",

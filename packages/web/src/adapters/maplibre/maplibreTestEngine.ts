@@ -411,6 +411,13 @@ export class FakeMapLibreMap {
     this.checkLoaded();
     this.images.set(name, { image, options });
   }
+  /** What the style (or `setProjection`) last asked for. A test sets it to stand in for a style's own `projection`. */
+  projection: { type: string } = { type: "mercator" };
+  setProjection(projection: { type: string }): this {
+    this.record("setProjection", [projection]);
+    this.projection = projection;
+    return this;
+  }
   setStyle(style: unknown, options?: unknown): void {
     this.record("setStyle", [style, options]);
     // A full style swap drops every source, layer and image the adapter added.

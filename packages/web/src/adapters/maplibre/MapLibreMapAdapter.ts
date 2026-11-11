@@ -1574,6 +1574,10 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.setLoading(true);
     });
     listen("style.load", () => {
+      // The overlays, the address hash and the shape tools assume a flat map,
+      // so a style that asks for a globe (VersaTiles Colorful does) is kept
+      // flat. See ARCHITECTURE.md.
+      map.setProjection({ type: "mercator" });
       this.omitSaveDataLayers(map);
       if (this.pending) {
         this.pending.styleLoaded = true;

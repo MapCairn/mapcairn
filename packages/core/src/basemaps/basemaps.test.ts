@@ -18,10 +18,11 @@ import {
 } from "./basemaps";
 
 describe("BASEMAPS", () => {
-  it("contains the five built-in basemaps in picker order, the default first", () => {
+  it("contains the six built-in basemaps in picker order, the default first: the general-purpose styles, then the rest", () => {
     expect(BASEMAPS.map((basemap) => basemap.id)).toEqual([
       "bright",
       "liberty",
+      "colorful",
       "positron",
       "osm",
       "fiord",
@@ -91,7 +92,7 @@ describe("BASEMAPS", () => {
     }
   });
 
-  it("uses the OpenFreeMap style URLs and the standard OpenStreetMap tile URL", () => {
+  it("uses the OpenFreeMap style URLs, the VersaTiles Colorful style URL and the standard OpenStreetMap tile URL", () => {
     const sources = Object.fromEntries(
       BASEMAPS.map((basemap) => [basemap.id, basemap.source]),
     );
@@ -110,6 +111,11 @@ describe("BASEMAPS", () => {
     expect(sources.fiord).toEqual({
       kind: "vector",
       styleUrl: "https://tiles.openfreemap.org/styles/fiord",
+    });
+    expect(sources.colorful).toEqual({
+      kind: "vector",
+      styleUrl:
+        "https://tiles.versatiles.org/assets/styles/colorful/style.json",
     });
     expect(sources.osm).toEqual({
       kind: "raster",
@@ -131,6 +137,31 @@ describe("BASEMAPS", () => {
       expect(text).toMatch(/OpenFreeMap/);
       expect(text).toMatch(/OpenMapTiles/);
     }
+  });
+
+  // Checked against https://tiles.versatiles.org/assets/styles/colorful/style.json
+  // and https://docs.versatiles.org/basics/tilesets.html on 2026-11-11. The
+  // style's two sources carry "© OpenStreetMap contributors" and "ESA
+  // WorldCover 2021 (CC BY 4.0)", which the guide calls "the required
+  // attribution". The tilesets page gives the land cover a longer credit,
+  // left out so the image export's one-line credits stay legible. VersaTiles
+  // asks for no credit of its own, and it is named here as the provider.
+  it("credits OpenStreetMap, VersaTiles and the ESA WorldCover land cover, with its licence, on Colorful", () => {
+    expect(getBasemap("colorful")?.attribution).toEqual([
+      {
+        text: "© OpenStreetMap contributors",
+        href: "https://www.openstreetmap.org/copyright",
+      },
+      { text: "VersaTiles", href: "https://versatiles.org" },
+      {
+        text: "ESA WorldCover 2021",
+        href: "https://esa-worldcover.org/en/data-access",
+      },
+      {
+        text: "CC BY 4.0",
+        href: "https://creativecommons.org/licenses/by/4.0/",
+      },
+    ]);
   });
 
   it("credits OpenStreetMap contributors, linked to the copyright page, on Streets", () => {
@@ -347,11 +378,19 @@ describe("createBasemapCatalogue", () => {
     ).toThrow(/missing/);
   });
 
-  it("is what the built-in basemaps make: Bright the default, then Liberty, Positron and Streets", () => {
+  it("is what the built-in basemaps make: Bright the default, then Liberty, Colorful, Positron, Streets and Fiord", () => {
     expect(BUILT_IN_BASEMAP_CATALOGUE.basemaps).toBe(BASEMAPS);
     expect(BUILT_IN_BASEMAP_CATALOGUE.defaultId).toBe(DEFAULT_BASEMAP_ID);
     expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("dark").id).toBe("bright");
     expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").id).toBe("liberty");
+  });
+
+  it("leaves out no layers for Colorful in Save data mode, whose style draws no raster layer", () => {
+    // Checked against the style on 2026-11-11: 266 background, fill, line and
+    // symbol layers over two vector sources, no raster or hillshade layer. The
+    // nine landcover-* layers read the second source, about a third of the tile
+    // bytes at zoom 4 to 6, but they are the style's land colouring, so they stay.
+    expect(resolveBasemap("colorful").saveDataOmitLayers).toBeUndefined();
   });
 
   it("names no provider whose terms the SDK would have to carry", () => {

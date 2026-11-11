@@ -14,19 +14,21 @@ function sourceOrigin(basemap: BasemapDefinition): string {
 }
 
 describe("the host's basemap catalogue", () => {
-  it("offers Bright, Liberty, Positron, Streets and Fiord, in that order", () => {
+  it("offers Bright, Liberty, Colorful, Positron, Streets and Fiord, in that order, as three columns of two rows", () => {
     expect(BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.name)).toEqual([
       "Bright",
       "Liberty",
+      "Colorful",
       "Positron",
       "Streets",
       "Fiord",
     ]);
   });
 
-  it("makes Bright the default, and finds Fiord by its own id", () => {
+  it("makes Bright the default, and finds Colorful and Fiord by their own ids", () => {
     expect(BASEMAP_CATALOGUE.defaultId).toBe("bright");
     expect(BASEMAP_CATALOGUE.resolve("liberty").name).toBe("Liberty");
+    expect(BASEMAP_CATALOGUE.resolve("colorful").name).toBe("Colorful");
     expect(BASEMAP_CATALOGUE.resolve("fiord").name).toBe("Fiord");
   });
 
