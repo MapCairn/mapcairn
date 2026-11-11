@@ -36,7 +36,7 @@ npm run check
 
 - `dev` runs the Vite SSR dev server on port 5173. It never touches Cloudflare.
 - `test` runs Vitest across `packages/*`. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
-- `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has lower floors (70% statements and lines, 65% functions, 50% branches), because its layout and touch-gesture code is covered by Playwright. Aim for 100% behavioural coverage.
+- `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has a slightly lower branch floor: 95% for statements, functions and lines and 90% for branches, because its layout and touch-gesture code is also covered by Playwright. Aim for 100% behavioural coverage.
 - `typecheck` checks every workspace, including web route types and the Playwright project.
 - `lint` runs Biome, dependency-cruiser and the harmony scanner (`scripts/harmony`, see `DESIGN.md`). Pre-commit runs the same three on staged files, but not typecheck, tests or coverage.
 - `build` builds every workspace. The web build then checks that the production bundle holds no browser test seam.

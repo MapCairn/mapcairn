@@ -20,12 +20,15 @@ export default defineConfig({
           functions: 95,
           lines: 95,
         },
-        // The host's layout and touch-gesture code is covered by Playwright, not jsdom.
+        // The host sits a little lower on branches because its layout and
+        // touch-gesture code is also covered by Playwright, not only by jsdom.
+        // Set below the measured figures (about 97.5, 93.8, 97.6 and 97.6) so
+        // ordinary changes do not trip it, and raised when the measure rises.
         "packages/web/**": {
-          statements: 70,
-          branches: 50,
-          functions: 65,
-          lines: 70,
+          statements: 95,
+          branches: 90,
+          functions: 95,
+          lines: 95,
         },
       },
     },
