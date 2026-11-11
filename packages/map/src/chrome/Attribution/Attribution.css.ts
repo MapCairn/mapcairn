@@ -1,10 +1,4 @@
-import {
-  focusRing,
-  mapOverlayTokens,
-  surfaceBlurStyle,
-  tokens,
-  zLayer,
-} from "@mapcairn/theme";
+import { focusRing, surfaceBlurStyle, tokens, zLayer } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 import { chromeVar, chromeVars } from "../MapChrome/chromeVars";
 
@@ -23,16 +17,20 @@ export const root = style({
 });
 
 /**
- * The credits button is a bare icon on the map, with no surface behind it.
- * The default map is Bright in both themes, so a dark theme's light icon would
- * sit on a light map; the map halo (dark in a dark theme, light in a light one)
- * outlines it, as the scale readout's text is outlined.
+ * The credits button sits on the same translucent chrome surface as the other
+ * controls, so the icon reads over any basemap, over place names on a raster
+ * map included. Hover keeps the surface and adds the hairline tint over it.
  */
 export const onMapIcon = style({
-  filter: [
-    `drop-shadow(0 0 calc(${tokens.space.xxs} / 2) ${mapOverlayTokens.halo})`,
-    `drop-shadow(0 0 calc(${tokens.space.xxs} / 2) ${mapOverlayTokens.halo})`,
-  ].join(" "),
+  ...surfaceBlurStyle,
+  borderRadius: "50%",
+  boxShadow: tokens.shadow.floating,
+  selectors: {
+    '&:hover:not([aria-disabled="true"])': {
+      backgroundColor: tokens.color.surface,
+      backgroundImage: `linear-gradient(${tokens.color.hairline}, ${tokens.color.hairline})`,
+    },
+  },
 });
 
 /** The end stack's width plus the gap after it: how far a beside popover moves inwards. */

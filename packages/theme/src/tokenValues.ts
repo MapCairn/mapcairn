@@ -174,8 +174,6 @@ export interface ColourRoles {
   mapAccuracyFill: string;
   /** Outline that separates a pin or line from the map beneath. */
   mapHalo: string;
-  /** Scale bar line. */
-  mapScaleLine: string;
 }
 
 /** Names of the colour roles, in declaration order. */
@@ -203,7 +201,6 @@ export const colourRoleNames = [
   "mapAccuracy",
   "mapAccuracyFill",
   "mapHalo",
-  "mapScaleLine",
 ] as const satisfies readonly (keyof ColourRoles)[];
 
 /** The two themes. */
@@ -251,7 +248,6 @@ const lightColour: ColourRoles = {
   mapAccuracy: accent[600],
   mapAccuracyFill: "oklch(0.55 0.175 255 / 0.12)",
   mapHalo: "oklch(1 0 0)",
-  mapScaleLine: "oklch(0.56 0.008 250)",
 };
 
 const darkColour: ColourRoles = {
@@ -278,7 +274,6 @@ const darkColour: ColourRoles = {
   mapAccuracy: accent[600],
   mapAccuracyFill: "oklch(0.55 0.175 255 / 0.2)",
   mapHalo: "oklch(0.19 0.008 250)",
-  mapScaleLine: "oklch(0.56 0.008 250)",
 };
 
 /** Light and dark values for every themed token. */

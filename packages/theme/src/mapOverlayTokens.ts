@@ -2,8 +2,8 @@ import { tokens } from "./tokens.css";
 
 /**
  * The CSS variable references for everything drawn over the map: pin,
- * measure line and fill, accuracy circle, scale bar, halo, loading indicator
- * and tile-error banner. Overlay components style from these alone, so they
+ * measure line and fill, accuracy circle, halo, loading indicator and
+ * tile-error banner. Overlay components style from these alone, so they
  * look the same on every map engine and never import an engine's styles.
  *
  * Each colour clears 3:1 against light and dark basemaps; `contrast.test.ts`
@@ -25,8 +25,6 @@ export const mapOverlayTokens = {
   accuracyStroke: tokens.color.mapAccuracy,
   /** Location accuracy circle fill. */
   accuracyFill: tokens.color.mapAccuracyFill,
-  /** Scale bar line. */
-  scaleLine: tokens.color.mapScaleLine,
   /** The moving arc of the tile-loading indicator. */
   loadingIndicator: tokens.color.mapPin,
   /** The track behind the loading indicator. */

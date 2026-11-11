@@ -130,13 +130,6 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     "basemaps",
     "non-text",
   ),
-  pair(
-    "scale-basemap",
-    "Scale bar on any basemap",
-    "mapScaleLine",
-    "basemaps",
-    "non-text",
-  ),
   pair("pin-halo", "Pin against its halo", "mapPin", "mapHalo", "non-text"),
   pair(
     "line-halo",
@@ -180,7 +173,6 @@ export const ROLE_PAIRS: Readonly<Record<ColourRole, string | ExemptRole>> = {
   mapAccuracy: "accuracy-basemap",
   mapAccuracyFill: { exempt: "Translucent fill, its outline carries 3:1" },
   mapHalo: "pin-halo",
-  mapScaleLine: "scale-basemap",
 };
 
 /**

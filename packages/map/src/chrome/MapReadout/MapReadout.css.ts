@@ -1,18 +1,19 @@
-import { mapOverlayTokens, tokens } from "@mapcairn/theme";
+import { surfaceBlurStyle, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /**
- * A halo behind text drawn straight on the map, so it reads on light and dark
- * basemaps in both themes. Text shadows rather than a text stroke, because a
- * stroke without `paint-order` support eats into the glyphs.
+ * The scale and the coordinates sit on the same translucent chrome surface as
+ * the other controls (opaque under reduced transparency and more contrast), so
+ * their text and line read over any basemap in either theme instead of
+ * depending on the map behind them.
  */
-const textHalo = {
+const onSurface = {
+  ...surfaceBlurStyle,
+  boxSizing: "border-box",
+  padding: `${tokens.space.xxs} ${tokens.space.xs}`,
+  borderRadius: tokens.radius.inner,
   color: tokens.color.text,
-  textShadow: [
-    `0 0 ${tokens.space.xxs} ${mapOverlayTokens.halo}`,
-    `0 0 ${tokens.space.xxs} ${mapOverlayTokens.halo}`,
-    `0 0 ${tokens.space.xs} ${mapOverlayTokens.halo}`,
-  ].join(", "),
+  boxShadow: tokens.shadow.floating,
 } as const;
 
 /** Thickness of the scale line and its end ticks. */
@@ -27,12 +28,12 @@ export const readout = style({
 });
 
 /**
- * The scale bar: a label over a thin line, with no box behind it. It fades
+ * The scale bar: a label over a thin line. It fades
  * out when idle (see `data-idle`); the duration tokens drop to near zero under
  * reduced motion, and the component never sets it idle then anyway.
  */
 export const scaleBar = style({
-  ...textHalo,
+  ...onSurface,
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -65,8 +66,7 @@ const tickBase = {
   gridArea: "1 / 1",
   width: lineWeight,
   height: "100%",
-  backgroundColor: mapOverlayTokens.scaleLine,
-  boxShadow: `0 0 0 1px ${mapOverlayTokens.halo}`,
+  backgroundColor: tokens.color.text,
 } as const;
 
 /** The line. Scaled from its start edge. */
@@ -75,8 +75,7 @@ export const line = style({
   alignSelf: "end",
   width: "100%",
   height: lineWeight,
-  backgroundColor: mapOverlayTokens.scaleLine,
-  boxShadow: `0 0 0 1px ${mapOverlayTokens.halo}`,
+  backgroundColor: tokens.color.text,
   transformOrigin: "left center",
   transform: "scaleX(var(--scale-ratio, 0))",
   transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
@@ -93,12 +92,9 @@ export const tickEnd = style({
   transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
 });
 
-/**
- * Cursor coordinates: plain text in the muted colour. The halo keeps it at
- * AA contrast over any basemap.
- */
+/** Cursor coordinates: muted text on the same surface as the scale. */
 export const coordinates = style({
-  ...textHalo,
+  ...onSurface,
   color: tokens.color.textMuted,
   margin: 0,
   fontFamily: tokens.type.family,

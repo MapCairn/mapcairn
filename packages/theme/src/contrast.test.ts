@@ -274,12 +274,7 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
     });
 
     it("keeps map overlays visible on light and dark basemaps", () => {
-      for (const role of [
-        "mapPin",
-        "mapMeasureLine",
-        "mapAccuracy",
-        "mapScaleLine",
-      ] as const) {
+      for (const role of ["mapPin", "mapMeasureLine", "mapAccuracy"] as const) {
         for (const [name, backdrop] of Object.entries({
           white,
           black,
