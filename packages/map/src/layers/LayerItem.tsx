@@ -18,6 +18,7 @@ import { SegmentedControl } from "../ui/SegmentedControl";
 import { Slider } from "../ui/Slider";
 import { Switch } from "../ui/Switch";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
+import { DateTimeControl } from "./DateTimeControl";
 import { FeatureGlyph, LegendGlyph } from "./FeatureGlyph";
 import * as styles from "./Layers.css";
 import type { DataLayerState, DataLayers, LayerStatus } from "./useDataLayers";
@@ -112,6 +113,17 @@ function LayerControl({ layer, control, layers }: ControlProps) {
         </label>
       );
     }
+    case "datetime":
+      return (
+        <DateTimeControl
+          control={control}
+          value={value}
+          now={layers.now()}
+          disabled={disabled}
+          onChange={change}
+          testId={testId}
+        />
+      );
     case "range":
       return (
         <div data-testid={testId}>

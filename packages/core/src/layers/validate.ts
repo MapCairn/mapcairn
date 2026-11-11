@@ -1,4 +1,5 @@
 import { isIsoDate } from "./controls";
+import { MINUTES_PER_DAY, slotTime } from "./dateTime";
 import type { LayerDefinition } from "./definition";
 import { isCategoricalSlot } from "./palette";
 import { parseTemplate } from "./template";
@@ -102,6 +103,59 @@ function checkDate(problems: Problems, control: Json, path: string): void {
   }
 }
 
+function isStep(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    MINUTES_PER_DAY % value === 0
+  );
+}
+
+/** Whether a bound is a slot on the step or a whole number of minutes ago. */
+function isTimeBound(value: unknown, step: number): boolean {
+  if (isObject(value)) {
+    const { minutesAgo } = value;
+    return (
+      typeof minutesAgo === "number" &&
+      Number.isInteger(minutesAgo) &&
+      minutesAgo >= 0
+    );
+  }
+  const time = slotTime(value);
+  return time !== null && (time / 60_000) % step === 0;
+}
+
+function checkDateTime(problems: Problems, control: Json, path: string): void {
+  const step = control.stepMinutes;
+  if (!isStep(step)) {
+    problems.add(
+      `${path}.stepMinutes`,
+      "must be a whole number of minutes that divides a day",
+    );
+    return;
+  }
+  for (const key of ["min", "max", "default"]) {
+    if (!isTimeBound(control[key], step)) {
+      problems.add(
+        `${path}.${key}`,
+        "must be a YYYY-MM-DDtHHMM slot on the step or { minutesAgo }",
+      );
+    }
+  }
+  const [min, max, fallback] = [control.min, control.max, control.default].map(
+    slotTime,
+  );
+  if (min != null && max != null && min > max) {
+    problems.add(path, "min is after max");
+  }
+  const belowMin = min != null && fallback != null && fallback < min;
+  const aboveMax = max != null && fallback != null && fallback > max;
+  if (belowMin || aboveMax) {
+    problems.add(`${path}.default`, "must be between min and max");
+  }
+}
+
 function checkOpacity(problems: Problems, control: Json, path: string): void {
   const value = control.default;
   if (typeof value !== "number" || value < 0.1 || value > 1) {
@@ -115,6 +169,7 @@ const CONTROL_CHECKS: Readonly<
   segmented: checkSegmented,
   switch: checkSwitch,
   date: checkDate,
+  datetime: checkDateTime,
   opacity: checkOpacity,
   range: checkRange,
 };
@@ -140,7 +195,7 @@ function checkControl(
   } else {
     problems.add(
       `${path}.kind`,
-      "must be segmented, switch, date, opacity or range",
+      "must be segmented, switch, date, datetime, opacity or range",
     );
   }
   if (control.enabledWhen !== undefined) {

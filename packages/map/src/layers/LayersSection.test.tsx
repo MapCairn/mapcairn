@@ -9,6 +9,7 @@ import {
   SAMPLE_LAYERS,
   SAMPLE_LINE_LAYER,
   SAMPLE_QUERY_LAYER,
+  SAMPLE_TIME_LAYER,
   SAMPLE_VECTOR_LAYER,
   StaticLayerRegistry,
   sampleArea,
@@ -825,5 +826,96 @@ describe("LayersSection", () => {
       layers().layers.find((l) => l.definition.id === "sample-imagery")
         ?.controls.opacity,
     ).toBe("0.75");
+  });
+
+  describe("a date and time control", () => {
+    // NOW is 12:00 UTC and the sample is six hours behind, so 06:00 is the newest slot.
+    const timeOf = (layers: () => DataLayers) =>
+      layers().layers.find((l) => l.definition.id === "sample-rain")?.controls
+        .time;
+    const open = () => {
+      const view = setup([SAMPLE_TIME_LAYER]);
+      toggle("sample-rain", "Sample rain");
+      const group = screen.getByRole("group", { name: "Time shown" });
+      return {
+        ...view,
+        group,
+        date: within(group).getByLabelText("Date (UTC)"),
+        time: within(group).getByRole("combobox", { name: "Time (UTC)" }),
+      };
+    };
+
+    it("shows the newest slot, bounded to the days the provider has, and says so in words", () => {
+      const { group, date, time } = open();
+      expect(date).toHaveAttribute("type", "date");
+      expect(date).toHaveAttribute("min", "2000-06-01");
+      expect(date).toHaveAttribute("max", "2026-11-09");
+      expect(date).toHaveValue("2026-11-09");
+      expect(time).toHaveValue("2026-11-09t0600");
+      expect(group).toHaveTextContent(
+        "Showing 06:00 to 06:30 UTC on 9 November 2026.",
+      );
+      expect(group).toHaveTextContent(
+        "Newest available: 06:00 UTC on 9 November 2026. Later times are not out yet.",
+      );
+      expect(date).toHaveAccessibleDescription(/Showing 06:00 to 06:30 UTC/);
+      expect(time).toHaveAccessibleDescription(
+        /Newest available.*Some half hours have no data./,
+      );
+    });
+
+    it("offers only the times that exist on the chosen day", () => {
+      const { time, date, layers } = open();
+      const labels = () =>
+        within(time)
+          .getAllByRole("option")
+          .map((option) => option.textContent);
+      expect(labels()).toHaveLength(13);
+      expect(labels().at(-1)).toBe("06:00");
+      fireEvent.change(date, { target: { value: "2026-11-01" } });
+      expect(timeOf(layers)).toBe("2026-11-01t0600");
+      expect(labels()).toHaveLength(48);
+      expect(labels()[0]).toBe("00:00");
+      expect(labels().at(-1)).toBe("23:30");
+    });
+
+    it("changes the time, and moves a time not out yet back to the newest", () => {
+      const { time, date, layers, group } = open();
+      fireEvent.change(date, { target: { value: "2026-11-08" } });
+      fireEvent.change(time, { target: { value: "2026-11-08t2130" } });
+      expect(timeOf(layers)).toBe("2026-11-08t2130");
+      expect(group).toHaveTextContent(
+        "Showing 21:30 to 22:00 UTC on 8 November 2026.",
+      );
+      fireEvent.change(date, { target: { value: "2026-11-09" } });
+      expect(timeOf(layers)).toBe("2026-11-09t0600");
+      fireEvent.change(date, { target: { value: "" } });
+      expect(timeOf(layers)).toBe("2026-11-09t0600");
+    });
+
+    it("is disabled, not hidden, while its condition is not met", () => {
+      const gated: LayerDefinition = {
+        ...SAMPLE_TIME_LAYER,
+        controls: [
+          {
+            kind: "switch",
+            id: "live",
+            label: "Choose a time",
+            default: false,
+          },
+          {
+            ...SAMPLE_TIME_LAYER.controls[0],
+            enabledWhen: { control: "live", in: ["true"] },
+          } as LayerDefinition["controls"][number],
+        ],
+      };
+      setup([gated]);
+      toggle("sample-rain", "Sample rain");
+      const group = screen.getByRole("group", { name: "Time shown" });
+      expect(within(group).getByLabelText("Date (UTC)")).toBeDisabled();
+      expect(
+        within(group).getByRole("combobox", { name: "Time (UTC)" }),
+      ).toBeDisabled();
+    });
   });
 });

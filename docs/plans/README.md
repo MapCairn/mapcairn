@@ -4,4 +4,6 @@ Plans and specs for larger changes live here, one file each, numbered in the ord
 
 Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository root, not here.
 
-No plan is open.
+| Plan | Status | Tracking |
+| --- | --- | --- |
+| [0007: Half-hourly rainfall and a date and time control](0007-half-hourly-rainfall.md) | in progress | [#2](https://github.com/MapCairn/mapcairn/issues/2) |
