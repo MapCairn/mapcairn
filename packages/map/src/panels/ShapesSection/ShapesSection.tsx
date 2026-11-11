@@ -11,7 +11,7 @@ import {
 import { type Ref, useContext } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { MapContext } from "../../host";
-import { coveredPadding } from "../../layers/reveal";
+import { fitPadding } from "../../layers/reveal";
 import { useSettings } from "../../services";
 import type { DrawFeedback, UseDraw } from "../../tools/DrawToolbar";
 import { Button } from "../../ui/Button";
@@ -20,9 +20,6 @@ import { ListRow } from "../../ui/ListRow";
 import { type HeadingLevel, Section, Subheading } from "../Section";
 import { note, noteIcon, prose, subsection } from "../Section/Section.css";
 import { actions, list } from "./ShapesSection.css";
-
-/** Space in pixels kept around imported shapes when the map fits to them. */
-const IMPORT_FIT_MARGIN_PX = 24;
 
 /** The closest the map zooms to fit imported shapes, so a single point keeps its surroundings. */
 const IMPORT_FIT_MAX_ZOOM = 16;
@@ -70,15 +67,9 @@ function useFitToImport(): (bounds: Bounds) => void {
     if (!adapter) {
       return;
     }
-    const covered = coveredPadding({ layout, viewport, panelEdge });
     adapter.fitBounds(bounds, {
       maxZoom: IMPORT_FIT_MAX_ZOOM,
-      padding: {
-        top: (covered?.top ?? 0) + IMPORT_FIT_MARGIN_PX,
-        right: (covered?.right ?? 0) + IMPORT_FIT_MARGIN_PX,
-        bottom: (covered?.bottom ?? 0) + IMPORT_FIT_MARGIN_PX,
-        left: (covered?.left ?? 0) + IMPORT_FIT_MARGIN_PX,
-      },
+      padding: fitPadding({ layout, viewport, panelEdge }),
     });
   };
 }

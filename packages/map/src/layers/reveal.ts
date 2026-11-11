@@ -27,6 +27,15 @@ export interface RevealGeometry {
 type Padding = NonNullable<MapFitOptions["padding"]>;
 
 /**
+ * Room kept round a fitted result, in pixels: the search pill above it and the
+ * end stack beside it are bigger than the plain margin, so nothing is drawn
+ * under them.
+ */
+const FIT_CLEARANCE_PX = 32;
+const FIT_CLEARANCE_TOP_PX = 88;
+const FIT_CLEARANCE_END_PX = 80;
+
+/**
  * The part of the map the sheet (at {@link REVEAL_DETENT}) or the side panel
  * covers, as fit padding.
  * @returns `null` while the map has no size, or when the cover would leave no
@@ -109,5 +118,20 @@ export function revealOffset(
   return {
     dx: point.x - (free.left + free.right) / 2,
     dy: point.y - (free.top + free.bottom) / 2,
+  };
+}
+
+/**
+ * Fit padding that keeps a result clear of the sheet (at {@link REVEAL_DETENT})
+ * or the side panel, and of the search pill and the end stack, so a route or
+ * imported shapes are drawn where they can be seen.
+ */
+export function fitPadding(geometry: RevealGeometry): Padding {
+  const covered = coveredPadding(geometry);
+  return {
+    top: (covered?.top ?? 0) + FIT_CLEARANCE_TOP_PX,
+    right: (covered?.right ?? 0) + FIT_CLEARANCE_END_PX,
+    bottom: (covered?.bottom ?? 0) + FIT_CLEARANCE_PX,
+    left: (covered?.left ?? 0) + FIT_CLEARANCE_PX,
   };
 }

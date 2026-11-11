@@ -3,7 +3,7 @@ import { tokenValues } from "@mapcairn/theme";
 import { useEffect } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { useMap } from "../../host";
-import { coveredPadding } from "../../layers/reveal";
+import { fitPadding } from "../../layers/reveal";
 import type { DirectionsOutcome } from "./useDirections";
 
 /** Map ids of what directions draws. Definition ids cannot contain a colon, so they never meet a layer's. */
@@ -15,15 +15,6 @@ export const AREA_LAYER_ID = ":area";
 
 /** The widest a route fit zooms in, so a short route is not shown at street level. */
 export const ROUTE_FIT_MAX_ZOOM = 16;
-
-/**
- * Room kept round a fitted result, in pixels: the search pill above it and the
- * end stack beside it are bigger than the plain margin, so the stops are not
- * drawn under them.
- */
-const FIT_CLEARANCE_PX = 32;
-const FIT_CLEARANCE_TOP_PX = 88;
-const FIT_CLEARANCE_END_PX = 80;
 
 /** Width of the route line, in pixels, and of the white casing under it. */
 const ROUTE_WIDTH_PX = 5;
@@ -93,24 +84,9 @@ export function MapDirections({ result }: MapDirectionsProps) {
     if (!bounds) {
       return;
     }
-    const covered = coveredPadding({
-      layout,
-      viewport,
-      panelEdge,
-    }) ?? {
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-    };
     adapter.fitBounds(bounds, {
       maxZoom: ROUTE_FIT_MAX_ZOOM,
-      padding: {
-        top: covered.top + FIT_CLEARANCE_TOP_PX,
-        right: covered.right + FIT_CLEARANCE_END_PX,
-        bottom: covered.bottom + FIT_CLEARANCE_PX,
-        left: covered.left + FIT_CLEARANCE_PX,
-      },
+      padding: fitPadding({ layout, viewport, panelEdge }),
     });
   }, [adapter, result]);
 
