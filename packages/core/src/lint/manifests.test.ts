@@ -19,9 +19,25 @@ const SDK_PACKAGES = ["core", "map", "react", "theme"] as const;
 const TEST_SUPPORT =
   /(\.test\.tsx?$|\/contracts\/|\/propertyTesting\/|\/lint\/|TestHarness\.tsx?$|\.d\.ts$)/;
 
-/** Type-only modules that npm installs from `@types`. */
+/**
+ * Type-only modules that npm installs from `@types`, and that the SDK's
+ * declared dependencies must therefore include. `react` is not mapped:
+ * React is a peer, and a host that compiles TypeScript with React already
+ * has `@types/react` for its own code, so the packages keep it as a
+ * devDependency rather than ask for a second copy.
+ */
 const TYPES_PACKAGES: Readonly<Record<string, string>> = {
   geojson: "@types/geojson",
+};
+
+/** Every entry point each SDK package offers, and nothing else. */
+const ENTRY_POINTS: Readonly<
+  Record<(typeof SDK_PACKAGES)[number], Record<string, string>>
+> = {
+  core: { ".": "./src/index.ts", "./contracts": "./src/contracts/index.ts" },
+  map: { ".": "./src/index.ts" },
+  react: { ".": "./src/index.ts" },
+  theme: { ".": "./src/index.ts" },
 };
 
 interface Manifest {
@@ -89,7 +105,7 @@ describe("SDK package manifests", () => {
   it.each(SDK_PACKAGES)(
     "@mapcairn/%s exposes only its entry points",
     (name) => {
-      expect(manifestOf(name).exports).toHaveProperty(".", "./src/index.ts");
+      expect(manifestOf(name).exports).toEqual(ENTRY_POINTS[name]);
     },
   );
 
