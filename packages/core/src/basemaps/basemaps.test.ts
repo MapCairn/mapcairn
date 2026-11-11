@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  FAKE_IMAGERY_BASEMAP,
+  FAKE_HYBRID_BASEMAP,
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
 } from "../fakes/fixtures";
@@ -28,7 +28,7 @@ function sourceUrls(basemap: BasemapDefinition): readonly string[] {
       return [source.styleUrl];
     case "raster":
       return [tile(source.tileUrl)];
-    case "imagery":
+    case "hybrid":
       return [tile(source.tileUrl), source.labelStyleUrl];
   }
 }
@@ -260,9 +260,9 @@ describe("BASEMAPS", () => {
 });
 
 describe("usesMoreData", () => {
-  it("is true for a basemap drawn from image tiles: raster or imagery", () => {
+  it("is true for a basemap drawn from image tiles: raster or hybrid", () => {
     expect(usesMoreData(FAKE_RASTER_BASEMAP)).toBe(true);
-    expect(usesMoreData(FAKE_IMAGERY_BASEMAP)).toBe(true);
+    expect(usesMoreData(FAKE_HYBRID_BASEMAP)).toBe(true);
   });
 
   it("is false for a vector basemap", () => {

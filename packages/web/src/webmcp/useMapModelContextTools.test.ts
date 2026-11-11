@@ -1,7 +1,7 @@
 import {
   BUILT_IN_BASEMAP_CATALOGUE,
   createBasemapCatalogue,
-  FAKE_IMAGERY_BASEMAP,
+  FAKE_HYBRID_BASEMAP,
   FAKE_VECTOR_BASEMAP,
   FakeSearchProvider,
   type SearchProvider,
@@ -42,7 +42,7 @@ describe("basemapChoices", () => {
   // An agent must not accept a provider's licence on a person's behalf.
   it("leaves out a basemap whose licence is non-commercial", () => {
     const choices = basemapChoices(
-      createBasemapCatalogue([FAKE_VECTOR_BASEMAP, FAKE_IMAGERY_BASEMAP]),
+      createBasemapCatalogue([FAKE_VECTOR_BASEMAP, FAKE_HYBRID_BASEMAP]),
     );
     expect(choices).toEqual([FAKE_VECTOR_BASEMAP.id]);
   });

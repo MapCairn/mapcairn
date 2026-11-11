@@ -3,7 +3,7 @@ import {
   type BasemapDefinition,
   createBasemapCatalogue,
   createFakeServices,
-  FAKE_IMAGERY_BASEMAP,
+  FAKE_HYBRID_BASEMAP,
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
   FakeDevicePreferences,
@@ -380,12 +380,12 @@ describe("BasemapPicker with a host's basemaps", () => {
     expect(onChange).toHaveBeenCalledWith("fake-plain");
   });
 
-  it("notes in Save data mode that an imagery basemap uses more data, as a raster one does", () => {
+  it("notes in Save data mode that a hybrid basemap uses more data, as a raster one does", () => {
     const services = createFakeServices({
       basemaps: createBasemapCatalogue([
         FAKE_VECTOR_BASEMAP,
         FAKE_RASTER_BASEMAP,
-        FAKE_IMAGERY_BASEMAP,
+        FAKE_HYBRID_BASEMAP,
       ]),
       preferences: new FakeDevicePreferences({ saveData: true }),
     });
@@ -397,7 +397,7 @@ describe("BasemapPicker with a host's basemaps", () => {
       </ServicesProvider>,
     );
     expect(
-      screen.getByRole("radio", { name: "Fake imagery Uses more data" }),
+      screen.getByRole("radio", { name: "Fake hybrid Uses more data" }),
     ).toBeInTheDocument();
     expect(
       screen.getByTestId("basemap-data-note-fake-raster"),

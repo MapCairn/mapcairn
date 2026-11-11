@@ -258,13 +258,13 @@ function idleBasemapTiles(): BasemapTiles {
   return { loaded: 0, failed: 0, reported: false };
 }
 
-/** The id of the image source and layer under an imagery basemap's labels. */
+/** The id of the image source and layer under a hybrid basemap's labels. */
 const IMAGERY_ID = "basemap-imagery";
 
 /**
  * Whether an engine source's tiles decide if a basemap is available: any of
  * the basemap's own sources (never a data layer's), except that only the
- * imagery counts for an imagery basemap, whose labels can load while the
+ * imagery counts for a hybrid basemap, whose labels can load while the
  * imagery is down and would otherwise hide that it is.
  */
 function decidesAvailability(
@@ -274,14 +274,26 @@ function decidesAvailability(
   if (typeof sourceId !== "string" || sourceId.startsWith(ENGINE_ID_PREFIX)) {
     return false;
   }
-  return basemap?.source.kind !== "imagery" || sourceId === IMAGERY_ID;
+  return basemap?.source.kind !== "hybrid" || sourceId === IMAGERY_ID;
+}
+
+/** The parts of a style layer the hybrid basemap reads. */
+interface StyleLayerLike {
+  readonly id: string;
+  readonly type?: string;
+  readonly source?: string;
+  readonly "source-layer"?: string;
 }
 
 /**
  * Removes style layers, and any source only they drew from. A layer the
  * style does not have is skipped.
+ * @returns The layers left in the style, bottom first.
  */
-function removeStyleLayers(map: MapLibreMap, ids: readonly string[]): void {
+function removeStyleLayers(
+  map: MapLibreMap,
+  ids: readonly string[],
+): readonly StyleLayerLike[] {
   const sources = new Set<string>();
   for (const id of ids) {
     const layer = map.getLayer(id);
@@ -292,10 +304,8 @@ function removeStyleLayers(map: MapLibreMap, ids: readonly string[]): void {
       map.removeLayer(id);
     }
   }
-  if (sources.size === 0) {
-    return;
-  }
-  for (const { source } of map.getStyle().layers as { source?: string }[]) {
+  const remaining = map.getStyle().layers as StyleLayerLike[];
+  for (const { source } of remaining) {
     if (source !== undefined) {
       sources.delete(source);
     }
@@ -305,49 +315,66 @@ function removeStyleLayers(map: MapLibreMap, ids: readonly string[]): void {
       map.removeSource(source);
     }
   }
+  return remaining;
 }
 
+/** The id of the plain ground a hybrid basemap lays under its imagery. */
+const GROUND_ID = "basemap-ground";
+
+/** The kinds of layer a hybrid basemap keeps from its label style: lines and labels, never areas. */
+const LABEL_LAYER_TYPES: ReadonlySet<string> = new Set(["line", "symbol"]);
+
 /**
- * Turns the label style an imagery basemap loaded into the hybrid: it keeps
- * only the layers that draw from the basemap's `labelSourceLayers`, less any
- * named in `labelOmitLayers`, then adds the imagery as a raster source and
- * layer under them. Its `maxzoom` is the
- * deepest tile level with real detail, so MapLibre enlarges those tiles
- * further in and requests nothing deeper. Does nothing for another basemap.
+ * Turns the label style a hybrid basemap loaded into the hybrid. It keeps only
+ * the line and symbol layers that draw from the basemap's `labelSourceLayers`,
+ * less any named in `labelOmitLayers`, so no area of the style (land, water,
+ * buildings, road areas) covers the imagery. It then adds the imagery as a
+ * raster source and layer under them, and under that a plain ground in the
+ * basemap's `swatch` colour, if it has one, so a dark map is not pale before
+ * its imagery draws. The imagery's `maxzoom` is the deepest tile level with
+ * real detail, so MapLibre enlarges those tiles further in and requests
+ * nothing deeper. Does nothing for another basemap.
+ * @remarks The thumbnail script (`scripts/generateBasemapThumbnails.mjs`)
+ *   mirrors this; change both together.
  */
-function composeImagery(
+function composeHybrid(
   map: MapLibreMap,
   basemap: BasemapDefinition | undefined,
 ): void {
   const source = basemap?.source;
-  if (source?.kind !== "imagery") {
+  if (source?.kind !== "hybrid") {
     return;
   }
   const keep = new Set(source.labelSourceLayers);
   const omit = new Set(source.labelOmitLayers);
-  const layers = map.getStyle().layers as {
-    id: string;
-    "source-layer"?: string;
-  }[];
-  removeStyleLayers(
+  const kept = (layer: StyleLayerLike) =>
+    LABEL_LAYER_TYPES.has(layer.type ?? "") &&
+    keep.has(layer["source-layer"] ?? "") &&
+    !omit.has(layer.id);
+  const remaining = removeStyleLayers(
     map,
-    layers
-      .filter(
-        (layer) => omit.has(layer.id) || !keep.has(layer["source-layer"] ?? ""),
-      )
+    (map.getStyle().layers as StyleLayerLike[])
+      .filter((layer) => !kept(layer))
       .map((layer) => layer.id),
   );
+  const lowest = remaining[0]?.id;
   map.addSource(IMAGERY_ID, {
     type: "raster",
     tiles: [source.tileUrl],
     tileSize: source.tileSize,
     maxzoom: source.maxTileZoom,
   });
-  const [lowest] = map.getStyle().layers;
-  map.addLayer(
-    { id: IMAGERY_ID, type: "raster", source: IMAGERY_ID },
-    lowest?.id,
-  );
+  map.addLayer({ id: IMAGERY_ID, type: "raster", source: IMAGERY_ID }, lowest);
+  if (basemap?.swatch !== undefined) {
+    map.addLayer(
+      {
+        id: GROUND_ID,
+        type: "background",
+        paint: { "background-color": basemap.swatch },
+      },
+      IMAGERY_ID,
+    );
+  }
 }
 
 /**
@@ -657,7 +684,7 @@ function sameTiles(a: MapTileOverlay, b: MapTileOverlay): boolean {
 
 /**
  * What MapLibre draws for a basemap: a vector basemap's style URL, an
- * imagery basemap's label style URL (`composeImagery` adds the imagery once
+ * imagery basemap's label style URL (`composeHybrid` adds the imagery once
  * it loads), or an inline style with one raster source and layer for a
  * raster basemap.
  * @remarks `tileSize` must be passed: MapLibre assumes 512 px raster tiles
@@ -671,7 +698,7 @@ function styleFor(basemap: BasemapDefinition): string | StyleSpecification {
   if (source.kind === "vector") {
     return source.styleUrl;
   }
-  if (source.kind === "imagery") {
+  if (source.kind === "hybrid") {
     return source.labelStyleUrl;
   }
   return {
@@ -1798,7 +1825,17 @@ export class MapLibreMapAdapter implements MapAdapter {
       // A style may ask for its own projection (VersaTiles Colorful asks for a
       // globe); the app's setting wins. See ARCHITECTURE.md.
       this.applyProjection(map);
-      composeImagery(map, this.basemap);
+      try {
+        composeHybrid(map, this.basemap);
+      } catch (error) {
+        console.error("The hybrid basemap could not be put together", error);
+        // A pending mount or swap fails, so it never hangs and a swap puts
+        // the last basemap back; its style.load draws the data layers again.
+        if (this.pending) {
+          this.failPending(this.pending, error);
+          return;
+        }
+      }
       this.omitSaveDataLayers(map);
       if (this.pending) {
         this.pending.styleLoaded = true;

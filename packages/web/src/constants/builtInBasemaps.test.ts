@@ -16,7 +16,7 @@ function sourceOrigins(basemap: BasemapDefinition): readonly string[] {
       return [new URL(source.styleUrl).origin];
     case "raster":
       return [tile(source.tileUrl)];
-    case "imagery":
+    case "hybrid":
       return [tile(source.tileUrl), new URL(source.labelStyleUrl).origin];
   }
 }

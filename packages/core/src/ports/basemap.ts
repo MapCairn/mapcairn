@@ -26,11 +26,13 @@ export type BasemapSource =
       /**
        * Image tiles, such as satellite imagery, with the labels and roads of a
        * vector style drawn over them: a hybrid map. The engine adapter loads
-       * the style, keeps only its layers that draw from `labelSourceLayers`
-       * (so its land, water and buildings do not cover the imagery) and puts
-       * the imagery under them.
+       * the style, keeps only its line and symbol layers that draw from
+       * `labelSourceLayers` (so its land, water, buildings and road areas do
+       * not cover the imagery) and puts the imagery under them, over a plain
+       * ground in the basemap's `swatch` colour, if it has one, so the map is
+       * not pale before the imagery draws.
        */
-      readonly kind: "imagery";
+      readonly kind: "hybrid";
       /** A URL template with `{z}`, `{x}` and `{y}` placeholders. */
       readonly tileUrl: string;
       /** 256 px tiles, so a tile's `{z}` equals the normalised zoom. */
@@ -77,8 +79,9 @@ export interface BasemapDefinition {
    * basemap with no preview image, and every basemap in Save data mode, shows.
    * Without it the swatch is the interface's map background colour, the
    * default basemap's land colour. Set it for a basemap that is not light, so
-   * its tile does not look like the default one. It describes only the tile in
-   * the picker and is the host's choice. It may be the style's own land colour
+   * its tile does not look like the default one. It colours the tile in the
+   * picker, and a hybrid basemap's ground before its imagery draws, and is the
+   * host's choice. It may be the style's own land colour
    * where the provider's terms allow it, and is otherwise a colour of the
    * host's own, never one sampled from the provider's map or screenshots.
    */
@@ -98,8 +101,9 @@ export interface BasemapDefinition {
   /**
    * True when the provider's licence allows only non-commercial use. The SDK's
    * own basemaps have none, so it stays free for commercial use; a host that
-   * accepts such terms may add one to its own catalogue. The ui never offers
-   * such a basemap to an agent tool, because an agent must not accept a
+   * accepts such terms may add one to its own catalogue. A host must leave
+   * such a basemap out of any tool an agent can call, as the reference
+   * host's `basemapChoices` does, because an agent must not accept a
    * provider's licence on a person's behalf.
    */
   readonly nonCommercial?: boolean;

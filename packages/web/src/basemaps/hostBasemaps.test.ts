@@ -158,7 +158,7 @@ describe("the Satellite basemap", () => {
     expect(SATELLITE_BASEMAP.id).toBe("satellite");
     expect(SATELLITE_BASEMAP.name).toBe("Satellite");
     expect(SATELLITE_BASEMAP.source).toMatchObject({
-      kind: "imagery",
+      kind: "hybrid",
       tileUrl: `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-${year}_3857/default/g/{z}/{y}/{x}.jpg`,
       tileSize: 256,
       maxTileZoom: 14,
@@ -192,7 +192,7 @@ describe("the Satellite basemap", () => {
     expect(SATELLITE_BASEMAP.nonCommercial).toBe(true);
   });
 
-  it("gives EOX's credit in its own words, with the address in the text, the licence, and the label credits", () => {
+  it("gives EOX's credit in its own words, with the address in the text, the licence, the link back to EOX::Maps that its tile service asks for, and the label credits", () => {
     expect(SATELLITE_BASEMAP.attribution).toEqual([
       {
         text: `EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data ${year})`,
@@ -202,6 +202,7 @@ describe("the Satellite basemap", () => {
         text: "CC BY-NC-SA 4.0",
         href: "https://creativecommons.org/licenses/by-nc-sa/4.0/",
       },
+      { text: "EOX::Maps", href: "https://maps.eox.at" },
       {
         text: "© OpenStreetMap contributors",
         href: "https://www.openstreetmap.org/copyright",

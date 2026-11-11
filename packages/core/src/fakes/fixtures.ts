@@ -31,16 +31,17 @@ export const FAKE_RASTER_BASEMAP: BasemapDefinition =
   });
 
 /**
- * An imagery basemap (image tiles under the labels of a vector style), with
+ * A hybrid basemap (image tiles under the labels of a vector style), with
  * real detail to tile level 14 and zoom limits 0 to 17. Its licence is
- * non-commercial, as a host's satellite imagery may be.
+ * non-commercial, as a host's satellite imagery may be, and its swatch is
+ * dark.
  */
-export const FAKE_IMAGERY_BASEMAP: BasemapDefinition =
+export const FAKE_HYBRID_BASEMAP: BasemapDefinition =
   Object.freeze<BasemapDefinition>({
-    id: "fake-imagery",
-    name: "Fake imagery",
+    id: "fake-hybrid",
+    name: "Fake hybrid",
     source: {
-      kind: "imagery",
+      kind: "hybrid",
       tileUrl: "https://imagery.example/{z}/{y}/{x}.jpg",
       tileSize: 256,
       maxTileZoom: 14,
@@ -50,8 +51,9 @@ export const FAKE_IMAGERY_BASEMAP: BasemapDefinition =
     },
     minZoom: 0,
     maxZoom: 17,
-    thumbnail: "/basemaps/fake-imagery.webp",
+    thumbnail: "/basemaps/fake-hybrid.webp",
     attribution: [{ text: "Fake imagery" }],
     appearance: "dark",
+    swatch: "#203024",
     nonCommercial: true,
   });

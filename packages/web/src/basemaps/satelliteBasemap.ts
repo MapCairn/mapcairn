@@ -28,7 +28,10 @@ const SATELLITE_MAX_ZOOM = 17;
 // "EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains
 // modified Copernicus Sentinel data <year>)". It is kept word for word, with the
 // address in the text, so a saved image, which cannot carry links, still names
-// it. The labels and roads are OpenFreeMap's, so their credits follow.
+// it. The tile service's own page (maps.eox.at, checked 2026-11-11) adds "We
+// just ask for a link back to EOX::Maps as well as appropriate attribution",
+// so that link follows the licence. The labels and roads are OpenFreeMap's, so
+// their credits come last.
 const SATELLITE_CREDITS: readonly BasemapAttributionEntry[] = [
   {
     text: `EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data ${SATELLITE_IMAGERY_YEAR})`,
@@ -38,6 +41,7 @@ const SATELLITE_CREDITS: readonly BasemapAttributionEntry[] = [
     text: "CC BY-NC-SA 4.0",
     href: "https://creativecommons.org/licenses/by-nc-sa/4.0/",
   },
+  { text: "EOX::Maps", href: "https://maps.eox.at" },
   {
     text: "© OpenStreetMap contributors",
     href: "https://www.openstreetmap.org/copyright",
@@ -58,7 +62,7 @@ export const SATELLITE_BASEMAP: BasemapDefinition = {
   id: "satellite",
   name: "Satellite",
   source: {
-    kind: "imagery",
+    kind: "hybrid",
     // The EOX WMTS in Web Mercator ("g" is its GoogleMapsCompatible tile
     // matrix set), which puts the row before the column.
     tileUrl: `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-${SATELLITE_IMAGERY_YEAR}_3857/default/g/{z}/{y}/{x}.jpg`,

@@ -95,8 +95,8 @@ const VENDOR = {
 
 /**
  * What MapLibre draws for a basemap, built the same way as `styleFor` in the
- * MapLibre adapter: a vector basemap's style URL, an imagery basemap's label
- * style URL (the page adds the imagery as `composeImagery` in the adapter
+ * MapLibre adapter: a vector basemap's style URL, a hybrid basemap's label
+ * style URL (the page adds the imagery as `composeHybrid` in the adapter
  * does), or an inline style with one 256 px raster source for a raster basemap.
  */
 function styleFor(basemap) {
@@ -104,7 +104,7 @@ function styleFor(basemap) {
   if (source.kind === "vector") {
     return source.styleUrl;
   }
-  if (source.kind === "imagery") {
+  if (source.kind === "hybrid") {
     return source.labelStyleUrl;
   }
   return {
@@ -154,32 +154,42 @@ function pageFor(basemap, zoom) {
       fadeDuration: 0,
       canvasContextAttributes: { preserveDrawingBuffer: true },
     });
-    // An imagery basemap, as "composeImagery" in the MapLibre adapter builds
-    // it: the label style's layers from the kept source layers only (less
-    // those it names to leave out), over the
-    // imagery as a raster source capped at its deepest real level.
-    const imagery = ${JSON.stringify(basemap.source.kind === "imagery" ? basemap.source : null)};
+    // A hybrid basemap. The source of truth is "composeHybrid" in
+    // packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts; this mirrors
+    // it, so change both together: keep the label style's line and symbol
+    // layers from the kept source layers (less those it names to leave out),
+    // put the imagery under them, capped at its deepest real level, and lay
+    // the basemap's swatch colour under that as a plain ground.
+    const hybrid = ${JSON.stringify(basemap.source.kind === "hybrid" ? { ...basemap.source, swatch: basemap.swatch } : null)};
     map.on("style.load", () => {
-      if (!imagery) {
+      if (!hybrid) {
         return;
       }
-      const keep = new Set(imagery.labelSourceLayers);
-      const omit = new Set(imagery.labelOmitLayers ?? []);
+      const keep = new Set(hybrid.labelSourceLayers);
+      const omit = new Set(hybrid.labelOmitLayers ?? []);
+      const types = new Set(["line", "symbol"]);
       for (const layer of map.getStyle().layers) {
-        if (omit.has(layer.id) || !keep.has(layer["source-layer"] ?? "")) {
+        const kept = types.has(layer.type) && keep.has(layer["source-layer"] ?? "") && !omit.has(layer.id);
+        if (!kept) {
           map.removeLayer(layer.id);
         }
       }
       map.addSource("imagery", {
         type: "raster",
-        tiles: [imagery.tileUrl],
-        tileSize: imagery.tileSize,
-        maxzoom: imagery.maxTileZoom,
+        tiles: [hybrid.tileUrl],
+        tileSize: hybrid.tileSize,
+        maxzoom: hybrid.maxTileZoom,
       });
       map.addLayer(
         { id: "imagery", type: "raster", source: "imagery" },
         map.getStyle().layers[0]?.id,
       );
+      if (hybrid.swatch) {
+        map.addLayer(
+          { id: "ground", type: "background", paint: { "background-color": hybrid.swatch } },
+          "imagery",
+        );
+      }
     });
     map.on("idle", () => { window.__mapReady = true; });
   </script></body></html>`;
