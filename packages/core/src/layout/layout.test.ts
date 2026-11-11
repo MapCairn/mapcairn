@@ -45,32 +45,13 @@ describe("computeBottomSlotLayout", () => {
     });
   });
 
-  it("lifts from a resting place above the inset, such as one above a credit row", () => {
-    // The slots rest 56px above the bottom edge (a credit row, a gap and the
-    // inset). A sheet whose top is at y=600 still leaves `inset` of room, so
-    // they move up by 200 - (56 - 12) = 156 from where they rest.
+  it("does not push the slots down when the sheet's top is below the viewport's edge", () => {
     expect(
       computeBottomSlotLayout({
         ...base,
         layout: "sheet",
-        sheetTopEdge: 600,
-        sheetDetent: "half",
-        restingInset: 56,
-      }),
-    ).toMatchObject({
-      bottomStartTranslateY: -156,
-      bottomEndTranslateY: -156,
-    });
-  });
-
-  it("does not lift when the sheet's top is below where the raised slots rest", () => {
-    expect(
-      computeBottomSlotLayout({
-        ...base,
-        layout: "sheet",
-        sheetTopEdge: 790,
+        sheetTopEdge: 900,
         sheetDetent: "peek",
-        restingInset: 56,
       }),
     ).toMatchObject({ bottomEndTranslateY: 0 });
   });

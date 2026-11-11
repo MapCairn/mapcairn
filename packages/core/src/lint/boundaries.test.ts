@@ -1,6 +1,5 @@
 import { spawnSync } from "node:child_process";
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -34,10 +33,6 @@ function writeTree(root: string, files: Record<string, string>): void {
 
 /** One violation reported as `rule: file`. */
 type Finding = string;
-
-const legacyPaths: Array<{ path: string; reason: string }> = JSON.parse(
-  readFileSync(path.join(REPO, "scripts/harmony/legacyPaths.json"), "utf8"),
-);
 
 describe("dependency-cruiser boundaries", () => {
   let root: string;
@@ -367,42 +362,5 @@ describe("Biome rules", () => {
     "packages/core/src/pure/dom.test.ts",
   ])("accepts %s", (file) => {
     expect(findings.filter((f) => f.endsWith(file))).toEqual([]);
-  });
-});
-
-describe("legacy path list", () => {
-  it("names only paths that still exist, so deleting code empties the list", () => {
-    for (const entry of legacyPaths) {
-      expect(existsSync(path.join(REPO, entry.path)), entry.path).toBe(true);
-    }
-  });
-
-  it("gives every entry a reason", () => {
-    for (const entry of legacyPaths) {
-      expect(entry.reason.length, entry.path).toBeGreaterThan(10);
-    }
-  });
-
-  it("is mirrored exactly by the Biome legacy override", () => {
-    const config = JSON.parse(
-      readFileSync(path.join(REPO, "biome.jsonc"), "utf8"),
-    );
-    const override = (
-      config.overrides as Array<{
-        includes: string[];
-        linter?: { rules?: { a11y?: Record<string, string> } };
-      }>
-    ).find(
-      (o) =>
-        o.linter?.rules?.a11y?.noNoninteractiveElementInteractions === "off",
-    );
-    const expected = legacyPaths.map((e) =>
-      e.path.endsWith("/") ? `${e.path}**` : e.path,
-    );
-    if (expected.length === 0) {
-      expect(override).toBeUndefined();
-    } else {
-      expect(override?.includes).toEqual(expected);
-    }
   });
 });

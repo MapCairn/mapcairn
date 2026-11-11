@@ -207,13 +207,6 @@ export interface VectorTileSource {
   readonly maxzoom: number;
 }
 
-/** Every kind of layer source. */
-export type LayerSourceDefinition =
-  | FeedSource
-  | QuerySource
-  | TileSource
-  | VectorTileSource;
-
 /** The shapes a point marker can take, so colour is never the only signal. */
 export type MarkerShape = "circle" | "square" | "triangle" | "diamond";
 
@@ -565,20 +558,6 @@ export type LayerDefinition =
   | TileLayerDefinition
   | VectorTileLayerDefinition;
 
-/** How a layer is drawn, which decides what the ui offers for it. */
-export type LayerKind = "points" | "shapes" | "heatmap" | "tiles" | "vector";
-
-/** The kind of a definition. */
-export function layerKind(definition: LayerDefinition): LayerKind {
-  if ("heatmap" in definition) {
-    return "heatmap";
-  }
-  if ("card" in definition) {
-    return isShapeStyle(definition.style) ? "shapes" : "points";
-  }
-  return definition.source.kind === "vector-tiles" ? "vector" : "tiles";
-}
-
 /**
  * Whether a definition is a layer of features with cards and a list: points,
  * polygons or lines from a feed or a query.
@@ -608,13 +587,6 @@ export function isVectorTileLayer(
   definition: LayerDefinition,
 ): definition is VectorTileLayerDefinition {
   return "sourceLayers" in definition;
-}
-
-/** Whether a definition is a raster tile overlay. */
-export function isRasterTileLayer(
-  definition: LayerDefinition,
-): definition is TileLayerDefinition {
-  return definition.source.kind === "tiles";
 }
 
 /** A layer whose features come from a query for the current view. */

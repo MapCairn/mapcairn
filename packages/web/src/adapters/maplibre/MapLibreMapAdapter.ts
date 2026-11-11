@@ -1858,21 +1858,10 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   /**
-   * Throws when an image of the map must not be made now: the terms of the
-   * basemap being loaded, or of the one a failed swap would put back, forbid
-   * it (either may be on screen when the pixels are copied), or a swap is
-   * still loading, so the pixels would be of neither basemap alone.
+   * Throws when an image of the map must not be made now: a swap is still
+   * loading, so the pixels would be of neither basemap alone.
    */
   private refuseExport(): void {
-    if (
-      this.basemap?.allowsImageExport === false ||
-      this.committedBasemap?.allowsImageExport === false
-    ) {
-      throw new MapEngineError(
-        "export-blocked",
-        "The basemap's terms do not allow saving an image of the map.",
-      );
-    }
     if (this.pending) {
       throw new MapEngineError(
         "export-failed",

@@ -47,9 +47,6 @@ export interface BottomSlotLayout {
  *   panel's right edge. Used only in the `"panel"` layout.
  * @param input.measureToolbarTop - Distance from the top of the viewport to
  *   the measure toolbar, when it is showing.
- * @param input.restingInset - How far above the bottom edge the slots rest,
- *   when that is more than `inset` because a row sits below them. `inset`
- *   stays the gap kept above a surface. Defaults to `inset`.
  * @remarks Both bottom slots ride `inset` above the highest of the sheet's
  *   top edge and the toolbar's top. A side panel moves only bottom-start,
  *   sideways. The result never lifts further than the viewport is tall.
@@ -63,7 +60,6 @@ export function computeBottomSlotLayout(input: {
   panelRightEdge: number | null;
   measureToolbarTop: number | null;
   inset: number;
-  restingInset?: number;
 }): BottomSlotLayout {
   const {
     layout,
@@ -74,7 +70,6 @@ export function computeBottomSlotLayout(input: {
     panelRightEdge,
     measureToolbarTop,
     inset,
-    restingInset = inset,
   } = input;
 
   const obstructions: number[] = [];
@@ -87,7 +82,7 @@ export function computeBottomSlotLayout(input: {
 
   let lift = 0;
   if (obstructions.length > 0) {
-    const restingBottom = viewportHeight - restingInset;
+    const restingBottom = viewportHeight - inset;
     const wantedBottom = Math.min(...obstructions) - inset;
     const offset = wantedBottom - restingBottom;
     // Only ever lift: a surface below the viewport edge must not push the

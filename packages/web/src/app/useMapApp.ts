@@ -105,11 +105,6 @@ export interface MapApp {
 
   readonly basemapChoice: string;
   readonly basemap: BasemapDefinition;
-  /**
-   * Every basemap on screen or about to be (see `useBasemapChoice`), which
-   * the permanent credit and the Save image block follow.
-   */
-  readonly basemapsInUse: readonly BasemapDefinition[];
   readonly chooseBasemap: (id: string) => void;
   /**
    * A basemap that could not load or whose provider is down, until the person
@@ -517,7 +512,6 @@ export function useMapApp(): MapApp {
     mapRef,
     basemapChoice: basemaps.choice,
     basemap: basemaps.basemap,
-    basemapsInUse: basemaps.inUse,
     chooseBasemap: basemaps.choose,
     basemapFailure: basemaps.failure
       ? {

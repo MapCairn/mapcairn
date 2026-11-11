@@ -1,5 +1,4 @@
 import {
-  type BasemapCredit,
   type BasemapDefinition,
   buildAttribution,
   type LayerAttribution,
@@ -57,12 +56,6 @@ export interface AttributionProps {
   readonly basemap: BasemapDefinition;
   /** Credits of the data layers that are on, listed after the map's own. */
   readonly layerCredits?: readonly LayerAttribution[];
-  /**
-   * The permanent credit on screen (see `PermanentCredit`), if any. A line
-   * of it with the same text and link as a credit listed here is left out of
-   * this list, so the same credit is not shown twice. Everything else stays.
-   */
-  readonly permanentCredit?: BasemapCredit;
 }
 
 /**
@@ -94,7 +87,6 @@ export interface AttributionProps {
 export function Attribution({
   basemap,
   layerCredits = NO_CREDITS,
-  permanentCredit,
 }: AttributionProps) {
   const { adapter, view, onUserZoom } = useMap();
   const { reducedMotion } = usePreferences();
@@ -114,19 +106,13 @@ export function Attribution({
   const openedOnView = useRef(view);
   const introShown = useRef(false);
   // A credit the basemap already gives, such as OpenStreetMap's, is listed
-  // once, and one the permanent credit already shows is not listed at all.
-  const shown = (text: string, href: string | undefined) =>
-    permanentCredit?.lines.some(
-      (line) => line.text === text && line.href === href,
-    ) === true;
+  // once.
   const basemapEntries = buildAttribution(basemap);
   const entries = [
-    ...basemapEntries.filter((entry) => !shown(entry.text, entry.href)),
+    ...basemapEntries,
     ...layerCredits
       .filter(
-        (credit) =>
-          !basemapEntries.some((entry) => entry.text === credit.text) &&
-          !shown(credit.text, credit.url),
+        (credit) => !basemapEntries.some((entry) => entry.text === credit.text),
       )
       .map((credit) => ({ text: credit.text, href: credit.url })),
   ];

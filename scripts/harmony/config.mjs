@@ -1,10 +1,9 @@
 /**
  * Configuration for the harmony scanner (`npm run lint:harmony`).
  *
- * Three lists decide what the scanner skips, and each has one home:
+ * Two lists decide what the scanner skips, and each has one home:
  *
  * - `EXEMPT_SURFACES` below: files that legitimately hold raw values.
- * - `legacyPaths.json`: old code awaiting deletion in the app rebuild.
  * - `allowlist.mjs`: one-off, justified exceptions, each with a reason.
  *
  * Exempt surfaces are the ones documented in DESIGN.md: the tokens file, the

@@ -2,12 +2,8 @@
  * Command line entry for the harmony scanner. Run through
  * `npm run lint:harmony`.
  *
- * Usage: `node scripts/harmony/cli.mjs [--ignore-legacy] [--json]`
+ * Usage: `node scripts/harmony/cli.mjs [--json]`
  *
- * - `--ignore-legacy` skips every path in `scripts/harmony/legacyPaths.json`
- *   (except for the viewport rule). `npm run lint` passes it. Without the
- *   flag, legacy code is scanned too, which lists what the rebuild must fix
- *   or delete.
  * - `--json` prints the violations as JSON.
  *
  * Exit code 1 when there is a violation or an allow-list entry that no longer
@@ -16,7 +12,7 @@
 import { scanRepo } from "./scan.mjs";
 
 const args = new Set(process.argv.slice(2));
-const result = scanRepo({ ignoreLegacy: args.has("--ignore-legacy") });
+const result = scanRepo();
 
 if (args.has("--json")) {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -37,5 +33,5 @@ if (failures > 0) {
   process.exit(1);
 }
 process.stdout.write(
-  `harmony: ${result.scanned} files scanned${args.has("--ignore-legacy") ? `, ${result.skippedLegacy} legacy files skipped` : ""}, no violations\n`,
+  `harmony: ${result.scanned} files scanned, no violations\n`,
 );

@@ -1,46 +1,7 @@
 /**
  * Enforces MapCairn's package boundaries and the layers described in
  * ARCHITECTURE.md. Run through `npm run depcruise`, part of `npm run lint`.
- *
- * Legacy code (`scripts/harmony/legacyPaths.json`) is exempt from the rules
- * that use `fromNotLegacy`, and from nothing else. Empty that list when the
- * old code is deleted.
  */
-const { readFileSync } = require("node:fs");
-const path = require("node:path");
-
-/** Escapes a literal path for use inside a regular expression. */
-const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const legacyEntries = JSON.parse(
-  readFileSync(
-    path.join(__dirname, "scripts/harmony/legacyPaths.json"),
-    "utf8",
-  ),
-).map((entry) => entry.path);
-
-/** The legacy path list as one regular expression, or `undefined` if empty. */
-const legacyPattern =
-  legacyEntries.length === 0
-    ? undefined
-    : `^(${legacyEntries
-        .map((entry) =>
-          entry.endsWith("/") ? escapeRegExp(entry) : `${escapeRegExp(entry)}$`,
-        )
-        .join("|")})`;
-
-/**
- * `from` that skips legacy code as well as any `pathNot` the rule names. The
- * two are combined, never replaced.
- */
-const fromNotLegacy = (from) => {
-  const exclusions = [from.pathNot, legacyPattern].filter(Boolean);
-  if (exclusions.length === 0) {
-    return from;
-  }
-  return { ...from, pathNot: exclusions.map((p) => `(${p})`).join("|") };
-};
-
 /**
  * npm packages that render a map or ship a map engine, plugin or type
  * declarations. Only `packages/web/src/adapters/maplibre` may import them.
@@ -110,12 +71,12 @@ module.exports = {
       severity: "error",
       comment:
         "core is pure logic. It may import only maths libraries (@turf/*, @types/geojson): no React, map engine, DOM library or Node built-in.",
-      from: fromNotLegacy({
+      from: {
         path: "^packages/core/src",
         // Contract suites and property-test generators are test code shipped
         // as modules, and import vitest or fast-check.
         pathNot: "^packages/core/src/(contracts|propertyTesting)/",
-      }),
+      },
       to: {
         dependencyTypes: [
           "npm",
@@ -135,7 +96,7 @@ module.exports = {
       severity: "error",
       comment:
         "Ports are interfaces. They may import only types (`import type`) from elsewhere in core. The typed error classes in ports/errors.ts are the one value export and stay inside ports.",
-      from: fromNotLegacy({ path: "^packages/core/src/ports/" }),
+      from: { path: "^packages/core/src/ports/" },
       to: {
         path: "^packages/core/src/",
         pathNot: "^packages/core/src/ports/",
@@ -146,7 +107,7 @@ module.exports = {
       name: "ports-import-no-packages",
       severity: "error",
       comment: "Ports may not depend on any npm package.",
-      from: fromNotLegacy({ path: "^packages/core/src/ports/" }),
+      from: { path: "^packages/core/src/ports/" },
       to: {
         dependencyTypes: [
           "npm",
@@ -163,10 +124,10 @@ module.exports = {
       severity: "error",
       comment:
         "Only the composition root may import an adapter. Everything else asks for a service through a port.",
-      from: fromNotLegacy({
+      from: {
         path: "^packages/",
         pathNot: "^packages/web/src/(adapters|composition)/",
-      }),
+      },
       to: { path: "^packages/web/src/adapters/" },
     },
     {
@@ -190,7 +151,7 @@ module.exports = {
       severity: "error",
       comment:
         "MapLibre, its plugins, styles and types may be imported only from packages/web/src/adapters/maplibre. The ui and the host never see an engine.",
-      from: fromNotLegacy({ path: "^packages/", pathNot: ENGINE_ADAPTERS }),
+      from: { path: "^packages/", pathNot: ENGINE_ADAPTERS },
       to: { path: ENGINE_PACKAGES },
     },
     {
@@ -198,14 +159,14 @@ module.exports = {
       severity: "error",
       comment:
         "An engine package that cannot be resolved is still an engine import. Same rule as above, for bare specifiers.",
-      from: fromNotLegacy({ path: "^packages/", pathNot: ENGINE_ADAPTERS }),
+      from: { path: "^packages/", pathNot: ENGINE_ADAPTERS },
       to: { couldNotResolve: true, path: ENGINE_SPECIFIERS },
     },
     {
       name: "icons-only-from-lucide-react",
       severity: "error",
       comment: "lucide-react is the only icon package.",
-      from: fromNotLegacy({ path: "^packages/" }),
+      from: { path: "^packages/" },
       to: { path: OTHER_ICON_PACKAGES },
     },
     {
@@ -213,7 +174,7 @@ module.exports = {
       severity: "error",
       comment:
         "An icon package that cannot be resolved is still not lucide-react.",
-      from: fromNotLegacy({ path: "^packages/" }),
+      from: { path: "^packages/" },
       to: { couldNotResolve: true, path: OTHER_ICON_SPECIFIERS },
     },
     {
@@ -221,24 +182,9 @@ module.exports = {
       severity: "error",
       comment:
         "Radix primitives are wrapped once, in packages/map/src/ui/{Switch,Slider,SegmentedControl,Tooltip}. Everything else uses the wrapper.",
-      from: fromNotLegacy({ path: "^packages/", pathNot: RADIX_WRAPPERS }),
+      from: { path: "^packages/", pathNot: RADIX_WRAPPERS },
       to: { path: "(^|/)node_modules/@radix-ui/" },
     },
-    ...(legacyPattern === undefined
-      ? []
-      : [
-          {
-            name: "new-code-does-not-import-legacy",
-            severity: "error",
-            comment:
-              "Legacy code is deleted in the app rebuild. Nothing outside the list may depend on it, or the deletion will break the build. Package barrels re-export legacy modules until then and are skipped.",
-            from: {
-              path: "^packages/",
-              pathNot: `(${legacyPattern})|^packages/(core|react)/src/index\\.ts$`,
-            },
-            to: { path: legacyPattern },
-          },
-        ]),
   ],
   options: {
     doNotFollow: { path: "node_modules" },

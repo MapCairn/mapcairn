@@ -1,6 +1,6 @@
 /**
  * Walks the repository, applies the harmony rules and filters the result
- * through the exempt surfaces, the legacy list and the allow-list.
+ * through the exempt surfaces and the allow-list.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -13,32 +13,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 /** The repository root, two levels above this directory. */
 export const REPO_ROOT = path.resolve(HERE, "..", "..");
-
-/**
- * The legacy path list. Each entry is a directory (ends with `/`) or a file.
- * Empty `legacyPaths.json` when the old code is deleted.
- * @param {string} [root]
- * @returns {Array<{ path: string, reason: string }>}
- */
-export function loadLegacyPaths(root = REPO_ROOT) {
-  return JSON.parse(
-    readFileSync(path.join(root, "scripts/harmony/legacyPaths.json"), "utf8"),
-  );
-}
-
-/**
- * Whether a file is legacy.
- * @param {string} file Repository relative path with forward slashes.
- * @param {Array<{ path: string }>} legacy
- * @returns {boolean}
- */
-export function isLegacy(file, legacy) {
-  return legacy.some((entry) =>
-    entry.path.endsWith("/")
-      ? file.startsWith(entry.path)
-      : file === entry.path,
-  );
-}
 
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -125,27 +99,16 @@ export function applyAllowList(violations, linesOf, allowList = ALLOW_LIST) {
  * Scans the repository.
  * @param {object} [options]
  * @param {string} [options.root] Repository root.
- * @param {boolean} [options.ignoreLegacy] Skip files in `legacyPaths.json`.
  * @param {typeof ALLOW_LIST} [options.allowList]
- * @returns {{ violations: import("./rules.mjs").Violation[], unused: typeof ALLOW_LIST, scanned: number, skippedLegacy: number }}
+ * @returns {{ violations: import("./rules.mjs").Violation[], unused: typeof ALLOW_LIST, scanned: number }}
  */
-export function scanRepo({
-  root = REPO_ROOT,
-  ignoreLegacy = false,
-  allowList = ALLOW_LIST,
-} = {}) {
-  const legacy = ignoreLegacy ? loadLegacyPaths(root) : [];
+export function scanRepo({ root = REPO_ROOT, allowList = ALLOW_LIST } = {}) {
   const cache = new Map();
   const linesOf = (file) => cache.get(file) ?? [];
   const all = [];
   let scanned = 0;
-  let skippedLegacy = 0;
   for (const file of listSourceFiles(root)) {
     if (isExemptSurface(file)) {
-      continue;
-    }
-    if (isLegacy(file, legacy)) {
-      skippedLegacy += 1;
       continue;
     }
     const source = readFileSync(path.join(root, file), "utf8");
@@ -154,5 +117,5 @@ export function scanRepo({
     all.push(...scanSource(file, source));
   }
   const { violations, unused } = applyAllowList(all, linesOf, allowList);
-  return { violations, unused, scanned, skippedLegacy };
+  return { violations, unused, scanned };
 }

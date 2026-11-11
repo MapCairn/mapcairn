@@ -40,14 +40,6 @@ export interface BasemapChoice {
   readonly savedChoice: string;
   /** The basemap to draw. */
   readonly basemap: BasemapDefinition;
-  /**
-   * Every basemap whose pixels are, or are about to be, on screen: `basemap`
-   * (which is the one asked for, still loading, during a swap) and the one
-   * the map still draws until the swap has loaded. A basemap's terms (its
-   * permanent credit, its ban on saved images) hold while it is in this list,
-   * so they never lapse early or late.
-   */
-  readonly inUse: readonly BasemapDefinition[];
   /** The swap that could not load, until the person goes back. */
   readonly failure: BasemapFailure | null;
   /**
@@ -137,7 +129,6 @@ export function useBasemapChoice(
   // The map starts on the saved or linked basemap, so that is what it draws
   // until a swap loads (`applied`) or fails and keeps the old one (`failed`).
   const [drawn, setDrawn] = useState(() => catalogue.resolve(requested));
-  const inUse = drawn.id === basemap.id ? [basemap] : [basemap, drawn];
 
   const save = useCallback(
     (id: string) => {
@@ -259,7 +250,6 @@ export function useBasemapChoice(
     choice,
     savedChoice,
     basemap,
-    inUse,
     failure,
     choose,
     applied,

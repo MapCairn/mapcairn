@@ -70,27 +70,6 @@ function renderContent({
   };
 }
 
-describe("SheetContent image export", () => {
-  it("gives Save image no reason to be off when no basemap blocks it", () => {
-    renderContent();
-    expect(screen.queryByTestId("export-blocked")).toBeNull();
-    expect(
-      screen.getByTestId("save-image-button").hasAttribute("aria-describedby"),
-    ).toBe(false);
-  });
-
-  it("turns Save image off, and says why, for the basemap named by imageBlockedBy", () => {
-    renderContent({ props: { imageBlockedBy: "Fake credited" } });
-    expect(screen.getByTestId("save-image-button")).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-    expect(screen.getByTestId("export-blocked")).toHaveTextContent(
-      "Fake credited",
-    );
-  });
-});
-
 describe("SheetContent structure", () => {
   const sectionHeadings = () =>
     within(screen.getByTestId("sheet-content"))

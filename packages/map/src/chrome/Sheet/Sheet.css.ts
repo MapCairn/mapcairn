@@ -55,9 +55,7 @@ export const surface = style({
   selectors: {
     '&[data-layout="sheet"]': {
       insetInline: 0,
-      // Zero, unless a credit row sits at the bottom: then the sheet ends
-      // a gap above it.
-      insetBlockEnd: chromeVar(chromeVars.creditReserve, "0px"),
+      insetBlockEnd: 0,
       height: `var(--sheet-full-height, calc(100% - ${tokens.space.inset}))`,
       borderStartStartRadius: tokens.radius.sheet,
       borderStartEndRadius: tokens.radius.sheet,
@@ -68,25 +66,6 @@ export const surface = style({
     },
     '&[data-layout="sheet"][data-dragging="true"]': {
       transition: "none",
-    },
-    // With a credit row under the sheet, the part of the sheet that is
-    // translated below its detent would show over that row, so it is cut off
-    // at the detent: the bottom `--sheet-offset` px of the box are not drawn
-    // or hit. The top is left open so the shadow still shows. The cut has
-    // the sheet's rounded corners and a hairline, so the panel ends as a
-    // finished edge above the credit row instead of a hard slice through its
-    // content, which made the credits look as if they sat behind the panel.
-    '[data-credit] &[data-layout="sheet"]': {
-      clipPath: `inset(calc(-2 * ${tokens.space.xl}) 0 var(--sheet-offset, 0px) 0 round 0 0 ${tokens.radius.sheet} ${tokens.radius.sheet})`,
-    },
-    '[data-credit] &[data-layout="sheet"]::after': {
-      content: '""',
-      position: "absolute",
-      insetInline: tokens.radius.sheet,
-      insetBlockEnd: "var(--sheet-offset, 0px)",
-      height: "1px",
-      backgroundColor: tokens.color.chromeBorder,
-      pointerEvents: "none",
     },
     '&[data-layout="sheet"][data-state="closed"]': {
       ...closedVisibility,

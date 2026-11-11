@@ -2406,52 +2406,28 @@ describe("MapLibreMapAdapter data layers", () => {
   });
 
   describe("toImage", () => {
-    const NO_IMAGES: BasemapDefinition = {
-      ...DARK,
-      id: "no-images",
-      allowsImageExport: false,
-    };
-
-    it("refuses while a basemap swap is still loading, and again once it has loaded a basemap that forbids images", async () => {
+    it("refuses while a basemap swap is still loading, and works again once it has loaded", async () => {
       const { adapter, map } = await ready();
-      const swapping = adapter.setBasemap(NO_IMAGES);
+      const swapping = adapter.setBasemap(DARK);
       await expect(adapter.toImage()).rejects.toMatchObject({
-        reason: "export-blocked",
+        reason: "export-failed",
       });
       map.fire("style.load");
       await swapping;
-      await expect(adapter.toImage()).rejects.toMatchObject({
-        reason: "export-blocked",
-      });
-    });
-
-    it("refuses a swap to a basemap that allows images while the one on screen forbids them", async () => {
-      const { adapter, map } = await ready();
-      const toBlocked = adapter.setBasemap(NO_IMAGES);
-      map.fire("style.load");
-      await toBlocked;
-      // The old style is still drawn until the new one loads, so the target
-      // being fine is not enough.
-      const back = adapter.setBasemap(DARK);
-      await expect(adapter.toImage()).rejects.toMatchObject({
-        reason: "export-blocked",
-      });
-      map.fire("style.load");
-      await back;
       const image = await adapter.toImage();
       expect(image.type).toBe("image/png");
     });
 
-    it("refuses when a swap to a basemap that forbids images starts between the repaint and the render", async () => {
+    it("refuses when a swap starts between the repaint and the render", async () => {
       const { adapter, map } = await ready();
       map.rendersOnRepaint = false;
       const image = adapter.toImage();
       await vi.waitFor(() => {
         expect(map.callsOf("triggerRepaint")).toHaveLength(1);
       });
-      void adapter.setBasemap(NO_IMAGES);
+      void adapter.setBasemap(DARK);
       const refused = expect(image).rejects.toMatchObject({
-        reason: "export-blocked",
+        reason: "export-failed",
       });
       map.fire("render");
       await refused;

@@ -10,11 +10,8 @@ import {
   DEFAULT_BASEMAP_BACKGROUND,
   DEFAULT_BASEMAP_ID,
   getBasemap,
-  imageExportBlockedBy,
   MAPLIBRE_CREDIT,
   omittedLayers,
-  permanentCredit,
-  resolveBasemap,
 } from "./basemaps";
 
 describe("BASEMAPS", () => {
@@ -267,7 +264,7 @@ describe("getBasemap", () => {
   });
 });
 
-describe("resolveBasemap", () => {
+describe("the default basemap", () => {
   it("makes Bright the default basemap, and the first one the picker lists", () => {
     expect(DEFAULT_BASEMAP_ID).toBe("bright");
     expect(getBasemap(DEFAULT_BASEMAP_ID)?.name).toBe("Bright");
@@ -275,19 +272,21 @@ describe("resolveBasemap", () => {
   });
 
   it("still resolves a saved or linked liberty to Liberty, not to the new default", () => {
-    expect(resolveBasemap("liberty").name).toBe("Liberty");
-    expect(resolveBasemap("liberty").id).not.toBe(DEFAULT_BASEMAP_ID);
+    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").name).toBe("Liberty");
+    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").id).not.toBe(
+      DEFAULT_BASEMAP_ID,
+    );
   });
 
   it("returns an explicit choice", () => {
     for (const basemap of BASEMAPS) {
-      expect(resolveBasemap(basemap.id)).toBe(basemap);
+      expect(BUILT_IN_BASEMAP_CATALOGUE.resolve(basemap.id)).toBe(basemap);
     }
   });
 
   it("falls back to the default for an unknown id, including the retired auto choice", () => {
     for (const id of ["auto", "maptoolkit-dark", "missing", "", "__proto__"]) {
-      expect(resolveBasemap(id).id).toBe("bright");
+      expect(BUILT_IN_BASEMAP_CATALOGUE.resolve(id).id).toBe("bright");
     }
   });
 });
@@ -305,7 +304,7 @@ describe("DEFAULT_BASEMAP_BACKGROUND", () => {
 
 describe("creditsLine", () => {
   it("joins the basemap's credits, MapLibre's and the layers' on one line", () => {
-    const osm = resolveBasemap("osm");
+    const osm = BUILT_IN_BASEMAP_CATALOGUE.resolve("osm");
     expect(creditsLine(osm, [{ text: "Sample provider" }])).toBe(
       "© OpenStreetMap contributors | MapLibre | Sample provider",
     );
@@ -339,7 +338,7 @@ describe("buildAttribution", () => {
 });
 
 describe("omittedLayers", () => {
-  const liberty = resolveBasemap("liberty");
+  const liberty = BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty");
 
   it("lists the layers a basemap leaves out in Save data mode, and only then", () => {
     expect(omittedLayers(liberty, true)).toEqual(["natural_earth"]);
@@ -355,17 +354,27 @@ describe("omittedLayers", () => {
         expect(omittedLayers(basemap, true)).toEqual([]);
       }
     }
-    expect(omittedLayers(resolveBasemap("bright"), true)).toEqual([]);
-    expect(omittedLayers(resolveBasemap("positron"), true)).toEqual([]);
-    expect(omittedLayers(resolveBasemap("osm"), true)).toEqual([]);
+    expect(
+      omittedLayers(BUILT_IN_BASEMAP_CATALOGUE.resolve("bright"), true),
+    ).toEqual([]);
+    expect(
+      omittedLayers(BUILT_IN_BASEMAP_CATALOGUE.resolve("positron"), true),
+    ).toEqual([]);
+    expect(
+      omittedLayers(BUILT_IN_BASEMAP_CATALOGUE.resolve("osm"), true),
+    ).toEqual([]);
   });
 
   // Checked against https://tiles.openfreemap.org/styles/fiord on 2026-11-10:
   // like Bright, it declares the Natural Earth raster source but draws no
   // raster layer from it (48 layers: background, fill, line and symbol).
   it("is empty for Fiord, whose style draws no raster layer", () => {
-    expect(resolveBasemap("fiord").saveDataOmitLayers).toBeUndefined();
-    expect(omittedLayers(resolveBasemap("fiord"), true)).toEqual([]);
+    expect(
+      BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord").saveDataOmitLayers,
+    ).toBeUndefined();
+    expect(
+      omittedLayers(BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord"), true),
+    ).toEqual([]);
   });
 
   // Checked against https://tiles.openfreemap.org/styles/liberty on 2026-11-09:
@@ -382,24 +391,24 @@ describe("omittedLayers", () => {
 });
 
 describe("createBasemapCatalogue", () => {
-  const credited: BasemapDefinition = {
+  const extra: BasemapDefinition = {
     ...FAKE_VECTOR_BASEMAP,
-    id: "credited",
-    name: "Credited",
+    id: "extra",
+    name: "Extra",
   };
 
   it("lists the basemaps in the order given and finds them by id", () => {
     const catalogue = createBasemapCatalogue([
       FAKE_VECTOR_BASEMAP,
       FAKE_RASTER_BASEMAP,
-      credited,
+      extra,
     ]);
     expect(catalogue.basemaps.map((basemap) => basemap.id)).toEqual([
       "fake-vector",
       "fake-raster",
-      "credited",
+      "extra",
     ]);
-    expect(catalogue.get("credited")).toBe(credited);
+    expect(catalogue.get("extra")).toBe(extra);
     expect(catalogue.get("nope")).toBeUndefined();
     expect(catalogue.get("__proto__")).toBeUndefined();
   });
@@ -471,49 +480,8 @@ describe("createBasemapCatalogue", () => {
     // symbol layers over two vector sources, no raster or hillshade layer. The
     // nine landcover-* layers read the second source, about a third of the tile
     // bytes at zoom 4 to 6, but they are the style's land colouring, so they stay.
-    expect(resolveBasemap("colorful").saveDataOmitLayers).toBeUndefined();
-  });
-
-  it("names no provider whose terms the SDK would have to carry", () => {
-    for (const basemap of BASEMAPS) {
-      expect(basemap.credit, basemap.id).toBeUndefined();
-      expect(basemap.allowsImageExport, basemap.id).toBeUndefined();
-    }
-  });
-});
-
-describe("basemap terms", () => {
-  const permanent: BasemapDefinition = {
-    ...FAKE_VECTOR_BASEMAP,
-    id: "permanent",
-    name: "Permanent",
-    allowsImageExport: false,
-    credit: {
-      kind: "permanent",
-      logo: {
-        src: "/logo.svg",
-        href: "https://provider.example/",
-        label: "Provider",
-      },
-      lines: [{ text: "© Provider", href: "https://provider.example/legal" }],
-    },
-  };
-
-  it("finds the permanent credit of the first basemap that has one", () => {
-    expect(permanentCredit([FAKE_VECTOR_BASEMAP, permanent])).toBe(
-      permanent.credit,
-    );
-    expect(permanentCredit([FAKE_VECTOR_BASEMAP, FAKE_RASTER_BASEMAP])).toBe(
-      undefined,
-    );
-    expect(permanentCredit([])).toBeUndefined();
-  });
-
-  it("blocks image export when any basemap in use forbids it", () => {
-    expect(imageExportBlockedBy([FAKE_VECTOR_BASEMAP])).toBeUndefined();
-    expect(imageExportBlockedBy([FAKE_VECTOR_BASEMAP, permanent])).toBe(
-      permanent,
-    );
-    expect(imageExportBlockedBy([])).toBeUndefined();
+    expect(
+      BUILT_IN_BASEMAP_CATALOGUE.resolve("colorful").saveDataOmitLayers,
+    ).toBeUndefined();
   });
 });

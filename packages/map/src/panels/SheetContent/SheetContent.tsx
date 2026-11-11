@@ -46,11 +46,6 @@ export interface SheetContentProps {
   readonly onShowOnMap?: () => void;
   /** The credits drawn into a saved map image (see `creditsLine`). */
   readonly imageCredits?: string;
-  /**
-   * The name of a basemap in use whose terms do not allow saving images, which
-   * turns Save image off with that reason (see `ExportSection`).
-   */
-  readonly imageBlockedBy?: string;
   /** Where the privacy policy is. Defaults to `/privacy`. */
   readonly privacyHref?: string;
 }
@@ -72,7 +67,6 @@ export function SheetContent({
   draw,
   onShowOnMap,
   imageCredits,
-  imageBlockedBy,
   privacyHref,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
@@ -141,7 +135,6 @@ export function SheetContent({
       ) : null}
       <ExportSection
         credits={imageCredits}
-        blockedBy={imageBlockedBy}
         drawing={draw ? drawingForImage(draw.shapes) : undefined}
       />
     </div>

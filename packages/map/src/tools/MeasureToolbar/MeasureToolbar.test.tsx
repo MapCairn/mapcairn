@@ -45,7 +45,6 @@ function layout(
     viewport: size,
     finePointer: true,
     panelEdge: null,
-    bottomReserve: 0,
     publishSheetTop: () => undefined,
     publishToolbarTop,
   };

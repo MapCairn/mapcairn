@@ -8,7 +8,7 @@
  * keeps its CSS.
  */
 import { focusRing, tokens } from "@mapcairn/theme";
-import { globalStyle, style } from "@vanilla-extract/css";
+import { globalStyle } from "@vanilla-extract/css";
 
 const DARK = ':root[data-theme="dark"]';
 /** No `data-theme` means the pre-paint script did not run, so the system decides. */
@@ -94,19 +94,4 @@ globalStyle("::selection", {
 globalStyle(":where(:focus-visible)", {
   outline: focusRing.outline,
   outlineOffset: focusRing.outlineOffset,
-});
-
-/** Figures that line up in columns: coordinates, distances, zoom levels. */
-export const tabularNums = style({
-  fontVariantNumeric: "tabular-nums",
-});
-
-/**
- * A page that scrolls inside the fixed document, such as the privacy policy.
- */
-export const scrollPage = style({
-  height: "100%",
-  overflowY: "auto",
-  overscrollBehavior: "contain",
-  WebkitOverflowScrolling: "touch",
 });

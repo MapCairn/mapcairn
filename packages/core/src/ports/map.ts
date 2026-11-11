@@ -506,11 +506,8 @@ export interface MapAdapter {
    * requests anything the map has not already loaded. Rejects with a
    * `MapEngineError` whose reason is `export-failed` when the engine cannot
    * produce an image, and also while a basemap swap is still loading, so a
-   * half-swapped map is never saved. It rejects with `export-blocked` when
-   * the terms of a basemap that is drawn, or about to be (the one a swap is
-   * loading, or the one a failed swap will put back), do not allow saved
-   * images (`allowsImageExport: false`). That is checked again just before
-   * the pixels are copied, so a swap that starts meanwhile is caught.
+   * half-swapped map is never saved. That is checked again just before the
+   * pixels are copied, so a swap that starts meanwhile is caught.
    */
   toImage(options?: MapImageOptions): Promise<Blob>;
 

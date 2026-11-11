@@ -229,8 +229,6 @@ test.describe("basemaps", () => {
       "aria-disabled",
       "true",
     );
-    await expect(page.getByTestId("export-blocked")).toHaveCount(0);
-    await expect(page.getByTestId("permanent-credit")).toHaveCount(0);
 
     await page.evaluate(() => {
       history.replaceState(null, "", `${location.pathname}${location.search}`);

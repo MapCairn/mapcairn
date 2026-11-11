@@ -24,31 +24,6 @@ export type BasemapSource =
     };
 
 /**
- * A credit a provider requires to stay on screen the whole time its basemap
- * is shown. Unlike the collapsing map credits, it is never hidden, collapsed
- * or covered by the sheet, the side panel, a toolbar or a control.
- */
-export interface BasemapCredit {
-  readonly kind: "permanent";
-  /** The provider's logo, drawn as an image that links to the provider. */
-  readonly logo: {
-    /** Public path or URL of the image. */
-    readonly src: string;
-    /** Where the logo links to. */
-    readonly href: string;
-    /** The image's text alternative, and the link's name. */
-    readonly label: string;
-    /**
-     * The least height, in CSS pixels, the provider allows the logo to be
-     * drawn at. The ui draws it at exactly this height.
-     */
-    readonly minHeight: number;
-  };
-  /** The credit lines shown beside the logo, in order. */
-  readonly lines: readonly BasemapAttributionEntry[];
-}
-
-/**
  * A basemap, as data. This is the single source for the picker, the
  * attribution content and the thumbnails. Nothing else may name a tile URL or
  * an attribution string.
@@ -91,16 +66,4 @@ export interface BasemapDefinition {
    * dropping. Ignored for a raster basemap, which has no style layers.
    */
   readonly saveDataOmitLayers?: readonly string[];
-  /**
-   * A credit that stays on screen at all times while this basemap is shown
-   * or loading, in place of relying on the collapsing credits alone. Leave
-   * unset when the provider's credits may collapse.
-   */
-  readonly credit?: BasemapCredit;
-  /**
-   * `false` when the provider's terms do not allow saving an image of the map.
-   * The ui then turns Save image off and the adapter refuses `toImage`.
-   * Unset means allowed.
-   */
-  readonly allowsImageExport?: false;
 }

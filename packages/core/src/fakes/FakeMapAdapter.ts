@@ -534,20 +534,8 @@ export class FakeMapAdapter implements MapAdapter {
     );
   }
 
-  /**
-   * Refuses an image while the terms of the basemap on screen, or of the one
-   * a swap is loading, forbid it, and while a swap is loading at all.
-   */
+  /** Refuses an image while a swap is loading. */
   #refuseExport(): void {
-    if (
-      this.#basemap?.allowsImageExport === false ||
-      this.#swapTarget?.allowsImageExport === false
-    ) {
-      throw new MapEngineError(
-        "export-blocked",
-        "The basemap's terms do not allow saving an image of the map.",
-      );
-    }
     if (this.#swapTarget !== null) {
       throw new MapEngineError(
         "export-failed",

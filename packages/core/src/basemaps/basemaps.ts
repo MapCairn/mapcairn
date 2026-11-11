@@ -1,6 +1,5 @@
 import type {
   BasemapAttributionEntry,
-  BasemapCredit,
   BasemapDefinition,
 } from "../ports/basemap";
 
@@ -233,17 +232,6 @@ export function getBasemap(id: string): BasemapDefinition | undefined {
 }
 
 /**
- * Turns a stored or linked basemap id into a basemap.
- * @param choiceId - A basemap id.
- * @remarks The basemap does not depend on the interface theme. An id that
- *   names no built-in basemap (one that has been removed, such as the retired
- *   "auto" choice from an earlier version) gives the default basemap.
- */
-export function resolveBasemap(choiceId: string): BasemapDefinition {
-  return getBasemap(choiceId) ?? BRIGHT;
-}
-
-/**
  * The basemaps a host offers, with the one used when nothing, or nothing
  * known, has been chosen. Plain data: a host builds one with
  * {@link createBasemapCatalogue} and passes it as `Services.basemaps`.
@@ -298,27 +286,6 @@ export function createBasemapCatalogue(
 /** The catalogue of the built-in basemaps, Bright the default. */
 export const BUILT_IN_BASEMAP_CATALOGUE: BasemapCatalogue =
   createBasemapCatalogue(BASEMAPS, DEFAULT_BASEMAP_ID);
-
-/**
- * The permanent credit to show for the basemaps in use, or undefined when
- * none of them has one. A caller passes both the basemap asked for and the
- * one still drawn, so the credit never lapses during a swap.
- */
-export function permanentCredit(
-  basemaps: readonly BasemapDefinition[],
-): BasemapCredit | undefined {
-  return basemaps.find((basemap) => basemap.credit !== undefined)?.credit;
-}
-
-/**
- * The first of the basemaps in use whose terms forbid saving an image of the
- * map, or undefined when saving one is allowed.
- */
-export function imageExportBlockedBy(
-  basemaps: readonly BasemapDefinition[],
-): BasemapDefinition | undefined {
-  return basemaps.find((basemap) => basemap.allowsImageExport === false);
-}
 
 /**
  * The style layer ids a basemap leaves out, given whether Save data is on.

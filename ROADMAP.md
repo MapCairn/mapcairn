@@ -10,16 +10,11 @@ Statuses are "proposed" (written down, not started) and "in progress" (work has 
 
 | Intention | Status | Tracking |
 | --- | --- | --- |
-| Rename the project from Karta to MapCairn everywhere, and keep the old address working by redirecting it | in progress | [#170](https://github.com/MapCairn/mapcairn/issues/170) |
 | Work toward the OpenSSF Best Practices silver badge: governance, this roadmap, an assurance case, a vulnerability response process, code style and review documents, and a repeatable build | in progress | [#182](https://github.com/MapCairn/mapcairn/issues/182) |
-| A basemap set of six in an even grid of three by two, each defined as data, all free for commercial use | proposed | [#184](https://github.com/MapCairn/mapcairn/issues/184) |
-| Fix chrome legibility (scale, credits button and markers) over basemaps with dark or busy backgrounds, in both themes | proposed | [#186](https://github.com/MapCairn/mapcairn/issues/186) |
-| A faint MapCairn mark and name on the map, decorative only | proposed | [#176](https://github.com/MapCairn/mapcairn/issues/176) |
 | A skippable first-visit tour, replaceable by the host (plan 0004) | proposed | [#179](https://github.com/MapCairn/mapcairn/issues/179) |
 | Get the four SDK packages ready to publish to npm, with API documentation generated from the TSDoc comments. A plan comes first | proposed | [#165](https://github.com/MapCairn/mapcairn/issues/165) |
-| A globe view alongside the flat map. It starts after the rename, the tour and the basemap set, and a plan comes first | proposed | [#187](https://github.com/MapCairn/mapcairn/issues/187) |
+| Finish the globe view that the Flat or Globe setting added: curved lines, every basemap, the scale bar and phones | in progress | [#187](https://github.com/MapCairn/mapcairn/issues/187) |
 | A 30-minute rainfall product, which needs a time-of-day control in the layer system. Low priority | proposed | [#173](https://github.com/MapCairn/mapcairn/issues/173) |
-| Redraw the icon masters in `packages/web/scripts/icons` as the cairn mark, so regenerating the icons does not bring back the old pin | proposed | [#191](https://github.com/MapCairn/mapcairn/issues/191) |
 
 Further items, such as new open data layers, are added as plans or issues when someone proposes them, and each new dataset is a separate, explicitly scoped decision with its provenance, publication rights and privacy reviewed first (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 

@@ -44,7 +44,7 @@ export interface MapDirectionsProps {
  */
 export function MapDirections({ result }: MapDirectionsProps) {
   const { adapter } = useMap();
-  const { layout, viewport, panelEdge, bottomReserve } = useChromeLayout();
+  const { layout, viewport, panelEdge } = useChromeLayout();
 
   useEffect(() => {
     if (!adapter || !result) {
@@ -97,7 +97,6 @@ export function MapDirections({ result }: MapDirectionsProps) {
       layout,
       viewport,
       panelEdge,
-      bottomReserve,
     }) ?? {
       top: 0,
       right: 0,

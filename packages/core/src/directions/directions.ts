@@ -23,9 +23,6 @@ export const MAX_DIRECTION_STOPS = 10;
 /** The travel times, in minutes, a person can ask a reachable area for. */
 export const AREA_MINUTES = [5, 10, 15, 30] as const;
 
-/** One of the {@link AREA_MINUTES}. */
-export type AreaMinutes = (typeof AREA_MINUTES)[number];
-
 /** Every way of travelling, in the order the interface lists them. */
 export const TRAVEL_MODES: readonly TravelMode[] = ["drive", "walk", "cycle"];
 

@@ -45,18 +45,6 @@ const TABBABLE = [
   '[tabindex]:not([tabindex="-1"]):not([data-focus-sentinel])',
 ].join(", ");
 
-/**
- * The top edge, from the container's top, of a bottom sheet showing `height`
- * px when its bottom edge stands `bottomReserve` px above the container's.
- */
-function sheetTopEdge(
-  viewportHeight: number,
-  bottomReserve: number,
-  height: number,
-): number {
-  return viewportHeight - bottomReserve - height;
-}
-
 /** Props for {@link Sheet}. */
 export interface SheetProps {
   /** The element id, for `aria-controls` on the control that opens it. */
@@ -240,8 +228,7 @@ export function Sheet({
   brand,
   children,
 }: SheetProps) {
-  const { layout, viewport, bottomReserve, publishSheetTop } =
-    useChromeLayout();
+  const { layout, viewport, publishSheetTop } = useChromeLayout();
   const { publishSheetDetent, publishPanelEdge } = useChromeSurface();
   const announce = useAnnounce();
   const titleId = useId();
@@ -254,14 +241,13 @@ export function Sheet({
 
   const isSheet = layout === "sheet";
   const modal = open && isSheet && detent === "full";
-  // The sheet ends `bottomReserve` px above the container's bottom edge when
-  // a credit row sits there, so its detents are heights within what is left.
-  const roomHeight = isSheet
-    ? Math.max(0, viewport.height - bottomReserve)
-    : viewport.height;
   const heights: DetentHeights = useMemo(
-    () => computeDetentHeights({ viewportHeight: roomHeight, insetBottom: 0 }),
-    [roomHeight],
+    () =>
+      computeDetentHeights({
+        viewportHeight: viewport.height,
+        insetBottom: 0,
+      }),
+    [viewport.height],
   );
 
   const latest = useRef({ onModalChange, restoreFocus, publishSheetTop });
@@ -292,9 +278,7 @@ export function Sheet({
   // Publish the edges the bottom slots ride above or beside.
   useEffect(() => {
     if (open && isSheet) {
-      publishSheetTop(
-        sheetTopEdge(viewport.height, bottomReserve, heights[detent]),
-      );
+      publishSheetTop(viewport.height - heights[detent]);
       publishSheetDetent(detent);
     } else {
       publishSheetTop(null);
@@ -306,7 +290,6 @@ export function Sheet({
     detent,
     heights,
     viewport.height,
-    bottomReserve,
     publishSheetTop,
     publishSheetDetent,
   ]);
@@ -390,9 +373,7 @@ export function Sheet({
       frameRef.current = null;
       const drag = dragRef.current;
       if (drag) {
-        latest.current.publishSheetTop(
-          sheetTopEdge(viewport.height, bottomReserve, drag.height),
-        );
+        latest.current.publishSheetTop(viewport.height - drag.height);
       }
     });
   };
@@ -463,9 +444,7 @@ export function Sheet({
     if (!drag.moved) {
       // The wobble under the slop already moved the sheet; put it back.
       applyHeight(heights[detent]);
-      publishSheetTop(
-        sheetTopEdge(viewport.height, bottomReserve, heights[detent]),
-      );
+      publishSheetTop(viewport.height - heights[detent]);
       return;
     }
     // Only the handle gets a click after a drag; a flag set for a drag from
@@ -480,9 +459,7 @@ export function Sheet({
       }),
     });
     applyHeight(heights[snapped]);
-    publishSheetTop(
-      sheetTopEdge(viewport.height, bottomReserve, heights[snapped]),
-    );
+    publishSheetTop(viewport.height - heights[snapped]);
     if (snapped !== detent) {
       onDetentChange(snapped);
     }
@@ -500,9 +477,7 @@ export function Sheet({
     }
     endDrag(drag);
     applyHeight(heights[detent]);
-    publishSheetTop(
-      sheetTopEdge(viewport.height, bottomReserve, heights[detent]),
-    );
+    publishSheetTop(viewport.height - heights[detent]);
   };
 
   const onHandleClick = (event: MouseEvent<HTMLButtonElement>) => {

@@ -1,8 +1,8 @@
 import {
   BASEMAPS,
+  type BasemapDefinition,
   createBasemapCatalogue,
   createFakeServices,
-  FAKE_CREDITED_BASEMAP,
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
   FakeDevicePreferences,
@@ -18,6 +18,15 @@ import {
 } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { BasemapPicker, type BasemapPickerProps } from "./BasemapPicker";
+
+const { thumbnail: _thumbnail, ...withoutThumbnail } = FAKE_VECTOR_BASEMAP;
+
+/** A basemap with no preview image, which the picker draws as a plain swatch. */
+const NO_PREVIEW_BASEMAP: BasemapDefinition = {
+  ...withoutThumbnail,
+  id: "fake-plain",
+  name: "Fake plain",
+};
 
 function renderPicker(
   props: Partial<BasemapPickerProps> = {},
@@ -275,7 +284,7 @@ describe("BasemapPicker swatch colours", () => {
   };
   const catalogue = createBasemapCatalogue([
     FAKE_VECTOR_BASEMAP,
-    FAKE_CREDITED_BASEMAP,
+    NO_PREVIEW_BASEMAP,
     SWATCHED,
   ]);
 
@@ -302,7 +311,7 @@ describe("BasemapPicker swatch colours", () => {
     renderSwatched(false);
     // This basemap has a preview, so no swatch yet; the one without has no colour.
     expect(screen.queryByTestId("basemap-swatch-fake-swatched")).toBeNull();
-    expect(colourOf("fake-credited")).toBe("");
+    expect(colourOf("fake-plain")).toBe("");
   });
 
   it("shows the same swatch colour in Save data mode, where every basemap is a swatch", () => {
@@ -332,7 +341,7 @@ describe("BasemapPicker swatch colours", () => {
 describe("BasemapPicker with a host's basemaps", () => {
   const catalogue = createBasemapCatalogue([
     FAKE_VECTOR_BASEMAP,
-    FAKE_CREDITED_BASEMAP,
+    NO_PREVIEW_BASEMAP,
     FAKE_RASTER_BASEMAP,
   ]);
 
@@ -352,7 +361,7 @@ describe("BasemapPicker with a host's basemaps", () => {
     renderHosted("fake-vector");
     expect(
       screen.getAllByRole("radio").map((item) => item.getAttribute("value")),
-    ).toEqual(["fake-vector", "fake-credited", "fake-raster"]);
+    ).toEqual(["fake-vector", "fake-plain", "fake-raster"]);
     expect(screen.queryByRole("radio", { name: "Liberty" })).toBeNull();
   });
 
@@ -366,17 +375,15 @@ describe("BasemapPicker with a host's basemaps", () => {
 
   it("chooses a host basemap by its id", () => {
     const { onChange } = renderHosted("fake-vector");
-    fireEvent.click(screen.getByRole("radio", { name: "Fake credited" }));
-    expect(onChange).toHaveBeenCalledWith("fake-credited");
+    fireEvent.click(screen.getByRole("radio", { name: "Fake plain" }));
+    expect(onChange).toHaveBeenCalledWith("fake-plain");
   });
 
   it("draws a plain swatch, and requests no image, for a basemap with no preview", () => {
     renderHosted("fake-vector");
-    const tile = screen.getByTestId("basemap-option-fake-credited");
+    const tile = screen.getByTestId("basemap-option-fake-plain");
     expect(tile.querySelector("img")).toBeNull();
-    expect(
-      screen.getByTestId("basemap-swatch-fake-credited"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("basemap-swatch-fake-plain")).toBeInTheDocument();
     expect(
       screen.getByTestId("basemap-option-fake-vector").querySelector("img"),
     ).not.toBeNull();

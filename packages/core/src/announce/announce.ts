@@ -64,14 +64,6 @@ export function announceImageFailed(): string {
   return "The map image could not be saved. Try again.";
 }
 
-/**
- * The map image was refused because the terms of a basemap on screen do not
- * allow saved images. `name` is that basemap, when the ui knows it.
- */
-export function announceImageBlocked(name?: string): string {
-  return `The map image was not saved. The terms of ${name ?? "the basemap"} do not allow saving images of its map.`;
-}
-
 /** The keyboard route found no feature at the centre of the map. */
 export function announceNoFeaturesHere(): string {
   return "No features at the centre of the map.";

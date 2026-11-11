@@ -266,6 +266,29 @@ describe("FakeMapAdapter", () => {
     expect(moves).toBe(0);
   });
 
+  it("refuses an image while a basemap swap is still loading, and makes one once it has loaded", async () => {
+    const adapter = new FakeMapAdapter();
+    await adapter.mount(new FakeMapHost(), OPTIONS);
+    const swap = adapter.deferNextBasemap();
+    const swapping = adapter.setBasemap(FAKE_RASTER_BASEMAP);
+    await expect(adapter.toImage()).rejects.toMatchObject({
+      reason: "export-failed",
+    });
+    swap.resolve();
+    await swapping;
+    expect((await adapter.toImage()).type).toBe("image/png");
+  });
+
+  it("refuses an image when a swap starts while the pixels are being collected", async () => {
+    const adapter = new FakeMapAdapter();
+    await adapter.mount(new FakeMapHost(), OPTIONS);
+    const image = adapter.toImage();
+    const swap = adapter.deferNextBasemap();
+    void adapter.setBasemap(FAKE_RASTER_BASEMAP);
+    await expect(image).rejects.toMatchObject({ reason: "export-failed" });
+    swap.resolve();
+  });
+
   it("builds a fresh adapter on every call and reports each one", () => {
     const built: FakeMapAdapter[] = [];
     const factory = createFakeMapAdapterFactory((adapter) =>

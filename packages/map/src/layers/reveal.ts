@@ -22,13 +22,6 @@ export interface RevealGeometry {
   readonly viewport: { readonly width: number; readonly height: number };
   /** The open side panel's right edge, in pixels from the left, once it has published one. */
   readonly panelEdge: number | null;
-  /**
-   * How far above the container's bottom edge the bottom sheet ends, in
-   * pixels, so it clears a basemap provider's credit row. The sheet is then
-   * that tall as well as its detent height, and its detents are heights within
-   * what the row leaves, as in `Sheet`. The side panel ignores it.
-   */
-  readonly bottomReserve: number;
 }
 
 type Padding = NonNullable<MapFitOptions["padding"]>;
@@ -40,19 +33,17 @@ type Padding = NonNullable<MapFitOptions["padding"]>;
  *   map to look at.
  */
 export function coveredPadding(geometry: RevealGeometry): Padding | null {
-  const { layout, viewport, panelEdge, bottomReserve } = geometry;
+  const { layout, viewport, panelEdge } = geometry;
   const padding: Padding =
     layout === "panel"
       ? { top: 0, right: 0, bottom: 0, left: panelEdge ?? 0 }
       : {
           top: 0,
           right: 0,
-          bottom:
-            bottomReserve +
-            computeDetentHeights({
-              viewportHeight: Math.max(0, viewport.height - bottomReserve),
-              insetBottom: 0,
-            })[REVEAL_DETENT],
+          bottom: computeDetentHeights({
+            viewportHeight: viewport.height,
+            insetBottom: 0,
+          })[REVEAL_DETENT],
           left: 0,
         };
   const width = viewport.width - padding.left - padding.right;

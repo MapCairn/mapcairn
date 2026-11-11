@@ -3,14 +3,6 @@ import type { LatLng } from "../ports/geometry";
 /** What a shape is: a single position, a path, an area or a circle. */
 export type DrawKind = "point" | "line" | "polygon" | "circle";
 
-/** Every kind, in the order the interface offers them. */
-export const DRAW_KINDS: readonly DrawKind[] = [
-  "point",
-  "line",
-  "polygon",
-  "circle",
-];
-
 /**
  * One drawn shape. A circle keeps its centre as its only vertex and its
  * radius in metres; every other kind is its vertices in order, and a polygon

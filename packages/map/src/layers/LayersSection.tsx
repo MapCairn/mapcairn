@@ -95,7 +95,7 @@ export function LayersSection({
   const { reducedMotion } = usePreferences();
   const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
-  const { layout, viewport, panelEdge, bottomReserve } = useChromeLayout();
+  const { layout, viewport, panelEdge } = useChromeLayout();
   const [cardRequest, setCardRequest] = useState(0);
   const { selected, choices } = layers;
   const choicesHeading = useRef<HTMLHeadingElement>(null);
@@ -134,7 +134,6 @@ export function LayersSection({
             layout,
             viewport,
             panelEdge,
-            bottomReserve,
           })
         : null;
     if (adapter && offset) {
@@ -149,7 +148,6 @@ export function LayersSection({
     layout,
     viewport,
     panelEdge,
-    bottomReserve,
   ]);
 
   // "Show on map" lowers the sheet to a detent that shows the map as well as
@@ -178,7 +176,6 @@ export function LayersSection({
         layout,
         viewport,
         panelEdge,
-        bottomReserve,
       });
       adapter.fitBounds(bounds, {
         padding: {
@@ -194,7 +191,6 @@ export function LayersSection({
         layout,
         viewport,
         panelEdge,
-        bottomReserve,
       });
       if (padding) {
         // A fit with padding centres the point in what the sheet leaves free.

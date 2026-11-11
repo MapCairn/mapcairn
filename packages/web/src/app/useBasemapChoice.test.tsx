@@ -3,7 +3,7 @@ import {
   type BasemapDefinition,
   createBasemapCatalogue,
   createFakeServices,
-  FAKE_CREDITED_BASEMAP,
+  FAKE_VECTOR_BASEMAP,
   getBasemap,
   MapEngineError,
 } from "@mapcairn/core";
@@ -136,13 +136,17 @@ describe("useBasemapChoice", () => {
   });
 });
 
-describe("useBasemapChoice with a basemap that has terms", () => {
-  const catalogue = createBasemapCatalogue([
-    ...BASEMAPS,
-    FAKE_CREDITED_BASEMAP,
-  ]);
+/** A basemap that only a host would offer. */
+const HOSTED_BASEMAP: BasemapDefinition = {
+  ...FAKE_VECTOR_BASEMAP,
+  id: "fake-hosted",
+  name: "Fake hosted",
+};
 
-  function setupCredited(stored: string, linked?: string) {
+describe("useBasemapChoice with a host's basemap", () => {
+  const catalogue = createBasemapCatalogue([...BASEMAPS, HOSTED_BASEMAP]);
+
+  function setupHosted(stored: string, linked?: string) {
     const services = createFakeServices({ basemaps: catalogue });
     services.fakes.settings.set({ basemapId: stored });
     const wrapper = ({ children }: { children: ReactNode }) => (
@@ -152,159 +156,85 @@ describe("useBasemapChoice with a basemap that has terms", () => {
     return { services, hook };
   }
 
-  const ids = (hook: ReturnType<typeof setupCredited>["hook"]) =>
-    hook.result.current.inUse.map((item) => item.id);
-
   it("resolves a host basemap by id, saved or linked", () => {
-    expect(setupCredited("fake-credited").hook.result.current.basemap.id).toBe(
-      "fake-credited",
+    expect(setupHosted("fake-hosted").hook.result.current.basemap.id).toBe(
+      "fake-hosted",
     );
     expect(
-      setupCredited("positron", "fake-credited").hook.result.current.basemap.id,
-    ).toBe("fake-credited");
+      setupHosted("positron", "fake-hosted").hook.result.current.basemap.id,
+    ).toBe("fake-hosted");
   });
 
   it("falls back to the host's default for a removed id", () => {
-    expect(
-      setupCredited("maptoolkit-dark").hook.result.current.basemap.id,
-    ).toBe("bright");
-  });
-
-  it("has only the shown basemap in use when nothing is loading", () => {
-    expect(ids(setupCredited("fake-credited").hook)).toEqual(["fake-credited"]);
-    expect(ids(setupCredited("bright").hook)).toEqual(["bright"]);
-  });
-
-  it("keeps a basemap in use while another is requested over it, until the new one has loaded", () => {
-    const { hook } = setupCredited("fake-credited");
-    act(() => hook.result.current.choose("bright"));
-    expect(hook.result.current.basemap.id).toBe("bright");
-    expect(ids(hook)).toEqual(["bright", "fake-credited"]);
-
-    act(() => hook.result.current.applied(basemap("bright")));
-    expect(ids(hook)).toEqual(["bright"]);
-  });
-
-  it("puts a requested basemap in use as soon as it is asked for, before it has loaded", () => {
-    const { hook } = setupCredited("bright");
-    act(() => hook.result.current.choose("fake-credited"));
-    expect(ids(hook)).toEqual(["fake-credited", "bright"]);
-    act(() => hook.result.current.applied(FAKE_CREDITED_BASEMAP));
-    expect(ids(hook)).toEqual(["fake-credited"]);
-  });
-
-  it("keeps the credited basemap in use when the swap away from it fails", () => {
-    const { hook } = setupCredited("fake-credited");
-    act(() => hook.result.current.choose("bright"));
-    act(() =>
-      hook.result.current.failed(
-        new Error("404"),
-        basemap("bright"),
-        FAKE_CREDITED_BASEMAP,
-      ),
+    expect(setupHosted("maptoolkit-dark").hook.result.current.basemap.id).toBe(
+      "bright",
     );
-    expect(ids(hook)).toEqual(["fake-credited"]);
-  });
-});
-
-describe("useBasemapChoice drawn basemap", () => {
-  const catalogue = createBasemapCatalogue([
-    ...BASEMAPS,
-    FAKE_CREDITED_BASEMAP,
-  ]);
-
-  function setupCredited(stored: string) {
-    const services = createFakeServices({ basemaps: catalogue });
-    services.fakes.settings.set({ basemapId: stored });
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <ServicesProvider services={services}>{children}</ServicesProvider>
-    );
-    const hook = renderHook(() => useBasemapChoice(undefined), { wrapper });
-    return { services, hook };
-  }
-
-  const ids = (hook: ReturnType<typeof setupCredited>["hook"]) =>
-    hook.result.current.inUse.map((item) => item.id);
-
-  it("follows a saved basemap that changes elsewhere, such as another tab, once the map has drawn it", () => {
-    const { services, hook } = setupCredited("bright");
-    act(() => services.fakes.settings.set({ basemapId: "fake-credited" }));
-    expect(hook.result.current.basemap.id).toBe("fake-credited");
-    // Until the swap loads, the old basemap is still on screen.
-    expect(ids(hook)).toEqual(["fake-credited", "bright"]);
-
-    // No local choice is pending, but the map still reports what loaded.
-    act(() => hook.result.current.applied(FAKE_CREDITED_BASEMAP));
-    expect(ids(hook)).toEqual(["fake-credited"]);
-
-    // A later choice then starts from the basemap that is really drawn.
-    act(() => hook.result.current.choose("bright"));
-    expect(ids(hook)).toEqual(["bright", "fake-credited"]);
-    act(() => hook.result.current.applied(basemap("bright")));
-    expect(ids(hook)).toEqual(["bright"]);
   });
 
   it("settles on the last of two choices made before the first has loaded", () => {
-    const { services, hook } = setupCredited("bright");
-    act(() => hook.result.current.choose("fake-credited"));
+    const { services, hook } = setupHosted("bright");
+    act(() => hook.result.current.choose("fake-hosted"));
     act(() => hook.result.current.choose("positron"));
-    expect(ids(hook)).toEqual(["positron", "bright"]);
+    expect(hook.result.current.basemap.id).toBe("positron");
 
     act(() => hook.result.current.applied(basemap("positron")));
-    expect(ids(hook)).toEqual(["positron"]);
     expect(services.fakes.settings.get().basemapId).toBe("positron");
   });
 
-  it("is drawn by whatever loaded, even if the earlier choice did report first", () => {
-    const { hook } = setupCredited("bright");
-    act(() => hook.result.current.choose("fake-credited"));
-    act(() => hook.result.current.choose("positron"));
-    act(() => hook.result.current.applied(FAKE_CREDITED_BASEMAP));
-    expect(ids(hook)).toEqual(["positron", "fake-credited"]);
-    act(() => hook.result.current.applied(basemap("positron")));
-    expect(ids(hook)).toEqual(["positron"]);
+  it("falls back to the basemap drawn before, once a basemap that changed elsewhere has loaded and then proves to be down", () => {
+    const { services, hook } = setupHosted("positron");
+    act(() => services.fakes.settings.set({ basemapId: "fake-hosted" }));
+    expect(hook.result.current.basemap.id).toBe("fake-hosted");
+    // No local choice is pending, but the map still reports what loaded.
+    act(() => hook.result.current.applied(HOSTED_BASEMAP));
+    act(() => hook.result.current.unavailableNow(HOSTED_BASEMAP));
+    // Positron was drawn before, and is not the default, so it is the
+    // drawn-before basemap that comes back.
+    expect(hook.result.current.basemap.id).toBe("positron");
+    expect(hook.result.current.failure).toEqual({
+      id: "fake-hosted",
+      name: "Fake hosted",
+      kept: basemap("positron"),
+      unavailable: true,
+    });
   });
 
-  it("keeps the credit off when the swap to the credited basemap fails", () => {
-    const { services, hook } = setupCredited("bright");
-    act(() => hook.result.current.choose("fake-credited"));
-    expect(ids(hook)).toEqual(["fake-credited", "bright"]);
+  it("names the host basemap that failed to load, and saves nothing", () => {
+    const { services, hook } = setupHosted("bright");
+    act(() => hook.result.current.choose("fake-hosted"));
     act(() =>
       hook.result.current.failed(
         new Error("404"),
-        FAKE_CREDITED_BASEMAP,
+        HOSTED_BASEMAP,
         basemap("bright"),
       ),
     );
-    expect(ids(hook)).toEqual(["bright"]);
-    expect(hook.result.current.failure?.name).toBe("Fake credited");
+    expect(hook.result.current.basemap.id).toBe("bright");
+    expect(hook.result.current.failure?.name).toBe("Fake hosted");
     expect(services.fakes.settings.get().basemapId).toBe("bright");
   });
 
-  it("takes what the map says it kept as what is drawn, even if it was never reported as loaded", () => {
-    const { hook } = setupCredited("bright");
-    act(() => hook.result.current.choose("fake-credited"));
+  it("takes what the map says it kept as the basemap to draw, even if the one it kept was never reported as loaded", () => {
+    const { hook } = setupHosted("bright");
+    act(() => hook.result.current.choose("fake-hosted"));
     act(() => hook.result.current.choose("positron"));
-    // The engine kept the credited basemap, whose own load went unreported
+    // The engine kept the host basemap, whose own load went unreported
     // because a newer choice superseded it.
     act(() =>
       hook.result.current.failed(
         new Error("404"),
         basemap("positron"),
-        FAKE_CREDITED_BASEMAP,
+        HOSTED_BASEMAP,
       ),
     );
-    expect(ids(hook)).toEqual(["fake-credited"]);
+    expect(hook.result.current.basemap.id).toBe("fake-hosted");
   });
 });
 
 describe("useBasemapChoice when the map cannot start on a basemap", () => {
-  const catalogue = createBasemapCatalogue([
-    ...BASEMAPS,
-    FAKE_CREDITED_BASEMAP,
-  ]);
+  const catalogue = createBasemapCatalogue([...BASEMAPS, HOSTED_BASEMAP]);
 
-  function setupCredited(stored: string, linked?: string) {
+  function setupHosted(stored: string, linked?: string) {
     const services = createFakeServices({ basemaps: catalogue });
     services.fakes.settings.set({ basemapId: stored });
     const wrapper = ({ children }: { children: ReactNode }) => (
@@ -316,30 +246,23 @@ describe("useBasemapChoice when the map cannot start on a basemap", () => {
 
   const loadFailed = new MapEngineError("load-failed");
 
-  it("falls back to the default, names the basemap that failed and puts its credit and image block down", () => {
-    const { services, hook } = setupCredited("fake-credited");
-    act(() =>
-      hook.result.current.mountFailed(loadFailed, FAKE_CREDITED_BASEMAP),
-    );
+  it("falls back to the default and names the basemap that failed", () => {
+    const { services, hook } = setupHosted("fake-hosted");
+    act(() => hook.result.current.mountFailed(loadFailed, HOSTED_BASEMAP));
     expect(hook.result.current.basemap.id).toBe("bright");
     expect(hook.result.current.failure).toEqual({
-      id: "fake-credited",
-      name: "Fake credited",
+      id: "fake-hosted",
+      name: "Fake hosted",
       kept: basemap("bright"),
       atMount: true,
     });
-    expect(hook.result.current.inUse.map((item) => item.id)).toEqual([
-      "bright",
-    ]);
     // Nothing is saved by a failure.
-    expect(services.fakes.settings.get().basemapId).toBe("fake-credited");
+    expect(services.fakes.settings.get().basemapId).toBe("fake-hosted");
   });
 
   it("saves the default when the person goes back, so the next start no longer asks for the failed basemap", () => {
-    const { services, hook } = setupCredited("fake-credited");
-    act(() =>
-      hook.result.current.mountFailed(loadFailed, FAKE_CREDITED_BASEMAP),
-    );
+    const { services, hook } = setupHosted("fake-hosted");
+    act(() => hook.result.current.mountFailed(loadFailed, HOSTED_BASEMAP));
     act(() => hook.result.current.goBack());
     expect(hook.result.current.failure).toBeNull();
     expect(hook.result.current.choice).toBe("bright");
@@ -348,34 +271,32 @@ describe("useBasemapChoice when the map cannot start on a basemap", () => {
   });
 
   it("does the same for a basemap named by a link, which it then stops using", () => {
-    const { hook } = setupCredited("positron", "fake-credited");
-    expect(hook.result.current.basemap.id).toBe("fake-credited");
-    act(() =>
-      hook.result.current.mountFailed(loadFailed, FAKE_CREDITED_BASEMAP),
-    );
+    const { hook } = setupHosted("positron", "fake-hosted");
+    expect(hook.result.current.basemap.id).toBe("fake-hosted");
+    act(() => hook.result.current.mountFailed(loadFailed, HOSTED_BASEMAP));
     act(() => hook.result.current.goBack());
     expect(hook.result.current.savedChoice).toBe("bright");
   });
 
   it("leaves a failure of the default basemap, or of the engine itself, alone", () => {
-    const { hook } = setupCredited("bright");
+    const { hook } = setupHosted("bright");
     act(() => hook.result.current.mountFailed(loadFailed, basemap("bright")));
     expect(hook.result.current.failure).toBeNull();
-    const credited = setupCredited("fake-credited");
+    const hosted = setupHosted("fake-hosted");
     act(() =>
-      credited.hook.result.current.mountFailed(
+      hosted.hook.result.current.mountFailed(
         new MapEngineError("webgl-unavailable"),
-        FAKE_CREDITED_BASEMAP,
+        HOSTED_BASEMAP,
       ),
     );
     act(() =>
-      credited.hook.result.current.mountFailed(
+      hosted.hook.result.current.mountFailed(
         new MapEngineError("stopped"),
-        FAKE_CREDITED_BASEMAP,
+        HOSTED_BASEMAP,
       ),
     );
-    expect(credited.hook.result.current.failure).toBeNull();
-    expect(credited.hook.result.current.basemap.id).toBe("fake-credited");
+    expect(hosted.hook.result.current.failure).toBeNull();
+    expect(hosted.hook.result.current.basemap.id).toBe("fake-hosted");
   });
 });
 
@@ -404,9 +325,6 @@ describe("useBasemapChoice when every tile of a basemap fails", () => {
       kept: liberty,
       unavailable: true,
     });
-    expect(hook.result.current.inUse.map((item) => item.id)).toEqual([
-      "liberty",
-    ]);
   });
 
   it("falls back to the default when there is no earlier basemap, such as a saved one at start", () => {
