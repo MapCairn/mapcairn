@@ -315,6 +315,12 @@ async function expectTourLayout(
         ? "crowded"
         : "shown";
   }
+  // Wait for the card to settle first: it fades, and hides after the fade.
+  if (expected === "shown") {
+    await expect(card, context).toBeVisible();
+  } else {
+    await expect(card, context).toBeHidden();
+  }
   const found = await inspectChromeLayout(page);
   const report = creditsOpen ? withoutCreditsOverCard(found) : found;
   const details = `${context}: ${JSON.stringify(report.boxes)}`;
@@ -323,10 +329,8 @@ async function expectTourLayout(
   if (expected === "shown") {
     await expect(slot, details).toHaveAttribute("data-crowded", "false");
     await expect(slot, details).not.toHaveAttribute("inert", /.*/);
-    await expect(card, details).toBeVisible();
     expect(tourShown, details).toBe(true);
   } else {
-    await expect(card, details).toBeHidden();
     await expect(slot, details).toHaveAttribute("inert", /.*/);
     expect(tourShown, details).toBe(false);
   }
