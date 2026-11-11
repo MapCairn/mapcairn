@@ -83,4 +83,14 @@ describe("SDK package manifests", () => {
       expect([...missing]).toEqual([]);
     },
   );
+
+  it.each(SDK_PACKAGES)(
+    "@mapcairn/%s takes React from the host, as a peer",
+    (name) => {
+      const manifest = manifestOf(name);
+      for (const shared of ["react", "react-dom"]) {
+        expect(manifest.dependencies ?? {}).not.toHaveProperty(shared);
+      }
+    },
+  );
 });
