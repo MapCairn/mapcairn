@@ -4,14 +4,26 @@
  * modules, which would silently switch the architecture rules off.
  */
 import { spawnSync } from "node:child_process";
+import { readdirSync } from "node:fs";
 
-const packages = ["core", "map", "react", "theme", "web"];
+/** Every example app, so a new one is cruised without editing this list. */
+const examples = readdirSync("examples", { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => `examples/${entry.name}/src`);
+
+/** Every directory cruised; each must yield at least one module. */
+const roots = [
+  ...["core", "map", "react", "theme", "web"].map(
+    (name) => `packages/${name}/src`,
+  ),
+  ...examples,
+];
 
 const result = spawnSync(
   process.execPath,
   [
     "node_modules/dependency-cruiser/bin/dependency-cruiser.mjs",
-    ...packages.map((name) => `packages/${name}/src`),
+    ...roots,
     "--config",
     ".dependency-cruiser.cjs",
     "--output-type",
@@ -30,13 +42,13 @@ try {
 }
 
 const errors = [];
-for (const name of packages) {
+for (const root of roots) {
   const count = report.modules.filter((module) =>
-    module.source.startsWith(`packages/${name}/src`),
+    module.source.startsWith(root),
   ).length;
   if (count === 0) {
     errors.push(
-      `No modules were cruised for packages/${name}. Check that a TypeScript parser (@swc/core) is installed.`,
+      `No modules were cruised for ${root}. Check that a TypeScript parser (@swc/core) is installed.`,
     );
   }
 }
