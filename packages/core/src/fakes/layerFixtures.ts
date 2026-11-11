@@ -452,6 +452,40 @@ export const SAMPLE_TILE_LAYER: TileLayerDefinition = {
   },
 };
 
+/**
+ * A raster overlay named by half hour, with a date and time control whose
+ * newest slot is six hours back, and an opacity control. It is kept out of
+ * {@link SAMPLE_LAYERS}, because suites that walk every sample layer expect
+ * fixed defaults and counts, while this one's newest slot moves with `now`.
+ */
+export const SAMPLE_TIME_LAYER: TileLayerDefinition = {
+  id: "sample-rain",
+  name: "Sample rain",
+  description: "Half-hourly sample rain, about six hours behind.",
+  group: "Imagery",
+  dataCost: "about 100 KB per screen",
+  attribution: [{ text: "Sample rain provider" }],
+  controls: [
+    {
+      kind: "datetime",
+      id: "time",
+      label: "Time shown",
+      description: "Some half hours have no data.",
+      stepMinutes: 30,
+      min: "2000-06-01t0000",
+      max: { minutesAgo: 360 },
+      default: { minutesAgo: 360 },
+    },
+    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 },
+  ],
+  source: {
+    kind: "tiles",
+    tiles: "https://tiles.test/rain/{time}/{z}/{y}/{x}.png",
+    tileSize: 256,
+    maxzoom: 6,
+  },
+};
+
 /** Every sample definition, in a stable order. */
 export const SAMPLE_LAYERS = [
   SAMPLE_FEED_LAYER,

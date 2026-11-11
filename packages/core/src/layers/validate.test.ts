@@ -4,6 +4,7 @@ import {
   SAMPLE_FEED_LAYER,
   SAMPLE_LAYERS,
   SAMPLE_TILE_LAYER,
+  SAMPLE_TIME_LAYER,
 } from "../fakes/layerFixtures";
 import { createDecoderRegistry } from "./decoders";
 import { createFormatterRegistry } from "./formatters";
@@ -27,7 +28,7 @@ function problems(value: unknown): string[] {
 
 describe("validateLayerDefinition", () => {
   it("accepts every sample definition", () => {
-    for (const definition of SAMPLE_LAYERS) {
+    for (const definition of [...SAMPLE_LAYERS, SAMPLE_TIME_LAYER]) {
       expect(problems(definition)).toEqual([]);
     }
   });
@@ -276,6 +277,121 @@ describe("validateLayerDefinition", () => {
         });
       },
       "controls[0].default:",
+    ],
+    [
+      "a time step that does not divide a day",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[0].stepMinutes = 7;
+      },
+      "controls[0].stepMinutes:",
+    ],
+    [
+      "a time step that is not a whole number",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[0].stepMinutes = 0.5;
+      },
+      "controls[0].stepMinutes:",
+    ],
+    [
+      "a time bound that is not a slot",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[0].min = "2000-06-01T00:00:00Z";
+      },
+      "controls[0].min:",
+    ],
+    [
+      "a fixed time bound off the step",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[0].min = "2000-06-01t0015";
+      },
+      "controls[0].min:",
+    ],
+    [
+      "a relative time that is negative",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[0].max = { minutesAgo: -30 };
+      },
+      "controls[0].max:",
+    ],
+    [
+      "a relative time in days",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[0].default = { daysAgo: 1 };
+      },
+      "controls[0].default:",
+    ],
+    [
+      "a relative time range that is backwards",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        Object.assign((d.controls as Json[])[0], {
+          min: { minutesAgo: 60 },
+          max: { minutesAgo: 120 },
+          default: { minutesAgo: 120 },
+        });
+      },
+      "controls[0]: min is after max",
+    ],
+    [
+      "a relative first time with a fixed newest time",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        Object.assign((d.controls as Json[])[0], {
+          min: { minutesAgo: 600 },
+          max: "2026-01-01t0000",
+          default: "2026-01-01t0000",
+        });
+      },
+      "controls[0]: min would pass max",
+    ],
+    [
+      "a relative time over a hundred years",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[0].default = { minutesAgo: 1e15 };
+      },
+      "controls[0].default:",
+    ],
+    [
+      "a fixed time range that is backwards",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        Object.assign((d.controls as Json[])[0], {
+          min: "2025-01-01t1200",
+          max: "2025-01-01t1130",
+          default: "2025-01-01t1130",
+        });
+      },
+      "controls[0]: min is after max",
+    ],
+    [
+      "a fixed time default outside a fixed range",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        Object.assign((d.controls as Json[])[0], {
+          min: "2025-01-01t0000",
+          max: "2025-01-02t0000",
+          default: "2025-01-03t0000",
+        });
+      },
+      "controls[0].default:",
+    ],
+    [
+      "a condition on a date and time control",
+      SAMPLE_TIME_LAYER,
+      (d) => {
+        (d.controls as Json[])[1].enabledWhen = {
+          control: "time",
+          in: ["2025-01-01t0000"],
+        };
+      },
+      "controls[1].enabledWhen:",
     ],
     [
       "an opacity outside 0.1 to 1",

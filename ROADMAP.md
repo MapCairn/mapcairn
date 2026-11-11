@@ -12,7 +12,6 @@ Statuses are "proposed" (written down, not started) and "in progress" (work has 
 | --- | --- | --- |
 | Work toward the OpenSSF Best Practices silver badge: governance, this roadmap, an assurance case, a vulnerability response process, code style and review documents, and a repeatable build | in progress | [#4](https://github.com/MapCairn/mapcairn/issues/4) |
 | Get the four SDK packages ready to publish to npm, with API documentation generated from the TSDoc comments. A plan comes first | proposed | [#1](https://github.com/MapCairn/mapcairn/issues/1) |
-| A 30-minute rainfall product, which needs a time-of-day control in the layer system. Low priority | proposed | [#2](https://github.com/MapCairn/mapcairn/issues/2) |
 
 Further items, such as new open data layers, are added as plans or issues when someone proposes them, and each new dataset is a separate, explicitly scoped decision with its provenance, publication rights and privacy reviewed first (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 

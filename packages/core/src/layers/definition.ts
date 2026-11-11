@@ -80,6 +80,37 @@ export interface DateControlDefinition extends ControlBase {
 }
 
 /**
+ * A time relative to now, so a definition can follow a provider's latency:
+ * `{ minutesAgo: 360 }` is six hours ago, rounded down to the control's step.
+ */
+export interface RelativeTime {
+  readonly minutesAgo: number;
+}
+
+/**
+ * A slot of a date and time control: a UTC `YYYY-MM-DDtHHMM` string on the
+ * control's step, such as `2000-06-01t0000`, or a time relative to now.
+ */
+export type DateTimeBound = string | RelativeTime;
+
+/**
+ * A UTC date and a time of day on a fixed step, such as the half hours of a
+ * product the provider names by timestamp. Its value is the slot's start as
+ * `YYYY-MM-DDtHHMM` (lowercase `t`, so it fits a permalink); a URL template
+ * receives it as an ISO instant, `YYYY-MM-DDTHH:MM:SSZ`. Only slots between
+ * `min` and `max` are offered, so `max` set to the provider's latency keeps
+ * slots that are not out yet off the list.
+ */
+export interface DateTimeControlDefinition extends ControlBase {
+  readonly kind: "datetime";
+  /** Minutes between slots. A whole number that divides a day, such as 30. */
+  readonly stepMinutes: number;
+  readonly min: DateTimeBound;
+  readonly max: DateTimeBound;
+  readonly default: DateTimeBound;
+}
+
+/**
  * How opaque a tile overlay is, from 0.1 to 1. Its value is a decimal string
  * such as `0.8`. It never changes a URL, so it costs no data.
  */
@@ -109,6 +140,7 @@ export type LayerControlDefinition =
   | SegmentedControlDefinition
   | SwitchControlDefinition
   | DateControlDefinition
+  | DateTimeControlDefinition
   | OpacityControlDefinition
   | RangeControlDefinition;
 
