@@ -45,9 +45,9 @@ export function buildContentSecurityPolicy(
     options.development
       ? "style-src 'self' 'unsafe-inline'"
       : "style-src 'self'",
-    "img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://styles.maptoolkit.org https://tiles.maptoolkit.org https://icons.maptoolkit.org https://fonts.maptoolkit.org https://tiles.mapterhorn.com https://gibs.earthdata.nasa.gov https://ows.globalfloods.eu",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://gibs.earthdata.nasa.gov https://ows.globalfloods.eu",
     "font-src 'self'",
-    "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://tile.openstreetmap.org https://nominatim.openstreetmap.org https://valhalla1.openstreetmap.de https://tiles.openfreemap.org https://styles.maptoolkit.org https://tiles.maptoolkit.org https://icons.maptoolkit.org https://fonts.maptoolkit.org https://tiles.mapterhorn.com https://earthquake.usgs.gov https://gibs.earthdata.nasa.gov https://www.gdacs.org https://ows.globalfloods.eu https://cdn.jsdelivr.net" +
+    "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://tile.openstreetmap.org https://nominatim.openstreetmap.org https://valhalla1.openstreetmap.de https://tiles.openfreemap.org https://earthquake.usgs.gov https://gibs.earthdata.nasa.gov https://www.gdacs.org https://ows.globalfloods.eu https://cdn.jsdelivr.net" +
       (options.development ? " ws://localhost:* http://localhost:*" : ""),
     "worker-src 'self' blob:",
     "frame-src 'none'",

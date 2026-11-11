@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import {
+  BASEMAP_COUNT,
   DEFAULT_VECTOR_BASEMAP_NAME,
   LIBERTY_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
@@ -122,7 +123,9 @@ test.describe("save data", () => {
       page.getByRole("switch", { name: "Save data" }),
     ).not.toBeChecked();
     await mapPage.switchToMapOptions();
-    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(4);
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
+      BASEMAP_COUNT,
+    );
     await expect.poll(() => thumbnails.length).toBeGreaterThan(0);
     expect(relief.length).toBeGreaterThan(0);
   });
@@ -190,7 +193,9 @@ test.describe("save data", () => {
       await page.evaluate(() => localStorage.getItem("mapcairn:saveData")),
     ).toBe("false");
     await mapPage.switchToMapOptions();
-    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(4);
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
+      BASEMAP_COUNT,
+    );
     await expect.poll(() => relief.length).toBeGreaterThan(0);
     expect(thumbnails.length).toBeGreaterThan(0);
   });
@@ -226,7 +231,9 @@ test.describe("save data", () => {
     await saveData.click();
     await expect(saveData).not.toBeChecked();
     await mapPage.switchToMapOptions();
-    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(4);
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
+      BASEMAP_COUNT,
+    );
     await expect.poll(() => relief.length).toBeGreaterThan(0);
   });
 

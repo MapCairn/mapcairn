@@ -1,21 +1,15 @@
 import {
-  BASEMAPS,
   type BasemapCatalogue,
-  createBasemapCatalogue,
-  DEFAULT_BASEMAP_ID,
+  BUILT_IN_BASEMAP_CATALOGUE,
 } from "@mapcairn/core";
-import { MAPTOOLKIT_DARK } from "./maptoolkit";
-
-export { MAPTOOLKIT_DARK, MAPTOOLKIT_DARK_ID } from "./maptoolkit";
 
 /**
- * The basemaps the reference host offers: the SDK's built-in basemaps, then
- * Maptoolkit Dark, whose licence the host accepts. Liberty stays the default,
- * and an id that names none of them (the removed "dark", the retired "auto")
- * still opens on Liberty. The composition root passes this as
- * `Services.basemaps`.
+ * The basemaps the reference host offers: the SDK's built-in basemaps (Bright,
+ * Liberty, Positron, Streets and Fiord), with Bright the default. An id that
+ * names none of them (the removed "dark", the retired "auto" and
+ * "maptoolkit-dark") opens on Bright. The composition root passes this as
+ * `Services.basemaps`. A basemap added here instead of in the SDK would need
+ * the host's own review of its provider's terms, its origins in the Content
+ * Security Policy, and its credit in `ATTRIBUTIONS.md` and the privacy page.
  */
-export const BASEMAP_CATALOGUE: BasemapCatalogue = createBasemapCatalogue(
-  [...BASEMAPS, MAPTOOLKIT_DARK],
-  DEFAULT_BASEMAP_ID,
-);
+export const BASEMAP_CATALOGUE: BasemapCatalogue = BUILT_IN_BASEMAP_CATALOGUE;

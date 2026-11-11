@@ -18,12 +18,13 @@ import {
 } from "./basemaps";
 
 describe("BASEMAPS", () => {
-  it("contains the four built-in basemaps in picker order, the default first", () => {
+  it("contains the five built-in basemaps in picker order, the default first", () => {
     expect(BASEMAPS.map((basemap) => basemap.id)).toEqual([
       "bright",
       "liberty",
       "positron",
       "osm",
+      "fiord",
     ]);
   });
 
@@ -106,6 +107,10 @@ describe("BASEMAPS", () => {
       kind: "vector",
       styleUrl: "https://tiles.openfreemap.org/styles/liberty",
     });
+    expect(sources.fiord).toEqual({
+      kind: "vector",
+      styleUrl: "https://tiles.openfreemap.org/styles/fiord",
+    });
     expect(sources.osm).toEqual({
       kind: "raster",
       tileSize: 256,
@@ -118,7 +123,7 @@ describe("BASEMAPS", () => {
   });
 
   it("credits OpenStreetMap, OpenFreeMap and OpenMapTiles on the vector styles", () => {
-    for (const id of ["bright", "positron", "liberty"]) {
+    for (const id of ["bright", "positron", "liberty", "fiord"]) {
       const text = getBasemap(id)
         ?.attribution.map((entry) => entry.text)
         .join(" ");
@@ -137,10 +142,27 @@ describe("BASEMAPS", () => {
     ]);
   });
 
-  it("has no dark basemap: every built-in basemap is light", () => {
+  it("has one dark basemap, Fiord, and no basemap called dark", () => {
     expect(getBasemap("dark")).toBeUndefined();
     for (const basemap of BASEMAPS) {
-      expect(basemap.appearance, basemap.id).toBe("light");
+      expect(basemap.appearance, basemap.id).toBe(
+        basemap.id === "fiord" ? "dark" : "light",
+      );
+    }
+  });
+
+  it("names Fiord's own land colour as its picker swatch, so Save data mode shows a dark tile", () => {
+    // Copied from the `background` layer's `background-color` in
+    // https://tiles.openfreemap.org/styles/fiord (checked 2026-11-10), in the
+    // style's own six-digit hex, lowercased.
+    expect(getBasemap("fiord")?.swatch).toBe("#45516e");
+  });
+
+  it("gives every other built-in basemap no swatch, so it shows the default land colour", () => {
+    for (const basemap of BASEMAPS) {
+      if (basemap.id !== "fiord") {
+        expect(basemap.swatch, basemap.id).toBeUndefined();
+      }
     }
   });
 
@@ -250,6 +272,14 @@ describe("omittedLayers", () => {
     expect(omittedLayers(resolveBasemap("bright"), true)).toEqual([]);
     expect(omittedLayers(resolveBasemap("positron"), true)).toEqual([]);
     expect(omittedLayers(resolveBasemap("osm"), true)).toEqual([]);
+  });
+
+  // Checked against https://tiles.openfreemap.org/styles/fiord on 2026-11-10:
+  // like Bright, it declares the Natural Earth raster source but draws no
+  // raster layer from it (48 layers: background, fill, line and symbol).
+  it("is empty for Fiord, whose style draws no raster layer", () => {
+    expect(resolveBasemap("fiord").saveDataOmitLayers).toBeUndefined();
+    expect(omittedLayers(resolveBasemap("fiord"), true)).toEqual([]);
   });
 
   // Checked against https://tiles.openfreemap.org/styles/liberty on 2026-11-09:

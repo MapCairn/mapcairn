@@ -1,6 +1,8 @@
 import { expect, test } from "./fixtures";
 import {
   BASEMAP_COUNT,
+  DARK_VECTOR_BASEMAP_ID,
+  DARK_VECTOR_BASEMAP_NAME,
   DEFAULT_VECTOR_BASEMAP_ID,
   DEFAULT_VECTOR_BASEMAP_NAME,
   LIBERTY_BASEMAP_ID,
@@ -127,6 +129,52 @@ test.describe("basemaps", () => {
     ).toBeChecked();
   });
 
+  test("Fiord, the dark basemap, is chosen from the picker, loads its style from OpenFreeMap, is saved, and leaves Save image on", async ({
+    page,
+    mapPage,
+  }) => {
+    const styles: string[] = [];
+    page.on("request", (request) => {
+      const match = /\/styles\/(\w+)$/.exec(request.url());
+      if (match?.[1]) {
+        styles.push(match[1]);
+      }
+    });
+    await mapPage.goto(START);
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: DARK_VECTOR_BASEMAP_NAME,
+      }),
+    ).not.toBeChecked();
+    await expect(
+      page
+        .getByTestId(`basemap-option-${DARK_VECTOR_BASEMAP_ID}`)
+        .locator("img"),
+    ).toHaveCount(1);
+    await mapPage.chooseBasemap(DARK_VECTOR_BASEMAP_NAME);
+    await expect.poll(() => mapPage.hashBasemap()).toBe(DARK_VECTOR_BASEMAP_ID);
+    expect(styles).toContain(DARK_VECTOR_BASEMAP_ID);
+    await expect(page.getByTestId("save-image-button")).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await expect(page.getByTestId("export-blocked")).toHaveCount(0);
+    await expect(page.getByTestId("permanent-credit")).toHaveCount(0);
+
+    await page.evaluate(() => {
+      history.replaceState(null, "", `${location.pathname}${location.search}`);
+    });
+    await page.reload();
+    await mapPage.waitForMap();
+    await mapPage.openMapOptions();
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: DARK_VECTOR_BASEMAP_NAME,
+      }),
+    ).toBeChecked();
+  });
+
   test("switching between the raster and vector styles keeps the map, the view and the bearing", async ({
     page,
     mapPage,
@@ -208,6 +256,16 @@ test.describe("basemaps", () => {
       await mapPage.page.keyboard.press("Escape");
 
       await mapPage.goto(`#basemap=${DEFAULT_VECTOR_BASEMAP_ID}`);
+      await collapseCredits(mapPage);
+      await mapPage.creditsButton.click();
+      await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
+        "© OpenStreetMap contributors",
+        "OpenFreeMap",
+        "OpenMapTiles",
+        "MapLibre",
+      ]);
+
+      await mapPage.goto(`#basemap=${DARK_VECTOR_BASEMAP_ID}`);
       await collapseCredits(mapPage);
       await mapPage.creditsButton.click();
       await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([

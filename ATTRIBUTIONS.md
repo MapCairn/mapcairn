@@ -25,22 +25,10 @@ NASA data is openly shared; its data use guidance says NASA material may not be 
 
 | Source | Use | Credit |
 |---|---|---|
-| [OpenFreeMap](https://openfreemap.org) | Bright, Liberty and Positron vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors |
+| [OpenFreeMap](https://openfreemap.org) | Bright, Liberty, Positron and Fiord vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors |
 | [OpenStreetMap](https://www.openstreetmap.org) | Streets raster tiles from `tile.openstreetmap.org` | © OpenStreetMap contributors, linked to [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright) |
-| [Maptoolkit](https://www.maptoolkit.org/) | Maptoolkit Dark vector style and tiles from `styles.maptoolkit.org`, `tiles.maptoolkit.org`, `icons.maptoolkit.org` and `fonts.maptoolkit.org`, with terrain tiles from `tiles.mapterhorn.com` that its style names | The Maptoolkit logo and "© Maptoolkit © Openstreetmap", always on screen while it is shown (see below) |
 
 OpenStreetMap data is available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/). Use of the OpenStreetMap tile servers follows the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). The map displays the active provider's attribution, followed by MapLibre's.
-
-### Maptoolkit Dark
-
-Maptoolkit Dark is served from the Maptoolkit community tile server under the [Maptoolkit Community License](https://www.maptoolkit.org/tos). Its definition lives in the reference host (`packages/web/src/basemaps`), not in the reusable SDK packages, because the licence is the host's to accept. The licence sets conditions that the host meets:
-
-- Section 8, attribution: while the basemap is shown or loading, the Maptoolkit logo (at least 24 CSS pixels high, linked to `https://www.maptoolkit.org/`) and "© Maptoolkit © Openstreetmap" (linked to `https://www.maptoolkit.com/copyright/` and `https://www.openstreetmap.org/copyright`) stay on screen, never collapsed, hidden or covered. The other basemaps keep their collapsing credits.
-- Section 7, no static exports: Save image is off while the basemap is shown or loading, with the reason in the Save image section, and the map adapter refuses to make an image of it. The picker therefore shows a plain swatch for it, not a preview image.
-- Section 11, styles stay Maptoolkit's: the style is loaded from Maptoolkit's own address and is not copied into this repository. `packages/web/src/basemaps/fixtures/maptoolkit-dark-requests.json` records only the addresses it requests, so a test can check each against the production Content Security Policy.
-- Section 9, fair use: unregistered use is limited to 10 uncached requests a second. Nothing here registers or sends a key.
-
-The logo is `packages/web/public/basemaps/maptoolkit-logo.svg`, the artwork of `@maptoolkit/maplibre-logo-control` 1.1.2 (the logo control Maptoolkit publishes on [GitHub](https://github.com/maptoolkit/maplibre-logo-control)), copied unchanged with a title element added. That package is licensed under BSD-3-Clause, Copyright (c) 2026, Maptoolkit - Toursprung GmbH. The full licence text is in `packages/web/public/basemaps/maptoolkit-logo.LICENSE.txt`, served beside the logo, and the SVG carries a one-line notice. The [licence](https://github.com/maptoolkit/maplibre-logo-control/blob/HEAD/LICENSE) requires redistributions to retain the copyright notice, the conditions and the disclaimer, and does not allow the name Maptoolkit to be used to endorse this project without permission. MapCairn is not endorsed by Maptoolkit.
 
 ### Basemap previews
 
@@ -48,10 +36,10 @@ The basemap picker previews in `packages/web/public/basemaps/` are small images 
 
 | Preview | Source | Credit |
 |---|---|---|
-| `bright.jpg`, `liberty.jpg`, `positron.jpg` | OpenFreeMap vector tiles and styles | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap |
+| `bright.jpg`, `liberty.jpg`, `positron.jpg`, `fiord.jpg` | OpenFreeMap vector tiles and styles | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap |
 | `osm.jpg` | OpenStreetMap standard tiles | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
 
-OpenFreeMap asks for this attribution wherever its maps appear in images or other media. Regenerate the previews with the script rather than editing them by hand, and keep this table in step with the basemap definitions in `packages/core/src/basemaps` and `packages/web/src/basemaps`. Maptoolkit Dark has no preview, for the reason above.
+OpenFreeMap asks for this attribution wherever its maps appear in images or other media. Regenerate the previews with the script rather than editing them by hand, and keep this table in step with the basemap definitions in `packages/core/src/basemaps` and `packages/web/src/basemaps`.
 
 The social preview image (`packages/web/public/og-image.png`) is generated by `packages/web/scripts/generateOgImage.ts`.
 

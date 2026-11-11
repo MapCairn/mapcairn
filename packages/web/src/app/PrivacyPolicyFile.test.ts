@@ -18,31 +18,11 @@ describe("PRIVACY.md mirrors the privacy page", () => {
 
   it("names every basemap tile provider that may log a request", () => {
     expect(policy).toContain(
-      "The basemap tile providers, OpenFreeMap, the OpenStreetMap Foundation when you choose the Streets basemap, and Maptoolkit and Mapterhorn when you choose Maptoolkit Dark (see below), may log tile requests, including your IP address, as part of serving the map.",
+      "The basemap tile providers, OpenFreeMap and the OpenStreetMap Foundation when you choose the Streets basemap, may log tile requests, including your IP address, as part of serving the map.",
     );
   });
 
-  it("describes the Maptoolkit Dark section: when it sends, to whom, and what it keeps", () => {
-    expect(policy).toContain("## Maptoolkit Dark basemap");
-    expect(policy).toContain(
-      "Nothing is sent to Maptoolkit unless you choose the Maptoolkit Dark basemap.",
-    );
-    for (const host of [
-      "styles.maptoolkit.org",
-      "tiles.maptoolkit.org",
-      "icons.maptoolkit.org",
-      "fonts.maptoolkit.org",
-      "tiles.mapterhorn.com",
-    ]) {
-      expect(policy, host).toContain(host);
-    }
-    expect(policy).toContain("this site's origin (no page path)");
-    expect(policy).toContain("up to 30 days");
-    expect(policy).toContain("so Save image is off while it is shown");
-  });
-
-  it("links both providers' privacy policies", () => {
-    expect(policy).toContain("(https://www.maptoolkit.com/privacy/)");
-    expect(policy).toContain("(https://mapterhorn.com/privacy-policy/)");
+  it("has no section or link for Maptoolkit or Mapterhorn", () => {
+    expect(policy).not.toMatch(/Maptoolkit|Mapterhorn/);
   });
 });

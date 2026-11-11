@@ -44,17 +44,25 @@ describe("useBasemapChoice", () => {
     expect(hook.result.current.basemap.id).toBe("bright");
   });
 
-  it("treats a saved auto or dark choice from an earlier version as Bright, without saving anything", () => {
+  it("treats a saved auto, dark or Maptoolkit Dark choice from an earlier version as Bright, without saving anything", () => {
     const { services, hook } = setup("auto");
     expect(setup("dark").hook.result.current.basemap.id).toBe("bright");
+    expect(setup("maptoolkit-dark").hook.result.current.basemap.id).toBe(
+      "bright",
+    );
     expect(hook.result.current.choice).toBe("bright");
     expect(hook.result.current.savedChoice).toBe("bright");
     expect(hook.result.current.basemap.id).toBe("bright");
     expect(services.fakes.settings.get().basemapId).toBe("auto");
   });
 
-  it("treats a linked auto, dark or retired basemap as Bright", () => {
-    for (const linked of ["auto", "dark", "retired-basemap"]) {
+  it("treats a linked auto, dark, Maptoolkit Dark or retired basemap as Bright", () => {
+    for (const linked of [
+      "auto",
+      "dark",
+      "maptoolkit-dark",
+      "retired-basemap",
+    ]) {
       const { hook } = setup("positron", linked);
       expect(hook.result.current.savedChoice).toBe("bright");
       expect(hook.result.current.basemap.id).toBe("bright");

@@ -47,15 +47,17 @@ export const OTHER_VECTOR_BASEMAP_NAME = "Positron";
  */
 export const REMOVED_BASEMAP_ID = "dark";
 
+/**
+ * The id of Maptoolkit Dark, which has been removed. A saved or linked value
+ * from an earlier visit must open on the default basemap.
+ */
+export const REMOVED_MAPTOOLKIT_BASEMAP_ID = "maptoolkit-dark";
+
+/** The dark basemap, OpenFreeMap Fiord, which is in the SDK's built-in set. */
+export const DARK_VECTOR_BASEMAP_ID = "fiord";
+
+/** Its name in the picker. */
+export const DARK_VECTOR_BASEMAP_NAME = "Fiord";
+
 /** How many basemaps the picker offers. */
 export const BASEMAP_COUNT = 5;
-
-/**
- * The Maptoolkit Dark basemap: a manual choice with a permanent credit and
- * no saved images, whose style, tiles, sprite and glyphs come from the
- * provider's own hosts (never reached by the suite; see `network.ts`).
- */
-export const MAPTOOLKIT_BASEMAP_ID = "maptoolkit-dark";
-
-/** Its name in the picker and in announcements. */
-export const MAPTOOLKIT_BASEMAP_NAME = "Maptoolkit Dark";

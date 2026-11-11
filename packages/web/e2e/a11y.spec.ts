@@ -6,7 +6,6 @@ import {
   findMissingFocusRings,
   inspectControls,
 } from "./support/a11y";
-import { MAPTOOLKIT_BASEMAP_ID } from "./support/basemaps";
 import { inspectChromeLayout } from "./support/layout";
 import { scriptSearch } from "./support/services";
 import {
@@ -80,49 +79,6 @@ test.describe("axe and control checks @a11y", () => {
       });
     }
   }
-});
-
-test.describe("Maptoolkit Dark @a11y", () => {
-  test.setTimeout(120_000);
-
-  for (const viewport of [MATRIX_VIEWPORTS[1], MATRIX_VIEWPORTS[3]]) {
-    test(
-      `passes with its permanent credit at ${viewport.width}x${viewport.height} @a11y`,
-      viewportDetails(viewport),
-      async ({ page, mapPage }) => {
-        await page.setViewportSize(viewport);
-        await scriptSearch(page);
-        await mapPage.goto(`#basemap=${MAPTOOLKIT_BASEMAP_ID}`);
-        await expect(page.getByTestId("permanent-credit")).toBeVisible();
-        for (const colorScheme of ["light", "dark"] as const) {
-          await page.emulateMedia({ colorScheme });
-          await expect(page.locator("html")).toHaveAttribute(
-            "data-theme",
-            colorScheme,
-          );
-          await auditStates(mapPage, colorScheme);
-        }
-      },
-    );
-  }
-
-  test("every control in the credit shows a focus ring @a11y", async ({
-    page,
-    mapPage,
-  }) => {
-    await mapPage.goto(`#basemap=${MAPTOOLKIT_BASEMAP_ID}`);
-    const links = page.getByTestId("permanent-credit").getByRole("link");
-    expect(await links.count()).toBe(3);
-    for (const link of await links.all()) {
-      await link.focus();
-      await expect(link).toBeFocused();
-      const ring = await link.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return `${style.outlineStyle}|${style.boxShadow}`;
-      });
-      expect(ring).not.toBe("none|none");
-    }
-  });
 });
 
 test.describe("focus @a11y", () => {

@@ -161,8 +161,8 @@ export function useMapModelContextTools({
   });
 
   // Offers only the built-in basemaps (`BASEMAP_CHOICES`) on purpose: a host
-  // basemap such as Maptoolkit Dark comes with a provider licence, and an
-  // agent should not accept a licence on a person's behalf.
+  // basemap can come with a provider licence, and an agent should not accept
+  // a licence on a person's behalf.
   useModelContextTool<BasemapInput>({
     name: "set-map-basemap",
     description:

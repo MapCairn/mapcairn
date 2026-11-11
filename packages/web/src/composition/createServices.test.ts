@@ -36,10 +36,10 @@ describe("createServices", () => {
     );
   });
 
-  it("offers the host's basemaps, Maptoolkit Dark among them, with Bright the default", () => {
+  it("offers the host's basemaps, Fiord among them, with Bright the default", () => {
     const { basemaps } = createServices();
     expect(basemaps).toBe(BASEMAP_CATALOGUE);
-    expect(basemaps?.get("maptoolkit-dark")?.name).toBe("Maptoolkit Dark");
+    expect(basemaps?.get("fiord")?.name).toBe("Fiord");
     expect(basemaps?.defaultId).toBe("bright");
   });
 

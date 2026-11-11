@@ -74,7 +74,9 @@ export interface BasemapDefinition {
    * Without it the swatch is the interface's map background colour, the
    * default basemap's land colour. Set it for a basemap that is not light, so
    * its tile does not look like the default one. It describes only the tile in
-   * the picker and is chosen by the host, never taken from the provider's map.
+   * the picker and is the host's choice. It may be the style's own land colour
+   * where the provider's terms allow it, and is otherwise a colour of the
+   * host's own, never one sampled from the provider's map or screenshots.
    */
   readonly swatch?: string;
   /** Provider credits, in display order. */

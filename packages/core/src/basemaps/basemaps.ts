@@ -69,6 +69,22 @@ const LIBERTY: BasemapDefinition = {
   saveDataOmitLayers: ["natural_earth"],
 };
 
+const FIORD: BasemapDefinition = {
+  id: "fiord",
+  name: "Fiord",
+  source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/fiord` },
+  minZoom: 0,
+  maxZoom: VECTOR_MAX_ZOOM,
+  thumbnail: "/basemaps/fiord.jpg",
+  attribution: OPEN_FREE_MAP_CREDITS,
+  appearance: "dark",
+  // Fiord's own land colour (the `background` layer of its style), so the
+  // plain tile Save data mode shows reads as a dark map, not as Bright's.
+  swatch: "#45516e",
+  // Nothing to leave out in Save data mode: like Bright, the style names the
+  // Natural Earth raster source but draws no raster layer from it.
+};
+
 /** Every built-in basemap, in the order the picker shows them, the default first. */
 export const BASEMAPS: readonly BasemapDefinition[] = [
   BRIGHT,
@@ -101,6 +117,7 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
     attribution: [OPEN_STREET_MAP_CREDIT],
     appearance: "light",
   },
+  FIORD,
 ];
 
 const BASEMAPS_BY_ID: ReadonlyMap<string, BasemapDefinition> = new Map(
