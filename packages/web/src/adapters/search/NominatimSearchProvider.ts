@@ -7,6 +7,7 @@ import {
   type SearchProvider,
   type SearchResult,
 } from "@mapcairn/core";
+import { defaultFetch, isAbortError } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
 
 const DEFAULT_ENDPOINT = "https://nominatim.openstreetmap.org";
@@ -57,14 +58,6 @@ const DEFAULT_MIN_INTERVAL_MS = 1000;
 
 function browserIsOnline(): boolean {
   return typeof navigator === "undefined" || navigator.onLine !== false;
-}
-
-function defaultFetch(...args: Parameters<typeof fetch>) {
-  return globalThis.fetch(...args);
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
 }
 
 function toBounds(
