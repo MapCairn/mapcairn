@@ -7,7 +7,7 @@
 
 ## Why use MapCairn in your GIS project
 
-- **A finished map interface, not a blank canvas.** Search, zoom and compass controls, a bottom sheet that becomes a side panel on wide screens, measuring, drawing and editing shapes with GeoJSON and CSV export, directions through your own routing provider, a layers panel, feature cards, saving the map as an image, and links that carry the view, the basemap and the layers.
+- **A finished map interface, not a blank canvas.** Search, zoom and compass controls, a bottom sheet that becomes a side panel on wide screens, measuring, drawing and editing shapes with GeoJSON and CSV import and export, directions through your own routing provider, a layers panel, feature cards, saving the map as an image, and links that carry the view, the basemap and the layers.
 - **Open data layers as data.** A layer is one definition: a feed, raster or vector tiles, a heatmap, or a query for what is in view. MapCairn draws it, builds the legend, the card and the list, keeps words beside every colour, and checks the definition, its fixture, its credit and your Content Security Policy in a test. There is no code per layer.
 - **Accessible by construction.** WCAG 2.2 AA is the target in both themes, every gesture has a keyboard or single-tap equivalent, announcements go through one live region, and automated accessibility checks run in CI.
 - **Private by design.** Nothing is requested until a person asks. There are no accounts and no tracking, nothing is proxied, and every provider the app can contact is named in its privacy policy and credits.
@@ -68,7 +68,7 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
 | [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules |
 | [`docs/guides/extending.md`](docs/guides/extending.md) | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, a routing provider or an adapter |
-| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Saving the map and drawing shapes |
+| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, choosing between features at one place, and drawing, importing and exporting shapes |
 | [`docs/guides/performance.md`](docs/guides/performance.md) | What was measured for Lighthouse, what was tried and what was left alone |
 | [`docs/plans/`](docs/plans/README.md) | Numbered plans for work not yet built |
 | [`GOVERNANCE.md`](GOVERNANCE.md) | The maintainer role, how decisions are made, and what is not yet covered |

@@ -26,6 +26,11 @@ export const card = style({
   color: tokens.color.text,
 });
 
+/**
+ * The message's first sentence, set in the title size and weight. It stays a
+ * paragraph, not a heading: it is a statement inside the map region, and a
+ * screen reader hears it through the announcer rather than by finding it.
+ */
 export const title = style({
   margin: 0,
   fontSize: tokens.type.title.size,
@@ -34,6 +39,7 @@ export const title = style({
   fontWeight: tokens.type.weight.semibold,
 });
 
+/** The advice under the title, in muted text so the title leads. */
 export const message = style({
   margin: 0,
   fontSize: tokens.type.body.size,

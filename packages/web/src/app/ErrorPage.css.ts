@@ -25,6 +25,7 @@ export const card = style({
   color: tokens.color.text,
 });
 
+/** The page's `h1`, in the title size, as the one heading on the error page. */
 export const title = style({
   margin: 0,
   fontSize: tokens.type.title.size,
@@ -33,6 +34,7 @@ export const title = style({
   fontWeight: tokens.type.weight.semibold,
 });
 
+/** The explanation under the title, in muted text so the title leads. */
 export const message = style({
   margin: 0,
   fontSize: tokens.type.body.size,
