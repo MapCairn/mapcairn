@@ -9,7 +9,6 @@ import {
   FocusRegistryProvider,
   MapChrome,
   type MapContextValue,
-  MapReadout,
   MeasureToolbar,
   PinCard,
   SearchPill,
@@ -17,7 +16,6 @@ import {
   SheetContent,
   useFocusReturn,
   useMap,
-  usePreferences,
   useSettings,
 } from "@mapcairn/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
@@ -26,6 +24,7 @@ import {
   SETTINGS_PRIVACY_NOTE,
 } from "../constants/providerNotes";
 import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
+import { AppReadout } from "./AppReadout";
 import { AppTour } from "./AppTour";
 import { Brand } from "./Brand";
 import { SHEET_ID } from "./initialView";
@@ -72,7 +71,6 @@ interface ChromeContentProps extends AppChromeProps {
 
 function ChromeContent({ app, map, background }: ChromeContentProps) {
   const { settings } = useSettings();
-  const { finePointer } = usePreferences();
   const restoreFocus = useFocusReturn();
   const requestZoomAnnouncement = useZoomAnnouncement(map);
   const pinHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -195,12 +193,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           onZoomOut={() => zoomBy("out")}
         />
       }
-      bottomStart={
-        <MapReadout
-          units={settings.units}
-          latlng={finePointer ? app.cursor : null}
-        />
-      }
+      bottomStart={<AppReadout units={settings.units} cursor={app.cursor} />}
       bottomEnd={
         <Attribution
           basemap={app.basemap}

@@ -3,12 +3,15 @@
 import {
   computeScaleBar,
   formatLatLng,
+  formatZoom,
   type LatLng,
   type UnitSystem,
 } from "@mapcairn/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap } from "../../host";
 import { usePreferences } from "../../services";
+import { VisuallyHidden } from "../../ui/VisuallyHidden";
+import { useChromeLayout } from "../layoutContext";
 import * as styles from "./MapReadout.css";
 
 /** The widest the scale bar may be, in CSS pixels. */
@@ -165,16 +168,43 @@ export interface CursorCoordinatesProps {
    * null on touch devices, where there is no hovering pointer.
    */
   readonly latlng: LatLng | null;
+  /**
+   * The map's zoom level in the 256 px tile convention, shown beside the
+   * position as "z 12.4", or undefined to leave it out.
+   */
+  readonly zoom?: number;
 }
 
-/** The position under the pointer, as plain muted text with tabular figures. */
-export function CursorCoordinates({ latlng }: CursorCoordinatesProps) {
-  if (!latlng) {
+/** Separates the position from the zoom in the text a screen reader or a copy carries. */
+const SPOKEN_SEPARATOR = ", ";
+
+/**
+ * The position under the pointer and the zoom level, as plain muted text with
+ * tabular figures. It is not a live region: the settled zoom is already
+ * announced after each zoom, so a change here is not spoken.
+ *
+ * @remarks The zoom is drawn as "z 12.4", which is `aria-hidden` and not
+ *   selectable, and carried as visually hidden text ("Zoom 12.4", after a
+ *   comma when a position comes first), so a screen reader and a copy of the
+ *   text read it once and in full, in the order the eye sees it.
+ */
+export function CursorCoordinates({ latlng, zoom }: CursorCoordinatesProps) {
+  if (!latlng && zoom === undefined) {
     return null;
   }
   return (
     <p data-chrome="cursor-coordinates" className={styles.coordinates}>
-      {formatLatLng(latlng)}
+      {latlng ? <span>{formatLatLng(latlng)}</span> : null}
+      {zoom === undefined ? null : (
+        <span data-testid="zoom-level" className={styles.zoomLevel}>
+          <span aria-hidden="true" className={styles.unselectable}>
+            z {formatZoom(zoom)}
+          </span>
+          <VisuallyHidden>
+            {latlng ? SPOKEN_SEPARATOR : ""}Zoom {formatZoom(zoom)}
+          </VisuallyHidden>
+        </span>
+      )}
     </p>
   );
 }
@@ -182,14 +212,27 @@ export function CursorCoordinates({ latlng }: CursorCoordinatesProps) {
 /** Props for {@link MapReadout}. */
 export interface MapReadoutProps
   extends ScaleBarProps,
-    CursorCoordinatesProps {}
+    Pick<CursorCoordinatesProps, "latlng"> {
+  /**
+   * Whether to show the map's zoom level beside the coordinates. Left out, it
+   * follows the chrome layout: shown in the side panel layout and left out in
+   * the bottom sheet layout, where the taller readout would crowd the credits
+   * popover on a small screen. Pass true or false to decide it yourself.
+   */
+  readonly showZoom?: boolean;
+}
 
 /**
- * The bottom-start readout: the scale bar with the cursor coordinates under
- * it. One floating element, for the layout collision test, and a landmark
- * named "Map scale" so its content is inside a landmark.
+ * The bottom-start readout: the scale bar with the cursor coordinates and
+ * zoom level under it. One floating element, for the layout collision test,
+ * and a landmark named "Map scale" so its content is inside a landmark.
+ * Reads the zoom with `useMap()` and the layout with `useChromeLayout()`, so
+ * it must sit inside the map context and a `MapChrome`.
  */
-export function MapReadout({ units, latlng }: MapReadoutProps) {
+export function MapReadout({ units, latlng, showZoom }: MapReadoutProps) {
+  const { view } = useMap();
+  const { layout } = useChromeLayout();
+  const zoomShown = showZoom ?? layout === "panel";
   return (
     <section
       aria-label="Map scale"
@@ -198,7 +241,10 @@ export function MapReadout({ units, latlng }: MapReadoutProps) {
       className={styles.readout}
     >
       <ScaleBar units={units} />
-      <CursorCoordinates latlng={latlng} />
+      <CursorCoordinates
+        latlng={latlng}
+        zoom={zoomShown ? view.zoom : undefined}
+      />
     </section>
   );
 }

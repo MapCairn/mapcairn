@@ -94,7 +94,10 @@ export const tickEnd = style({
   transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
 });
 
-/** Cursor coordinates: muted text on the same surface as the scale. */
+/**
+ * Cursor coordinates and zoom level: muted text on the same surface as the
+ * scale, in one line of inline text so that a copy of it stays one line.
+ */
 export const coordinates = style({
   ...onSurface,
   color: tokens.color.textMuted,
@@ -106,3 +109,11 @@ export const coordinates = style({
   fontWeight: tokens.type.weight.regular,
   fontVariantNumeric: "tabular-nums",
 });
+
+/** The zoom, one small spacing step after the coordinates when they come first. */
+export const zoomLevel = style({
+  selectors: { "* + &": { marginInlineStart: tokens.space.xs } },
+});
+
+/** The drawn "z 12.4", kept out of a copy of the text, which carries the hidden "Zoom 12.4" instead. */
+export const unselectable = style({ userSelect: "none" });
