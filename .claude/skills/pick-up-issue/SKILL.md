@@ -1,6 +1,6 @@
 ---
 name: pick-up-issue
-description: Take a MapCairn GitHub issue from "open" to a verified branch ready for a pull request, with the gh CLI: claim it, plan, write the failing test first, implement, update the docs, run the checks, look at the running app, and simplify. Use whenever someone says pick up, take, do, work on or fix an issue (by number or link), or asks for the next issue in the queue. Continue with the `land-pr` skill to open and merge the pull request.
+description: "Take a MapCairn GitHub issue from \"open\" to a verified branch ready for a pull request, with the gh CLI: claim it, plan, write the failing test first, implement, update the docs, run the checks, look at the running app, and simplify. Use whenever someone says pick up, take, do, work on or fix an issue (by number or link), or asks for the next issue in the queue. Continue with the `land-pr` skill to open and merge the pull request."
 ---
 
 # Pick up an issue
@@ -16,7 +16,7 @@ This skill is the working procedure behind `AGENTS.md`. Where they differ, `AGEN
    - From here on, add `--repo MapCairn/mapcairn` to any `gh issue` or `gh pr` command if you have not set the default.
 3. Commit with an email address linked to your GitHub account (`git config user.email`; check `git log -1 --format=%ae` before you push), or the `CLA` check cannot find you.
 4. Node 24 or newer and npm 11 or newer (`node -v`, `npm -v`).
-5. Read `AGENTS.md`, and your tool's own instruction file if it has one, for rules about sub-agents, model tiers, process limits and workflows. Follow them exactly.
+5. Read `AGENTS.md` (including "Sub-agents" for limits, model tiers and clean-up), and your tool's own instruction file if it has one. Follow them exactly.
 
 ## 1. Understand the issue
 
@@ -89,4 +89,4 @@ For a map or interface change, run the `visual-check` skill. A change with no vi
 
 ## Using sub-agents
 
-If you can start sub-agents and `AGENTS.md` or the person allows it, brief each like a colleague who has not seen the conversation: the goal, the issue number, the documents to read, what is already ruled out, the checks to run, the no-attribution rule, and the report to return. Say in every brief that the agent stops what it starts and confirms with a port check. Respect any limit on how many may run at once and on which model tiers. The project's `implementer`, `fresh-eyes-reviewer` and `ui-verifier` agent definitions already carry these rules, so name one in the brief where your tool has them.
+If you can start sub-agents and `AGENTS.md` or the person allows it, brief each like a colleague who has not seen the conversation: the goal, the issue number, the documents to read, what is already ruled out, the checks to run, the no-attribution rule, and the report to return. Say in every brief that the agent stops what it starts and confirms with a port check. Respect the limits in `AGENTS.md` ("Sub-agents") on how many may run at once and on which model tiers. The project's `implementer`, `fresh-eyes-reviewer` and `ui-verifier` agent definitions already carry these rules, so name one in the brief where your tool has them.

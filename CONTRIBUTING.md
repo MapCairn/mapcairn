@@ -57,7 +57,22 @@ The coding standard is what the tools enforce, not a separate guide.
 - **Licence header:** every source file starts with `// SPDX-License-Identifier: AGPL-3.0-only` and `// Copyright MapCairn contributors`. `npm run licence:write` adds the two lines to a new file, and `npm run lint` fails without them.
 - **TypeScript:** the strict settings in [`tsconfig.base.json`](tsconfig.base.json) apply to every package: `strict`, `noUncheckedIndexedAccess` and `forceConsistentCasingInFileNames`. Run `npm run typecheck`.
 - **Project rules:** dependency-cruiser enforces the package and layer boundaries, and the harmony scanner in `scripts/harmony` enforces the design tokens, markup and wiring rules described in [`DESIGN.md`](DESIGN.md).
-- **Enforcement:** the pre-commit hook runs Biome, dependency-cruiser, the harmony scanner and the licence header check, and CI runs `npm run lint` and `npm run typecheck` on every pull request, so a change that breaks the standard cannot merge. The conventions below cover what the tools cannot check.
+- **Enforcement:** the pre-commit hook runs Biome, dependency-cruiser, the harmony scanner, the licence header check and the agent files check, and CI runs `npm run lint` and `npm run typecheck` on every pull request, so a change that breaks the standard cannot merge. The conventions below cover what the tools cannot check.
+
+The style in one example: TSDoc on the export, a braced early return, a named constant instead of a magic number, and one job for the function.
+
+```ts
+/** The map's own default zoom, used when a stored value is not a number. */
+const FALLBACK_ZOOM = 2;
+
+/** Clamps a zoom to the range the map allows, falling back when it is not a number. */
+export function clampZoom(zoom: number, min: number, max: number): number {
+  if (Number.isNaN(zoom)) {
+    return FALLBACK_ZOOM;
+  }
+  return Math.min(Math.max(zoom, min), max);
+}
+```
 
 ## Dependencies
 
@@ -67,7 +82,7 @@ Prove a lockfile change with one real `npm ci --ignore-scripts` under npm 11 in 
 
 ## Pull requests
 
-Work is tracked in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues), and every change reaches `main` through a pull request. Open an issue first for large changes, use the bug and feature forms, and link the issue from the pull request (`Fixes #123`). Branch from `main`, name the branch for the change (`feat/...`, `fix/...`, `docs/...`), use a Conventional Commit as the pull request title, and merge once the `build` and `e2e` checks pass. Keep each pull request to one logical change and explain why it is needed. Include light and dark screenshots for visual changes. Run the checks above and report anything skipped or failing. If you use a coding agent, the project skills in `.claude/skills/` (`create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr` and `visual-check`) walk through this with the `gh` CLI; tell the agent which one to follow, and if your tool does not read `.claude/skills`, point it at `.claude/skills/<name>/SKILL.md`. The `implementer`, `fresh-eyes-reviewer` and `ui-verifier` agents in `.claude/agents/` wrap them. They merge only with a human's explicit say-so, and only where that person has write access.
+Work is tracked in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues), and every change reaches `main` through a pull request. Open an issue first for large changes, use the bug and feature forms, and link the issue from the pull request (`Fixes #123`). Branch from `main`, name the branch for the change (`feat/...`, `fix/...`, `docs/...`), use a Conventional Commit as the pull request title, and merge once the `build` and `e2e` checks pass. Keep each pull request to one logical change and explain why it is needed. Include light and dark screenshots for visual changes. Run the checks above and report anything skipped or failing. If you use a coding agent, whichever one, the same rules apply: it follows [`AGENTS.md`](AGENTS.md). The project skills (`create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr` and `visual-check`) walk through this with the `gh` CLI, and the `implementer`, `fresh-eyes-reviewer` and `ui-verifier` agents wrap them. [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) lists what Claude Code, Codex, opencode, GitHub Copilot, Antigravity and Cursor read (checked against their documentation), how to start (tell the agent which skill to follow), what only works in Claude Code and what has not been tried. Edit skills and agents under `.claude/` and run `npm run agents:sync`; `npm run lint` fails when the copies for other tools are stale. Agents merge only with a human's explicit say-so, and only where that person has write access.
 
 The host intentionally starts without datasets. Adding a real dataset is a separate, explicitly scoped change requiring source provenance, publication rights and privacy review. Plans for larger changes live in [`docs/plans/`](docs/plans/README.md). Never contribute identifying or household-level data.
 

@@ -70,6 +70,7 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 | [`docs/guides/extending.md`](docs/guides/extending.md) | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, a routing provider or an adapter |
 | [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, choosing between features at one place, and drawing, importing and exporting shapes |
 | [`docs/guides/performance.md`](docs/guides/performance.md) | What was measured for Lighthouse, what was tried and what was left alone |
+| [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) | Using Claude Code, Codex, opencode, GitHub Copilot, Antigravity or Cursor on this repository: what each reads, how to start, and what is Claude Code only |
 | [`docs/plans/`](docs/plans/README.md) | Numbered plans for work not yet built |
 | [`GOVERNANCE.md`](GOVERNANCE.md) | The maintainer role, how decisions are made, and what is not yet covered |
 | [`ROADMAP.md`](ROADMAP.md) | What the project intends to do in the next twelve months, and what it will not do |
@@ -79,6 +80,8 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 ## Contributing, security and conduct
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`GOVERNANCE.md`](GOVERNANCE.md) for who decides what, [`ROADMAP.md`](ROADMAP.md) for what is planned and what is not, [`SECURITY.md`](SECURITY.md) for private vulnerability reporting (with the [assurance case](docs/assurance-case.md)) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
+
+Everyone is welcome to use the coding agent they prefer, and the same rules in [`AGENTS.md`](AGENTS.md) apply to all of them. [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) lists what Claude Code, Codex, opencode, GitHub Copilot, Antigravity and Cursor read, as checked against their documentation, how to start, and what has not been tried.
 
 ## Licence
 

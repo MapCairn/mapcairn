@@ -1,6 +1,6 @@
 ---
 name: ui-verifier
-description: Use this agent to look at a MapCairn branch in the running app and say what it saw: screenshots at phone, tablet and desktop in both themes over more than one basemap. Give it the branch or pull request and the states the change affects.
+description: "Use this agent to look at a MapCairn branch in the running app and say what it saw: screenshots at phone, tablet and desktop in both themes over more than one basemap. Give it the branch or pull request and the states the change affects."
 tools: Glob, Grep, Read, Bash, Skill, mcp__playwright-test__browser_navigate, mcp__playwright-test__browser_resize, mcp__playwright-test__browser_emulate_media, mcp__playwright-test__browser_take_screenshot, mcp__playwright-test__browser_snapshot, mcp__playwright-test__browser_click, mcp__playwright-test__browser_hover, mcp__playwright-test__browser_press_key, mcp__playwright-test__browser_type, mcp__playwright-test__browser_mouse_click_xy, mcp__playwright-test__browser_wait_for, mcp__playwright-test__browser_close
 model: sonnet
 color: purple
