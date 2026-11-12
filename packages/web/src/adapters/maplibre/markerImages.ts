@@ -50,6 +50,9 @@ function wholeRadius(radius: number): number {
   return Math.max(1, Math.round(radius));
 }
 
+/** What every marker image's engine name starts with, so they can be told from a basemap's own images. */
+export const MARKER_IMAGE_PREFIX = "mapcairn-marker:";
+
 /**
  * The engine image name for a shape, colour and radius. Radii are rounded to
  * whole pixels, so a continuous size rule still shares a few images.
@@ -59,7 +62,7 @@ export function markerImageName(
   colour: string,
   radius: number,
 ): string {
-  return `mapcairn-marker:${shape}:${colour.toLowerCase()}:${wholeRadius(radius)}`;
+  return `${MARKER_IMAGE_PREFIX}${shape}:${colour.toLowerCase()}:${wholeRadius(radius)}`;
 }
 
 /**

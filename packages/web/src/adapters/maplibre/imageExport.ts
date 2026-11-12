@@ -3,13 +3,19 @@
 import type {
   MapImageDrawing,
   MapImageOptions,
+  MapImageSize,
+  MapImageView,
   PixelPoint,
+  RequestedImage,
+  VisibleMap,
 } from "@mapcairn/core";
 import {
   MapEngineError,
+  MapImageExportError,
   type MapPlacement,
   placePath,
   placePoint,
+  planRequestedImage,
   visibleRuns,
 } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
@@ -17,10 +23,19 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 import { rgbaColour } from "./markerImages";
 
 /**
- * How long an export waits for the map to finish loading, and then for a
- * frame, before it goes on with what is there or gives up.
+ * How long an export of the map on screen waits for the map to finish
+ * loading, and then for a frame, before it goes on with what is there or
+ * gives up.
  */
 export const IMAGE_WAIT_MS = 3000;
+
+/**
+ * How long a requested image waits for the tiles of its view to load before
+ * it fails with a `timed-out` error. A view the browser has not fetched yet
+ * can need many tiles over a slow connection, so this is longer than
+ * {@link IMAGE_WAIT_MS}.
+ */
+export const IMAGE_TILES_WAIT_MS = 15_000;
 
 /** The type an exported image is encoded as. */
 const IMAGE_MIME_TYPE = "image/png";
@@ -64,8 +79,53 @@ export interface MapImageExportHost {
    * while an export is under way.
    */
   isSwapPending(): boolean;
-  /** How the ui places its overlay marks, so the image agrees with what it draws. */
-  placement(): MapPlacement;
+  /**
+   * How the ui places its overlay marks on `map`, so the image agrees with
+   * what it draws: the map on screen, or the render map of a requested image.
+   */
+  placement(map: MapLibreMap): MapPlacement;
+  /** The size and view of the map on screen, which a request falls back to. */
+  visibleMap(): VisibleMap;
+  /** Aborts when the adapter is destroyed, so an export waiting for tiles stops at once. */
+  closed(): AbortSignal;
+  /**
+   * A number that changes whenever the map on screen's basemap, data layers
+   * or projection change, so an export that waited in the queue can tell the
+   * style it would draw is not the one its view and credits were read with.
+   */
+  styleVersion(): number;
+  /**
+   * Starts a map of its own beside the one on screen, in `container`, that
+   * draws the style and data layers the map on screen has now at the view and
+   * pixel ratio asked for. It must not move, repaint or otherwise touch the
+   * map on screen, and it adds no source the map on screen does not have. The
+   * exporter removes the map and the container when it is done.
+   * @throws MapEngineError when the engine cannot start, or the adapter is
+   *   destroyed while it starts.
+   */
+  openRenderMap(request: RenderMapRequest): Promise<RenderMap>;
+}
+
+/** What {@link MapImageExportHost.openRenderMap} is asked for. */
+export interface RenderMapRequest {
+  /** An attached, hidden element already the size of the map, in CSS pixels. */
+  readonly container: HTMLElement;
+  /** Image pixels for each CSS pixel of the container. */
+  readonly pixelRatio: number;
+  /** What the map shows, north-up. */
+  readonly view: MapImageView;
+}
+
+/** A map made to draw one requested image. */
+export interface RenderMap {
+  readonly map: MapLibreMap;
+  /**
+   * Resolves when the map has loaded every tile its view needs and drawn
+   * them. It is listened for from the moment the map exists, so an `idle`
+   * before the exporter asks is not missed. It never rejects; a map that does
+   * not settle is cut off by the exporter's own timeout.
+   */
+  readonly idle: Promise<void>;
 }
 
 /** A copy of the map's canvas, and the 2D context it was drawn with. */
@@ -79,46 +139,144 @@ interface Frame {
  * which would cost every frame. The buffer is only readable in the frame that
  * has just been drawn, so a repaint is asked for and the canvas is copied
  * inside its `render` event, before the browser clears it.
+ *
+ * A request with a size, a pixel ratio or a view is drawn the same way on a
+ * second map made for it, so the map on screen is never resized or moved.
  */
 export class MapImageExporter {
-  constructor(private readonly host: MapImageExportHost) {}
+  /** The requested export under way or last queued, which the next waits for. */
+  private turn: Promise<unknown> = Promise.resolve();
+
+  constructor(
+    private readonly host: MapImageExportHost,
+    private readonly tilesWaitMs = IMAGE_TILES_WAIT_MS,
+  ) {}
 
   /**
-   * Saves the map as it is now, with the credit text and the ui's drawn shapes
-   * on it when the options carry them.
+   * Runs a requested export once the ones asked for before it have finished,
+   * so only one render map, with its WebGL context and the largest canvas
+   * allowed, is open at a time. A failed export does not hold up
+   * the next. The queue has no cap and a caller cannot cancel an export in it.
+   */
+  private inTurn<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.turn.then(task);
+    this.turn = run.catch(() => undefined);
+    return run;
+  }
+
+  /**
+   * Saves the map, with the credit text and the ui's drawn shapes on it when
+   * the options carry them: as it is on screen when they name no size, pixel
+   * ratio or view, and otherwise as requested, on a map of its own.
    * @throws MapEngineError with reason `export-failed` for every failure:
    *   the adapter is not mounted (or is destroyed while the export waits), a
    *   swap is still loading, or the browser blocks reading or encoding the
    *   canvas.
+   * @throws MapImageExportError (an `export-failed` error) of kind `invalid`
+   *   or `too-large` for a request the size limits refuse, which it does
+   *   before drawing anything, of kind `too-large` for an image the device
+   *   cannot draw, and of kind `timed-out` when the tiles do not load in time.
    */
   async toImage(options: MapImageOptions = {}): Promise<Blob> {
     const map = this.readyOrRefuse();
     try {
-      await untilLoaded(map);
-      // A swap can start, or a failed one can put a basemap back, while the
-      // map finishes loading.
-      this.readyOrRefuse();
-      const frame = await this.captureFrame(map);
-      await fontsReady();
-      // The pixels are already copied, so a swap no longer matters, but a
-      // destroyed adapter can no longer place marks.
-      this.mountedOrRefuse();
-      const { drawing } = options;
-      if (drawing && drawing.marks.length > 0) {
-        drawMarks(frame, map, this.host.placement(), drawing);
+      const requested = planRequestedImage(options, this.host.visibleMap());
+      if (!requested) {
+        return await this.saveVisible(map, options);
       }
-      drawAttribution(frame, map, options.attribution);
-      return await encodePng(frame.canvas);
+      // The view and size were read now, and the style is read when the
+      // export's turn comes, so a change in between would mix the two.
+      const styleVersion = this.host.styleVersion();
+      return await this.inTurn(() =>
+        this.saveRequested(requested, options, styleVersion),
+      );
     } catch (error) {
       throw toExportError(error);
     }
+  }
+
+  /** Saves the map on screen as it is, going on with what has loaded if a tile is stuck. */
+  private async saveVisible(
+    map: MapLibreMap,
+    options: MapImageOptions,
+  ): Promise<Blob> {
+    await untilLoaded(map);
+    // A swap can start, or a failed one can put a basemap back, while the
+    // map finishes loading.
+    this.readyOrRefuse();
+    const frame = await this.captureFrame(map);
+    return this.finish(frame, map, options, imageScale(frame, map));
+  }
+
+  /**
+   * Draws a requested image on a hidden map of its own, so the map on screen
+   * is not moved or resized, and removes that map and its container whatever
+   * happens.
+   */
+  private async saveRequested(
+    request: RequestedImage,
+    options: MapImageOptions,
+    styleVersion: number,
+  ): Promise<Blob> {
+    // The adapter can have been destroyed, or a swap started, while this
+    // export waited for the one before it.
+    this.readyOrRefuse();
+    if (this.host.styleVersion() !== styleVersion) {
+      throw new MapEngineError(
+        "export-failed",
+        "The map changed while the image was waiting.",
+      );
+    }
+    const container = renderContainer(request.size);
+    document.body.append(container);
+    let render: RenderMap | undefined;
+    try {
+      render = await this.host.openRenderMap({
+        container,
+        pixelRatio: request.pixelRatio,
+        view: request.view,
+      });
+      await untilTilesLoaded(render.idle, this.tilesWaitMs, this.host.closed());
+      // A `destroy()` during the next step waits for its 3 second frame timer.
+      const frame = await this.captureFrame(render.map);
+      checkFrameSize(frame, request);
+      return await this.finish(frame, render.map, options, request.pixelRatio);
+    } finally {
+      try {
+        render?.map.remove();
+      } finally {
+        container.remove();
+      }
+    }
+  }
+
+  /**
+   * Puts the drawn shapes and the credit text on a copied frame, `scale`
+   * image pixels to a CSS pixel, and encodes it.
+   */
+  private async finish(
+    frame: Frame,
+    map: MapLibreMap,
+    options: MapImageOptions,
+    scale: number,
+  ): Promise<Blob> {
+    await fontsReady();
+    // The pixels are already copied, so a swap no longer matters, but a
+    // destroyed adapter can no longer place marks.
+    this.mountedOrRefuse();
+    const { drawing } = options;
+    if (drawing && drawing.marks.length > 0) {
+      drawMarks(frame, this.host.placement(map), drawing, scale);
+    }
+    drawAttribution(frame, options.attribution, scale);
+    return encodePng(frame.canvas);
   }
 
   /** The map, or an `export-failed` error when the adapter is not mounted. */
   private mountedOrRefuse(): MapLibreMap {
     const map = this.host.mountedMap();
     if (!map) {
-      throw new MapEngineError("export-failed", "The map is not mounted.");
+      throw notMounted();
     }
     return map;
   }
@@ -182,6 +340,91 @@ function untilLoaded(map: MapLibreMap): Promise<void> {
     const timer = setTimeout(done, IMAGE_WAIT_MS);
     const idle = map.on("idle", done);
   });
+}
+
+/**
+ * Waits for the render map's tiles, and fails with a `timed-out` export error
+ * when they have not loaded after `ms`, so a stuck tile cannot stall an
+ * export or leave a gap in the image unreported.
+ */
+function untilTilesLoaded(
+  idle: Promise<void>,
+  ms: number,
+  closed: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const stop = () => {
+      clearTimeout(timer);
+      closed.removeEventListener("abort", onClosed);
+    };
+    const onClosed = () => {
+      stop();
+      reject(notMounted());
+    };
+    const timer = setTimeout(() => {
+      stop();
+      reject(
+        new MapImageExportError(
+          "timed-out",
+          "The tiles for the image did not finish loading in time.",
+        ),
+      );
+    }, ms);
+    closed.addEventListener("abort", onClosed);
+    if (closed.aborted) {
+      onClosed();
+      return;
+    }
+    void idle.then(() => {
+      stop();
+      resolve();
+    });
+  });
+}
+
+/** The error for an export whose adapter is not mounted, or was destroyed while it waited. */
+export function notMounted(): MapEngineError {
+  return new MapEngineError("export-failed", "The map is not mounted.");
+}
+
+/**
+ * Makes the element a render map is built in: attached and sized, so the
+ * engine can measure it, but hidden from sight, from the pointer and from
+ * assistive technology. It is sized through the style object, which the
+ * production Content Security Policy allows, unlike a `style` attribute.
+ */
+function renderContainer({ width, height }: MapImageSize): HTMLElement {
+  const container = document.createElement("div");
+  container.setAttribute("aria-hidden", "true");
+  container.inert = true;
+  Object.assign(container.style, {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: `${width}px`,
+    height: `${height}px`,
+    visibility: "hidden",
+    pointerEvents: "none",
+    zIndex: "-1",
+  });
+  return container;
+}
+
+/**
+ * Fails with `too-large` when the copied canvas is not the size that was
+ * asked for. MapLibre lowers the pixel ratio of a canvas the GPU cannot hold
+ * rather than refusing it, which would quietly save a smaller image.
+ */
+function checkFrameSize(
+  { canvas }: Frame,
+  { pixelWidth, pixelHeight }: RequestedImage,
+): void {
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    throw new MapImageExportError(
+      "too-large",
+      `This device could not draw the image at ${pixelWidth} by ${pixelHeight} pixels.`,
+    );
+  }
 }
 
 /**
@@ -268,13 +511,11 @@ function imageScale({ canvas }: Frame, map: MapLibreMap): number {
  * scale: translucent fills, a halo under each outline and dots.
  */
 function drawMarks(
-  frame: Frame,
-  map: MapLibreMap,
+  { context }: Frame,
   placement: MapPlacement,
   drawing: MapImageDrawing,
+  scale: number,
 ): void {
-  const { context } = frame;
-  const scale = imageScale(frame, map);
   const toImage = (point: PixelPoint) => ({
     x: point.x * scale,
     y: point.y * scale,
@@ -420,16 +661,14 @@ function wrapLines(
  * scaled down to fit.
  */
 function drawAttribution(
-  frame: Frame,
-  map: MapLibreMap,
+  { canvas, context }: Frame,
   attribution: string | undefined,
+  scale: number,
 ): void {
   const text = attribution?.trim();
   if (!text) {
     return;
   }
-  const { canvas, context } = frame;
-  const scale = imageScale(frame, map);
   const padding = ATTRIBUTION_PADDING_PX * scale;
   const family = getComputedStyle(document.body).fontFamily || "sans-serif";
   let size = ATTRIBUTION_SIZE_PX * scale;

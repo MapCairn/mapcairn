@@ -11,12 +11,16 @@ import {
   EARTH_RADIUS_METRES,
   mercatorProject,
   mercatorUnproject,
+  pngHeader,
 } from "@mapcairn/core";
 
 /** Test-only width of the fake engine's viewport, in pixels. */
 export const FAKE_VIEWPORT_WIDTH = 800;
 /** Test-only height of the fake engine's viewport, in pixels. */
 export const FAKE_VIEWPORT_HEIGHT = 600;
+
+/** Where a fake map looks when it was given neither a centre nor a box to fit. */
+const UNSET_CAMERA = { lng: 123.4, lat: -45.6, zoom: 7.7 } as const;
 
 type Listener = (event: Record<string, unknown>) => void;
 type Camera = { center?: [number, number]; zoom?: number; bearing?: number };
@@ -72,6 +76,16 @@ export class FakeMapLibreMap {
   static nextConstructError: Error | undefined;
   /** When true, the map fires `load`, `style.load` and `idle` by itself. */
   static autoLoad = false;
+  /** With `autoLoad`, the next map built loads but never reports `idle`, as when its tiles never arrive. Then cleared. */
+  static holdIdle = false;
+  /**
+   * With `autoLoad`, the next map built reports `idle` only after it is asked
+   * to repaint, as a map over tiles that all 404 does: no event asks for a
+   * frame, so nothing else wakes it. Then cleared.
+   */
+  static settleOnRepaint = false;
+  /** When true, a box cannot be fitted: `cameraForBounds` answers undefined and `fitBounds` does nothing. */
+  static unfittableBounds = false;
   /**
    * With `autoLoad`, the next `setStyle` fails the way MapLibre reports a
    * style document it could not fetch: an `error` event with no tile or
@@ -84,6 +98,9 @@ export class FakeMapLibreMap {
     FakeMapLibreMap.instances = [];
     FakeMapLibreMap.nextConstructError = undefined;
     FakeMapLibreMap.autoLoad = false;
+    FakeMapLibreMap.holdIdle = false;
+    FakeMapLibreMap.settleOnRepaint = false;
+    FakeMapLibreMap.unfittableBounds = false;
     FakeMapLibreMap.nextStyleError = undefined;
   }
 
@@ -124,6 +141,8 @@ export class FakeMapLibreMap {
   basemapLayers: Record<string, unknown>[] = [];
   /** When true, `triggerRepaint` is followed by a `render` event, as a visible map does. */
   rendersOnRepaint = true;
+  /** True while the map waits for a repaint before it reports `idle`. */
+  idleOnRepaint = false;
 
   constructor(options: Record<string, unknown>) {
     const error = FakeMapLibreMap.nextConstructError;
@@ -133,30 +152,79 @@ export class FakeMapLibreMap {
     }
     this.options = options;
     this.loadBasemapStyle(options.style);
-    const [lng, lat] = options.center as [number, number];
+    // A map fitted to `bounds` has no centre or zoom of its own until it is
+    // fitted. MapLibre keeps its defaults when the fit fails, so the fake's
+    // are somewhere a test would never ask for, which shows a missing fit.
+    const [lng, lat] = (options.center as [number, number] | undefined) ?? [
+      UNSET_CAMERA.lng,
+      UNSET_CAMERA.lat,
+    ];
     this.center = { lng, lat };
     this.minZoom = options.minZoom as number;
     this.maxZoom = options.maxZoom as number;
-    this.zoom = options.zoom as number;
+    this.zoom = (options.zoom as number | undefined) ?? UNSET_CAMERA.zoom;
     this.bearing = options.bearing as number;
     const container = options.container as HTMLElement;
     container.classList.add("maplibregl-map");
     this.canvasContainer = document.createElement("div");
     this.canvasContainer.className = "maplibregl-canvas-container";
     this.canvas = document.createElement("canvas");
+    this.sizeCanvasToPixelRatio(container);
     this.canvas.setAttribute("tabindex", "0");
     this.canvas.setAttribute("aria-label", "Map");
     this.canvas.setAttribute("role", "region");
     this.canvasContainer.append(this.canvas);
     container.append(this.canvasContainer);
     FakeMapLibreMap.instances.push(this);
+    if (options.bounds) {
+      const [[west, south], [east, north]] = options.bounds as [
+        [number, number],
+        [number, number],
+      ];
+      const { maxZoom } = (options.fitBoundsOptions ?? {}) as {
+        maxZoom?: number;
+      };
+      this.fitBounds(
+        [
+          [west, south],
+          [east, north],
+        ],
+        { maxZoom },
+      );
+    }
     if (FakeMapLibreMap.autoLoad) {
+      const idles =
+        !FakeMapLibreMap.holdIdle && !FakeMapLibreMap.settleOnRepaint;
+      this.idleOnRepaint = FakeMapLibreMap.settleOnRepaint;
+      FakeMapLibreMap.holdIdle = false;
+      FakeMapLibreMap.settleOnRepaint = false;
       queueMicrotask(() => {
         this.fire("style.load");
         this.fire("load");
-        this.fire("idle");
+        if (idles) {
+          this.fire("idle");
+        }
       });
     }
+  }
+
+  /**
+   * MapLibre makes the canvas `pixelRatio` times the container's CSS size, so
+   * a map built with a ratio and a sized container has a canvas of that many pixels.
+   */
+  private sizeCanvasToPixelRatio(container: HTMLElement): void {
+    const ratio = this.options.pixelRatio;
+    if (typeof ratio !== "number") {
+      return;
+    }
+    // MapLibre's `_containerDimensions` floors the container's width and
+    // height, and `_resizeCanvas` rounds the ratio times that whole number.
+    this.canvas.width = Math.round(
+      ratio * Math.floor(Number.parseFloat(container.style.width)),
+    );
+    this.canvas.height = Math.round(
+      ratio * Math.floor(Number.parseFloat(container.style.height)),
+    );
   }
 
   /** Subscribes like MapLibre 6, returning a subscription. */
@@ -276,6 +344,32 @@ export class FakeMapLibreMap {
       ],
       options,
     ]);
+    const camera = this.cameraForBounds(
+      [
+        [west, south],
+        [east, north],
+      ],
+      options,
+    );
+    if (camera) {
+      this.apply({ ...camera, bearing: options.bearing ?? 0 });
+    }
+  }
+  /**
+   * The centre and zoom that fit a box, or undefined when the box cannot be
+   * fitted (`unfittableBounds`), as MapLibre answers for a box it cannot
+   * fit, and `fitBounds` then leaves the camera where it was.
+   */
+  cameraForBounds(
+    [[west, south], [east, north]]: [[number, number], [number, number]],
+    options: {
+      padding?: { top: number; right: number; bottom: number; left: number };
+      maxZoom?: number;
+    } = {},
+  ): { center: [number, number]; zoom: number } | undefined {
+    if (FakeMapLibreMap.unfittableBounds) {
+      return undefined;
+    }
     const padding = options.padding ?? { top: 0, right: 0, bottom: 0, left: 0 };
     const southWest = mercatorProject({ lat: south, lng: west }, 1);
     const northEast = mercatorProject({ lat: north, lng: east }, 1);
@@ -294,11 +388,10 @@ export class FakeMapLibreMap {
       },
       1,
     );
-    this.apply({
+    return {
       center: [centre.lng, centre.lat],
       zoom: Math.min(fitted, options.maxZoom ?? Number.POSITIVE_INFINITY),
-      bearing: options.bearing ?? 0,
-    });
+    };
   }
   stop(): void {
     this.record("stop", []);
@@ -430,6 +523,25 @@ export class FakeMapLibreMap {
     this.checkLoaded();
     this.images.set(name, { image, options });
   }
+  listImages(): string[] {
+    return [...this.images.keys()];
+  }
+  /** The image as MapLibre hands it back: its pixels and the metadata it was added with. */
+  getImage(name: string): {
+    data: unknown;
+    pixelRatio: number;
+    sdf: boolean;
+  } {
+    const { image, options } = this.images.get(name) as {
+      image: unknown;
+      options?: { pixelRatio?: number; sdf?: boolean };
+    };
+    return {
+      data: image,
+      pixelRatio: options?.pixelRatio ?? 1,
+      sdf: options?.sdf ?? false,
+    };
+  }
   /** What the style (or `setProjection`) last asked for. A test sets it to stand in for a style's own `projection`. */
   projection: { type: string } = { type: "mercator" };
   /** The engine's horizon test: on a globe, a place over a quarter of the way round from the centre is hidden. */
@@ -467,9 +579,14 @@ export class FakeMapLibreMap {
       });
     }
   }
-  getStyle(): { glyphs?: string; layers: Record<string, unknown>[] } {
+  getStyle(): {
+    glyphs?: string;
+    sources: Record<string, Record<string, unknown>>;
+    layers: Record<string, unknown>[];
+  } {
     return {
       ...(this.glyphs === undefined ? {} : { glyphs: this.glyphs }),
+      sources: Object.fromEntries(this.sources),
       layers: [...this.basemapLayers, ...this.styleLayers],
     };
   }
@@ -496,6 +613,12 @@ export class FakeMapLibreMap {
   }
   triggerRepaint(): void {
     this.record("triggerRepaint", []);
+    if (this.idleOnRepaint) {
+      this.idleOnRepaint = false;
+      queueMicrotask(() => {
+        this.fire("idle");
+      });
+    }
     if (this.rendersOnRepaint) {
       queueMicrotask(() => {
         this.fire("render");
@@ -514,6 +637,7 @@ export class FakeMapLibreMap {
   remove(): void {
     this.record("remove", []);
     this.removed = true;
+    this.fire("remove");
     this.canvasContainer.remove();
   }
 
@@ -799,6 +923,7 @@ export const canvasStub = {
       return context;
     };
     proto.toBlob = function toBlob(
+      this: HTMLCanvasElement,
       callback: (blob: Blob | null) => void,
       type?: string,
     ) {
@@ -812,7 +937,8 @@ export const canvasStub = {
         callback(null);
         return;
       }
-      callback(new Blob([new Uint8Array([137, 80, 78, 71])], { type }));
+      // The header of a PNG the size of the canvas, so a test reads the size back.
+      callback(new Blob([pngHeader(this.width, this.height)], { type }));
     };
     return () => {
       proto.getContext = original.getContext;

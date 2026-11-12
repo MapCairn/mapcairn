@@ -6,6 +6,8 @@ import {
   LayerError,
   LocationError,
   MapEngineError,
+  MapImageExportError,
+  type MapImageExportErrorKind,
   PortAbortError,
   RoutingError,
   type RoutingErrorKind,
@@ -72,6 +74,22 @@ describe("port errors", () => {
     expect(error.name).toBe("MapEngineError");
     expect(error.reason).toBe("webgl-unavailable");
     expect(error.message).toContain("webgl-unavailable");
+  });
+
+  it("carries the image export error kind, and stays a MapEngineError that failed to export", () => {
+    const kinds: MapImageExportErrorKind[] = [
+      "invalid",
+      "too-large",
+      "timed-out",
+    ];
+    for (const kind of kinds) {
+      const error = new MapImageExportError(kind, "Too big.");
+      expect(error).toBeInstanceOf(MapEngineError);
+      expect(error.name).toBe("MapImageExportError");
+      expect(error.reason).toBe("export-failed");
+      expect(error.kind).toBe(kind);
+      expect(error.message).toBe("Too big.");
+    }
   });
 
   it("names the abort error so callers can ignore it", () => {
