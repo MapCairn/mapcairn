@@ -31,23 +31,47 @@ async function freezeTime(page: Page): Promise<void> {
 }
 
 /**
- * Moves focus to the year field of a native date input, whatever order the
- * browser's locale puts the fields in: each field is nudged up and back, and
- * the one that changes the year is the one wanted.
+ * Finds how many fields the year of a native date input sits after the first,
+ * whatever order the browser puts them in, by nudging each field of a spare
+ * date input added to the page for the purpose and removed after. The
+ * control's own input is never nudged: its newest year is its last, so
+ * ArrowUp there wraps to its first year, a real day the control would commit
+ * and ask for tiles of before ArrowDown could put it back.
+ */
+async function yearFieldOffset(page: Page): Promise<number> {
+  const probe = page.locator("[data-year-probe]");
+  await page.evaluate(() => {
+    const input = document.createElement("input");
+    input.type = "date";
+    input.value = "2026-06-15";
+    input.setAttribute("data-year-probe", "");
+    document.body.append(input);
+  });
+  try {
+    await probe.focus();
+    for (let field = 0; field < 3; field += 1) {
+      await page.keyboard.press("ArrowUp");
+      if ((await probe.inputValue()).startsWith("2027")) {
+        return field;
+      }
+      await page.keyboard.press("ArrowRight");
+    }
+    throw new Error("A date input has no year field the keyboard can reach.");
+  } finally {
+    await probe.evaluate((input) => input.remove());
+  }
+}
+
+/**
+ * Moves focus to the year field of the control's date input without changing
+ * its value, so the only days it sees are the ones the test types.
  */
 async function focusYearField(page: Page, date: Locator): Promise<void> {
+  const offset = await yearFieldOffset(page);
   await date.focus();
-  for (let field = 0; field < 3; field += 1) {
-    const before = await date.inputValue();
-    await page.keyboard.press("ArrowUp");
-    const after = await date.inputValue();
-    await page.keyboard.press("ArrowDown");
-    if (after.slice(0, 4) !== before.slice(0, 4)) {
-      return;
-    }
+  for (let field = 0; field < offset; field += 1) {
     await page.keyboard.press("ArrowRight");
   }
-  throw new Error("The date input has no year field the keyboard can reach.");
 }
 
 test.describe("half-hourly rainfall layer", () => {
