@@ -1,4 +1,5 @@
 import type { FocusTarget } from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import {
   createContext,
   type ReactNode,
@@ -37,8 +38,7 @@ export function FocusRegistryProvider({
   children,
 }: FocusRegistryProviderProps) {
   const elements = useRef(new Map<FocusName, HTMLElement>());
-  const focusMapRef = useRef(focusMap);
-  focusMapRef.current = focusMap;
+  const focusMapRef = useLatestRef(focusMap);
 
   const register = useCallback(
     (name: FocusName, element: HTMLElement | null) => {
@@ -51,14 +51,17 @@ export function FocusRegistryProvider({
     [],
   );
 
-  const restore = useCallback((name: FocusName | null) => {
-    const element = name ? elements.current.get(name) : undefined;
-    if (element?.isConnected) {
-      element.focus();
-      return;
-    }
-    focusMapRef.current();
-  }, []);
+  const restore = useCallback(
+    (name: FocusName | null) => {
+      const element = name ? elements.current.get(name) : undefined;
+      if (element?.isConnected) {
+        element.focus();
+        return;
+      }
+      focusMapRef.current();
+    },
+    [focusMapRef],
+  );
 
   const element = useCallback((name: FocusName) => {
     const found = elements.current.get(name);

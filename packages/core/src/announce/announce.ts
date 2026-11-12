@@ -5,6 +5,7 @@ import {
   travelModeParticiple,
 } from "../directions/directions";
 import { formatLatLng, formatNumber, formatZoom } from "../format/format";
+import { describeSlotStart } from "../layers/dateTime";
 import type {
   LocationErrorKind,
   RoutingErrorKind,
@@ -246,6 +247,11 @@ export function announceStopAdded(index: number, total: number): string {
   return `Stop ${stopLetter(index)} added, ${total} ${pluralise(total, ["stop", "stops"])}`;
 }
 
+/** Announced when a stop cannot be added because the directions hold `max` already. */
+export function announceStopLimit(max: number): string {
+  return `You can add up to ${max} stops. Remove one to add another.`;
+}
+
 /** Announced when a stop is removed from the directions. `index` counts from zero. */
 export function announceStopRemoved(index: number): string {
   return `Stop ${stopLetter(index)} removed`;
@@ -292,4 +298,17 @@ export function announceRoutingCancelled(): string {
 /** Announced when the stops and the route or area are cleared. */
 export function announceDirectionsCleared(): string {
   return "Directions cleared";
+}
+
+/** Announced when the person skips the first-visit tour, saying how to start it again. */
+export function announceTourSkipped(): string {
+  return "Tour skipped. Help, in Settings, can start it again.";
+}
+
+/**
+ * Announced when a chosen time is not offered and the layer moves to the
+ * nearest slot that is. `slot` is that slot's value.
+ */
+export function announceTimeMoved(slot: string): string {
+  return `Time moved to ${describeSlotStart(slot)}, the nearest available.`;
 }

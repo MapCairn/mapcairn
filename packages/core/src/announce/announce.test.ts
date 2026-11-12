@@ -36,11 +36,14 @@ import {
   announceSearchResults,
   announceShowingFeature,
   announceStopAdded,
+  announceStopLimit,
   announceStopMoved,
   announceStopRemoved,
   announceSurfaceClosed,
   announceSurfaceOpened,
   announceTileError,
+  announceTimeMoved,
+  announceTourSkipped,
   announceZoom,
 } from "./index";
 
@@ -291,5 +294,25 @@ describe("directions announcements", () => {
   it("confirms a cancel and a clear", () => {
     expect(announceRoutingCancelled()).toBe("Cancelled");
     expect(announceDirectionsCleared()).toBe("Directions cleared");
+  });
+});
+
+describe("stop limit, tour and time announcements", () => {
+  it("says how many stops the directions hold and what to do", () => {
+    expect(announceStopLimit(10)).toBe(
+      "You can add up to 10 stops. Remove one to add another.",
+    );
+  });
+
+  it("says how to start a skipped tour again", () => {
+    expect(announceTourSkipped()).toBe(
+      "Tour skipped. Help, in Settings, can start it again.",
+    );
+  });
+
+  it("names the nearest time a layer moved to", () => {
+    expect(announceTimeMoved("2026-11-09t0600")).toBe(
+      "Time moved to 06:00 UTC on 9 November 2026, the nearest available.",
+    );
   });
 });
