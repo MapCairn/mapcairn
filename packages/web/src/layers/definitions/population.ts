@@ -5,6 +5,8 @@ import type { TileLayerDefinition } from "@mapcairn/core";
 /**
  * Gridded Population of the World (GPWv4) population density for 2020, served
  * by NASA GIBS from SEDAC as WMTS tiles. A static map with no date control.
+ * At its deepest zoom the provider sometimes answers with a solid black tile or
+ * an HTTP 500 (see issue 60), which the layer says in its disclaimer.
  */
 const population: TileLayerDefinition = {
   id: "population",
@@ -23,6 +25,8 @@ const population: TileLayerDefinition = {
       url: "https://sedac.ciesin.columbia.edu/data/collection/gpw-v4",
     },
   ],
+  disclaimer:
+    "Some tiles may be missing or solid black, mostly when zoomed in close. This comes from the data provider, not from your device or connection.",
   controls: [
     { kind: "opacity", id: "opacity", label: "Opacity", default: 0.75 },
   ],
