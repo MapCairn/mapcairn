@@ -5,7 +5,10 @@ import {
   RASTER_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
 } from "./support/basemaps";
-import { OTHER_VECTOR_STYLE_PATTERN } from "./support/network";
+import {
+  OTHER_VECTOR_STYLE_PATTERN,
+  STREETS_TILE_PATTERN,
+} from "./support/network";
 import { waitForStableLayout } from "./support/states";
 
 /*
@@ -17,16 +20,13 @@ import { waitForStableLayout } from "./support/states";
 
 test.use({ reducedMotion: "reduce" });
 
-/** The origin of the Streets tiles, which the first test takes down. */
-const STREETS_HOST = /tile\.openstreetmap\.org/;
-
 for (const colorScheme of ["light", "dark"] as const) {
   test(`a basemap that is not available, its marked tile and Try again pass axe in ${colorScheme} @a11y`, async ({
     page,
     mapPage,
   }) => {
     await page.emulateMedia({ colorScheme });
-    await page.route(STREETS_HOST, (route) => route.abort("failed"));
+    await page.route(STREETS_TILE_PATTERN, (route) => route.abort("failed"));
     await mapPage.goto();
     await mapPage.openMapOptions();
     await mapPage.pressBasemapTile(RASTER_BASEMAP_NAME);
@@ -46,6 +46,9 @@ for (const colorScheme of ["light", "dark"] as const) {
     await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
     await expect(banner).toBeVisible();
     await waitForStableLayout(page);
+    // axe leaves out colour contrast for the label of a disabled control, so
+    // this scan does not check the note's contrast; DESIGN.md's WCAG 2.2 AA
+    // rule still applies to it.
     expect(await axeViolations(page)).toEqual([]);
   });
 

@@ -75,6 +75,8 @@ test.describe("layer kinds", () => {
       await expect(page.getByTestId("layer-legend-kind-vector")).toContainText(
         "Park",
       );
+      // Nothing should be asked for, so there is no event to wait for; give a
+      // tile request time to be made if one were going to.
       await page.waitForTimeout(1500);
       expect(tileRequests()).toEqual([]);
       await mapPage.goto("#layers=kind-vector&map=7.00/30.00000/31.00000");
@@ -94,6 +96,8 @@ test.describe("layer kinds", () => {
       await expect(page.getByTestId("layer-status-kind-query")).toContainText(
         "Zoom in to load this layer.",
       );
+      // Nothing should be asked for, so there is no event to wait for; give a
+      // query time to be made if one were going to.
       await page.waitForTimeout(1000);
       expect(requests.urls.filter((url) => url.includes("/query"))).toEqual([]);
     });
@@ -133,13 +137,27 @@ test.describe("layer kinds", () => {
         .not.toBe(before?.lng);
       await page.clock.runFor(VIEW_SETTLE_MS + TIMER_SLACK_MS);
       await settleFrames(page);
+      // Requests are recorded by the route handler, outside the page, and
+      // nothing should be asked for, so there is no event to wait for; give a
+      // query time to reach the handler if one were made.
+      await page.waitForTimeout(500);
       expect(queries()).toHaveLength(1);
 
-      // A long pan leaves it: one more request, after the map settles.
+      // A long pan leaves it: one more request, after the map settles, for a
+      // window further east that holds the new view.
       for (let press = 0; press < 12; press += 1) {
         await page.keyboard.press("ArrowRight");
       }
       await expect.poll(() => queries().length).toBe(2);
+      const [nextWest, , nextEast] = (
+        new URL(queries()[1] as string).searchParams.get("bbox") as string
+      )
+        .split(",")
+        .map(Number) as [number, number, number, number];
+      expect(nextWest).toBeGreaterThan(west);
+      const centre = async () => (await mapPage.hashView())?.lng ?? Number.NaN;
+      await expect.poll(centre).toBeGreaterThan(nextWest);
+      await expect.poll(centre).toBeLessThan(nextEast);
     });
   });
 

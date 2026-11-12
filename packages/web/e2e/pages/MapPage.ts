@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { LONG_PRESS_DELAY_MS, TIMER_SLACK_MS } from "../support/timers";
 
 /** How long the first map frame may take: the engine chunk, the worker and the style. */
 export const MAP_READY_TIMEOUT_MS = 20_000;
@@ -408,7 +409,11 @@ export class MapPage {
    * A long press on the map at a point relative to the map's top-left, with
    * pointer events (mouse down, hold, mouse up), as `useLongPress` sees it.
    */
-  async longPress(x: number, y: number, holdMs = 700): Promise<void> {
+  async longPress(
+    x: number,
+    y: number,
+    holdMs = LONG_PRESS_DELAY_MS + TIMER_SLACK_MS,
+  ): Promise<void> {
     const box = await this.host.boundingBox();
     if (!box) {
       throw new Error("The map has no box to press on.");
