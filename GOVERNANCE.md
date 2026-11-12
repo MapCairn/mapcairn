@@ -52,14 +52,14 @@ The project is built so that it can outlive any one person, but one thing is sti
 
 If the only maintainer were unavailable for any reason, the project could not continue with minimal interruption. This is the OpenSSF Best Practices silver criterion `access_continuity`, and it is not met.
 
-What is missing is a named, trusted second person who has access to the GitHub organisation, the Cloudflare account that serves the site and the domain, and who could keep the project going or hand it on. No such person is recorded here, and none will be invented to fill the gap. The work is tracked in [#4](https://github.com/MapCairn/mapcairn/issues/4). When it is done, this section will say who has access, without credentials or any secret.
+What is missing is a named, trusted second person with administrator access to the repository, who could keep the project going or hand it on. No such person is recorded here, and none will be invented to fill the gap. The work is tracked in [#4](https://github.com/MapCairn/mapcairn/issues/4). When it is done, this section will say who has access and since when, without credentials or any secret.
 
-### What a second person needs access to
+### What a second person needs
 
-- the `MapCairn` GitHub organisation, as an owner, so they can merge, administer the ruleset and publish advisories;
-- the `mapcairn` npm organisation, as an owner, so they can publish packages once publishing starts;
-- the Cloudflare account that holds the `mapcairn` Worker and its Workers Builds connection to the repository;
-- the domain and its DNS. The reference site is served from a subdomain of the maintainer's own domain, so a project domain that the organisation controls is a further step, not yet taken.
+- A member of the `MapCairn` GitHub organisation with the Admin role on the `mapcairn` repository, so they can merge, triage, change the ruleset and publish advisories. They are not an organisation owner. Before the access is granted, the organisation's member privileges are checked so that members cannot delete or transfer repositories or change their visibility.
+- Once publishing starts, write access to the `mapcairn` packages on npm through a team.
+
+What a second person does not need is the Cloudflare account or the domain. The repository is the project: the code, the issues, the plans and the decisions are all in it, and the deployment is described by `wrangler.jsonc`. If the maintainer were unavailable, the second administrator could host the site themselves from the repository, on their own Cloudflare account and hostname.
 
 Credentials are never recorded in the repository. The access is granted to the person's own account and recorded here by role.
 
