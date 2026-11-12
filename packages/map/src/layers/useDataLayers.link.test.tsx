@@ -19,7 +19,7 @@ import {
   samplePoint,
 } from "@mapcairn/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { type ReactNode, StrictMode } from "react";
+import { Fragment, type ReactNode, StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../services";
 import { useDataLayers } from "./useDataLayers";
@@ -50,10 +50,16 @@ beforeEach(() => {
   announce.mockClear();
 });
 
-function render(catalogue: LayerCatalogue, initial?: LayersUrlState) {
+function render(
+  catalogue: LayerCatalogue,
+  initial?: LayersUrlState,
+  Shell: typeof StrictMode | typeof Fragment = Fragment,
+) {
   const services: FakeServices = createFakeServices({ layers: catalogue });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <ServicesProvider services={services}>{children}</ServicesProvider>
+    <Shell>
+      <ServicesProvider services={services}>{children}</ServicesProvider>
+    </Shell>
   );
   const view = renderHook(() => useDataLayers({ now: () => NOW, initial }), {
     wrapper,
@@ -142,7 +148,7 @@ describe("a layer the link names while the catalogue loads", () => {
     await waitFor(() => expect(layer(result, POINTS).features).toHaveLength(1));
   });
 
-  it("offers no way to turn a layer on while there are none, so the waiting layers never grow past the link's cap", () => {
+  it("keeps the link's 20 layers waiting, which is as many as a link carries, and turns none on while there are no layers", () => {
     const ids = Array.from({ length: 25 }, (_, index) => `layer-${index}`);
     const initial = parseUrlHash(`#layers=${ids.join(",")}`).layers;
     const catalogue = loadingCatalogue();
@@ -151,6 +157,14 @@ describe("a layer the link names while the catalogue loads", () => {
     act(() => result.current.setEnabled(ids[24] as string, true));
     act(() => result.current.setEnabled(POINTS, true));
     expect(result.current.urlValue.enabled).toEqual(ids.slice(0, 20));
+  });
+
+  it("does nothing when the hook unmounts while the catalogue is still pending", () => {
+    const catalogue = loadingCatalogue();
+    const { unmount } = render(catalogue, LINK);
+    unmount();
+    expect(() => act(() => catalogue.setLayers(LAYERS))).not.toThrow();
+    expect(said()).toEqual([]);
   });
 });
 
@@ -176,14 +190,7 @@ describe("a link layer the catalogue does not have", () => {
 
   it("is said once under StrictMode, which renders twice", () => {
     const catalogue = loadingCatalogue();
-    const services = createFakeServices({ layers: catalogue });
-    renderHook(() => useDataLayers({ now: () => NOW, initial: unknown }), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <StrictMode>
-          <ServicesProvider services={services}>{children}</ServicesProvider>
-        </StrictMode>
-      ),
-    });
+    render(catalogue, unknown, StrictMode);
     act(() => catalogue.setLayers(LAYERS));
     expect(said()).toEqual(["2 layers in the link are not available."]);
   });
@@ -353,9 +360,79 @@ describe("an enabled layer that a refreshed catalogue no longer has", () => {
     act(() => catalogue.setLayers(LAYERS));
     expect(idsOn(result)).toEqual([ALERTS]);
   });
+
+  it("is said once under StrictMode, which renders twice", () => {
+    const catalogue = new FakeLayerCatalogue(LAYERS);
+    render(catalogue, { enabled: [POINTS], controls: {} }, StrictMode);
+    act(() => catalogue.setLayers([SAMPLE_ALERT_LAYER]));
+    expect(said()).toEqual([
+      "Sample points is no longer available and was turned off.",
+    ]);
+  });
+});
+
+describe("Undo after a refresh that removes a layer", () => {
+  function withBothOff() {
+    const catalogue = new FakeLayerCatalogue(LAYERS);
+    const view = render(catalogue, { enabled: [POINTS, ALERTS], controls: {} });
+    act(() => view.result.current.turnOff([POINTS, ALERTS]));
+    return { ...view, catalogue };
+  }
+
+  it("counts only the layers that are still listed, and never turns a missing one back on", () => {
+    const { result, catalogue } = withBothOff();
+    expect(result.current.turnedOff?.count).toBe(2);
+    act(() => catalogue.setLayers([SAMPLE_ALERT_LAYER, SAMPLE_TILE_LAYER]));
+    expect(result.current.turnedOff?.count).toBe(1);
+    act(() => result.current.undoTurnOff());
+    expect(idsOn(result)).toEqual([ALERTS]);
+  });
+
+  it("does not turn on a layer that was turned on by hand, removed and listed again within the offer", () => {
+    const { result, catalogue } = withBothOff();
+    act(() => result.current.setEnabled(POINTS, true));
+    act(() => catalogue.setLayers([SAMPLE_ALERT_LAYER]));
+    act(() => catalogue.setLayers(LAYERS));
+    expect(result.current.turnedOff?.count).toBe(1);
+    act(() => result.current.undoTurnOff());
+    expect(idsOn(result)).toEqual([ALERTS]);
+  });
+
+  it("offers nothing once every layer of the batch has gone", () => {
+    const { result, catalogue } = withBothOff();
+    act(() => catalogue.setLayers([SAMPLE_TILE_LAYER]));
+    expect(result.current.turnedOff).toBeNull();
+  });
 });
 
 describe("a layer whose definition changed in a refresh", () => {
+  it("loads again from its new URL when a refresh changes it", async () => {
+    const catalogue = new FakeLayerCatalogue(LAYERS);
+    const { result, source } = render(catalogue, {
+      enabled: [ALERTS],
+      controls: {},
+    });
+    source.setFeatures(ALERTS, [samplePoint("a")]);
+    await waitFor(() => expect(layer(result, ALERTS).features).toHaveLength(1));
+    expect(source.requests.map((request) => request.url)).toEqual([
+      "https://alerts.test/events",
+    ]);
+    announce.mockClear();
+    const moved: LayerDefinition = {
+      ...SAMPLE_ALERT_LAYER,
+      source: { ...SAMPLE_ALERT_LAYER.source, url: "https://alerts.test/v2" },
+    };
+    act(() =>
+      catalogue.setLayers([SAMPLE_FEED_LAYER, moved, SAMPLE_TILE_LAYER]),
+    );
+    await waitFor(() => expect(source.requests).toHaveLength(2));
+    expect(source.requests[1]?.url).toBe("https://alerts.test/v2");
+    await waitFor(() =>
+      expect(layer(result, ALERTS).status).toMatchObject({ kind: "ready" }),
+    );
+    expect(layer(result, ALERTS).enabled).toBe(true);
+  });
+
   const weekly: LayerDefinition = {
     ...SAMPLE_FEED_LAYER,
     controls: [

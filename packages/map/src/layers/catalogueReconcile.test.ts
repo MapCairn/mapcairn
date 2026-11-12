@@ -25,7 +25,6 @@ function inputs(overrides: Partial<ReconcileInputs> = {}): ReconcileInputs {
     link: NO_LINK,
     known: [],
     next: [SAMPLE_FEED_LAYER, SAMPLE_ALERT_LAYER, SAMPLE_TILE_LAYER],
-    noteLink: true,
     now: NOW,
     ...overrides,
   };
@@ -50,25 +49,21 @@ describe("reconcile", () => {
       expect(link.waiting).toEqual([]);
     });
 
-    it("drops the ones it has not got, and counts them for a note", () => {
-      const { chosen, change } = reconcile(
+    it("drops the ones it has not got, and counts them", () => {
+      const { chosen, linkMissing } = reconcile(
         inputs({
           link: { waiting: ["sample-alerts", "gone", "also"], controls: {} },
         }),
       );
       expect(chosen.enabled).toEqual(["sample-alerts"]);
-      expect(change.linkUnavailable).toBe(2);
+      expect(linkMissing).toBe(2);
     });
 
-    it("counts none for a note when the catalogue was ready from the start", () => {
-      const { chosen, change } = reconcile(
-        inputs({
-          noteLink: false,
-          link: { waiting: ["sample-alerts", "gone"], controls: {} },
-        }),
+    it("counts none when every one is in the list", () => {
+      const { linkMissing } = reconcile(
+        inputs({ link: { waiting: ["sample-alerts"], controls: {} } }),
       );
-      expect(chosen.enabled).toEqual(["sample-alerts"]);
-      expect(change).toEqual({ turnedOff: [], linkUnavailable: 0 });
+      expect(linkMissing).toBe(0);
     });
 
     it("does not turn a layer on twice", () => {
@@ -127,8 +122,10 @@ describe("reconcile", () => {
       );
       expect(result.chosen.enabled).toEqual(["sample-alerts"]);
       expect(result.chosen.controls).toEqual({ "sample-alerts": {} });
-      expect(result.turnedOff).toEqual(["sample-points"]);
-      expect(result.change.turnedOff).toEqual(["Sample points"]);
+      expect(result.switchedOff).toEqual([
+        { id: "sample-points", name: "Sample points" },
+      ]);
+      expect(result.removed).toEqual(["sample-points"]);
     });
 
     it("counts several that go together", () => {
@@ -139,14 +136,14 @@ describe("reconcile", () => {
           chosen: { enabled: ["sample-points", "sample-alerts"], controls: {} },
         }),
       );
-      expect(result.turnedOff).toEqual(["sample-points", "sample-alerts"]);
-      expect(result.change.turnedOff).toEqual([
-        "Sample points",
-        "Sample alerts",
+      expect(result.switchedOff).toEqual([
+        { id: "sample-points", name: "Sample points" },
+        { id: "sample-alerts", name: "Sample alerts" },
       ]);
+      expect(result.removed).toEqual(["sample-points", "sample-alerts"]);
     });
 
-    it("says nothing of a layer that was off", () => {
+    it("lists a layer that was off as removed, but does not switch it off", () => {
       const result = reconcile(
         inputs({
           known: before,
@@ -157,9 +154,33 @@ describe("reconcile", () => {
           },
         }),
       );
-      expect(result.turnedOff).toEqual([]);
-      expect(result.change.turnedOff).toEqual([]);
+      expect(result.switchedOff).toEqual([]);
+      expect(result.removed).toEqual(["sample-points"]);
       expect(Object.keys(result.chosen.controls)).toEqual(["sample-alerts"]);
+    });
+  });
+
+  describe("what the list added and removed", () => {
+    it("names the ids that are new in the list and those that are gone from it", () => {
+      const result = reconcile(
+        inputs({
+          known: [SAMPLE_FEED_LAYER, SAMPLE_ALERT_LAYER],
+          next: [SAMPLE_ALERT_LAYER, SAMPLE_TILE_LAYER],
+        }),
+      );
+      expect(result.added).toEqual(["sample-imagery"]);
+      expect(result.removed).toEqual(["sample-points"]);
+    });
+
+    it("names nothing when the list is the same", () => {
+      const result = reconcile(
+        inputs({
+          known: [SAMPLE_FEED_LAYER],
+          next: [SAMPLE_FEED_LAYER],
+        }),
+      );
+      expect(result.added).toEqual([]);
+      expect(result.removed).toEqual([]);
     });
   });
 

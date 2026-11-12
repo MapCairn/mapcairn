@@ -238,12 +238,6 @@ interface State {
   readonly known: readonly LayerDefinition[];
   /** The catalogue state last reconciled, so each change is applied once. */
   readonly reconciled: CatalogueState | null;
-  /**
-   * Whether a link layer that is not in the first list is said aloud. True
-   * only for a catalogue that was not ready at mount: a host whose layers are
-   * there from the start has no list to wait for.
-   */
-  readonly noteLink: boolean;
   /** What the last change to the catalogue asks the hook to say and forget once it is committed. */
   readonly notice: CatalogueNotice | null;
   readonly sorts: Readonly<Record<string, string>>;
@@ -279,13 +273,27 @@ interface UndoOffer {
   readonly group: string | null;
 }
 
-/** A change to the catalogue that is to be said aloud, and what the layers that went leave behind. */
+/** A change to the catalogue that is to be said aloud, and the layers that went with it. */
 interface CatalogueNotice {
   readonly message: string;
-  /** The enabled layers that went. */
-  readonly turnedOff: readonly string[];
-  /** The affected area that was open before the change, whose request ends if its layer went. */
-  readonly detail: DetailState | null;
+  /** The ids of the enabled layers that went. */
+  readonly gone: readonly string[];
+}
+
+/**
+ * The offer without the layers a refresh removed from the catalogue, so a
+ * layer that is listed again later is not one Undo would turn on. Null when
+ * nothing is left.
+ */
+function withoutRemoved(
+  offer: UndoOffer | null,
+  removed: readonly string[],
+): UndoOffer | null {
+  if (!offer || removed.length === 0) {
+    return offer;
+  }
+  const ids = offer.ids.filter((id) => !removed.includes(id));
+  return ids.length > 0 ? { ...offer, ids } : null;
 }
 
 /** The layers of an offer that Undo would turn on: still off, and still in the catalogue. */
@@ -302,11 +310,14 @@ const OFF: LoadResult = { status: { kind: "off" }, features: [] };
 /**
  * The state at mount: the link's layers wait, and are resolved at once when
  * the catalogue is ready already (a static one), as they are when a list
- * arrives later.
+ * arrives later. `noteLink` says whether a link layer the list lacks is said
+ * aloud: true only for a catalogue that was not ready at mount, because a host
+ * whose layers are there from the start has no list to wait for.
  */
 function initialState(
   initial: LayersUrlState | undefined,
   catalogue: CatalogueState,
+  noteLink: boolean,
   now: number,
 ): State {
   return applyCatalogue(
@@ -319,7 +330,6 @@ function initialState(
       },
       known: [],
       reconciled: null,
-      noteLink: catalogue.status !== "ready",
       notice: null,
       sorts: {},
       results: {},
@@ -334,6 +344,7 @@ function initialState(
       undo: null,
     },
     catalogue,
+    noteLink,
     now,
   );
 }
@@ -378,6 +389,7 @@ function withoutTraces(state: State, ids: ReadonlySet<string>): State {
 function applyCatalogue(
   state: State,
   catalogue: CatalogueState,
+  noteLink: boolean,
   now: number,
 ): State {
   if (
@@ -391,21 +403,21 @@ function applyCatalogue(
     link: state.link,
     known: state.known,
     next: catalogue.layers,
-    noteLink: state.noteLink,
     now,
   });
-  const message = announceCatalogueChange(result.change);
-  const leaving = new Set(result.turnedOff);
+  const gone = result.switchedOff.map(({ id }) => id);
+  const message = announceCatalogueChange({
+    turnedOff: result.switchedOff.map(({ name }) => name),
+    linkUnavailable: noteLink ? result.linkMissing : 0,
+  });
   return {
-    ...(leaving.size > 0 ? withoutTraces(state, leaving) : state),
+    ...(gone.length > 0 ? withoutTraces(state, new Set(gone)) : state),
     ...result.chosen,
     link: result.link,
     known: catalogue.layers,
     reconciled: catalogue,
-    notice:
-      message === null
-        ? null
-        : { message, turnedOff: result.turnedOff, detail: state.detail },
+    undo: withoutRemoved(state.undo, result.removed),
+    notice: message === null ? null : { message, gone },
   };
 }
 
@@ -529,14 +541,17 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     catalogue.getState,
   );
   const definitions = readyLayers(catalogueState);
+  // Fixed at mount: only a catalogue that was not ready then makes a note of a
+  // link layer it does not have.
+  const [noteLink] = useState(catalogueState.status !== "ready");
   const [stored, setState] = useState(() =>
-    initialState(options.initial, catalogueState, now()),
+    initialState(options.initial, catalogueState, noteLink, now()),
   );
   // A new catalogue state is taken in during this render, so no render sees
   // its layers before their controls and choices are in step with them.
   let state = stored;
   if (stored.reconciled !== catalogueState) {
-    state = applyCatalogue(stored, catalogueState, now());
+    state = applyCatalogue(stored, catalogueState, noteLink, now());
     setState(state);
   }
   /**
@@ -678,25 +693,16 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     [],
   );
 
-  /**
-   * Drops what the hook holds outside the state for these layers: their open
-   * request for an affected area (the one in `detail`, which is the committed
-   * one unless a caller says it was cleared already), and what they last said.
-   */
-  const forgetLayers = useCallback(
-    (
-      ids: ReadonlySet<string>,
-      detail: DetailState | null = stateRef.current.detail,
-    ) => {
-      if (detail && ids.has(detail.layerId)) {
-        detailRequest.current?.abort();
-      }
-      for (const id of ids) {
-        announcedStates.current.delete(id);
-      }
-    },
-    [],
-  );
+  /** Drops what the hook holds outside the state for these layers: their open request for an affected area, and what they last said. */
+  const forgetLayers = useCallback((ids: ReadonlySet<string>) => {
+    const detail = stateRef.current.detail;
+    if (detail && ids.has(detail.layerId)) {
+      detailRequest.current?.abort();
+    }
+    for (const id of ids) {
+      announcedStates.current.delete(id);
+    }
+  }, []);
 
   // Says a change to the catalogue, once, and lets go of what the layers that
   // went had in flight. The change is in the state, not in the render that
@@ -708,7 +714,12 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       return;
     }
     spokenNotice.current = notice;
-    forgetLayers(new Set(notice.turnedOff), notice.detail);
+    // The change already closed the affected area of a layer that went, so no
+    // request for an area should stay open.
+    if (stateRef.current.detail === null) {
+      detailRequest.current?.abort();
+    }
+    forgetLayers(new Set(notice.gone));
     announce(notice.message, { priority: "polite" });
   }, [notice, forgetLayers, announce]);
 

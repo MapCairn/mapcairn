@@ -187,6 +187,32 @@ describe("App data layers", () => {
       expect(polite()).toBe("1 layer in the link is not available.");
     });
 
+    it("loads and draws a feed layer the link names once the list arrives", async () => {
+      const { services, catalogue } = servicesWithLoadingCatalogue();
+      services.fakes.layerSource.setFeatures("sample-points", [
+        samplePoint("a"),
+      ]);
+      services.fakes.url.write({
+        view: { center: { lat: 1, lng: 2 }, zoom: 7, bearing: 0 },
+        layers: {
+          enabled: ["sample-points"],
+          controls: { "sample-points": { window: "hour" } },
+        },
+      });
+      await renderApp(services);
+      expect(adapter(services).drawnLayers()).toEqual([]);
+      act(() => catalogue.setLayers(SAMPLE_LAYERS));
+      await settle();
+      expect(
+        adapter(services)
+          .drawnLayers()
+          .map((layer) => layer.id),
+      ).toEqual(["sample-points"]);
+      expect(services.fakes.layerSource.requests.map((r) => r.url)).toEqual([
+        "https://sample.test/feed/all_hour.json",
+      ]);
+    });
+
     it("says nothing of a layer the link names that a static catalogue does not have", async () => {
       const services = createFakeServices({
         layers: new FakeLayerCatalogue(SAMPLE_LAYERS),

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  type CatalogueChange,
   type ControlValues,
   type LayerDefinition,
   resolveControlValues,
@@ -33,21 +32,32 @@ export interface ReconcileInputs {
   readonly known: readonly LayerDefinition[];
   /** The list the catalogue holds now. */
   readonly next: readonly LayerDefinition[];
-  /** Whether a link layer that is not in the list is to be counted, so it can be said. */
-  readonly noteLink: boolean;
   /** The clock, in epoch milliseconds, for relative control defaults. */
   readonly now: number;
 }
 
-/** What {@link reconcile} works out. */
+/** An enabled layer that left the list, by id and by the name it had. */
+export interface SwitchedOff {
+  readonly id: string;
+  readonly name: string;
+}
+
+/**
+ * What {@link reconcile} works out. How many definitions were skipped is not
+ * here: it is in the catalogue's own state (`skipped`).
+ */
 export interface Reconciled {
   readonly chosen: Chosen;
   /** The link once answered: nothing waits any longer, so a dropped id stays dropped. */
   readonly link: Link;
-  /** The ids of enabled layers the list no longer holds, which are now off. */
-  readonly turnedOff: readonly string[];
-  /** What to say about it: the names turned off, and how many link layers were not there. */
-  readonly change: CatalogueChange;
+  /** The ids the list has that the last one did not. */
+  readonly added: readonly string[];
+  /** The ids the last list had that this one does not, whether the layer was on or off. */
+  readonly removed: readonly string[];
+  /** The enabled layers among those removed, which are now off. */
+  readonly switchedOff: readonly SwitchedOff[];
+  /** How many layers the link named that the list does not have. */
+  readonly linkMissing: number;
 }
 
 /**
@@ -84,27 +94,27 @@ function controlsOf(inputs: ReconcileInputs): ControlsById {
  * clears what the layers that went had loaded and says the change aloud.
  */
 export function reconcile(inputs: ReconcileInputs): Reconciled {
-  const { chosen, link, known, next, noteLink } = inputs;
+  const { chosen, link, known, next } = inputs;
   const inList = new Set(next.map((definition) => definition.id));
+  const wasListed = new Set(known.map((definition) => definition.id));
   const names = new Map(
     known.map((definition) => [definition.id, definition.name]),
   );
-  const turnedOff = chosen.enabled.filter((id) => !inList.has(id));
   const stillOn = chosen.enabled.filter((id) => inList.has(id));
   const arrived = link.waiting.filter(
     (id) => inList.has(id) && !stillOn.includes(id),
   );
-  const missing = link.waiting.filter((id) => !inList.has(id));
   return {
     chosen: {
       enabled: [...stillOn, ...arrived],
       controls: controlsOf(inputs),
     },
     link: { waiting: [], controls: {} },
-    turnedOff,
-    change: {
-      turnedOff: turnedOff.map((id) => names.get(id) ?? id),
-      linkUnavailable: noteLink ? missing.length : 0,
-    },
+    added: next.map(({ id }) => id).filter((id) => !wasListed.has(id)),
+    removed: known.map(({ id }) => id).filter((id) => !inList.has(id)),
+    switchedOff: chosen.enabled
+      .filter((id) => !inList.has(id))
+      .map((id) => ({ id, name: names.get(id) ?? id })),
+    linkMissing: link.waiting.filter((id) => !inList.has(id)).length,
   };
 }
