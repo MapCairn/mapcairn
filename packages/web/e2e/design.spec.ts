@@ -255,35 +255,39 @@ test.describe("design guide", () => {
 
 test.describe("design guide accessibility @a11y", () => {
   test.use({ reducedMotion: "reduce" });
+  // The guide renders every token and primitive, about 1,500 elements. One
+  // load takes 2 to 3 s and one full axe scan 3 to 4 s on an idle machine,
+  // so a test that loads and scans twice ran 16 to 24 s and passed the 30 s
+  // default only narrowly with two workers. Narrowing the scan would leave
+  // parts of the page unchecked, so these tests get triple the time instead.
+  test.slow();
 
   for (const viewport of [
     { width: 390, height: 844 },
     { width: 1280, height: 720 },
   ]) {
-    test(
-      `passes axe and the control checks in both themes at ${viewport.width}x${viewport.height} @a11y`,
-      viewportDetails(viewport),
-      async ({ page }) => {
-        await page.setViewportSize(viewport);
-        const design = new DesignPage(page);
-        for (const colorScheme of ["light", "dark"] as const) {
-          await test.step(colorScheme, async () => {
-            await page.emulateMedia({ colorScheme });
-            await design.goto();
-            await expect(page.locator("html")).toHaveAttribute(
-              "data-theme",
-              colorScheme,
-            );
-            expect(await axeViolations(page)).toEqual([]);
-            const controls = await inspectControls(page);
-            expect(controls.unnamed).toEqual([]);
-            expect(controls.positiveTabindex).toEqual([]);
-            expect(controls.tooSmall).toEqual([]);
-            expect(controls.under44).toEqual([]);
-          });
-        }
-      },
-    );
+    for (const colorScheme of ["light", "dark"] as const) {
+      test(
+        `passes axe and the control checks in the ${colorScheme} theme at ${viewport.width}x${viewport.height} @a11y`,
+        viewportDetails(viewport),
+        async ({ page }) => {
+          await page.setViewportSize(viewport);
+          await page.emulateMedia({ colorScheme });
+          const design = new DesignPage(page);
+          await design.goto();
+          await expect(page.locator("html")).toHaveAttribute(
+            "data-theme",
+            colorScheme,
+          );
+          expect(await axeViolations(page)).toEqual([]);
+          const controls = await inspectControls(page);
+          expect(controls.unnamed).toEqual([]);
+          expect(controls.positiveTabindex).toEqual([]);
+          expect(controls.tooSmall).toEqual([]);
+          expect(controls.under44).toEqual([]);
+        },
+      );
+    }
   }
 
   test("every control shows a focus ring @a11y", async ({ page }) => {
