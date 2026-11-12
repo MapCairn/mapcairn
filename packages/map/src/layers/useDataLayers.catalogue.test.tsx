@@ -11,7 +11,7 @@ import {
   SAMPLE_LAYERS,
 } from "@mapcairn/core";
 import { act, render, renderHook, screen } from "@testing-library/react";
-import { StrictMode } from "react";
+import { type ReactNode, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -62,7 +62,7 @@ afterEach(() => {
 describe("useDataLayers with a catalogue that loads", () => {
   it("offers no layers while the catalogue is loading, then the layers once it is ready", async () => {
     const { catalogue, resolve } = runtimeCatalogue();
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
+    const wrapper = ({ children }: { children: ReactNode }) => (
       <ServicesProvider services={createFakeServices({ layers: catalogue })}>
         {children}
       </ServicesProvider>

@@ -42,10 +42,10 @@ function held() {
   const loads: ReturnType<typeof createDeferred<unknown>>[] = [];
   const signals: AbortSignal[] = [];
   const load = vi.fn((signal: AbortSignal) => {
-    const load = createDeferred<unknown>();
-    loads.push(load);
+    const deferred = createDeferred<unknown>();
+    loads.push(deferred);
     signals.push(signal);
-    return load.promise;
+    return deferred.promise;
   });
   const onSkipped = vi.fn();
   const catalogue = createRuntimeLayerCatalogue({ load, options, onSkipped });
