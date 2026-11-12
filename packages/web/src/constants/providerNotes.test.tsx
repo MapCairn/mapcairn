@@ -56,14 +56,14 @@ describe("the host's privacy notes", () => {
     );
   });
 
-  it.each(SHARED_FACTS)("agree with the privacy page and PRIVACY.md that $fact", ({
-    pattern,
-    notes,
-  }) => {
-    for (const note of notes) {
-      expect(note).toMatch(pattern);
-    }
-    expect(page).toMatch(pattern);
-    expect(policy).toMatch(pattern);
-  });
+  it.each(SHARED_FACTS)(
+    "agree with the privacy page and PRIVACY.md that $fact",
+    ({ pattern, notes }) => {
+      for (const note of notes) {
+        expect(note).toMatch(pattern);
+      }
+      expect(page).toMatch(pattern);
+      expect(policy).toMatch(pattern);
+    },
+  );
 });
