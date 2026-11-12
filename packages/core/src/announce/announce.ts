@@ -77,6 +77,77 @@ export function announceFeaturesFound(count: number): string {
   return `${formatNumber(count)} features here. Choose one from the list.`;
 }
 
+/** What one tap on raster layers that answer a tap came to, for {@link announceIdentified}. */
+export interface IdentifyReport {
+  /** How many features the layers that answered found, in all. */
+  readonly found: number;
+  /** How many layers were asked. */
+  readonly asked: number;
+  /** How many layers could have been asked: on, showing imagery, and covering the tapped place. */
+  readonly available: number;
+  /** The names of the layers that did not answer: they failed or timed out. */
+  readonly failed: readonly string[];
+}
+
+/** What to say about one tap, and how urgently. */
+export interface IdentifyAnnouncement {
+  readonly message: string;
+  readonly priority: "polite" | "assertive";
+}
+
+const NAMES_IN_WORDS = new Intl.ListFormat("en-GB", {
+  style: "long",
+  type: "conjunction",
+});
+
+/** Names as a list in words: "Rain", "Rain and Flood", "Rain, Flood and Wind". */
+function namesInWords(names: readonly string[]): string {
+  return NAMES_IN_WORDS.format(names);
+}
+
+/**
+ * The one message for a tap that asked raster layers what is there, said once
+ * when every layer has answered or run out of time. Several features say a
+ * list opened, and one feature says nothing because its card takes focus.
+ * Nothing found says so, unless every layer failed, when there is nothing to
+ * report but the failure. Layers that did not answer are named, and a tap
+ * that could have asked more layers than it did says how many it asked. It
+ * is assertive only when every layer asked failed, because then the person
+ * has learned nothing. Null when there is nothing to say, including when no
+ * layer was asked.
+ */
+export function announceIdentified({
+  found,
+  asked,
+  available,
+  failed,
+}: IdentifyReport): IdentifyAnnouncement | null {
+  if (asked === 0) {
+    return null;
+  }
+  const everyoneFailed = failed.length === asked;
+  const parts: string[] = [];
+  if (found > 1) {
+    parts.push(announceFeaturesFound(found));
+  } else if (found === 0 && !everyoneFailed) {
+    parts.push("Nothing found here.");
+  }
+  if (failed.length > 0) {
+    parts.push(`${namesInWords(failed)} did not answer.`);
+  }
+  if (available > asked) {
+    parts.push(
+      `Asked ${formatNumber(asked)} of ${formatNumber(available)} layers.`,
+    );
+  }
+  return parts.length === 0
+    ? null
+    : {
+        message: parts.join(" "),
+        priority: everyoneFailed ? "assertive" : "polite",
+      };
+}
+
 /** A query layer drew only the first of more features than it shows. */
 export function announceLayerCapped(name: string, shown: number): string {
   return `${name}: showing the first ${formatNumber(shown)}. Zoom in to see more.`;

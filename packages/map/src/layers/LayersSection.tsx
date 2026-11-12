@@ -4,9 +4,11 @@ import {
   announceShowingFeature,
   type Bounds,
   boundsAroundPoint,
+  cardOf,
   createFormatterRegistry,
   type FormatterRegistry,
   formatTemplate,
+  hasCard,
   type LayerFeature,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
@@ -223,14 +225,12 @@ export function LayersSection({
     setCardRequest((count) => count + 1);
     const layer = layers.layers.find((item) => item.definition.id === layerId);
     const title =
-      layer && "card" in layer.definition
+      layer && hasCard(layer.definition)
         ? formatTemplate(
-            layer.definition.card.title,
+            cardOf(layer.definition).title,
             feature.fields,
             formatters,
-            {
-              now: layers.now(),
-            },
+            { now: layers.now() },
           )
         : null;
     announce(announceShowingFeature(title ?? "the feature"), {

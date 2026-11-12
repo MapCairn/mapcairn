@@ -700,6 +700,13 @@ export function isIdentifiable(
   return isRasterTileLayer(definition) && definition.identify !== undefined;
 }
 
+/** Whether a layer's features open a card: a feed layer, or a tile layer that answers a tap. */
+export function hasCard(
+  definition: LayerDefinition,
+): definition is FeedLayerDefinition | IdentifiableLayerDefinition {
+  return isFeedLayer(definition) || isIdentifiable(definition);
+}
+
 /** The card a layer's features open: a feed's own, or an identifiable layer's nested one. */
 export function cardOf(
   definition: FeedLayerDefinition | IdentifiableLayerDefinition,

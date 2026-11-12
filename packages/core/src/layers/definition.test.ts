@@ -12,6 +12,7 @@ import {
 } from "../fakes/layerFixtures";
 import {
   cardOf,
+  hasCard,
   isFeedLayer,
   isHeatmapLayer,
   isIdentifiable,
@@ -77,6 +78,20 @@ describe("a tile layer with an identify block", () => {
     expect(isIdentifiable(SAMPLE_VECTOR_LAYER)).toBe(false);
     expect(isIdentifiable(SAMPLE_FEED_LAYER)).toBe(false);
     expect(isIdentifiable(SAMPLE_HEATMAP_LAYER)).toBe(false);
+  });
+});
+
+describe("hasCard", () => {
+  it("is true for a feed layer and for a tile layer that answers a tap", () => {
+    expect(hasCard(SAMPLE_FEED_LAYER)).toBe(true);
+    expect(hasCard(SAMPLE_AREA_LAYER)).toBe(true);
+    expect(hasCard(SAMPLE_IDENTIFY_LAYER)).toBe(true);
+  });
+
+  it("is false for a layer whose features open no card", () => {
+    expect(hasCard(SAMPLE_TILE_LAYER)).toBe(false);
+    expect(hasCard(SAMPLE_HEATMAP_LAYER)).toBe(false);
+    expect(hasCard(SAMPLE_VECTOR_LAYER)).toBe(false);
   });
 });
 

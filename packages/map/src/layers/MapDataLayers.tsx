@@ -268,6 +268,7 @@ export function MapDataLayers({
 
   const latest = useLatestRef({
     choose: layers.choose,
+    cancelIdentify: layers.cancelIdentify,
     setView: layers.setView,
     reportTilesUnavailable: layers.reportTilesUnavailable,
     reportTilesRecovered: layers.reportTilesRecovered,
@@ -295,6 +296,13 @@ export function MapDataLayers({
       stopRecovered();
     };
   }, [adapter, latest]);
+  // Once taps mean something else (measuring, say), a raster layer's answer to
+  // an earlier tap must not open a card over it.
+  useEffect(() => {
+    if (ignoreTaps) {
+      latest.current.cancelIdentify();
+    }
+  }, [ignoreTaps, latest]);
   useEffect(() => {
     if (!adapter) {
       return;
@@ -304,6 +312,9 @@ export function MapDataLayers({
       if (current.ignoreTaps) {
         return;
       }
+      // A tap on a drawn feature is a new tap: a raster layer's answer to the
+      // last one must not replace this card when it arrives.
+      current.cancelIdentify();
       // One feature opens its card; several open a list to choose from.
       current.choose(tap.hits, { focus: true });
       current.onFeatureTap?.(tap);
