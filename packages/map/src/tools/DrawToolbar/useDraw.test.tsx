@@ -700,6 +700,21 @@ describe("useDraw", () => {
       });
     });
 
+    it("says that none of a WKT file was read when one line cannot be, and imports nothing", async () => {
+      const rig = await setup();
+      expect(
+        await importFile(rig, {
+          name: "shapes.wkt",
+          text: "POINT (2.35 48.85)\nPOINT M (1 2 3)",
+        }),
+      ).toBeNull();
+      expect(rig.result.current.shapes).toEqual([]);
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "error",
+        text: "The WKT could not be read, so none of the file was imported. Coordinates with a measure (M) are not supported.",
+      });
+    });
+
     it("keeps the result through its own change of shapes, and clears it on the next", async () => {
       const rig = await setup();
       addAll(rig, TRIANGLE);
@@ -721,7 +736,7 @@ describe("useDraw", () => {
       ).toBeNull();
       expect(rig.result.current.importFeedback).toEqual({
         kind: "error",
-        text: "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt or .csv file.",
+        text: "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt, .txt or .csv file.",
       });
       await advance(DRAW_ANNOUNCE_DELAY_MS);
       expect(assertive()).toContain("This is not GeoJSON");

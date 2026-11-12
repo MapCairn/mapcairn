@@ -4,7 +4,7 @@ import type { Feature, Geometry } from "geojson";
 import { describe, expect, it } from "vitest";
 import { failureOf } from "../propertyTesting/failureOf";
 import { GeometryError } from "./errors";
-import { formatWkt, parseWkt, readWktSequence } from "./wkt";
+import { formatWkt, parseWkt, readWktSequence, startsLikeWkt } from "./wkt";
 
 const SQUARE = [
   [0, 0],
@@ -534,6 +534,39 @@ describe("the axis order", () => {
         ],
       ],
     });
+  });
+});
+
+describe("startsLikeWkt", () => {
+  it("is true when the first word is a WKT type, with any case, tag or space before it", () => {
+    for (const text of [
+      "POINT (1 2)",
+      "  point(1 2",
+      "\n\tMultiPolygon EMPTY",
+      "POINTZ (1 2 3)",
+      "LINESTRING M (1 2 3, 4 5 6)",
+      "GEOMETRYCOLLECTION",
+      "CIRCULARSTRING (0 0, 1 1, 2 0)",
+      "POINT",
+    ]) {
+      expect(startsLikeWkt(text)).toBe(true);
+    }
+  });
+
+  it("is false for anything else", () => {
+    for (const text of [
+      "",
+      " ",
+      "hello",
+      "SRID=4326;POINT (1 2)",
+      "(1 2)",
+      "{}",
+      "1 2",
+      "POINTS (1 2)",
+      "name,wkt",
+    ]) {
+      expect(startsLikeWkt(text)).toBe(false);
+    }
   });
 });
 

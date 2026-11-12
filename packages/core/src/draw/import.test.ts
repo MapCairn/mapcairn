@@ -681,16 +681,19 @@ describe("parseShapeFile with WKT text", () => {
     });
   });
 
-  it("skips text with a measure or a curve as a type that cannot be drawn", () => {
-    for (const text of [
-      "POINT M (1 2 3)",
-      "POINT ZM (1 2 3 4)",
-      "CIRCULARSTRING (0 0, 1 1, 2 0)",
-    ]) {
-      expect(parseShapeFile(text)).toMatchObject({
-        ok: true,
-        shapes: [],
-        skipped: { unsupported: 1 },
+  it("refuses the whole file for a measure or a curve, even beside valid lines, and says why", () => {
+    const measure = "Coordinates with a measure (M) are not supported.";
+    const curve = "The WKT type CIRCULARSTRING is not supported.";
+    for (const [text, detail] of [
+      ["POINT M (1 2 3)", measure],
+      ["POINT ZM (1 2 3 4)", measure],
+      ["POINT (1 1)\nLINESTRING (0 0, 1 1)\nPOINT M (1 2 3)", measure],
+      ["CIRCULARSTRING (0 0, 1 1, 2 0)", curve],
+    ] as const) {
+      expect(parseShapeFile(text)).toEqual({
+        ok: false,
+        refusal: "wkt-unreadable",
+        detail,
       });
     }
   });
@@ -699,16 +702,37 @@ describe("parseShapeFile with WKT text", () => {
     expect(shapesOf(parseShapeFile("﻿ \nPOINT (1 1)"))).toHaveLength(1);
   });
 
-  it("refuses text that starts like WKT but is not", () => {
+  it("refuses the whole file for text that starts like WKT but is not, with the reader's own position", () => {
     for (const text of [
       "POINT (1",
       "POINT (1 2) x",
       "POINT (1 2), POINT (3 4)",
-      "SRID=4326;POINT (1 2)",
       "POINT (a b)",
       "POINT (1 2 3 4 5)",
-      "LINESTRING (0 0, 1 1",
+      "POINT (1 1)\nLINESTRING (0 0, 1 1",
       `${"GEOMETRYCOLLECTION (".repeat(40)}POINT (1 1)${")".repeat(40)}`,
+    ]) {
+      const result = parseShapeFile(text);
+      expect(result).toMatchObject({ ok: false, refusal: "wkt-unreadable" });
+      expect(result).toMatchObject({
+        detail: expect.stringMatching(/ at position \d+\.$/),
+      });
+    }
+  });
+
+  it("names the position of the fault in the words of the refusal", () => {
+    expect(parseShapeFile("POINT (1 1)\nLINESTRING (0 0, 1 1")).toEqual({
+      ok: false,
+      refusal: "wkt-unreadable",
+      detail: 'Expected ")" at position 33.',
+    });
+  });
+
+  it("does not take text that does not start with a WKT type for WKT", () => {
+    for (const text of [
+      "SRID=4326;POINT (1 2)",
+      "name,lat,lng\nA,1,2",
+      "(1 2)",
     ]) {
       expect(parseShapeFile(text)).toEqual({
         ok: false,

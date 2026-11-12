@@ -78,6 +78,25 @@ function splitSuffix(word: string): [string, string] {
   return [word, ""];
 }
 
+/** The first run of letters in a text, after any white space. */
+const FIRST_WORD = /^\s*([A-Za-z]+)/;
+
+/**
+ * Whether the text starts with the name of a WKT geometry type (in any case,
+ * with or without a `Z`, `M` or `ZM` tag), including the curved types
+ * {@link parseWkt} does not read. It says what the text is meant to be, not
+ * whether it can be read: use it to tell a damaged WKT file from a file that
+ * is something else.
+ */
+export function startsLikeWkt(text: string): boolean {
+  const word = FIRST_WORD.exec(text)?.[1];
+  if (word === undefined) {
+    return false;
+  }
+  const [type] = splitSuffix(word.toUpperCase());
+  return KEYWORDS.has(type) || UNSUPPORTED_KEYWORDS.has(type);
+}
+
 function refuse(message: string, at: number): GeometryError {
   return new GeometryError("invalid", `${message} at position ${at + 1}.`);
 }

@@ -2,7 +2,11 @@
 // Copyright MapCairn contributors
 import type { Geometry } from "geojson";
 import { GeometryError } from "../geometry/errors";
-import { readWktSequence, type WktAxisOrder } from "../geometry/wkt";
+import {
+  readWktSequence,
+  startsLikeWkt,
+  type WktAxisOrder,
+} from "../geometry/wkt";
 import { shortestLongitudeSpan } from "../globe/longitude";
 import type { Bounds, LatLng } from "../ports/geometry";
 import { SHAPES_CSV_HEADER } from "./export";
@@ -59,6 +63,7 @@ export type ShapeImportRefusal =
   | "too-large"
   | "too-deep"
   | "not-recognised"
+  | "wkt-unreadable"
   | "too-many-shapes"
   | "too-many-points";
 
@@ -73,10 +78,15 @@ export type ShapeImportSkip =
 /**
  * What a file held: a refusal of the whole file, or the shapes that can be
  * drawn with a count of those skipped for each reason and of the polygons
- * whose holes were left out.
+ * whose holes were left out. A `wkt-unreadable` refusal also carries the
+ * `detail` the WKT reader gave: what was wrong, and where.
  */
 export type ShapeImport =
-  | { readonly ok: false; readonly refusal: ShapeImportRefusal }
+  | {
+      readonly ok: false;
+      readonly refusal: ShapeImportRefusal;
+      readonly detail?: string;
+    }
   | {
       readonly ok: true;
       readonly shapes: readonly DrawShapeInput[];
@@ -125,6 +135,8 @@ interface Collector {
   /** Positions read so far. */
   points: number;
   refusal: ShapeImportRefusal | null;
+  /** The WKT reader's words for a `wkt-unreadable` refusal. */
+  detail?: string;
 }
 
 type Candidate = DrawShapeInput | ShapeImportSkip;
@@ -592,46 +604,44 @@ function addCsv(collector: Collector, text: string, layout: CsvLayout): void {
   }
 }
 
-/** The geometries in WKT text, or why it could not be read: `unsupported` for a measure or a curve, `invalid` for anything else. */
+/** The geometries in WKT text, or the reader's error when it could not be read. */
 function readWkt(
   text: string,
   axisOrder: WktAxisOrder,
-): Geometry[] | "invalid" | "unsupported" {
+): Geometry[] | GeometryError {
   try {
     return readWktSequence(text, { axisOrder });
   } catch (error) {
-    return error instanceof GeometryError && error.kind === "unsupported"
-      ? "unsupported"
-      : "invalid";
+    return error instanceof GeometryError
+      ? error
+      : new GeometryError("invalid", "The WKT could not be read.");
   }
-}
-
-/** Adds the shapes of WKT geometries, or one skip for a kind of WKT that cannot be drawn. */
-function addWktGeometries(
-  collector: Collector,
-  geometries: Geometry[] | "unsupported",
-): void {
-  if (geometries === "unsupported") {
-    add(collector, "unsupported");
-    return;
-  }
-  addParts(collector, geometries, (geometry) =>
-    addGeometry(collector, geometry, false),
-  );
 }
 
 /** Adds the shapes of one cell of WKT, or one skip when the cell cannot be read. */
 function addWktCell(collector: Collector, cell: string): void {
   const geometries = readWkt(cell, collector.wktAxisOrder);
-  if (geometries === "invalid") {
-    add(collector, "malformed");
+  if (geometries instanceof GeometryError) {
+    add(
+      collector,
+      geometries.kind === "unsupported" ? "unsupported" : "malformed",
+    );
     return;
   }
-  addWktGeometries(collector, geometries);
+  addGeometries(collector, geometries);
 }
 
-function refuse(refusal: ShapeImportRefusal): ShapeImport {
-  return { ok: false, refusal };
+/** Adds the shapes of WKT geometries, one after another. */
+function addGeometries(collector: Collector, geometries: Geometry[]): void {
+  addParts(collector, geometries, (geometry) =>
+    addGeometry(collector, geometry, false),
+  );
+}
+
+function refuse(refusal: ShapeImportRefusal, detail?: string): ShapeImport {
+  return detail === undefined
+    ? { ok: false, refusal }
+    : { ok: false, refusal, detail };
 }
 
 /** Adds what GeoJSON text holds, or says why the whole text is refused. */
@@ -653,17 +663,26 @@ function addGeoJsonText(
   return null;
 }
 
-/** Adds what WKT text holds, or says why the whole text is refused. */
+/**
+ * Adds what WKT text holds, or says why the whole text is refused: text that
+ * starts with a WKT type but cannot be read is a damaged WKT file, refused
+ * with the reader's own words in `collector.detail`; any other text is not
+ * WKT at all.
+ */
 function addWktText(
   collector: Collector,
   body: string,
 ): ShapeImportRefusal | null {
   const geometries = readWkt(body, collector.wktAxisOrder);
-  if (geometries === "invalid") {
+  if (!(geometries instanceof GeometryError)) {
+    addGeometries(collector, geometries);
+    return null;
+  }
+  if (!startsLikeWkt(body)) {
     return "not-recognised";
   }
-  addWktGeometries(collector, geometries);
-  return null;
+  collector.detail = geometries.message;
+  return "wkt-unreadable";
 }
 
 /**
@@ -696,14 +715,7 @@ function addFileBody(
  * ready for the draw reducer's `import` action. Pure and bounded, and never
  * throws: text from a file is hostile until proven otherwise.
  *
- * @remarks The format is told from the content. WKT may be one geometry or
- *   several one after another (one to a line is usual), each read like its
- *   GeoJSON twin, with the order of its two numbers set by
- *   `options.wktAxisOrder`; a measure (`M`) or a curved type is skipped as
- *   unsupported, and text that is not WKT is refused. A CSV is read when it
- *   is the draw tool's own, or when its header has a column named `wkt`
- *   (any case), whose cells are read as WKT, a cell that cannot be read
- *   skipping its row. GeoJSON may be a
+ * @remarks The format is told from the content. GeoJSON may be a
  *   `FeatureCollection`, a `Feature` or a bare geometry; Multi geometries
  *   give one shape per part, a `GeometryCollection` is flattened once, and a
  *   polygon keeps its outer ring, its holes left out and counted. A feature
@@ -712,6 +724,17 @@ function addFileBody(
  *   `radius_m`, `centre_lng` and `centre_lat`. Every shape must pass the
  *   draw tool's own rules with positions inside the world, or it is skipped
  *   and counted.
+ *
+ *   WKT may be one geometry or several one after another (one to a line is
+ *   usual), each read like its GeoJSON twin, with the order of its two
+ *   numbers set by `options.wktAxisOrder`. WKT text that cannot be read, or
+ *   that holds a measure (`M`) or a curved type, is refused whole as
+ *   `wkt-unreadable`, with the reader's own words and position in `detail`,
+ *   and nothing in it is imported; text that does not start with a WKT type
+ *   is `not-recognised`. A CSV that is not the draw tool's own is read as
+ *   WKT when its header has a column named `wkt` (any case, comma-delimited
+ *   only), whose cells are read as WKT; a cell that cannot be read skips
+ *   only its row.
  *
  *   The text is refused whole when it is longer than
  *   {@link MAX_IMPORT_BYTES} characters, nests deeper than
@@ -745,7 +768,7 @@ export function parseShapeFile(
   };
   const refusal = addFileBody(collector, body) ?? collector.refusal;
   if (refusal) {
-    return refuse(refusal);
+    return refuse(refusal, collector.detail);
   }
   return {
     ok: true,
