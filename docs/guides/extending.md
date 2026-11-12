@@ -1,12 +1,12 @@
 # Extending MapCairn
 
-Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md).
+Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, layers supplied at runtime, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md).
 
 ## Embed the SDK in an app of your own
 
 `examples/embed` is a one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. Run it with `npm run dev -w @mapcairn/example-embed` (add `-- --port <port>` to pick a port).
 
-It runs on the SDK's fakes (`createFakeServices()`), so it requests nothing and loads no map engine, and the map region shows only its background colour under the real chrome: the search pill, the end stack, the sheet with its basemap, pin, layers and settings sections, the measure toolbar, the scale bar and the credits, with the zoom level under the scale bar in the side panel layout (`MapReadout` leaves it out in the sheet layout unless `showZoom` is set). It adds one layer of its own (`src/cairnsLayer.ts`), answered from memory, a `ThemeSource` that writes the chosen theme onto the page, the fakes' `MemoryFeatureSelection`, which it passes through `useFeatureSelection` and `SelectionProvider` (nothing reads the selected set yet), a WebMCP tool through `useModelContextTool`, and the SDK's built-in basemaps as they are, which name no preview image (the files belong to the host that serves them), so its picker shows a plain swatch for each.
+It runs on the SDK's fakes (`createFakeServices()`), so it requests nothing and loads no map engine, and the map region shows only its background colour under the real chrome: the search pill, the end stack, the sheet with its basemap, pin, layers and settings sections, the measure toolbar, the scale bar and the credits, with the zoom level under the scale bar in the side panel layout (`MapReadout` leaves it out in the sheet layout unless `showZoom` is set). It adds one layer of its own (`src/cairnsLayer.ts`), answered from memory, three more that a sample mapper makes from a made-up server's layer metadata (see [Supply layers at runtime](#supply-layers-at-runtime)), a `ThemeSource` that writes the chosen theme onto the page, the fakes' `MemoryFeatureSelection`, which it passes through `useFeatureSelection` and `SelectionProvider` (nothing reads the selected set yet), a WebMCP tool through `useModelContextTool`, and the SDK's built-in basemaps as they are, which name no preview image (the files belong to the host that serves them), so its picker shows a plain swatch for each.
 
 What it proves, on every pull request: `npm run typecheck` and `npm run build` fail if an entry point stops exporting what an app needs or the vanilla-extract step breaks, its Vitest test mounts the app and uses it, dependency-cruiser refuses an import from `examples/` into a file inside a package, into the reference host or by a relative path, and any import of an example from a package, and a test in `packages/core/src/lint/manifests.test.ts` checks that each SDK package declares every package its source imports, exports only its entry points, takes React as a peer and declares `vitest` as an optional peer of core for the contract suites, which the hoisted workspace would otherwise hide.
 
@@ -275,6 +275,21 @@ const places: FeedLayerDefinition<PointStyle> = {
 
 export default places;
 ```
+
+## Supply layers at runtime
+
+A host with a server of its own usually holds its layer metadata in that server's format, not as MapCairn definitions. `examples/embed/src/mapServerLayers.ts` is a sample of turning the one into the other, and [`serving-layers.md`](serving-layers.md) covers what a host's server should serve and how `createRuntimeLayerCatalogue` behaves. The sample's server is made up: `src/serverMetadata.ts` types what it says, and `src/sampleServerLayers.ts` is its answer, a constant, so nothing is requested. `createExampleCatalogue` in `src/exampleServices.ts` passes `createRuntimeLayerCatalogue` a `load` that returns the example's own layer and the mapper's output, and the fake layer source answers for the feed layers.
+
+What `mapServerLayers` maps, using only what the SDK already offers:
+
+- **A field list** becomes the field map, the card and the list. The first object id (`oid`) identifies a feature and the first text field titles it. A card line shows each other field as `Label: {name}`, through the built-in `number` formatter for an integer or a double and `date` for a date. A field of another type (a blob) is left out, as is one whose name a template cannot read. The list's second line is the first card line, with a sort by title and one by each number. A layer's `visibleValues` becomes `source.filter`.
+- **A renderer** becomes a style, and `legendFor` derives the legend from it, so nothing maps a legend by hand. Unique values become a `category` rule, class breaks `steps` and equal intervals `intervals`. The SDK's point styles take `steps` and no `intervals`, so equal intervals map for polygons and lines only. Colours come from the palette in order and never from the server: the palette has five ordinal colours and seven categorical ones, so a rule has at most five classes, or six values and the class for every other value. A polygon or line coloured by a field also gets a label that names that field, because the SDK needs a second signal beyond colour.
+- **A tile service** becomes a raster layer whose legend is the server's, on the ordinal colours.
+- **An id** such as `Huts_2024` becomes `huts-2024`, since a definition's id is lowercase letters, digits and hyphens. Braces are taken out of a label so a server cannot open a template placeholder.
+
+The mapper does not check what it makes. A layer it cannot use becomes a candidate the catalogue skips, as `partitionDefinitions` does for any definition, and `onSkipped` gets the layer's id and each problem as a `path: message` line. In the sample, `survey-notes` has no text field, so the catalogue skips it with `source.fields.title: is required` and `card.title: {title} is not a field`, and the example writes one console line for it (`logSkippedLayers`). The checks stay in core.
+
+No mapping helper was added to `@mapcairn/core`: the sample needs only `CATEGORICAL_SLOTS`, `ORDINAL_SLOTS` and the runtime catalogue. A host with a differently shaped server writes its own mapper, with the same tests: its payload to the definitions it expects, and a payload it cannot map to the problems the catalogue reports (`mapServerLayers.test.ts` does both).
 
 ## Add a routing provider
 
