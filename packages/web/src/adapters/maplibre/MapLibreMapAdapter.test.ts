@@ -2028,6 +2028,82 @@ describe("MapLibreMapAdapter", () => {
       expect(click).toHaveBeenCalledTimes(1);
     });
 
+    it("reports a drag as start, move after leaving the click tolerance, then end", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const drags: { phase: string; moved: boolean }[] = [];
+      adapter.on("handleDrag", ({ phase, moved }) =>
+        drags.push({ phase, moved }),
+      );
+      const press = pointerEvent(map, HANDLE.position);
+      map.fire("mousedown", press);
+      map.fire("mousemove", {
+        ...press,
+        point: { x: press.point.x + 1, y: press.point.y },
+      });
+      map.fire("mousemove", {
+        ...press,
+        point: { x: press.point.x + 40, y: press.point.y },
+      });
+      map.fire("mouseup", press);
+      expect(drags).toEqual([
+        { phase: "start", moved: false },
+        { phase: "move", moved: true },
+        { phase: "end", moved: true },
+      ]);
+    });
+
+    it("reports a press that never left the tolerance as not moved", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const ends: boolean[] = [];
+      adapter.on("handleDrag", (drag) => {
+        if (drag.phase === "end") {
+          ends.push(drag.moved);
+        }
+      });
+      const press = pointerEvent(map, HANDLE.position);
+      map.fire("mousedown", press);
+      map.fire("mouseup", press);
+      expect(ends).toEqual([false]);
+    });
+
+    it("brings the position of a drag into [-180, 180)", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const longitudes: number[] = [];
+      adapter.on("handleDrag", (drag) => longitudes.push(drag.latlng.lng));
+      map.fire("mousedown", {
+        ...pointerEvent(map, HANDLE.position),
+        lngLat: { lat: HANDLE.position.lat, lng: 190 },
+      });
+      expect(longitudes).toEqual([-170]);
+    });
+
+    it("reports hover over a handle for the mouse only, and when it ends", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const hovers: (string | null)[] = [];
+      adapter.on("handleHover", (id) => hovers.push(id));
+      map.fire("touchmove", pointerEvent(map, HANDLE.position));
+      expect(hovers).toEqual([]);
+      map.fire("mousemove", pointerEvent(map, HANDLE.position));
+      map.fire("mousemove", pointerEvent(map, HANDLE.position));
+      map.fire("mousemove", pointerEvent(map, { lat: -26.5, lng: 28.5 }));
+      expect(hovers).toEqual(["v0", null]);
+    });
+
+    it("ends the hover when the hovered handle is taken away", async () => {
+      const { adapter, map } = await mounted();
+      adapter.setEditHandles([HANDLE]);
+      const hovers: (string | null)[] = [];
+      adapter.on("handleHover", (id) => hovers.push(id));
+      map.fire("mousemove", pointerEvent(map, HANDLE.position));
+      adapter.setEditHandles([{ ...HANDLE, id: "v1" }]);
+      adapter.setEditHandles([]);
+      expect(hovers).toEqual(["v0", null]);
+    });
+
     it("does nothing with the mouse when no handles are set", async () => {
       const { adapter, map } = await mounted();
       const hover = vi.fn();
