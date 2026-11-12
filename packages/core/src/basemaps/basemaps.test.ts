@@ -137,19 +137,9 @@ describe("BASEMAPS", () => {
     }
   });
 
-  it("names a preview only as the root-relative path of its own jpg, so a host that serves none shows the swatch", () => {
+  it("names no preview for any basemap, because the SDK ships no image files and a host adds its own paths", () => {
     for (const basemap of BASEMAPS) {
-      if (basemap.thumbnail !== undefined) {
-        expect(basemap.thumbnail, basemap.id).toBe(
-          `/basemaps/${basemap.id}.jpg`,
-        );
-      }
-    }
-  });
-
-  it("names no preview for Liberty, Colorful or Fiord, whose images the reference host does not ship", () => {
-    for (const id of ["liberty", "colorful", "fiord"]) {
-      expect(getBasemap(id)?.thumbnail, id).toBeUndefined();
+      expect(basemap.thumbnail, basemap.id).toBeUndefined();
     }
   });
 

@@ -83,7 +83,6 @@ export const SATELLITE_BASEMAP: BasemapDefinition = {
   },
   minZoom: 0,
   maxZoom: SATELLITE_MAX_ZOOM,
-  thumbnail: "/basemaps/satellite.jpg",
   attribution: SATELLITE_CREDITS,
   appearance: "dark",
   // A dark green of the host's own choosing, not sampled from the imagery, so

@@ -70,10 +70,11 @@ export interface BasemapDefinition {
   readonly minZoom: number;
   readonly maxZoom: number;
   /**
-   * Root-relative path of a preview image that the host is expected to
-   * serve; the SDK ships no image files. A basemap with none is shown in the
-   * picker as a plain colour swatch, as in Save data mode, and so is one
-   * whose image fails to load.
+   * Root-relative path of a preview image that the host serves. The SDK ships
+   * no image files, so its own definitions name none and a host that has
+   * previews adds the path to the definitions it offers. A basemap with none
+   * is shown in the picker as a plain colour swatch, as in Save data mode, and
+   * so is one whose image fails to load.
    */
   readonly thumbnail?: string;
   /**

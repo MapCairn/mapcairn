@@ -1,3 +1,4 @@
+import { BASEMAPS } from "@mapcairn/core";
 import {
   act,
   cleanup,
@@ -49,6 +50,17 @@ describe("ExampleApp", () => {
     fireEvent.click(within(layers).getByRole("switch", { name: /Cairns/ }));
 
     expect(await within(layers).findByText(/3 shown/)).toBeTruthy();
+  });
+
+  it("offers the SDK's basemaps as plain swatches, because the SDK names no preview image", async () => {
+    render(<ExampleApp />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Map options" }));
+    const picker = await screen.findByRole("radiogroup", { name: "Basemap" });
+
+    expect(within(picker).getAllByRole("radio")).toHaveLength(BASEMAPS.length);
+    expect(picker.querySelectorAll("img")).toHaveLength(0);
+    expect(within(picker).getByTestId("basemap-swatch-bright")).toBeTruthy();
   });
 
   it("registers a WebMCP tool that turns the layer on", async () => {

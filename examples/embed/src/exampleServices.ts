@@ -1,12 +1,8 @@
 import {
-  BASEMAPS,
-  type BasemapDefinition,
-  createBasemapCatalogue,
   createDecoderRegistry,
   createFakeServices,
   createFormatterRegistry,
   createLayerRegistry,
-  DEFAULT_BASEMAP_ID,
   type ResolvedTheme,
   type Services,
   THEME_ATTRIBUTE,
@@ -35,18 +31,11 @@ export class PageThemeSource implements ThemeSource {
 }
 
 /**
- * The built-in basemaps without their preview images. The SDK's thumbnails
- * are paths on the reference host, which this app does not serve, so the
- * picker shows each basemap's plain swatch instead.
- */
-function basemapsWithoutThumbnails(): BasemapDefinition[] {
-  return BASEMAPS.map(({ thumbnail: _thumbnail, ...basemap }) => basemap);
-}
-
-/**
  * The services the example runs on: the SDK's fakes, so nothing is requested
  * and no map engine is loaded, with a few scripted answers, one layer of its
- * own and a theme source that reaches the page.
+ * own and a theme source that reaches the page. It offers the SDK's built-in
+ * basemaps as they are: they name no preview image, so the picker shows each
+ * one's plain swatch.
  */
 export function createExampleServices(): Services {
   const services = createFakeServices({
@@ -55,10 +44,6 @@ export function createExampleServices(): Services {
       decoders: createDecoderRegistry(),
       formatters: createFormatterRegistry(),
     }),
-    basemaps: createBasemapCatalogue(
-      basemapsWithoutThumbnails(),
-      DEFAULT_BASEMAP_ID,
-    ),
     routing: undefined,
   });
   services.fakes.layerSource.setFeatures(CAIRNS_LAYER.id, CAIRN_FEATURES);

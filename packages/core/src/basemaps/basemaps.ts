@@ -69,7 +69,6 @@ const BRIGHT: BasemapDefinition = {
   source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/bright` },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
-  thumbnail: "/basemaps/bright.jpg",
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "light",
   // Nothing to leave out in Save data mode: the style names the Natural Earth
@@ -85,9 +84,9 @@ const LIBERTY: BasemapDefinition = {
   maxZoom: VECTOR_MAX_ZOOM,
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "light",
-  // No `thumbnail` and no `swatch`: the `background` layer of its style is
-  // #f8f4f0, the default's land colour (checked 2026-11-12), so the picker's
-  // plain tile needs no colour of its own.
+  // No `swatch`: the `background` layer of its style is #f8f4f0, the default's
+  // land colour (checked 2026-11-12), so the picker's plain tile needs no
+  // colour of its own.
   // The Natural Earth shaded relief raster layer (source "ne2_shaded"), drawn
   // from zoom 0 to 7. It is 933 KB of a 2.7 MB first view of the world, and
   // the vector layers carry the same map without it.
@@ -124,8 +123,8 @@ const FIORD: BasemapDefinition = {
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "dark",
   // Fiord's own land colour (the `background` layer of its style), so the
-  // plain tile the picker shows (it names no `thumbnail`, and Save data mode
-  // shows one too) reads as a dark map, not as Bright's.
+  // plain tile the picker shows (the SDK names no preview image, and Save data
+  // mode shows one too) reads as a dark map, not as Bright's.
   swatch: "#45516e",
   // Nothing to leave out in Save data mode: like Bright, the style names the
   // Natural Earth raster source but draws no raster layer from it.
@@ -137,7 +136,6 @@ const DARK: BasemapDefinition = {
   source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/dark` },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
-  thumbnail: "/basemaps/dark.jpg",
   attribution: OPEN_FREE_MAP_CREDITS,
   appearance: "dark",
   // Dark's own land colour (the `background` layer of its style, rgb(12,12,12)),
@@ -158,7 +156,6 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
     source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/positron` },
     minZoom: 0,
     maxZoom: VECTOR_MAX_ZOOM,
-    thumbnail: "/basemaps/positron.jpg",
     attribution: OPEN_FREE_MAP_CREDITS,
     appearance: "light",
   },
@@ -176,7 +173,6 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
     },
     minZoom: 0,
     maxZoom: OSM_MAX_ZOOM,
-    thumbnail: "/basemaps/osm.jpg",
     attribution: [OPEN_STREET_MAP_CREDIT],
     appearance: "light",
   },
