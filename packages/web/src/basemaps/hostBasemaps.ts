@@ -65,12 +65,11 @@ export function selectBasemaps(
  * Adds the preview the site serves for a basemap, from {@link BASEMAP_THUMBNAILS}.
  * The SDK's definitions name no preview, so this is where a host that serves
  * the files says so.
- * @returns A copy with `thumbnail` set, or the definition itself when the site
- *   serves no preview for it.
+ * @returns A copy with `thumbnail` set. A test requires the table to name every
+ *   basemap the host offers, so none is left without a preview.
  */
 function withThumbnail(basemap: BasemapDefinition): BasemapDefinition {
-  const thumbnail = BASEMAP_THUMBNAILS[basemap.id];
-  return thumbnail === undefined ? basemap : { ...basemap, thumbnail };
+  return { ...basemap, thumbnail: BASEMAP_THUMBNAILS[basemap.id] };
 }
 
 /**

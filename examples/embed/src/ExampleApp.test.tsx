@@ -1,3 +1,4 @@
+import { BASEMAPS } from "@mapcairn/core";
 import {
   act,
   cleanup,
@@ -57,7 +58,7 @@ describe("ExampleApp", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Map options" }));
     const picker = await screen.findByRole("radiogroup", { name: "Basemap" });
 
-    expect(within(picker).getAllByRole("radio").length).toBeGreaterThan(0);
+    expect(within(picker).getAllByRole("radio")).toHaveLength(BASEMAPS.length);
     expect(picker.querySelectorAll("img")).toHaveLength(0);
     expect(within(picker).getByTestId("basemap-swatch-bright")).toBeTruthy();
   });

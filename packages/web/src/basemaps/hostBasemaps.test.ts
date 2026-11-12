@@ -82,6 +82,13 @@ describe("the reference host's basemaps", () => {
         ...getBasemap(id),
         thumbnail: `/basemaps/${id}.jpg`,
       });
+      expect(HOST_BASEMAP_CATALOGUE.get(id), id).not.toBe(getBasemap(id));
+    }
+  });
+
+  it("leaves every SDK definition and the host's own definitions without a preview", () => {
+    for (const basemap of [...BASEMAPS, ...HOST_OWN_BASEMAPS]) {
+      expect(basemap.thumbnail, basemap.id).toBeUndefined();
     }
   });
 

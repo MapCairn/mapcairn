@@ -105,7 +105,7 @@ const UNKNOWN = REQUESTED.filter(
 );
 if (UNKNOWN.length > 0) {
   throw new Error(
-    `Unknown basemap ids, or ones that name no thumbnail: ${UNKNOWN.join(", ")}`,
+    `Unknown basemap ids, or ones the host names no preview for: ${UNKNOWN.join(", ")}`,
   );
 }
 

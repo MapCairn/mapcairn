@@ -195,10 +195,11 @@ export async function scriptLayers(
  * @remarks The catalogue is rebuilt inside the page from the definitions,
  *   because its `get` and `resolve` are functions and cannot cross from the
  *   test to the page. It follows the rules of `createBasemapCatalogue`: an id
- *   it does not hold resolves to the default. The previews of the three basemaps
- *   the site does not offer are no longer in `public/basemaps`, so they are
- *   answered with a blank image, as the picker would otherwise show a broken
- *   one and the preview server would log a missing route for each.
+ *   it does not hold resolves to the default. The SDK's definitions name no
+ *   preview, so passing them requests none. A spec that adds preview paths of
+ *   its own for basemaps the site does not offer has them answered with a
+ *   blank image, as the picker would otherwise show a broken one and the
+ *   preview server would log a missing route for each.
  */
 export async function scriptBasemaps(
   page: Page,
