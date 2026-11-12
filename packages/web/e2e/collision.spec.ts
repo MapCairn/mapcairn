@@ -3,6 +3,7 @@
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
+import { mockLayerProviders } from "./support/layers";
 import { inspectChromeLayout } from "./support/layout";
 import { scriptSearch } from "./support/services";
 import {
@@ -497,3 +498,86 @@ test.describe("tour card", () => {
     });
   }
 });
+
+/** The sizes the map key's placement is checked at: two small phones, a phone, a tablet and a desktop. */
+const MAP_KEY_VIEWPORTS = [
+  { width: 320, height: 568 },
+  { width: 360, height: 640 },
+  { width: 390, height: 844 },
+  { width: 820, height: 1180 },
+  { width: 1440, height: 900 },
+] as const;
+
+/** Three layers on that have a key. */
+const KEYED_LAYERS = "#layers=earthquakes,fire-alerts,cyclones";
+
+/**
+ * Brings the map key to open or minimised from the state it starts in, which
+ * is minimised on a phone and open on a larger screen.
+ */
+async function setMapKey(
+  mapPage: MapPage,
+  state: "open" | "minimised",
+): Promise<void> {
+  const expanded = state === "open";
+  if (
+    (await mapPage.mapKeyToggle.getAttribute("aria-expanded")) !== `${expanded}`
+  ) {
+    await mapPage.mapKeyToggle.click();
+  }
+  await expect(mapPage.mapKeyToggle).toHaveAttribute(
+    "aria-expanded",
+    `${expanded}`,
+  );
+}
+
+/*
+ * The map key in the layout collision test (DESIGN.md, "Layout and slots").
+ * With layers on, open and minimised, it shares the screen with no other
+ * floating element in any chrome state, and stays inside the viewport. It
+ * is either shown and clear, or it has given way (`data-crowded`, or the
+ * credits are open) and is hidden and inert, never left under another
+ * element.
+ */
+for (const viewport of MAP_KEY_VIEWPORTS) {
+  test(
+    `the map key never collides at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage }) => {
+      test.setTimeout(240_000);
+      await mockLayerProviders(page);
+      await page.setViewportSize(viewport);
+      await scriptSearch(page);
+      await mapPage.goto(KEYED_LAYERS);
+
+      for (const keyState of ["open", "minimised"] as const) {
+        await collapseCredits(mapPage);
+        await setMapKey(mapPage, keyState);
+        for (const state of CHROME_STATES) {
+          await test.step(`${keyState}, ${state}`, async () => {
+            await enterState(mapPage, state);
+            await waitForStableLayout(mapPage.page);
+            const report = await inspectChromeLayout(mapPage.page);
+            const context = `${keyState}, ${state}: ${JSON.stringify(report.boxes)}`;
+            expect(report.overlaps, context).toEqual([]);
+            expect(report.outside, context).toEqual([]);
+            expect(report.obscured, context).toEqual([]);
+
+            const crowded =
+              (await mapPage.mapKeySlot.getAttribute("data-crowded")) ===
+              "true";
+            const shown = report.boxes.some((box) => box.name === "map-key");
+            if (state === "attribution open" || crowded) {
+              expect(shown, context).toBe(false);
+              await expect(mapPage.mapKey, context).toBeHidden();
+            } else {
+              expect(shown, context).toBe(true);
+              await expect(mapPage.mapKey, context).toBeVisible();
+            }
+            await leaveState(mapPage, state);
+          });
+        }
+      }
+    },
+  );
+}

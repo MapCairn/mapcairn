@@ -33,6 +33,13 @@ export const chromeVars = {
   bottomStartX: "--chrome-bottom-start-x",
   /** Vertical shift of the bottom-centre slot, from the sheet alone (zero or negative). */
   bottomCentreLift: "--chrome-bottom-centre-lift",
+  /**
+   * The tallest the map key may be before it scrolls: the room between the
+   * search pill (or the tour card, while it shows) and the lifted bottom row.
+   */
+  mapKeyRoom: "--chrome-map-key-room",
+  /** Vertical shift of the map key from its resting place, to sit a gap above the lifted bottom row (zero or negative). */
+  mapKeyLift: "--chrome-map-key-lift",
 } as const;
 
 /** Reads a chrome variable in a stylesheet, with a fallback. */

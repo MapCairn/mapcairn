@@ -9,7 +9,6 @@ import {
   isFeedLayer,
   type LayerControlDefinition,
   type LayerFeature,
-  legendFor,
   loadsFeatures,
   resolveDateBound,
 } from "@mapcairn/core";
@@ -23,7 +22,8 @@ import { Slider } from "../ui/Slider";
 import { Switch } from "../ui/Switch";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { DateTimeControl } from "./DateTimeControl";
-import { FeatureGlyph, LegendGlyph } from "./FeatureGlyph";
+import { FeatureGlyph } from "./FeatureGlyph";
+import { LayerKey } from "./LayerKey";
 import * as styles from "./Layers.css";
 import type { DataLayerState, DataLayers, LayerStatus } from "./useDataLayers";
 
@@ -163,28 +163,6 @@ function LayerControl({ layer, control, layers }: ControlProps) {
         </div>
       );
   }
-}
-
-/** The legend, derived from the layer's style. */
-function LayerLegend({ layer }: { layer: DataLayerState }) {
-  const { entries } = legendFor(layer.definition);
-  if (entries.length === 0) {
-    return null;
-  }
-  return (
-    <ul
-      className={styles.legend}
-      aria-label={`Key for ${layer.definition.name}`}
-      data-testid={`layer-legend-${layer.definition.id}`}
-    >
-      {entries.map((entry) => (
-        <li key={entry.label} className={styles.legendEntry}>
-          <LegendGlyph entry={entry} />
-          {entry.label}
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 interface ListProps {
@@ -362,7 +340,11 @@ export function LayerItem({
               layers={layers}
             />
           ))}
-          <LayerLegend layer={layer} />
+          <LayerKey
+            definition={definition}
+            label={`Key for ${definition.name}`}
+            testId={`layer-legend-${definition.id}`}
+          />
           {definition.disclaimer ? (
             <p className={styles.disclaimer}>
               <Icon icon={TriangleAlert} />

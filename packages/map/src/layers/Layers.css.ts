@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { focusRing, mapOverlayTokens, tokens } from "@mapcairn/theme";
-import { style } from "@vanilla-extract/css";
+import { globalStyle, style } from "@vanilla-extract/css";
 
 const small = {
   fontSize: tokens.type.small.size,
@@ -229,6 +229,12 @@ export const legend = style({
   ...small,
 });
 
+/** The legend with one entry on each row, for a panel too narrow to wrap them side by side. */
+export const legendStacked = style([
+  legend,
+  { flexDirection: "column", flexWrap: "nowrap", gap: tokens.space.xxs },
+]);
+
 /** One legend entry: the glyph and its label. */
 export const legendEntry = style({
   display: "inline-flex",
@@ -236,6 +242,19 @@ export const legendEntry = style({
   gap: tokens.space.xxs,
   marginInlineEnd: tokens.space.sm,
 });
+
+/**
+ * One entry of a stacked legend. Every glyph is centred in a column of one
+ * fixed width, so the words line up whatever the markers' sizes.
+ */
+export const legendEntryStacked = style({
+  display: "grid",
+  gridTemplateColumns: `calc(${tokens.space.xl} * 1.25) 1fr`,
+  alignItems: "center",
+  columnGap: tokens.space.xs,
+});
+
+globalStyle(`${legendEntryStacked} > svg`, { justifySelf: "center" });
 
 /** The hazard note, with its icon. */
 export const disclaimer = style({

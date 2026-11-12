@@ -1,6 +1,6 @@
 # Using the reference site
 
-What the reference host offers for searching, saving the map, turning layers off and drawing, and how each works from the keyboard and a pointer.
+What the reference host offers for searching, saving the map, reading the layer key, turning layers off and drawing, and how each works from the keyboard and a pointer.
 
 ## Search by place name or coordinates
 
@@ -17,6 +17,12 @@ A comma is only ever a separator, never a decimal mark, and a negative sign (hyp
 ## Save an image and choose between features
 
 The sheet's "Save image" button saves a PNG of the map with its layers, any drawn shapes and credits, made in the browser from what the map has already loaded. A tap that finds several features opens a list, and the `I` key opens the same list for the centre of the map. Neither needs configuration.
+
+## Read the key on the map
+
+While a layer that has a key is on, its key shows on the map, above the scale bar, so you can read what its colours and shapes mean without opening Layers. Each layer has a block: its name, then one line for each colour or shape with its words. A layer with no key, such as the imagery layers, has no block, and with no keyed layer on there is no key at all.
+
+On a phone the key starts as a small chip, "Key, 3 layers", with the symbols of a few of the layers. On a larger screen it starts open. Choose the chevron ("Minimise map key") to shrink it to the chip, and the chip to open it again. The key remembers your choice until you reload the page; it is not stored between visits and puts nothing in the address. When many layers are on, the key scrolls inside its own height. It steps aside while the map credits are open, and when something else leaves too little room above the scale bar.
 
 ## Turn layers off
 
