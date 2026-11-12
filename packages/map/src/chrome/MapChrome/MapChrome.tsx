@@ -5,6 +5,7 @@ import {
   computeEndStackMaxHeight,
   type SheetDetent,
 } from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import {
   type ReactNode,
   useCallback,
@@ -299,13 +300,12 @@ export function MapChrome({
     update();
   }, [layout, update]);
 
-  const latestViewportChange = useRef(onViewportChange);
-  latestViewportChange.current = onViewportChange;
+  const onViewportChangeRef = useLatestRef(onViewportChange);
   useEffect(() => {
     if (measurements) {
-      latestViewportChange.current?.(viewport);
+      onViewportChangeRef.current?.(viewport);
     }
-  }, [viewport, measurements]);
+  }, [viewport, measurements, onViewportChangeRef]);
 
   // Where the bottom row rests above the bottom edge.
   const inset = measurements?.bottomInset ?? INSET_PX;
