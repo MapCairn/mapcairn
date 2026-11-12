@@ -76,15 +76,21 @@ export const toggle = style({
   },
 });
 
-/** The first glyph of each layer's key, side by side. */
+/**
+ * The first glyph of each layer's key, side by side. Each glyph's picture has
+ * room around the marker, so the gap is small.
+ */
 export const strip = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: tokens.space.xs,
+  gap: tokens.space.xxs,
 });
 
-/** "Key, 3 layers". */
-export const chipText = style({ fontVariantNumeric: "tabular-nums" });
+/** "Key, 3 layers", on one line so the chip stays as narrow as it can be. */
+export const chipText = style({
+  fontVariantNumeric: "tabular-nums",
+  whiteSpace: "nowrap",
+});
 
 /**
  * What scrolls inside the panel. It has a tab stop, with the focus ring, only

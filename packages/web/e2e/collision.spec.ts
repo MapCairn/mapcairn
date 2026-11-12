@@ -581,3 +581,57 @@ for (const viewport of MAP_KEY_VIEWPORTS) {
     },
   );
 }
+
+/*
+ * The map key and the first-visit tour card together. Tour step 1 asks a new
+ * visitor to turn a layer on, so the first key a person sees appears under
+ * the tour's next card. They share the cell under the search pill, and the
+ * key keeps clear of the card (or gives way to it).
+ */
+test.describe("tour card with the map key", () => {
+  test.use({ firstVisit: true });
+
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+  ] as const) {
+    test(
+      `share the screen at ${viewport.width}x${viewport.height}`,
+      viewportDetails(viewport),
+      async ({ page, mapPage }) => {
+        await mockLayerProviders(page);
+        await page.setViewportSize(viewport);
+        await startFirstVisit(mapPage, "light");
+        await advanceTourTo(mapPage, "step 1");
+
+        await mapPage.openMapOptions();
+        await page
+          .getByTestId("layer-earthquakes")
+          .getByRole("switch", { name: /Earthquakes/ })
+          .click();
+        await expect(
+          page.getByRole("heading", { name: "Try the globe" }),
+        ).toBeVisible();
+        await mapPage.sheetClose.click();
+        await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+
+        await expectTourLayout(
+          mapPage,
+          "tour step 2 with the key",
+          "as it fits",
+        );
+        await expect(mapPage.mapKey).toBeVisible();
+        const [tour, key] = await Promise.all([
+          page.getByTestId("tour-card").boundingBox(),
+          mapPage.mapKey.boundingBox(),
+        ]);
+        if (!(tour && key)) {
+          throw new Error("The tour card or the map key has no box.");
+        }
+        expect(key.y, "the key starts below the tour card").toBeGreaterThan(
+          tour.y + tour.height,
+        );
+      },
+    );
+  }
+});

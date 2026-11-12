@@ -15,7 +15,7 @@ import type { DataLayers } from "./useDataLayers";
 import { useScrolls } from "./useScrolls";
 
 /** How many layers' glyphs the minimised chip shows; the count says the rest. */
-const STRIP_LIMIT = 4;
+const STRIP_LIMIT = 3;
 
 /** Props for {@link MapKey}. */
 export interface MapKeyProps {

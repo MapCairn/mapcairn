@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeLayerCatalogue,
   FakeMapAdapter,
   type LayerDefinition,
   SAMPLE_ALERT_LAYER,
@@ -9,7 +10,6 @@ import {
   SAMPLE_HEATMAP_LAYER,
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
-  StaticLayerRegistry,
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -49,7 +49,7 @@ function setup(
     props = {},
   } = options;
   const services = createFakeServices({
-    layers: new StaticLayerRegistry(definitions),
+    layers: new FakeLayerCatalogue(definitions),
   });
   const handle: { current: DataLayers | null } = { current: null };
   function Harness() {
@@ -184,6 +184,19 @@ describe("MapKey", () => {
       expect(
         screen.getByRole("button", { name: "Minimise map key" }),
       ).toHaveFocus();
+    });
+
+    it("shows the glyphs of the first three layers on the chip, and the count says the rest", () => {
+      const { turnOn } = setup({ props: { defaultMinimised: true } });
+      turnOn(
+        SAMPLE_FEED_LAYER.id,
+        SAMPLE_ALERT_LAYER.id,
+        SAMPLE_HEATMAP_LAYER.id,
+        TIMED_LAYER.id,
+      );
+      const chip = screen.getByRole("button", { name: "Key, 4 layers" });
+      // Three glyphs and the chevron.
+      expect(chip.querySelectorAll("svg[aria-hidden='true']").length).toBe(4);
     });
 
     it("counts one layer in the singular", () => {
