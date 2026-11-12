@@ -10,6 +10,7 @@ export * from "./feed";
 export * from "./filter";
 export * from "./formatters";
 export * from "./heatmap";
+export * from "./identify";
 export * from "./palette";
 export * from "./partitionDefinitions";
 export * from "./paths";

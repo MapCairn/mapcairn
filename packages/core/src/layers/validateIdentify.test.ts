@@ -94,10 +94,10 @@ describe("the identify URL", () => {
     },
   );
 
-  it("must not hold a placeholder in its port either", () => {
-    expect(
-      urlProblems(`https://api.test:{period}/identify?${BOX}`),
-    ).not.toEqual([]);
+  it("refuses a placeholder in its port, which no URL can parse, as not a URL", () => {
+    expect(urlProblems(`https://api.test:{period}/identify?${BOX}`)).toEqual([
+      "identify.url: must be an https URL template",
+    ]);
   });
 
   it("may hold a placeholder in the path and the query", () => {

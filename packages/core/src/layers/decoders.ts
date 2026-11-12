@@ -126,23 +126,29 @@ export const geojsonDecoder: Decoder = (raw, fields) => {
 };
 
 /**
- * Decodes a raw response with the decoder registered as `name`.
+ * Decodes a raw response with the decoder registered as `name`, the way the
+ * feed, detail and identify functions do, so a host that reads a response of
+ * its own gets the same typed refusal.
  *
- * @throws `LayerError` `invalid` when no decoder has that name or the
- *   decoder throws.
+ * @param prepare Reshapes `raw` for the decoder. It runs inside the same
+ *   guard as the decoder, so a response that breaks it is refused too. It
+ *   leaves `raw` as it is by default.
+ * @throws `LayerError` `invalid` when no decoder has that name, or when
+ *   `prepare` or the decoder throws.
  */
 export function decodeWith(
   decoders: DecoderRegistry,
   name: string,
   raw: unknown,
   fields: FieldMap,
+  prepare: (raw: unknown) => unknown = (response) => response,
 ): LayerFeature[] {
   const decoder = decoders.get(name);
   if (!decoder) {
     throw new LayerError("invalid", `No decoder is registered as "${name}".`);
   }
   try {
-    return decoder(raw, fields);
+    return decoder(prepare(raw), fields);
   } catch (error) {
     throw new LayerError(
       "invalid",

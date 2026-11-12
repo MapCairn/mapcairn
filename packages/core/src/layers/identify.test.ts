@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it, vi } from "vitest";
-import { SAMPLE_IDENTIFY_LAYER } from "../fakes/layerFixtures";
+import {
+  SAMPLE_IDENTIFY_LAYER,
+  SAMPLE_TIME_LAYER,
+} from "../fakes/layerFixtures";
+import { GeometryError } from "../geometry/errors";
 import { wgs84ToWebMercator } from "../geometry/mercator";
+import * as entry from "../index";
 import { LayerError } from "../ports/errors";
 import type { IdentifyTarget } from "../ports/layers";
 import { failureOf } from "../propertyTesting/failureOf";
@@ -44,6 +49,19 @@ function boxOf(url: string): number[] {
   const bbox = new URL(url).searchParams.get("bbox") as string;
   return bbox.split(",").map(Number);
 }
+
+describe("the package entry point", () => {
+  it("exports what a layer source needs to ask and read an identify request", () => {
+    expect(entry.identifyUrl).toBe(identifyUrl);
+    expect(entry.decodeIdentify).toBe(decodeIdentify);
+    expect(entry.decodeWith).toBeTypeOf("function");
+    expect(entry.IDENTIFY_VARIABLES).toBe(IDENTIFY_VARIABLES);
+    expect(entry.DEFAULT_IDENTIFY_TOLERANCE_PX).toBe(12);
+    expect(entry.MIN_IDENTIFY_TOLERANCE_PX).toBe(1);
+    expect(entry.MAX_IDENTIFY_TOLERANCE_PX).toBe(20);
+    expect(entry.MAX_IDENTIFIED_FEATURES).toBe(MAX_IDENTIFIED_FEATURES);
+  });
+});
 
 describe("identifyUrl", () => {
   it("asks for a 25 pixel box around the tap at the default tolerance, pinned to the exact URL", () => {
@@ -107,14 +125,66 @@ describe("identifyUrl", () => {
     ).toBe("https://api.test/at?lat=89&lng=0");
   });
 
-  it("writes small numbers without an exponent, which a server may not read", () => {
+  it("writes a degree that rounds to nothing as 0, never as -0 or with trailing zeros", () => {
     const url = identifyUrl(
       identifying({ url: "https://api.test/at?lng={lng}&lat={lat}" }),
       {},
       NOW,
-      { latlng: { lat: 0.000_000_4, lng: 0.000_000_3 }, zoom: 3 },
+      { latlng: { lat: 0.000_001, lng: -0.000_000_4 }, zoom: 3 },
     );
-    expect(url).toBe("https://api.test/at?lng=0&lat=0");
+    expect(url).toBe("https://api.test/at?lng=0&lat=0.000001");
+    expect(
+      identifyUrl(
+        identifying({ url: "https://api.test/at?lng={lng}&zoom={zoom}" }),
+        {},
+        NOW,
+        { latlng: { lat: 1, lng: 10.5 }, zoom: 4 },
+      ),
+    ).toBe("https://api.test/at?lng=10.5&zoom=4");
+  });
+
+  it.each([
+    [
+      "a coordinate that is not a number",
+      { latlng: { lat: Number.NaN, lng: 1 }, zoom: 5 },
+    ],
+    [
+      "a longitude that is infinite",
+      { latlng: { lat: 1, lng: Number.POSITIVE_INFINITY }, zoom: 5 },
+    ],
+    [
+      "a latitude that is infinite",
+      { latlng: { lat: Number.NEGATIVE_INFINITY, lng: 1 }, zoom: 5 },
+    ],
+    [
+      "a zoom that is not a number",
+      { latlng: { lat: 1, lng: 1 }, zoom: Number.NaN },
+    ],
+    [
+      "a zoom that is infinite",
+      { latlng: { lat: 1, lng: 1 }, zoom: Number.POSITIVE_INFINITY },
+    ],
+  ])("throws a geometry error for %s", (_name, at) => {
+    expect(
+      failureOf(GeometryError, () =>
+        identifyUrl(SAMPLE_IDENTIFY_LAYER, {}, NOW, at),
+      )?.kind,
+    ).toBe("invalid");
+  });
+
+  it("fills a date and time control with its ISO instant, encoded", () => {
+    const layer: IdentifiableLayerDefinition = {
+      ...SAMPLE_TIME_LAYER,
+      identify: {
+        ...SAMPLE_IDENTIFY_LAYER.identify,
+        url: "https://api.test/at?time={time}&lng={lng}&lat={lat}",
+      },
+    };
+    expect(
+      identifyUrl(layer, { time: "2026-11-12t0400" }, NOW, CAPE_TOWN),
+    ).toBe(
+      "https://api.test/at?time=2026-11-12T04%3A00%3A00Z&lng=18.4241&lat=-33.9249",
+    );
   });
 
   it("names the variables an identify URL may use", () => {
@@ -343,6 +413,17 @@ describe("decodeIdentify", () => {
         decodeIdentify(identifying({ decoder: "many" }), {}, registry, AT),
       ).toHaveLength(20);
     });
+  });
+
+  it("refuses an answer a hostile getter breaks while it is being prepared as invalid, not as a stray error", () => {
+    const raw = {};
+    Object.defineProperty(raw, "features", {
+      enumerable: true,
+      get() {
+        throw new Error("boom");
+      },
+    });
+    expect(failureOf(LayerError, () => decode(raw))?.kind).toBe("invalid");
   });
 
   it("refuses a decoder that is not registered, or that throws, as invalid", () => {

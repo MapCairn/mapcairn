@@ -526,7 +526,13 @@ export interface FeedLayerDefinition<
  *   `{y}`. The origin is fixed in the template, so no placeholder may stand in
  *   the scheme, host or port. The answer must be JSON: GeoJSON, or with
  *   `records` a list at a path. XML, GML, HTML, plain text and JSONP are not
- *   read, and a `POST` is not supported.
+ *   read, and a `POST` is not supported. Coordinates in a GeoJSON answer
+ *   must be WGS 84 degrees: the decoder drops a position with a longitude
+ *   beyond 180 or a latitude beyond 90, so a server that answers in its own
+ *   coordinate system reads as nothing found. A feature with no `id`, or a
+ *   null or empty one, takes its position in the answer, which is not stable
+ *   from one tap to the next; map `fields.id` to a real attribute when the
+ *   service has one.
  */
 export interface IdentifySource {
   /** An `https` URL template, filled by `identifyUrl`. */

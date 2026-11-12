@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { GeometryError } from "../geometry/errors";
 import { wgs84ToWebMercator } from "../geometry/mercator";
 import type { LatLng } from "../ports/geometry";
 import type {
@@ -53,8 +54,10 @@ const MEASURE_DECIMALS = 3;
 const HALF_PIXEL = 0.5;
 
 /**
- * Writes a number rounded to `decimals`, always in plain notation: a long
- * float or an exponent (`1e-7`) is what a server may refuse.
+ * Writes a number rounded to `decimals`, so a long float is cut and a value
+ * that rounds to nothing is `0`, never `-0` or `0.000000`. Degrees, metres
+ * and zoom levels are far below the size at which JavaScript would switch to
+ * an exponent.
  */
 function plain(value: number, decimals: number): string {
   return String(Number(value.toFixed(decimals)));
@@ -66,6 +69,9 @@ function boxAround(
   zoom: number,
   tolerance: number,
 ): readonly number[] {
+  if (!Number.isFinite(zoom)) {
+    throw new GeometryError("invalid", "A zoom must be a finite number.");
+  }
   const centre = wgs84ToWebMercator(tap);
   const half =
     ((tolerance + HALF_PIXEL) * EQUATOR_METRES_PER_PIXEL_AT_ZOOM_0) / 2 ** zoom;
@@ -107,9 +113,9 @@ function identifyValues(
  *   `{lat}` keeps the latitude tapped. The caller wraps longitude to -180 up
  *   to 180 first. Numbers are rounded to a millimetre, a zoom to three
  *   decimals and degrees to six, and written without an exponent.
- * @throws When a coordinate or the zoom is not finite, or the template names
- *   a variable that has no value: a definition that passed validation never
- *   does the second.
+ * @throws `GeometryError` `invalid` when a coordinate or the zoom is not
+ *   finite. A plain `Error` when the template names a variable that has no
+ *   value, which a definition that passed validation never does.
  */
 export function identifyUrl(
   definition: IdentifiableLayerDefinition,
@@ -210,6 +216,10 @@ function prepared(
  *   other kind, including one registered under the name `geojson`, gets the
  *   raw answer. A feature without a usable `id` takes its position in the
  *   answer: unique for one answer, but not the same from one tap to the next.
+ *   The cap applies after decoding, because the decoder drops features it
+ *   cannot use, so the work is linear in the size of the answer (a records
+ *   list is cut to the cap first). The caller bounds the size of the answer
+ *   it fetches.
  * @throws `LayerError` `invalid` when the decoder is not registered, or the
  *   answer is not a document the decoder reads.
  */
@@ -220,9 +230,7 @@ export function decodeIdentify(
   at: IdentifyTarget,
 ): LayerFeature[] {
   const { decoder, fields } = definition.identify;
-  const answer = prepared(definition, raw, decoders, at.latlng);
-  return decodeWith(decoders, decoder, answer, fields).slice(
-    0,
-    MAX_IDENTIFIED_FEATURES,
-  );
+  return decodeWith(decoders, decoder, raw, fields, (answer) =>
+    prepared(definition, answer, decoders, at.latlng),
+  ).slice(0, MAX_IDENTIFIED_FEATURES);
 }
