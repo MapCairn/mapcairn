@@ -10,6 +10,7 @@ import { hitTestHandle, type ProjectedHandle } from "../draw/hit";
 import { wrapLongitude } from "../globe/longitude";
 import { placePoint } from "../globe/placement";
 import { mapMetresPerPixel } from "../globe/resolution";
+import { clamp } from "../numbers/clamp";
 import type { BasemapDefinition } from "../ports/basemap";
 import { MapEngineError, type MapEngineErrorReason } from "../ports/errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "../ports/geometry";
@@ -271,7 +272,7 @@ export class FakeMapAdapter implements MapAdapter {
     );
     this.setView({
       center: mercatorUnproject(
-        { x: world.x + dx, y: Math.min(limit.y, Math.max(0, world.y + dy)) },
+        { x: world.x + dx, y: clamp(world.y + dy, 0, limit.y) },
         zoom,
       ),
     });
@@ -851,9 +852,10 @@ export class FakeMapAdapter implements MapAdapter {
   #normalise(view: ViewState): ViewState {
     return {
       center: {
-        lat: Math.min(
+        lat: clamp(
+          view.center.lat,
+          -MAX_MERCATOR_LATITUDE,
           MAX_MERCATOR_LATITUDE,
-          Math.max(-MAX_MERCATOR_LATITUDE, view.center.lat),
         ),
         lng: wrapLongitude(view.center.lng),
       },

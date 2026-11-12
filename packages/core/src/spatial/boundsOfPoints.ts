@@ -1,8 +1,5 @@
+import { clamp } from "../numbers/clamp";
 import type { Bounds, LatLng } from "../ports/geometry";
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 /**
  * The smallest latitude and longitude box holding every point, clamped to
