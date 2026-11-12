@@ -7,11 +7,13 @@ import {
   FakeLayerCatalogue,
   FakeRoutingProvider,
   FakeSearchProvider,
+  MemoryFeatureSelection,
   readyLayers,
   type Services,
 } from "@mapcairn/core";
 import {
   DATA_SERVICE_NAMES,
+  HOST_SUPPLIED_PORT_NAMES,
   PORT_NAMES,
   type PortName,
 } from "@mapcairn/core/contracts";
@@ -24,6 +26,10 @@ import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
 
+const builtPortNames: readonly PortName[] = PORT_NAMES.filter(
+  (name) => !HOST_SUPPLIED_PORT_NAMES.some((supplied) => supplied === name),
+);
+
 afterEach(() => {
   Reflect.deleteProperty(window, "__MAPCAIRN_TEST_SERVICES__");
   vi.unstubAllEnvs();
@@ -31,15 +37,24 @@ afterEach(() => {
 });
 
 describe("createServices", () => {
-  it("returns a complete Services with every port, the optional routing port included", () => {
+  it("returns a Services with every port the host builds, the optional routing port included", () => {
     const services = createServices();
-    for (const name of PORT_NAMES) {
-      expect(services[name as PortName], name).toBeDefined();
+    for (const name of builtPortNames) {
+      expect(services[name], name).toBeDefined();
     }
     // `basemaps` is plain data, the built-in catalogue, not a port.
     expect(Object.keys(services).sort()).toEqual(
-      [...PORT_NAMES, ...DATA_SERVICE_NAMES].sort(),
+      [...builtPortNames, ...DATA_SERVICE_NAMES].sort(),
     );
+  });
+
+  it("builds no selection store, so the reference site offers no selection", () => {
+    expect(HOST_SUPPLIED_PORT_NAMES).toEqual(["selection"]);
+    const services = createServices();
+    for (const name of HOST_SUPPLIED_PORT_NAMES) {
+      expect(services[name], name).toBeUndefined();
+      expect(Object.keys(services)).not.toContain(name);
+    }
   });
 
   it("offers the site's six basemaps, not the SDK's seven, with Bright the default", () => {
@@ -166,6 +181,13 @@ describe("createServices", () => {
       window.__MAPCAIRN_TEST_SERVICES__ = { routing };
       vi.spyOn(console, "info").mockImplementation(() => undefined);
       expect(createServices().routing).toBe(routing);
+    });
+
+    it("lets a browser test supply a selection store, which the host builds none of", () => {
+      const selection = new MemoryFeatureSelection();
+      window.__MAPCAIRN_TEST_SERVICES__ = { selection };
+      vi.spyOn(console, "info").mockImplementation(() => undefined);
+      expect(createServices().selection).toBe(selection);
     });
 
     it("lets a browser test replace the basemap catalogue", () => {

@@ -37,6 +37,22 @@ describe("createFakeServices", () => {
     expect(result.features).toHaveLength(1);
   });
 
+  it("provides a scriptable, empty selection store", () => {
+    const services = createFakeServices();
+    expect(services.selection).toBe(services.fakes.selection);
+    expect(services.fakes.selection.getState()).toEqual([]);
+    services.fakes.selection.replaceExternally([
+      { layerId: "gauges", featureId: "a" },
+    ]);
+    expect(services.selection?.getState()).toHaveLength(1);
+  });
+
+  it("leaves the selection store out when told to, as a host may", () => {
+    const services = createFakeServices({ selection: undefined });
+    expect(services.selection).toBeUndefined();
+    expect(services.fakes.selection).toBeDefined();
+  });
+
   it("leaves routing out when told to, as a host may", () => {
     const services = createFakeServices({ routing: undefined });
     expect(services.routing).toBeUndefined();

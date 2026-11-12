@@ -48,7 +48,7 @@ flowchart TD
 
 ## Ports
 
-Add an interface only where a boundary has at least two implementations. The fake counts as the second implementation. Each port has a real adapter, a fake and a shared contract suite that runs against both.
+Add an interface only where a boundary has at least two implementations. The fake counts as the second implementation. Each port has a real adapter, a fake and a shared contract suite that runs against both, apart from `FeatureSelection`, whose one class is the SDK's store and its fake together.
 
 `MapAdapter` has one real implementation, MapLibre GL JS, and is kept for two reasons. It is the boundary between the ui and the engine, so the ui never imports `maplibre-gl`. It also lets unit tests run the ui against an in-memory fake, with no WebGL. The contract suite runs against the fake and against the real `MapLibreMapAdapter` code, but the adapter there drives a hand-written stand-in for the MapLibre map (`FakeMapLibreMap` in `packages/web/src/adapters/maplibre/maplibreTestEngine.ts`), not `maplibre-gl` itself, because unit tests have no WebGL. The suite keeps the two adapters in step with each other; it does not prove the stand-in matches MapLibre. The end-to-end tests are what exercise the real engine.
 
@@ -68,6 +68,7 @@ Add an interface only where a boundary has at least two implementations. The fak
 | `LayerCatalogue` | `createStaticLayerCatalogue` over the host's definitions, validated at start-up and ready on the first render (the reference host); `createRuntimeLayerCatalogue` for a host that loads them with its own function | `FakeLayerCatalogue`, scripted with `setLayers` and `setState` |
 | `LayerSource` | `FetchLayerSource` (`fetch`, shared response cache) | `FakeLayerSource`, scripted per layer id |
 | `RoutingProvider` (optional) | `ValhallaRoutingProvider`, the reference host's one adapter, for a public Valhalla server; the SDK ships none | `FakeRoutingProvider`, scripted routes, areas, errors and delays |
+| `FeatureSelection` (optional) | `MemoryFeatureSelection` keeps the set in memory; the reference host builds no store, so a host that wants selection supplies one, which may keep the set on a server | `MemoryFeatureSelection`, the same class, scripted with `replaceExternally` |
 
 The settings keys are `mapcairn:<name>`.
 
@@ -85,7 +86,7 @@ The Layers section shows the layers of a `ready` catalogue and nothing while it 
 
 A definition's `thumbnail` is optional, and it is a root-relative path the host serves; if the image fails to load, the picker shows the swatch. A basemap without one shows the picker's plain swatch, as Save data does, because only a host that serves the files, and has the right to them, can offer a preview; so does a tile whose image fails to load. The SDK's own definitions name no preview, so a host that serves none (the example app, say) shows a swatch for every SDK basemap and never requests an image, and a test in `core` and one in `map` check both. The reference host adds its previews as data: `BASEMAP_THUMBNAILS` in `packages/web/src/basemaps/basemapThumbnails.ts` maps each basemap it offers to a file in `packages/web/public/basemaps`, `hostBasemaps.ts` sets `thumbnail` on a copy of each definition it offers, and a test in `packages/web` checks that every basemap the host offers has its file. The thumbnail script reads the same table. A host that wants another place for its files only changes the paths in its own table, so the SDK carries no base URL.
 
-`RoutingProvider`, `FileOpener` and `SuggestionProvider` are the optional services: `Services.routing`, `Services.fileOpener` and `Services.suggestions` may be absent, and the ui must work without them. Without a file opener the Shapes section has no Import control. `route({ stops, mode, signal })` returns one GeoJSON line feature for each leg with its distance (metres) and duration (seconds), and `reachableArea({ origin, minutes, mode, signal })` returns polygon features. Both reject only with a typed `RoutingError` (`network`, `invalid`, `no-route`, `rate-limited`, `aborted`, `unsupported`).
+`RoutingProvider`, `FileOpener`, `SuggestionProvider` and `FeatureSelection` are the optional services: `Services.routing`, `Services.fileOpener`, `Services.suggestions` and `Services.selection` may be absent, and the ui must work without them. Without a file opener the Shapes section has no Import control. `route({ stops, mode, signal })` returns one GeoJSON line feature for each leg with its distance (metres) and duration (seconds), and `reachableArea({ origin, minutes, mode, signal })` returns polygon features. Both reject only with a typed `RoutingError` (`network`, `invalid`, `no-route`, `rate-limited`, `aborted`, `unsupported`).
 
 The reference host's `ValhallaRoutingProvider` (`packages/web/src/adapters/routing`) calls a public Valhalla server with `GET /route` and `GET /isochrone`, decodes the encoded polyline shape itself, maps HTTP and network failures to those kinds, starts at most one request a second through the shared `RequestSpacer`, and sends no cookies or referrer. `packages/map` holds only the generic Directions tool (`tools/Directions`): `useDirections` keeps the stops, mode and result and cancels superseded requests, `DirectionsPanel` is the interface, `MapDirections` draws the result through `setShapeLayer` and fits the map clear of the sheet, and `DirectionsOverlay` draws the lettered stops. None of them names a provider; the host passes the credit and the privacy note, and mounts the button only when `services.routing` exists.
 
@@ -94,6 +95,15 @@ The reference host's `ValhallaRoutingProvider` (`packages/web/src/adapters/routi
 The other copy that names a provider works the same way. The Settings privacy statement (`privacyNote` on `SheetContent` and `SettingsSection`) and the note under the pin card's "Look up address" (`lookupNote` on `PinCard`) are props that take text or nodes, and each has a neutral default that names no provider. The reference host supplies its own in `packages/web/src/constants/providerNotes.ts`, so its visible text is the same as the privacy page and `PRIVACY.md` describe, and an embedding host writes its own.
 
 Pure helpers (layer templates, decoders and style evaluation, zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
+
+**The feature selection.** `FeatureSelection` (`packages/core/src/ports/selection.ts`) is the set of features a person has picked. Each `FeatureRef` is a layer id and a feature id, the pair a tap reports (`MapFeatureHit`). The store is synchronous (`getState()`, `subscribe(listener)`, `add`, `remove`, `replace`, `clear` and a `limit`), because `useSyncExternalStore` needs a snapshot of stable identity, so it has no loading or failed state. A host that saves the set somewhere slow keeps a local copy, writes behind it, and calls its subscribers when the copy changes, when it hydrates or when it restores the copy after a failed save. The rules for every implementation are in `contracts/featureSelection.contract.ts`:
+
+- `getState()` returns the same array until a change, in selection order, and no method uses `this`.
+- A duplicate is ignored, and a call that changes the set tells every subscriber once, while a call that changes nothing tells none.
+- A call that would take the total past `limit` changes nothing, so a batch is refused whole, as a shape file that would take the drawing past `MAX_DRAWING_SHAPES` is.
+- A store that hydrates with more than `limit` references shows them all and refuses every addition. Removing is always allowed.
+
+`MemoryFeatureSelection` is the one class the SDK ships, as `MemorySettingsStore` is for settings: it is the store and its fake. Its limit defaults to `DEFAULT_SELECTION_LIMIT` (200), and `replaceExternally(refs)` scripts a change from outside, such as hydration or a failed save. `Services.selection` is optional and `createServices()` builds none (`HOST_SUPPLIED_PORT_NAMES` in `contracts/portRegistry.ts`), so the reference site offers no selection and a host that wants it supplies a store. `useSelectionStore()` returns it. Nothing in the ui reads the set yet: the hook that holds the selecting state, the highlights and the panel are planned in [`docs/plans/0007-multi-feature-selection.md`](docs/plans/0007-multi-feature-selection.md) and are not built. The set is not written to the permalink.
 
 ## The map adapter
 
@@ -154,7 +164,7 @@ The draw tool follows the same split. `packages/core/src/draw` holds a pure redu
 1. Define or extend the port in `packages/core/src/ports`, with typed errors and an `AbortSignal` on async calls.
 2. Write the fake in `packages/core/src/fakes` and the contract suite in `packages/core/src/contracts`.
 3. Write the real adapter in `packages/web/src/adapters`, passing the same suite. Helpers that more than one adapter uses (the event emitter, reading media queries) live in `packages/web/src/adapters/shared`.
-4. Register it in `createServices()`.
+4. Register it in `createServices()`. An optional port whose data belongs to the host, as the selection does, is not built there: list it in `HOST_SUPPLIED_PORT_NAMES` (`packages/core/src/contracts/portRegistry.ts`) and the host supplies it.
 5. Read it in the ui through a typed hook (`useSettings`, `useSearch` and so on).
 
 ## How tests substitute services

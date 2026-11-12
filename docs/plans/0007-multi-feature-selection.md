@@ -1,6 +1,6 @@
 # 0007: Multi-feature selection
 
-Status: proposed. Tracking issue: [#49](https://github.com/MapCairn/mapcairn/issues/49).
+Status: in progress. Tracking issue: [#49](https://github.com/MapCairn/mapcairn/issues/49).
 
 ## Goal
 

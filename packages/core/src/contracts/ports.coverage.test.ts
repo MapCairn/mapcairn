@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { createFakeServices } from "../fakes/createFakeServices";
 import {
+  HOST_SUPPLIED_PORT_NAMES,
   OPTIONAL_PORT_NAMES,
   PORT_NAMES,
   PORT_REGISTRY,
@@ -26,10 +27,19 @@ describe("port coverage", () => {
     expect([...OPTIONAL_PORT_NAMES]).toEqual([
       "fileOpener",
       "routing",
+      "selection",
       "suggestions",
     ]);
     for (const name of OPTIONAL_PORT_NAMES) {
       expect(PORT_NAMES).toContain(name);
+    }
+  });
+
+  it("lists the host-supplied services, each of which is optional and has a fake", () => {
+    expect([...HOST_SUPPLIED_PORT_NAMES]).toEqual(["selection"]);
+    for (const name of HOST_SUPPLIED_PORT_NAMES) {
+      expect(OPTIONAL_PORT_NAMES).toContain(name);
+      expect(PORT_REGISTRY[name].createFake()).toBeDefined();
     }
   });
 

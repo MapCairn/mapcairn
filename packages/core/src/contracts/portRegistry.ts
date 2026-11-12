@@ -12,11 +12,13 @@ import { FakeRoutingProvider } from "../fakes/FakeRoutingProvider";
 import { FakeSearchProvider } from "../fakes/FakeSearchProvider";
 import { FakeSuggestionProvider } from "../fakes/FakeSuggestionProvider";
 import { FakeThemeSource } from "../fakes/FakeThemeSource";
+import { MemoryFeatureSelection } from "../fakes/MemoryFeatureSelection";
 import { MemorySettingsStore } from "../fakes/MemorySettingsStore";
 import { MemoryUrlState } from "../fakes/MemoryUrlState";
 import type { Services } from "../ports/services";
 import { runClipboardContract } from "./clipboard.contract";
 import { runDevicePreferencesContract } from "./devicePreferences.contract";
+import { runFeatureSelectionContract } from "./featureSelection.contract";
 import { runFileOpenerContract } from "./fileOpener.contract";
 import { runFileSaverContract } from "./fileSaver.contract";
 import { runLayerCatalogueContract } from "./layerCatalogue.contract";
@@ -51,6 +53,7 @@ export const PORT_NAMES = [
   "layers",
   "layerSource",
   "routing",
+  "selection",
 ] as const satisfies readonly (keyof Services)[];
 
 /** The name of one port, as it appears on `Services`. */
@@ -58,14 +61,24 @@ export type PortName = (typeof PORT_NAMES)[number];
 
 /**
  * The ports a host may leave out. Each is an optional key of `Services`, so
- * the ui must work without it. The composition root builds only the other
- * ports, and a host adds these when it has an adapter.
+ * the ui must work without it. The reference host builds a real adapter for
+ * each of these except the ones in {@link HOST_SUPPLIED_PORT_NAMES}.
  */
 export const OPTIONAL_PORT_NAMES = [
   "fileOpener",
   "routing",
+  "selection",
   "suggestions",
 ] as const satisfies readonly PortName[];
+
+/**
+ * The optional ports that `createServices()` leaves out, because the data
+ * they hold belongs to the host that supplies them and an inert one would be
+ * dead code in production. They still have a fake and a contract suite.
+ */
+export const HOST_SUPPLIED_PORT_NAMES = [
+  "selection",
+] as const satisfies readonly (typeof OPTIONAL_PORT_NAMES)[number][];
 
 /**
  * The `Services` entries that are plain data a host supplies, not ports: they
@@ -102,6 +115,7 @@ export interface PortContractRunners {
   readonly layers: typeof runLayerCatalogueContract;
   readonly layerSource: typeof runLayerSourceContract;
   readonly routing: typeof runRoutingProviderContract;
+  readonly selection: typeof runFeatureSelectionContract;
 }
 
 /** What the registry holds for one port. */
@@ -175,5 +189,9 @@ export const PORT_REGISTRY: PortRegistry = {
   routing: {
     createFake: () => new FakeRoutingProvider(),
     runContract: runRoutingProviderContract,
+  },
+  selection: {
+    createFake: () => new MemoryFeatureSelection(),
+    runContract: runFeatureSelectionContract,
   },
 };

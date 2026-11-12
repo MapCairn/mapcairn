@@ -16,6 +16,7 @@ import { FakeRoutingProvider } from "./FakeRoutingProvider";
 import { FakeSearchProvider } from "./FakeSearchProvider";
 import { FakeSuggestionProvider } from "./FakeSuggestionProvider";
 import { FakeThemeSource } from "./FakeThemeSource";
+import { MemoryFeatureSelection } from "./MemoryFeatureSelection";
 import { MemorySettingsStore } from "./MemorySettingsStore";
 import { MemoryUrlState } from "./MemoryUrlState";
 
@@ -34,6 +35,7 @@ export interface FakeServiceHandles {
   readonly layers: FakeLayerCatalogue;
   readonly layerSource: FakeLayerSource;
   readonly routing: FakeRoutingProvider;
+  readonly selection: MemoryFeatureSelection;
   /** Every adapter `createMapAdapter` has built, oldest first. */
   readonly maps: FakeMapAdapter[];
 }
@@ -54,10 +56,10 @@ export interface FakeServices extends Services {
  * The default `createMapAdapter` is {@link createFakeMapAdapterFactory}, and
  * each adapter it builds is recorded in `fakes.maps`.
  *
- * `routing`, `fileOpener` and `suggestions` are optional on `Services`, but the
- * fakes include them so a test can script routes, files and suggestions. To
- * test the ui without one, pass it as `undefined`, for example
- * `{ routing: undefined }`.
+ * `routing`, `fileOpener`, `suggestions` and `selection` are optional on
+ * `Services`, but the fakes include them so a test can script routes, files,
+ * suggestions and a selected set. To test the ui without one, pass it as
+ * `undefined`, for example `{ routing: undefined }`.
  */
 export function createFakeServices(
   overrides: Partial<Services> = {},
@@ -77,6 +79,7 @@ export function createFakeServices(
     layers: new FakeLayerCatalogue(),
     layerSource: new FakeLayerSource(),
     routing: new FakeRoutingProvider(),
+    selection: new MemoryFeatureSelection(),
     maps,
   };
   return {
@@ -96,6 +99,7 @@ export function createFakeServices(
     layers: fakes.layers,
     layerSource: fakes.layerSource,
     routing: fakes.routing,
+    selection: fakes.selection,
     ...overrides,
     fakes,
   };
