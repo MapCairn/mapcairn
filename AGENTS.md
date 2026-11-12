@@ -161,7 +161,7 @@ No instruction file, agent definition, brief, document, code comment, test or Gi
 ## Definition of done
 
 - Code changes: run `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`.
-- Map or UI changes: also run `npm run e2e` and `npm run a11y`.
+- Map or UI changes: also run the Playwright specs that cover the change (`npm run e2e -w @mapcairn/web -- <spec name>`). Run the full `npm run e2e` and `npm run a11y` when the change is to layout, the map engine or the test seam. For other changes, name the full runs as left to CI under Checks; the required `e2e` check runs both.
 - Map or UI changes must also be confirmed visually with the `visual-check` skill: screenshots at phone, tablet and desktop sizes, in both themes, over more than one basemap. The linters, the harmony scanner and the tests cannot tell you that something looks bad, is hard to use or breaks the harmony of the design. Say what looks wrong, fix it, then describe in the pull request what you saw at each size and theme. The person who opens the pull request attaches the screenshots for a visible change; when an agent opened it for them, that person adds them, and the agent says they are available on request. An agent does not attach images. When you brief a sub-agent on UI work, tell it to do the same.
 - Dependency changes: perform the real install and the `npm ci` check above.
 - Feature changes: the documents that describe the behaviour are updated in the same pull request (see "Boundaries").
