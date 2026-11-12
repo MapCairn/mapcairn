@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  creditsLine,
-  type LatLng,
-  pressEscape,
-  type UnitSystem,
-} from "@mapcairn/core";
+import { creditsLine, pressEscape } from "@mapcairn/core";
 import {
   Attribution,
   DirectionsPanel,
@@ -14,13 +9,11 @@ import {
   FocusRegistryProvider,
   MapChrome,
   type MapContextValue,
-  MapReadout,
   MeasureToolbar,
   PinCard,
   SearchPill,
   Sheet,
   SheetContent,
-  useChromeLayout,
   useFocusReturn,
   useMap,
   useSettings,
@@ -31,6 +24,7 @@ import {
   SETTINGS_PRIVACY_NOTE,
 } from "../constants/providerNotes";
 import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
+import { AppReadout } from "./AppReadout";
 import { AppTour } from "./AppTour";
 import { Brand } from "./Brand";
 import { SHEET_ID } from "./initialView";
@@ -73,28 +67,6 @@ export function AppChrome({ app, background }: AppChromeProps) {
 
 interface ChromeContentProps extends AppChromeProps {
   readonly map: MapContextValue;
-}
-
-/** Props for {@link AppReadout}. */
-interface AppReadoutProps {
-  readonly units: UnitSystem;
-  readonly cursor: LatLng | null;
-}
-
-/**
- * The bottom-start readout. The cursor coordinates need a fine pointer; the
- * zoom level also needs the side panel layout, so a narrow window or a phone
- * keeps the readout as short as the scale bar, clear of the credits popover.
- */
-function AppReadout({ units, cursor }: AppReadoutProps) {
-  const { finePointer, layout } = useChromeLayout();
-  return (
-    <MapReadout
-      units={units}
-      latlng={finePointer ? cursor : null}
-      showZoom={finePointer && layout === "panel"}
-    />
-  );
 }
 
 function ChromeContent({ app, map, background }: ChromeContentProps) {

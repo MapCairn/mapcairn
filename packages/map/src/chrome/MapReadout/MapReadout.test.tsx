@@ -8,11 +8,16 @@ import {
   formatLatLng,
 } from "@mapcairn/core";
 import { act, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MapContext } from "../../host";
 import { ServicesProvider } from "../../services";
-import { renderChrome, testMapContext } from "../MapChrome/chromeTestHarness";
+import {
+  renderChrome,
+  testChromeLayout,
+  testMapContext,
+} from "../MapChrome/chromeTestHarness";
 import {
   CursorCoordinates,
   MapReadout,
@@ -256,9 +261,23 @@ describe("ScaleBar", () => {
   });
 });
 
+/**
+ * What a screen reader or a copy of the text carries: the content left after
+ * the `aria-hidden` visual parts are removed. Compared with `toBe`, so a
+ * missing or doubled space shows.
+ */
+function spokenText(element: Element): string {
+  const clone = element.cloneNode(true) as Element;
+  for (const hidden of clone.querySelectorAll('[aria-hidden="true"]')) {
+    hidden.remove();
+  }
+  return clone.textContent ?? "";
+}
+
 describe("CursorCoordinates", () => {
+  const latlng = { lat: -26.2041, lng: 28.0473 };
+
   it("shows the formatted position", () => {
-    const latlng = { lat: -26.2041, lng: 28.0473 };
     renderChrome(<CursorCoordinates latlng={latlng} />);
     const readout = screen.getByText(formatLatLng(latlng)).closest("p");
     expect(readout).toHaveAttribute("data-chrome", "cursor-coordinates");
@@ -270,40 +289,69 @@ describe("CursorCoordinates", () => {
   });
 
   it("shows the zoom beside the position, with one decimal at most", () => {
-    const latlng = { lat: -26.2041, lng: 28.0473 };
     renderChrome(<CursorCoordinates latlng={latlng} zoom={12.46} />);
     const readout = screen.getByText(formatLatLng(latlng)).closest("p");
-    expect(readout).toContainElement(screen.getByText("12.5"));
+    expect(readout).toContainElement(screen.getByText("z 12.5"));
   });
 
   it("shows the zoom alone while there is no position", () => {
     renderChrome(<CursorCoordinates latlng={null} zoom={12} />);
-    expect(screen.getByText("12").closest("p")).toHaveAttribute(
+    expect(screen.getByText("z 12").closest("p")).toHaveAttribute(
       "data-chrome",
       "cursor-coordinates",
     );
   });
 
-  it("shows a z for sighted users and the word Zoom to a screen reader", () => {
+  it("shows a z and the figure to sighted users and hides them from a screen reader", () => {
     renderChrome(<CursorCoordinates latlng={null} zoom={12.4} />);
-    expect(screen.getByText("z")).toHaveAttribute("aria-hidden", "true");
-    expect(screen.getByText("Zoom")).not.toHaveAttribute("aria-hidden");
+    expect(screen.getByText("z 12.4")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("reads and copies as one clean 'Zoom 12.4', apart from the coordinates", () => {
+    renderChrome(<CursorCoordinates latlng={latlng} zoom={12.4} />);
+    const readout = screen.getByText(formatLatLng(latlng)).closest("p");
+    expect(readout).not.toBeNull();
+    expect(spokenText(readout as Element)).toBe(
+      `${formatLatLng(latlng)}, Zoom 12.4`,
+    );
+  });
+
+  it("reads and copies the zoom alone as 'Zoom 12.4' with no stray separator", () => {
+    renderChrome(<CursorCoordinates latlng={null} zoom={12.4} />);
+    const readout = screen.getByTestId("zoom-level").closest("p");
+    expect(readout).not.toBeNull();
+    expect(spokenText(readout as Element)).toBe("Zoom 12.4");
   });
 
   it("is not a live region, so a zoom change is not announced", () => {
     renderChrome(<CursorCoordinates latlng={null} zoom={12.4} />);
     expect(
-      screen.getByText("12.4").closest("[aria-live], [role=status]"),
+      screen.getByTestId("zoom-level").closest("[aria-live], [role=status]"),
     ).toBeNull();
   });
 });
 
 describe("MapReadout", () => {
+  const sheet = testChromeLayout({ layout: "sheet" });
+  const panel = testChromeLayout({ layout: "panel" });
+
+  function renderReadout(
+    props: Partial<ComponentProps<typeof MapReadout>>,
+    layout = panel,
+    zoom = 12.4,
+  ) {
+    return renderChrome(
+      <MapReadout units="metric" latlng={null} {...props} />,
+      {
+        map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom } }),
+        layout,
+      },
+    );
+  }
+
   it("stacks the scale bar and the coordinates in one floating element", () => {
     const latlng = { lat: 1, lng: 2 };
-    renderChrome(<MapReadout units="metric" latlng={latlng} />, {
-      map: testMapContext({ view: DEFAULT_FAKE_VIEW }),
-    });
+    renderReadout({ latlng });
     const readout = screen.getByTestId("map-readout");
     expect(readout).toHaveAttribute("data-chrome", "map-readout");
     expect(readout).toContainElement(screen.getByRole("img"));
@@ -311,58 +359,57 @@ describe("MapReadout", () => {
   });
 
   it("is a landmark named Map scale, so the readout sits inside a landmark", () => {
-    renderChrome(<MapReadout units="metric" latlng={null} />, {
-      map: testMapContext({ view: DEFAULT_FAKE_VIEW }),
-    });
+    renderReadout({});
     const region = screen.getByRole("region", { name: "Map scale" });
     expect(region.tagName).toBe("SECTION");
     expect(region).toBe(screen.getByTestId("map-readout"));
   });
 
-  it("shows the map's zoom level", () => {
-    renderChrome(<MapReadout units="metric" latlng={null} />, {
-      map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 12.4 } }),
-    });
-    const readout = screen.getByTestId("map-readout");
-    expect(readout).toContainElement(screen.getByText("12.4"));
-    expect(screen.getByText("Zoom")).toBeInTheDocument();
+  it("shows the map's zoom level in the side panel layout", () => {
+    renderReadout({});
+    expect(screen.getByTestId("map-readout")).toContainElement(
+      screen.getByText("z 12.4"),
+    );
+  });
+
+  it("leaves the zoom out in the sheet layout, so the readout stays short", () => {
+    const latlng = { lat: 1, lng: 2 };
+    renderReadout({ latlng }, sheet);
+    expect(screen.queryByTestId("zoom-level")).toBeNull();
+    expect(screen.getByText(formatLatLng(latlng))).toBeInTheDocument();
   });
 
   it("follows zoom changes", () => {
-    const { rerenderChrome } = renderChrome(
-      <MapReadout units="metric" latlng={null} />,
-      { map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 12.4 } }) },
-    );
+    const { rerenderChrome } = renderReadout({});
     rerenderChrome(<MapReadout units="metric" latlng={null} />, {
       map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 13 } }),
+      layout: panel,
     });
-    expect(screen.queryByText("12.4")).toBeNull();
-    expect(screen.getByText("13")).toBeInTheDocument();
+    expect(screen.queryByText("z 12.4")).toBeNull();
+    expect(screen.getByText("z 13")).toBeInTheDocument();
   });
 
   it("shows the zoom beside the coordinates", () => {
     const latlng = { lat: 1, lng: 2 };
-    renderChrome(<MapReadout units="metric" latlng={latlng} />, {
-      map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 7 } }),
-    });
+    renderReadout({ latlng }, panel, 7);
     const coordinates = screen.getByText(formatLatLng(latlng)).closest("p");
-    expect(coordinates).toContainElement(screen.getByText("7"));
+    expect(coordinates).toContainElement(screen.getByText("z 7"));
   });
 
-  it("leaves the zoom out when the host turns it off", () => {
+  it("leaves the zoom out when showZoom is false, even in the side panel layout", () => {
     const latlng = { lat: 1, lng: 2 };
-    renderChrome(
-      <MapReadout units="metric" latlng={latlng} showZoom={false} />,
-      { map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 7 } }) },
-    );
-    expect(screen.queryByText("Zoom")).toBeNull();
+    renderReadout({ latlng, showZoom: false });
+    expect(screen.queryByTestId("zoom-level")).toBeNull();
     expect(screen.getByText(formatLatLng(latlng))).toBeInTheDocument();
   });
 
+  it("shows the zoom when showZoom is true, even in the sheet layout", () => {
+    renderReadout({ showZoom: true }, sheet);
+    expect(screen.getByText("z 12.4")).toBeInTheDocument();
+  });
+
   it("shows no coordinates element with no position and no zoom", () => {
-    renderChrome(<MapReadout units="metric" latlng={null} showZoom={false} />, {
-      map: testMapContext({ view: DEFAULT_FAKE_VIEW }),
-    });
+    renderReadout({ showZoom: false });
     expect(screen.getByTestId("map-readout").querySelector("p")).toBeNull();
   });
 });

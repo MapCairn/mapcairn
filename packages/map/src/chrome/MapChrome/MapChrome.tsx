@@ -35,7 +35,7 @@ export interface MapChromeProps {
   readonly topStart?: ReactNode;
   /** Compass, main control group and zoom group (`EndStack`). */
   readonly endStack?: ReactNode;
-  /** Scale bar and cursor coordinates (`MapReadout`). */
+  /** Scale bar, cursor coordinates and zoom level (`MapReadout`). */
   readonly bottomStart?: ReactNode;
   /** Attribution. */
   readonly bottomEnd?: ReactNode;

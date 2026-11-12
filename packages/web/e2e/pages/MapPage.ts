@@ -233,7 +233,7 @@ export class MapPage {
     this.creditsRegion = page.getByRole("region", { name: "Map credits" });
 
     this.scaleBar = page.locator('[data-chrome="scale-bar"]');
-    this.zoomLevel = page.locator('[data-chrome="zoom-level"]');
+    this.zoomLevel = page.getByTestId("zoom-level");
     this.locateError = page.getByTestId("locate-error");
     this.accuracyCircle = page.getByTestId("accuracy-circle");
     this.politeAnnouncer = page.getByTestId("live-region-polite");
