@@ -14,7 +14,9 @@ const SDK_PACKAGES = ["core", "map", "react", "theme"] as const;
 /**
  * Directories and files that are test code shipped as modules, for a host's
  * own test runner. They import vitest and fast-check, which the host brings
- * with its tests, so they are not checked here.
+ * with its tests, so the general check skips them. The contract suites are
+ * the exception: a test below requires the packages they import to be
+ * declared as optional peers of core.
  */
 const TEST_SUPPORT =
   /(\.test\.tsx?$|\/contracts\/|\/propertyTesting\/|\/lint\/|TestHarness\.tsx?$|\.d\.ts$)/;
