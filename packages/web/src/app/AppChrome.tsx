@@ -9,6 +9,7 @@ import {
   FocusRegistryProvider,
   MapChrome,
   type MapContextValue,
+  MapKey,
   MeasureToolbar,
   PinCard,
   SearchPill,
@@ -155,6 +156,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
         )
       }
       tourSide={app.tour.step?.side ?? "start"}
+      mapKey={<MapKey layers={app.layers} />}
       topStart={
         <SearchPill
           onSelect={app.flyTo}

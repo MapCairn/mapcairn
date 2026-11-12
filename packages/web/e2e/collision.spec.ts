@@ -3,6 +3,7 @@
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
+import { mockLayerProviders } from "./support/layers";
 import { inspectChromeLayout } from "./support/layout";
 import { scriptSearch } from "./support/services";
 import {
@@ -495,5 +496,147 @@ test.describe("tour card", () => {
         }
       }
     });
+  }
+});
+
+/**
+ * The sizes the map key's placement is checked at: every size of the chrome
+ * matrix (phones in both orientations, a tablet and two desktops) and the
+ * three more the key is also looked at (a small phone, a larger tablet and a
+ * smaller desktop).
+ */
+const MAP_KEY_VIEWPORTS = [
+  ...MATRIX_VIEWPORTS,
+  { width: 360, height: 640 },
+  { width: 820, height: 1180 },
+  { width: 1440, height: 900 },
+] as const;
+
+/** Six layers on that have a key: the tallest key the reference site can show. */
+const KEYED_LAYERS =
+  "#layers=earthquakes,volcano-alerts,fire-alerts,drought-alerts,flood-alerts,cyclones";
+
+/**
+ * Brings the map key to open or minimised from the state it starts in, which
+ * is minimised on a phone and open on a larger screen.
+ */
+async function setMapKey(
+  mapPage: MapPage,
+  state: "open" | "minimised",
+): Promise<void> {
+  const expanded = state === "open";
+  if (
+    (await mapPage.mapKeyToggle.getAttribute("aria-expanded")) !== `${expanded}`
+  ) {
+    await mapPage.mapKeyToggle.click();
+  }
+  await expect(mapPage.mapKeyToggle).toHaveAttribute(
+    "aria-expanded",
+    `${expanded}`,
+  );
+}
+
+/*
+ * The map key in the layout collision test (DESIGN.md, "Layout and slots").
+ * With layers on, open and minimised, it shares the screen with no other
+ * floating element in any chrome state, and stays inside the viewport. It
+ * is either shown and clear, or it has given way (`data-crowded`, or the
+ * credits are open) and is hidden and inert, never left under another
+ * element.
+ */
+for (const viewport of MAP_KEY_VIEWPORTS) {
+  test(
+    `the map key never collides at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage }) => {
+      test.setTimeout(240_000);
+      await mockLayerProviders(page);
+      await page.setViewportSize(viewport);
+      await scriptSearch(page);
+      await mapPage.goto(KEYED_LAYERS);
+
+      for (const keyState of ["open", "minimised"] as const) {
+        await collapseCredits(mapPage);
+        await setMapKey(mapPage, keyState);
+        for (const state of CHROME_STATES) {
+          await test.step(`${keyState}, ${state}`, async () => {
+            await enterState(mapPage, state);
+            await waitForStableLayout(mapPage.page);
+            const report = await inspectChromeLayout(mapPage.page);
+            const context = `${keyState}, ${state}: ${JSON.stringify(report.boxes)}`;
+            expect(report.overlaps, context).toEqual([]);
+            expect(report.outside, context).toEqual([]);
+            expect(report.obscured, context).toEqual([]);
+
+            const crowded =
+              (await mapPage.mapKeySlot.getAttribute("data-crowded")) ===
+              "true";
+            const shown = report.boxes.some((box) => box.name === "map-key");
+            if (state === "attribution open" || crowded) {
+              expect(shown, context).toBe(false);
+              await expect(mapPage.mapKey, context).toBeHidden();
+            } else {
+              expect(shown, context).toBe(true);
+              await expect(mapPage.mapKey, context).toBeVisible();
+            }
+            await leaveState(mapPage, state);
+          });
+        }
+      }
+    },
+  );
+}
+
+/*
+ * The map key and the first-visit tour card together. Tour step 1 asks a new
+ * visitor to turn a layer on, so the first key a person sees appears under
+ * the tour's next card. They share the cell under the search pill, and the
+ * key keeps clear of the card (or gives way to it).
+ */
+test.describe("tour card with the map key", () => {
+  test.use({ firstVisit: true });
+
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+  ] as const) {
+    test(
+      `share the screen at ${viewport.width}x${viewport.height}`,
+      viewportDetails(viewport),
+      async ({ page, mapPage }) => {
+        await mockLayerProviders(page);
+        await page.setViewportSize(viewport);
+        await startFirstVisit(mapPage, "light");
+        await advanceTourTo(mapPage, "step 1");
+
+        await mapPage.openMapOptions();
+        await page
+          .getByTestId("layer-earthquakes")
+          .getByRole("switch", { name: /Earthquakes/ })
+          .click();
+        await expect(
+          page.getByRole("heading", { name: "Try the globe" }),
+        ).toBeVisible();
+        await mapPage.sheetClose.click();
+        await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
+
+        await expectTourLayout(
+          mapPage,
+          "tour step 2 with the key",
+          "as it fits",
+        );
+        await expect(mapPage.mapKey).toBeVisible();
+        const [tour, key] = await Promise.all([
+          page.getByTestId("tour-card").boundingBox(),
+          mapPage.mapKey.boundingBox(),
+        ]);
+        if (!(tour && key)) {
+          throw new Error("The tour card or the map key has no box.");
+        }
+        expect(key.y, "the key starts below the tour card").toBeGreaterThan(
+          tour.y + tour.height,
+        );
+      },
+    );
   }
 });

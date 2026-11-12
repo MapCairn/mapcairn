@@ -95,7 +95,7 @@ with a tile URL such as `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/IMER
 
 ## Style polygons and lines
 
-A feed of polygons or lines uses a `shapes` style. Colour is a rule over one field: `fixed`, `category`, `steps` (explicit class breaks) or `intervals` (equal classes between a `min` and a `max`, one ordinal colour per class). Each class may also set a `pattern` (`stripes`, `dots`, `crosshatch`), a `dash` and a `width`, and a label template draws text with a halo. The key is derived from the style. Colour is never the only signal, so validation asks for a different pattern, width or dash in every class, or a label that names the field. The colour names a palette slot, never a value.
+A feed of polygons or lines uses a `shapes` style. Colour is a rule over one field: `fixed`, `category`, `steps` (explicit class breaks) or `intervals` (equal classes between a `min` and a `max`, one ordinal colour per class). Each class may also set a `pattern` (`stripes`, `dots`, `crosshatch`), a `dash` and a `width`, and a label template draws text with a halo. The key is derived from the style, and the Layers section and the map key (`MapKey`, in `MapChrome`'s `mapKey` slot) both draw it, so a layer needs nothing extra to appear in either. Colour is never the only signal, so validation asks for a different pattern, width or dash in every class, or a label that names the field. The colour names a palette slot, never a value.
 
 ```ts
 import type { FeedLayerDefinition, ShapeStyle } from "@mapcairn/core";

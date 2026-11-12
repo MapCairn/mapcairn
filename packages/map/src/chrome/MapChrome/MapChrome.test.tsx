@@ -514,6 +514,152 @@ describe("MapChrome layout", () => {
   });
 });
 
+describe("MapChrome map key slot", () => {
+  /** Lays the key slot out where the grid puts it: its bottom edge a gap above the bottom row. */
+  function placeKey(height: number, bottom = 732) {
+    place("map-key", bottom - height, height);
+    act(() => {
+      observers.trigger();
+    });
+  }
+
+  it("sits between the map and the bottom row in reading order, and is inert while modal", () => {
+    const { rerenderChrome } = mount({ mapKey: <div>key</div> });
+    const key = slot("map-key");
+    expect(key).toHaveTextContent("key");
+    expect(
+      screen.getByRole("main").compareDocumentPosition(key) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      key.compareDocumentPosition(slot("bottom-start")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(key).not.toHaveAttribute("inert");
+    rerenderChrome({ modal: true });
+    expect(key).toHaveAttribute("inert");
+  });
+
+  it("is left out when the host gives no key", () => {
+    mount();
+    expect(root().querySelector('[data-chrome="map-key"]')).toBeNull();
+  });
+
+  it("caps the key between the search pill and the bottom row", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    placeKey(200);
+    // The pill ends at 60 and the bottom row starts at 744: a gap clear of each.
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (60 + 12)}px`);
+    expect(cssVar(chromeVars.mapKeyLift)).toBe("0px");
+    expect(slot("map-key")).toHaveAttribute("data-crowded", "false");
+    expect(slot("map-key")).not.toHaveAttribute("inert");
+  });
+
+  it("rides above the sheet with the bottom row, with less room", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    placeKey(60);
+    const heights = computeDetentHeights({
+      viewportHeight: 800,
+      insetBottom: 0,
+    });
+    const lift = computeBottomSlotLayout({
+      layout: "sheet",
+      viewportWidth: 390,
+      viewportHeight: 800,
+      sheetTopEdge: 800 - heights.peek,
+      sheetDetent: "peek",
+      panelRightEdge: null,
+      measureToolbarTop: null,
+      inset: 12,
+    }).bottomEndTranslateY;
+    act(() => {
+      layoutValue.publishSheetTop(800 - heights.peek);
+      surfaceValue.publishSheetDetent("peek");
+    });
+    expect(lift).toBeLessThan(0);
+    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${lift}px`);
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 + lift - 12 - 72}px`);
+  });
+
+  it("lifts it above a taller bottom row by the row's own position, not the row's lift twice", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    // A toolbar makes the row taller, so the key's natural bottom is already above it.
+    place("bottom-centre", 700, 88);
+    placeKey(60, 688);
+    act(() => {
+      layoutValue.publishToolbarTop(700);
+    });
+    const lift = 700 - 12 - (800 - 12);
+    // Target bottom: the lifted scale bar's top (744 + lift) a gap above.
+    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 + lift - 12 - 688}px`);
+  });
+
+  it("hides while there is no room for the chip, and returns when there is", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(320, 568);
+    placeKey(60, 500);
+    // A tall toolbar lifts the bottom row to 150, leaving 10 px under the pill.
+    act(() => {
+      layoutValue.publishToolbarTop(150);
+    });
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe("48px");
+    expect(slot("map-key")).toHaveAttribute("data-crowded", "true");
+    expect(slot("map-key")).toHaveAttribute("inert");
+    act(() => {
+      layoutValue.publishToolbarTop(null);
+    });
+    expect(slot("map-key")).toHaveAttribute("data-crowded", "false");
+    expect(slot("map-key")).not.toHaveAttribute("inert");
+  });
+
+  it("keeps clear of the tour card while it shows, and uses the room under the search pill once it goes", () => {
+    const view = mount({ mapKey: <div>key</div>, tour: <div>tour</div> });
+    resize(390, 800, 190);
+    placeKey(60);
+    // The card ends at 262, so the key may use 744 - 12 - (262 + 12).
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (262 + 12)}px`);
+    view.rerenderChrome({ tour: undefined });
+    act(() => {
+      observers.trigger();
+    });
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (60 + 12)}px`);
+  });
+
+  it("measures again once a slot has left the page, because the key's resting place moves with the row", () => {
+    const view = mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    const centre = slot("bottom-centre");
+    // A taller bottom row (the toolbar) has the key rest 72 px higher.
+    Object.defineProperty(slot("map-key"), "offsetTop", {
+      get: () => (root().contains(centre) ? 600 : 672),
+      configurable: true,
+    });
+    Object.defineProperty(slot("map-key"), "offsetHeight", {
+      value: 60,
+      configurable: true,
+    });
+    act(() => {
+      observers.trigger();
+    });
+    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 - 12 - 660}px`);
+
+    view.rerenderChrome({ bottomCentre: undefined });
+
+    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 - 12 - 732}px`);
+  });
+
+  it("sets nothing while the slot has no size, as when no layer has a key", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    placeKey(0);
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe("");
+    expect(slot("map-key")).toHaveAttribute("data-crowded", "false");
+  });
+});
+
 describe("chrome internals outside a MapChrome", () => {
   it("give harmless defaults and well-formed variable references", () => {
     render(<Probe />);

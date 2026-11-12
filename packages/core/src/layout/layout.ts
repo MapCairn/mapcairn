@@ -25,6 +25,23 @@ export function chooseLayout(viewport: {
     : "sheet";
 }
 
+/**
+ * Whether a viewport is a phone's, in either orientation: narrower than
+ * {@link PANEL_MIN_WIDTH} (the bottom sheet) or shorter than
+ * {@link PANEL_MAX_HEIGHT_EXCLUSIVE} (a phone on its side, which gets the side
+ * panel). A short desktop window counts too. The map key starts minimised
+ * here, because the screen is small.
+ */
+export function isCompactViewport(viewport: {
+  width: number;
+  height: number;
+}): boolean {
+  return (
+    chooseLayout(viewport) === "sheet" ||
+    viewport.height < PANEL_MAX_HEIGHT_EXCLUSIVE
+  );
+}
+
 /** Offsets that keep the bottom slots clear of the surfaces above them. */
 export interface BottomSlotLayout {
   /** Rightwards shift of bottom-start, in pixels. Never negative. */

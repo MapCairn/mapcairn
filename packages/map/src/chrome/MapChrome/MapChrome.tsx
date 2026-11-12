@@ -18,14 +18,12 @@ import {
   useState,
 } from "react";
 import { usePreferences } from "../../services";
+import { CHROME_GAP_PX, CHROME_INSET_PX } from "../chromeSpacing";
 import { ChromeLayoutProvider, type ChromeLayoutValue } from "../layoutContext";
 import { ChromeSurfaceContext, type ChromeSurfaceValue } from "./chromeSurface";
 import { chromeVars } from "./chromeVars";
 import * as styles from "./MapChrome.css";
-
-/** The screen inset and the gap between slots, in CSS pixels (the 12 px tokens). */
-const INSET_PX = 12;
-const GAP_PX = 12;
+import { placeMapKey, useMapKeyPlacement } from "./useMapKeyPlacement";
 
 /** Props for {@link MapChrome}. */
 export interface MapChromeProps {
@@ -54,6 +52,14 @@ export interface MapChromeProps {
    * column and panel (`"start"`, the default) or against the end stack.
    */
   readonly tourSide?: "start" | "end";
+  /**
+   * The key to the layers that are on (`MapKey`). It sits above the scale
+   * bar, rides above the sheet or beside the side panel with it, is as tall
+   * as the room under the search pill allows, and hides when there is no room
+   * for its chip, while the credits are open, and at the full detent. A
+   * prop named `key` would be React's own, so it is `mapKey`.
+   */
+  readonly mapKey?: ReactNode;
   /**
    * The `Sheet` (bottom sheet or side panel). Rendered outside every inert
    * group, so it stays operable while the rest of the chrome is inert.
@@ -86,11 +92,14 @@ interface Measurements {
   readonly bottomCentreTop: number | null;
   /** Bottom edge of the tour card's slot, or null while it is empty. */
   readonly tourBottom: number | null;
+  /** Bottom edge of the map key's slot before any lift, or null while it is empty. */
+  readonly mapKeyBottom: number | null;
 }
 
 type SlotName =
   | "top-start"
   | "tour"
+  | "map-key"
   | "end-stack"
   | "bottom-start"
   | "bottom-centre"
@@ -119,7 +128,8 @@ function measure(
   const bottomEnd = box(slots, "bottom-end");
   const bottomCentre = box(slots, "bottom-centre");
   const tour = box(slots, "tour");
-  const restingBottom = height - INSET_PX;
+  const mapKey = box(slots, "map-key");
+  const restingBottom = height - CHROME_INSET_PX;
   const shown = [bottomStart, bottomEnd].filter(
     (slot): slot is NonNullable<typeof slot> =>
       slot !== null && slot.height > 0,
@@ -131,9 +141,9 @@ function measure(
   return {
     width,
     height,
-    topStartBottom: topStart ? topStart.top + topStart.height : INSET_PX,
-    endStackTop: endStack?.top ?? INSET_PX,
-    endStackBottom: endStack ? endStack.top + endStack.height : INSET_PX,
+    topStartBottom: topStart ? topStart.top + topStart.height : CHROME_INSET_PX,
+    endStackTop: endStack?.top ?? CHROME_INSET_PX,
+    endStackBottom: endStack ? endStack.top + endStack.height : CHROME_INSET_PX,
     endStackWidth: endStack?.width ?? 0,
     bottomRowTop:
       shown.length > 0 ? Math.min(...shown.map((slot) => slot.top)) : rowBottom,
@@ -142,6 +152,8 @@ function measure(
     bottomCentreTop:
       bottomCentre && bottomCentre.height > 0 ? bottomCentre.top : null,
     tourBottom: tour && tour.height > 0 ? tour.top + tour.height : null,
+    mapKeyBottom:
+      mapKey && mapKey.height > 0 ? mapKey.top + mapKey.height : null,
   };
 }
 
@@ -158,16 +170,16 @@ function verticalRoom(m: Measurements, lift: number) {
     endStackMaxHeight: computeEndStackMaxHeight({
       viewportHeight: m.height,
       topOffset: m.endStackTop,
-      bottomReserved: m.height - liftedRowTop + GAP_PX - INSET_PX,
-      inset: INSET_PX,
+      bottomReserved: m.height - liftedRowTop + CHROME_GAP_PX - CHROME_INSET_PX,
+      inset: CHROME_INSET_PX,
     }),
     bottomEndRoom: Math.max(
       0,
-      m.bottomEndTop + lift - GAP_PX - m.endStackBottom,
+      m.bottomEndTop + lift - CHROME_GAP_PX - m.endStackBottom,
     ),
     bottomEndBesideRoom: Math.max(
       0,
-      m.bottomEndTop + lift - GAP_PX - m.topStartBottom,
+      m.bottomEndTop + lift - CHROME_GAP_PX - m.topStartBottom,
     ),
   };
 }
@@ -187,8 +199,9 @@ function sameMeasurements(a: Measurements | null, b: Measurements): boolean {
  *
  * @remarks
  * - DOM order is reading order: top-start, tour, end-stack, the sheet, the map
- *   (`main`), then bottom-start, bottom-centre and bottom-end. The app renders
- *   the skip link before this component and the page's h1 itself.
+ *   (`main`), the map key, then bottom-start, bottom-centre and bottom-end.
+ *   The app renders the skip link before this component and the page's h1
+ *   itself.
  * - While `modal`, every group except the sheet gets `inert`. That is one
  *   inert attribute per group rather than one wrapper, because the sheet sits
  *   between the groups in reading order.
@@ -217,6 +230,7 @@ export function MapChrome({
   bottomCentre,
   tour,
   tourSide = "start",
+  mapKey,
   sheet,
   modal,
   onViewportChange,
@@ -266,6 +280,7 @@ export function MapChrome({
     return {
       "top-start": make("top-start"),
       tour: make("tour"),
+      "map-key": make("map-key"),
       "end-stack": make("end-stack"),
       "bottom-start": make("bottom-start"),
       "bottom-centre": make("bottom-centre"),
@@ -302,6 +317,31 @@ export function MapChrome({
     update();
   }, [layout, update]);
 
+  // A slot that comes or goes can move another without resizing it (the row a
+  // toolbar made taller shrinks back), and the measurement a slot's ref makes
+  // as it leaves still sees it in the page, so measure once the page has
+  // updated. On the reference site `mapKey == null` is never true, because
+  // `<MapKey />` is always an element, so the map key's own resize is what
+  // re-measures it.
+  const presence = [
+    topStart,
+    tour,
+    mapKey,
+    endStack,
+    bottomStart,
+    bottomCentre,
+    bottomEnd,
+  ]
+    .map((content) => (content == null ? "-" : "+"))
+    .join("");
+  const measuredPresence = useRef(presence);
+  useLayoutEffect(() => {
+    if (measuredPresence.current !== presence) {
+      measuredPresence.current = presence;
+      update();
+    }
+  }, [presence, update]);
+
   const onViewportChangeRef = useLatestRef(onViewportChange);
   useEffect(() => {
     if (measurements) {
@@ -310,7 +350,7 @@ export function MapChrome({
   }, [viewport, measurements, onViewportChangeRef]);
 
   // Where the bottom row rests above the bottom edge.
-  const inset = measurements?.bottomInset ?? INSET_PX;
+  const inset = measurements?.bottomInset ?? CHROME_INSET_PX;
   const sheetOnly = computeBottomSlotLayout({
     layout,
     viewportWidth: width,
@@ -350,8 +390,22 @@ export function MapChrome({
   // may hide where it would have fitted, which is accepted for the simpler rule.
   const tourCrowded =
     measurements?.tourBottom != null &&
-    measurements.tourBottom + GAP_PX >
+    measurements.tourBottom + CHROME_GAP_PX >
       measurements.bottomRowTop + bottom.bottomEndTranslateY;
+  const tourHidden = modal || tourCrowded;
+  // The map key gives way to the tour card, which is there for a first visit
+  // and is shown first, and hides when the room under the search pill is too
+  // small for its chip.
+  const mapKeyCrowded = useMapKeyPlacement(
+    rootRef,
+    measurements
+      ? placeMapKey(
+          measurements,
+          bottom.bottomEndTranslateY,
+          tourHidden ? null : measurements.tourBottom,
+        )
+      : null,
+  );
   const endStackMaxHeight = room?.endStackMaxHeight ?? null;
   const bottomEndRoom = room?.bottomEndRoom ?? null;
   const bottomEndBesideRoom = room?.bottomEndBesideRoom ?? null;
@@ -400,7 +454,6 @@ export function MapChrome({
     }),
     [layout, viewport, finePointer, panelEdge],
   );
-  const tourHidden = modal || tourCrowded;
   const surfaceValue = useMemo<ChromeSurfaceValue>(
     () => ({
       publishSheetDetent,
@@ -456,6 +509,17 @@ export function MapChrome({
           <main className={styles.background} inert={modal}>
             {background}
           </main>
+          {mapKey == null ? null : (
+            <div
+              ref={slotRefs["map-key"]}
+              data-chrome="map-key"
+              data-crowded={mapKeyCrowded ? "true" : "false"}
+              className={styles.mapKey}
+              inert={modal || mapKeyCrowded}
+            >
+              {mapKey}
+            </div>
+          )}
           {slot("bottom-start", styles.bottomStart, bottomStart)}
           {slot("bottom-centre", styles.bottomCentre, bottomCentre)}
           {slot("bottom-end", styles.bottomEnd, bottomEnd)}

@@ -190,6 +190,29 @@ export const tour = style({
   },
 });
 
+/**
+ * The map key, in the grid cell above the scale bar (the one the tour card
+ * also uses, from the top), aligned to its bottom edge. `MapChrome` moves it
+ * up to a gap above the lifted bottom row and caps its height, and moves it
+ * clear of the side panel the way it moves bottom-start. It gives way when
+ * there is no room (`data-crowded`), at the full detent and while the
+ * credits popover, which grows over this corner, is open.
+ */
+export const mapKey = style({
+  ...bottomBase,
+  gridRow: 2,
+  gridColumn: 1,
+  justifySelf: "start",
+  maxWidth: "100%",
+  transform: `translate(${chromeVar(chromeVars.bottomStartX, "0px")}, ${chromeVar(chromeVars.mapKeyLift, "0px")})`,
+  selectors: {
+    [whenHidden]: hidden,
+    '&[data-crowded="true"]': hidden,
+    [`${root}:has([data-chrome="attribution-popover"]:not([hidden])) &`]:
+      hidden,
+  },
+});
+
 /** Attribution. Rides above the sheet with bottom-start. */
 export const bottomEnd = style({
   ...bottomBase,
