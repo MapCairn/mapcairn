@@ -94,7 +94,7 @@ Before a pull request is merged:
 
 - The `build` and `e2e` checks must pass. The repository ruleset requires them. `build` runs lint, typecheck, the unit tests with the coverage floors and the production build, and `e2e` runs the Playwright suites.
 - The `CLA` check must show that the author and every commit author have agreed to [`CLA.md`](CLA.md).
-- The maintainer reads the diff and the description, and checks the items in the pull request template: the checks above passed, the copy is in British English, the documents match the change and anything the change sends over the network is in `PRIVACY.md`. For a visible change the description says what was seen at each size and theme, and a reviewer can ask the author to attach the screenshots.
+- The maintainer reads the diff and the description, and checks the items in the pull request template: the checks above passed, the copy is in British English, the documents match the change and anything the change sends over the network is in `PRIVACY.md`. For a visible change the description says what was seen at each size and theme, and the maintainer can ask for the screenshots when they are missing.
 - A new feature or a bug fix has tests. The tests are written first (see the conventions above) and a change that adds or changes behaviour is not accepted without them, unless the pull request says why none are needed, for example a documentation change.
 - Review threads are resolved. A change can be declined, or sent back for changes, with a reason.
 
