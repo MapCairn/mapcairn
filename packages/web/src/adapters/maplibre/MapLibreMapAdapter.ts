@@ -17,7 +17,6 @@ import type {
   MapFitOptions,
   MapHeatmap,
   MapHostElement,
-  MapImageDrawing,
   MapImageOptions,
   MapMountOptions,
   MapMoveOptions,
@@ -39,15 +38,12 @@ import {
   type MapPlacement,
   mapMetresPerPixel,
   omittedLayers,
-  placePath,
   placePoint,
   pressHandle,
   toEngineZoom,
   toNormalisedZoom,
-  visibleRuns,
   wrapLongitude,
 } from "@mapcairn/core";
-import { tokenValues } from "@mapcairn/theme";
 import type {
   AnimationOptions,
   GeoJSONSourceSpecification,
@@ -62,12 +58,12 @@ import type {
 import { withCacheKey } from "../../constants/workerCacheKey";
 import { Emitter } from "../shared/emitter";
 import { heatmapLayer } from "./heatmapLayer";
+import { MapImageExporter } from "./imageExport";
 import { propertyLook, ruleLook } from "./lookExpressions";
 import {
   MARKER_PIXEL_RATIO,
   markerImage,
   markerImageName,
-  rgbaColour,
 } from "./markerImages";
 import {
   PATTERN_NAMES,
@@ -83,6 +79,8 @@ import {
   lineLayers,
   type ShapeSource,
 } from "./shapeLayers";
+
+export { IMAGE_WAIT_MS } from "./imageExport";
 
 type MapLibreModule = typeof import("maplibre-gl");
 
@@ -132,33 +130,6 @@ export function loadEngine(workerCacheKey?: string): Promise<MapLibreModule> {
 }
 
 /**
- * Splits credit text into lines no wider than `room` at the context's current
- * font, breaking only between words. A single word wider than `room` stays on
- * its own line, and the caller shrinks the text to fit it.
- */
-function wrapLines(
-  context: CanvasRenderingContext2D,
-  text: string,
-  room: number,
-): string[] {
-  const lines: string[] = [];
-  let line = "";
-  for (const word of text.split(/\s+/)) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (line && context.measureText(candidate).width > room) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
-    }
-  }
-  lines.push(line);
-  return lines;
-}
-
-/** Bearing in degrees clockwise, in the range [0, 360) and never -0. */
-
-/**
  * A position MapLibre reports, with its longitude brought into [-180, 180).
  * MapLibre does not wrap `unproject` or event positions, so on a flat map a
  * press on the copy of the world east of the antimeridian reports 190, which
@@ -171,6 +142,7 @@ function positionOf(lngLat: {
   return { lat: lngLat.lat, lng: wrapLongitude(lngLat.lng) };
 }
 
+/** Bearing in degrees clockwise, in the range [0, 360) and never -0. */
 function normaliseBearing(bearing: number): number {
   const normalised = ((bearing % 360) + 360) % 360;
   return normalised === 0 ? 0 : normalised;
@@ -456,28 +428,6 @@ const SHAPE_FILL_OPACITY = 0.18;
 const SHAPE_LINE_WIDTH = 2;
 
 /**
- * How long `toImage` waits for the map to finish loading, and then for a
- * frame, before it goes on with what is there or gives up.
- */
-export const IMAGE_WAIT_MS = 3000;
-
-/** The size of an exported image's credit text, in CSS pixels. */
-const ATTRIBUTION_SIZE_PX = 11;
-
-/** The sizes of drawn shapes in an exported image, in CSS pixels, as on screen. */
-const MARK_LINE_PX = 4;
-const MARK_HALO_PX = 4;
-const MARK_DASH_PX = 8;
-const MARK_DOT_RADIUS_PX = 7;
-const MARK_FILL_OPACITY = 0.18;
-
-/** The gap between lines of an exported image's credit text, as a multiple of the text size. */
-const ATTRIBUTION_LINE_SPACING = 1.2;
-
-/** The opacity of the strip behind an exported image's credit text. */
-const ATTRIBUTION_STRIP_OPACITY = 0.8;
-
-/**
  * What the engine holds for one data layer: its source and style layers
  * (bottom first), and which of them a tap can land on. Kept so a layer is
  * erased and stacked without searching the style.
@@ -548,79 +498,6 @@ function basemapFont(map: MapLibreMap): readonly string[] | undefined {
     }
   }
   return undefined;
-}
-
-/** A copy of the map's canvas, and the 2D context it was drawn with. */
-interface Frame {
-  readonly canvas: HTMLCanvasElement;
-  readonly context: CanvasRenderingContext2D;
-}
-
-/**
- * Copies a canvas, pixel for pixel, onto a new 2D canvas, which keeps its
- * pixels after the engine clears its own drawing buffer. Must run inside the
- * frame that drew the source.
- */
-function copyCanvas(source: HTMLCanvasElement): Frame {
-  const canvas = document.createElement("canvas");
-  canvas.width = source.width;
-  canvas.height = source.height;
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new MapEngineError(
-      "export-failed",
-      "The browser could not make a canvas to draw the image on.",
-    );
-  }
-  context.drawImage(source, 0, 0);
-  return { canvas, context };
-}
-
-/** Waits for the page's fonts, so credit text is drawn in the right one. A font set that fails only costs the web font. */
-async function fontsReady(): Promise<void> {
-  try {
-    await document.fonts?.ready;
-  } catch {
-    // Draw in whatever font the page falls back to.
-  }
-}
-
-function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
-      } else {
-        reject(
-          new MapEngineError(
-            "export-failed",
-            "The browser could not encode the map as an image.",
-          ),
-        );
-      }
-    }, "image/png");
-  });
-}
-
-/**
- * Turns whatever went wrong while saving into the port's error. A tainted
- * canvas throws a `SecurityError` when it is read, which means a layer on the
- * map came from a server that does not allow it to be copied.
- */
-function toExportError(error: unknown): MapEngineError {
-  if (error instanceof MapEngineError) {
-    return error;
-  }
-  if ((error as { name?: unknown } | null)?.name === "SecurityError") {
-    return new MapEngineError(
-      "export-failed",
-      "The browser blocked reading the map, so it cannot be saved as an image.",
-    );
-  }
-  return new MapEngineError(
-    "export-failed",
-    `The map could not be saved as an image: ${String(error)}`,
-  );
 }
 
 function pointCollection(id: string, features: readonly MapFeature[]) {
@@ -851,6 +728,11 @@ interface WorkerCheck {
  */
 export class MapLibreMapAdapter implements MapAdapter {
   private readonly emitter = new Emitter<MapEvents>();
+  private readonly imageExporter = new MapImageExporter({
+    mountedMap: () => (this.destroyed ? undefined : this.map),
+    isSwapPending: () => this.pending !== undefined,
+    placement: () => this.placement(),
+  });
   private readonly workerFailureGraceMs: number;
   private readonly workerCacheKey: string | undefined;
   private map: MapLibreMap | undefined;
@@ -1256,31 +1138,8 @@ export class MapLibreMapAdapter implements MapAdapter {
     };
   }
 
-  /**
-   * Draws the map as a PNG without asking MapLibre to keep its drawing
-   * buffer, which would cost every frame. The buffer is only readable in the
-   * frame that has just been drawn, so a repaint is asked for and the canvas
-   * is copied inside its `render` event, before the browser clears it.
-   */
-  async toImage(options: MapImageOptions = {}): Promise<Blob> {
-    const map = this.map;
-    if (!map || this.destroyed) {
-      throw new MapEngineError("export-failed", "The map is not mounted.");
-    }
-    this.refuseExport();
-    try {
-      await this.untilLoaded(map);
-      // A swap can start, or a failed one can put a basemap back, while the
-      // map finishes loading.
-      this.refuseExport();
-      const frame = await this.captureFrame(map);
-      await fontsReady();
-      this.drawMarks(frame, options.drawing);
-      this.drawAttribution(frame, options.attribution);
-      return await encodePng(frame.canvas);
-    } catch (error) {
-      throw toExportError(error);
-    }
+  toImage(options?: MapImageOptions): Promise<Blob> {
+    return this.imageExporter.toImage(options);
   }
 
   removeLayer(id: string): void {
@@ -2145,192 +2004,6 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.workerCheck = undefined;
     clearTimeout(check.timer);
     check.idle.unsubscribe();
-  }
-
-  /**
-   * Throws when an image of the map must not be made now: a swap is still
-   * loading, so the pixels would be of neither basemap alone.
-   */
-  private refuseExport(): void {
-    if (this.pending) {
-      throw new MapEngineError(
-        "export-failed",
-        "The basemap is still loading, so the map cannot be saved yet.",
-      );
-    }
-  }
-
-  /** Resolves once the map has loaded everything, or after {@link IMAGE_WAIT_MS}, so a stuck tile cannot stall an export. */
-  private untilLoaded(map: MapLibreMap): Promise<void> {
-    if (map.loaded()) {
-      return Promise.resolve();
-    }
-    return new Promise((resolve) => {
-      const done = () => {
-        clearTimeout(timer);
-        idle.unsubscribe();
-        resolve();
-      };
-      const timer = setTimeout(done, IMAGE_WAIT_MS);
-      const idle = map.on("idle", done);
-    });
-  }
-
-  /**
-   * Asks for a repaint and copies the canvas inside the `render` event that
-   * follows, the only moment its drawing buffer can be read.
-   */
-  private captureFrame(map: MapLibreMap): Promise<Frame> {
-    return new Promise((resolve, reject) => {
-      const stop = () => {
-        clearTimeout(timer);
-        render.unsubscribe();
-      };
-      const timer = setTimeout(() => {
-        stop();
-        reject(
-          new MapEngineError(
-            "export-failed",
-            "The map did not draw a frame to save.",
-          ),
-        );
-      }, IMAGE_WAIT_MS);
-      const render = map.on("render", () => {
-        stop();
-        try {
-          this.refuseExport();
-          resolve(copyCanvas(map.getCanvas()));
-        } catch (error) {
-          reject(error);
-        }
-      });
-      map.triggerRepaint();
-    });
-  }
-
-  /**
-   * Draws the credit text on a semi-opaque strip along the bottom edge, in the
-   * page's own font and the palette's ink, sized to the map's CSS size so it
-   * reads the same on a high-density screen. Text too long for the image is
-   * scaled down to fit.
-   */
-  /**
-   * Draws the ui's own marks (drawn shapes) over the copied map, at the
-   * image's scale: translucent fills, a halo under each outline and dots.
-   */
-  private drawMarks(frame: Frame, drawing: MapImageDrawing | undefined): void {
-    const map = this.map;
-    if (!drawing || drawing.marks.length === 0 || !map) {
-      return;
-    }
-    const { canvas, context } = frame;
-    const cssWidth =
-      map.getCanvas().clientWidth ||
-      canvas.width / (window.devicePixelRatio || 1);
-    const scale = cssWidth > 0 ? canvas.width / cssWidth : 1;
-    const placement = this.placement();
-    const toImage = (point: PixelPoint) => ({
-      x: point.x * scale,
-      y: point.y * scale,
-    });
-    const trace = (points: readonly PixelPoint[], closed: boolean) => {
-      context.beginPath();
-      points.forEach((point, index) => {
-        if (index === 0) {
-          context.moveTo(point.x, point.y);
-        } else {
-          context.lineTo(point.x, point.y);
-        }
-      });
-      if (closed) {
-        context.closePath();
-      }
-    };
-    context.lineJoin = "round";
-    context.lineCap = "round";
-    for (const mark of drawing.marks) {
-      if (mark.kind === "dot") {
-        const placed = placePoint(mark.position, placement);
-        if (!placed) {
-          continue;
-        }
-        const at = toImage(placed);
-        context.beginPath();
-        context.arc(at.x, at.y, MARK_DOT_RADIUS_PX * scale, 0, 2 * Math.PI);
-        context.fillStyle = drawing.colour;
-        context.fill();
-        context.lineWidth = MARK_HALO_PX * scale;
-        context.strokeStyle = drawing.halo;
-        context.stroke();
-        continue;
-      }
-      // The same curves, copy of the world and horizon as the overlay, so
-      // the image shows the shapes as the person saw them.
-      const path = placePath(mark.positions, mark.closed, placement);
-      const ring = mark.closed && path.whole;
-      const lines = ring
-        ? [path.pixels.map(toImage)]
-        : visibleRuns(path).map((run) => run.map(toImage));
-      if (mark.fill && ring && path.pixels.length >= 3) {
-        trace(lines[0] as PixelPoint[], true);
-        context.fillStyle = rgbaColour(drawing.colour, MARK_FILL_OPACITY);
-        context.fill();
-      }
-      context.setLineDash(
-        mark.dashed ? [MARK_DASH_PX * scale, MARK_DASH_PX * scale] : [],
-      );
-      for (const line of lines) {
-        trace(line, ring);
-        context.lineWidth = (MARK_LINE_PX + MARK_HALO_PX) * scale;
-        context.strokeStyle = drawing.halo;
-        context.stroke();
-        trace(line, ring);
-        context.lineWidth = MARK_LINE_PX * scale;
-        context.strokeStyle = drawing.colour;
-        context.stroke();
-      }
-    }
-    context.setLineDash([]);
-  }
-
-  private drawAttribution(frame: Frame, attribution: string | undefined): void {
-    const text = attribution?.trim();
-    if (!text) {
-      return;
-    }
-    const { canvas, context } = frame;
-    const cssWidth =
-      this.map?.getCanvas().clientWidth ||
-      canvas.width / (window.devicePixelRatio || 1);
-    const scale = cssWidth > 0 ? canvas.width / cssWidth : 1;
-    const padding = 4 * scale;
-    const family = getComputedStyle(document.body).fontFamily || "sans-serif";
-    let size = ATTRIBUTION_SIZE_PX * scale;
-    context.font = `${size}px ${family}`;
-    const room = canvas.width - 2 * padding;
-    let lines = wrapLines(context, text, room);
-    const widest = Math.max(
-      ...lines.map((line) => context.measureText(line).width),
-    );
-    if (widest > room && room > 0) {
-      size *= room / widest;
-      context.font = `${size}px ${family}`;
-      lines = wrapLines(context, text, room);
-    }
-    const lineHeight = size * ATTRIBUTION_LINE_SPACING;
-    const height = size + (lines.length - 1) * lineHeight + 2 * padding;
-    context.fillStyle = rgbaColour(
-      tokenValues.dataMarker.halo,
-      ATTRIBUTION_STRIP_OPACITY,
-    );
-    context.fillRect(0, canvas.height - height, canvas.width, height);
-    context.fillStyle = tokenValues.dataMarker.edge;
-    context.textAlign = "right";
-    context.textBaseline = "middle";
-    const top = canvas.height - height + padding + size / 2;
-    lines.forEach((line, index) => {
-      context.fillText(line, canvas.width - padding, top + index * lineHeight);
-    });
   }
 
   /** Plain property bags of every rendered feature at a pixel, for the click event. */
