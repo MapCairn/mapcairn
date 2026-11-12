@@ -128,7 +128,7 @@ export interface DataLayers {
   setEnabled(id: string, enabled: boolean): void;
   /**
    * Turns several layers off as one change: one state update, so one redraw
-   * and one address update, and one announcement ("3 layers turned off"). Ids
+   * and one address update, and one announcement ("3 layers turned off. Undo available"). Ids
    * that are not on, or not known, are ignored, and nothing happens when none
    * is on. Each layer's selected feature, list of choices and affected area
    * close as they do for a single layer. It offers {@link DataLayers.turnedOff}

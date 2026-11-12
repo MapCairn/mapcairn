@@ -151,14 +151,14 @@ describe("Turn off all layers", () => {
     expect((undo().parentElement as HTMLElement).textContent).toContain(
       "Turned off 1 layer.",
     );
-    expect(said()).toEqual(["1 layer turned off"]);
+    expect(said()).toEqual(["1 layer turned off. Undo available"]);
   });
 
   it("announces once, through the shared announcer, and the visible status is not a live region", () => {
     const view = setup();
     view.turnOn(FEED, ALERTS, IMAGERY);
     fireEvent.click(turnOffAll());
-    expect(said()).toEqual(["3 layers turned off"]);
+    expect(said()).toEqual(["3 layers turned off. Undo available"]);
     const section = screen.getByTestId("sheet-section-layers");
     expect(within(section).queryByRole("status")).toBeNull();
     expect(within(section).queryByRole("alert")).toBeNull();
@@ -245,6 +245,22 @@ describe("Turn off all layers", () => {
       vi.advanceTimersByTime(UNDO_TIMEOUT_MS);
     });
     expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
+  });
+
+  it("does not pull focus back to the button when focus left Undo for the page and the offer later expired", () => {
+    const view = setup();
+    view.turnOn(FEED);
+    fireEvent.click(turnOffAll());
+    act(() => undo().focus());
+    // A click on blank text: Undo blurs, still mounted, and nothing takes focus.
+    act(() => undo().blur());
+    expect(document.body).toHaveFocus();
+    act(() => {
+      vi.advanceTimersByTime(UNDO_TIMEOUT_MS);
+    });
+    expect(view.layers().turnedOff).toBeNull();
+    expect(turnOffAll()).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
   });
 
   it("is not held by a tap, which a touch screen reports as the pointer entering", () => {
@@ -334,13 +350,50 @@ describe("Turn off the layers of a group", () => {
         .layers.filter((layer) => layer.enabled)
         .map((layer) => layer.definition.id),
     ).toEqual([IMAGERY]);
-    expect(said()).toEqual(["2 layers turned off"]);
+    expect(said()).toEqual(["2 layers turned off. Undo available"]);
     expect((undo().parentElement as HTMLElement).textContent).toContain(
       "Turned off 2 in Samples.",
     );
     expect(turnOffAll()).toHaveTextContent("1 on");
     expect(undo()).toHaveAccessibleName("Undo turning off 2 in Samples");
     expect(undo()).toHaveFocus();
+  });
+
+  it("does not hold the countdown for focus that a pointer click handed to Undo", () => {
+    const view = setup();
+    view.turnOn(FEED, ALERTS, IMAGERY);
+    // A mouse or touch click leaves the button without the keyboard's focus
+    // ring, so the Undo that inherits focus does not match :focus-visible.
+    const matches = Element.prototype.matches;
+    const spy = vi
+      .spyOn(Element.prototype, "matches")
+      .mockImplementation(function (this: Element, selector: string) {
+        return selector === ":focus-visible"
+          ? false
+          : matches.call(this, selector);
+      });
+    const group = screen.getByRole("button", { name: "Turn off 2 in Samples" });
+    group.focus();
+    fireEvent.click(group);
+    expect(undo()).toHaveFocus();
+    act(() => {
+      vi.advanceTimersByTime(UNDO_TIMEOUT_MS);
+    });
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
+    spy.mockRestore();
+  });
+
+  it("holds the countdown for focus that the keyboard handed to Undo", () => {
+    const view = setup();
+    view.turnOn(FEED, ALERTS, IMAGERY);
+    const group = screen.getByRole("button", { name: "Turn off 2 in Samples" });
+    group.focus();
+    fireEvent.click(group);
+    expect(undo()).toHaveFocus();
+    act(() => {
+      vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 2);
+    });
+    expect(undo()).toBeInTheDocument();
   });
 
   it("restores only the group's layers on Undo, and the action comes back", () => {

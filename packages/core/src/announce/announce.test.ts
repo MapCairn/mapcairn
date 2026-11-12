@@ -223,8 +223,12 @@ describe("layer announcements", () => {
   });
 
   it("says how many layers a batch turned off, in the singular for one", () => {
-    expect(announceLayersTurnedOff(3)).toBe("3 layers turned off");
-    expect(announceLayersTurnedOff(1)).toBe("1 layer turned off");
+    expect(announceLayersTurnedOff(3)).toBe(
+      "3 layers turned off. Undo available",
+    );
+    expect(announceLayersTurnedOff(1)).toBe(
+      "1 layer turned off. Undo available",
+    );
   });
 
   it("says how many layers an undo turned back on, in the singular for one", () => {

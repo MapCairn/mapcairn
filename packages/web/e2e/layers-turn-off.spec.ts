@@ -43,7 +43,7 @@ test.describe("turning layers off at once", () => {
     await expect(page).not.toHaveURL(/layers=/);
     await expect
       .poll(() => mapPage.announcements())
-      .toContain("2 layers turned off");
+      .toContain("2 layers turned off. Undo available");
 
     await mapPage.undoTurnOffButton.click();
 

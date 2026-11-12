@@ -65,10 +65,11 @@ function useFocusHandoff(showsUndo: boolean) {
     onFocus: () => {
       hadFocus.current = true;
     },
-    // A blur that names where focus went is a person moving on; one that does
-    // not is the focused button leaving the page, which the handoff follows.
+    // A blur from an element still on the page is a person moving on, to
+    // another control or to the page itself. One from an element that has
+    // gone is the focused button leaving, which the handoff follows.
     onBlur: (event: FocusEvent) => {
-      if (event.relatedTarget !== null) {
+      if ((event.target as Node).isConnected) {
         hadFocus.current = false;
       }
     },
@@ -81,7 +82,7 @@ interface UndoStatusProps extends UndoCopy {
 
 /**
  * What the action says once it has run, with Undo. The countdown to its expiry
- * waits while a mouse is over it and while focus is inside it, each held and
+ * waits while a mouse is over it and while keyboard focus is inside it, each held and
  * released on its own, and both are let go when it goes. A tap is not a hover:
  * a touch screen reports one as the pointer entering, and nothing then reports
  * it leaving.
@@ -105,6 +106,14 @@ function UndoStatus({ layers, text, label }: UndoStatusProps) {
       releaseUndo("pointer");
     }
   };
+  // Only a keyboard user's focus holds the countdown. After a click the
+  // handoff gives Undo focus too, without the focus ring, and a mouse or touch
+  // user who has moved on must not be left with a status that never goes.
+  const hold = (event: FocusEvent) => {
+    if ((event.target as Element).matches(":focus-visible")) {
+      holdUndo("focus");
+    }
+  };
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the handlers only pause a countdown; the one control inside, Undo, is a real button.
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: the handlers only pause a countdown; the one control inside, Undo, is a real button.
@@ -112,7 +121,7 @@ function UndoStatus({ layers, text, label }: UndoStatusProps) {
       className={styles.undoStatus}
       onPointerEnter={enter}
       onPointerLeave={leave}
-      onFocus={() => holdUndo("focus")}
+      onFocus={hold}
       onBlur={() => releaseUndo("focus")}
     >
       {text}

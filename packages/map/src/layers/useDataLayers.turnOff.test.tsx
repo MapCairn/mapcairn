@@ -127,17 +127,20 @@ describe("useDataLayers turnOff", () => {
     const view = setup();
     await withAllOn(view);
     act(() => view.result.current.turnOff([FEED, ALERTS, IMAGERY]));
-    expect(said()).toEqual(["3 layers turned off"]);
-    expect(announce).toHaveBeenCalledWith("3 layers turned off", {
-      priority: "polite",
-    });
+    expect(said()).toEqual(["3 layers turned off. Undo available"]);
+    expect(announce).toHaveBeenCalledWith(
+      "3 layers turned off. Undo available",
+      {
+        priority: "polite",
+      },
+    );
   });
 
   it("uses the singular for one layer", async () => {
     const view = setup();
     await withAllOn(view);
     act(() => view.result.current.turnOff([ALERTS]));
-    expect(said()).toEqual(["1 layer turned off"]);
+    expect(said()).toEqual(["1 layer turned off. Undo available"]);
   });
 
   it("leaves the layers that were not asked for on", async () => {
@@ -153,7 +156,7 @@ describe("useDataLayers turnOff", () => {
     announce.mockClear();
     act(() => view.result.current.turnOff([FEED, IMAGERY, "no-such-layer"]));
     expect(enabledIds(view)).toEqual([]);
-    expect(said()).toEqual(["1 layer turned off"]);
+    expect(said()).toEqual(["1 layer turned off. Undo available"]);
     expect(view.result.current.turnedOff).toEqual({ count: 1, group: null });
   });
 

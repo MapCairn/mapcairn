@@ -92,9 +92,9 @@ export function announceLayerOn(name: string): string {
   return `${name} is on.`;
 }
 
-/** One action turned several layers off. */
+/** One action turned several layers off, and the interface offers an Undo for a few seconds. */
 export function announceLayersTurnedOff(count: number): string {
-  return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} turned off`;
+  return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} turned off. Undo available`;
 }
 
 /** An undo turned layers that one action had turned off back on. */
