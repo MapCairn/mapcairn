@@ -1,6 +1,6 @@
 # Governance
 
-_Last updated: 2026-11-11_
+_Last updated: 2026-11-12_
 
 MapCairn is a small, volunteer-maintained project with one maintainer. This document says who decides what, how decisions are made and recorded, how that can change, and what is not yet in place.
 
@@ -46,11 +46,28 @@ Taking on the Cloudflare account, the domain or the repository's administration 
 
 ## Continuity: not yet covered
 
+The maintainer intends to support MapCairn for the long term and wants more contributors and, in time, more maintainers. The project is built so that it can outlive any one person, but one thing is still missing.
+
 If the only maintainer were unavailable for any reason, the project could not continue with minimal interruption. This is the OpenSSF Best Practices silver criterion `access_continuity`, and it is not met.
 
 What is missing is a named, trusted second person who has access to the GitHub organisation, the Cloudflare account that serves the site and the domain, and who could keep the project going or hand it on. No such person is recorded here, and none will be invented to fill the gap. The work is tracked in [#4](https://github.com/MapCairn/mapcairn/issues/4). When it is done, this section will say who has access, without credentials or any secret.
 
-What does reduce the risk today: the code, the plans and the decisions are public, the licence lets anyone fork and run it, the site has no database or accounts to migrate, and the deployment is a Cloudflare Worker described by `wrangler.jsonc` in the repository.
+### What a second person needs access to
+
+- the `MapCairn` GitHub organisation, as an owner, so they can merge, administer the ruleset and publish advisories;
+- the `mapcairn` npm organisation, as an owner, so they can publish packages once publishing starts;
+- the Cloudflare account that holds the `mapcairn` Worker and its Workers Builds connection to the repository;
+- the domain and its DNS. The reference site is served from a subdomain of the maintainer's own domain, so a project domain that the organisation controls is a further step, not yet taken.
+
+Credentials are never recorded in the repository. The access is granted to the person's own account and recorded here by role.
+
+### What reduces the risk today
+
+The code, the plans and the decisions are public, the licence lets anyone fork and run it, the site has no database or accounts to migrate, and the deployment is a Cloudflare Worker described by `wrangler.jsonc` in the repository. A fork can be deployed from the repository alone.
+
+### How you can help
+
+Contributors are welcome now, and the route to maintainer is above. A person who reads this and would like to be the second trusted person can say so in [#4](https://github.com/MapCairn/mapcairn/issues/4).
 
 ## Changing this document
 
