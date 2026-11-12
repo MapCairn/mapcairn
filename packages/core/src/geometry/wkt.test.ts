@@ -4,7 +4,13 @@ import type { Feature, Geometry } from "geojson";
 import { describe, expect, it } from "vitest";
 import { failureOf } from "../propertyTesting/failureOf";
 import { GeometryError } from "./errors";
-import { formatWkt, parseWkt, readWktSequence, startsLikeWkt } from "./wkt";
+import {
+  formatWkt,
+  parseWkt,
+  readWktSequence,
+  startsLikeWkt,
+  UnsupportedSridError,
+} from "./wkt";
 
 const SQUARE = [
   [0, 0],
@@ -353,6 +359,9 @@ describe("parseWkt", () => {
     "SRID=4326 POINT (1 2)",
     "SRID=4326;",
     "SRID=4326;POINT (1 2) SRID=4326;",
+    "SRID=4326;SRID=4326;POINT (1 2)",
+    "GEOMETRYCOLLECTION (SRID=4326;POINT (1 2))",
+    "GEOMETRYCOLLECTION (POINT (1 2), SRID=4326;POINT (3 4))",
     "LINESTRING (1 2)",
     "LINESTRING (1 2,, 3 4)",
     "LINESTRING (1 2, 3 4,)",
@@ -490,6 +499,28 @@ describe("parseWkt on hostile input", () => {
     expect(result.elapsed).toBeLessThan(LIMIT_MS);
   });
 
+  it("refuses a long run of SRID prefixes, one after another", () => {
+    const result = time(`${"SRID=4326;".repeat(SIZE / 10)}POINT (1 2)`);
+    expect(result.failed).toBe(true);
+    expect(result.elapsed).toBeLessThan(LIMIT_MS);
+  });
+
+  it("refuses an SRID that is a very long run of digits", () => {
+    const result = time(`SRID=${"4".repeat(SIZE)};POINT (1 2)`);
+    expect(result.failed).toBe(true);
+    expect(result.elapsed).toBeLessThan(LIMIT_MS);
+  });
+
+  it("refuses a long run of semicolons, equals signs or prefix parts", () => {
+    for (const mark of [";", "=", "SRID=", "SRID=4326;"]) {
+      for (const text of [mark.repeat(SIZE), `SRID=${mark.repeat(SIZE)}`]) {
+        const result = time(`${text}POINT (1 2)`);
+        expect(result.failed).toBe(true);
+        expect(result.elapsed).toBeLessThan(LIMIT_MS);
+      }
+    }
+  });
+
   it("reads a very long list of coordinates", () => {
     const positions = Array.from({ length: 100_000 }, (_, i) => `${i} ${i}`);
     const result = time(`LINESTRING (${positions.join(", ")})`);
@@ -543,14 +574,19 @@ describe("the axis order", () => {
 });
 
 describe("EWKT", () => {
-  /** The kind of error `text` raises, or `undefined` when it parses. */
-  function kindOf(text: string): string | undefined {
+  /** The error `text` raises, or `undefined` when it parses. */
+  function errorOf(text: string): GeometryError | undefined {
     try {
       parseWkt(text);
     } catch (error) {
-      return (error as GeometryError).kind;
+      return error as GeometryError;
     }
     return undefined;
+  }
+
+  /** The kind of error `text` raises, or `undefined` when it parses. */
+  function kindOf(text: string): string | undefined {
+    return errorOf(text)?.kind;
   }
 
   it("reads an SRID prefix of 4326, whatever its case or spacing", () => {
@@ -586,6 +622,69 @@ describe("EWKT", () => {
     );
     expect(() => parseWkt("SRID=3857;POINT (1 2)")).toThrow(GeometryError);
     expect(kindOf("SRID=3857;POINT (1 2)")).toBe("unsupported");
+  });
+
+  it("names the SRID it refused on the error, so a caller can tell it from a curve", () => {
+    for (const [text, srid] of [
+      ["SRID=3857;POINT (1 2)", 3857],
+      ["SRID=0;POINT (1 2)", 0],
+      ["SRID=123456789;POINT (1 2)", 123_456_789],
+    ] as const) {
+      const error = errorOf(text);
+      expect(error).toBeInstanceOf(UnsupportedSridError);
+      expect((error as UnsupportedSridError).srid).toBe(srid);
+      expect(error?.kind).toBe("unsupported");
+    }
+    expect(errorOf("CIRCULARSTRING (0 0, 1 1, 2 0)")).not.toBeInstanceOf(
+      UnsupportedSridError,
+    );
+  });
+
+  it("reads a prefix before every kind of geometry, empty or not", () => {
+    for (const text of [
+      "POINT (1 2)",
+      "MULTIPOINT ((1 2), (3 4))",
+      "MULTIPOLYGON (((0 0, 4 0, 4 4, 0 0)))",
+      "GEOMETRYCOLLECTION (POINT (1 2))",
+      "GEOMETRYCOLLECTION EMPTY",
+    ]) {
+      expect(parseWkt(`SRID=4326;${text}`)).toEqual(parseWkt(text));
+    }
+  });
+
+  it("refuses a prefix inside a collection, where only a whole geometry may carry one", () => {
+    for (const text of [
+      "GEOMETRYCOLLECTION (SRID=4326;POINT (1 2))",
+      "SRID=4326;GEOMETRYCOLLECTION (SRID=4326;POINT (1 2))",
+    ]) {
+      expect(kindOf(text)).toBe("invalid");
+      expect(() => readWktSequence(text)).toThrow(GeometryError);
+    }
+  });
+
+  it("refuses an SRID that is not a plain run of at most nine digits, as invalid", () => {
+    for (const srid of [
+      "4326.0",
+      "+4326",
+      "-1",
+      "4326e0",
+      "4.326e3",
+      "1e21",
+      "1234567890",
+      "9".repeat(40),
+      "",
+      "abc",
+    ]) {
+      const text = `SRID=${srid};POINT (1 2)`;
+      expect(kindOf(text), text).toBe("invalid");
+      expect(() => parseWkt(text), text).toThrow(/ at position \d+\.$/);
+    }
+  });
+
+  it("does not print a huge SRID back", () => {
+    expect(() => parseWkt(`SRID=${"9".repeat(30)};POINT (1 2)`)).toThrow(
+      "An SRID must be a whole number of at most 9 digits at position 6.",
+    );
   });
 });
 

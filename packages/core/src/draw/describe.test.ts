@@ -9,6 +9,7 @@ import {
   formatShapeMeasure,
   hintFor,
 } from "./describe";
+import { parseShapeFile } from "./import";
 import { type DrawEvent, drawReducer, initialDrawState } from "./reducer";
 import type { DrawShape } from "./types";
 
@@ -261,6 +262,7 @@ describe("describeShapeImport", () => {
       "too-many-points",
       "malformed",
       "unsupported",
+      "other-srid",
     ] as const;
     for (const reason of reasons) {
       const text = describeShapeImport({
@@ -269,7 +271,9 @@ describe("describeShapeImport", () => {
         skipped: { [reason]: 1 },
         holesDropped: 0,
       });
-      expect(text).toMatch(/^No shapes imported\. 1 skipped: 1 (with|of) \w/);
+      expect(text).toMatch(
+        /^No shapes imported\. 1 skipped: 1 (with|of|in) \w/,
+      );
     }
     expect(
       describeShapeImport({
@@ -279,6 +283,19 @@ describe("describeShapeImport", () => {
         holesDropped: 0,
       }),
     ).toContain("more than 1,000 points");
+  });
+
+  it("says, end to end, why a file of another SRID is refused or skipped", () => {
+    expect(describeShapeImport(parseShapeFile("SRID=3857;POINT (1 2)"))).toBe(
+      "The WKT could not be read, so none of the file was imported. Only SRID 4326 (WGS 84) is supported, not SRID 3857.",
+    );
+    expect(
+      describeShapeImport(
+        parseShapeFile("wkt\nSRID=4326;POINT (1 2)\nSRID=3857;POINT (3 4)\n"),
+      ),
+    ).toBe(
+      "1 shape imported. 1 skipped: 1 in a coordinate system other than SRID 4326.",
+    );
   });
 
   it("says a file with no shapes holds none", () => {
