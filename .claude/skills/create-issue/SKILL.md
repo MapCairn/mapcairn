@@ -12,7 +12,8 @@ Issues are how MapCairn tracks work. They are public, so write plain project fac
 1. Check the CLI works: `gh auth status`. If it is not signed in, ask the person to run `gh auth login` themselves (in Claude Code they can type `! gh auth login`).
 2. Do not file an issue for a gap you can fix in the same session. Fix it, in a pull request (see the `pick-up-issue` skill).
 3. Search for a duplicate first, open and closed:
-   `gh issue list --state all --search "<key words>" --limit 20`
+   `gh issue list --repo MapCairn/mapcairn --state all --search "<key words>" --limit 20`
+   (Always name the repository with `--repo MapCairn/mapcairn`: in a clone of a fork the default is the fork, which has no issues.)
    If one exists, comment on it with the new facts instead of filing another.
 4. Read `ROADMAP.md` if the idea might be something the project has said it will not do. Adding a dataset, a runtime dependency to an SDK package, or anything that changes `PRIVACY.md`, `SECURITY.md`, the licence or `CLA.md` is the maintainer's decision: say so in the issue and do not start the work.
 
@@ -33,14 +34,14 @@ Issues are how MapCairn tracks work. They are public, so write plain project fac
 
 ## Labels and milestone
 
-Apply the area labels that fit from: `map`, `search`, `layers`, `design-system`, `a11y`, `performance`, `privacy`, `plan`, plus one of `bug` or `enhancement` (and `documentation` for docs-only work). Check `gh label list` and `gh api repos/{owner}/{repo}/milestones --jq '.[].title'`; use a milestone when one clearly fits and none otherwise. Do not invent labels.
+Apply the area labels that fit from: `map`, `search`, `layers`, `design-system`, `a11y`, `performance`, `privacy`, `plan`, plus one of `bug` or `enhancement` (and `documentation` for docs-only work). Check `gh label list --repo MapCairn/mapcairn` and `gh api repos/MapCairn/mapcairn/milestones --jq '.[].title'`; use a milestone when one clearly fits and none otherwise. Do not invent labels.
 
 ## File it
 
 Write the body to a temporary file so formatting survives, then:
 
 ```bash
-gh issue create --title "<title>" --body-file <path> --label "enhancement,map" [--milestone "<title>"]
+gh issue create --repo MapCairn/mapcairn --title "<title>" --body-file <path> --label "enhancement,map" [--milestone "<title>"]
 ```
 
 On a fork, or without write access to the repository, labels and milestones may be refused: file it without them and say so. Print the issue URL back to the person.

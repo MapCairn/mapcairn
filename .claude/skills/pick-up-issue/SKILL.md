@@ -10,11 +10,13 @@ This skill is the working procedure behind `AGENTS.md`. Where they differ, `AGEN
 ## 0. Preflight
 
 1. `gh auth status` must succeed. If not, ask the person to run `gh auth login` (in Claude Code: `! gh auth login`).
-2. Find out what you may do: `gh repo view --json viewerPermission,nameWithOwner --jq .`.
-   - `WRITE`, `MAINTAIN` or `ADMIN`: branch in this repository.
-   - Anything else: fork first (`gh repo fork --remote`), work on the fork and open the pull request from it. A first pull request also needs the CLA comment described in `CONTRIBUTING.md`.
-3. Node 24 or newer and npm 11 or newer (`node -v`, `npm -v`).
-4. Read `AGENTS.md`, and any `CLAUDE.md` rules about sub-agents, model tiers, process limits and workflows. Follow them exactly.
+2. Find out what you may do, naming the repository so a fork cannot be mistaken for it: `gh repo view MapCairn/mapcairn --json viewerPermission --jq .viewerPermission`.
+   - `WRITE`, `MAINTAIN` or `ADMIN`: branch in this repository. The shared remote is `origin`.
+   - Anything else: fork first with `gh repo fork MapCairn/mapcairn --remote` (this makes your fork `origin` and the project `upstream`), then `gh repo set-default MapCairn/mapcairn` so issue and pull request commands target the project. Work on the fork and open the pull request from it. A first pull request also needs the CLA comment described in `CONTRIBUTING.md`.
+   - From here on, add `--repo MapCairn/mapcairn` to any `gh issue` or `gh pr` command if you have not set the default.
+3. Commit with an email address linked to your GitHub account (`git config user.email`; check `git log -1 --format=%ae` before you push), or the `CLA` check cannot find you.
+4. Node 24 or newer and npm 11 or newer (`node -v`, `npm -v`).
+5. Read `AGENTS.md`, and any `CLAUDE.md` rules about sub-agents, model tiers, process limits and workflows. Follow them exactly.
 
 ## 1. Understand the issue
 
@@ -30,10 +32,14 @@ If you have write access: `gh issue edit <n> --add-assignee "@me"` and a one-lin
 
 ## 3. Branch
 
+Branch from the project's current `main`: `origin/main` when you have write access, `upstream/main` on a fork.
+
 ```bash
-git switch main && git pull --ff-only
-git switch -c <type>/<short-name>      # feat/, fix/, docs/, refactor/, test/, chore/
+git fetch <origin-or-upstream>
+git switch -c <type>/<short-name> <origin-or-upstream>/main   # feat/, fix/, docs/, refactor/, test/, chore/
 ```
+
+Push with `git push -u origin <branch>`; on a fork that is your fork.
 
 Several issues at once, or an agent working beside you, means a separate worktree for each (`git worktree add ../mapcairn-<name> -b <branch> main`). In a worktree `npm ci` fails at `prepare`: use `npm ci --ignore-scripts` and run `npm run lint` yourself before each commit. Do not install into a working tree another person or agent is using. Give each concurrent e2e or dev server its own port (`MAPCAIRN_E2E_PORT`, and a different dev port).
 
