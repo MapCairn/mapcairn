@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { DEFAULT_MARKER_RADIUS } from "@mapcairn/core";
+import { DEFAULT_MARKER_RADIUS, isCompactViewport } from "@mapcairn/core";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useChromeLayout } from "../chrome/layoutContext";
 import { Icon } from "../ui/Icon";
 import { Surface } from "../ui/Surface";
@@ -21,9 +21,12 @@ const STRIP_LIMIT = 3;
 export interface MapKeyProps {
   readonly layers: DataLayers;
   /**
-   * Whether the key starts minimised. Left out, it starts minimised in the
-   * bottom sheet layout, where the screen is small, and open in the side
-   * panel layout. The person's own choice replaces it from then on.
+   * Whether the key starts minimised. Left out, a phone in either orientation
+   * starts it minimised (the viewport is narrower than the bottom sheet's
+   * width or shorter than the side panel's height threshold) and a larger
+   * screen starts it open. It is decided when the key first appears, so
+   * turning the phone does not change it, and the person's own choice
+   * replaces it from then on.
    */
   readonly defaultMinimised?: boolean;
 }
@@ -60,19 +63,33 @@ function GlyphStrip({ blocks }: { readonly blocks: readonly MapKeyBlock[] }) {
  *
  * @remarks Put it in `MapChrome`'s `mapKey` slot, which keeps it clear of the
  *   other floating elements and caps its height. The minimised state is held
- *   in memory, so it lasts for the visit but not a reload.
+ *   in memory, so it lasts for the visit but not a reload. The button's name
+ *   is "Map key, 3 layers" open and minimised, and `aria-expanded` says which.
  */
 export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
   const headingId = useId();
   const bodyId = useId();
-  const { layout } = useChromeLayout();
+  const { viewport } = useChromeLayout();
   const [chosen, setChosen] = useState<boolean | null>(null);
+  const [decided, setDecided] = useState<boolean | null>(null);
   const bodyRef = useRef<HTMLElement>(null);
   const blocks = mapKeyBlocks(layers.layers);
-  const minimised = chosen ?? defaultMinimised ?? layout === "sheet";
+  const hasBlocks = blocks.length > 0;
+  const startsMinimised = defaultMinimised ?? isCompactViewport(viewport);
+  // Before the chrome has measured, its viewport is empty and the default
+  // would be a guess, so wait for it unless the host has decided.
+  const canDecide = defaultMinimised !== undefined || viewport.width > 0;
+  // The start state is decided once, when the key first appears, so turning a
+  // phone to landscape (which is the side panel layout) does not change it.
+  useEffect(() => {
+    if (hasBlocks && canDecide) {
+      setDecided((current) => current ?? startsMinimised);
+    }
+  }, [hasBlocks, canDecide, startsMinimised]);
+  const minimised = chosen ?? decided ?? startsMinimised;
   // A box that scrolls needs a tab stop, or a keyboard cannot scroll it.
-  const scrolls = useScrolls(bodyRef, !minimised && blocks.length > 0);
-  if (blocks.length === 0) {
+  const scrolls = useScrolls(bodyRef, !minimised && hasBlocks);
+  if (!hasBlocks) {
     return null;
   }
   return (
@@ -99,7 +116,7 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
           className={styles.toggle}
           aria-expanded={!minimised}
           aria-controls={minimised ? undefined : bodyId}
-          aria-label={minimised ? undefined : "Minimise map key"}
+          aria-label={`Map key, ${layerCount(blocks.length)}`}
           data-testid="map-key-toggle"
           onClick={() => setChosen(!minimised)}
         >
@@ -138,7 +155,7 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
                   definition={block.definition}
                   label={`${block.name} key`}
                   testId={`map-key-list-${block.id}`}
-                  stacked
+                  layout="stacked"
                 />
               </div>
             ))}

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { type RefObject, useLayoutEffect } from "react";
+import { CHROME_GAP_PX } from "../chromeSpacing";
 import { chromeVars } from "./chromeVars";
-
-/** The gap between slots, in CSS pixels (the 12 px token). */
-const GAP_PX = 12;
 
 /**
  * The least room, in CSS pixels, the map key needs to show: its minimised
@@ -49,8 +47,8 @@ export function placeMapKey(
   if (m.mapKeyBottom === null) {
     return null;
   }
-  const bottomEdge = m.bottomRowTop + lift - GAP_PX;
-  const topEdge = Math.max(m.topStartBottom, tourBottom ?? 0) + GAP_PX;
+  const bottomEdge = m.bottomRowTop + lift - CHROME_GAP_PX;
+  const topEdge = Math.max(m.topStartBottom, tourBottom ?? 0) + CHROME_GAP_PX;
   return {
     room: Math.max(0, bottomEdge - topEdge),
     shift: bottomEdge - m.mapKeyBottom,

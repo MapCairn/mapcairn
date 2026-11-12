@@ -499,17 +499,22 @@ test.describe("tour card", () => {
   }
 });
 
-/** The sizes the map key's placement is checked at: two small phones, a phone, a tablet and a desktop. */
+/**
+ * The sizes the map key's placement is checked at: every size of the chrome
+ * matrix (phones in both orientations, a tablet and two desktops) and the
+ * three more the key is also looked at (a small phone, a larger tablet and a
+ * smaller desktop).
+ */
 const MAP_KEY_VIEWPORTS = [
-  { width: 320, height: 568 },
+  ...MATRIX_VIEWPORTS,
   { width: 360, height: 640 },
-  { width: 390, height: 844 },
   { width: 820, height: 1180 },
   { width: 1440, height: 900 },
 ] as const;
 
-/** Three layers on that have a key. */
-const KEYED_LAYERS = "#layers=earthquakes,fire-alerts,cyclones";
+/** Six layers on that have a key: the tallest key the reference site can show. */
+const KEYED_LAYERS =
+  "#layers=earthquakes,volcano-alerts,fire-alerts,drought-alerts,flood-alerts,cyclones";
 
 /**
  * Brings the map key to open or minimised from the state it starts in, which

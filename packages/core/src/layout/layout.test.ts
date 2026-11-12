@@ -5,8 +5,29 @@ import {
   chooseLayout,
   computeBottomSlotLayout,
   computeEndStackMaxHeight,
+  isCompactViewport,
   shouldShowZoomButtons,
 } from "./layout";
+
+describe("isCompactViewport", () => {
+  it("is true for a phone in either orientation", () => {
+    expect(isCompactViewport({ width: 390, height: 844 })).toBe(true);
+    expect(isCompactViewport({ width: 320, height: 568 })).toBe(true);
+    expect(isCompactViewport({ width: 844, height: 390 })).toBe(true);
+  });
+
+  it("is false for a tablet or a desktop", () => {
+    expect(isCompactViewport({ width: 768, height: 1024 })).toBe(false);
+    expect(isCompactViewport({ width: 1280, height: 720 })).toBe(false);
+  });
+
+  it("changes at the edges the layout uses: 768 wide and 500 tall", () => {
+    expect(isCompactViewport({ width: 767, height: 900 })).toBe(true);
+    expect(isCompactViewport({ width: 768, height: 900 })).toBe(false);
+    expect(isCompactViewport({ width: 1280, height: 499 })).toBe(true);
+    expect(isCompactViewport({ width: 1280, height: 500 })).toBe(false);
+  });
+});
 
 const base = {
   viewportWidth: 390,

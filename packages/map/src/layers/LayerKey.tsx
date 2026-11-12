@@ -11,9 +11,16 @@ export interface LayerKeyProps {
   readonly label: string;
   /** The list's `data-testid`. */
   readonly testId: string;
-  /** Puts each row on its own line, instead of wrapping them side by side. */
-  readonly stacked?: boolean;
+  /**
+   * How the rows sit: `wrap` (the default) side by side, wrapping as the
+   * line fills; `stacked` one to a line, with the glyphs in a fixed-width
+   * column so the words line up.
+   */
+  readonly layout?: LayerKeyLayout;
 }
+
+/** How a {@link LayerKey} arranges its rows. */
+export type LayerKeyLayout = "wrap" | "stacked";
 
 /**
  * A layer's key: one row for each colour, shape or class its style draws,
@@ -28,12 +35,13 @@ export function LayerKey({
   definition,
   label,
   testId,
-  stacked = false,
+  layout = "wrap",
 }: LayerKeyProps) {
   const { entries } = legendFor(definition);
   if (entries.length === 0) {
     return null;
   }
+  const stacked = layout === "stacked";
   return (
     <ul
       className={stacked ? styles.legendStacked : styles.legend}

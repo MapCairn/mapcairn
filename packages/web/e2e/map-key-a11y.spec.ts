@@ -5,11 +5,12 @@ import { axeViolations, inspectControls } from "./support/a11y";
 import { mockLayerProviders } from "./support/layers";
 import { collapseCredits, waitForStableLayout } from "./support/states";
 
-/** The sizes the key must fit: two small phones, a phone, a tablet and a desktop. */
+/** The sizes the key must fit: two small phones, a phone and a phone on its side, a tablet and a desktop. */
 const VIEWPORTS = [
   { width: 320, height: 568 },
   { width: 360, height: 640 },
   { width: 390, height: 844 },
+  { width: 844, height: 390 },
   { width: 820, height: 1180 },
   { width: 1440, height: 900 },
 ] as const;
@@ -48,7 +49,7 @@ test.describe("the map key @a11y", () => {
           expect(controls.unnamed, state).toEqual([]);
           expect(controls.tooSmall, state).toEqual([]);
           expect(controls.under44, state).not.toContainEqual(
-            expect.stringMatching(/Minimise map key|Key, \d+ layers?/),
+            expect.stringMatching(/Map key, \d+ layers?/),
           );
           const toggle = await mapPage.mapKeyToggle.boundingBox();
           expect(toggle?.width ?? 0, state).toBeGreaterThanOrEqual(44);

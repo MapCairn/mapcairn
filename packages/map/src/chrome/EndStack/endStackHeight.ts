@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { CHROME_GAP_PX } from "../chromeSpacing";
+
 /** Height of one control, in CSS pixels (the 48 px `size.control` token). */
 const CONTROL_PX = 48;
-/** The gap between groups (the 12 px `space.sm` token). */
-const GAP_PX = 12;
 /** One hairline between grouped buttons, plus the surface border. */
 const HAIRLINE_PX = 1;
 
@@ -27,6 +27,6 @@ export function endStackMinHeightForZoom(
   const extra =
     ((directionsShown ? 1 : 0) + (drawShown ? 1 : 0)) *
     (CONTROL_PX + HAIRLINE_PX);
-  const groups = 6 * CONTROL_PX + GAP_PX + 8 * HAIRLINE_PX + extra;
-  return compassShown ? groups + CONTROL_PX + GAP_PX : groups;
+  const groups = 6 * CONTROL_PX + CHROME_GAP_PX + 8 * HAIRLINE_PX + extra;
+  return compassShown ? groups + CONTROL_PX + CHROME_GAP_PX : groups;
 }

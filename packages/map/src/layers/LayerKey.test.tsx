@@ -38,6 +38,24 @@ describe("LayerKey", () => {
     );
   });
 
+  it("arranges the rows side by side by default and one to a line when stacked", () => {
+    const { rerender } = render(
+      <LayerKey definition={SAMPLE_ALERT_LAYER} label="Key" testId="k" />,
+    );
+    const wrapped = screen.getByRole("list").className;
+    const wrappedRow = screen.getAllByRole("listitem")[0]?.className;
+    rerender(
+      <LayerKey
+        definition={SAMPLE_ALERT_LAYER}
+        label="Key"
+        testId="k"
+        layout="stacked"
+      />,
+    );
+    expect(screen.getByRole("list").className).not.toBe(wrapped);
+    expect(screen.getAllByRole("listitem")[0]?.className).not.toBe(wrappedRow);
+  });
+
   it("renders nothing for a layer whose definition has no key", () => {
     const { container } = render(
       <LayerKey definition={SAMPLE_TILE_LAYER} label="Key" testId="k" />,

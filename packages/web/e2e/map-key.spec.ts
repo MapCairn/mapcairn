@@ -14,6 +14,8 @@ const SIX_KEYED =
 
 const DESKTOP = { width: 1440, height: 900 } as const;
 const PHONE = { width: 390, height: 844 } as const;
+const PHONE_ON_ITS_SIDE = { width: 844, height: 390 } as const;
+const TABLET = { width: 768, height: 1024 } as const;
 
 test.use({ reducedMotion: "reduce", fastCredits: true });
 
@@ -105,7 +107,10 @@ test.describe("the map key", () => {
       "aria-expanded",
       "false",
     );
-    await expect(mapPage.mapKeyToggle).toHaveAccessibleName("Key, 2 layers");
+    await expect(mapPage.mapKeyToggle).toHaveAccessibleName(
+      "Map key, 2 layers",
+    );
+    await expect(mapPage.mapKeyToggle).toContainText("Key, 2 layers");
     await expect(mapPage.mapKeyToggle).toBeFocused();
     await expect(page.getByTestId("map-key-earthquakes")).toHaveCount(0);
     await expect(
@@ -119,22 +124,57 @@ test.describe("the map key", () => {
     await expect(page.getByTestId("map-key-earthquakes")).toBeVisible();
   });
 
-  test("starts open on a large screen and minimised on a phone", async ({
+  test("a phone in either orientation starts minimised, and a larger screen starts open", async ({
     page,
     mapPage,
   }) => {
     await mockLayerProviders(page);
-    await page.setViewportSize(DESKTOP);
-    await openApp(mapPage, TWO_KEYED);
-    await expect(mapPage.mapKeyToggle).toHaveAttribute("aria-expanded", "true");
+    const starts = [
+      [DESKTOP, "true"],
+      [TABLET, "true"],
+      [PHONE, "false"],
+      [PHONE_ON_ITS_SIDE, "false"],
+    ] as const;
+    for (const [viewport, expanded] of starts) {
+      await page.setViewportSize(viewport);
+      await openApp(mapPage, TWO_KEYED);
+      await expect(
+        mapPage.mapKeyToggle,
+        `${viewport.width}x${viewport.height}`,
+      ).toHaveAttribute("aria-expanded", expanded);
+      await expect(mapPage.mapKeyToggle).toHaveAccessibleName(
+        "Map key, 2 layers",
+      );
+    }
+  });
 
+  test("keeps the state it started with when the screen is turned", async ({
+    page,
+    mapPage,
+  }) => {
+    await mockLayerProviders(page);
     await page.setViewportSize(PHONE);
     await openApp(mapPage, TWO_KEYED);
     await expect(mapPage.mapKeyToggle).toHaveAttribute(
       "aria-expanded",
       "false",
     );
-    await expect(mapPage.mapKeyToggle).toHaveAccessibleName("Key, 2 layers");
+
+    await page.setViewportSize(PHONE_ON_ITS_SIDE);
+    await expect(mapPage.mapKeyToggle).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    await page.setViewportSize(DESKTOP);
+    await expect(mapPage.mapKeyToggle).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    await mapPage.mapKeyToggle.click();
+    await page.setViewportSize(PHONE);
+    await expect(mapPage.mapKeyToggle).toHaveAttribute("aria-expanded", "true");
   });
 
   test("is not put in the address or in storage", async ({ page, mapPage }) => {
