@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { LayerDefinition } from "../layers/definition";
+import type {
+  IdentifiableLayerDefinition,
+  LayerDefinition,
+} from "../layers/definition";
 import type { Bounds, LatLng } from "./geometry";
 
 /** A decoded field value. Anything else in a response is dropped. */
@@ -53,7 +56,8 @@ export interface IdentifyTarget {
 export interface LayerLoadRequest {
   /**
    * A feed, query or heatmap layer. Tile layers have nothing to load: a tile
-   * layer's `identify` block is read when a tap asks (see `identifyUrl`).
+   * layer's `identify` block is read when a tap asks (see
+   * {@link LayerSource.identify}).
    */
   readonly definition: LayerDefinition;
   /**
@@ -68,6 +72,19 @@ export interface LayerLoadRequest {
   readonly signal?: AbortSignal;
 }
 
+/** What {@link LayerSource.identify} needs. */
+export interface LayerIdentifyRequest {
+  /** A tile layer with an `identify` block. */
+  readonly definition: IdentifiableLayerDefinition;
+  /** Every control's value, already resolved (see `resolveControlValues`). */
+  readonly controls: ControlValues;
+  /** Today, as epoch milliseconds, for relative dates. */
+  readonly now: number;
+  /** Where the tap landed. */
+  readonly at: IdentifyTarget;
+  readonly signal?: AbortSignal;
+}
+
 /** What {@link LayerSource.loadDetail} needs. */
 export interface LayerDetailRequest {
   readonly definition: LayerDefinition;
@@ -77,17 +94,28 @@ export interface LayerDetailRequest {
 }
 
 /**
- * Loads a feed layer's features, and on request a feature's detail shapes.
- * One source serves every definition: it reads the URL, the decoder and the
- * filter from the definition, so a new layer needs no new source.
+ * Loads a feed layer's features, on request a feature's detail shapes, and
+ * what a tile layer's service says is at a tap. One source serves every
+ * definition: it reads the URL, the decoder and the filter from the
+ * definition, so a new layer needs no new source.
  *
- * @remarks Rejects only with a `LayerError`: `network` when the request
- *   failed, `invalid` when the response could not be decoded, `empty` when it
- *   decoded to no features, and `aborted` when the signal fired first.
+ * @remarks `load` and `loadDetail` reject only with a `LayerError`:
+ *   `network` when the request failed, `invalid` when the response could not
+ *   be decoded, `empty` when it decoded to no features, and `aborted` when the
+ *   signal fired first.
+ *
+ *   `identify` rejects only with a `LayerError` too, but never with `empty`:
+ *   nothing found is the common answer, so it resolves to an empty list.
+ *   `network` includes a service that answered with an error status, which
+ *   until an `unauthorised` kind exists includes 401 and 403. `invalid` is a
+ *   URL that cannot be built or is not `https`, and an answer that is too
+ *   large or is not a document the decoder reads. A source keeps nothing an
+ *   `identify` was answered with: every tap asks again.
  */
 export interface LayerSource {
   load(request: LayerLoadRequest): Promise<readonly LayerFeature[]>;
   loadDetail(request: LayerDetailRequest): Promise<readonly LayerFeature[]>;
+  identify(request: LayerIdentifyRequest): Promise<readonly LayerFeature[]>;
 }
 
 /** Why a catalogue could not be loaded: the request failed, or its payload was not a list. */

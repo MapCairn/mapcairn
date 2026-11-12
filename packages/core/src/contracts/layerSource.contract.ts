@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import type { FeedLayerDefinition } from "../layers/definition";
+import type {
+  FeedLayerDefinition,
+  IdentifiableLayerDefinition,
+} from "../layers/definition";
 import { LayerError } from "../ports/errors";
-import type { LayerFeature, LayerSource } from "../ports/layers";
+import type {
+  IdentifyTarget,
+  LayerFeature,
+  LayerSource,
+} from "../ports/layers";
 
 /**
  * The feed layer every layer source is checked with: the `geojson` decoder,
@@ -40,6 +47,53 @@ export const CONTRACT_LAYER: FeedLayerDefinition = {
   emptyText: "No contract points.",
 };
 
+/**
+ * A raster tile layer whose `identify` block asks its own origin, with the
+ * `geojson` decoder and an id and a title field.
+ */
+export const CONTRACT_IDENTIFY_LAYER: IdentifiableLayerDefinition = {
+  id: "contract-imagery",
+  name: "Contract imagery",
+  description:
+    "A tile layer that answers a tap, for the layer source contract.",
+  group: "Contract",
+  dataCost: "about 1 KB",
+  attribution: [{ text: "Contract provider" }],
+  controls: [],
+  source: {
+    kind: "tiles",
+    tiles: "https://contract.test/imagery/{z}/{y}/{x}.png",
+    tileSize: 256,
+    maxzoom: 12,
+  },
+  identify: {
+    url: "https://contract.test/identify/imagery?lng={lng}&lat={lat}",
+    decoder: "geojson",
+    fields: { id: "id", title: "properties.title" },
+    card: { title: "{title}", lines: [] },
+  },
+};
+
+/**
+ * A second identifiable layer on a different URL, so the contract can hold
+ * one layer's answer while another layer is answered.
+ */
+export const CONTRACT_OTHER_IDENTIFY_LAYER: IdentifiableLayerDefinition = {
+  ...CONTRACT_IDENTIFY_LAYER,
+  id: "contract-rainfall",
+  name: "Contract rainfall",
+  source: {
+    kind: "tiles",
+    tiles: "https://contract.test/rainfall/{z}/{y}/{x}.png",
+    tileSize: 256,
+    maxzoom: 12,
+  },
+  identify: {
+    ...CONTRACT_IDENTIFY_LAYER.identify,
+    url: "https://contract.test/identify/rainfall?lng={lng}&lat={lat}",
+  },
+};
+
 /** A point the contract asks a source to return. */
 export interface ContractPoint {
   readonly id: string;
@@ -61,6 +115,20 @@ export interface LayerSourceControls {
   failWith(kind: "network" | "invalid"): void;
   /** Makes the next loads wait until the returned function is called. */
   hold(): () => void;
+  /**
+   * Makes the next identifies of {@link CONTRACT_IDENTIFY_LAYER} and
+   * {@link CONTRACT_OTHER_IDENTIFY_LAYER} find these points, or nothing when
+   * the list is empty.
+   */
+  respondToIdentifyWith(points: readonly ContractPoint[]): void;
+  /** Makes the next identifies fail the way a source fails for that kind. */
+  failIdentifyWith(kind: "network" | "invalid"): void;
+  /**
+   * Makes the next identifies of {@link CONTRACT_IDENTIFY_LAYER} alone wait
+   * until the returned function is called. The other identifiable layer is
+   * not held.
+   */
+  holdIdentify(): () => void;
 }
 
 /** One layer source under test, with its controls. */
@@ -75,6 +143,11 @@ const POINTS: readonly ContractPoint[] = [
   { id: "a", title: "Alpha", lng: 18.4, lat: -33.9 },
   { id: "b", title: "Beta", lng: 28.0, lat: -26.2 },
 ];
+
+const TAP: IdentifyTarget = {
+  latlng: { lat: -33.9249, lng: 18.4241 },
+  zoom: 10,
+};
 
 function feature(area: string): LayerFeature {
   return {
@@ -186,6 +259,88 @@ export function runLayerSourceContract(
         }),
       );
       expect(error.kind).toBe("invalid");
+    });
+
+    describe("identify", () => {
+      const identify = (
+        definition: IdentifiableLayerDefinition = CONTRACT_IDENTIFY_LAYER,
+        signal?: AbortSignal,
+      ) => ({
+        definition,
+        controls: {},
+        now: NOW,
+        at: TAP,
+        ...(signal ? { signal } : {}),
+      });
+
+      it("finds the features a service says are at the tap, with their ids and fields", async () => {
+        const { source, controls } = create();
+        controls.respondToIdentifyWith(POINTS);
+        const features = await source.identify(identify());
+        expect(features.map((f) => f.id)).toEqual(["a", "b"]);
+        expect(features[0]?.geometry).toEqual({
+          type: "Point",
+          coordinates: [18.4, -33.9],
+        });
+        expect(features[1]?.fields.title).toBe("Beta");
+      });
+
+      it("resolves to an empty list, not an error, when nothing is there", async () => {
+        const { source, controls } = create();
+        controls.respondToIdentifyWith([]);
+        await expect(source.identify(identify())).resolves.toEqual([]);
+      });
+
+      it("rejects with network when the request fails", async () => {
+        const { source, controls } = create();
+        controls.failIdentifyWith("network");
+        const error = await rejection(source.identify(identify()));
+        expect(error.kind).toBe("network");
+      });
+
+      it("rejects with invalid when the answer cannot be decoded", async () => {
+        const { source, controls } = create();
+        controls.failIdentifyWith("invalid");
+        const error = await rejection(source.identify(identify()));
+        expect(error.kind).toBe("invalid");
+      });
+
+      it("rejects with aborted when the signal has already fired", async () => {
+        const { source, controls } = create();
+        controls.respondToIdentifyWith(POINTS);
+        const error = await rejection(
+          source.identify(
+            identify(CONTRACT_IDENTIFY_LAYER, AbortSignal.abort()),
+          ),
+        );
+        expect(error.kind).toBe("aborted");
+      });
+
+      it("rejects with aborted when the signal fires while waiting", async () => {
+        const { source, controls } = create();
+        controls.respondToIdentifyWith(POINTS);
+        const release = controls.holdIdentify();
+        const controller = new AbortController();
+        const asking = source.identify(
+          identify(CONTRACT_IDENTIFY_LAYER, controller.signal),
+        );
+        controller.abort();
+        release();
+        expect((await rejection(asking)).kind).toBe("aborted");
+      });
+
+      it("answers one layer while another layer's identify is held", async () => {
+        const { source, controls } = create();
+        controls.respondToIdentifyWith(POINTS);
+        const release = controls.holdIdentify();
+        const held = source.identify(identify(CONTRACT_IDENTIFY_LAYER));
+        const answered = await source.identify(
+          identify(CONTRACT_OTHER_IDENTIFY_LAYER),
+        );
+        expect(answered.map((f) => f.id)).toEqual(["a", "b"]);
+        release();
+        expect((await held).map((f) => f.id)).toEqual(["a", "b"]);
+      });
     });
   });
 }
