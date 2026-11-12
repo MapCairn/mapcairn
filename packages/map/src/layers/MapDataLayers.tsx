@@ -8,6 +8,7 @@ import {
   isQueryLayer,
   isShapeStyle,
   isVectorTileLayer,
+  type LayerDefinition,
   type LayerFeature,
   type MapAdapter,
   type MapFeatureTap,
@@ -52,8 +53,17 @@ export interface MapDataLayersProps {
   readonly formatters?: FormatterRegistry;
 }
 
-/** What was last handed to the adapter under one map id, to skip redrawing it unchanged. */
+/**
+ * What was last handed to the adapter under one map id, to skip redrawing it
+ * unchanged. A layer is also drawn again when its definition is another
+ * object, so a refreshed list that replaces a definition redraws it even when
+ * its URL, controls and features are the same. `partitionDefinitions` keeps
+ * the old object for a definition that did not change, so a refresh that
+ * changes nothing redraws nothing.
+ */
 interface Drawn {
+  /** The definition the layer was drawn from, compared by identity. */
+  readonly definition?: LayerDefinition;
   readonly features?: readonly LayerFeature[];
   readonly tiles?: string;
   readonly opacity?: number;
@@ -93,18 +103,25 @@ function draw(
     if (layer.features.length === 0) {
       return [];
     }
-    if (own?.features !== layer.features || own.controls !== layer.controls) {
+    if (
+      own?.definition !== definition ||
+      own.features !== layer.features ||
+      own.controls !== layer.controls
+    ) {
       adapter.setHeatmapLayer(
         definition.id,
         toMapHeatmap(definition, layer.features, layer.controls),
       );
     }
     return [
-      [definition.id, { features: layer.features, controls: layer.controls }],
+      [
+        definition.id,
+        { definition, features: layer.features, controls: layer.controls },
+      ],
     ];
   }
   if (isVectorTileLayer(definition)) {
-    if (own?.controls !== layer.controls) {
+    if (own?.definition !== definition || own.controls !== layer.controls) {
       adapter.setVectorLayer(
         definition.id,
         toMapVector(definition, layer.controls, now),
@@ -120,19 +137,27 @@ function draw(
         const id = heatmapId(definition.id, position);
         const heatmap = heatmaps[index];
         index += 1;
-        if (heatmap && previous(id)?.controls !== layer.controls) {
+        const before = previous(id);
+        if (
+          heatmap &&
+          (before?.definition !== definition ||
+            before.controls !== layer.controls)
+        ) {
           adapter.setHeatmapLayer(id, heatmap);
         }
-        return [[id, { controls: layer.controls }]];
+        return [[id, { definition, controls: layer.controls }]];
       },
     );
-    return [[definition.id, { controls: layer.controls }], ...drawnHeatmaps];
+    return [
+      [definition.id, { definition, controls: layer.controls }],
+      ...drawnHeatmaps,
+    ];
   }
   if (isFeedLayer(definition)) {
     if (layer.features.length === 0) {
       return [];
     }
-    if (own?.features !== layer.features) {
+    if (own?.definition !== definition || own.features !== layer.features) {
       const { style } = definition;
       if (isShapeStyle(style)) {
         adapter.setStyledShapes(
@@ -151,11 +176,15 @@ function draw(
         );
       }
     }
-    return [[definition.id, { features: layer.features }]];
+    return [[definition.id, { definition, features: layer.features }]];
   }
   const tiles = tileUrl(definition, layer.controls, now);
   const opacity = opacityOf(layer);
-  if (own?.tiles !== tiles || own.opacity !== opacity) {
+  if (
+    own?.definition !== definition ||
+    own.tiles !== tiles ||
+    own.opacity !== opacity
+  ) {
     adapter.setTileLayer(definition.id, {
       tiles,
       tileSize: definition.source.tileSize,
@@ -164,7 +193,7 @@ function draw(
       opacity,
     });
   }
-  return [[definition.id, { tiles, opacity }]];
+  return [[definition.id, { definition, tiles, opacity }]];
 }
 
 /**
