@@ -5,6 +5,7 @@ import {
   DEFAULT_BASEMAP_ID,
   getBasemap,
 } from "@mapcairn/core";
+import { BASEMAP_THUMBNAILS } from "./basemapThumbnails";
 import { OPEN_TOPO_MAP_BASEMAP } from "./openTopoMapBasemap";
 import { SATELLITE_BASEMAP } from "./satelliteBasemap";
 
@@ -61,11 +62,24 @@ export function selectBasemaps(
 }
 
 /**
+ * Adds the preview the site serves for a basemap, from {@link BASEMAP_THUMBNAILS}.
+ * The SDK's definitions name no preview, so this is where a host that serves
+ * the files says so.
+ * @returns A copy with `thumbnail` set, or the definition itself when the site
+ *   serves no preview for it.
+ */
+function withThumbnail(basemap: BasemapDefinition): BasemapDefinition {
+  const thumbnail = BASEMAP_THUMBNAILS[basemap.id];
+  return thumbnail === undefined ? basemap : { ...basemap, thumbnail };
+}
+
+/**
  * The catalogue the reference host passes as `Services.basemaps`: the six
- * basemaps in {@link HOST_BASEMAP_IDS}, Bright the default. A saved or linked
- * id the host does not offer (such as `liberty`) opens on Bright.
+ * basemaps in {@link HOST_BASEMAP_IDS}, each with its preview, Bright the
+ * default. A saved or linked id the host does not offer (such as `liberty`)
+ * opens on Bright.
  */
 export const HOST_BASEMAP_CATALOGUE: BasemapCatalogue = createBasemapCatalogue(
-  selectBasemaps(HOST_BASEMAP_IDS, HOST_OWN_BASEMAPS),
+  selectBasemaps(HOST_BASEMAP_IDS, HOST_OWN_BASEMAPS).map(withThumbnail),
   DEFAULT_BASEMAP_ID,
 );

@@ -50,7 +50,6 @@ export const OPEN_TOPO_MAP_BASEMAP: BasemapDefinition = {
   },
   minZoom: 0,
   maxZoom: OPEN_TOPO_MAP_MAX_ZOOM,
-  thumbnail: "/basemaps/topographic.jpg",
   attribution: OPEN_TOPO_MAP_CREDITS,
   appearance: "light",
 };

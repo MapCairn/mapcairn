@@ -32,12 +32,17 @@ import { scriptBasemaps } from "./support/services";
 const ON_LIBERTY = `#basemap=${LIBERTY_BASEMAP_ID}`;
 
 /**
- * How many previews the picker holds on a host that offers the SDK's whole
- * list: Liberty, Colorful and Fiord name none.
+ * The SDK's whole list with a preview path on each, as a host that serves one
+ * for every basemap would offer it (the SDK's own definitions name none;
+ * `scriptBasemaps` answers the files the site does not hold with a blank image).
  */
-const SDK_PREVIEW_COUNT = BASEMAPS.filter(
-  (basemap) => basemap.thumbnail !== undefined,
-).length;
+const SDK_WITH_PREVIEWS = BASEMAPS.map((basemap) => ({
+  ...basemap,
+  thumbnail: `/basemaps/${basemap.id}.jpg`,
+}));
+
+/** How many previews the picker holds on a host that offers {@link SDK_WITH_PREVIEWS}. */
+const SDK_PREVIEW_COUNT = SDK_WITH_PREVIEWS.length;
 
 const RELIEF_TILES = /\/natural_earth\/ne2sr\//;
 const THUMBNAILS = /\/basemaps\/[\w-]+\.jpg/;
@@ -132,7 +137,7 @@ test.describe("save data", () => {
   }) => {
     const { relief } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
-    await scriptBasemaps(page, BASEMAPS);
+    await scriptBasemaps(page, SDK_WITH_PREVIEWS);
     await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     await expect(
@@ -198,7 +203,7 @@ test.describe("save data", () => {
     await storeChoice(page, true);
     const { relief } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
-    await scriptBasemaps(page, BASEMAPS);
+    await scriptBasemaps(page, SDK_WITH_PREVIEWS);
     await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     await expect(page.getByRole("switch", { name: "Save data" })).toBeChecked();
@@ -226,7 +231,7 @@ test.describe("save data", () => {
   }) => {
     const { relief, styles } = await serveRelief(page);
     const thumbnails = watchThumbnails(page);
-    await scriptBasemaps(page, BASEMAPS);
+    await scriptBasemaps(page, SDK_WITH_PREVIEWS);
     await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     const saveData = page.getByRole("switch", { name: "Save data" });
@@ -285,7 +290,7 @@ test.describe("save data", () => {
   }) => {
     await reportConnection(page, { saveData: true, effectiveType: "4g" });
     const { relief } = await serveRelief(page);
-    await scriptBasemaps(page, BASEMAPS);
+    await scriptBasemaps(page, SDK_WITH_PREVIEWS);
     await mapPage.goto(ON_LIBERTY);
     await mapPage.openSettings();
     const saveData = page.getByRole("switch", { name: "Save data" });

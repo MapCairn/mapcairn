@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { BASEMAPS, DEFAULT_BASEMAP_ID, getBasemap } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
+import { BASEMAP_THUMBNAILS } from "./basemapThumbnails";
 import {
   HOST_BASEMAP_CATALOGUE,
   HOST_BASEMAP_IDS,
@@ -74,15 +75,31 @@ describe("the reference host's basemaps", () => {
     }
   });
 
-  it("uses the SDK's own definitions for Bright, Positron, Streets and Dark, not copies", () => {
+  it("uses the SDK's definitions for Bright, Positron, Streets and Dark, with the host's preview added and nothing else changed", () => {
     for (const id of ["bright", "positron", "osm", "dark"]) {
-      expect(HOST_BASEMAP_CATALOGUE.get(id), id).toBe(getBasemap(id));
+      expect(getBasemap(id)?.thumbnail, id).toBeUndefined();
+      expect(HOST_BASEMAP_CATALOGUE.get(id), id).toEqual({
+        ...getBasemap(id),
+        thumbnail: `/basemaps/${id}.jpg`,
+      });
+    }
+  });
+
+  it("lists a preview for exactly the basemaps it offers, each the jpg of its own id", () => {
+    expect(Object.keys(BASEMAP_THUMBNAILS).sort()).toEqual(
+      [...HOST_BASEMAP_IDS].sort(),
+    );
+    for (const [id, path] of Object.entries(BASEMAP_THUMBNAILS)) {
+      expect(path, id).toBe(`/basemaps/${id}.jpg`);
     }
   });
 
   it("offers Topographic from the host's own definition, which the SDK does not have", () => {
     const topographic = HOST_BASEMAP_CATALOGUE.get("topographic");
-    expect(topographic).toBe(OPEN_TOPO_MAP_BASEMAP);
+    expect(topographic).toEqual({
+      ...OPEN_TOPO_MAP_BASEMAP,
+      thumbnail: "/basemaps/topographic.jpg",
+    });
     expect(HOST_OWN_BASEMAPS).toEqual([
       OPEN_TOPO_MAP_BASEMAP,
       SATELLITE_BASEMAP,
@@ -94,7 +111,10 @@ describe("the reference host's basemaps", () => {
   });
 
   it("offers Satellite from the host's own definition, which the SDK must never have", () => {
-    expect(HOST_BASEMAP_CATALOGUE.get("satellite")).toBe(SATELLITE_BASEMAP);
+    expect(HOST_BASEMAP_CATALOGUE.get("satellite")).toEqual({
+      ...SATELLITE_BASEMAP,
+      thumbnail: "/basemaps/satellite.jpg",
+    });
     expect(getBasemap("satellite")).toBeUndefined();
     expect(BASEMAPS.some((basemap) => basemap.nonCommercial)).toBe(false);
   });
@@ -140,7 +160,6 @@ describe("the Topographic basemap", () => {
     });
     expect(OPEN_TOPO_MAP_BASEMAP.minZoom).toBe(0);
     expect(OPEN_TOPO_MAP_BASEMAP.maxZoom).toBe(17);
-    expect(OPEN_TOPO_MAP_BASEMAP.thumbnail).toBe("/basemaps/topographic.jpg");
     expect(OPEN_TOPO_MAP_BASEMAP.appearance).toBe("light");
     expect(OPEN_TOPO_MAP_BASEMAP.swatch).toBeUndefined();
   });
@@ -178,7 +197,6 @@ describe("the Satellite basemap", () => {
     });
     expect(SATELLITE_BASEMAP.minZoom).toBe(0);
     expect(SATELLITE_BASEMAP.maxZoom).toBe(17);
-    expect(SATELLITE_BASEMAP.thumbnail).toBe("/basemaps/satellite.jpg");
   });
 
   it("draws the place names, roads and borders of OpenFreeMap Bright over the imagery, without its ferry routes", () => {

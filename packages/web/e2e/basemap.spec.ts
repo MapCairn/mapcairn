@@ -216,31 +216,28 @@ test.describe("basemaps", () => {
     ).toBeChecked();
   });
 
-  test("a host that offers the SDK's whole list shows Liberty, Colorful and Fiord as plain tiles and requests no preview for them", async ({
+  test("a host that offers the SDK's whole list shows every basemap as a plain tile and requests no preview, because the SDK names none", async ({
     page,
     mapPage,
   }) => {
     const previews: string[] = [];
     page.on("request", (request) => {
-      const match = /\/basemaps\/([\w-]+)\.jpg/.exec(request.url());
-      if (match?.[1]) {
-        previews.push(match[1]);
+      if (/\/basemaps\/[\w-]+\.jpg/.test(request.url())) {
+        previews.push(request.url());
       }
     });
     await scriptBasemaps(page, BASEMAPS);
     await mapPage.goto();
     await mapPage.openMapOptions();
-    for (const id of UNOFFERED_BASEMAP_IDS) {
+    await expect(mapPage.basemapPicker.getByRole("radio")).toHaveCount(
+      BASEMAPS.length,
+    );
+    await expect(mapPage.basemapPicker.locator("img")).toHaveCount(0);
+    for (const { id } of BASEMAPS) {
       const tile = mapPage.basemapPicker.getByTestId(`basemap-option-${id}`);
       await expect(tile.getByTestId(`basemap-swatch-${id}`)).toBeVisible();
-      await expect(tile.locator("img")).toHaveCount(0);
     }
-    // Previews load lazily, so which ones were asked for depends on the
-    // viewport; none may be one of the three the SDK has no image for.
-    await expect.poll(() => previews.length).toBeGreaterThan(0);
-    for (const id of UNOFFERED_BASEMAP_IDS) {
-      expect(previews).not.toContain(id);
-    }
+    expect(previews).toEqual([]);
   });
 
   for (const colorScheme of ["light", "dark"] as const) {

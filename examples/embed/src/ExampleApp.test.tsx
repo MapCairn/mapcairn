@@ -51,6 +51,17 @@ describe("ExampleApp", () => {
     expect(await within(layers).findByText(/3 shown/)).toBeTruthy();
   });
 
+  it("offers the SDK's basemaps as plain swatches, because the SDK names no preview image", async () => {
+    render(<ExampleApp />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Map options" }));
+    const picker = await screen.findByRole("radiogroup", { name: "Basemap" });
+
+    expect(within(picker).getAllByRole("radio").length).toBeGreaterThan(0);
+    expect(picker.querySelectorAll("img")).toHaveLength(0);
+    expect(within(picker).getByTestId("basemap-swatch-bright")).toBeTruthy();
+  });
+
   it("registers a WebMCP tool that turns the layer on", async () => {
     const tools = new Map<string, () => Promise<unknown>>();
     document.modelContext = {

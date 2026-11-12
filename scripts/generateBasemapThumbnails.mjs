@@ -4,7 +4,10 @@
  *
  * @remarks
  * Run with `node scripts/generateBasemapThumbnails.mjs` after a basemap is
- * added or changes, then commit the images. Pass basemap ids
+ * added or changes, then commit the images. Which basemaps get a preview, and
+ * where the file goes, is `BASEMAP_THUMBNAILS` in
+ * `packages/web/src/basemaps/basemapThumbnails.ts`: the SDK's definitions name
+ * no preview. Pass basemap ids
  * (`node scripts/generateBasemapThumbnails.mjs osm`) to render only those. It
  * builds nothing. A throwaway static server on port 4174 (never 4173, which
  * Playwright's preview owns) serves one HTML page and the installed
@@ -36,7 +39,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const OUTPUT_DIR = join(ROOT, "packages", "web", "public", "basemaps");
+const PUBLIC_DIR = join(ROOT, "packages", "web", "public");
+const OUTPUT_DIR = join(PUBLIC_DIR, "basemaps");
 const PORT = 4174;
 
 /** The CSS size of one preview. It matches the picker's `THUMB_WIDTH` and `THUMB_HEIGHT`. */
@@ -73,16 +77,23 @@ const { SATELLITE_BASEMAP } = await import(
     .href
 );
 
+/** The preview path the site serves for each basemap it offers (a module with no imports, so plain Node loads it). */
+const { BASEMAP_THUMBNAILS } = await import(
+  pathToFileURL(join(ROOT, "packages/web/src/basemaps/basemapThumbnails.ts"))
+    .href
+);
+
 /**
  * The SDK's basemaps and those only the reference host defines (which import
- * types only so plain Node loads them), less any that name no `thumbnail`:
- * their tile is a swatch, so there is no image to render.
+ * types only so plain Node loads them), less any the host names no preview
+ * for in `BASEMAP_THUMBNAILS`: their tile is a swatch, so there is no image to
+ * render. The SDK's definitions name none, so the host's table decides.
  */
 const BASEMAPS = [
   ...SDK_BASEMAPS,
   OPEN_TOPO_MAP_BASEMAP,
   SATELLITE_BASEMAP,
-].filter((basemap) => basemap.thumbnail !== undefined);
+].filter((basemap) => BASEMAP_THUMBNAILS[basemap.id] !== undefined);
 
 /** The basemaps to render: those named on the command line, or all of them. */
 const REQUESTED = process.argv.slice(2);
@@ -281,7 +292,7 @@ try {
     const page = await context.newPage();
     try {
       const { image, quality } = await capture(page, basemap);
-      const file = join(OUTPUT_DIR, `${basemap.id}.jpg`);
+      const file = join(PUBLIC_DIR, BASEMAP_THUMBNAILS[basemap.id]);
       writeFileSync(file, image);
       const kb = (image.length / 1024).toFixed(1);
       const note =

@@ -1,5 +1,6 @@
 import {
   BASEMAPS,
+  type BasemapCatalogue,
   type BasemapDefinition,
   createBasemapCatalogue,
   createFakeServices,
@@ -20,8 +21,15 @@ import {
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { BasemapPicker, type BasemapPickerProps } from "./BasemapPicker";
 
-/** The built-in basemaps that name a preview image. */
-const PREVIEWED = BASEMAPS.filter((basemap) => basemap.thumbnail !== undefined);
+/**
+ * The built-in basemaps as a host that serves a preview for each of them
+ * offers them: the SDK's definitions name none, so the host adds the path.
+ */
+const PREVIEWED = BASEMAPS.map((basemap) => ({
+  ...basemap,
+  thumbnail: `/basemaps/${basemap.id}.jpg`,
+}));
+const PREVIEWED_CATALOGUE = createBasemapCatalogue(PREVIEWED);
 
 const { thumbnail: _thumbnail, ...withoutThumbnail } = FAKE_VECTOR_BASEMAP;
 
@@ -34,10 +42,15 @@ const NO_PREVIEW_BASEMAP: BasemapDefinition = {
 
 function renderPicker(
   props: Partial<BasemapPickerProps> = {},
-  device: { saveData?: boolean; settings?: Partial<Settings> } = {},
+  device: {
+    saveData?: boolean;
+    settings?: Partial<Settings>;
+    catalogue?: BasemapCatalogue;
+  } = {},
 ) {
   const onChange = vi.fn();
   const services = createFakeServices({
+    basemaps: device.catalogue,
     preferences: new FakeDevicePreferences({ saveData: device.saveData }),
     settings: new MemorySettingsStore({ initial: device.settings }),
   });
@@ -162,7 +175,7 @@ describe("BasemapPicker", () => {
 
   describe("previews", () => {
     it("gives each preview an empty alt, intrinsic size and lazy loading", () => {
-      renderPicker();
+      renderPicker({}, { catalogue: PREVIEWED_CATALOGUE });
       for (const basemap of PREVIEWED) {
         const image = screen
           .getByTestId(`basemap-option-${basemap.id}`)
@@ -178,21 +191,21 @@ describe("BasemapPicker", () => {
       }
     });
 
-    it("shows a swatch, and requests no image, for a built-in basemap that names no preview", () => {
-      renderPicker();
+    it("shows a swatch and requests no image for every built-in basemap in a host that serves no previews", () => {
+      const { container } = renderPicker();
+      expect(container.querySelectorAll("img")).toHaveLength(0);
       for (const basemap of BASEMAPS) {
-        if (basemap.thumbnail === undefined) {
-          const tile = screen.getByTestId(`basemap-option-${basemap.id}`);
-          expect(tile.querySelector("img"), basemap.id).toBeNull();
-          expect(
-            screen.getByTestId(`basemap-swatch-${basemap.id}`),
-          ).toBeInTheDocument();
-        }
+        expect(basemap.thumbnail, basemap.id).toBeUndefined();
+        const tile = screen.getByTestId(`basemap-option-${basemap.id}`);
+        expect(tile.querySelector("img"), basemap.id).toBeNull();
+        expect(
+          screen.getByTestId(`basemap-swatch-${basemap.id}`),
+        ).toBeInTheDocument();
       }
     });
 
     it("removes a preview that fails to load and keeps the tile, name and radio", () => {
-      renderPicker();
+      renderPicker({}, { catalogue: PREVIEWED_CATALOGUE });
       const tile = screen.getByTestId("basemap-option-osm");
       const image = tile.querySelector("img");
       expect(image).not.toBeNull();
@@ -206,7 +219,7 @@ describe("BasemapPicker", () => {
     });
 
     it("shows the basemap's swatch in place of a preview that fails to load", () => {
-      renderPicker();
+      renderPicker({}, { catalogue: PREVIEWED_CATALOGUE });
       expect(screen.queryByTestId("basemap-swatch-dark")).toBeNull();
       const tile = screen.getByTestId("basemap-option-dark");
       fireEvent.error(tile.querySelector("img") as HTMLImageElement);
@@ -217,7 +230,7 @@ describe("BasemapPicker", () => {
     });
 
     it("keeps the selection badge on a selected tile whose preview failed", () => {
-      renderPicker({ value: "osm" });
+      renderPicker({ value: "osm" }, { catalogue: PREVIEWED_CATALOGUE });
       const tile = screen.getByTestId("basemap-option-osm");
       fireEvent.error(tile.querySelector("img") as HTMLImageElement);
       expect(screen.getByTestId("basemap-selected-osm")).toBeInTheDocument();
@@ -228,7 +241,7 @@ describe("BasemapPicker", () => {
 
 describe("BasemapPicker in Save data mode", () => {
   it("shows a thumbnail for every basemap when Save data is off", () => {
-    const { container } = renderPicker();
+    const { container } = renderPicker({}, { catalogue: PREVIEWED_CATALOGUE });
     expect(container.querySelectorAll("img")).toHaveLength(PREVIEWED.length);
     expect(screen.queryByTestId("basemap-data-note-osm")).toBeNull();
   });
@@ -236,7 +249,7 @@ describe("BasemapPicker in Save data mode", () => {
   it("requests no thumbnail and keeps every name, radio and the selection badge", () => {
     const { container } = renderPicker(
       { value: "liberty" },
-      { saveData: true },
+      { saveData: true, catalogue: PREVIEWED_CATALOGUE },
     );
     expect(container.querySelectorAll("img")).toHaveLength(0);
     for (const basemap of BASEMAPS) {
@@ -270,7 +283,10 @@ describe("BasemapPicker in Save data mode", () => {
 
   it("swaps previews for swatches, and back, as the setting changes", () => {
     const settings = new MemorySettingsStore();
-    const services = createFakeServices({ settings });
+    const services = createFakeServices({
+      settings,
+      basemaps: PREVIEWED_CATALOGUE,
+    });
     const { container } = render(
       <ServicesProvider services={services}>
         <LiveRegionProvider>
@@ -290,7 +306,11 @@ describe("BasemapPicker in Save data mode", () => {
   it("follows an explicit choice over the device signal", () => {
     const off = renderPicker(
       {},
-      { saveData: true, settings: { saveData: false } },
+      {
+        saveData: true,
+        settings: { saveData: false },
+        catalogue: PREVIEWED_CATALOGUE,
+      },
     );
     expect(off.container.querySelectorAll("img")).toHaveLength(
       PREVIEWED.length,
@@ -298,7 +318,11 @@ describe("BasemapPicker in Save data mode", () => {
     off.unmount();
     const on = renderPicker(
       {},
-      { saveData: false, settings: { saveData: true } },
+      {
+        saveData: false,
+        settings: { saveData: true },
+        catalogue: PREVIEWED_CATALOGUE,
+      },
     );
     expect(on.container.querySelectorAll("img")).toHaveLength(0);
   });
