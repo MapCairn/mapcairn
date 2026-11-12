@@ -147,9 +147,14 @@ export default function Root() {
 
 /**
  * React Router route module export: the error boundary for every route. It
- * shows a friendly page, never the raw error, and logs the error: on the
- * server to the console (Workers Logs), in the browser to `/log-error`.
- * A missing page is not logged.
+ * shows a friendly page, never the raw error, and in the browser logs the
+ * error to the console and reports it to `/log-error`, once per error
+ * however often the boundary renders. On the server it adds no log of its
+ * own: React Router's request handler and `entry.server.tsx` already log
+ * there (Workers Logs). A missing page is not logged. A route error
+ * response thrown on purpose with another status (`throw data(..., { status:
+ * 500 })`) is not logged by React Router on the server either, so it reaches
+ * only this effect in the browser; nothing in the app throws one today.
  */
 export function ErrorBoundary() {
   const error = useRouteError();
@@ -157,12 +162,10 @@ export function ErrorBoundary() {
 
   useEffect(() => {
     if (!notFound) {
+      console.error(error);
       reportCaughtError(error);
     }
   }, [error, notFound]);
 
-  if (!notFound) {
-    console.error(error);
-  }
   return <ErrorPage kind={notFound ? "not-found" : "unexpected"} />;
 }

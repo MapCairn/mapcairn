@@ -1,7 +1,7 @@
 import { createFakeServices, THEME_COLOR_META } from "@mapcairn/core";
 import { useServices } from "@mapcairn/map";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { createElement } from "react";
+import { createElement, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoutesStub } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -230,7 +230,70 @@ describe("root ErrorBoundary", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reload" }));
   });
 
-  it("shows a not-found page for an unmatched route without reporting it", () => {
+  it("logs and reports an error once, however often the boundary renders", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("kaboom once");
+    const Boom = () => {
+      throw failure;
+    };
+    // Renders the real boundary again, with the same error, on each click.
+    const Rerendering = () => {
+      const [renders, setRenders] = useState(0);
+      return createElement(
+        "div",
+        null,
+        createElement(
+          "button",
+          { type: "button", onClick: () => setRenders(renders + 1) },
+          `Render again ${renders}`,
+        ),
+        createElement(ErrorBoundary),
+      );
+    };
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: Root,
+        ErrorBoundary: Rerendering,
+        children: [{ index: true, Component: Boom }],
+      },
+    ]);
+
+    render(createElement(Stub, { initialEntries: ["/"] }));
+    fireEvent.click(screen.getByRole("button", { name: /Render again 0/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Render again 1/ }));
+
+    expect(
+      screen.getByRole("button", { name: /Render again 2/ }),
+    ).toBeVisible();
+    const ofThisError = logged.mock.calls.filter(
+      ([first]) => first === failure,
+    );
+    expect(ofThisError).toHaveLength(1);
+    expect(reportCaughtError).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds no log of its own when rendered on the server", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("kaboom on the server");
+    const Stub = createRoutesStub([
+      { id: "root", path: "/", Component: Root, ErrorBoundary },
+    ]);
+
+    const markup = renderToStaticMarkup(
+      createElement(Stub, {
+        initialEntries: ["/"],
+        hydrationData: { errors: { root: failure } },
+      }),
+    );
+
+    expect(markup).toContain("Something went wrong");
+    expect(logged).not.toHaveBeenCalled();
+    expect(reportCaughtError).not.toHaveBeenCalled();
+  });
+
+  it("shows a not-found page for an unmatched route without logging or reporting it", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const Stub = createRoutesStub([
       { path: "/", Component: Root, ErrorBoundary },
     ]);
@@ -244,6 +307,7 @@ describe("root ErrorBoundary", () => {
       "href",
       "/",
     );
+    expect(logged).not.toHaveBeenCalled();
     expect(reportCaughtError).not.toHaveBeenCalled();
   });
 });

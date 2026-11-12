@@ -25,8 +25,8 @@ const clientErrorReportSchema = z.object({
  * `installErrorReporting()` in `composition/errorReporting.ts`), validates
  * it, and logs it via
  * `console.error` so it reaches Cloudflare Workers Logs the same way
- * server-side rendering errors already do (see `root.tsx`'s `ErrorBoundary`
- * and `entry.server.tsx`'s `onError`); this is the only place an
+ * server errors already do (React Router's request handler, through its
+ * default `handleError`, and `entry.server.tsx`'s `onError`); this is the only place an
  * uncaught client-side error becomes visible outside the visitor's own
  * browser console.
  * @remarks Deliberately stores nothing and returns no body: this app keeps
