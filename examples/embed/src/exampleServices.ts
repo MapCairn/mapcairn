@@ -5,6 +5,7 @@ import {
   createFakeServices,
   createFormatterRegistry,
   createStaticLayerCatalogue,
+  MemoryFeatureSelection,
   type ResolvedTheme,
   type Services,
   THEME_ATTRIBUTE,
@@ -35,9 +36,10 @@ export class PageThemeSource implements ThemeSource {
 /**
  * The services the example runs on: the SDK's fakes, so nothing is requested
  * and no map engine is loaded, with a few scripted answers, one layer of its
- * own and a theme source that reaches the page. It offers the SDK's built-in
- * basemaps as they are: they name no preview image, so the picker shows each
- * one's plain swatch.
+ * own, a theme source that reaches the page and a `MemoryFeatureSelection`
+ * as its store of selected features (the reference site supplies none). It
+ * offers the SDK's built-in basemaps as they are: they name no preview image,
+ * so the picker shows each one's plain swatch.
  */
 export function createExampleServices(): Services {
   const services = createFakeServices({
@@ -47,6 +49,7 @@ export function createExampleServices(): Services {
       formatters: createFormatterRegistry(),
     }),
     routing: undefined,
+    selection: new MemoryFeatureSelection(),
   });
   services.fakes.layerSource.setFeatures(CAIRNS_LAYER.id, CAIRN_FEATURES);
   services.fakes.search.setDefaultResults([
