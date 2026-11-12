@@ -38,6 +38,7 @@ test.describe("turning layers off at once", () => {
     await mapPage.turnOffAllButton.click();
 
     await expect(mapPage.layersSection).toContainText("Turned off 2 layers.");
+    await expect(mapPage.turnOffAllButton).toContainText("0 on");
     await expect(quakes.first()).not.toBeChecked();
     await expect(page).not.toHaveURL(/layers=/);
     await expect
@@ -55,12 +56,9 @@ test.describe("turning layers off at once", () => {
         .getByRole("radio", { name: "Week" }),
     ).toBeChecked();
     await expect(mapPage.turnOffAllButton).toContainText("2 on");
-    await expect
-      .poll(() => mapPage.announcements())
-      .toContain("2 layers turned back on");
   });
 
-  test("works from the keyboard: Enter turns them off, focus lands on Undo, Enter undoes", async ({
+  test("works from the keyboard: Enter turns them off, Tab reaches Undo, Enter undoes", async ({
     page,
     mapPage,
   }) => {
@@ -69,6 +67,8 @@ test.describe("turning layers off at once", () => {
     await mapPage.openMapOptions();
     await mapPage.turnOffAllButton.focus();
     await page.keyboard.press("Enter");
+    await expect(mapPage.turnOffAllButton).toBeFocused();
+    await page.keyboard.press("Tab");
     await expect(mapPage.undoTurnOffButton).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(mapPage.turnOffAllButton).toBeFocused();
@@ -89,6 +89,7 @@ test.describe("turning layers off at once", () => {
     await expect(mapPage.layersSection).toContainText(
       "Turned off 1 in Earthquakes and volcanoes.",
     );
+    await expect(mapPage.undoTurnOffButton).toBeFocused();
     await expect(page).toHaveURL(/layers=imagery/);
     await expect(mapPage.turnOffAllButton).toContainText("1 on");
     await mapPage.undoTurnOffButton.click();

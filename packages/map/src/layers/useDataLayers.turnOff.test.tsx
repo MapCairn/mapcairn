@@ -10,6 +10,7 @@ import {
   SAMPLE_LAYERS,
   SAMPLE_TILE_LAYER,
   samplePoint,
+  tileUrl,
 } from "@mapcairn/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -57,7 +58,13 @@ function setup(definitions: readonly LayerDefinition[] = SAMPLE_LAYERS) {
     },
     { wrapper },
   );
-  return { ...view, renders, catalogue, source: services.fakes.layerSource };
+  return {
+    ...view,
+    renders,
+    catalogue,
+    services,
+    source: services.fakes.layerSource,
+  };
 }
 
 type Handle = ReturnType<typeof setup>;
@@ -177,6 +184,45 @@ describe("useDataLayers turnOff", () => {
     expect(view.result.current.detail).toBeNull();
   });
 
+  it("forgets that a tile layer found no tiles, so it starts clean when it returns", () => {
+    const view = setup();
+    act(() => view.result.current.setEnabled(IMAGERY, true));
+    const imagery = () =>
+      view.result.current.layers.find((item) => item.definition.id === IMAGERY);
+    const tiles = tileUrl(SAMPLE_TILE_LAYER, imagery()?.controls ?? {}, NOW);
+    act(() => view.result.current.reportTilesUnavailable(IMAGERY, tiles));
+    expect(imagery()?.status.kind).toBe("tiles-unavailable");
+    act(() => view.result.current.turnOff([IMAGERY]));
+    expect(imagery()?.status.kind).toBe("off");
+    act(() => view.result.current.undoTurnOff());
+    expect(imagery()?.status.kind).toBe("on");
+  });
+
+  it("cancels the request of a layer that is still loading", () => {
+    const view = setup();
+    const signals: (AbortSignal | undefined)[] = [];
+    vi.spyOn(view.services.layerSource, "load").mockImplementation(
+      ({ signal }) => {
+        signals.push(signal);
+        return new Promise(() => undefined);
+      },
+    );
+    act(() => view.result.current.setEnabled(FEED, true));
+    expect(signals).toHaveLength(1);
+    expect(signals[0]?.aborted).toBe(false);
+    act(() => view.result.current.turnOff([FEED]));
+    expect(signals[0]?.aborted).toBe(true);
+  });
+
+  it("drops what a layer had loaded", async () => {
+    const view = setup();
+    await withAllOn(view);
+    act(() => view.result.current.turnOff([FEED]));
+    expect(
+      view.result.current.layers.find((item) => item.definition.id === FEED),
+    ).toMatchObject({ enabled: false, features: [], status: { kind: "off" } });
+  });
+
   it("keeps the card of a layer it leaves on", async () => {
     const view = setup();
     await withAllOn(view);
@@ -207,7 +253,7 @@ describe("useDataLayers turnOff", () => {
 });
 
 describe("useDataLayers undoTurnOff", () => {
-  it("turns the same layers back on, with the control values they had", async () => {
+  it("turns the same layers back on, with the control values they have (controls stay while a layer is off)", async () => {
     const view = setup();
     await withAllOn(view);
     act(() => view.result.current.setControl(FEED, "window", "hour"));
@@ -275,15 +321,42 @@ describe("useDataLayers undoTurnOff", () => {
     expect(enabledIds(view).sort()).toEqual([ALERTS, FEED].sort());
   });
 
-  it("says nothing, and clears the offer, when every layer is already back on", async () => {
+  it("counts only the layers Undo would still turn on, and ends the offer when none is left", async () => {
     const view = setup();
     await withAllOn(view);
-    act(() => view.result.current.turnOff([ALERTS]));
+    act(() => view.result.current.turnOff([FEED, ALERTS, IMAGERY]));
     act(() => view.result.current.setEnabled(ALERTS, true));
+    expect(view.result.current.turnedOff).toEqual({ count: 2, group: null });
+    act(() => view.result.current.setEnabled(FEED, true));
+    act(() => view.result.current.setEnabled(IMAGERY, true));
+    expect(view.result.current.turnedOff).toBeNull();
     announce.mockClear();
     act(() => view.result.current.undoTurnOff());
     expect(announce).not.toHaveBeenCalled();
-    expect(view.result.current.turnedOff).toBeNull();
+  });
+
+  it("adds no layer twice when Undo is called twice in one tick", async () => {
+    const view = setup();
+    await withAllOn(view);
+    act(() => view.result.current.turnOff([FEED, ALERTS]));
+    act(() => {
+      view.result.current.undoTurnOff();
+      view.result.current.undoTurnOff();
+    });
+    const { enabled } = view.result.current.urlValue;
+    expect([...enabled].sort()).toEqual([ALERTS, FEED, IMAGERY].sort());
+  });
+
+  it("brings back a layer that loads fresh, not with what it showed before", async () => {
+    const view = setup();
+    await withAllOn(view);
+    act(() => view.result.current.turnOff([FEED]));
+    act(() => view.result.current.undoTurnOff());
+    const feed = view.result.current.layers.find(
+      (item) => item.definition.id === FEED,
+    );
+    expect(feed?.status.kind).toBe("loading");
+    expect(feed?.features).toEqual([]);
   });
 
   it("skips a layer that is no longer in the catalogue", async () => {
@@ -360,12 +433,12 @@ describe("useDataLayers Undo timing", () => {
 
   it("waits while the offer is held, and starts again in full when it is released", () => {
     const view = withTileLayers();
-    act(() => view.result.current.holdUndo());
+    act(() => view.result.current.holdUndo("pointer"));
     act(() => {
       vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 3);
     });
     expect(view.result.current.turnedOff).not.toBeNull();
-    act(() => view.result.current.releaseUndo());
+    act(() => view.result.current.releaseUndo("pointer"));
     act(() => {
       vi.advanceTimersByTime(UNDO_TIMEOUT_MS - 1);
     });
@@ -375,6 +448,28 @@ describe("useDataLayers Undo timing", () => {
     });
     expect(view.result.current.turnedOff).toBeNull();
   });
+
+  it.each([
+    ["the pointer leaves first", "pointer", "focus"],
+    ["focus leaves first", "focus", "pointer"],
+  ] as const)(
+    "keeps waiting while one hold remains, when %s",
+    (_name, first, second) => {
+      const view = withTileLayers();
+      act(() => view.result.current.holdUndo("pointer"));
+      act(() => view.result.current.holdUndo("focus"));
+      act(() => view.result.current.releaseUndo(first));
+      act(() => {
+        vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 3);
+      });
+      expect(view.result.current.turnedOff).not.toBeNull();
+      act(() => view.result.current.releaseUndo(second));
+      act(() => {
+        vi.advanceTimersByTime(UNDO_TIMEOUT_MS);
+      });
+      expect(view.result.current.turnedOff).toBeNull();
+    },
+  );
 
   it("gives a replacing batch its own full time", () => {
     const view = setup([SAMPLE_TILE_LAYER, SAMPLE_ALERT_LAYER]);

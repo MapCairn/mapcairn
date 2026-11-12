@@ -85,9 +85,12 @@ export interface DetailState {
   readonly shapes: readonly LayerFeature[];
 }
 
+/** What can hold the countdown to an Undo offer's expiry: the pointer over its status, or focus inside it. */
+export type UndoHolder = "pointer" | "focus";
+
 /** The batch of layers that was last turned off at once, which Undo would turn back on. */
 export interface TurnedOff {
-  /** How many layers were turned off. */
+  /** How many layers Undo would turn back on: those of the batch that are still off and still in the catalogue. */
   readonly count: number;
   /** The group whose action turned them off, or null when the action covered every layer. */
   readonly group: string | null;
@@ -133,20 +136,20 @@ export interface DataLayers {
    * which group's action asked, so the ui can show the Undo beside it.
    */
   turnOff(ids: readonly string[], options?: { readonly group?: string }): void;
-  /** The batch Undo would turn back on, or null when none is on offer (none yet, used, replaced or expired). */
+  /** The batch Undo would turn back on, or null when none is on offer (none yet, used, replaced, expired or every layer of it already on again). */
   readonly turnedOff: TurnedOff | null;
   /**
-   * Turns back on the layers of the last {@link DataLayers.turnOff}, with the
-   * control values they had, in one change and one announcement. A layer that
-   * is on again, or no longer in the catalogue, is skipped; the rest of what
-   * the person changed meanwhile is left as it is. Does nothing when no offer
-   * is open.
+   * Turns back on the layers of the last {@link DataLayers.turnOff}, in one
+   * change and one announcement. A layer's control values stay while it is
+   * off, so they come back as they are. A layer that is on again, or no
+   * longer in the catalogue, is skipped; the rest of what the person changed
+   * meanwhile is left as it is. Does nothing when no offer is open.
    */
   undoTurnOff(): void;
-  /** Pauses the offer's countdown, while the pointer is over its status or focus is inside it. */
-  holdUndo(): void;
-  /** Starts the offer's countdown again, in full. */
-  releaseUndo(): void;
+  /** Pauses the offer's countdown while `by` is on its status. The countdown waits until every holder has released. */
+  holdUndo(by: UndoHolder): void;
+  /** Ends `by`'s hold; once none is left the countdown starts again, in full. */
+  releaseUndo(by: UndoHolder): void;
   setControl(id: string, controlId: string, value: string): void;
   setSort(id: string, sortId: string): void;
   retry(id: string): void;
@@ -239,13 +242,19 @@ interface State {
   readonly undo: UndoOffer | null;
 }
 
-/** The layers a batch turned off, each with the control values it had. */
+/** The layers a batch turned off, and the group whose action asked, if any. */
 interface UndoOffer {
-  readonly layers: readonly {
-    readonly id: string;
-    readonly controls: ControlValues;
-  }[];
+  readonly ids: readonly string[];
   readonly group: string | null;
+}
+
+/** The layers of an offer that Undo would turn on: still off, and still in the catalogue. */
+function stillOff(
+  offer: UndoOffer,
+  enabled: readonly string[],
+  known: ReadonlyMap<string, LayerDefinition>,
+): string[] {
+  return offer.ids.filter((id) => known.has(id) && !enabled.includes(id));
 }
 
 const OFF: LoadResult = { status: { kind: "off" }, features: [] };
@@ -530,7 +539,11 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   // the section unmounts when the sheet closes, and a stale offer must not
   // be there when it opens again.
   const offer = state.undo;
-  const [undoHeld, setUndoHeld] = useState(false);
+  const [undoHolds, setUndoHolds] = useState<Record<UndoHolder, boolean>>({
+    pointer: false,
+    focus: false,
+  });
+  const undoHeld = undoHolds.pointer || undoHolds.focus;
   useEffect(() => {
     if (!offer || undoHeld) {
       return;
@@ -602,13 +615,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       setState((previous) => ({
         ...withoutTraces(previous, leaving),
         enabled: previous.enabled.filter((id) => !leaving.has(id)),
-        undo: {
-          layers: [...leaving].map((id) => ({
-            id,
-            controls: previous.controls[id] ?? {},
-          })),
-          group: offOptions.group ?? null,
-        },
+        undo: { ids: [...leaving], group: offOptions.group ?? null },
       }));
       announce(announceLayersTurnedOff(leaving.size), { priority: "polite" });
     },
@@ -620,22 +627,12 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     if (!undo) {
       return;
     }
-    const returning = undo.layers.flatMap(({ id, controls }) => {
-      const definition = byId.get(id);
-      return definition && !enabled.includes(id)
-        ? [{ id, controls: resolveControlValues(definition, controls, now()) }]
-        : [];
-    });
-    forgetLayers(new Set(returning.map(({ id }) => id)));
+    const returning = stillOff(undo, enabled, byId);
+    forgetLayers(new Set(returning));
     setState((previous) => ({
       ...previous,
-      enabled: [...previous.enabled, ...returning.map(({ id }) => id)],
-      controls: {
-        ...previous.controls,
-        ...Object.fromEntries(
-          returning.map((item) => [item.id, item.controls]),
-        ),
-      },
+      // Read from `previous`, so two calls before a render add nothing twice.
+      enabled: [...previous.enabled, ...stillOff(undo, previous.enabled, byId)],
       undo: null,
     }));
     if (returning.length > 0) {
@@ -643,10 +640,16 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         priority: "polite",
       });
     }
-  }, [announce, byId, forgetLayers, now]);
+  }, [announce, byId, forgetLayers]);
 
-  const holdUndo = useCallback(() => setUndoHeld(true), []);
-  const releaseUndo = useCallback(() => setUndoHeld(false), []);
+  const holdUndo = useCallback(
+    (by: UndoHolder) => setUndoHolds((holds) => ({ ...holds, [by]: true })),
+    [],
+  );
+  const releaseUndo = useCallback(
+    (by: UndoHolder) => setUndoHolds((holds) => ({ ...holds, [by]: false })),
+    [],
+  );
 
   const setControl = useCallback(
     (id: string, controlId: string, value: string) => {
@@ -972,10 +975,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     return found.length > 0 ? found : null;
   }, [layers, state.choices]);
 
-  const turnedOff = useMemo<TurnedOff | null>(
-    () => (offer ? { count: offer.layers.length, group: offer.group } : null),
-    [offer],
-  );
+  const turnedOff = useMemo<TurnedOff | null>(() => {
+    const count = offer ? stillOff(offer, state.enabled, byId).length : 0;
+    return offer && count > 0 ? { count, group: offer.group } : null;
+  }, [offer, state.enabled, byId]);
 
   const urlValue = useMemo<LayersUrlState>(
     () => ({

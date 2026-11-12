@@ -27,7 +27,7 @@ import { LayerItem } from "./LayerItem";
 import * as styles from "./Layers.css";
 import { featureBounds, featurePosition } from "./mapFeatures";
 import { coveredPadding, revealOffset } from "./reveal";
-import { TurnOffAction } from "./TurnOffAction";
+import { TurnOffAll, TurnOffGroup } from "./TurnOffActions";
 import type { DataLayerState, DataLayers } from "./useDataLayers";
 
 /** The closest "Show on map" zooms out to: far enough to see the region. */
@@ -272,11 +272,7 @@ export function LayersSection({
         layer on.
       </p>
       {showTurnOffAll ? (
-        <TurnOffAction
-          layers={layers}
-          group={null}
-          ids={enabledIds(layers.layers)}
-        />
+        <TurnOffAll layers={layers} ids={enabledIds(layers.layers)} />
       ) : null}
       <div className={styles.groups}>
         {byGroup(layers.layers).map(([group, items]) => (
@@ -284,7 +280,7 @@ export function LayersSection({
             <div className={styles.groupHeader}>
               <Subheading level={groupLevel}>{group}</Subheading>
               {showTurnOffAll ? (
-                <TurnOffAction
+                <TurnOffGroup
                   layers={layers}
                   group={group}
                   ids={enabledIds(items)}

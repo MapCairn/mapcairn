@@ -66,7 +66,7 @@ function setup(props: { showTurnOffAll?: boolean } = {}) {
 }
 
 const turnOffAll = () => screen.getByRole("button", { name: /Turn off all/ });
-const undo = () => screen.getByRole("button", { name: "Undo" });
+const undo = () => screen.getByRole("button", { name: /^Undo/ });
 const switchFor = (name: string) => screen.getByRole("switch", { name });
 
 beforeEach(() => {
@@ -102,17 +102,46 @@ describe("Turn off all layers", () => {
     setup();
     fireEvent.click(turnOffAll());
     expect(announce).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
   });
 
-  it("turns every layer off, says so in the button's place, and offers Undo", () => {
+  it("turns every layer off and says so below the button, which stays, now disabled", () => {
     const view = setup();
     view.turnOn(FEED, ALERTS, IMAGERY);
     fireEvent.click(turnOffAll());
     expect(view.layers().layers.some((layer) => layer.enabled)).toBe(false);
     expect(switchFor("Sample points")).not.toBeChecked();
     expect(undo().parentElement).toHaveTextContent("Turned off 3 layers.");
-    expect(screen.queryByRole("button", { name: /Turn off all/ })).toBeNull();
+    expect(turnOffAll()).toHaveAttribute("aria-disabled", "true");
+    expect(turnOffAll()).toHaveTextContent("0 on");
+  });
+
+  it("keeps the button usable while the Undo shows, once a layer is on again", () => {
+    const view = setup();
+    view.turnOn(FEED, ALERTS, IMAGERY);
+    fireEvent.click(turnOffAll());
+    fireEvent.click(switchFor("Sample points"));
+    expect(turnOffAll()).not.toHaveAttribute("aria-disabled");
+    expect(turnOffAll()).toHaveTextContent("1 on");
+    expect(undo().parentElement).toHaveTextContent("Turned off 2 layers.");
+  });
+
+  it("stops claiming a batch once every layer of it is on again", () => {
+    const view = setup();
+    view.turnOn(FEED, ALERTS);
+    fireEvent.click(turnOffAll());
+    fireEvent.click(switchFor("Sample points"));
+    fireEvent.click(switchFor("Sample alerts"));
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
+    expect(screen.queryByText(/Turned off/)).toBeNull();
+  });
+
+  it("names what Undo undoes, beginning with the visible word", () => {
+    const view = setup();
+    view.turnOn(FEED, ALERTS, IMAGERY);
+    fireEvent.click(turnOffAll());
+    expect(undo()).toHaveAccessibleName("Undo turning off 3 layers");
+    expect(undo()).toHaveTextContent("Undo");
   });
 
   it("uses the singular for one layer", () => {
@@ -136,21 +165,26 @@ describe("Turn off all layers", () => {
     expect(section.querySelector("[aria-live]")).toBeNull();
   });
 
-  it("moves focus to Undo, since the button it was on is gone", () => {
+  it("leaves focus on the button, with Undo the next stop after it", () => {
     const view = setup();
     view.turnOn(FEED);
     turnOffAll().focus();
     fireEvent.click(turnOffAll());
-    expect(undo()).toHaveFocus();
+    expect(turnOffAll()).toHaveFocus();
+    expect(
+      turnOffAll().compareDocumentPosition(undo()) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
-  it("restores the layers with their control values on Undo, and puts focus back on the button", () => {
+  it("restores the layers with the control values they have on Undo, and puts focus back on the button", () => {
     const view = setup();
     view.turnOn(FEED, IMAGERY);
     act(() => view.layers().setControl(FEED, "window", "hour"));
     turnOffAll().focus();
     fireEvent.click(turnOffAll());
     announce.mockClear();
+    act(() => undo().focus());
     fireEvent.click(undo());
     expect(switchFor("Sample points")).toBeChecked();
     expect(switchFor("Sample imagery")).toBeChecked();
@@ -174,7 +208,7 @@ describe("Turn off all layers", () => {
     act(() => {
       vi.advanceTimersByTime(1);
     });
-    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
     expect(turnOffAll()).toHaveAttribute("aria-disabled", "true");
     expect(view.layers().turnedOff).toBeNull();
   });
@@ -182,8 +216,8 @@ describe("Turn off all layers", () => {
   it("waits while focus is on Undo, and goes after its time once focus has moved on", () => {
     const view = setup();
     view.turnOn(FEED);
-    turnOffAll().focus();
     fireEvent.click(turnOffAll());
+    act(() => undo().focus());
     act(() => {
       vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 3);
     });
@@ -193,31 +227,57 @@ describe("Turn off all layers", () => {
     act(() => {
       vi.advanceTimersByTime(UNDO_TIMEOUT_MS);
     });
-    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
     expect(elsewhere).toHaveFocus();
   });
 
-  it("waits while the pointer is over the status or focus is inside it", () => {
+  it("waits while a mouse pointer is over the status", () => {
     setup().turnOn(FEED);
     fireEvent.click(turnOffAll());
     const status = undo().parentElement as HTMLElement;
-    fireEvent.mouseEnter(status);
+    fireEvent.pointerEnter(status, { pointerType: "mouse" });
     act(() => {
       vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 2);
     });
     expect(undo()).toBeInTheDocument();
-    fireEvent.mouseLeave(status);
+    fireEvent.pointerLeave(status, { pointerType: "mouse" });
     act(() => {
       vi.advanceTimersByTime(UNDO_TIMEOUT_MS);
     });
-    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
+  });
+
+  it("is not held by a tap, which a touch screen reports as the pointer entering", () => {
+    setup().turnOn(FEED);
+    fireEvent.click(turnOffAll());
+    const status = undo().parentElement as HTMLElement;
+    fireEvent.pointerEnter(status, { pointerType: "touch" });
+    act(() => {
+      vi.advanceTimersByTime(UNDO_TIMEOUT_MS);
+    });
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
+  });
+
+  it("keeps waiting when the pointer leaves while focus is still on Undo", () => {
+    setup().turnOn(FEED);
+    fireEvent.click(turnOffAll());
+    const status = undo().parentElement as HTMLElement;
+    act(() => undo().focus());
+    fireEvent.pointerEnter(status, { pointerType: "mouse" });
+    fireEvent.pointerLeave(status, { pointerType: "mouse" });
+    act(() => {
+      vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 3);
+    });
+    expect(undo()).toBeInTheDocument();
   });
 
   it("does not hold the countdown for ever when the section closes while the pointer is on it", () => {
     const view = setup();
     view.turnOn(FEED);
     fireEvent.click(turnOffAll());
-    fireEvent.mouseEnter(undo().parentElement as HTMLElement);
+    fireEvent.pointerEnter(undo().parentElement as HTMLElement, {
+      pointerType: "mouse",
+    });
     view.showSection(false);
     act(() => {
       vi.advanceTimersByTime(UNDO_TIMEOUT_MS);
@@ -279,6 +339,7 @@ describe("Turn off the layers of a group", () => {
       "Turned off 2 in Samples.",
     );
     expect(turnOffAll()).toHaveTextContent("1 on");
+    expect(undo()).toHaveAccessibleName("Undo turning off 2 in Samples");
     expect(undo()).toHaveFocus();
   });
 
@@ -303,7 +364,7 @@ describe("Turn off the layers of a group", () => {
       screen.getByRole("button", { name: "Turn off 2 in Samples" }),
     );
     fireEvent.click(turnOffAll());
-    expect(screen.getAllByRole("button", { name: "Undo" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^Undo/ })).toHaveLength(1);
     expect((undo().parentElement as HTMLElement).textContent).toContain(
       "Turned off 1 layer.",
     );

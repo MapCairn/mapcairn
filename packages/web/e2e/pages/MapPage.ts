@@ -235,7 +235,7 @@ export class MapPage {
       name: /^Turn off all layers/,
     });
     this.undoTurnOffButton = this.layersSection.getByRole("button", {
-      name: "Undo",
+      name: /^Undo/,
     });
 
     this.sheetBrand = page.getByTestId("sheet-brand");

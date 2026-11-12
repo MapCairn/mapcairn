@@ -94,6 +94,19 @@ describe("SheetContent structure", () => {
     ]);
   });
 
+  it("offers Turn off all layers in the Layers section, and leaves it out when the host says so", () => {
+    const { unmount } = renderContent({ layers: [SAMPLE_FEED_LAYER] });
+    expect(
+      screen.getByRole("button", { name: /^Turn off all layers/ }),
+    ).toBeInTheDocument();
+    unmount();
+    renderContent({
+      props: { showTurnOffAll: false },
+      layers: [SAMPLE_FEED_LAYER],
+    });
+    expect(screen.queryByRole("button", { name: /^Turn off/ })).toBeNull();
+  });
+
   it("shows only Settings and Help for the settings and help sections", () => {
     for (const section of ["settings", "help"] as const) {
       const { unmount } = renderContent({
