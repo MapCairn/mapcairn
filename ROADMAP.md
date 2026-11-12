@@ -1,17 +1,28 @@
 # Roadmap
 
-_Last reviewed: 2026-11-11. Reviewed every year, and sooner when a decision below changes._
+_Last reviewed: 2026-11-12. Reviewed every year, and sooner when a decision below changes._
 
-This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The tracking issue for each item holds the current state, and [`docs/plans/`](docs/plans/README.md) holds the written plans.
+This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
+
+## Direction
+
+MapCairn aims to give a team everything it needs to build an industry-grade GIS application or platform. That means capabilities comparable to the established commercial mapping and GIS development kits, delivered as an open-source SDK that is accessible by default, private by design, and built from parts that can each be adopted on their own. The reference site shows the parts working together; it stays small and public, and it does not adopt a capability just because the SDK offers it.
 
 ## Intentions
 
-Statuses are "proposed" (written down, not started) and "in progress" (work has begun, nothing finished that you can rely on).
+Statuses are "proposed" (written down, not started) and "in progress" (work has begun, nothing finished that you can rely on). Items for the SDK do not change the reference site unless the maintainer decides so, in the open, with a plan.
 
-| Intention | Status | Tracking |
-| --- | --- | --- |
-| Work toward the OpenSSF Best Practices silver badge: governance, this roadmap, an assurance case, a vulnerability response process, code style and review documents, and a repeatable build | in progress | [#4](https://github.com/MapCairn/mapcairn/issues/4) |
-| Get the four SDK packages ready to publish to npm, with API documentation generated from the TSDoc comments. A plan comes first | proposed | [#1](https://github.com/MapCairn/mapcairn/issues/1) |
+| Theme | What it covers | Status | Tracking |
+| --- | --- | --- | --- |
+| Layers and data | A layer catalogue loaded at runtime per user, identifying features on raster tile layers, richer filters and layers that wait for a filter, selecting several features, a layer key on the map, turning all layers off at once, clearer layer status | proposed, some in progress | [#46](https://github.com/MapCairn/mapcairn/issues/46), [#47](https://github.com/MapCairn/mapcairn/issues/47), [#62](https://github.com/MapCairn/mapcairn/issues/62), [#49](https://github.com/MapCairn/mapcairn/issues/49), [#71](https://github.com/MapCairn/mapcairn/issues/71), [#72](https://github.com/MapCairn/mapcairn/issues/72), [#66](https://github.com/MapCairn/mapcairn/issues/66) |
+| Shapes and formats | Reading and writing more geometry formats | in progress | [#50](https://github.com/MapCairn/mapcairn/issues/50) |
+| Output | Exporting the map as an image at a requested size and extent, and server-side rendering for hosts that want it | proposed | [#48](https://github.com/MapCairn/mapcairn/issues/48), [#53](https://github.com/MapCairn/mapcairn/issues/53) |
+| Embedding | An optional MapLibre adapter package, a prebuilt bundle for pages without React, ease of adding the SDK to server-rendered applications, and hosts behind a login | proposed | [#43](https://github.com/MapCairn/mapcairn/issues/43), [#44](https://github.com/MapCairn/mapcairn/issues/44), [#51](https://github.com/MapCairn/mapcairn/issues/51), [#45](https://github.com/MapCairn/mapcairn/issues/45) |
+| Hosts and agents | A tool catalogue so an AI agent can drive the map, and an optional analytics sink hosts can plug their own tools into | proposed | [#56](https://github.com/MapCairn/mapcairn/issues/56), [#75](https://github.com/MapCairn/mapcairn/issues/75) |
+| Code health | Smaller modules in the map adapter, the layer hook and the app hook | proposed, some in progress | [#24](https://github.com/MapCairn/mapcairn/issues/24), [#25](https://github.com/MapCairn/mapcairn/issues/25), [#26](https://github.com/MapCairn/mapcairn/issues/26) |
+| Publishing and assurance | Getting the four SDK packages ready to publish to npm with generated API documentation, and working toward the OpenSSF Best Practices silver badge | in progress | [#1](https://github.com/MapCairn/mapcairn/issues/1), [#4](https://github.com/MapCairn/mapcairn/issues/4) |
+
+Two items wait for the maintainer's decision before any work: optional adapters for a commercial map platform that hosts configure with their own key ([#40](https://github.com/MapCairn/mapcairn/issues/40)), and counting feature use without identifying anyone ([#41](https://github.com/MapCairn/mapcairn/issues/41)).
 
 Further items, such as new open data layers, are added as plans or issues when someone proposes them, and each new dataset is a separate, explicitly scoped decision with its provenance, publication rights and privacy reviewed first (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
