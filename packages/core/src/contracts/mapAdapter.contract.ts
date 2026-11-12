@@ -2,8 +2,10 @@
 // Copyright MapCairn contributors
 import { afterEach, describe, expect, it } from "vitest";
 import type { DrawnLayer } from "../fakes/FakeMapAdapter";
+import { readPngSize } from "../fakes/pngHeader";
+import { MAX_IMAGE_SIDE_PX } from "../imageExport/plan";
 import type { BasemapDefinition } from "../ports/basemap";
-import { MapEngineError } from "../ports/errors";
+import { MapEngineError, MapImageExportError } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
 import type {
   MapAdapter,
@@ -14,6 +16,7 @@ import type {
   MapHandleDrag,
   MapHeatmap,
   MapHostElement,
+  MapImageOptions,
   MapMountOptions,
   MapShapeLook,
   MapShapes,
@@ -89,6 +92,12 @@ export interface MapAdapterControls {
    * read. Optional because some engines cannot fail.
    */
   failNextImage?(): void;
+  /**
+   * Makes the tiles of the next requested image (one with a size, a pixel
+   * ratio or a view) never finish loading, and the adapter give up on them
+   * soon. Optional because some engines cannot stall.
+   */
+  stallNextImageTiles?(): void;
   /**
    * Makes the engine report a pointer going down at a position, as a mouse
    * or pen (`mouse`, the default) or as a finger (`touch`).
@@ -1131,6 +1140,190 @@ export function runMapAdapterContract(
         await expect(subject.adapter.toImage()).rejects.toBeInstanceOf(
           MapEngineError,
         );
+      });
+
+      describe("at a requested size and view", () => {
+        const BOX = { south: -34.1, west: 18.3, north: -33.8, east: 18.6 };
+
+        /** Counts the camera events the adapter emits until `stop` is called. */
+        function countCameraEvents(adapter: MapAdapter): () => number {
+          let count = 0;
+          const stops = (["move", "moveEnd", "zoom", "rotate"] as const).map(
+            (event) =>
+              adapter.on(event, () => {
+                count += 1;
+              }),
+          );
+          return () => {
+            for (const stop of stops) {
+              stop();
+            }
+            return count;
+          };
+        }
+
+        it("returns a PNG for a size and ratio, a box, and a centre and zoom, and leaves the view on screen alone", async () => {
+          const { adapter, controls, zoom } = await mounted();
+          adapter.setView({ bearing: 25 }, NO_ANIMATION);
+          await controls.settle();
+          const before = adapter.getView();
+          const events = countCameraEvents(adapter);
+          const { width, height } = controls.hostSize;
+          // Each request, with the size in pixels the image must have: the
+          // size times the pixel ratio, or the map on screen's size.
+          const requests: readonly (readonly [
+            MapImageOptions,
+            { readonly width: number; readonly height: number },
+          ])[] = [
+            [
+              { size: { width: 640, height: 480 }, pixelRatio: 2 },
+              { width: 1280, height: 960 },
+            ],
+            [{ view: { bounds: BOX } }, { width, height }],
+            [
+              {
+                pixelRatio: 2,
+                view: { center: { lat: 10, lng: 20 }, zoom: zoom + 1 },
+              },
+              { width: width * 2, height: height * 2 },
+            ],
+            [
+              {
+                size: { width: 320, height: 200 },
+                view: { bounds: BOX },
+                attribution: "© Example contributors",
+                drawing: {
+                  colour: "#1a73c8",
+                  halo: "#ffffff",
+                  marks: [{ kind: "dot", position: CENTRE }],
+                },
+              },
+              { width: 320, height: 200 },
+            ],
+            // A fractional size is drawn as the whole CSS pixels the engine
+            // sizes a canvas from, not refused because the product misses.
+            [
+              { size: { width: 390.4, height: 700.6 }, pixelRatio: 2 },
+              { width: 780, height: 1402 },
+            ],
+          ];
+          for (const [request, expected] of requests) {
+            const image = await adapter.toImage(request);
+            expect(image.type).toBe("image/png");
+            expect(await readPngSize(image)).toEqual(expected);
+          }
+          await controls.settle();
+          expect(events()).toBe(0);
+          expect(adapter.getView()).toEqual(before);
+        });
+
+        it("refuses an image over the size limit with a too-large error before drawing anything", async () => {
+          const { adapter, controls } = await mounted();
+          const events = countCameraEvents(adapter);
+          const huge = adapter.toImage({
+            size: { width: MAX_IMAGE_SIDE_PX + 1, height: 100 },
+          });
+          await expect(huge).rejects.toBeInstanceOf(MapImageExportError);
+          await expect(huge).rejects.toMatchObject({
+            kind: "too-large",
+            reason: "export-failed",
+          });
+          await expect(
+            adapter.toImage({
+              size: { width: 4000, height: 4000 },
+              pixelRatio: 2,
+            }),
+          ).rejects.toMatchObject({ kind: "too-large" });
+          await controls.settle();
+          expect(events()).toBe(0);
+          expect((await adapter.toImage()).type).toBe("image/png");
+        });
+
+        it("refuses a size or view that cannot be drawn with an invalid error", async () => {
+          const { adapter } = await mounted();
+          const invalid = [
+            { size: { width: 0, height: 100 } },
+            { size: { width: 100, height: Number.NaN } },
+            { pixelRatio: -1 },
+            { view: { center: CENTRE, zoom: Number.NaN } },
+            { view: { bounds: { south: 1, west: 0, north: 0, east: 1 } } },
+            // A box across the antimeridian is not drawn yet.
+            { view: { bounds: { south: 0, west: 170, north: 1, east: -170 } } },
+            // Nor is a view beyond what the flat map can show.
+            { view: { center: { lat: 89, lng: 0 }, zoom: 3 } },
+            { view: { center: { lat: 0, lng: 190 }, zoom: 3 } },
+          ];
+          for (const request of invalid) {
+            await expect(adapter.toImage(request)).rejects.toMatchObject({
+              kind: "invalid",
+              reason: "export-failed",
+            });
+          }
+        });
+
+        it("rejects with a timed-out error when the tiles do not finish, and still works afterwards", async () => {
+          const { adapter, controls } = await mounted();
+          if (controls.stallNextImageTiles === undefined) {
+            return;
+          }
+          const before = adapter.getView();
+          controls.stallNextImageTiles();
+          await expect(
+            adapter.toImage({ view: { bounds: BOX } }),
+          ).rejects.toMatchObject({
+            kind: "timed-out",
+            reason: "export-failed",
+          });
+          expect(adapter.getView()).toEqual(before);
+          const again = await adapter.toImage({ view: { bounds: BOX } });
+          expect(again.type).toBe("image/png");
+        });
+
+        it("draws the view on screen when a request names only a size, even looking at a pole", async () => {
+          const { adapter, controls } = await mounted();
+          adapter.setView({ center: { lat: 89, lng: 20 } }, NO_ANIMATION);
+          await controls.settle();
+          const image = await adapter.toImage({
+            size: { width: 200, height: 100 },
+          });
+          expect(await readPngSize(image)).toEqual({ width: 200, height: 100 });
+        });
+
+        it("refuses a box view on a globe as invalid for now, and draws a centre and zoom there", async () => {
+          const { adapter, controls, zoom } = await mounted();
+          adapter.setProjection("globe");
+          await controls.settle();
+          await expect(
+            adapter.toImage({ view: { bounds: BOX } }),
+          ).rejects.toMatchObject({ kind: "invalid", reason: "export-failed" });
+          const image = await adapter.toImage({
+            view: { center: CENTRE, zoom },
+          });
+          expect(image.type).toBe("image/png");
+        });
+
+        it("makes every image when several are asked for at once, each at its own size", async () => {
+          const { adapter } = await mounted();
+          const sizes = [
+            { width: 300, height: 200 },
+            { width: 500, height: 400 },
+            { width: 120, height: 90 },
+          ];
+          const images = await Promise.all(
+            sizes.map((size) =>
+              adapter.toImage({ size, view: { bounds: BOX } }),
+            ),
+          );
+          expect(await Promise.all(images.map(readPngSize))).toEqual(sizes);
+        });
+
+        it("rejects a requested image when the map is not mounted", async () => {
+          const subject = create();
+          live.push(subject.adapter);
+          await expect(
+            subject.adapter.toImage({ size: { width: 100, height: 100 } }),
+          ).rejects.toBeInstanceOf(MapEngineError);
+        });
       });
     });
 

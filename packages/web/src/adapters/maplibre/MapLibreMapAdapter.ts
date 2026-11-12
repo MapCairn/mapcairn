@@ -16,6 +16,7 @@ import type {
   MapHeatmap,
   MapHostElement,
   MapImageOptions,
+  MapImageView,
   MapMountOptions,
   MapMoveOptions,
   MapProjection,
@@ -25,14 +26,18 @@ import type {
   MapVectorTiles,
   PixelPoint,
   ViewState,
+  VisibleMap,
 } from "@mapcairn/core";
 import {
   clampZoom,
+  MAX_IMAGE_SIDE_PX,
   MAX_MERCATOR_LATITUDE,
   MapEngineError,
+  MapImageExportError,
   type MapPlacement,
   mapMetresPerPixel,
   omittedLayers,
+  refuseBoxOnGlobe,
   toEngineZoom,
   toNormalisedZoom,
 } from "@mapcairn/core";
@@ -51,7 +56,12 @@ import { withCacheKey } from "../../constants/workerCacheKey";
 import { Emitter } from "../shared/emitter";
 import { EditHandleController } from "./editHandles";
 import { heatmapLayer } from "./heatmapLayer";
-import { MapImageExporter } from "./imageExport";
+import {
+  MapImageExporter,
+  notMounted,
+  type RenderMap,
+  type RenderMapRequest,
+} from "./imageExport";
 import { propertyLook, ruleLook } from "./lookExpressions";
 import {
   MARKER_PIXEL_RATIO,
@@ -65,6 +75,7 @@ import {
   patternImageName,
 } from "./patternImages";
 import { positionOf } from "./positionOf";
+import { addDataLayerImages, coversBounds, dataLayerImages } from "./renderMap";
 import {
   areaLayers,
   type EngineLayer,
@@ -74,7 +85,7 @@ import {
   type ShapeSource,
 } from "./shapeLayers";
 
-export { IMAGE_WAIT_MS } from "./imageExport";
+export { IMAGE_TILES_WAIT_MS, IMAGE_WAIT_MS } from "./imageExport";
 
 type MapLibreModule = typeof import("maplibre-gl");
 
@@ -121,6 +132,15 @@ export function loadEngine(workerCacheKey?: string): Promise<MapLibreModule> {
       throw error;
     });
   return engineLoader;
+}
+
+/** Where a position is on `map`, in CSS pixels from its top left, or the origin when there is no map. */
+function pixelOf(map: MapLibreMap | undefined, latlng: LatLng): PixelPoint {
+  if (!map) {
+    return { x: 0, y: 0 };
+  }
+  const point = map.project([latlng.lng, latlng.lat]);
+  return { x: point.x, y: point.y };
 }
 
 /** Bearing in degrees clockwise, in the range [0, 360) and never -0. */
@@ -194,6 +214,8 @@ export interface MapLibreMapAdapterOptions {
    * Content Security Policy is fetched again when the policy changes.
    */
   readonly workerCacheKey?: string;
+  /** Overrides {@link IMAGE_TILES_WAIT_MS}, for example a few milliseconds in a test. */
+  readonly imageTilesWaitMs?: number;
 }
 
 /** Whether a camera event came from the person (a gesture), not from code. */
@@ -725,11 +747,11 @@ export class MapLibreMapAdapter implements MapAdapter {
     emitDrag: (drag) => this.emitter.emit("handleDrag", drag),
     emitHover: (id) => this.emitter.emit("handleHover", id),
   });
-  private readonly imageExporter = new MapImageExporter({
-    mountedMap: () => (this.destroyed ? undefined : this.map),
-    isSwapPending: () => this.pending !== undefined,
-    placement: () => this.placement(),
-  });
+  private readonly imageExporter: MapImageExporter;
+  /** Aborts when the adapter is destroyed, for an export that is waiting. */
+  private readonly lifetime = new AbortController();
+  /** Counts the changes to the basemap, data layers and projection, for an export that waited in the queue. */
+  private styleVersion = 0;
   private readonly workerFailureGraceMs: number;
   private readonly workerCacheKey: string | undefined;
   private map: MapLibreMap | undefined;
@@ -781,6 +803,18 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.workerFailureGraceMs =
       options.workerFailureGraceMs ?? WORKER_FAILURE_GRACE_MS;
     this.workerCacheKey = options.workerCacheKey;
+    this.imageExporter = new MapImageExporter(
+      {
+        mountedMap: () => (this.destroyed ? undefined : this.map),
+        isSwapPending: () => this.pending !== undefined,
+        placement: (map) => this.placement(map),
+        visibleMap: () => this.visibleMap(),
+        closed: () => this.lifetime.signal,
+        styleVersion: () => this.styleVersion,
+        openRenderMap: (request) => this.openRenderMap(request),
+      },
+      options.imageTilesWaitMs,
+    );
   }
 
   async mount(host: MapHostElement, options: MapMountOptions): Promise<void> {
@@ -857,6 +891,8 @@ export class MapLibreMapAdapter implements MapAdapter {
       return;
     }
     this.destroyed = true;
+    // An export waiting for its tiles stops at once and removes its render map.
+    this.lifetime.abort();
     // An intentional teardown is not a failure, so a waiting caller just resolves.
     this.settlePending();
     this.teardownMap();
@@ -864,7 +900,11 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   getView(): ViewState {
-    const map = this.map;
+    return this.viewOf(this.map);
+  }
+
+  /** The view of `map`, or the view it mounted with when there is no map. */
+  private viewOf(map: MapLibreMap | undefined): ViewState {
     if (!map) {
       return (
         this.mountView ?? { center: { lat: 0, lng: 0 }, zoom: 0, bearing: 0 }
@@ -951,12 +991,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   project(latlng: LatLng): PixelPoint {
-    const map = this.map;
-    if (!map) {
-      return { x: 0, y: 0 };
-    }
-    const point = map.project([latlng.lng, latlng.lat]);
-    return { x: point.x, y: point.y };
+    return pixelOf(this.map, latlng);
   }
 
   /**
@@ -964,7 +999,11 @@ export class MapLibreMapAdapter implements MapAdapter {
    * lies between the camera and it. A flat map hides nothing.
    */
   isVisible(latlng: LatLng): boolean {
-    const map = this.map;
+    return this.visibleOn(this.map, latlng);
+  }
+
+  /** The horizon test of {@link MapLibreMapAdapter.isVisible}, on any map the adapter made. */
+  private visibleOn(map: MapLibreMap | undefined, latlng: LatLng): boolean {
     const LngLat = this.lngLat;
     if (!map || !LngLat || this.projection === "flat") {
       return true;
@@ -978,6 +1017,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   setProjection(projection: MapProjection): void {
+    this.styleVersion += 1;
     this.projection = projection;
     this.applyProjection();
   }
@@ -1000,14 +1040,135 @@ export class MapLibreMapAdapter implements MapAdapter {
     );
   }
 
-  /** How the ui places its overlay marks, so presses and the exported image agree with what it draws. */
-  private placement(): MapPlacement {
+  /**
+   * How the ui places its overlay marks on `map` (the map on screen unless an
+   * export asks for its render map), so presses and the exported image agree
+   * with what it draws.
+   */
+  private placement(map = this.map): MapPlacement {
     return {
       projection: this.projection,
-      view: this.getView(),
-      project: (position) => this.project(position),
-      isVisible: (position) => this.isVisible(position),
+      view: this.viewOf(map),
+      project: (position) => pixelOf(map, position),
+      isVisible: (position) => this.visibleOn(map, position),
     };
+  }
+
+  /**
+   * The size of the map on screen, and where it looks, for an export that
+   * names neither. The size is the layout size in whole pixels
+   * (`clientWidth`), which is what the engine sizes its canvas from;
+   * `getBoundingClientRect` is fractional.
+   */
+  private visibleMap(): VisibleMap {
+    const { clientWidth, clientHeight } = this.host as HTMLElement;
+    return {
+      size: { width: clientWidth, height: clientHeight },
+      view: this.getView(),
+    };
+  }
+
+  /**
+   * Starts a map of its own from the style of the map on screen, so it draws
+   * the same basemap and data layers and requests nothing else, at the view
+   * and pixel ratio of a requested image. The map on screen is only read.
+   */
+  private async openRenderMap({
+    container,
+    pixelRatio,
+    view,
+  }: RenderMapRequest): Promise<RenderMap> {
+    refuseBoxOnGlobe(view, this.projection);
+    const maplibre = await loadEngine(this.workerCacheKey);
+    // The adapter can be destroyed while the engine loads.
+    const source = this.destroyed ? undefined : this.map;
+    if (!source) {
+      throw notMounted();
+    }
+    const images = dataLayerImages(source);
+    const map = new maplibre.Map({
+      container,
+      style: source.getStyle(),
+      ...this.renderCamera(view),
+      bearing: 0,
+      pitch: 0,
+      minZoom: toEngineZoom(this.getMinZoom()),
+      maxZoom: toEngineZoom(this.getMaxZoom()),
+      maxPitch: 0,
+      interactive: false,
+      attributionControl: false,
+      maplibreLogo: false,
+      // Nothing fades in, so the first full frame is the finished one.
+      fadeDuration: 0,
+      pixelRatio,
+      // The engine lowers the ratio of a canvas over this size, so it is
+      // the cap the port enforces, not MapLibre's smaller default.
+      maxCanvasSize: [MAX_IMAGE_SIDE_PX, MAX_IMAGE_SIDE_PX],
+    });
+    // The constructor keeps its default camera when it cannot fit the box,
+    // and MapLibre keeps the camera inside what the projection allows, so a
+    // box can come back cropped. Either would save the wrong place.
+    if ("bounds" in view && !coversBounds(map.getBounds(), view.bounds)) {
+      map.remove();
+      throw new MapImageExportError(
+        "invalid",
+        "The view cannot be framed at this size.",
+      );
+    }
+    // A style's own projection can differ from the app's, which wins; and
+    // `getStyle()` leaves out the images the data layers use.
+    map.on("style.load", () => {
+      this.applyProjection(map);
+      addDataLayerImages(map, images);
+    });
+    return { map, idle: this.untilSettled(map) };
+  }
+
+  /**
+   * Resolves when the render map reports `idle`. A tile that answers 404
+   * fires no event and asks for no frame, so a map over a sparse tile layer
+   * would never report it (see {@link TILE_SETTLE_NUDGE_MS}); it is painted
+   * every {@link TILE_SETTLE_NUDGE_MS} until it does, or until it is removed.
+   */
+  private untilSettled(map: MapLibreMap): Promise<void> {
+    return new Promise((resolve) => {
+      const nudge = setInterval(() => {
+        map.triggerRepaint();
+      }, TILE_SETTLE_NUDGE_MS);
+      map.on("remove", () => clearInterval(nudge));
+      map.on("idle", () => {
+        clearInterval(nudge);
+        resolve();
+      });
+    });
+  }
+
+  /** The engine's camera options for a requested view, north-up. */
+  private renderCamera(view: MapImageView): Partial<MapOptions> {
+    if ("bounds" in view) {
+      const [bounds, fitBoundsOptions] = this.fitOf(view.bounds);
+      return { bounds, fitBoundsOptions };
+    }
+    return {
+      center: [view.center.lng, view.center.lat],
+      zoom: this.engineZoom(view.zoom),
+    };
+  }
+
+  /** A box and the options to fit it with, never past the basemap's deepest zoom. */
+  private fitOf({
+    west,
+    south,
+    east,
+    north,
+  }: Bounds): [[[number, number], [number, number]], { maxZoom: number }] {
+    return [
+      [
+        [west, south],
+        [east, north],
+      ],
+      { maxZoom: toEngineZoom(this.getMaxZoom()) },
+    ];
   }
 
   setBasemap(
@@ -1020,6 +1181,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         new MapEngineError("load-failed", "The map is not mounted."),
       );
     }
+    this.styleVersion += 1;
     this.settlePending();
     this.saveData = options.saveData ?? false;
     const swapped = new Promise<void>((resolve, reject) => {
@@ -1136,6 +1298,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (!this.dataLayers.delete(id)) {
       return;
     }
+    this.styleVersion += 1;
     const map = this.readyMap();
     if (map) {
       this.eraseDataLayer(map, id);
@@ -1147,6 +1310,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   private setDataLayer(id: string, layer: DataLayer): void {
+    this.styleVersion += 1;
     this.dataLayers.set(id, layer);
     const map = this.readyMap();
     if (map) {
