@@ -46,6 +46,9 @@ interface Manifest {
   readonly exports?: Readonly<Record<string, string>>;
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
+  readonly peerDependenciesMeta?: Readonly<
+    Record<string, { readonly optional?: boolean }>
+  >;
 }
 
 function manifestOf(name: string): Manifest {
@@ -61,6 +64,13 @@ function sourceFiles(name: string): string[] {
   })
     .map((file) => `packages/${name}/src/${String(file).replaceAll("\\", "/")}`)
     .filter((file) => /\.tsx?$/.test(file) && !TEST_SUPPORT.test(file));
+}
+
+/** Every contract module of `@mapcairn/core`, relative to the repository. */
+function contractFiles(): string[] {
+  return readdirSync(path.join(REPO, "packages/core/src/contracts"))
+    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"))
+    .map((file) => `packages/core/src/contracts/${file}`);
 }
 
 /** The npm package each bare import names, such as `@turf/area` or `react`. */
@@ -118,4 +128,17 @@ describe("SDK package manifests", () => {
       }
     },
   );
+
+  it("@mapcairn/core declares what its contracts entry point imports as optional peers", () => {
+    const manifest = manifestOf("core");
+    const imported = new Set(
+      contractFiles().flatMap((file) => [...importedPackages(file)]),
+    );
+    expect([...imported]).toEqual(["vitest"]);
+    for (const name of imported) {
+      expect(manifest.peerDependencies).toHaveProperty(name);
+      expect(manifest.peerDependenciesMeta?.[name]?.optional).toBe(true);
+      expect(manifest.dependencies ?? {}).not.toHaveProperty(name);
+    }
+  });
 });

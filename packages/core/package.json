@@ -30,6 +30,14 @@
     "@turf/union": "7.4.0",
     "@types/geojson": "7946.0.16"
   },
+  "peerDependencies": {
+    "vitest": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "fast-check": "4.10.2"
   }
