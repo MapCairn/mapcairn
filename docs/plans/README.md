@@ -7,5 +7,4 @@ Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository r
 Open plans:
 
 - [0005: Runtime layer catalogue](0005-runtime-layer-catalogue.md), tracking issue [#46](https://github.com/MapCairn/mapcairn/issues/46).
-- [0006: Optional Google adapters package](0006-google-adapters-package.md), tracking issue [#40](https://github.com/MapCairn/mapcairn/issues/40).
 - [0007: Multi-feature selection](0007-multi-feature-selection.md), tracking issue [#49](https://github.com/MapCairn/mapcairn/issues/49).
