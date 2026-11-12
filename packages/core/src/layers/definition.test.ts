@@ -11,6 +11,7 @@ import {
   isFeedLayer,
   isHeatmapLayer,
   isQueryLayer,
+  isRasterTileLayer,
   isShapeStyle,
   isVectorTileLayer,
   loadsFeatures,
@@ -41,6 +42,13 @@ describe("layer guards", () => {
     expect(isQueryLayer(SAMPLE_TILE_LAYER)).toBe(false);
     expect(isVectorTileLayer(SAMPLE_VECTOR_LAYER)).toBe(true);
     expect(isVectorTileLayer(SAMPLE_TILE_LAYER)).toBe(false);
+  });
+
+  it("names the raster tile layers, and no other kind", () => {
+    expect(isRasterTileLayer(SAMPLE_TILE_LAYER)).toBe(true);
+    expect(isRasterTileLayer(SAMPLE_VECTOR_LAYER)).toBe(false);
+    expect(isRasterTileLayer(SAMPLE_FEED_LAYER)).toBe(false);
+    expect(isRasterTileLayer(SAMPLE_HEATMAP_LAYER)).toBe(false);
   });
 
   it("tells a shape style from a point style", () => {

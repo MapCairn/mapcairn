@@ -42,9 +42,11 @@ import {
   announceSurfaceClosed,
   announceSurfaceOpened,
   announceTileError,
+  announceTilesUnavailable,
   announceTimeMoved,
   announceTourSkipped,
   announceZoom,
+  describeTilesUnavailable,
 } from "./index";
 
 describe("search announcements", () => {
@@ -240,6 +242,23 @@ describe("layer announcements", () => {
     );
     expect(announceLayerError("Earthquakes", "invalid")).toBe(
       "Earthquakes could not load: the provider sent something unexpected. Try again later.",
+    );
+  });
+
+  it("says a tile layer found no imagery for the chosen time, or could not load", () => {
+    expect(describeTilesUnavailable("13:00 UTC on 11 November 2026")).toBe(
+      "No imagery was found for 13:00 UTC on 11 November 2026. Try another.",
+    );
+    expect(describeTilesUnavailable(null)).toBe(
+      "Could not load. Check your connection.",
+    );
+    expect(
+      announceTilesUnavailable("Rainfall", "13:00 UTC on 11 November 2026"),
+    ).toBe(
+      "Rainfall: No imagery was found for 13:00 UTC on 11 November 2026. Try another.",
+    );
+    expect(announceTilesUnavailable("Rainfall", null)).toBe(
+      "Rainfall: Could not load. Check your connection.",
     );
   });
 

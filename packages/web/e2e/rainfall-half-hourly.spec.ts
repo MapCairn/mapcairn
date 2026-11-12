@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { axeViolations } from "./support/a11y";
 import { mockLayerProviders } from "./support/layers";
-import { collapseCredits } from "./support/states";
+import { collapseCredits, waitForStableLayout } from "./support/states";
 
 const LAYER = "rainfall-half-hourly";
 const TILE_URL =
@@ -199,6 +199,82 @@ test.describe("half-hourly rainfall layer", () => {
     ).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);
   });
+});
+
+test.describe("half-hourly rainfall with no imagery for the time shown", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  const NO_IMAGERY =
+    "No imagery was found for 13:00 UTC on 11 November 2026. Try another.";
+
+  /** A half hour NASA has no tiles for: the provider answers 404 to each. */
+  const missing = (url: string) => requestedTimes([url]).includes(NEWEST);
+
+  test.beforeEach(async ({ page }) => {
+    await freezeTime(page);
+  });
+
+  test("says so beside the control, announces it politely, and does not blame the connection", async ({
+    page,
+    mapPage,
+  }) => {
+    const requests = await mockLayerProviders(page, { noTile: missing });
+    await mapPage.goto(`#layers=${LAYER}`);
+    await mapPage.openMapOptions();
+
+    const status = page.getByTestId(`layer-status-${LAYER}`);
+    await expect(status).toHaveText(NO_IMAGERY);
+    await expect(page.getByTestId("live-region-polite")).toHaveText(
+      `Rainfall, half-hourly: ${NO_IMAGERY}`,
+    );
+    await expect(page.getByTestId("live-region-assertive")).toBeEmpty();
+    await expect(page.getByTestId("tile-error")).toHaveCount(0);
+    await expect(
+      page.getByRole("group", { name: "Half hour shown" }),
+    ).toBeEnabled();
+    expect([...new Set(requestedTimes(requests.urls))]).toEqual([NEWEST]);
+  });
+
+  test("goes when another half hour is picked, and comes back for the one with none", async ({
+    page,
+    mapPage,
+  }) => {
+    const requests = await mockLayerProviders(page, { noTile: missing });
+    await mapPage.goto(`#layers=${LAYER}`);
+    await mapPage.openMapOptions();
+    const status = page.getByTestId(`layer-status-${LAYER}`);
+    await expect(status).toHaveText(NO_IMAGERY);
+
+    const time = page
+      .getByRole("group", { name: "Half hour shown" })
+      .getByRole("combobox", { name: "Time (UTC)" });
+    await time.selectOption({ label: "12:30" });
+    await expect(status).toHaveCount(0);
+    await expect
+      .poll(() => requestedTimes(requests.urls))
+      .toContain("2026-11-11T12:30:00Z");
+    await expect(status).toHaveCount(0);
+
+    await time.selectOption({ label: "13:00" });
+    await expect(status).toHaveText(NO_IMAGERY);
+  });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`its status passes axe in ${colorScheme} @a11y`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mockLayerProviders(page, { noTile: missing });
+      await mapPage.goto(`#layers=${LAYER}`);
+      await mapPage.openMapOptions();
+      await expect(page.getByTestId(`layer-status-${LAYER}`)).toHaveText(
+        NO_IMAGERY,
+      );
+      await waitForStableLayout(page);
+      expect(await axeViolations(page)).toEqual([]);
+    });
+  }
 });
 
 test.describe("half-hourly rainfall credits", () => {

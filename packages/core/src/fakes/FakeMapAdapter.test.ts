@@ -31,6 +31,8 @@ function subjectFor(
         simulateClick: (latlng) => adapter.simulateClick(latlng),
         simulateTileError: () => adapter.simulateTileError(),
         simulateBasemapUnavailable: () => adapter.simulateBasemapUnavailable(),
+        simulateTileLayerFailure: (layerId) =>
+          adapter.simulateTileLayerFailure(layerId),
         simulateLoading: (loading) => adapter.simulateLoading(loading),
         simulateUserZoom: (zoom) => adapter.simulateUserZoom(zoom),
         simulateFeatureTap: (layerId, featureId) =>

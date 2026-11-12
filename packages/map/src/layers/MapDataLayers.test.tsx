@@ -295,6 +295,31 @@ describe("MapDataLayers", () => {
     ]);
   });
 
+  describe("a tile layer the map found no tiles for", () => {
+    it("shows the layer's status when the map reports it, for the tiles it drew", () => {
+      const { adapter, layers } = setup();
+      act(() => layers().setEnabled("sample-imagery", true));
+      act(() => adapter.simulateTileLayerFailure("sample-imagery"));
+      expect(
+        layers().layers.find((item) => item.definition.id === "sample-imagery")
+          ?.status,
+      ).toEqual({ kind: "tiles-unavailable" });
+    });
+
+    it("clears when the layer's tiles change, and shows again when the map reports the new ones", () => {
+      const { adapter, layers } = setup();
+      act(() => layers().setEnabled("sample-imagery", true));
+      act(() => adapter.simulateTileLayerFailure("sample-imagery"));
+      act(() => layers().setControl("sample-imagery", "date", "2026-01-02"));
+      const status = () =>
+        layers().layers.find((item) => item.definition.id === "sample-imagery")
+          ?.status.kind;
+      expect(status()).toBe("on");
+      act(() => adapter.simulateTileLayerFailure("sample-imagery"));
+      expect(status()).toBe("tiles-unavailable");
+    });
+  });
+
   it("removes a layer from the map when it is turned off, and everything on unmount", async () => {
     const { adapter, layers, source, unmount } = setup();
     source.setFeatures("sample-points", [samplePoint("a")]);

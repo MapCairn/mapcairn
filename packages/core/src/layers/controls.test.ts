@@ -4,9 +4,11 @@ import {
   SAMPLE_FEED_LAYER,
   SAMPLE_HEATMAP_LAYER,
   SAMPLE_TILE_LAYER,
+  SAMPLE_TIME_LAYER,
 } from "../fakes/layerFixtures";
 import {
   defaultControlValues,
+  describeChosenTime,
   isControlEnabled,
   resolveControlValues,
   resolveDateBound,
@@ -161,5 +163,28 @@ describe("templateValues", () => {
       { window: "day", small: "false" },
     );
     expect(values).not.toHaveProperty("feed");
+  });
+});
+
+describe("describeChosenTime", () => {
+  it("names the day a date control is set to", () => {
+    expect(describeChosenTime(SAMPLE_TILE_LAYER, { date: "2026-11-08" })).toBe(
+      "8 November 2026",
+    );
+  });
+
+  it("names the UTC time and day a date and time control is set to", () => {
+    expect(
+      describeChosenTime(SAMPLE_TIME_LAYER, { time: "2026-11-11t1300" }),
+    ).toBe("13:00 UTC on 11 November 2026");
+  });
+
+  it("is null for a layer with no date or time to choose", () => {
+    expect(describeChosenTime(SAMPLE_FEED_LAYER, { window: "day" })).toBeNull();
+  });
+
+  it("is null when the control's value is not a date or a slot", () => {
+    expect(describeChosenTime(SAMPLE_TILE_LAYER, { date: "soon" })).toBeNull();
+    expect(describeChosenTime(SAMPLE_TIME_LAYER, {})).toBeNull();
   });
 });

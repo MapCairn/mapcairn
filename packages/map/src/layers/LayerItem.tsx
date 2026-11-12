@@ -1,4 +1,6 @@
 import {
+  describeChosenTime,
+  describeTilesUnavailable,
   type FormatterRegistry,
   formatTemplate,
   isControlEnabled,
@@ -314,6 +316,19 @@ export function LayerItem({
               data-testid={`layer-status-${definition.id}`}
             >
               {text}
+            </p>
+          ) : null}
+          {status.kind === "tiles-unavailable" ? (
+            <p
+              className={styles.status}
+              data-testid={`layer-status-${definition.id}`}
+            >
+              <span className={styles.statusError}>
+                <Icon icon={TriangleAlert} />
+                {describeTilesUnavailable(
+                  describeChosenTime(definition, layer.controls),
+                )}
+              </span>
             </p>
           ) : null}
           {status.kind === "error" ? (
