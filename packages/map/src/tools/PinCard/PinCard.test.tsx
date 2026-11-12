@@ -8,7 +8,7 @@ import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services/ServicesProvider";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
-import { PinCard, type PinCardProps } from "./PinCard";
+import { DEFAULT_LOOKUP_NOTE, PinCard, type PinCardProps } from "./PinCard";
 
 const POSITION = { lat: -26.2041, lng: 28.0473 };
 const ADDRESS: SearchResult = {
@@ -231,10 +231,25 @@ describe("PinCard", () => {
       expect(button.tagName).toBe("BUTTON");
       expect(button.getAttribute("data-testid")).toBe("pin-lookup");
       const note = screen.getByTestId("pin-lookup-note");
-      expect(note.textContent).toBe(
-        "Sends the pin's position, to about 11 m, to OpenStreetMap's Nominatim service.",
-      );
+      expect(note.textContent).toBe(DEFAULT_LOOKUP_NOTE);
+      expect(DEFAULT_LOOKUP_NOTE).not.toMatch(/Nominatim|OpenStreetMap/);
       expect(button).toHaveAccessibleDescription(note.textContent ?? "");
+    });
+
+    it("shows the host's wording of what is sent and to whom, and describes the button with it", () => {
+      setup({
+        lookupNote: (
+          <>
+            Sends the pin's position to <b>Example Geocoder</b>.
+          </>
+        ),
+      });
+      const note = screen.getByTestId("pin-lookup-note");
+      expect(note.textContent).toBe(
+        "Sends the pin's position to Example Geocoder.",
+      );
+      expect(screen.queryByText(DEFAULT_LOOKUP_NOTE)).toBeNull();
+      expect(lookupButton().getAttribute("aria-describedby")).toBe(note.id);
     });
 
     it("asks the provider once, with the position rounded to four decimals and a signal", async () => {

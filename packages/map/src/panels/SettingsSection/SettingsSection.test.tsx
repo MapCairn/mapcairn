@@ -8,7 +8,11 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
-import { SettingsSection, type SettingsSectionProps } from "./SettingsSection";
+import {
+  DEFAULT_PRIVACY_NOTE,
+  SettingsSection,
+  type SettingsSectionProps,
+} from "./SettingsSection";
 
 interface Options {
   readonly finePointer?: boolean;
@@ -291,13 +295,39 @@ describe("persistence note", () => {
 });
 
 describe("privacy", () => {
-  it("states what the app does and does not do", () => {
+  it("says, with no provider named, that nothing is sent until the person asks", () => {
     renderSettings();
+    expect(screen.getByTestId("settings-privacy-note")).toHaveTextContent(
+      DEFAULT_PRIVACY_NOTE,
+    );
+    expect(DEFAULT_PRIVACY_NOTE).not.toMatch(
+      /Nominatim|OpenStreetMap|MapCairn/,
+    );
+  });
+
+  it("shows the host's own note in place of the default", () => {
+    renderSettings({
+      props: {
+        privacyNote: (
+          <>
+            Searching sends your query to <b>Example Geocoder</b>.
+          </>
+        ),
+      },
+    });
+    const note = screen.getByTestId("settings-privacy-note");
+    expect(note).toHaveTextContent(
+      "Searching sends your query to Example Geocoder.",
+    );
+    expect(within(note).getByText("Example Geocoder").tagName).toBe("B");
+    expect(screen.queryByText(DEFAULT_PRIVACY_NOTE)).toBeNull();
+  });
+
+  it("keeps the policy link under a host's note", () => {
+    renderSettings({ props: { privacyNote: "Host note." } });
     expect(
-      screen.getByText(
-        "MapCairn has no accounts, sets no cookies and counts page views without tracking you. Map tiles come from the map provider you choose. Searching sends your query to OpenStreetMap's Nominatim service, and Look up address on a pin sends the pin's position, to about 11 m, to the same service. Nothing is sent to it until you do one of those, and a pair of coordinates typed in search is not sent to it, though showing the place loads map tiles for that area, as any move of the map does. A data layer contacts its provider only while it is on. Your settings stay on this device.",
-      ),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "Read the privacy policy" }),
+    ).toHaveAttribute("href", "/privacy");
   });
 
   it("links to /privacy by default", () => {

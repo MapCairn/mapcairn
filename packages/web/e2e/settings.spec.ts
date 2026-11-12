@@ -95,6 +95,22 @@ test.describe("settings", () => {
     await expect(mapPage.scaleBar).toHaveAccessibleName(/(foot|feet|mile)/);
   });
 
+  test("names the reference host's providers in its privacy statement", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await mapPage.openSettings();
+    const note = page.getByTestId("settings-privacy-note");
+    await expect(note).toContainText(
+      "MapCairn has no accounts, sets no cookies",
+    );
+    await expect(note).toContainText(
+      "Searching sends your query to OpenStreetMap's Nominatim service",
+    );
+    await expect(note).toContainText("Your settings stay on this device.");
+  });
+
   test("links to the privacy policy", async ({ page, mapPage }) => {
     await mapPage.goto();
     await mapPage.openSettings();

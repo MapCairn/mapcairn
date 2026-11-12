@@ -41,6 +41,8 @@ import { createExampleServices } from "./exampleServices";
 const MAP_ID = "example-map";
 const SHEET_ID = "example-sheet";
 const RESULT_ZOOM = 14;
+const PRIVACY_NOTE =
+  "This example runs on the SDK's scripted fakes and sends nothing to any service.";
 const INITIAL_VIEW: ViewState = {
   center: { lat: 57.05, lng: -3.65 },
   zoom: 11,
@@ -245,6 +247,7 @@ function ChromeSlots({ state, background }: ExampleChromeProps) {
               hasPin={pin !== null}
               onDropPin={() => state.setPin(map.view.center)}
               layers={layers}
+              privacyNote={PRIVACY_NOTE}
             />
           ) : null}
         </Sheet>

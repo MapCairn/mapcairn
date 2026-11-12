@@ -72,6 +72,18 @@ describe("ExampleApp", () => {
     }
   });
 
+  it("shows its own privacy note in Settings, with no provider of the reference site named", async () => {
+    render(<ExampleApp />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    const note = await screen.findByTestId("settings-privacy-note");
+
+    expect(note.textContent).toBe(
+      "This example runs on the SDK's scripted fakes and sends nothing to any service.",
+    );
+    expect(document.body.textContent).not.toMatch(/Nominatim/);
+  });
+
   it("applies the theme chosen in Settings to the page", async () => {
     render(<ExampleApp />);
 

@@ -49,6 +49,8 @@ export interface SheetContentProps {
   readonly imageCredits?: string;
   /** Where the privacy policy is. Defaults to `/privacy`. */
   readonly privacyHref?: string;
+  /** The host's privacy statement for Settings, shown in place of the default. */
+  readonly privacyNote?: ReactNode;
   /** Starts the first-visit tour from Help. Without it Help offers no tour. */
   readonly onStartTour?: () => void;
 }
@@ -71,6 +73,7 @@ export function SheetContent({
   onShowOnMap,
   imageCredits,
   privacyHref,
+  privacyNote,
   onStartTour,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
@@ -103,6 +106,7 @@ export function SheetContent({
       <div className={content} data-testid="sheet-content">
         <SettingsSection
           privacyHref={privacyHref}
+          privacyNote={privacyNote}
           headingRef={headingRef("settings")}
         />
         <HelpSection

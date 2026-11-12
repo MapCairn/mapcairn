@@ -19,6 +19,10 @@ import {
   useSettings,
 } from "@mapcairn/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  PIN_LOOKUP_NOTE,
+  SETTINGS_PRIVACY_NOTE,
+} from "../constants/providerNotes";
 import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
 import { AppTour } from "./AppTour";
 import { Brand } from "./Brand";
@@ -242,6 +246,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               draw={app.draw}
               onShowOnMap={app.revealMap}
               onStartTour={app.startTour}
+              privacyNote={SETTINGS_PRIVACY_NOTE}
               imageCredits={creditsLine(app.basemap, app.layers.credits)}
               pinCard={
                 app.pin ? (
@@ -250,6 +255,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
                     onClear={app.clearPin}
                     headingLevel={4}
                     headingRef={pinHeadingRef}
+                    lookupNote={PIN_LOOKUP_NOTE}
                   />
                 ) : undefined
               }

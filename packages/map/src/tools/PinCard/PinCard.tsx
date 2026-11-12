@@ -7,7 +7,14 @@ import {
   type LatLng,
 } from "@mapcairn/core";
 import { Check, Copy, MapPinned, Trash2, TriangleAlert, X } from "lucide-react";
-import { type Ref, useEffect, useId, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useClipboard } from "../../services/hooks";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -15,6 +22,14 @@ import { IconButton } from "../../ui/IconButton";
 import { useAnnounce } from "../../ui/LiveRegion";
 import * as styles from "./PinCard.css";
 import { useReverseAddress } from "./useReverseAddress";
+
+/**
+ * The default note under "Look up address". The rounding to about 11 m is the
+ * card's own; the service is not named, because the SDK does not know which
+ * one a host uses.
+ */
+export const DEFAULT_LOOKUP_NOTE =
+  "Sends the pin's position, to about 11 m, to the address service.";
 
 /** Props for {@link PinCard}. */
 export interface PinCardProps {
@@ -31,6 +46,12 @@ export interface PinCardProps {
    * -1), so the sheet that opens the card can move focus to it.
    */
   readonly headingRef?: Ref<HTMLHeadingElement>;
+  /**
+   * What the address lookup sends and to whom, shown under the "Look up
+   * address" button, which it describes. Defaults to
+   * {@link DEFAULT_LOOKUP_NOTE}. A host names its search provider here.
+   */
+  readonly lookupNote?: ReactNode;
 }
 
 type CopyStatus = "idle" | "copied" | "failed";
@@ -57,6 +78,7 @@ export function PinCard({
   onClose,
   headingLevel = 2,
   headingRef,
+  lookupNote = DEFAULT_LOOKUP_NOTE,
 }: PinCardProps) {
   const clipboard = useClipboard();
   const announce = useAnnounce();
@@ -177,8 +199,7 @@ export function PinCard({
             </p>
           ) : null}
           <p className={styles.note} id={noteId} data-testid="pin-lookup-note">
-            Sends the pin's position, to about 11 m, to OpenStreetMap's
-            Nominatim service.
+            {lookupNote}
           </p>
         </div>
       ) : null}
