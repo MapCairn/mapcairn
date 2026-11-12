@@ -42,6 +42,62 @@ export const group = style({
   gap: tokens.space.xs,
 });
 
+/** A group's heading, with its Turn off action at the end. It wraps on a narrow sheet. */
+export const groupHeader = style({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: tokens.space.xs,
+});
+
+/** The Turn off all button with its status and Undo below it. */
+export const turnOffRow = style({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: tokens.space.xs,
+});
+
+/**
+ * A group's Turn off button and its status. The wrapper draws no box, so both
+ * join the heading's row: the button at its end, and the status, as wide as
+ * the row, on a line of its own.
+ */
+export const groupActions = style({ display: "contents" });
+
+/**
+ * A group's Turn off button. It takes back the horizontal padding that
+ * `Button` gives every variant (`paddingInline: tokens.space.md`), so its
+ * words line up with the group heading when they wrap under it and with the
+ * sheet's edge when they sit at the end of its row. It follows that padding:
+ * change the two together.
+ */
+export const groupTurnOff = style({
+  marginInline: `calc(-1 * ${tokens.space.md})`,
+});
+
+/** The count inside the Turn off all button, such as "3 on". */
+export const turnOffCount = style({
+  fontWeight: tokens.type.weight.regular,
+  fontVariantNumeric: "tabular-nums",
+});
+
+/** What a Turn off action says once it has run, with Undo after it. */
+export const undoStatus = style({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: tokens.space.xs,
+  boxSizing: "border-box",
+  width: "100%",
+  color: tokens.color.text,
+  fontSize: tokens.type.body.size,
+  lineHeight: tokens.type.body.lineHeight,
+  letterSpacing: tokens.type.body.tracking,
+  fontVariantNumeric: "tabular-nums",
+});
+
 /** The plain list of layers in a group. */
 export const layerList = style({
   display: "flex",

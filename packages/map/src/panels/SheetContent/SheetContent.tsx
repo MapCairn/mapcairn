@@ -47,6 +47,8 @@ export interface SheetContentProps {
   readonly draw?: UseDraw;
   /** Called after "Show on map" in the Layers section, so the host can make room for the map. */
   readonly onShowOnMap?: () => void;
+  /** Whether the Layers section offers "Turn off all layers" and the Undo after it. Defaults to true. */
+  readonly showTurnOffAll?: boolean;
   /** The credits drawn into a saved map image (see `creditsLine`). */
   readonly imageCredits?: string;
   /** Where the privacy policy is. Defaults to `/privacy`. */
@@ -73,6 +75,7 @@ export function SheetContent({
   layers,
   draw,
   onShowOnMap,
+  showTurnOffAll,
   imageCredits,
   privacyHref,
   privacyNote,
@@ -140,6 +143,7 @@ export function SheetContent({
           layers={layers}
           headingRef={headingRef("layers")}
           onShowOnMap={onShowOnMap}
+          showTurnOffAll={showTurnOffAll}
         />
       ) : null}
       {draw ? (

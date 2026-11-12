@@ -1,6 +1,6 @@
 # Using the reference site
 
-What the reference host offers for saving the map and for drawing, and how each works from the keyboard and a pointer.
+What the reference host offers for searching, saving the map, turning layers off and drawing, and how each works from the keyboard and a pointer.
 
 ## Search by place name or coordinates
 
@@ -17,6 +17,10 @@ A comma is only ever a separator, never a decimal mark, and a negative sign (hyp
 ## Save an image and choose between features
 
 The sheet's "Save image" button saves a PNG of the map with its layers, any drawn shapes and credits, made in the browser from what the map has already loaded. A tap that finds several features opens a list, and the `I` key opens the same list for the centre of the map. Neither needs configuration.
+
+## Turn layers off
+
+In the Layers section, "Turn off all layers" at the top turns every layer off at once, and shows how many are on ("3 on"); it is greyed out when none is. Each group heading has the same action for its own layers, such as "Turn off 2 in Fires", while any of them is on. There is no confirmation. Below the button, "Turned off 3 layers." appears with an Undo, which turns those layers back on; their settings stay as they were, because a layer keeps its settings while it is off. A layer you turn on again yourself leaves the Undo, and the count drops. The Undo stays for ten seconds, and waits while a mouse is over it or it has keyboard focus. There is no "turn on all", because each layer you turn on asks its provider for data.
 
 ## Draw and export shapes
 

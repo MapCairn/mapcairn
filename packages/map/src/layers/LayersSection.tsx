@@ -27,6 +27,7 @@ import { LayerItem } from "./LayerItem";
 import * as styles from "./Layers.css";
 import { featureBounds, featurePosition } from "./mapFeatures";
 import { coveredPadding, revealOffset } from "./reveal";
+import { TurnOffAll, TurnOffGroup } from "./TurnOffActions";
 import type { DataLayerState, DataLayers } from "./useDataLayers";
 
 /** The closest "Show on map" zooms out to: far enough to see the region. */
@@ -59,6 +60,19 @@ export interface LayersSectionProps {
    * `REVEAL_DETENT`, so the host should bring the sheet to that detent.
    */
   readonly onShowOnMap?: () => void;
+  /**
+   * Whether the section offers "Turn off all layers", the action for each
+   * group and the Undo that follows. Defaults to true; a host that does not
+   * want them passes false.
+   */
+  readonly showTurnOffAll?: boolean;
+}
+
+/** The ids of the layers that are on. */
+function enabledIds(layers: readonly DataLayerState[]): string[] {
+  return layers
+    .filter((layer) => layer.enabled)
+    .map((layer) => layer.definition.id);
 }
 
 /** Layers grouped by their definitions' `group`, in the order groups first appear. */
@@ -89,6 +103,7 @@ export function LayersSection({
   headingRef,
   formatters = DEFAULT_FORMATTERS,
   onShowOnMap,
+  showTurnOffAll = true,
 }: LayersSectionProps) {
   // Read optionally, so the section also renders outside a map (a test, a guide).
   const adapter = useContext(MapContext)?.adapter ?? null;
@@ -256,10 +271,22 @@ export function LayersSection({
         Open data from public providers. Nothing is requested until you turn a
         layer on.
       </p>
+      {showTurnOffAll ? (
+        <TurnOffAll layers={layers} ids={enabledIds(layers.layers)} />
+      ) : null}
       <div className={styles.groups}>
         {byGroup(layers.layers).map(([group, items]) => (
           <div key={group} className={styles.group}>
-            <Subheading level={groupLevel}>{group}</Subheading>
+            <div className={styles.groupHeader}>
+              <Subheading level={groupLevel}>{group}</Subheading>
+              {showTurnOffAll ? (
+                <TurnOffGroup
+                  layers={layers}
+                  group={group}
+                  ids={enabledIds(items)}
+                />
+              ) : null}
+            </div>
             <ul className={styles.layerList}>
               {items.map((layer) => (
                 <LayerItem
