@@ -10,20 +10,20 @@ Use sub-agents. They keep this conversation small and let independent work run i
 
 Hard limits on sub-agents, which the owner set because many agents at once make their machine too slow to talk to Claude:
 
-- Run at most two sub-agents at the same time, and prefer one. Never start a third while two are running; queue the work instead. This counts agents started through a Workflow script too.
+- Run at most three sub-agents at the same time, and prefer one or two. Never start a fourth while three are running; queue the work instead. This counts agents started through a Workflow script too.
 - Do not stop a sub-agent that is already running just to get under the limit, because that wastes its work. Stopping one that is stuck, hung, redundant or no longer needed is fine.
 - Every agent must clean up after itself: stop each dev server, wrangler instance, browser and other process it starts, and confirm with a port or process check that none is left running before it reports. Put this in every brief. Whoever delegated checks again when the agent finishes and stops anything left behind.
 - While agents are running, prefer targeted checks over full local suites (CI runs the full suite on `main`), and use a different port for each e2e or dev server.
 
-Model tiers for any delegated work, covering both `Agent` tool calls and `agent()` calls inside a Workflow script. Set the `model` parameter explicitly on every call; never omit it, since omission silently inherits the session's model.
+Model tiers for any delegated work, covering both `Agent` tool calls and `agent()` calls inside a Workflow script. Set the `model` parameter explicitly on every call; never omit it, since omission silently inherits the session's model. When unsure between two tiers, pick the cheaper one and escalate on failure.
 
-| Tier | Use for |
-| --- | --- |
-| `haiku` | Mechanical bulk work: renames, boilerplate, format conversion, log triage |
-| `sonnet` | Default for well-specified implementation with clear acceptance criteria |
-| `opus` | Genuinely tricky work: concurrency, subtle algorithms, adversarial verify/judge panels, gnarly debugging |
+| Tier | Pick it when | Examples |
+| --- | --- | --- |
+| `haiku` | The work is mechanical and the result is easy to check: no design judgement and little context needed | Renames, boilerplate, format conversion, log triage, listing or counting, filling in a template |
+| `sonnet` | The task is well specified, with clear acceptance criteria and a test that shows it is done. The default | Implementing an issue, tests beside the code, a documentation change, a refactor along known seams, a fresh-eyes review of a diff |
+| `opus` | The work is hard to get right and a wrong answer is costly or hard to see: judgement across many files, or reasoning that must survive an attack | Concurrency, subtle algorithms, adversarial verify or judge panels, gnarly debugging after `sonnet` has failed, a design that decides a public API |
 
-**Never use `fable` sub-agents, under any circumstance, not even with my approval.** Stick to the three tiers above; when unsure between them, pick the cheaper one and escalate on failure.
+`fable` is the most capable and most costly model. Use it only when a human has authorised it for this task, in words, in the current conversation; an earlier session, a skill or a plan does not count. Without that authorisation never start a `fable` agent, never set `model: fable`, and never put it in a Workflow script. If you think a task needs it, say why and ask. A person may also limit the tiers for a session (for example "no Opus"); that limit holds until they lift it.
 
 ## Dynamic workflows (Workflow tool)
 
@@ -31,7 +31,7 @@ Applies to all sessions, on any model. Dynamic workflows are a normal tool here,
 
 Opt-in rule: if `ultracode` isn't already on for the session (no `ultracode` keyword, toggle, or an explicit orchestration request), propose the workflow in one or two sentences (its rough shape and cost) and wait for my go-ahead before invoking it. If `ultracode` is on, invoke directly.
 
-Every `agent()` call inside a workflow script must set `model` explicitly, chosen from the tiers in "Delegating to sub-agents" above. `fable` is never valid there either. A Fable review, if genuinely warranted, runs after the workflow finishes as its own standalone `Agent` call (ask first, per above), never as a workflow stage.
+Every `agent()` call inside a workflow script must set `model` explicitly, chosen from the tiers in "Delegating to sub-agents" above. `fable` is valid there only under the human authorisation described above. A Fable review, if genuinely warranted and authorised, runs after the workflow finishes as its own standalone `Agent` call, not as a workflow stage.
 
 ## Editing the instruction files
 
