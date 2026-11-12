@@ -6,28 +6,15 @@ The Playwright planner, generator and healer agents are in `.claude/agents/`. Pl
 
 ## Project skills and agents
 
-The skills in `.claude/skills/` (`create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr`, `visual-check`) are the procedures behind `AGENTS.md`; load the one that matches the task before you start. The agents `implementer`, `fresh-eyes-reviewer` and `ui-verifier` in `.claude/agents/` run `sonnet` and follow those skills. Brief them as set out below, and use them for the tasks they name.
+The skills in `.claude/skills/` (`create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr`, `visual-check`) are the procedures behind `AGENTS.md`; load the one that matches the task before you start. The agents `implementer`, `fresh-eyes-reviewer` and `ui-verifier` in `.claude/agents/` run `sonnet` and follow those skills. Use them for the tasks they name. The Playwright agents above are Claude Code only. Other tools read generated copies of the rest (see `docs/guides/working-with-agents.md`), so after editing a skill or agent run `npm run agents:sync`.
 
 ## Delegating to sub-agents
 
-Use sub-agents. They keep this conversation small and let independent work run in parallel, so reach for them by default instead of doing everything in one thread: wide searches across many files, independent changes in separate packages, tests written alongside the code they cover, long verification runs, and a fresh-eyes review of a diff before it is merged (for example the Playwright planner, generator and healer agents, independent package changes, or a fresh-eyes review of a map or basemap change). Do a small, strictly sequential task yourself. Brief each agent like a colleague who has not seen this conversation: the goal, the files or docs to read (name the sections of `ARCHITECTURE.md` and `DESIGN.md` that apply, from "Read before you change" in `AGENTS.md`), what is already ruled out, and what to report back.
+Use sub-agents. They keep this conversation small and let independent work run in parallel, so reach for them by default instead of doing everything in one thread: wide searches across many files, independent changes in separate packages, tests written alongside the code they cover, long verification runs, and a fresh-eyes review of a diff before it is merged (for example the Playwright planner, generator and healer agents, independent package changes, or a fresh-eyes review of a map or basemap change). Do a small, strictly sequential task yourself. The limits, the brief and the clean-up rules in `AGENTS.md` ("Sub-agents") apply, and agents started through a Workflow script count towards the limit on how many run at once.
 
-Hard limits on sub-agents, which the owner set because many agents at once make their machine too slow to talk to Claude:
+Set the `model` parameter explicitly on every `Agent` call and every `agent()` call inside a Workflow script; omitting it silently inherits the session's model. The tiers in `AGENTS.md` are, in Claude Code, `haiku` (small and fast), `sonnet` (default) and `opus` (most capable).
 
-- Run at most three sub-agents at the same time, and prefer one or two. Never start a fourth while three are running; queue the work instead. This counts agents started through a Workflow script too.
-- Do not stop a sub-agent that is already running just to get under the limit, because that wastes its work. Stopping one that is stuck, hung, redundant or no longer needed is fine.
-- Every agent must clean up after itself: stop each dev server, wrangler instance, browser and other process it starts, and confirm with a port or process check that none is left running before it reports. Put this in every brief. Whoever delegated checks again when the agent finishes and stops anything left behind.
-- While agents are running, prefer targeted checks over full local suites (CI runs the full suite on `main`), and use a different port for each e2e or dev server.
-
-Model tiers for any delegated work, covering both `Agent` tool calls and `agent()` calls inside a Workflow script. Set the `model` parameter explicitly on every call; never omit it, since omission silently inherits the session's model. When unsure between two tiers, pick the cheaper one and escalate on failure.
-
-| Tier | Pick it when | Examples |
-| --- | --- | --- |
-| `haiku` | The work is mechanical and the result is easy to check: no design judgement and little context needed | Renames, boilerplate, format conversion, log triage, listing or counting, filling in a template |
-| `sonnet` | The task is well specified, with clear acceptance criteria and a test that shows it is done. The default | Implementing an issue, tests beside the code, a documentation change, a refactor along known seams, a fresh-eyes review of a diff |
-| `opus` | The work is hard to get right and a wrong answer is costly or hard to see: judgement across many files, or reasoning that must survive an attack | Concurrency, subtle algorithms, adversarial verify or judge panels, gnarly debugging after `sonnet` has failed, a design that decides a public API |
-
-`fable` is the most capable and most costly model. Use it only when a human has authorised it for this task, in words, in the current conversation; an earlier session, a skill or a plan does not count. Without that authorisation never start a `fable` agent, never set `model: fable`, and never put it in a Workflow script. If you think a task needs it, say why and ask. A person may also limit the tiers for a session (for example "no Opus"); that limit holds until they lift it.
+`fable` is the model above them, so the rule in `AGENTS.md` on a model above the most capable tier applies to it: never start a `fable` agent, set `model: fable` or put it in a Workflow script without that authorisation. If you think a task needs it, say why and ask.
 
 ## Dynamic workflows (Workflow tool)
 

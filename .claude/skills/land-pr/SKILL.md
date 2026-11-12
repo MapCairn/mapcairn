@@ -1,6 +1,6 @@
 ---
 name: land-pr
-description: Open, review and land a MapCairn pull request with the gh CLI: write the description, run a fresh-eyes review, watch CI, fix failures, and merge only when the person has authorised merging and every required check is green. Use after `pick-up-issue` has produced a verified branch, or whenever someone asks to open, review, update or merge a pull request.
+description: "Open, review and land a MapCairn pull request with the gh CLI: write the description, run a fresh-eyes review, watch CI, fix failures, and merge only when the person has authorised merging and every required check is green. Use after `pick-up-issue` has produced a verified branch, or whenever someone asks to open, review, update or merge a pull request."
 ---
 
 # Land a pull request
@@ -26,7 +26,7 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
 
 Review the opened pull request before it merges, and fix what is real. A review is read-only: the reviewer reads the diff and reports, and does not edit, push or post.
 
-- Reviewer: if you can start a sub-agent within the limits in your tool's instruction file (`CLAUDE.md` for Claude Code), give it the `fresh-eyes-reviewer` role and the pull request number. Otherwise use your tool's review command if it has one, or read the diff yourself as a stranger, after the issue and the documents that "Read before you change" in `AGENTS.md` names.
+- Reviewer: if you can start a sub-agent within the limits in `AGENTS.md` ("Sub-agents"), give it the `fresh-eyes-reviewer` role and the pull request number. Otherwise use your tool's review command if it has one, or read the diff yourself as a stranger, after the issue and the documents that "Read before you change" in `AGENTS.md` names.
 - Checklist: does it solve the issue; is there a test that failed first and still means something; behaviour on the keyboard and for a screen reader; no id, kind or provider switched on in code; package boundaries respected; docs match the behaviour; copy in British English; nothing sent over the network that `PRIVACY.md` does not mention; no secrets, no identifying data, no dependency added without need; the description's claims about checks are true (`gh pr checks`).
 - Report only findings with a file, a line and a fix, most serious first (blocking, should fix, minor). Leave out style preferences and anything the lint enforces, and say what you could not check. "No findings" is a valid result.
 - Author: apply fixes as new commits, push, and re-run the affected checks. Leave a short comment on the pull request saying what the review found and what changed. A finding you decline gets a one-line reason.
