@@ -11,6 +11,16 @@ import type { MapFeatureHit } from "./map";
  */
 export type FeatureRef = MapFeatureHit;
 
+/**
+ * A key that is equal for two references exactly when both ids are equal, for
+ * a set or a map of references. Ids may hold any character, so the pair is
+ * encoded, not joined with a separator. Every store and every reader of one
+ * uses this key, so they cannot disagree on which references are the same.
+ */
+export function featureRefKey(ref: FeatureRef): string {
+  return JSON.stringify([ref.layerId, ref.featureId]);
+}
+
 /** The most references a selection holds unless its host sets another limit. */
 export const DEFAULT_SELECTION_LIMIT = 200;
 

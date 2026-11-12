@@ -10,4 +10,11 @@ export * from "./MarkerGlyph";
 export * from "./mapFeatures";
 export * from "./mapKeyBlocks";
 export { REVEAL_DETENT } from "./reveal";
+export * from "./SelectionProvider";
+export type {
+  HiddenSelection,
+  SelectedEntry,
+  ShownSelection,
+} from "./selectionResolve";
 export * from "./useDataLayers";
+export * from "./useFeatureSelection";

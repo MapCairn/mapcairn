@@ -113,7 +113,7 @@ export interface DataLayers {
    */
   readonly choices: readonly SelectedFeature[] | null;
   readonly detail: DetailState | null;
-  /** Grows each time a selection asks for its card to take focus (a tap on the map). */
+  /** Grows each time opening a card asks for it to take focus (a tap on the map). */
   readonly focusRequest: number;
   /**
    * True from a request for the card to take focus until
@@ -139,7 +139,7 @@ export interface DataLayers {
    * Turns several layers off as one change: one state update, so one redraw
    * and one address update, and one announcement ("3 layers turned off. Undo available"). Ids
    * that are not on, or not known, are ignored, and nothing happens when none
-   * is on. Each layer's selected feature, list of choices and affected area
+   * is on. Each layer's open card, list of choices and affected area
    * close as they do for a single layer. It offers {@link DataLayers.turnedOff}
    * for {@link UNDO_TIMEOUT_MS}, replacing any earlier offer. `group` says
    * which group's action asked, so the ui can show the Undo beside it.
@@ -362,7 +362,7 @@ function without<T>(
 /**
  * The state with what belongs to these layers cleared, for layers that are
  * turning on or off: what they loaded, tiles known to have failed, their
- * selected feature, their entries in a list of choices and their affected area.
+ * open card, their entries in a list of choices and their affected area.
  */
 function withoutTraces(state: State, ids: ReadonlySet<string>): State {
   const choices = state.choices?.filter((choice) => !ids.has(choice.layerId));
@@ -528,7 +528,7 @@ function sortFeatures(
  *   loaded and `reportTilesRecovered` when one loads later. Loads, empty
  *   feeds and failures are announced once each through the shared live
  *   region, failures assertively and a tile layer with no tiles, and its
- *   recovery, politely. Turning a layer off clears its features, its selection
+ *   recovery, politely. Turning a layer off clears its features, its open card
  *   and its affected area.
  */
 export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {

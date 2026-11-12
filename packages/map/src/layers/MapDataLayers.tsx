@@ -195,7 +195,7 @@ function draw(
 
 /**
  * Draws the layers that are on, and a shown affected area, through the map
- * adapter, and turns a tap on a point into a selection. Renders nothing; put
+ * adapter, and turns a tap on a point into an open card. Renders nothing; put
  * it inside `MapView`. Every layer is drawn from its definition, so nothing
  * here names one.
  */
@@ -364,7 +364,7 @@ export interface SelectionMarkerProps {
 }
 
 /**
- * A ring around the selected point, so the card and the map agree on which
+ * A ring around the point whose card is open, so the card and the map agree on which
  * one it is. Render it inside `MapOverlayLayer`; like every overlay it is a
  * picture of state the card already gives in words.
  */

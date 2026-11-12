@@ -4,14 +4,14 @@ Which layer kind to serve from your own server, and what each costs it. A layer 
 
 ## Choose the shape of the data
 
-| Server gives | Layer source | Fits | Cards, list and selection | What it costs |
+| Server gives | Layer source | Fits | Cards and list | What it costs |
 | --- | --- | --- | --- | --- |
 | XYZ or WMTS image tiles | `tiles` | A dense drawing, such as a forecast field or imagery | No, a tile is a picture | One request a tile, cheapest to cache |
 | Vector tiles (MVT) | `vector-tiles` | Linework and areas where a tile generator exists | No, the features stay in the tiles | A tileset to build and regenerate, one request a tile |
 | GeoJSON for a bounding box | `query` | A layer of features too large to send whole, and small enough to show at once | Yes | One request for each new area looked at, geometry as JSON |
 | One GeoJSON file | `feed` | A small layer served as one whole file, of any freshness, such as country outlines or an alert list | Yes | One request when the layer is turned on, then reused while the response is fresh |
 
-The first question is how much geometry there is. A tile layer or a vector tile layer suits a layer whose geometry is far more than a screen can hold, however few features it has. A query layer suits a layer with many features, up to the 5000 a query may show at once, where each feature should be something to tap, with a list and a selection. If the whole layer is small enough to send in one file, a feed is simpler than either.
+The first question is how much geometry there is. A tile layer or a vector tile layer suits a layer whose geometry is far more than a screen can hold, however few features it has. A query layer suits a layer with many features, up to the 5000 a query may show at once, where each feature should be something to tap, with a card and a list. If the whole layer is small enough to send in one file, a feed is simpler than either.
 
 ## Raster tiles for dense drawings
 
@@ -40,7 +40,7 @@ A `query` source is a GeoJSON endpoint that takes a box and a limit. The definit
 - Answer the box and the limit. Put `{limit}` in the URL and honour it, so the server never builds a response bigger than `maxFeatures` plus one. The guarantee holds only if the URL uses `{limit}`, which is optional; without it the server decides how much to send, and the client draws no more than `maxFeatures` of it.
 - Return features in a stable order. When more than `maxFeatures` come back the client keeps the first ones, so an unstable order makes features appear and vanish between requests.
 - Send GeoJSON with the fields your `fields` map names. This is the simplest server: a query, a limit and a JSON encoder, with no tileset and no image renderer.
-- This is the source that gives cards, a list and a selection from data too large to send whole. When the response holds more than `maxFeatures`, the layer draws the first ones and says to zoom in. As guidance only, features cost more as JSON than the same geometry costs in a tile, so choose `maxFeatures` by measuring a response, not by a fixed number.
+- This is the source that gives cards and a list from data too large to send whole. When the response holds more than `maxFeatures`, the layer draws the first ones and says to zoom in. As guidance only, features cost more as JSON than the same geometry costs in a tile, so choose `maxFeatures` by measuring a response, not by a fixed number.
 
 ## One GeoJSON file for a small layer
 

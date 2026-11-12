@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { type FormatterRegistry, formatTemplate } from "@mapcairn/core";
+import type { FormatterRegistry } from "@mapcairn/core";
 import { X } from "lucide-react";
 import { type Ref, useId } from "react";
 import { IconButton } from "../ui/IconButton";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { FeatureGlyph } from "./FeatureGlyph";
+import { featureTitle } from "./featureTitle";
 import * as styles from "./Layers.css";
 import type { DataLayers, SelectedFeature } from "./useDataLayers";
 
@@ -68,15 +69,7 @@ export function FeatureChoices({
       <ul className={styles.rows}>
         {choices.map(({ layer, feature }) => {
           const { definition } = layer;
-          const title =
-            "card" in definition
-              ? (formatTemplate(
-                  definition.card.title,
-                  feature.fields,
-                  formatters,
-                  context,
-                ) ?? definition.name)
-              : definition.name;
+          const title = featureTitle(definition, feature, formatters, context);
           return (
             <li
               key={`${definition.id}\u0000${feature.id}`}
