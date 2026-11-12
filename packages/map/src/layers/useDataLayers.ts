@@ -410,7 +410,9 @@ function sortFeatures(
 
 /**
  * The state of every data layer and the actions on it, driven entirely by
- * the definitions in the catalogue: nothing here names a layer.
+ * the definitions in the catalogue: nothing here names a layer. It reads the
+ * catalogue as a store, so the layers appear when a catalogue that loads
+ * becomes ready; while it is loading or has failed there are none.
  *
  * @remarks Nothing is requested until a layer is turned on. A feed layer is
  *   loaded on enable, on a control change and on retry; the request for the

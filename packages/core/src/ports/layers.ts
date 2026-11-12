@@ -121,8 +121,8 @@ export type CatalogueState =
  *   subscriber is told once for each change. `refresh` never rejects: a
  *   failure is the state. A static catalogue never changes, so it is ready
  *   from the first read, never calls a subscriber and refreshes to nothing.
- *   Every method is a bound function, so a caller may pass `getState` and
- *   `subscribe` on without the catalogue.
+ *   No method uses `this`, so a caller may pass `getState` and `subscribe`
+ *   on without the catalogue.
  */
 export interface LayerCatalogue {
   getState(): CatalogueState;
