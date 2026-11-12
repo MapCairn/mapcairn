@@ -46,4 +46,4 @@ Look for: overlap or clipping (especially the bottom row at 390 wide), text or i
 
 1. Stop the dev server and every browser you started, and nothing else. Kill only the process you recorded and its children (`taskkill /PID <pid> /T /F` on Windows, `kill <pid>` and its children elsewhere; `npm` leaves children behind), then re-run the listener check and confirm nothing listens on the port.
 2. Check `git status` shows no image; `.tmp-visual/` must stay uncommitted.
-3. Report under **Seen** (the report in `AGENTS.md`, "Definition of done"): the sizes, themes and basemaps covered, what looked wrong and what you fixed, and what remains. `gh` cannot attach images, so give the folder's absolute path and ask the person to drag the images into the pull request description; the description says in words what they show.
+3. Report under **Seen** (the report in `AGENTS.md`, "Definition of done"): the sizes, themes and basemaps covered, what looked wrong and what you fixed, and what remains. Give the folder's absolute path. An agent does not attach images (`gh` cannot upload them); the pull request describes in words what was seen, as `land-pr` section 1 says.
