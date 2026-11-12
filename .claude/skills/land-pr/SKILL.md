@@ -12,9 +12,15 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
 ## 1. Open it
 
 1. The branch is pushed and its checks from `pick-up-issue` passed. If not, finish that first.
-2. Self-review your diff as a stranger before you open it, and fix what you find. For each sentence you added to a document or guide, ask: is it true in the code, and which file did I check? Is each number, limit or rule of thumb in the code or a source I can cite, or did I make it up? Is each term defined where it is first used? Is anything planned described as built? Does a rule about people name the role it applies to? Cut or mark as unchecked anything you cannot verify.
+2. Self-review your diff as a stranger before you open it, and fix what you find. Cut or mark as unchecked anything you cannot verify. For each sentence you added to a document, guide, code comment or TSDoc:
+   - Is it true in the code, and which file did you check?
+   - Is each number, limit or rule of thumb in the code or a source you can cite, or did you make it up?
+   - Is each term defined where it is first used, and is anything planned described as built?
+   - Does a rule about people name the role it applies to?
+   - Is the issue's task list ticked for the steps this change finishes (or its status posted as a comment if you cannot edit the issue), and does the diff stay within the issue?
 3. Write the body to a file, plain project facts in a neutral voice, following `.github/pull_request_template.md`:
-   - What and why, with `Fixes #<n>` (the issue is finished by this pull request) or `Part of #<n>` (it is not). Write a decision in its final wording, not a summary, so nobody copies a loose phrase.
+   - What and why, with `Fixes #<n>` (the issue is finished by this pull request) or `Part of #<n>` (it is not).
+   - A decision made on the way, in its final wording (the exact sentence a document will carry, not a summary), so nobody copies a loose phrase.
    - The documents you updated, or why none needed it.
    - The checks you ran with their results, and any that failed or were skipped.
    - For a visible change, what the `visual-check` skill saw at each size and theme, in words, and that the images are kept locally and will be attached on request, with no local path. A person opening the pull request attaches the images for a visible change; an agent does not attach them (`gh` cannot upload them) and says they are available on request.

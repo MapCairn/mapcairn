@@ -35,7 +35,7 @@ Several issues at once, or an agent beside you, means a separate worktree for ea
 
 - Most issues need only a short plan in your head or as an issue comment: the files you will change, the test you will start with, the documents you will update.
 - A large change that crosses several packages or decides a public API needs a plan in `docs/plans/` first: use the `plan-change` skill, merge the plan first, then `split-plan`. Split independent parts into separate pull requests, each keeping the build green, and keep a deletion in its own change.
-- Where a choice is the person's and they are present, ask. Where they are away, take the simplest option that satisfies the issue and record the decision and its reason in a comment on the issue, with the decision in its final wording, not a summary.
+- Where a choice is the person's and they are present, ask. Where they are away, take the simplest option that satisfies the issue and record the decision and its reason in a comment on the issue, with the decision in its final wording (the exact sentence a document will carry, not a summary).
 
 ## 4. Build it, test first, with its documents
 
@@ -51,7 +51,7 @@ Several issues at once, or an agent beside you, means a separate worktree for ea
 - Any code: `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build`. A map or interface change adds the browser runs described below.
 - Documents only: `npm run lint`, then the read-through in section 6. Dependencies: the real install and `npm ci --ignore-scripts` check in `AGENTS.md`.
 
-Install the browsers once with `npm run playwright:install -w @mapcairn/web`. A full local `e2e` or `a11y` run can take hours when several agents share the machine. Run the Playwright specs that cover the change (`npm run e2e -w @mapcairn/web -- <spec name>`). Run the full `e2e` and `a11y` when the change is to layout, the map engine or the test seam; otherwise name the full runs as left to CI under Checks (the required `e2e` check runs both). A timeout that passes when that spec is run alone is a load flake: re-run it alone, say so in the report, and never weaken an assertion or lengthen a timeout to hide it. Report anything that failed or was skipped.
+Install the browsers once with `npm run playwright:install -w @mapcairn/web`. A full local `e2e` or `a11y` run can take hours when several agents share the machine. Run the Playwright specs that cover the change (`npm run test:e2e -w @mapcairn/web -- <spec name>`, the script CI runs, which includes the spec's `@a11y` tests). Run the full `e2e` and `a11y` when the change is to layout, the map engine, the test seam or a component's colour, focus or semantics; otherwise name the full runs as left to CI under Checks (the required `e2e` check runs both). A timeout that passes when that spec is run alone is a load flake: re-run it alone, say so in the report, and never weaken an assertion or lengthen a timeout to hide it. Report anything that failed or was skipped.
 
 For a map or interface change, also run the `visual-check` skill and describe what it saw in the pull request, saying the images are kept locally and will be attached on request, with no local path. A change with no visible effect says so in the report instead.
 
@@ -74,7 +74,7 @@ Other work in flight on <module>: <issue or pull request>. Keep your change addi
 No assistant attribution anywhere. Plain neutral voice on GitHub, no @mentions.
 Stop every server, browser and wrangler instance you start and confirm with a port check. Keep your worktree until the pull request has merged.
 Wording: <the decision, in the exact words to write>. Use these words; do not paraphrase them.
-Claims: check every claim against <files>. Put the file name beside each factual claim in a guide or document. Write no number, limit or rule of thumb that is not in the code or in a source you cite. In a rule about people, name the role, for example "the person who opens the pull request".
-Before you open: run the self-review in `land-pr` section 1 and report that every claim matches the code, nothing planned is described as built, the issue's task list is ticked, the change stays within the issue and no figure is invented.
+Claims: check every claim against <files>. Name the file you checked beside each factual claim in your pull request description. Write no number, limit or rule of thumb that is not in the code or in a source you cite. In a rule about people, name the role, for example "the person who opens the pull request".
+Before you open: run the self-review in `land-pr` section 1 and report that every claim matches the code, nothing planned is described as built, the issue's task list is ticked, or its status posted as a comment if you cannot edit the issue, the change stays within the issue and no figure is invented.
 Report with the five headings in AGENTS.md "Definition of done": PR, Checks, Seen, Deviations, Issues to file.
 ```
