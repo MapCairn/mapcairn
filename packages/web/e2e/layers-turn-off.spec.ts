@@ -56,6 +56,9 @@ test.describe("turning layers off at once", () => {
         .getByRole("radio", { name: "Week" }),
     ).toBeChecked();
     await expect(mapPage.turnOffAllButton).toContainText("2 on");
+    await expect
+      .poll(() => mapPage.announcements())
+      .toContain("2 layers turned back on");
   });
 
   test("works from the keyboard: Enter turns them off, Tab reaches Undo, Enter undoes", async ({
