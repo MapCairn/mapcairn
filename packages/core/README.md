@@ -6,7 +6,7 @@ See [`ARCHITECTURE.md`](../../ARCHITECTURE.md) for how core fits with the other 
 
 ## Exports
 
-Everything is exported from `@mapcairn/core`, apart from the contract suites, which come from `@mapcairn/core/contracts`.
+Everything is exported from `@mapcairn/core`, apart from the contract suites, which come from `@mapcairn/core/contracts`. The suites import `vitest`, an optional peer dependency: install it only if you run them.
 
 | Area | Source | What it holds |
 |---|---|---|
