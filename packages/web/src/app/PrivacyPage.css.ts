@@ -20,7 +20,7 @@ export const page = style({
   color: tokens.color.text,
 });
 
-/** The page's `h1`, in the title size. */
+/** The `h1`, in the same title type as the error page's, so the full pages match. */
 export const heading = style({
   margin: 0,
   fontSize: tokens.type.title.size,

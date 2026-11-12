@@ -68,7 +68,7 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
 | [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules |
 | [`docs/guides/extending.md`](docs/guides/extending.md) | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, a routing provider or an adapter |
-| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, and drawing, importing and exporting shapes |
+| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, choosing between features at one place, and drawing, importing and exporting shapes |
 | [`docs/guides/performance.md`](docs/guides/performance.md) | What was measured for Lighthouse, what was tried and what was left alone |
 | [`docs/plans/`](docs/plans/README.md) | Numbered plans for work not yet built |
 | [`GOVERNANCE.md`](GOVERNANCE.md) | The maintainer role, how decisions are made, and what is not yet covered |

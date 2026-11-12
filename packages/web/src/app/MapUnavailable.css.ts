@@ -26,7 +26,11 @@ export const card = style({
   color: tokens.color.text,
 });
 
-/** The message's first line, a paragraph set in the title size and weight. */
+/**
+ * The message's first sentence, set in the title size and weight. It stays a
+ * paragraph, not a heading: it is a statement inside the map region, and a
+ * screen reader hears it through the announcer rather than by finding it.
+ */
 export const title = style({
   margin: 0,
   fontSize: tokens.type.title.size,
