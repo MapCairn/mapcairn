@@ -5,7 +5,7 @@ import {
   type UnitSystem,
 } from "@mapcairn/core";
 import { Info } from "lucide-react";
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import {
   usePreferences,
   useSaveData,
@@ -47,20 +47,33 @@ const PROJECTION_OPTIONS: readonly { value: MapProjection; label: string }[] = [
   { value: "globe", label: "Globe" },
 ];
 
+/**
+ * The default privacy statement. It names no provider, because the SDK does not
+ * know which services a host uses; a host replaces it with one that does.
+ */
+export const DEFAULT_PRIVACY_NOTE =
+  "The privacy policy says what each service this map uses receives.";
+
 /** Props for {@link SettingsSection}. */
 export interface SettingsSectionProps {
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
   readonly headingLevel?: HeadingLevel;
   /** Where the privacy policy is. Defaults to `/privacy`. */
   readonly privacyHref?: string;
+  /**
+   * The host's privacy statement, shown under the Privacy heading. Defaults to
+   * {@link DEFAULT_PRIVACY_NOTE}. A host names its own providers here and says
+   * what it sends to each. Phrasing content only: it sits inside a paragraph.
+   */
+  readonly privacyNote?: ReactNode;
   /** Receives the heading, so the sheet can focus it. */
   readonly headingRef?: Ref<HTMLHeadingElement>;
 }
 
 /**
  * The settings: theme, units, map shape (flat or globe), zoom buttons and Save data, a note when changes
- * will not be remembered, and a short privacy statement with a link to the
- * policy.
+ * will not be remembered, and a short privacy statement (the host's, or
+ * {@link DEFAULT_PRIVACY_NOTE}) with a link to the policy.
  * @remarks The zoom switch shows the stored choice, or the device default
  *   (on with a mouse, off on touch) while nothing is stored. Toggling it stores
  *   an explicit boolean, so a person who turns it on keeps it on everywhere.
@@ -71,6 +84,7 @@ export interface SettingsSectionProps {
 export function SettingsSection({
   headingLevel = 3,
   privacyHref = "/privacy",
+  privacyNote = DEFAULT_PRIVACY_NOTE,
   headingRef,
 }: SettingsSectionProps) {
   const { choice, setChoice } = useTheme();
@@ -147,16 +161,8 @@ export function SettingsSection({
       )}
       <div className={subsection}>
         <Subheading level={subLevel}>Privacy</Subheading>
-        <p className={prose}>
-          MapCairn has no accounts, sets no cookies and counts page views
-          without tracking you. Map tiles come from the map provider you choose.
-          Searching sends your query to OpenStreetMap's Nominatim service, and
-          Look up address on a pin sends the pin's position, to about 11 m, to
-          the same service. Nothing is sent to it until you do one of those, and
-          a pair of coordinates typed in search is not sent to it, though
-          showing the place loads map tiles for that area, as any move of the
-          map does. A data layer contacts its provider only while it is on. Your
-          settings stay on this device.
+        <p className={prose} data-testid="settings-privacy-note">
+          {privacyNote}
         </p>
         <p className={prose}>
           <a className={link} href={privacyHref}>

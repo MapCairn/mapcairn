@@ -80,6 +80,8 @@ A definition's `thumbnail` is optional, and it is a root-relative path the host 
 
 The reference host's `ValhallaRoutingProvider` (`packages/web/src/adapters/routing`) calls a public Valhalla server with `GET /route` and `GET /isochrone`, decodes the encoded polyline shape itself, maps HTTP and network failures to those kinds, starts at most one request a second through the shared `RequestSpacer`, and sends no cookies or referrer. `packages/map` holds only the generic Directions tool (`tools/Directions`): `useDirections` keeps the stops, mode and result and cancels superseded requests, `DirectionsPanel` is the interface, `MapDirections` draws the result through `setShapeLayer` and fits the map clear of the sheet, and `DirectionsOverlay` draws the lettered stops. None of them names a provider; the host passes the credit and the privacy note, and mounts the button only when `services.routing` exists.
 
+The other copy that names a provider works the same way. The Settings privacy statement (`privacyNote` on `SheetContent` and `SettingsSection`) and the note under the pin card's "Look up address" (`lookupNote` on `PinCard`) are props that take text or nodes, and each has a neutral default that names no provider. The reference host supplies its own in `packages/web/src/constants/providerNotes.ts`, so its visible text is the same as the privacy page and `PRIVACY.md` describe, and an embedding host writes its own.
+
 Pure helpers (layer templates, decoders and style evaluation, zoom conversion, metres per pixel, the surface state machine, sheet snapping, coordinate formatting, announcement text, theme resolution, hash parsing) are plain functions in core. They are not wrapped in interfaces.
 
 ## The map adapter

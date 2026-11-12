@@ -215,6 +215,15 @@ describe("SheetContent pin, settings and help", () => {
     ).toHaveAttribute("href", "/af/privacy");
   });
 
+  it("passes the host's privacy note to Settings", () => {
+    renderContent({
+      props: { section: "settings", privacyNote: "Host privacy note." },
+    });
+    expect(screen.getByTestId("settings-privacy-note")).toHaveTextContent(
+      "Host privacy note.",
+    );
+  });
+
   it("uses /privacy when none is given", () => {
     renderContent({ props: { section: "settings" } });
     expect(
