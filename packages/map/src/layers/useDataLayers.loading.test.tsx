@@ -236,6 +236,43 @@ describe("useDataLayers loading", () => {
       ).toEqual(["new"]);
     });
 
+    it("does not say what a request that a newer one replaced found, whichever settles first", async () => {
+      const { result, services } = setup();
+      const loads = controlledLoads(services);
+      act(() => result.current.setEnabled("sample-points", true));
+      act(() => result.current.setControl("sample-points", "window", "hour"));
+      await act(async () => loads[0]?.resolve([samplePoint("old")]));
+      expect(said()).toEqual([]);
+      await act(async () =>
+        loads[1]?.resolve([samplePoint("a"), samplePoint("b")]),
+      );
+      expect(said()).toEqual(["Sample points: 2 shown on the map."]);
+    });
+
+    it("does not say what a request for a layer turned off meanwhile found", async () => {
+      const { result, services } = setup();
+      const loads = controlledLoads(services);
+      act(() => result.current.setEnabled("sample-points", true));
+      act(() => result.current.setEnabled("sample-points", false));
+      await act(async () => loads[0]?.resolve([samplePoint("old")]));
+      expect(layer(result, "sample-points").status.kind).toBe("off");
+      expect(said()).toEqual([]);
+    });
+
+    it("does not say what an earlier request found when the layer was turned off and on again for the same request", async () => {
+      const { result, services } = setup();
+      const loads = controlledLoads(services);
+      act(() => result.current.setEnabled("sample-points", true));
+      act(() => result.current.setEnabled("sample-points", false));
+      act(() => result.current.setEnabled("sample-points", true));
+      expect(loads).toHaveLength(2);
+      await act(async () => loads[0]?.resolve([samplePoint("old")]));
+      expect(said()).toEqual([]);
+      expect(layer(result, "sample-points").status.kind).toBe("loading");
+      await act(async () => loads[1]?.resolve([samplePoint("new")]));
+      expect(said()).toEqual(["Sample points: 1 shown on the map."]);
+    });
+
     it("ignores a late failure for a layer turned off meanwhile", async () => {
       const { result, services } = setup();
       const loads = controlledLoads(services);
