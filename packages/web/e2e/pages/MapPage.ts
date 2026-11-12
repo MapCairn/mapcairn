@@ -109,6 +109,12 @@ export class MapPage {
   readonly turnOffAllButton: Locator;
   /** The Undo that follows a Turn off action. */
   readonly undoTurnOffButton: Locator;
+  /** The map key: the region named "Map key" over the map, with a block for each layer that has a key. */
+  readonly mapKey: Locator;
+  /** The one button that minimises the map key and brings it back. */
+  readonly mapKeyToggle: Locator;
+  /** The map key's slot in the chrome, which is there whether or not a key shows. */
+  readonly mapKeySlot: Locator;
 
   /** The decorative brand row at the top of the sheet or side panel, with its mark and name. */
   readonly sheetBrand: Locator;
@@ -237,6 +243,11 @@ export class MapPage {
     this.undoTurnOffButton = this.layersSection.getByRole("button", {
       name: /^Undo/,
     });
+    this.mapKey = page.getByRole("region", { name: "Map key" });
+    this.mapKeyToggle = this.mapKey.getByRole("button", {
+      name: /^(Minimise map key|Key, \d+ layers?)$/,
+    });
+    this.mapKeySlot = page.locator('[data-chrome="map-key"]');
 
     this.sheetBrand = page.getByTestId("sheet-brand");
     this.brandMark = page.getByTestId("brand-mark");
