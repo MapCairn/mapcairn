@@ -409,7 +409,7 @@ test.describe("draw", () => {
   });
 
   test.describe("export and sharing", () => {
-    test("downloads GeoJSON and CSV from the Shapes section", async ({
+    test("downloads GeoJSON, CSV and WKT from the Shapes section", async ({
       page,
       mapPage,
     }) => {
@@ -445,6 +445,16 @@ test.describe("draw", () => {
       expect(text.split("\r\n")[1]).toMatch(/^shape-1,polygon,[\d.]+,[\d.]+,"/);
       await expect(page.getByTestId("shapes-feedback")).toContainText(
         "mapcairn-shapes.csv",
+      );
+
+      const wkt = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Download WKT" }).click();
+      const wktFile = await wkt;
+      expect(wktFile.suggestedFilename()).toBe("mapcairn-shapes.wkt");
+      const wktText = await readFile((await wktFile.path()) as string, "utf8");
+      expect(wktText).toMatch(/^POLYGON \(\(/);
+      await expect(page.getByTestId("shapes-feedback")).toContainText(
+        "mapcairn-shapes.wkt",
       );
     });
 

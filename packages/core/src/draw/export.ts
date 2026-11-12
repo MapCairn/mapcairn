@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
+import { formatWkt } from "../geometry/wkt";
 import type { LatLng } from "../ports/geometry";
 import { ringSignedArea } from "./geo";
 import { measureShape, shapeRing, validateShape } from "./shape";
@@ -104,6 +105,24 @@ export function shapesToGeoJson(
     }
   }
   return { type: "FeatureCollection", features };
+}
+
+/**
+ * The shapes as Well-Known Text, one geometry to a line and longitude first,
+ * in the order of the list, rounded to six decimals as the GeoJSON is. A
+ * circle is written as the polygon of its outline, so it reads back as a
+ * polygon. Only {@link exportableShapes} are included, so the text is empty
+ * when there are none.
+ */
+export function shapesToWkt(shapes: readonly DrawShape[]): string {
+  const lines: string[] = [];
+  for (const shape of exportableShapes(shapes)) {
+    const geometry = shapeGeometry(shape);
+    if (geometry) {
+      lines.push(formatWkt(geometry));
+    }
+  }
+  return lines.join("\n");
 }
 
 /** The header row of the CSV the draw tool writes, and reads back. */

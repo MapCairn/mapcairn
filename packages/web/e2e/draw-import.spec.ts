@@ -28,7 +28,9 @@ async function importFrom(
   files: Parameters<FileChooser["setFiles"]>[0],
 ): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Import GeoJSON or CSV" }).click();
+  await page
+    .getByRole("button", { name: "Import GeoJSON, CSV or WKT" })
+    .click();
   await (await chooser).setFiles(files);
 }
 
@@ -85,6 +87,39 @@ test.describe("draw import", () => {
     ]);
   });
 
+  test("imports a WKT file, one geometry to a line, and says what it skipped", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(FAR_AWAY);
+    await mapPage.mapOptionsButton.click();
+    await expect(mapPage.shapesSection).toBeVisible();
+    await importFrom(page, {
+      name: "places.wkt",
+      mimeType: "text/plain",
+      buffer: Buffer.from(
+        [
+          "POINT (2.3522 48.8566)",
+          "LINESTRING (2.35 48.85, 2.36 48.86)",
+          "POLYGON ((2.30 48.80, 2.31 48.80, 2.31 48.81, 2.30 48.81, 2.30 48.80))",
+          "LINESTRING (2.4 48.9)",
+        ].join("\n"),
+      ),
+    });
+
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      "3 shapes imported. 1 skipped: 1 with too few points.",
+    );
+    await expect(mapPage.shapesSection.getByTestId("shapes-row")).toHaveText([
+      /^Point 1/,
+      /^Line 1/,
+      /^Polygon 1/,
+    ]);
+    await expect(mapPage.drawShapes).toHaveCount(3);
+    // The sheet takes part of the screen, so the centre sits a little off the shapes.
+    await expect.poll(() => page.url()).toMatch(/#map=[\d.]+\/48\./);
+  });
+
   test("refuses a file that is not shapes, in words, and adds nothing", async ({
     page,
     mapPage,
@@ -97,7 +132,7 @@ test.describe("draw import", () => {
       buffer: Buffer.from("Bring a torch."),
     });
     await expect(page.getByTestId("shapes-import-feedback")).toContainText(
-      "This is not GeoJSON or a CSV of shapes from this map.",
+      "This is not GeoJSON, WKT or a CSV of shapes from this map.",
     );
     await expect(mapPage.assertiveAnnouncer).toContainText(
       "This is not GeoJSON",

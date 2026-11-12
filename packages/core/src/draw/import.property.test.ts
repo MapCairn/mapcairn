@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { formatWkt, type WktAxisOrder } from "../geometry/wkt";
 import { geoJsonGeometry } from "../propertyTesting/geoArbitraries";
 import { PROPERTY_PARAMETERS } from "../propertyTesting/propertyParameters";
 import { finishShape, shapeInput } from "../propertyTesting/shapeArbitraries";
@@ -10,7 +11,7 @@ import {
   repeatedFragment,
   textFromFragments,
 } from "../propertyTesting/textArbitraries";
-import { shapesToCsv, shapesToGeoJson } from "./export";
+import { shapesToCsv, shapesToGeoJson, shapesToWkt } from "./export";
 import {
   MAX_IMPORT_POINTS,
   MAX_IMPORT_SHAPES,
@@ -64,6 +65,30 @@ const CSV_FRAGMENTS = [
   "500",
   "NaN",
   "Infinity",
+];
+
+const WKT_FRAGMENTS = [
+  "POINT",
+  "LINESTRING",
+  "POLYGON",
+  "MULTIPOINT",
+  "MULTIPOLYGON",
+  "GEOMETRYCOLLECTION",
+  "EMPTY",
+  "Z",
+  "M",
+  "(",
+  ")",
+  ",",
+  "\n",
+  " ",
+  "0 0",
+  "1 1",
+  "2 0",
+  "1e999",
+  "200 0",
+  "-0",
+  "NaN",
 ];
 
 /** The shapes of an import, or none for a refusal. */
@@ -137,6 +162,73 @@ describe("parseShapeFile round trips", () => {
         expectWellFormed(result);
       }),
       PROPERTY_PARAMETERS,
+    );
+  });
+});
+
+describe("parseShapeFile with WKT", () => {
+  // A circle comes back as its polygon outline, and a very small outline
+  // rounded to six decimals can fold in on itself, so circles are left to
+  // the example test in import.test.ts.
+  it("reads back the WKT it exported, as the same geometries", () => {
+    const withoutCircles = fc.array(
+      shapeInput.filter((input) => input.kind !== "circle"),
+      { minLength: 1, maxLength: 8 },
+    );
+    fc.assert(
+      fc.property(withoutCircles, (inputs) => {
+        const shapes = inputs.map(finishShape);
+        const read = shapesOf(parseShapeFile(shapesToWkt(shapes)));
+        expect(shapesToWkt(read.map(finishShape))).toBe(shapesToWkt(shapes));
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("reads any WKT geometry, in either axis order, keeping only valid shapes", () => {
+    fc.assert(
+      fc.property(
+        geoJsonGeometry,
+        fc.constantFrom<WktAxisOrder>("lng-lat", "lat-lng"),
+        (geometry, wktAxisOrder) => {
+          const result = parseShapeFile(formatWkt(geometry), { wktAxisOrder });
+          expect(result.ok).toBe(true);
+          expectWellFormed(result);
+        },
+      ),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("reads text made of WKT's own parts without throwing", () => {
+    fc.assert(
+      fc.property(
+        textFromFragments(WKT_FRAGMENTS),
+        fc.constantFrom<WktAxisOrder>("lng-lat", "lat-lng"),
+        (text, wktAxisOrder) => {
+          expectWellFormed(parseShapeFile(text, { wktAxisOrder }));
+          expectWellFormed(parseShapeFile(`wkt\r\n${text}`, { wktAxisOrder }));
+          expectWellFormed(parseShapeFile(`id,WKT\r\n1,"${text}"`));
+        },
+      ),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("refuses thousands of tiny shapes, valid or not", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: MAX_IMPORT_SHAPES + 1, max: 5_000 }),
+        fc.boolean(),
+        (count, valid) => {
+          const point = valid ? "POINT (1 1)" : "POINT (999 1)";
+          expect(parseShapeFile(Array(count).fill(point).join("\n"))).toEqual({
+            ok: false,
+            refusal: "too-many-shapes",
+          });
+        },
+      ),
+      { numRuns: 20 },
     );
   });
 });

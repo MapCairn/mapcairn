@@ -314,7 +314,7 @@ describe("describeShapeImport", () => {
       "The file is nested too deeply to read. Check that it is GeoJSON.",
     );
     expect(describeShapeImport({ ok: false, refusal: "not-recognised" })).toBe(
-      "This is not GeoJSON or a CSV of shapes from this map. Choose a .geojson, .json or .csv file.",
+      "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt or .csv file.",
     );
     expect(describeShapeImport({ ok: false, refusal: "too-many-shapes" })).toBe(
       "The file holds more than 500 shapes. Import at most 500 at a time.",

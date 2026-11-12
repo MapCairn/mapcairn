@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { Geometry } from "geojson";
+import { GeometryError } from "../geometry/errors";
+import { readWktSequence, type WktAxisOrder } from "../geometry/wkt";
 import { shortestLongitudeSpan } from "../globe/longitude";
 import type { Bounds, LatLng } from "../ports/geometry";
 import { SHAPES_CSV_HEADER } from "./export";
@@ -8,13 +11,16 @@ import { shapeRing, validateShape } from "./shape";
 import type { DrawIssue } from "./types";
 
 /**
- * The file types the import offers in the picker: GeoJSON and CSV, by
- * extension and by media type.
+ * The file types the import offers in the picker: GeoJSON, CSV and WKT, by
+ * extension and by media type. WKT has no media type of its own, so it is
+ * offered by the extensions `.wkt` and `.txt`.
  */
 export const SHAPE_FILE_TYPES: readonly string[] = [
   ".geojson",
   ".json",
   ".csv",
+  ".wkt",
+  ".txt",
   "application/geo+json",
   "application/json",
   "text/csv",
@@ -78,6 +84,20 @@ export type ShapeImport =
       readonly holesDropped: number;
     };
 
+/** Options for {@link parseShapeFile}. */
+export interface ShapeImportOptions {
+  /**
+   * The order of the two numbers in each WKT position: `lng-lat` (the
+   * default, as the standard has it) or `lat-lng`, which some systems write.
+   * GeoJSON and the draw tool's CSV are always longitude then latitude, so
+   * this does not touch them.
+   */
+  readonly wktAxisOrder?: WktAxisOrder;
+}
+
+/** The header, compared without case or spaces, of a CSV column of WKT in a file from elsewhere. */
+const WKT_COLUMN = "wkt";
+
 /** The header of the CSV the draw tool wrote before circles carried their radius. */
 const LEGACY_CSV_HEADER = "id,type,area_m2,length_m,geometry";
 
@@ -98,6 +118,7 @@ const GEOMETRY_TYPES: ReadonlySet<unknown> = new Set([
 interface Collector {
   readonly shapes: DrawShapeInput[];
   readonly skipped: Partial<Record<ShapeImportSkip, number>>;
+  readonly wktAxisOrder: WktAxisOrder;
   holesDropped: number;
   /** Shapes met so far, imported or skipped. */
   count: number;
@@ -503,17 +524,14 @@ function circleFromCells(
   return { kind: "circle", vertices: [centre], radiusMetres: Number(radius) };
 }
 
-function addCsvRecord(
-  collector: Collector,
-  record: CsvRecord,
-  columns: number,
-): void {
-  if (!record.ok || record.fields.length !== columns) {
-    add(collector, "malformed");
-    return;
-  }
-  const [, type, , , geometry = "", radius = "", lng = "", lat = ""] =
-    record.fields;
+/** What a CSV of shapes looks like: how many columns a row has, and how a row is read. */
+interface CsvLayout {
+  readonly columns: number;
+  readonly addRow: (collector: Collector, fields: readonly string[]) => void;
+}
+
+function addDrawToolRow(collector: Collector, fields: readonly string[]): void {
+  const [, type, , , geometry = "", radius = "", lng = "", lat = ""] = fields;
   const circle =
     type === "circle" ? circleFromCells(collector, radius, lng, lat) : null;
   if (circle) {
@@ -528,22 +546,37 @@ function addCsvRecord(
   addGeometry(collector, json.value, false);
 }
 
-/** How many columns a CSV of shapes has, from its header, or null when it is not one the draw tool wrote. */
-function csvColumns(text: string): number | null {
+/** The layout of a CSV the draw tool wrote, from its header, or null when the text is not one. */
+function drawToolLayout(text: string): CsvLayout | null {
   for (const header of [SHAPES_CSV_HEADER, LEGACY_CSV_HEADER]) {
     const after = text[header.length];
     if (
       text.startsWith(header) &&
       (after === undefined || after === "\r" || after === "\n")
     ) {
-      return header.split(",").length;
+      return { columns: header.split(",").length, addRow: addDrawToolRow };
     }
   }
   return null;
 }
 
+/** The layout of a CSV from elsewhere with a column headed `wkt`, or null when the header has none. */
+function wktColumnLayout(text: string): CsvLayout | null {
+  const { fields, ok } = readRecord(text, 0).record;
+  const index = fields.findIndex(
+    (name) => name.trim().toLowerCase() === WKT_COLUMN,
+  );
+  if (!ok || index < 0) {
+    return null;
+  }
+  return {
+    columns: fields.length,
+    addRow: (collector, row) => addWktCell(collector, row[index] as string),
+  };
+}
+
 /** Adds the rows of a CSV of shapes, after its header. A blank line is ignored. */
-function addCsv(collector: Collector, text: string, columns: number): void {
+function addCsv(collector: Collector, text: string, layout: CsvLayout): void {
   let at = readRecord(text, 0).next;
   while (at < text.length && !collector.refusal) {
     const { record, next } = readRecord(text, at);
@@ -551,20 +584,126 @@ function addCsv(collector: Collector, text: string, columns: number): void {
     if (record.fields.length === 1 && record.fields[0] === "") {
       continue;
     }
-    addCsvRecord(collector, record, columns);
+    if (!record.ok || record.fields.length !== layout.columns) {
+      add(collector, "malformed");
+      continue;
+    }
+    layout.addRow(collector, record.fields);
   }
+}
+
+/** The geometries in WKT text, or why it could not be read: `unsupported` for a measure or a curve, `invalid` for anything else. */
+function readWkt(
+  text: string,
+  axisOrder: WktAxisOrder,
+): Geometry[] | "invalid" | "unsupported" {
+  try {
+    return readWktSequence(text, { axisOrder });
+  } catch (error) {
+    return error instanceof GeometryError && error.kind === "unsupported"
+      ? "unsupported"
+      : "invalid";
+  }
+}
+
+/** Adds the shapes of WKT geometries, or one skip for a kind of WKT that cannot be drawn. */
+function addWktGeometries(
+  collector: Collector,
+  geometries: Geometry[] | "unsupported",
+): void {
+  if (geometries === "unsupported") {
+    add(collector, "unsupported");
+    return;
+  }
+  addParts(collector, geometries, (geometry) =>
+    addGeometry(collector, geometry, false),
+  );
+}
+
+/** Adds the shapes of one cell of WKT, or one skip when the cell cannot be read. */
+function addWktCell(collector: Collector, cell: string): void {
+  const geometries = readWkt(cell, collector.wktAxisOrder);
+  if (geometries === "invalid") {
+    add(collector, "malformed");
+    return;
+  }
+  addWktGeometries(collector, geometries);
 }
 
 function refuse(refusal: ShapeImportRefusal): ShapeImport {
   return { ok: false, refusal };
 }
 
+/** Adds what GeoJSON text holds, or says why the whole text is refused. */
+function addGeoJsonText(
+  collector: Collector,
+  body: string,
+): ShapeImportRefusal | null {
+  const json = readJson(body);
+  if (json === "too-deep") {
+    return "too-deep";
+  }
+  // Text that starts with a brace and parses is an object.
+  if (
+    json === "malformed" ||
+    !addGeoJson(collector, json.value as JsonObject)
+  ) {
+    return "not-recognised";
+  }
+  return null;
+}
+
+/** Adds what WKT text holds, or says why the whole text is refused. */
+function addWktText(
+  collector: Collector,
+  body: string,
+): ShapeImportRefusal | null {
+  const geometries = readWkt(body, collector.wktAxisOrder);
+  if (geometries === "invalid") {
+    return "not-recognised";
+  }
+  addWktGeometries(collector, geometries);
+  return null;
+}
+
 /**
- * Reads the shapes in a GeoJSON file or in a CSV the draw tool wrote, ready
- * for the draw reducer's `import` action. Pure and bounded, and never
+ * Adds what the text holds, read as the format its start shows: the draw
+ * tool's CSV, GeoJSON (it starts with a brace), a CSV with a column of WKT,
+ * or else WKT itself. Says why the whole text is refused, if it is.
+ */
+function addFileBody(
+  collector: Collector,
+  body: string,
+): ShapeImportRefusal | null {
+  const drawTool = drawToolLayout(body);
+  if (drawTool) {
+    addCsv(collector, body, drawTool);
+    return null;
+  }
+  if (body.startsWith("{")) {
+    return addGeoJsonText(collector, body);
+  }
+  const wktColumn = wktColumnLayout(body);
+  if (wktColumn) {
+    addCsv(collector, body, wktColumn);
+    return null;
+  }
+  return addWktText(collector, body);
+}
+
+/**
+ * Reads the shapes in a GeoJSON file, in Well-Known Text (WKT) or in a CSV,
+ * ready for the draw reducer's `import` action. Pure and bounded, and never
  * throws: text from a file is hostile until proven otherwise.
  *
- * @remarks The format is told from the content. GeoJSON may be a
+ * @remarks The format is told from the content. WKT may be one geometry or
+ *   several one after another (one to a line is usual), each read like its
+ *   GeoJSON twin, with the order of its two numbers set by
+ *   `options.wktAxisOrder`; a measure (`M`) or a curved type is skipped as
+ *   unsupported, and text that is not WKT is refused. A CSV is read when it
+ *   is the draw tool's own, or when its header has a column named `wkt`
+ *   (any case), whose cells are read as WKT, a cell that cannot be read
+ *   skipping its row. GeoJSON may be a
  *   `FeatureCollection`, a `Feature` or a bare geometry; Multi geometries
  *   give one shape per part, a `GeometryCollection` is flattened once, and a
  *   polygon keeps its outer ring, its holes left out and counted. A feature
@@ -583,7 +722,10 @@ function refuse(refusal: ShapeImportRefusal): ShapeImport {
  *   is inert. The work is linear in the text, apart from each polygon's
  *   check for crossing edges, which the per-shape cap bounds.
  */
-export function parseShapeFile(text: string): ShapeImport {
+export function parseShapeFile(
+  text: string,
+  options: ShapeImportOptions = {},
+): ShapeImport {
   if (text.length > MAX_IMPORT_BYTES) {
     return refuse("too-large");
   }
@@ -595,31 +737,15 @@ export function parseShapeFile(text: string): ShapeImport {
   const collector: Collector = {
     shapes: [],
     skipped: {},
+    wktAxisOrder: options.wktAxisOrder ?? "lng-lat",
     holesDropped: 0,
     count: 0,
     points: 0,
     refusal: null,
   };
-  const columns = csvColumns(body);
-  if (columns !== null) {
-    addCsv(collector, body, columns);
-  } else if (body.startsWith("{")) {
-    const json = readJson(body);
-    if (json === "too-deep") {
-      return refuse("too-deep");
-    }
-    // Text that starts with a brace and parses is an object.
-    if (
-      json === "malformed" ||
-      !addGeoJson(collector, json.value as JsonObject)
-    ) {
-      return refuse("not-recognised");
-    }
-  } else {
-    return refuse("not-recognised");
-  }
-  if (collector.refusal) {
-    return refuse(collector.refusal);
+  const refusal = addFileBody(collector, body) ?? collector.refusal;
+  if (refusal) {
+    return refuse(refusal);
   }
   return {
     ok: true,

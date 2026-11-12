@@ -6,6 +6,7 @@ import {
   shapeGeometry,
   shapesToCsv,
   shapesToGeoJson,
+  shapesToWkt,
 } from "./export";
 import { ringSignedArea } from "./geo";
 import type { DrawShape } from "./types";
@@ -183,6 +184,29 @@ describe("shapesToCsv", () => {
     expect(shapesToCsv([])).toBe(
       "id,type,area_m2,length_m,geometry,radius_m,centre_lng,centre_lat",
     );
+  });
+});
+
+describe("shapesToWkt", () => {
+  it("writes one WKT geometry per exportable shape, one to a line, longitude first", () => {
+    const draft: DrawShape = { ...POLYGON, id: "d", done: false };
+    const lines = shapesToWkt([POINT, LINE, draft, POLYGON]).split("\n");
+    expect(lines).toEqual([
+      "POINT (2.3522 48.8566)",
+      "LINESTRING (2.35 48.85, 2.36 48.86, 2.37 48.85)",
+      // The ring is turned anticlockwise and closed, as in the GeoJSON.
+      "POLYGON ((0.01 0, 0.01 0.01, 0 0.01, 0 0, 0.01 0))",
+    ]);
+  });
+
+  it("writes a circle as the polygon of its outline", () => {
+    const [line = ""] = shapesToWkt([CIRCLE]).split("\n");
+    expect(line.startsWith("POLYGON ((")).toBe(true);
+    expect(line.split(",")).toHaveLength(73);
+  });
+
+  it("is empty when there is nothing to export", () => {
+    expect(shapesToWkt([])).toBe("");
   });
 });
 

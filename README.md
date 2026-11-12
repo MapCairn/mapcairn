@@ -7,7 +7,7 @@
 
 ## Why use MapCairn in your GIS project
 
-- **A finished map interface, not a blank canvas.** Search with optional suggestions as you type, zoom and compass controls, a bottom sheet that becomes a side panel on wide screens, measuring, drawing and editing shapes with GeoJSON and CSV import and export, directions through your own routing provider, a layers panel, feature cards, saving the map as an image, and links that carry the view, the basemap and the layers.
+- **A finished map interface, not a blank canvas.** Search with optional suggestions as you type, zoom and compass controls, a bottom sheet that becomes a side panel on wide screens, measuring, drawing and editing shapes with GeoJSON, CSV and WKT import and export, directions through your own routing provider, a layers panel, feature cards, saving the map as an image, and links that carry the view, the basemap and the layers.
 - **Open data layers as data.** A layer is one definition: a feed, raster or vector tiles, a heatmap, or a query for what is in view. MapCairn draws it, builds the legend, the card and the list, keeps words beside every colour, and checks the definition, its fixture, its credit and your Content Security Policy in a test. There is no code per layer.
 - **Accessible by construction.** WCAG 2.2 AA is the target in both themes, every gesture has a keyboard or single-tap equivalent, announcements go through one live region, and automated accessibility checks run in CI.
 - **Private by design.** Nothing is requested until a person asks, except the search suggestions a host may turn on, which send the text typed so far. There are no accounts and no tracking, nothing is proxied, and every provider the app can contact is named in its privacy policy and credits.

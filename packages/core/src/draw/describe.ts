@@ -221,7 +221,7 @@ const IMPORT_REFUSALS: Readonly<Record<ShapeImportRefusal, string>> = {
   "too-deep":
     "The file is nested too deeply to read. Check that it is GeoJSON.",
   "not-recognised":
-    "This is not GeoJSON or a CSV of shapes from this map. Choose a .geojson, .json or .csv file.",
+    "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt or .csv file.",
   "too-many-shapes": `The file holds more than ${formatNumber(MAX_IMPORT_SHAPES)} shapes. Import at most ${formatNumber(MAX_IMPORT_SHAPES)} at a time.`,
   "too-many-points": `The file holds more than ${formatNumber(MAX_IMPORT_POINTS)} points. Simplify the shapes or split the file.`,
 };

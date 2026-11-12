@@ -14,6 +14,19 @@ export interface FormatWktOptions {
   readonly precision?: number;
 }
 
+/**
+ * The order of the first two numbers of a position in WKT text: `lng-lat`
+ * (longitude, then latitude, as the OGC standard and GeoJSON have it) or
+ * `lat-lng`, which some systems write.
+ */
+export type WktAxisOrder = "lng-lat" | "lat-lng";
+
+/** Options for {@link parseWkt} and {@link readWktSequence}. */
+export interface ParseWktOptions {
+  /** Which number of a position is the longitude. Default `lng-lat`. */
+  readonly axisOrder?: WktAxisOrder;
+}
+
 type Token =
   | { readonly kind: "word"; readonly text: string; readonly at: number }
   | { readonly kind: "number"; readonly text: string; readonly at: number }
@@ -205,9 +218,11 @@ type Dimensions = "any" | "z";
 
 class Reader {
   readonly #tokens: Tokens;
+  readonly #latitudeFirst: boolean;
 
-  constructor(text: string) {
+  constructor(text: string, axisOrder: WktAxisOrder) {
     this.#tokens = new Tokens(text);
+    this.#latitudeFirst = axisOrder === "lat-lng";
   }
 
   /** Reads one geometry, then insists on the end of the text. */
@@ -218,6 +233,15 @@ class Reader {
       throw refuse("Unexpected text after the geometry", rest.at);
     }
     return geometry;
+  }
+
+  /** Reads one geometry or more, one after another, up to the end of the text. */
+  readSequence(): Geometry[] {
+    const geometries = [this.#geometry(0)];
+    while (this.#tokens.peek().kind !== "end") {
+      geometries.push(this.#geometry(0));
+    }
+    return geometries;
   }
 
   #expect(kind: "(" | ")" | ","): void {
@@ -249,7 +273,9 @@ class Reader {
 
   #position(dimensions: Dimensions): Position {
     const at = this.#tokens.peek().at;
-    const position = [this.#number(), this.#number()];
+    const first = this.#number();
+    const second = this.#number();
+    const position = this.#latitudeFirst ? [second, first] : [first, second];
     if (this.#tokens.peek().kind === "number") {
       position.push(this.#number());
     }
@@ -416,16 +442,51 @@ class Reader {
  * the range of the coordinates: WKT may hold projected coordinates, so
  * longitude and latitude are not held to degrees.
  *
+ * Positions are read as longitude then latitude; pass `axisOrder: "lat-lng"`
+ * for text that writes latitude first. The result is always GeoJSON order.
+ *
  * @throws {GeometryError} `invalid` for text that is not WKT or whose shape
  *   is wrong (a message names the position), `unsupported` for a valid WKT
  *   feature this reader leaves out.
  */
-export function parseWkt(text: string): Geometry {
+export function parseWkt(
+  text: string,
+  options: ParseWktOptions = {},
+): Geometry {
+  const geometry = readText(text, options, (reader) => reader.readAll());
+  return validateGeometry(geometry, { geographic: false });
+}
+
+/**
+ * Reads WKT text that holds one geometry or more, one after another in any
+ * layout (one to a line is the usual one), into GeoJSON geometries in the
+ * same way as {@link parseWkt}, with the same limits and the same errors.
+ *
+ * Unlike `parseWkt` it does not check the shapes it reads: an `EMPTY` shape,
+ * a line of one position or coordinates outside the world come back as
+ * written. It is for a caller that applies its own rules to each shape, such
+ * as the draw tool's import; use `parseWkt` where a valid geometry is needed.
+ *
+ * @throws {GeometryError} `invalid` for text that is not WKT, and
+ *   `unsupported` for a valid WKT feature this reader leaves out. Nothing is
+ *   returned for text that fails part of the way.
+ */
+export function readWktSequence(
+  text: string,
+  options: ParseWktOptions = {},
+): Geometry[] {
+  return readText(text, options, (reader) => reader.readSequence());
+}
+
+function readText<T>(
+  text: string,
+  options: ParseWktOptions,
+  read: (reader: Reader) => T,
+): T {
   if (typeof text !== "string") {
     throw new GeometryError("invalid", "WKT must be a string.");
   }
-  const geometry = new Reader(text).readAll();
-  return validateGeometry(geometry, { geographic: false });
+  return read(new Reader(text, options.axisOrder ?? "lng-lat"));
 }
 
 function checkPrecision(precision: number | undefined): void {
