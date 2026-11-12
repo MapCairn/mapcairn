@@ -35,41 +35,35 @@ Several issues at once, or an agent beside you, means a separate worktree for ea
 
 - Most issues need only a short plan in your head or as an issue comment: the files you will change, the test you will start with, the documents you will update.
 - A large change that crosses several packages or decides a public API needs a plan in `docs/plans/` first: use the `plan-change` skill, merge the plan first, then `split-plan`. Split independent parts into separate pull requests, each keeping the build green, and keep a deletion in its own change.
-- Where a choice is the person's and they are present, ask. Where they are away, take the simplest option that satisfies the issue and record the decision and its reason in a comment on the issue.
+- Where a choice is the person's and they are present, ask. Where they are away, take the simplest option that satisfies the issue and record the decision and its reason in a comment on the issue, with the decision in its final wording (the exact sentence a document will carry, not a summary).
 
-## 4. Build it, test first
+## 4. Build it, test first, with its documents
 
 1. Write a failing behavioural test, run it, and see it fail for the intended reason. Implement the smallest change that passes. Do not weaken assertions or exclude code from coverage.
 2. Follow the principles and conventions in `AGENTS.md` (`npm run licence:write` adds the SPDX header). Add no dependency without need; if you must, follow its dependency rules.
 3. Keep to the task. Anything unrelated that you notice becomes its own issue (`create-issue` skill). A delegated agent lists it under **Issues to file** in its report instead, and its caller files it.
 4. Tick the issue's task list as steps land: start from the current body (`gh issue view <n> --json body --jq .body > <file>`), change only the boxes, and save it with `gh issue edit <n> --body-file <file>`. Without triage rights, post the status as a comment or in the pull request description and leave ticking, closing and labels to the maintainer.
-5. Commit in small steps with Conventional Commits and no assistant attribution.
+5. A change that alters behaviour the documents describe updates them in the same pull request: `README.md` and package READMEs, `ARCHITECTURE.md`, `DESIGN.md`, `docs/guides/`, and `ROADMAP.md`, `ATTRIBUTIONS.md` or `PRIVACY.md` (the last together with `packages/web/src/app/PrivacyPage.tsx`). Note which ones in the pull request.
+6. Commit in small steps with Conventional Commits and no assistant attribution.
 
-## 5. Documents
-
-A change that alters behaviour the documents describe updates them in the same pull request: `README.md` and package READMEs, `ARCHITECTURE.md`, `DESIGN.md`, `docs/guides/`, and `ROADMAP.md`, `ATTRIBUTIONS.md` or `PRIVACY.md` (the last together with `packages/web/src/app/PrivacyPage.tsx`). Note which ones in the pull request.
-
-## 6. Checks
+## 5. Checks
 
 - Any code: `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build`. A map or interface change adds the browser runs described below.
-- Documents only: `npm run lint`, then the read-through in section 8. Dependencies: the real install and `npm ci --ignore-scripts` check in `AGENTS.md`.
+- Documents only: `npm run lint`, then the read-through in section 6. Dependencies: the real install and `npm ci --ignore-scripts` check in `AGENTS.md`.
 
-Install the browsers once with `npm run playwright:install -w @mapcairn/web`. A full local `e2e` or `a11y` run can take hours when several agents share the machine. Run the Playwright specs that cover the change (`npm run test:e2e -w @mapcairn/web -- e2e/<name>.spec.ts`). Run the full `e2e` and `a11y` when the change is to layout, the map engine or the test seam; otherwise name the full runs as left to CI under Checks (the required `e2e` check runs both). A timeout that passes when that spec is run alone is a load flake: re-run it alone, say so in the report, and never weaken an assertion or lengthen a timeout to hide it. Report anything that failed or was skipped.
+Install the browsers once with `npm run playwright:install -w @mapcairn/web`. A full local `e2e` or `a11y` run can take hours when several agents share the machine. Run the Playwright specs that cover the change (`npm run test:e2e -w @mapcairn/web -- <spec name>`, the script CI runs, which includes the spec's `@a11y` tests). Run the full `e2e` and `a11y` when the change is to layout, the map engine, the test seam or a component's colour, focus or semantics; otherwise name the full runs as left to CI under Checks (the required `e2e` check runs both). A timeout that passes when that spec is run alone is a load flake: re-run it alone, say so in the report, and never weaken an assertion or lengthen a timeout to hide it. Report anything that failed or was skipped.
 
-## 7. Look at it
+For a map or interface change, also run the `visual-check` skill and describe what it saw in the pull request, saying the images are kept locally and will be attached on request, with no local path. A change with no visible effect says so in the report instead.
 
-For a map or interface change, run the `visual-check` skill and describe what it saw in the pull request, saying the images are kept locally and will be attached on request, with no local path. A change with no visible effect says so in the report instead.
-
-## 8. Simplify, read, hand over
+## 6. Simplify, read, hand over
 
 1. Run your tool's simplify step on your diff if it has one; otherwise reread the diff for logic an existing helper already does, code or options nothing uses, functions with two jobs and comments that a better name would replace. Apply the fixes and re-run the checks they touched. If another agent started you, do not start sub-agents: run this step and the `land-pr` review checklist inline, and your caller runs the independent review.
 2. Read the changed text once for British English, plain prose and no em dashes. `npm run lint` is the only automated check for documents, so this step is the rest of the check, for code changes too.
-3. Stop every dev server, wrangler instance and browser you started, and check the ports are free.
-4. Push the branch and continue with the `land-pr` skill. If you stop here, hand off with the report in `AGENTS.md` ("Definition of done").
+3. Stop every dev server, wrangler instance and browser you started and check the ports are free, then push the branch and continue with the `land-pr` skill. If you stop here, hand off with the report in `AGENTS.md` ("Definition of done").
 
-## 9. Briefing an agent
+## 7. Briefing an agent
 
-If you can start sub-agents and `AGENTS.md` or the person allows it, within the limits and model tiers in `AGENTS.md` ("Sub-agents"), name the `implementer` agent where your tool has it and set its model tier yourself (the agent file sets none), and copy this block, filling the angle brackets and leaving out the line that does not apply. For layout, engine or test-seam work, replace the Checks line with a full `e2e` and `a11y` run (section 6):
+If you can start sub-agents and `AGENTS.md` or the person allows it, within the limits and model tiers in `AGENTS.md` ("Sub-agents"), name the `implementer` agent where your tool has it and set its model tier yourself (the agent file sets none), and copy this block, filling the angle brackets and leaving out the line that does not apply. For layout, engine or test-seam work, replace the Checks line with a full `e2e` and `a11y` run (section 5). The `Wording:`, `Claims:` and `Before you open:` lines are for a free or smaller model, which follows a brief literally and fills a gap with plausible text:
 
 ```
 Take issue #<n> in MapCairn/mapcairn and open the pull request. Do not merge. Do not start sub-agents.
@@ -79,5 +73,8 @@ UI work: run the visual-check skill and describe what you saw in the pull reques
 Other work in flight on <module>: <issue or pull request>. Keep your change additive and rebase before you push.
 No assistant attribution anywhere. Plain neutral voice on GitHub, no @mentions.
 Stop every server, browser and wrangler instance you start and confirm with a port check. Keep your worktree until the pull request has merged.
+Wording: <the decision, in the exact words to write>. Use these words; do not paraphrase them.
+Claims: check every claim against <files>. Name the file you checked beside each factual claim in your pull request description. Write no number, limit or rule of thumb that is not in the code or in a source you cite. In a rule about people, name the role, for example "the person who opens the pull request".
+Before you open: run the self-review in `land-pr` section 1 and report that every claim matches the code, nothing planned is described as built, the issue's task list is ticked, or its status posted as a comment if you cannot edit the issue, the change stays within the issue and no figure is invented.
 Report with the five headings in AGENTS.md "Definition of done": PR, Checks, Seen, Deviations, Issues to file.
 ```

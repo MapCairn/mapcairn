@@ -12,15 +12,22 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
 ## 1. Open it
 
 1. The branch is pushed and its checks from `pick-up-issue` passed. If not, finish that first.
-2. Write the body to a file, plain project facts in a neutral voice, following `.github/pull_request_template.md`:
+2. Self-review your diff as a stranger before you open it, and fix what you find. Cut or mark as unchecked anything you cannot verify. For each sentence you added to a document, guide, code comment or TSDoc:
+   - Is it true in the code, and which file did you check?
+   - Is each number, limit or rule of thumb in the code or a source you can cite, or did you make it up?
+   - Is each term defined where it is first used, and is anything planned described as built?
+   - Does a rule about people name the role it applies to?
+   - Is the issue's task list ticked for the steps this change finishes (or its status posted as a comment if you cannot edit the issue), and does the diff stay within the issue?
+3. Write the body to a file, plain project facts in a neutral voice, following `.github/pull_request_template.md`:
    - What and why, with `Fixes #<n>` (the issue is finished by this pull request) or `Part of #<n>` (it is not).
+   - A decision made on the way, in its final wording (the exact sentence a document will carry, not a summary), so nobody copies a loose phrase.
    - The documents you updated, or why none needed it.
    - The checks you ran with their results, and any that failed or were skipped.
    - For a visible change, what the `visual-check` skill saw at each size and theme, in words, and that the images are kept locally and will be attached on request, with no local path. A person opening the pull request attaches the images for a visible change; an agent does not attach them (`gh` cannot upload them) and says they are available on request.
    - That the simplify step was run.
-3. `gh pr create --title "<Conventional Commit title>" --body-file <file>`, from a fork with `--repo MapCairn/mapcairn --head <your-login>:<branch>` if you do not have write access.
-4. No assistant attribution in the title, body or commits, no `@mentions` of people, no maintainer name, no names of commercial products used as comparisons.
-5. A first pull request needs the CLA comment (the sentence at the end of `CLA.md`) from the author's own account. Tell the person if it is missing; do not post it for them.
+4. `gh pr create --title "<Conventional Commit title>" --body-file <file>`, from a fork with `--repo MapCairn/mapcairn --head <your-login>:<branch>` if you do not have write access.
+5. No assistant attribution in the title, body or commits, no `@mentions` of people, no maintainer name, no names of commercial products used as comparisons.
+6. A first pull request needs the CLA comment (the sentence at the end of `CLA.md`) from the author's own account. Tell the person if it is missing; do not post it for them.
 
 ## 2. Review it with fresh eyes
 
@@ -39,7 +46,7 @@ Review the opened pull request before it merges, and fix what is real. A review 
 gh pr checks <n> --watch --fail-fast
 ```
 
-The `build` and `e2e` checks are required, and the `CLA` check must be green for a contributor. A first-time contributor's workflows can wait for a maintainer to approve them, so `--watch` may never progress: report that and stop instead of waiting. If a check fails, read its log (`gh run view <run-id> --log-failed`), fix the cause in a new commit, and push. Do not retry a failing run blindly, weaken an assertion, or exclude code from coverage. A genuinely flaky test gets an issue; one re-run is fine, a pattern of re-runs is not. A timeout that passes when its spec runs alone is a load flake: report it as `pick-up-issue` section 6 says.
+The `build` and `e2e` checks are required, and the `CLA` check must be green for a contributor. A first-time contributor's workflows can wait for a maintainer to approve them, so `--watch` may never progress: report that and stop instead of waiting. If a check fails, read its log (`gh run view <run-id> --log-failed`), fix the cause in a new commit, and push. Do not retry a failing run blindly, weaken an assertion, or exclude code from coverage. A genuinely flaky test gets an issue; one re-run is fine, a pattern of re-runs is not. A timeout that passes when its spec runs alone is a load flake: report it as `pick-up-issue` section 5 says.
 
 If the branch is behind `main` and the ruleset needs it current: `gh pr update-branch <n>` or rebase, then wait for the checks again.
 
