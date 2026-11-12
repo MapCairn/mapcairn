@@ -35,6 +35,8 @@ function subjectFor(
         simulateBasemapUnavailable: () => adapter.simulateBasemapUnavailable(),
         simulateTileLayerFailure: (layerId) =>
           adapter.simulateTileLayerFailure(layerId),
+        simulateTileLayerRecovery: (layerId) =>
+          adapter.simulateTileLayerRecovery(layerId),
         simulateLoading: (loading) => adapter.simulateLoading(loading),
         simulateUserZoom: (zoom) => adapter.simulateUserZoom(zoom),
         simulateFeatureTap: (layerId, featureId) =>

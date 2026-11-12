@@ -5,6 +5,7 @@ import {
   announceDetailShown,
   announceFeaturesFound,
   announceLayerOn,
+  announceTilesRecovered,
   announceTilesUnavailable,
   type Bounds,
   type ControlValues,
@@ -113,9 +114,17 @@ export interface DataLayers {
    * which `MapDataLayers` calls from the adapter's report. `tiles` is the
    * template those tiles came from: a report for anything but the layer's
    * current tiles, or for a layer that is off, is ignored. The layer then
-   * says so and announces it once, until its tiles change or it is turned off.
+   * says so and announces it once, until its tiles change, it is turned off, or
+   * a tile loads later (see {@link DataLayers.reportTilesRecovered}).
    */
   reportTilesUnavailable(id: string, tiles: string): void;
+  /**
+   * Records that a tile loaded for the `tiles` a layer had reported no tiles
+   * for, which `MapDataLayers` calls from the adapter's report. The layer's
+   * status goes and the layer says so once, politely. A recovery for any other
+   * tiles, or for a layer that is not showing the status, is ignored.
+   */
+  reportTilesRecovered(id: string, tiles: string): void;
   /**
    * Opens a feature's card, or closes it (and any list) with `null`. A card
    * opened without `keepChoices` also closes the list of features found
@@ -313,9 +322,10 @@ function sortFeatures(
  *   loaded on enable, on a control change and on retry; the request for the
  *   previous URL is cancelled. Tile layers need no request here: the map
  *   draws their tiles, and says through `reportTilesUnavailable` when none
- *   loaded. Loads, empty feeds and failures are announced once each through
- *   the shared live region, failures assertively and a tile layer with no
- *   tiles politely. Turning a layer off clears its features, its selection
+ *   loaded and `reportTilesRecovered` when one loads later. Loads, empty
+ *   feeds and failures are announced once each through the shared live
+ *   region, failures assertively and a tile layer with no tiles, and its
+ *   recovery, politely. Turning a layer off clears its features, its selection
  *   and its affected area.
  */
 export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
@@ -537,6 +547,27 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       );
     },
     [announce, byId, now],
+  );
+
+  const reportTilesRecovered = useCallback(
+    (id: string, tiles: string) => {
+      const definition = byId.get(id);
+      if (!definition || stateRef.current.tilesUnavailable[id] !== tiles) {
+        return;
+      }
+      setState((previous) => ({
+        ...previous,
+        tilesUnavailable: tilesUnavailableFor(
+          previous.tilesUnavailable,
+          id,
+          null,
+        ),
+      }));
+      announce(announceTilesRecovered(definition.name), {
+        priority: "polite",
+      });
+    },
+    [announce, byId],
   );
 
   const setSort = useCallback((id: string, sortId: string) => {
@@ -828,6 +859,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     setSort,
     retry,
     reportTilesUnavailable,
+    reportTilesRecovered,
     select,
     choose,
     backToChoices,

@@ -244,6 +244,7 @@ export function MapDataLayers({
     choose: layers.choose,
     setView: layers.setView,
     reportTilesUnavailable: layers.reportTilesUnavailable,
+    reportTilesRecovered: layers.reportTilesRecovered,
     onFeatureTap,
     ignoreTaps,
   });
@@ -251,9 +252,22 @@ export function MapDataLayers({
     if (!adapter) {
       return;
     }
-    return adapter.on("tileLayerUnavailable", ({ layerId, tiles }) => {
-      latest.current.reportTilesUnavailable(layerId, tiles);
-    });
+    const stopUnavailable = adapter.on(
+      "tileLayerUnavailable",
+      ({ layerId, tiles }) => {
+        latest.current.reportTilesUnavailable(layerId, tiles);
+      },
+    );
+    const stopRecovered = adapter.on(
+      "tileLayerRecovered",
+      ({ layerId, tiles }) => {
+        latest.current.reportTilesRecovered(layerId, tiles);
+      },
+    );
+    return () => {
+      stopUnavailable();
+      stopRecovered();
+    };
   }, [adapter, latest]);
   useEffect(() => {
     if (!adapter) {

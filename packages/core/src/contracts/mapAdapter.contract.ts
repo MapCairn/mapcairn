@@ -55,6 +55,12 @@ export interface MapAdapterControls {
    */
   simulateTileLayerFailure(layerId: string): void;
   /**
+   * Makes the engine load a tile of the tile layer `layerId`, as after a
+   * transient failure has passed. A layer that was never set has no tiles, so
+   * nothing happens.
+   */
+  simulateTileLayerRecovery(layerId: string): void;
+  /**
    * Makes the engine report a zoom gesture it handles itself (a wheel, a
    * pinch or a double-click) that leaves the view at the normalised `zoom`.
    */
@@ -711,6 +717,95 @@ export function runMapAdapterContract(
         controls.simulateTileLayerFailure("never-set");
         await controls.settle();
         expect(reports).toEqual([]);
+      });
+
+      describe("a tile overlay that reported no tiles", () => {
+        async function watched() {
+          const { adapter, controls } = await mounted();
+          const recoveries: MapEvents["tileLayerRecovered"][] = [];
+          adapter.on("tileLayerRecovered", (report) => recoveries.push(report));
+          adapter.setTileLayer("imagery", TILES);
+          await controls.settle();
+          return { adapter, controls, recoveries };
+        }
+
+        it("reports once when a tile loads after it, naming the layer and its tiles", async () => {
+          const { controls, recoveries } = await watched();
+          controls.simulateTileLayerFailure("imagery");
+          await controls.settle();
+          expect(recoveries).toEqual([]);
+          controls.simulateTileLayerRecovery("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toEqual([
+            { layerId: "imagery", tiles: TILES.tiles },
+          ]);
+        });
+
+        it("says nothing for a layer that never reported, or that was never set", async () => {
+          const { controls, recoveries } = await watched();
+          controls.simulateTileLayerRecovery("imagery");
+          controls.simulateTileLayerRecovery("never-set");
+          await controls.settle();
+          expect(recoveries).toEqual([]);
+        });
+
+        it("says nothing once the layer is set to other tiles or removed, until it reports again", async () => {
+          const { adapter, controls, recoveries } = await watched();
+          controls.simulateTileLayerFailure("imagery");
+          adapter.setTileLayer("imagery", {
+            ...TILES,
+            tiles: "https://tiles.test/2026-11-07/{z}/{y}/{x}.jpg",
+          });
+          await controls.settle();
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toEqual([]);
+          controls.simulateTileLayerFailure("imagery");
+          adapter.removeLayer("imagery");
+          await controls.settle();
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toEqual([]);
+        });
+
+        it("still reports the recovery after the map draws it again with the same tiles, as a basemap swap does", async () => {
+          const { adapter, controls, recoveries } = await watched();
+          controls.simulateTileLayerFailure("imagery");
+          await adapter.setBasemap(controls.basemap);
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toEqual([
+            { layerId: "imagery", tiles: TILES.tiles },
+          ]);
+        });
+
+        it("reports once for a failure that repeats after the map drew it again", async () => {
+          const { adapter, controls, recoveries } = await watched();
+          controls.simulateTileLayerFailure("imagery");
+          await adapter.setBasemap(controls.basemap);
+          controls.simulateTileLayerFailure("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toHaveLength(1);
+        });
+
+        it("reports again for the tiles it is set to next, once they report and load", async () => {
+          const { adapter, controls, recoveries } = await watched();
+          controls.simulateTileLayerFailure("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          const next = "https://tiles.test/2026-11-07/{z}/{y}/{x}.jpg";
+          adapter.setTileLayer("imagery", { ...TILES, tiles: next });
+          controls.simulateTileLayerFailure("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries.map((report) => report.tiles)).toEqual([
+            TILES.tiles,
+            next,
+          ]);
+        });
       });
 
       it("draws a tile overlay, and changes its opacity in place", async () => {

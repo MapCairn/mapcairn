@@ -862,6 +862,18 @@ describe("LayersSection", () => {
       expect(screen.queryByTestId("layer-status-sample-rain")).toBeNull();
     });
 
+    it("takes the status away when a tile of the layer loads later", () => {
+      const { layers } = setup([SAMPLE_TIME_LAYER]);
+      toggle("sample-rain", "Sample rain");
+      const tiles = tileUrl(SAMPLE_TIME_LAYER, {}, NOW);
+      act(() => layers().reportTilesUnavailable("sample-rain", tiles));
+      expect(
+        screen.getByTestId("layer-status-sample-rain"),
+      ).toBeInTheDocument();
+      act(() => layers().reportTilesRecovered("sample-rain", tiles));
+      expect(screen.queryByTestId("layer-status-sample-rain")).toBeNull();
+    });
+
     it("says only that a layer with nothing to choose did not load", () => {
       const plain: LayerDefinition = {
         ...SAMPLE_TILE_LAYER,

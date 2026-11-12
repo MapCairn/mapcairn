@@ -205,6 +205,8 @@ export class FakeMapAdapter implements MapAdapter {
   #destroyed = false;
   #listeners = new Map<keyof MapEvents, Set<Handler>>();
   #dataLayers = new Map<string, DataLayer>();
+  /** The tiles each tile layer reported no tiles for, until they load or change. */
+  #unavailableTiles = new Map<string, string>();
   #hitsAtPointer: readonly MapFeatureHit[] = [];
   #failNextImage = false;
   /** The options of every `toImage` call, in order. */
@@ -458,6 +460,9 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   setTileLayer(id: string, overlay: MapTileOverlay): void {
+    if (this.#unavailableTiles.get(id) !== overlay.tiles) {
+      this.#unavailableTiles.delete(id);
+    }
     this.#dataLayers.delete(id);
     this.#dataLayers.set(id, { kind: "tiles", overlay });
   }
@@ -483,6 +488,7 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   removeLayer(id: string): void {
+    this.#unavailableTiles.delete(id);
     this.#dataLayers.delete(id);
   }
 
@@ -829,10 +835,26 @@ export class FakeMapAdapter implements MapAdapter {
   simulateTileLayerFailure(layerId: string): void {
     const layer = this.#dataLayers.get(layerId);
     if (layer?.kind === "tiles") {
+      this.#unavailableTiles.set(layerId, layer.overlay.tiles);
       this.#emit("tileLayerUnavailable", {
         layerId,
         tiles: layer.overlay.tiles,
       });
+    }
+  }
+
+  /**
+   * Emits `tileLayerRecovered` for the tile layer `layerId`, as an engine does
+   * when a tile loads after the layer reported no tiles. A layer that has not
+   * reported (or has since been set to other tiles, or removed) emits nothing,
+   * and one report is ended by one recovery.
+   */
+  simulateTileLayerRecovery(layerId: string): void {
+    const layer = this.#dataLayers.get(layerId);
+    const tiles = this.#unavailableTiles.get(layerId);
+    if (layer?.kind === "tiles" && tiles === layer.overlay.tiles) {
+      this.#unavailableTiles.delete(layerId);
+      this.#emit("tileLayerRecovered", { layerId, tiles });
     }
   }
 
