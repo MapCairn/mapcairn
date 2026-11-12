@@ -108,7 +108,7 @@ test.describe("search suggestions", () => {
     page,
     mapPage,
   }) => {
-    await scriptSuggestions(page);
+    const queries = await scriptSuggestions(page);
     await scriptSearch(page);
     await page.clock.install();
     await mapPage.goto();
@@ -139,11 +139,12 @@ test.describe("search suggestions", () => {
     // No second lookup: the geocoder was never asked, and the box does not suggest its own label.
     await pauseTyping(page);
     expect(await searchedQueries(page)).toEqual([]);
+    expect(queries).toEqual(["cape"]);
     await expect(input).toHaveAttribute("aria-expanded", "false");
   });
 
   test("picks a suggestion with a tap", async ({ page, mapPage }) => {
-    await scriptSuggestions(page);
+    const queries = await scriptSuggestions(page);
     await scriptSearch(page);
     await page.clock.install();
     await mapPage.goto();
@@ -158,7 +159,9 @@ test.describe("search suggestions", () => {
     await expect
       .poll(async () => (await mapPage.hashView())?.lat)
       .toBeCloseTo(SUGGESTED_PLACES[0]?.lat ?? 0, 2);
+    await pauseTyping(page);
     expect(await searchedQueries(page)).toEqual([]);
+    expect(queries).toEqual(["cape"]);
   });
 
   test("Enter with no suggestion highlighted still searches through the geocoder", async ({

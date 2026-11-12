@@ -23,7 +23,7 @@ The security surface is small. [`docs/assurance-case.md`](docs/assurance-case.md
 ## What you can expect
 
 - No accounts and no stored personal data on a server. Settings stay in your browser's local storage, and the map view stays in the address fragment, which is not sent to the server.
-- Searches, routes and data layers go from your browser to their public providers, only when you ask for them, with no cookies and no referrer. The providers see your IP address.
+- Searches, routes and data layers go from your browser to their public providers, only when you ask for them (the search box also asks for suggestions as you type), with no cookies and no referrer. The providers see your IP address.
 - Production pages are served with a Content Security Policy that allows no `unsafe-inline` source, and with headers that stop framing and downgrades.
 - You cannot expect control over the third-party providers, a service level, or fixes for old versions.
 

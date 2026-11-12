@@ -2,7 +2,6 @@ import {
   announceNoSuggestions,
   announceSuggestions,
   announceSuggestionsUnavailable,
-  coordinateSearchResult,
   PortAbortError,
   SearchError,
   type SearchResult,
@@ -27,14 +26,22 @@ export const SUGGEST_COOLDOWN_MS = 60_000;
 const NONE: readonly SearchResult[] = [];
 
 /**
+ * A run of letters that makes text a place name. Text with none (digits,
+ * signs, a degree mark and at most a compass letter or two) may be a
+ * coordinate pair still being typed, which is never sent to a service.
+ */
+const WORD = /\p{L}{3,}/u;
+
+/**
  * Suggests places for text as it is typed, over the services' optional
  * `SuggestionProvider`. Returns the suggestions for the latest text that has
  * settled, or none.
  *
  * A request starts only when the trimmed text has been unchanged for
  * {@link SUGGEST_DEBOUNCE_MS}, is at least {@link MIN_SUGGEST_LENGTH}
- * characters and is not a coordinate pair (which the search itself answers
- * without a service). Each change of text aborts the request before it, so an
+ * characters and has a word in it, so a coordinate pair typed digit by digit
+ * is never sent (the search itself answers a whole pair without a service).
+ * Each change of text aborts the request before it, so an
  * answer for older text never arrives after a newer one. Nothing is asked
  * while `enabled` is false, which a caller uses after the person has picked
  * a suggestion so the box showing its label does not suggest again.
@@ -56,18 +63,18 @@ export function useSuggestions(
   const provider = useSuggestionProvider();
   const announce = useAnnounce();
   const announceRef = useLatestRef(announce);
+  const text = query.trim();
   const [suggestions, setSuggestions] = useState<readonly SearchResult[]>(NONE);
   const failures = useRef(0);
   const pausedUntil = useRef(0);
   const toldUnavailable = useRef(false);
 
   useEffect(() => {
-    const text = query.trim();
     if (
       provider === undefined ||
       !enabled ||
       text.length < MIN_SUGGEST_LENGTH ||
-      coordinateSearchResult(text) !== null
+      !WORD.test(text)
     ) {
       setSuggestions(NONE);
       return;
@@ -126,7 +133,7 @@ export function useSuggestions(
       clearTimeout(timer);
       own.abort();
     };
-  }, [provider, enabled, query, announceRef]);
+  }, [provider, enabled, text, announceRef]);
 
   return suggestions;
 }

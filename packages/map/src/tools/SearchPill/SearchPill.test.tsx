@@ -754,6 +754,34 @@ describe("SearchPill", () => {
       expect(input().getAttribute("aria-expanded")).toBe("false");
     });
 
+    it("asks nothing when the input loses focus before the text settles", async () => {
+      const { services } = withSuggestions(CAPE_TOWN);
+      fireEvent.focus(input());
+      fireEvent.change(input(), { target: { value: "cap" } });
+      fireEvent.blur(input(), { relatedTarget: document.body });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SUGGEST_DEBOUNCE_MS * 2);
+      });
+      expect(services.fakes.suggestions.suggestCalls).toHaveLength(0);
+    });
+
+    it("keeps the geocoder's results when Enter is pressed while a suggestion request is still pending", async () => {
+      const { services } = withSuggestions(CAPE_TOWN);
+      services.fakes.search.setDefaultResults([CAPRICORN]);
+      const held = services.fakes.suggestions.holdNext();
+      await type("cap");
+      await act(async () => {
+        press("Enter");
+      });
+      await act(async () => {
+        held.resolve([CAPE_TOWN]);
+      });
+      expect(listbox().getAttribute("aria-label")).toBe("Search results");
+      expect(options().map((option) => option.textContent)).toEqual([
+        "Capricorn",
+      ]);
+    });
+
     it("suggests again when the picked label is edited", async () => {
       const { services } = withSuggestions(CAPE_TOWN);
       await type("cap");

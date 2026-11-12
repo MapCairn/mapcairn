@@ -1,4 +1,8 @@
-import { createFakeServices, type SearchResult } from "@mapcairn/core";
+import {
+  createFakeServices,
+  PortAbortError,
+  type SearchResult,
+} from "@mapcairn/core";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -118,6 +122,93 @@ describe("useSuggestions", () => {
     await advance(SUGGEST_DEBOUNCE_MS * 2);
     expect(fake.suggestCalls).toHaveLength(0);
     expect(result.current).toEqual([]);
+  });
+
+  it.each([
+    "-26.2041",
+    "-26.2041,",
+    "-26.2041, 28",
+    "-26.2041, 28.",
+    "26°12'14.8\"S",
+    "26°12'14.8\"S, 28°2'50.3\"E",
+    "123",
+  ])(
+    "asks nothing for %s, which may be a coordinate pair being typed",
+    async (query) => {
+      const { fake } = setup({ query });
+      await advance(SUGGEST_DEBOUNCE_MS * 2);
+      expect(fake.suggestCalls).toHaveLength(0);
+    },
+  );
+
+  it.each(["12 Main St", "N1 Highway", "Café"])(
+    "asks about %s, which has a word in it",
+    async (query) => {
+      const { fake } = setup({ query });
+      await advance(SUGGEST_DEBOUNCE_MS);
+      expect(fake.suggestCalls).toHaveLength(1);
+    },
+  );
+
+  it("does not ask again, or abort the request in flight, when only the spaces around the text change", async () => {
+    const { rerender, fake } = setup({ query: "cape" });
+    await advance(SUGGEST_DEBOUNCE_MS);
+    rerender({ query: "cape " });
+    await advance(SUGGEST_DEBOUNCE_MS * 2);
+    expect(fake.suggestCalls).toHaveLength(1);
+  });
+
+  it("drops an answer that arrives after the text changed, even from a service that ignores its signal", async () => {
+    const answers: Array<(results: readonly SearchResult[]) => void> = [];
+    const services = createFakeServices({
+      suggestions: {
+        suggest: () =>
+          new Promise<readonly SearchResult[]>((resolve) => {
+            answers.push(resolve);
+          }),
+      },
+    });
+    const { result, rerender } = setup({ query: "cape" }, services);
+    await advance(SUGGEST_DEBOUNCE_MS);
+    rerender({ query: "capri" });
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(answers).toHaveLength(2);
+    await act(async () => {
+      answers[1]?.([CAPRICORN]);
+      answers[0]?.([CAPE_TOWN]);
+    });
+    expect(result.current).toEqual([CAPRICORN]);
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith("1 suggestion", {
+      priority: "polite",
+    });
+  });
+
+  it("clears the suggestions it showed when a later request fails", async () => {
+    const services = createFakeServices();
+    services.fakes.suggestions.setDefaultResults([CAPE_TOWN]);
+    const { result, rerender, fake } = setup({ query: "cape" }, services);
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(result.current).toEqual([CAPE_TOWN]);
+    fake.failWith("failed");
+    rerender({ query: "cape t" });
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(result.current).toEqual([]);
+  });
+
+  it("does not count an abort it did not cause as a failure", async () => {
+    const services = createFakeServices({
+      suggestions: {
+        suggest: () => Promise.reject(new PortAbortError()),
+      },
+    });
+    const { rerender } = setup({ query: "cape" }, services);
+    for (const query of ["capet", "capeto", "capetow", "capetown"]) {
+      await advance(SUGGEST_DEBOUNCE_MS);
+      rerender({ query });
+    }
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(announce).not.toHaveBeenCalled();
   });
 
   it("asks nothing while it is disabled, and clears what it had", async () => {

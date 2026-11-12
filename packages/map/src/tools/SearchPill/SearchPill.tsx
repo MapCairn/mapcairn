@@ -109,14 +109,15 @@ export function SearchPill({
   const search = useSearch({ getBias });
   const { query, state } = search;
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const suggestions = useSuggestions(
     query,
-    state.status === "idle" && query !== pickedLabel,
+    focused && state.status === "idle" && query !== pickedLabel,
   );
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const registerFocus = useFocusTarget("search");
-  const [listOpen, setListOpen] = useState(false);
   const results = listedOptions(state, suggestions);
   const [active, setActive] = useState<{
     readonly results: readonly SearchResult[];
@@ -153,6 +154,7 @@ export function SearchPill({
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     search.setQuery(event.target.value);
     setPickedLabel(null);
+    setFocused(true);
     setListOpen(true);
     setActive(null);
   };
@@ -223,12 +225,14 @@ export function SearchPill({
   };
 
   const handleFocus = (event: FocusEvent<HTMLInputElement>) => {
+    setFocused(true);
     setListOpen(true);
     onFocus?.(event);
   };
 
   const handleRootBlur = (event: FocusEvent<HTMLDivElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget)) {
+      setFocused(false);
       setListOpen(false);
       setActive(null);
     }
