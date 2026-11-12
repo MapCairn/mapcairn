@@ -94,9 +94,14 @@ export const tickEnd = style({
   transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
 });
 
-/** Cursor coordinates: muted text on the same surface as the scale. */
+/**
+ * Cursor coordinates and zoom level: muted text on the same surface as the
+ * scale. The zoom follows the coordinates, one small spacing step apart.
+ */
 export const coordinates = style({
   ...onSurface,
+  display: "flex",
+  gap: tokens.space.xs,
   color: tokens.color.textMuted,
   margin: 0,
   fontFamily: tokens.type.family,

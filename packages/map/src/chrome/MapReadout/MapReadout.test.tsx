@@ -260,13 +260,41 @@ describe("CursorCoordinates", () => {
   it("shows the formatted position", () => {
     const latlng = { lat: -26.2041, lng: 28.0473 };
     renderChrome(<CursorCoordinates latlng={latlng} />);
-    const readout = screen.getByText(formatLatLng(latlng));
+    const readout = screen.getByText(formatLatLng(latlng)).closest("p");
     expect(readout).toHaveAttribute("data-chrome", "cursor-coordinates");
   });
 
-  it("renders nothing without a position", () => {
+  it("renders nothing without a position or a zoom", () => {
     const { container } = renderChrome(<CursorCoordinates latlng={null} />);
     expect(container.querySelector("[data-chrome]")).toBeNull();
+  });
+
+  it("shows the zoom beside the position, with one decimal at most", () => {
+    const latlng = { lat: -26.2041, lng: 28.0473 };
+    renderChrome(<CursorCoordinates latlng={latlng} zoom={12.46} />);
+    const readout = screen.getByText(formatLatLng(latlng)).closest("p");
+    expect(readout).toContainElement(screen.getByText("12.5"));
+  });
+
+  it("shows the zoom alone while there is no position", () => {
+    renderChrome(<CursorCoordinates latlng={null} zoom={12} />);
+    expect(screen.getByText("12").closest("p")).toHaveAttribute(
+      "data-chrome",
+      "cursor-coordinates",
+    );
+  });
+
+  it("shows a z for sighted users and the word Zoom to a screen reader", () => {
+    renderChrome(<CursorCoordinates latlng={null} zoom={12.4} />);
+    expect(screen.getByText("z")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Zoom")).not.toHaveAttribute("aria-hidden");
+  });
+
+  it("is not a live region, so a zoom change is not announced", () => {
+    renderChrome(<CursorCoordinates latlng={null} zoom={12.4} />);
+    expect(
+      screen.getByText("12.4").closest("[aria-live], [role=status]"),
+    ).toBeNull();
   });
 });
 
@@ -289,5 +317,52 @@ describe("MapReadout", () => {
     const region = screen.getByRole("region", { name: "Map scale" });
     expect(region.tagName).toBe("SECTION");
     expect(region).toBe(screen.getByTestId("map-readout"));
+  });
+
+  it("shows the map's zoom level", () => {
+    renderChrome(<MapReadout units="metric" latlng={null} />, {
+      map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 12.4 } }),
+    });
+    const readout = screen.getByTestId("map-readout");
+    expect(readout).toContainElement(screen.getByText("12.4"));
+    expect(screen.getByText("Zoom")).toBeInTheDocument();
+  });
+
+  it("follows zoom changes", () => {
+    const { rerenderChrome } = renderChrome(
+      <MapReadout units="metric" latlng={null} />,
+      { map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 12.4 } }) },
+    );
+    rerenderChrome(<MapReadout units="metric" latlng={null} />, {
+      map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 13 } }),
+    });
+    expect(screen.queryByText("12.4")).toBeNull();
+    expect(screen.getByText("13")).toBeInTheDocument();
+  });
+
+  it("shows the zoom beside the coordinates", () => {
+    const latlng = { lat: 1, lng: 2 };
+    renderChrome(<MapReadout units="metric" latlng={latlng} />, {
+      map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 7 } }),
+    });
+    const coordinates = screen.getByText(formatLatLng(latlng)).closest("p");
+    expect(coordinates).toContainElement(screen.getByText("7"));
+  });
+
+  it("leaves the zoom out when the host turns it off", () => {
+    const latlng = { lat: 1, lng: 2 };
+    renderChrome(
+      <MapReadout units="metric" latlng={latlng} showZoom={false} />,
+      { map: testMapContext({ view: { ...DEFAULT_FAKE_VIEW, zoom: 7 } }) },
+    );
+    expect(screen.queryByText("Zoom")).toBeNull();
+    expect(screen.getByText(formatLatLng(latlng))).toBeInTheDocument();
+  });
+
+  it("shows no coordinates element with no position and no zoom", () => {
+    renderChrome(<MapReadout units="metric" latlng={null} showZoom={false} />, {
+      map: testMapContext({ view: DEFAULT_FAKE_VIEW }),
+    });
+    expect(screen.getByTestId("map-readout").querySelector("p")).toBeNull();
   });
 });

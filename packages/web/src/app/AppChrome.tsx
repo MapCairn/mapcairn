@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { creditsLine, pressEscape } from "@mapcairn/core";
+import {
+  creditsLine,
+  type LatLng,
+  pressEscape,
+  type UnitSystem,
+} from "@mapcairn/core";
 import {
   Attribution,
   DirectionsPanel,
@@ -15,9 +20,9 @@ import {
   SearchPill,
   Sheet,
   SheetContent,
+  useChromeLayout,
   useFocusReturn,
   useMap,
-  usePreferences,
   useSettings,
 } from "@mapcairn/map";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
@@ -70,9 +75,30 @@ interface ChromeContentProps extends AppChromeProps {
   readonly map: MapContextValue;
 }
 
+/** Props for {@link AppReadout}. */
+interface AppReadoutProps {
+  readonly units: UnitSystem;
+  readonly cursor: LatLng | null;
+}
+
+/**
+ * The bottom-start readout. The cursor coordinates need a fine pointer; the
+ * zoom level also needs the side panel layout, so a narrow window or a phone
+ * keeps the readout as short as the scale bar, clear of the credits popover.
+ */
+function AppReadout({ units, cursor }: AppReadoutProps) {
+  const { finePointer, layout } = useChromeLayout();
+  return (
+    <MapReadout
+      units={units}
+      latlng={finePointer ? cursor : null}
+      showZoom={finePointer && layout === "panel"}
+    />
+  );
+}
+
 function ChromeContent({ app, map, background }: ChromeContentProps) {
   const { settings } = useSettings();
-  const { finePointer } = usePreferences();
   const restoreFocus = useFocusReturn();
   const requestZoomAnnouncement = useZoomAnnouncement(map);
   const pinHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -195,12 +221,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           onZoomOut={() => zoomBy("out")}
         />
       }
-      bottomStart={
-        <MapReadout
-          units={settings.units}
-          latlng={finePointer ? app.cursor : null}
-        />
-      }
+      bottomStart={<AppReadout units={settings.units} cursor={app.cursor} />}
       bottomEnd={
         <Attribution
           basemap={app.basemap}

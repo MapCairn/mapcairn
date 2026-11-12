@@ -114,6 +114,7 @@ export class MapPage {
   readonly creditsRegion: Locator;
 
   readonly scaleBar: Locator;
+  readonly zoomLevel: Locator;
   readonly locateError: Locator;
   readonly accuracyCircle: Locator;
   readonly politeAnnouncer: Locator;
@@ -232,6 +233,7 @@ export class MapPage {
     this.creditsRegion = page.getByRole("region", { name: "Map credits" });
 
     this.scaleBar = page.locator('[data-chrome="scale-bar"]');
+    this.zoomLevel = page.locator('[data-chrome="zoom-level"]');
     this.locateError = page.getByTestId("locate-error");
     this.accuracyCircle = page.getByTestId("accuracy-circle");
     this.politeAnnouncer = page.getByTestId("live-region-polite");
