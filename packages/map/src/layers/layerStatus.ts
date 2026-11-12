@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { LayerError } from "@mapcairn/core";
 
 /**
  * Where a layer is: off, on (tiles), loading, loaded, empty, failed, or (a
@@ -23,3 +24,14 @@ export type LayerStatus =
   | { readonly kind: "zoom-in" }
   | { readonly kind: "empty"; readonly updatedAt: number }
   | { readonly kind: "error"; readonly error: "network" | "invalid" };
+
+/**
+ * The kind of a failed load or detail request, with anything that is not a
+ * `LayerError` counted as `invalid`. `aborted` and `empty` are not failures
+ * the layer shows as an error.
+ */
+export function errorKind(
+  error: unknown,
+): "network" | "invalid" | "aborted" | "empty" {
+  return error instanceof LayerError ? error.kind : "invalid";
+}

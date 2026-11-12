@@ -9,7 +9,6 @@ import {
 } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import {
-  errorKind,
   loadOutcome,
   outcomeOfFailure,
   outcomeOfFeatures,
@@ -19,14 +18,6 @@ import type { WantedLoad } from "./loadRequests";
 const NOW = 1_000;
 const points = (count: number) =>
   Array.from({ length: count }, (_, index) => samplePoint(`p${index}`));
-
-describe("errorKind", () => {
-  it("is the kind of a layer error, and invalid for anything else", () => {
-    expect(errorKind(new LayerError("network"))).toBe("network");
-    expect(errorKind(new Error("boom"))).toBe("invalid");
-    expect(errorKind("boom")).toBe("invalid");
-  });
-});
 
 describe("outcomeOfFeatures", () => {
   it("shows every feature of a feed, stamped, and says how many", () => {

@@ -6,12 +6,11 @@ import {
   announceLayerError,
   announceLayerLoaded,
   isQueryLayer,
-  LayerError,
   type LayerFeature,
   type LayerSource,
 } from "@mapcairn/core";
 import type { AnnouncePriority } from "../ui/LiveRegion";
-import type { LayerStatus } from "./layerStatus";
+import { errorKind, type LayerStatus } from "./layerStatus";
 import type { LoadableLayer, WantedLoad } from "./loadRequests";
 
 /** What a layer shows once a load has settled. */
@@ -34,13 +33,6 @@ export interface Spoken {
 export interface LoadOutcome {
   readonly result: LoadResult;
   readonly spoken: Spoken;
-}
-
-/** The kind of a failure, with anything that is not a `LayerError` counted as `invalid`. */
-export function errorKind(
-  error: unknown,
-): "network" | "invalid" | "aborted" | "empty" {
-  return error instanceof LayerError ? error.kind : "invalid";
 }
 
 /** The features a layer draws: a query layer draws at most `maxFeatures` of what came back. */

@@ -11,6 +11,7 @@ import {
 } from "@mapcairn/core";
 import { act, render, waitFor } from "@testing-library/react";
 import {
+  type ReactNode,
   StrictMode,
   Suspense,
   startTransition,
@@ -35,7 +36,10 @@ const NEVER = new Promise<never>(() => {});
  * render returned. `abandonTransition` makes a render that React throws
  * away: a transition whose render suspends and is never committed.
  */
-function mount(definitions: readonly LayerDefinition[], strict = false) {
+function mountIn(
+  definitions: readonly LayerDefinition[],
+  wrap: (tree: ReactNode) => ReactNode,
+) {
   const services: FakeServices = createFakeServices({
     layers: new StaticLayerRegistry(definitions),
   });
@@ -67,7 +71,7 @@ function mount(definitions: readonly LayerDefinition[], strict = false) {
       </LiveRegionProvider>
     </ServicesProvider>
   );
-  render(strict ? <StrictMode>{tree}</StrictMode> : tree);
+  render(wrap(tree));
 
   const hook = () => {
     if (!committed.current) {
@@ -96,9 +100,16 @@ function mount(definitions: readonly LayerDefinition[], strict = false) {
   };
 }
 
+const mount = (definitions: readonly LayerDefinition[]) =>
+  mountIn(definitions, (tree) => tree);
+
+/** Mounts the hook under StrictMode, which renders every component twice. */
+const mountStrict = (definitions: readonly LayerDefinition[]) =>
+  mountIn(definitions, (tree) => <StrictMode>{tree}</StrictMode>);
+
 describe("useDataLayers when a render is not committed", () => {
   it("asks for the same window as before under StrictMode, which renders twice", async () => {
-    const { hook, source } = mount([SAMPLE_QUERY_LAYER], true);
+    const { hook, source } = mountStrict([SAMPLE_QUERY_LAYER]);
     source.setFeatures("sample-query", [samplePoint("a")]);
     act(() => hook().setEnabled("sample-query", true));
     act(() => hook().setView(AREA, 12));

@@ -6,6 +6,7 @@ import {
   type LayerDefinition,
   LayerError,
   type LayerFeature,
+  queryWindow,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_LAYERS,
@@ -117,6 +118,47 @@ describe("useDataLayers loading", () => {
       await waitFor(() => expect(source.requests).toHaveLength(1));
       expect(source.requests[0]?.area).toBeDefined();
       await act(async () => {});
+    });
+
+    describe("the window a query layer keeps", () => {
+      /** A small pan, which stays inside the window AREA asked for. */
+      const PANNED = {
+        ...AREA,
+        west: AREA.west + 0.02,
+        east: AREA.east + 0.02,
+      };
+      const loadedAt = async () => {
+        const loading = setup({}, [SAMPLE_QUERY_LAYER]);
+        loading.source.setFeatures("sample-query", items(1));
+        act(() => loading.result.current.setEnabled("sample-query", true));
+        act(() => loading.result.current.setView(AREA, 12));
+        await waitFor(() =>
+          expect(layer(loading.result, "sample-query").status.kind).toBe(
+            "ready",
+          ),
+        );
+        act(() => loading.result.current.setView(PANNED, 12));
+        expect(loading.source.requests).toHaveLength(1);
+        return loading;
+      };
+
+      it("takes a new window for the view when it comes back from too far out", async () => {
+        const { result, source } = await loadedAt();
+        act(() => result.current.setView(PANNED, 3));
+        act(() => result.current.setView(PANNED, 12));
+        await waitFor(() => expect(source.requests).toHaveLength(2));
+        expect(source.requests[1]?.area).toEqual(queryWindow(PANNED));
+        expect(source.requests[1]?.area).not.toEqual(source.requests[0]?.area);
+      });
+
+      it("takes a new window for the view when it is turned off and on again", async () => {
+        const { result, source } = await loadedAt();
+        act(() => result.current.setEnabled("sample-query", false));
+        act(() => result.current.setEnabled("sample-query", true));
+        await waitFor(() => expect(source.requests).toHaveLength(2));
+        expect(source.requests[1]?.area).toEqual(queryWindow(PANNED));
+        expect(source.requests[1]?.area).not.toEqual(source.requests[0]?.area);
+      });
     });
 
     it("does not load a failed layer again for an unrelated change", async () => {

@@ -32,8 +32,8 @@ import {
 } from "react";
 import { useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
-import type { LayerStatus } from "./layerStatus";
-import { errorKind, type LoadResult, loadOutcome } from "./loadOutcome";
+import { errorKind, type LayerStatus } from "./layerStatus";
+import { type LoadResult, loadOutcome } from "./loadOutcome";
 import { type AnnouncedStates, reportLoad, reportZoomIn } from "./loadReport";
 import {
   isTooFarOut,
@@ -371,8 +371,9 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   });
   const tooFarSignature = tooFar.join(" ");
 
-  // After every commit, not on a signature: turning a layer off and on within
-  // one batch leaves the signature as it was but has forgotten its window.
+  // Remembers the windows asked for, and forgets those of layers that no
+  // longer ask (turned off, or too far out). It runs after every commit: that
+  // is cheap, and it needs no dependency list to keep in step with `wanted`.
   useEffect(() => {
     rememberWindows(queryWindows.current, wanted);
   });
@@ -453,7 +454,6 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         detailRequest.current?.abort();
       }
       announcedStates.current.delete(id);
-      queryWindows.current.delete(id);
       setState((previous) => {
         const results = { ...previous.results };
         delete results[id];
