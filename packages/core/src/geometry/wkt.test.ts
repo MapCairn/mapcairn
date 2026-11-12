@@ -347,7 +347,12 @@ describe("parseWkt", () => {
     "POINT (Infinity 0)",
     "POINT EMPTY EMPTY",
     "POINT (1 2) ;",
-    "SRID=4326;POINT (1 2)",
+    "SRID=;POINT (1 2)",
+    "SRID=abc;POINT (1 2)",
+    "SRID 4326;POINT (1 2)",
+    "SRID=4326 POINT (1 2)",
+    "SRID=4326;",
+    "SRID=4326;POINT (1 2) SRID=4326;",
     "LINESTRING (1 2)",
     "LINESTRING (1 2,, 3 4)",
     "LINESTRING (1 2, 3 4,)",
@@ -537,6 +542,53 @@ describe("the axis order", () => {
   });
 });
 
+describe("EWKT", () => {
+  /** The kind of error `text` raises, or `undefined` when it parses. */
+  function kindOf(text: string): string | undefined {
+    try {
+      parseWkt(text);
+    } catch (error) {
+      return (error as GeometryError).kind;
+    }
+    return undefined;
+  }
+
+  it("reads an SRID prefix of 4326, whatever its case or spacing", () => {
+    const point = { type: "Point", coordinates: [2, 48] };
+    expect(parseWkt("SRID=4326;POINT (2 48)")).toEqual(point);
+    expect(parseWkt("srid = 4326 ; point(2 48)")).toEqual(point);
+  });
+
+  it("applies the axis order after the prefix", () => {
+    expect(
+      parseWkt("SRID=4326;POINT (48 2)", { axisOrder: "lat-lng" }),
+    ).toEqual({ type: "Point", coordinates: [2, 48] });
+  });
+
+  it("reads a prefix before each geometry of a sequence", () => {
+    expect(
+      readWktSequence("SRID=4326;POINT (1 2)\nSRID=4326;LINESTRING (0 0, 1 1)"),
+    ).toEqual([
+      { type: "Point", coordinates: [1, 2] },
+      {
+        type: "LineString",
+        coordinates: [
+          [0, 0],
+          [1, 1],
+        ],
+      },
+    ]);
+  });
+
+  it("refuses any other SRID with a plain message", () => {
+    expect(() => parseWkt("SRID=3857;POINT (261845.8 6250056)")).toThrow(
+      "Only SRID 4326 (WGS 84) is supported, not SRID 3857.",
+    );
+    expect(() => parseWkt("SRID=3857;POINT (1 2)")).toThrow(GeometryError);
+    expect(kindOf("SRID=3857;POINT (1 2)")).toBe("unsupported");
+  });
+});
+
 describe("startsLikeWkt", () => {
   it("is true when the first word is a WKT type, with any case, tag or space before it", () => {
     for (const text of [
@@ -548,6 +600,10 @@ describe("startsLikeWkt", () => {
       "GEOMETRYCOLLECTION",
       "CIRCULARSTRING (0 0, 1 1, 2 0)",
       "POINT",
+      "SRID=4326;POINT (1 2)",
+      "SRID=3857;POINT (1 2)",
+      "srid = 4326 ; point (1 2)",
+      "SRID=;POINT (1 2)",
     ]) {
       expect(startsLikeWkt(text)).toBe(true);
     }
@@ -558,12 +614,13 @@ describe("startsLikeWkt", () => {
       "",
       " ",
       "hello",
-      "SRID=4326;POINT (1 2)",
       "(1 2)",
       "{}",
       "1 2",
       "POINTS (1 2)",
       "name,wkt",
+      "SRID",
+      "srid,4326;POINT (1 2)",
     ]) {
       expect(startsLikeWkt(text)).toBe(false);
     }

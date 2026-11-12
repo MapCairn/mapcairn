@@ -30,7 +30,10 @@ export interface ParseWktOptions {
 type Token =
   | { readonly kind: "word"; readonly text: string; readonly at: number }
   | { readonly kind: "number"; readonly text: string; readonly at: number }
-  | { readonly kind: "(" | ")" | "," | "end"; readonly at: number };
+  | {
+      readonly kind: "(" | ")" | "," | "=" | ";" | "end";
+      readonly at: number;
+    };
 
 const KEYWORDS = new Set([
   "POINT",
@@ -81,14 +84,23 @@ function splitSuffix(word: string): [string, string] {
 /** The first run of letters in a text, after any white space. */
 const FIRST_WORD = /^\s*([A-Za-z]+)/;
 
+/** A leading EWKT prefix, `SRID=` in any case with any spacing before the `=`. */
+const SRID_PREFIX = /^\s*SRID\s*=/i;
+
+/** The only SRID the reader accepts: WGS 84, which WKT without a prefix is in. */
+const SUPPORTED_SRID = 4326;
+
 /**
  * Whether the text starts with the name of a WKT geometry type (in any case,
  * with or without a `Z`, `M` or `ZM` tag), including the curved types
- * {@link parseWkt} does not read. It says what the text is meant to be, not
- * whether it can be read: use it to tell a damaged WKT file from a file that
- * is something else.
+ * {@link parseWkt} does not read, or with an EWKT `SRID=` prefix. It says what
+ * the text is meant to be, not whether it can be read: use it to tell a
+ * damaged WKT file from a file that is something else.
  */
 export function startsLikeWkt(text: string): boolean {
+  if (SRID_PREFIX.test(text)) {
+    return true;
+  }
   const word = FIRST_WORD.exec(text)?.[1];
   if (word === undefined) {
     return false;
@@ -123,6 +135,26 @@ function isNumberCharacter(code: number): boolean {
     code === 69 || // E
     code === 101 // e
   );
+}
+
+/** The token kind of a punctuation character, or `undefined` when it is not one. */
+function punctuationKind(
+  code: number,
+): "(" | ")" | "," | "=" | ";" | undefined {
+  switch (code) {
+    case 40:
+      return "(";
+    case 41:
+      return ")";
+    case 44:
+      return ",";
+    case 59:
+      return ";";
+    case 61:
+      return "=";
+    default:
+      return undefined;
+  }
 }
 
 /**
@@ -161,9 +193,10 @@ class Tokens {
       return { kind: "end", at };
     }
     const code = text.charCodeAt(at);
-    if (code === 40 || code === 41 || code === 44) {
+    const punctuation = punctuationKind(code);
+    if (punctuation !== undefined) {
       this.#index += 1;
-      return { kind: code === 40 ? "(" : code === 41 ? ")" : ",", at };
+      return { kind: punctuation, at };
     }
     if (isLetter(code)) {
       let end = at + 1;
@@ -263,7 +296,7 @@ class Reader {
     return geometries;
   }
 
-  #expect(kind: "(" | ")" | ","): void {
+  #expect(kind: "(" | ")" | "," | "=" | ";"): void {
     const token = this.#tokens.next();
     if (token.kind !== kind) {
       throw refuse(`Expected "${kind}"`, token.at);
@@ -324,7 +357,30 @@ class Reader {
     return false;
   }
 
+  /**
+   * Reads an optional EWKT `SRID=4326;` prefix. Any other SRID is refused as
+   * `unsupported`, because the reader keeps coordinates as written and WGS 84
+   * is the one system the map draws.
+   */
+  #srid(): void {
+    const first = this.#tokens.peek();
+    if (first.kind !== "word" || first.text.toUpperCase() !== "SRID") {
+      return;
+    }
+    this.#tokens.next();
+    this.#expect("=");
+    const srid = this.#number();
+    if (srid !== SUPPORTED_SRID) {
+      throw new GeometryError(
+        "unsupported",
+        `Only SRID ${SUPPORTED_SRID} (WGS 84) is supported, not SRID ${srid}.`,
+      );
+    }
+    this.#expect(";");
+  }
+
   #geometry(depth: number): Geometry {
+    this.#srid();
     const word = this.#tokens.next();
     if (word.kind !== "word") {
       throw refuse("Expected a geometry type", word.at);
@@ -451,8 +507,9 @@ class Reader {
  * It reads `POINT`, `LINESTRING`, `POLYGON` (with holes), their `MULTI`
  * forms and `GEOMETRYCOLLECTION`, in any case and with any spacing, the
  * `EMPTY` form of each, and a height as a third number, with or without the
- * `Z` tag. A `MULTIPOINT` may bracket its points or not. It does not read a
- * measure (`M`, `ZM`), an `SRID=` prefix or curved shapes.
+ * `Z` tag. A `MULTIPOINT` may bracket its points or not. It reads an EWKT
+ * `SRID=4326;` prefix and refuses any other SRID as `unsupported`. It does
+ * not read a measure (`M`, `ZM`) or curved shapes.
  *
  * The parser is a hand-written tokenizer that never backtracks, so its time
  * grows with the length of the text however hostile the text is, and a
