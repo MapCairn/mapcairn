@@ -18,11 +18,20 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../services";
 import { LiveRegionProvider } from "../ui/LiveRegion";
+import { CLEAR_MS, THROTTLE_MS } from "../ui/LiveRegion/announcer";
 import { type UseDataLayersOptions, useDataLayers } from "./useDataLayers";
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 const polite = () => screen.getByTestId("live-region-polite").textContent;
 const assertive = () => screen.getByTestId("live-region-assertive").textContent;
+/** Lets the announcer's throttle and clear timers run out, so a message that should not come has had its chance. */
+const settleAnnouncer = () =>
+  act(
+    () =>
+      new Promise<void>((done) =>
+        setTimeout(done, THROTTLE_MS + CLEAR_MS + 50),
+      ),
+  );
 
 function setup(
   options: UseDataLayersOptions = {},
@@ -884,6 +893,7 @@ describe("useDataLayers", () => {
         result.current.reportTilesUnavailable("sample-points", "any");
         result.current.reportTilesUnavailable("nothing", "any");
       });
+      await settleAnnouncer();
       expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
       expect(layer(result, "sample-rain").status).toEqual({ kind: "off" });
       expect(layer(result, "sample-points").status.kind).not.toBe(
@@ -907,9 +917,9 @@ describe("useDataLayers", () => {
       act(() => result.current.setEnabled("sample-points", true));
       await waitFor(() => expect(polite()).not.toContain("No imagery"));
       report();
+      await settleAnnouncer();
       expect(polite()).not.toContain("No imagery");
     });
-
     it("goes when a control changes the tiles, and stays when only the opacity changes", async () => {
       const { result } = withTime();
       act(() => result.current.setEnabled("sample-imagery", true));

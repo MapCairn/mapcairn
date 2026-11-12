@@ -253,6 +253,7 @@ test.describe("half-hourly rainfall with no imagery for the time shown", () => {
     await expect
       .poll(() => requestedTimes(requests.urls))
       .toContain("2026-11-11T12:30:00Z");
+    await mapPage.waitForMap();
     await expect(status).toHaveCount(0);
 
     await time.selectOption({ label: "13:00" });
