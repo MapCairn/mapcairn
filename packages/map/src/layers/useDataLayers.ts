@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  announceCatalogueChange,
   announceDetailError,
   announceDetailShown,
   announceFeaturesFound,
@@ -10,6 +11,7 @@ import {
   announceTilesRecovered,
   announceTilesUnavailable,
   type Bounds,
+  type CatalogueState,
   type ControlValues,
   describeChosenTime,
   type FieldValue,
@@ -37,6 +39,7 @@ import {
 } from "react";
 import { useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
+import { type Link, reconcile } from "./catalogueReconcile";
 import { errorKind, type LayerStatus } from "./layerStatus";
 import { type LoadResult, loadOutcome } from "./loadOutcome";
 import { type AnnouncedStates, reportLoad, reportZoomIn } from "./loadReport";
@@ -121,7 +124,11 @@ export interface DataLayers {
   readonly focusPending: boolean;
   /** Marks the latest focus request as acted on. */
   readonly consumeFocus: () => void;
-  /** The layers part of the permalink. */
+  /**
+   * The layers part of the permalink: the layers that are on, and the
+   * link's layers still waiting for a catalogue that is loading or has
+   * failed, so writing the address does not erase them.
+   */
   readonly urlValue: LayersUrlState;
   /** The credits of the layers that are on, for the map credits. */
   readonly credits: readonly LayerAttribution[];
@@ -208,7 +215,14 @@ export interface DataLayers {
 
 /** Options for {@link useDataLayers}. */
 export interface UseDataLayersOptions {
-  /** Layers and control values from a permalink. Unknown ids and values are dropped. */
+  /**
+   * Layers and control values from a permalink. Control values are resolved
+   * against each layer's definition, so an invalid one becomes the default.
+   * A layer the catalogue has not got is dropped. A catalogue that is still
+   * loading has no layers yet, so the link's layers wait for its first list
+   * and stay in {@link DataLayers.urlValue} meanwhile; one that is not there
+   * when the list arrives is dropped then, and said once, for good.
+   */
   readonly initial?: LayersUrlState;
   /** The clock. Defaults to `Date.now`. */
   readonly now?: () => number;
@@ -216,7 +230,16 @@ export interface UseDataLayersOptions {
 
 interface State {
   readonly enabled: readonly string[];
+  /** Every listed layer's control values. */
   readonly controls: Readonly<Record<string, ControlValues>>;
+  /** The link's layers that no list has answered for yet. */
+  readonly link: Link;
+  /** The list the choices were last reconciled with. */
+  readonly known: readonly LayerDefinition[];
+  /** The catalogue state last reconciled, so each change is applied once. */
+  readonly reconciled: CatalogueState | null;
+  /** What the last change to the catalogue asks the hook to say and forget once it is committed. */
+  readonly notice: CatalogueNotice | null;
   readonly sorts: Readonly<Record<string, string>>;
   readonly results: Readonly<Record<string, LoadResult>>;
   readonly retries: Readonly<Record<string, number>>;
@@ -250,6 +273,29 @@ interface UndoOffer {
   readonly group: string | null;
 }
 
+/** A change to the catalogue that is to be said aloud, and the layers that went with it. */
+interface CatalogueNotice {
+  readonly message: string;
+  /** The ids of the enabled layers that went. */
+  readonly gone: readonly string[];
+}
+
+/**
+ * The offer without the layers a refresh removed from the catalogue, so a
+ * layer that is listed again later is not one Undo would turn on. Null when
+ * nothing is left.
+ */
+function withoutRemoved(
+  offer: UndoOffer | null,
+  removed: readonly string[],
+): UndoOffer | null {
+  if (!offer || removed.length === 0) {
+    return offer;
+  }
+  const ids = offer.ids.filter((id) => !removed.includes(id));
+  return ids.length > 0 ? { ...offer, ids } : null;
+}
+
 /** The layers of an offer that Undo would turn on: still off, and still in the catalogue. */
 function stillOff(
   offer: UndoOffer,
@@ -261,32 +307,46 @@ function stillOff(
 
 const OFF: LoadResult = { status: { kind: "off" }, features: [] };
 
+/**
+ * The state at mount: the link's layers wait, and are resolved at once when
+ * the catalogue is ready already (a static one), as they are when a list
+ * arrives later. `noteLink` says whether a link layer the list lacks is said
+ * aloud: true only for a catalogue that was not ready at mount, because a host
+ * whose layers are there from the start has no list to wait for.
+ */
 function initialState(
-  definitions: readonly LayerDefinition[],
   initial: LayersUrlState | undefined,
+  catalogue: CatalogueState,
+  noteLink: boolean,
   now: number,
 ): State {
-  const known = new Set(definitions.map((definition) => definition.id));
-  return {
-    enabled: (initial?.enabled ?? []).filter((id) => known.has(id)),
-    controls: Object.fromEntries(
-      definitions.map((definition) => [
-        definition.id,
-        resolveControlValues(definition, initial?.controls[definition.id], now),
-      ]),
-    ),
-    sorts: {},
-    results: {},
-    retries: {},
-    tilesUnavailable: {},
-    selection: null,
-    choices: null,
-    view: null,
-    focusRequest: 0,
-    focusHandled: 0,
-    detail: null,
-    undo: null,
-  };
+  return applyCatalogue(
+    {
+      enabled: [],
+      controls: {},
+      link: {
+        waiting: initial?.enabled ?? [],
+        controls: initial?.controls ?? {},
+      },
+      known: [],
+      reconciled: null,
+      notice: null,
+      sorts: {},
+      results: {},
+      retries: {},
+      tilesUnavailable: {},
+      selection: null,
+      choices: null,
+      view: null,
+      focusRequest: 0,
+      focusHandled: 0,
+      detail: null,
+      undo: null,
+    },
+    catalogue,
+    noteLink,
+    now,
+  );
 }
 
 /** The record without these layers' entries. */
@@ -316,6 +376,48 @@ function withoutTraces(state: State, ids: ReadonlySet<string>): State {
         : state.selection,
     choices: choices && choices.length > 0 ? choices : null,
     detail: state.detail && ids.has(state.detail.layerId) ? null : state.detail,
+  };
+}
+
+/**
+ * The state once it has taken in a catalogue state. Only a ready list changes
+ * the choices (see `reconcile`): while the catalogue loads or has failed the
+ * link's layers keep waiting. The layers that went are cleared as turning
+ * them off clears them, and the change is kept as a notice for the effect
+ * that says it. A list that is the one already reconciled changes nothing.
+ */
+function applyCatalogue(
+  state: State,
+  catalogue: CatalogueState,
+  noteLink: boolean,
+  now: number,
+): State {
+  if (
+    catalogue.status !== "ready" ||
+    (catalogue.layers === state.known && state.link.waiting.length === 0)
+  ) {
+    return { ...state, reconciled: catalogue };
+  }
+  const result = reconcile({
+    chosen: { enabled: state.enabled, controls: state.controls },
+    link: state.link,
+    known: state.known,
+    next: catalogue.layers,
+    now,
+  });
+  const gone = result.switchedOff.map(({ id }) => id);
+  const message = announceCatalogueChange({
+    turnedOff: result.switchedOff.map(({ name }) => name),
+    linkUnavailable: noteLink ? result.linkMissing : 0,
+  });
+  return {
+    ...(gone.length > 0 ? withoutTraces(state, new Set(gone)) : state),
+    ...result.chosen,
+    link: result.link,
+    known: catalogue.layers,
+    reconciled: catalogue,
+    undo: withoutRemoved(state.undo, result.removed),
+    notice: message === null ? null : { message, gone },
   };
 }
 
@@ -412,10 +514,12 @@ function sortFeatures(
  * The state of every data layer and the actions on it, driven entirely by
  * the definitions in the catalogue: nothing here names a layer. It reads the
  * catalogue as a store, so the layers appear when a catalogue that loads
- * becomes ready; while it is loading or has failed there are none. Control
- * values are worked out once, in `initialState`, so a layer that arrives
- * after mount has empty controls instead of its defaults: a known limit until
- * step 2 of plan 0005 (#95).
+ * becomes ready; while it is loading or has failed there are none, and the
+ * layers a link names wait for the first list. Each list that arrives is
+ * reconciled with the choices in the same render, before anything is drawn
+ * or requested: a layer that arrives has its controls' defaults, one that
+ * changed keeps the values that are still valid, and an enabled one that went
+ * is turned off as `setEnabled(id, false)` turns it off and said once.
  *
  * @remarks Nothing is requested until a layer is turned on. A feed layer is
  *   loaded on enable, on a control change and on retry; the request for the
@@ -437,9 +541,19 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     catalogue.getState,
   );
   const definitions = readyLayers(catalogueState);
-  const [state, setState] = useState(() =>
-    initialState(definitions, options.initial, now()),
+  // Fixed at mount: only a catalogue that was not ready then makes a note of a
+  // link layer it does not have.
+  const [noteLink] = useState(catalogueState.status !== "ready");
+  const [stored, setState] = useState(() =>
+    initialState(options.initial, catalogueState, noteLink, now()),
   );
+  // A new catalogue state is taken in during this render, so no render sees
+  // its layers before their controls and choices are in step with them.
+  let state = stored;
+  if (stored.reconciled !== catalogueState) {
+    state = applyCatalogue(stored, catalogueState, noteLink, now());
+    setState(state);
+  }
   /**
    * What the handlers below read. It follows the last committed state, set in
    * a layout effect so a render React throws away (a transition that
@@ -512,18 +626,16 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       requests.current.set(id, { key, controller });
       setState((current) => withLoading(current, load));
       loadOutcome(layerSource, load, now, controller.signal).then((outcome) => {
-        if (!outcome) {
+        // A load that was cancelled or replaced meanwhile is neither shown nor said.
+        if (!outcome || requests.current.get(id)?.controller !== controller) {
           return;
         }
-        if (requests.current.get(id)?.key === key) {
-          requests.current.delete(id);
-          loadedKeys.current.set(id, key);
-          setState((current) => ({
-            ...current,
-            results: { ...current.results, [id]: outcome.result },
-          }));
-        }
-        // A load that was replaced meanwhile is not shown but is still said (#81).
+        requests.current.delete(id);
+        loadedKeys.current.set(id, key);
+        setState((current) => ({
+          ...current,
+          results: { ...current.results, [id]: outcome.result },
+        }));
         reportLoad(
           definition,
           outcome.spoken,
@@ -591,6 +703,25 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       announcedStates.current.delete(id);
     }
   }, []);
+
+  // Says a change to the catalogue, once, and lets go of what the layers that
+  // went had in flight. The change is in the state, not in the render that
+  // found it, so a render that React repeats or throws away says nothing.
+  const spokenNotice = useRef<CatalogueNotice | null>(null);
+  const notice = state.notice;
+  useEffect(() => {
+    if (!notice || spokenNotice.current === notice) {
+      return;
+    }
+    spokenNotice.current = notice;
+    // The change already closed the affected area of a layer that went, so no
+    // request for an area should stay open.
+    if (stateRef.current.detail === null) {
+      detailRequest.current?.abort();
+    }
+    forgetLayers(new Set(notice.gone));
+    announce(notice.message, { priority: "polite" });
+  }, [notice, forgetLayers, announce]);
 
   const setEnabled = useCallback(
     (id: string, enabled: boolean) => {
@@ -992,15 +1123,16 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     return offer && count > 0 ? { count, group: offer.group } : null;
   }, [offer, state.enabled, byId]);
 
-  const urlValue = useMemo<LayersUrlState>(
-    () => ({
-      enabled: state.enabled,
-      controls: Object.fromEntries(
-        state.enabled.map((id) => [id, state.controls[id] ?? {}]),
-      ),
-    }),
-    [state.enabled, state.controls],
-  );
+  const urlValue = useMemo<LayersUrlState>(() => {
+    const { waiting, controls: linked } = state.link;
+    return {
+      enabled: [...state.enabled, ...waiting],
+      controls: Object.fromEntries([
+        ...state.enabled.map((id) => [id, state.controls[id] ?? {}]),
+        ...waiting.map((id) => [id, linked[id] ?? {}]),
+      ]),
+    };
+  }, [state.enabled, state.controls, state.link]);
 
   // Several layers can share a provider; its credit is listed once. A
   // provider's notice that asks for the year gets the current one.

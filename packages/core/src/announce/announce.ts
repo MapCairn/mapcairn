@@ -102,6 +102,47 @@ export function announceLayersTurnedBackOn(count: number): string {
   return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} turned back on`;
 }
 
+/** What a change to the layer catalogue did, for {@link announceCatalogueChange}. */
+export interface CatalogueChange {
+  /** The names of enabled layers the catalogue no longer holds, which were turned off. */
+  readonly turnedOff: readonly string[];
+  /** How many layers the link named that the catalogue does not have for this person. */
+  readonly linkUnavailable: number;
+}
+
+function announceLayersUnavailable(names: readonly string[]): string {
+  const [only] = names;
+  return only !== undefined && names.length === 1
+    ? `${only} is no longer available and was turned off.`
+    : `${formatNumber(names.length)} layers are no longer available and were turned off.`;
+}
+
+function announceLinkLayersUnavailable(count: number): string {
+  return count === 1
+    ? "1 layer in the link is not available."
+    : `${formatNumber(count)} layers in the link are not available.`;
+}
+
+/**
+ * One message for one change to the catalogue: the layers that were turned
+ * off, then the layers of the link that are not available. Null when neither
+ * happened. The live region speaks only the latest message of a burst, so a
+ * transition says everything at once.
+ */
+export function announceCatalogueChange(
+  change: CatalogueChange,
+): string | null {
+  const parts = [
+    change.turnedOff.length > 0
+      ? announceLayersUnavailable(change.turnedOff)
+      : null,
+    change.linkUnavailable > 0
+      ? announceLinkLayersUnavailable(change.linkUnavailable)
+      : null,
+  ].filter((part) => part !== null);
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
 /** A feed layer loaded with nothing in it, in the layer's own words. */
 export function announceLayerEmpty(name: string, emptyText: string): string {
   return `${name}: ${emptyText}`;

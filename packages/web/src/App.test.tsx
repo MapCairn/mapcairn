@@ -149,6 +149,87 @@ describe("App data layers", () => {
     });
   });
 
+  describe("a link that names layers before the catalogue has its list", () => {
+    function servicesWithLoadingCatalogue() {
+      const catalogue = new FakeLayerCatalogue();
+      catalogue.setState({ status: "loading" });
+      const services = createFakeServices({ layers: catalogue });
+      services.fakes.url.write({
+        view: { center: { lat: 1, lng: 2 }, zoom: 7, bearing: 0 },
+        layers: {
+          enabled: ["sample-imagery", "retired"],
+          controls: { "sample-imagery": { opacity: "0.5" } },
+        },
+      });
+      return { services, catalogue };
+    }
+
+    it("keeps the layers in the address as the map moves, then turns them on and drops the rest from the address", async () => {
+      const { services, catalogue } = servicesWithLoadingCatalogue();
+      await renderApp(services);
+      act(() => {
+        adapter(services).setView({ zoom: 5 });
+      });
+      expect(services.fakes.url.read().layers).toEqual({
+        enabled: ["sample-imagery", "retired"],
+        controls: { "sample-imagery": { opacity: "0.5" }, retired: {} },
+      });
+      act(() => catalogue.setLayers(SAMPLE_LAYERS));
+      await settle();
+      expect(
+        adapter(services)
+          .drawnLayers()
+          .map((layer) => layer.id),
+      ).toEqual(["sample-imagery"]);
+      expect(services.fakes.url.read().layers?.enabled).toEqual([
+        "sample-imagery",
+      ]);
+      expect(polite()).toBe("1 layer in the link is not available.");
+    });
+
+    it("loads and draws a feed layer the link names once the list arrives", async () => {
+      const { services, catalogue } = servicesWithLoadingCatalogue();
+      services.fakes.layerSource.setFeatures("sample-points", [
+        samplePoint("a"),
+      ]);
+      services.fakes.url.write({
+        view: { center: { lat: 1, lng: 2 }, zoom: 7, bearing: 0 },
+        layers: {
+          enabled: ["sample-points"],
+          controls: { "sample-points": { window: "hour" } },
+        },
+      });
+      await renderApp(services);
+      expect(adapter(services).drawnLayers()).toEqual([]);
+      act(() => catalogue.setLayers(SAMPLE_LAYERS));
+      await settle();
+      expect(
+        adapter(services)
+          .drawnLayers()
+          .map((layer) => layer.id),
+      ).toEqual(["sample-points"]);
+      expect(services.fakes.layerSource.requests.map((r) => r.url)).toEqual([
+        "https://sample.test/feed/all_hour.json",
+      ]);
+    });
+
+    it("says nothing of a layer the link names that a static catalogue does not have", async () => {
+      const services = createFakeServices({
+        layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
+      });
+      services.fakes.url.write({
+        layers: { enabled: ["sample-imagery", "retired"], controls: {} },
+      });
+      await renderApp(services);
+      expect(
+        adapter(services)
+          .drawnLayers()
+          .map((layer) => layer.id),
+      ).toEqual(["sample-imagery"]);
+      expect(polite()).not.toContain("in the link");
+    });
+  });
+
   it("opens the Layers section on a feature's card when its point is tapped", async () => {
     const services = servicesWithLayers();
     services.fakes.layerSource.setFeatures("sample-points", [

@@ -7,6 +7,7 @@ import {
   announceAddressNotFound,
   announceAreaFound,
   announceBasemap,
+  announceCatalogueChange,
   announceCoordinateResult,
   announceCopied,
   announceDetailError,
@@ -234,6 +235,52 @@ describe("layer announcements", () => {
   it("says how many layers an undo turned back on, in the singular for one", () => {
     expect(announceLayersTurnedBackOn(2)).toBe("2 layers turned back on");
     expect(announceLayersTurnedBackOn(1)).toBe("1 layer turned back on");
+  });
+
+  describe("a change to the catalogue", () => {
+    it("names the one layer that is no longer available", () => {
+      expect(
+        announceCatalogueChange({
+          turnedOff: ["Rainfall"],
+          linkUnavailable: 0,
+        }),
+      ).toBe("Rainfall is no longer available and was turned off.");
+    });
+
+    it("counts several layers that are no longer available", () => {
+      expect(
+        announceCatalogueChange({
+          turnedOff: ["Rainfall", "Wind"],
+          linkUnavailable: 0,
+        }),
+      ).toBe("2 layers are no longer available and were turned off.");
+    });
+
+    it("says how many layers in the link are not available, in the singular for one", () => {
+      expect(
+        announceCatalogueChange({ turnedOff: [], linkUnavailable: 1 }),
+      ).toBe("1 layer in the link is not available.");
+      expect(
+        announceCatalogueChange({ turnedOff: [], linkUnavailable: 3 }),
+      ).toBe("3 layers in the link are not available.");
+    });
+
+    it("composes one message, the layers turned off first and the link note after", () => {
+      expect(
+        announceCatalogueChange({
+          turnedOff: ["Rainfall"],
+          linkUnavailable: 2,
+        }),
+      ).toBe(
+        "Rainfall is no longer available and was turned off. 2 layers in the link are not available.",
+      );
+    });
+
+    it("has nothing to say when nothing changed", () => {
+      expect(
+        announceCatalogueChange({ turnedOff: [], linkUnavailable: 0 }),
+      ).toBeNull();
+    });
   });
 
   it("passes the layer's own empty text through", () => {
