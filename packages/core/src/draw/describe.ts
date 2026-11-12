@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { formatNumber } from "../format/format";
+import { SUPPORTED_WKT_SRID } from "../geometry/wkt";
 import type { UnitSystem } from "../ports/settings";
 import {
   describeArea,
@@ -239,6 +240,7 @@ const IMPORT_SKIPS: Readonly<Record<ShapeImportSkip, string>> = {
   "too-many-points": `with more than ${formatNumber(MAX_IMPORT_SHAPE_POINTS)} points`,
   malformed: "with coordinates that could not be read",
   unsupported: "of a type that cannot be drawn",
+  "other-srid": `in a coordinate system other than SRID ${SUPPORTED_WKT_SRID}`,
 };
 
 function describeSkips(
