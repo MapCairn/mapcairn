@@ -46,7 +46,9 @@ Taking on the Cloudflare account, the domain or the repository's administration 
 
 ## Continuity: not yet covered
 
-The maintainer intends to support MapCairn for the long term and wants more contributors and, in time, more maintainers. The project is built so that it can outlive any one person, but one thing is still missing.
+The maintainer commits to supporting MapCairn for as long as possible, and wants more contributors and, in time, more maintainers. If the maintainer can no longer maintain it, they will find a new maintainer or archive the repository. The repository will not be deleted.
+
+The project is built so that it can outlive any one person, but one thing is still missing.
 
 If the only maintainer were unavailable for any reason, the project could not continue with minimal interruption. This is the OpenSSF Best Practices silver criterion `access_continuity`, and it is not met.
 
