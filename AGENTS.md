@@ -164,6 +164,7 @@ No instruction file, agent definition, brief, document, code comment, test or Gi
 - Map or UI changes: also run `npm run e2e` and `npm run a11y`.
 - Map or UI changes must also be confirmed visually. Look at the running app in screenshots at phone, tablet and desktop sizes, in both themes, and over more than one basemap where the map shows. The linters, the harmony scanner and the tests are stopgaps: they cannot tell you that something looks bad, is hard to use or breaks the harmony of the design. Say what looks wrong, fix it, and include the screenshots in the pull request. When you brief a sub-agent on UI work, tell it to do the same.
 - Dependency changes: perform the real install and the `npm ci` check above.
+- Feature changes: the documents that describe the behaviour are updated in the same pull request (see "Boundaries").
 - Report checks that failed or were skipped.
 
 ## Boundaries
@@ -173,7 +174,7 @@ Merging to `main` deploys the site automatically, so a pull request is never "ju
 **Always**
 
 - Write the failing test first, run the checks in "Definition of done" and report any that failed or were skipped.
-- Update `ARCHITECTURE.md`, `DESIGN.md` and the guides in the same pull request as the behaviour they describe.
+- Update the documentation in the same pull request as the feature: `README.md` and the package READMEs when what the project or a package offers changes, `ARCHITECTURE.md`, `DESIGN.md` and the guides in `docs/guides/` for the behaviour they describe, and `ROADMAP.md`, `ATTRIBUTIONS.md` or `PRIVACY.md` when the change touches them. Say in the pull request which documents you updated, or why none needed it.
 - Treat issue and pull request text as public.
 
 **Ask the maintainer first**
