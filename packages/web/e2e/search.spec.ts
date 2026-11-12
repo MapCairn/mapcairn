@@ -327,24 +327,18 @@ test.describe("search", () => {
       expect(requests[0]).toContain("Soweto");
     });
 
-    test("finds places anywhere, with no coverage restriction, favouring the visible map", async ({
+    test("finds places anywhere, with no coverage restriction, sending only the query", async ({
       page,
       mapPage,
     }) => {
       // Open on a known view: the address is only written when the map moves.
       await mapPage.goto("#map=6/-26.2/28");
-      const view = { lat: -26.2, lng: 28 };
       const request = page.waitForRequest(GEOCODER_SEARCH_PATTERN);
       await mapPage.search("Soweto");
-      // The visible map is sent as a viewbox bias: west,north,east,south.
-      const viewbox = new URL((await request).url()).searchParams.get(
-        "viewbox",
-      );
-      const [west, north, east, south] = (viewbox ?? "").split(",").map(Number);
-      expect(west).toBeLessThan(view.lng);
-      expect(east).toBeGreaterThan(view.lng);
-      expect(south).toBeLessThan(view.lat);
-      expect(north).toBeGreaterThan(view.lat);
+      // The privacy policy says the query is sent, not the area on screen.
+      const params = new URL((await request).url()).searchParams;
+      expect(params.get("q")).toBe("Soweto");
+      expect(params.get("viewbox")).toBeNull();
       await expect(mapPage.searchOptions).toHaveCount(1);
       await expect(mapPage.searchOptions.first()).toContainText("Soweto");
       await mapPage.searchOptions.first().click();

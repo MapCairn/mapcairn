@@ -7,6 +7,7 @@ import {
   formatTemplate,
   type LayerFeature,
 } from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import { type Ref, useContext, useEffect, useRef, useState } from "react";
 import { useChromeLayout } from "../chrome/layoutContext";
 import { MapContext } from "../host";
@@ -93,8 +94,7 @@ export function LayersSection({
   const cardHeading = useRef<HTMLHeadingElement>(null);
   const { focusPending, consumeFocus } = layers;
   const { reducedMotion } = usePreferences();
-  const motion = useRef(reducedMotion);
-  motion.current = reducedMotion;
+  const reducedMotionRef = useLatestRef(reducedMotion);
   const { layout, viewport, panelEdge } = useChromeLayout();
   const [cardRequest, setCardRequest] = useState(0);
   const { selected, choices } = layers;
@@ -123,7 +123,7 @@ export function LayersSection({
       heading?.focus({ preventScroll: true });
       heading?.scrollIntoView?.({
         block: "start",
-        behavior: motion.current ? "auto" : "smooth",
+        behavior: reducedMotionRef.current ? "auto" : "smooth",
       });
     });
     const position =
@@ -148,6 +148,7 @@ export function LayersSection({
     layout,
     viewport,
     panelEdge,
+    reducedMotionRef,
   ]);
 
   // "Show on map" lowers the sheet to a detent that shows the map as well as
@@ -158,9 +159,9 @@ export function LayersSection({
     }
     cardHeading.current?.scrollIntoView?.({
       block: "start",
-      behavior: motion.current ? "auto" : "smooth",
+      behavior: reducedMotionRef.current ? "auto" : "smooth",
     });
-  }, [cardRequest]);
+  }, [cardRequest, reducedMotionRef]);
 
   if (layers.layers.length === 0) {
     return null;

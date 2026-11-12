@@ -1,3 +1,4 @@
+import { clamp } from "../numbers/clamp";
 import type { LatLng, PixelPoint } from "../ports/geometry";
 
 /** Size in pixels of the tiles the normalised zoom number refers to. */
@@ -31,7 +32,7 @@ export function toNormalisedZoom(engineZoom: number): number {
 
 /** Limits `zoom` to the range `[min, max]`. */
 export function clampZoom(zoom: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, zoom));
+  return clamp(zoom, min, max);
 }
 
 /**

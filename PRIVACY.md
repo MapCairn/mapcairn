@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 2026-11-11_
+_Last updated: 2026-11-12_
 
 _This mirrors the policy on the site at `/privacy`
 (`packages/web/src/app/PrivacyPage.tsx`). Keep both in sync when either
@@ -18,9 +18,10 @@ device instead, as described below.
 
 Your browser's `localStorage` keeps your settings: your light or dark theme
 (under the key `mapcairn:theme`), your units, whether the zoom buttons
-show, whether Save data is on, your chosen basemap, where the map was last
-left, and whether you have answered the first-visit tour (a version number
-under `mapcairn:tourSeen`). The other keys start with `mapcairn:`. The tour
+show, whether Save data is on, whether the map is flat or a globe, your chosen
+basemap, where the map was last left, and whether you have answered the
+first-visit tour (a version number under `mapcairn:tourSeen`). The other keys
+start with `mapcairn:`. The tour
 itself sends nothing; a layer you turn on during it loads from its provider as
 described below. These stay on your device and are
 never sent to a server. Where your browser reports a data saver or a very slow
@@ -61,12 +62,17 @@ tile requests, including your IP address, as part of serving the map. This is
 standard for any web map. Your browser makes those requests itself: they carry
 your IP address, its usual request headers (such as its user agent) and this
 site's address as the referrer, and nothing this site has stored about you.
+Tiles are requested for the part of the map on screen, so the basemap's
+provider, and the provider of any tile layer you turn on, can tell roughly
+which area you are looking at, and after Locate me roughly where you are.
 When you search (by pressing Enter or the Search button), your query is sent to
 OpenStreetMap's Nominatim geocoding service, which may likewise log the query
 and your IP address. Nothing is sent while you type. A search that is only a
 pair of coordinates is read in your browser and is not sent to the geocoder;
 showing the place requests map tiles for that area, as any move of the map
-does.
+does. If an assistant in your browser uses this site's search or measuring
+tools (through WebMCP), the place names it gives are sent to Nominatim in the
+same way, and a pair of coordinates is again read in your browser.
 
 ## Data layers
 
@@ -74,8 +80,9 @@ Every data layer is off until you turn it on, and nothing is requested before
 that. Turning a layer on, changing its controls or pressing Try again sends a
 request from your browser straight to that layer's provider, which may log it
 with your IP address: the US Geological Survey (USGS) for earthquakes, NASA's
-Global Imagery Browse Services for satellite imagery, rainfall and fire
-hotspots, the Global Disaster Alert and Coordination System (GDACS) for fire,
+Global Imagery Browse Services for its imagery layers (satellite imagery,
+rainfall, fire hotspots, where people live, Earth at night and sea
+temperature), the Global Disaster Alert and Coordination System (GDACS) for fire,
 flood, tropical cyclone, volcano and drought alerts, and Copernicus (the Global
 Flood Awareness System) for the flood hazard map, and the jsDelivr content
 delivery network for the country boundaries. Show affected area sends one more

@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { axeViolations } from "./support/a11y";
+import { GEOCODER_SEARCH_PATTERN } from "./support/network";
 import { mockRoutingService, type RoutingScript } from "./support/routing";
 import { viewportDetails, waitForStableLayout } from "./support/states";
 import { settleFrames } from "./support/timers";
@@ -212,7 +213,12 @@ for (const viewport of VIEWPORTS) {
         await expect(page.getByTestId("directions-search-results")).toHaveCount(
           0,
         );
+        const request = page.waitForRequest(GEOCODER_SEARCH_PATTERN);
         await input.press("Enter");
+        // The privacy policy says the query is sent, not the area on screen.
+        const params = new URL((await request).url()).searchParams;
+        expect(params.get("q")).toBe("Soweto");
+        expect(params.get("viewbox")).toBeNull();
         await page
           .getByRole("button", { name: /^Add Soweto/ })
           .first()

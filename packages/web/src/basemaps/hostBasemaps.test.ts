@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { BASEMAPS, DEFAULT_BASEMAP_ID, getBasemap } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import {
@@ -8,6 +10,9 @@ import {
 } from "./hostBasemaps";
 import { OPEN_TOPO_MAP_BASEMAP } from "./openTopoMapBasemap";
 import { SATELLITE_BASEMAP, SATELLITE_IMAGERY_YEAR } from "./satelliteBasemap";
+
+/** The folder the site serves at its root, where a thumbnail path points. */
+const PUBLIC_DIRECTORY = join(__dirname, "../../public");
 
 describe("the reference host's basemaps", () => {
   it("offers six basemaps, two full rows of three, in this order", () => {
@@ -52,6 +57,14 @@ describe("the reference host's basemaps", () => {
     ]) {
       expect(HOST_BASEMAP_CATALOGUE.get(id), id).toBeUndefined();
       expect(HOST_BASEMAP_CATALOGUE.resolve(id).id, id).toBe("bright");
+    }
+  });
+
+  it("names a preview for every basemap it offers, and the site serves each file", () => {
+    for (const basemap of HOST_BASEMAP_CATALOGUE.basemaps) {
+      expect(basemap.thumbnail, basemap.id).toBeDefined();
+      const file = join(PUBLIC_DIRECTORY, basemap.thumbnail ?? "");
+      expect(existsSync(file), `${basemap.id}: ${file}`).toBe(true);
     }
   });
 

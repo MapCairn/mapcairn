@@ -38,10 +38,9 @@ jobs:
       # separate boot step here. Scores run against real, un-mocked basemap
       # tile requests (unlike the Playwright e2e suite, which mocks them)
       # since Lighthouse is meant to reflect what a real visitor experiences.
-      # `performance` is asserted at 0.95 rather than the app's 100 target to
-      # absorb that real third-party network variance without making this
-      # check flaky; the other categories don't depend on network timing and
-      # stay at 1 (100).
+      # lighthouserc.json asserts accessibility and SEO at 1 (100) as errors.
+      # `performance` (0.95) and best practices (1) only warn, so real
+      # third-party network variance cannot make this check flaky.
       - name: Run Lighthouse CI
         id: lighthouse
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
@@ -59,4 +58,6 @@ jobs:
       # exactly what's needed to diagnose that failure.
       - name: Print Lighthouse report
         if: always()
-        run: node packages/web/scripts/print-lighthouse-summary.mjs "${{ steps.lighthouse.outputs.resultsPath }}"
+        env:
+          RESULTS_PATH: ${{ steps.lighthouse.outputs.resultsPath }}
+        run: node packages/web/scripts/print-lighthouse-summary.mjs "$RESULTS_PATH"
