@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import type { BasemapCatalogue } from "../basemaps/basemaps";
 import type { ClipboardPort } from "./clipboard";
+import type { FeatureQuery } from "./featureQuery";
 import type { FileOpener, FileSaver } from "./files";
 import type { LayerCatalogue, LayerSource } from "./layers";
 import type { LocationProvider } from "./location";
@@ -70,4 +71,11 @@ export interface Services {
    * none, so the host that wants selection supplies a store.
    */
   readonly selection?: FeatureSelection;
+  /**
+   * Finds the features inside a drawn shape, for the host that offers
+   * selection by shape. Optional: a host that supplies none offers no such
+   * action, and the ui must not require it. The reference host's
+   * `createServices()` builds none.
+   */
+  readonly featureQuery?: FeatureQuery;
 }

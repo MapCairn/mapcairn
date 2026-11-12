@@ -3,6 +3,7 @@
 export * from "./basemap";
 export * from "./clipboard";
 export * from "./errors";
+export * from "./featureQuery";
 export * from "./files";
 export * from "./geometry";
 export * from "./layers";

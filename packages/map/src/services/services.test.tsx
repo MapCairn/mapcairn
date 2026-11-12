@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import {
   useClipboard,
+  useFeatureQuery,
   useFileOpener,
   useLayers,
   useLocationProvider,
@@ -82,6 +83,18 @@ describe("ServicesProvider", () => {
     expect(
       renderHook(() => useSelectionStore(), { wrapper }).result.current,
     ).toBe(services.selection);
+    expect(
+      renderHook(() => useFeatureQuery(), { wrapper }).result.current,
+    ).toBe(services.featureQuery);
+  });
+
+  it("gives no feature query when the host supplies none", () => {
+    const { wrapper } = wrapperFor(
+      createFakeServices({ featureQuery: undefined }),
+    );
+    expect(
+      renderHook(() => useFeatureQuery(), { wrapper }).result.current,
+    ).toBeUndefined();
   });
 
   it("gives no selection store when the host supplies none", () => {

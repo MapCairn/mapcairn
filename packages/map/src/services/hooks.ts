@@ -5,6 +5,7 @@ import {
   BUILT_IN_BASEMAP_CATALOGUE,
   type ClipboardPort,
   type DevicePreferencesValue,
+  type FeatureQuery,
   type FeatureSelection,
   type FileOpener,
   type FileSaver,
@@ -134,6 +135,15 @@ export function useLayers(): LayerCatalogue {
  */
 export function useSelectionStore(): FeatureSelection | undefined {
   return useServices().selection;
+}
+
+/**
+ * The query for the features inside a shape, or `undefined` when the host
+ * supplies none. Selecting by shape needs it, so a host without one offers no
+ * such action. Nothing is requested until a user action asks.
+ */
+export function useFeatureQuery(): FeatureQuery | undefined {
+  return useServices().featureQuery;
 }
 
 /** What {@link useSettings} returns. */

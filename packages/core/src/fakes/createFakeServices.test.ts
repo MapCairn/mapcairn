@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { CONTRACT_AREA } from "../contracts/featureQuery.contract";
 import { PORT_NAMES } from "../contracts/portRegistry";
 import type { Services } from "../ports/services";
 import { createFakeServices } from "./createFakeServices";
@@ -51,6 +52,33 @@ describe("createFakeServices", () => {
     const services = createFakeServices({ selection: undefined });
     expect(services.selection).toBeUndefined();
     expect(services.fakes.selection).toBeDefined();
+  });
+
+  it("provides a scriptable feature query", async () => {
+    const services = createFakeServices();
+    expect(services.featureQuery).toBe(services.fakes.featureQuery);
+    services.fakes.featureQuery.respondWith([
+      {
+        layerId: "gauges",
+        feature: {
+          id: "a",
+          geometry: { type: "Point", coordinates: [18.4, -33.9] },
+          fields: {},
+        },
+      },
+    ]);
+    const hits = await services.featureQuery?.within({
+      area: CONTRACT_AREA,
+      layerIds: ["gauges"],
+      limit: 2,
+    });
+    expect(hits).toHaveLength(1);
+  });
+
+  it("leaves the feature query out when told to, as a host may", () => {
+    const services = createFakeServices({ featureQuery: undefined });
+    expect(services.featureQuery).toBeUndefined();
+    expect(services.fakes.featureQuery).toBeDefined();
   });
 
   it("leaves routing out when told to, as a host may", () => {

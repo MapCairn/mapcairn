@@ -3,6 +3,7 @@
 export * from "./createFakeServices";
 export * from "./FakeClipboard";
 export * from "./FakeDevicePreferences";
+export * from "./FakeFeatureQuery";
 export * from "./FakeFileOpener";
 export * from "./FakeFileSaver";
 export * from "./FakeLayerCatalogue";
