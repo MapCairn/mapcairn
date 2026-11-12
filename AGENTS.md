@@ -162,10 +162,10 @@ No instruction file, agent definition, brief, document, code comment, test or Gi
 
 - Code changes: run `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run build`.
 - Map or UI changes: also run `npm run e2e` and `npm run a11y`.
-- Map or UI changes must also be confirmed visually with the `visual-check` skill: screenshots at phone, tablet and desktop sizes, in both themes, over more than one basemap. The linters, the harmony scanner and the tests cannot tell you that something looks bad, is hard to use or breaks the harmony of the design. Say what looks wrong, fix it, and give the screenshots to the pull request. When you brief a sub-agent on UI work, tell it to do the same.
+- Map or UI changes must also be confirmed visually with the `visual-check` skill: screenshots at phone, tablet and desktop sizes, in both themes, over more than one basemap. The linters, the harmony scanner and the tests cannot tell you that something looks bad, is hard to use or breaks the harmony of the design. Say what looks wrong, fix it, then describe in the pull request what you saw at each size and theme. The person who opens the pull request attaches the screenshots for a visible change; when an agent opened it for them, that person adds them, and the agent says they are available on request. An agent does not attach images. When you brief a sub-agent on UI work, tell it to do the same.
 - Dependency changes: perform the real install and the `npm ci` check above.
 - Feature changes: the documents that describe the behaviour are updated in the same pull request (see "Boundaries").
-- Hand off with one report, in this order, each part filled or "none": **PR** (its URL; the issue URL for filing work; the pull request reviewed for a review), **Checks** (each command and its result, skipped ones named), **Seen** (what you looked at and what looked wrong, or "no visible effect"), **Deviations** (what differs from the brief or the issue, and why), **Issues to file** (or filed, with numbers).
+- Hand off with one report, in this order, each part filled or "none": **PR** (its URL; the issue URL for filing work; the pull request reviewed for a review), **Checks** (each command and its result, skipped ones named), **Seen** (what you looked at, what looked wrong, that the screenshots are available on request, or "no visible effect"), **Deviations** (what differs from the brief or the issue, and why), **Issues to file** (or filed, with numbers).
 
 ## Boundaries
 

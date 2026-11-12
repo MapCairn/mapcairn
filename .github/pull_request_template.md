@@ -13,4 +13,4 @@
 
 ## Screenshots
 
-<!-- For visible changes: light and dark, phone and desktop. -->
+<!-- For visible changes: say what you saw at phone, tablet and desktop sizes, in both themes. Contributors attach screenshots, and a reviewer can ask for any that are missing. An agent describes them and does not attach them. -->
