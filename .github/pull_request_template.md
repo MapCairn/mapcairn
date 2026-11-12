@@ -13,4 +13,5 @@
 
 ## Screenshots
 
-<!-- For visible changes: light and dark, phone and desktop. -->
+<!-- For visible changes: say what you saw at each size and theme, and where the images are.
+     Contributors attach the images to the pull request; a reviewer can ask for them. Coding agents describe them and do not attach them. -->
