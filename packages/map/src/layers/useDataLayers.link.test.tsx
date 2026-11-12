@@ -162,6 +162,7 @@ describe("a layer the link names while the catalogue loads", () => {
   it("does nothing when the hook unmounts while the catalogue is still pending", () => {
     const catalogue = loadingCatalogue();
     const { unmount } = render(catalogue, LINK);
+    announce.mockClear();
     unmount();
     expect(() => act(() => catalogue.setLayers(LAYERS))).not.toThrow();
     expect(said()).toEqual([]);
@@ -177,12 +178,15 @@ describe("a link layer the catalogue does not have", () => {
   it("is dropped once the catalogue is ready, from the address too, and named once", () => {
     const catalogue = loadingCatalogue();
     const { result } = render(catalogue, unknown);
-    expect(said()).toEqual([]);
+    expect(said()).toEqual(["Loading layers"]);
     act(() => catalogue.setLayers(LAYERS));
     expect(idsOn(result)).toEqual([POINTS]);
     expect(result.current.urlValue.enabled).toEqual([POINTS]);
     expect(result.current.urlValue.controls).not.toHaveProperty("retired");
-    expect(said()).toEqual(["2 layers in the link are not available."]);
+    expect(said()).toEqual([
+      "Loading layers",
+      "2 layers in the link are not available.",
+    ]);
     expect(announce).toHaveBeenCalledWith(expect.any(String), {
       priority: "polite",
     });
@@ -191,6 +195,7 @@ describe("a link layer the catalogue does not have", () => {
   it("is said once under StrictMode, which renders twice", () => {
     const catalogue = loadingCatalogue();
     render(catalogue, unknown, StrictMode);
+    announce.mockClear();
     act(() => catalogue.setLayers(LAYERS));
     expect(said()).toEqual(["2 layers in the link are not available."]);
   });
@@ -198,6 +203,7 @@ describe("a link layer the catalogue does not have", () => {
   it("says a single one in the singular", () => {
     const catalogue = loadingCatalogue();
     render(catalogue, { enabled: ["retired"], controls: {} });
+    announce.mockClear();
     act(() => catalogue.setLayers(LAYERS));
     expect(said()).toEqual(["1 layer in the link is not available."]);
   });
@@ -217,7 +223,11 @@ describe("a link layer the catalogue does not have", () => {
     );
     expect(idsOn(result)).toEqual([]);
     expect(result.current.urlValue.enabled).toEqual([]);
-    expect(said()).toHaveLength(1);
+    expect(said()).toEqual([
+      "Loading layers",
+      "1 layer in the link is not available.",
+      "Layers updated: 1 added.",
+    ]);
   });
 
   it("is dropped without a word from a catalogue that was ready from the start", () => {
@@ -298,7 +308,7 @@ describe("an enabled layer that a refreshed catalogue no longer has", () => {
     expect(result.current.selected).toBeNull();
     expect(result.current.urlValue.enabled).toEqual([ALERTS]);
     expect(said()).toEqual([
-      "Sample points is no longer available and was turned off.",
+      "Sample points is no longer available and was turned off. Layers updated: 1 removed.",
     ]);
   });
 
@@ -330,7 +340,7 @@ describe("an enabled layer that a refreshed catalogue no longer has", () => {
     expect(result.current.detail).toBeNull();
     await act(async () => release());
     expect(said()).toEqual([
-      "Sample alerts is no longer available and was turned off.",
+      "Sample alerts is no longer available and was turned off. Layers updated: 2 removed.",
     ]);
   });
 
@@ -338,14 +348,14 @@ describe("an enabled layer that a refreshed catalogue no longer has", () => {
     const { catalogue } = await withPointsOn();
     act(() => catalogue.setLayers([SAMPLE_TILE_LAYER]));
     expect(said()).toEqual([
-      "2 layers are no longer available and were turned off.",
+      "2 layers are no longer available and were turned off. Layers updated: 2 removed.",
     ]);
   });
 
-  it("says nothing about a layer that was off", async () => {
+  it("does not say a layer was turned off when it was off, only that the list was updated", async () => {
     const { catalogue } = await withPointsOn();
     act(() => catalogue.setLayers([SAMPLE_FEED_LAYER, SAMPLE_ALERT_LAYER]));
-    expect(said()).toEqual([]);
+    expect(said()).toEqual(["Layers updated: 1 removed."]);
   });
 
   it("says nothing when a refresh only changes what the catalogue says about itself", async () => {
@@ -364,9 +374,10 @@ describe("an enabled layer that a refreshed catalogue no longer has", () => {
   it("is said once under StrictMode, which renders twice", () => {
     const catalogue = new FakeLayerCatalogue(LAYERS);
     render(catalogue, { enabled: [POINTS], controls: {} }, StrictMode);
+    announce.mockClear();
     act(() => catalogue.setLayers([SAMPLE_ALERT_LAYER]));
     expect(said()).toEqual([
-      "Sample points is no longer available and was turned off.",
+      "Sample points is no longer available and was turned off. Layers updated: 2 removed.",
     ]);
   });
 });
@@ -463,7 +474,7 @@ describe("a layer whose definition changed in a refresh", () => {
     act(() => catalogue.setLayers([weekly, SAMPLE_ALERT_LAYER]));
     expect(layer(result, POINTS).enabled).toBe(true);
     expect(layer(result, POINTS).controls).toEqual({ window: "day" });
-    expect(said()).toEqual([]);
+    expect(said()).toEqual(["Layers updated: 1 removed."]);
   });
 
   it("takes the default for a value that is no longer valid", () => {

@@ -10,7 +10,14 @@ import {
   type LayerFeature,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
-import { type Ref, useContext, useEffect, useRef, useState } from "react";
+import {
+  type Ref,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useChromeLayout } from "../chrome/layoutContext";
 import { MapContext } from "../host";
 import {
@@ -21,6 +28,8 @@ import {
 } from "../panels/Section";
 import { usePreferences } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
+import { CatalogueStatus } from "./CatalogueStatus";
+import { hidesSection } from "./catalogueView";
 import { FeatureCard } from "./FeatureCard";
 import { FeatureChoices } from "./FeatureChoices";
 import { LayerItem } from "./LayerItem";
@@ -66,6 +75,26 @@ export interface LayersSectionProps {
    * want them passes false.
    */
   readonly showTurnOffAll?: boolean;
+  /**
+   * The line above the layers, in place of the default "Open data from public
+   * providers. Nothing is requested until you turn a layer on.", which is not
+   * true of every host (one behind a login serves its own data). An empty
+   * string leaves the line out.
+   */
+  readonly intro?: string;
+}
+
+/** The text above the layers when the host gives none. */
+const DEFAULT_INTRO =
+  "Open data from public providers. Nothing is requested until you turn a layer on.";
+
+/** Sets a ref of either kind, an object or a callback. */
+function setRef<T>(ref: Ref<T> | undefined, value: T | null): void {
+  if (typeof ref === "function") {
+    ref(value);
+  } else if (ref) {
+    ref.current = value;
+  }
 }
 
 /** The ids of the layers that are on. */
@@ -90,8 +119,10 @@ function byGroup(layers: readonly DataLayerState[]) {
  * The Layers section of the sheet and side panel, drawn entirely from the
  * layer definitions: a switch per layer with its data cost, and while a layer
  * is on, its status, controls, legend, disclaimer and the list of what
- * loaded. The open feature's card sits at the top. Renders nothing when the
- * host has no layers.
+ * loaded. The open feature's card sits at the top. When the catalogue is
+ * loading, has failed, is empty or skipped definitions, it says so (see
+ * `CatalogueStatus`). Renders nothing for a host whose layers were there from
+ * the start and are none.
  *
  * @remarks A tap on the map asks for the card to take focus
  *   (`layers.focusPending`); the focus moves after the sheet's own focus
@@ -104,6 +135,7 @@ export function LayersSection({
   formatters = DEFAULT_FORMATTERS,
   onShowOnMap,
   showTurnOffAll = true,
+  intro = DEFAULT_INTRO,
 }: LayersSectionProps) {
   // Read optionally, so the section also renders outside a map (a test, a guide).
   const adapter = useContext(MapContext)?.adapter ?? null;
@@ -116,6 +148,20 @@ export function LayersSection({
   const [cardRequest, setCardRequest] = useState(0);
   const { selected, choices } = layers;
   const choicesHeading = useRef<HTMLHeadingElement>(null);
+  // The host's heading ref and this section's own, so focus can return to the
+  // heading when Try again has recovered.
+  const sectionHeading = useRef<HTMLHeadingElement | null>(null);
+  const setHeading = useCallback(
+    (element: HTMLHeadingElement | null) => {
+      sectionHeading.current = element;
+      setRef(headingRef, element);
+    },
+    [headingRef],
+  );
+  const focusHeading = useCallback(
+    () => sectionHeading.current?.focus({ preventScroll: true }),
+    [],
+  );
 
   // A tap on the map selected a point and opened its card: the card takes
   // focus, and the sheet or side panel that opened for it must not hide the
@@ -180,7 +226,7 @@ export function LayersSection({
     });
   }, [cardRequest, reducedMotionRef]);
 
-  if (layers.layers.length === 0) {
+  if (hidesSection(layers.catalogue, layers.layers.length)) {
     return null;
   }
 
@@ -244,7 +290,8 @@ export function LayersSection({
     <Section
       title="Layers"
       headingLevel={headingLevel}
-      headingRef={headingRef}
+      headingRef={setHeading}
+      aria-busy={layers.catalogue.status === "loading" || undefined}
       data-testid="sheet-section-layers"
     >
       {selected ? (
@@ -267,11 +314,14 @@ export function LayersSection({
           headingRef={choicesHeading}
         />
       ) : null}
-      <p className={styles.intro}>
-        Open data from public providers. Nothing is requested until you turn a
-        layer on.
-      </p>
-      {showTurnOffAll ? (
+      {intro ? <p className={styles.intro}>{intro}</p> : null}
+      <CatalogueStatus
+        catalogue={layers.catalogue}
+        layerCount={layers.layers.length}
+        onRetry={layers.retryCatalogue}
+        onRecovered={focusHeading}
+      />
+      {showTurnOffAll && layers.layers.length > 0 ? (
         <TurnOffAll layers={layers} ids={enabledIds(layers.layers)} />
       ) : null}
       <div className={styles.groups}>

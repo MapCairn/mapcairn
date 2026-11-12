@@ -11,8 +11,8 @@
 // this package, which is how its test runs it.
 //
 // It searches build/client and build/server for each group's strings:
-// - test seam: the marker in src/composition/testSeam.ts and the window
-//   property it reads;
+// - test seam: the marker in src/composition/testSeam.ts and the two window
+//   properties it reads (the services and the scripted layer catalogue);
 // - design guide: the marker the style guide page renders
 //   (src/designGuide/DesignGuide.tsx).
 
@@ -29,7 +29,11 @@ const directories = ["build/client", "build/server"];
 const groups = [
   {
     name: "test seam",
-    needles: ["MAPCAIRN_TEST_SEAM_MARKER", "__MAPCAIRN_TEST_SERVICES__"],
+    needles: [
+      "MAPCAIRN_TEST_SEAM_MARKER",
+      "__MAPCAIRN_TEST_SERVICES__",
+      "__MAPCAIRN_TEST_CATALOGUE__",
+    ],
   },
   { name: "design guide", needles: ["MAPCAIRN_DESIGN_GUIDE_MARKER"] },
 ];

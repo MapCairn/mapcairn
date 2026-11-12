@@ -118,10 +118,13 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
       "utf8",
     );
     const windowProperty = /__[A-Z]+_TEST_SERVICES__/.exec(seamSource)?.[0];
+    const catalogueProperty = /__[A-Z]+_TEST_CATALOGUE__/.exec(seamSource)?.[0];
     expect(windowProperty).toBeDefined();
+    expect(catalogueProperty).toBeDefined();
     for (const marker of [
       TEST_SEAM_MARKER,
       windowProperty as string,
+      catalogueProperty as string,
       DESIGN_GUIDE_MARKER,
     ]) {
       const root = fakeBuild({ "client/assets/app.js": marker });

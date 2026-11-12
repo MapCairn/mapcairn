@@ -184,7 +184,11 @@ describe("App data layers", () => {
       expect(services.fakes.url.read().layers?.enabled).toEqual([
         "sample-imagery",
       ]);
-      expect(polite()).toBe("1 layer in the link is not available.");
+      // "Loading layers" was said as the page opened, so the announcer holds
+      // this note until its window ends.
+      await vi.waitFor(() =>
+        expect(polite()).toBe("1 layer in the link is not available."),
+      );
     });
 
     it("loads and draws a feed layer the link names once the list arrives", async () => {

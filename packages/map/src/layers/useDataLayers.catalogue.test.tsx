@@ -92,12 +92,13 @@ describe("server rendering a catalogue", () => {
     expect(html).toContain(SAMPLE_FEED_LAYER.name);
   });
 
-  it("renders a runtime catalogue as loading, with no section and no request", () => {
+  it("renders a runtime catalogue as loading, with the section saying so, no layers and no request", () => {
     const { catalogue, load } = runtimeCatalogue();
     expect(catalogue.getState()).toEqual({ status: "loading" });
     const html = renderToString(treeFor(catalogue));
     expect(html).not.toContain(SAMPLE_FEED_LAYER.name);
-    expect(html).not.toContain("<section");
+    expect(html).toContain("Loading layers");
+    expect(html).toContain('aria-busy="true"');
     expect(load).not.toHaveBeenCalled();
   });
 
@@ -140,13 +141,15 @@ describe("server rendering a catalogue", () => {
     container.remove();
   });
 
-  it("shows the section once a runtime catalogue is ready, on the client", async () => {
+  it("shows the section as loading, then with its layers once a runtime catalogue is ready, on the client", async () => {
     const { catalogue, resolve } = runtimeCatalogue();
     await act(async () => {
       render(treeFor(catalogue));
     });
-    expect(screen.queryByRole("region", { name: "Layers" })).toBeNull();
+    const region = () => screen.getByRole("region", { name: "Layers" });
+    expect(region()).toHaveTextContent("Loading layers");
     await act(async () => resolve(SAMPLE_LAYERS));
-    expect(screen.getByRole("region", { name: "Layers" })).toBeInTheDocument();
+    expect(region()).not.toHaveTextContent("Loading layers");
+    expect(region()).toHaveTextContent(SAMPLE_FEED_LAYER.name);
   });
 });

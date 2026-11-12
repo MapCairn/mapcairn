@@ -37,8 +37,9 @@ export interface SheetContentProps {
   /** The pin's details, shown inside the Pin section. */
   readonly pinCard?: ReactNode;
   /**
-   * The data layers, from `useDataLayers`. Without it, or with no layers
-   * registered, there is no Layers section.
+   * The data layers, from `useDataLayers`. Without it, or for a host whose
+   * catalogue was ready with no layers at mount, there is no Layers section;
+   * a catalogue that loads shows its state there (loading, failed, empty).
    */
   readonly layers?: DataLayers;
   /**
@@ -49,6 +50,8 @@ export interface SheetContentProps {
   readonly onShowOnMap?: () => void;
   /** Whether the Layers section offers "Turn off all layers" and the Undo after it. Defaults to true. */
   readonly showTurnOffAll?: boolean;
+  /** The line above the layers, in place of "Open data from public providers", for a host whose layers are not that. */
+  readonly intro?: string;
   /** The credits drawn into a saved map image (see `creditsLine`). */
   readonly imageCredits?: string;
   /** Where the privacy policy is. Defaults to `/privacy`. */
@@ -63,7 +66,7 @@ export interface SheetContentProps {
  * Everything inside the sheet, under its own h2 title, each part a `section`
  * named by an h3. For the `settings` and `help` sections that is Settings
  * and Help. Otherwise it is Basemap, Pin, Layers (only when the host has
- * layers), Shapes (only when the host offers drawing) and Save image.
+ * layers or a catalogue that loads), Shapes (only when the host offers drawing) and Save image.
  */
 export function SheetContent({
   basemapId,
@@ -76,6 +79,7 @@ export function SheetContent({
   draw,
   onShowOnMap,
   showTurnOffAll,
+  intro,
   imageCredits,
   privacyHref,
   privacyNote,
@@ -144,6 +148,7 @@ export function SheetContent({
           headingRef={headingRef("layers")}
           onShowOnMap={onShowOnMap}
           showTurnOffAll={showTurnOffAll}
+          intro={intro}
         />
       ) : null}
       {draw ? (

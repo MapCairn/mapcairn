@@ -107,6 +107,18 @@ describe("SheetContent structure", () => {
     expect(screen.queryByRole("button", { name: /^Turn off/ })).toBeNull();
   });
 
+  it("passes the host's own intro to the Layers section, in place of the open-data text", () => {
+    renderContent({
+      props: { intro: "Layers your organisation has shared with you." },
+      layers: [SAMPLE_FEED_LAYER],
+    });
+    const section = screen.getByRole("region", { name: "Layers" });
+    expect(section).toHaveTextContent(
+      "Layers your organisation has shared with you.",
+    );
+    expect(section).not.toHaveTextContent("public providers");
+  });
+
   it("shows only Settings and Help for the settings and help sections", () => {
     for (const section of ["settings", "help"] as const) {
       const { unmount } = renderContent({
