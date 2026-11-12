@@ -13,5 +13,4 @@
 
 ## Screenshots
 
-<!-- For visible changes: say what you saw at phone, tablet and desktop sizes, in both themes, and where the screenshots are.
-     A person contributing attaches them to the pull request, and a reviewer can ask for them. An agent describes them and does not attach them. -->
+<!-- For visible changes: say what you saw at phone, tablet and desktop sizes, in both themes. Contributors attach screenshots, and a reviewer can ask for any that are missing. An agent describes them and does not attach them. -->
