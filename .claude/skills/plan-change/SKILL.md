@@ -1,6 +1,6 @@
 ---
 name: plan-change
-description: Write a plan in docs/plans/ for a large MapCairn change - one that crosses several packages or decides a public API - and open it as its own pull request for review before any code is written. Use when an issue says "Plan in docs/plans/", when someone asks to plan, design or scope a large change, or when pick-up-issue meets an issue too large to build directly.
+description: Write a plan in docs/plans/ for a large MapCairn change, one that crosses several packages or decides a public API, and open it as its own pull request for review before any code is written. Use when an issue says "Plan in docs/plans/", when someone asks to plan, design or scope a large change, or when pick-up-issue meets an issue too large to build directly.
 ---
 
 # Plan a change
@@ -14,7 +14,7 @@ Example: issue #43 asks for a MapLibre adapter as an optional SDK package. It cr
 1. Do the preflight in `pick-up-issue` section 0 and read the issue with all its comments.
 2. If the change touches one package and decides no public API, stop and tell the person the issue is enough. If it needs a maintainer decision listed in `AGENTS.md` ("Ask the maintainer first"), the plan may state the question but not settle it.
 3. Find the tracking issue. If there is none, file one with the `create-issue` skill. Either way it carries the `plan` label.
-4. Choose the next number: the highest in `docs/plans/` and in open pull requests, plus one (`gh pr list --repo MapCairn/mapcairn --state open --json number,files --jq '.[] | select(any(.files[]; .path | startswith("docs/plans/"))) | .number'`). File name `NNNN-short-name.md`.
+4. Choose the next number: one more than the highest ever used. Finished plans are deleted, so also look in history: `git fetch <origin-or-upstream>`, then `git log <origin-or-upstream>/main --name-only --format= -- docs/plans`, the open pull requests (`gh pr list --repo MapCairn/mapcairn --state open --limit 200 --json files --jq '.[].files[].path | select(startswith("docs/plans/"))'`) and the numbers in the tracking issues. File name `NNNN-short-name.md`.
 
 ## 2. Investigate
 
@@ -54,7 +54,7 @@ For each open choice, give the cost to build and keep against the benefit, and r
 1. Add the plan to the list at the end of `docs/plans/README.md`, replacing "No plan is open." when it is the first.
 2. Branch `docs/plan-<short-name>` from the project's `main`, run `npm run lint`, commit as `docs(plans): <title>`, push.
 3. Continue with `land-pr`. The description says `Part of #<n>` and asks reviewers for the open questions. A plan is reviewed, not merged on your own authority unless a human authorised it.
-4. After it merges, link the plan from the tracking issue and tick its "Plan" task.
+4. After it merges, link the plan from the tracking issue and tick its "Plan" task, editing from the current body (`gh issue view <n> --json body --jq .body > <file>`) so nothing is overwritten. Without triage rights, post that status as a comment or in the pull request description and leave ticking, closing and labels to the maintainer.
 
 ## 5. Report
 

@@ -25,7 +25,7 @@ One issue per step, in plan order. Each body has: `Part of #<tracker>` and the p
 
 ## 4. Update the tracker
 
-Edit the tracker's task list so it holds one `- [ ] #<child>` line per child, in order, keeping all other text unchanged (`gh issue edit <n> --body-file <path>`). Comment on the tracker with the plan's status change: the first step's pull request moves the plan file and its README line from "proposed" to "in progress".
+Start from the current body (`gh issue view <tracker> --json body --jq .body > <path>`), add one `- [ ] #<child>` line per child in order, keep all other text unchanged, and save it with `gh issue edit <tracker> --body-file <path>`. Without triage rights you cannot edit or label issues: comment the list of children on the tracker instead and leave the editing and labels to the maintainer. When the first step's pull request merges, comment that the plan is now in progress; that pull request moves the plan file and its README line from "proposed" to "in progress".
 
 ## 5. Report
 

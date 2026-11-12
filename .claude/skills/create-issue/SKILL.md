@@ -48,6 +48,6 @@ On a fork, or without write access to the repository, labels and milestones may 
 
 ## Afterwards
 
-- If the issue is a child of a tracking issue, tick or add it in the tracker's task list (`gh issue edit <n> --body-file`), keeping the rest of the text unchanged.
+- If the issue is a child of a tracking issue, tick or add it in the tracker's task list: start from the current body (`gh issue view <n> --json body --jq .body > <file>`), change only that line, and save it with `gh issue edit <n> --body-file <file>`. Without triage rights, post the child's number as a comment on the tracker and leave the editing, closing and labels to the maintainer.
 - If the work is queued for you or another agent, say so in your reply and, if the person asked, start it with the `pick-up-issue` skill.
 - Hand off with the report in `AGENTS.md` ("Definition of done"): the issue URL goes under **PR**, a duplicate found or a label refused under **Deviations**.

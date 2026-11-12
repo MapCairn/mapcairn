@@ -1,6 +1,6 @@
 ---
 name: land-pr
-description: Open, review and land a MapCairn pull request with the gh CLI - write the description, run a fresh-eyes review, watch CI, fix failures, and merge only when the person has authorised merging and every required check is green. Use after `pick-up-issue` has produced a verified branch, or whenever someone asks to open, review, update or merge a pull request.
+description: Open, review and land a MapCairn pull request with the gh CLI: write the description, run a fresh-eyes review, watch CI, fix failures, and merge only when the person has authorised merging and every required check is green. Use after `pick-up-issue` has produced a verified branch, or whenever someone asks to open, review, update or merge a pull request.
 ---
 
 # Land a pull request
@@ -26,7 +26,7 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
 
 Review the opened pull request before it merges, and fix what is real. A review is read-only: the reviewer reads the diff and reports, and does not edit, push or post.
 
-- Reviewer: if you can start a sub-agent within the limits in `AGENTS.md` and your tool's instruction file, give it the `fresh-eyes-reviewer` role and the pull request number. Otherwise use your tool's review command if it has one, or read the diff yourself as a stranger, after the issue and the documents that "Read before you change" in `AGENTS.md` names.
+- Reviewer: if you can start a sub-agent within the limits in your tool's instruction file (`CLAUDE.md` for Claude Code), give it the `fresh-eyes-reviewer` role and the pull request number. Otherwise use your tool's review command if it has one, or read the diff yourself as a stranger, after the issue and the documents that "Read before you change" in `AGENTS.md` names.
 - Checklist: does it solve the issue; is there a test that failed first and still means something; behaviour on the keyboard and for a screen reader; no id, kind or provider switched on in code; package boundaries respected; docs match the behaviour; copy in British English; nothing sent over the network that `PRIVACY.md` does not mention; no secrets, no identifying data, no dependency added without need; the description's claims about checks are true (`gh pr checks`).
 - Report only findings with a file, a line and a fix, most serious first (blocking, should fix, minor). Leave out style preferences and anything the lint enforces, and say what you could not check. "No findings" is a valid result.
 - Author: apply fixes as new commits, push, and re-run the affected checks. Leave a short comment on the pull request saying what the review found and what changed. A finding you decline gets a one-line reason.
@@ -58,9 +58,9 @@ gh pr merge <n> --squash --delete-branch --subject "<Conventional Commit title> 
 ## 5. Close out
 
 1. Confirm the merge: `gh pr view <n> --json state,mergedAt`.
-2. If `Fixes #<n>` did not close the issue, or the pull request was `Part of`, tick the issue's task list and close it only when all the work is merged and verified (`gh issue close <n> --comment "<what shipped>"`).
-3. Update the tracking issue if there is one.
-4. Remove the local branch and worktree. A squash merge leaves the branch's commits outside `main`, so `git branch -d` refuses: once step 1 shows `MERGED`, use `git switch main && git pull --ff-only && git branch -D <branch>`, then `git worktree remove <path>` if you made one. (On a fork, pull from `upstream`.)
-5. Stop anything you left running and check the ports are free.
+2. If `Fixes #<n>` did not close the issue, or the pull request was `Part of`, tick the issue's task list and close it only when all the work is merged and verified (`gh issue close <n> --comment "<what shipped>"`). Edit from the current body (`gh issue view <n> --json body --jq .body > <file>`) so nothing is overwritten. Without triage rights, post the task-list status as a comment or in the pull request description and leave ticking, closing and labels to the maintainer.
+3. Update the tracking issue if there is one, the same way.
+4. Remove the local branch and worktree. `gh pr merge --delete-branch` may print a worktree error when the branch is checked out in one; that is expected, so confirm with `gh pr view` (step 1). A squash merge leaves the branch's commits outside `main`, so `git branch -d` refuses: once step 1 shows `MERGED`, use `git switch main && git pull --ff-only && git branch -D <branch>`, then `git worktree remove <path>` if you made one. (On a fork, pull from `upstream`.)
+5. Stop every server, wrangler instance and browser you started, and confirm with a port check that none is left.
 6. If the merged pull request was a plan, continue with `split-plan`. Otherwise pick the next issue with `pick-up-issue`, if the person asked for a queue.
 7. Hand off with the report in `AGENTS.md` ("Definition of done"), including the pull request URL, its final check results and whether it merged.
