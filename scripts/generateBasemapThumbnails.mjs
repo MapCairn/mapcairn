@@ -73,8 +73,16 @@ const { SATELLITE_BASEMAP } = await import(
     .href
 );
 
-/** The SDK's basemaps and those only the reference host defines, which import types only so plain Node loads them. */
-const BASEMAPS = [...SDK_BASEMAPS, OPEN_TOPO_MAP_BASEMAP, SATELLITE_BASEMAP];
+/**
+ * The SDK's basemaps and those only the reference host defines (which import
+ * types only so plain Node loads them), less any that name no `thumbnail`:
+ * their tile is a swatch, so there is no image to render.
+ */
+const BASEMAPS = [
+  ...SDK_BASEMAPS,
+  OPEN_TOPO_MAP_BASEMAP,
+  SATELLITE_BASEMAP,
+].filter((basemap) => basemap.thumbnail !== undefined);
 
 /** The basemaps to render: those named on the command line, or all of them. */
 const REQUESTED = process.argv.slice(2);
@@ -85,7 +93,9 @@ const UNKNOWN = REQUESTED.filter(
   (id) => !BASEMAPS.some((basemap) => basemap.id === id),
 );
 if (UNKNOWN.length > 0) {
-  throw new Error(`Unknown basemap ids: ${UNKNOWN.join(", ")}`);
+  throw new Error(
+    `Unknown basemap ids, or ones that name no thumbnail: ${UNKNOWN.join(", ")}`,
+  );
 }
 
 /** URL prefixes that map to the installed library folder, so MapLibre finds its own sibling files. */

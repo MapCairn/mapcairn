@@ -35,8 +35,9 @@ export const tile = style({
 });
 
 /**
- * The preview frame. Its background is the map's pre-load colour, so a
- * preview that is missing or has not loaded leaves a plain neutral tile.
+ * The preview frame. Its background shows only while a preview is loading: a
+ * basemap with no preview, or one whose preview failed, fills the frame with
+ * its swatch instead.
  * The 2px border is transparent until selected, when it becomes a ring in the
  * raised surface colour. The accent outline sits outside that ring, so the
  * selection reads against the sheet on one side and against any thumbnail on
@@ -99,10 +100,11 @@ export const image = style({
 });
 
 /**
- * A plain colour in place of the preview, for a basemap with no preview and
- * in Save data mode: the basemap's own swatch colour when it has one, else the
- * map's background colour, so no image is requested and the tile keeps its
- * size. The hairline keeps it visible against a sheet of a similar colour.
+ * A plain colour in place of the preview, for a basemap with no preview, one
+ * whose preview failed to load, and Save data mode: the basemap's own swatch
+ * colour when it has one, else the map's background colour, so the tile
+ * keeps its size without an image. The hairline keeps it visible against a
+ * sheet of a similar colour.
  */
 export const swatch = style({
   display: "block",
