@@ -25,6 +25,7 @@ describe("catalogueView", () => {
       status: "loading",
       skipped: 0,
       refresh: "idle",
+      failed: false,
       awaited: true,
     });
     expect(catalogueView(FAILED, true).status).toBe("failed");
@@ -35,6 +36,7 @@ describe("catalogueView", () => {
       status: "ready",
       skipped: 3,
       refresh: "failed",
+      failed: true,
       awaited: false,
     });
   });
@@ -42,11 +44,17 @@ describe("catalogueView", () => {
 
 describe("loadFailed", () => {
   it("is true for a failed load and for a failed refresh, and for nothing else", () => {
-    expect(loadFailed(catalogueView(FAILED, true))).toBe(true);
-    expect(loadFailed(catalogueView(ready("failed"), true))).toBe(true);
-    expect(loadFailed(catalogueView(ready("idle"), true))).toBe(false);
-    expect(loadFailed(catalogueView(ready("loading"), true))).toBe(false);
-    expect(loadFailed(catalogueView({ status: "loading" }, true))).toBe(false);
+    expect(loadFailed(FAILED)).toBe(true);
+    expect(loadFailed(ready("failed"))).toBe(true);
+    expect(loadFailed(ready("idle"))).toBe(false);
+    expect(loadFailed(ready("loading"))).toBe(false);
+    expect(loadFailed({ status: "loading" })).toBe(false);
+  });
+
+  it("is what the view reports as failed", () => {
+    expect(catalogueView(FAILED, true).failed).toBe(true);
+    expect(catalogueView(ready("failed"), true).failed).toBe(true);
+    expect(catalogueView(ready("idle"), true).failed).toBe(false);
   });
 });
 

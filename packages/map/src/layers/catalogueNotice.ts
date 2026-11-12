@@ -9,6 +9,7 @@ import {
 } from "@mapcairn/core";
 import type { AnnouncePriority } from "../ui/LiveRegion";
 import type { Reconciled } from "./catalogueReconcile";
+import { catalogueView, hidesSection } from "./catalogueView";
 
 /** The `ready` member of a catalogue state. */
 type ReadyState = Extract<CatalogueState, { status: "ready" }>;
@@ -44,10 +45,12 @@ const assertively = (message: string): CatalogueMessage => ({
 });
 
 /**
- * What a ready state says. A failed refresh is its own assertive message.
- * Anything else is one composed polite message (see `announceCatalogueChange`
- * for its order). The first list is not an update, so "Layers updated" waits
- * for a list that follows one; the skipped count is said when it changes.
+ * What a ready state says. A failed refresh is its own assertive message,
+ * unless the section is hidden (see `hidesSection`), which has no list to say
+ * was kept. Anything else is one composed polite message (see
+ * `announceCatalogueChange` for its order). The first list is not an update,
+ * so "Layers updated" waits for a list that follows one; the skipped count is
+ * said each time it changes to a count above zero, the first list included.
  */
 function readyNotice({
   previous,
@@ -59,7 +62,11 @@ function readyNotice({
 }): CatalogueMessage | null {
   const before = previous?.status === "ready" ? previous : null;
   if (next.refresh === "failed") {
-    return before?.refresh === "failed"
+    const hidden = hidesSection(
+      catalogueView(next, awaited),
+      next.layers.length,
+    );
+    return before?.refresh === "failed" || hidden
       ? null
       : assertively(describeLayersRefreshFailed());
   }

@@ -158,6 +158,59 @@ describe("the Layers section when the catalogue fails", () => {
     expect(tryAgain()).not.toHaveAttribute("aria-busy");
   });
 
+  it("keeps Try again busy and returns focus when the catalogue publishes loading only after refresh() has returned", async () => {
+    const catalogue = loadingCatalogue();
+    show(catalogue);
+    act(() => catalogue.setState({ status: "failed", reason: "network" }));
+    tryAgain().focus();
+    fireEvent.click(tryAgain());
+    // refresh() has returned and the catalogue has said nothing yet.
+    await act(async () => undefined);
+    act(() => catalogue.setState({ status: "loading" }));
+    expect(tryAgain()).toHaveAttribute("aria-busy", "true");
+    expect(tryAgain()).toHaveFocus();
+    expect(section()).toHaveTextContent("Loading layers");
+
+    readyWith(catalogue);
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Layers" })).toHaveFocus();
+  });
+
+  it("stays armed until a loading state has been seen and left, so a retry that fails again is not taken for success", async () => {
+    const catalogue = loadingCatalogue();
+    show(catalogue);
+    act(() => catalogue.setState({ status: "failed", reason: "network" }));
+    tryAgain().focus();
+    fireEvent.click(tryAgain());
+    await act(async () => undefined);
+    act(() => catalogue.setState({ status: "loading" }));
+    act(() => catalogue.setState({ status: "failed", reason: "network" }));
+    expect(tryAgain()).toHaveFocus();
+    expect(tryAgain()).not.toHaveAttribute("aria-busy");
+  });
+
+  it("returns focus to the Layers heading when Try again had focus as a refresh the host started recovered", () => {
+    const catalogue = loadingCatalogue();
+    show(catalogue);
+    readyWith(catalogue, { refresh: "failed" });
+    tryAgain().focus();
+    expect(tryAgain()).toHaveFocus();
+
+    readyWith(catalogue);
+
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Layers" })).toHaveFocus();
+  });
+
+  it("leaves focus alone when Try again goes without having had it", () => {
+    const catalogue = loadingCatalogue();
+    show(catalogue);
+    readyWith(catalogue, { refresh: "failed" });
+    readyWith(catalogue);
+    expect(screen.getByRole("heading", { name: "Layers" })).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
+  });
+
   it("does not take focus from someone who has gone elsewhere while it retries", async () => {
     const { catalogue, settle } = scripted();
     show(catalogue);

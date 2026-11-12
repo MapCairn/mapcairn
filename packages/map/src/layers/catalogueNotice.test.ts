@@ -116,6 +116,42 @@ describe("catalogueNotice", () => {
       });
     });
 
+    it("is not said while the section is hidden: a host that was ready and empty at mount shows nothing to be updated", () => {
+      expect(
+        catalogueNotice(
+          inputs({
+            awaited: false,
+            previous: ready([], [], "loading"),
+            next: ready([], [], "failed"),
+          }),
+        ),
+      ).toBeNull();
+    });
+
+    it("is said for an empty list that was awaited, because the section shows it", () => {
+      expect(
+        catalogueNotice(
+          inputs({
+            awaited: true,
+            previous: ready([], [], "loading"),
+            next: ready([], [], "failed"),
+          }),
+        )?.priority,
+      ).toBe("assertive");
+    });
+
+    it("is said for a host that was ready at mount once it has layers", () => {
+      expect(
+        catalogueNotice(
+          inputs({
+            awaited: false,
+            previous: ready([SAMPLE_FEED_LAYER], [], "loading"),
+            next: ready([SAMPLE_FEED_LAYER], [], "failed"),
+          }),
+        )?.priority,
+      ).toBe("assertive");
+    });
+
     it("is said once for the state, and again after another failed refresh", () => {
       const failed = ready([SAMPLE_FEED_LAYER], [], "failed");
       expect(

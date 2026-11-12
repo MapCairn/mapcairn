@@ -92,6 +92,7 @@ describe("what the hook says about the catalogue", () => {
       status: "loading",
       skipped: 0,
       refresh: "idle",
+      failed: false,
       awaited: true,
     });
     act(() => result.current.retryCatalogue());
@@ -105,6 +106,7 @@ describe("what the hook says about the catalogue", () => {
       status: "ready",
       skipped: 0,
       refresh: "idle",
+      failed: false,
       awaited: false,
     });
     act(() =>

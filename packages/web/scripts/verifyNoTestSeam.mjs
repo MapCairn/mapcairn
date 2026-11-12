@@ -5,7 +5,7 @@
 //
 // Usage, from packages/web after `react-router build`:
 //   node scripts/verifyNoTestSeam.mjs                   exits 1 if any marker is found
-//   node scripts/verifyNoTestSeam.mjs --expect-present  exits 1 unless every group is found (for the e2e build)
+//   node scripts/verifyNoTestSeam.mjs --expect-present  exits 1 unless every string of every group is found (for the e2e build)
 //
 // `--root <dir>` searches <dir>/build/client and <dir>/build/server instead of
 // this package, which is how its test runs it.
@@ -86,9 +86,16 @@ const report = (names) =>
   names.map((name) => `${name}:\n  ${found.get(name).join("\n  ")}`).join("\n");
 
 if (expectPresent) {
-  const absent = groups
-    .map((group) => group.name)
-    .filter((name) => found.get(name).length === 0);
+  // Every needle of a group must be there, not just one of them, so a seam
+  // that lost a part of itself fails too.
+  const absent = groups.flatMap((group) =>
+    group.needles
+      .filter(
+        (needle) =>
+          !found.get(group.name).some((line) => line.endsWith(`: ${needle}`)),
+      )
+      .map((needle) => `${group.name} (${needle})`),
+  );
   if (absent.length > 0) {
     console.error(
       `Missing from ${filesChecked} build files, but this build should keep it: ${absent.join(", ")}.`,

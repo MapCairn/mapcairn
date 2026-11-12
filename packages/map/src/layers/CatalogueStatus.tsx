@@ -8,10 +8,10 @@ import {
   describeNoLayers,
 } from "@mapcairn/core";
 import { LoaderCircle, RotateCw, TriangleAlert } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type FocusEvent, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
-import { type CatalogueView, loadFailed } from "./catalogueView";
+import type { CatalogueView } from "./catalogueView";
 import * as styles from "./Layers.css";
 
 /** Props for {@link CatalogueStatus}. */
@@ -22,20 +22,85 @@ export interface CatalogueStatusProps {
   /** Asks the catalogue to load again (`DataLayers.retryCatalogue`). */
   readonly onRetry: () => void;
   /**
-   * Called when a retry that Try again started has recovered and Try again has
-   * gone, so the section can put focus where the button was.
+   * Called when Try again has gone because the catalogue recovered, and it had
+   * focus or had just been pressed, so the section can put focus where the
+   * button was.
    */
   readonly onRecovered: () => void;
 }
 
-/** The words of the failure row: the retry in progress, or what failed. */
-function failureText(catalogue: CatalogueView, retrying: boolean): string {
-  if (retrying) {
-    return describeLayersLoading();
-  }
+/** The words of the failure row when nothing is being retried: what failed. */
+function failureText(catalogue: CatalogueView): string {
   return catalogue.status === "failed"
     ? describeLayersLoadFailed()
     : describeLayersRefreshFailed();
+}
+
+/**
+ * Whether a retry that Try again started is under way. It starts at the press
+ * and ends once the catalogue has been seen loading and has stopped, so a
+ * catalogue that publishes `loading` only after `refresh()` has returned is
+ * still taken as one retry.
+ */
+function useRetry(loading: boolean) {
+  const [retrying, setRetrying] = useState(false);
+  const sawLoading = useRef(false);
+  useEffect(() => {
+    if (!retrying) {
+      return;
+    }
+    if (loading) {
+      sawLoading.current = true;
+      return;
+    }
+    if (sawLoading.current) {
+      sawLoading.current = false;
+      setRetrying(false);
+    }
+  }, [retrying, loading]);
+  return {
+    retrying,
+    startRetry: () => {
+      sawLoading.current = false;
+      setRetrying(true);
+    },
+  };
+}
+
+/**
+ * Hands focus on when the failure row (Try again) goes. It acts only if the
+ * button had focus when it went, or a retry it started has just recovered, and
+ * focus has been left with nothing (on the page itself): someone who moved on
+ * is left alone. The returned handlers go on the button, to know it had focus.
+ */
+function useFocusHandoff(shown: boolean, retried: boolean, onGone: () => void) {
+  const wasShown = useRef(false);
+  const hadFocus = useRef(false);
+  useEffect(() => {
+    const gone = wasShown.current && !shown;
+    wasShown.current = shown;
+    if (!gone) {
+      return;
+    }
+    const mine = hadFocus.current || retried;
+    hadFocus.current = false;
+    const focused = document.activeElement;
+    if (mine && (focused === null || focused === document.body)) {
+      onGone();
+    }
+  }, [shown, retried, onGone]);
+  return {
+    onFocus: () => {
+      hadFocus.current = true;
+    },
+    // A blur from a button still on the page is a person moving on. One from a
+    // button that has gone is the focused button leaving, which the handoff follows.
+    onBlur: (event: FocusEvent<HTMLElement>) => {
+      if (event.currentTarget.isConnected) {
+        hadFocus.current = false;
+      }
+    },
+  };
 }
 
 /**
@@ -46,11 +111,11 @@ function failureText(catalogue: CatalogueView, retrying: boolean): string {
  * so nothing here is read twice.
  *
  * @remarks Try again stays in place while it retries, busy, so focus stays on
- *   it. When the retry recovers it goes, and focus moves to `onRecovered`'s
- *   target, but only if focus was left with nothing (on the page itself):
- *   someone who moved on is left alone. If the retry fails again the button is
- *   still there and keeps focus. A refresh the host started that is only
- *   loading shows nothing: the list stays as it was.
+ *   it. When the catalogue recovers it goes, and focus moves to
+ *   `onRecovered`'s target (see {@link useFocusHandoff}), whether the retry was
+ *   this button's or a refresh the host started. If a retry fails again the
+ *   button is still there and keeps focus. A refresh the host started that is
+ *   only loading shows nothing: the list stays as it was.
  */
 export function CatalogueStatus({
   catalogue,
@@ -58,26 +123,15 @@ export function CatalogueStatus({
   onRetry,
   onRecovered,
 }: CatalogueStatusProps) {
-  const [retrying, setRetrying] = useState(false);
   const loading =
     catalogue.status === "loading" || catalogue.refresh === "loading";
-  const failed = loadFailed(catalogue);
+  const { retrying, startRetry } = useRetry(loading);
   const retryingNow = retrying && loading;
-  const showsRetry = failed || retryingNow;
-
-  useEffect(() => {
-    if (!retrying || loading) {
-      return;
-    }
-    setRetrying(false);
-    const focused = document.activeElement;
-    if (!failed && (focused === null || focused === document.body)) {
-      onRecovered();
-    }
-  }, [retrying, loading, failed, onRecovered]);
+  const showsRetry = catalogue.failed || retryingNow;
+  const focusHandoff = useFocusHandoff(showsRetry, retrying, onRecovered);
 
   const retry = () => {
-    setRetrying(true);
+    startRetry();
     onRetry();
   };
 
@@ -85,16 +139,21 @@ export function CatalogueStatus({
     <>
       {showsRetry ? (
         <div className={styles.status} data-testid="catalogue-status">
-          <span className={retryingNow ? undefined : styles.statusError}>
-            {retryingNow ? null : <Icon icon={TriangleAlert} />}
-            {failureText(catalogue, retryingNow)}
-          </span>
+          {retryingNow ? (
+            <span>{describeLayersLoading()}</span>
+          ) : (
+            <span className={styles.statusError}>
+              <Icon icon={TriangleAlert} />
+              {failureText(catalogue)}
+            </span>
+          )}
           <Button
             variant="secondary"
             icon={RotateCw}
             busy={loading}
             data-testid="catalogue-retry"
             onClick={retry}
+            {...focusHandoff}
           >
             Try again
           </Button>

@@ -590,15 +590,15 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     state = applyCatalogue(stored, catalogueState, awaited, now());
     setState(state);
   }
-  const catalogueSummary = useMemo(
+  const statusView = useMemo(
     () => catalogueView(catalogueState, awaited),
     [catalogueState, awaited],
   );
   const retryCatalogue = useCallback(() => {
-    if (loadFailed(catalogueView(catalogue.getState(), awaited))) {
+    if (loadFailed(catalogue.getState())) {
       void catalogue.refresh();
     }
-  }, [catalogue, awaited]);
+  }, [catalogue]);
   /**
    * What the handlers below read. It follows the last committed state, set in
    * a layout effect so a render React throws away (a transition that
@@ -1197,7 +1197,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
 
   return {
     layers,
-    catalogue: catalogueSummary,
+    catalogue: statusView,
     retryCatalogue,
     selected,
     choices,
