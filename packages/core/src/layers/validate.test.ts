@@ -594,6 +594,54 @@ describe("validateLayerDefinition", () => {
       "source.maxzoom:",
     ],
     [
+      "bounds that are not four numbers",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-180, -60, 180];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds that are not a list",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = "world";
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds with a longitude out of range",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-181, -60, 180, 85];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds with a latitude out of range",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-180, -91, 180, 85];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds whose west is not west of east",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [10, -60, 10, 85];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds whose south is not south of north",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-180, 85, 180, -60];
+      },
+      "source.bounds:",
+    ],
+    [
       "a tile legend with an unknown colour",
       SAMPLE_TILE_LAYER,
       (d) => {

@@ -1,5 +1,7 @@
+import { mercatorUnproject, NORMALISED_TILE_SIZE } from "@mapcairn/core";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+import { mockLayerProviders } from "./support/layers";
 
 /*
  * Map shape: Flat is the default, Globe is a Settings choice that is
@@ -7,6 +9,14 @@ import { expect, test } from "./fixtures";
  */
 
 const VIEW = "#map=2.00/0.00000/0.00000";
+
+const POPULATION_TILE =
+  /GPW_Population_Density_2020\/default\/GoogleMapsCompatible_Level7\/(\d+)\/(\d+)\/\d+\.png/;
+
+/** The latitude, in degrees, of the northern edge of row `y` at tile level `z`. */
+function tileNorthLatitude(z: number, y: number): number {
+  return mercatorUnproject({ x: 0, y: y * NORMALISED_TILE_SIZE }, z).lat;
+}
 
 function shapeGroup(page: Page) {
   return page.getByRole("radiogroup", { name: "Map shape" });
@@ -91,6 +101,30 @@ test.describe("map shape", () => {
     ).toBe("globe");
     await mapPage.waitForMap();
     expect((await colours())[0]).toBe(globeHost);
+  });
+
+  test("the population layer asks for no tile south of 60 degrees south, where its provider serves opaque filler that a globe stretches into wedges at the pole", async ({
+    page,
+    mapPage,
+  }) => {
+    const requests = await mockLayerProviders(page);
+    await page.addInitScript(() => {
+      localStorage.setItem("mapcairn:projection", '"globe"');
+    });
+    await mapPage.goto("#map=3.00/-80.00000/30.00000&layers=population");
+    await expect(mapPage.host).toHaveAttribute("data-projection", "globe");
+
+    const tilesOf = () =>
+      requests.urls.flatMap((url) => {
+        const match = POPULATION_TILE.exec(url);
+        return match ? [{ z: Number(match[1]), y: Number(match[2]) }] : [];
+      });
+    await expect.poll(() => tilesOf().length).toBeGreaterThan(0);
+
+    const wholly = tilesOf().filter(
+      ({ z, y }) => tileNorthLatitude(z, y) <= -60,
+    );
+    expect(wholly).toEqual([]);
   });
 
   test("a pin on the far side of a globe is not drawn", async ({

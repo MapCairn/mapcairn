@@ -262,6 +262,16 @@ describe("MapDataLayers", () => {
     expect(adapter.drawnLayers()).toEqual([]);
   });
 
+  it("hands a tile layer's bounds to the map, so it never asks for a tile outside them", () => {
+    const { adapter, layers } = setup();
+    const setTileLayer = vi.spyOn(adapter, "setTileLayer");
+    act(() => layers().setEnabled("sample-imagery", true));
+    expect(setTileLayer).toHaveBeenCalledWith(
+      "sample-imagery",
+      expect.objectContaining({ bounds: [-180, -60, 180, 85] }),
+    );
+  });
+
   it("draws a tile layer with its URL and opacity, and follows its controls", () => {
     const { adapter, layers } = setup();
     act(() => layers().setEnabled("sample-imagery", true));

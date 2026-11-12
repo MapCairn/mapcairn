@@ -158,6 +158,7 @@ function draw(
       tiles,
       tileSize: definition.source.tileSize,
       maxzoom: definition.source.maxzoom,
+      bounds: definition.source.bounds,
       opacity,
     });
   }

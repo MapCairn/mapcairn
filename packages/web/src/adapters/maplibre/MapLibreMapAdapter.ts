@@ -1425,9 +1425,15 @@ export class MapLibreMapAdapter implements MapAdapter {
         };
       }
       case "tiles": {
-        const { tiles, tileSize, maxzoom, opacity } = layer.overlay;
+        const { tiles, tileSize, maxzoom, bounds, opacity } = layer.overlay;
         return {
-          source: { type: "raster", tiles: [tiles], tileSize, maxzoom },
+          source: {
+            type: "raster",
+            tiles: [tiles],
+            tileSize,
+            maxzoom,
+            ...(bounds ? { bounds: [...bounds] } : {}),
+          },
           layers: [
             {
               id: ids.tiles,

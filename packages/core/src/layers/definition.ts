@@ -201,6 +201,14 @@ export interface TileSource {
   readonly tileSize: 256 | 512;
   /** The deepest tile level the service has; the engine scales beyond it. */
   readonly maxzoom: number;
+  /**
+   * The box the service has real tiles for, as `[west, south, east, north]`
+   * in degrees. The engine asks for no tile outside it. Set it when a
+   * provider fills the rest with blank or opaque filler: on a globe the
+   * engine stretches a tile at the edge of the world over the pole, so filler
+   * there becomes wedges meeting at the pole.
+   */
+  readonly bounds?: readonly [number, number, number, number];
 }
 
 /**

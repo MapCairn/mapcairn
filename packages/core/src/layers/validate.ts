@@ -640,6 +640,28 @@ function checkFeed(
   checkDetail(problems, definition.detail, fields, options);
 }
 
+/** Bounds are `[west, south, east, north]` in degrees, a box with area inside the world. */
+function checkBounds(problems: Problems, bounds: unknown): void {
+  const inRange = (value: unknown, limit: number): value is number =>
+    typeof value === "number" && Math.abs(value) <= limit;
+  const [west, south, east, north] = Array.isArray(bounds) ? bounds : [];
+  const valid =
+    Array.isArray(bounds) &&
+    bounds.length === 4 &&
+    inRange(west, 180) &&
+    inRange(east, 180) &&
+    inRange(south, 90) &&
+    inRange(north, 90) &&
+    west < east &&
+    south < north;
+  if (!valid) {
+    problems.add(
+      "source.bounds",
+      "must be [west, south, east, north] in degrees, with west below east and south below north",
+    );
+  }
+}
+
 function checkTiles(
   problems: Problems,
   definition: Json,
@@ -658,6 +680,9 @@ function checkTiles(
     maxzoom > 24
   ) {
     problems.add("source.maxzoom", "must be a whole number from 0 to 24");
+  }
+  if (source.bounds !== undefined) {
+    checkBounds(problems, source.bounds);
   }
   if (
     definition.legend !== undefined &&
