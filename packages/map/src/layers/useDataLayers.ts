@@ -234,11 +234,6 @@ function withLoading(state: State, load: WantedLoad): State {
   };
 }
 
-/** The state with what a layer's load settled to. */
-function withResult(state: State, id: string, result: LoadResult): State {
-  return { ...state, results: { ...state.results, [id]: result } };
-}
-
 /** The tiles a raster tile layer asks for with these controls, or null for any other layer. */
 function tilesOf(
   definition: LayerDefinition,
@@ -335,7 +330,9 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
    * What the handlers below read. It follows the last committed state, set in
    * a layout effect so a render React throws away (a transition that
    * suspends) never leaves its state here, and before any effect of the
-   * same commit runs.
+   * same commit runs. A layout effect of a child that calls a handler in the
+   * same commit would still see the previous state; the handlers are only
+   * called from events and the map's callbacks.
    */
   const stateRef = useRef(state);
   useLayoutEffect(() => {
@@ -374,6 +371,8 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   });
   const tooFarSignature = tooFar.join(" ");
 
+  // After every commit, not on a signature: turning a layer off and on within
+  // one batch leaves the signature as it was but has forgotten its window.
   useEffect(() => {
     rememberWindows(queryWindows.current, wanted);
   });
@@ -389,27 +388,36 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     }
   }, [tooFarSignature]);
 
-  /** Starts one load, shows the layer as loading, and settles it when the source answers. */
-  const startLoad = (load: WantedLoad) => {
-    const { id, key, definition } = load;
-    const controller = new AbortController();
-    requests.current.set(id, { key, controller });
-    setState((current) => withLoading(current, load));
-    loadOutcome(layerSource, load, now, controller.signal).then((outcome) => {
-      if (!outcome) {
-        return;
-      }
-      if (requests.current.get(id)?.key === key) {
-        requests.current.delete(id);
-        loadedKeys.current.set(id, key);
-        setState((current) => withResult(current, id, outcome.result));
-      }
-      reportLoad(definition, outcome.spoken, announcedStates.current, announce);
-    });
-  };
-
   // biome-ignore lint/correctness/useExhaustiveDependencies: the signature is the trigger; everything else is read through refs or is stable.
   useEffect(() => {
+    /** Starts one load, shows the layer as loading, and settles it when the source answers. */
+    const startLoad = (load: WantedLoad) => {
+      const { id, key, definition } = load;
+      const controller = new AbortController();
+      requests.current.set(id, { key, controller });
+      setState((current) => withLoading(current, load));
+      loadOutcome(layerSource, load, now, controller.signal).then((outcome) => {
+        if (!outcome) {
+          return;
+        }
+        if (requests.current.get(id)?.key === key) {
+          requests.current.delete(id);
+          loadedKeys.current.set(id, key);
+          setState((current) => ({
+            ...current,
+            results: { ...current.results, [id]: outcome.result },
+          }));
+        }
+        // A load that was replaced meanwhile is not shown but is still said (#81).
+        reportLoad(
+          definition,
+          outcome.spoken,
+          announcedStates.current,
+          announce,
+        );
+      });
+    };
+
     const plan = planLoads(wanted, requests.current, loadedKeys.current);
     for (const id of plan.cancel) {
       requests.current.get(id)?.controller.abort();

@@ -129,13 +129,14 @@ export function planLoads(
   settled: ReadonlyMap<string, string>,
 ): LoadPlan {
   const wantedKeys = new Map(wanted.map((load) => [load.id, load.key]));
-  const notWanted = (keys: Iterable<readonly [string, string]>) =>
-    [...keys]
-      .filter(([id, key]) => wantedKeys.get(id) !== key)
-      .map(([id]) => id);
+  const isStale = (id: string, key: string) => wantedKeys.get(id) !== key;
   return {
-    cancel: notWanted([...inFlight].map(([id, { key }]) => [id, key])),
-    forget: notWanted(settled),
+    cancel: [...inFlight]
+      .filter(([id, request]) => isStale(id, request.key))
+      .map(([id]) => id),
+    forget: [...settled]
+      .filter(([id, key]) => isStale(id, key))
+      .map(([id]) => id),
     start: wanted.filter(
       (load) =>
         inFlight.get(load.id)?.key !== load.key &&
