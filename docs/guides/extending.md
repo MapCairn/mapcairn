@@ -41,7 +41,7 @@ Bright is the default basemap in both themes; the basemap never follows the ligh
 
 ## Add a data layer
 
-A layer is data, not code: one definition file, one recorded fixture (feeds only) and the provider's origins in the Content Security Policy. Nothing in the code names a layer, a provider or a response shape.
+A layer is data, not code: one definition file, one recorded fixture (feeds only) and the provider's origins in the Content Security Policy. Nothing in the code names a layer, a provider or a response shape. [`serving-layers.md`](serving-layers.md) says which kind fits which server, and what each costs it.
 
 1. Add `packages/web/src/layers/definitions/<id>.ts` with a default export of a `LayerDefinition` (types in `packages/core/src/layers/definition.ts`). It is picked up by `import.meta.glob`, so no list needs editing. A feed names its decoder (`geojson`, or one you register in `packages/web/src/layers/index.ts`), maps fields by dotted path, and describes its style, card and list with templates such as `{time|relative}`. A colour rule needs a shape, a size or the field named on the card, so colour is never the only signal. A tile layer needs no code for a date or time its provider has no tiles for: when the map settles with none of the layer's tiles loaded, the layer's status says no imagery was found for the chosen date or time, beside its control, and says it once through the live region. The status goes when the control changes, or when a tile of the layer loads later, and the live region says so once.
 2. For a feed, record a small sample response in `packages/web/src/layers/fixtures/` and add it to `manifest.json` with the number of features it should decode to (and a detail fixture if the layer has `detail`).

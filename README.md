@@ -68,6 +68,7 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
 | [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules |
 | [`docs/guides/extending.md`](docs/guides/extending.md) | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, a routing provider or an adapter |
+| [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md) | Which layer kind to serve from your own server, from raster tiles to GeoJSON by bounding box, and what each costs the server |
 | [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, choosing between features at one place, and drawing, importing and exporting shapes |
 | [`docs/guides/performance.md`](docs/guides/performance.md) | What was measured for Lighthouse, what was tried and what was left alone |
 | [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) | Using Claude Code, Codex, opencode, GitHub Copilot, Antigravity or Cursor on this repository: what each reads, how to start, and what is Claude Code only |
