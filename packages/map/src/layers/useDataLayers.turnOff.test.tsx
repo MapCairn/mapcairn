@@ -198,6 +198,22 @@ describe("useDataLayers turnOff", () => {
     expect(imagery()?.status.kind).toBe("on");
   });
 
+  it("ignores, and does not announce, a recovery that arrives after the batch turned the layer off", () => {
+    const view = setup();
+    act(() => view.result.current.setEnabled(IMAGERY, true));
+    const imagery = () =>
+      view.result.current.layers.find((item) => item.definition.id === IMAGERY);
+    const tiles = tileUrl(SAMPLE_TILE_LAYER, imagery()?.controls ?? {}, NOW);
+    act(() => view.result.current.reportTilesUnavailable(IMAGERY, tiles));
+    act(() => view.result.current.turnOff([IMAGERY]));
+    announce.mockClear();
+    act(() => view.result.current.reportTilesRecovered(IMAGERY, tiles));
+    expect(announce).not.toHaveBeenCalled();
+    expect(imagery()?.status.kind).toBe("off");
+    act(() => view.result.current.undoTurnOff());
+    expect(imagery()?.status.kind).toBe("on");
+  });
+
   it("cancels the request of a layer that is still loading", () => {
     const view = setup();
     const signals: (AbortSignal | undefined)[] = [];
