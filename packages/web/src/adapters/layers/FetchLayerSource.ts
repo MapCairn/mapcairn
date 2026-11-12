@@ -14,6 +14,7 @@ import {
   maxAgeFromCacheControl,
   SharedResponseCache,
 } from "@mapcairn/core";
+import { defaultFetch } from "../shared/fetch";
 
 /** Options for {@link FetchLayerSource}. */
 export interface FetchLayerSourceOptions {
@@ -26,10 +27,6 @@ export interface FetchLayerSourceOptions {
   readonly decoders?: DecoderRegistry;
   /** The clock for the response cache. Defaults to `Date.now`. */
   readonly now?: () => number;
-}
-
-function defaultFetch(...args: Parameters<typeof fetch>) {
-  return globalThis.fetch(...args);
 }
 
 /**

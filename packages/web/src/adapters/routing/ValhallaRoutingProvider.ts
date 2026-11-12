@@ -12,6 +12,7 @@ import {
   type RoutingProvider,
   type TravelMode,
 } from "@mapcairn/core";
+import { defaultFetch, isAbortError } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
 import { decodePolyline } from "./polyline";
 
@@ -62,14 +63,6 @@ export interface ValhallaRoutingProviderOptions {
    * alike. Defaults to 1000.
    */
   readonly minIntervalMs?: number;
-}
-
-function defaultFetch(...args: Parameters<typeof fetch>) {
-  return globalThis.fetch(...args);
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
 }
 
 function abortedError(): RoutingError {

@@ -58,21 +58,12 @@ export default {
 
 /**
  * Adds this app's `SECURITY_HEADERS` to `response`, filling in only the
- * ones `response` doesn't already set for itself.
- * @remarks `public/_headers`' own `/*` block covers every response served
- *   directly from the Workers Static Assets binding, but this Worker's own
- *   `fetch` handler (every SSR-rendered document, including error
- *   responses) sits outside that binding entirely, so those headers never
- *   reach it. See `securityHeaders.ts`'s own comment for the full picture
- *   and how the two are kept in sync.
- * @remarks "Already set wins" rather than "always overwrite" specifically so
- *   `entry.server.tsx`'s per-request, nonce-bearing `Content-Security-Policy`
- *   (its nonce allows the streaming/hydration `<script>` tags React itself
- *   injects, which a static hash can't cover since their content isn't
- *   static across requests) survives reaching here on a successful SSR
- *   response; this function has no CSP-specific logic of its own; the 500
- *   fallback below simply has no CSP of its own yet, so it gets
- *   `SECURITY_HEADERS`' nonce-free default like any other header would.
+ * ones `response` does not already set.
+ * @remarks `public/_headers` reaches only responses served straight from the
+ *   static assets, so the Worker adds the headers to the responses it renders
+ *   itself. A header already set wins, so the per-request, nonce-bearing
+ *   `Content-Security-Policy` from `entry.server.tsx` survives; the 500
+ *   fallback has none and gets the nonce-free default.
  */
 function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);

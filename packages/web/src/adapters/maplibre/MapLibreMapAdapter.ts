@@ -32,6 +32,7 @@ import {
   dragHandle,
   handleReach,
   hitTestHandle,
+  MAX_MERCATOR_LATITUDE,
   MapEngineError,
   type MapPlacement,
   mapMetresPerPixel,
@@ -1185,7 +1186,12 @@ export class MapLibreMapAdapter implements MapAdapter {
   getBounds(): Bounds {
     const map = this.map;
     if (!map) {
-      return { west: -180, south: -85.0511, east: 180, north: 85.0511 };
+      return {
+        west: -180,
+        south: -MAX_MERCATOR_LATITUDE,
+        east: 180,
+        north: MAX_MERCATOR_LATITUDE,
+      };
     }
     const bounds = map.getBounds();
     return {
