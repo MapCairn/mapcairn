@@ -8,9 +8,9 @@ import {
   announceSelectionCleared,
   announceSelectionFull,
   type FeatureRef,
+  featureRefKey,
 } from "@mapcairn/core";
 import type { AnnounceOptions } from "../ui/LiveRegion";
-import { selectionKey } from "./selectionResolve";
 
 /** What to say about one change to the selection, and how urgently. */
 export interface SelectionAnnouncement {
@@ -22,7 +22,7 @@ export interface SelectionAnnouncement {
 export type TitleOf = (ref: FeatureRef) => string | null;
 
 function keysOf(refs: readonly FeatureRef[]): ReadonlySet<string> {
-  return new Set(refs.map(selectionKey));
+  return new Set(refs.map(featureRefKey));
 }
 
 /** The references of `refs` whose keys are not in `held`. */
@@ -30,7 +30,7 @@ function missingFrom(
   held: ReadonlySet<string>,
   refs: readonly FeatureRef[],
 ): readonly FeatureRef[] {
-  return refs.filter((ref) => !held.has(selectionKey(ref)));
+  return refs.filter((ref) => !held.has(featureRefKey(ref)));
 }
 
 /**

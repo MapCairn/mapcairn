@@ -4,6 +4,7 @@ import {
   DEFAULT_SELECTION_LIMIT,
   type FeatureRef,
   type FeatureSelection,
+  featureRefKey,
 } from "../ports/selection";
 
 /** Options for {@link MemoryFeatureSelection}. */
@@ -15,18 +16,13 @@ export interface MemoryFeatureSelectionOptions {
   readonly limit?: number;
 }
 
-/** A key that is equal for two references exactly when both ids are equal. */
-function refKey(ref: FeatureRef): string {
-  return JSON.stringify([ref.layerId, ref.featureId]);
-}
-
 /** The references without repeats, in order, as frozen copies of their two ids. */
 function uniqueRefs(refs: readonly FeatureRef[]): readonly FeatureRef[] {
   const seen = new Set<string>();
   const unique: FeatureRef[] = [];
   for (const { layerId, featureId } of refs) {
     const ref = Object.freeze({ layerId, featureId });
-    const key = refKey(ref);
+    const key = featureRefKey(ref);
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(ref);
@@ -42,7 +38,8 @@ function sameSequence(
   return (
     left.length === right.length &&
     left.every(
-      (ref, index) => refKey(ref) === refKey(right[index] as FeatureRef),
+      (ref, index) =>
+        featureRefKey(ref) === featureRefKey(right[index] as FeatureRef),
     )
   );
 }
@@ -90,8 +87,10 @@ export class MemoryFeatureSelection implements FeatureSelection {
   };
 
   add(refs: readonly FeatureRef[]): void {
-    const held = new Set(this.#refs.map(refKey));
-    const fresh = uniqueRefs(refs).filter((ref) => !held.has(refKey(ref)));
+    const held = new Set(this.#refs.map(featureRefKey));
+    const fresh = uniqueRefs(refs).filter(
+      (ref) => !held.has(featureRefKey(ref)),
+    );
     if (fresh.length === 0 || this.#refs.length + fresh.length > this.limit) {
       return;
     }
@@ -99,8 +98,8 @@ export class MemoryFeatureSelection implements FeatureSelection {
   }
 
   remove(refs: readonly FeatureRef[]): void {
-    const dropped = new Set(refs.map(refKey));
-    this.#publish(this.#refs.filter((ref) => !dropped.has(refKey(ref))));
+    const dropped = new Set(refs.map(featureRefKey));
+    this.#publish(this.#refs.filter((ref) => !dropped.has(featureRefKey(ref))));
   }
 
   replace(refs: readonly FeatureRef[]): void {

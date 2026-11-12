@@ -126,8 +126,8 @@ function announceLinkLayersUnavailable(count: number): string {
 /**
  * One message for one change to the catalogue: the layers that were turned
  * off, then the layers of the link that are not available. Null when neither
- * happened. The live region speaks only the latest message of a burst, so a
- * transition says everything at once.
+ * happened. The live region coalesces messages that arrive within a window of the
+ * last one sent to the latest of them, so a transition says everything at once.
  */
 export function announceCatalogueChange(
   change: CatalogueChange,

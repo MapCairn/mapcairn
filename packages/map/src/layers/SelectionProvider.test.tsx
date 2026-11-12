@@ -31,6 +31,16 @@ describe("useSelection", () => {
     expect(result.current).toBe(state);
   });
 
+  it("gives the same value to a consumer on every render while the selection is the same", () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <SelectionProvider selection={state}>{children}</SelectionProvider>
+    );
+    const { result, rerender } = renderHook(() => useSelection(), { wrapper });
+    const first = result.current;
+    rerender();
+    expect(result.current).toBe(first);
+  });
+
   it("is undefined under a provider that has no selection, so a host with no store needs no branch", () => {
     const wrapper = ({ children }: { children: ReactNode }) => (
       <SelectionProvider selection={null}>{children}</SelectionProvider>

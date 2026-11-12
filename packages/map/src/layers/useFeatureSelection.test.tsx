@@ -130,7 +130,7 @@ describe("useFeatureSelection state", () => {
     expect(entry?.status).toBe("shown");
     if (entry?.status === "shown") {
       expect(entry.feature.id).toBe("b");
-      expect(entry.layer.definition.id).toBe(FEED);
+      expect(entry.definition.id).toBe(FEED);
     }
   });
 
@@ -185,6 +185,40 @@ describe("useFeatureSelection state", () => {
         "Renamed",
       );
     });
+  });
+});
+
+describe("useFeatureSelection when the map moves", () => {
+  const area = (offset: number) => ({
+    south: offset,
+    west: offset,
+    north: offset + 1,
+    east: offset + 1,
+  });
+
+  it("keeps the same entries and state when a move changes nothing the selection depends on", async () => {
+    const view = setup();
+    await view.load(FEED, "a");
+    act(() => view.selection().toggle(ref(FEED, "a")));
+    const before = view.selection();
+    const layersBefore = view.result.current.layers.layers;
+    act(() => view.result.current.layers.setView(area(0), 5));
+    act(() => view.result.current.layers.setView(area(10), 6));
+    expect(view.result.current.layers.layers).not.toBe(layersBefore);
+    expect(view.selection().entries).toBe(before.entries);
+    expect(view.selection()).toBe(before);
+  });
+
+  it("makes new entries when a layer's features change", async () => {
+    const view = setup();
+    await view.load(FEED, "a");
+    act(() => view.selection().toggle(ref(FEED, "a")));
+    const before = view.selection().entries;
+    view.services.fakes.layerSource.setFeatures(FEED, [
+      samplePoint("a", { title: "Renamed" }),
+    ]);
+    act(() => view.result.current.layers.setControl(FEED, "window", "hour"));
+    await waitFor(() => expect(view.selection().entries).not.toBe(before));
   });
 });
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  featureRefKey,
   type LayerDefinition,
   type LayerFeature,
   SAMPLE_ALERT_LAYER,
@@ -15,7 +16,6 @@ import {
   resolveSelection,
   type SelectionSnapshots,
   selectableRefs,
-  selectionKey,
 } from "./selectionResolve";
 import type { DataLayerState } from "./useDataLayers";
 
@@ -49,7 +49,7 @@ describe("resolveSelection", () => {
     expect(entry).toEqual({
       status: "shown",
       ref: ref(FEED, "a"),
-      layer,
+      definition: SAMPLE_FEED_LAYER,
       feature,
     });
     expect(entry?.status === "shown" && entry.feature).toBe(feature);
@@ -62,7 +62,7 @@ describe("resolveSelection", () => {
     const [entry] = resolveSelection(
       [ref(FEED, "a")],
       [layer],
-      new Map([[selectionKey(ref(FEED, "a")), old]]),
+      new Map([[featureRefKey(ref(FEED, "a")), old]]),
     );
     expect(entry?.status === "shown" && entry.feature).toBe(loaded);
   });
@@ -73,7 +73,7 @@ describe("resolveSelection", () => {
     const [entry] = resolveSelection(
       [ref(FEED, "a")],
       [layer],
-      new Map([[selectionKey(ref(FEED, "a")), old]]),
+      new Map([[featureRefKey(ref(FEED, "a")), old]]),
     );
     expect(entry?.status === "shown" && entry.feature).toBe(old);
   });
@@ -83,7 +83,7 @@ describe("resolveSelection", () => {
     const [entry] = resolveSelection(
       [ref(FEED, "a")],
       [layer],
-      new Map([[selectionKey(ref(FEED, "a")), samplePoint("a")]]),
+      new Map([[featureRefKey(ref(FEED, "a")), samplePoint("a")]]),
     );
     expect(entry).toEqual({ status: "not-shown", ref: ref(FEED, "a") });
   });
@@ -127,7 +127,7 @@ describe("resolveSelection", () => {
     );
     expect(
       entries.map((entry) =>
-        entry.status === "shown" ? entry.layer.definition.id : null,
+        entry.status === "shown" ? entry.definition.id : null,
       ),
     ).toEqual([ALERTS, null, FEED]);
   });
@@ -140,6 +140,69 @@ describe("resolveSelection", () => {
       NONE,
     );
     expect(entry?.status).toBe("not-shown");
+  });
+});
+
+describe("resolveSelection reusing the previous result", () => {
+  const refs = [ref(FEED, "a"), ref(FEED, "b")];
+
+  it("returns the previous array when the layers are new objects holding the same features", () => {
+    const features = [samplePoint("a"), samplePoint("b")];
+    const first = resolveSelection(
+      refs,
+      [layerState(SAMPLE_FEED_LAYER, true, features)],
+      NONE,
+    );
+    const again = resolveSelection(
+      refs,
+      [layerState(SAMPLE_FEED_LAYER, true, features)],
+      NONE,
+      first,
+    );
+    expect(again).toBe(first);
+  });
+
+  it("keeps the entries that did not change and replaces the one that did", () => {
+    const a = samplePoint("a");
+    const first = resolveSelection(
+      refs,
+      [layerState(SAMPLE_FEED_LAYER, true, [a, samplePoint("b")])],
+      NONE,
+    );
+    const next = resolveSelection(
+      refs,
+      [layerState(SAMPLE_FEED_LAYER, true, [a, samplePoint("b")])],
+      NONE,
+      first,
+    );
+    expect(next).not.toBe(first);
+    expect(next[0]).toBe(first[0]);
+    expect(next[1]).not.toBe(first[1]);
+  });
+
+  it("makes new entries when a layer is turned off or a reference is added", () => {
+    const layer = layerState(SAMPLE_FEED_LAYER, true, [samplePoint("a")]);
+    const first = resolveSelection([ref(FEED, "a")], [layer], NONE);
+    const off = resolveSelection(
+      [ref(FEED, "a")],
+      [{ ...layer, enabled: false }],
+      NONE,
+      first,
+    );
+    expect(off).toEqual([{ status: "not-shown", ref: ref(FEED, "a") }]);
+    const more = resolveSelection(
+      [ref(FEED, "a"), ref(FEED, "b")],
+      [layer],
+      NONE,
+      first,
+    );
+    expect(more).toHaveLength(2);
+    expect(more[0]).toBe(first[0]);
+  });
+
+  it("returns the previous array for an unchanged hidden selection", () => {
+    const first = resolveSelection(refs, [], NONE);
+    expect(resolveSelection(refs, [], NONE, first)).toBe(first);
   });
 });
 
@@ -167,7 +230,7 @@ describe("selectableRefs", () => {
 
 describe("reconcileSnapshots", () => {
   const key = (layerId: string, featureId: string) =>
-    selectionKey(ref(layerId, featureId));
+    featureRefKey(ref(layerId, featureId));
 
   it("takes a snapshot of each selected feature its layer has loaded", () => {
     const feature = samplePoint("a");

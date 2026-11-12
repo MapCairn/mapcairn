@@ -5,6 +5,7 @@ import {
   type FeatureRef,
   type FeatureSelection,
   type FormatterRegistry,
+  featureRefKey,
   MemoryFeatureSelection,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
@@ -12,6 +13,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -31,12 +33,12 @@ import {
   type SelectedEntry,
   type SelectionSnapshots,
   selectableRefs,
-  selectionKey,
 } from "./selectionResolve";
 import type { DataLayers } from "./useDataLayers";
 
 const DEFAULT_FORMATTERS = createFormatterRegistry();
 const NO_SNAPSHOTS: SelectionSnapshots = new Map();
+const NO_ENTRIES: readonly SelectedEntry[] = [];
 
 /**
  * Stands in while the host supplies no store, so every hook below is called
@@ -113,13 +115,33 @@ export function useFeatureSelection(
   const layerStates = layers.layers;
 
   useEffect(() => {
+    if (!hostStore) {
+      return;
+    }
     setSnapshots((previous) => reconcileSnapshots(previous, refs, layerStates));
-  }, [refs, layerStates]);
+  }, [hostStore, refs, layerStates]);
 
-  const entries = useMemo(
-    () => resolveSelection(refs, layerStates, snapshots),
-    [refs, layerStates, snapshots],
-  );
+  /**
+   * The entries of the last render. Resolving against them keeps every entry
+   * that did not change, so a map move, which makes new layer states with the
+   * same features, leaves `entries` and the state built from it as they were.
+   * A render React discards can leave a result here, which is harmless: it is
+   * only compared with by value.
+   */
+  const keptEntries = useRef(NO_ENTRIES);
+  const entries = useMemo(() => {
+    if (!hostStore) {
+      return NO_ENTRIES;
+    }
+    const next = resolveSelection(
+      refs,
+      layerStates,
+      snapshots,
+      keptEntries.current,
+    );
+    keptEntries.current = next;
+    return next;
+  }, [hostStore, refs, layerStates, snapshots]);
 
   const latest = useLatestRef({
     layerStates,
@@ -132,7 +154,7 @@ export function useFeatureSelection(
       const { layerStates, snapshots, formatters, now } = latest.current;
       const [entry] = resolveSelection([ref], layerStates, snapshots);
       return entry?.status === "shown"
-        ? featureTitle(entry.layer.definition, entry.feature, formatters, {
+        ? featureTitle(entry.definition, entry.feature, formatters, {
             now: now(),
           })
         : null;
@@ -196,10 +218,10 @@ export function useFeatureSelection(
 
   const toggle = useCallback(
     (ref: FeatureRef) => {
-      const key = selectionKey(ref);
+      const key = featureRefKey(ref);
       const selected = store
         .getState()
-        .some((held) => selectionKey(held) === key);
+        .some((held) => featureRefKey(held) === key);
       (selected ? remove : add)([ref]);
     },
     [store, add, remove],

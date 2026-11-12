@@ -9,14 +9,14 @@ const small = {
   letterSpacing: tokens.type.small.tracking,
 } as const;
 
-/** The halo under the selection ring, so it reads on any basemap. */
+/** The halo under the open card's ring, so it reads on any basemap. */
 export const selectionHalo = style({
   fill: "none",
   stroke: mapOverlayTokens.halo,
   strokeWidth: `calc(${tokens.space.xxs} + 2 * ${tokens.focus.innerWidth})`,
 });
 
-/** The ring around the selected point. */
+/** The ring around the point whose card is open. */
 export const selectionRing = style({
   fill: "none",
   stroke: mapOverlayTokens.pin,
