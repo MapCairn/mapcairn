@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";

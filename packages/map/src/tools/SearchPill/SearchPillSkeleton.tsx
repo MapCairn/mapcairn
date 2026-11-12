@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { Search } from "lucide-react";
 import { IconButton } from "../../ui/IconButton";
 import { Surface } from "../../ui/Surface";

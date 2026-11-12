@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The names of the data palette's colours. Definitions name a colour by slot
  * and never write a value; `@mapcairn/theme` holds the values

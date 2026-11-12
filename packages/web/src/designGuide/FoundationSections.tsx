@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { Icon } from "@mapcairn/map";
 import { tokenValues } from "@mapcairn/theme";
 import { Check, TriangleAlert } from "lucide-react";

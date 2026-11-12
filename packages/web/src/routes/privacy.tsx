@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LinksFunction, MetaFunction } from "react-router";
 import { PRIVACY_POLICY_TITLE, PrivacyPage } from "../app/PrivacyPage";
 import { buildPageMeta } from "../buildPageMeta";

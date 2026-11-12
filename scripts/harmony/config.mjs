@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Configuration for the harmony scanner (`npm run lint:harmony`).
  *

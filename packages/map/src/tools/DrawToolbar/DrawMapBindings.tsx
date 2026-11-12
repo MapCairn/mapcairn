@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { useEffect } from "react";
 import { useMap } from "../../host/MapContext";
 import type { UseDraw } from "./useDraw";

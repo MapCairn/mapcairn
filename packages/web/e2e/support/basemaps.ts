@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /*
  * The basemaps the suite names. Specs use these constants and never spell a
  * basemap id or name themselves, so a change to the basemaps the site offers is a

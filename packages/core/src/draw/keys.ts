@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { MapKeyEvent } from "../keyboard/keyboard";
 import {
   type DrawAction,

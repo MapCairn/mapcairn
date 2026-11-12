@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Canonical production origin, with no trailing slash.
  * @remarks Single source of truth for `workers/app.ts`'s old-hostname

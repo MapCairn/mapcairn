@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Page } from "@playwright/test";
 
 /** A floating element's visible box, as the collision check sees it. */

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { DecoderRegistry } from "./decoders";
 import type { FormatterRegistry } from "./formatters";
 import { isCategoricalSlot, isOrdinalSlot, isPaletteSlot } from "./palette";

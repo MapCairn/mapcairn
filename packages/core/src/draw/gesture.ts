@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { PixelPoint } from "../ports/geometry";
 import {
   HANDLE_HIT_RADIUS_MOUSE_PX,

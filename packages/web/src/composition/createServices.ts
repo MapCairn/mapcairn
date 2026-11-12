@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Services } from "@mapcairn/core";
 // The engine style file has no exports. Importing it here, in the one module
 // every page that builds services loads, puts its rules in the page before

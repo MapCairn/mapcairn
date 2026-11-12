@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { SAMPLE_ALERT_LAYER, SAMPLE_FEED_LAYER } from "@mapcairn/core";
 import { runLayerSourceContract } from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";

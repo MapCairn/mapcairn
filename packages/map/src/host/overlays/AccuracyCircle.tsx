@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type LatLng, placePoint } from "@mapcairn/core";
 import { useMap } from "../MapContext";
 import { roundPixel, screenRadiusForMetres, usePlacement } from "./geometry";

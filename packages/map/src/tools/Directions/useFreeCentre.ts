@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LatLng, PixelPoint } from "@mapcairn/core";
 import { useCallback } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";

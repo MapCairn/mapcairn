@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { Layers } from "lucide-react";
 import type { ReactNode } from "react";

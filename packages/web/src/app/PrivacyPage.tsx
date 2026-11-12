@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { THEME_STORAGE_KEY } from "@mapcairn/core";
 import { VisuallyHidden } from "@mapcairn/map";
 import { SITE_URL } from "../constants/siteConfig";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** Thrown by {@link decodePolyline} for input that is not a valid encoded polyline. */
 export class PolylineDecodeError extends Error {
   constructor(message: string) {

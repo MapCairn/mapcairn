@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { tokens, tokenValues, zLayer } from "@mapcairn/theme";
 import { style, styleVariants } from "@vanilla-extract/css";
 

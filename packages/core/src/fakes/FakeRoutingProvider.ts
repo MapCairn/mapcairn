@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { buffer, type GeometryError } from "../geometry";
 import { RoutingError, type RoutingErrorKind } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Thrown by an async port when the caller's `AbortSignal` fires before the
  * work finishes. Callers treat it as "ignore this result", never as a failure

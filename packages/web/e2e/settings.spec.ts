@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { expect, test } from "./fixtures";
 import { scriptMemorySettings } from "./support/services";
 import {

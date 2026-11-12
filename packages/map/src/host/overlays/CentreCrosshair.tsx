@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { useMap } from "../MapContext";
 import { roundPixel } from "./geometry";
 import * as styles from "./overlays.css";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import fc from "fast-check";
 import type { Geometry, Position } from "geojson";
 import type { LatLng } from "../ports/geometry";

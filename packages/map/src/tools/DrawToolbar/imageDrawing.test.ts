@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { DrawShape } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { drawingForImage } from "./imageDrawing";

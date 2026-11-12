@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 export * from "./createFakeServices";
 export * from "./FakeClipboard";
 export * from "./FakeDevicePreferences";

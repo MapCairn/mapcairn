@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type LatLng, placePoint } from "@mapcairn/core";
 import { roundPixel, usePlacement } from "./geometry";
 import * as styles from "./overlays.css";

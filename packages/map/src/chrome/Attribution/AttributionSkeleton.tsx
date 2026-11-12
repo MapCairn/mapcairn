@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { Info } from "lucide-react";
 import { IconButton } from "../../ui";
 import * as styles from "./Attribution.css";

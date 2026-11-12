@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { LayerError } from "../ports/errors";
 import type { Bounds } from "../ports/geometry";
 import type { ControlValues, LayerFeature } from "../ports/layers";

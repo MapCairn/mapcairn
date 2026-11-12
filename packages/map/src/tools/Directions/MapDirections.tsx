@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type LayerGeometry, routeBounds } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
 import { useEffect } from "react";

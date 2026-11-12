@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Why a geometry operation refused its input: the input is not valid GeoJSON
  * or WKT (`invalid`), it holds no coordinates where the operation needs some

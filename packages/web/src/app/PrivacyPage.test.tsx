@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { THEME_STORAGE_KEY } from "@mapcairn/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

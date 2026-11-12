@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import {
   CLIENT_ERROR_REPORT_MAX_FIELD_LENGTH,
   CLIENT_ERROR_REPORT_PATH,

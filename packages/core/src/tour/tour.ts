@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { MapProjection } from "../ports/map";
 import type { UrlStateValue } from "../ports/url";
 import type { SurfaceKind } from "../surface/surface";

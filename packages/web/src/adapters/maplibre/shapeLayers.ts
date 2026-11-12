@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LineDash } from "@mapcairn/core";
 import { toEngineZoom } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { wrapLongitude } from "../globe/longitude";
 import type { LatLng } from "../ports/geometry";
 

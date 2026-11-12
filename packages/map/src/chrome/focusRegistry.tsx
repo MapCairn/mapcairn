@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { FocusTarget } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import {

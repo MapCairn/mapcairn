@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 // Proves the development-only code is absent from a production build: the
 // browser test seam and the living style guide at /design.
 //

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { FillPattern, LineDash, MarkerShape } from "../layers/definition";
 import type { BasemapDefinition } from "./basemap";
 import type { MapEngineError } from "./errors";

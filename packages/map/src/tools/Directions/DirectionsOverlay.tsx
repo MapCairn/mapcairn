@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type DirectionStop, placePoint, stopLetter } from "@mapcairn/core";
 import { CentreCrosshair } from "../../host/overlays/CentreCrosshair";
 import { roundPixel, usePlacement } from "../../host/overlays/geometry";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { ComponentType, SVGProps } from "react";
 import { icon, spinning } from "./Icon.css";
 

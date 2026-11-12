@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The page's base styles: the one global stylesheet besides the tokens and
  * the engine style file. Imported by `root.tsx`, so it is linked in the server

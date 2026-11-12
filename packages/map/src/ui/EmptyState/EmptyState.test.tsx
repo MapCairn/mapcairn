@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { render, screen } from "@testing-library/react";
 import { SearchX } from "lucide-react";
 import { describe, expect, it } from "vitest";

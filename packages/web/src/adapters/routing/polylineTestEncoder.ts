@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** Encodes one signed integer the way the polyline algorithm does. */
 function encodeValue(value: number): string {
   let rest = value < 0 ? ~(value << 1) : value << 1;

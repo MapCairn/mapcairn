@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { tokenValues } from "@mapcairn/theme";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
 import type { ReactElement, ReactNode } from "react";

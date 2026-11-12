@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { useLatestRef } from "./useLatestRef";

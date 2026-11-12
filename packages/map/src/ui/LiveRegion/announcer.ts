@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** How urgently a message is read out. */
 export type AnnouncePriority = "polite" | "assertive";
 

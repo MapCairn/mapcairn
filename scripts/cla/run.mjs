@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The API side of the contributor licence agreement check
  * (`.github/workflows/cla.yml`). It reads the pull request, its commits and its

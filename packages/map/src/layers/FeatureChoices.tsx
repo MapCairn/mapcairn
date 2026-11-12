@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type FormatterRegistry, formatTemplate } from "@mapcairn/core";
 import { X } from "lucide-react";
 import { type Ref, useId } from "react";

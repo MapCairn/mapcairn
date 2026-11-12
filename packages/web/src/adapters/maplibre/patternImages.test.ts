@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";
 import { parseHexColour } from "./markerImages";

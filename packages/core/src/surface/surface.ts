@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { SheetDetent } from "../sheet/sheet";
 
 /** The one surface that is open over the map, or `"none"`. */

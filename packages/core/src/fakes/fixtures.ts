@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { BasemapDefinition } from "../ports/basemap";
 
 /** A vector basemap, with zoom limits 0 to 18. */

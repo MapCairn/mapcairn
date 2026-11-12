@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { FileChooser, Page } from "@playwright/test";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import fc from "fast-check";
 import type { ViewState } from "../ports/geometry";
 import type { LayersUrlState, UrlStateValue } from "../ports/url";

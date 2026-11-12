@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** What a key press on the focused map should do. */
 export type MapKeyAction =
   | { type: "pan"; dx: number; dy: number }

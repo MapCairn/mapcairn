@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { MarkerShape, PaletteSlot } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
 import * as styles from "./Layers.css";

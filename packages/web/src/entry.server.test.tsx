@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const renderToReadableStreamMock = vi.fn(

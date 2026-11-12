@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** A class that makes an error of type `E`, abstract or not. */
 type ErrorClass<E extends Error> = abstract new (...args: never[]) => E;
 

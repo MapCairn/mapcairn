@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Settings, UrlStateValue, ViewState } from "@mapcairn/core";
 
 /** The id of the map region, which the skip link moves focus to. */

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { area } from "@turf/area";
 import { lineString, polygon } from "@turf/helpers";
 import { length } from "@turf/length";

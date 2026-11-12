@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The brand colour: the accent blue the favicon is drawn in. It is the one
  * colour the manifest, the Windows tile and the Safari pinned tab can use for

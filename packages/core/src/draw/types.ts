@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LatLng } from "../ports/geometry";
 
 /** What a shape is: a single position, a path, an area or a circle. */

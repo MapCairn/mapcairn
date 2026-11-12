@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** The device and accessibility preferences the interface adapts to. */
 export interface DevicePreferencesValue {
   /** The user asked the system to reduce motion. */

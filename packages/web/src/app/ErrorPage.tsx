@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { Button } from "@mapcairn/map";
 import { RotateCw } from "lucide-react";
 import { useNavigate } from "react-router";

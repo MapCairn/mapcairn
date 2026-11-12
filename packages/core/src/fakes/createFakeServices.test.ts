@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { PORT_NAMES } from "../contracts/portRegistry";
 import type { Services } from "../ports/services";

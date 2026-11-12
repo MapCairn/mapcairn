@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import "@fontsource-variable/ibm-plex-sans/wght.css";
 import "./page.css";
 import { StrictMode } from "react";

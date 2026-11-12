@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { ClipboardPort, ClipboardResult } from "@mapcairn/core";
 
 /** The slice of `navigator` the clipboard adapter reads. */

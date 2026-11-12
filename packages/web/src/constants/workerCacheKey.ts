@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { SECURITY_HEADERS } from "./securityHeaders";
 
 const FNV_OFFSET_BASIS = 0x811c9dc5;

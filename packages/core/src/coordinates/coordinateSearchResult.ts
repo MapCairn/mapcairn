@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { formatFixed, formatLatitude, formatLongitude } from "../format";
 import type { LatLng } from "../ports/geometry";
 import type { SearchResult } from "../ports/search";

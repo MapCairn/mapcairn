@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The privacy statement in Settings. It matches the privacy page: what the
  * site sets and counts, who receives a search or an address lookup and when,

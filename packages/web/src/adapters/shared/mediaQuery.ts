@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** The slice of `window` that the media query adapters use. */
 export interface MediaQueryWindow {
   matchMedia(query: string): MediaQueryLike;

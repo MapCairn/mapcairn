@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { runUrlStateContract } from "@mapcairn/core/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {

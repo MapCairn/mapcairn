@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { SearchError, type SearchErrorKind } from "../ports/errors";
 import type { SearchResult } from "../ports/search";
 import type { SuggestionProvider, SuggestOptions } from "../ports/suggestions";

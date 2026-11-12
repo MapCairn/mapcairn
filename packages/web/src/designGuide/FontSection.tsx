@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { Icon } from "@mapcairn/map";
 import { CircleCheck, LoaderCircle, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";

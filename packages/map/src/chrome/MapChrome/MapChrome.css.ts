@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { PANEL_MAX_HEIGHT_EXCLUSIVE, PANEL_MIN_WIDTH } from "@mapcairn/core";
 import { tokens, zLayer } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { createFakeServices, THEME_COLOR_META } from "@mapcairn/core";
 import { useServices } from "@mapcairn/map";
 import { fireEvent, render, screen } from "@testing-library/react";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Settings } from "@mapcairn/core";

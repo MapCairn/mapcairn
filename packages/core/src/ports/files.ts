@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** A file the person is offered to keep. */
 export interface SavedFile {
   /** The name the file is saved under, for example `shapes.geojson`. */

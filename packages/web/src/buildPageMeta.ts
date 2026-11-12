@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { MetaDescriptor } from "react-router";
 import {
   OG_IMAGE_HEIGHT,

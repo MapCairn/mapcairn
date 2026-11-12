@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** A geographic position in decimal degrees (WGS 84). */
 export interface LatLng {
   readonly lat: number;

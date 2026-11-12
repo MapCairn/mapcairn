@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { Crosshair, Trash2, Undo2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useToolbarEdge } from "../../chrome/useToolbarEdge";

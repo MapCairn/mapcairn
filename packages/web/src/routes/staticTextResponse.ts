@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Shared cache policy for the generated static-content routes
  * (`robots.txt`, `sitemap.xml`, `llms.txt`); their bodies are computed

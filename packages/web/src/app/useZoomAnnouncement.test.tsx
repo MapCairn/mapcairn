@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { DEFAULT_FAKE_VIEW } from "@mapcairn/core";
 import type { MapContextValue } from "@mapcairn/map";
 import { act, renderHook } from "@testing-library/react";

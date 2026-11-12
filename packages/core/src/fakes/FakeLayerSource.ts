@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { detailUrl, feedUrl } from "../layers/feed";
 import { LayerError } from "../ports/errors";
 import type {

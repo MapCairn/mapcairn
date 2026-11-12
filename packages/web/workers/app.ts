@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { createRequestHandler } from "react-router";
 import { SECURITY_HEADERS } from "../src/constants/securityHeaders";
 import { PREVIOUS_HOSTNAME, SITE_URL } from "../src/constants/siteConfig";

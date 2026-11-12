@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type RouteConfigEntry, route } from "@react-router/dev/routes";
 
 /** The path of the living style guide, served at `/design`. */

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";

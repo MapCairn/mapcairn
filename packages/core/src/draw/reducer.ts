@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LatLng } from "../ports/geometry";
 import { distanceMetres } from "./geo";
 import { MAX_CIRCLE_RADIUS_METRES, shapeLabel, validateShape } from "./shape";

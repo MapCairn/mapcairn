@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { HTMLAttributes } from "react";
 import { Surface } from "../Surface";
 import { controlGroup } from "./ControlGroup.css";

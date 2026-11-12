@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** Height of one control, in CSS pixels (the 48 px `size.control` token). */
 const CONTROL_PX = 48;
 /** The gap between groups (the 12 px `space.sm` token). */

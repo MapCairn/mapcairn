@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { test as base, expect } from "@playwright/test";
 import { MapPage } from "./pages/MapPage";
 import { mockThirdPartyServices } from "./support/network";

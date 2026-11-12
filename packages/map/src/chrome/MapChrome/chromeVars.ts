@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The CSS custom properties `MapChrome` sets on its root with
  * `style.setProperty` after measuring, and that slots and surfaces read in

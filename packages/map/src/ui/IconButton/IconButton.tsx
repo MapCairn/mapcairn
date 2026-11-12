@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { LoaderCircle } from "lucide-react";
 import type { ButtonHTMLAttributes, MouseEvent } from "react";
 import { Icon, type IconComponent } from "../Icon";

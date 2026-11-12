@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { TourCard, type TourStep, type UseTour } from "@mapcairn/map";
 
 /** The reference host's tour steps, with their words. */

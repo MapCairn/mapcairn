@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Bounds, LatLng } from "./geometry";
 
 /** A place a search found. */

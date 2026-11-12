@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LayersUrlState, ViewState } from "@mapcairn/core";
 import { useSettings, useUrlState } from "@mapcairn/map";
 import { useCallback, useEffect, useRef } from "react";

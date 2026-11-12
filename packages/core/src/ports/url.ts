@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { ViewState } from "./geometry";
 
 /** The data layers in a link: which are on, and their control values. */

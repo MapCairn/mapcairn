@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { BasemapCatalogue } from "../basemaps/basemaps";
 import type { ClipboardPort } from "./clipboard";
 import type { FileOpener, FileSaver } from "./files";

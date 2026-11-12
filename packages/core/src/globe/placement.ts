@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LatLng, PixelPoint, ViewState } from "../ports/geometry";
 import type { MapProjection } from "../ports/map";
 import {

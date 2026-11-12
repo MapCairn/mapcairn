@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import type { ResolvedTheme } from "../ports/settings";
 import type { ThemeSource } from "../ports/theme";

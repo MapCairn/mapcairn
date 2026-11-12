@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Feature, Geometry, Polygon, Position } from "geojson";
 
 /** The mean radius of the Earth in metres, for the distance check in tests. */

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { afterEach, describe, expect, it } from "vitest";
 import type { DrawnLayer } from "../fakes/FakeMapAdapter";
 import type { BasemapDefinition } from "../ports/basemap";

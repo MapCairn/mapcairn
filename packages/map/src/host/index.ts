@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 export * from "./MapContext";
 export * from "./MapView";
 export * from "./overlays";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { FileSaveResult, FileSaver, SavedFile } from "../ports/files";
 
 /** The reasons a save can fail. */

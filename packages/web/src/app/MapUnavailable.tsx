@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { useAnnounce, useMap } from "@mapcairn/map";
 import { useEffect } from "react";
 import * as styles from "./MapUnavailable.css";

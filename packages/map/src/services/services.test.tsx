@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { createFakeServices, MemorySettingsStore } from "@mapcairn/core";
 import { act, render, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
