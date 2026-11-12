@@ -55,11 +55,14 @@ export interface FeatureQueryRequest {
  * - An empty `layerIds` resolves with no hits.
  * - It rejects only with a `FeatureQueryError`: `network` when the request
  *   failed, `invalid` when the request was not valid (an `area` that is not a
- *   closed polygon on the globe, or a `limit` that is not a whole number of at
- *   least 1) or the answer could not be read, `unsupported` when the host
- *   cannot answer for the layers or the area, and `aborted` when the signal
- *   fires first, whether before the call or while it is pending. The ui
- *   ignores `aborted`.
+ *   polygon with at least one closed ring on the globe, or a `limit` that is
+ *   not a whole number of at least 1) or the answer could not be read,
+ *   `unsupported` when the host cannot answer for the layers or the area, and
+ *   `aborted` when the signal fires first, whether before the call or while
+ *   it is pending. The ui ignores `aborted`.
+ * - The port asks no more of an `area` than that. It does not check that a
+ *   hole lies inside the outer ring, that no edge crosses another, or how many
+ *   positions a ring has, so a host guards against a very large ring itself.
  */
 export interface FeatureQuery {
   within(request: FeatureQueryRequest): Promise<readonly SelectionHit[]>;

@@ -114,8 +114,23 @@ const OFF_THE_GLOBE = {
     ],
   ],
 };
+const NO_RING = { type: "Polygon", coordinates: [] };
+const WITH_A_HOLE: QueryArea = {
+  type: "Polygon",
+  coordinates: [
+    ...CONTRACT_AREA.coordinates,
+    [
+      [18.35, -33.95],
+      [18.45, -33.95],
+      [18.45, -33.85],
+      [18.35, -33.85],
+      [18.35, -33.95],
+    ],
+  ],
+};
 const INVALID_AREAS: readonly (readonly [string, unknown])[] = [
   ["a point", NOT_A_POLYGON],
+  ["a polygon with no ring", NO_RING],
   ["a ring that is not closed", OPEN_RING],
   ["a ring of three positions", SHORT_RING],
   ["a position off the globe", OFF_THE_GLOBE],
@@ -235,6 +250,13 @@ export function runFeatureQueryContract(
       controls.respondWith(ALL_HITS);
       const hits = await ask(query, { layerIds: [BRIDGES], limit: 2 });
       expect(keys(hits)).toEqual(["bridges/x", "bridges/y"]);
+    });
+
+    it("accepts a polygon with a hole", async () => {
+      const { query, controls } = create();
+      controls.respondWith(GAUGE_HITS);
+      const hits = await ask(query, { area: WITH_A_HOLE, layerIds: [GAUGES] });
+      expect(keys(hits)).toEqual(["gauges/a", "gauges/b", "gauges/c"]);
     });
 
     for (const [label, area] of INVALID_AREAS) {

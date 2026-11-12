@@ -7,6 +7,7 @@ import type {
   FeatureQueryRequest,
   SelectionHit,
 } from "../ports/featureQuery";
+import { featureRefKey } from "../ports/selection";
 import { abortable } from "./internal";
 
 /** The failures {@link FakeFeatureQuery.failWith} can script. */
@@ -26,8 +27,11 @@ function checkRequest({ area, limit }: FeatureQueryRequest): void {
     // `validateGeometry` throws only a `GeometryError`.
     throw new FeatureQueryError("invalid", (error as GeometryError).message);
   }
-  if (area.type !== "Polygon") {
-    throw new FeatureQueryError("invalid", "A query needs a polygon.");
+  if (area.type !== "Polygon" || area.coordinates.length === 0) {
+    throw new FeatureQueryError(
+      "invalid",
+      "A query needs a polygon with a ring.",
+    );
   }
 }
 
@@ -41,7 +45,10 @@ function selectHits(
   const seen = new Set<string>();
   const selected: SelectionHit[] = [];
   for (const hit of hits) {
-    const key = JSON.stringify([hit.layerId, hit.feature.id]);
+    const key = featureRefKey({
+      layerId: hit.layerId,
+      featureId: hit.feature.id,
+    });
     if (!named.has(hit.layerId) || seen.has(key)) {
       continue;
     }
@@ -69,10 +76,11 @@ function abortedError(): FeatureQueryError {
  * - `failWith(kind)` makes every query reject with a `FeatureQueryError` until
  *   `clearFailure()`.
  * - `hold()` keeps every later query pending until the function it returns is
- *   called, which also lets the queries held since then answer.
+ *   called, which also lets the queries held since then answer. Releasing an
+ *   earlier hold does not free queries made under a later one.
  * - A request is checked first: a `limit` that is not a whole number of at
- *   least 1, or an `area` that is not a closed polygon on the globe, rejects as
- *   `invalid`. The check comes before any hold or failure, so a bad request
+ *   least 1, or an `area` that is not a polygon with at least one closed ring
+ *   on the globe, rejects as `invalid`. The check comes before any hold or failure, so a bad request
  *   never uses a script.
  * - Every query honours its `AbortSignal` by rejecting with a
  *   `FeatureQueryError` of kind `aborted`, before the call or while it is
@@ -101,14 +109,21 @@ export class FakeFeatureQuery implements FeatureQuery {
     this.#failure = null;
   }
 
-  /** Holds every later query until the returned function is called. */
+  /**
+   * Holds every later query until the returned function is called. A later
+   * `hold` replaces this one for queries made after it, and releasing this one
+   * then leaves that hold in place.
+   */
   hold(): () => void {
     let release!: () => void;
-    this.#held = new Promise<void>((resolve) => {
+    const held = new Promise<void>((resolve) => {
       release = resolve;
     });
+    this.#held = held;
     return () => {
-      this.#held = null;
+      if (this.#held === held) {
+        this.#held = null;
+      }
       release();
     };
   }

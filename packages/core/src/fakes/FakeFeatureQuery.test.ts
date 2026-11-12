@@ -93,6 +93,23 @@ describe("FakeFeatureQuery", () => {
     expect(await query.within(REQUEST)).toEqual([HIT]);
   });
 
+  it("keeps holding while a second hold is active, after the first is released", async () => {
+    const query = new FakeFeatureQuery();
+    query.respondWith([HIT]);
+    const releaseFirst = query.hold();
+    const releaseSecond = query.hold();
+    releaseFirst();
+    let settled = false;
+    const pending = query.within(REQUEST).then((hits) => {
+      settled = true;
+      return hits;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+    releaseSecond();
+    expect(await pending).toEqual([HIT]);
+  });
+
   it("rejects with a FeatureQueryError, not a PortAbortError, when aborted", async () => {
     const query = new FakeFeatureQuery();
     const error = await query
