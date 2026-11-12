@@ -243,6 +243,8 @@ export function useMapApp(): MapApp {
     }),
   );
   const layers = useDataLayers({ initial: link.layers });
+  // Pass { formatters: LAYER_FORMATTERS } here once a host registers a custom
+  // formatter; the default registry gives the same titles today.
   const selection = useFeatureSelection(layers);
   const basemaps = useBasemapChoice(initial.basemapId);
   const persistence = useViewPersistence(
