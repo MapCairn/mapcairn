@@ -35,6 +35,7 @@ const SERVICE_KEYS = [
   "layers",
   "layerSource",
   "routing",
+  "selection",
   "basemaps",
 ] as const satisfies readonly (keyof Services)[];
 

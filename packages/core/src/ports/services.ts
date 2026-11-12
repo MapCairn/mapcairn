@@ -9,6 +9,7 @@ import type { MapAdapterFactory } from "./map";
 import type { DevicePreferences } from "./preferences";
 import type { RoutingProvider } from "./routing";
 import type { SearchProvider } from "./search";
+import type { FeatureSelection } from "./selection";
 import type { SettingsStore } from "./settings";
 import type { SuggestionProvider } from "./suggestions";
 import type { ThemeSource } from "./theme";
@@ -62,4 +63,11 @@ export interface Services {
    * it, and not the SDK, accepts by building a catalogue that includes it.
    */
   readonly basemaps?: BasemapCatalogue;
+  /**
+   * The set of features the person has selected, kept wherever the host
+   * likes. Optional: a host that supplies none offers no selection, and the
+   * ui must not require it. The reference host's `createServices()` builds
+   * none, so the host that wants selection supplies a store.
+   */
+  readonly selection?: FeatureSelection;
 }

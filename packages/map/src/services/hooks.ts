@@ -5,6 +5,7 @@ import {
   BUILT_IN_BASEMAP_CATALOGUE,
   type ClipboardPort,
   type DevicePreferencesValue,
+  type FeatureSelection,
   type FileOpener,
   type FileSaver,
   type LayerCatalogue,
@@ -123,6 +124,16 @@ export function useBasemaps(): BasemapCatalogue {
  */
 export function useLayers(): LayerCatalogue {
   return useServices().layers;
+}
+
+/**
+ * The store of selected features, or `undefined` when the host supplies none.
+ * Nothing in the ui selects a feature without it. A component that needs the
+ * set to follow changes reads it with `useSyncExternalStore`, passing
+ * `getState` as the server snapshot.
+ */
+export function useSelectionStore(): FeatureSelection | undefined {
+  return useServices().selection;
 }
 
 /** What {@link useSettings} returns. */

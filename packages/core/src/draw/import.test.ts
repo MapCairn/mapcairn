@@ -649,6 +649,62 @@ describe("parseShapeFile with WKT text", () => {
     ).toMatchObject({ shapes: [], skipped: { "out-of-range": 1 } });
   });
 
+  it("reads an EWKT SRID prefix of 4326, one for each geometry", () => {
+    expect(shapesOf(parseShapeFile("SRID=4326;POINT (2 48)"))).toEqual([
+      { kind: "point", vertices: [p(2, 48)] },
+    ]);
+    expect(
+      shapesOf(
+        parseShapeFile(
+          "SRID=4326;POINT (1 1)\nSRID=4326;LINESTRING (0 0, 1 1)",
+        ),
+      ),
+    ).toEqual([
+      { kind: "point", vertices: [p(1, 1)] },
+      { kind: "line", vertices: [p(0, 0), p(1, 1)] },
+    ]);
+  });
+
+  it("refuses the whole file for any other SRID, with a plain message", () => {
+    expect(parseShapeFile("SRID=3857;POINT (261845.8 6250056)")).toEqual({
+      ok: false,
+      refusal: "wkt-unreadable",
+      detail: "Only SRID 4326 (WGS 84) is supported, not SRID 3857.",
+    });
+  });
+
+  it("refuses the whole file when a later geometry has another SRID", () => {
+    expect(
+      parseShapeFile("SRID=4326;POINT (1 2)\nSRID=3857;POINT (3 4)"),
+    ).toEqual({
+      ok: false,
+      refusal: "wkt-unreadable",
+      detail: "Only SRID 4326 (WGS 84) is supported, not SRID 3857.",
+    });
+  });
+
+  it("refuses SRID 0, which says no system at all", () => {
+    expect(parseShapeFile("SRID=0;POINT (1 2)")).toEqual({
+      ok: false,
+      refusal: "wkt-unreadable",
+      detail: "Only SRID 4326 (WGS 84) is supported, not SRID 0.",
+    });
+  });
+
+  it("reads a prefix after a byte order mark and white space", () => {
+    expect(shapesOf(parseShapeFile("﻿ \n\tSRID=4326;POINT (2 48)"))).toEqual([
+      { kind: "point", vertices: [p(2, 48)] },
+    ]);
+  });
+
+  it("takes a damaged EWKT prefix for WKT, with the reader's position", () => {
+    expect(parseShapeFile("SRID=;POINT (1 2)")).toMatchObject({
+      ok: false,
+      refusal: "wkt-unreadable",
+      detail: expect.stringMatching(/ at position \d+\.$/),
+    });
+  });
+
   it("skips shapes that break the draw rules and says why", () => {
     expect(
       parseShapeFile(
@@ -729,11 +785,7 @@ describe("parseShapeFile with WKT text", () => {
   });
 
   it("does not take text that does not start with a WKT type for WKT", () => {
-    for (const text of [
-      "SRID=4326;POINT (1 2)",
-      "name,lat,lng\nA,1,2",
-      "(1 2)",
-    ]) {
+    for (const text of ["name,lat,lng\nA,1,2", "(1 2)"]) {
       expect(parseShapeFile(text)).toEqual({
         ok: false,
         refusal: "not-recognised",
@@ -804,6 +856,28 @@ describe("parseShapeFile with a WKT column", () => {
     expect(shapesOf(parseShapeFile(text, { wktAxisOrder: "lat-lng" }))).toEqual(
       [{ kind: "point", vertices: [p(100, 2)] }],
     );
+  });
+
+  it("reads an EWKT cell of SRID 4326 and skips a cell of another SRID by its own reason", () => {
+    const text = rows("wkt", "SRID=4326;POINT (1 2)", "SRID=3857;POINT (3 4)");
+    expect(parseShapeFile(text)).toMatchObject({
+      ok: true,
+      shapes: [{ kind: "point", vertices: [p(1, 2)] }],
+      skipped: { "other-srid": 1 },
+    });
+  });
+
+  it("counts a curve or a measure as unsupported, not as another SRID", () => {
+    const text = rows(
+      "wkt",
+      '"CIRCULARSTRING (0 0, 1 1, 2 0)"',
+      "POINT M (1 2 3)",
+    );
+    expect(parseShapeFile(text)).toMatchObject({
+      ok: true,
+      shapes: [],
+      skipped: { unsupported: 2 },
+    });
   });
 
   it("skips a row it cannot read, by the reason, and keeps the rest", () => {

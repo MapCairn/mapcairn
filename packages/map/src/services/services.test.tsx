@@ -14,6 +14,7 @@ import {
   useRoutingProvider,
   useSaveData,
   useSearchProvider,
+  useSelectionStore,
   useSettings,
   useTheme,
   useThemeSource,
@@ -78,6 +79,18 @@ describe("ServicesProvider", () => {
     expect(
       renderHook(() => useRoutingProvider(), { wrapper }).result.current,
     ).toBe(services.routing);
+    expect(
+      renderHook(() => useSelectionStore(), { wrapper }).result.current,
+    ).toBe(services.selection);
+  });
+
+  it("gives no selection store when the host supplies none", () => {
+    const { wrapper } = wrapperFor(
+      createFakeServices({ selection: undefined }),
+    );
+    expect(
+      renderHook(() => useSelectionStore(), { wrapper }).result.current,
+    ).toBeUndefined();
   });
 
   it("gives no routing provider when the host supplies none", () => {

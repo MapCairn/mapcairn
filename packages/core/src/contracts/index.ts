@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 export * from "./clipboard.contract";
 export * from "./devicePreferences.contract";
+export * from "./featureSelection.contract";
 export * from "./fileOpener.contract";
 export * from "./fileSaver.contract";
 export * from "./layerCatalogue.contract";

@@ -27,10 +27,13 @@ export interface ParseWktOptions {
   readonly axisOrder?: WktAxisOrder;
 }
 
+/** The characters that are a token of their own. */
+type Punctuation = "(" | ")" | "," | "=" | ";";
+
 type Token =
   | { readonly kind: "word"; readonly text: string; readonly at: number }
   | { readonly kind: "number"; readonly text: string; readonly at: number }
-  | { readonly kind: "(" | ")" | "," | "end"; readonly at: number };
+  | { readonly kind: Punctuation | "end"; readonly at: number };
 
 const KEYWORDS = new Set([
   "POINT",
@@ -81,14 +84,50 @@ function splitSuffix(word: string): [string, string] {
 /** The first run of letters in a text, after any white space. */
 const FIRST_WORD = /^\s*([A-Za-z]+)/;
 
+/** A leading EWKT prefix, `SRID=` in any case with any spacing before the `=`. */
+const SRID_PREFIX = /^\s*SRID\s*=/i;
+
+/** The only SRID the reader accepts: WGS 84, which WKT without a prefix is in. */
+export const SUPPORTED_WKT_SRID = 4326;
+
+/**
+ * The most digits an SRID may have. Real codes have five or fewer; the limit
+ * keeps the value an exact integer and a hostile run of digits from being read
+ * or printed back.
+ */
+const MAX_SRID_DIGITS = 9;
+
+/**
+ * The error for text in a spatial reference system other than
+ * {@link SUPPORTED_WKT_SRID}. It is an `unsupported` {@link GeometryError}
+ * that also says which SRID, so a caller can tell it from the other things the
+ * reader leaves out (a measure, a curve).
+ */
+export class UnsupportedSridError extends GeometryError {
+  /** The SRID the text named. */
+  readonly srid: number;
+
+  constructor(srid: number) {
+    super(
+      "unsupported",
+      `Only SRID ${SUPPORTED_WKT_SRID} (WGS 84) is supported, not SRID ${srid}.`,
+    );
+    this.name = "UnsupportedSridError";
+    this.srid = srid;
+  }
+}
+
 /**
  * Whether the text starts with the name of a WKT geometry type (in any case,
  * with or without a `Z`, `M` or `ZM` tag), including the curved types
- * {@link parseWkt} does not read. It says what the text is meant to be, not
- * whether it can be read: use it to tell a damaged WKT file from a file that
- * is something else.
+ * {@link parseWkt} does not read, or with an EWKT `SRID=` prefix. It says what
+ * the text is meant to be, not whether it can be read: use it to tell a
+ * damaged WKT file from a file that is something else.
  */
 export function startsLikeWkt(text: string): boolean {
+  if (SRID_PREFIX.test(text)) {
+    return true;
+  }
   const word = FIRST_WORD.exec(text)?.[1];
   if (word === undefined) {
     return false;
@@ -123,6 +162,20 @@ function isNumberCharacter(code: number): boolean {
     code === 69 || // E
     code === 101 // e
   );
+}
+
+/** The punctuation a character is, or `undefined` when it is not one. */
+function punctuationOf(character: string): Punctuation | undefined {
+  switch (character) {
+    case "(":
+    case ")":
+    case ",":
+    case "=":
+    case ";":
+      return character;
+    default:
+      return undefined;
+  }
 }
 
 /**
@@ -161,9 +214,10 @@ class Tokens {
       return { kind: "end", at };
     }
     const code = text.charCodeAt(at);
-    if (code === 40 || code === 41 || code === 44) {
+    const punctuation = punctuationOf(text.charAt(at));
+    if (punctuation !== undefined) {
       this.#index += 1;
-      return { kind: code === 40 ? "(" : code === 41 ? ")" : ",", at };
+      return { kind: punctuation, at };
     }
     if (isLetter(code)) {
       let end = at + 1;
@@ -233,6 +287,19 @@ function numberValue(text: string): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+/** Whether a number token is a plain run of digits, one to {@link MAX_SRID_DIGITS} of them. */
+function isSridDigits(text: string): boolean {
+  if (text.length === 0 || text.length > MAX_SRID_DIGITS) {
+    return false;
+  }
+  for (let index = 0; index < text.length; index += 1) {
+    if (!isDigit(text.charCodeAt(index))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 type Dimensions = "any" | "z";
 
 class Reader {
@@ -246,7 +313,7 @@ class Reader {
 
   /** Reads one geometry, then insists on the end of the text. */
   readAll(): Geometry {
-    const geometry = this.#geometry(0);
+    const geometry = this.#wholeGeometry();
     const rest = this.#tokens.next();
     if (rest.kind !== "end") {
       throw refuse("Unexpected text after the geometry", rest.at);
@@ -256,14 +323,20 @@ class Reader {
 
   /** Reads one geometry or more, one after another, up to the end of the text. */
   readSequence(): Geometry[] {
-    const geometries = [this.#geometry(0)];
+    const geometries = [this.#wholeGeometry()];
     while (this.#tokens.peek().kind !== "end") {
-      geometries.push(this.#geometry(0));
+      geometries.push(this.#wholeGeometry());
     }
     return geometries;
   }
 
-  #expect(kind: "(" | ")" | ","): void {
+  /** One geometry of the text, with the EWKT prefix it may start with. */
+  #wholeGeometry(): Geometry {
+    this.#srid();
+    return this.#geometry(0);
+  }
+
+  #expect(kind: Punctuation): void {
     const token = this.#tokens.next();
     if (token.kind !== kind) {
       throw refuse(`Expected "${kind}"`, token.at);
@@ -322,6 +395,36 @@ class Reader {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Reads an optional EWKT `SRID=4326;` prefix, which may start a whole
+   * geometry and nothing nested in one. Any other SRID is refused as
+   * {@link UnsupportedSridError}, because the reader keeps coordinates as
+   * written and WGS 84 is the one system the map draws.
+   */
+  #srid(): void {
+    const first = this.#tokens.peek();
+    if (first.kind !== "word" || first.text.toUpperCase() !== "SRID") {
+      return;
+    }
+    this.#tokens.next();
+    this.#expect("=");
+    const code = this.#tokens.next();
+    if (code.kind !== "number") {
+      throw refuse("Expected an SRID", code.at);
+    }
+    if (!isSridDigits(code.text)) {
+      throw refuse(
+        `An SRID must be a whole number of at most ${MAX_SRID_DIGITS} digits`,
+        code.at,
+      );
+    }
+    const srid = Number(code.text);
+    if (srid !== SUPPORTED_WKT_SRID) {
+      throw new UnsupportedSridError(srid);
+    }
+    this.#expect(";");
   }
 
   #geometry(depth: number): Geometry {
@@ -451,8 +554,9 @@ class Reader {
  * It reads `POINT`, `LINESTRING`, `POLYGON` (with holes), their `MULTI`
  * forms and `GEOMETRYCOLLECTION`, in any case and with any spacing, the
  * `EMPTY` form of each, and a height as a third number, with or without the
- * `Z` tag. A `MULTIPOINT` may bracket its points or not. It does not read a
- * measure (`M`, `ZM`), an `SRID=` prefix or curved shapes.
+ * `Z` tag. A `MULTIPOINT` may bracket its points or not. It reads an EWKT
+ * `SRID=4326;` prefix and refuses any other SRID as `unsupported`. It does
+ * not read a measure (`M`, `ZM`) or curved shapes.
  *
  * The parser is a hand-written tokenizer that never backtracks, so its time
  * grows with the length of the text however hostile the text is, and a
