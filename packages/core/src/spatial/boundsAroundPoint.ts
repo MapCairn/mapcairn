@@ -1,3 +1,4 @@
+import { clamp } from "../numbers/clamp";
 import type { Bounds, LatLng } from "../ports/geometry";
 import {
   EQUATOR_METRES_PER_PIXEL_AT_ZOOM_0,
@@ -8,10 +9,6 @@ import {
 /** Metres in one degree of latitude, on the sphere Web Mercator uses. */
 const METRES_PER_DEGREE =
   (EQUATOR_METRES_PER_PIXEL_AT_ZOOM_0 * NORMALISED_TILE_SIZE) / 360;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 /**
  * The latitude and longitude box around a circle: `radiusMetres` north,
