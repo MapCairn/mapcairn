@@ -46,7 +46,7 @@ Taking on the Cloudflare account, the domain or the repository's administration 
 
 ## Continuity: not yet covered
 
-The maintainer commits to supporting MapCairn for as long as possible, and wants more contributors and, in time, more maintainers. If the maintainer can no longer maintain it, they will find a new maintainer or archive the repository. The repository will not be deleted.
+The maintainer intends MapCairn to be a long-term project and will keep supporting it for as long as they are able. They want to grow the number of contributors and, in time, the number of maintainers. If they can no longer look after it, they will hand it to a new maintainer or, failing that, archive the repository so that the code, history and issues stay available. The repository will not be deleted.
 
 The project is built so that it can outlive any one person, but one thing is still missing.
 
