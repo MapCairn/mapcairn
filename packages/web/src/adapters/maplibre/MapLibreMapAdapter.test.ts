@@ -1227,6 +1227,31 @@ describe("MapLibreMapAdapter", () => {
           expect(recovered).not.toHaveBeenCalled();
         });
 
+        it("reports the first tile that loads after a basemap swap drew it again, and not again after a later swap", async () => {
+          const { adapter, map, recovered } = await reported();
+          void adapter.setBasemap(DARK).catch(() => undefined);
+          map.fire("style.load");
+          loaded(map);
+          loaded(map);
+          expect(recovered).toHaveBeenCalledTimes(1);
+          void adapter.setBasemap(STREETS).catch(() => undefined);
+          map.fire("style.load");
+          loaded(map);
+          expect(recovered).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not carry a report over a basemap swap to a layer that was set to other tiles before it", async () => {
+          const { adapter, map, recovered } = await reported();
+          adapter.setTileLayer("imagery", {
+            ...OVERLAY,
+            tiles: "https://t.test/2026-11-07/{z}/{x}/{y}.png",
+          });
+          void adapter.setBasemap(DARK).catch(() => undefined);
+          map.fire("style.load");
+          loaded(map);
+          expect(recovered).not.toHaveBeenCalled();
+        });
+
         it("reports nothing for a layer set to other tiles since, until those report and load", async () => {
           const { adapter, map, recovered } = await reported();
           const next = "https://t.test/2026-11-07/{z}/{x}/{y}.png";

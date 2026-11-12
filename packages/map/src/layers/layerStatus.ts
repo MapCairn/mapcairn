@@ -6,7 +6,8 @@ import { LayerError } from "@mapcairn/core";
  * Where a layer is: off, on (tiles), loading, loaded, empty, failed, or (a
  * query layer) too far out to ask for features. A tile layer is `on` until
  * the map reports that none of its tiles loaded, which is
- * `tiles-unavailable`.
+ * `tiles-unavailable`. That lasts until its tiles change, it is turned off, or
+ * the map reports that a tile loaded later, when it is `on` again.
  */
 export type LayerStatus =
   | { readonly kind: "off" }

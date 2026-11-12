@@ -243,6 +243,23 @@ interface TileLayerTraffic {
   reported: boolean;
 }
 
+/**
+ * Whether a tile layer drawn again for `tiles` is still one that reported no
+ * tiles: its earlier drawing reported and loaded none, for the same tiles. The
+ * report was made to the ui and its status is still showing, so the new
+ * drawing's first tile has to end it.
+ */
+function isStillUnavailable(
+  earlier: TileLayerTraffic | undefined,
+  tiles: string,
+): boolean {
+  return (
+    earlier?.reported === true &&
+    earlier.loaded === 0 &&
+    earlier.tiles === tiles
+  );
+}
+
 /** The id of the image source and layer under a hybrid basemap's labels. */
 const IMAGERY_ID = "basemap-imagery";
 
@@ -1424,6 +1441,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   /** Draws one data layer afresh from what the adapter keeps, then restores the stacking order. */
   private drawDataLayer(map: MapLibreMap, id: string, order = true): void {
     const layer = this.dataLayers.get(id) as DataLayer;
+    const earlierTraffic = this.tileTraffic.get(dataLayerEngineIds(id).source);
     this.eraseDataLayer(map, id);
     const plan = this.planDataLayer(map, id, layer);
     if (
@@ -1448,7 +1466,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         requested: 0,
         aborted: 0,
         loaded: 0,
-        reported: false,
+        reported: isStillUnavailable(earlierTraffic, layer.overlay.tiles),
       });
     }
     map.addSource(source, plan.source as unknown as SourceSpecification);
@@ -1696,8 +1714,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       if (decidesAvailability(this.basemapTiles.basemap, sourceId)) {
         this.basemapTiles.loaded += 1;
       }
-      this.reportRecoveredTileLayer(sourceId);
-      this.countTileLayerTile(sourceId, "loaded");
+      this.recordLoadedTile(sourceId);
     });
     listen("sourcedataloading", (event) => {
       if (this.countTileLayerTile(tileEventSource(event), "requested")) {
@@ -1754,13 +1771,13 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   /**
-   * Counts one tile of a tile data layer's source; any other source is not
-   * counted.
+   * Counts one tile of a tile data layer's source that was asked for or given
+   * up on; any other source is not counted.
    * @returns Whether the source is a tile data layer's.
    */
   private countTileLayerTile(
     sourceId: string | undefined,
-    count: "requested" | "aborted" | "loaded",
+    count: "requested" | "aborted",
   ): boolean {
     const traffic =
       sourceId === undefined ? undefined : this.tileTraffic.get(sourceId);
@@ -1772,19 +1789,24 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   /**
-   * Reports `tileLayerRecovered` when a tile loads for a tile data layer that
-   * has reported `tileLayerUnavailable` and has loaded none since, which is
-   * once for each report. Call it before the tile is counted as loaded.
+   * Counts one tile that loaded for a tile data layer's source (any other
+   * source is not counted), and reports `tileLayerRecovered` if it is the
+   * first since the layer reported `tileLayerUnavailable`. The recovery is
+   * decided from the counters before the tile is added to them.
    */
-  private reportRecoveredTileLayer(sourceId: string): void {
+  private recordLoadedTile(sourceId: string): void {
     const traffic = this.tileTraffic.get(sourceId);
-    if (!traffic?.reported || traffic.loaded > 0) {
+    if (!traffic) {
       return;
     }
-    this.emitter.emit("tileLayerRecovered", {
-      layerId: traffic.layerId,
-      tiles: traffic.tiles,
-    });
+    const recovered = traffic.reported && traffic.loaded === 0;
+    traffic.loaded += 1;
+    if (recovered) {
+      this.emitter.emit("tileLayerRecovered", {
+        layerId: traffic.layerId,
+        tiles: traffic.tiles,
+      });
+    }
   }
 
   /**

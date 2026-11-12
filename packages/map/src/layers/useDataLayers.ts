@@ -114,7 +114,8 @@ export interface DataLayers {
    * which `MapDataLayers` calls from the adapter's report. `tiles` is the
    * template those tiles came from: a report for anything but the layer's
    * current tiles, or for a layer that is off, is ignored. The layer then
-   * says so and announces it once, until its tiles change or it is turned off.
+   * says so and announces it once, until its tiles change, it is turned off, or
+   * a tile loads later (see {@link DataLayers.reportTilesRecovered}).
    */
   reportTilesUnavailable(id: string, tiles: string): void;
   /**

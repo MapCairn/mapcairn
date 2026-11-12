@@ -769,6 +769,28 @@ export function runMapAdapterContract(
           expect(recoveries).toEqual([]);
         });
 
+        it("still reports the recovery after the map draws it again with the same tiles, as a basemap swap does", async () => {
+          const { adapter, controls, recoveries } = await watched();
+          controls.simulateTileLayerFailure("imagery");
+          await adapter.setBasemap(controls.basemap);
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toEqual([
+            { layerId: "imagery", tiles: TILES.tiles },
+          ]);
+        });
+
+        it("reports once for a failure that repeats after the map drew it again", async () => {
+          const { adapter, controls, recoveries } = await watched();
+          controls.simulateTileLayerFailure("imagery");
+          await adapter.setBasemap(controls.basemap);
+          controls.simulateTileLayerFailure("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toHaveLength(1);
+        });
+
         it("reports again for the tiles it is set to next, once they report and load", async () => {
           const { adapter, controls, recoveries } = await watched();
           controls.simulateTileLayerFailure("imagery");
