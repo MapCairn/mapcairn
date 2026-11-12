@@ -126,8 +126,10 @@ export interface IdentifyOutcome {
 
 /**
  * What a batch of answers comes to, or null when every layer was cancelled,
- * which opens and says nothing. `available` is how many layers could have been
- * asked, so the report can say when the cap held some back.
+ * which opens and says nothing. A cancelled layer is left out of what was
+ * asked and of what was available, because it is no longer there to ask.
+ * `available` is how many layers could have been asked, so the report can say
+ * when the cap held some back.
  */
 export function outcomeOf(
   answers: readonly IdentifyAnswer[],
@@ -135,6 +137,7 @@ export function outcomeOf(
 ): IdentifyOutcome | null {
   const found = answers.filter((answer) => answer.kind === "found");
   const failed = answers.filter((answer) => answer.kind === "failed");
+  const cancelled = answers.length - found.length - failed.length;
   if (found.length + failed.length === 0) {
     return null;
   }
@@ -154,11 +157,30 @@ export function outcomeOf(
     hits,
     report: {
       found: hits.length,
-      asked: answers.length,
-      available,
+      asked: found.length + failed.length,
+      available: available - cancelled,
       failed: failed.map(({ layer }) => layer.definition.name),
     },
   };
+}
+
+/**
+ * The answers with those that no longer describe what is shown set to
+ * cancelled: a layer that is off now, or whose tiles are not the ones it was
+ * asked about, whether it answered or failed. `current` is each layer that is
+ * on and answers a tap, with its tile URL, as {@link IdentifyRun.abortStale}
+ * reads it.
+ */
+export function stillCurrent(
+  answers: readonly IdentifyAnswer[],
+  current: ReadonlyMap<string, string>,
+): IdentifyAnswer[] {
+  return answers.map((answer) =>
+    answer.kind === "cancelled" ||
+    current.get(answer.layer.definition.id) === answer.layer.tiles
+      ? answer
+      : { kind: "cancelled", layer: answer.layer },
+  );
 }
 
 /**
@@ -203,23 +225,28 @@ export class IdentifyRun {
       controller.signal.addEventListener("abort", () => resolve(stopped()), {
         once: true,
       });
-      source
-        .identify({
+      // A source that throws before it returns a promise fails like one that rejects.
+      let request: Promise<readonly LayerFeature[]>;
+      try {
+        request = source.identify({
           definition: layer.definition,
           controls: layer.controls,
           now,
           at,
           signal: controller.signal,
-        })
-        .then(
-          (features) => resolve({ kind: "found", layer, features }),
-          (error: unknown) =>
-            resolve(
-              errorKind(error) === "aborted"
-                ? stopped()
-                : { kind: "failed", layer },
-            ),
-        );
+        });
+      } catch (error) {
+        request = Promise.reject(error);
+      }
+      request.then(
+        (features) => resolve({ kind: "found", layer, features }),
+        (error: unknown) =>
+          resolve(
+            errorKind(error) === "aborted"
+              ? stopped()
+              : { kind: "failed", layer },
+          ),
+      );
     }).finally(() => clearTimeout(timer));
   }
 

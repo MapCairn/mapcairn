@@ -49,6 +49,7 @@ import {
   identifiableLayers,
   MAX_IDENTIFY_LAYERS,
   outcomeOf,
+  stillCurrent,
 } from "./identifyRun";
 import { errorKind, type LayerStatus } from "./layerStatus";
 import { type LoadResult, loadOutcome } from "./loadOutcome";
@@ -250,7 +251,8 @@ export interface DataLayers {
    * when the person leaves the plain map (another surface opens, taps stop
    * meaning "look here", a long press), and Escape calls it before it closes
    * anything. A layer turned off, whose tiles change, or an unmount cancels
-   * what concerns it without a call.
+   * what concerns it without a call, and so does opening a card or a list
+   * with {@link DataLayers.select} or {@link DataLayers.choose}.
    */
   cancelIdentify(): boolean;
   /**
@@ -1066,6 +1068,20 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     }));
   }, []);
 
+  /** Cancels the tap in flight, and reports whether there was one. */
+  const cancelIdentify = useCallback((): boolean => {
+    const run = identifyRun.current;
+    if (!run) {
+      return false;
+    }
+    identifyRun.current = null;
+    run.cancel();
+    setState((previous) =>
+      previous.identifying ? { ...previous, identifying: false } : previous,
+    );
+    return true;
+  }, []);
+
   const select = useCallback(
     (
       layerId: string,
@@ -1075,6 +1091,11 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         readonly keepChoices?: boolean;
       } = {},
     ) => {
+      // A card opened another way wins over a lookup still waiting: its late
+      // answer must not replace the card or take focus from it.
+      if (featureId !== null) {
+        cancelIdentify();
+      }
       setState((previous) => {
         const snapshot =
           featureId === null
@@ -1098,7 +1119,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         };
       });
     },
-    [],
+    [cancelIdentify],
   );
 
   const choose = useCallback(
@@ -1129,27 +1150,14 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         select(only.layerId, only.featureId, chooseOptions);
         return;
       }
+      cancelIdentify();
       setState((previous) =>
         withOpened(previous, found, chooseOptions.focus === true),
       );
       announce(announceFeaturesFound(found.length), { priority: "polite" });
     },
-    [announce, select],
+    [announce, cancelIdentify, select],
   );
-
-  /** Cancels the tap in flight, and reports whether there was one. */
-  const cancelIdentify = useCallback((): boolean => {
-    const run = identifyRun.current;
-    if (!run) {
-      return false;
-    }
-    identifyRun.current = null;
-    run.cancel();
-    setState((previous) =>
-      previous.identifying ? { ...previous, identifying: false } : previous,
-    );
-    return true;
-  }, []);
 
   const identifyAt = useCallback(
     async (
@@ -1182,7 +1190,18 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         return null;
       }
       identifyRun.current = null;
-      const outcome = outcomeOf(answers, available.length);
+      // A layer turned off or re-timed while another was still held may have
+      // answered before the change, and its answer no longer describes the map.
+      const latest = stateRef.current;
+      const shown = new Map(
+        identifiableLayers({
+          definitions,
+          enabled: latest.enabled,
+          controls: latest.controls,
+          now: now(),
+        }).map(({ definition, tiles }) => [definition.id, tiles]),
+      );
+      const outcome = outcomeOf(stillCurrent(answers, shown), available.length);
       if (!outcome) {
         setState((previous) => ({ ...previous, identifying: false }));
         return null;
@@ -1199,7 +1218,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       if (said) {
         announce(said.message, { priority: said.priority });
       }
-      return { asked: asking.length, found: outcome.hits.length };
+      return { asked: outcome.report.asked, found: outcome.report.found };
     },
     [announce, cancelIdentify, definitions, layerSource, now],
   );

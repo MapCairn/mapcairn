@@ -559,8 +559,9 @@ export interface IdentifySource {
 }
 
 /**
- * A raster overlay. It has no features, card or list of its own; an
- * `identify` block makes a tap on it ask a service for them.
+ * A raster overlay. It loads no features and has no list. Without an
+ * `identify` block it has no card either; with one, a tap on it asks a
+ * service for features, which open a card (the block's `card`).
  */
 export interface TileLayerDefinition extends LayerDefinitionBase {
   readonly source: TileSource;
@@ -686,7 +687,7 @@ export function isHeatmapLayer(
   return "heatmap" in definition;
 }
 
-/** Whether a definition is a raster tile layer: an overlay with no features, card or list. */
+/** Whether a definition is a raster tile layer: an overlay that loads no features and has no list, and has a card only through an `identify` block. */
 export function isRasterTileLayer(
   definition: LayerDefinition,
 ): definition is TileLayerDefinition {

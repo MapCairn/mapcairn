@@ -159,7 +159,7 @@ describe("outcomeOf", () => {
     ]);
   });
 
-  it("reports the counts and names the layers that failed, and ignores a cancelled one", () => {
+  it("counts only the layers that answered or failed as asked, and a cancelled one is no longer available", () => {
     const outcome = outcomeOf(
       [
         found(a, "x"),
@@ -170,8 +170,8 @@ describe("outcomeOf", () => {
     );
     expect(outcome?.report).toEqual({
       found: 1,
-      asked: 3,
-      available: 5,
+      asked: 2,
+      available: 4,
       failed: ["b"],
     });
     expect(Object.keys(outcome?.entries ?? {})).toEqual(["a"]);

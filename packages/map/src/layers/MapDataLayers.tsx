@@ -312,10 +312,8 @@ export function MapDataLayers({
       if (current.ignoreTaps) {
         return;
       }
-      // A tap on a drawn feature is a new tap: a raster layer's answer to the
-      // last one must not replace this card when it arrives.
-      current.cancelIdentify();
-      // One feature opens its card; several open a list to choose from.
+      // One feature opens its card; several open a list to choose from. Either
+      // cancels a raster lookup in flight, so its late answer cannot replace it.
       current.choose(tap.hits, { focus: true });
       current.onFeatureTap?.(tap);
     });

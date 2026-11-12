@@ -431,10 +431,78 @@ describe("useDataLayers cancelling an identify", () => {
     turnOn(view, "rain", "wind");
     const pending = tap(view);
     act(() => view.result.current.setEnabled("rain", false));
-    expect(await settled(pending)).toEqual({ asked: 2, found: 1 });
+    expect(await settled(pending)).toEqual({ asked: 1, found: 1 });
     expect(view.source.identifyRequests[0]?.signal?.aborted).toBe(true);
     expect(selectedId(view)).toBe("w");
     expect(said()).toEqual([]);
+  });
+
+  it("says nothing was found, not that a cancelled layer failed, when the only other layer found nothing", async () => {
+    const view = setup([RAIN, WIND]);
+    view.source.holdIdentify("rain");
+    turnOn(view, "rain", "wind");
+    const pending = tap(view);
+    act(() => view.result.current.setEnabled("rain", false));
+    expect(await settled(pending)).toEqual({ asked: 1, found: 0 });
+    expect(announce.mock.calls).toEqual([
+      ["Nothing found here.", { priority: "polite" }],
+    ]);
+  });
+
+  it("is assertive when the one layer left failed, whatever became of a cancelled one", async () => {
+    const view = setup([RAIN, WIND]);
+    view.source.holdIdentify("rain");
+    view.source.failIdentify("wind", "network");
+    turnOn(view, "rain", "wind");
+    const pending = tap(view);
+    act(() => view.result.current.setEnabled("rain", false));
+    await settled(pending);
+    expect(announce.mock.calls).toEqual([
+      ["Wind did not answer.", { priority: "assertive" }],
+    ]);
+  });
+
+  it("drops the answer of a layer that was turned off after it answered, while another was still held", async () => {
+    const view = setup([RAIN, WIND]);
+    view.source.setIdentified("rain", [samplePoint("r")]);
+    view.source.setIdentified("wind", [samplePoint("w")]);
+    const releaseWind = view.source.holdIdentify("wind");
+    turnOn(view, "rain", "wind");
+    const pending = tap(view);
+    await act(async () => {});
+    act(() => view.result.current.setEnabled("rain", false));
+    releaseWind();
+    expect(await settled(pending)).toEqual({ asked: 1, found: 1 });
+    expect(selectedId(view)).toBe("w");
+    expect(view.result.current.choices).toBeNull();
+  });
+
+  it("drops the answer of a layer whose tiles changed after it answered, while another was still held", async () => {
+    const view = setup([RAIN, WIND]);
+    view.source.setIdentified("rain", [samplePoint("r")]);
+    view.source.setIdentified("wind", [samplePoint("w")]);
+    const releaseWind = view.source.holdIdentify("wind");
+    turnOn(view, "rain", "wind");
+    const pending = tap(view);
+    await act(async () => {});
+    act(() => view.result.current.setControl("rain", "period", "100"));
+    releaseWind();
+    expect(await settled(pending)).toEqual({ asked: 1, found: 1 });
+    expect(selectedId(view)).toBe("w");
+    expect(view.result.current.choices).toBeNull();
+  });
+
+  it("counts a source that throws before it returns as failed, and settles", async () => {
+    const view = setup([RAIN]);
+    vi.spyOn(view.source, "identify").mockImplementation(() => {
+      throw new Error("boom");
+    });
+    turnOn(view, "rain");
+    expect(await tapAndWait(view)).toEqual({ asked: 1, found: 0 });
+    expect(view.result.current.identifying).toBe(false);
+    expect(announce.mock.calls).toEqual([
+      ["Rainfall did not answer.", { priority: "assertive" }],
+    ]);
   });
 
   it("opens nothing when every layer asked was turned off", async () => {
@@ -448,6 +516,54 @@ describe("useDataLayers cancelling an identify", () => {
     expect(await settled(pending)).toBeNull();
     expect(view.result.current.identifying).toBe(false);
     expect(said()).toEqual([]);
+  });
+
+  describe("when a card or list is opened another way", () => {
+    async function withFeedAndHeldLookup() {
+      const view = setup([SAMPLE_FEED_LAYER, RAIN]);
+      view.source.setFeatures(FEED, [samplePoint("f"), samplePoint("g")]);
+      view.source.setIdentified("rain", [samplePoint("late")]);
+      const release = view.source.holdIdentify("rain");
+      turnOn(view, FEED, "rain");
+      await waitFor(() =>
+        expect(view.result.current.layers[0]?.status.kind).toBe("ready"),
+      );
+      announce.mockClear();
+      const pending = tap(view);
+      return { view, release, pending };
+    }
+
+    it("cancels a lookup in flight when select opens a card, so its late answer cannot replace it", async () => {
+      const { view, release, pending } = await withFeedAndHeldLookup();
+      act(() => view.result.current.select(FEED, "f", { focus: true }));
+      expect(view.result.current.identifying).toBe(false);
+      release();
+      expect(await settled(pending)).toBeNull();
+      expect(selectedId(view)).toBe("f");
+      expect(view.result.current.focusRequest).toBe(1);
+      expect(said()).toEqual([]);
+    });
+
+    it("cancels a lookup in flight when choose opens a list or a card", async () => {
+      const { view, release, pending } = await withFeedAndHeldLookup();
+      act(() =>
+        view.result.current.choose([
+          { layerId: FEED, featureId: "f" },
+          { layerId: FEED, featureId: "g" },
+        ]),
+      );
+      release();
+      expect(await settled(pending)).toBeNull();
+      expect(view.result.current.choices).toHaveLength(2);
+      expect(view.result.current.selected).toBeNull();
+    });
+
+    it("leaves a lookup in flight alone when select only closes the card", async () => {
+      const { view, release, pending } = await withFeedAndHeldLookup();
+      act(() => view.result.current.select(FEED, null));
+      release();
+      expect(await settled(pending)).toEqual({ asked: 1, found: 1 });
+    });
   });
 
   it("aborts the request of a layer whose tiles change", async () => {

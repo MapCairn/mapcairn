@@ -86,6 +86,13 @@ export const LOCATE_ZOOM = 15;
  */
 export const LOCATE_MAX_FIT_RADIUS_METRES = 25_000;
 
+/** The surfaces that own taps on the map, so a tap there asks no raster layer what is at it. */
+const TAP_TOOLS: ReadonlySet<SurfaceState["surface"]> = new Set([
+  "measure",
+  "directions",
+  "draw",
+]);
+
 /** Room kept around the accuracy circle when a fix is fitted, in pixels. */
 const LOCATE_FIT_PADDING_PX = 32;
 
@@ -578,6 +585,12 @@ export function useMapApp(): MapApp {
       openFeature();
       return;
     }
+    // While a tool owns the taps, as a tap there asks no raster layer, nor does
+    // the key: only what it said before is said.
+    if (TAP_TOOLS.has(stateRef.current.surface)) {
+      announce(announceNoFeaturesHere());
+      return;
+    }
     // The centre of the map is not wrapped as a tap is, so it is wrapped here.
     // Nothing is said until the layers have answered, which they say themselves.
     void identifyAtPlace({
@@ -588,7 +601,7 @@ export function useMapApp(): MapApp {
         announce(announceNoFeaturesHere());
       }
     });
-  }, [announce, choose, identifyAtPlace, openFeature]);
+  }, [announce, choose, identifyAtPlace, openFeature, stateRef]);
 
   const revealMap = useCallback(() => {
     if (stateRef.current.surface === "sheet") {

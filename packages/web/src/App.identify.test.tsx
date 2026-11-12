@@ -212,6 +212,23 @@ describe("App identify with the I key", () => {
     await vi.waitFor(() => expect(polite()).toBe("Nothing found here."));
   });
 
+  it.each([
+    ["measuring", "Measure distance and area"],
+    ["directions", "Directions"],
+    ["drawing", "Draw shapes"],
+  ])(
+    "asks no raster layer while %s, and says nothing is at the centre as it did",
+    async (_, name) => {
+      const services = await renderApp([SAMPLE_IDENTIFY_LAYER]);
+      fireEvent.click(screen.getByRole("button", { name }));
+      fireEvent.keyDown(region(), { key: "i" });
+      await vi.waitFor(() =>
+        expect(polite()).toBe("No features at the centre of the map."),
+      );
+      expect(services.fakes.layerSource.identifyRequests).toEqual([]);
+    },
+  );
+
   it("still says nothing is at the centre when no layer answers a tap", async () => {
     await renderApp([SAMPLE_FEED_LAYER]);
     fireEvent.keyDown(region(), { key: "i" });
@@ -233,14 +250,102 @@ describe("App cancelling an identify", () => {
     return { services, release, aborted: () => request?.signal?.aborted };
   }
 
-  it("is cancelled by Escape, which does not then close anything else, and opens nothing", async () => {
-    const { release, aborted } = await waiting();
+  describe("Escape with a sheet open", () => {
+    async function waitingWithSheetOpen() {
+      const view = await waiting();
+      fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+      expect(sheet()).toHaveAttribute("data-state", "open");
+      // Opening a surface cancels a lookup, so start another one over the sheet.
+      view.services.fakes.layerSource.holdIdentify(FLOOD);
+      act(() => adapter(view.services).simulateClick(PLACE));
+      await settle();
+      const request = view.services.fakes.layerSource.identifyRequests.at(-1);
+      expect(request?.signal?.aborted).toBe(false);
+      return { ...view, aborted: () => request?.signal?.aborted };
+    }
+
+    it("on the map ends the lookup and leaves the sheet open, and a second press closes it", async () => {
+      const { release, aborted } = await waitingWithSheetOpen();
+      fireEvent.keyDown(region(), { key: "Escape" });
+      expect(aborted()).toBe(true);
+      expect(sheet()).toHaveAttribute("data-state", "open");
+      release();
+      await settle();
+      expect(sheet()).toHaveAttribute("data-state", "open");
+      expect(screen.queryByTestId("feature-card")).toBeNull();
+      expect(polite()).not.toContain("Nothing found");
+      fireEvent.keyDown(region(), { key: "Escape" });
+      expect(sheet()).toHaveAttribute("data-state", "closed");
+    });
+
+    it("from elsewhere on the page does the same", async () => {
+      const { release, aborted } = await waitingWithSheetOpen();
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      expect(aborted()).toBe(true);
+      expect(sheet()).toHaveAttribute("data-state", "open");
+      release();
+      await settle();
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      expect(sheet()).toHaveAttribute("data-state", "closed");
+    });
+  });
+
+  it("is not held up by a source that never notices the abort: the late answer is dropped", async () => {
+    const { services, release, aborted } = await waiting();
     fireEvent.keyDown(region(), { key: "Escape" });
     expect(aborted()).toBe(true);
+    // The fake only rejects once released, as a source that ignores the signal would.
     release();
     await settle();
-    expect(sheet()).toHaveAttribute("data-state", "closed");
-    expect(polite()).toBe("");
+    expect(screen.queryByTestId("feature-card")).toBeNull();
+    expect(services.fakes.layerSource.identifyRequests).toHaveLength(1);
+  });
+
+  it("replaces a lookup with a second tap on the same place, and only the second opens", async () => {
+    const services = await renderApp([SAMPLE_IDENTIFY_LAYER]);
+    services.fakes.layerSource.setIdentified(FLOOD, [
+      samplePoint("a", { title: "Gauge 4" }),
+    ]);
+    const release = services.fakes.layerSource.holdIdentify(FLOOD);
+    act(() => adapter(services).simulateClick(PLACE));
+    await settle();
+    act(() => adapter(services).simulateClick(PLACE));
+    await settle();
+    const [first, second] = services.fakes.layerSource.identifyRequests;
+    expect(first?.signal?.aborted).toBe(true);
+    expect(second?.signal?.aborted).toBe(false);
+    release();
+    await vi.waitFor(() =>
+      expect(
+        within(sheet()).getByRole("heading", { name: "Gauge 4" }),
+      ).toBeInTheDocument(),
+    );
+    expect(services.fakes.layerSource.identifyRequests).toHaveLength(2);
+  });
+
+  it("is cancelled by a card that opens another way, whose focus its late answer must not take", async () => {
+    const services = await renderApp(
+      [SAMPLE_FEED_LAYER, SAMPLE_IDENTIFY_LAYER],
+      (source) => {
+        source.setFeatures("sample-points", [
+          samplePoint("a", { title: "Alpha" }),
+        ]);
+        source.setIdentified(FLOOD, [samplePoint("late", { title: "Late" })]);
+      },
+    );
+    const release = services.fakes.layerSource.holdIdentify(FLOOD);
+    act(() => adapter(services).simulateClick(PLACE));
+    await settle();
+    act(() => adapter(services).simulateFeatureTap("sample-points", "a"));
+    expect(
+      within(sheet()).getByRole("heading", { name: "Alpha" }),
+    ).toBeInTheDocument();
+    release();
+    await settle();
+    expect(
+      within(sheet()).getByRole("heading", { name: "Alpha" }),
+    ).toBeInTheDocument();
+    expect(within(sheet()).queryByRole("heading", { name: "Late" })).toBeNull();
   });
 
   it("is cancelled by a long press, which drops the pin instead", async () => {
