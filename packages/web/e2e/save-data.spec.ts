@@ -31,8 +31,13 @@ import { scriptBasemaps } from "./support/services";
 /** The hash that opens the map on Liberty, the basemap whose relief layer Save data leaves out. */
 const ON_LIBERTY = `#basemap=${LIBERTY_BASEMAP_ID}`;
 
-/** How many previews the picker holds on a host that offers the SDK's whole list. */
-const SDK_BASEMAP_COUNT = BASEMAPS.length;
+/**
+ * How many previews the picker holds on a host that offers the SDK's whole
+ * list: Liberty, Colorful and Fiord name none.
+ */
+const SDK_PREVIEW_COUNT = BASEMAPS.filter(
+  (basemap) => basemap.thumbnail !== undefined,
+).length;
 
 const RELIEF_TILES = /\/natural_earth\/ne2sr\//;
 const THUMBNAILS = /\/basemaps\/[\w-]+\.jpg/;
@@ -135,7 +140,7 @@ test.describe("save data", () => {
     ).not.toBeChecked();
     await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
-      SDK_BASEMAP_COUNT,
+      SDK_PREVIEW_COUNT,
     );
     await expect.poll(() => thumbnails.length).toBeGreaterThan(0);
     expect(relief.length).toBeGreaterThan(0);
@@ -252,7 +257,7 @@ test.describe("save data", () => {
     ).toBe("false");
     await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
-      SDK_BASEMAP_COUNT,
+      SDK_PREVIEW_COUNT,
     );
     await expect.poll(() => relief.length).toBeGreaterThan(0);
     expect(thumbnails.length).toBeGreaterThan(0);
@@ -291,7 +296,7 @@ test.describe("save data", () => {
     await expect(saveData).not.toBeChecked();
     await mapPage.switchToMapOptions();
     await expect(mapPage.basemapPicker.locator("img")).toHaveCount(
-      SDK_BASEMAP_COUNT,
+      SDK_PREVIEW_COUNT,
     );
     await expect.poll(() => relief.length).toBeGreaterThan(0);
   });

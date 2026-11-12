@@ -1,3 +1,4 @@
+import { clamp } from "../numbers/clamp";
 import type { Bounds } from "../ports/geometry";
 
 /** The furthest latitude a Web Mercator map shows. */
@@ -33,13 +34,11 @@ export function queryWindow(view: Bounds): Bounds {
   const step = 10 ** Math.floor(Math.log10(size)) / 2;
   const down = (value: number) => Math.floor(value / step) * step;
   const up = (value: number) => Math.ceil(value / step) * step;
-  const clamp = (value: number, limit: number) =>
-    Math.min(limit, Math.max(-limit, value));
   return {
-    west: round(clamp(down(view.west - margin), 180)),
-    south: round(clamp(down(view.south - margin), MAX_LATITUDE)),
-    east: round(clamp(up(view.east + margin), 180)),
-    north: round(clamp(up(view.north + margin), MAX_LATITUDE)),
+    west: round(clamp(down(view.west - margin), -180, 180)),
+    south: round(clamp(down(view.south - margin), -MAX_LATITUDE, MAX_LATITUDE)),
+    east: round(clamp(up(view.east + margin), -180, 180)),
+    north: round(clamp(up(view.north + margin), -MAX_LATITUDE, MAX_LATITUDE)),
   };
 }
 

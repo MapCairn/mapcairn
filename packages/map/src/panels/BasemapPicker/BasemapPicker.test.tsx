@@ -20,6 +20,9 @@ import {
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { BasemapPicker, type BasemapPickerProps } from "./BasemapPicker";
 
+/** The built-in basemaps that name a preview image. */
+const PREVIEWED = BASEMAPS.filter((basemap) => basemap.thumbnail !== undefined);
+
 const { thumbnail: _thumbnail, ...withoutThumbnail } = FAKE_VECTOR_BASEMAP;
 
 /** A basemap with no preview image, which the picker draws as a plain swatch. */
@@ -160,7 +163,7 @@ describe("BasemapPicker", () => {
   describe("previews", () => {
     it("gives each preview an empty alt, intrinsic size and lazy loading", () => {
       renderPicker();
-      for (const basemap of BASEMAPS) {
+      for (const basemap of PREVIEWED) {
         const image = screen
           .getByTestId(`basemap-option-${basemap.id}`)
           .querySelector("img");
@@ -175,27 +178,50 @@ describe("BasemapPicker", () => {
       }
     });
 
+    it("shows a swatch, and requests no image, for a built-in basemap that names no preview", () => {
+      renderPicker();
+      for (const basemap of BASEMAPS) {
+        if (basemap.thumbnail === undefined) {
+          const tile = screen.getByTestId(`basemap-option-${basemap.id}`);
+          expect(tile.querySelector("img"), basemap.id).toBeNull();
+          expect(
+            screen.getByTestId(`basemap-swatch-${basemap.id}`),
+          ).toBeInTheDocument();
+        }
+      }
+    });
+
     it("removes a preview that fails to load and keeps the tile, name and radio", () => {
       renderPicker();
-      const tile = screen.getByTestId("basemap-option-liberty");
+      const tile = screen.getByTestId("basemap-option-osm");
       const image = tile.querySelector("img");
       expect(image).not.toBeNull();
       fireEvent.error(image as HTMLImageElement);
       expect(tile.querySelector("img")).toBeNull();
-      expect(within(tile).getByText("Liberty")).toBeVisible();
-      expect(radio("Liberty")).toBeInTheDocument();
+      expect(within(tile).getByText("Streets")).toBeVisible();
+      expect(radio("Streets")).toBeInTheDocument();
       expect(
         screen.getByTestId("basemap-option-positron").querySelector("img"),
       ).not.toBeNull();
     });
 
-    it("keeps the selection badge on a selected tile whose preview failed", () => {
-      renderPicker({ value: "liberty" });
-      const tile = screen.getByTestId("basemap-option-liberty");
+    it("shows the basemap's swatch in place of a preview that fails to load", () => {
+      renderPicker();
+      expect(screen.queryByTestId("basemap-swatch-dark")).toBeNull();
+      const tile = screen.getByTestId("basemap-option-dark");
       fireEvent.error(tile.querySelector("img") as HTMLImageElement);
-      expect(
-        screen.getByTestId("basemap-selected-liberty"),
-      ).toBeInTheDocument();
+      const swatch = screen.getByTestId("basemap-swatch-dark");
+      expect(tile).toContainElement(swatch);
+      expect(swatch.style.getPropertyValue("--basemap-swatch")).toBe("#0c0c0c");
+      expect(screen.queryByTestId("basemap-swatch-positron")).toBeNull();
+    });
+
+    it("keeps the selection badge on a selected tile whose preview failed", () => {
+      renderPicker({ value: "osm" });
+      const tile = screen.getByTestId("basemap-option-osm");
+      fireEvent.error(tile.querySelector("img") as HTMLImageElement);
+      expect(screen.getByTestId("basemap-selected-osm")).toBeInTheDocument();
+      expect(screen.getByTestId("basemap-swatch-osm")).toBeInTheDocument();
     });
   });
 });
@@ -203,7 +229,7 @@ describe("BasemapPicker", () => {
 describe("BasemapPicker in Save data mode", () => {
   it("shows a thumbnail for every basemap when Save data is off", () => {
     const { container } = renderPicker();
-    expect(container.querySelectorAll("img")).toHaveLength(BASEMAPS.length);
+    expect(container.querySelectorAll("img")).toHaveLength(PREVIEWED.length);
     expect(screen.queryByTestId("basemap-data-note-osm")).toBeNull();
   });
 
@@ -252,13 +278,13 @@ describe("BasemapPicker in Save data mode", () => {
         </LiveRegionProvider>
       </ServicesProvider>,
     );
-    expect(container.querySelectorAll("img")).toHaveLength(BASEMAPS.length);
+    expect(container.querySelectorAll("img")).toHaveLength(PREVIEWED.length);
     act(() => settings.set({ saveData: true }));
     expect(container.querySelectorAll("img")).toHaveLength(0);
-    expect(screen.getByTestId("basemap-swatch-liberty")).toBeInTheDocument();
+    expect(screen.getByTestId("basemap-swatch-positron")).toBeInTheDocument();
     act(() => settings.set({ saveData: false }));
-    expect(container.querySelectorAll("img")).toHaveLength(BASEMAPS.length);
-    expect(screen.queryByTestId("basemap-swatch-liberty")).toBeNull();
+    expect(container.querySelectorAll("img")).toHaveLength(PREVIEWED.length);
+    expect(screen.queryByTestId("basemap-swatch-positron")).toBeNull();
   });
 
   it("follows an explicit choice over the device signal", () => {
@@ -266,7 +292,9 @@ describe("BasemapPicker in Save data mode", () => {
       {},
       { saveData: true, settings: { saveData: false } },
     );
-    expect(off.container.querySelectorAll("img")).toHaveLength(BASEMAPS.length);
+    expect(off.container.querySelectorAll("img")).toHaveLength(
+      PREVIEWED.length,
+    );
     off.unmount();
     const on = renderPicker(
       {},

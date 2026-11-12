@@ -1,6 +1,7 @@
-import { BASEMAPS } from "@mapcairn/core";
+import { BASEMAPS, getBasemap } from "@mapcairn/core";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
+import { axeViolations } from "./support/a11y";
 import {
   BASEMAP_COLUMNS,
   BASEMAP_COUNT,
@@ -37,6 +38,14 @@ import { scriptBasemaps, seedStoredSettings } from "./support/services";
 import { collapseCredits } from "./support/states";
 
 const START = "#map=8.00/-33.90000/18.40000/30";
+
+/** A `#rrggbb` colour as the `rgb(r, g, b)` text the browser computes for it. */
+function hexToRgb(hex: string): string {
+  const [red, green, blue] = [1, 3, 5].map((start) =>
+    Number.parseInt(hex.slice(start, start + 2), 16),
+  );
+  return `rgb(${red}, ${green}, ${blue})`;
+}
 
 test.describe("basemaps", () => {
   test.use({ reducedMotion: "reduce" });
@@ -205,6 +214,87 @@ test.describe("basemaps", () => {
       mapPage.basemapPicker.getByRole("radio", { name: LIBERTY_BASEMAP_NAME }),
     ).toBeChecked();
   });
+
+  test("a host that offers the SDK's whole list shows Liberty, Colorful and Fiord as plain tiles and requests no preview for them", async ({
+    page,
+    mapPage,
+  }) => {
+    const previews: string[] = [];
+    page.on("request", (request) => {
+      const match = /\/basemaps\/([\w-]+)\.jpg/.exec(request.url());
+      if (match?.[1]) {
+        previews.push(match[1]);
+      }
+    });
+    await scriptBasemaps(page, BASEMAPS);
+    await mapPage.goto();
+    await mapPage.openMapOptions();
+    for (const id of UNOFFERED_BASEMAP_IDS) {
+      const tile = mapPage.basemapPicker.getByTestId(`basemap-option-${id}`);
+      await expect(tile.getByTestId(`basemap-swatch-${id}`)).toBeVisible();
+      await expect(tile.locator("img")).toHaveCount(0);
+    }
+    // Previews load lazily, so which ones were asked for depends on the
+    // viewport; none may be one of the three the SDK has no image for.
+    await expect.poll(() => previews.length).toBeGreaterThan(0);
+    for (const id of UNOFFERED_BASEMAP_IDS) {
+      expect(previews).not.toContain(id);
+    }
+  });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`a preview that fails to load gives way to the basemap's swatch, in a ${colorScheme} theme`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.route(`**/basemaps/${DARK_BASEMAP_ID}.jpg`, (route) =>
+        route.fulfill({ status: 404 }),
+      );
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto();
+      await mapPage.openMapOptions();
+      await mapPage.chooseBasemap(DARK_BASEMAP_NAME);
+
+      const tile = mapPage.basemapPicker.getByTestId(
+        `basemap-option-${DARK_BASEMAP_ID}`,
+      );
+      const swatch = tile.getByTestId(`basemap-swatch-${DARK_BASEMAP_ID}`);
+      await expect(swatch).toBeVisible();
+      await expect(tile.locator("img")).toHaveCount(0);
+      await expect(swatch).toHaveCSS(
+        "background-color",
+        hexToRgb(getBasemap(DARK_BASEMAP_ID)?.swatch ?? ""),
+      );
+      await expect(
+        tile.getByTestId(`basemap-selected-${DARK_BASEMAP_ID}`),
+      ).toBeVisible();
+      // A tile whose preview loaded keeps its image.
+      await expect(
+        mapPage.basemapPicker
+          .getByTestId(`basemap-option-${OTHER_VECTOR_BASEMAP_ID}`)
+          .locator("img"),
+      ).toHaveCount(1);
+    });
+
+    test(`has no axe violation with a selected basemap whose preview failed, in a ${colorScheme} theme @a11y`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.route(`**/basemaps/${DARK_BASEMAP_ID}.jpg`, (route) =>
+        route.fulfill({ status: 404 }),
+      );
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto(`#basemap=${DARK_BASEMAP_ID}`);
+      await mapPage.openMapOptions();
+      const swatch = mapPage.basemapPicker.getByTestId(
+        `basemap-swatch-${DARK_BASEMAP_ID}`,
+      );
+      // Previews load lazily, so bring the tile into view before it is judged.
+      await swatch.scrollIntoViewIfNeeded();
+      await expect(swatch).toBeVisible();
+      expect(await axeViolations(page)).toEqual([]);
+    });
+  }
 
   test("Dark is chosen from the picker, loads its own OpenFreeMap style, is saved, leaves Save image on, and a linked dark opens on it", async ({
     page,
