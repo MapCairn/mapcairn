@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  type CatalogueState,
   createDecoderRegistry,
   createFormatterRegistry,
   type FeedLayerDefinition,
@@ -11,10 +10,8 @@ import {
   type PointStyle,
   partitionDefinitions,
   type ShapeStyle,
-  type SkippedDefinition,
 } from "@mapcairn/core";
-import { describe, expect, it, vi } from "vitest";
-import { createExampleCatalogue } from "./exampleServices";
+import { describe, expect, it } from "vitest";
 import { mapServerLayers } from "./mapServerLayers";
 import { SAMPLE_SERVER_LAYERS } from "./sampleServerLayers";
 import type { ServerLayer } from "./serverMetadata";
@@ -112,7 +109,7 @@ describe("mapServerLayers", () => {
         sorts: [
           { id: "name", label: "Name", field: "title", direction: "asc" },
           {
-            id: "by-elevation-m",
+            id: "by-number-1",
             label: "Elevation (m)",
             field: "elevation_m",
             direction: "desc",
@@ -301,42 +298,339 @@ describe("mapServerLayers", () => {
   });
 });
 
-describe("the catalogue that loads the mapped sample", () => {
-  async function readyState(): Promise<
-    Extract<CatalogueState, { status: "ready" }>
-  > {
-    const onSkipped = vi.fn<(skipped: readonly SkippedDefinition[]) => void>();
-    const catalogue = createExampleCatalogue(onSkipped);
-    await catalogue.refresh();
-    const state = catalogue.getState();
-    if (state.status !== "ready") {
-      throw new Error(`The catalogue is ${state.status}`);
-    }
-    return state;
+const HUTS = sampleLayer("Huts_2024");
+const SNOW = sampleLayer("snow_cover");
+
+/** Where a layer's server metadata is wrong in a way TypeScript would have caught. */
+function malformed(layer: ServerLayer, change: object): ServerLayer {
+  return { ...layer, ...change } as unknown as ServerLayer;
+}
+
+function fieldsOf(layer: ServerLayer): Readonly<Record<string, string>> {
+  return feedDefinitionOf(layer).source.fields;
+}
+
+describe("mapServerLayers with metadata a server got wrong", () => {
+  it.each([
+    ["no credit", malformed(HUTS, { credit: undefined })],
+    ["no field list", malformed(HUTS, { fields: undefined })],
+    ["a number for an id", malformed(HUTS, { id: 7 })],
+    [
+      "a number for a field label",
+      malformed(HUTS, {
+        fields: [
+          { name: "OBJECTID", label: "Record", type: "oid" },
+          { name: "hut_name", label: "Name", type: "string" },
+          { name: "elevation_m", label: 7, type: "integer" },
+        ],
+      }),
+    ],
+    ["no service", malformed(HUTS, { service: undefined })],
+    ["nothing at all", null as unknown as ServerLayer],
+  ])(
+    "skips only the layer with %s, and keeps the layers around it",
+    (_name, bad) => {
+      const { layers, skipped } = partitionDefinitions(
+        mapServerLayers({ layers: [bad, sampleLayer("glens_rainfall")] }),
+        OPTIONS,
+      );
+
+      expect(layers.map((layer) => layer.id)).toEqual(["glens-rainfall"]);
+      expect(skipped).toEqual([
+        { problems: ["definition: must be an object"] },
+      ]);
+    },
+  );
+});
+
+describe("mapServerLayers and the classes of equal intervals", () => {
+  function withClasses(classes: number): ServerLayer {
+    return {
+      ...POLYGONS_BY_BREAKS,
+      renderer: {
+        type: "equalInterval",
+        field: "rain_mm",
+        min: 0,
+        max: 2000,
+        classes,
+      },
+    };
   }
 
-  it("offers the example's own layer and the three layers it could map", async () => {
-    const state = await readyState();
+  it.each([2, 5])("maps %s classes", (classes) => {
+    const style = feedDefinitionOf(withClasses(classes)).style as ShapeStyle;
 
-    expect(state.layers.map((layer) => layer.id)).toEqual([
-      "example-cairns",
-      "huts-2024",
-      "glens-rainfall",
-      "snow-cover",
+    expect(style.colour).toMatchObject({
+      kind: "intervals",
+      ramp: [
+        "ordinal-1",
+        "ordinal-2",
+        "ordinal-3",
+        "ordinal-4",
+        "ordinal-5",
+      ].slice(0, classes),
+    });
+  });
+
+  it.each([6, 1e9, 2 ** 32, Number.POSITIVE_INFINITY])(
+    "skips %s classes, which the palette has no colour for, without counting them",
+    (classes) => {
+      expect(skippedProblems(withClasses(classes))).toEqual([
+        "style.colour.ramp[5]: must name a palette colour",
+      ]);
+    },
+  );
+
+  it.each([1, 0, -3, Number.NaN])(
+    "skips %s classes, because equal intervals need at least two",
+    (classes) => {
+      expect(skippedProblems(withClasses(classes))).toEqual([
+        "style.colour.ramp: must have 2 to 7 classes",
+      ]);
+    },
+  );
+});
+
+describe("mapServerLayers and the names a server uses", () => {
+  const OID = { name: "OBJECTID", label: "Record", type: "oid" } as const;
+  const NAME = { name: "name", label: "Name", type: "string" } as const;
+
+  it("keeps a field called title apart from the feature's title, in the field map, the card, the sorts and the style", () => {
+    const layer: ServerLayer = {
+      ...HUTS,
+      fields: [OID, NAME, { name: "title", label: "Rank", type: "integer" }],
+      renderer: {
+        type: "classBreaks",
+        field: "title",
+        breaks: [
+          { min: 0, label: "Low" },
+          { min: 5, label: "High" },
+        ],
+      },
+      visibleValues: { field: "title", values: [1, 2] },
+    };
+
+    const definition = feedDefinitionOf(layer);
+
+    expect(definition.source.fields).toEqual({
+      id: "properties.OBJECTID",
+      title: "properties.name",
+      "title-field": "properties.title",
+    });
+    expect(definition.source.filter).toEqual({
+      field: "title-field",
+      in: [1, 2],
+    });
+    expect(definition.card.lines).toEqual(["Rank: {title-field|number}"]);
+    expect(definition.list.sorts.map((sort) => sort.field)).toEqual([
+      "title",
+      "title-field",
+    ]);
+    expect((definition.style as PointStyle).colour).toMatchObject({
+      field: "title-field",
+    });
+  });
+
+  it("keeps a text field called id apart from the feature's id", () => {
+    const layer: ServerLayer = {
+      ...HUTS,
+      fields: [OID, NAME, { name: "id", label: "Reference", type: "string" }],
+      renderer: { type: "simple", label: "Hut" },
+      visibleValues: { field: "id", values: ["a"] },
+    };
+
+    const definition = feedDefinitionOf(layer);
+
+    expect(definition.source.fields).toEqual({
+      id: "properties.OBJECTID",
+      title: "properties.name",
+      "id-field": "properties.id",
+    });
+    expect(definition.source.filter).toEqual({ field: "id-field", in: ["a"] });
+  });
+
+  it("colours by the first text field through the name the feature's title has", () => {
+    const layer: ServerLayer = {
+      ...HUTS,
+      renderer: {
+        type: "uniqueValue",
+        field: "hut_name",
+        values: [{ value: "Corrour bothy", label: "Corrour" }],
+        otherLabel: "Another",
+      },
+    };
+
+    expect((feedDefinitionOf(layer).style as PointStyle).colour).toMatchObject({
+      kind: "category",
+      field: "title",
+    });
+  });
+
+  it("leaves out a field whose name a template cannot read", () => {
+    const layer: ServerLayer = {
+      ...HUTS,
+      fields: [
+        ...HUTS.fields,
+        { name: "rain mm", label: "Rain", type: "integer" },
+      ],
+    };
+
+    expect(Object.keys(fieldsOf(layer))).not.toContain("rain mm");
+    expect(feedDefinitionOf(layer).card.lines.join(" ")).not.toMatch(/Rain/);
+  });
+
+  it("gives sorts of fields whose names turn into the same text their own ids", () => {
+    const layer: ServerLayer = {
+      ...POLYGONS_BY_BREAKS,
+      fields: [
+        ...POLYGONS_BY_BREAKS.fields,
+        { name: "rain-mm", label: "Rain, other gauge", type: "double" },
+      ],
+    };
+
+    expect(feedDefinitionOf(layer).list.sorts.map((sort) => sort.id)).toEqual([
+      "name",
+      "by-number-1",
+      "by-number-2",
     ]);
   });
 
-  it("reports the layer it could not map as skipped, with the reason", async () => {
-    const state = await readyState();
+  it("skips a layer with no object id, and says the id is missing", () => {
+    const layer: ServerLayer = {
+      ...HUTS,
+      fields: HUTS.fields.filter((field) => field.type !== "oid"),
+    };
 
-    expect(state.skipped).toEqual([
-      {
-        id: "survey-notes",
-        problems: [
-          "source.fields.title: is required",
-          "card.title: {title} is not a field",
-        ],
+    expect(skippedProblems(layer)).toEqual(["source.fields.id: is required"]);
+  });
+
+  it("shows the feature's title on the second line of the list when there is no other field", () => {
+    const { visibleValues: _filter, ...unfiltered } = HUTS;
+    const layer: ServerLayer = {
+      ...unfiltered,
+      fields: [OID, NAME],
+      renderer: { type: "simple", label: "Hut" },
+    };
+
+    const definition = feedDefinitionOf(layer);
+
+    expect(definition.card.lines).toEqual([]);
+    expect(definition.list.secondary).toBe("{title}");
+    expect(definition.list.sorts.map((sort) => sort.field)).toEqual(["title"]);
+  });
+});
+
+describe("mapServerLayers and the rest of a layer", () => {
+  it("colours every feature alike for a simple renderer, as a marker and as an area", () => {
+    const point = feedDefinitionOf({
+      ...HUTS,
+      renderer: { type: "simple", label: "Hut" },
+    });
+    const area = feedDefinitionOf({
+      ...POLYGONS_BY_BREAKS,
+      renderer: { type: "simple", label: "Glen" },
+    });
+
+    expect(point.style).toEqual({
+      colour: { kind: "fixed", colour: "orange", label: "Hut" },
+    });
+    expect(area.style).toEqual({
+      kind: "shapes",
+      geometry: "area",
+      colour: { kind: "fixed", colour: "orange", label: "Glen" },
+    });
+  });
+
+  it("maps six values and the class for every other value, the most the categorical colours allow", () => {
+    const values = ["a", "b", "c", "d", "e", "f"].map((value) => ({
+      value,
+      label: value.toUpperCase(),
+    }));
+    const layer: ServerLayer = {
+      ...HUTS,
+      renderer: {
+        type: "uniqueValue",
+        field: "status",
+        values,
+        otherLabel: "?",
       },
+    };
+
+    expect((feedDefinitionOf(layer).style as PointStyle).colour).toMatchObject({
+      other: { colour: "reddish-purple" },
+    });
+  });
+
+  it("skips seven values, which leave no categorical colour for the other class", () => {
+    const values = ["a", "b", "c", "d", "e", "f", "g"].map((value) => ({
+      value,
+      label: value.toUpperCase(),
+    }));
+    const layer: ServerLayer = {
+      ...HUTS,
+      renderer: {
+        type: "uniqueValue",
+        field: "status",
+        values,
+        otherLabel: "?",
+      },
+    };
+
+    expect(skippedProblems(layer)).toEqual([
+      "style.colour.other: must have a label and a categorical colour",
     ]);
+  });
+
+  it("maps a tile legend of five entries and skips one of six", () => {
+    const withLegend = (count: number): ServerLayer =>
+      malformed(SNOW, {
+        service: {
+          ...SNOW.service,
+          legend: Array.from({ length: count }, (_, index) => ({
+            label: `Class ${index + 1}`,
+          })),
+        },
+      });
+
+    expect(definitionOf(withLegend(5))).toMatchObject({
+      legend: [
+        { label: "Class 1", colour: "ordinal-1" },
+        { label: "Class 2", colour: "ordinal-2" },
+        { label: "Class 3", colour: "ordinal-3" },
+        { label: "Class 4", colour: "ordinal-4" },
+        { label: "Class 5", colour: "ordinal-5" },
+      ],
+    });
+    expect(skippedProblems(withLegend(6))).toEqual([
+      "legend[5].colour: must name a palette colour",
+    ]);
+  });
+
+  it("credits a feed with no link without one, and sets no filter when the server names none", () => {
+    const { attribution, source } = feedDefinitionOf({
+      ...POLYGONS_BY_BREAKS,
+      credit: { text: "Example weather service" },
+    });
+
+    expect(attribution).toEqual([{ text: "Example weather service" }]);
+    expect(source).not.toHaveProperty("filter");
+  });
+
+  it("skips a layer whose id does not start with a letter once it is made lowercase and hyphenated", () => {
+    expect(skippedProblems({ ...HUTS, id: "2024_huts" })).toEqual([
+      "id: must be lowercase letters, digits and hyphens, starting with a letter",
+    ]);
+  });
+
+  it("keeps the first of two layers whose ids become the same, and skips the other as a duplicate", () => {
+    const { layers, skipped } = partitionDefinitions(
+      mapServerLayers({
+        layers: [HUTS, { ...POLYGONS_BY_BREAKS, id: "huts-2024" }],
+      }),
+      OPTIONS,
+    );
+
+    expect(layers.map((layer) => layer.name)).toEqual(["Mountain huts"]);
+    expect(skipped).toEqual([{ id: "huts-2024", problems: ["id: duplicate"] }]);
   });
 });

@@ -41,14 +41,13 @@ export class PageThemeSource implements ThemeSource {
 
 /**
  * Says, in the console, which layer was left out and why: one line for each,
- * with the path of every problem. A host would send these to its own log. The
- * Layers section shows a person only that some layers could not be shown.
+ * with the path of every problem. A layer with no id, or one whose id is
+ * empty, is named "(no id)". A host would send these to its own log.
  */
 export function logSkippedLayers(skipped: readonly SkippedDefinition[]): void {
   for (const { id, problems } of skipped) {
-    console.warn(
-      `Layer ${id ?? "(no id)"} was left out: ${problems.join("; ")}`,
-    );
+    const name = id === undefined || id === "" ? "(no id)" : id;
+    console.warn(`Layer ${name} was left out: ${problems.join("; ")}`);
   }
 }
 
