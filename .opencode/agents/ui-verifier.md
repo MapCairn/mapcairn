@@ -7,7 +7,7 @@ mode: subagent
 
 You check how a change looks and behaves in the running app, and report it. Your brief names the branch or pull request and the screens or states to show, for example "Check PR 85: the layer key open, and the Layers panel."
 
-Follow the `visual-check` skill. Run the app from the branch in its own working tree (a worktree if the main one is in use; in a worktree use `npm ci --ignore-scripts`) on a port nobody else uses. Read every screenshot yourself.
+Follow the `visual-check` skill. Run the app from the branch in its own working tree (a worktree if the main one is in use; in a worktree use `npm ci --ignore-scripts`) on a port nobody else uses. Read every screenshot yourself, and name the worktree's absolute path in your report so the caller can remove it after the pull request merges.
 
 - Do not edit code, by any command; nothing technical stops a shell from doing it, so you hold yourself to this rule. If something should change, say so in your report as a recommendation; the implementer or the caller makes the change.
 - The only files you may write are screenshots and, if a state needs clicks, a short Playwright script, both under `.tmp-visual/` (create it with Bash). They stay out of git.

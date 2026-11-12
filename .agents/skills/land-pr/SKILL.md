@@ -16,7 +16,7 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
    - What and why, with `Fixes #<n>` (the issue is finished by this pull request) or `Part of #<n>` (it is not).
    - The documents you updated, or why none needed it.
    - The checks you ran with their results, and any that failed or were skipped.
-   - For a visible change, what the `visual-check` skill saw, in words. `gh` cannot upload images, so ask the person to add the screenshots by hand.
+   - For a visible change, what the `visual-check` skill saw at each size and theme, in words, and that the images are kept locally and will be attached on request, with no local path. A person opening the pull request attaches the images for a visible change; an agent does not attach them (`gh` cannot upload them) and says they are available on request.
    - That the simplify step was run.
 3. `gh pr create --title "<Conventional Commit title>" --body-file <file>`, from a fork with `--repo MapCairn/mapcairn --head <your-login>:<branch>` if you do not have write access.
 4. No assistant attribution in the title, body or commits, no `@mentions` of people, no maintainer name, no names of commercial products used as comparisons.
@@ -26,7 +26,8 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
 
 Review the opened pull request before it merges, and fix what is real. A review is read-only: the reviewer reads the diff and reports, and does not edit, push or post.
 
-- Reviewer: if you can start a sub-agent within the limits in `AGENTS.md` ("Sub-agents"), give it the `fresh-eyes-reviewer` role and the pull request number. Otherwise use your tool's review command if it has one, or read the diff yourself as a stranger, after the issue and the documents that "Read before you change" in `AGENTS.md` names.
+- Reviewer: if you can start a sub-agent within the limits in `AGENTS.md` ("Sub-agents"), give it the `fresh-eyes-reviewer` role and the pull request number. If another agent started you, do not start sub-agents: review inline against the checklist below, and your caller runs the independent review after the hand-off. Otherwise use your tool's review command if it has one, or read the diff yourself as a stranger, after the issue and the documents that "Read before you change" in `AGENTS.md` names.
+- Reading the head: never check the branch out in the main working tree. Run `git fetch <origin-or-upstream> pull/<n>/head`, note `git rev-parse FETCH_HEAD`, and read a file with `git show FETCH_HEAD:<path>`. The next fetch overwrites `FETCH_HEAD`, so when one may have run, read by the noted SHA (`git show <sha>:<path>`).
 - Checklist: does it solve the issue; is there a test that failed first and still means something; behaviour on the keyboard and for a screen reader; no id, kind or provider switched on in code; package boundaries respected; docs match the behaviour; copy in British English; nothing sent over the network that `PRIVACY.md` does not mention; no secrets, no identifying data, no dependency added without need; the description's claims about checks are true (`gh pr checks`).
 - Report only findings with a file, a line and a fix, most serious first (blocking, should fix, minor). Leave out style preferences and anything the lint enforces, and say what you could not check. "No findings" is a valid result.
 - Author: apply fixes as new commits, push, and re-run the affected checks. Leave a short comment on the pull request saying what the review found and what changed. A finding you decline gets a one-line reason.
@@ -38,7 +39,7 @@ Review the opened pull request before it merges, and fix what is real. A review 
 gh pr checks <n> --watch --fail-fast
 ```
 
-The `build` and `e2e` checks are required, and the `CLA` check must be green for a contributor. A first-time contributor's workflows can wait for a maintainer to approve them, so `--watch` may never progress: report that and stop instead of waiting. If a check fails, read its log (`gh run view <run-id> --log-failed`), fix the cause in a new commit, and push. Do not retry a failing run blindly, weaken an assertion, or exclude code from coverage. A genuinely flaky test gets an issue; one re-run is fine, a pattern of re-runs is not.
+The `build` and `e2e` checks are required, and the `CLA` check must be green for a contributor. A first-time contributor's workflows can wait for a maintainer to approve them, so `--watch` may never progress: report that and stop instead of waiting. If a check fails, read its log (`gh run view <run-id> --log-failed`), fix the cause in a new commit, and push. Do not retry a failing run blindly, weaken an assertion, or exclude code from coverage. A genuinely flaky test gets an issue; one re-run is fine, a pattern of re-runs is not. A timeout that passes when its spec runs alone is a load flake: report it as `pick-up-issue` section 6 says.
 
 If the branch is behind `main` and the ruleset needs it current: `gh pr update-branch <n>` or rebase, then wait for the checks again.
 
@@ -60,7 +61,13 @@ gh pr merge <n> --squash --delete-branch --subject "<Conventional Commit title> 
 1. Confirm the merge: `gh pr view <n> --json state,mergedAt`.
 2. If `Fixes #<n>` did not close the issue, or the pull request was `Part of`, tick the issue's task list and close it only when all the work is merged and verified (`gh issue close <n> --comment "<what shipped>"`). Edit from the current body (`gh issue view <n> --json body --jq .body > <file>`) so nothing is overwritten. Without triage rights, post the task-list status as a comment or in the pull request description and leave ticking, closing and labels to the maintainer.
 3. Update the tracking issue if there is one, the same way.
-4. Remove the local branch and worktree. `gh pr merge --delete-branch` may print a worktree error when the branch is checked out in one; that is expected, so confirm with `gh pr view` (step 1). A squash merge leaves the branch's commits outside `main`, so `git branch -d` refuses: once step 1 shows `MERGED`, use `git switch main && git pull --ff-only && git branch -D <branch>`, then `git worktree remove <path>` if you made one. (On a fork, pull from `upstream`.)
-5. Stop every server, wrangler instance and browser you started, and confirm with a port check that none is left.
+4. Stop every server, wrangler instance and browser you started, and confirm with a port check that none is left. A running dev server, wrangler or workerd process locks files on Windows.
+5. Remove the local branch and worktree, once step 1 shows `MERGED`. `gh pr merge --delete-branch` may print a worktree error when the branch is checked out in one; that is expected. If you made a worktree, run `git worktree remove <path>` first, because git refuses to delete a branch that is checked out. Then, only if the main checkout is yours and clean (another tool may be on a branch in it), run `git switch main && git pull --ff-only && git branch -D <branch>` there; a squash merge leaves the branch's commits outside `main`, so `git branch -d` refuses. (On a fork, pull from `upstream`.) Check the folder is gone; see section 6 for a leftover `node_modules`.
 6. If the merged pull request was a plan, continue with `split-plan`. Otherwise pick the next issue with `pick-up-issue`, if the person asked for a queue.
 7. Hand off with the report in `AGENTS.md` ("Definition of done"), including the pull request URL, its final check results and whether it merged.
+
+## 6. If you delegated
+
+- Straight after launching an agent, write down its id and its task, and check the id against that note before you message it. Run the independent review on each delegated pull request before merging.
+- A delegated agent never leaves a server, browser or workerd running, and keeps its worktree until its pull request has merged. When the last agent has finished, sweep once yourself: check the ports and the processes (dev servers, wrangler, workerd, browsers), stop what is left, and remove the worktrees of merged pull requests.
+- Deleting a worktree can leave an unregistered `node_modules` folder behind (seen on Windows, usually because a dev server or workerd process still held files). Confirm the path is the former worktree folder you created (a sibling such as `../mapcairn-<name>` or one under `.claude/worktrees`, never the main checkout or its parent) and that `ls -A <path>` shows only `node_modules`. Then delete that folder only (`rm -rf <path>` in Git Bash, `rmdir /s /q <path>` in cmd). If files are locked, stop the dev server and workerd processes first.
