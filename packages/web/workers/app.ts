@@ -31,9 +31,10 @@ function redirectFromPreviousHostname(request: Request): Response | null {
  * server bundle. There are no Cloudflare bindings to thread through, so the
  * request is passed on with no `RouterContextProvider`.
  * @remarks The `try`/`catch` around `requestHandler` is a last-resort net,
- *   not the primary error path; `entry.server.tsx`'s `onError` and
- *   `root.tsx`'s `ErrorBoundary` catch render/loader/action errors and log
- *   them via `console.error` before this ever sees them. This only fires
+ *   not the primary error path; React Router's request handler (its
+ *   default `handleError`) logs loader and action errors, and
+ *   `entry.server.tsx`'s `onError` logs render errors, via `console.error`
+ *   before this ever sees them. This only fires
  *   for a failure outside that render lifecycle entirely (e.g. the dynamic
  *   `import("../build/server/index.js")` itself failing), where an
  *   unhandled throw would otherwise surface as a bare Workers runtime

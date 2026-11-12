@@ -273,7 +273,27 @@ describe("root ErrorBoundary", () => {
     expect(reportCaughtError).toHaveBeenCalledTimes(1);
   });
 
-  it("shows a not-found page for an unmatched route without reporting it", () => {
+  it("adds no log of its own when rendered on the server", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("kaboom on the server");
+    const Stub = createRoutesStub([
+      { id: "root", path: "/", Component: Root, ErrorBoundary },
+    ]);
+
+    const markup = renderToStaticMarkup(
+      createElement(Stub, {
+        initialEntries: ["/"],
+        hydrationData: { errors: { root: failure } },
+      }),
+    );
+
+    expect(markup).toContain("Something went wrong");
+    expect(logged).not.toHaveBeenCalled();
+    expect(reportCaughtError).not.toHaveBeenCalled();
+  });
+
+  it("shows a not-found page for an unmatched route without logging or reporting it", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const Stub = createRoutesStub([
       { path: "/", Component: Root, ErrorBoundary },
     ]);
@@ -287,6 +307,7 @@ describe("root ErrorBoundary", () => {
       "href",
       "/",
     );
+    expect(logged).not.toHaveBeenCalled();
     expect(reportCaughtError).not.toHaveBeenCalled();
   });
 });
