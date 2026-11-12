@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import type { FillPattern, LineDash, MarkerShape } from "../layers/definition";
 import type { BasemapDefinition } from "./basemap";
-import type { MapEngineError } from "./errors";
+import type { MapEngineError, MapImageExportError } from "./errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "./geometry";
 import type { LayerGeometry } from "./layers";
 
@@ -310,6 +310,20 @@ export interface MapImageDrawing {
   readonly marks: readonly MapImageMark[];
 }
 
+/** The size of a map, in CSS pixels. */
+export interface MapImageSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * The area an image shows: a box to fit, or a centre and a normalised zoom.
+ * Either way the image is north-up.
+ */
+export type MapImageView =
+  | { readonly bounds: Bounds }
+  | { readonly center: LatLng; readonly zoom: number };
+
 /** Options for {@link MapAdapter.toImage}. */
 export interface MapImageOptions {
   /**
@@ -322,6 +336,31 @@ export interface MapImageOptions {
    * keeps its sources. Nothing is drawn when it is empty or omitted.
    */
   readonly attribution?: string;
+  /**
+   * The size of the map the image shows, in CSS pixels, so labels and symbols
+   * are as large against it as on a screen of that size. The image is this
+   * many times `pixelRatio` pixels on each side. The size is rounded to whole
+   * CSS pixels first, and the image's pixels to whole pixels. Defaults to the
+   * size of the map on screen.
+   */
+  readonly size?: MapImageSize;
+  /** Image pixels for each CSS pixel of `size`. Defaults to 1, whatever the device. */
+  readonly pixelRatio?: number;
+  /**
+   * What the image shows. Defaults to where the map on screen is looking, but
+   * north-up. It is drawn without moving the map on screen. Latitudes are
+   * within the Web Mercator limit and longitudes within -180 to 180; a box has
+   * its west below its east, so one across the antimeridian is refused as
+   * `invalid` for now, and a later step may add it. A box the map cannot frame
+   * at the requested size (below the basemap's lowest zoom, or one it would
+   * have to crop to fit) is `invalid` too, and so is any box on a globe for
+   * now (a centre and zoom is drawn on either). What `getBounds()` gives for a
+   * world-wide view (longitudes beyond -180 and 180, or latitudes beyond the
+   * limit) is not an acceptable `bounds`. When a request names only a size or
+   * pixel ratio, the view on screen is used, with its latitude clamped to the
+   * Web Mercator limit and its longitude wrapped.
+   */
+  readonly view?: MapImageView;
 }
 
 /** What a draggable handle on the map stands for. */
@@ -564,12 +603,41 @@ export interface MapAdapter {
   /** The box of latitudes and longitudes the map shows now, covering a rotated map. */
   getBounds(): Bounds;
   /**
-   * Draws the map as it is now, with its data layers, as a PNG. It never
-   * requests anything the map has not already loaded. Rejects with a
-   * `MapEngineError` whose reason is `export-failed` when the engine cannot
-   * produce an image, and also while a basemap swap is still loading, so a
-   * half-swapped map is never saved. That is checked again just before the
-   * pixels are copied, so a swap that starts meanwhile is caught.
+   * Draws the map with its data layers as a PNG.
+   *
+   * With no `size`, `pixelRatio` or `view`, it copies the map as it is on
+   * screen and never requests anything the map has not already loaded.
+   *
+   * With any of them, it draws the requested size and view on a map of its own
+   * and leaves the map on screen where it is: no move, no event, no repaint.
+   * That map is separate, with its own caches, so it fetches again what its
+   * view needs from the providers the map on screen already uses: the style's
+   * tile descriptions, sprite sheets and glyph ranges, and the tiles of its
+   * view, unless the browser's HTTP cache has them. It adds no source and no
+   * origin of its own. It waits for the tiles to load. A request over the size
+   * limit is refused before anything is drawn. Requested images are drawn one
+   * at a time, each waiting for the ones asked for before it; the queue has no
+   * cap and no way for a caller to cancel yet. An export that waits in the
+   * queue while the basemap, a data layer or the projection changes fails with
+   * `export-failed` ("The map changed while the image was waiting.") rather
+   * than mixing the new style with the old view and credits. The CSS size is
+   * rounded to whole pixels, and a box must have its west below its east, so
+   * one across the antimeridian is not drawn yet.
+   *
+   * Rejects with a `MapEngineError` whose reason is `export-failed` when the
+   * engine cannot produce an image, and also while a basemap swap is still
+   * loading, so a half-swapped map is never saved. That is checked again just
+   * before the pixels are copied, so a swap that is still loading then is
+   * caught; one that starts and finishes during the wait is not noticed, and
+   * the image shows the basemap the map had when the export started.
+   * A requested size or view fails with a {@link MapImageExportError}, which is
+   * one of those, when the request is not valid (`invalid`), is too large
+   * (`too-large`) or its tiles do not finish loading in time (`timed-out`).
+   *
+   * Known limits: a second map that cannot start (the likeliest cause is
+   * memory pressure, on iOS especially) is an `export-failed` error without a
+   * `kind`; and a tile that errors (a 404, a 429, a blocked response) still
+   * lets the map settle, so the image is saved with a gap and no error.
    */
   toImage(options?: MapImageOptions): Promise<Blob>;
 

@@ -110,6 +110,30 @@ export class MapEngineError extends Error {
 }
 
 /**
+ * Why a requested image was not made: the request was not valid (`invalid`),
+ * the image would be larger than the size limits allow, or the device could
+ * not draw it that large (`too-large`), or the tiles the view needs had not
+ * finished loading in time (`timed-out`).
+ */
+export type MapImageExportErrorKind = "invalid" | "too-large" | "timed-out";
+
+/**
+ * What `toImage` rejects with when a requested size or view cannot be
+ * honoured. It is a {@link MapEngineError} with reason `export-failed`, so a
+ * caller that only handles that still works, and `kind` says which of the
+ * three it was.
+ */
+export class MapImageExportError extends MapEngineError {
+  readonly kind: MapImageExportErrorKind;
+
+  constructor(kind: MapImageExportErrorKind, message: string) {
+    super("export-failed", message);
+    this.name = "MapImageExportError";
+    this.kind = kind;
+  }
+}
+
+/**
  * Why no file was opened: the person closed the picker or the caller
  * cancelled (`cancelled`, which callers ignore), the file was larger than
  * allowed (`too-large`), it could not be read (`unreadable`), or the browser

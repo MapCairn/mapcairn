@@ -52,6 +52,9 @@ function createHost(): HTMLDivElement {
       width: FAKE_VIEWPORT_WIDTH,
       height: FAKE_VIEWPORT_HEIGHT,
     });
+  // The size an engine reads for the map: the layout size, whole pixels.
+  Object.defineProperty(host, "clientWidth", { value: FAKE_VIEWPORT_WIDTH });
+  Object.defineProperty(host, "clientHeight", { value: FAKE_VIEWPORT_HEIGHT });
   document.body.append(host);
   return host;
 }
@@ -91,7 +94,10 @@ for (const [name, basemap] of [
 ] as const) {
   runMapAdapterContract(name, () => ({
     // No grace period, so `settle` (one macrotask) sees the worker verdict.
-    adapter: new MapLibreMapAdapter({ workerFailureGraceMs: 0 }),
+    adapter: new MapLibreMapAdapter({
+      workerFailureGraceMs: 0,
+      imageTilesWaitMs: 20,
+    }),
     controls: {
       host: createHost(),
       hostSize: { width: FAKE_VIEWPORT_WIDTH, height: FAKE_VIEWPORT_HEIGHT },
@@ -163,6 +169,9 @@ for (const [name, basemap] of [
       },
       failNextImage: () => {
         canvasStub.failNext = true;
+      },
+      stallNextImageTiles: () => {
+        FakeMapLibreMap.holdIdle = true;
       },
       pointerDown: (latlng, pointer = "mouse") =>
         firePointer(pointer === "touch" ? "touchstart" : "mousedown", latlng),

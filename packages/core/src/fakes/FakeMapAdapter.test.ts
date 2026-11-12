@@ -55,6 +55,7 @@ function subjectFor(
                 new FakeMapAdapter({ failMount: "webgl-unavailable" }),
               failNextBasemap: () => adapter.failNextBasemap(),
               failNextImage: () => adapter.failNextImage(),
+              stallNextImageTiles: () => adapter.stallNextImageTiles(),
             }
           : {}),
       },
@@ -293,6 +294,29 @@ describe("FakeMapAdapter", () => {
     void adapter.setBasemap(FAKE_RASTER_BASEMAP);
     await expect(image).rejects.toMatchObject({ reason: "export-failed" });
     swap.resolve();
+  });
+
+  it("keeps a stalled-tiles request for the next requested image, not a plain one", async () => {
+    const adapter = new FakeMapAdapter();
+    await adapter.mount(new FakeMapHost(), OPTIONS);
+    adapter.stallNextImageTiles();
+    expect((await adapter.toImage()).type).toBe("image/png");
+    await expect(
+      adapter.toImage({ size: { width: 100, height: 100 } }),
+    ).rejects.toMatchObject({ kind: "timed-out" });
+    expect(
+      (await adapter.toImage({ size: { width: 100, height: 100 } })).type,
+    ).toBe("image/png");
+  });
+
+  it("records the options of a requested image, and refuses a too-large one without waiting", async () => {
+    const adapter = new FakeMapAdapter();
+    await adapter.mount(new FakeMapHost(), OPTIONS);
+    const request = { size: { width: 9000, height: 10 } };
+    await expect(adapter.toImage(request)).rejects.toMatchObject({
+      kind: "too-large",
+    });
+    expect(adapter.imageRequests).toEqual([request]);
   });
 
   it("builds a fresh adapter on every call and reports each one", () => {

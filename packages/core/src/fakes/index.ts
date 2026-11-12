@@ -18,3 +18,4 @@ export type { Deferred, HeldCall } from "./internal";
 export * from "./layerFixtures";
 export * from "./MemorySettingsStore";
 export * from "./MemoryUrlState";
+export * from "./pngHeader";

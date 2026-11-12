@@ -12,9 +12,14 @@ import { hitTestHandle, type ProjectedHandle } from "../draw/hit";
 import { wrapLongitude } from "../globe/longitude";
 import { placePoint } from "../globe/placement";
 import { mapMetresPerPixel } from "../globe/resolution";
+import { planRequestedImage, refuseBoxOnGlobe } from "../imageExport/plan";
 import { clamp } from "../numbers/clamp";
 import type { BasemapDefinition } from "../ports/basemap";
-import { MapEngineError, type MapEngineErrorReason } from "../ports/errors";
+import {
+  MapEngineError,
+  type MapEngineErrorReason,
+  MapImageExportError,
+} from "../ports/errors";
 import type { Bounds, LatLng, PixelPoint, ViewState } from "../ports/geometry";
 import type {
   MapAdapter,
@@ -42,6 +47,7 @@ import {
   mercatorProject,
   mercatorUnproject,
 } from "../zoom/zoom";
+import { pngHeader } from "./pngHeader";
 
 /** The view a {@link FakeMapAdapter} starts with before it is mounted. */
 export const DEFAULT_FAKE_VIEW: ViewState = Object.freeze({
@@ -209,6 +215,7 @@ export class FakeMapAdapter implements MapAdapter {
   #unavailableTiles = new Map<string, string>();
   #hitsAtPointer: readonly MapFeatureHit[] = [];
   #failNextImage = false;
+  #stallImageTiles = false;
   /** The options of every `toImage` call, in order. */
   readonly imageRequests: (MapImageOptions | undefined)[] = [];
   #handles: readonly MapEditHandle[] = [];
@@ -533,14 +540,36 @@ export class FakeMapAdapter implements MapAdapter {
       throw new MapEngineError("export-failed", "The map is not mounted.");
     }
     this.#refuseExport();
+    // The size of the map on screen as the MapLibre adapter reads it: the
+    // layout size, which the DOM's `clientWidth` and `clientHeight` give as
+    // whole pixels rounded to the nearest.
+    const screen = {
+      width: Math.round(this.#hostSize.width),
+      height: Math.round(this.#hostSize.height),
+    };
+    const requested = planRequestedImage(options ?? {}, {
+      size: screen,
+      view: this.#view,
+    });
+    if (requested) {
+      refuseBoxOnGlobe(requested.view, this.projection);
+    }
     // A real engine waits for its tiles here, and a swap can start meanwhile.
     await Promise.resolve();
     this.#refuseExport();
-    // The PNG signature, so the blob is recognisably an image without an encoder.
-    return new Blob(
-      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
-      { type: "image/png" },
-    );
+    if (requested && this.#stallImageTiles) {
+      this.#stallImageTiles = false;
+      throw new MapImageExportError(
+        "timed-out",
+        "The fake map's tiles did not finish loading.",
+      );
+    }
+    // A PNG header of the image's size, so the blob is recognisably an image
+    // without an encoder and a test can read the size back.
+    const { width, height } = requested
+      ? { width: requested.pixelWidth, height: requested.pixelHeight }
+      : screen;
+    return new Blob([pngHeader(width, height)], { type: "image/png" });
   }
 
   /** Refuses an image while a swap is loading. */
@@ -556,6 +585,15 @@ export class FakeMapAdapter implements MapAdapter {
   /** Makes the next `toImage` reject with an `export-failed` `MapEngineError`. */
   failNextImage(): void {
     this.#failNextImage = true;
+  }
+
+  /**
+   * Makes the next `toImage` that asks for a size, a pixel ratio or a view
+   * reject with a `timed-out` `MapImageExportError`, as when its tiles never
+   * finish loading.
+   */
+  stallNextImageTiles(): void {
+    this.#stallImageTiles = true;
   }
 
   setEditHandles(handles: readonly MapEditHandle[]): void {

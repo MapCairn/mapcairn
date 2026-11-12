@@ -3482,5 +3482,420 @@ describe("MapLibreMapAdapter data layers", () => {
         Reflect.deleteProperty(document, "fonts");
       }
     });
+
+    describe("at a requested size and view", () => {
+      const BOX = { south: -26.3, west: 27.9, north: -26.1, east: 28.2 };
+      const POINT = {
+        id: "a",
+        position: { lat: 10, lng: 20 },
+        colour: "#e69f00",
+        radius: 6,
+        shape: "square" as const,
+      };
+
+      /** A mounted map the size of the fake engine's viewport, with the maps made after it loading by themselves. */
+      async function readyForRender(basemap: BasemapDefinition = POSITRON) {
+        const subject = await ready(basemap);
+        setLayoutSize(subject.host, FAKE_VIEWPORT_WIDTH, FAKE_VIEWPORT_HEIGHT);
+        FakeMapLibreMap.autoLoad = true;
+        return subject;
+      }
+
+      /** Gives a host the layout size an engine reads (`clientWidth`), which happy-dom leaves at 0. */
+      function setLayoutSize(host: HTMLElement, width: number, height: number) {
+        Object.defineProperty(host, "clientWidth", {
+          configurable: true,
+          value: width,
+        });
+        Object.defineProperty(host, "clientHeight", {
+          configurable: true,
+          value: height,
+        });
+      }
+
+      /** The map an export made, after the one on screen. */
+      const renderMap = () => {
+        const [, made] = FakeMapLibreMap.instances;
+        if (!made) {
+          throw new Error("No render map was made.");
+        }
+        return made;
+      };
+
+      it("draws a map of its own at the requested size, ratio and view, and leaves the map on screen alone", async () => {
+        const { adapter, map, host } = await readyForRender();
+        const view = adapter.getView();
+        const calls = [...map.calls];
+        const moves = vi.fn();
+        adapter.on("move", moves);
+        const image = await adapter.toImage({
+          size: { width: 640, height: 480 },
+          pixelRatio: 2,
+          view: { center: { lat: 10, lng: 20 }, zoom: 5 },
+        });
+        expect(image.type).toBe("image/png");
+        expect(FakeMapLibreMap.instances).toHaveLength(2);
+        const render = renderMap();
+        expect(render.options).toMatchObject({
+          center: [20, 10],
+          // The port's zoom is normalised: MapLibre's is one lower.
+          zoom: 4,
+          bearing: 0,
+          pitch: 0,
+          maxPitch: 0,
+          pixelRatio: 2,
+          interactive: false,
+          fadeDuration: 0,
+          attributionControl: false,
+          maplibreLogo: false,
+          minZoom: -1,
+          maxZoom: 21,
+          maxCanvasSize: [8192, 8192],
+        });
+        const { container } = render.options as { container: HTMLElement };
+        expect(container).not.toBe(host);
+        expect(container.style.width).toBe("640px");
+        expect(container.style.height).toBe("480px");
+        expect(container.isConnected).toBe(false);
+        expect(render.removed).toBe(true);
+        expect(render.callsOf("triggerRepaint")).toHaveLength(1);
+        // Nothing was asked of the map on screen, so it did not move or repaint.
+        expect(map.calls).toEqual(calls);
+        expect(moves).not.toHaveBeenCalled();
+        expect(adapter.getView()).toEqual(view);
+      });
+
+      it("defaults to the size of the map on screen, and where it is looking, north-up", async () => {
+        const { adapter, host } = await readyForRender();
+        setLayoutSize(host, 390, 700);
+        // The box is fractional, as a layout often is; the engine's canvas is
+        // sized from the whole pixels of `clientWidth`, which is what is read.
+        host.getBoundingClientRect = () =>
+          DOMRect.fromRect({ width: 390.4, height: 700.6 });
+        adapter.setView({ bearing: 30, zoom: 12 }, { animate: false });
+        await adapter.toImage({ pixelRatio: 1 });
+        const render = renderMap();
+        const view = adapter.getView();
+        expect(render.options).toMatchObject({
+          center: [view.center.lng, view.center.lat],
+          zoom: 11,
+          bearing: 0,
+          pixelRatio: 1,
+        });
+        const { container } = render.options as { container: HTMLElement };
+        expect([container.style.width, container.style.height]).toEqual([
+          "390px",
+          "700px",
+        ]);
+      });
+
+      it("fits a box with the engine's own bounds option, never past the basemap's deepest zoom", async () => {
+        const { adapter } = await readyForRender();
+        await adapter.toImage({ view: { bounds: BOX } });
+        const render = renderMap();
+        expect(render.options).toMatchObject({
+          bounds: [
+            [BOX.west, BOX.south],
+            [BOX.east, BOX.north],
+          ],
+          fitBoundsOptions: { maxZoom: 21 },
+        });
+        expect(render.options).not.toHaveProperty("center");
+        const [[fit]] = [render.callsOf("fitBounds")];
+        expect(fit?.args[1]).toEqual({ maxZoom: 21 });
+      });
+
+      it("keeps a centre and zoom view within the basemap's zoom limits", async () => {
+        const { adapter } = await readyForRender(DARK);
+        await adapter.toImage({
+          view: { center: { lat: 0, lng: 0 }, zoom: 30 },
+        });
+        expect(renderMap().options).toMatchObject({
+          zoom: 13,
+          minZoom: 1,
+          maxZoom: 13,
+        });
+      });
+
+      it("starts from the style of the map on screen, so it adds no source of its own", async () => {
+        const { adapter, map } = await readyForRender();
+        adapter.setTileLayer("rain", {
+          tiles: "https://t.test/{z}/{x}/{y}.png",
+          tileSize: 256,
+          maxzoom: 9,
+          opacity: 1,
+        });
+        adapter.setFeatureLayer("quakes", [POINT]);
+        await adapter.toImage({ pixelRatio: 2 });
+        const style = renderMap().options.style as ReturnType<
+          FakeMapLibreMap["getStyle"]
+        >;
+        expect(style).toEqual(map.getStyle());
+        expect(Object.keys(style.sources)).toEqual([
+          "mapcairn:rain",
+          "mapcairn:quakes",
+        ]);
+      });
+
+      it("gives the render map the images the data layers use, and not the basemap's own", async () => {
+        const { adapter, map } = await readyForRender();
+        adapter.setFeatureLayer("quakes", [POINT]);
+        map.images.set("basemap-sprite-icon", { image: {}, options: {} });
+        const marker = [...map.images.keys()].find((name) =>
+          name.startsWith("mapcairn-marker:"),
+        ) as string;
+        await adapter.toImage({ pixelRatio: 2 });
+        const render = renderMap();
+        expect(render.images.get(marker)).toEqual({
+          image: (map.images.get(marker) as { image: unknown }).image,
+          options: { pixelRatio: 2, sdf: false },
+        });
+        expect(render.images.has("basemap-sprite-icon")).toBe(false);
+      });
+
+      it("gives the render map the shape the app chose, whatever the style asks for", async () => {
+        const { adapter } = await readyForRender();
+        adapter.setProjection("globe");
+        await adapter.toImage({ pixelRatio: 2 });
+        expect(renderMap().callsOf("setProjection")[0]?.args).toEqual([
+          { type: "globe" },
+        ]);
+      });
+
+      it("places drawn marks with the render map's camera, at the pixel ratio", async () => {
+        const { adapter } = await readyForRender();
+        await adapter.toImage({
+          size: { width: 640, height: 480 },
+          pixelRatio: 2,
+          view: { center: { lat: 10, lng: 20 }, zoom: 5 },
+          drawing: {
+            colour: "#112233",
+            halo: "#ffffff",
+            marks: [{ kind: "dot", position: { lat: 10, lng: 20 } }],
+          },
+        });
+        // The map on screen looks elsewhere, so only the render map puts the
+        // centre of the view in the middle of the fake engine's viewport.
+        const arc = canvasStub.contexts[0]?.calls.find(
+          (call) => call.method === "arc",
+        );
+        expect(arc?.args.slice(0, 3)).toEqual([
+          FAKE_VIEWPORT_WIDTH,
+          FAKE_VIEWPORT_HEIGHT,
+          14,
+        ]);
+      });
+
+      it("refuses a size over the limit before it makes a map", async () => {
+        const { adapter } = await readyForRender();
+        await expect(
+          adapter.toImage({ size: { width: 9000, height: 10 } }),
+        ).rejects.toMatchObject({ kind: "too-large" });
+        expect(FakeMapLibreMap.instances).toHaveLength(1);
+      });
+
+      it("refuses while a basemap swap is loading, and makes no map", async () => {
+        const { adapter } = await readyForRender();
+        void adapter.setBasemap(DARK);
+        await expect(adapter.toImage({ pixelRatio: 2 })).rejects.toMatchObject({
+          reason: "export-failed",
+        });
+        expect(FakeMapLibreMap.instances).toHaveLength(1);
+      });
+
+      it("gives up with a timed-out error when the render map's tiles do not finish, and removes it", async () => {
+        const patient = new MapLibreMapAdapter({ imageTilesWaitMs: 20 });
+        const { map } = await mounted({}, patient);
+        map.fire("style.load");
+        FakeMapLibreMap.autoLoad = true;
+        FakeMapLibreMap.holdIdle = true;
+        await expect(
+          patient.toImage({ size: { width: 100, height: 100 } }),
+        ).rejects.toMatchObject({ kind: "timed-out", reason: "export-failed" });
+        const render = latestMap();
+        expect(render).not.toBe(map);
+        expect(render.removed).toBe(true);
+      });
+
+      it("refuses when the adapter is destroyed while the engine loads, and makes no map", async () => {
+        const { adapter } = await readyForRender();
+        const image = adapter.toImage({ pixelRatio: 2 });
+        adapter.destroy();
+        await expect(image).rejects.toMatchObject({
+          message: "The map is not mounted.",
+        });
+        expect(FakeMapLibreMap.instances).toHaveLength(1);
+      });
+
+      it("fits the box on the render map, so it does not keep a default camera", async () => {
+        const { adapter } = await readyForRender();
+        await adapter.toImage({ view: { bounds: BOX } });
+        const render = renderMap();
+        expect(render.center.lng).toBeCloseTo(28.05, 5);
+        expect(render.center.lat).toBeCloseTo(-26.2, 1);
+        expect(render.zoom).toBeGreaterThan(9);
+        expect(render.zoom).toBeLessThan(21);
+      });
+
+      it("refuses as invalid a box the engine could not fit, instead of saving its default camera, and removes the map", async () => {
+        const { adapter } = await readyForRender();
+        FakeMapLibreMap.unfittableBounds = true;
+        await expect(
+          adapter.toImage({ view: { bounds: BOX } }),
+        ).rejects.toMatchObject({ kind: "invalid", reason: "export-failed" });
+        expect(renderMap().removed).toBe(true);
+        expect((renderMap().options.container as HTMLElement).isConnected).toBe(
+          false,
+        );
+      });
+
+      it("refuses a box the map can only frame by cropping it, here one below the basemap's lowest zoom, and removes the map", async () => {
+        const { adapter } = await readyForRender(DARK);
+        await expect(
+          adapter.toImage({
+            view: {
+              bounds: { south: -80, west: -170, north: 80, east: 170 },
+            },
+          }),
+        ).rejects.toMatchObject({
+          kind: "invalid",
+          message: "The view cannot be framed at this size.",
+        });
+        expect(renderMap().removed).toBe(true);
+      });
+
+      it.each([
+        [
+          "a data layer is set",
+          (adapter: MapLibreMapAdapter) =>
+            adapter.setFeatureLayer("quakes", [POINT]),
+        ],
+        [
+          "a data layer is removed",
+          (adapter: MapLibreMapAdapter) => {
+            adapter.setFeatureLayer("quakes", [POINT]);
+            adapter.removeLayer("quakes");
+          },
+        ],
+        [
+          "the projection changes",
+          (adapter: MapLibreMapAdapter) => adapter.setProjection("globe"),
+        ],
+        [
+          "a basemap swap is asked for",
+          (adapter: MapLibreMapAdapter) => {
+            void adapter.setBasemap(STREETS);
+          },
+        ],
+      ])(
+        "refuses an export queued behind another when %s meanwhile",
+        async (_name, change) => {
+          const { adapter } = await readyForRender();
+          FakeMapLibreMap.holdIdle = true;
+          const first = adapter.toImage({ pixelRatio: 1 });
+          const stale = adapter.toImage({ pixelRatio: 1 });
+          await vi.waitFor(() => {
+            expect(FakeMapLibreMap.instances).toHaveLength(2);
+          });
+          change(adapter);
+          renderMap().fire("idle");
+          await first.catch(() => undefined);
+          await expect(stale).rejects.toMatchObject({
+            reason: "export-failed",
+            message: expect.stringMatching(
+              /The map changed while the image was waiting\.|basemap is still loading/,
+            ),
+          });
+          expect(FakeMapLibreMap.instances).toHaveLength(2);
+        },
+      );
+
+      it("draws an export queued behind another when nothing about the style changed", async () => {
+        const { adapter } = await readyForRender();
+        FakeMapLibreMap.holdIdle = true;
+        const first = adapter.toImage({ pixelRatio: 1 });
+        const second = adapter.toImage({ pixelRatio: 1 });
+        await vi.waitFor(() => {
+          expect(FakeMapLibreMap.instances).toHaveLength(2);
+        });
+        renderMap().fire("idle");
+        await expect(first).resolves.toBeInstanceOf(Blob);
+        await expect(second).resolves.toBeInstanceOf(Blob);
+      });
+
+      it("paints a render map until it reports idle, because a tile that 404s asks for no frame", async () => {
+        const { adapter } = await readyForRender();
+        FakeMapLibreMap.settleOnRepaint = true;
+        await adapter.toImage({ view: { bounds: BOX } });
+        const render = renderMap();
+        // The nudge woke the map, and the exporter's own repaint copied it.
+        const repaints = render.callsOf("triggerRepaint").length;
+        expect(repaints).toBeGreaterThanOrEqual(2);
+        await new Promise((resolve) =>
+          setTimeout(resolve, TILE_SETTLE_NUDGE_MS * 2),
+        );
+        expect(render.callsOf("triggerRepaint")).toHaveLength(repaints);
+      });
+
+      it("stops painting a render map that is removed before it reports idle", async () => {
+        const patient = new MapLibreMapAdapter({ imageTilesWaitMs: 20 });
+        const { map, host } = await mounted({}, patient);
+        setLayoutSize(host, FAKE_VIEWPORT_WIDTH, FAKE_VIEWPORT_HEIGHT);
+        map.fire("style.load");
+        FakeMapLibreMap.autoLoad = true;
+        FakeMapLibreMap.holdIdle = true;
+        await expect(patient.toImage({ pixelRatio: 1 })).rejects.toMatchObject({
+          kind: "timed-out",
+        });
+        const render = latestMap();
+        await new Promise((resolve) =>
+          setTimeout(resolve, TILE_SETTLE_NUDGE_MS * 2),
+        );
+        expect(render.callsOf("triggerRepaint")).toHaveLength(0);
+      });
+
+      it("stops at once with the not-mounted error when the adapter is destroyed while the tiles load, and removes the render map", async () => {
+        const { adapter } = await readyForRender();
+        FakeMapLibreMap.holdIdle = true;
+        const image = adapter.toImage({ pixelRatio: 2 });
+        const refused = expect(image).rejects.toMatchObject({
+          reason: "export-failed",
+          message: "The map is not mounted.",
+        });
+        await vi.waitFor(() => {
+          expect(FakeMapLibreMap.instances).toHaveLength(2);
+        });
+        adapter.destroy();
+        await refused;
+        expect(renderMap().removed).toBe(true);
+      });
+
+      it("opens one render map at a time when exports overlap, the second waiting for the first", async () => {
+        const { adapter } = await readyForRender();
+        FakeMapLibreMap.holdIdle = true;
+        const first = adapter.toImage({ pixelRatio: 2 });
+        const second = adapter.toImage({ view: { bounds: BOX } });
+        await vi.waitFor(() => {
+          expect(FakeMapLibreMap.instances).toHaveLength(2);
+        });
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(FakeMapLibreMap.instances).toHaveLength(2);
+        renderMap().fire("idle");
+        await expect(first).resolves.toBeInstanceOf(Blob);
+        await expect(second).resolves.toBeInstanceOf(Blob);
+        expect(FakeMapLibreMap.instances).toHaveLength(3);
+        expect(FakeMapLibreMap.instances.slice(1).every((m) => m.removed)).toBe(
+          true,
+        );
+      });
+
+      it("turns an engine that cannot start a second map into export-failed", async () => {
+        const { adapter } = await readyForRender();
+        FakeMapLibreMap.nextConstructError = new FakeGPUInitializationError();
+        await expect(adapter.toImage({ pixelRatio: 2 })).rejects.toMatchObject({
+          reason: "export-failed",
+        });
+      });
+    });
   });
 });
