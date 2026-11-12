@@ -129,8 +129,6 @@ export function loadEngine(workerCacheKey?: string): Promise<MapLibreModule> {
   return engineLoader;
 }
 
-/** Bearing in degrees clockwise, in the range [0, 360) and never -0. */
-
 /**
  * A position MapLibre reports, with its longitude brought into [-180, 180).
  * MapLibre does not wrap `unproject` or event positions, so on a flat map a
@@ -144,6 +142,7 @@ function positionOf(lngLat: {
   return { lat: lngLat.lat, lng: wrapLongitude(lngLat.lng) };
 }
 
+/** Bearing in degrees clockwise, in the range [0, 360) and never -0. */
 function normaliseBearing(bearing: number): number {
   const normalised = ((bearing % 360) + 360) % 360;
   return normalised === 0 ? 0 : normalised;
@@ -730,6 +729,7 @@ interface WorkerCheck {
 export class MapLibreMapAdapter implements MapAdapter {
   private readonly emitter = new Emitter<MapEvents>();
   private readonly imageExporter = new MapImageExporter({
+    mountedMap: () => (this.destroyed ? undefined : this.map),
     isSwapPending: () => this.pending !== undefined,
     placement: () => this.placement(),
   });
@@ -1138,12 +1138,8 @@ export class MapLibreMapAdapter implements MapAdapter {
     };
   }
 
-  async toImage(options: MapImageOptions = {}): Promise<Blob> {
-    const map = this.map;
-    if (!map || this.destroyed) {
-      throw new MapEngineError("export-failed", "The map is not mounted.");
-    }
-    return this.imageExporter.toImage(map, options);
+  toImage(options?: MapImageOptions): Promise<Blob> {
+    return this.imageExporter.toImage(options);
   }
 
   removeLayer(id: string): void {

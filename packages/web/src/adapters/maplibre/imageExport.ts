@@ -22,8 +22,20 @@ import { rgbaColour } from "./markerImages";
  */
 export const IMAGE_WAIT_MS = 3000;
 
+/** The type an exported image is encoded as. */
+const IMAGE_MIME_TYPE = "image/png";
+
 /** The size of an exported image's credit text, in CSS pixels. */
 const ATTRIBUTION_SIZE_PX = 11;
+
+/** The padding around an exported image's credit text, in CSS pixels. */
+const ATTRIBUTION_PADDING_PX = 4;
+
+/** The gap between lines of an exported image's credit text, as a multiple of the text size. */
+const ATTRIBUTION_LINE_SPACING = 1.2;
+
+/** The opacity of the strip behind an exported image's credit text. */
+const ATTRIBUTION_STRIP_OPACITY = 0.8;
 
 /** The sizes of drawn shapes in an exported image, in CSS pixels, as on screen. */
 const MARK_LINE_PX = 4;
@@ -32,17 +44,20 @@ const MARK_DASH_PX = 8;
 const MARK_DOT_RADIUS_PX = 7;
 const MARK_FILL_OPACITY = 0.18;
 
-/** The gap between lines of an exported image's credit text, as a multiple of the text size. */
-const ATTRIBUTION_LINE_SPACING = 1.2;
+/** The fewest corners a ring needs to enclose an area worth filling. */
+const MIN_FILLED_RING_VERTICES = 3;
 
-/** The opacity of the strip behind an exported image's credit text. */
-const ATTRIBUTION_STRIP_OPACITY = 0.8;
-
-/** The padding around an exported image's credit text, in CSS pixels. */
-const ATTRIBUTION_PADDING_PX = 4;
+/** The angle of a full circle, in radians, for drawing a dot. */
+const FULL_CIRCLE_RADIANS = 2 * Math.PI;
 
 /** What an export reads from the adapter that owns the map. */
 export interface MapImageExportHost {
+  /**
+   * The map while the adapter is mounted, and undefined before `mount`, after
+   * `destroy` or after a failed mount. Asked again at each step after an
+   * `await`, because the adapter can be destroyed while an export waits.
+   */
+  mountedMap(): MapLibreMap | undefined;
   /**
    * Whether a basemap swap is still loading, so the pixels would be of
    * neither basemap alone. Asked again at each step, because a swap can start
@@ -71,20 +86,27 @@ export class MapImageExporter {
   /**
    * Saves the map as it is now, with the credit text and the ui's drawn shapes
    * on it when the options carry them.
-   * @throws MapEngineError with reason `export-failed` for every failure,
-   *   including a swap that is still loading and a browser that blocks
-   *   reading the canvas.
+   * @throws MapEngineError with reason `export-failed` for every failure:
+   *   the adapter is not mounted (or is destroyed while the export waits), a
+   *   swap is still loading, or the browser blocks reading or encoding the
+   *   canvas.
    */
-  async toImage(map: MapLibreMap, options: MapImageOptions): Promise<Blob> {
-    this.refuseWhileSwapping();
+  async toImage(options: MapImageOptions = {}): Promise<Blob> {
+    const map = this.readyOrRefuse();
     try {
       await untilLoaded(map);
       // A swap can start, or a failed one can put a basemap back, while the
       // map finishes loading.
-      this.refuseWhileSwapping();
+      this.readyOrRefuse();
       const frame = await this.captureFrame(map);
       await fontsReady();
-      this.drawMarks(frame, map, options.drawing);
+      // The pixels are already copied, so a swap no longer matters, but a
+      // destroyed adapter can no longer place marks.
+      this.mountedOrRefuse();
+      const { drawing } = options;
+      if (drawing && drawing.marks.length > 0) {
+        drawMarks(frame, map, this.host.placement(), drawing);
+      }
       drawAttribution(frame, map, options.attribution);
       return await encodePng(frame.canvas);
     } catch (error) {
@@ -92,14 +114,25 @@ export class MapImageExporter {
     }
   }
 
-  /** Throws when an image of the map must not be made now. */
-  private refuseWhileSwapping(): void {
+  /** The map, or an `export-failed` error when the adapter is not mounted. */
+  private mountedOrRefuse(): MapLibreMap {
+    const map = this.host.mountedMap();
+    if (!map) {
+      throw new MapEngineError("export-failed", "The map is not mounted.");
+    }
+    return map;
+  }
+
+  /** The map, or an `export-failed` error when the adapter is not mounted or a swap is loading. */
+  private readyOrRefuse(): MapLibreMap {
+    const map = this.mountedOrRefuse();
     if (this.host.isSwapPending()) {
       throw new MapEngineError(
         "export-failed",
         "The basemap is still loading, so the map cannot be saved yet.",
       );
     }
+    return map;
   }
 
   /**
@@ -124,7 +157,7 @@ export class MapImageExporter {
       const render = map.on("render", () => {
         stop();
         try {
-          this.refuseWhileSwapping();
+          this.readyOrRefuse();
           resolve(copyCanvas(map.getCanvas()));
         } catch (error) {
           reject(error);
@@ -132,53 +165,6 @@ export class MapImageExporter {
       });
       map.triggerRepaint();
     });
-  }
-
-  /**
-   * Draws the ui's own marks (drawn shapes) over the copied map, at the
-   * image's scale: translucent fills, a halo under each outline and dots.
-   */
-  private drawMarks(
-    frame: Frame,
-    map: MapLibreMap,
-    drawing: MapImageDrawing | undefined,
-  ): void {
-    if (!drawing || drawing.marks.length === 0) {
-      return;
-    }
-    const { context } = frame;
-    const scale = imageScale(frame, map);
-    const placement = this.host.placement();
-    const toImage = (point: PixelPoint) => ({
-      x: point.x * scale,
-      y: point.y * scale,
-    });
-    context.lineJoin = "round";
-    context.lineCap = "round";
-    for (const mark of drawing.marks) {
-      if (mark.kind === "dot") {
-        const placed = placePoint(mark.position, placement);
-        if (placed) {
-          drawDot(context, toImage(placed), scale, drawing);
-        }
-        continue;
-      }
-      // The same curves, copy of the world and horizon as the overlay, so
-      // the image shows the shapes as the person saw them.
-      const path = placePath(mark.positions, mark.closed, placement);
-      const ring = mark.closed && path.whole;
-      const lines = ring
-        ? [path.pixels.map(toImage)]
-        : visibleRuns(path).map((run) => run.map(toImage));
-      drawOutline(context, lines, {
-        ring,
-        fill: mark.fill && ring && path.pixels.length >= 3,
-        dashed: mark.dashed,
-        scale,
-        drawing,
-      });
-    }
-    context.setLineDash([]);
   }
 }
 
@@ -241,7 +227,7 @@ function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
           ),
         );
       }
-    }, "image/png");
+    }, IMAGE_MIME_TYPE);
   });
 }
 
@@ -277,11 +263,56 @@ function imageScale({ canvas }: Frame, map: MapLibreMap): number {
   return cssWidth > 0 ? canvas.width / cssWidth : 1;
 }
 
-/** Starts a canvas path through the given points, closing it when `closed`; the caller fills or strokes it. */
-function tracePath(
+/**
+ * Draws the ui's own marks (drawn shapes) over the copied map, at the image's
+ * scale: translucent fills, a halo under each outline and dots.
+ */
+function drawMarks(
+  frame: Frame,
+  map: MapLibreMap,
+  placement: MapPlacement,
+  drawing: MapImageDrawing,
+): void {
+  const { context } = frame;
+  const scale = imageScale(frame, map);
+  const toImage = (point: PixelPoint) => ({
+    x: point.x * scale,
+    y: point.y * scale,
+  });
+  context.lineJoin = "round";
+  context.lineCap = "round";
+  for (const mark of drawing.marks) {
+    if (mark.kind === "dot") {
+      const placed = placePoint(mark.position, placement);
+      if (placed) {
+        drawDot(context, toImage(placed), scale, drawing);
+      }
+      continue;
+    }
+    // The same curves, copy of the world and horizon as the overlay, so
+    // the image shows the shapes as the person saw them.
+    const path = placePath(mark.positions, mark.closed, placement);
+    const ring = mark.closed && path.whole;
+    const lines = ring
+      ? [path.pixels.map(toImage)]
+      : visibleRuns(path).map((run) => run.map(toImage));
+    const filled =
+      mark.fill && ring && path.pixels.length >= MIN_FILLED_RING_VERTICES;
+    drawOutline(context, lines, {
+      ring,
+      fillRing: filled ? lines[0] : undefined,
+      dashed: mark.dashed,
+      scale,
+      drawing,
+    });
+  }
+  context.setLineDash([]);
+}
+
+/** Starts a canvas path through the points; the caller fills or strokes it. */
+function traceOpenPath(
   context: CanvasRenderingContext2D,
   points: readonly PixelPoint[],
-  closed: boolean,
 ): void {
   context.beginPath();
   points.forEach((point, index) => {
@@ -291,9 +322,15 @@ function tracePath(
       context.lineTo(point.x, point.y);
     }
   });
-  if (closed) {
-    context.closePath();
-  }
+}
+
+/** Starts a closed canvas path through the points; the caller fills or strokes it. */
+function traceRing(
+  context: CanvasRenderingContext2D,
+  points: readonly PixelPoint[],
+): void {
+  traceOpenPath(context, points);
+  context.closePath();
 }
 
 /** Draws a dot mark: a filled circle with a halo around it. */
@@ -304,7 +341,7 @@ function drawDot(
   drawing: MapImageDrawing,
 ): void {
   context.beginPath();
-  context.arc(at.x, at.y, MARK_DOT_RADIUS_PX * scale, 0, 2 * Math.PI);
+  context.arc(at.x, at.y, MARK_DOT_RADIUS_PX * scale, 0, FULL_CIRCLE_RADIANS);
   context.fillStyle = drawing.colour;
   context.fill();
   context.lineWidth = MARK_HALO_PX * scale;
@@ -314,10 +351,10 @@ function drawDot(
 
 /** How a path mark is drawn, beyond the lines themselves. */
 interface OutlineStyle {
-  /** Whether the lines form a closed ring that is drawn closed. */
+  /** Whether the lines form one closed ring, drawn closed. */
   readonly ring: boolean;
-  /** Whether the ring is filled. */
-  readonly fill: boolean;
+  /** The ring to fill, or undefined when the mark has no fill. */
+  readonly fillRing: readonly PixelPoint[] | undefined;
   readonly dashed: boolean;
   /** Image pixels per CSS pixel. */
   readonly scale: number;
@@ -328,22 +365,23 @@ interface OutlineStyle {
 function drawOutline(
   context: CanvasRenderingContext2D,
   lines: readonly (readonly PixelPoint[])[],
-  { ring, fill, dashed, scale, drawing }: OutlineStyle,
+  { ring, fillRing, dashed, scale, drawing }: OutlineStyle,
 ): void {
-  if (fill) {
-    tracePath(context, lines[0] as readonly PixelPoint[], true);
+  if (fillRing) {
+    traceRing(context, fillRing);
     context.fillStyle = rgbaColour(drawing.colour, MARK_FILL_OPACITY);
     context.fill();
   }
   context.setLineDash(
     dashed ? [MARK_DASH_PX * scale, MARK_DASH_PX * scale] : [],
   );
+  const trace = ring ? traceRing : traceOpenPath;
   for (const line of lines) {
-    tracePath(context, line, ring);
+    trace(context, line);
     context.lineWidth = (MARK_LINE_PX + MARK_HALO_PX) * scale;
     context.strokeStyle = drawing.halo;
     context.stroke();
-    tracePath(context, line, ring);
+    trace(context, line);
     context.lineWidth = MARK_LINE_PX * scale;
     context.strokeStyle = drawing.colour;
     context.stroke();

@@ -3278,6 +3278,41 @@ describe("MapLibreMapAdapter data layers", () => {
       }
     });
 
+    it("refuses, and draws no marks, when the adapter is destroyed while it waits for the fonts", async () => {
+      const { adapter } = await ready();
+      let release = () => {};
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: {
+          ready: new Promise<void>((resolve) => {
+            release = resolve;
+          }),
+        },
+      });
+      try {
+        const image = adapter.toImage({
+          drawing: {
+            colour: "#112233",
+            halo: "#ffffff",
+            marks: [{ kind: "dot", position: { lat: -26.15, lng: 28.07 } }],
+          },
+        });
+        const refused = expect(image).rejects.toMatchObject({
+          reason: "export-failed",
+          message: "The map is not mounted.",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        adapter.destroy();
+        release();
+        await refused;
+        for (const { calls } of canvasStub.contexts) {
+          expect(calls.map((call) => call.method)).not.toContain("arc");
+        }
+      } finally {
+        Reflect.deleteProperty(document, "fonts");
+      }
+    });
+
     it("still draws when the font set fails", async () => {
       const { adapter } = await ready();
       Object.defineProperty(document, "fonts", {
