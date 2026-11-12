@@ -42,7 +42,8 @@ export class LocationError extends Error {
 
 /**
  * Why a layer could not load: the request failed (`network`), the response
- * could not be decoded (`invalid`), it held no features (`empty`), or the
+ * could not be decoded (`invalid`), it held no features (`empty`, which only
+ * `load` and `loadDetail` use: `identify` resolves to an empty list), or the
  * caller cancelled it (`aborted`, which callers ignore).
  */
 export type LayerErrorKind = "network" | "invalid" | "empty" | "aborted";

@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { GeometryError } from "../geometry/errors";
 import { wgs84ToWebMercator } from "../geometry/mercator";
+import { LayerError } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
 import type {
   ControlValues,
@@ -134,6 +135,36 @@ export function identifyUrl(
     },
     [],
   );
+}
+
+/**
+ * The URL a layer source asks for a tap: {@link identifyUrl}, refused as a
+ * typed error when it cannot be built or is not `https`. Every
+ * `LayerSource` calls this, so each refuses the same requests before it
+ * sends anything.
+ *
+ * @throws `LayerError` `invalid` when a coordinate or the zoom is not
+ *   finite, the template names a variable with no value, or the URL is not
+ *   `https`.
+ */
+export function identifyRequestUrl(
+  definition: IdentifiableLayerDefinition,
+  controls: ControlValues,
+  now: number,
+  at: IdentifyTarget,
+): string {
+  try {
+    const url = identifyUrl(definition, controls, now, at);
+    if (new URL(url).protocol === "https:") {
+      return url;
+    }
+  } catch (error) {
+    throw new LayerError(
+      "invalid",
+      `The identify URL could not be built: ${String(error)}`,
+    );
+  }
+  throw new LayerError("invalid", "The identify URL is not https.");
 }
 
 function featureCollection(features: readonly unknown[]): unknown {

@@ -23,6 +23,7 @@ import {
   DEFAULT_IDENTIFY_TOLERANCE_PX,
   decodeIdentify,
   IDENTIFY_VARIABLES,
+  identifyRequestUrl,
   identifyUrl,
   MAX_IDENTIFIED_FEATURES,
 } from "./identify";
@@ -53,6 +54,7 @@ function boxOf(url: string): number[] {
 describe("the package entry point", () => {
   it("exports what a layer source needs to ask and read an identify request", () => {
     expect(entry.identifyUrl).toBe(identifyUrl);
+    expect(entry.identifyRequestUrl).toBe(identifyRequestUrl);
     expect(entry.decodeIdentify).toBe(decodeIdentify);
     expect(entry.decodeWith).toBeTypeOf("function");
     expect(entry.IDENTIFY_VARIABLES).toBe(IDENTIFY_VARIABLES);
@@ -439,6 +441,54 @@ describe("decodeIdentify", () => {
     expect(
       failureOf(LayerError, () =>
         decodeIdentify(identifying({ decoder: "failing" }), {}, registry, AT),
+      )?.kind,
+    ).toBe("invalid");
+  });
+});
+
+describe("identifyRequestUrl", () => {
+  it("is the URL identifyUrl builds, for a request that can be made", () => {
+    expect(identifyRequestUrl(SAMPLE_IDENTIFY_LAYER, {}, NOW, CAPE_TOWN)).toBe(
+      identifyUrl(SAMPLE_IDENTIFY_LAYER, {}, NOW, CAPE_TOWN),
+    );
+  });
+
+  it.each([
+    ["a zoom that is not a number", { ...CAPE_TOWN, zoom: Number.NaN }],
+    [
+      "a latitude that is not a number",
+      { ...CAPE_TOWN, latlng: { lat: Number.NaN, lng: 1 } },
+    ],
+  ])("refuses %s with a layer error of kind invalid", (_name, at) => {
+    expect(
+      failureOf(LayerError, () =>
+        identifyRequestUrl(SAMPLE_IDENTIFY_LAYER, {}, NOW, at),
+      )?.kind,
+    ).toBe("invalid");
+  });
+
+  it("refuses a URL that is not https", () => {
+    const failure = failureOf(LayerError, () =>
+      identifyRequestUrl(
+        identifying({ url: "http://api.test/identify?bbox={bbox}" }),
+        {},
+        NOW,
+        CAPE_TOWN,
+      ),
+    );
+    expect(failure?.kind).toBe("invalid");
+    expect(failure?.message).toContain("not https");
+  });
+
+  it("refuses a template that names a variable it has no value for", () => {
+    expect(
+      failureOf(LayerError, () =>
+        identifyRequestUrl(
+          identifying({ url: "https://api.test/identify?q={nothing}" }),
+          {},
+          NOW,
+          CAPE_TOWN,
+        ),
       )?.kind,
     ).toBe("invalid");
   });

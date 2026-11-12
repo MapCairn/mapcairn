@@ -4,15 +4,21 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  type ControlValues,
   decodeDetail,
   decodeFeed,
   defaultControlValues,
   feedUrl,
+  type IdentifiableLayerDefinition,
+  type IdentifyTarget,
+  identifyUrl,
   isFeedLayer,
+  isIdentifiable,
   type LayerDefinition,
   LayerError,
   parseTemplate,
   readyLayers,
+  SAMPLE_IDENTIFY_LAYER,
   tileUrl,
   validateLayerDefinition,
 } from "@mapcairn/core";
@@ -57,6 +63,52 @@ const CSP = new Map(
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 
+/** Where a tap on a map is taken to be, for the URL a layer's `identify` block asks. */
+const IDENTIFY_TARGET: IdentifyTarget = {
+  latlng: { lat: -33.9249, lng: 18.4241 },
+  zoom: 10,
+};
+
+/** The origins a layer's requests go to, by the content security policy directive that must allow them. */
+function requestedOrigins(
+  definition: LayerDefinition,
+  controls: ControlValues,
+): { readonly connect: string[]; readonly image: string[] } {
+  if (isFeedLayer(definition)) {
+    return {
+      connect: [
+        new URL(feedUrl(definition, controls, NOW)).origin,
+        ...(definition.detail?.origins ?? []),
+      ],
+      image: [],
+    };
+  }
+  const tiles = new URL(tileUrl(definition, controls, NOW)).origin;
+  const identify = isIdentifiable(definition)
+    ? [new URL(identifyUrl(definition, controls, NOW, IDENTIFY_TARGET)).origin]
+    : [];
+  return { connect: [tiles, ...identify], image: [tiles] };
+}
+
+/** One line for each origin a layer asks that the production CSP does not allow, saying where to add it. */
+function cspGaps(definition: LayerDefinition): string[] {
+  const needed = requestedOrigins(
+    definition,
+    defaultControlValues(definition, NOW),
+  );
+  const missing = (directive: string, origins: readonly string[]) =>
+    origins
+      .filter((origin) => !(CSP.get(directive) ?? []).includes(origin))
+      .map(
+        (origin) =>
+          `add ${origin} to ${directive} in public/_headers and securityHeaders.ts`,
+      );
+  return [
+    ...missing("connect-src", needed.connect),
+    ...missing("img-src", needed.image),
+  ];
+}
+
 function count(decode: () => readonly unknown[]): number {
   try {
     return decode().length;
@@ -81,6 +133,41 @@ describe("the host's layer definitions", () => {
     expect(readyLayers(createHostLayerCatalogue().getState())).toEqual(
       LAYER_DEFINITIONS,
     );
+  });
+
+  describe("the origin check for a layer that identifies", () => {
+    const identifyingAt = (url: string): IdentifiableLayerDefinition => ({
+      ...SAMPLE_IDENTIFY_LAYER,
+      identify: { ...SAMPLE_IDENTIFY_LAYER.identify, url },
+    });
+    /** The sample layer with its tiles and its identify URL on the given origins. */
+    const onOrigins = (tiles: string, identify: string) => ({
+      ...identifyingAt(`${identify}/identify?bbox={bbox}`),
+      source: {
+        ...SAMPLE_IDENTIFY_LAYER.source,
+        tiles: `${tiles}/flood/{z}/{y}/{x}.png`,
+      },
+    });
+    const allowed = "https://ows.globalfloods.eu";
+
+    it("reports an identify origin that connect-src does not allow, and not for img-src", () => {
+      expect(cspGaps(onOrigins(allowed, "https://api.test"))).toEqual([
+        "add https://api.test to connect-src in public/_headers and securityHeaders.ts",
+      ]);
+    });
+
+    it("accepts an identify origin the policy already allows for tiles", () => {
+      expect(CSP.get("connect-src")).toContain(allowed);
+      expect(cspGaps(onOrigins(allowed, allowed))).toEqual([]);
+    });
+
+    it("reports each origin once for each directive that lacks it", () => {
+      expect(cspGaps(SAMPLE_IDENTIFY_LAYER)).toEqual([
+        "add https://tiles.test to connect-src in public/_headers and securityHeaders.ts",
+        "add https://api.test to connect-src in public/_headers and securityHeaders.ts",
+        "add https://tiles.test to img-src in public/_headers and securityHeaders.ts",
+      ]);
+    });
   });
 
   it("lists every fixture file in the manifest, and nothing else", () => {
@@ -124,31 +211,7 @@ describe("the host's layer definitions", () => {
     });
 
     it("has every origin it requests allowed by the production CSP", () => {
-      const controls = defaultControlValues(definition, NOW);
-      const connect = CSP.get("connect-src") ?? [];
-      const image = CSP.get("img-src") ?? [];
-      if (isFeedLayer(definition)) {
-        const origins = [
-          new URL(feedUrl(definition, controls, NOW)).origin,
-          ...(definition.detail?.origins ?? []),
-        ];
-        for (const origin of origins) {
-          expect(
-            connect,
-            `add ${origin} to connect-src in public/_headers and securityHeaders.ts`,
-          ).toContain(origin);
-        }
-      } else {
-        const origin = new URL(tileUrl(definition, controls, NOW)).origin;
-        expect(
-          connect,
-          `add ${origin} to connect-src in public/_headers and securityHeaders.ts`,
-        ).toContain(origin);
-        expect(
-          image,
-          `add ${origin} to img-src in public/_headers and securityHeaders.ts`,
-        ).toContain(origin);
-      }
+      expect(cspGaps(definition)).toEqual([]);
     });
 
     it("has its credit in ATTRIBUTIONS.md", () => {
