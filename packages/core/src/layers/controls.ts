@@ -1,5 +1,12 @@
 import type { ControlValues } from "../ports/layers";
-import { defaultSlot, resolveSlot, slotInstant } from "./dateTime";
+import {
+  defaultSlot,
+  describeDay,
+  describeSlotStart,
+  isSlotValue,
+  resolveSlot,
+  slotInstant,
+} from "./dateTime";
 import type {
   DateBound,
   DateControlDefinition,
@@ -90,6 +97,28 @@ function resolveValue(
         : undefined;
     }
   }
+}
+
+/**
+ * The date or time a layer is set to, in words for a status line or an
+ * announcement: the first date control's day ("11 November 2026") or the
+ * first date and time control's UTC slot ("13:00 UTC on 11 November 2026").
+ * Null when the layer has neither, or its value is not a real day or slot.
+ */
+export function describeChosenTime(
+  definition: LayerDefinition,
+  values: ControlValues,
+): string | null {
+  for (const control of definition.controls) {
+    const value = values[control.id];
+    if (control.kind === "date" && isIsoDate(value)) {
+      return describeDay(value);
+    }
+    if (control.kind === "datetime" && isSlotValue(value)) {
+      return describeSlotStart(value);
+    }
+  }
+  return null;
 }
 
 /** Every control's default value, as strings, by control id. */

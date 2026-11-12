@@ -53,6 +53,24 @@ test.describe("rainfall layer", () => {
       .toContain("2026-06-15");
   });
 
+  test("says no imagery was found for a day NASA has none of, beside the date it can be changed on", async ({
+    page,
+    mapPage,
+  }) => {
+    await mockLayerProviders(page, {
+      noTile: (url) => requestedDays([url]).includes("2026-06-15"),
+    });
+    await mapPage.goto("#layers=rainfall&rainfall.date=2026-06-15");
+    await mapPage.openMapOptions();
+    const status = page.getByTestId("layer-status-rainfall");
+    await expect(status).toHaveText(
+      "No imagery was found for 15 June 2026. Try another.",
+    );
+    await expect(page.getByTestId("tile-error")).toHaveCount(0);
+    await page.getByTestId("layer-control-rainfall-date").fill("2026-06-14");
+    await expect(status).toHaveCount(0);
+  });
+
   test("says what it is, names its colour scale in words and carries the credits", async ({
     page,
     mapPage,

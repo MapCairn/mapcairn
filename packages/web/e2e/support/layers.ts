@@ -53,12 +53,26 @@ export interface LayerRequests {
   readonly urls: string[];
 }
 
+/** Options for {@link mockLayerProviders}. */
+export interface LayerProviderOptions {
+  /**
+   * Whether the provider has no tile at this URL. Such a tile is answered as
+   * NASA GIBS answers a time it has not published: a 404 with an open CORS
+   * header, which the engine counts as a tile that did not load, not as an
+   * error. Every other tile is a transparent PNG.
+   */
+  readonly noTile?: (url: string) => boolean;
+}
+
 /**
  * Answers every layer provider from the committed fixtures, so layer tests
  * exercise the real fetch source and decoders without a live service, and
  * records what was asked. A fixture the folder lacks answers 404.
  */
-export async function mockLayerProviders(page: Page): Promise<LayerRequests> {
+export async function mockLayerProviders(
+  page: Page,
+  options: LayerProviderOptions = {},
+): Promise<LayerRequests> {
   const requests: LayerRequests = { urls: [] };
   for (const { pattern, file } of FEEDS) {
     await page.route(pattern, (route) => {
@@ -78,7 +92,16 @@ export async function mockLayerProviders(page: Page): Promise<LayerRequests> {
     });
   }
   await page.route(TILE_PATTERN, (route) => {
-    requests.urls.push(route.request().url());
+    const url = route.request().url();
+    requests.urls.push(url);
+    if (options.noTile?.(decodeURIComponent(url))) {
+      return route.fulfill({
+        status: 404,
+        contentType: "text/html",
+        headers: { "access-control-allow-origin": "*" },
+        body: "",
+      });
+    }
     return route.fulfill({
       status: 200,
       contentType: "image/png",

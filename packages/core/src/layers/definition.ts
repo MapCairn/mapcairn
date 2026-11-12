@@ -623,6 +623,13 @@ export function isHeatmapLayer(
   return "heatmap" in definition;
 }
 
+/** Whether a definition is a raster tile layer: an overlay with no features, card or list. */
+export function isRasterTileLayer(
+  definition: LayerDefinition,
+): definition is TileLayerDefinition {
+  return definition.source.kind === "tiles";
+}
+
 /** Whether a definition is a vector tile layer. */
 export function isVectorTileLayer(
   definition: LayerDefinition,

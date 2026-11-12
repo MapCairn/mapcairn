@@ -8,12 +8,15 @@ import {
   announceLayerLoaded,
   announceLayerOn,
   announceLayerZoomIn,
+  announceTilesUnavailable,
   type Bounds,
   type ControlValues,
+  describeChosenTime,
   type FieldValue,
   feedUrl,
   isFeedLayer,
   isQueryLayer,
+  isRasterTileLayer,
   type LayerAttribution,
   type LayerDefinition,
   LayerError,
@@ -23,6 +26,7 @@ import {
   nextQueryWindow,
   parseTime,
   resolveControlValues,
+  tileUrl,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -31,11 +35,14 @@ import { useAnnounce } from "../ui/LiveRegion";
 
 /**
  * Where a layer is: off, on (tiles), loading, loaded, empty, failed, or (a
- * query layer) too far out to ask for features.
+ * query layer) too far out to ask for features. A tile layer is `on` until
+ * the map reports that none of its tiles loaded, which is
+ * `tiles-unavailable`.
  */
 export type LayerStatus =
   | { readonly kind: "off" }
   | { readonly kind: "on" }
+  | { readonly kind: "tiles-unavailable" }
   | { readonly kind: "loading" }
   | {
       readonly kind: "ready";
@@ -112,6 +119,14 @@ export interface DataLayers {
   setSort(id: string, sortId: string): void;
   retry(id: string): void;
   /**
+   * Records that the map settled with none of a tile layer's tiles loaded,
+   * which `MapDataLayers` calls from the adapter's report. `tiles` is the
+   * template those tiles came from: a report for anything but the layer's
+   * current tiles, or for a layer that is off, is ignored. The layer then
+   * says so and announces it once, until its tiles change or it is turned off.
+   */
+  reportTilesUnavailable(id: string, tiles: string): void;
+  /**
    * Opens a feature's card, or closes it (and any list) with `null`. A card
    * opened without `keepChoices` also closes the list of features found
    * together.
@@ -165,6 +180,8 @@ interface State {
   readonly sorts: Readonly<Record<string, string>>;
   readonly results: Readonly<Record<string, LoadResult>>;
   readonly retries: Readonly<Record<string, number>>;
+  /** The tiles each tile layer found no imagery for, by layer id (see `reportTilesUnavailable`). */
+  readonly tilesUnavailable: Readonly<Record<string, string>>;
   /**
    * The open card's feature. Its snapshot keeps the card open when a query
    * layer refreshes for another part of the map and no longer lists it.
@@ -207,6 +224,7 @@ function initialState(
     sorts: {},
     results: {},
     retries: {},
+    tilesUnavailable: {},
     selection: null,
     choices: null,
     view: null,
@@ -214,6 +232,31 @@ function initialState(
     focusHandled: 0,
     detail: null,
   };
+}
+
+/** The tiles a raster tile layer asks for with these controls, or null for any other layer. */
+function tilesOf(
+  definition: LayerDefinition,
+  controls: ControlValues,
+  now: number,
+): string | null {
+  return isRasterTileLayer(definition)
+    ? tileUrl(definition, controls, now)
+    : null;
+}
+
+/** What is known of failed tiles once the layer asks for `tiles`: nothing, if they are not the ones that failed. */
+function tilesUnavailableFor(
+  failed: State["tilesUnavailable"],
+  id: string,
+  tiles: string | null,
+): State["tilesUnavailable"] {
+  if (failed[id] === undefined || failed[id] === tiles) {
+    return failed;
+  }
+  const rest = { ...failed };
+  delete rest[id];
+  return rest;
 }
 
 /** A value to sort by: numbers and readable times as numbers, else text. */
@@ -275,9 +318,11 @@ function errorKind(
  * @remarks Nothing is requested until a layer is turned on. A feed layer is
  *   loaded on enable, on a control change and on retry; the request for the
  *   previous URL is cancelled. Tile layers need no request here: the map
- *   draws their tiles. Loads, empty feeds and failures are announced once
- *   each through the shared live region, failures assertively. Turning a
- *   layer off clears its features, its selection and its affected area.
+ *   draws their tiles, and says through `reportTilesUnavailable` when none
+ *   loaded. Loads, empty feeds and failures are announced once each through
+ *   the shared live region, failures assertively and a tile layer with no
+ *   tiles politely. Turning a layer off clears its features, its selection
+ *   and its affected area.
  */
 export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   const { layers: registry, layerSource } = useServices();
@@ -517,6 +562,11 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
             ? [...previous.enabled, id]
             : previous.enabled.filter((item) => item !== id),
           results,
+          tilesUnavailable: tilesUnavailableFor(
+            previous.tilesUnavailable,
+            id,
+            null,
+          ),
           selection:
             previous.selection?.layerId === id ? null : previous.selection,
           choices: choices && choices.length > 0 ? choices : null,
@@ -536,19 +586,54 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       if (!definition) {
         return;
       }
-      setState((previous) => ({
-        ...previous,
-        controls: {
-          ...previous.controls,
-          [id]: resolveControlValues(
-            definition,
-            { ...previous.controls[id], [controlId]: value },
-            now(),
+      setState((previous) => {
+        const controls = resolveControlValues(
+          definition,
+          { ...previous.controls[id], [controlId]: value },
+          now(),
+        );
+        return {
+          ...previous,
+          controls: { ...previous.controls, [id]: controls },
+          tilesUnavailable: tilesUnavailableFor(
+            previous.tilesUnavailable,
+            id,
+            tilesOf(definition, controls, now()),
           ),
-        },
-      }));
+        };
+      });
     },
     [byId, now],
+  );
+
+  const reportTilesUnavailable = useCallback(
+    (id: string, tiles: string) => {
+      const definition = byId.get(id);
+      const current = stateRef.current;
+      if (
+        !definition ||
+        !current.enabled.includes(id) ||
+        current.tilesUnavailable[id] === tiles
+      ) {
+        return;
+      }
+      const controls = current.controls[id] ?? {};
+      if (tilesOf(definition, controls, now()) !== tiles) {
+        return;
+      }
+      setState((previous) => ({
+        ...previous,
+        tilesUnavailable: { ...previous.tilesUnavailable, [id]: tiles },
+      }));
+      announce(
+        announceTilesUnavailable(
+          definition.name,
+          describeChosenTime(definition, controls),
+        ),
+        { priority: "polite" },
+      );
+    },
+    [announce, byId, now, stateRef],
   );
 
   const setSort = useCallback((id: string, sortId: string) => {
@@ -746,7 +831,15 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
             state.results[id] ??
             (loadsFeatures(definition)
               ? { status: { kind: "loading" }, features: [] }
-              : { status: { kind: "on" }, features: [] });
+              : {
+                  status: {
+                    kind:
+                      state.tilesUnavailable[id] === undefined
+                        ? "on"
+                        : "tiles-unavailable",
+                  },
+                  features: [],
+                });
         }
         const sortId =
           state.sorts[id] ??
@@ -836,6 +929,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     setControl,
     setSort,
     retry,
+    reportTilesUnavailable,
     select,
     choose,
     backToChoices,

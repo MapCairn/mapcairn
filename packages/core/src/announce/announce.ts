@@ -105,6 +105,25 @@ export function announceLayerError(
     : `${name} could not load: the provider sent something unexpected. Try again later.`;
 }
 
+/**
+ * The status line of a tile layer whose tiles all failed. `when` is the
+ * layer's chosen date or time in words, or null for a layer with none to
+ * choose, which can only say that it did not load.
+ */
+export function describeTilesUnavailable(when: string | null): string {
+  return when === null
+    ? "Could not load. Check your connection."
+    : `No imagery was found for ${when}. Try another.`;
+}
+
+/** A tile layer's tiles all failed, in the words of {@link describeTilesUnavailable}. */
+export function announceTilesUnavailable(
+  name: string,
+  when: string | null,
+): string {
+  return `${name}: ${describeTilesUnavailable(when)}`;
+}
+
 /** "Show on map" centred the map on a feature. */
 export function announceShowingFeature(title: string): string {
   return `Showing ${title} on the map.`;

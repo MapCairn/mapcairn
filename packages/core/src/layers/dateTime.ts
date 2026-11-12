@@ -162,6 +162,11 @@ export function slotsOnDay(
   return slots;
 }
 
+/** Words for a UTC day, such as "11 November 2026". Expects a real `YYYY-MM-DD` day. */
+export function describeDay(day: string): string {
+  return DAY_TEXT.format(Date.parse(`${day}T00:00:00Z`));
+}
+
 /** Words for when a slot starts, with its time zone, such as "14:30 UTC on 11 November 2026". Expects a valid slot. */
 export function describeSlotStart(value: string): string {
   return `${timeLabel(value)} UTC on ${DAY_TEXT.format(startOf(value))}`;

@@ -224,6 +224,12 @@ function isWorkerFailure(event: object): boolean {
  */
 export const WORKER_FAILURE_GRACE_MS = 5000;
 
+/**
+ * How often, in milliseconds, the map is painted while a tile layer's tiles
+ * load, so that it reports `idle` once they are all in, or all missing.
+ */
+export const TILE_SETTLE_NUDGE_MS = 250;
+
 /** Options for {@link MapLibreMapAdapter}. */
 export interface MapLibreMapAdapterOptions {
   /** Overrides {@link WORKER_FAILURE_GRACE_MS}, for example 0 in a test. */
@@ -238,6 +244,14 @@ export interface MapLibreMapAdapterOptions {
 /** Whether a camera event came from the person (a gesture), not from code. */
 function isUserEvent(event: object): boolean {
   return (event as { originalEvent?: unknown }).originalEvent !== undefined;
+}
+
+/** The id of the source a tile event is about, or undefined when the event is not about a tile. */
+function tileEventSource(event: object): string | undefined {
+  const { tile, sourceId } = event as { tile?: unknown; sourceId?: unknown };
+  return tile !== undefined && typeof sourceId === "string"
+    ? sourceId
+    : undefined;
 }
 
 /** The id of the source and layer of an inline raster style. */
@@ -257,6 +271,21 @@ interface BasemapTiles {
 /** Counters that blame no basemap, for before a style has loaded. */
 function idleBasemapTiles(): BasemapTiles {
   return { loaded: 0, failed: 0, reported: false };
+}
+
+/**
+ * Tile traffic of one tile data layer since its source was last drawn. The
+ * engine fires no `error` for a tile the provider answers with a 404, so the
+ * layer is judged by what was asked for and what arrived, not by failures.
+ */
+interface TileLayerTraffic {
+  readonly layerId: string;
+  /** The tile template the source was drawn from. */
+  readonly tiles: string;
+  requested: number;
+  aborted: number;
+  loaded: number;
+  reported: boolean;
 }
 
 /** The id of the image source and layer under a hybrid basemap's labels. */
@@ -802,7 +831,9 @@ interface WorkerCheck {
  *   basemap would never be put back.
  *
  *   Engine `error` events are classified once:
- *   - a tile or source failure leaves the map working (`tileError`);
+ *   - a tile or source failure leaves the map working (`tileError`), except
+ *     one of a raster tile data layer, which that layer reports itself as
+ *     `tileLayerUnavailable` when the map settles (see `reportUnavailableTileLayers`);
  *   - a source-less error before the pending style document has loaded
  *     (`style.load`) means that document failed: it rejects the pending
  *     mount or swap, and a failed swap puts the last basemap that loaded
@@ -836,6 +867,14 @@ export class MapLibreMapAdapter implements MapAdapter {
    * whether `basemapUnavailable` has been reported for it.
    */
   private basemapTiles: BasemapTiles = idleBasemapTiles();
+  /**
+   * Tile traffic of each tile data layer, by engine source id: counted from
+   * the moment its source is drawn, so a new template or a basemap swap
+   * starts it afresh.
+   */
+  private readonly tileTraffic = new Map<string, TileLayerTraffic>();
+  /** The interval that paints the map while tile layer tiles load (see `repaintUntilIdle`). */
+  private tileSettleNudge: ReturnType<typeof setInterval> | undefined;
   private workerCheck: WorkerCheck | undefined;
   private started = false;
   private destroyed = false;
@@ -1363,6 +1402,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (!drawn) {
       return;
     }
+    this.tileTraffic.delete(drawn.source);
     for (const layerId of drawn.layers) {
       if (map.getLayer(layerId)) {
         map.removeLayer(layerId);
@@ -1648,6 +1688,16 @@ export class MapLibreMapAdapter implements MapAdapter {
       polygons: plan.polygons ?? [],
     };
     this.drawn.set(id, drawn);
+    if (layer.kind === "tiles") {
+      this.tileTraffic.set(source, {
+        layerId: id,
+        tiles: layer.overlay.tiles,
+        requested: 0,
+        aborted: 0,
+        loaded: 0,
+        reported: false,
+      });
+    }
     map.addSource(source, plan.source as unknown as SourceSpecification);
     for (const engineLayer of plan.layers) {
       drawn.layers.push(engineLayer.id);
@@ -1882,34 +1932,41 @@ export class MapLibreMapAdapter implements MapAdapter {
     listen("idle", () => {
       this.setLoading(false);
       this.emitLoad();
+      this.stopRepaintingUntilIdle();
       this.reportUnavailableBasemap();
+      this.reportUnavailableTileLayers();
     });
     listen("sourcedata", (event) => {
-      const { tile, sourceId } = event as {
-        tile?: unknown;
-        sourceId?: unknown;
-      };
-      if (
-        tile !== undefined &&
-        decidesAvailability(this.basemapTiles.basemap, sourceId)
-      ) {
+      const sourceId = tileEventSource(event);
+      if (sourceId === undefined) {
+        return;
+      }
+      if (decidesAvailability(this.basemapTiles.basemap, sourceId)) {
         this.basemapTiles.loaded += 1;
       }
+      this.countTileLayerTile(sourceId, "loaded");
+    });
+    listen("sourcedataloading", (event) => {
+      if (this.countTileLayerTile(tileEventSource(event), "requested")) {
+        this.repaintUntilIdle(map);
+      }
+    });
+    listen("sourcedataabort", (event) => {
+      this.countTileLayerTile(tileEventSource(event), "aborted");
     });
     // The classification is described on the class.
     listen("error", (event) => {
       // Listening to "error" silences MapLibre's own console logging.
       console.error("MapLibre basemap error", event.error);
       if (isTileOrSourceError(event)) {
-        if (
-          decidesAvailability(
-            this.basemapTiles.basemap,
-            (event as { sourceId?: unknown }).sourceId,
-          )
-        ) {
+        const { sourceId } = event as { sourceId?: unknown };
+        if (decidesAvailability(this.basemapTiles.basemap, sourceId)) {
           this.basemapTiles.failed += 1;
         }
-        this.emitter.emit("tileError", undefined);
+        // A tile layer is judged on its own, when the map settles.
+        if (typeof sourceId !== "string" || !this.tileTraffic.has(sourceId)) {
+          this.emitter.emit("tileError", undefined);
+        }
         return;
       }
       const workerFailed = isWorkerFailure(event);
@@ -1941,6 +1998,59 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.basemapTiles.reported = true;
     this.emitter.emit("basemapUnavailable", basemap);
+  }
+
+  /**
+   * Counts one tile of a tile data layer's source; any other source is not
+   * counted.
+   * @returns Whether the source is a tile data layer's.
+   */
+  private countTileLayerTile(
+    sourceId: string | undefined,
+    count: "requested" | "aborted" | "loaded",
+  ): boolean {
+    const traffic =
+      sourceId === undefined ? undefined : this.tileTraffic.get(sourceId);
+    if (!traffic) {
+      return false;
+    }
+    traffic[count] += 1;
+    return true;
+  }
+
+  /**
+   * Paints the map every {@link TILE_SETTLE_NUDGE_MS} until it next reports
+   * `idle`. A tile the provider answers with a 404 fires no event and asks
+   * for no new frame, so a map whose last tiles were such tiles is never
+   * painted again and never reports `idle`: the layer could not be judged,
+   * and the map would stay busy. One interval serves every tile layer.
+   */
+  private repaintUntilIdle(map: MapLibreMap): void {
+    this.tileSettleNudge ??= setInterval(() => {
+      map.triggerRepaint();
+    }, TILE_SETTLE_NUDGE_MS);
+  }
+
+  private stopRepaintingUntilIdle(): void {
+    clearInterval(this.tileSettleNudge);
+    this.tileSettleNudge = undefined;
+  }
+
+  /**
+   * Reports `tileLayerUnavailable` once for each tile data layer the map has
+   * settled on with tiles asked for and none loaded. A tile given up on (the
+   * view moved on) does not count as asked for, and a layer that has drawn
+   * any tile is not reported, however many fail afterwards.
+   */
+  private reportUnavailableTileLayers(): void {
+    for (const traffic of this.tileTraffic.values()) {
+      const { layerId, tiles, requested, aborted, loaded, reported } = traffic;
+      if (reported || loaded > 0 || requested <= aborted) {
+        continue;
+      }
+      traffic.reported = true;
+      this.emitter.emit("tileLayerUnavailable", { layerId, tiles });
+    }
   }
 
   /**
@@ -2271,6 +2381,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.handleGesture = null;
     this.hoveredHandle = null;
     this.clearWorkerCheck();
+    this.stopRepaintingUntilIdle();
     for (const subscription of this.subscriptions) {
       subscription.unsubscribe();
     }

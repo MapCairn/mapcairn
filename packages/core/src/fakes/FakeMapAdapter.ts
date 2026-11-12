@@ -819,6 +819,21 @@ export class FakeMapAdapter implements MapAdapter {
     }
   }
 
+  /**
+   * Emits `tileLayerUnavailable` for the tile layer `layerId` as it is drawn,
+   * as an engine does when every tile of it failed and none loaded. A layer
+   * that is not a drawn tile layer has no tiles, so nothing is emitted.
+   */
+  simulateTileLayerFailure(layerId: string): void {
+    const layer = this.#dataLayers.get(layerId);
+    if (layer?.kind === "tiles") {
+      this.#emit("tileLayerUnavailable", {
+        layerId,
+        tiles: layer.overlay.tiles,
+      });
+    }
+  }
+
   /** Emits `loading` with the given state. */
   simulateLoading(loading: boolean): void {
     this.#emit("loading", loading);

@@ -10,12 +10,14 @@ import {
   SAMPLE_LAYERS,
   SAMPLE_LINE_LAYER,
   SAMPLE_QUERY_LAYER,
+  SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
   SAMPLE_VECTOR_LAYER,
   StaticLayerRegistry,
   sampleArea,
   sampleLine,
   samplePoint,
+  tileUrl,
 } from "@mapcairn/core";
 import {
   act,
@@ -827,6 +829,60 @@ describe("LayersSection", () => {
       layers().layers.find((l) => l.definition.id === "sample-imagery")
         ?.controls.opacity,
     ).toBe("0.75");
+  });
+
+  describe("a tile layer the map found no tiles for", () => {
+    it("says no imagery was found for the chosen time, with the control to pick another beside it", () => {
+      const { layers } = setup([SAMPLE_TIME_LAYER]);
+      toggle("sample-rain", "Sample rain");
+      expect(screen.queryByTestId("layer-status-sample-rain")).toBeNull();
+      act(() =>
+        layers().reportTilesUnavailable(
+          "sample-rain",
+          tileUrl(SAMPLE_TIME_LAYER, {}, NOW),
+        ),
+      );
+      const status = screen.getByTestId("layer-status-sample-rain");
+      expect(status).toHaveTextContent(
+        "No imagery was found for 06:00 UTC on 9 November 2026. Try another.",
+      );
+      expect(status.querySelector("svg")).not.toBeNull();
+      expect(
+        within(item("sample-rain")).queryByRole("button", {
+          name: "Try again",
+        }),
+      ).toBeNull();
+      const group = screen.getByRole("group", { name: "Time shown" });
+      expect(group).not.toBeDisabled();
+      fireEvent.change(within(group).getByRole("combobox"), {
+        target: { value: "2026-11-09t0530" },
+      });
+      expect(screen.queryByTestId("layer-status-sample-rain")).toBeNull();
+    });
+
+    it("says only that a layer with nothing to choose did not load", () => {
+      const plain: LayerDefinition = {
+        ...SAMPLE_TILE_LAYER,
+        id: "sample-plain",
+        name: "Sample plain",
+        controls: [],
+        source: {
+          ...SAMPLE_TILE_LAYER.source,
+          tiles: "https://tiles.test/{z}",
+        },
+      };
+      const { layers } = setup([plain]);
+      toggle("sample-plain", "Sample plain");
+      act(() =>
+        layers().reportTilesUnavailable(
+          "sample-plain",
+          "https://tiles.test/{z}",
+        ),
+      );
+      expect(screen.getByTestId("layer-status-sample-plain")).toHaveTextContent(
+        "Could not load. Check your connection.",
+      );
+    });
   });
 
   describe("a date and time control", () => {

@@ -119,6 +119,14 @@ for (const [name, basemap] of [
         });
         map.fire("idle");
       },
+      simulateTileLayerFailure: (layerId) => {
+        const map = latestMap();
+        map.fire("sourcedataloading", {
+          sourceId: `mapcairn:${layerId}`,
+          tile: {},
+        });
+        map.fire("idle");
+      },
       simulateLoading: (loading) => {
         latestMap().fire(loading ? "dataloading" : "idle");
       },

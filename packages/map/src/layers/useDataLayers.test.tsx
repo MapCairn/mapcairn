@@ -9,6 +9,7 @@ import {
   SAMPLE_LAYERS,
   SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
+  SAMPLE_TIME_LAYER,
   StaticLayerRegistry,
   samplePoint,
 } from "@mapcairn/core";
@@ -17,11 +18,20 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../services";
 import { LiveRegionProvider } from "../ui/LiveRegion";
+import { CLEAR_MS, THROTTLE_MS } from "../ui/LiveRegion/announcer";
 import { type UseDataLayersOptions, useDataLayers } from "./useDataLayers";
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 const polite = () => screen.getByTestId("live-region-polite").textContent;
 const assertive = () => screen.getByTestId("live-region-assertive").textContent;
+/** Lets the announcer's throttle and clear timers run out, so a message that should not come has had its chance. */
+const settleAnnouncer = () =>
+  act(
+    () =>
+      new Promise<void>((done) =>
+        setTimeout(done, THROTTLE_MS + CLEAR_MS + 50),
+      ),
+  );
 
 function setup(
   options: UseDataLayersOptions = {},
@@ -801,6 +811,156 @@ describe("useDataLayers", () => {
       await waitFor(() =>
         expect(layer(result, "sample-query").status.kind).toBe("ready"),
       );
+    });
+  });
+
+  describe("tile layers with no imagery", () => {
+    const IMAGERY_TILES = "https://tiles.test/2026-11-08/{z}/{y}/{x}.jpg";
+    const PLAIN_LAYER: LayerDefinition = {
+      ...SAMPLE_TILE_LAYER,
+      id: "sample-plain",
+      name: "Sample plain",
+      controls: [
+        { kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 },
+      ],
+      source: { ...SAMPLE_TILE_LAYER.source, tiles: "https://tiles.test/{z}" },
+    };
+    const withTime = () =>
+      setup({}, [...SAMPLE_LAYERS, SAMPLE_TIME_LAYER, PLAIN_LAYER]);
+
+    it("says no imagery was found for the chosen day, and announces it once", async () => {
+      const { result } = withTime();
+      act(() => result.current.setEnabled("sample-imagery", true));
+      act(() =>
+        result.current.reportTilesUnavailable("sample-imagery", IMAGERY_TILES),
+      );
+      expect(layer(result, "sample-imagery").status).toEqual({
+        kind: "tiles-unavailable",
+      });
+      await waitFor(() =>
+        expect(polite()).toBe(
+          "Sample imagery: No imagery was found for 8 November 2026. Try another.",
+        ),
+      );
+      expect(assertive()).toBe("");
+    });
+
+    it("names the UTC time a date and time control is set to", async () => {
+      const { result } = withTime();
+      act(() => result.current.setEnabled("sample-rain", true));
+      act(() =>
+        result.current.reportTilesUnavailable(
+          "sample-rain",
+          "https://tiles.test/rain/2026-11-09T06%3A00%3A00Z/{z}/{y}/{x}.png",
+        ),
+      );
+      await waitFor(() =>
+        expect(polite()).toBe(
+          "Sample rain: No imagery was found for 06:00 UTC on 9 November 2026. Try another.",
+        ),
+      );
+    });
+
+    it("says only that a layer with no date or time to choose did not load", async () => {
+      const { result } = withTime();
+      act(() => result.current.setEnabled("sample-plain", true));
+      act(() =>
+        result.current.reportTilesUnavailable(
+          "sample-plain",
+          "https://tiles.test/{z}",
+        ),
+      );
+      expect(layer(result, "sample-plain").status.kind).toBe(
+        "tiles-unavailable",
+      );
+      await waitFor(() =>
+        expect(polite()).toBe(
+          "Sample plain: Could not load. Check your connection.",
+        ),
+      );
+    });
+
+    it("ignores a report for tiles the layer is no longer set to, a layer that is off, and one that has no tiles", async () => {
+      const { result } = withTime();
+      act(() => result.current.setEnabled("sample-imagery", true));
+      act(() => result.current.setEnabled("sample-points", true));
+      act(() => {
+        result.current.reportTilesUnavailable(
+          "sample-imagery",
+          "https://tiles.test/2026-11-07/{z}/{y}/{x}.jpg",
+        );
+        result.current.reportTilesUnavailable("sample-rain", "any");
+        result.current.reportTilesUnavailable("sample-points", "any");
+        result.current.reportTilesUnavailable("nothing", "any");
+      });
+      await settleAnnouncer();
+      expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+      expect(layer(result, "sample-rain").status).toEqual({ kind: "off" });
+      expect(layer(result, "sample-points").status.kind).not.toBe(
+        "tiles-unavailable",
+      );
+      expect(polite()).not.toContain("No imagery");
+    });
+
+    it("does not announce the same report twice", async () => {
+      const { result } = withTime();
+      act(() => result.current.setEnabled("sample-imagery", true));
+      const report = () =>
+        act(() =>
+          result.current.reportTilesUnavailable(
+            "sample-imagery",
+            IMAGERY_TILES,
+          ),
+        );
+      report();
+      await waitFor(() => expect(polite()).toContain("No imagery"));
+      act(() => result.current.setEnabled("sample-points", true));
+      await waitFor(() => expect(polite()).not.toContain("No imagery"));
+      report();
+      await settleAnnouncer();
+      expect(polite()).not.toContain("No imagery");
+    });
+    it("goes when a control changes the tiles, and stays when only the opacity changes", async () => {
+      const { result } = withTime();
+      act(() => result.current.setEnabled("sample-imagery", true));
+      act(() =>
+        result.current.reportTilesUnavailable("sample-imagery", IMAGERY_TILES),
+      );
+      act(() => result.current.setControl("sample-imagery", "opacity", "0.5"));
+      expect(layer(result, "sample-imagery").status.kind).toBe(
+        "tiles-unavailable",
+      );
+      act(() =>
+        result.current.setControl("sample-imagery", "date", "2026-11-07"),
+      );
+      expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+      act(() =>
+        result.current.setControl("sample-imagery", "date", "2026-11-08"),
+      );
+      expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+      act(() =>
+        result.current.reportTilesUnavailable("sample-imagery", IMAGERY_TILES),
+      );
+      await waitFor(() =>
+        expect(layer(result, "sample-imagery").status.kind).toBe(
+          "tiles-unavailable",
+        ),
+      );
+    });
+
+    it("goes when the layer is turned off, and is announced again when it is turned back on and fails again", async () => {
+      const { result } = withTime();
+      act(() => result.current.setEnabled("sample-imagery", true));
+      act(() =>
+        result.current.reportTilesUnavailable("sample-imagery", IMAGERY_TILES),
+      );
+      act(() => result.current.setEnabled("sample-imagery", false));
+      act(() => result.current.setEnabled("sample-imagery", true));
+      expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+      act(() =>
+        result.current.reportTilesUnavailable("sample-imagery", IMAGERY_TILES),
+      );
+      await waitFor(() => expect(polite()).toContain("No imagery"));
     });
   });
 

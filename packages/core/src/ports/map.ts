@@ -106,6 +106,18 @@ export interface MapTileOverlay {
   readonly opacity: number;
 }
 
+/** What {@link MapEvents.tileLayerUnavailable} carries. */
+export interface MapTileLayerUnavailable {
+  /** The id the layer was set under with `setTileLayer`. */
+  readonly layerId: string;
+  /**
+   * The {@link MapTileOverlay.tiles} template the failed tiles were drawn
+   * from, so a report that arrives after the layer was set again can be told
+   * from one for what is on the map now.
+   */
+  readonly tiles: string;
+}
+
 /** Polygons and lines drawn on request, such as an event's affected area. */
 export interface MapShapes {
   readonly geometries: readonly LayerGeometry[];
@@ -388,6 +400,17 @@ export interface MapEvents {
    * time a basemap's style loads, and never once any tile of it has loaded.
    */
   basemapUnavailable: BasemapDefinition;
+  /**
+   * The tiles of a tile data layer all failed and none loaded, counted from
+   * the moment the layer's tiles were last set (a new `tiles` template, or a
+   * basemap swap drawing the layer again) to the moment the map settled: the
+   * provider has none for what was asked, for example a date or time it has
+   * not published, or is unreachable. It is reported at most once each time
+   * the layer's tiles are set, and never once any tile of it has loaded. The
+   * layer's failures raise no general `tileError`: this is the layer's own
+   * report, so the ui can say what is wrong with that layer.
+   */
+  tileLayerUnavailable: MapTileLayerUnavailable;
   /**
    * The engine stopped working after it had loaded (for example its worker
    * failed), so the map can no longer draw. The error's reason is

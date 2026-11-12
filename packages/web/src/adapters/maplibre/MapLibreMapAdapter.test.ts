@@ -44,6 +44,7 @@ import {
   createMapLibreMapAdapter,
   IMAGE_WAIT_MS,
   MapLibreMapAdapter,
+  TILE_SETTLE_NUDGE_MS,
   WORKER_FAILURE_GRACE_MS,
 } from "./MapLibreMapAdapter";
 import { FakeGPUInitializationError } from "./maplibreTestEngine";
@@ -1022,6 +1023,223 @@ describe("MapLibreMapAdapter", () => {
         tileFailed(map);
         map.fire("idle");
         expect(unavailable).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    describe("an unavailable tile layer", () => {
+      const OVERLAY = {
+        tiles: "https://t.test/2026-11-08/{z}/{x}/{y}.png",
+        tileSize: 256 as const,
+        maxzoom: 9,
+        opacity: 1,
+      };
+      const SOURCE = "mapcairn:imagery";
+
+      async function watched() {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const { adapter, map } = await mounted();
+        const unavailable = vi.fn();
+        const tileError = vi.fn();
+        adapter.on("tileLayerUnavailable", unavailable);
+        adapter.on("tileError", tileError);
+        map.fire("style.load");
+        adapter.setTileLayer("imagery", OVERLAY);
+        return { adapter, map, unavailable, tileError };
+      }
+
+      /** What the engine fires for a tile it starts to load, loads, gives up on or fails. */
+      const requested = (map: FakeMapLibreMap, sourceId = SOURCE) =>
+        map.fire("sourcedataloading", { sourceId, tile: {} });
+      const loaded = (map: FakeMapLibreMap, sourceId = SOURCE) =>
+        map.fire("sourcedata", { sourceId, tile: {}, isSourceLoaded: false });
+      const aborted = (map: FakeMapLibreMap, sourceId = SOURCE) =>
+        map.fire("sourcedataabort", { sourceId, tile: {} });
+      const failed = (map: FakeMapLibreMap, sourceId = SOURCE) =>
+        map.fire("error", { error: new Error("tile"), tile: {}, sourceId });
+
+      it("is reported, with its tiles, once the map settles with every tile asked for and none loaded", async () => {
+        const { map, unavailable } = await watched();
+        requested(map);
+        requested(map);
+        expect(unavailable).not.toHaveBeenCalled();
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        expect(unavailable).toHaveBeenCalledWith({
+          layerId: "imagery",
+          tiles: OVERLAY.tiles,
+        });
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+      });
+
+      it("is reported for tiles the provider answered with an error the engine raises, without the general tile error", async () => {
+        const { map, unavailable, tileError } = await watched();
+        requested(map);
+        failed(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        expect(tileError).not.toHaveBeenCalled();
+      });
+
+      it("is not reported while some tile of it loaded", async () => {
+        const { map, unavailable } = await watched();
+        requested(map);
+        requested(map);
+        loaded(map);
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+      });
+
+      it("is not reported when no tile was asked for, or every one asked for was given up on", async () => {
+        const { map, unavailable } = await watched();
+        map.fire("idle");
+        requested(map);
+        aborted(map);
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+      });
+
+      it("is reported when some tiles were given up on and none loaded, and not when one loaded", async () => {
+        const { adapter, map, unavailable } = await watched();
+        requested(map);
+        requested(map);
+        requested(map);
+        aborted(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        adapter.setTileLayer("imagery", {
+          ...OVERLAY,
+          tiles: "https://t.test/2026-11-07/{z}/{x}/{y}.png",
+        });
+        requested(map);
+        requested(map);
+        requested(map);
+        aborted(map);
+        loaded(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+      });
+
+      it("does not count an engine event that is not about a tile, such as the source's metadata", async () => {
+        const { map, unavailable } = await watched();
+        vi.useFakeTimers();
+        map.fire("sourcedataloading", { sourceId: SOURCE });
+        vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 2);
+        expect(map.callsOf("triggerRepaint")).toHaveLength(0);
+        requested(map);
+        map.fire("sourcedata", { sourceId: SOURCE, isSourceLoaded: true });
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+      });
+
+      it("is reported once for its tiles, however many times the map settles after", async () => {
+        const { map, unavailable } = await watched();
+        requested(map);
+        map.fire("idle");
+        requested(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+      });
+
+      it("counts only its own tiles", async () => {
+        const { map, unavailable } = await watched();
+        requested(map, "basemap");
+        requested(map, "mapcairn:other");
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+      });
+
+      it("is reported again for the tiles it is set to next, but not when only its opacity changes", async () => {
+        const { adapter, map, unavailable } = await watched();
+        requested(map);
+        adapter.setTileLayer("imagery", { ...OVERLAY, opacity: 0.5 });
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+        const next = "https://t.test/2026-11-07/{z}/{x}/{y}.png";
+        adapter.setTileLayer("imagery", { ...OVERLAY, tiles: next });
+        requested(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(2);
+        expect(unavailable).toHaveBeenLastCalledWith({
+          layerId: "imagery",
+          tiles: next,
+        });
+      });
+
+      it("is counted afresh when a basemap swap draws it again", async () => {
+        const { adapter, map, unavailable } = await watched();
+        requested(map);
+        loaded(map);
+        void adapter.setBasemap(DARK).catch(() => undefined);
+        map.fire("style.load");
+        requested(map);
+        map.fire("idle");
+        expect(unavailable).toHaveBeenCalledTimes(1);
+      });
+
+      it("is not reported once it is removed", async () => {
+        const { adapter, map, unavailable } = await watched();
+        requested(map);
+        adapter.removeLayer("imagery");
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
+      });
+
+      describe("while its tiles load", () => {
+        const repaints = (map: FakeMapLibreMap) =>
+          map.callsOf("triggerRepaint").length;
+
+        it("repaints the map on an interval, so it settles even when the provider has none, and stops once it has", async () => {
+          const { map } = await watched();
+          vi.useFakeTimers();
+          requested(map);
+          requested(map);
+          expect(repaints(map)).toBe(0);
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS);
+          expect(repaints(map)).toBe(1);
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS);
+          expect(repaints(map)).toBe(2);
+          map.fire("idle");
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 3);
+          expect(repaints(map)).toBe(2);
+          requested(map);
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS);
+          expect(repaints(map)).toBe(3);
+        });
+
+        it("leaves the map alone for tiles of the basemap and of other sources", async () => {
+          const { map } = await watched();
+          vi.useFakeTimers();
+          requested(map, "basemap");
+          requested(map, "mapcairn:other");
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 3);
+          expect(repaints(map)).toBe(0);
+        });
+
+        it("stops when the map is destroyed", async () => {
+          const { adapter, map } = await watched();
+          vi.useFakeTimers();
+          requested(map);
+          adapter.destroy();
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 3);
+          expect(repaints(map)).toBe(0);
+        });
+      });
+
+      it("leaves the general tile error to every other source", async () => {
+        const { adapter, map, tileError } = await watched();
+        adapter.setFeatureLayer("quakes", []);
+        failed(map, "basemap");
+        failed(map, "mapcairn:quakes");
+        expect(tileError).toHaveBeenCalledTimes(2);
+      });
+
+      it("leaves the general tile error to an error with a tile but no source", async () => {
+        const { map, unavailable, tileError } = await watched();
+        map.fire("error", { error: new Error("tile"), tile: {} });
+        expect(tileError).toHaveBeenCalledTimes(1);
+        map.fire("idle");
+        expect(unavailable).not.toHaveBeenCalled();
       });
     });
 

@@ -241,9 +241,18 @@ export function MapDataLayers({
   const latest = useLatestRef({
     choose: layers.choose,
     setView: layers.setView,
+    reportTilesUnavailable: layers.reportTilesUnavailable,
     onFeatureTap,
     ignoreTaps,
   });
+  useEffect(() => {
+    if (!adapter) {
+      return;
+    }
+    return adapter.on("tileLayerUnavailable", ({ layerId, tiles }) => {
+      latest.current.reportTilesUnavailable(layerId, tiles);
+    });
+  }, [adapter, latest]);
   useEffect(() => {
     if (!adapter) {
       return;

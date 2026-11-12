@@ -47,6 +47,12 @@ export interface MapAdapterControls {
    */
   simulateBasemapUnavailable(): void;
   /**
+   * Makes the engine settle with every tile of the tile layer `layerId`
+   * requested and none loaded, as when its provider has no imagery for what
+   * was asked. A layer that was never set has no tiles, so nothing happens.
+   */
+  simulateTileLayerFailure(layerId: string): void;
+  /**
    * Makes the engine report a zoom gesture it handles itself (a wheel, a
    * pinch or a double-click) that leaves the view at the normalised `zoom`.
    */
@@ -651,6 +657,58 @@ export function runMapAdapterContract(
         expect(controls.drawnLayers()).toEqual([
           { id: "quakes", kind: "features", count: 1 },
         ]);
+      });
+
+      it("reports a tile overlay whose tiles all failed, naming it and its tiles, and raises no general tile error", async () => {
+        const { adapter, controls } = await mounted();
+        const reports: MapEvents["tileLayerUnavailable"][] = [];
+        let tileErrors = 0;
+        let fatalErrors = 0;
+        adapter.on("tileLayerUnavailable", (report) => reports.push(report));
+        adapter.on("tileError", () => {
+          tileErrors += 1;
+        });
+        adapter.on("fatalError", () => {
+          fatalErrors += 1;
+        });
+        adapter.setTileLayer("imagery", TILES);
+        await controls.settle();
+        controls.simulateTileLayerFailure("imagery");
+        await controls.settle();
+        expect(reports).toEqual([{ layerId: "imagery", tiles: TILES.tiles }]);
+        expect(tileErrors).toBe(0);
+        expect(fatalErrors).toBe(0);
+      });
+
+      it("reports a tile overlay again for the tiles it was set to next", async () => {
+        const { adapter, controls } = await mounted();
+        const reports: MapEvents["tileLayerUnavailable"][] = [];
+        adapter.on("tileLayerUnavailable", (report) => reports.push(report));
+        adapter.setTileLayer("imagery", TILES);
+        await controls.settle();
+        controls.simulateTileLayerFailure("imagery");
+        const next = "https://tiles.test/2026-11-07/{z}/{y}/{x}.jpg";
+        adapter.setTileLayer("imagery", { ...TILES, tiles: next });
+        await controls.settle();
+        controls.simulateTileLayerFailure("imagery");
+        await controls.settle();
+        expect(reports.map((report) => report.tiles)).toEqual([
+          TILES.tiles,
+          next,
+        ]);
+      });
+
+      it("reports nothing for a tile overlay that was removed or never set", async () => {
+        const { adapter, controls } = await mounted();
+        const reports: MapEvents["tileLayerUnavailable"][] = [];
+        adapter.on("tileLayerUnavailable", (report) => reports.push(report));
+        adapter.setTileLayer("imagery", TILES);
+        adapter.removeLayer("imagery");
+        await controls.settle();
+        controls.simulateTileLayerFailure("imagery");
+        controls.simulateTileLayerFailure("never-set");
+        await controls.settle();
+        expect(reports).toEqual([]);
       });
 
       it("draws a tile overlay, and changes its opacity in place", async () => {
