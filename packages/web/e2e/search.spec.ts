@@ -36,7 +36,8 @@ test.describe("search", () => {
 
     await input.focus();
     await page.keyboard.type("cape");
-    // Typing alone sends nothing (Nominatim forbids autocomplete). Absence
+    // Typing alone never searches the geocoder (Nominatim forbids autocomplete;
+    // suggestions come from Photon, which suggestions.spec covers). Absence
     // has no event to wait for, so run the clock well past any debounce first.
     await expect(mapPage.searchSubmit).not.toHaveAttribute(
       "aria-disabled",

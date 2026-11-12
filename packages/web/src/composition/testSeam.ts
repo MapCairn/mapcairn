@@ -21,6 +21,7 @@ declare global {
 const SERVICE_KEYS = [
   "createMapAdapter",
   "search",
+  "suggestions",
   "location",
   "settings",
   "clipboard",

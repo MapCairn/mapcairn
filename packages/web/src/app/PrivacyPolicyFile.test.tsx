@@ -69,6 +69,18 @@ describe("PRIVACY.md mirrors the privacy page", () => {
     );
   });
 
+  it("says typing sends the text so far to Photon, how often, and that it works without it", () => {
+    expectBothCopies(
+      "As you type, the text so far is also sent to Photon, a search-as-you-type geocoding service that komoot runs on OpenStreetMap data, to suggest places.",
+    );
+    expectBothCopies(
+      "A request goes out each time you pause after typing at least three characters, so one search can send several partial versions of it, and Photon may log them with your IP address.",
+    );
+    expectBothCopies(
+      "Your browser sends no cookies and no referrer with these requests. Picking a suggestion sends nothing more, and if suggestions stop working, Enter and the Search button still search through Nominatim.",
+    );
+  });
+
   it("says a search that is only coordinates is not sent to the geocoder", () => {
     expectBothCopies(
       "A search that is only a pair of coordinates is read in your browser and is not sent to the geocoder; showing the place requests map tiles for that area, as any move of the map does.",

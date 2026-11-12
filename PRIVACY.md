@@ -67,7 +67,14 @@ provider, and the provider of any tile layer you turn on, can tell roughly
 which area you are looking at, and after Locate me roughly where you are.
 When you search (by pressing Enter or the Search button), your query is sent to
 OpenStreetMap's Nominatim geocoding service, which may likewise log the query
-and your IP address. Nothing is sent while you type. A search that is only a
+and your IP address. As you type, the text so far is also sent to Photon, a
+search-as-you-type geocoding service that komoot runs on OpenStreetMap data, to
+suggest places. A request goes out each time you pause after typing at least
+three characters, so one search can send several partial versions of it, and
+Photon may log them with your IP address. Your browser sends no cookies and no
+referrer with these requests. Picking a suggestion sends nothing more, and if
+suggestions stop working, Enter and the Search button still search through
+Nominatim. A search that is only a
 pair of coordinates is read in your browser and is not sent to the geocoder;
 showing the place requests map tiles for that area, as any move of the map
 does. If an assistant in your browser uses this site's search or measuring

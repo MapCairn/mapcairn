@@ -143,6 +143,21 @@ export function announceSearchError(kind: SearchErrorKind): string {
   return SEARCH_ERROR_MESSAGES[kind];
 }
 
+/** "3 suggestions" or "1 suggestion", announced as the person types. */
+export function announceSuggestions(count: number): string {
+  return `${formatNumber(count)} ${pluralise(count, ["suggestion", "suggestions"])}`;
+}
+
+/** Announced when typing finds no suggestion. */
+export function announceNoSuggestions(): string {
+  return "No suggestions";
+}
+
+/** Announced once when suggestions stop working, so the person knows Enter still searches. */
+export function announceSuggestionsUnavailable(): string {
+  return "Suggestions are unavailable. Press Enter to search.";
+}
+
 /** Announced when a location fix arrives, with its accuracy in the user's units. */
 export function announceLocationFound(
   accuracyMetres: number,

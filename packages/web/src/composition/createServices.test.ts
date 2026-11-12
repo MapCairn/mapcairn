@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BrowserFileOpener } from "../adapters/files/BrowserFileOpener";
 import { MapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
+import { PhotonSuggestionProvider } from "../adapters/search/PhotonSuggestionProvider";
 import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
@@ -57,6 +58,12 @@ describe("createServices", () => {
 
   it("builds the browser file opener, which shows nothing until it is asked", () => {
     expect(createServices().fileOpener).toBeInstanceOf(BrowserFileOpener);
+  });
+
+  it("builds the Photon suggestion provider, which sends nothing until the person types", () => {
+    expect(createServices().suggestions).toBeInstanceOf(
+      PhotonSuggestionProvider,
+    );
   });
 
   it("builds the Valhalla routing provider, which sends nothing until a route is asked for", () => {

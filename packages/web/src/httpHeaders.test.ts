@@ -25,6 +25,13 @@ describe("public/_headers", () => {
     expect(connectSrc).toContain("https://nominatim.openstreetmap.org");
   });
 
+  it("allows search suggestions to reach Photon under the CSP connect-src directive", () => {
+    const csp = getHeader(getBlock("/*"), "Content-Security-Policy") ?? "";
+    const connectSrc = csp.match(/connect-src ([^;]+)/)?.[1] ?? "";
+
+    expect(connectSrc).toContain("https://photon.komoot.io");
+  });
+
   it("allows routing to reach the Valhalla server under the CSP connect-src directive", () => {
     const csp = getHeader(getBlock("/*"), "Content-Security-Policy") ?? "";
     const connectSrc = csp.match(/connect-src ([^;]+)/)?.[1] ?? "";

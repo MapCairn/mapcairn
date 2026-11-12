@@ -4,7 +4,9 @@ What the reference host offers for saving the map and for drawing, and how each 
 
 ## Search by place name or coordinates
 
-The search box finds a place by name through the geocoder when you press Enter or the Search button. It also takes a pair of coordinates, and answers that one itself, in the browser, with no request to the geocoder: a single result named "Coordinates 26.20410° S, 28.04730° E" that you choose like any other result. It reads:
+As you type, the search box suggests places once you pause after three or more characters. Choose one with the arrow keys and Enter, or tap it, and the map goes straight to it. The suggestions come from the Photon service, so the text you have typed so far is sent there as you type; the privacy page says so. A screen reader hears how many suggestions there are. If the service is unavailable, the box says so once and stops suggesting for a while.
+
+The search box finds a place by name through the geocoder when you press Enter or the Search button, with or without a suggestion highlighted, and that works when suggestions do not. It also takes a pair of coordinates, and answers that one itself, in the browser, with no request to the geocoder: a single result named "Coordinates 26.20410° S, 28.04730° E" that you choose like any other result. It reads:
 
 - decimal degrees, latitude first: `-26.2041, 28.0473` or `-26.2041 28.0473`. Every value needs a decimal point with digits after it, or a degree sign or the word degrees
 - hemisphere letters (or the words north, south, east and west) before or after a value, in either order: `26.2041S 28.0473E`, `S26.2041 E28.0473`, `28.0473 E, 26.2041 S`

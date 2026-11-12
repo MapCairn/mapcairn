@@ -8,6 +8,7 @@ import type { DevicePreferences } from "./preferences";
 import type { RoutingProvider } from "./routing";
 import type { SearchProvider } from "./search";
 import type { SettingsStore } from "./settings";
+import type { SuggestionProvider } from "./suggestions";
 import type { ThemeSource } from "./theme";
 import type { UrlState } from "./url";
 
@@ -19,6 +20,13 @@ import type { UrlState } from "./url";
 export interface Services {
   readonly createMapAdapter: MapAdapterFactory;
   readonly search: SearchProvider;
+  /**
+   * Suggests places while the person types. Optional: a host that supplies
+   * none gets no suggestions and keeps submit-only search, and the ui must not
+   * require it. Everything typed is sent to the provider, so the host's
+   * privacy text must say so.
+   */
+  readonly suggestions?: SuggestionProvider;
   readonly location: LocationProvider;
   readonly settings: SettingsStore;
   readonly clipboard: ClipboardPort;

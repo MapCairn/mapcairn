@@ -11,5 +11,6 @@ export * from "./routing";
 export * from "./search";
 export * from "./services";
 export * from "./settings";
+export * from "./suggestions";
 export * from "./theme";
 export * from "./url";

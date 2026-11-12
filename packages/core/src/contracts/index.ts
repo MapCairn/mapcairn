@@ -10,5 +10,6 @@ export * from "./portRegistry";
 export * from "./routingProvider.contract";
 export * from "./searchProvider.contract";
 export * from "./settingsStore.contract";
+export * from "./suggestionProvider.contract";
 export * from "./themeSource.contract";
 export * from "./urlState.contract";

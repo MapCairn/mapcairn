@@ -13,6 +13,7 @@ import {
   resolveTheme,
   type SearchProvider,
   type Settings,
+  type SuggestionProvider,
   type ThemeChoice,
   type ThemeSource,
   type UrlState,
@@ -28,6 +29,16 @@ export function useMapAdapterFactory(): MapAdapterFactory {
 /** The place search provider. Debounce and cancellation live in `useSearch`, not here. */
 export function useSearchProvider(): SearchProvider {
   return useServices().search;
+}
+
+/**
+ * The suggestion provider, or `undefined` when the host supplies none. The
+ * search pill suggests places as the person types only when it exists, so a
+ * host without one keeps submit-only search. Nothing is requested until the
+ * person has typed.
+ */
+export function useSuggestionProvider(): SuggestionProvider | undefined {
+  return useServices().suggestions;
 }
 
 /**

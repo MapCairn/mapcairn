@@ -7,7 +7,7 @@ import {
   type SearchProvider,
   type SearchResult,
 } from "@mapcairn/core";
-import { defaultFetch, isAbortError } from "../shared/fetch";
+import { defaultFetch, isAbortError, throwIfAborted } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
 
 const DEFAULT_ENDPOINT = "https://nominatim.openstreetmap.org";
@@ -250,11 +250,5 @@ export class NominatimSearchProvider implements SearchProvider {
       }
       throw new SearchError("failed");
     }
-  }
-}
-
-function throwIfAborted(signal: AbortSignal | undefined): void {
-  if (signal?.aborted) {
-    throw new PortAbortError();
   }
 }

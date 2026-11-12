@@ -88,12 +88,18 @@ describe("PrivacyPage", () => {
     expect(text).not.toMatch(/page URL/);
   });
 
-  it("says search sends the query only when you search, not as you type", () => {
+  it("says a search sends the query to Nominatim when you search, and the text so far to Photon as you type", () => {
     render(<PrivacyPage />);
 
     const text = screen.getByText(/Nominatim geocoding service/).textContent;
     expect(text).toMatch(/When you search/);
-    expect(text).not.toMatch(/Typing/);
+    expect(text).toContain(
+      "As you type, the text so far is also sent to Photon",
+    );
+    expect(text).toContain("komoot");
+    expect(text).toContain("at least three characters");
+    expect(text).toContain("no cookies and no referrer");
+    expect(text).toContain("Enter and the Search button still search");
   });
 
   it("names every data layer provider and says nothing is sent until a layer is on", () => {
