@@ -14,13 +14,14 @@ Statuses are "proposed" (written down, not started) and "in progress" (work has 
 
 | Theme | What it covers | Status | Tracking |
 | --- | --- | --- | --- |
-| Layers and data | A layer catalogue loaded at runtime per user, identifying features on raster tile layers, richer filters and layers that wait for a filter, selecting several features, a layer key on the map, turning all layers off at once, clearer layer status | proposed, some in progress | [#46](https://github.com/MapCairn/mapcairn/issues/46), [#47](https://github.com/MapCairn/mapcairn/issues/47), [#62](https://github.com/MapCairn/mapcairn/issues/62), [#49](https://github.com/MapCairn/mapcairn/issues/49), [#71](https://github.com/MapCairn/mapcairn/issues/71), [#72](https://github.com/MapCairn/mapcairn/issues/72), [#66](https://github.com/MapCairn/mapcairn/issues/66) |
+| Layers and data | A layer catalogue loaded at runtime per user, identifying features on raster tile layers, richer filters and layers that wait for a filter, selecting several features, a layer key on the map, turning all layers off at once, clearer layer status | proposed | [#46](https://github.com/MapCairn/mapcairn/issues/46), [#47](https://github.com/MapCairn/mapcairn/issues/47), [#62](https://github.com/MapCairn/mapcairn/issues/62), [#49](https://github.com/MapCairn/mapcairn/issues/49), [#71](https://github.com/MapCairn/mapcairn/issues/71), [#72](https://github.com/MapCairn/mapcairn/issues/72), [#66](https://github.com/MapCairn/mapcairn/issues/66) |
 | Shapes and formats | Reading and writing more geometry formats | in progress | [#50](https://github.com/MapCairn/mapcairn/issues/50) |
+| Map interface | Showing the zoom level beside the cursor coordinates | in progress | [#61](https://github.com/MapCairn/mapcairn/issues/61) |
 | Output | Exporting the map as an image at a requested size and extent, and server-side rendering for hosts that want it | proposed | [#48](https://github.com/MapCairn/mapcairn/issues/48), [#53](https://github.com/MapCairn/mapcairn/issues/53) |
-| Embedding | An optional MapLibre adapter package, a prebuilt bundle for pages without React, ease of adding the SDK to server-rendered applications, and hosts behind a login | proposed | [#43](https://github.com/MapCairn/mapcairn/issues/43), [#44](https://github.com/MapCairn/mapcairn/issues/44), [#51](https://github.com/MapCairn/mapcairn/issues/51), [#45](https://github.com/MapCairn/mapcairn/issues/45) |
+| Embedding | An optional MapLibre adapter package, a prebuilt bundle for pages without React, making the SDK easy to add to server-rendered applications, and hosts behind a login | proposed | [#43](https://github.com/MapCairn/mapcairn/issues/43), [#44](https://github.com/MapCairn/mapcairn/issues/44), [#51](https://github.com/MapCairn/mapcairn/issues/51), [#45](https://github.com/MapCairn/mapcairn/issues/45) |
 | Hosts and agents | A tool catalogue so an AI agent can drive the map, and an optional analytics sink hosts can plug their own tools into | proposed | [#56](https://github.com/MapCairn/mapcairn/issues/56), [#75](https://github.com/MapCairn/mapcairn/issues/75) |
 | Code health | Smaller modules in the map adapter, the layer hook and the app hook | proposed, some in progress | [#24](https://github.com/MapCairn/mapcairn/issues/24), [#25](https://github.com/MapCairn/mapcairn/issues/25), [#26](https://github.com/MapCairn/mapcairn/issues/26) |
-| Publishing and assurance | Getting the four SDK packages ready to publish to npm with generated API documentation, and working toward the OpenSSF Best Practices silver badge | in progress | [#1](https://github.com/MapCairn/mapcairn/issues/1), [#4](https://github.com/MapCairn/mapcairn/issues/4) |
+| Publishing and assurance | Getting the four SDK packages ready to publish to npm with generated API documentation, and working toward the OpenSSF Best Practices silver badge | in progress (#4), proposed (#1) | [#1](https://github.com/MapCairn/mapcairn/issues/1), [#4](https://github.com/MapCairn/mapcairn/issues/4) |
 
 Two items wait for the maintainer's decision before any work: optional adapters for a commercial map platform that hosts configure with their own key ([#40](https://github.com/MapCairn/mapcairn/issues/40)), and counting feature use without identifying anyone ([#41](https://github.com/MapCairn/mapcairn/issues/41)).
 
@@ -30,7 +31,7 @@ Still wanted and not yet possible: a second trusted person with access, so the p
 
 ## Non-goals
 
-The project does not intend to do these, and a pull request that does one will be declined.
+The project does not intend to do these, and a pull request that does one will be declined. They describe the reference site and its Worker. An SDK item above may let a host do something the reference site will not, and the reference site does not adopt it without a decision from the maintainer, made in the open.
 
 - **Accounts.** There is no sign-in, no profile and no stored user data on a server.
 - **Tracking.** There is no tracking beyond cookieless page-view counts. No advertising, no fingerprinting and no cross-site identifiers.
