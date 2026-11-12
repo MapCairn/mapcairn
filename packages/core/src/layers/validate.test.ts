@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
+  SAMPLE_IDENTIFY_LAYER,
   SAMPLE_LAYERS,
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
@@ -30,7 +31,11 @@ function problems(value: unknown): string[] {
 
 describe("validateLayerDefinition", () => {
   it("accepts every sample definition", () => {
-    for (const definition of [...SAMPLE_LAYERS, SAMPLE_TIME_LAYER]) {
+    for (const definition of [
+      ...SAMPLE_LAYERS,
+      SAMPLE_TIME_LAYER,
+      SAMPLE_IDENTIFY_LAYER,
+    ]) {
       expect(problems(definition)).toEqual([]);
     }
   });

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { LayerError } from "../ports/errors";
 import type {
   FieldValue,
   LayerFeature,
@@ -123,6 +124,38 @@ export const geojsonDecoder: Decoder = (raw, fields) => {
   });
   return decoded;
 };
+
+/**
+ * Decodes a raw response with the decoder registered as `name`, the way the
+ * feed, detail and identify functions do, so a host that reads a response of
+ * its own gets the same typed refusal.
+ *
+ * @param prepare Reshapes `raw` for the decoder. It runs inside the same
+ *   guard as the decoder, so a response that breaks it is refused too. It
+ *   leaves `raw` as it is by default.
+ * @throws `LayerError` `invalid` when no decoder has that name, or when
+ *   `prepare` or the decoder throws.
+ */
+export function decodeWith(
+  decoders: DecoderRegistry,
+  name: string,
+  raw: unknown,
+  fields: FieldMap,
+  prepare: (raw: unknown) => unknown = (response) => response,
+): LayerFeature[] {
+  const decoder = decoders.get(name);
+  if (!decoder) {
+    throw new LayerError("invalid", `No decoder is registered as "${name}".`);
+  }
+  try {
+    return decoder(prepare(raw), fields);
+  } catch (error) {
+    throw new LayerError(
+      "invalid",
+      `The response could not be decoded: ${String(error)}`,
+    );
+  }
+}
 
 /** A registry with the built-in `geojson` decoder plus any `extra` ones, by name. */
 export function createDecoderRegistry(

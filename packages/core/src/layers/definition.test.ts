@@ -5,13 +5,16 @@ import {
   SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_HEATMAP_LAYER,
+  SAMPLE_IDENTIFY_LAYER,
   SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   SAMPLE_VECTOR_LAYER,
 } from "../fakes/layerFixtures";
 import {
+  cardOf,
   isFeedLayer,
   isHeatmapLayer,
+  isIdentifiable,
   isQueryLayer,
   isRasterTileLayer,
   isShapeStyle,
@@ -56,5 +59,35 @@ describe("layer guards", () => {
   it("tells a shape style from a point style", () => {
     expect(isShapeStyle(SAMPLE_AREA_LAYER.style)).toBe(true);
     expect(isShapeStyle(SAMPLE_FEED_LAYER.style)).toBe(false);
+  });
+});
+
+describe("a tile layer with an identify block", () => {
+  it("is still a raster tile layer, and is not read as a feed", () => {
+    expect(isRasterTileLayer(SAMPLE_IDENTIFY_LAYER)).toBe(true);
+    expect(isFeedLayer(SAMPLE_IDENTIFY_LAYER)).toBe(false);
+    expect(loadsFeatures(SAMPLE_IDENTIFY_LAYER)).toBe(false);
+    expect(isHeatmapLayer(SAMPLE_IDENTIFY_LAYER)).toBe(false);
+    expect(isQueryLayer(SAMPLE_IDENTIFY_LAYER)).toBe(false);
+  });
+
+  it("is told from a layer that answers no tap", () => {
+    expect(isIdentifiable(SAMPLE_IDENTIFY_LAYER)).toBe(true);
+    expect(isIdentifiable(SAMPLE_TILE_LAYER)).toBe(false);
+    expect(isIdentifiable(SAMPLE_VECTOR_LAYER)).toBe(false);
+    expect(isIdentifiable(SAMPLE_FEED_LAYER)).toBe(false);
+    expect(isIdentifiable(SAMPLE_HEATMAP_LAYER)).toBe(false);
+  });
+});
+
+describe("cardOf", () => {
+  it("gives a feed layer's card", () => {
+    expect(cardOf(SAMPLE_FEED_LAYER)).toBe(SAMPLE_FEED_LAYER.card);
+  });
+
+  it("gives an identifiable layer's nested card", () => {
+    expect(cardOf(SAMPLE_IDENTIFY_LAYER)).toBe(
+      SAMPLE_IDENTIFY_LAYER.identify.card,
+    );
   });
 });

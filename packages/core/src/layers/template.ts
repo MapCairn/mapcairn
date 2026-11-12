@@ -39,8 +39,11 @@ export function parseTemplate(template: string): TemplatePlaceholder[] {
 }
 
 /**
- * Fills a URL template from string values, encoding each one. The engine's
- * own placeholders are left for the engine.
+ * Fills a URL template from string values, encoding each one. The
+ * placeholders named in `leftAlone` are left for the map engine, which are
+ * its own (`{z}`, `{x}`, `{y}`, `{bbox-epsg-3857}`) unless a caller says
+ * otherwise. A request the engine does not make, such as an identify URL,
+ * passes none, so it can fill `{x}` and `{y}` itself.
  *
  * @throws When a variable has no value: a definition that passed validation
  *   never does this, so it is a programming error, not a runtime condition.
@@ -48,9 +51,10 @@ export function parseTemplate(template: string): TemplatePlaceholder[] {
 export function fillUrlTemplate(
   template: string,
   values: Readonly<Record<string, string>>,
+  leftAlone: readonly string[] = ENGINE_PLACEHOLDERS,
 ): string {
   return template.replace(PLACEHOLDER, (whole, name: string) => {
-    if (ENGINE_PLACEHOLDERS.includes(name)) {
+    if (leftAlone.includes(name)) {
       return whole;
     }
     const value = Object.hasOwn(values, name) ? values[name] : undefined;

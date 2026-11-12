@@ -6,6 +6,7 @@ import {
   SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_HEATMAP_LAYER,
+  SAMPLE_IDENTIFY_LAYER,
   SAMPLE_LINE_LAYER,
   SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
@@ -24,6 +25,7 @@ export const SAMPLE_DEFINITIONS: readonly LayerDefinition[] = [
   SAMPLE_HEATMAP_LAYER,
   SAMPLE_VECTOR_LAYER,
   SAMPLE_TILE_LAYER,
+  SAMPLE_IDENTIFY_LAYER,
 ];
 
 /** The edges of the range of values a data layer's position may take. */

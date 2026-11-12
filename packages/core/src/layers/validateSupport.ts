@@ -105,6 +105,13 @@ export class Problems {
 export interface UrlAllowances {
   /** The engine's own placeholders (`{z}`, `{x}`, `{y}`, `{bbox-epsg-3857}`). */
   readonly engine?: boolean;
+  /**
+   * The names the map engine fills, which `engine` then allows and which
+   * are refused otherwise. Defaults to `ENGINE_PLACEHOLDERS`. A URL the
+   * engine does not request, such as an identify URL, passes none, so its
+   * `{x}` and `{y}` are ordinary variables.
+   */
+  readonly engineNames?: readonly string[];
   /** A query layer's box and limit; all four box edges are then required. */
   readonly query?: boolean;
 }
@@ -122,9 +129,10 @@ export function checkUrl(
     return;
   }
   const names = parseTemplate(url).map((placeholder) => placeholder.name);
+  const engineNames = allow.engineNames ?? ENGINE_PLACEHOLDERS;
   for (const name of names) {
     let allowed = known.includes(name);
-    if (ENGINE_PLACEHOLDERS.includes(name)) {
+    if (engineNames.includes(name)) {
       allowed = allow.engine === true;
     } else if (QUERY_PLACEHOLDERS.includes(name)) {
       allowed = allow.query === true;
@@ -142,23 +150,39 @@ export function checkUrl(
   }
 }
 
-/** Checks the field map and returns the decoded field names. */
-export function checkFields(problems: Problems, value: unknown): string[] {
-  if (!problems.object(value, "source.fields")) {
+/** Checks the field map at `path` and returns the decoded field names. */
+export function checkFields(
+  problems: Problems,
+  value: unknown,
+  path: string,
+): string[] {
+  if (!problems.object(value, path)) {
     return [];
   }
   const fields = Object.keys(value);
   for (const required of ["id", "title"]) {
     if (!fields.includes(required)) {
-      problems.add(`source.fields.${required}`, "is required");
+      problems.add(`${path}.${required}`, "is required");
     }
   }
-  for (const [name, path] of Object.entries(value)) {
-    if (!isText(path)) {
-      problems.add(`source.fields.${name}`, "must be a dotted path");
+  for (const [name, fieldPath] of Object.entries(value)) {
+    if (!isText(fieldPath)) {
+      problems.add(`${path}.${name}`, "must be a dotted path");
     }
   }
   return fields;
+}
+
+/** Checks that `name` is a registered decoder. */
+export function checkDecoder(
+  problems: Problems,
+  name: unknown,
+  path: string,
+  options: ValidationOptions,
+): void {
+  if (!options.decoders.has(name as string)) {
+    problems.add(path, "is not a registered decoder");
+  }
 }
 
 /** Checks a card or list template against the decoded fields and formatters. */
@@ -180,6 +204,34 @@ export function checkTemplate(
     if (formatter && !options.formatters.has(formatter)) {
       problems.add(path, `formatter ${formatter} is not registered`);
     }
+  }
+}
+
+/** Checks a card at `path` against the decoded fields and formatters. */
+export function checkCard(
+  problems: Problems,
+  card: unknown,
+  path: string,
+  fields: readonly string[],
+  options: ValidationOptions,
+): void {
+  if (!problems.object(card, path)) {
+    return;
+  }
+  checkTemplate(problems, card.title, `${path}.title`, fields, options);
+  if (problems.list(card.lines, `${path}.lines`, true)) {
+    card.lines.forEach((line, index) => {
+      checkTemplate(problems, line, `${path}.lines[${index}]`, fields, options);
+    });
+  }
+  const link = card.link;
+  if (
+    link !== undefined &&
+    (!isObject(link) ||
+      !fields.includes(link.field as string) ||
+      !isText(link.label))
+  ) {
+    problems.add(`${path}.link`, "must name a field and have a label");
   }
 }
 

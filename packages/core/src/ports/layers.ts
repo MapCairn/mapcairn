@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { LayerDefinition } from "../layers/definition";
-import type { Bounds } from "./geometry";
+import type { Bounds, LatLng } from "./geometry";
 
 /** A decoded field value. Anything else in a response is dropped. */
 export type FieldValue = string | number | boolean | null;
@@ -41,9 +41,20 @@ export interface LayerFeature {
 /** The value of each of a layer's controls, as strings, by control id. */
 export type ControlValues = Readonly<Record<string, string>>;
 
+/** Where a tap landed, for a tile layer's `identify` request. */
+export interface IdentifyTarget {
+  /** The tapped place, with longitude wrapped to -180 up to 180. */
+  readonly latlng: LatLng;
+  /** The normalised zoom the map was at (see `toNormalisedZoom`). */
+  readonly zoom: number;
+}
+
 /** What {@link LayerSource.load} needs. */
 export interface LayerLoadRequest {
-  /** A feed, query or heatmap layer. Tile layers have nothing to load. */
+  /**
+   * A feed, query or heatmap layer. Tile layers have nothing to load: a tile
+   * layer's `identify` block is read when a tap asks (see `identifyUrl`).
+   */
   readonly definition: LayerDefinition;
   /**
    * The box of the map a query layer asks for (see `queryWindow`). Required

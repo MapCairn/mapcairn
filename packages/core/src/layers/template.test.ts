@@ -72,6 +72,21 @@ describe("fillUrlTemplate", () => {
     ).toBe("https://t.test/2026-11-08/{z}/{y}/{x}.jpg?b={bbox-epsg-3857}");
   });
 
+  it("fills {x} and {y} when told the engine leaves nothing alone, as an identify URL needs", () => {
+    expect(
+      fillUrlTemplate("https://a.test/?i={x}&j={y}", { x: "12", y: "13" }, []),
+    ).toBe("https://a.test/?i=12&j=13");
+  });
+
+  it("leaves only the placeholders it is told to leave", () => {
+    expect(fillUrlTemplate("https://a.test/{z}/{x}", { x: "5" }, ["z"])).toBe(
+      "https://a.test/{z}/5",
+    );
+    expect(() => fillUrlTemplate("https://a.test/{y}", {}, ["z"])).toThrow(
+      /\{y\}/,
+    );
+  });
+
   it("throws on a variable with no value, so a broken definition fails loudly", () => {
     expect(() => fillUrlTemplate("https://a.test/{missing}", {})).toThrow(
       /missing/,

@@ -5,6 +5,7 @@ import { MAX_MINUTES_AGO, MINUTES_PER_DAY, slotTime } from "./dateTime";
 import type { LayerDefinition } from "./definition";
 import { isCategoricalSlot } from "./palette";
 import { parseTemplate } from "./template";
+import { checkIdentify } from "./validateIdentify";
 import {
   checkHeatmapLayer,
   checkQuerySource,
@@ -13,7 +14,9 @@ import {
 } from "./validateKinds";
 import { checkShapeStyle } from "./validateShapes";
 import {
+  checkCard,
   checkColourSlot,
+  checkDecoder,
   checkFields,
   checkTemplate,
   checkUrl,
@@ -487,32 +490,6 @@ function checkStyleField(
   }
 }
 
-function checkCard(
-  problems: Problems,
-  card: unknown,
-  fields: readonly string[],
-  options: ValidationOptions,
-): void {
-  if (!problems.object(card, "card")) {
-    return;
-  }
-  checkTemplate(problems, card.title, "card.title", fields, options);
-  if (problems.list(card.lines, "card.lines", true)) {
-    card.lines.forEach((line, index) => {
-      checkTemplate(problems, line, `card.lines[${index}]`, fields, options);
-    });
-  }
-  const link = card.link;
-  if (
-    link !== undefined &&
-    (!isObject(link) ||
-      !fields.includes(link.field as string) ||
-      !isText(link.label))
-  ) {
-    problems.add("card.link", "must name a field and have a label");
-  }
-}
-
 function checkSort(
   problems: Problems,
   sort: Json,
@@ -576,9 +553,7 @@ function checkDetail(
       }
     });
   }
-  if (!options.decoders.has(detail.decoder as string)) {
-    problems.add("detail.decoder", "is not a registered decoder");
-  }
+  checkDecoder(problems, detail.decoder, "detail.decoder", options);
   checkColourSlot(problems, detail.colour, "detail.colour");
   problems.text(detail.label, "detail.label");
   problems.text(detail.dataCost, "detail.dataCost");
@@ -596,10 +571,8 @@ function checkFeedSource(
   } else {
     checkUrl(problems, source.url, "source.url", known);
   }
-  if (!options.decoders.has(source.decoder as string)) {
-    problems.add("source.decoder", "is not a registered decoder");
-  }
-  const fields = checkFields(problems, source.fields);
+  checkDecoder(problems, source.decoder, "source.decoder", options);
+  const fields = checkFields(problems, source.fields, "source.fields");
   const { cacheSeconds } = source;
   if (
     cacheSeconds !== undefined &&
@@ -636,7 +609,7 @@ function checkFeed(
 ): void {
   const fields = checkFeedSource(problems, source, known, options);
   checkStyle(problems, definition, fields, options);
-  checkCard(problems, definition.card, fields, options);
+  checkCard(problems, definition.card, "card", fields, options);
   checkList(problems, definition.list, fields, options);
   problems.text(definition.emptyText, "emptyText");
   checkDetail(problems, definition.detail, fields, options);
@@ -781,6 +754,7 @@ export function validateLayerDefinition(
   } else {
     problems.add("source.kind", "must be feed, query, tiles or vector-tiles");
   }
+  checkIdentify(problems, value, source, known, options);
   return problems.lines;
 }
 

@@ -3,6 +3,7 @@
 import type {
   FeedLayerDefinition,
   HeatmapLayerDefinition,
+  IdentifiableLayerDefinition,
   PointStyle,
   ShapeStyle,
   TileLayerDefinition,
@@ -452,6 +453,46 @@ export const SAMPLE_TILE_LAYER: TileLayerDefinition = {
     tileSize: 256,
     maxzoom: 9,
     bounds: [-180, -60, 180, 85],
+  },
+};
+
+/**
+ * A raster overlay that answers a tap: its `identify` block asks a service
+ * for what lies in a small box around the tap, as a WMS `GetFeatureInfo`
+ * request does, and its tile URL and identify URL share the `period` control.
+ * Like {@link SAMPLE_TIME_LAYER} it is kept out of {@link SAMPLE_LAYERS}, so
+ * suites that count the sample layers keep their numbers.
+ */
+export const SAMPLE_IDENTIFY_LAYER: IdentifiableLayerDefinition = {
+  id: "sample-flood",
+  name: "Sample flood depth",
+  description: "Modelled sample flood depth.",
+  group: "Imagery",
+  dataCost: "about 200 KB per screen",
+  attribution: [{ text: "Sample flood provider" }],
+  controls: [
+    {
+      kind: "segmented",
+      id: "period",
+      label: "Return period",
+      options: [
+        { value: "20", label: "1 in 20 years" },
+        { value: "100", label: "1 in 100 years" },
+      ],
+      default: "20",
+    },
+  ],
+  source: {
+    kind: "tiles",
+    tiles: "https://tiles.test/flood/{period}/{z}/{y}/{x}.png",
+    tileSize: 256,
+    maxzoom: 12,
+  },
+  identify: {
+    url: "https://api.test/identify/{period}?bbox={bbox}&width={width}&height={height}&i={x}&j={y}",
+    decoder: "geojson",
+    fields: { id: "id", title: "properties.name", depth: "properties.depth" },
+    card: { title: "{title}", lines: ["{depth} m deep"] },
   },
 };
 
