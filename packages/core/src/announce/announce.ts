@@ -143,6 +143,48 @@ export function announceCatalogueChange(
   return parts.length > 0 ? parts.join(" ") : null;
 }
 
+/*
+ * The selection's messages each carry the running total, because the live
+ * region coalesces messages that arrive close together to the latest: the one
+ * that is read out must still be true when an earlier one was replaced.
+ */
+
+/** One feature was added to the selection: "Added Gauge 4. 5 selected." */
+export function announceFeatureSelected(title: string, total: number): string {
+  return `Added ${title}. ${formatNumber(total)} selected.`;
+}
+
+/** Several features, or one with no title to give, were added to the selection. */
+export function announceFeaturesSelected(count: number, total: number): string {
+  return `${formatNumber(count)} ${pluralise(count, ["feature", "features"])} added. ${formatNumber(total)} selected.`;
+}
+
+/** One feature was removed from the selection: "Removed Gauge 4. 4 selected." */
+export function announceFeatureDeselected(
+  title: string,
+  total: number,
+): string {
+  return `Removed ${title}. ${formatNumber(total)} selected.`;
+}
+
+/** Several features, or one with no title to give, were removed from the selection. */
+export function announceFeaturesDeselected(
+  count: number,
+  total: number,
+): string {
+  return `${formatNumber(count)} ${pluralise(count, ["feature", "features"])} removed. ${formatNumber(total)} selected.`;
+}
+
+/** The selection was emptied. */
+export function announceSelectionCleared(): string {
+  return "Selection cleared.";
+}
+
+/** An addition was refused whole because the selection would pass its `limit`. */
+export function announceSelectionFull(limit: number): string {
+  return `The selection holds ${formatNumber(limit)} at most. Nothing was added.`;
+}
+
 /** A feed layer loaded with nothing in it, in the layer's own words. */
 export function announceLayerEmpty(name: string, emptyText: string): string {
   return `${name}: ${emptyText}`;

@@ -14,7 +14,11 @@ import {
   announceDetailShown,
   announceDetent,
   announceDirectionsCleared,
+  announceFeatureDeselected,
+  announceFeatureSelected,
+  announceFeaturesDeselected,
   announceFeaturesFound,
+  announceFeaturesSelected,
   announceImageFailed,
   announceImageSaved,
   announceLayerCapped,
@@ -40,6 +44,8 @@ import {
   announceRoutingError,
   announceSearchError,
   announceSearchResults,
+  announceSelectionCleared,
+  announceSelectionFull,
   announceShowingFeature,
   announceStopAdded,
   announceStopLimit,
@@ -419,6 +425,55 @@ describe("stop limit, tour and time announcements", () => {
   it("names the nearest time a layer moved to", () => {
     expect(announceTimeMoved("2026-11-09t0600")).toBe(
       "Time moved to 06:00 UTC on 9 November 2026, the nearest available.",
+    );
+  });
+});
+
+describe("selection announcements", () => {
+  it("names the feature that was added and carries the total", () => {
+    expect(announceFeatureSelected("Gauge 4", 5)).toBe(
+      "Added Gauge 4. 5 selected.",
+    );
+  });
+
+  it("counts features that were added, in the singular for one", () => {
+    expect(announceFeaturesSelected(12, 17)).toBe(
+      "12 features added. 17 selected.",
+    );
+    expect(announceFeaturesSelected(1, 1)).toBe("1 feature added. 1 selected.");
+    expect(announceFeaturesSelected(1200, 1500)).toBe(
+      "1,200 features added. 1,500 selected.",
+    );
+  });
+
+  it("names the feature that was removed and carries the total", () => {
+    expect(announceFeatureDeselected("Gauge 4", 4)).toBe(
+      "Removed Gauge 4. 4 selected.",
+    );
+    expect(announceFeatureDeselected("Gauge 4", 0)).toBe(
+      "Removed Gauge 4. 0 selected.",
+    );
+  });
+
+  it("counts features that were removed, in the singular for one", () => {
+    expect(announceFeaturesDeselected(3, 2)).toBe(
+      "3 features removed. 2 selected.",
+    );
+    expect(announceFeaturesDeselected(1, 2)).toBe(
+      "1 feature removed. 2 selected.",
+    );
+  });
+
+  it("says when the selection was cleared", () => {
+    expect(announceSelectionCleared()).toBe("Selection cleared.");
+  });
+
+  it("says the limit and that nothing was added when an addition is refused", () => {
+    expect(announceSelectionFull(200)).toBe(
+      "The selection holds 200 at most. Nothing was added.",
+    );
+    expect(announceSelectionFull(1500)).toBe(
+      "The selection holds 1,500 at most. Nothing was added.",
     );
   });
 });
