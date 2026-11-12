@@ -4,4 +4,6 @@ Most work needs only a GitHub issue with its design notes and task list. A plan 
 
 Playwright planner output (see `CLAUDE.md`) goes in `specs/` at the repository root, not here.
 
-No plan is open.
+Open plans:
+
+- [0005: Runtime layer catalogue](0005-runtime-layer-catalogue.md), tracking issue [#46](https://github.com/MapCairn/mapcairn/issues/46).
