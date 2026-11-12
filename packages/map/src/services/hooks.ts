@@ -7,7 +7,7 @@ import {
   type DevicePreferencesValue,
   type FileOpener,
   type FileSaver,
-  type LayerRegistry,
+  type LayerCatalogue,
   type LocationProvider,
   type MapAdapterFactory,
   type ResolvedTheme,
@@ -116,8 +116,8 @@ export function useBasemaps(): BasemapCatalogue {
   return useServices().basemaps ?? BUILT_IN_BASEMAP_CATALOGUE;
 }
 
-/** The data layer registry: the host's layer definitions, or none. */
-export function useLayers(): LayerRegistry {
+/** The data layer catalogue: the host's layer definitions, or none. */
+export function useLayers(): LayerCatalogue {
   return useServices().layers;
 }
 

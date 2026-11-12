@@ -3,10 +3,10 @@
 import {
   createFakeServices,
   FakeDevicePreferences,
+  FakeLayerCatalogue,
   type LayerDefinition,
   MemorySettingsStore,
   SAMPLE_FEED_LAYER,
-  StaticLayerRegistry,
 } from "@mapcairn/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -51,7 +51,7 @@ function renderContent({
   const onBasemapChange = vi.fn();
   const onDropPin = vi.fn();
   const services = createFakeServices({
-    layers: new StaticLayerRegistry(layers),
+    layers: new FakeLayerCatalogue(layers),
     settings: new MemorySettingsStore({ initial: { theme } }),
     preferences: new FakeDevicePreferences({ reducedMotion }),
   });

@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeLayerCatalogue,
   type FakeServices,
   type LayerDefinition,
   LayerError,
@@ -12,7 +13,6 @@ import {
   SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
-  StaticLayerRegistry,
   samplePoint,
 } from "@mapcairn/core";
 import { act, renderHook, screen, waitFor } from "@testing-library/react";
@@ -40,7 +40,7 @@ function setup(
   definitions: readonly LayerDefinition[] = SAMPLE_LAYERS,
 ) {
   const services: FakeServices = createFakeServices({
-    layers: new StaticLayerRegistry(definitions),
+    layers: new FakeLayerCatalogue(definitions),
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ServicesProvider services={services}>
@@ -520,7 +520,7 @@ describe("useDataLayers", () => {
 
   it("lists a credit shared by several layers that are on only once", () => {
     const services = createFakeServices({
-      layers: new StaticLayerRegistry([
+      layers: new FakeLayerCatalogue([
         SAMPLE_TILE_LAYER,
         { ...SAMPLE_TILE_LAYER, id: "sample-imagery-two", name: "Two" },
       ]),
@@ -544,7 +544,7 @@ describe("useDataLayers", () => {
       attribution: [{ text: "Provider information {year}" }],
     };
     const services = createFakeServices({
-      layers: new StaticLayerRegistry([dated]),
+      layers: new FakeLayerCatalogue([dated]),
     });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ServicesProvider services={services}>

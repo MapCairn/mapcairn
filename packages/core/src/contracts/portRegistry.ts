@@ -4,6 +4,7 @@ import { FakeClipboard } from "../fakes/FakeClipboard";
 import { FakeDevicePreferences } from "../fakes/FakeDevicePreferences";
 import { FakeFileOpener } from "../fakes/FakeFileOpener";
 import { FakeFileSaver } from "../fakes/FakeFileSaver";
+import { FakeLayerCatalogue } from "../fakes/FakeLayerCatalogue";
 import { FakeLayerSource } from "../fakes/FakeLayerSource";
 import { FakeLocationProvider } from "../fakes/FakeLocationProvider";
 import { createFakeMapAdapterFactory } from "../fakes/FakeMapAdapter";
@@ -13,13 +14,12 @@ import { FakeSuggestionProvider } from "../fakes/FakeSuggestionProvider";
 import { FakeThemeSource } from "../fakes/FakeThemeSource";
 import { MemorySettingsStore } from "../fakes/MemorySettingsStore";
 import { MemoryUrlState } from "../fakes/MemoryUrlState";
-import { StaticLayerRegistry } from "../fakes/StaticLayerRegistry";
 import type { Services } from "../ports/services";
 import { runClipboardContract } from "./clipboard.contract";
 import { runDevicePreferencesContract } from "./devicePreferences.contract";
 import { runFileOpenerContract } from "./fileOpener.contract";
 import { runFileSaverContract } from "./fileSaver.contract";
-import { runLayerRegistryContract } from "./layerRegistry.contract";
+import { runLayerCatalogueContract } from "./layerCatalogue.contract";
 import { runLayerSourceContract } from "./layerSource.contract";
 import { runLocationProviderContract } from "./locationProvider.contract";
 import { runMapAdapterContract } from "./mapAdapter.contract";
@@ -99,7 +99,7 @@ export interface PortContractRunners {
   readonly url: typeof runUrlStateContract;
   readonly theme: typeof runThemeSourceContract;
   readonly preferences: typeof runDevicePreferencesContract;
-  readonly layers: typeof runLayerRegistryContract;
+  readonly layers: typeof runLayerCatalogueContract;
   readonly layerSource: typeof runLayerSourceContract;
   readonly routing: typeof runRoutingProviderContract;
 }
@@ -165,8 +165,8 @@ export const PORT_REGISTRY: PortRegistry = {
     runContract: runDevicePreferencesContract,
   },
   layers: {
-    createFake: () => new StaticLayerRegistry(),
-    runContract: runLayerRegistryContract,
+    createFake: () => new FakeLayerCatalogue(),
+    runContract: runLayerCatalogueContract,
   },
   layerSource: {
     createFake: () => new FakeLayerSource(),

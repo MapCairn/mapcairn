@@ -3,8 +3,8 @@
 import {
   createFakeServices,
   type FakeServices,
+  type LayerCatalogue,
   type LayerDefinition,
-  type LayerRegistry,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_LAYERS,
@@ -30,9 +30,9 @@ const IMAGERY = SAMPLE_TILE_LAYER.id;
 const said = () => announce.mock.calls.map(([message]) => message);
 
 /** A catalogue a test can change between renders, as a host that loads layers later would. */
-function changeableRegistry(definitions: readonly LayerDefinition[]) {
+function changeableCatalogue(definitions: readonly LayerDefinition[]) {
   let current = definitions;
-  const registry: LayerRegistry = { list: () => current };
+  const registry: LayerCatalogue = { list: () => current };
   return {
     registry,
     replace: (next: readonly LayerDefinition[]) => {
@@ -42,7 +42,7 @@ function changeableRegistry(definitions: readonly LayerDefinition[]) {
 }
 
 function setup(definitions: readonly LayerDefinition[] = SAMPLE_LAYERS) {
-  const catalogue = changeableRegistry(definitions);
+  const catalogue = changeableCatalogue(definitions);
   const services: FakeServices = createFakeServices({
     layers: catalogue.registry,
   });

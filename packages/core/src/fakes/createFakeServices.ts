@@ -5,6 +5,7 @@ import { FakeClipboard } from "./FakeClipboard";
 import { FakeDevicePreferences } from "./FakeDevicePreferences";
 import { FakeFileOpener } from "./FakeFileOpener";
 import { FakeFileSaver } from "./FakeFileSaver";
+import { FakeLayerCatalogue } from "./FakeLayerCatalogue";
 import { FakeLayerSource } from "./FakeLayerSource";
 import { FakeLocationProvider } from "./FakeLocationProvider";
 import {
@@ -17,7 +18,6 @@ import { FakeSuggestionProvider } from "./FakeSuggestionProvider";
 import { FakeThemeSource } from "./FakeThemeSource";
 import { MemorySettingsStore } from "./MemorySettingsStore";
 import { MemoryUrlState } from "./MemoryUrlState";
-import { StaticLayerRegistry } from "./StaticLayerRegistry";
 
 /** The fakes behind a {@link FakeServices}, for scripting and inspection. */
 export interface FakeServiceHandles {
@@ -31,7 +31,7 @@ export interface FakeServiceHandles {
   readonly url: MemoryUrlState;
   readonly theme: FakeThemeSource;
   readonly preferences: FakeDevicePreferences;
-  readonly layers: StaticLayerRegistry;
+  readonly layers: FakeLayerCatalogue;
   readonly layerSource: FakeLayerSource;
   readonly routing: FakeRoutingProvider;
   /** Every adapter `createMapAdapter` has built, oldest first. */
@@ -74,7 +74,7 @@ export function createFakeServices(
     url: new MemoryUrlState(),
     theme: new FakeThemeSource(),
     preferences: new FakeDevicePreferences(),
-    layers: new StaticLayerRegistry(),
+    layers: new FakeLayerCatalogue(),
     layerSource: new FakeLayerSource(),
     routing: new FakeRoutingProvider(),
     maps,

@@ -2,30 +2,30 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import type { LayerDefinition } from "../layers/definition";
-import type { LayerRegistry } from "../ports/layers";
+import type { LayerCatalogue } from "../ports/layers";
 
 /** What the layer contract needs besides the registry itself. */
-export interface LayerRegistryControls {
+export interface LayerCatalogueControls {
   /** The layers the registry was built to list, in order. May be empty. */
   readonly layers: readonly LayerDefinition[];
 }
 
 /** One layer registry under test, with its controls. */
-export interface LayerRegistrySubject {
-  readonly registry: LayerRegistry;
-  readonly controls: LayerRegistryControls;
+export interface LayerCatalogueSubject {
+  readonly registry: LayerCatalogue;
+  readonly controls: LayerCatalogueControls;
 }
 
 /**
- * Runs the shared behavioural suite for a {@link LayerRegistry}. Every test
+ * Runs the shared behavioural suite for a {@link LayerCatalogue}. Every test
  * calls `create` for a fresh subject. Run it for an empty registry and for
  * one with several layers.
  */
-export function runLayerRegistryContract(
+export function runLayerCatalogueContract(
   name: string,
-  create: () => LayerRegistrySubject,
+  create: () => LayerCatalogueSubject,
 ): void {
-  describe(`LayerRegistry contract: ${name}`, () => {
+  describe(`LayerCatalogue contract: ${name}`, () => {
     it("lists the layers it was built with, in order", () => {
       const { registry, controls } = create();
       expect(registry.list()).toEqual(controls.layers);

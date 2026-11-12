@@ -4,7 +4,7 @@ import {
   createDecoderRegistry,
   createFakeServices,
   createFormatterRegistry,
-  createLayerRegistry,
+  createStaticLayerCatalogue,
   type ResolvedTheme,
   type Services,
   THEME_ATTRIBUTE,
@@ -42,7 +42,7 @@ export class PageThemeSource implements ThemeSource {
 export function createExampleServices(): Services {
   const services = createFakeServices({
     theme: new PageThemeSource(),
-    layers: createLayerRegistry([CAIRNS_LAYER], {
+    layers: createStaticLayerCatalogue([CAIRNS_LAYER], {
       decoders: createDecoderRegistry(),
       formatters: createFormatterRegistry(),
     }),

@@ -98,7 +98,7 @@ export interface TurnedOff {
 
 /** What {@link useDataLayers} returns: the layers' state and every action on them. */
 export interface DataLayers {
-  /** Every registered layer, in registry order. */
+  /** Every registered layer, in catalogue order. */
   readonly layers: readonly DataLayerState[];
   readonly selected: SelectedFeature | null;
   /**
@@ -408,7 +408,7 @@ function sortFeatures(
 
 /**
  * The state of every data layer and the actions on it, driven entirely by
- * the definitions in the registry: nothing here names a layer.
+ * the definitions in the catalogue: nothing here names a layer.
  *
  * @remarks Nothing is requested until a layer is turned on. A feed layer is
  *   loaded on enable, on a control change and on retry; the request for the
@@ -421,10 +421,10 @@ function sortFeatures(
  *   and its affected area.
  */
 export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
-  const { layers: registry, layerSource } = useServices();
+  const { layers: catalogue, layerSource } = useServices();
   const announce = useAnnounce();
   const now = useCallback(() => (options.now ?? Date.now)(), [options.now]);
-  const definitions = registry.list();
+  const definitions = catalogue.list();
   const [state, setState] = useState(() =>
     initialState(definitions, options.initial, now()),
   );

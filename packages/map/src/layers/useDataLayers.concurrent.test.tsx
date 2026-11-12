@@ -2,11 +2,11 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeLayerCatalogue,
   type FakeServices,
   type LayerDefinition,
   SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
-  StaticLayerRegistry,
   samplePoint,
 } from "@mapcairn/core";
 import { act, render, waitFor } from "@testing-library/react";
@@ -41,7 +41,7 @@ function mountIn(
   wrap: (tree: ReactNode) => ReactNode,
 ) {
   const services: FakeServices = createFakeServices({
-    layers: new StaticLayerRegistry(definitions),
+    layers: new FakeLayerCatalogue(definitions),
   });
   const committed: { current: DataLayers | null } = { current: null };
   let abandon: () => void = () => {};

@@ -171,7 +171,7 @@ export async function searchedQueries(page: Page): Promise<string[]> {
 }
 
 /**
- * Replaces the layer registry with these definitions, which are plain data,
+ * Replaces the layer catalogue with these definitions, which are plain data,
  * so a test can offer layers of any kind. Their URLs must still be on an
  * origin the production policy allows, and the test answers them with
  * `page.route`.

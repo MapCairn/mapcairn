@@ -83,6 +83,6 @@ export interface LayerSource {
  * Lists the layers that exist, as definitions. Empty for a host with no
  * layers, so the sheet's Layers section is not shown.
  */
-export interface LayerRegistry {
+export interface LayerCatalogue {
   list(): readonly LayerDefinition[];
 }

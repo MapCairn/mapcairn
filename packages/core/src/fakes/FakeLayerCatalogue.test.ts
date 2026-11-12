@@ -2,36 +2,36 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import {
-  type LayerRegistrySubject,
-  runLayerRegistryContract,
-} from "../contracts/layerRegistry.contract";
+  type LayerCatalogueSubject,
+  runLayerCatalogueContract,
+} from "../contracts/layerCatalogue.contract";
 import type { LayerDefinition } from "../layers/definition";
+import { FakeLayerCatalogue } from "./FakeLayerCatalogue";
 import { SAMPLE_FEED_LAYER, SAMPLE_TILE_LAYER } from "./layerFixtures";
-import { StaticLayerRegistry } from "./StaticLayerRegistry";
 
 function subjectFor(
   layers?: readonly LayerDefinition[],
-): () => LayerRegistrySubject {
+): () => LayerCatalogueSubject {
   return () => ({
-    registry: new StaticLayerRegistry(layers),
+    registry: new FakeLayerCatalogue(layers),
     controls: { layers: layers ?? [] },
   });
 }
 
-runLayerRegistryContract("StaticLayerRegistry (empty)", subjectFor());
-runLayerRegistryContract(
-  "StaticLayerRegistry (layers)",
+runLayerCatalogueContract("FakeLayerCatalogue (empty)", subjectFor());
+runLayerCatalogueContract(
+  "FakeLayerCatalogue (layers)",
   subjectFor([SAMPLE_FEED_LAYER, SAMPLE_TILE_LAYER]),
 );
 
-describe("StaticLayerRegistry", () => {
+describe("FakeLayerCatalogue", () => {
   it("is empty by default", () => {
-    expect(new StaticLayerRegistry().list()).toEqual([]);
+    expect(new FakeLayerCatalogue().list()).toEqual([]);
   });
 
   it("copies the list it is given, so later changes to the input do not leak in", () => {
     const input: LayerDefinition[] = [SAMPLE_FEED_LAYER];
-    const registry = new StaticLayerRegistry(input);
+    const registry = new FakeLayerCatalogue(input);
     input.push(SAMPLE_TILE_LAYER);
     expect(registry.list()).toEqual([SAMPLE_FEED_LAYER]);
     expect(Object.isFrozen(registry.list())).toBe(true);

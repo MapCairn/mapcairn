@@ -4,7 +4,7 @@ export * from "./clipboard.contract";
 export * from "./devicePreferences.contract";
 export * from "./fileOpener.contract";
 export * from "./fileSaver.contract";
-export * from "./layerRegistry.contract";
+export * from "./layerCatalogue.contract";
 export * from "./layerSource.contract";
 export * from "./locationProvider.contract";
 export * from "./mapAdapter.contract";

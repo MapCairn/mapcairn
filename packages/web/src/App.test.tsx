@@ -7,13 +7,13 @@ import {
   createBasemapCatalogue,
   createFakeServices,
   FAKE_VECTOR_BASEMAP,
+  FakeLayerCatalogue,
   FakeMapAdapter,
   type FakeServices,
   type MapMountOptions,
   MemorySettingsStore,
   SAMPLE_LAYERS,
   type SearchResult,
-  StaticLayerRegistry,
   samplePoint,
 } from "@mapcairn/core";
 import {
@@ -116,7 +116,7 @@ afterEach(() => {
 describe("App data layers", () => {
   function servicesWithLayers() {
     return createFakeServices({
-      layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+      layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
     });
   }
 
@@ -696,7 +696,7 @@ describe("Settings over other surfaces", () => {
 
     it("lands a tapped feature in Map options, and Escape returns focus to Map options", async () => {
       const services = createFakeServices({
-        layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+        layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
       });
       services.fakes.layerSource.setFeatures("sample-points", [
         samplePoint("a"),
@@ -1599,7 +1599,7 @@ describe("the first-visit tour", () => {
 
   it("opens Map options on Layers during the layer step, and advances when a layer is turned on", async () => {
     const services = createFakeServices({
-      layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+      layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
     });
     await renderApp(services, { firstVisit: true });
     fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
