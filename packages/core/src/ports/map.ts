@@ -96,8 +96,10 @@ export interface MapTileOverlay {
   /** The deepest tile level the service has; the engine scales beyond it. */
   readonly maxzoom: number;
   /**
-   * `[west, south, east, north]` in degrees. The engine requests no tile
-   * outside this box. Without it, every tile of the world is requested.
+   * `[west, south, east, north]` in degrees, west less than east. The engine
+   * requests no tile that lies wholly outside this box; a tile that straddles
+   * an edge is still drawn whole. Without it, every tile of the world is
+   * requested.
    */
   readonly bounds?: readonly [number, number, number, number];
   /** From 0 to 1. */

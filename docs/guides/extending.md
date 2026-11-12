@@ -71,7 +71,7 @@ const example: TileLayerDefinition = {
 export default example;
 ```
 
-If the provider fills the part of the world it has no data for with opaque or noisy tiles, add `bounds: [west, south, east, north]` (degrees) to the source, and the map asks for no tile outside the box. This matters most near the poles: on a globe the map stretches the edge row of tiles over the pole, so filler there shows as wedges meeting at the pole. The population layer stops at 60 degrees south for this reason.
+If the provider fills the part of the world it has no data for with opaque or noisy tiles, add `bounds: [west, south, east, north]` (degrees) to the source, and the map asks for no tile that lies wholly outside the box (a tile that straddles an edge is still drawn whole, so check what the provider returns there). The box must have west less than east, so it cannot cross the antimeridian. This matters most near the poles: on a globe the map stretches the edge row of tiles over the pole, so filler there shows as wedges meeting at the pole. The population layer stops at 60 degrees south for this reason.
 
 ### Offer a date and a time
 

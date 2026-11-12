@@ -103,7 +103,7 @@ test.describe("map shape", () => {
     expect((await colours())[0]).toBe(globeHost);
   });
 
-  test("the population layer asks for no tile south of 60 degrees south, where its provider serves opaque filler that a globe stretches into wedges at the pole", async ({
+  test("the population layer asks for no tile wholly south of 60 degrees south, where its provider serves opaque filler that a globe stretches into wedges at the pole", async ({
     page,
     mapPage,
   }) => {
@@ -119,12 +119,32 @@ test.describe("map shape", () => {
         const match = POPULATION_TILE.exec(url);
         return match ? [{ z: Number(match[1]), y: Number(match[2]) }] : [];
       });
-    await expect.poll(() => tilesOf().length).toBeGreaterThan(0);
+    // Judge the requests only once they stop growing, so a late tile cannot
+    // slip past the check.
+    let previous = -1;
+    await expect
+      .poll(
+        async () => {
+          await page.evaluate(
+            () =>
+              new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+              ),
+          );
+          const count = tilesOf().length;
+          const settled = count > 0 && count === previous;
+          previous = count;
+          return settled;
+        },
+        { intervals: [100, 200, 200, 300], timeout: 10_000 },
+      )
+      .toBe(true);
 
-    const wholly = tilesOf().filter(
-      ({ z, y }) => tileNorthLatitude(z, y) <= -60,
+    const tiles = tilesOf();
+    expect(tiles.some(({ z, y }) => tileNorthLatitude(z, y) > -60)).toBe(true);
+    expect(tiles.filter(({ z, y }) => tileNorthLatitude(z, y) <= -60)).toEqual(
+      [],
     );
-    expect(wholly).toEqual([]);
   });
 
   test("a pin on the far side of a globe is not drawn", async ({

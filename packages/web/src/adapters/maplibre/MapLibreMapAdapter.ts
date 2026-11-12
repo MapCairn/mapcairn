@@ -677,9 +677,22 @@ function vectorSource(source: MapVectorTiles["source"]) {
   };
 }
 
+function sameBounds(
+  a: MapTileOverlay["bounds"],
+  b: MapTileOverlay["bounds"],
+): boolean {
+  if (!(a && b)) {
+    return a === b;
+  }
+  return a.every((value, index) => value === b[index]);
+}
+
 function sameTiles(a: MapTileOverlay, b: MapTileOverlay): boolean {
   return (
-    a.tiles === b.tiles && a.tileSize === b.tileSize && a.maxzoom === b.maxzoom
+    a.tiles === b.tiles &&
+    a.tileSize === b.tileSize &&
+    a.maxzoom === b.maxzoom &&
+    sameBounds(a.bounds, b.bounds)
   );
 }
 

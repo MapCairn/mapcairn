@@ -8,7 +8,7 @@ const population: TileLayerDefinition = {
   id: "population",
   name: "Where people live",
   description:
-    "Population density across the world in 2020, from dark and empty to bright and crowded. Detail stops at about 5 km, and nothing is drawn south of 60 degrees south.",
+    "Population density across the world in 2020, from dark and empty to bright and crowded. Detail stops at about 5 km. Antarctica is not shown.",
   group: "People",
   dataCost: "about 20 to 100 KB per screen",
   attribution: [

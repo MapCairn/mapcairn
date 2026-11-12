@@ -816,6 +816,33 @@ describe("MapLibreMapAdapter", () => {
         expect(map.sources.get("mapcairn:whole")).not.toHaveProperty("bounds");
       });
 
+      it("draws the source again when only a tile overlay's bounds change, and when they are removed", async () => {
+        const { adapter, map } = await mounted();
+        map.fire("style.load");
+        const overlay = {
+          tiles: "https://t.test/{z}/{x}/{y}.png",
+          tileSize: 256 as const,
+          maxzoom: 9,
+          opacity: 1,
+        };
+        adapter.setTileLayer("imagery", {
+          ...overlay,
+          bounds: [-180, -60, 180, 85],
+        });
+        adapter.setTileLayer("imagery", {
+          ...overlay,
+          opacity: 0.5,
+          bounds: [-180, -30, 180, 85],
+        });
+        expect(map.sources.get("mapcairn:imagery")).toMatchObject({
+          bounds: [-180, -30, 180, 85],
+        });
+        adapter.setTileLayer("imagery", overlay);
+        expect(map.sources.get("mapcairn:imagery")).not.toHaveProperty(
+          "bounds",
+        );
+      });
+
       it("changes only the paint when a tile overlay's opacity changes", async () => {
         const { adapter, map } = await mounted();
         map.fire("style.load");

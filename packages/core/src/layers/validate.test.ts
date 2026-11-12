@@ -642,6 +642,70 @@ describe("validateLayerDefinition", () => {
       "source.bounds:",
     ],
     [
+      "bounds that cross the antimeridian, which the engine does not draw",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [170, -60, -170, 85];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds whose south equals north",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-180, 10, 180, 10];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds with an east longitude out of range",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-180, -60, 181, 85];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds with a north latitude out of range",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-180, -60, 180, 91];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds with five numbers",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-180, -60, 180, 85, 0];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds with a number written as text",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = ["-180", -60, 180, 85];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds with a number that is not finite",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [-180, -60, Number.POSITIVE_INFINITY, 85];
+      },
+      "source.bounds:",
+    ],
+    [
+      "bounds with a number that is not a number",
+      SAMPLE_TILE_LAYER,
+      (d) => {
+        (d.source as Json).bounds = [Number.NaN, -60, 180, 85];
+      },
+      "source.bounds:",
+    ],
+    [
       "a tile legend with an unknown colour",
       SAMPLE_TILE_LAYER,
       (d) => {
