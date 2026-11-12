@@ -99,12 +99,13 @@ function draw(
 ): [string, Drawn][] {
   const { definition } = layer;
   const own = previous(definition.id);
+  const replaced = own?.definition !== definition;
   if (isHeatmapLayer(definition)) {
     if (layer.features.length === 0) {
       return [];
     }
     if (
-      own?.definition !== definition ||
+      replaced ||
       own.features !== layer.features ||
       own.controls !== layer.controls
     ) {
@@ -121,7 +122,7 @@ function draw(
     ];
   }
   if (isVectorTileLayer(definition)) {
-    if (own?.definition !== definition || own.controls !== layer.controls) {
+    if (replaced || own.controls !== layer.controls) {
       adapter.setVectorLayer(
         definition.id,
         toMapVector(definition, layer.controls, now),
@@ -157,7 +158,7 @@ function draw(
     if (layer.features.length === 0) {
       return [];
     }
-    if (own?.definition !== definition || own.features !== layer.features) {
+    if (replaced || own.features !== layer.features) {
       const { style } = definition;
       if (isShapeStyle(style)) {
         adapter.setStyledShapes(
@@ -180,11 +181,7 @@ function draw(
   }
   const tiles = tileUrl(definition, layer.controls, now);
   const opacity = opacityOf(layer);
-  if (
-    own?.definition !== definition ||
-    own.tiles !== tiles ||
-    own.opacity !== opacity
-  ) {
+  if (replaced || own.tiles !== tiles || own.opacity !== opacity) {
     adapter.setTileLayer(definition.id, {
       tiles,
       tileSize: definition.source.tileSize,

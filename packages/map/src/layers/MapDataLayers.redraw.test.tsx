@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  createDecoderRegistry,
   createFakeServices,
+  createFormatterRegistry,
+  createRuntimeLayerCatalogue,
   FakeLayerCatalogue,
   FakeMapAdapter,
+  type LayerCatalogue,
   type LayerDefinition,
   type LayerFeature,
   SAMPLE_AREA_LAYER,
@@ -40,11 +44,10 @@ type DrawMethod =
  * object, so only the definition says the layer changed; `catalogue.setLayers`
  * is the real route, a refreshed list.
  */
-function setup(
-  definitions: readonly LayerDefinition[],
+function mount<Catalogue extends LayerCatalogue>(
+  catalogue: Catalogue,
   features: Readonly<Record<string, readonly LayerFeature[]>> = {},
 ) {
-  const catalogue = new FakeLayerCatalogue(definitions);
   const services = createFakeServices({ layers: catalogue });
   const adapter = new FakeMapAdapter();
   for (const [id, loaded] of Object.entries(features)) {
@@ -84,15 +87,46 @@ function setup(
       </LiveRegionProvider>
     </ServicesProvider>
   );
-  const view = render(tree());
+  render(tree());
   return {
     adapter,
     catalogue,
     layers: () => handle.layers as DataLayers,
     swap: (definition: LayerDefinition) => act(() => handle.swap(definition)),
-    /** Renders again with nothing changed, as any unrelated update would. */
-    rerender: () => view.rerender(tree()),
   };
+}
+
+function setup(
+  definitions: readonly LayerDefinition[],
+  features: Readonly<Record<string, readonly LayerFeature[]>> = {},
+) {
+  return mount(new FakeLayerCatalogue(definitions), features);
+}
+
+/** A second layer, so a test can change the layers' state without touching the one it watches. */
+const OTHER_LAYER: LayerDefinition = {
+  ...SAMPLE_TILE_LAYER,
+  id: "other-imagery",
+};
+
+/** A runtime catalogue whose `load` returns a fresh deep copy of the definitions each time. */
+function copyingCatalogue(definitions: readonly LayerDefinition[]) {
+  const load = vi.fn(async () => structuredClone(definitions));
+  return {
+    load,
+    catalogue: createRuntimeLayerCatalogue({
+      load,
+      options: {
+        decoders: createDecoderRegistry(),
+        formatters: createFormatterRegistry(),
+      },
+    }),
+  };
+}
+
+/** How many times a draw method was called for a layer (or one of its heatmap source layers). */
+function drawsOf(spy: { mock: { calls: unknown[][] } }, layerId: string) {
+  return spy.mock.calls.filter(([id]) => String(id).startsWith(layerId)).length;
 }
 
 const KINDS: readonly {
@@ -163,7 +197,9 @@ describe("MapDataLayers when a layer's definition is replaced", () => {
     "$kind",
     ({ definition, features, methods, replaced }) => {
       const turnedOn = async () => {
-        const page = setup([definition], { [definition.id]: features });
+        const page = setup([definition, OTHER_LAYER], {
+          [definition.id]: features,
+        });
         act(() => page.layers().setEnabled(definition.id, true));
         await waitFor(() =>
           expect(page.adapter.drawnLayers().length).toBeGreaterThan(0),
@@ -176,22 +212,22 @@ describe("MapDataLayers when a layer's definition is replaced", () => {
         const { swap, spies } = await turnedOn();
         swap(replaced);
         for (const spy of spies) {
-          expect(spy).toHaveBeenCalledTimes(1);
+          expect(drawsOf(spy, definition.id)).toBe(1);
         }
       });
 
-      it("is not drawn again by a render that changes nothing", async () => {
-        const { swap, rerender, spies } = await turnedOn();
+      it("is not drawn again when the layers' state changes for another reason", async () => {
+        const { swap, layers, spies } = await turnedOn();
         swap(replaced);
-        rerender();
+        act(() => layers().setEnabled(OTHER_LAYER.id, true));
         for (const spy of spies) {
-          expect(spy).toHaveBeenCalledTimes(1);
+          expect(drawsOf(spy, definition.id)).toBe(1);
         }
       });
 
       it("is not drawn again when a refresh lists the same definition", async () => {
         const { catalogue, spies } = await turnedOn();
-        act(() => catalogue.setLayers([definition]));
+        act(() => catalogue.setLayers([definition, OTHER_LAYER]));
         for (const spy of spies) {
           expect(spy).not.toHaveBeenCalled();
         }
@@ -266,6 +302,63 @@ describe("MapDataLayers when a layer's definition is replaced", () => {
           tiles: "https://vector.test/v2/{z}/{x}/{y}.pbf",
         }),
       }),
+    );
+  });
+
+  it.each([
+    ["tile size", { tileSize: 512 as const }],
+    [
+      "bounds",
+      { bounds: [-90, -45, 90, 45] as [number, number, number, number] },
+    ],
+  ])(
+    "draws a raster layer again when a refresh changes only its %s",
+    (_name, change) => {
+      const { adapter, catalogue, layers } = setup([SAMPLE_TILE_LAYER]);
+      act(() => layers().setEnabled("sample-imagery", true));
+      const setTileLayer = vi.spyOn(adapter, "setTileLayer");
+      act(() =>
+        catalogue.setLayers([
+          {
+            ...SAMPLE_TILE_LAYER,
+            source: { ...SAMPLE_TILE_LAYER.source, ...change },
+          },
+        ]),
+      );
+      expect(setTileLayer).toHaveBeenCalledTimes(1);
+      expect(setTileLayer).toHaveBeenCalledWith(
+        "sample-imagery",
+        expect.objectContaining(change),
+      );
+    },
+  );
+
+  describe("a refresh that returns an equal copy of a definition", () => {
+    it.each([
+      [
+        "a feed layer",
+        SAMPLE_AREA_LAYER,
+        { "sample-areas": [sampleArea("p", { density: 10 })] },
+        "setStyledShapes",
+      ],
+      ["a raster layer", SAMPLE_TILE_LAYER, {}, "setTileLayer"],
+    ] as const)(
+      "draws %s nothing again",
+      async (_name, definition, features, method) => {
+        const { load, catalogue } = copyingCatalogue([definition]);
+        const { adapter, layers } = mount(catalogue, features);
+        await waitFor(() => expect(layers().layers).toHaveLength(1));
+        act(() => layers().setEnabled(definition.id, true));
+        await waitFor(() =>
+          expect(adapter.drawnLayers().length).toBeGreaterThan(0),
+        );
+        const kept = layers().layers[0]?.definition;
+        const spy = vi.spyOn(adapter, method);
+        await act(() => catalogue.refresh());
+        expect(load).toHaveBeenCalledTimes(2);
+        expect(layers().layers[0]?.definition).toBe(kept);
+        expect(spy).not.toHaveBeenCalled();
+      },
     );
   });
 
