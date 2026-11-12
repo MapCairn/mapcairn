@@ -511,7 +511,51 @@ export interface FeedLayerDefinition<
   readonly emptyText: string;
 }
 
-/** A raster overlay. It has no features, card or list. */
+/**
+ * Asks a service what a raster tile layer shows at a tapped place, as a WMS
+ * `GetFeatureInfo` request does. The answer is decoded into features that
+ * open the same card as any feature. Nothing is asked until a tap.
+ *
+ * @remarks The URL is a template over the layer's controls and these
+ *   variables, all filled by `identifyUrl`: `{lng}` and `{lat}` (the tap, in
+ *   degrees), `{bbox}` (a box around the tap as `minx,miny,maxx,maxy` in
+ *   EPSG:3857 metres), `{width}` and `{height}` (the box's size in pixels,
+ *   `2 * tolerance + 1`), `{x}` and `{y}` (the tapped pixel in that picture,
+ *   which is `tolerance`) and `{zoom}` (the normalised zoom). It needs
+ *   `{lng}` and `{lat}`, or all of `{bbox}`, `{width}`, `{height}`, `{x}` and
+ *   `{y}`. The origin is fixed in the template, so no placeholder may stand in
+ *   the scheme, host or port. The answer must be JSON: GeoJSON, or with
+ *   `records` a list at a path. XML, GML, HTML, plain text and JSONP are not
+ *   read, and a `POST` is not supported.
+ */
+export interface IdentifySource {
+  /** An `https` URL template, filled by `identifyUrl`. */
+  readonly url: string;
+  /**
+   * How far from the tap, in CSS pixels, a feature may be and still be
+   * found: a whole number from 1 to 20. Defaults to
+   * `DEFAULT_IDENTIFY_TOLERANCE_PX`.
+   */
+  readonly tolerance?: number;
+  /** The name of a registered decoder, such as `geojson`. */
+  readonly decoder: string;
+  /**
+   * A dotted path to a list in a plain JSON answer. Each item of the list
+   * becomes the `properties` of one feature at the tapped place, so fields
+   * read `properties.name`. A path that does not lead to a list finds nothing.
+   * The answer is then handed to `decoder` as a GeoJSON feature collection.
+   */
+  readonly records?: string;
+  /** Where each decoded field comes from. `id` and `title` are required. */
+  readonly fields: FieldMap;
+  /** What a found feature's card shows. */
+  readonly card: CardSpec;
+}
+
+/**
+ * A raster overlay. It has no features, card or list of its own; an
+ * `identify` block makes a tap on it ask a service for them.
+ */
 export interface TileLayerDefinition extends LayerDefinitionBase {
   readonly source: TileSource;
   /** What the colours on the overlay mean, if anything. */
@@ -519,6 +563,17 @@ export interface TileLayerDefinition extends LayerDefinitionBase {
     readonly label: string;
     readonly colour: PaletteSlot;
   }[];
+  /**
+   * How a tap on the layer finds features. Its card is nested here, not on
+   * the layer, so `isFeedLayer` and `loadsFeatures` still treat the layer
+   * as one that loads nothing.
+   */
+  readonly identify?: IdentifySource;
+}
+
+/** A raster tile layer that answers a tap. */
+export interface IdentifiableLayerDefinition extends TileLayerDefinition {
+  readonly identify: IdentifySource;
 }
 
 /**
@@ -630,6 +685,20 @@ export function isRasterTileLayer(
   definition: LayerDefinition,
 ): definition is TileLayerDefinition {
   return definition.source.kind === "tiles";
+}
+
+/** Whether a definition is a raster tile layer that answers a tap, with an `identify` block. */
+export function isIdentifiable(
+  definition: LayerDefinition,
+): definition is IdentifiableLayerDefinition {
+  return isRasterTileLayer(definition) && definition.identify !== undefined;
+}
+
+/** The card a layer's features open: a feed's own, or an identifiable layer's nested one. */
+export function cardOf(
+  definition: FeedLayerDefinition | IdentifiableLayerDefinition,
+): CardSpec {
+  return isFeedLayer(definition) ? definition.card : definition.identify.card;
 }
 
 /** Whether a definition is a vector tile layer. */

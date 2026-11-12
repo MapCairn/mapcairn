@@ -4,7 +4,7 @@ import { LayerError } from "../ports/errors";
 import type { Bounds } from "../ports/geometry";
 import type { ControlValues, LayerFeature } from "../ports/layers";
 import { resolveControlValues, templateValues } from "./controls";
-import type { DecoderRegistry } from "./decoders";
+import { type DecoderRegistry, decodeWith } from "./decoders";
 import {
   isFeedLayer,
   isShapeStyle,
@@ -13,26 +13,6 @@ import {
 } from "./definition";
 import { matchesFilter } from "./filter";
 import { fillUrlTemplate } from "./template";
-
-function decodeWith(
-  decoders: DecoderRegistry,
-  name: string,
-  raw: unknown,
-  fields: Parameters<NonNullable<ReturnType<DecoderRegistry["get"]>>>[1],
-): LayerFeature[] {
-  const decoder = decoders.get(name);
-  if (!decoder) {
-    throw new LayerError("invalid", `No decoder is registered as "${name}".`);
-  }
-  try {
-    return decoder(raw, fields);
-  } catch (error) {
-    throw new LayerError(
-      "invalid",
-      `The response could not be decoded: ${String(error)}`,
-    );
-  }
-}
 
 const GEOMETRIES: Readonly<
   Record<"points" | "area" | "line", readonly string[]>

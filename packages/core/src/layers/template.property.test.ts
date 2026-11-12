@@ -81,6 +81,22 @@ describe("fillUrlTemplate", () => {
     );
   });
 
+  it("fills each of the engine's placeholders from a value when told to leave none", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...ENGINE_PLACEHOLDERS),
+        fc.string({ unit: "grapheme" }),
+        (name, value) => {
+          expect(fillUrlTemplate(`{${name}}`, { [name]: value }, [])).toBe(
+            encodeURIComponent(value),
+          );
+          expect(fillUrlTemplate(`{${name}}`, {})).toBe(`{${name}}`);
+        },
+      ),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
   it("names the placeholder that has no value", () => {
     fc.assert(
       fc.property(placeholderNames, (name) => {

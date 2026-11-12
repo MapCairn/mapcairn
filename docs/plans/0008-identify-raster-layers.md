@@ -1,6 +1,6 @@
 # 0008: Identify features on raster tile layers
 
-Status: proposed. Tracking issue: [#47](https://github.com/MapCairn/mapcairn/issues/47).
+Status: in progress. Tracking issue: [#47](https://github.com/MapCairn/mapcairn/issues/47).
 
 ## Goal
 
