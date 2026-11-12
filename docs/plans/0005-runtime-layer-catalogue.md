@@ -8,115 +8,93 @@ A host can supply its layers when the page runs, and differently for each person
 
 ## Ground rules
 
-- The SDK stays host-agnostic. It never fetches the catalogue: the host writes a `load` function (so it also owns credentials, which is #45) and the SDK owns the state, the validation and the ui.
-- No timer and no polling. `ROADMAP.md` rules out live refresh. A refresh happens only when the host or a person asks for one.
-- Definitions stay plain JSON-shaped data with no functions, so they can cross the network. Nothing branches on a layer id.
-- Every definition is validated when it arrives, with the checks that exist now (https only, template variables, decoders and formatters registered, colour never the only signal).
-- Server rendering stays correct: the static catalogue is ready on the first render on the server and the client, so the reference site has no loading flash and no hydration mismatch.
-- Every step that touches `useDataLayers` (1, 3, 4 and 5) comes after PR #88 merges. It splits the load effect into `loadRequests`, `loadOutcome` and `loadReport`, and this plan builds on them. The plan changes no `MapAdapter` method, so it does not wait for the adapter split (#24, #90).
-- Every state is announced once through `LiveRegion`, keyboard reachable, and confirmed by eye with screenshots at three sizes in both themes.
+- The SDK stays host-agnostic. It never fetches the catalogue: the host writes a `load` function, so it also owns credentials (#45). The SDK owns the state, the validation and the ui.
+- No timer and no polling (`ROADMAP.md`). A refresh happens only when the host calls `refresh()` or a person presses Try again after a failure.
+- Definitions stay plain JSON-shaped data, so they can cross the network. Nothing branches on a layer id. Every definition passes the checks that exist now (https only, template variables, registered decoders and formatters, colour never the only signal).
+- Server rendering stays correct: the static catalogue is ready on the first render on the server and the client.
+- Steps that touch `useDataLayers` come after PR #88, which splits its load effect into `loadRequests`, `loadOutcome` and `loadReport`. No `MapAdapter` method changes, so the plan does not wait for the adapter split (#24, #90).
 
 ## Design
 
 ### The port (`packages/core`)
 
-`LayerRegistry` (`list()`) becomes `LayerCatalogue`, a small store that `useSyncExternalStore` can read:
+`LayerRegistry` is renamed `LayerCatalogue` and becomes a small store `useSyncExternalStore` can read:
 
 ```ts
 interface LayerCatalogue {
-  getState(): CatalogueState;          // same object until something changes
+  getState(): CatalogueState;   // the same object until something changes
   subscribe(listener: () => void): () => void;
-  refresh(): Promise<void>;            // never rejects; the outcome is in the state
+  refresh(): Promise<void>;     // never rejects; the outcome is in the state
 }
 type CatalogueState =
   | { status: "loading" }
-  | { status: "failed"; reason: CatalogueFailure }
-  | { status: "ready"; layers: readonly CatalogueLayer[];
+  | { status: "failed"; reason: "network" | "invalid" }
+  | { status: "ready"; layers: readonly LayerDefinition[];
       skipped: readonly SkippedDefinition[];
       refresh: "idle" | "loading" | "failed" };
-interface CatalogueLayer { definition: LayerDefinition; revision?: string }
 interface SkippedDefinition { id?: string; problems: readonly string[] }
 ```
 
-- Empty is `ready` with no layers. `failed` carries a reason of `network` or `invalid` (the payload was not a list); #45 adds `unauthorised`. A refresh that fails keeps the last list and sets `refresh: "failed"`; the list is never blanked by a refresh.
-- **Three implementations.** `createStaticLayerCatalogue(definitions, options)` is today's `createLayerRegistry`: it throws at start-up on any problem, which is right for definitions that ship in the build, and is `ready` from the first call. `createRuntimeLayerCatalogue({ load, options, onSkipped })` takes the host's `load(signal)`, which resolves to `{ definition: unknown; revision?: string }[]`; it starts in `loading`, calls `load` on the first subscription (never at construction, so never on the server), keeps one request in flight and returns the pending promise to a second `refresh()`. `FakeLayerCatalogue` is scripted: set a state, push a change. All three pass one contract suite (state identity, subscribe and unsubscribe, listener on each change, `refresh` never rejects, unique ids, `getState` stable between changes). `emptyLayerRegistry` stays, as a static catalogue of nothing.
-- **Partitioned validation.** `partitionDefinitions(raw, options)` in core returns the valid definitions and a `SkippedDefinition` for each of the others, using `validateLayerDefinition` as it is. A duplicate id keeps the first and skips the later ones. A value that is not an object is skipped with no id. Only the static path calls `assertValidDefinitions`, so the loop test in `packages/web/src/layers/layers.test.ts` and failing at start-up are unchanged. `onSkipped` is how the host reports problems (its own error log); the SDK shows a person only the count.
-- **Change signal.** A definition that changes is replaced under its id. A `revision` on the entry, which the host sets to anything that changes when its data does, reaches the layer as the built-in template variable `{revision}` (reserved, empty when unset, refused as a control or variable id). A host puts it in a tile URL, so the template string changes and `setTileLayer` already draws a new source; a feed's request key includes it, so an enabled feed loads again. The adapter and its contract suite are untouched. Rejected: a `MapAdapter.invalidateTiles(id)` method, which would cost an adapter method, a fake and a contract case to say what a changed URL already says.
-- **Ripple.** `Services.layers` keeps its key and takes a `LayerCatalogue`. This breaks an SDK consumer that built a registry by hand, which is acceptable before the packages are published (#1). It touches `PORT_NAMES`, `PORT_REGISTRY`, `createFakeServices`, `useLayers()`, `createServices()`, the example app and several tests, all in step 1. A `LayerRegistry` adapter shim is not kept: it would be a second path for nothing.
+- Empty is `ready` with no layers. `invalid` means the payload was not a list; #45 adds `unauthorised`. A failed refresh keeps the last list and sets `refresh: "failed"`.
+- **How it differs from `BasemapCatalogue`.** That one is plain data with `get` and `resolve`, one shape and no second implementation, so it is not a port. `LayerCatalogue` is a port: its state changes over time, it has a subscription and three implementations.
+- **Implementations, under one contract suite.** `createStaticLayerCatalogue(definitions, options)` is today's `createLayerRegistry`. It throws at start-up on any problem, which is right for definitions in the build, and is `ready` from the first call. `emptyLayerRegistry` becomes `emptyLayerCatalogue`. `createRuntimeLayerCatalogue({ load, options, onSkipped })` takes the host's `load(signal)`, which resolves to `unknown[]`, and starts `loading`. `FakeLayerCatalogue` is scripted.
+- **Runtime subscription rules.** The load starts on the first subscription, never at construction, so never on the server, and runs once: StrictMode's subscribe, unsubscribe, subscribe makes one request. The signal passed to `load` is aborted only by an explicit `dispose()` on host teardown, and an aborted load's result is ignored. A second `refresh()` returns the pending promise. `getState()` is also the server snapshot: the static catalogue renders its layers on the server and a runtime one renders `loading` there and before its first subscription, so hydration matches.
+- **Partitioned validation.** `partitionDefinitions(raw, options)` returns the valid definitions and a `SkippedDefinition` for each other value, using `validateLayerDefinition` as it is. A duplicate id keeps the first. A non-object is skipped with no id. It reuses the previous definition object when a new one is deeply equal, so a refresh that changes nothing redraws nothing. The static path keeps `assertValidDefinitions`, so the loop test in `packages/web/src/layers/layers.test.ts` is unchanged. `onSkipped` is the host's way to log the reasons; a person sees only a count.
+- **Refresh and change.** A refreshed definition replaces the old one under its id. The host already writes each tile or feed URL, so it puts a version in the URL when its data changes and the layer's request or tile source changes with it. No revision field, template variable, `LayerSource` change or contract change is needed. A `MapAdapter.invalidateTiles` method was rejected for the same reason.
+- **Breaking change.** `Services.layers` keeps its key and takes a `LayerCatalogue`, so a hand-built registry stops compiling. This is accepted before publication (#1) and lands as `feat(core)!:` with a `BREAKING CHANGE:` note. The ripple (`PORT_REGISTRY`, `createFakeServices`, `useLayers()`, `createServices()`, the example app) is all in step 1. No shim is kept.
 
-### The hook (`packages/map`)
+### The hook and the section (`packages/map`)
 
-- `useDataLayers` reads the catalogue with `useSyncExternalStore` and keeps three things apart: the permalink as given (`pending`: ids and raw control strings), the layers that are on (`enabled`, resolved against a definition) and the catalogue state. A pure `reconcile` function in `catalogueReconcile.ts` beside `loadRequests.ts` turns "state, previous layers, next layers" into the new state plus the notes to say.
-- **Permalink.** Today `initialState` drops any id not known at mount, and controls are resolved only for known layers. Now ids from the link wait in `pending`. When the catalogue is `ready`, a pending id found in it is turned on and its controls resolved by `resolveControlValues`; an id not found, or not allowed to this person (the catalogue is already per person, so the two look the same and are worded the same) is dropped and named once: "2 layers in the link are not available." While `loading` or `failed` the ids stay, and `urlValue` keeps them, because `useViewPersistence` writes the address on the first render and would otherwise erase them. A later refresh does not bring a dropped id back.
-- **A layer that goes.** A refresh that removes an enabled layer turns it off as `setEnabled(id, false)` does (aborts its request, clears its features, selection, choices and affected area) and announces once, politely, with its name from the previous list: "Rainfall is no longer available and was turned off." Several in one refresh are one announcement. A layer whose definition changed keeps its controls where they are still valid and falls back to the default where not, then loads if its request key changed. A load that a refresh replaced is not announced; that is the bug in #81 and is fixed there or here, whichever lands first.
-- **Section states.** `DataLayers` gains `catalogue` (status, skipped count, refresh state) and `reloadCatalogue()`. `LayersSection` renders: loading ("Loading layers", `aria-busy`), failed (an icon, "Layers could not be loaded." and Try again, which is `refresh()`), empty ("No layers are available."), a plain "N layers could not be shown" line when any were skipped, and "Updating layers" while a refresh runs. The section stays hidden for a catalogue whose first state was `ready` and empty (a host with no layers, as now). Announcements, each once per entry into the state: failed (assertive), empty, refreshed with a change ("Layers updated: 1 added, 1 removed"), skipped, link notes (polite), and "Loading layers" only when a layer from the link is waiting, so a host whose list always loads is not noisy on every page. The section's intro line says "Open data from public providers", which is wrong for a host behind a login, so it becomes an optional `intro` prop with today's text as the default, as the privacy note is.
+- `useDataLayers` keeps the link as given (`pending`: ids and raw control strings) apart from the layers that are on. A pure `reconcile` in `catalogueReconcile.ts`, beside `loadRequests.ts`, turns the state and the previous and next layers into the new state and one message.
+- **Link.** Today `initialState` drops any id unknown at mount. Now the ids wait. Nothing can be turned on before the first `ready`, so pending never exceeds the link's own cap of 20 (`MAX_LAYERS`). On `ready`, a pending id found in the catalogue is turned on with its controls resolved by `resolveControlValues`. One not found, or not allowed to this person (worded the same), is dropped for good, and a later refresh does not bring it back. While `loading` or `failed` the ids stay and `urlValue` keeps them, because the address is written on the first render. Dropping rewrites the address at once, so a host must reject `load` (`failed`) when a session has expired, not resolve with an empty list.
+- **The reference site.** It drops unknown link ids silently today. The link note is made only for an async catalogue, one whose first state was not `ready`, so the site is unchanged. The same rule keeps the section hidden for a host with no layers.
+- **A layer that goes.** A refresh that removes an enabled layer turns it off as `setEnabled(id, false)` does: it aborts the request and clears features, selection, choices and affected area. A changed definition keeps the controls that are still valid and takes the default for the rest.
+- **Section states.** Loading ("Loading layers", `aria-busy`); failed (icon, "Layers could not be loaded.", Try again); empty ("No layers are available."); a line "1 layer could not be shown" or "N layers could not be shown"; and, when a refresh failed, "Layers could not be updated. Showing the last list." with Try again. Only the host calls `refresh()` otherwise; there is no general refresh button. `DataLayers` gains `catalogue` (status, skipped count, refresh state) and `retryCatalogue()`. An optional `intro` prop replaces "Open data from public providers", which is wrong for a host behind a login; its default is today's text.
+- **Announcements.** The announcer keeps one message per priority and coalesces a burst within 600 ms (`THROTTLE_MS`), so each catalogue transition produces one composed message, in this order: layers turned off ("Rainfall is no longer available and was turned off."), link note ("1 layer in the link is not available."), skipped count, then "Layers updated: 1 added, 1 removed." A failed load is its own assertive message. "Loading layers" is said only when a link layer is waiting.
+- **Redraw.** `draw()` in `MapDataLayers.tsx` redraws a feed when its features change, a heatmap or vector layer when its controls change, and a raster layer when its URL changes. A replaced definition with the same URL and controls (a new style, vector tile URL or heatmap setting) would keep the old drawing. The `Drawn` record gains the definition, compared by identity for every kind, which `partitionDefinitions`' reuse makes cheap.
 
-### Mapping host metadata
+### Host metadata and the guide
 
-Most of the route exists: a `steps` or `intervals` colour rule takes class breaks, the legend is derived from the style, `FieldMap` and the card and list templates take fields by dotted path, and `filter` splits a feed by one field. What is missing is the documented path and a worked sample, so step 6 writes the sample first (`examples/embed/src/serverLayers.ts`, through the public entry points, on the fakes, with a scripted `load` that answers after a delay) and moves into core only the logic the sample would repeat. Host code stays host code. The mapper's output goes through `partitionDefinitions`, so a field list it cannot map becomes a skipped definition with a reason.
+The pieces exist: `steps` and `intervals` colour rules take class breaks, the legend comes from the style, and `FieldMap` and the templates read fields by dotted path. The sample mapper in `examples/embed` shows the route through public entry points only.
 
-### The serving guide (`docs/guides/serving-layers.md`)
-
-"Serving layers to MapCairn", with the cost to the server of each:
-
-- **Raster tiles** (XYZ, 256 px, `{z}/{x}/{y}`) for dense drawings: cheap to serve once cached, nothing per feature reaches the browser, no tap results unless #47 lands, and a change shows when `{revision}` changes.
-- **Vector tiles** (MVT) where a tile generator exists: smaller than raster and styled in the browser, but features are not tappable and a generator and its cache must run.
-- **GeoJSON by bounding box** (a query layer with `{west}`, `{south}`, `{east}` and `{north}`, `{limit}` and a `maxFeatures` cap) for layers small enough to send as features: the simplest to serve and the only kind with cards, a list and selection, but each pan is a request, so it needs a spatial index and a cap.
-- The catalogue endpoint: what it returns, per person; that its origins must be allowed by the host page's content security policy; that every URL must be `https`; and that the definition loop test and the credits check in `packages/web` cover only static definitions, so a catalogue host checks its own.
+`docs/guides/serving-layers.md`, "Serving layers to MapCairn", names formats and what each costs the server: XYZ raster tiles for dense drawings (cheap once cached, no tap results without #47); vector tiles (MVT) where a generator exists (smaller, styled in the browser, not tappable, needs a generator and cache); GeoJSON by bounding box (a query layer with `{west}`, `{south}`, `{east}` and `{north}`, `{limit}` and `maxFeatures`) for small layers (simplest, the only kind with cards, list and selection, but each pan is a request, so it needs a spatial index and a cap). It also covers the per-person catalogue endpoint, a version in the URL when data changes, https URLs whose origins the host page's content security policy allows, and that the loop test covers only static definitions.
 
 ## Tests
 
-Each group is written first and shown failing, then made to pass, in the step in brackets.
-
-1. (1) Contract suite for the static, runtime and fake catalogues. Runtime: loading, ready, empty, failed and refresh; one request in flight; no `load` before a subscriber and none on the server; a failed refresh keeps the list. `createStaticLayerCatalogue` still throws on a bad definition. `createFakeServices`, `PORT_REGISTRY` and the coverage test list the port. The reference site's tests and e2e are unchanged and pass.
-2. (2) `partitionDefinitions`: one bad definition among several is skipped with its path and message, a duplicate id, a non-object, an empty list, and property tests that it never throws on any JSON. `{revision}` is accepted in templates and refused as an id.
-3. (3) `reconcile` and the hook: a link layer waits while loading and is on after ready, controls resolved and clamped; `urlValue` keeps pending ids while loading and failed and the address is not rewritten (a test on `useViewPersistence`); a missing id is dropped and named once; a removed enabled layer is aborted, cleared and announced once, several as one; a changed definition keeps valid controls; a refresh never announces a load it replaced.
-4. (4) `LayersSection` in each state, with accessible names, focus after Try again, the live-region text once per entry, and axe in both themes. Playwright with a scripted `load` (through the test seam): loading, then ready; failed then Try again; empty; a link with a layer that waits; a refresh that removes a layer. Screenshots at phone, tablet and desktop in both themes.
-5. (5) `{revision}` changes a tile layer's source and a feed's request key; a changed revision reloads an enabled feed once; `refresh()` from the failed state resolves waiting link layers.
-6. (6) The example app's mapper: a sample server payload becomes the expected definitions; a bad field list is skipped; `ExampleApp.test.tsx` shows the layer, and the manifest check still passes.
-7. (7) Documentation only: a link check, and `README.md` and the guides link to it.
+Listed under each step below.
 
 ## Order of work
 
-1. The port, the static, runtime and fake implementations, the contract suite and the ripple through `Services`, with the reference site unchanged. The hook changes only where it reads the list.
-2. `partitionDefinitions`, the `{revision}` variable and the reserved id.
-3. Pending permalink resolution and disappearing layers in `useDataLayers` (after #88).
-4. Section states and announcements.
-5. Refresh from the ui and `{revision}` reaching tiles and feeds.
-6. The example app's sample mapper, and any helper it proves worth moving into core.
-7. The serving guide.
+Step 1 comes first. Steps 2 to 4 follow it, after #88. Steps 5 and 6 need only step 1 and are independent of the rest. Each is one pull request with a green build; tests are written first and shown failing.
 
-Each step is one pull request with a green build. Steps 2, 6 and 7 do not depend on each other.
+1. **Port, implementations, `partitionDefinitions`, ripple.** Tests: the contract suite for all three catalogues (state identity, subscribe, a listener per change, `refresh` never rejects, unique ids); runtime loading, ready, empty and failed; no `load` before a subscriber; one load under StrictMode; an aborted load ignored; one request in flight; `partitionDefinitions` with a bad definition among good ones, a duplicate id, a non-object, equal definitions reusing the old object, and a property test that it never throws; the static catalogue still throws; `renderToString` shows layers for static and loading for runtime, without a hydration mismatch; the reference site's tests and e2e pass unchanged. `ARCHITECTURE.md` gets the Ports row and the sentence on `BasemapCatalogue`.
+2. **Link and disappearing layers.** Tests: a link layer waits while loading and is on after `ready`, controls clamped; `urlValue` keeps pending ids while loading and failed, and `useViewPersistence` does not rewrite the address; a missing id is dropped and stays dropped after a refresh; pending plus enabled stays within 20; a removed enabled layer is aborted and cleared; a changed definition keeps valid controls; a static catalogue drops unknown ids silently as now; Try again from `failed` resolves the waiting ids; and a load a refresh replaced is not announced (#81).
+3. **Section states, refresh failure and announcements.** Tests: `LayersSection` in each state with its accessible names and focus after Try again; the composed message for each combination, run through the real announcer (`createAnnouncer`) with a clock, not a mock, asserting one message in the right order; singular and plural; a failed refresh keeps the list and shows its line; axe in both themes. Playwright reaches a scripted catalogue through the existing test seam (`ARCHITECTURE.md`, "How tests substitute services"), which takes plain data, a list of states and a delay, and builds a runtime catalogue from it. It is compiled out of production, and the production-bundle check searches for it. Cases: loading then ready, failed then Try again, empty, a waiting link layer, a refresh that removes a layer. Screenshots at phone, tablet and desktop in both themes.
+4. **Replaced definitions redraw.** Tests: one `MapDataLayers` test for each kind (feed, heatmap, vector tiles, raster) where the definition is replaced with the same URL and controls and the adapter is called again, and one where nothing changed and it is not; a changed tile URL still redraws once.
+5. **Sample mapper in the example app.** Tests: a sample server payload becomes the expected definitions; a field list it cannot map is skipped with a reason; `ExampleApp.test.tsx` shows the layer; the manifest check passes. A helper moves into core only if the sample repeats logic.
+6. **The serving guide.** Docs only; links checked from `README.md` and `docs/guides/extending.md`.
 
 ## Documents to update
 
-- `ARCHITECTURE.md`: the Ports table (`LayerCatalogue`, its three implementations) and "Data layers" (states, permalink, disappearing layers, `{revision}`), in steps 1 to 5.
-- `DESIGN.md`: the `LayersSection` row and a catalogue status row, in step 4.
-- `docs/guides/extending.md`: supplying layers at runtime, in step 6; `docs/guides/serving-layers.md` is new, in step 7; `README.md` and the package READMEs for `core` and `map`, with the first step that changes what they offer.
-- `ROADMAP.md`: the refresh line stays, and says refresh is on request.
-- `PRIVACY.md`: none. The reference site makes no new request.
+- `ARCHITECTURE.md`: the Ports table, "Data layers" (states, link, disappearing layers) and the test seam, in steps 1 to 3.
+- `DESIGN.md`: the `LayersSection` row and a catalogue status row, in step 3.
+- `docs/guides/extending.md` (supplying layers at runtime, step 5), `docs/guides/serving-layers.md` (step 6), and `README.md` and the `core` and `map` READMEs with the first step that changes what they offer.
+- `PRIVACY.md`: none; the reference site makes no new request.
 
 ## Risks
 
-- **Link layers lost.** The address is written on the first render. Contained by keeping pending ids in `urlValue`, with a test that fails first.
-- **Announcement noise.** Loading is announced only when a link layer waits; every state once per entry.
-- **Untrusted URLs.** Definitions from a server name URLs the browser fetches. Validation requires https and declared detail origins, and the host's content security policy is the backstop; the guide says so.
-- **Stale tiles.** A host that never changes `{revision}` or the URL gets cached tiles. The guide says what to change.
-- **The `Services.layers` type change** breaks hand-built registries: cheap now, dearer after publishing.
+- **Untrusted URLs.** A server's definitions name URLs the browser fetches. Validation requires https and declared detail origins, and the host's content security policy is the backstop.
+- **Link layers lost** on the first address write: covered by step 2's first failing test.
 
 ## Decided and open
 
-Decided on 2026-11-12 for this plan:
+Decided on 2026-11-12 by the maintainer:
 
-- One port, `LayerCatalogue`, with the static registry as an implementation, not a second optional port: one path in the hook is cheaper to keep than two.
-- Validation and skipping live in core; fetching lives in the host.
-- A change signal is a `{revision}` variable, not a new adapter method.
-- No timer. Refresh is on request.
+1. Rename `LayerRegistry` to `LayerCatalogue` and `emptyLayerRegistry` to `emptyLayerCatalogue`, and break hand-built registries now.
+2. No core mapping helpers until the sample mapper shows repeated logic.
+3. Show "N layers could not be shown", singular included, in the one composed announcement.
+4. A link layer dropped after load stays dropped on later refreshes.
 
-Open, each with a recommendation:
+Decided in this plan: one port with the static catalogue as an implementation; validation in core, fetching in the host; refresh is the host's call and a replaced definition is the change signal.
 
-1. **Name and breaking change.** Rename `LayerRegistry` to `LayerCatalogue` and break hand-built registries before publication (recommended, a `!` commit), or keep the name and add the async members. Keeping the name is less churn now and a worse name for good.
-2. **Core mapping helpers.** Write none until the sample mapper shows repeated logic (recommended); the alternative is a documented set of helpers up front, which risks building the wrong ones.
-3. **Skipped layers shown to a person.** Show "N layers could not be shown" (recommended: a person with a short list should know it is short); the alternative is silence, with the reasons to the host only.
-4. **Dropped link layers after a refresh.** A dropped id stays dropped (recommended, predictable); the alternative keeps a list of them for the session so a later refresh can restore them, at the cost of a hidden state.
-5. **Related work.** #62 adds options loaded at runtime and dependent options, which would extend this port with a call per control, and is not designed here. #45 adds the `unauthorised` failure and its wording. #47 adds an `identify` source that `partitionDefinitions` validates with the rest, and #49 drops a selection on a layer that disappears through the same path as step 3. Each plan should say how it meets these.
+Open: none. Related work: #62 would extend this port with runtime and dependent options and is not designed here. #45 adds the `unauthorised` failure and its wording, and must reject `load` so link ids stay pending. #47 adds an `identify` source that `partitionDefinitions` validates with the rest. #49 drops a selection on a vanished layer through step 2's path.
