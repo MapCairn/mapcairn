@@ -106,7 +106,10 @@ test.describe("settings", () => {
       "MapCairn has no accounts, sets no cookies",
     );
     await expect(note).toContainText(
-      "Searching sends your query to OpenStreetMap's Nominatim service",
+      "the text so far is sent to the Photon service, run by komoot, to suggest places",
+    );
+    await expect(note).toContainText(
+      "sends your query to OpenStreetMap's Nominatim service",
     );
     await expect(note).toContainText("Your settings stay on this device.");
   });
