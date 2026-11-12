@@ -233,6 +233,7 @@ describe("PinCard", () => {
       const note = screen.getByTestId("pin-lookup-note");
       expect(note.textContent).toBe(DEFAULT_LOOKUP_NOTE);
       expect(DEFAULT_LOOKUP_NOTE).not.toMatch(/Nominatim|OpenStreetMap/);
+      expect(DEFAULT_LOOKUP_NOTE).toMatch(/about 11 m/);
       expect(button).toHaveAccessibleDescription(note.textContent ?? "");
     });
 
@@ -250,6 +251,15 @@ describe("PinCard", () => {
       );
       expect(screen.queryByText(DEFAULT_LOOKUP_NOTE)).toBeNull();
       expect(lookupButton().getAttribute("aria-describedby")).toBe(note.id);
+      expect(lookupButton()).toHaveAccessibleDescription(
+        /^Sends the pin's position to Example Geocoder ?[.]$/,
+      );
+    });
+
+    it("shows nothing under the button when the host passes an empty note, instead of the default", () => {
+      setup({ lookupNote: "" });
+      expect(screen.getByTestId("pin-lookup-note")).toBeEmptyDOMElement();
+      expect(screen.queryByText(DEFAULT_LOOKUP_NOTE)).toBeNull();
     });
 
     it("asks the provider once, with the position rounded to four decimals and a signal", async () => {

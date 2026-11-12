@@ -52,7 +52,7 @@ const PROJECTION_OPTIONS: readonly { value: MapProjection; label: string }[] = [
  * know which services a host uses; a host replaces it with one that does.
  */
 export const DEFAULT_PRIVACY_NOTE =
-  "Nothing is sent to a search or address service until you search or look up an address on a pin. The privacy policy says what each service receives.";
+  "The privacy policy says what each service this map uses receives.";
 
 /** Props for {@link SettingsSection}. */
 export interface SettingsSectionProps {
@@ -63,7 +63,7 @@ export interface SettingsSectionProps {
   /**
    * The host's privacy statement, shown under the Privacy heading. Defaults to
    * {@link DEFAULT_PRIVACY_NOTE}. A host names its own providers here and says
-   * what it sends to each.
+   * what it sends to each. Phrasing content only: it sits inside a paragraph.
    */
   readonly privacyNote?: ReactNode;
   /** Receives the heading, so the sheet can focus it. */

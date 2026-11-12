@@ -295,7 +295,7 @@ describe("persistence note", () => {
 });
 
 describe("privacy", () => {
-  it("says, with no provider named, that nothing is sent until the person asks", () => {
+  it("names no provider and points to the privacy policy for what each service receives", () => {
     renderSettings();
     expect(screen.getByTestId("settings-privacy-note")).toHaveTextContent(
       DEFAULT_PRIVACY_NOTE,
@@ -321,6 +321,15 @@ describe("privacy", () => {
     );
     expect(within(note).getByText("Example Geocoder").tagName).toBe("B");
     expect(screen.queryByText(DEFAULT_PRIVACY_NOTE)).toBeNull();
+  });
+
+  it("shows no statement when the host passes an empty note, and keeps the policy link", () => {
+    renderSettings({ props: { privacyNote: "" } });
+    expect(screen.getByTestId("settings-privacy-note")).toBeEmptyDOMElement();
+    expect(screen.queryByText(DEFAULT_PRIVACY_NOTE)).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Read the privacy policy" }),
+    ).toBeInTheDocument();
   });
 
   it("keeps the policy link under a host's note", () => {

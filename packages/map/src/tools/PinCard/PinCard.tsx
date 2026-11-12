@@ -49,7 +49,8 @@ export interface PinCardProps {
   /**
    * What the address lookup sends and to whom, shown under the "Look up
    * address" button, which it describes. Defaults to
-   * {@link DEFAULT_LOOKUP_NOTE}. A host names its search provider here.
+   * {@link DEFAULT_LOOKUP_NOTE}. A host names its search provider here. Phrasing content only: it sits inside a
+   * paragraph.
    */
   readonly lookupNote?: ReactNode;
 }
