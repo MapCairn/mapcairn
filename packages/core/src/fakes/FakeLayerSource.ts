@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { detailUrl, feedUrl } from "../layers/feed";
-import { identifyUrl } from "../layers/identify";
+import { identifyRequestUrl } from "../layers/identify";
 import { LayerError } from "../ports/errors";
 import type {
   LayerDetailRequest,
@@ -39,7 +39,11 @@ export type RecordedLayerRequest<T> = T & { readonly url: string };
  * that one layer's identifies wait until the returned function is called.
  * `hold` does not hold an identify, and `holdIdentify` does not hold a load.
  * `identifyRequests` records what was asked, with the URL the real source
- * would have requested.
+ * would have requested. A tap that cannot be turned into an `https` URL is
+ * refused with `invalid` and not recorded, as a real source refuses it. The
+ * fake applies no limit to the size of an answer. A second `holdIdentify` for
+ * a layer replaces the first, and releasing the first leaves the second in
+ * place.
  */
 export class FakeLayerSource implements LayerSource {
   readonly requests: RecordedLayerRequest<LayerLoadRequest>[] = [];
@@ -95,14 +99,14 @@ export class FakeLayerSource implements LayerSource {
    */
   holdIdentify(layerId: string): () => void {
     let release!: () => void;
-    this.#heldIdentifies.set(
-      layerId,
-      new Promise<void>((resolve) => {
-        release = resolve;
-      }),
-    );
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.#heldIdentifies.set(layerId, held);
     return () => {
-      this.#heldIdentifies.delete(layerId);
+      if (this.#heldIdentifies.get(layerId) === held) {
+        this.#heldIdentifies.delete(layerId);
+      }
       release();
     };
   }
@@ -146,7 +150,7 @@ export class FakeLayerSource implements LayerSource {
     const { definition, controls, now, at, signal } = request;
     this.identifyRequests.push({
       ...request,
-      url: identifyUrl(definition, controls, now, at),
+      url: identifyRequestUrl(definition, controls, now, at),
     });
     await this.#wait(signal, this.#heldIdentifies.get(definition.id) ?? null);
     const outcome = this.#identified.get(definition.id);

@@ -184,6 +184,51 @@ describe("FakeLayerSource", () => {
       ).resolves.toHaveLength(1);
     });
 
+    it("refuses, as a real source does, a tap it cannot build a URL for or a URL that is not https, and records neither", async () => {
+      const source = new FakeLayerSource();
+      await expect(
+        source.identify({
+          definition: SAMPLE_IDENTIFY_LAYER,
+          controls: {},
+          now,
+          at: { ...at, zoom: Number.NaN },
+        }),
+      ).rejects.toMatchObject({ kind: "invalid" });
+      await expect(
+        source.identify({
+          definition: {
+            ...SAMPLE_IDENTIFY_LAYER,
+            identify: {
+              ...SAMPLE_IDENTIFY_LAYER.identify,
+              url: "http://api.test/identify?bbox={bbox}",
+            },
+          },
+          controls: { period: "100" },
+          now,
+          at,
+        }),
+      ).rejects.toMatchObject({ kind: "invalid" });
+      expect(source.identifyRequests).toEqual([]);
+    });
+
+    it("lets a release end only its own hold, not a later one on the same layer", async () => {
+      const source = new FakeLayerSource();
+      source.setIdentified(SAMPLE_IDENTIFY_LAYER.id, [samplePoint("a")]);
+      const first = source.holdIdentify(SAMPLE_IDENTIFY_LAYER.id);
+      const second = source.holdIdentify(SAMPLE_IDENTIFY_LAYER.id);
+      first();
+      let settled = false;
+      const asking = ask(source).then(() => {
+        settled = true;
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      second();
+      await asking;
+      expect(settled).toBe(true);
+    });
+
     it("stops holding once released, so a later identify answers at once", async () => {
       const source = new FakeLayerSource();
       source.setIdentified(SAMPLE_IDENTIFY_LAYER.id, [samplePoint("a")]);

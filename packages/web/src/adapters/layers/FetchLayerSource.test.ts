@@ -8,7 +8,10 @@ import {
   SAMPLE_FEED_LAYER,
   SAMPLE_IDENTIFY_LAYER,
 } from "@mapcairn/core";
-import { runLayerSourceContract } from "@mapcairn/core/contracts";
+import {
+  CONTRACT_IDENTIFY_LAYER,
+  runLayerSourceContract,
+} from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";
 import {
   FetchLayerSource,
@@ -116,7 +119,8 @@ runLayerSourceContract("FetchLayerSource", () => {
       failIdentifyWith: (kind) => {
         net.replyWith(failure(kind));
       },
-      holdIdentify: () => net.hold("/identify/imagery"),
+      holdIdentify: () =>
+        net.hold(new URL(CONTRACT_IDENTIFY_LAYER.identify.url).pathname),
       respondWithDetailLine: (from, to) => {
         net.reply(
           geojson([

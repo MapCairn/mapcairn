@@ -108,9 +108,12 @@ export interface LayerDetailRequest {
  *   nothing found is the common answer, so it resolves to an empty list.
  *   `network` includes a service that answered with an error status, which
  *   until an `unauthorised` kind exists includes 401 and 403. `invalid` is a
- *   URL that cannot be built or is not `https`, and an answer that is too
- *   large or is not a document the decoder reads. A source keeps nothing an
- *   `identify` was answered with: every tap asks again.
+ *   URL that cannot be built or is not `https` (see `identifyRequestUrl`),
+ *   and an answer that is not a document the decoder reads. A source keeps
+ *   nothing an `identify` was answered with: every tap asks again. Core sets
+ *   no limit on the size of an answer, because that belongs to the source: a
+ *   source that reads from a network applies one of its own and refuses a
+ *   larger answer as `invalid` (`FetchLayerSource` reads at most 1 MiB).
  */
 export interface LayerSource {
   load(request: LayerLoadRequest): Promise<readonly LayerFeature[]>;

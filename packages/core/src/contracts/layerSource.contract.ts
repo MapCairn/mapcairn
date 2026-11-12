@@ -329,17 +329,41 @@ export function runLayerSourceContract(
         expect((await rejection(asking)).kind).toBe("aborted");
       });
 
+      it("rejects with invalid when the tap cannot be turned into a URL", async () => {
+        const { source, controls } = create();
+        controls.respondToIdentifyWith(POINTS);
+        const error = await rejection(
+          source.identify({
+            ...identify(),
+            at: { latlng: TAP.latlng, zoom: Number.NaN },
+          }),
+        );
+        expect(error.kind).toBe("invalid");
+      });
+
       it("answers one layer while another layer's identify is held", async () => {
         const { source, controls } = create();
         controls.respondToIdentifyWith(POINTS);
         const release = controls.holdIdentify();
+        let settled = false;
         const held = source.identify(identify(CONTRACT_IDENTIFY_LAYER));
+        const heldAnswer = held.then(
+          (features) => {
+            settled = true;
+            return features;
+          },
+          (error: unknown) => {
+            settled = true;
+            throw error;
+          },
+        );
         const answered = await source.identify(
           identify(CONTRACT_OTHER_IDENTIFY_LAYER),
         );
         expect(answered.map((f) => f.id)).toEqual(["a", "b"]);
+        expect(settled).toBe(false);
         release();
-        expect((await held).map((f) => f.id)).toEqual(["a", "b"]);
+        expect((await heldAnswer).map((f) => f.id)).toEqual(["a", "b"]);
       });
     });
   });

@@ -8,7 +8,7 @@ import {
   decodeIdentify,
   detailUrl,
   feedUrl,
-  identifyUrl,
+  identifyRequestUrl,
   type LayerDetailRequest,
   LayerError,
   type LayerFeature,
@@ -35,32 +35,6 @@ export const MAX_IDENTIFY_RESPONSE_BYTES = 1024 * 1024;
 interface FetchedJson {
   readonly value: unknown;
   readonly cacheControl: string | null;
-}
-
-/**
- * The URL a tap asks, which must build and must be `https`.
- *
- * @throws `LayerError` `invalid` when core cannot build it (a zoom or a
- *   coordinate that is not finite) or the result is not an `https` URL.
- */
-function identifyRequestUrl({
-  definition,
-  controls,
-  now,
-  at,
-}: LayerIdentifyRequest): string {
-  try {
-    const url = identifyUrl(definition, controls, now, at);
-    if (new URL(url).protocol === "https:") {
-      return url;
-    }
-  } catch (error) {
-    throw new LayerError(
-      "invalid",
-      `The identify URL could not be built: ${String(error)}`,
-    );
-  }
-  throw new LayerError("invalid", "The identify URL is not https.");
 }
 
 /** Options for {@link FetchLayerSource}. */
@@ -133,9 +107,9 @@ export class FetchLayerSource implements LayerSource {
   async identify(
     request: LayerIdentifyRequest,
   ): Promise<readonly LayerFeature[]> {
-    const { definition, at, signal } = request;
+    const { definition, controls, now, at, signal } = request;
     const { value } = await this.#fetchJson(
-      identifyRequestUrl(request),
+      identifyRequestUrl(definition, controls, now, at),
       signal,
       MAX_IDENTIFY_RESPONSE_BYTES,
     );
