@@ -23,8 +23,6 @@ Statuses are "proposed" (written down, not started) and "in progress" (work has 
 | Code health | Smaller modules in the map adapter, the layer hook and the app hook | proposed, some in progress | [#24](https://github.com/MapCairn/mapcairn/issues/24), [#25](https://github.com/MapCairn/mapcairn/issues/25), [#26](https://github.com/MapCairn/mapcairn/issues/26) |
 | Publishing and assurance | Getting the four SDK packages ready to publish to npm with generated API documentation, and working toward the OpenSSF Best Practices silver badge | in progress (#4), proposed (#1) | [#1](https://github.com/MapCairn/mapcairn/issues/1), [#4](https://github.com/MapCairn/mapcairn/issues/4) |
 
-Two items wait for the maintainer's decision before any work: optional adapters for a commercial map platform that hosts configure with their own key ([#40](https://github.com/MapCairn/mapcairn/issues/40)), and counting feature use without identifying anyone ([#41](https://github.com/MapCairn/mapcairn/issues/41)).
-
 Further items, such as new open data layers, are added as plans or issues when someone proposes them, and each new dataset is a separate, explicitly scoped decision with its provenance, publication rights and privacy reviewed first (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
 Still wanted and not yet possible: a second trusted person with access, so the project can continue if the maintainer is unavailable. See [`GOVERNANCE.md`](GOVERNANCE.md).
@@ -34,9 +32,10 @@ Still wanted and not yet possible: a second trusted person with access, so the p
 The project does not intend to do these, and a pull request that does one will be declined. They describe the reference site and its Worker. An SDK item above may let a host do something the reference site will not, and the reference site does not adopt it without a decision from the maintainer, made in the open.
 
 - **Accounts.** There is no sign-in, no profile and no stored user data on a server.
-- **Tracking.** There is no tracking beyond cookieless page-view counts. No advertising, no fingerprinting and no cross-site identifiers.
+- **Tracking.** There is no tracking beyond cookieless page-view counts. No advertising, no fingerprinting and no cross-site identifiers, and no counting of feature use on the reference site ([#41](https://github.com/MapCairn/mapcairn/issues/41), closed as not planned). SDK hosts can plug in their own analytics through the optional sink in [#75](https://github.com/MapCairn/mapcairn/issues/75).
 - **Bundled datasets.** The reference site ships no data of its own. A layer is a definition that points to a public provider, and the visitor's browser fetches it only after the visitor turns it on. Household-level or identifying data is never published.
 - **Another map engine.** MapLibre GL JS is the only engine. The interface depends on a port, so tests can use a fake, but no second engine is planned.
+- **Google Maps Platform adapters.** Optional adapters for Google's search, routing and tile services were planned and dropped ([#40](https://github.com/MapCairn/mapcairn/issues/40), closed as not planned): Google's current terms appear to restrict the content of Places, Geocoding and Routes from use with a non-Google map. A host that wants them can write its own adapters against the existing ports.
 - **Proxying layers.** The Worker does not fetch, cache or relay layer data, tiles, search or routing on behalf of visitors. Browsers talk to the providers directly.
 - **Live refresh of layers.** A layer loads when it is turned on, when its controls change or, for a layer that asks only for the view, when the map moves to a new area. It never refreshes on a timer or polls, because the providers are public services that nobody pays for, and polling from every open tab would load them for no gain.
 
