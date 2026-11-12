@@ -16,6 +16,7 @@ export * from "./FakeThemeSource";
 export * from "./fixtures";
 export type { Deferred, HeldCall } from "./internal";
 export * from "./layerFixtures";
+export * from "./MemoryFeatureSelection";
 export * from "./MemorySettingsStore";
 export * from "./MemoryUrlState";
 export * from "./pngHeader";
