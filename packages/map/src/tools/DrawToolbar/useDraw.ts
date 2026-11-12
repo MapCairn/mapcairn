@@ -42,6 +42,7 @@ import {
   shapeInputBounds,
   shapesToCsv,
   shapesToGeoJson,
+  shapesToWkt,
   type UnitSystem,
   validateShape,
 } from "@mapcairn/core";
@@ -70,11 +71,14 @@ export const DRAW_ANNOUNCE_DELAY_MS = 800;
 /** How near, in CSS pixels, a tap must be to a shape's edge, line or point to select it. */
 export const SHAPE_PICK_TOLERANCE_PX = 12;
 
-/** The name of the GeoJSON file, and the stem of the CSV one. */
+/** The name of the GeoJSON file. */
 export const GEOJSON_FILENAME = "mapcairn-shapes.geojson";
 
 /** The name of the CSV file. */
 export const CSV_FILENAME = "mapcairn-shapes.csv";
+
+/** The name of the WKT file. */
+export const WKT_FILENAME = "mapcairn-shapes.wkt";
 
 /** What to say when no file could be opened. A cancelled picker says nothing. */
 const FILE_OPEN_MESSAGES: Readonly<
@@ -176,10 +180,11 @@ export interface UseDraw {
   readonly keyCommand: (event: DrawKeyEvent) => boolean;
   readonly exportGeoJson: () => Promise<void>;
   readonly exportCsv: () => Promise<void>;
+  readonly exportWkt: () => Promise<void>;
   /** Copies a link with the shapes in it, built from the current address. */
   readonly copyLink: () => Promise<void>;
   /**
-   * Asks the person for a GeoJSON or CSV file and adds its shapes as one undo
+   * Asks the person for a GeoJSON, CSV or WKT file and adds its shapes as one undo
    * step. Call it straight from a press, so the browser shows the picker.
    * @returns The box holding the shapes it added, for the map to fit, or
    *   null when it added none, including when the host has no file opener.
@@ -669,6 +674,11 @@ export function useDraw({
     [exportFile],
   );
 
+  const exportWkt = useCallback(
+    () => exportFile(WKT_FILENAME, "text/plain;charset=utf-8", shapesToWkt),
+    [exportFile],
+  );
+
   const copyLink = useCallback(async () => {
     const encoded = encodeShapes(stateRef.current.shapes);
     if (encoded === null) {
@@ -819,6 +829,7 @@ export function useDraw({
     keyCommand,
     exportGeoJson,
     exportCsv,
+    exportWkt,
     copyLink,
     importFile,
   };

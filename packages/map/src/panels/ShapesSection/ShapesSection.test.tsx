@@ -132,7 +132,7 @@ describe("ShapesSection", () => {
     expect(drawApi.shapes).toEqual([]);
   });
 
-  it("exports GeoJSON and CSV, and says what was saved", async () => {
+  it("exports GeoJSON, CSV and WKT, and says what was saved", async () => {
     const services = renderSection();
     finishTriangle();
     await act(async () => {
@@ -149,6 +149,15 @@ describe("ShapesSection", () => {
     });
     expect(services.fakes.fileSaver.saved[1]?.filename).toBe(
       "mapcairn-shapes.csv",
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("shapes-export-wkt"));
+    });
+    expect(services.fakes.fileSaver.saved[2]?.filename).toBe(
+      "mapcairn-shapes.wkt",
+    );
+    expect(screen.getByTestId("shapes-feedback")).toHaveTextContent(
+      "Saved 1 shape as mapcairn-shapes.wkt.",
     );
   });
 
@@ -192,7 +201,7 @@ describe("ShapesSection", () => {
       screen.getByRole("heading", { name: "Import", level: 4 }),
     ).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("button", { name: "Import GeoJSON or CSV" }),
+      screen.getByRole("button", { name: "Import GeoJSON, CSV or WKT" }),
     );
     expect(services.fakes.fileOpener.waiting).toBe(true);
     await act(async () => {

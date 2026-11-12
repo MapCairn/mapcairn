@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import { shapesToCsv, shapesToGeoJson } from "./export";
+import { shapesToCsv, shapesToGeoJson, shapesToWkt } from "./export";
 import {
   MAX_IMPORT_BYTES,
   MAX_IMPORT_DEPTH,
@@ -586,7 +586,305 @@ describe("parseShapeFile with CSV", () => {
   });
 });
 
+describe("parseShapeFile with WKT text", () => {
+  it("reads a point, a line and a polygon, with the closing position dropped", () => {
+    expect(shapesOf(parseShapeFile("POINT (2 48)"))).toEqual([
+      { kind: "point", vertices: [p(2, 48)] },
+    ]);
+    expect(shapesOf(parseShapeFile("LINESTRING (0 0, 1 1)"))).toEqual([
+      { kind: "line", vertices: [p(0, 0), p(1, 1)] },
+    ]);
+    expect(
+      shapesOf(parseShapeFile("POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))")),
+    ).toEqual([
+      { kind: "polygon", vertices: [p(0, 0), p(1, 0), p(1, 1), p(0, 1)] },
+    ]);
+  });
+
+  it("reads one geometry or several, in any layout, case and spacing", () => {
+    const text =
+      "point(1 2)\r\nLineString (\n 0 0,\n 1 1\n)\n\n  POINT Z (3 4 100)  ";
+    expect(shapesOf(parseShapeFile(text))).toEqual([
+      { kind: "point", vertices: [p(1, 2)] },
+      { kind: "line", vertices: [p(0, 0), p(1, 1)] },
+      { kind: "point", vertices: [p(3, 4)] },
+    ]);
+  });
+
+  it("splits Multi geometries into one shape per part and counts the holes it left out", () => {
+    const result = parseShapeFile(
+      "MULTIPOINT ((1 1), (2 2))\nMULTILINESTRING ((0 0, 1 1), (2 2, 3 3))\nMULTIPOLYGON (((0 0, 4 0, 4 4, 0 4, 0 0), (1 1, 1 2, 2 2, 2 1, 1 1)), ((10 10, 11 10, 11 11, 10 10)))",
+    );
+    expect(shapesOf(result).map((shape) => shape.kind)).toEqual([
+      "point",
+      "point",
+      "line",
+      "line",
+      "polygon",
+      "polygon",
+    ]);
+    expect(result).toMatchObject({ holesDropped: 1 });
+  });
+
+  it("flattens a GEOMETRYCOLLECTION once and skips one nested inside it", () => {
+    const result = parseShapeFile(
+      "GEOMETRYCOLLECTION (POINT (1 1), LINESTRING (0 0, 1 1), GEOMETRYCOLLECTION (POINT (2 2)))",
+    );
+    expect(shapesOf(result).map((shape) => shape.kind)).toEqual([
+      "point",
+      "line",
+    ]);
+    expect(result).toMatchObject({ skipped: { unsupported: 1 } });
+  });
+
+  it("reads longitude then latitude unless told the text is latitude first", () => {
+    expect(shapesOf(parseShapeFile("POINT (100 2)"))).toEqual([
+      { kind: "point", vertices: [p(100, 2)] },
+    ]);
+    expect(
+      shapesOf(parseShapeFile("POINT (2 100)", { wktAxisOrder: "lat-lng" })),
+    ).toEqual([{ kind: "point", vertices: [p(100, 2)] }]);
+    expect(
+      parseShapeFile("POINT (100 2)", { wktAxisOrder: "lat-lng" }),
+    ).toMatchObject({ shapes: [], skipped: { "out-of-range": 1 } });
+  });
+
+  it("skips shapes that break the draw rules and says why", () => {
+    expect(
+      parseShapeFile(
+        "POINT (200 0)\nLINESTRING (1 1)\nPOLYGON ((0 0, 2 2, 2 0, 0 2, 0 0))\nPOINT (5 5)",
+      ),
+    ).toEqual({
+      ok: true,
+      shapes: [{ kind: "point", vertices: [p(5, 5)] }],
+      skipped: {
+        "out-of-range": 1,
+        "too-few-vertices": 1,
+        "self-intersecting": 1,
+      },
+      holesDropped: 0,
+    });
+  });
+
+  it("skips an empty shape without refusing the file", () => {
+    expect(
+      parseShapeFile("POINT EMPTY\nPOLYGON EMPTY\nPOINT (1 2)"),
+    ).toMatchObject({
+      ok: true,
+      shapes: [{ kind: "point", vertices: [p(1, 2)] }],
+      skipped: { malformed: 2 },
+    });
+    expect(parseShapeFile("MULTIPOINT EMPTY")).toMatchObject({
+      ok: true,
+      shapes: [],
+      skipped: {},
+    });
+  });
+
+  it("refuses the whole file for a measure or a curve, even beside valid lines, and says why", () => {
+    const measure = "Coordinates with a measure (M) are not supported.";
+    const curve = "The WKT type CIRCULARSTRING is not supported.";
+    for (const [text, detail] of [
+      ["POINT M (1 2 3)", measure],
+      ["POINT ZM (1 2 3 4)", measure],
+      ["POINT (1 1)\nLINESTRING (0 0, 1 1)\nPOINT M (1 2 3)", measure],
+      ["CIRCULARSTRING (0 0, 1 1, 2 0)", curve],
+    ] as const) {
+      expect(parseShapeFile(text)).toEqual({
+        ok: false,
+        refusal: "wkt-unreadable",
+        detail,
+      });
+    }
+  });
+
+  it("strips a byte order mark and white space before the text", () => {
+    expect(shapesOf(parseShapeFile("﻿ \nPOINT (1 1)"))).toHaveLength(1);
+  });
+
+  it("refuses the whole file for text that starts like WKT but is not, with the reader's own position", () => {
+    for (const text of [
+      "POINT (1",
+      "POINT (1 2) x",
+      "POINT (1 2), POINT (3 4)",
+      "POINT (a b)",
+      "POINT (1 2 3 4 5)",
+      "POINT (1 1)\nLINESTRING (0 0, 1 1",
+      `${"GEOMETRYCOLLECTION (".repeat(40)}POINT (1 1)${")".repeat(40)}`,
+    ]) {
+      const result = parseShapeFile(text);
+      expect(result).toMatchObject({ ok: false, refusal: "wkt-unreadable" });
+      expect(result).toMatchObject({
+        detail: expect.stringMatching(/ at position \d+\.$/),
+      });
+    }
+  });
+
+  it("names the position of the fault in the words of the refusal", () => {
+    expect(parseShapeFile("POINT (1 1)\nLINESTRING (0 0, 1 1")).toEqual({
+      ok: false,
+      refusal: "wkt-unreadable",
+      detail: 'Expected ")" at position 33.',
+    });
+  });
+
+  it("does not take text that does not start with a WKT type for WKT", () => {
+    for (const text of [
+      "SRID=4326;POINT (1 2)",
+      "name,lat,lng\nA,1,2",
+      "(1 2)",
+    ]) {
+      expect(parseShapeFile(text)).toEqual({
+        ok: false,
+        refusal: "not-recognised",
+      });
+    }
+  });
+
+  it("refuses a file with more shapes than the cap, counting skipped ones", () => {
+    const points = Array(MAX_IMPORT_SHAPES + 1).fill("POINT (1 1)");
+    expect(parseShapeFile(points.join("\n"))).toEqual({
+      ok: false,
+      refusal: "too-many-shapes",
+    });
+  });
+
+  it("refuses a file with more points than the cap", () => {
+    const line = `LINESTRING (${Array(MAX_IMPORT_SHAPE_POINTS).fill("1 1").join(", ")})`;
+    const lines = Array(MAX_IMPORT_POINTS / MAX_IMPORT_SHAPE_POINTS + 1).fill(
+      line,
+    );
+    expect(parseShapeFile(lines.join("\n"))).toEqual({
+      ok: false,
+      refusal: "too-many-points",
+    });
+  });
+
+  it("skips a shape with more points than one shape may have", () => {
+    const line = `LINESTRING (${Array(MAX_IMPORT_SHAPE_POINTS + 1)
+      .fill("1 1")
+      .join(", ")})`;
+    expect(parseShapeFile(line)).toMatchObject({
+      ok: true,
+      shapes: [],
+      skipped: { "too-many-points": 1 },
+    });
+  });
+
+  it("refuses text longer than the size cap before reading it", () => {
+    expect(
+      parseShapeFile(`POINT (1 1)${" ".repeat(MAX_IMPORT_BYTES)}`),
+    ).toEqual({ ok: false, refusal: "too-large" });
+  });
+});
+
+describe("parseShapeFile with a WKT column", () => {
+  const rows = (...lines: string[]) => lines.join("\r\n");
+
+  it("reads the cells of a column named wkt, wherever it is and however it is cased", () => {
+    const text = rows(
+      "name,WKT,note",
+      'a,"POINT (1 2)",first',
+      'b,"LINESTRING (0 0, 1 1)",second',
+      'c,"MULTIPOINT ((3 3), (4 4))",third',
+    );
+    expect(shapesOf(parseShapeFile(text))).toEqual([
+      { kind: "point", vertices: [p(1, 2)] },
+      { kind: "line", vertices: [p(0, 0), p(1, 1)] },
+      { kind: "point", vertices: [p(3, 3)] },
+      { kind: "point", vertices: [p(4, 4)] },
+    ]);
+    expect(shapesOf(parseShapeFile(rows(" wkt ", "POINT (1 2)")))).toEqual([
+      { kind: "point", vertices: [p(1, 2)] },
+    ]);
+  });
+
+  it("applies the axis order to the cells", () => {
+    const text = rows("wkt", "POINT (2 100)");
+    expect(shapesOf(parseShapeFile(text, { wktAxisOrder: "lat-lng" }))).toEqual(
+      [{ kind: "point", vertices: [p(100, 2)] }],
+    );
+  });
+
+  it("skips a row it cannot read, by the reason, and keeps the rest", () => {
+    const text = rows(
+      "id,wkt",
+      '1,"POINT (1 2)"',
+      '2,"POINT (1"',
+      '3,"POINT M (1 2 3)"',
+      "4,",
+      '5,"POINT (500 0)"',
+      "6,LINESTRING (0 0, 1 1)",
+      "7",
+      '8,"POINT (5 6)"',
+      "",
+    );
+    expect(parseShapeFile(text)).toEqual({
+      ok: true,
+      shapes: [
+        { kind: "point", vertices: [p(1, 2)] },
+        { kind: "point", vertices: [p(5, 6)] },
+      ],
+      skipped: { malformed: 4, unsupported: 1, "out-of-range": 1 },
+      holesDropped: 0,
+    });
+  });
+
+  it("skips a row whose quote never closes", () => {
+    expect(parseShapeFile(rows("wkt", '"POINT (1 2)'))).toMatchObject({
+      ok: true,
+      shapes: [],
+      skipped: { malformed: 1 },
+    });
+  });
+
+  it("refuses a file with more rows than the shape cap", () => {
+    const text = rows(
+      "wkt",
+      ...Array(MAX_IMPORT_SHAPES + 1).fill("POINT (1 1)"),
+    );
+    expect(parseShapeFile(text)).toEqual({
+      ok: false,
+      refusal: "too-many-shapes",
+    });
+  });
+
+  it("does not take any other column for WKT", () => {
+    for (const text of [
+      rows("name,geometry", 'a,"POINT (1 2)"'),
+      rows("name,lat,lng", "A,1,2"),
+    ]) {
+      expect(parseShapeFile(text)).toEqual({
+        ok: false,
+        refusal: "not-recognised",
+      });
+    }
+  });
+});
+
 describe("export then import", () => {
+  it("brings WKT back as the same shapes, a circle as its polygon", () => {
+    const shapes: DrawShape[] = [
+      finished({ kind: "point", vertices: [p(1, 2)] }, 0),
+      finished({ kind: "line", vertices: [p(1, 2), p(3, 4)] }, 1),
+      finished(
+        { kind: "polygon", vertices: [p(0, 0), p(1, 0), p(1, 1), p(0, 1)] },
+        2,
+      ),
+      finished({ kind: "circle", vertices: [p(1, 2)], radiusMetres: 100 }, 3),
+    ];
+    const read = shapesOf(parseShapeFile(shapesToWkt(shapes)));
+    expect(read.map((shape) => shape.kind)).toEqual([
+      "point",
+      "line",
+      "polygon",
+      "polygon",
+    ]);
+    expect(
+      shapesToGeoJson(read.map(finished)).features.map((f) => f.geometry),
+    ).toEqual(shapesToGeoJson(shapes).features.map((f) => f.geometry));
+  });
+
   it("brings GeoJSON back as the same shapes", () => {
     const shapes: DrawShape[] = [
       finished({ kind: "point", vertices: [p(1, 2)] }, 0),

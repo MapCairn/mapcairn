@@ -2,8 +2,9 @@
 // Copyright MapCairn contributors
 import type { Feature, Geometry } from "geojson";
 import { describe, expect, it } from "vitest";
+import { failureOf } from "../propertyTesting/failureOf";
 import { GeometryError } from "./errors";
-import { formatWkt, parseWkt } from "./wkt";
+import { formatWkt, parseWkt, readWktSequence, startsLikeWkt } from "./wkt";
 
 const SQUARE = [
   [0, 0],
@@ -496,5 +497,137 @@ describe("parseWkt on hostile input", () => {
     const result = time(`LINESTRING (${positions.join(", ")}`);
     expect(result.failed).toBe(true);
     expect(result.elapsed).toBeLessThan(LIMIT_MS);
+  });
+});
+
+describe("the axis order", () => {
+  it("reads longitude then latitude unless told otherwise", () => {
+    expect(parseWkt("POINT (2 48)")).toEqual({
+      type: "Point",
+      coordinates: [2, 48],
+    });
+    expect(parseWkt("POINT (2 48)", { axisOrder: "lng-lat" })).toEqual({
+      type: "Point",
+      coordinates: [2, 48],
+    });
+  });
+
+  it("swaps every position when the text is latitude then longitude, keeping a height last", () => {
+    expect(parseWkt("POINT Z (48 2 100)", { axisOrder: "lat-lng" })).toEqual({
+      type: "Point",
+      coordinates: [2, 48, 100],
+    });
+    expect(
+      parseWkt("MULTILINESTRING ((48 2, 49 3), (50 4, 51 5))", {
+        axisOrder: "lat-lng",
+      }),
+    ).toEqual({
+      type: "MultiLineString",
+      coordinates: [
+        [
+          [2, 48],
+          [3, 49],
+        ],
+        [
+          [4, 50],
+          [5, 51],
+        ],
+      ],
+    });
+  });
+});
+
+describe("startsLikeWkt", () => {
+  it("is true when the first word is a WKT type, with any case, tag or space before it", () => {
+    for (const text of [
+      "POINT (1 2)",
+      "  point(1 2",
+      "\n\tMultiPolygon EMPTY",
+      "POINTZ (1 2 3)",
+      "LINESTRING M (1 2 3, 4 5 6)",
+      "GEOMETRYCOLLECTION",
+      "CIRCULARSTRING (0 0, 1 1, 2 0)",
+      "POINT",
+    ]) {
+      expect(startsLikeWkt(text)).toBe(true);
+    }
+  });
+
+  it("is false for anything else", () => {
+    for (const text of [
+      "",
+      " ",
+      "hello",
+      "SRID=4326;POINT (1 2)",
+      "(1 2)",
+      "{}",
+      "1 2",
+      "POINTS (1 2)",
+      "name,wkt",
+    ]) {
+      expect(startsLikeWkt(text)).toBe(false);
+    }
+  });
+});
+
+describe("readWktSequence", () => {
+  const kindOf = (text: unknown): string | undefined =>
+    failureOf(GeometryError, () => readWktSequence(text as string))?.kind;
+
+  it("reads one geometry, or several one after another in any layout", () => {
+    expect(readWktSequence("POINT (1 2)")).toEqual([
+      { type: "Point", coordinates: [1, 2] },
+    ]);
+    expect(
+      readWktSequence(
+        "POINT (1 2)\nLINESTRING (\n0 0,\n1 1)\r\n\r\npoint(3 4)",
+      ),
+    ).toEqual([
+      { type: "Point", coordinates: [1, 2] },
+      {
+        type: "LineString",
+        coordinates: [
+          [0, 0],
+          [1, 1],
+        ],
+      },
+      { type: "Point", coordinates: [3, 4] },
+    ]);
+  });
+
+  it("does not check the shape or the range, which its caller does", () => {
+    expect(readWktSequence("LINESTRING (500 500)")).toEqual([
+      { type: "LineString", coordinates: [[500, 500]] },
+    ]);
+    expect(readWktSequence("POINT EMPTY")).toEqual([
+      { type: "Point", coordinates: [] },
+    ]);
+  });
+
+  it("applies the axis order", () => {
+    expect(readWktSequence("POINT (48 2)", { axisOrder: "lat-lng" })).toEqual([
+      { type: "Point", coordinates: [2, 48] },
+    ]);
+  });
+
+  it("refuses text with no geometry, or with text that starts no geometry", () => {
+    for (const text of [
+      "",
+      "  \n",
+      "POINT (1 2) (3 4)",
+      "POINT (1 2), POINT (3 4)",
+      "POINT (1 2",
+    ]) {
+      expect(kindOf(text)).toBe("invalid");
+    }
+  });
+
+  it("refuses a measure or a curve as unsupported", () => {
+    expect(kindOf("POINT (1 2)\nPOINT M (1 2 3)")).toBe("unsupported");
+    expect(kindOf("CIRCULARSTRING (0 0, 1 1, 2 0)")).toBe("unsupported");
+  });
+
+  it("refuses something that is not a string", () => {
+    expect(kindOf(5)).toBe("invalid");
   });
 });

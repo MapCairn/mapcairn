@@ -5,6 +5,7 @@ import {
   CircleCheck,
   Download,
   FileSpreadsheet,
+  FileText,
   FileUp,
   Link,
   Trash2,
@@ -76,7 +77,7 @@ function useFitToImport(): (bounds: Bounds) => void {
 /**
  * The shapes the person has drawn: a list where each row selects a shape (so
  * it can be edited with the keyboard from the draw tool), buttons to delete
- * the selected shape or all of them, an import from a GeoJSON or CSV file
+ * the selected shape or all of them, an import from a GeoJSON, CSV or WKT file
  * (when the host supplies a file opener),
  * and the export buttons. Shapes are saved to a file or into a link only when
  * a button is pressed, a file is read only on this device, and the note says
@@ -159,7 +160,7 @@ export function ShapesSection({
               data-testid="shapes-import"
               onClick={importFile}
             >
-              Import GeoJSON or CSV
+              Import GeoJSON, CSV or WKT
             </Button>
           </div>
           <Feedback feedback={importFeedback} testId="shapes-import-feedback" />
@@ -183,6 +184,14 @@ export function ShapesSection({
             onClick={() => void draw.exportCsv()}
           >
             Download CSV
+          </Button>
+          <Button
+            variant="secondary"
+            icon={FileText}
+            data-testid="shapes-export-wkt"
+            onClick={() => void draw.exportWkt()}
+          >
+            Download WKT
           </Button>
           <Button
             variant="secondary"

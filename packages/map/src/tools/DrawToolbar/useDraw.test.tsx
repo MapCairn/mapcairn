@@ -556,6 +556,21 @@ describe("useDraw", () => {
       ).toBe(true);
     });
 
+    it("saves WKT, one geometry to a line", async () => {
+      const rig = await rigWithTriangle();
+      await act(async () => {
+        await rig.result.current.exportWkt();
+      });
+      const file = rig.services.fakes.fileSaver.saved[0];
+      expect(file?.filename).toBe("mapcairn-shapes.wkt");
+      expect(file?.mimeType).toBe("text/plain;charset=utf-8");
+      expect(file?.content.startsWith("POLYGON ((")).toBe(true);
+      expect(rig.result.current.feedback).toEqual({
+        kind: "success",
+        text: "Saved 1 shape as mapcairn-shapes.wkt.",
+      });
+    });
+
     it("reports a failed save and nothing to export", async () => {
       const rig = await rigWithTriangle();
       rig.services.fakes.fileSaver.failWith("failed");
@@ -627,12 +642,12 @@ describe("useDraw", () => {
     const assertive = () =>
       screen.getByTestId("live-region-assertive").textContent;
 
-    it("opens the picker for GeoJSON and CSV within the size cap, and does nothing when cancelled", async () => {
+    it("opens the picker for GeoJSON, CSV and WKT within the size cap, and does nothing when cancelled", async () => {
       const rig = await setup();
       expect(await importFile(rig, null)).toBeNull();
       const [options] = rig.services.fakes.fileOpener.opens;
       expect(options?.accept).toEqual(
-        expect.arrayContaining([".geojson", ".json", ".csv"]),
+        expect.arrayContaining([".geojson", ".json", ".csv", ".wkt"]),
       );
       expect(options?.maxBytes).toBe(1_000_000);
       expect(rig.result.current.shapes).toEqual([]);
@@ -667,6 +682,39 @@ describe("useDraw", () => {
       expect(rig.result.current.shapes).toHaveLength(1);
     });
 
+    it("adds the shapes of a WKT file and says what it held", async () => {
+      const rig = await setup();
+      const bounds = await importFile(rig, {
+        name: "shapes.wkt",
+        text: "POINT (2.35 48.85)\nLINESTRING (1 1)",
+      });
+      expect(bounds).toEqual({
+        south: 48.85,
+        west: 2.35,
+        north: 48.85,
+        east: 2.35,
+      });
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "success",
+        text: "1 shape imported. 1 skipped: 1 with too few points.",
+      });
+    });
+
+    it("says that none of a WKT file was read when one line cannot be, and imports nothing", async () => {
+      const rig = await setup();
+      expect(
+        await importFile(rig, {
+          name: "shapes.wkt",
+          text: "POINT (2.35 48.85)\nPOINT M (1 2 3)",
+        }),
+      ).toBeNull();
+      expect(rig.result.current.shapes).toEqual([]);
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "error",
+        text: "The WKT could not be read, so none of the file was imported. Coordinates with a measure (M) are not supported.",
+      });
+    });
+
     it("keeps the result through its own change of shapes, and clears it on the next", async () => {
       const rig = await setup();
       addAll(rig, TRIANGLE);
@@ -688,7 +736,7 @@ describe("useDraw", () => {
       ).toBeNull();
       expect(rig.result.current.importFeedback).toEqual({
         kind: "error",
-        text: "This is not GeoJSON or a CSV of shapes from this map. Choose a .geojson, .json or .csv file.",
+        text: "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt, .txt or .csv file.",
       });
       await advance(DRAW_ANNOUNCE_DELAY_MS);
       expect(assertive()).toContain("This is not GeoJSON");
