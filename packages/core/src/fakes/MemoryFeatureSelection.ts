@@ -56,6 +56,12 @@ function sameSequence(
  * call `replaceExternally` to change the set from outside, as a host does when
  * it hydrates a saved set or restores one after a failed save. Its
  * `getState` and `subscribe` are arrow properties, so they work unbound.
+ *
+ * A change tells the listeners that were subscribed when it began, so a
+ * listener that an earlier one unsubscribes during the same change is still
+ * told once. That is deliberate, as in the layer catalogue's store, and
+ * `useSyncExternalStore` tolerates it. A listener that throws stops the
+ * listeners after it, and its error leaves the call that changed the set.
  */
 export class MemoryFeatureSelection implements FeatureSelection {
   readonly limit: number;

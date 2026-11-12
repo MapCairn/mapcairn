@@ -5,7 +5,9 @@ import type { MapFeatureHit } from "./map";
 /**
  * One selected feature: its layer's id and its own id, as a tap reports them.
  * An alias of {@link MapFeatureHit}, so a tap's hits can be selected as they
- * are. Two references are the same feature when both ids are equal.
+ * are. Two references are the same feature when both ids are equal. A store
+ * keeps exactly those two ids, `layerId` and `featureId`, so a field that
+ * `MapFeatureHit` gains later is not kept.
  */
 export type FeatureRef = MapFeatureHit;
 
@@ -24,18 +26,21 @@ export const DEFAULT_SELECTION_LIMIT = 200;
  * save fails and it restores the copy.
  *
  * Rules for every implementation:
- * - `getState()` returns the same array until a change, in selection order,
- *   and no method uses `this`, so `getState` and `subscribe` can be passed to
- *   React unbound.
+ * - `getState()` returns the same array until a change, in selection order.
+ *   `getState` and `subscribe` work when taken off the object, as React reads
+ *   them.
  * - A duplicate is ignored, within a call and against what is already held.
  * - A call that changes the set tells every subscriber once. A call that
  *   changes nothing tells none.
  * - A call that would take the total past `limit` changes nothing, so a batch
- *   is refused whole.
+ *   is refused whole. A refusal is silent and the methods return nothing, so a
+ *   caller who needs to tell a refused batch from one of duplicates compares
+ *   `getState()` before and after.
  * - A store may hold more than `limit` references, for example when it
  *   hydrates a longer list. It shows them all and refuses every addition, and
  *   removing is always allowed.
- * - No method throws.
+ * - No method throws, provided its input is well typed (every reference an
+ *   object with both ids) and every listener returns without throwing.
  */
 export interface FeatureSelection {
   /** The most references the set holds. */
