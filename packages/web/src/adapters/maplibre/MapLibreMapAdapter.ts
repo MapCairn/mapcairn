@@ -1696,6 +1696,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       if (decidesAvailability(this.basemapTiles.basemap, sourceId)) {
         this.basemapTiles.loaded += 1;
       }
+      this.reportRecoveredTileLayer(sourceId);
       this.countTileLayerTile(sourceId, "loaded");
     });
     listen("sourcedataloading", (event) => {
@@ -1768,6 +1769,22 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     traffic[count] += 1;
     return true;
+  }
+
+  /**
+   * Reports `tileLayerRecovered` when a tile loads for a tile data layer that
+   * has reported `tileLayerUnavailable` and has loaded none since, which is
+   * once for each report. Call it before the tile is counted as loaded.
+   */
+  private reportRecoveredTileLayer(sourceId: string): void {
+    const traffic = this.tileTraffic.get(sourceId);
+    if (!traffic?.reported || traffic.loaded > 0) {
+      return;
+    }
+    this.emitter.emit("tileLayerRecovered", {
+      layerId: traffic.layerId,
+      tiles: traffic.tiles,
+    });
   }
 
   /**

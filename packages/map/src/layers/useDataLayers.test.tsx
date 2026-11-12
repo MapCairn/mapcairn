@@ -964,6 +964,116 @@ describe("useDataLayers", () => {
       );
       await waitFor(() => expect(polite()).toContain("No imagery"));
     });
+
+    describe("once a tile loads", () => {
+      const reportNoImagery = (result: ReturnType<typeof withTime>["result"]) =>
+        act(() =>
+          result.current.reportTilesUnavailable(
+            "sample-imagery",
+            IMAGERY_TILES,
+          ),
+        );
+
+      it("clears the status of the layer that recovered and announces it once", async () => {
+        const { result } = withTime();
+        act(() => result.current.setEnabled("sample-imagery", true));
+        reportNoImagery(result);
+        await waitFor(() => expect(polite()).toContain("No imagery"));
+        act(() =>
+          result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES),
+        );
+        expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+        await waitFor(() =>
+          expect(polite()).toBe("Sample imagery: imagery is showing again."),
+        );
+        act(() => result.current.setEnabled("sample-points", true));
+        await waitFor(() => expect(polite()).not.toContain("showing again"));
+        act(() =>
+          result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES),
+        );
+        await settleAnnouncer();
+        expect(polite()).not.toContain("showing again");
+      });
+
+      it("leaves another layer's status alone, and one for tiles it is no longer set to", async () => {
+        const { result } = withTime();
+        act(() => result.current.setEnabled("sample-imagery", true));
+        act(() => result.current.setEnabled("sample-plain", true));
+        reportNoImagery(result);
+        act(() =>
+          result.current.reportTilesUnavailable(
+            "sample-plain",
+            "https://tiles.test/{z}",
+          ),
+        );
+        act(() =>
+          result.current.reportTilesRecovered(
+            "sample-plain",
+            "https://tiles.test/{z}",
+          ),
+        );
+        expect(layer(result, "sample-plain").status).toEqual({ kind: "on" });
+        expect(layer(result, "sample-imagery").status.kind).toBe(
+          "tiles-unavailable",
+        );
+        act(() =>
+          result.current.reportTilesRecovered(
+            "sample-imagery",
+            "https://tiles.test/2026-11-07/{z}/{y}/{x}.jpg",
+          ),
+        );
+        expect(layer(result, "sample-imagery").status.kind).toBe(
+          "tiles-unavailable",
+        );
+      });
+
+      it("says nothing for a layer that never reported no tiles, one that is off, or one that is not a tile layer", async () => {
+        const { result } = withTime();
+        act(() => result.current.setEnabled("sample-imagery", true));
+        act(() => {
+          result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES);
+          result.current.reportTilesRecovered("sample-rain", "any");
+          result.current.reportTilesRecovered("sample-points", "any");
+          result.current.reportTilesRecovered("nothing", "any");
+        });
+        await settleAnnouncer();
+        expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+        expect(polite()).not.toContain("showing again");
+      });
+
+      it("ignores a recovery for the old tiles after a control changed them", async () => {
+        const { result } = withTime();
+        act(() => result.current.setEnabled("sample-imagery", true));
+        reportNoImagery(result);
+        act(() =>
+          result.current.setControl("sample-imagery", "date", "2026-11-07"),
+        );
+        await settleAnnouncer();
+        act(() =>
+          result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES),
+        );
+        await settleAnnouncer();
+        expect(polite()).not.toContain("showing again");
+      });
+
+      it("shows the status again, and announces it, when a later report repeats the failure", async () => {
+        const { result } = withTime();
+        act(() => result.current.setEnabled("sample-imagery", true));
+        reportNoImagery(result);
+        act(() =>
+          result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES),
+        );
+        reportNoImagery(result);
+        expect(layer(result, "sample-imagery").status.kind).toBe(
+          "tiles-unavailable",
+        );
+        await waitFor(() => expect(polite()).toContain("No imagery"));
+        act(() =>
+          result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES),
+        );
+        expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+      });
+    });
   });
 
   it("treats an unexpected rejection as invalid", async () => {

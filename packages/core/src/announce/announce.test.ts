@@ -47,6 +47,7 @@ import {
   announceSurfaceClosed,
   announceSurfaceOpened,
   announceTileError,
+  announceTilesRecovered,
   announceTilesUnavailable,
   announceTimeMoved,
   announceTourSkipped,
@@ -276,6 +277,12 @@ describe("layer announcements", () => {
     );
     expect(announceTilesUnavailable("Rainfall", null)).toBe(
       "Rainfall: Could not load. Check your connection.",
+    );
+  });
+
+  it("says a tile layer that had found no tiles is showing again", () => {
+    expect(announceTilesRecovered("Rainfall")).toBe(
+      "Rainfall: imagery is showing again.",
     );
   });
 

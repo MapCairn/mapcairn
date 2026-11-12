@@ -1187,6 +1187,60 @@ describe("MapLibreMapAdapter", () => {
         expect(unavailable).not.toHaveBeenCalled();
       });
 
+      describe("after it was reported", () => {
+        async function reported() {
+          const subject = await watched();
+          const recovered = vi.fn();
+          subject.adapter.on("tileLayerRecovered", recovered);
+          requested(subject.map);
+          subject.map.fire("idle");
+          return { ...subject, recovered };
+        }
+
+        it("reports recovery once, on the first tile that loads, naming its tiles", async () => {
+          const { map, recovered } = await reported();
+          loaded(map);
+          loaded(map);
+          expect(recovered).toHaveBeenCalledTimes(1);
+          expect(recovered).toHaveBeenCalledWith({
+            layerId: "imagery",
+            tiles: OVERLAY.tiles,
+          });
+        });
+
+        it("reports nothing for tiles of other sources, or an engine event that is not about a tile", async () => {
+          const { map, recovered } = await reported();
+          loaded(map, "basemap");
+          loaded(map, "mapcairn:other");
+          map.fire("sourcedata", { sourceId: SOURCE, isSourceLoaded: true });
+          expect(recovered).not.toHaveBeenCalled();
+        });
+
+        it("reports nothing for a layer that loaded before it could report, or whose tiles were never reported", async () => {
+          const { adapter, map } = await watched();
+          const recovered = vi.fn();
+          adapter.on("tileLayerRecovered", recovered);
+          requested(map);
+          loaded(map);
+          map.fire("idle");
+          loaded(map);
+          expect(recovered).not.toHaveBeenCalled();
+        });
+
+        it("reports nothing for a layer set to other tiles since, until those report and load", async () => {
+          const { adapter, map, recovered } = await reported();
+          const next = "https://t.test/2026-11-07/{z}/{x}/{y}.png";
+          adapter.setTileLayer("imagery", { ...OVERLAY, tiles: next });
+          loaded(map);
+          expect(recovered).not.toHaveBeenCalled();
+          adapter.setTileLayer("imagery", { ...OVERLAY, tiles: OVERLAY.tiles });
+          requested(map);
+          map.fire("idle");
+          loaded(map);
+          expect(recovered).toHaveBeenCalledTimes(1);
+        });
+      });
+
       describe("while its tiles load", () => {
         const repaints = (map: FakeMapLibreMap) =>
           map.callsOf("triggerRepaint").length;

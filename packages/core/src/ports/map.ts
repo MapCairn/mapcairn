@@ -120,6 +120,13 @@ export interface MapTileLayerUnavailable {
   readonly tiles: string;
 }
 
+/**
+ * What {@link MapEvents.tileLayerRecovered} carries: the layer and the tiles
+ * of the {@link MapTileLayerUnavailable} report it ends, so a recovery for
+ * tiles the layer has since moved on from can be told from the current one.
+ */
+export type MapTileLayerRecovered = MapTileLayerUnavailable;
+
 /** Polygons and lines drawn on request, such as an event's affected area. */
 export interface MapShapes {
   readonly geometries: readonly LayerGeometry[];
@@ -413,6 +420,15 @@ export interface MapEvents {
    * report, so the ui can say what is wrong with that layer.
    */
   tileLayerUnavailable: MapTileLayerUnavailable;
+  /**
+   * A tile of a tile data layer loaded after the layer reported
+   * `tileLayerUnavailable` for the same tiles, for example once a transient
+   * failure has passed and the person pans. It is emitted once for each such
+   * report, when the first tile loads, and never for a layer that has not
+   * reported, so a layer that always loaded says nothing. Setting the layer to
+   * new tiles starts the count again.
+   */
+  tileLayerRecovered: MapTileLayerRecovered;
   /**
    * The engine stopped working after it had loaded (for example its worker
    * failed), so the map can no longer draw. The error's reason is

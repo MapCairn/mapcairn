@@ -126,6 +126,11 @@ export function announceTilesUnavailable(
   return `${name}: ${describeTilesUnavailable(when)}`;
 }
 
+/** A tile layer that had found no tiles loaded one, so its status has gone. */
+export function announceTilesRecovered(name: string): string {
+  return `${name}: imagery is showing again.`;
+}
+
 /** "Show on map" centred the map on a feature. */
 export function announceShowingFeature(title: string): string {
   return `Showing ${title} on the map.`;

@@ -320,6 +320,17 @@ describe("MapDataLayers", () => {
       act(() => adapter.simulateTileLayerFailure("sample-imagery"));
       expect(status()).toBe("tiles-unavailable");
     });
+
+    it("clears when the map says a tile of the layer loaded after it", () => {
+      const { adapter, layers } = setup();
+      act(() => layers().setEnabled("sample-imagery", true));
+      act(() => adapter.simulateTileLayerFailure("sample-imagery"));
+      const status = () =>
+        layers().layers.find((item) => item.definition.id === "sample-imagery")
+          ?.status.kind;
+      act(() => adapter.simulateTileLayerRecovery("sample-imagery"));
+      expect(status()).toBe("on");
+    });
   });
 
   it("removes a layer from the map when it is turned off, and everything on unmount", async () => {

@@ -262,6 +262,28 @@ test.describe("half-hourly rainfall with no imagery for the time shown", () => {
     await expect(status).toHaveText(NO_IMAGERY);
   });
 
+  test("goes when the provider has tiles again and the map asks for new ones", async ({
+    page,
+    mapPage,
+  }) => {
+    let offline = true;
+    await mockLayerProviders(page, {
+      noTile: (url) => offline && missing(url),
+    });
+    await mapPage.goto(`#layers=${LAYER}`);
+    await mapPage.openMapOptions();
+    const status = page.getByTestId(`layer-status-${LAYER}`);
+    await expect(status).toHaveText(NO_IMAGERY);
+
+    offline = false;
+    await mapPage.focusMap();
+    await page.keyboard.press("+");
+    await expect(status).toHaveCount(0);
+    await expect(
+      page.getByRole("group", { name: "Half hour shown" }),
+    ).toBeEnabled();
+  });
+
   for (const colorScheme of ["light", "dark"] as const) {
     test(`its status passes axe in ${colorScheme} @a11y`, async ({
       page,
