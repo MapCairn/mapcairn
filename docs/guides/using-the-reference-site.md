@@ -18,6 +18,8 @@ A comma is only ever a separator, never a decimal mark, and a negative sign (hyp
 
 The sheet's "Save image" button saves a PNG of the map with its layers, any drawn shapes and credits, made in the browser from what the map has already loaded. A tap that finds several features opens a list, and the `I` key opens the same list for the centre of the map. Neither needs configuration.
 
+In the Layers section, "Turn off all layers" at the top turns every layer off at once, and shows how many are on ("3 on"); it is greyed out when none is. Each group heading has the same action for its own layers, such as "Turn off 2 in Fires", while any of them is on. There is no confirmation: the button's place says "Turned off 3 layers." with an Undo, which turns exactly those layers back on with the settings they had. The Undo stays for ten seconds, and waits while you hover over it or have it focused. There is no "turn on all", because each layer you turn on asks its provider for data.
+
 ## Draw and export shapes
 
 Choose **Draw shapes** in the control group beside the map. Pick Point, Line, Polygon or Circle, then tap the map to place points, or use **Add point at map centre** (or Space) after panning. A circle takes its centre first and its radius from the second tap. **Finish** (or Enter) closes the shape; a polygon needs three points and no crossing edges. Tap a shape's edge or choose it in the **Shapes** list to edit it: drag a point, drag a small midpoint handle to add one, or select a point with Previous point and Next point and move it with the arrow keys. Undo and Redo cover every edit.

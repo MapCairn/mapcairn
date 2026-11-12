@@ -104,6 +104,11 @@ export class MapPage {
   readonly drawShapes: Locator;
   readonly drawHandles: Locator;
   readonly shapesSection: Locator;
+  readonly layersSection: Locator;
+  /** The "Turn off all layers" button at the top of the Layers section. */
+  readonly turnOffAllButton: Locator;
+  /** The Undo that follows a Turn off action. */
+  readonly undoTurnOffButton: Locator;
 
   /** The decorative brand row at the top of the sheet or side panel, with its mark and name. */
   readonly sheetBrand: Locator;
@@ -225,6 +230,13 @@ export class MapPage {
     this.drawShapes = page.getByTestId("draw-shape");
     this.drawHandles = page.getByTestId("draw-handle");
     this.shapesSection = page.getByTestId("sheet-section-shapes");
+    this.layersSection = page.getByTestId("sheet-section-layers");
+    this.turnOffAllButton = this.layersSection.getByRole("button", {
+      name: /^Turn off all layers/,
+    });
+    this.undoTurnOffButton = this.layersSection.getByRole("button", {
+      name: "Undo",
+    });
 
     this.sheetBrand = page.getByTestId("sheet-brand");
     this.brandMark = page.getByTestId("brand-mark");

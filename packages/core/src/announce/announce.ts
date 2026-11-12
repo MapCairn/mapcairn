@@ -92,6 +92,16 @@ export function announceLayerOn(name: string): string {
   return `${name} is on.`;
 }
 
+/** One action turned several layers off. */
+export function announceLayersTurnedOff(count: number): string {
+  return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} turned off`;
+}
+
+/** An undo turned layers that one action had turned off back on. */
+export function announceLayersTurnedBackOn(count: number): string {
+  return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} turned back on`;
+}
+
 /** A feed layer loaded with nothing in it, in the layer's own words. */
 export function announceLayerEmpty(name: string, emptyText: string): string {
   return `${name}: ${emptyText}`;

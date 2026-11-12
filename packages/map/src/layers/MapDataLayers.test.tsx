@@ -264,6 +264,45 @@ describe("MapDataLayers", () => {
     expect(adapter.drawnLayers()).toEqual([]);
   });
 
+  it("removes every layer a batch turns off in one update, once each, and redraws none that stay", async () => {
+    const { adapter, layers, source } = setup();
+    source.setFeatures("sample-points", [samplePoint("a")]);
+    source.setFeatures("sample-alerts", [samplePoint("b")]);
+    act(() => {
+      layers().setEnabled("sample-points", true);
+      layers().setEnabled("sample-alerts", true);
+      layers().setEnabled("sample-imagery", true);
+    });
+    await waitFor(() => expect(adapter.drawnLayers()).toHaveLength(3));
+    const removeLayer = vi.spyOn(adapter, "removeLayer");
+    const setFeatureLayer = vi.spyOn(adapter, "setFeatureLayer");
+    const setTileLayer = vi.spyOn(adapter, "setTileLayer");
+    act(() =>
+      layers().turnOff(["sample-points", "sample-alerts", "sample-imagery"]),
+    );
+    expect(adapter.drawnLayers()).toEqual([]);
+    expect(removeLayer.mock.calls.map(([id]) => id).sort()).toEqual([
+      "sample-alerts",
+      "sample-imagery",
+      "sample-points",
+    ]);
+    expect(setFeatureLayer).not.toHaveBeenCalled();
+    expect(setTileLayer).not.toHaveBeenCalled();
+  });
+
+  it("draws the layers an Undo turns back on", async () => {
+    const { adapter, layers, source } = setup();
+    source.setFeatures("sample-alerts", [samplePoint("b")]);
+    act(() => {
+      layers().setEnabled("sample-alerts", true);
+      layers().setEnabled("sample-imagery", true);
+    });
+    await waitFor(() => expect(adapter.drawnLayers()).toHaveLength(2));
+    act(() => layers().turnOff(["sample-alerts", "sample-imagery"]));
+    act(() => layers().undoTurnOff());
+    await waitFor(() => expect(adapter.drawnLayers()).toHaveLength(2));
+  });
+
   it("hands a tile layer's bounds to the map, so it never asks for a tile outside them", () => {
     const { adapter, layers } = setup();
     const setTileLayer = vi.spyOn(adapter, "setTileLayer");
