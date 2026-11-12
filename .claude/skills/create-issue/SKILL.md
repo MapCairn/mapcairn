@@ -9,7 +9,7 @@ Issues are how MapCairn tracks work. They are public, so write plain project fac
 
 ## Before you write
 
-1. Check the CLI works: `gh auth status`. If it is not signed in, ask the person to run `gh auth login` themselves (in Claude Code they can type `! gh auth login`).
+1. Check the CLI works: `gh auth status`. If it is not signed in, ask the person to run `gh auth login` themselves in their own terminal.
 2. Do not file an issue for a gap you can fix in the same session. Fix it, in a pull request (see the `pick-up-issue` skill).
 3. Search for a duplicate first, open and closed:
    `gh issue list --repo MapCairn/mapcairn --state all --search "<key words>" --limit 20`
@@ -28,7 +28,7 @@ Issues are how MapCairn tracks work. They are public, so write plain project fac
 - A one-line title in sentence case that says the outcome or the fault, not "Improve X".
 - Context first (what exists now, with file paths in backticks), then the proposal or the fault, then constraints, then a **task list** of small checkboxes the person who picks it up can tick as they go. Put the test the work starts with as the first task.
 - Say which documents the work will update (`ARCHITECTURE.md`, `DESIGN.md`, guides, READMEs, `PRIVACY.md`).
-- For a large change that crosses several packages or decides a public API, add a task "Plan in `docs/plans/`" (see `docs/plans/README.md`) and link the plan from the issue when it exists. Everything else keeps its design notes in the issue.
+- For a large change that crosses several packages or decides a public API, add a task "Plan in `docs/plans/`" (see the `plan-change` skill) and link the plan from the issue when it exists. Everything else keeps its design notes in the issue.
 - Neutral voice. No emails, keys, private details, `@mentions` of people, employer references, assistant attribution, or names of commercial products used as comparisons. Do not name the maintainer.
 - Do not describe a planned feature as if it exists.
 
@@ -48,5 +48,6 @@ On a fork, or without write access to the repository, labels and milestones may 
 
 ## Afterwards
 
-- If the issue is a child of a tracking issue, tick or add it in the tracker's task list (`gh issue edit <n> --body-file`), keeping the rest of the text unchanged.
+- If the issue is a child of a tracking issue, tick or add it in the tracker's task list: start from the current body (`gh issue view <n> --json body --jq .body > <file>`), change only that line, and save it with `gh issue edit <n> --body-file <file>`. Without triage rights, post the child's number as a comment on the tracker and leave the editing, closing and labels to the maintainer.
 - If the work is queued for you or another agent, say so in your reply and, if the person asked, start it with the `pick-up-issue` skill.
+- Hand off with the report in `AGENTS.md` ("Definition of done"): the issue URL goes under **PR**, a duplicate found or a label refused under **Deviations**.
