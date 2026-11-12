@@ -15,6 +15,7 @@ What an app of your own provides:
 - `vanillaExtractPlugin()` from `@vanilla-extract/vite-plugin` in its Vite config, because the packages ship `.css.ts` source.
 - Base styles that give the map the whole page (a height on `html`, `body` and the root element) and use `tokens` from `@mapcairn/theme`, which brings the token stylesheet in (`src/page.css.ts`).
 - The IBM Plex Sans Variable font the tokens name, for example from `@fontsource-variable/ibm-plex-sans`. Without it the type falls back to the system font.
+- Its own wording for what the SDK's panels say about a provider. Settings shows a privacy statement and the pin card says what "Look up address" sends and to whom. Both have neutral defaults that name no provider, and a host replaces them with `privacyNote` on `SheetContent` and `lookupNote` on `PinCard` (the reference host's are in `packages/web/src/constants/providerNotes.ts`; the example passes a one-line `privacyNote`). The Directions panel's `note` and credits work the same way.
 - `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, and `FocusRegistryProvider` around `MapChrome`.
 - The services. Fakes are enough to see the interface; a real app writes an adapter for each port it needs. A map needs a `MapAdapter` over MapLibre GL JS with its engine styles: `packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts` and `packages/web/src/adapters/mapEngine.css.ts` are the reference, and `runMapAdapterContract` from `@mapcairn/core/contracts` checks yours against the port.
 
