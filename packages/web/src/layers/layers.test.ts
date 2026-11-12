@@ -12,6 +12,7 @@ import {
   type LayerDefinition,
   LayerError,
   parseTemplate,
+  readyLayers,
   tileUrl,
   validateLayerDefinition,
 } from "@mapcairn/core";
@@ -77,7 +78,9 @@ describe("the host's layer definitions", () => {
   });
 
   it("builds a catalogue that lists them all", () => {
-    expect(createHostLayerCatalogue().list()).toEqual(LAYER_DEFINITIONS);
+    expect(readyLayers(createHostLayerCatalogue().getState())).toEqual(
+      LAYER_DEFINITIONS,
+    );
   });
 
   it("lists every fixture file in the manifest, and nothing else", () => {

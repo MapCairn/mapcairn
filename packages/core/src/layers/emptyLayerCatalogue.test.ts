@@ -5,16 +5,25 @@ import { runLayerCatalogueContract } from "../contracts/layerCatalogue.contract"
 import { emptyLayerCatalogue } from "./emptyLayerCatalogue";
 
 runLayerCatalogueContract("emptyLayerCatalogue", () => ({
-  registry: emptyLayerCatalogue,
-  controls: { layers: [] },
+  catalogue: emptyLayerCatalogue,
+  controls: { layers: [], settle: () => Promise.resolve() },
 }));
 
 describe("emptyLayerCatalogue", () => {
-  it("lists no layers", () => {
-    expect(emptyLayerCatalogue.list()).toEqual([]);
+  it("is ready with no layers, so the Layers section stays hidden", () => {
+    expect(emptyLayerCatalogue.getState()).toEqual({
+      status: "ready",
+      layers: [],
+      skipped: [],
+      refresh: "idle",
+    });
   });
 
-  it("returns a frozen list, so a caller cannot add a layer to it", () => {
-    expect(Object.isFrozen(emptyLayerCatalogue.list())).toBe(true);
+  it("is frozen, so a caller cannot add a layer to it", () => {
+    const state = emptyLayerCatalogue.getState();
+    expect(Object.isFrozen(state)).toBe(true);
+    expect(state.status === "ready" && Object.isFrozen(state.layers)).toBe(
+      true,
+    );
   });
 });

@@ -22,6 +22,7 @@ import {
   type LayersUrlState,
   loadsFeatures,
   parseTime,
+  readyLayers,
   resolveControlValues,
   tileUrl,
 } from "@mapcairn/core";
@@ -32,6 +33,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
@@ -424,7 +426,12 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   const { layers: catalogue, layerSource } = useServices();
   const announce = useAnnounce();
   const now = useCallback(() => (options.now ?? Date.now)(), [options.now]);
-  const definitions = catalogue.list();
+  const catalogueState = useSyncExternalStore(
+    catalogue.subscribe,
+    catalogue.getState,
+    catalogue.getState,
+  );
+  const definitions = readyLayers(catalogueState);
   const [state, setState] = useState(() =>
     initialState(definitions, options.initial, now()),
   );

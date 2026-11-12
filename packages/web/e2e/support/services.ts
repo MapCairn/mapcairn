@@ -171,19 +171,34 @@ export async function searchedQueries(page: Page): Promise<string[]> {
 }
 
 /**
- * Replaces the layer catalogue with these definitions, which are plain data,
- * so a test can offer layers of any kind. Their URLs must still be on an
- * origin the production policy allows, and the test answers them with
- * `page.route`.
+ * Replaces the layer catalogue with one that is ready with these definitions,
+ * which are plain data, so a test can offer layers of any kind. Their URLs
+ * must still be on an origin the production policy allows, and the test
+ * answers them with `page.route`.
+ *
+ * @remarks The catalogue is built inside the page, because its methods are
+ *   functions and cannot cross from the test to the page. It never changes,
+ *   as a static catalogue never does.
  */
 export async function scriptLayers(
   page: Page,
   definitions: readonly object[],
 ): Promise<void> {
   await page.addInitScript((layers: readonly object[]) => {
+    const state = Object.freeze({
+      status: "ready",
+      layers,
+      skipped: [],
+      refresh: "idle",
+    });
+    const catalogue = {
+      getState: () => state,
+      subscribe: () => () => {},
+      refresh: () => Promise.resolve(),
+    };
     window.__MAPCAIRN_TEST_SERVICES__ = Object.assign(
       (window.__MAPCAIRN_TEST_SERVICES__ as object | undefined) ?? {},
-      { layers: { list: () => layers } },
+      { layers: catalogue },
     );
   }, definitions);
 }

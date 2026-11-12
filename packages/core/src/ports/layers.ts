@@ -79,10 +79,55 @@ export interface LayerSource {
   loadDetail(request: LayerDetailRequest): Promise<readonly LayerFeature[]>;
 }
 
+/** Why a catalogue could not be loaded: the request failed, or its payload was not a list. */
+export type CatalogueFailure = "network" | "invalid";
+
 /**
- * Lists the layers that exist, as definitions. Empty for a host with no
- * layers, so the sheet's Layers section is not shown.
+ * Where a refresh of a catalogue that already has a list has got to. A failed
+ * refresh keeps the list it had.
+ */
+export type CatalogueRefresh = "idle" | "loading" | "failed";
+
+/** A definition a catalogue left out, with what was wrong with it. */
+export interface SkippedDefinition {
+  /** The definition's own `id`, when it had a text one. */
+  readonly id?: string;
+  /** Every problem found, as `path: message` lines. */
+  readonly problems: readonly string[];
+}
+
+/**
+ * What a {@link LayerCatalogue} holds. `ready` with no layers is a catalogue
+ * that is empty, which is not the same as one still `loading`.
+ */
+export type CatalogueState =
+  | { readonly status: "loading" }
+  | { readonly status: "failed"; readonly reason: CatalogueFailure }
+  | {
+      readonly status: "ready";
+      readonly layers: readonly LayerDefinition[];
+      /** Values the host supplied that were not valid definitions. */
+      readonly skipped: readonly SkippedDefinition[];
+      readonly refresh: CatalogueRefresh;
+    };
+
+/**
+ * The layers that exist, as definitions, and what is known about getting
+ * them. It is a store that `useSyncExternalStore` can read: `getState` is
+ * also the server snapshot, so a catalogue must answer it with no
+ * subscription and without a browser.
+ *
+ * @remarks `getState` returns the same object until the state changes, and a
+ *   subscriber is told once for each change. `refresh` never rejects: a
+ *   failure is the state. A static catalogue never changes, so it is ready
+ *   from the first read, never calls a subscriber and refreshes to nothing.
+ *   Every method is a bound function, so a caller may pass `getState` and
+ *   `subscribe` on without the catalogue.
  */
 export interface LayerCatalogue {
-  list(): readonly LayerDefinition[];
+  getState(): CatalogueState;
+  /** Calls `listener` after each change. Returns the function that stops it. */
+  subscribe(listener: () => void): () => void;
+  /** Asks the catalogue to load again. Resolves when that attempt is over. */
+  refresh(): Promise<void>;
 }

@@ -2,8 +2,8 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeLayerCatalogue,
   type FakeServices,
-  type LayerCatalogue,
   type LayerDefinition,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
@@ -29,23 +29,9 @@ const IMAGERY = SAMPLE_TILE_LAYER.id;
 /** What has been said aloud, in order. */
 const said = () => announce.mock.calls.map(([message]) => message);
 
-/** A catalogue a test can change between renders, as a host that loads layers later would. */
-function changeableCatalogue(definitions: readonly LayerDefinition[]) {
-  let current = definitions;
-  const registry: LayerCatalogue = { list: () => current };
-  return {
-    registry,
-    replace: (next: readonly LayerDefinition[]) => {
-      current = next;
-    },
-  };
-}
-
 function setup(definitions: readonly LayerDefinition[] = SAMPLE_LAYERS) {
-  const catalogue = changeableCatalogue(definitions);
-  const services: FakeServices = createFakeServices({
-    layers: catalogue.registry,
-  });
+  const catalogue = new FakeLayerCatalogue(definitions);
+  const services: FakeServices = createFakeServices({ layers: catalogue });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ServicesProvider services={services}>{children}</ServicesProvider>
   );
@@ -382,8 +368,7 @@ describe("useDataLayers undoTurnOff", () => {
     const view = setup();
     await withAllOn(view);
     act(() => view.result.current.turnOff([FEED, ALERTS, IMAGERY]));
-    view.catalogue.replace([SAMPLE_FEED_LAYER, SAMPLE_TILE_LAYER]);
-    view.rerender();
+    act(() => view.catalogue.setLayers([SAMPLE_FEED_LAYER, SAMPLE_TILE_LAYER]));
     announce.mockClear();
     act(() => view.result.current.undoTurnOff());
     expect(enabledIds(view).sort()).toEqual([FEED, IMAGERY].sort());
