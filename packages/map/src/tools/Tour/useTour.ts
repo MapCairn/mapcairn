@@ -1,4 +1,5 @@
 import {
+  announceTourSkipped,
   initialTourState,
   stepDone,
   type TourAdvance,
@@ -134,7 +135,7 @@ export function useTour({
   const skip = useCallback(() => {
     markSeen();
     dispatch({ type: "close" });
-    announce("Tour skipped. Help, in Settings, can start it again.");
+    announce(announceTourSkipped());
   }, [announce, markSeen]);
 
   const close = useCallback(() => {
