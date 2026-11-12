@@ -7,7 +7,7 @@ import {
   type DevicePreferencesValue,
   type FileOpener,
   type FileSaver,
-  type LayerRegistry,
+  type LayerCatalogue,
   type LocationProvider,
   type MapAdapterFactory,
   type ResolvedTheme,
@@ -116,8 +116,12 @@ export function useBasemaps(): BasemapCatalogue {
   return useServices().basemaps ?? BUILT_IN_BASEMAP_CATALOGUE;
 }
 
-/** The data layer registry: the host's layer definitions, or none. */
-export function useLayers(): LayerRegistry {
+/**
+ * The data layer catalogue: a store of the host's layer definitions and
+ * whether they have loaded. Read it with `useSyncExternalStore` and pass
+ * `getState` as the server snapshot, as `useDataLayers` does.
+ */
+export function useLayers(): LayerCatalogue {
   return useServices().layers;
 }
 

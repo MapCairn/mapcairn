@@ -3,6 +3,7 @@
 import {
   createFakeServices,
   type DateTimeControlDefinition,
+  FakeLayerCatalogue,
   FakeMapAdapter,
   type LayerDefinition,
   SAMPLE_ALERT_LAYER,
@@ -15,7 +16,6 @@ import {
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
   SAMPLE_VECTOR_LAYER,
-  StaticLayerRegistry,
   sampleArea,
   sampleLine,
   samplePoint,
@@ -49,7 +49,7 @@ function setup(
   chrome?: Parameters<typeof testChromeLayout>[0],
 ) {
   const services = createFakeServices({
-    layers: new StaticLayerRegistry(definitions),
+    layers: new FakeLayerCatalogue(definitions),
   });
   const adapter = new FakeMapAdapter();
   const onShowOnMap = vi.fn();
@@ -634,7 +634,7 @@ describe("LayersSection", () => {
 
   it("works with no map and no chrome around it, as in a guide or a test", async () => {
     const services = createFakeServices({
-      layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+      layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
     });
     services.fakes.layerSource.setFeatures("sample-points", [
       samplePoint("a", { title: "Alpha" }),

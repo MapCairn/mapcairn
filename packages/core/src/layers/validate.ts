@@ -786,7 +786,7 @@ export function validateLayerDefinition(
 
 /**
  * Validates a set of definitions, including that their ids are unique, and
- * returns it unchanged. A host calls this once when it builds its registry.
+ * returns it unchanged. A host calls this once when it builds its catalogue.
  *
  * @throws An error listing every problem, each prefixed with its layer id.
  */

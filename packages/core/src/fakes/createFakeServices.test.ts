@@ -5,9 +5,9 @@ import { PORT_NAMES } from "../contracts/portRegistry";
 import type { Services } from "../ports/services";
 import { createFakeServices } from "./createFakeServices";
 import { FakeClipboard } from "./FakeClipboard";
+import { FakeLayerCatalogue } from "./FakeLayerCatalogue";
 import { FakeMapAdapter } from "./FakeMapAdapter";
 import { SAMPLE_FEED_LAYER } from "./layerFixtures";
-import { StaticLayerRegistry } from "./StaticLayerRegistry";
 
 describe("createFakeServices", () => {
   it("provides every service and the handles to script them", () => {
@@ -45,7 +45,7 @@ describe("createFakeServices", () => {
 
   it("uses an override instead of the fake, leaving the fake available", () => {
     const clipboard = new FakeClipboard();
-    const layers = new StaticLayerRegistry([SAMPLE_FEED_LAYER]);
+    const layers = new FakeLayerCatalogue([SAMPLE_FEED_LAYER]);
     const services = createFakeServices({ clipboard, layers });
     expect(services.clipboard).toBe(clipboard);
     expect(services.layers).toBe(layers);

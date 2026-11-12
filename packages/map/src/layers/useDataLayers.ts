@@ -22,6 +22,7 @@ import {
   type LayersUrlState,
   loadsFeatures,
   parseTime,
+  readyLayers,
   resolveControlValues,
   tileUrl,
 } from "@mapcairn/core";
@@ -32,6 +33,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
@@ -98,7 +100,7 @@ export interface TurnedOff {
 
 /** What {@link useDataLayers} returns: the layers' state and every action on them. */
 export interface DataLayers {
-  /** Every registered layer, in registry order. */
+  /** Every registered layer, in catalogue order. */
   readonly layers: readonly DataLayerState[];
   readonly selected: SelectedFeature | null;
   /**
@@ -408,7 +410,12 @@ function sortFeatures(
 
 /**
  * The state of every data layer and the actions on it, driven entirely by
- * the definitions in the registry: nothing here names a layer.
+ * the definitions in the catalogue: nothing here names a layer. It reads the
+ * catalogue as a store, so the layers appear when a catalogue that loads
+ * becomes ready; while it is loading or has failed there are none. Control
+ * values are worked out once, in `initialState`, so a layer that arrives
+ * after mount has empty controls instead of its defaults: a known limit until
+ * step 2 of plan 0005 (#95).
  *
  * @remarks Nothing is requested until a layer is turned on. A feed layer is
  *   loaded on enable, on a control change and on retry; the request for the
@@ -421,10 +428,15 @@ function sortFeatures(
  *   and its affected area.
  */
 export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
-  const { layers: registry, layerSource } = useServices();
+  const { layers: catalogue, layerSource } = useServices();
   const announce = useAnnounce();
   const now = useCallback(() => (options.now ?? Date.now)(), [options.now]);
-  const definitions = registry.list();
+  const catalogueState = useSyncExternalStore(
+    catalogue.subscribe,
+    catalogue.getState,
+    catalogue.getState,
+  );
+  const definitions = readyLayers(catalogueState);
   const [state, setState] = useState(() =>
     initialState(definitions, options.initial, now()),
   );

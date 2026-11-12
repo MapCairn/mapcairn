@@ -4,10 +4,11 @@ import {
   BUILT_IN_BASEMAP_CATALOGUE,
   createFakeServices,
   FakeClipboard,
+  FakeLayerCatalogue,
   FakeRoutingProvider,
   FakeSearchProvider,
+  readyLayers,
   type Services,
-  StaticLayerRegistry,
 } from "@mapcairn/core";
 import {
   DATA_SERVICE_NAMES,
@@ -77,14 +78,14 @@ describe("createServices", () => {
     expect(["light", "dark"]).toContain(services.theme.getSystemTheme());
     expect(services.settings.get().units).toBe("metric");
     expect(services.preferences.get()).toHaveProperty("reducedMotion");
-    expect(services.layers.list()).toEqual(LAYER_DEFINITIONS);
+    expect(readyLayers(services.layers.getState())).toEqual(LAYER_DEFINITIONS);
     expect(services.url.read()).toEqual({});
   });
 
-  it("lists the host's layer definitions, through a real registry rather than a fake", () => {
+  it("lists the host's layer definitions, through a real catalogue rather than a fake", () => {
     const { layers } = createServices();
-    expect(layers.list().length).toBeGreaterThan(0);
-    expect(layers).not.toBeInstanceOf(StaticLayerRegistry);
+    expect(readyLayers(layers.getState()).length).toBeGreaterThan(0);
+    expect(layers).not.toBeInstanceOf(FakeLayerCatalogue);
   });
 
   it("returns a fresh object, with fresh adapters, on every call", () => {

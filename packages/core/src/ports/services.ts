@@ -3,7 +3,7 @@
 import type { BasemapCatalogue } from "../basemaps/basemaps";
 import type { ClipboardPort } from "./clipboard";
 import type { FileOpener, FileSaver } from "./files";
-import type { LayerRegistry, LayerSource } from "./layers";
+import type { LayerCatalogue, LayerSource } from "./layers";
 import type { LocationProvider } from "./location";
 import type { MapAdapterFactory } from "./map";
 import type { DevicePreferences } from "./preferences";
@@ -43,7 +43,12 @@ export interface Services {
   readonly url: UrlState;
   readonly theme: ThemeSource;
   readonly preferences: DevicePreferences;
-  readonly layers: LayerRegistry;
+  /**
+   * The data layers on offer, and whether they have loaded. A host with fixed
+   * layers supplies a static catalogue, one that loads them supplies a
+   * runtime catalogue, and one with none supplies `emptyLayerCatalogue`.
+   */
+  readonly layers: LayerCatalogue;
   /** Loads any feed layer's features and details, reading everything from its definition. */
   readonly layerSource: LayerSource;
   /**

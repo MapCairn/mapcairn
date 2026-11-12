@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeLayerCatalogue,
   FakeMapAdapter,
   type LayerDefinition,
   SAMPLE_AREA_LAYER,
@@ -12,7 +13,6 @@ import {
   SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   SAMPLE_VECTOR_LAYER,
-  StaticLayerRegistry,
   sampleArea,
   sampleLine,
   samplePoint,
@@ -42,7 +42,7 @@ function setup(
   } = {},
 ) {
   const services = createFakeServices({
-    layers: new StaticLayerRegistry(props.definitions ?? SAMPLE_LAYERS),
+    layers: new FakeLayerCatalogue(props.definitions ?? SAMPLE_LAYERS),
   });
   const adapter = new FakeMapAdapter();
   const onFeatureTap = vi.fn();

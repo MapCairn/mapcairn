@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeLayerCatalogue,
   type FakeServices,
   type LayerDefinition,
   LayerError,
@@ -11,7 +12,6 @@ import {
   SAMPLE_FEED_LAYER,
   SAMPLE_LAYERS,
   SAMPLE_QUERY_LAYER,
-  StaticLayerRegistry,
   samplePoint,
 } from "@mapcairn/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -36,7 +36,7 @@ function setup(
   definitions: readonly LayerDefinition[] = SAMPLE_LAYERS,
 ) {
   const services: FakeServices = createFakeServices({
-    layers: new StaticLayerRegistry(definitions),
+    layers: new FakeLayerCatalogue(definitions),
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ServicesProvider services={services}>{children}</ServicesProvider>

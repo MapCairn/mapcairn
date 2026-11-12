@@ -3,9 +3,9 @@
 import {
   createDecoderRegistry,
   createFormatterRegistry,
-  createLayerRegistry,
+  createStaticLayerCatalogue,
+  type LayerCatalogue,
   type LayerDefinition,
-  type LayerRegistry,
 } from "@mapcairn/core";
 
 /**
@@ -35,12 +35,12 @@ export const LAYER_DEFINITIONS: readonly LayerDefinition[] = Object.values(
 );
 
 /**
- * The registry the composition root hands the ui. It validates every
+ * The catalogue the composition root hands the ui. It validates every
  * definition once, so a broken one stops the app at start-up in development
  * and in tests rather than when someone turns it on.
  */
-export function createHostLayerRegistry(): LayerRegistry {
-  return createLayerRegistry(LAYER_DEFINITIONS, {
+export function createHostLayerCatalogue(): LayerCatalogue {
+  return createStaticLayerCatalogue(LAYER_DEFINITIONS, {
     decoders: LAYER_DECODERS,
     formatters: LAYER_FORMATTERS,
   });

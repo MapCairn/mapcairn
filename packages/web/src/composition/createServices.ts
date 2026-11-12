@@ -20,7 +20,7 @@ import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
 import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
-import { createHostLayerRegistry } from "../layers";
+import { createHostLayerCatalogue } from "../layers";
 import { readTestOverrides } from "./testSeam";
 
 /** Options for {@link createServices}. */
@@ -76,7 +76,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     url: new BrowserUrlState(),
     theme: new BrowserThemeSource(),
     preferences: new BrowserDevicePreferences(),
-    layers: createHostLayerRegistry(),
+    layers: createHostLayerCatalogue(),
     layerSource: new FetchLayerSource(),
     routing: new ValhallaRoutingProvider(),
     // A subset of the SDK's built-in basemaps, not the whole list.

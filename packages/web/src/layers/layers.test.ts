@@ -12,13 +12,14 @@ import {
   type LayerDefinition,
   LayerError,
   parseTemplate,
+  readyLayers,
   tileUrl,
   validateLayerDefinition,
 } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy } from "../constants/securityHeaders";
 import {
-  createHostLayerRegistry,
+  createHostLayerCatalogue,
   LAYER_DECODERS,
   LAYER_DEFINITIONS,
   LAYER_FORMATTERS,
@@ -76,8 +77,10 @@ describe("the host's layer definitions", () => {
     expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b)));
   });
 
-  it("builds a registry that lists them all", () => {
-    expect(createHostLayerRegistry().list()).toEqual(LAYER_DEFINITIONS);
+  it("builds a catalogue that lists them all", () => {
+    expect(readyLayers(createHostLayerCatalogue().getState())).toEqual(
+      LAYER_DEFINITIONS,
+    );
   });
 
   it("lists every fixture file in the manifest, and nothing else", () => {

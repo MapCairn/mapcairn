@@ -2,11 +2,11 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeLayerCatalogue,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_LAYERS,
   SAMPLE_TILE_LAYER,
-  StaticLayerRegistry,
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
@@ -32,7 +32,7 @@ const said = () => announce.mock.calls.map(([message]) => message);
 
 function setup(props: { showTurnOffAll?: boolean } = {}) {
   const services = createFakeServices({
-    layers: new StaticLayerRegistry(SAMPLE_LAYERS),
+    layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
   });
   const handle: { current: DataLayers | null } = { current: null };
   const visible: { set: (shown: boolean) => void } = { set: () => {} };
