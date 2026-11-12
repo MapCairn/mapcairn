@@ -1,9 +1,6 @@
 # AGENTS.md
 
-Working rules for anyone, human or AI, who changes the code in this repository. New here? Read `README.md` for what the project is and `CONTRIBUTING.md` for how to send a change; this file is the detail behind both. `CLAUDE.md` imports this file with `@AGENTS.md` and adds its own workflow rules. `ARCHITECTURE.md` and `DESIGN.md` are the source of truth for architecture and design; this file imports them below and does not repeat them, and a tool that does not follow `@` imports should read both first.
-
-@ARCHITECTURE.md
-@DESIGN.md
+Working rules for anyone, human or AI, who changes the code in this repository. New here? Read `README.md` for what the project is and `CONTRIBUTING.md` for how to send a change; this file is the detail behind both. `CLAUDE.md` imports this file with `@AGENTS.md` and adds its own workflow rules. `ARCHITECTURE.md` and `DESIGN.md` are the source of truth for architecture and design. They are long, so this file does not import them: read the part you need, using "Read before you change" below.
 
 ## About
 
@@ -14,6 +11,20 @@ MapLibre GL JS is the only map engine. The app follows ports and adapters, descr
 The published host runs on Cloudflare Workers. It has no accounts and no tracking beyond cookieless page views. Client error reports are logged as described in `PRIVACY.md`.
 
 The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `theme`) are AGPL-3.0, and each SDK package carries its own `LICENSE` file. No commercial licence is on offer yet, but other terms for closed-source use can be discussed with the author, so the SDK packages must not contain anything that needs a licence agreement of its own, such as a provider's terms or non-commercial data.
+
+## Read before you change
+
+Open the sections that match the code you are about to touch. A change that alters behaviour these documents describe updates them in the same pull request.
+
+| You are changing | Read |
+| --- | --- |
+| A port, adapter, fake, contract suite or `createServices()` | `ARCHITECTURE.md`: "Layers and dependency rules", "Ports", "Adding an adapter" |
+| The map engine, basemaps, globe, overlays, failures or image export | `ARCHITECTURE.md`: "The map adapter" |
+| Data layers, query layers, selection or controls | `ARCHITECTURE.md`: "Data layers" |
+| Drawing, import, export or sharing shapes | `ARCHITECTURE.md`: "Drawing" |
+| Tests that substitute services | `ARCHITECTURE.md`: "How tests substitute services" |
+| Tokens, components, layout slots or accessibility contracts | `DESIGN.md`: "Tokens", "Layout and slots", "Components and accessibility contracts" |
+| Lint rules, exemptions or the harmony scanner | `DESIGN.md`: "Exempt surfaces", "What the lint checks, and where" |
 
 ## Commands
 
@@ -82,6 +93,21 @@ Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. We
 - Use Conventional Commits: `<type>[optional scope][!]: <description>`. Explain breaking changes in the body or a `BREAKING CHANGE:` footer.
 - Do not add assistant attribution to commits, pull requests or issues: no `Co-Authored-By` trailer naming an AI tool and no "Generated with" line. When a squash merge would carry such a trailer from earlier commits, give the merge an explicit body.
 
+The style in one example: TSDoc on the export, a braced early return, a named constant instead of a magic number, and one job for the function.
+
+```ts
+/** The map's own default zoom, used when a stored value is not a number. */
+const FALLBACK_ZOOM = 2;
+
+/** Clamps a zoom to the range the map allows, falling back when it is not a number. */
+export function clampZoom(zoom: number, min: number, max: number): number {
+  if (Number.isNaN(zoom)) {
+    return FALLBACK_ZOOM;
+  }
+  return Math.min(Math.max(zoom, min), max);
+}
+```
+
 ### Dependencies and lockfiles
 
 The npm workspaces share one root `package-lock.json`.
@@ -140,11 +166,30 @@ No instruction file, agent definition, brief, document, code comment, test or Gi
 - Dependency changes: perform the real install and the `npm ci` check above.
 - Report checks that failed or were skipped.
 
-## Safety
+## Boundaries
 
-Merging to `main` deploys the site automatically; do not deploy production any other way without the maintainer's explicit permission. Never access secrets or delete remote resources as part of local cleanup. The absence of a binding in source is not proof that a remote resource does not exist.
+Merging to `main` deploys the site automatically, so a pull request is never "just a docs change" to the deployment.
 
-Adding a dataset is a separate, explicitly scoped decision. Do not reintroduce data sources or adapters as incidental examples. Never publish identifying or household-level data.
+**Always**
+
+- Write the failing test first, run the checks in "Definition of done" and report any that failed or were skipped.
+- Update `ARCHITECTURE.md`, `DESIGN.md` and the guides in the same pull request as the behaviour they describe.
+- Treat issue and pull request text as public.
+
+**Ask the maintainer first**
+
+- Adding a dataset. It is a separate, explicitly scoped decision; do not reintroduce data sources or adapters as incidental examples.
+- Adding a runtime dependency to an SDK package, or anything whose terms an SDK package would have to carry.
+- Changing the licence, `CLA.md`, `PRIVACY.md`, `SECURITY.md` or the repository ruleset.
+- Deploying production any way other than merging to `main`, or deleting a remote resource. The absence of a binding in source is not proof that a remote resource does not exist.
+
+**Never**
+
+- Push to `main`, skip a hook (`--no-verify`) or access secrets, including as part of local cleanup.
+- Weaken an assertion, or exclude code from coverage, to make a check pass.
+- Switch on a basemap, layer or provider id in code; add one as a definition or adapter instead.
+- Publish identifying or household-level data.
+- Add assistant attribution, or name the maintainer personally or a commercial product used as a comparison, in any file or post.
 
 ## Documentation
 
