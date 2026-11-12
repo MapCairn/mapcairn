@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { FakeClipboard } from "../fakes/FakeClipboard";
 import { FakeDevicePreferences } from "../fakes/FakeDevicePreferences";
+import { FakeFeatureQuery } from "../fakes/FakeFeatureQuery";
 import { FakeFileOpener } from "../fakes/FakeFileOpener";
 import { FakeFileSaver } from "../fakes/FakeFileSaver";
 import { FakeLayerCatalogue } from "../fakes/FakeLayerCatalogue";
@@ -18,6 +19,7 @@ import { MemoryUrlState } from "../fakes/MemoryUrlState";
 import type { Services } from "../ports/services";
 import { runClipboardContract } from "./clipboard.contract";
 import { runDevicePreferencesContract } from "./devicePreferences.contract";
+import { runFeatureQueryContract } from "./featureQuery.contract";
 import { runFeatureSelectionContract } from "./featureSelection.contract";
 import { runFileOpenerContract } from "./fileOpener.contract";
 import { runFileSaverContract } from "./fileSaver.contract";
@@ -54,6 +56,7 @@ export const PORT_NAMES = [
   "layerSource",
   "routing",
   "selection",
+  "featureQuery",
 ] as const satisfies readonly (keyof Services)[];
 
 /** The name of one port, as it appears on `Services`. */
@@ -65,6 +68,7 @@ export type PortName = (typeof PORT_NAMES)[number];
  * each of these except the ones in {@link HOST_SUPPLIED_PORT_NAMES}.
  */
 export const OPTIONAL_PORT_NAMES = [
+  "featureQuery",
   "fileOpener",
   "routing",
   "selection",
@@ -77,6 +81,7 @@ export const OPTIONAL_PORT_NAMES = [
  * dead code in production. They still have a fake and a contract suite.
  */
 export const HOST_SUPPLIED_PORT_NAMES = [
+  "featureQuery",
   "selection",
 ] as const satisfies readonly (typeof OPTIONAL_PORT_NAMES)[number][];
 
@@ -116,6 +121,7 @@ export interface PortContractRunners {
   readonly layerSource: typeof runLayerSourceContract;
   readonly routing: typeof runRoutingProviderContract;
   readonly selection: typeof runFeatureSelectionContract;
+  readonly featureQuery: typeof runFeatureQueryContract;
 }
 
 /** What the registry holds for one port. */
@@ -193,5 +199,9 @@ export const PORT_REGISTRY: PortRegistry = {
   selection: {
     createFake: () => new MemoryFeatureSelection(),
     runContract: runFeatureSelectionContract,
+  },
+  featureQuery: {
+    createFake: () => new FakeFeatureQuery(),
+    runContract: runFeatureQueryContract,
   },
 };

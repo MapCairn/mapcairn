@@ -3,6 +3,7 @@
 import type { Services } from "../ports/services";
 import { FakeClipboard } from "./FakeClipboard";
 import { FakeDevicePreferences } from "./FakeDevicePreferences";
+import { FakeFeatureQuery } from "./FakeFeatureQuery";
 import { FakeFileOpener } from "./FakeFileOpener";
 import { FakeFileSaver } from "./FakeFileSaver";
 import { FakeLayerCatalogue } from "./FakeLayerCatalogue";
@@ -36,6 +37,7 @@ export interface FakeServiceHandles {
   readonly layerSource: FakeLayerSource;
   readonly routing: FakeRoutingProvider;
   readonly selection: MemoryFeatureSelection;
+  readonly featureQuery: FakeFeatureQuery;
   /** Every adapter `createMapAdapter` has built, oldest first. */
   readonly maps: FakeMapAdapter[];
 }
@@ -56,9 +58,10 @@ export interface FakeServices extends Services {
  * The default `createMapAdapter` is {@link createFakeMapAdapterFactory}, and
  * each adapter it builds is recorded in `fakes.maps`.
  *
- * `routing`, `fileOpener`, `suggestions` and `selection` are optional on
- * `Services`, but the fakes include them so a test can script routes, files,
- * suggestions and a selected set. To test the ui without one, pass it as
+ * `routing`, `fileOpener`, `suggestions`, `selection` and `featureQuery` are
+ * optional on `Services`, but the fakes include them so a test can script
+ * routes, files, suggestions, a selected set and the features inside a shape.
+ * To test the ui without one, pass it as
  * `undefined`, for example `{ routing: undefined }`.
  */
 export function createFakeServices(
@@ -80,6 +83,7 @@ export function createFakeServices(
     layerSource: new FakeLayerSource(),
     routing: new FakeRoutingProvider(),
     selection: new MemoryFeatureSelection(),
+    featureQuery: new FakeFeatureQuery(),
     maps,
   };
   return {
@@ -100,6 +104,7 @@ export function createFakeServices(
     layerSource: fakes.layerSource,
     routing: fakes.routing,
     selection: fakes.selection,
+    featureQuery: fakes.featureQuery,
     ...overrides,
     fakes,
   };

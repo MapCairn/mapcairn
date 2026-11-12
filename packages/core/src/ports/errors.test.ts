@@ -2,6 +2,8 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import {
+  FeatureQueryError,
+  type FeatureQueryErrorKind,
   FileOpenError,
   LayerError,
   LocationError,
@@ -56,6 +58,25 @@ describe("port errors", () => {
       expect(error.message).toContain(kind);
     }
     expect(new RoutingError("network", "Offline.").message).toBe("Offline.");
+  });
+
+  it("carries the feature query error kind and a default message", () => {
+    const kinds: FeatureQueryErrorKind[] = [
+      "network",
+      "invalid",
+      "unsupported",
+      "aborted",
+    ];
+    for (const kind of kinds) {
+      const error = new FeatureQueryError(kind);
+      expect(error).toBeInstanceOf(Error);
+      expect(error.name).toBe("FeatureQueryError");
+      expect(error.kind).toBe(kind);
+      expect(error.message).toContain(kind);
+    }
+    expect(new FeatureQueryError("network", "Offline.").message).toBe(
+      "Offline.",
+    );
   });
 
   it("carries the file open error kind and a default message", () => {

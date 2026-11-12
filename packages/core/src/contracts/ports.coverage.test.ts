@@ -25,6 +25,7 @@ describe("port coverage", () => {
 
   it("lists the optional services, each of which is a port", () => {
     expect([...OPTIONAL_PORT_NAMES]).toEqual([
+      "featureQuery",
       "fileOpener",
       "routing",
       "selection",
@@ -36,7 +37,10 @@ describe("port coverage", () => {
   });
 
   it("lists the host-supplied services, each of which is optional and has a fake", () => {
-    expect([...HOST_SUPPLIED_PORT_NAMES]).toEqual(["selection"]);
+    expect([...HOST_SUPPLIED_PORT_NAMES]).toEqual([
+      "featureQuery",
+      "selection",
+    ]);
     for (const name of HOST_SUPPLIED_PORT_NAMES) {
       expect(OPTIONAL_PORT_NAMES).toContain(name);
       expect(PORT_REGISTRY[name].createFake()).toBeDefined();

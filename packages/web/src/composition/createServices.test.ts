@@ -4,6 +4,7 @@ import {
   BUILT_IN_BASEMAP_CATALOGUE,
   createFakeServices,
   FakeClipboard,
+  FakeFeatureQuery,
   FakeLayerCatalogue,
   FakeRoutingProvider,
   FakeSearchProvider,
@@ -48,8 +49,8 @@ describe("createServices", () => {
     );
   });
 
-  it("builds no selection store, so the reference site offers no selection", () => {
-    expect(HOST_SUPPLIED_PORT_NAMES).toEqual(["selection"]);
+  it("builds no selection store and no feature query, so the reference site offers no selection", () => {
+    expect(HOST_SUPPLIED_PORT_NAMES).toEqual(["featureQuery", "selection"]);
     const services = createServices();
     for (const name of HOST_SUPPLIED_PORT_NAMES) {
       expect(services[name], name).toBeUndefined();
@@ -188,6 +189,13 @@ describe("createServices", () => {
       window.__MAPCAIRN_TEST_SERVICES__ = { selection };
       vi.spyOn(console, "info").mockImplementation(() => undefined);
       expect(createServices().selection).toBe(selection);
+    });
+
+    it("lets a browser test supply a feature query, which the host builds none of", () => {
+      const featureQuery = new FakeFeatureQuery();
+      window.__MAPCAIRN_TEST_SERVICES__ = { featureQuery };
+      vi.spyOn(console, "info").mockImplementation(() => undefined);
+      expect(createServices().featureQuery).toBe(featureQuery);
     });
 
     it("lets a browser test replace the basemap catalogue", () => {

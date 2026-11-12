@@ -85,6 +85,30 @@ export class RoutingError extends Error {
 }
 
 /**
+ * Why a query for the features inside an area failed: the request failed
+ * (`network`), it was not valid or the answer could not be read (`invalid`),
+ * the host cannot answer for the layers or the area asked about
+ * (`unsupported`), or the caller cancelled it (`aborted`, which callers
+ * ignore).
+ */
+export type FeatureQueryErrorKind =
+  | "network"
+  | "invalid"
+  | "unsupported"
+  | "aborted";
+
+/** The only error a feature query rejects with. */
+export class FeatureQueryError extends Error {
+  readonly kind: FeatureQueryErrorKind;
+
+  constructor(kind: FeatureQueryErrorKind, message?: string) {
+    super(message ?? `The feature query failed: ${kind}.`);
+    this.name = "FeatureQueryError";
+    this.kind = kind;
+  }
+}
+
+/**
  * Why a map engine failed: it could not start without WebGL, it could not
  * load, it `stopped` working after it had loaded, `toImage` could not
  * produce an image (`export-failed`).

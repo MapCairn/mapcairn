@@ -53,13 +53,13 @@ A layer is selectable when `isFeedLayer` is true: it has cards, and `featureTap`
 
 ```ts
 interface FeatureQuery {
-  within(request: { area: Polygon; layerIds: readonly string[]; limit: number;
+  within(request: { area: QueryArea; layerIds: readonly string[]; limit: number;
                     signal?: AbortSignal }): Promise<readonly SelectionHit[]>;
 }
 interface SelectionHit { layerId: string; feature: LayerFeature }  // doubles as the snapshot
 ```
 
-  `Services.featureQuery?` rejects only with a typed `FeatureQueryError` (`network`, `invalid`, `aborted`), has a fake and an exported contract, and is in `HOST_SUPPLIED_PORT_NAMES`. `layerIds` are the selectable layers that are on and `limit` is the room left plus one, so the host stops early and the ui can say more exist, as a query layer does with `{limit}`. One request is in flight, with Cancel; failure offers Try again. It is aborted when the shape is edited or deleted or the set or the layers change. The SDK sends nothing itself.
+  `QueryArea` is a GeoJSON `Polygon` written with plain arrays, since a port may import no package; the polygon `shapeGeometry` gives passes as it is. `Services.featureQuery?` rejects only with a typed `FeatureQueryError` (`network`, `invalid`, `unsupported`, `aborted`), has a fake (`FakeFeatureQuery`) and an exported contract, and is in `HOST_SUPPLIED_PORT_NAMES`. The contract asks for hits only from the named layers, each feature once, exactly `limit` hits when at least that many lie inside, and `invalid` for a `limit` that is not a whole number of at least 1 or an area that is not a closed polygon on the globe. `layerIds` are the selectable layers that are on and `limit` is the room left plus one, so the host stops early and the ui can say more exist, as a query layer does with `{limit}`. One request is in flight, with Cancel; failure offers Try again. It is aborted when the shape is edited or deleted or the set or the layers change. The SDK sends nothing itself.
 
 ### Highlight
 
