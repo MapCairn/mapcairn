@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * WCAG contrast maths with no dependencies. It parses the colour syntaxes the
  * token file uses (hex, `rgb()`/`rgba()` and `oklch()`), composites alpha the

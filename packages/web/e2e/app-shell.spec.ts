@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { expect, test } from "./fixtures";
 import { RASTER_BASEMAP_NAME } from "./support/basemaps";
 import { LAYER_PROVIDER_ORIGINS } from "./support/layers";

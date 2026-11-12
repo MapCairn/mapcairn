@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 const MINUTES_PER_HOUR = 60;
 const MINUTES_PER_DAY = 1440;
 

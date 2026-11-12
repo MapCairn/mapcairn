@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { UrlState, UrlStateValue } from "../ports/url";
 import { serialiseUrlHash } from "../urlHash/urlHash";
 

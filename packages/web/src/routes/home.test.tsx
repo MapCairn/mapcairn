@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import HomeRoute, { links } from "./home";

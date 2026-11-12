@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
 import type { LatLng } from "../ports/geometry";
 import { ringSignedArea } from "./geo";

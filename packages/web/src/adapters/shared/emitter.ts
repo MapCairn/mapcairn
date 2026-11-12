@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * A tiny typed event emitter shared by the map adapters. Handlers that throw
  * never stop other handlers from running.

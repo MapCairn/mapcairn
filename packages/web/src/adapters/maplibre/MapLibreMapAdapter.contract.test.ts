@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { runMapAdapterContract } from "@mapcairn/core/contracts";
 import { afterEach, beforeEach, vi } from "vitest";
 import { MapLibreMapAdapter } from "./MapLibreMapAdapter";

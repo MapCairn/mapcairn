@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * A read-only set of named plug-ins, such as decoders or formatters. A
  * definition names what it needs; the registry supplies it. `with` and

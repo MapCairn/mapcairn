@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { MetaFunction } from "react-router";
 import { DesignGuide } from "../designGuide/DesignGuide";
 import { checkDocumentFont } from "../designGuide/FontSection";

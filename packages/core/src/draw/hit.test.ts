@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import type { MapPlacement } from "../globe/placement";
 import type { LatLng, PixelPoint } from "../ports/geometry";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { PortAbortError } from "@mapcairn/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RequestSpacer } from "./RequestSpacer";

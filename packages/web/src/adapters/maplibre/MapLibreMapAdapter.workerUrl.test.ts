@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /** The adapter module is large, so its first import can outlast the default test timeout. */

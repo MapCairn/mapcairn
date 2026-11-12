@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LayerDefinition } from "../layers/definition";
 import type { LayerRegistry } from "../ports/layers";
 

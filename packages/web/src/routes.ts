@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { index, type RouteConfig, route } from "@react-router/dev/routes";
 import { designGuideRoutes } from "./designGuideRoutes";
 

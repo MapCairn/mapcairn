@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { expect, type Locator, type Page } from "@playwright/test";
 
 /**

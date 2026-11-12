@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { FileOpenError, type FileOpenErrorKind } from "../ports/errors";
 import type { FileOpener, FileOpenOptions, OpenedFile } from "../ports/files";

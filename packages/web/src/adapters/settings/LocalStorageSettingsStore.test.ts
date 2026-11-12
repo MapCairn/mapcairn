@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { PROJECTION_STORAGE_KEY, THEME_STORAGE_KEY } from "@mapcairn/core";
 import { runSettingsStoreContract } from "@mapcairn/core/contracts";
 import { describe, expect, it } from "vitest";

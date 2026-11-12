@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 // This file imports nothing, so `scripts/generateBasemapThumbnails.mjs` can
 // load it with plain Node and render exactly the previews the site serves.
 

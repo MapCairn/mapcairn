@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { PANEL_MAX_HEIGHT_EXCLUSIVE, PANEL_MIN_WIDTH } from "@mapcairn/core";
 import { render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";

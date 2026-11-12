@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from "react";
 import { visuallyHidden } from "../VisuallyHidden/VisuallyHidden.css";
 import { skipLink } from "./SkipLink.css";

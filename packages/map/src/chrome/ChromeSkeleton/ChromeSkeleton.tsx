@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { SearchPillSkeleton } from "../../tools/SearchPill/SearchPillSkeleton";
 import { AttributionSkeleton } from "../Attribution/AttributionSkeleton";
 import { EndStackSkeleton } from "../EndStack/EndStackSkeleton";

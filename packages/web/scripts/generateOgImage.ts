@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Renders `public/og-image.png`, the Open Graph/Twitter card preview image
  * used by `root.tsx`'s `meta()`, from a small self-contained HTML template.

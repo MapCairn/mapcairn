@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { clamp } from "../numbers/clamp";
 import type { Bounds } from "../ports/geometry";
 

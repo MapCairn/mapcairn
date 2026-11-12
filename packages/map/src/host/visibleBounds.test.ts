@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { BASEMAPS, FakeMapAdapter } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { visibleBounds } from "./visibleBounds";

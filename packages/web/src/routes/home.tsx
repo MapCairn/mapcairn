@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { ChromeSkeleton, SkipLink, VisuallyHidden } from "@mapcairn/map";
 import type { LinksFunction } from "react-router";
 import { App } from "../App";

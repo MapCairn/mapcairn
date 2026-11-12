@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { isIsoDate } from "./controls";
 import { MAX_MINUTES_AGO, MINUTES_PER_DAY, slotTime } from "./dateTime";
 import type { LayerDefinition } from "./definition";

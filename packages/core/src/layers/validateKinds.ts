@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { checkShapeStyle, PROPERTY_NAME } from "./validateShapes";
 import {
   checkColourSlot,

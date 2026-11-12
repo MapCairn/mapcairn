@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { DEFAULT_BASEMAP_ID } from "../basemaps/basemaps";
 import type { Settings, SettingsStore } from "../ports/settings";
 

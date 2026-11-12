@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { SAMPLE_TIME_LAYER } from "../fakes/layerFixtures";
 import {

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { OpenedFile } from "@mapcairn/core";
 import { runFileOpenerContract } from "@mapcairn/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";

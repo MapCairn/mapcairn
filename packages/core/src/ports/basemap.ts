@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** One credit line a tile provider requires. */
 export interface BasemapAttributionEntry {
   readonly text: string;

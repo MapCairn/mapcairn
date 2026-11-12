@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Position } from "geojson";
 import { describe, expect, it } from "vitest";
 import { measureLineDistance, measurePolygonArea } from "./measurement";

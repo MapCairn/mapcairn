@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import "./fonts/fonts.css";
 import "./global.css";
 import { THEME_COLOR_META } from "@mapcairn/core";

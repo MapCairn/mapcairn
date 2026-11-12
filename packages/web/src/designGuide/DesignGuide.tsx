@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { ThemeChoice } from "@mapcairn/core";
 import { SegmentedControl, SkipLink, useTheme } from "@mapcairn/map";
 import { ClientOnly } from "../app/ClientOnly";

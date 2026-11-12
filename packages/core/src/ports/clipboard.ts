@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /** The result of a copy. */
 export type ClipboardResult =
   | { readonly ok: true }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { axeViolations } from "./support/a11y";

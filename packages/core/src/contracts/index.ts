@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 export * from "./clipboard.contract";
 export * from "./devicePreferences.contract";
 export * from "./fileOpener.contract";

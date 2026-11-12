@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { BASEMAPS, getBasemap } from "@mapcairn/core";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";

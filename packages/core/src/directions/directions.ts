@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { formatLatLng } from "../format/format";
 import { geometryArea } from "../geometry/queries";
 import type { RoutingErrorKind } from "../ports/errors";

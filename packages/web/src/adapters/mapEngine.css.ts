@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The one engine style file: the only place `.maplibregl-*` selectors may
  * appear, and one of the two places raw z-index values may (the other is the

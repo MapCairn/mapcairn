@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { Feature, Geometry, Position } from "geojson";
 import { GeometryError } from "./errors";
 import { MAX_COLLECTION_DEPTH, validateGeometry } from "./validate";

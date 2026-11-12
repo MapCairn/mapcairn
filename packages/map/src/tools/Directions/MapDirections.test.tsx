@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { FakeMapAdapter, type RouteLeg } from "@mapcairn/core";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

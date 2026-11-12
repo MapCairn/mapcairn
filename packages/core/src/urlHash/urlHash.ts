@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { SHARE_PATTERN } from "../draw/share";
 import { formatFixed } from "../format/format";
 import type { ViewState } from "../ports/geometry";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { FieldValue } from "../ports/layers";
 
 /** A decoded field as a number, or null when it is missing or not numeric. */

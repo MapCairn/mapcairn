@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Walks the repository, applies the harmony rules and filters the result
  * through the exempt surfaces and the allow-list.

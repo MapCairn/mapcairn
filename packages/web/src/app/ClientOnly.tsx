@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type ReactNode, useSyncExternalStore } from "react";
 
 /** Nothing to subscribe to: the answer never changes after hydration. */

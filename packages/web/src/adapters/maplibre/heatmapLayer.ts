@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { MapHeatmapStyle } from "@mapcairn/core";
 import { rgbaColour as rgba } from "./markerImages";
 import type { EngineLayer, ZoomWindow } from "./shapeLayers";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import fc from "fast-check";
 import type { DrawShapeInput } from "../draw/reducer";
 import { MAX_CIRCLE_RADIUS_METRES, validateShape } from "../draw/shape";

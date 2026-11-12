@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The page's base styles. `MapChrome` fills its container, so the page gives
  * it the whole viewport. Using `tokens` here is also what brings the token

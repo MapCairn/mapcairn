@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { BUILT_IN_BASEMAP_CATALOGUE } from "@mapcairn/core";
 import { compositeOver, contrastRatio, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";

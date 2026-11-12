@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Runs dependency-cruiser and fails if it found violations or if it cruised no
  * modules for a package. Without a TypeScript parser it reports success on zero

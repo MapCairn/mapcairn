@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { isSettingsSection, type SheetSection } from "@mapcairn/core";
 
 /** What {@link sheetTitle} reads from the app's state. */

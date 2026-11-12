@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { render, screen, within } from "@testing-library/react";
 import { Compass, Minus, Plus } from "lucide-react";
 import { describe, expect, it } from "vitest";

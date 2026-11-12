@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { announceTileError } from "@mapcairn/core";
 import { type MapContextValue, StatusMessage, useMap } from "@mapcairn/map";
 import { useEffect, useState } from "react";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { useLatestRef } from "@mapcairn/react";
 import { CircleCheck, Info, TriangleAlert, X } from "lucide-react";
 import {

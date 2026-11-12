@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { DEFAULT_BASEMAP_BACKGROUND } from "@mapcairn/core";
 import { parseColour, toHex, tokenValues } from "@mapcairn/theme";
 import { describe, expect, it } from "vitest";

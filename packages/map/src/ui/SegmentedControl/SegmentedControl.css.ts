@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { focusRing, tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 

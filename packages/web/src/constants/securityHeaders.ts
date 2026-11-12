@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Builds this app's Content-Security-Policy directive string.
  * @param nonce - When given, added to `script-src` as `'nonce-<value>'`

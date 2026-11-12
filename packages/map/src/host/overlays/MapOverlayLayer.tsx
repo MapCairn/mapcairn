@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { ReactNode } from "react";
 import * as styles from "./overlays.css";
 

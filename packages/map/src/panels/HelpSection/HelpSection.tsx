@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { DRAW_KEY_HELP, MAP_KEY_HELP } from "@mapcairn/core";
 import type { Ref } from "react";
 import { usePreferences } from "../../services";

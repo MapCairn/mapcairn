@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { FeedLayerDefinition } from "@mapcairn/core";
 
 /** The parts every GDACS alert layer adds for itself. */

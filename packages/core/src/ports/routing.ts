@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LatLng } from "./geometry";
 
 /** How the traveller moves, which decides the roads and the speed. */

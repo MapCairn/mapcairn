@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { announceZoom } from "@mapcairn/core";
 import { type MapContextValue, useAnnounce } from "@mapcairn/map";
 import { useLatestRef } from "@mapcairn/react";

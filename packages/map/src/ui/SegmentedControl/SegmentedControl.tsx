@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";

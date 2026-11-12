@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LatLng, UnitSystem } from "@mapcairn/core";
 import { act, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";

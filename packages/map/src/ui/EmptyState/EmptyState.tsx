@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { HTMLAttributes, ReactNode } from "react";
 import { Icon, type IconComponent } from "../Icon";
 import { action, body, emptyIcon, emptyState, heading } from "./EmptyState.css";

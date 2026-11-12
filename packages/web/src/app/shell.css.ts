@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { MAP_SHAPE_ATTRIBUTE } from "@mapcairn/core";
 import { tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";

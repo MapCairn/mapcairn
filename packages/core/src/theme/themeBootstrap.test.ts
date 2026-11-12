@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { parseThemeChoice, resolveTheme } from "./theme";

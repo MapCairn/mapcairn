@@ -7,3 +7,5 @@ pre-commit:
       run: npm run depcruise
     harmony:
       run: npm run lint:harmony
+    licence:
+      run: npm run licence

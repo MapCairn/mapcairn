@@ -54,9 +54,10 @@ The pre-commit hook runs Biome, dependency-cruiser and the harmony scanner, not 
 The coding standard is what the tools enforce, not a separate guide.
 
 - **Formatting and linting:** [Biome](https://biomejs.dev), configured in [`biome.jsonc`](biome.jsonc), formats and lints the code with the recommended rules plus the project's accessibility, complexity and restricted-import rules. Warnings fail the build (`--error-on-warnings`). Run `npm run format` to format and `npm run lint` to check.
+- **Licence header:** every source file starts with `// SPDX-License-Identifier: AGPL-3.0-only` and `// Copyright MapCairn contributors`. `npm run licence:write` adds the two lines to a new file, and `npm run lint` fails without them.
 - **TypeScript:** the strict settings in [`tsconfig.base.json`](tsconfig.base.json) apply to every package: `strict`, `noUncheckedIndexedAccess` and `forceConsistentCasingInFileNames`. Run `npm run typecheck`.
 - **Project rules:** dependency-cruiser enforces the package and layer boundaries, and the harmony scanner in `scripts/harmony` enforces the design tokens, markup and wiring rules described in [`DESIGN.md`](DESIGN.md).
-- **Enforcement:** the pre-commit hook runs Biome, dependency-cruiser and the harmony scanner on staged files, and CI runs `npm run lint` and `npm run typecheck` on every pull request, so a change that breaks the standard cannot merge. The conventions below cover what the tools cannot check.
+- **Enforcement:** the pre-commit hook runs Biome, dependency-cruiser, the harmony scanner and the licence header check, and CI runs `npm run lint` and `npm run typecheck` on every pull request, so a change that breaks the standard cannot merge. The conventions below cover what the tools cannot check.
 
 ## Dependencies
 

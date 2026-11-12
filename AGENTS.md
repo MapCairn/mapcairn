@@ -49,7 +49,7 @@ npm run check
 - `test` runs Vitest across `packages/*`. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
 - `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has a slightly lower branch floor: 95% for statements, functions and lines and 90% for branches, because its layout and touch-gesture code is also covered by Playwright. Aim for 100% behavioural coverage.
 - `typecheck` checks every workspace, including web route types and the Playwright project.
-- `lint` runs Biome, dependency-cruiser and the harmony scanner (`scripts/harmony`, see `DESIGN.md`). Pre-commit runs the same three on staged files, but not typecheck, tests or coverage.
+- `lint` runs Biome, dependency-cruiser, the harmony scanner (`scripts/harmony`, see `DESIGN.md`) and the licence header check (`scripts/licenceHeaders.mjs`). Pre-commit runs the same four, but not typecheck, tests or coverage.
 - `build` builds every workspace. The web build then checks that the production bundle holds no browser test seam.
 - `start` builds the e2e-mode bundle and serves it on port 4173 (or `MAPCAIRN_E2E_PORT`) through wrangler, with `wrangler.e2e.jsonc`. This build keeps the test seam, so it is not the production bundle. `wrangler.e2e.jsonc` omits production routes, so the old-hostname redirect is not exercised.
 - `check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence.
@@ -88,6 +88,7 @@ Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. We
 - Add TSDoc-compatible JSDoc to every exported function, constant, type, interface, class and component. Explain non-obvious behaviour rather than repeating names.
 - Add code comments only for a non-obvious constraint, workaround or invariant.
 - Use expanded, braced `if` statements. Do not disable Biome's `useBlockStatements`.
+- Start every `.ts`, `.tsx`, `.mjs` and `.cjs` file with the two-line SPDX header (`// SPDX-License-Identifier: AGPL-3.0-only`, then `// Copyright MapCairn contributors`). `npm run lint` fails without it; `npm run licence:write` adds it to new files.
 - Use British English in user-facing copy and docs, not code identifiers.
 - Write plain, specific prose. Avoid em dashes, puffery, uppercase eyebrows and repetitive closing summaries. Use sentence-case headings.
 - Use Conventional Commits: `<type>[optional scope][!]: <description>`. Explain breaking changes in the body or a `BREAKING CHANGE:` footer.

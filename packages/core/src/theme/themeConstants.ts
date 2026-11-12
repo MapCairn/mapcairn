@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { ResolvedTheme } from "../ports/settings";
 
 /** The `localStorage` key holding the theme choice as a plain string. */

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import * as RadixSlider from "@radix-ui/react-slider";
 import { type CSSProperties, useId } from "react";
 import * as styles from "./Slider.css";

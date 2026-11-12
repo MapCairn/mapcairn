@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Reads a value by dotted path, such as `properties.url.geometry` or
  * `geometry.coordinates.2`. Returns `undefined` when any step is missing or

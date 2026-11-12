@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The harmony rules. Each rule reads one file and returns violations; the
  * caller decides which files to read and which violations are excused.

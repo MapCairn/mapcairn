@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Looks up which contributors are administrators of the repository, so the
  * contributor licence agreement check can exempt them (`cla.mjs` stays pure and

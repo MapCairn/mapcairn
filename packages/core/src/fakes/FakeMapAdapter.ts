@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { distanceMetres, EARTH_RADIUS_METRES } from "../draw/geo";
 import {
   dragHandle,

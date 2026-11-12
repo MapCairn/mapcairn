@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Enforces MapCairn's package boundaries and the layers described in
  * ARCHITECTURE.md. Run through `npm run depcruise`, part of `npm run lint`.

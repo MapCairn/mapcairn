@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type LatLng, roundForLookup, type SearchResult } from "@mapcairn/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchProvider } from "../../services/hooks";

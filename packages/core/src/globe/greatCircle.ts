@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LatLng } from "../ports/geometry";
 import { MAX_MERCATOR_LATITUDE, NORMALISED_TILE_SIZE } from "../zoom/zoom";
 

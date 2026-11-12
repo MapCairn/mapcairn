@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * The layer definition: typed data that describes one open data layer
  * completely, so adding a layer is a new definition and not new code. Nothing

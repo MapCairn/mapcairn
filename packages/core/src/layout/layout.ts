@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { SheetDetent } from "../sheet/sheet";
 
 /** How the map options surface is presented. */

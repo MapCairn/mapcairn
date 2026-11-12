@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Renders the basemap picker previews, `packages/web/public/basemaps/<id>.jpg`,
  * as small screenshots of the real basemaps.

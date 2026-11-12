@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { FileSaveResult, FileSaver, SavedFile } from "@mapcairn/core";
 
 /** The slice of the `URL` class the adapter uses. */

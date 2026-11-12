@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { formatNumber } from "../format/format";
 import type { UnitSystem } from "../ports/settings";
 import {

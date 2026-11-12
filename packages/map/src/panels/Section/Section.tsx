@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { type HTMLAttributes, type ReactNode, type Ref, useId } from "react";
 import { heading, section, subheading } from "./Section.css";
 

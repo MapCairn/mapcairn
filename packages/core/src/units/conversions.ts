@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 const METRES_PER_FOOT = 0.3048;
 const METRES_PER_MILE = 1609.344;
 const SQUARE_METRES_PER_SQUARE_FOOT = METRES_PER_FOOT ** 2;

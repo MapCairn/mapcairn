@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import { bbox } from "@turf/bbox";
 import { buffer as turfBuffer } from "@turf/buffer";
 import { difference as turfDifference } from "@turf/difference";

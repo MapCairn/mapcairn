@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { FieldValue } from "../ports/layers";
 import { createNamedRegistry, type NamedRegistry } from "./registry";
 

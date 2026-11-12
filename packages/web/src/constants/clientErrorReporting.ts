@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 /**
  * Path of the resource route client-side error reports are POSTed to (see
  * `routes/log-error.ts`). Shared between `BeaconErrorReporter` (the

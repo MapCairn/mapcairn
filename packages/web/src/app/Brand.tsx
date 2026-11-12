@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import * as styles from "./Brand.css";
 
 /** The brand's name, set beside the mark on wide screens. */

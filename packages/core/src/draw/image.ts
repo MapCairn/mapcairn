@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import type { LatLng } from "../ports/geometry";
 import type { MapImageMark } from "../ports/map";
 import { shapeRing } from "./shape";

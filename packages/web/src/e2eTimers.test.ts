@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright MapCairn contributors
 import {
   LONG_PRESS_DELAY_MS,
   SCALE_BAR_IDLE_MS,
