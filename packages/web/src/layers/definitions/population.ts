@@ -8,7 +8,7 @@ const population: TileLayerDefinition = {
   id: "population",
   name: "Where people live",
   description:
-    "Population density across the world in 2020, from dark and empty to bright and crowded. Detail stops at about 5 km.",
+    "Population density across the world in 2020, from dark and empty to bright and crowded. Detail stops at about 5 km. Antarctica is not shown.",
   group: "People",
   dataCost: "about 20 to 100 KB per screen",
   attribution: [
@@ -30,6 +30,10 @@ const population: TileLayerDefinition = {
       "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GPW_Population_Density_2020/default/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png",
     tileSize: 256,
     maxzoom: 7,
+    // GIBS serves opaque black and noisy grey filler south of 60 degrees south.
+    // A flat map shows it as dark rectangles; a globe stretches the polar row of
+    // tiles over the pole, so it shows as wedges meeting there.
+    bounds: [-180, -60, 180, 85],
   },
 };
 

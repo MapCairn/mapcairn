@@ -449,6 +449,7 @@ export const SAMPLE_TILE_LAYER: TileLayerDefinition = {
     tiles: "https://tiles.test/{date}/{z}/{y}/{x}.jpg",
     tileSize: 256,
     maxzoom: 9,
+    bounds: [-180, -60, 180, 85],
   },
 };
 
