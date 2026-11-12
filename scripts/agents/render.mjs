@@ -7,10 +7,18 @@
  * name mean nothing to the other tools (and some reject unknown tools), so
  * they are left out and the other tools use their own defaults.
  */
-import { parseFrontmatter } from "./skills.mjs";
+import { claudeOnlyProblems, parseFrontmatter } from "./skills.mjs";
 
-/** Agents whose names match this use Claude Code's Playwright MCP tools and stay Claude only. */
-const CLAUDE_ONLY_AGENT = /^playwright-test-/;
+/**
+ * Agents that call Claude Code's Playwright MCP tools and stay Claude only.
+ * They are named, not matched by prefix, so a new agent is portable unless it
+ * is added here.
+ */
+const CLAUDE_ONLY_AGENTS = [
+  "playwright-test-generator.md",
+  "playwright-test-healer.md",
+  "playwright-test-planner.md",
+];
 
 /**
  * Whether an agent file is turned into other tools' formats.
@@ -19,7 +27,7 @@ const CLAUDE_ONLY_AGENT = /^playwright-test-/;
  * @returns {boolean}
  */
 export function isPortable(filename) {
-  return !CLAUDE_ONLY_AGENT.test(filename);
+  return !CLAUDE_ONLY_AGENTS.includes(filename);
 }
 
 /**
@@ -37,7 +45,8 @@ export function isPortable(filename) {
  * @returns {Agent}
  */
 export function parseAgent(filename, text) {
-  const { fields, body, problems } = parseFrontmatter(text);
+  const { fields, body, problems: frontmatter } = parseFrontmatter(text);
+  const problems = [...frontmatter, ...claudeOnlyProblems(body)];
   if (problems.length > 0) {
     throw new Error(`${filename}: ${problems.join("; ")}`);
   }

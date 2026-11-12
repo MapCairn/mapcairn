@@ -12,9 +12,9 @@ The skills in `.claude/skills/` (`create-issue`, `plan-change`, `split-plan`, `p
 
 Use sub-agents. They keep this conversation small and let independent work run in parallel, so reach for them by default instead of doing everything in one thread: wide searches across many files, independent changes in separate packages, tests written alongside the code they cover, long verification runs, and a fresh-eyes review of a diff before it is merged (for example the Playwright planner, generator and healer agents, independent package changes, or a fresh-eyes review of a map or basemap change). Do a small, strictly sequential task yourself. The limits, the brief and the clean-up rules in `AGENTS.md` ("Sub-agents") apply, and agents started through a Workflow script count towards the limit on how many run at once.
 
-Set the `model` parameter explicitly on every `Agent` call and every `agent()` call inside a Workflow script; omitting it silently inherits the session's model. The tiers in `AGENTS.md` are, in Claude Code, `haiku` (small and fast), `sonnet` (default) and `opus` (most capable). When unsure between two, pick the cheaper and escalate on failure.
+Set the `model` parameter explicitly on every `Agent` call and every `agent()` call inside a Workflow script; omitting it silently inherits the session's model. The tiers in `AGENTS.md` are, in Claude Code, `haiku` (small and fast), `sonnet` (default) and `opus` (most capable).
 
-`fable` is the most capable and most costly model, above those three. Use it only when a human has authorised it for this task, in words, in the current conversation; an earlier session, a skill or a plan does not count. Without that authorisation never start a `fable` agent, never set `model: fable`, and never put it in a Workflow script. If you think a task needs it, say why and ask.
+`fable` is the model above them, so the rule in `AGENTS.md` on a model above the most capable tier applies to it: never start a `fable` agent, set `model: fable` or put it in a Workflow script without that authorisation. If you think a task needs it, say why and ask.
 
 ## Dynamic workflows (Workflow tool)
 

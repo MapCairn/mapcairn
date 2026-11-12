@@ -178,10 +178,18 @@ export function checkSkill(folder, text) {
       `description is ${description.length} characters; the limit is ${MAX_DESCRIPTION_LENGTH}`,
     );
   }
-  for (const token of CLAUDE_ONLY_TOOL_NAMES) {
-    if (body.includes(token)) {
-      problems.push(`the body names a Claude-only tool or feature: ${token}`);
-    }
-  }
-  return problems;
+  return [...problems, ...claudeOnlyProblems(body)];
+}
+
+/**
+ * One problem per Claude-only tool or feature name that a body uses. Applies
+ * to skill bodies and to the agent bodies shipped to other tools.
+ *
+ * @param {string} body
+ * @returns {string[]}
+ */
+export function claudeOnlyProblems(body) {
+  return CLAUDE_ONLY_TOOL_NAMES.filter((token) => body.includes(token)).map(
+    (token) => `the body names a Claude-only tool or feature: ${token}`,
+  );
 }

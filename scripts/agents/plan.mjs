@@ -71,39 +71,82 @@ function filesUnder(root, directory) {
 }
 
 /**
- * The names of the skill folders, sorted.
+ * The skills installed from elsewhere, named in `skills-lock.json`. They are
+ * not ours to rewrite, so they are neither checked nor copied.
+ *
+ * @param {string} root
+ * @returns {Set<string>}
+ */
+function vendoredSkills(root) {
+  const lock = path.join(root, "skills-lock.json");
+  if (!existsSync(lock)) {
+    return new Set();
+  }
+  const { skills = {} } = JSON.parse(readFileSync(lock, "utf8"));
+  return new Set(Object.keys(skills));
+}
+
+/**
+ * The project's own skill entries (everything in `.claude/skills` that
+ * `skills-lock.json` does not name), sorted by name.
+ *
+ * @param {string} root
+ * @returns {import("node:fs").Dirent[]}
+ */
+function projectSkillEntries(root) {
+  const vendored = vendoredSkills(root);
+  return entriesOf(root, SKILLS_SOURCE)
+    .filter((entry) => !vendored.has(entry.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * The names of the project skills that are real folders, sorted.
  *
  * @param {string} root
  * @returns {string[]}
  */
 function skillFolders(root) {
-  return entriesOf(root, SKILLS_SOURCE)
+  return projectSkillEntries(root)
     .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
+    .map((entry) => entry.name);
 }
 
 /**
- * Checks every skill in `.claude/skills` and returns one line per problem.
+ * Checks every project skill in `.claude/skills` and returns one line per
+ * problem. A symbolic link is reported, not skipped: the sync copies and never
+ * links, so a linked skill would silently go missing from the mirror.
  *
  * @param {string} root
  * @returns {string[]}
  */
 export function skillProblems(root) {
-  return skillFolders(root).flatMap((folder) => {
-    const file = path.join(root, SKILLS_SOURCE, folder, "SKILL.md");
-    if (!existsSync(file)) {
-      return [`${SKILLS_SOURCE}/${folder}: SKILL.md is missing`];
+  if (!existsSync(path.join(root, SKILLS_SOURCE))) {
+    return [`${SKILLS_SOURCE} is missing`];
+  }
+  return projectSkillEntries(root).flatMap((entry) => {
+    const where = `${SKILLS_SOURCE}/${entry.name}`;
+    if (entry.isSymbolicLink()) {
+      return [
+        `${where}: is a symbolic link; use a real folder, because the sync copies and never links`,
+      ];
     }
-    return checkSkill(folder, readFileSync(file, "utf8")).map(
-      (problem) => `${SKILLS_SOURCE}/${folder}/SKILL.md: ${problem}`,
+    if (!entry.isDirectory()) {
+      return [];
+    }
+    const file = path.join(root, where, "SKILL.md");
+    if (!existsSync(file)) {
+      return [`${where}: SKILL.md is missing`];
+    }
+    return checkSkill(entry.name, readFileSync(file, "utf8")).map(
+      (problem) => `${where}/SKILL.md: ${problem}`,
     );
   });
 }
 
 /**
- * The files the sync should produce: a byte-for-byte copy of each skill folder
- * (as `Buffer`s) and one file per portable agent in each tool's format (as
+ * The files the sync should produce: a byte-for-byte copy of each project skill
+ * folder, not the vendored ones (as `Buffer`s) and one file per portable agent in each tool's format (as
  * strings), keyed by path relative to `root`.
  *
  * @param {string} root
@@ -178,17 +221,21 @@ export function findDrift(root, plan) {
 }
 
 /**
- * Removes a file and then any parent folder it leaves empty, up to the root.
+ * Removes a file and then any parent folder it leaves empty, stopping at the
+ * owned folder it sits in, which stays.
  *
  * @param {string} root
  * @param {string} file
  */
 function removeFile(root, file) {
   rmSync(path.join(root, file));
+  const owned = OWNED_DIRECTORIES.find((directory) =>
+    file.startsWith(`${directory}/`),
+  );
   for (
-    let directory = path.dirname(file);
-    directory !== "." && readdirSync(path.join(root, directory)).length === 0;
-    directory = path.dirname(directory)
+    let directory = path.posix.dirname(file);
+    directory !== owned && readdirSync(path.join(root, directory)).length === 0;
+    directory = path.posix.dirname(directory)
   ) {
     rmSync(path.join(root, directory), { recursive: true });
   }
