@@ -364,8 +364,8 @@ export class MapPage {
   }
 
   /**
-   * Fills the search box and presses Enter. Typing alone never searches; the
-   * search runs only when it is submitted.
+   * Fills the search box and presses Enter. Typing alone never searches the
+   * geocoder; that search runs only when it is submitted.
    */
   async search(query: string): Promise<void> {
     await this.searchInput.fill(query);

@@ -36,7 +36,7 @@ const SHARED_FACTS: ReadonlyArray<{
   },
   {
     fact: "the text typed in search is sent to Photon, run by komoot, as it is typed",
-    pattern: /Photon/,
+    pattern: /Photon[\s\S]*komoot|komoot[\s\S]*Photon/,
     notes: [SETTINGS_PRIVACY_NOTE],
   },
   {
