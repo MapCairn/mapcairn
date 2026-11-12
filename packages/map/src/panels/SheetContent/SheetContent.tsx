@@ -1,4 +1,5 @@
 import { isSettingsSection, type SheetSection } from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { type DataLayers, LayersSection } from "../../layers";
 import { usePreferences } from "../../services";
@@ -79,8 +80,7 @@ export function SheetContent({
 
   // Only a change of section moves focus and scroll, not a change in motion
   // preference, so it is read through the render that ran it.
-  const motion = useRef(reducedMotion);
-  motion.current = reducedMotion;
+  const reducedMotionRef = useLatestRef(reducedMotion);
   useEffect(() => {
     const heading = section ? headings.current[section] : null;
     if (!heading) {
@@ -89,9 +89,9 @@ export function SheetContent({
     heading.focus({ preventScroll: true });
     heading.scrollIntoView({
       block: "start",
-      behavior: motion.current ? "auto" : "smooth",
+      behavior: reducedMotionRef.current ? "auto" : "smooth",
     });
-  }, [section]);
+  }, [section, reducedMotionRef]);
 
   const headingRef =
     (target: SheetSection) => (element: HTMLElement | null) => {
