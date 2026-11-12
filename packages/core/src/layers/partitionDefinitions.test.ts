@@ -136,6 +136,17 @@ describe("partitionDefinitions", () => {
       expect(second.layers[1]).toBe(first.layers[1]);
     });
 
+    it("takes a very deeply nested unknown key as a change, not a failure", () => {
+      const nested = JSON.parse(
+        `${'{"a":'.repeat(200_000)}1${"}".repeat(200_000)}`,
+      );
+      const withKey = () => ({ ...clone(SAMPLE_FEED_LAYER), extra: nested });
+      const first = partitionDefinitions([withKey()], options);
+      const second = partitionDefinitions([withKey()], options, first);
+      expect(second.layers).toHaveLength(1);
+      expect(second.layers[0]).not.toBe(first.layers[0]);
+    });
+
     it("takes a new list when a definition is added or removed", () => {
       const first = partitionDefinitions([SAMPLE_FEED_LAYER], options);
       const added = partitionDefinitions(
@@ -146,6 +157,74 @@ describe("partitionDefinitions", () => {
       expect(added.layers).not.toBe(first.layers);
       expect(added.layers[0]).toBe(first.layers[0]);
       expect(partitionDefinitions([], options, added).layers).toEqual([]);
+    });
+  });
+
+  describe("values that are not JSON", () => {
+    it("skips a value whose id getter throws, and keeps the rest", () => {
+      const hostile = {
+        ...clone(SAMPLE_TILE_LAYER),
+        get id(): string {
+          throw new Error("no id");
+        },
+      };
+      const result = partitionDefinitions(
+        [SAMPLE_FEED_LAYER, hostile],
+        options,
+      );
+      expect(result.layers).toEqual([SAMPLE_FEED_LAYER]);
+      expect(result.skipped).toEqual([
+        { problems: ["definition: could not be read"] },
+      ]);
+    });
+
+    it("skips a proxy that throws on every read", () => {
+      const hostile = new Proxy(
+        {},
+        {
+          get: () => {
+            throw new Error("no");
+          },
+          has: () => {
+            throw new Error("no");
+          },
+          ownKeys: () => {
+            throw new Error("no");
+          },
+        },
+      );
+      const result = partitionDefinitions([hostile], options);
+      expect(result.layers).toEqual([]);
+      expect(result.skipped).toHaveLength(1);
+    });
+
+    it("never throws, and keeps every value either kept or skipped, for values of any shape", () => {
+      const hostileValue = fc.oneof(
+        fc.anything(),
+        fc.constant(
+          new Proxy(
+            {},
+            {
+              get: () => {
+                throw new Error("no");
+              },
+            },
+          ),
+        ),
+        fc.constant({
+          get id(): string {
+            throw new Error("no");
+          },
+        }),
+        fc.constantFrom(...SAMPLE_DEFINITIONS),
+      );
+      fc.assert(
+        fc.property(fc.array(hostileValue, { maxLength: 8 }), (raw) => {
+          const { layers, skipped } = partitionDefinitions(raw, options);
+          expect(layers.length + skipped.length).toBe(raw.length);
+        }),
+        PROPERTY_PARAMETERS,
+      );
     });
   });
 

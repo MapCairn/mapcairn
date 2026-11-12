@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { BasemapDefinition } from "@mapcairn/core";
+import type {
+  BasemapDefinition,
+  CatalogueState,
+  LayerDefinition,
+} from "@mapcairn/core";
 import type { Page } from "@playwright/test";
 import { TRANSPARENT_PNG } from "./network";
 
@@ -187,10 +191,10 @@ export async function scriptLayers(
   await page.addInitScript((layers: readonly object[]) => {
     const state = Object.freeze({
       status: "ready",
-      layers,
+      layers: layers as readonly LayerDefinition[],
       skipped: [],
       refresh: "idle",
-    });
+    } satisfies CatalogueState);
     const catalogue = {
       getState: () => state,
       subscribe: () => () => {},

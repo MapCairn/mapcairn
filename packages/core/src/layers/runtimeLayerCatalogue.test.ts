@@ -325,6 +325,67 @@ describe("createRuntimeLayerCatalogue", () => {
     });
   });
 
+  describe("whatever the payload holds", () => {
+    // Promises look for `then` first, so that read is left alone and the
+    // rest, such as iterating the list, throws.
+    const unreadableList = () =>
+      new Proxy([], {
+        get: (_target, key) => {
+          if (key === "then") {
+            return undefined;
+          }
+          throw new Error("unreadable");
+        },
+      });
+
+    it("fails with invalid, and resolves, when the first payload cannot be read", async () => {
+      const { catalogue, loads } = held();
+      catalogue.subscribe(() => undefined);
+      loads[0]?.resolve(unreadableList());
+      await expect(catalogue.refresh()).resolves.toBeUndefined();
+      expect(catalogue.getState()).toEqual({
+        status: "failed",
+        reason: "invalid",
+      });
+    });
+
+    it("keeps the list, says the refresh failed and recovers on the next, when a later payload cannot be read", async () => {
+      const { catalogue, loads } = held();
+      catalogue.subscribe(() => undefined);
+      loads[0]?.resolve([SAMPLE_FEED_LAYER]);
+      await catalogue.refresh();
+      const refreshing = catalogue.refresh();
+      loads[1]?.resolve(unreadableList());
+      await expect(refreshing).resolves.toBeUndefined();
+      expect(catalogue.getState()).toMatchObject({
+        status: "ready",
+        layers: [SAMPLE_FEED_LAYER],
+        refresh: "failed",
+      });
+      const retry = catalogue.refresh();
+      loads[2]?.resolve([SAMPLE_FEED_LAYER]);
+      await retry;
+      expect(catalogue.getState()).toMatchObject({ refresh: "idle" });
+    });
+
+    it("stays usable when a definition holds a very deeply nested key and is refreshed again", async () => {
+      const levels = 200_000;
+      const nested = () =>
+        JSON.parse(`${'{"a":'.repeat(levels)}1${"}".repeat(levels)}`);
+      const { catalogue, loads } = held();
+      catalogue.subscribe(() => undefined);
+      loads[0]?.resolve([{ ...SAMPLE_FEED_LAYER, extra: nested() }]);
+      await catalogue.refresh();
+      const refreshing = catalogue.refresh();
+      loads[1]?.resolve([{ ...SAMPLE_FEED_LAYER, extra: nested() }]);
+      await expect(refreshing).resolves.toBeUndefined();
+      expect(catalogue.getState()).toMatchObject({
+        status: "ready",
+        refresh: "idle",
+      });
+    });
+  });
+
   describe("reporting skipped definitions to the host", () => {
     it("calls onSkipped with the skipped definitions when there are any", async () => {
       const { catalogue, loads, onSkipped } = held();

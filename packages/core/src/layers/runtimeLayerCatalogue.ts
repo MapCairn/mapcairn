@@ -37,7 +37,9 @@ export interface RuntimeLayerCatalogueOptions {
 export interface RuntimeLayerCatalogue extends LayerCatalogue {
   /**
    * Aborts the signal given to `load` and ignores anything it still
-   * returns. For the host's teardown: unsubscribing never calls it.
+   * returns, so the state stays as it was: a catalogue that was loading stays
+   * loading, and a refresh or subscription afterwards starts no load. For the
+   * host's teardown: unsubscribing never calls it.
    */
   dispose(): void;
 }
@@ -112,15 +114,28 @@ export function createRuntimeLayerCatalogue({
     }
   }
 
-  function accept(payload: unknown): CatalogueState {
+  function partition(payload: unknown): PartitionedDefinitions | null {
     if (!Array.isArray(payload)) {
+      return null;
+    }
+    try {
+      return partitionDefinitions(payload, options, previous);
+    } catch {
+      // The payload is the server's: one that cannot even be read is invalid.
+      return null;
+    }
+  }
+
+  function accept(payload: unknown): CatalogueState {
+    const partitioned = partition(payload);
+    if (partitioned === null) {
       return failedFrom(store.getState(), "invalid");
     }
-    previous = partitionDefinitions(payload, options, previous);
-    if (previous.skipped.length > 0) {
-      report(previous.skipped);
+    previous = partitioned;
+    if (partitioned.skipped.length > 0) {
+      report(partitioned.skipped);
     }
-    return readyState(previous.layers, previous.skipped);
+    return readyState(partitioned.layers, partitioned.skipped);
   }
 
   async function attempt(): Promise<Outcome> {
