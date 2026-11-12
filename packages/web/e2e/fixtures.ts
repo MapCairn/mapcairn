@@ -13,6 +13,9 @@ export interface MapCairnOptions {
    * `collapseCredits` instead of waiting it out. Off by default: a faked
    * clock is not the app's own, so it is for the tests that only need the
    * credits out of the way. `attribution.spec` proves the real timer.
+   * Specs that need to step past another app timer (a long press, the view
+   * settling, the scale bar's idle delay) install the clock themselves and
+   * jump by the values in `support/timers.ts`.
    */
   readonly fastCredits: boolean;
   /**

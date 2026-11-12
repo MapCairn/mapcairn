@@ -31,6 +31,7 @@ import {
   RASTER_TILE_PATTERN,
   SATELLITE_TILE_PATTERN,
   SPRITE_PATTERN,
+  STREETS_TILE_PATTERN,
   TRANSPARENT_PNG,
   VECTOR_STYLE_PATTERN,
 } from "./support/network";
@@ -627,8 +628,6 @@ test.describe("basemaps", () => {
   });
 
   test.describe("a basemap whose provider is down", () => {
-    /** The origin of the Streets tiles, which these tests take down. */
-    const STREETS_HOST = /tile\.openstreetmap\.org/;
     /** The style of the default basemap, which the map goes back to. */
     const DEFAULT_STYLE_PATTERN = new RegExp(
       `tiles\\.openfreemap\\.org/styles/${DEFAULT_VECTOR_BASEMAP_ID}$`,
@@ -640,7 +639,7 @@ test.describe("basemaps", () => {
       page,
       mapPage,
     }) => {
-      await page.route(STREETS_HOST, (route) => route.abort("failed"));
+      await page.route(STREETS_TILE_PATTERN, (route) => route.abort("failed"));
       await mapPage.goto(START);
       const canvas = page.locator("canvas.maplibregl-canvas");
       await canvas.evaluate((element) => {
@@ -733,7 +732,7 @@ test.describe("basemaps", () => {
       page,
       mapPage,
     }) => {
-      await page.route(STREETS_HOST, (route) => route.abort("failed"));
+      await page.route(STREETS_TILE_PATTERN, (route) => route.abort("failed"));
       // Starting on Streets, the map asks for the default's style only when
       // it falls back to it.
       const fellBack = page.waitForRequest(DEFAULT_STYLE_PATTERN);
@@ -770,7 +769,7 @@ test.describe("basemaps", () => {
       mapPage,
     }) => {
       let requests = 0;
-      await page.route(STREETS_HOST, (route) => {
+      await page.route(STREETS_TILE_PATTERN, (route) => {
         requests += 1;
         return requests === 2
           ? route.abort("failed")

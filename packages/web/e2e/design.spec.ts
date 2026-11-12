@@ -255,35 +255,40 @@ test.describe("design guide", () => {
 
 test.describe("design guide accessibility @a11y", () => {
   test.use({ reducedMotion: "reduce" });
+  // The guide renders every token and primitive, about 1,500 elements. One
+  // load takes 2 to 3 s and one full axe scan of it 3 to 4 s, so each test
+  // that scans the whole page with axe takes 8 to 12 s with two workers on
+  // an idle machine, and has timed out at the 30 s default on a loaded one.
+  // Narrowing the scan would leave parts of the page unchecked, so those
+  // tests, and only those, call `test.slow()` for triple the time.
 
   for (const viewport of [
     { width: 390, height: 844 },
     { width: 1280, height: 720 },
   ]) {
-    test(
-      `passes axe and the control checks in both themes at ${viewport.width}x${viewport.height} @a11y`,
-      viewportDetails(viewport),
-      async ({ page }) => {
-        await page.setViewportSize(viewport);
-        const design = new DesignPage(page);
-        for (const colorScheme of ["light", "dark"] as const) {
-          await test.step(colorScheme, async () => {
-            await page.emulateMedia({ colorScheme });
-            await design.goto();
-            await expect(page.locator("html")).toHaveAttribute(
-              "data-theme",
-              colorScheme,
-            );
-            expect(await axeViolations(page)).toEqual([]);
-            const controls = await inspectControls(page);
-            expect(controls.unnamed).toEqual([]);
-            expect(controls.positiveTabindex).toEqual([]);
-            expect(controls.tooSmall).toEqual([]);
-            expect(controls.under44).toEqual([]);
-          });
-        }
-      },
-    );
+    for (const colorScheme of ["light", "dark"] as const) {
+      test(
+        `passes axe and the control checks in the ${colorScheme} theme at ${viewport.width}x${viewport.height} @a11y`,
+        viewportDetails(viewport),
+        async ({ page }) => {
+          test.slow();
+          await page.setViewportSize(viewport);
+          await page.emulateMedia({ colorScheme });
+          const design = new DesignPage(page);
+          await design.goto();
+          await expect(page.locator("html")).toHaveAttribute(
+            "data-theme",
+            colorScheme,
+          );
+          expect(await axeViolations(page)).toEqual([]);
+          const controls = await inspectControls(page);
+          expect(controls.unnamed).toEqual([]);
+          expect(controls.positiveTabindex).toEqual([]);
+          expect(controls.tooSmall).toEqual([]);
+          expect(controls.under44).toEqual([]);
+        },
+      );
+    }
   }
 
   test("every control shows a focus ring @a11y", async ({ page }) => {
@@ -305,6 +310,7 @@ test.describe("design guide accessibility @a11y", () => {
   test("forced colours keep the page readable and in bounds @a11y", async ({
     page,
   }) => {
+    test.slow();
     await page.emulateMedia({ forcedColors: "active" });
     await page.setViewportSize({ width: 320, height: 568 });
     const design = new DesignPage(page);
@@ -316,6 +322,7 @@ test.describe("design guide accessibility @a11y", () => {
   });
 
   test("more contrast passes axe @a11y", async ({ page }) => {
+    test.slow();
     await page.emulateMedia({ contrast: "more" });
     const design = new DesignPage(page);
     await design.goto();

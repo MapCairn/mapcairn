@@ -5,6 +5,7 @@ import { axeViolations } from "./support/a11y";
 import { GEOCODER_SEARCH_PATTERN } from "./support/network";
 import { mockRoutingService, type RoutingScript } from "./support/routing";
 import { viewportDetails, waitForStableLayout } from "./support/states";
+import { settleFrames } from "./support/timers";
 
 /*
  * Directions: stops from the map, the map centre, a place search and the
@@ -399,6 +400,7 @@ test.describe("directions failures", () => {
     mapPage,
   }) => {
     routing.delayMs = 1500;
+    const answered = routing.answered;
     await getRoute(page).click();
     await expect(page.getByTestId("directions-loading")).toBeVisible();
     await page.getByTestId("directions-cancel").click();
@@ -406,7 +408,10 @@ test.describe("directions failures", () => {
     await expect
       .poll(() => mapPage.announcements())
       .toContainEqual("Cancelled");
-    await page.waitForTimeout(2000);
+    // Wait for the service's late answer to be sent, then for a frame in
+    // which it could have been drawn.
+    await expect.poll(() => routing.answered).toBe(answered + 1);
+    await settleFrames(page);
     await expect(page.getByTestId("directions-result")).toHaveCount(0);
   });
 });

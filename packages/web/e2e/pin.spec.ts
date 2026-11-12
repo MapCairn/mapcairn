@@ -2,6 +2,11 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { GEOCODER_REVERSE_PATTERN } from "./support/network";
 import { copiedText, scriptClipboard } from "./support/services";
+import {
+  LONG_PRESS_DELAY_MS,
+  settleFrames,
+  TIMER_SLACK_MS,
+} from "./support/timers";
 
 /** A view whose centre is easy to read back from the pin card. */
 const START = "#map=10.00/-26.20000/28.04000";
@@ -51,9 +56,13 @@ test.describe("pin", () => {
     page,
     mapPage,
   }) => {
+    await page.clock.install();
     await mapPage.goto(START);
     await mapPage.host.click({ position: { x: 100, y: 120 } });
-    await page.waitForTimeout(800);
+    // Run the clock past a long press, so a press the click failed to end
+    // would have dropped its pin by now.
+    await page.clock.runFor(LONG_PRESS_DELAY_MS + TIMER_SLACK_MS);
+    await settleFrames(page);
     await expect(mapPage.pinMarker).toHaveCount(0);
 
     await mapPage.host.click({ button: "right", position: { x: 100, y: 120 } });
@@ -62,6 +71,7 @@ test.describe("pin", () => {
   });
 
   test("a press that moves is a pan, not a pin", async ({ page, mapPage }) => {
+    await page.clock.install();
     await mapPage.goto(START);
     const box = await mapPage.host.boundingBox();
     if (!box) {
@@ -70,8 +80,10 @@ test.describe("pin", () => {
     await page.mouse.move(box.x + 200, box.y + 200);
     await page.mouse.down();
     await page.mouse.move(box.x + 260, box.y + 240, { steps: 5 });
-    await page.waitForTimeout(700);
+    // Hold past a long press: one the move failed to cancel would fire now.
+    await page.clock.runFor(LONG_PRESS_DELAY_MS + TIMER_SLACK_MS);
     await page.mouse.up();
+    await settleFrames(page);
     await expect(mapPage.pinMarker).toHaveCount(0);
   });
 

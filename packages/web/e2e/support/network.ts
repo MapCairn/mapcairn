@@ -16,6 +16,9 @@ export const TRANSPARENT_PNG = Buffer.from(
 export const RASTER_TILE_PATTERN =
   /(?:tile\.openstreetmap\.org|tile\.opentopomap\.org|tiles\.maps\.eox\.at)/;
 
+/** The Streets tiles, from OpenStreetMap, which the basemap-outage tests take down. */
+export const STREETS_TILE_PATTERN = /tile\.openstreetmap\.org/;
+
 /** Satellite's imagery tiles, from EOX. */
 export const SATELLITE_TILE_PATTERN = /tiles\.maps\.eox\.at\/wmts\//;
 

@@ -115,16 +115,12 @@ test.describe("map shape", () => {
     const centreX = box.x + box.width / 2;
     // Drag in the upper part of the map: on a phone the pin card's sheet covers the lower half.
     const y = box.y + box.height * 0.3;
-    for (let pass = 0; pass < 8; pass += 1) {
-      if ((await mapPage.pinMarker.count()) === 0) {
-        break;
-      }
+    await expect(async () => {
       await page.mouse.move(centreX - 75, y);
       await page.mouse.down();
       await page.mouse.move(centreX + 75, y, { steps: 10 });
       await page.mouse.up();
-      await page.waitForTimeout(300);
-    }
-    await expect(mapPage.pinMarker).toHaveCount(0);
+      await expect(mapPage.pinMarker).toHaveCount(0, { timeout: 500 });
+    }).toPass({ timeout: 15_000 });
   });
 });
