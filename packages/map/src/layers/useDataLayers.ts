@@ -4,59 +4,47 @@ import {
   announceDetailError,
   announceDetailShown,
   announceFeaturesFound,
-  announceLayerCapped,
-  announceLayerEmpty,
-  announceLayerError,
-  announceLayerLoaded,
   announceLayerOn,
-  announceLayerZoomIn,
   announceTilesUnavailable,
   type Bounds,
   type ControlValues,
   describeChosenTime,
   type FieldValue,
-  feedUrl,
   isFeedLayer,
   isQueryLayer,
   isRasterTileLayer,
   type LayerAttribution,
   type LayerDefinition,
-  LayerError,
   type LayerFeature,
   type LayersUrlState,
   loadsFeatures,
-  nextQueryWindow,
   parseTime,
   resolveControlValues,
   tileUrl,
 } from "@mapcairn/core";
-import { useLatestRef } from "@mapcairn/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
+import type { LayerStatus } from "./layerStatus";
+import { errorKind, type LoadResult, loadOutcome } from "./loadOutcome";
+import { type AnnouncedStates, reportLoad, reportZoomIn } from "./loadReport";
+import {
+  isTooFarOut,
+  planLoads,
+  type QueryView,
+  rememberWindows,
+  type WantedLoad,
+  wantedLoads,
+} from "./loadRequests";
 
-/**
- * Where a layer is: off, on (tiles), loading, loaded, empty, failed, or (a
- * query layer) too far out to ask for features. A tile layer is `on` until
- * the map reports that none of its tiles loaded, which is
- * `tiles-unavailable`.
- */
-export type LayerStatus =
-  | { readonly kind: "off" }
-  | { readonly kind: "on" }
-  | { readonly kind: "tiles-unavailable" }
-  | { readonly kind: "loading" }
-  | {
-      readonly kind: "ready";
-      /** How many are drawn. */
-      readonly count: number;
-      readonly updatedAt: number;
-      /** True when the query had more than its cap, so only the first are drawn. */
-      readonly capped?: boolean;
-    }
-  | { readonly kind: "zoom-in" }
-  | { readonly kind: "empty"; readonly updatedAt: number }
-  | { readonly kind: "error"; readonly error: "network" | "invalid" };
+export type { LayerStatus };
 
 /** One layer as the ui shows it. */
 export interface DataLayerState {
@@ -171,11 +159,6 @@ export interface UseDataLayersOptions {
   readonly now?: () => number;
 }
 
-interface LoadResult {
-  readonly status: LayerStatus;
-  readonly features: readonly LayerFeature[];
-}
-
 interface State {
   readonly enabled: readonly string[];
   readonly controls: Readonly<Record<string, ControlValues>>;
@@ -197,7 +180,7 @@ interface State {
     | readonly { readonly layerId: string; readonly featureId: string }[]
     | null;
   /** What the map last showed, for query layers. */
-  readonly view: { readonly area: Bounds; readonly zoom: number } | null;
+  readonly view: QueryView | null;
   readonly focusRequest: number;
   /** The `focusRequest` that has been acted on. */
   readonly focusHandled: number;
@@ -205,9 +188,6 @@ interface State {
 }
 
 const OFF: LoadResult = { status: { kind: "off" }, features: [] };
-
-/** A layer id, the key of the request it wants, and (for a query layer) the area it asks for. */
-type WantedRequest = readonly [string, string, Bounds | undefined];
 
 function initialState(
   definitions: readonly LayerDefinition[],
@@ -234,6 +214,29 @@ function initialState(
     focusHandled: 0,
     detail: null,
   };
+}
+
+/**
+ * The state with a layer loading. A query layer keeps what it draws while the
+ * next window loads; a feed clears its features.
+ */
+function withLoading(state: State, load: WantedLoad): State {
+  const { id, definition } = load;
+  const kept = isQueryLayer(definition)
+    ? (state.results[id]?.features ?? [])
+    : [];
+  return {
+    ...state,
+    results: {
+      ...state.results,
+      [id]: { status: { kind: "loading" }, features: kept },
+    },
+  };
+}
+
+/** The state with what a layer's load settled to. */
+function withResult(state: State, id: string, result: LoadResult): State {
+  return { ...state, results: { ...state.results, [id]: result } };
 }
 
 /** The tiles a raster tile layer asks for with these controls, or null for any other layer. */
@@ -307,12 +310,6 @@ function sortFeatures(
   });
 }
 
-function errorKind(
-  error: unknown,
-): "network" | "invalid" | "aborted" | "empty" {
-  return error instanceof LayerError ? error.kind : "invalid";
-}
-
 /**
  * The state of every data layer and the actions on it, driven entirely by
  * the definitions in the registry: nothing here names a layer.
@@ -334,21 +331,24 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   const [state, setState] = useState(() =>
     initialState(definitions, options.initial, now()),
   );
-  const stateRef = useLatestRef(state);
+  /**
+   * What the handlers below read. It follows the last committed state, set in
+   * a layout effect so a render React throws away (a transition that
+   * suspends) never leaves its state here, and before any effect of the
+   * same commit runs.
+   */
+  const stateRef = useRef(state);
+  useLayoutEffect(() => {
+    stateRef.current = state;
+  }, [state]);
   const requests = useRef(
     new Map<string, { key: string; controller: AbortController }>(),
   );
   /** The request key each layer last settled for, so a settled layer is not loaded again. */
   const loadedKeys = useRef(new Map<string, string>());
-  /** The window each query layer last asked for. */
+  /** The window each query layer last asked for, remembered once its request is committed. */
   const queryWindows = useRef(new Map<string, Bounds>());
-  /**
-   * What each query layer last said aloud, so a refresh for another part of
-   * the map is not announced again, only a change in what it shows.
-   */
-  const announcedStates = useRef(
-    new Map<string, "ready" | "capped" | "empty" | "error" | "zoom-in">(),
-  );
+  const announcedStates = useRef<AnnouncedStates>(new Map());
   const detailRequest = useRef<AbortController | null>(null);
 
   const byId = useMemo(
@@ -356,177 +356,70 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     [definitions],
   );
 
-  // The key of each enabled feed layer's request; a change starts a new load.
-  // A query layer asks for a window around the map's view, kept while the
-  // view stays inside it, and for nothing until the map has said where it is.
-  const wanted = state.enabled.flatMap((id): WantedRequest[] => {
-    const definition = byId.get(id);
-    if (!definition || !loadsFeatures(definition)) {
-      return [];
-    }
-    const controls = state.controls[id] ?? {};
-    const retries = state.retries[id] ?? 0;
-    if (isQueryLayer(definition)) {
-      const { view } = state;
-      if (!view || view.zoom < (definition.source.minzoom ?? 0)) {
-        queryWindows.current.delete(id);
-        return [];
-      }
-      const area = nextQueryWindow(
-        queryWindows.current.get(id) ?? null,
-        view.area,
-      );
-      queryWindows.current.set(id, area);
-      const url = feedUrl(definition, controls, now(), area);
-      return [[id, `${url}#${retries}`, area]];
-    }
-    const url = feedUrl(definition, controls, now());
-    return [[id, `${url}#${retries}`, undefined]];
+  const wanted = wantedLoads({
+    enabled: state.enabled,
+    definitions: byId,
+    controls: state.controls,
+    retries: state.retries,
+    view: state.view,
+    windows: queryWindows.current,
+    now: now(),
   });
-  const signature = wanted.map(([id, key]) => `${id} ${key}`).join("\n");
+  const signature = wanted.map(({ id, key }) => `${id} ${key}`).join("\n");
 
   // Query layers that are too far out, so each is told once to zoom in.
   const tooFar = state.enabled.filter((id) => {
     const definition = byId.get(id);
-    return (
-      definition !== undefined &&
-      isQueryLayer(definition) &&
-      state.view !== null &&
-      state.view.zoom < (definition.source.minzoom ?? 0)
-    );
+    return definition !== undefined && isTooFarOut(definition, state.view);
   });
   const tooFarSignature = tooFar.join(" ");
+
+  useEffect(() => {
+    rememberWindows(queryWindows.current, wanted);
+  });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the signatures are the triggers; everything else is read through refs or is stable.
   useEffect(() => {
     for (const id of tooFar) {
-      if (announcedStates.current.get(id) !== "zoom-in") {
-        announcedStates.current.set(id, "zoom-in");
-        announce(announceLayerZoomIn((byId.get(id) as LayerDefinition).name), {
-          priority: "polite",
-        });
-      }
+      reportZoomIn(
+        byId.get(id) as LayerDefinition,
+        announcedStates.current,
+        announce,
+      );
     }
   }, [tooFarSignature]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the signature is the trigger; everything else is read through refs or is stable.
-  useEffect(() => {
-    const keys = new Map(wanted.map(([id, key]) => [id, key]));
-    const areas = new Map(wanted.map(([id, , area]) => [id, area]));
-    for (const [id, request] of requests.current) {
-      if (keys.get(id) !== request.key) {
-        request.controller.abort();
-        requests.current.delete(id);
+  /** Starts one load, shows the layer as loading, and settles it when the source answers. */
+  const startLoad = (load: WantedLoad) => {
+    const { id, key, definition } = load;
+    const controller = new AbortController();
+    requests.current.set(id, { key, controller });
+    setState((current) => withLoading(current, load));
+    loadOutcome(layerSource, load, now, controller.signal).then((outcome) => {
+      if (!outcome) {
+        return;
       }
-    }
-    for (const [id, key] of loadedKeys.current) {
-      if (keys.get(id) !== key) {
-        loadedKeys.current.delete(id);
-      }
-    }
-    for (const [id, key] of keys) {
-      // A layer that has settled for this request is not loaded again because
-      // another layer was turned on or off.
-      if (requests.current.has(id) || loadedKeys.current.get(id) === key) {
-        continue;
-      }
-      const definition = byId.get(id) as LayerDefinition;
-      const controller = new AbortController();
-      requests.current.set(id, { key, controller });
-      const settle = (result: LoadResult) => {
-        if (requests.current.get(id)?.key !== key) {
-          return;
-        }
+      if (requests.current.get(id)?.key === key) {
         requests.current.delete(id);
         loadedKeys.current.set(id, key);
-        setState((current) => ({
-          ...current,
-          results: { ...current.results, [id]: result },
-        }));
-      };
-      const query = isQueryLayer(definition) ? definition : null;
-      // A query layer says each state once: a pan to another window is not news.
-      const say = (
-        announced: "ready" | "capped" | "empty" | "error",
-        message: string,
-        priority: "polite" | "assertive",
-      ) => {
-        if (query && announcedStates.current.get(id) === announced) {
-          return;
-        }
-        announcedStates.current.set(id, announced);
-        announce(message, { priority });
-      };
-      setState((current) => ({
-        ...current,
-        results: {
-          ...current.results,
-          // A query layer keeps what it draws while the next window loads.
-          [id]: {
-            status: { kind: "loading" },
-            features: query ? (current.results[id]?.features ?? []) : [],
-          },
-        },
-      }));
-      layerSource
-        .load({
-          definition,
-          controls: stateRef.current.controls[id] ?? {},
-          now: now(),
-          signal: controller.signal,
-          ...(areas.get(id) ? { area: areas.get(id) } : {}),
-        })
-        .then(
-          (loaded) => {
-            const capped =
-              query !== null && loaded.length > query.source.maxFeatures;
-            const features = capped
-              ? loaded.slice(0, query.source.maxFeatures)
-              : loaded;
-            settle({
-              status: {
-                kind: "ready",
-                count: features.length,
-                updatedAt: now(),
-                ...(capped ? { capped: true } : {}),
-              },
-              features,
-            });
-            say(
-              capped ? "capped" : "ready",
-              capped
-                ? announceLayerCapped(definition.name, features.length)
-                : announceLayerLoaded(definition.name, features.length),
-              "polite",
-            );
-          },
-          (error: unknown) => {
-            const kind = errorKind(error);
-            if (kind === "aborted" || controller.signal.aborted) {
-              return;
-            }
-            if (kind === "empty") {
-              settle({
-                status: { kind: "empty", updatedAt: now() },
-                features: [],
-              });
-              if (loadsFeatures(definition)) {
-                say(
-                  "empty",
-                  announceLayerEmpty(definition.name, definition.emptyText),
-                  "polite",
-                );
-              }
-              return;
-            }
-            settle({ status: { kind: "error", error: kind }, features: [] });
-            say(
-              "error",
-              announceLayerError(definition.name, kind),
-              "assertive",
-            );
-          },
-        );
+        setState((current) => withResult(current, id, outcome.result));
+      }
+      reportLoad(definition, outcome.spoken, announcedStates.current, announce);
+    });
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the signature is the trigger; everything else is read through refs or is stable.
+  useEffect(() => {
+    const plan = planLoads(wanted, requests.current, loadedKeys.current);
+    for (const id of plan.cancel) {
+      requests.current.get(id)?.controller.abort();
+      requests.current.delete(id);
+    }
+    for (const id of plan.forget) {
+      loadedKeys.current.delete(id);
+    }
+    for (const load of plan.start) {
+      startLoad(load);
     }
   }, [signature]);
 
@@ -579,7 +472,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         announce(announceLayerOn(definition.name), { priority: "polite" });
       }
     },
-    [announce, byId, stateRef],
+    [announce, byId],
   );
 
   const setControl = useCallback(
@@ -635,7 +528,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         { priority: "polite" },
       );
     },
-    [announce, byId, now, stateRef],
+    [announce, byId, now],
   );
 
   const setSort = useCallback((id: string, sortId: string) => {
@@ -721,7 +614,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       }));
       announce(announceFeaturesFound(found.length), { priority: "polite" });
     },
-    [announce, select, stateRef],
+    [announce, select],
   );
 
   const backToChoices = useCallback(
@@ -812,7 +705,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           },
         );
     },
-    [announce, byId, layerSource, stateRef],
+    [announce, byId, layerSource],
   );
 
   const layers = useMemo(
@@ -820,13 +713,8 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       definitions.map((definition): DataLayerState => {
         const id = definition.id;
         const enabled = state.enabled.includes(id);
-        const farOut =
-          enabled &&
-          isQueryLayer(definition) &&
-          state.view !== null &&
-          state.view.zoom < (definition.source.minzoom ?? 0);
         let result = OFF;
-        if (farOut) {
+        if (enabled && isTooFarOut(definition, state.view)) {
           result = { status: { kind: "zoom-in" }, features: [] };
         } else if (enabled) {
           result =
