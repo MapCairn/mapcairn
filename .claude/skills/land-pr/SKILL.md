@@ -16,19 +16,20 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
    - What and why, with `Fixes #<n>` (the issue is finished by this pull request) or `Part of #<n>` (it is not).
    - The documents you updated, or why none needed it.
    - The checks you ran with their results, and any that failed or were skipped.
-   - Screenshots for a visible change (light and dark, phone and desktop), attached to the pull request.
-   - That `simplify` was run.
+   - For a visible change, what the `visual-check` skill saw, in words. `gh` cannot upload images, so ask the person to add the screenshots by hand.
+   - That the simplify step was run.
 3. `gh pr create --title "<Conventional Commit title>" --body-file <file>`, from a fork with `--repo MapCairn/mapcairn --head <your-login>:<branch>` if you do not have write access.
 4. No assistant attribution in the title, body or commits, no `@mentions` of people, no maintainer name, no names of commercial products used as comparisons.
 5. A first pull request needs the CLA comment (the sentence at the end of `CLA.md`) from the author's own account. Tell the person if it is missing; do not post it for them.
 
 ## 2. Review it with fresh eyes
 
-Review the opened pull request before it merges, and fix what is real.
+Review the opened pull request before it merges, and fix what is real. A review is read-only: the reviewer reads the diff and reports, and does not edit, push or post.
 
-- If the `pr-review-toolkit` plugin is installed, run `/pr-review-toolkit:review-pr` on the pull request, keeping to any limit in `CLAUDE.md` on concurrent sub-agents. If that limit would be exceeded, or the plugin is missing, use the `code-review` skill, or one `sonnet` sub-agent with an explicit `model` for a fresh-eyes read, or read the diff yourself against the checklist below.
-- Checklist: does it solve the issue; is there a test that failed first and still means something; behaviour on the keyboard and for a screen reader; no id, kind or provider switched on in code; package boundaries respected; docs match the behaviour; copy in British English; nothing sent over the network that `PRIVACY.md` does not mention; no secrets, no identifying data, no dependency added without need.
-- Apply fixes as new commits, push, and re-run the affected checks. Leave a short comment on the pull request saying what the review found and what changed. A finding you decline gets a one-line reason.
+- Reviewer: if you can start a sub-agent within the limits in `AGENTS.md` and your tool's instruction file, give it the `fresh-eyes-reviewer` role and the pull request number. Otherwise use your tool's review command if it has one, or read the diff yourself as a stranger, after the issue and the documents that "Read before you change" in `AGENTS.md` names.
+- Checklist: does it solve the issue; is there a test that failed first and still means something; behaviour on the keyboard and for a screen reader; no id, kind or provider switched on in code; package boundaries respected; docs match the behaviour; copy in British English; nothing sent over the network that `PRIVACY.md` does not mention; no secrets, no identifying data, no dependency added without need; the description's claims about checks are true (`gh pr checks`).
+- Report only findings with a file, a line and a fix, most serious first (blocking, should fix, minor). Leave out style preferences and anything the lint enforces, and say what you could not check. "No findings" is a valid result.
+- Author: apply fixes as new commits, push, and re-run the affected checks. Leave a short comment on the pull request saying what the review found and what changed. A finding you decline gets a one-line reason.
 - Anything real but out of scope becomes its own issue (`create-issue` skill), linked from the pull request.
 
 ## 3. Watch CI
@@ -61,4 +62,5 @@ gh pr merge <n> --squash --delete-branch --subject "<Conventional Commit title> 
 3. Update the tracking issue if there is one.
 4. Remove the local branch and worktree. A squash merge leaves the branch's commits outside `main`, so `git branch -d` refuses: once step 1 shows `MERGED`, use `git switch main && git pull --ff-only && git branch -D <branch>`, then `git worktree remove <path>` if you made one. (On a fork, pull from `upstream`.)
 5. Stop anything you left running and check the ports are free.
-6. Pick the next issue with `pick-up-issue`, if the person asked for a queue.
+6. If the merged pull request was a plan, continue with `split-plan`. Otherwise pick the next issue with `pick-up-issue`, if the person asked for a queue.
+7. Hand off with the report in `AGENTS.md` ("Definition of done"), including the pull request URL, its final check results and whether it merged.
