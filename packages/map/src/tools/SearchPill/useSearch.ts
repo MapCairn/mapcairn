@@ -85,9 +85,10 @@ const IDLE: SearchState = { status: "idle" };
  * when the user submits. Text that is a coordinate pair, such as
  * `-26.2041, 28.0473` or `26°12'14.8"S 28°02'50.3"E`, is answered here with
  * one result for that place and never reaches the provider, so it sends no
- * request. Nothing is sent while they type, as the
+ * request. Nothing is sent to the geocoder while they type, as the
  * OpenStreetMap Foundation's Nominatim policy forbids client-side
- * autocomplete. This is the one place that owns the `AbortController`: each
+ * autocomplete; suggestions as they type come from a separate provider (see
+ * `useSuggestions`). This is the one place that owns the `AbortController`: each
  * search aborts the one before it, and an aborted request never changes state
  * or reaches the announcer. The provider itself keeps to the service's rate
  * limit.

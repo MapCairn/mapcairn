@@ -287,6 +287,19 @@ The Directions tool appears only when `services.routing` exists, and the SDK shi
 
 Leave `routing` out and the Directions button, panel and overlays are never mounted, so a host without a service carries no dead controls.
 
+## Add search suggestions
+
+The search pill suggests places as the person types only when `services.suggestions` exists, and the SDK ships no provider, because a service built for typing has its own terms. To offer suggestions, write one adapter and register it, as for routing:
+
+1. Implement `SuggestionProvider` from `@mapcairn/core` in `packages/web/src/adapters/search`. `suggest(query, { limit, signal })` resolves `SearchResult`s, each with a centre and optionally an extent, so picking one needs no second lookup. Reject only with `SearchError` (`offline`, `rate-limited`, `failed`) or `PortAbortError`, give each request a timeout, keep to the service's usage limits inside the adapter with `RequestSpacer`, and send no cookies or referrer. `PhotonSuggestionProvider` is the example.
+2. Run `runSuggestionProviderContract` against it with a scripted `fetch`, as `PhotonSuggestionProvider.test.ts` does.
+3. Register it as `suggestions` in `createServices()`. Leave it out and the pill keeps submit-only search.
+4. Allow its origin in `connect-src`, and say on the privacy page and in `PRIVACY.md`, `ATTRIBUTIONS.md` and the host's Settings note (`providerNotes.ts`) that the text typed so far goes to it as the person types. That is more than a submitted search sends, so the text must say it plainly.
+
+When to ask is not the adapter's job. `useSuggestions` waits for a pause in typing, asks for at least three characters, cancels what a newer keystroke supersedes, stops for a cooldown after repeated failures and announces once that suggestions are unavailable.
+
+**Self-host Photon for commercial use.** The reference host points at the public Photon server, `https://photon.komoot.io`. Its operator states only that clients should be fair and publishes no terms for commercial use. A host that is commercial, or that expects real traffic, should run its own Photon server on OpenStreetMap data and pass its address to the adapter, `new PhotonSuggestionProvider({ endpoint: "https://photon.example.org/api/" })`, with that origin in `connect-src`. The SDK packages do not name the public server and carry no terms of it.
+
 ## Add an adapter
 
-Define the port, write its fake and contract suite, write the real adapter in `packages/web/src/adapters` and register it in `createServices()`. A host that builds its own `Services` may supply any adapter that passes the port's contract suite (the suites import `vitest`, which `@mapcairn/core` declares as an optional peer, so the host installs it with its tests). `fileOpener` is optional, as `routing` is: leave it out and the Shapes section has no Import control, or supply one, for example a native app's own picker, that passes `runFileOpenerContract`. [`ARCHITECTURE.md`](../../ARCHITECTURE.md#adding-an-adapter) has the steps.
+Define the port, write its fake and contract suite, write the real adapter in `packages/web/src/adapters` and register it in `createServices()`. A host that builds its own `Services` may supply any adapter that passes the port's contract suite (the suites import `vitest`, which `@mapcairn/core` declares as an optional peer, so the host installs it with its tests). `fileOpener` and `suggestions` are optional, as `routing` is: leave it out and the Shapes section has no Import control, or supply one, for example a native app's own picker, that passes `runFileOpenerContract`. [`ARCHITECTURE.md`](../../ARCHITECTURE.md#adding-an-adapter) has the steps.

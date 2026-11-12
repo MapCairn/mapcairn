@@ -12,6 +12,7 @@ import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapte
 import { BrowserDevicePreferences } from "../adapters/preferences/BrowserDevicePreferences";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
 import { NominatimSearchProvider } from "../adapters/search/NominatimSearchProvider";
+import { PhotonSuggestionProvider } from "../adapters/search/PhotonSuggestionProvider";
 import { LocalStorageSettingsStore } from "../adapters/settings/LocalStorageSettingsStore";
 import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
@@ -64,6 +65,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     createMapAdapter: () =>
       createMapLibreMapAdapter({ workerCacheKey: WORKER_CACHE_KEY }),
     search: new NominatimSearchProvider(),
+    suggestions: new PhotonSuggestionProvider(),
     location: new BrowserLocationProvider(),
     settings: new LocalStorageSettingsStore(),
     clipboard: new BrowserClipboard(),

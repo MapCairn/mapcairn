@@ -7,6 +7,7 @@ import { FakeLocationProvider } from "../fakes/FakeLocationProvider";
 import { createFakeMapAdapterFactory } from "../fakes/FakeMapAdapter";
 import { FakeRoutingProvider } from "../fakes/FakeRoutingProvider";
 import { FakeSearchProvider } from "../fakes/FakeSearchProvider";
+import { FakeSuggestionProvider } from "../fakes/FakeSuggestionProvider";
 import { FakeThemeSource } from "../fakes/FakeThemeSource";
 import { MemorySettingsStore } from "../fakes/MemorySettingsStore";
 import { MemoryUrlState } from "../fakes/MemoryUrlState";
@@ -23,6 +24,7 @@ import { runMapAdapterContract } from "./mapAdapter.contract";
 import { runRoutingProviderContract } from "./routingProvider.contract";
 import { runSearchProviderContract } from "./searchProvider.contract";
 import { runSettingsStoreContract } from "./settingsStore.contract";
+import { runSuggestionProviderContract } from "./suggestionProvider.contract";
 import { runThemeSourceContract } from "./themeSource.contract";
 import { runUrlStateContract } from "./urlState.contract";
 
@@ -35,6 +37,7 @@ import { runUrlStateContract } from "./urlState.contract";
 export const PORT_NAMES = [
   "createMapAdapter",
   "search",
+  "suggestions",
   "location",
   "settings",
   "clipboard",
@@ -59,6 +62,7 @@ export type PortName = (typeof PORT_NAMES)[number];
 export const OPTIONAL_PORT_NAMES = [
   "fileOpener",
   "routing",
+  "suggestions",
 ] as const satisfies readonly PortName[];
 
 /**
@@ -84,6 +88,7 @@ export type PortsAreExhaustive = AssertNever<
 export interface PortContractRunners {
   readonly createMapAdapter: typeof runMapAdapterContract;
   readonly search: typeof runSearchProviderContract;
+  readonly suggestions: typeof runSuggestionProviderContract;
   readonly location: typeof runLocationProviderContract;
   readonly settings: typeof runSettingsStoreContract;
   readonly clipboard: typeof runClipboardContract;
@@ -120,6 +125,10 @@ export const PORT_REGISTRY: PortRegistry = {
   search: {
     createFake: () => new FakeSearchProvider(),
     runContract: runSearchProviderContract,
+  },
+  suggestions: {
+    createFake: () => new FakeSuggestionProvider(),
+    runContract: runSuggestionProviderContract,
   },
   location: {
     createFake: () => new FakeLocationProvider(),

@@ -1,3 +1,5 @@
+import { PortAbortError } from "@mapcairn/core";
+
 /**
  * Calls the `fetch` on `globalThis` at the moment of the request, not the one
  * there when the adapter was built, so a test or a polyfill installed later is
@@ -16,4 +18,11 @@ export function defaultFetch(
  */
 export function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
+}
+
+/** Throws a {@link PortAbortError} when the caller's signal has already fired. */
+export function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw new PortAbortError();
+  }
 }

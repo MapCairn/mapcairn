@@ -25,6 +25,7 @@ import {
   announceMeasureTotal,
   announceNoFeaturesHere,
   announceNoResults,
+  announceNoSuggestions,
   announceOffline,
   announcePinCleared,
   announcePinDropped,
@@ -39,6 +40,8 @@ import {
   announceStopLimit,
   announceStopMoved,
   announceStopRemoved,
+  announceSuggestions,
+  announceSuggestionsUnavailable,
   announceSurfaceClosed,
   announceSurfaceOpened,
   announceTileError,
@@ -64,6 +67,18 @@ describe("search announcements", () => {
 
   it("says when there are none", () => {
     expect(announceNoResults()).toBe("No results");
+  });
+
+  it("counts suggestions with the right plural", () => {
+    expect(announceSuggestions(5)).toBe("5 suggestions");
+    expect(announceSuggestions(1)).toBe("1 suggestion");
+  });
+
+  it("says when typing finds no suggestion, and when suggestions stop working", () => {
+    expect(announceNoSuggestions()).toBe("No suggestions");
+    expect(announceSuggestionsUnavailable()).toBe(
+      "Suggestions are unavailable. Press Enter to search.",
+    );
   });
 
   it("says what happened and what to do for each error", () => {

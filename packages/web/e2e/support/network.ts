@@ -44,6 +44,64 @@ export const GEOCODER_SEARCH_PATTERN = /nominatim\.openstreetmap\.org\/search/;
 export const GEOCODER_REVERSE_PATTERN =
   /nominatim\.openstreetmap\.org\/reverse/;
 
+/** A Photon suggestion request, which the search box sends as the person types. */
+export const SUGGESTION_PATTERN = /photon\.komoot\.io\/api/;
+
+/** One place as Photon's GeoJSON answer describes it. */
+export interface PhotonPlace {
+  readonly id: number;
+  readonly name: string;
+  readonly state?: string;
+  readonly country?: string;
+  readonly lat: number;
+  readonly lng: number;
+}
+
+/** The places the suggestion tests answer with, none of them in the Nominatim fixtures. */
+export const SUGGESTED_PLACES: readonly PhotonPlace[] = [
+  {
+    id: 1001,
+    name: "Cape Point",
+    state: "Western Cape",
+    country: "South Africa",
+    lat: -34.3568,
+    lng: 18.4971,
+  },
+  {
+    id: 1002,
+    name: "Cape Agulhas",
+    state: "Western Cape",
+    country: "South Africa",
+    lat: -34.8332,
+    lng: 20.0,
+  },
+  {
+    id: 1003,
+    name: "Capetown Road",
+    country: "South Africa",
+    lat: -26.2,
+    lng: 28.0,
+  },
+];
+
+/** Photon's GeoJSON answer for these places. */
+export function photonAnswer(places: readonly PhotonPlace[]) {
+  return {
+    type: "FeatureCollection",
+    features: places.map((place) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [place.lng, place.lat] },
+      properties: {
+        osm_type: "N",
+        osm_id: place.id,
+        name: place.name,
+        state: place.state,
+        country: place.country,
+      },
+    })),
+  };
+}
+
 /** The MapLibre worker script emitted by the build. */
 export const MAPLIBRE_WORKER_PATTERN =
   /\/assets\/maplibre-gl-worker-[\w-]+\.js/;
@@ -93,8 +151,8 @@ export const GEOCODER_REVERSE_RESULT = {
 };
 
 /**
- * Stubs every third-party request the app makes (raster tiles, vector styles
- * and Nominatim), so tests are deterministic and never reach a live service.
+ * Stubs every third-party request the app makes (raster tiles, vector styles,
+ * Nominatim and Photon), so tests are deterministic and never reach a live service.
  * Tests that need a different answer register their own route afterwards,
  * which Playwright tries first.
  */
@@ -121,6 +179,15 @@ export async function mockThirdPartyServices(page: Page): Promise<void> {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify([GEOCODER_RESULT]),
+    }),
+  );
+  // No suggestions unless a test scripts them: typing then looks as it did
+  // before suggestions, and nothing reaches the live service.
+  await page.route(SUGGESTION_PATTERN, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(photonAnswer([])),
     }),
   );
   await page.route(GEOCODER_REVERSE_PATTERN, (route) =>

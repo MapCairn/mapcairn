@@ -5,6 +5,7 @@ import { FocusRegistryProvider, useFocusReturn } from "../../chrome";
 import { ServicesProvider } from "../../services/ServicesProvider";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { SearchPill, type SearchPillProps } from "./SearchPill";
+import { SUGGEST_DEBOUNCE_MS } from "./useSuggestions";
 
 const CAPE_TOWN: SearchResult = {
   id: "ct",
@@ -668,6 +669,223 @@ describe("SearchPill", () => {
       const panel = screen.getByTestId("location-search-panel");
       expect(panel.textContent).not.toContain("Searching");
       expect(panel.textContent).not.toContain("Nothing matched");
+    });
+  });
+
+  describe("suggestions", () => {
+    /** Types the text and lets the debounce and the request finish. */
+    async function type(text: string) {
+      fireEvent.change(input(), { target: { value: text } });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SUGGEST_DEBOUNCE_MS);
+      });
+    }
+
+    function withSuggestions(...results: SearchResult[]) {
+      const view = setup();
+      view.services.fakes.suggestions.setDefaultResults(results);
+      return view;
+    }
+
+    it("lists suggestions as options in a listbox named Suggestions, as the text is typed", async () => {
+      withSuggestions(CAPE_TOWN, CAPRICORN);
+      await type("cap");
+      expect(options().map((option) => option.textContent)).toEqual([
+        "Cape TownWestern Cape, South Africa",
+        "Capricorn",
+      ]);
+      expect(listbox().getAttribute("aria-label")).toBe("Suggestions");
+      expect(input().getAttribute("aria-expanded")).toBe("true");
+      expect(input().getAttribute("aria-activedescendant")).toBeNull();
+    });
+
+    it("names the listbox for results again after a submitted search", async () => {
+      const { services } = withSuggestions(CAPE_TOWN);
+      services.fakes.search.setDefaultResults([CAPRICORN]);
+      await type("cap");
+      await act(async () => {
+        press("Enter");
+      });
+      expect(listbox().getAttribute("aria-label")).toBe("Search results");
+      expect(options().map((option) => option.textContent)).toEqual([
+        "Capricorn",
+      ]);
+    });
+
+    it("keeps the listbox closed when there are no suggestions", async () => {
+      setup();
+      await type("zzz");
+      expect(input().getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("moves through the suggestions with the arrow keys and selects one with Enter", async () => {
+      const { onSelect, services } = withSuggestions(CAPE_TOWN, CAPRICORN);
+      await type("cap");
+      press("ArrowDown");
+      press("ArrowDown");
+      expect(input().getAttribute("aria-activedescendant")).toBe(
+        options()[1]?.id,
+      );
+      press("Enter");
+      expect(onSelect).toHaveBeenCalledWith(CAPRICORN);
+      expect((input() as HTMLInputElement).value).toBe("Capricorn");
+      expect(services.fakes.search.searchCalls).toHaveLength(0);
+      expect(input().getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("selects a suggestion by tap without moving focus", async () => {
+      const { onSelect } = withSuggestions(CAPE_TOWN);
+      input().focus();
+      await type("cap");
+      fireEvent.click(options()[0] as HTMLElement);
+      expect(onSelect).toHaveBeenCalledWith(CAPE_TOWN);
+      expect(document.activeElement).toBe(input());
+    });
+
+    it("does not suggest again for the label that picking filled in", async () => {
+      const { services } = withSuggestions(CAPE_TOWN);
+      await type("cap");
+      fireEvent.click(options()[0] as HTMLElement);
+      const calls = services.fakes.suggestions.suggestCalls.length;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SUGGEST_DEBOUNCE_MS * 3);
+      });
+      expect(services.fakes.suggestions.suggestCalls).toHaveLength(calls);
+      expect(input().getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("asks nothing when the input loses focus before the text settles", async () => {
+      const { services } = withSuggestions(CAPE_TOWN);
+      fireEvent.focus(input());
+      fireEvent.change(input(), { target: { value: "cap" } });
+      fireEvent.blur(input(), { relatedTarget: document.body });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SUGGEST_DEBOUNCE_MS * 2);
+      });
+      expect(services.fakes.suggestions.suggestCalls).toHaveLength(0);
+    });
+
+    it("keeps the geocoder's results when Enter is pressed while a suggestion request is still pending", async () => {
+      const { services } = withSuggestions(CAPE_TOWN);
+      services.fakes.search.setDefaultResults([CAPRICORN]);
+      const held = services.fakes.suggestions.holdNext();
+      await type("cap");
+      await act(async () => {
+        press("Enter");
+      });
+      await act(async () => {
+        held.resolve([CAPE_TOWN]);
+      });
+      expect(listbox().getAttribute("aria-label")).toBe("Search results");
+      expect(options().map((option) => option.textContent)).toEqual([
+        "Capricorn",
+      ]);
+    });
+
+    it("suggests again when the picked label is edited", async () => {
+      const { services } = withSuggestions(CAPE_TOWN);
+      await type("cap");
+      fireEvent.click(options()[0] as HTMLElement);
+      await type("Cape Tow");
+      expect(services.fakes.suggestions.suggestCalls.at(-1)?.query).toBe(
+        "Cape Tow",
+      );
+      expect(options()).toHaveLength(1);
+    });
+
+    it("submits the text to the geocoder when Enter is pressed with no suggestion active", async () => {
+      const { services, onSelect } = withSuggestions(CAPE_TOWN);
+      services.fakes.search.setDefaultResults([CAPRICORN]);
+      await type("cap");
+      await act(async () => {
+        press("Enter");
+      });
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(services.fakes.search.searchCalls.map((c) => c.query)).toEqual([
+        "cap",
+      ]);
+    });
+
+    it("submits the text with the Search button too", async () => {
+      const { services } = withSuggestions(CAPE_TOWN);
+      await type("cap");
+      await act(async () => {
+        fireEvent.click(searchButton());
+      });
+      expect(services.fakes.search.searchCalls).toHaveLength(1);
+    });
+
+    it("closes the list with Escape and opens it again with the next character", async () => {
+      withSuggestions(CAPE_TOWN);
+      await type("cap");
+      press("Escape");
+      expect(input().getAttribute("aria-expanded")).toBe("false");
+      expect((input() as HTMLInputElement).value).toBe("cap");
+      await type("cape");
+      expect(input().getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("opens a closed list of suggestions with ArrowDown", async () => {
+      withSuggestions(CAPE_TOWN);
+      await type("cap");
+      press("Escape");
+      expect(press("ArrowDown")).toBe(false);
+      expect(input().getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("leaves ArrowDown alone when there is nothing to show", () => {
+      setup();
+      fireEvent.change(input(), { target: { value: "ca" } });
+      expect(press("ArrowDown")).toBe(true);
+    });
+
+    it("hides the suggestions when the text is cut below the minimum", async () => {
+      withSuggestions(CAPE_TOWN);
+      await type("cap");
+      fireEvent.change(input(), { target: { value: "ca" } });
+      expect(options()).toHaveLength(0);
+      expect(input().getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("clears the suggestions with the Clear button", async () => {
+      withSuggestions(CAPE_TOWN);
+      await type("cap");
+      fireEvent.click(screen.getByTestId("location-search-clear"));
+      expect(options()).toHaveLength(0);
+      expect((input() as HTMLInputElement).value).toBe("");
+    });
+
+    it("works as before when the host supplies no suggestion provider", async () => {
+      const services = createFakeServices({ suggestions: undefined });
+      services.fakes.search.setDefaultResults([CAPE_TOWN]);
+      render(
+        <ServicesProvider services={services}>
+          <LiveRegionProvider>
+            <FocusRegistryProvider focusMap={vi.fn()}>
+              <SearchPill onSelect={vi.fn()} />
+            </FocusRegistryProvider>
+          </LiveRegionProvider>
+        </ServicesProvider>,
+      );
+      await type("cape");
+      expect(options()).toHaveLength(0);
+      expect(input().getAttribute("aria-expanded")).toBe("false");
+      await act(async () => {
+        press("Enter");
+      });
+      expect(options()).toHaveLength(1);
+    });
+
+    it("shows nothing and keeps Enter working when the provider fails", async () => {
+      const { services } = setup();
+      services.fakes.suggestions.failWith("failed");
+      services.fakes.search.setDefaultResults([CAPE_TOWN]);
+      await type("cape");
+      expect(options()).toHaveLength(0);
+      await act(async () => {
+        press("Enter");
+      });
+      expect(options()).toHaveLength(1);
     });
   });
 });

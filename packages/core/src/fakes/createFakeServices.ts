@@ -11,6 +11,7 @@ import {
 } from "./FakeMapAdapter";
 import { FakeRoutingProvider } from "./FakeRoutingProvider";
 import { FakeSearchProvider } from "./FakeSearchProvider";
+import { FakeSuggestionProvider } from "./FakeSuggestionProvider";
 import { FakeThemeSource } from "./FakeThemeSource";
 import { MemorySettingsStore } from "./MemorySettingsStore";
 import { MemoryUrlState } from "./MemoryUrlState";
@@ -19,6 +20,7 @@ import { StaticLayerRegistry } from "./StaticLayerRegistry";
 /** The fakes behind a {@link FakeServices}, for scripting and inspection. */
 export interface FakeServiceHandles {
   readonly search: FakeSearchProvider;
+  readonly suggestions: FakeSuggestionProvider;
   readonly location: FakeLocationProvider;
   readonly settings: MemorySettingsStore;
   readonly clipboard: FakeClipboard;
@@ -50,9 +52,10 @@ export interface FakeServices extends Services {
  * The default `createMapAdapter` is {@link createFakeMapAdapterFactory}, and
  * each adapter it builds is recorded in `fakes.maps`.
  *
- * `routing` and `fileOpener` are optional on `Services`, but the fakes include
- * them so a test can script routes and files. To test the ui without one,
- * pass it as `undefined`, for example `{ routing: undefined }`.
+ * `routing`, `fileOpener` and `suggestions` are optional on `Services`, but the
+ * fakes include them so a test can script routes, files and suggestions. To
+ * test the ui without one, pass it as `undefined`, for example
+ * `{ routing: undefined }`.
  */
 export function createFakeServices(
   overrides: Partial<Services> = {},
@@ -60,6 +63,7 @@ export function createFakeServices(
   const maps: FakeMapAdapter[] = [];
   const fakes: FakeServiceHandles = {
     search: new FakeSearchProvider(),
+    suggestions: new FakeSuggestionProvider(),
     location: new FakeLocationProvider(),
     settings: new MemorySettingsStore(),
     clipboard: new FakeClipboard(),
@@ -78,6 +82,7 @@ export function createFakeServices(
       maps.push(adapter);
     }),
     search: fakes.search,
+    suggestions: fakes.suggestions,
     location: fakes.location,
     settings: fakes.settings,
     clipboard: fakes.clipboard,

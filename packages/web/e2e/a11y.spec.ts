@@ -7,6 +7,11 @@ import {
   inspectControls,
 } from "./support/a11y";
 import { inspectChromeLayout } from "./support/layout";
+import {
+  photonAnswer,
+  SUGGESTED_PLACES,
+  SUGGESTION_PATTERN,
+} from "./support/network";
 import { scriptSearch } from "./support/services";
 import {
   CHROME_STATES,
@@ -17,6 +22,7 @@ import {
   viewportDetails,
   waitForStableLayout,
 } from "./support/states";
+import { SUGGEST_DEBOUNCE_MS, TIMER_SLACK_MS } from "./support/timers";
 
 /*
  * Accessibility: axe with the WCAG 2.0, 2.1 and 2.2 A and AA tags plus best
@@ -76,6 +82,45 @@ test.describe("axe and control checks @a11y", () => {
         const controls = await inspectControls(page);
         expect(controls.unnamed).toEqual([]);
         expect(controls.tooSmall).toEqual([]);
+      });
+    }
+  }
+});
+
+test.describe("search suggestions @a11y", () => {
+  for (const colorScheme of ["light", "dark"] as const) {
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 1280, height: 800 },
+    ]) {
+      test(`the open suggestion list passes axe in ${colorScheme} at ${viewport.width}px @a11y`, async ({
+        page,
+        mapPage,
+      }) => {
+        await page.setViewportSize(viewport);
+        await page.emulateMedia({ colorScheme });
+        await page.route(SUGGESTION_PATTERN, (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(photonAnswer(SUGGESTED_PLACES)),
+          }),
+        );
+        await mapPage.goto();
+        await expect(page.locator("html")).toHaveAttribute(
+          "data-theme",
+          colorScheme,
+        );
+        await mapPage.searchInput.fill("cape");
+        await page.clock.runFor(SUGGEST_DEBOUNCE_MS + TIMER_SLACK_MS);
+        const options = page
+          .getByRole("listbox", { name: "Suggestions" })
+          .getByRole("option");
+        await expect(options).toHaveCount(3);
+        await page.keyboard.press("ArrowDown");
+        await expect(options.first()).toHaveAttribute("aria-selected", "true");
+        await waitForStableLayout(page);
+        expect(await axeViolations(page)).toEqual([]);
       });
     }
   }

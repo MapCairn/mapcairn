@@ -20,8 +20,10 @@ import * as styles from "./SearchPill.css";
 import {
   MIN_SEARCH_LENGTH,
   SEARCH_UNAVAILABLE_MESSAGE,
+  type SearchState,
   useSearch,
 } from "./useSearch";
+import { useSuggestions } from "./useSuggestions";
 
 /** Props for {@link SearchPill}. */
 export interface SearchPillProps {
@@ -41,6 +43,20 @@ export interface SearchPillProps {
 
 const NO_RESULTS: readonly SearchResult[] = [];
 
+/**
+ * The options the listbox holds: the results of a submitted search, or, while
+ * nothing has been submitted for the text, the suggestions for it.
+ */
+function listedOptions(
+  state: SearchState,
+  suggestions: readonly SearchResult[],
+): readonly SearchResult[] {
+  if (state.status === "results") {
+    return state.results;
+  }
+  return state.status === "idle" ? suggestions : NO_RESULTS;
+}
+
 /** Keeps the pointer from moving focus off the input. */
 function keepFocus(event: MouseEvent) {
   event.preventDefault();
@@ -52,13 +68,18 @@ function keepFocus(event: MouseEvent) {
  * rendered inside a `FocusRegistryProvider`, which it tells where the input is
  * so that closing the search surface can return focus to it.
  *
- * Searching happens only on submit (Enter, or the Search button), never as
- * the user types, because the OpenStreetMap Foundation's Nominatim policy
+ * The geocoder searches only on submit (Enter, or the Search button), never
+ * as the user types, because the OpenStreetMap Foundation's Nominatim policy
  * forbids client-side autocomplete. Editing the text hides any results for
- * the old text.
+ * the old text. When the host supplies a suggestion provider, the listbox also
+ * holds suggestions for the text as it is typed (see {@link useSuggestions}):
+ * they are the same options with the same keys, picking one goes straight to
+ * its place with no second lookup, and Enter with none highlighted still
+ * submits the text to the geocoder. When the provider is missing or failing,
+ * typing shows nothing and Enter works as it always did.
  *
  * Keyboard, following the WAI-ARIA Authoring Practices "list" combobox, with
- * the listbox filled by a submitted search:
+ * the listbox filled by suggestions or by a submitted search:
  * - Results never take focus: the input keeps focus and
  *   `aria-activedescendant` names the active option.
  * - ArrowDown and ArrowUp move the active option, wrapping at the ends, and
@@ -72,7 +93,8 @@ function keepFocus(event: MouseEvent) {
  * - Escape closes the list. With the list already closed, a second Escape
  *   clears the text, and a third reaches the page (closing the surface).
  *
- * Selecting a result fills the box with its label without searching again.
+ * Selecting a result or a suggestion fills the box with its label without
+ * searching again, and suggests nothing more for that label.
  * @remarks The panel is in normal flow below the pill; the chrome slot that
  *   holds this component decides where both sit. Text states in the panel
  *   ("Searching...", "Nothing matched that search.", the unavailable message)
@@ -86,11 +108,17 @@ export function SearchPill({
 }: SearchPillProps) {
   const search = useSearch({ getBias });
   const { query, state } = search;
+  const [pickedLabel, setPickedLabel] = useState<string | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const suggestions = useSuggestions(
+    query,
+    focused && state.status === "idle" && query !== pickedLabel,
+  );
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const registerFocus = useFocusTarget("search");
-  const [listOpen, setListOpen] = useState(false);
-  const results = state.status === "results" ? state.results : NO_RESULTS;
+  const results = listedOptions(state, suggestions);
   const [active, setActive] = useState<{
     readonly results: readonly SearchResult[];
     readonly index: number;
@@ -103,7 +131,8 @@ export function SearchPill({
     active.index < results.length
       ? active.index
       : -1;
-  const expanded = listOpen && state.status !== "idle";
+  const expanded =
+    listOpen && (state.status !== "idle" || suggestions.length > 0);
   const optionId = (index: number) => `${listboxId}-option-${index}`;
 
   const setInputRef = useCallback(
@@ -116,6 +145,7 @@ export function SearchPill({
 
   const select = (result: SearchResult) => {
     search.settle(result.label);
+    setPickedLabel(result.label);
     setListOpen(false);
     setActive(null);
     onSelect(result);
@@ -123,6 +153,9 @@ export function SearchPill({
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     search.setQuery(event.target.value);
+    setPickedLabel(null);
+    setFocused(true);
+    setListOpen(true);
     setActive(null);
   };
 
@@ -152,7 +185,7 @@ export function SearchPill({
     switch (event.key) {
       case "ArrowDown":
       case "ArrowUp":
-        if (state.status === "idle") {
+        if (state.status === "idle" && suggestions.length === 0) {
           return;
         }
         event.preventDefault();
@@ -192,12 +225,14 @@ export function SearchPill({
   };
 
   const handleFocus = (event: FocusEvent<HTMLInputElement>) => {
+    setFocused(true);
     setListOpen(true);
     onFocus?.(event);
   };
 
   const handleRootBlur = (event: FocusEvent<HTMLDivElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget)) {
+      setFocused(false);
       setListOpen(false);
       setActive(null);
     }
@@ -288,7 +323,9 @@ export function SearchPill({
         <div
           id={listboxId}
           role="listbox"
-          aria-label="Search results"
+          aria-label={
+            state.status === "idle" ? "Suggestions" : "Search results"
+          }
           className={styles.listbox}
           data-testid="location-search-results"
         >

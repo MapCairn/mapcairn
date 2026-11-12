@@ -8,6 +8,7 @@ export * from "./FakeLocationProvider";
 export * from "./FakeMapAdapter";
 export * from "./FakeRoutingProvider";
 export * from "./FakeSearchProvider";
+export * from "./FakeSuggestionProvider";
 export * from "./FakeThemeSource";
 export * from "./fixtures";
 export type { Deferred, HeldCall } from "./internal";

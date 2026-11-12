@@ -15,9 +15,12 @@ export const VIEW_SETTLE_MS = 400;
 /** `SCALE_BAR_IDLE_MS` in `packages/map/src/chrome/MapReadout/MapReadout.tsx`. */
 export const SCALE_BAR_IDLE_MS = 2_000;
 
+/** `SUGGEST_DEBOUNCE_MS` in `packages/map/src/tools/SearchPill/useSuggestions.ts`. */
+export const SUGGEST_DEBOUNCE_MS = 275;
+
 /**
- * Longer than any debounce a search box would use. The app has none, so a
- * spec jumps this far to show that typing alone never searches.
+ * Longer than any debounce a search box would use, so a spec jumps this far to
+ * show that typing alone never searches the geocoder.
  */
 export const ANY_DEBOUNCE_MS = 1_000;
 
