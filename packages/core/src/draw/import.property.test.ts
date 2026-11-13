@@ -121,6 +121,13 @@ function exportedShapes(inputs: readonly DrawShapeInput[]): unknown[] {
   );
 }
 
+/**
+ * The time allowed to a property that checks the 72-position ring of a circle
+ * for crossing edges on each of its generated cases, which the 5 s default
+ * does not leave room for when the whole suite runs under coverage.
+ */
+const SLOW_PROPERTY_TIMEOUT_MS = 20_000;
+
 /** How far, in degrees, a position may move when text written to six decimals or more is read and written again. */
 const ROUNDING_TOLERANCE = 1e-6;
 
@@ -250,35 +257,39 @@ describe("parseShapeFile with WKT", () => {
   // Only small circles are used: a large one can reach over a pole or the
   // antimeridian, where its outline is not a polygon of the plane and the
   // importer skips it.
-  it("reads back the WKT it exported, as the same geometries to a rounding", () => {
-    const withSmallCircles = fc.array(
-      fc.oneof(
-        shapeInput.filter((input) => input.kind !== "circle"),
-        smallCircleInput,
-      ),
-      { minLength: 1, maxLength: 4 },
-    );
-    fc.assert(
-      fc.property(withSmallCircles, (inputs) => {
-        const shapes = inputs.map(finishShape);
-        const read = shapesOf(parseShapeFile(shapesToWkt(shapes)));
-        const written = shapesToGeoJson(shapes).features;
-        const readBack = shapesToGeoJson(read.map(finishShape)).features;
-        expect(readBack).toHaveLength(written.length);
-        for (const [index, feature] of written.entries()) {
-          const before = coordinateNumbers(feature.geometry);
-          const after = coordinateNumbers(readBack[index]?.geometry);
-          expect(after).toHaveLength(before.length);
-          for (const [place, number] of before.entries()) {
-            expect(
-              Math.abs((after[place] as number) - number),
-            ).toBeLessThanOrEqual(ROUNDING_TOLERANCE);
+  it(
+    "reads back the WKT it exported, as the same geometries to a rounding",
+    () => {
+      const withSmallCircles = fc.array(
+        fc.oneof(
+          shapeInput.filter((input) => input.kind !== "circle"),
+          smallCircleInput,
+        ),
+        { minLength: 1, maxLength: 4 },
+      );
+      fc.assert(
+        fc.property(withSmallCircles, (inputs) => {
+          const shapes = inputs.map(finishShape);
+          const read = shapesOf(parseShapeFile(shapesToWkt(shapes)));
+          const written = shapesToGeoJson(shapes).features;
+          const readBack = shapesToGeoJson(read.map(finishShape)).features;
+          expect(readBack).toHaveLength(written.length);
+          for (const [index, feature] of written.entries()) {
+            const before = coordinateNumbers(feature.geometry);
+            const after = coordinateNumbers(readBack[index]?.geometry);
+            expect(after).toHaveLength(before.length);
+            for (const [place, number] of before.entries()) {
+              expect(
+                Math.abs((after[place] as number) - number),
+              ).toBeLessThanOrEqual(ROUNDING_TOLERANCE);
+            }
           }
-        }
-      }),
-      PROPERTY_PARAMETERS,
-    );
-  });
+        }),
+        PROPERTY_PARAMETERS,
+      );
+    },
+    SLOW_PROPERTY_TIMEOUT_MS,
+  );
 
   it("reads any WKT geometry, in either axis order, keeping only valid shapes", () => {
     fc.assert(
