@@ -6,7 +6,7 @@ The project's skills and agents were written for Claude Code, and everyone is we
 
 | Thing | Source (edit this) | Copies for other tools (generated, do not edit) |
 | --- | --- | --- |
-| Rules | `AGENTS.md` | `CLAUDE.md` imports it; `GEMINI.md` and `.github/copilot-instructions.md` are a few lines that point to it |
+| Rules | `AGENTS.md` | `CLAUDE.md` imports it; `.github/copilot-instructions.md` is a few lines that point to it |
 | Skills | `.claude/skills/<name>/SKILL.md`, project skills only | `.agents/skills/<name>/` |
 | Agents | `.claude/agents/<name>.md` | `.opencode/agents/<name>.md`, `.codex/agents/<name>.toml`, `.github/agents/<name>.agent.md` |
 
@@ -40,13 +40,13 @@ Checked on 2026-11-12 against each tool's own documentation. The pages were read
 | Claude Code | `CLAUDE.md` (here it imports `AGENTS.md`). Reads `AGENTS.md` alone only when there is no `CLAUDE.md` | `.claude/skills`. Does not read `.agents/skills` | `.claude/agents/*.md` |
 | Codex | `AGENTS.md` | `.agents/skills`; `.claude/skills` not mentioned | `.codex/agents/*.toml` with `name`, `description`, `developer_instructions` |
 | opencode | `AGENTS.md` only in the current (V2) docs; the older V1 docs fell back to `CLAUDE.md` | `.opencode/skills`, `.claude/skills`, `.agents/skills` | `.opencode/agents/*.md`, with `mode: subagent` |
-| GitHub Copilot | `.github/copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md` or `GEMINI.md` (GitHub docs). In VS Code the file depends on the harness chosen | `.github/skills`, `.claude/skills`, `.agents/skills` (GitHub docs). VS Code lists the folder per harness | `.github/agents/*.agent.md` (public preview) |
-| Antigravity | `AGENTS.md` or `GEMINI.md`, also inside `.agents/`, and `.agents/rules/*.md` | `.agents/skills` (the older `.agent/skills` still works) | `.agents/agents/<name>.md`, with tool names of its own; not generated, see below |
+| GitHub Copilot | `.github/copilot-instructions.md`, `AGENTS.md` or `CLAUDE.md` (GitHub docs). In VS Code the file depends on the harness chosen | `.github/skills`, `.claude/skills`, `.agents/skills` (GitHub docs). VS Code lists the folder per harness | `.github/agents/*.agent.md` (public preview) |
+| Antigravity | `AGENTS.md` in the workspace and in each parent folder up to the repository root, also inside `.agents/`, and `.agents/rules/*.md` | `.agents/skills` (the older `.agent/skills` still works) | `.agents/agents/<name>.md`, with tool names of its own; not generated, see below |
 | Cursor | `AGENTS.md`, and `.cursor/rules/*.mdc`. `CLAUDE.md` not mentioned | `.agents/skills`, `.cursor/skills`, and `.claude/skills` and `.codex/skills` for compatibility | `.cursor/agents`, `.claude/agents` and `.codex/agents` |
 
 What this means in practice:
 
-- `AGENTS.md` reaches every tool above without a copy. `GEMINI.md` and `.github/copilot-instructions.md` exist for the tools or surfaces that read only their own file. They hold no rule, so no rule is written twice.
+- `AGENTS.md` reaches every tool above without a copy. `.github/copilot-instructions.md` exists for the Copilot surfaces that read only that file. It holds no rule, so no rule is written twice.
 - Skills: Claude Code reads the source and Codex and Antigravity read the `.agents/skills` copy. opencode, Copilot and Cursor each read both `.claude/skills` and `.agents/skills`, so they see a project skill twice. Whether they deduplicate it is not checked.
 - Agents: Claude Code and Cursor read the source. The generated files cover opencode, Codex and Copilot. Antigravity's agent format was read, but its documentation says a tool list left empty means no tools and a misspelt tool name can hang the agent, and its tool names were not verified here, so no file is generated for it. It still works by loading the skills. Whether Cursor reads a `.toml` file in `.codex/agents` is not stated.
 - A tool that has skills but no agents, or the reverse, still works: tell the agent which skill to follow.
@@ -92,7 +92,7 @@ How each tool reaches the skill (all of them can read `AGENTS.md` and a file pat
 | Codex | `.agents/skills/playwright-tests` | `AGENTS.md` |
 | opencode | `.opencode/skills`, `.claude/skills` or `.agents/skills` | `AGENTS.md` |
 | GitHub Copilot | `.claude/skills` or `.agents/skills` | `AGENTS.md`, `.github/copilot-instructions.md` |
-| Antigravity | `.agents/skills/playwright-tests` | `AGENTS.md` or `GEMINI.md` |
+| Antigravity | `.agents/skills/playwright-tests` | `AGENTS.md` |
 | Cursor | `.agents/skills` or `.claude/skills` | `AGENTS.md` |
 
 Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None of them needs a new file.
