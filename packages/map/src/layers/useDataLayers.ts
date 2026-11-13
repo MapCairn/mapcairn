@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  announceCatalogueChange,
   announceDetailError,
   announceDetailShown,
   announceFeaturesFound,
@@ -39,7 +38,9 @@ import {
 } from "react";
 import { useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
-import { type Link, reconcile } from "./catalogueReconcile";
+import { type CatalogueMessage, catalogueNotice } from "./catalogueNotice";
+import { type Link, type Reconciled, reconcile } from "./catalogueReconcile";
+import { type CatalogueView, catalogueView, loadFailed } from "./catalogueView";
 import { errorKind, type LayerStatus } from "./layerStatus";
 import { type LoadResult, loadOutcome } from "./loadOutcome";
 import { type AnnouncedStates, reportLoad, reportZoomIn } from "./loadReport";
@@ -52,7 +53,7 @@ import {
   wantedLoads,
 } from "./loadRequests";
 
-export type { LayerStatus };
+export type { CatalogueView, LayerStatus };
 
 /**
  * How long the Undo after turning layers off stays on offer, in milliseconds.
@@ -103,8 +104,16 @@ export interface TurnedOff {
 
 /** What {@link useDataLayers} returns: the layers' state and every action on them. */
 export interface DataLayers {
-  /** Every registered layer, in catalogue order. */
+  /** Every registered layer, in catalogue order. Empty while the catalogue is loading or has failed. */
   readonly layers: readonly DataLayerState[];
+  /** What the catalogue is doing besides holding layers: loading, failed, how many definitions it skipped, and how a refresh went. */
+  readonly catalogue: CatalogueView;
+  /**
+   * Asks the catalogue to load again after a failed load or a failed refresh,
+   * which the section's Try again does. It does nothing in any other state:
+   * only the host refreshes a catalogue that is working.
+   */
+  retryCatalogue(): void;
   readonly selected: SelectedFeature | null;
   /**
    * The features a tap or the keyboard found together, when there were
@@ -274,8 +283,7 @@ interface UndoOffer {
 }
 
 /** A change to the catalogue that is to be said aloud, and the layers that went with it. */
-interface CatalogueNotice {
-  readonly message: string;
+interface CatalogueNotice extends CatalogueMessage {
   /** The ids of the enabled layers that went. */
   readonly gone: readonly string[];
 }
@@ -310,14 +318,15 @@ const OFF: LoadResult = { status: { kind: "off" }, features: [] };
 /**
  * The state at mount: the link's layers wait, and are resolved at once when
  * the catalogue is ready already (a static one), as they are when a list
- * arrives later. `noteLink` says whether a link layer the list lacks is said
- * aloud: true only for a catalogue that was not ready at mount, because a host
- * whose layers are there from the start has no list to wait for.
+ * arrives later. `awaited` says the catalogue was not ready at mount, so its
+ * list arrives later: only then is a link layer the list lacks said aloud, and
+ * an empty list, because a host whose layers are there from the start has no
+ * list to wait for.
  */
 function initialState(
   initial: LayersUrlState | undefined,
   catalogue: CatalogueState,
-  noteLink: boolean,
+  awaited: boolean,
   now: number,
 ): State {
   return applyCatalogue(
@@ -344,7 +353,7 @@ function initialState(
       undo: null,
     },
     catalogue,
-    noteLink,
+    awaited,
     now,
   );
 }
@@ -380,23 +389,22 @@ function withoutTraces(state: State, ids: ReadonlySet<string>): State {
 }
 
 /**
- * The state once it has taken in a catalogue state. Only a ready list changes
- * the choices (see `reconcile`): while the catalogue loads or has failed the
- * link's layers keep waiting. The layers that went are cleared as turning
- * them off clears them, and the change is kept as a notice for the effect
- * that says it. A list that is the one already reconciled changes nothing.
+ * Takes a ready list in, when it is a new one or a link layer is waiting for
+ * it: the choices `reconcile` works out, the layers that went cleared as
+ * turning them off clears them, and the list remembered as the one the
+ * choices match. Anything else (the list already taken in, a loading or
+ * failed catalogue) changes no choice, and has no result.
  */
-function applyCatalogue(
+function takeIn(
   state: State,
   catalogue: CatalogueState,
-  noteLink: boolean,
   now: number,
-): State {
+): { readonly taken: State; readonly result: Reconciled | null } {
   if (
     catalogue.status !== "ready" ||
     (catalogue.layers === state.known && state.link.waiting.length === 0)
   ) {
-    return { ...state, reconciled: catalogue };
+    return { taken: state, result: null };
   }
   const result = reconcile({
     chosen: { enabled: state.enabled, controls: state.controls },
@@ -406,18 +414,46 @@ function applyCatalogue(
     now,
   });
   const gone = result.switchedOff.map(({ id }) => id);
-  const message = announceCatalogueChange({
-    turnedOff: result.switchedOff.map(({ name }) => name),
-    linkUnavailable: noteLink ? result.linkMissing : 0,
+  return {
+    taken: {
+      ...(gone.length > 0 ? withoutTraces(state, new Set(gone)) : state),
+      ...result.chosen,
+      link: result.link,
+      known: catalogue.layers,
+      undo: withoutRemoved(state.undo, result.removed),
+    },
+    result,
+  };
+}
+
+/**
+ * The state once it has taken in a catalogue state. Only a ready list changes
+ * the choices (see `takeIn`): while the catalogue loads or has failed the
+ * link's layers keep waiting. A list that is the one already taken in changes
+ * no choice, though its skipped count or refresh state may. Whatever the state
+ * says aloud is kept as a notice for the effect that says it (see
+ * `catalogueNotice`), so every transition is said once.
+ */
+function applyCatalogue(
+  state: State,
+  catalogue: CatalogueState,
+  awaited: boolean,
+  now: number,
+): State {
+  const { taken, result } = takeIn(state, catalogue, now);
+  const message = catalogueNotice({
+    previous: state.reconciled,
+    next: catalogue,
+    linkWaiting: state.link.waiting.length,
+    awaited,
+    change: result,
   });
   return {
-    ...(gone.length > 0 ? withoutTraces(state, new Set(gone)) : state),
-    ...result.chosen,
-    link: result.link,
-    known: catalogue.layers,
+    ...taken,
     reconciled: catalogue,
-    undo: withoutRemoved(state.undo, result.removed),
-    notice: message === null ? null : { message, gone },
+    notice: message
+      ? { ...message, gone: result?.switchedOff.map(({ id }) => id) ?? [] }
+      : taken.notice,
   };
 }
 
@@ -542,18 +578,27 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   );
   const definitions = readyLayers(catalogueState);
   // Fixed at mount: only a catalogue that was not ready then makes a note of a
-  // link layer it does not have.
-  const [noteLink] = useState(catalogueState.status !== "ready");
+  // link layer it does not have, or says its first list is empty.
+  const [awaited] = useState(catalogueState.status !== "ready");
   const [stored, setState] = useState(() =>
-    initialState(options.initial, catalogueState, noteLink, now()),
+    initialState(options.initial, catalogueState, awaited, now()),
   );
   // A new catalogue state is taken in during this render, so no render sees
   // its layers before their controls and choices are in step with them.
   let state = stored;
   if (stored.reconciled !== catalogueState) {
-    state = applyCatalogue(stored, catalogueState, noteLink, now());
+    state = applyCatalogue(stored, catalogueState, awaited, now());
     setState(state);
   }
+  const statusView = useMemo(
+    () => catalogueView(catalogueState, awaited),
+    [catalogueState, awaited],
+  );
+  const retryCatalogue = useCallback(() => {
+    if (loadFailed(catalogue.getState())) {
+      void catalogue.refresh();
+    }
+  }, [catalogue]);
   /**
    * What the handlers below read. It follows the last committed state, set in
    * a layout effect so a render React throws away (a transition that
@@ -720,7 +765,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       detailRequest.current?.abort();
     }
     forgetLayers(new Set(notice.gone));
-    announce(notice.message, { priority: "polite" });
+    announce(notice.message, {
+      priority: notice.priority,
+      keep: notice.keep,
+    });
   }, [notice, forgetLayers, announce]);
 
   const setEnabled = useCallback(
@@ -739,7 +787,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           : previous.enabled.filter((item) => item !== id),
       }));
       if (enabled && !loadsFeatures(definition)) {
-        announce(announceLayerOn(definition.name), { priority: "polite" });
+        announce(announceLayerOn(definition.name), {
+          priority: "polite",
+          keep: true,
+        });
       }
     },
     [announce, byId, forgetLayers],
@@ -760,7 +811,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         enabled: previous.enabled.filter((id) => !leaving.has(id)),
         undo: { ids: [...leaving], group: offOptions.group ?? null },
       }));
-      announce(announceLayersTurnedOff(leaving.size), { priority: "polite" });
+      announce(announceLayersTurnedOff(leaving.size), {
+        priority: "polite",
+        keep: true,
+      });
     },
     [announce, byId, forgetLayers],
   );
@@ -781,6 +835,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     if (returning.length > 0) {
       announce(announceLayersTurnedBackOn(returning.length), {
         priority: "polite",
+        keep: true,
       });
     }
   }, [announce, byId, forgetLayers]);
@@ -1152,6 +1207,8 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
 
   return {
     layers,
+    catalogue: statusView,
+    retryCatalogue,
     selected,
     choices,
     detail: state.detail,

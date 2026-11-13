@@ -61,6 +61,12 @@ import {
   announceTimeMoved,
   announceTourSkipped,
   announceZoom,
+  type CatalogueChange,
+  describeLayersLoadFailed,
+  describeLayersLoading,
+  describeLayersRefreshFailed,
+  describeLayersSkipped,
+  describeNoLayers,
   describeTilesUnavailable,
 } from "./index";
 
@@ -244,48 +250,99 @@ describe("layer announcements", () => {
   });
 
   describe("a change to the catalogue", () => {
+    const NOTHING: CatalogueChange = {
+      turnedOff: [],
+      linkUnavailable: 0,
+      skipped: 0,
+      added: 0,
+      removed: 0,
+      empty: false,
+    };
+
     it("names the one layer that is no longer available", () => {
       expect(
-        announceCatalogueChange({
-          turnedOff: ["Rainfall"],
-          linkUnavailable: 0,
-        }),
+        announceCatalogueChange({ ...NOTHING, turnedOff: ["Rainfall"] }),
       ).toBe("Rainfall is no longer available and was turned off.");
     });
 
     it("counts several layers that are no longer available", () => {
       expect(
         announceCatalogueChange({
+          ...NOTHING,
           turnedOff: ["Rainfall", "Wind"],
-          linkUnavailable: 0,
         }),
       ).toBe("2 layers are no longer available and were turned off.");
     });
 
     it("says how many layers in the link are not available, in the singular for one", () => {
-      expect(
-        announceCatalogueChange({ turnedOff: [], linkUnavailable: 1 }),
-      ).toBe("1 layer in the link is not available.");
-      expect(
-        announceCatalogueChange({ turnedOff: [], linkUnavailable: 3 }),
-      ).toBe("3 layers in the link are not available.");
+      expect(announceCatalogueChange({ ...NOTHING, linkUnavailable: 1 })).toBe(
+        "1 layer in the link is not available.",
+      );
+      expect(announceCatalogueChange({ ...NOTHING, linkUnavailable: 3 })).toBe(
+        "3 layers in the link are not available.",
+      );
     });
 
-    it("composes one message, the layers turned off first and the link note after", () => {
+    it("says how many layers could not be shown, in the singular for one", () => {
+      expect(announceCatalogueChange({ ...NOTHING, skipped: 1 })).toBe(
+        "1 layer could not be shown.",
+      );
+      expect(announceCatalogueChange({ ...NOTHING, skipped: 3 })).toBe(
+        "3 layers could not be shown.",
+      );
+    });
+
+    it("says what an update added and removed, leaving out a part that is zero", () => {
+      expect(
+        announceCatalogueChange({ ...NOTHING, added: 1, removed: 1 }),
+      ).toBe("Layers updated: 1 added, 1 removed.");
+      expect(announceCatalogueChange({ ...NOTHING, added: 2 })).toBe(
+        "Layers updated: 2 added.",
+      );
+      expect(announceCatalogueChange({ ...NOTHING, removed: 12_345 })).toBe(
+        "Layers updated: 12,345 removed.",
+      );
+    });
+
+    it("says there are no layers when the first list is empty", () => {
+      expect(announceCatalogueChange({ ...NOTHING, empty: true })).toBe(
+        "No layers are available.",
+      );
+    });
+
+    it("composes one message in a fixed order: layers turned off, the link note, the skipped count, updated, then empty", () => {
       expect(
         announceCatalogueChange({
           turnedOff: ["Rainfall"],
           linkUnavailable: 2,
+          skipped: 1,
+          added: 1,
+          removed: 1,
+          empty: true,
         }),
       ).toBe(
-        "Rainfall is no longer available and was turned off. 2 layers in the link are not available.",
+        "Rainfall is no longer available and was turned off. 2 layers in the link are not available. 1 layer could not be shown. Layers updated: 1 added, 1 removed. No layers are available.",
       );
     });
 
     it("has nothing to say when nothing changed", () => {
-      expect(
-        announceCatalogueChange({ turnedOff: [], linkUnavailable: 0 }),
-      ).toBeNull();
+      expect(announceCatalogueChange(NOTHING)).toBeNull();
+    });
+  });
+
+  describe("the state of the catalogue", () => {
+    it("words the layers still loading, the failed load and the failed refresh", () => {
+      expect(describeLayersLoading()).toBe("Loading layers");
+      expect(describeNoLayers()).toBe("No layers are available.");
+      expect(describeLayersLoadFailed()).toBe("Layers could not be loaded.");
+      expect(describeLayersRefreshFailed()).toBe(
+        "Layers could not be updated. Showing the last list.",
+      );
+    });
+
+    it("words the skipped count the same for the section and for the live region", () => {
+      expect(describeLayersSkipped(1)).toBe("1 layer could not be shown");
+      expect(describeLayersSkipped(2)).toBe("2 layers could not be shown");
     });
   });
 

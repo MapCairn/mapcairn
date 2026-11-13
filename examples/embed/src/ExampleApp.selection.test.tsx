@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ExampleApp } from "./ExampleApp";
 
@@ -50,8 +56,12 @@ describe("ExampleApp feature selection", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Add probe" }));
 
-    expect(screen.getByTestId("live-region-polite").textContent).toMatch(
-      /1 selected\.$/,
+    // The example's catalogue skips one definition, which is said first, so
+    // the selection message waits for the announcer's next window.
+    await waitFor(() =>
+      expect(screen.getByTestId("live-region-polite").textContent).toMatch(
+        /1 selected\.$/,
+      ),
     );
   });
 });

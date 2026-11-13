@@ -108,6 +108,39 @@ export interface CatalogueChange {
   readonly turnedOff: readonly string[];
   /** How many layers the link named that the catalogue does not have for this person. */
   readonly linkUnavailable: number;
+  /** How many definitions the host supplied that were left out. Zero says nothing. */
+  readonly skipped: number;
+  /** How many layers a refresh added to a list that was already shown. Zero says nothing. */
+  readonly added: number;
+  /** How many layers a refresh removed from a list that was already shown. Zero says nothing. */
+  readonly removed: number;
+  /** The first list the catalogue gave is empty, which is worth saying after the wait. */
+  readonly empty: boolean;
+}
+
+/** The catalogue's layers are still being fetched. */
+export function describeLayersLoading(): string {
+  return "Loading layers";
+}
+
+/** The catalogue could not be loaded at all. */
+export function describeLayersLoadFailed(): string {
+  return "Layers could not be loaded.";
+}
+
+/** The catalogue loaded and holds no layers. */
+export function describeNoLayers(): string {
+  return "No layers are available.";
+}
+
+/** A refresh failed, so the list from before stays. */
+export function describeLayersRefreshFailed(): string {
+  return "Layers could not be updated. Showing the last list.";
+}
+
+/** How many of the host's definitions were left out, as a phrase with no full stop. */
+export function describeLayersSkipped(count: number): string {
+  return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} could not be shown`;
 }
 
 function announceLayersUnavailable(names: readonly string[]): string {
@@ -123,11 +156,20 @@ function announceLinkLayersUnavailable(count: number): string {
     : `${formatNumber(count)} layers in the link are not available.`;
 }
 
+function announceLayersUpdated(added: number, removed: number): string {
+  const parts = [
+    added > 0 ? `${formatNumber(added)} added` : null,
+    removed > 0 ? `${formatNumber(removed)} removed` : null,
+  ].filter((part) => part !== null);
+  return `Layers updated: ${parts.join(", ")}.`;
+}
+
 /**
- * One message for one change to the catalogue: the layers that were turned
- * off, then the layers of the link that are not available. Null when neither
- * happened. The live region coalesces messages that arrive within a window of the
- * last one sent to the latest of them, so a transition says everything at once.
+ * One message for one change to the catalogue, in a fixed order: the layers
+ * that were turned off, the layers of the link that are not available, how
+ * many definitions could not be shown, what a refresh added and removed, and
+ * that the first list is empty. Null when none of them applies. A transition
+ * is one message, so the live region speaks the whole change in one go.
  */
 export function announceCatalogueChange(
   change: CatalogueChange,
@@ -139,14 +181,20 @@ export function announceCatalogueChange(
     change.linkUnavailable > 0
       ? announceLinkLayersUnavailable(change.linkUnavailable)
       : null,
+    change.skipped > 0 ? `${describeLayersSkipped(change.skipped)}.` : null,
+    change.added > 0 || change.removed > 0
+      ? announceLayersUpdated(change.added, change.removed)
+      : null,
+    change.empty ? describeNoLayers() : null,
   ].filter((part) => part !== null);
   return parts.length > 0 ? parts.join(" ") : null;
 }
 
 /*
  * The selection's messages each carry the running total, because the live
- * region coalesces messages that arrive close together to the latest: the one
- * that is read out must still be true when an earlier one was replaced.
+ * region replaces a waiting message with a later one that arrives within its
+ * window: the one that is read out must still be true when an earlier one was
+ * replaced.
  */
 
 /** One feature was added to the selection: "Added Gauge 4. 5 selected." */

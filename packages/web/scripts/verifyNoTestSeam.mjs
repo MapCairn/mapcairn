@@ -5,14 +5,14 @@
 //
 // Usage, from packages/web after `react-router build`:
 //   node scripts/verifyNoTestSeam.mjs                   exits 1 if any marker is found
-//   node scripts/verifyNoTestSeam.mjs --expect-present  exits 1 unless every group is found (for the e2e build)
+//   node scripts/verifyNoTestSeam.mjs --expect-present  exits 1 unless every string of every group is found (for the e2e build)
 //
 // `--root <dir>` searches <dir>/build/client and <dir>/build/server instead of
 // this package, which is how its test runs it.
 //
 // It searches build/client and build/server for each group's strings:
-// - test seam: the marker in src/composition/testSeam.ts and the window
-//   property it reads;
+// - test seam: the marker in src/composition/testSeam.ts and the two window
+//   properties it reads (the services and the scripted layer catalogue);
 // - design guide: the marker the style guide page renders
 //   (src/designGuide/DesignGuide.tsx).
 
@@ -29,7 +29,11 @@ const directories = ["build/client", "build/server"];
 const groups = [
   {
     name: "test seam",
-    needles: ["MAPCAIRN_TEST_SEAM_MARKER", "__MAPCAIRN_TEST_SERVICES__"],
+    needles: [
+      "MAPCAIRN_TEST_SEAM_MARKER",
+      "__MAPCAIRN_TEST_SERVICES__",
+      "__MAPCAIRN_TEST_CATALOGUE__",
+    ],
   },
   { name: "design guide", needles: ["MAPCAIRN_DESIGN_GUIDE_MARKER"] },
 ];
@@ -82,9 +86,16 @@ const report = (names) =>
   names.map((name) => `${name}:\n  ${found.get(name).join("\n  ")}`).join("\n");
 
 if (expectPresent) {
-  const absent = groups
-    .map((group) => group.name)
-    .filter((name) => found.get(name).length === 0);
+  // Every needle of a group must be there, not just one of them, so a seam
+  // that lost a part of itself fails too.
+  const absent = groups.flatMap((group) =>
+    group.needles
+      .filter(
+        (needle) =>
+          !found.get(group.name).some((line) => line.endsWith(`: ${needle}`)),
+      )
+      .map((needle) => `${group.name} (${needle})`),
+  );
   if (absent.length > 0) {
     console.error(
       `Missing from ${filesChecked} build files, but this build should keep it: ${absent.join(", ")}.`,

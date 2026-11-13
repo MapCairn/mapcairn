@@ -104,9 +104,10 @@ export interface FeatureSelectionState {
  *   here: `useDataLayers` announces the turning off itself, and its Undo brings
  *   the references back. A change made outside (hydration, a failed save)
  *   updates `entries` and is not announced. Each message carries the new
- *   total, because the live region coalesces messages that arrive within
- *   `THROTTLE_MS` of the last one sent to the latest of them. The refusal of
- *   a batch past the limit is assertive, the rest polite.
+ *   total, because the live region replaces a waiting message that is not
+ *   kept with a later one when both arrive within `THROTTLE_MS` of the last
+ *   one sent. The refusal of a batch past the limit is assertive, the rest
+ *   polite.
  */
 export function useFeatureSelection(
   layers: DataLayers,
