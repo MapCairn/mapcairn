@@ -10,6 +10,7 @@ import {
   SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_HEATMAP_LAYER,
+  SAMPLE_IDENTIFY_LAYER,
   SAMPLE_LAYERS,
   SAMPLE_LINE_LAYER,
   SAMPLE_QUERY_LAYER,
@@ -617,6 +618,27 @@ describe("LayersSection", () => {
     await waitFor(() =>
       expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
         "Showing the feature on the map.",
+      ),
+    );
+  });
+
+  it("shows an identified feature on the map, and names it from the layer's identify card", async () => {
+    const { source, layers, adapter } = setup([SAMPLE_IDENTIFY_LAYER]);
+    source.setIdentified(SAMPLE_IDENTIFY_LAYER.id, [
+      samplePoint("a", { title: "Gauge 4" }, [18.4, -33.9]),
+    ]);
+    toggle(SAMPLE_IDENTIFY_LAYER.id, "Sample flood depth");
+    await act(async () => {
+      await layers().identifyAt({
+        latlng: { lat: -33.9, lng: 18.4 },
+        zoom: 10,
+      });
+    });
+    fireEvent.click(await screen.findByTestId("feature-card-show"));
+    expect(adapter.getView().center.lat).toBeCloseTo(-33.9);
+    await waitFor(() =>
+      expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+        "Showing Gauge 4 on the map.",
       ),
     );
   });
