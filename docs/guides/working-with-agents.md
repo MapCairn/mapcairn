@@ -97,20 +97,15 @@ How each tool reaches the skill (all of them can read `AGENTS.md` and a file pat
 | Antigravity | `.agents/skills/playwright-tests` | `AGENTS.md` or `GEMINI.md` |
 | Cursor | `.agents/skills` or `.claude/skills` | `AGENTS.md` |
 
-Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None of the verified tools needs a new file; Amp and Zed are unverified.
+Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None of them needs a new file.
 
 | Tool | What its documentation says | Source |
 | --- | --- | --- |
 | Windsurf | Reads `AGENTS.md` at the project root. Reads skills from `.agents/skills` as well as `.devin/skills` and `.windsurf/skills` | docs.windsurf.com (Customize, "AGENTS.md" and "Skill scopes") |
 | Gemini CLI | Loads `GEMINI.md` by default (the one here points to `AGENTS.md`); `AGENTS.md` too when `context.fileName` lists it | geminicli.com/docs (GEMINI.md context) |
-| Junie CLI | Reads `AGENTS.md` at the project root | junie.jetbrains.com/docs (guidelines and memory) |
 | Cline | Reads `AGENTS.md` | docs.cline.bot (rules) |
-| Roo Code | Reads `AGENTS.md` (or `AGENT.md`) in the workspace root | docs.roocode.com (custom instructions) |
-| Kiro | Reads `AGENTS.md`, always included | kiro.dev/docs (steering) |
-| Amp | Not verified: the manual page was fetched but its text on instructions was not read | ampcode.com/manual |
-| Zed | Not verified: the rules page was not found | zed.dev/docs |
 
-The skills folders of Cline, Roo Code, Kiro and Junie were not checked, so those tools follow the skill by path. The skill is written to be followed that way: open `.agents/skills/playwright-tests/SKILL.md`.
+Cline's skills folder was not checked, so it follows the skill by path. The skill is written to be followed that way: open `.agents/skills/playwright-tests/SKILL.md`.
 
 No MCP configuration for another tool is committed, because the skill does not use MCP. `.vscode/mcp.json` is an editor setting that configures a Playwright, a Chrome DevTools and a GitHub server; no skill or agent here uses them. `npx --no-install playwright cli` covers the Playwright one, and `gh` covers the GitHub one (the skills already use `gh`). Whether the command line covers what the Chrome DevTools server does was not checked.
 
