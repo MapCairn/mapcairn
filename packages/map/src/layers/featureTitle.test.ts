@@ -4,6 +4,7 @@ import {
   createFormatterRegistry,
   type FeedLayerDefinition,
   SAMPLE_FEED_LAYER,
+  SAMPLE_IDENTIFY_LAYER,
   SAMPLE_TILE_LAYER,
   samplePoint,
 } from "@mapcairn/core";
@@ -43,6 +44,20 @@ describe("featureTitle", () => {
     expect(featureTitle(SAMPLE_FEED_LAYER, feature, formatters, context)).toBe(
       SAMPLE_FEED_LAYER.name,
     );
+  });
+
+  it("fills the nested card's title for a tile layer that answers a tap", () => {
+    const feature = samplePoint("a", { title: "Sample flood" });
+    expect(
+      featureTitle(SAMPLE_IDENTIFY_LAYER, feature, formatters, context),
+    ).toBe("Sample flood");
+  });
+
+  it("falls back to an identifiable layer's name when its title fills to nothing", () => {
+    const feature = samplePoint("a", { title: null });
+    expect(
+      featureTitle(SAMPLE_IDENTIFY_LAYER, feature, formatters, context),
+    ).toBe(SAMPLE_IDENTIFY_LAYER.name);
   });
 
   it("uses the layer's name for a layer with no card", () => {

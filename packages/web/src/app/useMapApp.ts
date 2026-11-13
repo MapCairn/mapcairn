@@ -17,6 +17,7 @@ import {
   type MapClickEvent,
   openSearch,
   openSheet,
+  pressEscape,
   type SearchResult,
   type SheetDetent,
   type SheetSection,
@@ -32,6 +33,7 @@ import {
   stopMeasure,
   surfaceReducer,
   type ViewState,
+  wrapLongitude,
 } from "@mapcairn/core";
 import {
   type DataLayers,
@@ -85,6 +87,13 @@ export const LOCATE_ZOOM = 15;
  * as if it were this precise, so the map never zooms out to a whole region.
  */
 export const LOCATE_MAX_FIT_RADIUS_METRES = 25_000;
+
+/** The surfaces that own taps on the map, so a tap there asks no raster layer what is at it. */
+const TAP_TOOLS: ReadonlySet<SurfaceState["surface"]> = new Set([
+  "measure",
+  "directions",
+  "draw",
+]);
 
 /** Room kept around the accuracy circle when a fix is fitted, in pixels. */
 const LOCATE_FIT_PADDING_PX = 32;
@@ -195,6 +204,11 @@ export interface MapApp {
 
   readonly onMapClick: (event: MapClickEvent) => void;
   readonly onLongPress: (event: MapLongPressEvent) => void;
+  /**
+   * Pass to `MapView`'s `onEscape`. It ends a lookup of what a raster layer
+   * says is at a tap, if one is waiting, and otherwise closes the open surface.
+   */
+  readonly onEscape: () => void;
   readonly onSearchFocus: () => void;
   readonly onSearchBlur: () => void;
   readonly flyTo: (result: SearchResult) => void;
@@ -210,8 +224,10 @@ export interface MapApp {
   readonly openFeature: () => void;
   /**
    * The keyboard route to what a tap finds: opens the card of the one feature
-   * at the centre of the map, or the list when there are several, and says so
-   * when there are none.
+   * at the centre of the map, or the list when there are several. Where no
+   * drawn feature is there it asks the raster layers that answer a tap, and
+   * they say what they found. It says so itself only when none is there to
+   * ask.
    */
   readonly identifyAtCentre: () => void;
   /** Brings the sheet to the detent that shows the card and the map together, after "Show on map". */
@@ -452,27 +468,82 @@ export function useMapApp(): MapApp {
     [stateRef],
   );
 
+  // The card and the map share the screen at REVEAL_DETENT. A peeking sheet
+  // is too short to show the card, and a full one covers the map.
+  const openFeature = useCallback(() => {
+    dispatch(openSheet("layers"));
+    if (stateRef.current.sheetDetent === "peek") {
+      dispatch(setDetent(REVEAL_DETENT));
+    }
+  }, [stateRef]);
+
+  // A raster layer's answer to a tap opens a card or a list only while the
+  // person is still on the plain map, so leaving it (another surface opens,
+  // measuring starts) abandons a lookup in flight.
+  const { choose, identifyAt, cancelIdentify } = layers;
+  const surface = state.surface;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a change of surface is the trigger; the surface itself is not read.
+  useEffect(() => {
+    cancelIdentify();
+  }, [surface, cancelIdentify]);
+
+  /**
+   * Asks the raster layers what is at a place and opens what they find, after
+   * the sheet has been opened on it. Resolves with what `identifyAt` does.
+   */
+  const identifyAtPlace = useCallback(
+    async (place: LatLng) => {
+      const adapter = mapRef.current?.adapter;
+      if (!adapter) {
+        return null;
+      }
+      const result = await identifyAt(
+        { latlng: place, zoom: adapter.getView().zoom },
+        { focus: true },
+      );
+      if (result && result.found > 0) {
+        openFeature();
+      }
+      return result;
+    },
+    [identifyAt, openFeature],
+  );
+
   const { addStop } = directions;
   const onDrawClick = draw.onMapClick;
   const onMapClick = useCallback(
     (event: MapClickEvent) => {
-      if (stateRef.current.surface === "measure") {
+      const { surface } = stateRef.current;
+      if (surface === "measure") {
         addPoint(event.latlng);
-      } else if (stateRef.current.surface === "directions") {
+      } else if (surface === "directions") {
         addStop(event.latlng);
-      } else if (stateRef.current.surface === "draw") {
+      } else if (surface === "draw") {
         onDrawClick(event);
+      } else if (
+        mapRef.current?.adapter?.featuresAt(event.point).length === 0
+      ) {
+        // A tap on a drawn feature opens its own card, through `featureTap`.
+        void identifyAtPlace(event.latlng);
       }
     },
-    [addPoint, addStop, onDrawClick, stateRef],
+    [addPoint, addStop, identifyAtPlace, onDrawClick, stateRef],
   );
 
   const onLongPress = useCallback(
     (event: MapLongPressEvent) => {
+      cancelIdentify();
       dropPinAt(event.latlng);
     },
-    [dropPinAt],
+    [cancelIdentify, dropPinAt],
   );
+
+  const onEscape = useCallback(() => {
+    // Escape ends a lookup in flight first, and only then closes a surface.
+    if (!cancelIdentify()) {
+      closeExplicitly(pressEscape());
+    }
+  }, [cancelIdentify, closeExplicitly]);
 
   const flyTo = useCallback((result: SearchResult) => {
     const adapter = mapRef.current?.adapter;
@@ -512,29 +583,35 @@ export function useMapApp(): MapApp {
     );
   }, [locate.fix]);
 
-  // The card and the map share the screen at REVEAL_DETENT. A peeking sheet
-  // is too short to show the card, and a full one covers the map.
-  const openFeature = useCallback(() => {
-    dispatch(openSheet("layers"));
-    if (stateRef.current.sheetDetent === "peek") {
-      dispatch(setDetent(REVEAL_DETENT));
-    }
-  }, [stateRef]);
-
-  const { choose } = layers;
   const identifyAtCentre = useCallback(() => {
     const adapter = mapRef.current?.adapter;
     if (!adapter) {
       return;
     }
-    const hits = adapter.featuresAt(adapter.project(adapter.getView().center));
-    if (hits.length === 0) {
-      announce(announceNoFeaturesHere());
+    const { center } = adapter.getView();
+    const hits = adapter.featuresAt(adapter.project(center));
+    if (hits.length > 0) {
+      choose(hits, { focus: true });
+      openFeature();
       return;
     }
-    choose(hits, { focus: true });
-    openFeature();
-  }, [announce, choose, openFeature]);
+    // While a tool owns the taps, as a tap there asks no raster layer, nor does
+    // the key: only what it said before is said.
+    if (TAP_TOOLS.has(stateRef.current.surface)) {
+      announce(announceNoFeaturesHere(), { keep: true });
+      return;
+    }
+    // The centre of the map is not wrapped as a tap is, so it is wrapped here.
+    // Nothing is said until the layers have answered, which they say themselves.
+    void identifyAtPlace({
+      lat: center.lat,
+      lng: wrapLongitude(center.lng),
+    }).then((result) => {
+      if (result?.asked === 0) {
+        announce(announceNoFeaturesHere(), { keep: true });
+      }
+    });
+  }, [announce, choose, identifyAtPlace, openFeature, stateRef]);
 
   const revealMap = useCallback(() => {
     if (stateRef.current.surface === "sheet") {
@@ -611,6 +688,7 @@ export function useMapApp(): MapApp {
     setCursor,
     onMapClick,
     onLongPress,
+    onEscape,
     onSearchFocus,
     onSearchBlur,
     flyTo,
