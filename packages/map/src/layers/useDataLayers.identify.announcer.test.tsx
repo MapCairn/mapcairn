@@ -4,6 +4,8 @@ import {
   createFakeServices,
   FakeLayerCatalogue,
   type IdentifiableLayerDefinition,
+  type LayerDefinition,
+  SAMPLE_FEED_LAYER,
   SAMPLE_IDENTIFY_LAYER,
   samplePoint,
 } from "@mapcairn/core";
@@ -11,8 +13,8 @@ import { act, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../services";
-import { LiveRegionProvider } from "../ui/LiveRegion";
-import { THROTTLE_MS } from "../ui/LiveRegion/announcer";
+import { LiveRegionProvider, useAnnounce } from "../ui/LiveRegion";
+import { type Announce, THROTTLE_MS } from "../ui/LiveRegion/announcer";
 import { IDENTIFY_TIMEOUT_MS, useDataLayers } from "./useDataLayers";
 
 /*
@@ -35,6 +37,17 @@ const advance = (ms: number) =>
     await vi.advanceTimersByTimeAsync(ms);
   });
 
+/**
+ * Lets every waiting message go out, one window at a time. Each window is its
+ * own `act`, because React batches the text a region takes within one, so a
+ * single long advance would show only the last of several messages.
+ */
+async function drain() {
+  for (let window = 0; window < 4; window += 1) {
+    await advance(THROTTLE_MS);
+  }
+}
+
 /** Records each non-empty text a live region takes, in order. */
 function listenTo(region: HTMLElement) {
   const heard: string[] = [];
@@ -52,13 +65,21 @@ function listenTo(region: HTMLElement) {
   return { heard, stop: () => observer.disconnect() };
 }
 
-async function setup(...definitions: IdentifiableLayerDefinition[]) {
+async function setup(...definitions: LayerDefinition[]) {
   const services = createFakeServices({
     layers: new FakeLayerCatalogue(definitions),
   });
+  const speaker: { announce: Announce } = { announce: () => {} };
+  function Capture() {
+    speaker.announce = useAnnounce();
+    return null;
+  }
   const wrapper = ({ children }: { children: ReactNode }) => (
     <LiveRegionProvider>
-      <ServicesProvider services={services}>{children}</ServicesProvider>
+      <ServicesProvider services={services}>
+        <Capture />
+        {children}
+      </ServicesProvider>
     </LiveRegionProvider>
   );
   const view = renderHook(() => useDataLayers({ now: () => Date.now() }), {
@@ -70,9 +91,13 @@ async function setup(...definitions: IdentifiableLayerDefinition[]) {
     }
   });
   // Let what turning the layers on said go out before listening.
-  await advance(THROTTLE_MS * 4);
+  await advance(THROTTLE_MS * (definitions.length + 2));
   return {
     ...view,
+    /** Says something else, as another part of the app does. */
+    announce: (...args: Parameters<Announce>) => {
+      act(() => speaker.announce(...args));
+    },
     source: services.fakes.layerSource,
     polite: listenTo(screen.getByRole("status")),
     assertive: listenTo(screen.getByRole("alert")),
@@ -134,6 +159,64 @@ describe("what one tap says through the live region", () => {
     await advance(THROTTLE_MS);
     expect(view.assertive.heard).toEqual(["Rainfall and Wind did not answer."]);
     expect(view.polite.heard).toEqual([]);
+  });
+
+  it("keeps what a tap found when another message follows it inside the window", async () => {
+    const view = await setup(layer("rain", "Rainfall"));
+    view.source.setIdentified("rain", [samplePoint("a"), samplePoint("b")]);
+    // A message that went out just before opens the window, so the tap's waits in it.
+    view.announce("Earlier");
+    await act(async () => {
+      await view.result.current.identifyAt(TAP);
+    });
+    view.announce("Later");
+    await drain();
+    expect(view.polite.heard).toEqual([
+      "Earlier",
+      "2 features here. Choose one from the list.",
+      "Later",
+    ]);
+  });
+
+  it("keeps a failure that was said assertively when another assertive message follows", async () => {
+    const view = await setup(layer("rain", "Rainfall"));
+    view.source.failIdentify("rain", "network");
+    view.announce("Earlier", { priority: "assertive" });
+    await act(async () => {
+      await view.result.current.identifyAt(TAP);
+    });
+    view.announce("Later", { priority: "assertive" });
+    await drain();
+    expect(view.assertive.heard).toEqual([
+      "Earlier",
+      "Rainfall did not answer.",
+      "Later",
+    ]);
+  });
+
+  it("keeps the list that choose opens for a tap on drawn features", async () => {
+    const view = await setup(SAMPLE_FEED_LAYER);
+    view.source.setFeatures("sample-points", [
+      samplePoint("f"),
+      samplePoint("g"),
+    ]);
+    // The layer found nothing when it was turned on, so ask it again.
+    act(() => view.result.current.retry("sample-points"));
+    await advance(THROTTLE_MS * 4);
+    view.announce("Earlier");
+    act(() =>
+      view.result.current.choose([
+        { layerId: "sample-points", featureId: "f" },
+        { layerId: "sample-points", featureId: "g" },
+      ]),
+    );
+    view.announce("Later");
+    await drain();
+    expect(view.polite.heard.slice(-3)).toEqual([
+      "Earlier",
+      "2 features here. Choose one from the list.",
+      "Later",
+    ]);
   });
 
   it("says nothing for a tap that found one feature and was answered by all", async () => {

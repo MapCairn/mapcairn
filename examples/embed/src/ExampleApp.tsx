@@ -22,6 +22,7 @@ import {
   MeasureToolbar,
   PinMarker,
   SearchPill,
+  SelectionProvider,
   ServicesProvider,
   Sheet,
   SheetContent,
@@ -30,6 +31,7 @@ import {
   type UseMeasure,
   useBasemaps,
   useDataLayers,
+  useFeatureSelection,
   useLocate,
   useMap,
   useMeasure,
@@ -92,6 +94,7 @@ function ExampleMap() {
   const [measuring, setMeasuring] = useState(false);
   const [pin, setPin] = useState<LatLng | null>(null);
   const layers = useDataLayers();
+  const selection = useFeatureSelection(layers);
   const measure = useMeasure(settings.units);
   const locate = useLocate(settings.units);
   const state: ExampleState = {
@@ -121,34 +124,36 @@ function ExampleMap() {
   });
 
   return (
-    <MapView
-      id={MAP_ID}
-      initialView={INITIAL_VIEW}
-      basemap={catalogue.resolve(basemapId)}
-      cursor={measuring ? "crosshair" : "grab"}
-      onClick={(event) => {
-        if (measuring) {
-          measure.addPoint(event.latlng);
-        }
-      }}
-      chrome={(background) => (
-        <ExampleChrome state={state} background={background} />
-      )}
-    >
-      <MapDataLayers layers={layers} ignoreTaps={measuring} />
-      <MapOverlayLayer>
-        {locate.fix ? (
-          <AccuracyCircle
-            center={locate.fix.position}
-            accuracyMetres={locate.fix.accuracyMetres}
-          />
-        ) : null}
-        {measuring ? (
-          <MeasureOverlay points={measure.points} mode={measure.mode} />
-        ) : null}
-        {pin ? <PinMarker position={pin} /> : null}
-      </MapOverlayLayer>
-    </MapView>
+    <SelectionProvider selection={selection}>
+      <MapView
+        id={MAP_ID}
+        initialView={INITIAL_VIEW}
+        basemap={catalogue.resolve(basemapId)}
+        cursor={measuring ? "crosshair" : "grab"}
+        onClick={(event) => {
+          if (measuring) {
+            measure.addPoint(event.latlng);
+          }
+        }}
+        chrome={(background) => (
+          <ExampleChrome state={state} background={background} />
+        )}
+      >
+        <MapDataLayers layers={layers} ignoreTaps={measuring} />
+        <MapOverlayLayer>
+          {locate.fix ? (
+            <AccuracyCircle
+              center={locate.fix.position}
+              accuracyMetres={locate.fix.accuracyMetres}
+            />
+          ) : null}
+          {measuring ? (
+            <MeasureOverlay points={measure.points} mode={measure.mode} />
+          ) : null}
+          {pin ? <PinMarker position={pin} /> : null}
+        </MapOverlayLayer>
+      </MapView>
+    </SelectionProvider>
   );
 }
 

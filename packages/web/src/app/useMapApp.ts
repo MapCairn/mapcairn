@@ -37,6 +37,7 @@ import {
 } from "@mapcairn/core";
 import {
   type DataLayers,
+  type FeatureSelectionState,
   type MapContextValue,
   type MapLongPressEvent,
   REVEAL_DETENT,
@@ -49,6 +50,7 @@ import {
   useDataLayers,
   useDirections,
   useDraw,
+  useFeatureSelection,
   useLocate,
   useMeasure,
   useSettings,
@@ -213,6 +215,11 @@ export interface MapApp {
 
   /** The data layers: which are on, what loaded, the open card. */
   readonly layers: DataLayers;
+  /**
+   * The selected set, for `SelectionProvider`. Null when the host supplies no
+   * store, as the reference site's `createServices()` does not.
+   */
+  readonly selection: FeatureSelectionState | null;
   /** Opens the Layers section after a tap on a point has selected it. */
   readonly openFeature: () => void;
   /**
@@ -252,6 +259,9 @@ export function useMapApp(): MapApp {
     }),
   );
   const layers = useDataLayers({ initial: link.layers });
+  // Pass { formatters: LAYER_FORMATTERS } here once a host registers a custom
+  // formatter; the default registry gives the same titles today.
+  const selection = useFeatureSelection(layers);
   const basemaps = useBasemapChoice(initial.basemapId);
   const persistence = useViewPersistence(
     initial.view,
@@ -588,7 +598,7 @@ export function useMapApp(): MapApp {
     // While a tool owns the taps, as a tap there asks no raster layer, nor does
     // the key: only what it said before is said.
     if (TAP_TOOLS.has(stateRef.current.surface)) {
-      announce(announceNoFeaturesHere());
+      announce(announceNoFeaturesHere(), { keep: true });
       return;
     }
     // The centre of the map is not wrapped as a tap is, so it is wrapped here.
@@ -598,7 +608,7 @@ export function useMapApp(): MapApp {
       lng: wrapLongitude(center.lng),
     }).then((result) => {
       if (result?.asked === 0) {
-        announce(announceNoFeaturesHere());
+        announce(announceNoFeaturesHere(), { keep: true });
       }
     });
   }, [announce, choose, identifyAtPlace, openFeature, stateRef]);
@@ -683,6 +693,7 @@ export function useMapApp(): MapApp {
     onSearchBlur,
     flyTo,
     layers,
+    selection,
     openFeature,
     identifyAtCentre,
     revealMap,

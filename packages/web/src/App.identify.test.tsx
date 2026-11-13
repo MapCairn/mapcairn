@@ -229,6 +229,36 @@ describe("App identify with the I key", () => {
     },
   );
 
+  it("keeps what the key says when another message follows it inside the announcer's window", async () => {
+    const services = await renderApp([SAMPLE_FEED_LAYER]);
+    const heard: string[] = [];
+    const region_ = screen.getByTestId("live-region-polite");
+    new MutationObserver(() => {
+      const text = region_.textContent ?? "";
+      if (text !== "" && heard.at(-1) !== text) {
+        heard.push(text);
+      }
+    }).observe(region_, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    // Let what mounting said go out, so the pin's message is the one that opens
+    // the window.
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    heard.length = 0;
+    // The pin's message opens the window, the key's waits in it, and the second
+    // pin's (a different place, so not a repeat) would replace it if it were not kept.
+    fireEvent.keyDown(region(), { key: "p" });
+    fireEvent.keyDown(region(), { key: "i" });
+    act(() =>
+      adapter(services).setView({ center: { lat: 10, lng: 20 }, zoom: 6 }),
+    );
+    fireEvent.keyDown(region(), { key: "p" });
+    await vi.waitFor(() => expect(heard).toHaveLength(3), { timeout: 4000 });
+    expect(heard).toContain("No features at the centre of the map.");
+  });
+
   it("still says nothing is at the centre when no layer answers a tap", async () => {
     await renderApp([SAMPLE_FEED_LAYER]);
     fireEvent.keyDown(region(), { key: "i" });

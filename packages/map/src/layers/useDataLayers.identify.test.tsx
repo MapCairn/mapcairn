@@ -189,6 +189,7 @@ describe("useDataLayers identifyAt", () => {
     expect(said()).toEqual(["Nothing found here."]);
     expect(announce).toHaveBeenCalledWith("Nothing found here.", {
       priority: "polite",
+      keep: true,
     });
     expect(selectedId(view)).toBe("f");
   });
@@ -294,7 +295,7 @@ describe("useDataLayers identifyAt", () => {
     expect(result).toEqual({ asked: 2, found: 1 });
     expect(selectedId(view)).toBe("w");
     expect(announce.mock.calls).toEqual([
-      ["Rainfall did not answer.", { priority: "polite" }],
+      ["Rainfall did not answer.", { priority: "polite", keep: true }],
     ]);
   });
 
@@ -306,7 +307,10 @@ describe("useDataLayers identifyAt", () => {
     await tapAndWait(view);
     expect(view.result.current.selected).toBeNull();
     expect(announce.mock.calls).toEqual([
-      ["Rainfall and Wind did not answer.", { priority: "assertive" }],
+      [
+        "Rainfall and Wind did not answer.",
+        { priority: "assertive", keep: true },
+      ],
     ]);
   });
 });
@@ -338,7 +342,7 @@ describe("useDataLayers identifyAt over time", () => {
     expect(selectedId(view)).toBe("w");
     expect(view.source.identifyRequests[0]?.signal?.aborted).toBe(true);
     expect(announce.mock.calls).toEqual([
-      ["Rainfall did not answer.", { priority: "polite" }],
+      ["Rainfall did not answer.", { priority: "polite", keep: true }],
     ]);
   });
 
@@ -353,7 +357,10 @@ describe("useDataLayers identifyAt over time", () => {
     });
     await settled(pending);
     expect(announce.mock.calls).toEqual([
-      ["Rainfall and Wind did not answer.", { priority: "assertive" }],
+      [
+        "Rainfall and Wind did not answer.",
+        { priority: "assertive", keep: true },
+      ],
     ]);
   });
 
@@ -445,7 +452,7 @@ describe("useDataLayers cancelling an identify", () => {
     act(() => view.result.current.setEnabled("rain", false));
     expect(await settled(pending)).toEqual({ asked: 1, found: 0 });
     expect(announce.mock.calls).toEqual([
-      ["Nothing found here.", { priority: "polite" }],
+      ["Nothing found here.", { priority: "polite", keep: true }],
     ]);
   });
 
@@ -458,7 +465,7 @@ describe("useDataLayers cancelling an identify", () => {
     act(() => view.result.current.setEnabled("rain", false));
     await settled(pending);
     expect(announce.mock.calls).toEqual([
-      ["Wind did not answer.", { priority: "assertive" }],
+      ["Wind did not answer.", { priority: "assertive", keep: true }],
     ]);
   });
 
@@ -501,7 +508,7 @@ describe("useDataLayers cancelling an identify", () => {
     expect(await tapAndWait(view)).toEqual({ asked: 1, found: 0 });
     expect(view.result.current.identifying).toBe(false);
     expect(announce.mock.calls).toEqual([
-      ["Rainfall did not answer.", { priority: "assertive" }],
+      ["Rainfall did not answer.", { priority: "assertive", keep: true }],
     ]);
   });
 

@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type {
-  BasemapDefinition,
-  CatalogueState,
-  LayerDefinition,
+import {
+  type BasemapDefinition,
+  type CatalogueState,
+  DEFAULT_SELECTION_LIMIT,
+  type FeatureRef,
+  type FeatureSelection,
+  type LayerCatalogue,
+  type LayerDefinition,
 } from "@mapcairn/core";
 import type { Page } from "@playwright/test";
 import { TRANSPARENT_PNG } from "./network";
@@ -89,9 +93,12 @@ export const SAMPLE_RESULTS: ScriptedSearchResult[] = [
 declare global {
   interface Window {
     __MAPCAIRN_TEST_SERVICES__?: unknown;
+    __MAPCAIRN_TEST_CATALOGUE__?: unknown;
+    __mapcairnCatalogue?: LayerCatalogue;
     __mapcairnSearch?: SearchScript;
     __mapcairnClipboard?: { ok: boolean; written: string[] };
     __mapcairnGeolocation?: GeolocationScript;
+    __mapcairnSelection?: ScriptedSelectionHandle;
   }
 }
 
@@ -205,6 +212,191 @@ export async function scriptLayers(
       { layers: catalogue },
     );
   }, definitions);
+}
+
+/** What a scripted selection store starts with. */
+export interface SelectionScript {
+  /** The most references it holds. Defaults to the port's default of 200. */
+  readonly limit?: number;
+  /** The references selected at start. */
+  readonly refs?: readonly FeatureRef[];
+}
+
+/** What the page keeps for a test to reach the scripted selection store. */
+export interface ScriptedSelectionHandle {
+  /** The store the host was given. */
+  readonly store: FeatureSelection;
+  /** How many listeners are subscribed to the store now. */
+  subscribers(): number;
+  /** Makes the set exactly `refs` whatever the limit, as a host does when it hydrates or restores a set. */
+  replaceExternally(refs: readonly FeatureRef[]): void;
+}
+
+/**
+ * Puts a scripted `FeatureSelection` on the seam and its handle on
+ * `window.__mapcairnSelection`. It runs inside the page, so it uses nothing
+ * from this module, and the port's contract suite runs against it in
+ * `src/e2eSelectionSeam.test.ts`. It follows the rules in `FeatureSelection`
+ * with closures, because React reads `getState` and `subscribe` unbound.
+ */
+export function installScriptedSelection(config: {
+  readonly limit: number;
+  readonly refs: readonly FeatureRef[];
+}): void {
+  const keyOf = (ref: FeatureRef) =>
+    JSON.stringify([ref.layerId, ref.featureId]);
+  const unique = (refs: readonly FeatureRef[]) => {
+    const seen = new Set<string>();
+    const kept: FeatureRef[] = [];
+    for (const { layerId, featureId } of refs) {
+      const ref = Object.freeze({ layerId, featureId });
+      if (!seen.has(keyOf(ref))) {
+        seen.add(keyOf(ref));
+        kept.push(ref);
+      }
+    }
+    return kept;
+  };
+  let current: readonly FeatureRef[] = Object.freeze(unique(config.refs));
+  const listeners = new Set<() => void>();
+  const publish = (next: readonly FeatureRef[]) => {
+    const heldKeys = current.map(keyOf);
+    const unchanged =
+      next.length === heldKeys.length &&
+      next.every((ref, index) => keyOf(ref) === heldKeys[index]);
+    if (unchanged) {
+      return;
+    }
+    current = Object.freeze(next);
+    for (const listener of [...listeners]) {
+      listener();
+    }
+  };
+  const store: FeatureSelection = {
+    limit: config.limit,
+    getState: () => current,
+    subscribe(listener) {
+      const entry = () => listener();
+      listeners.add(entry);
+      return () => {
+        listeners.delete(entry);
+      };
+    },
+    add(refs) {
+      const held = new Set(current.map(keyOf));
+      const fresh = unique(refs).filter((ref) => !held.has(keyOf(ref)));
+      if (fresh.length > 0 && current.length + fresh.length <= config.limit) {
+        publish([...current, ...fresh]);
+      }
+    },
+    remove(refs) {
+      const dropped = new Set(refs.map(keyOf));
+      publish(current.filter((ref) => !dropped.has(keyOf(ref))));
+    },
+    replace(refs) {
+      const next = unique(refs);
+      if (next.length <= config.limit) {
+        publish(next);
+      }
+    },
+    clear: () => publish([]),
+  };
+  window.__mapcairnSelection = {
+    store,
+    subscribers: () => listeners.size,
+    replaceExternally: (refs) => publish(unique(refs)),
+  };
+  window.__MAPCAIRN_TEST_SERVICES__ = Object.assign(
+    (window.__MAPCAIRN_TEST_SERVICES__ as object | undefined) ?? {},
+    { selection: store },
+  );
+}
+
+/**
+ * Replaces the selection store, which the site does not build, with a
+ * scripted one that holds plain references. A spec reads it with
+ * {@link selectedRefs} and changes it with {@link addToSelection} or
+ * {@link replaceSelectionExternally}. It scripts no query: that waits for the
+ * `FeatureQuery` port.
+ */
+export async function scriptSelection(
+  page: Page,
+  script: SelectionScript = {},
+): Promise<void> {
+  const { limit = DEFAULT_SELECTION_LIMIT, refs = [] } = script;
+  await page.addInitScript(installScriptedSelection, { limit, refs });
+}
+
+/** The references the scripted selection store holds, in selection order. */
+export async function selectedRefs(page: Page): Promise<FeatureRef[]> {
+  return page.evaluate(() => [
+    ...(window.__mapcairnSelection?.store.getState() ?? []),
+  ]);
+}
+
+/** Adds references to the scripted store as a gesture would, so its limit applies. */
+export async function addToSelection(
+  page: Page,
+  refs: readonly FeatureRef[],
+): Promise<void> {
+  await page.evaluate((added) => {
+    window.__mapcairnSelection?.store.add(added);
+  }, refs);
+}
+
+/** Changes the scripted store from outside the ui, such as a late hydration. */
+export async function replaceSelectionExternally(
+  page: Page,
+  refs: readonly FeatureRef[],
+): Promise<void> {
+  await page.evaluate((next) => {
+    window.__mapcairnSelection?.replaceExternally(next);
+  }, refs);
+}
+
+/** How many listeners the page has subscribed to the scripted selection store. */
+export async function selectionSubscribers(page: Page): Promise<number> {
+  return page.evaluate(() => window.__mapcairnSelection?.subscribers() ?? 0);
+}
+
+/**
+ * What one load of a scripted catalogue answers: a list of definitions (bad
+ * entries are skipped by the real validation), `"fail"` for a request that
+ * rejects, or `"invalid"` for an answer that is not a list.
+ */
+export type CatalogueStep = readonly object[] | "fail" | "invalid";
+
+/**
+ * Makes the app's layer catalogue a real runtime catalogue that loads when the
+ * page runs, answering the first load with `steps[0]`, the next with
+ * `steps[1]` and so on (the last answers again), each after `delayMs`. Only
+ * the host refreshes a working catalogue, so a spec calls
+ * {@link refreshCatalogue} for that; Try again in the page does the same from
+ * a failure.
+ *
+ * @remarks The script is plain data, so it crosses into the page; the seam
+ *   builds the catalogue there (see `src/composition/testSeam.ts`), with the
+ *   real validation and states. It is unlike {@link scriptLayers}, whose
+ *   catalogue never changes.
+ */
+export async function scriptCatalogue(
+  page: Page,
+  steps: readonly CatalogueStep[],
+  delayMs = 0,
+): Promise<void> {
+  await page.addInitScript(
+    (script: { steps: readonly unknown[]; delayMs: number }) => {
+      window.__MAPCAIRN_TEST_CATALOGUE__ = script;
+    },
+    { steps, delayMs },
+  );
+}
+
+/** Asks the scripted catalogue to load again, as a host calls `refresh()`, and waits for the answer. */
+export function refreshCatalogue(page: Page): Promise<void> {
+  return page.evaluate(async () => {
+    await window.__mapcairnCatalogue?.refresh();
+  });
 }
 
 /**
