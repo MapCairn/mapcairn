@@ -206,6 +206,15 @@ export const WORKER_FAILURE_GRACE_MS = 5000;
  */
 export const TILE_SETTLE_NUDGE_MS = 250;
 
+/**
+ * How long, in milliseconds, the map on screen keeps painting after the last
+ * tile of a tile layer or the basemap was asked for. A tile the provider
+ * answers with a 404 is seen to be in within a few frames, so painting for
+ * longer only serves a tile that never answers, which keeps the engine from
+ * going idle however often it is painted.
+ */
+const TILE_SETTLE_GIVE_UP_MS = 30_000;
+
 /** Options for {@link MapLibreMapAdapter}. */
 export interface MapLibreMapAdapterOptions {
   /** Overrides {@link WORKER_FAILURE_GRACE_MS}, for example 0 in a test. */
@@ -793,6 +802,8 @@ export class MapLibreMapAdapter implements MapAdapter {
   private readonly tileTraffic = new Map<string, TileLayerTraffic>();
   /** The interval that paints the map while tile layer tiles load (see `repaintUntilIdle`). */
   private tileSettleNudge: ReturnType<typeof setInterval> | undefined;
+  /** The timer that ends that interval when no tile has been asked for for {@link TILE_SETTLE_GIVE_UP_MS}. */
+  private tileSettleGiveUp: ReturnType<typeof setTimeout> | undefined;
   /** Whether the style, or the style of a requested basemap still arriving, is loading. */
   private styleLoading = false;
   /**
@@ -2031,18 +2042,29 @@ export class MapLibreMapAdapter implements MapAdapter {
    * painted again and never reports `idle`: the layer could not be judged,
    * and the map would stay busy. One interval serves every tile layer and the
    * basemap's own tiles. It stops at `idle`, and when the basemap is in and no
-   * tile layer has a tile outstanding, so a basemap tile that never answers
-   * cannot keep the map painting.
+   * tile layer has a tile outstanding. A tile that never answers keeps the
+   * engine from going idle however often the map is painted, and from
+   * counting as in, so it also stops {@link TILE_SETTLE_GIVE_UP_MS} after the
+   * last tile was asked for; a tile asked for later starts it again. The
+   * counters cannot tell a tile that never answers from a 404, so only time
+   * can.
    */
   private repaintUntilIdle(map: MapLibreMap): void {
     this.tileSettleNudge ??= setInterval(() => {
       map.triggerRepaint();
     }, TILE_SETTLE_NUDGE_MS);
+    clearTimeout(this.tileSettleGiveUp);
+    this.tileSettleGiveUp = setTimeout(
+      () => this.stopRepaintingUntilIdle(),
+      TILE_SETTLE_GIVE_UP_MS,
+    );
   }
 
   private stopRepaintingUntilIdle(): void {
     clearInterval(this.tileSettleNudge);
+    clearTimeout(this.tileSettleGiveUp);
     this.tileSettleNudge = undefined;
+    this.tileSettleGiveUp = undefined;
   }
 
   /**
