@@ -10,11 +10,18 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ExampleApp } from "./ExampleApp";
+
+const warn = vi.spyOn(console, "warn");
+
+beforeEach(() => {
+  warn.mockImplementation(() => undefined);
+});
 
 afterEach(() => {
   cleanup();
+  warn.mockReset();
   document.documentElement.removeAttribute("data-theme");
 });
 
@@ -52,6 +59,39 @@ describe("ExampleApp", () => {
     fireEvent.click(within(layers).getByRole("switch", { name: /Cairns/ }));
 
     expect(await within(layers).findByText(/3 shown/)).toBeTruthy();
+  });
+
+  it("offers the layers its mapper made from the sample server's metadata, and loads one from the fake source", async () => {
+    render(<ExampleApp />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Map options" }));
+    const layers = await screen.findByRole("region", { name: "Layers" });
+    fireEvent.click(
+      await within(layers).findByRole("switch", { name: /Mountain huts/ }),
+    );
+
+    expect(await within(layers).findByText(/2 shown/)).toBeTruthy();
+    expect(
+      within(layers).getByRole("switch", { name: /Rainfall by glen/ }),
+    ).toBeTruthy();
+    expect(
+      within(layers).getByRole("switch", { name: /Snow cover/ }),
+    ).toBeTruthy();
+  });
+
+  it("leaves out the layer its mapper could not map, and logs the path of each problem", async () => {
+    render(<ExampleApp />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Map options" }));
+    const layers = await screen.findByRole("region", { name: "Layers" });
+    await within(layers).findByRole("switch", { name: /Mountain huts/ });
+
+    expect(
+      within(layers).queryByRole("switch", { name: /Survey notes/ }),
+    ).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      "Layer survey-notes was left out: source.fields.title: is required; card.title: {title} is not a field",
+    );
   });
 
   it("offers the SDK's basemaps as plain swatches, because the SDK names no preview image", async () => {

@@ -316,6 +316,32 @@ describe("what is said aloud about the catalogue, through the real announcer", (
     expect(spoken.polite).toEqual([]);
   });
 
+  it("speaks the link note and then the load result of a link layer that follows it inside the window, so neither replaces the other", async () => {
+    const catalogue = loadingCatalogue();
+    const { spoken } = setup(catalogue, {
+      enabled: [SAMPLE_FEED_LAYER.id, "ghost"],
+      controls: {},
+    });
+    // The list arrives while "Loading layers" still holds the announcer's window.
+    await settle(100);
+    act(() =>
+      catalogue.setState({
+        status: "ready",
+        layers: LAYERS,
+        skipped: [],
+        refresh: "idle",
+      }),
+    );
+    // One window at a time, so each message reaches the region before the next.
+    await settle();
+    await settle();
+    await settle();
+    expect(spoken.polite).toHaveLength(3);
+    expect(spoken.polite[0]).toBe("Loading layers");
+    expect(spoken.polite[1]).toBe("1 layer in the link is not available.");
+    expect(spoken.polite[2]).toContain(SAMPLE_FEED_LAYER.name);
+  });
+
   it("carries a real runtime catalogue from a failed load through Try again to its list", async () => {
     const load = vi
       .fn<() => Promise<unknown>>()

@@ -116,9 +116,7 @@ describe("useDataLayers turnOff", () => {
     expect(said()).toEqual(["3 layers turned off. Undo available"]);
     expect(announce).toHaveBeenCalledWith(
       "3 layers turned off. Undo available",
-      {
-        priority: "polite",
-      },
+      { priority: "polite", keep: true },
     );
   });
 
@@ -282,6 +280,10 @@ describe("useDataLayers undoTurnOff", () => {
     announce.mockClear();
     act(() => view.result.current.undoTurnOff());
     expect(said()).toEqual(["3 layers turned back on"]);
+    expect(announce).toHaveBeenCalledWith("3 layers turned back on", {
+      priority: "polite",
+      keep: true,
+    });
     expect(view.result.current.turnedOff).toBeNull();
     act(() => view.result.current.undoTurnOff());
     expect(said()).toEqual(["3 layers turned back on"]);
@@ -474,6 +476,30 @@ describe("useDataLayers Undo timing", () => {
       expect(view.result.current.turnedOff).toBeNull();
     },
   );
+
+  it("keeps the message that a tile layer is on, the result of the person's own switch", () => {
+    const view = setup();
+    act(() => view.result.current.setEnabled(IMAGERY, true));
+    expect(announce).toHaveBeenCalledWith(`${SAMPLE_TILE_LAYER.name} is on.`, {
+      priority: "polite",
+      keep: true,
+    });
+  });
+
+  it("does not keep what the tile status says, which is the map's news and not the person's action", () => {
+    const view = setup();
+    act(() => view.result.current.setEnabled(IMAGERY, true));
+    const imagery = () =>
+      view.result.current.layers.find((item) => item.definition.id === IMAGERY);
+    const tiles = tileUrl(SAMPLE_TILE_LAYER, imagery()?.controls ?? {}, NOW);
+    announce.mockClear();
+    act(() => view.result.current.reportTilesUnavailable(IMAGERY, tiles));
+    act(() => view.result.current.reportTilesRecovered(IMAGERY, tiles));
+    expect(announce).toHaveBeenCalledTimes(2);
+    for (const [, options] of announce.mock.calls) {
+      expect(options).toEqual({ priority: "polite" });
+    }
+  });
 
   it("gives a replacing batch its own full time", () => {
     const view = setup([SAMPLE_TILE_LAYER, SAMPLE_ALERT_LAYER]);

@@ -18,6 +18,13 @@ type ReadyState = Extract<CatalogueState, { status: "ready" }>;
 export interface CatalogueMessage {
   readonly message: string;
   readonly priority: AnnouncePriority;
+  /**
+   * Whether a later message must not replace it (the announcer's `keep`).
+   * True for the outcome of a discrete change, such as a list arriving or a
+   * load failing; false for "Loading layers", a state a later message may
+   * replace.
+   */
+  readonly keep: boolean;
 }
 
 /** What {@link catalogueNotice} reads. */
@@ -37,11 +44,20 @@ export interface CatalogueNoticeInputs {
 const politely = (message: string): CatalogueMessage => ({
   message,
   priority: "polite",
+  keep: true,
 });
 
 const assertively = (message: string): CatalogueMessage => ({
   message,
   priority: "assertive",
+  keep: true,
+});
+
+/** "Loading layers": a state, not an outcome, so a later message may replace it. */
+const loadingMessage = (): CatalogueMessage => ({
+  message: describeLayersLoading(),
+  priority: "polite",
+  keep: false,
 });
 
 /**
@@ -96,7 +112,7 @@ export function catalogueNotice(
   switch (next.status) {
     case "loading":
       return previous?.status !== "loading" && linkWaiting > 0
-        ? politely(describeLayersLoading())
+        ? loadingMessage()
         : null;
     case "failed":
       return previous?.status === "failed"

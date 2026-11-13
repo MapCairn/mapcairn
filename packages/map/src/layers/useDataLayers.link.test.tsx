@@ -179,6 +179,10 @@ describe("a link layer the catalogue does not have", () => {
     const catalogue = loadingCatalogue();
     const { result } = render(catalogue, unknown);
     expect(said()).toEqual(["Loading layers"]);
+    expect(announce).toHaveBeenCalledWith("Loading layers", {
+      priority: "polite",
+      keep: false,
+    });
     act(() => catalogue.setLayers(LAYERS));
     expect(idsOn(result)).toEqual([POINTS]);
     expect(result.current.urlValue.enabled).toEqual([POINTS]);
@@ -189,6 +193,7 @@ describe("a link layer the catalogue does not have", () => {
     ]);
     expect(announce).toHaveBeenCalledWith(expect.any(String), {
       priority: "polite",
+      keep: true,
     });
   });
 

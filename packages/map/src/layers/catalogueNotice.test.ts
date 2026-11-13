@@ -52,7 +52,7 @@ describe("catalogueNotice", () => {
     it("says so, politely, when a layer named by the link is waiting", () => {
       expect(
         catalogueNotice(inputs({ next: LOADING, linkWaiting: 2 })),
-      ).toEqual({ message: "Loading layers", priority: "polite" });
+      ).toEqual({ message: "Loading layers", priority: "polite", keep: false });
     });
 
     it("says nothing when no layer is waiting", () => {
@@ -72,7 +72,7 @@ describe("catalogueNotice", () => {
         catalogueNotice(
           inputs({ previous: FAILED, next: LOADING, linkWaiting: 1 }),
         ),
-      ).toEqual({ message: "Loading layers", priority: "polite" });
+      ).toEqual({ message: "Loading layers", priority: "polite", keep: false });
     });
   });
 
@@ -83,6 +83,7 @@ describe("catalogueNotice", () => {
       ).toEqual({
         message: "Layers could not be loaded.",
         priority: "assertive",
+        keep: true,
       });
     });
 
@@ -113,6 +114,7 @@ describe("catalogueNotice", () => {
       ).toEqual({
         message: "Layers could not be updated. Showing the last list.",
         priority: "assertive",
+        keep: true,
       });
     });
 
@@ -193,6 +195,7 @@ describe("catalogueNotice", () => {
       ).toEqual({
         message: "1 layer could not be shown.",
         priority: "polite",
+        keep: true,
       });
       expect(
         catalogueNotice(
@@ -245,6 +248,7 @@ describe("catalogueNotice", () => {
       ).toEqual({
         message: "Layers updated: 1 added, 1 removed.",
         priority: "polite",
+        keep: true,
       });
     });
 
@@ -267,6 +271,7 @@ describe("catalogueNotice", () => {
         message:
           "Earthquakes is no longer available and was turned off. 1 layer could not be shown. Layers updated: 1 added, 1 removed.",
         priority: "polite",
+        keep: true,
       });
     });
 

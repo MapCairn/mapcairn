@@ -168,9 +168,8 @@ function announceLayersUpdated(added: number, removed: number): string {
  * One message for one change to the catalogue, in a fixed order: the layers
  * that were turned off, the layers of the link that are not available, how
  * many definitions could not be shown, what a refresh added and removed, and
- * that the first list is empty. Null when none of them applies. The live
- * region coalesces messages that arrive within a window of the last one sent
- * to the latest of them, so a transition says everything at once.
+ * that the first list is empty. Null when none of them applies. A transition
+ * is one message, so the live region speaks the whole change in one go.
  */
 export function announceCatalogueChange(
   change: CatalogueChange,
@@ -193,8 +192,9 @@ export function announceCatalogueChange(
 
 /*
  * The selection's messages each carry the running total, because the live
- * region coalesces messages that arrive close together to the latest: the one
- * that is read out must still be true when an earlier one was replaced.
+ * region replaces a waiting message with a later one that arrives within its
+ * window: the one that is read out must still be true when an earlier one was
+ * replaced.
  */
 
 /** One feature was added to the selection: "Added Gauge 4. 5 selected." */

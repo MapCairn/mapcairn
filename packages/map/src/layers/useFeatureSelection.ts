@@ -6,7 +6,6 @@ import {
   type FeatureSelection,
   type FormatterRegistry,
   featureRefKey,
-  MemoryFeatureSelection,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import {
@@ -40,12 +39,24 @@ const DEFAULT_FORMATTERS = createFormatterRegistry();
 const NO_SNAPSHOTS: SelectionSnapshots = new Map();
 const NO_ENTRIES: readonly SelectedEntry[] = [];
 
+/** A change that does nothing: the methods of {@link NO_STORE}. */
+const DO_NOTHING = () => undefined;
+const NO_REFS: readonly FeatureRef[] = Object.freeze([]);
+
 /**
  * Stands in while the host supplies no store, so every hook below is called
- * either way. Its limit is zero, so it refuses every addition and never holds
- * anything, and the state built from it is never returned.
+ * either way. It holds nothing, refuses every addition (its limit is zero),
+ * and the state built from it is never returned.
  */
-const NO_STORE: FeatureSelection = new MemoryFeatureSelection({ limit: 0 });
+const NO_STORE: FeatureSelection = {
+  limit: 0,
+  getState: () => NO_REFS,
+  subscribe: () => DO_NOTHING,
+  add: DO_NOTHING,
+  remove: DO_NOTHING,
+  replace: DO_NOTHING,
+  clear: DO_NOTHING,
+};
 
 /** Options for {@link useFeatureSelection}. */
 export interface UseFeatureSelectionOptions {
@@ -93,9 +104,10 @@ export interface FeatureSelectionState {
  *   here: `useDataLayers` announces the turning off itself, and its Undo brings
  *   the references back. A change made outside (hydration, a failed save)
  *   updates `entries` and is not announced. Each message carries the new
- *   total, because the live region coalesces messages that arrive within
- *   `THROTTLE_MS` of the last one sent to the latest of them. The refusal of
- *   a batch past the limit is assertive, the rest polite.
+ *   total, because the live region replaces a waiting message that is not
+ *   kept with a later one when both arrive within `THROTTLE_MS` of the last
+ *   one sent. The refusal of a batch past the limit is assertive, the rest
+ *   polite.
  */
 export function useFeatureSelection(
   layers: DataLayers,
