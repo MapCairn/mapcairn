@@ -200,8 +200,9 @@ function isWorkerFailure(event: object): boolean {
 export const WORKER_FAILURE_GRACE_MS = 5000;
 
 /**
- * How often, in milliseconds, the map is painted while a tile layer's tiles
- * load, so that it reports `idle` once they are all in, or all missing.
+ * How often, in milliseconds, the map is painted while a tile layer's tiles,
+ * or the basemap's own, load, so that it reports `idle` (and the basemap is
+ * seen to be in) once they are all in, or all missing.
  */
 export const TILE_SETTLE_NUDGE_MS = 250;
 
@@ -1162,6 +1163,8 @@ export class MapLibreMapAdapter implements MapAdapter {
    * fires no event and asks for no frame, so a map over a sparse tile layer
    * would never report it (see {@link TILE_SETTLE_NUDGE_MS}); it is painted
    * every {@link TILE_SETTLE_NUDGE_MS} until it does, or until it is removed.
+   * This is the render map that exports an image; the live map's own nudge,
+   * started by a tile layer's or the basemap's tiles, is `repaintUntilIdle`.
    */
   private untilSettled(map: MapLibreMap): Promise<void> {
     return new Promise((resolve) => {
@@ -2026,7 +2029,10 @@ export class MapLibreMapAdapter implements MapAdapter {
    * `idle`. A tile the provider answers with a 404 fires no event and asks
    * for no new frame, so a map whose last tiles were such tiles is never
    * painted again and never reports `idle`: the layer could not be judged,
-   * and the map would stay busy. One interval serves every tile layer.
+   * and the map would stay busy. One interval serves every tile layer and the
+   * basemap's own tiles. It stops at `idle`, and when the basemap is in and no
+   * tile layer has a tile outstanding, so a basemap tile that never answers
+   * cannot keep the map painting.
    */
   private repaintUntilIdle(map: MapLibreMap): void {
     this.tileSettleNudge ??= setInterval(() => {
@@ -2222,8 +2228,18 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (!loading) {
       this.emitLoad();
       this.settlePending("load");
+      if (!this.tileLayerTilesOutstanding()) {
+        this.stopRepaintingUntilIdle();
+      }
     }
     this.setLoading(loading);
+  }
+
+  /** Whether any tile layer has asked for a tile that has neither loaded nor been given up on. */
+  private tileLayerTilesOutstanding(): boolean {
+    return [...this.tileTraffic.values()].some(
+      ({ requested, aborted, loaded }) => requested > aborted + loaded,
+    );
   }
 
   private setLoading(loading: boolean): void {

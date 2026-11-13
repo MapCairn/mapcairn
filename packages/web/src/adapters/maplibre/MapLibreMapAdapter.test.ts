@@ -1408,6 +1408,44 @@ describe("MapLibreMapAdapter", () => {
           expect(repaints(map)).toBe(3);
         });
 
+        it("repaints for a basemap tile asked for while the map is busy, and stops once the basemap is in", async () => {
+          FakeMapLibreMap.styleSourceIds = ["basemap"];
+          const { map } = await watched();
+          vi.useFakeTimers();
+          map.unloadedSources.add("basemap");
+          requested(map, "basemap");
+          await vi.advanceTimersByTimeAsync(TILE_SETTLE_NUDGE_MS);
+          expect(repaints(map)).toBe(1);
+          // The engine counts the 404 as in, and says nothing: the frame sees it.
+          map.unloadedSources.delete("basemap");
+          await vi.advanceTimersByTimeAsync(TILE_SETTLE_NUDGE_MS);
+          expect(repaints(map)).toBe(2);
+          await vi.advanceTimersByTimeAsync(TILE_SETTLE_NUDGE_MS * 3);
+          expect(repaints(map)).toBe(2);
+        });
+
+        it("keeps repainting for a tile layer's outstanding tile after the basemap is in", async () => {
+          FakeMapLibreMap.styleSourceIds = ["basemap"];
+          const { map } = await watched();
+          vi.useFakeTimers();
+          requested(map);
+          map.unloadedSources.add("basemap");
+          requested(map, "basemap");
+          map.unloadedSources.delete("basemap");
+          map.fire("sourcedata", { sourceId: "basemap", tile: {} });
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 3);
+          expect(repaints(map)).toBe(3);
+        });
+
+        it("does not start for a basemap tile asked for once the basemap is in", async () => {
+          const { map } = await watched();
+          vi.useFakeTimers();
+          map.fire("idle");
+          requested(map, "basemap");
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 3);
+          expect(repaints(map)).toBe(0);
+        });
+
         it("leaves the map alone for tiles of other sources", async () => {
           const { map } = await watched();
           vi.useFakeTimers();
