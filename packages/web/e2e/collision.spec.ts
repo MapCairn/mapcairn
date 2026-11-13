@@ -669,12 +669,29 @@ const TALL_READOUT_VIEWPORTS = [
   { width: 844, height: 390 },
 ] as const;
 
+/**
+ * The chrome states the cursor test walks: the ones with no sheet or side
+ * panel open. With a sheet open the credits popover is closed and the whole
+ * row is lifted, which the collision test above and the unit test of the lift
+ * cover; and on the CI runner the pointer did not reach the map again after a
+ * sheet opened (a resting pointer there never showed the coordinates), so
+ * those states cannot be held for this test.
+ */
+const POINTER_OVER_MAP_STATES = [
+  "rest",
+  "search open",
+  "measure active",
+  "draw active",
+  "attribution open",
+] as const satisfies readonly (typeof CHROME_STATES)[number][];
+
 /*
  * The bottom row at its tallest (issue: stop the bottom row overlapping at the
  * smallest screen sizes). On a desktop pointer with imperial units, the cursor
  * coordinates at their widest and the open key of six layers (the tallest
  * case), the scale bar, the coordinates and the credits popover share the
- * bottom row in every chrome state, and none of them collides. The other tests
+ * bottom row in the states of {@link POINTER_OVER_MAP_STATES}, and none of them
+ * collides. The other tests
  * leave the pointer off the map, so the readout is only the scale bar there,
  * and a touch screen never shows the coordinates, so this runs on the desktop
  * pointer project only.
@@ -699,7 +716,7 @@ for (const viewport of TALL_READOUT_VIEWPORTS) {
 
       await collapseCredits(mapPage);
       await setMapKey(mapPage, "open");
-      for (const state of CHROME_STATES) {
+      for (const state of POINTER_OVER_MAP_STATES) {
         await test.step(state, async () => {
           await enterState(mapPage, state);
           await hoverFreeMap(mapPage);
