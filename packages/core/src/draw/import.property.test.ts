@@ -12,6 +12,7 @@ import {
 import { PROPERTY_PARAMETERS } from "../propertyTesting/propertyParameters";
 import {
   finishShape,
+  offGridSmallCircleInput,
   shapeInput,
   smallCircleInput,
 } from "../propertyTesting/shapeArbitraries";
@@ -24,6 +25,7 @@ import {
   shapeGeometry,
   shapesToCsv,
   shapesToGeoJson,
+  shapesToGeoJsonText,
   shapesToWkt,
 } from "./export";
 import {
@@ -192,6 +194,26 @@ describe("parseShapeFile round trips", () => {
         expect(exportedShapes(shapesOf(parseShapeFile(text)))).toEqual(
           exportedShapes(inputs),
         );
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("reads back a circle of a few centimetres off the grid with its centre and radius exactly, from GeoJSON and CSV, and writes no exponent", () => {
+    fc.assert(
+      fc.property(offGridSmallCircleInput, (input) => {
+        const shapes = [finishShape(input, 0)];
+        const texts = [
+          shapesToGeoJsonText(shapes),
+          shapesToCsv(shapes),
+          shapesToWkt(shapes),
+        ];
+        for (const text of texts) {
+          expect(text).not.toMatch(/\de[+-]?\d/);
+        }
+        for (const text of texts.slice(0, 2)) {
+          expect(shapesOf(parseShapeFile(text))).toEqual([input]);
+        }
       }),
       PROPERTY_PARAMETERS,
     );

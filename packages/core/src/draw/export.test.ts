@@ -358,6 +358,56 @@ describe("shapes too small for six decimals", () => {
   });
 });
 
+describe("a circle's centre and radius", () => {
+  // A centre from a tap on the map has many more decimals than six.
+  const OFF_GRID = p(36.82190123456789, -1.29210987654321);
+  const circleOf = (radiusMetres: number): DrawShape => ({
+    ...CIRCLE,
+    vertices: [OFF_GRID],
+    radiusMetres,
+  });
+  const cellsOf = (shape: DrawShape): string[] =>
+    (shapesToCsv([shape]).split("\r\n")[1] ?? "").split(",").slice(-3);
+
+  it("writes them to six and two decimals where the outline is written at six, as it always was", () => {
+    const shape = circleOf(123.456789);
+    expect(decimalsOf(shapeGeometry(shape))).toBeLessThanOrEqual(6);
+    expect(shapesToGeoJson([shape]).features[0]?.properties).toMatchObject({
+      radius_m: 123.46,
+      centre: [36.821901, -1.29211],
+    });
+    expect(cellsOf(shape)).toEqual(["123.46", "36.821901", "-1.29211"]);
+  });
+
+  it("writes them exactly for a small circle whose outline needs more than six decimals", () => {
+    for (const radius of [0.01, 0.0123, 0.004, 0.5, 1]) {
+      const shape = circleOf(radius);
+      expect(
+        decimalsOf(shapeGeometry(shape)),
+        `radius ${radius}`,
+      ).toBeGreaterThan(6);
+      expect(shapesToGeoJson([shape]).features[0]?.properties).toMatchObject({
+        radius_m: radius,
+        centre: [OFF_GRID.lng, OFF_GRID.lat],
+      });
+      expect(cellsOf(shape), `radius ${radius}`).toEqual([
+        String(radius),
+        String(OFF_GRID.lng),
+        String(OFF_GRID.lat),
+      ]);
+    }
+  });
+
+  it("never writes the radius of a circle as zero while it is above zero", () => {
+    for (const radius of [0.004, 0.0004, 0.00001]) {
+      const shape = circleOf(radius);
+      const [radiusCell] = cellsOf(shape);
+      expect(Number(radiusCell), `radius ${radius}`).toBe(radius);
+      expect(radiusCell).not.toMatch(/e/i);
+    }
+  });
+});
+
 describe("numbers are written without an exponent", () => {
   // A circle of a metre on the equator and the prime meridian has coordinates
   // under 1e-6, which String and JSON.stringify write as `7.8e-7`.

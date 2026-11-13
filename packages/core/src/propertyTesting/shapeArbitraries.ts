@@ -71,6 +71,44 @@ export const smallCircleInput: fc.Arbitrary<DrawShapeInput> = fc
     radiusMetres: centimetres / CENTIMETRES_PER_METRE,
   }));
 
+/** The smallest radius, in metres, of a circle off the grid: 0.1 mm, which is still many units of ten decimals across. */
+const MIN_OFF_GRID_RADIUS_METRES = 0.0001;
+
+/** The largest radius, in metres, of a circle off the grid: well below the 1 m at which six decimals begin to fold a circle in. */
+const MAX_OFF_GRID_RADIUS_METRES = 0.1;
+
+/**
+ * A circle of a tenth of a metre or less whose centre and radius sit anywhere,
+ * as a tap on the map and a drag give them, not on a grid. Such a circle's
+ * outline needs more than six decimals, so its centre and radius are written
+ * exactly, and an export has to read back as the same numbers. It is away from
+ * the poles and the antimeridian, where its outline is an ordinary polygon.
+ */
+export const offGridSmallCircleInput: fc.Arbitrary<DrawShapeInput> = fc
+  .record({
+    lat: fc.double({
+      min: -SAFE_LATITUDE,
+      max: SAFE_LATITUDE,
+      noNaN: true,
+    }),
+    lng: fc.double({
+      min: -SAFE_LONGITUDE,
+      max: SAFE_LONGITUDE,
+      noNaN: true,
+    }),
+    radiusMetres: fc.double({
+      min: MIN_OFF_GRID_RADIUS_METRES,
+      max: MAX_OFF_GRID_RADIUS_METRES,
+      noNaN: true,
+    }),
+  })
+  .map(({ lat, lng, radiusMetres }) => ({
+    kind: "circle",
+    // Adding zero turns a negative zero into 0, which is how a file writes it.
+    vertices: [{ lat: lat + 0, lng: lng + 0 }],
+    radiusMetres,
+  }));
+
 /**
  * A polygon that cannot cross itself: its corners sit at evenly spaced
  * bearings around a centre, each at its own distance.
