@@ -11,7 +11,7 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
 
 ## 1. Open it
 
-1. The branch is pushed and its checks from `pick-up-issue` passed. If not, finish that first.
+1. The branch is pushed and its checks from `pick-up-issue` passed (for a documents-only change, the short list in its section 5, with "not run: documents only" under Checks). If not, finish that first.
 2. Self-review your diff as a stranger before you open it, and fix what you find. Cut or mark as unchecked anything you cannot verify. For each sentence you added to a document, guide, code comment or TSDoc:
    - Is it true in the code, and which file did you check?
    - Is each number, limit or rule of thumb in the code or a source you can cite, or did you make it up?

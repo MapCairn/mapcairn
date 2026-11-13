@@ -15,6 +15,7 @@ Follow the `pick-up-issue` skill from preflight to handover, then the `land-pr` 
 - If the issue needs a decision the maintainer owns, is already covered by an open pull request, or is a tracker, stop before writing code and report why.
 - When the project's `main` moves, merge it into your branch, resolve, and push with a plain `git push`; avoid a force-push (`land-pr` section 3). Poll CI with one-shot `gh pr checks` and leave no `--watch` or other background watcher running.
 - Before you report, run the misses list in `land-pr` section 2 against your own diff.
+- For a documents-only change, run only the checks `pick-up-issue` section 5 lists for it.
 - Keep to the issue. Anything unrelated you notice goes under **Issues to file** in your report, and the caller files it.
 
 Rules: `AGENTS.md` and your tool's instruction file (`CLAUDE.md` for Claude Code) apply. In particular, no assistant attribution or maintainer name or commercial comparison anywhere, a plain neutral voice on GitHub with no `@mentions`, no package under 7 days old without the maintainer's say-so, and every dev server, wrangler instance and browser you start is stopped and confirmed with a port check before you report.
