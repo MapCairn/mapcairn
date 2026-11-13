@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { Page } from "@playwright/test";
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
@@ -607,17 +608,17 @@ const HOVER_TRIP_MS = 1_000;
 const HOVER_TIMEOUT_MS = 10_000;
 
 /**
- * Moves the pointer onto a part of the map canvas that nothing covers, with
- * map on every side of it (a gap between two surfaces is too narrow to rest on), the one
- * nearest the middle of the screen and 30% of the way down. That is above the
- * bottom row, whose credits popover rises over the pointer when the
- * coordinates make the readout taller; a pointer under it would leave the map
- * and clear the coordinates. Then waits for the readout to show the cursor
- * coordinates. Fails when every point of the screen is covered.
+ * Finds a part of the map canvas that nothing covers, with map on every side
+ * of it (a gap between two surfaces is too narrow to rest on): the one nearest
+ * the middle of the screen and 30% of the way down. That is above the bottom
+ * row, whose credits popover rises over the pointer when the coordinates make
+ * the readout taller; a pointer under it would leave the map and clear the
+ * coordinates. Returns null when every point of the screen is covered.
  */
-async function hoverFreeMap(mapPage: MapPage): Promise<void> {
-  const page = mapPage.page;
-  const point = await page.evaluate(() => {
+async function findFreeMapPoint(
+  page: Page,
+): Promise<{ x: number; y: number } | null> {
+  return page.evaluate(() => {
     const STEP = 20;
     const ANCHOR_HEIGHT_RATIO = 0.3;
     const centreX = document.documentElement.clientWidth / 2;
@@ -641,12 +642,29 @@ async function hoverFreeMap(mapPage: MapPage): Promise<void> {
     }
     return best;
   });
-  if (!point) {
-    throw new Error("No part of the map is uncovered.");
-  }
+}
+
+/**
+ * Moves the pointer onto the free part of the map (see {@link findFreeMapPoint})
+ * and waits for the readout to show the cursor coordinates. Fails when every
+ * point of the screen is covered.
+ *
+ * The chrome moves for a few frames after a state is entered (the map key
+ * settles under the search panel), and a loaded runner takes longer, so the
+ * free point is found once the layout is still and again on every trip: a
+ * point chosen mid-move can be under the map key by the time the pointer
+ * arrives, and a pointer on the key leaves the map and shows no coordinates.
+ */
+async function hoverFreeMap(mapPage: MapPage): Promise<void> {
+  const page = mapPage.page;
+  await waitForStableLayout(page);
   // The map ignores the pointer while it is still moving to a new pin, so the
   // pointer travels onto the point again until the readout has the position.
   await expect(async () => {
+    const point = await findFreeMapPoint(page);
+    if (!point) {
+      throw new Error("No part of the map is uncovered.");
+    }
     await page.mouse.move(point.x - STEP_BEFORE_HOVER_PX, point.y);
     await page.mouse.move(point.x, point.y, { steps: 3 });
     await expect(page.getByTestId("map-readout")).toContainText(
