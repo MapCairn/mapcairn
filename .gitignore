@@ -22,3 +22,4 @@ playwright/.cache/
 .env.npm
 
 .playwright-mcp/
+.playwright-cli/

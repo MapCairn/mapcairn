@@ -10,27 +10,6 @@
 import { claudeOnlyProblems, parseFrontmatter } from "./skills.mjs";
 
 /**
- * Agents that call Claude Code's Playwright MCP tools and stay Claude only.
- * They are named, not matched by prefix, so a new agent is portable unless it
- * is added here.
- */
-const CLAUDE_ONLY_AGENTS = [
-  "playwright-test-generator.md",
-  "playwright-test-healer.md",
-  "playwright-test-planner.md",
-];
-
-/**
- * Whether an agent file is turned into other tools' formats.
- *
- * @param {string} filename The agent's file name, such as `implementer.md`.
- * @returns {boolean}
- */
-export function isPortable(filename) {
-  return !CLAUDE_ONLY_AGENTS.includes(filename);
-}
-
-/**
  * @typedef {object} Agent
  * @property {string} name
  * @property {string} description
