@@ -20,6 +20,7 @@ import {
   renderCodex,
   renderCopilot,
   renderOpencode,
+  renderQwen,
 } from "./render.mjs";
 import { checkSkill } from "./skills.mjs";
 
@@ -35,6 +36,7 @@ const AGENT_TARGETS = [
     extension: ".agent.md",
     render: renderCopilot,
   },
+  { directory: ".qwen/agents", extension: ".md", render: renderQwen },
 ];
 
 /** Folders the sync writes to. Nothing else in the repository is touched. */

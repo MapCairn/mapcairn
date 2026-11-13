@@ -66,12 +66,13 @@ export function renderOpencode(agent) {
 }
 
 /**
- * The GitHub Copilot custom agent format (`.agent.md`).
+ * Markdown with a name and a description in the frontmatter, then the role
+ * text: the shape the Copilot and Qwen Code agent files share.
  *
  * @param {Agent} agent
  * @returns {string}
  */
-export function renderCopilot(agent) {
+function renderNamedMarkdown(agent) {
   return [
     "---",
     `name: ${JSON.stringify(agent.name)}`,
@@ -82,6 +83,28 @@ export function renderCopilot(agent) {
     "",
     agent.body,
   ].join("\n");
+}
+
+/**
+ * The GitHub Copilot custom agent format (`.agent.md`).
+ *
+ * @param {Agent} agent
+ * @returns {string}
+ */
+export function renderCopilot(agent) {
+  return renderNamedMarkdown(agent);
+}
+
+/**
+ * The Qwen Code subagent format (`.qwen/agents/<name>.md`). Its optional
+ * `model`, `tools` and `approvalMode` fields are left out, so the agent
+ * inherits the session's model and tools.
+ *
+ * @param {Agent} agent
+ * @returns {string}
+ */
+export function renderQwen(agent) {
+  return renderNamedMarkdown(agent);
 }
 
 /**

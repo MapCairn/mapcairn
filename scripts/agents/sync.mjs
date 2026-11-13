@@ -10,9 +10,9 @@
  *                                          when a generated file is out of date
  *
  * The project's skills in `.claude/skills` are copied to `.agents/skills` (read
- * by Codex, Antigravity and others). Skills named in `skills-lock.json` are
+ * by Codex, Antigravity, Qwen Code and others). Skills named in `skills-lock.json` are
  * vendored from elsewhere and are neither checked nor copied. Each
- * agent in `.claude/agents` is written for opencode, Codex and GitHub Copilot. See `docs/guides/working-with-agents.md`.
+ * agent in `.claude/agents` is written for opencode, Codex, GitHub Copilot and Qwen Code. See `docs/guides/working-with-agents.md`.
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
