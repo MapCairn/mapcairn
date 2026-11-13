@@ -607,7 +607,8 @@ const HOVER_TRIP_MS = 1_000;
 const HOVER_TIMEOUT_MS = 10_000;
 
 /**
- * Moves the pointer onto a part of the map canvas that nothing covers, the one
+ * Moves the pointer onto a part of the map canvas that nothing covers, with
+ * map on every side of it (a gap between two surfaces is too narrow to rest on), the one
  * nearest the middle of the screen and 30% of the way down. That is above the
  * bottom row, whose credits popover rises over the pointer when the
  * coordinates make the readout taller; a pointer under it would leave the map
@@ -625,9 +626,14 @@ async function hoverFreeMap(mapPage: MapPage): Promise<void> {
     let bestDistance = Number.POSITIVE_INFINITY;
     for (let y = STEP; y < document.documentElement.clientHeight; y += STEP) {
       for (let x = STEP; x < centreX * 2; x += STEP) {
-        const hit = document.elementFromPoint(x, y);
         const distance = Math.hypot(x - centreX, y - centreY);
-        if (hit instanceof HTMLCanvasElement && distance < bestDistance) {
+        const isMap = (dx: number, dy: number) =>
+          document.elementFromPoint(x + dx, y + dy) instanceof
+          HTMLCanvasElement;
+        const surrounded = [-STEP, 0, STEP].every((dy) =>
+          [-STEP, 0, STEP].every((dx) => isMap(dx, dy)),
+        );
+        if (surrounded && distance < bestDistance) {
           best = { x, y };
           bestDistance = distance;
         }
