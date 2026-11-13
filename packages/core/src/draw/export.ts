@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
+import { fixedDecimal, withFixedDecimals } from "../geometry/fixedDecimal";
 import { formatWkt } from "../geometry/wkt";
 import type { LatLng } from "../ports/geometry";
 import { ringSignedArea } from "./geo";
@@ -15,6 +16,7 @@ const COORDINATE_DECIMALS = 6;
  */
 const MAX_COORDINATE_DECIMALS = 10;
 const MEASURE_DECIMALS = 2;
+const JSON_INDENT = 2;
 
 /**
  * A circle with at least this radius is written at six decimals without
@@ -28,13 +30,6 @@ const ROUNDING_SAFE_RADIUS_METRES = 100;
 function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
-}
-
-function position(vertex: LatLng): Position {
-  return [
-    round(vertex.lng, COORDINATE_DECIMALS),
-    round(vertex.lat, COORDINATE_DECIMALS),
-  ];
 }
 
 function roundedVertex(vertex: LatLng, decimals: number): LatLng {
@@ -62,6 +57,12 @@ function roundedAt(vertices: readonly LatLng[], decimals: number): LatLng[] {
   return vertices.map((vertex) => roundedVertex(vertex, decimals));
 }
 
+/** The positions a shape is written with, and whether they are rounded to six decimals. */
+interface WrittenPositions {
+  readonly vertices: readonly LatLng[];
+  readonly atSix: boolean;
+}
+
 /**
  * The positions of a shape rounded to six decimals, or to more where six
  * would spoil it: the fewest decimals, up to {@link MAX_COORDINATE_DECIMALS},
@@ -71,17 +72,15 @@ function roundedAt(vertices: readonly LatLng[], decimals: number): LatLng[] {
  * plane to begin with, because it reaches over a pole or the antimeridian,
  * has nothing for rounding to spoil and is written at six.
  */
-function roundedVertices(shape: DrawShape): readonly LatLng[] {
+function writtenPositions(shape: DrawShape): WrittenPositions {
   const exact = writtenVertices(shape);
   const atSix = roundedAt(exact, COORDINATE_DECIMALS);
   if (
     (shape.radiusMetres ?? 0) >= ROUNDING_SAFE_RADIUS_METRES ||
-    writtenIssue(shape, atSix) === null
+    writtenIssue(shape, atSix) === null ||
+    writtenIssue(shape, exact) !== null
   ) {
-    return atSix;
-  }
-  if (writtenIssue(shape, exact) !== null) {
-    return atSix;
+    return { vertices: atSix, atSix: true };
   }
   for (
     let decimals = COORDINATE_DECIMALS + 1;
@@ -90,10 +89,31 @@ function roundedVertices(shape: DrawShape): readonly LatLng[] {
   ) {
     const rounded = roundedAt(exact, decimals);
     if (writtenIssue(shape, rounded) === null) {
-      return rounded;
+      return { vertices: rounded, atSix: false };
     }
   }
-  return exact;
+  return { vertices: exact, atSix: false };
+}
+
+/**
+ * A circle's centre and radius as they are written beside its outline: to six
+ * and two decimals where the outline is written at six, and exactly as they
+ * are where the outline needed more, since six and two would move a circle of
+ * a centimetre or two by several times its radius and write one under 5 mm as
+ * a radius of 0.
+ */
+function circleFigures(
+  shape: DrawShape,
+  atSix: boolean,
+): { readonly centre: LatLng; readonly radius: number } {
+  const centre = shape.vertices[0] as LatLng;
+  const radius = shape.radiusMetres ?? 0;
+  return atSix
+    ? {
+        centre: roundedVertex(centre, COORDINATE_DECIMALS),
+        radius: round(radius, MEASURE_DECIMALS),
+      }
+    : { centre, radius };
 }
 
 function toPosition(vertex: LatLng): Position {
@@ -131,7 +151,11 @@ export function shapeGeometry(shape: DrawShape): Geometry | null {
   if (validateShape(shape) !== null) {
     return null;
   }
-  const vertices = roundedVertices(shape);
+  return geometryOf(shape, writtenPositions(shape).vertices);
+}
+
+/** The GeoJSON geometry of a valid shape written with `vertices`. */
+function geometryOf(shape: DrawShape, vertices: readonly LatLng[]): Geometry {
   switch (shape.kind) {
     case "point":
       return { type: "Point", coordinates: toPosition(vertices[0] as LatLng) };
@@ -143,7 +167,7 @@ export function shapeGeometry(shape: DrawShape): Geometry | null {
   }
 }
 
-function properties(shape: DrawShape): Record<string, unknown> {
+function properties(shape: DrawShape, atSix: boolean): Record<string, unknown> {
   const { areaMetres, lengthMetres } = measureShape(shape);
   const result: Record<string, unknown> = {
     name: shape.label,
@@ -156,8 +180,9 @@ function properties(shape: DrawShape): Record<string, unknown> {
     result.length_m = round(lengthMetres, MEASURE_DECIMALS);
   }
   if (shape.kind === "circle") {
-    result.radius_m = round(shape.radiusMetres ?? 0, MEASURE_DECIMALS);
-    result.centre = position(shape.vertices[0] as LatLng);
+    const { centre, radius } = circleFigures(shape, atSix);
+    result.radius_m = radius;
+    result.centre = toPosition(centre);
   }
   return result;
 }
@@ -165,44 +190,57 @@ function properties(shape: DrawShape): Record<string, unknown> {
 /**
  * The shapes as a GeoJSON `FeatureCollection`, one feature each, with the
  * shape's id, its name, its type and its area and length where they apply.
- * A circle also carries `radius_m` and its `centre`. Only
- * {@link exportableShapes} are included.
+ * A circle also carries `radius_m` and its `centre`, to two and six decimals,
+ * or exactly where its outline needed more than six decimals (a circle a few
+ * centimetres across). Only {@link exportableShapes} are included.
+ *
+ * The numbers are the shape's own: `JSON.stringify` writes one under 1e-6 in
+ * exponent notation, so write the file with {@link shapesToGeoJsonText}.
  */
 export function shapesToGeoJson(
   shapes: readonly DrawShape[],
 ): FeatureCollection {
   const features: Feature[] = [];
   for (const shape of exportableShapes(shapes)) {
-    const geometry = shapeGeometry(shape);
-    if (geometry) {
-      features.push({
-        type: "Feature",
-        id: shape.id,
-        geometry,
-        properties: properties(shape),
-      });
-    }
+    const { vertices, atSix } = writtenPositions(shape);
+    features.push({
+      type: "Feature",
+      id: shape.id,
+      geometry: geometryOf(shape, vertices),
+      properties: properties(shape, atSix),
+    });
   }
   return { type: "FeatureCollection", features };
 }
 
 /**
+ * The text of the GeoJSON file for the shapes: {@link shapesToGeoJson} as
+ * JSON indented by two spaces, with every number written as plain decimal
+ * text and none with an exponent (`0.00000078`, not `7.8e-7`), as the CSV and
+ * the WKT are. The text is the same as `JSON.stringify(collection, null, 2)`
+ * wherever that has no exponent.
+ */
+export function shapesToGeoJsonText(shapes: readonly DrawShape[]): string {
+  return withFixedDecimals(
+    JSON.stringify(shapesToGeoJson(shapes), null, JSON_INDENT),
+  );
+}
+
+/**
  * The shapes as Well-Known Text, one geometry to a line and longitude first,
  * in the order of the list, with the positions {@link shapeGeometry} gives
- * (six decimals, or more for a small shape). A circle is written as the
- * polygon of its outline, so it reads back as a polygon. Only
+ * (six decimals, or more for a small shape), each as plain decimal text with
+ * no exponent. A circle is written as the polygon of its outline, so it reads
+ * back as a polygon. Only
  * {@link exportableShapes} are included, so the text is empty when there are
  * none.
  */
 export function shapesToWkt(shapes: readonly DrawShape[]): string {
-  const lines: string[] = [];
-  for (const shape of exportableShapes(shapes)) {
-    const geometry = shapeGeometry(shape);
-    if (geometry) {
-      lines.push(formatWkt(geometry));
-    }
-  }
-  return lines.join("\n");
+  return exportableShapes(shapes)
+    .map((shape) =>
+      formatWkt(geometryOf(shape, writtenPositions(shape).vertices)),
+    )
+    .join("\n");
 }
 
 /** The header row of the CSV the draw tool writes, and reads back. */
@@ -214,32 +252,31 @@ function quote(text: string): string {
 }
 
 /** A circle's radius and centre, or three empty cells for any other shape. */
-function circleCells(shape: DrawShape): string[] {
+function circleCells(shape: DrawShape, atSix: boolean): string[] {
   if (shape.kind !== "circle") {
     return ["", "", ""];
   }
-  const [lng, lat] = position(shape.vertices[0] as LatLng);
+  const { centre, radius } = circleFigures(shape, atSix);
   return [
-    String(round(shape.radiusMetres ?? 0, MEASURE_DECIMALS)),
-    String(lng),
-    String(lat),
+    fixedDecimal(radius),
+    fixedDecimal(centre.lng),
+    fixedDecimal(centre.lat),
   ];
 }
 
 /**
  * The shapes as CSV text: `id`, `type`, `area_m2`, `length_m`, the GeoJSON
  * geometry as quoted text, and for a circle its `radius_m`, `centre_lng`
- * and `centre_lat`, so a circle can be read back as a circle. Rows end with
+ * and `centre_lat`, so a circle can be read back as a circle (written as the
+ * GeoJSON properties are, see {@link shapesToGeoJson}). Rows end with
  * CRLF between them, the measures are rounded to two decimals and are empty
- * where they do not apply. Only {@link exportableShapes} are included.
+ * where they do not apply, and no number has an exponent. Only
+ * {@link exportableShapes} are included.
  */
 export function shapesToCsv(shapes: readonly DrawShape[]): string {
   const rows = [SHAPES_CSV_HEADER];
   for (const shape of exportableShapes(shapes)) {
-    const geometry = shapeGeometry(shape);
-    if (!geometry) {
-      continue;
-    }
+    const { vertices, atSix } = writtenPositions(shape);
     const { areaMetres, lengthMetres } = measureShape(shape);
     rows.push(
       [
@@ -249,8 +286,8 @@ export function shapesToCsv(shapes: readonly DrawShape[]): string {
         lengthMetres === null
           ? ""
           : String(round(lengthMetres, MEASURE_DECIMALS)),
-        quote(JSON.stringify(geometry)),
-        ...circleCells(shape),
+        quote(withFixedDecimals(JSON.stringify(geometryOf(shape, vertices)))),
+        ...circleCells(shape, atSix),
       ].join(","),
     );
   }

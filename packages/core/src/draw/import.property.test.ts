@@ -4,6 +4,7 @@ import fc from "fast-check";
 import type { Geometry } from "geojson";
 import { describe, expect, it } from "vitest";
 import { formatWkt, type WktAxisOrder } from "../geometry/wkt";
+import { decimalPlaces } from "../propertyTesting/decimalPlaces";
 import {
   degreesOnGrid,
   geoJsonGeometry,
@@ -11,6 +12,7 @@ import {
 import { PROPERTY_PARAMETERS } from "../propertyTesting/propertyParameters";
 import {
   finishShape,
+  offGridSmallCircleInput,
   shapeInput,
   smallCircleInput,
 } from "../propertyTesting/shapeArbitraries";
@@ -23,6 +25,7 @@ import {
   shapeGeometry,
   shapesToCsv,
   shapesToGeoJson,
+  shapesToGeoJsonText,
   shapesToWkt,
 } from "./export";
 import {
@@ -196,6 +199,26 @@ describe("parseShapeFile round trips", () => {
     );
   });
 
+  it("reads back a circle of a few centimetres off the grid with its centre and radius exactly, from GeoJSON and CSV, and writes no exponent", () => {
+    fc.assert(
+      fc.property(offGridSmallCircleInput, (input) => {
+        const shapes = [finishShape(input, 0)];
+        const texts = [
+          shapesToGeoJsonText(shapes),
+          shapesToCsv(shapes),
+          shapesToWkt(shapes),
+        ];
+        for (const text of texts) {
+          expect(text).not.toMatch(/\de[+-]?\d/);
+        }
+        for (const text of texts.slice(0, 2)) {
+          expect(shapesOf(parseShapeFile(text))).toEqual([input]);
+        }
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
   it("reads any GeoJSON geometry without throwing, keeping only valid shapes", () => {
     fc.assert(
       fc.property(geoJsonGeometry, (geometry) => {
@@ -232,9 +255,7 @@ describe("shapeGeometry of a large circle", () => {
         const ring = (geometry.coordinates[0] ?? []).slice(0, -1);
         for (const position of ring) {
           for (const number of position) {
-            expect(
-              (String(number).split(".")[1] ?? "").length,
-            ).toBeLessThanOrEqual(6);
+            expect(decimalPlaces(number)).toBeLessThanOrEqual(6);
           }
         }
         expect(

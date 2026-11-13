@@ -7,6 +7,7 @@ import {
   MAX_SHARE_LENGTH,
   MAX_SHARE_SHAPES,
   SHARE_PATTERN,
+  unsharableShapes,
 } from "./share";
 import type { DrawShape } from "./types";
 
@@ -119,6 +120,71 @@ describe("encodeShapes and decodeShapes", () => {
   });
 });
 
+describe("shapes a link cannot carry", () => {
+  const circleOf = (radiusMetres: number) =>
+    done(
+      { kind: "circle", vertices: [p(36.8219, -1.2921)], radiusMetres },
+      "c",
+    );
+  // Two positions under half a unit of 0.00001 degrees apart read back as one.
+  const TINY_LINE = done({
+    kind: "line",
+    vertices: [p(10, 10), p(10.000002, 10.000002)],
+  });
+  const TINY_POLYGON = done({
+    kind: "polygon",
+    vertices: [p(10, 10), p(10.000003, 10), p(10, 10.000003)],
+  });
+
+  it("leaves a circle of under a metre out and says so", () => {
+    for (const radius of [0.3, 0.5, 0.6, 0.99]) {
+      expect(unsharableShapes([circleOf(radius)]), `radius ${radius}`).toEqual([
+        circleOf(radius),
+      ]);
+      expect(encodeShapes([circleOf(radius)])).toBe("");
+    }
+    expect(unsharableShapes([circleOf(1), circleOf(2.4)])).toEqual([]);
+  });
+
+  it("leaves a line and a polygon that collapse when positions are whole units out", () => {
+    expect(unsharableShapes([TINY_LINE, TINY_POLYGON, POINT])).toEqual([
+      TINY_LINE,
+      TINY_POLYGON,
+    ]);
+    expect(encodeShapes([TINY_LINE, TINY_POLYGON, POINT])).toBe(
+      encodeShapes([POINT]),
+    );
+  });
+
+  it("leaves out a shape with a position outside the world, which the link could not read back", () => {
+    const outside = done({ kind: "point", vertices: [p(400, 95)] }, "o");
+    expect(unsharableShapes([outside, POINT])).toEqual([outside]);
+    expect(encodeShapes([outside, POINT])).toBe(encodeShapes([POINT]));
+  });
+
+  it("does not report a draft or a shape that was not valid to begin with", () => {
+    const draft = { ...circleOf(0.3), done: false };
+    const broken = done({ kind: "polygon", vertices: [p(0, 0), p(1, 1)] });
+    expect(unsharableShapes([draft, broken, POINT])).toEqual([]);
+  });
+
+  it("keeps a link whole when a circle of 0.3 m is beside a normal shape", () => {
+    const text = encodeShapes([circleOf(0.3), PARIS_POLYGON]);
+    expect(decodeShapes(text ?? "")?.map((shape) => shape.kind)).toEqual([
+      "polygon",
+    ]);
+  });
+
+  it("counts the shapes it carries against the limit, not the ones it leaves out", () => {
+    const carried = Array.from({ length: MAX_SHARE_SHAPES }, (_, index) =>
+      done({ kind: "point", vertices: [p(index * 0.001, 1)] }, `s${index}`),
+    );
+    expect(encodeShapes([...carried, circleOf(0.3)])).toBe(
+      encodeShapes(carried),
+    );
+  });
+});
+
 describe("decodeShapes with hostile input", () => {
   it("rejects text that is empty, too long or has characters outside the alphabet", () => {
     expect(decodeShapes("")).toBeNull();
@@ -158,6 +224,25 @@ describe("decodeShapes with hostile input", () => {
     const decoded = decodeShapes(text);
     expect(decoded).toHaveLength(1);
     expect(decoded?.[0]?.kind).toBe("point");
+  });
+
+  it("keeps the other shapes when one in the text cannot be read", () => {
+    const point = encodeRaw("p", [100000, 200000]);
+    const bad = [
+      // A circle with a radius of 0, a negative one and one over the largest.
+      encodeRaw("c", [0, 0, 0]),
+      encodeRaw("c", [0, 0, -4]),
+      encodeRaw("c", [0, 0, 10_000_001]),
+      // A circle outside the world, an unknown kind and a number cut short.
+      encodeRaw("c", [95 * 1e5, 0, 5]),
+      "x",
+      "pg",
+    ];
+    for (const part of bad) {
+      expect(decodeShapes(`${part}.${point}.${part}`), part).toEqual([
+        { kind: "point", vertices: [p(2, 1)] },
+      ]);
+    }
   });
 
   it("rejects more shapes than the limit", () => {

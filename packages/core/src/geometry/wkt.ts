@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import type { Feature, Geometry, Position } from "geojson";
 import { GeometryError } from "./errors";
+import { fixedDecimal } from "./fixedDecimal";
 import { MAX_COLLECTION_DEPTH, validateGeometry } from "./validate";
 
 /** Options for {@link formatWkt}. */
@@ -9,7 +10,8 @@ export interface FormatWktOptions {
   /**
    * Round every number to this many decimal places, a whole number from 0 to
    * 20. Without it each number is written with the digits needed to read it
-   * back exactly.
+   * back exactly. Either way a number is written as plain decimal text, never
+   * with an exponent (`0.00000078`, not `7.8e-7`).
    */
   readonly precision?: number;
 }
@@ -625,7 +627,7 @@ function checkPrecision(precision: number | undefined): void {
 }
 
 function formatNumber(value: number, precision: number | undefined): string {
-  return String(
+  return fixedDecimal(
     precision === undefined ? value : Number(value.toFixed(precision)),
   );
 }

@@ -212,6 +212,40 @@ describe("parseShapeFile with GeoJSON", () => {
     expect(shapesOf(result)[0]?.kind).toBe("polygon");
   });
 
+  it("reads a circle whose radius is not above zero as the polygon it is written as", () => {
+    // Earlier exports wrote a radius of 0 for a circle under 5 mm.
+    for (const radius of [0, -3]) {
+      const result = parseShapeFile(
+        json(
+          feature(
+            { type: "Polygon", coordinates: [SQUARE] },
+            { type: "circle", radius_m: radius, centre: [0.5, 0.5] },
+          ),
+        ),
+      );
+      expect(result).toMatchObject({ ok: true, skipped: {} });
+      expect(shapesOf(result).map((shape) => shape.kind)).toEqual(["polygon"]);
+    }
+  });
+
+  it("reads a circle of a few centimetres back exactly, from where it was written", () => {
+    const circle: DrawShape = {
+      id: "shape-1",
+      kind: "circle",
+      label: "Circle 1",
+      vertices: [p(36.82190123456789, -1.29210987654321)],
+      radiusMetres: 0.0123,
+      done: true,
+    };
+    expect(shapesOf(parseShapeFile(json(shapesToGeoJson([circle]))))).toEqual([
+      {
+        kind: "circle",
+        vertices: [p(36.82190123456789, -1.29210987654321)],
+        radiusMetres: 0.0123,
+      },
+    ]);
+  });
+
   it("skips shapes that break the draw rules and says why", () => {
     const result = parseShapeFile(
       collection(
@@ -552,6 +586,41 @@ describe("parseShapeFile with CSV", () => {
       'c,circle,,,"{""type"":""Point"",""coordinates"":[1,2]}",500,200,0';
     expect(shapesOf(parseShapeFile(`${header}\n${row}`))).toEqual([
       { kind: "point", vertices: [p(1, 2)] },
+    ]);
+  });
+
+  it("reads a circle row whose radius is not above zero as its geometry", () => {
+    const header = shapesToCsv([]);
+    const rows = ["0", "-3"].map(
+      (radius) =>
+        `c,circle,,,"{""type"":""Point"",""coordinates"":[1,2]}",${radius},1,2`,
+    );
+    expect(parseShapeFile([header, ...rows].join("\r\n"))).toEqual({
+      ok: true,
+      shapes: [
+        { kind: "point", vertices: [p(1, 2)] },
+        { kind: "point", vertices: [p(1, 2)] },
+      ],
+      skipped: {},
+      holesDropped: 0,
+    });
+  });
+
+  it("reads a circle of a few centimetres back exactly, from where it was written", () => {
+    const circle = finished(
+      {
+        kind: "circle",
+        vertices: [p(36.82190123456789, -1.29210987654321)],
+        radiusMetres: 0.004,
+      },
+      0,
+    );
+    expect(shapesOf(parseShapeFile(shapesToCsv([circle])))).toEqual([
+      {
+        kind: "circle",
+        vertices: [p(36.82190123456789, -1.29210987654321)],
+        radiusMetres: 0.004,
+      },
     ]);
   });
 
