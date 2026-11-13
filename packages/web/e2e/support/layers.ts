@@ -64,6 +64,12 @@ export interface LayerProviderOptions {
    * error. Every other tile is a transparent PNG.
    */
   readonly noTile?: (url: string) => boolean;
+  /**
+   * Whether every tile request is recorded and never answered, as when a
+   * provider's server accepts the connection and stalls. The engine then never
+   * goes idle, which the map region's busy state must not wait for.
+   */
+  readonly holdTiles?: boolean;
 }
 
 /**
@@ -96,6 +102,9 @@ export async function mockLayerProviders(
   await page.route(TILE_PATTERN, (route) => {
     const url = route.request().url();
     requests.urls.push(url);
+    if (options.holdTiles) {
+      return;
+    }
     if (options.noTile?.(decodeURIComponent(url))) {
       return route.fulfill({
         status: 404,
