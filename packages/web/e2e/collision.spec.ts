@@ -5,7 +5,7 @@ import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { mockLayerProviders } from "./support/layers";
 import { inspectChromeLayout } from "./support/layout";
-import { scriptSearch } from "./support/services";
+import { scriptSearch, seedStoredSettings } from "./support/services";
 import {
   advanceTourTo,
   CHROME_STATES,
@@ -500,10 +500,10 @@ test.describe("tour card", () => {
 });
 
 /**
- * The sizes the map key's placement is checked at: every size of the chrome
- * matrix (phones in both orientations, a tablet and two desktops) and the
- * three more the key is also looked at (a small phone, a larger tablet and a
- * smaller desktop).
+ * The sizes the map key's placement and the bottom row are checked at: every
+ * size of the chrome matrix (phones in both orientations, a tablet and two
+ * desktops) and the three more they are also looked at (a small phone, a
+ * larger tablet and a smaller desktop).
  */
 const MAP_KEY_VIEWPORTS = [
   ...MATRIX_VIEWPORTS,
@@ -579,6 +579,106 @@ for (const viewport of MAP_KEY_VIEWPORTS) {
               expect(shown, context).toBe(true);
               await expect(mapPage.mapKey, context).toBeVisible();
             }
+            await leaveState(mapPage, state);
+          });
+        }
+      }
+    },
+  );
+}
+
+/**
+ * The view the bottom row's worst case is looked at in: a negative latitude
+ * and a three-digit negative longitude, so the cursor coordinates are as long
+ * as they get ("-33.92000, -118.42000").
+ */
+const WIDEST_COORDINATES_VIEW = "#map=11/-33.92/-118.42";
+
+/** What the cursor coordinates look like once the pointer is over the map. */
+const COORDINATES_PATTERN = /-?\d+\.\d{5}, -?\d+\.\d{5}/;
+
+/** How far the pointer travels onto the free map point, so the map sees it move. */
+const STEP_BEFORE_HOVER_PX = 10;
+
+/** How long one trip of the pointer onto the map gets to show the coordinates. */
+const HOVER_RETRY_MS = 1_000;
+
+/**
+ * Moves the pointer onto a part of the map canvas that nothing covers, the one
+ * nearest the middle of the screen, and waits for the readout to show
+ * the cursor coordinates. Fails when every point of the screen is covered.
+ */
+async function hoverFreeMap(mapPage: MapPage): Promise<void> {
+  const page = mapPage.page;
+  const point = await page.evaluate(() => {
+    const STEP = 20;
+    const centreX = document.documentElement.clientWidth / 2;
+    const centreY = document.documentElement.clientHeight / 2;
+    let best: { x: number; y: number } | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let y = STEP; y < centreY * 2; y += STEP) {
+      for (let x = STEP; x < centreX * 2; x += STEP) {
+        const hit = document.elementFromPoint(x, y);
+        const distance = Math.hypot(x - centreX, y - centreY);
+        if (hit instanceof HTMLCanvasElement && distance < bestDistance) {
+          best = { x, y };
+          bestDistance = distance;
+        }
+      }
+    }
+    return best;
+  });
+  if (!point) {
+    throw new Error("No part of the map is uncovered.");
+  }
+  // The map ignores the pointer while it is still moving to a new pin, so the
+  // pointer travels onto the point again until the readout has the position.
+  await expect(async () => {
+    await page.mouse.move(point.x - STEP_BEFORE_HOVER_PX, point.y);
+    await page.mouse.move(point.x, point.y, { steps: 3 });
+    await expect(page.getByTestId("map-readout")).toContainText(
+      COORDINATES_PATTERN,
+      { timeout: HOVER_RETRY_MS },
+    );
+  }).toPass();
+}
+
+/*
+ * The bottom row at its tallest (issue: stop the bottom row overlapping at the
+ * smallest screen sizes). On a desktop pointer with imperial units, the cursor
+ * coordinates at their widest and the key of six layers, the scale bar, the
+ * coordinates and the credits popover share the bottom row in every chrome
+ * state, at every size down to 320 by 568, and none of them collides. The
+ * other tests leave the pointer off the map, so the readout is only the scale
+ * bar there, and a touch screen never shows the coordinates, so this runs on
+ * the desktop pointer project only.
+ */
+for (const viewport of MAP_KEY_VIEWPORTS) {
+  test(
+    `the bottom row never collides with the cursor readout at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage, isMobile }) => {
+      test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+      test.setTimeout(240_000);
+      await mockLayerProviders(page);
+      await seedStoredSettings(page, { units: "imperial" });
+      await page.setViewportSize(viewport);
+      await scriptSearch(page);
+      await mapPage.goto(`${WIDEST_COORDINATES_VIEW}&${KEYED_LAYERS.slice(1)}`);
+
+      for (const keyState of ["open", "minimised"] as const) {
+        await collapseCredits(mapPage);
+        await setMapKey(mapPage, keyState);
+        for (const state of CHROME_STATES) {
+          await test.step(`${keyState}, ${state}`, async () => {
+            await enterState(mapPage, state);
+            await hoverFreeMap(mapPage);
+            await waitForStableLayout(page);
+            const report = await inspectChromeLayout(page);
+            const context = `${keyState}, ${state}: ${JSON.stringify(report.boxes)}`;
+            expect(report.overlaps, context).toEqual([]);
+            expect(report.outside, context).toEqual([]);
+            expect(report.obscured, context).toEqual([]);
             await leaveState(mapPage, state);
           });
         }

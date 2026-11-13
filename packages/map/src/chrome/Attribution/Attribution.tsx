@@ -31,7 +31,7 @@ export const ATTRIBUTION_INTRO_MS = 5000;
 export const ATTRIBUTION_FADE_MS = 200;
 
 /**
- * Where the credits popover sits: straight above the button, or, when the
+ * Where the credits popover sits: straight above the bottom row, or, when the
  * list would have to scroll there, beside the end stack where there is more
  * height (a short landscape phone).
  */
@@ -76,7 +76,8 @@ export interface AttributionProps {
  *   open as if the person had opened it.
  *
  *   After that it behaves as a popover the person opens. It opens above the
- *   button. If the credits would scroll there, it moves beside the end stack
+ *   bottom row, clear of the readout beside the button. If the credits would
+ *   scroll there, it moves beside the end stack
  *   before it is painted, where `MapChrome` measures more room; it scrolls
  *   only if that is not enough either. Opening moves focus to the first link.
  *   The popover closes on Escape, on a second press of the button, on a
