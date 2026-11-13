@@ -20,6 +20,7 @@ import {
   MeasureOverlay,
   PinMarker,
   SelectionMarker,
+  SelectionProvider,
   useSettings,
   useTheme,
 } from "@mapcairn/map";
@@ -65,76 +66,80 @@ export function App() {
 
   const fix = app.locate.fix;
   return (
-    <MapView
-      id={MAP_REGION_ID}
-      testId="map-host"
-      initialView={app.initialView}
-      basemap={app.basemap}
-      cursor={
-        app.measuring || app.directionsActive || app.drawing
-          ? "crosshair"
-          : "grab"
-      }
-      onKeyCommand={(event) => app.draw.keyCommand(event)}
-      keyHelp={app.drawing ? DRAW_KEY_HELP : undefined}
-      onViewChange={app.onViewChange}
-      onBasemapApplied={app.onBasemapApplied}
-      onBasemapError={app.onBasemapError}
-      onBasemapUnavailable={app.onBasemapUnavailable}
-      onEngineError={app.onEngineError}
-      onClick={app.onMapClick}
-      onLongPress={app.onLongPress}
-      onPointerMove={app.setCursor}
-      onDropPinKey={app.dropPinAtCentre}
-      onIdentifyKey={app.identifyAtCentre}
-      onEscape={() => closeExplicitly(pressEscape())}
-      chrome={(map) => <AppChrome app={app} background={map} />}
-    >
-      <MapDataLayers
-        layers={app.layers}
-        onFeatureTap={app.openFeature}
-        ignoreTaps={app.measuring || app.directionsActive || app.drawing}
-      />
-      <MapOverlayLayer testId="map-overlays">
-        <SelectionMarker layers={app.layers} />
-        {app.draw.shapes.length > 0 ? (
-          <DrawOverlay
-            shapes={app.draw.shapes}
-            selection={app.draw.selection}
-            handles={app.draw.handles}
-            hoveredHandle={app.draw.hoveredHandle}
-            hover={app.drawing ? (app.cursor ?? undefined) : undefined}
-            testId="draw-overlay"
-          />
-        ) : null}
-        {fix ? (
-          <AccuracyCircle
-            center={fix.position}
-            accuracyMetres={fix.accuracyMetres}
-            testId="accuracy-circle"
-          />
-        ) : null}
-        {app.measuring ? (
-          <>
-            <MeasureOverlay
-              points={measure.points}
-              mode={measure.mode}
-              hover={app.cursor ?? undefined}
-              testId="measure-overlay"
-            />
-            <CentreCrosshair testId="centre-crosshair" />
-          </>
-        ) : null}
-        <DirectionsOverlay
-          stops={app.directions.stops}
-          showCrosshair={app.directionsActive}
-          testId="directions-overlay"
+    <SelectionProvider selection={app.selection}>
+      <MapView
+        id={MAP_REGION_ID}
+        testId="map-host"
+        initialView={app.initialView}
+        basemap={app.basemap}
+        cursor={
+          app.measuring || app.directionsActive || app.drawing
+            ? "crosshair"
+            : "grab"
+        }
+        onKeyCommand={(event) => app.draw.keyCommand(event)}
+        keyHelp={app.drawing ? DRAW_KEY_HELP : undefined}
+        onViewChange={app.onViewChange}
+        onBasemapApplied={app.onBasemapApplied}
+        onBasemapError={app.onBasemapError}
+        onBasemapUnavailable={app.onBasemapUnavailable}
+        onEngineError={app.onEngineError}
+        onClick={app.onMapClick}
+        onLongPress={app.onLongPress}
+        onPointerMove={app.setCursor}
+        onDropPinKey={app.dropPinAtCentre}
+        onIdentifyKey={app.identifyAtCentre}
+        onEscape={() => closeExplicitly(pressEscape())}
+        chrome={(map) => <AppChrome app={app} background={map} />}
+      >
+        <MapDataLayers
+          layers={app.layers}
+          onFeatureTap={app.openFeature}
+          ignoreTaps={app.measuring || app.directionsActive || app.drawing}
         />
-        {app.pin ? <PinMarker position={app.pin} testId="pin-marker" /> : null}
-      </MapOverlayLayer>
-      <MapDirections result={app.directions.result} />
-      <DrawMapBindings draw={app.draw} />
-      <MapUnavailable />
-    </MapView>
+        <MapOverlayLayer testId="map-overlays">
+          <SelectionMarker layers={app.layers} />
+          {app.draw.shapes.length > 0 ? (
+            <DrawOverlay
+              shapes={app.draw.shapes}
+              selection={app.draw.selection}
+              handles={app.draw.handles}
+              hoveredHandle={app.draw.hoveredHandle}
+              hover={app.drawing ? (app.cursor ?? undefined) : undefined}
+              testId="draw-overlay"
+            />
+          ) : null}
+          {fix ? (
+            <AccuracyCircle
+              center={fix.position}
+              accuracyMetres={fix.accuracyMetres}
+              testId="accuracy-circle"
+            />
+          ) : null}
+          {app.measuring ? (
+            <>
+              <MeasureOverlay
+                points={measure.points}
+                mode={measure.mode}
+                hover={app.cursor ?? undefined}
+                testId="measure-overlay"
+              />
+              <CentreCrosshair testId="centre-crosshair" />
+            </>
+          ) : null}
+          <DirectionsOverlay
+            stops={app.directions.stops}
+            showCrosshair={app.directionsActive}
+            testId="directions-overlay"
+          />
+          {app.pin ? (
+            <PinMarker position={app.pin} testId="pin-marker" />
+          ) : null}
+        </MapOverlayLayer>
+        <MapDirections result={app.directions.result} />
+        <DrawMapBindings draw={app.draw} />
+        <MapUnavailable />
+      </MapView>
+    </SelectionProvider>
   );
 }

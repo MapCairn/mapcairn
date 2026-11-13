@@ -35,9 +35,11 @@ export class PageThemeSource implements ThemeSource {
 /**
  * The services the example runs on: the SDK's fakes, so nothing is requested
  * and no map engine is loaded, with a few scripted answers, one layer of its
- * own and a theme source that reaches the page. It offers the SDK's built-in
- * basemaps as they are: they name no preview image, so the picker shows each
- * one's plain swatch.
+ * own and a theme source that reaches the page. Its store of selected
+ * features is the `MemoryFeatureSelection` that `createFakeServices` builds;
+ * the reference site supplies none. It offers the SDK's built-in basemaps as
+ * they are: they name no preview image, so the picker shows each one's plain
+ * swatch.
  */
 export function createExampleServices(): Services {
   const services = createFakeServices({

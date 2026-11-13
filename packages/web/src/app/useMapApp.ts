@@ -35,6 +35,7 @@ import {
 } from "@mapcairn/core";
 import {
   type DataLayers,
+  type FeatureSelectionState,
   type MapContextValue,
   type MapLongPressEvent,
   REVEAL_DETENT,
@@ -47,6 +48,7 @@ import {
   useDataLayers,
   useDirections,
   useDraw,
+  useFeatureSelection,
   useLocate,
   useMeasure,
   useSettings,
@@ -199,6 +201,11 @@ export interface MapApp {
 
   /** The data layers: which are on, what loaded, the open card. */
   readonly layers: DataLayers;
+  /**
+   * The selected set, for `SelectionProvider`. Null when the host supplies no
+   * store, as the reference site's `createServices()` does not.
+   */
+  readonly selection: FeatureSelectionState | null;
   /** Opens the Layers section after a tap on a point has selected it. */
   readonly openFeature: () => void;
   /**
@@ -236,6 +243,9 @@ export function useMapApp(): MapApp {
     }),
   );
   const layers = useDataLayers({ initial: link.layers });
+  // Pass { formatters: LAYER_FORMATTERS } here once a host registers a custom
+  // formatter; the default registry gives the same titles today.
+  const selection = useFeatureSelection(layers);
   const basemaps = useBasemapChoice(initial.basemapId);
   const persistence = useViewPersistence(
     initial.view,
@@ -605,6 +615,7 @@ export function useMapApp(): MapApp {
     onSearchBlur,
     flyTo,
     layers,
+    selection,
     openFeature,
     identifyAtCentre,
     revealMap,
