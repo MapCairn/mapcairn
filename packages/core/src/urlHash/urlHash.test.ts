@@ -310,6 +310,38 @@ describe("layers in the hash", () => {
     ).toHaveLength(20);
   });
 
+  it("reads the first 20 layers of a link and drops the rest", () => {
+    const ids = Array.from({ length: 25 }, (_, index) => `l${index}`);
+    const value = parseUrlHash(
+      `#layers=${ids.join(",")}&l24.window=day&l3.window=week`,
+    );
+    expect(value.layers?.enabled).toEqual(ids.slice(0, 20));
+    expect(value.layers?.controls).toEqual({ l3: { window: "week" } });
+  });
+
+  it("writes at most 20 layers, the same ones it reads back", () => {
+    const enabled = Array.from({ length: 25 }, (_, index) => `l${index}`);
+    const hash = serialiseUrlHash({
+      layers: { enabled, controls: { l24: { window: "day" } } },
+    });
+    expect(hash).toBe(`#layers=${enabled.slice(0, 20).join(",")}`);
+    expect(parseUrlHash(hash).layers?.enabled).toEqual(enabled.slice(0, 20));
+  });
+
+  it("counts a repeated id once towards the 20 layers it writes", () => {
+    const enabled = [
+      "a",
+      "a",
+      ...Array.from({ length: 19 }, (_, i) => `b${i}`),
+      "c",
+    ];
+    const hash = serialiseUrlHash({ layers: { enabled, controls: {} } });
+    expect(parseUrlHash(hash).layers?.enabled).toEqual([
+      "a",
+      ...Array.from({ length: 19 }, (_, i) => `b${i}`),
+    ]);
+  });
+
   it("round-trips", () => {
     const value: UrlStateValue = {
       layers: {

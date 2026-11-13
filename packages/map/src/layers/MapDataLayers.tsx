@@ -243,13 +243,17 @@ export function MapDataLayers({
       isFeedLayer(detailLayer) &&
       detailLayer.detail
     ) {
-      if (drawn.current.get(DETAIL_LAYER_ID)?.features !== detail.shapes) {
+      const own = drawn.current.get(DETAIL_LAYER_ID);
+      if (own?.features !== detail.shapes || own.definition !== detailLayer) {
         adapter.setShapeLayer(DETAIL_LAYER_ID, {
           geometries: detail.shapes.map((shape) => shape.geometry),
           colour: paletteColour(detailLayer.detail.colour),
         });
       }
-      next.set(DETAIL_LAYER_ID, { features: detail.shapes });
+      next.set(DETAIL_LAYER_ID, {
+        definition: detailLayer,
+        features: detail.shapes,
+      });
     } else if (drawn.current.has(DETAIL_LAYER_ID)) {
       adapter.removeLayer(DETAIL_LAYER_ID);
     }

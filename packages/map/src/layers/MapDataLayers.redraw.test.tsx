@@ -5,14 +5,19 @@ import {
   createFakeServices,
   createFormatterRegistry,
   createRuntimeLayerCatalogue,
+  type DetailSource,
   FakeLayerCatalogue,
   FakeMapAdapter,
+  type FeedLayerDefinition,
+  isFeedLayer,
   type LayerCatalogue,
   type LayerDefinition,
   type LayerFeature,
+  type PointStyle,
   SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_HEATMAP_LAYER,
+  SAMPLE_LAYERS,
   SAMPLE_TILE_LAYER,
   SAMPLE_VECTOR_LAYER,
   sampleArea,
@@ -26,6 +31,7 @@ import { MapContext } from "../host";
 import { ServicesProvider } from "../services";
 import { LiveRegionProvider } from "../ui/LiveRegion";
 import { MapDataLayers } from "./MapDataLayers";
+import { paletteColour } from "./mapFeatures";
 import { type DataLayers, useDataLayers } from "./useDataLayers";
 
 const NOW = Date.UTC(2026, 10, 9, 12);
@@ -47,11 +53,15 @@ type DrawMethod =
 function mount<Catalogue extends LayerCatalogue>(
   catalogue: Catalogue,
   features: Readonly<Record<string, readonly LayerFeature[]>> = {},
+  details: Readonly<Record<string, readonly LayerFeature[]>> = {},
 ) {
   const services = createFakeServices({ layers: catalogue });
   const adapter = new FakeMapAdapter();
   for (const [id, loaded] of Object.entries(features)) {
     services.fakes.layerSource.setFeatures(id, loaded);
+  }
+  for (const [id, shapes] of Object.entries(details)) {
+    services.fakes.layerSource.setDetail(id, shapes);
   }
   const handle: {
     layers: DataLayers | null;
@@ -253,6 +263,74 @@ describe("MapDataLayers when a layer's definition is replaced", () => {
       ]),
     );
     expect(fillOpacity()).toBe(0.3);
+  });
+
+  describe("an affected area that is shown", () => {
+    /** The sample alerts layer, whose `detail` block gives the area its colour. */
+    function alertsWithDetail(): FeedLayerDefinition<PointStyle> & {
+      detail: DetailSource;
+    } {
+      const found = SAMPLE_LAYERS.find((layer) => layer.id === "sample-alerts");
+      if (!found || !isFeedLayer(found) || !found.detail) {
+        throw new Error(
+          "the sample alerts layer lost its affected-area detail",
+        );
+      }
+      return { ...found, detail: found.detail };
+    }
+
+    async function showingArea() {
+      const alerts = alertsWithDetail();
+      const page = mount(
+        new FakeLayerCatalogue([alerts]),
+        { [alerts.id]: [samplePoint("e", { area: "https://alerts.test/a" })] },
+        {
+          [alerts.id]: [
+            {
+              id: "s",
+              geometry: {
+                type: "LineString",
+                coordinates: [
+                  [0, 0],
+                  [1, 1],
+                ],
+              },
+              fields: {},
+            },
+          ],
+        },
+      );
+      act(() => page.layers().setEnabled(alerts.id, true));
+      await waitFor(() => expect(page.adapter.drawnLayers()).toHaveLength(1));
+      act(() => page.layers().showDetail(alerts.id, "e"));
+      await waitFor(() => expect(page.adapter.drawnLayers()).toHaveLength(2));
+      return { ...page, alerts };
+    }
+
+    it("is drawn again in the new colour when a refresh changes only the colour", async () => {
+      const { adapter, catalogue, alerts } = await showingArea();
+      const setShapeLayer = vi.spyOn(adapter, "setShapeLayer");
+      act(() =>
+        catalogue.setLayers([
+          {
+            ...alerts,
+            detail: { ...alerts.detail, colour: "orange" as const },
+          },
+        ]),
+      );
+      expect(setShapeLayer).toHaveBeenCalledTimes(1);
+      expect(setShapeLayer).toHaveBeenCalledWith(
+        ":detail",
+        expect.objectContaining({ colour: paletteColour("orange") }),
+      );
+    });
+
+    it("is not drawn again when a refresh lists the same definition", async () => {
+      const { adapter, catalogue, alerts } = await showingArea();
+      const setShapeLayer = vi.spyOn(adapter, "setShapeLayer");
+      act(() => catalogue.setLayers([alerts]));
+      expect(setShapeLayer).not.toHaveBeenCalled();
+    });
   });
 
   it("draws a raster layer once, not twice, when its tile URL and its definition both change", async () => {
