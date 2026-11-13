@@ -673,13 +673,19 @@ describe("parseShapeFile with WKT text", () => {
     });
   });
 
-  it("refuses the whole file when a later geometry has another SRID", () => {
+  it("skips a later geometry in another SRID, counts it, and keeps the others", () => {
     expect(
-      parseShapeFile("SRID=4326;POINT (1 2)\nSRID=3857;POINT (3 4)"),
+      parseShapeFile(
+        "SRID=4326;POINT (1 2)\nSRID=3857;POINT (3 4)\nSRID=4326;POINT (5 6)",
+      ),
     ).toEqual({
-      ok: false,
-      refusal: "wkt-unreadable",
-      detail: "Only SRID 4326 (WGS 84) is supported, not SRID 3857.",
+      ok: true,
+      shapes: [
+        { kind: "point", vertices: [p(1, 2)] },
+        { kind: "point", vertices: [p(5, 6)] },
+      ],
+      skipped: { "other-srid": 1 },
+      holesDropped: 0,
     });
   });
 
@@ -737,13 +743,59 @@ describe("parseShapeFile with WKT text", () => {
     });
   });
 
-  it("refuses the whole file for a measure or a curve, even beside valid lines, and says why", () => {
+  it("skips a measure or a curve beside valid geometries and counts it", () => {
+    expect(
+      parseShapeFile(
+        "POINT (1 1)\nPOINT M (1 2 3)\nCIRCULARSTRING (0 0, 1 1, 2 0)\nLINESTRING (0 0, 1 1) POINT ZM (1 2 3 4) POINT (2 2)",
+      ),
+    ).toEqual({
+      ok: true,
+      shapes: [
+        { kind: "point", vertices: [p(1, 1)] },
+        { kind: "line", vertices: [p(0, 0), p(1, 1)] },
+        { kind: "point", vertices: [p(2, 2)] },
+      ],
+      skipped: { unsupported: 3 },
+      holesDropped: 0,
+    });
+  });
+
+  it("skips one bad line, counts it, and keeps the lines around it", () => {
+    expect(
+      parseShapeFile(
+        "POINT (1 1)\nPOINT (x y)\nLINESTRING (0 0, 1 1\nPOINT (4 4)\nnot WKT at all\nPOINT (5 5)",
+      ),
+    ).toEqual({
+      ok: true,
+      shapes: [
+        { kind: "point", vertices: [p(1, 1)] },
+        { kind: "point", vertices: [p(4, 4)] },
+        { kind: "point", vertices: [p(5, 5)] },
+      ],
+      skipped: { malformed: 3 },
+      holesDropped: 0,
+    });
+  });
+
+  it("skips what follows a geometry on its line, up to the next line that starts one", () => {
+    expect(
+      parseShapeFile("POINT (1 2) x POINT (3 4)\nPOINT (5 6)"),
+    ).toMatchObject({
+      shapes: [
+        { kind: "point", vertices: [p(1, 2)] },
+        { kind: "point", vertices: [p(5, 6)] },
+      ],
+      skipped: { malformed: 1 },
+    });
+  });
+
+  it("refuses the whole file for a measure or a curve when nothing else can be read, and says why", () => {
     const measure = "Coordinates with a measure (M) are not supported.";
     const curve = "The WKT type CIRCULARSTRING is not supported.";
     for (const [text, detail] of [
       ["POINT M (1 2 3)", measure],
       ["POINT ZM (1 2 3 4)", measure],
-      ["POINT (1 1)\nLINESTRING (0 0, 1 1)\nPOINT M (1 2 3)", measure],
+      ["POINT M (1 2 3)\nPOINT ZM (1 2 3 4)", measure],
       ["CIRCULARSTRING (0 0, 1 1, 2 0)", curve],
     ] as const) {
       expect(parseShapeFile(text)).toEqual({
@@ -761,11 +813,9 @@ describe("parseShapeFile with WKT text", () => {
   it("refuses the whole file for text that starts like WKT but is not, with the reader's own position", () => {
     for (const text of [
       "POINT (1",
-      "POINT (1 2) x",
-      "POINT (1 2), POINT (3 4)",
       "POINT (a b)",
       "POINT (1 2 3 4 5)",
-      "POINT (1 1)\nLINESTRING (0 0, 1 1",
+      "POINT (1 2\nLINESTRING (0 0, 1 1",
       `${"GEOMETRYCOLLECTION (".repeat(40)}POINT (1 1)${")".repeat(40)}`,
     ]) {
       const result = parseShapeFile(text);
@@ -776,11 +826,11 @@ describe("parseShapeFile with WKT text", () => {
     }
   });
 
-  it("names the position of the fault in the words of the refusal", () => {
-    expect(parseShapeFile("POINT (1 1)\nLINESTRING (0 0, 1 1")).toEqual({
+  it("names the position of the first fault in the words of the refusal", () => {
+    expect(parseShapeFile("POINT (a b)\nLINESTRING (0 0, 1 1")).toEqual({
       ok: false,
       refusal: "wkt-unreadable",
-      detail: 'Expected ")" at position 33.',
+      detail: "Expected a number at position 8.",
     });
   });
 
@@ -832,6 +882,23 @@ describe("parseShapeFile with WKT text", () => {
 
 describe("parseShapeFile with a WKT column", () => {
   const rows = (...lines: string[]) => lines.join("\r\n");
+
+  it("keeps the geometries of a cell around one it cannot use, and counts that one", () => {
+    const text = rows(
+      "wkt",
+      '"POINT (1 1) POINT M (1 2 3) SRID=3857;POINT (5 5) POINT (3 3)"',
+      '"POINT (x)"',
+    );
+    expect(parseShapeFile(text)).toEqual({
+      ok: true,
+      shapes: [
+        { kind: "point", vertices: [p(1, 1)] },
+        { kind: "point", vertices: [p(3, 3)] },
+      ],
+      skipped: { unsupported: 1, "other-srid": 1, malformed: 1 },
+      holesDropped: 0,
+    });
+  });
 
   it("reads the cells of a column named wkt, wherever it is and however it is cased", () => {
     const text = rows(

@@ -81,11 +81,11 @@ function splitSuffix(word: string): [string, string] {
   return [word, ""];
 }
 
-/** The first run of letters in a text, after any white space. */
-const FIRST_WORD = /^\s*([A-Za-z]+)/;
-
-/** A leading EWKT prefix, `SRID=` in any case with any spacing before the `=`. */
-const SRID_PREFIX = /^\s*SRID\s*=/i;
+/**
+ * A geometry type word, or the `SRID` of an EWKT prefix with its `=`, after
+ * any white space on the same line. Sticky, so it matches at an offset.
+ */
+const GEOMETRY_START = /[^\S\r\n]*([A-Za-z]+)([^\S\r\n]*=)?/y;
 
 /** The only SRID the reader accepts: WGS 84, which WKT without a prefix is in. */
 export const SUPPORTED_WKT_SRID = 4326;
@@ -125,15 +125,33 @@ export class UnsupportedSridError extends GeometryError {
  * damaged WKT file from a file that is something else.
  */
 export function startsLikeWkt(text: string): boolean {
-  if (SRID_PREFIX.test(text)) {
-    return true;
-  }
-  const word = FIRST_WORD.exec(text)?.[1];
-  if (word === undefined) {
+  return startsGeometryAt(text, text.length - text.trimStart().length);
+}
+
+/** Whether a geometry type word or an EWKT `SRID=` begins at `offset`, after any spaces on its line. */
+function startsGeometryAt(text: string, offset: number): boolean {
+  GEOMETRY_START.lastIndex = offset;
+  const match = GEOMETRY_START.exec(text);
+  if (match === null) {
     return false;
   }
-  const [type] = splitSuffix(word.toUpperCase());
+  const word = (match[1] as string).toUpperCase();
+  if (word === "SRID") {
+    return match[2] !== undefined;
+  }
+  const [type] = splitSuffix(word);
   return KEYWORDS.has(type) || UNSUPPORTED_KEYWORDS.has(type);
+}
+
+/** The offset of the first line break at or after `from`, or the length of the text. */
+function lineEnd(text: string, from: number): number {
+  for (let index = from; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    if (code === 10 || code === 13) {
+      return index;
+    }
+  }
+  return text.length;
 }
 
 function refuse(message: string, at: number): GeometryError {
@@ -187,6 +205,9 @@ class Tokens {
   readonly #text: string;
   #index = 0;
   #peeked: Token | undefined;
+  #depth = 0;
+  #taken = 0;
+  #lastAt = 0;
 
   constructor(text: string) {
     this.#text = text;
@@ -200,7 +221,73 @@ class Tokens {
   next(): Token {
     const token = this.peek();
     this.#peeked = undefined;
+    this.#taken += 1;
+    this.#lastAt = token.at;
+    if (token.kind === "(") {
+      this.#depth += 1;
+    } else if (token.kind === ")") {
+      this.#depth -= 1;
+    }
     return token;
+  }
+
+  /** How many brackets are open among the tokens taken since {@link startGeometry}. */
+  get depth(): number {
+    return this.#depth;
+  }
+
+  /** Starts counting brackets and tokens afresh, for the next geometry. */
+  startGeometry(): void {
+    this.#depth = 0;
+    this.#taken = 0;
+  }
+
+  /** The offset of the end of the line that holds `offset`. */
+  lineEndFrom(offset: number): number {
+    return lineEnd(this.#text, offset);
+  }
+
+  /**
+   * Gives up on the text read so far and moves to where a geometry can start
+   * again: the token that broke the geometry, if it is the first on its line
+   * and starts another geometry (a line cut short is followed by the next
+   * line's), or else the first later line that does, or the end of the text
+   * when none does. It never goes back to the first token of the geometry, so
+   * it always makes progress.
+   */
+  resync(): void {
+    const peeked = this.#peeked;
+    const broke = peeked ? peeked.at : this.#lastAt;
+    const moved = peeked !== undefined || this.#taken > 1;
+    if (
+      moved &&
+      this.#firstOnLine(broke) &&
+      startsGeometryAt(this.#text, broke)
+    ) {
+      this.#peeked = undefined;
+      this.#index = broke;
+      return;
+    }
+    const from = peeked ? peeked.at : this.#index;
+    this.#peeked = undefined;
+    let line = lineEnd(this.#text, from) + 1;
+    while (line < this.#text.length && !startsGeometryAt(this.#text, line)) {
+      line = lineEnd(this.#text, line) + 1;
+    }
+    this.#index = Math.min(line, this.#text.length);
+  }
+
+  #firstOnLine(at: number): boolean {
+    for (let index = at - 1; index >= 0; index -= 1) {
+      const code = this.#text.charCodeAt(index);
+      if (code === 10 || code === 13) {
+        return true;
+      }
+      if (!isSpace(code)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   #read(): Token {
@@ -328,6 +415,83 @@ class Reader {
       geometries.push(this.#wholeGeometry());
     }
     return geometries;
+  }
+
+  /**
+   * Reads geometries one after another to the end of the text, giving the
+   * error for each stretch that cannot be used and going on after it.
+   */
+  *readRecovering(): Generator<Geometry | GeometryError, void> {
+    do {
+      yield this.#attempt();
+    } while (!this.#atEnd());
+  }
+
+  /** Whether only the end of the text is left. A character that cannot be read counts as more text. */
+  #atEnd(): boolean {
+    try {
+      return this.#tokens.peek().kind === "end";
+    } catch {
+      return false;
+    }
+  }
+
+  /** One geometry, or its error with the reader moved on to where the next geometry may start. */
+  #attempt(): Geometry | GeometryError {
+    this.#tokens.startGeometry();
+    let start = 0;
+    try {
+      start = this.#tokens.peek().at;
+      return this.#wholeGeometry();
+    } catch (error) {
+      // The tokenizer and the reader throw nothing but a GeometryError.
+      const failure = error as GeometryError;
+      this.#recover(failure, start);
+      return failure;
+    }
+  }
+
+  /**
+   * Moves past a geometry that failed. One that is valid WKT the reader leaves
+   * out (a measure, a curve, another SRID) is skipped to its closing bracket,
+   * so geometries after it on the same line are kept; if its brackets do not
+   * close on the line it began on, or the text is damaged, reading goes on at
+   * the next line that starts a geometry.
+   */
+  #recover(error: GeometryError, start: number): void {
+    if (error.kind === "unsupported" && this.#skipGeometry(start)) {
+      return;
+    }
+    this.#tokens.resync();
+  }
+
+  /**
+   * Takes the tokens that are left of a geometry: up to the bracket that
+   * closes it, or an `EMPTY` outside any bracket. Gives up, returning false,
+   * at the end of the line the geometry began on or of the text.
+   */
+  #skipGeometry(start: number): boolean {
+    const end = this.#tokens.lineEndFrom(start);
+    for (;;) {
+      let token: Token;
+      try {
+        token = this.#tokens.peek();
+      } catch {
+        return false;
+      }
+      if (token.kind === "end" || token.at >= end) {
+        return false;
+      }
+      this.#tokens.next();
+      const closed =
+        (token.kind === ")" && this.#tokens.depth <= 0) ||
+        (token.kind === "word" &&
+          token.text.toUpperCase() === "EMPTY" &&
+          this.#tokens.depth === 0);
+      if (closed) {
+        return true;
+      }
+    }
   }
 
   /** One geometry of the text, with the EWKT prefix it may start with. */
@@ -599,6 +763,34 @@ export function readWktSequence(
   options: ParseWktOptions = {},
 ): Geometry[] {
   return readText(text, options, (reader) => reader.readSequence());
+}
+
+/**
+ * Reads WKT text that holds one geometry or more, as {@link readWktSequence}
+ * does, but goes on after a geometry it cannot use instead of giving up. It
+ * gives each stretch of the text in turn, as a GeoJSON geometry (unchecked, as
+ * `readWktSequence` leaves it) or as the {@link GeometryError} that says why
+ * the stretch was left out, and is lazy: a caller that has enough stops
+ * asking and the rest is never read.
+ *
+ * A geometry that is valid WKT the reader leaves out (a measure, a curved
+ * type, a SRID other than 4326) is skipped to its closing bracket, so the
+ * geometries after it, on the same line or not, are kept. A bracket that has
+ * not closed by the end of the line the geometry began on ends the skip
+ * there. Text that is damaged is skipped up to the next line that starts with
+ * a geometry type or an `SRID=` prefix, and counts as one stretch. Text with
+ * a character the reader does not know is damaged in the same way. Nothing is
+ * read twice, so the time grows with the length of the text.
+ *
+ * The text always gives at least one reading: an error for empty text.
+ *
+ * @throws {GeometryError} `invalid` when the text is not a string.
+ */
+export function readWktRecovering(
+  text: string,
+  options: ParseWktOptions = {},
+): Generator<Geometry | GeometryError, void> {
+  return readText(text, options, (reader) => reader.readRecovering());
 }
 
 function readText<T>(

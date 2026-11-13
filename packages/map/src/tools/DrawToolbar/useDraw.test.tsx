@@ -700,12 +700,25 @@ describe("useDraw", () => {
       });
     });
 
-    it("says that none of a WKT file was read when one line cannot be, and imports nothing", async () => {
+    it("imports the lines of a WKT file that can be read and says how many were skipped", async () => {
+      const rig = await setup();
+      await importFile(rig, {
+        name: "shapes.wkt",
+        text: "POINT (2.35 48.85)\nPOINT M (1 2 3)",
+      });
+      expect(rig.result.current.shapes).toHaveLength(1);
+      expect(rig.result.current.importFeedback).toEqual({
+        kind: "success",
+        text: expect.stringContaining("1 skipped"),
+      });
+    });
+
+    it("says that none of a WKT file was read when no line can be, and imports nothing", async () => {
       const rig = await setup();
       expect(
         await importFile(rig, {
           name: "shapes.wkt",
-          text: "POINT (2.35 48.85)\nPOINT M (1 2 3)",
+          text: "POINT M (1 2 3)\nPOINT ZM (1 2 3 4)",
         }),
       ).toBeNull();
       expect(rig.result.current.shapes).toEqual([]);
