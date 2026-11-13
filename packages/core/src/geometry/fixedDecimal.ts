@@ -4,12 +4,26 @@
 /** A number as `String` writes it in exponent notation: sign, digits, point, exponent. */
 const EXPONENT_FORM = /^(-?)(\d+)(?:\.(\d+))?e([+-]\d+)$/;
 
-/**
- * A JSON string, or a number written with an exponent. The string is matched
- * first so that text inside a string is never mistaken for a number.
- */
-const STRING_OR_EXPONENT_NUMBER =
-  /"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?[eE][+-]?\d+/g;
+/** The characters a JSON number is made of, once it has begun with a digit or a minus. */
+const NUMBER_CHARACTER = /[0-9+\-.eE]/;
+
+/** The index just past the string that opens at `start`, or the end of the text when it never closes. */
+function endOfString(json: string, start: number): number {
+  let index = start + 1;
+  while (index < json.length && json.charAt(index) !== '"') {
+    index += json.charAt(index) === "\\" ? 2 : 1;
+  }
+  return Math.min(index + 1, json.length);
+}
+
+/** The index just past the run of number characters that begins at `start`. */
+function endOfNumber(json: string, start: number): number {
+  let index = start + 1;
+  while (index < json.length && NUMBER_CHARACTER.test(json.charAt(index))) {
+    index += 1;
+  }
+  return index;
+}
 
 /**
  * A finite number as plain decimal text, with no exponent: the digits
@@ -37,14 +51,37 @@ export function fixedDecimal(value: number): string {
   return `${sign}${digits}${"0".repeat(point - digits.length)}`;
 }
 
+/** A number of JSON text, in plain decimal text when it was written with an exponent. */
+function numberText(token: string): string {
+  const value = Number(token);
+  return /[eE]/.test(token) && Number.isFinite(value)
+    ? fixedDecimal(value)
+    : token;
+}
+
 /**
  * JSON text with every number that was written with an exponent written as
  * plain decimal text instead, with {@link fixedDecimal}. Strings are left as
  * they are. The result is still JSON, and equals the input when it holds no
- * exponent.
+ * exponent. The text is read once, from left to right, so the time taken is in
+ * proportion to its length whatever it holds.
  */
 export function withFixedDecimals(json: string): string {
-  return json.replace(STRING_OR_EXPONENT_NUMBER, (match) =>
-    match.startsWith('"') ? match : fixedDecimal(Number(match)),
-  );
+  const parts: string[] = [];
+  let index = 0;
+  while (index < json.length) {
+    const char = json.charAt(index);
+    let end = index + 1;
+    if (char === '"') {
+      end = endOfString(json, index);
+      parts.push(json.slice(index, end));
+    } else if (char === "-" || (char >= "0" && char <= "9")) {
+      end = endOfNumber(json, index);
+      parts.push(numberText(json.slice(index, end)));
+    } else {
+      parts.push(char);
+    }
+    index = end;
+  }
+  return parts.join("");
 }

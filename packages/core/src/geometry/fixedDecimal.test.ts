@@ -69,6 +69,29 @@ describe("withFixedDecimals", () => {
     );
   });
 
+  it("leaves literals, an unfinished string and a lone minus as they are", () => {
+    expect(withFixedDecimals('[true,false,null,"a\\"b",-1e-7]')).toBe(
+      '[true,false,null,"a\\"b",-0.0000001]',
+    );
+    expect(withFixedDecimals('{"a":1e-7,"b":"1e-7')).toBe(
+      '{"a":0.0000001,"b":"1e-7',
+    );
+    expect(withFixedDecimals("-")).toBe("-");
+    expect(withFixedDecimals("[1e999,-e]")).toBe("[1e999,-e]");
+    expect(withFixedDecimals('"ends in a backslash\\')).toBe(
+      '"ends in a backslash\\',
+    );
+  });
+
+  it("takes time in proportion to the text, however many quotes and zeros it holds", () => {
+    const quotes = `"${'\\"'.repeat(20_000)}`;
+    const zeros = `[${"0".repeat(40_000)}`;
+    const started = performance.now();
+    expect(withFixedDecimals(quotes)).toBe(quotes);
+    expect(withFixedDecimals(zeros)).toBe(zeros);
+    expect(performance.now() - started).toBeLessThan(1000);
+  }, 20_000);
+
   it("returns JSON without an exponent unchanged, indentation included", () => {
     const json = JSON.stringify({ a: [1, 2.5], b: { c: "x" } }, null, 2);
     expect(withFixedDecimals(json)).toBe(json);
