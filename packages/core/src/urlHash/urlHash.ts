@@ -11,17 +11,24 @@ const MAX_ZOOM = 24;
 const LAYER_ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 const CONTROL_KEY_PATTERN = /^([a-z][a-z0-9-]{0,63})\.([a-z][a-z0-9-]{0,63})$/;
 const CONTROL_VALUE_PATTERN = /^[a-z0-9._-]{1,32}$/;
+/**
+ * The most layer ids a link carries. Both {@link parseLayers} and
+ * {@link serialiseLayers} apply it, so an address the app writes is read back
+ * whole. A link with more ids keeps the first of them.
+ */
 const MAX_LAYERS = 20;
+
+/** Keeps the readable ids, once each, in order, up to {@link MAX_LAYERS}. */
+function keepReadableLayerIds(ids: readonly string[]): string[] {
+  return [...new Set(ids.filter((id) => LAYER_ID_PATTERN.test(id)))].slice(
+    0,
+    MAX_LAYERS,
+  );
+}
 
 /** Reads `layers=a,b` and the `a.control=value` pairs for layers that are on. */
 function parseLayers(params: Map<string, string>): LayersUrlState | undefined {
-  const enabled = [
-    ...new Set(
-      (params.get("layers") ?? "")
-        .split(",")
-        .filter((id) => LAYER_ID_PATTERN.test(id)),
-    ),
-  ].slice(0, MAX_LAYERS);
+  const enabled = keepReadableLayerIds((params.get("layers") ?? "").split(","));
   if (enabled.length === 0) {
     return undefined;
   }
@@ -36,11 +43,12 @@ function parseLayers(params: Map<string, string>): LayersUrlState | undefined {
   return { enabled, controls };
 }
 
-/** Writes the layers that are on, then their control values, leaving out anything unreadable. */
+/**
+ * Writes the layers that are on, then their control values, leaving out
+ * anything unreadable and any layer past {@link MAX_LAYERS}.
+ */
 function serialiseLayers(layers: LayersUrlState | undefined): string[] {
-  const enabled = (layers?.enabled ?? []).filter((id) =>
-    LAYER_ID_PATTERN.test(id),
-  );
+  const enabled = keepReadableLayerIds(layers?.enabled ?? []);
   if (enabled.length === 0) {
     return [];
   }
