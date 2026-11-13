@@ -61,6 +61,7 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Open the pull request and follow the `land-pr` skill. Do not merge."
 - "Review pull request 130 with the `fresh-eyes-reviewer` role."
 - "Look at the running app and follow the `visual-check` skill."
+- "Write the Playwright tests for issue 123 and follow the `playwright-tests` skill."
 
 Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer` or `ui-verifier`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tiers are named in `CLAUDE.md`; the generated agent files set no model.
 

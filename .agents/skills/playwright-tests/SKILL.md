@@ -11,7 +11,7 @@ This skill is the MapCairn layer on top of the procedure that Playwright ships f
 
 1. Run `npm ci --ignore-scripts` if `node_modules` is missing (the flag is for a git worktree, where the `prepare` script fails). Install the browsers once with `npm run playwright:install -w @mapcairn/web`.
 2. Read the Playwright procedure that matches the repository's Playwright version: `node_modules/playwright-core/lib/tools/skills/playwright-cli/SKILL.md`, then its `references/test-generation.md` (plan, generate, heal) and `references/playwright-tests.md` (debug and attach). Wherever they write `playwright-cli <command>`, run `npx --no-install playwright cli <command>`; after `attach <session>`, add `-s=<session>` to each later command, as the attach output says. Do not install `@playwright/cli`, do not run `playwright cli install` (it writes a skill and a workspace folder that the sync and the lint do not expect), and do not install anything globally.
-3. If that folder does not exist, Playwright is older than the version this skill expects: use the summary in section 3 and tell the person.
+3. If that folder does not exist, `npx --no-install playwright cli --help` prints the path of the skill on its first lines (`Agent skill: <path>`). If the command does not exist either, Playwright is older than the version this skill expects: use the summary in section 3 and tell the person. Never run `npm init playwright@latest`, which the Playwright procedure suggests when it finds no Playwright; the project already has one.
 4. Pick your own port and use it for every run: `MAPCAIRN_E2E_PORT=<port>`. Playwright starts `npm run start` on it and reuses a server already there.
 
 ## 2. MapCairn rules
