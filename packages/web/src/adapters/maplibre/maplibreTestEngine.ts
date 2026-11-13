@@ -86,6 +86,8 @@ export class FakeMapLibreMap {
   static settleOnRepaint = false;
   /** When true, a box cannot be fitted: `cameraForBounds` answers undefined and `fitBounds` does nothing. */
   static unfittableBounds = false;
+  /** The ids of the loaded style's own sources, which each new map starts with in `styleSources`. */
+  static styleSourceIds: string[] = [];
   /**
    * With `autoLoad`, the next `setStyle` fails the way MapLibre reports a
    * style document it could not fetch: an `error` event with no tile or
@@ -101,6 +103,7 @@ export class FakeMapLibreMap {
     FakeMapLibreMap.holdIdle = false;
     FakeMapLibreMap.settleOnRepaint = false;
     FakeMapLibreMap.unfittableBounds = false;
+    FakeMapLibreMap.styleSourceIds = [];
     FakeMapLibreMap.nextStyleError = undefined;
   }
 
@@ -131,6 +134,10 @@ export class FakeMapLibreMap {
   styleLoaded = false;
   /** Sources the adapter added, by id, with any data set on them. */
   readonly sources = new Map<string, Record<string, unknown>>();
+  /** The loaded style's own sources (the basemap's), which the adapter did not add. */
+  readonly styleSources = new Map<string, Record<string, unknown>>();
+  /** Sources whose tiles are not all in, as `isSourceLoaded` reports; any other source is in. */
+  readonly unloadedSources = new Set<string>();
   /** Layers the adapter added, bottom first. */
   styleLayers: Record<string, unknown>[] = [];
   /** Images the adapter added, by name. */
@@ -176,6 +183,9 @@ export class FakeMapLibreMap {
     this.canvasContainer.append(this.canvas);
     container.append(this.canvasContainer);
     FakeMapLibreMap.instances.push(this);
+    for (const id of FakeMapLibreMap.styleSourceIds) {
+      this.styleSources.set(id, { type: "vector" });
+    }
     if (options.bounds) {
       const [[west, south], [east, north]] = options.bounds as [
         [number, number],
@@ -449,8 +459,11 @@ export class FakeMapLibreMap {
     }
     this.sources.set(id, { ...spec });
   }
+  isSourceLoaded(id: string): boolean {
+    return !this.unloadedSources.has(id);
+  }
   getSource(id: string): { setData(data: unknown): void } | undefined {
-    const source = this.sources.get(id);
+    const source = this.sources.get(id) ?? this.styleSources.get(id);
     return (
       source && {
         setData: (data: unknown) => {
@@ -586,7 +599,7 @@ export class FakeMapLibreMap {
   } {
     return {
       ...(this.glyphs === undefined ? {} : { glyphs: this.glyphs }),
-      sources: Object.fromEntries(this.sources),
+      sources: Object.fromEntries([...this.styleSources, ...this.sources]),
       layers: [...this.basemapLayers, ...this.styleLayers],
     };
   }

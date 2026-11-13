@@ -38,7 +38,7 @@ If your tool has Playwright browser tools, use them to set the window size and c
 npx --no-install playwright screenshot --viewport-size=390,844 --color-scheme=dark --wait-for-selector='[data-zoom][aria-busy="false"]' --wait-for-timeout=6000 "http://localhost:5190/#map=10.00/-33.92000/18.42000&basemap=bright" .tmp-visual/phone-dark-bright.png
 ```
 
-The map is ready when `[data-zoom][aria-busy="false"]` matches; the extra 6 seconds lets the credits, which open for the first five seconds, close. Screenshot them open too if the change touches them. If a state needs clicks, use a short script in `.tmp-visual/` (git ignores it) and run it with `node .tmp-visual/shot.mjs` from the repository root. Change the size, theme and address for each combination:
+The map is ready when `[data-zoom][aria-busy="false"]` matches; the extra 6 seconds lets the credits, which open for the first five seconds, close. The flag covers the style and the basemap's tiles only, so with a data layer on it can match while that layer's tiles or feed are still arriving: keep the wait, raise it for a slow provider, and look at the image to see that the layer has drawn (a feed layer's row in the Layers section says "Updated" once it has). Screenshot them open too if the change touches them. If a state needs clicks, use a short script in `.tmp-visual/` (git ignores it) and run it with `node .tmp-visual/shot.mjs` from the repository root. Change the size, theme and address for each combination:
 
 ```js
 import { chromium } from "playwright";
