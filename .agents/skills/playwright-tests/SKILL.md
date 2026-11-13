@@ -19,13 +19,13 @@ This skill is the MapCairn layer on top of the procedure that Playwright ships f
 These hold at every stage and override the Playwright procedure.
 
 - Specs: write plans to `specs/<feature>.plan.md`. Tests go in `packages/web/e2e/`, starting from `packages/web/e2e/seed.spec.ts`, in the spec file for that feature or a new `<feature>.spec.ts`. Where the Playwright procedure says `tests/`, read `packages/web/e2e/`.
-- Imports: `test` and `expect` come from `./fixtures`, never `@playwright/test`. The fixtures mock basemap tiles, MapLibre styles, Nominatim and the layer providers, and script geolocation, the clipboard, storage and the system theme through the test seam. A test calls no third-party service.
+- Imports: `test` and `expect` come from `./fixtures`, never `@playwright/test`. The fixtures stub raster tiles, vector styles, Nominatim and Photon, and script geolocation, the clipboard, storage and the system theme through the test seam. A test calls no third-party service.
 - Locators: role and accessible name first, then `data-testid` (the configured `testIdAttribute`). Use the page object in `e2e/pages` and the helpers in `e2e/support`; add to them instead of repeating a locator. Read the copy from the components under `packages/web/src` (British English, written inline) instead of guessing it.
 - Projects: `chromium` (desktop), `mobile-chromium` (Pixel 7) and `webkit` (iPhone 15, which runs only the basemap, keyboard, sheet and app-shell specs). Pass `--project=chromium` while you work.
 - Accessibility specs carry the `@a11y` tag in the title (`npm run a11y` runs only those, `npm run e2e` everything else).
 - Timers: do not sleep. Use the helpers in `e2e/support/states.ts` and `e2e/support/timers.ts` (see `AGENTS.md`, "Browser tests", on `fastCredits`).
 - Never weaken an assertion, add a fixed wait (`waitForTimeout`), wait for `networkidle`, or skip a test (`test.skip`, `test.fixme`) to make it pass. Fix the cause in the test. If the test is right and the app is wrong, leave the test failing and report the failure and its cause. This replaces the Playwright procedure's allowance for `test.fixme`.
-- Run a test with `npm run test:e2e -w @mapcairn/web -- <spec name>` (the script CI runs; the Playwright configuration is in `packages/web`, so a bare `npx playwright test` at the repository root finds none). Run the specs that cover your change, not the full suites, unless the change is to layout, the map engine or the test seam (`pick-up-issue` section 5).
+- Run a test with `npm run test:e2e -w @mapcairn/web -- <spec name>` (the script CI runs; the Playwright configuration is in `packages/web`, so run it through the workspace script, not a bare `npx playwright test` at the repository root). Run the specs that cover your change, not the full suites, unless the change is to layout, the map engine or the test seam (`pick-up-issue` section 5).
 - Format a new spec with `npx --no-install biome check --write <file>` and start it with the two-line SPDX header.
 
 ## 3. Summary of the procedure
