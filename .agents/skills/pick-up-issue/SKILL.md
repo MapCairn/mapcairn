@@ -20,10 +20,11 @@ This skill is the working procedure behind `AGENTS.md`. Where they differ, `AGEN
 ## 1. Understand the issue
 
 1. `gh issue view <n> --comments` and read every comment; later comments may change the scope or record a decision.
-2. Check nobody else has it: the assignees, and `gh pr list --state all --search "#<n>"`. If another open pull request already covers it, stop and tell the person. If one only touches the same module, keep your change additive and rebase before you push.
+2. Check nobody else has it: the assignees, and `gh pr list --state all --search "#<n>"`. If another open pull request already covers it, stop and tell the person. If one only touches the same module, keep your change additive and merge the project's `main` (`upstream/main` on a fork) into your branch before you push (`land-pr` section 3).
 3. Stop and report, without starting, if the issue needs a decision that is the maintainer's: adding a dataset, adding a runtime dependency to an SDK package, anything whose terms an SDK package would carry, changing the licence, `CLA.md`, `PRIVACY.md`, `SECURITY.md` or the repository ruleset, or deploying production. Say which decision is needed in a short comment on the issue.
 4. Open the documents that match the code you will touch, using the "Read before you change" table in `AGENTS.md`.
 5. If the issue is a tracker, do not work it directly: pick up its children, or, if it has none and its plan is merged, use the `split-plan` skill.
+6. If you take over work another tool left unfinished, first record its pushed commits and its uncommitted diff (save the diff as a patch), and never edit or delete its worktree. Treat its draft critically (was the test written first, are the documents true) and build in a fresh worktree.
 
 ## 2. Claim it and branch
 
@@ -49,11 +50,14 @@ Several issues at once, or an agent beside you, means a separate worktree for ea
 ## 5. Checks
 
 - Any code: `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build`. A map or interface change adds the browser runs described below.
-- Documents only: `npm run lint`, then the read-through in section 6. Dependencies: the real install and `npm ci --ignore-scripts` check in `AGENTS.md`.
+- Documents only (Markdown, skills and agent files, issue and pull request templates, guides; no code, workflow, package or config change): `npm run lint` (it includes `agents:check`, so run `npm run agents:sync` first when a skill or agent changed) and the read-through in section 6, which also checks each claim against the files. Run `typecheck` only if a type-checked code sample changed. Do not run coverage, build, `e2e`, `a11y` or `visual-check` locally; say "not run: documents only" under Checks. CI still runs every check and must be green on the final head. A document that describes behaviour changed in the same pull request is part of that code change and follows the code checks, and anything under `.github/workflows`, package files or config is not documents only.
+- Dependencies: the real install and `npm ci --ignore-scripts` check in `AGENTS.md`.
 
 Install the browsers once with `npm run playwright:install -w @mapcairn/web`. A full local `e2e` or `a11y` run can take hours when several agents share the machine. Run the Playwright specs that cover the change (`npm run test:e2e -w @mapcairn/web -- <spec name>`, the script CI runs, which includes the spec's `@a11y` tests). Run the full `e2e` and `a11y` when the change is to layout, the map engine, the test seam or a component's colour, focus or semantics; otherwise name the full runs as left to CI under Checks (the required `e2e` check runs both). A timeout that passes when that spec is run alone is a load flake: re-run it alone, say so in the report, and never weaken an assertion or lengthen a timeout to hide it. Report anything that failed or was skipped.
 
-For a map or interface change, also run the `visual-check` skill and describe what it saw in the pull request, saying the images are kept locally and will be attached on request, with no local path. A change with no visible effect says so in the report instead.
+For a map or interface change, also run the `visual-check` skill and describe what it saw in the pull request, saying the images are kept locally and will be attached on request, with no local path. A change with no visible effect says so in the report instead. An agent that cannot read images follows `visual-check` for what to do and say.
+
+A change that announces something checks the `LiveRegion` row in `DESIGN.md` for when a message is sent with `keep`.
 
 ## 6. Simplify, read, hand over
 
@@ -70,7 +74,8 @@ Take issue #<n> in MapCairn/mapcairn and open the pull request. Do not merge. Do
 Follow the `pick-up-issue` skill, then `land-pr`. Read AGENTS.md and the documents "Read before you change" names for <area>.
 Checks: lint, typecheck, coverage and build, and targeted specs only, on your own port <port>. Leave the full e2e and a11y runs to CI.
 UI work: run the visual-check skill and describe what you saw in the pull request.
-Other work in flight on <module>: <issue or pull request>. Keep your change additive and rebase before you push.
+Other work in flight on <module>: <issue or pull request>. Keep your change additive; when the project's main moves, merge it into your branch, resolve and `git push`, and avoid a force-push.
+Work only in your own worktree, never the main checkout. Poll CI with one-shot `gh pr checks`; start no `--watch` or other background watcher.
 No assistant attribution anywhere. Plain neutral voice on GitHub, no @mentions.
 Stop every server, browser and wrangler instance you start and confirm with a port check. Keep your worktree until the pull request has merged.
 Wording: <the decision, in the exact words to write>. Use these words; do not paraphrase them.
@@ -78,3 +83,9 @@ Claims: check every claim against <files>. Name the file you checked beside each
 Before you open: run the self-review in `land-pr` section 1 and report that every claim matches the code, nothing planned is described as built, the issue's task list is ticked, or its status posted as a comment if you cannot edit the issue, the change stays within the issue and no figure is invented.
 Report with the five headings in AGENTS.md "Definition of done": PR, Checks, Seen, Deviations, Issues to file.
 ```
+
+For a free or smaller model, also:
+
+- Give it one or two small issues per prompt, not a long list, and tell it to work only in its own worktree.
+- Before you assign `visual-check` work, check the model can read images (`visual-check` says how).
+- For the small tier, `docs/guides/working-with-agents.md` says when to use it and how to brief it.
