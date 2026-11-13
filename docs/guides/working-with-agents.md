@@ -104,7 +104,7 @@ Other tools checked on 2026-11-13 against their own documentation, read as text;
 
 Cline's skills folder was not checked, so it follows the skill by path. The skill is written to be followed that way: open `.agents/skills/playwright-tests/SKILL.md`.
 
-No MCP configuration for another tool is committed, because the skill does not use MCP. `.vscode/mcp.json` is an editor setting that configures a Playwright, a Chrome DevTools and a GitHub server; no skill or agent here uses them. `npx --no-install playwright cli` covers the Playwright one, and `gh` covers the GitHub one (the skills already use `gh`). Whether the command line covers what the Chrome DevTools server does was not checked.
+No MCP configuration file is committed for any tool, because the skills do not use MCP. Playwright work runs through `npx --no-install playwright cli`, and GitHub work through `gh`, which the skills already use. No Chrome DevTools server is configured: the Playwright command line covers the browser checks this project uses, and CI runs Lighthouse.
 
 ## What has not been checked
 
