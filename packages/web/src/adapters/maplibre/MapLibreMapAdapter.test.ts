@@ -1454,6 +1454,49 @@ describe("MapLibreMapAdapter", () => {
           expect(repaints(map)).toBe(0);
         });
 
+        describe("when a tile is never answered", () => {
+          const ONE_HOUR_MS = 60 * 60 * 1000;
+          const ONE_SECOND_MS = 1000;
+          const TEN_MINUTES_S = 600;
+
+          /** Advances the clock a while and returns how many frames it asked for. */
+          const repaintsAfter = (map: FakeMapLibreMap, ms: number): number => {
+            const before = repaints(map);
+            vi.advanceTimersByTime(ms);
+            return repaints(map) - before;
+          };
+
+          it("gives up painting, so a hung tile does not keep the map busy for ever", async () => {
+            const { map } = await watched();
+            vi.useFakeTimers();
+            requested(map);
+            vi.advanceTimersByTime(ONE_HOUR_MS);
+            expect(repaintsAfter(map, TILE_SETTLE_NUDGE_MS * 8)).toBe(0);
+          });
+
+          it("paints again for a tile asked for after it gave up", async () => {
+            const { map } = await watched();
+            vi.useFakeTimers();
+            requested(map);
+            vi.advanceTimersByTime(ONE_HOUR_MS);
+            requested(map);
+            expect(repaintsAfter(map, TILE_SETTLE_NUDGE_MS * 2)).toBe(2);
+            vi.advanceTimersByTime(ONE_HOUR_MS);
+            expect(repaintsAfter(map, TILE_SETTLE_NUDGE_MS * 8)).toBe(0);
+          });
+
+          it("keeps painting while more tiles are asked for, and gives up after the last", async () => {
+            const { map } = await watched();
+            vi.useFakeTimers();
+            for (let second = 0; second < TEN_MINUTES_S; second += 1) {
+              requested(map);
+              expect(repaintsAfter(map, ONE_SECOND_MS)).toBeGreaterThan(0);
+            }
+            vi.advanceTimersByTime(ONE_HOUR_MS);
+            expect(repaintsAfter(map, TILE_SETTLE_NUDGE_MS * 8)).toBe(0);
+          });
+        });
+
         it("stops when the map is destroyed", async () => {
           const { adapter, map } = await watched();
           vi.useFakeTimers();
