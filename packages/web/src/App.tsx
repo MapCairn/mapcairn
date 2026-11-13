@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  DRAW_KEY_HELP,
-  type LatLng,
-  pressEscape,
-  startMeasure,
-} from "@mapcairn/core";
+import { DRAW_KEY_HELP, type LatLng, startMeasure } from "@mapcairn/core";
 import {
   AccuracyCircle,
   CentreCrosshair,
@@ -42,7 +37,7 @@ export function App() {
   const { setChoice } = useTheme();
   const { settings } = useSettings();
   const app = useMapApp();
-  const { dispatch, measure, closeExplicitly } = app;
+  const { dispatch, measure } = app;
 
   const showMeasurement = useCallback(
     (mode: MeasureMode, points: readonly LatLng[]) => {
@@ -89,7 +84,7 @@ export function App() {
         onPointerMove={app.setCursor}
         onDropPinKey={app.dropPinAtCentre}
         onIdentifyKey={app.identifyAtCentre}
-        onEscape={() => closeExplicitly(pressEscape())}
+        onEscape={app.onEscape}
         chrome={(map) => <AppChrome app={app} background={map} />}
       >
         <MapDataLayers
