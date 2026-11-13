@@ -61,6 +61,22 @@ test.describe("turning layers off at once", () => {
       .toContain("2 layers turned back on");
   });
 
+  test("says Undo worked even when the layers load straight after it", async ({
+    page,
+    mapPage,
+  }) => {
+    await mockLayerProviders(page);
+    await mapPage.goto(TWO_LAYERS);
+    await mapPage.openMapOptions();
+    await mapPage.turnOffAllButton.click();
+    // No wait between the two clicks: Undo and the loads it starts fall inside
+    // the announcer's window after the turning-off message.
+    await mapPage.undoTurnOffButton.click();
+    await expect
+      .poll(() => mapPage.announcements())
+      .toContain("2 layers turned back on");
+  });
+
   test("works from the keyboard: Enter turns them off, Tab reaches Undo, Enter undoes", async ({
     page,
     mapPage,

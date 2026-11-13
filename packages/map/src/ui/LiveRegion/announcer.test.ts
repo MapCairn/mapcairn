@@ -120,6 +120,57 @@ describe("the announcer's queue of messages to keep", () => {
     expect(spoken("assertive")).toEqual(["Urgent"]);
   });
 
+  it("keeps the order of a kept, a plain and a kept message", () => {
+    const { announce } = announcer;
+    announce("Opening");
+    announce("First kept", { keep: true });
+    announce("Plain");
+    announce("Second kept", { keep: true });
+    vi.advanceTimersByTime(THROTTLE_MS * 4);
+    expect(spoken()).toEqual(["Opening", "First kept", "Plain", "Second kept"]);
+  });
+
+  it("speaks the first message after a drained queue at once", () => {
+    const { announce } = announcer;
+    announce("First", { keep: true });
+    announce("Second", { keep: true });
+    vi.advanceTimersByTime(THROTTLE_MS);
+    expect(spoken()).toEqual(["First", "Second"]);
+    vi.advanceTimersByTime(THROTTLE_MS);
+    announce("Later");
+    expect(spoken()).toEqual(["First", "Second", "Later"]);
+  });
+
+  it("queues kept assertive messages on their own channel", () => {
+    const { announce } = announcer;
+    announce("Failed one", { priority: "assertive", keep: true });
+    announce("Failed two", { priority: "assertive", keep: true });
+    announce("Plain polite");
+    expect(spoken("assertive")).toEqual(["Failed one"]);
+    expect(spoken("polite")).toEqual(["Plain polite"]);
+    vi.advanceTimersByTime(THROTTLE_MS);
+    expect(spoken("assertive")).toEqual(["Failed one", "Failed two"]);
+    expect(spoken("polite")).toEqual(["Plain polite"]);
+  });
+
+  it("keeps a waiting message when the same message arrives again as kept", () => {
+    const { announce } = announcer;
+    announce("Opening");
+    announce("Imagery is on.");
+    announce("Imagery is on.", { keep: true });
+    announce("Zoom level 7");
+    vi.advanceTimersByTime(THROTTLE_MS * 4);
+    expect(spoken()).toEqual(["Opening", "Imagery is on.", "Zoom level 7"]);
+  });
+
+  it("does not repeat a message that was already spoken when it arrives again as kept", () => {
+    const { announce } = announcer;
+    announce("Imagery is on.");
+    announce("Imagery is on.", { keep: true });
+    vi.advanceTimersByTime(THROTTLE_MS * 2);
+    expect(spoken()).toEqual(["Imagery is on."]);
+  });
+
   it("drops an identical kept message that repeats inside the de-duplication window", () => {
     const { announce } = announcer;
     announce("Saved", { keep: true });

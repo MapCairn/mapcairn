@@ -89,6 +89,8 @@ function emptyChannel(): Channel {
  *   latest, and a kept message is never lost: it is spoken in its turn, one
  *   per window, in the order it arrived.
  * - De-duplicate: the same message twice within {@link DEDUPE_MS} is read once.
+ *   If the second is kept and the first still waits, the waiting one becomes
+ *   kept, so a message that matters is not lost to the one that follows.
  * - Clear then set: a region whose text would not change is emptied first, so
  *   a message repeated later is read again.
  */
@@ -145,16 +147,19 @@ export function createAnnouncer({
     const priority = options?.priority ?? "polite";
     const channel = channels[priority];
     const time = now();
+    const keep = options?.keep ?? false;
+    const tail = channel.queue.at(-1);
     if (
       message === channel.lastMessage &&
       time - channel.lastAcceptedAt < DEDUPE_MS
     ) {
+      if (keep && tail?.message === message) {
+        channel.queue[channel.queue.length - 1] = { message, keep };
+      }
       return;
     }
     channel.lastMessage = message;
     channel.lastAcceptedAt = time;
-    const keep = options?.keep ?? false;
-    const tail = channel.queue.at(-1);
     if (tail !== undefined && !tail.keep && !keep) {
       channel.queue[channel.queue.length - 1] = { message, keep };
     } else {

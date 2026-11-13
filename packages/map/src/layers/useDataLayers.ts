@@ -739,7 +739,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           : previous.enabled.filter((item) => item !== id),
       }));
       if (enabled && !loadsFeatures(definition)) {
-        announce(announceLayerOn(definition.name), { priority: "polite" });
+        announce(announceLayerOn(definition.name), {
+          priority: "polite",
+          keep: true,
+        });
       }
     },
     [announce, byId, forgetLayers],
@@ -870,7 +873,6 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       }));
       announce(announceTilesRecovered(definition.name), {
         priority: "polite",
-        keep: true,
       });
     },
     [announce, byId],

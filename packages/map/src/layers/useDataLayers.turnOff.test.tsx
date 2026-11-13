@@ -477,19 +477,28 @@ describe("useDataLayers Undo timing", () => {
     },
   );
 
-  it("keeps the message that a tile layer shows imagery again", () => {
+  it("keeps the message that a tile layer is on, the result of the person's own switch", () => {
+    const view = setup();
+    act(() => view.result.current.setEnabled(IMAGERY, true));
+    expect(announce).toHaveBeenCalledWith(`${SAMPLE_TILE_LAYER.name} is on.`, {
+      priority: "polite",
+      keep: true,
+    });
+  });
+
+  it("does not keep what the tile status says, which is the map's news and not the person's action", () => {
     const view = setup();
     act(() => view.result.current.setEnabled(IMAGERY, true));
     const imagery = () =>
       view.result.current.layers.find((item) => item.definition.id === IMAGERY);
     const tiles = tileUrl(SAMPLE_TILE_LAYER, imagery()?.controls ?? {}, NOW);
-    act(() => view.result.current.reportTilesUnavailable(IMAGERY, tiles));
     announce.mockClear();
+    act(() => view.result.current.reportTilesUnavailable(IMAGERY, tiles));
     act(() => view.result.current.reportTilesRecovered(IMAGERY, tiles));
-    expect(announce).toHaveBeenCalledWith(
-      `${SAMPLE_TILE_LAYER.name}: imagery is showing again.`,
-      { priority: "polite", keep: true },
-    );
+    expect(announce).toHaveBeenCalledTimes(2);
+    for (const [, options] of announce.mock.calls) {
+      expect(options).toEqual({ priority: "polite" });
+    }
   });
 
   it("gives a replacing batch its own full time", () => {
