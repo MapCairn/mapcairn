@@ -16,6 +16,15 @@ const COORDINATE_DECIMALS = 6;
 const MAX_COORDINATE_DECIMALS = 10;
 const MEASURE_DECIMALS = 2;
 
+/**
+ * A circle with at least this radius is written at six decimals without
+ * checking its ring. Rounding to six decimals moves a position by under 8 cm,
+ * and a ring of 72 positions more than 8 m apart (a radius over 90 m) has
+ * room for that; the rings of circles of 1 to 3 m were seen to fold in on
+ * themselves. A property test in `import.property.test.ts` holds this limit.
+ */
+const ROUNDING_SAFE_RADIUS_METRES = 100;
+
 function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
@@ -63,11 +72,18 @@ function roundedAt(vertices: readonly LatLng[], decimals: number): LatLng[] {
  */
 function roundedVertices(shape: DrawShape): LatLng[] | null {
   const exact = writtenVertices(shape);
+  const atSix = roundedAt(exact, COORDINATE_DECIMALS);
+  if (
+    (shape.radiusMetres ?? 0) >= ROUNDING_SAFE_RADIUS_METRES ||
+    writtenIssue(shape, atSix) === null
+  ) {
+    return atSix;
+  }
   if (writtenIssue(shape, exact) !== null) {
-    return roundedAt(exact, COORDINATE_DECIMALS);
+    return atSix;
   }
   for (
-    let decimals = COORDINATE_DECIMALS;
+    let decimals = COORDINATE_DECIMALS + 1;
     decimals <= MAX_COORDINATE_DECIMALS;
     decimals += 1
   ) {
@@ -100,7 +116,21 @@ function closedRing(ring: readonly LatLng[]): Position[] {
 export function exportableShapes(
   shapes: readonly DrawShape[],
 ): readonly DrawShape[] {
-  return shapes.filter((shape) => shape.done && shapeGeometry(shape) !== null);
+  return exportable(shapes).map(({ shape }) => shape);
+}
+
+/** The exportable shapes with their geometry, so a writer finds each geometry once. */
+function exportable(
+  shapes: readonly DrawShape[],
+): { shape: DrawShape; geometry: Geometry }[] {
+  const result: { shape: DrawShape; geometry: Geometry }[] = [];
+  for (const shape of shapes) {
+    const geometry = shape.done ? shapeGeometry(shape) : null;
+    if (geometry) {
+      result.push({ shape, geometry });
+    }
+  }
+  return result;
 }
 
 /**
@@ -159,16 +189,13 @@ export function shapesToGeoJson(
   shapes: readonly DrawShape[],
 ): FeatureCollection {
   const features: Feature[] = [];
-  for (const shape of exportableShapes(shapes)) {
-    const geometry = shapeGeometry(shape);
-    if (geometry) {
-      features.push({
-        type: "Feature",
-        id: shape.id,
-        geometry,
-        properties: properties(shape),
-      });
-    }
+  for (const { shape, geometry } of exportable(shapes)) {
+    features.push({
+      type: "Feature",
+      id: shape.id,
+      geometry,
+      properties: properties(shape),
+    });
   }
   return { type: "FeatureCollection", features };
 }
@@ -181,14 +208,9 @@ export function shapesToGeoJson(
  * when there are none.
  */
 export function shapesToWkt(shapes: readonly DrawShape[]): string {
-  const lines: string[] = [];
-  for (const shape of exportableShapes(shapes)) {
-    const geometry = shapeGeometry(shape);
-    if (geometry) {
-      lines.push(formatWkt(geometry));
-    }
-  }
-  return lines.join("\n");
+  return exportable(shapes)
+    .map(({ geometry }) => formatWkt(geometry))
+    .join("\n");
 }
 
 /** The header row of the CSV the draw tool writes, and reads back. */
@@ -221,11 +243,7 @@ function circleCells(shape: DrawShape): string[] {
  */
 export function shapesToCsv(shapes: readonly DrawShape[]): string {
   const rows = [SHAPES_CSV_HEADER];
-  for (const shape of exportableShapes(shapes)) {
-    const geometry = shapeGeometry(shape);
-    if (!geometry) {
-      continue;
-    }
+  for (const { shape, geometry } of exportable(shapes)) {
     const { areaMetres, lengthMetres } = measureShape(shape);
     rows.push(
       [

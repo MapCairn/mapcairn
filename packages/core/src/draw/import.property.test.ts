@@ -4,7 +4,10 @@ import fc from "fast-check";
 import type { Geometry } from "geojson";
 import { describe, expect, it } from "vitest";
 import { formatWkt, type WktAxisOrder } from "../geometry/wkt";
-import { geoJsonGeometry } from "../propertyTesting/geoArbitraries";
+import {
+  degreesOnGrid,
+  geoJsonGeometry,
+} from "../propertyTesting/geoArbitraries";
 import { PROPERTY_PARAMETERS } from "../propertyTesting/propertyParameters";
 import {
   finishShape,
@@ -16,7 +19,12 @@ import {
   repeatedFragment,
   textFromFragments,
 } from "../propertyTesting/textArbitraries";
-import { shapesToCsv, shapesToGeoJson, shapesToWkt } from "./export";
+import {
+  shapeGeometry,
+  shapesToCsv,
+  shapesToGeoJson,
+  shapesToWkt,
+} from "./export";
 import {
   MAX_IMPORT_POINTS,
   MAX_IMPORT_SHAPES,
@@ -24,7 +32,7 @@ import {
   type ShapeImport,
 } from "./import";
 import type { DrawShapeInput } from "./reducer";
-import { validateShape } from "./shape";
+import { MAX_CIRCLE_RADIUS_METRES, validateShape } from "./shape";
 
 const GEOJSON_FRAGMENTS = [
   "{",
@@ -181,6 +189,55 @@ describe("parseShapeFile round trips", () => {
         const result = parseShapeFile(JSON.stringify(geometry));
         expect(result.ok).toBe(true);
         expectWellFormed(result);
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+});
+
+describe("shapeGeometry of a large circle", () => {
+  // The export skips its check of the ring for a circle of 100 m or more, on
+  // the grounds that rounding to six decimals cannot fold it in on itself.
+  it("is a valid ring at six decimals from 100 m up, away from the poles and the antimeridian", () => {
+    const large = fc.record({
+      lat: degreesOnGrid(80),
+      lng: degreesOnGrid(170),
+      radius: fc.integer({ min: 100, max: MAX_CIRCLE_RADIUS_METRES / 100 }),
+    });
+    fc.assert(
+      fc.property(large, ({ lat, lng, radius }) => {
+        const geometry = shapeGeometry(
+          finishShape(
+            {
+              kind: "circle",
+              vertices: [{ lat, lng }],
+              radiusMetres: radius,
+            },
+            0,
+          ),
+        ) as { coordinates: number[][][] };
+        const ring = (geometry.coordinates[0] ?? []).slice(0, -1);
+        for (const position of ring) {
+          for (const number of position) {
+            expect(
+              (String(number).split(".")[1] ?? "").length,
+            ).toBeLessThanOrEqual(6);
+          }
+        }
+        expect(
+          validateShape(
+            finishShape(
+              {
+                kind: "polygon",
+                vertices: ring.map(([lng, lat]) => ({
+                  lat: lat as number,
+                  lng: lng as number,
+                })),
+              },
+              0,
+            ),
+          ),
+        ).toBeNull();
       }),
       PROPERTY_PARAMETERS,
     );
