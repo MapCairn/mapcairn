@@ -608,18 +608,22 @@ const HOVER_TIMEOUT_MS = 10_000;
 
 /**
  * Moves the pointer onto a part of the map canvas that nothing covers, the one
- * nearest the middle of the screen, and waits for the readout to show
- * the cursor coordinates. Fails when every point of the screen is covered.
+ * nearest the middle of the screen and 30% of the way down. That is above the
+ * bottom row, whose credits popover rises over the pointer when the
+ * coordinates make the readout taller; a pointer under it would leave the map
+ * and clear the coordinates. Then waits for the readout to show the cursor
+ * coordinates. Fails when every point of the screen is covered.
  */
 async function hoverFreeMap(mapPage: MapPage): Promise<void> {
   const page = mapPage.page;
   const point = await page.evaluate(() => {
     const STEP = 20;
+    const ANCHOR_HEIGHT_RATIO = 0.3;
     const centreX = document.documentElement.clientWidth / 2;
-    const centreY = document.documentElement.clientHeight / 2;
+    const centreY = document.documentElement.clientHeight * ANCHOR_HEIGHT_RATIO;
     let best: { x: number; y: number } | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
-    for (let y = STEP; y < centreY * 2; y += STEP) {
+    for (let y = STEP; y < document.documentElement.clientHeight; y += STEP) {
       for (let x = STEP; x < centreX * 2; x += STEP) {
         const hit = document.elementFromPoint(x, y);
         const distance = Math.hypot(x - centreX, y - centreY);
