@@ -44,8 +44,6 @@ Checked on 2026-11-12 against each tool's own documentation. The pages were read
 | Antigravity | `AGENTS.md` or `GEMINI.md`, also inside `.agents/`, and `.agents/rules/*.md` | `.agents/skills` (the older `.agent/skills` still works) | `.agents/agents/<name>.md`, with tool names of its own; not generated, see below |
 | Cursor | `AGENTS.md`, and `.cursor/rules/*.mdc`. `CLAUDE.md` not mentioned | `.agents/skills`, `.cursor/skills`, and `.claude/skills` and `.codex/skills` for compatibility | `.cursor/agents`, `.claude/agents` and `.codex/agents` |
 
-Gemini CLI, a separate tool, loads `GEMINI.md` by default and other names only when `context.fileName` lists them. `GEMINI.md` here is for it.
-
 What this means in practice:
 
 - `AGENTS.md` reaches every tool above without a copy. `GEMINI.md` and `.github/copilot-instructions.md` exist for the tools or surfaces that read only their own file. They hold no rule, so no rule is written twice.
@@ -102,7 +100,6 @@ Other tools checked on 2026-11-13 against their own documentation, read as text;
 | Tool | What its documentation says | Source |
 | --- | --- | --- |
 | Windsurf | Reads `AGENTS.md` at the project root. Reads skills from `.agents/skills` as well as `.devin/skills` and `.windsurf/skills` | docs.windsurf.com (Customize, "AGENTS.md" and "Skill scopes") |
-| Gemini CLI | Loads `GEMINI.md` by default (the one here points to `AGENTS.md`); `AGENTS.md` too when `context.fileName` lists it | geminicli.com/docs (GEMINI.md context) |
 | Cline | Reads `AGENTS.md` | docs.cline.bot (rules) |
 
 Cline's skills folder was not checked, so it follows the skill by path. The skill is written to be followed that way: open `.agents/skills/playwright-tests/SKILL.md`.
