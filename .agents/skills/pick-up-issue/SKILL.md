@@ -20,7 +20,7 @@ This skill is the working procedure behind `AGENTS.md`. Where they differ, `AGEN
 ## 1. Understand the issue
 
 1. `gh issue view <n> --comments` and read every comment; later comments may change the scope or record a decision.
-2. Check nobody else has it: the assignees, and `gh pr list --state all --search "#<n>"`. If another open pull request already covers it, stop and tell the person. If one only touches the same module, keep your change additive and merge the project's `main` (`origin/main`, or `upstream/main` on a fork) before you push (`land-pr` section 3: never a rebase, which needs a force-push).
+2. Check nobody else has it: the assignees, and `gh pr list --state all --search "#<n>"`. If another open pull request already covers it, stop and tell the person. If one only touches the same module, keep your change additive and merge the project's `main` (`upstream/main` on a fork) into your branch before you push (`land-pr` section 3).
 3. Stop and report, without starting, if the issue needs a decision that is the maintainer's: adding a dataset, adding a runtime dependency to an SDK package, anything whose terms an SDK package would carry, changing the licence, `CLA.md`, `PRIVACY.md`, `SECURITY.md` or the repository ruleset, or deploying production. Say which decision is needed in a short comment on the issue.
 4. Open the documents that match the code you will touch, using the "Read before you change" table in `AGENTS.md`.
 5. If the issue is a tracker, do not work it directly: pick up its children, or, if it has none and its plan is merged, use the `split-plan` skill.
@@ -54,9 +54,9 @@ Several issues at once, or an agent beside you, means a separate worktree for ea
 
 Install the browsers once with `npm run playwright:install -w @mapcairn/web`. A full local `e2e` or `a11y` run can take hours when several agents share the machine. Run the Playwright specs that cover the change (`npm run test:e2e -w @mapcairn/web -- <spec name>`, the script CI runs, which includes the spec's `@a11y` tests). Run the full `e2e` and `a11y` when the change is to layout, the map engine, the test seam or a component's colour, focus or semantics; otherwise name the full runs as left to CI under Checks (the required `e2e` check runs both). A timeout that passes when that spec is run alone is a load flake: re-run it alone, say so in the report, and never weaken an assertion or lengthen a timeout to hide it. Report anything that failed or was skipped.
 
-For a map or interface change, also run the `visual-check` skill and describe what it saw in the pull request, saying the images are kept locally and will be attached on request, with no local path. A change with no visible effect says so in the report instead. An agent whose model cannot read images still runs the `e2e` and `a11y` checks and the accessibility-tree checks, says plainly under **Seen** that it did not look at the screen and why, and never claims to have seen anything. The visual check then goes to a model that can read images (a Claude agent such as `ui-verifier` on sonnet, started by the caller), the caller makes sure that happens before the pull request is called done, and **Seen** says which agent looked.
+For a map or interface change, also run the `visual-check` skill and describe what it saw in the pull request, saying the images are kept locally and will be attached on request, with no local path. A change with no visible effect says so in the report instead. An agent that cannot read images follows `visual-check` for what to do and say.
 
-A message that reports the outcome of a person's own action ("2 layers turned back on") is sent with the announcer's `keep` option, so a later message queues behind it and does not replace it. A streaming or running-total message (a count that changes as the person works) must not use `keep`. `DESIGN.md` (the `LiveRegion` row) has the rule.
+A change that announces something checks the `LiveRegion` row in `DESIGN.md` for when a message is sent with `keep`.
 
 ## 6. Simplify, read, hand over
 
@@ -73,7 +73,7 @@ Take issue #<n> in MapCairn/mapcairn and open the pull request. Do not merge. Do
 Follow the `pick-up-issue` skill, then `land-pr`. Read AGENTS.md and the documents "Read before you change" names for <area>.
 Checks: lint, typecheck, coverage and build, and targeted specs only, on your own port <port>. Leave the full e2e and a11y runs to CI.
 UI work: run the visual-check skill and describe what you saw in the pull request.
-Other work in flight on <module>: <issue or pull request>. Keep your change additive; when main moves, `git merge origin/main`, resolve and `git push`. No force-push.
+Other work in flight on <module>: <issue or pull request>. Keep your change additive; when the project's main moves, merge it into your branch, resolve and `git push`, and avoid a force-push.
 Work only in your own worktree, never the main checkout. Poll CI with one-shot `gh pr checks`; start no `--watch` or other background watcher.
 No assistant attribution anywhere. Plain neutral voice on GitHub, no @mentions.
 Stop every server, browser and wrangler instance you start and confirm with a port check. Keep your worktree until the pull request has merged.
@@ -85,6 +85,6 @@ Report with the five headings in AGENTS.md "Definition of done": PR, Checks, See
 
 For a free or smaller model, also:
 
-- Give it one or two small issues per prompt, never a long list: a six-issue batch ran a free model out of usage.
-- Before you assign `visual-check` work, check the model can read images: ask it to describe one screenshot. Not every model can, so check rather than assume. A model that cannot gets issues that need no visual check, or the visual check goes to a Claude agent (`ui-verifier`).
-- For the small tier (haiku in Claude Code), use it only for mechanical work whose result is easy to check: searching and listing, a fully specified edit across files, a fixed check summarised, a clean-up sweep, ticking boxes, reading a log for one answer. Keep design decisions, judgement about the codebase, hostile-input reasoning and reviews that must find what the author missed on the default tier. Brief it with one task, the exact files, the exact change or question, the answer format ("reply with only ..."), a stop condition, no open-ended exploring, and the check you will run on its result. Put the rules it needs in the brief. If it fails, escalate to the default tier with a clearer brief rather than retrying the same one, and note what worked or failed in the lessons list on #93.
+- Give it one or two small issues per prompt, not a long list, and tell it to work only in its own worktree.
+- Before you assign `visual-check` work, check the model can read images (`visual-check` says how).
+- For the small tier, `docs/guides/working-with-agents.md` says when to use it and how to brief it.
