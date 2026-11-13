@@ -29,7 +29,7 @@ An agent file is a short role: a name, a description and the text of the role, w
 
 Tool limits, such as a list of allowed tools, are enforced only in Claude Code. In every other tool, and in the generated files, a limit like "the reviewer does not edit" rests on the instruction in the role text alone, and nothing technical stops a shell from writing. The reviewer's and the verifier's role texts say so, and all of them are worded as instructions ("Do not edit files"), not as facts about Claude's tools.
 
-`ui-verifier` lists Claude Code's Playwright MCP tools in its source. The generated files omit them and the agent still works: the `visual-check` skill falls back to the Playwright command line and a short script. The three Playwright test agents (`playwright-test-planner`, `-generator`, `-healer`) depend on those tools and are named as Claude only in `scripts/agents/render.mjs`; they are not generated.
+`ui-verifier` has no browser tools of its own in its source: the `visual-check` skill uses the Playwright command line, or browser tools where the tool offers them. Writing and healing Playwright tests is the `playwright-tests` skill, not an agent, so every tool gets it from the skill copy (see "Playwright tests" below).
 
 ## What each tool reads
 
@@ -68,9 +68,40 @@ When you start an agent, copy the brief block from `pick-up-issue` ("Briefing an
 
 ## Only in Claude Code
 
-- The Playwright test planner, generator and healer agents, and the Playwright MCP server in `.mcp.json`.
 - The Workflow tool and its opt-in rule, and the `fable` model rule, in `CLAUDE.md`.
 - Tool limits on agents (their `tools` lists). A person's own permission and hook settings are specific to the tool they use; no rule depends on one, because each is written in `AGENTS.md`.
+
+## Playwright tests
+
+The `playwright-tests` skill carries the MapCairn rules for planning, writing and healing the browser tests in `packages/web/e2e/`. It needs a shell and file access, and no MCP server, extension or image reader. The command-line procedure comes from the Playwright version in `package-lock.json`: the package `playwright-core` ships a skill at `node_modules/playwright-core/lib/tools/skills/playwright-cli/SKILL.md` (Apache-2.0), and `npx --no-install playwright cli` runs the commands it describes (the Playwright documentation says this needs Playwright 1.59 or newer; the repository has 1.65.0). The project skill points to that file, so no tool installs a package or copies a vendor skill, and the procedure always matches the installed version. The project had a Playwright test MCP server and three Claude Code agents (planner, generator, healer) for the same job. They were removed by the maintainer's decision, because the command line does the job for every tool and model. A model that cannot read images uses `snapshot` (the accessibility tree) instead of `screenshot`, and says in its report what it did not see.
+
+How each tool reaches the skill (all of them can read `AGENTS.md` and a file path in the repository, so every tool can follow the skill even when it does not list it as a skill):
+
+| Tool | Skill reached through | Instructions |
+| --- | --- | --- |
+| Claude Code | `.claude/skills/playwright-tests` | `CLAUDE.md`, which imports `AGENTS.md` |
+| Codex | `.agents/skills/playwright-tests` | `AGENTS.md` |
+| opencode | `.opencode/skills`, `.claude/skills` or `.agents/skills` | `AGENTS.md` |
+| GitHub Copilot | `.claude/skills` or `.agents/skills` | `AGENTS.md`, `.github/copilot-instructions.md` |
+| Antigravity | `.agents/skills/playwright-tests` | `AGENTS.md` or `GEMINI.md` |
+| Cursor | `.agents/skills` or `.claude/skills` | `AGENTS.md` |
+
+Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None needs a new file.
+
+| Tool | What its documentation says | Source |
+| --- | --- | --- |
+| Windsurf | Reads `AGENTS.md` at the project root. Reads skills from `.agents/skills` as well as `.devin/skills` and `.windsurf/skills` | docs.windsurf.com (Customize, "AGENTS.md" and "Skill scopes") |
+| Gemini CLI | Loads `GEMINI.md` by default (the one here points to `AGENTS.md`); `AGENTS.md` too when `context.fileName` lists it | geminicli.com/docs (GEMINI.md context) |
+| Junie CLI | Reads `AGENTS.md` at the project root | junie.jetbrains.com/docs (guidelines and memory) |
+| Cline | Reads `AGENTS.md` | docs.cline.bot (rules) |
+| Roo Code | Reads `AGENTS.md` (or `AGENT.md`) in the workspace root | docs.roocode.com (custom instructions) |
+| Kiro | Reads `AGENTS.md`, always included | kiro.dev/docs (steering) |
+| Amp | Not verified: the manual page was fetched but its text on instructions was not read | ampcode.com/manual |
+| Zed | Not verified: the rules page was not found | zed.dev/docs |
+
+The skills folders of Cline, Roo Code, Kiro and Junie were not checked, so those tools follow the skill by path. The skill is written to be followed that way: open `.agents/skills/playwright-tests/SKILL.md`.
+
+No MCP configuration for another tool is committed, because the skill does not use MCP. `.vscode/mcp.json` is an editor setting that configures a Playwright, a Chrome DevTools and a GitHub server; no skill or agent here uses them. `npx --no-install playwright cli` covers the Playwright one, and `gh` covers the GitHub one (the skills already use `gh`). Whether the command line covers what the Chrome DevTools server does was not checked.
 
 ## What has not been checked
 

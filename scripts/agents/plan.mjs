@@ -16,7 +16,6 @@ import {
 } from "node:fs";
 import path from "node:path";
 import {
-  isPortable,
   parseAgent,
   renderCodex,
   renderCopilot,
@@ -146,7 +145,7 @@ export function skillProblems(root) {
 
 /**
  * The files the sync should produce: a byte-for-byte copy of each project skill
- * folder, not the vendored ones (as `Buffer`s) and one file per portable agent in each tool's format (as
+ * folder, not the vendored ones (as `Buffer`s) and one file per agent in each tool's format (as
  * strings), keyed by path relative to `root`.
  *
  * @param {string} root
@@ -164,7 +163,6 @@ export function plannedFiles(root) {
   const agentFiles = entriesOf(root, AGENTS_SOURCE)
     .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
     .map((entry) => entry.name)
-    .filter(isPortable)
     .sort();
   for (const filename of agentFiles) {
     const text = readFileSync(path.join(root, AGENTS_SOURCE, filename), "utf8");
