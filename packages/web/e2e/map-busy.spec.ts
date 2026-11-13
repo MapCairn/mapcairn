@@ -33,7 +33,9 @@ test.describe("map region busy state", () => {
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let asked = 0;
     await page.route(RASTER_TILE_PATTERN, async (route) => {
+      asked += 1;
       await held;
       await route.fulfill({
         status: 200,
@@ -42,6 +44,9 @@ test.describe("map region busy state", () => {
       });
     });
     await page.goto(`/#basemap=${RASTER_BASEMAP_ID}`);
+    // Busy is true before the engine exists, so only a tile that the engine
+    // has asked for and not been answered proves the state follows the tiles.
+    await expect.poll(() => asked).toBeGreaterThan(0);
     await expect(mapPage.host).toHaveAttribute("aria-busy", "true");
     await expect(page.getByTestId("map-loading")).toBeVisible();
     release();

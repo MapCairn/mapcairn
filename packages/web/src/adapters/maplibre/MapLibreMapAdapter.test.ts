@@ -907,47 +907,124 @@ describe("MapLibreMapAdapter", () => {
       expect(loading.mock.calls).toEqual([[true], [false]]);
     });
 
-    it("reports loading for the basemap's own tiles, not a data layer's that never arrives", async () => {
-      const adapter = new MapLibreMapAdapter();
-      const loading = vi.fn();
-      adapter.on("loading", loading);
-      const mounting = adapter.mount(createHost(), MOUNT);
-      await vi.waitFor(() => {
-        expect(FakeMapLibreMap.instances).toHaveLength(1);
-      });
-      const map = latestMap();
-      map.fire("style.load");
-      map.fire("sourcedataloading", { sourceId: "openmaptiles", tile: {} });
-      // The tile layer's tile request never answers, so MapLibre never idles.
-      map.fire("sourcedataloading", {
-        sourceId: "mapcairn:rainfall:tiles",
-        tile: {},
-      });
-      map.fire("sourcedata", {
-        sourceId: "openmaptiles",
-        tile: {},
-        isSourceLoaded: true,
-      });
-      await vi.waitFor(() => {
-        expect(loading.mock.calls).toEqual([[true], [false]]);
-      });
-      await mounting;
-    });
+    describe("the busy state follows the basemap's own sources", () => {
+      /** Mounts with the loaded style's own sources named, none of them in yet. */
+      async function mountedWithStyleSources(...ids: string[]) {
+        FakeMapLibreMap.styleSourceIds = ids;
+        const adapter = new MapLibreMapAdapter();
+        const loading = vi.fn();
+        adapter.on("loading", loading);
+        const mounting = adapter.mount(createHost(), MOUNT);
+        await vi.waitFor(() => {
+          expect(FakeMapLibreMap.instances).toHaveLength(1);
+        });
+        const map = latestMap();
+        for (const id of ids) {
+          map.unloadedSources.add(id);
+        }
+        return { adapter, loading, map, mounting };
+      }
 
-    it("stops reporting loading when the basemap's last tile fails, without an idle", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
-      const { adapter, map } = await mounted();
-      const loading = vi.fn();
-      adapter.on("loading", loading);
-      map.fire("style.load");
-      map.fire("sourcedataloading", { sourceId: "openmaptiles", tile: {} });
-      map.fire("error", {
-        error: new Error("not found"),
-        tile: {},
-        sourceId: "openmaptiles",
-        isSourceLoaded: true,
+      /** A source's tile has arrived and the engine says the source is in. */
+      function settle(map: FakeMap, id: string) {
+        map.unloadedSources.delete(id);
+        map.fire("sourcedata", { sourceId: id, tile: {} });
+      }
+
+      it("is not held by a data layer's tile that never arrives", async () => {
+        const { loading, map, mounting } =
+          await mountedWithStyleSources("openmaptiles");
+        map.fire("style.load");
+        map.unloadedSources.add("mapcairn:rainfall:tiles");
+        map.fire("sourcedataloading", {
+          sourceId: "mapcairn:rainfall:tiles",
+          tile: {},
+        });
+        expect(loading.mock.calls).toEqual([[true]]);
+        settle(map, "openmaptiles");
+        expect(loading.mock.calls).toEqual([[true], [false]]);
+        await mounting;
       });
-      expect(loading.mock.calls).toEqual([[false]]);
+
+      it("ends when a basemap tile answers with a 404, which fires no source event, at the next frame", async () => {
+        const { loading, map, mounting } =
+          await mountedWithStyleSources("openmaptiles");
+        map.fire("style.load");
+        map.unloadedSources.add("mapcairn:rainfall:tiles");
+        map.fire("sourcedataloading", { sourceId: "openmaptiles", tile: {} });
+        // The engine counts the 404 as a tile that is in, and says nothing.
+        map.unloadedSources.delete("openmaptiles");
+        expect(loading.mock.calls).toEqual([[true]]);
+        map.fire("render");
+        expect(loading.mock.calls).toEqual([[true], [false]]);
+        await mounting;
+      });
+
+      it("counts the sources the style asked for when it loaded, not only the events seen since", async () => {
+        const { loading, map, mounting } = await mountedWithStyleSources(
+          "openmaptiles",
+          "contours",
+        );
+        // Neither source has reported anything: both only started loading.
+        map.fire("style.load");
+        expect(loading.mock.calls).toEqual([[true]]);
+        settle(map, "openmaptiles");
+        expect(loading.mock.calls).toEqual([[true]]);
+        settle(map, "contours");
+        expect(loading.mock.calls).toEqual([[true], [false]]);
+        await mounting;
+      });
+
+      it("is settled by the engine's idle when the style has no source of its own", async () => {
+        const { loading, map, mounting } = await mountedWithStyleSources();
+        map.fire("style.load");
+        expect(loading.mock.calls).toEqual([[true]]);
+        map.fire("idle");
+        expect(loading.mock.calls).toEqual([[true], [false]]);
+        await mounting;
+      });
+
+      it("is held by the imagery a hybrid basemap adds", async () => {
+        FakeMapLibreMap.styleSourceIds = ["openmaptiles"];
+        const adapter = new MapLibreMapAdapter();
+        const loading = vi.fn();
+        adapter.on("loading", loading);
+        const mounting = adapter.mount(createHost(), {
+          ...MOUNT,
+          basemap: FAKE_HYBRID_BASEMAP,
+        });
+        await vi.waitFor(() => {
+          expect(FakeMapLibreMap.instances).toHaveLength(1);
+        });
+        const map = latestMap();
+        // The adapter adds the imagery source itself, as the style loads.
+        map.unloadedSources.add("basemap-imagery");
+        map.fire("style.load");
+        expect(map.sources.has("basemap-imagery")).toBe(true);
+        expect(loading.mock.calls).toEqual([[true]]);
+        settle(map, "basemap-imagery");
+        expect(loading.mock.calls).toEqual([[true], [false]]);
+        await mounting;
+      });
+
+      it("holds the map busy again while a swapped basemap's style loads", async () => {
+        const { adapter, loading, map, mounting } =
+          await mountedWithStyleSources("openmaptiles");
+        map.fire("style.load");
+        settle(map, "openmaptiles");
+        await mounting;
+        expect(loading.mock.calls).toEqual([[true], [false]]);
+        const swap = adapter.setBasemap(DARK);
+        expect(loading.mock.calls).toEqual([[true], [false], [true]]);
+        map.styleSources.clear();
+        map.styleSources.set("dark-tiles", { type: "vector" });
+        map.unloadedSources.add("dark-tiles");
+        map.fire("style.load");
+        expect(loading.mock.calls).toEqual([[true], [false], [true]]);
+        settle(map, "dark-tiles");
+        await swap;
+        expect(loading.mock.calls).toEqual([[true], [false], [true], [false]]);
+      });
     });
 
     it("reports tile and style errors and logs them", async () => {
@@ -1331,10 +1408,9 @@ describe("MapLibreMapAdapter", () => {
           expect(repaints(map)).toBe(3);
         });
 
-        it("leaves the map alone for tiles of the basemap and of other sources", async () => {
+        it("leaves the map alone for tiles of other sources", async () => {
           const { map } = await watched();
           vi.useFakeTimers();
-          requested(map, "basemap");
           requested(map, "mapcairn:other");
           vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 3);
           expect(repaints(map)).toBe(0);

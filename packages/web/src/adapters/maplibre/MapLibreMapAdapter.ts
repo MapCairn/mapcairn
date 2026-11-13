@@ -286,6 +286,20 @@ function isStillUnavailable(
 const IMAGERY_ID = "basemap-imagery";
 
 /**
+ * Whether an engine source id belongs to the basemap's own style (or the
+ * imagery a hybrid basemap adds) and not to a data layer or an overlay, whose
+ * ids all start with {@link ENGINE_ID_PREFIX}.
+ */
+function isBasemapSource(sourceId: unknown): sourceId is string {
+  return typeof sourceId === "string" && !sourceId.startsWith(ENGINE_ID_PREFIX);
+}
+
+/** The ids of the sources in the engine's loaded style that belong to the basemap. */
+function ownSourceIds(map: MapLibreMap): readonly string[] {
+  return Object.keys(map.getStyle().sources).filter(isBasemapSource);
+}
+
+/**
  * Whether an engine source's tiles decide if a basemap is available: any of
  * the basemap's own sources (never a data layer's), except that only the
  * imagery counts for a hybrid basemap, whose labels can load while the
@@ -295,7 +309,7 @@ function decidesAvailability(
   basemap: BasemapDefinition | undefined,
   sourceId: unknown,
 ): boolean {
-  if (typeof sourceId !== "string" || sourceId.startsWith(ENGINE_ID_PREFIX)) {
+  if (!isBasemapSource(sourceId)) {
     return false;
   }
   return basemap?.source.kind !== "hybrid" || sourceId === IMAGERY_ID;
@@ -781,18 +795,21 @@ export class MapLibreMapAdapter implements MapAdapter {
   /** Whether the style, or the style of a requested basemap still arriving, is loading. */
   private styleLoading = false;
   /**
-   * The basemap's own sources that last reported themselves not fully loaded,
-   * by engine source id. Data layer sources are never here: a tile of one that
-   * never answers keeps the engine from going idle, and must not hold the
-   * map's busy state.
+   * The ids of the loaded style's own sources (the basemap's, and the imagery
+   * of a hybrid one), read from the engine when the style loads; `undefined`
+   * until then. Data layer sources are never here: a tile of one that never
+   * answers keeps the engine from going idle, and must not hold the map's busy
+   * state. Whether each is in is asked of the engine (`isSourceLoaded`), not
+   * inferred from events, because a tile the provider answers with a 404 fires
+   * none.
    */
-  private readonly basemapSourcesLoading = new Set<string>();
+  private basemapSourceIds: readonly string[] | undefined;
   /**
-   * Whether the loaded style has reported on a source of the basemap. Until
-   * then its tiles may still be on their way, so the map stays busy; a style
-   * with no such source is settled by the engine's `idle`.
+   * Whether the engine has gone idle since the style started loading. A style
+   * with no source of its own has nothing to ask, so it is in only once the
+   * engine says so.
    */
-  private basemapSourcesSeen = false;
+  private idleSinceStyle = false;
   private workerCheck: WorkerCheck | undefined;
   private started = false;
   private destroyed = false;
@@ -892,9 +909,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     });
     this.subscribe(map);
     // The constructor already started the style fetch, before these listeners existed.
-    this.styleLoading = true;
-    this.basemapSourcesLoading.clear();
-    this.basemapSourcesSeen = false;
+    this.startStyleLoad();
     this.updateLoading();
     try {
       await loaded;
@@ -1842,16 +1857,10 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.emitter.emit("click", click);
     });
     listen("styledataloading", () => {
-      // A style that starts loading has none of its sources in yet.
-      this.styleLoading = true;
-      this.basemapSourcesLoading.clear();
-      this.basemapSourcesSeen = false;
+      this.startStyleLoad();
       this.updateLoading();
     });
     listen("style.load", () => {
-      this.styleLoading = false;
-      this.basemapSourcesLoading.clear();
-      this.basemapSourcesSeen = false;
       this.basemapTiles = { ...idleBasemapTiles(), basemap: this.basemap };
       // A style may ask for its own projection (VersaTiles Colorful asks for a
       // globe); the app's setting wins. See ARCHITECTURE.md.
@@ -1873,6 +1882,8 @@ export class MapLibreMapAdapter implements MapAdapter {
       }
       this.styleReady = true;
       this.labelFontCache = undefined;
+      this.styleLoading = false;
+      this.basemapSourceIds = ownSourceIds(map);
       this.updateLoading();
       this.settlePending("style.load");
       try {
@@ -1889,15 +1900,22 @@ export class MapLibreMapAdapter implements MapAdapter {
     listen("idle", () => {
       // An idle map has its style and every source in, data layers included.
       this.styleLoading = false;
-      this.basemapSourcesLoading.clear();
-      this.basemapSourcesSeen = true;
+      this.idleSinceStyle = true;
+      this.basemapSourceIds ??= ownSourceIds(map);
       this.updateLoading();
       this.stopRepaintingUntilIdle();
       this.reportUnavailableBasemap();
       this.reportUnavailableTileLayers();
     });
+    listen("render", () => {
+      // A tile answered with a 404 fires no source event, so a frame is when
+      // the last of the basemap's tiles can be seen to be in.
+      if (this.loading) {
+        this.updateLoading();
+      }
+    });
     listen("sourcedata", (event) => {
-      this.trackBasemapSource(event);
+      this.trackBasemapSource(event, map);
       const sourceId = tileEventSource(event);
       if (sourceId === undefined) {
         return;
@@ -1908,13 +1926,13 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.recordLoadedTile(sourceId);
     });
     listen("sourcedataloading", (event) => {
-      this.trackBasemapSource(event);
+      this.trackBasemapSource(event, map);
       if (this.countTileLayerTile(tileEventSource(event), "requested")) {
         this.repaintUntilIdle(map);
       }
     });
     listen("sourcedataabort", (event) => {
-      this.trackBasemapSource(event);
+      this.trackBasemapSource(event, map);
       this.countTileLayerTile(tileEventSource(event), "aborted");
     });
     // The classification is described on the class.
@@ -1922,7 +1940,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       // Listening to "error" silences MapLibre's own console logging.
       console.error("MapLibre basemap error", event.error);
       if (isTileOrSourceError(event)) {
-        this.trackBasemapSource(event);
+        this.trackBasemapSource(event, map);
         const { sourceId } = event as { sourceId?: unknown };
         if (decidesAvailability(this.basemapTiles.basemap, sourceId)) {
           this.basemapTiles.failed += 1;
@@ -2066,10 +2084,8 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.loadEmitted = false;
     this.styleReady = false;
-    // The new style has nothing in yet; its events decide the busy state.
-    this.styleLoading = true;
-    this.basemapSourcesLoading.clear();
-    this.basemapSourcesSeen = false;
+    // The new style has nothing in yet.
+    this.startStyleLoad();
     // Tiles from here on belong to no basemap until the new style has loaded.
     this.basemapTiles = idleBasemapTiles();
     // A diffed swap fires no "style.load", so a swap could never settle.
@@ -2155,22 +2171,44 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.emitter.emit("load", undefined);
   }
 
+  /** A style, or the style of a requested basemap, has started to load: nothing of it is in yet. */
+  private startStyleLoad(): void {
+    this.styleLoading = true;
+    this.basemapSourceIds = undefined;
+    this.idleSinceStyle = false;
+  }
+
   /**
-   * Notes what a source event says about one of the basemap's own sources.
-   * Data layer sources are ignored, so their tiles never hold the busy state.
+   * Re-reads the busy state when a source event is about one of the basemap's
+   * own sources; a data layer's sources are ignored. A basemap tile being
+   * asked for also starts the repaint that lets a map whose last tiles were
+   * 404s see it is done (see `repaintUntilIdle`).
    */
-  private trackBasemapSource(event: object): void {
-    const sourceId = (event as { sourceId?: unknown }).sourceId;
-    if (typeof sourceId !== "string" || sourceId.startsWith(ENGINE_ID_PREFIX)) {
+  private trackBasemapSource(event: object, map: MapLibreMap): void {
+    if (!isBasemapSource((event as { sourceId?: unknown }).sourceId)) {
       return;
     }
-    this.basemapSourcesSeen = true;
-    if ((event as { isSourceLoaded?: unknown }).isSourceLoaded === true) {
-      this.basemapSourcesLoading.delete(sourceId);
-    } else {
-      this.basemapSourcesLoading.add(sourceId);
-    }
     this.updateLoading();
+    if (this.loading) {
+      this.repaintUntilIdle(map);
+    }
+  }
+
+  /**
+   * Whether the style is in and every one of its own sources says so. Asked of
+   * the engine each time, so an event that never comes (a 404) cannot leave it
+   * waiting.
+   */
+  private basemapIsIn(): boolean {
+    const map = this.map;
+    const ids = this.basemapSourceIds;
+    if (this.styleLoading || !map || !ids) {
+      return false;
+    }
+    if (ids.length === 0) {
+      return this.idleSinceStyle;
+    }
+    return ids.every((id) => !map.getSource(id) || map.isSourceLoaded(id));
   }
 
   /**
@@ -2180,10 +2218,7 @@ export class MapLibreMapAdapter implements MapAdapter {
    * `load` waits for every source, data layers included.
    */
   private updateLoading(): void {
-    const loading =
-      this.styleLoading ||
-      !this.basemapSourcesSeen ||
-      this.basemapSourcesLoading.size > 0;
+    const loading = !this.basemapIsIn();
     if (!loading) {
       this.emitLoad();
       this.settlePending("load");

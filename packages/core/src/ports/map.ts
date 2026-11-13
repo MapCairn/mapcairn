@@ -432,7 +432,10 @@ export interface MapEvents {
   /** The bearing changed. */
   rotate: ViewState;
   click: MapClickEvent;
-  /** The first frame of the current basemap is ready. */
+  /**
+   * The current basemap's style and its own sources are in. Data layers are
+   * not waited for, so their tiles may still be arriving.
+   */
   load: undefined;
   /**
    * True while the style or the basemap's own tiles are loading, false once
