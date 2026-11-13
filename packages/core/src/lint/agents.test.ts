@@ -23,7 +23,6 @@ import {
   writePlan,
 } from "../../../../scripts/agents/plan.mjs";
 import {
-  isPortable,
   parseAgent,
   renderCodex,
   renderCopilot,
@@ -262,15 +261,6 @@ describe("agent rendering", () => {
     );
   });
 
-  it("names the Playwright test agents as Claude only, and no others", () => {
-    expect(isPortable("playwright-test-generator.md")).toBe(false);
-    expect(isPortable("playwright-test-healer.md")).toBe(false);
-    expect(isPortable("playwright-test-planner.md")).toBe(false);
-    expect(isPortable("playwright-test-other.md")).toBe(true);
-    expect(isPortable("implementer.md")).toBe(true);
-    expect(isPortable("ui-verifier.md")).toBe(true);
-  });
-
   it.each(CLAUDE_ONLY_TOOL_NAMES as string[])(
     "rejects the Claude-only name %s in an agent body",
     (token) => {
@@ -313,15 +303,18 @@ describe("mirror planning", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  it("plans a byte-for-byte skill mirror and the generated agent files", () => {
+  it("plans a byte-for-byte skill mirror and the generated agent files, for every agent whatever its name", () => {
     const plan = plannedFiles(root);
     expect([...plan.keys()].sort()).toEqual([
       ".agents/skills/alpha/SKILL.md",
       ".agents/skills/alpha/references/bin.dat",
       ".agents/skills/alpha/references/notes.md",
       ".codex/agents/helper.toml",
+      ".codex/agents/playwright-test-healer.toml",
       ".github/agents/helper.agent.md",
+      ".github/agents/playwright-test-healer.agent.md",
       ".opencode/agents/helper.md",
+      ".opencode/agents/playwright-test-healer.md",
     ]);
     expect(plan.get(".agents/skills/alpha/references/bin.dat")).toEqual(
       Buffer.from([0, 255, 13, 10]),
@@ -330,7 +323,7 @@ describe("mirror planning", () => {
 
   it("reports every planned file as missing before the first sync", () => {
     const drift = findDrift(root, plannedFiles(root));
-    expect(drift.missing).toHaveLength(6);
+    expect(drift.missing).toHaveLength(9);
     expect(drift.changed).toEqual([]);
     expect(drift.extra).toEqual([]);
   });

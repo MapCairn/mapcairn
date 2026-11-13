@@ -29,7 +29,7 @@ An agent file is a short role: a name, a description and the text of the role, w
 
 Tool limits, such as a list of allowed tools, are enforced only in Claude Code. In every other tool, and in the generated files, a limit like "the reviewer does not edit" rests on the instruction in the role text alone, and nothing technical stops a shell from writing. The reviewer's and the verifier's role texts say so, and all of them are worded as instructions ("Do not edit files"), not as facts about Claude's tools.
 
-`ui-verifier` lists Claude Code's Playwright MCP tools in its source. The generated files omit them and the agent still works: the `visual-check` skill falls back to the Playwright command line and a short script. The three Playwright test agents (`playwright-test-planner`, `-generator`, `-healer`) depend on those tools and are named as Claude only in `scripts/agents/render.mjs`; they are not generated.
+`ui-verifier` has no browser tools of its own in its source: the `visual-check` skill uses the Playwright command line, or browser tools where the tool offers them. Writing and healing Playwright tests is the `playwright-tests` skill, not an agent, so every tool gets it from the skill copy (see "Playwright tests" below).
 
 ## What each tool reads
 
@@ -43,8 +43,6 @@ Checked on 2026-11-12 against each tool's own documentation. The pages were read
 | GitHub Copilot | `.github/copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md` or `GEMINI.md` (GitHub docs). In VS Code the file depends on the harness chosen | `.github/skills`, `.claude/skills`, `.agents/skills` (GitHub docs). VS Code lists the folder per harness | `.github/agents/*.agent.md` (public preview) |
 | Antigravity | `AGENTS.md` or `GEMINI.md`, also inside `.agents/`, and `.agents/rules/*.md` | `.agents/skills` (the older `.agent/skills` still works) | `.agents/agents/<name>.md`, with tool names of its own; not generated, see below |
 | Cursor | `AGENTS.md`, and `.cursor/rules/*.mdc`. `CLAUDE.md` not mentioned | `.agents/skills`, `.cursor/skills`, and `.claude/skills` and `.codex/skills` for compatibility | `.cursor/agents`, `.claude/agents` and `.codex/agents` |
-
-Gemini CLI, a separate tool, loads `GEMINI.md` by default and other names only when `context.fileName` lists them. `GEMINI.md` here is for it.
 
 What this means in practice:
 
@@ -61,6 +59,7 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Open the pull request and follow the `land-pr` skill. Do not merge."
 - "Review pull request 130 with the `fresh-eyes-reviewer` role."
 - "Look at the running app and follow the `visual-check` skill."
+- "Write the Playwright tests for issue 123 and follow the `playwright-tests` skill."
 
 Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer` or `ui-verifier`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tiers are named in `CLAUDE.md`; the generated agent files set no model.
 
@@ -74,13 +73,43 @@ When the project's `main` moves under an open pull request, merge it into the br
 
 ## Only in Claude Code
 
-- The Playwright test planner, generator and healer agents, and the Playwright MCP server in `.mcp.json`.
 - The Workflow tool and its opt-in rule, and the `fable` model rule, in `CLAUDE.md`.
 - Tool limits on agents (their `tools` lists). A person's own permission and hook settings are specific to the tool they use; no rule depends on one, because each is written in `AGENTS.md`.
+
+## Playwright tests
+
+The `playwright-tests` skill carries the MapCairn rules for planning, writing and healing the browser tests in `packages/web/e2e/`. It needs a shell and file access, and no MCP server, extension or image reader.
+
+The command-line procedure comes from the Playwright version in `package-lock.json`. The package `playwright-core` ships a skill at `node_modules/playwright-core/lib/tools/skills/playwright-cli/SKILL.md` (Apache-2.0), and `npx --no-install playwright cli` runs the commands it describes. The Playwright documentation says this needs Playwright 1.59 or newer; the repository has 1.65.0. The project skill points to that file, so no tool installs a package or copies a vendor skill, and the procedure matches the installed version.
+
+A model that cannot read images uses `snapshot` (the accessibility tree) instead of `screenshot`, and says in its report what it did not see. After `attach <session>`, every later command takes `-s=<session>`, and the seed is walked with `step-over`: on 1.65.0, `resume` let the seed finish and close the browser.
+
+How each tool reaches the skill (all of them can read `AGENTS.md` and a file path in the repository, so every tool can follow the skill even when it does not list it as a skill):
+
+| Tool | Skill reached through | Instructions |
+| --- | --- | --- |
+| Claude Code | `.claude/skills/playwright-tests` | `CLAUDE.md`, which imports `AGENTS.md` |
+| Codex | `.agents/skills/playwright-tests` | `AGENTS.md` |
+| opencode | `.opencode/skills`, `.claude/skills` or `.agents/skills` | `AGENTS.md` |
+| GitHub Copilot | `.claude/skills` or `.agents/skills` | `AGENTS.md`, `.github/copilot-instructions.md` |
+| Antigravity | `.agents/skills/playwright-tests` | `AGENTS.md` or `GEMINI.md` |
+| Cursor | `.agents/skills` or `.claude/skills` | `AGENTS.md` |
+
+Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None of them needs a new file.
+
+| Tool | What its documentation says | Source |
+| --- | --- | --- |
+| Windsurf | Reads `AGENTS.md` at the project root. Reads skills from `.agents/skills` as well as `.devin/skills` and `.windsurf/skills` | docs.windsurf.com (Customize, "AGENTS.md" and "Skill scopes") |
+| Cline | Reads `AGENTS.md` | docs.cline.bot (rules) |
+
+Cline's skills folder was not checked, so it follows the skill by path. The skill is written to be followed that way: open `.agents/skills/playwright-tests/SKILL.md`.
+
+No MCP configuration for another tool is committed, because the skill does not use MCP. `.vscode/mcp.json` is an editor setting that configures a Playwright, a Chrome DevTools and a GitHub server; no skill or agent here uses them. `npx --no-install playwright cli` covers the Playwright one, and `gh` covers the GitHub one (the skills already use `gh`). Whether the command line covers what the Chrome DevTools server does was not checked.
 
 ## What has not been checked
 
 - No skill has been run end to end in another tool. Codex, opencode, Cursor, Antigravity and Copilot's command line were not installed where this was written, and Copilot in VS Code (1.146.0) was not exercised. If you try one, say what broke in a pull request or an issue.
+- The Playwright command-line workflow was run only on Windows with Playwright 1.65.0 and only as far as attaching to the paused seed, stepping it and reading a `snapshot`. Planning, generating and healing a real spec through it, and `resume` followed by a command, were not tried (`resume` ends the seed run).
 - Whether opencode, Copilot and Cursor deduplicate a skill present in both `.claude/skills` and `.agents/skills`.
 - The generated TOML and YAML were not parsed by the tools' own readers. Skill frontmatter is held to the strict rule above, and the agent files are built from JSON-quoted strings, which both formats read.
 - Documentation changes often. A path that stops working is a reason to open an issue, with the tool, its version and the page that says otherwise.

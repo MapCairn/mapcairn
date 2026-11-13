@@ -11,7 +11,7 @@
  *
  * The project's skills in `.claude/skills` are copied to `.agents/skills` (read
  * by Codex, Antigravity and others). Skills named in `skills-lock.json` are
- * vendored from elsewhere and are neither checked nor copied. Each portable
+ * vendored from elsewhere and are neither checked nor copied. Each
  * agent in `.claude/agents` is written for opencode, Codex and GitHub Copilot. See `docs/guides/working-with-agents.md`.
  */
 import path from "node:path";
@@ -44,7 +44,7 @@ function planOrExit() {
     }
     const files = plannedFiles(root);
     if (files.size === 0) {
-      fail("nothing to generate: no project skills or portable agents found");
+      fail("nothing to generate: no project skills or agents found");
     }
     return files;
   } catch (error) {
