@@ -80,7 +80,11 @@ When the project's `main` moves under an open pull request, merge it into the br
 
 ## Playwright tests
 
-The `playwright-tests` skill carries the MapCairn rules for planning, writing and healing the browser tests in `packages/web/e2e/`. It needs a shell and file access, and no MCP server, extension or image reader. The command-line procedure comes from the Playwright version in `package-lock.json`: the package `playwright-core` ships a skill at `node_modules/playwright-core/lib/tools/skills/playwright-cli/SKILL.md` (Apache-2.0), and `npx --no-install playwright cli` runs the commands it describes (the Playwright documentation says this needs Playwright 1.59 or newer; the repository has 1.65.0). The project skill points to that file, so no tool installs a package or copies a vendor skill, and the procedure always matches the installed version. The project had a Playwright test MCP server and three Claude Code agents (planner, generator, healer) for the same job. They were removed by the maintainer's decision, because the command line does the job for every tool and model. A model that cannot read images uses `snapshot` (the accessibility tree) instead of `screenshot`, and says in its report what it did not see.
+The `playwright-tests` skill carries the MapCairn rules for planning, writing and healing the browser tests in `packages/web/e2e/`. It needs a shell and file access, and no MCP server, extension or image reader.
+
+The command-line procedure comes from the Playwright version in `package-lock.json`. The package `playwright-core` ships a skill at `node_modules/playwright-core/lib/tools/skills/playwright-cli/SKILL.md` (Apache-2.0), and `npx --no-install playwright cli` runs the commands it describes. The Playwright documentation says this needs Playwright 1.59 or newer; the repository has 1.65.0. The project skill points to that file, so no tool installs a package or copies a vendor skill, and the procedure matches the installed version.
+
+A model that cannot read images uses `snapshot` (the accessibility tree) instead of `screenshot`, and says in its report what it did not see. After `attach <session>`, every later command takes `-s=<session>`, and the seed is walked with `step-over`: on 1.65.0, `resume` let the seed finish and close the browser.
 
 How each tool reaches the skill (all of them can read `AGENTS.md` and a file path in the repository, so every tool can follow the skill even when it does not list it as a skill):
 
@@ -93,7 +97,7 @@ How each tool reaches the skill (all of them can read `AGENTS.md` and a file pat
 | Antigravity | `.agents/skills/playwright-tests` | `AGENTS.md` or `GEMINI.md` |
 | Cursor | `.agents/skills` or `.claude/skills` | `AGENTS.md` |
 
-Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None needs a new file.
+Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None of the verified tools needs a new file; Amp and Zed are unverified.
 
 | Tool | What its documentation says | Source |
 | --- | --- | --- |
@@ -113,6 +117,7 @@ No MCP configuration for another tool is committed, because the skill does not u
 ## What has not been checked
 
 - No skill has been run end to end in another tool. Codex, opencode, Cursor, Antigravity and Copilot's command line were not installed where this was written, and Copilot in VS Code (1.146.0) was not exercised. If you try one, say what broke in a pull request or an issue.
+- The Playwright command-line workflow was run only on Windows with Playwright 1.65.0 and only as far as attaching to the paused seed, stepping it and reading a `snapshot`. Planning, generating and healing a real spec through it, and `resume` followed by a command, were not tried (`resume` ends the seed run).
 - Whether opencode, Copilot and Cursor deduplicate a skill present in both `.claude/skills` and `.agents/skills`.
 - The generated TOML and YAML were not parsed by the tools' own readers. Skill frontmatter is held to the strict rule above, and the agent files are built from JSON-quoted strings, which both formats read.
 - Documentation changes often. A path that stops working is a reason to open an issue, with the tool, its version and the page that says otherwise.

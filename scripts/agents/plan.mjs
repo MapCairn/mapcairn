@@ -144,9 +144,9 @@ export function skillProblems(root) {
 }
 
 /**
- * The files the sync should produce: a byte-for-byte copy of each project skill
- * folder, not the vendored ones (as `Buffer`s) and one file per agent in each tool's format (as
- * strings), keyed by path relative to `root`.
+ * The files the sync should produce, keyed by path relative to `root`: a
+ * byte-for-byte copy of each project skill folder (as `Buffer`s, vendored skills
+ * left out) and one file per agent in each tool's format (as strings).
  *
  * @param {string} root
  * @returns {Map<string, Buffer | string>}
