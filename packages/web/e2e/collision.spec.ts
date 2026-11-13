@@ -5,7 +5,7 @@ import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { mockLayerProviders } from "./support/layers";
 import { inspectChromeLayout } from "./support/layout";
-import { scriptSearch } from "./support/services";
+import { scriptSearch, seedStoredSettings } from "./support/services";
 import {
   advanceTourTo,
   CHROME_STATES,
@@ -500,10 +500,10 @@ test.describe("tour card", () => {
 });
 
 /**
- * The sizes the map key's placement is checked at: every size of the chrome
- * matrix (phones in both orientations, a tablet and two desktops) and the
- * three more the key is also looked at (a small phone, a larger tablet and a
- * smaller desktop).
+ * The sizes the map key's placement and the bottom row are checked at: every
+ * size of the chrome matrix (phones in both orientations, a tablet and two
+ * desktops) and the three more they are also looked at (a small phone, a
+ * larger tablet and a smaller desktop).
  */
 const MAP_KEY_VIEWPORTS = [
   ...MATRIX_VIEWPORTS,
@@ -582,6 +582,152 @@ for (const viewport of MAP_KEY_VIEWPORTS) {
             await leaveState(mapPage, state);
           });
         }
+      }
+    },
+  );
+}
+
+/**
+ * The view the bottom row's worst case is looked at in: a negative latitude
+ * and a three-digit negative longitude, so the cursor coordinates are as long
+ * as they get ("-33.92000, -118.42000").
+ */
+const WIDEST_COORDINATES_VIEW = "#map=11/-33.92/-118.42";
+
+/** What the cursor coordinates look like once the pointer is over the map. */
+const COORDINATES_PATTERN = /-?\d+\.\d{5}, -?\d+\.\d{5}/;
+
+/** How far the pointer travels onto the free map point, so the map sees it move. */
+const STEP_BEFORE_HOVER_PX = 10;
+
+/** How long one trip of the pointer onto the map gets to show the coordinates. */
+const HOVER_TRIP_MS = 1_000;
+
+/** How long {@link hoverFreeMap} keeps sending the pointer before it gives up. */
+const HOVER_TIMEOUT_MS = 10_000;
+
+/**
+ * Moves the pointer onto a part of the map canvas that nothing covers, with
+ * map on every side of it (a gap between two surfaces is too narrow to rest on), the one
+ * nearest the middle of the screen and 30% of the way down. That is above the
+ * bottom row, whose credits popover rises over the pointer when the
+ * coordinates make the readout taller; a pointer under it would leave the map
+ * and clear the coordinates. Then waits for the readout to show the cursor
+ * coordinates. Fails when every point of the screen is covered.
+ */
+async function hoverFreeMap(mapPage: MapPage): Promise<void> {
+  const page = mapPage.page;
+  const point = await page.evaluate(() => {
+    const STEP = 20;
+    const ANCHOR_HEIGHT_RATIO = 0.3;
+    const centreX = document.documentElement.clientWidth / 2;
+    const centreY = document.documentElement.clientHeight * ANCHOR_HEIGHT_RATIO;
+    let best: { x: number; y: number } | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let y = STEP; y < document.documentElement.clientHeight; y += STEP) {
+      for (let x = STEP; x < centreX * 2; x += STEP) {
+        const distance = Math.hypot(x - centreX, y - centreY);
+        const isMap = (dx: number, dy: number) =>
+          document.elementFromPoint(x + dx, y + dy) instanceof
+          HTMLCanvasElement;
+        const surrounded = [-STEP, 0, STEP].every((dy) =>
+          [-STEP, 0, STEP].every((dx) => isMap(dx, dy)),
+        );
+        if (surrounded && distance < bestDistance) {
+          best = { x, y };
+          bestDistance = distance;
+        }
+      }
+    }
+    return best;
+  });
+  if (!point) {
+    throw new Error("No part of the map is uncovered.");
+  }
+  // The map ignores the pointer while it is still moving to a new pin, so the
+  // pointer travels onto the point again until the readout has the position.
+  await expect(async () => {
+    await page.mouse.move(point.x - STEP_BEFORE_HOVER_PX, point.y);
+    await page.mouse.move(point.x, point.y, { steps: 3 });
+    await expect(page.getByTestId("map-readout")).toContainText(
+      COORDINATES_PATTERN,
+      { timeout: HOVER_TRIP_MS },
+    );
+  }).toPass({ timeout: HOVER_TIMEOUT_MS });
+}
+
+/**
+ * The sizes where the readout can be taller than the credits slot: a window
+ * narrower than 768 px, which shows the coordinates under the scale bar, and
+ * the short landscape phone, which is in the side panel layout and also shows
+ * the zoom. Wider screens keep the readout beside the popover with room to spare.
+ */
+const TALL_READOUT_VIEWPORTS = [
+  { width: 320, height: 568 },
+  { width: 360, height: 640 },
+  { width: 390, height: 844 },
+  { width: 844, height: 390 },
+] as const;
+
+/**
+ * The chrome states the cursor test walks: the ones with no sheet or side
+ * panel open. With a sheet open the credits popover is closed and the whole
+ * row is lifted, which the collision test above and the unit test of the lift
+ * cover; and on the CI runner the pointer did not reach the map again after a
+ * sheet opened (a resting pointer there never showed the coordinates), so
+ * those states cannot be held for this test.
+ */
+const POINTER_OVER_MAP_STATES = [
+  "rest",
+  "search open",
+  "measure active",
+  "draw active",
+  "attribution open",
+] as const satisfies readonly (typeof CHROME_STATES)[number][];
+
+/*
+ * The bottom row at its tallest (issue: stop the bottom row overlapping at the
+ * smallest screen sizes). On a desktop pointer with imperial units, the cursor
+ * coordinates at their widest and the open key of six layers (the tallest
+ * case), the scale bar, the coordinates and the credits popover share the
+ * bottom row in the states of {@link POINTER_OVER_MAP_STATES}, and none of them
+ * collides. The other tests
+ * leave the pointer off the map, so the readout is only the scale bar there,
+ * and a touch screen never shows the coordinates, so this runs on the desktop
+ * pointer project only.
+ *
+ * The credits state is entered with a click and the pointer then goes back to
+ * the map. That models the paths where credits and coordinates are on screen
+ * together (the first showing after the map starts, and opening the credits
+ * from the keyboard), not a mouse click on the button: the pointer leaving the
+ * map clears the coordinates.
+ */
+for (const viewport of TALL_READOUT_VIEWPORTS) {
+  test(
+    `the bottom row never collides with the cursor readout at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage, isMobile }) => {
+      test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+      await mockLayerProviders(page);
+      await seedStoredSettings(page, { units: "imperial" });
+      await page.setViewportSize(viewport);
+      await scriptSearch(page);
+      await mapPage.goto(`${WIDEST_COORDINATES_VIEW}&${KEYED_LAYERS.slice(1)}`);
+
+      await collapseCredits(mapPage);
+      await setMapKey(mapPage, "open");
+      for (const state of POINTER_OVER_MAP_STATES) {
+        await test.step(state, async () => {
+          await enterState(mapPage, state);
+          await hoverFreeMap(mapPage);
+          await waitForStableLayout(page);
+          const report = await inspectChromeLayout(page);
+          const context = `${state}: ${JSON.stringify(report.boxes)}`;
+          expect(report.overlaps, context).toEqual([]);
+          expect(report.outside, context).toEqual([]);
+          expect(report.obscured, context).toEqual([]);
+          await leaveState(mapPage, state);
+        });
       }
     },
   );

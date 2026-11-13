@@ -20,11 +20,17 @@ export const chromeVars = {
   endStackMaxHeight: "--chrome-end-stack-max-height",
   /** Width of the end stack, zero when it is absent. */
   endStackWidth: "--chrome-end-stack-width",
-  /** Vertical room above the bottom-end slot that stays clear of the end stack. */
+  /**
+   * How far the top of the bottom row is above the top of the bottom-end slot
+   * (zero or positive): the extra height of the bottom-start readout. The
+   * credits popover rises this far more, so it clears the whole row.
+   */
+  bottomEndRise: "--chrome-bottom-end-rise",
+  /** Vertical room above the bottom row that stays clear of the end stack. */
   bottomEndRoom: "--chrome-bottom-end-room",
   /**
-   * Vertical room above the bottom-end slot for something placed beside the
-   * end stack rather than under it: from the gap below the top-start slot.
+   * Vertical room above the bottom row for something placed beside the end
+   * stack rather than under it: from the gap below the top-start slot.
    */
   bottomEndBesideRoom: "--chrome-bottom-end-beside-room",
   /** Vertical shift of the bottom-start and bottom-end slots (zero or negative). */

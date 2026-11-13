@@ -116,12 +116,17 @@ function place(name: string, top: number, height: number, width = 0) {
 }
 
 /** Sizes the container, lays the slots out like a phone and reports a resize. */
-function resize(width: number, height: number, tourHeight = 0) {
+function resize(
+  width: number,
+  height: number,
+  tourHeight = 0,
+  readoutHeight = 30,
+) {
   mockRect(root(), { left: 0, top: 0, width, height });
   place("top-start", 12, 48);
   place("tour", 72, tourHeight);
   place("end-stack", 72, 300, 48);
-  place("bottom-start", height - 12 - 30, 30);
+  place("bottom-start", height - 12 - readoutHeight, readoutHeight);
   place("bottom-end", height - 12 - 44, 44);
   place("bottom-centre", height - 12, 0);
   act(() => {
@@ -265,6 +270,62 @@ describe("MapChrome layout", () => {
     expect(cssVar(chromeVars.endStackMaxHeight)).toBe(`${744 - 12 - 72}px`);
     // Room for the credits popover: from the stack's bottom (372) to the
     // bottom-end slot's top, less the gap.
+    expect(cssVar(chromeVars.bottomEndRoom)).toBe(`${744 - 12 - 372}px`);
+  });
+
+  it("keeps the credits popover above the whole bottom row, whichever slot is tallest", () => {
+    mount();
+    resize(390, 800);
+    // The credits slot is the tallest: nothing to rise over.
+    expect(cssVar(chromeVars.bottomEndRise)).toBe("0px");
+
+    // A readout 68 px tall starts at 800 - 12 - 68 = 720, 24 px above the
+    // credits slot's top (744): the popover rises that far and has that much
+    // less room.
+    resize(390, 800, 0, 68);
+    expect(cssVar(chromeVars.bottomEndRise)).toBe("24px");
+    expect(cssVar(chromeVars.bottomEndRoom)).toBe(`${720 - 12 - 372}px`);
+    expect(cssVar(chromeVars.bottomEndBesideRoom)).toBe(`${720 - 12 - 60}px`);
+  });
+
+  it("keeps the rise and measures the rooms from the lifted row while the sheet lifts it", () => {
+    mount();
+    resize(390, 800, 0, 68);
+    const heights = computeDetentHeights({
+      viewportHeight: 800,
+      insetBottom: 0,
+    });
+    const top = 800 - heights.half;
+    act(() => {
+      layoutValue.publishSheetTop(top);
+      surfaceValue.publishSheetDetent("half");
+    });
+    const { bottomEndTranslateY: lift } = computeBottomSlotLayout({
+      layout: "sheet",
+      viewportWidth: 390,
+      viewportHeight: 800,
+      sheetTopEdge: top,
+      sheetDetent: "half",
+      panelRightEdge: null,
+      measureToolbarTop: null,
+      inset: 12,
+    });
+    expect(lift).toBeLessThan(0);
+    // The lift moves the whole row, so the readout still reaches 24 px above
+    // the credits slot, and the rooms start from the lifted row's top (720).
+    expect(cssVar(chromeVars.bottomEndRise)).toBe("24px");
+    expect(cssVar(chromeVars.bottomEndRoom)).toBe(
+      `${Math.max(0, 720 + lift - 12 - 372)}px`,
+    );
+    expect(cssVar(chromeVars.bottomEndBesideRoom)).toBe(
+      `${Math.max(0, 720 + lift - 12 - 60)}px`,
+    );
+  });
+
+  it("has no rise without a bottom-start slot", () => {
+    mount({ bottomStart: undefined });
+    resize(390, 800, 0, 68);
+    expect(cssVar(chromeVars.bottomEndRise)).toBe("0px");
     expect(cssVar(chromeVars.bottomEndRoom)).toBe(`${744 - 12 - 372}px`);
   });
 
