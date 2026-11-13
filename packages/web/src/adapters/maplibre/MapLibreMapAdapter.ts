@@ -782,9 +782,9 @@ export class MapLibreMapAdapter implements MapAdapter {
   private styleLoading = false;
   /**
    * The basemap's own sources that last reported themselves not fully loaded,
-   * by engine source id. Data layer sources are never here: each layer reports
-   * its own status, and a tile of one that never answers (issue #129) must not
-   * hold the map's busy state.
+   * by engine source id. Data layer sources are never here: a tile of one that
+   * never answers keeps the engine from going idle, and must not hold the
+   * map's busy state.
    */
   private readonly basemapSourcesLoading = new Set<string>();
   /**
