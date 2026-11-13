@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import fc from "fast-check";
+import type { Geometry } from "geojson";
 import { describe, expect, it } from "vitest";
 import { formatWkt, type WktAxisOrder } from "../geometry/wkt";
 import { geoJsonGeometry } from "../propertyTesting/geoArbitraries";
 import { PROPERTY_PARAMETERS } from "../propertyTesting/propertyParameters";
-import { finishShape, shapeInput } from "../propertyTesting/shapeArbitraries";
+import {
+  finishShape,
+  shapeInput,
+  smallCircleInput,
+} from "../propertyTesting/shapeArbitraries";
 import {
   hostileText,
   repeatedFragment,
@@ -108,8 +113,24 @@ function exportedShapes(inputs: readonly DrawShapeInput[]): unknown[] {
   );
 }
 
-/** A shape set of the size an export holds in practice. */
-const exportable = fc.array(shapeInput, { minLength: 1, maxLength: 8 });
+/** How far, in degrees, a position may move when text written to six decimals or more is read and written again. */
+const ROUNDING_TOLERANCE = 1e-6;
+
+/** The numbers of a geometry's coordinates, in order. */
+function coordinateNumbers(geometry: Geometry | undefined): number[] {
+  if (geometry === undefined || geometry.type === "GeometryCollection") {
+    return [];
+  }
+  return (geometry.coordinates as unknown[]).flat(
+    Number.POSITIVE_INFINITY,
+  ) as number[];
+}
+
+/** A shape set of the size an export holds in practice, with small circles among it. */
+const exportable = fc.array(fc.oneof(shapeInput, smallCircleInput), {
+  minLength: 1,
+  maxLength: 8,
+});
 
 /** Every imported shape obeys the draw rules and stays inside the world, and the caps hold. */
 function expectWellFormed(result: ShapeImport): void {
@@ -167,19 +188,36 @@ describe("parseShapeFile round trips", () => {
 });
 
 describe("parseShapeFile with WKT", () => {
-  // A circle comes back as its polygon outline, and a very small outline
-  // rounded to six decimals can fold in on itself, so circles are left to
-  // the example test in import.test.ts.
-  it("reads back the WKT it exported, as the same geometries", () => {
-    const withoutCircles = fc.array(
-      shapeInput.filter((input) => input.kind !== "circle"),
+  // A circle comes back as its polygon outline, which is written again with as
+  // few decimals as keep it valid, so a position may differ by a rounding.
+  // Only small circles are used: a large one can reach over a pole or the
+  // antimeridian, where its outline is not a polygon of the plane and the
+  // importer skips it.
+  it("reads back the WKT it exported, as the same geometries to a rounding", () => {
+    const withSmallCircles = fc.array(
+      fc.oneof(
+        shapeInput.filter((input) => input.kind !== "circle"),
+        smallCircleInput,
+      ),
       { minLength: 1, maxLength: 8 },
     );
     fc.assert(
-      fc.property(withoutCircles, (inputs) => {
+      fc.property(withSmallCircles, (inputs) => {
         const shapes = inputs.map(finishShape);
         const read = shapesOf(parseShapeFile(shapesToWkt(shapes)));
-        expect(shapesToWkt(read.map(finishShape))).toBe(shapesToWkt(shapes));
+        const written = shapesToGeoJson(shapes).features;
+        const readBack = shapesToGeoJson(read.map(finishShape)).features;
+        expect(readBack).toHaveLength(written.length);
+        for (const [index, feature] of written.entries()) {
+          const before = coordinateNumbers(feature.geometry);
+          const after = coordinateNumbers(readBack[index]?.geometry);
+          expect(after).toHaveLength(before.length);
+          for (const [place, number] of before.entries()) {
+            expect(
+              Math.abs((after[place] as number) - number),
+            ).toBeLessThanOrEqual(ROUNDING_TOLERANCE);
+          }
+        }
       }),
       PROPERTY_PARAMETERS,
     );
