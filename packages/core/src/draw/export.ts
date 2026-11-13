@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
+import { fixedDecimal, withFixedDecimals } from "../geometry/fixedDecimal";
 import { formatWkt } from "../geometry/wkt";
 import type { LatLng } from "../ports/geometry";
 import { ringSignedArea } from "./geo";
@@ -15,6 +16,7 @@ const COORDINATE_DECIMALS = 6;
  */
 const MAX_COORDINATE_DECIMALS = 10;
 const MEASURE_DECIMALS = 2;
+const JSON_INDENT = 2;
 
 /**
  * A circle with at least this radius is written at six decimals without
@@ -167,6 +169,9 @@ function properties(shape: DrawShape): Record<string, unknown> {
  * shape's id, its name, its type and its area and length where they apply.
  * A circle also carries `radius_m` and its `centre`. Only
  * {@link exportableShapes} are included.
+ *
+ * The numbers are the shape's own: `JSON.stringify` writes one under 1e-6 in
+ * exponent notation, so write the file with {@link shapesToGeoJsonText}.
  */
 export function shapesToGeoJson(
   shapes: readonly DrawShape[],
@@ -187,10 +192,24 @@ export function shapesToGeoJson(
 }
 
 /**
+ * The text of the GeoJSON file for the shapes: {@link shapesToGeoJson} as
+ * JSON indented by two spaces, with every number written as plain decimal
+ * text and none with an exponent (`0.00000078`, not `7.8e-7`), as the CSV and
+ * the WKT are. The text is the same as `JSON.stringify(collection, null, 2)`
+ * wherever that has no exponent.
+ */
+export function shapesToGeoJsonText(shapes: readonly DrawShape[]): string {
+  return withFixedDecimals(
+    JSON.stringify(shapesToGeoJson(shapes), null, JSON_INDENT),
+  );
+}
+
+/**
  * The shapes as Well-Known Text, one geometry to a line and longitude first,
  * in the order of the list, with the positions {@link shapeGeometry} gives
- * (six decimals, or more for a small shape). A circle is written as the
- * polygon of its outline, so it reads back as a polygon. Only
+ * (six decimals, or more for a small shape), each as plain decimal text with
+ * no exponent. A circle is written as the polygon of its outline, so it reads
+ * back as a polygon. Only
  * {@link exportableShapes} are included, so the text is empty when there are
  * none.
  */
@@ -220,9 +239,9 @@ function circleCells(shape: DrawShape): string[] {
   }
   const [lng, lat] = position(shape.vertices[0] as LatLng);
   return [
-    String(round(shape.radiusMetres ?? 0, MEASURE_DECIMALS)),
-    String(lng),
-    String(lat),
+    fixedDecimal(round(shape.radiusMetres ?? 0, MEASURE_DECIMALS)),
+    fixedDecimal(lng as number),
+    fixedDecimal(lat as number),
   ];
 }
 
@@ -231,7 +250,8 @@ function circleCells(shape: DrawShape): string[] {
  * geometry as quoted text, and for a circle its `radius_m`, `centre_lng`
  * and `centre_lat`, so a circle can be read back as a circle. Rows end with
  * CRLF between them, the measures are rounded to two decimals and are empty
- * where they do not apply. Only {@link exportableShapes} are included.
+ * where they do not apply, and no number has an exponent. Only
+ * {@link exportableShapes} are included.
  */
 export function shapesToCsv(shapes: readonly DrawShape[]): string {
   const rows = [SHAPES_CSV_HEADER];
@@ -249,7 +269,7 @@ export function shapesToCsv(shapes: readonly DrawShape[]): string {
         lengthMetres === null
           ? ""
           : String(round(lengthMetres, MEASURE_DECIMALS)),
-        quote(JSON.stringify(geometry)),
+        quote(withFixedDecimals(JSON.stringify(geometry))),
         ...circleCells(shape),
       ].join(","),
     );

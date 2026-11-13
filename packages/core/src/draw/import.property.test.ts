@@ -4,6 +4,7 @@ import fc from "fast-check";
 import type { Geometry } from "geojson";
 import { describe, expect, it } from "vitest";
 import { formatWkt, type WktAxisOrder } from "../geometry/wkt";
+import { decimalPlaces } from "../propertyTesting/decimalPlaces";
 import {
   degreesOnGrid,
   geoJsonGeometry,
@@ -232,9 +233,7 @@ describe("shapeGeometry of a large circle", () => {
         const ring = (geometry.coordinates[0] ?? []).slice(0, -1);
         for (const position of ring) {
           for (const number of position) {
-            expect(
-              (String(number).split(".")[1] ?? "").length,
-            ).toBeLessThanOrEqual(6);
+            expect(decimalPlaces(number)).toBeLessThanOrEqual(6);
           }
         }
         expect(

@@ -41,7 +41,7 @@ import {
   selectedShape,
   shapeInputBounds,
   shapesToCsv,
-  shapesToGeoJson,
+  shapesToGeoJsonText,
   shapesToWkt,
   type UnitSystem,
   validateShape,
@@ -663,9 +663,7 @@ export function useDraw({
 
   const exportGeoJson = useCallback(
     () =>
-      exportFile(GEOJSON_FILENAME, "application/geo+json", (ready) =>
-        JSON.stringify(shapesToGeoJson(ready), null, 2),
-      ),
+      exportFile(GEOJSON_FILENAME, "application/geo+json", shapesToGeoJsonText),
     [exportFile],
   );
 
