@@ -121,9 +121,18 @@ export interface MapTileLayerUnavailable {
 }
 
 /**
+ * What {@link MapEvents.tileLayerSlow} carries: the layer and the tiles it is
+ * still waiting for, in the form of {@link MapTileLayerUnavailable} so a report
+ * that arrives after the layer was set again can be told from one for what is
+ * on the map now.
+ */
+export type MapTileLayerSlow = MapTileLayerUnavailable;
+
+/**
  * What {@link MapEvents.tileLayerRecovered} carries: the layer and the tiles
- * of the {@link MapTileLayerUnavailable} report it ends, so a recovery for
- * tiles the layer has since moved on from can be told from the current one.
+ * of the {@link MapTileLayerSlow} or {@link MapTileLayerUnavailable} report it
+ * ends, so a recovery for tiles the layer has since moved on from can be told
+ * from the current one.
  */
 export type MapTileLayerRecovered = MapTileLayerUnavailable;
 
@@ -467,10 +476,23 @@ export interface MapEvents {
    */
   tileLayerUnavailable: MapTileLayerUnavailable;
   /**
+   * A tile data layer has had tiles asked for, and none of its tiles has
+   * loaded, for longer than the adapter's wait: the provider is slow or not
+   * answering. It does not wait for the map to settle, which a tile that never
+   * answers prevents. It is emitted at most once each time the layer's tiles
+   * are set, only while a tile it asked for is still outstanding, and never
+   * once any tile of the layer has loaded. A layer that goes on to report
+   * `tileLayerUnavailable` for the same tiles (the tile that held it up was
+   * answered with a failure, and the map settled) has both, slow first; the
+   * ui shows the later. The layer's failures raise no general `tileError`.
+   */
+  tileLayerSlow: MapTileLayerSlow;
+  /**
    * A tile of a tile data layer loaded after the layer reported
-   * `tileLayerUnavailable` for the same tiles, for example once a transient
-   * failure has passed and the person pans. It is emitted once for each such
-   * report, when the first tile loads, and never for a layer that has not
+   * `tileLayerSlow` or `tileLayerUnavailable` for the same tiles, for example
+   * once a transient failure has passed and the person pans. It is emitted once
+   * for each drawing that reported, when the first tile loads, however many
+   * of the two it reported, and never for a layer that has not
    * reported, so a layer that always loaded says nothing. "Each report" is per
    * drawing: setting the layer to new tiles starts the count again, and so
    * does the map drawing it again with the same tiles (a basemap swap or a

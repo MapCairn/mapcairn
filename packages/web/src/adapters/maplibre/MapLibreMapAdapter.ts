@@ -215,6 +215,19 @@ export const TILE_SETTLE_NUDGE_MS = 250;
  */
 const TILE_SETTLE_GIVE_UP_MS = 30_000;
 
+/**
+ * How long, in milliseconds, a tile data layer may have tiles asked for and
+ * none loaded before the adapter reports it as slow (`tileLayerSlow`). It runs
+ * from the first tile asked for and is not pushed back by later ones, so it
+ * measures how long the layer has had nothing to show. It is a judgement, not a
+ * measured figure: long enough that a provider that is merely slow to render
+ * a tile is not flagged, and well inside {@link TILE_SETTLE_GIVE_UP_MS}, which
+ * is counted from the last tile asked for and so never ends before this does.
+ * The map keeps repainting until then, so a tile answered late with a 404 can
+ * still turn the report into `tileLayerUnavailable`.
+ */
+export const TILE_LAYER_SLOW_MS = 10_000;
+
 /** Options for {@link MapLibreMapAdapter}. */
 export interface MapLibreMapAdapterOptions {
   /** Overrides {@link WORKER_FAILURE_GRACE_MS}, for example 0 in a test. */
@@ -261,9 +274,18 @@ function idleBasemapTiles(): BasemapTiles {
 }
 
 /**
+ * What a tile data layer has told the ui about its tiles so far: nothing, that
+ * it is slow (`tileLayerSlow`), or that none came (`tileLayerUnavailable`),
+ * which follows slow when the tile that held the layer up is answered with a
+ * failure.
+ */
+type TileLayerReport = "none" | "slow" | "unavailable";
+
+/**
  * Tile traffic of one tile data layer since its source was last drawn. The
- * engine fires no `error` for a tile the provider answers with a 404, so the
- * layer is judged by what was asked for and what arrived, not by failures.
+ * engine fires no `error` for a tile the provider answers with a 404, and
+ * fires nothing for one that never answers, so the layer is judged by what was
+ * asked for and what arrived, not by failures.
  */
 interface TileLayerTraffic {
   readonly layerId: string;
@@ -272,24 +294,33 @@ interface TileLayerTraffic {
   requested: number;
   aborted: number;
   loaded: number;
-  reported: boolean;
+  report: TileLayerReport;
+  /** The wait ({@link TILE_LAYER_SLOW_MS}) before the layer is reported slow, while one runs. */
+  slowTimer?: ReturnType<typeof setTimeout>;
 }
 
 /**
- * Whether a tile layer drawn again for `tiles` is still one that reported no
- * tiles: its earlier drawing reported and loaded none, for the same tiles. The
+ * What a tile layer drawn again for `tiles` starts out as having reported: the
+ * report of its earlier drawing if that loaded no tile, for the same tiles. The
  * report was made to the ui and its status is still showing, so the new
  * drawing's first tile has to end it.
  */
-function isStillUnavailable(
+function carriedReport(
   earlier: TileLayerTraffic | undefined,
   tiles: string,
-): boolean {
-  return (
-    earlier?.reported === true &&
-    earlier.loaded === 0 &&
-    earlier.tiles === tiles
-  );
+): TileLayerReport {
+  return earlier?.loaded === 0 && earlier.tiles === tiles
+    ? earlier.report
+    : "none";
+}
+
+/** Whether a tile layer has asked for a tile that has neither loaded nor been given up on. */
+function hasOutstandingTile({
+  requested,
+  aborted,
+  loaded,
+}: TileLayerTraffic): boolean {
+  return requested > aborted + loaded;
 }
 
 /** The id of the image source and layer under a hybrid basemap's labels. */
@@ -749,7 +780,10 @@ interface WorkerCheck {
  *   Engine `error` events are classified once:
  *   - a tile or source failure leaves the map working (`tileError`), except
  *     one of a raster tile data layer, which that layer reports itself as
- *     `tileLayerUnavailable` when the map settles (see `reportUnavailableTileLayers`);
+ *     `tileLayerUnavailable` when the map settles (see
+ *     `reportUnavailableTileLayers`), or as `tileLayerSlow` when it has
+ *     waited {@link TILE_LAYER_SLOW_MS} with nothing loaded (see
+ *     `watchForSlowTiles`);
  *   - a source-less error before the pending style document has loaded
  *     (`style.load`) means that document failed: it rejects the pending
  *     mount or swap, and a failed swap puts the last basemap that loaded
@@ -1383,6 +1417,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (!drawn) {
       return;
     }
+    clearTimeout(this.tileTraffic.get(drawn.source)?.slowTimer);
     this.tileTraffic.delete(drawn.source);
     for (const layerId of drawn.layers) {
       if (map.getLayer(layerId)) {
@@ -1677,7 +1712,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         requested: 0,
         aborted: 0,
         loaded: 0,
-        reported: isStillUnavailable(earlierTraffic, layer.overlay.tiles),
+        report: carriedReport(earlierTraffic, layer.overlay.tiles),
       });
     }
     map.addSource(source, plan.source as unknown as SourceSpecification);
@@ -1941,7 +1976,12 @@ export class MapLibreMapAdapter implements MapAdapter {
     });
     listen("sourcedataloading", (event) => {
       this.trackBasemapSource(event, map);
-      if (this.countTileLayerTile(tileEventSource(event), "requested")) {
+      const traffic = this.countTileLayerTile(
+        tileEventSource(event),
+        "requested",
+      );
+      if (traffic) {
+        this.watchForSlowTiles(traffic);
         this.repaintUntilIdle(map);
       }
     });
@@ -1999,34 +2039,64 @@ export class MapLibreMapAdapter implements MapAdapter {
   /**
    * Counts one tile of a tile data layer's source that was asked for or given
    * up on; any other source is not counted.
-   * @returns Whether the source is a tile data layer's.
+   * @returns The layer's traffic, or undefined when the source is not a tile
+   *   data layer's.
    */
   private countTileLayerTile(
     sourceId: string | undefined,
     count: "requested" | "aborted",
-  ): boolean {
+  ): TileLayerTraffic | undefined {
     const traffic =
       sourceId === undefined ? undefined : this.tileTraffic.get(sourceId);
-    if (!traffic) {
-      return false;
+    if (traffic) {
+      traffic[count] += 1;
     }
-    traffic[count] += 1;
-    return true;
+    return traffic;
+  }
+
+  /**
+   * Starts the wait of {@link TILE_LAYER_SLOW_MS} for a layer that has had a
+   * tile asked for, if it has none running and has nothing to show: no tile
+   * loaded and nothing reported yet. Later tiles asked for do not restart it.
+   * When it ends, the layer is reported slow if a tile is still outstanding;
+   * otherwise nothing is outstanding and the next tile asked for starts it again.
+   */
+  private watchForSlowTiles(traffic: TileLayerTraffic): void {
+    if (
+      traffic.slowTimer !== undefined ||
+      traffic.loaded > 0 ||
+      traffic.report !== "none"
+    ) {
+      return;
+    }
+    traffic.slowTimer = setTimeout(() => {
+      traffic.slowTimer = undefined;
+      if (!hasOutstandingTile(traffic)) {
+        return;
+      }
+      traffic.report = "slow";
+      this.emitter.emit("tileLayerSlow", {
+        layerId: traffic.layerId,
+        tiles: traffic.tiles,
+      });
+    }, TILE_LAYER_SLOW_MS);
   }
 
   /**
    * Counts one tile that loaded for a tile data layer's source (any other
    * source is not counted), and reports `tileLayerRecovered` if it is the
-   * first since the layer reported `tileLayerUnavailable`. The recovery is
-   * decided from the counters before the tile is added to them.
+   * first since the layer reported `tileLayerSlow` or `tileLayerUnavailable`.
+   * The recovery is decided from the counters before the tile is added to them.
    */
   private recordLoadedTile(sourceId: string): void {
     const traffic = this.tileTraffic.get(sourceId);
     if (!traffic) {
       return;
     }
-    const recovered = traffic.reported && traffic.loaded === 0;
+    const recovered = traffic.report !== "none" && traffic.loaded === 0;
     traffic.loaded += 1;
+    clearTimeout(traffic.slowTimer);
+    traffic.slowTimer = undefined;
     if (recovered) {
       this.emitter.emit("tileLayerRecovered", {
         layerId: traffic.layerId,
@@ -2069,17 +2139,20 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   /**
    * Reports `tileLayerUnavailable` once for each tile data layer the map has
-   * settled on with tiles asked for and none loaded. A tile given up on (the
-   * view moved on) does not count as asked for, and a layer that has drawn
-   * any tile is not reported, however many fail afterwards.
+   * settled on with tiles asked for and none loaded, including one already
+   * reported slow. A tile given up on (the view moved on) does not count as
+   * asked for, and a layer that has drawn any tile is not reported, however
+   * many fail afterwards.
    */
   private reportUnavailableTileLayers(): void {
     for (const traffic of this.tileTraffic.values()) {
-      const { layerId, tiles, requested, aborted, loaded, reported } = traffic;
-      if (reported || loaded > 0 || requested <= aborted) {
+      const { layerId, tiles, requested, aborted, loaded, report } = traffic;
+      if (report === "unavailable" || loaded > 0 || requested <= aborted) {
         continue;
       }
-      traffic.reported = true;
+      clearTimeout(traffic.slowTimer);
+      traffic.slowTimer = undefined;
+      traffic.report = "unavailable";
       this.emitter.emit("tileLayerUnavailable", { layerId, tiles });
     }
   }
@@ -2259,9 +2332,7 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   /** Whether any tile layer has asked for a tile that has neither loaded nor been given up on. */
   private tileLayerTilesOutstanding(): boolean {
-    return [...this.tileTraffic.values()].some(
-      ({ requested, aborted, loaded }) => requested > aborted + loaded,
-    );
+    return [...this.tileTraffic.values()].some(hasOutstandingTile);
   }
 
   private setLoading(loading: boolean): void {
@@ -2294,6 +2365,9 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.editHandles.reset();
     this.clearWorkerCheck();
     this.stopRepaintingUntilIdle();
+    for (const traffic of this.tileTraffic.values()) {
+      clearTimeout(traffic.slowTimer);
+    }
     for (const subscription of this.subscriptions) {
       subscription.unsubscribe();
     }

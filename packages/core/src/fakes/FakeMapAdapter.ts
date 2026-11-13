@@ -211,8 +211,8 @@ export class FakeMapAdapter implements MapAdapter {
   #destroyed = false;
   #listeners = new Map<keyof MapEvents, Set<Handler>>();
   #dataLayers = new Map<string, DataLayer>();
-  /** The tiles each tile layer reported no tiles for, until they load or change. */
-  #unavailableTiles = new Map<string, string>();
+  /** The tiles each tile layer reported as slow or missing, until they load or change. */
+  #reportedTiles = new Map<string, string>();
   #hitsAtPointer: readonly MapFeatureHit[] = [];
   #failNextImage = false;
   #stallImageTiles = false;
@@ -467,8 +467,8 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   setTileLayer(id: string, overlay: MapTileOverlay): void {
-    if (this.#unavailableTiles.get(id) !== overlay.tiles) {
-      this.#unavailableTiles.delete(id);
+    if (this.#reportedTiles.get(id) !== overlay.tiles) {
+      this.#reportedTiles.delete(id);
     }
     this.#dataLayers.delete(id);
     this.#dataLayers.set(id, { kind: "tiles", overlay });
@@ -495,7 +495,7 @@ export class FakeMapAdapter implements MapAdapter {
   }
 
   removeLayer(id: string): void {
-    this.#unavailableTiles.delete(id);
+    this.#reportedTiles.delete(id);
     this.#dataLayers.delete(id);
   }
 
@@ -871,28 +871,41 @@ export class FakeMapAdapter implements MapAdapter {
    * that is not a drawn tile layer has no tiles, so nothing is emitted.
    */
   simulateTileLayerFailure(layerId: string): void {
-    const layer = this.#dataLayers.get(layerId);
-    if (layer?.kind === "tiles") {
-      this.#unavailableTiles.set(layerId, layer.overlay.tiles);
-      this.#emit("tileLayerUnavailable", {
-        layerId,
-        tiles: layer.overlay.tiles,
-      });
-    }
+    this.#reportTileLayer(layerId, "tileLayerUnavailable");
+  }
+
+  /**
+   * Emits `tileLayerSlow` for the tile layer `layerId` as it is drawn, as an
+   * engine does when none of its tiles has loaded for longer than its wait. A
+   * layer that is not a drawn tile layer has no tiles, so nothing is emitted.
+   */
+  simulateTileLayerSlow(layerId: string): void {
+    this.#reportTileLayer(layerId, "tileLayerSlow");
   }
 
   /**
    * Emits `tileLayerRecovered` for the tile layer `layerId`, as an engine does
-   * when a tile loads after the layer reported no tiles. A layer that has not
-   * reported (or has since been set to other tiles, or removed) emits nothing,
-   * and one report is ended by one recovery.
+   * when a tile loads after the layer reported slow tiles or no tiles. A layer
+   * that has not reported (or has since been set to other tiles, or removed)
+   * emits nothing, and the reports of one drawing are ended by one recovery.
    */
   simulateTileLayerRecovery(layerId: string): void {
     const layer = this.#dataLayers.get(layerId);
-    const tiles = this.#unavailableTiles.get(layerId);
+    const tiles = this.#reportedTiles.get(layerId);
     if (layer?.kind === "tiles" && tiles === layer.overlay.tiles) {
-      this.#unavailableTiles.delete(layerId);
+      this.#reportedTiles.delete(layerId);
       this.#emit("tileLayerRecovered", { layerId, tiles });
+    }
+  }
+
+  #reportTileLayer(
+    layerId: string,
+    event: "tileLayerSlow" | "tileLayerUnavailable",
+  ): void {
+    const layer = this.#dataLayers.get(layerId);
+    if (layer?.kind === "tiles") {
+      this.#reportedTiles.set(layerId, layer.overlay.tiles);
+      this.#emit(event, { layerId, tiles: layer.overlay.tiles });
     }
   }
 

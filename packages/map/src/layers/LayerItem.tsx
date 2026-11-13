@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   describeChosenTime,
+  describeTilesSlow,
   describeTilesUnavailable,
   type FormatterRegistry,
   formatTemplate,
@@ -12,7 +13,7 @@ import {
   loadsFeatures,
   resolveDateBound,
 } from "@mapcairn/core";
-import { RotateCw, TriangleAlert } from "lucide-react";
+import { Hourglass, RotateCw, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { useSaveData } from "../services";
 import { Button } from "../ui/Button";
@@ -296,6 +297,17 @@ export function LayerItem({
               data-testid={`layer-status-${definition.id}`}
             >
               {text}
+            </p>
+          ) : null}
+          {status.kind === "tiles-slow" ? (
+            <p
+              className={styles.status}
+              data-testid={`layer-status-${definition.id}`}
+            >
+              <span className={styles.statusWaiting}>
+                <Icon icon={Hourglass} />
+                {describeTilesSlow()}
+              </span>
             </p>
           ) : null}
           {status.kind === "tiles-unavailable" ? (
