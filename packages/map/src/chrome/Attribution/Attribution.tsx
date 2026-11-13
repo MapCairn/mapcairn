@@ -77,9 +77,9 @@ export interface AttributionProps {
  *
  *   After that it behaves as a popover the person opens. It opens above the
  *   bottom row, clear of the readout beside the button. If the credits would
- *   scroll there, it moves beside the end stack
- *   before it is painted, where `MapChrome` measures more room; it scrolls
- *   only if that is not enough either. Opening moves focus to the first link.
+ *   scroll there, it moves beside the end stack before it is painted, where
+ *   `MapChrome` measures more room; it scrolls only if that is not enough
+ *   either. Opening moves focus to the first link.
  *   The popover closes on Escape, on a second press of the button, on a
  *   pointer down outside it, and when the map moves; if focus was inside it,
  *   focus goes back to the button with an explicit `focus()` (Safari does not

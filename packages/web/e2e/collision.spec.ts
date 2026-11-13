@@ -601,7 +601,10 @@ const COORDINATES_PATTERN = /-?\d+\.\d{5}, -?\d+\.\d{5}/;
 const STEP_BEFORE_HOVER_PX = 10;
 
 /** How long one trip of the pointer onto the map gets to show the coordinates. */
-const HOVER_RETRY_MS = 1_000;
+const HOVER_TRIP_MS = 1_000;
+
+/** How long {@link hoverFreeMap} keeps sending the pointer before it gives up. */
+const HOVER_TIMEOUT_MS = 10_000;
 
 /**
  * Moves the pointer onto a part of the map canvas that nothing covers, the one
@@ -638,50 +641,66 @@ async function hoverFreeMap(mapPage: MapPage): Promise<void> {
     await page.mouse.move(point.x, point.y, { steps: 3 });
     await expect(page.getByTestId("map-readout")).toContainText(
       COORDINATES_PATTERN,
-      { timeout: HOVER_RETRY_MS },
+      { timeout: HOVER_TRIP_MS },
     );
-  }).toPass();
+  }).toPass({ timeout: HOVER_TIMEOUT_MS });
 }
+
+/**
+ * The sizes where the readout can be taller than the credits slot: a window
+ * narrower than 768 px, which shows the coordinates under the scale bar, and
+ * the short landscape phone, which is in the side panel layout and also shows
+ * the zoom. Wider screens keep the readout beside the popover with room to spare.
+ */
+const TALL_READOUT_VIEWPORTS = [
+  { width: 320, height: 568 },
+  { width: 360, height: 640 },
+  { width: 390, height: 844 },
+  { width: 844, height: 390 },
+] as const;
 
 /*
  * The bottom row at its tallest (issue: stop the bottom row overlapping at the
  * smallest screen sizes). On a desktop pointer with imperial units, the cursor
- * coordinates at their widest and the key of six layers, the scale bar, the
- * coordinates and the credits popover share the bottom row in every chrome
- * state, at every size down to 320 by 568, and none of them collides. The
- * other tests leave the pointer off the map, so the readout is only the scale
- * bar there, and a touch screen never shows the coordinates, so this runs on
- * the desktop pointer project only.
+ * coordinates at their widest and the open key of six layers (the tallest
+ * case), the scale bar, the coordinates and the credits popover share the
+ * bottom row in every chrome state, and none of them collides. The other tests
+ * leave the pointer off the map, so the readout is only the scale bar there,
+ * and a touch screen never shows the coordinates, so this runs on the desktop
+ * pointer project only.
+ *
+ * The credits state is entered with a click and the pointer then goes back to
+ * the map. That models the paths where credits and coordinates are on screen
+ * together (the first showing after the map starts, and opening the credits
+ * from the keyboard), not a mouse click on the button: the pointer leaving the
+ * map clears the coordinates.
  */
-for (const viewport of MAP_KEY_VIEWPORTS) {
+for (const viewport of TALL_READOUT_VIEWPORTS) {
   test(
     `the bottom row never collides with the cursor readout at ${viewport.width}x${viewport.height}`,
     viewportDetails(viewport),
     async ({ page, mapPage, isMobile }) => {
       test.skip(isMobile, "The cursor coordinates need a fine pointer.");
-      test.setTimeout(240_000);
       await mockLayerProviders(page);
       await seedStoredSettings(page, { units: "imperial" });
       await page.setViewportSize(viewport);
       await scriptSearch(page);
       await mapPage.goto(`${WIDEST_COORDINATES_VIEW}&${KEYED_LAYERS.slice(1)}`);
 
-      for (const keyState of ["open", "minimised"] as const) {
-        await collapseCredits(mapPage);
-        await setMapKey(mapPage, keyState);
-        for (const state of CHROME_STATES) {
-          await test.step(`${keyState}, ${state}`, async () => {
-            await enterState(mapPage, state);
-            await hoverFreeMap(mapPage);
-            await waitForStableLayout(page);
-            const report = await inspectChromeLayout(page);
-            const context = `${keyState}, ${state}: ${JSON.stringify(report.boxes)}`;
-            expect(report.overlaps, context).toEqual([]);
-            expect(report.outside, context).toEqual([]);
-            expect(report.obscured, context).toEqual([]);
-            await leaveState(mapPage, state);
-          });
-        }
+      await collapseCredits(mapPage);
+      await setMapKey(mapPage, "open");
+      for (const state of CHROME_STATES) {
+        await test.step(state, async () => {
+          await enterState(mapPage, state);
+          await hoverFreeMap(mapPage);
+          await waitForStableLayout(page);
+          const report = await inspectChromeLayout(page);
+          const context = `${state}: ${JSON.stringify(report.boxes)}`;
+          expect(report.overlaps, context).toEqual([]);
+          expect(report.outside, context).toEqual([]);
+          expect(report.obscured, context).toEqual([]);
+          await leaveState(mapPage, state);
+        });
       }
     },
   );
