@@ -907,6 +907,49 @@ describe("MapLibreMapAdapter", () => {
       expect(loading.mock.calls).toEqual([[true], [false]]);
     });
 
+    it("reports loading for the basemap's own tiles, not a data layer's that never arrives", async () => {
+      const adapter = new MapLibreMapAdapter();
+      const loading = vi.fn();
+      adapter.on("loading", loading);
+      const mounting = adapter.mount(createHost(), MOUNT);
+      await vi.waitFor(() => {
+        expect(FakeMapLibreMap.instances).toHaveLength(1);
+      });
+      const map = latestMap();
+      map.fire("style.load");
+      map.fire("sourcedataloading", { sourceId: "openmaptiles", tile: {} });
+      // The tile layer's tile request never answers, so MapLibre never idles.
+      map.fire("sourcedataloading", {
+        sourceId: "mapcairn:rainfall:tiles",
+        tile: {},
+      });
+      map.fire("sourcedata", {
+        sourceId: "openmaptiles",
+        tile: {},
+        isSourceLoaded: true,
+      });
+      await vi.waitFor(() => {
+        expect(loading.mock.calls).toEqual([[true], [false]]);
+      });
+      await mounting;
+    });
+
+    it("stops reporting loading when the basemap's last tile fails, without an idle", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const { adapter, map } = await mounted();
+      const loading = vi.fn();
+      adapter.on("loading", loading);
+      map.fire("style.load");
+      map.fire("sourcedataloading", { sourceId: "openmaptiles", tile: {} });
+      map.fire("error", {
+        error: new Error("not found"),
+        tile: {},
+        sourceId: "openmaptiles",
+        isSourceLoaded: true,
+      });
+      expect(loading.mock.calls).toEqual([[false]]);
+    });
+
     it("reports tile and style errors and logs them", async () => {
       const log = vi.spyOn(console, "error").mockImplementation(() => {});
       const { adapter, map } = await mounted();

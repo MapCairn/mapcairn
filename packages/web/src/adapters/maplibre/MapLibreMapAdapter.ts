@@ -778,6 +778,21 @@ export class MapLibreMapAdapter implements MapAdapter {
   private readonly tileTraffic = new Map<string, TileLayerTraffic>();
   /** The interval that paints the map while tile layer tiles load (see `repaintUntilIdle`). */
   private tileSettleNudge: ReturnType<typeof setInterval> | undefined;
+  /** Whether the style, or the style of a requested basemap still arriving, is loading. */
+  private styleLoading = false;
+  /**
+   * The basemap's own sources that last reported themselves not fully loaded,
+   * by engine source id. Data layer sources are never here: each layer reports
+   * its own status, and a tile of one that never answers (issue #129) must not
+   * hold the map's busy state.
+   */
+  private readonly basemapSourcesLoading = new Set<string>();
+  /**
+   * Whether the loaded style has reported on a source of the basemap. Until
+   * then its tiles may still be on their way, so the map stays busy; a style
+   * with no such source is settled by the engine's `idle`.
+   */
+  private basemapSourcesSeen = false;
   private workerCheck: WorkerCheck | undefined;
   private started = false;
   private destroyed = false;
@@ -876,8 +891,11 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.pending = { settleOn: "load", resolve, reject, styleLoaded: false };
     });
     this.subscribe(map);
-    // The constructor already fired "dataloading" for the style, before these listeners existed.
-    this.setLoading(true);
+    // The constructor already started the style fetch, before these listeners existed.
+    this.styleLoading = true;
+    this.basemapSourcesLoading.clear();
+    this.basemapSourcesSeen = false;
+    this.updateLoading();
     try {
       await loaded;
     } catch (error) {
@@ -1823,13 +1841,17 @@ export class MapLibreMapAdapter implements MapAdapter {
       };
       this.emitter.emit("click", click);
     });
-    listen("dataloading", () => {
-      this.setLoading(true);
-    });
     listen("styledataloading", () => {
-      this.setLoading(true);
+      // A style that starts loading has none of its sources in yet.
+      this.styleLoading = true;
+      this.basemapSourcesLoading.clear();
+      this.basemapSourcesSeen = false;
+      this.updateLoading();
     });
     listen("style.load", () => {
+      this.styleLoading = false;
+      this.basemapSourcesLoading.clear();
+      this.basemapSourcesSeen = false;
       this.basemapTiles = { ...idleBasemapTiles(), basemap: this.basemap };
       // A style may ask for its own projection (VersaTiles Colorful asks for a
       // globe); the app's setting wins. See ARCHITECTURE.md.
@@ -1851,6 +1873,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       }
       this.styleReady = true;
       this.labelFontCache = undefined;
+      this.updateLoading();
       this.settlePending("style.load");
       try {
         this.restoreDataLayers(map);
@@ -1864,13 +1887,17 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.settlePending("load");
     });
     listen("idle", () => {
-      this.setLoading(false);
-      this.emitLoad();
+      // An idle map has its style and every source in, data layers included.
+      this.styleLoading = false;
+      this.basemapSourcesLoading.clear();
+      this.basemapSourcesSeen = true;
+      this.updateLoading();
       this.stopRepaintingUntilIdle();
       this.reportUnavailableBasemap();
       this.reportUnavailableTileLayers();
     });
     listen("sourcedata", (event) => {
+      this.trackBasemapSource(event);
       const sourceId = tileEventSource(event);
       if (sourceId === undefined) {
         return;
@@ -1881,11 +1908,13 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.recordLoadedTile(sourceId);
     });
     listen("sourcedataloading", (event) => {
+      this.trackBasemapSource(event);
       if (this.countTileLayerTile(tileEventSource(event), "requested")) {
         this.repaintUntilIdle(map);
       }
     });
     listen("sourcedataabort", (event) => {
+      this.trackBasemapSource(event);
       this.countTileLayerTile(tileEventSource(event), "aborted");
     });
     // The classification is described on the class.
@@ -1893,6 +1922,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       // Listening to "error" silences MapLibre's own console logging.
       console.error("MapLibre basemap error", event.error);
       if (isTileOrSourceError(event)) {
+        this.trackBasemapSource(event);
         const { sourceId } = event as { sourceId?: unknown };
         if (decidesAvailability(this.basemapTiles.basemap, sourceId)) {
           this.basemapTiles.failed += 1;
@@ -2036,10 +2066,15 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.loadEmitted = false;
     this.styleReady = false;
+    // The new style has nothing in yet; its events decide the busy state.
+    this.styleLoading = true;
+    this.basemapSourcesLoading.clear();
+    this.basemapSourcesSeen = false;
     // Tiles from here on belong to no basemap until the new style has loaded.
     this.basemapTiles = idleBasemapTiles();
     // A diffed swap fires no "style.load", so a swap could never settle.
     map.setStyle(styleFor(basemap), { diff: false });
+    this.updateLoading();
   }
 
   /**
@@ -2118,6 +2153,42 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.loadEmitted = true;
     this.emitter.emit("load", undefined);
+  }
+
+  /**
+   * Notes what a source event says about one of the basemap's own sources.
+   * Data layer sources are ignored, so their tiles never hold the busy state.
+   */
+  private trackBasemapSource(event: object): void {
+    const sourceId = (event as { sourceId?: unknown }).sourceId;
+    if (typeof sourceId !== "string" || sourceId.startsWith(ENGINE_ID_PREFIX)) {
+      return;
+    }
+    this.basemapSourcesSeen = true;
+    if ((event as { isSourceLoaded?: unknown }).isSourceLoaded === true) {
+      this.basemapSourcesLoading.delete(sourceId);
+    } else {
+      this.basemapSourcesLoading.add(sourceId);
+    }
+    this.updateLoading();
+  }
+
+  /**
+   * Publishes the busy state: the style and the basemap's own tiles decide it,
+   * so a data layer's tile that never answers cannot keep it on. The first
+   * moment they are all in settles a waiting mount, because the engine's own
+   * `load` waits for every source, data layers included.
+   */
+  private updateLoading(): void {
+    const loading =
+      this.styleLoading ||
+      !this.basemapSourcesSeen ||
+      this.basemapSourcesLoading.size > 0;
+    if (!loading) {
+      this.emitLoad();
+      this.settlePending("load");
+    }
+    this.setLoading(loading);
   }
 
   private setLoading(loading: boolean): void {

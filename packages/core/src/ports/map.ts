@@ -434,7 +434,11 @@ export interface MapEvents {
   click: MapClickEvent;
   /** The first frame of the current basemap is ready. */
   load: undefined;
-  /** True while tiles or the style are loading, false when everything has loaded. */
+  /**
+   * True while the style or the basemap's own tiles are loading, false once
+   * they are in. A data layer's tiles do not count: each layer reports its own
+   * status, so a tile of one that never answers cannot keep the map busy.
+   */
   loading: boolean;
   /** A tile or style request failed. The map still works. */
   tileError: undefined;

@@ -111,10 +111,14 @@ for (const [name, basemap] of [
         });
       },
       simulateTileError: () => {
+        // The engine tags a tile error with the source's own loaded state,
+        // read from its tile manager; an errored tile leaves the source
+        // loaded, so the failure does not put the map back to busy.
         latestMap().fire("error", {
           error: new Error("Tile failed"),
           tile: {},
           sourceId: "openmaptiles",
+          isSourceLoaded: true,
         });
       },
       simulateBasemapUnavailable: () => {
@@ -143,7 +147,13 @@ for (const [name, basemap] of [
         });
       },
       simulateLoading: (loading) => {
-        latestMap().fire(loading ? "dataloading" : "idle");
+        // One of the basemap's own sources reports a tile starting or
+        // settling; the engine tags each with the source's loaded state.
+        latestMap().fire(loading ? "sourcedataloading" : "sourcedata", {
+          tile: {},
+          sourceId: "openmaptiles",
+          isSourceLoaded: !loading,
+        });
       },
       simulateUserZoom: (zoom) => {
         // MapLibre zooms by 512 px tiles: one level below the normalised zoom.
