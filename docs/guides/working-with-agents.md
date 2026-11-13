@@ -66,6 +66,10 @@ Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-rev
 
 When you start an agent, copy the brief block from `pick-up-issue` ("Briefing an agent") so it carries the checks, the clean-up and the report. For a free or smaller model, which follows a brief literally and fills a gap with plausible text, also fill in the block's `Wording:`, `Claims:` and `Before you open:` lines. An agent that another agent started does not start sub-agents: it does the simplify step and the review checklist inline, and its caller runs the independent review. Full local `e2e` and `a11y` runs are for layout, engine and test-seam changes; for the rest the agent runs the specs that cover its change and CI runs the full suites.
 
+Most of the work here is done with Claude Code, and the Claude models used (haiku, sonnet, opus) can read images. Other tools and models vary, and one free model has been unable to, so check a model's image support before relying on it, with a one-line smoke test: ask it to describe a screenshot. An agent that cannot read images still runs the `e2e`, `a11y` and accessibility-tree checks, says under **Seen** that it did not look at the screen and why, and the caller starts a Claude agent such as `ui-verifier` for the visual check (`visual-check`). For a free or smaller model, give it one or two small issues per prompt and tell it to work only in its own worktree.
+
+When `main` moves under an open pull request, merge `origin/main`, resolve and push normally. Pull requests are squash-merged, and the permission system here refuses the force-push a rebase needs. When several open pull requests touch the same files, the caller merges the smallest and most widely shared change first and sends each remaining author the same instruction, one at a time.
+
 ## Only in Claude Code
 
 - The Playwright test planner, generator and healer agents, and the Playwright MCP server in `.mcp.json`.
