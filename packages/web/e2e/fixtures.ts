@@ -108,7 +108,9 @@ export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
     mapPage.waitForMap = async () => {
       await waitForMap();
       const scripted = await page.evaluate(
-        () => window.__MAPCAIRN_TEST_SERVICES__ !== undefined,
+        () =>
+          window.__MAPCAIRN_TEST_SERVICES__ !== undefined ||
+          window.__MAPCAIRN_TEST_CATALOGUE__ !== undefined,
       );
       if (scripted) {
         expect(

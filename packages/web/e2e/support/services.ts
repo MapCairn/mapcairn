@@ -6,6 +6,7 @@ import {
   DEFAULT_SELECTION_LIMIT,
   type FeatureRef,
   type FeatureSelection,
+  type LayerCatalogue,
   type LayerDefinition,
 } from "@mapcairn/core";
 import type { Page } from "@playwright/test";
@@ -92,6 +93,8 @@ export const SAMPLE_RESULTS: ScriptedSearchResult[] = [
 declare global {
   interface Window {
     __MAPCAIRN_TEST_SERVICES__?: unknown;
+    __MAPCAIRN_TEST_CATALOGUE__?: unknown;
+    __mapcairnCatalogue?: LayerCatalogue;
     __mapcairnSearch?: SearchScript;
     __mapcairnClipboard?: { ok: boolean; written: string[] };
     __mapcairnGeolocation?: GeolocationScript;
@@ -354,6 +357,46 @@ export async function replaceSelectionExternally(
 /** How many listeners the page has subscribed to the scripted selection store. */
 export async function selectionSubscribers(page: Page): Promise<number> {
   return page.evaluate(() => window.__mapcairnSelection?.subscribers() ?? 0);
+}
+
+/**
+ * What one load of a scripted catalogue answers: a list of definitions (bad
+ * entries are skipped by the real validation), `"fail"` for a request that
+ * rejects, or `"invalid"` for an answer that is not a list.
+ */
+export type CatalogueStep = readonly object[] | "fail" | "invalid";
+
+/**
+ * Makes the app's layer catalogue a real runtime catalogue that loads when the
+ * page runs, answering the first load with `steps[0]`, the next with
+ * `steps[1]` and so on (the last answers again), each after `delayMs`. Only
+ * the host refreshes a working catalogue, so a spec calls
+ * {@link refreshCatalogue} for that; Try again in the page does the same from
+ * a failure.
+ *
+ * @remarks The script is plain data, so it crosses into the page; the seam
+ *   builds the catalogue there (see `src/composition/testSeam.ts`), with the
+ *   real validation and states. It is unlike {@link scriptLayers}, whose
+ *   catalogue never changes.
+ */
+export async function scriptCatalogue(
+  page: Page,
+  steps: readonly CatalogueStep[],
+  delayMs = 0,
+): Promise<void> {
+  await page.addInitScript(
+    (script: { steps: readonly unknown[]; delayMs: number }) => {
+      window.__MAPCAIRN_TEST_CATALOGUE__ = script;
+    },
+    { steps, delayMs },
+  );
+}
+
+/** Asks the scripted catalogue to load again, as a host calls `refresh()`, and waits for the answer. */
+export function refreshCatalogue(page: Page): Promise<void> {
+  return page.evaluate(async () => {
+    await window.__mapcairnCatalogue?.refresh();
+  });
 }
 
 /**

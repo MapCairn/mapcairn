@@ -54,7 +54,8 @@ function definedEntries(
  *   on the window (see `testSeam.ts`; the property name is kept out of this
  *   file because the server bundle keeps comments and the seam check searches
  *   for it), so a Playwright `addInitScript` can script geolocation, search, the
- *   clipboard, storage, the system theme and the basemap catalogue. In a
+ *   clipboard, storage, the system theme, the basemap catalogue and a layer
+ *   catalogue that loads (from plain data, as a real runtime catalogue). In a
  *   production build the mode
  *   is a constant, the branch is removed, and so is `testSeam.ts`;
  *   `scripts/verifyNoTestSeam.mjs` proves it from the build output.

@@ -170,6 +170,10 @@ export interface LayerCatalogue {
   getState(): CatalogueState;
   /** Calls `listener` after each change. Returns the function that stops it. */
   subscribe(listener: () => void): () => void;
-  /** Asks the catalogue to load again. Resolves when that attempt is over. */
+  /**
+   * Asks the catalogue to load again. Resolves when that attempt is over. The
+   * state may change to `loading` before this returns or some time after, so a
+   * caller must not read `getState()` straight after the call and expect it.
+   */
   refresh(): Promise<void>;
 }
