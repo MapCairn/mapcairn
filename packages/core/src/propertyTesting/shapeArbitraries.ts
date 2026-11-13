@@ -42,6 +42,35 @@ const circleInput: fc.Arbitrary<DrawShapeInput> = fc
     radiusMetres,
   }));
 
+/** The range of a small circle's radius in centimetres: 0.01 m, the least a CSV or GeoJSON export keeps, to 3 m. */
+const MIN_SMALL_RADIUS_CENTIMETRES = 1;
+const MAX_SMALL_RADIUS_CENTIMETRES = 300;
+const CENTIMETRES_PER_METRE = 100;
+
+/**
+ * A circle with a radius from a centimetre to three metres, in whole
+ * centimetres so its exported radius reads back exactly, and far enough from
+ * the poles and the antimeridian for its outline to be an ordinary polygon.
+ * Rounding the outline to six decimals folds such a circle in on itself, so it
+ * checks that the export keeps more digits.
+ */
+export const smallCircleInput: fc.Arbitrary<DrawShapeInput> = fc
+  .record({
+    centre: fc.record({
+      lat: degreesOnGrid(SAFE_LATITUDE),
+      lng: degreesOnGrid(SAFE_LONGITUDE),
+    }),
+    centimetres: fc.integer({
+      min: MIN_SMALL_RADIUS_CENTIMETRES,
+      max: MAX_SMALL_RADIUS_CENTIMETRES,
+    }),
+  })
+  .map(({ centre, centimetres }) => ({
+    kind: "circle",
+    vertices: [centre],
+    radiusMetres: centimetres / CENTIMETRES_PER_METRE,
+  }));
+
 /**
  * A polygon that cannot cross itself: its corners sit at evenly spaced
  * bearings around a centre, each at its own distance.

@@ -959,6 +959,18 @@ describe("export then import", () => {
     ).toEqual(shapesToGeoJson(shapes).features.map((f) => f.geometry));
   });
 
+  it("brings back a circle of half a metre, from WKT and CSV, as a polygon that is kept", () => {
+    const shapes: DrawShape[] = [
+      finished({ kind: "circle", vertices: [p(1, 2)], radiusMetres: 0.5 }, 0),
+    ];
+    const fromWkt = parseShapeFile(shapesToWkt(shapes));
+    expect(fromWkt).toMatchObject({ ok: true, skipped: {} });
+    expect(shapesOf(fromWkt).map((shape) => shape.kind)).toEqual(["polygon"]);
+    expect(shapesOf(parseShapeFile(shapesToCsv(shapes)))).toEqual([
+      { kind: "circle", vertices: [p(1, 2)], radiusMetres: 0.5 },
+    ]);
+  });
+
   it("brings GeoJSON back as the same shapes", () => {
     const shapes: DrawShape[] = [
       finished({ kind: "point", vertices: [p(1, 2)] }, 0),
