@@ -104,6 +104,16 @@ describe("useFeatureSelection without a store", () => {
     expect(view.result.current.selection).toBeNull();
     expect(announce).not.toHaveBeenCalled();
   });
+
+  it("stays null, and quiet, while the layers change and the hook renders again", async () => {
+    const view = setup({ store: null });
+
+    await view.load("sample-points", "a");
+    view.rerender();
+
+    expect(view.result.current.selection).toBeNull();
+    expect(saidMessages()).toEqual([]);
+  });
 });
 
 describe("useFeatureSelection state", () => {
