@@ -31,10 +31,10 @@ export function fixedDecimal(value: number): string {
   if (point <= 0) {
     return `${sign}0.${"0".repeat(-point)}${digits}`;
   }
-  if (point >= digits.length) {
-    return `${sign}${digits}${"0".repeat(point - digits.length)}`;
-  }
-  return `${sign}${digits.slice(0, point)}.${digits.slice(point)}`;
+  // `String` writes an exponent only under 1e-6 or from 1e21 up, and a number
+  // has at most 17 digits, so a positive exponent always puts the point after
+  // the last digit.
+  return `${sign}${digits}${"0".repeat(point - digits.length)}`;
 }
 
 /**
