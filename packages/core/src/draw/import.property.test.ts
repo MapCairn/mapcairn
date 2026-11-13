@@ -33,6 +33,7 @@ import {
 } from "./import";
 import type { DrawShapeInput } from "./reducer";
 import { MAX_CIRCLE_RADIUS_METRES, validateShape } from "./shape";
+import type { DrawShape } from "./types";
 
 const GEOJSON_FRAGMENTS = [
   "{",
@@ -128,8 +129,13 @@ function exportedShapes(inputs: readonly DrawShapeInput[]): unknown[] {
  */
 const SLOW_PROPERTY_TIMEOUT_MS = 20_000;
 
-/** How far, in degrees, a position may move when text written to six decimals or more is read and written again. */
-const ROUNDING_TOLERANCE = 1e-6;
+/**
+ * How far, in degrees, a circle's position may move when its outline is read
+ * and written again: half a unit at six decimals, the most the second
+ * rounding can move a position written to six or more, and a little for the
+ * arithmetic.
+ */
+const ROUNDING_TOLERANCE = 5e-7 + 1e-12;
 
 /** The numbers of a geometry's coordinates, in order. */
 function coordinateNumbers(geometry: Geometry | undefined): number[] {
@@ -144,7 +150,7 @@ function coordinateNumbers(geometry: Geometry | undefined): number[] {
 /** A shape set of the size an export holds in practice, with small circles among it. */
 const exportable = fc.array(fc.oneof(shapeInput, smallCircleInput), {
   minLength: 1,
-  maxLength: 4,
+  maxLength: 8,
 });
 
 /** Every imported shape obeys the draw rules and stays inside the world, and the caps hold. */
@@ -252,8 +258,9 @@ describe("shapeGeometry of a large circle", () => {
 });
 
 describe("parseShapeFile with WKT", () => {
-  // A circle comes back as its polygon outline, which is written again with as
-  // few decimals as keep it valid, so a position may differ by a rounding.
+  // Shapes other than circles come back as the same text. A circle comes back
+  // as its polygon outline, which is written again with as few decimals as keep
+  // it valid, so a position may differ by half a unit of the first rounding.
   // Only small circles are used: a large one can reach over a pole or the
   // antimeridian, where its outline is not a polygon of the plane and the
   // importer skips it.
@@ -271,12 +278,19 @@ describe("parseShapeFile with WKT", () => {
         fc.property(withSmallCircles, (inputs) => {
           const shapes = inputs.map(finishShape);
           const read = shapesOf(parseShapeFile(shapesToWkt(shapes)));
-          const written = shapesToGeoJson(shapes).features;
-          const readBack = shapesToGeoJson(read.map(finishShape)).features;
-          expect(readBack).toHaveLength(written.length);
-          for (const [index, feature] of written.entries()) {
-            const before = coordinateNumbers(feature.geometry);
-            const after = coordinateNumbers(readBack[index]?.geometry);
+          expect(read).toHaveLength(shapes.length);
+          const readShapes = read.map(finishShape);
+          for (const [index, shape] of shapes.entries()) {
+            const readShape = readShapes[index] as DrawShape;
+            if (shape.kind !== "circle") {
+              expect(shapesToWkt([readShape])).toBe(shapesToWkt([shape]));
+              continue;
+            }
+            expect(readShape.kind).toBe("polygon");
+            const before = coordinateNumbers(shapeGeometry(shape) ?? undefined);
+            const after = coordinateNumbers(
+              shapeGeometry(readShape) ?? undefined,
+            );
             expect(after).toHaveLength(before.length);
             for (const [place, number] of before.entries()) {
               expect(

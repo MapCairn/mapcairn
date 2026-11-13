@@ -65,12 +65,13 @@ function roundedAt(vertices: readonly LatLng[], decimals: number): LatLng[] {
 /**
  * The positions of a shape rounded to six decimals, or to more where six
  * would spoil it: the fewest decimals, up to {@link MAX_COORDINATE_DECIMALS},
- * at which the rounded shape is valid. Null when no number of decimals keeps
- * it valid, as for a circle a few micrometres across. A circle whose outline is not
- * valid in the plane to begin with, because it reaches over a pole or the
- * antimeridian, has nothing for rounding to spoil and is written at six.
+ * at which the rounded shape is valid. Where none does, as for a circle a few
+ * micrometres across, the positions are written as they are, unrounded, so a
+ * valid shape is never left out. A circle whose outline is not valid in the
+ * plane to begin with, because it reaches over a pole or the antimeridian,
+ * has nothing for rounding to spoil and is written at six.
  */
-function roundedVertices(shape: DrawShape): LatLng[] | null {
+function roundedVertices(shape: DrawShape): readonly LatLng[] {
   const exact = writtenVertices(shape);
   const atSix = roundedAt(exact, COORDINATE_DECIMALS);
   if (
@@ -92,7 +93,7 @@ function roundedVertices(shape: DrawShape): LatLng[] | null {
       return rounded;
     }
   }
-  return null;
+  return exact;
 }
 
 function toPosition(vertex: LatLng): Position {
@@ -109,46 +110,28 @@ function closedRing(ring: readonly LatLng[]): Position[] {
 }
 
 /**
- * The shapes that can be exported: finished, and valid, with a geometry
- * {@link shapeGeometry} can write. A shape still being drawn, or one a later
- * edit left with crossing edges, is left out.
+ * The shapes that can be exported: finished, and valid. A shape still being
+ * drawn, or one a later edit left with crossing edges, is left out.
  */
 export function exportableShapes(
   shapes: readonly DrawShape[],
 ): readonly DrawShape[] {
-  return exportable(shapes).map(({ shape }) => shape);
-}
-
-/** The exportable shapes with their geometry, so a writer finds each geometry once. */
-function exportable(
-  shapes: readonly DrawShape[],
-): { shape: DrawShape; geometry: Geometry }[] {
-  const result: { shape: DrawShape; geometry: Geometry }[] = [];
-  for (const shape of shapes) {
-    const geometry = shape.done ? shapeGeometry(shape) : null;
-    if (geometry) {
-      result.push({ shape, geometry });
-    }
-  }
-  return result;
+  return shapes.filter((shape) => shape.done && validateShape(shape) === null);
 }
 
 /**
  * The GeoJSON geometry of a shape, or null when it is not valid. A circle is
  * a polygon of 72 positions; coordinates are `[longitude, latitude]` rounded
- * to six decimals (about 10 cm), or to up to ten where six would fold a small
- * shape in on itself, as a circle with a radius of a metre or two does. A shape
- * that no number of decimals can write validly (a circle a few micrometres across) has
- * no geometry.
+ * to six decimals (about 10 cm), or to the fewest more, up to ten, at which a
+ * small shape that six decimals would fold in on itself is valid again, as a
+ * circle with a radius of a metre or two is. A shape that not even ten
+ * decimals keep valid is written unrounded.
  */
 export function shapeGeometry(shape: DrawShape): Geometry | null {
   if (validateShape(shape) !== null) {
     return null;
   }
   const vertices = roundedVertices(shape);
-  if (vertices === null) {
-    return null;
-  }
   switch (shape.kind) {
     case "point":
       return { type: "Point", coordinates: toPosition(vertices[0] as LatLng) };
@@ -189,28 +172,37 @@ export function shapesToGeoJson(
   shapes: readonly DrawShape[],
 ): FeatureCollection {
   const features: Feature[] = [];
-  for (const { shape, geometry } of exportable(shapes)) {
-    features.push({
-      type: "Feature",
-      id: shape.id,
-      geometry,
-      properties: properties(shape),
-    });
+  for (const shape of exportableShapes(shapes)) {
+    const geometry = shapeGeometry(shape);
+    if (geometry) {
+      features.push({
+        type: "Feature",
+        id: shape.id,
+        geometry,
+        properties: properties(shape),
+      });
+    }
   }
   return { type: "FeatureCollection", features };
 }
 
 /**
  * The shapes as Well-Known Text, one geometry to a line and longitude first,
- * in the order of the list, rounded to six decimals as the GeoJSON is. A
- * circle is written as the polygon of its outline, so it reads back as a
- * polygon. Only {@link exportableShapes} are included, so the text is empty
- * when there are none.
+ * in the order of the list, with the positions {@link shapeGeometry} gives
+ * (six decimals, or more for a small shape). A circle is written as the
+ * polygon of its outline, so it reads back as a polygon. Only
+ * {@link exportableShapes} are included, so the text is empty when there are
+ * none.
  */
 export function shapesToWkt(shapes: readonly DrawShape[]): string {
-  return exportable(shapes)
-    .map(({ geometry }) => formatWkt(geometry))
-    .join("\n");
+  const lines: string[] = [];
+  for (const shape of exportableShapes(shapes)) {
+    const geometry = shapeGeometry(shape);
+    if (geometry) {
+      lines.push(formatWkt(geometry));
+    }
+  }
+  return lines.join("\n");
 }
 
 /** The header row of the CSV the draw tool writes, and reads back. */
@@ -243,7 +235,11 @@ function circleCells(shape: DrawShape): string[] {
  */
 export function shapesToCsv(shapes: readonly DrawShape[]): string {
   const rows = [SHAPES_CSV_HEADER];
-  for (const { shape, geometry } of exportable(shapes)) {
+  for (const shape of exportableShapes(shapes)) {
+    const geometry = shapeGeometry(shape);
+    if (!geometry) {
+      continue;
+    }
     const { areaMetres, lengthMetres } = measureShape(shape);
     rows.push(
       [

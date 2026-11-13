@@ -10,7 +10,7 @@ import {
   shapesToWkt,
 } from "./export";
 import { ringSignedArea } from "./geo";
-import { validateShape } from "./shape";
+import { shapeRing, validateShape } from "./shape";
 import type { DrawShape } from "./types";
 
 const p = (lng: number, lat: number) => ({ lat, lng });
@@ -248,6 +248,22 @@ function ringIssue(geometry: unknown) {
   });
 }
 
+/** The issue with a shape's ring rounded to `decimals` places, or null when it is valid. */
+function ringIssueAt(shape: DrawShape, decimals: number) {
+  const factor = 10 ** decimals;
+  const round = (value: number) => Math.round(value * factor) / factor;
+  return validateShape({
+    id: "ring",
+    kind: "polygon",
+    label: "Ring",
+    done: true,
+    vertices: shapeRing(shape).map(({ lat, lng }) => ({
+      lat: round(lat),
+      lng: round(lng),
+    })),
+  });
+}
+
 /** The most decimal places any plain number in the geometry is written with. */
 function decimalsOf(geometry: unknown): number {
   const numbers = JSON.stringify(geometry).match(/-?\d+(?:\.\d+)?/g) ?? [];
@@ -299,18 +315,49 @@ describe("shapes too small for six decimals", () => {
     expect(ringIssue(shapeGeometry(polygon))).toBeNull();
   });
 
-  it("still writes a circle that crosses the antimeridian, as it was drawn", () => {
-    const geometry = shapeGeometry({ ...CIRCLE, vertices: [p(180, 0)] });
-    expect(geometry?.type).toBe("Polygon");
-    expect(decimalsOf(geometry)).toBeLessThanOrEqual(6);
+  it("writes a small circle that reaches over the antimeridian or a pole at six decimals, as it was drawn", () => {
+    for (const centre of [
+      p(179.99999, 0),
+      p(-179.99999, 10),
+      p(0, 90),
+      p(0, -90),
+    ]) {
+      const geometry = shapeGeometry({
+        ...CIRCLE,
+        vertices: [centre],
+        radiusMetres: 2,
+      });
+      expect(geometry?.type, JSON.stringify(centre)).toBe("Polygon");
+      expect(decimalsOf(geometry), JSON.stringify(centre)).toBeLessThanOrEqual(
+        6,
+      );
+    }
   });
 
-  it("leaves a circle too small for any number of decimals out of every export", () => {
+  it("uses the fewest decimals that keep the ring valid", () => {
+    for (const radius of [0.01, 0.05, 0.1, 0.5, 1]) {
+      const shape = small(radius);
+      const decimals = decimalsOf(shapeGeometry(shape));
+      expect(decimals, `radius ${radius}`).toBeGreaterThan(6);
+      expect(
+        ringIssueAt(shape, decimals),
+        `radius ${radius} at ${decimals}`,
+      ).toBeNull();
+      expect(
+        ringIssueAt(shape, decimals - 1),
+        `radius ${radius} at ${decimals - 1}`,
+      ).not.toBeNull();
+    }
+  });
+
+  it("writes a circle no number of decimals keeps valid as it is, unrounded, and exports it", () => {
     const speck = small(0.00001);
-    expect(shapeGeometry(speck)).toBeNull();
-    expect(exportableShapes([POINT, speck])).toEqual([POINT]);
-    expect(shapesToWkt([speck])).toBe("");
-    expect(shapesToGeoJson([speck]).features).toEqual([]);
-    expect(shapesToCsv([speck])).toBe(SHAPES_CSV_HEADER);
+    const geometry = shapeGeometry(speck);
+    expect(geometry?.type).toBe("Polygon");
+    expect(decimalsOf(geometry)).toBeGreaterThan(10);
+    expect(exportableShapes([POINT, speck])).toEqual([POINT, speck]);
+    expect(shapesToWkt([speck])).toContain("POLYGON ((");
+    expect(shapesToGeoJson([speck]).features).toHaveLength(1);
+    expect(shapesToCsv([speck])).not.toBe(SHAPES_CSV_HEADER);
   });
 });
