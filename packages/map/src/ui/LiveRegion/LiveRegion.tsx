@@ -103,8 +103,10 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
 }
 
 /**
- * Returns `announce(message, { priority? })`, which reads a message out
- * through the app-wide live regions. The function is stable between renders.
+ * Returns `announce(message, { priority?, keep? })`, which reads a message out
+ * through the app-wide live regions. Pass `keep` for the outcome of something
+ * the person did, so a later message cannot replace it while it waits for the
+ * throttle window. The function is stable between renders.
  * Outside a `LiveRegionProvider` it does nothing, and warns once in development.
  */
 export function useAnnounce(): Announce {

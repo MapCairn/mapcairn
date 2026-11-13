@@ -185,6 +185,7 @@ describe("a link layer the catalogue does not have", () => {
     expect(said()).toEqual(["2 layers in the link are not available."]);
     expect(announce).toHaveBeenCalledWith(expect.any(String), {
       priority: "polite",
+      keep: true,
     });
   });
 

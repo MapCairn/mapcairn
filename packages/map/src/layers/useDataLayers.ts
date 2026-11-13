@@ -720,7 +720,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       detailRequest.current?.abort();
     }
     forgetLayers(new Set(notice.gone));
-    announce(notice.message, { priority: "polite" });
+    announce(notice.message, { priority: "polite", keep: true });
   }, [notice, forgetLayers, announce]);
 
   const setEnabled = useCallback(
@@ -739,7 +739,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           : previous.enabled.filter((item) => item !== id),
       }));
       if (enabled && !loadsFeatures(definition)) {
-        announce(announceLayerOn(definition.name), { priority: "polite" });
+        announce(announceLayerOn(definition.name), {
+          priority: "polite",
+          keep: true,
+        });
       }
     },
     [announce, byId, forgetLayers],
@@ -760,7 +763,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         enabled: previous.enabled.filter((id) => !leaving.has(id)),
         undo: { ids: [...leaving], group: offOptions.group ?? null },
       }));
-      announce(announceLayersTurnedOff(leaving.size), { priority: "polite" });
+      announce(announceLayersTurnedOff(leaving.size), {
+        priority: "polite",
+        keep: true,
+      });
     },
     [announce, byId, forgetLayers],
   );
@@ -781,6 +787,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     if (returning.length > 0) {
       announce(announceLayersTurnedBackOn(returning.length), {
         priority: "polite",
+        keep: true,
       });
     }
   }, [announce, byId, forgetLayers]);
