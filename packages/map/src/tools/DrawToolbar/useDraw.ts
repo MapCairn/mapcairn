@@ -44,6 +44,7 @@ import {
   shapesToGeoJsonText,
   shapesToWkt,
   type UnitSystem,
+  unsharableShapes,
   validateShape,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
@@ -91,6 +92,11 @@ const FILE_OPEN_MESSAGES: Readonly<
 
 /** Added to an import's result when the shapes are more than a link can carry. */
 const LINK_LIMIT_NOTE = `A link carries at most ${MAX_SHARE_SHAPES} shapes, so download a file to share them all.`;
+
+/** "1 shape is too small to carry in a link", or "2 shapes are" for more than one. */
+function tooSmallForLink(count: number): string {
+  return `${count} ${pluralise(count, ["shape is", "shapes are"])} too small to carry in a link`;
+}
 
 /** The outcome of an export or a copy, shown beside the buttons and announced. */
 export interface DrawFeedback {
@@ -678,7 +684,9 @@ export function useDraw({
   );
 
   const copyLink = useCallback(async () => {
-    const encoded = encodeShapes(stateRef.current.shapes);
+    const { shapes } = stateRef.current;
+    const encoded = encodeShapes(shapes);
+    const leftOut = unsharableShapes(shapes).length;
     if (encoded === null) {
       report({
         kind: "error",
@@ -689,7 +697,10 @@ export function useDraw({
     if (encoded === "") {
       report({
         kind: "error",
-        text: "Nothing to share yet. Finish a shape first.",
+        text:
+          leftOut === 0
+            ? "Nothing to share yet. Finish a shape first."
+            : `Nothing to copy: ${tooSmallForLink(leftOut)}. Export a file instead.`,
       });
       return;
     }
@@ -698,7 +709,13 @@ export function useDraw({
     );
     report(
       result.ok
-        ? { kind: "success", text: "Link with shapes copied." }
+        ? {
+            kind: "success",
+            text:
+              leftOut === 0
+                ? "Link with shapes copied."
+                : `Link with shapes copied. ${tooSmallForLink(leftOut)} and ${pluralise(leftOut, ["was", "were"])} left out. Export a file to keep ${pluralise(leftOut, ["it", "them"])}.`,
+          }
         : {
             kind: "error",
             text: "The link could not be copied. Export a file instead.",
