@@ -164,14 +164,16 @@ export function polygonSelfIntersects(vertices: readonly LatLng[]): boolean {
   if (count < 3) {
     return false;
   }
-  const edge = (index: number): Segment => [
-    vertices[index] as LatLng,
-    vertices[(index + 1) % count] as LatLng,
-  ];
+  const edges = vertices.map(
+    (vertex, index): Segment => [
+      vertex,
+      vertices[(index + 1) % count] as LatLng,
+    ],
+  );
   for (let i = 0; i < count; i += 1) {
-    const [a, b] = edge(i);
+    const [a, b] = edges[i] as Segment;
     for (let j = i + 1; j < count; j += 1) {
-      const [c, d] = edge(j);
+      const [c, d] = edges[j] as Segment;
       if (j === i + 1) {
         if (edgesDoubleBack(b, a, d)) {
           return true;

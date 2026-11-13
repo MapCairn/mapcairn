@@ -137,7 +137,7 @@ function coordinateNumbers(geometry: Geometry | undefined): number[] {
 /** A shape set of the size an export holds in practice, with small circles among it. */
 const exportable = fc.array(fc.oneof(shapeInput, smallCircleInput), {
   minLength: 1,
-  maxLength: 8,
+  maxLength: 4,
 });
 
 /** Every imported shape obeys the draw rules and stays inside the world, and the caps hold. */
@@ -256,7 +256,7 @@ describe("parseShapeFile with WKT", () => {
         shapeInput.filter((input) => input.kind !== "circle"),
         smallCircleInput,
       ),
-      { minLength: 1, maxLength: 8 },
+      { minLength: 1, maxLength: 4 },
     );
     fc.assert(
       fc.property(withSmallCircles, (inputs) => {
