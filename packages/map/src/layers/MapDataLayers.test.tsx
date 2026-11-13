@@ -8,6 +8,7 @@ import {
   SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_HEATMAP_LAYER,
+  SAMPLE_IDENTIFY_LAYER,
   SAMPLE_LAYERS,
   SAMPLE_LINE_LAYER,
   SAMPLE_QUERY_LAYER,
@@ -19,6 +20,7 @@ import {
 } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
 import { act, render, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { testMapContext } from "../chrome/MapChrome/chromeTestHarness";
 import { MapContext } from "../host";
@@ -47,15 +49,18 @@ function setup(
   const adapter = new FakeMapAdapter();
   const onFeatureTap = vi.fn();
   const handle: { current: DataLayers | null } = { current: null };
+  const ignore: { set: (ignoring: boolean) => void } = { set: () => {} };
   function Harness() {
     const layers = useDataLayers({ now: () => NOW });
+    const [ignoreTaps, setIgnoreTaps] = useState(props.ignoreTaps);
     handle.current = layers;
+    ignore.set = setIgnoreTaps;
     return (
       <>
         <MapDataLayers
           layers={layers}
           onFeatureTap={onFeatureTap}
-          ignoreTaps={props.ignoreTaps}
+          ignoreTaps={ignoreTaps}
         />
         <svg aria-hidden="true">
           <SelectionMarker layers={layers} />
@@ -79,6 +84,8 @@ function setup(
     ...view,
     adapter,
     layers,
+    /** Changes whether the app says taps mean something else. */
+    setIgnoreTaps: (ignoring: boolean) => act(() => ignore.set(ignoring)),
     onFeatureTap,
     source: services.fakes.layerSource,
   };
@@ -411,6 +418,49 @@ describe("MapDataLayers", () => {
     act(() => adapter.simulateFeatureTap("sample-points", "a"));
     expect(layers().selected).toBeNull();
     expect(onFeatureTap).not.toHaveBeenCalled();
+  });
+
+  describe("a tap on a raster layer in flight", () => {
+    const TAP = { latlng: { lat: -33.9, lng: 18.4 }, zoom: 10 };
+
+    function holdATap() {
+      const view = setup({
+        definitions: [SAMPLE_FEED_LAYER, SAMPLE_IDENTIFY_LAYER],
+      });
+      view.source.setFeatures("sample-points", [samplePoint("a")]);
+      view.source.setIdentified("sample-flood", [samplePoint("flood")]);
+      const release = view.source.holdIdentify("sample-flood");
+      act(() => view.layers().setEnabled("sample-points", true));
+      act(() => view.layers().setEnabled("sample-flood", true));
+      let pending!: Promise<unknown>;
+      act(() => {
+        pending = view.layers().identifyAt(TAP);
+      });
+      return { ...view, pending: () => pending, release };
+    }
+
+    it("is cancelled when taps start to mean something else", async () => {
+      const view = holdATap();
+      view.setIgnoreTaps(true);
+      expect(view.layers().identifying).toBe(false);
+      view.release();
+      expect(await view.pending()).toBeNull();
+      expect(view.layers().selected).toBeNull();
+    });
+
+    it("is cancelled by a tap on a drawn feature, so its late answer cannot replace that card", async () => {
+      const view = holdATap();
+      await waitFor(() =>
+        expect(view.adapter.drawnLayers().map((layer) => layer.id)).toContain(
+          "sample-points",
+        ),
+      );
+      act(() => view.adapter.simulateFeatureTap("sample-points", "a"));
+      expect(view.layers().selected?.feature.id).toBe("a");
+      view.release();
+      expect(await view.pending()).toBeNull();
+      expect(view.layers().selected?.feature.id).toBe("a");
+    });
   });
 
   it("draws an affected area while it is shown", async () => {

@@ -268,6 +268,7 @@ export function MapDataLayers({
 
   const latest = useLatestRef({
     choose: layers.choose,
+    cancelIdentify: layers.cancelIdentify,
     setView: layers.setView,
     reportTilesUnavailable: layers.reportTilesUnavailable,
     reportTilesRecovered: layers.reportTilesRecovered,
@@ -295,6 +296,13 @@ export function MapDataLayers({
       stopRecovered();
     };
   }, [adapter, latest]);
+  // Once taps mean something else (measuring, say), a raster layer's answer to
+  // an earlier tap must not open a card over it.
+  useEffect(() => {
+    if (ignoreTaps) {
+      latest.current.cancelIdentify();
+    }
+  }, [ignoreTaps, latest]);
   useEffect(() => {
     if (!adapter) {
       return;
@@ -304,7 +312,8 @@ export function MapDataLayers({
       if (current.ignoreTaps) {
         return;
       }
-      // One feature opens its card; several open a list to choose from.
+      // One feature opens its card; several open a list to choose from. Either
+      // cancels a raster lookup in flight, so its late answer cannot replace it.
       current.choose(tap.hits, { focus: true });
       current.onFeatureTap?.(tap);
     });
