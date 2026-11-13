@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { creditsLine, pressEscape } from "@mapcairn/core";
+import { creditsLine } from "@mapcairn/core";
 import {
   Attribution,
   DirectionsPanel,
@@ -75,7 +75,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
   const restoreFocus = useFocusReturn();
   const requestZoomAnnouncement = useZoomAnnouncement(map);
   const pinHeadingRef = useRef<HTMLHeadingElement>(null);
-  const { state, closeExplicitly, flushFocusReturn } = app;
+  const { state, closeExplicitly, flushFocusReturn, onEscape } = app;
 
   // The title follows the open sheet. Once it closes, the app state no longer
   // says which sheet it was, so the last title stays while it slides away.
@@ -98,12 +98,12 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
     const doc = map.hostElement?.ownerDocument ?? document;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
-        closeExplicitly(pressEscape());
+        onEscape();
       }
     };
     doc.addEventListener("keydown", onKeyDown);
     return () => doc.removeEventListener("keydown", onKeyDown);
-  }, [map.hostElement, closeExplicitly]);
+  }, [map.hostElement, onEscape]);
 
   // A newly opened pin card takes focus. This parent effect runs after the
   // sheet's own focus effects, so the card heading wins over the sheet title.

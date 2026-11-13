@@ -4,6 +4,7 @@ import {
   announceDetailError,
   announceDetailShown,
   announceFeaturesFound,
+  announceIdentified,
   announceLayerOn,
   announceLayersTurnedBackOn,
   announceLayersTurnedOff,
@@ -14,6 +15,7 @@ import {
   type ControlValues,
   describeChosenTime,
   type FieldValue,
+  type IdentifyTarget,
   isFeedLayer,
   isQueryLayer,
   isRasterTileLayer,
@@ -41,6 +43,15 @@ import { useAnnounce } from "../ui/LiveRegion";
 import { type CatalogueMessage, catalogueNotice } from "./catalogueNotice";
 import { type Link, type Reconciled, reconcile } from "./catalogueReconcile";
 import { type CatalogueView, catalogueView, loadFailed } from "./catalogueView";
+import {
+  askableLayers,
+  type IdentifiedEntry,
+  IdentifyRun,
+  identifiableLayers,
+  MAX_IDENTIFY_LAYERS,
+  outcomeOf,
+  stillCurrent,
+} from "./identifyRun";
 import { errorKind, type LayerStatus } from "./layerStatus";
 import { type LoadResult, loadOutcome } from "./loadOutcome";
 import { type AnnouncedStates, reportLoad, reportZoomIn } from "./loadReport";
@@ -53,6 +64,7 @@ import {
   wantedLoads,
 } from "./loadRequests";
 
+export { IDENTIFY_TIMEOUT_MS, MAX_IDENTIFY_LAYERS } from "./identifyRun";
 export type { CatalogueView, LayerStatus };
 
 /**
@@ -89,6 +101,14 @@ export interface DetailState {
   readonly featureId: string;
   readonly status: "loading" | "shown" | "error";
   readonly shapes: readonly LayerFeature[];
+}
+
+/** What a tap that asked raster layers came to. */
+export interface IdentifyResult {
+  /** How many layers were asked. Zero when none could be, and then nothing was requested. */
+  readonly asked: number;
+  /** How many features the layers that answered found, in all. */
+  readonly found: number;
 }
 
 /** What can hold the countdown to an Undo offer's expiry: the pointer over its status, or focus inside it. */
@@ -210,6 +230,46 @@ export interface DataLayers {
     hits: readonly { readonly layerId: string; readonly featureId: string }[],
     options?: { readonly focus?: boolean },
   ): void;
+  /**
+   * Asks the raster layers that answer a tap what is at a place, and opens
+   * what they find: one feature opens its card, several open the list to
+   * choose from, and none leaves an open card alone.
+   *
+   * It asks each layer that is on, has an `identify` block, shows imagery and
+   * whose `bounds` hold the place, at most {@link MAX_IDENTIFY_LAYERS} in
+   * catalogue order. The requests start together, each with
+   * {@link IDENTIFY_TIMEOUT_MS} to answer. It waits for all of them, changes
+   * the state once and says one message: how many were found, which layers
+   * did not answer, and how many it asked when the cap held some back. A
+   * layer that did not answer leaves what it showed before as it was.
+   *
+   * Resolves with how many layers were asked and how many features they
+   * found, or with null when this tap was replaced or cancelled before it
+   * settled, which opens and says nothing. When no layer can be asked it
+   * resolves at once with `asked` of zero, changes nothing and says nothing,
+   * so the caller can fall back to its own message. Starting a tap cancels the
+   * one in flight.
+   */
+  identifyAt(
+    target: IdentifyTarget,
+    options?: { readonly focus?: boolean },
+  ): Promise<IdentifyResult | null>;
+  /**
+   * Cancels the tap in flight, if there is one: its requests are aborted and it
+   * opens and says nothing. Returns whether there was one. The host calls it
+   * when the person leaves the plain map (another surface opens, taps stop
+   * meaning "look here", a long press), and Escape calls it before it closes
+   * anything. A layer turned off, whose tiles change, or an unmount cancels
+   * what concerns it without a call, and so does opening a card or a list
+   * with {@link DataLayers.select} or {@link DataLayers.choose}.
+   */
+  cancelIdentify(): boolean;
+  /**
+   * True from the start of {@link DataLayers.identifyAt} until it settles or is
+   * cancelled. It is the status data for a "looking up" line, which waits a
+   * moment before it shows so a quick answer never flickers.
+   */
+  readonly identifying: boolean;
   /** Closes the open card and returns to the list of features found together. */
   backToChoices(options?: { readonly focus?: boolean }): void;
   /**
@@ -254,6 +314,14 @@ interface State {
   readonly retries: Readonly<Record<string, number>>;
   /** The tiles each tile layer found no imagery for, by layer id (see `reportTilesUnavailable`). */
   readonly tilesUnavailable: Readonly<Record<string, string>>;
+  /**
+   * What each tile layer found at the last tap that answered for it. It sits
+   * apart from `results`, which feeds the list and the drawing, because these
+   * features are neither listed nor drawn and their ids are not stable.
+   */
+  readonly identified: Readonly<Record<string, IdentifiedEntry>>;
+  /** A tap is waiting for the layers it asked. */
+  readonly identifying: boolean;
   /**
    * The open card's feature. Its snapshot keeps the card open when a query
    * layer refreshes for another part of the map and no longer lists it.
@@ -344,6 +412,8 @@ function initialState(
       results: {},
       retries: {},
       tilesUnavailable: {},
+      identified: {},
+      identifying: false,
       selection: null,
       choices: null,
       view: null,
@@ -368,17 +438,11 @@ function without<T>(
   );
 }
 
-/**
- * The state with what belongs to these layers cleared, for layers that are
- * turning on or off: what they loaded, tiles known to have failed, their
- * open card, their entries in a list of choices and their affected area.
- */
-function withoutTraces(state: State, ids: ReadonlySet<string>): State {
+/** The state with the open card, the entries in a list of choices and the affected area of these layers closed. */
+function withoutOpenIn(state: State, ids: ReadonlySet<string>): State {
   const choices = state.choices?.filter((choice) => !ids.has(choice.layerId));
   return {
     ...state,
-    results: without(state.results, ids),
-    tilesUnavailable: without(state.tilesUnavailable, ids),
     selection:
       state.selection && ids.has(state.selection.layerId)
         ? null
@@ -386,6 +450,95 @@ function withoutTraces(state: State, ids: ReadonlySet<string>): State {
     choices: choices && choices.length > 0 ? choices : null,
     detail: state.detail && ids.has(state.detail.layerId) ? null : state.detail,
   };
+}
+
+/**
+ * The state with what belongs to these layers cleared, for layers that are
+ * turning on or off: what they loaded, what a tap found, tiles known to have
+ * failed, their open card, their entries in a list of choices and their
+ * affected area.
+ */
+function withoutTraces(state: State, ids: ReadonlySet<string>): State {
+  return {
+    ...withoutOpenIn(state, ids),
+    results: without(state.results, ids),
+    identified: without(state.identified, ids),
+    tilesUnavailable: without(state.tilesUnavailable, ids),
+  };
+}
+
+/** A feature to open, by its layer and its id. */
+type FeatureHit = {
+  readonly layerId: string;
+  readonly featureId: string;
+};
+
+/**
+ * The state with these features open: one opens its card, several open the
+ * list to choose from. `focus` asks for the card or list to take focus.
+ */
+function withOpened(
+  state: State,
+  hits: readonly FeatureHit[],
+  focus: boolean,
+): State {
+  const [only] = hits;
+  return {
+    ...state,
+    selection: hits.length === 1 && only ? { ...only } : null,
+    choices: hits.length > 1 ? hits : null,
+    focusRequest: state.focusRequest + (focus ? 1 : 0),
+  };
+}
+
+/**
+ * The state once a tap settled: the layers that answered keep what they
+ * found, replacing what an earlier tap found, and what was found opens. When
+ * nothing was found the card that is open stays, unless it points into a
+ * layer that answered, whose features it was a feature of before.
+ */
+function withIdentified(
+  state: State,
+  entries: Readonly<Record<string, IdentifiedEntry>>,
+  hits: readonly FeatureHit[],
+  focus: boolean,
+): State {
+  const settled = {
+    ...state,
+    identified: { ...state.identified, ...entries },
+    identifying: false,
+  };
+  return hits.length === 0
+    ? withoutOpenIn(settled, new Set(Object.keys(entries)))
+    : withOpened(settled, hits, focus);
+}
+
+/**
+ * The state without what a tap found for a layer, once the tiles it asked
+ * about are not the ones it shows now: the answer describes other imagery.
+ * `tiles` is the URL the layer shows now, or null for a layer without tiles.
+ */
+function withoutStaleIdentified(
+  state: State,
+  id: string,
+  tiles: string | null,
+): State {
+  const entry = state.identified[id];
+  return entry === undefined || entry.tiles === tiles
+    ? state
+    : {
+        ...withoutOpenIn(state, new Set([id])),
+        identified: without(state.identified, new Set([id])),
+      };
+}
+
+/** The features a layer has: those a tap found for it, else the `loaded` ones (a feed's or a query's). */
+function featuresFor(
+  identified: State["identified"],
+  layerId: string,
+  loaded: readonly LayerFeature[] | undefined,
+): readonly LayerFeature[] | undefined {
+  return identified[layerId]?.features ?? loaded;
 }
 
 /**
@@ -620,6 +773,8 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   const queryWindows = useRef(new Map<string, Bounds>());
   const announcedStates = useRef<AnnouncedStates>(new Map());
   const detailRequest = useRef<AbortController | null>(null);
+  /** The tap in flight, if there is one. */
+  const identifyRun = useRef<IdentifyRun | null>(null);
 
   const byId = useMemo(
     () => new Map(definitions.map((definition) => [definition.id, definition])),
@@ -643,6 +798,27 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     return definition !== undefined && isTooFarOut(definition, state.view);
   });
   const tooFarSignature = tooFar.join(" ");
+
+  // A tap's request for a layer that has been turned off, left the catalogue or
+  // changed its tiles in the meantime is aborted: what it would find describes
+  // imagery that is no longer shown.
+  const identifiable = identifiableLayers({
+    definitions,
+    enabled: state.enabled,
+    controls: state.controls,
+    now: now(),
+  });
+  const identifiableSignature = identifiable
+    .map(({ definition, tiles }) => `${definition.id} ${tiles}`)
+    .join("\n");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the signature is the trigger; everything else is read through refs or is stable.
+  useEffect(() => {
+    identifyRun.current?.abortStale(
+      new Map(
+        identifiable.map(({ definition, tiles }) => [definition.id, tiles]),
+      ),
+    );
+  }, [identifiableSignature]);
 
   // Remembers the windows asked for, and forgets those of layers that no
   // longer ask (turned off, or too far out). It runs after every commit: that
@@ -734,6 +910,8 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       }
       requests.current.clear();
       detailRequest.current?.abort();
+      identifyRun.current?.cancel();
+      identifyRun.current = null;
     },
     [],
   );
@@ -861,15 +1039,20 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           { ...previous.controls[id], [controlId]: value },
           now(),
         );
-        return {
-          ...previous,
-          controls: { ...previous.controls, [id]: controls },
-          tilesUnavailable: tilesUnavailableFor(
-            previous.tilesUnavailable,
-            id,
-            tilesOf(definition, controls, now()),
-          ),
-        };
+        const tiles = tilesOf(definition, controls, now());
+        return withoutStaleIdentified(
+          {
+            ...previous,
+            controls: { ...previous.controls, [id]: controls },
+            tilesUnavailable: tilesUnavailableFor(
+              previous.tilesUnavailable,
+              id,
+              tiles,
+            ),
+          },
+          id,
+          tiles,
+        );
       });
     },
     [byId, now],
@@ -940,6 +1123,20 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     }));
   }, []);
 
+  /** Cancels the tap in flight, and reports whether there was one. */
+  const cancelIdentify = useCallback((): boolean => {
+    const run = identifyRun.current;
+    if (!run) {
+      return false;
+    }
+    identifyRun.current = null;
+    run.cancel();
+    setState((previous) =>
+      previous.identifying ? { ...previous, identifying: false } : previous,
+    );
+    return true;
+  }, []);
+
   const select = useCallback(
     (
       layerId: string,
@@ -949,13 +1146,20 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         readonly keepChoices?: boolean;
       } = {},
     ) => {
+      // A card opened another way wins over a lookup still waiting: its late
+      // answer must not replace the card or take focus from it.
+      if (featureId !== null) {
+        cancelIdentify();
+      }
       setState((previous) => {
         const snapshot =
           featureId === null
             ? undefined
-            : previous.results[layerId]?.features.find(
-                (item) => item.id === featureId,
-              );
+            : featuresFor(
+                previous.identified,
+                layerId,
+                previous.results[layerId]?.features,
+              )?.find((item) => item.id === featureId);
         return {
           ...previous,
           selection:
@@ -970,7 +1174,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         };
       });
     },
-    [],
+    [cancelIdentify],
   );
 
   const choose = useCallback(
@@ -1001,15 +1205,80 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         select(only.layerId, only.featureId, chooseOptions);
         return;
       }
-      setState((previous) => ({
-        ...previous,
-        selection: null,
-        choices: found,
-        focusRequest: previous.focusRequest + (chooseOptions.focus ? 1 : 0),
-      }));
-      announce(announceFeaturesFound(found.length), { priority: "polite" });
+      cancelIdentify();
+      setState((previous) =>
+        withOpened(previous, found, chooseOptions.focus === true),
+      );
+      announce(announceFeaturesFound(found.length), {
+        priority: "polite",
+        keep: true,
+      });
     },
-    [announce, select],
+    [announce, cancelIdentify, select],
+  );
+
+  const identifyAt = useCallback(
+    async (
+      target: IdentifyTarget,
+      identifyOptions: { readonly focus?: boolean } = {},
+    ): Promise<IdentifyResult | null> => {
+      cancelIdentify();
+      const current = stateRef.current;
+      const available = askableLayers(
+        identifiableLayers({
+          definitions,
+          enabled: current.enabled,
+          controls: current.controls,
+          now: now(),
+        }),
+        current.tilesUnavailable,
+        target.latlng,
+      );
+      const asking = available.slice(0, MAX_IDENTIFY_LAYERS);
+      if (asking.length === 0) {
+        return { asked: 0, found: 0 };
+      }
+      const run = new IdentifyRun();
+      identifyRun.current = run;
+      setState((previous) => ({ ...previous, identifying: true }));
+      const answers = await Promise.all(
+        asking.map((layer) => run.ask(layerSource, layer, target, now())),
+      );
+      if (identifyRun.current !== run) {
+        return null;
+      }
+      identifyRun.current = null;
+      // A layer turned off or re-timed while another was still held may have
+      // answered before the change, and its answer no longer describes the map.
+      const latest = stateRef.current;
+      const shown = new Map(
+        identifiableLayers({
+          definitions,
+          enabled: latest.enabled,
+          controls: latest.controls,
+          now: now(),
+        }).map(({ definition, tiles }) => [definition.id, tiles]),
+      );
+      const outcome = outcomeOf(stillCurrent(answers, shown), available.length);
+      if (!outcome) {
+        setState((previous) => ({ ...previous, identifying: false }));
+        return null;
+      }
+      setState((previous) =>
+        withIdentified(
+          previous,
+          outcome.entries,
+          outcome.hits,
+          identifyOptions.focus === true,
+        ),
+      );
+      const said = announceIdentified(outcome.report);
+      if (said) {
+        announce(said.message, { priority: said.priority, keep: true });
+      }
+      return { asked: outcome.report.asked, found: outcome.report.found };
+    },
+    [announce, cancelIdentify, definitions, layerSource, now],
   );
 
   const backToChoices = useCallback(
@@ -1150,12 +1419,16 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     // A query layer's card stays open when a refresh for another part of the
     // map no longer lists its feature. Other layers close it, as they reload.
     const feature =
-      layer?.features.find((item) => item.id === selection?.featureId) ??
+      featuresFor(
+        state.identified,
+        layer?.definition.id ?? "",
+        layer?.features,
+      )?.find((item) => item.id === selection?.featureId) ??
       (layer?.enabled && isQueryLayer(layer.definition)
         ? selection?.snapshot
         : undefined);
     return layer && feature ? { layer, feature } : null;
-  }, [layers, state.selection]);
+  }, [layers, state.identified, state.selection]);
 
   const choices = useMemo<readonly SelectedFeature[] | null>(() => {
     if (!state.choices) {
@@ -1165,13 +1438,15 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       const layer = layers.find(
         (item) => item.definition.id === choice.layerId,
       );
-      const feature = layer?.features.find(
-        (item) => item.id === choice.featureId,
-      );
+      const feature = featuresFor(
+        state.identified,
+        choice.layerId,
+        layer?.features,
+      )?.find((item) => item.id === choice.featureId);
       return layer && feature ? [{ layer, feature }] : [];
     });
     return found.length > 0 ? found : null;
-  }, [layers, state.choices]);
+  }, [layers, state.identified, state.choices]);
 
   const turnedOff = useMemo<TurnedOff | null>(() => {
     const count = offer ? stillOff(offer, state.enabled, byId).length : 0;
@@ -1231,6 +1506,9 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     reportTilesRecovered,
     select,
     choose,
+    identifyAt,
+    cancelIdentify,
+    identifying: state.identifying,
     backToChoices,
     setView,
     showDetail,
