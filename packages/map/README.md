@@ -55,6 +55,6 @@ import { ServicesProvider, MapView, MapChrome } from "@mapcairn/map";
 
 ## What doesn't belong here
 
-- A map engine, an adapter or a browser API. Those live in `packages/web/src/adapters` behind a port from `@mapcairn/core`.
+- A map engine or an adapter. Those live in `packages/web/src/adapters` behind a port from `@mapcairn/core`. Browser APIs that need a port, such as storage, network, URL state, media queries, geolocation and the clipboard, live there too.
 - App-specific copy, routes and headers. Those belong to the host.
 - Raw colours, sizes, z-index values or icon packages. Use the tokens and `Icon`.

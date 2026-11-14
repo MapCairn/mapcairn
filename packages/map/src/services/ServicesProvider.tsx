@@ -15,8 +15,8 @@ export interface ServicesProviderProps {
 
 /**
  * Makes the app's services available to every component below it. This is the
- * only way components reach adapters, browser APIs or map engines, so tests can
- * swap in fakes by wrapping a tree in this provider. It also keeps which
+ * only way components reach adapters, browser services or map engines, so tests
+ * can swap in fakes by wrapping a tree in this provider. It also keeps which
  * basemaps are not working (see `useBasemapAvailability`).
  */
 export function ServicesProvider({

@@ -1,6 +1,6 @@
 # Architecture
 
-MapCairn separates what the app does from what it runs on. The interface and the pure logic depend on small interfaces (ports). Concrete code that touches a map engine, a browser API or a network service (adapters) lives in one place each and is wired together once, in the composition root.
+MapCairn separates what the app does from what it runs on. The interface and the pure logic depend on small interfaces (ports). Concrete code that touches a map engine, a browser service or a network service (adapters) lives in one place each and is wired together once, in the composition root.
 
 ```mermaid
 flowchart TD

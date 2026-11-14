@@ -79,7 +79,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 
 ## Rendering on the server
 
-- **S1** The page is server-rendered on Workers. Browser globals belong in an adapter: lint denies storage, `fetch`, `matchMedia`, `location` and `history` outside one, and the rest (`window`, `document`) is checked by reading. A value that differs between server and client (time, locale, `matchMedia`, storage) is read after mount or with `useSyncExternalStore`. An input with `value` has `onChange`. `suppressHydrationWarning` only where it is truly needed.
+- **S1** The page is server-rendered on Workers. Outside an adapter, a test or a Playwright spec, lint denies the bare `localStorage`, `sessionStorage`, `matchMedia`, `fetch`, `location` and `history`, the same six on `window`, `globalThis` or `self`, `navigator.geolocation`, `navigator.clipboard` and `document.location`; those belong in an adapter. `packages/core` also denies every property of `window`, `document`, `navigator`, `self` and `globalThis`, and a list of bare globals. Outside core, everything else on `window`, `document` and `navigator` is allowed and is checked by reading. Focus management such as `document.activeElement` is accepted in components (`DESIGN.md` records where it is used). A value that differs between server and client (time, locale, `matchMedia`, storage) is read after mount or with `useSyncExternalStore`. An input with `value` has `onChange`. `suppressHydrationWarning` only where it is truly needed.
 - **S2** No inline `style` attribute (lint). A dynamic value is a custom property set through the CSSOM.
 
 ## Locale
