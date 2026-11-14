@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { Suspense, startTransition, use, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StatusMessage } from "./StatusMessage";
 
@@ -254,6 +255,50 @@ describe("StatusMessage", () => {
     unmountOther();
     unmount();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps the onDismiss that was committed when a render with another one is thrown away", async () => {
+    const committed = vi.fn();
+    const discarded = vi.fn();
+    let propose: (next: () => void) => void = () => {};
+    let abandon: () => void = () => {};
+
+    function Harness() {
+      const [onDismiss, setOnDismiss] = useState(() => committed);
+      const [abandoned, setAbandoned] = useState(false);
+      propose = (next) => setOnDismiss(() => next);
+      abandon = () => setAbandoned(true);
+      return (
+        <>
+          <StatusMessage variant="info" onDismiss={onDismiss}>
+            Hello
+          </StatusMessage>
+          <Suspender suspended={abandoned} />
+        </>
+      );
+    }
+    function Suspender({ suspended }: { suspended: boolean }) {
+      if (suspended) {
+        use(new Promise<never>(() => {}));
+      }
+      return null;
+    }
+
+    render(
+      <Suspense fallback={null}>
+        <Harness />
+      </Suspense>,
+    );
+    await act(async () => {
+      startTransition(() => {
+        propose(discarded);
+        abandon();
+      });
+    });
+    act(() => vi.advanceTimersByTime(6000));
+
+    expect(discarded).not.toHaveBeenCalled();
+    expect(committed).toHaveBeenCalledTimes(1);
   });
 
   it("stops the countdown when an info message becomes an error", () => {

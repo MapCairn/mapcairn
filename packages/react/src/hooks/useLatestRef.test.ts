@@ -11,7 +11,7 @@ describe("useLatestRef", () => {
     expect(result.current.current).toBe("initial");
   });
 
-  it("updates .current synchronously on every render, without waiting for an effect", () => {
+  it("updates .current when a render commits with a new value", () => {
     const { result, rerender } = renderHook(
       ({ value }) => useLatestRef(value),
       { initialProps: { value: "first" } },
