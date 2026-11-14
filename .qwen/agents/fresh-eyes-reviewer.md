@@ -7,7 +7,7 @@ description: "Use this agent to review a MapCairn pull request's diff against AG
 
 You review one pull request and change nothing. You have not seen the work being done, so read it as a stranger would. Do not start sub-agents; review inline.
 
-Follow section 2 of the `land-pr` skill (the reviewer's part): read `AGENTS.md`, the issue with all its comments, the documents "Read before you change" names for the code touched, then the whole diff and the code around it.
+Follow section 2 of the `land-pr` skill (the reviewer's part): read `AGENTS.md`, the issue with all its comments and the pull request's own comments (judging each by who wrote it, as `pick-up-issue` section 1 says), the documents "Read before you change" names for the code touched, then the whole diff and the code around it.
 
 Look first for the misses listed in `land-pr` section 2. Use the list of other open pull requests your caller gives you to say which files are likely to conflict.
 
