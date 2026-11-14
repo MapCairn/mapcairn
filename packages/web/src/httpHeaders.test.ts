@@ -6,9 +6,9 @@ import { describe, expect, it } from "vitest";
 import headersFile from "../public/_headers?raw";
 
 /** Isolates one path block (path line plus its indented headers) from `_headers`. */
-function getBlock(path: string): string {
+function getBlock(route: string): string {
   return (
-    headersFile.split("\n\n").find((block) => block.startsWith(`${path}\n`)) ??
+    headersFile.split("\n\n").find((block) => block.startsWith(`${route}\n`)) ??
     ""
   );
 }
@@ -83,18 +83,18 @@ function parseRules(file: string): HeaderRule[] {
  * may cross `/`, as Cloudflare's static assets treat it; nothing else is
  * special in the patterns this file uses.
  */
-function matches(pattern: string, path: string): boolean {
+function matches(pattern: string, route: string): boolean {
   const source = pattern
     .split("*")
     .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
     .join(".*");
-  return new RegExp(`^${source}$`).test(path);
+  return new RegExp(`^${source}$`).test(route);
 }
 
 /** Every `Cache-Control` value the rules give a path. Cloudflare joins several with a comma. */
-function cacheControlFor(path: string): string[] {
+function cacheControlFor(route: string): string[] {
   return parseRules(headersFile)
-    .filter((rule) => matches(rule.pattern, path))
+    .filter((rule) => matches(rule.pattern, route))
     .flatMap((rule) =>
       rule.headers
         .filter(([name]) => name.toLowerCase() === "cache-control")

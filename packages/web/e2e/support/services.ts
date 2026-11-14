@@ -428,7 +428,7 @@ export async function scriptBasemaps(
   await page.addInitScript((definitions: readonly { id: string }[]) => {
     const byId = new Map(definitions.map((basemap) => [basemap.id, basemap]));
     const fallback = definitions[0];
-    const basemaps = {
+    const service = {
       basemaps: definitions,
       defaultId: fallback?.id,
       get: (id: string) => byId.get(id),
@@ -436,7 +436,7 @@ export async function scriptBasemaps(
     };
     window.__MAPCAIRN_TEST_SERVICES__ = Object.assign(
       (window.__MAPCAIRN_TEST_SERVICES__ as object | undefined) ?? {},
-      { basemaps },
+      { basemaps: service },
     );
   }, basemaps);
 }

@@ -685,9 +685,9 @@ export function useDraw({
   );
 
   const copyLink = useCallback(async () => {
-    const { shapes } = stateRef.current;
-    const encoded = encodeShapes(shapes);
-    const leftOut = unsharableShapes(shapes).length;
+    const current = stateRef.current.shapes;
+    const encoded = encodeShapes(current);
+    const leftOut = unsharableShapes(current).length;
     if (encoded === null) {
       report({
         kind: "error",

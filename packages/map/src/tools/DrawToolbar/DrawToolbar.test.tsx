@@ -43,15 +43,13 @@ const onOpenShapes = vi.fn();
 const focusMap = vi.fn();
 
 function Harness({ active = true }: { active?: boolean }) {
-  const draw = useDraw({
+  const api = useDraw({
     units: "metric",
     active,
     getAdapter: () => adapter,
   });
-  drawApi = draw;
-  return (
-    <DrawToolbar draw={draw} onDone={onDone} onOpenShapes={onOpenShapes} />
-  );
+  drawApi = api;
+  return <DrawToolbar draw={api} onDone={onDone} onOpenShapes={onOpenShapes} />;
 }
 
 const layout: ChromeLayoutValue = {

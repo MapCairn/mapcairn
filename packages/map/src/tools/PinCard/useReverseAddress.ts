@@ -68,9 +68,9 @@ export function useReverseAddress({ lat, lng }: LatLng): ReverseAddress {
     controller.current?.abort();
     const current = new AbortController();
     controller.current = current;
-    const settle = (state: AddressState) => {
+    const settle = (settled: AddressState) => {
       if (!current.signal.aborted) {
-        setTracked({ lat, lng, state });
+        setTracked({ lat, lng, state: settled });
       }
     };
     setTracked({ lat, lng, state: { status: "loading" } });

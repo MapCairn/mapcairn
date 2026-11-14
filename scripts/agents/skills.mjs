@@ -74,9 +74,9 @@ function plainValueProblem(raw) {
  * @returns {{ value: string, problem?: string }}
  */
 function readValue(key, raw) {
-  const invalid = (/** @type {string} */ reason) => ({
+  const invalid = (/** @type {string} */ why) => ({
     value: raw,
-    problem: `${key}: ${reason}`,
+    problem: `${key}: ${why}`,
   });
   if (raw.startsWith('"')) {
     try {

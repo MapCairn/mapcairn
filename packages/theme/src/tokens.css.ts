@@ -125,14 +125,18 @@ const staticContract = {
 function themedValues(
   theme: ThemeName,
   set: "colour" | "opaque" | "contrastMore" = "colour",
-  blur: string = blurValue,
+  backdropBlur: string = blurValue,
 ): {
   color: ColourRoles;
   shadow: ThemeValues["shadow"];
   effect: { blur: string };
 } {
   const values = themeValues[theme];
-  return { color: values[set], shadow: values.shadow, effect: { blur } };
+  return {
+    color: values[set],
+    shadow: values.shadow,
+    effect: { blur: backdropBlur },
+  };
 }
 
 createGlobalTheme(":root", staticContract, {

@@ -277,9 +277,9 @@ describe("shapeGeometry of a large circle", () => {
             finishShape(
               {
                 kind: "polygon",
-                vertices: ring.map(([lng, lat]) => ({
-                  lat: lat as number,
-                  lng: lng as number,
+                vertices: ring.map(([x, y]) => ({
+                  lat: y as number,
+                  lng: x as number,
                 })),
               },
               0,

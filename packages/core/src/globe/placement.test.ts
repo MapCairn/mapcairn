@@ -174,7 +174,7 @@ describe("placePath on a globe", () => {
   });
 });
 
-function path(
+function placed(
   pixels: PixelPoint[],
   visible: boolean[],
   closed: boolean,
@@ -199,39 +199,39 @@ const PIXELS: PixelPoint[] = [
 describe("visibleRuns", () => {
   it("splits an open path where it goes out of sight", () => {
     expect(
-      visibleRuns(path(PIXELS, [true, true, false, true, true], false)),
+      visibleRuns(placed(PIXELS, [true, true, false, true, true], false)),
     ).toEqual([PIXELS.slice(0, 2), PIXELS.slice(3)]);
   });
 
   it("drops a lone visible point, which makes no segment", () => {
     expect(
-      visibleRuns(path(PIXELS, [true, false, true, false, true], false)),
+      visibleRuns(placed(PIXELS, [true, false, true, false, true], false)),
     ).toEqual([]);
   });
 
   it("returns a wholly visible ring as one run back to its start", () => {
     const ring = PIXELS.slice(0, 3);
-    expect(visibleRuns(path(ring, [true, true, true], true))).toEqual([
+    expect(visibleRuns(placed(ring, [true, true, true], true))).toEqual([
       [...ring, ring[0]],
     ]);
   });
 
   it("joins the runs on either side of a ring's closing segment", () => {
     expect(
-      visibleRuns(path(PIXELS, [true, true, false, true, true], true)),
+      visibleRuns(placed(PIXELS, [true, true, false, true, true], true)),
     ).toEqual([[PIXELS[3], PIXELS[4], PIXELS[0], PIXELS[1]]]);
   });
 
   it("returns nothing for a hidden ring or an empty path", () => {
     expect(
       visibleRuns(
-        path(
+        placed(
           PIXELS,
           PIXELS.map(() => false),
           true,
         ),
       ),
     ).toEqual([]);
-    expect(visibleRuns(path([], [], true))).toEqual([]);
+    expect(visibleRuns(placed([], [], true))).toEqual([]);
   });
 });

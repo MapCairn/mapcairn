@@ -152,7 +152,8 @@
       "suspicious": {
         "noDeprecatedImports": "error",
         "noDocumentCookie": "error",
-        "noLeakedRender": "error"
+        "noLeakedRender": "error",
+        "noShadow": "error"
       },
       "style": {
         "noInlineStyles": "error",
