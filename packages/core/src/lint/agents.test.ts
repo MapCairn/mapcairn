@@ -421,18 +421,49 @@ describe("mirror planning", () => {
     }
   });
 
-  it("copies project skills only, and leaves vendored ones out", () => {
-    put(
-      ".claude/skills/vendored/SKILL.md",
-      skill("name: vendored\ndescription: V."),
-    );
+  it("mirrors a vendored skill byte for byte, so every tool reads it", () => {
+    put(".claude/skills/vendored/SKILL.md", "no frontmatter\r\n");
+    put(".claude/skills/vendored/references/data.bin", Buffer.from([0, 255]));
     put(
       "skills-lock.json",
       JSON.stringify({ version: 1, skills: { vendored: {} } }),
     );
+    const plan = plannedFiles(root);
+    expect(plan.get(".agents/skills/vendored/SKILL.md")).toEqual(
+      Buffer.from("no frontmatter\r\n"),
+    );
+    expect(plan.get(".agents/skills/vendored/references/data.bin")).toEqual(
+      Buffer.from([0, 255]),
+    );
+    expect(plan.has(".agents/skills/alpha/SKILL.md")).toBe(true);
+    writePlan(root, plan);
+    expect(findDrift(root, plannedFiles(root))).toEqual({
+      missing: [],
+      changed: [],
+      extra: [],
+    });
+  });
+
+  it("plans nothing for a skill the lock file names but the folder lacks", () => {
+    put(
+      "skills-lock.json",
+      JSON.stringify({ version: 1, skills: { absent: {} } }),
+    );
     const files = [...plannedFiles(root).keys()];
-    expect(files.some((file) => file.includes("vendored"))).toBe(false);
-    expect(files).toContain(".agents/skills/alpha/SKILL.md");
+    expect(files.some((file) => file.includes("absent"))).toBe(false);
+  });
+
+  it("reports a vendored skill that is a symbolic link", () => {
+    mkdirSync(path.join(root, "elsewhere"), { recursive: true });
+    symlinkSync(
+      path.join(root, "elsewhere"),
+      path.join(root, ".claude/skills/linked"),
+      "junction",
+    );
+    put("skills-lock.json", JSON.stringify({ skills: { linked: {} } }));
+    expect(skillProblems(root)).toEqual([
+      ".claude/skills/linked: is a symbolic link; use a real folder, because the sync copies and never links",
+    ]);
   });
 
   it("does not hold a vendored skill to the project rules", () => {

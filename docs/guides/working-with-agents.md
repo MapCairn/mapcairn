@@ -7,7 +7,7 @@ The project's skills and agents were written for Claude Code, and everyone is we
 | Thing | Source (edit this) | Copies for other tools (generated, do not edit) |
 | --- | --- | --- |
 | Rules | `AGENTS.md` | `CLAUDE.md` imports it; `.github/copilot-instructions.md` is a few lines that point to it |
-| Skills | `.claude/skills/<name>/SKILL.md`, project skills only | `.agents/skills/<name>/` |
+| Skills | `.claude/skills/<name>/SKILL.md`, the project's own and those installed from elsewhere | `.agents/skills/<name>/` |
 | Agents | `.claude/agents/<name>.md` | `.opencode/agents/<name>.md`, `.codex/agents/<name>.toml`, `.github/agents/<name>.agent.md`, `.qwen/agents/<name>.md` |
 
 After you change a skill or an agent, run `npm run agents:sync`. It copies files (never links, so it works on Windows) and removes stale ones in the five output folders only. `npm run agents:check` does the same comparison without writing; `npm run lint` and the pre-commit hook run it, so stale copies cannot merge. The script takes the repository root from its own location, and fails in both modes when `.claude/skills` is missing or there is nothing to generate.
@@ -21,7 +21,7 @@ After you change a skill or an agent, run `npm run agents:sync`. It copies files
 
 ### Skills installed from elsewhere
 
-`skills-lock.json` records the skills installed from other sources (the Cloudflare ones), with their source and a hash. They are not the project's text to rewrite, so `agents:sync` neither checks nor copies them, and the mirror holds the project's skills only. To add or update one, install it into `.claude/skills` the way the lock file records and commit the folder and its lock entry together; do not edit its files by hand, because the hash would no longer match. A tool that reads only `.agents/skills` (Codex, Antigravity) will not see it unless you install it there yourself, which is not tracked here.
+`skills-lock.json` records the skills installed from other sources (the Cloudflare ones), with their source and a hash. They are not the project's text to rewrite, so `agents:check` does not hold them to the project's skill rules (it still reports one that is a symbolic link), but `agents:sync` copies them byte for byte into `.agents/skills` like the project's own, so every tool reads them. To add or update one, install it into `.claude/skills` the way the lock file records and commit the folder and its lock entry together; do not edit its files by hand, because the hash would no longer match. Run `npm run agents:sync` afterwards so the copy in `.agents/skills` is written, and commit it; a tool that reads only `.agents/skills` (Codex, Antigravity, Qwen Code) then sees it too.
 
 ### Agents
 

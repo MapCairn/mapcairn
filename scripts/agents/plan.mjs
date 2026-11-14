@@ -4,7 +4,8 @@
  * Works out which files the sync owns and what they should contain. The
  * sources are `.claude/skills` and `.claude/agents`; everything under the
  * output folders in `OWNED_DIRECTORIES` is generated and is replaced or
- * removed to match. Files are copied, never linked, so it works on Windows.
+ * removed to match. Files are copied, never linked, so it works on Windows. The
+ * skills named in `skills-lock.json` are mirrored too, so every tool reads them.
  */
 import {
   existsSync,
@@ -73,7 +74,8 @@ function filesUnder(root, directory) {
 
 /**
  * The skills installed from elsewhere, named in `skills-lock.json`. They are
- * not ours to rewrite, so they are neither checked nor copied.
+ * not ours to rewrite, so they are not held to the project's skill rules, but
+ * they are mirrored like the project's own so that every tool reads them.
  *
  * @param {string} root
  * @returns {Set<string>}
@@ -88,35 +90,36 @@ function vendoredSkills(root) {
 }
 
 /**
- * The project's own skill entries (everything in `.claude/skills` that
- * `skills-lock.json` does not name), sorted by name.
+ * Every entry in `.claude/skills`, project and vendored, sorted by name.
  *
  * @param {string} root
  * @returns {import("node:fs").Dirent[]}
  */
-function projectSkillEntries(root) {
-  const vendored = vendoredSkills(root);
-  return entriesOf(root, SKILLS_SOURCE)
-    .filter((entry) => !vendored.has(entry.name))
-    .sort((a, b) => a.name.localeCompare(b.name));
+function skillEntries(root) {
+  return entriesOf(root, SKILLS_SOURCE).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 }
 
 /**
- * The names of the project skills that are real folders, sorted.
+ * The names of the skills (project and vendored) that are real folders, sorted.
+ * A skill the lock file names but whose folder is missing is not listed.
  *
  * @param {string} root
  * @returns {string[]}
  */
 function skillFolders(root) {
-  return projectSkillEntries(root)
+  return skillEntries(root)
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 }
 
 /**
- * Checks every project skill in `.claude/skills` and returns one line per
- * problem. A symbolic link is reported, not skipped: the sync copies and never
- * links, so a linked skill would silently go missing from the mirror.
+ * Checks every skill in `.claude/skills` and returns one line per problem. A
+ * symbolic link is reported, not skipped, for a vendored skill as for a project
+ * one: the sync copies and never links, so a linked skill would silently go
+ * missing from the mirror. Only the project's own skills are held to the rest of
+ * the skill rules.
  *
  * @param {string} root
  * @returns {string[]}
@@ -125,14 +128,15 @@ export function skillProblems(root) {
   if (!existsSync(path.join(root, SKILLS_SOURCE))) {
     return [`${SKILLS_SOURCE} is missing`];
   }
-  return projectSkillEntries(root).flatMap((entry) => {
+  const vendored = vendoredSkills(root);
+  return skillEntries(root).flatMap((entry) => {
     const where = `${SKILLS_SOURCE}/${entry.name}`;
     if (entry.isSymbolicLink()) {
       return [
         `${where}: is a symbolic link; use a real folder, because the sync copies and never links`,
       ];
     }
-    if (!entry.isDirectory()) {
+    if (!entry.isDirectory() || vendored.has(entry.name)) {
       return [];
     }
     const file = path.join(root, where, "SKILL.md");
@@ -147,8 +151,8 @@ export function skillProblems(root) {
 
 /**
  * The files the sync should produce, keyed by path relative to `root`: a
- * byte-for-byte copy of each project skill folder (as `Buffer`s, vendored skills
- * left out) and one file per agent in each tool's format (as strings).
+ * byte-for-byte copy of each skill folder, project and vendored (as `Buffer`s),
+ * and one file per agent in each tool's format (as strings).
  *
  * @param {string} root
  * @returns {Map<string, Buffer | string>}
