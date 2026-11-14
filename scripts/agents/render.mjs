@@ -118,7 +118,8 @@ export function renderQwen(agent) {
  * tools it stands for, in the order they are written. They are the only four
  * the documentation names; an unknown name is a known cause of a hung agent, so
  * no other is guessed. Glob and Skill have no documented name: `grep_search` and
- * `run_command` find files, and the skills are read from `.agents/skills`.
+ * `run_command` find files, and the role text names the skill to follow (whether
+ * Antigravity gives a custom agent the workspace skills is not checked).
  */
 const ANTIGRAVITY_TOOLS = [
   { name: "view_file", claude: ["Read"] },

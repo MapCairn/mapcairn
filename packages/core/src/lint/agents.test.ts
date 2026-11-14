@@ -287,6 +287,18 @@ describe("agent rendering", () => {
     );
   });
 
+  it("writes a description with a colon, a quote and a line break as one quoted YAML value", () => {
+    const description = 'Has: a colon, a "quote" and\na line break';
+    const text = renderAntigravity({
+      name: "a",
+      description,
+      body: "Body.\n",
+      tools: ["Read"],
+    });
+    expect(text).toContain(`description: ${JSON.stringify(description)}\n`);
+    expect(text.split("---")[1]).not.toContain("\na line break");
+  });
+
   it("gives an agent that lists no tools every documented tool, as Claude Code does", () => {
     const text = renderAntigravity(
       parseAgent("a.md", agent("name: a\ndescription: x")),
@@ -416,6 +428,20 @@ describe("mirror planning", () => {
     const drift = findDrift(root, plannedFiles(root));
     expect(drift.changed).toEqual([".agents/skills/alpha/SKILL.md"]);
     expect(drift.missing).toEqual([".opencode/agents/helper.md"]);
+  });
+
+  it("removes a stale Antigravity agent and leaves the rest of .agents alone", () => {
+    writePlan(root, plannedFiles(root));
+    put(".agents/agents/old.md", "stale\n");
+    put(".agents/rules/keep.md", "mine\n");
+    expect(findDrift(root, plannedFiles(root)).extra).toEqual([
+      ".agents/agents/old.md",
+    ]);
+    writePlan(root, plannedFiles(root));
+    expect(existsSync(path.join(root, ".agents/agents/old.md"))).toBe(false);
+    expect(readFileSync(path.join(root, ".agents/rules/keep.md"), "utf8")).toBe(
+      "mine\n",
+    );
   });
 
   it("finds a stale file in a folder the sync owns and removes it on write", () => {
