@@ -1,0 +1,64 @@
+name: Workflow security lint
+
+# Runs zizmor over .github (script injection, over-broad permissions, unpinned
+# actions, credential persistence). The action installs zizmor from a wheel whose
+# hashes are pinned in the action's own tree, and the only network calls are to the
+# GitHub API with the workflow's own token.
+#
+# Two jobs, because the two places the results go need different permissions:
+# - On a pull request the job fails the check and prints annotations. It holds only
+#   a read token, so it also works on pull requests from forks, which cannot upload
+#   to code scanning.
+# - On main, and weekly (an advisory about an action already in use can appear at
+#   any time), the job uploads the results to code scanning for triage. In that mode
+#   the action does not fail the run on findings.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/dependabot.yml"
+  push:
+    branches: [main]
+  schedule:
+    - cron: "41 6 * * 2"
+
+permissions: {}
+
+concurrency:
+  group: zizmor-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: zizmor (pull request)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          advanced-security: false
+          annotations: true
+
+  report:
+    name: zizmor (code scanning)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write # upload the SARIF results to code scanning
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
