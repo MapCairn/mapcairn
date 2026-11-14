@@ -16,15 +16,15 @@ The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `th
 
 Open the sections that match the code you are about to touch. A change that alters behaviour these documents describe updates them in the same pull request.
 
-| You are changing | Read |
-| --- | --- |
-| A port, adapter, fake, contract suite or `createServices()` | `ARCHITECTURE.md`: "Layers and dependency rules", "Ports", "Adding an adapter" |
-| The map engine, basemaps, globe, overlays, failures or image export | `ARCHITECTURE.md`: "The map adapter" |
-| Data layers, query layers, selection or controls | `ARCHITECTURE.md`: "Data layers" |
-| Drawing, import, export or sharing shapes | `ARCHITECTURE.md`: "Drawing" |
-| Tests that substitute services | `ARCHITECTURE.md`: "How tests substitute services" |
-| Tokens, components, layout slots or accessibility contracts | `DESIGN.md`: "Tokens", "Layout and slots", "Components and accessibility contracts" |
-| Lint rules, exemptions or the harmony scanner | `DESIGN.md`: "Exempt surfaces", "What the lint checks, and where" |
+| You are changing                                                    | Read                                                                                |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| A port, adapter, fake, contract suite or `createServices()`         | `ARCHITECTURE.md`: "Layers and dependency rules", "Ports", "Adding an adapter"      |
+| The map engine, basemaps, globe, overlays, failures or image export | `ARCHITECTURE.md`: "The map adapter"                                                |
+| Data layers, query layers, selection or controls                    | `ARCHITECTURE.md`: "Data layers"                                                    |
+| Drawing, import, export or sharing shapes                           | `ARCHITECTURE.md`: "Drawing"                                                        |
+| Tests that substitute services                                      | `ARCHITECTURE.md`: "How tests substitute services"                                  |
+| Tokens, components, layout slots or accessibility contracts         | `DESIGN.md`: "Tokens", "Layout and slots", "Components and accessibility contracts" |
+| Lint rules, exemptions or the harmony scanner                       | `DESIGN.md`: "Exempt surfaces", "What the lint checks, and where"                   |
 
 ## Commands
 
@@ -89,6 +89,8 @@ Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. We
 - Add TSDoc-compatible JSDoc to every exported function, constant, type, interface, class and component. Explain non-obvious behaviour rather than repeating names.
 - Add code comments only for a non-obvious constraint, workaround or invariant.
 - Use expanded, braced `if` statements. Do not disable Biome's `useBlockStatements`.
+- Biome also enforces these, so write to them: `interface` for object shapes, no nested ternaries (use a named function or early returns), no name that shadows an outer one, `readonly` for class fields that are never reassigned, every promise awaited, returned or marked `void`, a `switch` over a union that names every case, and no `console` call in application code except `console.error` and `console.warn` to report a failure (tests, scripts and the Playwright specs may print). The rules and their exemptions are in `biome.jsonc`, with the reason beside each exemption.
+- Biome formats Markdown and YAML as well as code, and its layout wins: tables are aligned, emphasis is `_text_`, YAML strings are double-quoted, and prose lines stay as written (no rewrapping). Run `npm run format` before you commit; `npm run lint` fails on a file that is not formatted. The skill and agent sources in `.claude` and the copies `npm run agents:sync` writes (`.agents`, `.codex`, `.opencode`, `.qwen`, `.github/agents`) are left out, because the sync writes the copies and the formatter would break their front matter.
 - Start every `.ts`, `.tsx`, `.mjs` and `.cjs` file with the two-line SPDX header (`// SPDX-License-Identifier: AGPL-3.0-only`, then `// Copyright MapCairn contributors`). `npm run lint` fails without it; `npm run licence:write` adds it to new files.
 - Use British English in user-facing copy and docs, not code identifiers.
 - Write plain, specific prose. Avoid puffery, uppercase eyebrows and repetitive closing summaries. Use an em dash only where a person would naturally write one, such as a single aside or a sharp turn in a sentence. Do not use it as the default connector or more than once in a paragraph; a comma, colon, bracket or full stop usually reads better. Use sentence-case headings.

@@ -43,9 +43,9 @@ export function FocusRegistryProvider({
   const focusMapRef = useLatestRef(focusMap);
 
   const register = useCallback(
-    (name: FocusName, element: HTMLElement | null) => {
-      if (element) {
-        elements.current.set(name, element);
+    (name: FocusName, target: HTMLElement | null) => {
+      if (target) {
+        elements.current.set(name, target);
       } else {
         elements.current.delete(name);
       }

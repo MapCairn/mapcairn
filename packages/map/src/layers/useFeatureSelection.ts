@@ -163,11 +163,15 @@ export function useFeatureSelection(
   });
   const titleOf = useCallback<TitleOf>(
     (ref) => {
-      const { layerStates, snapshots, formatters, now } = latest.current;
-      const [entry] = resolveSelection([ref], layerStates, snapshots);
+      const current = latest.current;
+      const [entry] = resolveSelection(
+        [ref],
+        current.layerStates,
+        current.snapshots,
+      );
       return entry?.status === "shown"
-        ? featureTitle(entry.definition, entry.feature, formatters, {
-            now: now(),
+        ? featureTitle(entry.definition, entry.feature, current.formatters, {
+            now: current.now(),
           })
         : null;
     },

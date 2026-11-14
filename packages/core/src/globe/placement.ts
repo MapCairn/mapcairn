@@ -81,6 +81,14 @@ function horizonPoint(
   return { lat: edge.lat, lng: nearestLongitude(edge.lng, inside.lng) };
 }
 
+/** The point after `index`, wrapping round when the path is closed; -1 after the last point of an open path. */
+function followingIndex(index: number, count: number, closed: boolean): number {
+  if (index + 1 < count) {
+    return index + 1;
+  }
+  return closed ? 0 : -1;
+}
+
 /**
  * Places a path on the screen. Every segment goes the short way, across the
  * antimeridian when that is shorter, starting on the copy of the world
@@ -115,7 +123,7 @@ export function placePath(
     moved.push(points.length);
     points.push(position);
     visible.push(seen[index] as boolean);
-    const next = index + 1 < count ? index + 1 : closed ? 0 : -1;
+    const next = followingIndex(index, count, closed);
     if (next < 0 || next === index || seen[index] === seen[next]) {
       return;
     }

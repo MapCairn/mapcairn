@@ -23,7 +23,11 @@ export const FAKE_VIEWPORT_HEIGHT = 600;
 const UNSET_CAMERA = { lng: 123.4, lat: -45.6, zoom: 7.7 } as const;
 
 type Listener = (event: Record<string, unknown>) => void;
-type Camera = { center?: [number, number]; zoom?: number; bearing?: number };
+interface Camera {
+  center?: [number, number];
+  zoom?: number;
+  bearing?: number;
+}
 
 /** One recorded call to the fake engine. */
 export interface FakeCall {

@@ -8,9 +8,14 @@
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
+    "domains": {
+      "react": "recommended",
+      "test": "recommended"
+    },
     "rules": {
       "preset": "recommended",
       "correctness": {
+        "noReactPropAssignments": "error",
         "useExhaustiveDependencies": "warn"
       },
       "a11y": {
@@ -144,13 +149,27 @@
             ]
           }
         },
-        "noNonScalableViewport": "error"
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "noNonScalableViewport": "error",
+        "noYamlBooleanKeys": "error",
+        "useExhaustiveSwitchCases": "error"
       },
       "suspicious": {
-        "noDocumentCookie": "error"
+        "noDeprecatedImports": "error",
+        "noConsole": {
+          "level": "error",
+          "options": { "allow": ["error", "warn"] }
+        },
+        "noDocumentCookie": "error",
+        "noDuplicateDependencies": "error",
+        "noImportCycles": "error",
+        "noLeakedRender": "error",
+        "noShadow": "error"
       },
       "style": {
         "noInlineStyles": "error",
+        "noNestedTernary": "error",
         "noRestrictedGlobals": {
           "level": "error",
           "options": {
@@ -235,7 +254,9 @@
           }
         },
         "useBlockStatements": "error",
-        "useConst": "error"
+        "useConsistentTypeDefinitions": "error",
+        "useConst": "error",
+        "useReadonlyClassProperties": "error"
       }
     }
   },
@@ -262,12 +283,17 @@
   },
   "markdown": {
     "formatter": {
-      "enabled": false
+      "enabled": true,
+      "formatEmbeds": false,
+      "proseWrap": "preserve"
     }
   },
   "yaml": {
+    "linter": {
+      "enabled": true
+    },
     "formatter": {
-      "enabled": false
+      "enabled": true
     }
   },
   "overrides": [
@@ -365,6 +391,32 @@
       }
     },
     {
+      // The Playwright rules match any call named describe or test, so they
+      // run on the browser specs only.
+      "includes": ["packages/web/e2e/**"],
+      "linter": {
+        "domains": { "playwright": "recommended" }
+      }
+    },
+    {
+      // Command line scripts and the test setup print for the person running
+      // them, so any console call is allowed there. Application code may only
+      // report a failure with console.error or console.warn.
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/vitest.setup.ts",
+        "packages/web/e2e/**",
+        "scripts/**",
+        "packages/web/scripts/**"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": { "noConsole": "off" }
+        }
+      }
+    },
+    {
       "includes": ["scripts/harmony/lex.mjs"],
       "linter": {
         "rules": {
@@ -391,6 +443,16 @@
     }
   ],
   "files": {
-    "includes": ["**", "!**/dist", "!**/node_modules", "!**/.claude"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/.claude",
+      "!.agents",
+      "!.codex",
+      "!.opencode",
+      "!.qwen",
+      "!.github/agents"
+    ]
   }
 }

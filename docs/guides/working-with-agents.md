@@ -4,11 +4,11 @@ The project's skills and agents were written for Claude Code, and everyone is we
 
 ## One source for each thing
 
-| Thing | Source (edit this) | Copies for other tools (generated, do not edit) |
-| --- | --- | --- |
-| Rules | `AGENTS.md` | `CLAUDE.md` imports it; `.github/copilot-instructions.md` is a few lines that point to it |
-| Skills | `.claude/skills/<name>/SKILL.md`, project skills only | `.agents/skills/<name>/` |
-| Agents | `.claude/agents/<name>.md` | `.agents/agents/<name>.md`, `.opencode/agents/<name>.md`, `.codex/agents/<name>.toml`, `.github/agents/<name>.agent.md`, `.qwen/agents/<name>.md` |
+| Thing  | Source (edit this)                                    | Copies for other tools (generated, do not edit)                                                                                                   |
+| ------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rules  | `AGENTS.md`                                           | `CLAUDE.md` imports it; `.github/copilot-instructions.md` is a few lines that point to it                                                         |
+| Skills | `.claude/skills/<name>/SKILL.md`, project skills only | `.agents/skills/<name>/`                                                                                                                          |
+| Agents | `.claude/agents/<name>.md`                            | `.agents/agents/<name>.md`, `.opencode/agents/<name>.md`, `.codex/agents/<name>.toml`, `.github/agents/<name>.agent.md`, `.qwen/agents/<name>.md` |
 
 After you change a skill or an agent, run `npm run agents:sync`. It copies files (never links, so it works on Windows) and removes stale ones in the six output folders only. `npm run agents:check` does the same comparison without writing; `npm run lint` and the pre-commit hook run it, so stale copies cannot merge. The script takes the repository root from its own location, and fails in both modes when `.claude/skills` is missing or there is nothing to generate.
 
@@ -35,14 +35,14 @@ Tool limits, such as a list of allowed tools, are enforced only in Claude Code. 
 
 Checked on 2026-11-12 against each tool's own documentation. The pages were read through a summarising web reader; the tools themselves were not run, except Claude Code (2.1.322). None of the tools' versions is stated in its documentation, apart from Claude Code needing 2.1.277 or later to read `AGENTS.md` on its own. A blank means the documentation did not say.
 
-| | Instructions | Skills | Agents |
-| --- | --- | --- | --- |
-| Claude Code | `CLAUDE.md` (here it imports `AGENTS.md`). Reads `AGENTS.md` alone only when there is no `CLAUDE.md` | `.claude/skills`. Does not read `.agents/skills` | `.claude/agents/*.md` |
-| Codex | `AGENTS.md` | `.agents/skills`; `.claude/skills` not mentioned | `.codex/agents/*.toml` with `name`, `description`, `developer_instructions` |
-| opencode | `AGENTS.md` only in the current (V2) docs; the older V1 docs fell back to `CLAUDE.md` | `.opencode/skills`, `.claude/skills`, `.agents/skills` | `.opencode/agents/*.md`, with `mode: subagent` |
-| GitHub Copilot | `.github/copilot-instructions.md`, `AGENTS.md` or `CLAUDE.md` (GitHub docs). In VS Code the file depends on the harness chosen | `.github/skills`, `.claude/skills`, `.agents/skills` (GitHub docs). VS Code lists the folder per harness | `.github/agents/*.agent.md` (public preview) |
-| Antigravity | `AGENTS.md` in the workspace and in each parent folder up to the repository root, also inside `.agents/`, and `.agents/rules/*.md` | `.agents/skills` (the older `.agent/skills` still works) | `.agents/agents/<name>.md`, with a `tools` list in tool names of its own; generated, see below |
-| Cursor | `AGENTS.md`, and `.cursor/rules/*.mdc`. `CLAUDE.md` not mentioned | `.agents/skills`, `.cursor/skills`, and `.claude/skills` and `.codex/skills` for compatibility | `.cursor/agents`, `.claude/agents` and `.codex/agents` |
+|                                | Instructions                                                                                                                                                        | Skills                                                                                                                                                                        | Agents                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Claude Code                    | `CLAUDE.md` (here it imports `AGENTS.md`). Reads `AGENTS.md` alone only when there is no `CLAUDE.md`                                                                | `.claude/skills`. Does not read `.agents/skills`                                                                                                                              | `.claude/agents/*.md`                                                                               |
+| Codex                          | `AGENTS.md`                                                                                                                                                         | `.agents/skills`; `.claude/skills` not mentioned                                                                                                                              | `.codex/agents/*.toml` with `name`, `description`, `developer_instructions`                         |
+| opencode                       | `AGENTS.md` only in the current (V2) docs; the older V1 docs fell back to `CLAUDE.md`                                                                               | `.opencode/skills`, `.claude/skills`, `.agents/skills`                                                                                                                        | `.opencode/agents/*.md`, with `mode: subagent`                                                      |
+| GitHub Copilot                 | `.github/copilot-instructions.md`, `AGENTS.md` or `CLAUDE.md` (GitHub docs). In VS Code the file depends on the harness chosen                                      | `.github/skills`, `.claude/skills`, `.agents/skills` (GitHub docs). VS Code lists the folder per harness                                                                      | `.github/agents/*.agent.md` (public preview)                                                        |
+| Antigravity                    | `AGENTS.md` in the workspace and in each parent folder up to the repository root, also inside `.agents/`, and `.agents/rules/*.md`                                  | `.agents/skills` (the older `.agent/skills` still works)                                                                                                                      | `.agents/agents/<name>.md`, with a `tools` list in tool names of its own; generated, see below      |
+| Cursor                         | `AGENTS.md`, and `.cursor/rules/*.mdc`. `CLAUDE.md` not mentioned                                                                                                   | `.agents/skills`, `.cursor/skills`, and `.claude/skills` and `.codex/skills` for compatibility                                                                                | `.cursor/agents`, `.claude/agents` and `.codex/agents`                                              |
 | Qwen Code (checked 2026-11-13) | `AGENTS.md` ("if your repository already has an `AGENTS.md` file for other AI tools, Qwen reads that too"), as well as its own `QWEN.md`. `CLAUDE.md` not mentioned | `.agents/skills` and `.qwen/skills` in the project (the `.qwen` copy wins on a name clash). `.claude/skills` is not read unless `skills.directories` in its settings lists it | `.qwen/agents/*.md`, with `name` and `description` and optional `model`, `tools` and `approvalMode` |
 
 What this means in practice:
@@ -91,22 +91,22 @@ A model that cannot read images uses `snapshot` (the accessibility tree) instead
 
 How each tool reaches the skill (all of them can read `AGENTS.md` and a file path in the repository, so every tool can follow the skill even when it does not list it as a skill):
 
-| Tool | Skill reached through | Instructions |
-| --- | --- | --- |
-| Claude Code | `.claude/skills/playwright-tests` | `CLAUDE.md`, which imports `AGENTS.md` |
-| Codex | `.agents/skills/playwright-tests` | `AGENTS.md` |
-| opencode | `.opencode/skills`, `.claude/skills` or `.agents/skills` | `AGENTS.md` |
-| GitHub Copilot | `.claude/skills` or `.agents/skills` | `AGENTS.md`, `.github/copilot-instructions.md` |
-| Antigravity | `.agents/skills/playwright-tests` | `AGENTS.md` |
-| Cursor | `.agents/skills` or `.claude/skills` | `AGENTS.md` |
-| Qwen Code | `.agents/skills/playwright-tests` | `AGENTS.md` |
+| Tool           | Skill reached through                                    | Instructions                                   |
+| -------------- | -------------------------------------------------------- | ---------------------------------------------- |
+| Claude Code    | `.claude/skills/playwright-tests`                        | `CLAUDE.md`, which imports `AGENTS.md`         |
+| Codex          | `.agents/skills/playwright-tests`                        | `AGENTS.md`                                    |
+| opencode       | `.opencode/skills`, `.claude/skills` or `.agents/skills` | `AGENTS.md`                                    |
+| GitHub Copilot | `.claude/skills` or `.agents/skills`                     | `AGENTS.md`, `.github/copilot-instructions.md` |
+| Antigravity    | `.agents/skills/playwright-tests`                        | `AGENTS.md`                                    |
+| Cursor         | `.agents/skills` or `.claude/skills`                     | `AGENTS.md`                                    |
+| Qwen Code      | `.agents/skills/playwright-tests`                        | `AGENTS.md`                                    |
 
 Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None of them needs a new file.
 
-| Tool | What its documentation says | Source |
-| --- | --- | --- |
+| Tool     | What its documentation says                                                                                                 | Source                                                        |
+| -------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | Windsurf | Reads `AGENTS.md` at the project root. Reads skills from `.agents/skills` as well as `.devin/skills` and `.windsurf/skills` | docs.windsurf.com (Customize, "AGENTS.md" and "Skill scopes") |
-| Cline | Reads `AGENTS.md` | docs.cline.bot (rules) |
+| Cline    | Reads `AGENTS.md`                                                                                                           | docs.cline.bot (rules)                                        |
 
 Cline's skills folder was not checked, so it follows the skill by path. The skill is written to be followed that way: open `.agents/skills/playwright-tests/SKILL.md`.
 

@@ -37,10 +37,10 @@ export type HeldSuggestCall = HeldCall<readonly SearchResult[]>;
 export class FakeSuggestionProvider implements SuggestionProvider {
   readonly suggestCalls: RecordedSuggestCall[] = [];
 
-  #byQuery = new Map<string, readonly SearchResult[]>();
+  readonly #byQuery = new Map<string, readonly SearchResult[]>();
   #defaultResults: readonly SearchResult[] = [];
   #failure: SearchErrorKind | null = null;
-  #holds: Deferred<readonly SearchResult[]>[] = [];
+  readonly #holds: Deferred<readonly SearchResult[]>[] = [];
 
   /** Answers suggestions for `query` (trimmed) with `results`. */
   setResults(query: string, results: readonly SearchResult[]): void {

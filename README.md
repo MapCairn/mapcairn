@@ -48,12 +48,12 @@ Feeds, polygons and lines with patterns, heatmaps, vector tiles and queries for 
 
 ## What is in the box
 
-| Package | Provides |
-|---|---|
-| [`@mapcairn/core`](packages/core/README.md) | The port interfaces, pure logic, basemap definitions, fakes and contract suites. No React, no browser globals |
-| [`@mapcairn/map`](packages/map/README.md) | The map interface: chrome, sheet and panels, tools, `MapView` and the services provider |
-| [`@mapcairn/react`](packages/react/README.md) | Generic React hooks |
-| [`@mapcairn/theme`](packages/theme/README.md) | The typed design tokens and their contrast calculations |
+| Package                                       | Provides                                                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [`@mapcairn/core`](packages/core/README.md)   | The port interfaces, pure logic, basemap definitions, fakes and contract suites. No React, no browser globals |
+| [`@mapcairn/map`](packages/map/README.md)     | The map interface: chrome, sheet and panels, tools, `MapView` and the services provider                       |
+| [`@mapcairn/react`](packages/react/README.md) | Generic React hooks                                                                                           |
+| [`@mapcairn/theme`](packages/theme/README.md) | The typed design tokens and their contrast calculations                                                       |
 
 `packages/web` is the reference host: a complete map built from those four packages, running at [mapcairn.timothybrits.co.za](https://mapcairn.timothybrits.co.za). It shows what the SDK composes and is what the tests run against; it is a demonstration, not the product.
 
@@ -63,21 +63,21 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 
 ## Documentation
 
-| Document | Covers |
-|---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
-| [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules |
-| [`docs/guides/extending.md`](docs/guides/extending.md) | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, layers supplied at runtime, a routing provider or an adapter |
-| [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md) | Which layer kind to serve from your own server, from raster tiles to GeoJSON by bounding box, and what each costs the server |
-| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, choosing between features at one place, and drawing, importing and exporting shapes |
-| [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md) | What an industry-grade GIS application needs, what MapCairn has, partly has or lacks, the issue for each gap, and a proposed order for the SDK work |
-| [`docs/guides/performance.md`](docs/guides/performance.md) | What was measured for Lighthouse, what was tried and what was left alone |
-| [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) | Using Claude Code, Codex, opencode, GitHub Copilot, Antigravity, Cursor or Qwen Code on this repository: what each reads, how to start, and what is Claude Code only |
-| [`docs/plans/`](docs/plans/README.md) | Numbered plans for work not yet built |
-| [`GOVERNANCE.md`](GOVERNANCE.md) | The maintainer role, how decisions are made, and what is not yet covered |
-| [`ROADMAP.md`](ROADMAP.md) | What the project intends to do in the next twelve months, and what it will not do |
-| [`docs/assurance-case.md`](docs/assurance-case.md) | Security requirements, trust boundaries, threat model and the evidence for each |
-| [`AGENTS.md`](AGENTS.md) | Working rules for people and AI changing the code |
+| Document                                                                             | Covers                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                 | Layers, ports and adapters, the map adapter, adding an adapter                                                                                                                                |
+| [`DESIGN.md`](DESIGN.md)                                                             | Tokens, layout slots, accessibility contracts and the lint rules                                                                                                                              |
+| [`docs/guides/extending.md`](docs/guides/extending.md)                               | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, layers supplied at runtime, a routing provider or an adapter |
+| [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                     | Which layer kind to serve from your own server, from raster tiles to GeoJSON by bounding box, and what each costs the server                                                                  |
+| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, choosing between features at one place, and drawing, importing and exporting shapes                                                   |
+| [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md)               | What an industry-grade GIS application needs, what MapCairn has, partly has or lacks, the issue for each gap, and a proposed order for the SDK work                                           |
+| [`docs/guides/performance.md`](docs/guides/performance.md)                           | What was measured for Lighthouse, what was tried and what was left alone                                                                                                                      |
+| [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md)           | Using Claude Code, Codex, opencode, GitHub Copilot, Antigravity, Cursor or Qwen Code on this repository: what each reads, how to start, and what is Claude Code only                          |
+| [`docs/plans/`](docs/plans/README.md)                                                | Numbered plans for work not yet built                                                                                                                                                         |
+| [`GOVERNANCE.md`](GOVERNANCE.md)                                                     | The maintainer role, how decisions are made, and what is not yet covered                                                                                                                      |
+| [`ROADMAP.md`](ROADMAP.md)                                                           | What the project intends to do in the next twelve months, and what it will not do                                                                                                             |
+| [`docs/assurance-case.md`](docs/assurance-case.md)                                   | Security requirements, trust boundaries, threat model and the evidence for each                                                                                                               |
+| [`AGENTS.md`](AGENTS.md)                                                             | Working rules for people and AI changing the code                                                                                                                                             |
 
 ## Contributing, security and conduct
 

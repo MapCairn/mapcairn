@@ -305,7 +305,8 @@ export function LayersSection({
             show(selected.layer.definition.id, selected.feature)
           }
         />
-      ) : choices ? (
+      ) : null}
+      {!selected && choices ? (
         <FeatureChoices
           layers={layers}
           choices={choices}

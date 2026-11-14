@@ -278,6 +278,11 @@ export function MapView({
 
   const motion = reducedMotion ? "static" : "animated";
 
+  const instructions =
+    keyHelp && keyHelp.length > 0
+      ? keyboardInstructions(keyHelp)
+      : KEYBOARD_INSTRUCTIONS;
+
   const region = (
     <>
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the focused map region is the one keyboard and pointer target for panning, zooming, pins and long-press; each gesture has a button or key equivalent. */}
@@ -316,17 +321,11 @@ export function MapView({
           </div>
         ) : null}
       </section>
-      <VisuallyHidden id={helpId}>
-        {keyHelp && keyHelp.length > 0
-          ? keyboardInstructions(keyHelp)
-          : KEYBOARD_INSTRUCTIONS}
-      </VisuallyHidden>
+      <VisuallyHidden id={helpId}>{instructions}</VisuallyHidden>
     </>
   );
 
-  return (
-    <MapContext.Provider value={map}>
-      {chrome ? chrome(region) : region}
-    </MapContext.Provider>
-  );
+  const content = chrome ? chrome(region) : region;
+
+  return <MapContext.Provider value={map}>{content}</MapContext.Provider>;
 }

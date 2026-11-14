@@ -120,12 +120,12 @@ function isStep(value: unknown): value is number {
 /** Whether a bound is a slot on the step or a whole number of minutes ago, up to about a hundred years. */
 function isTimeBound(value: unknown, step: number): boolean {
   if (isObject(value)) {
-    const { minutesAgo } = value;
+    const { minutesAgo: ago } = value;
     return (
-      typeof minutesAgo === "number" &&
-      Number.isInteger(minutesAgo) &&
-      minutesAgo >= 0 &&
-      minutesAgo <= MAX_MINUTES_AGO
+      typeof ago === "number" &&
+      Number.isInteger(ago) &&
+      ago >= 0 &&
+      ago <= MAX_MINUTES_AGO
     );
   }
   const time = slotTime(value);

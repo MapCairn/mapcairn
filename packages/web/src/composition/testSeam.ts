@@ -185,6 +185,7 @@ export function readTestOverrides(): Partial<Services> | undefined {
   if (keys.length === 0) {
     return undefined;
   }
+  // biome-ignore lint/suspicious/noConsole: the marker line tells whoever reads the console that test services are in use.
   console.info(`${TEST_SEAM_MARKER}: test services replace ${keys.join(", ")}`);
   return accepted as Partial<Services>;
 }

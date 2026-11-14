@@ -247,9 +247,9 @@ function startServer() {
     }
     response.writeHead(404).end();
   });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(PORT, "127.0.0.1", () => resolve(server));
+  return new Promise((done, fail) => {
+    server.once("error", fail);
+    server.listen(PORT, "127.0.0.1", () => done(server));
   });
 }
 

@@ -394,10 +394,11 @@ export function useDraw({
       );
       // A point or a circle has one vertex that matters: its centre.
       const single = shape?.kind === "point" || shape?.kind === "circle";
+      const centre = single ? 0 : null;
       act({
         type: "select",
         shapeId,
-        vertex: vertex === undefined ? (single ? 0 : null) : vertex,
+        vertex: vertex === undefined ? centre : vertex,
       });
     },
     [act, stateRef],
@@ -684,9 +685,9 @@ export function useDraw({
   );
 
   const copyLink = useCallback(async () => {
-    const { shapes } = stateRef.current;
-    const encoded = encodeShapes(shapes);
-    const leftOut = unsharableShapes(shapes).length;
+    const current = stateRef.current.shapes;
+    const encoded = encodeShapes(current);
+    const leftOut = unsharableShapes(current).length;
     if (encoded === null) {
       report({
         kind: "error",

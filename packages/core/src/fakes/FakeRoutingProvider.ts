@@ -79,8 +79,8 @@ export class FakeRoutingProvider implements RoutingProvider {
   #area: ReachableAreaResult | null = null;
   #modes: readonly TravelMode[] = ALL_MODES;
   #failure: FakeRoutingFailure | null = null;
-  #routeHolds: Deferred<RouteResult>[] = [];
-  #areaHolds: Deferred<ReachableAreaResult>[] = [];
+  readonly #routeHolds: Deferred<RouteResult>[] = [];
+  readonly #areaHolds: Deferred<ReachableAreaResult>[] = [];
 
   /** Answers every later `route` with `result`. `null` restores the default. */
   setRoute(result: RouteResult | null): void {

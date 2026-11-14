@@ -103,6 +103,14 @@ interface Drag {
   samples: Sample[];
 }
 
+/** The way an arrow key moves the sheet from its handle, or null for any other key. */
+function handleDirection(key: string): "up" | "down" | null {
+  if (key === "ArrowUp") {
+    return "up";
+  }
+  return key === "ArrowDown" ? "down" : null;
+}
+
 /**
  * Velocity in px/s from the oldest sample in the last
  * {@link VELOCITY_WINDOW_MS} to the release; positive when expanding. A
@@ -498,12 +506,7 @@ export function Sheet({
   };
 
   const onHandleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const direction =
-      event.key === "ArrowUp"
-        ? "up"
-        : event.key === "ArrowDown"
-          ? "down"
-          : null;
+    const direction = handleDirection(event.key);
     if (!direction) {
       return;
     }
