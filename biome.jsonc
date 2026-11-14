@@ -151,6 +151,10 @@
       },
       "suspicious": {
         "noDeprecatedImports": "error",
+        "noConsole": {
+          "level": "error",
+          "options": { "allow": ["error", "warn"] }
+        },
         "noDocumentCookie": "error",
         "noLeakedRender": "error",
         "noShadow": "error"
@@ -370,6 +374,24 @@
         "rules": {
           "nursery": { "noJsRestrictedProperties": "off" },
           "style": { "noRestrictedGlobals": "off" }
+        }
+      }
+    },
+    {
+      // Command line scripts and the test setup print for the person running
+      // them, so any console call is allowed there. Application code may only
+      // report a failure with console.error or console.warn.
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/vitest.setup.ts",
+        "packages/web/e2e/**",
+        "scripts/**",
+        "packages/web/scripts/**"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": { "noConsole": "off" }
         }
       }
     },
