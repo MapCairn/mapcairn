@@ -19,7 +19,7 @@ import type { UrlState } from "./url";
 /**
  * Everything the ui may use from outside itself. The composition root builds
  * one of these from real adapters (or fakes, in tests) and provides it through
- * React context. Components never import an adapter or a browser global.
+ * React context. Components never import an adapter, and reach a browser service only through a port.
  */
 export interface Services {
   readonly createMapAdapter: MapAdapterFactory;
