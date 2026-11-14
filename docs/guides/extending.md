@@ -1,6 +1,6 @@
 # Extending MapCairn
 
-Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, layers supplied at runtime, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md).
+Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, layers supplied at runtime, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md). The Content Security Policy a host page needs is in [`content-security-policy.md`](content-security-policy.md).
 
 ## Embed the SDK in an app of your own
 
