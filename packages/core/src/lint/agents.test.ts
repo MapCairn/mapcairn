@@ -24,6 +24,7 @@ import {
 } from "../../../../scripts/agents/plan.mjs";
 import {
   parseAgent,
+  renderAntigravity,
   renderCodex,
   renderCopilot,
   renderOpencode,
@@ -255,6 +256,57 @@ describe("agent rendering", () => {
     expect(text.endsWith(parsed.body)).toBe(true);
   });
 
+  it("reads the source's tool names, and none when the field is absent", () => {
+    expect(parsed.tools).toEqual(["Glob", "Grep", "Read", "Bash"]);
+    expect(
+      parseAgent("a.md", agent("name: a\ndescription: x")).tools,
+    ).toBeUndefined();
+  });
+
+  it("renders the Antigravity format with the tools it documents, mapped from the source's", () => {
+    const text = renderAntigravity(parsed);
+    expect(
+      text.startsWith(
+        '---\nname: "fresh-eyes-reviewer"\ndescription: "Reviews a diff. Give it a number."\ntools:\n  - view_file\n  - grep_search\n  - run_command\n---\n',
+      ),
+    ).toBe(true);
+    expect(text).not.toMatch(/^model:|^mcpServers:|^commandExecutionPolicy:/m);
+    expect(text).toContain("Edit that file, not this one.");
+    expect(text.endsWith(parsed.body)).toBe(true);
+  });
+
+  it("maps Edit and Write to the one edit tool, once, and leaves out a tool with no documented name", () => {
+    const text = renderAntigravity(
+      parseAgent(
+        "a.md",
+        agent("name: a\ndescription: x\ntools: Glob, Skill, Write, Edit, Read"),
+      ),
+    );
+    expect(text).toContain(
+      "tools:\n  - view_file\n  - replace_file_content\n---",
+    );
+  });
+
+  it("gives an agent that lists no tools every documented tool, as Claude Code does", () => {
+    const text = renderAntigravity(
+      parseAgent("a.md", agent("name: a\ndescription: x")),
+    );
+    expect(text).toContain(
+      "tools:\n  - view_file\n  - replace_file_content\n  - grep_search\n  - run_command\n---",
+    );
+  });
+
+  it("refuses an agent whose tools have no Antigravity equivalent, rather than writing one with none", () => {
+    expect(() =>
+      renderAntigravity(
+        parseAgent(
+          "a.md",
+          agent("name: a\ndescription: x\ntools: Glob, Skill"),
+        ),
+      ),
+    ).toThrow(/a: none of its tools has a documented Antigravity name/);
+  });
+
   it("renders the Codex format as TOML with the body as a literal string", () => {
     const text = renderCodex(parsed);
     expect(text).toContain('name = "fresh-eyes-reviewer"');
@@ -319,6 +371,8 @@ describe("mirror planning", () => {
   it("plans a byte-for-byte skill mirror and the generated agent files, for every agent whatever its name", () => {
     const plan = plannedFiles(root);
     expect([...plan.keys()].sort()).toEqual([
+      ".agents/agents/helper.md",
+      ".agents/agents/playwright-test-healer.md",
       ".agents/skills/alpha/SKILL.md",
       ".agents/skills/alpha/references/bin.dat",
       ".agents/skills/alpha/references/notes.md",
@@ -338,7 +392,7 @@ describe("mirror planning", () => {
 
   it("reports every planned file as missing before the first sync", () => {
     const drift = findDrift(root, plannedFiles(root));
-    expect(drift.missing).toHaveLength(11);
+    expect(drift.missing).toHaveLength(13);
     expect(drift.changed).toEqual([]);
     expect(drift.extra).toEqual([]);
   });

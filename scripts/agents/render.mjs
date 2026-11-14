@@ -5,7 +5,8 @@
  * coding tools read. The substance of an agent is its description and its role
  * text, so that is all that is carried over. Claude's tool list and model
  * name mean nothing to the other tools (and some reject unknown tools), so
- * they are left out and the other tools use their own defaults.
+ * they are left out and the other tools use their own defaults, except for
+ * Antigravity, which needs a tool list and gets the one it documents.
  */
 import { claudeOnlyProblems, parseFrontmatter } from "./skills.mjs";
 
@@ -14,6 +15,8 @@ import { claudeOnlyProblems, parseFrontmatter } from "./skills.mjs";
  * @property {string} name
  * @property {string} description
  * @property {string} body The role text, with leading blank lines removed.
+ * @property {string[]} [tools] Claude's tool names, or none when the source
+ *   names none (Claude Code then gives the agent every tool).
  */
 
 /**
@@ -39,7 +42,10 @@ export function parseAgent(filename, text) {
       `${filename}: name "${name}" must equal its filename "${stem}"`,
     );
   }
-  return { name, description, body: body.replace(/^\n+/, "") };
+  const tools = fields.tools
+    ? fields.tools.split(",").map((tool) => tool.trim())
+    : undefined;
+  return { name, description, body: body.replace(/^\n+/, ""), tools };
 }
 
 /** The line that tells a reader not to edit a generated file. */
@@ -105,6 +111,55 @@ export function renderCopilot(agent) {
  */
 export function renderQwen(agent) {
   return renderNamedMarkdown(agent);
+}
+
+/**
+ * The tool names Antigravity documents for a custom agent, each with the Claude
+ * tools it stands for, in the order they are written. They are the only four
+ * the documentation names; an unknown name is a known cause of a hung agent, so
+ * no other is guessed. Glob and Skill have no documented name: `grep_search` and
+ * `run_command` find files, and the skills are read from `.agents/skills`.
+ */
+const ANTIGRAVITY_TOOLS = [
+  { name: "view_file", claude: ["Read"] },
+  { name: "replace_file_content", claude: ["Edit", "Write"] },
+  { name: "grep_search", claude: ["Grep"] },
+  { name: "run_command", claude: ["Bash"] },
+];
+
+/**
+ * The Antigravity custom agent format (`.agents/agents/<name>.md`): a name, a
+ * description, the tools it may use and the role text. Antigravity gives an
+ * agent no tools when the list is empty, so the list is always written: the
+ * four documented tools for an agent whose source names none (as Claude Code
+ * gives it every tool), else the ones that match the source's tools. Its model
+ * and shell policy are left to Antigravity's defaults.
+ *
+ * @param {Agent} agent
+ * @returns {string}
+ */
+export function renderAntigravity(agent) {
+  const wanted = agent.tools;
+  const tools = ANTIGRAVITY_TOOLS.filter(
+    ({ claude }) => !wanted || claude.some((tool) => wanted.includes(tool)),
+  ).map(({ name }) => name);
+  if (tools.length === 0) {
+    throw new Error(
+      `${agent.name}: none of its tools has a documented Antigravity name`,
+    );
+  }
+  return [
+    "---",
+    `name: ${JSON.stringify(agent.name)}`,
+    `description: ${JSON.stringify(agent.description)}`,
+    "tools:",
+    ...tools.map((tool) => `  - ${tool}`),
+    "---",
+    "",
+    `<!-- ${note(agent)} -->`,
+    "",
+    agent.body,
+  ].join("\n");
 }
 
 /**

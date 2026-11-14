@@ -17,6 +17,7 @@ import {
 import path from "node:path";
 import {
   parseAgent,
+  renderAntigravity,
   renderCodex,
   renderCopilot,
   renderOpencode,
@@ -29,6 +30,7 @@ const AGENTS_SOURCE = ".claude/agents";
 
 /** Where each generated agent file goes, and how it is rendered. */
 const AGENT_TARGETS = [
+  { directory: ".agents/agents", extension: ".md", render: renderAntigravity },
   { directory: ".opencode/agents", extension: ".md", render: renderOpencode },
   { directory: ".codex/agents", extension: ".toml", render: renderCodex },
   {
