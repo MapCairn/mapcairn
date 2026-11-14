@@ -57,6 +57,11 @@ describe("useLocate when a render is not committed", () => {
         abandon();
       });
     });
+    // React tries the suspended transition again with each render that follows,
+    // so the synchronous rerender and the locate that follows it both render the
+    // "imperial" units a second time and throw that render away again. A hook
+    // that wrote its ref while rendering would keep "imperial" and word the fix
+    // in feet; one that commits it keeps "metric".
     await act(async () => rerender());
     await act(async () => committed.current?.locate());
     await act(async () => {

@@ -23,6 +23,8 @@ const NEVER = new Promise<never>(() => {});
 function mount() {
   const held: { ref: RefObject<string> | null } = { ref: null };
   const seenByLayoutEffect: string[] = [];
+  const seenByEarlierLayoutEffect: (string | undefined)[] = [];
+  const seenByChildLayoutEffect: (string | undefined)[] = [];
   let setValue: (value: string) => void = () => {};
   let abandon: () => void = () => {};
 
@@ -31,6 +33,9 @@ function mount() {
     const [abandoned, setAbandoned] = useState(false);
     setValue = setValueState;
     abandon = () => setAbandoned(true);
+    useLayoutEffect(() => {
+      seenByEarlierLayoutEffect.push(held.ref?.current);
+    });
     const latest = useLatestRef(value);
     held.ref = latest;
     useLayoutEffect(() => {
@@ -39,6 +44,13 @@ function mount() {
     if (abandoned) {
       use(NEVER);
     }
+    return <Child />;
+  }
+
+  function Child() {
+    useLayoutEffect(() => {
+      seenByChildLayoutEffect.push(held.ref?.current);
+    });
     return null;
   }
 
@@ -52,6 +64,8 @@ function mount() {
   return {
     view,
     seenByLayoutEffect,
+    seenByEarlierLayoutEffect,
+    seenByChildLayoutEffect,
     current: () => held.ref?.current,
     setValue: (value: string) => setValue(value),
     abandonTransition: (value: string) =>
@@ -99,5 +113,16 @@ describe("useLatestRef when a render is not committed", () => {
     act(() => probe.setValue("next"));
 
     expect(probe.seenByLayoutEffect.at(-1)).toBe("next");
+  });
+
+  it("is still the previous value for a layout effect declared before it, or a child's, in the commit that changes it", () => {
+    const probe = mount();
+    probe.view(false);
+
+    act(() => probe.setValue("next"));
+
+    expect(probe.seenByEarlierLayoutEffect.at(-1)).toBe("committed");
+    expect(probe.seenByChildLayoutEffect.at(-1)).toBe("committed");
+    expect(probe.current()).toBe("next");
   });
 });
