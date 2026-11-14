@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { Page } from "@playwright/test";
+import { CHROME_GAP_PX } from "../../map/src/chrome/chromeSpacing";
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
@@ -747,6 +748,71 @@ for (const viewport of TALL_READOUT_VIEWPORTS) {
           await leaveState(mapPage, state);
         });
       }
+    },
+  );
+}
+
+/**
+ * The sizes where the readout, even with the cursor coordinates at their
+ * widest, ends well before the credits popover begins.
+ */
+const WIDE_READOUT_VIEWPORTS = [
+  { width: 1440, height: 900 },
+  { width: 1280, height: 720 },
+] as const;
+
+/**
+ * How far the bottom of the credits popover is above the top of the credits
+ * button. Fails when either is not on screen.
+ */
+async function creditsGap(mapPage: MapPage): Promise<number> {
+  const [button, region] = await Promise.all([
+    mapPage.creditsButton.boundingBox(),
+    mapPage.creditsRegion.boundingBox(),
+  ]);
+  if (!(button && region)) {
+    throw new Error("The credits button or popover has no box.");
+  }
+  return button.y - (region.y + region.height);
+}
+
+/*
+ * The credits popover rises over the bottom row only where the readout and the
+ * popover share width. On a wide screen the readout (the scale bar and zoom,
+ * and the cursor coordinates while the pointer is on the map) never reaches the
+ * popover, so the popover sits within one gap of the button, both with the
+ * pointer on the button and with it resting on the map (the first showing, and
+ * opening the credits from the keyboard).
+ */
+for (const viewport of WIDE_READOUT_VIEWPORTS) {
+  test(
+    `the credits popover stays next to its button with the cursor coordinates showing at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage, isMobile }) => {
+      test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+      await mockLayerProviders(page);
+      await seedStoredSettings(page, { units: "imperial" });
+      await page.setViewportSize(viewport);
+      await scriptSearch(page);
+      await mapPage.goto(`${WIDEST_COORDINATES_VIEW}&${KEYED_LAYERS.slice(1)}`);
+
+      await collapseCredits(mapPage);
+      await mapPage.creditsButton.click();
+      await expect(mapPage.creditsRegion).toBeVisible();
+      await waitForStableLayout(page);
+      const gapWithPointerOnButton = await creditsGap(mapPage);
+
+      await hoverFreeMap(mapPage);
+      await waitForStableLayout(page);
+      const gapWithCoordinates = await creditsGap(mapPage);
+
+      expect(
+        gapWithPointerOnButton,
+        "pointer on the button",
+      ).toBeLessThanOrEqual(CHROME_GAP_PX);
+      expect(gapWithCoordinates, "pointer on the map").toBeLessThanOrEqual(
+        CHROME_GAP_PX,
+      );
     },
   );
 }

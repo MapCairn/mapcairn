@@ -8,8 +8,15 @@ import {
   FAKE_VECTOR_BASEMAP,
 } from "@mapcairn/core";
 import { act, fireEvent, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderChrome, testMapContext } from "../MapChrome/chromeTestHarness";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CHROME_GAP_PX } from "../chromeSpacing";
+import {
+  mockRect,
+  type ResizeObserverStub,
+  renderChrome,
+  stubResizeObserver,
+  testMapContext,
+} from "../MapChrome/chromeTestHarness";
 import {
   ATTRIBUTION_FADE_MS,
   ATTRIBUTION_INTRO_MS,
@@ -251,6 +258,114 @@ describe("Attribution", () => {
     fireEvent.click(button());
     size.visible = 140;
     expect(open()).toHaveAttribute("data-placement", "above");
+  });
+});
+
+/*
+ * The popover rises over the whole bottom row only while it shares width with
+ * the readout in bottom-start: `data-readout-clear` tells the CSS to drop the
+ * rise once the two never overlap horizontally.
+ */
+describe("Attribution beside the readout", () => {
+  const POPOVER = { left: 700, top: 300, width: 300, height: 120 };
+  const READOUT = { left: 12, top: 400, width: 200, height: 70 };
+
+  let observers: ResizeObserverStub;
+
+  beforeEach(() => {
+    observers = stubResizeObserver();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** The credits inside a chrome root, with a bottom-start slot when `readout` is given. */
+  function mount(readout: boolean) {
+    const result = renderChrome(
+      <div data-chrome-root>
+        {readout ? <div data-chrome="bottom-start">scale</div> : null}
+        <Attribution basemap={BASEMAP} />
+      </div>,
+      { map: SETTLED },
+    );
+    const slot = result.container.querySelector<HTMLElement>(
+      '[data-chrome="bottom-start"]',
+    );
+    const region = result.container.querySelector<HTMLElement>(
+      '[data-chrome="attribution-popover"]',
+    );
+    if (readout && slot) {
+      mockRect(slot, READOUT);
+    }
+    if (region) {
+      mockRect(region, POPOVER);
+    }
+    return { ...result, slot, region };
+  }
+
+  it("is clear of the readout when the popover starts a gap after the readout's end edge", () => {
+    mount(true);
+    // The readout ends at 212; the popover starts at 700.
+    expect(open()).toHaveAttribute("data-readout-clear", "true");
+  });
+
+  it("is not clear when the popover would overlap the readout", () => {
+    const { region } = mount(true);
+    if (!region) {
+      throw new Error("No credits region");
+    }
+    mockRect(region, { ...POPOVER, left: 100 });
+    expect(open()).not.toHaveAttribute("data-readout-clear");
+  });
+
+  it("is not clear when the popover starts closer to the readout than the gap between slots", () => {
+    const { region } = mount(true);
+    if (!region) {
+      throw new Error("No credits region");
+    }
+    const readoutEnd = READOUT.left + READOUT.width;
+    mockRect(region, { ...POPOVER, left: readoutEnd + CHROME_GAP_PX - 1 });
+    expect(open()).not.toHaveAttribute("data-readout-clear");
+    fireEvent.click(button());
+    mockRect(region, { ...POPOVER, left: readoutEnd + CHROME_GAP_PX });
+    expect(open()).toHaveAttribute("data-readout-clear", "true");
+  });
+
+  it("is clear when there is no readout to share width with", () => {
+    mount(false);
+    expect(open()).toHaveAttribute("data-readout-clear", "true");
+  });
+
+  it("measures again when the readout grows or the screen resizes", () => {
+    const { slot } = mount(true);
+    const region = open();
+    expect(region).toHaveAttribute("data-readout-clear", "true");
+
+    // The cursor coordinates make the readout wider than the room before the popover.
+    if (!slot) {
+      throw new Error("No readout slot");
+    }
+    mockRect(slot, { ...READOUT, width: POPOVER.left });
+    act(() => {
+      observers.trigger();
+    });
+    expect(region).not.toHaveAttribute("data-readout-clear");
+
+    mockRect(slot, READOUT);
+    act(() => {
+      observers.trigger();
+    });
+    expect(region).toHaveAttribute("data-readout-clear", "true");
+  });
+
+  it("leaves nothing observed while the popover is closed", () => {
+    mount(true);
+    expect(observers.active).toBe(0);
+    open();
+    expect(observers.active).toBeGreaterThan(0);
+    fireEvent.click(button());
+    expect(observers.active).toBe(0);
   });
 });
 
