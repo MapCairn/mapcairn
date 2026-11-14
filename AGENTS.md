@@ -55,7 +55,7 @@ npm run check
 - `check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence.
 - In a git worktree, `npm ci` fails at its `prepare` script (lefthook cannot install there). Use `npm ci --ignore-scripts` and run `npm run lint` yourself before you commit.
 
-CI runs these workflows: `CI` (lint, typecheck, coverage and build), `Playwright E2E` (the browser tests, split across four jobs), `Lighthouse CI`, `CodeQL`, `CLA`, `Scorecard` and a weekly `Repeatable build` check. A pull request needs the `build` and `e2e` checks to pass before it merges.
+CI runs these workflows: `CI` (lint, typecheck, coverage and build), `Playwright E2E` (the browser tests, split across four jobs), `Lighthouse CI`, `CodeQL`, `CLA`, `Scorecard`, `Dependency review`, `Workflow security lint` (zizmor), `Secret scan` (TruffleHog) and a weekly `Repeatable build` check. A pull request needs the `build` and `e2e` checks to pass before it merges.
 
 ### Browser tests
 

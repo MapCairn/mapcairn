@@ -19,7 +19,13 @@ import {
   useMap,
   useSettings,
 } from "@mapcairn/map";
-import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   PIN_LOOKUP_NOTE,
   SETTINGS_PRIVACY_NOTE,
@@ -80,9 +86,9 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
   // The title follows the open sheet. Once it closes, the app state no longer
   // says which sheet it was, so the last title stays while it slides away.
   const currentTitle = sheetTitle(app);
-  const shownTitle = useRef(currentTitle);
-  if (app.sheetOpen) {
-    shownTitle.current = currentTitle;
+  const [shownTitle, setShownTitle] = useState(currentTitle);
+  if (app.sheetOpen && shownTitle !== currentTitle) {
+    setShownTitle(currentTitle);
   }
 
   // Focus goes back to the opener once an explicitly closed surface is gone.
@@ -211,7 +217,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
         <Sheet
           id={SHEET_ID}
           open={app.sheetOpen}
-          title={shownTitle.current}
+          title={shownTitle}
           detent={app.sheetDetent}
           onDetentChange={app.onSheetDetentChange}
           onModalChange={app.setSheetModal}
