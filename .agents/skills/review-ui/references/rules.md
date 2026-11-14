@@ -7,15 +7,15 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 ## Accessibility
 
 - **A1** Native elements first. A `<button>` does an action, an `<a>` or React Router `<Link>` goes somewhere. No `<div>` or `<span>` with a click handler. No `tabindex` above 0 (lint).
-- **A2** Every interactive component has an accessible name and a stable `data-testid`; every floating element has `data-chrome`. An icon-only button is named for the action ("Zoom in") (lint), and a visible label is contained in the name.
+- **A2** Every interactive component has an accessible name and a stable `data-testid`; every floating element has `data-chrome`. An icon-only button is named for the action ("Zoom in"; lint checks only that it has a name), and a visible label is contained in the name.
 - **A3** A form control has a `<label>` or an accessible name, and the label is clickable.
 - **A4** An image has `alt` (empty when decorative). A decorative SVG is `aria-hidden`, and the words beside a glyph carry the meaning (`MarkerGlyph`, `ShapeGlyph`).
 - **A5** Nothing is conveyed by colour alone: a shape, an icon or words go with every colour.
-- **A6** Announcements go through `LiveRegion`, and status text through `StatusMessage` (lint: no other live regions). A message that reports a running count carries the whole count. `keep` is only for the outcome of something the person did.
+- **A6** Announcements go through `LiveRegion`, and status text through `StatusMessage` (lint: no other live regions). A message that reports a running count carries the whole count. `keep` is for the outcome of something the person did, or a state they would otherwise miss, as `DESIGN.md` (the `LiveRegion` row) says.
 - **A7** Screen-reader-only text is `VisuallyHidden`, nothing else.
 - **A8** Headings are in order (h2, h3, h4 as the sheet nests them). A region has a name. The sheet or panel title is the dialog's name.
 - **A9** Every gesture has a keyboard or single-tap equivalent, and nothing needs hover or a mouse (`DESIGN.md`, principles 3 and 4). Escape closes the active surface.
-- **A10** Focus is visible through the `focusRing` token, which is two tones so it shows on any basemap, and uses `:focus-visible`. `outline: none` without `focusRing` is not allowed (lint). Focus moves into a panel, card or dialog when it opens and returns to the control that opened it when it closes. A sticky or floating element must not cover the focused control.
+- **A10** Focus is visible through the `focusRing` token, which is two tones so it shows on any basemap, and uses `:focus-visible`. `outline: none` without `focusRing` is not allowed (lint). Focus moves into a panel, card or dialog when it opens and returns to the control that opened it when it closes, unless `DESIGN.md` says otherwise (the welcome tour card and the credits popover do not take focus). A sticky or floating element must not cover the focused control.
 - **A11** A control that is not available is disabled with its reason in words, not hidden, unless `DESIGN.md` says otherwise.
 
 ## Forms
@@ -29,7 +29,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 
 ## Motion
 
-- **M1** Only `transform` and `opacity` animate. Durations and easing come from the motion tokens (120, 200 and 320 ms, one curve), never a literal (lint) and never `transition: all`.
+- **M1** Only `transform` and `opacity` animate. Durations and easing come from the motion tokens (120, 200 and 320 ms, one curve). A literal duration is refused by lint; a literal easing curve is not, so check it by reading. Never `transition: all`.
 - **M2** `prefers-reduced-motion` turns motion off, including the map engine's own animation.
 - **M3** An animation can be interrupted by the next input. SVG transforms go on a `<g>` with `transform-box: fill-box` and `transform-origin: center`.
 - **M4** Nothing moves on its own for more than five seconds without a way to pause, stop or hide it.
@@ -50,7 +50,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 
 - **P1** A long list is capped or windowed, as the feature list shows 50 rows and "Show all". No unbounded `.map()` over data a provider returns.
 - **P2** No layout read (`getBoundingClientRect`, `offsetWidth`, `scrollTop`) during render. Read in an effect or with `ResizeObserver`, and batch reads before writes. `MapChrome`'s measurements are the deliberate exception.
-- **P3** Prefer uncontrolled inputs. A controlled input is cheap on every keystroke.
+- **P3** Prefer uncontrolled inputs where nothing else needs the value. A controlled input (the search combobox is one) must be cheap on every keystroke.
 - **P4** Fonts and app CSS come in as module imports so the build applies fallback metrics, not as a hand-written preload. A new tile or geocoder origin is allowed in `packages/web/public/_headers` and `packages/web/src/constants/securityHeaders.ts`.
 
 ## State and navigation
@@ -62,7 +62,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 ## Touch
 
 - **H1** Controls are 48 px or more and no target is under 44 px, with 8 px between neighbours. A switch's or slider thumb's hit area is larger than what it draws.
-- **H2** Controls use `touch-action: manipulation`. A sheet or panel that scrolls uses `overscroll-behavior: contain`.
+- **H2** `touch-action: manipulation` is set once, globally, in `packages/web/src/global.css.ts`, so it is not a per-control rule. A sheet or panel that scrolls uses `overscroll-behavior: contain`.
 - **H3** While something is dragged, text selection is off. Every drag, swipe, pinch and long press has a button or key equivalent.
 - **H4** `autoFocus` is rare. Move focus on purpose, as a card's heading takes it when a tap opens the card, and never on first load on a phone.
 
@@ -79,7 +79,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 
 ## Rendering on the server
 
-- **S1** The page is server-rendered on Workers. No browser global outside an adapter (lint). A value that differs between server and client (time, locale, `matchMedia`, storage) is read after mount or with `useSyncExternalStore`. An input with `value` has `onChange`. `suppressHydrationWarning` only where it is truly needed.
+- **S1** The page is server-rendered on Workers. Browser globals belong in an adapter: lint denies storage, `fetch`, `matchMedia`, `location` and `history` outside one, and the rest (`window`, `document`) is checked by reading. A value that differs between server and client (time, locale, `matchMedia`, storage) is read after mount or with `useSyncExternalStore`. An input with `value` has `onChange`. `suppressHydrationWarning` only where it is truly needed.
 - **S2** No inline `style` attribute (lint). A dynamic value is a custom property set through the CSSOM.
 
 ## Locale
@@ -88,7 +88,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 
 ## Components
 
-- **C1** Use the primitives that exist: `IconButton`, `ControlGroup`, `Switch`, `Slider` and `SegmentedControl` (Radix wrapped in our own components), `Tooltip` (it supplements a name, never replaces one), `Sheet`, `Icon`. Icons are `lucide-react` imported by name, 24 px, through `Icon` (lint). No second palette, icon set or font, and no Shadow DOM component library.
+- **C1** Use the primitives that exist: `IconButton`, `ControlGroup`, `Switch`, `Slider` and `SegmentedControl` (Radix wrapped in our own components), `Tooltip` (it supplements a name, never replaces one), `Sheet`, `Icon`. Icons are `lucide-react` imported by name, 24 px, through `Icon` (lint covers the import form and the size and stroke props). No second palette, icon set or font, and no Shadow DOM component library.
 - **C2** A component matches its row in "Components and accessibility contracts" in `DESIGN.md`. If the behaviour changed, the row changed in the same pull request.
 
 ## Anti-patterns to flag

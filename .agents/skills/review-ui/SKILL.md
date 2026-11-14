@@ -9,7 +9,7 @@ description: "Review MapCairn interface code (React components styled with vanil
 
 The rules come from the Web Interface Guidelines by Vercel Labs (MIT), rewritten for React, vanilla-extract and this project's design system. `references/rules.md` has them, each with an id. The skill needs no network and no tool beyond reading files and running the repository's own linters, so every tool and model can follow it.
 
-Example: asked to review a new panel component, run the linters, read the matching row in `DESIGN.md`, read the file against the rules, and report each gap as one line, such as `packages/map/src/panels/ExamplePanel.tsx:42 - A2 close button has no accessible name`.
+Example: asked to review a new panel component, run the linters, read the matching row in `DESIGN.md`, read the file against the rules, and report each gap as one line, such as `packages/map/src/panels/ExamplePanel.tsx:42 - A10 focus is not returned to the opener when the panel closes`.
 
 ## 1. Choose what to review
 
@@ -40,7 +40,7 @@ Group by file, most serious first within a file, one line per finding, in the fo
 ```text
 ## packages/map/src/panels/ExamplePanel.tsx
 
-packages/map/src/panels/ExamplePanel.tsx:42 - A2 close button has no accessible name
+packages/map/src/panels/ExamplePanel.tsx:42 - A10 focus is not returned to the opener when the panel closes
 packages/map/src/panels/ExamplePanel.tsx:77 - M2 chevron rotation ignores reduced motion
 
 ## packages/map/src/panels/OtherPanel.tsx
