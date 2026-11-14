@@ -23,7 +23,8 @@ export const chromeVars = {
   /**
    * How far the top of the bottom row is above the top of the bottom-end slot
    * (zero or positive): the extra height of the bottom-start readout. The
-   * credits popover rises this far more, so it clears the whole row.
+   * credits popover rises this far more, so it clears the whole row, unless it
+   * shares no width with the readout (`data-readout-clear`).
    */
   bottomEndRise: "--chrome-bottom-end-rise",
   /** Vertical room above the bottom row that stays clear of the end stack. */
