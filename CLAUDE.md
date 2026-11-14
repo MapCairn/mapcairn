@@ -2,7 +2,7 @@
 
 ## Project skills and agents
 
-The skills in `.claude/skills/` (`create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr`, `visual-check`, `playwright-tests`) are the procedures behind `AGENTS.md`; load the one that matches the task before you start. The agents `implementer`, `fresh-eyes-reviewer` and `ui-verifier` in `.claude/agents/` run `sonnet` and follow those skills. Use them for the tasks they name. Other tools read generated copies of the rest (see `docs/guides/working-with-agents.md`), so after editing a skill or agent run `npm run agents:sync`.
+The skills in `.claude/skills/` (`create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr`, `visual-check`, `review-ui`, `playwright-tests`) are the procedures behind `AGENTS.md`; load the one that matches the task before you start. The agents `implementer`, `fresh-eyes-reviewer` and `ui-verifier` in `.claude/agents/` run `sonnet` and follow those skills. Use them for the tasks they name. Other tools read generated copies of the rest (see `docs/guides/working-with-agents.md`), so after editing a skill or agent run `npm run agents:sync`.
 
 ## Delegating to sub-agents
 
