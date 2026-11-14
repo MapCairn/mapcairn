@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
+    "@svg-maps/usa": "^2.0.0",
     "@swc/core": "1.16.22",
     "@vitest/coverage-v8": "5.1.0",
     "dependency-cruiser": "18.7.2",
