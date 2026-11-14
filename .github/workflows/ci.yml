@@ -26,6 +26,9 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      # Checks the registry signature of every installed package and the
+      # provenance attestation of those that have one.
+      - run: npm audit signatures
       - run: npm run lint
         env:
           # The roadmap check reads issue states with `gh`, which needs a token
