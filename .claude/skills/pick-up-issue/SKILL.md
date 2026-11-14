@@ -38,7 +38,7 @@ This skill is the working procedure behind `AGENTS.md`. Where they differ, `AGEN
 
 With write access: `gh issue edit <n> --add-assignee "@me"` and a one-line comment with the branch name. On a fork, comment only. Run `git fetch <origin-or-upstream>`, branch from the project's current `main` with `git switch -c <type>/<short-name> <origin-or-upstream>/main` (`origin` with write access, `upstream` on a fork; types `feat`, `fix`, `docs`, `refactor`, `test`, `chore`), and push with `git push -u origin <branch>`.
 
-Several issues at once, or an agent beside you, means a separate worktree for each (`git worktree add ../mapcairn-<name> -b <branch> <origin-or-upstream>/main`). There `npm ci` fails at `prepare`: use `npm ci --ignore-scripts` and run `npm run lint` yourself before each commit. Do not install into a working tree another person or agent is using. Give each concurrent e2e or dev server its own port (`MAPCAIRN_E2E_PORT`, and a different dev port).
+Several issues at once, or an agent beside you, means a separate worktree for each (`git worktree add --no-track -b <branch> .claude/worktrees/<name> <origin-or-upstream>/main`; the folder is under the repository and git-ignored, so nothing is left in the folder that holds the clone, and the final sweep finds every worktree in one place). There `npm ci` fails at `prepare`: use `npm ci --ignore-scripts` and run `npm run lint` yourself before each commit. Do not install into a working tree another person or agent is using. Give each concurrent e2e or dev server its own port (`MAPCAIRN_E2E_PORT`, and a different dev port).
 
 ## 3. Plan
 
