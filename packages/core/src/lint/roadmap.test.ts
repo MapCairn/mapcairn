@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   checkRoadmap,
   parseIssueStates,
+  readIssueStates,
+  runRoadmapCheck,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/roadmap-check.mjs";
 
@@ -16,7 +18,7 @@ function roadmap(now: string[], next: string[], later: string[]): string {
     "## Direction",
     "Mentions #999 outside the list.",
     "## Priorities",
-    "Intro with no issue numbers.",
+    "Intro mentions #777 and #1, which are not in a list.",
     "### Now",
     list(now),
     "### Next",
@@ -40,9 +42,60 @@ describe("checkRoadmap", () => {
     });
   });
 
-  it("ignores issue numbers outside the Priorities section", () => {
+  it("reads only the three lists, not the introduction or other sections", () => {
     const text = roadmap(["#1"], ["#2"], ["#3"]);
     expect(checkRoadmap(text, open(1, 2, 3)).errors).toEqual([]);
+    expect(checkRoadmap(text, open(1, 2, 3)).warnings).toEqual([]);
+    const closedIntro = new Map([
+      [1, "OPEN"],
+      [2, "OPEN"],
+      [3, "OPEN"],
+      [777, "CLOSED"],
+    ]);
+    expect(checkRoadmap(text, closedIntro).warnings).toEqual([]);
+  });
+
+  it("ignores a number written as an HTML entity or inside a code span", () => {
+    const text = roadmap(
+      ["Don&#39;t, `#500` and #1."],
+      ["``#501`` and #2"],
+      ["#3"],
+    );
+    expect(checkRoadmap(text, open(1, 2, 3))).toEqual({
+      errors: [],
+      warnings: [],
+    });
+  });
+
+  it("finds a heading with trailing spaces", () => {
+    const text = roadmap(["#1"], ["#2"], ["#3"])
+      .replace("### Now", "### Now  ")
+      .replace("## Priorities", "## Priorities ");
+    expect(checkRoadmap(text, open(1, 2, 3)).errors).toEqual([]);
+  });
+
+  it("reads a file with Windows line endings", () => {
+    const text = roadmap(["#1", "#2"], ["#3"], ["#4"]).replaceAll("\n", "\r\n");
+    expect(checkRoadmap(text, open(1, 2, 3, 4))).toEqual({
+      errors: [],
+      warnings: [],
+    });
+    const six = roadmap(
+      ["#1", "#2", "#3", "#4", "#5", "#6"],
+      ["#7"],
+      ["#8"],
+    ).replaceAll("\n", "\r\n");
+    expect(checkRoadmap(six, null).errors).toEqual([
+      "Now has 6 items, at most 5 are allowed",
+    ]);
+  });
+
+  it("treats a number above the highest returned as unknown, not as missing", () => {
+    const text = roadmap(["#1"], ["#2"], ["#50"]);
+    expect(checkRoadmap(text, open(1, 2, 3))).toEqual({
+      errors: [],
+      warnings: [],
+    });
   });
 
   it("reports an issue number that does not exist", () => {
@@ -145,5 +198,93 @@ describe("parseIssueStates", () => {
     expect(parseIssueStates("not json")).toBeNull();
     expect(parseIssueStates('{"message":"rate limit"}')).toBeNull();
     expect(parseIssueStates('[{"number":"x"}]')).toBeNull();
+  });
+
+  it("returns null for an empty list, so it is never read as 'no such issue'", () => {
+    expect(parseIssueStates("[]")).toBeNull();
+  });
+});
+
+describe("readIssueStates", () => {
+  const output = JSON.stringify([{ number: 4, state: "open" }]);
+
+  it("asks for every issue of the project in one read-only call", () => {
+    const calls: string[][] = [];
+    const states = readIssueStates((args: string[]) => {
+      calls.push(args);
+      return { status: 0, stdout: output };
+    });
+    expect(states).toEqual(new Map([[4, "OPEN"]]));
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual([
+      "issue",
+      "list",
+      "--repo",
+      "MapCairn/mapcairn",
+      "--state",
+      "all",
+      "--limit",
+      "1000",
+      "--json",
+      "number,state",
+    ]);
+  });
+
+  it("returns null when gh fails, is missing or prints something unusable", () => {
+    expect(readIssueStates(() => ({ status: 1, stdout: "" }))).toBeNull();
+    expect(readIssueStates(() => ({ status: null, stdout: "" }))).toBeNull();
+    expect(readIssueStates(() => ({ status: 0, stdout: "[]" }))).toBeNull();
+    expect(readIssueStates(() => ({ status: 0, stdout: "oops" }))).toBeNull();
+  });
+});
+
+describe("runRoadmapCheck", () => {
+  const text = roadmap(["#1"], ["#2"], ["#3"]);
+
+  function run(roadmapText: string, states: Map<number, string> | null) {
+    const out: string[] = [];
+    const err: string[] = [];
+    const code = runRoadmapCheck({
+      roadmapText,
+      states,
+      log: (line: string) => out.push(line),
+      error: (line: string) => err.push(line),
+    });
+    return { code, out, err };
+  }
+
+  it("exits 0 and prints nothing for a clean list", () => {
+    expect(run(text, open(1, 2, 3))).toEqual({ code: 0, out: [], err: [] });
+  });
+
+  it("prints a warning with the same prefix as errors and still exits 0", () => {
+    const states = new Map([
+      [1, "OPEN"],
+      [2, "CLOSED"],
+      [3, "OPEN"],
+    ]);
+    expect(run(text, states)).toEqual({
+      code: 0,
+      out: ["roadmap check: warning: #2 is closed, move or remove it"],
+      err: [],
+    });
+  });
+
+  it("prints each error with the prefix and exits 1", () => {
+    const result = run(roadmap(["#1, #1"], ["#2"], ["#3"]), open(1, 2, 3));
+    expect(result.code).toBe(1);
+    expect(result.err).toEqual(["roadmap check: #1 is listed more than once"]);
+  });
+
+  it("says once that the states were not checked, and still fails on a structural error", () => {
+    const clean = run(text, null);
+    expect(clean.code).toBe(0);
+    expect(clean.out).toHaveLength(1);
+    expect(clean.out[0]).toMatch(
+      /^roadmap check: issue states were not checked/,
+    );
+    const broken = run(roadmap(["#1, #1"], ["#2"], ["#3"]), null);
+    expect(broken.code).toBe(1);
+    expect(broken.out).toHaveLength(1);
   });
 });
