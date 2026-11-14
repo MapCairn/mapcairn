@@ -319,6 +319,33 @@ describe("layers in the hash", () => {
     expect(value.layers?.controls).toEqual({ l3: { window: "week" } });
   });
 
+  it("counts the readable ids past the 20 it keeps, so they can be reported", () => {
+    const ids = Array.from({ length: 25 }, (_, index) => `l${index}`);
+    expect(parseUrlHash(`#layers=${ids.join(",")}`).layers?.dropped).toBe(5);
+  });
+
+  it("counts a repeated id past the 20 once, and leaves out unreadable and empty ones", () => {
+    const ids = Array.from({ length: 20 }, (_, index) => `l${index}`);
+    const value = parseUrlHash(
+      `#layers=${[...ids, "extra", "extra", "Bad!", "", "l3"].join(",")}`,
+    );
+    expect(value.layers?.dropped).toBe(1);
+  });
+
+  it("has no count when the link carries 20 layers or fewer", () => {
+    const ids = Array.from({ length: 20 }, (_, index) => `l${index}`);
+    const { layers } = parseUrlHash(`#layers=${ids.join(",")}`);
+    expect(layers).not.toHaveProperty("dropped");
+  });
+
+  it("never writes the count back into the address", () => {
+    const ids = Array.from({ length: 25 }, (_, index) => `l${index}`);
+    const { layers } = parseUrlHash(`#layers=${ids.join(",")}`);
+    const hash = serialiseUrlHash({ layers });
+    expect(hash).toBe(`#layers=${ids.slice(0, 20).join(",")}`);
+    expect(parseUrlHash(hash).layers).not.toHaveProperty("dropped");
+  });
+
   it("writes at most 20 layers, the same ones it reads back", () => {
     const enabled = Array.from({ length: 25 }, (_, index) => `l${index}`);
     const hash = serialiseUrlHash({

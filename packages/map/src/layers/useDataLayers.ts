@@ -290,7 +290,9 @@ export interface UseDataLayersOptions {
    * A layer the catalogue has not got is dropped. A catalogue that is still
    * loading has no layers yet, so the link's layers wait for its first list
    * and stay in {@link DataLayers.urlValue} meanwhile; one that is not there
-   * when the list arrives is dropped then, and said once, for good.
+   * when the list arrives is dropped then, and said once, for good. The ids
+   * the link carried past its limit (`initial.dropped`) are said in the same
+   * message.
    */
   readonly initial?: LayersUrlState;
   /** The clock. Defaults to `Date.now`. */
@@ -404,6 +406,7 @@ function initialState(
       link: {
         waiting: initial?.enabled ?? [],
         controls: initial?.controls ?? {},
+        dropped: initial?.dropped,
       },
       known: [],
       reconciled: null,
