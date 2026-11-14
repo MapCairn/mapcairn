@@ -126,9 +126,11 @@ function exportedShapes(inputs: readonly DrawShapeInput[]): unknown[] {
 }
 
 /**
- * The time allowed to a property that checks the 72-position ring of a circle
- * for crossing edges on each of its generated cases, which the 5 s default
- * does not leave room for when the whole suite runs under coverage.
+ * The time allowed to a property that exports circles on each of its generated
+ * cases, and so checks the 72-position ring of each circle under 100 m for
+ * crossing edges. The work is bounded (the runs and the shapes in each are
+ * capped) but took up to about 1.6 s alone and 5 to 8 s when the whole suite
+ * ran under coverage, which the 5 s default does not leave room for.
  */
 const SLOW_PROPERTY_TIMEOUT_MS = 20_000;
 
@@ -175,49 +177,61 @@ function expectWellFormed(result: ShapeImport): void {
 }
 
 describe("parseShapeFile round trips", () => {
-  it("reads back the GeoJSON it exported, as the same shapes", () => {
-    fc.assert(
-      fc.property(exportable, (inputs) => {
-        const text = JSON.stringify(shapesToGeoJson(inputs.map(finishShape)));
-        expect(exportedShapes(shapesOf(parseShapeFile(text)))).toEqual(
-          exportedShapes(inputs),
-        );
-      }),
-      PROPERTY_PARAMETERS,
-    );
-  });
+  it(
+    "reads back the GeoJSON it exported, as the same shapes",
+    () => {
+      fc.assert(
+        fc.property(exportable, (inputs) => {
+          const text = JSON.stringify(shapesToGeoJson(inputs.map(finishShape)));
+          expect(exportedShapes(shapesOf(parseShapeFile(text)))).toEqual(
+            exportedShapes(inputs),
+          );
+        }),
+        PROPERTY_PARAMETERS,
+      );
+    },
+    SLOW_PROPERTY_TIMEOUT_MS,
+  );
 
-  it("reads back the CSV it exported, as the same shapes", () => {
-    fc.assert(
-      fc.property(exportable, (inputs) => {
-        const text = shapesToCsv(inputs.map(finishShape));
-        expect(exportedShapes(shapesOf(parseShapeFile(text)))).toEqual(
-          exportedShapes(inputs),
-        );
-      }),
-      PROPERTY_PARAMETERS,
-    );
-  });
+  it(
+    "reads back the CSV it exported, as the same shapes",
+    () => {
+      fc.assert(
+        fc.property(exportable, (inputs) => {
+          const text = shapesToCsv(inputs.map(finishShape));
+          expect(exportedShapes(shapesOf(parseShapeFile(text)))).toEqual(
+            exportedShapes(inputs),
+          );
+        }),
+        PROPERTY_PARAMETERS,
+      );
+    },
+    SLOW_PROPERTY_TIMEOUT_MS,
+  );
 
-  it("reads back a circle of a few centimetres off the grid with its centre and radius exactly, from GeoJSON and CSV, and writes no exponent", () => {
-    fc.assert(
-      fc.property(offGridSmallCircleInput, (input) => {
-        const shapes = [finishShape(input, 0)];
-        const texts = [
-          shapesToGeoJsonText(shapes),
-          shapesToCsv(shapes),
-          shapesToWkt(shapes),
-        ];
-        for (const text of texts) {
-          expect(text).not.toMatch(/\de[+-]?\d/);
-        }
-        for (const text of texts.slice(0, 2)) {
-          expect(shapesOf(parseShapeFile(text))).toEqual([input]);
-        }
-      }),
-      PROPERTY_PARAMETERS,
-    );
-  });
+  it(
+    "reads back a circle of a few centimetres off the grid with its centre and radius exactly, from GeoJSON and CSV, and writes no exponent",
+    () => {
+      fc.assert(
+        fc.property(offGridSmallCircleInput, (input) => {
+          const shapes = [finishShape(input, 0)];
+          const texts = [
+            shapesToGeoJsonText(shapes),
+            shapesToCsv(shapes),
+            shapesToWkt(shapes),
+          ];
+          for (const text of texts) {
+            expect(text).not.toMatch(/\de[+-]?\d/);
+          }
+          for (const text of texts.slice(0, 2)) {
+            expect(shapesOf(parseShapeFile(text))).toEqual([input]);
+          }
+        }),
+        PROPERTY_PARAMETERS,
+      );
+    },
+    SLOW_PROPERTY_TIMEOUT_MS,
+  );
 
   it("reads any GeoJSON geometry without throwing, keeping only valid shapes", () => {
     fc.assert(
