@@ -120,6 +120,35 @@ test.describe("draw import", () => {
     await expect.poll(() => page.url()).toMatch(/#map=[\d.]+\/48\./);
   });
 
+  test("imports the rest of a WKT file around a geometry and a line it cannot use", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(FAR_AWAY);
+    await mapPage.mapOptionsButton.click();
+    await expect(mapPage.shapesSection).toBeVisible();
+    await importFrom(page, {
+      name: "mixed.wkt",
+      mimeType: "text/plain",
+      buffer: Buffer.from(
+        [
+          "POINT (2.3522 48.8566) POINT M (1 2 3) POINT (2.36 48.86)",
+          "LINESTRING (2.35 48.85, 2.36",
+          "LINESTRING (2.30 48.80, 2.31 48.81)",
+        ].join("\n"),
+      ),
+    });
+
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      /^3 shapes imported\. 2 skipped: /,
+    );
+    await expect(mapPage.shapesSection.getByTestId("shapes-row")).toHaveText([
+      /^Point 1/,
+      /^Point 2/,
+      /^Line 1/,
+    ]);
+  });
+
   test("refuses a file that is not shapes, in words, and adds nothing", async ({
     page,
     mapPage,

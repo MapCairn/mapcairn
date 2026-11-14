@@ -33,9 +33,23 @@ export interface ParseWktOptions {
 type Punctuation = "(" | ")" | "," | "=" | ";";
 
 type Token =
-  | { readonly kind: "word"; readonly text: string; readonly at: number }
-  | { readonly kind: "number"; readonly text: string; readonly at: number }
-  | { readonly kind: Punctuation | "end"; readonly at: number };
+  | {
+      readonly kind: "word";
+      readonly text: string;
+      readonly at: number;
+      readonly first: boolean;
+    }
+  | {
+      readonly kind: "number";
+      readonly text: string;
+      readonly at: number;
+      readonly first: boolean;
+    }
+  | {
+      readonly kind: Punctuation | "end";
+      readonly at: number;
+      readonly first: boolean;
+    };
 
 const KEYWORDS = new Set([
   "POINT",
@@ -210,6 +224,8 @@ class Tokens {
   #depth = 0;
   #taken = 0;
   #lastAt = 0;
+  #lastFirst = false;
+  #lineStart = true;
   #lineFrom = 0;
   #lineTo = -1;
 
@@ -227,6 +243,7 @@ class Tokens {
     this.#peeked = undefined;
     this.#taken += 1;
     this.#lastAt = token.at;
+    this.#lastFirst = token.first;
     if (token.kind === "(") {
       this.#depth += 1;
     } else if (token.kind === ")") {
@@ -270,14 +287,12 @@ class Tokens {
   resync(): void {
     const peeked = this.#peeked;
     const broke = peeked ? peeked.at : this.#lastAt;
+    const first = peeked ? peeked.first : this.#lastFirst;
     const moved = peeked !== undefined || this.#taken > 1;
-    if (
-      moved &&
-      this.#firstOnLine(broke) &&
-      startsGeometryAt(this.#text, broke)
-    ) {
+    if (moved && first && startsGeometryAt(this.#text, broke)) {
       this.#peeked = undefined;
       this.#index = broke;
+      this.#lineStart = true;
       return;
     }
     const from = peeked ? peeked.at : this.#index;
@@ -287,36 +302,30 @@ class Tokens {
       line = lineEnd(this.#text, line) + 1;
     }
     this.#index = Math.min(line, this.#text.length);
-  }
-
-  #firstOnLine(at: number): boolean {
-    for (let index = at - 1; index >= 0; index -= 1) {
-      const code = this.#text.charCodeAt(index);
-      if (code === 10 || code === 13) {
-        return true;
-      }
-      if (!isSpace(code)) {
-        return false;
-      }
-    }
-    return true;
+    this.#lineStart = true;
   }
 
   #read(): Token {
     const text = this.#text;
     const length = text.length;
     while (this.#index < length && isSpace(text.charCodeAt(this.#index))) {
+      const code = text.charCodeAt(this.#index);
+      if (code === 10 || code === 13) {
+        this.#lineStart = true;
+      }
       this.#index += 1;
     }
     const at = this.#index;
+    const first = this.#lineStart;
+    this.#lineStart = false;
     if (at >= length) {
-      return { kind: "end", at };
+      return { kind: "end", at, first };
     }
     const code = text.charCodeAt(at);
     const punctuation = punctuationOf(text.charAt(at));
     if (punctuation !== undefined) {
       this.#index += 1;
-      return { kind: punctuation, at };
+      return { kind: punctuation, at, first };
     }
     if (isLetter(code)) {
       let end = at + 1;
@@ -324,7 +333,7 @@ class Tokens {
         end += 1;
       }
       this.#index = end;
-      return { kind: "word", text: text.slice(at, end), at };
+      return { kind: "word", text: text.slice(at, end), at, first };
     }
     if (isNumberCharacter(code)) {
       let end = at + 1;
@@ -332,7 +341,7 @@ class Tokens {
         end += 1;
       }
       this.#index = end;
-      return { kind: "number", text: text.slice(at, end), at };
+      return { kind: "number", text: text.slice(at, end), at, first };
     }
     throw refuse("Unexpected character", at);
   }
