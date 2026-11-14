@@ -17,6 +17,9 @@ import {
 
 // happy-dom has no WebGL, so the contract runs against the scripted engine.
 // The same adapter is checked against real MapLibre in Playwright.
+/** The adapter's wait before it calls a tile layer slow, short so the contract does not sleep for the real one. */
+const SLOW_WAIT_MS = 20;
+
 vi.mock("maplibre-gl", async () => ({
   Map: (await import("./maplibreTestEngine")).FakeMapLibreMap,
   GPUInitializationError: (await import("./maplibreTestEngine"))
@@ -99,6 +102,7 @@ for (const [name, basemap] of [
       adapter: new MapLibreMapAdapter({
         workerFailureGraceMs: 0,
         imageTilesWaitMs: 20,
+        tileLayerSlowMs: SLOW_WAIT_MS,
       }),
       controls: {
         host: createHost(),
@@ -139,6 +143,13 @@ for (const [name, basemap] of [
             tile: {},
           });
           map.fire("idle");
+        },
+        simulateTileLayerSlow: async (layerId) => {
+          latestMap().fire("sourcedataloading", {
+            sourceId: `mapcairn:${layerId}`,
+            tile: {},
+          });
+          await new Promise((resolve) => setTimeout(resolve, SLOW_WAIT_MS * 2));
         },
         simulateTileLayerRecovery: (layerId) => {
           latestMap().fire("sourcedata", {

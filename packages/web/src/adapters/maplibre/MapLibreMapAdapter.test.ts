@@ -46,6 +46,7 @@ import {
   createMapLibreMapAdapter,
   IMAGE_WAIT_MS,
   MapLibreMapAdapter,
+  TILE_LAYER_SLOW_MS,
   TILE_SETTLE_NUDGE_MS,
   WORKER_FAILURE_GRACE_MS,
 } from "./MapLibreMapAdapter";
@@ -1504,6 +1505,235 @@ describe("MapLibreMapAdapter", () => {
           adapter.destroy();
           vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 3);
           expect(repaints(map)).toBe(0);
+        });
+      });
+
+      describe("that is slow", () => {
+        const JUST_BEFORE = TILE_LAYER_SLOW_MS - 1;
+
+        async function slowWatched() {
+          const subject = await watched();
+          const slow = vi.fn();
+          const recovered = vi.fn();
+          subject.adapter.on("tileLayerSlow", slow);
+          subject.adapter.on("tileLayerRecovered", recovered);
+          vi.useFakeTimers();
+          return { ...subject, slow, recovered };
+        }
+
+        it("is reported, with its tiles, once the wait passes with a tile still outstanding and none loaded, without the map settling", async () => {
+          const { map, slow, tileError } = await slowWatched();
+          requested(map);
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          expect(slow).not.toHaveBeenCalled();
+          vi.advanceTimersByTime(1);
+          expect(slow).toHaveBeenCalledTimes(1);
+          expect(slow).toHaveBeenCalledWith({
+            layerId: "imagery",
+            tiles: OVERLAY.tiles,
+          });
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+          requested(map);
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+          expect(slow).toHaveBeenCalledTimes(1);
+          expect(tileError).not.toHaveBeenCalled();
+        });
+
+        it("is reported while the map is still being painted, so a late 404 can still be seen", async () => {
+          const { map, slow } = await slowWatched();
+          requested(map);
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS);
+          expect(slow).toHaveBeenCalledTimes(1);
+          const before = map.callsOf("triggerRepaint").length;
+          vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS);
+          expect(map.callsOf("triggerRepaint").length).toBe(before + 1);
+        });
+
+        it("is not pushed back by tiles asked for later", async () => {
+          const { map, slow } = await slowWatched();
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          requested(map);
+          vi.advanceTimersByTime(1);
+          expect(slow).toHaveBeenCalledTimes(1);
+        });
+
+        it("is not reported once a tile of it has loaded", async () => {
+          const { map, slow } = await slowWatched();
+          requested(map);
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          loaded(map);
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+          expect(slow).not.toHaveBeenCalled();
+        });
+
+        it("is reported when some tiles were given up on and one is still outstanding", async () => {
+          const { map, slow } = await slowWatched();
+          requested(map);
+          requested(map);
+          aborted(map);
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS);
+          expect(slow).toHaveBeenCalledTimes(1);
+        });
+
+        it("is not reported when every tile asked for was given up on, and is watched again for the next one", async () => {
+          const { map, slow } = await slowWatched();
+          requested(map);
+          aborted(map);
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS);
+          expect(slow).not.toHaveBeenCalled();
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS);
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          expect(slow).not.toHaveBeenCalled();
+          vi.advanceTimersByTime(1);
+          expect(slow).toHaveBeenCalledTimes(1);
+        });
+
+        it("is not reported for a layer whose tiles failed and settled in time, which is unavailable instead", async () => {
+          const { map, slow, unavailable } = await slowWatched();
+          requested(map);
+          failed(map);
+          map.fire("idle");
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+          expect(unavailable).toHaveBeenCalledTimes(1);
+          expect(slow).not.toHaveBeenCalled();
+        });
+
+        it("counts only its own tiles, and ignores an engine event that is not about a tile", async () => {
+          const { map, slow } = await slowWatched();
+          requested(map, "basemap");
+          requested(map, "mapcairn:other");
+          map.fire("sourcedataloading", { sourceId: SOURCE });
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+          expect(slow).not.toHaveBeenCalled();
+        });
+
+        it("is not reported once the layer is removed", async () => {
+          const { adapter, map, slow } = await slowWatched();
+          requested(map);
+          adapter.removeLayer("imagery");
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+          expect(slow).not.toHaveBeenCalled();
+        });
+
+        it("starts again for the tiles the layer is set to next, and not for an opacity change", async () => {
+          const { adapter, map, slow } = await slowWatched();
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          adapter.setTileLayer("imagery", { ...OVERLAY, opacity: 0.5 });
+          vi.advanceTimersByTime(1);
+          expect(slow).toHaveBeenCalledTimes(1);
+          const next = "https://t.test/2026-11-07/{z}/{x}/{y}.png";
+          adapter.setTileLayer("imagery", { ...OVERLAY, tiles: next });
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          expect(slow).toHaveBeenCalledTimes(1);
+          vi.advanceTimersByTime(1);
+          expect(slow).toHaveBeenCalledTimes(2);
+          expect(slow).toHaveBeenLastCalledWith({
+            layerId: "imagery",
+            tiles: next,
+          });
+        });
+
+        it("is not carried by the wait of tiles the layer was set away from", async () => {
+          const { adapter, map, slow } = await slowWatched();
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          const next = "https://t.test/2026-11-07/{z}/{x}/{y}.png";
+          adapter.setTileLayer("imagery", { ...OVERLAY, tiles: next });
+          requested(map);
+          vi.advanceTimersByTime(1);
+          expect(slow).not.toHaveBeenCalled();
+        });
+
+        it("leaves no timer behind when the map is destroyed", async () => {
+          const { adapter, map, slow } = await slowWatched();
+          requested(map);
+          adapter.destroy();
+          expect(vi.getTimerCount()).toBe(0);
+          vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+          expect(slow).not.toHaveBeenCalled();
+        });
+
+        describe("and reported", () => {
+          async function reportedSlow() {
+            const subject = await slowWatched();
+            requested(subject.map);
+            vi.advanceTimersByTime(TILE_LAYER_SLOW_MS);
+            return subject;
+          }
+
+          it("is recovered once, by the first tile that loads, naming its tiles", async () => {
+            const { map, recovered } = await reportedSlow();
+            loaded(map);
+            loaded(map);
+            expect(recovered).toHaveBeenCalledTimes(1);
+            expect(recovered).toHaveBeenCalledWith({
+              layerId: "imagery",
+              tiles: OVERLAY.tiles,
+            });
+          });
+
+          it("is reported unavailable when the map then settles with none loaded, and recovered once after both", async () => {
+            const { map, unavailable, recovered } = await reportedSlow();
+            map.fire("idle");
+            expect(unavailable).toHaveBeenCalledTimes(1);
+            map.fire("idle");
+            expect(unavailable).toHaveBeenCalledTimes(1);
+            loaded(map);
+            loaded(map);
+            expect(recovered).toHaveBeenCalledTimes(1);
+          });
+
+          it("is not reported slow again for more tiles asked for", async () => {
+            const { map, slow } = await reportedSlow();
+            requested(map);
+            vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+            expect(slow).toHaveBeenCalledTimes(1);
+          });
+
+          it("keeps its report over a basemap swap that draws it again, so the first tile after the swap ends it", async () => {
+            const { adapter, map, slow, recovered } = await reportedSlow();
+            void adapter.setBasemap(DARK).catch(() => undefined);
+            map.fire("style.load");
+            requested(map);
+            vi.advanceTimersByTime(TILE_LAYER_SLOW_MS * 3);
+            expect(slow).toHaveBeenCalledTimes(1);
+            loaded(map);
+            loaded(map);
+            expect(recovered).toHaveBeenCalledTimes(1);
+          });
+
+          it("is reported again by a layer set to other tiles that are slow too, and is not recovered by setting them", async () => {
+            const { adapter, map, slow, recovered } = await reportedSlow();
+            const next = "https://t.test/2026-11-07/{z}/{x}/{y}.png";
+            adapter.setTileLayer("imagery", { ...OVERLAY, tiles: next });
+            requested(map);
+            vi.advanceTimersByTime(TILE_LAYER_SLOW_MS);
+            expect(slow).toHaveBeenCalledTimes(2);
+            expect(slow).toHaveBeenLastCalledWith({
+              layerId: "imagery",
+              tiles: next,
+            });
+            expect(recovered).not.toHaveBeenCalled();
+          });
+        });
+
+        it("is reported again after a basemap swap that draws a layer that had loaded none and was not yet reported", async () => {
+          const { adapter, map, slow } = await slowWatched();
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          void adapter.setBasemap(DARK).catch(() => undefined);
+          map.fire("style.load");
+          requested(map);
+          vi.advanceTimersByTime(JUST_BEFORE);
+          expect(slow).not.toHaveBeenCalled();
+          vi.advanceTimersByTime(1);
+          expect(slow).toHaveBeenCalledTimes(1);
         });
       });
 
