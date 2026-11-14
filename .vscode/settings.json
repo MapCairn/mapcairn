@@ -34,7 +34,7 @@
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
-    "package.json": "package-lock.json, tsconfig*.json, biome.json*, vite.config.*, vitest.config.*, playwright.config.*, react-router.config.*, wrangler.*, lefthook.yml, .dependency-cruiser.cjs, lighthouserc.json, skills-lock.json",
+    "package.json": "package-lock.json, tsconfig*.json, biome.json*, vite.config.*, vitest.config.*, playwright.config.*, react-router.config.*, wrangler.*, lefthook.yml, .dependency-cruiser.cjs, lighthouserc.json",
     "README.md": "AGENTS.md, CLAUDE.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, PRIVACY.md, ATTRIBUTIONS.md, LICENSE*",
     ".gitignore": ".env*, .dev.vars*, .editorconfig, .gitattributes"
   }
