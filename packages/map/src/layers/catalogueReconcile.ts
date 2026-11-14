@@ -22,6 +22,12 @@ export interface Chosen {
 export interface Link {
   readonly waiting: readonly string[];
   readonly controls: ControlsById;
+  /**
+   * How many ids the link carried past its limit on layers (see
+   * `LayersUrlState.dropped`), none when absent. They were never kept, so they
+   * only add to the count of layers the link named that the list lacks.
+   */
+  readonly dropped?: number;
 }
 
 /** What {@link reconcile} reads. */
@@ -56,7 +62,7 @@ export interface Reconciled {
   readonly removed: readonly string[];
   /** The enabled layers among those removed, which are now off. */
   readonly switchedOff: readonly SwitchedOff[];
-  /** How many layers the link named that the list does not have. */
+  /** How many layers the link named that the list does not have, with those it carried past its limit. */
   readonly linkMissing: number;
 }
 
@@ -115,6 +121,7 @@ export function reconcile(inputs: ReconcileInputs): Reconciled {
     switchedOff: chosen.enabled
       .filter((id) => !inList.has(id))
       .map((id) => ({ id, name: names.get(id) ?? id })),
-    linkMissing: link.waiting.filter((id) => !inList.has(id)).length,
+    linkMissing:
+      link.waiting.filter((id) => !inList.has(id)).length + (link.dropped ?? 0),
   };
 }

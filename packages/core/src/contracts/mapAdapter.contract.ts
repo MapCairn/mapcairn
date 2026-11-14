@@ -58,6 +58,13 @@ export interface MapAdapterControls {
    */
   simulateTileLayerFailure(layerId: string): void;
   /**
+   * Makes the engine wait, with a tile of the tile layer `layerId` requested
+   * and none loaded, for longer than it waits before calling a layer slow, as
+   * when its provider is not answering. Resolves once that wait has passed. A
+   * layer that was never set has no tiles, so nothing happens.
+   */
+  simulateTileLayerSlow(layerId: string): Promise<void>;
+  /**
    * Makes the engine load a tile of the tile layer `layerId`, as after a
    * transient failure has passed. A layer that was never set has no tiles, so
    * nothing happens.
@@ -726,6 +733,93 @@ export function runMapAdapterContract(
         controls.simulateTileLayerFailure("never-set");
         await controls.settle();
         expect(reports).toEqual([]);
+      });
+
+      it("reports a tile overlay that is slow, naming it and its tiles, and raises no general tile error or failure", async () => {
+        const { adapter, controls } = await mounted();
+        const slow: MapEvents["tileLayerSlow"][] = [];
+        const unavailable: MapEvents["tileLayerUnavailable"][] = [];
+        let tileErrors = 0;
+        adapter.on("tileLayerSlow", (report) => slow.push(report));
+        adapter.on("tileLayerUnavailable", (report) =>
+          unavailable.push(report),
+        );
+        adapter.on("tileError", () => {
+          tileErrors += 1;
+        });
+        adapter.setTileLayer("imagery", TILES);
+        await controls.settle();
+        await controls.simulateTileLayerSlow("imagery");
+        await controls.settle();
+        expect(slow).toEqual([{ layerId: "imagery", tiles: TILES.tiles }]);
+        expect(unavailable).toEqual([]);
+        expect(tileErrors).toBe(0);
+      });
+
+      it("reports a slow tile overlay once for the tiles it was set to", async () => {
+        const { adapter, controls } = await mounted();
+        const slow: MapEvents["tileLayerSlow"][] = [];
+        adapter.on("tileLayerSlow", (report) => slow.push(report));
+        adapter.setTileLayer("imagery", TILES);
+        await controls.settle();
+        await controls.simulateTileLayerSlow("imagery");
+        await controls.simulateTileLayerSlow("imagery");
+        await controls.settle();
+        expect(slow).toHaveLength(1);
+      });
+
+      it("reports nothing slow for a tile overlay that was removed or never set", async () => {
+        const { adapter, controls } = await mounted();
+        const slow: MapEvents["tileLayerSlow"][] = [];
+        adapter.on("tileLayerSlow", (report) => slow.push(report));
+        adapter.setTileLayer("imagery", TILES);
+        adapter.removeLayer("imagery");
+        await controls.settle();
+        await controls.simulateTileLayerSlow("imagery");
+        await controls.simulateTileLayerSlow("never-set");
+        await controls.settle();
+        expect(slow).toEqual([]);
+      });
+
+      describe("a tile overlay that reported slow tiles", () => {
+        it("reports once when a tile loads after it, naming the layer and its tiles", async () => {
+          const { adapter, controls } = await mounted();
+          const recoveries: MapEvents["tileLayerRecovered"][] = [];
+          adapter.on("tileLayerRecovered", (report) => recoveries.push(report));
+          adapter.setTileLayer("imagery", TILES);
+          await controls.settle();
+          await controls.simulateTileLayerSlow("imagery");
+          await controls.settle();
+          expect(recoveries).toEqual([]);
+          controls.simulateTileLayerRecovery("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toEqual([
+            { layerId: "imagery", tiles: TILES.tiles },
+          ]);
+        });
+
+        it("reports one recovery for a layer that went on to report no tiles", async () => {
+          const { adapter, controls } = await mounted();
+          const unavailable: MapEvents["tileLayerUnavailable"][] = [];
+          const recoveries: MapEvents["tileLayerRecovered"][] = [];
+          adapter.on("tileLayerUnavailable", (report) =>
+            unavailable.push(report),
+          );
+          adapter.on("tileLayerRecovered", (report) => recoveries.push(report));
+          adapter.setTileLayer("imagery", TILES);
+          await controls.settle();
+          await controls.simulateTileLayerSlow("imagery");
+          controls.simulateTileLayerFailure("imagery");
+          await controls.settle();
+          expect(unavailable).toEqual([
+            { layerId: "imagery", tiles: TILES.tiles },
+          ]);
+          controls.simulateTileLayerRecovery("imagery");
+          controls.simulateTileLayerRecovery("imagery");
+          await controls.settle();
+          expect(recoveries).toHaveLength(1);
+        });
       });
 
       describe("a tile overlay that reported no tiles", () => {
