@@ -324,13 +324,83 @@ describe("Biome rules", () => {
     ),
     "packages/core/src/pure/dom.test.ts": "export const a = window;\n",
     "packages/web/src/important.css": "a {\n  color: red !important;\n}\n",
+    "packages/map/src/host/loud.ts": lines(
+      'console.log("a");',
+      'console.error("b");',
+      'console.warn("c");',
+    ),
+    "packages/map/src/host/loud.test.ts": 'console.log("a");\n',
+    "packages/web/scripts/loud.mjs": 'console.log("a");\n',
+    "packages/map/src/host/quality.ts": lines(
+      "export type Shape = { a: number };",
+      "export class Box {",
+      "  #items = new Set<number>();",
+      "  add(n: number): void {",
+      "    this.#items.add(n);",
+      "  }",
+      "}",
+      "export const nested = (a: boolean, b: boolean) => (a ? 1 : b ? 2 : 3);",
+      "const outer = 1;",
+      "export const shadow = (outer: number) => outer;",
+      "export const taken = outer;",
+      "export async function load(): Promise<void> {}",
+      "export function run(): void {",
+      "  load();",
+      "}",
+      'export function kind(value: "a" | "b"): number {',
+      "  switch (value) {",
+      '    case "a":',
+      "      return 1;",
+      "  }",
+      "  return 2;",
+      "}",
+    ),
+    "packages/map/src/host/quality.tsx": lines(
+      "export const leaked = (count: number) => <p>{count && <b>x</b>}</p>;",
+    ),
+    "packages/map/src/host/old.ts": lines(
+      "/** @deprecated Use something else. */",
+      "export const old = 1;",
+    ),
+    "packages/map/src/host/useOld.ts": lines(
+      'import { old } from "./old";',
+      "export const value = old;",
+    ),
+    "packages/map/src/host/goodQuality.ts": lines(
+      "export interface Shape {",
+      "  a: number;",
+      "}",
+      "export class Box {",
+      "  readonly #items = new Set<number>();",
+      "  add(n: number): void {",
+      "    this.#items.add(n);",
+      "  }",
+      "}",
+      "export const pick = (a: boolean) => (a ? 1 : 2);",
+      "export async function load(): Promise<void> {}",
+      "export async function run(): Promise<void> {",
+      "  await load();",
+      "}",
+      'export function kind(value: "a" | "b"): number {',
+      "  switch (value) {",
+      '    case "a":',
+      "      return 1;",
+      '    case "b":',
+      "      return 2;",
+      "  }",
+      "}",
+    ),
   };
 
   beforeAll(() => {
     root = mkdtempSync(path.join(tmpdir(), "mapcairn-biome-"));
     writeTree(root, files);
+    // The config keeps its reasons in whole-line `//` comments.
     const config = JSON.parse(
-      readFileSync(path.join(REPO, "biome.jsonc"), "utf8"),
+      readFileSync(path.join(REPO, "biome.jsonc"), "utf8")
+        .split("\n")
+        .filter((row) => !row.trim().startsWith("//"))
+        .join("\n"),
     );
     config.vcs = { enabled: false };
     delete config.$schema;
@@ -380,8 +450,24 @@ describe("Biome rules", () => {
     ["noRestrictedGlobals", "packages/core/src/pure/dom.ts"],
     ["noJsRestrictedProperties", "packages/core/src/pure/dom.ts"],
     ["noImportantStyles", "packages/web/src/important.css"],
+    ["noConsole", "packages/map/src/host/loud.ts"],
+    ["useConsistentTypeDefinitions", "packages/map/src/host/quality.ts"],
+    ["useReadonlyClassProperties", "packages/map/src/host/quality.ts"],
+    ["noNestedTernary", "packages/map/src/host/quality.ts"],
+    ["noShadow", "packages/map/src/host/quality.ts"],
+    ["noFloatingPromises", "packages/map/src/host/quality.ts"],
+    ["useExhaustiveSwitchCases", "packages/map/src/host/quality.ts"],
+    ["noLeakedRender", "packages/map/src/host/quality.tsx"],
+    ["noDeprecatedImports", "packages/map/src/host/useOld.ts"],
   ])("%s fires in %s", (rule, file) => {
     expect(findings).toContain(`${rule}: ${file}`);
+  });
+
+  it("lets application code report a failure with console.error and console.warn", () => {
+    const rows = findings.filter(
+      (f) => f === "noConsole: packages/map/src/host/loud.ts",
+    );
+    expect(rows).toHaveLength(1);
   });
 
   it("flags namespace, default, dynamic and other icon imports separately", () => {
@@ -399,6 +485,9 @@ describe("Biome rules", () => {
     "packages/map/src/host/globals.test.ts",
     "packages/core/src/pure/ok.ts",
     "packages/core/src/pure/dom.test.ts",
+    "packages/map/src/host/loud.test.ts",
+    "packages/web/scripts/loud.mjs",
+    "packages/map/src/host/goodQuality.ts",
   ])("accepts %s", (file) => {
     expect(findings.filter((f) => f.endsWith(file))).toEqual([]);
   });
