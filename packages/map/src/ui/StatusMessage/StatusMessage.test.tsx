@@ -264,7 +264,7 @@ describe("StatusMessage", () => {
     let abandon: () => void = () => {};
 
     function Harness() {
-      const [onDismiss, setOnDismiss] = useState(() => committed);
+      const [onDismiss, setOnDismiss] = useState<() => void>(() => committed);
       const [abandoned, setAbandoned] = useState(false);
       propose = (next) => setOnDismiss(() => next);
       abandon = () => setAbandoned(true);
