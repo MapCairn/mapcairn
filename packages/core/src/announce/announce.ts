@@ -338,7 +338,21 @@ export function announceTilesUnavailable(
   return `${name}: ${describeTilesUnavailable(when)}`;
 }
 
-/** A tile layer that had found no tiles loaded one, so its status has gone. */
+/**
+ * The status line of a tile layer that has had tiles asked for and none has
+ * loaded yet. It does not say the layer failed: the provider has not answered,
+ * and may still.
+ */
+export function describeTilesSlow(): string {
+  return "Still waiting for imagery. The provider may be slow or not answering.";
+}
+
+/** A tile layer is still waiting for its first tile, in the words of {@link describeTilesSlow}. */
+export function announceTilesSlow(name: string): string {
+  return `${name}: ${describeTilesSlow()}`;
+}
+
+/** A tile layer that was slow or had found no tiles loaded one, so its status has gone. */
 export function announceTilesRecovered(name: string): string {
   return `${name}: imagery is showing again.`;
 }
