@@ -77,6 +77,9 @@ test.describe("layer kinds", () => {
       await expect(page.getByTestId("layer-legend-kind-vector")).toContainText(
         "Park",
       );
+      await expect(page.getByTestId("layer-status-kind-vector")).toContainText(
+        "Zoom in to level 5 or closer to load this layer.",
+      );
       // Nothing should be asked for, so there is no event to wait for; give a
       // tile request time to be made if one were going to.
       await page.waitForTimeout(1500);
@@ -84,6 +87,19 @@ test.describe("layer kinds", () => {
       await mapPage.goto("#layers=kind-vector&map=7.00/30.00000/31.00000");
       await expect.poll(() => tileRequests().length).toBeGreaterThan(0);
       await expect(page.getByTestId("layer-list-kind-vector")).toHaveCount(0);
+      await expect(page.getByTestId("layer-status-kind-vector")).toHaveCount(0);
+    });
+
+    test("says how far to zoom out when the map is closer than the layer's window", async ({
+      page,
+      mapPage,
+    }) => {
+      await mockKindData(page);
+      await mapPage.goto("#layers=kind-vector&map=14.00/30.00000/31.00000");
+      await mapPage.openMapOptions();
+      await expect(page.getByTestId("layer-status-kind-vector")).toHaveText(
+        "Zoom out to level 12 or wider.",
+      );
     });
   });
 
@@ -96,7 +112,7 @@ test.describe("layer kinds", () => {
       await mapPage.goto("#layers=kind-query&map=3.00/30.00000/31.00000");
       await mapPage.openMapOptions();
       await expect(page.getByTestId("layer-status-kind-query")).toContainText(
-        "Zoom in to load this layer.",
+        "Zoom in to level 6 or closer to load this layer.",
       );
       // Nothing should be asked for, so there is no event to wait for; give a
       // query time to be made if one were going to.

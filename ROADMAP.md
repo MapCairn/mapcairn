@@ -49,7 +49,7 @@ After the project has its own domain names, in this order:
 
 Then, roughly in this order:
 
-- **Small additions:** #222 (UTM and MGRS), #225 (snapping), #226 (buffer and merge), #227 (GPX and KML), #62 (richer filters), #48 (the interface for image export) and #178 (printing), #182 (a timeline), #181 and #180 (box and lasso selection, elevation profile), #228 (save a layer's features), #84 (WKT axis order), #79 (the zoom level in a layer's message).
+- **Small additions:** #222 (UTM and MGRS), #225 (snapping), #226 (buffer and merge), #227 (GPX and KML), #62 (richer filters), #48 (the interface for image export) and #178 (printing), #182 (a timeline), #181 and #180 (box and lasso selection, elevation profile), #228 (save a layer's features), #84 (WKT axis order).
 - **Research and plans, each to be decided after its measurement or plan:** #223 (coordinate systems), #224 (terrain), #177 (tilt and the shared link), #185 (deck.gl), #196 (storing tiles on the device), #197 (MapLibre Tile), #186, #187 and #188 (host-side search, nearby queries and short links), #53 (server rendering), #56 and #75 (an agent tool catalogue and an analytics sink).
 - **Whenever there is room (quality and process):** #25 (thin the app hook), #214, #218 and #149 (test stability and shard balance), #216, #215, #217, #240 and #242 (documents, CI security, the forbidden-names check, and making dependency review and the secret scan required checks once three merged pull requests have run them clean), #146 (a screen reader check, which needs a person with a screen reader), #4 (the OpenSSF silver badge) and the agent and skill upkeep in #82, #93 and #108.
 - **Trackers, not ranked:** #47, #49 and #51 (their steps are ranked above).

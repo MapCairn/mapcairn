@@ -470,6 +470,23 @@ describe("LayersSection", () => {
       expect(screen.queryByTestId("layer-list-sample-districts")).toBeNull();
     });
 
+    it("says which level to zoom to when the map is outside a vector tile layer's window", () => {
+      const { layers } = setup([SAMPLE_VECTOR_LAYER]);
+      toggle("sample-districts", "Sample districts");
+      const area = { west: 0, south: 0, east: 50, north: 50 };
+      expect(screen.queryByTestId("layer-status-sample-districts")).toBeNull();
+      act(() => layers().setView(area, 1));
+      expect(
+        screen.getByTestId("layer-status-sample-districts"),
+      ).toHaveTextContent("Zoom in to level 2 or closer to load this layer.");
+      act(() => layers().setView(area, 19));
+      expect(
+        screen.getByTestId("layer-status-sample-districts"),
+      ).toHaveTextContent("Zoom out to level 18 or wider.");
+      act(() => layers().setView(area, 10));
+      expect(screen.queryByTestId("layer-status-sample-districts")).toBeNull();
+    });
+
     it("says to zoom in below a query layer's zoom, and when it shows only the first", async () => {
       const { source, layers, adapter } = setup([SAMPLE_QUERY_LAYER]);
       toggle("sample-query", "Sample query");
@@ -477,7 +494,7 @@ describe("LayersSection", () => {
         layers().setView({ west: 0, south: 0, east: 50, north: 50 }, 3),
       );
       expect(screen.getByTestId("layer-status-sample-query")).toHaveTextContent(
-        "Zoom in to load this layer.",
+        "Zoom in to level 4 or closer to load this layer.",
       );
       source.setFeatures("sample-query", [
         samplePoint("a"),

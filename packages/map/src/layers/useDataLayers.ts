@@ -55,12 +55,17 @@ import {
 } from "./identifyRun";
 import { errorKind, type LayerStatus } from "./layerStatus";
 import { type LoadResult, loadOutcome } from "./loadOutcome";
-import { type AnnouncedStates, reportLoad, reportZoomIn } from "./loadReport";
 import {
-  isTooFarOut,
+  type AnnouncedStates,
+  type LimitedLayer,
+  reportLoad,
+  reportZoomLimits,
+} from "./loadReport";
+import {
   planLoads,
   type QueryView,
   rememberWindows,
+  viewZoomLimit,
   type WantedLoad,
   wantedLoads,
 } from "./loadRequests";
@@ -287,9 +292,11 @@ export interface DataLayers {
   /** Closes the open card and returns to the list of features found together. */
   backToChoices(options?: { readonly focus?: boolean }): void;
   /**
-   * Tells query layers what the map shows, once it has settled: the visible
-   * box and the normalised zoom. A query layer asks for the features in a
-   * window around it, and says to zoom in below its own `minzoom`.
+   * Tells layers what the map shows, once it has settled: the visible box and
+   * the normalised zoom. A query layer asks for the features in a window
+   * around it. A layer with a zoom window in its definition (a query layer's
+   * `minzoom`, a vector tile layer's `minzoom` and `maxzoom`) says which
+   * level to zoom to when the zoom is outside it.
    */
   setView(area: Bounds, zoom: number): void;
   showDetail(layerId: string, featureId: string): void;
@@ -832,12 +839,15 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   });
   const signature = wanted.map(({ id, key }) => `${id} ${key}`).join("\n");
 
-  // Query layers that are too far out, so each is told once to zoom in.
-  const tooFar = state.enabled.filter((id) => {
+  // Layers outside their zoom window, so each is told once which way to zoom.
+  const limited = state.enabled.flatMap((id): LimitedLayer[] => {
     const definition = byId.get(id);
-    return definition !== undefined && isTooFarOut(definition, state.view);
+    const limit = definition && viewZoomLimit(definition, state.view);
+    return definition && limit ? [{ definition, limit }] : [];
   });
-  const tooFarSignature = tooFar.join(" ");
+  const limitedSignature = limited
+    .map(({ definition, limit }) => `${definition.id} ${limit.kind}`)
+    .join("\n");
 
   // A tap's request for a layer that has been turned off, left the catalogue or
   // changed its tiles in the meantime is aborted: what it would find describes
@@ -869,14 +879,8 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the signatures are the triggers; everything else is read through refs or is stable.
   useEffect(() => {
-    for (const id of tooFar) {
-      reportZoomIn(
-        byId.get(id) as LayerDefinition,
-        announcedStates.current,
-        announce,
-      );
-    }
-  }, [tooFarSignature]);
+    reportZoomLimits(limited, announcedStates.current, announce);
+  }, [limitedSignature]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the signature is the trigger; everything else is read through refs or is stable.
   useEffect(() => {
@@ -1451,8 +1455,9 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         const id = definition.id;
         const enabled = state.enabled.includes(id);
         let result = OFF;
-        if (enabled && isTooFarOut(definition, state.view)) {
-          result = { status: { kind: "zoom-in" }, features: [] };
+        const limit = enabled ? viewZoomLimit(definition, state.view) : null;
+        if (limit) {
+          result = { status: limit, features: [] };
         } else if (enabled) {
           result =
             state.results[id] ??

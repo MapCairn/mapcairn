@@ -29,6 +29,7 @@ import {
   announceLayersTurnedBackOn,
   announceLayersTurnedOff,
   announceLayerZoomIn,
+  announceLayerZoomOut,
   announceLocationError,
   announceLocationFound,
   announceMeasureTotal,
@@ -70,6 +71,8 @@ import {
   describeNoLayers,
   describeTilesSlow,
   describeTilesUnavailable,
+  describeZoomIn,
+  describeZoomOut,
 } from "./index";
 
 describe("search announcements", () => {
@@ -377,8 +380,21 @@ describe("layer announcements", () => {
     expect(announceLayerCapped("Places", 1500)).toBe(
       "Places: showing the first 1,500. Zoom in to see more.",
     );
-    expect(announceLayerZoomIn("Places")).toBe(
-      "Places: zoom in to load this layer.",
+    expect(announceLayerZoomIn("Places", 9)).toBe(
+      "Places: zoom in to level 9 or closer to load this layer.",
+    );
+    expect(announceLayerZoomOut("Places", 12)).toBe(
+      "Places: zoom out to level 12 or wider.",
+    );
+  });
+
+  it("says the zoom level a layer needs, in the status line and the announcement", () => {
+    expect(describeZoomIn(9)).toBe(
+      "Zoom in to level 9 or closer to load this layer.",
+    );
+    expect(describeZoomOut(12)).toBe("Zoom out to level 12 or wider.");
+    expect(describeZoomIn(9.5)).toBe(
+      "Zoom in to level 9.5 or closer to load this layer.",
     );
   });
 
