@@ -43,7 +43,7 @@ The pre-commit hook runs Biome, dependency-cruiser and the harmony scanner, not 
 - Document exported APIs with JSDoc. Add code comments only for non-obvious constraints or invariants.
 - Use expanded, braced `if` statements.
 - Use semantic HTML, keyboard navigation, visible focus states and WCAG 2.2 AA contrast in both themes. Every gesture needs a keyboard or single-tap equivalent.
-- Use British English in user-facing copy and docs. Keep prose plain and specific, without em dashes.
+- Use British English in user-facing copy and docs. Keep prose plain and specific. Use an em dash only where it reads naturally, not as a habit.
 - Use the tokens in [`DESIGN.md`](DESIGN.md), not ad hoc colours, fonts or icons.
 - Use Conventional Commits for commit messages.
 
