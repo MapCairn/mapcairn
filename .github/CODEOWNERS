@@ -1,0 +1,4 @@
+# The maintainers are asked to review every change to the roadmap, because it
+# says what the project will and will not do. This only requests a review; the
+# repository ruleset does not require a code owner's approval.
+/ROADMAP.md @MapCairn/maintainers

@@ -9,6 +9,7 @@ import {
   announceLayersTurnedBackOn,
   announceLayersTurnedOff,
   announceTilesRecovered,
+  announceTilesSlow,
   announceTilesUnavailable,
   type Bounds,
   type CatalogueState,
@@ -192,19 +193,32 @@ export interface DataLayers {
   setSort(id: string, sortId: string): void;
   retry(id: string): void;
   /**
+   * Records that a tile layer has had tiles asked for and none has loaded for
+   * a long while, which `MapDataLayers` calls from the adapter's report. `tiles`
+   * is the template those tiles came from: a report for anything but the
+   * layer's current tiles, or for a layer that is off, is ignored, as is one
+   * for tiles the layer already reported as slow or unavailable. The layer then
+   * says it is still waiting, and announces it once in a message that is kept,
+   * because the person turned the layer on and would otherwise see nothing,
+   * until its tiles change, it is turned off, or a tile loads later (see
+   * {@link DataLayers.reportTilesRecovered}).
+   */
+  reportTilesSlow(id: string, tiles: string): void;
+  /**
    * Records that the map settled with none of a tile layer's tiles loaded,
    * which `MapDataLayers` calls from the adapter's report. `tiles` is the
    * template those tiles came from: a report for anything but the layer's
    * current tiles, or for a layer that is off, is ignored. The layer then
    * says so and announces it once, until its tiles change, it is turned off, or
-   * a tile loads later (see {@link DataLayers.reportTilesRecovered}).
+   * a tile loads later (see {@link DataLayers.reportTilesRecovered}). It
+   * replaces the status of a layer reported slow for the same tiles.
    */
   reportTilesUnavailable(id: string, tiles: string): void;
   /**
-   * Records that a tile loaded for the `tiles` a layer had reported no tiles
-   * for, which `MapDataLayers` calls from the adapter's report. The layer's
-   * status goes and the layer says so once, politely. A recovery for any other
-   * tiles, or for a layer that is not showing the status, is ignored.
+   * Records that a tile loaded for the `tiles` a layer had reported slow or
+   * with no tiles, which `MapDataLayers` calls from the adapter's report. The
+   * layer's status goes and the layer says so once, politely. A recovery for
+   * any other tiles, or for a layer that is not showing the status, is ignored.
    */
   reportTilesRecovered(id: string, tiles: string): void;
   /**
@@ -316,6 +330,8 @@ interface State {
   readonly retries: Readonly<Record<string, number>>;
   /** The tiles each tile layer found no imagery for, by layer id (see `reportTilesUnavailable`). */
   readonly tilesUnavailable: Readonly<Record<string, string>>;
+  /** The tiles each tile layer is still waiting for its first of, by layer id (see `reportTilesSlow`). */
+  readonly tilesSlow: Readonly<Record<string, string>>;
   /**
    * What each tile layer found at the last tap that answered for it. It sits
    * apart from `results`, which feeds the list and the drawing, because these
@@ -415,6 +431,7 @@ function initialState(
       results: {},
       retries: {},
       tilesUnavailable: {},
+      tilesSlow: {},
       identified: {},
       identifying: false,
       selection: null,
@@ -467,6 +484,7 @@ function withoutTraces(state: State, ids: ReadonlySet<string>): State {
     results: without(state.results, ids),
     identified: without(state.identified, ids),
     tilesUnavailable: without(state.tilesUnavailable, ids),
+    tilesSlow: without(state.tilesSlow, ids),
   };
 }
 
@@ -642,16 +660,30 @@ function tilesOf(
     : null;
 }
 
-/** What is known of failed tiles once the layer asks for `tiles`: nothing, if they are not the ones that failed. */
-function tilesUnavailableFor(
-  failed: State["tilesUnavailable"],
+/** The status of a tile layer that is on: unavailable outranks slow, which outranks nothing reported. */
+function tileStatusKind(
+  state: State,
+  id: string,
+): "on" | "tiles-slow" | "tiles-unavailable" {
+  if (state.tilesUnavailable[id] !== undefined) {
+    return "tiles-unavailable";
+  }
+  return state.tilesSlow[id] === undefined ? "on" : "tiles-slow";
+}
+
+/**
+ * What is known of reported tiles (slow or unavailable) once the layer asks for
+ * `tiles`: nothing, if they are not the ones that were reported.
+ */
+function reportedTilesFor(
+  reported: State["tilesUnavailable"],
   id: string,
   tiles: string | null,
 ): State["tilesUnavailable"] {
-  if (failed[id] === undefined || failed[id] === tiles) {
-    return failed;
+  if (reported[id] === undefined || reported[id] === tiles) {
+    return reported;
   }
-  const rest = { ...failed };
+  const rest = { ...reported };
   delete rest[id];
   return rest;
 }
@@ -716,11 +748,12 @@ function sortFeatures(
  * @remarks Nothing is requested until a layer is turned on. A feed layer is
  *   loaded on enable, on a control change and on retry; the request for the
  *   previous URL is cancelled. Tile layers need no request here: the map
- *   draws their tiles, and says through `reportTilesUnavailable` when none
- *   loaded and `reportTilesRecovered` when one loads later. Loads, empty
- *   feeds and failures are announced once each through the shared live
- *   region, failures assertively and a tile layer with no tiles, and its
- *   recovery, politely. Turning a layer off clears its features, its open card
+ *   draws their tiles, and says through `reportTilesSlow` when none has
+ *   loaded for a long while, `reportTilesUnavailable` when the map settled
+ *   with none loaded and `reportTilesRecovered` when one loads later. Loads,
+ *   empty feeds and failures are announced once each through the shared live
+ *   region, failures assertively and a tile layer that is slow or has no
+ *   tiles, and its recovery, politely. Turning a layer off clears its features, its open card
  *   and its affected area.
  */
 export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
@@ -1047,11 +1080,12 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           {
             ...previous,
             controls: { ...previous.controls, [id]: controls },
-            tilesUnavailable: tilesUnavailableFor(
+            tilesUnavailable: reportedTilesFor(
               previous.tilesUnavailable,
               id,
               tiles,
             ),
+            tilesSlow: reportedTilesFor(previous.tilesSlow, id, tiles),
           },
           id,
           tiles,
@@ -1059,6 +1093,33 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       });
     },
     [byId, now],
+  );
+
+  const reportTilesSlow = useCallback(
+    (id: string, tiles: string) => {
+      const definition = byId.get(id);
+      const current = stateRef.current;
+      if (
+        !definition ||
+        !current.enabled.includes(id) ||
+        current.tilesSlow[id] === tiles ||
+        current.tilesUnavailable[id] === tiles
+      ) {
+        return;
+      }
+      if (tilesOf(definition, current.controls[id] ?? {}, now()) !== tiles) {
+        return;
+      }
+      setState((previous) => ({
+        ...previous,
+        tilesSlow: { ...previous.tilesSlow, [id]: tiles },
+      }));
+      announce(announceTilesSlow(definition.name), {
+        priority: "polite",
+        keep: true,
+      });
+    },
+    [announce, byId, now],
   );
 
   const reportTilesUnavailable = useCallback(
@@ -1079,6 +1140,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       setState((previous) => ({
         ...previous,
         tilesUnavailable: { ...previous.tilesUnavailable, [id]: tiles },
+        tilesSlow: reportedTilesFor(previous.tilesSlow, id, null),
       }));
       announce(
         announceTilesUnavailable(
@@ -1094,16 +1156,18 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   const reportTilesRecovered = useCallback(
     (id: string, tiles: string) => {
       const definition = byId.get(id);
-      if (!definition || stateRef.current.tilesUnavailable[id] !== tiles) {
+      const current = stateRef.current;
+      if (
+        !definition ||
+        (current.tilesUnavailable[id] !== tiles &&
+          current.tilesSlow[id] !== tiles)
+      ) {
         return;
       }
       setState((previous) => ({
         ...previous,
-        tilesUnavailable: tilesUnavailableFor(
-          previous.tilesUnavailable,
-          id,
-          null,
-        ),
+        tilesUnavailable: reportedTilesFor(previous.tilesUnavailable, id, null),
+        tilesSlow: reportedTilesFor(previous.tilesSlow, id, null),
       }));
       announce(announceTilesRecovered(definition.name), {
         priority: "polite",
@@ -1389,12 +1453,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
             (loadsFeatures(definition)
               ? { status: { kind: "loading" }, features: [] }
               : {
-                  status: {
-                    kind:
-                      state.tilesUnavailable[id] === undefined
-                        ? "on"
-                        : "tiles-unavailable",
-                  },
+                  status: { kind: tileStatusKind(state, id) },
                   features: [],
                 });
         }
@@ -1505,6 +1564,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
     setControl,
     setSort,
     retry,
+    reportTilesSlow,
     reportTilesUnavailable,
     reportTilesRecovered,
     select,

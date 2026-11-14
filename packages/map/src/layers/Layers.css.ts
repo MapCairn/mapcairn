@@ -153,6 +153,13 @@ export const statusError = style({
   color: tokens.color.danger,
 });
 
+/** The waiting part of a status line, beside its icon, in the line's own muted colour. */
+export const statusWaiting = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: tokens.space.xxs,
+});
+
 /** A layer's controls and everything shown while it is on. */
 export const details = style({
   display: "flex",
