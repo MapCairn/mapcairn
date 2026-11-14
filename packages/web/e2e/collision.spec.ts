@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { Page } from "@playwright/test";
+import { CHROME_GAP_PX } from "../../map/src/chrome/chromeSpacing";
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
@@ -750,6 +751,126 @@ for (const viewport of TALL_READOUT_VIEWPORTS) {
     },
   );
 }
+
+/**
+ * The sizes where the readout, even with the cursor coordinates at their
+ * widest, ends well before the credits popover begins.
+ */
+const WIDE_READOUT_VIEWPORTS = [
+  { width: 1440, height: 900 },
+  { width: 1280, height: 720 },
+] as const;
+
+/**
+ * How far the bottom of the credits popover is above the top of the credits
+ * button. Fails when either is not on screen.
+ */
+async function creditsGap(mapPage: MapPage): Promise<number> {
+  const [button, region] = await Promise.all([
+    mapPage.creditsButton.boundingBox(),
+    mapPage.creditsRegion.boundingBox(),
+  ]);
+  if (!(button && region)) {
+    throw new Error("The credits button or popover has no box.");
+  }
+  return button.y - (region.y + region.height);
+}
+
+/*
+ * The credits popover rises over the bottom row only where the readout and the
+ * popover share width. On a wide screen the readout (the scale bar and zoom,
+ * and the cursor coordinates while the pointer is on the map) never reaches the
+ * popover, so the popover sits within one gap of the button, both with the
+ * pointer on the button and with it resting on the map (the first showing, and
+ * opening the credits from the keyboard).
+ */
+for (const viewport of WIDE_READOUT_VIEWPORTS) {
+  test(
+    `the credits popover stays next to its button with the cursor coordinates showing at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage, isMobile }) => {
+      test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+      await mockLayerProviders(page);
+      await seedStoredSettings(page, { units: "imperial" });
+      await page.setViewportSize(viewport);
+      await scriptSearch(page);
+      await mapPage.goto(`${WIDEST_COORDINATES_VIEW}&${KEYED_LAYERS.slice(1)}`);
+
+      await collapseCredits(mapPage);
+      await mapPage.creditsButton.click();
+      await expect(mapPage.creditsRegion).toBeVisible();
+      await waitForStableLayout(page);
+      const gapWithPointerOnButton = await creditsGap(mapPage);
+
+      await hoverFreeMap(mapPage);
+      await waitForStableLayout(page);
+      const gapWithCoordinates = await creditsGap(mapPage);
+
+      expect(
+        gapWithPointerOnButton,
+        "pointer on the button",
+      ).toBeLessThanOrEqual(CHROME_GAP_PX);
+      expect(gapWithCoordinates, "pointer on the map").toBeLessThanOrEqual(
+        CHROME_GAP_PX,
+      );
+    },
+  );
+}
+
+/** The narrowest window that has the side panel layout. */
+const NARROWEST_PANEL_VIEWPORT = { width: 768, height: 700 } as const;
+
+/**
+ * Where on the map the pointer rests: right of the side panel, so the cursor
+ * coordinates stay on screen while the panel opens.
+ */
+const BESIDE_PANEL_POINTER = { xRatio: 0.75, yRatio: 0.3 } as const;
+
+/*
+ * The readout slides right when the side panel opens, without changing size.
+ * The credits stay open while the panel opens from the keyboard, and the
+ * popover, which sat beside the readout and next to its button, must not end
+ * up over the readout's new place.
+ */
+test("the credits popover keeps clear of the readout when the side panel opens from the keyboard", async ({
+  page,
+  mapPage,
+  isMobile,
+}) => {
+  test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+  await seedStoredSettings(page, { units: "imperial" });
+  await page.setViewportSize(NARROWEST_PANEL_VIEWPORT);
+  await scriptSearch(page);
+  await mapPage.goto(WIDEST_COORDINATES_VIEW);
+
+  await collapseCredits(mapPage);
+  await mapPage.creditsButton.click();
+  await expect(mapPage.creditsRegion).toBeVisible();
+  await page.mouse.move(
+    NARROWEST_PANEL_VIEWPORT.width * BESIDE_PANEL_POINTER.xRatio,
+    NARROWEST_PANEL_VIEWPORT.height * BESIDE_PANEL_POINTER.yRatio,
+    { steps: 3 },
+  );
+  await expect(page.getByTestId("map-readout")).toContainText(
+    COORDINATES_PATTERN,
+  );
+  await waitForStableLayout(page);
+  expect(
+    (await inspectChromeLayout(page)).overlaps,
+    "before the panel opens",
+  ).toEqual([]);
+
+  await mapPage.mapOptionsButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
+  await expect(mapPage.creditsRegion).toBeVisible();
+  await expect(page.getByTestId("map-readout")).toContainText(
+    COORDINATES_PATTERN,
+  );
+  await waitForStableLayout(page);
+  const report = await inspectChromeLayout(page);
+  expect(report.overlaps, JSON.stringify(report.boxes)).toEqual([]);
+});
 
 /*
  * The map key and the first-visit tour card together. Tour step 1 asks a new
