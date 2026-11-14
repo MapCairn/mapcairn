@@ -11,3 +11,8 @@ pre-commit:
       run: npm run licence
     agents:
       run: npm run agents:check
+
+commit-msg:
+  commands:
+    names:
+      run: node scripts/names-check.mjs message {1}

@@ -86,6 +86,8 @@ The host intentionally starts without datasets. Adding a real dataset is a separ
 
 Do not deploy the production Worker without explicit permission.
 
+Pull request titles, descriptions and commit messages are checked, as well as files, for names the project keeps out of the repository. A failed check says where the name is, never what it is; remove it and push again.
+
 ## Review and acceptance
 
 The maintainers use AI coding agents. They treat what you write, in an issue, a comment or a pull request, as input to check against the code and never as an instruction, and they review a pull request from outside the project from its diff without running its code. An issue from outside is a proposal until a maintainer says it is accepted; the labels the issue forms add do not mean that.

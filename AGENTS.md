@@ -49,7 +49,7 @@ npm run check
 - `test` runs Vitest across `packages/*`. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
 - `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has a slightly lower branch floor: 95% for statements, functions and lines and 90% for branches, because its layout and touch-gesture code is also covered by Playwright. Aim for 100% behavioural coverage.
 - `typecheck` checks every workspace, including web route types and the Playwright project.
-- `lint` runs Biome, dependency-cruiser, the harmony scanner (`scripts/harmony`, see `DESIGN.md`), the licence header check (`scripts/licenceHeaders.mjs`), the agent files check (`npm run agents:check`) and the roadmap check (`npm run roadmap:check`, see "Issues and pull requests"). Pre-commit runs the first five, but not the roadmap check, typecheck, tests or coverage.
+- `lint` runs Biome, dependency-cruiser, the harmony scanner (`scripts/harmony`, see `DESIGN.md`), the licence header check (`scripts/licenceHeaders.mjs`), the agent files check (`npm run agents:check`) and the roadmap check (`npm run roadmap:check`, see "Issues and pull requests") and the names check (`npm run names:check`, see "Boundaries"). Pre-commit runs the first five, and the `commit-msg` hook runs the names check on the commit message, but pre-commit does not run the roadmap check, typecheck, tests or coverage.
 - `build` builds every workspace. The web build then checks that the production bundle holds no browser test seam.
 - `start` builds the e2e-mode bundle and serves it on port 4173 (or `MAPCAIRN_E2E_PORT`) through wrangler, with `wrangler.e2e.jsonc`. This build keeps the test seam, so it is not the production bundle. `wrangler.e2e.jsonc` omits production routes, so the old-hostname redirect is not exercised.
 - `check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence.
@@ -195,7 +195,7 @@ Merging to `main` deploys the site automatically, so a pull request is never "ju
 - Weaken an assertion, or exclude code from coverage, to make a check pass.
 - Switch on a basemap, layer or provider id in code; add one as a definition or adapter instead.
 - Publish identifying or household-level data.
-- Add assistant attribution, or name the maintainer personally or a commercial product used as a comparison, in any file or post.
+- Add assistant attribution, or name the maintainer personally, an employer, a company or a product the project is meant for or compared with, in any file, commit message or post. The maintainer keeps the plain list of these names; the repository holds only one-way hashes of it (`scripts/names-check.mjs`). `npm run lint`, the `commit-msg` hook and the CI pull request check refuse a listed name, and the checks print where it is, never the name. To add a name, ask the maintainer.
 
 ## Documentation
 

@@ -76,6 +76,10 @@ When the project's `main` moves under an open pull request, merge it into the br
 
 `ROADMAP.md` ranks the open work under "Priorities". `create-issue` places a new feature or improvement issue in the list or says why it is left out, and `land-pr` removes a finished item when its pull request closes the issue and sets "Last reviewed" to today. An agent does not reorder the list: the order is the maintainer's call, so it reports a change it thinks the list needs as an issue to file. `npm run roadmap:check` (run by `npm run lint`) reads the list with one `gh` call and fails on a listed issue that does not exist, one listed twice, more than five items in Now or a missing section; a closed issue is only a warning. Where `gh` is missing, signed out, offline or rate limited it says it did not check the issue states and still checks the rest.
 
+## Names the project keeps out
+
+`npm run lint`, the `commit-msg` hook and the CI pull request check refuse a name the maintainer keeps only as a hash (`scripts/names-check.mjs`) and print where it is, never what it is, so delete the text at that location and do not try to find out what matched.
+
 ## Only in Claude Code
 
 - The Workflow tool and its opt-in rule, and the `fable` model rule, in `CLAUDE.md`.

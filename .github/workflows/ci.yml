@@ -18,6 +18,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The names check reads the pull request's commit messages, which
+          # needs the base branch's history.
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
@@ -29,6 +33,17 @@ jobs:
           # The roadmap check reads issue states with `gh`, which needs a token
           # even for a public repository. Without one it skips that part.
           GH_TOKEN: ${{ github.token }}
+      - name: Check the pull request text and commit messages for forbidden names
+        if: github.event_name == 'pull_request'
+        # The title, body and base branch reach the script through the
+        # environment, never through the shell script text.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+        # `shell: bash` turns on pipefail, so a failing `git log` fails the step.
+        shell: bash
+        run: git log --format=%B "origin/$BASE_REF..HEAD" | node scripts/names-check.mjs text
       - run: npm run typecheck
       - run: npm run test:coverage
       - name: Upload coverage report
