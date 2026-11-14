@@ -938,6 +938,18 @@ describe("readWktRecovering", () => {
     expect(iterator.next().value).toBeInstanceOf(GeometryError);
   });
 
+  it("finds the end of a long line once, however many geometries it holds", () => {
+    // Regression guard: finding the end of the line afresh for each skipped
+    // geometry made this read quadratic in the length of the line.
+    const text = "POINT M (1 2 3) ".repeat(62_500);
+    const started = performance.now();
+    const iterator = readWktRecovering(text);
+    for (let taken = 0; taken < 500; taken += 1) {
+      expect(iterator.next().done).toBe(false);
+    }
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   it("honours the axis order", () => {
     expect(readings("POINT (1 2) POINT M (1 2 3)")[0]).toEqual({
       type: "Point",

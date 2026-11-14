@@ -210,6 +210,8 @@ class Tokens {
   #depth = 0;
   #taken = 0;
   #lastAt = 0;
+  #lineFrom = 0;
+  #lineTo = -1;
 
   constructor(text: string) {
     this.#text = text;
@@ -244,9 +246,17 @@ class Tokens {
     this.#taken = 0;
   }
 
-  /** The offset of the end of the line that holds `offset`. */
+  /**
+   * The offset of the end of the line that holds `offset`. The last answer is
+   * kept, so asking again within the same line costs nothing and a long line
+   * of many geometries is scanned once.
+   */
   lineEndFrom(offset: number): number {
-    return lineEnd(this.#text, offset);
+    if (offset < this.#lineFrom || offset > this.#lineTo) {
+      this.#lineFrom = offset;
+      this.#lineTo = lineEnd(this.#text, offset);
+    }
+    return this.#lineTo;
   }
 
   /**
