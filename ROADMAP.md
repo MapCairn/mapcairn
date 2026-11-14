@@ -10,6 +10,8 @@ MapCairn aims to give a team everything it needs to build an industry-grade GIS 
 
 ## Intentions
 
+What an industry-grade application needs, and what MapCairn has, partly has or lacks today, is in the [capability matrix](docs/guides/capability-matrix.md).
+
 Statuses are "proposed" (written down, not started) and "in progress" (work has begun, nothing finished that you can rely on). Items for the SDK do not change the reference site unless the maintainer decides so, in the open, with a plan.
 
 | Theme | What it covers | Status | Tracking |
