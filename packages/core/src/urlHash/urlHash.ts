@@ -18,20 +18,22 @@ const CONTROL_VALUE_PATTERN = /^[a-z0-9._-]{1,32}$/;
  */
 const MAX_LAYERS = 20;
 
-/** Keeps the readable ids, once each, in order, up to {@link MAX_LAYERS}. */
-function keepReadableLayerIds(ids: readonly string[]): string[] {
-  return [...new Set(ids.filter((id) => LAYER_ID_PATTERN.test(id)))].slice(
-    0,
-    MAX_LAYERS,
-  );
+/** The readable ids, once each, in order. */
+function readableLayerIds(ids: readonly string[]): string[] {
+  return [...new Set(ids.filter((id) => LAYER_ID_PATTERN.test(id)))];
 }
 
-/** Reads `layers=a,b` and the `a.control=value` pairs for layers that are on. */
+/**
+ * Reads `layers=a,b` and the `a.control=value` pairs for layers that are on.
+ * The readable ids past {@link MAX_LAYERS} are counted in `dropped`, not kept.
+ */
 function parseLayers(params: Map<string, string>): LayersUrlState | undefined {
-  const enabled = keepReadableLayerIds((params.get("layers") ?? "").split(","));
+  const readable = readableLayerIds((params.get("layers") ?? "").split(","));
+  const enabled = readable.slice(0, MAX_LAYERS);
   if (enabled.length === 0) {
     return undefined;
   }
+  const dropped = readable.length - enabled.length;
   const controls: Record<string, Record<string, string>> = {};
   for (const [key, value] of params) {
     const match = CONTROL_KEY_PATTERN.exec(key);
@@ -40,7 +42,7 @@ function parseLayers(params: Map<string, string>): LayersUrlState | undefined {
       controls[layer] = { ...controls[layer], [match[2] as string]: value };
     }
   }
-  return { enabled, controls };
+  return { enabled, controls, ...(dropped > 0 ? { dropped } : {}) };
 }
 
 /**
@@ -48,7 +50,7 @@ function parseLayers(params: Map<string, string>): LayersUrlState | undefined {
  * anything unreadable and any layer past {@link MAX_LAYERS}.
  */
 function serialiseLayers(layers: LayersUrlState | undefined): string[] {
-  const enabled = keepReadableLayerIds(layers?.enabled ?? []);
+  const enabled = readableLayerIds(layers?.enabled ?? []).slice(0, MAX_LAYERS);
   if (enabled.length === 0) {
     return [];
   }

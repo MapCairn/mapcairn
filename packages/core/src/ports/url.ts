@@ -8,6 +8,13 @@ export interface LayersUrlState {
   readonly enabled: readonly string[];
   /** Control values by layer id, then control id. Untrusted until resolved. */
   readonly controls: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /**
+   * How many distinct readable ids a link carried past the limit on layers
+   * (the first ones are kept), so the interface can say they were left out.
+   * Set only when an address is read and left out when it is zero. It is never
+   * written to an address.
+   */
+  readonly dropped?: number;
 }
 
 /** The shareable parts of the app state. Every field is optional. */

@@ -253,6 +253,60 @@ describe("a link layer the catalogue does not have", () => {
   });
 });
 
+describe("layers a link carries past the limit of 20", () => {
+  const ids = Array.from({ length: 25 }, (_, index) => `layer-${index}`);
+  const link = () => parseUrlHash(`#layers=${ids.join(",")}`).layers;
+  const listed = (count: number): LayerDefinition[] =>
+    ids.slice(0, count).map((id) => ({ ...SAMPLE_ALERT_LAYER, id }));
+
+  it("are said once with the layers the list does not have, once the catalogue is ready", () => {
+    const catalogue = loadingCatalogue();
+    const { result } = render(catalogue, link());
+    announce.mockClear();
+    act(() => catalogue.setLayers(listed(18)));
+    expect(idsOn(result)).toEqual(ids.slice(0, 18));
+    expect(said()).toEqual(["7 layers in the link are not available."]);
+  });
+
+  it("are said on their own when every layer that was kept is listed", () => {
+    const catalogue = loadingCatalogue();
+    const { result } = render(catalogue, link());
+    announce.mockClear();
+    act(() => catalogue.setLayers(listed(20)));
+    expect(idsOn(result)).toEqual(ids.slice(0, 20));
+    expect(said()).toEqual(["5 layers in the link are not available."]);
+    expect(announce).toHaveBeenCalledWith(expect.any(String), {
+      priority: "polite",
+      keep: true,
+    });
+  });
+
+  it("are not said again by a later list, and never reach the address", () => {
+    const catalogue = loadingCatalogue();
+    const { result } = render(catalogue, link());
+    act(() => catalogue.setLayers(listed(20)));
+    announce.mockClear();
+    act(() => catalogue.setLayers(listed(25)));
+    expect(said()).toEqual(["Layers updated: 5 added."]);
+    expect(result.current.urlValue.enabled).toEqual(ids.slice(0, 20));
+    expect(result.current.urlValue).not.toHaveProperty("dropped");
+  });
+
+  it("are said once under StrictMode, which renders twice", () => {
+    const catalogue = loadingCatalogue();
+    render(catalogue, link(), StrictMode);
+    announce.mockClear();
+    act(() => catalogue.setLayers(listed(20)));
+    expect(said()).toEqual(["5 layers in the link are not available."]);
+  });
+
+  it("are dropped without a word from a catalogue that was ready from the start", () => {
+    const { result } = render(new FakeLayerCatalogue(listed(25)), link());
+    expect(idsOn(result)).toEqual(ids.slice(0, 20));
+    expect(said()).toEqual([]);
+  });
+});
+
 describe("a layer that arrives after the hook mounted", () => {
   it("has its controls' defaults, and a feed request built from them has no variable left unfilled", async () => {
     const catalogue = new FakeLayerCatalogue([SAMPLE_ALERT_LAYER]);

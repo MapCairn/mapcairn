@@ -66,6 +66,29 @@ describe("reconcile", () => {
       expect(linkMissing).toBe(0);
     });
 
+    it("counts the ids the link carried past its limit with the ones the list has not got, and says them once", () => {
+      const { linkMissing, link } = reconcile(
+        inputs({
+          link: {
+            waiting: ["sample-alerts", "gone"],
+            controls: {},
+            dropped: 3,
+          },
+        }),
+      );
+      expect(linkMissing).toBe(4);
+      expect(link).toEqual({ waiting: [], controls: {} });
+    });
+
+    it("counts the ids past the limit when every id that was kept is in the list", () => {
+      const { linkMissing } = reconcile(
+        inputs({
+          link: { waiting: ["sample-alerts"], controls: {}, dropped: 2 },
+        }),
+      );
+      expect(linkMissing).toBe(2);
+    });
+
     it("does not turn a layer on twice", () => {
       const { chosen } = reconcile(
         inputs({
