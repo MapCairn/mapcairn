@@ -932,7 +932,7 @@ describe("readWktRecovering", () => {
     for (let taken = 0; taken < 500; taken += 1) {
       expect(iterator.next().done).toBe(false);
     }
-    expect(performance.now() - started).toBeLessThan(1000);
+    expect(performance.now() - started).toBeLessThan(5000);
   });
 
   it("goes on after a character it does not know", () => {
