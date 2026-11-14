@@ -384,7 +384,7 @@ describe("layer announcements", () => {
       "Places: zoom in to level 9 or closer to load this layer.",
     );
     expect(announceLayerZoomOut("Places", 12)).toBe(
-      "Places: zoom out to level 12 or wider.",
+      "Places: zoom out below level 12 to see this layer.",
     );
   });
 
@@ -392,7 +392,15 @@ describe("layer announcements", () => {
     expect(describeZoomIn(9)).toBe(
       "Zoom in to level 9 or closer to load this layer.",
     );
-    expect(describeZoomOut(12)).toBe("Zoom out to level 12 or wider.");
+    expect(describeZoomOut(12)).toBe(
+      "Zoom out below level 12 to see this layer.",
+    );
+    expect(describeZoomIn(9.04)).toBe(
+      "Zoom in to level 9.1 or closer to load this layer.",
+    );
+    expect(describeZoomOut(12.26)).toBe(
+      "Zoom out below level 12.2 to see this layer.",
+    );
     expect(describeZoomIn(9.5)).toBe(
       "Zoom in to level 9.5 or closer to load this layer.",
     );

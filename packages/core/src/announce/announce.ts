@@ -153,14 +153,23 @@ export function announceLayerCapped(name: string, shown: number): string {
   return `${name}: showing the first ${formatNumber(shown)}. Zoom in to see more.`;
 }
 
-/** The direction and level to zoom to for a layer that is too far out to load. */
-function zoomInPhrase(level: number): string {
-  return `in to level ${formatZoom(level)} or closer to load this layer`;
+/** One decimal place, as {@link formatZoom} shows it, free of floating point noise. */
+function tenths(level: number): number {
+  return Number((level * 10).toFixed(6));
 }
 
-/** The direction and level to zoom to for a layer that is too far in to show. */
+/** The direction and level to zoom to for a layer that is too far out to load. A level with more than one decimal is rounded up, so the level shown is always enough. */
+function zoomInPhrase(level: number): string {
+  return `in to level ${formatZoom(Math.ceil(tenths(level)) / 10)} or closer to load this layer`;
+}
+
+/**
+ * The direction and level to zoom to for a layer that is too far in to show.
+ * The engine hides a layer from its `maxzoom` itself, so the level is one to
+ * go below, rounded down to one decimal so that the level shown is enough.
+ */
 function zoomOutPhrase(level: number): string {
-  return `out to level ${formatZoom(level)} or wider`;
+  return `out below level ${formatZoom(Math.floor(tenths(level)) / 10)} to see this layer`;
 }
 
 /**

@@ -59,7 +59,12 @@ describe("layerZoomLimit", () => {
       level: 12,
     });
     expect(layerZoomLimit(layer, 3)).toBeNull();
-    expect(layerZoomLimit(layer, 12)).toBeNull();
+    expect(layerZoomLimit(layer, 11.99)).toBeNull();
+  });
+
+  it("treats maxzoom as the first zoom the engine hides the layer, so it is out of the window", () => {
+    const layer = vectorWindow({ minzoom: 3, maxzoom: 12 });
+    expect(layerZoomLimit(layer, 12)).toEqual({ kind: "zoom-out", level: 12 });
   });
 
   it("reads only the sides of the window the layer has", () => {

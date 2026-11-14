@@ -98,7 +98,7 @@ test.describe("layer kinds", () => {
       await mapPage.goto("#layers=kind-vector&map=14.00/30.00000/31.00000");
       await mapPage.openMapOptions();
       await expect(page.getByTestId("layer-status-kind-vector")).toHaveText(
-        "Zoom out to level 12 or wider.",
+        "Zoom out below level 12 to see this layer.",
       );
     });
   });

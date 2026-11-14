@@ -54,7 +54,7 @@ export function layerZoomLimit(
   if (minzoom !== undefined && zoom < minzoom) {
     return { kind: "zoom-in", level: minzoom };
   }
-  if (maxzoom !== undefined && zoom > maxzoom) {
+  if (maxzoom !== undefined && zoom >= maxzoom) {
     return { kind: "zoom-out", level: maxzoom };
   }
   return null;

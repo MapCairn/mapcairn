@@ -443,7 +443,8 @@ describe("useDataLayers loading", () => {
         act(() => result.current.setEnabled("sample-districts", true));
         act(() => result.current.setView(AREA, 19));
         act(() => result.current.setView(OTHER_AREA, 20));
-        const zoomOut = "Sample districts: zoom out to level 18 or wider.";
+        const zoomOut =
+          "Sample districts: zoom out below level 18 to see this layer.";
         expect(said()).toEqual(["Sample districts is on.", zoomOut]);
         act(() => result.current.setView(AREA, 10));
         act(() => result.current.setView(AREA, 19));

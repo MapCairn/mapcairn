@@ -629,6 +629,11 @@ describe("useDataLayers", () => {
         level: 18,
       });
       act(() => result.current.setView(AREA, 18));
+      expect(layer(result, districts).status).toEqual({
+        kind: "zoom-out",
+        level: 18,
+      });
+      act(() => result.current.setView(AREA, 17.9));
       expect(layer(result, districts).status).toEqual({ kind: "on" });
     });
 
@@ -640,7 +645,7 @@ describe("useDataLayers", () => {
       await waitFor(
         () =>
           expect(polite()).toBe(
-            "Sample districts: zoom out to level 18 or wider.",
+            "Sample districts: zoom out below level 18 to see this layer.",
           ),
         { timeout: THROTTLE_MS * 4 },
       );

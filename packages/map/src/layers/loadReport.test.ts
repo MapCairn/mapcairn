@@ -68,7 +68,7 @@ describe("reportZoomLimits", () => {
         { priority: "polite" },
       ],
       [
-        "Sample districts: zoom out to level 18 or wider.",
+        "Sample districts: zoom out below level 18 to see this layer.",
         { priority: "polite" },
       ],
     ]);
@@ -93,7 +93,7 @@ describe("reportZoomLimits", () => {
     );
     expect(announce.mock.calls.map(([message]) => message)).toEqual([
       "Sample districts: zoom in to level 2 or closer to load this layer.",
-      "Sample districts: zoom out to level 18 or wider.",
+      "Sample districts: zoom out below level 18 to see this layer.",
     ]);
   });
 

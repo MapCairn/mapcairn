@@ -482,7 +482,7 @@ describe("LayersSection", () => {
       act(() => layers().setView(area, 19));
       expect(
         screen.getByTestId("layer-status-sample-districts"),
-      ).toHaveTextContent("Zoom out to level 18 or wider.");
+      ).toHaveTextContent("Zoom out below level 18 to see this layer.");
       act(() => layers().setView(area, 10));
       expect(screen.queryByTestId("layer-status-sample-districts")).toBeNull();
     });
