@@ -167,7 +167,7 @@ export class FakeLayerSource implements LayerSource {
     if (signal?.aborted) {
       throw new LayerError("aborted");
     }
-    if (held) {
+    if (held !== null) {
       await held;
     }
     if (signal?.aborted) {

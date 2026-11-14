@@ -165,7 +165,7 @@ export function announceDrawEvent(
   shapes: readonly DrawShape[],
   units: UnitSystem,
 ): string | null {
-  if (!event || event.type === "mode") {
+  if (!event) {
     return null;
   }
   const shape =
@@ -207,8 +207,10 @@ export function announceDrawEvent(
       return "Redone.";
     case "loaded":
       return `${shapeCount(event.count)} loaded from the link.`;
+    case "mode":
     case "imported":
-      // The import's own result says what it added and what it skipped.
+      // A mode change is visible on the switch itself, and the import's own
+      // result says what it added and what it skipped.
       return null;
   }
 }

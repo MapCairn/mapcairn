@@ -144,10 +144,15 @@
             ]
           }
         },
-        "noNonScalableViewport": "error"
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "noNonScalableViewport": "error",
+        "useExhaustiveSwitchCases": "error"
       },
       "suspicious": {
-        "noDocumentCookie": "error"
+        "noDeprecatedImports": "error",
+        "noDocumentCookie": "error",
+        "noLeakedRender": "error"
       },
       "style": {
         "noInlineStyles": "error",

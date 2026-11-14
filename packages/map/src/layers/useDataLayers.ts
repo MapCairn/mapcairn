@@ -882,24 +882,26 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       const controller = new AbortController();
       requests.current.set(id, { key, controller });
       setState((current) => withLoading(current, load));
-      loadOutcome(layerSource, load, now, controller.signal).then((outcome) => {
-        // A load that was cancelled or replaced meanwhile is neither shown nor said.
-        if (!outcome || requests.current.get(id)?.controller !== controller) {
-          return;
-        }
-        requests.current.delete(id);
-        loadedKeys.current.set(id, key);
-        setState((current) => ({
-          ...current,
-          results: { ...current.results, [id]: outcome.result },
-        }));
-        reportLoad(
-          definition,
-          outcome.spoken,
-          announcedStates.current,
-          announce,
-        );
-      });
+      void loadOutcome(layerSource, load, now, controller.signal).then(
+        (outcome) => {
+          // A load that was cancelled or replaced meanwhile is neither shown nor said.
+          if (!outcome || requests.current.get(id)?.controller !== controller) {
+            return;
+          }
+          requests.current.delete(id);
+          loadedKeys.current.set(id, key);
+          setState((current) => ({
+            ...current,
+            results: { ...current.results, [id]: outcome.result },
+          }));
+          reportLoad(
+            definition,
+            outcome.spoken,
+            announcedStates.current,
+            announce,
+          );
+        },
+      );
     };
 
     const plan = planLoads(wanted, requests.current, loadedKeys.current);
