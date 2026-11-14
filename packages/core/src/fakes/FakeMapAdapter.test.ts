@@ -35,6 +35,8 @@ function subjectFor(
         simulateBasemapUnavailable: () => adapter.simulateBasemapUnavailable(),
         simulateTileLayerFailure: (layerId) =>
           adapter.simulateTileLayerFailure(layerId),
+        simulateTileLayerSlow: async (layerId) =>
+          adapter.simulateTileLayerSlow(layerId),
         simulateTileLayerRecovery: (layerId) =>
           adapter.simulateTileLayerRecovery(layerId),
         simulateLoading: (loading) => adapter.simulateLoading(loading),
@@ -111,6 +113,17 @@ describe("FakeMapAdapter", () => {
       adapter.simulateTileLayerRecovery("imagery");
       adapter.simulateTileLayerRecovery("imagery");
       expect(recovered).toEqual([{ layerId: "imagery", tiles: TILES.tiles }]);
+    });
+
+    it("is reported once for the tiles the layer is set to, and not again once it has reported no tiles", () => {
+      const { adapter, slow } = watched();
+      adapter.simulateTileLayerSlow("imagery");
+      adapter.simulateTileLayerSlow("imagery");
+      expect(slow).toHaveLength(1);
+      adapter.setTileLayer("imagery", { ...TILES, tiles: "https://x.test/" });
+      adapter.simulateTileLayerFailure("imagery");
+      adapter.simulateTileLayerSlow("imagery");
+      expect(slow).toHaveLength(1);
     });
 
     it("says nothing for a layer that is not a drawn tile layer", () => {

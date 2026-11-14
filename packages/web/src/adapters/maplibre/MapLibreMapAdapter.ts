@@ -239,6 +239,8 @@ export interface MapLibreMapAdapterOptions {
   readonly workerCacheKey?: string;
   /** Overrides {@link IMAGE_TILES_WAIT_MS}, for example a few milliseconds in a test. */
   readonly imageTilesWaitMs?: number;
+  /** Overrides {@link TILE_LAYER_SLOW_MS}, for example a few milliseconds in a test. */
+  readonly tileLayerSlowMs?: number;
 }
 
 /** Whether a camera event came from the person (a gesture), not from code. */
@@ -812,6 +814,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   private styleVersion = 0;
   private readonly workerFailureGraceMs: number;
   private readonly workerCacheKey: string | undefined;
+  private readonly tileLayerSlowMs: number;
   private map: MapLibreMap | undefined;
   private host: MapHostElement | undefined;
   private basemap: BasemapDefinition | undefined;
@@ -881,6 +884,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.workerFailureGraceMs =
       options.workerFailureGraceMs ?? WORKER_FAILURE_GRACE_MS;
     this.workerCacheKey = options.workerCacheKey;
+    this.tileLayerSlowMs = options.tileLayerSlowMs ?? TILE_LAYER_SLOW_MS;
     this.imageExporter = new MapImageExporter(
       {
         mountedMap: () => (this.destroyed ? undefined : this.map),
@@ -2079,7 +2083,7 @@ export class MapLibreMapAdapter implements MapAdapter {
         layerId: traffic.layerId,
         tiles: traffic.tiles,
       });
-    }, TILE_LAYER_SLOW_MS);
+    }, this.tileLayerSlowMs);
   }
 
   /**

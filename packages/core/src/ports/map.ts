@@ -479,8 +479,8 @@ export interface MapEvents {
    * A tile data layer has had tiles asked for, and none of its tiles has
    * loaded, for longer than the adapter's wait: the provider is slow or not
    * answering. It does not wait for the map to settle, which a tile that never
-   * answers prevents. It is emitted at most once each time the layer's tiles
-   * are set, only while a tile it asked for is still outstanding, and never
+   * answers prevents. It is emitted at most once for each drawing of the
+   * layer (see `tileLayerRecovered` for what a drawing is), only while a tile it asked for is still outstanding, and never
    * once any tile of the layer has loaded. A layer that goes on to report
    * `tileLayerUnavailable` for the same tiles (the tile that held it up was
    * answered with a failure, and the map settled) has both, slow first; the

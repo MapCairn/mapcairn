@@ -877,10 +877,18 @@ export class FakeMapAdapter implements MapAdapter {
   /**
    * Emits `tileLayerSlow` for the tile layer `layerId` as it is drawn, as an
    * engine does when none of its tiles has loaded for longer than its wait. A
-   * layer that is not a drawn tile layer has no tiles, so nothing is emitted.
+   * layer that is not a drawn tile layer has no tiles, so nothing is emitted,
+   * and a layer reports it at most once for the tiles it is set to, and not
+   * once it has reported no tiles.
    */
   simulateTileLayerSlow(layerId: string): void {
-    this.#reportTileLayer(layerId, "tileLayerSlow");
+    const layer = this.#dataLayers.get(layerId);
+    if (
+      layer?.kind === "tiles" &&
+      this.#reportedTiles.get(layerId) !== layer.overlay.tiles
+    ) {
+      this.#reportTileLayer(layerId, "tileLayerSlow");
+    }
   }
 
   /**

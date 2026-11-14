@@ -3,6 +3,7 @@
 import { expect, test } from "./fixtures";
 import { mockLayerProviders } from "./support/layers";
 import { collapseCredits } from "./support/states";
+import { TILE_LAYER_SLOW_MS, TIMER_SLACK_MS } from "./support/timers";
 
 const TILE_URL =
   /gibs\.earthdata\.nasa\.gov\/wmts\/epsg3857\/best\/IMERG_Precipitation_Rate\/default\/(\d{4}-\d{2}-\d{2})\/GoogleMapsCompatible_Level6\/\d+\/\d+\/\d+\.png/;
@@ -71,6 +72,37 @@ test.describe("rainfall layer", () => {
     await expect(page.getByTestId("tile-error")).toHaveCount(0);
     await page.getByTestId("layer-control-rainfall-date").fill("2026-06-14");
     await expect(status).toHaveCount(0);
+  });
+
+  test("says it is still waiting for imagery when its tiles are held, announces it once, and says so when they arrive", async ({
+    page,
+    mapPage,
+  }) => {
+    const requests = await mockLayerProviders(page, { holdTiles: true });
+    await mapPage.goto("#layers=rainfall");
+    await mapPage.openMapOptions();
+    await expect.poll(() => requests.urls.length).toBeGreaterThan(0);
+    const status = page.getByTestId("layer-status-rainfall");
+    await expect(status).toHaveCount(0);
+
+    await page.clock.runFor(TILE_LAYER_SLOW_MS + TIMER_SLACK_MS);
+    const waiting =
+      "Still waiting for imagery. The provider may be slow or not answering.";
+    await expect(status).toHaveText(waiting);
+    await expect(page.getByTestId("tile-error")).toHaveCount(0);
+    await expect
+      .poll(async () =>
+        (await mapPage.announcements()).filter((message) =>
+          message.includes(waiting),
+        ),
+      )
+      .toEqual([`Rainfall: ${waiting}`]);
+
+    await requests.releaseTiles();
+    await expect(status).toHaveCount(0);
+    await expect
+      .poll(() => mapPage.announcements())
+      .toContain("Rainfall: imagery is showing again.");
   });
 
   test("says what it is, names its colour scale in words and carries the credits", async ({
