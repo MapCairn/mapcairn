@@ -24,7 +24,7 @@ npm run build
 
 For UI or map changes, run the Playwright specs that cover the change (`npm run test:e2e -w @mapcairn/web -- <spec name>`, which includes that spec's accessibility tests), and run the full `npm run e2e` and `npm run a11y` when the change is to layout, the map engine, the test seam or a component's colour, focus or semantics. CI runs the full suites. Install the browsers once with `npm run playwright:install -w @mapcairn/web`. Playwright starts `npm start` itself, an e2e-mode build served on port 4173 (or `MAPCAIRN_E2E_PORT`), and the tests mock basemap tiles and place search. Basemap changes also need a real iPhone check, because WebKit emulation cannot reproduce its GPU.
 
-The pre-commit hook runs Biome, dependency-cruiser, the harmony scanner, the licence header check and the agent files check, not typecheck or tests, and the `commit-msg` hook checks the commit message for names the project keeps out of the repository. CI runs lint, typecheck, coverage and build. Separate workflows run Playwright and Lighthouse.
+The pre-commit hook runs Biome, dependency-cruiser, the harmony scanner, the licence header check, the agent files check and the names check, not typecheck or tests, and the `commit-msg` hook checks the commit message for names the project keeps out of the repository. CI runs lint, typecheck, coverage and build. Separate workflows run Playwright and Lighthouse.
 
 ## Architecture
 
@@ -55,7 +55,7 @@ The coding standard is what the tools enforce, not a separate guide.
 - **Licence header:** every source file starts with `// SPDX-License-Identifier: AGPL-3.0-only` and `// Copyright MapCairn contributors`. `npm run licence:write` adds the two lines to a new file, and `npm run lint` fails without them.
 - **TypeScript:** the strict settings in [`tsconfig.base.json`](tsconfig.base.json) apply to every package: `strict`, `noUncheckedIndexedAccess` and `forceConsistentCasingInFileNames`. Run `npm run typecheck`.
 - **Project rules:** dependency-cruiser enforces the package and layer boundaries, and the harmony scanner in `scripts/harmony` enforces the design tokens, markup and wiring rules described in [`DESIGN.md`](DESIGN.md).
-- **Enforcement:** the pre-commit hook runs Biome, dependency-cruiser, the harmony scanner, the licence header check and the agent files check, the `commit-msg` hook runs the names check on the commit message, and CI runs `npm run lint` (which includes the names check) and `npm run typecheck` on every pull request, so a change that breaks the standard cannot merge. The conventions below cover what the tools cannot check.
+- **Enforcement:** the pre-commit hook runs Biome, dependency-cruiser, the harmony scanner, the licence header check, the agent files check and the names check, the `commit-msg` hook runs the names check on the commit message, and CI runs `npm run lint` (which includes the names check) and `npm run typecheck` on every pull request, so a change that breaks the standard cannot merge. The conventions below cover what the tools cannot check.
 
 The style in one example: TSDoc on the export, a braced early return, a named constant instead of a magic number, and one job for the function.
 
@@ -86,7 +86,7 @@ The host intentionally starts without datasets. Adding a real dataset is a separ
 
 Do not deploy the production Worker without explicit permission.
 
-Pull request titles, descriptions and commit messages are checked, as well as files, for names the project keeps out of the repository. A failed check says where the name is, never what it is; remove it and push again.
+Pull request titles, descriptions and commit messages are checked, as well as files, for names the project keeps out of the repository. A failed check says where the name is, never what it is. Edit the title or description, or rewrite the commit message (amend or rebase, then force-push your own branch), and the check runs again.
 
 ## Review and acceptance
 

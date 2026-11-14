@@ -11,8 +11,10 @@
  *   node scripts/names-check.mjs github           read-only scan of the repository's issues, pull requests, reviews, comments and releases
  *   node scripts/names-check.mjs hash <word>      prints the hash and length to add to the list
  *
- * The list holds only one-way SHA-256 hashes, so the names are not in the
- * repository. Every mode prints only where a name is, such as
+ * The list holds only one-way SHA-256 hashes, so the names are not stored in
+ * plain text. Hashes of short words can still be found by exhaustive search,
+ * so this keeps names out of casual sight and does not hide them from a
+ * determined reader. Every mode prints only where a name is, such as
  * `path:3: a forbidden name`, and never the name, a hash or the line. `hash` is
  * the one mode that prints a hash, for the person who keeps the plain list.
  * Exit codes: 0 clean, 1 a name was found, 2 the check could not run, which is
@@ -26,13 +28,14 @@
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO = "MapCairn/mapcairn";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const FOUND = "a forbidden name";
+const CANNOT_RUN = "names check: the check could not run";
 const USAGE =
   "usage: node scripts/names-check.mjs [files | message <path> | text | github | hash <word>]";
 const GH_TIMEOUT_MS = 120_000;
@@ -79,8 +82,6 @@ const WHITESPACE = /[\s\u0085]/g;
 const CONTROL = /\p{Cc}/gu;
 const TOKEN = /[\p{L}\p{N}]+/gu;
 const LINE_END = /\r\n|\r|\n/;
-const COMMENT_LINE = /^#/;
-const SCISSORS_LINE = /^# -{20,} >8 -{20,}$/;
 const BINARY_EXTENSIONS = new Set([
   ".avif",
   ".bmp",
@@ -238,8 +239,11 @@ function readText(path) {
     return buffer.subarray(0, BINARY_SNIFF_BYTES).includes(0)
       ? null
       : buffer.toString("utf8");
-  } catch {
-    return null;
+  } catch (error) {
+    if (error.code === "ENOENT" || error.code === "EISDIR") {
+      return null;
+    }
+    throw error;
   }
 }
 
@@ -269,20 +273,6 @@ function scanFiles(deps) {
     }
   });
   return findings;
-}
-
-/**
- * The part of a commit message file git keeps: no comment lines, nothing after
- * the scissors line. Removed lines are blanked so line numbers stay true.
- *
- * @param {string} raw
- * @returns {string}
- */
-function keptMessage(raw) {
-  const lines = raw.split(LINE_END);
-  const scissors = lines.findIndex((line) => SCISSORS_LINE.test(line));
-  const kept = scissors === -1 ? lines : lines.slice(0, scissors);
-  return kept.map((line) => (COMMENT_LINE.test(line) ? "" : line)).join("\n");
 }
 
 /**
@@ -323,7 +313,7 @@ function messageMode(path, deps) {
     deps.error("names check: the commit message file could not be read");
     return 2;
   }
-  return report(locate(path, keptMessage(raw), deps.list), deps);
+  return report(locate(path, raw, deps.list), deps);
 }
 
 /**
@@ -524,7 +514,12 @@ export function runCli(argv, deps) {
     deps.error(USAGE);
     return 2;
   }
-  return run(argument, { root: ROOT, ...deps });
+  try {
+    return run(argument, { root: ROOT, ...deps });
+  } catch {
+    deps.error(CANNOT_RUN);
+    return 2;
+  }
 }
 
 /** @returns {string[]} The paths git tracks, relative to the repository root. */
@@ -540,19 +535,26 @@ function gitTrackedFiles() {
   return result.stdout.split("\0").filter(Boolean);
 }
 
-/** @returns {string} Standard input when it is piped, otherwise nothing. */
+/** @returns {string} Standard input when it is piped, otherwise nothing. A read error is thrown, so it is never taken for an empty input. */
 function readPipedStdin() {
-  if (process.stdin.isTTY) {
-    return "";
-  }
-  try {
-    return readFileSync(0, "utf8");
-  } catch {
-    return "";
-  }
+  return process.stdin.isTTY ? "" : readFileSync(0, "utf8");
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+/**
+ * Whether this file was started directly, comparing real paths so that a
+ * symbolic link or junction to it does not make the check run nothing.
+ *
+ * @returns {boolean}
+ */
+function isEntryPoint() {
+  const entry = process.argv[1];
+  return (
+    entry !== undefined &&
+    realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url))
+  );
+}
+
+if (isEntryPoint()) {
   process.exit(
     runCli(process.argv.slice(2), {
       list: FORBIDDEN,

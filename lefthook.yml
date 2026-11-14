@@ -11,6 +11,8 @@ pre-commit:
       run: npm run licence
     agents:
       run: npm run agents:check
+    names:
+      run: npm run names:check
 
 commit-msg:
   commands:

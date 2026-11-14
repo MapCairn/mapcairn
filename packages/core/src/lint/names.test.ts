@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   FORBIDDEN,
@@ -223,8 +231,8 @@ describe("runCli", () => {
     argv: string[],
     options: {
       env?: Record<string, string>;
-      stdin?: string;
-      files?: string[];
+      stdin?: string | Error;
+      files?: string[] | Error;
       gh?: (args: string[]) => { status: number | null; stdout: string };
     } = {},
   ) {
@@ -233,8 +241,18 @@ describe("runCli", () => {
     const code = runCli(argv, {
       list: LIST,
       env: options.env ?? {},
-      readStdin: () => options.stdin ?? "",
-      trackedFiles: () => options.files ?? [],
+      readStdin: () => {
+        if (options.stdin instanceof Error) {
+          throw options.stdin;
+        }
+        return options.stdin ?? "";
+      },
+      trackedFiles: () => {
+        if (options.files instanceof Error) {
+          throw options.files;
+        }
+        return options.files ?? [];
+      },
       runGh: options.gh ?? (() => ({ status: 1, stdout: "" })),
       log: (line: string) => out.push(line),
       error: (line: string) => err.push(line),
@@ -270,6 +288,28 @@ describe("runCli", () => {
       expect(result.code).toBe(0);
     });
 
+    it("skips a file with a NUL byte near its start, as binary", () => {
+      const nul = join(dir, "data.dat");
+      writeFileSync(
+        nul,
+        Buffer.from(` ${LONG_WORD}
+`),
+      );
+      expect(run(["files"], { files: [nul] }).code).toBe(0);
+    });
+
+    it("exits 2, not 0, when a file cannot be read for another reason", () => {
+      const result = run(["files"], { files: [`${clean} `] });
+      expect(result.code).toBe(2);
+      expectNoLeak(result.all);
+    });
+
+    it("exits 2 when git cannot list the files", () => {
+      const result = run(["files"], { files: new Error("git failed") });
+      expect(result.code).toBe(2);
+      expect(result.err).toEqual(["names check: the check could not run"]);
+    });
+
     it("finds a name in a file name without printing the file name", () => {
       const named = join(dir, `${LONG_WORD}.md`);
       writeFileSync(named, "clean\n");
@@ -281,22 +321,26 @@ describe("runCli", () => {
   });
 
   describe("message", () => {
-    it("scans a commit message file and ignores comment lines and the diff after the scissors line", () => {
+    it("scans the whole commit message file, comment lines and text after a scissors line included", () => {
       writeFileSync(
         messageFile,
         [
           "feat: add a thing",
           "",
-          `# ${LONG_WORD} in a comment git removes`,
+          `# ${LONG_WORD} in a line git may keep`,
           "Body line",
           `${LONG_WORD} in the body`,
           "# ------------------------ >8 ------------------------",
-          `+${LONG_WORD} in the diff`,
+          `+${LONG_WORD} after the scissors line`,
         ].join("\n"),
       );
       const result = run(["message", messageFile]);
       expect(result.code).toBe(1);
-      expect(result.err).toEqual([`${messageFile}:5: a forbidden name`]);
+      expect(result.err).toEqual([
+        `${messageFile}:3: a forbidden name`,
+        `${messageFile}:5: a forbidden name`,
+        `${messageFile}:7: a forbidden name`,
+      ]);
       expectNoLeak(result.all);
     });
 
@@ -314,6 +358,12 @@ describe("runCli", () => {
   });
 
   describe("text", () => {
+    it("exits 2, not 0, when standard input cannot be read", () => {
+      const result = run(["text"], { stdin: new Error("read failed") });
+      expect(result.code).toBe(2);
+      expect(result.err).toEqual(["names check: the check could not run"]);
+    });
+
     it("reads the title and body from the environment and commit messages from standard input", () => {
       const result = run(["text"], {
         env: {
@@ -453,5 +503,27 @@ describe("runCli", () => {
     const result = run(["nonsense"]);
     expect(result.code).toBe(2);
     expect(result.err.join("\n")).toContain("usage:");
+  });
+});
+
+describe("started through a link", () => {
+  it("still runs, so a link to the script cannot turn the check off", () => {
+    const dir = mkdtempSync(join(tmpdir(), "names-link-"));
+    try {
+      const scripts = fileURLToPath(
+        new URL("../../../../scripts", import.meta.url),
+      );
+      const link = join(dir, "scripts");
+      symlinkSync(scripts, link, "junction");
+      const result = spawnSync(
+        process.execPath,
+        [join(link, "names-check.mjs"), "hash", SHORT_WORD],
+        { encoding: "utf8" },
+      );
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain(entry(SHORT_WORD, true).hash);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
