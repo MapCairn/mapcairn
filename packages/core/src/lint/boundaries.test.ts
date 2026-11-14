@@ -366,6 +366,33 @@ describe("Biome rules", () => {
       'import { old } from "./old";',
       "export const value = old;",
     ),
+    "packages/map/src/host/cycleA.ts": lines(
+      'import { b } from "./cycleB";',
+      "export const a = () => b;",
+    ),
+    "packages/map/src/host/cycleB.ts": lines(
+      'import { a } from "./cycleA";',
+      "export const b = () => a;",
+    ),
+    "packages/map/src/host/Prop.tsx": lines(
+      "export function Prop(props: { a: number }) {",
+      "  props.a = 2;",
+      "  return <p>{props.a}</p>;",
+      "}",
+    ),
+    "packages/map/package.json": JSON.stringify({
+      dependencies: { left: "1.0.0" },
+      devDependencies: { left: "1.0.0" },
+    }),
+    "packages/web/e2e/badDescribe.spec.ts": lines(
+      'import { test } from "@playwright/test";',
+      'test.describe("x", 5 as never);',
+    ),
+    "packages/map/src/host/describeParam.ts": lines(
+      "export const call = (",
+      "  describe: (name: string, body: number) => void,",
+      '): void => describe("x", 5);',
+    ),
     "packages/map/src/host/goodQuality.ts": lines(
       "export interface Shape {",
       "  a: number;",
@@ -459,6 +486,13 @@ describe("Biome rules", () => {
     ["useExhaustiveSwitchCases", "packages/map/src/host/quality.ts"],
     ["noLeakedRender", "packages/map/src/host/quality.tsx"],
     ["noDeprecatedImports", "packages/map/src/host/useOld.ts"],
+    ["noImportCycles", "packages/map/src/host/cycleA.ts"],
+    ["noReactPropAssignments", "packages/map/src/host/Prop.tsx"],
+    ["noDuplicateDependencies", "packages/map/package.json"],
+    [
+      "usePlaywrightValidDescribeCallback",
+      "packages/web/e2e/badDescribe.spec.ts",
+    ],
   ])("%s fires in %s", (rule, file) => {
     expect(findings).toContain(`${rule}: ${file}`);
   });
@@ -488,6 +522,7 @@ describe("Biome rules", () => {
     "packages/map/src/host/loud.test.ts",
     "packages/web/scripts/loud.mjs",
     "packages/map/src/host/goodQuality.ts",
+    "packages/map/src/host/describeParam.ts",
   ])("accepts %s", (file) => {
     expect(findings.filter((f) => f.endsWith(file))).toEqual([]);
   });

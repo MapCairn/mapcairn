@@ -103,11 +103,6 @@ interface Drag {
   samples: Sample[];
 }
 
-/**
- * Velocity in px/s from the oldest sample in the last
- * {@link VELOCITY_WINDOW_MS} to the release; positive when expanding. A
- * pointer held still for longer than the window releases at zero.
- */
 /** The way an arrow key moves the sheet from its handle, or null for any other key. */
 function handleDirection(key: string): "up" | "down" | null {
   if (key === "ArrowUp") {
@@ -116,6 +111,11 @@ function handleDirection(key: string): "up" | "down" | null {
   return key === "ArrowDown" ? "down" : null;
 }
 
+/**
+ * Velocity in px/s from the oldest sample in the last
+ * {@link VELOCITY_WINDOW_MS} to the release; positive when expanding. A
+ * pointer held still for longer than the window releases at zero.
+ */
 function releaseVelocity(samples: readonly Sample[], release: Sample): number {
   const first = samples.reduce(
     (oldest, sample) =>
