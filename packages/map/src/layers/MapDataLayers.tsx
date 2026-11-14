@@ -274,6 +274,7 @@ export function MapDataLayers({
     choose: layers.choose,
     cancelIdentify: layers.cancelIdentify,
     setView: layers.setView,
+    reportTilesSlow: layers.reportTilesSlow,
     reportTilesUnavailable: layers.reportTilesUnavailable,
     reportTilesRecovered: layers.reportTilesRecovered,
     onFeatureTap,
@@ -283,6 +284,9 @@ export function MapDataLayers({
     if (!adapter) {
       return;
     }
+    const stopSlow = adapter.on("tileLayerSlow", ({ layerId, tiles }) => {
+      latest.current.reportTilesSlow(layerId, tiles);
+    });
     const stopUnavailable = adapter.on(
       "tileLayerUnavailable",
       ({ layerId, tiles }) => {
@@ -296,6 +300,7 @@ export function MapDataLayers({
       },
     );
     return () => {
+      stopSlow();
       stopUnavailable();
       stopRecovered();
     };
