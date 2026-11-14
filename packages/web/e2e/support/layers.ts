@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Page } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 
 const FIXTURES = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -53,6 +53,12 @@ const TILE_PATTERN = /gibs\.earthdata\.nasa\.gov|ows\.globalfloods\.eu/;
 /** Every request the suite saw for a layer provider, in order. */
 export interface LayerRequests {
   readonly urls: string[];
+  /**
+   * Answers every tile held by `holdTiles` with a transparent PNG, as when
+   * a provider that stalled answers at last. Tiles asked for afterwards are
+   * answered at once.
+   */
+  releaseTiles(): Promise<void>;
 }
 
 /** Options for {@link mockLayerProviders}. */
@@ -65,9 +71,10 @@ export interface LayerProviderOptions {
    */
   readonly noTile?: (url: string) => boolean;
   /**
-   * Whether every tile request is recorded and never answered, as when a
-   * provider's server accepts the connection and stalls. The engine then never
-   * goes idle, which the map region's busy state must not wait for.
+   * Whether every tile request is recorded and not answered until
+   * `LayerRequests.releaseTiles`, as when a provider's server accepts the
+   * connection and stalls. The engine then never goes idle, which the map
+   * region's busy state must not wait for.
    */
   readonly holdTiles?: boolean;
 }
@@ -81,7 +88,22 @@ export async function mockLayerProviders(
   page: Page,
   options: LayerProviderOptions = {},
 ): Promise<LayerRequests> {
-  const requests: LayerRequests = { urls: [] };
+  const held: Route[] = [];
+  let holding = options.holdTiles === true;
+  const answerTile = (route: Route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      headers: { "access-control-allow-origin": "*" },
+      body: TRANSPARENT_PNG,
+    });
+  const requests: LayerRequests = {
+    urls: [],
+    releaseTiles: async () => {
+      holding = false;
+      await Promise.all(held.splice(0).map(answerTile));
+    },
+  };
   for (const { pattern, file } of FEEDS) {
     await page.route(pattern, (route) => {
       requests.urls.push(route.request().url());
@@ -102,7 +124,8 @@ export async function mockLayerProviders(
   await page.route(TILE_PATTERN, (route) => {
     const url = route.request().url();
     requests.urls.push(url);
-    if (options.holdTiles) {
+    if (holding) {
+      held.push(route);
       return;
     }
     if (options.noTile?.(decodeURIComponent(url))) {
@@ -113,12 +136,7 @@ export async function mockLayerProviders(
         body: "",
       });
     }
-    return route.fulfill({
-      status: 200,
-      contentType: "image/png",
-      headers: { "access-control-allow-origin": "*" },
-      body: TRANSPARENT_PNG,
-    });
+    return answerTile(route);
   });
   return requests;
 }

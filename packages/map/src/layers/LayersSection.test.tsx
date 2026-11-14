@@ -921,6 +921,46 @@ describe("LayersSection", () => {
     });
   });
 
+  describe("a tile layer that is slow", () => {
+    const WORDS =
+      "Still waiting for imagery. The provider may be slow or not answering.";
+
+    it("says it is still waiting, with an icon and no Try again, and leaves its controls enabled", () => {
+      const { layers } = setup([SAMPLE_TIME_LAYER]);
+      toggle("sample-rain", "Sample rain");
+      act(() =>
+        layers().reportTilesSlow(
+          "sample-rain",
+          tileUrl(SAMPLE_TIME_LAYER, {}, NOW),
+        ),
+      );
+      const status = screen.getByTestId("layer-status-sample-rain");
+      expect(status).toHaveTextContent(WORDS);
+      expect(status.querySelector("svg")).not.toBeNull();
+      expect(
+        within(item("sample-rain")).queryByRole("button", {
+          name: "Try again",
+        }),
+      ).toBeNull();
+      expect(
+        screen.getByRole("group", { name: "Time shown" }),
+      ).not.toBeDisabled();
+    });
+
+    it("gives way to the unavailable words, then to nothing once a tile loads", () => {
+      const { layers } = setup([SAMPLE_TIME_LAYER]);
+      toggle("sample-rain", "Sample rain");
+      const tiles = tileUrl(SAMPLE_TIME_LAYER, {}, NOW);
+      act(() => layers().reportTilesSlow("sample-rain", tiles));
+      act(() => layers().reportTilesUnavailable("sample-rain", tiles));
+      const status = screen.getByTestId("layer-status-sample-rain");
+      expect(status).toHaveTextContent("No imagery was found");
+      expect(status).not.toHaveTextContent(WORDS);
+      act(() => layers().reportTilesRecovered("sample-rain", tiles));
+      expect(screen.queryByTestId("layer-status-sample-rain")).toBeNull();
+    });
+  });
+
   describe("a date and time control", () => {
     // NOW is 12:00 UTC and the sample is six hours behind, so 06:00 is the newest slot.
     const timeOf = (layers: () => DataLayers) =>
