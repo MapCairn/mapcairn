@@ -1,9 +1,9 @@
 name: Workflow security lint
 
 # Runs zizmor over .github (script injection, over-broad permissions, unpinned
-# actions, credential persistence). The action installs zizmor from a wheel whose
-# hashes are pinned in the action's own tree, and the only network calls are to the
-# GitHub API with the workflow's own token.
+# actions, credential persistence). The action downloads zizmor from the Python package
+# index as a wheel whose hashes are pinned in the action's own tree, and zizmor's online
+# audits call the GitHub API with the workflow's own token. Nothing else leaves the runner.
 #
 # Two jobs, because the two places the results go need different permissions:
 # - On a pull request the job fails the check and prints annotations. It holds only
@@ -16,6 +16,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/**"
+      - ".github/actions/**"
       - ".github/dependabot.yml"
   push:
     branches: [main]
