@@ -651,7 +651,7 @@ export type VectorSourceLayer = VectorShapeLayer | VectorHeatmapLayer;
 export interface VectorTileLayerDefinition extends LayerDefinitionBase {
   readonly source: VectorTileSource;
   readonly sourceLayers: readonly VectorSourceLayer[];
-  /** The layer is visible from and to these normalised zoom levels. */
+  /** The layer is visible from `minzoom` up to, but not including, `maxzoom` (normalised zoom levels), as the engine hides a layer from its `maxzoom`. */
   readonly minzoom?: number;
   readonly maxzoom?: number;
 }

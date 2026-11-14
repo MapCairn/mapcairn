@@ -23,3 +23,4 @@ export * from "./staticLayerCatalogue";
 export * from "./style";
 export * from "./template";
 export * from "./validate";
+export * from "./zoomLimit";

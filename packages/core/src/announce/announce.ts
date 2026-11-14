@@ -153,9 +153,47 @@ export function announceLayerCapped(name: string, shown: number): string {
   return `${name}: showing the first ${formatNumber(shown)}. Zoom in to see more.`;
 }
 
-/** A query layer is too far out to ask for features. */
-export function announceLayerZoomIn(name: string): string {
-  return `${name}: zoom in to load this layer.`;
+/** One decimal place, as {@link formatZoom} shows it, free of floating point noise. */
+function tenths(level: number): number {
+  return Number((level * 10).toFixed(6));
+}
+
+/** The direction and level to zoom to for a layer that is too far out to load. A level with more than one decimal is rounded up, so the level shown is always enough. */
+function zoomInPhrase(level: number): string {
+  return `in to level ${formatZoom(Math.ceil(tenths(level)) / 10)} or closer to load this layer`;
+}
+
+/**
+ * The direction and level to zoom to for a layer that is too far in to show.
+ * The engine hides a layer from its `maxzoom` itself, so the level is one to
+ * go below, rounded down to one decimal so that the level shown is enough.
+ */
+function zoomOutPhrase(level: number): string {
+  return `out below level ${formatZoom(Math.floor(tenths(level)) / 10)} to see this layer`;
+}
+
+/**
+ * The status line of a layer that is too far out to load, naming the
+ * normalised zoom level to zoom in to. The level comes from the layer's
+ * definition, so a layer without a zoom window never gets this line.
+ */
+export function describeZoomIn(level: number): string {
+  return `Zoom ${zoomInPhrase(level)}.`;
+}
+
+/** The status line of a layer that is too far in to show, naming the level to zoom out to. */
+export function describeZoomOut(level: number): string {
+  return `Zoom ${zoomOutPhrase(level)}.`;
+}
+
+/** A layer is too far out to load, in the words of {@link describeZoomIn}. */
+export function announceLayerZoomIn(name: string, level: number): string {
+  return `${name}: zoom ${zoomInPhrase(level)}.`;
+}
+
+/** A layer is too far in to show, in the words of {@link describeZoomOut}. */
+export function announceLayerZoomOut(name: string, level: number): string {
+  return `${name}: zoom ${zoomOutPhrase(level)}.`;
 }
 
 /** A tile layer was turned on. */

@@ -13,6 +13,7 @@ import {
   SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
+  SAMPLE_VECTOR_LAYER,
   samplePoint,
 } from "@mapcairn/core";
 import { act, renderHook, screen, waitFor } from "@testing-library/react";
@@ -607,6 +608,73 @@ describe("useDataLayers", () => {
     });
   });
 
+  describe("zoom windows", () => {
+    const AREA = { west: 2.2, south: 48.8, east: 2.5, north: 48.95 };
+    const vector = () => setup({}, [SAMPLE_VECTOR_LAYER, SAMPLE_TILE_LAYER]);
+    const districts = "sample-districts";
+
+    it("tells a vector tile layer outside its window which level to zoom to", async () => {
+      const { result } = vector();
+      act(() => result.current.setEnabled(districts, true));
+      act(() => result.current.setView(AREA, 10));
+      expect(layer(result, districts).status).toEqual({ kind: "on" });
+      act(() => result.current.setView(AREA, 1));
+      expect(layer(result, districts).status).toEqual({
+        kind: "zoom-in",
+        level: 2,
+      });
+      act(() => result.current.setView(AREA, 19));
+      expect(layer(result, districts).status).toEqual({
+        kind: "zoom-out",
+        level: 18,
+      });
+      act(() => result.current.setView(AREA, 18));
+      expect(layer(result, districts).status).toEqual({
+        kind: "zoom-out",
+        level: 18,
+      });
+      act(() => result.current.setView(AREA, 17.9));
+      expect(layer(result, districts).status).toEqual({ kind: "on" });
+    });
+
+    it("announces the zoom a vector tile layer needs", async () => {
+      const { result } = vector();
+      act(() => result.current.setEnabled(districts, true));
+      act(() => result.current.setView(AREA, 19));
+      // The layer's own "is on" goes first and is kept, so this waits its turn.
+      await waitFor(
+        () =>
+          expect(polite()).toBe(
+            "Sample districts: zoom out below level 18 to see this layer.",
+          ),
+        { timeout: THROTTLE_MS * 4 },
+      );
+    });
+
+    it("says nothing about zoom for a layer without a window, however far in or out", () => {
+      const { result } = vector();
+      act(() => result.current.setEnabled("sample-imagery", true));
+      act(() => result.current.setView(AREA, 24));
+      expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+      act(() => result.current.setView(AREA, 0));
+      expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
+    });
+
+    it("says nothing about zoom for a query layer without a minzoom", async () => {
+      const { minzoom: _dropped, ...source } = SAMPLE_QUERY_LAYER.source as {
+        minzoom?: number;
+      };
+      const unwindowed = {
+        ...SAMPLE_QUERY_LAYER,
+        source,
+      } as unknown as LayerDefinition;
+      const { result } = setup({}, [unwindowed]);
+      act(() => result.current.setEnabled("sample-query", true));
+      act(() => result.current.setView(AREA, 0));
+      expect(layer(result, "sample-query").status.kind).toBe("loading");
+    });
+  });
+
   describe("query layers", () => {
     const AREA = { west: 2.2, south: 48.8, east: 2.5, north: 48.95 };
     const items = (count: number) =>
@@ -629,6 +697,7 @@ describe("useDataLayers", () => {
       act(() => result.current.setView(AREA, 3));
       expect(layer(result, "sample-query").status).toEqual({
         kind: "zoom-in",
+        level: 4,
       });
       expect(source.requests).toHaveLength(0);
     });
@@ -755,10 +824,13 @@ describe("useDataLayers", () => {
       );
       expect(layer(result, "sample-query").status).toEqual({
         kind: "zoom-in",
+        level: 4,
       });
       expect(layer(result, "sample-query").features).toEqual([]);
       await waitFor(() =>
-        expect(polite()).toBe("Sample query: zoom in to load this layer."),
+        expect(polite()).toBe(
+          "Sample query: zoom in to level 4 or closer to load this layer.",
+        ),
       );
     });
 

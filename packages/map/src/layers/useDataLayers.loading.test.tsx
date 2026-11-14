@@ -12,6 +12,7 @@ import {
   SAMPLE_FEED_LAYER,
   SAMPLE_LAYERS,
   SAMPLE_QUERY_LAYER,
+  SAMPLE_VECTOR_LAYER,
   samplePoint,
 } from "@mapcairn/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -424,15 +425,30 @@ describe("useDataLayers loading", () => {
         act(() => result.current.setEnabled("sample-query", true));
         act(() => result.current.setView(AREA, 3));
         act(() => result.current.setView(OTHER_AREA, 2));
-        expect(said()).toEqual(["Sample query: zoom in to load this layer."]);
+        expect(said()).toEqual([
+          "Sample query: zoom in to level 4 or closer to load this layer.",
+        ]);
         act(() => result.current.setView(AREA, 12));
         await waitFor(() => expect(said()).toHaveLength(2));
         act(() => result.current.setView(AREA, 3));
         expect(said()).toEqual([
-          "Sample query: zoom in to load this layer.",
+          "Sample query: zoom in to level 4 or closer to load this layer.",
           "Sample query: 1 shown on the map.",
-          "Sample query: zoom in to load this layer.",
+          "Sample query: zoom in to level 4 or closer to load this layer.",
         ]);
+      });
+
+      it("says to zoom out of a vector tile layer once, and again after it has been back inside its window", () => {
+        const { result } = setup({}, [SAMPLE_VECTOR_LAYER]);
+        act(() => result.current.setEnabled("sample-districts", true));
+        act(() => result.current.setView(AREA, 19));
+        act(() => result.current.setView(OTHER_AREA, 20));
+        const zoomOut =
+          "Sample districts: zoom out below level 18 to see this layer.";
+        expect(said()).toEqual(["Sample districts is on.", zoomOut]);
+        act(() => result.current.setView(AREA, 10));
+        act(() => result.current.setView(AREA, 19));
+        expect(said()).toEqual(["Sample districts is on.", zoomOut, zoomOut]);
       });
 
       it("says to zoom in again after it was turned off and on", () => {
@@ -442,8 +458,8 @@ describe("useDataLayers loading", () => {
         act(() => result.current.setEnabled("sample-query", false));
         act(() => result.current.setEnabled("sample-query", true));
         expect(said()).toEqual([
-          "Sample query: zoom in to load this layer.",
-          "Sample query: zoom in to load this layer.",
+          "Sample query: zoom in to level 4 or closer to load this layer.",
+          "Sample query: zoom in to level 4 or closer to load this layer.",
         ]);
       });
     });

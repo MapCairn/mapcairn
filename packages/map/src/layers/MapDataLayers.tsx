@@ -3,6 +3,7 @@
 import {
   createFormatterRegistry,
   type FormatterRegistry,
+  hasZoomWindow,
   isFeedLayer,
   isHeatmapLayer,
   isQueryLayer,
@@ -39,7 +40,7 @@ const DEFAULT_FORMATTERS = createFormatterRegistry();
  */
 export const DETAIL_LAYER_ID = ":detail";
 
-/** How long the map must stay still, in milliseconds, before query layers ask for its view. */
+/** How long the map must stay still, in milliseconds, before layers that depend on its view are told it. */
 export const VIEW_SETTLE_MS = 400;
 
 /** Props for {@link MapDataLayers}. */
@@ -328,13 +329,15 @@ export function MapDataLayers({
     });
   }, [adapter, latest]);
 
-  // Query layers ask for what is in view, so they are told once the map has
-  // settled (and straight away when one is turned on), never while it moves.
-  const hasQuery = states.some(
-    (layer) => layer.enabled && isQueryLayer(layer.definition),
+  // Query layers ask for what is in view, and layers with a zoom window say
+  // which level to zoom to, so they are told once the map has settled (and
+  // straight away when one is turned on), never while it moves.
+  const needsView = states.some(
+    ({ enabled, definition }) =>
+      enabled && (isQueryLayer(definition) || hasZoomWindow(definition)),
   );
   useEffect(() => {
-    if (!adapter || !hasQuery) {
+    if (!adapter || !needsView) {
       return;
     }
     const report = () => {
@@ -350,7 +353,7 @@ export function MapDataLayers({
       clearTimeout(timer);
       stop();
     };
-  }, [adapter, hasQuery, latest]);
+  }, [adapter, needsView, latest]);
 
   return null;
 }

@@ -4,6 +4,8 @@ import {
   describeChosenTime,
   describeTilesSlow,
   describeTilesUnavailable,
+  describeZoomIn,
+  describeZoomOut,
   type FormatterRegistry,
   formatTemplate,
   isControlEnabled,
@@ -50,7 +52,9 @@ function statusText(status: LayerStatus, emptyText: string): string | null {
         ? `Updated ${TIME.format(status.updatedAt)}. Showing the first ${status.count.toLocaleString("en-GB")}. Zoom in to see more.`
         : `Updated ${TIME.format(status.updatedAt)}, ${status.count.toLocaleString("en-GB")} shown`;
     case "zoom-in":
-      return "Zoom in to load this layer.";
+      return describeZoomIn(status.level);
+    case "zoom-out":
+      return describeZoomOut(status.level);
     case "empty":
       return `Updated ${TIME.format(status.updatedAt)}. ${emptyText}`;
     default:

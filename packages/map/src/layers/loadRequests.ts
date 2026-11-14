@@ -8,8 +8,10 @@ import {
   type HeatmapLayerDefinition,
   isQueryLayer,
   type LayerDefinition,
+  layerZoomLimit,
   loadsFeatures,
   nextQueryWindow,
+  type ZoomLimit,
 } from "@mapcairn/core";
 
 /** What the map last showed, which a query layer asks for features around. */
@@ -63,11 +65,19 @@ export function isTooFarOut(
   definition: LayerDefinition,
   view: QueryView | null,
 ): boolean {
-  return (
-    isQueryLayer(definition) &&
-    view !== null &&
-    view.zoom < (definition.source.minzoom ?? 0)
-  );
+  return isQueryLayer(definition) && viewZoomLimit(definition, view) !== null;
+}
+
+/**
+ * Which way to zoom, and to which level, for a layer to show what the view is
+ * at, or null when the view is inside its zoom window, it has none or the map
+ * has not said where it is.
+ */
+export function viewZoomLimit(
+  definition: LayerDefinition,
+  view: QueryView | null,
+): ZoomLimit | null {
+  return view === null ? null : layerZoomLimit(definition, view.zoom);
 }
 
 /**

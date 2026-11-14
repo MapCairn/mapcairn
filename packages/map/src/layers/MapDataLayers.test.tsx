@@ -223,6 +223,33 @@ describe("MapDataLayers", () => {
     });
   });
 
+  describe("layers with a zoom window", () => {
+    it("reports the view for a vector tile layer with a window, so it can say which way to zoom", () => {
+      const { adapter, layers } = setup({ definitions: [SAMPLE_VECTOR_LAYER] });
+      act(() => adapter.setView({ zoom: 1 }));
+      act(() => layers().setEnabled("sample-districts", true));
+      expect(layers().layers[0]?.status).toEqual({
+        kind: "zoom-in",
+        level: 2,
+      });
+    });
+
+    it("does not listen to the map for layers with no window to compare it with", () => {
+      const {
+        minzoom: _min,
+        maxzoom: _max,
+        ...unwindowed
+      } = SAMPLE_VECTOR_LAYER;
+      const { adapter, layers } = setup({
+        definitions: [unwindowed, SAMPLE_TILE_LAYER],
+      });
+      const bounds = vi.spyOn(adapter, "getBounds");
+      act(() => layers().setEnabled("sample-districts", true));
+      act(() => layers().setEnabled("sample-imagery", true));
+      expect(bounds).not.toHaveBeenCalled();
+    });
+  });
+
   it("draws a heatmap from its points and follows its controls", async () => {
     const { adapter, layers, source } = setup({
       definitions: [SAMPLE_HEATMAP_LAYER],
