@@ -25,10 +25,10 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | Only the features in view, from a bounding box query, with a cap | has | `QuerySource` (`maxFeatures` 1 to 5000) | none |
 | Raster tiles, including a WMS through a box template | has | `TileSource` (`{z}/{x}/{y}` and `{bbox-epsg-3857}`), `docs/guides/serving-layers.md` | none |
 | Vector tiles styled by source layer | has | `VectorTileSource`, `docs/guides/extending.md` | none |
-| Worked recipes for OGC API Features, WMS and WMTS endpoints | partial | the templates cover the three, but no guide shows them or tests them | [#232] |
+| Worked recipes for OGC API Features, WMS and WMTS endpoints | partial | the templates should cover the three, but nothing has tested them and no guide shows them | [#232] |
 | Tiles read from a single-file archive | lacks | none | [#192] |
 | Newer vector tile encodings | lacks | none | [#197] |
-| Layers supplied at runtime, per user, validated one at a time | has | `createRuntimeLayerCatalogue` and `partitionDefinitions` (steps closed as #94, #95, #97 to #99) | [#46] still open for its remaining step |
+| Layers supplied at runtime, per user, validated one at a time | has | `createRuntimeLayerCatalogue` and `partitionDefinitions` (steps closed as #94 to #99) | [#46], all its steps merged |
 | Hosts that sit behind a login | lacks | the reference site calls only public providers, so there is no way for a host to attach credentials or react to a refused request | [#45] |
 | One place for tile and layer request limits, retry, priority and a host hook | partial | each load is cancelled when replaced, and a slow tile layer says so (`useDataLayers`, #159 closed) | [#195] |
 | Importing drawn shapes from GeoJSON, WKT and CSV files | has | `parseShapeFile` in `packages/core/src/draw/import.ts` | none |
@@ -96,7 +96,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | Suggestions as you type, only when a host supplies a provider | has | `SuggestionProvider`, `PhotonSuggestionProvider` | none |
 | Coordinates typed into search | has | `coordinateSearchResult` | UTM and MGRS: [#222] |
 | Reverse lookup of a place | has | `useReverseAddress`, the pin card | none |
-| A guide to plugging in a custom provider | lacks | the port is documented in `ARCHITECTURE.md` only | [#184] |
+| A guide to plugging in a custom provider | partial | the ports are documented in `ARCHITECTURE.md`, and `docs/guides/extending.md` has sections for routing, search suggestions and adapters but none for a search provider | [#184] |
 | Search over a host-owned index | lacks | none | [#186] |
 | One palette for layers, places, shapes and tools | lacks | none | [#175] |
 | Bulk geocoding of address lists | lacks | a browser SDK with no server | none, see "Gaps left without an issue" |
@@ -136,7 +136,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | Capability | Status | Evidence | Tracked by |
 | --- | --- | --- | --- |
 | Save the map as an image, with the credits | has | `toImage`, `packages/web/src/adapters/maplibre/imageExport.ts` | none |
-| An image at a requested size, pixel ratio and view | has | `MapImageOptions`, `planRequestedImage` in `packages/core/src/imageExport` | scale bar, key, title, overlays and a headless route: [#48] |
+| An image at a requested size, pixel ratio and view | has | `MapImageOptions`, `planRequestedImage` in `packages/core/src/imageExport` (the port and adapter only: the Save image button uses the view on screen) | the interface for it, scale bar, key, title, overlays and a headless route: [#48] |
 | Print with a title, key and credits, and save as PDF through the browser | lacks | none | [#178] |
 | Export drawn shapes as GeoJSON, CSV and WKT | has | `packages/core/src/draw/export.ts` | none |
 | Export the features of a layer | lacks | none; needs each provider's terms checked | [#228] |
@@ -146,7 +146,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 | Capability | Status | Evidence | Tracked by |
 | --- | --- | --- | --- |
-| Say when the device is offline | lacks | `DevicePreferences` reads save-data only | [#229] |
+| Say when the device is offline | partial | the search adapters already raise an offline error and the interface names it; layers and tiles do not, and nothing announces the change once | [#229] |
 | Tiles stored on the device | lacks | none; a privacy and storage question first | research only: [#196] |
 | An installable app that works offline | lacks | none | none, see "Gaps left without an issue" |
 
@@ -168,7 +168,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | React components built from four packages, with an example app that uses only public entry points | has | `examples/embed`, `docs/guides/extending.md` | none |
 | The map engine adapter as an optional package | lacks | the adapter is in `packages/web` | [#43], after [#24] |
 | A script and stylesheet with a mount function for pages without React | lacks | none | [#44] |
-| A guide for IIS and server-rendered .NET pages | lacks | none | [#221] |
+| A guide for serving the bundle from a Windows web server and server-rendered pages | lacks | none | [#221] |
 | The Content Security Policy a host needs | lacks | the reference site's own is in `packages/web/public/_headers` | [#230] |
 | Making the SDK easy to drop into existing server-rendered applications | lacks | the tracker for the items above | [#51] |
 | The interface text and language chosen by the host | lacks | English only, with copy inline in components; changing it is a decision | [#231] |
@@ -228,13 +228,13 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 **Next: what makes the SDK usable in another team's stack**
 
 - [#24] then [#43]: the engine adapter in its own package, so a host can embed without copying `packages/web`.
-- [#44], then [#221] and [#230]: a mount function for pages without React, and the guides that make it work in a server-rendered stack under a strict policy.
+- [#44], then [#45], [#221] and [#230]: a mount function for pages without React, hosts behind a login (which the serving guide's login part needs), and the guides that make it work in a server-rendered stack under a strict policy.
+- [#220]: host theming with contrast checks, so the chrome can match another team's look.
 - [#192], [#194], [#195], [#193], [#183]: the performance track for large data, from tile archives and a tile budget to clustering and cards for vector features.
 - [#62], [#176], [#71]: the layer controls a person expects (filters, order and opacity, the key over the map).
-- [#232], [#184]: two small guides that show what already works (open service standards, a custom search provider).
+- [#232], [#184]: two small guides that show how to use what exists (open service standards, a custom search provider).
 - [#48], [#178]: image export beyond the screen, and printing.
 - [#222], [#225], [#226], [#227]: small, dependency-free additions that fill obvious gaps in measuring, drawing and import.
-- [#45]: hosts behind a login, which the server-rendered embedding case needs.
 - [#229]: small, and it improves every failure message.
 
 **Later: needs research, a plan or a decision first**
@@ -267,7 +267,7 @@ These come from [`ROADMAP.md`](../../ROADMAP.md) ("Non-goals") and [`README.md`]
 A gap is filed only when it is real, small enough to pick up (or says it needs a plan) and not a duplicate. These were left, with the reason, and can be filed when someone needs one.
 
 - **Binary vector files and raster files** (zipped vector sets, GeoPackage, FlatGeobuf, GeoTIFF). Each needs a reader library, which is a decision about a runtime dependency, and several are large. Wait for a named need, then start with a plan.
-- **Reading a service's capabilities document.** A definition is data a host writes on purpose, so the service's own list adds a parser and a trust question for little gain. [#232] shows how to write the definitions by hand.
+- **Reading a service's capabilities document.** A definition is data a host writes on purpose, so the service's own list adds a parser and a trust question for little gain. [#232] will show how to write the definitions by hand.
 - **Custom image icons for points.** The design contract is that colour is never the only signal and that a style names a palette slot, never a value. An image icon would need its own rules for contrast and for a text alternative, so it needs a design decision first.
 - **Bearing and angle measurement.** Low demand, and a small addition to the measure tool once someone asks.
 - **Write-back of edits to a service.** It needs a port with a write method, and no host has asked. [#45] comes first.
