@@ -57,6 +57,7 @@ import {
   announceSurfaceOpened,
   announceTileError,
   announceTilesRecovered,
+  announceTilesSlow,
   announceTilesUnavailable,
   announceTimeMoved,
   announceTourSkipped,
@@ -67,6 +68,7 @@ import {
   describeLayersRefreshFailed,
   describeLayersSkipped,
   describeNoLayers,
+  describeTilesSlow,
   describeTilesUnavailable,
 } from "./index";
 
@@ -403,6 +405,15 @@ describe("layer announcements", () => {
     );
     expect(announceTilesUnavailable("Rainfall", null)).toBe(
       "Rainfall: Could not load. Check your connection.",
+    );
+  });
+
+  it("says a tile layer is still waiting for imagery, in the status line and aloud", () => {
+    expect(describeTilesSlow()).toBe(
+      "Still waiting for imagery. The provider may be slow or not answering.",
+    );
+    expect(announceTilesSlow("Rainfall")).toBe(
+      "Rainfall: Still waiting for imagery. The provider may be slow or not answering.",
     );
   });
 

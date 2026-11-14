@@ -35,6 +35,8 @@ function subjectFor(
         simulateBasemapUnavailable: () => adapter.simulateBasemapUnavailable(),
         simulateTileLayerFailure: (layerId) =>
           adapter.simulateTileLayerFailure(layerId),
+        simulateTileLayerSlow: async (layerId) =>
+          adapter.simulateTileLayerSlow(layerId),
         simulateTileLayerRecovery: (layerId) =>
           adapter.simulateTileLayerRecovery(layerId),
         simulateLoading: (loading) => adapter.simulateLoading(loading),
@@ -84,6 +86,63 @@ describe("FakeMapAdapter", () => {
     expect(error).toBeInstanceOf(MapEngineError);
     expect((error as MapEngineError).reason).toBe("load-failed");
     expect(adapter.mountCount).toBe(0);
+  });
+
+  describe("a tile layer reported as slow", () => {
+    const TILES = {
+      tiles: "https://tiles.test/{z}/{y}/{x}.jpg",
+      tileSize: 256 as const,
+      maxzoom: 9,
+      opacity: 0.8,
+    };
+
+    function watched() {
+      const adapter = new FakeMapAdapter();
+      const slow: MapEvents["tileLayerSlow"][] = [];
+      const recovered: MapEvents["tileLayerRecovered"][] = [];
+      adapter.on("tileLayerSlow", (report) => slow.push(report));
+      adapter.on("tileLayerRecovered", (report) => recovered.push(report));
+      adapter.setTileLayer("imagery", TILES);
+      return { adapter, slow, recovered };
+    }
+
+    it("names the layer and its tiles, and is ended by one recovery", () => {
+      const { adapter, slow, recovered } = watched();
+      adapter.simulateTileLayerSlow("imagery");
+      expect(slow).toEqual([{ layerId: "imagery", tiles: TILES.tiles }]);
+      adapter.simulateTileLayerRecovery("imagery");
+      adapter.simulateTileLayerRecovery("imagery");
+      expect(recovered).toEqual([{ layerId: "imagery", tiles: TILES.tiles }]);
+    });
+
+    it("is reported once for the tiles the layer is set to, and not again once it has reported no tiles", () => {
+      const { adapter, slow } = watched();
+      adapter.simulateTileLayerSlow("imagery");
+      adapter.simulateTileLayerSlow("imagery");
+      expect(slow).toHaveLength(1);
+      adapter.setTileLayer("imagery", { ...TILES, tiles: "https://x.test/" });
+      adapter.simulateTileLayerFailure("imagery");
+      adapter.simulateTileLayerSlow("imagery");
+      expect(slow).toHaveLength(1);
+    });
+
+    it("says nothing for a layer that is not a drawn tile layer", () => {
+      const { adapter, slow } = watched();
+      adapter.setFeatureLayer("quakes", []);
+      adapter.simulateTileLayerSlow("quakes");
+      adapter.simulateTileLayerSlow("never-set");
+      adapter.removeLayer("imagery");
+      adapter.simulateTileLayerSlow("imagery");
+      expect(slow).toEqual([]);
+    });
+
+    it("is not recovered once the layer is set to other tiles", () => {
+      const { adapter, recovered } = watched();
+      adapter.simulateTileLayerSlow("imagery");
+      adapter.setTileLayer("imagery", { ...TILES, tiles: "https://x.test/" });
+      adapter.simulateTileLayerRecovery("imagery");
+      expect(recovered).toEqual([]);
+    });
   });
 
   it("starts from a default view before it is mounted", () => {

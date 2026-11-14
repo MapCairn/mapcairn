@@ -379,6 +379,31 @@ describe("MapDataLayers", () => {
     });
   });
 
+  describe("a tile layer the map found slow", () => {
+    const status = (layers: () => DataLayers) =>
+      layers().layers.find((item) => item.definition.id === "sample-imagery")
+        ?.status.kind;
+
+    it("shows the slow status when the map reports it, and clears it when a tile loads", () => {
+      const { adapter, layers } = setup();
+      act(() => layers().setEnabled("sample-imagery", true));
+      act(() => adapter.simulateTileLayerSlow("sample-imagery"));
+      expect(status(layers)).toBe("tiles-slow");
+      act(() => adapter.simulateTileLayerRecovery("sample-imagery"));
+      expect(status(layers)).toBe("on");
+    });
+
+    it("clears when the layer's tiles change, and shows again when the map reports the new ones", () => {
+      const { adapter, layers } = setup();
+      act(() => layers().setEnabled("sample-imagery", true));
+      act(() => adapter.simulateTileLayerSlow("sample-imagery"));
+      act(() => layers().setControl("sample-imagery", "date", "2026-01-02"));
+      expect(status(layers)).toBe("on");
+      act(() => adapter.simulateTileLayerSlow("sample-imagery"));
+      expect(status(layers)).toBe("tiles-slow");
+    });
+  });
+
   it("removes a layer from the map when it is turned off, and everything on unmount", async () => {
     const { adapter, layers, source, unmount } = setup();
     source.setFeatures("sample-points", [samplePoint("a")]);

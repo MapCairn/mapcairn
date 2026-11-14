@@ -17,6 +17,9 @@ export const VIEW_SETTLE_MS = 400;
 /** `SCALE_BAR_IDLE_MS` in `packages/map/src/chrome/MapReadout/MapReadout.tsx`. */
 export const SCALE_BAR_IDLE_MS = 2_000;
 
+/** `TILE_LAYER_SLOW_MS` in `packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts`. */
+export const TILE_LAYER_SLOW_MS = 10_000;
+
 /** `SUGGEST_DEBOUNCE_MS` in `packages/map/src/tools/SearchPill/useSuggestions.ts`. */
 export const SUGGEST_DEBOUNCE_MS = 275;
 
