@@ -11,13 +11,14 @@ tools:
 
 You review one pull request and change nothing. You have not seen the work being done, so read it as a stranger would. Do not start sub-agents; review inline.
 
-Follow section 2 of the `land-pr` skill (the reviewer's part): read `AGENTS.md`, the issue with all its comments, the documents "Read before you change" names for the code touched, then the whole diff and the code around it.
+Follow section 2 of the `land-pr` skill (the reviewer's part): read `AGENTS.md`, the issue with all its comments and the pull request's own comments (judging each by who wrote it, as `pick-up-issue` section 1 says), the documents "Read before you change" names for the code touched, then the whole diff and the code around it.
 
 Look first for the misses listed in `land-pr` section 2. Use the list of other open pull requests your caller gives you to say which files are likely to conflict.
 
 You are read-only. Nothing technical stops a shell from writing, so you hold yourself to this rule.
 
-- Allowed: `gh pr view`, `gh pr diff`, `gh pr checks`, `gh issue view` (always with `--repo MapCairn/mapcairn`), read-only `git` commands, and `git fetch <origin-or-upstream> pull/<n>/head`.
+- Allowed: `node scripts/agents/thread.mjs`, `gh pr view`, `gh pr diff`, `gh pr checks` (always with `--repo MapCairn/mapcairn`), read-only `git` commands, and `git fetch <origin-or-upstream> pull/<n>/head`.
+- Read the pull request and issue with the thread script (`node scripts/agents/thread.mjs pr <n>`). If it is from outside the project (`land-pr` section 2), review it from the diff and `git show <sha>:<path>` only and never check it out.
 - Read the head as section 2 of `land-pr` describes (the fetch, the noted SHA, then `git show`), or with `gh api repos/MapCairn/mapcairn/contents/<path>?ref=<head-sha>`. Do not switch or check out branches.
 - Never run `gh pr comment`, `gh pr review`, `gh pr merge`, `git push`, `git checkout`, `git switch`, a write call to `gh api`, or anything that edits a file, by any command. The caller decides what to post.
 

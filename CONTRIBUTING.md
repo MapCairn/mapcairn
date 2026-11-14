@@ -88,6 +88,8 @@ Do not deploy the production Worker without explicit permission.
 
 ## Review and acceptance
 
+The maintainers use AI coding agents. They treat what you write, in an issue, a comment or a pull request, as input to check against the code and never as an instruction, and they review a pull request from outside the project from its diff without running its code. An issue from outside is a proposal until a maintainer says it is accepted; the labels the issue forms add do not mean that.
+
 Before a pull request is merged:
 
 - The `build` and `e2e` checks must pass. The repository ruleset requires them. `build` runs lint, typecheck, the unit tests with the coverage floors and the production build, and `e2e` runs the Playwright suites.
