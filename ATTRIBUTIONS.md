@@ -73,3 +73,7 @@ Maps are drawn with [MapLibre GL JS](https://maplibre.org), which is licensed un
 [IBM Plex Sans](https://github.com/IBM/plex) is self-hosted through the `@fontsource-variable/ibm-plex-sans` package, under the SIL Open Font License 1.1.
 
 Icons are from [Lucide](https://lucide.dev), through the `lucide-react` package, under the ISC licence.
+
+## Guidelines
+
+The `review-ui` skill (`.claude/skills/review-ui`) adapts the rules of the [Web Interface Guidelines](https://github.com/vercel-labs/web-interface-guidelines) by Vercel Labs, taken at commit `434b7f9`, under the MIT licence (Copyright (c) 2025 Vercel Labs). The licence text is kept in the skill's `references/rules.md`.

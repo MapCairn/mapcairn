@@ -46,7 +46,10 @@ const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tok
  * sits a gap above the top of the whole bottom row, not just the button
  * (`bottomEndRise` is how far a taller neighbour, such as the readout with
  * the cursor coordinates, reaches above the button), so it never covers the
- * scale bar or the coordinates beside the button.
+ * scale bar or the coordinates beside the button. With
+ * `data-readout-clear="true"` (set when the popover starts a gap after the
+ * readout's end edge, so the two share no width) it sits only a step above
+ * the button, next to it, and the rise is left out.
  *
  * With `data-placement="beside"` (chosen when the list would scroll above the
  * button) its end edge moves a gap clear of the end stack's start edge, and
@@ -86,6 +89,9 @@ export const popover = style({
       transition: `opacity ${tokens.motion.duration.base} ${tokens.motion.easing}`,
     },
     "&:focus-visible": focusRing,
+    '&[data-readout-clear="true"]': {
+      insetBlockEnd: `calc(100% + ${tokens.space.xs})`,
+    },
     '&[data-placement="beside"]': {
       insetInlineEnd: besideOffset,
       maxWidth: `calc(${chromeVar(chromeVars.width, "100vw")} - 2 * ${tokens.space.inset} - ${besideOffset} - ${chromeVar(chromeVars.bottomStartX, "0px")})`,

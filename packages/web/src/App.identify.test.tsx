@@ -34,6 +34,12 @@ const RAIN: IdentifiableLayerDefinition = {
   name: "Sample rain",
 };
 const PLACE: LatLng = { lat: -33.9, lng: 18.4 };
+/**
+ * Fake time stepped past the announcer's window, which the SDK does not export:
+ * long enough for every queued message to go out, and free because the clock is
+ * faked.
+ */
+const ANNOUNCER_SETTLE_MS = 5_000;
 
 async function settle(): Promise<void> {
   await act(async () => {
@@ -86,6 +92,7 @@ const adapter = (services: FakeServices): FakeMapAdapter => {
 };
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -230,6 +237,14 @@ describe("App identify with the I key", () => {
   );
 
   it("keeps what the key says when another message follows it inside the announcer's window", async () => {
+    // The announcer spaces its messages by timers and reads the clock, so both
+    // are faked from before the app mounts and stepped by hand: a real wait
+    // would stretch with the load on the machine.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const advance = (ms: number) =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
     const services = await renderApp([SAMPLE_FEED_LAYER]);
     const heard: string[] = [];
     const region_ = screen.getByTestId("live-region-polite");
@@ -245,7 +260,7 @@ describe("App identify with the I key", () => {
     });
     // Let what mounting said go out, so the pin's message is the one that opens
     // the window.
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await advance(ANNOUNCER_SETTLE_MS);
     heard.length = 0;
     // The pin's message opens the window, the key's waits in it, and the second
     // pin's (a different place, so not a repeat) would replace it if it were not kept.
@@ -255,7 +270,8 @@ describe("App identify with the I key", () => {
       adapter(services).setView({ center: { lat: 10, lng: 20 }, zoom: 6 }),
     );
     fireEvent.keyDown(region(), { key: "p" });
-    await vi.waitFor(() => expect(heard).toHaveLength(3), { timeout: 4000 });
+    await advance(ANNOUNCER_SETTLE_MS);
+    expect(heard).toHaveLength(3);
     expect(heard).toContain("No features at the centre of the map.");
   });
 

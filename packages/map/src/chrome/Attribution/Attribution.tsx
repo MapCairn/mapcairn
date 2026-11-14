@@ -9,6 +9,7 @@ import {
 import { Info } from "lucide-react";
 import {
   type KeyboardEvent,
+  type RefObject,
   useCallback,
   useEffect,
   useId,
@@ -19,6 +20,7 @@ import {
 import { useMap } from "../../host";
 import { usePreferences } from "../../services";
 import { IconButton } from "../../ui";
+import { CHROME_GAP_PX } from "../chromeSpacing";
 import * as styles from "./Attribution.css";
 
 /**
@@ -50,6 +52,63 @@ function sameView(a: ViewState, b: ViewState): boolean {
   );
 }
 
+/**
+ * Whether the open credits popover starts a gap after the end edge of the
+ * readout in bottom-start, so the two share no width and the popover need not
+ * rise over the readout's height. True when the chrome has no readout. It is
+ * measured before the popover is painted and again whenever the popover, the
+ * readout or the chrome changes size (the cursor coordinates widen the readout
+ * as the pointer enters the map) and whenever the readout finishes sliding
+ * sideways (the side panel opening or closing moves it with a transform and
+ * no change of size). Nothing is observed while the popover is closed.
+ */
+function useClearOfReadout(
+  regionRef: RefObject<HTMLElement | null>,
+  open: boolean,
+  placement: Placement,
+): boolean {
+  const [clear, setClear] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the placement moves the popover sideways, which is what is measured.
+  useLayoutEffect(() => {
+    const region = regionRef.current;
+    if (!open || region === null) {
+      return;
+    }
+    const chrome = region.closest("[data-chrome-root]");
+    const readout =
+      chrome?.querySelector<HTMLElement>('[data-chrome="bottom-start"]') ??
+      null;
+    const measure = () => {
+      setClear(
+        readout === null ||
+          region.getBoundingClientRect().left >=
+            readout.getBoundingClientRect().right + CHROME_GAP_PX,
+      );
+    };
+    measure();
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target === readout && event.propertyName === "transform") {
+        measure();
+      }
+    };
+    readout?.addEventListener("transitionend", onTransitionEnd);
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(measure);
+    for (const element of [region, chrome, readout]) {
+      if (element) {
+        observer?.observe(element);
+      }
+    }
+    return () => {
+      readout?.removeEventListener("transitionend", onTransitionEnd);
+      observer?.disconnect();
+    };
+  }, [open, placement, regionRef]);
+  return clear;
+}
+
 const NO_CREDITS: readonly LayerAttribution[] = [];
 
 /** Props for {@link Attribution}. */
@@ -76,8 +135,12 @@ export interface AttributionProps {
  *   open as if the person had opened it.
  *
  *   After that it behaves as a popover the person opens. It opens above the
- *   bottom row, clear of the readout beside the button. If the credits would
- *   scroll there, it moves beside the end stack before it is painted, where
+ *   bottom row, clear of the readout beside the button; where it starts a gap
+ *   after the readout's end edge, so the two share no width, it sits next to
+ *   the button instead of rising over the readout's height, and it is
+ *   measured again when the readout resizes or slides sideways. If the
+ *   credits would scroll there, it moves beside the end stack before it is
+ *   painted, where
  *   `MapChrome` measures more room; it scrolls only if that is not enough
  *   either. Opening moves focus to the first link.
  *   The popover closes on Escape, on a second press of the button, on a
@@ -106,6 +169,7 @@ export function Attribution({
   const regionId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const regionRef = useRef<HTMLElement>(null);
+  const clearOfReadout = useClearOfReadout(regionRef, open, placement);
   const openedOnView = useRef(view);
   const introShown = useRef(false);
   // A credit the basemap already gives, such as OpenStreetMap's, is listed
@@ -282,6 +346,7 @@ export function Attribution({
         hidden={!open}
         data-chrome="attribution-popover"
         data-placement={placement}
+        data-readout-clear={clearOfReadout ? "true" : undefined}
         data-closing={fading ? "true" : undefined}
         className={styles.popover}
       >
