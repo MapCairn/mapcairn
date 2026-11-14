@@ -43,8 +43,12 @@ jobs:
     timeout-minutes: 30
     # The image carries the browsers and their system packages, so the job no
     # longer downloads them from Ubuntu's mirrors, which are unreliable from the runners.
+    #
+    # The image is pinned by tag, not by digest, and stays that way: the tag is
+    # built at run time from the version in the lockfile, so no digest can be
+    # written in this file without a second copy of that version to keep in step.
     container:
-      image: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-noble
+      image: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-noble # zizmor: ignore[unpinned-images] tag built from the lockfile version at run time
       options: --init --ipc=host
     env:
       HOME: /root
@@ -74,7 +78,9 @@ jobs:
           npm ci
 
       - name: Run Playwright tests (shard ${{ matrix.shard }} of 4)
-        run: npm run test:e2e -w @mapcairn/web -- --shard=${{ matrix.shard }}/4
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: npm run test:e2e -w @mapcairn/web -- --shard="${SHARD}/4"
 
       - name: Upload Playwright test results
         if: failure()
