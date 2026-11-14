@@ -23,6 +23,17 @@ describe("cleanText", () => {
     expect(cleanText(`a${tags}b­c️d`)).toBe("abcd");
   });
 
+  it("drops a comment hidden inside another comment marker, not only the outer one", () => {
+    expect(cleanText("a<!<!-- x -->-- y -->b")).toBe("ab");
+    expect(cleanText("a<!<!<!-- x -->-- y -->-- z -->b")).toBe("ab");
+  });
+
+  it("drops invisible fillers and joiners that render as nothing", () => {
+    expect(cleanText("a\u034fb\u061cc\u115fd\u1160e\u3164f\uffa0g")).toBe(
+      "abcdefg",
+    );
+  });
+
   it("leaves ordinary text, accents and emoji alone", () => {
     expect(cleanText("Café 😀 naïve")).toBe("Café 😀 naïve");
   });

@@ -27,6 +27,11 @@ const HIDDEN_RANGES = [
   [0x200b, 0x200f],
   [0x2028, 0x202e],
   [0x2060, 0x2069],
+  [0x034f, 0x034f],
+  [0x061c, 0x061c],
+  [0x115f, 0x1160],
+  [0x3164, 0x3164],
+  [0xffa0, 0xffa0],
   [0xfe00, 0xfe0f],
   [0xfeff, 0xfeff],
   [0xe0000, 0xe01ef],
@@ -40,7 +45,15 @@ const HIDDEN_RANGES = [
  * @returns {string}
  */
 export function cleanText(text) {
-  return Array.from(text.replace(HTML_COMMENT, ""))
+  let withoutComments = text;
+  for (;;) {
+    const next = withoutComments.replace(HTML_COMMENT, "");
+    if (next === withoutComments) {
+      break;
+    }
+    withoutComments = next;
+  }
+  return Array.from(withoutComments)
     .filter((character) => {
       const point = character.codePointAt(0) ?? 0;
       return !HIDDEN_RANGES.some(([from, to]) => point >= from && point <= to);
@@ -77,16 +90,35 @@ function gh(args) {
 
 /**
  * @param {string} path
- * @returns {any[]}
+ * @returns {any[] | null} The items, or null when the call failed (so a failure is never read as an empty list).
  */
 function listAll(path) {
   const out = gh(["api", path, "--paginate", "--jq", ".[]"]);
-  return out
-    ? out
+  return out === null
+    ? null
+    : out
         .split("\n")
         .filter(Boolean)
-        .map((line) => JSON.parse(line))
-    : [];
+        .map((line) => JSON.parse(line));
+}
+
+/**
+ * Prints each item of a list, or says the list is unavailable.
+ *
+ * @param {string} name
+ * @param {any[] | null} items
+ * @param {(item: any) => string} show
+ */
+function printAll(name, items, show) {
+  if (items === null) {
+    console.log(
+      `${name} unavailable (the call failed): do not rely on this thread and do not merge`,
+    );
+    return;
+  }
+  for (const item of items) {
+    console.log(show(item));
+  }
 }
 
 /** @returns {Set<string> | null} */
@@ -130,9 +162,11 @@ function printIssue(number, people) {
   console.log(`# ${issue.state ?? "?"} #${number}`);
   console.log(line(people, { ...issue, body: issue.title }, "title: "));
   console.log(line(people, issue, "body: "));
-  for (const comment of listAll(`repos/${REPO}/issues/${number}/comments`)) {
-    console.log(line(people, comment, "comment: "));
-  }
+  printAll(
+    "comments",
+    listAll(`repos/${REPO}/issues/${number}/comments`),
+    (comment) => line(people, comment, "comment: "),
+  );
 }
 
 /**
@@ -144,40 +178,56 @@ function printPullRequest(number, people) {
   const pull = JSON.parse(gh(["api", `repos/${REPO}/pulls/${number}`]) ?? "{}");
   const headRepo = pull.head?.repo?.full_name ?? "unknown";
   const commits = listAll(`repos/${REPO}/pulls/${number}/commits`);
-  const outsideCommits = commits.filter(
-    (commit) => !people?.has((commit.author?.login ?? "").toLowerCase()),
-  ).length;
-  console.log(
-    `head: ${headRepo} (${headRepo === REPO ? "this repository" : "another repository"}), ${outsideCommits} of ${commits.length} commits by logins outside the project; a pull request with any of these is reviewed as outside`,
-  );
-  for (const review of listAll(`repos/${REPO}/pulls/${number}/reviews`)) {
-    console.log(line(people, review, `review ${review.state}: `));
-  }
-  for (const comment of listAll(`repos/${REPO}/pulls/${number}/comments`)) {
+  if (commits === null) {
     console.log(
+      "commits unavailable (the call failed): treat the pull request as from outside and do not merge",
+    );
+  } else {
+    const outsideCommits = commits.filter(
+      (commit) => !people?.has((commit.author?.login ?? "").toLowerCase()),
+    ).length;
+    console.log(
+      `head: ${headRepo} (${headRepo === REPO ? "this repository" : "another repository"}), ${outsideCommits} of ${commits.length} commits by logins outside the project; a pull request with any of these is reviewed as outside`,
+    );
+  }
+  printAll(
+    "reviews",
+    listAll(`repos/${REPO}/pulls/${number}/reviews`),
+    (review) => line(people, review, `review ${review.state}: `),
+  );
+  printAll(
+    "review comments",
+    listAll(`repos/${REPO}/pulls/${number}/comments`),
+    (comment) =>
       line(
         people,
         comment,
         `review comment ${comment.path}:${comment.line ?? "?"}: `,
       ),
-    );
-  }
+  );
   const threads = gh([
     "api",
     "graphql",
     "-F",
     `number=${number}`,
     "-f",
-    `query=query($number:Int!){repository(owner:"MapCairn",name:"mapcairn"){pullRequest(number:$number){reviewThreads(first:100){nodes{isResolved path comments(first:1){nodes{author{login} body}}}}}}}`,
+    `query=query($number:Int!){repository(owner:"MapCairn",name:"mapcairn"){pullRequest(number:$number){reviewThreads(first:100){nodes{isResolved path comments(first:20){nodes{author{login} body}}}}}}}`,
     "--jq",
     ".data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not)",
   ]);
-  for (const text of (threads ?? "").split("\n").filter(Boolean)) {
-    const thread = JSON.parse(text);
-    const first = thread.comments?.nodes?.[0];
+  if (threads === null) {
     console.log(
-      `unresolved thread ${thread.path}: ${formatItem(first?.author?.login ?? "unknown", "n/a", first?.body, people)}`,
+      "threads unavailable (the call failed): do not merge until the unresolved review threads are known",
     );
+    return;
+  }
+  for (const text of threads.split("\n").filter(Boolean)) {
+    const thread = JSON.parse(text);
+    for (const comment of thread.comments?.nodes ?? []) {
+      console.log(
+        `unresolved thread ${thread.path}: ${formatItem(comment.author?.login ?? "unknown", "n/a", comment.body, people)}`,
+      );
+    }
   }
 }
 

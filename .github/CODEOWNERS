@@ -21,6 +21,8 @@
 /packages/*/package.json @MapCairn/maintainers
 /examples/*/package.json @MapCairn/maintainers
 /vitest.config.ts @MapCairn/maintainers
+/packages/*/*.config.ts @MapCairn/maintainers
+/packages/core/src/lint/ @MapCairn/maintainers
 /biome.jsonc @MapCairn/maintainers
 /.dependency-cruiser.cjs @MapCairn/maintainers
 /wrangler*.jsonc @MapCairn/maintainers
