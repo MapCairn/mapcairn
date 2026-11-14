@@ -858,6 +858,31 @@ describe("parseShapeFile with WKT text", () => {
     });
   });
 
+  it("skips a collection with an unsupported member whole, over several lines, and counts it once", () => {
+    expect(
+      parseShapeFile(
+        "GEOMETRYCOLLECTION (\nPOINT (1 1),\nPOINT M (1 2 3),\nLINESTRING (0 0, 1 1)\n)\nPOINT (9 9)",
+      ),
+    ).toEqual({
+      ok: true,
+      shapes: [{ kind: "point", vertices: [p(9, 9)] }],
+      skipped: { unsupported: 1 },
+      holesDropped: 0,
+    });
+  });
+
+  it("stops reading at the cap when every stretch is one that cannot be used", () => {
+    const lines = (count: number) => "POINT M (1 2 3)\n".repeat(count);
+    expect(parseShapeFile(lines(500))).toMatchObject({
+      ok: false,
+      refusal: "wkt-unreadable",
+    });
+    expect(parseShapeFile(lines(501))).toEqual({
+      ok: false,
+      refusal: "too-many-shapes",
+    });
+  });
+
   it("refuses the whole file for a measure or a curve when nothing else can be read, and says why", () => {
     const measure = "Coordinates with a measure (M) are not supported.";
     const curve = "The WKT type CIRCULARSTRING is not supported.";

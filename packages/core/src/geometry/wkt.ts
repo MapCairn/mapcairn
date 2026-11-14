@@ -98,10 +98,11 @@ function splitSuffix(word: string): [string, string] {
 }
 
 /**
- * A geometry type word, or the `SRID` of an EWKT prefix with its `=`, after
- * any white space on the same line. Sticky, so it matches at an offset.
+ * A geometry type word, or the `SRID` of an EWKT prefix with its `=` (which
+ * may be on a later line, as the reader allows), after any white space on the
+ * same line. Sticky, so it matches at an offset.
  */
-const GEOMETRY_START = /[^\S\r\n]*([A-Za-z]+)([^\S\r\n]*=)?/y;
+const GEOMETRY_START = /[^\S\r\n]*([A-Za-z]+)(\s*=)?/y;
 
 /** The only SRID the reader accepts: WGS 84, which WKT without a prefix is in. */
 export const SUPPORTED_WKT_SRID = 4326;
@@ -217,6 +218,20 @@ function punctuationOf(character: string): Punctuation | undefined {
  * It never goes back over text, so the whole parse is linear in the length of
  * the input, whatever the input holds.
  */
+/** How a skip over the rest of a geometry ended; see `Reader.#skipTokens`. */
+type SkipOutcome = "closed" | "stopped" | "ran-out";
+
+/** The state of a {@link Tokens} at one moment. */
+interface TokensMark {
+  readonly index: number;
+  readonly peeked: Token | undefined;
+  readonly depth: number;
+  readonly taken: number;
+  readonly lastAt: number;
+  readonly lastFirst: boolean;
+  readonly lineStart: boolean;
+}
+
 class Tokens {
   readonly #text: string;
   #index = 0;
@@ -255,6 +270,30 @@ class Tokens {
   /** How many brackets are open among the tokens taken since {@link startGeometry}. */
   get depth(): number {
     return this.#depth;
+  }
+
+  /** Where the tokenizer is, so {@link reset} can come back to it. */
+  mark(): TokensMark {
+    return {
+      index: this.#index,
+      peeked: this.#peeked,
+      depth: this.#depth,
+      taken: this.#taken,
+      lastAt: this.#lastAt,
+      lastFirst: this.#lastFirst,
+      lineStart: this.#lineStart,
+    };
+  }
+
+  /** Goes back to a place noted by {@link mark}. */
+  reset(mark: TokensMark): void {
+    this.#index = mark.index;
+    this.#peeked = mark.peeked;
+    this.#depth = mark.depth;
+    this.#taken = mark.taken;
+    this.#lastAt = mark.lastAt;
+    this.#lastFirst = mark.lastFirst;
+    this.#lineStart = mark.lineStart;
   }
 
   /** Starts counting brackets and tokens afresh, for the next geometry. */
@@ -413,6 +452,7 @@ type Dimensions = "any" | "z";
 class Reader {
   readonly #tokens: Tokens;
   readonly #latitudeFirst: boolean;
+  #bracketsStayOpen = false;
 
   constructor(text: string, axisOrder: WktAxisOrder) {
     this.#tokens = new Tokens(text);
@@ -475,9 +515,9 @@ class Reader {
   /**
    * Moves past a geometry that failed. One that is valid WKT the reader leaves
    * out (a measure, a curve, another SRID) is skipped to its closing bracket,
-   * so geometries after it on the same line are kept; if its brackets do not
-   * close on the line it began on, or the text is damaged, reading goes on at
-   * the next line that starts a geometry.
+   * so geometries after it are kept, on the same line or not; if its brackets
+   * never close, or the text is damaged, reading goes on at the next line that
+   * starts a geometry.
    */
   #recover(error: GeometryError, start: number): void {
     if (error.kind === "unsupported" && this.#skipGeometry(start)) {
@@ -488,20 +528,49 @@ class Reader {
 
   /**
    * Takes the tokens that are left of a geometry: up to the bracket that
-   * closes it, or an `EMPTY` outside any bracket. Gives up, returning false,
-   * at the end of the line the geometry began on or of the text.
+   * closes it, or an `EMPTY` outside any bracket. Outside any bracket the
+   * skip gives up, returning false, at the end of the line the geometry began
+   * on; once a bracket is open it goes on over lines to the one that closes it,
+   * so a collection or a curve written over several lines is skipped whole. If
+   * that bracket never closes, the skip is done again as if brackets could not
+   * span lines, and every later skip is too, so the rest of the text is read
+   * at most once more however many geometries are left open.
    */
   #skipGeometry(start: number): boolean {
     const end = this.#tokens.lineEndFrom(start);
+    if (!this.#bracketsStayOpen) {
+      const from = this.#tokens.mark();
+      const outcome = this.#skipTokens(end, true);
+      if (outcome !== "ran-out") {
+        return outcome === "closed";
+      }
+      this.#bracketsStayOpen = true;
+      this.#tokens.reset(from);
+    }
+    return this.#skipTokens(end, false) === "closed";
+  }
+
+  /**
+   * Takes tokens until the geometry is closed (`closed`), until it gives up at
+   * the end of the line outside a bracket, or at the end of the text, or at
+   * a character that cannot be read (`stopped`), or until the text or a
+   * character that cannot be read ends it inside a bracket that stretched past
+   * the line, which only a skip that may span lines can reach (`ran-out`).
+   */
+  #skipTokens(end: number, spanLines: boolean): SkipOutcome {
     for (;;) {
+      const inBracket = spanLines && this.#tokens.depth > 0;
       let token: Token;
       try {
         token = this.#tokens.peek();
       } catch {
-        return false;
+        return inBracket ? "ran-out" : "stopped";
       }
-      if (token.kind === "end" || token.at >= end) {
-        return false;
+      if (token.kind === "end") {
+        return inBracket ? "ran-out" : "stopped";
+      }
+      if (token.at >= end && !inBracket) {
+        return "stopped";
       }
       this.#tokens.next();
       const closed =
@@ -510,7 +579,7 @@ class Reader {
           token.text.toUpperCase() === "EMPTY" &&
           this.#tokens.depth === 0);
       if (closed) {
-        return true;
+        return "closed";
       }
     }
   }
@@ -796,12 +865,14 @@ export function readWktSequence(
  *
  * A geometry that is valid WKT the reader leaves out (a measure, a curved
  * type, a SRID other than 4326) is skipped to its closing bracket, so the
- * geometries after it, on the same line or not, are kept. A bracket that has
- * not closed by the end of the line the geometry began on ends the skip
- * there. Text that is damaged is skipped up to the next line that starts with
- * a geometry type or an `SRID=` prefix, and counts as one stretch. Text with
- * a character the reader does not know is damaged in the same way. Nothing is
- * read twice, so the time grows with the length of the text.
+ * geometries after it, on the same line or not, are kept; once a bracket of it
+ * is open the skip goes on over lines, so a collection written over several
+ * lines is skipped whole. A bracket that never closes ends the skip at the
+ * end of the line the geometry began on. Text that is damaged is skipped up
+ * to the next line that starts with a geometry type or an `SRID=` prefix, and
+ * counts as one stretch. Text with a character the reader does not know is
+ * damaged in the same way. The time grows with the length of the text, however
+ * many geometries are left open.
  *
  * The text always gives at least one reading: an error for empty text.
  *
