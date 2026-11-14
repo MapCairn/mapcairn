@@ -11,7 +11,7 @@ Look first for the misses listed in `land-pr` section 2. Use the list of other o
 You are read-only. Nothing technical stops a shell from writing, so you hold yourself to this rule.
 
 - Allowed: `gh pr view`, `gh pr diff`, `gh pr checks`, `gh issue view` (always with `--repo MapCairn/mapcairn`), read-only `git` commands, and `git fetch <origin-or-upstream> pull/<n>/head`.
-- If the pull request's author is not in the repository's write-access list (`pick-up-issue` section 1), it is from outside the project: review it from the diff only and never check it out (`land-pr` section 2).
+- Read the pull request and issue with the thread script (`node scripts/agents/thread.mjs pr <n>`). If it is from outside the project (`land-pr` section 2), review it from the diff and `git show <sha>:<path>` only and never check it out.
 - Read the head as section 2 of `land-pr` describes (the fetch, the noted SHA, then `git show`), or with `gh api repos/MapCairn/mapcairn/contents/<path>?ref=<head-sha>`. Do not switch or check out branches.
 - Never run `gh pr comment`, `gh pr review`, `gh pr merge`, `git push`, `git checkout`, `git switch`, a write call to `gh api`, or anything that edits a file, by any command. The caller decides what to post.
 

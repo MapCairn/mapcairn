@@ -12,7 +12,16 @@
 /.opencode/ @MapCairn/maintainers
 /.qwen/ @MapCairn/maintainers
 /.github/ @MapCairn/maintainers
+/.vscode/ @MapCairn/maintainers
 /scripts/ @MapCairn/maintainers
 /lefthook.yml @MapCairn/maintainers
 /.npmrc @MapCairn/maintainers
 /package.json @MapCairn/maintainers
+/package-lock.json @MapCairn/maintainers
+/packages/*/package.json @MapCairn/maintainers
+/examples/*/package.json @MapCairn/maintainers
+/vitest.config.ts @MapCairn/maintainers
+/biome.jsonc @MapCairn/maintainers
+/.dependency-cruiser.cjs @MapCairn/maintainers
+/wrangler*.jsonc @MapCairn/maintainers
+/docs/guides/working-with-agents.md @MapCairn/maintainers
