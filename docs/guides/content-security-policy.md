@@ -6,7 +6,7 @@ The reference host is the worked example. Its policy is `packages/web/public/_he
 
 ## The shape of the policy
 
-The reference host sends one strict policy on every response (`_headers`):
+The reference host sends one strict policy, with a nonce added on rendered pages, on every response: the static copy in `_headers` for the responses served straight from assets, and a per-request copy with a nonce for the pages it renders (`entry.server.tsx`):
 
 - `default-src 'self'`, so anything not named below falls back to the site's own origin and fails closed.
 - `script-src`, `style-src 'self'`, `img-src`, `font-src 'self'`, `connect-src` and `worker-src`, covered one by one below.
@@ -14,7 +14,7 @@ The reference host sends one strict policy on every response (`_headers`):
 
 Two of the closing set carry a detail worth copying. `frame-src 'none'` is written out, not inherited, so it does not fall back to `child-src`, which also governs workers (`securityHeaders.ts`). And the worker section of the policy is not idle: a worker script enforces the Content Security Policy of its own response, so the origin lists below reach the engine's fetching inside the worker too.
 
-Besides the policy itself the host sends `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, a referrer policy, a Permissions-Policy that keeps camera and microphone off and geolocation on the same origin, and the cross-origin headers (`_headers`).
+Besides the policy itself the host sends `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, a referrer policy, a Permissions-Policy that keeps camera and microphone off and geolocation on the same origin, `Strict-Transport-Security: max-age=31536000; includeSubDomains` and the cross-origin headers (`_headers`). The policy sets neither `upgrade-insecure-requests` nor a reporting directive, and no file in the repository records a decision about either.
 
 ## script-src
 
@@ -32,25 +32,31 @@ In development the policy is relaxed by the `development` option of `buildConten
 
 Without `'unsafe-inline'`, two things a host might otherwise reach for are blocked: a `<style>` element and a `style=""` attribute written into markup. Styling through the CSS object model still works. The adapter sizes the hidden container it builds an image-export map in by assigning to `element.style`, which the production policy allows, unlike a `style` attribute (`imageExport.ts`).
 
+The SDK keeps style attributes out of server-rendered markup for this reason, and its tests require it: the map host, the chrome, the sheet, the readout and the served pages are each asserted to render none (`MapView.tsx`, `MapChrome.test.tsx`, `Sheet.test.tsx`, `MapReadout.test.tsx` and `ChromeSkeleton.test.tsx` in `packages/map`; `root.test.tsx`, `home.test.tsx` and the e2e `design.spec.ts` in `packages/web`). The one React style prop in the SDK, the fill custom property of the slider track (`Slider.tsx`), reaches the page only in the browser: the sections that hold it are not server-rendered, and the server sends a decorative skeleton in their place (`home.test.tsx`). How React applies a style prop in the browser was not checked.
+
 ## img-src
 
 `'self'`, then `data:`, then `blob:`, then one origin per tile provider the host serves. Raster tiles, basemap and layer alike, are requested as images, so each tile origin goes here; the reference host's definition loop test requires a tile layer's origin in `img-src` as well as in `connect-src` and names the file to add it to (`layers.test.ts`).
 
 The two URL schemes are for the engine's own image handling: it decodes some images from data URLs and loads others from blob object URLs it creates itself. Both uses are in the engine's source, not in this repository's files, and they were not checked in a running browser; a host that trims them should watch its console for a report saying an image was refused.
 
+Leave a tile origin out of `img-src` and those tiles do not load. That consequence was reasoned from the policy, not checked in a browser; the loop test requires the origin in this list and in `connect-src` and names the files to add it to (`layers.test.ts`).
+
 ## font-src
 
 `'self'`, because the host serves its own type. The design tokens name IBM Plex Sans Variable, which the host bundles from its font package; the reference host preloads the Latin face from the same file its stylesheet names (`fontPreload.ts`). Map labels need no entry here: a label is drawn from glyph ranges the style's glyph server serves, which are fetched like other data, so the glyph host's origin goes in `connect-src`. The adapter draws labels only when the loaded style has a glyph source and a literal font stack, so a raster basemap asks for none (`MapLibreMapAdapter.ts`). A host that loads a font from a provider's origin adds that origin here.
+
+Leave a font origin out and its font does not load, so the type falls back to the system font (`extending.md`).
 
 ## connect-src
 
 `'self'`, then every origin anyone fetches from:
 
-- Each tile origin, again: the reference host's loop test requires a tile origin in `connect-src` as well as `img-src` (`layers.test.ts`). The engine fetches inside its worker, whose policy is its own response's, so the same list has to cover the fetches as well as the image loads.
-- Each basemap's style hosts: a vector style URL is fetched, and a style brings its sprites, glyphs and terrain from hosts of its own. When you add a basemap, read the style and its tile sets for every host it requests and allow each in `connect-src` (`extending.md`).
+- Each tile origin, again: the reference host's loop test requires a tile origin in `connect-src` as well as `img-src` (`layers.test.ts`). The engine fetches inside its worker, whose policy is its own response's, so the same list has to cover the fetches as well as the image loads. Leave an origin out and the requests it carries are refused; reasoned from the policy, not checked in a browser.
+- Each basemap's style hosts: a vector style URL is fetched, and a style brings its sprites, glyphs and terrain from hosts of its own. When you add a basemap, read the style and its tile sets for every host it requests and allow each in `connect-src` (`extending.md`). Leave a style's own host out and that basemap does not load: the adapter treats a style document that failed as a failed mount or basemap swap (`MapLibreMapAdapter.ts`).
 - Each layer's feed, detail and identify origins (`layers.test.ts`).
 - The origins of the host's own adapters: place search, suggestions and routing. The reference host allows one origin per adapter (`securityHeaders.ts`).
-- The origins of any analytics the host runs. The reference host allows its analytics' connect origin beside its script origin (`securityHeaders.ts`).
+- The origins of any analytics the host runs. The reference host allows its analytics' two connect origins beside its script origin (`securityHeaders.ts`).
 
 The reference host's list also includes the content delivery network one of its layer definitions serves its data file from (`world-countries.ts`). Every origin in the policy is named by something the host offers: a definition, an adapter or the analytics it chose. Nothing is allowed "in case".
 
@@ -59,6 +65,8 @@ The reference host's list also includes the content delivery network one of its 
 `'self' blob:`, for the engine's worker. MapLibre runs its work in a web worker. The adapter points the engine at a worker file the build emits as a self-contained same-origin asset, so `'self'` covers it, including on iOS; the engine is told the worker's URL before any map exists, because without that it finds no worker inside a bundle and the map stays blank (`MapLibreMapAdapter.ts`). The `blob:` entry is kept because the engine can also start a worker from a blob URL, for example when the worker file is not on the page's origin; this path is in the engine's source and was not checked in a running browser.
 
 The subtle part is caching. A worker script takes its policy from its own response, and the worker file is cached as immutable, so a copy fetched before the policy changed would keep enforcing the old one for as long as it is cached. The reference host adds a short cache key, derived from the policy, to the worker URL, so every policy change is a new address and no device is left on a stale policy (`workerCacheKey.ts`). A host building its own adapter should keep the worker same-origin and do the same.
+
+Leave `worker-src` out and the engine's worker never loads, which the adapter treats as fatal, so the map stays blank (`MapLibreMapAdapter.ts`). Reasoned from the adapter's code, not checked in a browser.
 
 ## The nonce question
 
@@ -81,4 +89,4 @@ Then test it. The reference host's loop test checks its own definitions against 
 
 ## What this guide does not say
 
-It was written from the repository's own files, named beside each claim above, and from the engine's source for the engine's internal behaviour it names: the `data:` and `blob:` image loads, the blob worker, and the fetching done inside the worker, glyph ranges included. No page was loaded under a policy while writing it, and none of the origin lists is reproduced here: read your own policy from your own files.
+It was written from the repository's own files, named beside each claim above, and from the engine's source for the engine's internal behaviour it names: the `data:` and `blob:` image loads, the blob worker, and the fetching done inside the worker, glyph ranges included. The sentences about what breaks when a directive is missing were reasoned from the adapter's code and the tests, not checked in a browser. No page was loaded under a policy while writing it, and none of the origin lists is reproduced here: read your own policy from your own files.
