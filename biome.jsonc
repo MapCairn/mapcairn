@@ -11,6 +11,7 @@
     "rules": {
       "preset": "recommended",
       "correctness": {
+        "noReactPropAssignments": "error",
         "useExhaustiveDependencies": "warn"
       },
       "a11y": {
@@ -156,6 +157,8 @@
           "options": { "allow": ["error", "warn"] }
         },
         "noDocumentCookie": "error",
+        "noDuplicateDependencies": "error",
+        "noImportCycles": "error",
         "noLeakedRender": "error",
         "noShadow": "error"
       },
