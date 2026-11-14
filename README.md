@@ -68,6 +68,7 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, ports and adapters, the map adapter, adding an adapter |
 | [`DESIGN.md`](DESIGN.md) | Tokens, layout slots, accessibility contracts and the lint rules |
 | [`docs/guides/extending.md`](docs/guides/extending.md) | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, layers supplied at runtime, a routing provider or an adapter |
+| [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md) | The directives a page hosting the SDK needs in its Content Security Policy, and why: script, style, images, fonts, the origins it fetches from, the engine's worker and the nonce question |
 | [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md) | Which layer kind to serve from your own server, from raster tiles to GeoJSON by bounding box, and what each costs the server |
 | [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, choosing between features at one place, and drawing, importing and exporting shapes |
 | [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md) | What an industry-grade GIS application needs, what MapCairn has, partly has or lacks, the issue for each gap, and a proposed order for the SDK work |
