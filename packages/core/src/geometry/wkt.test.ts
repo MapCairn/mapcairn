@@ -923,6 +923,43 @@ describe("readWktRecovering", () => {
     ).toEqual(["unsupported", "Point", "unsupported", "Point"]);
   });
 
+  it("reads a collection the same way after a geometry whose brackets never close", () => {
+    const collection =
+      "GEOMETRYCOLLECTION (\nPOINT (1 1),\nPOINT M (1 2 3),\nLINESTRING (0 0, 1 1)\n)\nPOINT (9 9)";
+    expect(kinds(collection)).toEqual(["unsupported", "Point"]);
+    expect(kinds(`POINT M (1 2\n${collection}`)).toEqual([
+      "unsupported",
+      "unsupported",
+      "Point",
+    ]);
+    expect(readings(`POINT M (1 2\n${collection}`)[2]).toEqual({
+      type: "Point",
+      coordinates: [9, 9],
+    });
+  });
+
+  it("reads a curve over several lines the same way after a geometry whose brackets never close", () => {
+    const curve =
+      "CIRCULARSTRING (\n0 0,\n1 1,\n2 0\n) POINT (5 5)\nPOINT (6 6)";
+    expect(kinds(curve)).toEqual(["unsupported", "Point", "Point"]);
+    expect(kinds(`POINT M (1 2\n${curve}`)).toEqual([
+      "unsupported",
+      "unsupported",
+      "Point",
+      "Point",
+    ]);
+  });
+
+  it("reads a collection the same way after a character it does not know inside a bracket", () => {
+    const collection =
+      "GEOMETRYCOLLECTION (\nPOINT (1 1),\nPOINT M (1 2 3),\nLINESTRING (0 0, 1 1)\n)\nPOINT (9 9)";
+    expect(kinds(`POINT M (1 @ 2)\n${collection}`)).toEqual([
+      "unsupported",
+      "unsupported",
+      "Point",
+    ]);
+  });
+
   it("reads a long run of geometries whose brackets never close in time proportional to its length", () => {
     // Regression guard: looking for a bracket that is not there from every
     // geometry would read the rest of the text each time.

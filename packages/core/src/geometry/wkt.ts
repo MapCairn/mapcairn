@@ -213,11 +213,6 @@ function punctuationOf(character: string): Punctuation | undefined {
   }
 }
 
-/**
- * Reads tokens one at a time, left to right, with one token of look-ahead.
- * It never goes back over text, so the whole parse is linear in the length of
- * the input, whatever the input holds.
- */
 /** How a skip over the rest of a geometry ended; see `Reader.#skipTokens`. */
 type SkipOutcome = "closed" | "stopped" | "ran-out";
 
@@ -232,6 +227,12 @@ interface TokensMark {
   readonly lineStart: boolean;
 }
 
+/**
+ * Reads tokens one at a time, left to right, with one token of look-ahead.
+ * It goes back over text only to a place it was asked to note ({@link mark}),
+ * and only for a skip the reader pays for out of a budget, so the whole parse
+ * is linear in the length of the input, whatever the input holds.
+ */
 class Tokens {
   readonly #text: string;
   #index = 0;
@@ -270,6 +271,11 @@ class Tokens {
   /** How many brackets are open among the tokens taken since {@link startGeometry}. */
   get depth(): number {
     return this.#depth;
+  }
+
+  /** The length of the text. */
+  get length(): number {
+    return this.#text.length;
   }
 
   /** Where the tokenizer is, so {@link reset} can come back to it. */
@@ -452,7 +458,8 @@ type Dimensions = "any" | "z";
 class Reader {
   readonly #tokens: Tokens;
   readonly #latitudeFirst: boolean;
-  #bracketsStayOpen = false;
+  #tokensSpent = 0;
+  #tokensWasted = 0;
 
   constructor(text: string, axisOrder: WktAxisOrder) {
     this.#tokens = new Tokens(text);
@@ -532,19 +539,23 @@ class Reader {
    * skip gives up, returning false, at the end of the line the geometry began
    * on; once a bracket is open it goes on over lines to the one that closes it,
    * so a collection or a curve written over several lines is skipped whole. If
-   * that bracket never closes, the skip is done again as if brackets could not
-   * span lines, and every later skip is too, so the rest of the text is read
-   * at most once more however many geometries are left open.
+   * the text or an unreadable character ends the skip inside that bracket, it
+   * is made again as if the geometry ended at the end of its line, and the
+   * tokens it read for nothing are added up. Once they are more than the
+   * length of the text, later skips end at the end of their line without trying
+   * to span lines, so the work stays linear however many geometries are left
+   * open, and a few stray brackets do not change how the rest is read.
    */
   #skipGeometry(start: number): boolean {
     const end = this.#tokens.lineEndFrom(start);
-    if (!this.#bracketsStayOpen) {
+    if (this.#tokensWasted <= this.#tokens.length) {
       const from = this.#tokens.mark();
+      const spentBefore = this.#tokensSpent;
       const outcome = this.#skipTokens(end, true);
       if (outcome !== "ran-out") {
         return outcome === "closed";
       }
-      this.#bracketsStayOpen = true;
+      this.#tokensWasted += this.#tokensSpent - spentBefore;
       this.#tokens.reset(from);
     }
     return this.#skipTokens(end, false) === "closed";
@@ -573,6 +584,7 @@ class Reader {
         return "stopped";
       }
       this.#tokens.next();
+      this.#tokensSpent += 1;
       const closed =
         (token.kind === ")" && this.#tokens.depth <= 0) ||
         (token.kind === "word" &&
@@ -867,12 +879,16 @@ export function readWktSequence(
  * type, a SRID other than 4326) is skipped to its closing bracket, so the
  * geometries after it, on the same line or not, are kept; once a bracket of it
  * is open the skip goes on over lines, so a collection written over several
- * lines is skipped whole. A bracket that never closes ends the skip at the
- * end of the line the geometry began on. Text that is damaged is skipped up
+ * lines is skipped whole. A skip that the end of the text, or a character the
+ * reader does not know, ends inside a bracket is made again to the end of the
+ * line the geometry began on; the tokens read for nothing are added up, and
+ * once they are more than the length of the text every later skip ends at the
+ * end of its line. Text that is damaged is skipped up
  * to the next line that starts with a geometry type or an `SRID=` prefix, and
  * counts as one stretch. Text with a character the reader does not know is
  * damaged in the same way. The time grows with the length of the text, however
- * many geometries are left open.
+ * many geometries are left open, and a few stray brackets do not change how
+ * the geometries after them are read.
  *
  * The text always gives at least one reading: an error for empty text.
  *
