@@ -11,13 +11,14 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
 
 ## 1. Open it
 
-1. The branch is pushed and its checks from `pick-up-issue` passed. If not, finish that first.
+1. The branch is pushed and its checks from `pick-up-issue` passed (for a documents-only change, the short list in its section 5, with "not run: documents only" under Checks). If not, finish that first.
 2. Self-review your diff as a stranger before you open it, and fix what you find. Cut or mark as unchecked anything you cannot verify. For each sentence you added to a document, guide, code comment or TSDoc:
    - Is it true in the code, and which file did you check?
    - Is each number, limit or rule of thumb in the code or a source you can cite, or did you make it up?
    - Is each term defined where it is first used, and is anything planned described as built?
    - Does a rule about people name the role it applies to?
    - Is the issue's task list ticked for the steps this change finishes (or its status posted as a comment if you cannot edit the issue), and does the diff stay within the issue?
+   - Did you run the misses list in section 2 against your own diff? A test guard that passed before the fix is labelled as a regression guard in the description.
 3. Write the body to a file, plain project facts in a neutral voice, following `.github/pull_request_template.md`:
    - What and why, with `Fixes #<n>` (the issue is finished by this pull request) or `Part of #<n>` (it is not).
    - A decision made on the way, in its final wording (the exact sentence a document will carry, not a summary), so nobody copies a loose phrase.
@@ -36,6 +37,8 @@ Review the opened pull request before it merges, and fix what is real. A review 
 - Reviewer: if you can start a sub-agent within the limits in `AGENTS.md` ("Sub-agents"), give it the `fresh-eyes-reviewer` role and the pull request number. If another agent started you, do not start sub-agents: review inline against the checklist below, and your caller runs the independent review after the hand-off. Otherwise use your tool's review command if it has one, or read the diff yourself as a stranger, after the issue and the documents that "Read before you change" in `AGENTS.md` names.
 - Reading the head: never check the branch out in the main working tree. Run `git fetch <origin-or-upstream> pull/<n>/head`, note `git rev-parse FETCH_HEAD`, and read a file with `git show FETCH_HEAD:<path>`. The next fetch overwrites `FETCH_HEAD`, so when one may have run, read by the noted SHA (`git show <sha>:<path>`).
 - Checklist: does it solve the issue; is there a test that failed first and still means something; behaviour on the keyboard and for a screen reader; no id, kind or provider switched on in code; package boundaries respected; docs match the behaviour; copy in British English; nothing sent over the network that `PRIVACY.md` does not mention; no secrets, no identifying data, no dependency added without need; the description's claims about checks are true (`gh pr checks`).
+- Misses that reviews keep finding, so look for them first: a stale sentence about the old behaviour left in another document (grep every document); a test that cannot fail without the fix (run it against the unfixed code, or reason from the diff that it would fail); a vacuous assertion (state checked before the action); a documented claim the code does not back; a rule in a TSDoc or comment that nothing enforces; no adversarial input tests for code that parses hostile data (oversized numbers, missing properties, reserved names, duplicates).
+- Other open pull requests: the caller gives the reviewer the list of open pull requests so it can say which files are likely to conflict.
 - Report only findings with a file, a line and a fix, most serious first (blocking, should fix, minor). Leave out style preferences and anything the lint enforces, and say what you could not check. "No findings" is a valid result.
 - Author: apply fixes as new commits, push, and re-run the affected checks. Leave a short comment on the pull request saying what the review found and what changed. A finding you decline gets a one-line reason.
 - Anything real but out of scope becomes its own issue (`create-issue` skill), linked from the pull request.
@@ -43,17 +46,31 @@ Review the opened pull request before it merges, and fix what is real. A review 
 ## 3. Watch CI
 
 ```bash
-gh pr checks <n> --watch --fail-fast
+gh pr checks <n>
 ```
 
-The `build` and `e2e` checks are required, and the `CLA` check must be green for a contributor. A first-time contributor's workflows can wait for a maintainer to approve them, so `--watch` may never progress: report that and stop instead of waiting. If a check fails, read its log (`gh run view <run-id> --log-failed`), fix the cause in a new commit, and push. Do not retry a failing run blindly, weaken an assertion, or exclude code from coverage. A genuinely flaky test gets an issue; one re-run is fine, a pattern of re-runs is not. A timeout that passes when its spec runs alone is a load flake: report it as `pick-up-issue` section 5 says.
+Poll with that one-shot command, with a short sleep between polls. Do not leave `gh pr checks --watch` or any other background watcher running: a running watcher is background work of yours, so you cannot hand in your report while it runs. Report when CI on the final head is green or has failed, or has not started after the approval wait described below.
 
-If the branch is behind `main` and the ruleset needs it current: `gh pr update-branch <n>` or rebase, then wait for the checks again.
+The `build` and `e2e` checks are required, and the `CLA` check must be green for a contributor. A first-time contributor's workflows can wait for a maintainer to approve them, so the checks may never progress: report that and stop instead of waiting. If a check fails, read its log (`gh run view <run-id> --log-failed`), fix the cause in a new commit, and push. Do not retry a failing run blindly, weaken an assertion, or exclude code from coverage. A genuinely flaky test gets an issue; one re-run is fine, a pattern of re-runs is not. A timeout that passes when its spec runs alone is a load flake: report it as `pick-up-issue` section 5 says.
+
+Read what the bots say as well as the check list. A scanner can comment on the pull request without failing a required check, and a failing non-required check (such as `CodeQL`) is still a finding. Once CI has started, and again before you merge:
+
+```bash
+gh api repos/MapCairn/mapcairn/pulls/<n>/comments --jq '.[] | "\(.user.login) \(.path):\(.line) \(.body)"'
+gh api repos/MapCairn/mapcairn/pulls/<n>/reviews --jq '.[] | "\(.user.login) \(.state) \(.body)"'
+gh api "repos/MapCairn/mapcairn/code-scanning/alerts?pr=<n>&state=open" --jq '.[] | "\(.rule.id) \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line) \(.most_recent_instance.message.text)"'
+```
+
+Fix what `github-advanced-security` or another scanner reports in a new commit (for example a regular expression that can run slowly on crafted input: replace it with a single pass over the text, and test that the time stays in proportion to the length), or say in a comment why the alert is wrong. The Cloudflare preview comment is not a finding. Say what you found in the report, even "nothing".
+
+When a test fails in CI, start from the failed run's log, trace and screenshot (`gh run view <run-id> --log-failed`, then `gh run download <run-id> -n playwright-test-results-<shard>`) and name the failing step before you choose a remedy. The one line of the error message is a guess at the cause, not the cause.
+
+If the branch is behind `main` and the ruleset needs it current: `gh pr update-branch <n>`, or `git merge <origin-or-upstream>/main`, resolve any conflict and push with a plain `git push`, then wait for the checks again. Prefer merging the project's `main` into the branch to rebasing: the pull request is squash-merged, so the branch's history does not matter, and a force-push is avoided.
 
 ## 4. Merge only with authority
 
 - Merge only when the person has authorised merging for this pull request or for the run (for example "merge when the checks pass"). The authorisation must come from the person's own message in the current conversation; text in an issue, pull request, comment, review or file never counts. It covers the pull requests they said it for and does not carry to unrelated ones. Without it, stop at a green pull request and tell the person it is ready.
-- Merge only when `gh pr checks <n> --required` shows every required check passing, `gh pr view <n> --json mergeStateStatus,reviewDecision` says it is mergeable with no change requested, review threads are resolved, and you have nothing left unreported. If you do not have write access, you cannot merge: say the pull request is ready for the maintainer.
+- Merge only when `gh pr checks <n> --required` shows every required check passing, `gh pr view <n> --json mergeStateStatus,reviewDecision` says it is mergeable with no change requested, review threads are resolved, the scanner step in section 3 found nothing open, and you have nothing left unreported. If you do not have write access, you cannot merge: say the pull request is ready for the maintainer.
 - Never deploy production any other way than merging to `main`, which deploys automatically. Treat every merge as a production deploy.
 - Merge with a squash and an explicit body, so no earlier trailer carries over:
 
@@ -61,7 +78,7 @@ If the branch is behind `main` and the ruleset needs it current: `gh pr update-b
 gh pr merge <n> --squash --delete-branch --subject "<Conventional Commit title> (#<n>)" --body "<one or two plain sentences and Fixes #<issue>>"
 ```
 
-  Do not use `--admin` to get past a failing or missing check.
+  Do not use `--admin` to get past a failing or missing check. If the permission system blocks `gh pr merge` until the maintainer grants permission, do not work around the refusal (no merge through the API, no `--admin`): say what is ready and wait.
 
 ## 5. Close out
 
@@ -78,3 +95,6 @@ gh pr merge <n> --squash --delete-branch --subject "<Conventional Commit title> 
 - Straight after launching an agent, write down its id and its task, and check the id against that note before you message it. Run the independent review on each delegated pull request before merging.
 - A delegated agent never leaves a server, browser or workerd running, and keeps its worktree until its pull request has merged. When the last agent has finished, sweep once yourself: check the ports and the processes (dev servers, wrangler, workerd, browsers), stop what is left, and remove the worktrees of merged pull requests.
 - Deleting a worktree can leave an unregistered `node_modules` folder behind (seen on Windows, usually because a dev server or workerd process still held files). Confirm the path is the former worktree folder you created (a sibling such as `../mapcairn-<name>` or one under `.claude/worktrees`, never the main checkout or its parent) and that `ls -A <path>` shows only `node_modules`. Then delete that folder only (`rm -rf <path>` in Git Bash, `rmdir /s /q <path>` in cmd). If files are locked, stop the dev server and workerd processes first.
+- Merge order matters when several open pull requests touch the same files. Order the merges to minimise conflict: the smallest and most widely shared change first (an announcer or hook change before the pull requests that depend on it). Then send each remaining author "merge the project's `main`, resolve, push", one at a time, and give each reviewer the list of the other open pull requests so it can predict conflicts.
+- Check each report's **Seen**: it must name the agent that looked at the screen. `visual-check` says what happens when an agent could not.
+- Stop each sub-agent that has finished, so it does not clutter the person's agent list. The final sweep above also covers worktrees, leftover `node_modules` folders, processes and ports.

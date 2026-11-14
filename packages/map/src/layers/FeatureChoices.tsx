@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { FormatterRegistry } from "@mapcairn/core";
+import { type FormatterRegistry, isFeedLayer } from "@mapcairn/core";
 import { X } from "lucide-react";
 import { type Ref, useId } from "react";
 import { IconButton } from "../ui/IconButton";
@@ -25,6 +25,8 @@ export interface FeatureChoicesProps {
  * features together: each row names a feature and its layer, and opens that
  * feature's card, which offers a way back here. Rows are plain buttons in a
  * list, so the same list is reachable with the keyboard and a screen reader.
+ * A row for a feature found by a tap on a tile layer has no glyph, since it
+ * has no style to draw one from.
  */
 export function FeatureChoices({
   layers,
@@ -86,7 +88,7 @@ export function FeatureChoices({
                   })
                 }
               >
-                {"card" in definition ? (
+                {isFeedLayer(definition) ? (
                   <FeatureGlyph
                     definition={definition}
                     fields={feature.fields}

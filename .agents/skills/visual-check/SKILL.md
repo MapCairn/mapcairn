@@ -7,6 +7,8 @@ description: Confirm a MapCairn map or interface change visually. Run the app on
 
 `AGENTS.md` ("Definition of done") requires this for every map or interface change; tests and linters cannot see that something looks bad or is hard to use. A change with no visible effect says so in its report and skips the rest.
 
+The model that does this check must be able to read images. The Claude models used here (haiku, sonnet, opus) can; other models vary, so check one before relying on it by asking it to describe a screenshot in one line. An agent that cannot read images does not do this check. It still runs the `e2e` and `a11y` checks and the accessibility-tree checks, says plainly under **Seen** that it did not look at the screen and why, and never claims to have seen anything. When **Seen** says the screen was not looked at, the caller starts `ui-verifier` on a model that can read images (the person who started the agent directly does this if there is no caller). In Claude Code that is sonnet; in other tools the caller picks the model, because the generated agent files set none. The caller makes sure this happens before the pull request is called done, and **Seen** then names the agent that looked. Only if no such agent can be used, or something needs a human (a real device, a real screen reader, a decision that is theirs), is the person asked, with exactly what is needed.
+
 Example: a change moves the layer key. Shoot the map with the key open at 390x844 and 1440x900 in both themes on Bright, then on Satellite at phone size in the dark theme, and note that the key's close button sits under the credits at 390 wide.
 
 ## 1. Start the app
@@ -36,7 +38,25 @@ If your tool has Playwright browser tools, use them to set the window size and c
 npx --no-install playwright screenshot --viewport-size=390,844 --color-scheme=dark --wait-for-selector='[data-zoom][aria-busy="false"]' --wait-for-timeout=6000 "http://localhost:5190/#map=10.00/-33.92000/18.42000&basemap=bright" .tmp-visual/phone-dark-bright.png
 ```
 
-The map is ready when `[data-zoom][aria-busy="false"]` matches; the extra 6 seconds lets the credits, which open for the first five seconds, close. Screenshot them open too if the change touches them. If a state needs clicks, use a short Playwright script in `.tmp-visual/` instead. Read each image; do not assume it is right because it was produced.
+The map is ready when `[data-zoom][aria-busy="false"]` matches; the extra 6 seconds lets the credits, which open for the first five seconds, close. The flag covers the style and the basemap's tiles only, so with a data layer on it can match while that layer's tiles or feed are still arriving: keep the wait, raise it for a slow provider, and look at the image to see that the layer has drawn (a feed layer's row in the Layers section says "Updated" once it has). Screenshot them open too if the change touches them. If a state needs clicks, use a short script in `.tmp-visual/` (git ignores it) and run it with `node .tmp-visual/shot.mjs` from the repository root. Change the size, theme and address for each combination:
+
+```js
+import { chromium } from "playwright";
+
+const browser = await chromium.launch();
+const context = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  colorScheme: "dark",
+});
+const page = await context.newPage();
+await page.goto("http://localhost:5190/#map=10.00/-33.92000/18.42000&basemap=bright");
+await page.locator('[data-zoom][aria-busy="false"]').waitFor();
+// Click or type here to reach the state the change affects.
+await page.screenshot({ path: ".tmp-visual/phone-dark-state.png" });
+await browser.close();
+```
+
+Read each image; do not assume it is right because it was produced.
 
 ## 3. Judge and fix
 

@@ -216,8 +216,9 @@ export interface MapReadoutProps
   /**
    * Whether to show the map's zoom level beside the coordinates. Left out, it
    * follows the chrome layout: shown in the side panel layout and left out in
-   * the bottom sheet layout, where the taller readout would crowd the credits
-   * popover on a small screen. Pass true or false to decide it yourself.
+   * the bottom sheet layout, which keeps the readout short on a small screen.
+   * Pass true or false to decide it yourself. The credits popover clears the
+   * readout either way.
    */
   readonly showZoom?: boolean;
 }

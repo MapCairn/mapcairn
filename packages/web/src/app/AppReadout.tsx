@@ -14,7 +14,7 @@ export interface AppReadoutProps {
  * The bottom-start readout. The cursor coordinates need a fine pointer. The
  * zoom level also needs the side panel layout, so a narrow window keeps the
  * coordinates but not the zoom, and a phone has neither: the readout stays as
- * short as the scale bar and clear of the credits popover.
+ * short as the scale bar on a touch screen.
  */
 export function AppReadout({ units, cursor }: AppReadoutProps) {
   const { finePointer, layout } = useChromeLayout();

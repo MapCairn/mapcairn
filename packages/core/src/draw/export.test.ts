@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { decimalsOf } from "../propertyTesting/decimalPlaces";
 import {
   exportableShapes,
+  SHAPES_CSV_HEADER,
   shapeGeometry,
   shapesToCsv,
   shapesToGeoJson,
+  shapesToGeoJsonText,
   shapesToWkt,
 } from "./export";
 import { ringSignedArea } from "./geo";
+import { shapeRing, validateShape } from "./shape";
 import type { DrawShape } from "./types";
 
 const p = (lng: number, lat: number) => ({ lat, lng });
@@ -228,6 +232,216 @@ describe("shapes across the antimeridian", () => {
     });
     expect(shapesToCsv([line])).toContain(
       '""coordinates"":[[170,10],[-170,10]]',
+    );
+  });
+});
+
+/** The issue the draw rules find with the ring a polygon geometry holds, or null. */
+function ringIssue(geometry: unknown) {
+  const ring = (geometry as { coordinates: number[][][] }).coordinates[0] ?? [];
+  return validateShape({
+    id: "ring",
+    kind: "polygon",
+    label: "Ring",
+    done: true,
+    vertices: ring
+      .slice(0, -1)
+      .map(([lng, lat]) => ({ lat: lat as number, lng: lng as number })),
+  });
+}
+
+/** The issue with a shape's ring rounded to `decimals` places, or null when it is valid. */
+function ringIssueAt(shape: DrawShape, decimals: number) {
+  const factor = 10 ** decimals;
+  const round = (value: number) => Math.round(value * factor) / factor;
+  return validateShape({
+    id: "ring",
+    kind: "polygon",
+    label: "Ring",
+    done: true,
+    vertices: shapeRing(shape).map(({ lat, lng }) => ({
+      lat: round(lat),
+      lng: round(lng),
+    })),
+  });
+}
+
+describe("shapes too small for six decimals", () => {
+  const small = (radiusMetres: number): DrawShape => ({
+    ...CIRCLE,
+    radiusMetres,
+  });
+
+  it("writes a circle of one metre as a ring that does not fold in on itself", () => {
+    expect(ringIssue(shapeGeometry(small(1)))).toBeNull();
+  });
+
+  it("writes circles from a centimetre up as valid rings", () => {
+    for (const radius of [0.01, 0.05, 0.1, 0.5, 1, 1.5, 2, 3]) {
+      const geometry = shapeGeometry(small(radius));
+      expect(geometry?.type, `radius ${radius}`).toBe("Polygon");
+      expect(ringIssue(geometry), `radius ${radius}`).toBeNull();
+    }
+  });
+
+  it("keeps six decimals where they are enough", () => {
+    expect(decimalsOf(shapeGeometry(CIRCLE))).toBeLessThanOrEqual(6);
+    expect(decimalsOf(shapeGeometry(small(5)))).toBeLessThanOrEqual(6);
+  });
+
+  it("writes a line of a few centimetres with two different positions", () => {
+    const line: DrawShape = {
+      ...LINE,
+      vertices: [p(2.35, 48.85), p(2.3500002, 48.85)],
+    };
+    const geometry = shapeGeometry(line) as { coordinates: number[][] } | null;
+    expect(geometry?.coordinates[0]).not.toEqual(geometry?.coordinates[1]);
+  });
+
+  it("writes a polygon of a few decimetres as a ring that does not fold in on itself", () => {
+    const polygon: DrawShape = {
+      ...POLYGON,
+      vertices: [
+        p(10, 10),
+        p(10.0000004, 10),
+        p(10.0000004, 10.0000003),
+        p(10, 10.0000003),
+      ],
+    };
+    expect(ringIssue(shapeGeometry(polygon))).toBeNull();
+  });
+
+  it("writes a small circle that reaches over the antimeridian or a pole at six decimals, as it was drawn", () => {
+    for (const centre of [
+      p(179.99999, 0),
+      p(-179.99999, 10),
+      p(0, 90),
+      p(0, -90),
+    ]) {
+      const geometry = shapeGeometry({
+        ...CIRCLE,
+        vertices: [centre],
+        radiusMetres: 2,
+      });
+      expect(geometry?.type, JSON.stringify(centre)).toBe("Polygon");
+      expect(decimalsOf(geometry), JSON.stringify(centre)).toBeLessThanOrEqual(
+        6,
+      );
+    }
+  });
+
+  it("uses the fewest decimals that keep the ring valid", () => {
+    for (const radius of [0.01, 0.05, 0.1, 0.5, 1]) {
+      const shape = small(radius);
+      const decimals = decimalsOf(shapeGeometry(shape));
+      expect(decimals, `radius ${radius}`).toBeGreaterThan(6);
+      expect(
+        ringIssueAt(shape, decimals),
+        `radius ${radius} at ${decimals}`,
+      ).toBeNull();
+      expect(
+        ringIssueAt(shape, decimals - 1),
+        `radius ${radius} at ${decimals - 1}`,
+      ).not.toBeNull();
+    }
+  });
+
+  it("writes a circle no number of decimals keeps valid as it is, unrounded, and exports it", () => {
+    const speck = small(0.00001);
+    const geometry = shapeGeometry(speck);
+    expect(geometry?.type).toBe("Polygon");
+    expect(decimalsOf(geometry)).toBeGreaterThan(10);
+    expect(exportableShapes([POINT, speck])).toEqual([POINT, speck]);
+    expect(shapesToWkt([speck])).toContain("POLYGON ((");
+    expect(shapesToGeoJson([speck]).features).toHaveLength(1);
+    expect(shapesToCsv([speck])).not.toBe(SHAPES_CSV_HEADER);
+  });
+});
+
+describe("a circle's centre and radius", () => {
+  // A centre from a tap on the map has many more decimals than six.
+  const OFF_GRID = p(36.82190123456789, -1.29210987654321);
+  const circleOf = (radiusMetres: number): DrawShape => ({
+    ...CIRCLE,
+    vertices: [OFF_GRID],
+    radiusMetres,
+  });
+  const cellsOf = (shape: DrawShape): string[] =>
+    (shapesToCsv([shape]).split("\r\n")[1] ?? "").split(",").slice(-3);
+
+  it("writes them to six and two decimals where the outline is written at six, as it always was", () => {
+    const shape = circleOf(123.456789);
+    expect(decimalsOf(shapeGeometry(shape))).toBeLessThanOrEqual(6);
+    expect(shapesToGeoJson([shape]).features[0]?.properties).toMatchObject({
+      radius_m: 123.46,
+      centre: [36.821901, -1.29211],
+    });
+    expect(cellsOf(shape)).toEqual(["123.46", "36.821901", "-1.29211"]);
+  });
+
+  it("writes them exactly for a small circle whose outline needs more than six decimals", () => {
+    for (const radius of [0.01, 0.0123, 0.004, 0.5, 1]) {
+      const shape = circleOf(radius);
+      expect(
+        decimalsOf(shapeGeometry(shape)),
+        `radius ${radius}`,
+      ).toBeGreaterThan(6);
+      expect(shapesToGeoJson([shape]).features[0]?.properties).toMatchObject({
+        radius_m: radius,
+        centre: [OFF_GRID.lng, OFF_GRID.lat],
+      });
+      expect(cellsOf(shape), `radius ${radius}`).toEqual([
+        String(radius),
+        String(OFF_GRID.lng),
+        String(OFF_GRID.lat),
+      ]);
+    }
+  });
+
+  it("never writes the radius of a circle as zero while it is above zero", () => {
+    for (const radius of [0.004, 0.0004, 0.00001]) {
+      const shape = circleOf(radius);
+      const [radiusCell] = cellsOf(shape);
+      expect(Number(radiusCell), `radius ${radius}`).toBe(radius);
+      expect(radiusCell).not.toMatch(/e/i);
+    }
+  });
+});
+
+describe("numbers are written without an exponent", () => {
+  // A circle of a metre on the equator and the prime meridian has coordinates
+  // under 1e-6, which String and JSON.stringify write as `7.8e-7`.
+  const ON_THE_EQUATOR: DrawShape = {
+    ...CIRCLE,
+    vertices: [p(0, 0)],
+    radiusMetres: 1,
+  };
+  const SPECK: DrawShape = { ...ON_THE_EQUATOR, radiusMetres: 0.00001 };
+
+  it("writes a 1 m circle on the equator and the prime meridian as plain decimals in WKT", () => {
+    expect(shapesToWkt([ON_THE_EQUATOR])).not.toMatch(/e/i);
+  });
+
+  it("writes plain decimals in the CSV, in its geometry and in its circle cells", () => {
+    for (const shape of [ON_THE_EQUATOR, SPECK]) {
+      expect(shapesToCsv([shape])).not.toMatch(/\de[+-]?\d/);
+    }
+  });
+
+  it("writes plain decimals in the GeoJSON text, which reads back as the same collection", () => {
+    for (const shape of [ON_THE_EQUATOR, SPECK]) {
+      const text = shapesToGeoJsonText([shape]);
+      expect(text).not.toMatch(/\de[+-]?\d/);
+      expect(JSON.parse(text)).toEqual(
+        JSON.parse(JSON.stringify(shapesToGeoJson([shape]))),
+      );
+    }
+  });
+
+  it("writes the same GeoJSON text as JSON.stringify where no number has an exponent", () => {
+    const shapes = [POINT, LINE, POLYGON, CIRCLE];
+    expect(shapesToGeoJsonText(shapes)).toBe(
+      JSON.stringify(shapesToGeoJson(shapes), null, 2),
     );
   });
 });

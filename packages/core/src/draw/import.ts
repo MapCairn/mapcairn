@@ -352,7 +352,12 @@ function addGeometry(
   }
 }
 
-/** A circle from the properties the exporter writes, or null when they do not describe one. */
+/**
+ * A circle from the properties the exporter writes, or null when they do not
+ * describe one. A radius that is not above zero, as an earlier export wrote
+ * for a circle under 5 mm, does not describe one: the shape's own geometry is
+ * read instead.
+ */
 function circleFromProperties(
   collector: Collector,
   properties: unknown,
@@ -364,6 +369,7 @@ function circleFromProperties(
   const centre = readPosition(field(properties, "centre"));
   if (
     typeof radius !== "number" ||
+    !(radius > 0) ||
     !Number.isFinite(radius) ||
     typeof centre === "string" ||
     !spend(collector, 1)
@@ -522,14 +528,22 @@ function readRecord(
   };
 }
 
-/** A circle from the radius and centre cells, or null when they do not hold numbers. */
+/**
+ * A circle from the radius and centre cells, or null when they do not hold
+ * numbers or the radius is not above zero (see {@link circleFromProperties}).
+ */
 function circleFromCells(
   collector: Collector,
   radius: string,
   lng: string,
   lat: string,
 ): DrawShapeInput | null {
-  if (!DECIMAL.test(radius) || !DECIMAL.test(lng) || !DECIMAL.test(lat)) {
+  if (
+    !DECIMAL.test(radius) ||
+    !DECIMAL.test(lng) ||
+    !DECIMAL.test(lat) ||
+    !(Number(radius) > 0)
+  ) {
     return null;
   }
   const centre = readPosition([Number(lng), Number(lat)]);
@@ -737,7 +751,9 @@ function addFileBody(
  *   polygon keeps its outer ring, its holes left out and counted. A feature
  *   whose properties name a circle with `radius_m` and `centre`, as the
  *   exporter writes, is a circle again, and so is a CSV row with
- *   `radius_m`, `centre_lng` and `centre_lat`. Every shape must pass the
+ *   `radius_m`, `centre_lng` and `centre_lat`; where the radius is not above
+ *   zero, as an older export wrote for a circle under 5 mm, the shape is read
+ *   from its geometry instead, as a polygon. Every shape must pass the
  *   draw tool's own rules with positions inside the world, or it is skipped
  *   and counted.
  *

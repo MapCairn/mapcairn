@@ -42,9 +42,11 @@ const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tok
  * The credits popover. It grows upwards and inwards from the button, on the
  * `chromeRaised` layer. Its width is capped at the chrome width minus both
  * insets, and its height at the room `MapChrome` measures between the end
- * stack and this slot, so it never covers the end stack above it or the
- * scale bar beside the button (which it clears by sitting above the bottom
- * row).
+ * stack and the bottom row, so it never covers the end stack above it. It
+ * sits a gap above the top of the whole bottom row, not just the button
+ * (`bottomEndRise` is how far a taller neighbour, such as the readout with
+ * the cursor coordinates, reaches above the button), so it never covers the
+ * scale bar or the coordinates beside the button.
  *
  * With `data-placement="beside"` (chosen when the list would scroll above the
  * button) its end edge moves a gap clear of the end stack's start edge, and
@@ -54,7 +56,7 @@ const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tok
 export const popover = style({
   ...surfaceBlurStyle,
   position: "absolute",
-  insetBlockEnd: `calc(100% + ${tokens.space.xs})`,
+  insetBlockEnd: `calc(100% + ${tokens.space.xs} + ${chromeVar(chromeVars.bottomEndRise, "0px")})`,
   insetInlineEnd: 0,
   zIndex: zLayer("chromeRaised"),
   boxSizing: "border-box",

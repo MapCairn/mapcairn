@@ -42,6 +42,73 @@ const circleInput: fc.Arbitrary<DrawShapeInput> = fc
     radiusMetres,
   }));
 
+/** The range of a small circle's radius in centimetres: 0.01 m, the least a CSV or GeoJSON export keeps, to 3 m. */
+const MIN_SMALL_RADIUS_CENTIMETRES = 1;
+const MAX_SMALL_RADIUS_CENTIMETRES = 300;
+const CENTIMETRES_PER_METRE = 100;
+
+/**
+ * A circle with a radius from a centimetre to three metres, in whole
+ * centimetres so its exported radius reads back exactly, and far enough from
+ * the poles and the antimeridian for its outline to be an ordinary polygon.
+ * Rounding the outline to six decimals folds such a circle in on itself, so it
+ * checks that the export keeps more digits.
+ */
+export const smallCircleInput: fc.Arbitrary<DrawShapeInput> = fc
+  .record({
+    centre: fc.record({
+      lat: degreesOnGrid(SAFE_LATITUDE),
+      lng: degreesOnGrid(SAFE_LONGITUDE),
+    }),
+    centimetres: fc.integer({
+      min: MIN_SMALL_RADIUS_CENTIMETRES,
+      max: MAX_SMALL_RADIUS_CENTIMETRES,
+    }),
+  })
+  .map(({ centre, centimetres }) => ({
+    kind: "circle",
+    vertices: [centre],
+    radiusMetres: centimetres / CENTIMETRES_PER_METRE,
+  }));
+
+/** The smallest radius, in metres, of a circle off the grid: 0.1 mm, which is still many units of ten decimals across. */
+const MIN_OFF_GRID_RADIUS_METRES = 0.0001;
+
+/** The largest radius, in metres, of a circle off the grid: well below the 1 m at which six decimals begin to fold a circle in. */
+const MAX_OFF_GRID_RADIUS_METRES = 0.1;
+
+/**
+ * A circle of a tenth of a metre or less whose centre and radius sit anywhere,
+ * as a tap on the map and a drag give them, not on a grid. Such a circle's
+ * outline needs more than six decimals, so its centre and radius are written
+ * exactly, and an export has to read back as the same numbers. It is away from
+ * the poles and the antimeridian, where its outline is an ordinary polygon.
+ */
+export const offGridSmallCircleInput: fc.Arbitrary<DrawShapeInput> = fc
+  .record({
+    lat: fc.double({
+      min: -SAFE_LATITUDE,
+      max: SAFE_LATITUDE,
+      noNaN: true,
+    }),
+    lng: fc.double({
+      min: -SAFE_LONGITUDE,
+      max: SAFE_LONGITUDE,
+      noNaN: true,
+    }),
+    radiusMetres: fc.double({
+      min: MIN_OFF_GRID_RADIUS_METRES,
+      max: MAX_OFF_GRID_RADIUS_METRES,
+      noNaN: true,
+    }),
+  })
+  .map(({ lat, lng, radiusMetres }) => ({
+    kind: "circle",
+    // Adding zero turns a negative zero into 0, which is how a file writes it.
+    vertices: [{ lat: lat + 0, lng: lng + 0 }],
+    radiusMetres,
+  }));
+
 /**
  * A polygon that cannot cross itself: its corners sit at evenly spaced
  * bearings around a centre, each at its own distance.

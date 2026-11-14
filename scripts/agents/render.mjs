@@ -10,27 +10,6 @@
 import { claudeOnlyProblems, parseFrontmatter } from "./skills.mjs";
 
 /**
- * Agents that call Claude Code's Playwright MCP tools and stay Claude only.
- * They are named, not matched by prefix, so a new agent is portable unless it
- * is added here.
- */
-const CLAUDE_ONLY_AGENTS = [
-  "playwright-test-generator.md",
-  "playwright-test-healer.md",
-  "playwright-test-planner.md",
-];
-
-/**
- * Whether an agent file is turned into other tools' formats.
- *
- * @param {string} filename The agent's file name, such as `implementer.md`.
- * @returns {boolean}
- */
-export function isPortable(filename) {
-  return !CLAUDE_ONLY_AGENTS.includes(filename);
-}
-
-/**
  * @typedef {object} Agent
  * @property {string} name
  * @property {string} description
@@ -87,12 +66,13 @@ export function renderOpencode(agent) {
 }
 
 /**
- * The GitHub Copilot custom agent format (`.agent.md`).
+ * Markdown with a name and a description in the frontmatter, then the role
+ * text: the shape the Copilot and Qwen Code agent files share.
  *
  * @param {Agent} agent
  * @returns {string}
  */
-export function renderCopilot(agent) {
+function renderNamedMarkdown(agent) {
   return [
     "---",
     `name: ${JSON.stringify(agent.name)}`,
@@ -103,6 +83,28 @@ export function renderCopilot(agent) {
     "",
     agent.body,
   ].join("\n");
+}
+
+/**
+ * The GitHub Copilot custom agent format (`.agent.md`).
+ *
+ * @param {Agent} agent
+ * @returns {string}
+ */
+export function renderCopilot(agent) {
+  return renderNamedMarkdown(agent);
+}
+
+/**
+ * The Qwen Code subagent format (`.qwen/agents/<name>.md`). Its optional
+ * `model`, `tools` and `approvalMode` fields are left out, so the agent
+ * inherits the session's model and tools.
+ *
+ * @param {Agent} agent
+ * @returns {string}
+ */
+export function renderQwen(agent) {
+  return renderNamedMarkdown(agent);
 }
 
 /**

@@ -160,9 +160,11 @@ function measure(
 /**
  * Vertical room between the end stack and the bottom row, once the bottom row
  * has been lifted by `lift` (zero or negative). The end stack stops a gap
- * above that row, and the credits popover, which grows up from bottom-end,
- * stops a gap below the end stack. Placed beside the end stack instead, the
- * popover may rise to a gap below the top-start slot.
+ * above that row, and the credits popover, which grows up from bottom-end
+ * and rises over the whole row (`bottomEndRise` is how much taller than the
+ * bottom-end slot the row is), stops a gap below the end stack. Placed beside
+ * the end stack instead, the popover may rise to a gap below the top-start
+ * slot.
  */
 function verticalRoom(m: Measurements, lift: number) {
   const liftedRowTop = m.bottomRowTop + lift;
@@ -173,13 +175,11 @@ function verticalRoom(m: Measurements, lift: number) {
       bottomReserved: m.height - liftedRowTop + CHROME_GAP_PX - CHROME_INSET_PX,
       inset: CHROME_INSET_PX,
     }),
-    bottomEndRoom: Math.max(
-      0,
-      m.bottomEndTop + lift - CHROME_GAP_PX - m.endStackBottom,
-    ),
+    bottomEndRise: Math.max(0, m.bottomEndTop - m.bottomRowTop),
+    bottomEndRoom: Math.max(0, liftedRowTop - CHROME_GAP_PX - m.endStackBottom),
     bottomEndBesideRoom: Math.max(
       0,
-      m.bottomEndTop + lift - CHROME_GAP_PX - m.topStartBottom,
+      liftedRowTop - CHROME_GAP_PX - m.topStartBottom,
     ),
   };
 }
@@ -407,6 +407,7 @@ export function MapChrome({
       : null,
   );
   const endStackMaxHeight = room?.endStackMaxHeight ?? null;
+  const bottomEndRise = room?.bottomEndRise ?? null;
   const bottomEndRoom = room?.bottomEndRoom ?? null;
   const bottomEndBesideRoom = room?.bottomEndBesideRoom ?? null;
 
@@ -416,6 +417,7 @@ export function MapChrome({
       !root ||
       !measurements ||
       endStackMaxHeight === null ||
+      bottomEndRise === null ||
       bottomEndRoom === null ||
       bottomEndBesideRoom === null
     ) {
@@ -428,6 +430,7 @@ export function MapChrome({
     set(chromeVars.topStartBottom, measurements.topStartBottom);
     set(chromeVars.endStackMaxHeight, endStackMaxHeight);
     set(chromeVars.endStackWidth, measurements.endStackWidth);
+    set(chromeVars.bottomEndRise, bottomEndRise);
     set(chromeVars.bottomEndRoom, bottomEndRoom);
     set(chromeVars.bottomEndBesideRoom, bottomEndBesideRoom);
     set(chromeVars.bottomLift, bottom.bottomEndTranslateY);
@@ -436,6 +439,7 @@ export function MapChrome({
   }, [
     measurements,
     endStackMaxHeight,
+    bottomEndRise,
     bottomEndRoom,
     bottomEndBesideRoom,
     bottom.bottomEndTranslateY,

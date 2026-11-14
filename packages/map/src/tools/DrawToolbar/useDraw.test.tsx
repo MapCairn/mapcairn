@@ -911,6 +911,57 @@ describe("useDraw", () => {
       expect(failing.result.current.feedback?.kind).toBe("error");
     });
 
+    describe("a circle under a metre", () => {
+      /** Draws a circle with a radius of about 70 cm, the least a tap can give being 0.5 m. */
+      function drawTinyCircle(rig: Rig) {
+        act(() => rig.result.current.setMode("circle"));
+        addAll(rig, [CENTRE, p(CENTRE.lng + 0.0000095, CENTRE.lat)]);
+      }
+
+      it("is left out of the link and the person is told, with the rest copied", async () => {
+        const services = createFakeServices();
+        const rig = await setup({ services });
+        act(() => rig.result.current.setMode("polygon"));
+        addAll(rig, TRIANGLE);
+        act(() => rig.result.current.finish());
+        drawTinyCircle(rig);
+        expect(rig.result.current.shapes).toHaveLength(2);
+        await act(async () => {
+          await rig.result.current.copyLink();
+        });
+        const link = services.fakes.clipboard.written[0] ?? "";
+        const shapes = new URL(link).hash.split("shapes=")[1] ?? "";
+        expect(decodeShapes(shapes)?.map((shape) => shape.kind)).toEqual([
+          "polygon",
+        ]);
+        expect(rig.result.current.feedback).toEqual({
+          kind: "success",
+          text: "Link with shapes copied. 1 shape is too small to carry in a link and was left out. Export a file to keep it.",
+        });
+      });
+
+      it("copies nothing and says why when every shape is too small", async () => {
+        const services = createFakeServices();
+        const rig = await setup({ services });
+        drawTinyCircle(rig);
+        await act(async () => {
+          await rig.result.current.copyLink();
+        });
+        expect(services.fakes.clipboard.written).toEqual([]);
+        expect(rig.result.current.feedback).toEqual({
+          kind: "error",
+          text: "Nothing to copy: 1 shape is too small to carry in a link. Export a file instead.",
+        });
+        drawTinyCircle(rig);
+        await act(async () => {
+          await rig.result.current.copyLink();
+        });
+        expect(rig.result.current.feedback?.text).toBe(
+          "Nothing to copy: 2 shapes are too small to carry in a link. Export a file instead.",
+        );
+      });
+    });
+
     it("loads shapes from a link and announces how many", async () => {
       const encoded = encodeShapes([
         {

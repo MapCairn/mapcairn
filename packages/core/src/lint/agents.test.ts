@@ -23,11 +23,11 @@ import {
   writePlan,
 } from "../../../../scripts/agents/plan.mjs";
 import {
-  isPortable,
   parseAgent,
   renderCodex,
   renderCopilot,
   renderOpencode,
+  renderQwen,
   // @ts-expect-error The agent scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/agents/render.mjs";
 import {
@@ -243,6 +243,18 @@ describe("agent rendering", () => {
     expect(text).toContain("Edit that file, not this one.");
   });
 
+  it("renders the Qwen Code format with a name and description and no tools or model", () => {
+    const text = renderQwen(parsed);
+    expect(
+      text.startsWith(
+        '---\nname: "fresh-eyes-reviewer"\ndescription: "Reviews a diff. Give it a number."\n---\n',
+      ),
+    ).toBe(true);
+    expect(text).not.toMatch(/^tools:|^model:|^approvalMode:/m);
+    expect(text).toContain("Edit that file, not this one.");
+    expect(text.endsWith(parsed.body)).toBe(true);
+  });
+
   it("renders the Codex format as TOML with the body as a literal string", () => {
     const text = renderCodex(parsed);
     expect(text).toContain('name = "fresh-eyes-reviewer"');
@@ -260,15 +272,6 @@ describe("agent rendering", () => {
     expect(() => renderCodex(bad)).toThrow(
       /cannot be written as a TOML literal string/,
     );
-  });
-
-  it("names the Playwright test agents as Claude only, and no others", () => {
-    expect(isPortable("playwright-test-generator.md")).toBe(false);
-    expect(isPortable("playwright-test-healer.md")).toBe(false);
-    expect(isPortable("playwright-test-planner.md")).toBe(false);
-    expect(isPortable("playwright-test-other.md")).toBe(true);
-    expect(isPortable("implementer.md")).toBe(true);
-    expect(isPortable("ui-verifier.md")).toBe(true);
   });
 
   it.each(CLAUDE_ONLY_TOOL_NAMES as string[])(
@@ -313,15 +316,20 @@ describe("mirror planning", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  it("plans a byte-for-byte skill mirror and the generated agent files", () => {
+  it("plans a byte-for-byte skill mirror and the generated agent files, for every agent whatever its name", () => {
     const plan = plannedFiles(root);
     expect([...plan.keys()].sort()).toEqual([
       ".agents/skills/alpha/SKILL.md",
       ".agents/skills/alpha/references/bin.dat",
       ".agents/skills/alpha/references/notes.md",
       ".codex/agents/helper.toml",
+      ".codex/agents/playwright-test-healer.toml",
       ".github/agents/helper.agent.md",
+      ".github/agents/playwright-test-healer.agent.md",
       ".opencode/agents/helper.md",
+      ".opencode/agents/playwright-test-healer.md",
+      ".qwen/agents/helper.md",
+      ".qwen/agents/playwright-test-healer.md",
     ]);
     expect(plan.get(".agents/skills/alpha/references/bin.dat")).toEqual(
       Buffer.from([0, 255, 13, 10]),
@@ -330,7 +338,7 @@ describe("mirror planning", () => {
 
   it("reports every planned file as missing before the first sync", () => {
     const drift = findDrift(root, plannedFiles(root));
-    expect(drift.missing).toHaveLength(6);
+    expect(drift.missing).toHaveLength(11);
     expect(drift.changed).toEqual([]);
     expect(drift.extra).toEqual([]);
   });
