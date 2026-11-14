@@ -240,7 +240,7 @@ describe("union", () => {
         (rectangle(10, 10, 11, 11) as Polygon).coordinates,
       ],
     };
-    expect(union([multi, right])?.type).toBe("MultiPolygon");
+    expect(union([multi, right]).type).toBe("MultiPolygon");
   });
 
   it("returns a single polygon as it is", () => {

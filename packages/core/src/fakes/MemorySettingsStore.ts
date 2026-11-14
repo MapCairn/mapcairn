@@ -39,7 +39,7 @@ export class MemorySettingsStore implements SettingsStore {
   readonly persistent: boolean;
 
   #settings: Settings;
-  #listeners = new Set<(settings: Settings) => void>();
+  readonly #listeners = new Set<(settings: Settings) => void>();
 
   constructor(options: MemorySettingsStoreOptions = {}) {
     this.persistent = options.persistent ?? true;

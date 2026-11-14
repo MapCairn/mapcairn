@@ -18,200 +18,200 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Data formats and connections
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Point, line and polygon features from a GeoJSON document, with fields read by path | has | `FeedSource` and the `geojson` decoder in `packages/core/src/layers` | none |
-| Any other JSON shape through a registered decoder | has | `decodeWith` and the decoder registry in `packages/core/src/layers/decoders.ts` | none |
-| Only the features in view, from a bounding box query, with a cap | has | `QuerySource` (`maxFeatures` 1 to 5000) | none |
-| Raster tiles, including a WMS through a box template | has | `TileSource` (`{z}/{x}/{y}` and `{bbox-epsg-3857}`), `docs/guides/serving-layers.md` | none |
-| Vector tiles styled by source layer | has | `VectorTileSource`, `docs/guides/extending.md` | none |
-| Worked recipes for OGC API Features, WMS and WMTS endpoints | partial | the templates should cover the three, but nothing has tested them and no guide shows them | [#232] |
-| Tiles read from a single-file archive | lacks | none | [#192] |
-| Newer vector tile encodings | lacks | none | [#197] |
-| Layers supplied at runtime, per user, validated one at a time | has | `createRuntimeLayerCatalogue` and `partitionDefinitions` (steps closed as #94 to #99) | [#46], all its steps merged |
-| Hosts that sit behind a login | lacks | the reference site calls only public providers, so there is no way for a host to attach credentials or react to a refused request | [#45] |
-| One place for tile and layer request limits, retry, priority and a host hook | partial | each load is cancelled when replaced, and a slow tile layer says so (`useDataLayers`, #159 closed) | [#195] |
-| Importing drawn shapes from GeoJSON, WKT and CSV files | has | `parseShapeFile` in `packages/core/src/draw/import.ts` | none |
-| Importing drawn shapes from GPX and KML files | lacks | none | [#227] |
-| Binary vector files (zipped vector sets, GeoPackage, FlatGeobuf) and raster files | lacks | none | none, see "Gaps left without an issue" |
-| Reading a service's capabilities document to list its layers | lacks | a definition is written by the host | none, see "Gaps left without an issue" |
+| Capability                                                                         | Status  | Evidence                                                                                                                          | Tracked by                             |
+| ---------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Point, line and polygon features from a GeoJSON document, with fields read by path | has     | `FeedSource` and the `geojson` decoder in `packages/core/src/layers`                                                              | none                                   |
+| Any other JSON shape through a registered decoder                                  | has     | `decodeWith` and the decoder registry in `packages/core/src/layers/decoders.ts`                                                   | none                                   |
+| Only the features in view, from a bounding box query, with a cap                   | has     | `QuerySource` (`maxFeatures` 1 to 5000)                                                                                           | none                                   |
+| Raster tiles, including a WMS through a box template                               | has     | `TileSource` (`{z}/{x}/{y}` and `{bbox-epsg-3857}`), `docs/guides/serving-layers.md`                                              | none                                   |
+| Vector tiles styled by source layer                                                | has     | `VectorTileSource`, `docs/guides/extending.md`                                                                                    | none                                   |
+| Worked recipes for OGC API Features, WMS and WMTS endpoints                        | partial | the templates should cover the three, but nothing has tested them and no guide shows them                                         | [#232]                                 |
+| Tiles read from a single-file archive                                              | lacks   | none                                                                                                                              | [#192]                                 |
+| Newer vector tile encodings                                                        | lacks   | none                                                                                                                              | [#197]                                 |
+| Layers supplied at runtime, per user, validated one at a time                      | has     | `createRuntimeLayerCatalogue` and `partitionDefinitions` (steps closed as #94 to #99)                                             | [#46], all its steps merged            |
+| Hosts that sit behind a login                                                      | lacks   | the reference site calls only public providers, so there is no way for a host to attach credentials or react to a refused request | [#45]                                  |
+| One place for tile and layer request limits, retry, priority and a host hook       | partial | each load is cancelled when replaced, and a slow tile layer says so (`useDataLayers`, #159 closed)                                | [#195]                                 |
+| Importing drawn shapes from GeoJSON, WKT and CSV files                             | has     | `parseShapeFile` in `packages/core/src/draw/import.ts`                                                                            | none                                   |
+| Importing drawn shapes from GPX and KML files                                      | lacks   | none                                                                                                                              | [#227]                                 |
+| Binary vector files (zipped vector sets, GeoPackage, FlatGeobuf) and raster files  | lacks   | none                                                                                                                              | none, see "Gaps left without an issue" |
+| Reading a service's capabilities document to list its layers                       | lacks   | a definition is written by the host                                                                                               | none, see "Gaps left without an issue" |
 
 ## Coordinate systems and projections
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| WGS 84 positions and Web Mercator, with conversion | has | `packages/core/src/geometry/mercator.ts` | none |
-| Decimal degrees and degrees, minutes and seconds, written and read | has | `packages/core/src/format`, `packages/core/src/coordinates/parseCoordinates.ts` | none |
-| UTM and MGRS references | lacks | none (pure arithmetic, no dependency) | [#222] |
-| Data in other coordinate systems, read by code and reprojected | lacks | `parseWkt` refuses any SRID but 4326 with `UnsupportedSridError`; needs a decision (a projection library or a fixed list in core) | [#223] |
-| A map projection other than flat Web Mercator or a globe | lacks | `MapProjection` is `"flat"` or `"globe"` | out of scope with one engine, unless [#223] finds otherwise |
-| Shapes that cross the antimeridian | partial | a buffer that would cross it is refused and a shape that crosses it must be split first; image export refuses a box across it | none, a documented limit in `packages/core/README.md` |
+| Capability                                                         | Status  | Evidence                                                                                                                          | Tracked by                                                  |
+| ------------------------------------------------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| WGS 84 positions and Web Mercator, with conversion                 | has     | `packages/core/src/geometry/mercator.ts`                                                                                          | none                                                        |
+| Decimal degrees and degrees, minutes and seconds, written and read | has     | `packages/core/src/format`, `packages/core/src/coordinates/parseCoordinates.ts`                                                   | none                                                        |
+| UTM and MGRS references                                            | lacks   | none (pure arithmetic, no dependency)                                                                                             | [#222]                                                      |
+| Data in other coordinate systems, read by code and reprojected     | lacks   | `parseWkt` refuses any SRID but 4326 with `UnsupportedSridError`; needs a decision (a projection library or a fixed list in core) | [#223]                                                      |
+| A map projection other than flat Web Mercator or a globe           | lacks   | `MapProjection` is `"flat"` or `"globe"`                                                                                          | out of scope with one engine, unless [#223] finds otherwise |
+| Shapes that cross the antimeridian                                 | partial | a buffer that would cross it is refused and a shape that crosses it must be split first; image export refuses a box across it     | none, a documented limit in `packages/core/README.md`       |
 
 ## Rendering and styling
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| A catalogue of basemaps, vector, image and hybrid, with host-defined ones | has | `BASEMAPS`, `createBasemapCatalogue`, `docs/guides/extending.md` | none |
-| Light, dark and system themes, with contrast checked | has | `packages/theme`, `packages/core/src/theme` | none |
-| A host's own colours and font | partial | the tokens are typed and exported; a supported way to replace them with contrast checking is not built | [#220] |
-| Symbology by category, class breaks or equal intervals, marker shapes, size by value, patterns, dashes and outline widths | has | `ShapeStyle`, `PointStyle`, `docs/guides/extending.md` | none |
-| Labels from a template, with a halo and a minimum zoom | has | `ShapeLabel` and the point label template in `packages/core/src/layers/definition.ts` | none |
-| Custom image icons for points | lacks | none | none, see "Gaps left without an issue" |
-| Heatmaps with controls for radius and intensity | has | `packages/core/src/layers/heatmap.ts`, `docs/guides/extending.md` | none |
-| Clustering of dense points, with expansion | lacks | none | [#183] |
-| Legend or key for each layer, in the sheet and over the map | partial | `LayerKey` and `MapKey` exist; the selector and host options of the map key are open | [#71] |
-| Layer order and opacity on any layer | partial | an opacity control only where the definition declares one | [#176] |
-| A globe as well as a flat map | has | `MapProjection`, `ARCHITECTURE.md` ("Flat or globe") | none |
-| Camera tilt | lacks | the camera is north-up with no pitch, by design; whether to add one is to be decided | [#177] |
-| Hillshade, terrain and extruded buildings | lacks | none; needs a decision (an elevation data source) | [#224] |
-| A second renderer for very dense data | lacks | MapLibre draws everything | research only: [#185] (needs a decision if it adds a dependency) |
+| Capability                                                                                                                | Status  | Evidence                                                                                               | Tracked by                                                       |
+| ------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| A catalogue of basemaps, vector, image and hybrid, with host-defined ones                                                 | has     | `BASEMAPS`, `createBasemapCatalogue`, `docs/guides/extending.md`                                       | none                                                             |
+| Light, dark and system themes, with contrast checked                                                                      | has     | `packages/theme`, `packages/core/src/theme`                                                            | none                                                             |
+| A host's own colours and font                                                                                             | partial | the tokens are typed and exported; a supported way to replace them with contrast checking is not built | [#220]                                                           |
+| Symbology by category, class breaks or equal intervals, marker shapes, size by value, patterns, dashes and outline widths | has     | `ShapeStyle`, `PointStyle`, `docs/guides/extending.md`                                                 | none                                                             |
+| Labels from a template, with a halo and a minimum zoom                                                                    | has     | `ShapeLabel` and the point label template in `packages/core/src/layers/definition.ts`                  | none                                                             |
+| Custom image icons for points                                                                                             | lacks   | none                                                                                                   | none, see "Gaps left without an issue"                           |
+| Heatmaps with controls for radius and intensity                                                                           | has     | `packages/core/src/layers/heatmap.ts`, `docs/guides/extending.md`                                      | none                                                             |
+| Clustering of dense points, with expansion                                                                                | lacks   | none                                                                                                   | [#183]                                                           |
+| Legend or key for each layer, in the sheet and over the map                                                               | partial | `LayerKey` and `MapKey` exist; the selector and host options of the map key are open                   | [#71]                                                            |
+| Layer order and opacity on any layer                                                                                      | partial | an opacity control only where the definition declares one                                              | [#176]                                                           |
+| A globe as well as a flat map                                                                                             | has     | `MapProjection`, `ARCHITECTURE.md` ("Flat or globe")                                                   | none                                                             |
+| Camera tilt                                                                                                               | lacks   | the camera is north-up with no pitch, by design; whether to add one is to be decided                   | [#177]                                                           |
+| Hillshade, terrain and extruded buildings                                                                                 | lacks   | none; needs a decision (an elevation data source)                                                      | [#224]                                                           |
+| A second renderer for very dense data                                                                                     | lacks   | MapLibre draws everything                                                                              | research only: [#185] (needs a decision if it adds a dependency) |
 
 ## Editing and geometry operations
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Draw points, lines, polygons and circles, with validity rules | has | `packages/core/src/draw`, `ARCHITECTURE.md` ("Drawing") | none |
-| Edit vertices by drag, midpoint handle or arrow keys, with undo | has | `packages/core/src/draw/reducer.ts`, `packages/web/src/adapters/maplibre/editHandles.ts` | none |
-| Snap to other shapes while drawing | lacks | none | [#225] |
-| Buffer, union, intersect, difference, simplify and centroid | partial | pure helpers in `packages/core/src/geometry/operations.ts`; the draw tool does not call them | [#226] |
-| Share shapes in a link, and import and export them as files | has | `packages/core/src/draw/share.ts`, `import.ts`, `export.ts` | larger states: [#188] |
-| Write edits back to a service | lacks | no port; each host would supply one | none, see "Gaps left without an issue" |
+| Capability                                                      | Status  | Evidence                                                                                     | Tracked by                             |
+| --------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Draw points, lines, polygons and circles, with validity rules   | has     | `packages/core/src/draw`, `ARCHITECTURE.md` ("Drawing")                                      | none                                   |
+| Edit vertices by drag, midpoint handle or arrow keys, with undo | has     | `packages/core/src/draw/reducer.ts`, `packages/web/src/adapters/maplibre/editHandles.ts`     | none                                   |
+| Snap to other shapes while drawing                              | lacks   | none                                                                                         | [#225]                                 |
+| Buffer, union, intersect, difference, simplify and centroid     | partial | pure helpers in `packages/core/src/geometry/operations.ts`; the draw tool does not call them | [#226]                                 |
+| Share shapes in a link, and import and export them as files     | has     | `packages/core/src/draw/share.ts`, `import.ts`, `export.ts`                                  | larger states: [#188]                  |
+| Write edits back to a service                                   | lacks   | no port; each host would supply one                                                          | none, see "Gaps left without an issue" |
 
 ## Measurement and analysis
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Distance and area on the ground (great circle), with unit choice | has | `packages/core/src/spatial/measurement.ts`, `MeasureToolbar` | none |
-| An elevation profile along a line | lacks | none; through an optional port, so no data source is built in | [#180] |
-| Areas reachable within a travel time | has | `ReachableAreaRequest` in `packages/core/src/ports/routing.ts`, the Directions panel | none |
-| Features near a point from a spatial index | lacks | none; for hosts with a database | [#187] |
-| Bearing and angle between points | lacks | none | none, see "Gaps left without an issue" |
-| Overlay analysis, summary statistics and geoprocessing chains | out of scope by decision | `README.md`: "not a GIS analysis engine" | none |
+| Capability                                                       | Status                   | Evidence                                                                             | Tracked by                             |
+| ---------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------ | -------------------------------------- |
+| Distance and area on the ground (great circle), with unit choice | has                      | `packages/core/src/spatial/measurement.ts`, `MeasureToolbar`                         | none                                   |
+| An elevation profile along a line                                | lacks                    | none; through an optional port, so no data source is built in                        | [#180]                                 |
+| Areas reachable within a travel time                             | has                      | `ReachableAreaRequest` in `packages/core/src/ports/routing.ts`, the Directions panel | none                                   |
+| Features near a point from a spatial index                       | lacks                    | none; for hosts with a database                                                      | [#187]                                 |
+| Bearing and angle between points                                 | lacks                    | none                                                                                 | none, see "Gaps left without an issue" |
+| Overlay analysis, summary statistics and geoprocessing chains    | out of scope by decision | `README.md`: "not a GIS analysis engine"                                             | none                                   |
 
 ## Search and geocoding
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Place search through a replaceable provider | has | `SearchProvider`, the Nominatim adapter in `packages/web/src/adapters/search` | none |
-| Suggestions as you type, only when a host supplies a provider | has | `SuggestionProvider`, `PhotonSuggestionProvider` | none |
-| Coordinates typed into search | has | `coordinateSearchResult` | UTM and MGRS: [#222] |
-| Reverse lookup of a place | has | `useReverseAddress`, the pin card | none |
-| A guide to plugging in a custom provider | partial | the ports are documented in `ARCHITECTURE.md`, and `docs/guides/extending.md` has sections for routing, search suggestions and adapters but none for a search provider | [#184] |
-| Search over a host-owned index | lacks | none | [#186] |
-| One palette for layers, places, shapes and tools | lacks | none | [#175] |
-| Bulk geocoding of address lists | lacks | a browser SDK with no server | none, see "Gaps left without an issue" |
+| Capability                                                    | Status  | Evidence                                                                                                                                                               | Tracked by                             |
+| ------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Place search through a replaceable provider                   | has     | `SearchProvider`, the Nominatim adapter in `packages/web/src/adapters/search`                                                                                          | none                                   |
+| Suggestions as you type, only when a host supplies a provider | has     | `SuggestionProvider`, `PhotonSuggestionProvider`                                                                                                                       | none                                   |
+| Coordinates typed into search                                 | has     | `coordinateSearchResult`                                                                                                                                               | UTM and MGRS: [#222]                   |
+| Reverse lookup of a place                                     | has     | `useReverseAddress`, the pin card                                                                                                                                      | none                                   |
+| A guide to plugging in a custom provider                      | partial | the ports are documented in `ARCHITECTURE.md`, and `docs/guides/extending.md` has sections for routing, search suggestions and adapters but none for a search provider | [#184]                                 |
+| Search over a host-owned index                                | lacks   | none                                                                                                                                                                   | [#186]                                 |
+| One palette for layers, places, shapes and tools              | lacks   | none                                                                                                                                                                   | [#175]                                 |
+| Bulk geocoding of address lists                               | lacks   | a browser SDK with no server                                                                                                                                           | none, see "Gaps left without an issue" |
 
 ## Routing and network analysis
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| A route through ordered stops, by drive, walk or cycle | has | `RoutingProvider`, the Valhalla adapter in `packages/web/src/adapters/routing` | none |
-| Routing as a replaceable port with a fake and a contract suite | has | `packages/core/src/ports/routing.ts`, `docs/guides/extending.md` | none |
-| Distance matrices, closest facility and stop-order optimisation | lacks | none | none, see "Gaps left without an issue" |
-| Adapters for a closed provider's search and routing services | out of scope by decision | `ROADMAP.md`, [#40] closed as not planned | none |
+| Capability                                                      | Status                   | Evidence                                                                       | Tracked by                             |
+| --------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------ | -------------------------------------- |
+| A route through ordered stops, by drive, walk or cycle          | has                      | `RoutingProvider`, the Valhalla adapter in `packages/web/src/adapters/routing` | none                                   |
+| Routing as a replaceable port with a fake and a contract suite  | has                      | `packages/core/src/ports/routing.ts`, `docs/guides/extending.md`               | none                                   |
+| Distance matrices, closest facility and stop-order optimisation | lacks                    | none                                                                           | none, see "Gaps left without an issue" |
+| Adapters for a closed provider's search and routing services    | out of scope by decision | `ROADMAP.md`, [#40] closed as not planned                                      | none                                   |
 
 ## Selection and querying
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| A card for a tapped feature, a list of loaded features with sorting, choices where several overlap | has | `FeatureCard`, `FeatureChoices` in `packages/map/src/layers` | none |
-| Identify on raster layers through a host endpoint | partial | the definition block, `LayerSource.identify` and the tap in `useDataLayers` are built; no host defines an `identify` block yet, and the tap path and key press are open | [#47] ([#126], [#127]) |
-| Selecting several features, with a host's store | partial | the port, store, hook and provider are built (closed #114 to #116); highlighting, a panel and select mode are open | [#49] ([#117] to [#119], [#122]) |
-| Features inside a drawn shape | partial | the optional `FeatureQuery` port is built (closed #120); no interface calls it yet | [#121] |
-| Features inside a box or a freehand loop, from loaded features | lacks | none | [#181] |
-| Filters a person can change, and layers that wait for a filter | partial | controls fill URL templates and a fixed `filter` splits a feed; no person-set attribute filter | [#62] |
-| Full details for a feature in a side panel, with a chart for a series | lacks | the card shows templated lines only | [#179] |
-| Cards for features in vector tiles | lacks | vector tile layers have a key but no cards | [#193] |
+| Capability                                                                                         | Status  | Evidence                                                                                                                                                                | Tracked by                       |
+| -------------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| A card for a tapped feature, a list of loaded features with sorting, choices where several overlap | has     | `FeatureCard`, `FeatureChoices` in `packages/map/src/layers`                                                                                                            | none                             |
+| Identify on raster layers through a host endpoint                                                  | partial | the definition block, `LayerSource.identify` and the tap in `useDataLayers` are built; no host defines an `identify` block yet, and the tap path and key press are open | [#47] ([#126], [#127])           |
+| Selecting several features, with a host's store                                                    | partial | the port, store, hook and provider are built (closed #114 to #116); highlighting, a panel and select mode are open                                                      | [#49] ([#117] to [#119], [#122]) |
+| Features inside a drawn shape                                                                      | partial | the optional `FeatureQuery` port is built (closed #120); no interface calls it yet                                                                                      | [#121]                           |
+| Features inside a box or a freehand loop, from loaded features                                     | lacks   | none                                                                                                                                                                    | [#181]                           |
+| Filters a person can change, and layers that wait for a filter                                     | partial | controls fill URL templates and a fixed `filter` splits a feed; no person-set attribute filter                                                                          | [#62]                            |
+| Full details for a feature in a side panel, with a chart for a series                              | lacks   | the card shows templated lines only                                                                                                                                     | [#179]                           |
+| Cards for features in vector tiles                                                                 | lacks   | vector tile layers have a key but no cards                                                                                                                              | [#193]                           |
 
 ## Time-based data
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Date and date-time controls that fill a layer's URL | has | `DateTimeControl`, `docs/guides/extending.md` | none |
-| Playing a layer through its dates | lacks | none | [#182] |
-| Layers that refresh on a timer | out of scope by decision | `ROADMAP.md`, "Live refresh of layers" | none |
+| Capability                                          | Status                   | Evidence                                      | Tracked by |
+| --------------------------------------------------- | ------------------------ | --------------------------------------------- | ---------- |
+| Date and date-time controls that fill a layer's URL | has                      | `DateTimeControl`, `docs/guides/extending.md` | none       |
+| Playing a layer through its dates                   | lacks                    | none                                          | [#182]     |
+| Layers that refresh on a timer                      | out of scope by decision | `ROADMAP.md`, "Live refresh of layers"        | none       |
 
 ## Printing and export
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Save the map as an image, with the credits | has | `toImage`, `packages/web/src/adapters/maplibre/imageExport.ts` | none |
-| An image at a requested size, pixel ratio and view | has | `MapImageOptions`, `planRequestedImage` in `packages/core/src/imageExport` (the port and adapter only: the Save image button uses the view on screen) | the interface for it, scale bar, key, title, overlays and a headless route: [#48] |
-| Print with a title, key and credits, and save as PDF through the browser | lacks | none | [#178] |
-| Export drawn shapes as GeoJSON, CSV and WKT | has | `packages/core/src/draw/export.ts` | none |
-| Export the features of a layer | lacks | none; needs each provider's terms checked | [#228] |
-| A link that carries view, basemap, layers and shapes | has | `packages/core/src/urlHash`, `draw/share.ts` | map shape and tilt: [#177]; large states: [#188] |
+| Capability                                                               | Status | Evidence                                                                                                                                              | Tracked by                                                                        |
+| ------------------------------------------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Save the map as an image, with the credits                               | has    | `toImage`, `packages/web/src/adapters/maplibre/imageExport.ts`                                                                                        | none                                                                              |
+| An image at a requested size, pixel ratio and view                       | has    | `MapImageOptions`, `planRequestedImage` in `packages/core/src/imageExport` (the port and adapter only: the Save image button uses the view on screen) | the interface for it, scale bar, key, title, overlays and a headless route: [#48] |
+| Print with a title, key and credits, and save as PDF through the browser | lacks  | none                                                                                                                                                  | [#178]                                                                            |
+| Export drawn shapes as GeoJSON, CSV and WKT                              | has    | `packages/core/src/draw/export.ts`                                                                                                                    | none                                                                              |
+| Export the features of a layer                                           | lacks  | none; needs each provider's terms checked                                                                                                             | [#228]                                                                            |
+| A link that carries view, basemap, layers and shapes                     | has    | `packages/core/src/urlHash`, `draw/share.ts`                                                                                                          | map shape and tilt: [#177]; large states: [#188]                                  |
 
 ## Offline use
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Say when the device is offline | partial | the search adapters already raise an offline error and the interface names it; layers and tiles do not, and nothing announces the change once | [#229] |
-| Tiles stored on the device | lacks | none; a privacy and storage question first | research only: [#196] |
-| An installable app that works offline | lacks | none | none, see "Gaps left without an issue" |
+| Capability                            | Status  | Evidence                                                                                                                                      | Tracked by                             |
+| ------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Say when the device is offline        | partial | the search adapters already raise an offline error and the interface names it; layers and tiles do not, and nothing announces the change once | [#229]                                 |
+| Tiles stored on the device            | lacks   | none; a privacy and storage question first                                                                                                    | research only: [#196]                  |
+| An installable app that works offline | lacks   | none                                                                                                                                          | none, see "Gaps left without an issue" |
 
 ## Performance on large data
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Ask only for the view, with a cap and a zoom floor | has | `QuerySource`, `docs/guides/serving-layers.md` | none |
-| Raster and vector tiles for dense drawings | has | `TileSource`, `VectorTileSource` | none |
-| A reused response within a page | has | `packages/core/src/layers/responseCache.ts` | none |
-| A measured budget for tiles per view | lacks | none | [#194] |
-| Clustering and tile archives | lacks | none | [#183], [#192] |
-| Measured Lighthouse work on the reference site | has | `docs/guides/performance.md` | none |
+| Capability                                         | Status | Evidence                                       | Tracked by     |
+| -------------------------------------------------- | ------ | ---------------------------------------------- | -------------- |
+| Ask only for the view, with a cap and a zoom floor | has    | `QuerySource`, `docs/guides/serving-layers.md` | none           |
+| Raster and vector tiles for dense drawings         | has    | `TileSource`, `VectorTileSource`               | none           |
+| A reused response within a page                    | has    | `packages/core/src/layers/responseCache.ts`    | none           |
+| A measured budget for tiles per view               | lacks  | none                                           | [#194]         |
+| Clustering and tile archives                       | lacks  | none                                           | [#183], [#192] |
+| Measured Lighthouse work on the reference site     | has    | `docs/guides/performance.md`                   | none           |
 
 ## Embedding and server-rendered pages
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| React components built from four packages, with an example app that uses only public entry points | has | `examples/embed`, `docs/guides/extending.md` | none |
-| The map engine adapter as an optional package | lacks | the adapter is in `packages/web` | [#43], after [#24] |
-| A script and stylesheet with a mount function for pages without React | lacks | none | [#44] |
-| A guide for serving the bundle from a Windows web server and server-rendered pages | lacks | none | [#221] |
-| The Content Security Policy a host needs | lacks | the reference site's own is in `packages/web/public/_headers` | [#230] |
-| Making the SDK easy to drop into existing server-rendered applications | lacks | the tracker for the items above | [#51] |
-| The interface text and language chosen by the host | lacks | English only, with copy inline in components; changing it is a decision | [#231] |
-| An agent that can drive the map through a tool catalogue | partial | the reference host registers a few tools (`packages/web/src/webmcp`); the SDK ships none | [#56] |
-| Hosts plugging in their own analytics | lacks | none | [#75] |
+| Capability                                                                                        | Status  | Evidence                                                                                 | Tracked by         |
+| ------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------- | ------------------ |
+| React components built from four packages, with an example app that uses only public entry points | has     | `examples/embed`, `docs/guides/extending.md`                                             | none               |
+| The map engine adapter as an optional package                                                     | lacks   | the adapter is in `packages/web`                                                         | [#43], after [#24] |
+| A script and stylesheet with a mount function for pages without React                             | lacks   | none                                                                                     | [#44]              |
+| A guide for serving the bundle from a Windows web server and server-rendered pages                | lacks   | none                                                                                     | [#221]             |
+| The Content Security Policy a host needs                                                          | lacks   | the reference site's own is in `packages/web/public/_headers`                            | [#230]             |
+| Making the SDK easy to drop into existing server-rendered applications                            | lacks   | the tracker for the items above                                                          | [#51]              |
+| The interface text and language chosen by the host                                                | lacks   | English only, with copy inline in components; changing it is a decision                  | [#231]             |
+| An agent that can drive the map through a tool catalogue                                          | partial | the reference host registers a few tools (`packages/web/src/webmcp`); the SDK ships none | [#56]              |
+| Hosts plugging in their own analytics                                                             | lacks   | none                                                                                     | [#75]              |
 
 ## Server-side rendering
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| The page shell and chrome rendered on the server, then hydrated | has | `ChromeSkeleton`, `packages/web/src/entry.server.tsx` | none |
-| The map itself rendered on the server | lacks | the reference site draws the map in the browser, by decision | research only: [#53] |
-| Map images produced where no one is looking at the map | lacks | none | [#48], [#53] |
+| Capability                                                      | Status | Evidence                                                     | Tracked by           |
+| --------------------------------------------------------------- | ------ | ------------------------------------------------------------ | -------------------- |
+| The page shell and chrome rendered on the server, then hydrated | has    | `ChromeSkeleton`, `packages/web/src/entry.server.tsx`        | none                 |
+| The map itself rendered on the server                           | lacks  | the reference site draws the map in the browser, by decision | research only: [#53] |
+| Map images produced where no one is looking at the map          | lacks  | none                                                         | [#48], [#53]         |
 
 ## Accessibility
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| WCAG 2.2 AA as the target, with a keyboard or single-tap route for every gesture | has | `DESIGN.md`, the `@a11y` Playwright tests in `packages/web/e2e` | none |
-| Announcements through one live region | has | `LiveRegionProvider`, `packages/core/src/announce` | none |
-| Contrast calculations for every token pair | has | `packages/theme/src/contrast.ts` | none |
-| Screen reader checks of the announcements | partial | automated checks only | [#146] |
+| Capability                                                                       | Status  | Evidence                                                        | Tracked by |
+| -------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------- | ---------- |
+| WCAG 2.2 AA as the target, with a keyboard or single-tap route for every gesture | has     | `DESIGN.md`, the `@a11y` Playwright tests in `packages/web/e2e` | none       |
+| Announcements through one live region                                            | has     | `LiveRegionProvider`, `packages/core/src/announce`              | none       |
+| Contrast calculations for every token pair                                       | has     | `packages/theme/src/contrast.ts`                                | none       |
+| Screen reader checks of the announcements                                        | partial | automated checks only                                           | [#146]     |
 
 ## Security and privacy
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| No accounts and no tracking beyond cookieless page views | has, by decision | `PRIVACY.md`, `ROADMAP.md` | none |
-| Untrusted text read in bounded, linear time | has | the WKT, shape file, coordinate and link readers, with property-based tests | none |
-| A strict Content Security Policy on the reference site | has | `packages/web/public/_headers` | for hosts: [#230] |
-| A check that every SDK dependency allows commercial use | lacks | the licence header check only | [#198] |
-| Reporting channel and assurance case | has | `SECURITY.md`, `docs/assurance-case.md` | OpenSSF silver: [#4] |
-| Optional host analytics that keep the reference site untouched | lacks | none | [#75] |
+| Capability                                                     | Status           | Evidence                                                                    | Tracked by           |
+| -------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------- | -------------------- |
+| No accounts and no tracking beyond cookieless page views       | has, by decision | `PRIVACY.md`, `ROADMAP.md`                                                  | none                 |
+| Untrusted text read in bounded, linear time                    | has              | the WKT, shape file, coordinate and link readers, with property-based tests | none                 |
+| A strict Content Security Policy on the reference site         | has              | `packages/web/public/_headers`                                              | for hosts: [#230]    |
+| A check that every SDK dependency allows commercial use        | lacks            | the licence header check only                                               | [#198]               |
+| Reporting channel and assurance case                           | has              | `SECURITY.md`, `docs/assurance-case.md`                                     | OpenSSF silver: [#4] |
+| Optional host analytics that keep the reference site untouched | lacks            | none                                                                        | [#75]                |
 
 ## Developer experience
 
-| Capability | Status | Evidence | Tracked by |
-| --- | --- | --- | --- |
-| Ports with fakes and shared contract suites, and coverage floors | has | `packages/core/src/contracts`, `AGENTS.md` | none |
-| An example app and guides | has | `examples/embed`, `docs/guides` | none |
-| Packages published with generated API documentation | lacks | the four packages are not yet published | [#1] |
-| A documentation site | lacks | none | [#199] |
-| Component documentation for consumers | lacks | none | [#174] |
+| Capability                                                       | Status | Evidence                                   | Tracked by |
+| ---------------------------------------------------------------- | ------ | ------------------------------------------ | ---------- |
+| Ports with fakes and shared contract suites, and coverage floors | has    | `packages/core/src/contracts`, `AGENTS.md` | none       |
+| An example app and guides                                        | has    | `examples/embed`, `docs/guides`            | none       |
+| Packages published with generated API documentation              | lacks  | the four packages are not yet published    | [#1]       |
+| A documentation site                                             | lacks  | none                                       | [#199]     |
+| Component documentation for consumers                            | lacks  | none                                       | [#174]     |
 
 ## Proposed order for the SDK track
 

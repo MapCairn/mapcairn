@@ -76,8 +76,8 @@ function loadingCatalogue() {
 
 const idsOn = (result: { current: ReturnType<typeof useDataLayers> }) =>
   result.current.layers
-    .filter((layer) => layer.enabled)
-    .map((layer) => layer.definition.id);
+    .filter((item) => item.enabled)
+    .map((item) => item.definition.id);
 
 function layer(
   result: { current: ReturnType<typeof useDataLayers> },

@@ -198,7 +198,7 @@ export class FakeMapAdapter implements MapAdapter {
   /** The shape the map was last asked to draw. */
   projection: MapProjection = "flat";
 
-  #failMount: MapEngineErrorReason | undefined;
+  readonly #failMount: MapEngineErrorReason | undefined;
   #failNextBasemap = false;
   /** The next swap waits on this until the test settles it. */
   #nextSwapGate: SwapGate | null = null;
@@ -209,10 +209,10 @@ export class FakeMapAdapter implements MapAdapter {
   #host: MapHostElement | null = null;
   #hostSize = { width: 800, height: 600 };
   #destroyed = false;
-  #listeners = new Map<keyof MapEvents, Set<Handler>>();
-  #dataLayers = new Map<string, DataLayer>();
+  readonly #listeners = new Map<keyof MapEvents, Set<Handler>>();
+  readonly #dataLayers = new Map<string, DataLayer>();
   /** The tiles each tile layer reported as slow or missing, until they load or change. */
-  #reportedTiles = new Map<string, string>();
+  readonly #reportedTiles = new Map<string, string>();
   #hitsAtPointer: readonly MapFeatureHit[] = [];
   #failNextImage = false;
   #stallImageTiles = false;

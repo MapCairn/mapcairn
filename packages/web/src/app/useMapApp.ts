@@ -513,12 +513,12 @@ export function useMapApp(): MapApp {
   const onDrawClick = draw.onMapClick;
   const onMapClick = useCallback(
     (event: MapClickEvent) => {
-      const { surface } = stateRef.current;
-      if (surface === "measure") {
+      const current = stateRef.current.surface;
+      if (current === "measure") {
         addPoint(event.latlng);
-      } else if (surface === "directions") {
+      } else if (current === "directions") {
         addStop(event.latlng);
-      } else if (surface === "draw") {
+      } else if (current === "draw") {
         onDrawClick(event);
       } else if (
         mapRef.current?.adapter?.featuresAt(event.point).length === 0

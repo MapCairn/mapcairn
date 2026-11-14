@@ -489,10 +489,10 @@ function withoutTraces(state: State, ids: ReadonlySet<string>): State {
 }
 
 /** A feature to open, by its layer and its id. */
-type FeatureHit = {
+interface FeatureHit {
   readonly layerId: string;
   readonly featureId: string;
-};
+}
 
 /**
  * The state with these features open: one opens its card, several open the
@@ -703,7 +703,11 @@ function compare(a: FieldValue | undefined, b: FieldValue | undefined): number {
   const left = sortable(a);
   const right = sortable(b);
   if (left === null || right === null) {
-    return left === right ? 0 : left === null ? 1 : -1;
+    if (left === right) {
+      return 0;
+    }
+    // A missing value sorts last.
+    return left === null ? 1 : -1;
   }
   if (typeof left === "number" && typeof right === "number") {
     return left - right;
@@ -882,24 +886,26 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       const controller = new AbortController();
       requests.current.set(id, { key, controller });
       setState((current) => withLoading(current, load));
-      loadOutcome(layerSource, load, now, controller.signal).then((outcome) => {
-        // A load that was cancelled or replaced meanwhile is neither shown nor said.
-        if (!outcome || requests.current.get(id)?.controller !== controller) {
-          return;
-        }
-        requests.current.delete(id);
-        loadedKeys.current.set(id, key);
-        setState((current) => ({
-          ...current,
-          results: { ...current.results, [id]: outcome.result },
-        }));
-        reportLoad(
-          definition,
-          outcome.spoken,
-          announcedStates.current,
-          announce,
-        );
-      });
+      void loadOutcome(layerSource, load, now, controller.signal).then(
+        (outcome) => {
+          // A load that was cancelled or replaced meanwhile is neither shown nor said.
+          if (!outcome || requests.current.get(id)?.controller !== controller) {
+            return;
+          }
+          requests.current.delete(id);
+          loadedKeys.current.set(id, key);
+          setState((current) => ({
+            ...current,
+            results: { ...current.results, [id]: outcome.result },
+          }));
+          reportLoad(
+            definition,
+            outcome.spoken,
+            announcedStates.current,
+            announce,
+          );
+        },
+      );
     };
 
     const plan = planLoads(wanted, requests.current, loadedKeys.current);

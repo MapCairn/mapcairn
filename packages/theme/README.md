@@ -4,13 +4,13 @@ MapCairn's design tokens, built with [vanilla-extract](https://vanilla-extract.s
 
 ## Exports
 
-| Export | Purpose |
-|---|---|
-| `tokens` | The token contract: `tokens.color.*`, `shadow`, `effect`, `space`, `radius`, `type`, `size`, `focus`, `motion` and `z`. Each is a typed CSS variable reference, so a typo in a `.css.ts` file is a type error. The values and the light and dark switching are defined in `src/tokens.css.ts`. |
-| `focusRing`, `blur`, `surfaceBlurStyle`, `surfaceBlurSupported` | Shared style fragments: the two-tone focus ring, and translucent surfaces with an opaque fallback. |
-| `zLayer(name)` | The z-index variable for a named layer (map, mapOverlay, chrome, chromeRaised, sheet, toolbar, popover, toast). Components name a layer and never write a number. |
-| `mapOverlayTokens` | Colours for everything drawn over the map: pin, measure line and fill, accuracy circle, scale bar and tile-error banner. |
-| `tokenValues` | The raw values (colour roles for both themes, spacing, radii, type scale, motion, z layers). Used by tests and the contrast checks, not by components. |
+| Export                                                          | Purpose                                                                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokens`                                                        | The token contract: `tokens.color.*`, `shadow`, `effect`, `space`, `radius`, `type`, `size`, `focus`, `motion` and `z`. Each is a typed CSS variable reference, so a typo in a `.css.ts` file is a type error. The values and the light and dark switching are defined in `src/tokens.css.ts`. |
+| `focusRing`, `blur`, `surfaceBlurStyle`, `surfaceBlurSupported` | Shared style fragments: the two-tone focus ring, and translucent surfaces with an opaque fallback.                                                                                                                                                                                             |
+| `zLayer(name)`                                                  | The z-index variable for a named layer (map, mapOverlay, chrome, chromeRaised, sheet, toolbar, popover, toast). Components name a layer and never write a number.                                                                                                                              |
+| `mapOverlayTokens`                                              | Colours for everything drawn over the map: pin, measure line and fill, accuracy circle, scale bar and tile-error banner.                                                                                                                                                                       |
+| `tokenValues`                                                   | The raw values (colour roles for both themes, spacing, radii, type scale, motion, z layers). Used by tests and the contrast checks, not by components.                                                                                                                                         |
 
 The token set and the contrast checks live in `src/tokens.css.ts`, `src/tokenValues.ts` and `src/contrast.ts`. The contrast tests compute every text and boundary pairing over the worst-case map backdrops in both themes.
 

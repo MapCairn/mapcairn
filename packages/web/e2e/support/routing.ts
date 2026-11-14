@@ -49,6 +49,14 @@ function endpointOf(url: URL): string {
   return url.pathname.replace(/^\//, "");
 }
 
+/** The fixture that answers a request in the `ok` mode. */
+function okFixture(endpoint: string, stops: number): string {
+  if (endpoint === "isochrone") {
+    return "isochrone-polygon.json";
+  }
+  return stops > 2 ? "route-three-stops.json" : "route-paris-lyon.json";
+}
+
 async function answer(route: Route, script: RoutingScript): Promise<void> {
   const url = new URL(route.request().url());
   const endpoint = endpointOf(url);
@@ -85,17 +93,11 @@ async function answer(route: Route, script: RoutingScript): Promise<void> {
       return;
     case "ok": {
       const locations = Array.isArray(body.locations) ? body.locations : [];
-      const file =
-        endpoint === "isochrone"
-          ? "isochrone-polygon.json"
-          : locations.length > 2
-            ? "route-three-stops.json"
-            : "route-paris-lyon.json";
       await route.fulfill({
         status: 200,
         headers: cors,
         contentType: "application/json",
-        body: fixture(file),
+        body: fixture(okFixture(endpoint, locations.length)),
       });
     }
   }

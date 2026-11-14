@@ -15,7 +15,18 @@ import { IconButton } from "../ui/IconButton";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { FeatureGlyph, featureClass } from "./FeatureGlyph";
 import * as styles from "./Layers.css";
-import type { DataLayers, SelectedFeature } from "./useDataLayers";
+import type { DataLayers, DetailState, SelectedFeature } from "./useDataLayers";
+
+/** The label of the affected-area button: `idle` until the area is shown or has failed to load. */
+function detailButtonLabel(
+  status: DetailState["status"] | undefined,
+  idle: string,
+): string {
+  if (status === "shown") {
+    return "Hide affected area";
+  }
+  return status === "error" ? "Try again" : idle;
+}
 
 /** Props for {@link FeatureCard}. */
 export interface FeatureCardProps {
@@ -168,11 +179,7 @@ export function FeatureCard({
                 : layers.showDetail(definition.id, feature.id)
             }
           >
-            {detail?.status === "shown"
-              ? "Hide affected area"
-              : detail?.status === "error"
-                ? "Try again"
-                : detailSource.label}
+            {detailButtonLabel(detail?.status, detailSource.label)}
           </Button>
         ) : null}
       </div>

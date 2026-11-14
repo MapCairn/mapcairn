@@ -31,7 +31,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, type SyntheticEvent, useEffect, useRef } from "react";
 import { usePreferences, useSettings } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -179,7 +179,7 @@ export function DirectionsPanel({
     }
   };
 
-  const submitSearch = (event: FormEvent) => {
+  const submitSearch = (event: SyntheticEvent) => {
     event.preventDefault();
     search.submit();
   };

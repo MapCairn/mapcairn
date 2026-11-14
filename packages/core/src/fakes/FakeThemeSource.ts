@@ -16,7 +16,7 @@ export class FakeThemeSource implements ThemeSource {
   readonly applyCalls: ResolvedTheme[] = [];
 
   #systemTheme: ResolvedTheme;
-  #listeners = new Set<(theme: ResolvedTheme) => void>();
+  readonly #listeners = new Set<(theme: ResolvedTheme) => void>();
 
   constructor(systemTheme: ResolvedTheme = "light") {
     this.#systemTheme = systemTheme;

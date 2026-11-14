@@ -27,22 +27,22 @@ function formatScore(score) {
     : String(Math.round(score * 100));
 }
 
-function readReports(resultsDir) {
-  const files = readdirSync(resultsDir).filter(
+function readReports(directory) {
+  const files = readdirSync(directory).filter(
     (name) => name.startsWith("lhr-") && name.endsWith(".json"),
   );
   return files
-    .map((file) => JSON.parse(readFileSync(join(resultsDir, file), "utf8")))
+    .map((file) => JSON.parse(readFileSync(join(directory, file), "utf8")))
     .sort((a, b) => a.fetchTime.localeCompare(b.fetchTime));
 }
 
-function buildSummary(reports) {
+function buildSummary(runs) {
   const lines = ["## Lighthouse report", ""];
-  lines.push(`URL: ${reports[0].requestedUrl}`);
+  lines.push(`URL: ${runs[0].requestedUrl}`);
   lines.push("");
   lines.push(`| Run | ${CATEGORY_IDS.join(" | ")} |`);
   lines.push(`| --- | ${CATEGORY_IDS.map(() => "---").join(" | ")} |`);
-  for (const [index, report] of reports.entries()) {
+  for (const [index, report] of runs.entries()) {
     const scores = CATEGORY_IDS.map((id) =>
       formatScore(report.categories[id]?.score),
     );
@@ -51,7 +51,7 @@ function buildSummary(reports) {
   lines.push("");
   lines.push(`| Run | ${AUDIT_IDS.join(" | ")} |`);
   lines.push(`| --- | ${AUDIT_IDS.map(() => "---").join(" | ")} |`);
-  for (const [index, report] of reports.entries()) {
+  for (const [index, report] of runs.entries()) {
     const values = AUDIT_IDS.map(
       (id) => report.audits[id]?.displayValue ?? "n/a",
     );

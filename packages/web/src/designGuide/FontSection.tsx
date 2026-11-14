@@ -40,6 +40,31 @@ export interface FontSectionProps {
 
 type GateState = "pending" | "true" | "false";
 
+const GATE_GLYPHS: Record<GateState, typeof LoaderCircle> = {
+  pending: LoaderCircle,
+  true: CircleCheck,
+  false: TriangleAlert,
+};
+
+/** The gate's state for a result that may not have arrived yet. */
+function gateState(result: FontGateResult | null): GateState {
+  if (result === null) {
+    return "pending";
+  }
+  return result.loaded ? "true" : "false";
+}
+
+/** The gate's result in words. */
+function gateMessage(result: FontGateResult | null): string {
+  if (result === null) {
+    return "Checking which font is rendering";
+  }
+  if (result.loaded) {
+    return "IBM Plex Sans loaded";
+  }
+  return `IBM Plex Sans did not load. The page is showing the fallback face. ${result.reason}`;
+}
+
 /**
  * The font specimen and the font gate. The gate's element carries
  * `data-font-loaded` (`pending`, then `true` or `false`), which the e2e
@@ -67,20 +92,9 @@ export function FontSection({ checkFont }: FontSectionProps) {
     };
   }, [checkFont]);
 
-  const state: GateState =
-    result === null ? "pending" : result.loaded ? "true" : "false";
-  const glyph =
-    state === "pending"
-      ? LoaderCircle
-      : state === "true"
-        ? CircleCheck
-        : TriangleAlert;
-  const message =
-    result === null
-      ? "Checking which font is rendering"
-      : result.loaded
-        ? "IBM Plex Sans loaded"
-        : `IBM Plex Sans did not load. The page is showing the fallback face. ${result.reason}`;
+  const state = gateState(result);
+  const glyph = GATE_GLYPHS[state];
+  const message = gateMessage(result);
 
   return (
     <GuideSection

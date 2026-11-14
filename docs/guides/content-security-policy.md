@@ -6,7 +6,7 @@ The reference host is the worked example. Its policy is `packages/web/public/_he
 
 ## The shape of the policy
 
-The reference host sends one strict policy, with a nonce added on rendered pages, on every response: the static copy in `_headers` for the responses served straight from assets, and a per-request copy with a nonce for the pages it renders (`entry.server.tsx`):
+The reference host sends one strict policy on every response, in two copies: the static one in `_headers` for the responses served straight from assets, and a per-request one with a nonce added for the pages it renders (`entry.server.tsx`). Development relaxes `style-src` and `connect-src` (see below). The directives:
 
 - `default-src 'self'`, so anything not named below falls back to the site's own origin and fails closed.
 - `script-src`, `style-src 'self'`, `img-src`, `font-src 'self'`, `connect-src` and `worker-src`, covered one by one below.
@@ -22,9 +22,9 @@ Three kinds of source, each for a reason:
 
 - `'self'`, for the app's own scripts, which the build emits as files.
 - One exact `sha256-` hash, for the single inline script the host runs: the theme bootstrap, which sets the theme before the page hydrates so it does not flash (`root.tsx`, source in `src/app/themeBootstrap.ts`). Its hash is written into both copies of the policy, and a test recomputes it whenever the script's source changes (`securityHeaders.ts`). Any other inline script needs its own hash or a nonce; production permits no `'unsafe-inline'`.
-- The script origin of any third-party script the host chooses to run. The reference host allows only its analytics beacon's script origin; a host without analytics has no third entry.
+- The script origin of any third-party script the host chooses to run. The reference host allows only its analytics beacon's script origin; a host without analytics has no entry for a third-party script.
 
-In development the policy is relaxed by the `development` option of `buildContentSecurityPolicy`, because the Vite dev server injects its own styles and a hot-reload socket. Production never sets it (`securityHeaders.ts`).
+In development the policy is relaxed in `style-src` and `connect-src` by the `development` option of `buildContentSecurityPolicy`, because the Vite dev server injects its own styles and opens a hot-reload socket. Production never sets it (`securityHeaders.ts`).
 
 ## style-src
 
@@ -36,7 +36,7 @@ The SDK keeps style attributes out of server-rendered markup for this reason, an
 
 ## img-src
 
-`'self'`, then `data:`, then `blob:`, then one origin per tile provider the host serves. Raster tiles, basemap and layer alike, are requested as images, so each tile origin goes here; the reference host's definition loop test requires a tile layer's origin in `img-src` as well as in `connect-src` and names the file to add it to (`layers.test.ts`).
+`'self'`, then `data:`, then `blob:`, then one origin per tile provider the host serves. The reference policy lists the tile hosts of its basemaps here, and its definition loop test requires a tile layer's origin in `img-src` as well as in `connect-src` and names the file to add it to (`layers.test.ts`). The repository does not say why the engine needs both, so treat both lists as required.
 
 The two URL schemes are for the engine's own image handling: it decodes some images from data URLs and loads others from blob object URLs it creates itself. Both uses are in the engine's source, not in this repository's files, and they were not checked in a running browser; a host that trims them should watch its console for a report saying an image was refused.
 

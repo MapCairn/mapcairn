@@ -161,13 +161,13 @@ function BasemapTile({
   const showSwatch = preview === undefined || failed;
   // A ref callback with a listener, not an onError prop, which the a11y lint
   // rejects on a non-interactive element.
-  const watchImage = useCallback((image: HTMLImageElement | null) => {
-    if (!image) {
+  const watchImage = useCallback((node: HTMLImageElement | null) => {
+    if (!node) {
       return;
     }
     const fail = () => setFailed(true);
-    image.addEventListener("error", fail);
-    return () => image.removeEventListener("error", fail);
+    node.addEventListener("error", fail);
+    return () => node.removeEventListener("error", fail);
   }, []);
   // The basemap's own swatch colour, through a custom property.
   const swatchColour = basemap.swatch;

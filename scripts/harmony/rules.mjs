@@ -429,7 +429,11 @@ function moduleScopeCalls(code) {
   let depth = 0;
   for (const [k, tok] of tokens.entries()) {
     if (tok.t === "p") {
-      depth += tok.v === "{" ? 1 : tok.v === "}" ? -1 : 0;
+      if (tok.v === "{") {
+        depth += 1;
+      } else if (tok.v === "}") {
+        depth -= 1;
+      }
       continue;
     }
     const isCall =

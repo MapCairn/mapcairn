@@ -131,7 +131,7 @@ export function inspectControls(page: Page): Promise<ControlReport> {
     const targetBox = (element: HTMLElement): DOMRect | null => {
       const own = element.getBoundingClientRect();
       const label = element.closest("label");
-      const tiny = (box: DOMRect) => box.width <= 2 && box.height <= 2;
+      const tiny = (rect: DOMRect) => rect.width <= 2 && rect.height <= 2;
       const box = tiny(own) && label ? label.getBoundingClientRect() : own;
       const inRunningText =
         element.matches("a[href]") && element.closest("p") !== null;

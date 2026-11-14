@@ -83,6 +83,14 @@ export function MapBanners({ app }: MapBannersProps) {
     }
   }, [map.error]);
 
+  const basemapMessage = app.basemapFailure?.unavailable
+    ? basemapUnavailableMessage(app.basemapFailure.name)
+    : BASEMAP_FAILED_MESSAGE;
+  const engineMessage =
+    map.error?.reason === "stopped"
+      ? ENGINE_STOPPED_MESSAGE
+      : ENGINE_FAILED_MESSAGE;
+
   return (
     <div className={styles.stack} data-testid="map-banners">
       {map.tileError &&
@@ -121,9 +129,7 @@ export function MapBanners({ app }: MapBannersProps) {
           }
           onDismiss={app.restorePreviousBasemap}
         >
-          {app.basemapFailure.unavailable
-            ? basemapUnavailableMessage(app.basemapFailure.name)
-            : BASEMAP_FAILED_MESSAGE}
+          {basemapMessage}
         </StatusMessage>
       ) : null}
       {engineFailed(map) && !engineErrorDismissed ? (
@@ -133,9 +139,7 @@ export function MapBanners({ app }: MapBannersProps) {
           action={{ label: "Reload", onClick: reload }}
           onDismiss={() => setEngineErrorDismissed(true)}
         >
-          {map.error?.reason === "stopped"
-            ? ENGINE_STOPPED_MESSAGE
-            : ENGINE_FAILED_MESSAGE}
+          {engineMessage}
         </StatusMessage>
       ) : null}
     </div>

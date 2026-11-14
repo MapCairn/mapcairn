@@ -660,7 +660,7 @@ describe("MapLibreMapAdapter", () => {
       const { adapter, map } = await mounted();
       const seen: Array<[string, unknown]> = [];
       for (const name of ["move", "moveEnd", "zoom", "rotate"] as const) {
-        adapter.on(name, (view) => seen.push([name, view]));
+        adapter.on(name, (next) => seen.push([name, next]));
       }
       map.zoom = 4;
       map.bearing = -10;

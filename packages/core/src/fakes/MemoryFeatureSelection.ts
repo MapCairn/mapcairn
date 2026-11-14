@@ -64,7 +64,7 @@ export class MemoryFeatureSelection implements FeatureSelection {
   readonly limit: number;
 
   #refs: readonly FeatureRef[] = Object.freeze([]);
-  #listeners = new Set<() => void>();
+  readonly #listeners = new Set<() => void>();
 
   constructor(options: MemoryFeatureSelectionOptions = {}) {
     const limit = options.limit ?? DEFAULT_SELECTION_LIMIT;

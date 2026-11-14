@@ -853,7 +853,7 @@ describe("ValhallaRoutingProvider cancellation", () => {
           mode: "walk",
           signal: controller.signal,
         })
-        .catch((error: unknown) => error);
+        .catch((failure: unknown) => failure);
       controller.abort();
       await vi.advanceTimersByTimeAsync(1000);
       const error = await queued;

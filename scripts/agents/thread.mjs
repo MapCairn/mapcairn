@@ -99,7 +99,7 @@ function listAll(path) {
     : out
         .split("\n")
         .filter(Boolean)
-        .map((line) => JSON.parse(line));
+        .map((row) => JSON.parse(row));
 }
 
 /**
