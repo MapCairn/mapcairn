@@ -47,7 +47,7 @@ What could go wrong and how it is contained.
 Decisions made, with the date and reason. Open questions, each with a recommendation.
 ```
 
-For each open choice, give the cost to build and keep against the benefit, and recommend the simpler option. Neutral voice, British English, no em dashes. No maintainer name, no commercial comparison, no assistant attribution.
+For each open choice, give the cost to build and keep against the benefit, and recommend the simpler option. Neutral voice, British English, em dashes only where natural. No maintainer name, no commercial comparison, no assistant attribution.
 
 ## 4. Open the pull request
 

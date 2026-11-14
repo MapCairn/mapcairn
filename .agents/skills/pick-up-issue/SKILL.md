@@ -62,7 +62,7 @@ A change that announces something checks the `LiveRegion` row in `DESIGN.md` for
 ## 6. Simplify, read, hand over
 
 1. Run your tool's simplify step on your diff if it has one; otherwise reread the diff for logic an existing helper already does, code or options nothing uses, functions with two jobs and comments that a better name would replace. Apply the fixes and re-run the checks they touched. If another agent started you, do not start sub-agents: run this step and the `land-pr` review checklist inline, and your caller runs the independent review.
-2. Read the changed text once for British English, plain prose and no em dashes. `npm run lint` is the only automated check for documents, so this step is the rest of the check, for code changes too.
+2. Read the changed text once for British English, plain prose and only natural em dashes (see `AGENTS.md`). `npm run lint` is the only automated check for documents, so this step is the rest of the check, for code changes too.
 3. Stop every dev server, wrangler instance and browser you started and check the ports are free, then push the branch and continue with the `land-pr` skill. If you stop here, hand off with the report in `AGENTS.md` ("Definition of done").
 
 ## 7. Briefing an agent
