@@ -29,7 +29,7 @@ Issues are how MapCairn tracks work. They are public, so write plain project fac
 - Context first (what exists now, with file paths in backticks), then the proposal or the fault, then constraints, then a **task list** of small checkboxes the person who picks it up can tick as they go. Put the test the work starts with as the first task.
 - Say which documents the work will update (`ARCHITECTURE.md`, `DESIGN.md`, guides, READMEs, `PRIVACY.md`).
 - For a large change that crosses several packages or decides a public API, add a task "Plan in `docs/plans/`" (see the `plan-change` skill) and link the plan from the issue when it exists. Everything else keeps its design notes in the issue.
-- Neutral voice. No emails, keys, private details, `@mentions` of people, employer references, assistant attribution, or names of commercial products used as comparisons. Do not name the maintainer.
+- Neutral voice. No emails, keys, private details, `@mentions` of people, employer references, assistant attribution, names of commercial products used as comparisons, or any name on the maintainer's private list. Do not name the maintainer.
 - Do not describe a planned feature as if it exists.
 - Write a decision in its final wording, the exact sentence a document will carry, not a summary, so nobody copies a loose phrase. In a rule about people, name the role, for example "the person who opens the pull request".
 

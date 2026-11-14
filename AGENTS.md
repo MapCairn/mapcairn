@@ -49,11 +49,11 @@ npm run check
 - `test` runs Vitest across `packages/*`. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
 - `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has a slightly lower branch floor: 95% for statements, functions and lines and 90% for branches, because its layout and touch-gesture code is also covered by Playwright. Aim for 100% behavioural coverage.
 - `typecheck` checks every workspace, including web route types and the Playwright project.
-- `lint` runs Biome, dependency-cruiser, the harmony scanner (`scripts/harmony`, see `DESIGN.md`), the licence header check (`scripts/licenceHeaders.mjs`), the agent files check (`npm run agents:check`) and the roadmap check (`npm run roadmap:check`, see "Issues and pull requests"). Pre-commit runs the first five, but not the roadmap check, typecheck, tests or coverage.
+- `lint` runs Biome, dependency-cruiser, the harmony scanner (`scripts/harmony`, see `DESIGN.md`), the licence header check (`scripts/licenceHeaders.mjs`), the agent files check (`npm run agents:check`), the roadmap check (`npm run roadmap:check`, see "Issues and pull requests") and the names check (`npm run names:check`, see "Boundaries"). Pre-commit runs every check except the roadmap check, the `commit-msg` hook runs the names check on the commit message, and neither runs typecheck, tests or coverage.
 - `build` builds every workspace. The web build then checks that the production bundle holds no browser test seam.
 - `start` builds the e2e-mode bundle and serves it on port 4173 (or `MAPCAIRN_E2E_PORT`) through wrangler, with `wrangler.e2e.jsonc`. This build keeps the test seam, so it is not the production bundle. `wrangler.e2e.jsonc` omits production routes, so the old-hostname redirect is not exercised.
 - `check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence.
-- In a git worktree, `npm ci` fails at its `prepare` script (lefthook cannot install there). Use `npm ci --ignore-scripts` and run `npm run lint` yourself before you commit.
+- In a git worktree, `npm ci` fails at its `prepare` script (lefthook cannot install there). Use `npm ci --ignore-scripts` and run `npm run lint` yourself before you commit, and keep commit messages free of listed names, because the `commit-msg` hook does not run there.
 
 CI runs these workflows: `CI` (lint, typecheck, coverage and build), `Playwright E2E` (the browser tests, split across four jobs), `Lighthouse CI`, `CodeQL`, `CLA`, `Scorecard`, `Dependency review`, `Workflow security lint` (zizmor), `Secret scan` (TruffleHog) and a weekly `Repeatable build` check. A pull request needs the `build` and `e2e` checks to pass before it merges.
 
@@ -195,7 +195,7 @@ Merging to `main` deploys the site automatically, so a pull request is never "ju
 - Weaken an assertion, or exclude code from coverage, to make a check pass.
 - Switch on a basemap, layer or provider id in code; add one as a definition or adapter instead.
 - Publish identifying or household-level data.
-- Add assistant attribution, or name the maintainer personally or a commercial product used as a comparison, in any file or post.
+- Add assistant attribution, or name the maintainer personally, a commercial product used as a comparison or any name on the maintainer's private list, in any file, commit message or post. The maintainer keeps the plain list; the repository holds only one-way hashes of it (`scripts/names-check.mjs`). `npm run lint`, the `commit-msg` hook and the CI pull request check refuse a listed name, and the checks print where it is, never the name. To add a name, ask the maintainer.
 
 ## Documentation
 

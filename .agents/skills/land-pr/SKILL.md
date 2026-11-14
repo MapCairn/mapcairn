@@ -27,7 +27,7 @@ Unless you ran `gh repo set-default MapCairn/mapcairn` (see `pick-up-issue`), ad
    - For a map or interface change, what the `review-ui` skill found (or "no findings"), and for a visible change what the `visual-check` skill saw at each size and theme, in words, and that the images are kept locally and will be attached on request, with no local path. A person opening the pull request attaches the images for a visible change; an agent does not attach them (`gh` cannot upload them) and says they are available on request.
    - That the simplify step was run.
 4. `gh pr create --title "<Conventional Commit title>" --body-file <file>`, from a fork with `--repo MapCairn/mapcairn --head <your-login>:<branch>` if you do not have write access.
-5. No assistant attribution in the title, body or commits, no `@mentions` of people, no maintainer name, no names of commercial products used as comparisons.
+5. No assistant attribution in the title, body or commits, no `@mentions` of people, no maintainer name, no names of commercial products used as comparisons, and no name on the maintainer's private list (`npm run names:check` and the pull request check refuse them).
 6. A first pull request needs the CLA comment (the sentence at the end of `CLA.md`) from the author's own account. Tell the person if it is missing; do not post it for them.
 
 ## 2. Review it with fresh eyes
