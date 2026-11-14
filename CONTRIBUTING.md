@@ -24,7 +24,7 @@ npm run build
 
 For UI or map changes, run the Playwright specs that cover the change (`npm run test:e2e -w @mapcairn/web -- <spec name>`, which includes that spec's accessibility tests), and run the full `npm run e2e` and `npm run a11y` when the change is to layout, the map engine, the test seam or a component's colour, focus or semantics. CI runs the full suites. Install the browsers once with `npm run playwright:install -w @mapcairn/web`. Playwright starts `npm start` itself, an e2e-mode build served on port 4173 (or `MAPCAIRN_E2E_PORT`), and the tests mock basemap tiles and place search. Basemap changes also need a real iPhone check, because WebKit emulation cannot reproduce its GPU.
 
-The pre-commit hook runs Biome, dependency-cruiser and the harmony scanner, not typecheck or tests. CI runs lint, typecheck, coverage and build. Separate workflows run Playwright and Lighthouse.
+The pre-commit hook runs Biome, dependency-cruiser and the harmony scanner, not typecheck or tests. CI runs lint, typecheck, coverage and build. Separate workflows run Playwright and Lighthouse. A pull request also gets a dependency review (it fails on a new dependency with a known vulnerability at high severity or above, or with a non-commercial licence or another licence that limits commercial use; AGPL-3.0, the project's own licence, is allowed), a TruffleHog scan for verified secrets in its commits and, when it changes a workflow, a zizmor lint of the workflows. CI also runs `npm audit signatures` after `npm ci`. None of these is a required check.
 
 ## Architecture
 
