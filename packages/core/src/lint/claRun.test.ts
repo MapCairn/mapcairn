@@ -12,10 +12,21 @@ import {
 } from "../../../../scripts/cla/cla.mjs";
 import { run } from "../../../../scripts/cla/run.mjs";
 
-type User = { login: string; id: number; type: string };
-type Call = { name: string; params: Record<string, unknown> };
+interface User {
+  login: string;
+  id: number;
+  type: string;
+}
+interface Call {
+  name: string;
+  params: Record<string, unknown>;
+}
 type Params = Record<string, unknown>;
-type Failure = { status: number; times?: number; after?: () => void };
+interface Failure {
+  status: number;
+  times?: number;
+  after?: () => void;
+}
 
 const user = (login: string, id: number, type = "User"): User => ({
   login,
@@ -59,7 +70,7 @@ const signature = (login: string, id: number) => ({
   claVersion: "1.0",
 });
 
-type World = {
+interface World {
   /** The pull request author; null models a deleted account. */
   pullAuthor?: User | null;
   commits?: Array<ReturnType<typeof commit>>;
@@ -88,7 +99,7 @@ type World = {
   permissions?: Record<string, string>;
   /** Logins whose permission lookup fails with the given HTTP status. */
   permissionErrors?: Record<string, number>;
-};
+}
 
 /** An in-memory stand-in for the parts of Octokit the check uses. */
 function makeWorld(init: World = {}) {

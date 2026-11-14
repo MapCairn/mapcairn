@@ -1377,10 +1377,10 @@ describe("search", () => {
 });
 
 describe("WebMCP tools", () => {
-  type Tool = {
+  interface Tool {
     name: string;
     execute: (input: unknown) => Promise<{ content: { text: string }[] }>;
-  };
+  }
 
   async function renderWithTools(services = createFakeServices()) {
     const tools = new Map<string, Tool>();

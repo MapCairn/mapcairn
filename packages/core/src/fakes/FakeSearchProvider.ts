@@ -53,11 +53,11 @@ export class FakeSearchProvider implements SearchProvider {
   readonly searchCalls: RecordedSearchCall[] = [];
   readonly reverseCalls: RecordedReverseCall[] = [];
 
-  #byQuery = new Map<string, readonly SearchResult[]>();
+  readonly #byQuery = new Map<string, readonly SearchResult[]>();
   #defaultResults: readonly SearchResult[] = [];
   #reverseResult: SearchResult | null = null;
   #failure: SearchErrorKind | null = null;
-  #holds: Deferred<readonly SearchResult[]>[] = [];
+  readonly #holds: Deferred<readonly SearchResult[]>[] = [];
 
   /** Answers searches for `query` (trimmed) with `results`. */
   setResults(query: string, results: readonly SearchResult[]): void {

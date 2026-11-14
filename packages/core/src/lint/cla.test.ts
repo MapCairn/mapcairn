@@ -23,7 +23,11 @@ const REPO = path.resolve(
 );
 const CLA_URL = "https://github.com/mooship/karta/blob/main/CLA.md";
 
-type User = { login: string; id: number; type: string };
+interface User {
+  login: string;
+  id: number;
+  type: string;
+}
 
 const user = (login: string, id: number, type = "User"): User => ({
   login,

@@ -15,7 +15,7 @@ import type {
  */
 export class FakeDevicePreferences implements DevicePreferences {
   #value: DevicePreferencesValue;
-  #listeners = new Set<(value: DevicePreferencesValue) => void>();
+  readonly #listeners = new Set<(value: DevicePreferencesValue) => void>();
 
   constructor(initial: Partial<DevicePreferencesValue> = {}) {
     this.#value = {

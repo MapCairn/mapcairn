@@ -489,10 +489,10 @@ function withoutTraces(state: State, ids: ReadonlySet<string>): State {
 }
 
 /** A feature to open, by its layer and its id. */
-type FeatureHit = {
+interface FeatureHit {
   readonly layerId: string;
   readonly featureId: string;
-};
+}
 
 /**
  * The state with these features open: one opens its card, several open the

@@ -50,8 +50,8 @@ export class FakeLocationProvider implements LocationProvider {
 
   #fix: LocationFix;
   #failure: LocationErrorKind | null = null;
-  #holds: Deferred<LocationFix>[] = [];
-  #watchers = new Set<LocationWatchHandlers>();
+  readonly #holds: Deferred<LocationFix>[] = [];
+  readonly #watchers = new Set<LocationWatchHandlers>();
 
   constructor(options: FakeLocationProviderOptions = {}) {
     this.supportsWatch = options.supportsWatch ?? true;

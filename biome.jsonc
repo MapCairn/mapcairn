@@ -240,7 +240,9 @@
           }
         },
         "useBlockStatements": "error",
-        "useConst": "error"
+        "useConsistentTypeDefinitions": "error",
+        "useConst": "error",
+        "useReadonlyClassProperties": "error"
       }
     }
   },
