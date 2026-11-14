@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { PROPERTY_PARAMETERS } from "../propertyTesting/propertyParameters";
 import {
   finishShape,
+  offGridSmallCircleInput,
   shapeInput,
   shapeInputs,
 } from "../propertyTesting/shapeArbitraries";
@@ -13,6 +14,7 @@ import {
   repeatedFragment,
   textFromFragments,
 } from "../propertyTesting/textArbitraries";
+import { exportableShapes } from "./export";
 import { validateShape } from "./shape";
 import {
   decodeShapes,
@@ -20,6 +22,7 @@ import {
   MAX_SHARE_LENGTH,
   MAX_SHARE_SHAPES,
   SHARE_PATTERN,
+  unsharableShapes,
 } from "./share";
 
 const SHARE_FRAGMENTS = [
@@ -96,6 +99,58 @@ describe("encodeShapes", () => {
           expect(encodeShapes(inputs.map(finishShape))).toBeNull();
         },
       ),
+      PROPERTY_PARAMETERS,
+    );
+  });
+});
+
+/** A position anywhere on the map, off the grid, and one a few units of the grid from it. */
+const nearbyPositions = fc
+  .record({
+    lat: fc.double({ min: -80, max: 80, noNaN: true }),
+    lng: fc.double({ min: -170, max: 170, noNaN: true }),
+    offsets: fc.array(
+      fc.record({
+        lat: fc.double({ min: -4e-5, max: 4e-5, noNaN: true }),
+        lng: fc.double({ min: -4e-5, max: 4e-5, noNaN: true }),
+      }),
+      { minLength: 2, maxLength: 5 },
+    ),
+  })
+  .map(({ lat, lng, offsets }) =>
+    offsets.map((offset) => ({
+      lat: lat + offset.lat,
+      lng: lng + offset.lng,
+    })),
+  );
+
+/** Shapes of every size, among them circles of a few centimetres and lines and polygons a few metres across. */
+const shapesOfAnySize = fc.array(
+  fc.oneof(
+    shapeInput,
+    offGridSmallCircleInput,
+    fc.double({ min: 0.01, max: 3, noNaN: true }).map((radiusMetres) => ({
+      kind: "circle" as const,
+      vertices: [{ lat: 1.5, lng: 2.5 }],
+      radiusMetres,
+    })),
+    nearbyPositions.map((vertices) => ({ kind: "line" as const, vertices })),
+    nearbyPositions.map((vertices) => ({ kind: "polygon" as const, vertices })),
+  ),
+  { minLength: 1, maxLength: 6 },
+);
+
+describe("encodeShapes and unsharableShapes", () => {
+  it("write a link that reads back as every shape but those reported as left out", () => {
+    fc.assert(
+      fc.property(shapesOfAnySize, (inputs) => {
+        const shapes = inputs.map(finishShape);
+        const carried =
+          exportableShapes(shapes).length - unsharableShapes(shapes).length;
+        const text = encodeShapes(shapes);
+        expect(text).not.toBeNull();
+        expect(decodeShapes(text ?? "")?.length ?? 0).toBe(carried);
+      }),
       PROPERTY_PARAMETERS,
     );
   });

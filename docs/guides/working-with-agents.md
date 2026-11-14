@@ -1,6 +1,6 @@
 # Working with coding agents
 
-The project's skills and agents were written for Claude Code, and everyone is welcome to use the coding agent they prefer: Claude Code, Codex, opencode, GitHub Copilot, Antigravity, Cursor or another. The rules live in one place, [`AGENTS.md`](../../AGENTS.md), and apply whichever tool you use. What differs is how much a tool can enforce: a rule is written as an instruction everywhere, and Claude Code can also back some of them with settings. This guide says what each tool reads, how to start, what only works in Claude Code, and what has and has not been checked.
+The project's skills and agents were written for Claude Code, and everyone is welcome to use the coding agent they prefer: Claude Code, Codex, opencode, GitHub Copilot, Antigravity, Cursor, Qwen Code or another. The rules live in one place, [`AGENTS.md`](../../AGENTS.md), and apply whichever tool you use. What differs is how much a tool can enforce: a rule is written as an instruction everywhere, and Claude Code can also back some of them with settings. This guide says what each tool reads, how to start, what only works in Claude Code, and what has and has not been checked.
 
 ## One source for each thing
 
@@ -8,9 +8,9 @@ The project's skills and agents were written for Claude Code, and everyone is we
 | --- | --- | --- |
 | Rules | `AGENTS.md` | `CLAUDE.md` imports it; `.github/copilot-instructions.md` is a few lines that point to it |
 | Skills | `.claude/skills/<name>/SKILL.md`, project skills only | `.agents/skills/<name>/` |
-| Agents | `.claude/agents/<name>.md` | `.opencode/agents/<name>.md`, `.codex/agents/<name>.toml`, `.github/agents/<name>.agent.md` |
+| Agents | `.claude/agents/<name>.md` | `.opencode/agents/<name>.md`, `.codex/agents/<name>.toml`, `.github/agents/<name>.agent.md`, `.qwen/agents/<name>.md` |
 
-After you change a skill or an agent, run `npm run agents:sync`. It copies files (never links, so it works on Windows) and removes stale ones in the four output folders only. `npm run agents:check` does the same comparison without writing; `npm run lint` and the pre-commit hook run it, so stale copies cannot merge. The script takes the repository root from its own location, and fails in both modes when `.claude/skills` is missing or there is nothing to generate.
+After you change a skill or an agent, run `npm run agents:sync`. It copies files (never links, so it works on Windows) and removes stale ones in the five output folders only. `npm run agents:check` does the same comparison without writing; `npm run lint` and the pre-commit hook run it, so stale copies cannot merge. The script takes the repository root from its own location, and fails in both modes when `.claude/skills` is missing or there is nothing to generate.
 
 `agents:check` also holds every project skill to the rules that make it work in more than one tool:
 
@@ -43,12 +43,13 @@ Checked on 2026-11-12 against each tool's own documentation. The pages were read
 | GitHub Copilot | `.github/copilot-instructions.md`, `AGENTS.md` or `CLAUDE.md` (GitHub docs). In VS Code the file depends on the harness chosen | `.github/skills`, `.claude/skills`, `.agents/skills` (GitHub docs). VS Code lists the folder per harness | `.github/agents/*.agent.md` (public preview) |
 | Antigravity | `AGENTS.md` in the workspace and in each parent folder up to the repository root, also inside `.agents/`, and `.agents/rules/*.md` | `.agents/skills` (the older `.agent/skills` still works) | `.agents/agents/<name>.md`, with tool names of its own; not generated, see below |
 | Cursor | `AGENTS.md`, and `.cursor/rules/*.mdc`. `CLAUDE.md` not mentioned | `.agents/skills`, `.cursor/skills`, and `.claude/skills` and `.codex/skills` for compatibility | `.cursor/agents`, `.claude/agents` and `.codex/agents` |
+| Qwen Code (checked 2026-11-13) | `AGENTS.md` ("if your repository already has an `AGENTS.md` file for other AI tools, Qwen reads that too"), as well as its own `QWEN.md`. `CLAUDE.md` not mentioned | `.agents/skills` and `.qwen/skills` in the project (the `.qwen` copy wins on a name clash). `.claude/skills` is not read unless `skills.directories` in its settings lists it | `.qwen/agents/*.md`, with `name` and `description` and optional `model`, `tools` and `approvalMode` |
 
 What this means in practice:
 
 - `AGENTS.md` reaches every tool above without a copy. `.github/copilot-instructions.md` exists for the Copilot surfaces that read only that file. It holds no rule, so no rule is written twice.
-- Skills: Claude Code reads the source and Codex and Antigravity read the `.agents/skills` copy. opencode, Copilot and Cursor each read both `.claude/skills` and `.agents/skills`, so they see a project skill twice. Whether they deduplicate it is not checked.
-- Agents: Claude Code and Cursor read the source. The generated files cover opencode, Codex and Copilot. Antigravity's agent format was read, but its documentation says a tool list left empty means no tools and a misspelt tool name can hang the agent, and its tool names were not verified here, so no file is generated for it. It still works by loading the skills. Whether Cursor reads a `.toml` file in `.codex/agents` is not stated.
+- Skills: Claude Code reads the source and Codex, Antigravity and Qwen Code read the `.agents/skills` copy. opencode, Copilot and Cursor each read both `.claude/skills` and `.agents/skills`, so they see a project skill twice. Whether they deduplicate it is not checked.
+- Agents: Claude Code and Cursor read the source. The generated files cover opencode, Codex, Copilot and Qwen Code (`.qwen/agents`, where Qwen Code's documentation says a Claude Code agent file can be dropped; the generated file has only `name`, `description` and the role text, so it inherits the session's model and tools). Antigravity's agent format was read, but its documentation says a tool list left empty means no tools and a misspelt tool name can hang the agent, and its tool names were not verified here, so no file is generated for it. It still works by loading the skills. Whether Cursor reads a `.toml` file in `.codex/agents` is not stated.
 - A tool that has skills but no agents, or the reverse, still works: tell the agent which skill to follow.
 
 ## How to start
@@ -94,6 +95,7 @@ How each tool reaches the skill (all of them can read `AGENTS.md` and a file pat
 | GitHub Copilot | `.claude/skills` or `.agents/skills` | `AGENTS.md`, `.github/copilot-instructions.md` |
 | Antigravity | `.agents/skills/playwright-tests` | `AGENTS.md` |
 | Cursor | `.agents/skills` or `.claude/skills` | `AGENTS.md` |
+| Qwen Code | `.agents/skills/playwright-tests` | `AGENTS.md` |
 
 Other tools checked on 2026-11-13 against their own documentation, read as text; none was run. None of them needs a new file.
 
@@ -108,8 +110,9 @@ No MCP configuration file is committed for any tool, because the skills do not u
 
 ## What has not been checked
 
-- No skill has been run end to end in another tool. Codex, opencode, Cursor, Antigravity and Copilot's command line were not installed where this was written, and Copilot in VS Code (1.146.0) was not exercised. If you try one, say what broke in a pull request or an issue.
+- No skill has been run end to end in another tool. Codex, opencode, Cursor, Antigravity, Qwen Code and Copilot's command line were not installed where this was written, and Copilot in VS Code (1.146.0) was not exercised. If you try one, say what broke in a pull request or an issue.
 - The Playwright command-line workflow was run only on Windows with Playwright 1.65.0 and only as far as attaching to the paused seed, stepping it and reading a `snapshot`. Planning, generating and healing a real spec through it, and `resume` followed by a command, were not tried (`resume` ends the seed run).
 - Whether opencode, Copilot and Cursor deduplicate a skill present in both `.claude/skills` and `.agents/skills`.
+- Qwen Code was read from its documentation, not run, so whether it loads the generated `.qwen/agents` files and the `.agents/skills` copy as described is not tried. Its documentation says a subagent without a `tools` list inherits all the parent's tools and that Skills need no switch, but it states no minimum version. Its own `QWEN.md` is not committed, because `AGENTS.md` reaches it already.
 - The generated TOML and YAML were not parsed by the tools' own readers. Skill frontmatter is held to the strict rule above, and the agent files are built from JSON-quoted strings, which both formats read.
 - Documentation changes often. A path that stops working is a reason to open an issue, with the tool, its version and the page that says otherwise.

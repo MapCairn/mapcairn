@@ -27,6 +27,7 @@ import {
   renderCodex,
   renderCopilot,
   renderOpencode,
+  renderQwen,
   // @ts-expect-error The agent scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/agents/render.mjs";
 import {
@@ -242,6 +243,18 @@ describe("agent rendering", () => {
     expect(text).toContain("Edit that file, not this one.");
   });
 
+  it("renders the Qwen Code format with a name and description and no tools or model", () => {
+    const text = renderQwen(parsed);
+    expect(
+      text.startsWith(
+        '---\nname: "fresh-eyes-reviewer"\ndescription: "Reviews a diff. Give it a number."\n---\n',
+      ),
+    ).toBe(true);
+    expect(text).not.toMatch(/^tools:|^model:|^approvalMode:/m);
+    expect(text).toContain("Edit that file, not this one.");
+    expect(text.endsWith(parsed.body)).toBe(true);
+  });
+
   it("renders the Codex format as TOML with the body as a literal string", () => {
     const text = renderCodex(parsed);
     expect(text).toContain('name = "fresh-eyes-reviewer"');
@@ -315,6 +328,8 @@ describe("mirror planning", () => {
       ".github/agents/playwright-test-healer.agent.md",
       ".opencode/agents/helper.md",
       ".opencode/agents/playwright-test-healer.md",
+      ".qwen/agents/helper.md",
+      ".qwen/agents/playwright-test-healer.md",
     ]);
     expect(plan.get(".agents/skills/alpha/references/bin.dat")).toEqual(
       Buffer.from([0, 255, 13, 10]),
@@ -323,7 +338,7 @@ describe("mirror planning", () => {
 
   it("reports every planned file as missing before the first sync", () => {
     const drift = findDrift(root, plannedFiles(root));
-    expect(drift.missing).toHaveLength(9);
+    expect(drift.missing).toHaveLength(11);
     expect(drift.changed).toEqual([]);
     expect(drift.extra).toEqual([]);
   });

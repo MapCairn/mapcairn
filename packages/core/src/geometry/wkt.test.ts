@@ -188,6 +188,20 @@ describe("formatWkt", () => {
     expect(parseWkt(formatWkt(point))).toEqual(point);
   });
 
+  it("writes every number as plain decimal text, with no exponent", () => {
+    const point: Geometry = { type: "Point", coordinates: [7.8e-7, -1e21] };
+    expect(formatWkt(point)).toBe(`POINT (0.00000078 -1${"0".repeat(21)})`);
+    expect(formatWkt({ type: "Point", coordinates: [1e-9, 2.5e-8] })).toBe(
+      "POINT (0.000000001 0.000000025)",
+    );
+    expect(
+      formatWkt(
+        { type: "Point", coordinates: [1.23456789e-7, 5] },
+        { precision: 8 },
+      ),
+    ).toBe("POINT (0.00000012 5)");
+  });
+
   it("never writes a negative zero", () => {
     const point: Geometry = { type: "Point", coordinates: [-0, 0] };
     expect(formatWkt(point)).toBe("POINT (0 0)");

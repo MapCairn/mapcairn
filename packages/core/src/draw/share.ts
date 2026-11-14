@@ -3,7 +3,7 @@
 import type { LatLng } from "../ports/geometry";
 import { exportableShapes } from "./export";
 import type { DrawShapeInput } from "./reducer";
-import { MAX_CIRCLE_RADIUS_METRES, validateShape } from "./shape";
+import { validateShape } from "./shape";
 import type { DrawKind, DrawShape } from "./types";
 
 /** The most characters a shared set of shapes may take in a link. */
@@ -69,25 +69,77 @@ function encodeShape(shape: DrawShape): string {
 }
 
 /**
+ * The least radius, in metres, of a circle a link carries. The radius is
+ * written in whole metres, so a smaller circle is left out rather than read
+ * back as one that is up to twice the size.
+ */
+const MIN_SHARED_RADIUS_METRES = 1;
+
+/** Whether `input` is a shape the draw rules accept, as a decoded part has to be. */
+function isDrawable(input: DrawShapeInput): boolean {
+  return (
+    validateShape({ id: "candidate", label: "", done: true, ...input }) === null
+  );
+}
+
+/**
+ * The text of one shape in a link, or null when the link cannot carry it:
+ * a circle under {@link MIN_SHARED_RADIUS_METRES}, or a shape that
+ * {@link decodeShapes} would not accept as the text reads back, such as a line
+ * whose two positions fall on the same unit of 0.00001 degrees or a polygon
+ * that collapses on it. Checking what is read back keeps the writer and the
+ * reader from disagreeing.
+ */
+function linkPart(shape: DrawShape): string | null {
+  if (
+    shape.kind === "circle" &&
+    (shape.radiusMetres ?? 0) < MIN_SHARED_RADIUS_METRES
+  ) {
+    return null;
+  }
+  const text = encodeShape(shape);
+  const input = decodeShape(text);
+  return input !== null && isDrawable(input) ? text : null;
+}
+
+/**
+ * The finished, valid shapes that {@link encodeShapes} leaves out because a
+ * link cannot carry them: a circle of under a metre, and a line or polygon
+ * too small to keep its shape when its positions are whole units of
+ * 0.00001 degrees (about a metre). A caller says so, and offers a file.
+ */
+export function unsharableShapes(
+  shapes: readonly DrawShape[],
+): readonly DrawShape[] {
+  return exportableShapes(shapes).filter((shape) => linkPart(shape) === null);
+}
+
+/**
  * Writes finished, valid shapes as a short text for a link: one letter for
  * the kind (`p` point, `l` line, `g` polygon, `c` circle) and then the
  * positions as whole units of 0.00001 degrees (about a metre), the first
  * absolute and each later one as the step from the one before, every number
  * zigzagged and packed five bits to a character in the alphabet `A-Z a-z 0-9
  * - _`. Shapes are separated by a full stop. Only link-safe characters are
- * used, so nothing needs escaping.
+ * used, so nothing needs escaping. A circle's radius is in whole metres.
+ *
+ * A shape the link cannot carry (see {@link unsharableShapes}) is left out,
+ * and a caller tells the person.
  *
  * @returns The text, an empty string when there is nothing to share, or
  *   null when the result would pass {@link MAX_SHARE_LENGTH} characters or
- *   {@link MAX_SHARE_SHAPES} shapes. A set is never cut short: the caller
- *   says it is too big.
+ *   {@link MAX_SHARE_SHAPES} shapes. A set is never cut short for its size:
+ *   the caller says it is too big.
  */
 export function encodeShapes(shapes: readonly DrawShape[]): string | null {
-  const shareable = exportableShapes(shapes);
-  if (shareable.length > MAX_SHARE_SHAPES) {
+  const parts = exportableShapes(shapes).flatMap((shape) => {
+    const part = linkPart(shape);
+    return part === null ? [] : [part];
+  });
+  if (parts.length > MAX_SHARE_SHAPES) {
     return null;
   }
-  const text = shareable.map(encodeShape).join(".");
+  const text = parts.join(".");
   return text.length > MAX_SHARE_LENGTH ? null : text;
 }
 
@@ -167,9 +219,7 @@ function decodeShape(part: string): DrawShapeInput | null {
       lat === undefined ||
       lng === undefined ||
       radius === undefined ||
-      !inWorld(lat, lng) ||
-      radius < 1 ||
-      radius > MAX_CIRCLE_RADIUS_METRES
+      !inWorld(lat, lng)
     ) {
       return null;
     }
@@ -190,9 +240,11 @@ function decodeShape(part: string): DrawShapeInput | null {
  * {@link MAX_SHARE_SHAPES} shapes, numbers of at most seven characters and
  * positions inside the world. The work done is linear in the text.
  *
- * @returns The shapes, or null when the text is malformed or holds no valid
- *   shape. A well-formed shape that fails the draw rules (a polygon of two
- *   positions, or with crossing edges) is skipped and the rest kept.
+ * @returns The shapes, or null when the text is not made of the link-safe
+ *   alphabet, is too long or holds too many shapes, or holds no valid shape.
+ *   A shape that cannot be read or that fails the draw rules (a polygon of
+ *   two positions, a circle with a radius of 0, crossing edges, a position
+ *   outside the world) is skipped on its own and the rest kept.
  */
 export function decodeShapes(text: string): DrawShapeInput[] | null {
   if (!SHARE_PATTERN.test(text)) {
@@ -202,21 +254,9 @@ export function decodeShapes(text: string): DrawShapeInput[] | null {
   if (parts.length > MAX_SHARE_SHAPES) {
     return null;
   }
-  const shapes: DrawShapeInput[] = [];
-  for (const part of parts) {
-    const input = decodeShape(part);
-    if (!input) {
-      return null;
-    }
-    const candidate: DrawShape = {
-      id: "candidate",
-      label: "",
-      done: true,
-      ...input,
-    };
-    if (validateShape(candidate) === null) {
-      shapes.push(input);
-    }
-  }
+  const shapes = parts
+    .map(decodeShape)
+    .filter((input): input is DrawShapeInput => input !== null)
+    .filter(isDrawable);
   return shapes.length > 0 ? shapes : null;
 }
