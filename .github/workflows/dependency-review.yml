@@ -46,7 +46,8 @@ jobs:
           # non-commercial families and the source-available licences that limit
           # commercial use or hosting. AGPL-3.0 is the project's own licence and is
           # not denied. The action reads GitHub's licence data, so a package
-          # with no detected licence is not caught here.
+          # with no detected licence is not caught here. CC-BY-NC-3.0-IGO is left
+          # out because the action's own SPDX list rejects it and fails the run.
           # `deny-licenses` is marked deprecated in the action's README; an allow
           # list would need every licence the dependency tree uses, so revisit this
           # if the option is removed in a later major release.
@@ -56,7 +57,6 @@ jobs:
             CC-BY-NC-2.5,
             CC-BY-NC-3.0,
             CC-BY-NC-3.0-DE,
-            CC-BY-NC-3.0-IGO,
             CC-BY-NC-4.0,
             CC-BY-NC-ND-1.0,
             CC-BY-NC-ND-2.0,
