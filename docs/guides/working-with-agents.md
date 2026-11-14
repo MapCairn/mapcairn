@@ -21,7 +21,7 @@ After you change a skill or an agent, run `npm run agents:sync`. It copies files
 
 ### Skills installed from elsewhere
 
-`skills-lock.json` records the skills installed from other sources (the Cloudflare ones), with their source and a hash. They are not the project's text to rewrite, so `agents:sync` neither checks nor copies them, and the mirror holds the project's skills only. To add or update one, install it into `.claude/skills` the way the lock file records and commit the folder and its lock entry together; do not edit its files by hand, because the hash would no longer match. A tool that reads only `.agents/skills` (Codex, Antigravity) will not see it unless you install it there yourself, which is not tracked here.
+`skills-lock.json` records the skills installed from other sources (the Cloudflare ones and `web-design-guidelines` from `vercel-labs/agent-skills`, MIT according to that repository's README), with their source and a hash. `web-design-guidelines` reviews UI code against a rule list that it fetches from a web address each time it runs, so a review needs a tool that can fetch a page and depends on that page's current text; check its findings against `DESIGN.md`, which wins where they differ. They are not the project's text to rewrite, so `agents:sync` neither checks nor copies them, and the mirror holds the project's skills only. To add or update one, install it into `.claude/skills` the way the lock file records and commit the folder and its lock entry together; do not edit its files by hand, because the hash would no longer match. A tool that reads only `.agents/skills` (Codex, Antigravity) will not see it unless you install it there yourself, which is not tracked here.
 
 ### Agents
 
