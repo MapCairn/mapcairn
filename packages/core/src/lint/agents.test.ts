@@ -494,7 +494,15 @@ describe("skill problems", () => {
   });
 });
 
-describe("the command line", () => {
+/**
+ * The time allowed to a test that starts the sync script as a process. Each
+ * took 0.4 to 1.2 s alone and 1.5 to 4.4 s when the whole suite ran under
+ * coverage, which leaves the 5 s default little room. The work is bounded: one
+ * or two short-lived processes on a few files.
+ */
+const PROCESS_TEST_TIMEOUT_MS = 30_000;
+
+describe("the command line", { timeout: PROCESS_TEST_TIMEOUT_MS }, () => {
   const scripts = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../../../../scripts/agents",
