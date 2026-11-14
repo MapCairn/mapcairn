@@ -12,7 +12,7 @@ MapCairn aims to give a team everything it needs to build an industry-grade GIS 
 
 The order the work is done in, as issue numbers with the reason for each position. The issue holds the current state; this list holds the order only, so it does not repeat status. A position is a plan, not a promise.
 
-Two tracks share the list. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most five items, and every second item in Now and Next is a Site item, so the site keeps improving while the SDK grows. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md), says what each item adds.
+Two tracks share the list. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most five items, and every second item in Now and Next is a Site item, so the site keeps improving while the SDK grows. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md), says what each item adds. `npm run roadmap:check`, which `npm run lint` runs, fails on an issue number that does not exist or is listed twice, on more than five items in Now and on a missing section, and warns about a closed issue: move or remove it, and update "Last reviewed" when you do.
 
 ### Now
 
@@ -52,7 +52,7 @@ Then, roughly in this order:
 - **Small additions:** #222 (UTM and MGRS), #225 (snapping), #226 (buffer and merge), #227 (GPX and KML), #62 (richer filters), #48 (the interface for image export) and #178 (printing), #182 (a timeline), #181 and #180 (box and lasso selection, elevation profile), #228 (save a layer's features), #84 (WKT axis order), #79 (the zoom level in a layer's message).
 - **Research and plans, each to be decided after its measurement or plan:** #223 (coordinate systems), #224 (terrain), #177 (tilt and the shared link), #185 (deck.gl), #196 (storing tiles on the device), #197 (MapLibre Tile), #186, #187 and #188 (host-side search, nearby queries and short links), #53 (server rendering), #56 and #75 (an agent tool catalogue and an analytics sink).
 - **Whenever there is room (quality and process):** #210 (Biome), #89 (refs in render), #25 (thin the app hook), #214, #218 and #149 (test stability and shard balance), #216, #215 and #217 (documents and CI security), #146 (a screen reader check, which needs a person with a screen reader), #4 (the OpenSSF silver badge) and the agent and skill upkeep in #82, #93 and #108.
-- **Trackers, not ranked:** #47, #49 and #51 (their steps are ranked above), and #191, which keeps this list.
+- **Trackers, not ranked:** #47, #49 and #51 (their steps are ranked above).
 
 ## Intentions
 

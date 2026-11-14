@@ -25,6 +25,10 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run lint
+        env:
+          # The roadmap check reads issue states with `gh`, which needs a token
+          # even for a public repository. Without one it skips that part.
+          GH_TOKEN: ${{ github.token }}
       - run: npm run typecheck
       - run: npm run test:coverage
       - name: Upload coverage report
