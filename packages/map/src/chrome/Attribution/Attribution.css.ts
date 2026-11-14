@@ -47,7 +47,7 @@ const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tok
  * (`bottomEndRise` is how far a taller neighbour, such as the readout with
  * the cursor coordinates, reaches above the button), so it never covers the
  * scale bar or the coordinates beside the button. With
- * `data-readout-clear="true"` (set when the popover ends a gap clear of the
+ * `data-readout-clear="true"` (set when the popover starts a gap after the
  * readout's end edge, so the two share no width) it sits only a step above
  * the button, next to it, and the rise is left out.
  *

@@ -276,6 +276,13 @@ describe("Attribution beside the readout", () => {
     observers = stubResizeObserver();
   });
 
+  /** Reports that `property` has finished transitioning on `target`, as a browser does. */
+  function endTransition(target: Element, property: string) {
+    const event = new Event("transitionend", { bubbles: true });
+    Object.defineProperty(event, "propertyName", { value: property });
+    fireEvent(target, event);
+  }
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -301,7 +308,12 @@ describe("Attribution beside the readout", () => {
     if (region) {
       mockRect(region, POPOVER);
     }
-    return { ...result, slot, region };
+    const chromeRoot =
+      result.container.querySelector<HTMLElement>("[data-chrome-root]");
+    if (!chromeRoot) {
+      throw new Error("No chrome root");
+    }
+    return { ...result, slot, region, chromeRoot };
   }
 
   it("is clear of the readout when the popover starts a gap after the readout's end edge", () => {
@@ -337,15 +349,18 @@ describe("Attribution beside the readout", () => {
     expect(open()).toHaveAttribute("data-readout-clear", "true");
   });
 
-  it("measures again when the readout grows or the screen resizes", () => {
-    const { slot } = mount(true);
+  it("watches the popover, the readout and the chrome while it is open, and measures again when the readout grows", () => {
+    const { slot, chromeRoot } = mount(true);
     const region = open();
     expect(region).toHaveAttribute("data-readout-clear", "true");
-
-    // The cursor coordinates make the readout wider than the room before the popover.
+    expect(observers.isObserved(region)).toBe(true);
+    expect(observers.isObserved(chromeRoot)).toBe(true);
     if (!slot) {
       throw new Error("No readout slot");
     }
+    expect(observers.isObserved(slot)).toBe(true);
+
+    // The cursor coordinates make the readout wider than the room before the popover.
     mockRect(slot, { ...READOUT, width: POPOVER.left });
     act(() => {
       observers.trigger();
@@ -355,6 +370,59 @@ describe("Attribution beside the readout", () => {
     mockRect(slot, READOUT);
     act(() => {
       observers.trigger();
+    });
+    expect(region).toHaveAttribute("data-readout-clear", "true");
+  });
+
+  it("measures again when the readout has slid sideways with no change of size", () => {
+    const { slot } = mount(true);
+    const region = open();
+    expect(region).toHaveAttribute("data-readout-clear", "true");
+    if (!slot) {
+      throw new Error("No readout slot");
+    }
+
+    // The side panel opens: the readout's end edge passes the popover's start edge.
+    mockRect(slot, { ...READOUT, left: POPOVER.left });
+    act(() => {
+      endTransition(slot, "transform");
+    });
+    expect(region).not.toHaveAttribute("data-readout-clear");
+
+    // The panel closes and the readout slides back.
+    mockRect(slot, READOUT);
+    act(() => {
+      endTransition(slot, "transform");
+    });
+    expect(region).toHaveAttribute("data-readout-clear", "true");
+  });
+
+  it("does not measure again for the readout's other transitions, or those of what is inside it", () => {
+    const { slot } = mount(true);
+    const region = open();
+    if (!slot) {
+      throw new Error("No readout slot");
+    }
+    const inner = slot.appendChild(document.createElement("span"));
+    mockRect(slot, { ...READOUT, left: POPOVER.left });
+
+    act(() => {
+      endTransition(slot, "opacity");
+      endTransition(inner, "transform");
+    });
+    expect(region).toHaveAttribute("data-readout-clear", "true");
+  });
+
+  it("stops listening for the readout's transitions when the popover closes", () => {
+    const { slot } = mount(true);
+    const region = open();
+    if (!slot) {
+      throw new Error("No readout slot");
+    }
+    fireEvent.click(button());
+    mockRect(slot, { ...READOUT, left: POPOVER.left });
+    act(() => {
+      endTransition(slot, "transform");
     });
     expect(region).toHaveAttribute("data-readout-clear", "true");
   });

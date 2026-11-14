@@ -817,6 +817,61 @@ for (const viewport of WIDE_READOUT_VIEWPORTS) {
   );
 }
 
+/** The narrowest window that has the side panel layout. */
+const NARROWEST_PANEL_VIEWPORT = { width: 768, height: 700 } as const;
+
+/**
+ * Where on the map the pointer rests: right of the side panel, so the cursor
+ * coordinates stay on screen while the panel opens.
+ */
+const BESIDE_PANEL_POINTER = { xRatio: 0.75, yRatio: 0.3 } as const;
+
+/*
+ * The readout slides right when the side panel opens, without changing size.
+ * The credits stay open while the panel opens from the keyboard, and the
+ * popover, which sat beside the readout and next to its button, must not end
+ * up over the readout's new place.
+ */
+test("the credits popover keeps clear of the readout when the side panel opens from the keyboard", async ({
+  page,
+  mapPage,
+  isMobile,
+}) => {
+  test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+  await seedStoredSettings(page, { units: "imperial" });
+  await page.setViewportSize(NARROWEST_PANEL_VIEWPORT);
+  await scriptSearch(page);
+  await mapPage.goto(WIDEST_COORDINATES_VIEW);
+
+  await collapseCredits(mapPage);
+  await mapPage.creditsButton.click();
+  await expect(mapPage.creditsRegion).toBeVisible();
+  await page.mouse.move(
+    NARROWEST_PANEL_VIEWPORT.width * BESIDE_PANEL_POINTER.xRatio,
+    NARROWEST_PANEL_VIEWPORT.height * BESIDE_PANEL_POINTER.yRatio,
+    { steps: 3 },
+  );
+  await expect(page.getByTestId("map-readout")).toContainText(
+    COORDINATES_PATTERN,
+  );
+  await waitForStableLayout(page);
+  expect(
+    (await inspectChromeLayout(page)).overlaps,
+    "before the panel opens",
+  ).toEqual([]);
+
+  await mapPage.mapOptionsButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
+  await expect(mapPage.creditsRegion).toBeVisible();
+  await expect(page.getByTestId("map-readout")).toContainText(
+    COORDINATES_PATTERN,
+  );
+  await waitForStableLayout(page);
+  const report = await inspectChromeLayout(page);
+  expect(report.overlaps, JSON.stringify(report.boxes)).toEqual([]);
+});
+
 /*
  * The map key and the first-visit tour card together. Tour step 1 asks a new
  * visitor to turn a layer on, so the first key a person sees appears under

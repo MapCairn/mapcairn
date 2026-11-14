@@ -53,12 +53,14 @@ function sameView(a: ViewState, b: ViewState): boolean {
 }
 
 /**
- * Whether the open credits popover ends clear of the readout in bottom-start
- * by a gap, so the two share no width and the popover need not rise over the
- * readout's height. True when the chrome has no readout. It is measured before
- * the popover is painted and again whenever the popover, the readout or the
- * chrome changes size (the cursor coordinates widen the readout as the pointer
- * enters the map), and not at all while the popover is closed.
+ * Whether the open credits popover starts a gap after the end edge of the
+ * readout in bottom-start, so the two share no width and the popover need not
+ * rise over the readout's height. True when the chrome has no readout. It is
+ * measured before the popover is painted and again whenever the popover, the
+ * readout or the chrome changes size (the cursor coordinates widen the readout
+ * as the pointer enters the map) and whenever the readout finishes sliding
+ * sideways (the side panel opening or closing moves it with a transform and
+ * no change of size). Nothing is observed while the popover is closed.
  */
 function useClearOfReadout(
   regionRef: RefObject<HTMLElement | null>,
@@ -74,7 +76,8 @@ function useClearOfReadout(
     }
     const chrome = region.closest("[data-chrome-root]");
     const readout =
-      chrome?.querySelector('[data-chrome="bottom-start"]') ?? null;
+      chrome?.querySelector<HTMLElement>('[data-chrome="bottom-start"]') ??
+      null;
     const measure = () => {
       setClear(
         readout === null ||
@@ -83,17 +86,24 @@ function useClearOfReadout(
       );
     };
     measure();
-    if (typeof ResizeObserver === "undefined") {
-      return;
-    }
-    const observer = new ResizeObserver(measure);
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target === readout && event.propertyName === "transform") {
+        measure();
+      }
+    };
+    readout?.addEventListener("transitionend", onTransitionEnd);
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(measure);
     for (const element of [region, chrome, readout]) {
       if (element) {
-        observer.observe(element);
+        observer?.observe(element);
       }
     }
     return () => {
-      observer.disconnect();
+      readout?.removeEventListener("transitionend", onTransitionEnd);
+      observer?.disconnect();
     };
   }, [open, placement, regionRef]);
   return clear;
@@ -125,10 +135,12 @@ export interface AttributionProps {
  *   open as if the person had opened it.
  *
  *   After that it behaves as a popover the person opens. It opens above the
- *   bottom row, clear of the readout beside the button; where it ends a gap
- *   clear of the readout's end edge, so the two share no width, it sits next
- *   to the button instead of rising over the readout's height. If the credits would
- *   scroll there, it moves beside the end stack before it is painted, where
+ *   bottom row, clear of the readout beside the button; where it starts a gap
+ *   after the readout's end edge, so the two share no width, it sits next to
+ *   the button instead of rising over the readout's height, and it is
+ *   measured again when the readout resizes or slides sideways. If the
+ *   credits would scroll there, it moves beside the end stack before it is
+ *   painted, where
  *   `MapChrome` measures more room; it scrolls only if that is not enough
  *   either. Opening moves focus to the first link.
  *   The popover closes on Escape, on a second press of the button, on a
