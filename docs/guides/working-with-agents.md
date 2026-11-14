@@ -72,6 +72,10 @@ Use the small tier (in Claude Code, haiku) where the work is mechanical and the 
 
 When the project's `main` moves under an open pull request, merge it into the branch, resolve and push normally: the pull request is squash-merged, so the branch's history does not matter, and a force-push is avoided. When several open pull requests touch the same files, the caller merges the smallest and most widely shared change first and sends each remaining author the same instruction, one at a time.
 
+## The priority list
+
+`ROADMAP.md` ranks the open work under "Priorities". `create-issue` places a new feature or improvement issue in the list or says why it is left out, and `land-pr` removes a finished item when its pull request closes the issue and sets "Last reviewed" to today. An agent does not reorder the list: the order is the maintainer's call, so it reports a change it thinks the list needs as an issue to file. `npm run roadmap:check` (run by `npm run lint`) reads the list with one `gh` call and fails on a listed issue that does not exist, one listed twice, more than five items in Now or a missing section; a closed issue is only a warning. Where `gh` is missing, signed out, offline or rate limited it says it did not check the issue states and still checks the rest.
+
 ## Only in Claude Code
 
 - The Workflow tool and its opt-in rule, and the `fable` model rule, in `CLAUDE.md`.

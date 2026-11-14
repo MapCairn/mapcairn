@@ -10,6 +10,7 @@ import {
   resolveSnap,
   type SheetDetent,
 } from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import { X } from "lucide-react";
 import {
   type KeyboardEvent,
@@ -260,8 +261,11 @@ export function Sheet({
     [viewport.height],
   );
 
-  const latest = useRef({ onModalChange, restoreFocus, publishSheetTop });
-  latest.current = { onModalChange, restoreFocus, publishSheetTop };
+  const latest = useLatestRef({
+    onModalChange,
+    restoreFocus,
+    publishSheetTop,
+  });
 
   /** Places the sheet so `height` px of it shows. Transform only. */
   const applyHeight = (height: number) => {
@@ -334,12 +338,12 @@ export function Sheet({
         cancelAnimationFrame(frameRef.current);
       }
     },
-    [publishSheetDetent, publishPanelEdge],
+    [latest, publishSheetDetent, publishPanelEdge],
   );
 
   useEffect(() => {
     latest.current.onModalChange?.(modal);
-  }, [modal]);
+  }, [latest, modal]);
 
   // Focus the heading on open; hand focus back after close.
   const wasOpen = useRef(open);
@@ -351,7 +355,7 @@ export function Sheet({
       latest.current.restoreFocus?.();
     }
     wasOpen.current = open;
-  }, [open]);
+  }, [latest, open]);
   // The first render may already be open.
   useEffect(() => {
     if (wasOpen.current) {

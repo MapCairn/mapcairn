@@ -1,12 +1,58 @@
 # Roadmap
 
-_Last reviewed: 2026-11-12. Reviewed every year, and sooner when a decision below changes._
+_Last reviewed: 2026-11-14. Reviewed every year, and sooner when a decision below changes._
 
 This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
 
 ## Direction
 
 MapCairn aims to give a team everything it needs to build an industry-grade GIS application or platform. That means capabilities comparable to the established commercial mapping and GIS development kits, delivered as an open-source SDK that is accessible by default, private by design, and built from parts that can each be adopted on their own. The reference site shows the parts working together; it stays small and public, and it does not adopt a capability just because the SDK offers it.
+
+## Priorities
+
+The order the work is done in, as issue numbers with the reason for each position. The issue holds the current state; this list holds the order only, so it does not repeat status. A position is a plan, not a promise.
+
+Two tracks share the list. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most five items, and every second item in Now and Next is a Site item, so the site keeps improving while the SDK grows. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md), says what each item adds. `npm run roadmap:check`, which `npm run lint` runs, fails on an issue number that does not exist or is listed twice, on more than five items in Now and on a missing section, and warns about a closed issue: move or remove it, and update "Last reviewed" when you do.
+
+### Now
+
+1. **SDK, #231.** Language support: a plan first, then a small slice (the catalogue port, the English text and one panel). It touches the copy of almost every component, so it is cheapest now, and it brings Afrikaans to the reference site.
+2. **Site, #117, #118 and #119.** Highlight selected features, the Selection panel and select mode. The selection port and hook are built, and nothing in the interface uses them yet.
+3. **SDK, #24 and then #43.** The engine adapter in its own package. It is the first step for a team that wants to embed the map without copying the reference host.
+4. **Site, #126 and #127.** Identify on raster layers: the tap, the key press and the guide. The core is built.
+5. **SDK, #198.** A small check that every SDK dependency allows commercial use, in place before packages are published.
+
+### Next
+
+1. **SDK, #44.** A mount function and a prebuilt bundle for pages without React, the main path for existing server-rendered applications.
+2. **Site, #176.** Order and opacity for every layer.
+3. **SDK, #45.** Hosts that sit behind a login.
+4. **Site, #121 and #122.** Finish selection: the features inside a drawn shape, and dropping references when a layer leaves.
+5. **SDK, #195.** One place for tile and layer requests (limits, retry, a hook for credentials and headers).
+6. **Site, #175.** A command palette.
+7. **SDK, #220.** A host can theme the SDK, with contrast checked.
+8. **Site, #183.** Clustering for dense point layers.
+9. **SDK, #230 and #221.** The guide to the Content Security Policy a host needs, and the guide to serving the bundle from a Windows web server and server-rendered pages.
+10. **Site, #71 and #213.** Finish the map key, and stop the credits popover jumping.
+11. **SDK, #232 and #184.** Two small guides: open service standards, and a custom search provider.
+12. **Site, #229.** Say once when the device is offline.
+13. **SDK, #192, #194 and #193.** The large-data track: tile archives, a tile budget, and cards for vector features.
+14. **Site, #179.** A side panel with a feature's full details.
+
+### Later
+
+After the project has its own domain names, in this order:
+
+1. **SDK, #199.** The documentation site.
+2. **SDK, #174.** Component documentation.
+3. **SDK, #1.** Versioning, GitHub releases and npm, with API documentation. The dependency check in Now is already in place by then.
+
+Then, roughly in this order:
+
+- **Small additions:** #222 (UTM and MGRS), #225 (snapping), #226 (buffer and merge), #227 (GPX and KML), #62 (richer filters), #48 (the interface for image export) and #178 (printing), #182 (a timeline), #181 and #180 (box and lasso selection, elevation profile), #228 (save a layer's features), #84 (WKT axis order), #79 (the zoom level in a layer's message).
+- **Research and plans, each to be decided after its measurement or plan:** #223 (coordinate systems), #224 (terrain), #177 (tilt and the shared link), #185 (deck.gl), #196 (storing tiles on the device), #197 (MapLibre Tile), #186, #187 and #188 (host-side search, nearby queries and short links), #53 (server rendering), #56 and #75 (an agent tool catalogue and an analytics sink).
+- **Whenever there is room (quality and process):** #210 (Biome), #89 (refs in render), #25 (thin the app hook), #214, #218 and #149 (test stability and shard balance), #216, #215 and #217 (documents and CI security), #146 (a screen reader check, which needs a person with a screen reader), #4 (the OpenSSF silver badge) and the agent and skill upkeep in #82, #93 and #108.
+- **Trackers, not ranked:** #47, #49 and #51 (their steps are ranked above).
 
 ## Intentions
 

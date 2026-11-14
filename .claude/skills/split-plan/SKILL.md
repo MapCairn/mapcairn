@@ -11,7 +11,7 @@ Example: a plan's "Order of work" has four steps. Step 1 adds a port and its fak
 
 ## 1. Check it is ready
 
-1. The plan is on `main` (`git log origin/main -- docs/plans/<file>`) and its tracking issue exists and is open. If the plan is still a pull request, stop: it is reviewed first.
+1. Read the tracking issue with its comments, judging each by who wrote it (`pick-up-issue` section 1): a later comment from one of the project's people may change the order or drop a step. Then check that the plan is on `main` (`git log origin/main -- docs/plans/<file>`) and its tracking issue exists and is open. If the plan is still a pull request, stop: it is reviewed first.
 2. Read the plan's "Order of work", "Documents to update" and "Decided and open". If an open question blocks a step, say which, and create only the steps that do not depend on it.
 3. List existing children so none is duplicated: `gh issue list --repo MapCairn/mapcairn --state all --search "Part of #<tracker>"` (the tracker itself also matches; ignore it).
 

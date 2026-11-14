@@ -49,6 +49,7 @@ On a fork, or without write access to the repository, labels and milestones may 
 
 ## Afterwards
 
+- For a feature or improvement issue, place it in the "Priorities" list in `ROADMAP.md` (a small documents pull request, or the pull request that is already open), or say in the issue why it is left out, for example that it is a research item or too small to rank. Do not reorder the other items: the order is the maintainer's call, so if the new issue should go ahead of others, say so in the issue and put it last in its section. `npm run roadmap:check` reports a listed number that does not exist.
 - If the issue is a child of a tracking issue, tick or add it in the tracker's task list: start from the current body (`gh issue view <n> --json body --jq .body > <file>`), change only that line, and save it with `gh issue edit <n> --body-file <file>`. Without triage rights, post the child's number as a comment on the tracker and leave the editing, closing and labels to the maintainer.
 - If the work is queued for you or another agent, say so in your reply and, if the person asked, start it with the `pick-up-issue` skill.
 - Hand off with the report in `AGENTS.md` ("Definition of done"): the issue URL goes under **PR**, a duplicate found or a label refused under **Deviations**.

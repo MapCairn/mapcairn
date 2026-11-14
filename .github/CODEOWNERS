@@ -1,4 +1,29 @@
-# The maintainers are asked to review every change to the roadmap, because it
-# says what the project will and will not do. This only requests a review; the
-# repository ruleset does not require a code owner's approval.
+# The maintainers are asked to review changes to the roadmap, which says what
+# the project will and will not do, and to the files that steer agents, CI and
+# what runs on a developer's machine, because a change there reaches every tool.
+# This only requests a review; the repository ruleset does not require a code
+# owner's approval.
 /ROADMAP.md @MapCairn/maintainers
+/AGENTS.md @MapCairn/maintainers
+/CLAUDE.md @MapCairn/maintainers
+/.claude/ @MapCairn/maintainers
+/.agents/ @MapCairn/maintainers
+/.codex/ @MapCairn/maintainers
+/.opencode/ @MapCairn/maintainers
+/.qwen/ @MapCairn/maintainers
+/.github/ @MapCairn/maintainers
+/.vscode/ @MapCairn/maintainers
+/scripts/ @MapCairn/maintainers
+/lefthook.yml @MapCairn/maintainers
+/.npmrc @MapCairn/maintainers
+/package.json @MapCairn/maintainers
+/package-lock.json @MapCairn/maintainers
+/packages/*/package.json @MapCairn/maintainers
+/examples/*/package.json @MapCairn/maintainers
+/vitest.config.ts @MapCairn/maintainers
+/packages/*/*.config.ts @MapCairn/maintainers
+/packages/core/src/lint/ @MapCairn/maintainers
+/biome.jsonc @MapCairn/maintainers
+/.dependency-cruiser.cjs @MapCairn/maintainers
+/wrangler*.jsonc @MapCairn/maintainers
+/docs/guides/working-with-agents.md @MapCairn/maintainers
