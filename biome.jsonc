@@ -8,6 +8,10 @@
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
+    "domains": {
+      "react": "recommended",
+      "test": "recommended"
+    },
     "rules": {
       "preset": "recommended",
       "correctness": {
@@ -378,6 +382,14 @@
           "nursery": { "noJsRestrictedProperties": "off" },
           "style": { "noRestrictedGlobals": "off" }
         }
+      }
+    },
+    {
+      // The Playwright rules match any call named describe or test, so they
+      // run on the browser specs only.
+      "includes": ["packages/web/e2e/**"],
+      "linter": {
+        "domains": { "playwright": "recommended" }
       }
     },
     {
