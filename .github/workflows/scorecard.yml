@@ -6,7 +6,13 @@ on:
   push:
     branches: ["main"]
 
-permissions: read-all
+# The only job sets its own permissions, which replace these, so nothing is
+# granted here. The action's README forbids write permissions at this level.
+permissions: {}
+
+concurrency:
+  group: scorecard-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analysis:
@@ -15,8 +21,8 @@ jobs:
     timeout-minutes: 10
     if: github.event.repository.default_branch == github.ref_name
     permissions:
-      security-events: write
-      id-token: write
+      security-events: write # upload the results to code scanning (the action's README lists it for publishing results)
+      id-token: write # the action's README requires it for `publish_results: true`
 
     steps:
       - name: "Checkout code"
