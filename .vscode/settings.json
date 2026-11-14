@@ -31,11 +31,19 @@
     "**/test-results": true,
     "**/*.tsbuildinfo": true
   },
+  "search.exclude": {
+    "**/package-lock.json": true,
+    "**/.agents/skills": true,
+    "**/.codex/agents": true,
+    "**/.opencode/agents": true,
+    "**/.qwen/agents": true,
+    "**/.github/agents": true
+  },
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
-    "package.json": "package-lock.json, tsconfig*.json, biome.json*, vite.config.*, vitest.config.*, playwright.config.*, react-router.config.*, wrangler.*, lefthook.yml, .dependency-cruiser.cjs, lighthouserc.json",
-    "README.md": "AGENTS.md, CLAUDE.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, PRIVACY.md, ATTRIBUTIONS.md, LICENSE*",
+    "package.json": "package-lock.json, tsconfig*.json, biome.json*, vite.config.*, vitest.config.*, playwright.config.*, react-router.config.*, wrangler.*, lefthook.yml, .dependency-cruiser.cjs, lighthouserc.json, .node-version, .npmrc",
+    "README.md": "AGENTS.md, CLAUDE.md, ARCHITECTURE.md, DESIGN.md, ROADMAP.md, CONTRIBUTING.md, GOVERNANCE.md, CODE_OF_CONDUCT.md, CLA.md, SECURITY.md, PRIVACY.md, ATTRIBUTIONS.md, LICENSE*",
     ".gitignore": ".env*, .dev.vars*, .editorconfig, .gitattributes"
   }
 }
