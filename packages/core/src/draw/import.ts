@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { Geometry } from "geojson";
 import { GeometryError } from "../geometry/errors";
 import {
-  readWktSequence,
+  readWktRecovering,
   startsLikeWkt,
   UnsupportedSridError,
   type WktAxisOrder,
@@ -80,9 +79,10 @@ export type ShapeImportSkip =
 /**
  * What a file held: a refusal of the whole file, or the shapes that can be
  * drawn with a count of those skipped for each reason and of the polygons
- * whose holes were left out. A `wkt-unreadable` refusal, which covers text in
- * an SRID other than 4326, also carries the `detail` the WKT reader gave:
- * what was wrong, and where.
+ * whose holes were left out. A `wkt-unreadable` refusal, given when not one
+ * geometry in WKT text could be used (text in an SRID other than 4326
+ * included), also carries the `detail` the WKT reader gave for the first
+ * fault: what was wrong, and where.
  */
 export type ShapeImport =
   | {
@@ -621,20 +621,6 @@ function addCsv(collector: Collector, text: string, layout: CsvLayout): void {
   }
 }
 
-/** The geometries in WKT text, or the reader's error when it could not be read. */
-function readWkt(
-  text: string,
-  axisOrder: WktAxisOrder,
-): Geometry[] | GeometryError {
-  try {
-    return readWktSequence(text, { axisOrder });
-  } catch (error) {
-    return error instanceof GeometryError
-      ? error
-      : new GeometryError("invalid", "The WKT could not be read.");
-  }
-}
-
 /** Why a cell of WKT could not be read, as the skip that counts its row. */
 function skipFor(error: GeometryError): ShapeImportSkip {
   if (error instanceof UnsupportedSridError) {
@@ -643,21 +629,42 @@ function skipFor(error: GeometryError): ShapeImportSkip {
   return error.kind === "unsupported" ? "unsupported" : "malformed";
 }
 
-/** Adds the shapes of one cell of WKT, or one skip when the cell cannot be read. */
-function addWktCell(collector: Collector, cell: string): void {
-  const geometries = readWkt(cell, collector.wktAxisOrder);
-  if (geometries instanceof GeometryError) {
-    add(collector, skipFor(geometries));
-    return;
-  }
-  addGeometries(collector, geometries);
+/** What reading WKT text gave: how many geometries it held, and the first reason a stretch was left out. */
+interface WktOutcome {
+  readonly geometries: number;
+  readonly firstError: GeometryError | undefined;
 }
 
-/** Adds the shapes of WKT geometries, one after another. */
-function addGeometries(collector: Collector, geometries: Geometry[]): void {
-  addParts(collector, geometries, (geometry) =>
-    addGeometry(collector, geometry, false),
-  );
+/**
+ * Adds the shapes of the WKT text, geometry by geometry. A stretch that cannot
+ * be used is skipped and counted, and the geometries after it are still read.
+ */
+function addWktReadings(collector: Collector, text: string): WktOutcome {
+  let geometries = 0;
+  let firstError: GeometryError | undefined;
+  const readings = readWktRecovering(text, {
+    axisOrder: collector.wktAxisOrder,
+  });
+  for (const reading of readings) {
+    if (reading instanceof GeometryError) {
+      firstError ??= reading;
+      add(collector, skipFor(reading));
+    } else {
+      geometries += 1;
+      addParts(collector, [reading], (geometry) =>
+        addGeometry(collector, geometry, false),
+      );
+    }
+    if (collector.refusal) {
+      break;
+    }
+  }
+  return { geometries, firstError };
+}
+
+/** Adds the shapes of one cell of WKT, and one skip for each stretch of it that cannot be used. */
+function addWktCell(collector: Collector, cell: string): void {
+  addWktReadings(collector, cell);
 }
 
 function refuse(refusal: ShapeImportRefusal, detail?: string): ShapeImport {
@@ -686,25 +693,25 @@ function addGeoJsonText(
 }
 
 /**
- * Adds what WKT text holds, or says why the whole text is refused: text that
- * starts with a WKT type or an EWKT `SRID=` prefix but cannot be read is a
- * damaged WKT file, refused with the reader's own words in
- * `collector.detail` (a geometry in another SRID included); any other text is
- * not WKT at all.
+ * Adds what WKT text holds, skipping and counting each stretch that cannot be
+ * used. It says why the whole text is refused only when not one geometry in it
+ * could be read: text that starts with a WKT type or an EWKT `SRID=` prefix
+ * is then a damaged WKT file, refused with the reader's own words for its
+ * first fault in `collector.detail` (a geometry in another SRID included);
+ * any other text is not WKT at all.
  */
 function addWktText(
   collector: Collector,
   body: string,
 ): ShapeImportRefusal | null {
-  const geometries = readWkt(body, collector.wktAxisOrder);
-  if (!(geometries instanceof GeometryError)) {
-    addGeometries(collector, geometries);
+  const { geometries, firstError } = addWktReadings(collector, body);
+  if (geometries > 0 || collector.refusal) {
     return null;
   }
   if (!startsLikeWkt(body)) {
     return "not-recognised";
   }
-  collector.detail = geometries.message;
+  collector.detail = (firstError as GeometryError).message;
   return "wkt-unreadable";
 }
 
@@ -752,15 +759,19 @@ function addFileBody(
  *
  *   WKT may be one geometry or several one after another (one to a line is
  *   usual), each read like its GeoJSON twin, with the order of its two
- *   numbers set by `options.wktAxisOrder`. WKT text that cannot be read, or
+ *   numbers set by `options.wktAxisOrder`. A geometry that cannot be used
+ *   is skipped and counted, and the geometries after it are still read: one
  *   that holds a measure (`M`), a curved type or an EWKT `SRID=` prefix other
- *   than `SRID=4326;`, is refused whole as `wkt-unreadable`, with the
- *   reader's own words (and position, where it has one) in `detail`, and
- *   nothing in it is imported; text that starts with neither a WKT type nor
- *   an `SRID=` prefix is `not-recognised`. A CSV that is not the draw tool's
- *   own is read as WKT when its header has a column named `wkt` (any case,
- *   comma-delimited only), whose cells are read as WKT; a cell that cannot be
- *   read skips only its row, as `other-srid` when the cell is in another SRID.
+ *   than `SRID=4326;` is skipped to its closing bracket (counted as
+ *   `unsupported`, or `other-srid`), and damaged text is skipped up to the
+ *   next line that starts a geometry (counted as `malformed`). Only WKT text
+ *   in which not one geometry could be used is refused whole, as
+ *   `wkt-unreadable`, with the reader's own words (and position, where it
+ *   has one) for its first fault in `detail`; text that starts with neither a
+ *   WKT type nor an `SRID=` prefix is `not-recognised`. A CSV that is not the
+ *   draw tool's own is read as WKT when its header has a column named `wkt`
+ *   (any case, comma-delimited only), whose cells are read as WKT in the same
+ *   way, each stretch of a cell that cannot be used counting as one skip.
  *
  *   The text is refused whole when it is longer than
  *   {@link MAX_IMPORT_BYTES} characters, nests deeper than

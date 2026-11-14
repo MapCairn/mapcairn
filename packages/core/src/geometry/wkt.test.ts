@@ -7,6 +7,7 @@ import { GeometryError } from "./errors";
 import {
   formatWkt,
   parseWkt,
+  readWktRecovering,
   readWktSequence,
   startsLikeWkt,
   UnsupportedSridError,
@@ -799,5 +800,268 @@ describe("readWktSequence", () => {
 
   it("refuses something that is not a string", () => {
     expect(kindOf(5)).toBe("invalid");
+  });
+});
+
+describe("readWktRecovering", () => {
+  const readings = (text: string) => [...readWktRecovering(text)];
+  const kinds = (text: string) =>
+    readings(text).map((reading) =>
+      reading instanceof GeometryError ? reading.kind : reading.type,
+    );
+
+  it("gives the same geometries as readWktSequence when every one can be read", () => {
+    const text =
+      "POINT (1 2)\nLINESTRING (0 0, 1 1)\nPOLYGON ((0 0, 1 0, 1 1, 0 0))";
+    expect(readings(text)).toEqual(readWktSequence(text));
+  });
+
+  it("skips a geometry with a measure and keeps the ones around it, on one line", () => {
+    expect(
+      kinds(
+        "POINT (1 1) POINT M (1 2 3) LINESTRINGZM (0 0 0 0, 1 1 1 1) POINT (3 3)",
+      ),
+    ).toEqual(["Point", "unsupported", "unsupported", "Point"]);
+  });
+
+  it("skips a curved geometry with brackets inside it, whatever its layout", () => {
+    const text =
+      "COMPOUNDCURVE (CIRCULARSTRING (0 0, 1 1, 2 0), (2 0, 3 3)) LINESTRING (0 0, 1 1)";
+    expect(kinds(text)).toEqual(["unsupported", "LineString"]);
+    expect(
+      kinds("POINT (1 1) CURVEPOLYGON EMPTY POINT (2 2) CIRCULARSTRING EMPTY"),
+    ).toEqual(["Point", "unsupported", "Point", "unsupported"]);
+  });
+
+  it("skips a measure that carries EMPTY, and one with a tag word", () => {
+    expect(kinds("POINT ZM EMPTY POINT (1 1) POINT M EMPTY")).toEqual([
+      "unsupported",
+      "Point",
+      "unsupported",
+    ]);
+  });
+
+  it("skips a geometry in another SRID, and keeps one in SRID 4326 after it", () => {
+    const [first, second] = readings(
+      "SRID=3857;POINT (1 2)\nSRID=4326;POINT (3 4)",
+    );
+    expect(first).toBeInstanceOf(UnsupportedSridError);
+    expect(second).toEqual({ type: "Point", coordinates: [3, 4] });
+  });
+
+  it("skips a whole collection that has a measure member", () => {
+    expect(
+      kinds(
+        "GEOMETRYCOLLECTION (POINT (1 1), POINT M (1 2 3), POINT (4 4)) POINT (5 5)",
+      ),
+    ).toEqual(["unsupported", "Point"]);
+  });
+
+  it("skips one bad line and keeps the lines around it", () => {
+    const [before, bad, after] = readings(
+      "POINT (1 1)\nPOINT (x y)\nPOINT (3 3)",
+    );
+    expect(before).toEqual({ type: "Point", coordinates: [1, 1] });
+    expect(bad).toBeInstanceOf(GeometryError);
+    expect((bad as GeometryError).kind).toBe("invalid");
+    expect((bad as GeometryError).message).toBe(
+      "Expected a number at position 20.",
+    );
+    expect(after).toEqual({ type: "Point", coordinates: [3, 3] });
+  });
+
+  it("starts again at the next line when a line is cut short", () => {
+    expect(kinds("LINESTRING (1 2, 3 4\nPOINT (5 6)")).toEqual([
+      "invalid",
+      "Point",
+    ]);
+  });
+
+  it("counts the text up to the next geometry line as one stretch", () => {
+    expect(kinds("POINT (1 1)\nfoo\nbar baz\nPOINT (2 2)")).toEqual([
+      "Point",
+      "invalid",
+      "Point",
+    ]);
+  });
+
+  it("ends the skip of a measure at the end of its line when its brackets stay open", () => {
+    expect(kinds("POINT M (1 2\nPOINT (5 6)")).toEqual([
+      "unsupported",
+      "Point",
+    ]);
+    expect(kinds("POINT M\nPOINT (5 6)")).toEqual(["unsupported", "Point"]);
+  });
+
+  it("skips a collection with an unsupported member to its closing bracket, over several lines", () => {
+    const text =
+      "GEOMETRYCOLLECTION (\nPOINT (1 1),\nPOINT M (1 2 3),\nLINESTRING (0 0, 1 1)\n)\nPOINT (9 9)";
+    expect(kinds(text)).toEqual(["unsupported", "Point"]);
+    expect(readings(text)[1]).toEqual({ type: "Point", coordinates: [9, 9] });
+  });
+
+  it("skips a curve written over several lines and keeps what follows its closing bracket", () => {
+    expect(
+      kinds("CIRCULARSTRING (\n0 0,\n1 1,\n2 0\n) POINT (5 5)\nPOINT (6 6)"),
+    ).toEqual(["unsupported", "Point", "Point"]);
+  });
+
+  it("counts a stray closing bracket after a skipped geometry as unreadable text, once", () => {
+    expect(kinds("POINT M (1 2 3))\nPOINT (4 4)")).toEqual([
+      "unsupported",
+      "invalid",
+      "Point",
+    ]);
+    expect(
+      kinds("GEOMETRYCOLLECTION (\nPOINT M (1 2 3)\n))\nPOINT (4 4)"),
+    ).toEqual(["unsupported", "invalid", "Point"]);
+  });
+
+  it("falls back to the end of the line for a skipped geometry whose brackets never close", () => {
+    expect(
+      kinds("POINT M (1 2 3\nPOINT (4 4)\nPOINT M (5 6 7\nPOINT (8 8)"),
+    ).toEqual(["unsupported", "Point", "unsupported", "Point"]);
+  });
+
+  it("reads a collection the same way after a geometry whose brackets never close", () => {
+    const collection =
+      "GEOMETRYCOLLECTION (\nPOINT (1 1),\nPOINT M (1 2 3),\nLINESTRING (0 0, 1 1)\n)\nPOINT (9 9)";
+    expect(kinds(collection)).toEqual(["unsupported", "Point"]);
+    expect(kinds(`POINT M (1 2\n${collection}`)).toEqual([
+      "unsupported",
+      "unsupported",
+      "Point",
+    ]);
+    expect(readings(`POINT M (1 2\n${collection}`)[2]).toEqual({
+      type: "Point",
+      coordinates: [9, 9],
+    });
+  });
+
+  it("reads a curve over several lines the same way after a geometry whose brackets never close", () => {
+    const curve =
+      "CIRCULARSTRING (\n0 0,\n1 1,\n2 0\n) POINT (5 5)\nPOINT (6 6)";
+    expect(kinds(curve)).toEqual(["unsupported", "Point", "Point"]);
+    expect(kinds(`POINT M (1 2\n${curve}`)).toEqual([
+      "unsupported",
+      "unsupported",
+      "Point",
+      "Point",
+    ]);
+  });
+
+  it("reads a collection the same way after a character it does not know inside a bracket", () => {
+    const collection =
+      "GEOMETRYCOLLECTION (\nPOINT (1 1),\nPOINT M (1 2 3),\nLINESTRING (0 0, 1 1)\n)\nPOINT (9 9)";
+    expect(kinds(`POINT M (1 @ 2)\n${collection}`)).toEqual([
+      "unsupported",
+      "unsupported",
+      "Point",
+    ]);
+  });
+
+  it("reads a long run of geometries whose brackets never close in time proportional to its length", () => {
+    // Regression guard: looking for a bracket that is not there from every
+    // geometry would read the rest of the text each time.
+    const text = "POINT M (1 2 3\n".repeat(60_000);
+    const started = performance.now();
+    const iterator = readWktRecovering(text);
+    for (let taken = 0; taken < 500; taken += 1) {
+      expect(iterator.next().done).toBe(false);
+    }
+    expect(performance.now() - started).toBeLessThan(5000);
+  });
+
+  it("goes on after a character it does not know", () => {
+    expect(kinds("POINT (1 1) @\nPOINT (2 2)")).toEqual([
+      "Point",
+      "invalid",
+      "Point",
+    ]);
+    expect(kinds("@\nPOINT (2 2)")).toEqual(["invalid", "Point"]);
+    expect(kinds("POINT M (1 @ 2)\nPOINT (2 2)")).toEqual([
+      "unsupported",
+      "Point",
+    ]);
+  });
+
+  it("reads every line break the same way", () => {
+    expect(kinds("POINT (1 1)\r\nPOINT (x)\r\nPOINT (3 3)")).toEqual([
+      "Point",
+      "invalid",
+      "Point",
+    ]);
+    expect(kinds("POINT (1 1)\rPOINT (x)\rPOINT (3 3)")).toEqual([
+      "Point",
+      "invalid",
+      "Point",
+    ]);
+  });
+
+  it("gives one error for text that is not WKT, and for empty text", () => {
+    expect(kinds("hello world")).toEqual(["invalid"]);
+    expect(kinds("")).toEqual(["invalid"]);
+  });
+
+  it("gives one error and stops for text that never starts a geometry again", () => {
+    expect(kinds("POINT (x)\n1 2\n3 4")).toEqual(["invalid"]);
+  });
+
+  it("reads lazily, so a caller that stops early reads no more", () => {
+    const text = `POINT (1 1)\n${"POINT (x)\n".repeat(100_000)}`;
+    const iterator = readWktRecovering(text);
+    expect(iterator.next().value).toEqual({
+      type: "Point",
+      coordinates: [1, 1],
+    });
+    expect(iterator.next().value).toBeInstanceOf(GeometryError);
+  });
+
+  it("finds the end of a long line once, however many geometries it holds", () => {
+    // Regression guard: finding the end of the line afresh for each skipped
+    // geometry made this read quadratic in the length of the line.
+    const text = "POINT M (1 2 3) ".repeat(62_500);
+    const started = performance.now();
+    const iterator = readWktRecovering(text);
+    for (let taken = 0; taken < 500; taken += 1) {
+      expect(iterator.next().done).toBe(false);
+    }
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
+  it("honours the axis order", () => {
+    expect(readings("POINT (1 2) POINT M (1 2 3)")[0]).toEqual({
+      type: "Point",
+      coordinates: [1, 2],
+    });
+    expect([
+      ...readWktRecovering("POINT (1 2)", { axisOrder: "lat-lng" }),
+    ]).toEqual([{ type: "Point", coordinates: [2, 1] }]);
+  });
+
+  it("refuses something that is not a string", () => {
+    expect(() => readWktRecovering(5 as unknown as string)).toThrow(
+      "WKT must be a string.",
+    );
+  });
+});
+
+describe("startsLikeWkt on later lines and with odd spacing", () => {
+  it("accepts a line break between SRID and the equals sign, as the reader does", () => {
+    expect(startsLikeWkt("SRID\n=4326;POINT (1 2)")).toBe(true);
+    expect(startsLikeWkt("SRID\n4326")).toBe(false);
+  });
+
+  it("resumes at a later line whose SRID prefix has a line break before the equals sign", () => {
+    const found = [...readWktRecovering("POINT (x\nSRID\n=4326;POINT (2 2)")];
+    expect(found).toHaveLength(2);
+    expect(found[0]).toBeInstanceOf(GeometryError);
+    expect(found[1]).toEqual({ type: "Point", coordinates: [2, 2] });
+  });
+
+  it("accepts the SRID prefix spaced out, and refuses a bare SRID word", () => {
+    expect(startsLikeWkt("  \n SRID  = 4326;POINT (1 2)")).toBe(true);
+    expect(startsLikeWkt("SRID 4326")).toBe(false);
+    expect(startsLikeWkt("Sridhar")).toBe(false);
   });
 });
