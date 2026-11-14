@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   lighthouse:
+    name: lighthouse
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
