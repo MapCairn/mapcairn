@@ -703,7 +703,11 @@ function compare(a: FieldValue | undefined, b: FieldValue | undefined): number {
   const left = sortable(a);
   const right = sortable(b);
   if (left === null || right === null) {
-    return left === right ? 0 : left === null ? 1 : -1;
+    if (left === right) {
+      return 0;
+    }
+    // A missing value sorts last.
+    return left === null ? 1 : -1;
   }
   if (typeof left === "number" && typeof right === "number") {
     return left - right;

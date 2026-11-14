@@ -156,6 +156,7 @@
       },
       "style": {
         "noInlineStyles": "error",
+        "noNestedTernary": "error",
         "noRestrictedGlobals": {
           "level": "error",
           "options": {

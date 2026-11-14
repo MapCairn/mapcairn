@@ -6,7 +6,7 @@ import {
   placePoint,
   visibleRuns,
 } from "../globe/placement";
-import type { PixelPoint } from "../ports/geometry";
+import type { LatLng, PixelPoint } from "../ports/geometry";
 import type { MapEditHandleKind } from "../ports/map";
 import { shapeRing } from "./shape";
 import type { DrawShape } from "./types";
@@ -109,6 +109,17 @@ function insideRing(at: PixelPoint, ring: readonly PixelPoint[]): boolean {
   return inside;
 }
 
+/** The ring a shape's interior is tested against, or null for a shape with none. */
+function hitRing(shape: DrawShape): readonly LatLng[] | null {
+  if (shape.kind === "circle" && shape.radiusMetres !== undefined) {
+    return shapeRing(shape);
+  }
+  if (shape.kind === "polygon" && shape.vertices.length >= 3) {
+    return shape.vertices;
+  }
+  return null;
+}
+
 function hits(
   shape: DrawShape,
   at: PixelPoint,
@@ -121,12 +132,7 @@ function hits(
   if (!first) {
     return false;
   }
-  const ring =
-    shape.kind === "circle" && shape.radiusMetres !== undefined
-      ? shapeRing(shape)
-      : shape.kind === "polygon" && vertices.length >= 3
-        ? vertices
-        : null;
+  const ring = hitRing(shape);
   if (ring) {
     const path = placePath(ring, true, placement);
     if (interior && path.whole && insideRing(at, path.pixels)) {

@@ -98,11 +98,12 @@ function toLabels(item: NominatimItem): {
     return { label: displayName };
   }
   const prefix = `${name}, `;
-  const rest = displayName.startsWith(prefix)
-    ? displayName.slice(prefix.length)
-    : displayName === name
-      ? ""
-      : displayName;
+  let rest = displayName;
+  if (displayName.startsWith(prefix)) {
+    rest = displayName.slice(prefix.length);
+  } else if (displayName === name) {
+    rest = "";
+  }
   return rest === "" ? { label: name } : { label: name, secondaryLabel: rest };
 }
 

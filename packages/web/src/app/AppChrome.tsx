@@ -232,7 +232,8 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               pin={app.pin}
               note={ROUTING_NOTE}
             />
-          ) : app.sheetOpen ? (
+          ) : null}
+          {!app.directionsActive && app.sheetOpen ? (
             <SheetContent
               basemapId={app.basemapChoice}
               onBasemapChange={app.chooseBasemap}

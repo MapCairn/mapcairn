@@ -515,6 +515,18 @@ function select(
   };
 }
 
+/** The vertex a step lands on: the first or last when none is selected, else the neighbour, wrapping. */
+function steppedVertex(
+  current: number | null,
+  delta: 1 | -1,
+  count: number,
+): number {
+  if (current === null) {
+    return delta === 1 ? 0 : count - 1;
+  }
+  return (current + delta + count) % count;
+}
+
 function stepVertex(state: DrawState, delta: 1 | -1): DrawState {
   const shape = selectedShape(state);
   if (!shape || shape.vertices.length === 0) {
@@ -522,12 +534,7 @@ function stepVertex(state: DrawState, delta: 1 | -1): DrawState {
   }
   const count = shape.vertices.length;
   const current = state.selection?.vertex ?? null;
-  const next =
-    current === null
-      ? delta === 1
-        ? 0
-        : count - 1
-      : (current + delta + count) % count;
+  const next = steppedVertex(current, delta, count);
   return select(state, { type: "select", shapeId: shape.id, vertex: next });
 }
 

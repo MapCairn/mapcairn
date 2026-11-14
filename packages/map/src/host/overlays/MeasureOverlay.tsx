@@ -65,12 +65,9 @@ export function MeasureOverlay({
   const area = mode === "area";
   const path = placePath(points, area && points.length >= 3, placement);
   const filled = area && path.whole && points.length >= 2;
-  const fill =
-    filled && hover
-      ? placePath([...points, hover], true, placement)
-      : filled
-        ? path
-        : null;
+  const hoverFill =
+    filled && hover ? placePath([...points, hover], true, placement) : null;
+  const fill = filled ? (hoverFill ?? path) : null;
   const last = points.at(-1);
   const first = points[0];
   const preview =

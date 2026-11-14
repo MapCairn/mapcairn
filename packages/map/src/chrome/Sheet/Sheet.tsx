@@ -107,6 +107,14 @@ interface Drag {
  * {@link VELOCITY_WINDOW_MS} to the release; positive when expanding. A
  * pointer held still for longer than the window releases at zero.
  */
+/** The way an arrow key moves the sheet from its handle, or null for any other key. */
+function handleDirection(key: string): "up" | "down" | null {
+  if (key === "ArrowUp") {
+    return "up";
+  }
+  return key === "ArrowDown" ? "down" : null;
+}
+
 function releaseVelocity(samples: readonly Sample[], release: Sample): number {
   const first = samples.reduce(
     (oldest, sample) =>
@@ -494,12 +502,7 @@ export function Sheet({
   };
 
   const onHandleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const direction =
-      event.key === "ArrowUp"
-        ? "up"
-        : event.key === "ArrowDown"
-          ? "down"
-          : null;
+    const direction = handleDirection(event.key);
     if (!direction) {
       return;
     }

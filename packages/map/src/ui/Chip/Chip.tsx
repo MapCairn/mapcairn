@@ -36,11 +36,8 @@ export function Chip({
   const actionable = onClick !== undefined;
   const classes = chip({ actionable, selected });
   const merged = className ? `${classes} ${className}` : classes;
-  const glyph = selected ? (
-    <Icon icon={Check} className={selectedMark} />
-  ) : icon ? (
-    <Icon icon={icon} />
-  ) : null;
+  const own = icon ? <Icon icon={icon} /> : null;
+  const glyph = selected ? <Icon icon={Check} className={selectedMark} /> : own;
   if (actionable) {
     return (
       <button
