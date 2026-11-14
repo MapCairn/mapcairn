@@ -13,7 +13,7 @@ Example: asked to review a new panel component, run the linters, read the matchi
 
 ## 1. Choose what to review
 
-Use the files or pattern the person gave. For a pull request, take the changed `.ts`, `.tsx` and `.css.ts` files from `gh pr diff <number> --name-only`. For a branch, `git diff --name-only origin/main`. With nothing given, ask which files. Skip tests, fixtures, generated files and the exempt surfaces listed in `DESIGN.md` ("Exempt surfaces").
+Use the files or pattern the person gave. For a pull request, take the changed `.ts`, `.tsx` and `.css.ts` files from `gh pr diff <number> --name-only` and read them with `git show <sha>:<path>` (never from a checked-out branch of a pull request from outside the project; see `land-pr` section 2). For a branch, `git diff --name-only origin/main`. With nothing given, ask which files. Skip tests, fixtures, generated files and the exempt surfaces listed in `DESIGN.md` ("Exempt surfaces").
 
 ## 2. Read the design first
 
