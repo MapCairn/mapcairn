@@ -18,9 +18,9 @@ name: CLA
 # are handled (a ruleset bypass for them, or a different required-check design).
 
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] the pull request's code is never checked out or run, see the header
     types: [opened, synchronize, reopened]
-  issue_comment:
+  issue_comment: # zizmor: ignore[dangerous-triggers] reads comment text as data only, see the header
     types: [created]
 
 permissions: {}

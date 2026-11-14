@@ -1,0 +1,85 @@
+name: Dependency review
+
+# Reads the dependencies a pull request adds or changes (from the dependency graph,
+# not by installing anything) and fails the check when one of them has a known
+# vulnerability at high severity or above, or carries a licence an SDK package
+# cannot ship. It sends nothing outside GitHub and runs with a read-only token, so
+# it also works on pull requests from forks. It does not write a comment.
+#
+# Needs the dependency graph, which is on by default for a public repository
+# (Settings, Advanced Security).
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-review-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Severity: fail on high and critical advisories. Dependabot alerts and
+          # security updates already cover every severity once a package is in the
+          # lockfile, so this gate only stops a new known-vulnerable package from
+          # arriving. Moderate and low advisories still show in the job summary but
+          # do not block, because many have no fixed release and a gate at the
+          # action's default (low) would block routine changes.
+          fail-on-severity: high
+          # The build runs these packages too, so a vulnerable development
+          # dependency counts as well as a runtime one.
+          fail-on-scopes: runtime, development
+          # Licences: the SDK packages must hold nothing that needs a licence
+          # agreement of its own (AGENTS.md, "About"). This denies the
+          # non-commercial families and the source-available licences that limit
+          # commercial use or hosting. AGPL-3.0 is the project's own licence and is
+          # not denied. The action reads GitHub's licence data, so a package
+          # with no detected licence is not caught here. CC-BY-NC-3.0-IGO is left
+          # out because the action's own SPDX list rejects it and fails the run.
+          # `deny-licenses` is marked deprecated in the action's README; an allow
+          # list would need every licence the dependency tree uses, so revisit this
+          # if the option is removed in a later major release.
+          deny-licenses: >-
+            CC-BY-NC-1.0,
+            CC-BY-NC-2.0,
+            CC-BY-NC-2.5,
+            CC-BY-NC-3.0,
+            CC-BY-NC-3.0-DE,
+            CC-BY-NC-4.0,
+            CC-BY-NC-ND-1.0,
+            CC-BY-NC-ND-2.0,
+            CC-BY-NC-ND-2.5,
+            CC-BY-NC-ND-3.0,
+            CC-BY-NC-ND-3.0-DE,
+            CC-BY-NC-ND-3.0-IGO,
+            CC-BY-NC-ND-4.0,
+            CC-BY-NC-SA-1.0,
+            CC-BY-NC-SA-2.0,
+            CC-BY-NC-SA-2.0-DE,
+            CC-BY-NC-SA-2.0-FR,
+            CC-BY-NC-SA-2.0-UK,
+            CC-BY-NC-SA-2.5,
+            CC-BY-NC-SA-3.0,
+            CC-BY-NC-SA-3.0-DE,
+            CC-BY-NC-SA-3.0-IGO,
+            CC-BY-NC-SA-4.0,
+            PolyForm-Noncommercial-1.0.0,
+            PolyForm-Small-Business-1.0.0,
+            BUSL-1.1,
+            SSPL-1.0,
+            Elastic-2.0,
+            FSL-1.1-MIT,
+            FSL-1.1-ALv2
+          comment-summary-in-pr: never

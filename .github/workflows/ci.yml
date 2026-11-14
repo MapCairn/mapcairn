@@ -24,6 +24,7 @@ jobs:
           # The names check reads the pull request's commit messages, which
           # needs the base branch's history.
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
@@ -56,3 +57,25 @@ jobs:
           path: coverage/
           retention-days: 14
       - run: npm run build
+
+  # Its own job, so a registry outage or a package that publishes without a
+  # signature cannot fail the required `build` check. Nothing depends on it.
+  signatures:
+    name: Registry signatures
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --ignore-scripts
+      # Checks the registry signature of every installed package and the
+      # provenance attestation of those that have one.
+      - run: npm audit signatures
