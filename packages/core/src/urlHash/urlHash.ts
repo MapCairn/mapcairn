@@ -14,7 +14,8 @@ const CONTROL_VALUE_PATTERN = /^[a-z0-9._-]{1,32}$/;
 /**
  * The most layer ids a link carries. Both {@link parseLayers} and
  * {@link serialiseLayers} apply it, so an address the app writes is read back
- * whole. A link with more ids keeps the first of them.
+ * whole. A link with more ids keeps the first of them and counts the rest in
+ * `LayersUrlState.dropped`.
  */
 const MAX_LAYERS = 20;
 
