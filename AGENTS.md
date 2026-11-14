@@ -16,15 +16,15 @@ The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `th
 
 Open the sections that match the code you are about to touch. A change that alters behaviour these documents describe updates them in the same pull request.
 
-| You are changing | Read |
-| --- | --- |
-| A port, adapter, fake, contract suite or `createServices()` | `ARCHITECTURE.md`: "Layers and dependency rules", "Ports", "Adding an adapter" |
-| The map engine, basemaps, globe, overlays, failures or image export | `ARCHITECTURE.md`: "The map adapter" |
-| Data layers, query layers, selection or controls | `ARCHITECTURE.md`: "Data layers" |
-| Drawing, import, export or sharing shapes | `ARCHITECTURE.md`: "Drawing" |
-| Tests that substitute services | `ARCHITECTURE.md`: "How tests substitute services" |
-| Tokens, components, layout slots or accessibility contracts | `DESIGN.md`: "Tokens", "Layout and slots", "Components and accessibility contracts" |
-| Lint rules, exemptions or the harmony scanner | `DESIGN.md`: "Exempt surfaces", "What the lint checks, and where" |
+| You are changing                                                    | Read                                                                                |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| A port, adapter, fake, contract suite or `createServices()`         | `ARCHITECTURE.md`: "Layers and dependency rules", "Ports", "Adding an adapter"      |
+| The map engine, basemaps, globe, overlays, failures or image export | `ARCHITECTURE.md`: "The map adapter"                                                |
+| Data layers, query layers, selection or controls                    | `ARCHITECTURE.md`: "Data layers"                                                    |
+| Drawing, import, export or sharing shapes                           | `ARCHITECTURE.md`: "Drawing"                                                        |
+| Tests that substitute services                                      | `ARCHITECTURE.md`: "How tests substitute services"                                  |
+| Tokens, components, layout slots or accessibility contracts         | `DESIGN.md`: "Tokens", "Layout and slots", "Components and accessibility contracts" |
+| Lint rules, exemptions or the harmony scanner                       | `DESIGN.md`: "Exempt surfaces", "What the lint checks, and where"                   |
 
 ## Commands
 

@@ -17,13 +17,13 @@ Lighthouse 13.4.1 against the production build served as CI serves it (`npm run 
 
 ## Findings
 
-| Where | Performance | LCP | TBT | FCP | Speed Index | CLS |
-| --- | --- | --- | --- | --- | --- | --- |
-| CI, `main`, 3 runs (mobile) | 33, 42, 42 | 9.7 to 10.0 s | 2.05 to 7.3 s | | | 0 |
-| Local preview, mobile median | 27 (26 to 27) | 21.8 s | 7.8 s | 6.2 s | 9.4 s | 0 |
-| Local preview, desktop | 36 | 4.4 s | 2.0 s | 1.3 s | 3.9 s | 0 |
-| Production, mobile median | 29 (28 to 29) | 19.2 s | 5.3 s | 5.5 s | 6.8 s | 0 |
-| Production, desktop median | 51 (40 to 52) | 3.4 s | 0.7 s | 1.1 s | 2.1 s | 0 |
+| Where                        | Performance   | LCP           | TBT           | FCP   | Speed Index | CLS |
+| ---------------------------- | ------------- | ------------- | ------------- | ----- | ----------- | --- |
+| CI, `main`, 3 runs (mobile)  | 33, 42, 42    | 9.7 to 10.0 s | 2.05 to 7.3 s |       |             | 0   |
+| Local preview, mobile median | 27 (26 to 27) | 21.8 s        | 7.8 s         | 6.2 s | 9.4 s       | 0   |
+| Local preview, desktop       | 36            | 4.4 s         | 2.0 s         | 1.3 s | 3.9 s       | 0   |
+| Production, mobile median    | 29 (28 to 29) | 19.2 s        | 5.3 s         | 5.5 s | 6.8 s       | 0   |
+| Production, desktop median   | 51 (40 to 52) | 3.4 s         | 0.7 s         | 1.1 s | 2.1 s       | 0   |
 
 Accessibility, best practices and SEO are 100 everywhere. 24 requests to the site itself and about 46 in all.
 

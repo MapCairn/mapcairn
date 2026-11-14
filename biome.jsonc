@@ -152,6 +152,7 @@
         "noFloatingPromises": "error",
         "noMisusedPromises": "error",
         "noNonScalableViewport": "error",
+        "noYamlBooleanKeys": "error",
         "useExhaustiveSwitchCases": "error"
       },
       "suspicious": {
@@ -282,12 +283,17 @@
   },
   "markdown": {
     "formatter": {
-      "enabled": false
+      "enabled": true,
+      "formatEmbeds": false,
+      "proseWrap": "preserve"
     }
   },
   "yaml": {
+    "linter": {
+      "enabled": true
+    },
     "formatter": {
-      "enabled": false
+      "enabled": true
     }
   },
   "overrides": [
@@ -437,6 +443,16 @@
     }
   ],
   "files": {
-    "includes": ["**", "!**/dist", "!**/node_modules", "!**/.claude"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/.claude",
+      "!.agents",
+      "!.codex",
+      "!.opencode",
+      "!.qwen",
+      "!.github/agents"
+    ]
   }
 }

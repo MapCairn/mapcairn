@@ -4,10 +4,10 @@ Generic React hooks for MapCairn apps. No map-engine, domain-data or theme depen
 
 ## Exports
 
-| Hook or export | Purpose |
-|---|---|
+| Hook or export                                                 | Purpose                                                                                                                                                                                                                                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `useModelContextTool(definition)`, `isModelContextSupported()` | Registers a [WebMCP](https://webmachinelearning.github.io/webmcp/) tool with `document.modelContext.registerTool()` and unregisters it on unmount or when `definition` becomes `null`. Types: `ModelContextToolDefinition`, `ModelContextToolResult`, `ModelContextToolContentBlock`. |
-| `useLatestRef(value)` | A ref that always holds the latest render's value, for listeners bound once by outside code. |
+| `useLatestRef(value)`                                          | A ref that always holds the latest render's value, for listeners bound once by outside code.                                                                                                                                                                                          |
 
 Notes:
 
