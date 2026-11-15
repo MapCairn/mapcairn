@@ -7,6 +7,7 @@ import type { FileOpener, FileSaver } from "./files";
 import type { LayerCatalogue, LayerSource } from "./layers";
 import type { LocationProvider } from "./location";
 import type { MapAdapterFactory } from "./map";
+import type { MessageCatalogue } from "./messages";
 import type { DevicePreferences } from "./preferences";
 import type { RoutingProvider } from "./routing";
 import type { SearchProvider } from "./search";
@@ -44,6 +45,8 @@ export interface Services {
   readonly fileOpener?: FileOpener;
   readonly url: UrlState;
   readonly theme: ThemeSource;
+  /** Formats every piece of user-facing text for the active language. */
+  readonly messages: MessageCatalogue;
   readonly preferences: DevicePreferences;
   /**
    * The data layers on offer, and whether they have loaded. A host with fixed

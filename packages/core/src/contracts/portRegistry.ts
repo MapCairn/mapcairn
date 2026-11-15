@@ -9,6 +9,7 @@ import { FakeLayerCatalogue } from "../fakes/FakeLayerCatalogue";
 import { FakeLayerSource } from "../fakes/FakeLayerSource";
 import { FakeLocationProvider } from "../fakes/FakeLocationProvider";
 import { createFakeMapAdapterFactory } from "../fakes/FakeMapAdapter";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { FakeRoutingProvider } from "../fakes/FakeRoutingProvider";
 import { FakeSearchProvider } from "../fakes/FakeSearchProvider";
 import { FakeSuggestionProvider } from "../fakes/FakeSuggestionProvider";
@@ -27,6 +28,7 @@ import { runLayerCatalogueContract } from "./layerCatalogue.contract";
 import { runLayerSourceContract } from "./layerSource.contract";
 import { runLocationProviderContract } from "./locationProvider.contract";
 import { runMapAdapterContract } from "./mapAdapter.contract";
+import { runMessageCatalogueContract } from "./messageCatalogue.contract";
 import { runRoutingProviderContract } from "./routingProvider.contract";
 import { runSearchProviderContract } from "./searchProvider.contract";
 import { runSettingsStoreContract } from "./settingsStore.contract";
@@ -51,6 +53,7 @@ export const PORT_NAMES = [
   "fileOpener",
   "url",
   "theme",
+  "messages",
   "preferences",
   "layers",
   "layerSource",
@@ -116,6 +119,7 @@ export interface PortContractRunners {
   readonly fileOpener: typeof runFileOpenerContract;
   readonly url: typeof runUrlStateContract;
   readonly theme: typeof runThemeSourceContract;
+  readonly messages: typeof runMessageCatalogueContract;
   readonly preferences: typeof runDevicePreferencesContract;
   readonly layers: typeof runLayerCatalogueContract;
   readonly layerSource: typeof runLayerSourceContract;
@@ -179,6 +183,10 @@ export const PORT_REGISTRY: PortRegistry = {
   theme: {
     createFake: () => new FakeThemeSource(),
     runContract: runThemeSourceContract,
+  },
+  messages: {
+    createFake: () => new FakeMessageCatalogue(),
+    runContract: runMessageCatalogueContract,
   },
   preferences: {
     createFake: () => new FakeDevicePreferences(),

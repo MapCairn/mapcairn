@@ -13,6 +13,7 @@ import {
   createFakeMapAdapterFactory,
   type FakeMapAdapter,
 } from "./FakeMapAdapter";
+import { FakeMessageCatalogue } from "./FakeMessageCatalogue";
 import { FakeRoutingProvider } from "./FakeRoutingProvider";
 import { FakeSearchProvider } from "./FakeSearchProvider";
 import { FakeSuggestionProvider } from "./FakeSuggestionProvider";
@@ -32,6 +33,7 @@ export interface FakeServiceHandles {
   readonly fileOpener: FakeFileOpener;
   readonly url: MemoryUrlState;
   readonly theme: FakeThemeSource;
+  readonly messages: FakeMessageCatalogue;
   readonly preferences: FakeDevicePreferences;
   readonly layers: FakeLayerCatalogue;
   readonly layerSource: FakeLayerSource;
@@ -78,6 +80,7 @@ export function createFakeServices(
     fileOpener: new FakeFileOpener(),
     url: new MemoryUrlState(),
     theme: new FakeThemeSource(),
+    messages: new FakeMessageCatalogue(),
     preferences: new FakeDevicePreferences(),
     layers: new FakeLayerCatalogue(),
     layerSource: new FakeLayerSource(),
@@ -99,6 +102,7 @@ export function createFakeServices(
     fileOpener: fakes.fileOpener,
     url: fakes.url,
     theme: fakes.theme,
+    messages: fakes.messages,
     preferences: fakes.preferences,
     layers: fakes.layers,
     layerSource: fakes.layerSource,
