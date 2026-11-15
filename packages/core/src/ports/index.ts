@@ -9,6 +9,7 @@ export * from "./geometry";
 export * from "./layers";
 export * from "./location";
 export * from "./map";
+export * from "./messages";
 export * from "./preferences";
 export * from "./routing";
 export * from "./search";

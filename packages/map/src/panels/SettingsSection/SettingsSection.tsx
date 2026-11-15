@@ -3,12 +3,14 @@
 import {
   announceProjection,
   type MapProjection,
+  type MessageCatalogue,
   type ThemeChoice,
   type UnitSystem,
 } from "@mapcairn/core";
 import { Info } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 import {
+  useMessages,
   usePreferences,
   useSaveData,
   useSettings,
@@ -33,21 +35,33 @@ import {
 } from "../Section/Section.css";
 import { field, fieldLabel } from "./SettingsSection.css";
 
-const THEME_OPTIONS: readonly { value: ThemeChoice; label: string }[] = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-];
+function themeOptions(
+  t: MessageCatalogue["t"],
+): readonly { value: ThemeChoice; label: string }[] {
+  return [
+    { value: "system", label: t("settings.theme.system", {}) },
+    { value: "light", label: t("settings.theme.light", {}) },
+    { value: "dark", label: t("settings.theme.dark", {}) },
+  ];
+}
 
-const UNIT_OPTIONS: readonly { value: UnitSystem; label: string }[] = [
-  { value: "metric", label: "Metric" },
-  { value: "imperial", label: "Imperial" },
-];
+function unitOptions(
+  t: MessageCatalogue["t"],
+): readonly { value: UnitSystem; label: string }[] {
+  return [
+    { value: "metric", label: t("settings.units.metric", {}) },
+    { value: "imperial", label: t("settings.units.imperial", {}) },
+  ];
+}
 
-const PROJECTION_OPTIONS: readonly { value: MapProjection; label: string }[] = [
-  { value: "flat", label: "Flat" },
-  { value: "globe", label: "Globe" },
-];
+function projectionOptions(
+  t: MessageCatalogue["t"],
+): readonly { value: MapProjection; label: string }[] {
+  return [
+    { value: "flat", label: t("settings.mapShape.flat", {}) },
+    { value: "globe", label: t("settings.mapShape.globe", {}) },
+  ];
+}
 
 /**
  * The default privacy statement. It names no provider, because the SDK does not
@@ -94,21 +108,25 @@ export function SettingsSection({
   const { finePointer } = usePreferences();
   const saveData = useSaveData();
   const announce = useAnnounce();
+  const { t } = useMessages();
   const subLevel = nextHeadingLevel(headingLevel);
+  const themeLabel = t("settings.theme.label", {});
+  const unitsLabel = t("settings.units.label", {});
+  const mapShapeLabel = t("settings.mapShape.label", {});
   return (
     <Section
-      title="Settings"
+      title={t("settings.title", {})}
       headingLevel={headingLevel}
       headingRef={headingRef}
       data-testid="sheet-section-settings"
     >
       <div className={field}>
         <p className={fieldLabel} aria-hidden="true">
-          Theme
+          {themeLabel}
         </p>
         <SegmentedControl
-          label="Theme"
-          options={THEME_OPTIONS}
+          label={themeLabel}
+          options={themeOptions(t)}
           value={choice}
           onValueChange={(next) => setChoice(next as ThemeChoice)}
           data-testid="theme-option"
@@ -116,11 +134,11 @@ export function SettingsSection({
       </div>
       <div className={field}>
         <p className={fieldLabel} aria-hidden="true">
-          Units
+          {unitsLabel}
         </p>
         <SegmentedControl
-          label="Units"
-          options={UNIT_OPTIONS}
+          label={unitsLabel}
+          options={unitOptions(t)}
           value={settings.units}
           onValueChange={(next) => update({ units: next as UnitSystem })}
           data-testid="units-option"
@@ -128,11 +146,11 @@ export function SettingsSection({
       </div>
       <div className={field}>
         <p className={fieldLabel} aria-hidden="true">
-          Map shape
+          {mapShapeLabel}
         </p>
         <SegmentedControl
-          label="Map shape"
-          options={PROJECTION_OPTIONS}
+          label={mapShapeLabel}
+          options={projectionOptions(t)}
           value={settings.projection}
           onValueChange={(next) => {
             update({ projection: next as MapProjection });
@@ -142,15 +160,15 @@ export function SettingsSection({
         />
       </div>
       <Switch
-        label="Show zoom buttons"
-        description="On by default with a mouse, off on touch screens."
+        label={t("settings.zoomButtons.label", {})}
+        description={t("settings.zoomButtons.description", {})}
         checked={settings.zoomButtons ?? finePointer}
         onCheckedChange={(next) => update({ zoomButtons: next })}
         data-testid="zoom-buttons-switch"
       />
       <Switch
-        label="Save data"
-        description="Shows map names instead of previews and leaves out heavy map layers."
+        label={t("settings.saveData.label", {})}
+        description={t("settings.saveData.description", {})}
         checked={saveData}
         onCheckedChange={(next) => update({ saveData: next })}
         data-testid="save-data-switch"
@@ -158,17 +176,19 @@ export function SettingsSection({
       {persistent ? null : (
         <p className={note} data-testid="settings-not-saved">
           <Icon icon={Info} className={noteIcon} />
-          Changes will not be remembered on this device.
+          {t("settings.notSaved", {})}
         </p>
       )}
       <div className={subsection}>
-        <Subheading level={subLevel}>Privacy</Subheading>
+        <Subheading level={subLevel}>
+          {t("settings.privacy.heading", {})}
+        </Subheading>
         <p className={prose} data-testid="settings-privacy-note">
           {privacyNote}
         </p>
         <p className={prose}>
           <a className={link} href={privacyHref}>
-            Read the privacy policy
+            {t("settings.privacy.link", {})}
           </a>
         </p>
       </div>

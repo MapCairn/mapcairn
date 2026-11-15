@@ -12,6 +12,7 @@ import {
   type LayerCatalogue,
   type LocationProvider,
   type MapAdapterFactory,
+  type MessageCatalogue,
   type ResolvedTheme,
   type RoutingProvider,
   resolveTheme,
@@ -86,6 +87,17 @@ export function useUrlState(): UrlState {
 /** The theme source. Most components want {@link useTheme} instead. */
 export function useThemeSource(): ThemeSource {
   return useServices().theme;
+}
+
+/**
+ * The active message catalogue, for `t`/`plural`/`list` calls that look up
+ * copy by key instead of writing it inline. Reads the active language from
+ * `Services.messages` directly; nothing here switches it yet, so the
+ * language is whatever `createServices()` built (the host's default until a
+ * later step adds the language setting).
+ */
+export function useMessages(): MessageCatalogue {
+  return useServices().messages;
 }
 
 /** Device and accessibility preferences (reduced motion, fine pointer, save data), updating live. */

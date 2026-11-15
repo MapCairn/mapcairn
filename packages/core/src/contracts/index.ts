@@ -10,6 +10,7 @@ export * from "./layerCatalogue.contract";
 export * from "./layerSource.contract";
 export * from "./locationProvider.contract";
 export * from "./mapAdapter.contract";
+export * from "./messageCatalogue.contract";
 export * from "./portRegistry";
 export * from "./routingProvider.contract";
 export * from "./searchProvider.contract";

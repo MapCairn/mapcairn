@@ -13,6 +13,7 @@ export * from "./imageExport";
 export * from "./keyboard";
 export * from "./layers";
 export * from "./layout";
+export * from "./messages";
 export * from "./ports";
 export * from "./scale";
 export * from "./sheet";

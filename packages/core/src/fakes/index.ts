@@ -10,6 +10,7 @@ export * from "./FakeLayerCatalogue";
 export * from "./FakeLayerSource";
 export * from "./FakeLocationProvider";
 export * from "./FakeMapAdapter";
+export * from "./FakeMessageCatalogue";
 export * from "./FakeRoutingProvider";
 export * from "./FakeSearchProvider";
 export * from "./FakeSuggestionProvider";
