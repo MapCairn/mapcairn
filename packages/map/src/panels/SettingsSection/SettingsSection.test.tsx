@@ -356,6 +356,44 @@ describe("privacy", () => {
   });
 });
 
+describe("message catalogue", () => {
+  it("asks for its text and labels by key, not by writing the text inline", () => {
+    const { services } = renderSettings();
+    const keys = services.fakes.messages.calls.map((call) => call.key);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "settings.title",
+        "settings.theme.label",
+        "settings.theme.system",
+        "settings.theme.light",
+        "settings.theme.dark",
+        "settings.units.label",
+        "settings.units.metric",
+        "settings.units.imperial",
+        "settings.mapShape.label",
+        "settings.mapShape.flat",
+        "settings.mapShape.globe",
+        "settings.zoomButtons.label",
+        "settings.zoomButtons.description",
+        "settings.saveData.label",
+        "settings.saveData.description",
+        "settings.privacy.heading",
+        "settings.privacy.link",
+      ]),
+    );
+    for (const call of services.fakes.messages.calls) {
+      expect(call.params).toEqual({});
+    }
+  });
+
+  it("asks for the not-saved note by key only when storage is blocked", () => {
+    const { services } = renderSettings({ persistent: false });
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining(["settings.notSaved"]),
+    );
+  });
+});
+
 describe("markup rules", () => {
   it("sets no style attribute of its own", () => {
     renderSettings({ persistent: false });
