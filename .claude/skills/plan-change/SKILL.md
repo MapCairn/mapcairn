@@ -1,6 +1,6 @@
 ---
 name: plan-change
-description: Write a plan in docs/plans/ for a large MapCairn change, one that crosses several packages or decides a public API, and open it as its own pull request for review before any code is written. Use when an issue says "Plan in docs/plans/", when someone asks to plan, design or scope a large change, or when pick-up-issue meets an issue too large to build directly.
+description: Write a plan in docs/plans/ for a large MapCairn change, one that crosses several packages or decides a public API. When the work will not start straight away, open the plan as its own pull request for review before any code is written; when it starts immediately, land the plan with its first implementation step in one pull request instead. Use when an issue says "Plan in docs/plans/", when someone asks to plan, design or scope a large change, or when pick-up-issue meets an issue too large to build directly.
 ---
 
 # Plan a change
@@ -51,11 +51,17 @@ For each open choice, give the cost to build and keep against the benefit, and r
 
 ## 4. Open the pull request
 
+First decide whether the work starts straight away. It does not when the maintainer wants to weigh the design before resources go into it, or several people will build the plan over time; it does when you (or whoever is taking the issue next) are about to start step one of "Order of work" in the same session or the same day.
+
+**The work does not start straight away:**
+
 1. Add the plan to the list at the end of `docs/plans/README.md`, replacing "No plan is open." when it is the first.
 2. Branch `docs/plan-<short-name>` from the project's `main`, run `npm run lint`, commit as `docs(plans): <title>`, push.
 3. Continue with `land-pr`. The description says `Part of #<n>` and asks reviewers for the open questions. A plan is reviewed, not merged on your own authority unless a human authorised it.
 4. Before it merges, a reviewer other than the author verifies the plan against `main` (the `land-pr` review, with this checklist): every file, symbol and call the plan names exists and works as it says, the steps build in the order given, and nothing a step needs is left without a supplier. Fix what the review finds first.
 5. After it merges, link the plan from the tracking issue and tick its "Plan" task, editing from the current body (`gh issue view <n> --json body --jq .body > <file>`) so nothing is overwritten. Without triage rights, post that status as a comment or in the pull request description and leave ticking, closing and labels to the maintainer.
+
+**The work starts straight away:** skip the standalone pull request. Add the plan to `docs/plans/README.md` as above, write its file with `Status: in progress` rather than `proposed`, then go directly into `pick-up-issue` (or `implementer`) for step one of "Order of work," on the same branch, in the same pull request. A reviewer still checks the plan against the code before that pull request merges, using the same checklist as step 4 above, because it is still deciding a public API; there is just no separate, idle round trip waiting on it first. Link the plan from the tracking issue once this first pull request merges, as step 5 above.
 
 ## 5. Report
 
