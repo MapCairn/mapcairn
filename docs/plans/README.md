@@ -11,3 +11,4 @@ Open plans:
 - [0005: Runtime layer catalogue](0005-runtime-layer-catalogue.md), tracking issue [#46](https://github.com/MapCairn/mapcairn/issues/46).
 - [0007: Multi-feature selection](0007-multi-feature-selection.md), tracking issue [#49](https://github.com/MapCairn/mapcairn/issues/49).
 - [0008: Identify features on raster tile layers](0008-identify-raster-layers.md), tracking issue [#47](https://github.com/MapCairn/mapcairn/issues/47).
+- [0009: A message catalogue port, and English plus Afrikaans on the reference host](0009-i18n-message-catalogue.md), tracking issue [#231](https://github.com/MapCairn/mapcairn/issues/231).
