@@ -58,7 +58,7 @@ Routes and travel-time areas come from the public [Valhalla](https://valhalla.gi
 
 ## Software
 
-MapCairn is licensed under [AGPL-3.0](LICENSE). Each SDK package (`core`, `map`, `react` and `theme`) carries its own copy, and the reference host is in `packages/web`. Dependency licences are recorded in the installed packages' licence files.
+MapCairn is licensed under [AGPL-3.0](LICENSE). Each SDK package (`core`, `map`, `react` and `theme`) carries its own copy, and the reference host is in `packages/web`. The one exception is `packages/geolint`, a GeoJSON linter, which is licensed under Apache-2.0 (see its `LICENSE` and `NOTICE`). Dependency licences are recorded in the installed packages' licence files.
 
 Maps are drawn with [MapLibre GL JS](https://maplibre.org), which is licensed under the BSD 3-Clause licence.
 

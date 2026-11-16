@@ -44,6 +44,8 @@ flowchart TD
 | adapters         | `packages/web/src/adapters`    | ports, core                    | be imported by anything except the composition root              |
 | composition root | `packages/web/src/composition` | everything                     | be imported as a singleton; it exposes `createServices()` only   |
 
+`packages/geolint` sits outside these layers. It is an independent Apache-2.0 package that imports nothing else in the repository, and its lint engine imports no Node built-in (two dependency-cruiser rules, each proved by a fixture). Nothing here depends on it yet.
+
 `npm run lint` enforces these rules with dependency-cruiser (layers, engine imports), Biome (restricted imports and globals, accessibility rules) and the harmony scanner in `scripts/harmony` (style, markup and wiring rules), whose rules are proven by Vitest tests in `packages/core/src/lint`. A violation fails the build.
 
 ## Ports

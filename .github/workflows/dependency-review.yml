@@ -45,7 +45,11 @@ jobs:
           # agreement of its own (AGENTS.md, "About"). This denies the
           # non-commercial families and the source-available licences that limit
           # commercial use or hosting. AGPL-3.0 is the project's own licence and is
-          # not denied. The action reads GitHub's licence data, so a package
+          # not denied. This list does not tell the AGPL packages from
+          # packages/geolint, which is Apache-2.0 and must hold only permissive
+          # dependencies: a test in that package (src/testing/licences.test.ts)
+          # checks its installed dependency tree for that. The action reads
+          # GitHub's licence data, so a package
           # with no detected licence is not caught here. CC-BY-NC-3.0-IGO is left
           # out because the action's own SPDX list rejects it and fails the run.
           # `deny-licenses` is marked deprecated in the action's README; an allow

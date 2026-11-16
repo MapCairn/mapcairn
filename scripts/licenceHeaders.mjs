@@ -24,7 +24,7 @@ const PACKAGE_LICENCES = [
   { prefix: "packages/geolint/", identifier: "Apache-2.0" },
 ];
 const SOURCE_FILE = /\.(?:ts|tsx|mjs|cjs)$/;
-const IDENTIFIER_LINE = /SPDX-License-Identifier: (\S+)/;
+const IDENTIFIER_LINE = /SPDX-License-Identifier: (\S+)\s*$/;
 /** How many leading lines are searched for an existing identifier. */
 const HEADER_WINDOW_LINES = 5;
 
@@ -58,11 +58,21 @@ export function headerFor(path) {
  * @returns {boolean}
  */
 export function hasHeader(text, path) {
-  const found = text
+  return declaredIdentifier(text) === expectedIdentifier(path);
+}
+
+/**
+ * The licence identifier named in the first lines of the text, or undefined
+ * when they name none.
+ *
+ * @param {string} text
+ * @returns {string | undefined}
+ */
+export function declaredIdentifier(text) {
+  return text
     .split("\n", HEADER_WINDOW_LINES)
     .map((line) => IDENTIFIER_LINE.exec(line)?.[1])
     .find((identifier) => identifier !== undefined);
-  return found === expectedIdentifier(path);
 }
 
 /**
@@ -104,7 +114,7 @@ function main() {
 
   if (write) {
     const unlicensed = missing.filter(
-      (path) => !IDENTIFIER_LINE.test(readFileSync(path, "utf8")),
+      (path) => declaredIdentifier(readFileSync(path, "utf8")) === undefined,
     );
     for (const path of unlicensed) {
       writeFileSync(path, withHeader(readFileSync(path, "utf8"), path));

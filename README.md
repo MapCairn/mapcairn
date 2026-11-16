@@ -55,6 +55,8 @@ Feeds, polygons and lines with patterns, heatmaps, vector tiles and queries for 
 | [`@mapcairn/react`](packages/react/README.md) | Generic React hooks                                                                                           |
 | [`@mapcairn/theme`](packages/theme/README.md) | The typed design tokens and their contrast calculations                                                       |
 
+[`@mapcairn/geolint`](packages/geolint/README.md) is separate from those four: a GeoJSON linter (a `geolint` command and a library) that is Apache-2.0, imports nothing else in this repository and is not built on the map ports.
+
 `packages/web` is the reference host: a complete map built from those four packages, running at [mapcairn.timothybrits.co.za](https://mapcairn.timothybrits.co.za). It shows what the SDK composes and is what the tests run against; it is a demonstration, not the product.
 
 ## Status

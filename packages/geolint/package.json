@@ -40,6 +40,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "robust-predicates": "3.0.3"
+  },
   "devDependencies": {
     "@types/node": "26.6.6",
     "fast-check": "4.10.2",
