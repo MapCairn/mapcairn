@@ -162,6 +162,35 @@ describe("fixFeature", () => {
     });
   });
 
+  it("is the same when applied twice to a degenerate polygon that rounding would damage", () => {
+    const degenerate = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [1.23456789, 0, 0],
+              [0, 0, 0],
+              [0, -5e-324, 0],
+              [0, 1, 0],
+              [2, -0],
+              [0, -1e-323],
+            ],
+            [
+              [-0, -0],
+              [1.23456789, 1.23456789, 0],
+              [0, -0, 0],
+            ],
+          ],
+        ],
+      },
+    };
+    const once = fixFeature(degenerate, context, rules);
+    expect(fixFeature(once, context, rules)).toBe(once);
+  });
+
   it("is the same when applied twice", () => {
     const once = fixFeature(messy, context, rules);
     expect(fixFeature(once, context, rules)).toBe(once);

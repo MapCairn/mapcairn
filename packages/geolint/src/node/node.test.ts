@@ -46,6 +46,16 @@ describe("expandInputs", () => {
     ).toEqual(["x.geojson", STDIN]);
   });
 
+  it("reads a file once however its path is written", async () => {
+    const absolute = path.join(dir, "x.geojson");
+    expect(
+      await expandInputs(
+        ["x.geojson", "./x.geojson", absolute, "sub/../x.geojson"],
+        dir,
+      ),
+    ).toEqual(["x.geojson"]);
+  });
+
   it("expands a glob, sorted, and a recursive glob", async () => {
     expect(await expandInputs(["*.geojson"], dir)).toEqual([
       "a.geojson",
@@ -191,6 +201,17 @@ describe("fixFile", () => {
     );
   });
 
+  it("writes nothing, and says why, when no feature needed a repair", async () => {
+    const folder = path.join(dir, "nothing-to-fix");
+    mkdirSync(folder);
+    const file = path.join(folder, "ok.geojson");
+    writeFileSync(file, '{"type":"Point","coordinates":[1,2]}');
+    const outcome = await fixFile(file, await buildContext({}), rules);
+    expect(outcome.written).toBeUndefined();
+    expect(outcome.problem).toBe("no feature needed a repair");
+    expect(readdirSync(folder)).toEqual(["ok.geojson"]);
+  });
+
   it("does not use a temporary name that an earlier run, or another one, may be using", async () => {
     const folder = path.join(dir, "decoy");
     mkdirSync(folder);
@@ -221,7 +242,7 @@ describe("fixFile", () => {
     mkdirSync(folder);
     writeFileSync(
       path.join(folder, "b.geojson"),
-      '{"type":"Point","coordinates":[1,2]}',
+      '{"type":"Point","coordinates":[1.123456789,2]}',
     );
     mkdirSync(path.join(folder, "b.fixed.geojson"));
     await expect(
@@ -260,7 +281,7 @@ describe("fixFile", () => {
     const feature = JSON.stringify({
       type: "Feature",
       properties: { p: "x".repeat(900) },
-      geometry: null,
+      geometry: { type: "Point", coordinates: [1.123456789, 2] },
     });
     writeFileSync(
       file,

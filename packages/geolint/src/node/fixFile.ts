@@ -10,6 +10,9 @@ import { fileChunks } from "./files.js";
 /** How much fixed text is gathered before it is written, so a large file is not written in tiny pieces. */
 const WRITE_BATCH_CHARACTERS = 1024 * 1024;
 
+/** Why no copy is written for a file in which no feature changed. */
+const NOTHING_TO_REPAIR = "no feature needed a repair";
+
 /** The extension every fixed copy gets. */
 const FIXED_SUFFIX = ".fixed.geojson";
 
@@ -121,6 +124,9 @@ export async function fixFile(
   try {
     const temporary = path.join(workDirectory, "copy");
     await writeFixedText(temporary, file, context, rules, stats);
+    if (stats.changed === 0) {
+      return { written: undefined, stats, problem: NOTHING_TO_REPAIR };
+    }
     await rename(temporary, target);
     return { written: target, stats, problem: undefined };
   } catch (error) {

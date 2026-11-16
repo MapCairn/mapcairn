@@ -37,8 +37,9 @@ async function exists(file: string, cwd: string): Promise<boolean> {
  * glob characters in it (`data[1].geojson`); only an argument that does not is
  * read as a glob. A glob contributes its matches sorted by name, so the order
  * never depends on the file system. A plain path is kept as it is, and a missing
- * file is reported when it is read. `-` stays `-`. A file named twice is read
- * once.
+ * file is reported when it is read. `-` stays `-`. A file named twice, however the
+ * path is written (`ok.geojson` and `./ok.geojson`), is read once, under the
+ * first name.
  */
 export async function expandInputs(
   patterns: readonly string[],
@@ -47,8 +48,9 @@ export async function expandInputs(
   const seen = new Set<string>();
   const files: string[] = [];
   const add = (file: string): void => {
-    if (!seen.has(file)) {
-      seen.add(file);
+    const key = file === STDIN ? file : path.resolve(cwd, file);
+    if (!seen.has(key)) {
+      seen.add(key);
       files.push(file);
     }
   };

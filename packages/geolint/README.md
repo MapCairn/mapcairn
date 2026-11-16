@@ -49,7 +49,7 @@ The pointer, not a line number, says where: the linter streams the file and neve
 
 ### Fixing
 
-`--fix` repairs what has one right answer: it closes an open ring, removes repeated consecutive vertices, rounds coordinates to seven decimals and turns rings the right way round. It writes `<name>.fixed.geojson` beside the input and then lints that copy, so what you see is what is left to repair by hand. It applies the fixes in a fixed order until nothing changes, because one fix can create work for another. It never fixes a guess (a swap, a projection, a country mismatch). If the input is not valid JSON nothing is written.
+`--fix` repairs what has one right answer: it closes an open ring, removes repeated consecutive vertices, rounds coordinates to seven decimals and turns rings the right way round. It writes `<name>.fixed.geojson` beside the input and then lints that copy, so what you see is what is left to repair by hand. It applies the fixes in a fixed order until nothing changes, because one fix can create work for another. It never fixes a guess (a swap, a projection, a country mismatch). If the input is not valid JSON, or no feature needed a repair, nothing is written (and a note says so), and an older `.fixed.geojson` is left as it was. A file named twice, however its path is written, is read once.
 
 The copy is re-serialised: members other than `features` keep their order and values, a feature that needed nothing keeps its original text, and whitespace between features is not kept.
 

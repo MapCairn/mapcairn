@@ -402,7 +402,7 @@ describe("the command", () => {
     });
 
     describe("inputs that collide", () => {
-      const pointJson = '{"type":"Point","coordinates":[1,2]}';
+      const pointJson = '{"type":"Point","coordinates":[1.123456789,2]}';
 
       it("refuses two inputs that would write the same copy, naming both, and writes nothing", async () => {
         mkdirSync(path.join(dir, "collide"));
@@ -465,6 +465,19 @@ describe("the command", () => {
           "same.fixed.geojson",
         );
       });
+    });
+
+    it("writes no copy, and says so, when nothing needed a repair", async () => {
+      writeFileSync(
+        path.join(dir, "tidy.geojson"),
+        '{"type":"Point","coordinates":[1,2]}',
+      );
+      const result = await run(["--fix", "tidy.geojson"]);
+      expect(result.code).toBe(0);
+      expect(result.err).toContain(
+        "tidy.geojson: nothing written: no feature needed a repair",
+      );
+      expect(readdirSync(dir)).not.toContain("tidy.fixed.geojson");
     });
 
     it("says nothing was written for invalid input, leaves no partial file, and still exits 3", async () => {

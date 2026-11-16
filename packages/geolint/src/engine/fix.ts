@@ -71,15 +71,13 @@ function problemCount(
 }
 
 /**
- * Applies the fix of every active rule that has one, in `FIX_ORDER`, until a
- * whole pass changes nothing (at most `MAX_FIX_PASSES` times). Returns the same
- * object when nothing needed fixing. A rule that is not in `rules` (because it
- * was ignored) is not applied. Rounding to seven decimals can break a feature
- * that small (a new self-intersection, or a ring collapsed onto repeated
- * vertices), so when it leaves more problems than the other fixes do alone, the
- * feature is repaired without it.
+ * One round of repair: every active fix in `FIX_ORDER`, until a pass changes
+ * nothing. Rounding to seven decimals can break a feature that small (a new
+ * self-intersection, or a ring collapsed onto repeated vertices), so when it
+ * leaves more problems than the other fixes do alone, the feature is repaired
+ * without it.
  */
-export function fixFeature(
+function repairOnce(
   value: unknown,
   context: RuleContext,
   rules: readonly Rule[],
@@ -93,7 +91,7 @@ export function fixFeature(
     context,
     fixers.map(({ fix }) => fix),
   );
-  if (!fixers.some(({ id }) => id === PRECISION_RULE_ID)) {
+  if (all === value || !fixers.some(({ id }) => id === PRECISION_RULE_ID)) {
     return all;
   }
   const others = applyUntilSettled(
@@ -105,6 +103,33 @@ export function fixFeature(
     problemCount(others, context, rules)
     ? others
     : all;
+}
+
+/**
+ * Applies the fix of every active rule that has one, in `FIX_ORDER`, until a
+ * whole pass changes nothing (at most `MAX_FIX_PASSES` times). Returns the same
+ * object when nothing needed fixing. A rule that is not in `rules` (because it
+ * was ignored) is not applied. Rounding is held back when it would leave a
+ * feature worse (see `repairOnce`); the repair then runs again on what is left,
+ * so that fixing a fixed feature changes nothing.
+ */
+export function fixFeature(
+  value: unknown,
+  context: RuleContext,
+  rules: readonly Rule[],
+): unknown {
+  if (!rules.some((rule) => rule.id === PRECISION_RULE_ID && rule.fix)) {
+    return repairOnce(value, context, rules);
+  }
+  let current = value;
+  for (let round = 0; round < MAX_FIX_PASSES; round++) {
+    const next = repairOnce(current, context, rules);
+    if (next === current) {
+      break;
+    }
+    current = next;
+  }
+  return current;
 }
 
 const FEATURES_KEY = "features";
