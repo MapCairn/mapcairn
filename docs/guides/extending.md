@@ -2,6 +2,8 @@
 
 Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, layers supplied at runtime, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md). The Content Security Policy a host page needs is in [`content-security-policy.md`](content-security-policy.md).
 
+For translating the interface or offering a choice of languages, see the [translation guide](translate-the-sdk.md).
+
 ## Embed the SDK in an app of your own
 
 `examples/embed` is a one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. Run it with `npm run dev -w @mapcairn/example-embed` (add `-- --port <port>` to pick a port).
