@@ -171,7 +171,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | A guide for serving the bundle from a Windows web server and server-rendered pages                | lacks   | none                                                                                     | [#221]             |
 | The Content Security Policy a host needs                                                          | lacks   | the reference site's own is in `packages/web/public/_headers`                            | [#230]             |
 | Making the SDK easy to drop into existing server-rendered applications                            | lacks   | the tracker for the items above                                                          | [#51]              |
-| The interface text and language chosen by the host                                                | lacks   | English only, with copy inline in components; changing it is a decision                  | [#231]             |
+| The interface text and language chosen by the host                                                | partial | A message catalogue and language setting; the site offers English only so far            | [#231]             |
 | An agent that can drive the map through a tool catalogue                                          | partial | the reference host registers a few tools (`packages/web/src/webmcp`); the SDK ships none | [#56]              |
 | Hosts plugging in their own analytics                                                             | lacks   | none                                                                                     | [#75]              |
 
