@@ -164,34 +164,55 @@ export function ringsOf(leaf: LeafGeometry): RingRef[] {
   );
 }
 
-function pointPositions(leaf: LeafGeometry, base: string): PositionRef[] {
-  if (leaf.type === "Point") {
-    return isPosition(leaf.coordinates)
-      ? [{ position: leaf.coordinates, pointer: base }]
-      : [];
-  }
-  if (!Array.isArray(leaf.coordinates)) {
-    return [];
-  }
-  return leaf.coordinates.flatMap((position: unknown, index: number) =>
-    isPosition(position) ? [{ position, pointer: pointer(base, index) }] : [],
-  );
+/** The readable positions of a leaf geometry that pass a test, and where the first is. */
+export interface PositionMatches {
+  readonly positions: readonly Position[];
+  /** The first match and its feature-relative pointer; undefined when nothing matched. */
+  readonly first: PositionRef | undefined;
 }
 
-/** Every readable position of a leaf geometry, in document order. */
-export function positionsOf(leaf: LeafGeometry): PositionRef[] {
+/**
+ * Tests every readable position of a leaf geometry, in document order, the ones
+ * a line or ring that is wholly readable holds and the readable members of a
+ * `Point` or `MultiPoint`. It builds a JSON pointer only for the first match,
+ * because a rule reports one finding for a geometry and a pointer for every
+ * position costs more than the test.
+ */
+export function matchingPositions(
+  leaf: LeafGeometry,
+  test: (position: Position) => boolean,
+): PositionMatches {
   const base = pointer(leaf.pointer, "coordinates");
-  if (leaf.type === "Point" || leaf.type === "MultiPoint") {
-    return pointPositions(leaf, base);
+  const positions: Position[] = [];
+  let first: PositionRef | undefined;
+  const scan = (
+    items: readonly unknown[],
+    pointerAt: (index: number) => string,
+  ): void => {
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+      if (isPosition(item) && test(item)) {
+        if (first === undefined) {
+          first = { position: item, pointer: pointerAt(index) };
+        }
+        positions.push(item);
+      }
+    }
+  };
+  if (leaf.type === "Point") {
+    scan([leaf.coordinates], () => base);
+  } else if (leaf.type === "MultiPoint") {
+    if (Array.isArray(leaf.coordinates)) {
+      scan(leaf.coordinates, (index) => pointer(base, index));
+    }
+  } else {
+    const runs: readonly RunRef[] =
+      leaf.type === "LineString" || leaf.type === "MultiLineString"
+        ? linesOf(leaf)
+        : ringsOf(leaf);
+    for (const run of runs) {
+      scan(run.positions, (index) => pointer(run.pointer, index));
+    }
   }
-  const runs: readonly RunRef[] =
-    leaf.type === "LineString" || leaf.type === "MultiLineString"
-      ? linesOf(leaf)
-      : ringsOf(leaf);
-  return runs.flatMap((run) =>
-    run.positions.map((position, index) => ({
-      position,
-      pointer: pointer(run.pointer, index),
-    })),
-  );
+  return { positions, first };
 }

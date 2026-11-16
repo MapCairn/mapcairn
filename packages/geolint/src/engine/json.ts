@@ -30,7 +30,11 @@ export function isPosition(value: unknown): value is readonly number[] {
 
 /** Escapes one reference token for a JSON pointer (RFC 6901). */
 export function escapePointerToken(token: string | number): string {
-  return String(token).replaceAll("~", "~0").replaceAll("/", "~1");
+  const text = String(token);
+  if (!text.includes("~") && !text.includes("/")) {
+    return text;
+  }
+  return text.replaceAll("~", "~0").replaceAll("/", "~1");
 }
 
 /** Appends tokens to a JSON pointer. */

@@ -1,0 +1,6 @@
+[
+  { "path": "/features/0/geometry/coordinates/0", "severity": "error" },
+  { "path": "/features/1/geometry/coordinates/0", "severity": "warning" },
+  { "path": "/features/2/geometry/coordinates/1", "severity": "error" },
+  { "path": "/features/2/geometry/coordinates/1", "severity": "error" }
+]

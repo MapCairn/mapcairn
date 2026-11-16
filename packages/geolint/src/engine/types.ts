@@ -33,6 +33,19 @@ export interface CountryIndex {
   contains(code: string, longitude: number, latitude: number): boolean;
   /** Whether a country with this ISO 3166-1 alpha-2 code is known. */
   has(code: string): boolean;
+  /**
+   * The bounding box of every polygon of the country as `[west, south, east,
+   * north]` in degrees, without the coastline tolerance; `undefined` for an
+   * unknown code or a country with no polygon. A country that crosses the
+   * antimeridian has a box that spans the whole range of longitudes.
+   */
+  bounds(code: string): readonly [number, number, number, number] | undefined;
+  /**
+   * The code of a country whose outline contains the position, with no
+   * allowance for the coast, or undefined for open sea and for land the outlines
+   * leave out (small islands, for one).
+   */
+  locate(longitude: number, latitude: number): string | undefined;
 }
 
 /** What a rule may know besides the feature itself. */
@@ -51,6 +64,18 @@ export interface DocumentInfo {
   readonly members: Readonly<Record<string, unknown>>;
   /** Whether the root has a `features` member that is an array. */
   readonly hasFeatures: boolean;
+  /**
+   * Whether the root itself went to the rules as a feature: a Feature, or a bare
+   * geometry wrapped in one. A rule that reads a feature's members has then
+   * seen the root's, and a document check should not report them again.
+   */
+  readonly rootIsFeature: boolean;
+  /**
+   * The names of root members that appear more than once, each once, in the
+   * order the second copy was read. For `features` only the first array is
+   * checked; for any other name the last copy wins in `members`.
+   */
+  readonly duplicateMembers: readonly string[];
 }
 
 /**
