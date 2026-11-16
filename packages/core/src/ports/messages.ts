@@ -997,8 +997,8 @@ interface MessageParamOverrides {
     readonly total: number;
   };
   readonly "tools.tour.stepAnnouncement": {
-    readonly step: number;
-    readonly total: number;
+    /** The `tools.tour.progress` message, so the announcement and the card say the step the same way. */
+    readonly progress: string;
     readonly heading: string;
     readonly text: string;
   };

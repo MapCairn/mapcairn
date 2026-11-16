@@ -540,7 +540,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "tools.tour.finish": "Finish",
   "tools.tour.skipTour": "Skip tour",
   "tools.tour.close": "Close",
-  "tools.tour.stepAnnouncement": "Step {step} of {total}, {heading}. {text}",
+  "tools.tour.stepAnnouncement": "{progress}, {heading}. {text}",
   "tools.tour.finished": "Tour finished.",
   // Tools: directions
   "tools.directions.note":

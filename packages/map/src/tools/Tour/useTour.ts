@@ -2,8 +2,10 @@
 // Copyright MapCairn contributors
 import {
   announceTourSkipped,
+  type DefinitionText,
   initialTourState,
   message,
+  resolveText,
   stepDone,
   type TourAdvance,
   type TourSnapshot,
@@ -12,15 +14,17 @@ import {
 } from "@mapcairn/core";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { FocusName } from "../../chrome/focusRegistry";
-import { useSettings } from "../../services";
+import { useMessages, useSettings } from "../../services";
 import { useAnnounce } from "../../ui/LiveRegion";
 
 /** One step of a tour, as data. The host writes the words. */
 export interface TourStep {
   /** A stable id, for the host's own wiring (for example "layers"). */
   readonly id: string;
-  readonly heading: string;
-  readonly text: string;
+  /** A message key or plain text, read in the active language where the card and the announcement show it. */
+  readonly heading: DefinitionText;
+  /** As `heading`. */
+  readonly text: DefinitionText;
   /** What the person does to finish the step. */
   readonly advance: TourAdvance;
   /** The registered control to ring while the step is current, if any. */
@@ -78,6 +82,7 @@ export function useTour({
   const [focusRequest, setFocusRequest] = useState(0);
   const { update } = useSettings();
   const announce = useAnnounce();
+  const messages = useMessages();
   const stepAtStart = useRef<{ key: string; snapshot: TourSnapshot } | null>(
     null,
   );
@@ -118,16 +123,28 @@ export function useTour({
       announce(
         following
           ? message("tools.tour.stepAnnouncement", {
-              step: state.step + 2,
-              total: steps.length,
-              heading: following.heading,
-              text: following.text,
+              progress: message("tools.tour.progress", {
+                step: state.step + 2,
+                total: steps.length,
+              }),
+              heading: resolveText(messages, following.heading),
+              text: resolveText(messages, following.text),
             })
           : message("tools.tour.finished", {}),
       );
       dispatch({ type: "next" });
     }
-  }, [key, state, steps, layersOn, projection, surface, announce, markSeen]);
+  }, [
+    key,
+    state,
+    steps,
+    layersOn,
+    projection,
+    surface,
+    announce,
+    markSeen,
+    messages,
+  ]);
 
   const start = useCallback(() => {
     markSeen();

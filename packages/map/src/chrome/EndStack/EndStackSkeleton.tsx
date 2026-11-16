@@ -13,8 +13,23 @@ import {
 import { ControlGroup, IconButton } from "../../ui";
 import * as styles from "./EndStack.css";
 
+/** The names of the controls {@link EndStackSkeleton} draws, in the host's default language. */
+export interface EndStackSkeletonCopy {
+  readonly controls: string;
+  readonly mapOptions: string;
+  readonly measure: string;
+  readonly directions: string;
+  readonly draw: string;
+  readonly locate: string;
+  readonly settings: string;
+  readonly zoomControls: string;
+  readonly zoomIn: string;
+  readonly zoomOut: string;
+}
+
 /** Props for {@link EndStackSkeleton}. */
 export interface EndStackSkeletonProps {
+  readonly copy: EndStackSkeletonCopy;
   /** Shows the Directions button, as the live stack does when the host offers directions. */
   readonly directions?: boolean;
   /** Show the Draw shapes button, as the live stack does when its host offers drawing. */
@@ -29,42 +44,39 @@ export interface EndStackSkeletonProps {
  * pointer, the zoom group. No compass, because the map starts facing north.
  *
  * @remarks Only ever rendered inside an `aria-hidden`, `inert` container. It
- *   uses no hooks and needs no provider.
+ *   uses no hooks and needs no provider: the names arrive as `copy`.
  */
 export function EndStackSkeleton({
+  copy,
   directions = false,
   draw = false,
 }: EndStackSkeletonProps) {
   return (
     <div className={styles.skeletonStack} data-skeleton="end-stack">
       <ControlGroup
-        label="Map controls"
+        label={copy.controls}
         className={styles.group}
         data-skeleton="controls"
       >
-        <IconButton label="Map options" icon={Layers} tabIndex={-1} />
-        <IconButton
-          label="Measure distance and area"
-          icon={Ruler}
-          tabIndex={-1}
-        />
+        <IconButton label={copy.mapOptions} icon={Layers} tabIndex={-1} />
+        <IconButton label={copy.measure} icon={Ruler} tabIndex={-1} />
         {directions ? (
-          <IconButton label="Directions" icon={Route} tabIndex={-1} />
+          <IconButton label={copy.directions} icon={Route} tabIndex={-1} />
         ) : null}
         {draw ? (
-          <IconButton label="Draw shapes" icon={Pentagon} tabIndex={-1} />
+          <IconButton label={copy.draw} icon={Pentagon} tabIndex={-1} />
         ) : null}
-        <IconButton label="Locate me" icon={LocateFixed} tabIndex={-1} />
-        <IconButton label="Settings" icon={Settings} tabIndex={-1} />
+        <IconButton label={copy.locate} icon={LocateFixed} tabIndex={-1} />
+        <IconButton label={copy.settings} icon={Settings} tabIndex={-1} />
       </ControlGroup>
       <div className={styles.skeletonZoom}>
         <ControlGroup
-          label="Zoom controls"
+          label={copy.zoomControls}
           className={styles.group}
           data-skeleton="zoom"
         >
-          <IconButton label="Zoom in" icon={Plus} tabIndex={-1} />
-          <IconButton label="Zoom out" icon={Minus} tabIndex={-1} />
+          <IconButton label={copy.zoomIn} icon={Plus} tabIndex={-1} />
+          <IconButton label={copy.zoomOut} icon={Minus} tabIndex={-1} />
         </ControlGroup>
       </div>
     </div>

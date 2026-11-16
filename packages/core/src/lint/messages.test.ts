@@ -449,7 +449,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "tools.tour.finish": [],
   "tools.tour.skipTour": [],
   "tools.tour.close": [],
-  "tools.tour.stepAnnouncement": ["step", "total", "heading", "text"],
+  "tools.tour.stepAnnouncement": ["progress", "heading", "text"],
   "tools.tour.finished": [],
   // Tools: directions
   "tools.directions.note": [],
