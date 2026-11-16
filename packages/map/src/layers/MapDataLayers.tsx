@@ -13,12 +13,14 @@ import {
   type LayerFeature,
   type MapAdapter,
   type MapFeatureTap,
+  type MessageCatalogue,
   tileUrl,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { useEffect, useRef } from "react";
 import { useMap } from "../host";
 import { roundPixel } from "../host/overlays/geometry";
+import { useMessages } from "../services";
 import * as styles from "./Layers.css";
 import {
   featureOutlines,
@@ -97,6 +99,7 @@ function draw(
   previous: (id: string) => Drawn | undefined,
   now: number,
   formatters: FormatterRegistry,
+  catalogue: MessageCatalogue,
 ): [string, Drawn][] {
   const { definition } = layer;
   const own = previous(definition.id);
@@ -169,6 +172,7 @@ function draw(
             layer.features,
             formatters,
             now,
+            catalogue,
           ),
         );
       } else {
@@ -207,6 +211,7 @@ export function MapDataLayers({
   formatters = DEFAULT_FORMATTERS,
 }: MapDataLayersProps) {
   const { adapter } = useMap();
+  const messages = useMessages();
   const drawn = useRef(new Map<string, Drawn>());
   const { now, layers: states, detail } = layers;
 
@@ -225,6 +230,7 @@ export function MapDataLayers({
         (id) => drawn.current.get(id),
         now(),
         formatters,
+        messages,
       );
       for (const [id, result] of results) {
         next.set(id, result);
@@ -259,7 +265,7 @@ export function MapDataLayers({
       adapter.removeLayer(DETAIL_LAYER_ID);
     }
     drawn.current = next;
-  }, [adapter, states, detail, now, formatters]);
+  }, [adapter, states, detail, now, formatters, messages]);
 
   useEffect(
     () => () => {

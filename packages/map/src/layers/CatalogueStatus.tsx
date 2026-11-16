@@ -10,7 +10,7 @@ import {
 } from "@mapcairn/core";
 import { LoaderCircle, RotateCw, TriangleAlert } from "lucide-react";
 import { type FocusEvent, useEffect, useRef, useState } from "react";
-import { useFormatMessage } from "../services";
+import { useFormatMessage, useMessages } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import type { CatalogueView } from "./catalogueView";
@@ -126,6 +126,7 @@ export function CatalogueStatus({
   onRecovered,
 }: CatalogueStatusProps) {
   const format = useFormatMessage();
+  const { t } = useMessages();
   const loading =
     catalogue.status === "loading" || catalogue.refresh === "loading";
   const { retrying, startRetry } = useRetry(loading);
@@ -158,7 +159,7 @@ export function CatalogueStatus({
             onClick={retry}
             {...focusHandoff}
           >
-            Try again
+            {t("layers.tryAgain", {})}
           </Button>
         </div>
       ) : null}

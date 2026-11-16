@@ -6,6 +6,7 @@ import {
   encodeShapes,
   FakeMapAdapter,
   FakeMapHost,
+  FakeMessageCatalogue,
   type FakeServices,
   type LatLng,
   type UnitSystem,
@@ -541,8 +542,8 @@ describe("useDraw", () => {
   });
 
   describe("export", () => {
-    const rigWithTriangle = async () => {
-      const rig = await setup();
+    const rigWithTriangle = async (services?: FakeServices) => {
+      const rig = await setup({ services });
       addAll(rig, TRIANGLE);
       act(() => rig.result.current.finish());
       return rig;
@@ -606,6 +607,35 @@ describe("useDraw", () => {
         kind: "error",
         text: "Nothing to export yet. Finish a shape first.",
       });
+    });
+
+    it("asks the catalogue by key for what it reports, so another language can say it", async () => {
+      const messages = new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "tools.draw.nothingToExport": "Niks om uit te voer nie.",
+          "tools.draw.saved":
+            "{count} vorm gestoor as {filename}.|{count} vorms gestoor as {filename}.",
+        },
+      });
+      const services = createFakeServices({ messages });
+      const rig = await rigWithTriangle(services);
+      await act(async () => {
+        await rig.result.current.exportWkt();
+      });
+      expect(rig.result.current.feedback?.text).toBe(
+        "1 vorm gestoor as mapcairn-shapes.wkt.",
+      );
+      expect(
+        messages.calls.find((call) => call.key === "tools.draw.saved")?.params,
+      ).toEqual({ count: 1, filename: "mapcairn-shapes.wkt" });
+      const empty = await setup({ services });
+      await act(async () => {
+        await empty.result.current.exportCsv();
+      });
+      expect(empty.result.current.feedback?.text).toBe(
+        "Niks om uit te voer nie.",
+      );
     });
 
     it("clears the feedback when the shapes change", async () => {

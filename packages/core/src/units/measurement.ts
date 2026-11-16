@@ -170,14 +170,6 @@ export function formatArea(
   return `${formatNumber(value, language)} ${AREA_UNIT_SYMBOL[unit]}`;
 }
 
-/** Picks the singular name for exactly one and the plural otherwise. Only for copy that is not yet in the catalogue. */
-export function pluralise(
-  value: number,
-  names: readonly [string, string],
-): string {
-  return value === 1 ? names[0] : names[1];
-}
-
 /** A distance in a given unit as words, "1.25 kilometres": the unit's plural key with the count. */
 export function describeDistanceReading(
   value: number,

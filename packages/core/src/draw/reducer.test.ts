@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import {
+  createDrawReducer,
   DRAW_HISTORY_LIMIT,
   type DrawAction,
   type DrawState,
@@ -65,6 +67,34 @@ describe("setMode", () => {
     expect(switched.lastEvent).toEqual({ type: "discarded", kind: "polygon" });
     const undone = drawReducer(switched, { type: "undo" });
     expect(draftOf(undone)?.vertices).toHaveLength(2);
+  });
+});
+
+describe("createDrawReducer", () => {
+  const afrikaans = new FakeMessageCatalogue({
+    language: "af",
+    overrides: { "draw.shapeLabel.polygon": "Veelhoek {serial}" },
+  });
+  const reduce = createDrawReducer(afrikaans);
+
+  it("names a shape it starts in the words of the catalogue", () => {
+    const state = TRIANGLE.reduce(
+      (current, action) => reduce(current, action),
+      initialDrawState,
+    );
+    expect(draftOf(state)?.label).toBe("Veelhoek 1");
+  });
+
+  it("names the shapes it loads and imports the same way", () => {
+    const inputs = [
+      { kind: "polygon" as const, vertices: [p(0, 0), p(1, 0), p(0, 1)] },
+    ];
+    const loaded = reduce(initialDrawState, { type: "load", shapes: inputs });
+    const imported = reduce(loaded, { type: "import", shapes: inputs });
+    expect(imported.shapes.map((shape) => shape.label)).toEqual([
+      "Veelhoek 1",
+      "Veelhoek 2",
+    ]);
   });
 });
 

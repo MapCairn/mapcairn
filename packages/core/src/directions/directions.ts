@@ -30,11 +30,11 @@ export const AREA_MINUTES = [5, 10, 15, 30] as const;
 /** Every way of travelling, in the order the interface lists them. */
 export const TRAVEL_MODES: readonly TravelMode[] = ["drive", "walk", "cycle"];
 
-const MODE_LABELS: Readonly<Record<TravelMode, string>> = {
-  drive: "Drive",
-  walk: "Walk",
-  cycle: "Cycle",
-};
+const MODE_LABEL_MESSAGES = {
+  drive: message("directions.mode.drive", {}),
+  walk: message("directions.mode.walk", {}),
+  cycle: message("directions.mode.cycle", {}),
+} as const satisfies Readonly<Record<TravelMode, Message>>;
 
 const MODE_PARTICIPLE_MESSAGES = {
   drive: message("directions.participle.drive", {}),
@@ -42,9 +42,9 @@ const MODE_PARTICIPLE_MESSAGES = {
   cycle: message("directions.participle.cycle", {}),
 } as const satisfies Readonly<Record<TravelMode, Message>>;
 
-/** The short name of a travel mode, as it labels a choice: "Drive", "Walk" or "Cycle". */
-export function travelModeLabel(mode: TravelMode): string {
-  return MODE_LABELS[mode];
+/** The short name of a travel mode, as it labels a choice: "Drive", "Walk" or "Cycle", as a message to format. */
+export function travelModeLabel(mode: TravelMode): Message {
+  return MODE_LABEL_MESSAGES[mode];
 }
 
 /** A travel mode as it reads in a sentence: "driving", "walking" or "cycling", as a message to format. */
@@ -104,9 +104,15 @@ export function stopLetter(index: number): string {
   return String.fromCharCode(65 + index);
 }
 
-/** A stop for a screen reader: "Stop A, Paris", or its coordinates when it has no name. */
-export function describeStop(index: number, stop: DirectionStop): string {
-  return `Stop ${stopLetter(index)}, ${stop.label ?? formatLatLng(stop.position)}`;
+/** A stop for a screen reader: "Stop A, Paris", or its coordinates when it has no name, as a message to format. */
+export function describeStop(
+  index: number,
+  stop: DirectionStop,
+): Message<"directions.stop"> {
+  return message("directions.stop", {
+    letter: stopLetter(index),
+    place: stop.label ?? formatLatLng(stop.position),
+  });
 }
 
 function extendBounds(

@@ -3,6 +3,7 @@
 import {
   createFakeServices,
   DEFAULT_FAKE_FIX,
+  FakeMessageCatalogue,
   LocationError,
   PortAbortError,
   type UnitSystem,
@@ -12,11 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services/ServicesProvider";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
-import {
-  LOCATING_MESSAGE,
-  type UseLocateOptions,
-  useLocate,
-} from "./useLocate";
+import { type UseLocateOptions, useLocate } from "./useLocate";
 
 function setup(
   units: UnitSystem = "metric",
@@ -116,10 +113,30 @@ describe("useLocate", () => {
     act(() => result.current.locate());
     await flush();
     expect(result.current.state).toBe("locating");
-    expect(result.current.message).toBe(LOCATING_MESSAGE);
+    expect(result.current.message).toBe("Finding your location...");
     expect(polite()).toBe("");
     await act(async () => held.resolve(DEFAULT_FAKE_FIX));
     expect(result.current.state).toBe("found");
+  });
+
+  it("asks the catalogue by key for the locating text", async () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: { "tools.locate.locating": "Soek tans jou ligging..." },
+    });
+    const { result, services } = setup(
+      "metric",
+      undefined,
+      createFakeServices({ messages }),
+    );
+    services.fakes.location.holdNext();
+    act(() => result.current.locate());
+    await flush();
+    expect(result.current.message).toBe("Soek tans jou ligging...");
+    expect(messages.calls).toContainEqual({
+      key: "tools.locate.locating",
+      params: {},
+    });
   });
 
   it("passes a signal and the timeout to the provider", async () => {

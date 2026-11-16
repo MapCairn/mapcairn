@@ -5,6 +5,7 @@ import {
   createFakeServices,
   FakeLayerCatalogue,
   FakeMapAdapter,
+  FakeMessageCatalogue,
   type LayerDefinition,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
@@ -48,6 +49,7 @@ function setup(
     readonly definitions?: readonly LayerDefinition[];
     readonly viewport?: Viewport;
     readonly props?: Partial<MapKeyProps>;
+    readonly messages?: FakeMessageCatalogue;
   } = {},
 ) {
   const {
@@ -60,9 +62,11 @@ function setup(
     ],
     viewport = DESKTOP,
     props = {},
+    messages,
   } = options;
   const services = createFakeServices({
     layers: new FakeLayerCatalogue(definitions),
+    ...(messages ? { messages } : {}),
   });
   const handle: { current: DataLayers | null } = { current: null };
   function Harness() {
@@ -116,6 +120,33 @@ const region = () => screen.queryByRole("region", { name: "Map key" });
 /** The one button, named the same open and minimised: "Map key, 2 layers". */
 const toggle = () =>
   screen.getByRole("button", { name: /^Map key, \d+ layers?$/ });
+
+describe("MapKey copy", () => {
+  it("asks the catalogue by key, with the layer count as a plural parameter", () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "layers.key.title": "Kaartsleutel",
+        "layers.key.toggle":
+          "Kaartsleutel, {count} laag|Kaartsleutel, {count} lae",
+        "layers.key.nameKey": "{name}-sleutel",
+      },
+    });
+    const { turnOn } = setup({ messages });
+    turnOn(SAMPLE_FEED_LAYER.id, SAMPLE_ALERT_LAYER.id);
+    expect(screen.getByRole("region", { name: "Kaartsleutel" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Kaartsleutel, 2 lae" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("list", { name: `${SAMPLE_FEED_LAYER.name}-sleutel` }),
+    ).toBeTruthy();
+    expect(messages.calls).toContainEqual({
+      key: "layers.key.toggle",
+      params: { count: 2 },
+    });
+  });
+});
 
 describe("MapKey", () => {
   it("shows nothing while no layer that is on has a key", () => {

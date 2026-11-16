@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { Hemispheres } from "../format/format";
 import type { LatLng } from "../ports/geometry";
 
 /**
@@ -66,6 +67,31 @@ const WORDS: Readonly<Record<string, WordToken>> = {
   coordinates: { kind: "label" },
 };
 
+type Words = Readonly<Record<string, WordToken>>;
+
+/**
+ * The words the reader knows: the English ones always, plus the hemisphere
+ * letters a language writes (such as "O" for east in Afrikaans). An English
+ * word keeps its meaning if a language's letter would clash with it.
+ */
+function wordsFor(hemispheres: Hemispheres | undefined): Words {
+  if (hemispheres === undefined) {
+    return WORDS;
+  }
+  const letters: readonly [string, WordToken][] = [
+    [hemispheres.north, { kind: "hemisphere", axis: "lat", negative: false }],
+    [hemispheres.south, { kind: "hemisphere", axis: "lat", negative: true }],
+    [hemispheres.east, { kind: "hemisphere", axis: "lng", negative: false }],
+    [hemispheres.west, { kind: "hemisphere", axis: "lng", negative: true }],
+  ];
+  return {
+    ...Object.fromEntries(
+      letters.map(([letter, token]) => [letter.toLowerCase(), token]),
+    ),
+    ...WORDS,
+  };
+}
+
 const DEGREE_SYMBOLS = "°º˚";
 const MINUTE_SYMBOLS = "'′’‘´`";
 const SECOND_SYMBOLS = '"″”“';
@@ -78,8 +104,8 @@ function isDigit(char: string | undefined): boolean {
   return char !== undefined && char >= "0" && char <= "9";
 }
 
-function isAsciiLetter(char: string | undefined): boolean {
-  return char !== undefined && /^[A-Za-z]$/.test(char);
+function isLetter(char: string | undefined): boolean {
+  return char !== undefined && /^\p{L}$/u.test(char);
 }
 
 /** Where a run of characters that satisfy `test` starting at `from` ends. */
@@ -177,13 +203,13 @@ function readCountedNumber(text: string, index: number): Read | null {
       };
 }
 
-function readWord(text: string, index: number): Read | null {
-  const end = runEnd(text, index, isAsciiLetter);
-  const token = WORDS[text.slice(index, end).toLowerCase()];
+function readWord(text: string, index: number, words: Words): Read | null {
+  const end = runEnd(text, index, isLetter);
+  const token = words[text.slice(index, end).toLowerCase()];
   return token === undefined ? null : { token, end };
 }
 
-function readToken(text: string, index: number): Read | null {
+function readToken(text: string, index: number, words: Words): Read | null {
   const char = text.charAt(index);
   const symbol = SYMBOLS.get(char);
   if (WHITE_SPACE.test(char)) {
@@ -201,18 +227,18 @@ function readToken(text: string, index: number): Read | null {
   if (isDigit(char) || char === ".") {
     return readCountedNumber(text, index);
   }
-  return isAsciiLetter(char) ? readWord(text, index) : null;
+  return isLetter(char) ? readWord(text, index, words) : null;
 }
 
 /**
  * Splits the text into tokens in one left-to-right pass, skipping white space.
  * Returns `null` for any character that cannot be part of a coordinate pair.
  */
-function tokenise(text: string): readonly Token[] | null {
+function tokenise(text: string, words: Words): readonly Token[] | null {
   const tokens: Token[] = [];
   let index = 0;
   while (index < text.length) {
-    const read = readToken(text, index);
+    const read = readToken(text, index, words);
     if (read === null) {
       return null;
     }
@@ -377,7 +403,10 @@ function roundToCentimetre(degrees: number): number {
  *   usual symbols or the words degrees, minutes and seconds, and decimal
  *   minutes when there are no seconds
  * - hemisphere letters (N, S, E, W or the words) before or after a value,
- *   in either order; a negative sign cannot be combined with a letter
+ *   in either order; a negative sign cannot be combined with a letter.
+ *   Pass `hemispheres` (`hemispheresFor(catalogue)`) to read the letters of
+ *   the language in use as well, so "26.20410° S, 28.04730° O" reads back in
+ *   Afrikaans; N, S, E and W are always read
  * - one comma or semicolon between the two values, or white space alone
  * - a leading "coordinates" or "coords", so the label of a coordinate result
  *   reads back as the same place to about a metre
@@ -395,11 +424,14 @@ function roundToCentimetre(degrees: number): number {
  * grows in step with the text and no hostile input can make it slow.
  * @returns The position, rounded to seven decimals, or `null`.
  */
-export function parseCoordinates(text: string): LatLng | null {
+export function parseCoordinates(
+  text: string,
+  hemispheres?: Hemispheres,
+): LatLng | null {
   if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
     return null;
   }
-  const tokens = tokenise(text);
+  const tokens = tokenise(text, wordsFor(hemispheres));
   if (tokens === null) {
     return null;
   }

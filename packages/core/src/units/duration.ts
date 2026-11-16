@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { message } from "../messages/formatMessage";
+import { joinMessages, message } from "../messages/formatMessage";
 import type { Message } from "../ports/messages";
 
 const MINUTES_PER_HOUR = 60;
@@ -28,33 +28,44 @@ function splitDuration(seconds: number): DurationParts | null {
   };
 }
 
+/** A unit of a travel time written short, for example "18 min": the message to format. */
+function shortUnit(key: ShortUnitKey, count: number): Message {
+  return message(key, { count });
+}
+
+type ShortUnitKey =
+  | "duration.short.day"
+  | "duration.short.hour"
+  | "duration.short.minute";
+
 /**
  * Formats a travel time with short units, for example "18 min", "1 h 5 min"
- * or "2 d 3 h". The time is rounded to the minute, and a day or more drops the
- * minutes. Under half a minute, and for a time that is negative or not finite,
- * it reads "Under 1 min".
+ * or "2 d 3 h", as a message to format with the active catalogue. The time is
+ * rounded to the minute, and a day or more drops the minutes. Under half a
+ * minute, and for a time that is negative or not finite, it reads "Under 1
+ * min".
  */
-export function formatDuration(seconds: number): string {
+export function formatDuration(seconds: number): Message {
   const parts = splitDuration(seconds);
   if (parts === null) {
-    return "Under 1 min";
+    return message("duration.short.underMinute", {});
   }
   const { days, hours, minutes } = parts;
-  const text: string[] = [];
+  const units: Message[] = [];
   if (days > 0) {
-    text.push(`${days} d`);
+    units.push(shortUnit("duration.short.day", days));
     if (hours > 0) {
-      text.push(`${hours} h`);
+      units.push(shortUnit("duration.short.hour", hours));
     }
-    return text.join(" ");
+  } else {
+    if (hours > 0) {
+      units.push(shortUnit("duration.short.hour", hours));
+    }
+    if (minutes > 0) {
+      units.push(shortUnit("duration.short.minute", minutes));
+    }
   }
-  if (hours > 0) {
-    text.push(`${hours} h`);
-  }
-  if (minutes > 0) {
-    text.push(`${minutes} min`);
-  }
-  return text.join(" ");
+  return joinMessages(units) as Message;
 }
 
 /** The biggest unit of a time: days, else hours, else minutes. */

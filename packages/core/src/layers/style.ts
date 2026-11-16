@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { FieldValue } from "../ports/layers";
+import type { MessageCatalogue } from "../ports/messages";
 import {
   type FillPattern,
   type HeatmapSpec,
@@ -150,8 +151,11 @@ function heatmapLegend(heatmap: HeatmapSpec): LegendEntry[] {
   }));
 }
 
-function shapeLegend(style: ShapeStyle): LegendEntry[] {
-  return shapeClasses(style).map((item) => ({
+function shapeLegend(
+  style: ShapeStyle,
+  catalogue: MessageCatalogue,
+): LegendEntry[] {
+  return shapeClasses(style, catalogue).map((item) => ({
     label: item.label,
     colour: item.colour,
     shape: "square" as const,
@@ -166,13 +170,19 @@ function shapeLegend(style: ShapeStyle): LegendEntry[] {
 /**
  * A layer's legend. For a feed it lists each colour with its words, its
  * shape and the size it draws; for a tile layer it is the definition's own
- * legend, drawn as squares, or nothing.
+ * legend, drawn as squares, or nothing. The words for an interval are written
+ * in `catalogue`'s language.
  */
-export function legendFor(definition: LayerDefinition): Legend {
+export function legendFor(
+  definition: LayerDefinition,
+  catalogue: MessageCatalogue,
+): Legend {
   if (isFeedLayer(definition)) {
     const { style } = definition;
     return {
-      entries: isShapeStyle(style) ? shapeLegend(style) : pointLegend(style),
+      entries: isShapeStyle(style)
+        ? shapeLegend(style, catalogue)
+        : pointLegend(style),
     };
   }
   if (isHeatmapLayer(definition)) {
@@ -183,7 +193,7 @@ export function legendFor(definition: LayerDefinition): Legend {
       entries: definition.sourceLayers.flatMap((layer) =>
         "heatmap" in layer
           ? heatmapLegend(layer.heatmap)
-          : shapeLegend(layer.style),
+          : shapeLegend(layer.style, catalogue),
       ),
     };
   }

@@ -1,13 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  createFakeServices,
   SAMPLE_ALERT_LAYER,
   SAMPLE_HEATMAP_LAYER,
   SAMPLE_TILE_LAYER,
 } from "@mapcairn/core";
-import { render, screen, within } from "@testing-library/react";
+import { render as renderBare, screen, within } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { ServicesProvider } from "../services";
 import { LayerKey } from "./LayerKey";
+
+function withServices({ children }: { children: ReactNode }) {
+  return (
+    <ServicesProvider services={createFakeServices()}>
+      {children}
+    </ServicesProvider>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderBare(ui, { wrapper: withServices });
+}
 
 describe("LayerKey", () => {
   it("is a list named by the caller, with a row of words for each entry", () => {

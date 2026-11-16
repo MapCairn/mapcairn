@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { fieldValue } from "../propertyTesting/layerArbitraries";
 import { PROPERTY_PARAMETERS } from "../propertyTesting/propertyParameters";
 import {
@@ -42,6 +43,7 @@ const placeholderNames = fc
   .filter((name) => !ENGINE_PLACEHOLDERS.includes(name));
 
 const formatters = createFormatterRegistry();
+const catalogue = new FakeMessageCatalogue();
 
 const fields = fc.dictionary(
   fc.constantFrom("title", "value", "time", "depth", "id"),
@@ -111,7 +113,10 @@ describe("formatTemplate", () => {
   it("fills any template from any fields without throwing", () => {
     fc.assert(
       fc.property(templates, fields, fc.integer(), (template, values, now) => {
-        const text = formatTemplate(template, values, formatters, { now });
+        const text = formatTemplate(template, values, formatters, {
+          now,
+          catalogue,
+        });
         expect(text === null || typeof text === "string").toBe(true);
       }),
       PROPERTY_PARAMETERS,

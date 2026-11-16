@@ -88,8 +88,10 @@ describe("naming stops", () => {
   });
 
   it("describes a stop by its label, or by its coordinates when it has none", () => {
-    expect(describeStop(0, stop("a", PARIS, "Paris"))).toBe("Stop A, Paris");
-    expect(describeStop(1, stop("b", BERLIN))).toBe(
+    expect(english(describeStop(0, stop("a", PARIS, "Paris")))).toBe(
+      "Stop A, Paris",
+    );
+    expect(english(describeStop(1, stop("b", BERLIN)))).toBe(
       "Stop B, 52.52000, 13.40500",
     );
   });
@@ -98,7 +100,7 @@ describe("naming stops", () => {
 describe("travel modes", () => {
   it("offers drive, walk and cycle with names for each", () => {
     expect(TRAVEL_MODES).toEqual(["drive", "walk", "cycle"]);
-    expect(TRAVEL_MODES.map(travelModeLabel)).toEqual([
+    expect(TRAVEL_MODES.map((mode) => english(travelModeLabel(mode)))).toEqual([
       "Drive",
       "Walk",
       "Cycle",

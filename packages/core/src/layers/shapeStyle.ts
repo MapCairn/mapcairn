@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { formatNumber } from "../format/format";
 import type { FieldValue } from "../ports/layers";
+import type { MessageCatalogue } from "../ports/messages";
 import type {
   FillPattern,
   LineDash,
@@ -20,11 +22,9 @@ export const DEFAULT_LINE_WIDTH = 2.5;
 /** Opacity of a polygon's fill when the style names none. */
 export const DEFAULT_FILL_OPACITY = 0.55;
 
-/** How one polygon or line is drawn, worked out from its definition's style. */
-export interface ShapeLook {
+/** How one polygon or line is drawn, worked out from its definition's style, without its words. */
+export interface ShapeAppearance {
   readonly colour: PaletteSlot;
-  /** The words for the class, such as `10 to 99`, for the legend, list and card. */
-  readonly label: string;
   readonly pattern: FillPattern;
   readonly dash: LineDash;
   /** The outline or line width in pixels. */
@@ -32,7 +32,19 @@ export interface ShapeLook {
   readonly fillOpacity: number;
 }
 
-const NUMBER = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+/** How one polygon or line is drawn, and the words for its class. */
+export interface ShapeLook extends ShapeAppearance {
+  /** The words for the class, such as `10 to 99`, for the legend, list and card. */
+  readonly label: string;
+}
+
+const MAX_FRACTION_DIGITS = 2;
+
+/** One class of a style: how it is drawn, and its words, which an interval writes in the language it is asked for. */
+interface ShapeClass {
+  readonly appearance: ShapeAppearance;
+  readonly label: (catalogue: MessageCatalogue) => string;
+}
 
 function defaults(style: ShapeStyle, marks: ShapeMarks) {
   return {
@@ -46,71 +58,106 @@ function defaults(style: ShapeStyle, marks: ShapeMarks) {
   } as const;
 }
 
-function look(
+function classOf(
   style: ShapeStyle,
   colour: PaletteSlot,
-  label: string,
+  label: string | ShapeClass["label"],
   marks: ShapeMarks,
-): ShapeLook {
-  return { colour, label, ...defaults(style, marks) };
+): ShapeClass {
+  return {
+    appearance: { colour, ...defaults(style, marks) },
+    label: typeof label === "string" ? () => label : label,
+  };
 }
 
 function intervalLabel(
   colour: ShapeIntervalColour,
   index: number,
   width: number,
+  catalogue: MessageCatalogue,
 ): string {
   const unit = colour.unit ?? "";
   const last = colour.ramp.length - 1;
-  const low = NUMBER.format(colour.min + index * width);
-  const high = NUMBER.format(colour.min + (index + 1) * width);
+  const figure = (value: number) =>
+    formatNumber(value, catalogue.language, {
+      maximumFractionDigits: MAX_FRACTION_DIGITS,
+    });
+  const low = figure(colour.min + index * width);
+  const high = figure(colour.min + (index + 1) * width);
   if (index === 0) {
-    return `Up to ${high}${unit}`;
+    return catalogue.t("layers.interval.upTo", { high, unit });
   }
   return index === last
-    ? `${low}${unit} and above`
-    : `${low} to ${high}${unit}`;
+    ? catalogue.t("layers.interval.andAbove", { low, unit })
+    : catalogue.t("layers.interval.range", { low, high, unit });
 }
 
 function intervalClasses(
   style: ShapeStyle,
   colour: ShapeIntervalColour,
-): ShapeLook[] {
+): ShapeClass[] {
   const width = (colour.max - colour.min) / colour.ramp.length;
   return colour.ramp.map((slot, index) =>
-    look(style, slot, intervalLabel(colour, index, width), {
-      pattern: colour.patterns?.[index],
-      dash: colour.dashes?.[index],
-      width: colour.widths?.[index],
-    }),
+    classOf(
+      style,
+      slot,
+      (catalogue) => intervalLabel(colour, index, width, catalogue),
+      {
+        pattern: colour.patterns?.[index],
+        dash: colour.dashes?.[index],
+        width: colour.widths?.[index],
+      },
+    ),
   );
+}
+
+function classesOf(style: ShapeStyle): readonly ShapeClass[] {
+  const { colour } = style;
+  switch (colour.kind) {
+    case "fixed":
+      return [classOf(style, colour.colour, colour.label, colour)];
+    case "category":
+      return [
+        ...colour.categories.map((category) =>
+          classOf(style, category.colour, category.label, category),
+        ),
+        classOf(style, colour.other.colour, colour.other.label, colour.other),
+      ];
+    case "steps":
+      return colour.steps.map((step) =>
+        classOf(style, step.colour, step.label, step),
+      );
+    case "intervals":
+      return intervalClasses(style, colour);
+  }
+}
+
+/**
+ * How every class of a style is drawn, in legend order, with defaults filled
+ * in. It carries no words, so it needs no language: it is what a map engine
+ * draws from.
+ */
+export function shapeAppearances(
+  style: ShapeStyle,
+): readonly ShapeAppearance[] {
+  return classesOf(style).map(({ appearance }) => appearance);
 }
 
 /**
  * Every class of a style in legend order: the categories and then the class
  * for other values, the steps, the equal intervals worked out from the range,
  * or the one fixed class. Defaults are filled in, so a legend, a map and a
- * list read the same values.
+ * list read the same values. The words for an interval are written in
+ * `catalogue`'s language.
  */
-export function shapeClasses(style: ShapeStyle): readonly ShapeLook[] {
-  const { colour } = style;
-  switch (colour.kind) {
-    case "fixed":
-      return [look(style, colour.colour, colour.label, colour)];
-    case "category":
-      return [
-        ...colour.categories.map((category) =>
-          look(style, category.colour, category.label, category),
-        ),
-        look(style, colour.other.colour, colour.other.label, colour.other),
-      ];
-    case "steps":
-      return colour.steps.map((step) =>
-        look(style, step.colour, step.label, step),
-      );
-    case "intervals":
-      return intervalClasses(style, colour);
-  }
+export function shapeClasses(
+  style: ShapeStyle,
+  catalogue: MessageCatalogue,
+): readonly ShapeLook[] {
+  return classesOf(style).map(({ appearance, label }) => ({
+    ...appearance,
+    label: label(catalogue),
+  }));
 }
 
 /** Picks a feature's {@link ShapeLook} from its fields. */
@@ -123,9 +170,12 @@ export type ShapeEvaluator = (
  * its classes for each one. A value that is missing or unreadable falls in
  * the other class (categories) or the first class (steps and intervals).
  */
-export function shapeEvaluator(style: ShapeStyle): ShapeEvaluator {
+export function shapeEvaluator(
+  style: ShapeStyle,
+  catalogue: MessageCatalogue,
+): ShapeEvaluator {
   const { colour } = style;
-  const classes = shapeClasses(style);
+  const classes = shapeClasses(style, catalogue);
   const pick = (index: number) => classes[index] as ShapeLook;
   switch (colour.kind) {
     case "fixed":
@@ -166,6 +216,7 @@ export function shapeEvaluator(style: ShapeStyle): ShapeEvaluator {
 export function evaluateShapeStyle(
   style: ShapeStyle,
   fields: Readonly<Record<string, FieldValue>>,
+  catalogue: MessageCatalogue,
 ): ShapeLook {
-  return shapeEvaluator(style)(fields);
+  return shapeEvaluator(style, catalogue)(fields);
 }

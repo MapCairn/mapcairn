@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { type LayerDefinition, legendFor } from "@mapcairn/core";
+import { useMessages } from "../services";
 import { LegendGlyph } from "./FeatureGlyph";
 import * as styles from "./Layers.css";
 
@@ -37,7 +38,8 @@ export function LayerKey({
   testId,
   layout = "wrap",
 }: LayerKeyProps) {
-  const { entries } = legendFor(definition);
+  const messages = useMessages();
+  const { entries } = legendFor(definition, messages);
   if (entries.length === 0) {
     return null;
   }

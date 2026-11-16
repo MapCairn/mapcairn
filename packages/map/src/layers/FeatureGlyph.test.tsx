@@ -1,28 +1,46 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  createFakeServices,
+  FakeMessageCatalogue,
   type LegendEntry,
   SAMPLE_ALERT_LAYER,
   SAMPLE_AREA_LAYER,
   SAMPLE_LINE_LAYER,
 } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
-import { render } from "@testing-library/react";
+import { render as renderBare } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { ServicesProvider } from "../services";
 import { FeatureGlyph, featureClass, LegendGlyph } from "./FeatureGlyph";
+
+const catalogue = new FakeMessageCatalogue();
+
+function withServices({ children }: { children: ReactNode }) {
+  return (
+    <ServicesProvider services={createFakeServices()}>
+      {children}
+    </ServicesProvider>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderBare(ui, { wrapper: withServices });
+}
 
 describe("featureClass", () => {
   it("gives the words for a point's colour", () => {
-    expect(featureClass(SAMPLE_ALERT_LAYER, { level: "Red" })).toBe(
+    expect(featureClass(SAMPLE_ALERT_LAYER, { level: "Red" }, catalogue)).toBe(
       "Red alert",
     );
   });
 
   it("gives the words for a polygon's or line's class", () => {
-    expect(featureClass(SAMPLE_AREA_LAYER, { density: 150 })).toBe(
+    expect(featureClass(SAMPLE_AREA_LAYER, { density: 150 }, catalogue)).toBe(
       "100 to 200 per km²",
     );
-    expect(featureClass(SAMPLE_LINE_LAYER, { kind: "side" })).toBe(
+    expect(featureClass(SAMPLE_LINE_LAYER, { kind: "side" }, catalogue)).toBe(
       "Side route",
     );
   });

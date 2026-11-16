@@ -14,17 +14,13 @@ import {
   useState,
 } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
+import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
 import { Surface } from "../../ui/Surface";
 import * as styles from "./SearchPill.css";
-import {
-  MIN_SEARCH_LENGTH,
-  SEARCH_UNAVAILABLE_MESSAGE,
-  type SearchState,
-  useSearch,
-} from "./useSearch";
+import { MIN_SEARCH_LENGTH, type SearchState, useSearch } from "./useSearch";
 import { useSuggestions } from "./useSuggestions";
 
 /** Props for {@link SearchPill}. */
@@ -109,6 +105,7 @@ export function SearchPill({
   onBlur,
 }: SearchPillProps) {
   const search = useSearch({ getBias });
+  const { t } = useMessages();
   const { query, state } = search;
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
@@ -262,7 +259,7 @@ export function SearchPill({
     // biome-ignore lint/a11y/useSemanticElements: the search landmark is requested with role="search" and a name
     <div
       role="search"
-      aria-label="Search"
+      aria-label={t("tools.search.label", {})}
       className={styles.root}
       data-chrome="search-pill"
       data-testid="search-pill"
@@ -274,7 +271,7 @@ export function SearchPill({
           className={styles.input}
           type="text"
           role="combobox"
-          aria-label="Search places"
+          aria-label={t("tools.search.places", {})}
           aria-autocomplete="list"
           aria-expanded={expanded}
           aria-controls={listboxId}
@@ -285,7 +282,7 @@ export function SearchPill({
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="search"
-          placeholder="Search places"
+          placeholder={t("tools.search.places", {})}
           value={query}
           data-testid="location-search-input"
           onChange={handleChange}
@@ -295,7 +292,7 @@ export function SearchPill({
         />
         {query !== "" ? (
           <IconButton
-            label="Clear search"
+            label={t("tools.search.clear", {})}
             icon={X}
             size="compact"
             data-testid="location-search-clear"
@@ -304,7 +301,7 @@ export function SearchPill({
           />
         ) : null}
         <IconButton
-          label="Search"
+          label={t("tools.search.label", {})}
           icon={Search}
           size="compact"
           disabled={query.trim().length < MIN_SEARCH_LENGTH}
@@ -326,7 +323,9 @@ export function SearchPill({
           id={listboxId}
           role="listbox"
           aria-label={
-            state.status === "idle" ? "Suggestions" : "Search results"
+            state.status === "idle"
+              ? t("tools.search.suggestions", {})
+              : t("tools.search.results", {})
           }
           className={styles.listbox}
           data-testid="location-search-results"
@@ -363,21 +362,25 @@ export function SearchPill({
           ))}
         </div>
         {state.status === "loading" ? (
-          <div className={styles.message}>Searching...</div>
+          <div className={styles.message}>
+            {t("tools.search.searching", {})}
+          </div>
         ) : null}
         {state.status === "empty" ? (
-          <div className={styles.message}>Nothing matched that search.</div>
+          <div className={styles.message}>
+            {t("tools.search.nothingMatched", {})}
+          </div>
         ) : null}
         {state.status === "error" ? (
           <div className={styles.message}>
-            <span>{SEARCH_UNAVAILABLE_MESSAGE}</span>
+            <span>{t("tools.search.unavailable", {})}</span>
             <Button
               variant="quiet"
               data-testid="location-search-retry"
               onMouseDown={keepFocus}
               onClick={handleRetry}
             >
-              Retry
+              {t("tools.search.retry", {})}
             </Button>
           </div>
         ) : null}

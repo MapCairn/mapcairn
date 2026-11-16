@@ -21,14 +21,6 @@ import { useAnnounce } from "../../ui/LiveRegion";
 /** The fewest characters (after trimming) that a submitted search needs. */
 export const MIN_SEARCH_LENGTH = 2;
 
-/**
- * The one message shown for every kind of failed search. The next step is in
- * the sentence and in the Retry button beside it; the screen reader hears the
- * more specific, per-kind wording through the announcer instead.
- */
-export const SEARCH_UNAVAILABLE_MESSAGE =
-  "Search is unavailable right now. Please try again.";
-
 /** Where a search stands. Exactly one of these is true at a time. */
 export type SearchState =
   | { readonly status: "idle" }

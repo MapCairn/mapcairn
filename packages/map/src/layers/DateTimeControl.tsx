@@ -10,7 +10,7 @@ import {
   slotsOnDay,
 } from "@mapcairn/core";
 import { useId, useState } from "react";
-import { useFormatMessage } from "../services";
+import { useFormatMessage, useMessages } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import * as styles from "./Layers.css";
 
@@ -53,6 +53,7 @@ export function DateTimeControl({
 }: DateTimeControlProps) {
   const announce = useAnnounce();
   const format = useFormatMessage();
+  const { t } = useMessages();
   const statusId = useId();
   const descriptionId = useId();
   const describedBy = control.description
@@ -78,7 +79,7 @@ export function DateTimeControl({
       <legend className={styles.timeLegend}>{control.label}</legend>
       <div className={styles.timeInputs}>
         <label className={styles.field}>
-          Date (UTC)
+          {t("layers.time.date", {})}
           <input
             type="date"
             className={styles.dateInput}
@@ -95,7 +96,7 @@ export function DateTimeControl({
           />
         </label>
         <label className={styles.field}>
-          Time (UTC)
+          {t("layers.time.time", {})}
           <select
             className={styles.dateInput}
             value={value}
@@ -112,9 +113,10 @@ export function DateTimeControl({
         </label>
       </div>
       <p id={statusId} className={styles.muted}>
-        Showing {format(describeSlot(value, control.stepMinutes))}. Newest
-        available: {format(describeSlotStart(range.max))}. Newer times may not
-        be out yet, so they are not offered.
+        {t("layers.time.status", {
+          slot: format(describeSlot(value, control.stepMinutes)),
+          newest: format(describeSlotStart(range.max)),
+        })}
       </p>
       {control.description ? (
         <p id={descriptionId} className={styles.muted}>

@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { createFakeServices, type TourSnapshot } from "@mapcairn/core";
+import {
+  createFakeServices,
+  FakeMessageCatalogue,
+  type TourSnapshot,
+} from "@mapcairn/core";
 import {
   act,
   fireEvent,
@@ -108,8 +112,8 @@ function SurfaceHarness({
 
 function renderTour(
   options: { offer?: boolean; persistent?: boolean; hidden?: boolean } = {},
+  services = createFakeServices(),
 ) {
-  const services = createFakeServices();
   const focusMap = vi.fn();
   const view = render(
     <ServicesProvider services={services}>
@@ -300,5 +304,39 @@ describe("TourCard", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("heading", { name: "Turn on a layer" }),
     );
+  });
+
+  it("asks the catalogue by key for its buttons, progress and step announcement", async () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "tools.tour.take": "Neem die toer",
+        "tools.tour.progress": "Stap {step} van {total}",
+        "tools.tour.stepAnnouncement":
+          "Stap {step} van {total}, {heading}. {text}",
+      },
+    });
+    renderTour({}, createFakeServices({ messages }));
+    fireEvent.click(screen.getByRole("button", { name: "Neem die toer" }));
+    expect(screen.getByText("Stap 1 van 2")).toBeInTheDocument();
+    expect(messages.calls).toContainEqual({
+      key: "tools.tour.progress",
+      params: { step: 1, total: 2 },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Turn a layer on" }));
+    await waitFor(() =>
+      expect(polite()).toBe(
+        "Stap 2 van 2, Find a place. Type a place in Search.",
+      ),
+    );
+    expect(messages.calls).toContainEqual({
+      key: "tools.tour.stepAnnouncement",
+      params: {
+        step: 2,
+        total: 2,
+        heading: "Find a place",
+        text: "Type a place in Search.",
+      },
+    });
   });
 });

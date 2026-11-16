@@ -6,6 +6,7 @@ import {
   LocationError,
   type LocationErrorKind,
   type LocationFix,
+  message,
   PortAbortError,
   type UnitSystem,
 } from "@mapcairn/core";
@@ -14,8 +15,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useFormatMessage, useLocationProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";
 
-/** The text shown while a fix is being found. */
-export const LOCATING_MESSAGE = "Finding your location...";
+/** What is shown while a fix is being found, as a message to format. */
+export const LOCATING_MESSAGE = message("tools.locate.locating", {});
 
 /** Where a locate request stands. */
 export type LocateState = "idle" | "locating" | "found" | "error";
@@ -88,7 +89,7 @@ export function useLocate(
   const [state, setState] = useState<LocateState>("idle");
   const [fix, setFix] = useState<LocationFix | null>(null);
   const [error, setError] = useState<LocationErrorKind | null>(null);
-  const [message, setMessage] = useState("");
+  const [shown, setShown] = useState("");
 
   const abort = useCallback(() => {
     controller.current?.abort();
@@ -102,7 +103,7 @@ export function useLocate(
     setState("locating");
     setFix(null);
     setError(null);
-    setMessage(LOCATING_MESSAGE);
+    setShown(formatRef.current(LOCATING_MESSAGE));
     providerRef.current
       .locate({ signal: own.signal, timeoutMs: timeoutRef.current })
       .then(
@@ -116,7 +117,7 @@ export function useLocate(
           );
           setState("found");
           setFix(found);
-          setMessage(formatRef.current(said));
+          setShown(formatRef.current(said));
           announceRef.current(said);
         },
         (failure: unknown) => {
@@ -128,7 +129,7 @@ export function useLocate(
           const said = announceLocationError(kind);
           setState("error");
           setError(kind);
-          setMessage(formatRef.current(said));
+          setShown(formatRef.current(said));
           if (announceErrorsRef.current) {
             announceRef.current(said, { priority: "assertive" });
           }
@@ -149,10 +150,10 @@ export function useLocate(
     setState("idle");
     setFix(null);
     setError(null);
-    setMessage("");
+    setShown("");
   }, [abort]);
 
   useEffect(() => abort, [abort]);
 
-  return { state, fix, error, message, locate, cancel };
+  return { state, fix, error, message: shown, locate, cancel };
 }

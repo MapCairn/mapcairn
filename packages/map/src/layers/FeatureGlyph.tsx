@@ -7,18 +7,24 @@ import {
   type FieldValue,
   isShapeStyle,
   type LegendEntry,
+  type MessageCatalogue,
 } from "@mapcairn/core";
+import { useMessages } from "../services";
 import { MarkerGlyph } from "./MarkerGlyph";
 import { ShapeGlyph } from "./ShapeGlyph";
 
-/** The words for the class a feature falls in, such as `Orange alert` or `10 to 99`. */
+/**
+ * The words for the class a feature falls in, such as `Orange alert` or
+ * `10 to 99`, written in `catalogue`'s language.
+ */
 export function featureClass(
   definition: FeedLayerDefinition,
   fields: Readonly<Record<string, FieldValue>>,
+  catalogue: MessageCatalogue,
 ): string {
   const { style } = definition;
   return isShapeStyle(style)
-    ? evaluateShapeStyle(style, fields).label
+    ? evaluateShapeStyle(style, fields, catalogue).label
     : evaluatePointStyle(style, fields).label;
 }
 
@@ -42,9 +48,10 @@ export function FeatureGlyph({
   radius,
   maxRadius = Number.POSITIVE_INFINITY,
 }: FeatureGlyphProps) {
+  const messages = useMessages();
   const { style } = definition;
   if (isShapeStyle(style)) {
-    const look = evaluateShapeStyle(style, fields);
+    const look = evaluateShapeStyle(style, fields, messages);
     return (
       <ShapeGlyph
         swatch={style.geometry}

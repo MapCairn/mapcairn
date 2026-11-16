@@ -17,21 +17,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { useClipboard } from "../../services/hooks";
+import { useClipboard, useMessages } from "../../services/hooks";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
 import { useAnnounce } from "../../ui/LiveRegion";
 import * as styles from "./PinCard.css";
 import { useReverseAddress } from "./useReverseAddress";
-
-/**
- * The default note under "Look up address". The rounding to about 11 m is the
- * card's own; the service is not named, because the SDK does not know which
- * one a host uses.
- */
-export const DEFAULT_LOOKUP_NOTE =
-  "Sends the pin's position, to about 11 m, to the address service.";
 
 /** Props for {@link PinCard}. */
 export interface PinCardProps {
@@ -50,9 +42,10 @@ export interface PinCardProps {
   readonly headingRef?: Ref<HTMLHeadingElement>;
   /**
    * What the address lookup sends and to whom, shown under the "Look up
-   * address" button, which it describes. Defaults to
-   * {@link DEFAULT_LOOKUP_NOTE}. A host names its search provider here. Phrasing content only: it sits inside a
-   * paragraph.
+   * address" button, which it describes. Defaults to the catalogue's
+   * `tools.pin.lookupNote`, which does not name the service because the SDK
+   * does not know which one a host uses. A host names its search provider
+   * here. Phrasing content only: it sits inside a paragraph.
    */
   readonly lookupNote?: ReactNode;
 }
@@ -81,9 +74,10 @@ export function PinCard({
   onClose,
   headingLevel = 2,
   headingRef,
-  lookupNote = DEFAULT_LOOKUP_NOTE,
+  lookupNote,
 }: PinCardProps) {
   const clipboard = useClipboard();
+  const { t } = useMessages();
   const announce = useAnnounce();
   const { state: address, lookUp } = useReverseAddress(position);
   const noteId = useId();
@@ -148,11 +142,11 @@ export function PinCard({
           className={styles.heading}
           data-testid="pin-card-heading"
         >
-          Dropped pin
+          {t("tools.pin.heading", {})}
         </Heading>
         {onClose ? (
           <IconButton
-            label="Close pin"
+            label={t("tools.pin.close", {})}
             icon={X}
             size="compact"
             data-testid="pin-card-close"
@@ -170,7 +164,9 @@ export function PinCard({
           className={styles.address}
           data-testid="pin-address"
         >
-          {address.status === "found" ? address.text : "No address found here."}
+          {address.status === "found"
+            ? address.text
+            : t("tools.pin.noAddress", {})}
         </p>
       ) : null}
       {address.status === "idle" ||
@@ -187,22 +183,23 @@ export function PinCard({
             }
             onClick={lookUp}
           >
-            {address.status === "error" ? "Try again" : "Look up address"}
+            {address.status === "error"
+              ? t("tools.tryAgain", {})
+              : t("tools.pin.lookUp", {})}
           </Button>
           {address.status === "loading" ? (
             <p className={styles.address} data-testid="pin-address-loading">
-              Looking up the address
+              {t("tools.pin.lookingUp", {})}
             </p>
           ) : null}
           {address.status === "error" ? (
             <p className={styles.feedback} data-testid="pin-address-error">
               <Icon icon={TriangleAlert} className={styles.feedbackError} />
-              Could not look up the address. Check your connection and try
-              again.
+              {t("tools.pin.lookupFailed", {})}
             </p>
           ) : null}
           <p className={styles.note} id={noteId} data-testid="pin-lookup-note">
-            {lookupNote}
+            {lookupNote ?? t("tools.pin.lookupNote", {})}
           </p>
         </div>
       ) : null}
@@ -213,7 +210,7 @@ export function PinCard({
           data-testid="pin-copy"
           onClick={handleCopy}
         >
-          Copy coordinates
+          {t("tools.pin.copy", {})}
         </Button>
         <Button
           variant="quiet"
@@ -221,19 +218,19 @@ export function PinCard({
           data-testid="pin-clear"
           onClick={onClear}
         >
-          Clear pin
+          {t("tools.pin.clear", {})}
         </Button>
       </div>
       {copy === "copied" ? (
         <p className={styles.feedback} data-testid="pin-copy-feedback">
           <Icon icon={Check} className={styles.feedbackOk} />
-          Copied
+          {t("tools.pin.copied", {})}
         </p>
       ) : null}
       {copy === "failed" ? (
         <p className={styles.feedback} data-testid="pin-copy-feedback">
           <Icon icon={TriangleAlert} className={styles.feedbackError} />
-          Could not copy
+          {t("tools.pin.copyFailed", {})}
         </p>
       ) : null}
     </div>
