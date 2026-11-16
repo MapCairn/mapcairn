@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { parseThemeChoice, resolveTheme } from "./theme";
 import { buildThemeBootstrapScript } from "./themeBootstrap";
 import {
+  LANGUAGE_STORAGE_KEY,
   MAP_SHAPE_ATTRIBUTE,
   PROJECTION_STORAGE_KEY,
   THEME_ATTRIBUTE,
@@ -35,6 +36,7 @@ function makeMeta(): FakeMeta {
 
 interface Run {
   attributes: Record<string, string>;
+  lang: string | undefined;
   colorScheme: string | undefined;
   metas: FakeMeta[];
   queriedSelector: string | undefined;
@@ -50,10 +52,15 @@ function run(
     documentThrows?: boolean;
     /** What the map shape key holds. */
     projection?: string | null;
+    /** What the language key holds. */
+    language?: string | null;
+    /** The tags passed to the script builder. */
+    offered?: readonly string[];
   } = {},
 ): Run {
   const result: Run = {
     attributes: {},
+    lang: undefined,
     colorScheme: undefined,
     metas: Array.from({ length: options.existingMetas ?? 0 }, makeMeta),
     queriedSelector: undefined,
@@ -63,6 +70,9 @@ function run(
   const root = {
     setAttribute(name: string, value: string) {
       result.attributes[name] = value;
+    },
+    set lang(value: string) {
+      result.lang = value;
     },
     style: {
       set colorScheme(value: string) {
@@ -106,9 +116,13 @@ function run(
     sandbox.localStorage = {
       getItem(key: string) {
         result.readKey ??= key;
-        return key === PROJECTION_STORAGE_KEY
-          ? (options.projection ?? null)
-          : stored;
+        if (key === PROJECTION_STORAGE_KEY) {
+          return options.projection ?? null;
+        }
+        if (key === LANGUAGE_STORAGE_KEY) {
+          return options.language ?? null;
+        }
+        return stored;
       },
     };
   }
@@ -122,7 +136,7 @@ function run(
       return { matches: system === "dark" };
     };
   }
-  runInNewContext(buildThemeBootstrapScript(), sandbox);
+  runInNewContext(buildThemeBootstrapScript(options.offered), sandbox);
   return result;
 }
 
@@ -204,6 +218,35 @@ describe("buildThemeBootstrapScript", () => {
     }
   });
 
+  it("sets lang to a stored language the host offers", () => {
+    const offered = ["en-GB", "af"];
+    expect(run("light", "light", { language: '"af"', offered }).lang).toBe(
+      "af",
+    );
+    expect(run("light", "light", { language: '"en-GB"', offered }).lang).toBe(
+      "en-GB",
+    );
+  });
+
+  it("leaves lang alone for no stored language, an unoffered or invalid one, or no offered list", () => {
+    const offered = ["en-GB", "af"];
+    for (const language of [null, '"fr"', "af", "{", "null", '"AF"']) {
+      expect(
+        run("light", "light", { language, offered }).lang,
+        String(language),
+      ).toBeUndefined();
+    }
+    expect(run("light", "light", { language: '"af"' }).lang).toBeUndefined();
+    expect(
+      run("light", "light", { language: '"af"', offered: [] }).lang,
+    ).toBeUndefined();
+  });
+
+  it("still sets the theme when the language key cannot be read", () => {
+    const result = run("dark", "light", { language: "{", offered: ["af"] });
+    expect(result.attributes[THEME_ATTRIBUTE]).toBe("dark");
+  });
+
   it("never throws when the document is blocked", () => {
     expect(() => run("dark", "dark", { documentThrows: true })).not.toThrow();
   });
@@ -213,6 +256,9 @@ describe("buildThemeBootstrapScript", () => {
     expect(script).toBe(buildThemeBootstrapScript());
     expect(script).not.toContain("\n");
     expect(new TextEncoder().encode(script).length).toBeLessThan(1000);
+    const withLanguages = buildThemeBootstrapScript(["en-GB", "af"]);
+    expect(withLanguages).toBe(buildThemeBootstrapScript(["en-GB", "af"]));
+    expect(new TextEncoder().encode(withLanguages).length).toBeLessThan(1200);
   });
 
   it("is built from the shared constants", () => {
@@ -222,6 +268,7 @@ describe("buildThemeBootstrapScript", () => {
     expect(script).toContain(THEME_COLOR_META.light);
     expect(script).toContain(THEME_COLOR_META.dark);
     expect(script).toContain(PROJECTION_STORAGE_KEY);
+    expect(buildThemeBootstrapScript(["af"])).toContain(LANGUAGE_STORAGE_KEY);
     expect(script).toContain(MAP_SHAPE_ATTRIBUTE);
   });
 });

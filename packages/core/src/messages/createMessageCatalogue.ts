@@ -39,14 +39,14 @@ function selectPluralForm(
 
 /**
  * Builds the dependency-free default {@link MessageCatalogue}: a plain
- * `Record<MessageKey, string>` of resolved text, formatted with
- * `Intl.PluralRules` and `Intl.ListFormat`. A key missing from `catalogue`
+ * `Record<MessageKey, string>` of resolved text (partial, for a translation
+ * in progress), formatted with `Intl.PluralRules` and `Intl.ListFormat`. A key missing from `catalogue`
  * falls back to `fallback`'s value, warning once per missing key for this
  * instance.
  */
 export function createMessageCatalogue(
   language: string,
-  catalogue: Readonly<Record<MessageKey, string>>,
+  catalogue: Readonly<Partial<Record<MessageKey, string>>>,
   fallback: Readonly<Record<MessageKey, string>>,
 ): MessageCatalogue {
   const warned = new Set<MessageKey>();

@@ -36,4 +36,6 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "settings.privacy.heading": "Privacy",
   "settings.privacy.link": "Read the privacy policy",
   "common.itemCount": "{count} item|{count} items",
+  "settings.language.label": "Language",
+  "settings.language.auto": "Automatic",
 };

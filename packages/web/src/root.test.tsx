@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { createFakeServices, THEME_COLOR_META } from "@mapcairn/core";
+import {
+  createFakeServices,
+  createLanguageCatalogue,
+  FakeMessageCatalogue,
+  THEME_COLOR_META,
+} from "@mapcairn/core";
 import { useServices } from "@mapcairn/map";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoutesStub } from "react-router";
@@ -203,6 +208,51 @@ describe("root Root", () => {
     expect(screen.getByText("services ready")).toBeInTheDocument();
     expect(createServices).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("live-region-polite")).toBeInTheDocument();
+  });
+});
+
+describe("root document language", () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute("lang");
+  });
+
+  const stub = () =>
+    createRoutesStub([
+      {
+        path: "/",
+        Component: Root,
+        children: [{ index: true, Component: () => null }],
+      },
+    ]);
+
+  it("sets lang on the document to the language in use", () => {
+    createServices.mockReturnValueOnce(
+      createFakeServices({
+        messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      }),
+    );
+    const Stub = stub();
+    render(createElement(Stub, { initialEntries: ["/"] }));
+    expect(document.documentElement.lang).toBe("en-GB");
+  });
+
+  it("follows the language when the person's choice loads", async () => {
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "af", label: "Afrikaans" },
+        ],
+        "en-GB",
+        (tag) => Promise.resolve(new FakeMessageCatalogue({ language: tag })),
+      ),
+    });
+    services.fakes.settings.set({ language: "af" });
+    createServices.mockReturnValueOnce(services);
+    const Stub = stub();
+    render(createElement(Stub, { initialEntries: ["/"] }));
+    await waitFor(() => expect(document.documentElement.lang).toBe("af"));
   });
 });
 

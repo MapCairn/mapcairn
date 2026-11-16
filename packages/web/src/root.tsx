@@ -7,6 +7,7 @@ import {
   LiveRegionProvider,
   ServicesProvider,
   TooltipProvider,
+  useMessages,
 } from "@mapcairn/map";
 import { type ReactNode, useEffect, useState } from "react";
 import {
@@ -83,8 +84,9 @@ export const links: LinksFunction = () => [
  * Windows tile tags and the inline theme script, which runs before the
  * stylesheets so the first paint is in the right theme.
  *
- * @remarks The theme script sets `data-theme` and `color-scheme` on `<html>`
- *   and rewrites a `theme-color` tag before React hydrates, so those two
+ * @remarks The theme script sets `data-theme` and `color-scheme` on `<html>`,
+ *   sets `lang` there when the stored language is one the host offers, and
+ *   rewrites a `theme-color` tag before React hydrates, so those two
  *   elements suppress the hydration warning for their own attributes.
  *   `<Scripts>` and `<ScrollRestoration>` take the CSP nonce from React
  *   Router's context, set by `entry.server.tsx`.
@@ -125,9 +127,23 @@ export function Layout({ children }: { readonly children: ReactNode }) {
 }
 
 /**
+ * Keeps `<html lang>` on the language the interface speaks. The pre-paint
+ * script sets it from the stored choice before first paint; this covers the
+ * browser's own languages and a choice made later.
+ */
+function DocumentLanguage() {
+  const { language } = useMessages();
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+  return null;
+}
+
+/**
  * React Router route module export: the root route. Builds the services once
  * per app instance (once per request on the server, once in the browser) and
- * mounts the app-wide providers: services, the one announcer and tooltips.
+ * mounts the app-wide providers: services, the one announcer and tooltips. It
+ * also keeps the document's `lang` in step with the active language.
  *
  * @remarks `createServices` is safe on the server: adapters touch no browser
  *   API until used. Their values differ between server and browser (stored
@@ -138,6 +154,7 @@ export default function Root() {
   const [services] = useState(() => createServices());
   return (
     <ServicesProvider services={services}>
+      <DocumentLanguage />
       <LiveRegionProvider>
         <TooltipProvider>
           <Outlet />

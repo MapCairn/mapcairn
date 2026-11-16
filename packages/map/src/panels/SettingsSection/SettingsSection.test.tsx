@@ -2,11 +2,21 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  createLanguageCatalogue,
   FakeDevicePreferences,
+  FakeMessageCatalogue,
+  type LanguageOption,
   MemorySettingsStore,
   type Settings,
 } from "@mapcairn/core";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
@@ -22,6 +32,7 @@ interface Options {
   readonly persistent?: boolean;
   readonly initial?: Partial<Settings>;
   readonly props?: SettingsSectionProps;
+  readonly languages?: readonly LanguageOption[];
 }
 
 function renderSettings({
@@ -30,10 +41,21 @@ function renderSettings({
   persistent = true,
   initial,
   props,
+  languages,
 }: Options = {}) {
   const settings = new MemorySettingsStore({ persistent, initial });
   const preferences = new FakeDevicePreferences({ finePointer, saveData });
-  const services = createFakeServices({ settings, preferences });
+  const services = createFakeServices({
+    settings,
+    preferences,
+    languages: languages
+      ? createLanguageCatalogue(
+          languages,
+          "en-GB",
+          (tag) => new FakeMessageCatalogue({ language: tag }),
+        )
+      : undefined,
+  });
   const view = render(
     <ServicesProvider services={services}>
       <LiveRegionProvider>
@@ -108,6 +130,88 @@ describe("theme", () => {
     expect(screen.getByTestId("theme-option-dark")).toHaveAttribute(
       "aria-checked",
       "true",
+    );
+  });
+});
+
+const TWO_LANGUAGES: readonly LanguageOption[] = [
+  { tag: "en-GB", label: "English" },
+  { tag: "af", label: "Afrikaans" },
+];
+
+describe("language", () => {
+  it("shows no switcher when the host offers no languages to choose between", () => {
+    renderSettings();
+    expect(screen.queryByRole("radiogroup", { name: "Language" })).toBeNull();
+    cleanup();
+    renderSettings({ languages: [{ tag: "en-GB", label: "English" }] });
+    expect(screen.queryByRole("radiogroup", { name: "Language" })).toBeNull();
+  });
+
+  it("is a radio group named Language with Automatic and each language", () => {
+    renderSettings({ languages: TWO_LANGUAGES });
+    const group = screen.getByRole("radiogroup", { name: "Language" });
+    expect(
+      within(group)
+        .getAllByRole("radio")
+        .map((radio) => radio.textContent),
+    ).toEqual(["Automatic", "English", "Afrikaans"]);
+    expect(screen.getByTestId("language-option-auto")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("names each language in its own language, marked with lang", () => {
+    renderSettings({ languages: TWO_LANGUAGES });
+    expect(screen.getByTestId("language-option-en-GB")).toHaveAttribute(
+      "lang",
+      "en-GB",
+    );
+    expect(screen.getByTestId("language-option-af")).toHaveAttribute(
+      "lang",
+      "af",
+    );
+    expect(screen.getByTestId("language-option-auto")).not.toHaveAttribute(
+      "lang",
+    );
+  });
+
+  it("stores the chosen language, and null again for Automatic", () => {
+    const { settings } = renderSettings({ languages: TWO_LANGUAGES });
+    fireEvent.click(screen.getByTestId("language-option-af"));
+    expect(settings.get().language).toBe("af");
+    expect(screen.getByTestId("language-option-af")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    fireEvent.click(screen.getByTestId("language-option-auto"));
+    expect(settings.get().language).toBeNull();
+  });
+
+  it("shows the stored language as selected", () => {
+    renderSettings({ languages: TWO_LANGUAGES, initial: { language: "af" } });
+    expect(screen.getByTestId("language-option-af")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("shows Automatic for a stored language the host does not offer", () => {
+    renderSettings({ languages: TWO_LANGUAGES, initial: { language: "fr" } });
+    expect(screen.getByTestId("language-option-auto")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("asks for its label and Automatic by key", () => {
+    const { services } = renderSettings({ languages: TWO_LANGUAGES });
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "settings.language.label",
+        "settings.language.auto",
+      ]),
     );
   });
 });
@@ -403,6 +507,15 @@ describe("markup rules", () => {
     expect(
       region.querySelectorAll("[style]:not([role='radiogroup'])"),
     ).toHaveLength(0);
+  });
+
+  it("hides the visible Language label from assistive technology too", () => {
+    renderSettings({ languages: TWO_LANGUAGES });
+    const region = screen.getByTestId("sheet-section-settings");
+    const hidden = [...region.querySelectorAll('p[aria-hidden="true"]')].map(
+      (item) => item.textContent,
+    );
+    expect(hidden).toEqual(["Theme", "Units", "Map shape", "Language"]);
   });
 
   it("hides the visible Theme, Units and Map shape labels from assistive technology, since the groups carry the names", () => {

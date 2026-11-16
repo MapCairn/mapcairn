@@ -129,6 +129,22 @@ describe("SegmentedControl", () => {
     expect(screen.getByRole("radio", { name: "Light" })).toBeTruthy();
   });
 
+  it("marks an item with its own language, and leaves the rest unmarked", () => {
+    render(
+      <SegmentedControl
+        label="Language"
+        options={[
+          { value: "auto", label: "Automatic" },
+          { value: "af", label: "Afrikaans", lang: "af" },
+        ]}
+        value="auto"
+        onValueChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "Afrikaans" }).lang).toBe("af");
+    expect(screen.getByRole("radio", { name: "Automatic" }).lang).toBe("");
+  });
+
   it("is one tab stop that lands on the selected item, with roving focus on the arrow keys", async () => {
     render(<Controlled initial="light" />);
     const light = screen.getByRole("radio", { name: "Light" });

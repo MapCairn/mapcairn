@@ -19,11 +19,12 @@ runDevicePreferencesContract(
 );
 
 describe("FakeDevicePreferences", () => {
-  it("defaults to a fine pointer, no reduced motion and no save-data request", () => {
+  it("defaults to a fine pointer, no reduced motion, no save-data request and no languages", () => {
     expect(new FakeDevicePreferences().get()).toEqual({
       reducedMotion: false,
       finePointer: true,
       saveData: false,
+      languages: [],
     });
   });
 
@@ -33,7 +34,25 @@ describe("FakeDevicePreferences", () => {
         reducedMotion: true,
         finePointer: false,
         saveData: true,
+        languages: ["af-ZA", "en"],
       }).get(),
-    ).toEqual({ reducedMotion: true, finePointer: false, saveData: true });
+    ).toEqual({
+      reducedMotion: true,
+      finePointer: false,
+      saveData: true,
+      languages: ["af-ZA", "en"],
+    });
+  });
+
+  it("notifies when the languages change, and not when the same list is set again", () => {
+    const preferences = new FakeDevicePreferences({ languages: ["en"] });
+    const seen: string[][] = [];
+    preferences.subscribe((value) => {
+      seen.push([...value.languages]);
+    });
+    preferences.set({ languages: ["en"] });
+    expect(seen).toHaveLength(0);
+    preferences.set({ languages: ["af", "en"] });
+    expect(seen).toEqual([["af", "en"]]);
   });
 });
