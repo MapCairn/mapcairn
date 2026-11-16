@@ -408,7 +408,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "app.tour.ending.text": "Hulp, in Instellings, kan dit weer begin.",
   // Short durations
   "duration.short.day": "{count} d",
-  "duration.short.hour": "{count} h",
+  "duration.short.hour": "{count} u",
   "duration.short.minute": "{count} min",
   "duration.short.underMinute": "Minder as 1 min",
   // Travel modes and stops
@@ -601,7 +601,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layers.tryAgain": "Probeer weer",
   "layers.usesCost": "Gebruik {cost}.",
   "layers.keyFor": "Sleutel vir {name}",
-  "layers.status.loading": "Laai",
+  "layers.status.loading": "Laai tans",
   "layers.status.updated": "Opgedateer {time}, {count} gewys",
   "layers.status.updatedCapped":
     "Opgedateer {time}. Die eerste {count} word gewys. Zoem in om meer te sien.",
@@ -805,7 +805,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "keyHelp.draw.selectPoint": "Kies die vorige of volgende punt",
   "keyHelp.draw.remove":
     "Verwyder die gekose punt of vorm, of die laaste punt terwyl jy teken",
-  "keyHelp.draw.undo": "Ontdoen; met Shift by herdoen jy",
+  "keyHelp.draw.undo": "Ontdoen; met Shift daarby herdoen jy",
   "keyHelp.draw.escape":
     "Gaan terug: los 'n punt, kanselleer die vorm en maak dan die tekening toe",
   "host.map.keyInstruction": "{keys}: {description}.",

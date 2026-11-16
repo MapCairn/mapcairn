@@ -58,7 +58,7 @@ Routes and travel-time areas come from the public [Valhalla](https://valhalla.gi
 
 ## Translations
 
-The interface text is written in British English. The Afrikaans catalogue (`packages/web/src/i18n/af.ts`) is a machine-translated draft, not yet reviewed by a fluent speaker; once it has been reviewed, the reviewer is credited here.
+The interface text is written in British English. The Afrikaans catalogue (`packages/web/src/i18n/af.ts`) is a machine-translated draft that is offered on the reference site before its review by a fluent speaker; once it has been reviewed, the reviewer is credited here.
 
 ## Software
 
