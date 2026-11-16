@@ -255,7 +255,7 @@ function checkPosition({ file, decl, report }) {
  * Fails a physical position or spacing property, or a physical direction in a
  * value, where a logical one mirrors in a right-to-left language. A horizontal
  * translation, gradient or origin is accepted when the same rule also sets it
- * under `:dir(rtl)`.
+ * under `[dir="rtl"]`.
  * @param {DeclarationContext} c
  */
 function checkLogicalProperty({ decl, code, report }) {
@@ -272,15 +272,15 @@ function checkLogicalProperty({ decl, code, report }) {
     );
     return;
   }
-  const mirrored = /dir\(|\[dir/.test(code.slice(decl.ruleStart, decl.ruleEnd));
+  const mirrored = /\[dir/.test(code.slice(decl.ruleStart, decl.ruleEnd));
   if (mirrored) {
     return;
   }
-  const reverse = 'Reverse it in the same rule under ":dir(rtl)".';
+  const reverse = 'Reverse it in the same rule under [dir="rtl"].';
   if (PHYSICAL_KEYWORD_PROP.test(decl.prop) && PHYSICAL_SIDE.test(decl.text)) {
     fail(
       `${decl.prop} "${decl.text}"`,
-      `Use start, end or a centred value, or reverse it in the same rule under ":dir(rtl)".`,
+      `Use start, end or a centred value, or reverse it in the same rule under [dir="rtl"].`,
     );
   } else if (GRADIENT_TO_SIDE.test(decl.text)) {
     fail(`Gradient direction "${decl.text}"`, reverse);

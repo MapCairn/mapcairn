@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+import type { MapCairnOptions } from "./e2e/fixtures";
 
 // Claude Code's remote/web sessions preinstall a fixed Chromium revision under
 // /opt/pw-browsers rather than the revision this project's @playwright/test
@@ -27,7 +28,7 @@ const WEBKIT_SPECS = /(basemap|keyboard|sheet|app-shell)\.spec\.ts$/;
 // The right-to-left projects run the same subset, with `dir="rtl"` on <html>
 // (see `direction` in e2e/fixtures.ts). The app ships no right-to-left
 // language yet, so they prove the layout mirrors, not any translation.
-const RTL_SPECS = WEBKIT_SPECS;
+const RTL_SPECS = /(basemap|keyboard|sheet|app-shell|rtl)\.spec\.ts$/;
 
 /**
  * End-to-end and accessibility suites for the web host.
@@ -44,7 +45,7 @@ const RTL_SPECS = WEBKIT_SPECS;
  * - Locators use `data-testid` (every interactive component renders one),
  *   but role and accessible-name locators come first wherever they exist.
  */
-export default defineConfig({
+export default defineConfig<MapCairnOptions>({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

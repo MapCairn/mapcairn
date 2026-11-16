@@ -73,7 +73,7 @@ export const root = style({
   gridTemplateAreas: '"top top" ". end" "start end-bottom"',
   selectors: {
     '&[data-layout="panel"]': panelGrid,
-    "&:dir(rtl)": {
+    '[dir="rtl"] &': {
       paddingInlineEnd: edge(safeArea.rtl.end),
       paddingInlineStart: edge(safeArea.rtl.start),
     },
@@ -152,7 +152,7 @@ export const bottomStart = style({
   transform: `translate(${shiftX}, ${chromeVar(chromeVars.bottomLift, "0px")})`,
   selectors: {
     [whenHidden]: hidden,
-    "&:dir(rtl)": {
+    '[dir="rtl"] &': {
       transform: `translate(calc(-1 * ${shiftX}), ${chromeVar(chromeVars.bottomLift, "0px")})`,
     },
   },
@@ -173,7 +173,7 @@ export const bottomCentre = style({
   transform: `translate(calc(${shiftX} / 2), ${chromeVar(chromeVars.bottomCentreLift, "0px")})`,
   selectors: {
     [whenHidden]: hidden,
-    "&:dir(rtl)": {
+    '[dir="rtl"] &': {
       transform: `translate(calc(${shiftX} / -2), ${chromeVar(chromeVars.bottomCentreLift, "0px")})`,
     },
   },
@@ -227,7 +227,7 @@ export const mapKey = style({
   maxWidth: "100%",
   transform: `translate(${shiftX}, ${chromeVar(chromeVars.mapKeyLift, "0px")})`,
   selectors: {
-    "&:dir(rtl)": {
+    '[dir="rtl"] &': {
       transform: `translate(calc(-1 * ${shiftX}), ${chromeVar(chromeVars.mapKeyLift, "0px")})`,
     },
     [whenHidden]: hidden,

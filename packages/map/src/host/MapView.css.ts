@@ -118,7 +118,7 @@ export const loadingBar = style({
       width: "40%",
       animation: `${slide} calc(${tokens.motion.duration.slow} * 4) ${tokens.motion.easing} infinite`,
     },
-    [`${loadingTrack.animated} &:dir(rtl)`]: {
+    [`[dir="rtl"] ${loadingTrack.animated} &`]: {
       animationName: slideRtl,
     },
   },
@@ -128,6 +128,7 @@ export const loadingBar = style({
     "(prefers-reduced-motion: reduce)": {
       selectors: {
         [`${loadingTrack.animated} &`]: { width: "100%", animation: "none" },
+        [`[dir="rtl"] ${loadingTrack.animated} &`]: { animation: "none" },
       },
     },
   },

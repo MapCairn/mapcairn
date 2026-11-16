@@ -33,6 +33,6 @@ export const ALLOW_LIST = [
     file: "packages/map/src/host/MapView.css.ts",
     contains: "translateX(",
     reason:
-      "A keyframes rule cannot carry a :dir(rtl) selector. The sweep is written twice (slide, slideRtl) and the loading bar picks the second under :dir(rtl).",
+      "A keyframes rule cannot carry a selector. The sweep is written twice (slide, slideRtl) and the loading bar picks the second under a right-to-left page.",
   },
 ];

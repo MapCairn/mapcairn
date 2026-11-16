@@ -10,7 +10,7 @@ const right = "env(safe-area-inset-right, 0px)";
  * The device safe-area insets (a notch, a rounded corner, the home indicator).
  * `env()` names physical sides, so the inline-start and inline-end insets
  * depend on the reading direction: a stylesheet sets the `ltr` pair, then the
- * `rtl` pair under `:dir(rtl)`.
+ * `rtl` pair under `[dir="rtl"]`.
  */
 export const safeArea = {
   top,

@@ -81,7 +81,7 @@ export const line = style({
   transformOrigin: "left center",
   transform: "scaleX(var(--scale-ratio, 0))",
   transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
-  selectors: { "&:dir(rtl)": { transformOrigin: "right center" } },
+  selectors: { '[dir="rtl"] &': { transformOrigin: "right center" } },
 });
 
 /** The tick at the start of the line. */
@@ -97,7 +97,7 @@ export const tickEnd = style({
   transform: `translateX(${tickEndOffset})`,
   transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
   selectors: {
-    "&:dir(rtl)": { transform: `translateX(calc(-1 * ${tickEndOffset}))` },
+    '[dir="rtl"] &': { transform: `translateX(calc(-1 * ${tickEndOffset}))` },
   },
 });
 

@@ -85,14 +85,14 @@ export const surface = style({
       transform: `translateX(calc(-1 * ${tokens.space.lg}))`,
       opacity: 0,
     },
-    '&[data-layout="sheet"]:dir(rtl)': {
+    '[dir="rtl"] &[data-layout="sheet"]': {
       paddingInlineStart: safeArea.rtl.start,
       paddingInlineEnd: safeArea.rtl.end,
     },
-    '&[data-layout="panel"]:dir(rtl)': {
+    '[dir="rtl"] &[data-layout="panel"]': {
       insetInlineStart: `calc(${tokens.space.inset} + ${safeArea.rtl.start})`,
     },
-    '&[data-layout="panel"][data-state="closed"]:dir(rtl)': {
+    '[dir="rtl"] &[data-layout="panel"][data-state="closed"]': {
       transform: `translateX(${tokens.space.lg})`,
     },
   },

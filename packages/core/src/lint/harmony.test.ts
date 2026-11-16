@@ -85,7 +85,7 @@ const cases: readonly Case[] = [
     file: CSS,
     bad: css('  transformOrigin: "left center",'),
     good: css(
-      '  transformOrigin: "left center",\n  selectors: { "&:dir(rtl)": { transformOrigin: "right center" } },',
+      `  transformOrigin: "left center",\n  selectors: { '[dir="rtl"] &': { transformOrigin: "right center" } },`,
     ),
   },
   {
@@ -101,7 +101,18 @@ const cases: readonly Case[] = [
     file: CSS,
     bad: css('  transform: "translateX(8px)",'),
     good: css(
-      '  selectors: { "&:dir(rtl)": { transform: "translateX(-8px)" } },',
+      `  selectors: { '[dir="rtl"] &': { transform: "translateX(-8px)" } },`,
+    ),
+  },
+  {
+    rule: "logical-property",
+    name: "a translation reversed only under :dir(rtl), which the build rewrites",
+    file: CSS,
+    bad: css(
+      `  transform: "translateX(8px)",\n  selectors: { "&:dir(rtl)": { transform: "translateX(-8px)" } },`,
+    ),
+    good: css(
+      `  transform: "translateX(8px)",\n  selectors: { '[dir="rtl"] &': { transform: "translateX(-8px)" } },`,
     ),
   },
   {

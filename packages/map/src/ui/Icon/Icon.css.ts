@@ -38,5 +38,5 @@ export const spinning = style({
  * (a clock, a magnifier, a logo) is not given this.
  */
 export const mirroredInRtl = style({
-  selectors: { "&:dir(rtl)": { transform: "scaleX(-1)" } },
+  selectors: { '[dir="rtl"] &': { transform: "scaleX(-1)" } },
 });

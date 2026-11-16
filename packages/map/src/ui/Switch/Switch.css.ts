@@ -138,7 +138,7 @@ export const thumb = style({
       backgroundColor: tokens.color.accentContrast,
       transform: `translateX(${tokens.size.icon})`,
     },
-    '&[data-state="checked"]:dir(rtl)': {
+    '[dir="rtl"] &[data-state="checked"]': {
       transform: `translateX(calc(-1 * ${tokens.size.icon}))`,
     },
   },

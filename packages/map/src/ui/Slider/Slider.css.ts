@@ -71,7 +71,7 @@ export const track = style({
   backgroundColor: tokens.color.surfaceRaised,
   backgroundImage: fill("right"),
   forcedColorAdjust: "none",
-  selectors: { "&:dir(rtl)": { backgroundImage: fill("left") } },
+  selectors: { '[dir="rtl"] &': { backgroundImage: fill("left") } },
 });
 
 /**
