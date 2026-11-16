@@ -1,46 +1,42 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { TourCard, type TourStep, type UseTour } from "@mapcairn/map";
+import type { MessageCatalogue } from "@mapcairn/core";
+import {
+  TourCard,
+  type TourStep,
+  type UseTour,
+  useMessages,
+} from "@mapcairn/map";
 
-/** The reference host's tour steps, with their words. */
-export const TOUR_STEPS: readonly TourStep[] = [
-  {
-    id: "layers",
-    heading: "Turn on a layer",
-    text: "Open Map options and turn on any layer under Layers.",
-    advance: { kind: "layer-on" },
-    target: "map-options",
-    side: "end",
-  },
-  {
-    id: "map-shape",
-    heading: "Try the globe",
-    text: "Open Settings and switch Map shape between Flat and Globe. Help, just below it, lists the keys and can start this tour again.",
-    advance: { kind: "projection-changed" },
-    target: "settings",
-    side: "end",
-  },
-  {
-    id: "search",
-    heading: "Find a place",
-    text: "Type a place name in Search and press Enter.",
-    advance: { kind: "surface", surface: "search" },
-    target: "search",
-    side: "start",
-  },
-];
-
-const WELCOME = {
-  heading: "New to MapCairn?",
-  text: "Data such as earthquakes and fires is drawn only once you turn its layer on. This three-step tour shows how.",
-  announcement:
-    "New to MapCairn? A three-step tour is after the search box, with Take the tour and Skip.",
-};
-
-const ENDING = {
-  heading: "Tour finished",
-  text: "Help, in Settings, can start it again.",
-};
+/** The reference host's tour steps, with their words from `messages`. */
+export function tourSteps({ t }: MessageCatalogue): readonly TourStep[] {
+  return [
+    {
+      id: "layers",
+      heading: t("app.tour.layers.heading", {}),
+      text: t("app.tour.layers.text", {}),
+      advance: { kind: "layer-on" },
+      target: "map-options",
+      side: "end",
+    },
+    {
+      id: "map-shape",
+      heading: t("app.tour.mapShape.heading", {}),
+      text: t("app.tour.mapShape.text", {}),
+      advance: { kind: "projection-changed" },
+      target: "settings",
+      side: "end",
+    },
+    {
+      id: "search",
+      heading: t("app.tour.search.heading", {}),
+      text: t("app.tour.search.text", {}),
+      advance: { kind: "surface", surface: "search" },
+      target: "search",
+      side: "start",
+    },
+  ];
+}
 
 /** Props for {@link AppTour}. */
 export interface AppTourProps {
@@ -49,5 +45,19 @@ export interface AppTourProps {
 
 /** The first-visit tour card with the reference host's words. */
 export function AppTour({ tour }: AppTourProps) {
-  return <TourCard tour={tour} welcome={WELCOME} ending={ENDING} />;
+  const { t } = useMessages();
+  return (
+    <TourCard
+      tour={tour}
+      welcome={{
+        heading: t("app.tour.welcome.heading", {}),
+        text: t("app.tour.welcome.text", {}),
+        announcement: t("app.tour.welcome.announcement", {}),
+      }}
+      ending={{
+        heading: t("app.tour.ending.heading", {}),
+        text: t("app.tour.ending.text", {}),
+      }}
+    />
+  );
 }

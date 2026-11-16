@@ -16,6 +16,7 @@ import {
   Sheet,
   SheetContent,
   useFocusReturn,
+  useFormatMessage,
   useMap,
   useSettings,
 } from "@mapcairn/map";
@@ -85,7 +86,8 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
 
   // The title follows the open sheet. Once it closes, the app state no longer
   // says which sheet it was, so the last title stays while it slides away.
-  const currentTitle = sheetTitle(app);
+  const format = useFormatMessage();
+  const currentTitle = format(sheetTitle(app));
   const [shownTitle, setShownTitle] = useState(currentTitle);
   if (app.sheetOpen && shownTitle !== currentTitle) {
     setShownTitle(currentTitle);

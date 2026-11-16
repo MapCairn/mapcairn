@@ -20,7 +20,7 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { usePreferences } from "../services";
+import { useMessages, usePreferences } from "../services";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { MapContext, type MapContextValue } from "./MapContext";
 import * as styles from "./MapView.css";
@@ -208,6 +208,7 @@ export function MapView({
   const adapterRef = useRef<MapAdapter | null>(null);
   const helpId = useId();
   const { reducedMotion } = usePreferences();
+  const { t } = useMessages();
 
   const getAdapter = useCallback(() => adapterRef.current, []);
   const longPress = useLongPress({ hostRef, getAdapter, onLongPress });
@@ -289,8 +290,8 @@ export function MapView({
       <section
         ref={hostRef}
         id={id}
-        aria-label="Map"
-        aria-roledescription="map"
+        aria-label={t("host.map.label", {})}
+        aria-roledescription={t("host.map.roleDescription", {})}
         aria-describedby={helpId}
         aria-busy={map.loading}
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the map region is the keyboard target for panning, zooming and pins.

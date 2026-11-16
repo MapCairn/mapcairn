@@ -247,3 +247,45 @@ describe("ShapesSection", () => {
     expect(screen.getAllByTestId("shapes-row")).toHaveLength(2);
   });
 });
+
+describe("ShapesSection message catalogue", () => {
+  it("asks for its words by key", () => {
+    const services = renderSection();
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "panels.shapes.title",
+        "panels.shapes.empty",
+        "panels.shapes.deleteSelected",
+        "panels.shapes.deleteAll",
+        "panels.shapes.exportHeading",
+        "panels.shapes.downloadGeoJson",
+        "panels.shapes.downloadCsv",
+        "panels.shapes.downloadWkt",
+        "panels.shapes.copyLink",
+        "panels.shapes.storageNote",
+      ]),
+    );
+  });
+
+  it("asks for the list name, and the unfinished label with its parameter", () => {
+    const services = renderSection();
+    act(() => drawApi.setMode("line"));
+    act(() => drawApi.addPoint(p(2.3, 48.8)));
+    expect(services.fakes.messages.calls).toEqual(
+      expect.arrayContaining([
+        { key: "panels.shapes.listLabel", params: {} },
+        { key: "panels.shapes.unfinished", params: { label: "Line 1" } },
+      ]),
+    );
+  });
+
+  it("asks for the import words by key when the host can open files", () => {
+    const services = renderSection();
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "panels.shapes.importHeading",
+        "panels.shapes.import",
+      ]),
+    );
+  });
+});

@@ -1,8 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { fireEvent, render, screen } from "@testing-library/react";
+import { createFakeServices } from "@mapcairn/core";
+import {
+  fireEvent,
+  render as renderBare,
+  screen,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { ServicesProvider } from "../../services";
 import { PinSection } from "./PinSection";
+
+function render(ui: ReactElement, services = createFakeServices()) {
+  return renderBare(
+    <ServicesProvider services={services}>{ui}</ServicesProvider>,
+  );
+}
 
 describe("PinSection", () => {
   it("is a region named Pin with an h3", () => {
@@ -62,5 +75,17 @@ describe("PinSection", () => {
     expect(
       button.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("asks the catalogue for its words by key", () => {
+    const services = createFakeServices();
+    render(<PinSection hasPin onDropPin={vi.fn()} />, services);
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "panels.pin.title",
+        "panels.pin.drop",
+        "panels.pin.note",
+      ]),
+    );
   });
 });

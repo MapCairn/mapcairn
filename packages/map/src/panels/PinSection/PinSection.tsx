@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { MapPin } from "lucide-react";
 import type { ReactNode, Ref } from "react";
+import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { type HeadingLevel, Section } from "../Section";
 import { prose } from "../Section/Section.css";
@@ -32,9 +33,10 @@ export function PinSection({
   headingLevel = 3,
   headingRef,
 }: PinSectionProps) {
+  const { t } = useMessages();
   return (
     <Section
-      title="Pin"
+      title={t("panels.pin.title", {})}
       headingLevel={headingLevel}
       headingRef={headingRef}
       data-testid="sheet-section-pin"
@@ -45,11 +47,11 @@ export function PinSection({
         onClick={onDropPin}
         data-testid="drop-pin-button"
       >
-        Drop pin at map centre
+        {t("panels.pin.drop", {})}
       </Button>
       {hasPin ? (
         <p className={prose} data-testid="pin-note">
-          A pin is on the map.
+          {t("panels.pin.note", {})}
         </p>
       ) : null}
       {children}

@@ -10,6 +10,7 @@ import { useCallback, useId, useRef, useState } from "react";
 import {
   useBasemapAvailability,
   useBasemaps,
+  useMessages,
   useSaveData,
 } from "../../services";
 import { Button } from "../../ui/Button";
@@ -79,6 +80,7 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
   const groupName = useId();
   const announce = useAnnounce();
   const catalogue = useBasemaps();
+  const { t } = useMessages();
   const shownId = catalogue.resolve(value).id;
   const saveData = useSaveData();
   const { unavailable, clear } = useBasemapAvailability();
@@ -101,7 +103,7 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
       <div
         ref={group}
         role="radiogroup"
-        aria-label="Basemap"
+        aria-label={t("panels.basemap.groupLabel", {})}
         className={grid}
         data-testid="basemap-picker"
       >
@@ -124,7 +126,7 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
             onClick={tryAgain}
             data-testid="basemap-try-again"
           >
-            Try again
+            {t("panels.basemap.tryAgain", {})}
           </Button>
         </div>
       ) : null}
@@ -156,6 +158,7 @@ function BasemapTile({
   unavailable,
   onChoose,
 }: BasemapTileProps) {
+  const { t } = useMessages();
   const [failed, setFailed] = useState(false);
   const preview = saveData ? undefined : basemap.thumbnail;
   const showSwatch = preview === undefined || failed;
@@ -230,7 +233,7 @@ function BasemapTile({
           className={dataNote}
           data-testid={`basemap-unavailable-note-${basemap.id}`}
         >
-          Not available right now
+          {t("panels.basemap.unavailable", {})}
         </span>
       ) : null}
       {saveData && usesMoreData(basemap) ? (
@@ -238,7 +241,7 @@ function BasemapTile({
           className={dataNote}
           data-testid={`basemap-data-note-${basemap.id}`}
         >
-          Uses more data
+          {t("panels.basemap.usesMoreData", {})}
         </span>
       ) : null}
     </label>

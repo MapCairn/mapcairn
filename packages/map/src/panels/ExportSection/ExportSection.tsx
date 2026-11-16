@@ -8,6 +8,7 @@ import {
 import { Download } from "lucide-react";
 import { type Ref, useContext, useState } from "react";
 import { MapContext } from "../../host";
+import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { useAnnounce } from "../../ui/LiveRegion";
 import { type HeadingLevel, Section } from "../Section";
@@ -65,6 +66,7 @@ export function ExportSection({
   // Read optionally, so the section also renders outside a map (a test, a guide).
   const adapter = useContext(MapContext)?.adapter ?? null;
   const announce = useAnnounce();
+  const { t } = useMessages();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -95,15 +97,12 @@ export function ExportSection({
 
   return (
     <Section
-      title="Save image"
+      title={t("panels.export.title", {})}
       headingLevel={headingLevel}
       headingRef={headingRef}
       data-testid="sheet-section-export"
     >
-      <p className={prose}>
-        Saves the map as it looks now, with its layers and credits, as a PNG
-        file. It is made in your browser and sent nowhere.
-      </p>
+      <p className={prose}>{t("panels.export.description", {})}</p>
       <Button
         variant="secondary"
         icon={Download}
@@ -112,11 +111,11 @@ export function ExportSection({
         onClick={save}
         data-testid="save-image-button"
       >
-        Save image
+        {t("panels.export.save", {})}
       </Button>
       {failed ? (
         <p className={prose} data-testid="export-error">
-          The map image could not be saved. Try again.
+          {t("panels.export.error", {})}
         </p>
       ) : null}
     </Section>

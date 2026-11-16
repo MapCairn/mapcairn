@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { DRAW_KEY_HELP, MAP_KEY_HELP } from "@mapcairn/core";
 import type { Ref } from "react";
-import { usePreferences } from "../../services";
+import { useMessages, usePreferences } from "../../services";
 import { Button } from "../../ui/Button";
 import {
   type HeadingLevel,
@@ -38,40 +38,39 @@ export function HelpSection({
   onStartTour,
 }: HelpSectionProps) {
   const { finePointer } = usePreferences();
+  const { t } = useMessages();
   const subLevel = nextHeadingLevel(headingLevel);
   return (
     <Section
-      title="Help"
+      title={t("panels.help.title", {})}
       headingLevel={headingLevel}
       headingRef={headingRef}
       data-testid="sheet-section-help"
     >
       {onStartTour ? (
         <div className={subsection}>
-          <Subheading level={subLevel}>Tour</Subheading>
-          <p className={prose}>
-            A few short steps that show the main controls by using them.
-          </p>
+          <Subheading level={subLevel}>
+            {t("panels.help.tourHeading", {})}
+          </Subheading>
+          <p className={prose}>{t("panels.help.tourDescription", {})}</p>
           <div>
             <Button variant="secondary" onClick={onStartTour}>
-              Take the tour
+              {t("panels.help.tourStart", {})}
             </Button>
           </div>
         </div>
       ) : null}
       <div className={subsection} data-testid="help-search">
-        <Subheading level={subLevel}>Search</Subheading>
-        <p className={prose}>
-          Type a place name or a pair of coordinates, such as -26.2041, 28.0473
-          or 26.2041° S, 28.0473° E, then press Enter or Search. Write each
-          value with a decimal point or a degree sign. Coordinates are read on
-          this device and not sent to the geocoder; the map then loads map tiles
-          for that area, as it does for any move.
-        </p>
+        <Subheading level={subLevel}>
+          {t("panels.help.searchHeading", {})}
+        </Subheading>
+        <p className={prose}>{t("panels.help.searchDescription", {})}</p>
       </div>
       {finePointer ? (
         <div className={subsection} data-testid="help-keyboard">
-          <Subheading level={subLevel}>Keyboard</Subheading>
+          <Subheading level={subLevel}>
+            {t("panels.help.keyboardHeading", {})}
+          </Subheading>
           <dl className={shortcuts}>
             {MAP_KEY_HELP.map((entry) => (
               <div key={entry.keys} className={shortcut}>
@@ -84,7 +83,9 @@ export function HelpSection({
       ) : null}
       {finePointer ? (
         <div className={subsection} data-testid="help-drawing">
-          <Subheading level={subLevel}>Drawing</Subheading>
+          <Subheading level={subLevel}>
+            {t("panels.help.drawingHeading", {})}
+          </Subheading>
           <dl className={shortcuts}>
             {DRAW_KEY_HELP.map((entry) => (
               <div key={entry.keys} className={shortcut}>
@@ -96,12 +97,10 @@ export function HelpSection({
         </div>
       ) : null}
       <div className={subsection}>
-        <Subheading level={subLevel}>Accessibility</Subheading>
-        <p className={prose}>
-          MapCairn aims to meet WCAG 2.2 level AA. Every action that uses a
-          gesture, such as a long press or a drag, also has a button or a
-          keyboard shortcut.
-        </p>
+        <Subheading level={subLevel}>
+          {t("panels.help.accessibilityHeading", {})}
+        </Subheading>
+        <p className={prose}>{t("panels.help.accessibilityDescription", {})}</p>
       </div>
     </Section>
   );

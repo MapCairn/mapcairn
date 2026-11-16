@@ -1560,3 +1560,15 @@ describe("Save data", () => {
     });
   });
 });
+
+describe("message catalogue", () => {
+  it("asks for the region's name and role description by key", async () => {
+    const { services } = await setup();
+    expect(services.fakes.messages.calls).toEqual(
+      expect.arrayContaining([
+        { key: "host.map.label", params: {} },
+        { key: "host.map.roleDescription", params: {} },
+      ]),
+    );
+  });
+});

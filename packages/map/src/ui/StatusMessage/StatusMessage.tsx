@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useMessages } from "../../services";
 import { Button } from "../Button";
 import { Icon, type IconComponent } from "../Icon";
 import { IconButton } from "../IconButton";
@@ -53,7 +54,7 @@ export interface StatusMessageProps
    * Changing it after mount has no effect; remount with a `key` instead.
    */
   readonly autoDismissMs?: number;
-  /** The accessible name of the dismiss button. Defaults to "Dismiss". */
+  /** The accessible name of the dismiss button. Defaults to the catalogue's "ui.dismiss". */
   readonly dismissLabel?: string;
 }
 
@@ -74,10 +75,11 @@ export function StatusMessage({
   onDismiss,
   action,
   autoDismissMs = MIN_AUTO_DISMISS_MS,
-  dismissLabel = "Dismiss",
+  dismissLabel,
   className,
   ...rest
 }: StatusMessageProps) {
+  const { t } = useMessages();
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [ready, setReady] = useState(false);
@@ -138,7 +140,7 @@ export function StatusMessage({
           </Button>
         ) : null}
         <IconButton
-          label={dismissLabel}
+          label={dismissLabel ?? t("ui.dismiss", {})}
           icon={X}
           size="compact"
           onClick={onDismiss}

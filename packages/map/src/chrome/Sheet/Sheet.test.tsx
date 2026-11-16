@@ -820,3 +820,15 @@ describe("Sheet brand", () => {
     expect(sheet()).toHaveAttribute("data-detent", "peek");
   });
 });
+
+describe("Sheet message catalogue", () => {
+  it("asks for the handle and close names by key", () => {
+    const { services } = mount(setup());
+    expect(services.fakes.messages.calls).toEqual(
+      expect.arrayContaining([
+        { key: "chrome.sheet.resize", params: {} },
+        { key: "chrome.sheet.close", params: {} },
+      ]),
+    );
+  });
+});

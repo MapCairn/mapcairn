@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { Button } from "@mapcairn/map";
+import {
+  createMessageCatalogue,
+  EN_GB_CATALOGUE,
+  type MessageKey,
+} from "@mapcairn/core";
+import { Button, useOptionalServices } from "@mapcairn/map";
 import { RotateCw } from "lucide-react";
 import { useNavigate } from "react-router";
 import * as styles from "./ErrorPage.css";
@@ -9,19 +14,30 @@ import * as styles from "./ErrorPage.css";
 export type ErrorPageKind = "not-found" | "unexpected";
 
 const COPY: Readonly<
-  Record<ErrorPageKind, { readonly title: string; readonly message: string }>
+  Record<
+    ErrorPageKind,
+    { readonly title: MessageKey; readonly message: MessageKey }
+  >
 > = {
   "not-found": {
-    title: "Page not found",
-    message:
-      "There is nothing at this address. Check the link, or go back to the map.",
+    title: "app.error.notFound.title",
+    message: "app.error.notFound.message",
   },
   unexpected: {
-    title: "Something went wrong",
-    message:
-      "MapCairn stopped because of an unexpected problem. Reload the page to start again. Your settings are kept.",
+    title: "app.error.unexpected.title",
+    message: "app.error.unexpected.message",
   },
 };
+
+/**
+ * What the page says when the boundary renders outside the services, which is
+ * the usual case: the boundary replaces the root route that supplies them.
+ */
+const ENGLISH = createMessageCatalogue(
+  "en-GB",
+  EN_GB_CATALOGUE,
+  EN_GB_CATALOGUE,
+);
 
 /**
  * Returns a function that reloads the page. React Router's `navigate(0)` is
@@ -40,25 +56,30 @@ export interface ErrorPageProps {
 }
 
 /**
- * The page shown by the root error boundary: plain English about what
+ * The page shown by the root error boundary: plain words about what
  * happened and what to do, never the raw error. "Page not found" links back
  * to the map; anything else offers a Reload button.
+ *
+ * @remarks It reads the host's catalogue when there are services above it and
+ *   English otherwise, so it never depends on the services that may have
+ *   failed.
  */
 export function ErrorPage({ kind }: ErrorPageProps) {
   const reload = useReloadPage();
+  const { t } = useOptionalServices()?.messages ?? ENGLISH;
   const { title, message } = COPY[kind];
   return (
     <main className={styles.page} data-testid="error-page">
       <div className={styles.card}>
-        <h1 className={styles.title}>{title}</h1>
-        <p className={styles.message}>{message}</p>
+        <h1 className={styles.title}>{t(title, {})}</h1>
+        <p className={styles.message}>{t(message, {})}</p>
         {kind === "not-found" ? (
           <a href="/" className={styles.link}>
-            Go to the map
+            {t("app.error.notFound.link", {})}
           </a>
         ) : (
           <Button icon={RotateCw} onClick={reload}>
-            Reload
+            {t("app.reload", {})}
           </Button>
         )}
       </div>

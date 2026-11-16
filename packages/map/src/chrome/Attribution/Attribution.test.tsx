@@ -630,3 +630,16 @@ describe("Attribution on first load", () => {
     );
   });
 });
+
+describe("Attribution message catalogue", () => {
+  it("names the button and the popover from one key", () => {
+    const { services } = renderChrome(<Attribution basemap={BASEMAP} />, {
+      map: SETTLED,
+    });
+    const keys = services.fakes.messages.calls.map((call) => call.key);
+    expect(keys).toContain("chrome.attribution.label");
+    expect(
+      screen.getByRole("button", { name: "Map credits" }),
+    ).toBeInTheDocument();
+  });
+});
