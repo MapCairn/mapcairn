@@ -66,6 +66,7 @@ const BUDGET_BYTES = 15 * 1024;
 const { BASEMAPS: SDK_BASEMAPS } = await import(
   pathToFileURL(join(ROOT, "packages/core/src/basemaps/basemaps.ts")).href
 );
+
 /** The preview path the site serves for each basemap it offers (a module with no imports, so plain Node loads it). */
 const { BASEMAP_THUMBNAILS } = await import(
   pathToFileURL(join(ROOT, "packages/web/src/basemaps/basemapThumbnails.ts"))
