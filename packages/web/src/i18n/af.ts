@@ -763,7 +763,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layer.gdacs.key.1": "Groen waarskuwing",
   "layer.gdacs.key.2": "Oranje waarskuwing",
   "layer.gdacs.key.3": "Rooi waarskuwing",
-  "layer.gdacs.key.4": "Geen waarskuwingsvlak",
+  "layer.gdacs.key.4": "Geen waarskuwing",
   "layer.gdacs.card.link": "Verslag op GDACS",
   "layer.gdacs.sort.newest": "Nuutste",
   "layer.gdacs.sort.alert": "Hoogste waarskuwing",
