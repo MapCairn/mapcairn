@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { DefinitionText } from "./messages";
+
 /** One credit line a tile provider requires. */
 export interface BasemapAttributionEntry {
   readonly text: string;
@@ -63,7 +65,12 @@ export type BasemapSource =
  */
 export interface BasemapDefinition {
   readonly id: string;
-  readonly name: string;
+  /**
+   * What the picker calls the basemap: a `MessageKey` the active catalogue
+   * translates (the SDK's own basemaps use one, such as `basemap.bright.name`),
+   * or a plain string shown as written, as a host's own basemap may use.
+   */
+  readonly name: DefinitionText;
   readonly source: BasemapSource;
   /**
    * Normalised zoom limits (256 px tile convention). For a raster source,

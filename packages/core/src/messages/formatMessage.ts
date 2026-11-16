@@ -30,18 +30,21 @@ function isMessage(value: unknown): value is Message {
 
 /**
  * Turns a {@link Message} into text with `catalogue`. A placeholder that holds
- * another message is formatted first, so a sentence can carry a distance or a
- * travel mode and the whole thing is in one language. A key whose English
+ * another message, or a list with messages among its items, is formatted
+ * first, so a sentence can carry a distance, a travel mode or a layer's name
+ * and the whole thing is in one language. A key whose English
  * value has plural forms (`|`) goes through `plural`, the rest through `t`.
  */
 export function formatMessage(
   catalogue: MessageCatalogue,
   { key, params }: Message,
 ): string {
+  const text = (value: unknown): unknown =>
+    isMessage(value) ? formatMessage(catalogue, value) : value;
   const resolved = Object.fromEntries(
     Object.entries(params).map(([name, value]) => [
       name,
-      isMessage(value) ? formatMessage(catalogue, value) : value,
+      Array.isArray(value) ? value.map(text) : text(value),
     ]),
   ) as MessageParams[MessageKey];
   if (EN_GB_CATALOGUE[key].includes("|")) {

@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
-import { isMessageKey, resolveText } from "./resolveText";
+import { isMessageKey, resolveText, textOrMessage } from "./resolveText";
 
 describe("resolveText", () => {
   it("looks a known key up in the active catalogue", () => {
@@ -33,5 +33,15 @@ describe("resolveText", () => {
     expect(isMessageKey("settings.title")).toBe(true);
     expect(isMessageKey("Settings")).toBe(false);
     expect(isMessageKey("__proto__")).toBe(false);
+  });
+});
+
+describe("textOrMessage", () => {
+  it("turns a key into a message with no parameters, and leaves a plain string alone", () => {
+    expect(textOrMessage("settings.title")).toEqual({
+      key: "settings.title",
+      params: {},
+    });
+    expect(textOrMessage("Earthquakes")).toBe("Earthquakes");
   });
 });

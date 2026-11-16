@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import {
   FAKE_HYBRID_BASEMAP,
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
 } from "../fakes/fixtures";
+import { resolveText } from "../messages/resolveText";
 import type { BasemapDefinition } from "../ports/basemap";
 import {
   BASEMAPS,
@@ -20,6 +22,13 @@ import {
   omittedLayers,
   usesMoreData,
 } from "./basemaps";
+
+const english = new FakeMessageCatalogue();
+
+/** The English name the picker shows for a basemap. */
+function nameOf(basemap: BasemapDefinition | undefined): string | undefined {
+  return basemap === undefined ? undefined : resolveText(english, basemap.name);
+}
 
 /** Every address a basemap's tiles or style come from, with the tile placeholders filled. */
 function sourceUrls(basemap: BasemapDefinition): readonly string[] {
@@ -182,7 +191,7 @@ describe("BASEMAPS", () => {
   });
 
   it("names the OpenStreetMap basemap Streets", () => {
-    expect(getBasemap("osm")?.name).toBe("Streets");
+    expect(nameOf(getBasemap("osm"))).toBe("Streets");
   });
 
   it("credits OpenStreetMap, OpenFreeMap and OpenMapTiles on the vector styles", () => {
@@ -274,7 +283,7 @@ describe("usesMoreData", () => {
 
 describe("getBasemap", () => {
   it("finds a basemap by id and returns undefined otherwise", () => {
-    expect(getBasemap("liberty")?.name).toBe("Liberty");
+    expect(nameOf(getBasemap("liberty"))).toBe("Liberty");
     expect(getBasemap("nope")).toBeUndefined();
     expect(getBasemap("__proto__")).toBeUndefined();
   });
@@ -283,12 +292,14 @@ describe("getBasemap", () => {
 describe("the default basemap", () => {
   it("makes Bright the default basemap, and the first one the picker lists", () => {
     expect(DEFAULT_BASEMAP_ID).toBe("bright");
-    expect(getBasemap(DEFAULT_BASEMAP_ID)?.name).toBe("Bright");
+    expect(nameOf(getBasemap(DEFAULT_BASEMAP_ID))).toBe("Bright");
     expect(BASEMAPS[0]?.id).toBe(DEFAULT_BASEMAP_ID);
   });
 
   it("still resolves a saved or linked liberty to Liberty, not to the new default", () => {
-    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").name).toBe("Liberty");
+    expect(nameOf(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty"))).toBe(
+      "Liberty",
+    );
     expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").id).not.toBe(
       DEFAULT_BASEMAP_ID,
     );
@@ -460,9 +471,7 @@ describe("createBasemapCatalogue", () => {
 
   it("is what the built-in basemaps make: Bright the default, then Liberty, Colorful, Positron, Streets, Fiord and Dark", () => {
     expect(BUILT_IN_BASEMAP_CATALOGUE.basemaps).toBe(BASEMAPS);
-    expect(
-      BUILT_IN_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.name),
-    ).toEqual([
+    expect(BUILT_IN_BASEMAP_CATALOGUE.basemaps.map(nameOf)).toEqual([
       "Bright",
       "Liberty",
       "Colorful",
@@ -473,11 +482,11 @@ describe("createBasemapCatalogue", () => {
     ]);
     expect(BUILT_IN_BASEMAP_CATALOGUE.defaultId).toBe(DEFAULT_BASEMAP_ID);
     expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("liberty").id).toBe("liberty");
-    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord").name).toBe("Fiord");
+    expect(nameOf(BUILT_IN_BASEMAP_CATALOGUE.resolve("fiord"))).toBe("Fiord");
   });
 
   it("opens a saved or linked dark on Dark, and on the default for a retired id: auto and Maptoolkit Dark", () => {
-    expect(BUILT_IN_BASEMAP_CATALOGUE.resolve("dark").name).toBe("Dark");
+    expect(nameOf(BUILT_IN_BASEMAP_CATALOGUE.resolve("dark"))).toBe("Dark");
     for (const id of [
       "auto",
       "maptoolkit",
@@ -498,5 +507,17 @@ describe("createBasemapCatalogue", () => {
     expect(
       BUILT_IN_BASEMAP_CATALOGUE.resolve("colorful").saveDataOmitLayers,
     ).toBeUndefined();
+  });
+});
+
+describe("the built-in basemaps' names", () => {
+  it("are message keys the catalogue looks up, so a translation can name them", () => {
+    const scripted = new FakeMessageCatalogue({
+      overrides: { "basemap.osm.name": "Strate" },
+    });
+    expect(resolveText(scripted, getBasemap("osm")?.name ?? "")).toBe("Strate");
+    expect(
+      BASEMAPS.every((basemap) => basemap.name.startsWith("basemap.")),
+    ).toBe(true);
   });
 });

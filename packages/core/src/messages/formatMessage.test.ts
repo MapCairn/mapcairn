@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { formatMessage, joinMessages, message } from "./formatMessage";
+import { textOrMessage } from "./resolveText";
 
 describe("message", () => {
   it("pairs a key with its parameters", () => {
@@ -92,5 +93,21 @@ describe("joinMessages", () => {
     expect(commas && formatMessage(catalogue, commas)).toBe(
       "Map image saved., No results",
     );
+  });
+});
+
+describe("formatMessage with a list that holds messages", () => {
+  it("formats each message in a list placeholder, so a layer's keyed name is read in the language", () => {
+    const catalogue = new FakeMessageCatalogue({
+      overrides: { "layer.earthquakes.name": "Aardbewings" },
+    });
+    expect(
+      formatMessage(
+        catalogue,
+        message("announce.layersDidNotAnswer", {
+          names: [textOrMessage("layer.earthquakes.name"), "Rain"],
+        }),
+      ),
+    ).toContain("Aardbewings and Rain");
   });
 });

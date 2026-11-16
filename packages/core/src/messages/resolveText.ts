@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import type {
   DefinitionText,
+  Message,
   MessageCatalogue,
   MessageKey,
 } from "../ports/messages";
@@ -28,4 +29,15 @@ export function resolveText(
   text: DefinitionText,
 ): string {
   return isMessageKey(text) ? catalogue.t(text, {}) : text;
+}
+
+/**
+ * A definition's text as a placeholder value for a {@link Message}: a key
+ * becomes a message with no parameters, which the one place that speaks the
+ * sentence formats in the active language, and a plain string stays as it is.
+ * Use it where a pure helper builds an announcement from a definition's name
+ * and has no catalogue to hand.
+ */
+export function textOrMessage(text: DefinitionText): string | Message {
+  return isMessageKey(text) ? ({ key: text, params: {} } as Message) : text;
 }
