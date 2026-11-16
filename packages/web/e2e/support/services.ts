@@ -504,6 +504,7 @@ export async function scriptMemorySettings(
       zoomButtons: null,
       basemapId: "bright",
       lastView: null,
+      language: null,
       ...seed,
     });
     const listeners = new Set<(settings: typeof current) => void>();
