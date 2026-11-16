@@ -84,4 +84,4 @@ No right-to-left language ships yet, but the interface is built to mirror: style
 
 - The search and routing providers receive the visitor's language only if their adapter sends it. The reference adapters do not, and one that starts to must update [`PRIVACY.md`](../../PRIVACY.md) and the provider note first.
 - The copied coordinate value (`formatLatLng`) uses a dot and the letters N, S, E and W in every language, so it can be pasted elsewhere.
-- The privacy page and the developer design guide stay in English.
+- The privacy page and the developer design guide stay in English. The short notes in Settings, Directions and the pin card that say what each service receives are catalogue keys, so a language translates them, and a test keeps the facts in them in step with the privacy page.

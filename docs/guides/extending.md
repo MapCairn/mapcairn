@@ -313,7 +313,7 @@ The search pill suggests places as the person types only when `services.suggesti
 1. Implement `SuggestionProvider` from `@mapcairn/core` in `packages/web/src/adapters/search`. `suggest(query, { limit, signal })` resolves `SearchResult`s, each with a centre and optionally an extent, so picking one needs no second lookup. Reject only with `SearchError` (`offline`, `rate-limited`, `failed`) or `PortAbortError`, give each request a timeout, keep to the service's usage limits inside the adapter with `RequestSpacer`, and send no cookies or referrer. `PhotonSuggestionProvider` is the example.
 2. Run `runSuggestionProviderContract` against it with a scripted `fetch`, as `PhotonSuggestionProvider.test.ts` does.
 3. Register it as `suggestions` in `createServices()`. Leave it out and the pill keeps submit-only search.
-4. Allow its origin in `connect-src`, and say on the privacy page and in `PRIVACY.md`, `ATTRIBUTIONS.md` and the host's Settings note (`providerNotes.ts`) that the text typed so far goes to it as the person types. That is more than a submitted search sends, so the text must say it plainly.
+4. Allow its origin in `connect-src`, and say on the privacy page and in `PRIVACY.md`, `ATTRIBUTIONS.md` and the host's Settings note (`host.notes.privacy` in `EN_GB_CATALOGUE` and each language's catalogue) that the text typed so far goes to it as the person types. That is more than a submitted search sends, so the text must say it plainly.
 
 When to ask is not the adapter's job. `useSuggestions` waits for a pause in typing, asks for at least three characters, cancels what a newer keystroke supersedes, stops for a cooldown after repeated failures and announces once that suggestions are unavailable.
 
