@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  createMessageCatalogue,
-  EN_GB_CATALOGUE,
-  formatMessage,
-} from "@mapcairn/core";
+import { formatMessage } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import {
   createContext,
@@ -14,7 +10,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { useOptionalServices } from "../../services/ServicesProvider";
+import { useOptionalMessages } from "../../services/hooks";
 import { VisuallyHidden } from "../VisuallyHidden";
 import {
   type Announce,
@@ -47,16 +43,6 @@ let warnedMissingProvider = false;
 /** Does nothing. Returned outside a provider so callers need no null check. */
 const ignore: Announce = () => undefined;
 
-/**
- * What speaks a message outside a services provider, such as a test that
- * mounts the regions alone: the SDK's own English.
- */
-const ENGLISH = createMessageCatalogue(
-  "en-GB",
-  EN_GB_CATALOGUE,
-  EN_GB_CATALOGUE,
-);
-
 /** Props for {@link LiveRegionProvider}. */
 export interface LiveRegionProviderProps {
   readonly children?: ReactNode;
@@ -74,7 +60,7 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
     polite: "",
     assertive: "",
   });
-  const catalogueRef = useLatestRef(useOptionalServices()?.messages ?? ENGLISH);
+  const catalogueRef = useLatestRef(useOptionalMessages());
   const [announcer] = useState(() =>
     createAnnouncer({
       setText: (priority, text) =>

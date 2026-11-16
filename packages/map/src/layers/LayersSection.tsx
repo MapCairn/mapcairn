@@ -28,7 +28,7 @@ import {
   Section,
   Subheading,
 } from "../panels/Section";
-import { useMessages, usePreferences } from "../services";
+import { useMessages, usePreferences, useResolveText } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import { CatalogueStatus } from "./CatalogueStatus";
 import { hidesSection } from "./catalogueView";
@@ -137,6 +137,7 @@ export function LayersSection({
 }: LayersSectionProps) {
   const messages = useMessages();
   const { t } = messages;
+  const resolve = useResolveText();
   // Read optionally, so the section also renders outside a map (a test, a guide).
   const adapter = useContext(MapContext)?.adapter ?? null;
   const announce = useAnnounce();
@@ -328,7 +329,7 @@ export function LayersSection({
         {byGroup(layers.layers).map(([group, items]) => (
           <div key={group} className={styles.group}>
             <div className={styles.groupHeader}>
-              <Subheading level={groupLevel}>{group}</Subheading>
+              <Subheading level={groupLevel}>{resolve(group)}</Subheading>
               {showTurnOffAll ? (
                 <TurnOffGroup
                   layers={layers}

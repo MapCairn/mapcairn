@@ -9,7 +9,9 @@ import {
   type MapEngineError,
   type MapKeyAction,
   type MapKeyHelpEntry,
+  type MessageCatalogue,
   mapKeyAction,
+  resolveText,
   type ViewState,
 } from "@mapcairn/core";
 import {
@@ -114,17 +116,32 @@ export interface MapViewProps {
   readonly testId?: string;
 }
 
-/** The hidden keyboard instructions, as plain sentences. */
-function keyboardInstructions(extra: readonly MapKeyHelpEntry[]): string {
+/** `text` with its first letter in lower case for `language`, to follow a colon. */
+function lowerFirst(text: string, language: string): string {
+  return `${text.charAt(0).toLocaleLowerCase(language)}${text.slice(1)}`;
+}
+
+/**
+ * The hidden keyboard instructions, as plain sentences in the catalogue's
+ * language: each line is "keys: description." with the description's first
+ * letter in lower case.
+ */
+function keyboardInstructions(
+  messages: MessageCatalogue,
+  extra: readonly MapKeyHelpEntry[],
+): string {
   return [...MAP_KEY_HELP, ...extra]
-    .map(
-      ({ keys, description }) =>
-        `${keys}: ${description.charAt(0).toLowerCase()}${description.slice(1)}.`,
+    .map(({ keys, description }) =>
+      messages.t("host.map.keyInstruction", {
+        keys: resolveText(messages, keys),
+        description: lowerFirst(
+          resolveText(messages, description),
+          messages.language,
+        ),
+      }),
     )
     .join(" ");
 }
-
-const KEYBOARD_INSTRUCTIONS = keyboardInstructions([]);
 
 /** Runs a key action against the adapter. */
 function runKeyAction(
@@ -208,7 +225,8 @@ export function MapView({
   const adapterRef = useRef<MapAdapter | null>(null);
   const helpId = useId();
   const { reducedMotion } = usePreferences();
-  const { t } = useMessages();
+  const messages = useMessages();
+  const { t } = messages;
 
   const getAdapter = useCallback(() => adapterRef.current, []);
   const longPress = useLongPress({ hostRef, getAdapter, onLongPress });
@@ -279,10 +297,7 @@ export function MapView({
 
   const motion = reducedMotion ? "static" : "animated";
 
-  const instructions =
-    keyHelp && keyHelp.length > 0
-      ? keyboardInstructions(keyHelp)
-      : KEYBOARD_INSTRUCTIONS;
+  const instructions = keyboardInstructions(messages, keyHelp ?? []);
 
   const region = (
     <>

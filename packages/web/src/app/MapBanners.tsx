@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { announceTileError } from "@mapcairn/core";
+import { announceTileError, resolveText } from "@mapcairn/core";
 import {
   type MapContextValue,
   StatusMessage,
@@ -58,7 +58,8 @@ function engineFailed(map: Pick<MapContextValue, "error">): boolean {
 export function MapBanners({ app }: MapBannersProps) {
   const map = useMap();
   const format = useFormatMessage();
-  const { t } = useMessages();
+  const messages = useMessages();
+  const { t } = messages;
   const reload = useReloadPage();
   const [tileErrorDismissed, setTileErrorDismissed] = useState(false);
   const [engineErrorDismissed, setEngineErrorDismissed] = useState(false);
@@ -76,7 +77,9 @@ export function MapBanners({ app }: MapBannersProps) {
   }, [map.error]);
 
   const basemapMessage = app.basemapFailure?.unavailable
-    ? t("app.banner.basemapUnavailable", { name: app.basemapFailure.name })
+    ? t("app.banner.basemapUnavailable", {
+        name: resolveText(messages, app.basemapFailure.name),
+      })
     : t("app.banner.basemapFailed", {});
   const engineMessage =
     map.error?.reason === "stopped"

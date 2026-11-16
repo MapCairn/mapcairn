@@ -7,7 +7,7 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { useMessages } from "../services";
+import { useMessages, useResolveText } from "../services";
 import { Button } from "../ui/Button";
 import * as styles from "./Layers.css";
 import type { DataLayers } from "./useDataLayers";
@@ -196,17 +196,18 @@ export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
  */
 export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
   const { t } = useMessages();
+  const groupName = useResolveText()(group);
   const { turnedOff, turnOff } = layers;
   const undo =
     turnedOff?.group === group
       ? {
           text: t("layers.turnOff.doneGroup", {
             count: turnedOff.count,
-            group,
+            group: groupName,
           }),
           label: t("layers.turnOff.undoGroup", {
             count: turnedOff.count,
-            group,
+            group: groupName,
           }),
         }
       : null;
@@ -221,7 +222,7 @@ export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
           className={styles.groupTurnOff}
           onClick={() => turnOff(ids, { group })}
         >
-          {t("layers.turnOff.group", { count: ids.length, group })}
+          {t("layers.turnOff.group", { count: ids.length, group: groupName })}
         </Button>
       ) : null}
     </ActionRow>

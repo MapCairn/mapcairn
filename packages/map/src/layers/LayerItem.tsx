@@ -19,7 +19,12 @@ import {
 } from "@mapcairn/core";
 import { Hourglass, RotateCw, TriangleAlert } from "lucide-react";
 import { useState } from "react";
-import { useFormatMessage, useMessages, useSaveData } from "../services";
+import {
+  useFormatMessage,
+  useMessages,
+  useResolveText,
+  useSaveData,
+} from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { SegmentedControl } from "../ui/SegmentedControl";
@@ -91,14 +96,18 @@ function LayerControl({ layer, control, layers }: ControlProps) {
   const value = layer.controls[control.id] ?? "";
   const disabled = !isControlEnabled(control, layer.controls);
   const change = (next: string) => layers.setControl(id, control.id, next);
+  const resolve = useResolveText();
   const testId = `layer-control-${id}-${control.id}`;
   switch (control.kind) {
     case "segmented":
       return (
         <div data-testid={testId}>
           <SegmentedControl
-            label={control.label}
-            options={control.options}
+            label={resolve(control.label)}
+            options={control.options.map((option) => ({
+              ...option,
+              label: resolve(option.label),
+            }))}
             value={value}
             onValueChange={change}
             disabled={disabled}
@@ -109,8 +118,12 @@ function LayerControl({ layer, control, layers }: ControlProps) {
       return (
         <div data-testid={testId}>
           <Switch
-            label={control.label}
-            description={control.description}
+            label={resolve(control.label)}
+            description={
+              control.description === undefined
+                ? undefined
+                : resolve(control.description)
+            }
             checked={value === "true"}
             onCheckedChange={(checked) => change(String(checked))}
             disabled={disabled}
@@ -121,7 +134,7 @@ function LayerControl({ layer, control, layers }: ControlProps) {
       const now = layers.now();
       return (
         <label className={styles.field}>
-          {control.label}
+          {resolve(control.label)}
           <input
             type="date"
             className={styles.dateInput}
@@ -154,7 +167,7 @@ function LayerControl({ layer, control, layers }: ControlProps) {
       return (
         <div data-testid={testId}>
           <Slider
-            label={control.label}
+            label={resolve(control.label)}
             min={control.min}
             max={control.max}
             step={control.step}
@@ -171,7 +184,7 @@ function LayerControl({ layer, control, layers }: ControlProps) {
       return (
         <div data-testid={testId}>
           <Slider
-            label={control.label}
+            label={resolve(control.label)}
             min={0.1}
             max={1}
             step={0.05}
@@ -202,6 +215,7 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
   const [showAll, setShowAll] = useState(false);
   const messages = useMessages();
   const { t } = messages;
+  const resolve = useResolveText();
   const { definition } = layer;
   if (!isFeedLayer(definition) || layer.sorted.length === 0) {
     return null;
@@ -222,7 +236,7 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
           label={t("layers.list.sortBy", {})}
           options={definition.list.sorts.map((sort) => ({
             value: sort.id,
-            label: sort.label,
+            label: resolve(sort.label),
           }))}
           value={layer.sortId}
           onValueChange={(sortId) => layers.setSort(definition.id, sortId)}
@@ -236,7 +250,7 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
               feature.fields,
               formatters,
               context,
-            ) ?? definition.name;
+            ) ?? resolve(definition.name);
           const secondary = formatTemplate(
             definition.list.secondary,
             feature.fields,
@@ -301,22 +315,25 @@ export function LayerItem({
   const { definition, enabled, status } = layer;
   // Only worth a line for someone who is saving data.
   const saveData = useSaveData();
-  const emptyText = loadsFeatures(definition) ? definition.emptyText : "";
   const messages = useMessages();
+  const resolve = useResolveText();
+  const emptyText = loadsFeatures(definition)
+    ? resolve(definition.emptyText)
+    : "";
   const format = useFormatMessage();
   const { t } = messages;
   const text = statusText(status, emptyText, messages);
   return (
     <li className={styles.layerItem} data-testid={`layer-${definition.id}`}>
       <Switch
-        label={definition.name}
-        description={definition.description}
+        label={resolve(definition.name)}
+        description={resolve(definition.description)}
         checked={enabled}
         onCheckedChange={(checked) => layers.setEnabled(definition.id, checked)}
       />
       {saveData ? (
         <p className={styles.muted}>
-          {t("layers.usesCost", { cost: definition.dataCost })}
+          {t("layers.usesCost", { cost: resolve(definition.dataCost) })}
         </p>
       ) : null}
       {enabled ? (
@@ -386,13 +403,13 @@ export function LayerItem({
           ))}
           <LayerKey
             definition={definition}
-            label={t("layers.keyFor", { name: definition.name })}
+            label={t("layers.keyFor", { name: resolve(definition.name) })}
             testId={`layer-legend-${definition.id}`}
           />
           {definition.disclaimer ? (
             <p className={styles.disclaimer}>
               <Icon icon={TriangleAlert} />
-              {definition.disclaimer}
+              {resolve(definition.disclaimer)}
             </p>
           ) : null}
           <FeatureList

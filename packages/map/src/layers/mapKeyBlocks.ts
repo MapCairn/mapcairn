@@ -7,6 +7,7 @@ import {
   legendFor,
   type Message,
   type MessageCatalogue,
+  resolveText,
 } from "@mapcairn/core";
 import type { DataLayerState } from "./useDataLayers";
 
@@ -42,7 +43,7 @@ export function mapKeyBlocks(
     return [
       {
         id: definition.id,
-        name: definition.name,
+        name: resolveText(catalogue, definition.name),
         definition,
         entries: [first, ...rest],
         chosenTime: describeChosenTime(definition, controls),

@@ -6,7 +6,9 @@ import {
   FakeLayerCatalogue,
   FakeMapAdapter,
   FakeMessageCatalogue,
+  type FeedLayerDefinition,
   type LayerDefinition,
+  type PointStyle,
   SAMPLE_ALERT_LAYER,
   SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
@@ -1186,5 +1188,205 @@ describe("LayersSection", () => {
         within(group).getByRole("combobox", { name: "Time (UTC)" }),
       ).toBeDisabled();
     });
+  });
+});
+
+describe("LayersSection definition text", () => {
+  const KEYED: FeedLayerDefinition<PointStyle> = {
+    ...SAMPLE_ALERT_LAYER,
+    id: "keyed-alerts",
+    name: "layer.fire-alerts.name",
+    description: "layer.fire-alerts.description",
+    group: "layer.group.fires",
+    dataCost: "layer.gdacs.dataCost",
+    disclaimer: "layer.gdacs.disclaimer",
+    emptyText: "layer.fire-alerts.emptyText",
+    controls: [
+      {
+        kind: "segmented",
+        id: "period",
+        label: "layer.earthquakes.control.window.label",
+        options: [
+          {
+            value: "day",
+            label: "layer.earthquakes.control.window.option.day",
+          },
+          { value: "week", label: "A plain week" },
+        ],
+        default: "day",
+      },
+      {
+        kind: "switch",
+        id: "more",
+        label: "layer.earthquakes.control.small.label",
+        description: "layer.earthquakes.control.small.description",
+        default: false,
+      },
+    ],
+    style: {
+      colour: {
+        kind: "category",
+        field: "level",
+        categories: [
+          {
+            value: "Green",
+            label: "layer.gdacs.key.1",
+            colour: "bluish-green",
+            shape: "circle",
+          },
+        ],
+        other: { label: "A plain other", colour: "sky-blue" },
+      },
+    },
+    card: {
+      ...SAMPLE_ALERT_LAYER.card,
+      link: { field: "report", label: "layer.gdacs.card.link" },
+    },
+    list: {
+      ...SAMPLE_ALERT_LAYER.list,
+      sorts: [
+        {
+          id: "newest",
+          label: "layer.gdacs.sort.newest",
+          field: "from",
+          direction: "desc",
+        },
+        { id: "alert", label: "A plain sort", field: "from", direction: "asc" },
+      ],
+    },
+    detail: {
+      ...(SAMPLE_ALERT_LAYER.detail as NonNullable<
+        FeedLayerDefinition["detail"]
+      >),
+      label: "layer.gdacs.detail.label",
+      dataCost: "layer.gdacs.detail.dataCost",
+    },
+  };
+
+  const scripted = () =>
+    new FakeMessageCatalogue({
+      overrides: {
+        "layer.fire-alerts.name": "Brandwaarskuwings",
+        "layer.fire-alerts.description": "Huidige veldbrande.",
+        "layer.group.fires": "Brande",
+        "layer.gdacs.dataCost": "ongeveer 135 KB",
+        "layer.gdacs.disclaimer": "Outomatiese skattings.",
+        "layer.fire-alerts.emptyText": "Geen brandwaarskuwings nou nie.",
+        "layer.earthquakes.control.window.label": "Tydperk",
+        "layer.earthquakes.control.window.option.day": "Dag",
+        "layer.earthquakes.control.small.label": "Sluit kleiner in",
+        "layer.earthquakes.control.small.description": "Onder 2,5.",
+        "layer.gdacs.key.1": "Groen waarskuwing",
+        "layer.gdacs.card.link": "Verslag",
+        "layer.gdacs.sort.newest": "Nuutste",
+        "layer.gdacs.detail.label": "Wys gebied",
+        "layer.gdacs.detail.dataCost": "ongeveer 300 KB",
+      },
+    });
+
+  it("looks the group, name, description and controls up, and shows plain text as written", async () => {
+    const { source } = setup([KEYED], undefined, scripted());
+    expect(
+      screen.getByRole("heading", { name: "Brande", level: 4 }),
+    ).toBeInTheDocument();
+    expect(item("keyed-alerts")).toHaveTextContent("Huidige veldbrande.");
+    source.setFeatures("keyed-alerts", [
+      samplePoint("g", {
+        title: "Brand",
+        level: "Green",
+        from: "2026-11-06T21:00:00",
+      }),
+    ]);
+    toggle("keyed-alerts", "Brandwaarskuwings");
+    const section = within(item("keyed-alerts"));
+    expect(
+      await section.findByRole("radiogroup", { name: "Tydperk" }),
+    ).toBeInTheDocument();
+    expect(section.getByRole("radio", { name: "Dag" })).toBeInTheDocument();
+    expect(
+      section.getByRole("radio", { name: "A plain week" }),
+    ).toBeInTheDocument();
+    expect(
+      section.getByRole("switch", { name: "Sluit kleiner in" }),
+    ).toHaveAccessibleDescription("Onder 2,5.");
+    expect(section.getByText("Outomatiese skattings.")).toBeInTheDocument();
+    expect(section.getByText("Groen waarskuwing")).toBeInTheDocument();
+    expect(section.getByText("A plain other")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+        "Brandwaarskuwings:",
+      ),
+    );
+  });
+
+  it("looks the list's sort options, the card and its detail button up", async () => {
+    const { source, layers } = setup([KEYED], undefined, scripted());
+    source.setFeatures("keyed-alerts", [
+      samplePoint("g", {
+        title: "Brand",
+        level: "Green",
+        from: "2026-11-06T21:00:00",
+        report: "https://alerts.test/report",
+        area: "https://alerts.test/a",
+      }),
+    ]);
+    toggle("keyed-alerts", "Brandwaarskuwings");
+    const list = await screen.findByTestId("layer-list-keyed-alerts");
+    expect(
+      within(list).getByRole("radio", { name: "Nuutste" }),
+    ).toBeInTheDocument();
+    expect(
+      within(list).getByRole("radio", { name: "A plain sort" }),
+    ).toBeInTheDocument();
+    act(() => layers().select("keyed-alerts", "g"));
+    const card = screen.getByTestId("feature-card");
+    expect(card).toHaveTextContent("Brandwaarskuwings");
+    expect(card).toHaveTextContent("Groen waarskuwing");
+    expect(card).toHaveTextContent("Outomatiese skattings.");
+    expect(within(card).getByTestId("feature-card-link")).toHaveAccessibleName(
+      /^Verslag/,
+    );
+    expect(
+      within(card).getByRole("button", { name: "Wys gebied" }),
+    ).toBeInTheDocument();
+    expect(within(card).getByText("Uses ongeveer 300 KB.")).toBeInTheDocument();
+  });
+
+  it("looks the empty text up", async () => {
+    setup([KEYED], undefined, scripted());
+    toggle("keyed-alerts", "Brandwaarskuwings");
+    await waitFor(() =>
+      expect(screen.getByTestId("layer-status-keyed-alerts")).toHaveTextContent(
+        "Geen brandwaarskuwings nou nie.",
+      ),
+    );
+  });
+
+  it("reads the group in the turn-off button and a time control's label and note", async () => {
+    const timed: LayerDefinition = {
+      ...SAMPLE_TIME_LAYER,
+      controls: SAMPLE_TIME_LAYER.controls.map((each) => ({
+        ...each,
+        label: "layer.rainfall-half-hourly.control.time.label",
+        description: "layer.rainfall-half-hourly.control.time.description",
+      })),
+    };
+    const messages = new FakeMessageCatalogue({
+      overrides: {
+        "layer.group.fires": "Brande",
+        "layer.fire-alerts.name": "Brandwaarskuwings",
+        "layer.rainfall-half-hourly.control.time.label": "Halfuur gewys",
+        "layer.rainfall-half-hourly.control.time.description":
+          "Sommige het geen data.",
+      },
+    });
+    setup([KEYED, timed], undefined, messages);
+    toggle("keyed-alerts", "Brandwaarskuwings");
+    expect(
+      await screen.findByRole("button", { name: "Turn off 1 in Brande" }),
+    ).toBeInTheDocument();
+    toggle("sample-rain", "Sample rain");
+    const control = await screen.findByRole("group", { name: "Halfuur gewys" });
+    expect(control).toHaveTextContent("Sommige het geen data.");
   });
 });

@@ -377,3 +377,16 @@ describe("StatusMessage message catalogue", () => {
     });
   });
 });
+
+describe("StatusMessage without a services provider", () => {
+  it("falls back to the SDK's English for its buttons", () => {
+    vi.useFakeTimers();
+    renderBare(
+      <StatusMessage variant="error" onDismiss={vi.fn()}>
+        Failed
+      </StatusMessage>,
+    );
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeTruthy();
+    vi.useRealTimers();
+  });
+});

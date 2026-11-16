@@ -4,6 +4,7 @@ import {
   type BasemapCatalogue,
   BUILT_IN_BASEMAP_CATALOGUE,
   type ClipboardPort,
+  type DefinitionText,
   type DevicePreferencesValue,
   type FeatureQuery,
   type FeatureSelection,
@@ -18,6 +19,7 @@ import {
   type MessageCatalogue,
   type ResolvedTheme,
   type RoutingProvider,
+  resolveText,
   resolveTheme,
   type SearchProvider,
   type Settings,
@@ -33,7 +35,8 @@ import {
   useSyncExternalStore,
 } from "react";
 import { ActiveMessagesContext } from "./activeMessages";
-import { useServices } from "./ServicesProvider";
+import { ENGLISH_MESSAGES } from "./englishMessages";
+import { useOptionalServices, useServices } from "./ServicesProvider";
 
 /** The map adapter factory, used by the map host to pick an engine for a basemap. */
 export function useMapAdapterFactory(): MapAdapterFactory {
@@ -109,6 +112,28 @@ export function useThemeSource(): ThemeSource {
 export function useMessages(): MessageCatalogue {
   const services = useServices();
   return useContext(ActiveMessagesContext) ?? services.messages;
+}
+
+/**
+ * Reads a definition's text in the active language: a message key is looked
+ * up in the catalogue, a plain string is returned as written (see
+ * `resolveText`). The function is stable while the catalogue is.
+ */
+export function useResolveText(): (text: DefinitionText) => string {
+  const messages = useMessages();
+  return useCallback((text) => resolveText(messages, text), [messages]);
+}
+
+/**
+ * As {@link useMessages}, but without a {@link ServicesProvider} above it the
+ * SDK's English catalogue, so a piece a consumer may render on its own (the
+ * skip link, a status message) keeps working. Inside a provider it is the
+ * active catalogue.
+ */
+export function useOptionalMessages(): MessageCatalogue {
+  const services = useOptionalServices();
+  const active = useContext(ActiveMessagesContext);
+  return active ?? services?.messages ?? ENGLISH_MESSAGES;
 }
 
 /**

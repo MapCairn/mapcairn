@@ -5,6 +5,7 @@ import {
   announceLayerZoomOut,
   isQueryLayer,
   type LayerDefinition,
+  textOrMessage,
   type ZoomLimit,
 } from "@mapcairn/core";
 import type { Announce } from "../ui/LiveRegion";
@@ -75,8 +76,8 @@ export function reportZoomLimits(
     announced.set(definition.id, limit.kind);
     announce(
       limit.kind === "zoom-in"
-        ? announceLayerZoomIn(definition.name, limit.level)
-        : announceLayerZoomOut(definition.name, limit.level),
+        ? announceLayerZoomIn(textOrMessage(definition.name), limit.level)
+        : announceLayerZoomOut(textOrMessage(definition.name), limit.level),
       { priority: "polite" },
     );
   }
