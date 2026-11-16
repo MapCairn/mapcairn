@@ -2,6 +2,8 @@
 
 Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, layers supplied at runtime, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md). The Content Security Policy a host page needs is in [`content-security-policy.md`](content-security-policy.md).
 
+For translating the interface or offering a choice of languages, see the [translation guide](translate-the-sdk.md).
+
 ## Embed the SDK in an app of your own
 
 `examples/embed` is a one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. Run it with `npm run dev -w @mapcairn/example-embed` (add `-- --port <port>` to pick a port).
@@ -23,7 +25,7 @@ What an app of your own provides:
 
 Defining a basemap in the SDK and offering it on a host are separate. `BASEMAPS` holds every basemap the SDK defines (seven today). The reference site does not offer them all: `packages/web/src/basemaps/hostBasemaps.ts` lists the ids it offers, in picker order (four today), and builds its catalogue from them. Defining a basemap does not put it on the site.
 
-1. Add a `BasemapDefinition` to `BASEMAPS` in `packages/core/src/basemaps/basemaps.ts`. A `raster` source is a tile URL template with 256 px tiles, and a `vector` source is a MapLibre style URL. Set the zoom limits, the provider credits and `appearance`. For a heavy layer that a vector style can do without (a shaded-relief raster, say), list its style layer id in `saveDataOmitLayers`; Save data mode then leaves it, and any source only it uses, out of the style. The SDK's basemap test lists the tile origins whose terms allow commercial use with no agreement; it fails for a new origin until you have read that provider's terms and added the origin there with the reason.
+1. Add a `BasemapDefinition` to `BASEMAPS` in `packages/core/src/basemaps/basemaps.ts`. Its `name` is a `DefinitionText`: a `MessageKey` (`basemap.<id>.name`, with the English in `EN_GB_CATALOGUE`, so a language can translate it) or a plain string, which is shown as written and is what a basemap of your own host can use. A `raster` source is a tile URL template with 256 px tiles, and a `vector` source is a MapLibre style URL. Set the zoom limits, the provider credits and `appearance`. For a heavy layer that a vector style can do without (a shaded-relief raster, say), list its style layer id in `saveDataOmitLayers`; Save data mode then leaves it, and any source only it uses, out of the style. The SDK's basemap test lists the tile origins whose terms allow commercial use with no agreement; it fails for a new origin until you have read that provider's terms and added the origin there with the reason.
 
 A host of your own builds a catalogue from `BASEMAPS`, or from its own definitions, and needs nothing more from this repository. To offer the basemap on the reference site as well:
 
@@ -47,6 +49,8 @@ A layer is data, not code: one definition file, one recorded fixture (feeds only
 2. For a feed, record a small sample response in `packages/web/src/layers/fixtures/` and add it to `manifest.json` with the number of features it should decode to (and a detail fixture if the layer has `detail`).
 3. Add the provider's origins to `public/_headers` and `src/constants/securityHeaders.ts`: feeds in `connect-src`, tiles in `connect-src` and `img-src`.
 4. Add the provider's credit to `ATTRIBUTIONS.md` and name the provider in the privacy page and `PRIVACY.md`.
+
+The text a person reads in a definition (`name`, `description`, `group`, `dataCost`, `disclaimer`, `emptyText`, control and option labels, the labels of a style's classes, sort labels, the card's link label and the detail source's `label` and `dataCost`) is a `MessageKey` or a plain string. A plain string is shown as written, which is all a layer of your own host needs. The reference host's definitions use keys, so each key is added to `MessageKey`, `EN_GB_CATALOGUE` (with the exact English) and `EXPECTED_PLACEHOLDERS` in `packages/core/src/lint/messages.test.ts`, and to each of the site's translations (`packages/web/src/i18n/af.ts`), which typecheck holds complete. Card lines, the list line and polygon labels are templates over the feed's fields, so they stay plain strings, and the credits in `attribution` are never translated.
 
 Run `npx --no-install vitest run packages/web/src/layers`: the definition-loop test checks the schema, the fixture, the CSP and the credit, and names the line to add for anything missing. A minimal tile layer:
 
@@ -309,7 +313,7 @@ The search pill suggests places as the person types only when `services.suggesti
 1. Implement `SuggestionProvider` from `@mapcairn/core` in `packages/web/src/adapters/search`. `suggest(query, { limit, signal })` resolves `SearchResult`s, each with a centre and optionally an extent, so picking one needs no second lookup. Reject only with `SearchError` (`offline`, `rate-limited`, `failed`) or `PortAbortError`, give each request a timeout, keep to the service's usage limits inside the adapter with `RequestSpacer`, and send no cookies or referrer. `PhotonSuggestionProvider` is the example.
 2. Run `runSuggestionProviderContract` against it with a scripted `fetch`, as `PhotonSuggestionProvider.test.ts` does.
 3. Register it as `suggestions` in `createServices()`. Leave it out and the pill keeps submit-only search.
-4. Allow its origin in `connect-src`, and say on the privacy page and in `PRIVACY.md`, `ATTRIBUTIONS.md` and the host's Settings note (`providerNotes.ts`) that the text typed so far goes to it as the person types. That is more than a submitted search sends, so the text must say it plainly.
+4. Allow its origin in `connect-src`, and say on the privacy page and in `PRIVACY.md`, `ATTRIBUTIONS.md` and the host's Settings note (`host.notes.privacy` in `EN_GB_CATALOGUE` and each language's catalogue) that the text typed so far goes to it as the person types. That is more than a submitted search sends, so the text must say it plainly.
 
 When to ask is not the adapter's job. `useSuggestions` waits for a pause in typing, asks for at least three characters, cancels what a newer keystroke supersedes, stops for a cooldown after repeated failures and announces once that suggestions are unavailable.
 

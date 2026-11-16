@@ -343,3 +343,21 @@ describe("SheetContent section focus", () => {
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("SheetContent message catalogue", () => {
+  it("asks for the Basemap section title by key", () => {
+    const services = createFakeServices();
+    render(
+      tree(services, {
+        basemapId: "liberty",
+        onBasemapChange: vi.fn(),
+        hasPin: false,
+        onDropPin: vi.fn(),
+      }),
+    );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "panels.basemap.title",
+      params: {},
+    });
+  });
+});

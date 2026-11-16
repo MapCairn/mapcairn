@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { useReadingDirection } from "@mapcairn/react";
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
@@ -13,6 +14,11 @@ export interface SegmentedControlOption {
   readonly label: string;
   /** Optional decorative icon shown before the label. It is hidden from assistive technology. */
   readonly icon?: ReactNode;
+  /**
+   * The BCP 47 language the label is written in, when it differs from the
+   * page's, so assistive technology reads it in that language.
+   */
+  readonly lang?: string;
 }
 
 /** Props for {@link SegmentedControl}. */
@@ -55,6 +61,7 @@ export function SegmentedControl({
   className,
   "data-testid": testId,
 }: SegmentedControlProps) {
+  const direction = useReadingDirection();
   return (
     <ToggleGroup.Root
       type="single"
@@ -62,6 +69,7 @@ export function SegmentedControl({
       aria-label={label}
       value={value}
       disabled={disabled}
+      dir={direction}
       onValueChange={(next) => {
         if (next) {
           onValueChange(next);
@@ -74,6 +82,7 @@ export function SegmentedControl({
           key={option.value}
           className={styles.item}
           value={option.value}
+          lang={option.lang}
           data-testid={testId ? `${testId}-${option.value}` : undefined}
         >
           {option.icon ? (

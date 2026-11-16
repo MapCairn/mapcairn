@@ -10,6 +10,7 @@ import {
   slotsOnDay,
 } from "@mapcairn/core";
 import { useId, useState } from "react";
+import { useFormatMessage, useMessages, useResolveText } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import * as styles from "./Layers.css";
 
@@ -51,6 +52,9 @@ export function DateTimeControl({
   testId,
 }: DateTimeControlProps) {
   const announce = useAnnounce();
+  const format = useFormatMessage();
+  const { t } = useMessages();
+  const resolve = useResolveText();
   const statusId = useId();
   const descriptionId = useId();
   const describedBy = control.description
@@ -73,10 +77,10 @@ export function DateTimeControl({
   };
   return (
     <fieldset className={styles.timeField} disabled={disabled}>
-      <legend className={styles.timeLegend}>{control.label}</legend>
+      <legend className={styles.timeLegend}>{resolve(control.label)}</legend>
       <div className={styles.timeInputs}>
         <label className={styles.field}>
-          Date (UTC)
+          {t("layers.time.date", {})}
           <input
             type="date"
             className={styles.dateInput}
@@ -93,7 +97,7 @@ export function DateTimeControl({
           />
         </label>
         <label className={styles.field}>
-          Time (UTC)
+          {t("layers.time.time", {})}
           <select
             className={styles.dateInput}
             value={value}
@@ -110,13 +114,14 @@ export function DateTimeControl({
         </label>
       </div>
       <p id={statusId} className={styles.muted}>
-        Showing {describeSlot(value, control.stepMinutes)}. Newest available:{" "}
-        {describeSlotStart(range.max)}. Newer times may not be out yet, so they
-        are not offered.
+        {t("layers.time.status", {
+          slot: format(describeSlot(value, control.stepMinutes)),
+          newest: format(describeSlotStart(range.max)),
+        })}
       </p>
       {control.description ? (
         <p id={descriptionId} className={styles.muted}>
-          {control.description}
+          {resolve(control.description)}
         </p>
       ) : null}
     </fieldset>

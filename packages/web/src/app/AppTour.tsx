@@ -2,52 +2,56 @@
 // Copyright MapCairn contributors
 import { TourCard, type TourStep, type UseTour } from "@mapcairn/map";
 
-/** The reference host's tour steps, with their words. */
+/**
+ * The reference host's tour steps. Their words are message keys, so the tour
+ * card and the step announcement read them in the active language.
+ */
 export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "layers",
-    heading: "Turn on a layer",
-    text: "Open Map options and turn on any layer under Layers.",
+    heading: "app.tour.layers.heading",
+    text: "app.tour.layers.text",
     advance: { kind: "layer-on" },
     target: "map-options",
     side: "end",
   },
   {
     id: "map-shape",
-    heading: "Try the globe",
-    text: "Open Settings and switch Map shape between Flat and Globe. Help, just below it, lists the keys and can start this tour again.",
+    heading: "app.tour.mapShape.heading",
+    text: "app.tour.mapShape.text",
     advance: { kind: "projection-changed" },
     target: "settings",
     side: "end",
   },
   {
     id: "search",
-    heading: "Find a place",
-    text: "Type a place name in Search and press Enter.",
+    heading: "app.tour.search.heading",
+    text: "app.tour.search.text",
     advance: { kind: "surface", surface: "search" },
     target: "search",
     side: "start",
   },
 ];
 
-const WELCOME = {
-  heading: "New to MapCairn?",
-  text: "Data such as earthquakes and fires is drawn only once you turn its layer on. This three-step tour shows how.",
-  announcement:
-    "New to MapCairn? A three-step tour is after the search box, with Take the tour and Skip.",
-};
-
-const ENDING = {
-  heading: "Tour finished",
-  text: "Help, in Settings, can start it again.",
-};
-
 /** Props for {@link AppTour}. */
 export interface AppTourProps {
   readonly tour: UseTour;
 }
 
-/** The first-visit tour card with the reference host's words. */
+/** The first-visit tour card with the reference host's words, as keys. */
 export function AppTour({ tour }: AppTourProps) {
-  return <TourCard tour={tour} welcome={WELCOME} ending={ENDING} />;
+  return (
+    <TourCard
+      tour={tour}
+      welcome={{
+        heading: "app.tour.welcome.heading",
+        text: "app.tour.welcome.text",
+        announcement: "app.tour.welcome.announcement",
+      }}
+      ending={{
+        heading: "app.tour.ending.heading",
+        text: "app.tour.ending.text",
+      }}
+    />
+  );
 }

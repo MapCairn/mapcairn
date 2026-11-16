@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
+import { isMessageKey, resolveText } from "../messages/resolveText";
 import { MAP_KEY_HELP, mapKeyAction } from "./keyboard";
+
+const english = new FakeMessageCatalogue();
 
 function press(
   key: string,
@@ -146,6 +150,13 @@ describe("browser shortcuts", () => {
 });
 
 describe("keyboard help", () => {
+  it("is written as message keys, so a language can translate it", () => {
+    for (const entry of MAP_KEY_HELP) {
+      expect(isMessageKey(entry.keys)).toBe(true);
+      expect(isMessageKey(entry.description)).toBe(true);
+    }
+  });
+
   it("lists every shortcut with a description", () => {
     expect(MAP_KEY_HELP.length).toBeGreaterThan(0);
     for (const entry of MAP_KEY_HELP) {
@@ -156,7 +167,8 @@ describe("keyboard help", () => {
 
   it("documents panning, rotation, north, zooming, pins and Escape", () => {
     const text = MAP_KEY_HELP.map(
-      (entry) => `${entry.keys} ${entry.description}`,
+      (entry) =>
+        `${resolveText(english, entry.keys)} ${resolveText(english, entry.description)}`,
     ).join("\n");
     for (const topic of [
       /pan/i,

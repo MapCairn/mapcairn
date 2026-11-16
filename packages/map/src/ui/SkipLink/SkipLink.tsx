@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from "react";
+import { useOptionalMessages } from "../../services";
 import { visuallyHidden } from "../VisuallyHidden/VisuallyHidden.css";
 import { skipLink } from "./SkipLink.css";
 
@@ -9,7 +10,7 @@ export interface SkipLinkProps
   extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "children" | "href"> {
   /** The id of the element to move focus to. It must be focusable. */
   readonly targetId: string;
-  /** The link text. Defaults to "Skip to map". */
+  /** The link text. Defaults to the catalogue's "ui.skipToMap". */
   readonly children?: ReactNode;
 }
 
@@ -23,11 +24,12 @@ export interface SkipLinkProps
  */
 export function SkipLink({
   targetId,
-  children = "Skip to map",
+  children,
   className,
   onClick,
   ...rest
 }: SkipLinkProps) {
+  const { t } = useOptionalMessages();
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event);
     if (event.defaultPrevented) {
@@ -50,7 +52,7 @@ export function SkipLink({
       }
       onClick={handleClick}
     >
-      {children}
+      {children ?? t("ui.skipToMap", {})}
     </a>
   );
 }

@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
+import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import { expect, type Locator, type Page } from "@playwright/test";
+import {
+  type CatalogueText,
+  namePattern,
+  startsWith,
+} from "../support/language";
 import { LONG_PRESS_DELAY_MS, TIMER_SLACK_MS } from "../support/timers";
 
 /** How long the first map frame may take: the engine chunk, the worker and the style. */
@@ -28,6 +35,8 @@ export type Detent = "peek" | "half" | "full";
  */
 export class MapPage {
   readonly page: Page;
+  /** The text of the language the page is expected to speak, by message key. */
+  readonly messages: CatalogueText;
 
   /** The page's visually hidden h1. */
   readonly heading: Locator;
@@ -131,105 +140,154 @@ export class MapPage {
   readonly politeAnnouncer: Locator;
   readonly assertiveAnnouncer: Locator;
 
-  constructor(page: Page) {
+  constructor(page: Page, messages: CatalogueText = EN_GB_CATALOGUE) {
+    const m = messages;
     this.page = page;
+    this.messages = messages;
     this.heading = page.getByRole("heading", { level: 1 });
-    this.skipLink = page.getByRole("link", { name: "Skip to map" });
-    this.region = page.getByRole("region", { name: "Map", exact: true });
+    this.skipLink = page.getByRole("link", { name: m["ui.skipToMap"] });
+    this.region = page.getByRole("region", {
+      name: m["host.map.label"],
+      exact: true,
+    });
     this.host = page.getByTestId("map-host");
     this.chrome = page.getByTestId("map-chrome");
 
-    this.searchLandmark = page.getByRole("search", { name: "Search" });
-    this.searchInput = page.getByRole("combobox", { name: "Search places" });
-    this.searchClear = page.getByRole("button", { name: "Clear search" });
-    this.searchList = page.getByRole("listbox", { name: "Search results" });
+    this.searchLandmark = page.getByRole("search", {
+      name: m["tools.search.label"],
+    });
+    this.searchInput = page.getByRole("combobox", {
+      name: m["tools.search.places"],
+    });
+    this.searchClear = page.getByRole("button", {
+      name: m["tools.search.clear"],
+    });
+    this.searchList = page.getByRole("listbox", {
+      name: m["tools.search.results"],
+    });
     this.searchOptions = this.searchList.getByRole("option");
     this.searchPanel = page.getByTestId("location-search-panel");
     this.searchRetry = page.getByTestId("location-search-retry");
     this.searchSubmit = this.searchLandmark.getByRole("button", {
-      name: "Search",
+      name: m["tools.search.label"],
       exact: true,
     });
 
-    this.mapControls = page.getByRole("group", { name: "Map controls" });
-    this.mapOptionsButton = page.getByRole("button", { name: "Map options" });
-    this.measureButton = page.getByRole("button", {
-      name: "Measure distance and area",
+    this.mapControls = page.getByRole("group", {
+      name: m["chrome.endStack.controls"],
     });
-    this.directionsButton = page.getByRole("button", { name: "Directions" });
-    this.drawButton = page.getByRole("button", { name: "Draw shapes" });
-    this.locateButton = page.getByRole("button", { name: "Locate me" });
+    this.mapOptionsButton = page.getByRole("button", {
+      name: m["chrome.endStack.mapOptions"],
+    });
+    this.measureButton = page.getByRole("button", {
+      name: m["chrome.endStack.measure"],
+    });
+    this.directionsButton = page.getByRole("button", {
+      name: m["chrome.endStack.directions"],
+    });
+    this.drawButton = page.getByRole("button", {
+      name: m["chrome.endStack.draw"],
+    });
+    this.locateButton = page.getByRole("button", {
+      name: m["chrome.endStack.locate"],
+    });
     this.settingsButton = page.getByRole("button", {
-      name: "Settings",
+      name: m["chrome.endStack.settings"],
       exact: true,
     });
-    this.zoomControls = page.getByRole("group", { name: "Zoom controls" });
-    this.zoomInButton = page.getByRole("button", { name: "Zoom in" });
-    this.zoomOutButton = page.getByRole("button", { name: "Zoom out" });
+    this.zoomControls = page.getByRole("group", {
+      name: m["chrome.endStack.zoomControls"],
+    });
+    this.zoomInButton = page.getByRole("button", {
+      name: m["chrome.endStack.zoomIn"],
+    });
+    this.zoomOutButton = page.getByRole("button", {
+      name: m["chrome.endStack.zoomOut"],
+    });
     this.compassButton = page.getByRole("button", {
-      name: "Reset bearing to north",
+      name: m["chrome.endStack.resetBearing"],
     });
 
     this.sheet = page.getByTestId("map-options-sheet");
     this.sheetHeading = this.sheet.getByRole("heading", {
-      name: "Map options",
+      name: m["app.sheetTitle.mapOptions"],
       level: 2,
     });
     this.settingsHeading = this.sheet.getByRole("heading", {
-      name: "Settings and help",
+      name: m["app.sheetTitle.settings"],
       level: 2,
     });
-    this.sheetHandle = page.getByRole("button", { name: "Resize panel" });
+    this.sheetHandle = page.getByRole("button", {
+      name: m["chrome.sheet.resize"],
+    });
     this.sheetClose = this.sheet.getByRole("button", {
-      name: "Close",
+      name: m["chrome.sheet.close"],
       exact: true,
     });
-    this.basemapPicker = page.getByRole("radiogroup", { name: "Basemap" });
+    this.basemapPicker = page.getByRole("radiogroup", {
+      name: m["panels.basemap.groupLabel"],
+    });
     this.dropPinButton = page.getByRole("button", {
-      name: "Drop pin at map centre",
+      name: m["panels.pin.drop"],
     });
 
     this.pinCard = page.getByTestId("pin-card");
-    this.pinHeading = page.getByRole("heading", { name: "Dropped pin" });
+    this.pinHeading = page.getByRole("heading", {
+      name: m["tools.pin.heading"],
+    });
     this.pinCoordinates = page.getByTestId("pin-coordinates");
     this.pinAddress = page.getByTestId("pin-address");
     this.pinLookupButton = page.getByRole("button", {
-      name: "Look up address",
+      name: m["tools.pin.lookUp"],
     });
     this.pinLookupNote = page.getByTestId("pin-lookup-note");
     this.pinLookupRetryButton = page.getByRole("button", {
-      name: "Try again",
+      name: m["tools.tryAgain"],
     });
     this.pinAddressLoading = page.getByTestId("pin-address-loading");
     this.pinAddressError = page.getByTestId("pin-address-error");
     this.pinCopyButton = page.getByRole("button", {
-      name: "Copy coordinates",
+      name: m["tools.pin.copy"],
     });
-    this.pinClearButton = page.getByRole("button", { name: "Clear pin" });
+    this.pinClearButton = page.getByRole("button", {
+      name: m["tools.pin.clear"],
+    });
     this.pinCopyFeedback = page.getByTestId("pin-copy-feedback");
     this.pinMarker = page.getByTestId("pin-marker");
 
-    this.measureToolbar = page.getByRole("toolbar", { name: "Measure" });
+    this.measureToolbar = page.getByRole("toolbar", {
+      name: m["tools.measure.label"],
+    });
     this.measureReadout = page.getByTestId("measure-readout");
     this.measureAddPoint = page.getByRole("button", {
-      name: "Add point at map centre",
+      name: m["tools.addPointAtCentre"],
     });
-    this.measureUndo = page.getByRole("button", { name: "Undo last point" });
-    this.measureClear = page.getByRole("button", { name: "Clear points" });
+    this.measureUndo = page.getByRole("button", {
+      name: m["tools.measure.undo"],
+    });
+    this.measureClear = page.getByRole("button", {
+      name: m["tools.measure.clear"],
+    });
     this.measureDone = this.measureToolbar.getByRole("button", {
-      name: "Done",
+      name: m["tools.done"],
     });
     this.measureOverlay = page.getByTestId("measure-overlay");
 
-    this.drawToolbar = page.getByRole("toolbar", { name: "Draw" });
+    this.drawToolbar = page.getByRole("toolbar", {
+      name: m["tools.draw.toolbar"],
+    });
     this.drawStatus = page.getByTestId("draw-status");
     this.drawMeasure = page.getByTestId("draw-measure");
     this.drawAddPoint = this.drawToolbar.getByTestId("draw-add-point");
-    this.drawUndo = this.drawToolbar.getByRole("button", { name: "Undo" });
-    this.drawRedo = this.drawToolbar.getByRole("button", { name: "Redo" });
+    this.drawUndo = this.drawToolbar.getByRole("button", {
+      name: m["tools.draw.undo"],
+    });
+    this.drawRedo = this.drawToolbar.getByRole("button", {
+      name: m["tools.draw.redo"],
+    });
     this.drawRemove = this.drawToolbar.getByTestId("draw-remove");
     this.drawShapesButton = this.drawToolbar.getByRole("button", {
-      name: "Shapes and export",
+      name: m["tools.draw.shapesAndExport"],
     });
     this.drawPrimary = this.drawToolbar.getByTestId("draw-done");
     this.drawIssue = page.getByTestId("draw-issue");
@@ -238,22 +296,26 @@ export class MapPage {
     this.shapesSection = page.getByTestId("sheet-section-shapes");
     this.layersSection = page.getByTestId("sheet-section-layers");
     this.turnOffAllButton = this.layersSection.getByRole("button", {
-      name: /^Turn off all layers/,
+      name: startsWith(m["layers.turnOff.all"]),
     });
     this.undoTurnOffButton = this.layersSection.getByRole("button", {
-      name: /^Undo/,
+      name: startsWith(m["layers.turnOff.undo"]),
     });
-    this.mapKey = page.getByRole("region", { name: "Map key" });
+    this.mapKey = page.getByRole("region", { name: m["layers.key.title"] });
     this.mapKeyToggle = this.mapKey.getByRole("button", {
-      name: /^Map key, \d+ layers?$/,
+      name: namePattern(m["layers.key.toggle"]),
     });
     this.mapKeySlot = page.locator('[data-chrome="map-key"]');
 
     this.sheetBrand = page.getByTestId("sheet-brand");
     this.brandMark = page.getByTestId("brand-mark");
     this.brandName = page.getByTestId("brand-name");
-    this.creditsButton = page.getByRole("button", { name: "Map credits" });
-    this.creditsRegion = page.getByRole("region", { name: "Map credits" });
+    this.creditsButton = page.getByRole("button", {
+      name: m["chrome.attribution.label"],
+    });
+    this.creditsRegion = page.getByRole("region", {
+      name: m["chrome.attribution.label"],
+    });
 
     this.scaleBar = page.locator('[data-chrome="scale-bar"]');
     this.zoomLevel = page.getByTestId("zoom-level");

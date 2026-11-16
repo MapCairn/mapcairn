@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
+import { formatMessage } from "../messages/formatMessage";
+import type { Message } from "../ports/messages";
 import type { ReachableAreaFeature, RouteLeg } from "../ports/routing";
 import {
   AREA_MINUTES,
@@ -17,7 +20,12 @@ import {
   stopLetter,
   TRAVEL_MODES,
   travelModeLabel,
+  travelModeParticiple,
 } from "./directions";
+
+/** The English text of a message, as the live region would say it. */
+const english = (value: Message) =>
+  formatMessage(new FakeMessageCatalogue(), value);
 
 const PARIS = { lat: 48.8566, lng: 2.3522 };
 const BERLIN = { lat: 52.52, lng: 13.405 };
@@ -80,8 +88,10 @@ describe("naming stops", () => {
   });
 
   it("describes a stop by its label, or by its coordinates when it has none", () => {
-    expect(describeStop(0, stop("a", PARIS, "Paris"))).toBe("Stop A, Paris");
-    expect(describeStop(1, stop("b", BERLIN))).toBe(
+    expect(english(describeStop(0, stop("a", PARIS, "Paris")))).toBe(
+      "Stop A, Paris",
+    );
+    expect(english(describeStop(1, stop("b", BERLIN)))).toBe(
       "Stop B, 52.52000, 13.40500",
     );
   });
@@ -90,7 +100,7 @@ describe("naming stops", () => {
 describe("travel modes", () => {
   it("offers drive, walk and cycle with names for each", () => {
     expect(TRAVEL_MODES).toEqual(["drive", "walk", "cycle"]);
-    expect(TRAVEL_MODES.map(travelModeLabel)).toEqual([
+    expect(TRAVEL_MODES.map((mode) => english(travelModeLabel(mode)))).toEqual([
       "Drive",
       "Walk",
       "Cycle",
@@ -244,17 +254,34 @@ describe("reachable area size", () => {
 
 describe("routing error messages", () => {
   it("says what happened and what to do next for each failure", () => {
-    expect(routingErrorMessage("network", "route")).toMatch(
+    expect(english(routingErrorMessage("network", "route"))).toMatch(
       /could not be reached.*offline/i,
     );
-    expect(routingErrorMessage("rate-limited", "route")).toMatch(/busy/i);
-    expect(routingErrorMessage("invalid", "route")).toMatch(/move/i);
-    expect(routingErrorMessage("unsupported", "area")).toMatch(/another/i);
+    expect(english(routingErrorMessage("rate-limited", "route"))).toMatch(
+      /busy/i,
+    );
+    expect(english(routingErrorMessage("invalid", "route"))).toMatch(/move/i);
+    expect(english(routingErrorMessage("unsupported", "area"))).toMatch(
+      /another/i,
+    );
   });
 
   it("words a missing result for the route or the area", () => {
-    expect(routingErrorMessage("no-route", "route")).toMatch(/No route/);
-    expect(routingErrorMessage("no-route", "area")).toMatch(/Nothing/);
+    expect(english(routingErrorMessage("no-route", "route"))).toMatch(
+      /No route/,
+    );
+    expect(english(routingErrorMessage("no-route", "area"))).toMatch(/Nothing/);
+  });
+
+  it("returns keys, so the wording can be translated", () => {
+    expect(routingErrorMessage("no-route", "area")).toEqual({
+      key: "error.routing.noReachableArea",
+      params: {},
+    });
+    expect(travelModeParticiple("cycle")).toEqual({
+      key: "directions.participle.cycle",
+      params: {},
+    });
   });
 
   it("has a message for every kind that reaches a person", () => {
@@ -265,7 +292,9 @@ describe("routing error messages", () => {
       "rate-limited",
       "unsupported",
     ] as const) {
-      expect(routingErrorMessage(kind, "route").length).toBeGreaterThan(10);
+      expect(
+        english(routingErrorMessage(kind, "route")).length,
+      ).toBeGreaterThan(10);
     }
   });
 });

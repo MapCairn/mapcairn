@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { createFormatterRegistry } from "./formatters";
 import { readPath } from "./paths";
 import {
@@ -102,7 +103,10 @@ describe("fillUrlTemplate", () => {
 
 describe("formatTemplate", () => {
   const formatters = createFormatterRegistry();
-  const context = { now: Date.UTC(2026, 10, 9, 12, 0, 0) };
+  const context = {
+    now: Date.UTC(2026, 10, 9, 12, 0, 0),
+    catalogue: new FakeMessageCatalogue(),
+  };
 
   it("fills fields through named formatters", () => {
     expect(

@@ -389,3 +389,47 @@ describe("EndStack", () => {
     });
   });
 });
+
+describe("EndStack message catalogue", () => {
+  it("asks for every name by key, so each button name and its tooltip share one", () => {
+    const { services } = renderChrome(
+      withRegistry(
+        <EndStack
+          {...props({
+            bearing: 30,
+            onDraw: vi.fn(),
+            directions: {
+              active: false,
+              controls: "map-options-sheet",
+              onToggle: vi.fn(),
+            },
+          })}
+        />,
+      ),
+    );
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "chrome.endStack.label",
+        "chrome.endStack.resetBearing",
+        "chrome.endStack.controls",
+        "chrome.endStack.mapOptions",
+        "chrome.endStack.measure",
+        "chrome.endStack.directions",
+        "chrome.endStack.draw",
+        "chrome.endStack.locate",
+        "chrome.endStack.settings",
+      ]),
+    );
+  });
+
+  it("names the zoom group and buttons by key", () => {
+    const { services } = renderChrome(withRegistry(<EndStack {...props()} />));
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "chrome.endStack.zoomControls",
+        "chrome.endStack.zoomIn",
+        "chrome.endStack.zoomOut",
+      ]),
+    );
+  });
+});

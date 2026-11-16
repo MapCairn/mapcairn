@@ -4,7 +4,7 @@ import { isSettingsSection, type SheetSection } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { type DataLayers, LayersSection } from "../../layers";
-import { usePreferences } from "../../services";
+import { useMessages, usePreferences } from "../../services";
 import { drawingForImage, type UseDraw } from "../../tools/DrawToolbar";
 import { BasemapPicker } from "../BasemapPicker";
 import { ExportSection } from "../ExportSection";
@@ -86,6 +86,7 @@ export function SheetContent({
   onStartTour,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
+  const { t } = useMessages();
   const headings = useRef<Partial<Record<SheetSection, HTMLElement | null>>>(
     {},
   );
@@ -129,7 +130,7 @@ export function SheetContent({
   return (
     <div className={content} data-testid="sheet-content">
       <Section
-        title="Basemap"
+        title={t("panels.basemap.title", {})}
         headingRef={headingRef("basemap")}
         data-testid="sheet-section-basemap"
       >

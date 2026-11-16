@@ -28,7 +28,7 @@ import {
   Section,
   Subheading,
 } from "../panels/Section";
-import { usePreferences } from "../services";
+import { useMessages, usePreferences, useResolveText } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import { CatalogueStatus } from "./CatalogueStatus";
 import { hidesSection } from "./catalogueView";
@@ -78,17 +78,13 @@ export interface LayersSectionProps {
    */
   readonly showTurnOffAll?: boolean;
   /**
-   * The line above the layers, in place of the default "Open data from public
-   * providers. Nothing is requested until you turn a layer on.", which is not
-   * true of every host (one behind a login serves its own data). An empty
-   * string leaves the line out.
+   * The line above the layers, in place of the catalogue's `layers.intro` ("Open
+   * data from public providers. Nothing is requested until you turn a layer
+   * on."), which is not true of every host (one behind a login serves its own
+   * data). An empty string leaves the line out.
    */
   readonly intro?: string;
 }
-
-/** The text above the layers when the host gives none. */
-const DEFAULT_INTRO =
-  "Open data from public providers. Nothing is requested until you turn a layer on.";
 
 /** Sets a ref of either kind, an object or a callback. */
 function setRef<T>(ref: Ref<T> | undefined, value: T | null): void {
@@ -137,8 +133,11 @@ export function LayersSection({
   formatters = DEFAULT_FORMATTERS,
   onShowOnMap,
   showTurnOffAll = true,
-  intro = DEFAULT_INTRO,
+  intro,
 }: LayersSectionProps) {
+  const messages = useMessages();
+  const { t } = messages;
+  const resolve = useResolveText();
   // Read optionally, so the section also renders outside a map (a test, a guide).
   const adapter = useContext(MapContext)?.adapter ?? null;
   const announce = useAnnounce();
@@ -276,19 +275,20 @@ export function LayersSection({
             cardOf(layer.definition).title,
             feature.fields,
             formatters,
-            { now: layers.now() },
+            { now: layers.now(), catalogue: messages },
           )
         : null;
-    announce(announceShowingFeature(title ?? "the feature"), {
+    announce(announceShowingFeature(title ?? t("layers.theFeature", {})), {
       priority: "polite",
     });
     onShowOnMap?.();
   };
 
   const groupLevel = nextHeadingLevel(headingLevel);
+  const shownIntro = intro ?? t("layers.intro", {});
   return (
     <Section
-      title="Layers"
+      title={t("layers.title", {})}
       headingLevel={headingLevel}
       headingRef={setHeading}
       aria-busy={layers.catalogue.status === "loading" || undefined}
@@ -315,7 +315,7 @@ export function LayersSection({
           headingRef={choicesHeading}
         />
       ) : null}
-      {intro ? <p className={styles.intro}>{intro}</p> : null}
+      {shownIntro ? <p className={styles.intro}>{shownIntro}</p> : null}
       <CatalogueStatus
         catalogue={layers.catalogue}
         layerCount={layers.layers.length}
@@ -329,7 +329,7 @@ export function LayersSection({
         {byGroup(layers.layers).map(([group, items]) => (
           <div key={group} className={styles.group}>
             <div className={styles.groupHeader}>
-              <Subheading level={groupLevel}>{group}</Subheading>
+              <Subheading level={groupLevel}>{resolve(group)}</Subheading>
               {showTurnOffAll ? (
                 <TurnOffGroup
                   layers={layers}

@@ -314,3 +314,45 @@ describe("parseCoordinates", () => {
     });
   });
 });
+
+describe("parseCoordinates with a language's hemisphere letters", () => {
+  const afrikaans = { north: "N", south: "S", east: "O", west: "W" };
+
+  it("reads the letters of the language in use", () => {
+    expect(parseCoordinates("26.2041° S, 28.0473° O", afrikaans)).toEqual({
+      lat: -26.2041,
+      lng: 28.0473,
+    });
+    expect(parseCoordinates("o 28.0473°, s 26.2041°", afrikaans)).toEqual({
+      lat: -26.2041,
+      lng: 28.0473,
+    });
+  });
+
+  it("keeps reading N, S, E and W whatever the language", () => {
+    expect(parseCoordinates("26.2041° S, 28.0473° E", afrikaans)).toEqual({
+      lat: -26.2041,
+      lng: 28.0473,
+    });
+  });
+
+  it("does not read a language's letter without being given it", () => {
+    expect(parseCoordinates("26.2041° S, 28.0473° O")).toBeNull();
+  });
+
+  it("lets an English word keep its meaning over a clashing letter", () => {
+    const clashing = { north: "S", south: "N", east: "W", west: "E" };
+    expect(parseCoordinates("26.2041° S, 28.0473° E", clashing)).toEqual({
+      lat: -26.2041,
+      lng: 28.0473,
+    });
+  });
+
+  it("reads a letter that is not ASCII", () => {
+    const accented = { north: "N", south: "Z", east: "Ö", west: "W" };
+    expect(parseCoordinates("26.2041° Z, 28.0473° Ö", accented)).toEqual({
+      lat: -26.2041,
+      lng: 28.0473,
+    });
+  });
+});

@@ -130,6 +130,7 @@ const POLICY_WORDS: Readonly<Record<keyof Settings, string>> = {
   basemapId: "your chosen basemap",
   lastView: "where the map was last left",
   tourSeen: "whether you have answered the first-visit tour",
+  language: "which language you chose",
 };
 
 /**
@@ -145,6 +146,7 @@ const EVERY_SETTING: Settings = {
   basemapId: "positron",
   lastView: { center: { lat: 1, lng: 2 }, zoom: 3, bearing: 0 },
   tourSeen: 1,
+  language: "af",
 };
 
 /** A settings store over an in-memory `Storage`, and that storage's entries. */

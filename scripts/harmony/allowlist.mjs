@@ -28,4 +28,11 @@ export const ALLOW_LIST = [
     reason:
       "The document itself (html and body) is pinned to the viewport so the full-screen map never scrolls or rubber-bands. It is the page root, not a floating surface.",
   },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/host/MapView.css.ts",
+    contains: "translateX(",
+    reason:
+      "A keyframes rule cannot carry a selector. The sweep is written twice (slide, slideRtl) and the loading bar picks the second under a right-to-left page.",
+  },
 ];

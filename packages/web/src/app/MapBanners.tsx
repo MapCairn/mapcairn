@@ -1,27 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { announceTileError } from "@mapcairn/core";
-import { type MapContextValue, StatusMessage, useMap } from "@mapcairn/map";
+import { announceTileError, resolveText } from "@mapcairn/core";
+import {
+  type MapContextValue,
+  StatusMessage,
+  useFormatMessage,
+  useMap,
+  useMessages,
+} from "@mapcairn/map";
 import { useEffect, useState } from "react";
 import { useReloadPage } from "./ErrorPage";
 import * as styles from "./MapBanners.css";
 import type { MapApp } from "./useMapApp";
-
-/** Shown when the engine could not start for a reason other than missing WebGL. */
-export const ENGINE_FAILED_MESSAGE =
-  "The map could not start. Reload the page to try again.";
-
-/** Shown when the engine stopped working after it had loaded (a worker failed). */
-export const ENGINE_STOPPED_MESSAGE =
-  "The map stopped working. Reload the page to try again.";
-
-/** Shown when a chosen basemap could not load; the map keeps the previous one. */
-export const BASEMAP_FAILED_MESSAGE = "That basemap could not be loaded.";
-
-/** Shown when every tile of a basemap failed, which means its provider is down. */
-export function basemapUnavailableMessage(name: string): string {
-  return `${name} is not available right now.`;
-}
 
 /** Props for {@link MapBanners}. */
 export interface MapBannersProps {
@@ -67,6 +57,9 @@ function engineFailed(map: Pick<MapContextValue, "error">): boolean {
  */
 export function MapBanners({ app }: MapBannersProps) {
   const map = useMap();
+  const format = useFormatMessage();
+  const messages = useMessages();
+  const { t } = messages;
   const reload = useReloadPage();
   const [tileErrorDismissed, setTileErrorDismissed] = useState(false);
   const [engineErrorDismissed, setEngineErrorDismissed] = useState(false);
@@ -84,12 +77,14 @@ export function MapBanners({ app }: MapBannersProps) {
   }, [map.error]);
 
   const basemapMessage = app.basemapFailure?.unavailable
-    ? basemapUnavailableMessage(app.basemapFailure.name)
-    : BASEMAP_FAILED_MESSAGE;
+    ? t("app.banner.basemapUnavailable", {
+        name: resolveText(messages, app.basemapFailure.name),
+      })
+    : t("app.banner.basemapFailed", {});
   const engineMessage =
     map.error?.reason === "stopped"
-      ? ENGINE_STOPPED_MESSAGE
-      : ENGINE_FAILED_MESSAGE;
+      ? t("app.banner.engineStopped", {})
+      : t("app.banner.engineFailed", {});
 
   return (
     <div className={styles.stack} data-testid="map-banners">
@@ -99,17 +94,20 @@ export function MapBanners({ app }: MapBannersProps) {
         <StatusMessage
           variant="error"
           data-testid="tile-error"
-          action={{ label: "Retry", onClick: map.retry }}
+          action={{ label: t("app.banner.retry", {}), onClick: map.retry }}
           onDismiss={() => setTileErrorDismissed(true)}
         >
-          {announceTileError()}
+          {format(announceTileError())}
         </StatusMessage>
       ) : null}
       {app.locate.state === "error" ? (
         <StatusMessage
           variant="error"
           data-testid="locate-error"
-          action={{ label: "Try again", onClick: app.locate.locate }}
+          action={{
+            label: t("app.banner.tryAgain", {}),
+            onClick: app.locate.locate,
+          }}
           onDismiss={app.locate.cancel}
         >
           {app.locate.message}
@@ -123,7 +121,7 @@ export function MapBanners({ app }: MapBannersProps) {
             app.basemapFailure.stayed
               ? undefined
               : {
-                  label: "Use previous basemap",
+                  label: t("app.banner.usePreviousBasemap", {}),
                   onClick: app.restorePreviousBasemap,
                 }
           }
@@ -136,7 +134,7 @@ export function MapBanners({ app }: MapBannersProps) {
         <StatusMessage
           variant="error"
           data-testid="engine-error"
-          action={{ label: "Reload", onClick: reload }}
+          action={{ label: t("app.reload", {}), onClick: reload }}
           onDismiss={() => setEngineErrorDismissed(true)}
         >
           {engineMessage}

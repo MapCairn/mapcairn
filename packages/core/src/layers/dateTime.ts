@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { message } from "../messages/formatMessage";
+import type { Message } from "../ports/messages";
 import type { DateTimeBound, DateTimeControlDefinition } from "./definition";
 
 /**
@@ -18,13 +20,6 @@ export const MINUTES_PER_DAY = 1440;
 export const MAX_MINUTES_AGO = 52_596_000;
 const SLOT = /^(\d{4}-\d{2}-\d{2})t(\d{2})(\d{2})$/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-const DAY_TEXT = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "UTC",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
 
 /** The start of a slot already known to be well formed, in milliseconds since the epoch. */
 function startOf(value: string): number {
@@ -165,17 +160,29 @@ export function slotsOnDay(
 }
 
 /** Words for a UTC day, such as "11 November 2026". Expects a real `YYYY-MM-DD` day. */
-export function describeDay(day: string): string {
-  return DAY_TEXT.format(Date.parse(`${day}T00:00:00Z`));
+export function describeDay(day: string): Message<"format.day"> {
+  return message("format.day", { date: new Date(`${day}T00:00:00Z`) });
 }
 
 /** Words for when a slot starts, with its time zone, such as "14:30 UTC on 11 November 2026". Expects a valid slot. */
-export function describeSlotStart(value: string): string {
-  return `${timeLabel(value)} UTC on ${DAY_TEXT.format(startOf(value))}`;
+export function describeSlotStart(value: string): Message<"format.timeOnDay"> {
+  return message("format.timeOnDay", {
+    time: message("format.utcTime", { time: timeLabel(value) }),
+    day: describeDay(value.slice(0, 10)),
+  });
 }
 
 /** Words for the slot shown, with its time zone, such as "14:30 to 15:00 UTC on 11 November 2026". Expects a valid slot. */
-export function describeSlot(value: string, stepMinutes: number): string {
+export function describeSlot(
+  value: string,
+  stepMinutes: number,
+): Message<"format.timeOnDay"> {
   const end = slotValue(startOf(value) + stepMinutes * MINUTE_MS);
-  return `${timeLabel(value)} to ${timeLabel(end)} UTC on ${DAY_TEXT.format(startOf(value))}`;
+  return message("format.timeOnDay", {
+    time: message("format.utcRange", {
+      start: timeLabel(value),
+      end: timeLabel(end),
+    }),
+    day: describeDay(value.slice(0, 10)),
+  });
 }

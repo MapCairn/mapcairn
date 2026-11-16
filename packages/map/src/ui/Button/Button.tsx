@@ -15,6 +15,8 @@ export interface ButtonProps
   readonly variant?: "primary" | "secondary" | "quiet";
   /** A leading icon, imported by name from `lucide-react`. */
   readonly icon?: IconComponent;
+  /** Flips the leading icon when the page reads right to left, for one that points along the reading direction. */
+  readonly mirrorInRtl?: boolean;
   /**
    * Replaces the leading icon with a loader and sets `aria-busy`. Clicks are
    * ignored while busy. The visible label stays, so the name is stable.
@@ -34,6 +36,7 @@ export interface ButtonProps
 export function Button({
   variant = "primary",
   icon,
+  mirrorInRtl = false,
   busy = false,
   disabled = false,
   type = "button",
@@ -60,7 +63,9 @@ export function Button({
       aria-disabled={disabled ? true : undefined}
       onClick={handleClick}
     >
-      {leading ? <Icon icon={leading} spinning={busy} /> : null}
+      {leading ? (
+        <Icon icon={leading} spinning={busy} mirrorInRtl={mirrorInRtl} />
+      ) : null}
       {children}
     </button>
   );

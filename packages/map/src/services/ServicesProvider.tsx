@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import type { Services } from "@mapcairn/core";
 import { createContext, type ReactNode, useContext } from "react";
+import { ActiveMessagesProvider } from "./activeMessages";
 import { BasemapAvailabilityProvider } from "./basemapAvailability";
 
 const ServicesContext = createContext<Services | null>(null);
@@ -17,7 +18,8 @@ export interface ServicesProviderProps {
  * Makes the app's services available to every component below it. This is the
  * only way components reach adapters, browser services or map engines, so tests
  * can swap in fakes by wrapping a tree in this provider. It also keeps which
- * basemaps are not working (see `useBasemapAvailability`).
+ * basemaps are not working (see `useBasemapAvailability`) and the active
+ * message catalogue (see `useMessages`).
  */
 export function ServicesProvider({
   services,
@@ -25,7 +27,9 @@ export function ServicesProvider({
 }: ServicesProviderProps) {
   return (
     <ServicesContext.Provider value={services}>
-      <BasemapAvailabilityProvider>{children}</BasemapAvailabilityProvider>
+      <ActiveMessagesProvider services={services}>
+        <BasemapAvailabilityProvider>{children}</BasemapAvailabilityProvider>
+      </ActiveMessagesProvider>
     </ServicesContext.Provider>
   );
 }
@@ -40,4 +44,13 @@ export function useServices(): Services {
     throw new Error("useServices must be used inside a ServicesProvider.");
   }
   return services;
+}
+
+/**
+ * Returns the services, or null outside a {@link ServicesProvider}. For the
+ * few pieces, such as the live regions, that must still work when a test or
+ * a host mounts them without one.
+ */
+export function useOptionalServices(): Services | null {
+  return useContext(ServicesContext);
 }

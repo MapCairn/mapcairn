@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import {
   CIRCLE_EXPORT_STEPS,
   MAX_CIRCLE_RADIUS_METRES,
@@ -195,6 +196,17 @@ describe("shapeLabel", () => {
     expect(shapeLabel("point", 1)).toBe("Point 1");
     expect(shapeLabel("line", 3)).toBe("Line 3");
     expect(shapeLabel("circle", 4)).toBe("Circle 4");
+  });
+
+  it("asks the catalogue by key, so another language can name it", () => {
+    const catalogue = new FakeMessageCatalogue({
+      language: "af",
+      overrides: { "draw.shapeLabel.polygon": "Veelhoek {serial}" },
+    });
+    expect(shapeLabel("polygon", 2, catalogue)).toBe("Veelhoek 2");
+    expect(catalogue.calls).toEqual([
+      { key: "draw.shapeLabel.polygon", params: { serial: 2 } },
+    ]);
   });
 });
 

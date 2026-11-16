@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
+import { formatMessage } from "../messages/formatMessage";
 import { shapesToCsv, shapesToGeoJson, shapesToWkt } from "./export";
 import {
   MAX_IMPORT_BYTES,
@@ -14,6 +16,16 @@ import {
 } from "./import";
 import type { DrawShapeInput } from "./reducer";
 import type { DrawShape } from "./types";
+
+/** A result with the reader's `detail` in English, as the live region would say it. */
+function readable(result: ShapeImport) {
+  return result.ok || result.detail === undefined
+    ? result
+    : {
+        ...result,
+        detail: formatMessage(new FakeMessageCatalogue(), result.detail),
+      };
+}
 
 const p = (lng: number, lat: number) => ({ lat, lng });
 
@@ -735,7 +747,9 @@ describe("parseShapeFile with WKT text", () => {
   });
 
   it("refuses the whole file for any other SRID, with a plain message", () => {
-    expect(parseShapeFile("SRID=3857;POINT (261845.8 6250056)")).toEqual({
+    expect(
+      readable(parseShapeFile("SRID=3857;POINT (261845.8 6250056)")),
+    ).toEqual({
       ok: false,
       refusal: "wkt-unreadable",
       detail: "Only SRID 4326 (WGS 84) is supported, not SRID 3857.",
@@ -759,7 +773,7 @@ describe("parseShapeFile with WKT text", () => {
   });
 
   it("refuses SRID 0, which says no system at all", () => {
-    expect(parseShapeFile("SRID=0;POINT (1 2)")).toEqual({
+    expect(readable(parseShapeFile("SRID=0;POINT (1 2)"))).toEqual({
       ok: false,
       refusal: "wkt-unreadable",
       detail: "Only SRID 4326 (WGS 84) is supported, not SRID 0.",
@@ -773,7 +787,7 @@ describe("parseShapeFile with WKT text", () => {
   });
 
   it("takes a damaged EWKT prefix for WKT, with the reader's position", () => {
-    expect(parseShapeFile("SRID=;POINT (1 2)")).toMatchObject({
+    expect(readable(parseShapeFile("SRID=;POINT (1 2)"))).toMatchObject({
       ok: false,
       refusal: "wkt-unreadable",
       detail: expect.stringMatching(/ at position \d+\.$/),
@@ -892,7 +906,7 @@ describe("parseShapeFile with WKT text", () => {
       ["POINT M (1 2 3)\nPOINT ZM (1 2 3 4)", measure],
       ["CIRCULARSTRING (0 0, 1 1, 2 0)", curve],
     ] as const) {
-      expect(parseShapeFile(text)).toEqual({
+      expect(readable(parseShapeFile(text))).toEqual({
         ok: false,
         refusal: "wkt-unreadable",
         detail,
@@ -912,7 +926,7 @@ describe("parseShapeFile with WKT text", () => {
       "POINT (1 2\nLINESTRING (0 0, 1 1",
       `${"GEOMETRYCOLLECTION (".repeat(40)}POINT (1 1)${")".repeat(40)}`,
     ]) {
-      const result = parseShapeFile(text);
+      const result = readable(parseShapeFile(text));
       expect(result).toMatchObject({ ok: false, refusal: "wkt-unreadable" });
       expect(result).toMatchObject({
         detail: expect.stringMatching(/ at position \d+\.$/),
@@ -921,7 +935,9 @@ describe("parseShapeFile with WKT text", () => {
   });
 
   it("names the position of the first fault in the words of the refusal", () => {
-    expect(parseShapeFile("POINT (a b)\nLINESTRING (0 0, 1 1")).toEqual({
+    expect(
+      readable(parseShapeFile("POINT (a b)\nLINESTRING (0 0, 1 1")),
+    ).toEqual({
       ok: false,
       refusal: "wkt-unreadable",
       detail: "Expected a number at position 8.",

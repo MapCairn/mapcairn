@@ -134,4 +134,16 @@ describe("IconButton", () => {
     expect(button.tagName).toBe("BUTTON");
     expect(button.getAttribute("tabindex")).toBeNull();
   });
+
+  it("passes mirrorInRtl on to its icon", () => {
+    const { rerender } = render(
+      <IconButton label="Next" icon={Plus} data-testid="next" />,
+    );
+    const plain = document.querySelector("svg")?.getAttribute("class") ?? "";
+    rerender(
+      <IconButton label="Next" icon={Plus} mirrorInRtl data-testid="next" />,
+    );
+    const mirrored = document.querySelector("svg")?.getAttribute("class") ?? "";
+    expect(mirrored).not.toBe(plain);
+  });
 });

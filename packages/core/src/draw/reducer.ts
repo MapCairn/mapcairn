@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { LatLng } from "../ports/geometry";
+import type { MessageCatalogue } from "../ports/messages";
 import { distanceMetres } from "./geo";
 import { MAX_CIRCLE_RADIUS_METRES, shapeLabel, validateShape } from "./shape";
 import type { DrawIssue, DrawKind, DrawSelection, DrawShape } from "./types";
@@ -222,7 +223,13 @@ function findShape(state: DrawState, shapeId: string): DrawShape | undefined {
   return state.shapes.find((shape) => shape.id === shapeId);
 }
 
-function startShape(state: DrawState, at: LatLng): DrawState {
+/**
+ * What names a new shape: the catalogue in use, or the shipped English when
+ * there is none.
+ */
+type Labeller = Pick<MessageCatalogue, "t"> | undefined;
+
+function startShape(state: DrawState, at: LatLng, labels: Labeller): DrawState {
   const kind = state.mode;
   const serial = state.serials[kind] + 1;
   const id = `shape-${state.nextId}`;
@@ -230,7 +237,7 @@ function startShape(state: DrawState, at: LatLng): DrawState {
   const shape: DrawShape = {
     id,
     kind,
-    label: shapeLabel(kind, serial),
+    label: shapeLabel(kind, serial, labels),
     vertices: [at],
     done,
   };
@@ -269,13 +276,13 @@ function setCircleRadius(
   });
 }
 
-function addVertex(state: DrawState, at: LatLng): DrawState {
+function addVertex(state: DrawState, at: LatLng, labels: Labeller): DrawState {
   if (!usable(at)) {
     return state;
   }
   const draft = draftOf(state);
   if (!draft) {
-    return startShape(state, at);
+    return startShape(state, at, labels);
   }
   if (draft.kind === "circle") {
     return setCircleRadius(state, draft, at);
@@ -606,6 +613,7 @@ function redo(state: DrawState): DrawState {
 function finishInputs(
   inputs: readonly DrawShapeInput[],
   from: Pick<DrawState, "nextId" | "serials">,
+  labels: Labeller,
 ): Pick<DrawState, "nextId" | "serials"> & { shapes: DrawShape[] } {
   let nextId = from.nextId;
   const serials = { ...from.serials };
@@ -615,7 +623,7 @@ function finishInputs(
     const candidate: DrawShape = {
       id: `shape-${nextId}`,
       kind: input.kind,
-      label: shapeLabel(input.kind, serial),
+      label: shapeLabel(input.kind, serial, labels),
       vertices: input.vertices,
       ...(input.radiusMetres === undefined
         ? {}
@@ -631,8 +639,16 @@ function finishInputs(
   return { shapes, nextId, serials };
 }
 
-function load(state: DrawState, inputs: readonly DrawShapeInput[]): DrawState {
-  const { shapes, nextId, serials } = finishInputs(inputs, initialDrawState);
+function load(
+  state: DrawState,
+  inputs: readonly DrawShapeInput[],
+  labels: Labeller,
+): DrawState {
+  const { shapes, nextId, serials } = finishInputs(
+    inputs,
+    initialDrawState,
+    labels,
+  );
   if (shapes.length === 0 && state.shapes.length === 0) {
     return state;
   }
@@ -655,8 +671,13 @@ function load(state: DrawState, inputs: readonly DrawShapeInput[]): DrawState {
 function importShapes(
   state: DrawState,
   inputs: readonly DrawShapeInput[],
+  labels: Labeller,
 ): DrawState {
-  const { shapes: added, nextId, serials } = finishInputs(inputs, state);
+  const {
+    shapes: added,
+    nextId,
+    serials,
+  } = finishInputs(inputs, state, labels);
   const [first] = added;
   if (!first) {
     return state;
@@ -672,23 +693,16 @@ function importShapes(
   });
 }
 
-/**
- * Applies an action to the drawing. Pure: an action that changes nothing
- * returns the same state object, so React can skip re-rendering.
- *
- * @remarks Every edit goes on the undo stack as the shapes and selection
- *   before it (at most {@link DRAW_HISTORY_LIMIT} steps), except an edit that
- *   passes the same `coalesceKey` as the one just before it, which joins that
- *   step. Selecting, stepping and changing mode with nothing drawn are not
- *   edits. A refused action leaves the shapes alone and sets a `rejected`
- *   event naming why.
- */
-export function drawReducer(state: DrawState, action: DrawAction): DrawState {
+function reduceDraw(
+  state: DrawState,
+  action: DrawAction,
+  labels: Labeller,
+): DrawState {
   switch (action.type) {
     case "setMode":
       return setMode(state, action.kind);
     case "addVertex":
-      return addVertex(state, action.at);
+      return addVertex(state, action.at, labels);
     case "insertVertex":
       return insertVertex(state, action);
     case "moveVertex":
@@ -718,11 +732,37 @@ export function drawReducer(state: DrawState, action: DrawAction): DrawState {
     case "redo":
       return redo(state);
     case "load":
-      return load(state, action.shapes);
+      return load(state, action.shapes, labels);
     case "import":
-      return importShapes(state, action.shapes);
+      return importShapes(state, action.shapes, labels);
   }
 }
+
+/**
+ * Builds a drawing reducer that names the shapes it creates with `labels`
+ * (the shipped English when none is given): pass a catalogue so a new shape is
+ * called "Veelhoek 1" rather than "Polygon 1". Pure, as {@link drawReducer}.
+ */
+export function createDrawReducer(
+  labels?: Labeller,
+): (state: DrawState, action: DrawAction) => DrawState {
+  return (state, action) => reduceDraw(state, action, labels);
+}
+
+/**
+ * Applies an action to the drawing. Pure: an action that changes nothing
+ * returns the same state object, so React can skip re-rendering. Shapes are
+ * named in English; see {@link createDrawReducer} for another language.
+ *
+ * @remarks Every edit goes on the undo stack as the shapes and selection
+ *   before it (at most {@link DRAW_HISTORY_LIMIT} steps), except an edit that
+ *   passes the same `coalesceKey` as the one just before it, which joins that
+ *   step. Selecting, stepping and changing mode with nothing drawn are not
+ *   edits. A refused action leaves the shapes alone and sets a `rejected`
+ *   event naming why.
+ */
+export const drawReducer: (state: DrawState, action: DrawAction) => DrawState =
+  createDrawReducer();
 
 /**
  * What Escape does next, one level at a time: leave a selected vertex, then

@@ -5,6 +5,9 @@ import {
   type LayerDefinition,
   type LegendEntry,
   legendFor,
+  type Message,
+  type MessageCatalogue,
+  resolveText,
 } from "@mapcairn/core";
 import type { DataLayerState } from "./useDataLayers";
 
@@ -19,26 +22,28 @@ export interface MapKeyBlock {
    * The day or time the layer is set to, in words such as `13:00 UTC on 11
    * November 2026`, or null when it has no date or time control.
    */
-  readonly chosenTime: string | null;
+  readonly chosenTime: Message | null;
 }
 
 /**
  * The blocks of the map key: one for each layer that is on and has a key, in
  * catalogue order. Pure, so the image export can draw the same key the map
- * shows. An empty result means there is no key to show at all.
+ * shows. The words for an interval are written in `catalogue`'s language.
+ * An empty result means there is no key to show at all.
  */
 export function mapKeyBlocks(
   layers: readonly DataLayerState[],
+  catalogue: MessageCatalogue,
 ): readonly MapKeyBlock[] {
   return layers.flatMap(({ definition, enabled, controls }) => {
-    const [first, ...rest] = legendFor(definition).entries;
+    const [first, ...rest] = legendFor(definition, catalogue).entries;
     if (!enabled || first === undefined) {
       return [];
     }
     return [
       {
         id: definition.id,
-        name: definition.name,
+        name: resolveText(catalogue, definition.name),
         definition,
         entries: [first, ...rest],
         chosenTime: describeChosenTime(definition, controls),

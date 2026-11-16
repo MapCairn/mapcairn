@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import type { ShapeStyle } from "./definition";
 import {
   DEFAULT_AREA_WIDTH,
@@ -9,6 +10,8 @@ import {
   evaluateShapeStyle,
   shapeClasses,
 } from "./shapeStyle";
+
+const catalogue = new FakeMessageCatalogue();
 
 const categories: ShapeStyle = {
   kind: "shapes",
@@ -75,7 +78,9 @@ const lines: ShapeStyle = {
 
 describe("evaluateShapeStyle", () => {
   it("picks a category's colour, pattern, dash, width and words", () => {
-    expect(evaluateShapeStyle(categories, { type: "water" })).toEqual({
+    expect(
+      evaluateShapeStyle(categories, { type: "water" }, catalogue),
+    ).toEqual({
       colour: "sky-blue",
       label: "Water",
       pattern: "stripes",
@@ -86,73 +91,108 @@ describe("evaluateShapeStyle", () => {
   });
 
   it("gives a category the style's defaults for what it leaves out", () => {
-    expect(evaluateShapeStyle(categories, { type: "park" })).toEqual({
-      colour: "bluish-green",
-      label: "Park",
-      pattern: "dots",
-      dash: "solid",
-      width: DEFAULT_AREA_WIDTH,
-      fillOpacity: DEFAULT_FILL_OPACITY,
-    });
+    expect(evaluateShapeStyle(categories, { type: "park" }, catalogue)).toEqual(
+      {
+        colour: "bluish-green",
+        label: "Park",
+        pattern: "dots",
+        dash: "solid",
+        width: DEFAULT_AREA_WIDTH,
+        fillOpacity: DEFAULT_FILL_OPACITY,
+      },
+    );
   });
 
   it("uses the other class for a value no category names, or no value", () => {
-    expect(evaluateShapeStyle(categories, { type: "road" })).toMatchObject({
+    expect(
+      evaluateShapeStyle(categories, { type: "road" }, catalogue),
+    ).toMatchObject({
       colour: "orange",
       label: "Other",
       pattern: "solid",
     });
-    expect(evaluateShapeStyle(categories, { type: null })).toMatchObject({
+    expect(
+      evaluateShapeStyle(categories, { type: null }, catalogue),
+    ).toMatchObject({
       label: "Other",
     });
   });
 
   it("picks the step at or below the value, and the first below every minimum", () => {
-    expect(evaluateShapeStyle(steps, { density: 10 })).toMatchObject({
-      colour: "ordinal-3",
-      label: "10 to 99",
-      pattern: "dots",
-      width: 2,
-      fillOpacity: 0.7,
-    });
-    expect(evaluateShapeStyle(steps, { density: 5000 }).label).toBe(
+    expect(evaluateShapeStyle(steps, { density: 10 }, catalogue)).toMatchObject(
+      {
+        colour: "ordinal-3",
+        label: "10 to 99",
+        pattern: "dots",
+        width: 2,
+        fillOpacity: 0.7,
+      },
+    );
+    expect(evaluateShapeStyle(steps, { density: 5000 }, catalogue).label).toBe(
       "100 and above",
     );
-    expect(evaluateShapeStyle(steps, { density: -4 }).label).toBe("Under 10");
-    expect(evaluateShapeStyle(steps, { density: null }).label).toBe("Under 10");
-    expect(evaluateShapeStyle(steps, { density: "12" }).label).toBe("10 to 99");
+    expect(evaluateShapeStyle(steps, { density: -4 }, catalogue).label).toBe(
+      "Under 10",
+    );
+    expect(evaluateShapeStyle(steps, { density: null }, catalogue).label).toBe(
+      "Under 10",
+    );
+    expect(evaluateShapeStyle(steps, { density: "12" }, catalogue).label).toBe(
+      "10 to 99",
+    );
   });
 
   it("divides an interval style into equal classes", () => {
-    expect(evaluateShapeStyle(intervals, { density: 0 }).label).toBe(
+    expect(evaluateShapeStyle(intervals, { density: 0 }, catalogue).label).toBe(
       "Up to 100 per km²",
     );
-    expect(evaluateShapeStyle(intervals, { density: 99.9 }).label).toBe(
-      "Up to 100 per km²",
-    );
-    expect(evaluateShapeStyle(intervals, { density: 100 })).toMatchObject({
+    expect(
+      evaluateShapeStyle(intervals, { density: 99.9 }, catalogue).label,
+    ).toBe("Up to 100 per km²");
+    expect(
+      evaluateShapeStyle(intervals, { density: 100 }, catalogue),
+    ).toMatchObject({
       colour: "ordinal-3",
       label: "100 to 200 per km²",
       pattern: "dots",
     });
-    expect(evaluateShapeStyle(intervals, { density: 250 })).toMatchObject({
+    expect(
+      evaluateShapeStyle(intervals, { density: 250 }, catalogue),
+    ).toMatchObject({
       colour: "ordinal-5",
       label: "200 per km² and above",
       pattern: "crosshatch",
     });
   });
 
-  it("puts values outside an interval style's range in its first and last class", () => {
-    expect(evaluateShapeStyle(intervals, { density: -50 }).colour).toBe(
-      "ordinal-1",
-    );
-    expect(evaluateShapeStyle(intervals, { density: 9999 }).colour).toBe(
-      "ordinal-5",
+  it("writes interval words and numbers in the catalogue's language", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "layers.interval.upTo": "Tot {high}{unit}",
+        "layers.interval.andAbove": "{low}{unit} en meer",
+        "layers.interval.range": "{low} tot {high}{unit}",
+      },
+    });
+    const labels = shapeClasses(intervals, afrikaans).map((look) => look.label);
+    expect(labels[0]).toMatch(/^Tot /);
+    expect(labels.at(-1)).toMatch(/ en meer$/);
+    expect(afrikaans.calls.map((call) => call.key)).toContain(
+      "layers.interval.range",
     );
   });
 
+  it("puts values outside an interval style's range in its first and last class", () => {
+    expect(
+      evaluateShapeStyle(intervals, { density: -50 }, catalogue).colour,
+    ).toBe("ordinal-1");
+    expect(
+      evaluateShapeStyle(intervals, { density: 9999 }, catalogue).colour,
+    ).toBe("ordinal-5");
+  });
+
   it("reads a fixed style, with a line's own default width", () => {
-    expect(evaluateShapeStyle(lines, {})).toEqual({
+    expect(evaluateShapeStyle(lines, {}, catalogue)).toEqual({
       colour: "vermillion",
       label: "Route",
       pattern: "solid",
@@ -164,6 +204,7 @@ describe("evaluateShapeStyle", () => {
       evaluateShapeStyle(
         { ...lines, colour: { kind: "fixed", colour: "blue", label: "L" } },
         {},
+        catalogue,
       ).width,
     ).toBe(DEFAULT_LINE_WIDTH);
   });
@@ -171,15 +212,13 @@ describe("evaluateShapeStyle", () => {
 
 describe("shapeClasses", () => {
   it("lists categories in order, then the other class", () => {
-    expect(shapeClasses(categories).map((item) => item.label)).toEqual([
-      "Park",
-      "Water",
-      "Other",
-    ]);
+    expect(
+      shapeClasses(categories, catalogue).map((item) => item.label),
+    ).toEqual(["Park", "Water", "Other"]);
   });
 
   it("lists steps in order", () => {
-    expect(shapeClasses(steps).map((item) => item.colour)).toEqual([
+    expect(shapeClasses(steps, catalogue).map((item) => item.colour)).toEqual([
       "ordinal-1",
       "ordinal-3",
       "ordinal-5",
@@ -187,7 +226,7 @@ describe("shapeClasses", () => {
   });
 
   it("lists interval classes with their words, in order", () => {
-    expect(shapeClasses(intervals)).toEqual([
+    expect(shapeClasses(intervals, catalogue)).toEqual([
       {
         colour: "ordinal-1",
         label: "Up to 100 per km²",
@@ -229,7 +268,10 @@ describe("shapeClasses", () => {
       },
     };
     expect(
-      shapeClasses(styled).map(({ dash, width }) => ({ dash, width })),
+      shapeClasses(styled, catalogue).map(({ dash, width }) => ({
+        dash,
+        width,
+      })),
     ).toEqual([
       { dash: "solid", width: 1 },
       { dash: "dashed", width: 5 },
@@ -237,7 +279,7 @@ describe("shapeClasses", () => {
   });
 
   it("lists a fixed style as one class", () => {
-    expect(shapeClasses(lines)).toHaveLength(1);
+    expect(shapeClasses(lines, catalogue)).toHaveLength(1);
   });
 
   it("rounds interval bounds for the legend without noise", () => {
@@ -251,7 +293,7 @@ describe("shapeClasses", () => {
         ramp: ["ordinal-1", "ordinal-3", "ordinal-5"],
       },
     };
-    expect(shapeClasses(thirds).map((item) => item.label)).toEqual([
+    expect(shapeClasses(thirds, catalogue).map((item) => item.label)).toEqual([
       "Up to 0.33",
       "0.33 to 0.67",
       "0.67 and above",

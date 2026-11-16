@@ -8,6 +8,7 @@ Generic React hooks for MapCairn apps. No map-engine, domain-data or theme depen
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `useModelContextTool(definition)`, `isModelContextSupported()` | Registers a [WebMCP](https://webmachinelearning.github.io/webmcp/) tool with `document.modelContext.registerTool()` and unregisters it on unmount or when `definition` becomes `null`. Types: `ModelContextToolDefinition`, `ModelContextToolResult`, `ModelContextToolContentBlock`. |
 | `useLatestRef(value)`                                          | A ref that always holds the latest committed render's value, for listeners bound once by outside code.                                                                                                                                                                                |
+| `useReadingDirection()`                                        | The page's reading direction (`"ltr"` or `"rtl"`) from `dir` on `<html>`, for a component that must hand a direction to a library. It is `"ltr"` on the server and follows a change made while the page is open.                                                                      |
 
 Notes:
 

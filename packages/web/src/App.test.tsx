@@ -32,10 +32,6 @@ import {
 import { createRoutesStub } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import {
-  WEBGL_UNAVAILABLE_ADVICE,
-  WEBGL_UNAVAILABLE_TITLE,
-} from "./app/MapUnavailable";
 import { TOUR_VERSION } from "./app/tourVersion";
 import { LOCATE_MAX_FIT_RADIUS_METRES, LOCATE_ZOOM } from "./app/useMapApp";
 import { SAVE_VIEW_DELAY_MS } from "./app/useViewPersistence";
@@ -87,6 +83,10 @@ async function renderApp(
   await settle();
   return services;
 }
+
+const WEBGL_UNAVAILABLE_TITLE = "MapCairn needs WebGL to draw the map.";
+const WEBGL_UNAVAILABLE_ADVICE =
+  "This browser has WebGL turned off or does not support it. Try a different browser, or turn on hardware acceleration in your browser settings.";
 
 const region = () => screen.getByRole("region", { name: "Map" });
 const sheet = () => screen.getByTestId("map-options-sheet");
@@ -820,6 +820,20 @@ describe("pins", () => {
     expect(centre).toBeDefined();
   });
 
+  it("asks the catalogue for the pin's announcement and the tile banner, by key", async () => {
+    const services = await renderApp();
+    fireEvent.keyDown(region(), { key: "p" });
+    act(() => {
+      adapter(services).simulateTileError();
+    });
+    const { calls } = services.fakes.messages;
+    const dropped = calls.find((call) => call.key === "announce.pinDropped");
+    expect(dropped?.params).toEqual({
+      position: expect.stringMatching(/^-?\d+\.\d{5}, -?\d+\.\d{5}$/),
+    });
+    expect(calls).toContainEqual({ key: "announce.tileError", params: {} });
+  });
+
   it("drops a pin where the map is long-pressed", async () => {
     const services = await renderApp();
     fireEvent.contextMenu(region(), { clientX: 30, clientY: 40 });
@@ -957,7 +971,7 @@ describe("basemaps", () => {
     await settle();
     expect(services.fakes.settings.get().basemapId).toBe("osm");
     expect(setBasemap).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "osm", name: "Streets" }),
+      expect.objectContaining({ id: "osm", name: "basemap.osm.name" }),
       { saveData: false },
     );
     expect(services.fakes.maps).toHaveLength(1);
@@ -1723,6 +1737,98 @@ describe("the first-visit tour", () => {
     await settle();
     expect(document.activeElement).toBe(
       screen.getByRole("heading", { name: "Turn on a layer" }),
+    );
+  });
+});
+
+describe("message catalogue", () => {
+  const keys = (services: FakeServices) =>
+    services.fakes.messages.calls.map((call) => call.key);
+
+  it("asks for the WebGL message by key, and joins its two parts through the catalogue", async () => {
+    const services = createFakeServices({
+      createMapAdapter: () =>
+        new FakeMapAdapter({ failMount: "webgl-unavailable" }),
+    });
+    await renderApp(services);
+    await vi.waitFor(() =>
+      expect(services.fakes.messages.calls).toContainEqual({
+        key: "common.followedBy",
+        params: {
+          first: WEBGL_UNAVAILABLE_TITLE,
+          second: WEBGL_UNAVAILABLE_ADVICE,
+        },
+      }),
+    );
+    expect(keys(services)).toEqual(
+      expect.arrayContaining(["app.webgl.title", "app.webgl.advice"]),
+    );
+  });
+
+  it("asks for the engine banners by key", async () => {
+    const failed = createFakeServices({
+      createMapAdapter: () => new FakeMapAdapter({ failMount: "load-failed" }),
+    });
+    await renderApp(failed);
+    expect(keys(failed)).toEqual(
+      expect.arrayContaining(["app.banner.engineFailed", "app.reload"]),
+    );
+    cleanup();
+    const stopped = await renderApp();
+    act(() => {
+      adapter(stopped).simulateFatalError();
+    });
+    expect(keys(stopped)).toContain("app.banner.engineStopped");
+  });
+
+  it("asks for the tile error action and the locate action by key", async () => {
+    const services = createFakeServices();
+    services.fakes.location.failWith("denied");
+    await renderApp(services);
+    act(() => {
+      adapter(services).simulateTileError();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Locate me" }));
+    await settle();
+    expect(keys(services)).toEqual(
+      expect.arrayContaining(["app.banner.retry", "app.banner.tryAgain"]),
+    );
+  });
+
+  it("asks for the basemap banners by key, naming the basemap through a parameter", async () => {
+    const services = createFakeServices();
+    services.fakes.settings.set({ basemapId: "positron" });
+    await renderApp(services);
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    fireEvent.click(
+      screen
+        .getByTestId("basemap-option-osm")
+        .querySelector("input") as HTMLInputElement,
+    );
+    await settle();
+    act(() => {
+      adapter(services).simulateBasemapUnavailable();
+    });
+    await settle();
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "app.banner.basemapUnavailable",
+      params: { name: "Streets" },
+    });
+    expect(keys(services)).toContain("app.banner.usePreviousBasemap");
+  });
+
+  it("asks for the sheet titles and the tour words by key", async () => {
+    const services = await renderApp(createFakeServices(), {
+      firstVisit: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Map options" }));
+    expect(keys(services)).toEqual(
+      expect.arrayContaining([
+        "app.sheetTitle.mapOptions",
+        "app.tour.welcome.heading",
+        "app.tour.welcome.text",
+        "app.tour.welcome.announcement",
+      ]),
     );
   });
 });

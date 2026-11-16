@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { resolveText } from "../messages/resolveText";
 import type { FieldValue } from "../ports/layers";
+import type { MessageCatalogue } from "../ports/messages";
 import {
   type FillPattern,
   type HeatmapSpec,
@@ -26,7 +28,11 @@ export interface MarkerStyle {
   readonly colour: PaletteSlot;
   readonly radius: number;
   readonly shape: MarkerShape;
-  /** The words for the colour, such as `Orange alert`, for the list and card. */
+  /**
+   * The words for the colour, such as `Orange alert`, for the list and card,
+   * as the definition writes them: a message key or a plain string, which
+   * `resolveText` turns into text in the active language.
+   */
   readonly label: string;
 }
 
@@ -99,14 +105,17 @@ export function evaluatePointStyle(
   }
 }
 
-function pointLegend(style: PointStyle): LegendEntry[] {
+function pointLegend(
+  style: PointStyle,
+  catalogue: MessageCatalogue,
+): LegendEntry[] {
   const shape = style.shape ?? "circle";
   const { colour } = style;
   switch (colour.kind) {
     case "fixed":
       return [
         {
-          label: colour.label,
+          label: resolveText(catalogue, colour.label),
           colour: colour.colour,
           shape,
           radius: DEFAULT_MARKER_RADIUS,
@@ -114,7 +123,7 @@ function pointLegend(style: PointStyle): LegendEntry[] {
       ];
     case "steps":
       return colour.steps.map((step) => ({
-        label: step.label,
+        label: resolveText(catalogue, step.label),
         colour: step.colour,
         shape,
         radius:
@@ -125,13 +134,13 @@ function pointLegend(style: PointStyle): LegendEntry[] {
     case "category":
       return [
         ...colour.categories.map((category) => ({
-          label: category.label,
+          label: resolveText(catalogue, category.label),
           colour: category.colour,
           shape: category.shape ?? shape,
           radius: DEFAULT_MARKER_RADIUS,
         })),
         {
-          label: colour.other.label,
+          label: resolveText(catalogue, colour.other.label),
           colour: colour.other.colour,
           shape,
           radius: DEFAULT_MARKER_RADIUS,
@@ -140,9 +149,12 @@ function pointLegend(style: PointStyle): LegendEntry[] {
   }
 }
 
-function heatmapLegend(heatmap: HeatmapSpec): LegendEntry[] {
+function heatmapLegend(
+  heatmap: HeatmapSpec,
+  catalogue: MessageCatalogue,
+): LegendEntry[] {
   return heatmap.ramp.map((colour, index) => ({
-    label: heatmap.words[index] ?? "",
+    label: resolveText(catalogue, heatmap.words[index] ?? ""),
     colour,
     shape: "square" as const,
     radius: DEFAULT_MARKER_RADIUS,
@@ -150,8 +162,11 @@ function heatmapLegend(heatmap: HeatmapSpec): LegendEntry[] {
   }));
 }
 
-function shapeLegend(style: ShapeStyle): LegendEntry[] {
-  return shapeClasses(style).map((item) => ({
+function shapeLegend(
+  style: ShapeStyle,
+  catalogue: MessageCatalogue,
+): LegendEntry[] {
+  return shapeClasses(style, catalogue).map((item) => ({
     label: item.label,
     colour: item.colour,
     shape: "square" as const,
@@ -166,30 +181,36 @@ function shapeLegend(style: ShapeStyle): LegendEntry[] {
 /**
  * A layer's legend. For a feed it lists each colour with its words, its
  * shape and the size it draws; for a tile layer it is the definition's own
- * legend, drawn as squares, or nothing.
+ * legend, drawn as squares, or nothing. The words for an interval are written
+ * in `catalogue`'s language.
  */
-export function legendFor(definition: LayerDefinition): Legend {
+export function legendFor(
+  definition: LayerDefinition,
+  catalogue: MessageCatalogue,
+): Legend {
   if (isFeedLayer(definition)) {
     const { style } = definition;
     return {
-      entries: isShapeStyle(style) ? shapeLegend(style) : pointLegend(style),
+      entries: isShapeStyle(style)
+        ? shapeLegend(style, catalogue)
+        : pointLegend(style, catalogue),
     };
   }
   if (isHeatmapLayer(definition)) {
-    return { entries: heatmapLegend(definition.heatmap) };
+    return { entries: heatmapLegend(definition.heatmap, catalogue) };
   }
   if (isVectorTileLayer(definition)) {
     return {
       entries: definition.sourceLayers.flatMap((layer) =>
         "heatmap" in layer
-          ? heatmapLegend(layer.heatmap)
-          : shapeLegend(layer.style),
+          ? heatmapLegend(layer.heatmap, catalogue)
+          : shapeLegend(layer.style, catalogue),
       ),
     };
   }
   return {
     entries: (definition.legend ?? []).map((entry) => ({
-      label: entry.label,
+      label: resolveText(catalogue, entry.label),
       colour: entry.colour,
       shape: "square" as const,
       radius: DEFAULT_MARKER_RADIUS,

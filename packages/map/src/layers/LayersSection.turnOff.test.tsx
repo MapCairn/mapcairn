@@ -3,6 +3,7 @@
 import {
   createFakeServices,
   FakeLayerCatalogue,
+  FakeMessageCatalogue,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_LAYERS,
@@ -20,7 +21,11 @@ import {
 } from "./useDataLayers";
 
 const announce = vi.hoisted(() => vi.fn());
-vi.mock("../ui/LiveRegion", () => ({ useAnnounce: () => announce }));
+vi.mock("../ui/LiveRegion", async () => {
+  const { englishAnnounce } = await import("../ui/LiveRegion/englishAnnounce");
+  const speak = englishAnnounce(announce);
+  return { useAnnounce: () => speak };
+});
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 const FEED = SAMPLE_FEED_LAYER.id;
@@ -30,9 +35,16 @@ const IMAGERY = SAMPLE_TILE_LAYER.id;
 /** What has been said aloud, in order. */
 const said = () => announce.mock.calls.map(([message]) => message);
 
-function setup(props: { showTurnOffAll?: boolean } = {}) {
+function setup({
+  messages,
+  ...props
+}: {
+  showTurnOffAll?: boolean;
+  messages?: FakeMessageCatalogue;
+} = {}) {
   const services = createFakeServices({
     layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
+    ...(messages ? { messages } : {}),
   });
   const handle: { current: DataLayers | null } = { current: null };
   const visible: { set: (shown: boolean) => void } = { set: () => {} };
@@ -142,6 +154,23 @@ describe("Turn off all layers", () => {
     fireEvent.click(turnOffAll());
     expect(undo()).toHaveAccessibleName("Undo turning off 3 layers");
     expect(undo()).toHaveTextContent("Undo");
+  });
+
+  it("takes the visible Undo word from the active catalogue", () => {
+    const view = setup({
+      messages: new FakeMessageCatalogue({
+        overrides: {
+          "layers.turnOff.undo": "Ontdoen",
+          "layers.turnOff.undoAll":
+            "Ontdoen, skakel {count} laag weer aan|Ontdoen, skakel {count} lae weer aan",
+        },
+      }),
+    });
+    view.turnOn(FEED, ALERTS, IMAGERY);
+    fireEvent.click(turnOffAll());
+    const button = screen.getByRole("button", { name: /^Ontdoen/ });
+    expect(button).toHaveTextContent(/^Ontdoen$/);
+    expect(button).toHaveAccessibleName("Ontdoen, skakel 3 lae weer aan");
   });
 
   it("uses the singular for one layer", () => {

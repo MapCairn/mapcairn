@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { type DrawKind, type DrawShape, hintFor } from "@mapcairn/core";
+import {
+  type DrawKind,
+  type DrawShape,
+  hintFor,
+  type MessageCatalogue,
+} from "@mapcairn/core";
 import {
   Check,
   ChevronLeft,
@@ -20,6 +25,7 @@ import {
 import { type KeyboardEvent, useCallback, useEffect, useRef } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
 import { useToolbarEdge } from "../../chrome/useToolbarEdge";
+import { useFormatMessage, useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
@@ -39,12 +45,16 @@ export interface DrawToolbarProps {
   readonly onOpenShapes: () => void;
 }
 
-const MODE_OPTIONS = [
-  { value: "point", label: "Point" },
-  { value: "line", label: "Line" },
-  { value: "polygon", label: "Polygon" },
-  { value: "circle", label: "Circle" },
-] as const;
+function modeOptions(
+  t: MessageCatalogue["t"],
+): readonly { value: DrawKind; label: string }[] {
+  return [
+    { value: "point", label: t("tools.draw.mode.point", {}) },
+    { value: "line", label: t("tools.draw.mode.line", {}) },
+    { value: "polygon", label: t("tools.draw.mode.polygon", {}) },
+    { value: "circle", label: t("tools.draw.mode.circle", {}) },
+  ];
+}
 
 /** The keys the selected shape's group handles itself, because its buttons do not use them. */
 const GROUP_KEYS = new Set([
@@ -58,13 +68,25 @@ const GROUP_KEYS = new Set([
   "]",
 ]);
 
-function selectedGroupLabel(shape: DrawShape, vertex: number | null): string {
-  if (shape.kind === "line" || shape.kind === "polygon") {
-    return vertex === null
-      ? `${shape.label}, ${shape.vertices.length} points`
-      : `${shape.label}, point ${vertex + 1} of ${shape.vertices.length}`;
+function selectedGroupLabel(
+  messages: MessageCatalogue,
+  shape: DrawShape,
+  vertex: number | null,
+): string {
+  if (shape.kind !== "line" && shape.kind !== "polygon") {
+    return shape.label;
   }
-  return shape.label;
+  const total = shape.vertices.length;
+  return vertex === null
+    ? messages.plural("tools.draw.selectedPoints", {
+        label: shape.label,
+        count: total,
+      })
+    : messages.t("tools.draw.selectedPoint", {
+        label: shape.label,
+        index: vertex + 1,
+        total,
+      });
 }
 
 interface SelectedGroupProps {
@@ -78,6 +100,8 @@ interface SelectedGroupProps {
  * single tap, and the arrow keys move the selected point.
  */
 function SelectedGroup({ draw, shape }: SelectedGroupProps) {
+  const messages = useMessages();
+  const { t } = messages;
   const vertex = draw.selection?.vertex ?? null;
   const path = shape.kind === "line" || shape.kind === "polygon";
   const circle = shape.kind === "circle";
@@ -89,20 +113,22 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
       data-draw-group=""
     >
       <legend className={styles.groupLabel} data-testid="draw-selected-label">
-        {selectedGroupLabel(shape, vertex)}
+        {selectedGroupLabel(messages, shape, vertex)}
       </legend>
       <div className={styles.actions}>
         {path ? (
           <>
             <IconButton
-              label="Previous point"
+              label={t("tools.draw.previousPoint", {})}
               icon={ChevronLeft}
+              mirrorInRtl
               data-testid="draw-vertex-prev"
               onClick={() => draw.stepVertex(-1)}
             />
             <IconButton
-              label="Next point"
+              label={t("tools.draw.nextPoint", {})}
               icon={ChevronRight}
+              mirrorInRtl
               data-testid="draw-vertex-next"
               onClick={() => draw.stepVertex(1)}
             />
@@ -111,14 +137,14 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
         {path ? (
           <>
             <IconButton
-              label="Add point after this one at map centre"
+              label={t("tools.draw.insertPoint", {})}
               icon={CirclePlus}
               disabled={!hasVertex}
               data-testid="draw-vertex-insert"
               onClick={draw.insertAtCentre}
             />
             <IconButton
-              label="Remove point"
+              label={t("tools.draw.removePoint", {})}
               icon={CircleMinus}
               disabled={!hasVertex}
               data-testid="draw-vertex-remove"
@@ -129,19 +155,19 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
         {circle ? (
           <>
             <IconButton
-              label="Smaller radius"
+              label={t("tools.draw.smallerRadius", {})}
               icon={Minus}
               data-testid="draw-radius-smaller"
               onClick={() => draw.scaleRadius(1 / 1.1)}
             />
             <IconButton
-              label="Larger radius"
+              label={t("tools.draw.largerRadius", {})}
               icon={Plus}
               data-testid="draw-radius-larger"
               onClick={() => draw.scaleRadius(1.1)}
             />
             <IconButton
-              label="Set radius to map centre"
+              label={t("tools.draw.radiusToCentre", {})}
               icon={Crosshair}
               data-testid="draw-radius-centre"
               onClick={draw.setRadiusToCentre}
@@ -176,6 +202,8 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
  */
 export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
   const rootRef = useRef<HTMLElement>(null);
+  const format = useFormatMessage();
+  const { t } = useMessages();
   const registerShapes = useFocusTarget("draw-shapes");
   useToolbarEdge(rootRef);
 
@@ -225,20 +253,22 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
 
   const addLabel =
     draw.selection?.vertex != null
-      ? "Move point to map centre"
-      : "Add point at map centre";
-  const removeLabel = drawing ? "Cancel shape" : "Delete shape";
+      ? t("tools.draw.movePoint", {})
+      : t("tools.addPointAtCentre", {});
+  const removeLabel = drawing
+    ? t("tools.draw.cancelShape", {})
+    : t("tools.draw.deleteShape", {});
 
   return (
     <section
       ref={setRoot}
-      aria-label="Drawing"
+      aria-label={t("tools.draw.region", {})}
       className={styles.root}
       data-chrome="draw-toolbar"
     >
       <Surface
         role="toolbar"
-        aria-label="Draw"
+        aria-label={t("tools.draw.toolbar", {})}
         className={styles.toolbar}
         data-testid="draw-toolbar"
         onKeyDown={toolbarKeys}
@@ -246,8 +276,8 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
         <div className={styles.modesRow}>
           <SegmentedControl
             className={styles.modes}
-            label="Shape to draw"
-            options={MODE_OPTIONS}
+            label={t("tools.draw.shapeToDraw", {})}
+            options={modeOptions(t)}
             value={mode}
             onValueChange={(next) => draw.setMode(next as DrawKind)}
             data-testid="draw-mode"
@@ -279,15 +309,17 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
               onClick={draw.placeAtCentre}
             />
             <IconButton
-              label="Undo"
+              label={t("tools.draw.undo", {})}
               icon={Undo2}
+              mirrorInRtl
               disabled={!draw.canUndo}
               data-testid="draw-undo"
               onClick={draw.undo}
             />
             <IconButton
-              label="Redo"
+              label={t("tools.draw.redo", {})}
               icon={Redo2}
+              mirrorInRtl
               disabled={!draw.canRedo}
               data-testid="draw-redo"
               onClick={draw.redo}
@@ -300,7 +332,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
               onClick={drawing ? draw.cancel : draw.deleteSelected}
             />
             <IconButton
-              label="Shapes and export"
+              label={t("tools.draw.shapesAndExport", {})}
               icon={Shapes}
               data-focus-target="draw-shapes"
               data-testid="draw-shapes"
@@ -312,7 +344,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
             data-testid="draw-done"
             onClick={drawing ? draw.finish : onDone}
           >
-            {drawing ? "Finish" : "Done"}
+            {drawing ? t("tools.draw.finish", {}) : t("tools.done", {})}
           </Button>
         </div>
         {selected && selected.kind !== "point" && !drawing ? (
@@ -320,8 +352,8 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
         ) : null}
         <p className={styles.hint}>
           {selected && !drawing
-            ? "Drag a point to move it, or use the arrow keys. Escape steps back."
-            : hintFor(mode)}
+            ? t("tools.draw.selectedHint", {})
+            : format(hintFor(mode))}
         </p>
       </Surface>
     </section>

@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { formatNumber } from "../format/format";
 import type { FieldValue } from "../ports/layers";
+import type { MessageCatalogue, MessageKey } from "../ports/messages";
 import { createNamedRegistry, type NamedRegistry } from "./registry";
 
-/** What a formatter may know besides the value: the time now, for relative times. */
+/**
+ * What a formatter may know besides the value: the time now, for relative
+ * times, and the catalogue whose language its words and numbers are written in.
+ */
 export interface FormatContext {
   /** Epoch milliseconds. Core never reads the clock itself. */
   readonly now: number;
+  /** The active catalogue: its `language` formats numbers and dates, and its keys word a relative time. */
+  readonly catalogue: MessageCatalogue;
 }
 
 /**
@@ -55,50 +62,62 @@ function toNumber(value: FieldValue): number | null {
   return null;
 }
 
-const NUMBER = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
+const MAX_FRACTION_DIGITS = 1;
 
-const DATE = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-  timeZone: "UTC",
-});
-
-const SPANS: readonly [number, string][] = [
-  [86_400_000, "day"],
-  [3_600_000, "hour"],
-  [60_000, "minute"],
+/** The spans a relative time is counted in, largest first, each with the keys for "ago" and "in". */
+const SPANS: readonly (readonly [number, MessageKey, MessageKey])[] = [
+  [86_400_000, "layers.formatter.agoDay", "layers.formatter.inDay"],
+  [3_600_000, "layers.formatter.agoHour", "layers.formatter.inHour"],
+  [60_000, "layers.formatter.agoMinute", "layers.formatter.inMinute"],
 ];
 
-function relative(value: FieldValue, { now }: FormatContext): string | null {
+function relative(
+  value: FieldValue,
+  { now, catalogue }: FormatContext,
+): string | null {
   const time = parseTime(value);
   if (time === null) {
     return null;
   }
   const difference = now - time;
   const distance = Math.abs(difference);
-  for (const [size, unit] of SPANS) {
+  for (const [size, ago, within] of SPANS) {
     if (distance >= size) {
-      const count = Math.floor(distance / size);
-      const span = `${count} ${unit}${count === 1 ? "" : "s"}`;
-      return difference >= 0 ? `${span} ago` : `in ${span}`;
+      return catalogue.plural(difference >= 0 ? ago : within, {
+        count: Math.floor(distance / size),
+      });
     }
   }
-  return "just now";
+  return catalogue.t("layers.formatter.justNow", {});
 }
 
-function date(value: FieldValue): string | null {
+function date(value: FieldValue, { catalogue }: FormatContext): string | null {
   const time = parseTime(value);
   if (time === null) {
     return null;
   }
-  const parts = Object.fromEntries(
-    DATE.formatToParts(time).map((part) => [part.type, part.value]),
-  );
-  return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute} UTC`;
+  const { language } = catalogue;
+  const day = new Intl.DateTimeFormat(language, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(time);
+  const clock = new Intl.DateTimeFormat(language, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(time);
+  return catalogue.t("format.utcTime", {
+    time: catalogue.t("common.commaJoined", { first: day, second: clock }),
+  });
+}
+
+function formatFigure(value: number, { catalogue }: FormatContext): string {
+  return formatNumber(value, catalogue.language, {
+    maximumFractionDigits: MAX_FRACTION_DIGITS,
+  });
 }
 
 /**
@@ -108,13 +127,13 @@ function date(value: FieldValue): string | null {
  */
 export const BUILT_IN_FORMATTERS: Readonly<Record<string, Formatter>> = {
   relative,
-  number: (value) => {
+  number: (value, context) => {
     const number = toNumber(value);
-    return number === null ? null : NUMBER.format(number);
+    return number === null ? null : formatFigure(number, context);
   },
-  km: (value) => {
+  km: (value, context) => {
     const number = toNumber(value);
-    return number === null ? null : `${NUMBER.format(number)} km`;
+    return number === null ? null : `${formatFigure(number, context)} km`;
   },
   date,
 };

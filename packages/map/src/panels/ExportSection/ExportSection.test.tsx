@@ -49,7 +49,7 @@ function setup(
       </LiveRegionProvider>
     </ServicesProvider>,
   );
-  return { adapter, ...view };
+  return { adapter, services, ...view };
 }
 
 describe("ExportSection", () => {
@@ -79,6 +79,17 @@ describe("ExportSection", () => {
       screen.getByRole("button", { name: "Save image" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("sheet-section-export")).toHaveTextContent("PNG");
+  });
+
+  it("asks the catalogue for the saved announcement, by key", async () => {
+    const { services } = setup();
+    fireEvent.click(screen.getByRole("button", { name: "Save image" }));
+    await waitFor(() =>
+      expect(services.fakes.messages.calls).toContainEqual({
+        key: "announce.imageSaved",
+        params: {},
+      }),
+    );
   });
 
   it("asks the map for an image with the credits drawn in, and saves it as a file", async () => {
@@ -170,5 +181,32 @@ describe("ExportSection", () => {
       "aria-disabled",
       "true",
     );
+  });
+});
+
+describe("ExportSection message catalogue", () => {
+  it("asks for its words by key", () => {
+    const { services } = setup();
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "panels.export.title",
+        "panels.export.description",
+        "panels.export.save",
+      ]),
+    );
+  });
+
+  it("asks for the error text by key once saving has failed", async () => {
+    const { adapter, services } = setup();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(adapter, "toImage").mockRejectedValue(new Error("no"));
+    fireEvent.click(screen.getByTestId("save-image-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("export-error")).toBeInTheDocument();
+    });
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "panels.export.error",
+      params: {},
+    });
   });
 });

@@ -56,6 +56,10 @@ Place search and reverse geocoding use [OpenStreetMap Nominatim](https://nominat
 
 Routes and travel-time areas come from the public [Valhalla](https://valhalla.github.io/valhalla/) routing service at `valhalla1.openstreetmap.de`, run by the [FOSSGIS](https://www.fossgis.de) community. Valhalla is open source under the MIT licence, and it routes on OpenStreetMap data, with © OpenStreetMap contributors attribution under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/).
 
+## Translations
+
+The interface text is written in British English. The Afrikaans catalogue (`packages/web/src/i18n/af.ts`) is a machine-translated draft that is offered on the reference site before its review by a fluent speaker; once it has been reviewed, the reviewer is credited here.
+
 ## Software
 
 MapCairn is licensed under [AGPL-3.0](LICENSE). Each SDK package (`core`, `map`, `react` and `theme`) carries its own copy, and the reference host is in `packages/web`. The one exception is `packages/geolint`, a GeoJSON linter, which is licensed under Apache-2.0 (see its `LICENSE` and `NOTICE`). Dependency licences are recorded in the installed packages' licence files.

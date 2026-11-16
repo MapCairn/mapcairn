@@ -6,9 +6,11 @@ import {
   describeLayersRefreshFailed,
   describeLayersSkipped,
   describeNoLayers,
+  type Message,
 } from "@mapcairn/core";
 import { LoaderCircle, RotateCw, TriangleAlert } from "lucide-react";
 import { type FocusEvent, useEffect, useRef, useState } from "react";
+import { useFormatMessage, useMessages } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import type { CatalogueView } from "./catalogueView";
@@ -30,7 +32,7 @@ export interface CatalogueStatusProps {
 }
 
 /** The words of the failure row when nothing is being retried: what failed. */
-function failureText(catalogue: CatalogueView): string {
+function failureText(catalogue: CatalogueView): Message {
   return catalogue.status === "failed"
     ? describeLayersLoadFailed()
     : describeLayersRefreshFailed();
@@ -123,6 +125,8 @@ export function CatalogueStatus({
   onRetry,
   onRecovered,
 }: CatalogueStatusProps) {
+  const format = useFormatMessage();
+  const { t } = useMessages();
   const loading =
     catalogue.status === "loading" || catalogue.refresh === "loading";
   const { retrying, startRetry } = useRetry(loading);
@@ -140,11 +144,11 @@ export function CatalogueStatus({
       {showsRetry ? (
         <div className={styles.status} data-testid="catalogue-status">
           {retryingNow ? (
-            <span>{describeLayersLoading()}</span>
+            <span>{format(describeLayersLoading())}</span>
           ) : (
             <span className={styles.statusError}>
               <Icon icon={TriangleAlert} />
-              {failureText(catalogue)}
+              {format(failureText(catalogue))}
             </span>
           )}
           <Button
@@ -155,24 +159,24 @@ export function CatalogueStatus({
             onClick={retry}
             {...focusHandoff}
           >
-            Try again
+            {t("layers.tryAgain", {})}
           </Button>
         </div>
       ) : null}
       {!showsRetry && catalogue.status === "loading" ? (
         <p className={styles.status} data-testid="catalogue-status">
           <Icon icon={LoaderCircle} spinning />
-          {describeLayersLoading()}
+          {format(describeLayersLoading())}
         </p>
       ) : null}
       {catalogue.status === "ready" && layerCount === 0 ? (
         <p className={styles.status} data-testid="catalogue-status">
-          {describeNoLayers()}
+          {format(describeNoLayers())}
         </p>
       ) : null}
       {catalogue.skipped > 0 ? (
         <p className={styles.status} data-testid="catalogue-skipped">
-          {describeLayersSkipped(catalogue.skipped)}
+          {format(describeLayersSkipped(catalogue.skipped))}
         </p>
       ) : null}
     </>

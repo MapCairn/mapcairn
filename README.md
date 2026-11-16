@@ -16,7 +16,7 @@
 - **Pure, tested logic.** Geometry, measurement, formatting, URL state and the surface state machine are plain functions with no DOM, covered by unit tests with 95 percent coverage floors, and the parsers that read untrusted text by property-based tests.
 - **Server-renderable.** The reference host runs on Cloudflare Workers under a strict Content Security Policy with no inline script except one hashed one.
 
-What it is not: a hosted service, a dataset or a GIS analysis engine. MapLibre GL JS is the only map engine, and the interface is in English (British).
+What it is not: a hosted service, a dataset or a GIS analysis engine. MapLibre GL JS is the only map engine. The interface text is British English by default and can be translated or replaced through a message catalogue; the reference site offers English and Afrikaans.
 
 ## A layer is data
 
@@ -70,6 +70,7 @@ The packages are not published to npm yet; the work is tracked in the roadmap. T
 | [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                 | Layers, ports and adapters, the map adapter, adding an adapter                                                                                                                                |
 | [`DESIGN.md`](DESIGN.md)                                                             | Tokens, layout slots, accessibility contracts and the lint rules                                                                                                                              |
 | [`docs/guides/extending.md`](docs/guides/extending.md)                               | Embedding the SDK in an app of your own (with the example in `examples/embed`), and adding a basemap, a data layer of each kind, layers supplied at runtime, a routing provider or an adapter |
+| [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)               | Using the SDK in another language, offering a choice of languages, translating definitions, wiring a message-format library of your own, and adding a language to the reference site          |
 | [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                     | Which layer kind to serve from your own server, from raster tiles to GeoJSON by bounding box, and what each costs the server                                                                  |
 | [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md)   | The directives a page hosting the SDK needs in its Content Security Policy, and why: script, style, images, fonts, the origins it fetches from, the engine's worker and the nonce question    |
 | [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Searching by place name or coordinates, saving the map, choosing between features at one place, and drawing, importing and exporting shapes                                                   |

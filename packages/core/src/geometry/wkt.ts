@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { Feature, Geometry, Position } from "geojson";
+import { message } from "../messages/formatMessage";
+import type { Message } from "../ports/messages";
 import { GeometryError } from "./errors";
 import { fixedDecimal } from "./fixedDecimal";
 import { MAX_COLLECTION_DEPTH, validateGeometry } from "./validate";
@@ -78,7 +80,7 @@ const UNSUPPORTED_KEYWORDS = new Set([
 function measureUnsupported(): GeometryError {
   return new GeometryError(
     "unsupported",
-    "Coordinates with a measure (M) are not supported.",
+    message("wkt.measureUnsupported", {}),
   );
 }
 
@@ -127,7 +129,10 @@ export class UnsupportedSridError extends GeometryError {
   constructor(srid: number) {
     super(
       "unsupported",
-      `Only SRID ${SUPPORTED_WKT_SRID} (WGS 84) is supported, not SRID ${srid}.`,
+      message("wkt.onlySrid", {
+        supported: String(SUPPORTED_WKT_SRID),
+        srid: String(srid),
+      }),
     );
     this.name = "UnsupportedSridError";
     this.srid = srid;
@@ -171,8 +176,11 @@ function lineEnd(text: string, from: number): number {
   return text.length;
 }
 
-function refuse(message: string, at: number): GeometryError {
-  return new GeometryError("invalid", `${message} at position ${at + 1}.`);
+function refuse(fault: Message, at: number): GeometryError {
+  return new GeometryError(
+    "invalid",
+    message("wkt.atPosition", { fault, position: String(at + 1) }),
+  );
 }
 
 function isLetter(code: number): boolean {
@@ -388,7 +396,7 @@ class Tokens {
       this.#index = end;
       return { kind: "number", text: text.slice(at, end), at, first };
     }
-    throw refuse("Unexpected character", at);
+    throw refuse(message("wkt.unexpectedCharacter", {}), at);
   }
 }
 
@@ -471,7 +479,7 @@ class Reader {
     const geometry = this.#wholeGeometry();
     const rest = this.#tokens.next();
     if (rest.kind !== "end") {
-      throw refuse("Unexpected text after the geometry", rest.at);
+      throw refuse(message("wkt.unexpectedText", {}), rest.at);
     }
     return geometry;
   }
@@ -605,7 +613,7 @@ class Reader {
   #expect(kind: Punctuation): void {
     const token = this.#tokens.next();
     if (token.kind !== kind) {
-      throw refuse(`Expected "${kind}"`, token.at);
+      throw refuse(message("wkt.expectedKeyword", { kind }), token.at);
     }
   }
 
@@ -620,11 +628,11 @@ class Reader {
   #number(): number {
     const token = this.#tokens.next();
     if (token.kind !== "number") {
-      throw refuse("Expected a number", token.at);
+      throw refuse(message("wkt.expectedNumber", {}), token.at);
     }
     const value = numberValue(token.text);
     if (value === undefined) {
-      throw refuse("Not a valid number", token.at);
+      throw refuse(message("wkt.invalidNumber", {}), token.at);
     }
     return value;
   }
@@ -638,7 +646,7 @@ class Reader {
       position.push(this.#number());
     }
     if (dimensions === "z" && position.length !== 3) {
-      throw refuse("A Z position needs three numbers", at);
+      throw refuse(message("wkt.zNeedsThree", {}), at);
     }
     return position;
   }
@@ -678,11 +686,11 @@ class Reader {
     this.#expect("=");
     const code = this.#tokens.next();
     if (code.kind !== "number") {
-      throw refuse("Expected an SRID", code.at);
+      throw refuse(message("wkt.expectedSrid", {}), code.at);
     }
     if (!isSridDigits(code.text)) {
       throw refuse(
-        `An SRID must be a whole number of at most ${MAX_SRID_DIGITS} digits`,
+        message("wkt.sridDigits", { max: String(MAX_SRID_DIGITS) }),
         code.at,
       );
     }
@@ -696,7 +704,7 @@ class Reader {
   #geometry(depth: number): Geometry {
     const word = this.#tokens.next();
     if (word.kind !== "word") {
-      throw refuse("Expected a geometry type", word.at);
+      throw refuse(message("wkt.expectedType", {}), word.at);
     }
     const [keyword, suffix] = splitSuffix(word.text.toUpperCase());
     let dimensions: Dimensions = suffix === "Z" ? "z" : "any";
@@ -707,9 +715,12 @@ class Reader {
       throw UNSUPPORTED_KEYWORDS.has(keyword)
         ? new GeometryError(
             "unsupported",
-            `The WKT type ${keyword} is not supported.`,
+            message("wkt.typeUnsupported", { keyword }),
           )
-        : refuse(`Unknown geometry type "${keyword.slice(0, 20)}"`, word.at);
+        : refuse(
+            message("wkt.unknownType", { keyword: keyword.slice(0, 20) }),
+            word.at,
+          );
     }
     const tag = this.#tokens.peek();
     if (tag.kind === "word") {
@@ -718,7 +729,7 @@ class Reader {
         throw measureUnsupported();
       }
       if (text !== "EMPTY" && text !== "Z") {
-        throw refuse("Unexpected word", tag.at);
+        throw refuse(message("wkt.unexpectedWord", {}), tag.at);
       }
       this.#tokens.next();
       if (text === "Z") {
@@ -776,7 +787,7 @@ class Reader {
       default: {
         if (depth >= MAX_COLLECTION_DEPTH) {
           throw refuse(
-            "Geometry collections are nested too deeply",
+            message("wkt.nestedTooDeep", {}),
             this.#tokens.peek().at,
           );
         }
@@ -796,7 +807,7 @@ class Reader {
       if (!first) {
         const at = this.#tokens.peek().at;
         if (bracketed !== this.#accept("(")) {
-          throw refuse("Points must all be bracketed or all bare", at);
+          throw refuse(message("wkt.mixedBrackets", {}), at);
         }
       }
       const value = position();

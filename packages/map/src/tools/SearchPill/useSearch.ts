@@ -7,6 +7,7 @@ import {
   announceSearchResults,
   type Bounds,
   coordinateSearchResult,
+  type Message,
   PortAbortError,
   SearchError,
   type SearchErrorKind,
@@ -14,19 +15,11 @@ import {
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchProvider } from "../../services/hooks";
+import { useMessages, useSearchProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";
 
 /** The fewest characters (after trimming) that a submitted search needs. */
 export const MIN_SEARCH_LENGTH = 2;
-
-/**
- * The one message shown for every kind of failed search. The next step is in
- * the sentence and in the Retry button beside it; the screen reader hears the
- * more specific, per-kind wording through the announcer instead.
- */
-export const SEARCH_UNAVAILABLE_MESSAGE =
-  "Search is unavailable right now. Please try again.";
 
 /** Where a search stands. Exactly one of these is true at a time. */
 export type SearchState =
@@ -105,6 +98,7 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
   const announce = useAnnounce();
   const providerRef = useLatestRef(provider);
   const announceRef = useLatestRef(announce);
+  const messagesRef = useLatestRef(useMessages());
   const getBiasRef = useLatestRef(getBias);
 
   const [query, setQueryState] = useState("");
@@ -120,18 +114,20 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
   }, []);
 
   const announceOnce = useCallback(
-    (message: string, priority: "polite" | "assertive") => {
-      if (message === lastAnnounced.current) {
+    (message: Message, priority: "polite" | "assertive") => {
+      // The same outcome, by key and parameters, is said once.
+      const outcome = JSON.stringify(message);
+      if (outcome === lastAnnounced.current) {
         return;
       }
-      lastAnnounced.current = message;
+      lastAnnounced.current = outcome;
       announceRef.current(message, { priority });
     },
     [announceRef],
   );
 
   const showResults = useCallback(
-    (results: readonly SearchResult[], message: string) => {
+    (results: readonly SearchResult[], message: Message) => {
       setState({ status: "results", results });
       announceOnce(message, "polite");
     },
@@ -141,7 +137,7 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
   const run = useCallback(
     async (text: string) => {
       controller.current?.abort();
-      const coordinates = coordinateSearchResult(text);
+      const coordinates = coordinateSearchResult(text, messagesRef.current);
       if (coordinates !== null) {
         controller.current = null;
         showResults([coordinates], announceCoordinateResult(coordinates.label));
@@ -174,7 +170,7 @@ export function useSearch({ getBias }: UseSearchOptions = {}): UseSearch {
         announceOnce(announceSearchError(kind), "assertive");
       }
     },
-    [providerRef, getBiasRef, announceOnce, showResults],
+    [providerRef, getBiasRef, messagesRef, announceOnce, showResults],
   );
 
   const setQuery = useCallback(

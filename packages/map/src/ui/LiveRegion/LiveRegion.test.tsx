@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import {
+  createFakeServices,
+  FakeMessageCatalogue,
+  message,
+} from "@mapcairn/core";
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ServicesProvider } from "../../services/ServicesProvider";
 import { type Announce, LiveRegionProvider, useAnnounce } from "./LiveRegion";
 
 let announce: Announce = () => undefined;
@@ -199,5 +205,75 @@ describe("LiveRegionProvider", () => {
     expect(vi.getTimerCount()).toBe(1);
     unmount();
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("announcing a message", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function renderWithServices(services = createFakeServices()) {
+    render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <Capture />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    return services;
+  }
+
+  it("formats a message with the active catalogue just before setting the text", () => {
+    const services = renderWithServices();
+    act(() => announce(message("announce.layerOn", { name: "Rain" })));
+    expect(polite().textContent).toBe("Rain is on.");
+    expect(services.fakes.messages.calls).toEqual([
+      { key: "announce.layerOn", params: { name: "Rain" } },
+    ]);
+  });
+
+  it("speaks in the language of the catalogue it is given", () => {
+    renderWithServices(
+      createFakeServices({
+        messages: new FakeMessageCatalogue({
+          language: "af",
+          overrides: { "announce.layerOn": "{name} is aan." },
+        }),
+      }),
+    );
+    act(() => announce(message("announce.layerOn", { name: "Reën" })));
+    expect(polite().textContent).toBe("Reën is aan.");
+  });
+
+  it("falls back to English outside a services provider", () => {
+    renderProvider();
+    act(() => announce(message("announce.layerOn", { name: "Rain" })));
+    expect(polite().textContent).toBe("Rain is on.");
+  });
+
+  it("drops the same outcome twice in a row whether it is text or a message", () => {
+    renderWithServices();
+    act(() => announce(message("announce.layerOn", { name: "Rain" })));
+    act(() => vi.advanceTimersByTime(700));
+    act(() => announce("Rain is on."));
+    act(() => vi.advanceTimersByTime(1000));
+    expect(polite().textContent).toBe("Rain is on.");
+  });
+
+  it("keeps a message that reports an outcome, as keep does for text", () => {
+    renderWithServices();
+    act(() => announce("First"));
+    act(() => announce(message("announce.imageSaved", {}), { keep: true }));
+    act(() => announce("Latest"));
+    act(() => vi.advanceTimersByTime(600));
+    expect(polite().textContent).toBe("Map image saved.");
+    act(() => vi.advanceTimersByTime(600));
+    expect(polite().textContent).toBe("Latest");
   });
 });

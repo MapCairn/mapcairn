@@ -13,7 +13,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
-import { usePreferences, useSettings } from "../../services";
+import { useMessages, usePreferences, useSettings } from "../../services";
 import { ControlGroup, IconButton, Surface } from "../../ui";
 import { useFocusTarget } from "../focusRegistry";
 import { useChromeSurface } from "../MapChrome/chromeSurface";
@@ -114,6 +114,7 @@ export function EndStack({
   const registerDirections = useFocusTarget("directions");
   const registerDraw = useFocusTarget("draw");
   const { settings } = useSettings();
+  const { t } = useMessages();
   const { finePointer } = usePreferences();
   const { endStackMaxHeight } = useChromeSurface();
 
@@ -159,7 +160,7 @@ export function EndStack({
   return (
     <section
       ref={setRoot}
-      aria-label="Map tools"
+      aria-label={t("chrome.endStack.label", {})}
       data-testid="end-stack"
       data-zoom-yielded={zoom.yieldedToHeight ? "true" : "false"}
       className={styles.stack}
@@ -171,7 +172,7 @@ export function EndStack({
           className={styles.compassSurface}
         >
           <IconButton
-            label="Reset bearing to north"
+            label={t("chrome.endStack.resetBearing", {})}
             icon={Navigation2}
             className={styles.compass}
             onClick={onResetBearing}
@@ -179,12 +180,12 @@ export function EndStack({
         </Surface>
       ) : null}
       <ControlGroup
-        label="Map controls"
+        label={t("chrome.endStack.controls", {})}
         data-chrome="end-stack-controls"
         className={styles.group}
       >
         <IconButton
-          label="Map options"
+          label={t("chrome.endStack.mapOptions", {})}
           icon={Layers}
           expanded={mapOptionsOpen}
           controls={mapOptionsControls}
@@ -192,7 +193,7 @@ export function EndStack({
           onClick={onMapOptions}
         />
         <IconButton
-          label="Measure distance and area"
+          label={t("chrome.endStack.measure", {})}
           icon={Ruler}
           pressed={measuring}
           data-focus-target="measure"
@@ -200,7 +201,7 @@ export function EndStack({
         />
         {directions ? (
           <IconButton
-            label="Directions"
+            label={t("chrome.endStack.directions", {})}
             icon={Route}
             pressed={directions.active}
             controls={directions.controls}
@@ -210,7 +211,7 @@ export function EndStack({
         ) : null}
         {onDraw ? (
           <IconButton
-            label="Draw shapes"
+            label={t("chrome.endStack.draw", {})}
             icon={Pentagon}
             pressed={drawing}
             data-focus-target="draw"
@@ -218,13 +219,13 @@ export function EndStack({
           />
         ) : null}
         <IconButton
-          label="Locate me"
+          label={t("chrome.endStack.locate", {})}
           icon={LocateFixed}
           busy={locating}
           onClick={onLocate}
         />
         <IconButton
-          label="Settings"
+          label={t("chrome.endStack.settings", {})}
           icon={Settings}
           expanded={settingsOpen}
           controls={settingsControls}
@@ -234,18 +235,18 @@ export function EndStack({
       </ControlGroup>
       {zoom.show ? (
         <ControlGroup
-          label="Zoom controls"
+          label={t("chrome.endStack.zoomControls", {})}
           data-chrome="end-stack-zoom"
           className={styles.group}
         >
           <IconButton
-            label="Zoom in"
+            label={t("chrome.endStack.zoomIn", {})}
             icon={Plus}
             disabled={!canZoomIn}
             onClick={onZoomIn}
           />
           <IconButton
-            label="Zoom out"
+            label={t("chrome.endStack.zoomOut", {})}
             icon={Minus}
             disabled={!canZoomOut}
             onClick={onZoomOut}

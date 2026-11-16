@@ -56,6 +56,10 @@ One test fix came out of the work: the basemap outage end-to-end test checked th
 
 That is where this plan stops. What is left is the engine itself, the first view's tiles and glyphs, and byte savings the audit overstates. A real gain would need a different design: for example, showing the tour card before the map has loaded, which plan 0004 rules out, or a lighter engine, which is out of scope.
 
+## Language weight
+
+A language other than the host's default is its own module, imported when a visitor first uses it, so no visitor downloads text for a language they do not use (`LanguageCatalogue.load` may return a promise; the reference host's `packages/web/src/i18n/hostLanguages.ts` imports `i18n/af.ts` this way). The default language is in the main bundle and loads synchronously. While another language loads, the interface keeps showing the previous one, so a slow connection never shows blank text. On the reference site the Afrikaans catalogue builds to its own chunk of about 40 KB, 12 KB gzipped (`af-<hash>.js` in the `npm run build` output, measured when it was added), and no other chunk holds its text. Nothing in the repository measures the bundle's size yet, so this is a shape the code holds to and not a checked budget.
+
 ## Decided not to do
 
 - Show the tour card before the map has loaded. It would move LCP without making anything faster, and it breaks plan 0004's rule.

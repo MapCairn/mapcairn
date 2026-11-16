@@ -4,6 +4,7 @@ import { DEFAULT_MARKER_RADIUS, isCompactViewport } from "@mapcairn/core";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useChromeLayout } from "../chrome/layoutContext";
+import { useFormatMessage, useMessages } from "../services";
 import { Icon } from "../ui/Icon";
 import { Surface } from "../ui/Surface";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
@@ -29,11 +30,6 @@ export interface MapKeyProps {
    * replaces it from then on.
    */
   readonly defaultMinimised?: boolean;
-}
-
-/** The count in words, for the chip. */
-function layerCount(count: number): string {
-  return `${count} ${count === 1 ? "layer" : "layers"}`;
 }
 
 /** The first row of each block's key, as a strip of small glyphs. */
@@ -70,10 +66,13 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
   const headingId = useId();
   const bodyId = useId();
   const { viewport } = useChromeLayout();
+  const format = useFormatMessage();
+  const messages = useMessages();
+  const { t } = messages;
   const [chosen, setChosen] = useState<boolean | null>(null);
   const [decided, setDecided] = useState<boolean | null>(null);
   const bodyRef = useRef<HTMLElement>(null);
-  const blocks = mapKeyBlocks(layers.layers);
+  const blocks = mapKeyBlocks(layers.layers, messages);
   const hasBlocks = blocks.length > 0;
   const startsMinimised = defaultMinimised ?? isCompactViewport(viewport);
   // Before the chrome has measured, its viewport is empty and the default
@@ -104,11 +103,11 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
       <div className={styles.header}>
         {minimised ? (
           <VisuallyHidden as="h2" id={headingId}>
-            Map key
+            {t("layers.key.title", {})}
           </VisuallyHidden>
         ) : (
           <h2 id={headingId} className={styles.heading}>
-            Map key
+            {t("layers.key.title", {})}
           </h2>
         )}
         <button
@@ -116,7 +115,9 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
           className={styles.toggle}
           aria-expanded={!minimised}
           aria-controls={minimised ? undefined : bodyId}
-          aria-label={`Map key, ${layerCount(blocks.length)}`}
+          aria-label={messages.plural("layers.key.toggle", {
+            count: blocks.length,
+          })}
           data-testid="map-key-toggle"
           onClick={() => setChosen(!minimised)}
         >
@@ -124,7 +125,7 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
             <>
               <GlyphStrip blocks={blocks} />
               <span className={styles.chipText}>
-                Key, {layerCount(blocks.length)}
+                {messages.plural("layers.key.chip", { count: blocks.length })}
               </span>
             </>
           ) : null}
@@ -136,7 +137,7 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
           ref={bodyRef}
           id={bodyId}
           className={styles.body}
-          aria-label={scrolls ? "Layer keys" : undefined}
+          aria-label={scrolls ? t("layers.key.scrolling", {}) : undefined}
           tabIndex={scrolls ? 0 : undefined}
           data-testid="map-key-body"
         >
@@ -149,11 +150,15 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
               >
                 <h3 className={styles.layerName}>{block.name}</h3>
                 {block.chosenTime ? (
-                  <p className={styles.when}>Showing {block.chosenTime}</p>
+                  <p className={styles.when}>
+                    {t("layers.key.showing", {
+                      time: format(block.chosenTime),
+                    })}
+                  </p>
                 ) : null}
                 <LayerKey
                   definition={block.definition}
-                  label={`${block.name} key`}
+                  label={t("layers.key.nameKey", { name: block.name })}
                   testId={`map-key-list-${block.id}`}
                   layout="stacked"
                 />

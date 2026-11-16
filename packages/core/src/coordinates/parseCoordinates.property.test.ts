@@ -2,7 +2,8 @@
 // Copyright MapCairn contributors
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { formatLatitude, formatLongitude } from "../format";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
+import { formatLatitude, formatLongitude, hemispheresFor } from "../format";
 import { PROPERTY_PARAMETERS } from "../propertyTesting/propertyParameters";
 import {
   hostileText,
@@ -34,6 +35,16 @@ const FRAGMENTS = [
 
 const LAT = fc.integer({ min: -90_000_000, max: 90_000_000 });
 const LNG = fc.integer({ min: -180_000_000, max: 180_000_000 });
+
+const hemispheres = hemispheresFor(new FakeMessageCatalogue());
+const afrikaans = hemispheresFor(
+  new FakeMessageCatalogue({
+    language: "af",
+    overrides: {
+      "format.hemisphereEast": "O",
+    },
+  }),
+);
 
 describe("parseCoordinates properties", () => {
   it("never throws, and any position it returns is within range", () => {
@@ -90,7 +101,7 @@ describe("parseCoordinates properties", () => {
       fc.property(LAT, LNG, (lat, lng) => {
         const position = { lat: lat / 1e7, lng: lng / 1e7 };
         const parsed = parseCoordinates(
-          `${formatLatitude(position.lat)}, ${formatLongitude(position.lng)}`,
+          `${formatLatitude(position.lat, hemispheres)}, ${formatLongitude(position.lng, hemispheres)}`,
         );
         expect(parsed?.lat).toBeCloseTo(position.lat, 4);
         expect(parsed?.lng).toBeCloseTo(position.lng, 4);
@@ -121,6 +132,19 @@ describe("parseCoordinates properties", () => {
         );
         expect(parsed?.lat).toBeCloseTo(expectedLat, 6);
         expect(parsed?.lng).toBeCloseTo(expectedLng, 6);
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("reads back what the coordinate formatters write with Afrikaans letters", () => {
+    fc.assert(
+      fc.property(LAT, LNG, (lat, lng) => {
+        const position = { lat: lat / 1e7, lng: lng / 1e7 };
+        const text = `${formatLatitude(position.lat, afrikaans)}, ${formatLongitude(position.lng, afrikaans)}`;
+        const parsed = parseCoordinates(text, afrikaans);
+        expect(parsed?.lat).toBeCloseTo(position.lat, 4);
+        expect(parsed?.lng).toBeCloseTo(position.lng, 4);
       }),
       PROPERTY_PARAMETERS,
     );

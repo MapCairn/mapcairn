@@ -2,7 +2,9 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  EN_GB_CATALOGUE,
   FakeMapAdapter,
+  FakeMessageCatalogue,
   formatLatLng,
   type LatLng,
   MAX_DIRECTION_STOPS,
@@ -15,8 +17,10 @@ import {
   testChromeLayout,
   testMapContext,
 } from "../../chrome/MapChrome/chromeTestHarness";
-import { DEFAULT_DIRECTIONS_NOTE, DirectionsPanel } from "./DirectionsPanel";
+import { DirectionsPanel } from "./DirectionsPanel";
 import { useDirections } from "./useDirections";
+
+const DEFAULT_DIRECTIONS_NOTE = EN_GB_CATALOGUE["tools.directions.note"];
 
 const PARIS: LatLng = { lat: 48.8566, lng: 2.3522 };
 const NAIROBI: LatLng = { lat: -1.2921, lng: 36.8219 };
@@ -26,8 +30,10 @@ function Harness({ pin = null, note }: { pin?: LatLng | null; note?: string }) {
   return <DirectionsPanel directions={directions} pin={pin} note={note} />;
 }
 
-function setup(props: { pin?: LatLng | null; note?: string } = {}) {
-  const services = createFakeServices();
+function setup(
+  props: { pin?: LatLng | null; note?: string } = {},
+  services = createFakeServices(),
+) {
   const view = renderChrome(<Harness {...props} />, {
     services,
     layout: testChromeLayout(),
@@ -308,6 +314,10 @@ describe("getting a route", () => {
     expect(screen.getByTestId("directions-error")).toHaveTextContent(
       "No route was found",
     );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "error.routing.noRoute",
+      params: {},
+    });
     expect(screen.queryByTestId("directions-retry")).toBeNull();
   });
 
@@ -385,5 +395,35 @@ describe("the map centre the panel uses", () => {
     expect(screen.getByTestId("directions-stop-row")).toHaveTextContent(
       formatLatLng(adapter.unproject({ x: 846, y: 360 })),
     );
+  });
+});
+
+describe("copy", () => {
+  it("asks the catalogue by key for its words, with the stop and the time as parameters", () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "tools.directions.addAtCentre": "Voeg stop by kaartmiddelpunt by",
+        "tools.directions.stopPrefix": "Stop {letter} is:",
+        "tools.directions.showArea":
+          "Wys die gebied binne {count} minuut|Wys die gebied binne {count} minute",
+      },
+    });
+    setup({}, createFakeServices({ messages }));
+    click("Voeg stop by kaartmiddelpunt by");
+    expect(screen.getByTestId("directions-stop-row")).toHaveTextContent(
+      "Stop A is:",
+    );
+    expect(
+      screen.getByRole("button", { name: "Wys die gebied binne 15 minute" }),
+    ).toBeTruthy();
+    expect(messages.calls).toContainEqual({
+      key: "tools.directions.stopPrefix",
+      params: { letter: "A" },
+    });
+    expect(messages.calls).toContainEqual({
+      key: "tools.directions.showArea",
+      params: { count: 15 },
+    });
   });
 });

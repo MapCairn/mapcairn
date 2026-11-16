@@ -6,9 +6,11 @@ import {
   formatTemplate,
   hasCard,
   isFeedLayer,
+  type MessageCatalogue,
 } from "@mapcairn/core";
 import { ArrowLeft, Crosshair, Layers, TriangleAlert, X } from "lucide-react";
 import { type Ref, useId } from "react";
+import { useMessages, useResolveText } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
@@ -19,13 +21,14 @@ import type { DataLayers, DetailState, SelectedFeature } from "./useDataLayers";
 
 /** The label of the affected-area button: `idle` until the area is shown or has failed to load. */
 function detailButtonLabel(
+  t: MessageCatalogue["t"],
   status: DetailState["status"] | undefined,
   idle: string,
 ): string {
   if (status === "shown") {
-    return "Hide affected area";
+    return t("layers.card.hideArea", {});
   }
-  return status === "error" ? "Try again" : idle;
+  return status === "error" ? t("layers.tryAgain", {}) : idle;
 }
 
 /** Props for {@link FeatureCard}. */
@@ -66,6 +69,9 @@ export function FeatureCard({
   onShowOnMap,
 }: FeatureCardProps) {
   const headingId = useId();
+  const messages = useMessages();
+  const { t } = messages;
+  const resolve = useResolveText();
   const { definition } = selected.layer;
   if (!hasCard(definition)) {
     return null;
@@ -74,10 +80,10 @@ export function FeatureCard({
   const card = cardOf(definition);
   const feed = isFeedLayer(definition) ? definition : null;
   const detailSource = feed?.detail;
-  const context = { now: layers.now() };
+  const context = { now: layers.now(), catalogue: messages };
   const fill = (template: string) =>
     formatTemplate(template, feature.fields, formatters, context);
-  const title = fill(card.title) ?? definition.name;
+  const title = fill(card.title) ?? resolve(definition.name);
   const lines = card.lines
     .map(fill)
     .filter((line): line is string => line !== null && line.trim() !== "");
@@ -106,7 +112,7 @@ export function FeatureCard({
           {title}
         </Heading>
         <IconButton
-          label="Close card"
+          label={t("layers.card.close", {})}
           icon={X}
           size="compact"
           data-testid="feature-card-close"
@@ -116,11 +122,11 @@ export function FeatureCard({
           }}
         />
       </div>
-      <p className={styles.muted}>{definition.name}</p>
+      <p className={styles.muted}>{resolve(definition.name)}</p>
       {feed ? (
         <p className={styles.cardLevel} data-testid="feature-card-class">
           <FeatureGlyph definition={feed} fields={feature.fields} radius={6} />
-          {featureClass(feed, feature.fields)}
+          {featureClass(feed, feature.fields, messages)}
         </p>
       ) : null}
       {lines.map((line, index) => (
@@ -138,14 +144,14 @@ export function FeatureCard({
           rel="noopener noreferrer"
           data-testid="feature-card-link"
         >
-          {card.link.label}
-          <VisuallyHidden> (opens in a new tab)</VisuallyHidden>
+          {resolve(card.link.label)}
+          <VisuallyHidden> {t("layers.card.opensInNewTab", {})}</VisuallyHidden>
         </a>
       ) : null}
       {definition.disclaimer ? (
         <p className={styles.disclaimer} data-testid="feature-card-disclaimer">
           <Icon icon={TriangleAlert} />
-          {definition.disclaimer}
+          {resolve(definition.disclaimer)}
         </p>
       ) : null}
       <div className={styles.cardActions}>
@@ -153,10 +159,11 @@ export function FeatureCard({
           <Button
             variant="quiet"
             icon={ArrowLeft}
+            mirrorInRtl
             data-testid="feature-card-back"
             onClick={() => layers.backToChoices({ focus: true })}
           >
-            Back to list
+            {t("layers.card.back", {})}
           </Button>
         ) : null}
         <Button
@@ -165,7 +172,7 @@ export function FeatureCard({
           data-testid="feature-card-show"
           onClick={onShowOnMap}
         >
-          Show on map
+          {t("layers.card.showOnMap", {})}
         </Button>
         {detailSource ? (
           <Button
@@ -179,15 +186,15 @@ export function FeatureCard({
                 : layers.showDetail(definition.id, feature.id)
             }
           >
-            {detailButtonLabel(detail?.status, detailSource.label)}
+            {detailButtonLabel(t, detail?.status, resolve(detailSource.label))}
           </Button>
         ) : null}
       </div>
       {detailSource && detail?.status !== "shown" ? (
         <p className={styles.muted}>
           {detail?.status === "error"
-            ? "The affected area could not load."
-            : `Uses ${detailSource.dataCost}.`}
+            ? t("layers.card.areaFailed", {})
+            : t("layers.usesCost", { cost: resolve(detailSource.dataCost) })}
         </p>
       ) : null}
     </article>

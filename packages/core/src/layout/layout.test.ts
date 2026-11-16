@@ -3,8 +3,10 @@
 import { describe, expect, it } from "vitest";
 import {
   chooseLayout,
+  clearsInlineEnd,
   computeBottomSlotLayout,
   computeEndStackMaxHeight,
+  inlineDistanceToFarEdge,
   isCompactViewport,
   shouldShowZoomButtons,
 } from "./layout";
@@ -312,5 +314,43 @@ describe("chooseLayout", () => {
   it("uses the panel on screens shorter than 500px", () => {
     expect(chooseLayout({ width: 390, height: 499 })).toBe("panel");
     expect(chooseLayout({ width: 844, height: 390 })).toBe("panel");
+  });
+});
+
+describe("inlineDistanceToFarEdge", () => {
+  const panel = { offsetLeft: 12, offsetWidth: 360, containerWidth: 1000 };
+
+  it("measures from the left edge to the panel's far edge when reading left to right", () => {
+    expect(inlineDistanceToFarEdge({ ...panel, direction: "ltr" })).toBe(372);
+  });
+
+  it("measures from the right edge to the panel's far edge when reading right to left", () => {
+    expect(
+      inlineDistanceToFarEdge({ ...panel, offsetLeft: 628, direction: "rtl" }),
+    ).toBe(372);
+  });
+});
+
+describe("clearsInlineEnd", () => {
+  const near = { left: 100, right: 200 };
+  const far = { left: 300, right: 400 };
+
+  it("is true when the second box starts after the first ends, reading left to right", () => {
+    expect(clearsInlineEnd(near, far, 8, "ltr")).toBe(true);
+    expect(clearsInlineEnd(far, near, 8, "ltr")).toBe(false);
+  });
+
+  it("is true when the second box ends before the first starts, reading right to left", () => {
+    expect(clearsInlineEnd(far, near, 8, "rtl")).toBe(true);
+    expect(clearsInlineEnd(near, far, 8, "rtl")).toBe(false);
+  });
+
+  it("needs the gap as well as the clearance", () => {
+    expect(clearsInlineEnd(near, { left: 205, right: 300 }, 8, "ltr")).toBe(
+      false,
+    );
+    expect(clearsInlineEnd(near, { left: 208, right: 300 }, 8, "ltr")).toBe(
+      true,
+    );
   });
 });

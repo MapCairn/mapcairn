@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { type FormatterRegistry, isFeedLayer } from "@mapcairn/core";
+import {
+  type FormatterRegistry,
+  isFeedLayer,
+  resolveText,
+} from "@mapcairn/core";
 import { X } from "lucide-react";
 import { type Ref, useId } from "react";
+import { useMessages } from "../services";
 import { IconButton } from "../ui/IconButton";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { FeatureGlyph } from "./FeatureGlyph";
@@ -36,8 +41,10 @@ export function FeatureChoices({
   headingRef,
 }: FeatureChoicesProps) {
   const headingId = useId();
+  const messages = useMessages();
+  const { t } = messages;
   const Heading = `h${headingLevel}` as const;
-  const context = { now: layers.now() };
+  const context = { now: layers.now(), catalogue: messages };
   return (
     <section
       className={styles.card}
@@ -52,10 +59,12 @@ export function FeatureChoices({
           className={styles.cardHeading}
           data-testid="feature-choices-heading"
         >
-          {choices.length.toLocaleString("en-GB")} features here
+          {messages.plural("layers.choices.heading", {
+            count: choices.length,
+          })}
         </Heading>
         <IconButton
-          label="Close list"
+          label={t("layers.choices.close", {})}
           icon={X}
           size="compact"
           data-testid="feature-choices-close"
@@ -67,7 +76,7 @@ export function FeatureChoices({
           }}
         />
       </div>
-      <p className={styles.muted}>Choose one to see its details.</p>
+      <p className={styles.muted}>{t("layers.choices.hint", {})}</p>
       <ul className={styles.rows}>
         {choices.map(({ layer, feature }) => {
           const { definition } = layer;
@@ -97,9 +106,13 @@ export function FeatureChoices({
                 ) : null}
                 <span className={styles.rowText}>
                   <span className={styles.rowTitle}>{title}</span>
-                  <span className={styles.rowSecondary}>{definition.name}</span>
+                  <span className={styles.rowSecondary}>
+                    {resolveText(messages, definition.name)}
+                  </span>
                 </span>
-                <VisuallyHidden>, open details</VisuallyHidden>
+                <VisuallyHidden>
+                  , {t("layers.choices.openDetails", {})}
+                </VisuallyHidden>
               </button>
             </li>
           );

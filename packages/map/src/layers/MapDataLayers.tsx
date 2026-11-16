@@ -13,12 +13,14 @@ import {
   type LayerFeature,
   type MapAdapter,
   type MapFeatureTap,
+  type MessageCatalogue,
   tileUrl,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { useEffect, useRef } from "react";
 import { useMap } from "../host";
 import { roundPixel } from "../host/overlays/geometry";
+import { useMessages } from "../services";
 import * as styles from "./Layers.css";
 import {
   featureOutlines,
@@ -70,6 +72,12 @@ interface Drawn {
   readonly opacity?: number;
   /** The control values a heatmap or vector layer was drawn with. */
   readonly controls?: DataLayerState["controls"];
+  /**
+   * The catalogue a polygon or line layer's labels were written with, compared
+   * by identity: a figure in a label is written for the language, so another
+   * catalogue draws them again.
+   */
+  readonly catalogue?: MessageCatalogue;
 }
 
 /**
@@ -97,6 +105,7 @@ function draw(
   previous: (id: string) => Drawn | undefined,
   now: number,
   formatters: FormatterRegistry,
+  catalogue: MessageCatalogue,
 ): [string, Drawn][] {
   const { definition } = layer;
   const own = previous(definition.id);
@@ -159,8 +168,10 @@ function draw(
     if (layer.features.length === 0) {
       return [];
     }
-    if (replaced || own.features !== layer.features) {
-      const { style } = definition;
+    const { style } = definition;
+    // Only a polygon or line layer's labels depend on the language.
+    const wrongLanguage = isShapeStyle(style) && own?.catalogue !== catalogue;
+    if (replaced || own.features !== layer.features || wrongLanguage) {
       if (isShapeStyle(style)) {
         adapter.setStyledShapes(
           definition.id,
@@ -169,6 +180,7 @@ function draw(
             layer.features,
             formatters,
             now,
+            catalogue,
           ),
         );
       } else {
@@ -178,7 +190,16 @@ function draw(
         );
       }
     }
-    return [[definition.id, { definition, features: layer.features }]];
+    return [
+      [
+        definition.id,
+        {
+          definition,
+          features: layer.features,
+          ...(isShapeStyle(style) ? { catalogue } : {}),
+        },
+      ],
+    ];
   }
   const tiles = tileUrl(definition, layer.controls, now);
   const opacity = opacityOf(layer);
@@ -207,6 +228,7 @@ export function MapDataLayers({
   formatters = DEFAULT_FORMATTERS,
 }: MapDataLayersProps) {
   const { adapter } = useMap();
+  const messages = useMessages();
   const drawn = useRef(new Map<string, Drawn>());
   const { now, layers: states, detail } = layers;
 
@@ -225,6 +247,7 @@ export function MapDataLayers({
         (id) => drawn.current.get(id),
         now(),
         formatters,
+        messages,
       );
       for (const [id, result] of results) {
         next.set(id, result);
@@ -259,7 +282,7 @@ export function MapDataLayers({
       adapter.removeLayer(DETAIL_LAYER_ID);
     }
     drawn.current = next;
-  }, [adapter, states, detail, now, formatters]);
+  }, [adapter, states, detail, now, formatters, messages]);
 
   useEffect(
     () => () => {

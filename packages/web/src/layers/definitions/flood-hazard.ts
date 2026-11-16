@@ -9,21 +9,24 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const floodHazard: TileLayerDefinition = {
   id: "flood-hazard",
-  name: "Flood hazard map",
-  description:
-    "Land a river flood with a 1 in 100 chance each year would cover, from the Copernicus Global Flood Awareness System. A long-term hazard map, not a forecast.",
-  group: "Floods, storms and droughts",
-  dataCost: "about 5 to 50 KB per screen",
+  name: "layer.flood-hazard.name",
+  description: "layer.flood-hazard.description",
+  group: "layer.group.floodsStormsAndDroughts",
+  dataCost: "layer.flood-hazard.dataCost",
   attribution: [
     {
       text: "Generated using Copernicus Emergency Management Service information {year}",
       url: "https://www.globalfloods.eu/",
     },
   ],
-  disclaimer:
-    "For information only. It shows where floods could reach, not where they are now.",
+  disclaimer: "layer.flood-hazard.disclaimer",
   controls: [
-    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.7 },
+    {
+      kind: "opacity",
+      id: "opacity",
+      label: "layer.control.opacity",
+      default: 0.7,
+    },
   ],
   source: {
     kind: "tiles",

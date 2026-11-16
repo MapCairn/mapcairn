@@ -6,6 +6,7 @@ import {
   computeDetentHeights,
   cycleDetent,
   type DetentHeights,
+  inlineDistanceToFarEdge,
   nextDetent,
   resolveSnap,
   type SheetDetent,
@@ -24,6 +25,7 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { useMessages } from "../../services";
 import { IconButton, useAnnounce } from "../../ui";
 import { useChromeLayout } from "../layoutContext";
 import { useChromeSurface } from "../MapChrome/chromeSurface";
@@ -242,6 +244,7 @@ export function Sheet({
   const { layout, viewport, publishSheetTop } = useChromeLayout();
   const { publishSheetDetent, publishPanelEdge } = useChromeSurface();
   const announce = useAnnounce();
+  const { t } = useMessages();
   const titleId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -315,7 +318,15 @@ export function Sheet({
       return;
     }
     const publish = () => {
-      publishPanelEdge(panel.offsetLeft + panel.offsetWidth);
+      publishPanelEdge(
+        inlineDistanceToFarEdge({
+          offsetLeft: panel.offsetLeft,
+          offsetWidth: panel.offsetWidth,
+          containerWidth: panel.offsetParent?.clientWidth ?? 0,
+          direction:
+            getComputedStyle(panel).direction === "rtl" ? "rtl" : "ltr",
+        }),
+      );
     };
     publish();
     const observer =
@@ -567,7 +578,7 @@ export function Sheet({
           <button
             ref={handleRef}
             type="button"
-            aria-label="Resize panel"
+            aria-label={t("chrome.sheet.resize", {})}
             className={styles.handle}
             onClick={onHandleClick}
             onKeyDown={onHandleKeyDown}
@@ -588,7 +599,7 @@ export function Sheet({
           {title}
         </h2>
         <IconButton
-          label="Close"
+          label={t("chrome.sheet.close", {})}
           icon={X}
           size="compact"
           className={styles.close}

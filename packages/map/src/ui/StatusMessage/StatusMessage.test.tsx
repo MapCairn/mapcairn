@@ -1,9 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { Suspense, startTransition, use, useState } from "react";
+import { createFakeServices } from "@mapcairn/core";
+import {
+  act,
+  fireEvent,
+  render as renderBare,
+  screen,
+} from "@testing-library/react";
+import {
+  type ReactElement,
+  Suspense,
+  startTransition,
+  use,
+  useState,
+} from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ServicesProvider } from "../../services";
 import { StatusMessage } from "./StatusMessage";
+
+function render(ui: ReactElement, services = createFakeServices()) {
+  const view = renderBare(
+    <ServicesProvider services={services}>{ui}</ServicesProvider>,
+  );
+  return {
+    ...view,
+    rerender: (next: ReactElement) =>
+      view.rerender(
+        <ServicesProvider services={services}>{next}</ServicesProvider>,
+      ),
+  };
+}
 
 describe("StatusMessage", () => {
   beforeEach(() => {
@@ -333,5 +359,34 @@ describe("StatusMessage", () => {
     const message = screen.getByTestId("msg");
     expect(message.className).toContain("extra");
     expect(message.getAttribute("data-chrome")).toBe("toast");
+  });
+});
+
+describe("StatusMessage message catalogue", () => {
+  it("asks for the dismiss name by key", () => {
+    const services = createFakeServices();
+    render(
+      <StatusMessage variant="error" onDismiss={vi.fn()}>
+        Failed
+      </StatusMessage>,
+      services,
+    );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "ui.dismiss",
+      params: {},
+    });
+  });
+});
+
+describe("StatusMessage without a services provider", () => {
+  it("falls back to the SDK's English for its buttons", () => {
+    vi.useFakeTimers();
+    renderBare(
+      <StatusMessage variant="error" onDismiss={vi.fn()}>
+        Failed
+      </StatusMessage>,
+    );
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeTruthy();
+    vi.useRealTimers();
   });
 });

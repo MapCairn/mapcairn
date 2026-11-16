@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { parseThemeChoice, resolveTheme } from "./theme";
 import {
+  LANGUAGE_STORAGE_KEY,
   MAP_SHAPE_ATTRIBUTE,
   PROJECTION_STORAGE_KEY,
   THEME_ATTRIBUTE,
@@ -14,7 +15,13 @@ import {
  * Builds the inline script that sets the theme before first paint, so a dark
  * theme never flashes light. It also marks a stored globe map shape on the
  * root element ({@link MAP_SHAPE_ATTRIBUTE}), so the map placeholder starts in
- * the colour of the space around a globe rather than the flat map's.
+ * the colour of the space around a globe rather than the flat map's. When
+ * given the tags the host offers, it also sets `lang` on the root element to
+ * the stored language if (and only if) it is one of them, so assistive
+ * technology and hyphenation get the right language before the app mounts.
+ *
+ * @param offeredLanguages - The language tags the host offers. Without them
+ *   (or with none) the script leaves `lang` as the server rendered it.
  *
  * @remarks The script embeds the real `parseThemeChoice` and `resolveTheme`
  *   through `Function.prototype.toString`, so it cannot drift from them, and
@@ -26,7 +33,14 @@ import {
  *   The output is deterministic: the host hashes
  *   it for its content security policy. Whitespace is collapsed, nothing else.
  */
-export function buildThemeBootstrapScript(): string {
+export function buildThemeBootstrapScript(
+  offeredLanguages: readonly string[] = [],
+): string {
+  const language =
+    offeredLanguages.length === 0
+      ? ""
+      : `
+try{var tag=JSON.parse(localStorage.getItem(${JSON.stringify(LANGUAGE_STORAGE_KEY)}));if(${JSON.stringify(offeredLanguages)}.indexOf(tag)>-1)root.lang=tag}catch(e){}`;
   const source = `(function(){
 var parse=${parseThemeChoice.toString()};
 var resolve=${resolveTheme.toString()};
@@ -43,7 +57,7 @@ var metas=document.querySelectorAll('meta[name="${THEME_COLOR_META_NAME}"]');
 if(!metas.length){var made=document.createElement("meta");made.name=${JSON.stringify(THEME_COLOR_META_NAME)};document.head.appendChild(made);metas=[made]}
 for(var i=0;i<metas.length;i++){metas[i].setAttribute("content",colors[theme])}
 }catch(e){}
-try{if(localStorage.getItem(${JSON.stringify(PROJECTION_STORAGE_KEY)})===${JSON.stringify(JSON.stringify("globe"))})root.setAttribute(${JSON.stringify(MAP_SHAPE_ATTRIBUTE)},"globe")}catch(e){}
+try{if(localStorage.getItem(${JSON.stringify(PROJECTION_STORAGE_KEY)})===${JSON.stringify(JSON.stringify("globe"))})root.setAttribute(${JSON.stringify(MAP_SHAPE_ATTRIBUTE)},"globe")}catch(e){}${language}
 })()`;
   return source.replace(/\s+/g, " ");
 }

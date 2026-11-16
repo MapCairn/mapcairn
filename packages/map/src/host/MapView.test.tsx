@@ -5,6 +5,7 @@ import {
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
   FakeMapAdapter as FakeAdapter,
+  FakeMessageCatalogue,
   type FakeServices,
   type MapAdapter,
   type MapAdapterFactory,
@@ -202,6 +203,26 @@ describe("mounting and accessibility", () => {
     )?.textContent;
     expect(help).toMatch(/Shift with left or right arrow: rotate the map./);
     expect(help).toMatch(/Home or 0: point the map north again./);
+  });
+
+  it("writes the instructions from the catalogue, keys and plain host lines alike", async () => {
+    const { host } = await setup(
+      { keyHelp: [{ keys: "keyHelp.keys.space", description: "Host extra" }] },
+      createFakeServices({
+        messages: new FakeMessageCatalogue({
+          overrides: {
+            "keyHelp.keys.arrowKeys": "Pyltoetse",
+            "keyHelp.map.pan": "Skuif die kaart",
+            "host.map.keyInstruction": "{keys} - {description}.",
+          },
+        }),
+      }),
+    );
+    const help = document.getElementById(
+      host().getAttribute("aria-describedby") as string,
+    )?.textContent;
+    expect(help).toContain("Pyltoetse - skuif die kaart.");
+    expect(help).toContain("Space - host extra.");
   });
 
   it("mounts the adapter into a child element with the initial view, basemap, motion preference and Save data", async () => {
@@ -1558,5 +1579,17 @@ describe("Save data", () => {
     expect(setBasemap).toHaveBeenLastCalledWith(WITH_RELIEF, {
       saveData: true,
     });
+  });
+});
+
+describe("message catalogue", () => {
+  it("asks for the region's name and role description by key", async () => {
+    const { services } = await setup();
+    expect(services.fakes.messages.calls).toEqual(
+      expect.arrayContaining([
+        { key: "host.map.label", params: {} },
+        { key: "host.map.roleDescription", params: {} },
+      ]),
+    );
   });
 });

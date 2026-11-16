@@ -4,6 +4,7 @@ import {
   createFakeServices,
   createFormatterRegistry,
   FakeLayerCatalogue,
+  FakeMessageCatalogue,
   type IdentifiableLayerDefinition,
   type LayerDefinition,
   SAMPLE_FEED_LAYER,
@@ -43,9 +44,13 @@ const FLOOD: IdentifiableLayerDefinition = {
   },
 };
 
-function setup(definitions: readonly LayerDefinition[]) {
+function setup(
+  definitions: readonly LayerDefinition[],
+  messages?: FakeMessageCatalogue,
+) {
   const services = createFakeServices({
     layers: new FakeLayerCatalogue(definitions),
+    ...(messages ? { messages } : {}),
   });
   const handle: { current: DataLayers | null } = { current: null };
   function Harness() {
@@ -144,16 +149,18 @@ describe("a card for an identified feature", () => {
 
   it("renders nothing for a layer whose features have no card", () => {
     const { container } = render(
-      <FeatureCard
-        layers={{} as DataLayers}
-        selected={{
-          layer: { definition: SAMPLE_TILE_LAYER } as DataLayerState,
-          feature: samplePoint("a"),
-        }}
-        formatters={formatters}
-        headingLevel={4}
-        onShowOnMap={() => {}}
-      />,
+      <ServicesProvider services={createFakeServices()}>
+        <FeatureCard
+          layers={{} as DataLayers}
+          selected={{
+            layer: { definition: SAMPLE_TILE_LAYER } as DataLayerState,
+            feature: samplePoint("a"),
+          }}
+          formatters={formatters}
+          headingLevel={4}
+          onShowOnMap={() => {}}
+        />
+      </ServicesProvider>,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -199,5 +206,40 @@ describe("a list with identified features", () => {
     );
     fireEvent.click(screen.getByTestId("feature-card-back"));
     expect(screen.getAllByTestId("feature-choices-row")).toHaveLength(2);
+  });
+});
+
+describe("copy", () => {
+  const OTHER: IdentifiableLayerDefinition = {
+    ...SAMPLE_IDENTIFY_LAYER,
+    id: "other",
+    name: "Other layer",
+  };
+
+  it("asks the catalogue by key for the card and the list, with the count as a plural parameter", async () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "layers.choices.heading": "{count} kenmerk hier|{count} kenmerke hier",
+        "layers.card.back": "Terug na lys",
+        "layers.card.close": "Maak kaart toe",
+      },
+    });
+    const view = setup([FLOOD, OTHER], messages);
+    view.source.setIdentified(FLOOD.id, [samplePoint("a", { title: "G4" })]);
+    view.source.setIdentified("other", [samplePoint("b", { title: "G5" })]);
+    await view.tap(FLOOD.id, "other");
+    expect(screen.getByTestId("feature-choices-heading")).toHaveTextContent(
+      "2 kenmerke hier",
+    );
+    expect(messages.calls).toContainEqual({
+      key: "layers.choices.heading",
+      params: { count: 2 },
+    });
+    fireEvent.click(
+      screen.getAllByTestId("feature-choices-row")[0] as HTMLElement,
+    );
+    expect(screen.getByRole("button", { name: "Terug na lys" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Maak kaart toe" })).toBeTruthy();
   });
 });

@@ -16,7 +16,7 @@ Two tracks share the list. **SDK** is the goal in "Direction": what a team needs
 
 ### Now
 
-1. **SDK, #231.** Language support: a plan first, then a small slice (the catalogue port, the English text and one panel). It touches the copy of almost every component, so it is cheapest now, and it brings Afrikaans to the reference site.
+1. **SDK, #231.** Review the Afrikaans catalogue with a fluent speaker, then close the issue. The catalogue is offered as a draft.
 2. **Site, #117, #118 and #119.** Highlight selected features, the Selection panel and select mode. The selection port and hook are built, and nothing in the interface uses them yet.
 3. **SDK, #24 and then #43.** The engine adapter in its own package. It is the first step for a team that wants to embed the map without copying the reference host.
 4. **Site, #126 and #127.** Identify on raster layers: the tap, the key press and the guide. The core is built.

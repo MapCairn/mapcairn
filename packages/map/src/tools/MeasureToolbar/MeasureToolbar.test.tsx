@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { LatLng, UnitSystem } from "@mapcairn/core";
+import {
+  createFakeServices,
+  FakeMessageCatalogue,
+  type LatLng,
+  type UnitSystem,
+} from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ChromeLayoutProvider,
   type ChromeLayoutValue,
 } from "../../chrome/layoutContext";
+import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { MeasureToolbar } from "./MeasureToolbar";
 import { type UseMeasure, useMeasure } from "./useMeasure";
@@ -52,14 +58,19 @@ function layout(
   };
 }
 
-function renderToolbar(props: HarnessProps = {}) {
+function renderToolbar(
+  props: HarnessProps = {},
+  services = createFakeServices(),
+) {
   const publish = vi.fn<(px: number | null) => void>();
   const tree = (value: ChromeLayoutValue) => (
-    <LiveRegionProvider>
-      <ChromeLayoutProvider value={value}>
-        <Harness {...props} />
-      </ChromeLayoutProvider>
-    </LiveRegionProvider>
+    <ServicesProvider services={services}>
+      <LiveRegionProvider>
+        <ChromeLayoutProvider value={value}>
+          <Harness {...props} />
+        </ChromeLayoutProvider>
+      </LiveRegionProvider>
+    </ServicesProvider>
   );
   const view = render(tree(layout(publish)));
   return {
@@ -304,11 +315,42 @@ describe("MeasureToolbar", () => {
 
     it("works with the default layout outside a MapChrome", () => {
       render(
-        <LiveRegionProvider>
-          <Harness />
-        </LiveRegionProvider>,
+        <ServicesProvider services={createFakeServices()}>
+          <LiveRegionProvider>
+            <Harness />
+          </LiveRegionProvider>
+        </ServicesProvider>,
       );
       expect(screen.getByRole("toolbar", { name: "Measure" })).toBeTruthy();
+    });
+  });
+
+  describe("copy", () => {
+    it("asks the catalogue for every piece of its text by key", () => {
+      const messages = new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "tools.measure.undo": "Haal laaste punt terug",
+          "tools.measure.area": "Oppervlakte",
+        },
+      });
+      renderToolbar({}, createFakeServices({ messages }));
+      expect(
+        screen.getByRole("button", { name: "Haal laaste punt terug" }),
+      ).toBeTruthy();
+      expect(screen.getByRole("radio", { name: "Oppervlakte" })).toBeTruthy();
+      expect(messages.calls.map((call) => call.key)).toEqual(
+        expect.arrayContaining([
+          "tools.measure.region",
+          "tools.measure.label",
+          "tools.measure.distance",
+          "tools.measure.total",
+          "tools.addPointAtCentre",
+          "tools.measure.clear",
+          "tools.done",
+          "tools.measure.hint",
+        ]),
+      );
     });
   });
 });

@@ -5,7 +5,10 @@ import {
   createFakeServices,
   DEFAULT_FAKE_VIEW,
   FakeMapAdapter,
+  FakeMessageCatalogue,
   formatLatLng,
+  formatMessage,
+  type Message,
 } from "@mapcairn/core";
 import { act, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
@@ -34,6 +37,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** The English text of a message. */
+const english = (value: Message) =>
+  formatMessage(new FakeMessageCatalogue(), value);
+
 function adapterAtZoom(zoom: number): FakeMapAdapter {
   const adapter = new FakeMapAdapter();
   adapter.setView({ zoom, center: { lat: -33.9, lng: 18.4 } });
@@ -45,6 +52,7 @@ function expectedBar(adapter: FakeMapAdapter, units: "metric" | "imperial") {
     metresPerPixel: adapter.metresPerPixel(),
     maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
     units,
+    language: "en-GB",
   });
 }
 
@@ -55,10 +63,34 @@ describe("ScaleBar", () => {
       map: testMapContext({ adapter, view: adapter.getView() }),
     });
     const bar = expectedBar(adapter, "metric");
-    const image = screen.getByRole("img", { name: bar.accessibleLabel });
+    const image = screen.getByRole("img", {
+      name: english(bar.accessibleLabel),
+    });
     expect(image).toHaveAttribute("data-chrome", "scale-bar");
     expect(image).toHaveTextContent(bar.label);
-    expect(bar.accessibleLabel).toMatch(/^Scale: /);
+    expect(english(bar.accessibleLabel)).toMatch(/^Scale: /);
+  });
+
+  it("asks the catalogue for the scale wording and writes the figure in its language", () => {
+    const adapter = adapterAtZoom(12);
+    const messages = new FakeMessageCatalogue({
+      language: "de",
+      overrides: { "scale.label": "Maßstab: {distance}" },
+    });
+    renderChrome(<ScaleBar units="metric" />, {
+      map: testMapContext({ adapter, view: adapter.getView() }),
+      services: createFakeServices({ messages }),
+    });
+    const image = screen.getByRole("img", { name: /^Maßstab: / });
+    expect(messages.calls.map((call) => call.key)).toContain("scale.label");
+    expect(image).toHaveTextContent(
+      computeScaleBar({
+        metresPerPixel: adapter.metresPerPixel(),
+        maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
+        units: "metric",
+        language: "de",
+      }).label,
+    );
   });
 
   it("uses imperial units when asked", () => {
@@ -69,7 +101,7 @@ describe("ScaleBar", () => {
     const bar = expectedBar(adapter, "imperial");
     expect(bar.unit === "ft" || bar.unit === "mi").toBe(true);
     expect(
-      screen.getByRole("img", { name: bar.accessibleLabel }),
+      screen.getByRole("img", { name: english(bar.accessibleLabel) }),
     ).toBeInTheDocument();
   });
 
@@ -110,12 +142,12 @@ describe("ScaleBar", () => {
     const { rerenderChrome } = renderChrome(<ScaleBar units="metric" />, {
       map: testMapContext({ adapter, view: adapter.getView() }),
     });
-    const before = expectedBar(adapter, "metric").accessibleLabel;
+    const before = english(expectedBar(adapter, "metric").accessibleLabel);
     adapter.setView({ zoom: 6 });
     rerenderChrome(<ScaleBar units="metric" />, {
       map: testMapContext({ adapter, view: adapter.getView() }),
     });
-    const after = expectedBar(adapter, "metric").accessibleLabel;
+    const after = english(expectedBar(adapter, "metric").accessibleLabel);
     expect(after).not.toBe(before);
     expect(screen.getByRole("img", { name: after })).toBeInTheDocument();
   });
@@ -411,5 +443,41 @@ describe("MapReadout", () => {
   it("shows no coordinates element with no position and no zoom", () => {
     renderReadout({ showZoom: false });
     expect(screen.getByTestId("map-readout").querySelector("p")).toBeNull();
+  });
+});
+
+describe("MapReadout message catalogue", () => {
+  const latlng = { lat: -26.2041, lng: 28.0473 };
+
+  it("asks for the landmark name by key", () => {
+    const { services } = renderChrome(
+      <MapReadout units="metric" latlng={null} />,
+    );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "chrome.readout.label",
+      params: {},
+    });
+  });
+
+  it("asks for the visible and the spoken zoom by key, with the figure formatted for the language", () => {
+    const { services } = renderChrome(
+      <CursorCoordinates latlng={null} zoom={12.4} />,
+    );
+    expect(services.fakes.messages.calls).toEqual(
+      expect.arrayContaining([
+        { key: "chrome.readout.zoomShort", params: { level: "12.4" } },
+        { key: "chrome.readout.zoomSpoken", params: { level: "12.4" } },
+      ]),
+    );
+  });
+
+  it("asks for the spoken zoom that follows a position, so the comma moves with the language", () => {
+    const { services } = renderChrome(
+      <CursorCoordinates latlng={latlng} zoom={12.4} />,
+    );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "chrome.readout.zoomSpokenAfterPosition",
+      params: { level: "12.4" },
+    });
   });
 });

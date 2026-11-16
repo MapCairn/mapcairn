@@ -8,7 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SegmentedControl } from "./SegmentedControl";
 
 const options = [
@@ -129,6 +129,22 @@ describe("SegmentedControl", () => {
     expect(screen.getByRole("radio", { name: "Light" })).toBeTruthy();
   });
 
+  it("marks an item with its own language, and leaves the rest unmarked", () => {
+    render(
+      <SegmentedControl
+        label="Language"
+        options={[
+          { value: "auto", label: "Automatic" },
+          { value: "af", label: "Afrikaans", lang: "af" },
+        ]}
+        value="auto"
+        onValueChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "Afrikaans" }).lang).toBe("af");
+    expect(screen.getByRole("radio", { name: "Automatic" }).lang).toBe("");
+  });
+
   it("is one tab stop that lands on the selected item, with roving focus on the arrow keys", async () => {
     render(<Controlled initial="light" />);
     const light = screen.getByRole("radio", { name: "Light" });
@@ -220,5 +236,19 @@ describe("SegmentedControl", () => {
       />,
     );
     expect(screen.getByRole("radiogroup").className).toContain("extra");
+  });
+});
+
+describe("SegmentedControl on a right-to-left page", () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute("dir");
+  });
+
+  it("hands the page's direction to the group, so the arrow keys follow it", () => {
+    document.documentElement.setAttribute("dir", "rtl");
+    render(<Controlled />);
+    expect(
+      screen.getByRole("radiogroup", { name: "Theme" }).getAttribute("dir"),
+    ).toBe("rtl");
   });
 });

@@ -37,6 +37,10 @@ The pre-commit hook runs Biome, dependency-cruiser, the harmony scanner, the lic
 
 [`ARCHITECTURE.md`](ARCHITECTURE.md) describes the layers and the dependency rules, and how to add an adapter. `npm run lint` enforces the rules, so supply services through the composition root and `ServicesProvider` rather than importing an adapter or an engine into the user interface. [`DESIGN.md`](DESIGN.md) describes the tokens and the accessibility contracts. The [extending guide](docs/guides/extending.md) has short how-tos for adding a basemap, a data layer, a routing provider and an adapter.
 
+## Translations
+
+The interface text is a catalogue of keys, with British English as the source. The [translation guide](docs/guides/translate-the-sdk.md) says how to add a language to the reference site (a catalogue file, an entry in the offered languages, and the checks that keep its placeholders right). A translation is reviewed by someone who speaks the language fluently before it ships, a machine translation is only ever a draft, and the pull request names the reviewer. Translators are credited in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
+
 ## Conventions
 
 - Write a failing test before implementing a feature or bug fix.

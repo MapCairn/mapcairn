@@ -28,6 +28,8 @@ export interface BrowserDevicePreferencesOptions {
   readonly getWindow?: () => MediaQueryWindow | undefined;
   /** Returns the connection information. Called on every access. Defaults to `navigator.connection`. */
   readonly getConnection?: () => NetworkInformationLike | undefined;
+  /** Returns the browser's languages, most preferred first. Called on every read. Defaults to `navigator.languages`. */
+  readonly getLanguages?: () => readonly string[] | undefined;
 }
 
 /** Connection types so slow that a person is treated as asking to save data. */
@@ -40,12 +42,21 @@ function defaultConnection(): NetworkInformationLike | undefined {
     : (navigator as { connection?: NetworkInformationLike }).connection;
 }
 
+/** `navigator.languages`, or undefined where there is no `navigator`. */
+function defaultLanguages(): readonly string[] | undefined {
+  return typeof navigator === "undefined" ? undefined : navigator.languages;
+}
+
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 
 /**
  * Reports the reduced motion and fine pointer preferences from `matchMedia`,
- * and whether the device asks to save data from `navigator.connection`.
+ * and whether the device asks to save data from `navigator.connection`. It
+ * also reports `navigator.languages`, read afresh with the rest (the browser
+ * announces no change to it that the adapter listens for, so a change made
+ * while the page is open shows at the next `get()` with no subscribers or the
+ * next change of another preference).
  *
  * @remarks Where `matchMedia` is missing or throws (the server, a locked-down
  *   browser) both preferences are false: animation is allowed and the device
@@ -61,6 +72,7 @@ const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 export class BrowserDevicePreferences implements DevicePreferences {
   readonly #getWindow: () => MediaQueryWindow | undefined;
   readonly #getConnection: () => NetworkInformationLike | undefined;
+  readonly #getLanguages: () => readonly string[] | undefined;
   readonly #listeners = new Set<(value: DevicePreferencesValue) => void>();
   #value: DevicePreferencesValue;
   #stopObserving: (() => void) | undefined;
@@ -68,6 +80,7 @@ export class BrowserDevicePreferences implements DevicePreferences {
   constructor(options: BrowserDevicePreferencesOptions = {}) {
     this.#getWindow = options.getWindow ?? defaultMediaQueryWindow;
     this.#getConnection = options.getConnection ?? defaultConnection;
+    this.#getLanguages = options.getLanguages ?? defaultLanguages;
     this.#value = Object.freeze(this.#read());
   }
 
@@ -123,6 +136,15 @@ export class BrowserDevicePreferences implements DevicePreferences {
     }
   }
 
+  /** The browser's languages, or none when there are none or reading them throws. */
+  #languages(): readonly string[] {
+    try {
+      return [...(this.#getLanguages() ?? [])];
+    } catch {
+      return [];
+    }
+  }
+
   #read(): DevicePreferencesValue {
     const connection = this.#connection();
     return {
@@ -133,6 +155,7 @@ export class BrowserDevicePreferences implements DevicePreferences {
       saveData:
         connection?.saveData === true ||
         SLOW_CONNECTIONS.has(connection?.effectiveType ?? ""),
+      languages: this.#languages(),
     };
   }
 
@@ -142,7 +165,8 @@ export class BrowserDevicePreferences implements DevicePreferences {
     if (
       next.reducedMotion === this.#value.reducedMotion &&
       next.finePointer === this.#value.finePointer &&
-      next.saveData === this.#value.saveData
+      next.saveData === this.#value.saveData &&
+      next.languages.join(",") === this.#value.languages.join(",")
     ) {
       return false;
     }

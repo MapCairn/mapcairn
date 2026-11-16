@@ -9,6 +9,7 @@ import {
   formatLatLng,
   type LatLng,
   MAX_DIRECTION_STOPS,
+  message,
   routingErrorMessage,
   stopLetter,
   TRAVEL_MODES,
@@ -32,7 +33,12 @@ import {
   X,
 } from "lucide-react";
 import { type ReactNode, type SyntheticEvent, useEffect, useRef } from "react";
-import { usePreferences, useSettings } from "../../services";
+import {
+  useFormatMessage,
+  useMessages,
+  usePreferences,
+  useSettings,
+} from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
@@ -42,10 +48,6 @@ import { MIN_SEARCH_LENGTH, useSearch } from "../SearchPill/useSearch";
 import * as styles from "./Directions.css";
 import type { DirectionsOutcome, UseDirections } from "./useDirections";
 import { useFreeCentre } from "./useFreeCentre";
-
-/** The default note under the buttons that send a request. A host replaces it with one that names its service. */
-export const DEFAULT_DIRECTIONS_NOTE =
-  "Nothing is sent until you ask. Get route sends the stops and the way of travelling to the routing service. A travel time area sends the first stop.";
 
 const MODE_ICONS: Readonly<Record<TravelMode, typeof Car>> = {
   drive: Car,
@@ -67,12 +69,16 @@ export interface DirectionsPanelProps {
   readonly getBias?: () => Bounds | undefined;
   /**
    * What a request sends and to whom, shown under the buttons. Defaults to
-   * {@link DEFAULT_DIRECTIONS_NOTE}. A host names its routing service here.
+   * the catalogue's `tools.directions.note`, which does not name the service.
+   * A host names its routing service here.
    */
   readonly note?: ReactNode;
   /** The level of the group headings, one below the sheet's title. Defaults to 3. */
   readonly headingLevel?: 3 | 4;
 }
+
+/** Stands for a value in a sentence that is split around it, so the value can be an element of its own. */
+const SLOT = "{slot}";
 
 function ResultCard({
   result,
@@ -81,19 +87,32 @@ function ResultCard({
   result: DirectionsOutcome;
   units: UnitSystem;
 }) {
+  const messages = useMessages();
+  const { language, t } = messages;
+  const format = useFormatMessage();
   const how = travelModeParticiple(result.mode);
   if (result.kind === "area") {
+    const [before = "", after = ""] = t("tools.directions.reachesArea", {
+      area: SLOT,
+    }).split(SLOT);
     return (
       <div className={styles.result} data-testid="directions-result">
         <p className={styles.figures} data-testid="directions-figures">
-          {result.minutes} min {how}
+          {format(
+            message("common.followedBy", {
+              first: message("duration.short.minute", {
+                count: result.minutes,
+              }),
+              second: how,
+            }),
+          )}
         </p>
         <p>
-          Reaches an area of{" "}
+          {before}
           <span data-testid="directions-area">
-            {formatArea(result.size, units)}
-          </span>{" "}
-          from stop A.
+            {formatArea(result.size, units, language)}
+          </span>
+          {after}
         </p>
       </div>
     );
@@ -101,24 +120,39 @@ function ResultCard({
   return (
     <div className={styles.result} data-testid="directions-result">
       <p className={styles.figures} data-testid="directions-figures">
-        {formatDistance(result.distance, units)},{" "}
-        {formatDuration(result.duration)}
+        {t("common.commaJoined", {
+          first: formatDistance(result.distance, units, language),
+          second: format(formatDuration(result.duration)),
+        })}
       </p>
       <p className={styles.hint}>
-        {travelModeLabel(result.mode)}, {how}, through {result.stops.length}{" "}
-        stops.
+        {messages.plural("tools.directions.routeSummary", {
+          mode: format(travelModeLabel(result.mode)),
+          how: format(how),
+          count: result.stops.length,
+        })}
       </p>
       {result.legs.length > 1 ? (
-        <ol className={styles.legList} aria-label="Legs">
+        <ol
+          className={styles.legList}
+          aria-label={t("tools.directions.legs", {})}
+        >
           {result.legs.map((leg, index) => (
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: legs are positional.
               key={index}
               data-testid="directions-leg"
             >
-              {stopLetter(index)} to {stopLetter(index + 1)}:{" "}
-              {formatDistance(leg.properties.distance, units)},{" "}
-              {formatDuration(leg.properties.duration)}
+              {t("tools.directions.leg", {
+                from: stopLetter(index),
+                to: stopLetter(index + 1),
+                distance: formatDistance(
+                  leg.properties.distance,
+                  units,
+                  language,
+                ),
+                duration: format(formatDuration(leg.properties.duration)),
+              })}
             </li>
           ))}
         </ol>
@@ -145,10 +179,13 @@ export function DirectionsPanel({
   directions,
   pin,
   getBias,
-  note = DEFAULT_DIRECTIONS_NOTE,
+  note,
   headingLevel = 3,
 }: DirectionsPanelProps) {
   const { settings } = useSettings();
+  const format = useFormatMessage();
+  const messages = useMessages();
+  const { t } = messages;
   const { reducedMotion } = usePreferences();
   const search = useSearch({ getBias });
   const centre = useFreeCentre();
@@ -200,11 +237,9 @@ export function DirectionsPanel({
           tabIndex={-1}
           className={styles.groupHeading}
         >
-          Stops
+          {t("tools.directions.stops", {})}
         </Heading>
-        <p className={styles.hint}>
-          Tap the map to add a stop, or use Add stop at map centre.
-        </p>
+        <p className={styles.hint}>{t("tools.directions.stopsHint", {})}</p>
         {stops.length > 0 ? (
           <ol className={styles.stopList} data-testid="directions-stops">
             {stops.map((stop, index) => {
@@ -219,26 +254,28 @@ export function DirectionsPanel({
                     {letter}
                   </span>
                   <span className={styles.stopName}>
-                    <VisuallyHidden>Stop {letter}: </VisuallyHidden>
+                    <VisuallyHidden>
+                      {t("tools.directions.stopPrefix", { letter })}{" "}
+                    </VisuallyHidden>
                     {stop.label ?? formatLatLng(stop.position)}
                   </span>
                   <span className={styles.stopActions}>
                     <IconButton
-                      label={`Move stop ${letter} up`}
+                      label={t("tools.directions.moveUp", { letter })}
                       icon={ChevronUp}
                       size="compact"
                       disabled={index === 0}
                       onClick={() => directions.moveStop(stop.id, -1)}
                     />
                     <IconButton
-                      label={`Move stop ${letter} down`}
+                      label={t("tools.directions.moveDown", { letter })}
                       icon={ChevronDown}
                       size="compact"
                       disabled={index === stops.length - 1}
                       onClick={() => directions.moveStop(stop.id, 1)}
                     />
                     <IconButton
-                      label={`Remove stop ${letter}`}
+                      label={t("tools.directions.remove", { letter })}
                       icon={X}
                       size="compact"
                       data-testid="directions-remove"
@@ -258,7 +295,7 @@ export function DirectionsPanel({
             data-testid="directions-add-centre"
             onClick={addAtCentre}
           >
-            Add stop at map centre
+            {t("tools.directions.addAtCentre", {})}
           </Button>
           {pin ? (
             <Button
@@ -266,16 +303,17 @@ export function DirectionsPanel({
               icon={MapPin}
               disabled={full}
               data-testid="directions-add-pin"
-              onClick={() => directions.addStop(pin, "Dropped pin")}
+              onClick={() =>
+                directions.addStop(pin, t("tools.directions.droppedPin", {}))
+              }
             >
-              Add dropped pin
+              {t("tools.directions.addPin", {})}
             </Button>
           ) : null}
         </div>
         {full ? (
           <p className={styles.hint}>
-            You can add up to {MAX_DIRECTION_STOPS} stops. Remove one to add
-            another.
+            {t("tools.directions.full", { max: MAX_DIRECTION_STOPS })}
           </p>
         ) : null}
       </section>
@@ -283,13 +321,13 @@ export function DirectionsPanel({
       <section className={styles.group} aria-labelledby="directions-route">
         {/* The controls name themselves, and the room matters on a half-height sheet. */}
         <VisuallyHidden as={Heading} id="directions-route">
-          Route
+          {t("tools.directions.route", {})}
         </VisuallyHidden>
         <SegmentedControl
-          label="Travel mode"
+          label={t("tools.directions.travelMode", {})}
           options={TRAVEL_MODES.map((value) => ({
             value,
-            label: travelModeLabel(value),
+            label: format(travelModeLabel(value)),
             icon: <Icon icon={MODE_ICONS[value]} />,
           }))}
           value={mode}
@@ -304,7 +342,7 @@ export function DirectionsPanel({
             data-testid="directions-get-route"
             onClick={directions.requestRoute}
           >
-            Get route
+            {t("tools.directions.getRoute", {})}
           </Button>
           {busy ? (
             <Button
@@ -312,21 +350,21 @@ export function DirectionsPanel({
               data-testid="directions-cancel"
               onClick={directions.cancel}
             >
-              Cancel
+              {t("tools.directions.cancel", {})}
             </Button>
           ) : null}
         </div>
         {needsTwo ? (
-          <p className={styles.hint}>Add at least two stops to get a route.</p>
+          <p className={styles.hint}>{t("tools.directions.needTwo", {})}</p>
         ) : null}
       </section>
 
       <section className={styles.group} aria-labelledby="directions-search">
         <Heading id="directions-search" className={styles.groupHeading}>
-          Add a stop by search
+          {t("tools.directions.searchHeading", {})}
         </Heading>
         <form
-          aria-label="Search for a stop"
+          aria-label={t("tools.directions.searchForm", {})}
           className={styles.group}
           onSubmit={submitSearch}
         >
@@ -334,8 +372,8 @@ export function DirectionsPanel({
             <input
               className={styles.searchInput}
               type="text"
-              aria-label="Search for a place to add as a stop"
-              placeholder="Search for a place"
+              aria-label={t("tools.directions.searchInput", {})}
+              placeholder={t("tools.directions.searchPlaceholder", {})}
               autoComplete="off"
               autoCapitalize="off"
               spellCheck={false}
@@ -352,25 +390,27 @@ export function DirectionsPanel({
               busy={search.state.status === "loading"}
               data-testid="directions-search-submit"
             >
-              Search
+              {t("tools.search.label", {})}
             </Button>
           </div>
           {search.state.status === "empty" ? (
-            <p className={styles.hint}>Nothing matched that search.</p>
+            <p className={styles.hint}>
+              {t("tools.search.nothingMatched", {})}
+            </p>
           ) : null}
           {search.state.status === "error" ? (
             <p className={styles.statusLine}>
               <Icon icon={TriangleAlert} className={styles.errorIcon} />
-              <span>Search is unavailable right now. Please try again.</span>
+              <span>{t("tools.search.unavailable", {})}</span>
               <Button variant="quiet" onClick={search.retry}>
-                Retry
+                {t("tools.search.retry", {})}
               </Button>
             </p>
           ) : null}
           {results.length > 0 ? (
             <ul
               className={styles.resultList}
-              aria-label="Places found"
+              aria-label={t("tools.directions.placesFound", {})}
               data-testid="directions-search-results"
             >
               {results.map((place) => (
@@ -384,8 +424,14 @@ export function DirectionsPanel({
                       search.clear();
                     }}
                   >
-                    Add {place.label}
-                    {place.secondaryLabel ? `, ${place.secondaryLabel}` : ""}
+                    {t("tools.directions.addPlace", {
+                      place: place.secondaryLabel
+                        ? t("common.commaJoined", {
+                            first: place.label,
+                            second: place.secondaryLabel,
+                          })
+                        : place.label,
+                    })}
                   </Button>
                 </li>
               ))}
@@ -396,11 +442,9 @@ export function DirectionsPanel({
 
       <section className={styles.group} aria-labelledby="directions-area">
         <Heading id="directions-area" className={styles.groupHeading}>
-          Travel time area
+          {t("tools.directions.areaHeading", {})}
         </Heading>
-        <p className={styles.hint}>
-          Shows how far you can get from stop A in the time you choose.
-        </p>
+        <p className={styles.hint}>{t("tools.directions.areaHint", {})}</p>
         <div className={styles.actions} data-testid="directions-area-actions">
           {AREA_MINUTES.map((minutes) => (
             <Button
@@ -416,16 +460,18 @@ export function DirectionsPanel({
                 directions.result?.kind === "area" &&
                 directions.result.minutes === minutes
               }
-              aria-label={`Show the area reachable within ${minutes} minutes`}
+              aria-label={messages.plural("tools.directions.showArea", {
+                count: minutes,
+              })}
               data-testid={`directions-area-${minutes}`}
               onClick={() => directions.requestArea(minutes)}
             >
-              {minutes} min
+              {t("duration.short.minute", { count: minutes })}
             </Button>
           ))}
         </div>
         <p className={styles.hint} data-testid="directions-note">
-          {note}
+          {note ?? t("tools.directions.note", {})}
         </p>
       </section>
 
@@ -433,15 +479,17 @@ export function DirectionsPanel({
         {state.status === "loading" ? (
           <p className={styles.hint} data-testid="directions-loading">
             {state.request === "route"
-              ? "Finding a route..."
-              : "Finding the area..."}
+              ? t("tools.directions.findingRoute", {})
+              : t("tools.directions.findingArea", {})}
           </p>
         ) : null}
         {state.status === "error" ? (
           <div className={styles.group} data-testid="directions-error">
             <p className={styles.statusLine}>
               <Icon icon={TriangleAlert} className={styles.errorIcon} />
-              <span>{routingErrorMessage(state.kind, state.request)}</span>
+              <span>
+                {format(routingErrorMessage(state.kind, state.request))}
+              </span>
             </p>
             {state.kind === "network" || state.kind === "rate-limited" ? (
               <div className={styles.actions}>
@@ -450,7 +498,7 @@ export function DirectionsPanel({
                   data-testid="directions-retry"
                   onClick={directions.retry}
                 >
-                  Try again
+                  {t("tools.tryAgain", {})}
                 </Button>
               </div>
             ) : null}
@@ -469,7 +517,7 @@ export function DirectionsPanel({
             data-testid="directions-clear"
             onClick={directions.clear}
           >
-            Clear directions
+            {t("tools.directions.clear", {})}
           </Button>
         </div>
       ) : null}

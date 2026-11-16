@@ -3,7 +3,9 @@
 import {
   type ControlValues,
   type LayerDefinition,
+  type Message,
   resolveControlValues,
+  textOrMessage,
 } from "@mapcairn/core";
 
 /** Control values by layer id. */
@@ -45,7 +47,8 @@ export interface ReconcileInputs {
 /** An enabled layer that left the list, by id and by the name it had. */
 export interface SwitchedOff {
   readonly id: string;
-  readonly name: string;
+  /** The layer's name as a placeholder value: plain text, or a message for a keyed name. */
+  readonly name: string | Message;
 }
 
 /**
@@ -104,7 +107,7 @@ export function reconcile(inputs: ReconcileInputs): Reconciled {
   const inList = new Set(next.map((definition) => definition.id));
   const wasListed = new Set(known.map((definition) => definition.id));
   const names = new Map(
-    known.map((definition) => [definition.id, definition.name]),
+    known.map((definition) => [definition.id, textOrMessage(definition.name)]),
   );
   const stillOn = chosen.enabled.filter((id) => inList.has(id));
   const arrived = link.waiting.filter(

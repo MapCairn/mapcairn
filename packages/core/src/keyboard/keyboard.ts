@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { DefinitionText } from "../ports/messages";
+
 /** What a key press on the focused map should do. */
 export type MapKeyAction =
   | { type: "pan"; dx: number; dy: number }
@@ -91,20 +93,23 @@ export function mapKeyAction(event: MapKeyEvent): MapKeyAction | null {
   }
 }
 
-/** One line of the keyboard help. */
+/**
+ * One line of the keyboard help. Both parts are a `DefinitionText`: a message
+ * key (the SDK's own lines) or a plain string (a host's own extra lines).
+ */
 export interface MapKeyHelpEntry {
-  readonly keys: string;
-  readonly description: string;
+  readonly keys: DefinitionText;
+  readonly description: DefinitionText;
 }
 
-/** The keyboard shortcuts of the map region, in display order. */
+/** The keyboard shortcuts of the map region, in display order, as message keys. */
 export const MAP_KEY_HELP: readonly MapKeyHelpEntry[] = [
-  { keys: "Arrow keys", description: "Pan the map" },
-  { keys: "Shift with up or down arrow", description: "Pan the map further" },
-  { keys: "Shift with left or right arrow", description: "Rotate the map" },
-  { keys: "Plus or minus", description: "Zoom in or out" },
-  { keys: "Home or 0", description: "Point the map north again" },
-  { keys: "P", description: "Drop a pin at the centre of the map" },
-  { keys: "I", description: "List the features at the centre of the map" },
-  { keys: "Escape", description: "Close the open panel" },
+  { keys: "keyHelp.keys.arrowKeys", description: "keyHelp.map.pan" },
+  { keys: "keyHelp.keys.shiftUpDown", description: "keyHelp.map.panFurther" },
+  { keys: "keyHelp.keys.shiftLeftRight", description: "keyHelp.map.rotate" },
+  { keys: "keyHelp.keys.plusMinus", description: "keyHelp.map.zoom" },
+  { keys: "keyHelp.keys.homeOr0", description: "keyHelp.map.north" },
+  { keys: "keyHelp.keys.p", description: "keyHelp.map.pin" },
+  { keys: "keyHelp.keys.i", description: "keyHelp.map.identify" },
+  { keys: "keyHelp.keys.escape", description: "keyHelp.map.escape" },
 ];

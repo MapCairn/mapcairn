@@ -449,7 +449,9 @@ test.describe("tour card", () => {
               );
             });
           }
-          await card.getByRole("button", { name: "Close" }).click();
+          await card
+            .getByRole("button", { name: mapPage.messages["tools.tour.close"] })
+            .click();
           await expect(card).toHaveCount(0);
         }
       },
@@ -897,10 +899,14 @@ test.describe("tour card with the map key", () => {
         await mapPage.openMapOptions();
         await page
           .getByTestId("layer-earthquakes")
-          .getByRole("switch", { name: /Earthquakes/ })
+          .getByRole("switch", {
+            name: mapPage.messages["layer.earthquakes.name"],
+          })
           .click();
         await expect(
-          page.getByRole("heading", { name: "Try the globe" }),
+          page.getByRole("heading", {
+            name: mapPage.messages["app.tour.mapShape.heading"],
+          }),
         ).toBeVisible();
         await mapPage.sheetClose.click();
         await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");

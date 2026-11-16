@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   createFormatterRegistry,
+  FakeMessageCatalogue,
   PALETTE_SLOTS,
   SAMPLE_ALERT_LAYER,
   SAMPLE_AREA_LAYER,
@@ -326,6 +327,7 @@ describe("toVectorHeatmaps", () => {
 
 describe("toStyledShapes", () => {
   const formatters = createFormatterRegistry();
+  const catalogue = new FakeMessageCatalogue();
 
   it("gives each polygon its look from the style, as hex colours", () => {
     const shapes = toStyledShapes(
@@ -333,6 +335,7 @@ describe("toStyledShapes", () => {
       [sampleArea("a", { title: "Paris", density: 250 })],
       formatters,
       0,
+      catalogue,
     );
     expect(shapes.geometry).toBe("area");
     expect(shapes.labelMinZoom).toBe(3);
@@ -358,6 +361,7 @@ describe("toStyledShapes", () => {
       [sampleLine("l", { kind: "main" }), sampleArea("a", { kind: "main" })],
       formatters,
       0,
+      catalogue,
     );
     expect(shapes.geometry).toBe("line");
     expect(shapes.shapes.map((shape) => shape.id)).toEqual(["l"]);
@@ -375,6 +379,7 @@ describe("toStyledShapes", () => {
       [sampleArea("a", { title: null, density: 1 })],
       formatters,
       0,
+      catalogue,
     ).shapes;
     expect(shape?.label).toBeUndefined();
   });

@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatNumber } from "../format/format";
 import { SUPPORTED_WKT_SRID } from "../geometry/wkt";
+import {
+  appendMessages,
+  joinMessages,
+  message,
+} from "../messages/formatMessage";
+import type { Message, MessageCatalogue } from "../ports/messages";
 import type { UnitSystem } from "../ports/settings";
 import {
   describeArea,
   describeDistance,
   formatArea,
   formatDistance,
-  pluralise,
 } from "../units/measurement";
 import {
   MAX_DRAWING_SHAPES,
@@ -21,142 +25,196 @@ import {
   type ShapeImportSkip,
 } from "./import";
 import type { DrawEvent } from "./reducer";
-import { kindName, measureShape } from "./shape";
+import { measureShape } from "./shape";
 import type { DrawIssue, DrawKind, DrawShape } from "./types";
 
 /*
- * Every string the draw tool shows or announces lives here, so the wording is
- * reviewed in one place and tests can pin it. Plain British English, each
- * refusal saying what to do next.
+ * Every piece of text the draw tool shows or announces is a message here (a
+ * key and its parameters), so the wording lives in the catalogue, is reviewed
+ * in one place and can be translated. The English is in `messages/en-GB.ts`;
+ * plain British English, each refusal saying what to do next.
  */
 
 /** What to do about each reason a shape or an edit was refused. */
-export const DRAW_ISSUE_MESSAGES: Readonly<Record<DrawIssue, string>> = {
-  "too-few-vertices":
-    "Not enough points yet. A line needs two points and a polygon needs three.",
-  "self-intersecting":
-    "The edges cross each other. Move a point so they do not, then finish.",
-  degenerate:
-    "That would have no size. Choose a place further from the others.",
-  "radius-missing": "Tap a second point to set the circle's radius.",
-  "radius-too-large": "That radius is too large. The most is 10,000 km.",
-};
+export const DRAW_ISSUE_MESSAGES = {
+  "too-few-vertices": message("draw.issue.too-few-vertices", {}),
+  "self-intersecting": message("draw.issue.self-intersecting", {}),
+  degenerate: message("draw.issue.degenerate", {}),
+  "radius-missing": message("draw.issue.radius-missing", {}),
+  "radius-too-large": message("draw.issue.radius-too-large", {}),
+} as const satisfies Readonly<Record<DrawIssue, Message>>;
 
-const HINTS: Readonly<Record<DrawKind, string>> = {
-  point: "Tap the map to place a point, or use Add point at map centre.",
-  line: "Tap the map to add points, then Finish. Or use Add point at map centre.",
-  polygon:
-    "Tap the map to add corners, then Finish. Or use Add point at map centre.",
-  circle:
-    "Tap the centre, then a second point to set the radius. Or use Add point at map centre.",
-};
+const HINTS = {
+  point: message("draw.hint.point", {}),
+  line: message("draw.hint.line", {}),
+  polygon: message("draw.hint.polygon", {}),
+  circle: message("draw.hint.circle", {}),
+} as const satisfies Readonly<Record<DrawKind, Message>>;
+
+const DISCARDED = {
+  point: message("draw.discarded.point", {}),
+  line: message("draw.discarded.line", {}),
+  polygon: message("draw.discarded.polygon", {}),
+  circle: message("draw.discarded.circle", {}),
+} as const satisfies Readonly<Record<DrawKind, Message>>;
 
 /** The instruction shown under the toolbar for a drawing mode. */
-export function hintFor(kind: DrawKind): string {
+export function hintFor(kind: DrawKind): Message {
   return HINTS[kind];
 }
 
 /**
  * A shape's measures as short text for the readout, for example
  * "1.2 ha · 480 m", "850 m", or "500 m radius · 78.5 ha" for a circle. Empty
- * for a point and for a shape with nothing to measure yet.
+ * for a point and for a shape with nothing to measure yet. Figures are written
+ * for the language of `messages`, and "radius" is its word.
  */
 export function formatShapeMeasure(
   shape: DrawShape,
   units: UnitSystem,
+  messages: MessageCatalogue,
 ): string {
   const { areaMetres, lengthMetres } = measureShape(shape);
+  const { language } = messages;
   if (shape.kind === "circle") {
     return shape.radiusMetres === undefined || areaMetres === null
       ? ""
-      : `${formatDistance(shape.radiusMetres, units)} radius · ${formatArea(areaMetres, units)}`;
+      : messages.t("draw.measure.radiusAndArea", {
+          radius: formatDistance(shape.radiusMetres, units, language),
+          area: formatArea(areaMetres, units, language),
+        });
   }
   const parts: string[] = [];
   if (areaMetres !== null) {
-    parts.push(formatArea(areaMetres, units));
+    parts.push(formatArea(areaMetres, units, language));
   }
   if (lengthMetres !== null) {
-    parts.push(formatDistance(lengthMetres, units));
+    parts.push(formatDistance(lengthMetres, units, language));
   }
-  return parts.join(" · ");
+  const [first, second] = parts;
+  if (first === undefined || second === undefined) {
+    return first ?? "";
+  }
+  return messages.t("common.dotJoined", { first, second });
 }
 
 /**
  * A shape's measures in words for a screen reader, for example "area 1.2
- * hectares, perimeter 480 metres". Empty for a point.
+ * hectares, perimeter 480 metres". Null for a point.
  */
 export function describeShapeMeasure(
   shape: DrawShape,
   units: UnitSystem,
-): string {
+): Message | null {
   const { areaMetres, lengthMetres } = measureShape(shape);
   if (shape.kind === "circle") {
     return shape.radiusMetres === undefined || areaMetres === null
-      ? ""
-      : `radius ${describeDistance(shape.radiusMetres, units)}, area ${describeArea(areaMetres, units)}`;
+      ? null
+      : message("draw.measure.circle", {
+          radius: describeDistance(shape.radiusMetres, units),
+          area: describeArea(areaMetres, units),
+        });
   }
   if (shape.kind === "line") {
     return lengthMetres === null
-      ? ""
-      : `length ${describeDistance(lengthMetres, units)}`;
+      ? null
+      : message("draw.measure.line", {
+          length: describeDistance(lengthMetres, units),
+        });
   }
   if (areaMetres === null) {
-    return "";
+    return null;
   }
-  const area = `area ${describeArea(areaMetres, units)}`;
   return lengthMetres === null
-    ? area
-    : `${area}, perimeter ${describeDistance(lengthMetres, units)}`;
+    ? message("draw.measure.polygonArea", {
+        area: describeArea(areaMetres, units),
+      })
+    : message("draw.measure.polygon", {
+        area: describeArea(areaMetres, units),
+        perimeter: describeDistance(lengthMetres, units),
+      });
 }
 
-function sentence(measure: string): string {
-  return measure === ""
-    ? ""
-    : ` ${measure.charAt(0).toUpperCase()}${measure.slice(1)}.`;
+/** The measures of a shape as a sentence that follows another, or null when there are none. */
+function measureSentence(shape: DrawShape, units: UnitSystem): Message | null {
+  const { areaMetres, lengthMetres } = measureShape(shape);
+  if (shape.kind === "circle") {
+    return shape.radiusMetres === undefined || areaMetres === null
+      ? null
+      : message("draw.sentence.circle", {
+          radius: describeDistance(shape.radiusMetres, units),
+          area: describeArea(areaMetres, units),
+        });
+  }
+  if (shape.kind === "line") {
+    return lengthMetres === null
+      ? null
+      : message("draw.sentence.line", {
+          length: describeDistance(lengthMetres, units),
+        });
+  }
+  if (areaMetres === null) {
+    return null;
+  }
+  return lengthMetres === null
+    ? message("draw.sentence.polygonArea", {
+        area: describeArea(areaMetres, units),
+      })
+    : message("draw.sentence.polygon", {
+        area: describeArea(areaMetres, units),
+        perimeter: describeDistance(lengthMetres, units),
+      });
 }
 
-function points(count: number): string {
-  return `${count} ${pluralise(count, ["point", "points"])}`;
-}
-
-function shapeCount(count: number): string {
-  return `${count} ${pluralise(count, ["shape", "shapes"])}`;
-}
-
-function describeSelection(shape: DrawShape, vertex: number | null): string {
+function describeSelection(shape: DrawShape, vertex: number | null): Message {
   if (vertex !== null && (shape.kind === "line" || shape.kind === "polygon")) {
-    return `Point ${vertex + 1} of ${shape.vertices.length} selected in ${shape.label}.`;
+    return message("draw.vertexSelected", {
+      index: vertex + 1,
+      count: shape.vertices.length,
+      label: shape.label,
+    });
   }
   if (shape.kind === "line" || shape.kind === "polygon") {
-    return `${shape.label} selected. ${points(shape.vertices.length)}.`;
+    return message("draw.pathSelected", {
+      label: shape.label,
+      count: shape.vertices.length,
+    });
   }
-  return `${shape.label} selected.`;
+  return message("draw.shapeSelected", { label: shape.label });
 }
 
-function describeFinished(shape: DrawShape, units: UnitSystem): string {
+function describeFinished(shape: DrawShape, units: UnitSystem): Message {
   if (shape.kind === "point") {
-    return `${shape.label} added.`;
+    return message("draw.pointAdded", { label: shape.label });
   }
-  return `${shape.label} finished.${sentence(describeShapeMeasure(shape, units))}`;
+  return appendMessages(message("draw.finished", { label: shape.label }), [
+    measureSentence(shape, units),
+  ]);
 }
 
 function describeMove(
   shape: DrawShape,
   index: number,
   units: UnitSystem,
-): string {
-  const measure = sentence(describeShapeMeasure(shape, units));
+): Message {
+  const measure = measureSentence(shape, units);
   if (shape.kind === "circle") {
-    return `${shape.label} changed.${measure}`;
+    return appendMessages(
+      message("draw.circleChanged", { label: shape.label }),
+      [measure],
+    );
   }
   if (shape.kind === "point") {
-    return `${shape.label} moved.`;
+    return message("draw.pointMoved", { label: shape.label });
   }
-  return `Point ${index + 1} of ${shape.label} moved.${measure}`;
+  return appendMessages(
+    message("draw.vertexMoved", { index: index + 1, label: shape.label }),
+    [measure],
+  );
 }
 
 /**
- * The words for what the last draw action did, or null when it needs none
+ * The message for what the last draw action did, or null when it needs none
  * (a mode change is visible on the switch itself). Wording is read from the
  * shapes as they are now, so a move reports the new measures.
  */
@@ -164,7 +222,7 @@ export function announceDrawEvent(
   event: DrawEvent | null,
   shapes: readonly DrawShape[],
   units: UnitSystem,
-): string | null {
+): Message | null {
   if (!event) {
     return null;
   }
@@ -175,38 +233,51 @@ export function announceDrawEvent(
   switch (event.type) {
     case "vertex-added":
       return shape
-        ? `Point ${event.count} added to ${shape.label}.${sentence(describeShapeMeasure(shape, units))}`
-        : `Point ${event.count} added.`;
+        ? appendMessages(
+            message("draw.vertexAddedTo", {
+              count: event.count,
+              label: shape.label,
+            }),
+            [measureSentence(shape, units)],
+          )
+        : message("draw.vertexAdded", { count: event.count });
     case "vertex-moved":
       return shape ? describeMove(shape, event.index, units) : null;
     case "vertex-inserted":
       return shape
-        ? `Point added to ${shape.label} as point ${event.index + 1} of ${event.count}.`
+        ? message("draw.vertexInserted", {
+            label: shape.label,
+            index: event.index + 1,
+            count: event.count,
+          })
         : null;
     case "vertex-removed":
       return shape
-        ? `Point removed from ${shape.label}. ${event.count} ${pluralise(event.count, ["point", "points"])} left.`
+        ? message("draw.vertexRemoved", {
+            label: shape.label,
+            count: event.count,
+          })
         : null;
     case "finished":
       return shape ? describeFinished(shape, units) : null;
     case "selected":
       return shape ? describeSelection(shape, event.vertex) : null;
     case "discarded":
-      return `Discarded the unfinished ${kindName(event.kind).toLowerCase()}.`;
+      return DISCARDED[event.kind];
     case "rejected":
       return DRAW_ISSUE_MESSAGES[event.issue];
     case "deleted":
-      return `Deleted ${event.label}. Undo brings it back.`;
+      return message("draw.deleted", { label: event.label });
     case "cleared":
       return event.count === 1
-        ? "Deleted 1 shape."
-        : `Deleted all ${event.count} shapes.`;
+        ? message("draw.clearedOne", {})
+        : message("draw.clearedAll", { count: event.count });
     case "undone":
-      return "Undone.";
+      return message("draw.undone", {});
     case "redone":
-      return "Redone.";
+      return message("draw.redone", {});
     case "loaded":
-      return `${shapeCount(event.count)} loaded from the link.`;
+      return message("draw.loaded", { count: event.count });
     case "mode":
     case "imported":
       // A mode change is visible on the switch itself, and the import's own
@@ -217,73 +288,127 @@ export function announceDrawEvent(
 
 const BYTES_PER_MEGABYTE = 1_000_000;
 
-const IMPORT_REFUSALS: Readonly<Record<ShapeImportRefusal, string>> = {
-  "drawing-full": `That would make more than ${formatNumber(MAX_DRAWING_SHAPES)} shapes. Delete some shapes first, or import a smaller file.`,
-  empty: "The file is empty.",
-  "too-large": `The file is larger than ${formatNumber(MAX_IMPORT_BYTES / BYTES_PER_MEGABYTE)} MB. Split it into smaller files.`,
-  "too-deep":
-    "The file is nested too deeply to read. Check that it is GeoJSON.",
-  "not-recognised":
-    "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt, .txt or .csv file.",
-  "wkt-unreadable":
-    "The WKT could not be read, so none of the file was imported.",
-  "too-many-shapes": `The file holds more than ${formatNumber(MAX_IMPORT_SHAPES)} shapes. Import at most ${formatNumber(MAX_IMPORT_SHAPES)} at a time.`,
-  "too-many-points": `The file holds more than ${formatNumber(MAX_IMPORT_POINTS)} points. Simplify the shapes or split the file.`,
-};
+/** Why a whole file was refused, each with what to do instead. */
+function describeRefusal(refusal: ShapeImportRefusal): Message {
+  switch (refusal) {
+    case "drawing-full":
+      return message("draw.import.refusal.drawing-full", {
+        max: MAX_DRAWING_SHAPES,
+      });
+    case "empty":
+      return message("draw.import.refusal.empty", {});
+    case "too-large":
+      return message("draw.import.refusal.too-large", {
+        megabytes: MAX_IMPORT_BYTES / BYTES_PER_MEGABYTE,
+      });
+    case "too-deep":
+      return message("draw.import.refusal.too-deep", {});
+    case "not-recognised":
+      return message("draw.import.refusal.not-recognised", {});
+    case "wkt-unreadable":
+      return message("draw.import.refusal.wkt-unreadable", {});
+    case "too-many-shapes":
+      return message("draw.import.refusal.too-many-shapes", {
+        max: MAX_IMPORT_SHAPES,
+      });
+    case "too-many-points":
+      return message("draw.import.refusal.too-many-points", {
+        max: MAX_IMPORT_POINTS,
+      });
+  }
+}
 
-/** What each skipped shape had wrong, after its count: "2 with edges that cross". */
-const IMPORT_SKIPS: Readonly<Record<ShapeImportSkip, string>> = {
-  "self-intersecting": "with edges that cross",
-  degenerate: "with no length or area",
-  "too-few-vertices": "with too few points",
-  "radius-missing": "with no radius",
-  "radius-too-large": "with a radius over 10,000 km",
-  "out-of-range": "with a position outside the world",
-  "too-many-points": `with more than ${formatNumber(MAX_IMPORT_SHAPE_POINTS)} points`,
-  malformed: "with coordinates that could not be read",
-  unsupported: "of a type that cannot be drawn",
-  "other-srid": `in a coordinate system other than SRID ${SUPPORTED_WKT_SRID}`,
-};
+/** What one skipped shape had wrong, after its count: "2 with edges that cross". */
+function describeSkip(reason: ShapeImportSkip, count: number): Message {
+  switch (reason) {
+    case "self-intersecting":
+      return message("draw.import.skip.self-intersecting", { count });
+    case "degenerate":
+      return message("draw.import.skip.degenerate", { count });
+    case "too-few-vertices":
+      return message("draw.import.skip.too-few-vertices", { count });
+    case "radius-missing":
+      return message("draw.import.skip.radius-missing", { count });
+    case "radius-too-large":
+      return message("draw.import.skip.radius-too-large", { count });
+    case "out-of-range":
+      return message("draw.import.skip.out-of-range", { count });
+    case "too-many-points":
+      return message("draw.import.skip.too-many-points", {
+        count,
+        max: MAX_IMPORT_SHAPE_POINTS,
+      });
+    case "malformed":
+      return message("draw.import.skip.malformed", { count });
+    case "unsupported":
+      return message("draw.import.skip.unsupported", { count });
+    case "other-srid":
+      return message("draw.import.skip.other-srid", {
+        count,
+        srid: String(SUPPORTED_WKT_SRID),
+      });
+  }
+}
+
+/** The order skipped shapes are listed in. */
+const SKIP_REASONS: readonly ShapeImportSkip[] = [
+  "self-intersecting",
+  "degenerate",
+  "too-few-vertices",
+  "radius-missing",
+  "radius-too-large",
+  "out-of-range",
+  "too-many-points",
+  "malformed",
+  "unsupported",
+  "other-srid",
+];
 
 function describeSkips(
   skipped: Readonly<Partial<Record<ShapeImportSkip, number>>>,
-): string {
-  const parts: string[] = [];
+): Message | null {
+  const parts: Message[] = [];
   let total = 0;
-  for (const [reason, words] of Object.entries(IMPORT_SKIPS)) {
-    const count = skipped[reason as ShapeImportSkip] ?? 0;
+  for (const reason of SKIP_REASONS) {
+    const count = skipped[reason] ?? 0;
     if (count > 0) {
-      parts.push(`${count} ${words}`);
+      parts.push(describeSkip(reason, count));
       total += count;
     }
   }
-  return total === 0 ? "" : ` ${total} skipped: ${parts.join(", ")}.`;
+  const reasons = joinMessages(parts, "common.commaJoined");
+  return reasons === null
+    ? null
+    : message("draw.import.skipped", { total, reasons });
 }
 
 /**
- * The words for what a file held, shown beside the Import button and
+ * The message for what a file held, shown beside the Import button and
  * announced: how many shapes were imported, how many were skipped and why,
  * and whether holes were left out; or why the whole file was refused and
  * what to do instead.
  */
-export function describeShapeImport(result: ShapeImport): string {
+export function describeShapeImport(result: ShapeImport): Message {
   if (!result.ok) {
-    const refusal = IMPORT_REFUSALS[result.refusal];
+    const refusal = describeRefusal(result.refusal);
     return result.detail === undefined
       ? refusal
-      : `${refusal} ${result.detail}`;
+      : message("draw.import.refusalWithDetail", {
+          refusal,
+          detail: result.detail,
+        });
   }
   const skips = describeSkips(result.skipped);
-  if (result.shapes.length === 0 && skips === "") {
-    return "The file holds no shapes.";
+  if (result.shapes.length === 0 && skips === null) {
+    return message("draw.import.noShapes", {});
   }
   const imported =
     result.shapes.length === 0
-      ? "No shapes imported."
-      : `${shapeCount(result.shapes.length)} imported.`;
+      ? message("draw.import.noneImported", {})
+      : message("draw.import.imported", { count: result.shapes.length });
   const holes =
     result.holesDropped > 0
-      ? ` Holes in ${result.holesDropped} ${pluralise(result.holesDropped, ["polygon", "polygons"])} were left out.`
-      : "";
-  return `${imported}${skips}${holes}`;
+      ? message("draw.import.holesLeftOut", { count: result.holesDropped })
+      : null;
+  return appendMessages(imported, [skips, holes]);
 }

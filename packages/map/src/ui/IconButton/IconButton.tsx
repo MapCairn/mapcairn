@@ -23,6 +23,8 @@ export interface IconButtonProps
   readonly label: string;
   /** The icon to show, imported by name from `lucide-react`. */
   readonly icon: IconComponent;
+  /** Flips the icon when the page reads right to left, for one that points along the reading direction. */
+  readonly mirrorInRtl?: boolean;
   /**
    * Makes it a toggle. Renders `aria-pressed` and a shape change (tinted fill
    * plus a bar under the icon). Leave undefined for a plain action button.
@@ -54,6 +56,7 @@ export interface IconButtonProps
 export function IconButton({
   label,
   icon,
+  mirrorInRtl = false,
   pressed,
   busy = false,
   disabled = false,
@@ -88,6 +91,7 @@ export function IconButton({
       <Icon
         icon={busy ? LoaderCircle : icon}
         spinning={busy}
+        mirrorInRtl={mirrorInRtl}
         className={iconSlot}
       />
       {pressed === true ? (

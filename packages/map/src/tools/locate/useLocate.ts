@@ -6,16 +6,17 @@ import {
   LocationError,
   type LocationErrorKind,
   type LocationFix,
+  message,
   PortAbortError,
   type UnitSystem,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocationProvider } from "../../services/hooks";
+import { useFormatMessage, useLocationProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";
 
-/** The text shown while a fix is being found. */
-export const LOCATING_MESSAGE = "Finding your location...";
+/** What is shown while a fix is being found, as a message to format. */
+export const LOCATING_MESSAGE = message("tools.locate.locating", {});
 
 /** Where a locate request stands. */
 export type LocateState = "idle" | "locating" | "found" | "error";
@@ -80,6 +81,7 @@ export function useLocate(
   const announce = useAnnounce();
   const providerRef = useLatestRef(provider);
   const announceRef = useLatestRef(announce);
+  const formatRef = useLatestRef(useFormatMessage());
   const unitsRef = useLatestRef(units);
   const timeoutRef = useLatestRef(timeoutMs);
   const announceErrorsRef = useLatestRef(announceErrors);
@@ -87,7 +89,7 @@ export function useLocate(
   const [state, setState] = useState<LocateState>("idle");
   const [fix, setFix] = useState<LocationFix | null>(null);
   const [error, setError] = useState<LocationErrorKind | null>(null);
-  const [message, setMessage] = useState("");
+  const [shown, setShown] = useState("");
 
   const abort = useCallback(() => {
     controller.current?.abort();
@@ -101,7 +103,7 @@ export function useLocate(
     setState("locating");
     setFix(null);
     setError(null);
-    setMessage(LOCATING_MESSAGE);
+    setShown(formatRef.current(LOCATING_MESSAGE));
     providerRef.current
       .locate({ signal: own.signal, timeoutMs: timeoutRef.current })
       .then(
@@ -109,14 +111,14 @@ export function useLocate(
           if (own.signal.aborted) {
             return;
           }
-          const text = announceLocationFound(
+          const said = announceLocationFound(
             found.accuracyMetres,
             unitsRef.current,
           );
           setState("found");
           setFix(found);
-          setMessage(text);
-          announceRef.current(text);
+          setShown(formatRef.current(said));
+          announceRef.current(said);
         },
         (failure: unknown) => {
           if (own.signal.aborted || failure instanceof PortAbortError) {
@@ -124,12 +126,12 @@ export function useLocate(
           }
           const kind: LocationErrorKind =
             failure instanceof LocationError ? failure.kind : "unavailable";
-          const text = announceLocationError(kind);
+          const said = announceLocationError(kind);
           setState("error");
           setError(kind);
-          setMessage(text);
+          setShown(formatRef.current(said));
           if (announceErrorsRef.current) {
-            announceRef.current(text, { priority: "assertive" });
+            announceRef.current(said, { priority: "assertive" });
           }
         },
       );
@@ -139,6 +141,7 @@ export function useLocate(
     timeoutRef,
     unitsRef,
     announceRef,
+    formatRef,
     announceErrorsRef,
   ]);
 
@@ -147,10 +150,10 @@ export function useLocate(
     setState("idle");
     setFix(null);
     setError(null);
-    setMessage("");
+    setShown("");
   }, [abort]);
 
   useEffect(() => abort, [abort]);
 
-  return { state, fix, error, message, locate, cancel };
+  return { state, fix, error, message: shown, locate, cancel };
 }

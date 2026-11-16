@@ -11,11 +11,10 @@ import type { FeedLayerDefinition } from "@mapcairn/core";
  */
 const earthquakes: FeedLayerDefinition = {
   id: "earthquakes",
-  name: "Earthquakes",
-  description:
-    "Earthquakes recorded by the US Geological Survey worldwide, updated about every minute.",
-  group: "Earthquakes and volcanoes",
-  dataCost: "about 30 KB, up to 220 KB for a week",
+  name: "layer.earthquakes.name",
+  description: "layer.earthquakes.description",
+  group: "layer.group.earthquakesAndVolcanoes",
+  dataCost: "layer.earthquakes.dataCost",
   attribution: [
     {
       text: "Credit: U.S. Geological Survey",
@@ -26,19 +25,25 @@ const earthquakes: FeedLayerDefinition = {
     {
       kind: "segmented",
       id: "window",
-      label: "Period",
+      label: "layer.earthquakes.control.window.label",
       options: [
-        { value: "hour", label: "Hour" },
-        { value: "day", label: "Day" },
-        { value: "week", label: "Week" },
+        {
+          value: "hour",
+          label: "layer.earthquakes.control.window.option.hour",
+        },
+        { value: "day", label: "layer.earthquakes.control.window.option.day" },
+        {
+          value: "week",
+          label: "layer.earthquakes.control.window.option.week",
+        },
       ],
       default: "day",
     },
     {
       kind: "switch",
       id: "small",
-      label: "Include smaller earthquakes",
-      description: "Below magnitude 2.5, for the past day. Up to about 130 KB.",
+      label: "layer.earthquakes.control.small.label",
+      description: "layer.earthquakes.control.small.description",
       default: false,
       enabledWhen: { control: "window", in: ["day"] },
     },
@@ -76,11 +81,11 @@ const earthquakes: FeedLayerDefinition = {
       kind: "steps",
       field: "magnitude",
       steps: [
-        { min: -10, label: "Below 2.5", colour: "ordinal-1" },
-        { min: 2.5, label: "2.5 to 4.4", colour: "ordinal-2" },
-        { min: 4.5, label: "4.5 to 5.9", colour: "ordinal-3" },
-        { min: 6, label: "6 to 6.9", colour: "ordinal-4" },
-        { min: 7, label: "7 and above", colour: "ordinal-5" },
+        { min: -10, label: "layer.earthquakes.key.1", colour: "ordinal-1" },
+        { min: 2.5, label: "layer.earthquakes.key.2", colour: "ordinal-2" },
+        { min: 4.5, label: "layer.earthquakes.key.3", colour: "ordinal-3" },
+        { min: 6, label: "layer.earthquakes.key.4", colour: "ordinal-4" },
+        { min: 7, label: "layer.earthquakes.key.5", colour: "ordinal-5" },
       ],
     },
     size: {
@@ -93,11 +98,11 @@ const earthquakes: FeedLayerDefinition = {
         [7, 16],
       ],
       labels: [
-        "Below 2.5",
-        "2.5 to 4.4",
-        "4.5 to 5.9",
-        "6 to 6.9",
-        "7 and above",
+        "layer.earthquakes.key.1",
+        "layer.earthquakes.key.2",
+        "layer.earthquakes.key.3",
+        "layer.earthquakes.key.4",
+        "layer.earthquakes.key.5",
       ],
     },
   },
@@ -108,21 +113,26 @@ const earthquakes: FeedLayerDefinition = {
       "{depth|km} deep",
       "{time|date} ({time|relative})",
     ],
-    link: { field: "url", label: "Details on the USGS site" },
+    link: { field: "url", label: "layer.earthquakes.card.link" },
   },
   list: {
     secondary: "Magnitude {magnitude|number}, {time|relative}",
     sorts: [
-      { id: "newest", label: "Newest", field: "time", direction: "desc" },
+      {
+        id: "newest",
+        label: "layer.earthquakes.sort.newest",
+        field: "time",
+        direction: "desc",
+      },
       {
         id: "strongest",
-        label: "Strongest",
+        label: "layer.earthquakes.sort.strongest",
         field: "magnitude",
         direction: "desc",
       },
     ],
   },
-  emptyText: "No earthquakes in this period.",
+  emptyText: "layer.earthquakes.emptyText",
 };
 
 export default earthquakes;

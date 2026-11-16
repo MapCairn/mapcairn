@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { createFakeServices, type TourSnapshot } from "@mapcairn/core";
+import {
+  createFakeServices,
+  FakeMessageCatalogue,
+  type TourSnapshot,
+} from "@mapcairn/core";
 import {
   act,
   fireEvent,
@@ -108,8 +112,8 @@ function SurfaceHarness({
 
 function renderTour(
   options: { offer?: boolean; persistent?: boolean; hidden?: boolean } = {},
+  services = createFakeServices(),
 ) {
-  const services = createFakeServices();
   const focusMap = vi.fn();
   const view = render(
     <ServicesProvider services={services}>
@@ -214,6 +218,19 @@ describe("TourCard", () => {
     );
   });
 
+  it("asks the catalogue for the skip announcement, by key", async () => {
+    const { services } = renderTour();
+    act(() => {
+      screen.getByRole("button", { name: "Skip" }).click();
+    });
+    await waitFor(() =>
+      expect(services.fakes.messages.calls).toContainEqual({
+        key: "announce.tourSkipped",
+        params: {},
+      }),
+    );
+  });
+
   it("skips on Escape inside the card, and prevents the default so nothing else closes", async () => {
     const { focusMap } = renderTour();
     fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
@@ -286,6 +303,188 @@ describe("TourCard", () => {
     act(() => latestStart());
     expect(document.activeElement).toBe(
       screen.getByRole("heading", { name: "Turn on a layer" }),
+    );
+  });
+
+  it("asks the catalogue by key for its buttons, progress and step announcement", async () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "tools.tour.take": "Neem die toer",
+        "tools.tour.progress": "Stap {step} van {total}",
+        "tools.tour.stepAnnouncement": "{progress}, {heading}. {text}",
+      },
+    });
+    renderTour({}, createFakeServices({ messages }));
+    fireEvent.click(screen.getByRole("button", { name: "Neem die toer" }));
+    expect(screen.getByText("Stap 1 van 2")).toBeInTheDocument();
+    expect(messages.calls).toContainEqual({
+      key: "tools.tour.progress",
+      params: { step: 1, total: 2 },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Turn a layer on" }));
+    await waitFor(() =>
+      expect(polite()).toBe(
+        "Stap 2 van 2, Find a place. Type a place in Search.",
+      ),
+    );
+    expect(messages.calls).toContainEqual({
+      key: "tools.tour.stepAnnouncement",
+      params: {
+        progress: "Stap 2 van 2",
+        heading: "Find a place",
+        text: "Type a place in Search.",
+      },
+    });
+    expect(messages.calls).toContainEqual({
+      key: "tools.tour.progress",
+      params: { step: 2, total: 2 },
+    });
+  });
+});
+
+describe("TourCard keyed words", () => {
+  const KEYED_STEPS: readonly TourStep[] = [
+    {
+      id: "search",
+      heading: "app.tour.search.heading",
+      text: "app.tour.search.text",
+      advance: { kind: "surface", surface: "search" },
+    },
+    {
+      id: "plain",
+      heading: "A plain heading",
+      text: "A plain text.",
+      advance: { kind: "layer-on" },
+    },
+  ];
+
+  function KeyedHarness() {
+    const [snapshot, setSnapshot] = useState<TourSnapshot>({
+      layersOn: 0,
+      projection: "flat",
+      surface: "none",
+    });
+    const tour = useTour({
+      steps: KEYED_STEPS,
+      version: 3,
+      offer: true,
+      snapshot,
+    });
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() =>
+            setSnapshot((current) => ({ ...current, surface: "search" }))
+          }
+        >
+          Focus search
+        </button>
+        <TourCard
+          tour={tour}
+          welcome={{
+            heading: "app.tour.welcome.heading",
+            text: "app.tour.welcome.text",
+            announcement: "app.tour.welcome.announcement",
+          }}
+          ending={{
+            heading: "app.tour.ending.heading",
+            text: "Plain ending text.",
+          }}
+        />
+      </>
+    );
+  }
+
+  it("looks the welcome, the steps, their announcement and the ending up by key, and shows plain words as written", async () => {
+    const messages = new FakeMessageCatalogue({
+      overrides: {
+        "app.tour.welcome.heading": "Nuut hier?",
+        "app.tour.welcome.text": "Die toer wys hoe.",
+        "app.tour.welcome.announcement": "Daar is 'n toer.",
+        "app.tour.search.heading": "Vind 'n plek",
+        "app.tour.search.text": "Tik in Soek.",
+        "app.tour.ending.heading": "Toer klaar",
+      },
+    });
+    render(
+      <ServicesProvider services={createFakeServices({ messages })}>
+        <LiveRegionProvider>
+          <FocusRegistryProvider focusMap={vi.fn()}>
+            <KeyedHarness />
+          </FocusRegistryProvider>
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    expect(
+      screen.getByRole("region", { name: "Nuut hier?" }),
+    ).toHaveTextContent("Die toer wys hoe.");
+    await waitFor(() => expect(polite()).toBe("Daar is 'n toer."));
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+    expect(
+      screen.getByRole("heading", { name: "Vind 'n plek" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Tik in Soek.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(
+      screen.getByRole("heading", { name: "A plain heading" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
+    expect(
+      screen.getByRole("heading", { name: "Toer klaar" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Plain ending text.")).toBeInTheDocument();
+  });
+
+  it("announces the next keyed step in the language when a step is done", async () => {
+    const messages = new FakeMessageCatalogue({
+      overrides: {
+        "app.tour.search.heading": "Vind 'n plek",
+        "app.tour.search.text": "Tik in Soek.",
+      },
+    });
+    function Reverse() {
+      const [snapshot, setSnapshot] = useState<TourSnapshot>({
+        layersOn: 0,
+        projection: "flat",
+        surface: "none",
+      });
+      const tour = useTour({
+        steps: [KEYED_STEPS[1] as TourStep, KEYED_STEPS[0] as TourStep],
+        version: 3,
+        offer: true,
+        snapshot,
+      });
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() =>
+              setSnapshot((current) => ({ ...current, layersOn: 1 }))
+            }
+          >
+            Turn a layer on
+          </button>
+          <button type="button" onClick={tour.start}>
+            Start
+          </button>
+        </>
+      );
+    }
+    render(
+      <ServicesProvider services={createFakeServices({ messages })}>
+        <LiveRegionProvider>
+          <FocusRegistryProvider focusMap={vi.fn()}>
+            <Reverse />
+          </FocusRegistryProvider>
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Start" }));
+    fireEvent.click(screen.getByRole("button", { name: "Turn a layer on" }));
+    await waitFor(() =>
+      expect(polite()).toBe("Step 2 of 2, Vind 'n plek. Tik in Soek."),
     );
   });
 });

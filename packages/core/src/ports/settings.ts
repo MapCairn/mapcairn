@@ -39,6 +39,13 @@ export interface Settings {
    * visitor. A host that bumps its tour version offers the tour once more.
    */
   readonly tourSeen: number | null;
+  /**
+   * The BCP 47 tag of the language the person chose (for example `"af"`), or
+   * `null` to follow the browser's languages. A tag the host does not offer
+   * is ignored when the language is resolved. It lives on the device and is
+   * not part of a shared link.
+   */
+  readonly language: string | null;
 }
 
 /**

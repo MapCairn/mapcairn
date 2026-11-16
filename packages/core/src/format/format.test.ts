@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import {
+  formatDay,
   formatFixed,
   formatLatitude,
   formatLatLng,
   formatLongitude,
   formatNumber,
   formatZoom,
+  type Hemispheres,
+  hemispheresFor,
 } from "./index";
 
 describe("formatFixed", () => {
@@ -51,18 +55,54 @@ describe("formatLatLng", () => {
   });
 });
 
+const ENGLISH_HEMISPHERES: Hemispheres = {
+  north: "N",
+  south: "S",
+  east: "E",
+  west: "W",
+};
+
+/** Afrikaans says O for east (oos), so the letters are not English's. */
+const AFRIKAANS_HEMISPHERES: Hemispheres = {
+  north: "N",
+  south: "S",
+  east: "O",
+  west: "W",
+};
+
 describe("formatLatitude and formatLongitude", () => {
   it("names the hemisphere instead of using a sign", () => {
-    expect(formatLatitude(-26.2041)).toBe("26.20410° S");
-    expect(formatLatitude(51.5)).toBe("51.50000° N");
-    expect(formatLongitude(28.0473)).toBe("28.04730° E");
-    expect(formatLongitude(-0.1278)).toBe("0.12780° W");
+    expect(formatLatitude(-26.2041, ENGLISH_HEMISPHERES)).toBe("26.20410° S");
+    expect(formatLatitude(51.5, ENGLISH_HEMISPHERES)).toBe("51.50000° N");
+    expect(formatLongitude(28.0473, ENGLISH_HEMISPHERES)).toBe("28.04730° E");
+    expect(formatLongitude(-0.1278, ENGLISH_HEMISPHERES)).toBe("0.12780° W");
   });
 
   it("treats zero, and values that round to zero, as north and east", () => {
-    expect(formatLatitude(0)).toBe("0.00000° N");
-    expect(formatLatitude(-0.000001)).toBe("0.00000° N");
-    expect(formatLongitude(-0.000001)).toBe("0.00000° E");
+    expect(formatLatitude(0, ENGLISH_HEMISPHERES)).toBe("0.00000° N");
+    expect(formatLatitude(-0.000001, ENGLISH_HEMISPHERES)).toBe("0.00000° N");
+    expect(formatLongitude(-0.000001, ENGLISH_HEMISPHERES)).toBe("0.00000° E");
+  });
+
+  it("uses the letters it is given, with no language of its own", () => {
+    expect(formatLongitude(28.0473, AFRIKAANS_HEMISPHERES)).toBe("28.04730° O");
+    expect(formatLatitude(-26.2041, AFRIKAANS_HEMISPHERES)).toBe("26.20410° S");
+  });
+});
+
+describe("hemispheresFor", () => {
+  it("reads the four letters from the catalogue's keys", () => {
+    const catalogue = new FakeMessageCatalogue({
+      language: "af",
+      overrides: { "format.hemisphereEast": "O" },
+    });
+    expect(hemispheresFor(catalogue)).toEqual(AFRIKAANS_HEMISPHERES);
+    expect(catalogue.calls.map((call) => call.key).sort()).toEqual([
+      "format.hemisphereEast",
+      "format.hemisphereNorth",
+      "format.hemisphereSouth",
+      "format.hemisphereWest",
+    ]);
   });
 });
 
@@ -71,27 +111,42 @@ describe("formatNumber", () => {
     vi.restoreAllMocks();
   });
 
-  it("groups thousands the British way", () => {
-    expect(formatNumber(1234567.891)).toBe("1,234,567.891");
+  it("groups thousands the way the language does", () => {
+    expect(formatNumber(1234567.891, "en-GB")).toBe("1,234,567.891");
+    expect(formatNumber(1234567.891, "de")).toBe("1.234.567,891");
   });
 
   it("passes options through", () => {
-    expect(formatNumber(1.23456, { maximumFractionDigits: 2 })).toBe("1.23");
-    expect(formatNumber(2, { minimumFractionDigits: 2 })).toBe("2.00");
+    expect(formatNumber(1.23456, "en-GB", { maximumFractionDigits: 2 })).toBe(
+      "1.23",
+    );
+    expect(formatNumber(2, "en-GB", { minimumFractionDigits: 2 })).toBe("2.00");
   });
 
-  it("names the en-GB locale explicitly", () => {
+  it("names the language explicitly, never the visitor's locale", () => {
     const spy = vi.spyOn(Intl, "NumberFormat");
-    formatNumber(5);
-    expect(spy).toHaveBeenCalledWith("en-GB", undefined);
+    formatNumber(5, "af");
+    expect(spy).toHaveBeenCalledWith("af", undefined);
   });
 });
 
 describe("formatZoom", () => {
   it("drops a trailing zero and keeps one decimal at most", () => {
-    expect(formatZoom(12)).toBe("12");
-    expect(formatZoom(12.04)).toBe("12");
-    expect(formatZoom(12.46)).toBe("12.5");
-    expect(formatZoom(0)).toBe("0");
+    expect(formatZoom(12, "en-GB")).toBe("12");
+    expect(formatZoom(12.04, "en-GB")).toBe("12");
+    expect(formatZoom(12.46, "en-GB")).toBe("12.5");
+    expect(formatZoom(0, "en-GB")).toBe("0");
+  });
+
+  it("uses the language's decimal separator", () => {
+    expect(formatZoom(12.46, "de")).toBe("12,5");
+  });
+});
+
+describe("formatDay", () => {
+  it("writes a UTC day in words in the language given", () => {
+    const day = new Date("2026-11-11T23:30:00Z");
+    expect(formatDay(day, "en-GB")).toBe("11 November 2026");
+    expect(formatDay(day, "de")).toBe("11. November 2026");
   });
 });

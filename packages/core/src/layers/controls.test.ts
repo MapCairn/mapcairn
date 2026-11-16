@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import {
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
@@ -8,6 +9,8 @@ import {
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
 } from "../fakes/layerFixtures";
+import { formatMessage } from "../messages/formatMessage";
+import type { Message } from "../ports/messages";
 import {
   defaultControlValues,
   describeChosenTime,
@@ -16,6 +19,10 @@ import {
   resolveDateBound,
   templateValues,
 } from "./controls";
+
+/** The English text of a message, as the live region would say it. */
+const english = (value: Message) =>
+  formatMessage(new FakeMessageCatalogue(), value);
 
 const NOW = Date.UTC(2026, 10, 9, 8, 30);
 
@@ -170,15 +177,17 @@ describe("templateValues", () => {
 
 describe("describeChosenTime", () => {
   it("names the day a date control is set to", () => {
-    expect(describeChosenTime(SAMPLE_TILE_LAYER, { date: "2026-11-08" })).toBe(
-      "8 November 2026",
-    );
+    const chosen = describeChosenTime(SAMPLE_TILE_LAYER, {
+      date: "2026-11-08",
+    });
+    expect(chosen && english(chosen)).toBe("8 November 2026");
   });
 
   it("names the UTC time and day a date and time control is set to", () => {
-    expect(
-      describeChosenTime(SAMPLE_TIME_LAYER, { time: "2026-11-11t1300" }),
-    ).toBe("13:00 UTC on 11 November 2026");
+    const chosen = describeChosenTime(SAMPLE_TIME_LAYER, {
+      time: "2026-11-11t1300",
+    });
+    expect(chosen && english(chosen)).toBe("13:00 UTC on 11 November 2026");
   });
 
   it("is null for a layer with no date or time to choose", () => {

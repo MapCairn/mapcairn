@@ -2,8 +2,10 @@
 // Copyright MapCairn contributors
 import { formatLatLng } from "../format/format";
 import { geometryArea } from "../geometry/queries";
+import { message } from "../messages/formatMessage";
 import type { RoutingErrorKind } from "../ports/errors";
 import type { Bounds, LatLng } from "../ports/geometry";
+import type { Message } from "../ports/messages";
 import type {
   ReachableAreaFeature,
   RouteLeg,
@@ -28,26 +30,26 @@ export const AREA_MINUTES = [5, 10, 15, 30] as const;
 /** Every way of travelling, in the order the interface lists them. */
 export const TRAVEL_MODES: readonly TravelMode[] = ["drive", "walk", "cycle"];
 
-const MODE_LABELS: Readonly<Record<TravelMode, string>> = {
-  drive: "Drive",
-  walk: "Walk",
-  cycle: "Cycle",
-};
+const MODE_LABEL_MESSAGES = {
+  drive: message("directions.mode.drive", {}),
+  walk: message("directions.mode.walk", {}),
+  cycle: message("directions.mode.cycle", {}),
+} as const satisfies Readonly<Record<TravelMode, Message>>;
 
-const MODE_PARTICIPLES: Readonly<Record<TravelMode, string>> = {
-  drive: "driving",
-  walk: "walking",
-  cycle: "cycling",
-};
+const MODE_PARTICIPLE_MESSAGES = {
+  drive: message("directions.participle.drive", {}),
+  walk: message("directions.participle.walk", {}),
+  cycle: message("directions.participle.cycle", {}),
+} as const satisfies Readonly<Record<TravelMode, Message>>;
 
-/** The short name of a travel mode, as it labels a choice: "Drive", "Walk" or "Cycle". */
-export function travelModeLabel(mode: TravelMode): string {
-  return MODE_LABELS[mode];
+/** The short name of a travel mode, as it labels a choice: "Drive", "Walk" or "Cycle", as a message to format. */
+export function travelModeLabel(mode: TravelMode): Message {
+  return MODE_LABEL_MESSAGES[mode];
 }
 
-/** A travel mode as it reads in a sentence: "driving", "walking" or "cycling". */
-export function travelModeParticiple(mode: TravelMode): string {
-  return MODE_PARTICIPLES[mode];
+/** A travel mode as it reads in a sentence: "driving", "walking" or "cycling", as a message to format. */
+export function travelModeParticiple(mode: TravelMode): Message {
+  return MODE_PARTICIPLE_MESSAGES[mode];
 }
 
 /** Whether another stop fits. */
@@ -102,9 +104,15 @@ export function stopLetter(index: number): string {
   return String.fromCharCode(65 + index);
 }
 
-/** A stop for a screen reader: "Stop A, Paris", or its coordinates when it has no name. */
-export function describeStop(index: number, stop: DirectionStop): string {
-  return `Stop ${stopLetter(index)}, ${stop.label ?? formatLatLng(stop.position)}`;
+/** A stop for a screen reader: "Stop A, Paris", or its coordinates when it has no name, as a message to format. */
+export function describeStop(
+  index: number,
+  stop: DirectionStop,
+): Message<"directions.stop"> {
+  return message("directions.stop", {
+    letter: stopLetter(index),
+    place: stop.label ?? formatLatLng(stop.position),
+  });
 }
 
 function extendBounds(
@@ -171,25 +179,25 @@ export function reachableAreaSize(
 export type RoutingRequestKind = "route" | "area";
 
 /**
- * The text that tells a person a route or area request failed, saying what
+ * The message that tells a person a route or area request failed, saying what
  * happened and what to do next. Not for `aborted`, which is never shown.
  */
 export function routingErrorMessage(
   kind: Exclude<RoutingErrorKind, "aborted">,
   request: RoutingRequestKind,
-): string {
+): Message {
   switch (kind) {
     case "network":
-      return "The routing service could not be reached. You may be offline. Check your connection and try again.";
+      return message("error.routing.network", {});
     case "rate-limited":
-      return "The routing service is busy. Wait a moment and try again.";
+      return message("error.routing.rateLimited", {});
     case "no-route":
       return request === "route"
-        ? "No route was found between these stops. Move a stop closer to a road or path, or choose another way to travel."
-        : "Nothing is reachable from the first stop in that time. Move it closer to a road or path, or choose another way to travel.";
+        ? message("error.routing.noRoute", {})
+        : message("error.routing.noReachableArea", {});
     case "invalid":
-      return "The routing service could not use those stops. Move them and try again.";
+      return message("error.routing.invalid", {});
     case "unsupported":
-      return "That way of travelling is not available here. Choose another.";
+      return message("error.routing.unsupported", {});
   }
 }

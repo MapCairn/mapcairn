@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { Message } from "@mapcairn/core";
+
 /** How urgently a message is read out. */
 export type AnnouncePriority = "polite" | "assertive";
 
@@ -17,8 +19,18 @@ export interface AnnounceOptions {
   readonly keep?: boolean;
 }
 
-/** Sends a message to the one app-wide announcer. */
-export type Announce = (message: string, options?: AnnounceOptions) => void;
+/** Sends text to the announcer, which throttles and de-duplicates it as it is. */
+export type AnnounceText = (message: string, options?: AnnounceOptions) => void;
+
+/**
+ * Sends a message to the one app-wide announcer: text, or a {@link Message}
+ * (a key and its parameters) that is formatted with the active catalogue
+ * just before it is queued.
+ */
+export type Announce = (
+  message: string | Message,
+  options?: AnnounceOptions,
+) => void;
 
 /**
  * At most one message per priority is spoken in each window of this length.
@@ -61,7 +73,7 @@ export interface AnnouncerHost {
 
 /** The announcer: send messages, and stop its timers when the host unmounts. */
 export interface Announcer {
-  readonly announce: Announce;
+  readonly announce: AnnounceText;
   /** Cancels timers. Safe to call more than once; the announcer still works afterwards. */
   readonly dispose: () => void;
 }
@@ -140,7 +152,7 @@ export function createAnnouncer({
     schedule(priority);
   };
 
-  const announce: Announce = (message, options) => {
+  const announce: AnnounceText = (message, options) => {
     if (message.trim() === "") {
       return;
     }

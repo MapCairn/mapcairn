@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { BasemapCatalogue } from "../basemaps/basemaps";
+import type { LanguageCatalogue } from "../messages/languageCatalogue";
 import type { ClipboardPort } from "./clipboard";
 import type { FeatureQuery } from "./featureQuery";
 import type { FileOpener, FileSaver } from "./files";
@@ -67,6 +68,13 @@ export interface Services {
    * it, and not the SDK, accepts by building a catalogue that includes it.
    */
   readonly basemaps?: BasemapCatalogue;
+  /**
+   * The languages the host offers, with the default and a loader for each.
+   * Optional: without it the ui speaks only `messages`, follows no language
+   * setting and shows no language switcher. The reference host offers one
+   * language until it ships a translation.
+   */
+  readonly languages?: LanguageCatalogue;
   /**
    * The set of features the person has selected, kept wherever the host
    * likes. Optional: a host that supplies none offers no selection, and the

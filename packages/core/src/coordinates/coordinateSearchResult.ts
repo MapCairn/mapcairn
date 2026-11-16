@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatFixed, formatLatitude, formatLongitude } from "../format";
+import {
+  formatFixed,
+  formatLatitude,
+  formatLongitude,
+  hemispheresFor,
+} from "../format";
 import type { LatLng } from "../ports/geometry";
+import type { MessageCatalogue } from "../ports/messages";
 import type { SearchResult } from "../ports/search";
 import { parseCoordinates } from "./parseCoordinates";
 
@@ -20,18 +26,27 @@ function coordinateId(position: LatLng): string {
  * request.
  *
  * The label names the place in words, such as "Coordinates 26.20410° S,
- * 28.04730° E", using the app's coordinate formatters. It reads back through
+ * 28.04730° E", using the app's coordinate formatters and the hemisphere
+ * letters and wording of `messages`, and it reads the letters of that language
+ * in the text too. It reads back through
  * {@link parseCoordinates} as the same place to about a metre (the label keeps
  * five decimals), so the box can show it after the person picks it.
  */
-export function coordinateSearchResult(text: string): SearchResult | null {
-  const position = parseCoordinates(text);
+export function coordinateSearchResult(
+  text: string,
+  messages: MessageCatalogue,
+): SearchResult | null {
+  const hemispheres = hemispheresFor(messages);
+  const position = parseCoordinates(text, hemispheres);
   if (position === null) {
     return null;
   }
   return {
     id: coordinateId(position),
-    label: `Coordinates ${formatLatitude(position.lat)}, ${formatLongitude(position.lng)}`,
+    label: messages.t("search.coordinatesLabel", {
+      latitude: formatLatitude(position.lat, hemispheres),
+      longitude: formatLongitude(position.lng, hemispheres),
+    }),
     centre: position,
   };
 }

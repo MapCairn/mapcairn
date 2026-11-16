@@ -23,11 +23,10 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const rainfallHalfHourly: TileLayerDefinition = {
   id: "rainfall-half-hourly",
-  name: "Rainfall, half-hourly",
-  description:
-    "Rain estimated from satellites for the whole Earth, as the rain rate in one half hour in millimetres per hour (mm per hour). Rain runs from green (light, up to about 1) through yellow and orange (about 1 to 4) to red (about 5 to 20) and dark red (heavy, over 20; the scale stops at 53). Snow and other frozen precipitation use pale cyan, blue and purple over the same steps. Nothing is drawn below 0.1. Each half hour arrives six to seven hours late, and detail stops at about 10 km.",
-  group: "Floods, storms and droughts",
-  dataCost: "about 50 to 250 KB per screen",
+  name: "layer.rainfall-half-hourly.name",
+  description: "layer.rainfall-half-hourly.description",
+  group: "layer.group.floodsStormsAndDroughts",
+  dataCost: "layer.rainfall-half-hourly.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",
@@ -38,21 +37,24 @@ const rainfallHalfHourly: TileLayerDefinition = {
       url: "https://gpm.nasa.gov/data/imerg",
     },
   ],
-  disclaimer:
-    "Not a forecast, and not for warnings. It is a satellite estimate, coarser than radar, and can miss or overstate rain. Recent half hours are early estimates that NASA revises later. For warnings, use your national weather service.",
+  disclaimer: "layer.rainfall-half-hourly.disclaimer",
   controls: [
     {
       kind: "datetime",
       id: "time",
-      label: "Half hour shown",
-      description:
-        "A few half hours have no data. If tiles fail to load, try another time.",
+      label: "layer.rainfall-half-hourly.control.time.label",
+      description: "layer.rainfall-half-hourly.control.time.description",
       stepMinutes: 30,
       min: "1998-01-01t0000",
       max: { minutesAgo: 420 },
       default: { minutesAgo: 420 },
     },
-    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 },
+    {
+      kind: "opacity",
+      id: "opacity",
+      label: "layer.control.opacity",
+      default: 0.8,
+    },
   ],
   source: {
     kind: "tiles",

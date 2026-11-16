@@ -4,6 +4,7 @@ import {
   createFakeServices,
   FakeMapAdapter,
   FakeMapHost,
+  FakeMessageCatalogue,
   type LatLng,
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
@@ -61,11 +62,11 @@ const layout: ChromeLayoutValue = {
   publishToolbarTop: vi.fn(),
 };
 
-async function renderToolbar() {
+async function renderToolbar(services = createFakeServices()) {
   adapter = new FakeMapAdapter();
   await adapter.mount(new FakeMapHost(), OPTIONS);
-  return render(
-    <ServicesProvider services={createFakeServices()}>
+  const view = render(
+    <ServicesProvider services={services}>
       <LiveRegionProvider>
         <FocusRegistryProvider focusMap={focusMap}>
           <ChromeLayoutProvider value={layout}>
@@ -75,6 +76,7 @@ async function renderToolbar() {
       </LiveRegionProvider>
     </ServicesProvider>,
   );
+  return { ...view, services };
 }
 
 function draw(...points: LatLng[]) {
@@ -116,6 +118,14 @@ describe("DrawToolbar", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Circle" }));
     expect(drawApi.mode).toBe("circle");
     expect(screen.getByText(/set the radius/)).toBeInTheDocument();
+  });
+
+  it("asks the catalogue for the hint of the mode, by key", async () => {
+    const { services } = await renderToolbar();
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "draw.hint.polygon",
+      params: {},
+    });
   });
 
   it("shows the name and measures of the shape being drawn, with a hint", async () => {
@@ -370,6 +380,43 @@ describe("DrawToolbar", () => {
       expect(
         within(screen.getByTestId("draw-toolbar")).getByTestId("draw-shapes"),
       ).toHaveAttribute("data-focus-target", "draw-shapes");
+    });
+  });
+
+  describe("copy", () => {
+    it("asks the catalogue by key for its labels, the shape's name and the status line", async () => {
+      const messages = new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "tools.draw.undo": "Ontdoen",
+          "tools.draw.mode.circle": "Sirkel",
+          "draw.shapeLabel.polygon": "Veelhoek {serial}",
+          "tools.draw.status.drawing":
+            "{label}, {count} punt|{label}, {count} punte",
+        },
+      });
+      await renderToolbar(createFakeServices({ messages }));
+      draw(...TRIANGLE.slice(0, 2));
+      expect(screen.getByRole("button", { name: "Ontdoen" })).toBeTruthy();
+      expect(screen.getByRole("radio", { name: "Sirkel" })).toBeTruthy();
+      expect(screen.getByTestId("draw-status")).toHaveTextContent(
+        "Veelhoek 1, 2 punte",
+      );
+      const asked = messages.calls.map((call) => call.key);
+      expect(asked).toEqual(
+        expect.arrayContaining([
+          "tools.draw.region",
+          "tools.draw.shapeToDraw",
+          "draw.shapeLabel.polygon",
+          "tools.draw.status.drawing",
+          "tools.draw.finish",
+        ]),
+      );
+      expect(
+        messages.calls
+          .filter((call) => call.key === "tools.draw.status.drawing")
+          .at(-1)?.params,
+      ).toEqual({ label: "Veelhoek 1", count: 2 });
     });
   });
 });

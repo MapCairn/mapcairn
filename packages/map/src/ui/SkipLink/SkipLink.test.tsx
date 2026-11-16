@@ -1,9 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { fireEvent, render, screen } from "@testing-library/react";
+import { createFakeServices } from "@mapcairn/core";
+import {
+  fireEvent,
+  render as renderBare,
+  screen,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { ServicesProvider } from "../../services";
 import { visuallyHidden } from "../VisuallyHidden/VisuallyHidden.css";
 import { SkipLink } from "./SkipLink";
+
+function render(ui: ReactElement, services = createFakeServices()) {
+  return renderBare(
+    <ServicesProvider services={services}>{ui}</ServicesProvider>,
+  );
+}
 
 describe("SkipLink", () => {
   it("is a link to the target with a default name", () => {
@@ -75,5 +88,21 @@ describe("SkipLink", () => {
     link.focus();
     expect(document.activeElement).toBe(link);
     expect(link.className).toContain("extra");
+  });
+
+  it("asks the catalogue for its default text by key", () => {
+    const services = createFakeServices();
+    render(<SkipLink targetId="map" />, services);
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "ui.skipToMap",
+      params: {},
+    });
+  });
+});
+
+describe("SkipLink without a services provider", () => {
+  it("falls back to the SDK's English", () => {
+    renderBare(<SkipLink targetId="map" />);
+    expect(screen.getByRole("link", { name: "Skip to map" })).toBeTruthy();
   });
 });

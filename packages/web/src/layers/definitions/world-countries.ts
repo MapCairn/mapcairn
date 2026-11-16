@@ -12,18 +12,17 @@ import type { FeedLayerDefinition, ShapeStyle } from "@mapcairn/core";
  */
 const worldCountries: FeedLayerDefinition<ShapeStyle> = {
   id: "world-countries",
-  name: "Countries by population",
-  description:
-    "Country outlines shaded by estimated population, from Natural Earth.",
-  group: "Boundaries",
-  dataCost: "about 840 KB",
+  name: "layer.world-countries.name",
+  description: "layer.world-countries.description",
+  group: "layer.group.boundaries",
+  dataCost: "layer.world-countries.dataCost",
   attribution: [
     {
       text: "Made with Natural Earth",
       url: "https://www.naturalearthdata.com/",
     },
   ],
-  disclaimer: "Population figures are estimates, not official counts.",
+  disclaimer: "layer.world-countries.disclaimer",
   controls: [],
   source: {
     kind: "feed",
@@ -46,31 +45,31 @@ const worldCountries: FeedLayerDefinition<ShapeStyle> = {
       steps: [
         {
           min: 0,
-          label: "Under 1 million",
+          label: "layer.world-countries.key.1",
           colour: "ordinal-1",
           width: 0.8,
         },
         {
           min: 1_000_000,
-          label: "1 to 10 million",
+          label: "layer.world-countries.key.2",
           colour: "ordinal-2",
           width: 1.2,
         },
         {
           min: 10_000_000,
-          label: "10 to 50 million",
+          label: "layer.world-countries.key.3",
           colour: "ordinal-3",
           width: 1.8,
         },
         {
           min: 50_000_000,
-          label: "50 to 200 million",
+          label: "layer.world-countries.key.4",
           colour: "ordinal-4",
           width: 2.6,
         },
         {
           min: 200_000_000,
-          label: "200 million and above",
+          label: "layer.world-countries.key.5",
           colour: "ordinal-5",
           width: 3.6,
         },
@@ -85,16 +84,21 @@ const worldCountries: FeedLayerDefinition<ShapeStyle> = {
   list: {
     secondary: "About {population|number} people",
     sorts: [
-      { id: "name", label: "Name", field: "title", direction: "asc" },
+      {
+        id: "name",
+        label: "layer.world-countries.sort.name",
+        field: "title",
+        direction: "asc",
+      },
       {
         id: "population",
-        label: "Most people",
+        label: "layer.world-countries.sort.population",
         field: "population",
         direction: "desc",
       },
     ],
   },
-  emptyText: "No countries could be shown.",
+  emptyText: "layer.world-countries.emptyText",
 };
 
 export default worldCountries;

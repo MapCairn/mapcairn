@@ -8,6 +8,8 @@ import {
   isQueryLayer,
   type LayerFeature,
   type LayerSource,
+  type Message,
+  textOrMessage,
 } from "@mapcairn/core";
 import type { AnnouncePriority } from "../ui/LiveRegion";
 import { errorKind, type LayerStatus } from "./layerStatus";
@@ -25,7 +27,7 @@ export type SpokenState = "ready" | "capped" | "empty" | "error";
 /** A line for the live region, and the state of the layer it describes. */
 export interface Spoken {
   readonly state: SpokenState;
-  readonly message: string;
+  readonly message: Message;
   readonly priority: AnnouncePriority;
 }
 
@@ -72,8 +74,8 @@ export function outcomeOfFeatures(
     spoken: {
       state: capped ? "capped" : "ready",
       message: capped
-        ? announceLayerCapped(definition.name, features.length)
-        : announceLayerLoaded(definition.name, features.length),
+        ? announceLayerCapped(textOrMessage(definition.name), features.length)
+        : announceLayerLoaded(textOrMessage(definition.name), features.length),
       priority: "polite",
     },
   };
@@ -98,7 +100,10 @@ export function outcomeOfFailure(
       result: { status: { kind: "empty", updatedAt: now }, features: [] },
       spoken: {
         state: "empty",
-        message: announceLayerEmpty(definition.name, definition.emptyText),
+        message: announceLayerEmpty(
+          textOrMessage(definition.name),
+          textOrMessage(definition.emptyText),
+        ),
         priority: "polite",
       },
     };
@@ -107,7 +112,7 @@ export function outcomeOfFailure(
     result: { status: { kind: "error", error: kind }, features: [] },
     spoken: {
       state: "error",
-      message: announceLayerError(definition.name, kind),
+      message: announceLayerError(textOrMessage(definition.name), kind),
       priority: "assertive",
     },
   };

@@ -14,6 +14,7 @@ import {
   type DirectionStop,
   type LatLng,
   MAX_DIRECTION_STOPS,
+  type Message,
   moveStop,
   type ReachableAreaFeature,
   type RouteLeg,
@@ -161,7 +162,7 @@ async function find(
 function describeOutcome(
   outcome: DirectionsOutcome,
   units: UnitSystem,
-): string {
+): Message {
   return outcome.kind === "route"
     ? announceRouteFound(
         outcome.distance,

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  announceDetent,
   computeDetentHeights,
   createFakeServices,
   type SheetDetent,
@@ -277,7 +276,7 @@ describe("Sheet in the sheet layout", () => {
   it("announces detent changes, but not the first opening", () => {
     vi.useFakeTimers();
     const state = setup({ detent: "half" });
-    const { rerenderChrome } = mount(state);
+    const { rerenderChrome, services } = mount(state);
     act(() => {
       vi.advanceTimersByTime(1000);
     });
@@ -287,8 +286,12 @@ describe("Sheet in the sheet layout", () => {
       vi.advanceTimersByTime(1000);
     });
     expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
-      announceDetent("full"),
+      "Panel full height",
     );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "announce.detent.full",
+      params: {},
+    });
   });
 
   it("publishes its top edge and detent, and clears them when closed", () => {
@@ -815,5 +818,17 @@ describe("Sheet brand", () => {
   it("marks the detent on the surface, so the stylesheet can leave the row out at peek", () => {
     mount(setup({ brand, detent: "peek" }));
     expect(sheet()).toHaveAttribute("data-detent", "peek");
+  });
+});
+
+describe("Sheet message catalogue", () => {
+  it("asks for the handle and close names by key", () => {
+    const { services } = mount(setup());
+    expect(services.fakes.messages.calls).toEqual(
+      expect.arrayContaining([
+        { key: "chrome.sheet.resize", params: {} },
+        { key: "chrome.sheet.close", params: {} },
+      ]),
+    );
   });
 });

@@ -4,17 +4,22 @@ import {
   type BasemapCatalogue,
   BUILT_IN_BASEMAP_CATALOGUE,
   type ClipboardPort,
+  type DefinitionText,
   type DevicePreferencesValue,
   type FeatureQuery,
   type FeatureSelection,
   type FileOpener,
   type FileSaver,
+  formatMessage,
+  type LanguageCatalogue,
   type LayerCatalogue,
   type LocationProvider,
   type MapAdapterFactory,
+  type Message,
   type MessageCatalogue,
   type ResolvedTheme,
   type RoutingProvider,
+  resolveText,
   resolveTheme,
   type SearchProvider,
   type Settings,
@@ -23,8 +28,15 @@ import {
   type ThemeSource,
   type UrlState,
 } from "@mapcairn/core";
-import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { useServices } from "./ServicesProvider";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
+import { ActiveMessagesContext } from "./activeMessages";
+import { ENGLISH_MESSAGES } from "./englishMessages";
+import { useOptionalServices, useServices } from "./ServicesProvider";
 
 /** The map adapter factory, used by the map host to pick an engine for a basemap. */
 export function useMapAdapterFactory(): MapAdapterFactory {
@@ -91,13 +103,59 @@ export function useThemeSource(): ThemeSource {
 
 /**
  * The active message catalogue, for `t`/`plural`/`list` calls that look up
- * copy by key instead of writing it inline. Reads the active language from
- * `Services.messages` directly; nothing here switches it yet, so the
- * language is whatever `createServices()` built (the host's default until a
- * later step adds the language setting).
+ * copy by key instead of writing it inline. With `Services.languages` it is
+ * the language the person's setting, or else the browser's languages, resolve
+ * to; the catalogue changes when either does, and keeps the previous one while
+ * a lazily loaded language is still arriving. Without it, it is always
+ * `Services.messages`.
  */
 export function useMessages(): MessageCatalogue {
-  return useServices().messages;
+  const services = useServices();
+  return useContext(ActiveMessagesContext) ?? services.messages;
+}
+
+/**
+ * Reads a definition's text in the active language: a message key is looked
+ * up in the catalogue, a plain string is returned as written (see
+ * `resolveText`). The function is stable while the catalogue is.
+ */
+export function useResolveText(): (text: DefinitionText) => string {
+  const messages = useMessages();
+  return useCallback((text) => resolveText(messages, text), [messages]);
+}
+
+/**
+ * As {@link useMessages}, but without a {@link ServicesProvider} above it the
+ * SDK's English catalogue, so a piece a consumer may render on its own (the
+ * skip link, a status message) keeps working. Inside a provider it is the
+ * active catalogue.
+ */
+export function useOptionalMessages(): MessageCatalogue {
+  const services = useOptionalServices();
+  const active = useContext(ActiveMessagesContext);
+  return active ?? services?.messages ?? ENGLISH_MESSAGES;
+}
+
+/**
+ * The languages the host offers, or `undefined` when it offers none to choose
+ * between. The Settings panel shows its language switcher only when there is
+ * more than one.
+ */
+export function useLanguages(): LanguageCatalogue | undefined {
+  return useServices().languages;
+}
+
+/**
+ * Formats a core {@link Message} (a key and its parameters) with the active
+ * catalogue, for text a component shows or hands on as a string. The function
+ * is stable while the catalogue is.
+ */
+export function useFormatMessage(): (message: Message) => string {
+  const messages = useMessages();
+  return useCallback(
+    (message: Message) => formatMessage(messages, message),
+    [messages],
+  );
 }
 
 /** Device and accessibility preferences (reduced motion, fine pointer, save data), updating live. */
