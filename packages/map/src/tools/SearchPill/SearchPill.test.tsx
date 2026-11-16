@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { createFakeServices, type SearchResult } from "@mapcairn/core";
+import {
+  createFakeServices,
+  FakeMessageCatalogue,
+  type SearchResult,
+} from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FocusRegistryProvider, useFocusReturn } from "../../chrome";
@@ -34,8 +38,10 @@ function RestoreProbe() {
   return null;
 }
 
-function setup(props: Partial<SearchPillProps> = {}) {
-  const services = createFakeServices();
+function setup(
+  props: Partial<SearchPillProps> = {},
+  services = createFakeServices(),
+) {
   const onSelect = vi.fn();
   const focusMap = vi.fn();
   const view = render(
@@ -888,6 +894,31 @@ describe("SearchPill", () => {
         press("Enter");
       });
       expect(options()).toHaveLength(1);
+    });
+  });
+
+  describe("copy", () => {
+    it("asks the catalogue by key for its labels and states", async () => {
+      const messages = new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "tools.search.places": "Soek plekke",
+          "tools.search.nothingMatched": "Niks het gepas nie.",
+        },
+      });
+      setup({}, createFakeServices({ messages }));
+      expect(input()).toHaveAttribute("placeholder", "Soek plekke");
+      expect(input()).toHaveAccessibleName("Soek plekke");
+      await search("zzzz");
+      expect(screen.getByText("Niks het gepas nie.")).toBeTruthy();
+      expect(messages.calls.map((call) => call.key)).toEqual(
+        expect.arrayContaining([
+          "tools.search.label",
+          "tools.search.places",
+          "tools.search.suggestions",
+          "tools.search.nothingMatched",
+        ]),
+      );
     });
   });
 });

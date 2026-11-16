@@ -3,6 +3,7 @@
 import {
   announceTourSkipped,
   initialTourState,
+  message,
   stepDone,
   type TourAdvance,
   type TourSnapshot,
@@ -116,8 +117,13 @@ export function useTour({
       const following = steps[state.step + 1];
       announce(
         following
-          ? `Step ${state.step + 2} of ${steps.length}, ${following.heading}. ${following.text}`
-          : "Tour finished.",
+          ? message("tools.tour.stepAnnouncement", {
+              step: state.step + 2,
+              total: steps.length,
+              heading: following.heading,
+              text: following.text,
+            })
+          : message("tools.tour.finished", {}),
       );
       dispatch({ type: "next" });
     }

@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useFocusElement, useFocusReturn } from "../../chrome/focusRegistry";
 import { useChromeSurface } from "../../chrome/MapChrome/chromeSurface";
-import { usePreferences } from "../../services";
+import { useMessages, usePreferences } from "../../services";
 import { Button } from "../../ui/Button";
 import { useAnnounce } from "../../ui/LiveRegion";
 import { Surface } from "../../ui/Surface";
@@ -59,6 +59,7 @@ export function TourCard({ tour, welcome, ending }: TourCardProps) {
   const elementFor = useFocusElement();
   const announce = useAnnounce();
   const { reducedMotion } = usePreferences();
+  const { t } = useMessages();
   const { tourHidden } = useChromeSurface();
   const { state, step, steps, focusRequest } = tour;
 
@@ -159,29 +160,34 @@ export function TourCard({ tour, welcome, ending }: TourCardProps) {
       </h2>
       {state.status === "running" ? (
         <p className={styles.progress}>
-          Step {state.step + 1} of {steps.length}
+          {t("tools.tour.progress", {
+            step: state.step + 1,
+            total: steps.length,
+          })}
         </p>
       ) : null}
       <p className={styles.text}>{text}</p>
       <div className={styles.actions}>
         {state.status === "welcome" ? (
           <>
-            <Button onClick={tour.start}>Take the tour</Button>
+            <Button onClick={tour.start}>{t("tools.tour.take", {})}</Button>
             <Button variant="secondary" onClick={dismiss}>
-              Skip
+              {t("tools.tour.skip", {})}
             </Button>
           </>
         ) : null}
         {state.status === "running" ? (
           <>
-            <Button onClick={tour.next}>{last ? "Finish" : "Next"}</Button>
+            <Button onClick={tour.next}>
+              {last ? t("tools.tour.finish", {}) : t("tools.tour.next", {})}
+            </Button>
             <Button variant="quiet" onClick={dismiss}>
-              Skip tour
+              {t("tools.tour.skipTour", {})}
             </Button>
           </>
         ) : null}
         {state.status === "ended" ? (
-          <Button onClick={dismiss}>Close</Button>
+          <Button onClick={dismiss}>{t("tools.tour.close", {})}</Button>
         ) : null}
       </div>
     </Surface>

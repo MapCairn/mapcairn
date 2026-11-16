@@ -2,6 +2,8 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  EN_GB_CATALOGUE,
+  FakeMessageCatalogue,
   formatLatLng,
   type SearchResult,
 } from "@mapcairn/core";
@@ -10,7 +12,9 @@ import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services/ServicesProvider";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
-import { DEFAULT_LOOKUP_NOTE, PinCard, type PinCardProps } from "./PinCard";
+import { PinCard, type PinCardProps } from "./PinCard";
+
+const DEFAULT_LOOKUP_NOTE = EN_GB_CATALOGUE["tools.pin.lookupNote"];
 
 const POSITION = { lat: -26.2041, lng: 28.0473 };
 const ADDRESS: SearchResult = {
@@ -469,5 +473,35 @@ describe("PinCard", () => {
       view.unmount();
       expect(signal?.aborted).toBe(true);
     });
+  });
+});
+
+describe("PinCard copy", () => {
+  it("asks the catalogue by key for what it shows", () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "tools.pin.heading": "Gelaatde speld",
+        "tools.pin.lookUp": "Soek adres",
+        "tools.pin.lookupNote": "Stuur die speld se posisie na die adresdiens.",
+      },
+    });
+    render(tree(createFakeServices({ messages })));
+    expect(
+      screen.getByRole("heading", { name: "Gelaatde speld" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Soek adres" })).toBeTruthy();
+    expect(screen.getByTestId("pin-lookup-note")).toHaveTextContent(
+      "Stuur die speld se posisie na die adresdiens.",
+    );
+    expect(messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "tools.pin.heading",
+        "tools.pin.lookUp",
+        "tools.pin.copy",
+        "tools.pin.clear",
+        "tools.pin.lookupNote",
+      ]),
+    );
   });
 });
