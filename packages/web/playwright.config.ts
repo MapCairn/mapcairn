@@ -24,6 +24,11 @@ const baseURL = `http://localhost:${port}`;
 // WebKit and would more than double the run time.
 const WEBKIT_SPECS = /(basemap|keyboard|sheet|app-shell)\.spec\.ts$/;
 
+// The right-to-left projects run the same subset, with `dir="rtl"` on <html>
+// (see `direction` in e2e/fixtures.ts). The app ships no right-to-left
+// language yet, so they prove the layout mirrors, not any translation.
+const RTL_SPECS = WEBKIT_SPECS;
+
 /**
  * End-to-end and accessibility suites for the web host.
  *
@@ -71,6 +76,25 @@ export default defineConfig({
       // on the desktop project only (DESKTOP_VIEWPORT_TAG in e2e/support/states.ts).
       grepInvert: /@desktop-viewport/,
       use: { ...devices["Pixel 7"], launchOptions: { executablePath } },
+    },
+    {
+      name: "rtl-chromium",
+      testMatch: RTL_SPECS,
+      use: {
+        ...devices["Desktop Chrome"],
+        direction: "rtl",
+        launchOptions: { executablePath },
+      },
+    },
+    {
+      name: "rtl-mobile-chromium",
+      testMatch: RTL_SPECS,
+      grepInvert: /@desktop-viewport/,
+      use: {
+        ...devices["Pixel 7"],
+        direction: "rtl",
+        launchOptions: { executablePath },
+      },
     },
     {
       name: "webkit",
