@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
+import { formatMessage } from "../messages/formatMessage";
+import type { Message } from "../ports/messages";
 import { computeScaleBar } from "./index";
+
+/** The English text of a message, as the live region would say it. */
+const english = (value: Message) =>
+  formatMessage(new FakeMessageCatalogue(), value);
 
 describe("computeScaleBar (metric)", () => {
   it("picks the largest 1, 2 or 5 step that fits", () => {
@@ -9,8 +16,9 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 2.5,
       maxWidthPx: 100,
       units: "metric",
+      language: "en-GB",
     });
-    expect(bar).toEqual({
+    expect({ ...bar, accessibleLabel: english(bar.accessibleLabel) }).toEqual({
       widthPx: 80,
       value: 200,
       unit: "m",
@@ -37,6 +45,7 @@ describe("computeScaleBar (metric)", () => {
         metresPerPixel: metres / 100,
         maxWidthPx: 100,
         units: "metric",
+        language: "en-GB",
       });
       expect(bar.value).toBe(expected);
       expect(bar.unit).toBe("m");
@@ -50,6 +59,7 @@ describe("computeScaleBar (metric)", () => {
         metresPerPixel,
         maxWidthPx: 120,
         units: "metric",
+        language: "en-GB",
       });
       expect(bar.widthPx).toBeLessThanOrEqual(120);
       expect(bar.widthPx).toBeGreaterThan(0);
@@ -61,8 +71,9 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 25,
       maxWidthPx: 100,
       units: "metric",
+      language: "en-GB",
     });
-    expect(bar).toEqual({
+    expect({ ...bar, accessibleLabel: english(bar.accessibleLabel) }).toEqual({
       widthPx: 80,
       value: 2,
       unit: "km",
@@ -76,14 +87,16 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 10,
       maxWidthPx: 100,
       units: "metric",
+      language: "en-GB",
     });
-    expect(km.accessibleLabel).toBe("Scale: 1 kilometre");
+    expect(english(km.accessibleLabel)).toBe("Scale: 1 kilometre");
     const m = computeScaleBar({
       metresPerPixel: 0.01,
       maxWidthPx: 100,
       units: "metric",
+      language: "en-GB",
     });
-    expect(m.accessibleLabel).toBe("Scale: 1 metre");
+    expect(english(m.accessibleLabel)).toBe("Scale: 1 metre");
   });
 
   it("groups large kilometre values", () => {
@@ -91,9 +104,10 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 10_000,
       maxWidthPx: 100,
       units: "metric",
+      language: "en-GB",
     });
     expect(bar.label).toBe("1,000 km");
-    expect(bar.accessibleLabel).toBe("Scale: 1,000 kilometres");
+    expect(english(bar.accessibleLabel)).toBe("Scale: 1,000 kilometres");
   });
 
   it("handles fractions of a metre at the deepest zooms", () => {
@@ -101,10 +115,11 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 0.0093,
       maxWidthPx: 100,
       units: "metric",
+      language: "en-GB",
     });
     expect(bar.value).toBe(0.5);
     expect(bar.label).toBe("0.5 m");
-    expect(bar.accessibleLabel).toBe("Scale: 0.5 metres");
+    expect(english(bar.accessibleLabel)).toBe("Scale: 0.5 metres");
   });
 });
 
@@ -114,11 +129,12 @@ describe("computeScaleBar (imperial)", () => {
       metresPerPixel: 2,
       maxWidthPx: 100,
       units: "imperial",
+      language: "en-GB",
     });
     expect(bar.unit).toBe("ft");
     expect(bar.value).toBe(500);
     expect(bar.label).toBe("500 ft");
-    expect(bar.accessibleLabel).toBe("Scale: 500 feet");
+    expect(english(bar.accessibleLabel)).toBe("Scale: 500 feet");
     expect(bar.widthPx).toBeCloseTo((500 * 0.3048) / 2, 6);
   });
 
@@ -127,18 +143,20 @@ describe("computeScaleBar (imperial)", () => {
       metresPerPixel: 20,
       maxWidthPx: 100,
       units: "imperial",
+      language: "en-GB",
     });
     expect(one.unit).toBe("mi");
     expect(one.value).toBe(1);
     expect(one.label).toBe("1 mi");
-    expect(one.accessibleLabel).toBe("Scale: 1 mile");
+    expect(english(one.accessibleLabel)).toBe("Scale: 1 mile");
     const many = computeScaleBar({
       metresPerPixel: 200,
       maxWidthPx: 100,
       units: "imperial",
+      language: "en-GB",
     });
     expect(many.value).toBe(10);
-    expect(many.accessibleLabel).toBe("Scale: 10 miles");
+    expect(english(many.accessibleLabel)).toBe("Scale: 10 miles");
   });
 
   it("says one foot in the singular", () => {
@@ -146,9 +164,10 @@ describe("computeScaleBar (imperial)", () => {
       metresPerPixel: 0.005,
       maxWidthPx: 100,
       units: "imperial",
+      language: "en-GB",
     });
     expect(bar.value).toBe(1);
-    expect(bar.accessibleLabel).toBe("Scale: 1 foot");
+    expect(english(bar.accessibleLabel)).toBe("Scale: 1 foot");
   });
 });
 
@@ -164,6 +183,7 @@ describe("computeScaleBar (degenerate input)", () => {
         metresPerPixel,
         maxWidthPx: 100,
         units: "metric",
+        language: "en-GB",
       });
       expect(bar.widthPx).toBe(0);
       expect(bar.value).toBe(0);
@@ -173,13 +193,33 @@ describe("computeScaleBar (degenerate input)", () => {
       metresPerPixel: 1,
       maxWidthPx: 0,
       units: "imperial",
+      language: "en-GB",
     });
-    expect(imperial).toEqual({
+    expect({
+      ...imperial,
+      accessibleLabel: english(imperial.accessibleLabel),
+    }).toEqual({
       widthPx: 0,
       value: 0,
       unit: "ft",
       label: "0 ft",
       accessibleLabel: "Scale: 0 feet",
+    });
+  });
+});
+
+describe("computeScaleBar in another language", () => {
+  it("writes the figure for the language and leaves the wording to the catalogue", () => {
+    const bar = computeScaleBar({
+      metresPerPixel: 1000,
+      maxWidthPx: 1500,
+      units: "metric",
+      language: "de",
+    });
+    expect(bar.label).toBe("1.000 km");
+    expect(bar.accessibleLabel).toEqual({
+      key: "scale.label",
+      params: { distance: { key: "units.kilometre", params: { count: 1000 } } },
     });
   });
 });

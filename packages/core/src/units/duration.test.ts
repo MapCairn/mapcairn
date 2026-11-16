@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
+import { formatMessage } from "../messages/formatMessage";
+import type { Message } from "../ports/messages";
 import { describeDuration, formatDuration } from "./duration";
+
+/** The English text of a message, as the live region would say it. */
+const english = (value: Message) =>
+  formatMessage(new FakeMessageCatalogue(), value);
 
 describe("formatDuration", () => {
   it.each([
@@ -41,6 +48,22 @@ describe("describeDuration", () => {
     [90_000, "1 day 1 hour"],
     [172_800, "2 days"],
   ])("says %d seconds as %s", (seconds, text) => {
-    expect(describeDuration(seconds)).toBe(text);
+    expect(english(describeDuration(seconds))).toBe(text);
+  });
+});
+
+describe("describeDuration as a message", () => {
+  it("is keys and counts, joined by the catalogue's own wording", () => {
+    expect(describeDuration(3900)).toEqual({
+      key: "common.followedBy",
+      params: {
+        first: { key: "duration.hour", params: { count: 1 } },
+        second: { key: "duration.minute", params: { count: 5 } },
+      },
+    });
+    expect(describeDuration(5)).toEqual({
+      key: "duration.underMinute",
+      params: {},
+    });
   });
 });

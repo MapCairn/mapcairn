@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { SAMPLE_TIME_LAYER } from "../fakes/layerFixtures";
+import { formatMessage } from "../messages/formatMessage";
+import type { Message } from "../ports/messages";
 import {
   defaultControlValues,
   resolveControlValues,
@@ -22,6 +25,10 @@ import type { DateTimeControlDefinition } from "./definition";
 /** 2026-11-11 20:14 UTC: the newest slot six hours back is 14:00. */
 const NOW = Date.UTC(2026, 10, 11, 20, 14);
 const control = SAMPLE_TIME_LAYER.controls[0] as DateTimeControlDefinition;
+
+/** The English text of a message, as the live region would say it. */
+const english = (value: Message) =>
+  formatMessage(new FakeMessageCatalogue(), value);
 
 describe("slot values", () => {
   it("reads a real day and time as YYYY-MM-DDtHHMM", () => {
@@ -177,20 +184,49 @@ describe("slotsOnDay", () => {
 
 describe("describeSlot", () => {
   it("names the half hour shown, with its time zone", () => {
-    expect(describeSlot("2026-11-11t1430", 30)).toBe(
+    expect(english(describeSlot("2026-11-11t1430", 30))).toBe(
       "14:30 to 15:00 UTC on 11 November 2026",
     );
   });
 
   it("names when a slot starts", () => {
-    expect(describeSlotStart("2026-11-11t1430")).toBe(
+    expect(english(describeSlotStart("2026-11-11t1430"))).toBe(
       "14:30 UTC on 11 November 2026",
     );
   });
 
   it("ends a slot at midnight with the next day's time", () => {
-    expect(describeSlot("2026-12-31t2330", 30)).toBe(
+    expect(english(describeSlot("2026-12-31t2330", 30))).toBe(
       "23:30 to 00:00 UTC on 31 December 2026",
     );
+  });
+});
+
+describe("describing a slot in another language", () => {
+  it("keeps UTC as it is while the day and the joining word are the catalogue's", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      overrides: { "format.timeOnDay": "{time} op {day}" },
+    });
+    expect(formatMessage(afrikaans, describeSlotStart("2026-11-11t1430"))).toBe(
+      "14:30 UTC op 11 November 2026",
+    );
+    const german = new FakeMessageCatalogue({ language: "de" });
+    expect(formatMessage(german, describeSlot("2026-11-11t1430", 30))).toBe(
+      "14:30 to 15:00 UTC on 11. November 2026",
+    );
+  });
+
+  it("returns keys and a date, not text", () => {
+    expect(describeSlotStart("2026-11-11t1430")).toEqual({
+      key: "format.timeOnDay",
+      params: {
+        time: { key: "format.utcTime", params: { time: "14:30" } },
+        day: {
+          key: "format.day",
+          params: { date: new Date("2026-11-11T00:00:00Z") },
+        },
+      },
+    });
   });
 });

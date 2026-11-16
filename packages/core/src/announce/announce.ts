@@ -6,8 +6,9 @@ import {
   stopLetter,
   travelModeParticiple,
 } from "../directions/directions";
-import { formatLatLng, formatNumber, formatZoom } from "../format/format";
+import { formatLatLng } from "../format/format";
 import { describeSlotStart } from "../layers/dateTime";
+import { joinMessages, message } from "../messages/formatMessage";
 import type {
   LocationErrorKind,
   RoutingErrorKind,
@@ -15,66 +16,66 @@ import type {
 } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
 import type { MapProjection } from "../ports/map";
+import type { Message } from "../ports/messages";
 import type { TravelMode } from "../ports/routing";
 import type { UnitSystem } from "../ports/settings";
 import { describeDuration } from "../units/duration";
-import {
-  describeArea,
-  describeDistance,
-  pluralise,
-} from "../units/measurement";
+import { describeArea, describeDistance } from "../units/measurement";
 
 /*
- * Every string the single live region announces lives here, so wording is
- * reviewed in one place and tests can pin it. Plain, neutral British English,
- * each error saying what happened and what to do next.
+ * Every message the single live region announces is built here as a key and
+ * its parameters (see `Message`), so wording is reviewed in one place, tests
+ * can pin it, and the one place that speaks it formats it with the active
+ * catalogue. The English is in `messages/en-GB.ts`: plain, neutral British
+ * English, each error saying what happened and what to do next.
  */
 
-const SEARCH_ERROR_MESSAGES: Readonly<Record<SearchErrorKind, string>> = {
-  offline: "You appear to be offline. Check your connection and try again.",
-  "rate-limited":
-    "Too many searches in a short time. Wait a moment and try again.",
-  failed: "Search did not work. Try again in a moment.",
-};
+const SEARCH_ERROR_MESSAGES = {
+  offline: message("error.search.offline", {}),
+  "rate-limited": message("error.search.rate-limited", {}),
+  failed: message("error.search.failed", {}),
+} as const satisfies Readonly<Record<SearchErrorKind, Message>>;
 
-const LOCATION_ERROR_MESSAGES: Readonly<Record<LocationErrorKind, string>> = {
-  denied:
-    "Location access is blocked. Allow it in your browser settings, or search for a place instead.",
-  unavailable:
-    "Your location is not available right now. Check that location services are on, or search for a place instead.",
-  timeout:
-    "Finding your location took too long. Try again, or search for a place instead.",
-};
+const LOCATION_ERROR_MESSAGES = {
+  denied: message("error.location.denied", {}),
+  unavailable: message("error.location.unavailable", {}),
+  timeout: message("error.location.timeout", {}),
+} as const satisfies Readonly<Record<LocationErrorKind, Message>>;
 
 const DETENT_MESSAGES = {
-  peek: "Panel minimised",
-  half: "Panel half height",
-  full: "Panel full height",
+  peek: message("announce.detent.peek", {}),
+  half: message("announce.detent.half", {}),
+  full: message("announce.detent.full", {}),
 } as const;
 
+const PROJECTION_MESSAGES = {
+  flat: message("announce.projection.flat", {}),
+  globe: message("announce.projection.globe", {}),
+} as const satisfies Readonly<Record<MapProjection, Message>>;
+
 /** A feed layer loaded: "Earthquakes: 43 shown on the map." */
-export function announceLayerLoaded(name: string, count: number): string {
-  return `${name}: ${formatNumber(count)} shown on the map.`;
+export function announceLayerLoaded(name: string, count: number): Message {
+  return message("announce.layerLoaded", { name, count });
 }
 
 /** The map image was handed to the browser to save. */
-export function announceImageSaved(): string {
-  return "Map image saved.";
+export function announceImageSaved(): Message {
+  return message("announce.imageSaved", {});
 }
 
 /** The map image could not be made. */
-export function announceImageFailed(): string {
-  return "The map image could not be saved. Try again.";
+export function announceImageFailed(): Message {
+  return message("announce.imageFailed", {});
 }
 
 /** The keyboard route found no feature at the centre of the map. */
-export function announceNoFeaturesHere(): string {
-  return "No features at the centre of the map.";
+export function announceNoFeaturesHere(): Message {
+  return message("announce.noFeaturesHere", {});
 }
 
 /** A tap or the keyboard found several features together, and a list opened to choose one. */
-export function announceFeaturesFound(count: number): string {
-  return `${formatNumber(count)} features here. Choose one from the list.`;
+export function announceFeaturesFound(count: number): Message {
+  return message("announce.featuresFound", { count });
 }
 
 /** What one tap on raster layers that answer a tap came to, for {@link announceIdentified}. */
@@ -91,18 +92,8 @@ export interface IdentifyReport {
 
 /** What to say about one tap, and how urgently. */
 export interface IdentifyAnnouncement {
-  readonly message: string;
+  readonly message: Message;
   readonly priority: "polite" | "assertive";
-}
-
-const NAMES_IN_WORDS = new Intl.ListFormat("en-GB", {
-  style: "long",
-  type: "conjunction",
-});
-
-/** Names as a list in words: "Rain", "Rain and Flood", "Rain, Flood and Wind". */
-function namesInWords(names: readonly string[]): string {
-  return NAMES_IN_WORDS.format(names);
 }
 
 /**
@@ -126,50 +117,46 @@ export function announceIdentified({
     return null;
   }
   const everyoneFailed = failed.length === asked;
-  const parts: string[] = [];
+  const parts: Message[] = [];
   if (found > 1) {
     parts.push(announceFeaturesFound(found));
   } else if (found === 0 && !everyoneFailed) {
-    parts.push("Nothing found here.");
+    parts.push(message("announce.nothingFoundHere", {}));
   }
   if (failed.length > 0) {
-    parts.push(`${namesInWords(failed)} did not answer.`);
+    parts.push(message("announce.layersDidNotAnswer", { names: failed }));
   }
   if (available > asked) {
-    parts.push(
-      `Asked ${formatNumber(asked)} of ${formatNumber(available)} layers.`,
-    );
+    parts.push(message("announce.askedOfAvailable", { asked, available }));
   }
-  return parts.length === 0
+  const said = joinMessages(parts);
+  return said === null
     ? null
-    : {
-        message: parts.join(" "),
-        priority: everyoneFailed ? "assertive" : "polite",
-      };
+    : { message: said, priority: everyoneFailed ? "assertive" : "polite" };
 }
 
 /** A query layer drew only the first of more features than it shows. */
-export function announceLayerCapped(name: string, shown: number): string {
-  return `${name}: showing the first ${formatNumber(shown)}. Zoom in to see more.`;
+export function announceLayerCapped(name: string, shown: number): Message {
+  return message("announce.layerCapped", { name, shown });
 }
 
-/** One decimal place, as {@link formatZoom} shows it, free of floating point noise. */
+/** One decimal place, as `formatZoom` shows it, free of floating point noise. */
 function tenths(level: number): number {
   return Number((level * 10).toFixed(6));
 }
 
-/** The direction and level to zoom to for a layer that is too far out to load. A level with more than one decimal is rounded up, so the level shown is always enough. */
-function zoomInPhrase(level: number): string {
-  return `in to level ${formatZoom(Math.ceil(tenths(level)) / 10)} or closer to load this layer`;
+/** The level to zoom in to for a layer that is too far out to load. A level with more than one decimal is rounded up, so the level shown is always enough. */
+function levelToZoomInTo(level: number): number {
+  return Math.ceil(tenths(level)) / 10;
 }
 
 /**
- * The direction and level to zoom to for a layer that is too far in to show.
- * The engine hides a layer from its `maxzoom` itself, so the level is one to
- * go below, rounded down to one decimal so that the level shown is enough.
+ * The level to zoom out below for a layer that is too far in to show. The
+ * engine hides a layer from its `maxzoom` itself, so the level is one to go
+ * below, rounded down to one decimal so that the level shown is enough.
  */
-function zoomOutPhrase(level: number): string {
-  return `out below level ${formatZoom(Math.floor(tenths(level)) / 10)} to see this layer`;
+function levelToZoomOutBelow(level: number): number {
+  return Math.floor(tenths(level)) / 10;
 }
 
 /**
@@ -177,38 +164,44 @@ function zoomOutPhrase(level: number): string {
  * normalised zoom level to zoom in to. The level comes from the layer's
  * definition, so a layer without a zoom window never gets this line.
  */
-export function describeZoomIn(level: number): string {
-  return `Zoom ${zoomInPhrase(level)}.`;
+export function describeZoomIn(level: number): Message {
+  return message("describe.zoomIn", { level: levelToZoomInTo(level) });
 }
 
 /** The status line of a layer that is too far in to show, naming the level to zoom out to. */
-export function describeZoomOut(level: number): string {
-  return `Zoom ${zoomOutPhrase(level)}.`;
+export function describeZoomOut(level: number): Message {
+  return message("describe.zoomOut", { level: levelToZoomOutBelow(level) });
 }
 
 /** A layer is too far out to load, in the words of {@link describeZoomIn}. */
-export function announceLayerZoomIn(name: string, level: number): string {
-  return `${name}: zoom ${zoomInPhrase(level)}.`;
+export function announceLayerZoomIn(name: string, level: number): Message {
+  return message("announce.layerZoomIn", {
+    name,
+    level: levelToZoomInTo(level),
+  });
 }
 
 /** A layer is too far in to show, in the words of {@link describeZoomOut}. */
-export function announceLayerZoomOut(name: string, level: number): string {
-  return `${name}: zoom ${zoomOutPhrase(level)}.`;
+export function announceLayerZoomOut(name: string, level: number): Message {
+  return message("announce.layerZoomOut", {
+    name,
+    level: levelToZoomOutBelow(level),
+  });
 }
 
 /** A tile layer was turned on. */
-export function announceLayerOn(name: string): string {
-  return `${name} is on.`;
+export function announceLayerOn(name: string): Message {
+  return message("announce.layerOn", { name });
 }
 
 /** One action turned several layers off, and the interface offers an Undo for a few seconds. */
-export function announceLayersTurnedOff(count: number): string {
-  return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} turned off. Undo available`;
+export function announceLayersTurnedOff(count: number): Message {
+  return message("announce.layersTurnedOff", { count });
 }
 
 /** An undo turned layers that one action had turned off back on. */
-export function announceLayersTurnedBackOn(count: number): string {
-  return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} turned back on`;
+export function announceLayersTurnedBackOn(count: number): Message {
+  return message("announce.layersTurnedBackOn", { count });
 }
 
 /** What a change to the layer catalogue did, for {@link announceCatalogueChange}. */
@@ -228,49 +221,48 @@ export interface CatalogueChange {
 }
 
 /** The catalogue's layers are still being fetched. */
-export function describeLayersLoading(): string {
-  return "Loading layers";
+export function describeLayersLoading(): Message {
+  return message("describe.layersLoading", {});
 }
 
 /** The catalogue could not be loaded at all. */
-export function describeLayersLoadFailed(): string {
-  return "Layers could not be loaded.";
+export function describeLayersLoadFailed(): Message {
+  return message("describe.layersLoadFailed", {});
 }
 
 /** The catalogue loaded and holds no layers. */
-export function describeNoLayers(): string {
-  return "No layers are available.";
+export function describeNoLayers(): Message {
+  return message("describe.noLayers", {});
 }
 
 /** A refresh failed, so the list from before stays. */
-export function describeLayersRefreshFailed(): string {
-  return "Layers could not be updated. Showing the last list.";
+export function describeLayersRefreshFailed(): Message {
+  return message("describe.layersRefreshFailed", {});
 }
 
 /** How many of the host's definitions were left out, as a phrase with no full stop. */
-export function describeLayersSkipped(count: number): string {
-  return `${formatNumber(count)} ${pluralise(count, ["layer", "layers"])} could not be shown`;
+export function describeLayersSkipped(count: number): Message {
+  return message("describe.layersSkipped", { count });
 }
 
-function announceLayersUnavailable(names: readonly string[]): string {
+function announceLayersUnavailable(names: readonly string[]): Message {
   const [only] = names;
   return only !== undefined && names.length === 1
-    ? `${only} is no longer available and was turned off.`
-    : `${formatNumber(names.length)} layers are no longer available and were turned off.`;
+    ? message("announce.layerUnavailable", { name: only })
+    : message("announce.layersUnavailable", { count: names.length });
 }
 
-function announceLinkLayersUnavailable(count: number): string {
-  return count === 1
-    ? "1 layer in the link is not available."
-    : `${formatNumber(count)} layers in the link are not available.`;
-}
-
-function announceLayersUpdated(added: number, removed: number): string {
-  const parts = [
-    added > 0 ? `${formatNumber(added)} added` : null,
-    removed > 0 ? `${formatNumber(removed)} removed` : null,
-  ].filter((part) => part !== null);
-  return `Layers updated: ${parts.join(", ")}.`;
+/** What a refresh added and removed: "3 added", "2 removed" or "3 added, 2 removed". */
+function describeLayerChanges(added: number, removed: number): Message {
+  const addedMessage = message("announce.layersAdded", { count: added });
+  const removedMessage = message("announce.layersRemoved", { count: removed });
+  if (added > 0 && removed > 0) {
+    return message("common.commaJoined", {
+      first: addedMessage,
+      second: removedMessage,
+    });
+  }
+  return added > 0 ? addedMessage : removedMessage;
 }
 
 /**
@@ -282,21 +274,27 @@ function announceLayersUpdated(added: number, removed: number): string {
  */
 export function announceCatalogueChange(
   change: CatalogueChange,
-): string | null {
+): Message | null {
   const parts = [
     change.turnedOff.length > 0
       ? announceLayersUnavailable(change.turnedOff)
       : null,
     change.linkUnavailable > 0
-      ? announceLinkLayersUnavailable(change.linkUnavailable)
+      ? message("announce.linkLayersUnavailable", {
+          count: change.linkUnavailable,
+        })
       : null,
-    change.skipped > 0 ? `${describeLayersSkipped(change.skipped)}.` : null,
+    change.skipped > 0
+      ? message("announce.layersSkipped", { count: change.skipped })
+      : null,
     change.added > 0 || change.removed > 0
-      ? announceLayersUpdated(change.added, change.removed)
+      ? message("announce.layersUpdated", {
+          changes: describeLayerChanges(change.added, change.removed),
+        })
       : null,
     change.empty ? describeNoLayers() : null,
   ].filter((part) => part !== null);
-  return parts.length > 0 ? parts.join(" ") : null;
+  return joinMessages(parts);
 }
 
 /*
@@ -307,54 +305,57 @@ export function announceCatalogueChange(
  */
 
 /** One feature was added to the selection: "Added Gauge 4. 5 selected." */
-export function announceFeatureSelected(title: string, total: number): string {
-  return `Added ${title}. ${formatNumber(total)} selected.`;
+export function announceFeatureSelected(title: string, total: number): Message {
+  return message("announce.featureSelected", { title, total });
 }
 
 /** Several features, or one with no title to give, were added to the selection. */
-export function announceFeaturesSelected(count: number, total: number): string {
-  return `${formatNumber(count)} ${pluralise(count, ["feature", "features"])} added. ${formatNumber(total)} selected.`;
+export function announceFeaturesSelected(
+  count: number,
+  total: number,
+): Message {
+  return message("announce.featuresSelected", { count, total });
 }
 
 /** One feature was removed from the selection: "Removed Gauge 4. 4 selected." */
 export function announceFeatureDeselected(
   title: string,
   total: number,
-): string {
-  return `Removed ${title}. ${formatNumber(total)} selected.`;
+): Message {
+  return message("announce.featureDeselected", { title, total });
 }
 
 /** Several features, or one with no title to give, were removed from the selection. */
 export function announceFeaturesDeselected(
   count: number,
   total: number,
-): string {
-  return `${formatNumber(count)} ${pluralise(count, ["feature", "features"])} removed. ${formatNumber(total)} selected.`;
+): Message {
+  return message("announce.featuresDeselected", { count, total });
 }
 
 /** The selection was emptied. */
-export function announceSelectionCleared(): string {
-  return "Selection cleared.";
+export function announceSelectionCleared(): Message {
+  return message("announce.selectionCleared", {});
 }
 
 /** An addition was refused whole because the selection would pass its `limit`. */
-export function announceSelectionFull(limit: number): string {
-  return `The selection holds ${formatNumber(limit)} at most. Nothing was added.`;
+export function announceSelectionFull(limit: number): Message {
+  return message("announce.selectionFull", { limit });
 }
 
 /** A feed layer loaded with nothing in it, in the layer's own words. */
-export function announceLayerEmpty(name: string, emptyText: string): string {
-  return `${name}: ${emptyText}`;
+export function announceLayerEmpty(name: string, emptyText: string): Message {
+  return message("announce.layerStatus", { name, status: emptyText });
 }
 
 /** A layer could not load, and what to do next. */
 export function announceLayerError(
   name: string,
   kind: "network" | "invalid",
-): string {
+): Message {
   return kind === "network"
-    ? `${name} could not load. Check your connection and try again.`
-    : `${name} could not load: the provider sent something unexpected. Try again later.`;
+    ? message("announce.layerLoadFailed", { name })
+    : message("announce.layerInvalid", { name });
 }
 
 /**
@@ -362,18 +363,21 @@ export function announceLayerError(
  * layer's chosen date or time in words, or null for a layer with none to
  * choose, which can only say that it did not load.
  */
-export function describeTilesUnavailable(when: string | null): string {
+export function describeTilesUnavailable(when: Message | null): Message {
   return when === null
-    ? "Could not load. Check your connection."
-    : `No imagery was found for ${when}. Try another.`;
+    ? message("describe.tilesUnavailable", {})
+    : message("describe.tilesNoImagery", { when });
 }
 
 /** A tile layer's tiles all failed, in the words of {@link describeTilesUnavailable}. */
 export function announceTilesUnavailable(
   name: string,
-  when: string | null,
-): string {
-  return `${name}: ${describeTilesUnavailable(when)}`;
+  when: Message | null,
+): Message {
+  return message("announce.layerStatus", {
+    name,
+    status: describeTilesUnavailable(when),
+  });
 }
 
 /**
@@ -381,101 +385,109 @@ export function announceTilesUnavailable(
  * loaded yet. It does not say the layer failed: the provider has not answered,
  * and may still.
  */
-export function describeTilesSlow(): string {
-  return "Still waiting for imagery. The provider may be slow or not answering.";
+export function describeTilesSlow(): Message {
+  return message("describe.tilesSlow", {});
 }
 
 /** A tile layer is still waiting for its first tile, in the words of {@link describeTilesSlow}. */
-export function announceTilesSlow(name: string): string {
-  return `${name}: ${describeTilesSlow()}`;
+export function announceTilesSlow(name: string): Message {
+  return message("announce.layerStatus", {
+    name,
+    status: describeTilesSlow(),
+  });
 }
 
 /** A tile layer that was slow or had found no tiles loaded one, so its status has gone. */
-export function announceTilesRecovered(name: string): string {
-  return `${name}: imagery is showing again.`;
+export function announceTilesRecovered(name: string): Message {
+  return message("announce.tilesRecovered", { name });
 }
 
 /** "Show on map" centred the map on a feature. */
-export function announceShowingFeature(title: string): string {
-  return `Showing ${title} on the map.`;
+export function announceShowingFeature(title: string): Message {
+  return message("announce.showingFeature", { title });
 }
 
 /** A feature's affected area is on the map. */
-export function announceDetailShown(title: string): string {
-  return `Affected area of ${title} shown on the map.`;
+export function announceDetailShown(title: string): Message {
+  return message("announce.detailShown", { title });
 }
 
 /** A feature's affected area could not load. */
-export function announceDetailError(): string {
-  return "The affected area could not load. Try again.";
+export function announceDetailError(): Message {
+  return message("announce.detailError", {});
 }
 
 /** "3 results" or "1 result". */
-export function announceSearchResults(count: number): string {
-  return `${formatNumber(count)} ${pluralise(count, ["result", "results"])}`;
+export function announceSearchResults(count: number): Message {
+  return message("announce.searchResults", { count });
 }
 
 /**
  * Announced when a search is answered by one pair of coordinates. It names the
  * place, so a second pair is never mistaken for a repeat of the first.
  */
-export function announceCoordinateResult(label: string): string {
-  return `${announceSearchResults(1)}, ${label}`;
+export function announceCoordinateResult(label: string): Message {
+  return message("announce.coordinateResult", {
+    results: announceSearchResults(1),
+    label,
+  });
 }
 
 /** Announced when a search finds nothing. */
-export function announceNoResults(): string {
-  return "No results";
+export function announceNoResults(): Message {
+  return message("announce.noResults", {});
 }
 
 /** Says what went wrong with a search and what to do next. */
-export function announceSearchError(kind: SearchErrorKind): string {
+export function announceSearchError(kind: SearchErrorKind): Message {
   return SEARCH_ERROR_MESSAGES[kind];
 }
 
 /** "3 suggestions" or "1 suggestion", announced as the person types. */
-export function announceSuggestions(count: number): string {
-  return `${formatNumber(count)} ${pluralise(count, ["suggestion", "suggestions"])}`;
+export function announceSuggestions(count: number): Message {
+  return message("announce.suggestions", { count });
 }
 
 /** Announced when typing finds no suggestion. */
-export function announceNoSuggestions(): string {
-  return "No suggestions";
+export function announceNoSuggestions(): Message {
+  return message("announce.noSuggestions", {});
 }
 
 /** Announced once when suggestions stop working, so the person knows Enter still searches. */
-export function announceSuggestionsUnavailable(): string {
-  return "Suggestions are unavailable. Press Enter to search.";
+export function announceSuggestionsUnavailable(): Message {
+  return message("announce.suggestionsUnavailable", {});
 }
 
 /** Announced when a location fix arrives, with its accuracy in the user's units. */
 export function announceLocationFound(
   accuracyMetres: number,
   units: UnitSystem,
-): string {
-  return `Location found, accuracy about ${describeDistance(accuracyMetres, units)}`;
+): Message {
+  return message("announce.locationFound", {
+    accuracy: describeDistance(accuracyMetres, units),
+  });
 }
 
 /** Says why finding the location failed and what to do next. */
-export function announceLocationError(kind: LocationErrorKind): string {
+export function announceLocationError(kind: LocationErrorKind): Message {
   return LOCATION_ERROR_MESSAGES[kind];
 }
 
 /** Announced after an attempt to copy coordinates. */
-export function announceCopied(ok: boolean): string {
+export function announceCopied(ok: boolean): Message {
   return ok
-    ? "Coordinates copied"
-    : "Could not copy. Select the coordinates and copy them manually.";
+    ? message("announce.copied", {})
+    : message("announce.copyFailed", {});
 }
 
 /** Announced when a pin is placed, with its coordinates. */
-export function announcePinDropped(position: LatLng): string {
-  return `Pin dropped at ${formatLatLng(position)}`;
+export function announcePinDropped(position: LatLng): Message {
+  return message("announce.pinDropped", { position: formatLatLng(position) });
 }
 
 /** Announced when the pin is removed. */
-export function announcePinCleared(): string {
-  return "Pin removed";
+export function announcePinCleared(): Message {
+  return message("announce.pinCleared", {});
 }
 
 /**
@@ -486,85 +498,94 @@ export function announceMeasureTotal(
   mode: "distance" | "area",
   value: number,
   units: UnitSystem,
-): string {
+): Message {
   return mode === "distance"
-    ? `Total distance ${describeDistance(value, units)}`
-    : `Total area ${describeArea(value, units)}`;
+    ? message("announce.measureDistance", {
+        distance: describeDistance(value, units),
+      })
+    : message("announce.measureArea", { area: describeArea(value, units) });
 }
 
 /** Announced when the basemap changes. */
-export function announceBasemap(name: string): string {
-  return `Basemap changed to ${name}`;
+export function announceBasemap(name: string): Message {
+  return message("announce.basemapChanged", { name });
 }
 
 /** Announced when the map is switched between flat and globe. */
-export function announceProjection(projection: MapProjection): string {
-  return `Map shape: ${projection}`;
+export function announceProjection(projection: MapProjection): Message {
+  return PROJECTION_MESSAGES[projection];
 }
 
-/** Announced when the zoom level settles. */
-export function announceZoom(zoom: number): string {
-  return `Zoom level ${formatZoom(zoom)}`;
+/** Announced when the zoom level settles. The level is shown to one decimal. */
+export function announceZoom(zoom: number): Message {
+  return message("announce.zoom", { level: Math.round(zoom * 10) / 10 });
 }
 
 /** Announced when the bottom panel moves to a new height. */
-export function announceDetent(detent: "peek" | "half" | "full"): string {
+export function announceDetent(detent: "peek" | "half" | "full"): Message {
   return DETENT_MESSAGES[detent];
 }
 
 /** Announced when a panel, dialog or sheet opens. */
-export function announceSurfaceOpened(name: string): string {
-  return `${name} opened`;
+export function announceSurfaceOpened(name: string): Message {
+  return message("announce.surfaceOpened", { name });
 }
 
 /** Announced when a panel, dialog or sheet closes. */
-export function announceSurfaceClosed(name: string): string {
-  return `${name} closed`;
+export function announceSurfaceClosed(name: string): Message {
+  return message("announce.surfaceClosed", { name });
 }
 
 /** Announced when map tiles fail to load. */
-export function announceTileError(): string {
-  return "Some of the map could not load. Check your connection.";
+export function announceTileError(): Message {
+  return message("announce.tileError", {});
 }
 
 /** Announced when the browser goes offline. */
-export function announceOffline(): string {
-  return "You are offline. Parts of the map may not load.";
+export function announceOffline(): Message {
+  return message("announce.offline", {});
 }
 
 /** Announced when an address lookup finds the address at a pin. */
-export function announceAddressFound(address: string): string {
-  return `Address found: ${address}`;
+export function announceAddressFound(address: string): Message {
+  return message("announce.addressFound", { address });
 }
 
 /** Announced when an address lookup finds no address at a pin. */
-export function announceAddressNotFound(): string {
-  return "No address found here";
+export function announceAddressNotFound(): Message {
+  return message("announce.addressNotFound", {});
 }
 
 /** Says an address lookup failed and what to do next. */
-export function announceAddressError(): string {
-  return "Could not look up the address. Check your connection and try again.";
+export function announceAddressError(): Message {
+  return message("announce.addressError", {});
 }
 
 /** Announced when a stop is added to the directions. `index` counts from zero. */
-export function announceStopAdded(index: number, total: number): string {
-  return `Stop ${stopLetter(index)} added, ${total} ${pluralise(total, ["stop", "stops"])}`;
+export function announceStopAdded(index: number, total: number): Message {
+  return message("announce.stopAdded", {
+    letter: stopLetter(index),
+    count: total,
+  });
 }
 
 /** Announced when a stop cannot be added because the directions hold `max` already. */
-export function announceStopLimit(max: number): string {
-  return `You can add up to ${max} stops. Remove one to add another.`;
+export function announceStopLimit(max: number): Message {
+  return message("announce.stopLimit", { max });
 }
 
 /** Announced when a stop is removed from the directions. `index` counts from zero. */
-export function announceStopRemoved(index: number): string {
-  return `Stop ${stopLetter(index)} removed`;
+export function announceStopRemoved(index: number): Message {
+  return message("announce.stopRemoved", { letter: stopLetter(index) });
 }
 
 /** Announced when a stop moves to a new place in the list. `index` counts from zero. */
-export function announceStopMoved(index: number, total: number): string {
-  return `Stop moved to position ${index + 1} of ${total}, now stop ${stopLetter(index)}`;
+export function announceStopMoved(index: number, total: number): Message {
+  return message("announce.stopMoved", {
+    position: index + 1,
+    total,
+    letter: stopLetter(index),
+  });
 }
 
 /** Announced when a route is found: how far, how long, and how it is travelled. */
@@ -573,8 +594,12 @@ export function announceRouteFound(
   seconds: number,
   mode: TravelMode,
   units: UnitSystem,
-): string {
-  return `Route found, ${describeDistance(metres, units)}, ${describeDuration(seconds)} ${travelModeParticiple(mode)}`;
+): Message {
+  return message("announce.routeFound", {
+    distance: describeDistance(metres, units),
+    duration: describeDuration(seconds),
+    mode: travelModeParticiple(mode),
+  });
 }
 
 /** Announced when a reachable area is found: how long it is for, the mode and its size. */
@@ -583,37 +608,41 @@ export function announceAreaFound(
   squareMetres: number,
   mode: TravelMode,
   units: UnitSystem,
-): string {
-  return `Area reachable within ${minutes} ${pluralise(minutes, ["minute", "minutes"])} ${travelModeParticiple(mode)} found, covering ${describeArea(squareMetres, units)}`;
+): Message {
+  return message("announce.areaFound", {
+    count: minutes,
+    mode: travelModeParticiple(mode),
+    area: describeArea(squareMetres, units),
+  });
 }
 
 /** Announced when a route or area request fails, saying what to do next. */
 export function announceRoutingError(
   kind: Exclude<RoutingErrorKind, "aborted">,
   request: RoutingRequestKind,
-): string {
+): Message {
   return routingErrorMessage(kind, request);
 }
 
 /** Announced when the person cancels a route or area request. */
-export function announceRoutingCancelled(): string {
-  return "Cancelled";
+export function announceRoutingCancelled(): Message {
+  return message("announce.routingCancelled", {});
 }
 
 /** Announced when the stops and the route or area are cleared. */
-export function announceDirectionsCleared(): string {
-  return "Directions cleared";
+export function announceDirectionsCleared(): Message {
+  return message("announce.directionsCleared", {});
 }
 
 /** Announced when the person skips the first-visit tour, saying how to start it again. */
-export function announceTourSkipped(): string {
-  return "Tour skipped. Help, in Settings, can start it again.";
+export function announceTourSkipped(): Message {
+  return message("announce.tourSkipped", {});
 }
 
 /**
  * Announced when a chosen time is not offered and the layer moves to the
  * nearest slot that is. `slot` is that slot's value.
  */
-export function announceTimeMoved(slot: string): string {
-  return `Time moved to ${describeSlotStart(slot)}, the nearest available.`;
+export function announceTimeMoved(slot: string): Message {
+  return message("announce.timeMoved", { time: describeSlotStart(slot) });
 }
