@@ -52,7 +52,6 @@ describe("PrivacyPage", () => {
 
     expect(screen.getByText(/OpenFreeMap/)).toBeInTheDocument();
     expect(screen.getByText(/OpenStreetMap Foundation/)).toBeInTheDocument();
-    expect(screen.getByText(/OpenTopoMap/)).toBeInTheDocument();
     expect(
       screen.getByText(/OpenStreetMap's Nominatim geocoding service/),
     ).toBeInTheDocument();
@@ -150,12 +149,12 @@ describe("PrivacyPage", () => {
     expect(text).toMatch(/not saved or put in the page address/);
   });
 
-  it("names the basemap tile providers that may log requests: OpenFreeMap, the OpenStreetMap Foundation for Streets, OpenTopoMap for Topographic and EOX for Satellite", () => {
+  it("names the basemap tile providers that may log requests: OpenFreeMap, and the OpenStreetMap Foundation for Streets", () => {
     render(<PrivacyPage />);
 
     const text = screen.getByText(/The basemap tile providers/).textContent;
     expect(text).toMatch(
-      /OpenFreeMap, the OpenStreetMap Foundation when you choose the Streets basemap, OpenTopoMap when you choose the Topographic basemap, and EOX IT Services when you choose the Satellite basemap, may log tile requests, including your IP address/,
+      /OpenFreeMap and, when you choose the Streets basemap, the OpenStreetMap Foundation, may log tile requests, including your IP address/,
     );
   });
 
@@ -163,6 +162,12 @@ describe("PrivacyPage", () => {
     const { container } = render(<PrivacyPage />);
 
     expect(container.textContent).not.toMatch(/VersaTiles/);
+  });
+
+  it("does not mention OpenTopoMap or EOX, whose basemaps the site no longer offers", () => {
+    const { container } = render(<PrivacyPage />);
+
+    expect(container.textContent).not.toMatch(/OpenTopoMap|EOX/);
   });
 
   it("has no section or link for Maptoolkit or Mapterhorn, which the site no longer loads from", () => {

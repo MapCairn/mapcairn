@@ -196,10 +196,9 @@ export function useMapModelContextTools({
   });
 
   // Offers the basemaps the host's catalogue offers, no others. An agent should
-  // not accept a provider's licence on a person's behalf. Five of the reference
-  // host's six come from free providers whose terms ask for nothing to be
-  // accepted, so choosing one here is what tapping it in the picker does.
-  // Satellite's imagery is non-commercial, so `basemapChoices` leaves it out.
+  // not accept a provider's licence on a person's behalf, so `basemapChoices`
+  // leaves out one whose licence is non-commercial. The reference host offers
+  // none, so choosing one here is what tapping it in the picker does.
   const choices = basemapChoices(useBasemaps());
   useModelContextTool<BasemapInput>({
     name: "set-map-basemap",

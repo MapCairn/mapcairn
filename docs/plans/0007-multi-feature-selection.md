@@ -68,7 +68,7 @@ interface SelectionHit { layerId: string; feature: LayerFeature }  // doubles as
 
 - **Cost.** Up to 200 features are drawn, each outline thinned to a lower cap than `MAX_OUTLINE_POINTS`, and only features whose bounds meet the view are drawn. A test with 200 polygons counts the nodes it renders.
 - **Two signals.** A point gets a ring and a check badge. A line or polygon gets a dashed, halo-backed outline, where the open card's ring is solid, and a badge at the placed vertex nearest the view centre, so it is on screen whenever any vertex is; with none in view the outline alone is drawn. The shapes differ, so colour is never the only signal.
-- **Contrast.** Existing `mapOverlayTokens`; a unit test checks ring against halo in both themes. It cannot check imagery, so the visual check does, over Bright, Satellite and Dark. A saved image omits the highlight, as it omits the card's ring.
+- **Contrast.** Existing `mapOverlayTokens`; a unit test checks ring against halo in both themes. It cannot check imagery, so the visual check does, over Bright, Streets and Dark. A saved image omits the highlight, as it omits the card's ring.
 
 ### The panel and announcements
 
@@ -78,7 +78,7 @@ One message per transition, built from the store after the call and sent through
 
 ## Tests
 
-Under each step, written first and seen failing. Each UI step also has its own Playwright spec, axe run and screenshots at three sizes, in both themes, over Bright, Satellite and Dark.
+Under each step, written first and seen failing. Each UI step also has its own Playwright spec, axe run and screenshots at three sizes, in both themes, over Bright, Streets and Dark.
 
 ## Order of work
 

@@ -26,17 +26,10 @@ const basemapBackdrops: Record<string, string> = {
   dark: "#0c0c0c",
 };
 
-/** The same for a basemap only the reference host defines, which the second test below checks. */
-const hostBasemapBackdrops: Record<string, string> = {
-  topographic: "#f2efe9",
-  // Satellite has no single land colour: this is its dark ocean, the largest
-  // area of a world view. Its other surfaces are in `imageryBackdrops`.
-  satellite: "#111d35",
-};
-
 /**
- * Typical colours of Satellite's Sentinel-2 cloudless imagery, from dark sea
- * to snow, because chrome and markers sit on whichever is under them.
+ * Typical colours of satellite imagery, from dark sea to snow, which the
+ * imagery data layer draws, because chrome and markers sit on whichever is
+ * under them.
  */
 const imageryBackdrops: Record<string, string> = {
   imageryOcean: "#111d35",
@@ -56,7 +49,6 @@ const extremeBackdrops: Record<string, string> = {
 
 const allBackdrops = {
   ...basemapBackdrops,
-  ...hostBasemapBackdrops,
   ...imageryBackdrops,
   ...extremeBackdrops,
 };
@@ -72,10 +64,7 @@ describe("chrome legibility over every basemap", () => {
 
   it("covers every basemap the site offers", () => {
     for (const basemap of HOST_BASEMAP_CATALOGUE.basemaps) {
-      expect(
-        { ...basemapBackdrops, ...hostBasemapBackdrops },
-        basemap.id,
-      ).toHaveProperty(basemap.id);
+      expect(basemapBackdrops, basemap.id).toHaveProperty(basemap.id);
     }
   });
 
@@ -101,7 +90,7 @@ describe("chrome legibility over every basemap", () => {
   });
 });
 
-describe("data markers over Satellite's imagery", () => {
+describe("data markers over satellite imagery", () => {
   const { edge, halo } = tokenValues.dataMarker;
 
   it.each(Object.entries(imageryBackdrops))(
@@ -122,8 +111,6 @@ describe("data markers over Satellite's imagery", () => {
 const GLOBE_EDGE = 1.2;
 
 describe("the space around a globe", () => {
-  const siteLands = { ...basemapBackdrops, ...hostBasemapBackdrops };
-
   describe.each(themes)("%s theme", (theme) => {
     describe.each(colourSets)("%s colours", (set) => {
       const roles = tokenValues.themeValues[theme][set];
@@ -139,7 +126,7 @@ describe("the space around a globe", () => {
         }
       });
 
-      it.each(Object.entries(siteLands))(
+      it.each(Object.entries(basemapBackdrops))(
         `keeps the edge of the globe at ${GLOBE_EDGE}:1 against %s land`,
         (_name, land) => {
           expect(

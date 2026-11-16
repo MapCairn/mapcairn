@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 2026-11-12_
+_Last updated: 2026-11-16_
 
 _This mirrors the policy on the site at `/privacy`
 (`packages/web/src/app/PrivacyPage.tsx`). Keep both in sync when either
@@ -55,14 +55,12 @@ policy.
 
 ## Map tiles and location search
 
-The basemap tile providers, OpenFreeMap, the OpenStreetMap Foundation when you
-choose the Streets basemap, OpenTopoMap when you choose the Topographic
-basemap, and EOX IT Services when you choose the Satellite basemap, may log
-tile requests, including your IP address, as part of serving the map. This is
-standard for any web map. Your browser makes those requests itself: they carry
-your IP address, its usual request headers (such as its user agent) and this
-site's address as the referrer, and nothing this site has stored about you.
-Tiles are requested for the part of the map on screen, so the basemap's
+The basemap tile providers, OpenFreeMap and, when you choose the Streets
+basemap, the OpenStreetMap Foundation, may log tile requests, including your IP
+address, as part of serving the map. This is standard for any web map. Your
+browser makes those requests itself: they carry your IP address, its usual
+request headers (such as its user agent) and this site's address as the referrer,
+and nothing this site has stored about you. Tiles are requested for the part of the map on screen, so the basemap's
 provider, and the provider of any tile layer you turn on, can tell roughly
 which area you are looking at, and after Locate me roughly where you are.
 When you search (by pressing Enter or the Search button), your query is sent to

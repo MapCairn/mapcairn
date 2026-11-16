@@ -8,8 +8,6 @@ import {
   DEFAULT_VECTOR_BASEMAP_NAME,
   LIBERTY_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
-  SATELLITE_BASEMAP_NAME,
-  TOPOGRAPHIC_BASEMAP_NAME,
 } from "./support/basemaps";
 import {
   MINIMAL_VECTOR_STYLE,
@@ -153,7 +151,7 @@ test.describe("save data", () => {
     expect(relief.length).toBeGreaterThan(0);
   });
 
-  test("on the site's own six basemaps, Save data swaps the previews for plain tiles and back, and notes that the image maps use more data", async ({
+  test("on the site's own four basemaps, Save data swaps the previews for plain tiles and back, and notes that the image maps use more data", async ({
     page,
     mapPage,
   }) => {
@@ -172,17 +170,11 @@ test.describe("save data", () => {
     await expect(mapPage.basemapPicker.getByRole("radio")).toHaveCount(
       BASEMAP_COUNT,
     );
-    for (const name of [
-      RASTER_BASEMAP_NAME,
-      TOPOGRAPHIC_BASEMAP_NAME,
-      SATELLITE_BASEMAP_NAME,
-    ]) {
-      await expect(
-        mapPage.basemapPicker.getByRole("radio", {
-          name: `${name} Uses more data`,
-        }),
-      ).toBeAttached();
-    }
+    await expect(
+      mapPage.basemapPicker.getByRole("radio", {
+        name: `${RASTER_BASEMAP_NAME} Uses more data`,
+      }),
+    ).toBeAttached();
     await expect(
       mapPage.basemapPicker.getByRole("radio", {
         name: DEFAULT_VECTOR_BASEMAP_NAME,

@@ -11,24 +11,16 @@ export const TRANSPARENT_PNG = Buffer.from(
   "base64",
 );
 
-/**
- * The raster tile hosts of the site's Streets and Topographic basemaps, and
- * of Satellite's imagery.
- */
-export const RASTER_TILE_PATTERN =
-  /(?:tile\.openstreetmap\.org|tile\.opentopomap\.org|tiles\.maps\.eox\.at)/;
+/** The raster tiles of the site's Streets basemap, from OpenStreetMap. */
+export const RASTER_TILE_PATTERN = /tile\.openstreetmap\.org/;
 
-/** The Streets tiles, from OpenStreetMap, which the basemap-outage tests take down. */
-export const STREETS_TILE_PATTERN = /tile\.openstreetmap\.org/;
-
-/** Satellite's imagery tiles, from EOX. */
-export const SATELLITE_TILE_PATTERN = /tiles\.maps\.eox\.at\/wmts\//;
+/** The Streets tiles, which the basemap-outage tests take down. */
+export const STREETS_TILE_PATTERN = RASTER_TILE_PATTERN;
 
 /**
- * Vector style documents from OpenFreeMap: Bright (the default, whose labels
- * Satellite draws over its imagery), Positron and Dark on the site, and Liberty
- * and Fiord for a host that offers the SDK's whole list. No test reaches
- * OpenFreeMap.
+ * Vector style documents from OpenFreeMap: Bright (the default), Positron and
+ * Dark on the site, and Liberty and Fiord for a host that offers the SDK's
+ * whole list. No test reaches OpenFreeMap.
  */
 export const VECTOR_STYLE_PATTERN = /tiles\.openfreemap\.org\/styles\//;
 
