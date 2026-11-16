@@ -86,6 +86,12 @@ const slide = keyframes({
   to: { transform: "translateX(250%)" },
 });
 
+/** The same sweep from the other side, for a right-to-left page. */
+const slideRtl = keyframes({
+  from: { transform: "translateX(100%)" },
+  to: { transform: "translateX(-250%)" },
+});
+
 const trackBase = style({
   gridArea: "1 / 1",
   alignSelf: "start",
@@ -111,6 +117,9 @@ export const loadingBar = style({
     [`${loadingTrack.animated} &`]: {
       width: "40%",
       animation: `${slide} calc(${tokens.motion.duration.slow} * 4) ${tokens.motion.easing} infinite`,
+    },
+    [`${loadingTrack.animated} &:dir(rtl)`]: {
+      animationName: slideRtl,
     },
   },
   "@media": {

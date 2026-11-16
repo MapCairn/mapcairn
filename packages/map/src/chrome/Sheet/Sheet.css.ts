@@ -3,16 +3,10 @@
 import { focusRing, surfaceBlurStyle, tokens, zLayer } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 import { chromeVar, chromeVars } from "../MapChrome/chromeVars";
+import { safeArea } from "../safeArea";
 
 /** Width of the side panel: 360 px, written on the spacing scale (32 × 11.25). */
 const panelWidth = `calc(${tokens.space.xl} * 11.25)`;
-
-const safe = {
-  top: "env(safe-area-inset-top, 0px)",
-  right: "env(safe-area-inset-right, 0px)",
-  bottom: "env(safe-area-inset-bottom, 0px)",
-  left: "env(safe-area-inset-left, 0px)",
-} as const;
 
 /** Hidden after the exit transition, so a closed surface is not painted or hit. */
 const closedVisibility = {
@@ -62,7 +56,8 @@ export const surface = style({
       borderStartStartRadius: tokens.radius.sheet,
       borderStartEndRadius: tokens.radius.sheet,
       boxShadow: tokens.shadow.sheet,
-      paddingInline: `${safe.left} ${safe.right}`,
+      paddingInlineStart: safeArea.ltr.start,
+      paddingInlineEnd: safeArea.ltr.end,
       transform: "translateY(var(--sheet-offset, 100%))",
       transition: `transform ${tokens.motion.duration.slow} ${tokens.motion.spring}, opacity ${tokens.motion.duration.base} ${tokens.motion.easing}`,
     },
@@ -75,9 +70,9 @@ export const surface = style({
       opacity: 0,
     },
     '&[data-layout="panel"]': {
-      insetInlineStart: `calc(${tokens.space.inset} + ${safe.left})`,
+      insetInlineStart: `calc(${tokens.space.inset} + ${safeArea.ltr.start})`,
       insetBlockStart: `calc(${chromeVar(chromeVars.topStartBottom, tokens.space.inset)} + ${tokens.space.sm})`,
-      insetBlockEnd: `calc(${tokens.space.inset} + ${safe.bottom})`,
+      insetBlockEnd: `calc(${tokens.space.inset} + ${safeArea.bottom})`,
       width: `min(${panelWidth}, calc(100% - 2 * ${tokens.space.inset}))`,
       borderRadius: tokens.radius.sheet,
       boxShadow: tokens.shadow.floating,
@@ -89,6 +84,16 @@ export const surface = style({
       ...closedVisibility,
       transform: `translateX(calc(-1 * ${tokens.space.lg}))`,
       opacity: 0,
+    },
+    '&[data-layout="sheet"]:dir(rtl)': {
+      paddingInlineStart: safeArea.rtl.start,
+      paddingInlineEnd: safeArea.rtl.end,
+    },
+    '&[data-layout="panel"]:dir(rtl)': {
+      insetInlineStart: `calc(${tokens.space.inset} + ${safeArea.rtl.start})`,
+    },
+    '&[data-layout="panel"][data-state="closed"]:dir(rtl)': {
+      transform: `translateX(${tokens.space.lg})`,
     },
   },
 });
@@ -201,10 +206,10 @@ export const content = style({
   overflowY: "auto",
   overscrollBehavior: "contain",
   paddingInline: tokens.space.md,
-  paddingBlockEnd: `calc(${tokens.space.md} + ${safe.bottom})`,
+  paddingBlockEnd: `calc(${tokens.space.md} + ${safeArea.bottom})`,
   selectors: {
     [`${surface}[data-layout="sheet"] &`]: {
-      paddingBlockEnd: `calc(${tokens.space.md} + ${safe.bottom} + var(--sheet-offset, 0px))`,
+      paddingBlockEnd: `calc(${tokens.space.md} + ${safeArea.bottom} + var(--sheet-offset, 0px))`,
     },
   },
 });

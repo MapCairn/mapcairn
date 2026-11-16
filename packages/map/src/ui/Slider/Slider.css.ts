@@ -53,6 +53,10 @@ export const control = style({
   },
 });
 
+/** The filled part of the track, growing from the side the slider starts at. */
+const fill = (towards: "left" | "right") =>
+  `linear-gradient(to ${towards}, ${tokens.color.accent} var(--slider-fill, 0%), transparent var(--slider-fill, 0%))`;
+
 /**
  * The track. The filled part is a hard-stop gradient driven by `--slider-fill`
  * rather than the absolutely positioned Radix range, so no layout code depends
@@ -65,8 +69,9 @@ export const track = style({
   border: `1px solid ${tokens.color.controlBoundary}`,
   borderRadius: tokens.radius.pill,
   backgroundColor: tokens.color.surfaceRaised,
-  backgroundImage: `linear-gradient(to right, ${tokens.color.accent} var(--slider-fill, 0%), transparent var(--slider-fill, 0%))`,
+  backgroundImage: fill("right"),
   forcedColorAdjust: "none",
+  selectors: { "&:dir(rtl)": { backgroundImage: fill("left") } },
 });
 
 /**

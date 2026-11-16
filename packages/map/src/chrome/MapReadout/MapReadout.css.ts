@@ -81,17 +81,24 @@ export const line = style({
   transformOrigin: "left center",
   transform: "scaleX(var(--scale-ratio, 0))",
   transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
+  selectors: { "&:dir(rtl)": { transformOrigin: "right center" } },
 });
 
 /** The tick at the start of the line. */
 export const tickStart = style({ ...tickBase, justifySelf: "start" });
 
+/** How far the end tick sits from the start tick: the line's length less one tick. */
+const tickEndOffset = `calc(var(--scale-ratio, 0) * var(--scale-max, 0px) - ${lineWeight})`;
+
 /** The tick at the end of the line, moved to wherever the line ends. */
 export const tickEnd = style({
   ...tickBase,
   justifySelf: "start",
-  transform: `translateX(calc(var(--scale-ratio, 0) * var(--scale-max, 0px) - ${lineWeight}))`,
+  transform: `translateX(${tickEndOffset})`,
   transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
+  selectors: {
+    "&:dir(rtl)": { transform: `translateX(calc(-1 * ${tickEndOffset}))` },
+  },
 });
 
 /**

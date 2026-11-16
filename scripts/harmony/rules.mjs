@@ -254,7 +254,8 @@ function checkPosition({ file, decl, report }) {
 /**
  * Fails a physical position or spacing property, or a physical direction in a
  * value, where a logical one mirrors in a right-to-left language. A horizontal
- * translation is accepted when the same rule also sets it under `:dir(rtl)`.
+ * translation, gradient or origin is accepted when the same rule also sets it
+ * under `:dir(rtl)`.
  * @param {DeclarationContext} c
  */
 function checkLogicalProperty({ decl, code, report }) {
@@ -269,24 +270,22 @@ function checkLogicalProperty({ decl, code, report }) {
       `Physical ${decl.prop}`,
       "Use the logical property (marginInlineStart, insetInlineEnd, borderStartStartRadius and so on).",
     );
-  } else if (
-    PHYSICAL_KEYWORD_PROP.test(decl.prop) &&
-    PHYSICAL_SIDE.test(decl.text)
-  ) {
-    fail(`${decl.prop} "${decl.text}"`, "Use start, end or a centred value.");
+    return;
+  }
+  const mirrored = /dir\(|\[dir/.test(code.slice(decl.ruleStart, decl.ruleEnd));
+  if (mirrored) {
+    return;
+  }
+  const reverse = 'Reverse it in the same rule under ":dir(rtl)".';
+  if (PHYSICAL_KEYWORD_PROP.test(decl.prop) && PHYSICAL_SIDE.test(decl.text)) {
+    fail(
+      `${decl.prop} "${decl.text}"`,
+      `Use start, end or a centred value, or reverse it in the same rule under ":dir(rtl)".`,
+    );
   } else if (GRADIENT_TO_SIDE.test(decl.text)) {
-    fail(
-      `Gradient direction "${decl.text}"`,
-      'Run it vertically, or set it again under ":dir(rtl)".',
-    );
-  } else if (
-    HORIZONTAL_TRANSLATE.test(decl.text) &&
-    !/dir\(|\[dir/.test(code.slice(decl.ruleStart, decl.ruleEnd))
-  ) {
-    fail(
-      `Horizontal translation "${decl.text}"`,
-      'Reverse it in the same rule under ":dir(rtl)".',
-    );
+    fail(`Gradient direction "${decl.text}"`, reverse);
+  } else if (HORIZONTAL_TRANSLATE.test(decl.text)) {
+    fail(`Horizontal translation "${decl.text}"`, reverse);
   }
 }
 

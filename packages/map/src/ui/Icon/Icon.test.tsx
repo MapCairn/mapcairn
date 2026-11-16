@@ -34,4 +34,12 @@ describe("Icon", () => {
     const spun = screen.getByTestId("icon").getAttribute("class") ?? "";
     expect(spun.split(" ").length).toBe(plain.split(" ").length + 1);
   });
+
+  it("adds the mirror class only when asked to mirror in right-to-left", () => {
+    const { rerender } = render(<Icon icon={Search} data-testid="icon" />);
+    const plain = screen.getByTestId("icon").getAttribute("class") ?? "";
+    rerender(<Icon icon={Search} data-testid="icon" mirrorInRtl />);
+    const mirrored = screen.getByTestId("icon").getAttribute("class") ?? "";
+    expect(mirrored.split(" ").length).toBe(plain.split(" ").length + 1);
+  });
 });

@@ -353,7 +353,11 @@ export function SearchPill({
                 ) : null}
               </span>
               {index === activeIndex ? (
-                <Icon icon={ChevronRight} className={styles.chevron} />
+                <Icon
+                  icon={ChevronRight}
+                  mirrorInRtl
+                  className={styles.chevron}
+                />
               ) : null}
             </div>
           ))}

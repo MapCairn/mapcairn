@@ -3,14 +3,21 @@
 import { PANEL_MAX_HEIGHT_EXCLUSIVE, PANEL_MIN_WIDTH } from "@mapcairn/core";
 import { tokens, zLayer } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
+import { safeArea } from "../safeArea";
 import { chromeVar, chromeVars } from "./chromeVars";
 
 /** Width of the side panel column: 360 px on the spacing scale (32 × 11.25). */
 const panelWidth = `calc(${tokens.space.xl} * 11.25)`;
 
 /** The screen inset plus the safe area on one side. */
-const edge = (side: "top" | "right" | "bottom" | "left") =>
-  `calc(${tokens.space.inset} + env(safe-area-inset-${side}, 0px))`;
+const edge = (inset: string) => `calc(${tokens.space.inset} + ${inset})`;
+
+/**
+ * How far the bottom slots move clear of the side panel, along the reading
+ * direction: `MapChrome` measures a distance from the inline-start side, so
+ * a right-to-left page negates it where it is used.
+ */
+const shiftX = chromeVar(chromeVars.bottomStartX, "0px");
 
 const slideTransition = [
   `transform ${tokens.motion.duration.fast} ${tokens.motion.easing}`,
@@ -57,15 +64,19 @@ export const root = style({
   pointerEvents: "none",
   display: "grid",
   gap: tokens.space.sm,
-  paddingBlockStart: edge("top"),
-  paddingInlineEnd: edge("right"),
-  paddingBlockEnd: edge("bottom"),
-  paddingInlineStart: edge("left"),
+  paddingBlockStart: edge(safeArea.top),
+  paddingInlineEnd: edge(safeArea.ltr.end),
+  paddingBlockEnd: edge(safeArea.bottom),
+  paddingInlineStart: edge(safeArea.ltr.start),
   gridTemplateColumns: "minmax(0, 1fr) auto",
   gridTemplateRows: "auto minmax(0, 1fr) auto",
   gridTemplateAreas: '"top top" ". end" "start end-bottom"',
   selectors: {
     '&[data-layout="panel"]': panelGrid,
+    "&:dir(rtl)": {
+      paddingInlineEnd: edge(safeArea.rtl.end),
+      paddingInlineStart: edge(safeArea.rtl.start),
+    },
   },
 });
 
@@ -138,8 +149,13 @@ export const bottomStart = style({
   ...bottomBase,
   gridArea: "start",
   justifySelf: "start",
-  transform: `translate(${chromeVar(chromeVars.bottomStartX, "0px")}, ${chromeVar(chromeVars.bottomLift, "0px")})`,
-  selectors: { [whenHidden]: hidden },
+  transform: `translate(${shiftX}, ${chromeVar(chromeVars.bottomLift, "0px")})`,
+  selectors: {
+    [whenHidden]: hidden,
+    "&:dir(rtl)": {
+      transform: `translate(calc(-1 * ${shiftX}), ${chromeVar(chromeVars.bottomLift, "0px")})`,
+    },
+  },
 });
 
 /**
@@ -153,9 +169,14 @@ export const bottomCentre = style({
   gridRow: 3,
   gridColumn: "1 / -1",
   justifySelf: "center",
-  maxWidth: `calc(100% - ${chromeVar(chromeVars.bottomStartX, "0px")})`,
-  transform: `translate(calc(${chromeVar(chromeVars.bottomStartX, "0px")} / 2), ${chromeVar(chromeVars.bottomCentreLift, "0px")})`,
-  selectors: { [whenHidden]: hidden },
+  maxWidth: `calc(100% - ${shiftX})`,
+  transform: `translate(calc(${shiftX} / 2), ${chromeVar(chromeVars.bottomCentreLift, "0px")})`,
+  selectors: {
+    [whenHidden]: hidden,
+    "&:dir(rtl)": {
+      transform: `translate(calc(${shiftX} / -2), ${chromeVar(chromeVars.bottomCentreLift, "0px")})`,
+    },
+  },
 });
 
 /**
@@ -204,8 +225,11 @@ export const mapKey = style({
   gridColumn: 1,
   justifySelf: "start",
   maxWidth: "100%",
-  transform: `translate(${chromeVar(chromeVars.bottomStartX, "0px")}, ${chromeVar(chromeVars.mapKeyLift, "0px")})`,
+  transform: `translate(${shiftX}, ${chromeVar(chromeVars.mapKeyLift, "0px")})`,
   selectors: {
+    "&:dir(rtl)": {
+      transform: `translate(calc(-1 * ${shiftX}), ${chromeVar(chromeVars.mapKeyLift, "0px")})`,
+    },
     [whenHidden]: hidden,
     '&[data-crowded="true"]': hidden,
     [`${root}:has([data-chrome="attribution-popover"]:not([hidden])) &`]:

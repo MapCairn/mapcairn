@@ -84,7 +84,9 @@ const cases: readonly Case[] = [
     name: "a physical transform origin",
     file: CSS,
     bad: css('  transformOrigin: "left center",'),
-    good: css('  transformOrigin: "center",'),
+    good: css(
+      '  transformOrigin: "left center",\n  selectors: { "&:dir(rtl)": { transformOrigin: "right center" } },',
+    ),
   },
   {
     rule: "logical-property",

@@ -272,7 +272,7 @@ function ListRowDemo() {
           label="Liberty"
           secondary="Colourful vector basemap"
           selected={chosen === "liberty"}
-          trailing={<Icon icon={ChevronRight} />}
+          trailing={<Icon icon={ChevronRight} mirrorInRtl />}
           onClick={() => setChosen("liberty")}
         />
       </ul>

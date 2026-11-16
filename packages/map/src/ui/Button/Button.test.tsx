@@ -108,4 +108,16 @@ describe("Button", () => {
     expect(button.querySelector("svg")).not.toBeNull();
     expect(button.className).toContain("extra");
   });
+
+  it("passes mirrorInRtl on to its icon", () => {
+    const { rerender } = render(<Button icon={Download}>Save</Button>);
+    const plain = document.querySelector("svg")?.getAttribute("class") ?? "";
+    rerender(
+      <Button icon={Download} mirrorInRtl>
+        Save
+      </Button>,
+    );
+    const mirrored = document.querySelector("svg")?.getAttribute("class") ?? "";
+    expect(mirrored).not.toBe(plain);
+  });
 });
