@@ -533,6 +533,17 @@ export type MessageKey =
   | "layers.time.status";
 
 /**
+ * Text a definition shows a person: a {@link MessageKey}, looked up in the
+ * active catalogue where the definition is rendered, or a plain string,
+ * shown as written. A third-party definition keeps writing plain strings; the
+ * reference host's own definitions use keys so they can be translated. Read
+ * it with `resolveText`. It is a plain `string` at compile time, so a host's
+ * definition needs no cast, and the runtime check against the English
+ * catalogue decides what is a key.
+ */
+export type DefinitionText = MessageKey | string;
+
+/**
  * The parameters a key's placeholders need. A key with no placeholders maps
  * to an empty object, so it still takes a `params` argument (for a
  * consistent call shape), but an empty one.
