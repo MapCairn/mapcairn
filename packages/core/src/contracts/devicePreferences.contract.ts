@@ -38,6 +38,13 @@ export function runDevicePreferencesContract(
       expect(typeof value.saveData).toBe("boolean");
     });
 
+    it("reports the languages as a list of tags, empty when there are none", () => {
+      const { preferences } = create();
+      const { languages } = preferences.get();
+      expect(Array.isArray(languages)).toBe(true);
+      expect(languages.every((tag) => typeof tag === "string")).toBe(true);
+    });
+
     it("returns the same object until a preference changes", () => {
       const { preferences, controls } = create();
       controls.set({ reducedMotion: false });
@@ -54,7 +61,7 @@ export function runDevicePreferencesContract(
         finePointer: false,
         saveData: true,
       });
-      expect(preferences.get()).toEqual({
+      expect(preferences.get()).toMatchObject({
         reducedMotion: true,
         finePointer: false,
         saveData: true,

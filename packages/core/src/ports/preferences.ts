@@ -13,6 +13,12 @@ export interface DevicePreferencesValue {
    * Always false where the browser gives no signal (Safari on iOS has none).
    */
   readonly saveData: boolean;
+  /**
+   * The languages the browser prefers, as BCP 47 tags, most preferred first
+   * (`navigator.languages`). Empty where there is none, as on the server. The
+   * language setting follows them while the person has made no choice.
+   */
+  readonly languages: readonly string[];
 }
 
 /**

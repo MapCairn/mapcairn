@@ -24,6 +24,7 @@ import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
 import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
+import { HOST_LANGUAGE_CATALOGUE } from "../i18n/hostLanguages";
 import { createHostLayerCatalogue } from "../layers";
 import { readTestOverrides } from "./testSeam";
 
@@ -80,8 +81,9 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     fileOpener: new BrowserFileOpener(),
     url: new BrowserUrlState(),
     theme: new BrowserThemeSource(),
-    // The language is hard-coded to the host's default for now; a later step
-    // reads the language setting and builds the active catalogue from it.
+    // The server renders the default language, and the browser's first render
+    // matches it; `useMessages` then swaps in the language the person's
+    // setting or browser resolves to, through `languages`.
     messages: createMessageCatalogue("en-GB", EN_GB_CATALOGUE, EN_GB_CATALOGUE),
     preferences: new BrowserDevicePreferences(),
     layers: createHostLayerCatalogue(),
@@ -89,6 +91,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     routing: new ValhallaRoutingProvider(),
     // A subset of the SDK's built-in basemaps, not the whole list.
     basemaps: HOST_BASEMAP_CATALOGUE,
+    languages: HOST_LANGUAGE_CATALOGUE,
   };
   const seam =
     import.meta.env.MODE !== "production" ? readTestOverrides() : undefined;

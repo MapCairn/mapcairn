@@ -91,10 +91,11 @@ export const HOST_SUPPLIED_PORT_NAMES = [
 /**
  * The `Services` entries that are plain data a host supplies, not ports: they
  * have one shape and no second implementation, so they have no fake and no
- * contract suite. The basemaps a host offers are the one so far.
+ * contract suite. The basemaps and the languages a host offers are the two.
  */
 export const DATA_SERVICE_NAMES = [
   "basemaps",
+  "languages",
 ] as const satisfies readonly (keyof Services)[];
 
 type AssertNever<T extends never> = T;

@@ -9,6 +9,7 @@ import {
   type FeatureSelection,
   type FileOpener,
   type FileSaver,
+  type LanguageCatalogue,
   type LayerCatalogue,
   type LocationProvider,
   type MapAdapterFactory,
@@ -23,7 +24,13 @@ import {
   type ThemeSource,
   type UrlState,
 } from "@mapcairn/core";
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
+import { ActiveMessagesContext } from "./activeMessages";
 import { useServices } from "./ServicesProvider";
 
 /** The map adapter factory, used by the map host to pick an engine for a basemap. */
@@ -91,13 +98,24 @@ export function useThemeSource(): ThemeSource {
 
 /**
  * The active message catalogue, for `t`/`plural`/`list` calls that look up
- * copy by key instead of writing it inline. Reads the active language from
- * `Services.messages` directly; nothing here switches it yet, so the
- * language is whatever `createServices()` built (the host's default until a
- * later step adds the language setting).
+ * copy by key instead of writing it inline. With `Services.languages` it is
+ * the language the person's setting, or else the browser's languages, resolve
+ * to; the catalogue changes when either does, and keeps the previous one while
+ * a lazily loaded language is still arriving. Without it, it is always
+ * `Services.messages`.
  */
 export function useMessages(): MessageCatalogue {
-  return useServices().messages;
+  const services = useServices();
+  return useContext(ActiveMessagesContext) ?? services.messages;
+}
+
+/**
+ * The languages the host offers, or `undefined` when it offers none to choose
+ * between. The Settings panel shows its language switcher only when there is
+ * more than one.
+ */
+export function useLanguages(): LanguageCatalogue | undefined {
+  return useServices().languages;
 }
 
 /** Device and accessibility preferences (reduced motion, fine pointer, save data), updating live. */

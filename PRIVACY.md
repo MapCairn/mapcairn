@@ -17,7 +17,7 @@ device instead, as described below.
 ## Local storage
 
 Your browser's `localStorage` keeps your settings: your light or dark theme
-(under the key `mapcairn:theme`), your units, whether the zoom buttons
+(under the key `mapcairn:theme`), your units, which language you chose, whether the zoom buttons
 show, whether Save data is on, whether the map is flat or a globe, your chosen
 basemap, where the map was last left, and whether you have answered the
 first-visit tour (a version number under `mapcairn:tourSeen`). The other keys

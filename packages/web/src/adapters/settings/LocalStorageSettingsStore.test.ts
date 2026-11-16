@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { PROJECTION_STORAGE_KEY, THEME_STORAGE_KEY } from "@mapcairn/core";
+import {
+  LANGUAGE_STORAGE_KEY,
+  PROJECTION_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+} from "@mapcairn/core";
 import { runSettingsStoreContract } from "@mapcairn/core/contracts";
 import { describe, expect, it } from "vitest";
 import {
@@ -119,8 +123,11 @@ describe("LocalStorageSettingsStore", () => {
       projection: "globe",
       basemapId: "positron",
       lastView: VIEW,
+      language: "af",
     });
     expect(storage.getItem("mapcairn:units")).toBe('"imperial"');
+    expect(storage.getItem("mapcairn:language")).toBe('"af"');
+    expect(LANGUAGE_STORAGE_KEY).toBe("mapcairn:language");
     expect(storage.getItem("mapcairn:zoomButtons")).toBe("false");
     expect(storage.getItem("mapcairn:saveData")).toBe("true");
     expect(storage.getItem("mapcairn:projection")).toBe('"globe"');
@@ -142,6 +149,7 @@ describe("LocalStorageSettingsStore", () => {
       "mapcairn:basemapId": '"osm"',
       "mapcairn:lastView": JSON.stringify(VIEW),
       "mapcairn:tourSeen": "1",
+      "mapcairn:language": '"af"',
     });
     expect(store.get()).toEqual({
       theme: "light",
@@ -152,6 +160,7 @@ describe("LocalStorageSettingsStore", () => {
       basemapId: "osm",
       lastView: VIEW,
       tourSeen: 1,
+      language: "af",
     });
   });
 
@@ -177,6 +186,7 @@ describe("LocalStorageSettingsStore", () => {
       "mapcairn:basemapId": '"Not A Basemap!"',
       "mapcairn:lastView":
         '{"center":{"lat":200,"lng":0},"zoom":3,"bearing":0}',
+      "mapcairn:language": '"not a tag!"',
     });
     expect(store.get()).toEqual({
       theme: "system",
@@ -187,7 +197,19 @@ describe("LocalStorageSettingsStore", () => {
       basemapId: "bright",
       lastView: null,
       tourSeen: null,
+      language: null,
     });
+  });
+
+  it("reads a stored language tag, and ignores anything that is not a tag", () => {
+    expect(setup({ "mapcairn:language": '"en-GB"' }).store.get().language).toBe(
+      "en-GB",
+    );
+    for (const raw of ["af", "1", "true", '""', '"x"', '"a b"', "{not json"]) {
+      expect(setup({ "mapcairn:language": raw }).store.get().language).toBe(
+        null,
+      );
+    }
   });
 
   it("reads a stored tour version, and treats anything but a positive whole number as unanswered", () => {

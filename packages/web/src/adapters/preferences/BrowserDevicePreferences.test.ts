@@ -63,7 +63,7 @@ class FakeConnection implements NetworkInformationLike {
   }
 }
 
-function setup() {
+function setup(languages: readonly string[] | null = ["af-ZA", "en"]) {
   const queries = {
     reducedMotion: new FakeMediaQuery(false),
     finePointer: new FakeMediaQuery(true),
@@ -83,6 +83,7 @@ function setup() {
   const preferences = new BrowserDevicePreferences({
     getWindow: () => window,
     getConnection: () => connection,
+    getLanguages: () => languages ?? undefined,
   });
   return { queries, connection, window, preferences };
 }
@@ -125,9 +126,30 @@ describe("BrowserDevicePreferences", () => {
       reducedMotion: false,
       finePointer: true,
       saveData: false,
+      languages: ["af-ZA", "en"],
     });
     expect(window.matchMedia).toHaveBeenCalledWith(REDUCED_MOTION);
     expect(window.matchMedia).toHaveBeenCalledWith(FINE_POINTER);
+  });
+
+  it("reports no languages where the browser gives none or reading them throws", () => {
+    expect(setup(null).preferences.get().languages).toEqual([]);
+    const throwing = new BrowserDevicePreferences({
+      getWindow: () => undefined,
+      getLanguages: () => {
+        throw new Error("blocked");
+      },
+    });
+    expect(throwing.get().languages).toEqual([]);
+  });
+
+  it("reads the browser's languages from navigator by default", () => {
+    vi.spyOn(navigator, "languages", "get").mockReturnValue(["af", "en-GB"]);
+    const preferences = new BrowserDevicePreferences({
+      getWindow: () => undefined,
+    });
+    expect(preferences.get().languages).toEqual(["af", "en-GB"]);
+    vi.restoreAllMocks();
   });
 
   it("is never stale without subscribers", () => {
@@ -210,11 +232,15 @@ describe("BrowserDevicePreferences", () => {
         },
       }),
     ]) {
-      const preferences = new BrowserDevicePreferences({ getWindow });
+      const preferences = new BrowserDevicePreferences({
+        getWindow,
+        getLanguages: () => undefined,
+      });
       expect(preferences.get()).toEqual({
         reducedMotion: false,
         finePointer: false,
         saveData: false,
+        languages: [],
       });
       expect(() => preferences.subscribe(() => undefined)()).not.toThrow();
     }

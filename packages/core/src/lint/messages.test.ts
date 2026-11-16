@@ -33,6 +33,8 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "settings.privacy.heading": [],
   "settings.privacy.link": [],
   "common.itemCount": ["count"],
+  "settings.language.label": [],
+  "settings.language.auto": [],
 };
 
 /** Every `{name}` placeholder used in `value`, deduplicated. */

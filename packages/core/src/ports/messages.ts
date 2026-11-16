@@ -34,7 +34,9 @@ export type MessageKey =
   | "settings.notSaved"
   | "settings.privacy.heading"
   | "settings.privacy.link"
-  | "common.itemCount";
+  | "common.itemCount"
+  | "settings.language.label"
+  | "settings.language.auto";
 
 /**
  * The parameters a key's placeholders need. A key with no placeholders maps
