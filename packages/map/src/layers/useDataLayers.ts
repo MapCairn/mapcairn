@@ -28,6 +28,7 @@ import {
   parseTime,
   readyLayers,
   resolveControlValues,
+  textOrMessage,
   tileUrl,
 } from "@mapcairn/core";
 import {
@@ -1011,7 +1012,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           : previous.enabled.filter((item) => item !== id),
       }));
       if (enabled && !loadsFeatures(definition)) {
-        announce(announceLayerOn(definition.name), {
+        announce(announceLayerOn(textOrMessage(definition.name)), {
           priority: "polite",
           keep: true,
         });
@@ -1124,7 +1125,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         ...previous,
         tilesSlow: { ...previous.tilesSlow, [id]: tiles },
       }));
-      announce(announceTilesSlow(definition.name), {
+      announce(announceTilesSlow(textOrMessage(definition.name)), {
         priority: "polite",
         keep: true,
       });
@@ -1154,7 +1155,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       }));
       announce(
         announceTilesUnavailable(
-          definition.name,
+          textOrMessage(definition.name),
           describeChosenTime(definition, controls),
         ),
         { priority: "polite" },
@@ -1179,7 +1180,7 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
         tilesUnavailable: reportedTilesFor(previous.tilesUnavailable, id, null),
         tilesSlow: reportedTilesFor(previous.tilesSlow, id, null),
       }));
-      announce(announceTilesRecovered(definition.name), {
+      announce(announceTilesRecovered(textOrMessage(definition.name)), {
         priority: "polite",
       });
     },

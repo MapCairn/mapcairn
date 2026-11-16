@@ -12,11 +12,10 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const seaTemperatureAnomaly: TileLayerDefinition = {
   id: "sea-temperature-anomaly",
-  name: "Sea temperature compared with normal",
-  description:
-    "Warm colours, from yellow to dark red, show sea water warmer than usual for the time of year. Grey is about normal, and cyan to blue is cooler. Unusually warm water along the equator in the Pacific is the sign of El Niño, and unusually cool water is La Niña. Detail stops at about 5 km.",
-  group: "Oceans",
-  dataCost: "about 20 to 60 KB per screen",
+  name: "layer.sea-temperature-anomaly.name",
+  description: "layer.sea-temperature-anomaly.description",
+  group: "layer.group.oceans",
+  dataCost: "layer.sea-temperature-anomaly.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",
@@ -31,12 +30,17 @@ const seaTemperatureAnomaly: TileLayerDefinition = {
     {
       kind: "date",
       id: "date",
-      label: "Date",
+      label: "layer.control.date",
       min: "2026-01-11",
       max: { daysAgo: 3 },
       default: { daysAgo: 3 },
     },
-    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 },
+    {
+      kind: "opacity",
+      id: "opacity",
+      label: "layer.control.opacity",
+      default: 0.8,
+    },
   ],
   source: {
     kind: "tiles",

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { FakeMessageCatalogue } from "@mapcairn/core";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { chromeSkeletonCopy } from "../ChromeSkeleton";
 import { FocusRegistryProvider, useFocusReturn } from "../focusRegistry";
 import {
   ChromeSurfaceContext,
@@ -10,6 +12,9 @@ import {
 import { renderChrome } from "../MapChrome/chromeTestHarness";
 import { EndStack, type EndStackProps } from "./EndStack";
 import { EndStackSkeleton } from "./EndStackSkeleton";
+
+const COPY = chromeSkeletonCopy(new FakeMessageCatalogue()).endStack;
+
 import { endStackMinHeightForZoom } from "./endStackHeight";
 
 function props(overrides: Partial<EndStackProps> = {}): EndStackProps {
@@ -114,11 +119,13 @@ describe("EndStack with drawing", () => {
 
 describe("EndStackSkeleton with drawing", () => {
   it("draws the Draw shapes button only when asked, in the same place as the live stack", () => {
-    const { container, rerenderChrome } = renderChrome(<EndStackSkeleton />);
+    const { container, rerenderChrome } = renderChrome(
+      <EndStackSkeleton copy={COPY} />,
+    );
     expect(
       container.querySelectorAll('[aria-label="Draw shapes"]'),
     ).toHaveLength(0);
-    rerenderChrome(<EndStackSkeleton draw />);
+    rerenderChrome(<EndStackSkeleton copy={COPY} draw />);
     const labels = [
       ...container.querySelectorAll('[data-skeleton="controls"] button'),
     ].map((button) => button.getAttribute("aria-label"));

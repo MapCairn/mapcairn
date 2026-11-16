@@ -125,7 +125,7 @@ describe("useBasemapChoice", () => {
     act(() =>
       hook.result.current.failed(new Error("404"), basemap("osm"), positron),
     );
-    expect(hook.result.current.failure?.name).toBe("Streets");
+    expect(hook.result.current.failure?.name).toBe("basemap.osm.name");
     expect(hook.result.current.failure?.id).toBe("osm");
     expect(hook.result.current.basemap).toBe(positron);
     expect(hook.result.current.choice).toBe("osm");
@@ -323,7 +323,7 @@ describe("useBasemapChoice when every tile of a basemap fails", () => {
     expect(hook.result.current.basemap.id).toBe("liberty");
     expect(hook.result.current.failure).toEqual({
       id: "osm",
-      name: "Streets",
+      name: "basemap.osm.name",
       kept: liberty,
       unavailable: true,
     });
@@ -353,7 +353,7 @@ describe("useBasemapChoice when every tile of a basemap fails", () => {
     expect(hook.result.current.basemap.id).toBe("bright");
     expect(hook.result.current.failure).toEqual({
       id: "bright",
-      name: "Bright",
+      name: "basemap.bright.name",
       kept: bright,
       unavailable: true,
     });

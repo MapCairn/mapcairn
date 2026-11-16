@@ -2,7 +2,13 @@
 // Copyright MapCairn contributors
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { BASEMAPS, DEFAULT_BASEMAP_ID, getBasemap } from "@mapcairn/core";
+import {
+  BASEMAPS,
+  DEFAULT_BASEMAP_ID,
+  FakeMessageCatalogue,
+  getBasemap,
+  resolveText,
+} from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { BASEMAP_THUMBNAILS } from "./basemapThumbnails";
 import {
@@ -20,8 +26,11 @@ describe("the reference host's basemaps", () => {
     expect(
       HOST_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.id),
     ).toEqual([...HOST_BASEMAP_IDS]);
+    const english = new FakeMessageCatalogue();
     expect(
-      HOST_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.name),
+      HOST_BASEMAP_CATALOGUE.basemaps.map((basemap) =>
+        resolveText(english, basemap.name),
+      ),
     ).toEqual(["Bright", "Positron", "Streets", "Dark"]);
   });
 

@@ -11,6 +11,7 @@ import {
   useBasemapAvailability,
   useBasemaps,
   useMessages,
+  useResolveText,
   useSaveData,
 } from "../../services";
 import { Button } from "../../ui/Button";
@@ -81,6 +82,7 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
   const announce = useAnnounce();
   const catalogue = useBasemaps();
   const { t } = useMessages();
+  const resolve = useResolveText();
   const shownId = catalogue.resolve(value).id;
   const saveData = useSaveData();
   const { unavailable, clear } = useBasemapAvailability();
@@ -94,7 +96,7 @@ export function BasemapPicker({ value, onChange }: BasemapPickerProps) {
   };
 
   const choose = (basemap: BasemapDefinition) => {
-    announce(announceBasemap(basemap.name));
+    announce(announceBasemap(resolve(basemap.name)));
     onChange(basemap.id);
   };
 
@@ -159,6 +161,7 @@ function BasemapTile({
   onChoose,
 }: BasemapTileProps) {
   const { t } = useMessages();
+  const resolve = useResolveText();
   const [failed, setFailed] = useState(false);
   const preview = saveData ? undefined : basemap.thumbnail;
   const showSwatch = preview === undefined || failed;
@@ -227,7 +230,7 @@ function BasemapTile({
           </span>
         ) : null}
       </span>
-      <span className={name({ selected })}>{basemap.name}</span>
+      <span className={name({ selected })}>{resolve(basemap.name)}</span>
       {unavailable ? (
         <span
           className={dataNote}

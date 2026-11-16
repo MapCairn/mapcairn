@@ -10,7 +10,14 @@
  * templates are filled from control values and derived variables; card and
  * list templates are filled from a feature's decoded fields, optionally
  * through a named formatter.
+ *
+ * Fields a person reads (names, descriptions, labels, costs, disclaimers and
+ * empty text) are a `DefinitionText`: a `MessageKey` the active catalogue
+ * translates, or a plain string shown as written. Card and list templates stay
+ * plain strings, because their `{field}` placeholders are the definition's
+ * own, not the catalogue's. Credits are legal text and are never translated.
  */
+import type { DefinitionText } from "../ports/messages";
 
 /** A credit line a provider asks for. */
 export interface LayerAttribution {
@@ -27,7 +34,7 @@ export interface LayerAttribution {
 export interface SegmentedOption {
   /** The value used in templates and the permalink: lowercase letters, digits, `.`, `_` and `-`. */
   readonly value: string;
-  readonly label: string;
+  readonly label: DefinitionText;
 }
 
 /**
@@ -54,9 +61,9 @@ export interface ControlCondition {
 interface ControlBase {
   /** Unique inside the layer. Lowercase letters, digits and hyphens, starting with a letter. */
   readonly id: string;
-  readonly label: string;
+  readonly label: DefinitionText;
   /** Optional one-line help under the control. */
-  readonly description?: string;
+  readonly description?: DefinitionText;
   readonly enabledWhen?: ControlCondition;
 }
 
@@ -262,13 +269,13 @@ export interface SizeStops {
   /** Pairs of `[minimum value, radius in pixels]`, ascending. */
   readonly stops: readonly (readonly [number, number])[];
   /** Legend label for each stop, such as `Magnitude 4.5 and above`. */
-  readonly labels: readonly string[];
+  readonly labels: readonly DefinitionText[];
 }
 
 /** One category of a categorical style. */
 export interface StyleCategory {
   readonly value: string | number;
-  readonly label: string;
+  readonly label: DefinitionText;
   readonly colour: PaletteSlot;
   readonly shape?: MarkerShape;
 }
@@ -279,7 +286,10 @@ export interface CategoryColour {
   readonly field: string;
   readonly categories: readonly StyleCategory[];
   /** Used for a value no category names. */
-  readonly other: { readonly label: string; readonly colour: PaletteSlot };
+  readonly other: {
+    readonly label: DefinitionText;
+    readonly colour: PaletteSlot;
+  };
 }
 
 /** Colour by ordered value ranges, using an ordered (ordinal) palette. */
@@ -289,7 +299,7 @@ export interface StepColour {
   /** Ascending minimums; the first applies to everything below the second. */
   readonly steps: readonly {
     readonly min: number;
-    readonly label: string;
+    readonly label: DefinitionText;
     readonly colour: PaletteSlot;
   }[];
 }
@@ -298,7 +308,7 @@ export interface StepColour {
 export interface FixedColour {
   readonly kind: "fixed";
   readonly colour: PaletteSlot;
-  readonly label: string;
+  readonly label: DefinitionText;
 }
 
 /** How a polygon is hatched, so a fill's meaning never rests on colour alone. */
@@ -323,14 +333,14 @@ export interface ShapeMarks {
 /** One category of a polygon or line style. */
 export interface ShapeCategory extends ShapeMarks {
   readonly value: string | number;
-  readonly label: string;
+  readonly label: DefinitionText;
   readonly colour: PaletteSlot;
 }
 
 /** One value range of a polygon or line style, from explicit stops. */
 export interface ShapeStep extends ShapeMarks {
   readonly min: number;
-  readonly label: string;
+  readonly label: DefinitionText;
   readonly colour: PaletteSlot;
 }
 
@@ -338,7 +348,7 @@ export interface ShapeStep extends ShapeMarks {
 export interface ShapeFixedColour extends ShapeMarks {
   readonly kind: "fixed";
   readonly colour: PaletteSlot;
-  readonly label: string;
+  readonly label: DefinitionText;
 }
 
 /** Colour by category: a field's value picks the class. */
@@ -348,7 +358,7 @@ export interface ShapeCategoryColour {
   readonly categories: readonly ShapeCategory[];
   /** Used for a value no category names. */
   readonly other: ShapeMarks & {
-    readonly label: string;
+    readonly label: DefinitionText;
     readonly colour: PaletteSlot;
   };
 }
@@ -446,16 +456,16 @@ export interface DetailSource {
   /** How the polygons and lines are drawn. */
   readonly colour: PaletteSlot;
   /** The button label, such as `Show affected area`. */
-  readonly label: string;
+  readonly label: DefinitionText;
   /** Roughly how much one request costs, such as `about 300 KB`. */
-  readonly dataCost: string;
+  readonly dataCost: DefinitionText;
 }
 
 /** A sort option for the list of loaded features. */
 export interface ListSort {
   /** Lowercase letters, digits and hyphens. */
   readonly id: string;
-  readonly label: string;
+  readonly label: DefinitionText;
   readonly field: string;
   readonly direction: "asc" | "desc";
 }
@@ -466,7 +476,10 @@ export interface CardSpec {
   /** One line each, such as `{depthKm|km} deep`. Lines whose fields are all missing are left out. */
   readonly lines: readonly string[];
   /** A link to the provider's page for the feature. */
-  readonly link?: { readonly field: string; readonly label: string };
+  readonly link?: {
+    readonly field: string;
+    readonly label: DefinitionText;
+  };
 }
 
 /** What each row of the list of loaded features shows. */
@@ -480,16 +493,16 @@ export interface ListSpec {
 interface LayerDefinitionBase {
   /** Lowercase letters, digits and hyphens, starting with a letter. Used in the permalink. */
   readonly id: string;
-  readonly name: string;
+  readonly name: DefinitionText;
   /** One sentence on what the layer shows. */
-  readonly description: string;
+  readonly description: DefinitionText;
   /** A heading the layer is listed under, such as `Hazards`. */
-  readonly group: string;
+  readonly group: DefinitionText;
   /** Roughly how much data turning the layer on costs, such as `about 30 KB`. */
-  readonly dataCost: string;
+  readonly dataCost: DefinitionText;
   readonly attribution: readonly LayerAttribution[];
   /** Shown on every card, for example that alerts are automatic estimates. */
-  readonly disclaimer?: string;
+  readonly disclaimer?: DefinitionText;
   readonly controls: readonly LayerControlDefinition[];
   readonly variables?: readonly DerivedVariable[];
 }
@@ -508,7 +521,7 @@ export interface FeedLayerDefinition<
   readonly list: ListSpec;
   readonly detail?: DetailSource;
   /** Shown when the feed has no features, such as `No volcano alerts right now`. */
-  readonly emptyText: string;
+  readonly emptyText: DefinitionText;
 }
 
 /**
@@ -567,7 +580,7 @@ export interface TileLayerDefinition extends LayerDefinitionBase {
   readonly source: TileSource;
   /** What the colours on the overlay mean, if anything. */
   readonly legend?: readonly {
-    readonly label: string;
+    readonly label: DefinitionText;
     readonly colour: PaletteSlot;
   }[];
   /**
@@ -603,7 +616,7 @@ export interface HeatmapSpec {
   /** Ordinal colours from the lowest density to the highest. Three to five. */
   readonly ramp: readonly PaletteSlot[];
   /** One word for each step of the ramp, such as `Sparse`, `Moderate`, `Dense`. */
-  readonly words: readonly string[];
+  readonly words: readonly DefinitionText[];
 }
 
 /**
@@ -615,7 +628,7 @@ export interface HeatmapLayerDefinition extends LayerDefinitionBase {
   readonly source: FeedSource | QuerySource;
   readonly heatmap: HeatmapSpec;
   /** Shown when the feed has no points. */
-  readonly emptyText: string;
+  readonly emptyText: DefinitionText;
 }
 
 /** One layer of a vector tile source, drawn as polygons or lines. */

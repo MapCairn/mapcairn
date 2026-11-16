@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { type DefinitionText, resolveText } from "@mapcairn/core";
 import {
   type KeyboardEvent,
   useEffect,
@@ -19,8 +20,8 @@ import type { UseTour } from "./useTour";
 
 /** The words of a card that is not a step. */
 export interface TourCardCopy {
-  readonly heading: string;
-  readonly text: string;
+  readonly heading: DefinitionText;
+  readonly text: DefinitionText;
 }
 
 /** Props for {@link TourCard}. */
@@ -29,7 +30,7 @@ export interface TourCardProps {
   /** The welcome card, offered on a first visit. */
   readonly welcome: TourCardCopy & {
     /** Read out once when the welcome card appears, which takes no focus. */
-    readonly announcement: string;
+    readonly announcement: DefinitionText;
   };
   /** The ending, after the last step. */
   readonly ending: TourCardCopy;
@@ -59,16 +60,17 @@ export function TourCard({ tour, welcome, ending }: TourCardProps) {
   const elementFor = useFocusElement();
   const announce = useAnnounce();
   const { reducedMotion } = usePreferences();
-  const { t } = useMessages();
+  const messages = useMessages();
+  const { t } = messages;
   const { tourHidden } = useChromeSurface();
   const { state, step, steps, focusRequest } = tour;
 
   useEffect(() => {
     if (state.status === "welcome" && !announced) {
       setAnnounced(true);
-      announce(welcome.announcement);
+      announce(resolveText(messages, welcome.announcement));
     }
-  }, [state.status, announced, announce, welcome.announcement]);
+  }, [state.status, announced, announce, welcome.announcement, messages]);
 
   useEffect(() => {
     const heading = headingRef.current;
@@ -130,15 +132,14 @@ export function TourCard({ tour, welcome, ending }: TourCardProps) {
     }
   };
 
-  let heading = ending.heading;
-  let text = ending.text;
+  let copy: TourCardCopy = ending;
   if (state.status === "welcome") {
-    heading = welcome.heading;
-    text = welcome.text;
+    copy = welcome;
   } else if (step) {
-    heading = step.heading;
-    text = step.text;
+    copy = step;
   }
+  const heading = resolveText(messages, copy.heading);
+  const text = resolveText(messages, copy.text);
   const last = state.status === "running" && state.step === steps.length - 1;
 
   return (

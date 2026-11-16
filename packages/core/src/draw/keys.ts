@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { MapKeyEvent } from "../keyboard/keyboard";
+import type { MapKeyEvent, MapKeyHelpEntry } from "../keyboard/keyboard";
 import {
   type DrawAction,
   type DrawState,
@@ -29,33 +29,18 @@ export type DrawKeyCommand =
   | { readonly type: "nudge"; readonly dx: number; readonly dy: number }
   | { readonly type: "placeAtCentre" };
 
-/** The keyboard shortcuts of the draw tool, in display order. */
-export const DRAW_KEY_HELP: readonly { keys: string; description: string }[] = [
+/** The keyboard shortcuts of the draw tool, in display order, as message keys. */
+export const DRAW_KEY_HELP: readonly MapKeyHelpEntry[] = [
+  { keys: "keyHelp.keys.space", description: "keyHelp.draw.addPoint" },
+  { keys: "keyHelp.keys.enter", description: "keyHelp.draw.finish" },
+  { keys: "keyHelp.keys.arrowKeys", description: "keyHelp.draw.nudge" },
   {
-    keys: "Space",
-    description:
-      "While drawing, add a point at the map centre, or move the selected point there",
+    keys: "keyHelp.keys.squareBrackets",
+    description: "keyHelp.draw.selectPoint",
   },
-  { keys: "Enter", description: "While drawing, finish the shape" },
-  {
-    keys: "Arrow keys",
-    description: "With a point selected, move it a little; hold Shift for more",
-  },
-  {
-    keys: "Square bracket keys",
-    description: "Select the previous or next point",
-  },
-  {
-    keys: "Delete or Backspace",
-    description:
-      "Remove the selected point or shape, or the last point while drawing",
-  },
-  { keys: "Control or Command with Z", description: "Undo; add Shift to redo" },
-  {
-    keys: "Escape",
-    description:
-      "Step back: leave a point, cancel the shape, then close drawing",
-  },
+  { keys: "keyHelp.keys.deleteBackspace", description: "keyHelp.draw.remove" },
+  { keys: "keyHelp.keys.undo", description: "keyHelp.draw.undo" },
+  { keys: "keyHelp.keys.escape", description: "keyHelp.draw.escape" },
 ];
 
 const ARROWS: Readonly<Record<string, { x: number; y: number }>> = {

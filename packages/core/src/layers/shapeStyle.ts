@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { formatNumber } from "../format/format";
+import { resolveText } from "../messages/resolveText";
 import type { FieldValue } from "../ports/layers";
 import type { MessageCatalogue } from "../ports/messages";
 import type {
@@ -66,7 +67,10 @@ function classOf(
 ): ShapeClass {
   return {
     appearance: { colour, ...defaults(style, marks) },
-    label: typeof label === "string" ? () => label : label,
+    label:
+      typeof label === "string"
+        ? (catalogue) => resolveText(catalogue, label)
+        : label,
   };
 }
 

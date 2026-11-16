@@ -67,7 +67,7 @@ const OSM_MAX_ZOOM = 19;
 
 const BRIGHT: BasemapDefinition = {
   id: "bright",
-  name: "Bright",
+  name: "basemap.bright.name",
   source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/bright` },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
@@ -80,7 +80,7 @@ const BRIGHT: BasemapDefinition = {
 
 const LIBERTY: BasemapDefinition = {
   id: "liberty",
-  name: "Liberty",
+  name: "basemap.liberty.name",
   source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/liberty` },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
@@ -97,7 +97,7 @@ const LIBERTY: BasemapDefinition = {
 
 const COLORFUL: BasemapDefinition = {
   id: "colorful",
-  name: "Colorful",
+  name: "basemap.colorful.name",
   source: {
     kind: "vector",
     styleUrl: "https://tiles.versatiles.org/assets/styles/colorful/style.json",
@@ -118,7 +118,7 @@ const COLORFUL: BasemapDefinition = {
 
 const FIORD: BasemapDefinition = {
   id: "fiord",
-  name: "Fiord",
+  name: "basemap.fiord.name",
   source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/fiord` },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
@@ -134,7 +134,7 @@ const FIORD: BasemapDefinition = {
 
 const DARK: BasemapDefinition = {
   id: "dark",
-  name: "Dark",
+  name: "basemap.dark.name",
   source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/dark` },
   minZoom: 0,
   maxZoom: VECTOR_MAX_ZOOM,
@@ -154,7 +154,7 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
   COLORFUL,
   {
     id: "positron",
-    name: "Positron",
+    name: "basemap.positron.name",
     source: { kind: "vector", styleUrl: `${OPEN_FREE_MAP_STYLES}/positron` },
     minZoom: 0,
     maxZoom: VECTOR_MAX_ZOOM,
@@ -167,7 +167,7 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
     // attribution and a valid Referer, which browsers send by default under
     // the site's `strict-origin-when-cross-origin` referrer policy.
     id: "osm",
-    name: "Streets",
+    name: "basemap.osm.name",
     source: {
       kind: "raster",
       tileUrl: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",

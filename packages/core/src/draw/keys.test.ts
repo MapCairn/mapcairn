@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { isMessageKey } from "../messages/resolveText";
 import {
   DRAW_KEY_HELP,
   DRAW_NUDGE_PX,
@@ -223,6 +224,13 @@ describe("vertex stepping and placing", () => {
 });
 
 describe("DRAW_KEY_HELP", () => {
+  it("is written as message keys, so a language can translate it", () => {
+    for (const entry of DRAW_KEY_HELP) {
+      expect(isMessageKey(entry.keys)).toBe(true);
+      expect(isMessageKey(entry.description)).toBe(true);
+    }
+  });
+
   it("describes each key with no empty text", () => {
     expect(DRAW_KEY_HELP.length).toBeGreaterThan(4);
     for (const entry of DRAW_KEY_HELP) {

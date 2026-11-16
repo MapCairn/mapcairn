@@ -10,7 +10,7 @@ import {
 } from "@mapcairn/core";
 import { ArrowLeft, Crosshair, Layers, TriangleAlert, X } from "lucide-react";
 import { type Ref, useId } from "react";
-import { useMessages } from "../services";
+import { useMessages, useResolveText } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
@@ -71,6 +71,7 @@ export function FeatureCard({
   const headingId = useId();
   const messages = useMessages();
   const { t } = messages;
+  const resolve = useResolveText();
   const { definition } = selected.layer;
   if (!hasCard(definition)) {
     return null;
@@ -82,7 +83,7 @@ export function FeatureCard({
   const context = { now: layers.now(), catalogue: messages };
   const fill = (template: string) =>
     formatTemplate(template, feature.fields, formatters, context);
-  const title = fill(card.title) ?? definition.name;
+  const title = fill(card.title) ?? resolve(definition.name);
   const lines = card.lines
     .map(fill)
     .filter((line): line is string => line !== null && line.trim() !== "");
@@ -121,7 +122,7 @@ export function FeatureCard({
           }}
         />
       </div>
-      <p className={styles.muted}>{definition.name}</p>
+      <p className={styles.muted}>{resolve(definition.name)}</p>
       {feed ? (
         <p className={styles.cardLevel} data-testid="feature-card-class">
           <FeatureGlyph definition={feed} fields={feature.fields} radius={6} />
@@ -143,14 +144,14 @@ export function FeatureCard({
           rel="noopener noreferrer"
           data-testid="feature-card-link"
         >
-          {card.link.label}
+          {resolve(card.link.label)}
           <VisuallyHidden> {t("layers.card.opensInNewTab", {})}</VisuallyHidden>
         </a>
       ) : null}
       {definition.disclaimer ? (
         <p className={styles.disclaimer} data-testid="feature-card-disclaimer">
           <Icon icon={TriangleAlert} />
-          {definition.disclaimer}
+          {resolve(definition.disclaimer)}
         </p>
       ) : null}
       <div className={styles.cardActions}>
@@ -185,7 +186,7 @@ export function FeatureCard({
                 : layers.showDetail(definition.id, feature.id)
             }
           >
-            {detailButtonLabel(t, detail?.status, detailSource.label)}
+            {detailButtonLabel(t, detail?.status, resolve(detailSource.label))}
           </Button>
         ) : null}
       </div>
@@ -193,7 +194,7 @@ export function FeatureCard({
         <p className={styles.muted}>
           {detail?.status === "error"
             ? t("layers.card.areaFailed", {})
-            : t("layers.usesCost", { cost: detailSource.dataCost })}
+            : t("layers.usesCost", { cost: resolve(detailSource.dataCost) })}
         </p>
       ) : null}
     </article>

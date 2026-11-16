@@ -99,3 +99,10 @@ describe("SkipLink", () => {
     });
   });
 });
+
+describe("SkipLink without a services provider", () => {
+  it("falls back to the SDK's English", () => {
+    renderBare(<SkipLink targetId="map" />);
+    expect(screen.getByRole("link", { name: "Skip to map" })).toBeTruthy();
+  });
+});

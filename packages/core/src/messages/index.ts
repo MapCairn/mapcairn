@@ -5,3 +5,4 @@ export * from "./en-GB";
 export * from "./formatMessage";
 export * from "./languageCatalogue";
 export * from "./resolveLanguage";
+export * from "./resolveText";

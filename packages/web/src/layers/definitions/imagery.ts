@@ -10,11 +10,10 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const imagery: TileLayerDefinition = {
   id: "imagery",
-  name: "Satellite imagery",
-  description:
-    "A daily true-colour picture of the whole Earth from the NOAA-21 satellite, with that day's clouds, unlike the Satellite basemap. Detail stops at about 300 m.",
-  group: "Imagery",
-  dataCost: "about 0.5 to 1 MB per screen",
+  name: "layer.imagery.name",
+  description: "layer.imagery.description",
+  group: "layer.group.imagery",
+  dataCost: "layer.imagery.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",
@@ -25,12 +24,17 @@ const imagery: TileLayerDefinition = {
     {
       kind: "date",
       id: "date",
-      label: "Date",
+      label: "layer.control.date",
       min: "2024-02-29",
       max: { daysAgo: 1 },
       default: { daysAgo: 1 },
     },
-    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.85 },
+    {
+      kind: "opacity",
+      id: "opacity",
+      label: "layer.control.opacity",
+      default: 0.85,
+    },
   ],
   source: {
     kind: "tiles",

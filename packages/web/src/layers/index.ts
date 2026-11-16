@@ -3,9 +3,12 @@
 import {
   createDecoderRegistry,
   createFormatterRegistry,
+  createMessageCatalogue,
   createStaticLayerCatalogue,
+  EN_GB_CATALOGUE,
   type LayerCatalogue,
   type LayerDefinition,
+  resolveText,
 } from "@mapcairn/core";
 
 /**
@@ -27,12 +30,25 @@ const modules = import.meta.glob<LayerDefinition>("./definitions/*.ts", {
   import: "default",
 });
 
-/** The host's layers, ordered by group and then by name. */
+/** The words the host's catalogue order is judged by, so it is the same in every language. */
+const ENGLISH = createMessageCatalogue(
+  "en-GB",
+  EN_GB_CATALOGUE,
+  EN_GB_CATALOGUE,
+);
+
+/** A definition's group and name in English, joined so groups sort before names. */
+function sortKey(definition: LayerDefinition): string {
+  return `${resolveText(ENGLISH, definition.group)}\u0000${resolveText(ENGLISH, definition.name)}`;
+}
+
+/**
+ * The host's layers, ordered by group and then by name, as the English words
+ * read. The order is fixed at start-up and does not follow the language.
+ */
 export const LAYER_DEFINITIONS: readonly LayerDefinition[] = Object.values(
   modules,
-).sort((a, b) =>
-  `${a.group}\u0000${a.name}`.localeCompare(`${b.group}\u0000${b.name}`),
-);
+).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
 /**
  * The catalogue the composition root hands the ui. It validates every

@@ -11,11 +11,11 @@ import { GDACS_ALERTS } from "./gdacs/alerts";
 const droughtAlerts: FeedLayerDefinition = {
   ...GDACS_ALERTS,
   id: "drought-alerts",
-  name: "Drought alerts",
-  description: "Current droughts that GDACS rates for their impact on people.",
-  group: "Floods, storms and droughts",
+  name: "layer.drought-alerts.name",
+  description: "layer.drought-alerts.description",
+  group: "layer.group.floodsStormsAndDroughts",
   source: { ...GDACS_ALERTS.source, filter: { field: "type", in: ["DR"] } },
-  emptyText: "No drought alerts right now.",
+  emptyText: "layer.drought-alerts.emptyText",
 };
 
 export default droughtAlerts;

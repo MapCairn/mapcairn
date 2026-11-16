@@ -9,11 +9,10 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const fireHotspots: TileLayerDefinition = {
   id: "fire-hotspots",
-  name: "Fire hotspots",
-  description:
-    "Places where the MODIS sensor on the Terra satellite saw unusual heat on the chosen day, such as fires. Each mark is about 1 km.",
-  group: "Fires",
-  dataCost: "about 10 to 50 KB per screen",
+  name: "layer.fire-hotspots.name",
+  description: "layer.fire-hotspots.description",
+  group: "layer.group.fires",
+  dataCost: "layer.fire-hotspots.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",
@@ -24,12 +23,17 @@ const fireHotspots: TileLayerDefinition = {
     {
       kind: "date",
       id: "date",
-      label: "Date",
+      label: "layer.control.date",
       min: "2026-02-10",
       max: { daysAgo: 1 },
       default: { daysAgo: 1 },
     },
-    { kind: "opacity", id: "opacity", label: "Opacity", default: 1 },
+    {
+      kind: "opacity",
+      id: "opacity",
+      label: "layer.control.opacity",
+      default: 1,
+    },
   ],
   source: {
     kind: "tiles",

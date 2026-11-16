@@ -530,7 +530,153 @@ export type MessageKey =
   | "layers.key.nameKey"
   | "layers.time.date"
   | "layers.time.time"
-  | "layers.time.status";
+  | "layers.time.status"
+  // Definition text: layer and basemap fields, keyboard help
+  | "layer.cyclones.name"
+  | "layer.cyclones.description"
+  | "layer.cyclones.emptyText"
+  | "layer.group.floodsStormsAndDroughts"
+  | "layer.drought-alerts.name"
+  | "layer.drought-alerts.description"
+  | "layer.drought-alerts.emptyText"
+  | "layer.earth-at-night.name"
+  | "layer.earth-at-night.description"
+  | "layer.earth-at-night.dataCost"
+  | "layer.group.imagery"
+  | "layer.control.opacity"
+  | "layer.earthquakes.name"
+  | "layer.earthquakes.description"
+  | "layer.earthquakes.dataCost"
+  | "layer.earthquakes.emptyText"
+  | "layer.group.earthquakesAndVolcanoes"
+  | "layer.earthquakes.control.window.label"
+  | "layer.earthquakes.control.window.option.hour"
+  | "layer.earthquakes.control.window.option.day"
+  | "layer.earthquakes.control.window.option.week"
+  | "layer.earthquakes.control.small.label"
+  | "layer.earthquakes.control.small.description"
+  | "layer.earthquakes.key.1"
+  | "layer.earthquakes.key.2"
+  | "layer.earthquakes.key.3"
+  | "layer.earthquakes.key.4"
+  | "layer.earthquakes.key.5"
+  | "layer.earthquakes.card.link"
+  | "layer.earthquakes.sort.newest"
+  | "layer.earthquakes.sort.strongest"
+  | "layer.fire-alerts.name"
+  | "layer.fire-alerts.description"
+  | "layer.fire-alerts.emptyText"
+  | "layer.group.fires"
+  | "layer.fire-hotspots-viirs.name"
+  | "layer.fire-hotspots-viirs.description"
+  | "layer.fire-hotspots-viirs.dataCost"
+  | "layer.control.date"
+  | "layer.fire-hotspots.name"
+  | "layer.fire-hotspots.description"
+  | "layer.fire-hotspots.dataCost"
+  | "layer.flood-alerts.name"
+  | "layer.flood-alerts.description"
+  | "layer.flood-alerts.emptyText"
+  | "layer.flood-hazard.name"
+  | "layer.flood-hazard.description"
+  | "layer.flood-hazard.dataCost"
+  | "layer.flood-hazard.disclaimer"
+  | "layer.imagery.name"
+  | "layer.imagery.description"
+  | "layer.imagery.dataCost"
+  | "layer.population.name"
+  | "layer.population.description"
+  | "layer.population.dataCost"
+  | "layer.group.people"
+  | "layer.rainfall-half-hourly.name"
+  | "layer.rainfall-half-hourly.description"
+  | "layer.rainfall-half-hourly.dataCost"
+  | "layer.rainfall-half-hourly.disclaimer"
+  | "layer.rainfall-half-hourly.control.time.label"
+  | "layer.rainfall-half-hourly.control.time.description"
+  | "layer.rainfall.name"
+  | "layer.rainfall.description"
+  | "layer.rainfall.dataCost"
+  | "layer.rainfall.disclaimer"
+  | "layer.rainfall.control.date.description"
+  | "layer.sea-temperature-anomaly.name"
+  | "layer.sea-temperature-anomaly.description"
+  | "layer.sea-temperature-anomaly.dataCost"
+  | "layer.group.oceans"
+  | "layer.volcano-alerts.name"
+  | "layer.volcano-alerts.description"
+  | "layer.volcano-alerts.emptyText"
+  | "layer.world-countries.name"
+  | "layer.world-countries.description"
+  | "layer.world-countries.dataCost"
+  | "layer.world-countries.disclaimer"
+  | "layer.world-countries.emptyText"
+  | "layer.group.boundaries"
+  | "layer.world-countries.key.1"
+  | "layer.world-countries.key.2"
+  | "layer.world-countries.key.3"
+  | "layer.world-countries.key.4"
+  | "layer.world-countries.key.5"
+  | "layer.world-countries.sort.name"
+  | "layer.world-countries.sort.population"
+  | "layer.gdacs.dataCost"
+  | "layer.gdacs.disclaimer"
+  | "layer.gdacs.key.1"
+  | "layer.gdacs.key.2"
+  | "layer.gdacs.key.3"
+  | "layer.gdacs.key.4"
+  | "layer.gdacs.card.link"
+  | "layer.gdacs.sort.newest"
+  | "layer.gdacs.sort.alert"
+  | "layer.gdacs.detail.label"
+  | "layer.gdacs.detail.dataCost"
+  | "basemap.bright.name"
+  | "basemap.liberty.name"
+  | "basemap.colorful.name"
+  | "basemap.fiord.name"
+  | "basemap.dark.name"
+  | "basemap.positron.name"
+  | "basemap.osm.name"
+  | "keyHelp.keys.arrowKeys"
+  | "keyHelp.keys.shiftUpDown"
+  | "keyHelp.keys.shiftLeftRight"
+  | "keyHelp.keys.plusMinus"
+  | "keyHelp.keys.homeOr0"
+  | "keyHelp.keys.p"
+  | "keyHelp.keys.i"
+  | "keyHelp.keys.escape"
+  | "keyHelp.keys.space"
+  | "keyHelp.keys.enter"
+  | "keyHelp.keys.squareBrackets"
+  | "keyHelp.keys.deleteBackspace"
+  | "keyHelp.keys.undo"
+  | "keyHelp.map.pan"
+  | "keyHelp.map.panFurther"
+  | "keyHelp.map.rotate"
+  | "keyHelp.map.zoom"
+  | "keyHelp.map.north"
+  | "keyHelp.map.pin"
+  | "keyHelp.map.identify"
+  | "keyHelp.map.escape"
+  | "keyHelp.draw.addPoint"
+  | "keyHelp.draw.finish"
+  | "keyHelp.draw.nudge"
+  | "keyHelp.draw.selectPoint"
+  | "keyHelp.draw.remove"
+  | "keyHelp.draw.undo"
+  | "keyHelp.draw.escape"
+  | "host.map.keyInstruction";
+
+/**
+ * Text a definition shows a person: a {@link MessageKey}, looked up in the
+ * active catalogue where the definition is rendered, or a plain string,
+ * shown as written. A third-party definition keeps writing plain strings; the
+ * reference host's own definitions use keys so they can be translated. Read
+ * it with `resolveText`. It is a plain `string` at compile time, so a host's
+ * definition needs no cast, and the runtime check against the English
+ * catalogue decides what is a key.
+ */
+export type DefinitionText = MessageKey | string;
 
 /**
  * The parameters a key's placeholders need. A key with no placeholders maps
@@ -851,8 +997,8 @@ interface MessageParamOverrides {
     readonly total: number;
   };
   readonly "tools.tour.stepAnnouncement": {
-    readonly step: number;
-    readonly total: number;
+    /** The `tools.tour.progress` message, so the announcement and the card say the step the same way. */
+    readonly progress: string;
     readonly heading: string;
     readonly text: string;
   };
@@ -917,6 +1063,11 @@ interface MessageParamOverrides {
     readonly slot: string;
     readonly newest: string;
   };
+  // Definition text: layer and basemap fields, keyboard help
+  readonly "host.map.keyInstruction": {
+    readonly keys: string;
+    readonly description: string;
+  };
 }
 
 /** The parameters every {@link MessageKey} takes, keyed by the key itself. */
@@ -936,7 +1087,8 @@ export type MessageValue = string | number | Date | readonly string[];
 /**
  * The parameters a {@link Message} carries: those of the key, except that a
  * text placeholder may also hold another message, which is formatted first
- * (a distance inside "Total distance {distance}"). A key with no
+ * (a distance inside "Total distance {distance}"), and a list of strings
+ * may hold messages among its items. A key with no
  * placeholders takes none.
  */
 export type MessageArgs<P> =
@@ -945,7 +1097,9 @@ export type MessageArgs<P> =
     : {
         readonly [Name in keyof P]: P[Name] extends string
           ? P[Name] | Message
-          : P[Name];
+          : P[Name] extends readonly string[]
+            ? readonly (string | Message)[]
+            : P[Name];
       };
 
 /**

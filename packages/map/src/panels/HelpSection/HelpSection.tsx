@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { DRAW_KEY_HELP, MAP_KEY_HELP } from "@mapcairn/core";
+import { DRAW_KEY_HELP, MAP_KEY_HELP, resolveText } from "@mapcairn/core";
 import type { Ref } from "react";
 import { useMessages, usePreferences } from "../../services";
 import { Button } from "../../ui/Button";
@@ -38,7 +38,8 @@ export function HelpSection({
   onStartTour,
 }: HelpSectionProps) {
   const { finePointer } = usePreferences();
-  const { t } = useMessages();
+  const messages = useMessages();
+  const { t } = messages;
   const subLevel = nextHeadingLevel(headingLevel);
   return (
     <Section
@@ -74,8 +75,10 @@ export function HelpSection({
           <dl className={shortcuts}>
             {MAP_KEY_HELP.map((entry) => (
               <div key={entry.keys} className={shortcut}>
-                <dt className={keys}>{entry.keys}</dt>
-                <dd className={action}>{entry.description}</dd>
+                <dt className={keys}>{resolveText(messages, entry.keys)}</dt>
+                <dd className={action}>
+                  {resolveText(messages, entry.description)}
+                </dd>
               </div>
             ))}
           </dl>
@@ -89,8 +92,10 @@ export function HelpSection({
           <dl className={shortcuts}>
             {DRAW_KEY_HELP.map((entry) => (
               <div key={entry.keys} className={shortcut}>
-                <dt className={keys}>{entry.keys}</dt>
-                <dd className={action}>{entry.description}</dd>
+                <dt className={keys}>{resolveText(messages, entry.keys)}</dt>
+                <dd className={action}>
+                  {resolveText(messages, entry.description)}
+                </dd>
               </div>
             ))}
           </dl>

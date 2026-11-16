@@ -10,6 +10,7 @@ import {
   type LayerDefinition,
   type LayerFeature,
   type LayerSource,
+  textOrMessage,
   tileUrl,
 } from "@mapcairn/core";
 import { errorKind } from "./layerStatus";
@@ -159,7 +160,7 @@ export function outcomeOf(
       found: hits.length,
       asked: found.length + failed.length,
       available: available - cancelled,
-      failed: failed.map(({ layer }) => layer.definition.name),
+      failed: failed.map(({ layer }) => textOrMessage(layer.definition.name)),
     },
   };
 }

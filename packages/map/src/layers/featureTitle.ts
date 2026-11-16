@@ -8,11 +8,12 @@ import {
   hasCard,
   type LayerDefinition,
   type LayerFeature,
+  resolveText,
 } from "@mapcairn/core";
 
 /**
  * The title of a feature's card, from its layer's card template (a feed's own
- * or a tile layer's `identify` card), or the layer's name when the layer has
+ * or a tile layer's `identify` card), or the layer's name (read in the context's language) when the layer has
  * no card or the template fills to nothing.
  */
 export function featureTitle(
@@ -22,7 +23,7 @@ export function featureTitle(
   context: FormatContext,
 ): string {
   if (!hasCard(definition)) {
-    return definition.name;
+    return resolveText(context.catalogue, definition.name);
   }
   return (
     formatTemplate(
@@ -30,6 +31,6 @@ export function featureTitle(
       feature.fields,
       formatters,
       context,
-    ) ?? definition.name
+    ) ?? resolveText(context.catalogue, definition.name)
   );
 }

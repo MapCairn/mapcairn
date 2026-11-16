@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   ChromeSkeleton,
+  chromeSkeletonCopy,
   SkipLink,
   useMessages,
   VisuallyHidden,
@@ -32,7 +33,8 @@ export const links: LinksFunction = () => [
  *   placeholder and the skeleton in the same boxes.
  */
 export default function HomeRoute() {
-  const { t } = useMessages();
+  const messages = useMessages();
+  const { t } = messages;
   return (
     <>
       <SkipLink targetId={MAP_REGION_ID} />
@@ -48,7 +50,11 @@ export default function HomeRoute() {
             data-testid="map-placeholder"
           >
             <VisuallyHidden>{t("app.loadingMap", {})}</VisuallyHidden>
-            <ChromeSkeleton directions draw />
+            <ChromeSkeleton
+              copy={chromeSkeletonCopy(messages)}
+              directions
+              draw
+            />
           </main>
         }
       >

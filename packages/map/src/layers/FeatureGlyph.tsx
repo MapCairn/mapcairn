@@ -8,6 +8,7 @@ import {
   isShapeStyle,
   type LegendEntry,
   type MessageCatalogue,
+  resolveText,
 } from "@mapcairn/core";
 import { useMessages } from "../services";
 import { MarkerGlyph } from "./MarkerGlyph";
@@ -25,7 +26,7 @@ export function featureClass(
   const { style } = definition;
   return isShapeStyle(style)
     ? evaluateShapeStyle(style, fields, catalogue).label
-    : evaluatePointStyle(style, fields).label;
+    : resolveText(catalogue, evaluatePointStyle(style, fields).label);
 }
 
 /** Props for {@link FeatureGlyph}. */

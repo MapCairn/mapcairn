@@ -10,7 +10,9 @@ import {
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
   FakeDevicePreferences,
+  FakeMessageCatalogue,
   MemorySettingsStore,
+  resolveText,
   type Settings,
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
@@ -32,6 +34,10 @@ const PREVIEWED = BASEMAPS.map((basemap) => ({
   thumbnail: `/basemaps/${basemap.id}.jpg`,
 }));
 const PREVIEWED_CATALOGUE = createBasemapCatalogue(PREVIEWED);
+
+/** The English name the picker shows for a basemap. */
+const nameOf = (basemap: BasemapDefinition) =>
+  resolveText(new FakeMessageCatalogue(), basemap.name);
 
 const { thumbnail: _thumbnail, ...withoutThumbnail } = FAKE_VECTOR_BASEMAP;
 
@@ -82,10 +88,10 @@ describe("BasemapPicker", () => {
   it("names each radio by its visible basemap name", () => {
     renderPicker();
     for (const basemap of BASEMAPS) {
-      expect(radio(basemap.name)).toBeInTheDocument();
+      expect(radio(nameOf(basemap))).toBeInTheDocument();
       expect(
         within(screen.getByTestId(`basemap-option-${basemap.id}`)).getByText(
-          basemap.name,
+          nameOf(basemap),
         ),
       ).toBeVisible();
     }
@@ -265,7 +271,7 @@ describe("BasemapPicker in Save data mode", () => {
     expect(container.querySelectorAll("img")).toHaveLength(0);
     for (const basemap of BASEMAPS) {
       expect(
-        screen.getByRole("radio", { name: new RegExp(`^${basemap.name}`) }),
+        screen.getByRole("radio", { name: new RegExp(`^${nameOf(basemap)}`) }),
       ).toBeInTheDocument();
       expect(
         screen.getByTestId(`basemap-swatch-${basemap.id}`),
@@ -622,6 +628,32 @@ describe("BasemapPicker message catalogue", () => {
         "panels.basemap.unavailable",
         "panels.basemap.tryAgain",
       ]),
+    );
+  });
+});
+
+describe("BasemapPicker definition text", () => {
+  it("looks a keyed name up in the catalogue, in the tile and the announcement, and shows a plain name unchanged", () => {
+    const services = createFakeServices({
+      basemaps: createBasemapCatalogue([
+        { ...NO_PREVIEW_BASEMAP, id: "keyed", name: "basemap.dark.name" },
+        NO_PREVIEW_BASEMAP,
+      ]),
+      messages: new FakeMessageCatalogue({
+        overrides: { "basemap.dark.name": "Donker" },
+      }),
+    });
+    render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <BasemapPicker value="fake-plain" onChange={vi.fn()} />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    expect(radio("Fake plain")).toBeTruthy();
+    fireEvent.click(radio("Donker"));
+    expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+      "Basemap changed to Donker",
     );
   });
 });

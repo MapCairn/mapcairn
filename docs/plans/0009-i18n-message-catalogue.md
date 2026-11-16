@@ -1,6 +1,6 @@
 # 0009: A message catalogue port, and English plus Afrikaans on the reference host
 
-Status: proposed. Tracking issue: #231.
+Status: in progress; steps 1-8 built, step 9 (guide) and the Afrikaans catalogue follow. Tracking issue: #231.
 
 ## Goal
 

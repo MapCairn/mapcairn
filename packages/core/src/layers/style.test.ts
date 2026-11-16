@@ -250,3 +250,142 @@ describe("legendFor", () => {
     ]);
   });
 });
+
+describe("legendFor with keyed definition text", () => {
+  const scripted = new FakeMessageCatalogue({
+    overrides: {
+      "layer.earthquakes.key.1": "Onder 2,5",
+      "layer.gdacs.key.1": "Groen waarskuwing",
+      "layer.gdacs.key.4": "Geen waarskuwingsvlak",
+      "layer.world-countries.key.1": "Onder 1 miljoen",
+      "layer.control.opacity": "Deursigtigheid",
+    },
+  });
+
+  it("looks a point step label up and shows a plain one as written", () => {
+    const style: PointStyle = {
+      colour: {
+        kind: "steps",
+        field: "value",
+        steps: [
+          {
+            min: 0,
+            label: "layer.earthquakes.key.1",
+            colour: "ordinal-1",
+          },
+          { min: 3, label: "3 or more", colour: "ordinal-3" },
+        ],
+      },
+    };
+    const entries = legendFor(
+      { ...SAMPLE_FEED_LAYER, style },
+      scripted,
+    ).entries;
+    expect(entries.map((entry) => entry.label)).toEqual([
+      "Onder 2,5",
+      "3 or more",
+    ]);
+  });
+
+  it("looks category, other and fixed labels up", () => {
+    const category = legendFor(
+      {
+        ...SAMPLE_ALERT_LAYER,
+        style: {
+          colour: {
+            kind: "category",
+            field: "level",
+            categories: [
+              {
+                value: "Green",
+                label: "layer.gdacs.key.1",
+                colour: "bluish-green",
+              },
+            ],
+            other: { label: "layer.gdacs.key.4", colour: "sky-blue" },
+          },
+        },
+      },
+      scripted,
+    ).entries;
+    expect(category.map((entry) => entry.label)).toEqual([
+      "Groen waarskuwing",
+      "Geen waarskuwingsvlak",
+    ]);
+    const fixed = legendFor(
+      {
+        ...SAMPLE_ALERT_LAYER,
+        style: {
+          colour: {
+            kind: "fixed",
+            colour: "blue",
+            label: "layer.control.opacity",
+          },
+        },
+      },
+      scripted,
+    ).entries;
+    expect(fixed.map((entry) => entry.label)).toEqual(["Deursigtigheid"]);
+  });
+
+  it("looks a shape class label up", () => {
+    const entries = legendFor(
+      {
+        ...SAMPLE_AREA_LAYER,
+        style: {
+          kind: "shapes",
+          geometry: "area",
+          colour: {
+            kind: "steps",
+            field: "density",
+            steps: [
+              {
+                min: 0,
+                label: "layer.world-countries.key.1",
+                colour: "ordinal-1",
+              },
+              { min: 10, label: "Ten or more", colour: "ordinal-3" },
+            ],
+          },
+        },
+      },
+      scripted,
+    ).entries;
+    expect(entries.map((entry) => entry.label)).toEqual([
+      "Onder 1 miljoen",
+      "Ten or more",
+    ]);
+  });
+
+  it("looks a heatmap word and a tile legend label up", () => {
+    const heat = legendFor(
+      {
+        ...SAMPLE_HEATMAP_LAYER,
+        heatmap: {
+          ...SAMPLE_HEATMAP_LAYER.heatmap,
+          ramp: ["ordinal-1", "ordinal-3"],
+          words: ["layer.control.opacity", "Dense"],
+        },
+      },
+      scripted,
+    ).entries;
+    expect(heat.map((entry) => entry.label)).toEqual([
+      "Deursigtigheid",
+      "Dense",
+    ]);
+    const tile = legendFor(
+      {
+        ...SAMPLE_TILE_LAYER,
+        legend: [
+          { label: "layer.control.opacity", colour: "blue" },
+          { label: "Plain", colour: "orange" },
+        ],
+      },
+      scripted,
+    ).entries;
+    expect(tile.map((entry) => entry.label)).toEqual([
+      "Deursigtigheid",
+      "Plain",
+    ]);
+  });
+});

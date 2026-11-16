@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { type FormatterRegistry, isFeedLayer } from "@mapcairn/core";
+import {
+  type FormatterRegistry,
+  isFeedLayer,
+  resolveText,
+} from "@mapcairn/core";
 import { X } from "lucide-react";
 import { type Ref, useId } from "react";
 import { useMessages } from "../services";
@@ -102,7 +106,9 @@ export function FeatureChoices({
                 ) : null}
                 <span className={styles.rowText}>
                   <span className={styles.rowTitle}>{title}</span>
-                  <span className={styles.rowSecondary}>{definition.name}</span>
+                  <span className={styles.rowSecondary}>
+                    {resolveText(messages, definition.name)}
+                  </span>
                 </span>
                 <VisuallyHidden>
                   , {t("layers.choices.openDetails", {})}

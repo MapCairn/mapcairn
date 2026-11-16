@@ -7,11 +7,11 @@ import { GDACS_ALERTS } from "./gdacs/alerts";
 const floodAlerts: FeedLayerDefinition = {
   ...GDACS_ALERTS,
   id: "flood-alerts",
-  name: "Flood alerts",
-  description: "Current floods that GDACS rates for their impact on people.",
-  group: "Floods, storms and droughts",
+  name: "layer.flood-alerts.name",
+  description: "layer.flood-alerts.description",
+  group: "layer.group.floodsStormsAndDroughts",
   source: { ...GDACS_ALERTS.source, filter: { field: "type", in: ["FL"] } },
-  emptyText: "No flood alerts right now.",
+  emptyText: "layer.flood-alerts.emptyText",
 };
 
 export default floodAlerts;

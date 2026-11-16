@@ -72,6 +72,12 @@ interface Drawn {
   readonly opacity?: number;
   /** The control values a heatmap or vector layer was drawn with. */
   readonly controls?: DataLayerState["controls"];
+  /**
+   * The catalogue a polygon or line layer's labels were written with, compared
+   * by identity: a figure in a label is written for the language, so another
+   * catalogue draws them again.
+   */
+  readonly catalogue?: MessageCatalogue;
 }
 
 /**
@@ -162,8 +168,10 @@ function draw(
     if (layer.features.length === 0) {
       return [];
     }
-    if (replaced || own.features !== layer.features) {
-      const { style } = definition;
+    const { style } = definition;
+    // Only a polygon or line layer's labels depend on the language.
+    const wrongLanguage = isShapeStyle(style) && own?.catalogue !== catalogue;
+    if (replaced || own.features !== layer.features || wrongLanguage) {
       if (isShapeStyle(style)) {
         adapter.setStyledShapes(
           definition.id,
@@ -182,7 +190,16 @@ function draw(
         );
       }
     }
-    return [[definition.id, { definition, features: layer.features }]];
+    return [
+      [
+        definition.id,
+        {
+          definition,
+          features: layer.features,
+          ...(isShapeStyle(style) ? { catalogue } : {}),
+        },
+      ],
+    ];
   }
   const tiles = tileUrl(definition, layer.controls, now);
   const opacity = opacityOf(layer);

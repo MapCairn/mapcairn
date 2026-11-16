@@ -8,16 +8,19 @@ import {
   decodeDetail,
   decodeFeed,
   defaultControlValues,
+  FakeMessageCatalogue,
   feedUrl,
   type IdentifiableLayerDefinition,
   type IdentifyTarget,
   identifyUrl,
   isFeedLayer,
   isIdentifiable,
+  isMessageKey,
   type LayerDefinition,
   LayerError,
   parseTemplate,
   readyLayers,
+  resolveText,
   SAMPLE_IDENTIFY_LAYER,
   tileUrl,
   validateLayerDefinition,
@@ -125,8 +128,38 @@ describe("the host's layer definitions", () => {
     expect(LAYER_DEFINITIONS.length).toBeGreaterThan(0);
     const ids = LAYER_DEFINITIONS.map((definition) => definition.id);
     expect(new Set(ids).size).toBe(ids.length);
-    const keys = LAYER_DEFINITIONS.map((d) => `${d.group}\u0000${d.name}`);
+    const english = new FakeMessageCatalogue();
+    const keys = LAYER_DEFINITIONS.map(
+      (d) =>
+        `${resolveText(english, d.group)}\u0000${resolveText(english, d.name)}`,
+    );
     expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it("writes its own readable text as message keys the English catalogue holds", () => {
+    const strings = (value: unknown): string[] => {
+      if (typeof value === "string") {
+        return [value];
+      }
+      if (Array.isArray(value)) {
+        return value.flatMap(strings);
+      }
+      return value !== null && typeof value === "object"
+        ? Object.values(value).flatMap(strings)
+        : [];
+    };
+    for (const definition of LAYER_DEFINITIONS) {
+      const dotted = strings(definition).filter((text) =>
+        /^layer\.[\w.-]+$/.test(text),
+      );
+      expect(dotted.length, definition.id).toBeGreaterThan(0);
+      for (const text of dotted) {
+        expect(isMessageKey(text), `${definition.id}: ${text}`).toBe(true);
+      }
+      expect(isMessageKey(definition.name), definition.id).toBe(true);
+      expect(isMessageKey(definition.description), definition.id).toBe(true);
+      expect(isMessageKey(definition.group), definition.id).toBe(true);
+    }
   });
 
   it("builds a catalogue that lists them all", () => {

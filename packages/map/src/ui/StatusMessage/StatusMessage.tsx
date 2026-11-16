@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useMessages } from "../../services";
+import { useOptionalMessages } from "../../services";
 import { Button } from "../Button";
 import { Icon, type IconComponent } from "../Icon";
 import { IconButton } from "../IconButton";
@@ -79,7 +79,7 @@ export function StatusMessage({
   className,
   ...rest
 }: StatusMessageProps) {
-  const { t } = useMessages();
+  const { t } = useOptionalMessages();
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [ready, setReady] = useState(false);

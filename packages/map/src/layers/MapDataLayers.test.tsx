@@ -4,6 +4,8 @@ import {
   createFakeServices,
   FakeLayerCatalogue,
   FakeMapAdapter,
+  FakeMessageCatalogue,
+  type FeedLayerDefinition,
   type LayerDefinition,
   SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
@@ -14,6 +16,7 @@ import {
   SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   SAMPLE_VECTOR_LAYER,
+  type ShapeStyle,
   sampleArea,
   sampleLine,
   samplePoint,
@@ -610,5 +613,82 @@ describe("MapDataLayers", () => {
     expect(
       container.querySelector("[data-testid='selection-marker']"),
     ).not.toBeNull();
+  });
+});
+
+describe("MapDataLayers language", () => {
+  it("draws a polygon layer's labels again when the language changes, because a figure is written for the language", async () => {
+    const definition: FeedLayerDefinition<ShapeStyle> = {
+      ...SAMPLE_AREA_LAYER,
+      style: {
+        ...SAMPLE_AREA_LAYER.style,
+        label: { template: "{density|number}", minzoom: 3 },
+      },
+    };
+    const services = createFakeServices({
+      layers: new FakeLayerCatalogue([definition]),
+    });
+    const adapter = new FakeMapAdapter();
+    const handle: { current: DataLayers | null } = { current: null };
+    function Harness() {
+      const layers = useDataLayers({ now: () => NOW });
+      handle.current = layers;
+      return <MapDataLayers layers={layers} />;
+    }
+    const tree = (messages: FakeMessageCatalogue) => (
+      <ServicesProvider services={{ ...services, messages }}>
+        <LiveRegionProvider>
+          <MapContext.Provider value={testMapContext({ adapter })}>
+            <Harness />
+          </MapContext.Provider>
+        </LiveRegionProvider>
+      </ServicesProvider>
+    );
+    services.fakes.layerSource.setFeatures("sample-areas", [
+      sampleArea("p", { title: "Paris", density: 1234567 }),
+    ]);
+    const view = render(tree(new FakeMessageCatalogue()));
+    act(() => handle.current?.setEnabled("sample-areas", true));
+    await waitFor(() =>
+      expect(adapter.styledShapesOf("sample-areas")?.shapes[0]?.label).toBe(
+        "1,234,567",
+      ),
+    );
+    view.rerender(tree(new FakeMessageCatalogue({ language: "de" })));
+    await waitFor(() =>
+      expect(adapter.styledShapesOf("sample-areas")?.shapes[0]?.label).toBe(
+        "1.234.567",
+      ),
+    );
+  });
+
+  it("leaves a point layer alone when the language changes, because its markers carry no words", async () => {
+    const services = createFakeServices({
+      layers: new FakeLayerCatalogue([SAMPLE_FEED_LAYER]),
+    });
+    const adapter = new FakeMapAdapter();
+    const draw = vi.spyOn(adapter, "setFeatureLayer");
+    const handle: { current: DataLayers | null } = { current: null };
+    function Harness() {
+      const layers = useDataLayers({ now: () => NOW });
+      handle.current = layers;
+      return <MapDataLayers layers={layers} />;
+    }
+    const tree = (messages: FakeMessageCatalogue) => (
+      <ServicesProvider services={{ ...services, messages }}>
+        <LiveRegionProvider>
+          <MapContext.Provider value={testMapContext({ adapter })}>
+            <Harness />
+          </MapContext.Provider>
+        </LiveRegionProvider>
+      </ServicesProvider>
+    );
+    services.fakes.layerSource.setFeatures("sample-points", [samplePoint("a")]);
+    const view = render(tree(new FakeMessageCatalogue()));
+    act(() => handle.current?.setEnabled("sample-points", true));
+    await waitFor(() => expect(draw).toHaveBeenCalledTimes(1));
+    view.rerender(tree(new FakeMessageCatalogue({ language: "de" })));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(draw).toHaveBeenCalledTimes(1);
   });
 });

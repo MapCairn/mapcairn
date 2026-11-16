@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from "react";
-import { useMessages } from "../../services";
+import { useOptionalMessages } from "../../services";
 import { visuallyHidden } from "../VisuallyHidden/VisuallyHidden.css";
 import { skipLink } from "./SkipLink.css";
 
@@ -29,7 +29,7 @@ export function SkipLink({
   onClick,
   ...rest
 }: SkipLinkProps) {
-  const { t } = useMessages();
+  const { t } = useOptionalMessages();
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event);
     if (event.defaultPrevented) {
