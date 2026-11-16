@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  type FormatterRegistry,
-  formatNumber,
-  isFeedLayer,
-} from "@mapcairn/core";
+import { type FormatterRegistry, isFeedLayer } from "@mapcairn/core";
 import { X } from "lucide-react";
 import { type Ref, useId } from "react";
 import { useMessages } from "../services";
@@ -41,9 +37,10 @@ export function FeatureChoices({
   headingRef,
 }: FeatureChoicesProps) {
   const headingId = useId();
-  const { language } = useMessages();
+  const messages = useMessages();
+  const { t } = messages;
   const Heading = `h${headingLevel}` as const;
-  const context = { now: layers.now() };
+  const context = { now: layers.now(), catalogue: messages };
   return (
     <section
       className={styles.card}
@@ -58,10 +55,12 @@ export function FeatureChoices({
           className={styles.cardHeading}
           data-testid="feature-choices-heading"
         >
-          {formatNumber(choices.length, language)} features here
+          {messages.plural("layers.choices.heading", {
+            count: choices.length,
+          })}
         </Heading>
         <IconButton
-          label="Close list"
+          label={t("layers.choices.close", {})}
           icon={X}
           size="compact"
           data-testid="feature-choices-close"
@@ -73,7 +72,7 @@ export function FeatureChoices({
           }}
         />
       </div>
-      <p className={styles.muted}>Choose one to see its details.</p>
+      <p className={styles.muted}>{t("layers.choices.hint", {})}</p>
       <ul className={styles.rows}>
         {choices.map(({ layer, feature }) => {
           const { definition } = layer;
@@ -105,7 +104,9 @@ export function FeatureChoices({
                   <span className={styles.rowTitle}>{title}</span>
                   <span className={styles.rowSecondary}>{definition.name}</span>
                 </span>
-                <VisuallyHidden>, open details</VisuallyHidden>
+                <VisuallyHidden>
+                  , {t("layers.choices.openDetails", {})}
+                </VisuallyHidden>
               </button>
             </li>
           );

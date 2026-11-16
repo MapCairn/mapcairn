@@ -8,7 +8,6 @@ import {
   describeZoomOut,
   type FormatterRegistry,
   formatMessage,
-  formatNumber,
   formatTemplate,
   isControlEnabled,
   isFeedLayer,
@@ -54,20 +53,27 @@ function statusText(
   emptyText: string,
   messages: MessageCatalogue,
 ): string | null {
-  const { language } = messages;
+  const { language, t } = messages;
   switch (status.kind) {
     case "loading":
-      return "Loading";
+      return t("layers.status.loading", {});
     case "ready":
-      return status.capped
-        ? `Updated ${timeOfDay(status.updatedAt, language)}. Showing the first ${formatNumber(status.count, language)}. Zoom in to see more.`
-        : `Updated ${timeOfDay(status.updatedAt, language)}, ${formatNumber(status.count, language)} shown`;
+      return t(
+        status.capped ? "layers.status.updatedCapped" : "layers.status.updated",
+        {
+          time: timeOfDay(status.updatedAt, language),
+          count: status.count,
+        },
+      );
     case "zoom-in":
       return formatMessage(messages, describeZoomIn(status.level));
     case "zoom-out":
       return formatMessage(messages, describeZoomOut(status.level));
     case "empty":
-      return `Updated ${timeOfDay(status.updatedAt, language)}. ${emptyText}`;
+      return t("layers.status.updatedEmpty", {
+        time: timeOfDay(status.updatedAt, language),
+        text: emptyText,
+      });
     default:
       return null;
   }
@@ -194,25 +200,26 @@ interface ListProps {
  */
 function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
   const [showAll, setShowAll] = useState(false);
-  const { language } = useMessages();
+  const messages = useMessages();
+  const { t } = messages;
   const { definition } = layer;
   if (!isFeedLayer(definition) || layer.sorted.length === 0) {
     return null;
   }
-  const context = { now: layers.now() };
+  const context = { now: layers.now(), catalogue: messages };
   const rows = showAll ? layer.sorted : layer.sorted.slice(0, LIST_PAGE);
-  const count = formatNumber(layer.sorted.length, language);
+  const count = layer.sorted.length;
   return (
     <details
       className={styles.featureList}
       data-testid={`layer-list-${definition.id}`}
     >
       <summary className={styles.listSummary}>
-        List of {count} on the map
+        {t("layers.list.summary", { count })}
       </summary>
       {definition.list.sorts.length > 1 ? (
         <SegmentedControl
-          label="Sort by"
+          label={t("layers.list.sortBy", {})}
           options={definition.list.sorts.map((sort) => ({
             value: sort.id,
             label: sort.label,
@@ -255,7 +262,9 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
                     <span className={styles.rowSecondary}>{secondary}</span>
                   ) : null}
                 </span>
-                <VisuallyHidden>, show on map</VisuallyHidden>
+                <VisuallyHidden>
+                  , {t("layers.list.showOnMap", {})}
+                </VisuallyHidden>
               </button>
             </li>
           );
@@ -263,7 +272,7 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
       </ul>
       {rows.length < layer.sorted.length ? (
         <Button variant="quiet" onClick={() => setShowAll(true)}>
-          Show all {count}
+          {t("layers.list.showAll", { count })}
         </Button>
       ) : null}
     </details>
@@ -295,6 +304,7 @@ export function LayerItem({
   const emptyText = loadsFeatures(definition) ? definition.emptyText : "";
   const messages = useMessages();
   const format = useFormatMessage();
+  const { t } = messages;
   const text = statusText(status, emptyText, messages);
   return (
     <li className={styles.layerItem} data-testid={`layer-${definition.id}`}>
@@ -305,7 +315,9 @@ export function LayerItem({
         onCheckedChange={(checked) => layers.setEnabled(definition.id, checked)}
       />
       {saveData ? (
-        <p className={styles.muted}>Uses {definition.dataCost}.</p>
+        <p className={styles.muted}>
+          {t("layers.usesCost", { cost: definition.dataCost })}
+        </p>
       ) : null}
       {enabled ? (
         <div className={styles.details}>
@@ -351,8 +363,8 @@ export function LayerItem({
               <span className={styles.statusError}>
                 <Icon icon={TriangleAlert} />
                 {status.error === "network"
-                  ? "Could not load. Check your connection."
-                  : "Could not load: the provider sent something unexpected."}
+                  ? t("layers.status.loadFailedNetwork", {})
+                  : t("layers.status.loadFailedInvalid", {})}
               </span>
               <Button
                 variant="secondary"
@@ -360,7 +372,7 @@ export function LayerItem({
                 data-testid={`layer-retry-${definition.id}`}
                 onClick={() => layers.retry(definition.id)}
               >
-                Try again
+                {t("layers.tryAgain", {})}
               </Button>
             </div>
           ) : null}
@@ -374,7 +386,7 @@ export function LayerItem({
           ))}
           <LayerKey
             definition={definition}
-            label={`Key for ${definition.name}`}
+            label={t("layers.keyFor", { name: definition.name })}
             testId={`layer-legend-${definition.id}`}
           />
           {definition.disclaimer ? (

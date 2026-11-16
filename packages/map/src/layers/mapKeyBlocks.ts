@@ -6,6 +6,7 @@ import {
   type LegendEntry,
   legendFor,
   type Message,
+  type MessageCatalogue,
 } from "@mapcairn/core";
 import type { DataLayerState } from "./useDataLayers";
 
@@ -26,13 +27,15 @@ export interface MapKeyBlock {
 /**
  * The blocks of the map key: one for each layer that is on and has a key, in
  * catalogue order. Pure, so the image export can draw the same key the map
- * shows. An empty result means there is no key to show at all.
+ * shows. The words for an interval are written in `catalogue`'s language.
+ * An empty result means there is no key to show at all.
  */
 export function mapKeyBlocks(
   layers: readonly DataLayerState[],
+  catalogue: MessageCatalogue,
 ): readonly MapKeyBlock[] {
   return layers.flatMap(({ definition, enabled, controls }) => {
-    const [first, ...rest] = legendFor(definition).entries;
+    const [first, ...rest] = legendFor(definition, catalogue).entries;
     if (!enabled || first === undefined) {
       return [];
     }

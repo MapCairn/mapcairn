@@ -5,6 +5,7 @@ import {
   type DateTimeControlDefinition,
   FakeLayerCatalogue,
   FakeMapAdapter,
+  FakeMessageCatalogue,
   type LayerDefinition,
   SAMPLE_ALERT_LAYER,
   SAMPLE_AREA_LAYER,
@@ -48,9 +49,11 @@ const NOW = Date.UTC(2026, 10, 9, 12);
 function setup(
   definitions: readonly LayerDefinition[] = SAMPLE_LAYERS,
   chrome?: Parameters<typeof testChromeLayout>[0],
+  messages?: FakeMessageCatalogue,
 ) {
   const services = createFakeServices({
     layers: new FakeLayerCatalogue(definitions),
+    ...(messages ? { messages } : {}),
   });
   const adapter = new FakeMapAdapter();
   const onShowOnMap = vi.fn();
@@ -132,6 +135,36 @@ describe("LayersSection", () => {
       within(item("sample-points")).getByText("Uses about 30 KB."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/only while it is on/)).toBeNull();
+  });
+
+  it("asks the catalogue by key for its words, with the counts and times as parameters", async () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "layers.title": "Lae",
+        "layers.status.updated": "Opgedateer {time}, {count} gewys",
+        "layers.keyFor": "Sleutel vir {name}",
+      },
+    });
+    const { source } = setup(SAMPLE_LAYERS, undefined, messages);
+    expect(screen.getByRole("region", { name: "Lae" })).toBeInTheDocument();
+    source.setFeatures("sample-points", [samplePoint("a"), samplePoint("b")]);
+    toggle("sample-points", "Sample points");
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("layer-status-sample-points"),
+      ).toHaveTextContent(/Opgedateer \d\d:\d\d, 2 gewys/),
+    );
+    expect(
+      screen.getByRole("list", { name: "Sleutel vir Sample points" }),
+    ).toBeInTheDocument();
+    expect(
+      messages.calls.find((call) => call.key === "layers.status.updated")
+        ?.params,
+    ).toMatchObject({ count: 2 });
+    expect(messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining(["layers.intro", "layers.list.summary"]),
+    );
   });
 
   it("shows the status, controls and legend of a layer while it is on", async () => {
@@ -998,6 +1031,30 @@ describe("LayersSection", () => {
         time: within(group).getByRole("combobox", { name: "Time (UTC)" }),
       };
     };
+
+    it("asks the catalogue by key for its labels and the sentence under the inputs", () => {
+      const messages = new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "layers.time.date": "Datum (UTC)",
+          "layers.time.status": "Wys {slot}. Nuutste: {newest}.",
+        },
+      });
+      setup([SAMPLE_TIME_LAYER], undefined, messages);
+      toggle("sample-rain", "Sample rain");
+      const group = screen.getByRole("group", { name: "Time shown" });
+      expect(within(group).getByLabelText("Datum (UTC)")).toBeTruthy();
+      expect(group).toHaveTextContent(
+        "Wys 06:00 to 06:30 UTC on 9 November 2026. Nuutste: 06:00 UTC on 9 November 2026.",
+      );
+      expect(
+        messages.calls.find((call) => call.key === "layers.time.status")
+          ?.params,
+      ).toEqual({
+        slot: "06:00 to 06:30 UTC on 9 November 2026",
+        newest: "06:00 UTC on 9 November 2026",
+      });
+    });
 
     it("shows the newest slot, bounded to the days the provider has, and says so in words", () => {
       const { group, date, time } = open();

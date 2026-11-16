@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { pluralise } from "@mapcairn/core";
 import {
   type FocusEvent,
   type PointerEvent,
@@ -8,6 +7,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { useMessages } from "../services";
 import { Button } from "../ui/Button";
 import * as styles from "./Layers.css";
 import type { DataLayers } from "./useDataLayers";
@@ -32,11 +32,6 @@ export interface TurnOffGroupProps {
 interface UndoCopy {
   readonly text: string;
   readonly label: string;
-}
-
-/** The words for a batch of `count` layers, such as "3 layers". */
-function layerCount(count: number): string {
-  return `${count} ${pluralise(count, ["layer", "layers"])}`;
 }
 
 /**
@@ -166,12 +161,17 @@ function ActionRow({ layers, undo, className, children }: ActionRowProps) {
  * shared live region.
  */
 export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
+  const messages = useMessages();
   const { turnedOff, turnOff } = layers;
   const undo =
     turnedOff?.group === null
       ? {
-          text: `Turned off ${layerCount(turnedOff.count)}.`,
-          label: `Undo turning off ${layerCount(turnedOff.count)}`,
+          text: messages.plural("layers.turnOff.doneAll", {
+            count: turnedOff.count,
+          }),
+          label: messages.plural("layers.turnOff.undoAll", {
+            count: turnedOff.count,
+          }),
         }
       : null;
   return (
@@ -181,8 +181,10 @@ export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
         disabled={ids.length === 0}
         onClick={() => turnOff(ids)}
       >
-        Turn off all layers
-        <span className={styles.turnOffCount}>{ids.length} on</span>
+        {messages.t("layers.turnOff.all", {})}
+        <span className={styles.turnOffCount}>
+          {messages.t("layers.turnOff.count", { count: ids.length })}
+        </span>
       </Button>
     </ActionRow>
   );
@@ -193,12 +195,19 @@ export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
  * run, its status and Undo take the row under the group's heading.
  */
 export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
+  const { t } = useMessages();
   const { turnedOff, turnOff } = layers;
   const undo =
     turnedOff?.group === group
       ? {
-          text: `Turned off ${turnedOff.count} in ${group}.`,
-          label: `Undo turning off ${turnedOff.count} in ${group}`,
+          text: t("layers.turnOff.doneGroup", {
+            count: turnedOff.count,
+            group,
+          }),
+          label: t("layers.turnOff.undoGroup", {
+            count: turnedOff.count,
+            group,
+          }),
         }
       : null;
   if (undo === null && ids.length === 0) {
@@ -212,7 +221,7 @@ export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
           className={styles.groupTurnOff}
           onClick={() => turnOff(ids, { group })}
         >
-          Turn off {ids.length} in {group}
+          {t("layers.turnOff.group", { count: ids.length, group })}
         </Button>
       ) : null}
     </ActionRow>

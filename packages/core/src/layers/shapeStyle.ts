@@ -22,11 +22,9 @@ export const DEFAULT_LINE_WIDTH = 2.5;
 /** Opacity of a polygon's fill when the style names none. */
 export const DEFAULT_FILL_OPACITY = 0.55;
 
-/** How one polygon or line is drawn, worked out from its definition's style. */
-export interface ShapeLook {
+/** How one polygon or line is drawn, worked out from its definition's style, without its words. */
+export interface ShapeAppearance {
   readonly colour: PaletteSlot;
-  /** The words for the class, such as `10 to 99`, for the legend, list and card. */
-  readonly label: string;
   readonly pattern: FillPattern;
   readonly dash: LineDash;
   /** The outline or line width in pixels. */
@@ -34,7 +32,19 @@ export interface ShapeLook {
   readonly fillOpacity: number;
 }
 
+/** How one polygon or line is drawn, and the words for its class. */
+export interface ShapeLook extends ShapeAppearance {
+  /** The words for the class, such as `10 to 99`, for the legend, list and card. */
+  readonly label: string;
+}
+
 const MAX_FRACTION_DIGITS = 2;
+
+/** One class of a style: how it is drawn, and its words, which an interval writes in the language it is asked for. */
+interface ShapeClass {
+  readonly appearance: ShapeAppearance;
+  readonly label: (catalogue: MessageCatalogue) => string;
+}
 
 function defaults(style: ShapeStyle, marks: ShapeMarks) {
   return {
@@ -48,13 +58,16 @@ function defaults(style: ShapeStyle, marks: ShapeMarks) {
   } as const;
 }
 
-function look(
+function classOf(
   style: ShapeStyle,
   colour: PaletteSlot,
-  label: string,
+  label: string | ShapeClass["label"],
   marks: ShapeMarks,
-): ShapeLook {
-  return { colour, label, ...defaults(style, marks) };
+): ShapeClass {
+  return {
+    appearance: { colour, ...defaults(style, marks) },
+    label: typeof label === "string" ? () => label : label,
+  };
 }
 
 function intervalLabel(
@@ -82,16 +95,52 @@ function intervalLabel(
 function intervalClasses(
   style: ShapeStyle,
   colour: ShapeIntervalColour,
-  catalogue: MessageCatalogue,
-): ShapeLook[] {
+): ShapeClass[] {
   const width = (colour.max - colour.min) / colour.ramp.length;
   return colour.ramp.map((slot, index) =>
-    look(style, slot, intervalLabel(colour, index, width, catalogue), {
-      pattern: colour.patterns?.[index],
-      dash: colour.dashes?.[index],
-      width: colour.widths?.[index],
-    }),
+    classOf(
+      style,
+      slot,
+      (catalogue) => intervalLabel(colour, index, width, catalogue),
+      {
+        pattern: colour.patterns?.[index],
+        dash: colour.dashes?.[index],
+        width: colour.widths?.[index],
+      },
+    ),
   );
+}
+
+function classesOf(style: ShapeStyle): readonly ShapeClass[] {
+  const { colour } = style;
+  switch (colour.kind) {
+    case "fixed":
+      return [classOf(style, colour.colour, colour.label, colour)];
+    case "category":
+      return [
+        ...colour.categories.map((category) =>
+          classOf(style, category.colour, category.label, category),
+        ),
+        classOf(style, colour.other.colour, colour.other.label, colour.other),
+      ];
+    case "steps":
+      return colour.steps.map((step) =>
+        classOf(style, step.colour, step.label, step),
+      );
+    case "intervals":
+      return intervalClasses(style, colour);
+  }
+}
+
+/**
+ * How every class of a style is drawn, in legend order, with defaults filled
+ * in. It carries no words, so it needs no language: it is what a map engine
+ * draws from.
+ */
+export function shapeAppearances(
+  style: ShapeStyle,
+): readonly ShapeAppearance[] {
+  return classesOf(style).map(({ appearance }) => appearance);
 }
 
 /**
@@ -105,24 +154,10 @@ export function shapeClasses(
   style: ShapeStyle,
   catalogue: MessageCatalogue,
 ): readonly ShapeLook[] {
-  const { colour } = style;
-  switch (colour.kind) {
-    case "fixed":
-      return [look(style, colour.colour, colour.label, colour)];
-    case "category":
-      return [
-        ...colour.categories.map((category) =>
-          look(style, category.colour, category.label, category),
-        ),
-        look(style, colour.other.colour, colour.other.label, colour.other),
-      ];
-    case "steps":
-      return colour.steps.map((step) =>
-        look(style, step.colour, step.label, step),
-      );
-    case "intervals":
-      return intervalClasses(style, colour, catalogue);
-  }
+  return classesOf(style).map(({ appearance, label }) => ({
+    ...appearance,
+    label: label(catalogue),
+  }));
 }
 
 /** Picks a feature's {@link ShapeLook} from its fields. */

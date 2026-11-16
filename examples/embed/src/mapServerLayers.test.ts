@@ -3,6 +3,7 @@
 import {
   createDecoderRegistry,
   createFormatterRegistry,
+  FakeMessageCatalogue,
   type FeedLayerDefinition,
   isFeedLayer,
   type LayerDefinition,
@@ -15,6 +16,8 @@ import { describe, expect, it } from "vitest";
 import { mapServerLayers } from "./mapServerLayers";
 import { SAMPLE_SERVER_LAYERS } from "./sampleServerLayers";
 import type { ServerLayer } from "./serverMetadata";
+
+const catalogue = new FakeMessageCatalogue();
 
 const OPTIONS = {
   decoders: createDecoderRegistry(),
@@ -143,11 +146,9 @@ describe("mapServerLayers", () => {
         { min: 1500, label: "1,500 mm and over", colour: "ordinal-3" },
       ],
     });
-    expect(legendFor(definition).entries.map((entry) => entry.label)).toEqual([
-      "Under 1,000 mm",
-      "1,000 to 1,499 mm",
-      "1,500 mm and over",
-    ]);
+    expect(
+      legendFor(definition, catalogue).entries.map((entry) => entry.label),
+    ).toEqual(["Under 1,000 mm", "1,000 to 1,499 mm", "1,500 mm and over"]);
   });
 
   it("names the classified field on a polygon's label, so colour is not its only signal", () => {
@@ -181,7 +182,7 @@ describe("mapServerLayers", () => {
       ramp: ["ordinal-1", "ordinal-2", "ordinal-3"],
       unit: " mm",
     });
-    expect(legendFor(definition).entries).toHaveLength(3);
+    expect(legendFor(definition, catalogue).entries).toHaveLength(3);
   });
 
   it("draws a polyline as a line style", () => {

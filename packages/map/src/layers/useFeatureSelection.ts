@@ -16,7 +16,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { useSelectionStore } from "../services";
+import { useMessages, useSelectionStore } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import { featureTitle } from "./featureTitle";
 import {
@@ -117,6 +117,7 @@ export function useFeatureSelection(
   const hostStore = useSelectionStore();
   const store = hostStore ?? NO_STORE;
   const announce = useAnnounce();
+  const messages = useMessages();
   const refs = useSyncExternalStore(
     store.subscribe,
     store.getState,
@@ -160,6 +161,7 @@ export function useFeatureSelection(
     snapshots,
     formatters,
     now: layers.now,
+    messages,
   });
   const titleOf = useCallback<TitleOf>(
     (ref) => {
@@ -172,6 +174,7 @@ export function useFeatureSelection(
       return entry?.status === "shown"
         ? featureTitle(entry.definition, entry.feature, current.formatters, {
             now: current.now(),
+            catalogue: current.messages,
           })
         : null;
     },

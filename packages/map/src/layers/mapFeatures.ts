@@ -25,11 +25,12 @@ import {
   type MapStyledShapes,
   type MapVectorSourceLayer,
   type MapVectorTiles,
+  type MessageCatalogue,
   type PaletteSlot,
   type PointStyle,
-  type ShapeLook,
+  type ShapeAppearance,
   type ShapeStyle,
-  shapeClasses,
+  shapeAppearances,
   shapeEvaluator,
   tileUrl,
   type VectorTileLayerDefinition,
@@ -146,7 +147,7 @@ export function featurePosition(feature: LayerFeature): LatLng | null {
     : null;
 }
 
-function toMapLook(look: ShapeLook): MapShapeLook {
+function toMapLook(look: ShapeAppearance): MapShapeLook {
   return {
     colour: paletteColour(look.colour),
     fillOpacity: look.fillOpacity,
@@ -162,7 +163,7 @@ function toMapLook(look: ShapeLook): MapShapeLook {
  * as the fallback, and steps and equal intervals become ascending minimums.
  */
 export function toLookRule(style: ShapeStyle): MapLookRule {
-  const classes = shapeClasses(style).map(toMapLook);
+  const classes = shapeAppearances(style).map(toMapLook);
   const at = (index: number) => classes[index] as MapShapeLook;
   const { colour } = style;
   switch (colour.kind) {
@@ -338,9 +339,10 @@ export function toStyledShapes(
   features: readonly LayerFeature[],
   formatters: FormatterRegistry,
   now: number,
+  catalogue: MessageCatalogue,
 ): MapStyledShapes {
   const { style } = definition;
-  const evaluate = shapeEvaluator(style);
+  const evaluate = shapeEvaluator(style, catalogue);
   const drawn =
     style.geometry === "area"
       ? ["Polygon", "MultiPolygon"]
@@ -353,6 +355,7 @@ export function toStyledShapes(
     const label = style.label
       ? formatTemplate(style.label.template, feature.fields, formatters, {
           now,
+          catalogue,
         })
       : null;
     return [

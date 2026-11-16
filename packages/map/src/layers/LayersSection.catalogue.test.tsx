@@ -7,6 +7,7 @@ import {
   createFormatterRegistry,
   createRuntimeLayerCatalogue,
   FakeLayerCatalogue,
+  FakeMessageCatalogue,
   type LayerCatalogue,
   SAMPLE_FEED_LAYER,
   SAMPLE_TILE_LAYER,
@@ -29,8 +30,12 @@ function Section(props: Partial<LayersSectionProps>) {
 function show(
   catalogue: LayerCatalogue,
   props: Partial<LayersSectionProps> = {},
+  messages?: FakeMessageCatalogue,
 ) {
-  const services = createFakeServices({ layers: catalogue });
+  const services = createFakeServices({
+    layers: catalogue,
+    ...(messages ? { messages } : {}),
+  });
   const view = render(
     <ServicesProvider services={services}>
       <LiveRegionProvider>
@@ -106,6 +111,21 @@ describe("the Layers section when the catalogue fails", () => {
     expect(tryAgain()).toBeEnabled();
     expect(section()).toHaveTextContent(DEFAULT_INTRO);
     expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  it("asks the message catalogue by key for the Try again button", () => {
+    const messages = new FakeMessageCatalogue({
+      language: "af",
+      overrides: { "layers.tryAgain": "Probeer weer" },
+    });
+    const catalogue = loadingCatalogue();
+    show(catalogue, {}, messages);
+    act(() => catalogue.setState({ status: "failed", reason: "network" }));
+    expect(screen.getByRole("button", { name: "Probeer weer" })).toBeTruthy();
+    expect(messages.calls).toContainEqual({
+      key: "layers.tryAgain",
+      params: {},
+    });
   });
 
   it("asks the catalogue to load again when Try again is pressed", () => {

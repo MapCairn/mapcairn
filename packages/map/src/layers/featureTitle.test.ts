@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   createFormatterRegistry,
+  FakeMessageCatalogue,
   type FeedLayerDefinition,
   SAMPLE_FEED_LAYER,
   SAMPLE_IDENTIFY_LAYER,
@@ -12,7 +13,10 @@ import { describe, expect, it } from "vitest";
 import { featureTitle } from "./featureTitle";
 
 const formatters = createFormatterRegistry();
-const context = { now: Date.UTC(2026, 10, 12, 12) };
+const context = {
+  now: Date.UTC(2026, 10, 12, 12),
+  catalogue: new FakeMessageCatalogue(),
+};
 
 describe("featureTitle", () => {
   it("fills the card's title template from the feature's fields", () => {
