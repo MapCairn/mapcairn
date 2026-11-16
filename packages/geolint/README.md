@@ -116,6 +116,7 @@ Read this before you trust the heuristic rules.
 - **An open ring reports fewer crossings than its closed form,** because the closing edge is not part of it. `--fix` closes the ring, so it can reveal more crossings.
 - **A region names one country, and the outlines give some territories a code of their own.** With `--region FR`, Papeete and the other French territories that have their own country code in the outlines (French Polynesia, Guadeloupe) are reported as a region mismatch, and so are Puerto Rico's positions with `--region US`. Istanbul falls in a gap in Turkey's 1:110m outline, so `region-mismatch` misses it.
 - **With a region, `projected-coords` ranks UTM zones by how many positions land in the country,** and for a large country several zones tie. The right zone is among the top three only most of the time: in a test of 44 places it was first for 30 and in the top three for 41.
+- **On projected data `precision` also reports fractional metres,** and on a tie between systems with the same share `EPSG:3857` is listed ahead of a UTM zone, because Web Mercator comes first in the list of candidates.
 - **`antimeridian` does not flag a step of exactly 180 degrees in longitude,** and flags one of 180.0000001.
 - **A fourth number in a position is a `structure` warning,** and `--fix` leaves it unrounded.
 - **A repeated `features` member is a `structure` error, and only the first array is checked.** `--fix` fixes the first and copies a later one through unchanged.

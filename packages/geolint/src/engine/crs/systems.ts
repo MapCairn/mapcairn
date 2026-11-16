@@ -107,10 +107,13 @@ const webMercator: CandidateSystem = {
     "metres from the equator and the prime meridian, up to about 20 million",
 };
 
+/** West, south, east and north of the area the British National Grid covers, in degrees. */
+const BRITISH_NATIONAL_GRID_AREA = [-9, 49.75, 2, 61] as const;
+
 const britishNationalGrid: CandidateSystem = {
   code: "EPSG:27700",
   name: "OSGB36 / British National Grid",
-  areaOfUse: [-9, 49.75, 2, 61],
+  areaOfUse: BRITISH_NATIONAL_GRID_AREA,
   inverse: (x, y) =>
     inverseTransverseMercator(
       {

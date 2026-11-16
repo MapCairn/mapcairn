@@ -150,7 +150,7 @@ describe("precisionRule", () => {
           confidence: "high",
           path: "/geometry/coordinates",
           message:
-            "Coordinates in 2 positions have up to 10 decimal places, but 7 is about a centimetre.",
+            "Coordinates in 2 positions have up to 10 decimal places, but 7 places of longitude or latitude is about a centimetre.",
           fixable: true,
           data: { maxDecimals: 10, positions: 2 },
         },
@@ -159,7 +159,7 @@ describe("precisionRule", () => {
 
     it("words a single position in the singular", () => {
       expect(check(point(0.12345678, 1))[0]?.message).toBe(
-        "Coordinates in 1 position have up to 8 decimal places, but 7 is about a centimetre.",
+        "Coordinates in 1 position have up to 8 decimal places, but 7 places of longitude or latitude is about a centimetre.",
       );
     });
 

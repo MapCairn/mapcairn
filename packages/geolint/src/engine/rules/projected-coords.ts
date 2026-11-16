@@ -20,6 +20,8 @@ const SAMPLE_SIZE = 16;
 const MAX_CANDIDATES = 3;
 /** With a region, a system must put at least this share of the sample in it to be named. */
 const MIN_REGION_SHARE = 0.5;
+/** Turns a share between 0 and 1 into a percentage. */
+const PERCENT = 100;
 
 /** UTM eastings run from about 166,000 to 834,000 metres across a zone, and northings to about 9.4 million. */
 const UTM_EASTING_RANGE = [100000, 900000] as const;
@@ -145,7 +147,7 @@ function candidatesWithRegion(
       scored.push({
         code: system.code,
         name: system.name,
-        reason: `puts ${Math.round(share * 100)} per cent of the positions checked in ${context.regions.join(" or ")}`,
+        reason: `puts ${Math.round(share * PERCENT)} per cent of the positions checked in ${context.regions.join(" or ")}`,
         share,
       });
     }

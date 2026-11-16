@@ -116,7 +116,7 @@ export const precisionRule: Rule = {
   severity: "info",
   confidence: "high",
   summary:
-    "Coordinates have more than 7 decimal places, finer than about a centimetre at the equator.",
+    "Coordinates have more than 7 decimal places; 7 places of longitude or latitude is about a centimetre at the equator.",
   fixable: true,
   needsRegion: false,
   check(feature) {
@@ -134,7 +134,7 @@ export const precisionRule: Rule = {
           severity: "info",
           confidence: "high",
           path: pointer(leaf.pointer, "coordinates"),
-          message: `Coordinates in ${plural(positions)} have up to ${maxDecimals} decimal places, but ${MAX_DECIMALS} is about a centimetre.`,
+          message: `Coordinates in ${plural(positions)} have up to ${maxDecimals} decimal places, but ${MAX_DECIMALS} places of longitude or latitude is about a centimetre.`,
           fixable: true,
           data: { maxDecimals, positions },
         });

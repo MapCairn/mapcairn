@@ -162,7 +162,8 @@ export const regionMismatchRule: Rule = {
   id: "region-mismatch",
   severity: "warning",
   confidence: "medium",
-  summary: "A feature that lies wholly outside the region it should be in.",
+  summary:
+    "A feature that is positively in another country: no position in the region and at least half of the sampled positions inside another country.",
   fixable: false,
   needsRegion: true,
   check,
