@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { formatNumber } from "../format/format";
 import type { FieldValue } from "../ports/layers";
+import type { MessageCatalogue } from "../ports/messages";
 import type {
   FillPattern,
   LineDash,
@@ -32,7 +34,7 @@ export interface ShapeLook {
   readonly fillOpacity: number;
 }
 
-const NUMBER = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+const MAX_FRACTION_DIGITS = 2;
 
 function defaults(style: ShapeStyle, marks: ShapeMarks) {
   return {
@@ -59,26 +61,32 @@ function intervalLabel(
   colour: ShapeIntervalColour,
   index: number,
   width: number,
+  catalogue: MessageCatalogue,
 ): string {
   const unit = colour.unit ?? "";
   const last = colour.ramp.length - 1;
-  const low = NUMBER.format(colour.min + index * width);
-  const high = NUMBER.format(colour.min + (index + 1) * width);
+  const figure = (value: number) =>
+    formatNumber(value, catalogue.language, {
+      maximumFractionDigits: MAX_FRACTION_DIGITS,
+    });
+  const low = figure(colour.min + index * width);
+  const high = figure(colour.min + (index + 1) * width);
   if (index === 0) {
-    return `Up to ${high}${unit}`;
+    return catalogue.t("layers.interval.upTo", { high, unit });
   }
   return index === last
-    ? `${low}${unit} and above`
-    : `${low} to ${high}${unit}`;
+    ? catalogue.t("layers.interval.andAbove", { low, unit })
+    : catalogue.t("layers.interval.range", { low, high, unit });
 }
 
 function intervalClasses(
   style: ShapeStyle,
   colour: ShapeIntervalColour,
+  catalogue: MessageCatalogue,
 ): ShapeLook[] {
   const width = (colour.max - colour.min) / colour.ramp.length;
   return colour.ramp.map((slot, index) =>
-    look(style, slot, intervalLabel(colour, index, width), {
+    look(style, slot, intervalLabel(colour, index, width, catalogue), {
       pattern: colour.patterns?.[index],
       dash: colour.dashes?.[index],
       width: colour.widths?.[index],
@@ -90,9 +98,13 @@ function intervalClasses(
  * Every class of a style in legend order: the categories and then the class
  * for other values, the steps, the equal intervals worked out from the range,
  * or the one fixed class. Defaults are filled in, so a legend, a map and a
- * list read the same values.
+ * list read the same values. The words for an interval are written in
+ * `catalogue`'s language.
  */
-export function shapeClasses(style: ShapeStyle): readonly ShapeLook[] {
+export function shapeClasses(
+  style: ShapeStyle,
+  catalogue: MessageCatalogue,
+): readonly ShapeLook[] {
   const { colour } = style;
   switch (colour.kind) {
     case "fixed":
@@ -109,7 +121,7 @@ export function shapeClasses(style: ShapeStyle): readonly ShapeLook[] {
         look(style, step.colour, step.label, step),
       );
     case "intervals":
-      return intervalClasses(style, colour);
+      return intervalClasses(style, colour, catalogue);
   }
 }
 
@@ -123,9 +135,12 @@ export type ShapeEvaluator = (
  * its classes for each one. A value that is missing or unreadable falls in
  * the other class (categories) or the first class (steps and intervals).
  */
-export function shapeEvaluator(style: ShapeStyle): ShapeEvaluator {
+export function shapeEvaluator(
+  style: ShapeStyle,
+  catalogue: MessageCatalogue,
+): ShapeEvaluator {
   const { colour } = style;
-  const classes = shapeClasses(style);
+  const classes = shapeClasses(style, catalogue);
   const pick = (index: number) => classes[index] as ShapeLook;
   switch (colour.kind) {
     case "fixed":
@@ -166,6 +181,7 @@ export function shapeEvaluator(style: ShapeStyle): ShapeEvaluator {
 export function evaluateShapeStyle(
   style: ShapeStyle,
   fields: Readonly<Record<string, FieldValue>>,
+  catalogue: MessageCatalogue,
 ): ShapeLook {
-  return shapeEvaluator(style)(fields);
+  return shapeEvaluator(style, catalogue)(fields);
 }

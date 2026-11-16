@@ -9,6 +9,7 @@ import {
 } from "../geometry/wkt";
 import { shortestLongitudeSpan } from "../globe/longitude";
 import type { Bounds, LatLng } from "../ports/geometry";
+import type { Message } from "../ports/messages";
 import { SHAPES_CSV_HEADER } from "./export";
 import type { DrawShapeInput } from "./reducer";
 import { shapeRing, validateShape } from "./shape";
@@ -82,13 +83,13 @@ export type ShapeImportSkip =
  * whose holes were left out. A `wkt-unreadable` refusal, given when not one
  * geometry in WKT text could be used (text in an SRID other than 4326
  * included), also carries the `detail` the WKT reader gave for the first
- * fault: what was wrong, and where.
+ * fault: what was wrong, and where, as a message to format.
  */
 export type ShapeImport =
   | {
       readonly ok: false;
       readonly refusal: ShapeImportRefusal;
-      readonly detail?: string;
+      readonly detail?: Message;
     }
   | {
       readonly ok: true;
@@ -139,7 +140,7 @@ interface Collector {
   points: number;
   refusal: ShapeImportRefusal | null;
   /** The WKT reader's words for a `wkt-unreadable` refusal. */
-  detail?: string;
+  detail?: Message;
 }
 
 type Candidate = DrawShapeInput | ShapeImportSkip;
@@ -667,7 +668,7 @@ function addWktCell(collector: Collector, cell: string): void {
   addWktReadings(collector, cell);
 }
 
-function refuse(refusal: ShapeImportRefusal, detail?: string): ShapeImport {
+function refuse(refusal: ShapeImportRefusal, detail?: Message): ShapeImport {
   return detail === undefined
     ? { ok: false, refusal }
     : { ok: false, refusal, detail };
@@ -711,7 +712,7 @@ function addWktText(
   if (!startsLikeWkt(body)) {
     return "not-recognised";
   }
-  collector.detail = (firstError as GeometryError).message;
+  collector.detail = (firstError as GeometryError).description;
   return "wkt-unreadable";
 }
 

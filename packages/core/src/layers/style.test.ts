@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import {
   SAMPLE_ALERT_LAYER,
   SAMPLE_AREA_LAYER,
@@ -12,6 +13,8 @@ import {
 } from "../fakes/layerFixtures";
 import type { PointStyle } from "./definition";
 import { DEFAULT_MARKER_RADIUS, evaluatePointStyle, legendFor } from "./style";
+
+const catalogue = new FakeMessageCatalogue();
 
 describe("evaluatePointStyle", () => {
   const steps = SAMPLE_FEED_LAYER.style;
@@ -81,7 +84,7 @@ describe("evaluatePointStyle", () => {
 
 describe("legendFor", () => {
   it("lists steps with words and the size each stop draws", () => {
-    expect(legendFor(SAMPLE_FEED_LAYER)).toEqual({
+    expect(legendFor(SAMPLE_FEED_LAYER, catalogue)).toEqual({
       entries: [
         { label: "Below 3", colour: "ordinal-1", shape: "circle", radius: 4 },
         { label: "3 to 5", colour: "ordinal-3", shape: "circle", radius: 7 },
@@ -96,7 +99,7 @@ describe("legendFor", () => {
   });
 
   it("lists categories with their shapes, and the other entry last", () => {
-    expect(legendFor(SAMPLE_ALERT_LAYER).entries).toEqual([
+    expect(legendFor(SAMPLE_ALERT_LAYER, catalogue).entries).toEqual([
       {
         label: "Green alert",
         colour: "bluish-green",
@@ -116,15 +119,18 @@ describe("legendFor", () => {
 
   it("lists a fixed colour as one entry", () => {
     expect(
-      legendFor({
-        ...SAMPLE_ALERT_LAYER,
-        style: { colour: { kind: "fixed", colour: "blue", label: "Event" } },
-      }).entries,
+      legendFor(
+        {
+          ...SAMPLE_ALERT_LAYER,
+          style: { colour: { kind: "fixed", colour: "blue", label: "Event" } },
+        },
+        catalogue,
+      ).entries,
     ).toEqual([{ label: "Event", colour: "blue", shape: "circle", radius: 6 }]);
   });
 
   it("lists an area style's classes with their words, patterns and widths", () => {
-    expect(legendFor(SAMPLE_AREA_LAYER).entries).toEqual([
+    expect(legendFor(SAMPLE_AREA_LAYER, catalogue).entries).toEqual([
       {
         label: "Up to 100 per km²",
         colour: "ordinal-1",
@@ -159,7 +165,7 @@ describe("legendFor", () => {
   });
 
   it("lists a line style's classes as line swatches with their dashes", () => {
-    const entries = legendFor(SAMPLE_LINE_LAYER).entries;
+    const entries = legendFor(SAMPLE_LINE_LAYER, catalogue).entries;
     expect(entries.map((entry) => entry.swatch)).toEqual([
       "line",
       "line",
@@ -175,7 +181,7 @@ describe("legendFor", () => {
   });
 
   it("names each step of a heatmap's ramp with its density word", () => {
-    expect(legendFor(SAMPLE_HEATMAP_LAYER).entries).toEqual([
+    expect(legendFor(SAMPLE_HEATMAP_LAYER, catalogue).entries).toEqual([
       {
         label: "Sparse",
         colour: "ordinal-1",
@@ -201,7 +207,7 @@ describe("legendFor", () => {
   });
 
   it("lists every source layer of a vector tile layer in order: areas, roads, then density", () => {
-    const labels = legendFor(SAMPLE_VECTOR_LAYER).entries.map(
+    const labels = legendFor(SAMPLE_VECTOR_LAYER, catalogue).entries.map(
       (entry) => entry.label,
     );
     expect(labels).toEqual([
@@ -214,7 +220,7 @@ describe("legendFor", () => {
       "Some events",
       "Many events",
     ]);
-    const swatches = legendFor(SAMPLE_VECTOR_LAYER).entries.map(
+    const swatches = legendFor(SAMPLE_VECTOR_LAYER, catalogue).entries.map(
       (entry) => entry.swatch,
     );
     expect(swatches).toEqual([
@@ -230,12 +236,15 @@ describe("legendFor", () => {
   });
 
   it("uses the tile layer's own legend, or none", () => {
-    expect(legendFor(SAMPLE_TILE_LAYER).entries).toEqual([]);
+    expect(legendFor(SAMPLE_TILE_LAYER, catalogue).entries).toEqual([]);
     expect(
-      legendFor({
-        ...SAMPLE_TILE_LAYER,
-        legend: [{ label: "Hazard", colour: "blue" }],
-      }).entries,
+      legendFor(
+        {
+          ...SAMPLE_TILE_LAYER,
+          legend: [{ label: "Hazard", colour: "blue" }],
+        },
+        catalogue,
+      ).entries,
     ).toEqual([
       { label: "Hazard", colour: "blue", shape: "square", radius: 6 },
     ]);

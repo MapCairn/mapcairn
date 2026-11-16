@@ -27,13 +27,49 @@ describe("formatDuration", () => {
     [90_000, "1 d 1 h"],
     [183_600, "2 d 3 h"],
   ])("writes %d seconds as %s", (seconds, text) => {
-    expect(formatDuration(seconds)).toBe(text);
+    expect(english(formatDuration(seconds))).toBe(text);
   });
 
   it("treats a negative or non-finite time as no time", () => {
-    expect(formatDuration(-5)).toBe("Under 1 min");
-    expect(formatDuration(Number.NaN)).toBe("Under 1 min");
-    expect(formatDuration(Number.POSITIVE_INFINITY)).toBe("Under 1 min");
+    expect(english(formatDuration(-5))).toBe("Under 1 min");
+    expect(english(formatDuration(Number.NaN))).toBe("Under 1 min");
+    expect(english(formatDuration(Number.POSITIVE_INFINITY))).toBe(
+      "Under 1 min",
+    );
+  });
+});
+
+describe("formatDuration as a message", () => {
+  it("is keys and counts, joined by the catalogue's own wording", () => {
+    expect(formatDuration(3900)).toEqual({
+      key: "common.followedBy",
+      params: {
+        first: { key: "duration.short.hour", params: { count: 1 } },
+        second: { key: "duration.short.minute", params: { count: 5 } },
+      },
+    });
+    expect(formatDuration(5)).toEqual({
+      key: "duration.short.underMinute",
+      params: {},
+    });
+  });
+
+  it("is written in another language's words and order", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "common.followedBy": "{first} en {second}",
+        "duration.short.hour": "{count} u",
+        "duration.short.minute": "{count} min.",
+        "duration.short.underMinute": "Minder as 1 min.",
+      },
+    });
+    expect(formatMessage(afrikaans, formatDuration(3900))).toBe(
+      "1 u en 5 min.",
+    );
+    expect(formatMessage(afrikaans, formatDuration(5))).toBe(
+      "Minder as 1 min.",
+    );
   });
 });
 

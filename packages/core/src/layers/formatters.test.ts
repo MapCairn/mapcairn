@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import {
   BUILT_IN_FORMATTERS,
   createFormatterRegistry,
@@ -9,14 +10,18 @@ import {
 } from "./formatters";
 
 const NOW = Date.UTC(2026, 10, 9, 12, 0, 0);
-const context = { now: NOW };
+const context = { now: NOW, catalogue: new FakeMessageCatalogue() };
 
-function format(name: string, value: Parameters<Formatter>[0]) {
+function format(
+  name: string,
+  value: Parameters<Formatter>[0],
+  using: Parameters<Formatter>[1] = context,
+) {
   const formatter = createFormatterRegistry().get(name);
   if (!formatter) {
     throw new Error(`No formatter ${name}`);
   }
-  return formatter(value, context);
+  return formatter(value, using);
 }
 
 describe("parseTime", () => {
@@ -87,6 +92,32 @@ describe("built-in formatters", () => {
   it("date: day, month, year and time in UTC", () => {
     expect(format("date", Date.UTC(2026, 10, 8, 14, 5))).toBe(
       "8 Nov 2026, 14:05 UTC",
+    );
+  });
+
+  it("write their words, numbers and dates in the catalogue's language", () => {
+    const afrikaans = {
+      now: NOW,
+      catalogue: new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "layers.formatter.agoHour": "{count} uur gelede|{count} ure gelede",
+          "layers.formatter.justNow": "nou net",
+        },
+      }),
+    };
+    expect(format("relative", NOW - 3 * 3600_000, afrikaans)).toBe(
+      "3 ure gelede",
+    );
+    expect(format("relative", NOW - 3600_000, afrikaans)).toBe("1 uur gelede");
+    expect(format("relative", NOW, afrikaans)).toBe("nou net");
+    expect(format("number", 12_345.6, afrikaans)).toBe(
+      new Intl.NumberFormat("af", { maximumFractionDigits: 1 }).format(
+        12_345.6,
+      ),
+    );
+    expect(format("date", Date.UTC(2026, 10, 8, 14, 5), afrikaans)).toContain(
+      "UTC",
     );
   });
 

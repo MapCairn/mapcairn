@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { createMessageCatalogue } from "../messages/createMessageCatalogue";
+import { EN_GB_CATALOGUE } from "../messages/en-GB";
 import type { LatLng } from "../ports/geometry";
+import type { MessageCatalogue, MessageKey } from "../ports/messages";
 import {
   measureLineDistance,
   measurePolygonArea,
@@ -20,21 +23,31 @@ export const CIRCLE_EXPORT_STEPS = 72;
 /** The largest radius a circle may have, in metres (10,000 km). */
 export const MAX_CIRCLE_RADIUS_METRES = 10_000_000;
 
-const KIND_NAMES: Readonly<Record<DrawKind, string>> = {
-  point: "Point",
-  line: "Line",
-  polygon: "Polygon",
-  circle: "Circle",
-};
+const SHAPE_LABEL_KEYS = {
+  point: "draw.shapeLabel.point",
+  line: "draw.shapeLabel.line",
+  polygon: "draw.shapeLabel.polygon",
+  circle: "draw.shapeLabel.circle",
+} as const satisfies Readonly<Record<DrawKind, MessageKey>>;
 
-/** A name for a shape of `kind`, such as "Polygon 2". `serial` counts shapes of that kind from 1. */
-export function shapeLabel(kind: DrawKind, serial: number): string {
-  return `${KIND_NAMES[kind]} ${serial}`;
-}
+/** The shipped English, used where no catalogue is given. */
+const ENGLISH_LABELS: Pick<MessageCatalogue, "t"> = createMessageCatalogue(
+  "en-GB",
+  EN_GB_CATALOGUE,
+  EN_GB_CATALOGUE,
+);
 
-/** The word for a kind, such as "Polygon", for announcements and labels. */
-export function kindName(kind: DrawKind): string {
-  return KIND_NAMES[kind];
+/**
+ * A name for a shape of `kind`, such as "Polygon 2", in the words of
+ * `catalogue` (the shipped English when none is given). `serial` counts shapes
+ * of that kind from 1.
+ */
+export function shapeLabel(
+  kind: DrawKind,
+  serial: number,
+  catalogue: Pick<MessageCatalogue, "t"> = ENGLISH_LABELS,
+): string {
+  return catalogue.t(SHAPE_LABEL_KEYS[kind], { serial });
 }
 
 function finite(vertices: readonly LatLng[]): boolean {
