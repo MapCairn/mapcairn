@@ -73,6 +73,20 @@ describe("createServices", () => {
     expect(basemaps?.defaultId).toBe("bright");
   });
 
+  it("speaks English first and offers Afrikaans, loaded only when chosen", async () => {
+    const services = createServices();
+    expect(services.messages.language).toBe("en-GB");
+    expect(services.languages?.languages.map(({ tag }) => tag)).toEqual([
+      "en-GB",
+      "af",
+    ]);
+    const pending = services.languages?.load("af");
+    expect(pending).toBeInstanceOf(Promise);
+    const afrikaans = await pending;
+    expect(afrikaans?.language).toBe("af");
+    expect(afrikaans?.t("settings.title", {})).toBe("Instellings");
+  });
+
   it("builds the browser file opener, which shows nothing until it is asked", () => {
     expect(createServices().fileOpener).toBeInstanceOf(BrowserFileOpener);
   });

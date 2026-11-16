@@ -84,7 +84,7 @@ A rule marked "(lint)" is enforced by the harmony scanner (`npm run lint:harmony
 
 ## Locale
 
-- **O1** Dates, numbers, coordinates, units and zoom go through the core formatters or `Intl`, never a hand-written format. A time in UTC says UTC. The app is English only (`lang="en-GB"`).
+- **O1** Dates, numbers, coordinates, units and zoom go through the core formatters or `Intl`, never a hand-written format. A time in UTC says UTC. Copy, `aria-label`s and announcements come from the message catalogue by key (`t`, `plural`), never inline text, and a host string in another language than the page (such as an English provider note) carries `lang`.
 
 ## Components
 
@@ -104,7 +104,7 @@ These Web Interface Guidelines rules do not apply here, so do not flag their abs
 - Tailwind class names, `nuqs`, a Next.js `priority` image prop and `<Link>` from another router.
 - Putting state in query parameters (the address fragment is used so nothing is sent to a server).
 - Virtualising lists above 50 items (the project caps and pages them), and hand-written font preload links.
-- Detecting language from `Accept-Language` and `translate="no"` (the app is English only).
+- Detecting language from `Accept-Language` (the server renders the default language and the client resolves the stored or browser language, plan 0009) and `translate="no"`.
 
 ## Licence of the source
 

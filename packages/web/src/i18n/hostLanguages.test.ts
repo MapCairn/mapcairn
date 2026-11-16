@@ -12,9 +12,12 @@ import {
 } from "./hostLanguages";
 
 describe("the host's languages", () => {
-  it("offers English, named in English, as the default", () => {
-    expect(OFFERED_LANGUAGES).toEqual([{ tag: "en-GB", label: "English" }]);
-    expect(OFFERED_LANGUAGE_TAGS).toEqual(["en-GB"]);
+  it("offers English, the default, then Afrikaans, each named in its own language", () => {
+    expect(OFFERED_LANGUAGES).toEqual([
+      { tag: "en-GB", label: "English" },
+      { tag: "af", label: "Afrikaans" },
+    ]);
+    expect(OFFERED_LANGUAGE_TAGS).toEqual(["en-GB", "af"]);
     expect(HOST_LANGUAGE_CATALOGUE.defaultLanguage).toBe(DEFAULT_LANGUAGE);
   });
 
@@ -28,16 +31,25 @@ describe("the host's languages", () => {
     );
   });
 
-  it("loads Afrikaans on demand, falling back to English for a key it lacks", async () => {
+  it("loads Afrikaans on demand, with no key falling back to English", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const pending = loadLanguage("af");
     expect(pending).toBeInstanceOf(Promise);
     const messages = await pending;
     expect(messages.language).toBe("af");
-    expect(messages.t("settings.title", {})).toBe(
-      AF_CATALOGUE["settings.title"] ?? EN_GB_CATALOGUE["settings.title"],
+    expect(messages.t("settings.title", {})).toBe("Instellings");
+    expect(messages.plural("announce.searchResults", { count: 2 })).toBe(
+      "2 resultate",
     );
+    expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  it("offers Afrikaans through the catalogue the services get", async () => {
+    const messages = await HOST_LANGUAGE_CATALOGUE.load("af");
+    expect(messages.t("tools.search.places", {})).toBe(
+      AF_CATALOGUE["tools.search.places"],
+    );
   });
 
   it("refuses a language it has no messages for", () => {

@@ -19,6 +19,7 @@ export const DEFAULT_LANGUAGE = "en-GB";
  */
 export const OFFERED_LANGUAGES: readonly LanguageOption[] = [
   { tag: DEFAULT_LANGUAGE, label: "English" },
+  { tag: "af", label: "Afrikaans" },
 ];
 
 /** The tags in {@link OFFERED_LANGUAGES}. */

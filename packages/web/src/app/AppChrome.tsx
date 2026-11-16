@@ -38,6 +38,7 @@ import { Brand } from "./Brand";
 import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
 import { bottomCentre } from "./MapBanners.css";
+import { SourceLanguage } from "./SourceLanguage";
 import { sheetTitle } from "./sheetTitle";
 import type { MapApp } from "./useMapApp";
 import { useZoomAnnouncement } from "./useZoomAnnouncement";
@@ -238,7 +239,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
             <DirectionsPanel
               directions={app.directions}
               pin={app.pin}
-              note={ROUTING_NOTE}
+              note={<SourceLanguage>{ROUTING_NOTE}</SourceLanguage>}
             />
           ) : null}
           {!app.directionsActive && app.sheetOpen ? (
@@ -252,7 +253,9 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               draw={app.draw}
               onShowOnMap={app.revealMap}
               onStartTour={app.startTour}
-              privacyNote={SETTINGS_PRIVACY_NOTE}
+              privacyNote={
+                <SourceLanguage>{SETTINGS_PRIVACY_NOTE}</SourceLanguage>
+              }
               imageCredits={creditsLine(app.basemap, app.layers.credits)}
               pinCard={
                 app.pin ? (
@@ -261,7 +264,9 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
                     onClear={app.clearPin}
                     headingLevel={4}
                     headingRef={pinHeadingRef}
-                    lookupNote={PIN_LOOKUP_NOTE}
+                    lookupNote={
+                      <SourceLanguage>{PIN_LOOKUP_NOTE}</SourceLanguage>
+                    }
                   />
                 ) : undefined
               }

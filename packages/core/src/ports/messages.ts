@@ -519,6 +519,7 @@ export type MessageKey =
   | "layers.turnOff.count"
   | "layers.turnOff.group"
   | "layers.turnOff.doneAll"
+  | "layers.turnOff.undo"
   | "layers.turnOff.undoAll"
   | "layers.turnOff.doneGroup"
   | "layers.turnOff.undoGroup"

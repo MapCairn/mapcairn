@@ -71,9 +71,9 @@ A key that your library does not know is yours to handle: the SDK calls `t` for 
 
 1. Add `packages/web/src/i18n/<tag>.ts` exporting a `Record<MessageKey, string>` (or a `Partial` for work in progress), and a loader for the tag in `hostLanguages.ts`.
 2. Add the language to `OFFERED_LANGUAGES` with its name in that language.
-3. Keep every placeholder the English text has, spelled the same: `packages/core/src/lint/messages.test.ts` checks every shipped catalogue against `MessageParams` and fails the build on a missing or misspelt placeholder. Keep a key's plural forms in the same order as English (the "one" form, then the others).
+3. Keep every placeholder the English text has, spelled the same, and a key's plural forms in the same order as English (the "one" form, then the others). `packages/core/src/lint/messages.test.ts` checks the English catalogue against `MessageParams`, and a test beside each of the site's catalogues (`packages/web/src/i18n/af.test.ts`) checks that it has every key, the English placeholders in each form and the same number of forms; a complete `Record<MessageKey, string>` also makes `npm run typecheck` fail when a key is added without its translation.
 4. Keep an accessible name containing its visible label, which a translation keeps by using the same key for both.
-5. Run the layout and accessibility specs in the new language (`e2e/i18n.spec.ts` shows how). Translated text is often longer, so check that nothing collides or truncates.
+5. Run the layout and accessibility specs in the new language: add the language's catalogue to `e2e/support/language.ts` and a pair of projects like `af-chromium` and `af-mobile-chromium` in `playwright.config.ts`, which run the collision and accessibility specs with the `language` option set, and extend `e2e/i18n.spec.ts`. The page object finds the chrome by the names in the active catalogue. Translated text is often longer, so check that nothing collides or truncates.
 6. A person who speaks the language fluently reviews the catalogue before it ships. A machine translation is a draft, and the pull request says who reviewed it. Credit the translators in [`ATTRIBUTIONS.md`](../../ATTRIBUTIONS.md).
 
 ## Right-to-left languages

@@ -84,6 +84,7 @@ interface UndoStatusProps extends UndoCopy {
  */
 function UndoStatus({ layers, text, label }: UndoStatusProps) {
   const { holdUndo, releaseUndo, undoTurnOff } = layers;
+  const { t } = useMessages();
   useEffect(
     () => () => {
       releaseUndo("pointer");
@@ -121,7 +122,7 @@ function UndoStatus({ layers, text, label }: UndoStatusProps) {
     >
       {text}
       <Button variant="quiet" aria-label={label} onClick={undoTurnOff}>
-        Undo
+        {t("layers.turnOff.undo", {})}
       </Button>
     </div>
   );
