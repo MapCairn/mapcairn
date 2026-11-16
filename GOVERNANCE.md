@@ -14,7 +14,7 @@ MapCairn is a small, volunteer-maintained project with one maintainer. This docu
 - handles private vulnerability reports and publishes advisories, following [`SECURITY.md`](SECURITY.md);
 - holds the repository, the Cloudflare account that serves the reference site and the domain, and is the only person with access to them today;
 - enforces the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md);
-- answers for the licence position: the repository is AGPL-3.0, and the terms contributors agree to are in [`CLA.md`](CLA.md).
+- answers for the licence position: the repository is AGPL-3.0, except `packages/geolint`, which is Apache-2.0, and the terms contributors agree to are in [`CLA.md`](CLA.md).
 
 **Contributor.** Anyone who opens an issue, comments, or sends a pull request. A contributor keeps the copyright in what they contribute and agrees to [`CLA.md`](CLA.md) before a pull request is merged. Contributors have no commit access. They propose, and the maintainer decides.
 
@@ -29,7 +29,7 @@ The maintainer decides. The record of a decision is public and lives in four pla
 - **Pull requests** change the repository. [`.github/CODEOWNERS`](.github/CODEOWNERS) asks the `maintainers` team to review any change to [`ROADMAP.md`](ROADMAP.md) and to the files that steer agents, CI and what runs on a developer's machine (`AGENTS.md`, `CLAUDE.md`, the skill and agent folders, `.github/`, `.vscode/`, `scripts/`, the package manifests and lockfile, and the build and lint configuration; `.github/CODEOWNERS` lists them); it requests a review and the ruleset does not require the code owner's approval, so a roadmap change from a contributor is reviewed by the maintainer before it is merged. Every change reaches `main` through a pull request, and the repository ruleset requires the `build` and `e2e` checks to pass before it merges. What is checked, and by whom, is in the "Review and acceptance" section of [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - **The licence agreement** governs contributions. [`CLA.md`](CLA.md) is checked on every pull request by the `CLA` workflow. A contribution is not merged without it.
 
-Some things are not open to a vote or a pull request: the licence of the SDK packages and of the host, the privacy position in [`PRIVACY.md`](PRIVACY.md) (no accounts, no tracking beyond cookieless page-view counts) and the non-goals in [`ROADMAP.md`](ROADMAP.md). The maintainer can change them, in the open, with a plan and a tracking issue, but a pull request that quietly changes one will be declined.
+Some things are not open to a vote or a pull request: the licence of the SDK packages, of the host and of `packages/geolint`, the privacy position in [`PRIVACY.md`](PRIVACY.md) (no accounts, no tracking beyond cookieless page-view counts) and the non-goals in [`ROADMAP.md`](ROADMAP.md). The maintainer can change them, in the open, with a plan and a tracking issue, but a pull request that quietly changes one will be declined.
 
 A disagreement with a decision is raised on the issue or pull request in question. The maintainer gives a reason when declining. There is no separate appeals body. An unresolved disagreement can be taken up by forking the project, which the licence allows.
 

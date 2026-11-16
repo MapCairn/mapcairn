@@ -1,0 +1,114 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                177.5,
+                -18
+              ],
+              [
+                180,
+                -18
+              ],
+              [
+                180,
+                -16
+              ],
+              [
+                177.5,
+                -16
+              ],
+              [
+                177.5,
+                -18
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                -180,
+                -18
+              ],
+              [
+                -179.5,
+                -18
+              ],
+              [
+                -179.5,
+                -16
+              ],
+              [
+                -180,
+                -16
+              ],
+              [
+                -180,
+                -18
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -180,
+              -90
+            ],
+            [
+              180,
+              -90
+            ],
+            [
+              180,
+              -70
+            ],
+            [
+              -180,
+              -70
+            ],
+            [
+              -180,
+              -90
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            170,
+            60
+          ],
+          [
+            179,
+            61
+          ],
+          [
+            180,
+            61.5
+          ]
+        ]
+      }
+    }
+  ]
+}

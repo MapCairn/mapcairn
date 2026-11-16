@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/crs",
+    "severity": "warning"
+  },
+  {
+    "path": "/features/0/crs",
+    "severity": "info"
+  }
+]

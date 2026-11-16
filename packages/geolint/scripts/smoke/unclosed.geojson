@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "A square whose ring is not closed" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[18.0, -34.0], [19.0, -34.0], [19.0, -33.0], [18.0, -33.0]]]
+      }
+    }
+  ]
+}

@@ -55,6 +55,8 @@ Feeds, polygons and lines with patterns, heatmaps, vector tiles and queries for 
 | [`@mapcairn/react`](packages/react/README.md) | Generic React hooks                                                                                           |
 | [`@mapcairn/theme`](packages/theme/README.md) | The typed design tokens and their contrast calculations                                                       |
 
+[`@mapcairn/geolint`](packages/geolint/README.md) is separate from those four: a GeoJSON linter (a `geolint` command and a library) that is Apache-2.0, imports nothing else in this repository and is not built on the map ports.
+
 `packages/web` is the reference host: a complete map built from those four packages, running at [mapcairn.timothybrits.co.za](https://mapcairn.timothybrits.co.za). It shows what the SDK composes and is what the tests run against; it is a demonstration, not the product.
 
 ## Status
@@ -89,6 +91,8 @@ Everyone is welcome to use the coding agent they prefer, and the same rules in [
 ## Licence
 
 MapCairn is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/core`, `packages/map`, `packages/react` and `packages/theme`) carries its own copy. If you ship the SDK in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence.
+
+The one exception is [`packages/geolint`](packages/geolint), a GeoJSON linter, which is licensed under [Apache-2.0](packages/geolint/LICENSE). It is a command line tool and a library meant for unrestricted use in other toolchains, so it carries a permissive licence. It imports nothing from the rest of the repository, and everything else stays AGPL-3.0.
 
 There is no commercial licence on offer yet, but the author is open to discussing other terms for closed-source use. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
 

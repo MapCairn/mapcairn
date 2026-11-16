@@ -1,0 +1,116 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -33.92,
+          18.42
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -33.92,
+            18.42
+          ],
+          [
+            -29.86,
+            31.02
+          ],
+          [
+            -26.2,
+            28.05
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -26,
+              27.9
+            ],
+            [
+              -26,
+              28.2
+            ],
+            [
+              -26.4,
+              28.2
+            ],
+            [
+              -26.4,
+              27.9
+            ],
+            [
+              -26,
+              27.9
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "MultiPoint",
+        "coordinates": [
+          [
+            18.42,
+            -33.92
+          ],
+          [
+            -29.86,
+            31.02
+          ],
+          [
+            -26.2,
+            28.05
+          ],
+          [
+            -25.75,
+            28.19
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "GeometryCollection",
+        "geometries": [
+          {
+            "type": "Point",
+            "coordinates": [
+              18.42,
+              -33.92
+            ]
+          },
+          {
+            "type": "Point",
+            "coordinates": [
+              -33.92,
+              18.42
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

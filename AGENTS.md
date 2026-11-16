@@ -10,7 +10,7 @@ MapLibre GL JS is the only map engine. The app follows ports and adapters, descr
 
 The published host runs on Cloudflare Workers. It has no accounts and no tracking beyond cookieless page views. Client error reports are logged as described in `PRIVACY.md`.
 
-The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `theme`) are AGPL-3.0, and each SDK package carries its own `LICENSE` file. No commercial licence is on offer yet, but other terms for closed-source use can be discussed with the author, so the SDK packages must not contain anything that needs a licence agreement of its own, such as a provider's terms or non-commercial data.
+The repository, `packages/web` and the SDK packages (`core`, `map`, `react`, `theme`) are AGPL-3.0, and each SDK package carries its own `LICENSE` file. The one exception is `packages/geolint`, a GeoJSON linter that is Apache-2.0 and independent of the rest of the repository (plan `docs/plans/0010-geolint.md`): it imports no other package here, its source headers say `Apache-2.0`, and its dependencies are permissive only. No commercial licence is on offer yet, but other terms for closed-source use can be discussed with the author, so the SDK packages must not contain anything that needs a licence agreement of its own, such as a provider's terms or non-commercial data.
 
 ## Read before you change
 
@@ -47,7 +47,7 @@ npm run check
 
 - `dev` runs the Vite SSR dev server on port 5173. It never touches Cloudflare.
 - `test` runs Vitest across `packages/*`. Run one file with `npx --no-install vitest run path/to/file.test.ts`.
-- `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has a slightly lower branch floor: 95% for statements, functions and lines and 90% for branches, because its layout and touch-gesture code is also covered by Playwright. Aim for 100% behavioural coverage.
+- `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react`, `theme` and `geolint`. `packages/web` has a slightly lower branch floor: 95% for statements, functions and lines and 90% for branches, because its layout and touch-gesture code is also covered by Playwright. Aim for 100% behavioural coverage.
 - `typecheck` checks every workspace, including web route types and the Playwright project.
 - `lint` runs Biome, dependency-cruiser, the harmony scanner (`scripts/harmony`, see `DESIGN.md`), the licence header check (`scripts/licenceHeaders.mjs`), the agent files check (`npm run agents:check`), the roadmap check (`npm run roadmap:check`, see "Issues and pull requests") and the names check (`npm run names:check`, see "Boundaries"). Pre-commit runs every check except the roadmap check, the `commit-msg` hook runs the names check on the commit message, and neither runs typecheck, tests or coverage.
 - `build` builds every workspace. The web build then checks that the production bundle holds no browser test seam.
@@ -55,7 +55,7 @@ npm run check
 - `check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence.
 - In a git worktree, `npm ci` fails at its `prepare` script (lefthook cannot install there). Use `npm ci --ignore-scripts` and run `npm run lint` yourself before you commit, and keep commit messages free of listed names, because the `commit-msg` hook does not run there.
 
-CI runs these workflows: `CI` (lint, typecheck, coverage and build), `Playwright E2E` (the browser tests, split across four jobs), `Lighthouse CI`, `CodeQL`, `CLA`, `Scorecard`, `Dependency review`, `Workflow security lint` (zizmor), `Secret scan` (TruffleHog) and a weekly `Repeatable build` check. A pull request needs the `build` and `e2e` checks to pass before it merges.
+CI runs these workflows: `CI` (lint, typecheck, coverage and build), `Playwright E2E` (the browser tests, split across four jobs), `Lighthouse CI`, `CodeQL`, `CLA`, `Scorecard`, `Dependency review`, `Workflow security lint` (zizmor), the `geolint pack and install` job in `CI` (builds and packs `packages/geolint` and runs the installed command, only when it or the lockfile changed), `Secret scan` (TruffleHog) and a weekly `Repeatable build` check. A pull request needs the `build` and `e2e` checks to pass before it merges.
 
 ### Browser tests
 
@@ -91,7 +91,7 @@ Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. We
 - Use expanded, braced `if` statements. Do not disable Biome's `useBlockStatements`.
 - Biome also enforces these, so write to them: `interface` for object shapes, no nested ternaries (use a named function or early returns), no name that shadows an outer one, `readonly` for class fields that are never reassigned, every promise awaited, returned or marked `void`, a `switch` over a union that names every case, and no `console` call in application code except `console.error` and `console.warn` to report a failure (tests, scripts and the Playwright specs may print). The rules and their exemptions are in `biome.jsonc`, with the reason beside each exemption.
 - Biome formats Markdown and YAML as well as code, and its layout wins: tables are aligned, emphasis is `_text_`, YAML strings are double-quoted, and prose lines stay as written (no rewrapping). Run `npm run format` before you commit; `npm run lint` fails on a file that is not formatted. The skill and agent sources in `.claude` and the copies `npm run agents:sync` writes (`.agents`, `.codex`, `.opencode`, `.qwen`, `.github/agents`) are left out, because the sync writes the copies and the formatter would break their front matter.
-- Start every `.ts`, `.tsx`, `.mjs` and `.cjs` file with the two-line SPDX header (`// SPDX-License-Identifier: AGPL-3.0-only`, then `// Copyright MapCairn contributors`). `npm run lint` fails without it; `npm run licence:write` adds it to new files.
+- Start every `.ts`, `.tsx`, `.mjs` and `.cjs` file with the two-line SPDX header (`// SPDX-License-Identifier: AGPL-3.0-only`, then `// Copyright MapCairn contributors`; in `packages/geolint` the identifier is `Apache-2.0`). `npm run lint` fails without the right one; `npm run licence:write` adds it to new files.
 - Use British English in user-facing copy and docs, not code identifiers.
 - Write plain, specific prose. Avoid puffery, uppercase eyebrows and repetitive closing summaries. Use an em dash only where a person would naturally write one, such as a single aside or a sharp turn in a sentence. Do not use it as the default connector or more than once in a paragraph; a comma, colon, bracket or full stop usually reads better. Use sentence-case headings.
 - Use Conventional Commits: `<type>[optional scope][!]: <description>`. Explain breaking changes in the body or a `BREAKING CHANGE:` footer.
@@ -120,6 +120,7 @@ The npm workspaces share one root `package-lock.json`.
 - `packages/core` (`@mapcairn/core`): the port interfaces, pure logic (surface state machine, sheet snapping, zoom, scale, formatting, announcements, URL hash, theme resolution, measurement), the basemap definitions, fakes and contract suites. It must not import other MapCairn packages, React or a browser global.
 - `packages/react` (`@mapcairn/react`): generic React hooks. It must not import other MapCairn packages.
 - `packages/theme` (`@mapcairn/theme`): the typed token contract, `focusRing`, `zLayer` and the token values with their contrast maths. It must not import other MapCairn packages.
+- `packages/geolint` (`@mapcairn/geolint`): a GeoJSON linter, Apache-2.0 and independent. It imports no other MapCairn package, and its lint engine (`src/engine`) imports no Node built-in. See `docs/plans/0010-geolint.md`.
 - `packages/map` (`@mapcairn/map`): the map user interface (chrome, sheet, panels, tools, primitives), the `MapView` host and `ServicesProvider`. It builds on core, react and theme, never web, and never imports an adapter or an engine.
 - `packages/web` (`@mapcairn/web`): the SSR host. It owns the adapters (MapLibre, Nominatim, Valhalla routing, geolocation, storage, clipboard, URL hash, theme), the composition root `createServices()`, the engine CSS, app copy, routes and headers.
 

@@ -1,6 +1,6 @@
 # Contributor licence agreement
 
-Version 1.1
+Version 1.2
 
 MapCairn is licensed under [AGPL-3.0](LICENSE), and its author may also agree other licence terms by arrangement, for example for closed-source use. To make both possible, everyone who contributes code, documentation or other material to MapCairn agrees to the terms below. You keep the copyright in your contribution. You give the project owner the rights needed to distribute it under both kinds of licence.
 
@@ -44,6 +44,16 @@ The Owner will keep the Project available to the public under the AGPL-3.0, or u
 - These terms do not change the licence of the Project itself, which stays in the [`LICENSE`](LICENSE) file.
 - These terms are governed by the laws of the Republic of South Africa.
 
+## 7. Packages with their own licence
+
+Despite the first paragraph above and section 6, `packages/geolint` in the Project is licensed under the Apache License, Version 2.0, not the AGPL-3.0. Its terms are in `packages/geolint/LICENSE`. For a Contribution to that package, and only that package:
+
+- you submit it under the Apache License, Version 2.0, as section 5 of that licence provides, and section 1 above still applies, so the Owner may also license it under any other terms the Owner chooses;
+- in section 4, item 3, a part that comes from someone else must be under a licence that is compatible with the Apache License, Version 2.0 (a permissive licence such as MIT, BSD, ISC, Apache-2.0, 0BSD, CC0 or the Unlicense), not only one that is compatible with the AGPL-3.0; and
+- the Owner's promise in section 5 holds, because the Apache License, Version 2.0 is approved by the Open Source Initiative.
+
+This section changes nothing for a Contribution to any other part of the Project.
+
 ## How to agree
 
 On your first pull request, add this comment, with the sentence on a line of its own:
@@ -54,5 +64,6 @@ A pull request is not merged until the comment is there. The `CLA` check on the 
 
 ## Changes
 
+- **1.2:** added section 7, for the package `packages/geolint`, which is licensed under the Apache License, Version 2.0. Sections 1 to 6 and the agreement sentence are unchanged, and nothing changes for a Contribution to any other part of the Project. People who agreed to version 1.0 or 1.1 have agreed to these terms and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
 - **1.1:** the Project was renamed from Karta to MapCairn, and the agreement sentence now names MapCairn. The terms are unchanged. People who agreed to version 1.0, with the sentence that named Karta, have agreed to these terms for the same Project and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
 - **1.0:** the first version.

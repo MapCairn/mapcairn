@@ -1,0 +1,3 @@
+{"type":"FeatureCollection","features":[
+{"type":"Feature","properties":{"name":"Taveuni, longitudes past 180","note":"Approximate extent of the island"},"geometry":{"type":"Polygon","coordinates":[[[179.85,-17.05],[180.15,-17.05],[180.15,-16.65],[179.85,-16.65],[179.85,-17.05]]]}}
+]}
