@@ -408,7 +408,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "app.tour.ending.text": "Hulp, in Instellings, kan dit weer begin.",
   // Short durations
   "duration.short.day": "{count} d",
-  "duration.short.hour": "{count} u",
+  "duration.short.hour": "{count} h",
   "duration.short.minute": "{count} min",
   "duration.short.underMinute": "Minder as 1 min",
   // Travel modes and stops
@@ -809,4 +809,10 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "keyHelp.draw.escape":
     "Gaan terug: los 'n punt, kanselleer die vorm en maak dan die tekening toe",
   "host.map.keyInstruction": "{keys}: {description}.",
+  "host.notes.privacy":
+    "MapCairn het geen rekeninge nie, stel geen koekies nie en tel bladsybesoeke sonder om jou te volg. Kaarteëls kom van die kaartverskaffer wat jy kies. Terwyl jy in die soekbalk tik, word die teks tot nou toe gestuur na die Photon-diens, wat komoot bedryf, om plekke voor te stel. As jy Enter of Soek druk, word jou soekvraag na OpenStreetMap se Nominatim-diens gestuur, en Soek adres op 'n speld stuur die speld se ligging, tot op ongeveer 11 m, ook na Nominatim. Niks word na een van die dienste gestuur voordat jy in die soekbalk tik of 'n adres opvra nie, en 'n paar koördinate wat jy in die soekbalk tik, word nie na hulle gestuur nie, al laai die kaart wel eëls vir daardie gebied om die plek te wys, soos by enige kaartbeweging. 'n Datalaag kontak sy verskaffer net solank dit aan is. Jou instellings bly op hierdie toestel.",
+  "host.notes.pinLookup":
+    "Stuur die speld se ligging, tot op ongeveer 11 m, na OpenStreetMap se Nominatim-diens.",
+  "host.notes.routing":
+    "Niks word gestuur voordat jy dit vra nie. Kry roete stuur die stoppe en die vervoerwyse, en 'n reistydgebied stuur die eerste stop, saam met jou IP-adres, na die Valhalla-roeteringsdiens wat FOSSGIS bedryf. Dit gebruik OpenStreetMap-data.",
 };

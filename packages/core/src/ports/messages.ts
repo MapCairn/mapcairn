@@ -666,7 +666,10 @@ export type MessageKey =
   | "keyHelp.draw.remove"
   | "keyHelp.draw.undo"
   | "keyHelp.draw.escape"
-  | "host.map.keyInstruction";
+  | "host.map.keyInstruction"
+  | "host.notes.privacy"
+  | "host.notes.pinLookup"
+  | "host.notes.routing";
 
 /**
  * Text a definition shows a person: a {@link MessageKey}, looked up in the

@@ -2,10 +2,18 @@
 // Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { EN_GB_CATALOGUE } from "@mapcairn/core";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PrivacyPage } from "../app/PrivacyPage";
-import { PIN_LOOKUP_NOTE, SETTINGS_PRIVACY_NOTE } from "./providerNotes";
+import { AF_CATALOGUE } from "./af";
+
+const SETTINGS_PRIVACY_NOTE = EN_GB_CATALOGUE["host.notes.privacy"];
+const PIN_LOOKUP_NOTE = EN_GB_CATALOGUE["host.notes.pinLookup"];
+const AF_NOTES: readonly string[] = [
+  AF_CATALOGUE["host.notes.privacy"],
+  AF_CATALOGUE["host.notes.pinLookup"],
+];
 
 /** Collapses line wraps and runs of spaces, as the copies wrap differently. */
 function collapse(text: string): string {
@@ -73,4 +81,19 @@ describe("the host's privacy notes", () => {
       expect(policy).toMatch(pattern);
     },
   );
+
+  it("state the same facts in Afrikaans", () => {
+    const [privacy, pinLookup] = AF_NOTES;
+    expect(privacy).toMatch(/Nominatim/);
+    expect(privacy).toMatch(/Photon[\s\S]*komoot|komoot[\s\S]*Photon/);
+    expect(privacy).toMatch(/koekies/);
+    expect(privacy).toMatch(/11 m/);
+    expect(privacy).toMatch(/koördinate/);
+    expect(pinLookup).toMatch(/Nominatim/);
+    expect(pinLookup).toMatch(/11 m/);
+    expect(AF_CATALOGUE["host.notes.routing"]).toMatch(
+      /Valhalla[\s\S]*FOSSGIS/,
+    );
+    expect(AF_CATALOGUE["host.notes.routing"]).toMatch(/IP-adres/);
+  });
 });

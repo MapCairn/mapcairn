@@ -18,6 +18,7 @@ import {
   useFocusReturn,
   useFormatMessage,
   useMap,
+  useMessages,
   useSettings,
 } from "@mapcairn/map";
 import {
@@ -27,18 +28,13 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  PIN_LOOKUP_NOTE,
-  SETTINGS_PRIVACY_NOTE,
-} from "../constants/providerNotes";
-import { ROUTING_CREDITS, ROUTING_NOTE } from "../constants/routingCredits";
+import { ROUTING_CREDITS } from "../constants/routingCredits";
 import { AppReadout } from "./AppReadout";
 import { AppTour } from "./AppTour";
 import { Brand } from "./Brand";
 import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
 import { bottomCentre } from "./MapBanners.css";
-import { SourceLanguage } from "./SourceLanguage";
 import { sheetTitle } from "./sheetTitle";
 import type { MapApp } from "./useMapApp";
 import { useZoomAnnouncement } from "./useZoomAnnouncement";
@@ -87,6 +83,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
 
   // The title follows the open sheet. Once it closes, the app state no longer
   // says which sheet it was, so the last title stays while it slides away.
+  const messages = useMessages();
   const format = useFormatMessage();
   const currentTitle = format(sheetTitle(app));
   const [shownTitle, setShownTitle] = useState(currentTitle);
@@ -239,7 +236,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
             <DirectionsPanel
               directions={app.directions}
               pin={app.pin}
-              note={<SourceLanguage>{ROUTING_NOTE}</SourceLanguage>}
+              note={messages.t("host.notes.routing", {})}
             />
           ) : null}
           {!app.directionsActive && app.sheetOpen ? (
@@ -253,9 +250,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               draw={app.draw}
               onShowOnMap={app.revealMap}
               onStartTour={app.startTour}
-              privacyNote={
-                <SourceLanguage>{SETTINGS_PRIVACY_NOTE}</SourceLanguage>
-              }
+              privacyNote={messages.t("host.notes.privacy", {})}
               imageCredits={creditsLine(app.basemap, app.layers.credits)}
               pinCard={
                 app.pin ? (
@@ -264,9 +259,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
                     onClear={app.clearPin}
                     headingLevel={4}
                     headingRef={pinHeadingRef}
-                    lookupNote={
-                      <SourceLanguage>{PIN_LOOKUP_NOTE}</SourceLanguage>
-                    }
+                    lookupNote={messages.t("host.notes.pinLookup", {})}
                   />
                 ) : undefined
               }

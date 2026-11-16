@@ -663,6 +663,9 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "keyHelp.draw.undo": [],
   "keyHelp.draw.escape": [],
   "host.map.keyInstruction": ["keys", "description"],
+  "host.notes.privacy": [],
+  "host.notes.pinLookup": [],
+  "host.notes.routing": [],
 };
 
 /** Every `{name}` placeholder used in `value`, deduplicated. */
