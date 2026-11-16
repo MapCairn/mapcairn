@@ -445,3 +445,39 @@ describe("MapReadout", () => {
     expect(screen.getByTestId("map-readout").querySelector("p")).toBeNull();
   });
 });
+
+describe("MapReadout message catalogue", () => {
+  const latlng = { lat: -26.2041, lng: 28.0473 };
+
+  it("asks for the landmark name by key", () => {
+    const { services } = renderChrome(
+      <MapReadout units="metric" latlng={null} />,
+    );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "chrome.readout.label",
+      params: {},
+    });
+  });
+
+  it("asks for the visible and the spoken zoom by key, with the figure formatted for the language", () => {
+    const { services } = renderChrome(
+      <CursorCoordinates latlng={null} zoom={12.4} />,
+    );
+    expect(services.fakes.messages.calls).toEqual(
+      expect.arrayContaining([
+        { key: "chrome.readout.zoomShort", params: { level: "12.4" } },
+        { key: "chrome.readout.zoomSpoken", params: { level: "12.4" } },
+      ]),
+    );
+  });
+
+  it("asks for the spoken zoom that follows a position, so the comma moves with the language", () => {
+    const { services } = renderChrome(
+      <CursorCoordinates latlng={latlng} zoom={12.4} />,
+    );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "chrome.readout.zoomSpokenAfterPosition",
+      params: { level: "12.4" },
+    });
+  });
+});

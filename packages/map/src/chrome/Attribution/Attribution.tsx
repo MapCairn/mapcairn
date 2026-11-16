@@ -18,7 +18,7 @@ import {
   useState,
 } from "react";
 import { useMap } from "../../host";
-import { usePreferences } from "../../services";
+import { useMessages, usePreferences } from "../../services";
 import { IconButton } from "../../ui";
 import { CHROME_GAP_PX } from "../chromeSpacing";
 import * as styles from "./Attribution.css";
@@ -166,6 +166,7 @@ export function Attribution({
   // Counts the openings the person asked for, each of which moves focus in.
   const [openRequest, setOpenRequest] = useState(0);
   const [placement, setPlacement] = useState<Placement>("above");
+  const { t } = useMessages();
   const regionId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const regionRef = useRef<HTMLElement>(null);
@@ -330,7 +331,7 @@ export function Attribution({
       onFocus={onFocus}
     >
       <IconButton
-        label="Map credits"
+        label={t("chrome.attribution.label", {})}
         icon={Info}
         size="compact"
         className={styles.onMapIcon}
@@ -341,7 +342,7 @@ export function Attribution({
       <section
         ref={regionRef}
         id={regionId}
-        aria-label="Map credits"
+        aria-label={t("chrome.attribution.label", {})}
         tabIndex={-1}
         hidden={!open}
         data-chrome="attribution-popover"

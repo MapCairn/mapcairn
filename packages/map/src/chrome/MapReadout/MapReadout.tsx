@@ -178,9 +178,6 @@ export interface CursorCoordinatesProps {
   readonly zoom?: number;
 }
 
-/** Separates the position from the zoom in the text a screen reader or a copy carries. */
-const SPOKEN_SEPARATOR = ", ";
-
 /**
  * The position under the pointer and the zoom level, as plain muted text with
  * tabular figures. It is not a live region: the settled zoom is already
@@ -192,20 +189,26 @@ const SPOKEN_SEPARATOR = ", ";
  *   text read it once and in full, in the order the eye sees it.
  */
 export function CursorCoordinates({ latlng, zoom }: CursorCoordinatesProps) {
-  const { language } = useMessages();
+  const { language, t } = useMessages();
   if (!latlng && zoom === undefined) {
     return null;
   }
+  const level = zoom === undefined ? "" : formatZoom(zoom, language);
   return (
     <p data-chrome="cursor-coordinates" className={styles.coordinates}>
       {latlng ? <span>{formatLatLng(latlng)}</span> : null}
       {zoom === undefined ? null : (
         <span data-testid="zoom-level" className={styles.zoomLevel}>
           <span aria-hidden="true" className={styles.unselectable}>
-            z {formatZoom(zoom, language)}
+            {t("chrome.readout.zoomShort", { level })}
           </span>
           <VisuallyHidden>
-            {latlng ? SPOKEN_SEPARATOR : ""}Zoom {formatZoom(zoom, language)}
+            {t(
+              latlng
+                ? "chrome.readout.zoomSpokenAfterPosition"
+                : "chrome.readout.zoomSpoken",
+              { level },
+            )}
           </VisuallyHidden>
         </span>
       )}
@@ -237,10 +240,11 @@ export interface MapReadoutProps
 export function MapReadout({ units, latlng, showZoom }: MapReadoutProps) {
   const { view } = useMap();
   const { layout } = useChromeLayout();
+  const { t } = useMessages();
   const zoomShown = showZoom ?? layout === "panel";
   return (
     <section
-      aria-label="Map scale"
+      aria-label={t("chrome.readout.label", {})}
       data-chrome="map-readout"
       data-testid="map-readout"
       className={styles.readout}
