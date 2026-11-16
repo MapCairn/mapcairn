@@ -47,7 +47,7 @@ jobs:
           # commercial use or hosting. AGPL-3.0 is the project's own licence and is
           # not denied. This list does not tell the AGPL packages from
           # packages/geolint, which is Apache-2.0 and must hold only permissive
-          # dependencies: a test in that package (src/testing/licences.test.ts)
+          # production dependencies: a test in that package (src/testing/licences.test.ts)
           # checks its installed dependency tree for that. The action reads
           # GitHub's licence data, so a package
           # with no detected licence is not caught here. CC-BY-NC-3.0-IGO is left

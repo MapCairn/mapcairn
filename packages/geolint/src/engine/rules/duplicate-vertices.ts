@@ -4,6 +4,7 @@ import type { Position } from "../geometry/predicates.js";
 import { leafGeometries, linesOf, ringsOf } from "../geometry/walk.js";
 import { pointer } from "../json.js";
 import type { Finding, Rule } from "../types.js";
+import { FindingCap } from "./findingCap.js";
 import {
   fixLeaves,
   identicalPositions,
@@ -86,7 +87,8 @@ function messageFor(count: number): string {
  * position of a ring repeating the first is not a duplicate. A run of repeats
  * is one finding. When removing the repeats would leave a line with fewer than
  * two positions or a ring with fewer than four, the geometry is left alone and
- * the finding is not fixable.
+ * the finding is not fixable. At most twenty runs of a feature are reported
+ * and the rest are counted, but the fix removes every repeat.
  */
 export const duplicateVerticesRule: Rule = {
   id: RULE_ID,
@@ -96,7 +98,7 @@ export const duplicateVerticesRule: Rule = {
   fixable: true,
   needsRegion: false,
   check(feature) {
-    const findings: Finding[] = [];
+    const found = new FindingCap(duplicateVerticesRule, feature);
     for (const leaf of leafGeometries(feature)) {
       const runs = [
         ...linesOf(leaf).map((run) => ({ run, kind: "line" as const })),
@@ -105,19 +107,22 @@ export const duplicateVerticesRule: Rule = {
       for (const { run, kind } of runs) {
         const fixable = canRemoveRepeats(run.positions, kind);
         for (const { index, count } of repeatsIn(run.positions)) {
-          findings.push({
-            ruleId: RULE_ID,
-            severity: "warning",
-            confidence: "high",
-            path: pointer(run.pointer, index),
-            message: messageFor(count),
-            fixable,
-            data: { count },
-          });
+          found.add(
+            "warning",
+            (): Finding => ({
+              ruleId: RULE_ID,
+              severity: "warning",
+              confidence: "high",
+              path: pointer(run.pointer, index),
+              message: messageFor(count),
+              fixable,
+              data: { count },
+            }),
+          );
         }
       }
     }
-    return findings;
+    return found.result();
   },
   fix(feature) {
     return fixLeaves(feature, (leaf) =>

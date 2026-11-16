@@ -196,7 +196,11 @@ describe("regionMismatchRule", () => {
       expect(many?.message).toBe(
         "All 3 positions in this feature are outside ZA or NA, even allowing for a coarse coastline, so the feature may belong to another place.",
       );
-      expect(many?.data).toEqual({ regions: ["ZA", "NA"], positions: 3 });
+      expect(many?.data).toEqual({
+        regions: ["ZA", "NA"],
+        positions: 3,
+        checked: 3,
+      });
     });
 
     it("flags a line, polygon, multipoint and multipolygon that lie wholly elsewhere, at the geometry", () => {
@@ -358,7 +362,13 @@ describe("regionMismatchRule", () => {
       const item = feature({ type: "Polygon", coordinates: [ring] });
       const findings = check(item, { regions: ["ZA"], countries: counting });
       expect(findings).toHaveLength(1);
-      expect(findings[0]?.data).toMatchObject({ positions: 1_000_001 });
+      expect(findings[0]?.data).toMatchObject({
+        positions: 1_000_001,
+        checked: 1000,
+      });
+      expect(findings[0]?.message).toBe(
+        "All 1,000 positions checked in this feature (of 1,000,001) are outside ZA, even allowing for a coarse coastline, so the feature may belong to another place.",
+      );
       expect(calls).toBeLessThanOrEqual(2 * 1000 + 2 * 64);
     });
   });

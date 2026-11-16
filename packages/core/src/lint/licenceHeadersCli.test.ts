@@ -91,6 +91,18 @@ describe("scripts/licenceHeaders.mjs, run as a command", () => {
     expect(result.stderr).toContain("name a different licence");
   });
 
+  it("does not add a second header with --write to a file that names an expression", () => {
+    const dual =
+      "// SPDX-License-Identifier: Apache-2.0 OR MIT\n// Copyright MapCairn contributors\nexport {};\n";
+    put("packages/geolint/src/dual.ts", dual);
+    const result = run("--write");
+    expect(
+      readFileSync(path.join(root, "packages/geolint/src/dual.ts"), "utf8"),
+    ).toBe(dual);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("name a different licence");
+  });
+
   it("succeeds with --write when only headers were missing", () => {
     put("packages/geolint/src/new.ts", "export {};\n");
     expect(run("--write").status).toBe(0);

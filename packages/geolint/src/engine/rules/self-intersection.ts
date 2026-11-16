@@ -11,6 +11,7 @@ import {
 import { leafGeometries, type RingRef, ringsOf } from "../geometry/walk.js";
 import { pointer } from "../json.js";
 import type { Finding, Rule } from "../types.js";
+import { FindingCap } from "./findingCap.js";
 
 const RULE_ID = "self-intersection";
 
@@ -280,10 +281,11 @@ function checkPolygon(rings: readonly RingRef[]): Finding[] {
  * `MultiPolygon` that touch, are valid and are not reported. A line that crosses
  * itself is valid and is not reported either.
  *
- * Findings are one for each distinct place, at most ten for a ring. When a
- * ring has more intersections than that, the check between the polygon's rings
- * is skipped: it would have to sweep every crossing of a ring that is already
- * a tangle, and the ring needs repairing first.
+ * Findings are one for each distinct place, at most ten for a ring and twenty
+ * for a feature, the rest being counted. When a ring has more intersections
+ * than that, the check between the polygon's rings is skipped: it would have to
+ * sweep every crossing of a ring that is already a tangle, and the ring needs
+ * repairing first.
  */
 export const selfIntersectionRule: Rule = {
   id: RULE_ID,
@@ -294,15 +296,17 @@ export const selfIntersectionRule: Rule = {
   fixable: false,
   needsRegion: false,
   check(feature) {
-    const findings: Finding[] = [];
+    const found = new FindingCap(selfIntersectionRule, feature);
     for (const leaf of leafGeometries(feature)) {
       if (leaf.type !== "Polygon" && leaf.type !== "MultiPolygon") {
         continue;
       }
       for (const polygon of polygonsOf(ringsOf(leaf))) {
-        findings.push(...checkPolygon(polygon));
+        for (const finding of checkPolygon(polygon)) {
+          found.add(finding.severity, () => finding);
+        }
       }
     }
-    return findings;
+    return found.result();
   },
 };

@@ -98,7 +98,9 @@ export interface Rule {
   /**
    * Checks one feature value as parsed from the input. It must tolerate any
    * JSON value (the `structure` rule reports malformed shapes; the others skip
-   * what they cannot read) and must not throw or mutate the input.
+   * what they cannot read) and must not throw or mutate the input. It reports at
+   * most `MAX_FINDINGS_PER_FEATURE` findings, then one that counts the rest (see
+   * `FindingCap`), so a feature with a very large number of problems stays small.
    */
   readonly check: (
     feature: unknown,

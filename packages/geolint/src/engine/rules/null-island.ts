@@ -2,9 +2,10 @@
 // Copyright MapCairn contributors
 import { leafGeometries, matchingPositions } from "../geometry/walk.js";
 import type { Finding, Rule } from "../types.js";
+import { capFindings } from "./findingCap.js";
 
 function check(feature: unknown): Finding[] {
-  return leafGeometries(feature).flatMap((leaf) => {
+  const found = leafGeometries(feature).flatMap((leaf) => {
     const { positions: hits, first } = matchingPositions(
       leaf,
       (position) => position[0] === 0 && position[1] === 0,
@@ -28,6 +29,7 @@ function check(feature: unknown): Finding[] {
       } satisfies Finding,
     ];
   });
+  return capFindings(found, nullIslandRule, feature);
 }
 
 /** Reports a position that is exactly longitude 0, latitude 0, a common stand-in for a missing location. */

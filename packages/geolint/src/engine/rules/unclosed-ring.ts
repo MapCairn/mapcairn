@@ -3,6 +3,7 @@
 import { type Position, samePosition } from "../geometry/predicates.js";
 import { leafGeometries, ringsOf } from "../geometry/walk.js";
 import type { Finding, Rule } from "../types.js";
+import { FindingCap } from "./findingCap.js";
 import { fixLeaves, identicalPositions, mapRuns } from "./fixSupport.js";
 
 const RULE_ID = "unclosed-ring";
@@ -35,6 +36,8 @@ function closed(positions: readonly Position[]): readonly Position[] {
 /**
  * A polygon ring whose last position is not identical to its first. RFC 7946
  * requires a closed ring, and parsers differ in what they do with an open one.
+ * At most twenty rings of a feature are reported and the rest are counted, but
+ * the fix closes every one.
  */
 export const unclosedRingRule: Rule = {
   id: RULE_ID,
@@ -44,23 +47,26 @@ export const unclosedRingRule: Rule = {
   fixable: true,
   needsRegion: false,
   check(feature) {
-    const findings: Finding[] = [];
+    const found = new FindingCap(unclosedRingRule, feature);
     for (const leaf of leafGeometries(feature)) {
       for (const ring of ringsOf(leaf)) {
         if (isOpen(ring.positions)) {
-          findings.push({
-            ruleId: RULE_ID,
-            severity: "error",
-            confidence: "high",
-            path: ring.pointer,
-            message:
-              "The ring is not closed: its last position is not the same as its first.",
-            fixable: true,
-          });
+          found.add(
+            "error",
+            (): Finding => ({
+              ruleId: RULE_ID,
+              severity: "error",
+              confidence: "high",
+              path: ring.pointer,
+              message:
+                "The ring is not closed: its last position is not the same as its first.",
+              fixable: true,
+            }),
+          );
         }
       }
     }
-    return findings;
+    return found.result();
   },
   fix(feature) {
     return fixLeaves(feature, (leaf) =>

@@ -72,7 +72,7 @@ Maps are drawn with [MapLibre GL JS](https://maplibre.org), which is licensed un
 | [`robust-predicates`](https://github.com/mourner/robust-predicates) 3.0.3                                                                                                                                                                                                                    | Exact orientation tests for winding and intersection decisions                                                                                                   | Unlicense                                                       |
 | [`flatbush`](https://github.com/mourner/flatbush) 4.7.0 and its dependency [`flatqueue`](https://github.com/mourner/flatqueue) 3.1.0                                                                                                                                                         | A static R-tree over the country outlines                                                                                                                        | ISC                                                             |
 
-The test and benchmark tools (`vitest`, `fast-check`, `tinybench`, `typescript`) are development dependencies and are not part of what the package installs.
+The files in `packages/geolint/test-data` are outlines taken from the same Natural Earth data, for tests, and are not part of the published package. The test and benchmark tools (`vitest`, `fast-check`, `tinybench`, `typescript`) are development dependencies and are not part of what the package installs.
 
 ## Fonts and icons
 

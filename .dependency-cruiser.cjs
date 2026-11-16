@@ -214,7 +214,7 @@ module.exports = {
       name: "geolint-imports-no-workspace-package",
       severity: "error",
       comment:
-        "packages/geolint is Apache-2.0 and independent: it must build, test and pack on its own, and it must never import AGPL MapCairn code. It imports no other package or example in this repository, by path or by package name.",
+        "packages/geolint is Apache-2.0 and independent: its published files depend on nothing else in this repository, and it must never import AGPL MapCairn code. It imports no other package or example in this repository, by path or by package name.",
       from: { path: "^packages/geolint/" },
       to: { path: "^(packages/(?!geolint/)|examples/)" },
     },

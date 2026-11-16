@@ -10,8 +10,13 @@ export interface Ellipsoid {
   readonly f: number;
 }
 
+/** The WGS 84 ellipsoid, which GPS and GeoJSON use. */
 export const WGS84: Ellipsoid = { a: 6378137, f: 1 / 298.257223563 };
+
+/** The GRS 80 ellipsoid, which ETRS89 and so Lambert-93 and the Irish grid use. It differs from WGS 84 by less than a millimetre. */
 export const GRS80: Ellipsoid = { a: 6378137, f: 1 / 298.257222101 };
+
+/** The Airy 1830 ellipsoid, which the British National Grid uses. */
 export const AIRY_1830: Ellipsoid = { a: 6377563.396, f: 1 / 299.3249646 };
 
 const DEGREES = Math.PI / 180;

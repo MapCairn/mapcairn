@@ -11,11 +11,17 @@
  * countries the 1:110m set does not have. Rings are quantised to 1e-4 degrees
  * and delta encoded, which keeps the artefact small.
  *
+ * The committed artefact is formatted by Biome, so after writing the raw output
+ * this script runs Biome's formatter on the file (from the repository's
+ * dependencies), which gives the committed form back.
+ *
  * The inputs are untrusted data: each file is checked against a pinned SHA-256
  * before it is read, and nothing in it is executed or used as a path.
  */
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 /** The Natural Earth Vector repository commit the files were taken from. */
 const SOURCE_COMMIT = "ca96624a56bd078437bca8184e78163e5039ad19";
@@ -150,6 +156,25 @@ const artefact = {
   countries,
 };
 writeFileSync(OUTPUT, `${JSON.stringify(artefact)}\n`);
+const biome = spawnSync(
+  process.execPath,
+  [
+    fileURLToPath(
+      new URL(
+        "../../../node_modules/@biomejs/biome/bin/biome",
+        import.meta.url,
+      ),
+    ),
+    "format",
+    "--write",
+    fileURLToPath(OUTPUT),
+  ],
+  { encoding: "utf8" },
+);
+if (biome.status !== 0) {
+  throw new Error(`Biome could not format the artefact:
+${biome.stdout}${biome.stderr}`);
+}
 process.stdout.write(
   `${countries.length} countries (${coarse.length} at 1:110m, ${fine.length} at 1:50m) written.\n`,
 );

@@ -5,6 +5,7 @@ import {
   expectedIdentifier,
   hasHeader,
   headerFor,
+  namesAnIdentifier,
   withHeader,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/licenceHeaders.mjs";
@@ -73,6 +74,26 @@ describe("hasHeader", () => {
         "packages/geolint/src/bin.ts",
       ),
     ).toBe(true);
+  });
+});
+
+describe("namesAnIdentifier", () => {
+  it("is true for any identifier, an expression included, which hasHeader refuses", () => {
+    const dual =
+      "// SPDX-License-Identifier: Apache-2.0 OR MIT\n// Copyright MapCairn contributors\nexport {};\n";
+    expect(namesAnIdentifier(APACHE)).toBe(true);
+    expect(namesAnIdentifier(dual)).toBe(true);
+    expect(hasHeader(dual, "packages/geolint/src/a.ts")).toBe(false);
+  });
+
+  it("is true after a shebang and false for no identifier or one too far down", () => {
+    expect(namesAnIdentifier(`#!/usr/bin/env node\n${APACHE}`)).toBe(true);
+    expect(namesAnIdentifier("export {};\n")).toBe(false);
+    expect(
+      namesAnIdentifier(
+        `${"// a\n".repeat(5)}// SPDX-License-Identifier: Apache-2.0\n`,
+      ),
+    ).toBe(false);
   });
 });
 

@@ -3,6 +3,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -12,11 +13,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { handle } from "../cli/worker.js";
-import { buildContext } from "../engine/lint.js";
+import { buildContext, LintUsageError } from "../engine/lint.js";
 import { rules } from "../engine/rules/index.js";
 import { expandInputs, fileChunks, NoMatchError, STDIN } from "./files.js";
-import { fixedPathFor, fixFile } from "./fixFile.js";
-import { lintFile } from "./lintFile.js";
+import { fixedPathFor, fixFile, planFixInputs } from "./fixFile.js";
+import { isFileSystemError, lintFile } from "./lintFile.js";
 import { mapInThreads } from "./pool.js";
 
 let dir: string;
@@ -57,6 +58,50 @@ describe("expandInputs", () => {
     ]);
   });
 
+  describe("an argument with glob characters in it", () => {
+    let folder: string;
+    const point = '{"type":"Point","coordinates":[1,2]}';
+
+    beforeAll(() => {
+      folder = path.join(dir, "glob-names");
+      mkdirSync(folder);
+      for (const name of [
+        "a.geojson",
+        "b.geojson",
+        "data[1].geojson",
+        "{a,b}.geojson",
+      ]) {
+        writeFileSync(path.join(folder, name), point);
+      }
+    });
+
+    it("is a path when it names a file that exists", async () => {
+      for (const name of ["data[1].geojson", "{a,b}.geojson"]) {
+        expect(await expandInputs([name], folder)).toEqual([name]);
+      }
+    });
+
+    it.skipIf(process.platform === "win32")(
+      "is a path for a name with * and ?, which Windows does not allow",
+      async () => {
+        for (const name of ["all*.geojson", "what?.geojson"]) {
+          writeFileSync(path.join(folder, name), point);
+          expect(await expandInputs([name], folder)).toEqual([name]);
+        }
+      },
+    );
+
+    it("is a glob when nothing of that name exists, and is refused when it matches nothing", async () => {
+      expect(await expandInputs(["[ab].geojson"], folder)).toEqual([
+        "a.geojson",
+        "b.geojson",
+      ]);
+      await expect(expandInputs(["[xy].geojson"], folder)).rejects.toThrow(
+        NoMatchError,
+      );
+    });
+  });
+
   it("refuses a glob that matches nothing", async () => {
     await expect(expandInputs(["*.nothing"], dir)).rejects.toThrow(
       NoMatchError,
@@ -84,7 +129,120 @@ describe("fixedPathFor", () => {
   });
 });
 
+describe("planFixInputs", () => {
+  it("keeps the inputs in order and skips the ones that are fixed copies", () => {
+    expect(
+      planFixInputs(["b.geojson", "a.fixed.geojson", "c.json"], dir),
+    ).toEqual({
+      inputs: ["b.geojson", "c.json"],
+      skipped: ["a.fixed.geojson"],
+    });
+  });
+
+  it("refuses two inputs that write the same copy and names both", () => {
+    expect(() => planFixInputs(["x.geojson", "x.json"], dir)).toThrow(
+      /x[.]fixed[.]geojson for both x[.]geojson and x[.]json/,
+    );
+    expect(() =>
+      planFixInputs(["x.geojson", path.join(dir, "x.json")], dir),
+    ).toThrow(LintUsageError);
+  });
+
+  it("tells files with the same name in different folders apart", () => {
+    expect(
+      planFixInputs(
+        [path.join("a", "x.geojson"), path.join("b", "x.geojson")],
+        dir,
+      ).inputs,
+    ).toHaveLength(2);
+  });
+
+  it("sees through a relative and an absolute spelling of the same copy", () => {
+    expect(() =>
+      planFixInputs(["x.geojson", path.join(dir, "x.json")], dir),
+    ).toThrow(/for both/);
+  });
+});
+
 describe("fixFile", () => {
+  it("writes many copies into one folder at once and leaves nothing beside them but the originals", async () => {
+    const folder = path.join(dir, "concurrent");
+    mkdirSync(folder);
+    const names = Array.from({ length: 12 }, (_, index) => `file-${index}`);
+    for (const name of names) {
+      writeFileSync(
+        path.join(folder, `${name}.geojson`),
+        '{"type":"Point","coordinates":[1.123456789,2]}',
+      );
+    }
+    const context = await buildContext({});
+    const outcomes = await Promise.all(
+      names.map((name) =>
+        fixFile(path.join(folder, `${name}.geojson`), context, rules),
+      ),
+    );
+    expect(outcomes.map((outcome) => outcome.written)).toEqual(
+      names.map((name) => path.join(folder, `${name}.fixed.geojson`)),
+    );
+    expect(readdirSync(folder).sort()).toEqual(
+      names
+        .flatMap((name) => [`${name}.fixed.geojson`, `${name}.geojson`])
+        .sort(),
+    );
+  });
+
+  it("does not use a temporary name that an earlier run, or another one, may be using", async () => {
+    const folder = path.join(dir, "decoy");
+    mkdirSync(folder);
+    const file = path.join(folder, "d.geojson");
+    writeFileSync(file, '{"type":"Point","coordinates":[1,2]}');
+    writeFileSync(path.join(folder, "d.fixed.geojson.tmp"), "another run");
+    await fixFile(file, await buildContext({}), rules);
+    expect(readFileSync(path.join(folder, "d.fixed.geojson.tmp"), "utf8")).toBe(
+      "another run",
+    );
+  });
+
+  it("leaves no work directory after invalid input", async () => {
+    const folder = path.join(dir, "invalid-folder");
+    mkdirSync(folder);
+    writeFileSync(path.join(folder, "bad.geojson"), "{");
+    const outcome = await fixFile(
+      path.join(folder, "bad.geojson"),
+      await buildContext({}),
+      rules,
+    );
+    expect(outcome.written).toBeUndefined();
+    expect(readdirSync(folder)).toEqual(["bad.geojson"]);
+  });
+
+  it("throws, leaving no work directory, when the copy cannot be moved into place", async () => {
+    const folder = path.join(dir, "blocked");
+    mkdirSync(folder);
+    writeFileSync(
+      path.join(folder, "b.geojson"),
+      '{"type":"Point","coordinates":[1,2]}',
+    );
+    mkdirSync(path.join(folder, "b.fixed.geojson"));
+    await expect(
+      fixFile(path.join(folder, "b.geojson"), await buildContext({}), rules),
+    ).rejects.toThrow();
+    expect(readdirSync(folder).sort()).toEqual([
+      "b.fixed.geojson",
+      "b.geojson",
+    ]);
+  });
+
+  it("throws, leaving nothing behind, when the folder cannot be written", async () => {
+    await expect(
+      fixFile(
+        path.join(dir, "no-such-folder", "a.geojson"),
+        await buildContext({}),
+        rules,
+      ),
+    ).rejects.toThrow(/ENOENT/);
+  });
+
   it("writes the copy for a valid file and removes the temporary file", async () => {
     const file = path.join(dir, "fixable.geojson");
     writeFileSync(file, '{"type":"Point","coordinates":[1.123456789,2]}');
@@ -134,6 +292,33 @@ describe("fixFile", () => {
   });
 });
 
+describe("isFileSystemError", () => {
+  const withCode = (code: string) => Object.assign(new Error(code), { code });
+
+  it("is true for the errors that mean the file cannot be read", () => {
+    for (const code of [
+      "ENOENT",
+      "EISDIR",
+      "EACCES",
+      "EPERM",
+      "ENOTDIR",
+      "ELOOP",
+      "ENAMETOOLONG",
+    ]) {
+      expect(isFileSystemError(withCode(code)), code).toBe(true);
+    }
+  });
+
+  it("is false for an error about the run, such as too many open files, and for anything else", () => {
+    expect(isFileSystemError(withCode("EMFILE"))).toBe(false);
+    expect(isFileSystemError(withCode("ENFILE"))).toBe(false);
+    expect(isFileSystemError(withCode("ENOSPC"))).toBe(false);
+    expect(isFileSystemError(new Error("no code"))).toBe(false);
+    expect(isFileSystemError({ code: "ENOENT" })).toBe(false);
+    expect(isFileSystemError(undefined)).toBe(false);
+  });
+});
+
 describe("lintFile", () => {
   const task = (file: string) => ({
     file,
@@ -154,6 +339,16 @@ describe("lintFile", () => {
       (await lintFile(task("gone.geojson"))).report.inputError,
     ).toBeDefined();
     expect((await lintFile(task("nested"))).report.inputError).toBeDefined();
+  });
+
+  it("turns a file system failure while writing the fixed copy into an input error too", async () => {
+    const result = await lintFile({
+      ...task(path.join("no-such-folder", "a.geojson")),
+      fix: true,
+    });
+    expect(result.file).toBe(path.join("no-such-folder", "a.geojson"));
+    expect(result.report.inputError?.message).toContain("ENOENT");
+    expect(result.report.featureCount).toBe(0);
   });
 
   it("does not hide an error that is not a file system error", async () => {

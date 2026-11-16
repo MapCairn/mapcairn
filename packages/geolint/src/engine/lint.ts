@@ -159,6 +159,16 @@ function withDocumentPaths(
 }
 
 /**
+ * Adds the items to the end of the list one at a time. `push(...items)` passes
+ * every item as an argument, and a long enough list overflows the stack.
+ */
+function appendAll<T>(target: T[], items: readonly T[]): void {
+  for (const item of items) {
+    target.push(item);
+  }
+}
+
+/**
  * Lints one input: reads it as a stream of features, runs every active rule on
  * each, and returns the findings sorted. Memory use follows the largest
  * feature, not the input, apart from the findings themselves.
@@ -175,13 +185,14 @@ export async function lintBytes(
   let featureCount = 0;
   for await (const source of result.features) {
     featureCount += 1;
-    findings.push(
-      ...withDocumentPaths(source, lintFeature(source.value, context, rules)),
+    appendAll(
+      findings,
+      withDocumentPaths(source, lintFeature(source.value, context, rules)),
     );
   }
   const { document, error } = await result.done;
   if (error === undefined) {
-    findings.push(...documentFindings(document, context, rules));
+    appendAll(findings, documentFindings(document, context, rules));
   }
   findings.sort(compareFindings);
   return { findings, featureCount, inputError: error };

@@ -3,6 +3,7 @@
 import type { Position } from "../geometry/predicates.js";
 import { leafGeometries, type PositionRef } from "../geometry/walk.js";
 import type { CountryIndex, Finding, Rule, RuleContext } from "../types.js";
+import { capFindings } from "./findingCap.js";
 import { samplePositions } from "./positionSample.js";
 
 /** How many positions of one geometry are read, so a huge geometry costs bounded time. */
@@ -147,7 +148,7 @@ function rangeFinding(sample: readonly PositionRef[]): Finding | undefined {
 
 function check(feature: unknown, context: RuleContext): Finding[] {
   const lookup = regionLookup(context);
-  return leafGeometries(feature).flatMap((leaf) => {
+  const found = leafGeometries(feature).flatMap((leaf) => {
     const sample = samplePositions(leaf, SAMPLE_SIZE);
     const finding =
       lookup === undefined
@@ -155,6 +156,7 @@ function check(feature: unknown, context: RuleContext): Finding[] {
         : regionFinding(sample, lookup);
     return finding === undefined ? [] : [finding];
   });
+  return capFindings(found, coordinateOrderRule, feature);
 }
 
 /**

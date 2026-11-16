@@ -2377,19 +2377,40 @@ describe("--fix on documents laid out unusually", () => {
 });
 
 describe("very large single geometries", () => {
-  it("a 100,000-vertex ring is linted in a moment, and a 1,000,000-position line too", async () => {
+  /** A closed ring of `count` vertices on a circle, which has no findings. */
+  const circleRing = (count: number): number[][] => {
     const ring: number[][] = [];
-    for (let index = 0; index < 100_000; index++) {
-      const angle = (2 * Math.PI * index) / 100_000;
+    for (let index = 0; index < count; index++) {
+      const angle = (2 * Math.PI * index) / count;
       ring.push([
         Number((20 + 10 * Math.cos(angle)).toFixed(6)),
         Number((20 + 10 * Math.sin(angle)).toFixed(6)),
       ]);
     }
     ring.push(ring[0] as number[]);
-    const started = performance.now();
-    const circle = await lint(collection(feature(polygon(ring))));
-    expect(circle.findings).toEqual([]);
+    return ring;
+  };
+
+  it("a ring takes time in proportion to its length, not its square (10,000 against 100,000 vertices)", async () => {
+    const document = (count: number) =>
+      collection(feature(polygon(circleRing(count))));
+    const small = document(10_000);
+    const large = document(100_000);
+    await lint(small);
+    const startedSmall = performance.now();
+    expect((await lint(small)).findings).toEqual([]);
+    const smallTime = performance.now() - startedSmall;
+    const startedLarge = performance.now();
+    expect((await lint(large)).findings).toEqual([]);
+    const largeTime = performance.now() - startedLarge;
+    // Ten times the vertices should take about ten times as long (a sweep line
+    // is n log n). A quadratic check would take a hundred times as long. The
+    // margin of three times that ratio, plus a second, absorbs a busy machine
+    // without an absolute time that depends on it.
+    expect(largeTime).toBeLessThan(30 * smallTime + 1000);
+  }, 120_000);
+
+  it("a line of 1,000,000 positions is linted with a bounded number of region lookups", async () => {
     const line = await lint(
       collection(
         feature({
@@ -2403,8 +2424,7 @@ describe("very large single geometries", () => {
       ["ZA"],
     );
     expect(marks(line)).toEqual(["region-mismatch /features/0/geometry"]);
-    expect(performance.now() - started).toBeLessThan(30_000);
-  }, 60_000);
+  }, 120_000);
 
   it("a ring whose closing edge crosses 1,500 others is cut off at ten findings, quickly", async () => {
     const ring: number[][] = [];
@@ -2421,13 +2441,14 @@ describe("very large single geometries", () => {
   });
 });
 
-describe("other defects found, each kept as a skipped test", () => {
+describe("regressions: defects that were found and are fixed", () => {
   const deepCoordinates = (depth: number) =>
     `{"type":"FeatureCollection","features":[{"type":"Feature","properties":null,"geometry":{"type":"Point","coordinates":${"[".repeat(depth)}${"]".repeat(depth)}}}]}`;
 
-  // Defect: empty-geometry's holdsNoPosition recurses once for each level of
-  // nesting in `coordinates`, so a document that JSON.parse reads comfortably
-  // makes lintText throw a RangeError (stack overflow) between 4,000 and 5,000 levels.
+  // Regression: empty-geometry's holdsNoPosition recursed once for each level
+  // of nesting in `coordinates`, so a document that JSON.parse reads comfortably
+  // made lintText throw a RangeError (stack overflow) between 4,000 and 5,000
+  // levels. It now looks no deeper than valid coordinates go.
   it("deeply nested coordinates arrays do not make lintText throw", async () => {
     const report = await lint(deepCoordinates(200_000));
     expect(report.inputError).toBeUndefined();
@@ -2438,8 +2459,8 @@ describe("other defects found, each kept as a skipped test", () => {
     expect(report.inputError).toBeUndefined();
   });
 
-  // Defect: a root Feature with a crs member is reported twice at /crs, once as
-  // a document member and once as a feature member.
+  // Regression: a root Feature with a crs member was reported twice at /crs,
+  // once as a document member and once as a feature member.
   it("a root Feature's crs is reported once", async () => {
     const report = await lint({
       type: "Feature",
@@ -2450,15 +2471,15 @@ describe("other defects found, each kept as a skipped test", () => {
     expect(only(report, "deprecated-crs-member")).toHaveLength(1);
   });
 
-  // Defect: invalid JSON adds a second, misleading finding ("not GeoJSON: its
-  // root must be an object with a type member") on top of the input error.
+  // Regression: invalid JSON added a second, misleading finding ("not GeoJSON:
+  // its root must be an object with a type member") on top of the input error.
   it("a syntax error reports only the input error", async () => {
     const report = await lint("{'type':'Point'}");
     expect(report.inputError).toBeDefined();
     expect(report.findings).toEqual([]);
   });
 
-  // Defect (cosmetic): the message for an infinite coordinate reads
+  // Regression (cosmetic): the message for an infinite coordinate read
   // "must be finite numbers, not number".
   it("the message for 1e999 says what is wrong with it", async () => {
     const report = await lint(

@@ -8,6 +8,7 @@ import {
 } from "../crs/systems.js";
 import { leafGeometries, matchingPositions } from "../geometry/walk.js";
 import type { Finding, Rule, RuleContext } from "../types.js";
+import { capFindings } from "./findingCap.js";
 
 /** The valid range of latitude, in degrees. */
 const LATITUDE_LIMIT = 90;
@@ -170,7 +171,7 @@ function describeCandidates(
 }
 
 function check(feature: unknown, context: RuleContext): Finding[] {
-  return leafGeometries(feature).flatMap((leaf) => {
+  const found = leafGeometries(feature).flatMap((leaf) => {
     const { positions: projected, first } = matchingPositions(
       leaf,
       isProjected,
@@ -203,6 +204,7 @@ function check(feature: unknown, context: RuleContext): Finding[] {
       } satisfies Finding,
     ];
   });
+  return capFindings(found, projectedCoordsRule, feature);
 }
 
 /** Reports coordinates outside longitude and latitude range, and names the projected systems they most likely come from. */

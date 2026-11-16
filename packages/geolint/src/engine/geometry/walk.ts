@@ -78,12 +78,17 @@ export function leafGeometries(feature: unknown): LeafGeometry[] {
   if (!isObject(feature)) {
     return out;
   }
-  if (feature.type === "Feature") {
-    collect(feature.geometry, "/geometry", 0, out);
-  } else {
-    collect(feature, "", 0, out);
-  }
+  const geometry = feature.type === "Feature" ? feature.geometry : feature;
+  collect(geometry, geometryPointer(feature), 0, out);
   return out;
+}
+
+/**
+ * The feature-relative pointer of the geometry of a feature: `/geometry` for a
+ * `Feature`, and the empty pointer for a bare geometry, which is its own geometry.
+ */
+export function geometryPointer(feature: unknown): string {
+  return isObject(feature) && feature.type === "Feature" ? "/geometry" : "";
 }
 
 /** A readable position and where it is. */

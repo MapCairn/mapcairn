@@ -19,22 +19,42 @@ export interface FileTask {
   readonly fix: boolean;
 }
 
-/** Whether an error came from the file system (a missing file, a directory, no permission). */
-function isFileSystemError(error: unknown): boolean {
+/** The error codes that mean this one file cannot be read, as opposed to a problem with the run (too many open files, say). */
+const UNREADABLE_FILE_CODES: ReadonlySet<string> = new Set([
+  "ENOENT",
+  "EISDIR",
+  "EACCES",
+  "EPERM",
+  "ENOTDIR",
+  "ELOOP",
+  "ENAMETOOLONG",
+]);
+
+/**
+ * Whether an error says the file itself cannot be read: it is missing, is a
+ * directory, is not allowed, or has a name the system rejects. Any other
+ * system error (running out of open files, a full disk) is about the run and
+ * is not blamed on the file.
+ */
+export function isFileSystemError(
+  error: unknown,
+): error is NodeJS.ErrnoException {
   const code = (error as NodeJS.ErrnoException | undefined)?.code;
   return (
-    error instanceof Error && typeof code === "string" && code.startsWith("E")
+    error instanceof Error &&
+    typeof code === "string" &&
+    UNREADABLE_FILE_CODES.has(code)
   );
 }
 
-function unreadable(file: string, error: unknown): FileReport {
+function unreadable(file: string, error: Error): FileReport {
   return {
     file,
     report: {
       findings: [],
       featureCount: 0,
       inputError: {
-        message: error instanceof Error ? error.message : String(error),
+        message: error.message,
         offset: 0,
       },
     },

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright MapCairn contributors
 import { createReadStream } from "node:fs";
-import { glob } from "node:fs/promises";
+import { glob, stat } from "node:fs/promises";
+import path from "node:path";
 
 /** The name that stands for standard input in the list of inputs. */
 export const STDIN = "-";
@@ -20,11 +21,24 @@ export class NoMatchError extends Error {
   }
 }
 
+/** Whether something exists at the path, resolved against `cwd`. */
+async function exists(file: string, cwd: string): Promise<boolean> {
+  try {
+    await stat(path.resolve(cwd, file));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Expands the input arguments to the files to lint, in argument order. A glob
- * contributes its matches sorted by name, so the order never depends on the file
- * system. A plain path is kept as it is, and a missing file is reported when it
- * is read. `-` stays `-`. A file named twice is read once.
+ * Expands the input arguments to the files to lint, in argument order. An
+ * argument that names something that exists is a path, even when its name has
+ * glob characters in it (`data[1].geojson`); only an argument that does not is
+ * read as a glob. A glob contributes its matches sorted by name, so the order
+ * never depends on the file system. A plain path is kept as it is, and a missing
+ * file is reported when it is read. `-` stays `-`. A file named twice is read
+ * once.
  */
 export async function expandInputs(
   patterns: readonly string[],
@@ -39,7 +53,11 @@ export async function expandInputs(
     }
   };
   for (const pattern of patterns) {
-    if (pattern === STDIN || !GLOB_CHARACTERS.test(pattern)) {
+    if (
+      pattern === STDIN ||
+      !GLOB_CHARACTERS.test(pattern) ||
+      (await exists(pattern, cwd))
+    ) {
       add(pattern);
       continue;
     }
@@ -56,6 +74,6 @@ export async function expandInputs(
 }
 
 /** The bytes of a file, as a stream of chunks. */
-export function fileChunks(path: string): AsyncIterable<Uint8Array> {
-  return createReadStream(path, { highWaterMark: CHUNK_BYTES });
+export function fileChunks(file: string): AsyncIterable<Uint8Array> {
+  return createReadStream(file, { highWaterMark: CHUNK_BYTES });
 }

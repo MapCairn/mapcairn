@@ -20,7 +20,7 @@ npm run test:coverage
 npm run build
 ```
 
-`npm run check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence. Run one unit test file with `npx --no-install vitest run path/to/file.test.ts`. Coverage must reach 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. Aim for complete behavioural coverage rather than exclusions.
+`npm run check` runs lint, typecheck, unit tests, build, e2e and a11y in sequence. Run one unit test file with `npx --no-install vitest run path/to/file.test.ts`. Coverage must reach 95% for statements, branches, functions and lines in `core`, `map`, `react`, `theme` and `geolint`. Aim for complete behavioural coverage rather than exclusions.
 
 For UI or map changes, run the Playwright specs that cover the change (`npm run test:e2e -w @mapcairn/web -- <spec name>`, which includes that spec's accessibility tests), and run the full `npm run e2e` and `npm run a11y` when the change is to layout, the map engine, the test seam or a component's colour, focus or semantics. CI runs the full suites. Install the browsers once with `npm run playwright:install -w @mapcairn/web`. Playwright starts `npm start` itself, an e2e-mode build served on port 4173 (or `MAPCAIRN_E2E_PORT`), and the tests mock basemap tiles and place search. Basemap changes also need a real iPhone check, because WebKit emulation cannot reproduce its GPU.
 
@@ -33,6 +33,7 @@ The pre-commit hook runs Biome, dependency-cruiser, the harmony scanner, the lic
 - `packages/react`: generic React hooks, independent of mapping and host state.
 - `packages/theme`: the design tokens.
 - `packages/web`: the SSR host, which holds the adapters and the composition root, with no bundled datasets.
+- `packages/geolint`: a GeoJSON linter (a command and a pure library), Apache-2.0, independent of every other package here.
 
 [`ARCHITECTURE.md`](ARCHITECTURE.md) describes the layers and the dependency rules, and how to add an adapter. `npm run lint` enforces the rules, so supply services through the composition root and `ServicesProvider` rather than importing an adapter or an engine into the user interface. [`DESIGN.md`](DESIGN.md) describes the tokens and the accessibility contracts. The [extending guide](docs/guides/extending.md) has short how-tos for adding a basemap, a data layer, a routing provider and an adapter.
 

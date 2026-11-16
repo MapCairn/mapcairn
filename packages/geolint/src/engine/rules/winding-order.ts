@@ -3,6 +3,7 @@
 import { type Position, ringOrientation } from "../geometry/predicates.js";
 import { leafGeometries, ringsOf } from "../geometry/walk.js";
 import type { Finding, Rule } from "../types.js";
+import { FindingCap } from "./findingCap.js";
 import { fixLeaves, MIN_RING_POSITIONS, mapRuns } from "./fixSupport.js";
 
 const RULE_ID = "winding-order";
@@ -56,7 +57,9 @@ function messageFor(isExterior: boolean): string {
  * RFC 7946 asks for counter-clockwise exterior rings and clockwise holes. It is
  * a SHOULD for parsers, so this is a warning. The winding is exact, so a very
  * thin ring is judged correctly. A wrong ring is fixed by reversing it, unless
- * that cannot give it the right winding (see `reversedToTheRightWay`).
+ * that cannot give it the right winding (see `reversedToTheRightWay`). At most
+ * twenty rings of a feature are reported and the rest are counted, but the fix
+ * reverses every one.
  */
 export const windingOrderRule: Rule = {
   id: RULE_ID,
@@ -67,24 +70,27 @@ export const windingOrderRule: Rule = {
   fixable: true,
   needsRegion: false,
   check(feature) {
-    const findings: Finding[] = [];
+    const found = new FindingCap(windingOrderRule, feature);
     for (const leaf of leafGeometries(feature)) {
       for (const ring of ringsOf(leaf)) {
         if (windsTheWrongWay(ring.positions, ring.isExterior)) {
-          findings.push({
-            ruleId: RULE_ID,
-            severity: "warning",
-            confidence: "high",
-            path: ring.pointer,
-            message: messageFor(ring.isExterior),
-            fixable:
-              reversedToTheRightWay(ring.positions, ring.isExterior) !==
-              undefined,
-          });
+          found.add(
+            "warning",
+            (): Finding => ({
+              ruleId: RULE_ID,
+              severity: "warning",
+              confidence: "high",
+              path: ring.pointer,
+              message: messageFor(ring.isExterior),
+              fixable:
+                reversedToTheRightWay(ring.positions, ring.isExterior) !==
+                undefined,
+            }),
+          );
         }
       }
     }
-    return findings;
+    return found.result();
   },
   fix(feature) {
     return fixLeaves(feature, (leaf) =>

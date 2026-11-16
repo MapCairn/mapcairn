@@ -3,6 +3,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -57,6 +58,9 @@ const BOWTIE = collection({
   },
 });
 
+/** A worker script that does not exist: the tests that lint several files in one go use `--jobs 1`, or name their own worker. */
+const NO_WORKER = new URL("./no-worker.mjs", import.meta.url);
+
 interface Run {
   readonly code: number;
   readonly out: string;
@@ -85,6 +89,7 @@ describe("the command", () => {
           yield new TextEncoder().encode(stdin);
         })(),
       cwd: dir,
+      workerUrl: NO_WORKER,
     });
     return { code, out, err };
   }
@@ -166,6 +171,88 @@ describe("the command", () => {
         expect(result.code).toBe(3);
         expect(result.err).toContain(message);
       }
+    });
+  });
+
+  describe("an unexpected failure", () => {
+    async function runWith(
+      args: string[],
+      overrides: Partial<Parameters<typeof main>[1]>,
+    ): Promise<Run> {
+      let out = "";
+      let err = "";
+      const code = await main(args, {
+        stdout: {
+          write: (text) => {
+            out += text;
+          },
+        },
+        stderr: {
+          write: (text) => {
+            err += text;
+          },
+        },
+        stdin: () => (async function* () {})(),
+        cwd: dir,
+        workerUrl: NO_WORKER,
+        ...overrides,
+      });
+      return { code, out, err };
+    }
+
+    it("is exit 3 with one line on standard error when standard input cannot be opened", async () => {
+      const result = await runWith(["-"], {
+        stdin: () => {
+          throw new Error("no standard input");
+        },
+      });
+      expect(result.code).toBe(3);
+      expect(result.err).toBe("geolint: unexpected error: no standard input\n");
+      expect(result.out).toBe("");
+    });
+
+    it("describes a failure that is not an Error by its text", async () => {
+      const result = await runWith(["-"], {
+        stdin: () => {
+          throw "plain text";
+        },
+      });
+      expect(result.code).toBe(3);
+      expect(result.err).toBe("geolint: unexpected error: plain text\n");
+    });
+
+    it("reports a stream that fails part-way as unreadable input, as before", async () => {
+      const result = await runWith(["-"], {
+        stdin: () =>
+          (async function* () {
+            yield new TextEncoder().encode('{"type":');
+            throw new Error("the pipe broke");
+          })(),
+      });
+      expect(result.code).toBe(3);
+      expect(result.out).toContain("invalid-input");
+    });
+
+    it("is exit 3 when a worker thread fails", async () => {
+      const workerFile = path.join(dir, "throwing-worker.mjs");
+      writeFileSync(
+        workerFile,
+        [
+          'import { parentPort } from "node:worker_threads";',
+          'parentPort.on("message", () => { throw new Error("worker blew up"); });',
+        ].join("\n"),
+      );
+      const result = await runWith(
+        ["--jobs", "2", "clean.geojson", "clockwise.geojson"],
+        { workerUrl: pathToFileURL(workerFile) },
+      );
+      expect(result.code).toBe(3);
+      expect(result.err).toContain("geolint: unexpected error:");
+      expect(result.err).toContain("worker blew up");
+    });
+
+    it("says in the help that exit 3 covers it", async () => {
+      expect((await run(["--help"])).out).toContain("unexpected failure");
     });
   });
 
@@ -314,6 +401,72 @@ describe("the command", () => {
       expect(result.out).toContain("fixme.fixed.geojson");
     });
 
+    describe("inputs that collide", () => {
+      const pointJson = '{"type":"Point","coordinates":[1,2]}';
+
+      it("refuses two inputs that would write the same copy, naming both, and writes nothing", async () => {
+        mkdirSync(path.join(dir, "collide"));
+        writeFileSync(path.join(dir, "collide", "x.geojson"), pointJson);
+        writeFileSync(path.join(dir, "collide", "x.json"), pointJson);
+        const result = await run([
+          "--fix",
+          path.join("collide", "x.geojson"),
+          path.join("collide", "x.json"),
+        ]);
+        expect(result.code).toBe(3);
+        expect(result.err).toContain(path.join("collide", "x.geojson"));
+        expect(result.err).toContain(path.join("collide", "x.json"));
+        expect(result.err).toContain("x.fixed.geojson");
+        expect(() =>
+          readFileSync(path.join(dir, "collide", "x.fixed.geojson")),
+        ).toThrow();
+      });
+
+      it("skips an input that is a fixed copy already, with a note, and does not write .fixed.fixed.geojson", async () => {
+        mkdirSync(path.join(dir, "twice"));
+        writeFileSync(path.join(dir, "twice", "p.geojson"), pointJson);
+        const first = await run(["--fix", "twice/*.geojson"]);
+        expect(first.code).toBe(0);
+        expect(first.err).not.toContain("skipping");
+        const second = await run(["--fix", "twice/*.geojson"]);
+        expect(second.code).toBe(0);
+        expect(second.err).toContain(
+          `skipping ${path.join("twice", "p.fixed.geojson")}: it is already a fixed copy.`,
+        );
+        expect(readdirSync(path.join(dir, "twice")).sort()).toEqual([
+          "p.fixed.geojson",
+          "p.geojson",
+        ]);
+      });
+
+      it("lints no file when every input is a fixed copy", async () => {
+        const result = await run(["--fix", "twice/p.fixed.geojson"]);
+        expect(result.code).toBe(0);
+        expect(result.out).toContain("in 0 files.");
+      });
+
+      it("does not tell two inputs in different folders apart by name alone", async () => {
+        mkdirSync(path.join(dir, "left"));
+        mkdirSync(path.join(dir, "right"));
+        writeFileSync(path.join(dir, "left", "same.geojson"), pointJson);
+        writeFileSync(path.join(dir, "right", "same.geojson"), pointJson);
+        const result = await run([
+          "--fix",
+          "--jobs",
+          "1",
+          path.join("left", "same.geojson"),
+          path.join("right", "same.geojson"),
+        ]);
+        expect(result.code, result.err + result.out).toBe(0);
+        expect(readdirSync(path.join(dir, "left"))).toContain(
+          "same.fixed.geojson",
+        );
+        expect(readdirSync(path.join(dir, "right"))).toContain(
+          "same.fixed.geojson",
+        );
+      });
+    });
+
     it("says nothing was written for invalid input, leaves no partial file, and still exits 3", async () => {
       const result = await run(["--fix", "broken.geojson"]);
       expect(result.code).toBe(3);
@@ -321,9 +474,9 @@ describe("the command", () => {
       expect(() =>
         readFileSync(path.join(dir, "broken.fixed.geojson")),
       ).toThrow();
-      expect(() =>
-        readFileSync(path.join(dir, "broken.fixed.geojson.tmp")),
-      ).toThrow();
+      expect(
+        readdirSync(dir).filter((name) => name.startsWith(".geolint-fix-")),
+      ).toEqual([]);
     });
   });
 });

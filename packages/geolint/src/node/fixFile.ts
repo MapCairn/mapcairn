@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright MapCairn contributors
-import { open, rename, rm } from "node:fs/promises";
+import { mkdtemp, open, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { FixError, type FixStats, fixBytes } from "../engine/fix.js";
+import { LintUsageError } from "../engine/lint.js";
 import type { Rule, RuleContext } from "../engine/types.js";
 import { fileChunks } from "./files.js";
 
@@ -22,6 +23,46 @@ export function fixedPathFor(file: string): string {
   return path.join(dir, `${name}${FIXED_SUFFIX}`);
 }
 
+/** What `planFixInputs` decided. */
+export interface FixPlan {
+  /** The files to write fixed copies of, in the order they were given. */
+  readonly inputs: readonly string[];
+  /** The files left out because they are fixed copies already. */
+  readonly skipped: readonly string[];
+}
+
+/**
+ * Chooses the files `--fix` writes copies of. A file that is a fixed copy
+ * already (its name ends `.fixed.geojson`) is left out, so running a glob twice
+ * does not write `.fixed.fixed.geojson`. Two files that would write the same copy
+ * (`x.geojson` and `x.json` both give `x.fixed.geojson`) are refused, because
+ * the second would overwrite the first; the error names both.
+ */
+export function planFixInputs(files: readonly string[], cwd: string): FixPlan {
+  const inputs: string[] = [];
+  const skipped: string[] = [];
+  const writers = new Map<string, string>();
+  for (const file of files) {
+    if (file.endsWith(FIXED_SUFFIX)) {
+      skipped.push(file);
+      continue;
+    }
+    const copy = path.resolve(cwd, fixedPathFor(file));
+    const other = writers.get(copy);
+    if (other !== undefined) {
+      throw new LintUsageError(
+        `--fix would write ${fixedPathFor(file)} for both ${other} and ${file}. Fix them in separate runs.`,
+      );
+    }
+    writers.set(copy, file);
+    inputs.push(file);
+  }
+  return { inputs, skipped };
+}
+
+/** The start of the name of the directory a copy is written in before it is moved into place. */
+const WORK_DIRECTORY_PREFIX = ".geolint-fix-";
+
 /** What `fixFile` did. */
 export interface FixOutcome {
   /** The fixed copy, or undefined when none was written. */
@@ -31,19 +72,14 @@ export interface FixOutcome {
   readonly problem: string | undefined;
 }
 
-/**
- * Writes a fixed copy of `file` and leaves the original alone. The copy is
- * written to a temporary name and moved into place only when the whole input
- * was read, so a truncated or invalid input leaves no half-written file.
- */
-export async function fixFile(
+/** Streams the fixed text of `file` into a new file at `temporary`, in large writes. */
+async function writeFixedText(
+  temporary: string,
   file: string,
   context: RuleContext,
   rules: readonly Rule[],
-): Promise<FixOutcome> {
-  const target = fixedPathFor(file);
-  const temporary = `${target}.tmp`;
-  const stats: FixStats = { features: 0, changed: 0 };
+  stats: FixStats,
+): Promise<void> {
   const handle = await open(temporary, "w");
   try {
     let batch = "";
@@ -60,15 +96,39 @@ export async function fixFile(
       }
     }
     await handle.write(`${batch}\n`);
+  } finally {
     await handle.close();
+  }
+}
+
+/**
+ * Writes a fixed copy of `file` and leaves the original alone. The copy is
+ * written inside a new directory that only this call uses, beside the target,
+ * and moved into place only when the whole input was read, so a truncated or
+ * invalid input leaves no half-written file and two runs cannot share a
+ * temporary file.
+ */
+export async function fixFile(
+  file: string,
+  context: RuleContext,
+  rules: readonly Rule[],
+): Promise<FixOutcome> {
+  const target = fixedPathFor(file);
+  const workDirectory = await mkdtemp(
+    path.join(path.dirname(target), WORK_DIRECTORY_PREFIX),
+  );
+  const stats: FixStats = { features: 0, changed: 0 };
+  try {
+    const temporary = path.join(workDirectory, "copy");
+    await writeFixedText(temporary, file, context, rules, stats);
     await rename(temporary, target);
     return { written: target, stats, problem: undefined };
   } catch (error) {
-    await handle.close().catch(() => undefined);
-    await rm(temporary, { force: true });
     if (error instanceof FixError) {
       return { written: undefined, stats, problem: error.message };
     }
     throw error;
+  } finally {
+    await rm(workDirectory, { recursive: true, force: true });
   }
 }

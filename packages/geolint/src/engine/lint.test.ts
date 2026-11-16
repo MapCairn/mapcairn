@@ -167,6 +167,37 @@ describe("lintText", () => {
     expect(report.findings).toEqual([]);
   });
 
+  it("keeps every finding of a rule that reports far more than push(...findings) can take as arguments", async () => {
+    const total = 200_000;
+    const flood: Rule = {
+      ...(rules[0] as Rule),
+      id: "flood",
+      check: () =>
+        Array.from({ length: total }, (_, index) => ({
+          ruleId: "flood",
+          severity: "info" as const,
+          confidence: "low" as const,
+          path: `/geometry/${index}`,
+          message: "A finding.",
+          fixable: false,
+        })),
+      checkDocument: () => [
+        {
+          ruleId: "flood",
+          severity: "info" as const,
+          confidence: "low" as const,
+          path: "",
+          message: "A document finding.",
+          fixable: false,
+        },
+      ],
+    };
+    const report = await lintText(JSON.stringify(point([1, 2])), {
+      rules: [flood],
+    });
+    expect(report.findings).toHaveLength(total + 1);
+  });
+
   it("keeps the findings for what it read when the input is cut short", async () => {
     const text = JSON.stringify({
       type: "FeatureCollection",

@@ -9,6 +9,7 @@ import {
 } from "../geometry/walk.js";
 import { pointer } from "../json.js";
 import type { Finding, Rule } from "../types.js";
+import { capFindings } from "./findingCap.js";
 
 /** A step between consecutive positions that is longer than this in longitude went the long way round. */
 const JUMP_DEGREES = 180;
@@ -91,10 +92,14 @@ function unwrapped(leaf: LeafGeometry): Finding[] {
 }
 
 function check(feature: unknown): Finding[] {
-  return leafGeometries(feature).flatMap((leaf) => [
-    ...jumps(leaf),
-    ...unwrapped(leaf),
-  ]);
+  return capFindings(
+    leafGeometries(feature).flatMap((leaf) => [
+      ...jumps(leaf),
+      ...unwrapped(leaf),
+    ]),
+    antimeridianRule,
+    feature,
+  );
 }
 
 /** Reports shapes that cross the antimeridian without being split, and longitudes beyond plus or minus 180. */

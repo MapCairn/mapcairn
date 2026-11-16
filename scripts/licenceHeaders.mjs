@@ -25,6 +25,8 @@ const PACKAGE_LICENCES = [
 ];
 const SOURCE_FILE = /\.(?:ts|tsx|mjs|cjs)$/;
 const IDENTIFIER_LINE = /SPDX-License-Identifier: (\S+)\s*$/;
+/** A line that names some identifier, however it is written (`Apache-2.0 OR MIT` included). */
+const ANY_IDENTIFIER_LINE = /SPDX-License-Identifier:/;
 /** How many leading lines are searched for an existing identifier. */
 const HEADER_WINDOW_LINES = 5;
 
@@ -76,6 +78,21 @@ export function declaredIdentifier(text) {
 }
 
 /**
+ * Whether the first lines of the text name a licence identifier of any kind,
+ * including an expression such as `Apache-2.0 OR MIT`, which `hasHeader` does
+ * not accept. `--write` uses it, so that it never adds a second header to a file
+ * that already has one.
+ *
+ * @param {string} text
+ * @returns {boolean}
+ */
+export function namesAnIdentifier(text) {
+  return text
+    .split("\n", HEADER_WINDOW_LINES)
+    .some((line) => ANY_IDENTIFIER_LINE.test(line));
+}
+
+/**
  * The text with the header inserted after a shebang, if there is one. A file
  * that names a different licence is not rewritten here: the check reports it.
  *
@@ -114,7 +131,7 @@ function main() {
 
   if (write) {
     const unlicensed = missing.filter(
-      (path) => declaredIdentifier(readFileSync(path, "utf8")) === undefined,
+      (path) => !namesAnIdentifier(readFileSync(path, "utf8")),
     );
     for (const path of unlicensed) {
       writeFileSync(path, withHeader(readFileSync(path, "utf8"), path));

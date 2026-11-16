@@ -4,6 +4,7 @@ import type { Position } from "../geometry/predicates.js";
 import { leafGeometries, matchingPositions } from "../geometry/walk.js";
 import { isFiniteNumber, pointer } from "../json.js";
 import type { Finding, Rule } from "../types.js";
+import { capFindings } from "./findingCap.js";
 import { fixLeaves, mapPositions } from "./fixSupport.js";
 
 const RULE_ID = "precision";
@@ -139,7 +140,7 @@ export const precisionRule: Rule = {
         });
       }
     }
-    return findings;
+    return capFindings(findings, precisionRule, feature);
   },
   fix(feature) {
     return fixLeaves(feature, (leaf) => mapPositions(leaf, roundPosition));

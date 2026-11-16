@@ -4,6 +4,7 @@
 import { MAX_COLLECTION_DEPTH } from "../geometry/walk.js";
 import { isObject, pointer } from "../json.js";
 import type { Finding, Rule } from "../types.js";
+import { capFindings } from "./findingCap.js";
 
 const MULTI_TYPES: ReadonlySet<string> = new Set([
   "MultiPoint",
@@ -95,7 +96,11 @@ function check(feature: unknown): Finding[] {
       },
     ];
   }
-  return checkGeometry(feature.geometry, "/geometry", 0);
+  return capFindings(
+    checkGeometry(feature.geometry, "/geometry", 0),
+    emptyGeometryRule,
+    feature,
+  );
 }
 
 /** Reports a null geometry (information) and geometries that hold no coordinates (a warning). */

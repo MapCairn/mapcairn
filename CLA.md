@@ -46,7 +46,7 @@ The Owner will keep the Project available to the public under the AGPL-3.0, or u
 
 ## 7. Packages with their own licence
 
-`packages/geolint` in the Project is licensed under the Apache License, Version 2.0, not the AGPL-3.0. Its terms are in `packages/geolint/LICENSE`. For a Contribution to that package, and only that package:
+Despite the first paragraph above and section 6, `packages/geolint` in the Project is licensed under the Apache License, Version 2.0, not the AGPL-3.0. Its terms are in `packages/geolint/LICENSE`. For a Contribution to that package, and only that package:
 
 - you submit it under the Apache License, Version 2.0, as section 5 of that licence provides, and section 1 above still applies, so the Owner may also license it under any other terms the Owner chooses;
 - in section 4, item 3, a part that comes from someone else must be under a licence that is compatible with the Apache License, Version 2.0 (a permissive licence such as MIT, BSD, ISC, Apache-2.0, 0BSD, CC0 or the Unlicense), not only one that is compatible with the AGPL-3.0; and

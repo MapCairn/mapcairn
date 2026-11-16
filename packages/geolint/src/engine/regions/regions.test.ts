@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   type CountryArtefact,
   createCountryIndex,
+  createCountryLoader,
   loadCountries,
 } from "./index.js";
 
@@ -143,6 +144,63 @@ describe("createCountryIndex", () => {
     });
     expect(degenerate.contains("DD", 3, 1)).toBe(true);
     expect(degenerate.contains("DD", 0.5, 0.2)).toBe(true);
+  });
+});
+
+describe("createCountryLoader", () => {
+  const artefact: CountryArtefact = {
+    format: 1,
+    quantum: 1,
+    countries: [
+      {
+        code: "AA",
+        tolerance: 0,
+        polygons: [[ring([0, 0], [2, 0], [2, 2], [0, 2], [0, 0])]],
+      },
+    ],
+  };
+
+  it("reads once and keeps the index", async () => {
+    let reads = 0;
+    const load = createCountryLoader(async () => {
+      reads += 1;
+      return artefact;
+    });
+    const [first, second] = await Promise.all([load(), load()]);
+    expect(first).toBe(second);
+    expect(await load()).toBe(first);
+    expect(reads).toBe(1);
+    expect(first.has("AA")).toBe(true);
+  });
+
+  it("does not keep a failed read: the next call reads again and can succeed", async () => {
+    let reads = 0;
+    const load = createCountryLoader(async () => {
+      reads += 1;
+      if (reads === 1) {
+        throw new Error("the file was not there");
+      }
+      return artefact;
+    });
+    await expect(load()).rejects.toThrow("the file was not there");
+    expect((await load()).has("AA")).toBe(true);
+    expect(reads).toBe(2);
+    await load();
+    expect(reads).toBe(2);
+  });
+
+  it("rejects every caller that waited on a failed read, once", async () => {
+    let reads = 0;
+    const load = createCountryLoader(async () => {
+      reads += 1;
+      throw new Error("broken");
+    });
+    const results = await Promise.allSettled([load(), load()]);
+    expect(results.map((result) => result.status)).toEqual([
+      "rejected",
+      "rejected",
+    ]);
+    expect(reads).toBe(1);
   });
 });
 

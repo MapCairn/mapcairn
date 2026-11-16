@@ -20,6 +20,7 @@ import {
 import { rules } from "../engine/rules/index.js";
 import { formatSarif } from "../engine/sarif.js";
 import { expandInputs, NoMatchError, STDIN } from "../node/files.js";
+import { planFixInputs } from "../node/fixFile.js";
 import { type FileTask, lintFile } from "../node/lintFile.js";
 import { mapInThreads } from "../node/pool.js";
 
@@ -34,8 +35,8 @@ export interface CliIo {
   readonly stdin: () => AsyncIterable<Uint8Array>;
   /** The directory globs and relative paths are read from. */
   readonly cwd: string;
-  /** The worker script for `--jobs`. Defaults to the one beside this file. */
-  readonly workerUrl?: URL;
+  /** The worker script that lints files for `--jobs`, which the built command keeps beside this file. */
+  readonly workerUrl: URL;
 }
 
 const USAGE = `Usage: geolint [options] <file|glob|-> [...]
@@ -52,7 +53,8 @@ Options:
   --help                 Show this help
 
 Use - to read standard input. Exit codes: 0 clean, 1 warnings only, 2 errors,
-3 unreadable or invalid input, or a request that could not be understood.
+3 unreadable or invalid input, a request that could not be understood, or an
+unexpected failure.
 `;
 
 interface Parsed {
@@ -104,9 +106,8 @@ function parse(argv: readonly string[]): Parsed {
       },
     }));
   } catch (error) {
-    throw new LintUsageError(
-      error instanceof Error ? error.message : String(error),
-    );
+    // parseArgs only ever throws an Error that says what is wrong with the arguments.
+    throw new LintUsageError((error as Error).message);
   }
   return {
     inputs: positionals,
@@ -120,6 +121,11 @@ function parse(argv: readonly string[]): Parsed {
   };
 }
 
+/** The widest rule id, severity and confidence, so the `--rules` columns line up. */
+const RULE_ID_WIDTH = 22;
+const SEVERITY_WIDTH = 8;
+const CONFIDENCE_WIDTH = 7;
+
 /** The `--rules` listing: one line for each rule. */
 export function formatRules(): string {
   const lines = rules.map((rule) => {
@@ -128,9 +134,23 @@ export function formatRules(): string {
       rule.needsRegion ? "needs --region" : undefined,
     ].filter((note) => note !== undefined);
     const suffix = notes.length > 0 ? ` (${notes.join(", ")})` : "";
-    return `${rule.id.padEnd(22)} ${rule.severity.padEnd(8)} ${rule.confidence.padEnd(7)} ${rule.summary}${suffix}`;
+    return `${rule.id.padEnd(RULE_ID_WIDTH)} ${rule.severity.padEnd(SEVERITY_WIDTH)} ${rule.confidence.padEnd(CONFIDENCE_WIDTH)} ${rule.summary}${suffix}`;
   });
   return `${lines.join("\n")}\n`;
+}
+
+/**
+ * Lints the tasks one at a time, so a long list of files never holds more than
+ * one open at once (the open-file limit is a real one).
+ */
+async function lintInSequence(
+  tasks: readonly FileTask[],
+): Promise<FileReport[]> {
+  const reports: FileReport[] = [];
+  for (const task of tasks) {
+    reports.push(await lintFile(task));
+  }
+  return reports;
 }
 
 async function lintAll(
@@ -150,11 +170,11 @@ async function lintAll(
   const lintedFiles =
     parsed.jobs > 1 && tasks.length > 1
       ? await mapInThreads<FileTask, FileReport>(
-          io.workerUrl ?? new URL("./worker.js", import.meta.url),
+          io.workerUrl,
           tasks,
           parsed.jobs,
         )
-      : await Promise.all(tasks.map((task) => lintFile(task)));
+      : await lintInSequence(tasks);
   let nextFile = 0;
   const reports: FileReport[] = [];
   for (const file of files) {
@@ -188,9 +208,48 @@ function render(
 }
 
 /**
+ * The files `--fix` will write copies of. An input that is already a fixed copy
+ * is left out with a note, and two inputs that would write the same copy are
+ * refused (see `planFixInputs`). Without `--fix` every file is kept.
+ */
+function selectInputs(
+  files: readonly string[],
+  parsed: Parsed,
+  io: CliIo,
+): readonly string[] {
+  if (!parsed.fix) {
+    return files;
+  }
+  const plan = planFixInputs(files, io.cwd);
+  for (const file of plan.skipped) {
+    io.stderr.write(`geolint: skipping ${file}: it is already a fixed copy.\n`);
+  }
+  return plan.inputs;
+}
+
+/**
+ * Says what went wrong on standard error and gives the exit code. A request the
+ * command could not understand is described as it is; anything else (a worker
+ * that failed, a bug) is called unexpected. Both are exit 3: an unexpected
+ * failure must never look like the "warnings only" code that a crashed process
+ * would give.
+ */
+function reportFailure(error: unknown, io: CliIo): number {
+  if (error instanceof LintUsageError || error instanceof NoMatchError) {
+    io.stderr.write(`geolint: ${error.message}\n`);
+  } else {
+    const message = error instanceof Error ? error.message : String(error);
+    io.stderr.write(`geolint: unexpected error: ${message}\n`);
+  }
+  return EXIT.unreadable;
+}
+
+/**
  * The whole command, apart from process wiring: parses the arguments, lints the
  * inputs, writes the report and returns the exit code. It never calls
- * `process.exit`, so tests call it directly and the `bin` shim passes the code on.
+ * `process.exit` and never throws: a failure it did not expect is written to
+ * standard error and gives exit code 3. Tests call it directly and the `bin`
+ * shim passes the code on.
  */
 export async function main(
   argv: readonly string[],
@@ -217,19 +276,18 @@ export async function main(
     }
     activeRules(rules, parsed.ignore);
     await buildContext({ regions: parsed.regions, countries: loadCountries });
-    const files = await expandInputs(parsed.inputs, io.cwd);
+    const files = selectInputs(
+      await expandInputs(parsed.inputs, io.cwd),
+      parsed,
+      io,
+    );
     const reports = await lintAll(files, parsed, io);
     for (const note of reports.flatMap((entry) => entry.notes ?? [])) {
-      io.stderr.write(`${note}
-`);
+      io.stderr.write(`${note}\n`);
     }
     io.stdout.write(render(parsed.format, reports));
     return exitCodeFor(reports);
   } catch (error) {
-    if (error instanceof LintUsageError || error instanceof NoMatchError) {
-      io.stderr.write(`geolint: ${error.message}\n`);
-      return EXIT.unreadable;
-    }
-    throw error;
+    return reportFailure(error, io);
   }
 }

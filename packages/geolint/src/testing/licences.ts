@@ -71,8 +71,10 @@ function locate(name: string, from: string): string | undefined {
   }
 }
 
+/** A package found in the production tree, and the licence its manifest declares. */
 export interface InstalledPackage {
   readonly name: string;
+  /** The SPDX expression from the manifest, or undefined when it declares none. */
   readonly licence: string | undefined;
 }
 

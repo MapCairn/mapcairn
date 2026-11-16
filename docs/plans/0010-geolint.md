@@ -26,7 +26,9 @@ packages/geolint/
   src/node/          Node only: files, glob, stdin, worker threads
   src/cli/           the command: main(argv, io), a bin shim, a worker
   fixtures/<rule>/   pass.geojson, fail.geojson, fail.expected.json
-  data/              the country outline artefact and how it was built
+  scripts/           the country outline build script, the smoke test
+  bench/             the benchmark scripts
+  test-data/         larger real-shaped inputs for the edge-case tests
 ```
 
 The package exports `.` and `./engine` (the pure engine) and `./node` (the Node helpers). `bin` is `geolint`.
@@ -88,7 +90,7 @@ One pull request, with one commit for each step.
 1. Licence work, the package skeleton, `LICENSE` and `NOTICE`, the header check, the independence rules and the dependency-licence check.
 2. This plan, the types, the reader, and rules 1 to 5.
 3. Fix mode and SARIF output.
-4. Region data and rules 6, 7 and 12, with the remaining rules (8 to 11).
+4. Region data and the region rules (`coordinate-order`, `projected-coords`, `region-mismatch`), with the remaining rules (`deprecated-crs-member`, `precision`, `antimeridian`, `empty-geometry`, `null-island`).
 5. Benchmarks, performance work, the README and the roadmap entry.
 
 ## Documents to update

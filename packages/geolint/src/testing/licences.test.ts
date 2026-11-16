@@ -89,6 +89,30 @@ describe("productionTree", () => {
     ]);
   });
 
+  it("lists a package that two others depend on once", () => {
+    const pkg = path.join(root, "diamond");
+    write(pkg, { name: "diamond", dependencies: { a: "1.0.0", b: "1.0.0" } });
+    write(path.join(pkg, "node_modules", "a"), {
+      name: "a",
+      license: "MIT",
+      dependencies: { shared: "1.0.0" },
+    });
+    write(path.join(pkg, "node_modules", "b"), {
+      name: "b",
+      license: "MIT",
+      dependencies: { shared: "1.0.0" },
+    });
+    write(path.join(pkg, "node_modules", "shared"), {
+      name: "shared",
+      license: "ISC",
+    });
+    expect(productionTree(pkg).map((entry) => entry.name)).toEqual([
+      "a",
+      "b",
+      "shared",
+    ]);
+  });
+
   it("throws when a declared dependency is not installed", () => {
     const pkg = path.join(root, "missing");
     write(pkg, { name: "missing", dependencies: { nowhere: "1.0.0" } });

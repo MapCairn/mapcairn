@@ -82,10 +82,29 @@ function swallowsRegion(box: Box, lookup: Lookup): boolean {
   });
 }
 
-function subject(count: number): string {
-  return count === 1
-    ? "The only position in this feature is"
-    : `All ${count} positions in this feature are`;
+const NUMBER = new Intl.NumberFormat("en-GB");
+
+/** How many positions were tested against the outlines: at most `SAMPLE_SIZE` for each geometry. */
+function checkedCount(leaves: readonly LeafGeometry[]): number {
+  return leaves.reduce(
+    (sum, leaf) => sum + samplePositions(leaf, SAMPLE_SIZE).length,
+    0,
+  );
+}
+
+/**
+ * The start of the sentence. When a big feature was sampled, it says how many
+ * positions were checked and how many the feature holds, as the others were
+ * not looked at.
+ */
+function subject(count: number, checked: number): string {
+  if (count === 1) {
+    return "The only position in this feature is";
+  }
+  if (checked < count) {
+    return `All ${NUMBER.format(checked)} positions checked in this feature (of ${NUMBER.format(count)}) are`;
+  }
+  return `All ${NUMBER.format(count)} positions in this feature are`;
 }
 
 /** The first geometry that has a readable position. */
@@ -109,6 +128,7 @@ function check(feature: unknown, context: RuleContext): Finding[] {
     return [];
   }
   const { box, count } = measure(leaves);
+  const checked = checkedCount(leaves);
   if (
     swallowsRegion(box, lookup) ||
     coordinateOrderRule.check(feature, context).length > 0
@@ -121,9 +141,9 @@ function check(feature: unknown, context: RuleContext): Finding[] {
       severity: "warning",
       confidence: "medium",
       path: populated.pointer,
-      message: `${subject(count)} outside ${listRegions(lookup.regions)}, even allowing for a coarse coastline, so the feature may belong to another place.`,
+      message: `${subject(count, checked)} outside ${listRegions(lookup.regions)}, even allowing for a coarse coastline, so the feature may belong to another place.`,
       fixable: false,
-      data: { regions: lookup.regions, positions: count },
+      data: { regions: lookup.regions, positions: count, checked },
     },
   ];
 }

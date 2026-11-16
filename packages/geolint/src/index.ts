@@ -3,8 +3,8 @@
 
 /**
  * The geolint lint engine: pure, with no Node built-in, so it runs in a browser
- * or a Worker as well as Node. The command and the file helpers are in
- * `@mapcairn/geolint/node`.
+ * or a Worker as well as Node. The file helpers are in `@mapcairn/geolint/node`, and the command is the
+ * `geolint` bin.
  */
 export {
   FIX_ORDER,
