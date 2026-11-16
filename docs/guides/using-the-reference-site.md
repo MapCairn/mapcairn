@@ -1,6 +1,6 @@
 # Using the reference site
 
-What the reference host offers for searching, saving the map, reading the layer key, turning layers off and drawing, and how each works from the keyboard and a pointer.
+What the reference host offers for choosing a language, searching, saving the map, reading the layer key, turning layers off and drawing, and how each works from the keyboard and a pointer.
 
 ## Search by place name or coordinates
 
@@ -13,6 +13,12 @@ The search box finds a place by name through the geocoder when you press Enter o
 - degrees, minutes and seconds with the usual symbols or words: `26°12'14.8"S 28°02'50.3"E`, `26 degrees 12 minutes 14.8 seconds south, 28 degrees 2 minutes 50.3 seconds east`
 
 A comma is only ever a separator, never a decimal mark, and a negative sign (hyphen, en dash or Unicode minus) cannot be mixed with a hemisphere letter. A bare whole number is not a coordinate, so `12 34`, `3 4`, `+27 82` and `E1 6` are searched as place names; so are `02-123` and `12-14`, because a minus sign that touches a number before it is not the start of a negative value. Text that is out of range (latitude beyond 90, longitude beyond 180), a lone number such as a postcode, or anything with extra text is treated as a place name and searched as usual. Showing a coordinate result sends nothing to the geocoder, but the map loads tiles for that area as it does for any move. The parser is `parseCoordinates` in `@mapcairn/core`, and `useSearch` uses it, so the Directions panel's place search reads coordinates too.
+
+## Choose a language
+
+The site speaks English (British) and Afrikaans. Settings has a Language control with Automatic, English and Afrikaans, each language named in its own language. Automatic, the default, follows the browser: Afrikaans when the browser lists Afrikaans (`af` or `af-ZA`) before any kind of English, English otherwise. The choice is kept on the device with the other settings and is never put in a shared link.
+
+The page renders in English and switches as soon as the app starts, so a visitor who chose Afrikaans can see English for a moment on a first load; the page's `lang` says Afrikaans from the start, so a screen reader uses the right voice. Afrikaans is loaded only when it is chosen. In Afrikaans the coordinates name east with O (oos), and the search box reads O as well as E. The privacy page, the notes in Settings, Directions and the pin card that say what each service receives, and the credits stay in English, and the notes are marked as English for screen readers. The Afrikaans text is a draft until a fluent speaker has reviewed it.
 
 ## Save an image and choose between features
 

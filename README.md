@@ -16,7 +16,7 @@
 - **Pure, tested logic.** Geometry, measurement, formatting, URL state and the surface state machine are plain functions with no DOM, covered by unit tests with 95 percent coverage floors, and the parsers that read untrusted text by property-based tests.
 - **Server-renderable.** The reference host runs on Cloudflare Workers under a strict Content Security Policy with no inline script except one hashed one.
 
-What it is not: a hosted service, a dataset or a GIS analysis engine. MapLibre GL JS is the only map engine, and the interface is in English (British).
+What it is not: a hosted service, a dataset or a GIS analysis engine. MapLibre GL JS is the only map engine. The interface text is British English by default and can be translated or replaced through a message catalogue; the reference site offers English and Afrikaans.
 
 ## A layer is data
 
