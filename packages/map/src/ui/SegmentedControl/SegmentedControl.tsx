@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { useReadingDirection } from "@mapcairn/react";
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
@@ -55,6 +56,7 @@ export function SegmentedControl({
   className,
   "data-testid": testId,
 }: SegmentedControlProps) {
+  const direction = useReadingDirection();
   return (
     <ToggleGroup.Root
       type="single"
@@ -62,6 +64,7 @@ export function SegmentedControl({
       aria-label={label}
       value={value}
       disabled={disabled}
+      dir={direction}
       onValueChange={(next) => {
         if (next) {
           onValueChange(next);

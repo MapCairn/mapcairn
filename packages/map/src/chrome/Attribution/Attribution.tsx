@@ -3,6 +3,7 @@
 import {
   type BasemapDefinition,
   buildAttribution,
+  clearsInlineEnd,
   type LayerAttribution,
   type ViewState,
 } from "@mapcairn/core";
@@ -81,8 +82,12 @@ function useClearOfReadout(
     const measure = () => {
       setClear(
         readout === null ||
-          region.getBoundingClientRect().left >=
-            readout.getBoundingClientRect().right + CHROME_GAP_PX,
+          clearsInlineEnd(
+            readout.getBoundingClientRect(),
+            region.getBoundingClientRect(),
+            CHROME_GAP_PX,
+            getComputedStyle(region).direction === "rtl" ? "rtl" : "ltr",
+          ),
       );
     };
     measure();

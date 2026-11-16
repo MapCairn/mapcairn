@@ -174,3 +174,39 @@ export function shouldShowZoomButtons(input: {
   }
   return { show: true, yieldedToHeight: false };
 }
+
+/** The reading direction of a page or element. */
+export type ReadingDirection = "ltr" | "rtl";
+
+/**
+ * How far a box's far edge is from the inline-start side of its container:
+ * from the left when reading left to right, from the right when reading right
+ * to left. Layout offsets are always from the left, so a right-to-left page
+ * needs the container's width to turn them round.
+ */
+export function inlineDistanceToFarEdge(input: {
+  offsetLeft: number;
+  offsetWidth: number;
+  containerWidth: number;
+  direction: ReadingDirection;
+}): number {
+  return input.direction === "rtl"
+    ? input.containerWidth - input.offsetLeft
+    : input.offsetLeft + input.offsetWidth;
+}
+
+/**
+ * Whether `box` starts at least `gap` pixels past where `anchor` ends along the
+ * reading direction: to the right of it when reading left to right, to the
+ * left when reading right to left.
+ */
+export function clearsInlineEnd(
+  anchor: { left: number; right: number },
+  box: { left: number; right: number },
+  gap: number,
+  direction: ReadingDirection,
+): boolean {
+  return direction === "rtl"
+    ? box.right <= anchor.left - gap
+    : box.left >= anchor.right + gap;
+}
