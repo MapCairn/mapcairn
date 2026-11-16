@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright MapCairn contributors
 import type { LintReport } from "./lint.js";
-import type { Finding, Severity } from "./types.js";
+import type { Finding, InputError, Severity } from "./types.js";
 
 /** The report for one named input. */
 export interface FileReport {
@@ -67,9 +67,50 @@ function plural(amount: number, word: string): string {
   return `${amount} ${word}${amount === 1 ? "" : "s"}`;
 }
 
+const NEWLINE = 0x0a;
+const SPACE = 0x20;
+const DELETE = 0x7f;
+const LAST_C1_CONTROL = 0x9f;
+const TAB = 0x09;
+const HEX = 16;
+
+function isControl(code: number): boolean {
+  return code < SPACE || (code >= DELETE && code <= LAST_C1_CONTROL);
+}
+
+function escapeControl(code: number): string {
+  if (code === NEWLINE) {
+    return "\\n";
+  }
+  if (code === TAB) {
+    return "\\t";
+  }
+  return `\\x${code.toString(HEX).padStart(2, "0")}`;
+}
+
+/**
+ * Replaces control characters (an escape sequence in a `crs` name that a message
+ * echoes, a newline in a file name) with `\xNN`, `\n` or `\t`, so that text output
+ * cannot move the cursor, change colours or split a finding over two lines.
+ */
+function printable(text: string): string {
+  let result = "";
+  for (const character of text) {
+    result += isControl(character.charCodeAt(0))
+      ? escapeControl(character.charCodeAt(0))
+      : character;
+  }
+  return result;
+}
+
 function findingLine(file: string, finding: Finding): string {
-  const place = finding.path === "" ? "(document)" : finding.path;
-  return `${file}: ${finding.severity} ${finding.ruleId} (${finding.confidence} confidence) ${place} ${finding.message}`;
+  const place = finding.path === "" ? "(document)" : printable(finding.path);
+  return `${printable(file)}: ${finding.severity} ${finding.ruleId} (${finding.confidence} confidence) ${place} ${printable(finding.message)}`;
+}
+
+function inputErrorLine(file: string, error: InputError): string {
+  const where = error.offset === 0 ? "" : ` past byte ${error.offset}`;
+  return `${printable(file)}: error invalid-input could not be read${where}: ${printable(error.message)}`;
 }
 
 /**
@@ -84,14 +125,14 @@ export function formatText(reports: readonly FileReport[]): string {
       lines.push(findingLine(file, finding));
     }
     if (report.inputError) {
-      lines.push(
-        `${file}: error invalid-input could not be read past byte ${report.inputError.offset}: ${report.inputError.message}`,
-      );
+      lines.push(inputErrorLine(file, report.inputError));
     }
   }
   const summary = summarise(reports);
+  const unreadable =
+    summary.unreadable > 0 ? `, ${summary.unreadable} unreadable` : "";
   lines.push(
-    `${plural(summary.errors, "error")}, ${plural(summary.warnings, "warning")}, ${summary.infos} info in ${plural(summary.files, "file")}.`,
+    `${plural(summary.errors, "error")}, ${plural(summary.warnings, "warning")}, ${summary.infos} info${unreadable} in ${plural(summary.files, "file")}.`,
   );
   return `${lines.join("\n")}\n`;
 }

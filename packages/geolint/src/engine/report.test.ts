@@ -100,6 +100,42 @@ describe("formatText", () => {
     expect(text).toContain("1 warning, ");
     expect(text).toContain("in 2 files.");
   });
+
+  it("says how many inputs were unreadable next to the counts", () => {
+    const text = formatText([
+      file("b.geojson", [], { message: "Unexpected end of input", offset: 42 }),
+    ]);
+    expect(text).toContain(
+      "0 errors, 0 warnings, 0 info, 1 unreadable in 1 file.",
+    );
+  });
+
+  it("leaves the unreadable count out when every input was read", () => {
+    expect(formatText([file("a", [])])).not.toContain("unreadable");
+  });
+
+  it("words an input that could not be read at all without a byte offset", () => {
+    const text = formatText([
+      file("b.geojson", [], { message: "Unexpected token", offset: 0 }),
+    ]);
+    expect(text).toContain(
+      "b.geojson: error invalid-input could not be read: Unexpected token",
+    );
+  });
+
+  it("escapes control characters in a message and a file name, so output cannot move the cursor or split a line", () => {
+    const text = formatText([
+      file("a\u001b[2Jb.geojson", [
+        { ...finding("warning", "/x"), message: "crs is \u001b[31mred\nnext" },
+      ]),
+    ]);
+    const codes = [...text].map((character) => character.charCodeAt(0));
+    expect(codes.filter((code) => code < 0x20 && code !== 0x0a)).toEqual([]);
+    expect(codes).not.toContain(0x7f);
+    expect(text.split("\n")).toHaveLength(3);
+    expect(text).toContain("a\\x1b[2Jb.geojson");
+    expect(text).toContain("crs is \\x1b[31mred\\nnext");
+  });
 });
 
 describe("formatJson", () => {
