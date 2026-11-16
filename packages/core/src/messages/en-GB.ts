@@ -616,6 +616,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layers.turnOff.group": "Turn off {count} in {group}",
   "layers.turnOff.doneAll":
     "Turned off {count} layer.|Turned off {count} layers.",
+  "layers.turnOff.undo": "Undo",
   "layers.turnOff.undoAll":
     "Undo turning off {count} layer|Undo turning off {count} layers",
   "layers.turnOff.doneGroup": "Turned off {count} in {group}.",

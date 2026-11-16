@@ -515,6 +515,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "layers.turnOff.count": ["count"],
   "layers.turnOff.group": ["count", "group"],
   "layers.turnOff.doneAll": ["count"],
+  "layers.turnOff.undo": [],
   "layers.turnOff.undoAll": ["count"],
   "layers.turnOff.doneGroup": ["count", "group"],
   "layers.turnOff.undoGroup": ["count", "group"],
