@@ -3,6 +3,7 @@
 import { Crosshair, Trash2, Undo2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useToolbarEdge } from "../../chrome/useToolbarEdge";
+import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
 import { SegmentedControl } from "../../ui/SegmentedControl";
@@ -20,11 +21,6 @@ export interface MeasureToolbarProps {
   /** Called by "Done". */
   readonly onDone: () => void;
 }
-
-const MODE_OPTIONS = [
-  { value: "distance", label: "Distance" },
-  { value: "area", label: "Area" },
-] as const;
 
 /**
  * The measure toolbar: a Distance or Area switch, the running total, buttons
@@ -50,6 +46,11 @@ export function MeasureToolbar({
   onDone,
 }: MeasureToolbarProps) {
   const { mode, points, readout, setMode, undo, clear } = measure;
+  const { t } = useMessages();
+  const modeOptions = [
+    { value: "distance", label: t("tools.measure.distance", {}) },
+    { value: "area", label: t("tools.measure.area", {}) },
+  ] as const;
   const rootRef = useRef<HTMLElement>(null);
   const empty = points.length === 0;
 
@@ -62,47 +63,47 @@ export function MeasureToolbar({
   return (
     <section
       ref={rootRef}
-      aria-label="Measurement"
+      aria-label={t("tools.measure.region", {})}
       className={styles.root}
       data-chrome="measure-toolbar"
     >
       <Surface
         role="toolbar"
-        aria-label="Measure"
+        aria-label={t("tools.measure.label", {})}
         className={styles.toolbar}
         data-testid="measure-toolbar"
       >
         <div className={styles.row}>
           <SegmentedControl
             className={styles.modes}
-            label="Measure"
-            options={MODE_OPTIONS}
+            label={t("tools.measure.label", {})}
+            options={modeOptions}
             value={mode}
             onValueChange={(next) => setMode(next as MeasureMode)}
             data-testid="measure-mode"
           />
           <p className={styles.readout}>
-            <VisuallyHidden>Total </VisuallyHidden>
+            <VisuallyHidden>{t("tools.measure.total", {})} </VisuallyHidden>
             <span data-testid="measure-readout">{readout}</span>
           </p>
         </div>
         <div className={styles.row}>
           <div className={styles.actions}>
             <IconButton
-              label="Add point at map centre"
+              label={t("tools.addPointAtCentre", {})}
               icon={Crosshair}
               data-testid="measure-add-point"
               onClick={onAddPointAtCentre}
             />
             <IconButton
-              label="Undo last point"
+              label={t("tools.measure.undo", {})}
               icon={Undo2}
               disabled={empty}
               data-testid="measure-undo"
               onClick={undo}
             />
             <IconButton
-              label="Clear points"
+              label={t("tools.measure.clear", {})}
               icon={Trash2}
               disabled={empty}
               data-testid="measure-clear"
@@ -110,12 +111,10 @@ export function MeasureToolbar({
             />
           </div>
           <Button data-testid="measure-done" onClick={onDone}>
-            Done
+            {t("tools.done", {})}
           </Button>
         </div>
-        <p className={styles.hint}>
-          Tap the map to add points, or use Add point at map centre.
-        </p>
+        <p className={styles.hint}>{t("tools.measure.hint", {})}</p>
       </Surface>
     </section>
   );

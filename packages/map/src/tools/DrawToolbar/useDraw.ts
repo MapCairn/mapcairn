@@ -3,6 +3,7 @@
 import {
   announceDrawEvent,
   type Bounds,
+  createDrawReducer,
   DRAW_ISSUE_MESSAGES,
   type DrawAction,
   type DrawIssue,
@@ -16,7 +17,6 @@ import {
   distanceMetres,
   draftOf,
   drawKeyCommand,
-  drawReducer,
   editHandlesFor,
   encodeShapes,
   exportableShapes,
@@ -33,11 +33,11 @@ import {
   type MapHandleDrag,
   type MapProjection,
   type Message,
+  message,
   type ParsedHandleId,
   parseHandleId,
   parseShapeFile,
   pickShape,
-  pluralise,
   SHAPE_FILE_TYPES,
   selectedShape,
   shapeInputBounds,
@@ -86,20 +86,17 @@ export const WKT_FILENAME = "mapcairn-shapes.wkt";
 
 /** What to say when no file could be opened. A cancelled picker says nothing. */
 const FILE_OPEN_MESSAGES: Readonly<
-  Record<Exclude<FileOpenError["kind"], "cancelled">, string | Message>
+  Record<Exclude<FileOpenError["kind"], "cancelled">, Message>
 > = {
   "too-large": describeShapeImport({ ok: false, refusal: "too-large" }),
-  unreadable: "The file could not be read. Choose it again, or another file.",
-  unsupported: "This browser cannot open files here.",
+  unreadable: message("tools.draw.file.unreadable", {}),
+  unsupported: message("tools.draw.file.unsupported", {}),
 };
 
 /** Added to an import's result when the shapes are more than a link can carry. */
-const LINK_LIMIT_NOTE = `A link carries at most ${MAX_SHARE_SHAPES} shapes, so download a file to share them all.`;
-
-/** "1 shape is too small to carry in a link", or "2 shapes are" for more than one. */
-function tooSmallForLink(count: number): string {
-  return `${count} ${pluralise(count, ["shape is", "shapes are"])} too small to carry in a link`;
-}
+const LINK_LIMIT_NOTE = message("tools.draw.linkLimitNote", {
+  max: MAX_SHARE_SHAPES,
+});
 
 /** The outcome of an export or a copy, shown beside the buttons and announced. */
 export interface DrawFeedback {
@@ -285,15 +282,39 @@ function moveAction(
     : null;
 }
 
-function countPoints(count: number): string {
-  return `${count} ${pluralise(count, ["point", "points"])}`;
-}
-
-function initialState(encoded: string | undefined): DrawState {
+function initialState(
+  encoded: string | undefined,
+  reducer: (state: DrawState, action: DrawAction) => DrawState,
+): DrawState {
   const shapes = encoded ? decodeShapes(encoded) : null;
   return shapes
-    ? drawReducer(initialDrawState, { type: "load", shapes })
+    ? reducer(initialDrawState, { type: "load", shapes })
     : initialDrawState;
+}
+
+/** The line for the toolbar: what is drawn or selected, or how many shapes there are. */
+function statusText(
+  format: (message: Message) => string,
+  draft: DrawShape | null,
+  selected: DrawShape | null,
+  count: number,
+): string {
+  if (draft) {
+    return format(
+      message("tools.draw.status.drawing", {
+        label: draft.label,
+        count: draft.vertices.length,
+      }),
+    );
+  }
+  if (selected) {
+    return selected.label;
+  }
+  return format(
+    count > 0
+      ? message("tools.draw.status.shapes", { count })
+      : message("tools.draw.status.empty", {}),
+  );
 }
 
 /**
@@ -322,12 +343,14 @@ export function useDraw({
   const announce = useAnnounce();
   const announceRef = useLatestRef(announce);
   const messages = useMessages();
-  const formatRef = useLatestRef(useFormatMessage());
+  const format = useFormatMessage();
+  const formatRef = useLatestRef(format);
   const fileSaver = useFileSaver();
   const clipboard = useClipboard();
   const url = useUrlState();
-  const [state, dispatch] = useReducer(drawReducer, undefined, () =>
-    initialState(url.read().shapes),
+  const reducer = useMemo(() => createDrawReducer(messages), [messages]);
+  const [state, dispatch] = useReducer(reducer, undefined, () =>
+    initialState(url.read().shapes, reducer),
   );
   const stateRef = useLatestRef(state);
   const getAdapterRef = useLatestRef(getAdapter);
@@ -630,13 +653,13 @@ export function useDraw({
   );
 
   const report = useCallback(
-    (result: DrawFeedback) => {
-      setFeedback(result);
-      announceRef.current(result.text, {
-        priority: result.kind === "error" ? "assertive" : "polite",
+    (kind: DrawFeedback["kind"], said: Message) => {
+      setFeedback({ kind, text: formatRef.current(said) });
+      announceRef.current(said, {
+        priority: kind === "error" ? "assertive" : "polite",
       });
     },
-    [announceRef],
+    [announceRef, formatRef],
   );
 
   const exportFile = useCallback(
@@ -647,10 +670,7 @@ export function useDraw({
     ) => {
       const ready = exportableShapes(stateRef.current.shapes);
       if (ready.length === 0) {
-        report({
-          kind: "error",
-          text: "Nothing to export yet. Finish a shape first.",
-        });
+        report("error", message("tools.draw.nothingToExport", {}));
         return;
       }
       const result = await fileSaver.save({
@@ -658,17 +678,14 @@ export function useDraw({
         mimeType,
         content: build(ready),
       });
-      report(
-        result.ok
-          ? {
-              kind: "success",
-              text: `Saved ${ready.length} ${pluralise(ready.length, ["shape", "shapes"])} as ${filename}.`,
-            }
-          : {
-              kind: "error",
-              text: "The file could not be saved. Try copying a link instead.",
-            },
-      );
+      if (result.ok) {
+        report(
+          "success",
+          message("tools.draw.saved", { count: ready.length, filename }),
+        );
+      } else {
+        report("error", message("tools.draw.saveFailed", {}));
+      }
     },
     [fileSaver, report, stateRef],
   );
@@ -694,49 +711,41 @@ export function useDraw({
     const encoded = encodeShapes(current);
     const leftOut = unsharableShapes(current).length;
     if (encoded === null) {
-      report({
-        kind: "error",
-        text: "Too many shapes to share in a link. Export a file instead.",
-      });
+      report("error", message("tools.draw.tooManyToShare", {}));
       return;
     }
     if (encoded === "") {
-      report({
-        kind: "error",
-        text:
-          leftOut === 0
-            ? "Nothing to share yet. Finish a shape first."
-            : `Nothing to copy: ${tooSmallForLink(leftOut)}. Export a file instead.`,
-      });
+      report(
+        "error",
+        leftOut === 0
+          ? message("tools.draw.nothingToShare", {})
+          : message("tools.draw.nothingToCopy", { count: leftOut }),
+      );
       return;
     }
     const result = await clipboard.writeText(
       url.link({ ...url.read(), shapes: encoded }),
     );
+    if (!result.ok) {
+      report("error", message("tools.draw.linkCopyFailed", {}));
+      return;
+    }
     report(
-      result.ok
-        ? {
-            kind: "success",
-            text:
-              leftOut === 0
-                ? "Link with shapes copied."
-                : `Link with shapes copied. ${tooSmallForLink(leftOut)} and ${pluralise(leftOut, ["was", "were"])} left out. Export a file to keep ${pluralise(leftOut, ["it", "them"])}.`,
-          }
-        : {
-            kind: "error",
-            text: "The link could not be copied. Export a file instead.",
-          },
+      "success",
+      leftOut === 0
+        ? message("tools.draw.linkCopied", {})
+        : message("tools.draw.linkCopiedLeftOut", { count: leftOut }),
     );
   }, [clipboard, report, stateRef, url]);
 
   const reportImport = useCallback(
-    (result: DrawFeedback) => {
-      setImportFeedback(result);
-      announceRef.current(result.text, {
-        priority: result.kind === "error" ? "assertive" : "polite",
+    (kind: DrawFeedback["kind"], said: Message) => {
+      setImportFeedback({ kind, text: formatRef.current(said) });
+      announceRef.current(said, {
+        priority: kind === "error" ? "assertive" : "polite",
       });
     },
-    [announceRef],
+    [announceRef, formatRef],
   );
 
   const importFile = useCallback(async (): Promise<Bounds | null> => {
@@ -757,41 +766,40 @@ export function useDraw({
     } catch (error) {
       const kind = error instanceof FileOpenError ? error.kind : "unreadable";
       if (kind !== "cancelled") {
-        const said = FILE_OPEN_MESSAGES[kind];
-        reportImport({
-          kind: "error",
-          text: typeof said === "string" ? said : formatRef.current(said),
-        });
+        reportImport("error", FILE_OPEN_MESSAGES[kind]);
       }
       return null;
     }
     const result = parseShapeFile(text);
-    const words = formatRef.current(describeShapeImport(result));
+    const words = describeShapeImport(result);
     if (!result.ok || result.shapes.length === 0) {
-      reportImport({ kind: "error", text: words });
+      reportImport("error", words);
       return null;
     }
     if (
       stateRef.current.shapes.length + result.shapes.length >
       MAX_DRAWING_SHAPES
     ) {
-      reportImport({
-        kind: "error",
-        text: formatRef.current(
-          describeShapeImport({ ok: false, refusal: "drawing-full" }),
-        ),
-      });
+      reportImport(
+        "error",
+        describeShapeImport({ ok: false, refusal: "drawing-full" }),
+      );
       return null;
     }
     const total =
       exportableShapes(stateRef.current.shapes).length + result.shapes.length;
     dispatch({ type: "import", shapes: result.shapes });
-    reportImport({
-      kind: "success",
-      text: total > MAX_SHARE_SHAPES ? `${words} ${LINK_LIMIT_NOTE}` : words,
-    });
+    reportImport(
+      "success",
+      total > MAX_SHARE_SHAPES
+        ? message("common.followedBy", {
+            first: words,
+            second: LINK_LIMIT_NOTE,
+          })
+        : words,
+    );
     return shapeInputBounds(result.shapes) ?? null;
-  }, [fileOpener, formatRef, reportImport, stateRef]);
+  }, [fileOpener, reportImport, stateRef]);
 
   const handles = useMemo(
     () => (active ? editHandlesFor(shapes, selection, projection) : []),
@@ -804,14 +812,7 @@ export function useDraw({
   );
 
   const focus = draft ?? selected;
-  let status = "Nothing drawn yet";
-  if (draft) {
-    status = `${draft.label}, ${countPoints(draft.vertices.length)}`;
-  } else if (selected) {
-    status = selected.label;
-  } else if (shapes.length > 0) {
-    status = `${shapes.length} ${pluralise(shapes.length, ["shape", "shapes"])}`;
-  }
+  const status = statusText(format, draft, selected, shapes.length);
 
   return {
     state,

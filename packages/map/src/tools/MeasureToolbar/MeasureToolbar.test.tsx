@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeMessageCatalogue,
   type LatLng,
   type UnitSystem,
 } from "@mapcairn/core";
@@ -57,10 +58,13 @@ function layout(
   };
 }
 
-function renderToolbar(props: HarnessProps = {}) {
+function renderToolbar(
+  props: HarnessProps = {},
+  services = createFakeServices(),
+) {
   const publish = vi.fn<(px: number | null) => void>();
   const tree = (value: ChromeLayoutValue) => (
-    <ServicesProvider services={createFakeServices()}>
+    <ServicesProvider services={services}>
       <LiveRegionProvider>
         <ChromeLayoutProvider value={value}>
           <Harness {...props} />
@@ -318,6 +322,35 @@ describe("MeasureToolbar", () => {
         </ServicesProvider>,
       );
       expect(screen.getByRole("toolbar", { name: "Measure" })).toBeTruthy();
+    });
+  });
+
+  describe("copy", () => {
+    it("asks the catalogue for every piece of its text by key", () => {
+      const messages = new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "tools.measure.undo": "Haal laaste punt terug",
+          "tools.measure.area": "Oppervlakte",
+        },
+      });
+      renderToolbar({}, createFakeServices({ messages }));
+      expect(
+        screen.getByRole("button", { name: "Haal laaste punt terug" }),
+      ).toBeTruthy();
+      expect(screen.getByRole("radio", { name: "Oppervlakte" })).toBeTruthy();
+      expect(messages.calls.map((call) => call.key)).toEqual(
+        expect.arrayContaining([
+          "tools.measure.region",
+          "tools.measure.label",
+          "tools.measure.distance",
+          "tools.measure.total",
+          "tools.addPointAtCentre",
+          "tools.measure.clear",
+          "tools.done",
+          "tools.measure.hint",
+        ]),
+      );
     });
   });
 });
