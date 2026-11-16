@@ -28,4 +28,71 @@ export const ALLOW_LIST = [
     reason:
       "The document itself (html and body) is pinned to the viewport so the full-screen map never scrolls or rubber-bands. It is the page root, not a floating surface.",
   },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/chrome/MapChrome/MapChrome.css.ts",
+    contains: "transform: `translate(",
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/chrome/MapReadout/MapReadout.css.ts",
+    contains: 'transformOrigin: "left center",',
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/chrome/MapReadout/MapReadout.css.ts",
+    contains:
+      "transform: `translateX(calc(var(--scale-ratio, 0) * var(--scale-max, 0px) - ",
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/chrome/Sheet/Sheet.css.ts",
+    contains: 'right: "env(safe-area-inset-right, 0px)",',
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/chrome/Sheet/Sheet.css.ts",
+    contains: 'left: "env(safe-area-inset-left, 0px)",',
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/chrome/Sheet/Sheet.css.ts",
+    contains: 'transform: "translateX(0)",',
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/chrome/Sheet/Sheet.css.ts",
+    contains: "transform: `translateX(calc(-1 * ",
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/host/MapView.css.ts",
+    contains: 'from: { transform: "translateX(-100%)" },',
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/host/MapView.css.ts",
+    contains: 'to: { transform: "translateX(250%)" },',
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/ui/Slider/Slider.css.ts",
+    contains: "backgroundImage: `linear-gradient(to right, ",
+    reason: "Interim: converted to logical properties later in this change.",
+  },
+  {
+    rule: "logical-property",
+    file: "packages/map/src/ui/Switch/Switch.css.ts",
+    contains: "transform: `translateX(",
+    reason: "Interim: converted to logical properties later in this change.",
+  },
 ];

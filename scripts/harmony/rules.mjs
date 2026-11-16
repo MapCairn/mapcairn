@@ -7,7 +7,7 @@
  * Rule ids, grouped:
  * - style values (`.css.ts` files and `style={{...}}` props): `colour-literal`,
  *   `radius`, `spacing`, `font-size`, `font-family`, `font-weight`, `z-index`,
- *   `position`, `outline`, `motion`
+ *   `position`, `outline`, `motion`, `logical-property`
  * - engine isolation: `engine-selector`, `engine-control`
  * - accessibility and markup: `inline-style`, `tab-index`, `viewport`,
  *   `live-region`, `icon-sizing`, `icon-only-button`
@@ -64,6 +64,13 @@ const LINE_PROP =
   /^(?:border|outline)(?:Top|Right|Bottom|Left|Block|Inline)?(?:Start|End)?(?:Width|Offset)?$/;
 const MOTION_PROP =
   /^(?:transition|transitionDuration|transitionDelay|animation|animationDuration|animationDelay)$/;
+const PHYSICAL_PROP =
+  /^(?:(?:margin|padding|scrollMargin|scrollPadding)(?:Left|Right)|left|right|border(?:Left|Right)(?:Width|Style|Color)?|border(?:Top|Bottom)(?:Left|Right)Radius)$/;
+const PHYSICAL_KEYWORD_PROP =
+  /^(?:textAlign|float|clear|transformOrigin|perspectiveOrigin|backgroundPosition|objectPosition|maskPosition)$/;
+const PHYSICAL_SIDE = /(?<![\w-])(?:left|right)(?![\w-])/;
+const GRADIENT_TO_SIDE = /(?<![\w-])to\s+(?:left|right)(?![\w-])/;
+const HORIZONTAL_TRANSLATE = /translateX\(|translate\(/;
 const RESET_KEYWORDS = /^(?:inherit|unset|initial|revert)$/;
 
 /** Whether the value is a bare number, which vanilla-extract writes as px. */
@@ -244,6 +251,45 @@ function checkPosition({ file, decl, report }) {
   }
 }
 
+/**
+ * Fails a physical position or spacing property, or a physical direction in a
+ * value, where a logical one mirrors in a right-to-left language. A horizontal
+ * translation is accepted when the same rule also sets it under `:dir(rtl)`.
+ * @param {DeclarationContext} c
+ */
+function checkLogicalProperty({ decl, code, report }) {
+  const fail = (what, instead) =>
+    report(
+      "logical-property",
+      decl.line,
+      `${what} does not mirror in a right-to-left language. ${instead}`,
+    );
+  if (PHYSICAL_PROP.test(decl.prop)) {
+    fail(
+      `Physical ${decl.prop}`,
+      "Use the logical property (marginInlineStart, insetInlineEnd, borderStartStartRadius and so on).",
+    );
+  } else if (
+    PHYSICAL_KEYWORD_PROP.test(decl.prop) &&
+    PHYSICAL_SIDE.test(decl.text)
+  ) {
+    fail(`${decl.prop} "${decl.text}"`, "Use start, end or a centred value.");
+  } else if (GRADIENT_TO_SIDE.test(decl.text)) {
+    fail(
+      `Gradient direction "${decl.text}"`,
+      'Run it vertically, or set it again under ":dir(rtl)".',
+    );
+  } else if (
+    HORIZONTAL_TRANSLATE.test(decl.text) &&
+    !/dir\(|\[dir/.test(code.slice(decl.ruleStart, decl.ruleEnd))
+  ) {
+    fail(
+      `Horizontal translation "${decl.text}"`,
+      'Reverse it in the same rule under ":dir(rtl)".',
+    );
+  }
+}
+
 /** @param {DeclarationContext} c */
 function checkOutline({ decl, code, report }) {
   const value = decl.text.trim();
@@ -308,6 +354,7 @@ const DECLARATION_CHECKS = [
   checkFontWeight,
   checkZIndex,
   checkPosition,
+  checkLogicalProperty,
   checkOutline,
   checkMotion,
 ];
