@@ -39,6 +39,7 @@ export function runSettingsStoreContract(
         basemapId: "bright",
         lastView: null,
         tourSeen: null,
+        language: null,
       });
       expect(typeof store.persistent).toBe("boolean");
     });
@@ -76,6 +77,7 @@ export function runSettingsStoreContract(
         basemapId: "osm",
         lastView,
         tourSeen: 1,
+        language: "af",
       });
       expect(store.get()).toEqual({
         theme: "dark",
@@ -86,13 +88,16 @@ export function runSettingsStoreContract(
         basemapId: "osm",
         lastView,
         tourSeen: 1,
+        language: "af",
       });
       store.set({
         zoomButtons: null,
         saveData: null,
         lastView: null,
         tourSeen: null,
+        language: null,
       });
+      expect(store.get().language).toBeNull();
       expect(store.get().zoomButtons).toBeNull();
       expect(store.get().saveData).toBeNull();
       expect(store.get().lastView).toBeNull();

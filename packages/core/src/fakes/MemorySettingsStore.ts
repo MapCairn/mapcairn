@@ -13,6 +13,7 @@ export const DEFAULT_FAKE_SETTINGS: Settings = Object.freeze({
   basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
   tourSeen: null,
+  language: null,
 });
 
 /** Options for {@link MemorySettingsStore}. */

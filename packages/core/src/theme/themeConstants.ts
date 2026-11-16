@@ -15,6 +15,13 @@ export const THEME_ATTRIBUTE = "data-theme";
 export const PROJECTION_STORAGE_KEY = "mapcairn:projection";
 
 /**
+ * The `localStorage` key holding the language choice, as JSON (a BCP 47 tag
+ * such as `"af"`, or `null`). The settings store writes it; the pre-paint
+ * script reads it to set `lang` on the root element.
+ */
+export const LANGUAGE_STORAGE_KEY = "mapcairn:language";
+
+/**
  * The attribute the pre-paint script puts on the root element, with the value
  * `globe`, when the stored map shape is a globe, so the placeholder painted
  * before the app mounts already shows the space around a globe.

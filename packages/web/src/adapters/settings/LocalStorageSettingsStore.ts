@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   DEFAULT_BASEMAP_ID,
+  LANGUAGE_STORAGE_KEY,
   type MapProjection,
   parseThemeChoice,
   type Settings,
@@ -21,12 +22,14 @@ const DEFAULTS: Settings = Object.freeze({
   basemapId: DEFAULT_BASEMAP_ID,
   lastView: null,
   tourSeen: null,
+  language: null,
 });
 
 const KEY_PREFIX = "mapcairn:";
 const PROBE_KEY = `${KEY_PREFIX}probe`;
 const BASEMAP_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 const MAX_ZOOM = 24;
+const LANGUAGE_TAG_PATTERN = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
 
 type SettingName = keyof Settings;
 
@@ -39,11 +42,19 @@ const SETTING_NAMES: readonly SettingName[] = [
   "basemapId",
   "lastView",
   "tourSeen",
+  "language",
 ];
 
-/** The storage key for a setting. Theme is the one key shared with the pre-paint script. */
+/** The storage key for a setting. Theme and language are the keys the pre-paint script reads. */
 function storageKey(name: SettingName): string {
-  return name === "theme" ? THEME_STORAGE_KEY : `${KEY_PREFIX}${name}`;
+  switch (name) {
+    case "theme":
+      return THEME_STORAGE_KEY;
+    case "language":
+      return LANGUAGE_STORAGE_KEY;
+    default:
+      return `${KEY_PREFIX}${name}`;
+  }
 }
 
 /** Anything but a stored "globe" is the flat default. */
@@ -101,6 +112,14 @@ function parseTourSeen(raw: unknown): number | null {
     : null;
 }
 
+/**
+ * A stored language is a BCP 47 tag shape; anything else means "follow the
+ * browser". Whether the host offers it is decided when the language resolves.
+ */
+function parseLanguage(raw: unknown): string | null {
+  return typeof raw === "string" && LANGUAGE_TAG_PATTERN.test(raw) ? raw : null;
+}
+
 function viewsEqual(a: ViewState | null, b: ViewState | null): boolean {
   if (a === null || b === null) {
     return a === b;
@@ -156,6 +175,8 @@ function parseSetting(
       return parseLastView(parseJson(raw));
     case "tourSeen":
       return parseTourSeen(parseJson(raw));
+    case "language":
+      return parseLanguage(parseJson(raw));
   }
 }
 
