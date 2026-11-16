@@ -32,6 +32,7 @@ import {
   type MapEditHandle,
   type MapHandleDrag,
   type MapProjection,
+  type Message,
   type ParsedHandleId,
   parseHandleId,
   parseShapeFile,
@@ -61,6 +62,8 @@ import {
   useClipboard,
   useFileOpener,
   useFileSaver,
+  useFormatMessage,
+  useMessages,
   useSettings,
   useUrlState,
 } from "../../services";
@@ -83,7 +86,7 @@ export const WKT_FILENAME = "mapcairn-shapes.wkt";
 
 /** What to say when no file could be opened. A cancelled picker says nothing. */
 const FILE_OPEN_MESSAGES: Readonly<
-  Record<Exclude<FileOpenError["kind"], "cancelled">, string>
+  Record<Exclude<FileOpenError["kind"], "cancelled">, string | Message>
 > = {
   "too-large": describeShapeImport({ ok: false, refusal: "too-large" }),
   unreadable: "The file could not be read. Choose it again, or another file.",
@@ -318,6 +321,8 @@ export function useDraw({
 }: UseDrawOptions): UseDraw {
   const announce = useAnnounce();
   const announceRef = useLatestRef(announce);
+  const messages = useMessages();
+  const formatRef = useLatestRef(useFormatMessage());
   const fileSaver = useFileSaver();
   const clipboard = useClipboard();
   const url = useUrlState();
@@ -752,12 +757,16 @@ export function useDraw({
     } catch (error) {
       const kind = error instanceof FileOpenError ? error.kind : "unreadable";
       if (kind !== "cancelled") {
-        reportImport({ kind: "error", text: FILE_OPEN_MESSAGES[kind] });
+        const said = FILE_OPEN_MESSAGES[kind];
+        reportImport({
+          kind: "error",
+          text: typeof said === "string" ? said : formatRef.current(said),
+        });
       }
       return null;
     }
     const result = parseShapeFile(text);
-    const words = describeShapeImport(result);
+    const words = formatRef.current(describeShapeImport(result));
     if (!result.ok || result.shapes.length === 0) {
       reportImport({ kind: "error", text: words });
       return null;
@@ -768,7 +777,9 @@ export function useDraw({
     ) {
       reportImport({
         kind: "error",
-        text: describeShapeImport({ ok: false, refusal: "drawing-full" }),
+        text: formatRef.current(
+          describeShapeImport({ ok: false, refusal: "drawing-full" }),
+        ),
       });
       return null;
     }
@@ -780,7 +791,7 @@ export function useDraw({
       text: total > MAX_SHARE_SHAPES ? `${words} ${LINK_LIMIT_NOTE}` : words,
     });
     return shapeInputBounds(result.shapes) ?? null;
-  }, [fileOpener, reportImport, stateRef]);
+  }, [fileOpener, formatRef, reportImport, stateRef]);
 
   const handles = useMemo(
     () => (active ? editHandlesFor(shapes, selection, projection) : []),
@@ -810,9 +821,9 @@ export function useDraw({
     draft,
     selected,
     status,
-    measure: focus ? formatShapeMeasure(focus, units) : "",
+    measure: focus ? formatShapeMeasure(focus, units, messages) : "",
     issue,
-    issueMessage: issue ? DRAW_ISSUE_MESSAGES[issue] : "",
+    issueMessage: issue ? formatRef.current(DRAW_ISSUE_MESSAGES[issue]) : "",
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
     handles,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { DEFAULT_FAKE_VIEW } from "@mapcairn/core";
+import { DEFAULT_FAKE_VIEW, type Message } from "@mapcairn/core";
 import type { MapContextValue } from "@mapcairn/map";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,10 +10,29 @@ import {
 } from "./useZoomAnnouncement";
 
 const announce = vi.fn();
-vi.mock("@mapcairn/map", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@mapcairn/map")>()),
-  useAnnounce: () => announce,
-}));
+const announced = vi.fn();
+vi.mock("@mapcairn/map", async (importOriginal) => {
+  const { FakeMessageCatalogue, formatMessage } = await import(
+    "@mapcairn/core"
+  );
+  const english = new FakeMessageCatalogue();
+  const speak = (message: unknown, options?: unknown) => {
+    announced(message);
+    const text =
+      typeof message === "string"
+        ? message
+        : formatMessage(english, message as Message);
+    if (options === undefined) {
+      announce(text);
+    } else {
+      announce(text, options);
+    }
+  };
+  return {
+    ...(await importOriginal<typeof import("@mapcairn/map")>()),
+    useAnnounce: () => speak,
+  };
+});
 
 type ZoomMap = Pick<MapContextValue, "view" | "onUserZoom">;
 
@@ -61,6 +80,7 @@ function wait(ms: number) {
 beforeEach(() => {
   vi.useFakeTimers();
   announce.mockClear();
+  announced.mockClear();
 });
 
 afterEach(() => {
@@ -80,6 +100,16 @@ describe("useZoomAnnouncement", () => {
     wait(1);
     expect(announce).toHaveBeenCalledTimes(1);
     expect(announce).toHaveBeenCalledWith("Zoom level 4");
+  });
+
+  it("announces a key and the level, for the live region to say in its language", () => {
+    const map = setup(2);
+    map.userZoomTo(2.6);
+    wait(ZOOM_ANNOUNCE_DELAY_MS);
+    expect(announced).toHaveBeenCalledWith({
+      key: "announce.zoom",
+      params: { level: 2.6 },
+    });
   });
 
   it("announces each separate gesture once", () => {

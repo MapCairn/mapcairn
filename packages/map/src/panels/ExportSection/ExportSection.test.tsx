@@ -49,7 +49,7 @@ function setup(
       </LiveRegionProvider>
     </ServicesProvider>,
   );
-  return { adapter, ...view };
+  return { adapter, services, ...view };
 }
 
 describe("ExportSection", () => {
@@ -79,6 +79,17 @@ describe("ExportSection", () => {
       screen.getByRole("button", { name: "Save image" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("sheet-section-export")).toHaveTextContent("PNG");
+  });
+
+  it("asks the catalogue for the saved announcement, by key", async () => {
+    const { services } = setup();
+    fireEvent.click(screen.getByRole("button", { name: "Save image" }));
+    await waitFor(() =>
+      expect(services.fakes.messages.calls).toContainEqual({
+        key: "announce.imageSaved",
+        params: {},
+      }),
+    );
   });
 
   it("asks the map for an image with the credits drawn in, and saves it as a file", async () => {

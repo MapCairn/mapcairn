@@ -8,6 +8,7 @@ import {
   isQueryLayer,
   type LayerFeature,
   type LayerSource,
+  type Message,
 } from "@mapcairn/core";
 import type { AnnouncePriority } from "../ui/LiveRegion";
 import { errorKind, type LayerStatus } from "./layerStatus";
@@ -25,7 +26,7 @@ export type SpokenState = "ready" | "capped" | "empty" | "error";
 /** A line for the live region, and the state of the layer it describes. */
 export interface Spoken {
   readonly state: SpokenState;
-  readonly message: string;
+  readonly message: Message;
   readonly priority: AnnouncePriority;
 }
 

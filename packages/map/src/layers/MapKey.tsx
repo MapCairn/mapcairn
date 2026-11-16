@@ -4,6 +4,7 @@ import { DEFAULT_MARKER_RADIUS, isCompactViewport } from "@mapcairn/core";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useChromeLayout } from "../chrome/layoutContext";
+import { useFormatMessage } from "../services";
 import { Icon } from "../ui/Icon";
 import { Surface } from "../ui/Surface";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
@@ -70,6 +71,7 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
   const headingId = useId();
   const bodyId = useId();
   const { viewport } = useChromeLayout();
+  const format = useFormatMessage();
   const [chosen, setChosen] = useState<boolean | null>(null);
   const [decided, setDecided] = useState<boolean | null>(null);
   const bodyRef = useRef<HTMLElement>(null);
@@ -149,7 +151,9 @@ export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
               >
                 <h3 className={styles.layerName}>{block.name}</h3>
                 {block.chosenTime ? (
-                  <p className={styles.when}>Showing {block.chosenTime}</p>
+                  <p className={styles.when}>
+                    Showing {format(block.chosenTime)}
+                  </p>
                 ) : null}
                 <LayerKey
                   definition={block.definition}

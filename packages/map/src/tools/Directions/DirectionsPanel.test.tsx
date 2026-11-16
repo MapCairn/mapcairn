@@ -308,6 +308,10 @@ describe("getting a route", () => {
     expect(screen.getByTestId("directions-error")).toHaveTextContent(
       "No route was found",
     );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "error.routing.noRoute",
+      params: {},
+    });
     expect(screen.queryByTestId("directions-retry")).toBeNull();
   });
 

@@ -6,8 +6,9 @@ import type { MessageKey } from "../ports/messages";
  * The SDK's shipped default catalogue: British English, the source language.
  * Every `MessageKey` has a value here; `packages/core/src/lint` fails the
  * build when one is missing or when a value's placeholders do not match its
- * `MessageParams` entry. Seeded verbatim from the Settings panel's existing
- * inline copy, so moving the panel to keys changes no visible text.
+ * `MessageParams` entry. Seeded verbatim from the Settings panel's inline
+ * copy and from the strings core's announcement, description, unit and error
+ * helpers used to return, so moving them to keys changes no visible text.
  *
  * A key used with `plural` carries two forms separated by `|`: the form for
  * `Intl.PluralRules`'s "one" category first, the form for every other
@@ -35,6 +36,259 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "settings.notSaved": "Changes will not be remembered on this device.",
   "settings.privacy.heading": "Privacy",
   "settings.privacy.link": "Read the privacy policy",
+  // Common joins
+  "common.followedBy": "{first} {second}",
+  "common.commaJoined": "{first}, {second}",
+  "common.dotJoined": "{first} · {second}",
+  // Formatting
+  "format.hemisphereNorth": "N",
+  "format.hemisphereSouth": "S",
+  "format.hemisphereEast": "E",
+  "format.hemisphereWest": "W",
+  "format.day": "{date}",
+  "format.utcTime": "{time} UTC",
+  "format.utcRange": "{start} to {end} UTC",
+  "format.timeOnDay": "{time} on {day}",
+  "search.coordinatesLabel": "Coordinates {latitude}, {longitude}",
+  // Units and durations
+  "units.metre": "{count} metre|{count} metres",
+  "units.kilometre": "{count} kilometre|{count} kilometres",
+  "units.foot": "{count} foot|{count} feet",
+  "units.mile": "{count} mile|{count} miles",
+  "units.squareMetre": "{count} square metre|{count} square metres",
+  "units.hectare": "{count} hectare|{count} hectares",
+  "units.squareKilometre": "{count} square kilometre|{count} square kilometres",
+  "units.squareFoot": "{count} square foot|{count} square feet",
+  "units.acre": "{count} acre|{count} acres",
+  "units.squareMile": "{count} square mile|{count} square miles",
+  "duration.day": "{count} day|{count} days",
+  "duration.hour": "{count} hour|{count} hours",
+  "duration.minute": "{count} minute|{count} minutes",
+  "duration.underMinute": "under a minute",
+  "scale.label": "Scale: {distance}",
+  // Errors
+  "error.search.offline":
+    "You appear to be offline. Check your connection and try again.",
+  "error.search.rate-limited":
+    "Too many searches in a short time. Wait a moment and try again.",
+  "error.search.failed": "Search did not work. Try again in a moment.",
+  "error.location.denied":
+    "Location access is blocked. Allow it in your browser settings, or search for a place instead.",
+  "error.location.unavailable":
+    "Your location is not available right now. Check that location services are on, or search for a place instead.",
+  "error.location.timeout":
+    "Finding your location took too long. Try again, or search for a place instead.",
+  "error.routing.network":
+    "The routing service could not be reached. You may be offline. Check your connection and try again.",
+  "error.routing.rateLimited":
+    "The routing service is busy. Wait a moment and try again.",
+  "error.routing.noRoute":
+    "No route was found between these stops. Move a stop closer to a road or path, or choose another way to travel.",
+  "error.routing.noReachableArea":
+    "Nothing is reachable from the first stop in that time. Move it closer to a road or path, or choose another way to travel.",
+  "error.routing.invalid":
+    "The routing service could not use those stops. Move them and try again.",
+  "error.routing.unsupported":
+    "That way of travelling is not available here. Choose another.",
+  // Directions
+  "directions.participle.drive": "driving",
+  "directions.participle.walk": "walking",
+  "directions.participle.cycle": "cycling",
+  // Layer status lines
+  "describe.zoomIn": "Zoom in to level {level} or closer to load this layer.",
+  "describe.zoomOut": "Zoom out below level {level} to see this layer.",
+  "describe.layersLoading": "Loading layers",
+  "describe.layersLoadFailed": "Layers could not be loaded.",
+  "describe.noLayers": "No layers are available.",
+  "describe.layersRefreshFailed":
+    "Layers could not be updated. Showing the last list.",
+  "describe.layersSkipped":
+    "{count} layer could not be shown|{count} layers could not be shown",
+  "describe.tilesNoImagery": "No imagery was found for {when}. Try another.",
+  "describe.tilesUnavailable": "Could not load. Check your connection.",
+  "describe.tilesSlow":
+    "Still waiting for imagery. The provider may be slow or not answering.",
+  // Announcements
+  "announce.layerLoaded": "{name}: {count} shown on the map.",
+  "announce.layerStatus": "{name}: {status}",
+  "announce.layerCapped":
+    "{name}: showing the first {shown}. Zoom in to see more.",
+  "announce.layerZoomIn":
+    "{name}: zoom in to level {level} or closer to load this layer.",
+  "announce.layerZoomOut":
+    "{name}: zoom out below level {level} to see this layer.",
+  "announce.layerOn": "{name} is on.",
+  "announce.layersTurnedOff":
+    "{count} layer turned off. Undo available|{count} layers turned off. Undo available",
+  "announce.layersTurnedBackOn":
+    "{count} layer turned back on|{count} layers turned back on",
+  "announce.layerLoadFailed":
+    "{name} could not load. Check your connection and try again.",
+  "announce.layerInvalid":
+    "{name} could not load: the provider sent something unexpected. Try again later.",
+  "announce.tilesRecovered": "{name}: imagery is showing again.",
+  "announce.imageSaved": "Map image saved.",
+  "announce.imageFailed": "The map image could not be saved. Try again.",
+  "announce.noFeaturesHere": "No features at the centre of the map.",
+  "announce.featuresFound": "{count} features here. Choose one from the list.",
+  "announce.nothingFoundHere": "Nothing found here.",
+  "announce.layersDidNotAnswer": "{names} did not answer.",
+  "announce.askedOfAvailable": "Asked {asked} of {available} layers.",
+  "announce.layerUnavailable":
+    "{name} is no longer available and was turned off.",
+  "announce.layersUnavailable":
+    "{count} layers are no longer available and were turned off.",
+  "announce.linkLayersUnavailable":
+    "{count} layer in the link is not available.|{count} layers in the link are not available.",
+  "announce.layersSkipped":
+    "{count} layer could not be shown.|{count} layers could not be shown.",
+  "announce.layersAdded": "{count} added",
+  "announce.layersRemoved": "{count} removed",
+  "announce.layersUpdated": "Layers updated: {changes}.",
+  "announce.featureSelected": "Added {title}. {total} selected.",
+  "announce.featuresSelected":
+    "{count} feature added. {total} selected.|{count} features added. {total} selected.",
+  "announce.featureDeselected": "Removed {title}. {total} selected.",
+  "announce.featuresDeselected":
+    "{count} feature removed. {total} selected.|{count} features removed. {total} selected.",
+  "announce.selectionCleared": "Selection cleared.",
+  "announce.selectionFull":
+    "The selection holds {limit} at most. Nothing was added.",
+  "announce.showingFeature": "Showing {title} on the map.",
+  "announce.detailShown": "Affected area of {title} shown on the map.",
+  "announce.detailError": "The affected area could not load. Try again.",
+  "announce.searchResults": "{count} result|{count} results",
+  "announce.coordinateResult": "{results}, {label}",
+  "announce.noResults": "No results",
+  "announce.suggestions": "{count} suggestion|{count} suggestions",
+  "announce.noSuggestions": "No suggestions",
+  "announce.suggestionsUnavailable":
+    "Suggestions are unavailable. Press Enter to search.",
+  "announce.locationFound": "Location found, accuracy about {accuracy}",
+  "announce.copied": "Coordinates copied",
+  "announce.copyFailed":
+    "Could not copy. Select the coordinates and copy them manually.",
+  "announce.pinDropped": "Pin dropped at {position}",
+  "announce.pinCleared": "Pin removed",
+  "announce.measureDistance": "Total distance {distance}",
+  "announce.measureArea": "Total area {area}",
+  "announce.basemapChanged": "Basemap changed to {name}",
+  "announce.projection.flat": "Map shape: flat",
+  "announce.projection.globe": "Map shape: globe",
+  "announce.zoom": "Zoom level {level}",
+  "announce.detent.peek": "Panel minimised",
+  "announce.detent.half": "Panel half height",
+  "announce.detent.full": "Panel full height",
+  "announce.surfaceOpened": "{name} opened",
+  "announce.surfaceClosed": "{name} closed",
+  "announce.tileError":
+    "Some of the map could not load. Check your connection.",
+  "announce.offline": "You are offline. Parts of the map may not load.",
+  "announce.addressFound": "Address found: {address}",
+  "announce.addressNotFound": "No address found here",
+  "announce.addressError":
+    "Could not look up the address. Check your connection and try again.",
+  "announce.stopAdded":
+    "Stop {letter} added, {count} stop|Stop {letter} added, {count} stops",
+  "announce.stopLimit":
+    "You can add up to {max} stops. Remove one to add another.",
+  "announce.stopRemoved": "Stop {letter} removed",
+  "announce.stopMoved":
+    "Stop moved to position {position} of {total}, now stop {letter}",
+  "announce.routeFound": "Route found, {distance}, {duration} {mode}",
+  "announce.areaFound":
+    "Area reachable within {count} minute {mode} found, covering {area}|Area reachable within {count} minutes {mode} found, covering {area}",
+  "announce.routingCancelled": "Cancelled",
+  "announce.directionsCleared": "Directions cleared",
+  "announce.tourSkipped":
+    "Tour skipped. Help, in Settings, can start it again.",
+  "announce.timeMoved": "Time moved to {time}, the nearest available.",
+  // Drawing
+  "draw.hint.point":
+    "Tap the map to place a point, or use Add point at map centre.",
+  "draw.hint.line":
+    "Tap the map to add points, then Finish. Or use Add point at map centre.",
+  "draw.hint.polygon":
+    "Tap the map to add corners, then Finish. Or use Add point at map centre.",
+  "draw.hint.circle":
+    "Tap the centre, then a second point to set the radius. Or use Add point at map centre.",
+  "draw.issue.too-few-vertices":
+    "Not enough points yet. A line needs two points and a polygon needs three.",
+  "draw.issue.self-intersecting":
+    "The edges cross each other. Move a point so they do not, then finish.",
+  "draw.issue.degenerate":
+    "That would have no size. Choose a place further from the others.",
+  "draw.issue.radius-missing": "Tap a second point to set the circle's radius.",
+  "draw.issue.radius-too-large":
+    "That radius is too large. The most is 10,000 km.",
+  "draw.measure.circle": "radius {radius}, area {area}",
+  "draw.measure.line": "length {length}",
+  "draw.measure.polygonArea": "area {area}",
+  "draw.measure.polygon": "area {area}, perimeter {perimeter}",
+  "draw.measure.radiusAndArea": "{radius} radius · {area}",
+  "draw.sentence.circle": "Radius {radius}, area {area}.",
+  "draw.sentence.line": "Length {length}.",
+  "draw.sentence.polygonArea": "Area {area}.",
+  "draw.sentence.polygon": "Area {area}, perimeter {perimeter}.",
+  "draw.vertexAdded": "Point {count} added.",
+  "draw.vertexAddedTo": "Point {count} added to {label}.",
+  "draw.circleChanged": "{label} changed.",
+  "draw.pointMoved": "{label} moved.",
+  "draw.vertexMoved": "Point {index} of {label} moved.",
+  "draw.vertexInserted": "Point added to {label} as point {index} of {count}.",
+  "draw.vertexRemoved":
+    "Point removed from {label}. {count} point left.|Point removed from {label}. {count} points left.",
+  "draw.pointAdded": "{label} added.",
+  "draw.finished": "{label} finished.",
+  "draw.vertexSelected": "Point {index} of {count} selected in {label}.",
+  "draw.pathSelected":
+    "{label} selected. {count} point.|{label} selected. {count} points.",
+  "draw.shapeSelected": "{label} selected.",
+  "draw.discarded.point": "Discarded the unfinished point.",
+  "draw.discarded.line": "Discarded the unfinished line.",
+  "draw.discarded.polygon": "Discarded the unfinished polygon.",
+  "draw.discarded.circle": "Discarded the unfinished circle.",
+  "draw.deleted": "Deleted {label}. Undo brings it back.",
+  "draw.clearedOne": "Deleted 1 shape.",
+  "draw.clearedAll": "Deleted all {count} shapes.",
+  "draw.undone": "Undone.",
+  "draw.redone": "Redone.",
+  "draw.loaded":
+    "{count} shape loaded from the link.|{count} shapes loaded from the link.",
+  "draw.import.refusal.drawing-full":
+    "That would make more than {max} shapes. Delete some shapes first, or import a smaller file.",
+  "draw.import.refusal.empty": "The file is empty.",
+  "draw.import.refusal.too-large":
+    "The file is larger than {megabytes} MB. Split it into smaller files.",
+  "draw.import.refusal.too-deep":
+    "The file is nested too deeply to read. Check that it is GeoJSON.",
+  "draw.import.refusal.not-recognised":
+    "This is not GeoJSON, WKT or a CSV of shapes from this map. Choose a .geojson, .json, .wkt, .txt or .csv file.",
+  "draw.import.refusal.wkt-unreadable":
+    "The WKT could not be read, so none of the file was imported.",
+  "draw.import.refusal.too-many-shapes":
+    "The file holds more than {max} shapes. Import at most {max} at a time.",
+  "draw.import.refusal.too-many-points":
+    "The file holds more than {max} points. Simplify the shapes or split the file.",
+  "draw.import.refusalWithDetail": "{refusal} {detail}",
+  "draw.import.skip.self-intersecting": "{count} with edges that cross",
+  "draw.import.skip.degenerate": "{count} with no length or area",
+  "draw.import.skip.too-few-vertices": "{count} with too few points",
+  "draw.import.skip.radius-missing": "{count} with no radius",
+  "draw.import.skip.radius-too-large": "{count} with a radius over 10,000 km",
+  "draw.import.skip.out-of-range": "{count} with a position outside the world",
+  "draw.import.skip.too-many-points": "{count} with more than {max} points",
+  "draw.import.skip.malformed":
+    "{count} with coordinates that could not be read",
+  "draw.import.skip.unsupported": "{count} of a type that cannot be drawn",
+  "draw.import.skip.other-srid":
+    "{count} in a coordinate system other than SRID {srid}",
+  "draw.import.skipped": "{total} skipped: {reasons}.",
+  "draw.import.noShapes": "The file holds no shapes.",
+  "draw.import.noneImported": "No shapes imported.",
+  "draw.import.imported": "{count} shape imported.|{count} shapes imported.",
+  "draw.import.holesLeftOut":
+    "Holes in {count} polygon were left out.|Holes in {count} polygons were left out.",
   "common.itemCount": "{count} item|{count} items",
   "settings.language.label": "Language",
   "settings.language.auto": "Automatic",

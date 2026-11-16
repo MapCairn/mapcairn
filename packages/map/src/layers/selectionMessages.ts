@@ -9,12 +9,13 @@ import {
   announceSelectionFull,
   type FeatureRef,
   featureRefKey,
+  type Message,
 } from "@mapcairn/core";
 import type { AnnounceOptions } from "../ui/LiveRegion";
 
 /** What to say about one change to the selection, and how urgently. */
 export interface SelectionAnnouncement {
-  readonly message: string;
+  readonly message: Message;
   readonly options: AnnounceOptions;
 }
 

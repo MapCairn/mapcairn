@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { formatNumber } from "../format/format";
+import { message } from "../messages/formatMessage";
+import type { Message, MessageKey } from "../ports/messages";
 import type { UnitSystem } from "../ports/settings";
 import {
   metresToFeet,
@@ -33,15 +35,13 @@ export const DISTANCE_UNIT_SYMBOL: Readonly<Record<DistanceUnit, string>> = {
   mi: "mi",
 };
 
-/** Spoken names, as [singular, plural], for announcements and accessible labels. */
-export const DISTANCE_UNIT_NAME: Readonly<
-  Record<DistanceUnit, readonly [string, string]>
-> = {
-  m: ["metre", "metres"],
-  km: ["kilometre", "kilometres"],
-  ft: ["foot", "feet"],
-  mi: ["mile", "miles"],
-};
+/** The message key that names a distance unit in words, with the count it takes. */
+const DISTANCE_UNIT_KEY = {
+  m: "units.metre",
+  km: "units.kilometre",
+  ft: "units.foot",
+  mi: "units.mile",
+} as const satisfies Readonly<Record<DistanceUnit, MessageKey>>;
 
 const AREA_UNIT_SYMBOL: Readonly<Record<AreaUnit, string>> = {
   m2: "m²",
@@ -52,14 +52,14 @@ const AREA_UNIT_SYMBOL: Readonly<Record<AreaUnit, string>> = {
   mi2: "mi²",
 };
 
-const AREA_UNIT_NAME: Readonly<Record<AreaUnit, readonly [string, string]>> = {
-  m2: ["square metre", "square metres"],
-  ha: ["hectare", "hectares"],
-  km2: ["square kilometre", "square kilometres"],
-  ft2: ["square foot", "square feet"],
-  ac: ["acre", "acres"],
-  mi2: ["square mile", "square miles"],
-};
+const AREA_UNIT_KEY = {
+  m2: "units.squareMetre",
+  ha: "units.hectare",
+  km2: "units.squareKilometre",
+  ft2: "units.squareFoot",
+  ac: "units.acre",
+  mi2: "units.squareMile",
+} as const satisfies Readonly<Record<AreaUnit, MessageKey>>;
 
 const FEET_PER_TENTH_OF_A_MILE = 528;
 const SQUARE_FEET_PER_TENTH_OF_AN_ACRE = 4356;
@@ -144,23 +144,33 @@ export function readArea(
 
 /**
  * Formats a distance with a short unit, for example "850 m", "1.25 km",
- * "328 ft" or "1.25 mi". Numbers use `en-GB` grouping.
+ * "328 ft" or "1.25 mi". The number is grouped for `language`; the unit
+ * symbols are the same in every language.
  */
-export function formatDistance(metres: number, units: UnitSystem): string {
+export function formatDistance(
+  metres: number,
+  units: UnitSystem,
+  language: string,
+): string {
   const { value, unit } = readDistance(metres, units);
-  return `${formatNumber(value)} ${DISTANCE_UNIT_SYMBOL[unit]}`;
+  return `${formatNumber(value, language)} ${DISTANCE_UNIT_SYMBOL[unit]}`;
 }
 
 /**
  * Formats an area with a short unit, for example "850 m²", "1.25 ha",
- * "2.5 km²", "1,076 ft²", "1 ac" or "1.93 mi²".
+ * "2.5 km²", "1,076 ft²", "1 ac" or "1.93 mi²". The number is grouped for
+ * `language`.
  */
-export function formatArea(squareMetres: number, units: UnitSystem): string {
+export function formatArea(
+  squareMetres: number,
+  units: UnitSystem,
+  language: string,
+): string {
   const { value, unit } = readArea(squareMetres, units);
-  return `${formatNumber(value)} ${AREA_UNIT_SYMBOL[unit]}`;
+  return `${formatNumber(value, language)} ${AREA_UNIT_SYMBOL[unit]}`;
 }
 
-/** Picks the singular name for exactly one and the plural otherwise. */
+/** Picks the singular name for exactly one and the plural otherwise. Only for copy that is not yet in the catalogue. */
 export function pluralise(
   value: number,
   names: readonly [string, string],
@@ -168,20 +178,36 @@ export function pluralise(
   return value === 1 ? names[0] : names[1];
 }
 
+/** A distance in a given unit as words, "1.25 kilometres": the unit's plural key with the count. */
+export function describeDistanceReading(
+  value: number,
+  unit: DistanceUnit,
+): Message<(typeof DISTANCE_UNIT_KEY)[DistanceUnit]> {
+  return message(DISTANCE_UNIT_KEY[unit], { count: value });
+}
+
 /**
  * Describes a distance in words for a screen reader, for example
- * "1.25 kilometres" or "1 mile".
+ * "1.25 kilometres" or "1 mile", as a message to format with the active
+ * catalogue.
  */
-export function describeDistance(metres: number, units: UnitSystem): string {
+export function describeDistance(
+  metres: number,
+  units: UnitSystem,
+): Message<(typeof DISTANCE_UNIT_KEY)[DistanceUnit]> {
   const { value, unit } = readDistance(metres, units);
-  return `${formatNumber(value)} ${pluralise(value, DISTANCE_UNIT_NAME[unit])}`;
+  return describeDistanceReading(value, unit);
 }
 
 /**
  * Describes an area in words for a screen reader, for example
- * "1.25 hectares" or "1 square mile".
+ * "1.25 hectares" or "1 square mile", as a message to format with the active
+ * catalogue.
  */
-export function describeArea(squareMetres: number, units: UnitSystem): string {
+export function describeArea(
+  squareMetres: number,
+  units: UnitSystem,
+): Message<(typeof AREA_UNIT_KEY)[AreaUnit]> {
   const { value, unit } = readArea(squareMetres, units);
-  return `${formatNumber(value)} ${pluralise(value, AREA_UNIT_NAME[unit])}`;
+  return message(AREA_UNIT_KEY[unit], { count: value });
 }

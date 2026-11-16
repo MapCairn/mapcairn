@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { LatLng, UnitSystem } from "@mapcairn/core";
+import {
+  createFakeServices,
+  type LatLng,
+  type UnitSystem,
+} from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ChromeLayoutProvider,
   type ChromeLayoutValue,
 } from "../../chrome/layoutContext";
+import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { MeasureToolbar } from "./MeasureToolbar";
 import { type UseMeasure, useMeasure } from "./useMeasure";
@@ -55,11 +60,13 @@ function layout(
 function renderToolbar(props: HarnessProps = {}) {
   const publish = vi.fn<(px: number | null) => void>();
   const tree = (value: ChromeLayoutValue) => (
-    <LiveRegionProvider>
-      <ChromeLayoutProvider value={value}>
-        <Harness {...props} />
-      </ChromeLayoutProvider>
-    </LiveRegionProvider>
+    <ServicesProvider services={createFakeServices()}>
+      <LiveRegionProvider>
+        <ChromeLayoutProvider value={value}>
+          <Harness {...props} />
+        </ChromeLayoutProvider>
+      </LiveRegionProvider>
+    </ServicesProvider>
   );
   const view = render(tree(layout(publish)));
   return {
@@ -304,9 +311,11 @@ describe("MeasureToolbar", () => {
 
     it("works with the default layout outside a MapChrome", () => {
       render(
-        <LiveRegionProvider>
-          <Harness />
-        </LiveRegionProvider>,
+        <ServicesProvider services={createFakeServices()}>
+          <LiveRegionProvider>
+            <Harness />
+          </LiveRegionProvider>
+        </ServicesProvider>,
       );
       expect(screen.getByRole("toolbar", { name: "Measure" })).toBeTruthy();
     });

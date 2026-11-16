@@ -9,7 +9,7 @@ import {
 } from "@mapcairn/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap } from "../../host";
-import { usePreferences } from "../../services";
+import { useFormatMessage, useMessages, usePreferences } from "../../services";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { useChromeLayout } from "../layoutContext";
 import * as styles from "./MapReadout.css";
@@ -91,6 +91,8 @@ function useMapHasKeyboardFocus(host: HTMLElement | null): boolean {
 export function ScaleBar({ units }: ScaleBarProps) {
   const { adapter, view, hostElement } = useMap();
   const { reducedMotion } = usePreferences();
+  const { language } = useMessages();
+  const format = useFormatMessage();
   const mapHasFocus = useMapHasKeyboardFocus(hostElement);
   const trackRef = useRef<HTMLDivElement>(null);
   const latitude = view.center.lat;
@@ -108,8 +110,9 @@ export function ScaleBar({ units }: ScaleBarProps) {
       metresPerPixel: adapter.metresPerPixel(latitude),
       maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
       units,
+      language,
     });
-  }, [adapter, latitude, zoom, units]);
+  }, [adapter, latitude, zoom, units, language]);
 
   const canFade = !reducedMotion && !mapHasFocus;
   const [idleAtZoom, setIdleAtZoom] = useState<number | null>(null);
@@ -142,7 +145,7 @@ export function ScaleBar({ units }: ScaleBarProps) {
   return (
     <div
       role="img"
-      aria-label={bar.accessibleLabel}
+      aria-label={format(bar.accessibleLabel)}
       data-chrome="scale-bar"
       data-idle={idle ? "true" : "false"}
       className={styles.scaleBar}
@@ -189,6 +192,7 @@ const SPOKEN_SEPARATOR = ", ";
  *   text read it once and in full, in the order the eye sees it.
  */
 export function CursorCoordinates({ latlng, zoom }: CursorCoordinatesProps) {
+  const { language } = useMessages();
   if (!latlng && zoom === undefined) {
     return null;
   }
@@ -198,10 +202,10 @@ export function CursorCoordinates({ latlng, zoom }: CursorCoordinatesProps) {
       {zoom === undefined ? null : (
         <span data-testid="zoom-level" className={styles.zoomLevel}>
           <span aria-hidden="true" className={styles.unselectable}>
-            z {formatZoom(zoom)}
+            z {formatZoom(zoom, language)}
           </span>
           <VisuallyHidden>
-            {latlng ? SPOKEN_SEPARATOR : ""}Zoom {formatZoom(zoom)}
+            {latlng ? SPOKEN_SEPARATOR : ""}Zoom {formatZoom(zoom, language)}
           </VisuallyHidden>
         </span>
       )}

@@ -22,7 +22,11 @@ import { ServicesProvider } from "../services";
 import { type UseDataLayersOptions, useDataLayers } from "./useDataLayers";
 
 const announce = vi.hoisted(() => vi.fn());
-vi.mock("../ui/LiveRegion", () => ({ useAnnounce: () => announce }));
+vi.mock("../ui/LiveRegion", async () => {
+  const { englishAnnounce } = await import("../ui/LiveRegion/englishAnnounce");
+  const speak = englishAnnounce(announce);
+  return { useAnnounce: () => speak };
+});
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 const AREA = { west: 2.2, south: 48.8, east: 2.5, north: 48.95 };

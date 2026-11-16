@@ -5,7 +5,10 @@ import {
   createFakeServices,
   DEFAULT_FAKE_VIEW,
   FakeMapAdapter,
+  FakeMessageCatalogue,
   formatLatLng,
+  formatMessage,
+  type Message,
 } from "@mapcairn/core";
 import { act, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
@@ -34,6 +37,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** The English text of a message. */
+const english = (value: Message) =>
+  formatMessage(new FakeMessageCatalogue(), value);
+
 function adapterAtZoom(zoom: number): FakeMapAdapter {
   const adapter = new FakeMapAdapter();
   adapter.setView({ zoom, center: { lat: -33.9, lng: 18.4 } });
@@ -45,6 +52,7 @@ function expectedBar(adapter: FakeMapAdapter, units: "metric" | "imperial") {
     metresPerPixel: adapter.metresPerPixel(),
     maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
     units,
+    language: "en-GB",
   });
 }
 
@@ -55,10 +63,34 @@ describe("ScaleBar", () => {
       map: testMapContext({ adapter, view: adapter.getView() }),
     });
     const bar = expectedBar(adapter, "metric");
-    const image = screen.getByRole("img", { name: bar.accessibleLabel });
+    const image = screen.getByRole("img", {
+      name: english(bar.accessibleLabel),
+    });
     expect(image).toHaveAttribute("data-chrome", "scale-bar");
     expect(image).toHaveTextContent(bar.label);
-    expect(bar.accessibleLabel).toMatch(/^Scale: /);
+    expect(english(bar.accessibleLabel)).toMatch(/^Scale: /);
+  });
+
+  it("asks the catalogue for the scale wording and writes the figure in its language", () => {
+    const adapter = adapterAtZoom(12);
+    const messages = new FakeMessageCatalogue({
+      language: "de",
+      overrides: { "scale.label": "Maßstab: {distance}" },
+    });
+    renderChrome(<ScaleBar units="metric" />, {
+      map: testMapContext({ adapter, view: adapter.getView() }),
+      services: createFakeServices({ messages }),
+    });
+    const image = screen.getByRole("img", { name: /^Maßstab: / });
+    expect(messages.calls.map((call) => call.key)).toContain("scale.label");
+    expect(image).toHaveTextContent(
+      computeScaleBar({
+        metresPerPixel: adapter.metresPerPixel(),
+        maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
+        units: "metric",
+        language: "de",
+      }).label,
+    );
   });
 
   it("uses imperial units when asked", () => {
@@ -69,7 +101,7 @@ describe("ScaleBar", () => {
     const bar = expectedBar(adapter, "imperial");
     expect(bar.unit === "ft" || bar.unit === "mi").toBe(true);
     expect(
-      screen.getByRole("img", { name: bar.accessibleLabel }),
+      screen.getByRole("img", { name: english(bar.accessibleLabel) }),
     ).toBeInTheDocument();
   });
 
@@ -110,12 +142,12 @@ describe("ScaleBar", () => {
     const { rerenderChrome } = renderChrome(<ScaleBar units="metric" />, {
       map: testMapContext({ adapter, view: adapter.getView() }),
     });
-    const before = expectedBar(adapter, "metric").accessibleLabel;
+    const before = english(expectedBar(adapter, "metric").accessibleLabel);
     adapter.setView({ zoom: 6 });
     rerenderChrome(<ScaleBar units="metric" />, {
       map: testMapContext({ adapter, view: adapter.getView() }),
     });
-    const after = expectedBar(adapter, "metric").accessibleLabel;
+    const after = english(expectedBar(adapter, "metric").accessibleLabel);
     expect(after).not.toBe(before);
     expect(screen.getByRole("img", { name: after })).toBeInTheDocument();
   });

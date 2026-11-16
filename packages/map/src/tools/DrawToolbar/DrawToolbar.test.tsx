@@ -64,8 +64,9 @@ const layout: ChromeLayoutValue = {
 async function renderToolbar() {
   adapter = new FakeMapAdapter();
   await adapter.mount(new FakeMapHost(), OPTIONS);
-  return render(
-    <ServicesProvider services={createFakeServices()}>
+  const services = createFakeServices();
+  const view = render(
+    <ServicesProvider services={services}>
       <LiveRegionProvider>
         <FocusRegistryProvider focusMap={focusMap}>
           <ChromeLayoutProvider value={layout}>
@@ -75,6 +76,7 @@ async function renderToolbar() {
       </LiveRegionProvider>
     </ServicesProvider>,
   );
+  return { ...view, services };
 }
 
 function draw(...points: LatLng[]) {
@@ -116,6 +118,14 @@ describe("DrawToolbar", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Circle" }));
     expect(drawApi.mode).toBe("circle");
     expect(screen.getByText(/set the radius/)).toBeInTheDocument();
+  });
+
+  it("asks the catalogue for the hint of the mode, by key", async () => {
+    const { services } = await renderToolbar();
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "draw.hint.polygon",
+      params: {},
+    });
   });
 
   it("shows the name and measures of the shape being drawn, with a hint", async () => {

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  message,
   SAMPLE_FEED_LAYER,
   SAMPLE_QUERY_LAYER,
   SAMPLE_VECTOR_LAYER,
 } from "@mapcairn/core";
 import { describe, expect, it, vi } from "vitest";
+import { inEnglish } from "../ui/LiveRegion/englishAnnounce";
 import type { Spoken } from "./loadOutcome";
 import {
   type AnnouncedStates,
@@ -13,10 +15,19 @@ import {
   reportZoomLimits,
 } from "./loadReport";
 
-const ready: Spoken = { state: "ready", message: "Ready.", priority: "polite" };
+const readyMessage = message("announce.layerLoaded", {
+  name: "Quakes",
+  count: 3,
+});
+const failedMessage = message("announce.layerLoadFailed", { name: "Quakes" });
+const ready: Spoken = {
+  state: "ready",
+  message: readyMessage,
+  priority: "polite",
+};
 const failed: Spoken = {
   state: "error",
-  message: "Failed.",
+  message: failedMessage,
   priority: "assertive",
 };
 
@@ -28,9 +39,9 @@ describe("reportLoad", () => {
     reportLoad(SAMPLE_FEED_LAYER, ready, announced, announce);
     reportLoad(SAMPLE_FEED_LAYER, failed, announced, announce);
     expect(announce.mock.calls).toEqual([
-      ["Ready.", { priority: "polite" }],
-      ["Ready.", { priority: "polite" }],
-      ["Failed.", { priority: "assertive" }],
+      [readyMessage, { priority: "polite" }],
+      [readyMessage, { priority: "polite" }],
+      [failedMessage, { priority: "assertive" }],
     ]);
   });
 
@@ -62,7 +73,7 @@ describe("reportZoomLimits", () => {
     const announced: AnnouncedStates = new Map();
     reportZoomLimits([zoomIn, zoomOut], announced, announce);
     reportZoomLimits([zoomIn, zoomOut], announced, announce);
-    expect(announce.mock.calls).toEqual([
+    expect(inEnglish(announce.mock.calls)).toEqual([
       [
         "Sample query: zoom in to level 4 or closer to load this layer.",
         { priority: "polite" },
@@ -91,7 +102,7 @@ describe("reportZoomLimits", () => {
       announced,
       announce,
     );
-    expect(announce.mock.calls.map(([message]) => message)).toEqual([
+    expect(inEnglish(announce.mock.calls.map(([spoken]) => spoken))).toEqual([
       "Sample districts: zoom in to level 2 or closer to load this layer.",
       "Sample districts: zoom out below level 18 to see this layer.",
     ]);

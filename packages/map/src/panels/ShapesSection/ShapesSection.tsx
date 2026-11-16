@@ -15,7 +15,7 @@ import { type Ref, useContext } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { MapContext } from "../../host";
 import { FIT_MAX_ZOOM, fitPadding } from "../../layers/reveal";
-import { useFileOpener, useSettings } from "../../services";
+import { useFileOpener, useMessages, useSettings } from "../../services";
 import type { DrawFeedback, UseDraw } from "../../tools/DrawToolbar";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -89,6 +89,7 @@ export function ShapesSection({
   headingRef,
 }: ShapesSectionProps) {
   const { settings } = useSettings();
+  const messages = useMessages();
   const { shapes, selection, feedback, importFeedback } = draw;
   const subLevel = (headingLevel + 1) as HeadingLevel;
   const fitToImport = useFitToImport();
@@ -122,7 +123,9 @@ export function ShapesSection({
             <ListRow
               key={shape.id}
               label={shape.done ? shape.label : `${shape.label}, unfinished`}
-              secondary={formatShapeMeasure(shape, settings.units) || undefined}
+              secondary={
+                formatShapeMeasure(shape, settings.units, messages) || undefined
+              }
               selected={selection?.shapeId === shape.id}
               data-testid="shapes-row"
               onClick={() => draw.select(shape.id)}

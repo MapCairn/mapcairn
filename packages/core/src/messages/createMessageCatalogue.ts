@@ -1,18 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { formatDay, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
 
 /** Matches a `{name}` placeholder in a catalogue string. */
 const PLACEHOLDER = /\{(\w+)\}/g;
 
-/** Substitutes every `{name}` placeholder in `template` from `params`. */
+/**
+ * Substitutes every `{name}` placeholder in `template` from `params`. A
+ * number, a `Date` and a list of strings are formatted for `language`; a
+ * placeholder with no value is left as written.
+ */
 function substitute(
   template: string,
   params: Readonly<Record<string, unknown>>,
+  language: string,
 ): string {
   return template.replace(PLACEHOLDER, (whole, name: string) => {
     const value = params[name];
-    return value === undefined ? whole : String(value);
+    if (value === undefined) {
+      return whole;
+    }
+    if (typeof value === "number") {
+      return formatNumber(value, language);
+    }
+    if (value instanceof Date) {
+      return formatDay(value, language);
+    }
+    if (Array.isArray(value)) {
+      return new Intl.ListFormat(language, { type: "conjunction" }).format(
+        value,
+      );
+    }
+    return String(value);
   });
 }
 
@@ -68,12 +88,12 @@ export function createMessageCatalogue(
   return {
     language,
     t(key, params) {
-      return substitute(resolve(key), params);
+      return substitute(resolve(key), params, language);
     },
     plural(key, params) {
       const { count } = params;
       const form = selectPluralForm(resolve(key), language, count);
-      return substitute(form, params);
+      return substitute(form, params, language);
     },
     list(items, type = "conjunction") {
       return new Intl.ListFormat(language, { type }).format(items);

@@ -208,6 +208,32 @@ describe("useSearch", () => {
     expect(polite()).toBe("2 results");
   });
 
+  it("asks the catalogue for the count, the error and the coordinate label, by key", async () => {
+    const { result, services } = setup();
+    const { calls } = services.fakes.messages;
+    services.fakes.search.setResults("cape", [CAPE_TOWN, CAPRICORN]);
+    await searchFor(result, "cape");
+    expect(calls).toContainEqual({
+      key: "announce.searchResults",
+      params: { count: 2 },
+    });
+    services.fakes.search.failWith("offline");
+    await searchFor(result, "cairo");
+    expect(calls).toContainEqual({ key: "error.search.offline", params: {} });
+    await searchFor(result, "-26.2041, 28.0473");
+    expect(calls).toContainEqual({
+      key: "search.coordinatesLabel",
+      params: { latitude: "26.20410° S", longitude: "28.04730° E" },
+    });
+    expect(calls).toContainEqual({
+      key: "announce.coordinateResult",
+      params: {
+        results: "1 result",
+        label: "Coordinates 26.20410° S, 28.04730° E",
+      },
+    });
+  });
+
   it("announces no results", async () => {
     const { result } = setup();
     await searchFor(result, "zzzz");

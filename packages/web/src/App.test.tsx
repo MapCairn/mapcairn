@@ -820,6 +820,20 @@ describe("pins", () => {
     expect(centre).toBeDefined();
   });
 
+  it("asks the catalogue for the pin's announcement and the tile banner, by key", async () => {
+    const services = await renderApp();
+    fireEvent.keyDown(region(), { key: "p" });
+    act(() => {
+      adapter(services).simulateTileError();
+    });
+    const { calls } = services.fakes.messages;
+    const dropped = calls.find((call) => call.key === "announce.pinDropped");
+    expect(dropped?.params).toEqual({
+      position: expect.stringMatching(/^-?\d+\.\d{5}, -?\d+\.\d{5}$/),
+    });
+    expect(calls).toContainEqual({ key: "announce.tileError", params: {} });
+  });
+
   it("drops a pin where the map is long-pressed", async () => {
     const services = await renderApp();
     fireEvent.contextMenu(region(), { clientX: 30, clientY: 40 });

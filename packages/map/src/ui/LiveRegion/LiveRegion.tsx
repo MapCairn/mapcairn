@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  createMessageCatalogue,
+  EN_GB_CATALOGUE,
+  formatMessage,
+} from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
+import {
   createContext,
   type ReactNode,
   useCallback,
@@ -8,6 +14,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { useOptionalServices } from "../../services/ServicesProvider";
 import { VisuallyHidden } from "../VisuallyHidden";
 import {
   type Announce,
@@ -40,6 +47,16 @@ let warnedMissingProvider = false;
 /** Does nothing. Returned outside a provider so callers need no null check. */
 const ignore: Announce = () => undefined;
 
+/**
+ * What speaks a message outside a services provider, such as a test that
+ * mounts the regions alone: the SDK's own English.
+ */
+const ENGLISH = createMessageCatalogue(
+  "en-GB",
+  EN_GB_CATALOGUE,
+  EN_GB_CATALOGUE,
+);
+
 /** Props for {@link LiveRegionProvider}. */
 export interface LiveRegionProviderProps {
   readonly children?: ReactNode;
@@ -57,6 +74,7 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
     polite: "",
     assertive: "",
   });
+  const catalogueRef = useLatestRef(useOptionalServices()?.messages ?? ENGLISH);
   const [announcer] = useState(() =>
     createAnnouncer({
       setText: (priority, text) =>
@@ -77,8 +95,19 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
     };
   }, [announcer]);
 
+  const announce = useCallback<Announce>(
+    (message, options) =>
+      announcer.announce(
+        typeof message === "string"
+          ? message
+          : formatMessage(catalogueRef.current, message),
+        options,
+      ),
+    [announcer, catalogueRef],
+  );
+
   return (
-    <LiveRegionContext.Provider value={announcer.announce}>
+    <LiveRegionContext.Provider value={announce}>
       {children}
       <VisuallyHidden
         as="div"
@@ -104,7 +133,8 @@ export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
 
 /**
  * Returns `announce(message, { priority?, keep? })`, which reads a message out
- * through the app-wide live regions. Pass `keep` for the outcome of something
+ * through the app-wide live regions. The message is text or a `Message` from
+ * core, which is formatted with the active catalogue. Pass `keep` for the outcome of something
  * the person did, so a later message cannot replace it while it waits for the
  * throttle window. The function is stable between renders.
  * Outside a `LiveRegionProvider` it does nothing, and warns once in development.

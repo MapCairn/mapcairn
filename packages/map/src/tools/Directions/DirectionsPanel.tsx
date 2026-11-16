@@ -32,7 +32,12 @@ import {
   X,
 } from "lucide-react";
 import { type ReactNode, type SyntheticEvent, useEffect, useRef } from "react";
-import { usePreferences, useSettings } from "../../services";
+import {
+  useFormatMessage,
+  useMessages,
+  usePreferences,
+  useSettings,
+} from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
@@ -81,7 +86,9 @@ function ResultCard({
   result: DirectionsOutcome;
   units: UnitSystem;
 }) {
-  const how = travelModeParticiple(result.mode);
+  const { language } = useMessages();
+  const format = useFormatMessage();
+  const how = format(travelModeParticiple(result.mode));
   if (result.kind === "area") {
     return (
       <div className={styles.result} data-testid="directions-result">
@@ -91,7 +98,7 @@ function ResultCard({
         <p>
           Reaches an area of{" "}
           <span data-testid="directions-area">
-            {formatArea(result.size, units)}
+            {formatArea(result.size, units, language)}
           </span>{" "}
           from stop A.
         </p>
@@ -101,7 +108,7 @@ function ResultCard({
   return (
     <div className={styles.result} data-testid="directions-result">
       <p className={styles.figures} data-testid="directions-figures">
-        {formatDistance(result.distance, units)},{" "}
+        {formatDistance(result.distance, units, language)},{" "}
         {formatDuration(result.duration)}
       </p>
       <p className={styles.hint}>
@@ -117,7 +124,7 @@ function ResultCard({
               data-testid="directions-leg"
             >
               {stopLetter(index)} to {stopLetter(index + 1)}:{" "}
-              {formatDistance(leg.properties.distance, units)},{" "}
+              {formatDistance(leg.properties.distance, units, language)},{" "}
               {formatDuration(leg.properties.duration)}
             </li>
           ))}
@@ -149,6 +156,7 @@ export function DirectionsPanel({
   headingLevel = 3,
 }: DirectionsPanelProps) {
   const { settings } = useSettings();
+  const format = useFormatMessage();
   const { reducedMotion } = usePreferences();
   const search = useSearch({ getBias });
   const centre = useFreeCentre();
@@ -441,7 +449,9 @@ export function DirectionsPanel({
           <div className={styles.group} data-testid="directions-error">
             <p className={styles.statusLine}>
               <Icon icon={TriangleAlert} className={styles.errorIcon} />
-              <span>{routingErrorMessage(state.kind, state.request)}</span>
+              <span>
+                {format(routingErrorMessage(state.kind, state.request))}
+              </span>
             </p>
             {state.kind === "network" || state.kind === "rate-limited" ? (
               <div className={styles.actions}>

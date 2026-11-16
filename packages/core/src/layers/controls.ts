@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { ControlValues } from "../ports/layers";
+import type { Message } from "../ports/messages";
 import {
   defaultSlot,
   describeDay,
@@ -106,11 +107,12 @@ function resolveValue(
  * announcement: the first date control's day ("11 November 2026") or the
  * first date and time control's UTC slot ("13:00 UTC on 11 November 2026").
  * Null when the layer has neither, or its value is not a real day or slot.
+ * It is a message, to format with the active catalogue.
  */
 export function describeChosenTime(
   definition: LayerDefinition,
   values: ControlValues,
-): string | null {
+): Message | null {
   for (const control of definition.controls) {
     const value = values[control.id];
     if (control.kind === "date" && isIsoDate(value)) {

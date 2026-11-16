@@ -5,6 +5,7 @@ import {
   type LayerDefinition,
   type LegendEntry,
   legendFor,
+  type Message,
 } from "@mapcairn/core";
 import type { DataLayerState } from "./useDataLayers";
 
@@ -19,7 +20,7 @@ export interface MapKeyBlock {
    * The day or time the layer is set to, in words such as `13:00 UTC on 11
    * November 2026`, or null when it has no date or time control.
    */
-  readonly chosenTime: string | null;
+  readonly chosenTime: Message | null;
 }
 
 /**

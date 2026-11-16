@@ -20,6 +20,7 @@ import {
 import { type KeyboardEvent, useCallback, useEffect, useRef } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
 import { useToolbarEdge } from "../../chrome/useToolbarEdge";
+import { useFormatMessage } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
@@ -176,6 +177,7 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
  */
 export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
   const rootRef = useRef<HTMLElement>(null);
+  const format = useFormatMessage();
   const registerShapes = useFocusTarget("draw-shapes");
   useToolbarEdge(rootRef);
 
@@ -321,7 +323,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
         <p className={styles.hint}>
           {selected && !drawing
             ? "Drag a point to move it, or use the arrow keys. Escape steps back."
-            : hintFor(mode)}
+            : format(hintFor(mode))}
         </p>
       </Surface>
     </section>
