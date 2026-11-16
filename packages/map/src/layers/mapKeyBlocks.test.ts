@@ -11,6 +11,7 @@ import {
   SAMPLE_TIME_LAYER,
 } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
+import { inEnglish } from "../ui/LiveRegion/englishAnnounce";
 import { mapKeyBlocks } from "./mapKeyBlocks";
 import type { DataLayerState } from "./useDataLayers";
 
@@ -66,7 +67,7 @@ describe("mapKeyBlocks", () => {
       ),
       state(SAMPLE_FEED_LAYER, true),
     ]);
-    expect(timed?.chosenTime).toMatch(/UTC on \d{1,2} \w+ \d{4}$/);
+    expect(inEnglish(timed?.chosenTime)).toMatch(/UTC on \d{1,2} \w+ \d{4}$/);
     expect(plain?.chosenTime).toBeNull();
   });
 });

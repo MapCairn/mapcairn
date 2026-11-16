@@ -6,6 +6,7 @@ import {
   describeLayersLoadFailed,
   describeLayersLoading,
   describeLayersRefreshFailed,
+  type Message,
 } from "@mapcairn/core";
 import type { AnnouncePriority } from "../ui/LiveRegion";
 import type { Reconciled } from "./catalogueReconcile";
@@ -16,7 +17,7 @@ type ReadyState = Extract<CatalogueState, { status: "ready" }>;
 
 /** What a transition of the catalogue says aloud, and how urgently. */
 export interface CatalogueMessage {
-  readonly message: string;
+  readonly message: Message;
   readonly priority: AnnouncePriority;
   /**
    * Whether a later message must not replace it (the announcer's `keep`).
@@ -41,13 +42,13 @@ export interface CatalogueNoticeInputs {
   readonly change: Reconciled | null;
 }
 
-const politely = (message: string): CatalogueMessage => ({
+const politely = (message: Message): CatalogueMessage => ({
   message,
   priority: "polite",
   keep: true,
 });
 
-const assertively = (message: string): CatalogueMessage => ({
+const assertively = (message: Message): CatalogueMessage => ({
   message,
   priority: "assertive",
   keep: true,

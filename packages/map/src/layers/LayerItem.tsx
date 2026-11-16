@@ -7,17 +7,20 @@ import {
   describeZoomIn,
   describeZoomOut,
   type FormatterRegistry,
+  formatMessage,
+  formatNumber,
   formatTemplate,
   isControlEnabled,
   isFeedLayer,
   type LayerControlDefinition,
   type LayerFeature,
   loadsFeatures,
+  type MessageCatalogue,
   resolveDateBound,
 } from "@mapcairn/core";
 import { Hourglass, RotateCw, TriangleAlert } from "lucide-react";
 import { useState } from "react";
-import { useSaveData } from "../services";
+import { useFormatMessage, useMessages, useSaveData } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { SegmentedControl } from "../ui/SegmentedControl";
@@ -33,30 +36,38 @@ import type { DataLayerState, DataLayers, LayerStatus } from "./useDataLayers";
 /** How many rows the list shows before "Show all". */
 export const LIST_PAGE = 50;
 
-const TIME = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
+/** The time of day a layer last updated, written for `language`. */
+function timeOfDay(updatedAt: number, language: string): string {
+  return new Intl.DateTimeFormat(language, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(updatedAt);
+}
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
 /** The status line's words for a layer that is on. */
-function statusText(status: LayerStatus, emptyText: string): string | null {
+function statusText(
+  status: LayerStatus,
+  emptyText: string,
+  messages: MessageCatalogue,
+): string | null {
+  const { language } = messages;
   switch (status.kind) {
     case "loading":
       return "Loading";
     case "ready":
       return status.capped
-        ? `Updated ${TIME.format(status.updatedAt)}. Showing the first ${status.count.toLocaleString("en-GB")}. Zoom in to see more.`
-        : `Updated ${TIME.format(status.updatedAt)}, ${status.count.toLocaleString("en-GB")} shown`;
+        ? `Updated ${timeOfDay(status.updatedAt, language)}. Showing the first ${formatNumber(status.count, language)}. Zoom in to see more.`
+        : `Updated ${timeOfDay(status.updatedAt, language)}, ${formatNumber(status.count, language)} shown`;
     case "zoom-in":
-      return describeZoomIn(status.level);
+      return formatMessage(messages, describeZoomIn(status.level));
     case "zoom-out":
-      return describeZoomOut(status.level);
+      return formatMessage(messages, describeZoomOut(status.level));
     case "empty":
-      return `Updated ${TIME.format(status.updatedAt)}. ${emptyText}`;
+      return `Updated ${timeOfDay(status.updatedAt, language)}. ${emptyText}`;
     default:
       return null;
   }
@@ -183,13 +194,14 @@ interface ListProps {
  */
 function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
   const [showAll, setShowAll] = useState(false);
+  const { language } = useMessages();
   const { definition } = layer;
   if (!isFeedLayer(definition) || layer.sorted.length === 0) {
     return null;
   }
   const context = { now: layers.now() };
   const rows = showAll ? layer.sorted : layer.sorted.slice(0, LIST_PAGE);
-  const count = layer.sorted.length.toLocaleString("en-GB");
+  const count = formatNumber(layer.sorted.length, language);
   return (
     <details
       className={styles.featureList}
@@ -281,7 +293,9 @@ export function LayerItem({
   // Only worth a line for someone who is saving data.
   const saveData = useSaveData();
   const emptyText = loadsFeatures(definition) ? definition.emptyText : "";
-  const text = statusText(status, emptyText);
+  const messages = useMessages();
+  const format = useFormatMessage();
+  const text = statusText(status, emptyText, messages);
   return (
     <li className={styles.layerItem} data-testid={`layer-${definition.id}`}>
       <Switch
@@ -310,7 +324,7 @@ export function LayerItem({
             >
               <span className={styles.statusWaiting}>
                 <Icon icon={Hourglass} />
-                {describeTilesSlow()}
+                {format(describeTilesSlow())}
               </span>
             </p>
           ) : null}
@@ -321,8 +335,10 @@ export function LayerItem({
             >
               <span className={styles.statusError}>
                 <Icon icon={TriangleAlert} />
-                {describeTilesUnavailable(
-                  describeChosenTime(definition, layer.controls),
+                {format(
+                  describeTilesUnavailable(
+                    describeChosenTime(definition, layer.controls),
+                  ),
                 )}
               </span>
             </p>

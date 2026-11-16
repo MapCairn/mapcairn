@@ -15,7 +15,11 @@ import { ServicesProvider } from "../services";
 import { useDataLayers } from "./useDataLayers";
 
 const announce = vi.hoisted(() => vi.fn());
-vi.mock("../ui/LiveRegion", () => ({ useAnnounce: () => announce }));
+vi.mock("../ui/LiveRegion", async () => {
+  const { englishAnnounce } = await import("../ui/LiveRegion/englishAnnounce");
+  const speak = englishAnnounce(announce);
+  return { useAnnounce: () => speak };
+});
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 const IMAGERY = SAMPLE_TILE_LAYER.id;

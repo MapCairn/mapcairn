@@ -8,6 +8,7 @@ import {
   samplePoint,
 } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
+import { inEnglish } from "../ui/LiveRegion/englishAnnounce";
 import {
   loadOutcome,
   outcomeOfFailure,
@@ -21,7 +22,9 @@ const points = (count: number) =>
 
 describe("outcomeOfFeatures", () => {
   it("shows every feature of a feed, stamped, and says how many", () => {
-    expect(outcomeOfFeatures(SAMPLE_FEED_LAYER, points(5), NOW)).toEqual({
+    expect(
+      inEnglish(outcomeOfFeatures(SAMPLE_FEED_LAYER, points(5), NOW)),
+    ).toEqual({
       result: {
         status: { kind: "ready", count: 5, updatedAt: NOW },
         features: points(5),
@@ -57,7 +60,7 @@ describe("outcomeOfFeatures", () => {
       capped: true,
     });
     expect(result.features).toEqual(points(3));
-    expect(spoken).toEqual({
+    expect(inEnglish(spoken)).toEqual({
       state: "capped",
       message: "Sample query: showing the first 3. Zoom in to see more.",
       priority: "polite",
@@ -74,7 +77,9 @@ describe("outcomeOfFailure", () => {
 
   it("is an empty layer, in its own words, for an empty feed", () => {
     expect(
-      outcomeOfFailure(SAMPLE_FEED_LAYER, new LayerError("empty"), NOW),
+      inEnglish(
+        outcomeOfFailure(SAMPLE_FEED_LAYER, new LayerError("empty"), NOW),
+      ),
     ).toEqual({
       result: { status: { kind: "empty", updatedAt: NOW }, features: [] },
       spoken: {
@@ -87,7 +92,9 @@ describe("outcomeOfFailure", () => {
 
   it("is an error, said assertively, for a failure", () => {
     expect(
-      outcomeOfFailure(SAMPLE_FEED_LAYER, new LayerError("network"), NOW),
+      inEnglish(
+        outcomeOfFailure(SAMPLE_FEED_LAYER, new LayerError("network"), NOW),
+      ),
     ).toEqual({
       result: { status: { kind: "error", error: "network" }, features: [] },
       spoken: {

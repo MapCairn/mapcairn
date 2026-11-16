@@ -10,6 +10,7 @@ import {
   slotsOnDay,
 } from "@mapcairn/core";
 import { useId, useState } from "react";
+import { useFormatMessage } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import * as styles from "./Layers.css";
 
@@ -51,6 +52,7 @@ export function DateTimeControl({
   testId,
 }: DateTimeControlProps) {
   const announce = useAnnounce();
+  const format = useFormatMessage();
   const statusId = useId();
   const descriptionId = useId();
   const describedBy = control.description
@@ -110,9 +112,9 @@ export function DateTimeControl({
         </label>
       </div>
       <p id={statusId} className={styles.muted}>
-        Showing {describeSlot(value, control.stepMinutes)}. Newest available:{" "}
-        {describeSlotStart(range.max)}. Newer times may not be out yet, so they
-        are not offered.
+        Showing {format(describeSlot(value, control.stepMinutes))}. Newest
+        available: {format(describeSlotStart(range.max))}. Newer times may not
+        be out yet, so they are not offered.
       </p>
       {control.description ? (
         <p id={descriptionId} className={styles.muted}>

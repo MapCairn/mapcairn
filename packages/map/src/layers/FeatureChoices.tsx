@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { type FormatterRegistry, isFeedLayer } from "@mapcairn/core";
+import {
+  type FormatterRegistry,
+  formatNumber,
+  isFeedLayer,
+} from "@mapcairn/core";
 import { X } from "lucide-react";
 import { type Ref, useId } from "react";
+import { useMessages } from "../services";
 import { IconButton } from "../ui/IconButton";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { FeatureGlyph } from "./FeatureGlyph";
@@ -36,6 +41,7 @@ export function FeatureChoices({
   headingRef,
 }: FeatureChoicesProps) {
   const headingId = useId();
+  const { language } = useMessages();
   const Heading = `h${headingLevel}` as const;
   const context = { now: layers.now() };
   return (
@@ -52,7 +58,7 @@ export function FeatureChoices({
           className={styles.cardHeading}
           data-testid="feature-choices-heading"
         >
-          {choices.length.toLocaleString("en-GB")} features here
+          {formatNumber(choices.length, language)} features here
         </Heading>
         <IconButton
           label="Close list"

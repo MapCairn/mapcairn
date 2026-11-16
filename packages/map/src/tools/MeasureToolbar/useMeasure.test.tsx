@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { LatLng, UnitSystem } from "@mapcairn/core";
+import {
+  createFakeServices,
+  type LatLng,
+  type UnitSystem,
+} from "@mapcairn/core";
 import { act, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { MEASURE_ANNOUNCE_DELAY_MS, useMeasure } from "./useMeasure";
 
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <LiveRegionProvider>{children}</LiveRegionProvider>
+  <ServicesProvider services={createFakeServices()}>
+    <LiveRegionProvider>{children}</LiveRegionProvider>
+  </ServicesProvider>
 );
 
 function setup(units: UnitSystem = "metric") {

@@ -19,7 +19,13 @@ import {
 
 const announce = vi.hoisted(() => vi.fn());
 
-vi.mock("../../ui/LiveRegion", () => ({ useAnnounce: () => announce }));
+vi.mock("../../ui/LiveRegion", async () => {
+  const { englishAnnounce } = await import(
+    "../../ui/LiveRegion/englishAnnounce"
+  );
+  const speak = englishAnnounce(announce);
+  return { useAnnounce: () => speak };
+});
 
 const CAPE_TOWN: SearchResult = {
   id: "ct",

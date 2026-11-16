@@ -9,9 +9,11 @@ import {
   type FeatureSelection,
   type FileOpener,
   type FileSaver,
+  formatMessage,
   type LayerCatalogue,
   type LocationProvider,
   type MapAdapterFactory,
+  type Message,
   type MessageCatalogue,
   type ResolvedTheme,
   type RoutingProvider,
@@ -98,6 +100,19 @@ export function useThemeSource(): ThemeSource {
  */
 export function useMessages(): MessageCatalogue {
   return useServices().messages;
+}
+
+/**
+ * Formats a core {@link Message} (a key and its parameters) with the active
+ * catalogue, for text a component shows or hands on as a string. The function
+ * is stable while the catalogue is.
+ */
+export function useFormatMessage(): (message: Message) => string {
+  const messages = useMessages();
+  return useCallback(
+    (message: Message) => formatMessage(messages, message),
+    [messages],
+  );
 }
 
 /** Device and accessibility preferences (reduced motion, fine pointer, save data), updating live. */

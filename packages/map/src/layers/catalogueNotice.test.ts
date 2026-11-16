@@ -9,6 +9,7 @@ import {
   type SkippedDefinition,
 } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
+import { inEnglish } from "../ui/LiveRegion/englishAnnounce";
 import { type CatalogueNoticeInputs, catalogueNotice } from "./catalogueNotice";
 import type { Reconciled } from "./catalogueReconcile";
 
@@ -47,21 +48,29 @@ function inputs(
   };
 }
 
+/** What a transition says, with its message in English words. */
+const noticeInEnglish = (given: CatalogueNoticeInputs) =>
+  inEnglish(catalogueNotice(given)) as {
+    message: string;
+    priority: string;
+    keep: boolean;
+  } | null;
+
 describe("catalogueNotice", () => {
   describe("while the catalogue loads", () => {
     it("says so, politely, when a layer named by the link is waiting", () => {
       expect(
-        catalogueNotice(inputs({ next: LOADING, linkWaiting: 2 })),
+        noticeInEnglish(inputs({ next: LOADING, linkWaiting: 2 })),
       ).toEqual({ message: "Loading layers", priority: "polite", keep: false });
     });
 
     it("says nothing when no layer is waiting", () => {
-      expect(catalogueNotice(inputs({ next: LOADING }))).toBeNull();
+      expect(noticeInEnglish(inputs({ next: LOADING }))).toBeNull();
     });
 
     it("says it once for the state, not again when the catalogue is still loading", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({ previous: LOADING, next: LOADING, linkWaiting: 1 }),
         ),
       ).toBeNull();
@@ -69,7 +78,7 @@ describe("catalogueNotice", () => {
 
     it("says it again when a retry puts a failed catalogue back to loading", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({ previous: FAILED, next: LOADING, linkWaiting: 1 }),
         ),
       ).toEqual({ message: "Loading layers", priority: "polite", keep: false });
@@ -79,7 +88,7 @@ describe("catalogueNotice", () => {
   describe("when the load fails", () => {
     it("is its own assertive message", () => {
       expect(
-        catalogueNotice(inputs({ previous: LOADING, next: FAILED })),
+        noticeInEnglish(inputs({ previous: LOADING, next: FAILED })),
       ).toEqual({
         message: "Layers could not be loaded.",
         priority: "assertive",
@@ -89,13 +98,13 @@ describe("catalogueNotice", () => {
 
     it("is said once for the state", () => {
       expect(
-        catalogueNotice(inputs({ previous: FAILED, next: FAILED })),
+        noticeInEnglish(inputs({ previous: FAILED, next: FAILED })),
       ).toBeNull();
     });
 
     it("is said again when a retry fails again", () => {
       expect(
-        catalogueNotice(inputs({ previous: LOADING, next: FAILED })),
+        noticeInEnglish(inputs({ previous: LOADING, next: FAILED })),
       ).not.toBeNull();
     });
   });
@@ -105,7 +114,7 @@ describe("catalogueNotice", () => {
 
     it("is an assertive message of its own", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: ready([SAMPLE_FEED_LAYER], [], "loading"),
             next: ready([SAMPLE_FEED_LAYER], [], "failed"),
@@ -120,7 +129,7 @@ describe("catalogueNotice", () => {
 
     it("is not said while the section is hidden: a host that was ready and empty at mount shows nothing to be updated", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             awaited: false,
             previous: ready([], [], "loading"),
@@ -132,7 +141,7 @@ describe("catalogueNotice", () => {
 
     it("is said for an empty list that was awaited, because the section shows it", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             awaited: true,
             previous: ready([], [], "loading"),
@@ -144,7 +153,7 @@ describe("catalogueNotice", () => {
 
     it("is said for a host that was ready at mount once it has layers", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             awaited: false,
             previous: ready([SAMPLE_FEED_LAYER], [], "loading"),
@@ -157,10 +166,10 @@ describe("catalogueNotice", () => {
     it("is said once for the state, and again after another failed refresh", () => {
       const failed = ready([SAMPLE_FEED_LAYER], [], "failed");
       expect(
-        catalogueNotice(inputs({ previous: failed, next: failed })),
+        noticeInEnglish(inputs({ previous: failed, next: failed })),
       ).toBeNull();
       expect(
-        catalogueNotice(inputs({ previous: shown, next: failed })),
+        noticeInEnglish(inputs({ previous: shown, next: failed })),
       ).not.toBeNull();
     });
   });
@@ -170,7 +179,7 @@ describe("catalogueNotice", () => {
 
     it("says nothing for a first list with nothing to report, and not 'updated'", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: LOADING,
             next: first,
@@ -185,7 +194,7 @@ describe("catalogueNotice", () => {
 
     it("says the skipped count with the first list, in the singular for one", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: LOADING,
             next: ready([SAMPLE_FEED_LAYER], [SKIPPED]),
@@ -198,7 +207,7 @@ describe("catalogueNotice", () => {
         keep: true,
       });
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: LOADING,
             next: ready([SAMPLE_FEED_LAYER], [SKIPPED, SKIPPED, SKIPPED]),
@@ -211,7 +220,7 @@ describe("catalogueNotice", () => {
     it("says the skipped count again when it changes, though the layers do not", () => {
       const layers = [SAMPLE_FEED_LAYER];
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: ready(layers, [SKIPPED]),
             next: ready(layers, [SKIPPED, SKIPPED]),
@@ -223,7 +232,7 @@ describe("catalogueNotice", () => {
     it("says nothing about a skipped count that has not changed", () => {
       const layers = [SAMPLE_FEED_LAYER];
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: ready(layers, [SKIPPED], "loading"),
             next: ready(layers, [SKIPPED]),
@@ -234,7 +243,7 @@ describe("catalogueNotice", () => {
 
     it("says that a refresh updated the list, with what it added and removed", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: ready([SAMPLE_FEED_LAYER], [], "loading"),
             next: ready([SAMPLE_ALERT_LAYER]),
@@ -254,7 +263,7 @@ describe("catalogueNotice", () => {
 
     it("composes one message in the fixed order for a refresh that does everything", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: ready([SAMPLE_FEED_LAYER], [], "loading"),
             next: ready([SAMPLE_ALERT_LAYER], [SKIPPED]),
@@ -277,7 +286,7 @@ describe("catalogueNotice", () => {
 
     it("puts the link note after the layers turned off, for a catalogue that was awaited", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: LOADING,
             next: first,
@@ -289,7 +298,7 @@ describe("catalogueNotice", () => {
 
     it("makes no link note for a catalogue that was ready at mount", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             awaited: false,
             next: first,
@@ -301,7 +310,7 @@ describe("catalogueNotice", () => {
 
     it("says that the first list of an awaited catalogue is empty", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({ previous: LOADING, next: ready([]), change: NO_CHANGE }),
         )?.message,
       ).toBe("No layers are available.");
@@ -309,7 +318,7 @@ describe("catalogueNotice", () => {
 
     it("says nothing about an empty list for a catalogue that was ready at mount", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({ awaited: false, next: ready([]), change: NO_CHANGE }),
         ),
       ).toBeNull();
@@ -317,7 +326,7 @@ describe("catalogueNotice", () => {
 
     it("does not say the list is empty when a refresh empties a list that was shown", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: ready([SAMPLE_FEED_LAYER], [], "loading"),
             next: ready([]),
@@ -329,7 +338,7 @@ describe("catalogueNotice", () => {
 
     it("counts the first list after a failed load as a first list, not an update", () => {
       expect(
-        catalogueNotice(
+        noticeInEnglish(
           inputs({
             previous: LOADING,
             next: first,

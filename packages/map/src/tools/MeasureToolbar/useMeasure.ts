@@ -11,6 +11,7 @@ import {
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMessages } from "../../services";
 import { useAnnounce } from "../../ui/LiveRegion";
 
 /** What is being measured. */
@@ -58,6 +59,7 @@ export interface UseMeasure {
 export function useMeasure(units: UnitSystem): UseMeasure {
   const announce = useAnnounce();
   const announceRef = useLatestRef(announce);
+  const { language } = useMessages();
   const [mode, setModeState] = useState<MeasureMode>("distance");
   const [points, setPoints] = useState<readonly LatLng[]>([]);
 
@@ -73,8 +75,8 @@ export function useMeasure(units: UnitSystem): UseMeasure {
 
   const readout =
     mode === "distance"
-      ? formatDistance(total ?? 0, units)
-      : formatArea(total ?? 0, units);
+      ? formatDistance(total ?? 0, units, language)
+      : formatArea(total ?? 0, units, language);
 
   useEffect(() => {
     if (total === null) {

@@ -11,7 +11,7 @@ import {
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocationProvider } from "../../services/hooks";
+import { useFormatMessage, useLocationProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";
 
 /** The text shown while a fix is being found. */
@@ -80,6 +80,7 @@ export function useLocate(
   const announce = useAnnounce();
   const providerRef = useLatestRef(provider);
   const announceRef = useLatestRef(announce);
+  const formatRef = useLatestRef(useFormatMessage());
   const unitsRef = useLatestRef(units);
   const timeoutRef = useLatestRef(timeoutMs);
   const announceErrorsRef = useLatestRef(announceErrors);
@@ -109,14 +110,14 @@ export function useLocate(
           if (own.signal.aborted) {
             return;
           }
-          const text = announceLocationFound(
+          const said = announceLocationFound(
             found.accuracyMetres,
             unitsRef.current,
           );
           setState("found");
           setFix(found);
-          setMessage(text);
-          announceRef.current(text);
+          setMessage(formatRef.current(said));
+          announceRef.current(said);
         },
         (failure: unknown) => {
           if (own.signal.aborted || failure instanceof PortAbortError) {
@@ -124,12 +125,12 @@ export function useLocate(
           }
           const kind: LocationErrorKind =
             failure instanceof LocationError ? failure.kind : "unavailable";
-          const text = announceLocationError(kind);
+          const said = announceLocationError(kind);
           setState("error");
           setError(kind);
-          setMessage(text);
+          setMessage(formatRef.current(said));
           if (announceErrorsRef.current) {
-            announceRef.current(text, { priority: "assertive" });
+            announceRef.current(said, { priority: "assertive" });
           }
         },
       );
@@ -139,6 +140,7 @@ export function useLocate(
     timeoutRef,
     unitsRef,
     announceRef,
+    formatRef,
     announceErrorsRef,
   ]);
 

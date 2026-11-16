@@ -3,6 +3,8 @@
 import {
   type BasemapCatalogue,
   coordinateSearchResult,
+  createMessageCatalogue,
+  EN_GB_CATALOGUE,
   formatArea,
   formatDistance,
   type LatLng,
@@ -42,6 +44,16 @@ export function basemapChoices(catalogue: BasemapCatalogue): readonly string[] {
     .map((basemap) => basemap.id);
 }
 
+/**
+ * Tool results are read by an agent, not shown in the interface, so they are
+ * always in the SDK's English whatever language the interface speaks.
+ */
+const TOOL_MESSAGES = createMessageCatalogue(
+  "en-GB",
+  EN_GB_CATALOGUE,
+  EN_GB_CATALOGUE,
+);
+
 const MIN_POINTS: Readonly<Record<MeasureMode, number>> = {
   distance: 2,
   area: 3,
@@ -64,10 +76,12 @@ function describeTotal(
     const kilometres = measureLineDistance(positions);
     return kilometres === null
       ? null
-      : formatDistance(kilometres * 1000, units);
+      : formatDistance(kilometres * 1000, units, TOOL_MESSAGES.language);
   }
   const squareMetres = measurePolygonArea(positions);
-  return squareMetres === null ? null : formatArea(squareMetres, units);
+  return squareMetres === null
+    ? null
+    : formatArea(squareMetres, units, TOOL_MESSAGES.language);
 }
 
 /**
@@ -87,7 +101,7 @@ export async function findPlace(
   provider: SearchProvider,
   text: string,
 ): Promise<SearchResult | null> {
-  const coordinates = coordinateSearchResult(text);
+  const coordinates = coordinateSearchResult(text, TOOL_MESSAGES);
   if (coordinates !== null) {
     return coordinates;
   }

@@ -41,3 +41,12 @@ export function useServices(): Services {
   }
   return services;
 }
+
+/**
+ * Returns the services, or null outside a {@link ServicesProvider}. For the
+ * few pieces, such as the live regions, that must still work when a test or
+ * a host mounts them without one.
+ */
+export function useOptionalServices(): Services | null {
+  return useContext(ServicesContext);
+}

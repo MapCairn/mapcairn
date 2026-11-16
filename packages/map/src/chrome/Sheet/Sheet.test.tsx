@@ -4,6 +4,8 @@ import {
   announceDetent,
   computeDetentHeights,
   createFakeServices,
+  FakeMessageCatalogue,
+  formatMessage,
   type SheetDetent,
 } from "@mapcairn/core";
 import { act, fireEvent, screen } from "@testing-library/react";
@@ -287,7 +289,7 @@ describe("Sheet in the sheet layout", () => {
       vi.advanceTimersByTime(1000);
     });
     expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
-      announceDetent("full"),
+      formatMessage(new FakeMessageCatalogue(), announceDetent("full")),
     );
   });
 

@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { announceTileError } from "@mapcairn/core";
-import { type MapContextValue, StatusMessage, useMap } from "@mapcairn/map";
+import {
+  type MapContextValue,
+  StatusMessage,
+  useFormatMessage,
+  useMap,
+} from "@mapcairn/map";
 import { useEffect, useState } from "react";
 import { useReloadPage } from "./ErrorPage";
 import * as styles from "./MapBanners.css";
@@ -67,6 +72,7 @@ function engineFailed(map: Pick<MapContextValue, "error">): boolean {
  */
 export function MapBanners({ app }: MapBannersProps) {
   const map = useMap();
+  const format = useFormatMessage();
   const reload = useReloadPage();
   const [tileErrorDismissed, setTileErrorDismissed] = useState(false);
   const [engineErrorDismissed, setEngineErrorDismissed] = useState(false);
@@ -102,7 +108,7 @@ export function MapBanners({ app }: MapBannersProps) {
           action={{ label: "Retry", onClick: map.retry }}
           onDismiss={() => setTileErrorDismissed(true)}
         >
-          {announceTileError()}
+          {format(announceTileError())}
         </StatusMessage>
       ) : null}
       {app.locate.state === "error" ? (
