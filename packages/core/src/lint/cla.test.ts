@@ -96,8 +96,9 @@ describe("the CLA text", () => {
     expect(claText).toContain(`Version ${CLA_VERSION}`);
   });
 
-  it("is version 1.1, the first to name the project MapCairn", () => {
-    expect(CLA_VERSION).toBe("1.1");
+  it("is version 1.2, which still names the project MapCairn and adds a section for geolint", () => {
+    expect(CLA_VERSION).toBe("1.2");
+    expect(claText).toContain("## 7. Packages with their own licence");
     expect(AGREEMENT_SENTENCE.endsWith("contributions to MapCairn.")).toBe(
       true,
     );

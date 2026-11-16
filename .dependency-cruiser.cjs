@@ -211,6 +211,33 @@ module.exports = {
       to: { path: "^packages/", dependencyTypes: ["local"] },
     },
     {
+      name: "geolint-imports-no-workspace-package",
+      severity: "error",
+      comment:
+        "packages/geolint is Apache-2.0 and independent: it must build, test and pack on its own, and it must never import AGPL MapCairn code. It imports no other package or example in this repository, by path or by package name.",
+      from: { path: "^packages/geolint/" },
+      to: { path: "^(packages/(?!geolint/)|examples/)" },
+    },
+    {
+      name: "geolint-imports-no-workspace-package-unresolved",
+      severity: "error",
+      comment:
+        "The same rule for a workspace package name that is not installed and so does not resolve to a path.",
+      from: { path: "^packages/geolint/" },
+      to: { path: "^@mapcairn/", couldNotResolve: true },
+    },
+    {
+      name: "geolint-engine-has-no-node-apis",
+      severity: "error",
+      comment:
+        "The lint engine runs in a browser or a Worker as well as Node, so it imports no Node built-in. Only src/node and src/cli (the command line and its workers) may.",
+      from: {
+        path: "^packages/geolint/src/",
+        pathNot: "^packages/geolint/src/(node|cli|testing)/",
+      },
+      to: { dependencyTypes: ["core"] },
+    },
+    {
       name: "packages-do-not-import-examples",
       severity: "error",
       comment:

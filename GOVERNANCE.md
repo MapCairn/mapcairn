@@ -14,7 +14,7 @@ MapCairn is a small, volunteer-maintained project with one maintainer. This docu
 - handles private vulnerability reports and publishes advisories, following [`SECURITY.md`](SECURITY.md);
 - holds the repository, the Cloudflare account that serves the reference site and the domain, and is the only person with access to them today;
 - enforces the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md);
-- answers for the licence position: the repository is AGPL-3.0, and the terms contributors agree to are in [`CLA.md`](CLA.md).
+- answers for the licence position: the repository is AGPL-3.0, except `packages/geolint`, which is Apache-2.0, and the terms contributors agree to are in [`CLA.md`](CLA.md).
 
 **Contributor.** Anyone who opens an issue, comments, or sends a pull request. A contributor keeps the copyright in what they contribute and agrees to [`CLA.md`](CLA.md) before a pull request is merged. Contributors have no commit access. They propose, and the maintainer decides.
 
