@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { createFakeServices } from "@mapcairn/core";
+import { ServicesProvider } from "@mapcairn/map";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import HomeRoute, { links } from "./home";
@@ -14,8 +16,22 @@ describe("home route links", () => {
 });
 
 describe("home route server render", () => {
-  // No services provider: the static shell must not need one.
-  const html = renderToString(<HomeRoute />);
+  // The root route supplies the services; the skeleton inside needs none.
+  const services = createFakeServices();
+  const html = renderToString(
+    <ServicesProvider services={services}>
+      <HomeRoute />
+    </ServicesProvider>,
+  );
+
+  it("asks for the skip link and the loading text by key", () => {
+    expect(services.fakes.messages.calls).toEqual(
+      expect.arrayContaining([
+        { key: "ui.skipToMap", params: {} },
+        { key: "app.loadingMap", params: {} },
+      ]),
+    );
+  });
 
   it("starts with the skip link to the map region", () => {
     expect(html.startsWith('<a href="#map"')).toBe(true);

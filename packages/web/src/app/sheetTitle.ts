@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { isSettingsSection, type SheetSection } from "@mapcairn/core";
+import {
+  isSettingsSection,
+  type Message,
+  message,
+  type SheetSection,
+} from "@mapcairn/core";
 
 /** What {@link sheetTitle} reads from the app's state. */
 export interface SheetTitleState {
@@ -11,7 +16,7 @@ export interface SheetTitleState {
 }
 
 /**
- * The sheet's title: Directions while that panel is open, "Settings and help"
+ * The sheet's title, as a message for the one place that shows it: Directions while that panel is open, "Settings and help"
  * for the Settings and Help sections, otherwise Map options (which includes
  * the pin card and the sections a tapped feature or a drawing open). The
  * Settings sheet is not simply titled "Settings", because its first section
@@ -21,9 +26,11 @@ export interface SheetTitleState {
 export function sheetTitle({
   directionsActive,
   sheetSection,
-}: SheetTitleState): string {
+}: SheetTitleState): Message {
   if (directionsActive) {
-    return "Directions";
+    return message("app.sheetTitle.directions", {});
   }
-  return isSettingsSection(sheetSection) ? "Settings and help" : "Map options";
+  return isSettingsSection(sheetSection)
+    ? message("app.sheetTitle.settings", {})
+    : message("app.sheetTitle.mapOptions", {});
 }

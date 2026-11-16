@@ -53,6 +53,7 @@ import {
   useFeatureSelection,
   useLocate,
   useMeasure,
+  useMessages,
   useSettings,
   useTour,
   useUrlState,
@@ -62,11 +63,12 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
 } from "react";
-import { TOUR_STEPS } from "./AppTour";
+import { tourSteps } from "./AppTour";
 import { initialMapState } from "./initialView";
 import { TOUR_VERSION } from "./tourVersion";
 import { type BasemapChoice, useBasemapChoice } from "./useBasemapChoice";
@@ -270,8 +272,10 @@ export function useMapApp(): MapApp {
   );
   const [state, dispatch] = useReducer(surfaceReducer, initialSurfaceState);
   const stateRef = useLatestRef(state);
+  const messages = useMessages();
+  const steps = useMemo(() => tourSteps(messages), [messages]);
   const tour = useTour({
-    steps: TOUR_STEPS,
+    steps,
     version: TOUR_VERSION,
     offer: offerTour,
     snapshot: {

@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { ChromeSkeleton, SkipLink, VisuallyHidden } from "@mapcairn/map";
+import {
+  ChromeSkeleton,
+  SkipLink,
+  useMessages,
+  VisuallyHidden,
+} from "@mapcairn/map";
 import type { LinksFunction } from "react-router";
 import { App } from "../App";
 import { ClientOnly } from "../app/ClientOnly";
@@ -27,6 +32,7 @@ export const links: LinksFunction = () => [
  *   placeholder and the skeleton in the same boxes.
  */
 export default function HomeRoute() {
+  const { t } = useMessages();
   return (
     <>
       <SkipLink targetId={MAP_REGION_ID} />
@@ -41,7 +47,7 @@ export default function HomeRoute() {
             id={MAP_REGION_ID}
             data-testid="map-placeholder"
           >
-            <VisuallyHidden>Loading the map</VisuallyHidden>
+            <VisuallyHidden>{t("app.loadingMap", {})}</VisuallyHidden>
             <ChromeSkeleton directions draw />
           </main>
         }
