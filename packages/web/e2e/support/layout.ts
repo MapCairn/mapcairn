@@ -186,7 +186,9 @@ export function inspectChromeLayout(page: Page): Promise<ChromeLayoutReport> {
         control.getAttribute("aria-label") ??
         control.textContent?.trim() ??
         control.tagName;
-      const isZoom = label === "Zoom in" || label === "Zoom out";
+      // The zoom group holds only the two zoom buttons; found by its slot, not
+      // by name, so the check holds in every language.
+      const isZoom = control.closest('[data-chrome="end-stack-zoom"]') !== null;
       const box = visibleBox(control);
       if (!hasArea(box)) {
         if (isZoom) {
