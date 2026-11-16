@@ -212,6 +212,25 @@ describe("windingOrderRule", () => {
     });
   });
 
+  describe("a ring across the antimeridian", () => {
+    const ACROSS = [
+      [178, -18],
+      [-178, -18],
+      [-178, -16],
+      [178, -16],
+      [178, -18],
+    ];
+
+    it("is not judged, because the planar test cannot tell its winding", () => {
+      expect(windingOrderRule.check(polygon(ACROSS), CONTEXT)).toEqual([]);
+    });
+
+    it("is left as it is by the fix", () => {
+      const item = polygon(ACROSS);
+      expect(windingOrderRule.fix?.(item, CONTEXT)).toBe(item);
+    });
+  });
+
   describe("fix", () => {
     it("reverses a wrong ring, keeps it closed and keeps altitude", () => {
       const item = polygon([

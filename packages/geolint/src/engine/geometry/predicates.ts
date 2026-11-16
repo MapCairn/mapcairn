@@ -52,24 +52,6 @@ export function onSegment(a: Position, b: Position, p: Position): boolean {
   );
 }
 
-/**
- * Twice the signed area of a ring by the shoelace sum: positive when the ring
- * runs counter-clockwise, negative when clockwise. The sum is in ordinary
- * floating point, so use it for magnitude, and use `ringOrientation` where the
- * answer must be exact.
- */
-export function signedArea2(ring: readonly Position[]): number {
-  let sum = 0;
-  for (let i = 0; i < ring.length; i++) {
-    const a = ring[i];
-    const b = ring[(i + 1) % ring.length];
-    if (a !== undefined && b !== undefined) {
-      sum += x(a) * y(b) - x(b) * y(a);
-    }
-  }
-  return sum;
-}
-
 /** The vertices of a ring without the closing position, when it repeats the first. */
 function openVertices(ring: readonly Position[]): readonly Position[] {
   const first = ring[0];

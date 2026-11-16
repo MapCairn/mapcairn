@@ -16,15 +16,31 @@ function expectedWinding(isExterior: boolean): 1 | -1 {
   return isExterior ? COUNTER_CLOCKWISE : CLOCKWISE;
 }
 
+/** A step in longitude longer than this went round the globe the other way, as the `antimeridian` rule reads it. */
+const JUMP_DEGREES = 180;
+
+/** Whether a step between two consecutive positions is more than half a turn of longitude. */
+function jumpsAcross(positions: readonly Position[]): boolean {
+  return positions.some((position, index) => {
+    const previous = positions[index - 1];
+    return (
+      previous !== undefined &&
+      Math.abs((position[0] as number) - (previous[0] as number)) > JUMP_DEGREES
+    );
+  });
+}
+
 /**
  * Whether a ring winds the wrong way. A ring with too few positions, or with no
- * area, has no winding to get wrong.
+ * area, has no winding to get wrong, and neither has a ring that crosses the
+ * antimeridian (`antimeridian` reports it): the planar test cannot say which way
+ * it goes round the globe.
  */
 function windsTheWrongWay(
   positions: readonly Position[],
   isExterior: boolean,
 ): boolean {
-  if (positions.length < MIN_RING_POSITIONS) {
+  if (positions.length < MIN_RING_POSITIONS || jumpsAcross(positions)) {
     return false;
   }
   const winding = ringOrientation(positions);
