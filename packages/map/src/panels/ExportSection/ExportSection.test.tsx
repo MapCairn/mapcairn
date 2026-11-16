@@ -183,3 +183,30 @@ describe("ExportSection", () => {
     );
   });
 });
+
+describe("ExportSection message catalogue", () => {
+  it("asks for its words by key", () => {
+    const { services } = setup();
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "panels.export.title",
+        "panels.export.description",
+        "panels.export.save",
+      ]),
+    );
+  });
+
+  it("asks for the error text by key once saving has failed", async () => {
+    const { adapter, services } = setup();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(adapter, "toImage").mockRejectedValue(new Error("no"));
+    fireEvent.click(screen.getByTestId("save-image-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("export-error")).toBeInTheDocument();
+    });
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "panels.export.error",
+      params: {},
+    });
+  });
+});

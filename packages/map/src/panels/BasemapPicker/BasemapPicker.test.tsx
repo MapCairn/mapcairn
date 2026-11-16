@@ -579,3 +579,49 @@ describe("BasemapPicker availability", () => {
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 });
+
+describe("BasemapPicker message catalogue", () => {
+  it("asks for the group name by key", () => {
+    const { services } = renderPicker();
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "panels.basemap.groupLabel",
+      params: {},
+    });
+  });
+
+  it("asks for the Save data note by key", () => {
+    const { services } = renderPicker(
+      {},
+      { saveData: true, catalogue: PREVIEWED_CATALOGUE },
+    );
+    expect(services.fakes.messages.calls.map((call) => call.key)).toContain(
+      "panels.basemap.usesMoreData",
+    );
+  });
+
+  it("asks for the unavailable note and the retry button by key", () => {
+    const services = createFakeServices();
+    let availability: BasemapAvailability | null = null;
+    function Marks() {
+      availability = useBasemapAvailability();
+      return null;
+    }
+    render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <Marks />
+          <BasemapPicker value="positron" onChange={vi.fn()} />
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    act(() => {
+      (availability as unknown as BasemapAvailability).markUnavailable("osm");
+    });
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "panels.basemap.unavailable",
+        "panels.basemap.tryAgain",
+      ]),
+    );
+  });
+});

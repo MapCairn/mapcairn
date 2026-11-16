@@ -12,17 +12,22 @@ import { ServicesProvider } from "../../services";
 import { HelpSection } from "./HelpSection";
 
 function renderHelp(
-  options: { finePointer?: boolean; headingLevel?: 3 | 4 } = {},
+  options: {
+    finePointer?: boolean;
+    headingLevel?: 3 | 4;
+    onStartTour?: () => void;
+  } = {},
 ) {
-  const { finePointer = true, headingLevel } = options;
+  const { finePointer = true, headingLevel, onStartTour } = options;
   const services = createFakeServices({
     preferences: new FakeDevicePreferences({ finePointer }),
   });
-  return render(
+  const view = render(
     <ServicesProvider services={services}>
-      <HelpSection headingLevel={headingLevel} />
+      <HelpSection headingLevel={headingLevel} onStartTour={onStartTour} />
     </ServicesProvider>,
   );
+  return { ...view, services };
 }
 
 describe("HelpSection", () => {
@@ -132,5 +137,28 @@ describe("HelpSection", () => {
     const region = screen.getByTestId("sheet-section-help");
     expect(region.querySelector("a")).toBeNull();
     expect(region.textContent).not.toMatch(/@/);
+  });
+});
+
+describe("message catalogue", () => {
+  it("asks for its text and headings by key", () => {
+    const { services } = renderHelp({ onStartTour: () => undefined });
+    expect(services.fakes.messages.calls.map((call) => call.key)).toEqual(
+      expect.arrayContaining([
+        "panels.help.title",
+        "panels.help.tourHeading",
+        "panels.help.tourDescription",
+        "panels.help.tourStart",
+        "panels.help.searchHeading",
+        "panels.help.searchDescription",
+        "panels.help.keyboardHeading",
+        "panels.help.drawingHeading",
+        "panels.help.accessibilityHeading",
+        "panels.help.accessibilityDescription",
+      ]),
+    );
+    for (const call of services.fakes.messages.calls) {
+      expect(call.params).toEqual({});
+    }
   });
 });

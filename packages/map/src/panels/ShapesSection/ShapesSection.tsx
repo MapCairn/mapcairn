@@ -90,6 +90,7 @@ export function ShapesSection({
 }: ShapesSectionProps) {
   const { settings } = useSettings();
   const messages = useMessages();
+  const { t } = messages;
   const { shapes, selection, feedback, importFeedback } = draw;
   const subLevel = (headingLevel + 1) as HeadingLevel;
   const fitToImport = useFitToImport();
@@ -104,25 +105,29 @@ export function ShapesSection({
   };
   return (
     <Section
-      title="Shapes"
+      title={t("panels.shapes.title", {})}
       headingLevel={headingLevel}
       headingRef={headingRef}
       data-testid="sheet-section-shapes"
     >
       {shapes.length === 0 ? (
         <p className={prose} data-testid="shapes-empty">
-          Nothing drawn yet. Choose Draw shapes on the map to start.
+          {t("panels.shapes.empty", {})}
         </p>
       ) : (
         <ul
           className={list}
-          aria-label="Drawn shapes"
+          aria-label={t("panels.shapes.listLabel", {})}
           data-testid="shapes-list"
         >
           {shapes.map((shape) => (
             <ListRow
               key={shape.id}
-              label={shape.done ? shape.label : `${shape.label}, unfinished`}
+              label={
+                shape.done
+                  ? shape.label
+                  : t("panels.shapes.unfinished", { label: shape.label })
+              }
               secondary={
                 formatShapeMeasure(shape, settings.units, messages) || undefined
               }
@@ -141,7 +146,7 @@ export function ShapesSection({
           data-testid="shapes-delete"
           onClick={draw.deleteSelected}
         >
-          Delete selected shape
+          {t("panels.shapes.deleteSelected", {})}
         </Button>
         <Button
           variant="secondary"
@@ -150,12 +155,14 @@ export function ShapesSection({
           data-testid="shapes-clear"
           onClick={draw.clear}
         >
-          Delete all shapes
+          {t("panels.shapes.deleteAll", {})}
         </Button>
       </div>
       {canImport ? (
         <div className={subsection}>
-          <Subheading level={subLevel}>Import</Subheading>
+          <Subheading level={subLevel}>
+            {t("panels.shapes.importHeading", {})}
+          </Subheading>
           <div className={actions}>
             <Button
               variant="secondary"
@@ -163,14 +170,16 @@ export function ShapesSection({
               data-testid="shapes-import"
               onClick={importFile}
             >
-              Import GeoJSON, CSV or WKT
+              {t("panels.shapes.import", {})}
             </Button>
           </div>
           <Feedback feedback={importFeedback} testId="shapes-import-feedback" />
         </div>
       ) : null}
       <div className={subsection}>
-        <Subheading level={subLevel}>Export</Subheading>
+        <Subheading level={subLevel}>
+          {t("panels.shapes.exportHeading", {})}
+        </Subheading>
         <div className={actions}>
           <Button
             variant="secondary"
@@ -178,7 +187,7 @@ export function ShapesSection({
             data-testid="shapes-export-geojson"
             onClick={() => void draw.exportGeoJson()}
           >
-            Download GeoJSON
+            {t("panels.shapes.downloadGeoJson", {})}
           </Button>
           <Button
             variant="secondary"
@@ -186,7 +195,7 @@ export function ShapesSection({
             data-testid="shapes-export-csv"
             onClick={() => void draw.exportCsv()}
           >
-            Download CSV
+            {t("panels.shapes.downloadCsv", {})}
           </Button>
           <Button
             variant="secondary"
@@ -194,7 +203,7 @@ export function ShapesSection({
             data-testid="shapes-export-wkt"
             onClick={() => void draw.exportWkt()}
           >
-            Download WKT
+            {t("panels.shapes.downloadWkt", {})}
           </Button>
           <Button
             variant="secondary"
@@ -202,15 +211,11 @@ export function ShapesSection({
             data-testid="shapes-copy-link"
             onClick={() => void draw.copyLink()}
           >
-            Copy link with shapes
+            {t("panels.shapes.copyLink", {})}
           </Button>
         </div>
         <Feedback feedback={feedback} testId="shapes-feedback" />
-        <p className={prose}>
-          Shapes stay in this browser and are not saved. Files are made and read
-          on your device, and nothing is uploaded. A link with shapes holds them
-          in its address, so anyone you send it to can see them.
-        </p>
+        <p className={prose}>{t("panels.shapes.storageNote", {})}</p>
       </div>
     </Section>
   );
