@@ -1,6 +1,6 @@
 # 0009: A message catalogue port, and English plus Afrikaans on the reference host
 
-Status: in progress; steps 1-8 built, step 9 (guide) and the Afrikaans catalogue follow. Tracking issue: #231.
+Status: built. Tracking issue: #231. The Afrikaans catalogue is a draft that a fluent speaker still has to review; layer card templates and unit suffixes are not translatable yet.
 
 ## Goal
 
