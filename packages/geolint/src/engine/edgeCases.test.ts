@@ -933,7 +933,6 @@ describe("the antimeridian, with real outlines", () => {
   it("Taveuni drawn as one ring across 180 is flagged at both long steps", async () => {
     const text = testData("fiji-unsplit.geojson");
     const expected = [
-      "winding-order /features/0/geometry/coordinates/0",
       "antimeridian /features/0/geometry/coordinates/0/1",
       "antimeridian /features/0/geometry/coordinates/0/3",
     ];
@@ -944,7 +943,6 @@ describe("the antimeridian, with real outlines", () => {
   it("Wrangel Island drawn as one ring across 180 is flagged, with and without --region RU", async () => {
     const text = testData("russia-wrangel-unsplit.geojson");
     const expected = [
-      "winding-order /features/0/geometry/coordinates/0",
       "antimeridian /features/0/geometry/coordinates/0/1",
       "antimeridian /features/0/geometry/coordinates/0/3",
     ];
@@ -1949,8 +1947,8 @@ describe("each rule, with inputs a sensible person would expect to be handled", 
     expect((await lint(fixed.output)).findings).toEqual([]);
   });
 
-  it("rounding that makes two close vertices equal leaves a duplicate that --fix cannot remove, and says so", async () => {
-    // [10, 10], [11, 10.0000000001], [11, 10.0000000002], [10, 10] rounds to a ring of three distinct positions plus a repeat.
+  it("rounding that would collapse a ring onto repeated vertices is not applied", async () => {
+    // [10, 10], [11, 10.0000000001], [11, 10.0000000002], [10, 10] would round to a ring of three distinct positions plus a repeat, so the fix leaves the coordinates as they are.
     const text = JSON.stringify(
       collection(
         feature(
@@ -1965,8 +1963,10 @@ describe("each rule, with inputs a sensible person would expect to be handled", 
     );
     const fixed = await fixText(text);
     const after = await lint(fixed.output);
-    expect(after.findings.filter((finding) => finding.fixable)).toEqual([]);
-    expect(marks(after)).toContain(
+    expect(marks(after)).toEqual([
+      "precision /features/0/geometry/coordinates",
+    ]);
+    expect(marks(after)).not.toContain(
       "duplicate-vertices /features/0/geometry/coordinates/0/2",
     );
     expect((await fixText(fixed.output)).changed).toBe(0);

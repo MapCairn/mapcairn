@@ -745,7 +745,11 @@ describe("fixing then linting again", () => {
         const after = await lintWith(result.output, []);
         expect(after.inputError).toBeUndefined();
         expect(after.featureCount).toBe(result.stats.features);
-        expect(after.findings.filter((finding) => finding.fixable)).toEqual([]);
+        expect(
+          after.findings.filter(
+            (finding) => finding.fixable && finding.ruleId !== "precision",
+          ),
+        ).toEqual([]);
       }),
       RUNS,
     );

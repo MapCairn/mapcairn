@@ -67,11 +67,23 @@ async function fixText(
   return { output, stats };
 }
 
-/** Findings of the rules that `--fix` repairs, for a document. */
-async function fixableFindings(text: string): Promise<string[]> {
+/**
+ * Findings of the rules that `--fix` repairs, for a document. `precision` can
+ * stay when rounding would have damaged the feature, so a test that generates
+ * features of any size leaves it out.
+ */
+async function fixableFindings(
+  text: string,
+  ignored: readonly string[] = [],
+): Promise<string[]> {
   const report = await lintText(text);
   return report.findings
-    .filter((finding) => FIX_ORDER.includes(finding.ruleId) && finding.fixable)
+    .filter(
+      (finding) =>
+        FIX_ORDER.includes(finding.ruleId) &&
+        finding.fixable &&
+        !ignored.includes(finding.ruleId),
+    )
     .map((finding) => finding.ruleId);
 }
 
@@ -110,6 +122,44 @@ describe("fixFeature", () => {
     };
     fixFeature(tidy, context, [flipper]);
     expect(calls).toBe(MAX_FIX_PASSES);
+  });
+
+  describe("a polygon so small that rounding damages it", () => {
+    /** Simple at full precision; rounded to seven decimals it collapses onto a few grid points and crosses itself. */
+    const tiny = {
+      type: "Feature",
+      properties: null,
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [10.0000000674179, 20.0000000079739],
+            [10.0000000373136, 20.0000000468924],
+            [10.0000000126925, 20.0000000924147],
+            [9.999999983821, 20.0000000171779],
+            [9.99999996854054, 20.0000000082991],
+            [9.99999997832276, 19.9999999875333],
+            [9.9999999546644, 19.9999998971455],
+            [10.0000000375681, 19.99999991509],
+            [10.0000000226883, 19.9999999901942],
+            [10.0000000674179, 20.0000000079739],
+          ],
+        ],
+      },
+    };
+
+    const problems = (value: unknown): number =>
+      rules
+        .filter((rule) => rule.id !== "precision")
+        .flatMap((rule) => rule.check(value, context))
+        .filter((finding) => finding.severity !== "info").length;
+
+    it("keeps its full precision rather than making it worse", () => {
+      expect(problems(tiny)).toBe(0);
+      const fixed = fixFeature(tiny, context, rules);
+      expect(problems(fixed)).toBe(0);
+      expect(fixed).toBe(tiny);
+    });
   });
 
   it("is the same when applied twice", () => {
@@ -251,7 +301,7 @@ describe("fixBytes", () => {
             geometry: { type: "Polygon", coordinates: [ring] },
           });
           const { output } = await fixText(text);
-          expect(await fixableFindings(output)).toEqual([]);
+          expect(await fixableFindings(output, ["precision"])).toEqual([]);
         },
       ),
       { numRuns: 60 },

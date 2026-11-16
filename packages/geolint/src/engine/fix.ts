@@ -35,21 +35,16 @@ export interface FixStats {
   changed: number;
 }
 
-/**
- * Applies the fix of every active rule that has one, in `FIX_ORDER`, until a
- * whole pass changes nothing (at most `MAX_FIX_PASSES` times). Returns the same
- * object when nothing needed fixing. A rule that is not in `rules` (because it
- * was ignored) is not applied.
- */
-export function fixFeature(
+type Fixer = NonNullable<Rule["fix"]>;
+
+/** The fix that rounds coordinates, which can damage a feature smaller than its precision. */
+const PRECISION_RULE_ID = "precision";
+
+function applyUntilSettled(
   value: unknown,
   context: RuleContext,
-  rules: readonly Rule[],
+  fixers: readonly Fixer[],
 ): unknown {
-  const fixers = FIX_ORDER.flatMap((id) => {
-    const rule = rules.find((candidate) => candidate.id === id);
-    return rule?.fix ? [rule.fix] : [];
-  });
   let current = value;
   for (let pass = 0; pass < MAX_FIX_PASSES; pass++) {
     const before = current;
@@ -61,6 +56,55 @@ export function fixFeature(
     }
   }
   return current;
+}
+
+/** How many findings above `info` the rules other than `precision` make for a feature. */
+function problemCount(
+  value: unknown,
+  context: RuleContext,
+  rules: readonly Rule[],
+): number {
+  return rules
+    .filter((rule) => rule.id !== PRECISION_RULE_ID)
+    .flatMap((rule) => rule.check(value, context))
+    .filter((finding) => finding.severity !== "info").length;
+}
+
+/**
+ * Applies the fix of every active rule that has one, in `FIX_ORDER`, until a
+ * whole pass changes nothing (at most `MAX_FIX_PASSES` times). Returns the same
+ * object when nothing needed fixing. A rule that is not in `rules` (because it
+ * was ignored) is not applied. Rounding to seven decimals can break a feature
+ * that small (a new self-intersection, or a ring collapsed onto repeated
+ * vertices), so when it leaves more problems than the other fixes do alone, the
+ * feature is repaired without it.
+ */
+export function fixFeature(
+  value: unknown,
+  context: RuleContext,
+  rules: readonly Rule[],
+): unknown {
+  const fixers = FIX_ORDER.flatMap((id) => {
+    const rule = rules.find((candidate) => candidate.id === id);
+    return rule?.fix ? [{ id, fix: rule.fix }] : [];
+  });
+  const all = applyUntilSettled(
+    value,
+    context,
+    fixers.map(({ fix }) => fix),
+  );
+  if (!fixers.some(({ id }) => id === PRECISION_RULE_ID)) {
+    return all;
+  }
+  const others = applyUntilSettled(
+    value,
+    context,
+    fixers.filter(({ id }) => id !== PRECISION_RULE_ID).map(({ fix }) => fix),
+  );
+  return problemCount(all, context, rules) >
+    problemCount(others, context, rules)
+    ? others
+    : all;
 }
 
 const FEATURES_KEY = "features";
