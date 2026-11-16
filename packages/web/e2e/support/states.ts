@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+
+import type { MessageKey } from "@mapcairn/core";
 import { expect, type Page } from "@playwright/test";
 import type { MapPage } from "../pages/MapPage";
+import { namePattern } from "./language";
 
 /** The chrome states the collision and accessibility matrices walk through. */
 export const CHROME_STATES = [
@@ -18,6 +21,19 @@ export const CHROME_STATES = [
 
 /** One of {@link CHROME_STATES}. */
 export type ChromeState = (typeof CHROME_STATES)[number];
+
+/**
+ * The drawing status for an unfinished polygon of two points, such as
+ * "Polygon 3, 2 points", with its number left as `{serial}`, because it grows
+ * each time the state is walked.
+ */
+function polygonWithTwoPoints(mapPage: MapPage): string {
+  const m = mapPage.messages;
+  const plural = m["tools.draw.status.drawing"].split("|").at(-1) ?? "";
+  return plural
+    .replace("{label}", m["draw.shapeLabel.polygon"])
+    .replace("{count}", "2");
+}
 
 /**
  * The tag for a matrix test at a desktop-sized viewport. The touch projects
@@ -140,20 +156,26 @@ export async function enterState(
       await expect(mapPage.measureUndo).toBeEnabled();
       return;
     case "directions open": {
+      const m = mapPage.messages;
       const addStop = mapPage.page.getByRole("button", {
-        name: "Add stop at map centre",
+        name: m["tools.directions.addAtCentre"],
       });
       await mapPage.directionsButton.click();
       await expect(mapPage.sheet).toHaveAttribute("data-state", "open");
       await expect(
-        mapPage.sheet.getByRole("heading", { name: "Directions", level: 2 }),
+        mapPage.sheet.getByRole("heading", {
+          name: m["app.sheetTitle.directions"],
+          level: 2,
+        }),
       ).toBeFocused();
       await addStop.click();
       await mapPage.focusMap();
       await mapPage.page.keyboard.press("ArrowRight");
       await addStop.click();
       await expect(
-        mapPage.page.getByRole("button", { name: "Remove stop B" }),
+        mapPage.page.getByRole("button", {
+          name: m["tools.directions.remove"].replace("{letter}", "B"),
+        }),
       ).toBeVisible();
       return;
     }
@@ -164,7 +186,9 @@ export async function enterState(
       await mapPage.page.keyboard.press("ArrowRight");
       await mapPage.drawAddPoint.click();
       // The number grows each time the state is walked, so it is not pinned.
-      await expect(mapPage.drawStatus).toHaveText(/^Polygon \d+, 2 points$/);
+      await expect(mapPage.drawStatus).toHaveText(
+        namePattern(polygonWithTwoPoints(mapPage), ["serial"]),
+      );
       return;
     case "pin card":
       await mapPage.focusMap();
@@ -202,7 +226,9 @@ export async function leaveState(
       return;
     case "directions open":
       await mapPage.page
-        .getByRole("button", { name: "Clear directions" })
+        .getByRole("button", {
+          name: mapPage.messages["tools.directions.clear"],
+        })
         .click();
       await mapPage.sheetClose.click();
       break;
@@ -238,11 +264,14 @@ export const TOUR_STATES = [
 export type TourState = (typeof TOUR_STATES)[number];
 
 /** The button of the card before each state, which moves the tour on to it. */
-const TOUR_BUTTON_TO_REACH: Record<Exclude<TourState, "welcome">, string> = {
-  "step 1": "Take the tour",
-  "step 2": "Next",
-  "step 3": "Next",
-  ending: "Finish",
+const TOUR_BUTTON_TO_REACH: Record<
+  Exclude<TourState, "welcome">,
+  MessageKey
+> = {
+  "step 1": "tools.tour.take",
+  "step 2": "tools.tour.next",
+  "step 3": "tools.tour.next",
+  ending: "tools.tour.finish",
 };
 
 /**
@@ -258,7 +287,10 @@ export async function advanceTourTo(
   const card = mapPage.page.getByTestId("tour-card");
   if (state !== "welcome") {
     await card
-      .getByRole("button", { name: TOUR_BUTTON_TO_REACH[state], exact: true })
+      .getByRole("button", {
+        name: mapPage.messages[TOUR_BUTTON_TO_REACH[state]],
+        exact: true,
+      })
       .click();
   }
   await expect(card).toBeVisible();

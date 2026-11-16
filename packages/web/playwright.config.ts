@@ -30,6 +30,12 @@ const WEBKIT_SPECS = /(basemap|keyboard|sheet|app-shell)\.spec\.ts$/;
 // language yet, so they prove the layout mirrors, not any translation.
 const RTL_SPECS = /(basemap|keyboard|sheet|app-shell|rtl)\.spec\.ts$/;
 
+// The Afrikaans projects run the layout collision test and the accessibility
+// specs with Afrikaans chosen (see `language` in e2e/fixtures.ts), because
+// translated text is often longer than English. `i18n.spec.ts` sets its own
+// language, so it runs in the default projects.
+const AFRIKAANS_SPECS = /(collision|a11y)\.spec\.ts$/;
+
 /**
  * End-to-end and accessibility suites for the web host.
  *
@@ -94,6 +100,25 @@ export default defineConfig<MapCairnOptions>({
       use: {
         ...devices["Pixel 7"],
         direction: "rtl",
+        launchOptions: { executablePath },
+      },
+    },
+    {
+      name: "af-chromium",
+      testMatch: AFRIKAANS_SPECS,
+      use: {
+        ...devices["Desktop Chrome"],
+        language: "af",
+        launchOptions: { executablePath },
+      },
+    },
+    {
+      name: "af-mobile-chromium",
+      testMatch: AFRIKAANS_SPECS,
+      grepInvert: /@desktop-viewport/,
+      use: {
+        ...devices["Pixel 7"],
+        language: "af",
         launchOptions: { executablePath },
       },
     },

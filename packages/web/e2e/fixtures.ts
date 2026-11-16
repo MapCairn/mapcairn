@@ -2,6 +2,12 @@
 // Copyright MapCairn contributors
 import { test as base, expect } from "@playwright/test";
 import { MapPage } from "./pages/MapPage";
+import {
+  type CatalogueText,
+  catalogueText,
+  storedLanguage,
+  storeLanguageBeforeLoad,
+} from "./support/language";
 import { mockThirdPartyServices } from "./support/network";
 
 /** The string `testSeam.ts` logs when it accepts scripted services. */
@@ -33,6 +39,14 @@ export interface MapCairnOptions {
    * in `playwright.config.ts` set it; a spec does not need to.
    */
   readonly direction: "ltr" | "rtl";
+  /**
+   * The language stored as the person's choice before the app loads, or
+   * null to leave the choice to the browser (English, in Playwright). The
+   * `af-*` projects in `playwright.config.ts` set it to `"af"`, so the
+   * layout and accessibility specs run in Afrikaans; the page object then
+   * finds the chrome by its Afrikaans names.
+   */
+  readonly language: string | null;
 }
 
 /** The tour version the app ships (`TOUR_VERSION` in `src/app/tourVersion.ts`). */
@@ -44,6 +58,8 @@ export interface MapCairnFixtures {
   readonly mapPage: MapPage;
   /** Console messages from the page, in order. */
   readonly consoleMessages: string[];
+  /** The text of the language the page speaks, by message key. */
+  readonly messages: CatalogueText;
 }
 
 /**
@@ -108,6 +124,10 @@ export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
   fastCredits: [false, { option: true }],
   firstVisit: [false, { option: true }],
   direction: ["ltr", { option: true }],
+  language: [null, { option: true }],
+  messages: async ({ language }, use) => {
+    await use(catalogueText(language));
+  },
   consoleMessages: async ({ page }, use) => {
     const messages: string[] = [];
     page.on("console", (message) => {
@@ -115,9 +135,15 @@ export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
     });
     await use(messages);
   },
-  page: async ({ page, fastCredits, firstVisit, direction }, use) => {
+  page: async ({ page, fastCredits, firstVisit, direction, language }, use) => {
     if (direction === "rtl") {
       await page.addInitScript(setRightToLeft);
+    }
+    if (language !== null) {
+      await page.addInitScript(
+        storeLanguageBeforeLoad,
+        storedLanguage(language),
+      );
     }
     if (fastCredits) {
       await page.clock.install();
@@ -135,8 +161,8 @@ export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
     await page.addInitScript(recordAnnouncements);
     await use(page);
   },
-  mapPage: async ({ page, consoleMessages }, use) => {
-    const mapPage = new MapPage(page);
+  mapPage: async ({ page, consoleMessages, messages }, use) => {
+    const mapPage = new MapPage(page, messages);
     const waitForMap = mapPage.waitForMap.bind(mapPage);
     mapPage.waitForMap = async () => {
       await waitForMap();

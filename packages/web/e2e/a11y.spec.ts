@@ -116,7 +116,9 @@ test.describe("search suggestions @a11y", () => {
         await mapPage.searchInput.fill("cape");
         await page.clock.runFor(SUGGEST_DEBOUNCE_MS + TIMER_SLACK_MS);
         const options = page
-          .getByRole("listbox", { name: "Suggestions" })
+          .getByRole("listbox", {
+            name: mapPage.messages["tools.search.suggestions"],
+          })
           .getByRole("option");
         await expect(options).toHaveCount(3);
         await page.keyboard.press("ArrowDown");
