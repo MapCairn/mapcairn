@@ -14,15 +14,14 @@ type OwnParts = "id" | "name" | "description" | "group" | "emptyText";
  * only when someone asks for it.
  */
 export const GDACS_ALERTS: Omit<FeedLayerDefinition, OwnParts> = {
-  dataCost: "about 135 KB",
+  dataCost: "layer.gdacs.dataCost",
   attribution: [
     {
       text: "Global Disaster Alert and Coordination System, GDACS",
       url: "https://www.gdacs.org/",
     },
   ],
-  disclaimer:
-    "GDACS alerts are automatic estimates from models. Check official sources before you act.",
+  disclaimer: "layer.gdacs.disclaimer",
   controls: [],
   source: {
     kind: "feed",
@@ -50,24 +49,24 @@ export const GDACS_ALERTS: Omit<FeedLayerDefinition, OwnParts> = {
       categories: [
         {
           value: "Green",
-          label: "Green alert",
+          label: "layer.gdacs.key.1",
           colour: "bluish-green",
           shape: "circle",
         },
         {
           value: "Orange",
-          label: "Orange alert",
+          label: "layer.gdacs.key.2",
           colour: "orange",
           shape: "square",
         },
         {
           value: "Red",
-          label: "Red alert",
+          label: "layer.gdacs.key.3",
           colour: "vermillion",
           shape: "triangle",
         },
       ],
-      other: { label: "No alert level", colour: "sky-blue" },
+      other: { label: "layer.gdacs.key.4", colour: "sky-blue" },
     },
   },
   card: {
@@ -78,15 +77,20 @@ export const GDACS_ALERTS: Omit<FeedLayerDefinition, OwnParts> = {
       "From {from|date}",
       "Last updated {to|date}",
     ],
-    link: { field: "report", label: "Report on GDACS" },
+    link: { field: "report", label: "layer.gdacs.card.link" },
   },
   list: {
     secondary: "{level} alert, {from|relative}",
     sorts: [
-      { id: "newest", label: "Newest", field: "from", direction: "desc" },
+      {
+        id: "newest",
+        label: "layer.gdacs.sort.newest",
+        field: "from",
+        direction: "desc",
+      },
       {
         id: "alert",
-        label: "Highest alert",
+        label: "layer.gdacs.sort.alert",
         field: "score",
         direction: "desc",
       },
@@ -97,7 +101,7 @@ export const GDACS_ALERTS: Omit<FeedLayerDefinition, OwnParts> = {
     origins: ["https://www.gdacs.org"],
     decoder: "geojson",
     colour: "blue",
-    label: "Show affected area",
-    dataCost: "about 300 KB",
+    label: "layer.gdacs.detail.label",
+    dataCost: "layer.gdacs.detail.dataCost",
   },
 };

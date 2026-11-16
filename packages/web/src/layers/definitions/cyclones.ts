@@ -7,12 +7,11 @@ import { GDACS_ALERTS } from "./gdacs/alerts";
 const cyclones: FeedLayerDefinition = {
   ...GDACS_ALERTS,
   id: "cyclones",
-  name: "Tropical cyclones",
-  description:
-    "Current tropical storms and cyclones with their strongest winds. Show affected area draws the track and wind zones.",
-  group: "Floods, storms and droughts",
+  name: "layer.cyclones.name",
+  description: "layer.cyclones.description",
+  group: "layer.group.floodsStormsAndDroughts",
   source: { ...GDACS_ALERTS.source, filter: { field: "type", in: ["TC"] } },
-  emptyText: "No tropical cyclone alerts right now.",
+  emptyText: "layer.cyclones.emptyText",
 };
 
 export default cyclones;

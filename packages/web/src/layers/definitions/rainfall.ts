@@ -17,11 +17,10 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const rainfall: TileLayerDefinition = {
   id: "rainfall",
-  name: "Rainfall",
-  description:
-    "Rain estimated from satellites for the whole Earth, as the rain rate for the chosen day in millimetres per hour (mm per hour). Rain runs from green (light, up to about 1) through yellow and orange (about 1 to 4) to red (about 5 to 20) and dark red (heavy, over 20; the scale stops at 53). Snow and other frozen precipitation use pale cyan, blue and purple over the same steps. Nothing is drawn below 0.1. Each day arrives two to three days late, and detail stops at about 10 km.",
-  group: "Floods, storms and droughts",
-  dataCost: "about 50 to 160 KB per screen",
+  name: "layer.rainfall.name",
+  description: "layer.rainfall.description",
+  group: "layer.group.floodsStormsAndDroughts",
+  dataCost: "layer.rainfall.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",
@@ -32,20 +31,23 @@ const rainfall: TileLayerDefinition = {
       url: "https://doi.org/10.5067/GPM/IMERG/3B-HH/07",
     },
   ],
-  disclaimer:
-    "Not a forecast, and not for warnings. It is a satellite estimate, coarser than radar, and can miss or overstate rain. For warnings, use your national weather service.",
+  disclaimer: "layer.rainfall.disclaimer",
   controls: [
     {
       kind: "date",
       id: "date",
-      label: "Date",
-      description:
-        "A few days have no data. If tiles fail to load, try the day before or after.",
+      label: "layer.control.date",
+      description: "layer.rainfall.control.date.description",
       min: "2000-06-01",
       max: { daysAgo: 3 },
       default: { daysAgo: 3 },
     },
-    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.8 },
+    {
+      kind: "opacity",
+      id: "opacity",
+      label: "layer.control.opacity",
+      default: 0.8,
+    },
   ],
   source: {
     kind: "tiles",

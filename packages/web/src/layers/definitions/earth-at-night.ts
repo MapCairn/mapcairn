@@ -9,11 +9,10 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const earthAtNight: TileLayerDefinition = {
   id: "earth-at-night",
-  name: "Earth at night",
-  description:
-    "The lights of cities, roads and ships seen from space, as a cloud-free picture from 2016. Detail stops at about 500 m.",
-  group: "Imagery",
-  dataCost: "about 0.3 to 1 MB per screen",
+  name: "layer.earth-at-night.name",
+  description: "layer.earth-at-night.description",
+  group: "layer.group.imagery",
+  dataCost: "layer.earth-at-night.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",
@@ -25,7 +24,12 @@ const earthAtNight: TileLayerDefinition = {
     },
   ],
   controls: [
-    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.9 },
+    {
+      kind: "opacity",
+      id: "opacity",
+      label: "layer.control.opacity",
+      default: 0.9,
+    },
   ],
   source: {
     kind: "tiles",

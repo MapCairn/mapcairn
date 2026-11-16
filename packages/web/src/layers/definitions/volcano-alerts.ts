@@ -11,12 +11,11 @@ import { GDACS_ALERTS } from "./gdacs/alerts";
 const volcanoAlerts: FeedLayerDefinition = {
   ...GDACS_ALERTS,
   id: "volcano-alerts",
-  name: "Volcano alerts",
-  description:
-    "Current volcanic eruptions that GDACS rates for their impact on people.",
-  group: "Earthquakes and volcanoes",
+  name: "layer.volcano-alerts.name",
+  description: "layer.volcano-alerts.description",
+  group: "layer.group.earthquakesAndVolcanoes",
   source: { ...GDACS_ALERTS.source, filter: { field: "type", in: ["VO"] } },
-  emptyText: "No volcano alerts right now.",
+  emptyText: "layer.volcano-alerts.emptyText",
 };
 
 export default volcanoAlerts;

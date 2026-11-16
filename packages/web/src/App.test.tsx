@@ -971,7 +971,7 @@ describe("basemaps", () => {
     await settle();
     expect(services.fakes.settings.get().basemapId).toBe("osm");
     expect(setBasemap).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "osm", name: "Streets" }),
+      expect.objectContaining({ id: "osm", name: "basemap.osm.name" }),
       { saveData: false },
     );
     expect(services.fakes.maps).toHaveLength(1);

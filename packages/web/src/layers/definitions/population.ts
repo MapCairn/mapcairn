@@ -8,11 +8,10 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const population: TileLayerDefinition = {
   id: "population",
-  name: "Where people live",
-  description:
-    "Population density across the world in 2020, from dark and empty to bright and crowded. Detail stops at about 5 km. Antarctica is not shown.",
-  group: "People",
-  dataCost: "about 20 to 100 KB per screen",
+  name: "layer.population.name",
+  description: "layer.population.description",
+  group: "layer.group.people",
+  dataCost: "layer.population.dataCost",
   attribution: [
     {
       text: "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS).",
@@ -24,7 +23,12 @@ const population: TileLayerDefinition = {
     },
   ],
   controls: [
-    { kind: "opacity", id: "opacity", label: "Opacity", default: 0.75 },
+    {
+      kind: "opacity",
+      id: "opacity",
+      label: "layer.control.opacity",
+      default: 0.75,
+    },
   ],
   source: {
     kind: "tiles",

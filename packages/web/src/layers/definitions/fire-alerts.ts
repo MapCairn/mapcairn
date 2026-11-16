@@ -7,12 +7,11 @@ import { GDACS_ALERTS } from "./gdacs/alerts";
 const fireAlerts: FeedLayerDefinition = {
   ...GDACS_ALERTS,
   id: "fire-alerts",
-  name: "Fire alerts",
-  description:
-    "Current wildfires that GDACS rates for their impact on people, with the area burnt.",
-  group: "Fires",
+  name: "layer.fire-alerts.name",
+  description: "layer.fire-alerts.description",
+  group: "layer.group.fires",
   source: { ...GDACS_ALERTS.source, filter: { field: "type", in: ["WF"] } },
-  emptyText: "No wildfire alerts right now.",
+  emptyText: "layer.fire-alerts.emptyText",
 };
 
 export default fireAlerts;
