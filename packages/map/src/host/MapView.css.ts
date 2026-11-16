@@ -86,6 +86,12 @@ const slide = keyframes({
   to: { transform: "translateX(250%)" },
 });
 
+/** The same sweep from the other side, for a right-to-left page. */
+const slideRtl = keyframes({
+  from: { transform: "translateX(100%)" },
+  to: { transform: "translateX(-250%)" },
+});
+
 const trackBase = style({
   gridArea: "1 / 1",
   alignSelf: "start",
@@ -112,6 +118,9 @@ export const loadingBar = style({
       width: "40%",
       animation: `${slide} calc(${tokens.motion.duration.slow} * 4) ${tokens.motion.easing} infinite`,
     },
+    [`[dir="rtl"] ${loadingTrack.animated} &`]: {
+      animationName: slideRtl,
+    },
   },
   "@media": {
     // The motion tokens shrink to almost zero here, which would make the loop
@@ -119,6 +128,7 @@ export const loadingBar = style({
     "(prefers-reduced-motion: reduce)": {
       selectors: {
         [`${loadingTrack.animated} &`]: { width: "100%", animation: "none" },
+        [`[dir="rtl"] ${loadingTrack.animated} &`]: { animation: "none" },
       },
     },
   },

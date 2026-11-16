@@ -31,6 +31,91 @@ const delegatedRing = (inner: string): string =>
 
 const cases: readonly Case[] = [
   {
+    rule: "logical-property",
+    name: "a physical margin",
+    file: CSS,
+    bad: css("  marginLeft: tokens.space.sm,"),
+    good: css("  marginInlineStart: tokens.space.sm,"),
+  },
+  {
+    rule: "logical-property",
+    name: "a physical padding",
+    file: CSS,
+    bad: css("  paddingRight: tokens.space.sm,"),
+    good: css("  paddingInlineEnd: tokens.space.sm,"),
+  },
+  {
+    rule: "logical-property",
+    name: "a physical inset",
+    file: CSS,
+    bad: css('  right: 0,\n  position: "relative",'),
+    good: css('  insetInlineEnd: 0,\n  position: "relative",'),
+  },
+  {
+    rule: "logical-property",
+    name: "a physical border",
+    file: CSS,
+    bad: css("  borderLeft: `1px solid ${tokens.color.hairline}`,"),
+    good: css("  borderInlineStart: `1px solid ${tokens.color.hairline}`,"),
+  },
+  {
+    rule: "logical-property",
+    name: "a physical corner radius",
+    file: CSS,
+    bad: css("  borderTopLeftRadius: tokens.radius.sheet,"),
+    good: css("  borderStartStartRadius: tokens.radius.sheet,"),
+  },
+  {
+    rule: "logical-property",
+    name: "left-aligned text",
+    file: CSS,
+    bad: css('  textAlign: "left",'),
+    good: css('  textAlign: "start",'),
+  },
+  {
+    rule: "logical-property",
+    name: "a float",
+    file: CSS,
+    bad: css('  float: "right",'),
+    good: css('  float: "inline-end",'),
+  },
+  {
+    rule: "logical-property",
+    name: "a physical transform origin",
+    file: CSS,
+    bad: css('  transformOrigin: "left center",'),
+    good: css(
+      `  transformOrigin: "left center",\n  selectors: { '[dir="rtl"] &': { transformOrigin: "right center" } },`,
+    ),
+  },
+  {
+    rule: "logical-property",
+    name: "a gradient that runs to the right",
+    file: CSS,
+    bad: css("  backgroundImage: `linear-gradient(to right, red, blue)`,"),
+    good: css("  backgroundImage: `linear-gradient(to bottom, red, blue)`,"),
+  },
+  {
+    rule: "logical-property",
+    name: "a horizontal translation that does not mirror",
+    file: CSS,
+    bad: css('  transform: "translateX(8px)",'),
+    good: css(
+      `  selectors: { '[dir="rtl"] &': { transform: "translateX(-8px)" } },`,
+    ),
+  },
+  {
+    rule: "logical-property",
+    name: "a translation reversed only under :dir(rtl), which the build rewrites",
+    file: CSS,
+    bad: css(
+      `  transform: "translateX(8px)",\n  selectors: { "&:dir(rtl)": { transform: "translateX(-8px)" } },`,
+    ),
+    good: css(
+      `  transform: "translateX(8px)",\n  selectors: { '[dir="rtl"] &': { transform: "translateX(-8px)" } },`,
+    ),
+  },
+  {
     rule: "colour-literal",
     name: "hex colour",
     file: CSS,
@@ -468,6 +553,7 @@ describe("harmony rules", () => {
         "icon-sizing",
         "inline-style",
         "live-region",
+        "logical-property",
         "motion",
         "outline",
         "position",

@@ -153,6 +153,7 @@ export function FeatureCard({
           <Button
             variant="quiet"
             icon={ArrowLeft}
+            mirrorInRtl
             data-testid="feature-card-back"
             onClick={() => layers.backToChoices({ focus: true })}
           >

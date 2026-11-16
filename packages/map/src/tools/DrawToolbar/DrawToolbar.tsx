@@ -98,12 +98,14 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
             <IconButton
               label="Previous point"
               icon={ChevronLeft}
+              mirrorInRtl
               data-testid="draw-vertex-prev"
               onClick={() => draw.stepVertex(-1)}
             />
             <IconButton
               label="Next point"
               icon={ChevronRight}
+              mirrorInRtl
               data-testid="draw-vertex-next"
               onClick={() => draw.stepVertex(1)}
             />
@@ -283,6 +285,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
             <IconButton
               label="Undo"
               icon={Undo2}
+              mirrorInRtl
               disabled={!draw.canUndo}
               data-testid="draw-undo"
               onClick={draw.undo}
@@ -290,6 +293,7 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
             <IconButton
               label="Redo"
               icon={Redo2}
+              mirrorInRtl
               disabled={!draw.canRedo}
               data-testid="draw-redo"
               onClick={draw.redo}

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { useReadingDirection } from "@mapcairn/react";
 import * as RadixSlider from "@radix-ui/react-slider";
 import { type CSSProperties, useId } from "react";
 import * as styles from "./Slider.css";
@@ -65,6 +66,7 @@ export function Slider({
   className,
   "data-testid": testId,
 }: SliderProps) {
+  const direction = useReadingDirection();
   const labelId = useId();
   const text = formatValue(value);
   const fill = `${fillPercent(value, min, max)}%`;
@@ -91,6 +93,7 @@ export function Slider({
         step={step}
         value={[value]}
         disabled={disabled}
+        dir={direction}
         onValueChange={(next) => {
           const [first] = next;
           if (first !== undefined) {

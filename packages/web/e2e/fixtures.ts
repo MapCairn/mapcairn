@@ -26,6 +26,13 @@ export interface MapCairnOptions {
    * card never sits in its tab order or its screenshots.
    */
   readonly firstVisit: boolean;
+  /**
+   * The reading direction of the page. `"rtl"` sets `dir="rtl"` on `<html>`
+   * before the app loads, so the layout runs mirrored in the app's own
+   * English: a pseudo-locale, not a shipped language. The `rtl-*` projects
+   * in `playwright.config.ts` set it; a spec does not need to.
+   */
+  readonly direction: "ltr" | "rtl";
 }
 
 /** The tour version the app ships (`TOUR_VERSION` in `src/app/tourVersion.ts`). */
@@ -68,6 +75,28 @@ function recordAnnouncements() {
 }
 
 /**
+ * Sets `dir="rtl"` on `<html>` as soon as the element exists, which is
+ * after an init script first runs, and keeps it there if the page rewrites
+ * the attribute.
+ */
+function setRightToLeft() {
+  const apply = () => {
+    if (document.documentElement.getAttribute("dir") !== "rtl") {
+      document.documentElement.setAttribute("dir", "rtl");
+    }
+  };
+  new MutationObserver(apply).observe(document, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["dir"],
+  });
+  if (document.documentElement) {
+    apply();
+  }
+}
+
+/**
  * Playwright's `test`, extended so that every page:
  *
  * - has every third-party request stubbed (tiles, styles, Nominatim);
@@ -78,6 +107,7 @@ function recordAnnouncements() {
 export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
   fastCredits: [false, { option: true }],
   firstVisit: [false, { option: true }],
+  direction: ["ltr", { option: true }],
   consoleMessages: async ({ page }, use) => {
     const messages: string[] = [];
     page.on("console", (message) => {
@@ -85,7 +115,10 @@ export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
     });
     await use(messages);
   },
-  page: async ({ page, fastCredits, firstVisit }, use) => {
+  page: async ({ page, fastCredits, firstVisit, direction }, use) => {
+    if (direction === "rtl") {
+      await page.addInitScript(setRightToLeft);
+    }
     if (fastCredits) {
       await page.clock.install();
     }

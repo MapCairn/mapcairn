@@ -31,3 +31,12 @@ export const spinning = style({
     "(prefers-reduced-motion: reduce)": { animation: "none" },
   },
 });
+
+/**
+ * Flips a glyph that points along the reading direction (next, back, a
+ * disclosure arrow) when the page reads right to left. A glyph that does not
+ * (a clock, a magnifier, a logo) is not given this.
+ */
+export const mirroredInRtl = style({
+  selectors: { '[dir="rtl"] &': { transform: "scaleX(-1)" } },
+});

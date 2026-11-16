@@ -149,13 +149,16 @@ test.describe("basemaps", () => {
   test("arrow keys move through the basemaps in one tab stop", async ({
     page,
     mapPage,
+    direction,
   }) => {
     await mapPage.goto();
     await mapPage.openMapOptions();
     await mapPage.basemapPicker
       .getByRole("radio", { name: DEFAULT_VECTOR_BASEMAP_NAME })
       .focus();
-    await page.keyboard.press("ArrowRight");
+    // A radio group moves along the reading direction, so the key that goes
+    // to the next tile points the other way on a right-to-left page.
+    await page.keyboard.press(direction === "rtl" ? "ArrowLeft" : "ArrowRight");
     const next = mapPage.basemapPicker.getByRole("radio", {
       name: OTHER_VECTOR_BASEMAP_NAME,
     });

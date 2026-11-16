@@ -97,6 +97,7 @@ export function MeasureToolbar({
             <IconButton
               label="Undo last point"
               icon={Undo2}
+              mirrorInRtl
               disabled={empty}
               data-testid="measure-undo"
               onClick={undo}

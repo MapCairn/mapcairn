@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { Slider } from "./Slider";
 
 beforeAll(() => {
@@ -221,5 +221,20 @@ describe("Slider", () => {
     const wrapper = screen.getByTestId("opacity");
     expect(wrapper.className).toContain("extra");
     expect(wrapper.contains(screen.getByRole("slider"))).toBe(true);
+  });
+});
+
+describe("Slider on a right-to-left page", () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute("dir");
+  });
+
+  it("starts at the right, so the left arrow raises the value", () => {
+    document.documentElement.setAttribute("dir", "rtl");
+    render(<Controlled />);
+    const thumb = screen.getByRole("slider", { name: "Opacity" });
+    expect(thumb.closest("[dir]")?.getAttribute("dir")).toBe("rtl");
+    fireEvent.keyDown(thumb, { key: "ArrowLeft" });
+    expect(thumb.getAttribute("aria-valuenow")).toBe("60");
   });
 });

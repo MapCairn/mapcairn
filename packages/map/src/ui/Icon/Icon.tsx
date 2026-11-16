@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { ComponentType, SVGProps } from "react";
-import { icon, spinning } from "./Icon.css";
+import { icon, mirroredInRtl, spinning } from "./Icon.css";
 
 /**
  * The shape of an icon component such as a lucide icon. Callers import the
@@ -27,6 +27,12 @@ export interface IconProps
   readonly label?: string;
   /** Rotates the icon continuously. Stops under `prefers-reduced-motion`. */
   readonly spinning?: boolean;
+  /**
+   * Flips the icon when the page reads right to left. Set it on an icon that
+   * points along the reading direction, such as a back arrow or a next
+   * chevron; leave it off for one that does not.
+   */
+  readonly mirrorInRtl?: boolean;
 }
 
 /**
@@ -37,10 +43,16 @@ export function Icon({
   icon: Glyph,
   label,
   spinning: isSpinning = false,
+  mirrorInRtl = false,
   className,
   ...rest
 }: IconProps) {
-  const classes = [icon, isSpinning ? spinning : "", className ?? ""]
+  const classes = [
+    icon,
+    isSpinning ? spinning : "",
+    mirrorInRtl ? mirroredInRtl : "",
+    className ?? "",
+  ]
     .filter(Boolean)
     .join(" ");
   const accessibility =

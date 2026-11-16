@@ -6,6 +6,7 @@ import {
   computeDetentHeights,
   cycleDetent,
   type DetentHeights,
+  inlineDistanceToFarEdge,
   nextDetent,
   resolveSnap,
   type SheetDetent,
@@ -317,7 +318,15 @@ export function Sheet({
       return;
     }
     const publish = () => {
-      publishPanelEdge(panel.offsetLeft + panel.offsetWidth);
+      publishPanelEdge(
+        inlineDistanceToFarEdge({
+          offsetLeft: panel.offsetLeft,
+          offsetWidth: panel.offsetWidth,
+          containerWidth: panel.offsetParent?.clientWidth ?? 0,
+          direction:
+            getComputedStyle(panel).direction === "rtl" ? "rtl" : "ltr",
+        }),
+      );
     };
     publish();
     const observer =
