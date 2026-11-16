@@ -137,19 +137,18 @@ The benchmark (`npm run bench`, after `npm run build`) generates a 1 MB, a 50 MB
 
 Targets, set before any profiling: a FeatureCollection lints at 15 MB/s or better on one thread with peak memory under 400 MB whatever its size, and a polygon of 1,000,000 vertices lints in under 10 seconds with under 1 GB.
 
-Results, with every rule on, one thread, on a developer laptop that was in normal use (other programs running), so treat the times as a floor and the memory figures as the steadier ones:
+Results, with every rule on, one thread, measured on a quiet machine on 2026-11-16:
 
-Machine: Intel Core i7-10850H, 12 logical processors, 32 GB memory, Windows 11, Node 24.22.
+Machine: Apple M4, 10 logical processors, 16 GB memory, macOS (Darwin 27.2.0), Node 24.22.
 
-| Input                           | Size    | Time    | Speed    | Peak memory | Features |
-| ------------------------------- | ------- | ------- | -------- | ----------- | -------- |
-| FeatureCollection, 1 MB         | 1.0 MB  | 0.47 s  | 2.1 MB/s | 94 MB       | 1,456    |
-| FeatureCollection, 50 MB        | 50.0 MB | 12.69 s | 3.9 MB/s | 246 MB      | 72,403   |
-| One polygon, 1,000,000 vertices | 23.5 MB | 5.25 s  | 4.5 MB/s | 731 MB      | 1        |
+| Input                           | Size     | Time    | Speed     | Peak memory | Features |
+| ------------------------------- | -------- | ------- | --------- | ----------- | -------- |
+| FeatureCollection, 1 MB         | 1.0 MB   | 0.05 s  | 18.4 MB/s | 96 MB       | 1,456    |
+| FeatureCollection, 50 MB        | 50.0 MB  | 1.60 s  | 31.3 MB/s | 447 MB      | 72,403   |
+| FeatureCollection, 500 MB       | 500.0 MB | 14.74 s | 33.9 MB/s | 509 MB      | 721,899  |
+| One polygon, 1,000,000 vertices | 23.5 MB  | 0.90 s  | 26.2 MB/s | 775 MB      | 1        |
 
-The 500 MB FeatureCollection has not been run yet. Memory grew from 94 MB at 1 MB to 246 MB at 50 MB, which is mostly the runtime and the loaded rules rather than the input (the reader holds one feature at a time), so a 500 MB file is expected to stay in the same range; that is an expectation, not a measurement.
-
-The speed target is not met, and the first release is an MVP for speed. The polygon target is met. Profiling showed that `self-intersection` (the exact sweep line) is about 80 percent of the CPU time on a collection of small polygons, and the rest is reading each feature and the rules that walk every position. Two cheap fixes were made (JSON pointers are built only for a position that produces a finding, and a cheap exact test decides whether a number has more than seven decimals), which roughly halved the time. The sweep and the shared ring reading are tracked in [#261](https://github.com/MapCairn/mapcairn/issues/261). To measure again, run `npm run build -w @mapcairn/geolint` and then `npm run bench -w @mapcairn/geolint`, on a quiet machine, with `-- --skip-large` to leave out the 500 MB file.
+The speed target is met (18 to 34 MB/s) and the polygon target is met (0.9 s, 775 MB). The memory target for a collection is not met: peak memory is 447 MB at 50 MB and 509 MB at 500 MB, above 400 MB, though it grows by only about 60 MB for a tenfold larger file, so it does not follow the file size. The earlier laptop figures (3.9 MB/s on 50 MB) were taken on a different machine in normal use and are not comparable. Profiling showed that `self-intersection` (the exact sweep line) is about 80 percent of the CPU time on a collection of small polygons. The sweep and the shared ring reading, and the memory overshoot, are tracked in [#261](https://github.com/MapCairn/mapcairn/issues/261). To measure again, run `npm run build -w @mapcairn/geolint` and then `npm run bench -w @mapcairn/geolint`, on a quiet machine, with `-- --skip-large` to leave out the 500 MB file.
 
 ## What it adds
 
