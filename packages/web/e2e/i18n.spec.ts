@@ -49,14 +49,12 @@ test.describe("with Afrikaans chosen", () => {
     ).toBeVisible();
   });
 
-  test("marks the host's English notes as English", async ({ mapPage }) => {
+  test("shows the host's privacy note in Afrikaans", async ({ mapPage }) => {
     await mapPage.goto();
     await mapPage.openSettings();
     await expect(
-      mapPage.page
-        .getByTestId("settings-privacy-note")
-        .locator('[lang="en-GB"]'),
-    ).toContainText("MapCairn has no accounts");
+      mapPage.page.getByTestId("settings-privacy-note"),
+    ).toContainText("MapCairn het geen rekeninge nie");
   });
 });
 
