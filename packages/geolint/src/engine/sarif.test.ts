@@ -89,6 +89,7 @@ describe("formatSarif", () => {
         {
           physicalLocation: {
             artifactLocation: { uri: "dir/my%20file.geojson" },
+            region: { startLine: 1 },
           },
           logicalLocations: [
             { fullyQualifiedName: "/features/1", kind: "member" },
@@ -138,12 +139,58 @@ describe("formatSarif", () => {
   });
 });
 
+describe("the fields SARIF 2.1.0 requires", () => {
+  it("has a version, a run with a tool driver name, and results that name a rule and a message", () => {
+    const log = sarif([
+      {
+        file: "dir/my file.geojson",
+        report: {
+          findings: [finding("a", "warning", "/features/0")],
+          featureCount: 1,
+          inputError: { offset: 3, message: "bad" },
+        },
+      },
+    ]);
+    expect(log.version).toBe("2.1.0");
+    const [run] = log.runs;
+    expect(typeof run.tool.driver.name).toBe("string");
+    for (const descriptor of run.tool.driver.rules) {
+      expect(typeof descriptor.id).toBe("string");
+    }
+    for (const result of run.results) {
+      expect(typeof result.message.text).toBe("string");
+      expect(typeof result.ruleId).toBe("string");
+      expect(result.ruleIndex).toBeGreaterThanOrEqual(0);
+      expect(run.tool.driver.rules[result.ruleIndex].id).toBe(result.ruleId);
+      for (const location of result.locations) {
+        expect(typeof location.physicalLocation.artifactLocation.uri).toBe(
+          "string",
+        );
+        expect(
+          location.physicalLocation.region.startLine,
+        ).toBeGreaterThanOrEqual(1);
+      }
+    }
+    for (const invocation of run.invocations) {
+      expect(typeof invocation.executionSuccessful).toBe("boolean");
+    }
+  });
+});
+
 describe("toUri", () => {
   it("uses forward slashes and encodes unsafe characters", () => {
     expect(toUri("a b/c#d.geojson")).toBe("a%20b/c%23d.geojson");
     expect(toUri(["win", "file.geojson"].join(String.fromCharCode(92)))).toBe(
       "win/file.geojson",
     );
+  });
+
+  it("writes a Windows drive path as a file URI that keeps the drive colon", () => {
+    const back = String.fromCharCode(92);
+    expect(toUri(["C:", "My Data", "x.geojson"].join(back))).toBe(
+      "file:///C:/My%20Data/x.geojson",
+    );
+    expect(toUri("d:/data/x.geojson")).toBe("file:///d:/data/x.geojson");
   });
 
   it("names standard input", () => {

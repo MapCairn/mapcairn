@@ -18,17 +18,35 @@ const LEVELS: Readonly<Record<Severity, SarifLevel>> = {
 /** The name SARIF shows for standard input. */
 const STDIN_URI = "stdin";
 
-/** A file name as a URI reference: forward slashes, with unsafe characters percent-encoded. */
+/** A Windows drive path after its slashes are normalised, such as `C:/data/x.geojson`. */
+const DRIVE_PATH = /^[A-Za-z]:\//;
+
+/**
+ * A file name as a URI reference: forward slashes, with unsafe characters
+ * percent-encoded. A Windows drive path becomes a `file:///C:/...` URI, because
+ * a bare `C:` would read as a URI scheme and encoding the colon would lose the drive.
+ */
 export function toUri(file: string): string {
   if (file === "<stdin>") {
     return STDIN_URI;
   }
-  return file
-    .replaceAll("\\", "/")
-    .split("/")
-    .map((part) => encodeURIComponent(part))
-    .join("/");
+  const slashed = file.replaceAll("\\", "/");
+  const encode = (path: string) =>
+    path
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/");
+  if (DRIVE_PATH.test(slashed)) {
+    return `file:///${slashed.slice(0, 2)}${encode(slashed.slice(2))}`;
+  }
+  return encode(slashed);
 }
+
+/**
+ * Findings have no line numbers, but code-scanning tools want a region, so every
+ * result points at the first line; the real place is the logical location.
+ */
+const FIRST_LINE = 1;
 
 function ruleDescriptor(rule: Rule) {
   return {
@@ -56,7 +74,10 @@ function result(
     message: { text: finding.message },
     locations: [
       {
-        physicalLocation: { artifactLocation: { uri: toUri(file) } },
+        physicalLocation: {
+          artifactLocation: { uri: toUri(file) },
+          region: { startLine: FIRST_LINE },
+        },
         logicalLocations: [
           {
             fullyQualifiedName: finding.path === "" ? "/" : finding.path,

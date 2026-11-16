@@ -55,7 +55,7 @@ The copy is re-serialised: members other than `features` keep their order and va
 
 ### Output formats
 
-`--format json` writes `{ "version": 1, "files": [...], "summary": {...} }` with every finding. `--format sarif` writes SARIF 2.1.0 for code-scanning tools: the rules are the tool's rule metadata, the JSON pointer is a logical location, and the confidence is a property of the result. Severity `info` is the SARIF level `note`.
+`--format json` writes `{ "version": 1, "files": [...], "summary": {...} }` with every finding. `--format sarif` writes SARIF 2.1.0 for code-scanning tools: the rules are the tool's rule metadata, the JSON pointer is a logical location (findings have no line numbers, so each result's region is line 1 and the logical location is the real place), and the confidence is a property of the result. A Windows drive path becomes a `file:///C:/...` URI. Severity `info` is the SARIF level `note`.
 
 ## The library
 
