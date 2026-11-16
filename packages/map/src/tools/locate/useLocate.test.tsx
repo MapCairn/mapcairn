@@ -80,6 +80,20 @@ describe("useLocate", () => {
     expect(polite()).toBe("Location found, accuracy about 25 metres");
   });
 
+  it("asks the catalogue for the fix and for its accuracy, by key and parameters", async () => {
+    const { result, services } = setup("metric");
+    act(() => result.current.locate());
+    await flush();
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "units.metre",
+      params: { count: 25 },
+    });
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "announce.locationFound",
+      params: { accuracy: "25 metres" },
+    });
+  });
+
   it("announces the accuracy in imperial units when asked", async () => {
     const { result } = setup("imperial");
     act(() => result.current.locate());

@@ -63,7 +63,7 @@ function renderPicker(
       </LiveRegionProvider>
     </ServicesProvider>,
   );
-  return { ...view, onChange };
+  return { ...view, onChange, services };
 }
 
 const radio = (name: string) => screen.getByRole("radio", { name });
@@ -173,6 +173,15 @@ describe("BasemapPicker", () => {
     expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
       "Basemap changed to Streets",
     );
+  });
+
+  it("asks the catalogue for the announcement with the basemap's name", () => {
+    const { services } = renderPicker();
+    fireEvent.click(radio("Streets"));
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "announce.basemapChanged",
+      params: { name: "Streets" },
+    });
   });
 
   describe("previews", () => {

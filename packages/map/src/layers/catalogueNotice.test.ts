@@ -349,3 +349,15 @@ describe("catalogueNotice", () => {
     });
   });
 });
+
+describe("catalogueNotice messages are keys and parameters", () => {
+  it("is the failure's key, with nothing to fill in", () => {
+    expect(
+      catalogueNotice(inputs({ previous: LOADING, next: FAILED })),
+    ).toEqual({
+      message: { key: "describe.layersLoadFailed", params: {} },
+      priority: "assertive",
+      keep: true,
+    });
+  });
+});

@@ -214,6 +214,19 @@ describe("TourCard", () => {
     );
   });
 
+  it("asks the catalogue for the skip announcement, by key", async () => {
+    const { services } = renderTour();
+    act(() => {
+      screen.getByRole("button", { name: "Skip" }).click();
+    });
+    await waitFor(() =>
+      expect(services.fakes.messages.calls).toContainEqual({
+        key: "announce.tourSkipped",
+        params: {},
+      }),
+    );
+  });
+
   it("skips on Escape inside the card, and prevents the default so nothing else closes", async () => {
     const { focusMap } = renderTour();
     fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));

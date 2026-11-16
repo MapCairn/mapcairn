@@ -183,3 +183,25 @@ describe("loadOutcome", () => {
     expect(await aborted).toBeNull();
   });
 });
+
+describe("loadOutcome messages are keys and parameters", () => {
+  it("names the layer and the count for the catalogue to word", () => {
+    expect(outcomeOfFeatures(SAMPLE_FEED_LAYER, points(5), NOW).spoken).toEqual(
+      {
+        state: "ready",
+        message: {
+          key: "announce.layerLoaded",
+          params: { name: "Sample points", count: 5 },
+        },
+        priority: "polite",
+      },
+    );
+    expect(
+      outcomeOfFailure(SAMPLE_FEED_LAYER, new LayerError("network"), NOW)
+        ?.spoken.message,
+    ).toEqual({
+      key: "announce.layerLoadFailed",
+      params: { name: "Sample points" },
+    });
+  });
+});

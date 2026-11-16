@@ -134,6 +134,16 @@ describe("PinCard", () => {
       expect(polite()).toBe("Coordinates copied");
     });
 
+    it("asks the catalogue for what was said, by key", async () => {
+      const { services } = setup();
+      fireEvent.click(screen.getByRole("button", { name: "Copy coordinates" }));
+      await flush();
+      expect(services.fakes.messages.calls).toContainEqual({
+        key: "announce.copied",
+        params: {},
+      });
+    });
+
     it("says it could not copy, inline and aloud, when the clipboard refuses", async () => {
       const { services } = setup();
       services.fakes.clipboard.failWith("denied");

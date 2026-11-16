@@ -18,12 +18,13 @@ import {
 } from "./useSuggestions";
 
 const announce = vi.hoisted(() => vi.fn());
+const messages = vi.hoisted(() => [] as unknown[]);
 
 vi.mock("../../ui/LiveRegion", async () => {
   const { englishAnnounce } = await import(
     "../../ui/LiveRegion/englishAnnounce"
   );
-  const speak = englishAnnounce(announce);
+  const speak = englishAnnounce(announce, (message) => messages.push(message));
   return { useAnnounce: () => speak };
 });
 
@@ -99,6 +100,17 @@ describe("useSuggestions", () => {
     expect(result.current).toEqual([CAPE_TOWN, CAPRICORN]);
     expect(announce).toHaveBeenCalledWith("2 suggestions", {
       priority: "polite",
+    });
+  });
+
+  it("hands the announcer the count as a key and parameters", async () => {
+    const services = createFakeServices();
+    services.fakes.suggestions.setDefaultResults([CAPE_TOWN, CAPRICORN]);
+    setup({ query: "cap" }, services);
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(messages).toContainEqual({
+      key: "announce.suggestions",
+      params: { count: 2 },
     });
   });
 

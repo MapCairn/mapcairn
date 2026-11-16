@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  announceDetent,
   computeDetentHeights,
   createFakeServices,
-  FakeMessageCatalogue,
-  formatMessage,
   type SheetDetent,
 } from "@mapcairn/core";
 import { act, fireEvent, screen } from "@testing-library/react";
@@ -279,7 +276,7 @@ describe("Sheet in the sheet layout", () => {
   it("announces detent changes, but not the first opening", () => {
     vi.useFakeTimers();
     const state = setup({ detent: "half" });
-    const { rerenderChrome } = mount(state);
+    const { rerenderChrome, services } = mount(state);
     act(() => {
       vi.advanceTimersByTime(1000);
     });
@@ -289,8 +286,12 @@ describe("Sheet in the sheet layout", () => {
       vi.advanceTimersByTime(1000);
     });
     expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
-      formatMessage(new FakeMessageCatalogue(), announceDetent("full")),
+      "Panel full height",
     );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "announce.detent.full",
+      params: {},
+    });
   });
 
   it("publishes its top edge and detent, and clears them when closed", () => {

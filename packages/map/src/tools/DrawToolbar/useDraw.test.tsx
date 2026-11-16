@@ -488,6 +488,26 @@ describe("useDraw", () => {
       expect(polite()).toMatch(/^Point 3 added to Polygon 1\. Area /);
     });
 
+    it("asks the catalogue for the point, the measure and the refusal, by key", async () => {
+      const rig = await setup();
+      const { calls } = rig.services.fakes.messages;
+      addAll(rig, TRIANGLE);
+      await advance(DRAW_ANNOUNCE_DELAY_MS);
+      expect(calls).toContainEqual({
+        key: "draw.vertexAddedTo",
+        params: { count: 3, label: "Polygon 1" },
+      });
+      expect(calls.map((call) => call.key)).toContain("draw.sentence.polygon");
+      const second = await setup();
+      addAll(second, TRIANGLE.slice(0, 2));
+      act(() => second.result.current.finish());
+      await advance(DRAW_ANNOUNCE_DELAY_MS);
+      expect(second.services.fakes.messages.calls).toContainEqual({
+        key: "draw.issue.too-few-vertices",
+        params: {},
+      });
+    });
+
     it("announces a refusal assertively", async () => {
       const rig = await setup();
       addAll(rig, TRIANGLE.slice(0, 2));

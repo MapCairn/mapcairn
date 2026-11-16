@@ -170,6 +170,15 @@ describe("map shape", () => {
     );
   });
 
+  it("asks the catalogue for the map shape announcement, by key", () => {
+    const { services } = renderSettings();
+    fireEvent.click(screen.getByTestId("projection-option-globe"));
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "announce.projection.globe",
+      params: {},
+    });
+  });
+
   it("announces a change back to flat", () => {
     renderSettings({ initial: { projection: "globe" } });
     fireEvent.click(screen.getByTestId("projection-option-flat"));

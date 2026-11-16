@@ -195,7 +195,7 @@ describe("LayersSection", () => {
   });
 
   it("lists loaded features, and a row shows its feature on the map and opens its card", async () => {
-    const { source, adapter, onShowOnMap } = setup();
+    const { source, adapter, onShowOnMap, services } = setup();
     source.setFeatures("sample-points", [
       samplePoint("a", { title: "Alpha", time: 1 }, [10, 20]),
       samplePoint("b", { title: "Beta", time: 2 }, [30, 40]),
@@ -222,6 +222,10 @@ describe("LayersSection", () => {
         "Showing Alpha on the map.",
       ),
     );
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "announce.showingFeature",
+      params: { title: "Alpha" },
+    });
   });
 
   it("sorts the list with the layer's sort options", async () => {
@@ -1027,6 +1031,25 @@ describe("LayersSection", () => {
       expect(labels()).toHaveLength(48);
       expect(labels()[0]).toBe("00:00");
       expect(labels().at(-1)).toBe("23:30");
+    });
+
+    it("asks the catalogue for the slot's words and the time move, by key", async () => {
+      const { date, time, services } = open();
+      const { calls } = services.fakes.messages;
+      expect(calls).toContainEqual({
+        key: "format.utcRange",
+        params: { start: "06:00", end: "06:30" },
+      });
+      expect(calls).toContainEqual({
+        key: "format.day",
+        params: { date: new Date("2026-11-09T00:00:00Z") },
+      });
+      fireEvent.change(date, { target: { value: "2026-11-08" } });
+      fireEvent.change(time, { target: { value: "2026-11-08t2130" } });
+      fireEvent.change(date, { target: { value: "2026-11-09" } });
+      await waitFor(() =>
+        expect(calls.map((call) => call.key)).toContain("announce.timeMoved"),
+      );
     });
 
     it("changes the time, and moves a time not out yet back to the newest, saying so", async () => {

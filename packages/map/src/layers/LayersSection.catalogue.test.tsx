@@ -30,13 +30,15 @@ function show(
   catalogue: LayerCatalogue,
   props: Partial<LayersSectionProps> = {},
 ) {
-  return render(
-    <ServicesProvider services={createFakeServices({ layers: catalogue })}>
+  const services = createFakeServices({ layers: catalogue });
+  const view = render(
+    <ServicesProvider services={services}>
       <LiveRegionProvider>
         <Section {...props} />
       </LiveRegionProvider>
     </ServicesProvider>,
   );
+  return { ...view, services };
 }
 
 function loadingCatalogue() {
@@ -86,6 +88,16 @@ describe("the Layers section while the catalogue loads", () => {
 });
 
 describe("the Layers section when the catalogue fails", () => {
+  it("asks the catalogue for the failure's words, by key", () => {
+    const catalogue = loadingCatalogue();
+    const { services } = show(catalogue);
+    act(() => catalogue.setState({ status: "failed", reason: "network" }));
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "describe.layersLoadFailed",
+      params: {},
+    });
+  });
+
   it("says so with a Try again button, and keeps the intro", () => {
     const catalogue = loadingCatalogue();
     show(catalogue);

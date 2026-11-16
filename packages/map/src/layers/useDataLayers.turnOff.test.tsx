@@ -19,9 +19,10 @@ import { ServicesProvider } from "../services";
 import { UNDO_TIMEOUT_MS, useDataLayers } from "./useDataLayers";
 
 const announce = vi.hoisted(() => vi.fn());
+const messages = vi.hoisted(() => [] as unknown[]);
 vi.mock("../ui/LiveRegion", async () => {
   const { englishAnnounce } = await import("../ui/LiveRegion/englishAnnounce");
-  const speak = englishAnnounce(announce);
+  const speak = englishAnnounce(announce, (message) => messages.push(message));
   return { useAnnounce: () => speak };
 });
 
@@ -122,6 +123,16 @@ describe("useDataLayers turnOff", () => {
       "3 layers turned off. Undo available",
       { priority: "polite", keep: true },
     );
+  });
+
+  it("hands the announcer the count as a key and parameters", async () => {
+    const view = setup();
+    await withAllOn(view);
+    act(() => view.result.current.turnOff([FEED, ALERTS]));
+    expect(messages).toContainEqual({
+      key: "announce.layersTurnedOff",
+      params: { count: 2 },
+    });
   });
 
   it("uses the singular for one layer", async () => {

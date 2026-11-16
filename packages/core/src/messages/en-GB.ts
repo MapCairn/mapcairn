@@ -6,8 +6,9 @@ import type { MessageKey } from "../ports/messages";
  * The SDK's shipped default catalogue: British English, the source language.
  * Every `MessageKey` has a value here; `packages/core/src/lint` fails the
  * build when one is missing or when a value's placeholders do not match its
- * `MessageParams` entry. Seeded verbatim from the Settings panel's existing
- * inline copy, so moving the panel to keys changes no visible text.
+ * `MessageParams` entry. Seeded verbatim from the Settings panel's inline
+ * copy and from the strings core's announcement, description, unit and error
+ * helpers used to return, so moving them to keys changes no visible text.
  *
  * A key used with `plural` carries two forms separated by `|`: the form for
  * `Intl.PluralRules`'s "one" category first, the form for every other

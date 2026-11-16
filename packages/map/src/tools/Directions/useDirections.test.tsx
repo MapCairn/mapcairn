@@ -164,6 +164,28 @@ describe("getting a route", () => {
     expect(await polite()).toMatch(/^Route found, .+ walking$/);
   });
 
+  it("asks the catalogue for each stop, the route and the mode, by key and parameters", async () => {
+    const { result, services } = withTwoStops();
+    const { calls } = services.fakes.messages;
+    expect(calls).toContainEqual({
+      key: "announce.stopAdded",
+      params: { letter: "B", count: 2 },
+    });
+    act(() => result.current.setMode("walk"));
+    act(() => result.current.requestRoute());
+    await flush();
+    expect(calls).toContainEqual({
+      key: "directions.participle.walk",
+      params: {},
+    });
+    expect(calls.map((call) => call.key)).toContain("announce.routeFound");
+    act(() => result.current.removeStop(result.current.stops[0]?.id ?? ""));
+    expect(calls).toContainEqual({
+      key: "announce.stopRemoved",
+      params: { letter: "A" },
+    });
+  });
+
   it("keeps each leg, with the totals", async () => {
     const { result, services } = withTwoStops();
     const route: RouteResult = {

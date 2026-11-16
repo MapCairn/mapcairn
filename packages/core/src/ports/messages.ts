@@ -8,9 +8,11 @@
  * {@link MessageCatalogue.plural} instead, so the text can be replaced or
  * translated without touching the component.
  *
- * @remarks Only the keys the Settings panel needs are here so far; later
- *   steps add a key as each further component moves off inline copy.
- *   `common.itemCount` is the exception: it carries no user-facing text yet
+ * @remarks The keys are those of the Settings panel and of the text core's
+ *   pure helpers return as a {@link Message} (announcements, descriptions,
+ *   units, errors, the draw tool's wording); later steps add a key as each
+ *   further component moves off inline copy. `common.itemCount` is the
+ *   exception: it carries no user-facing text yet
  *   and exists only so the contract suite can prove {@link
  *   MessageCatalogue.plural} picks the right English form, until a real
  *   plural key is needed.

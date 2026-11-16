@@ -12,17 +12,17 @@ import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { MEASURE_ANNOUNCE_DELAY_MS, useMeasure } from "./useMeasure";
 
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <ServicesProvider services={createFakeServices()}>
-    <LiveRegionProvider>{children}</LiveRegionProvider>
-  </ServicesProvider>
-);
-
-function setup(units: UnitSystem = "metric") {
-  return renderHook(({ unit }: { unit: UnitSystem }) => useMeasure(unit), {
-    wrapper,
-    initialProps: { unit: units },
-  });
+function setup(units: UnitSystem = "metric", services = createFakeServices()) {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <ServicesProvider services={services}>
+      <LiveRegionProvider>{children}</LiveRegionProvider>
+    </ServicesProvider>
+  );
+  const view = renderHook(
+    ({ unit }: { unit: UnitSystem }) => useMeasure(unit),
+    { wrapper, initialProps: { unit: units } },
+  );
+  return { ...view, services };
 }
 
 const polite = () => screen.getByTestId("live-region-polite").textContent;
@@ -235,6 +235,20 @@ describe("useMeasure", () => {
       expect(polite()).toBe("");
       await advance(1);
       expect(polite()).toBe("Total distance 111 kilometres");
+    });
+
+    it("asks the catalogue for the total's wording and its unit, by key and parameters", async () => {
+      const { result, services } = setup();
+      addAll(result, [ORIGIN, ONE_DEGREE_EAST]);
+      await advance(MEASURE_ANNOUNCE_DELAY_MS);
+      expect(services.fakes.messages.calls).toContainEqual({
+        key: "units.kilometre",
+        params: { count: 111 },
+      });
+      expect(services.fakes.messages.calls).toContainEqual({
+        key: "announce.measureDistance",
+        params: { distance: "111 kilometres" },
+      });
     });
 
     it("announces nothing before there is a total", async () => {
