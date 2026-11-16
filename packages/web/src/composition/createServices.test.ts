@@ -58,7 +58,7 @@ describe("createServices", () => {
     }
   });
 
-  it("offers the site's six basemaps, not the SDK's seven, with Bright the default", () => {
+  it("offers the site's four basemaps, not the SDK's seven, with Bright the default", () => {
     const { basemaps } = createServices();
     expect(basemaps).toBe(HOST_BASEMAP_CATALOGUE);
     expect(basemaps).not.toBe(BUILT_IN_BASEMAP_CATALOGUE);
@@ -66,8 +66,6 @@ describe("createServices", () => {
       "bright",
       "positron",
       "osm",
-      "topographic",
-      "satellite",
       "dark",
     ]);
     expect(basemaps?.get("fiord")).toBeUndefined();

@@ -19,18 +19,17 @@ import {
 } from "./useMapModelContextTools";
 
 describe("basemapChoices", () => {
-  it("offers the basemaps the site's picker offers, in its order, except Satellite, with no auto choice", () => {
+  it("offers the basemaps the site's picker offers, in its order, with no auto choice", () => {
     const choices = basemapChoices(HOST_BASEMAP_CATALOGUE);
-    expect(choices).toEqual([
-      "bright",
-      "positron",
-      "osm",
-      "topographic",
-      "dark",
-    ]);
+    expect(choices).toEqual(["bright", "positron", "osm", "dark"]);
     expect(choices).not.toContain("auto");
-    expect(choices).not.toContain("satellite");
-    for (const removed of ["liberty", "colorful", "fiord"]) {
+    for (const removed of [
+      "liberty",
+      "colorful",
+      "fiord",
+      "satellite",
+      "topographic",
+    ]) {
       expect(choices).not.toContain(removed);
     }
   });
@@ -39,7 +38,7 @@ describe("basemapChoices", () => {
     const choices = basemapChoices(BUILT_IN_BASEMAP_CATALOGUE);
     expect(choices).toHaveLength(7);
     expect(choices).toContain("liberty");
-    expect(choices).not.toContain("topographic");
+    expect(choices).not.toContain("satellite");
   });
 
   // An agent must not accept a provider's licence on a person's behalf.

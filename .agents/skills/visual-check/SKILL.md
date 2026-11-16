@@ -9,7 +9,7 @@ description: Confirm a MapCairn map or interface change visually. Run the app on
 
 The model that does this check must be able to read images. The Claude models used here (haiku, sonnet, opus) can; other models vary, so check one before relying on it by asking it to describe a screenshot in one line. An agent that cannot read images does not do this check. It still runs the `e2e` and `a11y` checks and the accessibility-tree checks, says plainly under **Seen** that it did not look at the screen and why, and never claims to have seen anything. When **Seen** says the screen was not looked at, the caller starts `ui-verifier` on a model that can read images (the person who started the agent directly does this if there is no caller). In Claude Code that is sonnet; in other tools the caller picks the model, because the generated agent files set none. The caller makes sure this happens before the pull request is called done, and **Seen** then names the agent that looked. Only if no such agent can be used, or something needs a human (a real device, a real screen reader, a decision that is theirs), is the person asked, with exactly what is needed.
 
-Example: a change moves the layer key. Shoot the map with the key open at 390x844 and 1440x900 in both themes on Bright, then on Satellite at phone size in the dark theme, and note that the key's close button sits under the credits at 390 wide.
+Example: a change moves the layer key. Shoot the map with the key open at 390x844 and 1440x900 in both themes on Bright, then on Streets at phone size in the dark theme, and note that the key's close button sits under the credits at 390 wide.
 
 ## 1. Start the app
 
@@ -29,7 +29,7 @@ Save every image under `.tmp-visual/` (ignored by git) in a name that says size,
 | Desktop | 1440x900 |
 
 - Default basemap: all three sizes in both themes (six images).
-- At least one other basemap: Satellite or Topographic, plus Dark, at phone and desktop in the theme where it matters. A basemap is chosen with `&basemap=<id>` in the address hash, for example `http://localhost:5190/#map=10.00/-33.92000/18.42000&basemap=satellite`. The ids the site offers are in `HOST_BASEMAP_IDS` in `packages/web/src/basemaps/hostBasemaps.ts`.
+- At least one other basemap: Streets, plus Dark, at phone and desktop in the theme where it matters. A basemap is chosen with `&basemap=<id>` in the address hash, for example `http://localhost:5190/#map=10.00/-33.92000/18.42000&basemap=osm`. The ids the site offers are in `HOST_BASEMAP_IDS` in `packages/web/src/basemaps/hostBasemaps.ts`.
 - Put the app in the state the change affects first (open the panel, turn the layer on, start the tool), and show that state, not only the bare map.
 
 If your tool has Playwright browser tools, use them to set the window size and colour scheme, open the address, wait for the map to finish loading and save a screenshot to a named file. Otherwise use the Playwright CLI from the repository root for each combination:

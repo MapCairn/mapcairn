@@ -23,13 +23,11 @@ function sourceOrigins(basemap: BasemapDefinition): readonly string[] {
   }
 }
 
-// Fiord is the SDK's dark basemap that the site does not offer; Dark and
-// Satellite are the site's. Each needs a swatch of its own for the picker's
-// Save data tile.
+// Fiord is the SDK's dark basemap that the site does not offer; Dark is the
+// site's. Each needs a swatch of its own for the picker's Save data tile.
 describe.each([
   ["fiord", BUILT_IN_BASEMAP_CATALOGUE],
   ["dark", HOST_BASEMAP_CATALOGUE],
-  ["satellite", HOST_BASEMAP_CATALOGUE],
 ] as const)("%s in the picker", (id, catalogue) => {
   const basemap = catalogue.resolve(id);
 
@@ -80,14 +78,12 @@ describe("the production CSP and the site's basemaps", () => {
     });
   }
 
-  it("allows exactly the origins the six basemaps need, and none for a basemap the site does not offer", () => {
+  it("allows exactly the origins the four basemaps need, and none for a basemap the site does not offer", () => {
     const origins = new Set(
       HOST_BASEMAP_CATALOGUE.basemaps.flatMap(sourceOrigins),
     );
     expect([...origins].sort()).toEqual([
       "https://tile.openstreetmap.org",
-      "https://tile.opentopomap.org",
-      "https://tiles.maps.eox.at",
       "https://tiles.openfreemap.org",
     ]);
     const offered = new Set(HOST_BASEMAP_CATALOGUE.basemaps.map((b) => b.id));

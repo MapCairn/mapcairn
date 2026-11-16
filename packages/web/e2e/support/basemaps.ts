@@ -58,13 +58,23 @@ export const COLORFUL_BASEMAP_ID = "colorful";
 export const FIORD_BASEMAP_ID = "fiord";
 
 /**
- * The SDK's basemaps that the site does not offer. A saved or linked one
- * opens on the default basemap.
+ * The ids of Topographic and Satellite, which the site no longer offers and
+ * the SDK never defined. A saved or linked one opens on the default basemap.
+ */
+export const REMOVED_HOST_BASEMAP_IDS: readonly string[] = [
+  "topographic",
+  "satellite",
+];
+
+/**
+ * The basemaps the site does not offer: the SDK's that it leaves out, and the
+ * two it removed. A saved or linked one opens on the default basemap.
  */
 export const UNOFFERED_BASEMAP_IDS: readonly string[] = [
   LIBERTY_BASEMAP_ID,
   COLORFUL_BASEMAP_ID,
   FIORD_BASEMAP_ID,
+  ...REMOVED_HOST_BASEMAP_IDS,
 ];
 
 /** OpenFreeMap Dark, the dark basemap. A saved or linked "dark" opens on it. */
@@ -73,29 +83,8 @@ export const DARK_BASEMAP_ID = "dark";
 /** Its name in the picker. */
 export const DARK_BASEMAP_NAME = "Dark";
 
-/**
- * OpenTopoMap, the site's Topographic basemap and a second raster basemap, from a
- * different host than OpenStreetMap's own. The reference host defines it; the SDK
- * does not, so a host that offers the SDK's whole list (`scriptBasemaps`) has no
- * Topographic.
- */
-export const TOPOGRAPHIC_BASEMAP_ID = "topographic";
-
-/** Its name in the picker. */
-export const TOPOGRAPHIC_BASEMAP_NAME = "Topographic";
-
-/**
- * Satellite, the site's hybrid: EOX imagery under the labels and roads of the
- * default basemap's style. The reference host defines it, because the imagery's
- * licence is non-commercial, and the SDK does not.
- */
-export const SATELLITE_BASEMAP_ID = "satellite";
-
-/** Its name in the picker. */
-export const SATELLITE_BASEMAP_NAME = "Satellite";
-
 /** How many basemaps the site's picker offers. */
-export const BASEMAP_COUNT = 6;
+export const BASEMAP_COUNT = 4;
 
 /** The picker's columns. */
 export const BASEMAP_COLUMNS = 3;
@@ -103,6 +92,6 @@ export const BASEMAP_COLUMNS = 3;
 /** The picker's rows. */
 export const BASEMAP_ROWS = Math.ceil(BASEMAP_COUNT / BASEMAP_COLUMNS);
 
-/** How many tiles sit in the picker's last row: a full one with six basemaps. */
+/** How many tiles sit in the picker's last row: one, with four basemaps. */
 export const BASEMAP_LAST_ROW_COUNT =
   BASEMAP_COUNT - BASEMAP_COLUMNS * (BASEMAP_ROWS - 1);

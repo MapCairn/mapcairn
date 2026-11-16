@@ -20,10 +20,6 @@ import {
   RASTER_BASEMAP_CREDIT,
   RASTER_BASEMAP_ID,
   RASTER_BASEMAP_NAME,
-  SATELLITE_BASEMAP_ID,
-  SATELLITE_BASEMAP_NAME,
-  TOPOGRAPHIC_BASEMAP_ID,
-  TOPOGRAPHIC_BASEMAP_NAME,
   UNOFFERED_BASEMAP_IDS,
 } from "./support/basemaps";
 import {
@@ -31,7 +27,6 @@ import {
   MINIMAL_VECTOR_STYLE,
   OTHER_VECTOR_STYLE_PATTERN,
   RASTER_TILE_PATTERN,
-  SATELLITE_TILE_PATTERN,
   SPRITE_PATTERN,
   STREETS_TILE_PATTERN,
   TRANSPARENT_PNG,
@@ -340,93 +335,6 @@ test.describe("basemaps", () => {
     ).toBeChecked();
   });
 
-  test("Topographic loads OpenTopoMap raster tiles, credits them in full and is saved", async ({
-    page,
-    mapPage,
-  }) => {
-    await mapPage.goto(START);
-    await mapPage.openMapOptions();
-    const tileRequest = page.waitForRequest(/tile\.opentopomap\.org/);
-    await mapPage.chooseBasemap(TOPOGRAPHIC_BASEMAP_NAME);
-    await tileRequest;
-    await expect.poll(() => mapPage.hashBasemap()).toBe(TOPOGRAPHIC_BASEMAP_ID);
-    await expect(page.getByTestId("save-image-button")).not.toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-
-    await collapseCredits(mapPage);
-    await mapPage.creditsButton.click();
-    await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
-      "© OpenStreetMap contributors",
-      "SRTM",
-      "© OpenTopoMap",
-      "CC-BY-SA",
-      "MapLibre",
-    ]);
-
-    await page.evaluate(() => {
-      history.replaceState(null, "", `${location.pathname}${location.search}`);
-    });
-    await page.reload();
-    await mapPage.waitForMap();
-    await mapPage.openMapOptions();
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", {
-        name: TOPOGRAPHIC_BASEMAP_NAME,
-      }),
-    ).toBeChecked();
-  });
-
-  test("Satellite loads EOX imagery under the default style's labels, credits them in full and is saved", async ({
-    page,
-    mapPage,
-  }) => {
-    await mapPage.goto(START);
-    await mapPage.openMapOptions();
-    const imagery = page.waitForRequest(SATELLITE_TILE_PATTERN);
-    const labels = page.waitForRequest(
-      new RegExp(
-        `tiles\\.openfreemap\\.org/styles/${DEFAULT_VECTOR_BASEMAP_ID}$`,
-      ),
-    );
-    await mapPage.chooseBasemap(SATELLITE_BASEMAP_NAME);
-    // Row before column, in Web Mercator, no deeper than level 14.
-    expect((await imagery).url()).toMatch(
-      /\/s2cloudless-\d{4}_3857\/default\/g\/(?:[0-9]|1[0-4])\/\d+\/\d+\.jpg$/,
-    );
-    await labels;
-    await expect.poll(() => mapPage.hashBasemap()).toBe(SATELLITE_BASEMAP_ID);
-    await expect(page.getByTestId("save-image-button")).not.toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-
-    await collapseCredits(mapPage);
-    await mapPage.creditsButton.click();
-    await expect(mapPage.creditsRegion.getByRole("link")).toHaveText([
-      /^EOxCloudless https:\/\/cloudless\.eox\.at by EOX IT Services GmbH \(Contains modified Copernicus Sentinel data \d{4}\)$/,
-      "CC BY-NC-SA 4.0",
-      "EOX::Maps",
-      "© OpenStreetMap contributors",
-      "OpenFreeMap",
-      "OpenMapTiles",
-      "MapLibre",
-    ]);
-
-    await page.evaluate(() => {
-      history.replaceState(null, "", `${location.pathname}${location.search}`);
-    });
-    await page.reload();
-    await mapPage.waitForMap();
-    await mapPage.openMapOptions();
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", {
-        name: SATELLITE_BASEMAP_NAME,
-      }),
-    ).toBeChecked();
-  });
-
   test("switching between the raster and vector styles keeps the map, the view and the bearing", async ({
     page,
     mapPage,
@@ -695,36 +603,6 @@ test.describe("basemaps", () => {
         0,
       );
       await expect(bright).toBeFocused();
-    });
-
-    test("is found for Satellite when its imagery fails, though its labels load", async ({
-      page,
-      mapPage,
-    }) => {
-      await page.route(SATELLITE_TILE_PATTERN, (route) =>
-        route.abort("failed"),
-      );
-      await mapPage.goto(START);
-      await mapPage.openMapOptions();
-      const redrawn = page.waitForRequest(DEFAULT_STYLE_PATTERN);
-      await mapPage.chooseBasemap(SATELLITE_BASEMAP_NAME);
-      await mapPage.sheetClose.click();
-
-      const banner = page.getByTestId("basemap-error");
-      await expect(banner).toContainText(
-        "Satellite is not available right now.",
-        { timeout: 20_000 },
-      );
-      await redrawn;
-      await expect
-        .poll(() => mapPage.hashBasemap())
-        .toBe(DEFAULT_VECTOR_BASEMAP_ID);
-      await mapPage.openMapOptions();
-      await expect(
-        mapPage.basemapPicker.getByRole("radio", {
-          name: new RegExp(`^${SATELLITE_BASEMAP_NAME}`),
-        }),
-      ).toBeDisabled();
     });
 
     test("is found at start-up, when a link opens on it", async ({

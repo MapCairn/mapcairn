@@ -415,8 +415,6 @@ const LABEL_LAYER_TYPES: ReadonlySet<string> = new Set(["line", "symbol"]);
  * its imagery draws. The imagery's `maxzoom` is the deepest tile level with
  * real detail, so MapLibre enlarges those tiles further in and requests
  * nothing deeper. Does nothing for another basemap.
- * @remarks The thumbnail script (`scripts/generateBasemapThumbnails.mjs`)
- *   mirrors this; change both together.
  */
 function composeHybrid(
   map: MapLibreMap,
