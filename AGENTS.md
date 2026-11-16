@@ -107,7 +107,7 @@ The npm workspaces share one root `package-lock.json`.
 - Check the result with one real `npm ci --ignore-scripts` under npm 11 in a disposable clone. A dry run is insufficient.
 - If `npm ls` reports invalid nested entries after a range change, remove those stale lockfile entries and run a real install again. Never hand-edit dependency versions.
 - Pin prerelease versions exactly.
-- Never install or upgrade to a package version published less than 7 days ago, in npm or in a `uv` script. `.npmrc` sets `min-release-age=7` and Dependabot has a 7-day cooldown; do not work around either. A fix that exists only in a newer release goes to the maintainer first.
+- Never install or upgrade to a package version published less than 7 days ago, in npm or in a `uv` script. `.npmrc` sets `min-release-age=7` and Dependabot has a 7-day cooldown; do not work around either. A fix that exists only in a newer release goes to the maintainer first: an agent never decides this alone. With the maintainer's approval in the conversation, install it with `npm install <package>@<version> --min-release-age=0`, or exempt one package with `--min-release-age-exclude=<package>`, and leave `.npmrc` alone.
 - Dependabot owns its own lockfile changes. Change one only when a real install fails.
 - Do not install into a working tree another person or agent is using.
 - Run existing tools through `npm run` or `npx --no-install`, so missing binaries cannot fetch unrelated packages. For a throwaway script or an image or data check that needs Python, use `uv` (`uv run --no-project --with <package> script.py`, or `uvx <tool>`) and do not assume a system Python; if `uv` is missing, ask before installing it. `--exclude-newer` takes an absolute date, so work out the date 7 days back.
