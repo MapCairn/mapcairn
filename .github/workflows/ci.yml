@@ -80,3 +80,45 @@ jobs:
       # Checks the registry signature of every installed package and the
       # provenance attestation of those that have one.
       - run: npm audit signatures
+
+  # Builds geolint, packs it, installs the tarball in a directory outside the
+  # repository and runs the command there, to prove the package works on its own.
+  # It runs only when geolint, the lockfile or this workflow changed in the pull
+  # request (always on a push to main). The filter is a step inside the job, not
+  # a `paths` filter on the workflow, so the required `build` and `e2e` checks
+  # always report. Nothing depends on it and it is not a required check.
+  geolint-pack:
+    name: geolint pack and install
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Find out whether geolint changed
+        id: changed
+        # The event name and base branch reach the script through the
+        # environment, never through the shell script text.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "origin/$BASE_REF...HEAD" -- packages/geolint package-lock.json .github/workflows/ci.yml; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.changed.outputs.run == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - if: steps.changed.outputs.run == 'true'
+        run: npm ci --ignore-scripts
+      - if: steps.changed.outputs.run == 'true'
+        run: npm run smoke -w @mapcairn/geolint

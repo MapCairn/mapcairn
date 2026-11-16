@@ -62,6 +62,18 @@ MapCairn is licensed under [AGPL-3.0](LICENSE). Each SDK package (`core`, `map`,
 
 Maps are drawn with [MapLibre GL JS](https://maplibre.org), which is licensed under the BSD 3-Clause licence.
 
+## geolint
+
+`packages/geolint` is licensed under Apache-2.0 and bundles one dataset and depends on two packages. All three are permissive; a test in the package checks its installed production dependencies.
+
+| Credit                                                                                                                                                                                                                                                                                       | Use                                                                                                                                                              | Licence                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [Natural Earth](https://www.naturalearthdata.com/) admin-0 country polygons, 1:110m, and 1:50m for the countries the 1:110m set leaves out, from the [natural-earth-vector](https://github.com/nvkelso/natural-earth-vector) repository at commit `ca96624a56bd078437bca8184e78163e5039ad19` | The country outlines the region rules use, converted by `packages/geolint/scripts/build-countries.mjs` into `packages/geolint/src/engine/regions/countries.json` | Public domain. No credit is required; it is given as a courtesy |
+| [`robust-predicates`](https://github.com/mourner/robust-predicates) 3.0.3                                                                                                                                                                                                                    | Exact orientation tests for winding and intersection decisions                                                                                                   | Unlicense                                                       |
+| [`flatbush`](https://github.com/mourner/flatbush) 4.7.0 and its dependency [`flatqueue`](https://github.com/mourner/flatqueue) 3.1.0                                                                                                                                                         | A static R-tree over the country outlines                                                                                                                        | ISC                                                             |
+
+The test and benchmark tools (`vitest`, `fast-check`, `tinybench`, `typescript`) are development dependencies and are not part of what the package installs.
+
 ## Fonts and icons
 
 [IBM Plex Sans](https://github.com/IBM/plex) is self-hosted through the `@fontsource-variable/ibm-plex-sans` package, under the SIL Open Font License 1.1.

@@ -65,7 +65,7 @@ A rule is a pure function `(feature, context) => Finding[]`, one file in `src/en
 
 ### Region data
 
-Natural Earth 1:110m admin-0 country polygons are converted by a script into one compact JSON file of quantised rings, keyed by ISO 3166-1 alpha-2 code, with a bounding-box index (`flatbush`). It is loaded with a dynamic import only when a region rule needs it. The 1:110m set leaves out some very small countries (such as Monaco and the Vatican), so the 1:50m outlines of only the countries missing from it are added. The coastline is coarse at 1:110m, so a position within a stated tolerance of a country counts as inside it. The tolerance, and what it costs in missed detections, is in the README's "Failure modes and limitations".
+Natural Earth 1:110m admin-0 country polygons are converted by a script into one compact JSON file of quantised rings, keyed by ISO 3166-1 alpha-2 code, with a bounding-box index (`flatbush`). It is loaded with a dynamic import only when a region rule needs it. The 1:110m set leaves out some very small countries (such as Monaco and the Vatican), so the 1:50m outlines of only the countries missing from it are added. The coastline is coarse at 1:110m, so a position within a stated tolerance of a country counts as inside it. The tolerance, and what it costs in missed detections, is in the README's "Failure modes and limitations". The outlines also lack many small islands, so `region-mismatch` reports a feature only when at least half of its positions are inside another country's outline (`CountryIndex.locate`); open sea and unmapped islands stay quiet, which trades missed detections for fewer false alarms.
 
 ### Options rejected
 
@@ -104,6 +104,6 @@ One pull request, with one commit for each step.
 
 ## Decided and open
 
-Decided on 2026-11-16: one pull request for the whole package; no npm release in this work; the package is labelled `enhancement` and `plan`, because the repository has no licence label.
+Decided on 2026-11-16: one pull request for the whole package; no npm release in this work; the package is labelled `enhancement` and `plan`, because the repository has no licence label; the first release is an MVP for speed, with the sweep-line speed-up and the shared ring view left to [#261](https://github.com/MapCairn/mapcairn/issues/261); the pull request waits for a benchmark taken on a quiet machine before it merges; `--fix` with standard input is refused, `-` is not a file to write beside; findings of `info` severity do not change the exit code; a request the command cannot understand exits 3.
 
 Open: whether a later release should make `@mapcairn/geolint` public before the SDK packages (a release decision for the maintainer, with the licence check by a person first).
