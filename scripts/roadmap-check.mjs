@@ -9,8 +9,9 @@
  *   node scripts/roadmap-check.mjs
  *
  * Errors (exit code 1): a linked milestone or issue that does not exist, one
- * listed more than once, more than three numbered items under "Now" or more
- * than six under "Next", or a missing section. Later has no cap. A linked
+ * listed more than once, more than three items under "Now" or more than six
+ * under "Next" (a numbered item or a `-` bullet), an item that does not link
+ * exactly one milestone, or a missing section. Later has no cap. A linked
  * milestone or issue that is closed is only a warning, so one closing never
  * fails an unrelated pull request.
  *
@@ -40,7 +41,8 @@ const ISSUE_REFERENCE = /(?<![\w/&])#(\d+)(?!\d)/g;
 const CODE_SPAN = /(`+)[^`]*?\1/g;
 /** A link to a GitHub milestone of the project, by number. */
 const MILESTONE_REFERENCE = /\/milestone\/(\d+)(?!\d)/g;
-const NUMBERED_ITEM = /^\d+\.\s/;
+/** The start of a list item: a number or a `-` bullet, optionally indented. */
+const ITEM_START = /^\s*(?:\d+\.|-)\s/;
 
 /**
  * The lines from a heading to the next heading of the same or a higher level.
@@ -136,7 +138,7 @@ export function checkRoadmap(markdown, states, milestones = null) {
     ...repeatedProblems(milestoneList, "milestone "),
     ...repeatedProblems(numbers, "#"),
   );
-  errors.push(...capProblems(sections));
+  errors.push(...itemProblems(sections));
   const milestoneResult = milestoneProblems(milestoneList, milestones);
   const issueResult = issueProblems(numbers, states);
   return {
@@ -146,18 +148,46 @@ export function checkRoadmap(markdown, states, milestones = null) {
 }
 
 /**
- * @param {Map<string, string[]>} sections The lines of each list by name.
- * @returns {string[]} One message for each list that has more numbered items than its cap.
+ * The list items of a section, each as its lines joined, so an item that wraps
+ * onto the next line is read as one.
+ *
+ * @param {string[]} lines
+ * @returns {string[]}
  */
-function capProblems(sections) {
-  const problems = [];
-  for (const [name, max] of MAX_ITEMS) {
-    const items = (sections.get(name) ?? []).filter((line) =>
-      NUMBERED_ITEM.test(line),
-    ).length;
-    if (items > max) {
-      problems.push(`${name} has ${items} items, at most ${max} are allowed`);
+function itemsOf(lines) {
+  const items = [];
+  for (const line of lines) {
+    if (ITEM_START.test(line)) {
+      items.push(line);
+    } else if (items.length > 0 && line.trim() !== "") {
+      items[items.length - 1] += `\n${line}`;
     }
+  }
+  return items;
+}
+
+/**
+ * @param {Map<string, string[]>} sections The lines of each list by name.
+ * @returns {string[]} One message for each list that has more items than its cap, and for each item that does not link exactly one milestone.
+ */
+function itemProblems(sections) {
+  const problems = [];
+  for (const [name, lines] of sections) {
+    const items = itemsOf(lines);
+    const max = MAX_ITEMS.get(name);
+    if (max !== undefined && items.length > max) {
+      problems.push(
+        `${name} has ${items.length} items, at most ${max} are allowed`,
+      );
+    }
+    items.forEach((item, index) => {
+      const links = milestoneNumbers(item).length;
+      if (links !== 1) {
+        problems.push(
+          `${name} item ${index + 1} links ${links} milestones, exactly 1 is required`,
+        );
+      }
+    });
   }
   return problems;
 }
@@ -220,6 +250,9 @@ function parseStates(json) {
   } catch {
     return null;
   }
+  if (Array.isArray(parsed) && parsed.every(Array.isArray)) {
+    parsed = parsed.flat();
+  }
   const valid =
     Array.isArray(parsed) &&
     parsed.length > 0 &&
@@ -243,7 +276,7 @@ export function parseIssueStates(json) {
 }
 
 /**
- * Reads the output of `gh api` on the milestones of the project.
+ * Reads the output of `gh api --paginate --slurp` on the milestones of the project: a list of pages, or one list.
  *
  * @param {string} json
  * @returns {Map<number, string> | null} Upper-case state by milestone number, or null when the output is unusable.
@@ -283,6 +316,8 @@ export function readIssueStates(runGh) {
 export function readMilestoneStates(runGh) {
   const result = runGh([
     "api",
+    "--paginate",
+    "--slurp",
     `repos/${REPO}/milestones?state=all&per_page=${MILESTONE_PAGE_SIZE}`,
   ]);
   return result.status === 0 ? parseMilestoneStates(result.stdout) : null;
