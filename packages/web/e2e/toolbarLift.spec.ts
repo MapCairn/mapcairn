@@ -134,7 +134,9 @@ async function offFramesDuring(
     return state.gaps;
   });
   return gaps.flatMap((sample) => {
-    const settledGap = gaps.findLast((last) => last.slot === sample.slot)?.gap;
+    const settledGap = gaps
+      .filter((last) => last.slot === sample.slot)
+      .at(-1)?.gap;
     const over = sample.gap < -GAP_TOLERANCE;
     const moved =
       settledGap !== undefined &&
