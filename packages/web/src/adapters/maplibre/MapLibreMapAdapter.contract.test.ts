@@ -145,11 +145,19 @@ for (const [name, basemap] of [
           map.fire("idle");
         },
         simulateTileLayerSlow: async (layerId) => {
-          latestMap().fire("sourcedataloading", {
-            sourceId: `mapcairn:${layerId}`,
-            tile: {},
-          });
-          await new Promise((resolve) => setTimeout(resolve, SLOW_WAIT_MS * 2));
+          // The slow wait is a timer the adapter starts when the load starts, so
+          // the clock is faked first and stepped past it; real timers come back
+          // before the contract's own `settle` runs.
+          vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+          try {
+            latestMap().fire("sourcedataloading", {
+              sourceId: `mapcairn:${layerId}`,
+              tile: {},
+            });
+            await vi.advanceTimersByTimeAsync(SLOW_WAIT_MS * 2);
+          } finally {
+            vi.useRealTimers();
+          }
         },
         simulateTileLayerRecovery: (layerId) => {
           latestMap().fire("sourcedata", {
