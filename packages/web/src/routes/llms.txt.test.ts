@@ -39,7 +39,7 @@ function expectResolves(target: string): void {
     }
   }
   expect(target, "a link outside the site and the repository").toMatch(
-    /^https:\/\/github\.com\/MapCairn\/mapcairn(\/(issues(\/\d+)?|tree\/main\/[\w/.-]+))?$/,
+    /^https:\/\/github\.com\/MapCairn\/mapcairn(#(documentation|licence)|\/(issues(\/\d+)?|contribute|milestones|tree\/main\/[\w/.-]+))?$/,
   );
 }
 
@@ -69,12 +69,14 @@ describe("/llms.txt", () => {
     );
   });
 
-  it("says what MapCairn is not, and that the packages are not on npm yet", async () => {
+  it("says what MapCairn is not and how to use it today, and nothing about npm", async () => {
     const text = await loader().text();
     expect(text).toContain(
       "It is not a hosted service, a dataset or a GIS analysis engine",
     );
-    expect(text).toContain("not published to npm yet");
+    expect(text).toContain("It is used from its source on GitHub");
+    expect(text).not.toMatch(/npm/i);
+    expect(await fullLoader().text()).not.toMatch(/npm/i);
   });
 
   it("links only to pages the site serves and files the repository has", async () => {

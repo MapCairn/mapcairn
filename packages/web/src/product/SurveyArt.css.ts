@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { tokens } from "@mapcairn/theme";
 import { keyframes, style } from "@vanilla-extract/css";
+import { NARROW_CROP } from "./surveyGeometry";
 
 /*
  * The survey sheet's inks. Every colour is a token, so the art follows the
@@ -16,17 +17,44 @@ const FINE = 1.25;
 const BOLD = 2;
 
 /** How strongly the contours show: the ordinary ones faint, every fifth firmer. */
-const CONTOUR_OPACITY = 0.4;
-const INDEX_CONTOUR_OPACITY = 0.8;
+const CONTOUR_OPACITY = 0.3;
+const INDEX_CONTOUR_OPACITY = 0.6;
 
 /** The measured line's dash, in view box units. */
 const DASH = "7 6";
 
-/** The whole drawing: as wide as its cell, its height from its view box. */
+/** Below this width the art is shown cropped round the measured line, so its labels stay legible. */
+const NARROW = "screen and (max-width: 36rem)";
+
+/** A share of the frame's width as a percentage. */
+const percent = (share: number): string => `${(share * 100).toFixed(4)}%`;
+
+/**
+ * The art's frame. On a narrow screen it has the crop's shape and hides what
+ * falls outside it (`NARROW_CROP` in `surveyGeometry.ts`).
+ */
+export const frame = style({
+  "@media": {
+    [NARROW]: {
+      aspectRatio: String(NARROW_CROP.aspect),
+      overflow: "hidden",
+    },
+  },
+});
+
+/** The whole drawing: as wide as its frame, or `zoom` times as wide and offset onto the crop on a narrow screen. */
 export const art = style({
   display: "block",
   width: "100%",
   height: "auto",
+  "@media": {
+    [NARROW]: {
+      width: percent(NARROW_CROP.zoom),
+      maxWidth: "none",
+      marginInlineStart: percent(NARROW_CROP.marginInlineStart),
+      marginBlockStart: percent(NARROW_CROP.marginBlockStart),
+    },
+  },
   color: tokens.color.text,
   fontFamily: tokens.type.family,
   fontVariantNumeric: "tabular-nums",
@@ -40,10 +68,10 @@ const stroke = (width: number) =>
     vectorEffect: "non-scaling-stroke",
   }) as const;
 
-/** The grid lines. */
-export const grid = style({
+/** The grid ticks on the sheet's edges. */
+export const tick = style({
   ...stroke(HAIR),
-  stroke: tokens.color.hairline,
+  stroke: tokens.color.controlBoundary,
 });
 
 /** An ordinary contour. */

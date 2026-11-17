@@ -7,15 +7,20 @@ import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
-import { SITE_URL } from "../constants/siteConfig";
 import { ProductPage } from "./ProductPage";
 import { EMBED_EXAMPLE_CODE } from "./productContent";
 
 const REPO = "https://github.com/MapCairn/mapcairn";
 
-/** The capability matrix, where every "Works today" item must be a "has". */
+/** The capability matrix, which says what MapCairn has, partly has or lacks. */
 const MATRIX = readFileSync(
   path.resolve(__dirname, "../../../../docs/guides/capability-matrix.md"),
+  "utf8",
+);
+
+/** The README on `main`, whose "Documentation" heading GitHub anchors as `#documentation`. */
+const README = readFileSync(
+  path.resolve(__dirname, "../../../../README.md"),
   "utf8",
 );
 
@@ -29,13 +34,9 @@ function renderPage() {
   return render(<ProductPage />);
 }
 
-/** The list under an h3 inside a section, by the h3's name. */
-function listUnder(name: string): string[] {
-  const heading = screen.getByRole("heading", { level: 3, name });
-  const list = heading.nextElementSibling as HTMLElement;
-  return within(list)
-    .getAllByRole("listitem")
-    .map((item) => item.textContent ?? "");
+/** A section by its heading. */
+function section(name: string): HTMLElement {
+  return screen.getByRole("region", { name });
 }
 
 describe("the product page stands on its own", () => {
@@ -48,35 +49,53 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("answers, by heading, everything a developer asks before clicking through", () => {
+  it("has one clear order: embed, what you get, see it working, fit, questions, then follow and help", () => {
     renderPage();
-    const sections = screen
-      .getAllByRole("heading", { level: 2 })
-      .map((heading) => heading.textContent);
-    expect(sections).toEqual([
-      "Who it is for",
-      "What the code looks like",
-      "What is in the SDK",
-      "How it is built",
-      "Accessibility and privacy you can check",
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+    ).toEqual([
+      "Embed a map",
+      "What you get",
       "See it working",
-      "What works today, and what does not yet",
-      "Licence",
-      "Questions developers ask first",
+      "When it fits, and when it does not",
+      "Questions",
       "Follow the project and help",
     ]);
   });
 
-  it("names the four packages, one line each", () => {
+  it("lists at most six things you get, each one line, with the detail one tap away and in the page", () => {
     renderPage();
-    const packages = screen.getByRole("region", { name: "What is in the SDK" });
+    const items = within(section("What you get")).getAllByRole("group");
+    expect(items.length).toBeLessThanOrEqual(6);
+    for (const item of items) {
+      expect(item.tagName).toBe("DETAILS");
+      const summary = item.querySelector("summary");
+      expect(summary?.textContent?.length).toBeLessThan(45);
+      expect(item.querySelector("p")?.textContent?.length).toBeGreaterThan(60);
+    }
+    const text = section("What you get").textContent ?? "";
+    for (const claim of [
+      "WCAG 2.2 AA",
+      "arrow keys pan",
+      "nothing is requested until a person asks",
+      "contract suite",
+      "contrast of every token pair",
+      "GeoJSON, CSV and WKT",
+    ]) {
+      expect(text).toContain(claim);
+    }
+  });
+
+  it("names the four packages, one line each, one tap away", () => {
+    renderPage();
+    const embed = section("Embed a map");
     for (const name of [
       "@mapcairn/core",
       "@mapcairn/map",
       "@mapcairn/react",
       "@mapcairn/theme",
     ]) {
-      expect(within(packages).getByText(name)).toBeInTheDocument();
+      expect(within(embed).getByText(name)).toBeInTheDocument();
     }
   });
 
@@ -88,27 +107,36 @@ describe("the product page stands on its own", () => {
     expect(code.textContent).toBe(EMBED_EXAMPLE_CODE);
   });
 
-  it("makes View on GitHub the first action, and offers it again at the end", () => {
+  it("offers the two actions only in the hero and the closing block, View on GitHub first", () => {
     renderPage();
     const main = screen.getByRole("main");
-    const actions = within(main).getAllByRole("link", {
+    const github = within(main).getAllByRole("link", {
       name: "View on GitHub",
     });
-    expect(actions.length).toBeGreaterThanOrEqual(2);
-    for (const action of actions) {
-      expect(action).toHaveAttribute("href", REPO);
-    }
-    const first = within(main).getAllByRole("link")[0];
-    expect(first).toHaveAccessibleName("View on GitHub");
-    const last = screen.getByRole("region", {
-      name: "Follow the project and help",
+    const playground = within(main).getAllByRole("link", {
+      name: "Try the playground",
     });
+    expect(github).toHaveLength(2);
+    expect(playground).toHaveLength(2);
+    for (const link of github) {
+      expect(link).toHaveAttribute("href", REPO);
+    }
+    for (const link of playground) {
+      expect(link).toHaveAttribute("href", "/map");
+    }
+    expect(within(main).getAllByRole("link")[0]).toHaveAccessibleName(
+      "View on GitHub",
+    );
+    const closing = section("Follow the project and help");
     expect(
-      within(last).getByRole("link", { name: "View on GitHub" }),
+      within(closing).getByRole("link", { name: "View on GitHub" }),
+    ).toBeInTheDocument();
+    expect(
+      within(closing).getByRole("link", { name: "Try the playground" }),
     ).toBeInTheDocument();
   });
 
-  it("puts the playground one link away everywhere: header, hero, See it working, the end and the footer", () => {
+  it("keeps Playground and GitHub in the header, and both in the footer", () => {
     renderPage();
     const header = screen.getByRole("banner");
     expect(
@@ -117,21 +145,20 @@ describe("the product page stands on its own", () => {
     expect(
       within(header).getByRole("link", { name: "GitHub" }),
     ).toHaveAttribute("href", REPO);
-    const tries = screen.getAllByRole("link", { name: "Try the playground" });
-    // Hero, See it working, the closing actions and the footer.
-    expect(tries).toHaveLength(4);
-    for (const link of tries) {
-      expect(link).toHaveAttribute("href", "/map");
-    }
+    const footer = screen.getByRole("contentinfo");
     expect(
-      within(screen.getByRole("contentinfo")).getByRole("link", {
-        name: "Try the playground",
-      }),
-    ).toBeInTheDocument();
+      within(footer).getByRole("link", { name: "Try the playground" }),
+    ).toHaveAttribute("href", "/map");
+    expect(
+      within(footer).getByRole("link", { name: "Source code on GitHub" }),
+    ).toHaveAttribute("href", REPO);
   });
 
-  it("opens the playground in real states through the links it shares", () => {
+  it("says what to try in the playground, and opens it in real states through the links it shares", () => {
     renderPage();
+    expect(section("See it working")).toHaveTextContent(
+      "Search for a place or a pair of coordinates",
+    );
     const deepLinks = within(screen.getByTestId("playground-deep-links"))
       .getAllByRole("link")
       .map((link) => ({
@@ -154,84 +181,34 @@ describe("the product page stands on its own", () => {
     expect(earthquakes?.layers?.enabled).toEqual(["earthquakes"]);
   });
 
-  it("says the packages are not on npm yet, links issue 1, and shows no install command or badge", () => {
-    const { container } = renderPage();
-    const code = screen.getByRole("region", {
-      name: "What the code looks like",
-    });
-    expect(code).toHaveTextContent("The packages are not on npm yet");
-    expect(
-      within(code).getByRole("link", {
-        name: "Publishing the first release is tracked in issue 1",
-      }),
-    ).toHaveAttribute("href", `${REPO}/issues/1`);
-    expect(container.textContent).not.toMatch(/npm (install|i) /);
-    expect(container.querySelector("img")).toBeNull();
+  it("says nothing about npm, either way", () => {
+    const html = renderToStaticMarkup(<ProductPage />);
+    expect(html).not.toMatch(/npm/i);
   });
 
-  it("lists as working today only what the capability matrix says MapCairn has", () => {
+  it("says when it does not fit only with open issues the capability matrix agrees with", () => {
     renderPage();
-    const today = listUnder("Works today");
-    expect(today.length).toBeGreaterThan(3);
-    const has = [
-      [
-        "Search by place name or coordinates",
-        "Place search through a replaceable provider",
-      ],
-      ["Search by place name or coordinates", "Coordinates typed into search"],
-      [
-        "GeoJSON, CSV and WKT import and export",
-        "Importing drawn shapes from GeoJSON, WKT and CSV files",
-      ],
-      [
-        "Directions through a routing provider",
-        "A route through ordered stops",
-      ],
-      ["vector tiles", "Vector tiles styled by source layer"],
-      ["heatmaps", "Heatmaps with controls"],
-      [
-        "Links that carry the view, the basemap, the layers and drawn shapes",
-        "A link that carries view, basemap, layers and shapes",
-      ],
-      ["saving the map as an image", "Save the map as an image"],
-    ];
-    for (const [claim, evidence] of has) {
-      expect(today.join(" ")).toContain(claim);
-      const row = MATRIX.split("\n").find((line) =>
-        line.toLowerCase().includes((evidence ?? "").toLowerCase()),
+    const fit = section("When it fits, and when it does not");
+    const issueLinks = within(fit)
+      .getAllByRole("link")
+      .filter((link) => /\/issues\/\d+$/.test(link.getAttribute("href") ?? ""));
+    expect(issueLinks.length).toBeGreaterThan(0);
+    for (const link of issueLinks) {
+      const number = (link.getAttribute("href") ?? "").split("/").at(-1);
+      const row = MATRIX.split("\n").find(
+        (line) => line.startsWith("|") && line.includes(`[#${number}]`),
       );
-      expect(row, evidence).toMatch(/\|\s*has\s*\|/);
+      expect(row, `#${number}`).toMatch(/\|\s*(lacks|partial)\s*\|/);
     }
-  });
-
-  it("lists as not yet only what has an open issue, and claims no planned feature as built", () => {
-    renderPage();
-    const notYet = screen.getByRole("heading", { level: 3, name: "Not yet" })
-      .nextElementSibling as HTMLElement;
-    for (const link of within(notYet).getAllByRole("link")) {
-      expect(link.getAttribute("href")).toMatch(
-        /^https:\/\/github\.com\/MapCairn\/mapcairn\/issues\/\d+$/,
-      );
-    }
-    for (const [number, phrase] of [
-      ["43", "adapter as an optional package"],
-      ["44", "pages without React"],
-      ["192", "PMTiles"],
-      ["227", "GPX and KML"],
-      ["45", "behind a login"],
-      ["231", "any language"],
-    ] as const) {
-      const row = MATRIX.split("\n").find((line) =>
-        line.includes(`[#${number}]`),
-      );
-      expect(row, phrase).toMatch(/\|\s*(lacks|partial)\s*\|/);
-    }
+    expect(fit).toHaveTextContent(
+      "a hosted service, a dataset or a GIS analysis engine",
+    );
   });
 
   it("states the licence as open source under the AGPL-3.0, and never commercial terms", () => {
     const { container } = renderPage();
     const text = container.textContent ?? "";
-    expect(text).toContain("open source under the AGPL-3.0");
+    expect(text).toContain("Open source under the AGPL-3.0");
     expect(text).not.toMatch(/commercial/i);
   });
 
@@ -244,12 +221,35 @@ describe("the product page stands on its own", () => {
     for (const name of [
       "Source code on GitHub",
       "Try the playground",
-      "Privacy policy",
-      "Credits",
+      "Documentation",
       "Roadmap",
+      "Privacy policy",
+      "Licence and credits",
     ]) {
       expect(within(footer).getByRole("link", { name })).toBeInTheDocument();
     }
+    expect(
+      within(footer).getByRole("link", { name: "Roadmap" }),
+    ).toHaveAttribute("href", `${REPO}/milestones`);
+  });
+
+  it("links to no Markdown file: documentation, the roadmap, issues and contributing use GitHub's own pages", () => {
+    renderPage();
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href") ?? "");
+    for (const href of hrefs) {
+      expect(href).not.toMatch(/\.md(#.*)?$/);
+      expect(href).not.toMatch(/\/(blob|raw)\//);
+      expect(href).not.toContain("raw.githubusercontent.com");
+    }
+    expect(hrefs).toContain(`${REPO}#documentation`);
+    expect(hrefs).toContain(`${REPO}/milestones`);
+    expect(hrefs).toContain(`${REPO}/issues`);
+    expect(hrefs).toContain(`${REPO}/contribute`);
+    // The anchors the page uses exist on the repository's front page.
+    expect(README).toMatch(/^## Documentation$/m);
+    expect(README).toMatch(/^## Licence$/m);
   });
 
   it("asks nothing of a third party: no image, frame, script source or stylesheet from elsewhere", () => {
@@ -267,8 +267,14 @@ describe("the product page stands on its own", () => {
       expect(name.length).toBeGreaterThan(2);
       expect(name).not.toMatch(/^(here|click here|read more|more|link)$/i);
       expect(link).not.toHaveAttribute("target");
-      const href = link.getAttribute("href") ?? "";
-      expect(href).toMatch(/^(\/|#|https:\/\/)/);
+      expect(link.getAttribute("href") ?? "").toMatch(/^(\/|#|https:\/\/)/);
+    }
+  });
+
+  it("keeps paragraphs short", () => {
+    const { container } = renderPage();
+    for (const paragraph of container.querySelectorAll("main p")) {
+      expect(paragraph.textContent?.length ?? 0).toBeLessThan(420);
     }
   });
 
@@ -291,33 +297,25 @@ describe("the product page stands on its own", () => {
     expect(screen.getByRole("main")).toHaveAttribute("id", "content");
   });
 
-  it("draws its artwork as decoration only", () => {
+  it("draws its artwork once, in the hero, as decoration only", () => {
     renderPage();
-    const art = screen.getByTestId("survey-art");
-    expect(art).toHaveAttribute("aria-hidden", "true");
-    expect(art).toHaveAttribute("focusable", "false");
-  });
-
-  it("links the privacy policy as a page on this site", () => {
-    renderPage();
-    for (const link of screen.getAllByRole("link", {
-      name: /privacy policy/i,
-    })) {
-      expect(link.getAttribute("href")).toBe("/privacy");
-    }
-    expect(SITE_URL.startsWith("https://")).toBe(true);
+    const art = screen.getAllByTestId("survey-art");
+    expect(art).toHaveLength(1);
+    expect(art[0]).toHaveAttribute("aria-hidden", "true");
+    expect(art[0]).toHaveAttribute("focusable", "false");
   });
 });
 
 describe("the embedding example", () => {
   it("is the README's example, character for character", () => {
-    const readme = readFileSync(
-      path.resolve(__dirname, "../../../../README.md"),
-      "utf8",
-    );
-    const section = readme.slice(readme.indexOf("## Embed a map"));
-    const block = /```tsx\n([\s\S]*?)\n```/.exec(section)?.[1];
+    const embed = README.slice(README.indexOf("## Embed a map"));
+    const block = /```tsx\n([\s\S]*?)\n```/.exec(embed)?.[1];
     expect(block).toBe(EMBED_EXAMPLE_CODE);
+  });
+
+  it("starts at the first import, with no licence header or note", () => {
+    expect(EMBED_EXAMPLE_CODE.startsWith("import {")).toBe(true);
+    expect(EMBED_EXAMPLE_CODE).not.toMatch(/SPDX|\/\*|\/\//);
   });
 
   it("builds the same providers in the same order as the example app", () => {
@@ -334,11 +332,6 @@ describe("the embedding example", () => {
       "MapView",
     ]);
     expect(order(EXAMPLE_APP)).toEqual(order(EMBED_EXAMPLE_CODE));
-  });
-
-  it("starts at the first import, with no licence header or note", () => {
-    expect(EMBED_EXAMPLE_CODE.startsWith("import {")).toBe(true);
-    expect(EMBED_EXAMPLE_CODE).not.toMatch(/SPDX|\/\*|\/\//);
   });
 
   it("imports only from the SDK's public entry points and React", () => {

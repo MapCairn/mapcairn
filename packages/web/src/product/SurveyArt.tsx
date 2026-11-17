@@ -1,122 +1,87 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatDistance, formatNumber } from "@mapcairn/core";
 import { STONES } from "../app/cairnStones";
-import { CONTOUR_VIEW_BOX, CONTOURS, SUMMIT } from "./contours";
+import { CONTOURS } from "./contours";
 import * as styles from "./SurveyArt.css";
+import {
+  CAIRN_TRANSFORM,
+  CROSSHAIR,
+  CROSSHAIR_ARMS,
+  EASTINGS,
+  MEASURE,
+  MEASURE_LABEL,
+  NORTH,
+  NORTH_HALVES,
+  NORTHINGS,
+  PIN_HEAD,
+  PIN_PATH,
+  PIN_TIP,
+  SCALE_BAR,
+  SHEET,
+  SPOT_HEIGHT,
+  TICK_LENGTH,
+  VIEW_BOX,
+} from "./surveyGeometry";
 
 /*
- * The product page's artwork: a corner of a survey sheet. Contour lines of a
- * made-up terrain (`contours.ts`, from `scripts/generateContours.mjs`), a grid
- * with its numbers in the collar, a cairn on the summit with its spot height,
- * a dropped pin, a measured line between the two, the map's centre cross, a
- * north arrow and a scale bar. It depicts no real place and carries no
- * information: it is `aria-hidden`, and every colour is a token through a
- * class, so it follows the theme.
+ * The product page's artwork: a corner of a survey sheet. Contours of a
+ * made-up terrain, grid ticks with their numbers in the collar, a cairn on the
+ * summit with its spot height, a dropped pin, the line measured from the pin
+ * to the cairn with its length, the map's centre cross, a north arrow and a
+ * scale bar. Every position comes from `surveyGeometry.ts`, so the marks agree
+ * by construction. It depicts no real place and carries no information: it is
+ * `aria-hidden`, and every colour is a token through a class. The anchors a
+ * browser test measures carry `data-anchor`.
  */
 
-const { width: WIDTH, height: HEIGHT } = CONTOUR_VIEW_BOX;
-
-/** The room around the frame for the grid numbers. */
-const COLLAR = 30;
-
-/** The grid's spacing, in view box units, and what one square is on the ground. */
-const GRID_STEP = 80;
-/** The scale: view box units in one kilometre. */
-const UNITS_PER_KM = 160;
-
-/** The first grid numbers, along the top and down the side, like a sheet's references. */
-const FIRST_EASTING = 41;
-const FIRST_NORTHING = 12;
-
-/** Where the pin was dropped, on the lower hill. */
-const PIN = { x: 232, y: 318 };
-
-/** The map's centre, marked with a cross as the playground marks it. */
-const CENTRE = { x: WIDTH / 2 + 180, y: HEIGHT / 2 + 110 };
-
-/** The cairn's stones at the summit: the brand's polygons, scaled down and stood on the point. */
-const CAIRN_SCALE = 0.075;
-/** The middle of the bottom stone's base, in the master's coordinates. */
-const CAIRN_BASE = { x: 258, y: 420 };
-
-/** Two figures, padded, as grid numbers are written. */
-function gridNumber(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-/** The page's one language, for the figures the art writes. */
-const LANGUAGE = "en-GB";
-
-/** Metres in a kilometre, for the scale. */
-const METRES_PER_KM = 1000;
-
-/** The length of the measured line, written as the playground's measure readout writes it. */
-function measuredLength(): string {
-  const units = Math.hypot(SUMMIT.x - PIN.x, SUMMIT.y - PIN.y);
-  return formatDistance(
-    (units / UNITS_PER_KM) * METRES_PER_KM,
-    "metric",
-    LANGUAGE,
-  );
-}
-
-/** The grid lines inside the frame. */
+/** The grid ticks on the sheet's edges, and their numbers in the collar. */
 function Grid() {
-  const verticals = [];
-  for (let x = GRID_STEP; x < WIDTH; x += GRID_STEP) {
-    verticals.push(<line key={`x${x}`} x1={x} y1={0} x2={x} y2={HEIGHT} />);
-  }
-  const horizontals = [];
-  for (let y = GRID_STEP; y < HEIGHT; y += GRID_STEP) {
-    horizontals.push(<line key={`y${y}`} x1={0} y1={y} x2={WIDTH} y2={y} />);
-  }
   return (
-    <g className={styles.grid}>
-      {verticals}
-      {horizontals}
-    </g>
-  );
-}
-
-/** The grid numbers in the collar: eastings along the top, northings down the side. */
-function GridNumbers() {
-  const eastings = [];
-  for (let x = 0, n = FIRST_EASTING; x <= WIDTH; x += GRID_STEP, n += 1) {
-    eastings.push(
-      <text key={`e${x}`} x={x} y={-10} textAnchor="middle">
-        {gridNumber(n)}
-      </text>,
-    );
-  }
-  const northings = [];
-  for (let y = 0, n = FIRST_NORTHING; y <= HEIGHT; y += GRID_STEP, n -= 1) {
-    northings.push(
-      <text
-        key={`n${y}`}
-        x={-8}
-        y={y}
-        textAnchor="end"
-        dominantBaseline="middle"
-      >
-        {gridNumber(n)}
-      </text>,
-    );
-  }
-  return (
-    <g className={styles.collarText}>
-      {eastings}
-      {northings}
+    <g>
+      <g className={styles.tick}>
+        {EASTINGS.map(({ at }) => (
+          <line key={`e${at}`} x1={at} y1={0} x2={at} y2={TICK_LENGTH} />
+        ))}
+        {NORTHINGS.map(({ at }) => (
+          <line key={`n${at}`} x1={0} y1={at} x2={TICK_LENGTH} y2={at} />
+        ))}
+      </g>
+      <g className={styles.collarText}>
+        {EASTINGS.map(({ at, label }) => (
+          <text
+            key={`e${at}`}
+            x={at}
+            y={-8}
+            textAnchor="middle"
+            data-anchor="easting"
+            data-at={at}
+          >
+            {label}
+          </text>
+        ))}
+        {NORTHINGS.map(({ at, label }) => (
+          <text
+            key={`n${at}`}
+            x={-6}
+            y={at}
+            textAnchor="end"
+            dominantBaseline="central"
+            data-anchor="northing"
+            data-at={at}
+          >
+            {label}
+          </text>
+        ))}
+      </g>
     </g>
   );
 }
 
 /** The cairn on the summit, with its spot height. */
 function Cairn() {
-  const transform = `translate(${SUMMIT.x} ${SUMMIT.y}) scale(${CAIRN_SCALE}) translate(${-CAIRN_BASE.x} ${-CAIRN_BASE.y})`;
   return (
     <g>
-      <g transform={transform} strokeLinejoin="round">
+      <g transform={CAIRN_TRANSFORM} strokeLinejoin="round">
         {STONES.map(({ points, offset }) => (
           <g key={points} transform={offset}>
             <polygon className={styles.halo} strokeWidth="40" points={points} />
@@ -128,43 +93,50 @@ function Cairn() {
           </g>
         ))}
       </g>
-      <text className={styles.label} x={SUMMIT.x + 22} y={SUMMIT.y - 6}>
-        {formatNumber(SUMMIT.metres, LANGUAGE)}
+      <text className={styles.label} x={SPOT_HEIGHT.at.x} y={SPOT_HEIGHT.at.y}>
+        {SPOT_HEIGHT.text}
       </text>
     </g>
   );
 }
 
-/** The dropped pin, drawn as the playground draws it: a teardrop with a dot. */
+/** The dropped pin, drawn as the playground draws it, with its tip on {@link PIN_TIP}. */
 function Pin() {
   return (
-    <g transform={`translate(${PIN.x} ${PIN.y})`}>
+    <g transform={`translate(${PIN_TIP.x} ${PIN_TIP.y})`}>
       <g className={styles.pin}>
-        <path
-          className={styles.pinBody}
-          d="M0 0C-3 -8 -12 -14 -12 -24A12 12 0 0 1 12 -24C12 -14 3 -8 0 0Z"
+        <path className={styles.pinBody} d={PIN_PATH} />
+        <circle
+          className={styles.pinDot}
+          cx={PIN_HEAD.cx}
+          cy={PIN_HEAD.cy}
+          r={PIN_HEAD.r}
         />
-        <circle className={styles.pinDot} cx={0} cy={-24} r={4.5} />
+        <circle cx={0} cy={0} r={0} data-anchor="pin-tip" />
       </g>
     </g>
   );
 }
 
-/** The measured line from the pin to the cairn, with its length. */
+/** The measured line from the pin's tip to the cairn's foot, with its length. */
 function Measure() {
-  const midX = (PIN.x + SUMMIT.x) / 2;
-  const midY = (PIN.y + SUMMIT.y) / 2;
   return (
     <g className={styles.measure}>
       <line
         className={styles.measureLine}
-        x1={PIN.x}
-        y1={PIN.y}
-        x2={SUMMIT.x}
-        y2={SUMMIT.y}
+        x1={MEASURE.from.x}
+        y1={MEASURE.from.y}
+        x2={MEASURE.to.x}
+        y2={MEASURE.to.y}
+        data-anchor="measure-line"
       />
-      <text className={styles.measureLabel} x={midX + 10} y={midY + 22}>
-        {measuredLength()}
+      <text
+        className={styles.measureLabel}
+        x={MEASURE_LABEL.at.x}
+        y={MEASURE_LABEL.at.y}
+        textAnchor="middle"
+      >
+        {MEASURE_LABEL.text}
       </text>
     </g>
   );
@@ -172,58 +144,72 @@ function Measure() {
 
 /** The cross at the map's centre. */
 function Crosshair() {
-  const { x, y } = CENTRE;
+  const { centre, radius } = CROSSHAIR;
   return (
     <g className={styles.crosshair}>
-      <circle cx={x} cy={y} r={9} />
-      <line x1={x - 16} y1={y} x2={x - 5} y2={y} />
-      <line x1={x + 5} y1={y} x2={x + 16} y2={y} />
-      <line x1={x} y1={y - 16} x2={x} y2={y - 5} />
-      <line x1={x} y1={y + 5} x2={x} y2={y + 16} />
+      <circle cx={centre.x} cy={centre.y} r={radius} data-anchor="crosshair" />
+      {CROSSHAIR_ARMS.map(([from, to]) => (
+        <line
+          key={`${from.x},${from.y}`}
+          x1={from.x}
+          y1={from.y}
+          x2={to.x}
+          y2={to.y}
+        />
+      ))}
     </g>
   );
 }
 
-/** The north arrow, in the sheet's top corner. */
+/** The north arrow, pointing up the grid. */
 function NorthArrow() {
   return (
-    <g transform={`translate(${WIDTH - 36} 30)`}>
-      <path className={styles.arrowDark} d="M0 0L9 30L0 24Z" />
-      <path className={styles.arrowLight} d="M0 0L-9 30L0 24Z" />
-      <text className={styles.label} x={0} y={48} textAnchor="middle">
+    <g>
+      <path
+        className={styles.arrowDark}
+        d={NORTH_HALVES.dark}
+        data-anchor="north"
+      />
+      <path className={styles.arrowLight} d={NORTH_HALVES.light} />
+      <text
+        className={styles.label}
+        x={NORTH.tip.x}
+        y={NORTH.labelY}
+        textAnchor="middle"
+      >
         N
       </text>
     </g>
   );
 }
 
-/** The scale bar: one kilometre in alternate quarters, in the sheet's bottom corner. */
+/** The scale bar: one kilometre in alternate quarters. */
 function ScaleBar() {
-  const quarter = UNITS_PER_KM / 4;
-  const y = HEIGHT - 30;
+  const { origin, height, quarters, labels, labelY } = SCALE_BAR;
   return (
-    <g transform={`translate(24 ${y})`}>
-      {[0, 1, 2, 3].map((step) => (
+    <g>
+      {quarters.map((quarter) => (
         <rect
-          key={step}
-          className={step % 2 === 0 ? styles.barDark : styles.barLight}
-          x={step * quarter}
-          y={0}
-          width={quarter}
-          height={6}
+          key={quarter.x}
+          className={quarter.dark ? styles.barDark : styles.barLight}
+          x={quarter.x}
+          y={origin.y}
+          width={quarter.width}
+          height={height}
+          data-anchor="scale-quarter"
         />
       ))}
-      <text className={styles.label} x={0} y={-8} textAnchor="middle">
-        0
-      </text>
-      <text
-        className={styles.label}
-        x={UNITS_PER_KM}
-        y={-8}
-        textAnchor="middle"
-      >
-        {formatDistance(METRES_PER_KM, "metric", LANGUAGE)}
-      </text>
+      {labels.map((label) => (
+        <text
+          key={label.text}
+          className={styles.label}
+          x={label.x}
+          y={labelY}
+          textAnchor="middle"
+        >
+          {label.text}
+        </text>
+      ))}
     </g>
   );
 }
@@ -231,42 +217,44 @@ function ScaleBar() {
 /** The survey sheet: decorative, hidden from assistive technology. */
 export function SurveyArt() {
   return (
-    <svg
-      className={styles.art}
-      viewBox={`${-COLLAR} ${-COLLAR} ${WIDTH + COLLAR * 2} ${HEIGHT + COLLAR * 2}`}
-      aria-hidden="true"
-      focusable="false"
-      data-testid="survey-art"
-    >
-      <defs>
-        <clipPath id="survey-art-sheet">
-          <rect x={0} y={0} width={WIDTH} height={HEIGHT} />
-        </clipPath>
-      </defs>
-      <GridNumbers />
-      <g clipPath="url(#survey-art-sheet)">
+    <div className={styles.frame} data-testid="survey-art-frame">
+      <svg
+        className={styles.art}
+        viewBox={`${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.width} ${VIEW_BOX.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+        focusable="false"
+        data-testid="survey-art"
+      >
+        <defs>
+          <clipPath id="survey-art-sheet">
+            <rect x={0} y={0} width={SHEET.width} height={SHEET.height} />
+          </clipPath>
+        </defs>
+        <g clipPath="url(#survey-art-sheet)">
+          {CONTOURS.map(({ index, d }) => (
+            <path
+              key={d}
+              className={index ? styles.indexContour : styles.contour}
+              d={d}
+            />
+          ))}
+        </g>
         <Grid />
-        {CONTOURS.map(({ index, d }) => (
-          <path
-            key={d}
-            className={index ? styles.indexContour : styles.contour}
-            d={d}
-          />
-        ))}
+        <rect
+          className={styles.neatline}
+          x={0}
+          y={0}
+          width={SHEET.width}
+          height={SHEET.height}
+        />
         <Measure />
         <Crosshair />
         <Cairn />
         <Pin />
         <NorthArrow />
         <ScaleBar />
-      </g>
-      <rect
-        className={styles.neatline}
-        x={0}
-        y={0}
-        width={WIDTH}
-        height={HEIGHT}
-      />
-    </svg>
+      </svg>
+    </div>
   );
 }

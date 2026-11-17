@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { PLAYGROUND_PATH } from "../constants/siteConfig";
 import { MAP_LINK_REDIRECT_SCRIPT } from "./mapLinkRedirect";
 
 /** Runs the script against a stand-in `location` and returns where it sent the page, if anywhere. */
@@ -49,6 +50,12 @@ describe("the old map link redirect", () => {
     expect(() =>
       new Function("location", MAP_LINK_REDIRECT_SCRIPT)(blocked),
     ).not.toThrow();
+  });
+
+  it("sends to the playground's own path, written into the script as a fixed string", () => {
+    expect(MAP_LINK_REDIRECT_SCRIPT).toContain(
+      `location.replace("${PLAYGROUND_PATH}"+`,
+    );
   });
 
   it("is one line with no markup, so it can sit inline under a hash", () => {

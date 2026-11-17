@@ -13,12 +13,16 @@ import {
 import * as styles from "./ProductPage.css";
 import {
   type Block,
-  FACTS,
+  type Disclosure,
+  DOCUMENTATION_URL,
   GITHUB_ACTION,
   HEADLINE,
+  HERO_NOTE,
   type Inline,
   LEDE,
+  LICENCE_URL,
   type Line,
+  MILESTONES_URL,
   PLAYGROUND_ACTION,
   SECTIONS,
   type Section,
@@ -27,12 +31,6 @@ import { SurveyArt } from "./SurveyArt";
 
 /** The id of the main landmark, the skip link's target. */
 const MAIN_ID = "content";
-
-/** The credits for the software and basemaps the site uses. */
-const CREDITS_URL = `${SOURCE_REPOSITORY_URL}/blob/main/ATTRIBUTIONS.md`;
-
-/** The roadmap. */
-const ROADMAP_URL = `${SOURCE_REPOSITORY_URL}/blob/main/ROADMAP.md`;
 
 /** One run of text: words, a link or a name from the code. */
 function Run({ run }: { readonly run: Inline }) {
@@ -58,7 +56,7 @@ function Text({ line }: { readonly line: Line }) {
   ));
 }
 
-/** The two actions: View on GitHub first and strongest, then Try the playground. */
+/** The two actions, the same size: View on GitHub first and filled, Try the playground beside it. */
 function Actions() {
   return (
     <div className={styles.actions}>
@@ -78,6 +76,27 @@ function Actions() {
         <Icon icon={Compass} />
         {PLAYGROUND_ACTION.text}
       </a>
+    </div>
+  );
+}
+
+/** Items that open to show their detail: native disclosures, in the page's markup whether open or not. */
+function Disclosures({ items }: { readonly items: readonly Disclosure[] }) {
+  return (
+    <div className={styles.disclosures}>
+      {items.map(({ summary, detail }) => (
+        <details key={summary} className={styles.disclosure}>
+          <summary className={styles.summary}>
+            {summary}
+            <Icon icon={ChevronDown} className={styles.marker} />
+          </summary>
+          {detail.map((line) => (
+            <p key={JSON.stringify(line)} className={styles.detail}>
+              <Text line={line} />
+            </p>
+          ))}
+        </details>
+      ))}
     </div>
   );
 }
@@ -107,21 +126,6 @@ function BlockView({
           ))}
         </ul>
       );
-    case "terms":
-      return (
-        <dl className={styles.terms}>
-          {block.items.map(({ term, description }) => (
-            <div key={JSON.stringify(term)}>
-              <dt className={styles.term}>
-                <Text line={term} />
-              </dt>
-              <dd className={styles.description}>
-                <Text line={description} />
-              </dd>
-            </div>
-          ))}
-        </dl>
-      );
     case "subheading":
       return <h3 className={styles.subheading}>{block.text}</h3>;
     case "code":
@@ -140,24 +144,8 @@ function BlockView({
           <code>{block.code}</code>
         </pre>
       );
-    case "faq":
-      return (
-        <div className={styles.faq}>
-          {block.items.map(({ question, answer }) => (
-            <details key={question} className={styles.question}>
-              <summary className={styles.questionSummary}>
-                {question}
-                <Icon icon={ChevronDown} className={styles.questionMarker} />
-              </summary>
-              {answer.map((line) => (
-                <p key={JSON.stringify(line)} className={styles.answer}>
-                  <Text line={line} />
-                </p>
-              ))}
-            </details>
-          ))}
-        </div>
-      );
+    case "details":
+      return <Disclosures items={block.items} />;
     case "actions":
       return <Actions />;
     case "deepLinks":
@@ -165,7 +153,8 @@ function BlockView({
         <ul className={styles.deepLinks} data-testid="playground-deep-links">
           {block.links.map((link) => (
             <li key={link.href}>
-              <a className={styles.furtherLink} href={link.href}>
+              <a className={styles.blockLink} href={link.href}>
+                <Icon icon={Compass} className={styles.linkIcon} />
                 {link.text}
               </a>
             </li>
@@ -175,7 +164,7 @@ function BlockView({
   }
 }
 
-/** One section: its heading in the margin, its blocks and where to read more. */
+/** One section: its heading, its blocks and where to read more. */
 function SectionView({ section }: { readonly section: Section }) {
   const headingId = `${section.id}-heading`;
   return (
@@ -187,28 +176,26 @@ function SectionView({ section }: { readonly section: Section }) {
       <h2 id={headingId} className={styles.sectionHeading}>
         {section.heading}
       </h2>
-      <div className={styles.sectionBody}>
-        {section.blocks.map((block, index) => (
-          <BlockView
-            // A section's blocks are fixed, so their order is their identity.
-            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of blocks
-            key={index}
-            block={block}
-            sectionId={section.id}
-          />
-        ))}
-        {section.further.length > 0 ? (
-          <ul className={styles.further}>
-            {section.further.map((link) => (
-              <li key={link.href}>
-                <a className={styles.furtherLink} href={link.href}>
-                  {link.text}
-                </a>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
+      {section.blocks.map((block, index) => (
+        <BlockView
+          // A section's blocks are fixed, so their order is their identity.
+          // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of blocks
+          key={index}
+          block={block}
+          sectionId={section.id}
+        />
+      ))}
+      {section.further.length > 0 ? (
+        <ul className={styles.further}>
+          {section.further.map((link) => (
+            <li key={link.href}>
+              <a className={styles.blockLink} href={link.href}>
+                {link.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   );
 }
@@ -246,37 +233,28 @@ function ProductHeader() {
   );
 }
 
-/** The hero: the survey sheet with the headline, the actions and the legend of facts. */
+/** The hero: the pitch, the two actions, and the survey sheet beside them. */
 function Hero() {
   return (
     <div className={styles.hero}>
-      <div className={styles.sheet}>
-        <div className={styles.heroText}>
-          <h1 className={styles.headline}>{HEADLINE}</h1>
-          <p className={styles.lede}>
-            <Text line={LEDE} />
-          </p>
-          <Actions />
-          <dl className={styles.facts} data-testid="product-facts">
-            {FACTS.map(({ term, description }) => (
-              <div key={JSON.stringify(term)} className={styles.factRow}>
-                <dt className={styles.factTerm}>
-                  <Text line={term} />
-                </dt>
-                <dd className={styles.factValue}>
-                  <Text line={description} />
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+      <div className={styles.heroText}>
+        <h1 className={styles.headline}>{HEADLINE}</h1>
+        <p className={styles.lede}>
+          <Text line={LEDE} />
+        </p>
+        <Actions />
+        <p className={styles.note}>
+          <Text line={HERO_NOTE} />
+        </p>
+      </div>
+      <div className={styles.heroArt}>
         <SurveyArt />
       </div>
     </div>
   );
 }
 
-/** The footer: the licence, the links again and where the project is made. */
+/** The footer: where the project is made, the licence and the links again. */
 function ProductFooter() {
   return (
     <footer className={styles.footer}>
@@ -300,18 +278,23 @@ function ProductFooter() {
             </a>
           </li>
           <li>
+            <a className={styles.footerLink} href={DOCUMENTATION_URL}>
+              Documentation
+            </a>
+          </li>
+          <li>
+            <a className={styles.footerLink} href={MILESTONES_URL}>
+              Roadmap
+            </a>
+          </li>
+          <li>
             <a className={styles.footerLink} href="/privacy">
               Privacy policy
             </a>
           </li>
           <li>
-            <a className={styles.footerLink} href={CREDITS_URL}>
-              Credits
-            </a>
-          </li>
-          <li>
-            <a className={styles.footerLink} href={ROADMAP_URL}>
-              Roadmap
+            <a className={styles.footerLink} href={LICENCE_URL}>
+              Licence and credits
             </a>
           </li>
         </ul>
@@ -321,17 +304,18 @@ function ProductFooter() {
 }
 
 /**
- * The product page at `/`: what MapCairn is, for whom, what the code looks
- * like, what is in it and how it is built, what works today, the licence and
- * the questions developers ask first, with View on GitHub as the first action
- * and the playground one tap away from anywhere on the page.
+ * The product page at `/`: the pitch and the two actions, the embedding
+ * example, what you get, the playground, when it fits, the questions and the
+ * way to follow and help, with View on GitHub as the first action and the
+ * playground one link away from anywhere on the page.
  *
  * @remarks Server-rendered and static: it loads no map code and requests
- *   nothing from a third party; every link is a plain anchor. Its first
- *   element is the inline script that sends an old map link (`/#map=...`) on
- *   to the playground before the page paints. It is English only, by
- *   decision, so it sets `lang="en-GB"` on its own root whatever language the
- *   playground is in.
+ *   nothing from a third party; every link is a plain anchor to GitHub's own
+ *   pages, this site or the page's own anchors, never straight to a Markdown
+ *   file. Its first element is the inline script that sends an old map link
+ *   (`/#map=...`) on to the playground before the page paints. It is English
+ *   only, by decision, so it sets `lang="en-GB"` on its own root whatever
+ *   language the playground is in.
  */
 export function ProductPage() {
   return (

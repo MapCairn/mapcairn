@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { PLAYGROUND_PATH } from "../constants/siteConfig";
 
 /**
  * The inline script the product page at `/` runs before it paints, so a link
@@ -15,6 +14,9 @@ import { PLAYGROUND_PATH } from "../constants/siteConfig";
  * @remarks Its SHA-256 is allowed by the content security policy in
  *   `public/_headers` and `constants/securityHeaders.ts`, beside the theme
  *   script's; `inlineScripts.test.ts` hashes this exact string and checks both
- *   files. It is guarded so it never throws.
+ *   files. It is guarded so it never throws. It is a fixed string with
+ *   nothing built into it: the playground's path is written out, and
+ *   `mapLinkRedirect.test.ts` checks it is `PLAYGROUND_PATH`.
  */
-export const MAP_LINK_REDIRECT_SCRIPT = `(function(){try{var hash=location.hash;if(/^#[^=]+=/.test(hash))location.replace(${JSON.stringify(PLAYGROUND_PATH)}+location.search+hash)}catch(e){}})()`;
+export const MAP_LINK_REDIRECT_SCRIPT =
+  '(function(){try{var hash=location.hash;if(/^#[^=]+=/.test(hash))location.replace("/map"+location.search+hash)}catch(e){}})()';

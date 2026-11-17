@@ -26,7 +26,18 @@ import {
   OG_IMAGE_WIDTH,
   SITE_URL,
 } from "../src/constants/siteConfig";
-import { CONTOUR_VIEW_BOX, CONTOURS, SUMMIT } from "../src/product/contours";
+import { CONTOURS } from "../src/product/contours";
+import {
+  CAIRN_TRANSFORM,
+  EASTINGS,
+  MEASURE,
+  NORTHINGS,
+  PIN_HEAD,
+  PIN_PATH,
+  PIN_TIP,
+  SHEET,
+  TICK_LENGTH,
+} from "../src/product/surveyGeometry";
 
 const FONT_PATH = fileURLToPath(
   import.meta.resolve(
@@ -53,42 +64,42 @@ const accentColor = accent[700];
 const halo = colour.mapHalo;
 const contourMinor = neutral[300];
 const contourIndex = neutral[500];
-const gridLine = neutral[200];
+const gridLine = neutral[500];
 
-const { width: W, height: H } = CONTOUR_VIEW_BOX;
+const { width: W, height: H } = SHEET;
 
-/** The cairn's stones at a point, as the page's art draws them. */
-function cairnAt(x: number, y: number, scale: number): string {
+/** The cairn's stones on the summit, placed exactly as the page's art places them. */
+function cairn(): string {
   const stones = STONES.map(
     ({ points, offset }) =>
       `<g transform="${offset ?? ""}"><polygon points="${points}" fill="${halo}" stroke="${halo}" stroke-width="40" stroke-linejoin="round"/><polygon points="${points}" fill="${accentColor}" stroke="${accentColor}" stroke-width="16" stroke-linejoin="round"/></g>`,
   ).join("");
-  return `<g transform="translate(${x} ${y}) scale(${scale}) translate(-258 -420)">${stones}</g>`;
+  return `<g transform="${CAIRN_TRANSFORM}">${stones}</g>`;
 }
 
-/** The grid every 80 units, as on the page. */
-function grid(): string {
-  const lines: string[] = [];
-  for (let x = 80; x < W; x += 80) {
-    lines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${H}"/>`);
-  }
-  for (let y = 80; y < H; y += 80) {
-    lines.push(`<line x1="0" y1="${y}" x2="${W}" y2="${y}"/>`);
-  }
-  return `<g stroke="${gridLine}" stroke-width="1" vector-effect="non-scaling-stroke">${lines.join("")}</g>`;
+/** The grid ticks on the sheet's edges, as on the page. */
+function ticks(): string {
+  const lines = [
+    ...EASTINGS.map(
+      ({ at }) => `<line x1="${at}" y1="0" x2="${at}" y2="${TICK_LENGTH}"/>`,
+    ),
+    ...NORTHINGS.map(
+      ({ at }) => `<line x1="0" y1="${at}" x2="${TICK_LENGTH}" y2="${at}"/>`,
+    ),
+  ];
+  return `<g stroke="${gridLine}" stroke-width="1.5">${lines.join("")}</g>`;
 }
 
-const PIN = { x: 232, y: 318 };
-
+/** The page's art at the card's size: contours, the measured line from the pin's tip to the cairn, the cairn and the pin. */
 const ART = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
-  ${grid()}
   ${CONTOURS.map(
     ({ index, d }) =>
       `<path d="${d}" fill="none" stroke="${index ? contourIndex : contourMinor}" stroke-width="${index ? 2 : 1.25}" stroke-linejoin="round"/>`,
   ).join("\n  ")}
-  <line x1="${PIN.x}" y1="${PIN.y}" x2="${SUMMIT.x}" y2="${SUMMIT.y}" stroke="${accent[600]}" stroke-width="3" stroke-dasharray="9 8" stroke-linecap="round"/>
-  ${cairnAt(SUMMIT.x, SUMMIT.y, 0.1)}
-  <g transform="translate(${PIN.x} ${PIN.y}) scale(1.3)"><path d="M0 0C-3 -8 -12 -14 -12 -24A12 12 0 0 1 12 -24C12 -14 3 -8 0 0Z" fill="${accent[600]}" stroke="${halo}" stroke-width="2"/><circle cx="0" cy="-24" r="4.5" fill="${halo}"/></g>
+  ${ticks()}
+  <line x1="${MEASURE.from.x}" y1="${MEASURE.from.y}" x2="${MEASURE.to.x}" y2="${MEASURE.to.y}" stroke="${accent[600]}" stroke-width="3" stroke-dasharray="9 8" stroke-linecap="round"/>
+  ${cairn()}
+  <g transform="translate(${PIN_TIP.x} ${PIN_TIP.y})"><path d="${PIN_PATH}" fill="${accent[600]}" stroke="${halo}" stroke-width="2"/><circle cx="${PIN_HEAD.cx}" cy="${PIN_HEAD.cy}" r="${PIN_HEAD.r}" fill="${halo}"/></g>
   <rect x="0" y="0" width="${W}" height="${H}" fill="none" stroke="${neutral[600]}" stroke-width="2"/>
 </svg>`;
 

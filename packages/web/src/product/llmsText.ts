@@ -6,7 +6,6 @@ import {
   SITE_URL,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
-import { FIRST_RELEASE_ISSUE_URL } from "./productContent";
 import { productMarkdown } from "./productMarkdown";
 
 /*
@@ -39,17 +38,21 @@ export const PLAYGROUND_TOOLS: readonly string[] = [
 const SUMMARY =
   "MapCairn is an open-source SDK, under the AGPL-3.0, for building accessible, privacy-respecting map applications on MapLibre GL JS and React.";
 
-/** What MapCairn is not, and its status, in plain words. */
+/** What MapCairn is, what it is not, and how to use it today, in plain words. */
 const DETAILS = `It gives a team a complete map interface, open data layers defined as data, measuring and drawing tools, and a design system, with every service behind a small interface (a port) that a host implements with its own adapter. It is not a hosted service, a dataset or a GIS analysis engine, and MapLibre GL JS is its only map engine.
 
-Status: the packages are not published to npm yet, so they are used from the repository (first release: ${FIRST_RELEASE_ISSUE_URL}).`;
+It is used from its source on GitHub (${SOURCE_REPOSITORY_URL}): clone the repository and build it, or start from the example app in \`examples/embed\`.`;
 
 /** The playground's description, the same words its page renders for crawlers. */
 const PLAYGROUND_SUMMARY = EN_GB_CATALOGUE["host.map.summary"];
 
 /** The guides and documents, as raw Markdown. */
 const DOCUMENTS: readonly (readonly [string, string, string])[] = [
-  ["README", "README.md", "what the SDK offers, the packages and the status"],
+  [
+    "README",
+    "README.md",
+    "what the SDK offers, how to embed it and the packages",
+  ],
   [
     "Embedding and extending",
     "docs/guides/extending.md",
@@ -95,7 +98,7 @@ function linkSections(): string {
   ).join("\n");
   return `## Product
 
-- [MapCairn](${SITE_URL}/): the product page: what the SDK is, who it is for, the embedding example, the status and the licence.
+- [MapCairn](${SITE_URL}/): the product page: what the SDK is, who it is for, the embedding example, when it fits and the licence.
 - [Product page as Markdown](${SITE_URL}/index.md): the same page as plain Markdown.
 
 ## Playground

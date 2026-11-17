@@ -3,9 +3,9 @@
 import { SITE_URL } from "../constants/siteConfig";
 import {
   type Block,
-  FACTS,
   GITHUB_ACTION,
   HEADLINE,
+  HERO_NOTE,
   type Inline,
   LEDE,
   type Line,
@@ -35,10 +35,15 @@ function lineToMarkdown(line: Line): string {
   return line.map(inline).join("");
 }
 
+/** A list of links as a Markdown list. */
+function linkList(links: readonly { text: string; href: string }[]): string {
+  return links
+    .map((link) => `- [${link.text}](${absoluteUrl(link.href)})`)
+    .join("\n");
+}
+
 /** The two actions, as a list of links. */
-const ACTIONS = [GITHUB_ACTION, PLAYGROUND_ACTION]
-  .map((action) => `- [${action.text}](${absoluteUrl(action.href)})`)
-  .join("\n");
+const ACTIONS = linkList([GITHUB_ACTION, PLAYGROUND_ACTION]);
 
 /** One block as Markdown. */
 function block(item: Block): string {
@@ -47,30 +52,21 @@ function block(item: Block): string {
       return lineToMarkdown(item.text);
     case "list":
       return item.items.map((line) => `- ${lineToMarkdown(line)}`).join("\n");
-    case "terms":
-      return item.items
-        .map(
-          ({ term, description }) =>
-            `- ${lineToMarkdown(term)}: ${lineToMarkdown(description)}`,
-        )
-        .join("\n");
     case "subheading":
       return `### ${item.text}`;
     case "code":
       return `\`\`\`${item.language}\n${item.code}\n\`\`\``;
-    case "faq":
+    case "details":
       return item.items
         .map(
-          ({ question, answer }) =>
-            `### ${question}\n\n${answer.map(lineToMarkdown).join("\n\n")}`,
+          ({ summary, detail }) =>
+            `### ${summary}\n\n${detail.map(lineToMarkdown).join("\n\n")}`,
         )
         .join("\n\n");
     case "actions":
       return ACTIONS;
     case "deepLinks":
-      return item.links
-        .map((link) => `- [${link.text}](${absoluteUrl(link.href)})`)
-        .join("\n");
+      return linkList(item.links);
   }
 }
 
@@ -78,29 +74,22 @@ function block(item: Block): string {
 function section({ heading, blocks, further }: Section): string {
   const parts = [`## ${heading}`, ...blocks.map(block)];
   if (further.length > 0) {
-    parts.push(
-      further
-        .map((link) => `- [${link.text}](${absoluteUrl(link.href)})`)
-        .join("\n"),
-    );
+    parts.push(linkList(further));
   }
   return parts.join("\n\n");
 }
 
 /**
  * The product page as Markdown, from the same content the page renders, with
- * every link absolute. Served at `/index.md` and included in `/llms-full.txt`.
+ * every link absolute and every disclosure open. Served at `/index.md` and
+ * included in `/llms-full.txt`.
  */
 export function productMarkdown(): string {
-  const facts = FACTS.map(
-    ({ term, description }) =>
-      `- ${lineToMarkdown(term)}: ${lineToMarkdown(description)}`,
-  ).join("\n");
   return `${[
     `# ${HEADLINE}`,
     lineToMarkdown(LEDE),
-    facts,
     ACTIONS,
+    lineToMarkdown(HERO_NOTE),
     ...SECTIONS.map(section),
   ].join("\n\n")}\n`;
 }

@@ -1,30 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { focusRing, tokens } from "@mapcairn/theme";
-import { style } from "@vanilla-extract/css";
+import { globalStyle, style } from "@vanilla-extract/css";
 
 /*
- * The product page: a survey sheet. The hero is framed by a neatline, like a
- * printed map, with the legend of facts beside the headline; the sections
- * below read like the notes in a sheet's margin, a heading in a narrow column
- * and the text beside it. Mobile first: one column at 320 px, two from the
- * `wide` width. Tokens only.
+ * The product page: calm and in one reading column. The hero carries the
+ * pitch, the two actions and the survey sheet beside them; every section
+ * below is a heading and a few short blocks, with the detail one tap away in
+ * native disclosures. Mobile first: one column at 320 px; from the `wide`
+ * width the hero puts the art beside its words. Tokens only.
  */
 
-/** Two columns from here: the hero's text and art, and each section's heading and body. */
-const WIDE = "screen and (min-width: 52rem)";
+/** From here the hero puts its art beside its words. */
+const WIDE = "screen and (min-width: 56rem)";
 
-/** Where the header and the footer put their links in one row. */
+/** From here the two actions sit side by side. */
 const ROOMY = "screen and (min-width: 30rem)";
 
-/** The reading width of body text, about 70 characters. */
-const MEASURE = "38rem";
+/** The reading width of the sections, about 65 characters of the large type. */
+const MEASURE = "40rem";
 
-/** The widest the page's content gets. */
+/** The tallest the code example gets before it scrolls inside its own box. */
+const CODE_HEIGHT = "26rem";
+
+/** The widest the page gets. */
 const PAGE_WIDTH = "72rem";
 
-/** The width of the margin column that holds each section's heading on a wide screen. */
-const MARGIN_COLUMN = "16rem";
+/** The space between sections: two of the largest steps. */
+const SECTION_SPACE = `calc(${tokens.space.xl} * 2)`;
 
 /** The scrolling page: the document is fixed for the map, so this scrolls itself. */
 export const scroller = style({
@@ -34,31 +37,36 @@ export const scroller = style({
   overscrollBehavior: "contain",
   backgroundColor: tokens.color.pageBackground,
   color: tokens.color.text,
+  fontSize: tokens.type.large.size,
+  lineHeight: tokens.type.large.lineHeight,
+  letterSpacing: tokens.type.large.tracking,
   fontVariantNumeric: "tabular-nums",
   // A long word breaks rather than widen the page, at 320 px and 200 percent text.
   overflowWrap: "break-word",
 });
 
-/** The column every block of the page sits in. */
-const column = {
+/** The page's outer column. */
+const pageColumn = {
   width: "100%",
   maxWidth: PAGE_WIDTH,
   marginInline: "auto",
   paddingInline: tokens.space.md,
-  "@media": {
-    [WIDE]: { paddingInline: tokens.space.xl },
-  },
 } as const;
 
-/** The page header: the brand, then the playground and the source. */
+/** The header: the brand, then the playground and the source. */
 export const header = style({
-  ...column,
+  ...pageColumn,
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
   justifyContent: "space-between",
   columnGap: tokens.space.md,
   paddingBlock: tokens.space.xs,
+  fontSize: tokens.type.body.size,
+  lineHeight: tokens.type.body.lineHeight,
+  "@media": {
+    [WIDE]: { paddingInline: tokens.space.xl },
+  },
 });
 
 /** The brand link: the cairn and the name, a full-size target. */
@@ -110,40 +118,39 @@ export const main = style({
   },
 });
 
-/** The hero's frame: the neatline of the sheet. */
+/** The hero: words first, then the art below them, or beside them on a wide screen. */
 export const hero = style({
-  ...column,
-  paddingBlock: tokens.space.md,
-});
-
-/** The neatline: a ruled frame with the sheet inside. */
-export const sheet = style({
+  ...pageColumn,
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr)",
-  gap: tokens.space.lg,
-  padding: tokens.space.md,
-  border: `1px solid ${tokens.color.controlBoundary}`,
-  borderRadius: tokens.radius.control,
-  backgroundColor: tokens.color.surfaceRaised,
+  alignItems: "center",
+  gap: tokens.space.xl,
+  paddingBlock: tokens.space.xl,
   "@media": {
     [WIDE]: {
-      gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-      alignItems: "center",
-      gap: tokens.space.xl,
-      padding: tokens.space.xl,
+      gridTemplateColumns: "minmax(0, 6fr) minmax(0, 5fr)",
+      paddingInline: tokens.space.xl,
+      paddingBlock: SECTION_SPACE,
+      columnGap: SECTION_SPACE,
     },
   },
 });
 
-/** The hero's words: the headline, the lede, the actions and the legend. */
+/** The hero's words. */
 export const heroText = style({
   display: "flex",
   flexDirection: "column",
-  gap: tokens.space.md,
+  gap: tokens.space.lg,
   minWidth: 0,
 });
 
-/** The page's one h1, at the display size on a wide screen and the title size on a phone. */
+/** The hero's art: quiet, and only as wide as it needs to be. */
+export const heroArt = style({
+  minWidth: 0,
+  maxWidth: MEASURE,
+});
+
+/** The page's one h1, at the display size on a wide screen and smaller on a phone. */
 export const headline = style({
   margin: 0,
   fontSize: `clamp(${tokens.type.title.size}, 8vw, ${tokens.type.display.size})`,
@@ -151,17 +158,13 @@ export const headline = style({
   letterSpacing: tokens.type.display.tracking,
   fontWeight: tokens.type.weight.semibold,
   textWrap: "balance",
-  overflowWrap: "break-word",
 });
 
 /** The paragraph under the h1. */
 export const lede = style({
   margin: 0,
   maxWidth: MEASURE,
-  fontSize: tokens.type.large.size,
-  lineHeight: tokens.type.large.lineHeight,
-  letterSpacing: tokens.type.large.tracking,
-  color: tokens.color.text,
+  color: tokens.color.textMuted,
 });
 
 /** The two actions, side by side and the same size, stacked on a narrow phone. */
@@ -214,89 +217,43 @@ export const secondaryAction = style({
   },
 });
 
-/** The legend of facts: term and value pairs, ruled like a map's legend box. */
-export const facts = style({
+/** The quiet line under the actions. */
+export const note = style({
+  margin: 0,
+  fontSize: tokens.type.body.size,
+  lineHeight: tokens.type.body.lineHeight,
+  color: tokens.color.textMuted,
+});
+
+/** One section: a heading and a few blocks, in the reading column, with room around it. */
+export const section = style({
+  ...pageColumn,
+  paddingBlock: tokens.space.xl,
   display: "flex",
   flexDirection: "column",
-  margin: 0,
-  paddingBlockStart: tokens.space.sm,
-  borderBlockStart: `1px solid ${tokens.color.hairline}`,
-  fontSize: tokens.type.small.size,
-  lineHeight: tokens.type.small.lineHeight,
-  letterSpacing: tokens.type.small.tracking,
-});
-
-/** The width of the legend's terms, in the legend's own type so it grows with the text. */
-const TERM_WIDTH = "7em";
-
-/**
- * One row of the legend: the term in a fixed column and its value beside it.
- * When the value has no room beside the term (large text on a phone), it
- * wraps below it.
- */
-export const factRow = style({
-  display: "flex",
-  flexWrap: "wrap",
-  columnGap: tokens.space.md,
-});
-
-/** A term in the legend. */
-export const factTerm = style({
-  flex: `0 0 ${TERM_WIDTH}`,
-  color: tokens.color.textMuted,
-  paddingBlock: tokens.space.xxs,
-});
-
-/** A value in the legend. */
-export const factValue = style({
-  flex: `1 1 ${TERM_WIDTH}`,
-  margin: 0,
-  paddingBlock: tokens.space.xxs,
-});
-
-/** One section of the page. */
-export const section = style({
-  ...column,
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr)",
-  gap: tokens.space.sm,
-  paddingBlock: tokens.space.xl,
+  alignItems: "stretch",
+  gap: tokens.space.md,
   scrollMarginBlockStart: tokens.space.md,
   "@media": {
     [WIDE]: {
       paddingInline: tokens.space.xl,
-      gridTemplateColumns: `minmax(0, ${MARGIN_COLUMN}) minmax(0, 1fr)`,
-      columnGap: tokens.space.xl,
+      paddingBlock: SECTION_SPACE,
     },
   },
 });
 
-/** A section's heading, in the margin column on a wide screen, under a short rule with a tick. */
+// Every block of a section keeps to the reading width, aligned with the hero's words.
+globalStyle(`${section} > *`, {
+  maxWidth: MEASURE,
+});
+
+/** A section's heading. */
 export const sectionHeading = style({
   margin: 0,
-  paddingBlockStart: tokens.space.sm,
-  borderBlockStart: `2px solid ${tokens.color.accent}`,
-  maxWidth: MARGIN_COLUMN,
   fontSize: tokens.type.title.size,
   lineHeight: tokens.type.title.lineHeight,
   letterSpacing: tokens.type.title.tracking,
   fontWeight: tokens.type.weight.semibold,
-  alignSelf: "start",
-});
-
-/** A section's body: its blocks, in reading order. */
-export const sectionBody = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: tokens.space.md,
-  minWidth: 0,
-  maxWidth: MEASURE,
-  "@media": {
-    [WIDE]: {
-      paddingBlockStart: tokens.space.sm,
-      borderBlockStart: `1px solid ${tokens.color.hairline}`,
-    },
-  },
 });
 
 /** A paragraph. */
@@ -310,7 +267,6 @@ export const subheading = style({
   paddingBlockStart: tokens.space.xs,
   fontSize: tokens.type.large.size,
   lineHeight: tokens.type.large.lineHeight,
-  letterSpacing: tokens.type.large.tracking,
   fontWeight: tokens.type.weight.semibold,
 });
 
@@ -320,33 +276,14 @@ export const list = style({
   flexDirection: "column",
   gap: tokens.space.xs,
   margin: 0,
-  paddingInlineStart: tokens.space.md,
+  paddingInlineStart: tokens.space.lg,
 });
 
-/** A list of terms: each term above its description. */
-export const terms = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: tokens.space.sm,
-  margin: 0,
-});
-
-/** A term. */
-export const term = style({
-  fontWeight: tokens.type.weight.semibold,
-});
-
-/** A term's description. */
-export const description = style({
-  margin: 0,
-  color: tokens.color.text,
-});
-
-/** A link in running text. */
+/** A link in running text or a list. */
 export const link = style({
   color: tokens.color.accent,
   // Padding on an inline link grows the box it is hit in, not the line, so
-  // even a link in a list or a legend is a 24 px target (WCAG 2.5.8).
+  // even a link in a list is a 24 px target (WCAG 2.5.8).
   paddingBlock: tokens.space.xxs,
   textDecorationThickness: "1px",
   textUnderlineOffset: "0.2em",
@@ -366,8 +303,10 @@ export const code = style({
 export const codeBlock = style({
   margin: 0,
   padding: tokens.space.md,
-  overflowX: "auto",
-  maxWidth: "100%",
+  overflow: "auto",
+  maxWidth: MEASURE,
+  // A tall example scrolls inside its own box, so it does not take over the page.
+  maxHeight: CODE_HEIGHT,
   border: `1px solid ${tokens.color.hairline}`,
   borderRadius: tokens.radius.control,
   backgroundColor: tokens.color.surfaceRaised,
@@ -380,55 +319,25 @@ export const codeBlock = style({
   },
 });
 
-/** The links that go deeper, at the foot of a section. */
-export const further = style({
+/** A list of disclosures, ruled apart. */
+export const disclosures = style({
   display: "flex",
   flexDirection: "column",
-  margin: 0,
-  padding: 0,
-  listStyle: "none",
+  borderBlockStart: `1px solid ${tokens.color.hairline}`,
 });
 
-/** One of them: a full-size target. */
-export const furtherLink = style([
-  link,
-  {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: tokens.space.xs,
-    minHeight: tokens.size.minTarget,
-  },
-]);
-
-/** The deep links into the playground. */
-export const deepLinks = style([
-  further,
-  {
-    gap: tokens.space.xxs,
-    paddingInlineStart: tokens.space.sm,
-    borderInlineStart: `2px solid ${tokens.color.accent}`,
-  },
-]);
-
-/** The questions: each a native disclosure, ruled apart. */
-export const faq = style({
-  display: "flex",
-  flexDirection: "column",
-  margin: 0,
-});
-
-/** One question and its answer. */
-export const question = style({
+/** One disclosure. */
+export const disclosure = style({
   borderBlockEnd: `1px solid ${tokens.color.hairline}`,
 });
 
-/** The question, the disclosure's 44 px summary. */
-export const questionSummary = style({
+/** A disclosure's one-line summary: a 44 px target with a chevron at its end. */
+export const summary = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   gap: tokens.space.sm,
-  minHeight: tokens.size.minTarget,
+  minHeight: tokens.size.control,
   paddingBlock: tokens.space.xs,
   cursor: "pointer",
   fontWeight: tokens.type.weight.semibold,
@@ -440,8 +349,8 @@ export const questionSummary = style({
   },
 });
 
-/** The chevron that says whether an answer is open: down when closed, up when open. */
-export const questionMarker = style({
+/** The chevron that says whether a disclosure is open: down when closed, up when open. */
+export const marker = style({
   flexShrink: 0,
   color: tokens.color.textMuted,
   selectors: {
@@ -449,26 +358,58 @@ export const questionMarker = style({
   },
 });
 
-/** The answer. */
-export const answer = style({
+/** A disclosure's detail. */
+export const detail = style({
   margin: 0,
   paddingBlockEnd: tokens.space.md,
+  maxWidth: MEASURE,
   color: tokens.color.text,
 });
 
-/** The footer: the licence, the links and where it was made. */
+/** The links that go further, at the foot of a section. */
+export const further = style({
+  display: "flex",
+  flexDirection: "column",
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+});
+
+/** A link on its own line: a full-size target. */
+export const blockLink = style([
+  link,
+  {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: tokens.space.xs,
+    minHeight: tokens.size.minTarget,
+  },
+]);
+
+/** The deep links into the playground. */
+export const deepLinks = style([further]);
+
+/** The compass before each deep link. */
+export const linkIcon = style({
+  flexShrink: 0,
+});
+
+/** The footer: where the project is made, the licence and the links. */
 export const footer = style({
-  ...column,
+  ...pageColumn,
   display: "flex",
   flexDirection: "column",
   gap: tokens.space.md,
   paddingBlock: tokens.space.xl,
   marginBlockStart: tokens.space.xl,
-  borderBlockStart: `1px solid ${tokens.color.controlBoundary}`,
+  borderBlockStart: `1px solid ${tokens.color.hairline}`,
   fontSize: tokens.type.small.size,
   lineHeight: tokens.type.small.lineHeight,
   letterSpacing: tokens.type.small.tracking,
   color: tokens.color.textMuted,
+  "@media": {
+    [WIDE]: { paddingInline: tokens.space.xl },
+  },
 });
 
 /** The footer's links, wrapping onto as many rows as they need. */
@@ -496,7 +437,7 @@ export const footerLine = style({
   margin: 0,
 });
 
-/** The closing line: where the project is made, with the heart beside it. */
+/** The line that says where the project is made, with the heart beside it. */
 export const made = style({
   display: "inline-flex",
   alignItems: "center",
