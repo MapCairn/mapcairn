@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -19,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   findDrift,
   plannedFiles,
+  printable,
   skillProblems,
   writePlan,
 } from "../../../../scripts/agents/plan.mjs";
@@ -571,6 +573,164 @@ describe("skill problems", () => {
     expect(skillProblems(root)).toEqual([
       ".claude/skills/linked: is a symbolic link; use a real folder, because the sync copies and never links",
     ]);
+  });
+});
+
+describe("symbolic links in the sources", () => {
+  let root: string;
+  let outside: string;
+
+  const put = (file: string, text: string): void => {
+    const target = path.join(root, file);
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, text);
+  };
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), "agents-links-"));
+    outside = mkdtempSync(path.join(tmpdir(), "agents-outside-"));
+    writeFileSync(path.join(outside, "secret.txt"), "private\n");
+    put(".claude/skills/alpha/SKILL.md", skill("name: alpha\ndescription: A."));
+    put(".claude/agents/helper.md", agent("name: helper\ndescription: Helps."));
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  });
+
+  it("refuses a link to a file outside the folder, naming its path, and reports it as a problem", () => {
+    symlinkSync(
+      path.join(outside, "secret.txt"),
+      path.join(root, ".claude/skills/alpha/leak.txt"),
+    );
+    expect(() => plannedFiles(root)).toThrow(
+      /\.claude\/skills\/alpha\/leak\.txt: is a symbolic link/,
+    );
+    expect(skillProblems(root).join("\n")).toContain(
+      ".claude/skills/alpha/leak.txt",
+    );
+  });
+
+  it("refuses a link to a folder at any depth", () => {
+    mkdirSync(path.join(root, ".claude/skills/alpha/references"), {
+      recursive: true,
+    });
+    symlinkSync(
+      outside,
+      path.join(root, ".claude/skills/alpha/references/deep"),
+      "junction",
+    );
+    expect(() => plannedFiles(root)).toThrow(
+      /alpha\/references\/deep: is a symbolic link/,
+    );
+    expect(skillProblems(root).join("\n")).toContain("references/deep");
+  });
+
+  it("refuses a linked SKILL.md", () => {
+    rmSync(path.join(root, ".claude/skills/alpha/SKILL.md"));
+    symlinkSync(
+      path.join(outside, "secret.txt"),
+      path.join(root, ".claude/skills/alpha/SKILL.md"),
+    );
+    expect(skillProblems(root).join("\n")).toContain("alpha/SKILL.md");
+    expect(() => plannedFiles(root)).toThrow(/alpha\/SKILL\.md/);
+  });
+
+  it("refuses a linked agent file instead of skipping it", () => {
+    symlinkSync(
+      path.join(outside, "secret.txt"),
+      path.join(root, ".claude/agents/linked.md"),
+    );
+    expect(() => plannedFiles(root)).toThrow(
+      /\.claude\/agents\/linked\.md: is a symbolic link/,
+    );
+  });
+
+  it("refuses a skills folder that is itself a link out of the repository", () => {
+    rmSync(path.join(root, ".claude/skills"), { recursive: true });
+    mkdirSync(path.join(outside, "beta"), { recursive: true });
+    writeFileSync(
+      path.join(outside, "beta/SKILL.md"),
+      skill("name: beta\ndescription: B."),
+    );
+    symlinkSync(outside, path.join(root, ".claude/skills"), "junction");
+    expect(() => plannedFiles(root)).toThrow(
+      /\.claude\/skills: is a symbolic link/,
+    );
+  });
+
+  it("refuses a link in a generated folder, so the check never reads through it", () => {
+    mkdirSync(path.join(root, ".agents/skills"), { recursive: true });
+    symlinkSync(
+      path.join(outside, "secret.txt"),
+      path.join(root, ".agents/skills/stale.txt"),
+    );
+    expect(() => findDrift(root, plannedFiles(root))).toThrow(
+      /\.agents\/skills\/stale\.txt: is a symbolic link/,
+    );
+  });
+
+  it("refuses a generated folder that is itself a link, and writes nothing through it", () => {
+    mkdirSync(path.join(root, ".agents"), { recursive: true });
+    symlinkSync(outside, path.join(root, ".agents/skills"), "junction");
+    expect(() => findDrift(root, plannedFiles(root))).toThrow(
+      /\.agents\/skills: is a symbolic link/,
+    );
+    expect(() => writePlan(root, plannedFiles(root))).toThrow(
+      /\.agents\/skills: is a symbolic link/,
+    );
+    expect(readdirSync(outside)).toEqual(["secret.txt"]);
+  });
+
+  it("refuses a link in the parent of a generated folder, and writes nothing through it", () => {
+    symlinkSync(outside, path.join(root, ".codex"), "junction");
+    expect(() => findDrift(root, plannedFiles(root))).toThrow(
+      /\.codex: is a symbolic link/,
+    );
+    expect(() => writePlan(root, plannedFiles(root))).toThrow(
+      /\.codex: is a symbolic link/,
+    );
+    expect(readdirSync(outside)).toEqual(["secret.txt"]);
+  });
+
+  it("refuses a linked parent of a generated file when it has no folder listing to refuse", () => {
+    symlinkSync(outside, path.join(root, ".opencode"), "junction");
+    expect(() =>
+      writePlan(root, new Map([[".opencode/agents/x.md", "x"]])),
+    ).toThrow(/\.opencode: is a symbolic link/);
+    expect(readdirSync(outside)).toEqual(["secret.txt"]);
+  });
+
+  it("refuses a linked skills-lock.json", () => {
+    symlinkSync(
+      path.join(outside, "secret.txt"),
+      path.join(root, "skills-lock.json"),
+    );
+    expect(() => plannedFiles(root)).toThrow(/skills-lock\.json/);
+  });
+
+  it("escapes control and bidirectional characters in a path it prints, so a file name cannot add a line", () => {
+    expect(printable("a\nb\r\u2028\u202e\u0007c")).toBe(
+      "a\\u000ab\\u000d\\u2028\\u202e\\u0007c",
+    );
+    expect(printable(".claude/skills/alpha/SKILL.md")).toBe(
+      ".claude/skills/alpha/SKILL.md",
+    );
+    symlinkSync(
+      path.join(outside, "secret.txt"),
+      path.join(root, ".claude/skills/alpha/x\ny: forged"),
+    );
+    const message = skillProblems(root).join("\n");
+    expect(message.split("\n")).toHaveLength(1);
+    expect(message).toContain("x\\u000ay: forged");
+  });
+
+  it("still plans an ordinary tree", () => {
+    expect([...plannedFiles(root).keys()]).toContain(
+      ".agents/skills/alpha/SKILL.md",
+    );
+    expect(skillProblems(root)).toEqual([]);
   });
 });
 

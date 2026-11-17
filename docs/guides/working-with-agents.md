@@ -14,7 +14,7 @@ After you change a skill or an agent, run `npm run agents:sync`. It copies files
 
 `agents:check` also holds every project skill to the rules that make it work in more than one tool:
 
-- `name` equals the folder name and is lowercase kebab-case, at most 64 characters. A folder that is a symbolic link is reported, because the sync copies and never links.
+- `name` equals the folder name and is lowercase kebab-case, at most 64 characters. A symbolic link anywhere in a skill folder, in the agent files or in a generated folder or its parent is refused, at any depth and in both `agents:sync` and `agents:check`, and the error names its path, because the sync copies and never links and a link could read from or write outside the repository.
 - `description` is present and at most 1024 characters.
 - Frontmatter is one `key: value` per line, and a plain value does not contain `: ` or ` #`. Claude Code accepts that, but a strict YAML reader does not, and other tools may skip the skill without saying so. Wrap such a value in double quotes.
 - The body names no tool or feature that only one tool has (the list is `CLAUDE_ONLY_TOOL_NAMES` in `scripts/agents/skills.mjs`). Write "run the visual check" and let each tool use its own browser or shell. The same list is applied to the body of every agent that is generated.

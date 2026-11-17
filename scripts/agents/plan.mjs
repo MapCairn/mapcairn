@@ -8,6 +8,7 @@
  */
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -55,8 +56,39 @@ export const OWNED_DIRECTORIES = [
  * @returns {import("node:fs").Dirent[]}
  */
 function entriesOf(root, directory) {
-  const base = path.join(root, directory);
+  const base = checkedPath(root, directory);
   return existsSync(base) ? readdirSync(base, { withFileTypes: true }) : [];
+}
+
+/**
+ * The absolute path of `relative` under `root`, after checking that no part of
+ * it that exists is a symbolic link. Every part below `root` is a real folder
+ * or file, so the path cannot lead outside the repository; a linked folder or
+ * parent would otherwise let a read, write or removal reach outside it.
+ *
+ * @param {string} root
+ * @param {string} relative
+ * @returns {string}
+ */
+function checkedPath(root, relative) {
+  let current = root;
+  let walked = "";
+  for (const part of relative.split("/")) {
+    current = path.join(current, part);
+    walked = walked ? `${walked}/${part}` : part;
+    let stats;
+    try {
+      stats = lstatSync(current);
+    } catch {
+      break;
+    }
+    if (stats.isSymbolicLink()) {
+      throw new Error(
+        `${printable(walked)}: is a symbolic link; use a real folder, because the sync copies and never links`,
+      );
+    }
+  }
+  return path.join(root, relative);
 }
 
 /**
@@ -69,8 +101,53 @@ function entriesOf(root, directory) {
 function filesUnder(root, directory) {
   return entriesOf(root, directory).flatMap((entry) => {
     const relative = `${directory}/${entry.name}`;
+    refuseLink(entry, relative);
     return entry.isDirectory() ? filesUnder(root, relative) : [relative];
   });
+}
+
+/**
+ * A path made safe to print: control characters, line and paragraph
+ * separators and bidirectional controls become `\uXXXX` escapes, so a file name
+ * from a pull request cannot start a second line of output or reorder it.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function printable(text) {
+  return text.replace(
+    /[\p{Cc}\u2028\u2029\u202a-\u202e\u2066-\u2069]/gu,
+    (character) =>
+      `\\u${(character.codePointAt(0) ?? 0).toString(16).padStart(4, "0")}`,
+  );
+}
+
+/**
+ * Throws when an entry is a symbolic link. The sync copies and never links, and
+ * following a link could read a file from outside the repository into the
+ * generated copies.
+ *
+ * @param {import("node:fs").Dirent} entry
+ * @param {string} relative The entry's path relative to the root, named in the error.
+ */
+function refuseLink(entry, relative) {
+  if (entry.isSymbolicLink()) {
+    throw new Error(
+      `${printable(relative)}: is a symbolic link; use a real file or folder, because the sync copies and never links`,
+    );
+  }
+}
+
+/**
+ * Reads a file under `root`, refusing a symbolic link at any part of its path.
+ *
+ * @param {string} root
+ * @param {string} file Relative to `root`.
+ * @param {BufferEncoding} [encoding] Omit for a `Buffer`.
+ * @returns {Buffer | string}
+ */
+function readSource(root, file, encoding) {
+  return readFileSync(checkedPath(root, file), encoding);
 }
 
 /**
@@ -85,7 +162,9 @@ function vendoredSkills(root) {
   if (!existsSync(lock)) {
     return new Set();
   }
-  const { skills = {} } = JSON.parse(readFileSync(lock, "utf8"));
+  const { skills = {} } = JSON.parse(
+    String(readSource(root, "skills-lock.json", "utf8")),
+  );
   return new Set(Object.keys(skills));
 }
 
@@ -131,19 +210,24 @@ export function skillProblems(root) {
     const where = `${SKILLS_SOURCE}/${entry.name}`;
     if (entry.isSymbolicLink()) {
       return [
-        `${where}: is a symbolic link; use a real folder, because the sync copies and never links`,
+        `${printable(where)}: is a symbolic link; use a real folder, because the sync copies and never links`,
       ];
     }
     if (!entry.isDirectory()) {
       return [];
     }
-    const file = path.join(root, where, "SKILL.md");
-    if (!existsSync(file)) {
-      return [`${where}: SKILL.md is missing`];
+    try {
+      filesUnder(root, where);
+      if (!existsSync(path.join(root, where, "SKILL.md"))) {
+        return [`${printable(where)}: SKILL.md is missing`];
+      }
+      const text = readSource(root, `${where}/SKILL.md`, "utf8");
+      return checkSkill(entry.name, String(text)).map(
+        (problem) => `${printable(where)}/SKILL.md: ${printable(problem)}`,
+      );
+    } catch (error) {
+      return [error instanceof Error ? error.message : String(error)];
     }
-    return checkSkill(entry.name, readFileSync(file, "utf8")).map(
-      (problem) => `${where}/SKILL.md: ${problem}`,
-    );
   });
 }
 
@@ -161,16 +245,19 @@ export function plannedFiles(root) {
   for (const folder of skillFolders(root)) {
     for (const file of filesUnder(root, `${SKILLS_SOURCE}/${folder}`)) {
       const target = file.replace(SKILLS_SOURCE, ".agents/skills");
-      plan.set(target, readFileSync(path.join(root, file)));
+      plan.set(target, readSource(root, file));
     }
   }
   const agentFiles = entriesOf(root, AGENTS_SOURCE)
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .filter((entry) => {
+      refuseLink(entry, `${AGENTS_SOURCE}/${entry.name}`);
+      return entry.isFile() && entry.name.endsWith(".md");
+    })
     .map((entry) => entry.name)
     .sort();
   for (const filename of agentFiles) {
-    const text = readFileSync(path.join(root, AGENTS_SOURCE, filename), "utf8");
-    const agent = parseAgent(filename, text);
+    const text = readSource(root, `${AGENTS_SOURCE}/${filename}`, "utf8");
+    const agent = parseAgent(filename, String(text));
     for (const { directory, extension, render } of AGENT_TARGETS) {
       plan.set(`${directory}/${agent.name}${extension}`, render(agent));
     }
@@ -205,7 +292,7 @@ export function findDrift(root, plan) {
   const missing = [];
   const changed = [];
   for (const [file, wanted] of plan) {
-    const absolute = path.join(root, file);
+    const absolute = checkedPath(root, file);
     if (!existsSync(absolute)) {
       missing.push(file);
     } else if (!matches(absolute, wanted)) {
@@ -230,16 +317,17 @@ export function findDrift(root, plan) {
  * @param {string} file
  */
 function removeFile(root, file) {
-  rmSync(path.join(root, file));
+  rmSync(checkedPath(root, file));
   const owned = OWNED_DIRECTORIES.find((directory) =>
     file.startsWith(`${directory}/`),
   );
   for (
     let directory = path.posix.dirname(file);
-    directory !== owned && readdirSync(path.join(root, directory)).length === 0;
+    directory !== owned &&
+    readdirSync(checkedPath(root, directory)).length === 0;
     directory = path.posix.dirname(directory)
   ) {
-    rmSync(path.join(root, directory), { recursive: true });
+    rmSync(checkedPath(root, directory), { recursive: true });
   }
 }
 
@@ -256,7 +344,7 @@ export function writePlan(root, plan) {
     removeFile(root, file);
   }
   for (const file of [...missing, ...changed]) {
-    const absolute = path.join(root, file);
+    const absolute = checkedPath(root, file);
     mkdirSync(path.dirname(absolute), { recursive: true });
     writeFileSync(absolute, plan.get(file) ?? "");
   }
