@@ -51,7 +51,7 @@ import { ServicesProvider, MapView, MapChrome } from "@mapcairn/map";
 </ServicesProvider>;
 ```
 
-`services` comes from the host's composition root. In tests, use `createFakeServices()` from `@mapcairn/core`. The host also mounts `LiveRegionProvider` (the one announcer) and `TooltipProvider` above the map, as `packages/web/src/root.tsx` does. Without a `LiveRegionProvider`, announcements are dropped, with a warning in development.
+`services` comes from the host's composition root. In tests, use `createFakeServices()` from `@mapcairn/core`. The host also mounts `LiveRegionProvider` (the one announcer) and `TooltipProvider` above the map, as the reference host's app layout, `packages/web/src/routes/app.tsx`, does. Without a `LiveRegionProvider`, announcements are dropped, with a warning in development.
 
 ## What doesn't belong here
 
