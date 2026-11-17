@@ -438,6 +438,54 @@ describe("Attribution beside the readout", () => {
 });
 
 /*
+ * The popover's offset slides when the readout's height changes, but not as it
+ * opens: `data-settled` marks the popover as having been on screen for a frame.
+ */
+describe("Attribution settling", () => {
+  const FRAME_MS = 20;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("is not settled as it opens, and is a frame later", () => {
+    renderChrome(<Attribution basemap={BASEMAP} />, { map: SETTLED });
+    const region = open();
+    expect(region).not.toHaveAttribute("data-settled");
+    act(() => {
+      vi.advanceTimersByTime(FRAME_MS);
+    });
+    expect(region).toHaveAttribute("data-settled", "true");
+  });
+
+  it("is not settled again once it closes and opens again", () => {
+    renderChrome(<Attribution basemap={BASEMAP} />, { map: SETTLED });
+    const region = open();
+    act(() => {
+      vi.advanceTimersByTime(FRAME_MS);
+    });
+    fireEvent.click(button());
+    expect(region).not.toHaveAttribute("data-settled");
+    fireEvent.click(button());
+    expect(region).not.toHaveAttribute("data-settled");
+  });
+
+  it("does not settle if it closes within the frame", () => {
+    renderChrome(<Attribution basemap={BASEMAP} />, { map: SETTLED });
+    const region = open();
+    fireEvent.click(button());
+    act(() => {
+      vi.advanceTimersByTime(FRAME_MS);
+    });
+    expect(region).not.toHaveAttribute("data-settled");
+  });
+});
+
+/*
  * OSMF attribution guidelines: credits may be collapsed only after they have
  * been shown, on dismissal, on map interaction or after about five seconds.
  */
