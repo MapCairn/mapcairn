@@ -14,7 +14,21 @@ import {
 import { link, prose, subsection } from "../Section/Section.css";
 import { action, keys, shortcut, shortcuts } from "./HelpSection.css";
 
-/** A host's About block in Help: a heading, a line of text and one link. */
+/** Whether `href` is an absolute http or https address, the only kind the About link may point to. */
+function isWebAddress(href: string): boolean {
+  try {
+    const { protocol } = new URL(href);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A host's About block in Help: a heading, a line of text and one link. The
+ * link is drawn only when its address is an absolute http or https one;
+ * otherwise Help shows the heading and text without it.
+ */
 export interface HelpAbout {
   /** The block's heading, in the host's words. */
   readonly heading: string;
@@ -22,6 +36,7 @@ export interface HelpAbout {
   readonly text: string;
   /** A link out, opened in a new tab and announced as doing so. */
   readonly link: {
+    /** The host must supply a trusted http or https address, as with its other links. */
     readonly href: string;
     /** A name that says where the link goes, not "click here". */
     readonly label: string;
@@ -36,7 +51,11 @@ export interface HelpSectionProps {
   readonly headingRef?: Ref<HTMLHeadingElement>;
   /** Starts the first-visit tour. Without it Help offers no tour. */
   readonly onStartTour?: () => void;
-  /** The host's About block, shown below the other subsections. Without it Help has none. */
+  /**
+   * The host's About block, shown below the other subsections. Without it Help
+   * has none. Its link address must be a trusted http or https one that the
+   * host supplies; any other address leaves the link out.
+   */
   readonly about?: HelpAbout;
 }
 
@@ -129,20 +148,22 @@ export function HelpSection({
         <div className={subsection} data-testid="help-about">
           <Subheading level={subLevel}>{about.heading}</Subheading>
           <p className={prose}>{about.text}</p>
-          <p className={prose}>
-            <a
-              className={link}
-              href={about.link.href}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {about.link.label}
-              <VisuallyHidden>
-                {" "}
-                {t("layers.card.opensInNewTab", {})}
-              </VisuallyHidden>
-            </a>
-          </p>
+          {isWebAddress(about.link.href) ? (
+            <p className={prose}>
+              <a
+                className={link}
+                href={about.link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {about.link.label}
+                <VisuallyHidden>
+                  {" "}
+                  {t("layers.card.opensInNewTab", {})}
+                </VisuallyHidden>
+              </a>
+            </p>
+          ) : null}
         </div>
       ) : null}
     </Section>

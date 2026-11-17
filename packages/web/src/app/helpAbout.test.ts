@@ -2,7 +2,6 @@
 // Copyright MapCairn contributors
 import { EN_GB_CATALOGUE, FakeMessageCatalogue } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
-import { SOURCE_REPOSITORY_URL } from "../constants/siteConfig";
 import { AF_CATALOGUE } from "../i18n/af";
 import { helpAbout } from "./helpAbout";
 
@@ -15,7 +14,6 @@ describe("helpAbout", () => {
     );
     expect(about.link.label).toBe("View the source code and licence on GitHub");
     expect(about.link.href).toBe("https://github.com/MapCairn/mapcairn");
-    expect(about.link.href).toBe(SOURCE_REPOSITORY_URL);
   });
 
   it("asks the catalogue for each piece of text by key", () => {

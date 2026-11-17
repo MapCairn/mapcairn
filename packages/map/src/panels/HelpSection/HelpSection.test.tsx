@@ -186,6 +186,28 @@ describe("the host's About block", () => {
     expect(headings).toContain("Accessibility");
   });
 
+  it.each([
+    ["a javascript: address", "javascript:alert(1)"],
+    ["a data: address", "data:text/html,hello"],
+    ["a relative address", "/source"],
+    ["a malformed address", "http://"],
+    ["an empty address", ""],
+  ])("shows the heading and text but no link for %s", (_name, href) => {
+    renderAbout({ about: { ...about, link: { ...about.link, href } } });
+    const block = within(screen.getByTestId("help-about"));
+    expect(block.getByText(about.text)).toBeInTheDocument();
+    expect(block.queryByRole("link")).toBeNull();
+  });
+
+  it("links an http address as well as an https one", () => {
+    renderAbout({
+      about: { ...about, link: { ...about.link, href: "http://example.org/" } },
+    });
+    expect(
+      within(screen.getByTestId("help-about")).getByRole("link"),
+    ).toHaveAttribute("href", "http://example.org/");
+  });
+
   it("shows nothing when the host passes none", () => {
     renderAbout();
     expect(screen.queryByTestId("help-about")).toBeNull();

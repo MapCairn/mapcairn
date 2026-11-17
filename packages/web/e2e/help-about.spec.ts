@@ -45,9 +45,16 @@ test.describe("the About block in Help", () => {
     const link = mapPage.page
       .getByTestId("help-about")
       .getByRole("link", { name: /source code and licence/ });
-    await link.focus();
-    // Arriving by keyboard, so the browser treats the focus as visible.
+    // The tour button is the last control in Help before the About block.
+    const tourButton = mapPage.page
+      .getByTestId("sheet-section-help")
+      .getByRole("button", { name: "Take the tour" });
+    await tourButton.focus();
+    await expect(tourButton).toBeFocused();
+    await mapPage.page.keyboard.press("Tab");
+    await expect(link).toBeFocused();
     await mapPage.page.keyboard.press("Shift+Tab");
+    await expect(tourButton).toBeFocused();
     await mapPage.page.keyboard.press("Tab");
     await expect(link).toBeFocused();
     const ring = await link.evaluate((element) => {

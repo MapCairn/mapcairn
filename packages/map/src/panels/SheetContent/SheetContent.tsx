@@ -60,7 +60,10 @@ export interface SheetContentProps {
   readonly privacyNote?: ReactNode;
   /** Starts the first-visit tour from Help. Without it Help offers no tour. */
   readonly onStartTour?: () => void;
-  /** The host's About block for Help. Without it Help has none. */
+  /**
+   * The host's About block for Help. Without it Help has none. Its link
+   * address must be a trusted http or https one that the host supplies.
+   */
   readonly about?: HelpAbout;
 }
 
