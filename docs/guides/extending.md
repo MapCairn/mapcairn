@@ -316,10 +316,10 @@ The box is neither clamped nor shifted at the edges of the world. A tap's longit
 
 ### What the answer may hold
 
-The answer must be JSON of under 1 MiB, and it is read in one of two shapes:
+The answer must be JSON, at most 1 MiB, and it is read in one of two shapes:
 
-- **GeoJSON**, with `decoder: "geojson"`. It has a `features` list, and each feature's `fields` are read by dotted path. Coordinates are `[longitude, latitude]` in WGS 84 degrees. A position beyond 180 in longitude or 90 in latitude is dropped, so a server that answers in its own coordinate system reads as nothing found. A position inside those limits but in another unit would be drawn in the wrong place, so the server must answer in WGS 84. A feature with a missing or `null` geometry, as a server sends for a raster pixel value, is placed at the tap. A document with no `features` list is no features.
-- **A JSON list**, with `records` naming its dotted path, such as `results`. Each item becomes the properties of a feature at the tap, so a field reads `properties.name`. A path that is not a list is no features.
+- **GeoJSON**, with `decoder: "geojson"`. It has a `features` list, and each feature's `fields` are read by dotted path. Coordinates are `[longitude, latitude]` in WGS 84 degrees. A feature with a position beyond 180 in longitude or 90 in latitude is dropped, so a server that answers in its own coordinate system reads as nothing found. A position inside those limits but in another unit would be drawn in the wrong place, so the server must answer in WGS 84. A feature with a missing or `null` geometry, as a server sends for a raster pixel value, is placed at the tap. A document with no `features` list is no features.
+- **A JSON list**, with `records` naming its dotted path, such as `results`. `decoder` is still required with `records` and must name a registered decoder, and `geojson` is the usual choice. Each item becomes the properties of a feature at the tap, so a field reads `properties.name`. A path that is not a list is no features.
 
 Without `records`, a decoder other than the built-in `geojson` gets the answer as it came. XML or GML, HTML, plain text (the default `GetFeatureInfo` formats on some servers), JSONP and a POST are not read. A server that cannot send JSON needs a small proxy that asks it and answers in JSON.
 
@@ -329,7 +329,7 @@ Without `records`, a decoder other than the built-in `geojson` gets the answer a
 
 ### Limits
 
-A tap asks at most 4 tile layers that are on and cover the tapped place, in catalogue order. Any further layers are not asked, and the message says how many were, for example "Asked 4 of 6 layers.". Each request has 8 seconds to answer, and a layer that does not answer in time is named in the message. A layer shows at most 20 features from one answer, and the rest are dropped.
+A tap asks at most 4 tile layers, in catalogue order. A layer is asked only when it is on, has an `identify` block, covers the tapped place, and the map has not reported that it has no imagery. Any further layers are not asked, and the message says how many were, for example "Asked 4 of 6 layers.". Each request has 8 seconds to answer, and a layer that does not answer in time is named in the message. A layer shows at most 20 features from one answer, and the rest are dropped.
 
 One feature opens its card. Several open a list to choose from. Nothing found says "Nothing found here.", and a layer that did not answer is named in the same message.
 
