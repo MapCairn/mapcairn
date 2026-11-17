@@ -151,6 +151,21 @@ describe("the Afrikaans catalogue", () => {
     expect(formal).toEqual([]);
   });
 
+  it.each([
+    ["English", EN_GB_CATALOGUE],
+    ["Afrikaans", AF_CATALOGUE],
+  ])(
+    "starts the %s map key button's name with the words its chip shows",
+    (_language, catalogue) => {
+      const names = catalogue["layers.key.toggle"].split("|");
+      const chips = catalogue["layers.key.chip"].split("|");
+      expect(names.length).toBe(chips.length);
+      names.forEach((name, index) => {
+        expect(name.startsWith(chips[index] ?? "")).toBe(true);
+      });
+    },
+  );
+
   it("keeps UTC wherever the English says a time is in UTC", () => {
     const dropped = KEYS.filter(
       (key) =>
