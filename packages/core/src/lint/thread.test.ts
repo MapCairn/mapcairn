@@ -140,9 +140,24 @@ describe("other markup that GitHub does not show", () => {
     expect(cleanText("a<style>SECRET</style>b")).toBe("ab");
   });
 
-  it("accepts attributes and a slash in the closing tag", () => {
-    expect(cleanText("a<script>SECRET</script foo='x'>b")).toBe("ab");
-    expect(cleanText("a<style>SECRET</style/>b")).toBe("ab");
+  it("ends a script or style block only at a bare closing tag", () => {
+    expect(cleanText("a<script>x</script >b")).toBe("ab");
+    expect(cleanText("a<style>x</style\n>b")).toBe("ab");
+    expect(cleanText("a<script>x</scripture>y</script>b")).toBe("ab");
+  });
+
+  it("fails closed on a closing tag with attributes, quotes or a slash, and flags it", () => {
+    for (const text of [
+      "a<script>x</script a='>SECRET'>b",
+      "a<script>x</script a='>b",
+      'a<style>x</style a=">SECRET">b</style>c',
+      "a<style>SECRET</style/>b",
+      "a<script>SECRET</script foo='x'>b",
+    ]) {
+      const result = inspectText(text);
+      expect(result.text).toBe("a");
+      expect(result.hiddenCharacters).toBe(text.length - 1);
+    }
   });
 
   it("runs an unclosed one to the end of the text", () => {
