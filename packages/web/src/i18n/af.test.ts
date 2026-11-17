@@ -32,8 +32,6 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
     "Item and items are Afrikaans words with the same plural form.",
   "chrome.readout.zoomShort": "The symbol z for the zoom level.",
   "duration.short.day": "The unit symbol d.",
-  "duration.short.hour":
-    "Unit symbol; Afrikaans wording to be confirmed in the #231 review.",
   "duration.short.minute":
     "The unit abbreviation min is the same in Afrikaans.",
   "directions.stop": "Stop is the Afrikaans word too.",
@@ -165,6 +163,25 @@ describe("the Afrikaans catalogue", () => {
       });
     },
   );
+
+  it("calls the map key a legende, and leaves sleutel for keyboard keys", () => {
+    const mapKeyKeys: MessageKey[] = [
+      "layers.key.title",
+      "layers.key.toggle",
+      "layers.key.chip",
+      "layers.key.scrolling",
+      "layers.key.nameKey",
+      "layers.keyFor",
+    ];
+    for (const key of mapKeyKeys) {
+      expect(AF_CATALOGUE[key], key).toMatch(/[Ll]egende?s?\b/);
+      expect(AF_CATALOGUE[key], key).not.toMatch(/sleutel/i);
+    }
+    expect(AF_CATALOGUE["layers.key.title"]).toBe("Kaartlegende");
+    expect(AF_CATALOGUE["layers.key.showing"]).toBe("Wys tans {time}");
+    expect(AF_CATALOGUE["layers.time.status"]).toMatch(/^Wys tans \{slot\}\./);
+    expect(AF_CATALOGUE["duration.short.hour"]).toBe("{count} uur");
+  });
 
   it("keeps UTC wherever the English says a time is in UTC", () => {
     const dropped = KEYS.filter(

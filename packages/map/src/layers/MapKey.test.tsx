@@ -125,17 +125,17 @@ describe("MapKey copy", () => {
     const messages = new FakeMessageCatalogue({
       language: "af",
       overrides: {
-        "layers.key.title": "Kaartsleutel",
-        "layers.key.toggle": "Sleutel, {count} laag|Sleutel, {count} lae",
-        "layers.key.nameKey": "{name}-sleutel",
+        "layers.key.title": "Kaartlegende",
+        "layers.key.toggle": "Legende, {count} laag|Legende, {count} lae",
+        "layers.key.nameKey": "{name}-legende",
       },
     });
     const { turnOn } = setup({ messages });
     turnOn(SAMPLE_FEED_LAYER.id, SAMPLE_ALERT_LAYER.id);
-    expect(screen.getByRole("region", { name: "Kaartsleutel" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Sleutel, 2 lae" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Kaartlegende" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Legende, 2 lae" })).toBeTruthy();
     expect(
-      screen.getByRole("list", { name: `${SAMPLE_FEED_LAYER.name}-sleutel` }),
+      screen.getByRole("list", { name: `${SAMPLE_FEED_LAYER.name}-legende` }),
     ).toBeTruthy();
     expect(messages.calls).toContainEqual({
       key: "layers.key.toggle",
