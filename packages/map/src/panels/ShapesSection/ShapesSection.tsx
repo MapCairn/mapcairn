@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { type Bounds, formatShapeMeasure } from "@mapcairn/core";
+import {
+  type Bounds,
+  formatShapeMeasure,
+  type MessageKey,
+  type WktAxisOrder,
+} from "@mapcairn/core";
 import {
   CircleCheck,
   Download,
@@ -11,9 +16,10 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { type Ref, useContext } from "react";
+import { type Ref, useContext, useRef } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { MapContext } from "../../host";
+import { dateInput, field } from "../../layers/Layers.css";
 import { FIT_MAX_ZOOM, fitPadding } from "../../layers/reveal";
 import { useFileOpener, useMessages, useSettings } from "../../services";
 import type { DrawFeedback, UseDraw } from "../../tools/DrawToolbar";
@@ -33,6 +39,12 @@ export interface ShapesSectionProps {
   /** Receives the heading, so the sheet can focus it. */
   readonly headingRef?: Ref<HTMLHeadingElement>;
 }
+
+/** The button that reads the offered file in the other WKT axis order, by the order it offers. */
+const REREAD_KEYS = {
+  "lat-lng": "panels.shapes.axisReread.lat-lng",
+  "lng-lat": "panels.shapes.axisReread.lng-lat",
+} as const satisfies Readonly<Record<WktAxisOrder, MessageKey>>;
 
 /** The outcome of an import, export or copy, in words with an icon. */
 function Feedback({
@@ -95,6 +107,8 @@ export function ShapesSection({
   const subLevel = (headingLevel + 1) as HeadingLevel;
   const fitToImport = useFitToImport();
   const canImport = useFileOpener() !== undefined;
+  const readAs = importFeedback?.readAs;
+  const orderRef = useRef<HTMLSelectElement>(null);
   const importFile = () => {
     // Called straight from the press, so the browser shows the picker.
     void draw.importFile().then((bounds) => {
@@ -102,6 +116,14 @@ export function ShapesSection({
         fitToImport(bounds);
       }
     });
+  };
+  const reread = (order: WktAxisOrder) => {
+    // The button that was pressed goes with the offer, so focus moves to the control it set.
+    orderRef.current?.focus();
+    const bounds = draw.rereadImport(order);
+    if (bounds) {
+      fitToImport(bounds);
+    }
   };
   return (
     <Section
@@ -163,6 +185,25 @@ export function ShapesSection({
           <Subheading level={subLevel}>
             {t("panels.shapes.importHeading", {})}
           </Subheading>
+          <label className={field}>
+            {t("panels.shapes.axisOrderLabel", {})}
+            <select
+              ref={orderRef}
+              className={dateInput}
+              value={draw.wktAxisOrder}
+              data-testid="shapes-axis-order"
+              onChange={(event) =>
+                draw.setWktAxisOrder(event.target.value as WktAxisOrder)
+              }
+            >
+              <option value="lng-lat">
+                {t("panels.shapes.axisOrder.lng-lat", {})}
+              </option>
+              <option value="lat-lng">
+                {t("panels.shapes.axisOrder.lat-lng", {})}
+              </option>
+            </select>
+          </label>
           <div className={actions}>
             <Button
               variant="secondary"
@@ -174,6 +215,17 @@ export function ShapesSection({
             </Button>
           </div>
           <Feedback feedback={importFeedback} testId="shapes-import-feedback" />
+          {readAs ? (
+            <div className={actions}>
+              <Button
+                variant="secondary"
+                data-testid="shapes-import-reread"
+                onClick={() => reread(readAs)}
+              >
+                {t(REREAD_KEYS[readAs], {})}
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className={subsection}>

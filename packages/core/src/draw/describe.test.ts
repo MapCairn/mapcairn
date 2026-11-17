@@ -7,6 +7,7 @@ import type { Message } from "../ports/messages";
 import {
   announceDrawEvent,
   DRAW_ISSUE_MESSAGES,
+  describeAxisSuggestion,
   describeShapeImport,
   describeShapeMeasure,
   formatShapeMeasure,
@@ -243,6 +244,17 @@ describe("announceDrawEvent", () => {
     expect(
       english(announceDrawEvent(state.lastEvent, state.shapes, "metric")),
     ).toBe("Point 1 added to Polygon 1.");
+  });
+});
+
+describe("describeAxisSuggestion", () => {
+  it("says the first position fits only the other order, for each order", () => {
+    expect(english(describeAxisSuggestion("lat-lng"))).toBe(
+      "No shapes imported. The first position is outside the world as longitude, latitude, but it fits as latitude, longitude.",
+    );
+    expect(english(describeAxisSuggestion("lng-lat"))).toBe(
+      "No shapes imported. The first position is outside the world as latitude, longitude, but it fits as longitude, latitude.",
+    );
   });
 });
 
