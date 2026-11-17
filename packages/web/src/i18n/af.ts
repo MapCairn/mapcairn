@@ -830,4 +830,45 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Stuur die speld se ligging, tot op sowat 11 m, na OpenStreetMap se Nominatim-diens.",
   "host.notes.routing":
     "Niks word gestuur voordat jy dit vra nie. Kry roete stuur die stoppe en die manier van reis, en 'n reistydgebied stuur die eerste stop, saam met jou IP-adres, na die Valhalla-roetediens wat FOSSGIS bedryf. Dit gebruik OpenStreetMap-data.",
+  "host.title.map": "Interaktiewe kaart",
+  "privacy.title": "Privaatheidsbeleid",
+  "privacy.updated": "Laas opgedateer: {date}",
+  "privacy.intro":
+    "MapCairn het geen gebruikersrekeninge, geen vorms en geen databasis met besoekerdata aan die bedienerkant nie. Die webwerf stoor of stuur net die volgende.",
+  "privacy.cookies.heading": "Koekies",
+  "privacy.cookies.body":
+    "Die webwerf stel geen koekies nie. Jou instellings word eerder op jou toestel in plaaslike berging gehou, soos hieronder beskryf.",
+  "privacy.storage.heading": "Plaaslike berging",
+  "privacy.storage.body":
+    "Jou blaaier se {localStorage} hou jou instellings: jou ligte of donker tema (onder die sleutel {themeKey}), jou eenhede, watter taal jy gekies het, of die zoemknoppies wys, of Spaar data aan is, of die kaart plat of 'n aardbol is, jou gekose basiskaart, waar die kaart laas gelaat is, en of jy die toer by jou eerste besoek beantwoord het ('n weergawenommer onder {tourKey}). Die ander sleutels begin met {keyPrefix}. Die toer self stuur niks nie; 'n laag wat jy daartydens aanskakel, laai van sy verskaffer soos hieronder beskryf. Dit bly op jou toestel en word nooit na 'n bediener gestuur nie. Waar jou blaaier 'n datasparer of 'n baie stadige verbinding rapporteer, lees die bladsy dit plaaslik om die verstek vir Spaar data te kies. Niks daarvan word êrens heen gestuur nie.",
+  "privacy.analytics.heading": "Analise",
+  "privacy.analytics.body":
+    "Hierdie webwerf gebruik Cloudflare Web Analytics vir saamgevoegde tellings van bladsybesoeke. Dit gebruik geen koekies nie, maak nie 'n vingerafdruk van besoekers nie, volg jou nie oor webwerwe heen nie en stoor geen persoonlike data nie. Versoeke word gerig aan {scriptHost} en {beaconHost}.",
+  "privacy.errors.heading": "Foutverslagdoening",
+  "privacy.errors.body":
+    "As die toepassing 'n onverwagte fout in jou blaaier teëkom, stuur dit 'n kort diagnostiese verslag na hierdie webwerf se eie bediener, waar dit in Cloudflare se bedryfslogboeke geskryf word sodat die fout reggemaak kan word. Die verslag bevat die foutboodskap, 'n stapelspoor, die bladsy se adres sonder sy navraag of die deel ná # (byvoorbeeld {exampleUrl}), en of dit 'n onopgevangde fout of 'n verwerpte belofte was. Dit bevat nooit die kaart se ligging of joune nie. Geen koekies, persoonlike data of blywende identifiseerders word by die verslag gevoeg nie, en dit word nie in enige databasis gestoor nie. Een bladsylaai stuur hoogstens vyf verslae, en dieselfde fout net een keer.",
+  "privacy.hosting.heading": "Gasheerlogboeke",
+  "privacy.hosting.body":
+    "Cloudflare, as gasheer, mag standaard versoekmetadata (IP-adres, gebruikersagent, tydstempel) as deel van normale werking aanteken. Sien {link}.",
+  "privacy.hosting.link": "Cloudflare se eie privaatheidsbeleid",
+  "privacy.tiles.heading": "Kaartteëls en plekkesoektog",
+  "privacy.tiles.body":
+    "Die basiskaart se teëlverskaffers, OpenFreeMap en, wanneer jy die Strate-basiskaart kies, die OpenStreetMap Foundation, mag teëlversoeke, insluitend jou IP-adres, aanteken as deel van die lewering van die kaart. Dit is standaard vir enige webkaart. Jou blaaier maak daardie versoeke self: dit dra jou IP-adres, sy gewone versoekopskrifte (soos sy gebruikersagent) en hierdie webwerf se adres as die verwysingsadres, en niks wat hierdie webwerf oor jou gestoor het nie. Teëls word aangevra vir die deel van die kaart op die skerm, so die basiskaart se verskaffer, en die verskaffer van enige teëllaag wat jy aanskakel, kan sowat aflei na watter gebied jy kyk, en ná Vind my sowat waar jy is. Wanneer jy soek (deur Enter of die Soek-knoppie te druk), word jou soekvraag gestuur na OpenStreetMap se Nominatim-geokodeerdiens, wat insgelyks die soekvraag en jou IP-adres mag aanteken. Terwyl jy tik, word die teks tot nou toe ook gestuur na Photon, 'n geokodeerdiens wat soek terwyl jy tik en wat komoot op OpenStreetMap-data bedryf, om plekke voor te stel. 'n Versoek gaan uit elke keer as jy ophou tik nadat jy minstens drie karakters getik het, so een soektog kan verskeie gedeeltelike weergawes daarvan stuur, en Photon mag hulle saam met jou IP-adres aanteken. Jou blaaier stuur geen koekies en geen verwysingsadres saam met hierdie versoeke nie. As jy 'n voorstel kies, word niks meer gestuur nie, en as voorstelle ophou werk, soek Enter en die Soek-knoppie steeds deur Nominatim. 'n Soektog wat net 'n koördinaatpaar is, word in jou blaaier gelees en nie na die geokodeerder gestuur nie; om die plek te wys, vra kaartteëls vir daardie gebied aan, soos enige kaartbeweging. As 'n assistent in jou blaaier hierdie webwerf se soek- of meetgereedskap gebruik (deur WebMCP), word die plekname wat dit gee op dieselfde manier na Nominatim gestuur, en 'n koördinaatpaar word weer in jou blaaier gelees.",
+  "privacy.layers.heading": "Datalae",
+  "privacy.layers.body":
+    "Elke datalaag is af totdat jy dit aanskakel, en niks word voor dit aangevra nie. As jy 'n laag aanskakel, sy beheer verander of Probeer weer druk, gaan 'n versoek van jou blaaier reguit na daardie laag se verskaffer, wat dit saam met jou IP-adres mag aanteken: die US Geological Survey (USGS) vir aardbewings, NASA se Global Imagery Browse Services vir sy beeldlae (satellietbeelde, reënval, brandkolle, waar mense woon, die aarde snags en seetemperatuur), die Global Disaster Alert and Coordination System (GDACS) vir waarskuwings oor brande, vloede, tropiese siklone, vulkane en droogtes, en Copernicus (die Global Flood Awareness System) vir die vloedgevaarkaart, en die jsDelivr-inhoudafleweringsnetwerk vir die landsgrense. Wys geraakte gebied stuur nog een versoek na GDACS, net vir daardie gebeurtenis. Teëllae vra prente aan vir die deel van die kaart waarna jy kyk, so die verskaffer kan sowat aflei waarheen jy kyk. Niks gaan deur hierdie webwerf nie, en niks word gestoor buiten die bladsy wat jy oop het nie. Die lae wat jy aanskakel, word in die bladsyadres geskryf sodat 'n skakel gedeel kan word; hulle word nêrens anders heen gestuur nie. As jy 'n skakel oopmaak wat lae aan het, word daardie lae dadelik aangevra, omdat die skakel hulle aanskakel.",
+  "privacy.pins.heading": "Speldadresse",
+  "privacy.pins.body":
+    "As jy 'n speld plaas, word niks gestuur nie. 'n Speld se adres word net opgesoek wanneer jy by die speld op Soek adres op druk. Dit stuur die speld se ligging, afgerond tot sowat 11 m, na OpenStreetMap se Nominatim-diens, wat dit saam met jou IP-adres mag aanteken.",
+  "privacy.routes.heading": "Roetes en reistydgebiede",
+  "privacy.routes.body":
+    "As jy 'n roete of 'n reistydgebied vra, gaan die versoek na die openbare Valhalla-roetediens by valhalla1.openstreetmap.de, wat die FOSSGIS-gemeenskap bedryf en wat op OpenStreetMap-data gebou is. Dit stuur die roete se koördinate (sy stoppe, of die beginpunt van 'n reistydgebied) en die manier van reis, en die bediener mag hulle saam met jou IP-adres aanteken. Niks word gestuur voordat jy vra nie. MapCairn stoor niks oor die versoek nie, en die resultate word nie gestoor of in die bladsyadres gesit nie.",
+  "privacy.location.heading": "Jou ligging",
+  "privacy.location.body":
+    "Die Vind my-knoppie vra jou blaaier net vir jou ligging wanneer jy dit druk. Die ligging word gebruik om te wys waar jy op die kaart is. Dit word nie na hierdie webwerf gestuur nie en word nie gestoor nie.",
+  "privacy.contact.heading": "Kontak",
+  "privacy.contact.body":
+    "Vir 'n vraag of bekommernis oor privaatheid, skryf aan {email}, of maak 'n kwessie oop op {issues}.",
+  "privacy.contact.issuesLink": "GitHub",
+  "privacy.back": "Terug na die kaart",
 };
