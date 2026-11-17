@@ -29,6 +29,8 @@ interface NamedImport {
   readonly imported: string;
   /** The name the importing file uses, after any `as`. */
   readonly local: string;
+  /** True for `import type { ... }` and for a name marked `type` inside braces. */
+  readonly typeOnly: boolean;
 }
 
 /** The code inside every fenced block of the given language. */
@@ -38,29 +40,36 @@ function fencedBlocks(markdown: string, language: string): string[] {
 }
 
 /**
- * Every named import in a source text. A default or namespace import, or a
- * side-effect import, is returned with the imported name `*`, so a check
- * that compares names against the example fails on it rather than skip it.
+ * Every named import in a source text. A default or namespace import is
+ * returned with the imported name `*`, so a check that compares names
+ * against the example fails on it rather than skip it.
  */
 function namedImports(source: string): NamedImport[] {
   const found: NamedImport[] = [];
   for (const match of source.matchAll(
-    /^import\s+(?:type\s+)?([\s\S]*?)\s+from\s+"([^"]+)";/gm,
+    /^import\s+(type\s+)?([\s\S]*?)\s+from\s+"([^"]+)";/gm,
   )) {
-    const clause = match[1] ?? "";
-    const specifier = match[2] ?? "";
-    const braced = /^\{([\s\S]*)\}$/.exec(clause.trim());
+    const statementTypeOnly = match[1] !== undefined;
+    const clause = (match[2] ?? "").trim();
+    const specifier = match[3] ?? "";
+    const braced = /^\{([\s\S]*)\}$/.exec(clause);
     if (!braced) {
-      found.push({ specifier, imported: "*", local: clause.trim() });
+      found.push({
+        specifier,
+        imported: "*",
+        local: clause,
+        typeOnly: statementTypeOnly,
+      });
       continue;
     }
     for (const part of (braced[1] ?? "").split(",")) {
-      const [imported = "", local = imported] = part
-        .replace(/^\s*type\s+/, "")
-        .trim()
+      const name = part.trim();
+      const typeOnly = statementTypeOnly || name.startsWith("type ");
+      const [imported = "", local = imported] = name
+        .replace(/^type\s+/, "")
         .split(/\s+as\s+/);
       if (imported !== "") {
-        found.push({ specifier, imported, local });
+        found.push({ specifier, imported, local, typeOnly });
       }
     }
   }
@@ -156,8 +165,8 @@ describe("README.md", () => {
 
   it("uses each SDK component with props the example also passes it", () => {
     const components = namedImports(snippet).filter(
-      ({ specifier, local }) =>
-        specifier.startsWith("@mapcairn/") && /^[A-Z]/.test(local),
+      ({ specifier, local, typeOnly }) =>
+        !typeOnly && specifier.startsWith("@mapcairn/") && /^[A-Z]/.test(local),
     );
     const unknown: string[] = [];
     for (const { local, imported } of components) {
