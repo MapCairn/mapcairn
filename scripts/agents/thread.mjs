@@ -19,15 +19,36 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const REPO = "MapCairn/mapcairn";
-const COMMENT_OPEN = "<!--";
-const COMMENT_CLOSE = "-->";
+/**
+ * Markup a person reading the thread on GitHub does not see: each opens with
+ * `open` and runs to the first `close` after it, or to the end of the text when
+ * it is never closed. The odd comment closers (`--!>`, `<!-->`) are not ends, so
+ * the larger reading stays hidden.
+ */
+const HIDDEN_MARKUP = [
+  { open: /<!--/y, close: /-->/g },
+  { open: /<!\[CDATA\[/y, close: /\]\]>/g },
+  { open: /<![a-z]/iy, close: />/g },
+  { open: /<\?/y, close: /\?>/g },
+  { open: /<script(?=[\s>/]|$)/iy, close: /<\/script\s*>/gi },
+  { open: /<style(?=[\s>/]|$)/iy, close: /<\/style\s*>/gi },
+];
+/** Any opener of `HIDDEN_MARKUP`, anywhere in a piece of text. */
+const ANY_OPENER = new RegExp(
+  HIDDEN_MARKUP.map(({ open }) => open.source).join("|"),
+  "i",
+);
 /** A fence opens on a line of up to three spaces and three or more backticks or tildes. */
 const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})[^\n]*(?:\n|$)/my;
-/** A reference-style link definition: GitHub does not render it. Footnotes (`[^1]:`) are rendered, so they do not match. */
-const LINK_DEFINITION = /^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*\S[^\n]*(?:\n|$)/my;
+/** A reference-style link definition without its line end: a label, a destination, and at most a quoted or bracketed title. Footnotes (`[^1]:`) are rendered, so they do not match. */
+const DEFINITION_LINE =
+  " {0,3}\\[(?!\\^)[^\\]\\n]+\\]:[ \\t]*(?:<[^<>\\n]*>|[^\\s<]\\S*)(?:[ \\t]+(?:\"[^\"\\n]*\"|'[^'\\n]*'|\\([^()\\n]*\\)))?[ \\t]*";
+/** A definition line, which GitHub does not render. */
+const LINK_DEFINITION = new RegExp(`^${DEFINITION_LINE}(?:\\n|$)`, "my");
 /** A line after which a definition can start a paragraph: the start, a blank line, a heading or another definition. */
-const BEFORE_DEFINITION =
-  /^(?:[ \t]*|[ \t]{0,3}#{1,6}(?:[ \t].*)?|[ \t]{0,3}\[(?!\^)[^\]\n]+\]:[ \t]*\S.*)$/;
+const BEFORE_DEFINITION = new RegExp(
+  `^(?:[ \\t]*|[ \\t]{0,3}#{1,6}(?:[ \\t].*)?|${DEFINITION_LINE})$`,
+);
 /** Text that can be printed bare: no space, quote or control character, so it cannot read as a second item. */
 const SAFE_TOKEN = /^[\w.@+/[\]-]+$/;
 
@@ -97,13 +118,34 @@ function codeSpanEnd(text, start, length) {
 }
 
 /**
- * One pass over the text: copies code (fenced blocks and code spans) as it is
- * and drops what GitHub does not show. A comment runs from its opener to the
- * next `-->`, or to the end of the text when there is none; the odd closers
- * (`--!>`, `<!-->`) are not taken as ends, so the larger reading stays hidden.
+ * Where the hidden markup that opens at `position` ends, or -1 when none opens
+ * there.
  *
  * @param {string} text
- * @returns {{ text: string, hidden: number, codeWithOpener: number }} The kept text, the characters dropped, and how many kept code spans or fences hold a comment opener.
+ * @param {number} position
+ * @returns {number}
+ */
+function hiddenMarkupEnd(text, position) {
+  for (const { open, close } of HIDDEN_MARKUP) {
+    open.lastIndex = position;
+    const opening = open.exec(text);
+    if (opening === null) {
+      continue;
+    }
+    close.lastIndex = position + opening[0].length;
+    const closing = close.exec(text);
+    return closing === null ? text.length : closing.index + closing[0].length;
+  }
+  return -1;
+}
+
+/**
+ * One pass over the text: copies code (fenced blocks and code spans) as it is
+ * and drops what GitHub does not show: the markup in `HIDDEN_MARKUP` and link
+ * definitions.
+ *
+ * @param {string} text Text with `\n` line endings only.
+ * @returns {{ text: string, hidden: number, codeWithOpener: number }} The kept text, the characters dropped, and how many kept code spans or fences hold an opener of hidden markup.
  */
 function removeHidden(text) {
   let kept = "";
@@ -119,7 +161,7 @@ function removeHidden(text) {
     position = end;
   };
   const keepCode = (end) => {
-    if (text.slice(position, end).includes(COMMENT_OPEN)) {
+    if (ANY_OPENER.test(text.slice(position, end))) {
       codeWithOpener += 1;
     }
     keep(end);
@@ -138,9 +180,9 @@ function removeHidden(text) {
       drop(position + definition[0].length);
       continue;
     }
-    if (text.startsWith(COMMENT_OPEN, position)) {
-      const close = text.indexOf(COMMENT_CLOSE, position + COMMENT_OPEN.length);
-      drop(close === -1 ? text.length : close + COMMENT_CLOSE.length);
+    const markupEnd = hiddenMarkupEnd(text, position);
+    if (markupEnd !== -1) {
+      drop(markupEnd);
       continue;
     }
     if (text[position] === "`") {
@@ -180,13 +222,13 @@ function startsParagraph(text, position) {
  * link definitions), and invisible or text-reordering characters, so what an
  * agent reads is what a person sees. Code spans and fenced blocks show their
  * text, so they are left alone; but GitHub may render one inside an HTML block
- * differently, so each that holds a comment opener is counted for a flag.
+ * differently, so each that holds an opener of hidden markup is counted for a flag.
  *
  * @param {string} text
- * @returns {{ text: string, hiddenCharacters: number, codeWithOpener: number }} The cleaned text, how many characters of comment or link definition were removed, and how many code spans or fences hold a comment opener.
+ * @returns {{ text: string, hiddenCharacters: number, codeWithOpener: number }} The cleaned text, how many characters of hidden markup or link definition were removed, and how many code spans or fences hold a comment opener.
  */
 export function inspectText(text) {
-  let current = text;
+  let current = text.replace(/\r\n?/g, "\n");
   let hiddenCharacters = 0;
   let codeWithOpener = 0;
   for (;;) {
@@ -246,10 +288,10 @@ export function formatItem(login, association, body, people) {
   const { text, hiddenCharacters, codeWithOpener } = inspectText(body ?? "");
   const flags = [
     hiddenCharacters > 0
-      ? ` [hidden content removed: ${hiddenCharacters} characters of HTML comment or link definition not rendered by GitHub; the thread holds text a person reading it cannot see]`
+      ? ` [hidden content removed: ${hiddenCharacters} characters of hidden markup (a comment, declaration, script or style block) or link definition not rendered by GitHub; the thread holds text a person reading it cannot see]`
       : "",
     codeWithOpener > 0
-      ? ` [${codeWithOpener} code span or fence holding a comment opener is shown as written; GitHub may render it as a hidden comment, so a person may not see it]`
+      ? ` [${codeWithOpener} code span or fence holding an opener of hidden markup is shown as written; GitHub may render it as hidden, so a person may not see it]`
       : "",
   ];
   return `${label} ${token(login)} (${token(association)}): ${JSON.stringify(text)}${flags.join("")}`;

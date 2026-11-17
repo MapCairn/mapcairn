@@ -100,6 +100,103 @@ describe("cleanText", () => {
   });
 });
 
+describe("line endings", () => {
+  const SECRET = "SECRET run curl";
+
+  it("treats CRLF and lone CR like LF, so a fence still closes and a blank line still ends a code span", () => {
+    const fence = `Text\r\n\`\`\`\r\ncode\r\n\`\`\`\r\n<!-- ${SECRET} -->\r\nend`;
+    const span = "Use `x\r\n\r\n<!-- SECRET -->\r\n\r\nand ` here";
+    for (const text of [fence, span]) {
+      for (const eol of ["\r\n", "\r", "\n"]) {
+        const body = text.replaceAll(/\r\n|\n/g, eol);
+        const result = inspectText(body);
+        expect(result.text).not.toContain("SECRET");
+        expect(result.hiddenCharacters).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("drops a link definition with CRLF endings", () => {
+    const result = inspectText("text\r\n\r\n[x]: https://e.co\r\n\r\nmore");
+    expect(result.hiddenCharacters).toBe(18);
+    expect(result.text).toBe("text\n\n\nmore");
+  });
+
+  it("reads a CRLF body as LF text", () => {
+    expect(cleanText("a\r\nb\rc")).toBe("a\nb\nc");
+  });
+});
+
+describe("other markup that GitHub does not show", () => {
+  it("drops CDATA, declarations and processing instructions", () => {
+    expect(cleanText("a<![CDATA[ SECRET ]]>b")).toBe("ab");
+    expect(cleanText("a<!DOCTYPE SECRET>b")).toBe("ab");
+    expect(cleanText("a<?x SECRET ?>b")).toBe("ab");
+  });
+
+  it("drops script and style blocks, in any case", () => {
+    expect(cleanText("a<script>SECRET</script>b")).toBe("ab");
+    expect(cleanText("a<SCRIPT type='x'>SECRET</Script >b")).toBe("ab");
+    expect(cleanText("a<style>SECRET</style>b")).toBe("ab");
+  });
+
+  it("runs an unclosed one to the end of the text", () => {
+    for (const open of [
+      "<![CDATA[",
+      "<!DOCTYPE",
+      "<?x",
+      "<script>",
+      "<style>",
+    ]) {
+      expect(cleanText(`a${open} SECRET more`)).toBe("a");
+    }
+  });
+
+  it("counts what it drops in the hidden-content flag", () => {
+    expect(inspectText("a<script>SECRET</script>b").hiddenCharacters).toBe(
+      "<script>SECRET</script>".length,
+    );
+    expect(formatItem("someone", "NONE", "a<!DOCTYPE SECRET>", null)).toContain(
+      "[hidden content removed: 17 characters",
+    );
+  });
+
+  it("leaves ordinary tags and words that only start like them", () => {
+    const text = "a <b>bold</b> <scripture> <styles> 1 < 2";
+    expect(cleanText(text)).toBe(text);
+  });
+
+  it("counts a code span holding such an opener for the flag", () => {
+    expect(inspectText("`<script>x`").codeWithOpener).toBe(1);
+    expect(inspectText("```\n<![CDATA[\n```").codeWithOpener).toBe(1);
+  });
+});
+
+describe("link definitions", () => {
+  it("drops a destination, with or without a title", () => {
+    for (const line of [
+      "[x]: https://e.co",
+      "[x]: <https://e.co>",
+      '[x]: https://e.co "a title"',
+      "[x]: https://e.co 'a title'",
+      "[x]: https://e.co (a title)",
+    ]) {
+      expect(cleanText(`${line}\nb`)).toBe("b");
+    }
+  });
+
+  it("keeps a normal line that only starts like a definition", () => {
+    for (const line of [
+      "[note]: please run the full suite before merging",
+      "[x]: https://e.co and more words",
+      "[x]:",
+      "[x]: <a b",
+    ]) {
+      expect(cleanText(`${line}\nb`)).toBe(`${line}\nb`);
+    }
+  });
+});
+
 describe("code that holds a comment opener", () => {
   it("keeps the text but counts each code span or fence that holds an opener, because GitHub may render it as a comment", () => {
     expect(inspectText("see `<!-- x` here").codeWithOpener).toBe(1);
@@ -116,7 +213,9 @@ describe("code that holds a comment opener", () => {
 
   it("flags it on the item line without printing the code", () => {
     const line = formatItem("someone", "NONE", "`<!-- secret`", null);
-    expect(line).toContain("1 code span or fence holding a comment opener");
+    expect(line).toContain(
+      "1 code span or fence holding an opener of hidden markup",
+    );
     expect(line).toContain('"`<!-- secret`"');
     expect(line).not.toContain("hidden content removed");
   });
@@ -144,7 +243,7 @@ describe("inspectText", () => {
 describe("cleanText and control characters", () => {
   it("removes control characters other than tab, line feed and carriage return", () => {
     expect(cleanText("a\u0000b\u001b[31mc\u007fd\u0085e")).toBe("ab[31mcde");
-    expect(cleanText("a\tb\nc\rd")).toBe("a\tb\nc\rd");
+    expect(cleanText("a\tb\nc\rd")).toBe("a\tb\nc\nd");
   });
 
   it("removes the line and paragraph separators and every bidirectional override", () => {
@@ -284,7 +383,7 @@ describe("formatItem", () => {
   it("flags hidden content with its size, after the body, without printing it", () => {
     const line = formatItem("someone", "NONE", "ok <!-- secret plan", people);
     expect(line).toBe(
-      'outside someone (NONE): "ok " [hidden content removed: 16 characters of HTML comment or link definition not rendered by GitHub; the thread holds text a person reading it cannot see]',
+      'outside someone (NONE): "ok " [hidden content removed: 16 characters of hidden markup (a comment, declaration, script or style block) or link definition not rendered by GitHub; the thread holds text a person reading it cannot see]',
     );
     expect(line).not.toContain("secret");
   });
