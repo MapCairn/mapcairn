@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "url": ["http://localhost:4173/"],
+      "url": ["http://localhost:4173/", "http://localhost:4173/map"],
       "numberOfRuns": 3,
       "startServerCommand": "npm run preview:e2e -w @mapcairn/web -- --port 4173",
       "startServerReadyPattern": "Ready on",

@@ -3,7 +3,13 @@
 import { SITE_URL } from "../constants/siteConfig";
 import { staticTextResponse } from "./staticTextResponse";
 
-const ROBOTS_TXT_BODY = `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`;
+const ROBOTS_TXT_BODY = `# MapCairn is open source. Search engines and AI crawlers are welcome to read
+# every page; /llms.txt summarises the project for language models.
+User-agent: *
+Allow: /
+
+Sitemap: ${SITE_URL}/sitemap.xml
+`;
 
 /**
  * React Router resource route: generates `/robots.txt` from `SITE_URL`

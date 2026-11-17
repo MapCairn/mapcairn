@@ -2,17 +2,35 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
+import routes from "../routes";
 import { loader } from "./sitemap.xml";
 
 describe("/sitemap.xml route", () => {
-  it("lists every published route as an absolute URL", async () => {
+  it("lists the product page, the playground and the privacy policy as absolute URLs", async () => {
     const response = loader();
     const body = await response.text();
 
     expect(response.headers.get("Content-Type")).toBe(
       "application/xml; charset=utf-8",
     );
-    expect(body).toContain(`<loc>${SITE_URL}/</loc>`);
-    expect(body).toContain(`<loc>${SITE_URL}/privacy</loc>`);
+    const locations = [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+      (match) => match[1],
+    );
+    expect(locations).toEqual([
+      `${SITE_URL}/`,
+      `${SITE_URL}/map`,
+      `${SITE_URL}/privacy`,
+    ]);
+  });
+
+  it("lists only pages the route table has, and no date it cannot know", async () => {
+    const body = await loader().text();
+    const paths = new Set(
+      routes.map((entry) => (entry.index ? "" : (entry.path ?? ""))),
+    );
+    for (const [, path] of body.matchAll(/<loc>[^<]+?\/([^/<]*)<\/loc>/g)) {
+      expect(paths.has(path ?? "")).toBe(true);
+    }
+    expect(body).not.toContain("<lastmod>");
   });
 });

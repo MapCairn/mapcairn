@@ -326,7 +326,7 @@ export class MapPage {
   }
 
   /**
-   * Opens the app at `/` plus an optional hash (for example
+   * Opens the playground at `/map` plus an optional hash (for example
    * `#basemap=osm`) and waits until the first frame of the basemap has
    * loaded.
    */
@@ -336,7 +336,7 @@ export class MapPage {
     if (this.page.url().startsWith("http")) {
       await this.page.goto("about:blank");
     }
-    await this.page.goto(`/${hash}`);
+    await this.page.goto(`/map${hash}`);
     await this.waitForMap();
   }
 

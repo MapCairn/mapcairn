@@ -17,7 +17,7 @@ test.describe("other pages", () => {
     ).toBeVisible();
     await expect(page.getByRole("main")).toHaveCount(1);
     await page.getByRole("link", { name: "Go to the map" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/map$/);
     await expect(page.getByTestId("map-host")).toBeVisible();
   });
 
@@ -70,7 +70,7 @@ test.describe("the privacy page in Afrikaans", () => {
   test("the tab title of the map page is in Afrikaans too", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/map");
     await expect(page).toHaveTitle("MapCairn | Interaktiewe kaart");
   });
 
@@ -89,7 +89,7 @@ test.describe("the privacy page in Afrikaans", () => {
     ).toBeVisible();
 
     await page.getByRole("link", { name: "Terug na die kaart" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/map$/);
     await expect(page).toHaveTitle("MapCairn | Interaktiewe kaart");
   });
 

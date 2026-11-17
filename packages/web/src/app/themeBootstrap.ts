@@ -10,9 +10,9 @@ import { OFFERED_LANGUAGE_TAGS } from "../i18n/hostLanguages";
  * the stored language when the host offers it.
  *
  * @remarks Its SHA-256 is allowed by the content security policy in
- *   `public/_headers` and `constants/securityHeaders.ts`. A test hashes this
- *   exact string and checks both files, so any change here fails until the
- *   hash is updated in both.
+ *   `public/_headers` and `constants/securityHeaders.ts`.
+ *   `inlineScripts.test.ts` hashes this exact string and checks both files,
+ *   so any change here fails until the hash is updated in both.
  */
 export const THEME_BOOTSTRAP_SCRIPT = buildThemeBootstrapScript(
   OFFERED_LANGUAGE_TAGS,

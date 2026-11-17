@@ -19,6 +19,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useMatches,
   useRouteError,
 } from "react-router";
 import { DocumentTitle } from "./app/DocumentTitle";
@@ -30,28 +31,29 @@ import { reportCaughtError } from "./composition/errorReporting";
 import { BRAND_COLOUR } from "./constants/brandColour";
 import { SITE_URL } from "./constants/siteConfig";
 import { fontPreloadLinks } from "./fonts/fontPreload";
-import { englishTitle, MAP_TITLE } from "./i18n/pageTitle";
+import { fixedPageLanguage } from "./i18n/pageLanguage";
+import { PRODUCT_DESCRIPTION } from "./product/productContent";
+import { jsonLdGraph, websiteNode } from "./structuredData";
 
 /**
- * React Router route module export: the page title and meta tags, including
- * the viewport, Open Graph, Twitter card and JSON-LD, from `buildPageMeta`.
- * The server renders the English title and the browser shows it in the
- * visitor's language (see `DocumentTitle`); the description and the other tags
- * are read by crawlers and link previews, not shown in the app, so they stay
- * English.
+ * React Router route module export: the site's own title and meta tags, for a
+ * page with none of its own (the error pages). Each page's route exports its
+ * own `meta`, which replaces these (see `buildPageMeta`). They are read by
+ * crawlers and link previews, so they stay English.
  */
 export const meta: MetaFunction = () =>
   buildPageMeta({
-    title: englishTitle(MAP_TITLE),
-    description:
-      "Explore an interactive map. Search places, compare basemaps and measure distances or areas.",
-    url: SITE_URL,
+    title: "MapCairn",
+    description: PRODUCT_DESCRIPTION,
+    url: `${SITE_URL}/`,
+    image: "product",
+    structuredData: jsonLdGraph([websiteNode()]),
   });
 
 /**
- * React Router route module export: the font preload, icons, manifest and a
- * preconnect to the default basemap's tile host. OpenStreetMap tiles are
- * needed only after the reader picks Streets, so they get no preconnect.
+ * React Router route module export: the font preload, icons and manifest,
+ * which every page needs. A page that loads more (the map's tile host) adds
+ * its own links.
  */
 export const links: LinksFunction = () => [
   ...fontPreloadLinks,
@@ -77,11 +79,6 @@ export const links: LinksFunction = () => [
   { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
   { rel: "mask-icon", href: "/safari-pinned-tab.svg", color: BRAND_COLOUR },
   { rel: "manifest", href: "/site.webmanifest" },
-  {
-    rel: "preconnect",
-    href: "https://tiles.openfreemap.org",
-    crossOrigin: "anonymous",
-  },
 ];
 
 /**
@@ -135,13 +132,16 @@ export function Layout({ children }: { readonly children: ReactNode }) {
 /**
  * Keeps `<html lang>` on the language the interface speaks. The pre-paint
  * script sets it from the stored choice before first paint; this covers the
- * browser's own languages and a choice made later.
+ * browser's own languages and a choice made later. A page in one language
+ * only (the English product page, through its route's `handle`) keeps that
+ * language instead.
  */
 function DocumentLanguage() {
   const { language } = useMessages();
+  const fixed = fixedPageLanguage(useMatches());
   useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
+    document.documentElement.lang = fixed ?? language;
+  }, [fixed, language]);
   return null;
 }
 
@@ -155,7 +155,7 @@ function DocumentLanguage() {
  * @remarks `createServices` is safe on the server: adapters touch no browser
  *   API until used. Their values differ between server and browser (stored
  *   settings, device preferences), so nothing rendered from them is in the
- *   server HTML; the home route mounts the map after hydration.
+ *   server HTML; the map route mounts the map after hydration.
  */
 export default function Root() {
   const [services] = useState(() => createServices());

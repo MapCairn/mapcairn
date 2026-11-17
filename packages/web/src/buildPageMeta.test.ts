@@ -2,38 +2,55 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { buildPageMeta } from "./buildPageMeta";
+import { jsonLdGraph, websiteNode } from "./structuredData";
 
-/**
- * Finds the JSON-LD descriptor `buildPageMeta` emits without depending on
- * its position in the returned array.
- */
-function getJsonLd(
-  meta: ReturnType<typeof buildPageMeta>,
-): Record<string, unknown> {
-  const entry = meta.find(
-    (descriptor): descriptor is { "script:ld+json": Record<string, unknown> } =>
-      "script:ld+json" in descriptor,
-  );
-  if (!entry) {
-    throw new Error("buildPageMeta did not return a script:ld+json entry");
-  }
-  return entry["script:ld+json"];
-}
+const page = {
+  title: "Test title",
+  description: "Test description",
+  url: "https://example.com/page",
+  structuredData: jsonLdGraph([websiteNode()]),
+} as const;
 
 describe("buildPageMeta", () => {
-  it("describes MapCairn as a domain-neutral mapping application", () => {
-    const jsonLd = getJsonLd(
-      buildPageMeta({
-        title: "Test title",
-        description: "Test description",
-        url: "https://example.com",
-      }),
+  it("derives every title, description and URL tag from the page's own values", () => {
+    const tags = buildPageMeta({ ...page, image: "map" });
+    expect(tags).toEqual(
+      expect.arrayContaining([
+        { title: "Test title" },
+        { name: "description", content: "Test description" },
+        { property: "og:title", content: "Test title" },
+        { property: "og:description", content: "Test description" },
+        { property: "og:url", content: "https://example.com/page" },
+        { name: "twitter:title", content: "Test title" },
+        { name: "twitter:description", content: "Test description" },
+        { name: "robots", content: "index, follow" },
+      ]),
     );
+  });
 
-    expect(jsonLd["@type"]).toBe("WebApplication");
-    expect(jsonLd.applicationCategory).toBe("MappingApplication");
-    const keywords = jsonLd.keywords as string[];
-    expect(keywords).toContain("geospatial data");
-    expect(JSON.stringify(jsonLd)).not.toMatch(/Gauteng|apartheid|township/i);
+  it("uses the preview image the page names, as an absolute URL with its size and words", () => {
+    const tags = buildPageMeta({ ...page, image: "product" });
+    expect(tags).toEqual(
+      expect.arrayContaining([
+        {
+          property: "og:image",
+          content: "https://mapcairn.timothybrits.co.za/og-sdk.png",
+        },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        {
+          name: "twitter:image",
+          content: "https://mapcairn.timothybrits.co.za/og-sdk.png",
+        },
+        expect.objectContaining({ property: "og:image:alt" }),
+        expect.objectContaining({ name: "twitter:image:alt" }),
+      ]),
+    );
+  });
+
+  it("carries the page's structured data as one JSON-LD document", () => {
+    const tags = buildPageMeta({ ...page, image: "map" });
+    const scripts = tags.filter((tag) => "script:ld+json" in tag);
+    expect(scripts).toEqual([{ "script:ld+json": page.structuredData }]);
   });
 });

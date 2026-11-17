@@ -9,6 +9,12 @@
  */
 export const SITE_URL = "https://mapcairn.timothybrits.co.za";
 
+/** The path of the product page, the site's front page. */
+export const PRODUCT_PATH = "/";
+
+/** The path of the playground: the reference site's map. */
+export const PLAYGROUND_PATH = "/map";
+
 /** The public repository that holds the site's source code, linked from Help. */
 export const SOURCE_REPOSITORY_URL = "https://github.com/MapCairn/mapcairn";
 

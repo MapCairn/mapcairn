@@ -3,7 +3,7 @@
 import { type MessageKey, THEME_STORAGE_KEY } from "@mapcairn/core";
 import { useOptionalMessages, VisuallyHidden } from "@mapcairn/map";
 import type { ReactNode } from "react";
-import { SITE_URL } from "../constants/siteConfig";
+import { PLAYGROUND_PATH, SITE_URL } from "../constants/siteConfig";
 import { MessageParts } from "../i18n/MessageParts";
 import * as styles from "./PrivacyPage.css";
 
@@ -178,7 +178,7 @@ export function PrivacyPage() {
           }}
         />
 
-        <a className={styles.link} href="/">
+        <a className={styles.link} href={PLAYGROUND_PATH}>
           {t("privacy.back", {})}
         </a>
       </main>

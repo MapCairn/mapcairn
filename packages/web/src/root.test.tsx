@@ -95,18 +95,9 @@ describe("root links", () => {
     );
   });
 
-  it("preconnects to the default vector basemap's tile host only", () => {
+  it("opens no connection to another host on every page: the map route does that for itself", () => {
     const preconnects = allLinks().filter((link) => link.rel === "preconnect");
-    expect(preconnects.map((link) => link.href)).toEqual([
-      "https://tiles.openfreemap.org",
-    ]);
-  });
-
-  it("makes the tile host preconnect a CORS one, as MapLibre fetches with CORS", () => {
-    const preconnects = allLinks().filter((link) => link.rel === "preconnect");
-    expect(preconnects).toEqual([
-      expect.objectContaining({ crossOrigin: "anonymous" }),
-    ]);
+    expect(preconnects).toEqual([]);
   });
 
   it("leaves the canonical link to each route and stylesheets to the bundler", () => {
@@ -117,10 +108,10 @@ describe("root links", () => {
 });
 
 describe("root meta", () => {
-  it("sets the title, description and a viewport that allows zoom", () => {
+  it("sets the site's own title, description and a viewport that allows zoom, for a page with none of its own", () => {
     const tags = meta({} as never);
 
-    expect(tags).toContainEqual({ title: "MapCairn | Interactive map" });
+    expect(tags).toContainEqual({ title: "MapCairn" });
     expect(tags).toContainEqual(
       expect.objectContaining({ name: "description" }),
     );
@@ -140,7 +131,7 @@ describe("root meta", () => {
     expect(tags).toContainEqual({ property: "og:locale", content: "en_GB" });
     expect(tags).toContainEqual({
       property: "og:image",
-      content: "https://mapcairn.timothybrits.co.za/og-image.png",
+      content: "https://mapcairn.timothybrits.co.za/og-sdk.png",
     });
     expect(tags).toContainEqual({
       name: "twitter:card",
@@ -254,6 +245,28 @@ describe("root document language", () => {
     render(createElement(Stub, { initialEntries: ["/"] }));
     await waitFor(() => expect(document.documentElement.lang).toBe("af"));
   });
+
+  it("keeps a page in one language when its route says so, whatever the interface speaks", async () => {
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "af" }),
+    });
+    createServices.mockReturnValueOnce(services);
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: Root,
+        children: [
+          {
+            index: true,
+            Component: () => null,
+            handle: { language: "en-GB" },
+          },
+        ],
+      },
+    ]);
+    render(createElement(Stub, { initialEntries: ["/"] }));
+    await waitFor(() => expect(document.documentElement.lang).toBe("en-GB"));
+  });
 });
 
 describe("root ErrorBoundary", () => {
@@ -357,7 +370,7 @@ describe("root ErrorBoundary", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to the map" })).toHaveAttribute(
       "href",
-      "/",
+      "/map",
     );
     expect(logged).not.toHaveBeenCalled();
     expect(reportCaughtError).not.toHaveBeenCalled();

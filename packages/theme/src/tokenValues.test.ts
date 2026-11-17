@@ -7,6 +7,7 @@ import {
   dataMarker,
   dataPalette,
   fontFamily,
+  fontFamilyMono,
   fontWeight,
   inset,
   motion,
@@ -166,10 +167,16 @@ describe("scales", () => {
     const pixels = Object.values(typeScale).map(
       (step) => Number.parseFloat(step.size) * 16,
     );
-    expect(pixels).toEqual([13, 15, 17, 22]);
+    expect(pixels).toEqual([13, 15, 17, 22, 40]);
     for (const step of Object.values(typeScale)) {
       expect(step.size).toMatch(/rem$/);
     }
+  });
+
+  it("keeps code samples on the system's monospaced faces, with no web font", () => {
+    expect(fontFamilyMono.startsWith("ui-monospace, ")).toBe(true);
+    expect(fontFamilyMono.endsWith(", monospace")).toBe(true);
+    expect(fontFamilyMono).not.toMatch(/Plex|Variable/);
   });
 
   it("uses only weights 400 and 600 and puts the fallback right after Plex", () => {

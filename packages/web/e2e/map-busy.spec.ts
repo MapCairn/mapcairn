@@ -43,7 +43,7 @@ test.describe("map region busy state", () => {
         body: TRANSPARENT_PNG,
       });
     });
-    await page.goto(`/#basemap=${RASTER_BASEMAP_ID}`);
+    await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
     // Busy is true before the engine exists, so only a tile that the engine
     // has asked for and not been answered proves the state follows the tiles.
     await expect.poll(() => asked).toBeGreaterThan(0);

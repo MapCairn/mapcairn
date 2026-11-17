@@ -16,6 +16,14 @@ describe("helpAbout", () => {
     expect(about.link.href).toBe("https://github.com/MapCairn/mapcairn");
   });
 
+  it("leads back to the product page, in the same tab", () => {
+    const about = helpAbout(new FakeMessageCatalogue());
+    expect(about.homeLink).toEqual({
+      href: "/",
+      label: "About MapCairn, the SDK behind this map",
+    });
+  });
+
   it("asks the catalogue for each piece of text by key", () => {
     const messages = new FakeMessageCatalogue();
     helpAbout(messages);
@@ -23,6 +31,7 @@ describe("helpAbout", () => {
       "host.about.heading",
       "host.about.text",
       "host.about.link",
+      "host.about.product",
     ]);
   });
 

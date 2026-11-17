@@ -148,7 +148,7 @@ for (const viewport of VIEWPORTS) {
       viewportDetails(viewport),
       async ({ page, mapPage }) => {
         const serveNormally = await serveWithoutAppScripts(page);
-        await page.goto("/");
+        await page.goto("/map");
         await expect(inSkeleton(page)).toBeVisible();
         await expect(page.getByTestId("map-chrome")).toHaveCount(0);
         const before = await boxes(page, (pair) => pair.skeleton);
@@ -196,7 +196,7 @@ test.describe("chrome skeleton rendering", () => {
     }) => {
       await page.emulateMedia({ colorScheme });
       await serveWithoutAppScripts(page);
-      await page.goto("/");
+      await page.goto("/map");
       const skeleton = inSkeleton(page);
       await expect(skeleton).toBeVisible();
       await expect(skeleton).toHaveAttribute("aria-hidden", "true");

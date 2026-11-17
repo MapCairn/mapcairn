@@ -42,9 +42,11 @@ test.describe("the About block in Help", () => {
   }) => {
     await mapPage.goto();
     await mapPage.openSettings();
-    const link = mapPage.page
-      .getByTestId("help-about")
-      .getByRole("link", { name: /source code and licence/ });
+    const about = mapPage.page.getByTestId("help-about");
+    const home = about.getByRole("link", {
+      name: "About MapCairn, the SDK behind this map",
+    });
+    const link = about.getByRole("link", { name: /source code and licence/ });
     // The tour button is the last control in Help before the About block.
     const tourButton = mapPage.page
       .getByTestId("sheet-section-help")
@@ -52,16 +54,41 @@ test.describe("the About block in Help", () => {
     await tourButton.focus();
     await expect(tourButton).toBeFocused();
     await mapPage.page.keyboard.press("Tab");
-    await expect(link).toBeFocused();
-    await mapPage.page.keyboard.press("Shift+Tab");
-    await expect(tourButton).toBeFocused();
+    await expect(home).toBeFocused();
     await mapPage.page.keyboard.press("Tab");
     await expect(link).toBeFocused();
-    const ring = await link.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return style.outlineStyle !== "none" || style.boxShadow !== "none";
-    });
-    expect(ring).toBe(true);
+    await mapPage.page.keyboard.press("Shift+Tab");
+    await expect(home).toBeFocused();
+    await mapPage.page.keyboard.press("Shift+Tab");
+    await expect(tourButton).toBeFocused();
+    for (const target of [home, link]) {
+      await target.focus();
+      const ring = await target.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return style.outlineStyle !== "none" || style.boxShadow !== "none";
+      });
+      expect(ring).toBe(true);
+    }
+  });
+
+  test("leads back to the product page, in the same tab", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await mapPage.openSettings();
+    const home = page
+      .getByTestId("help-about")
+      .getByRole("link", { name: "About MapCairn, the SDK behind this map" });
+    await expect(home).not.toHaveAttribute("target");
+    await home.click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "An open-source SDK for accessible, privacy-respecting map applications",
+      }),
+    ).toBeVisible();
   });
 
   test("is not in the Map options sheet", async ({ mapPage }) => {

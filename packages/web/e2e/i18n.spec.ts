@@ -29,7 +29,7 @@ test.describe("with Afrikaans chosen", () => {
         ? route.abort()
         : route.fallback(),
     );
-    await page.goto("/");
+    await page.goto("/map");
     await expect(page.locator("html")).toHaveAttribute("lang", "af");
   });
 

@@ -11,7 +11,7 @@ import {
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../../services";
-import { HelpSection } from "./HelpSection";
+import { type HelpAbout, HelpSection } from "./HelpSection";
 
 const english = new FakeMessageCatalogue();
 const words = (text: string) => resolveText(english, text);
@@ -152,7 +152,7 @@ describe("the host's About block", () => {
     link: { href: "https://example.org/source", label: "Read the source" },
   };
 
-  function renderAbout(props: { about?: typeof about } = {}) {
+  function renderAbout(props: { about?: HelpAbout } = {}) {
     const services = createFakeServices();
     return render(
       <ServicesProvider services={services}>
@@ -212,6 +212,49 @@ describe("the host's About block", () => {
     renderAbout();
     expect(screen.queryByTestId("help-about")).toBeNull();
     expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  describe("the link to the host's own page", () => {
+    const home = { href: "/", label: "About this project" };
+
+    it("comes first, in the same tab, with no new-tab note", () => {
+      renderAbout({ about: { ...about, homeLink: home } });
+      const block = within(screen.getByTestId("help-about"));
+      const links = block.getAllByRole("link");
+      expect(links.map((link) => link.textContent)).toEqual([
+        "About this project",
+        "Read the source (opens in a new tab)",
+      ]);
+      const [first] = links;
+      expect(first).toHaveAttribute("href", "/");
+      expect(first).not.toHaveAttribute("target");
+    });
+
+    it.each([
+      ["a path on the site", "/about"],
+      ["an https address", "https://example.org/about"],
+    ])("takes %s", (_name, href) => {
+      renderAbout({ about: { ...about, homeLink: { ...home, href } } });
+      expect(
+        within(screen.getByTestId("help-about")).getByRole("link", {
+          name: "About this project",
+        }),
+      ).toHaveAttribute("href", href);
+    });
+
+    it.each([
+      ["a javascript: address", "javascript:alert(1)"],
+      ["an address on another site with no scheme", "//example.org/"],
+      ["a relative address that is not a path", "about"],
+      ["an empty address", ""],
+    ])("is left out for %s", (_name, href) => {
+      renderAbout({ about: { ...about, homeLink: { ...home, href } } });
+      expect(
+        within(screen.getByTestId("help-about")).queryByRole("link", {
+          name: "About this project",
+        }),
+      ).toBeNull();
+    });
   });
 });
 
