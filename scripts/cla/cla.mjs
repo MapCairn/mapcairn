@@ -45,6 +45,33 @@ export const BOT_HEADING = "## Contributor licence agreement";
 /** The login `GITHUB_TOKEN` comments as. Only its comments are ever updated. */
 export const BOT_LOGIN = "github-actions[bot]";
 
+/**
+ * The bot accounts that never have to agree, matched by account id only. An
+ * account's type is not enough: anyone can register a GitHub App, and its
+ * `<app>[bot]` account has the type `Bot` too. A login is not enough either,
+ * because it can be renamed and taken by another account. Only bots that
+ * really open pull requests here are listed; GitHub Actions is not, because no
+ * workflow here commits or opens pull requests. The id is the one GitHub
+ * reports for the account (`GET /users/dependabot%5Bbot%5D`); the login is
+ * only for people reading this list.
+ *
+ * A commit is linked to an account by the email address in the commit, which
+ * whoever makes the commit chooses, so a listed bot's commit is exempt on any
+ * pull request. That gives nobody a way round the agreement: the pull request
+ * author always has to agree, unless they are a listed bot or an administrator.
+ */
+export const EXEMPT_BOTS = Object.freeze([
+  Object.freeze({ login: "dependabot[bot]", id: 49699333 }),
+]);
+
+/**
+ * @param {Account | null | undefined} account
+ * @returns {boolean} Whether the account's id is one of `EXEMPT_BOTS`.
+ */
+export function isExemptBot(account) {
+  return EXEMPT_BOTS.some((bot) => bot.id === account?.id);
+}
+
 /** GitHub rejects a commit status description longer than this. */
 const MAX_DESCRIPTION_LENGTH = 140;
 
@@ -190,13 +217,15 @@ function sameLogin(left, right) {
 
 /**
  * Works out who has to agree: the pull request author and every distinct
- * commit author with a GitHub account, minus the repository owner, bots and any
- * login in `exemptLogins` (repository administrators, found by the caller).
+ * commit author with a GitHub account, minus the repository owner (matched by
+ * account id, so an account that later takes the owner's login is not exempt),
+ * the bots in `EXEMPT_BOTS` and any login in `exemptLogins` (repository
+ * administrators, which the caller asks GitHub about in the same run).
  * A commit whose author matches no account is reported in `unresolved`, and a
  * pull request author with no login or id in `authorUnresolved`, so neither is
  * ever dropped silently.
  * @param {{
- *   ownerLogin: string,
+ *   ownerId: number | undefined,
  *   exemptLogins?: string[],
  *   pullAuthor: Account | null | undefined,
  *   commits: Array<{
@@ -212,7 +241,7 @@ function sameLogin(left, right) {
  * }}
  */
 export function requiredContributors({
-  ownerLogin,
+  ownerId,
   exemptLogins = [],
   pullAuthor,
   commits,
@@ -229,11 +258,7 @@ export function requiredContributors({
       return false;
     }
     const key = account.login.toLowerCase();
-    if (
-      account.type === "Bot" ||
-      sameLogin(account.login, ownerLogin) ||
-      exempt.has(key)
-    ) {
+    if (isExemptBot(account) || account.id === ownerId || exempt.has(key)) {
       return true;
     }
     if (!byLogin.has(key)) {
@@ -264,7 +289,7 @@ export function requiredContributors({
  * does not inherit an agreement. A person agrees only through a comment they
  * wrote themselves.
  * @param {{
- *   ownerLogin: string,
+ *   ownerId: number | undefined,
  *   exemptLogins?: string[],
  *   pullAuthor: Account | null | undefined,
  *   commits: Parameters<typeof requiredContributors>[0]["commits"],
@@ -284,7 +309,7 @@ export function requiredContributors({
  * @returns {Evaluation}
  */
 export function evaluate({
-  ownerLogin,
+  ownerId,
   exemptLogins,
   pullAuthor,
   commits,
@@ -294,7 +319,7 @@ export function evaluate({
   pullRequest,
 }) {
   const { required, unresolved, authorUnresolved } = requiredContributors({
-    ownerLogin,
+    ownerId,
     exemptLogins,
     pullAuthor,
     commits,
@@ -439,11 +464,48 @@ export function buildStatus(evaluation) {
   if (evaluation.incomplete) {
     parts.push("Too many commits to check");
   }
-  let description = parts.join("; ");
-  if (description.length > MAX_DESCRIPTION_LENGTH) {
-    description = `${description.slice(0, MAX_DESCRIPTION_LENGTH - 3)}...`;
+  return { state: "failure", description: shorten(parts.join("; ")) };
+}
+
+/**
+ * @param {string} description
+ * @returns {string} The description cut to GitHub's limit, with an ellipsis.
+ */
+function shorten(description) {
+  if (description.length <= MAX_DESCRIPTION_LENGTH) {
+    return description;
   }
-  return { state: "failure", description };
+  return `${description.slice(0, MAX_DESCRIPTION_LENGTH - 3)}...`;
+}
+
+/**
+ * @param {number[]} numbers
+ * @returns {string} The pull request numbers as `#12, #15`.
+ */
+function pullList(numbers) {
+  return numbers.map((number) => `#${number}`).join(", ");
+}
+
+/**
+ * Builds the `CLA` status for a commit. A commit status belongs to the commit,
+ * not to a pull request, so every open pull request whose head is that commit
+ * shows it. It passes only when this pull request and every other one listed
+ * in `waitingPulls` (the open pull requests with the same head that have not
+ * passed) are clear.
+ * @param {Evaluation} evaluation This pull request's evaluation.
+ * @param {number[]} [waitingPulls] The numbers of the other pull requests.
+ * @returns {{ state: "success" | "failure", description: string }}
+ */
+export function buildCommitStatus(evaluation, waitingPulls = []) {
+  const own = buildStatus(evaluation);
+  if (own.state === "failure" || waitingPulls.length === 0) {
+    return own;
+  }
+  const description =
+    waitingPulls.length === 1
+      ? `Waiting for the CLA on pull request ${pullList(waitingPulls)}, which has the same head commit`
+      : `Waiting for the CLA on pull requests ${pullList(waitingPulls)}, which have the same head commit`;
+  return { state: "failure", description: shorten(description) };
 }
 
 /**
@@ -480,21 +542,29 @@ const MENTIONABLE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/;
  * evaluation always gives the same text, so the comment is only edited when
  * something changed.
  * @param {Evaluation} evaluation
- * @param {{ claUrl: string }} options `claUrl` links to `CLA.md`.
+ * @param {{ claUrl: string, waitingPulls?: number[] }} options `claUrl` links
+ *   to `CLA.md`. `waitingPulls` are the other open pull requests with the same
+ *   head commit that have not passed, which keep the shared status red.
  * @returns {string}
  */
-export function buildComment(evaluation, { claUrl }) {
+export function buildComment(evaluation, { claUrl, waitingPulls = [] }) {
   const heading = `${COMMENT_MARKER}\n## Contributor licence agreement\n`;
   const link = `[contributor licence agreement](${claUrl})`;
 
   if (evaluation.agreed) {
+    const sharedHead =
+      waitingPulls.length === 0
+        ? ""
+        : ` The \`CLA\` status belongs to the head commit, which is also the head of ${pullList(waitingPulls)}, so it stays red until everyone there has agreed too.`;
     if (evaluation.required.length === 0) {
-      return `${heading}\nNo agreement is needed for this pull request, because it comes only from repository administrators or from bots.\n`;
+      return `${heading}\nNo agreement is needed for this pull request, because it comes only from repository administrators or from bots.${sharedHead}\n`;
     }
     const names = evaluation.required
       .map((person) => code(person.login))
       .join(", ");
-    return `${heading}\nAll contributors on this pull request have agreed to the ${link}: ${names}. The \`CLA\` check is green.\n`;
+    const outcome =
+      sharedHead === "" ? " The `CLA` check is green." : sharedHead;
+    return `${heading}\nAll contributors on this pull request have agreed to the ${link}: ${names}.${outcome}\n`;
   }
 
   const sections = [
