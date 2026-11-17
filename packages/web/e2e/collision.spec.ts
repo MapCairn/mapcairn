@@ -607,6 +607,16 @@ const COORDINATES_PATTERN = /-?\d+\.\d{5}, -?\d+\.\d{5}/;
 /** How far the pointer travels onto the free map point, so the map sees it move. */
 const STEP_BEFORE_HOVER_PX = 10;
 
+/** The map a resting point wants on every side of it, when there is room. */
+const REST_MARGIN_PX = 20;
+
+/**
+ * The least map a resting point may have on every side, the fallback when no
+ * point has {@link REST_MARGIN_PX}. It is also the pitch of the points tried,
+ * and equal to the pointer's step, so the step before the hover is on the map.
+ */
+const CHANNEL_MARGIN_PX = STEP_BEFORE_HOVER_PX;
+
 /** How long one trip of the pointer onto the map gets to show the coordinates. */
 const HOVER_TRIP_MS = 1_000;
 
@@ -619,26 +629,33 @@ const HOVER_TIMEOUT_MS = 10_000;
  * the middle of the screen and 30% of the way down. That is above the bottom
  * row, whose credits popover rises over the pointer when the coordinates make
  * the readout taller; a pointer under it would leave the map and clear the
- * coordinates. Returns null when every point of the screen is covered.
+ * coordinates. Returns null when no point is both free and outside the
+ * readout's grown footprint.
  *
- * "Map on every side" means one pointer step (the distance the pointer travels
- * before it lands), so a narrow channel counts.
+ * "Map on every side" first means one resting-point neighbourhood
+ * ({@link REST_MARGIN_PX}) of map around the point. Only when no point has that
+ * much room does it accept {@link CHANNEL_MARGIN_PX}, so a narrow channel
+ * counts as a fallback. At 320 px in Afrikaans the open map key is wide enough
+ * that the only wider gaps are in the bottom row, so the channel beside the key
+ * is the one free place, and a test that needs it rests the pointer 10 px from
+ * a control.
  *
  * A point where the readout grows to hold the widest coordinates is left out.
  * The readout is only as wide as the scale bar until the pointer is on the map,
  * and a pointer resting where the coordinates then appear is under them, which
  * takes it off the map and clears them again, so the readout flickers between
- * the scale and the position and the test reads whichever it caught. The open
- * map key is wider in Afrikaans, so at 320 px the free map nearest the anchor
- * is beside the readout (the panels of the other states lift the readout into
- * the middle of the screen). The grown readout is measured from the scale bar's
- * font and padding, with the room it needs to grow by its own height.
+ * the scale and the position and the test reads whichever it caught. The grown
+ * width is the coordinates' text plus what is already there: where the zoom is
+ * shown (the panel layout) that is the real cursor coordinates element, whose
+ * font, padding and zoom gap are read from it; otherwise it is the scale bar's
+ * padding and font, which is bolder than the coordinates' and so errs wide. The
+ * readout gets room to grow upward by its own height.
  */
 async function findFreeMapPoint(
   page: Page,
 ): Promise<{ x: number; y: number } | null> {
   return page.evaluate(
-    ({ stepPx, widestCoordinates }) => {
+    ({ restMargin, channelMargin, widestCoordinates }) => {
       const ANCHOR_HEIGHT_RATIO = 0.3;
       const readoutBox = (() => {
         const readout = document.querySelector('[data-testid="map-readout"]');
@@ -647,20 +664,36 @@ async function findFreeMapPoint(
           return null;
         }
         const box = readout.getBoundingClientRect();
-        const style = getComputedStyle(scale);
+        const coordinates = readout.querySelector(
+          '[data-chrome="cursor-coordinates"]',
+        );
+        const zoom = readout.querySelector('[data-testid="zoom-level"]');
+        const source = coordinates ?? scale;
+        const style = getComputedStyle(source);
         const probe = document.createElement("span");
         probe.style.font = style.font;
-        probe.style.fontWeight = "400";
         probe.style.fontVariantNumeric = "tabular-nums";
         probe.style.position = "absolute";
         probe.style.whiteSpace = "pre";
         probe.textContent = widestCoordinates;
         document.body.append(probe);
-        const grownWidth =
-          probe.getBoundingClientRect().width +
+        const textWidth = probe.getBoundingClientRect().width;
+        probe.remove();
+        const padding =
           Number.parseFloat(style.paddingLeft) +
           Number.parseFloat(style.paddingRight);
-        probe.remove();
+        const positionShown =
+          coordinates !== null && coordinates.firstElementChild !== zoom;
+        const zoomGap = zoom
+          ? Number.parseFloat(getComputedStyle(zoom).marginInlineStart)
+          : 0;
+        const grownWidth = (() => {
+          if (!coordinates) {
+            return textWidth + padding;
+          }
+          const shownWidth = coordinates.getBoundingClientRect().width;
+          return positionShown ? shownWidth : shownWidth + textWidth + zoomGap;
+        })();
         return {
           left: Math.min(box.left, box.right - grownWidth),
           right: Math.max(box.right, box.left + grownWidth),
@@ -670,41 +703,45 @@ async function findFreeMapPoint(
       })();
       const underReadout = (x: number, y: number) =>
         readoutBox !== null &&
-        x >= readoutBox.left - stepPx &&
-        x <= readoutBox.right + stepPx &&
-        y >= readoutBox.top - stepPx &&
-        y <= readoutBox.bottom + stepPx;
+        x >= readoutBox.left - channelMargin &&
+        x <= readoutBox.right + channelMargin &&
+        y >= readoutBox.top - channelMargin &&
+        y <= readoutBox.bottom + channelMargin;
       const centreX = document.documentElement.clientWidth / 2;
       const centreY =
         document.documentElement.clientHeight * ANCHOR_HEIGHT_RATIO;
-      let best: { x: number; y: number } | null = null;
-      let bestDistance = Number.POSITIVE_INFINITY;
-      for (
-        let y = stepPx;
-        y < document.documentElement.clientHeight;
-        y += stepPx
-      ) {
-        for (let x = stepPx; x < centreX * 2; x += stepPx) {
-          const distance = Math.hypot(x - centreX, y - centreY);
-          if (underReadout(x, y) || distance >= bestDistance) {
-            continue;
-          }
-          const isMap = (dx: number, dy: number) =>
-            document.elementFromPoint(x + dx, y + dy) instanceof
-            HTMLCanvasElement;
-          const surrounded = [-stepPx, 0, stepPx].every((dy) =>
-            [-stepPx, 0, stepPx].every((dx) => isMap(dx, dy)),
-          );
-          if (surrounded) {
-            best = { x, y };
-            bestDistance = distance;
+      const nearestWithRoom = (margin: number) => {
+        let best: { x: number; y: number } | null = null;
+        let bestDistance = Number.POSITIVE_INFINITY;
+        for (
+          let y = channelMargin;
+          y < document.documentElement.clientHeight;
+          y += channelMargin
+        ) {
+          for (let x = channelMargin; x < centreX * 2; x += channelMargin) {
+            const distance = Math.hypot(x - centreX, y - centreY);
+            if (underReadout(x, y) || distance >= bestDistance) {
+              continue;
+            }
+            const isMap = (dx: number, dy: number) =>
+              document.elementFromPoint(x + dx, y + dy) instanceof
+              HTMLCanvasElement;
+            const surrounded = [-margin, 0, margin].every((dy) =>
+              [-margin, 0, margin].every((dx) => isMap(dx, dy)),
+            );
+            if (surrounded) {
+              best = { x, y };
+              bestDistance = distance;
+            }
           }
         }
-      }
-      return best;
+        return best;
+      };
+      return nearestWithRoom(restMargin) ?? nearestWithRoom(channelMargin);
     },
     {
-      stepPx: STEP_BEFORE_HOVER_PX,
+      restMargin: REST_MARGIN_PX,
+      channelMargin: CHANNEL_MARGIN_PX,
       widestCoordinates: WIDEST_COORDINATES_TEXT,
     },
   );
@@ -712,8 +749,8 @@ async function findFreeMapPoint(
 
 /**
  * Moves the pointer onto the free part of the map (see {@link findFreeMapPoint})
- * and waits for the readout to show the cursor coordinates. Fails when every
- * point of the screen is covered.
+ * and waits for the readout to show the cursor coordinates. Fails when no free
+ * part of the map lies outside the readout's grown footprint.
  *
  * The chrome moves for a few frames after a state is entered (the map key
  * settles under the search panel), and a loaded runner takes longer, so the
@@ -729,7 +766,9 @@ async function hoverFreeMap(mapPage: MapPage): Promise<void> {
   await expect(async () => {
     const point = await findFreeMapPoint(page);
     if (!point) {
-      throw new Error("No part of the map is uncovered.");
+      throw new Error(
+        "No free part of the map outside the readout's grown footprint.",
+      );
     }
     await page.mouse.move(point.x - STEP_BEFORE_HOVER_PX, point.y);
     await page.mouse.move(point.x, point.y, { steps: 3 });
