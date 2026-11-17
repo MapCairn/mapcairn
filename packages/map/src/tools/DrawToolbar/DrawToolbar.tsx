@@ -199,7 +199,10 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
  *   focus is in the selected shape's group, and Escape and the undo keys work
  *   from anywhere in the toolbar. The primary button is Finish while a shape
  *   is being drawn and Done otherwise, in one element, so focus stays put when
- *   it changes. Cancel and Delete are one button for the same reason.
+ *   it changes. Cancel and Delete are one button for the same reason. The
+ *   button keeps the width of the longer label and its check mark in both
+ *   states, so the row does not wrap, and the toolbar does not change height,
+ *   when the label changes.
  */
 export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
   const rootRef = useRef<HTMLElement>(null);
@@ -258,6 +261,11 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
     draw.selection?.vertex != null
       ? t("tools.draw.movePoint", {})
       : t("tools.addPointAtCentre", {});
+  const finishLabel = t("tools.draw.finish", {});
+  const doneLabel = t("tools.done", {});
+  const [primaryLabel, otherLabel] = drawing
+    ? [finishLabel, doneLabel]
+    : [doneLabel, finishLabel];
   const removeLabel = drawing
     ? t("tools.draw.cancelShape", {})
     : t("tools.draw.deleteShape", {});
@@ -348,11 +356,13 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
               />
             </div>
             <Button
-              icon={drawing ? Check : undefined}
+              icon={Check}
               data-testid="draw-done"
               onClick={drawing ? draw.finish : onDone}
             >
-              {drawing ? t("tools.draw.finish", {}) : t("tools.done", {})}
+              <span className={styles.primaryLabel} data-reserve={otherLabel}>
+                {primaryLabel}
+              </span>
             </Button>
           </div>
           {selected && selected.kind !== "point" && !drawing ? (

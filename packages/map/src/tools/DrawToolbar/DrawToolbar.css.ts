@@ -169,6 +169,25 @@ export const actions = style({
   gap: tokens.space.xxs,
 });
 
+/**
+ * The primary button's label. Its other state's label (`data-reserve`) is
+ * laid out as an invisible, zero-height line beneath it, so the button is as
+ * wide as the longer of the two in both states, whatever the language.
+ */
+export const primaryLabel = style({
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "center",
+  selectors: {
+    "&::after": {
+      content: "attr(data-reserve)",
+      blockSize: 0,
+      overflow: "hidden",
+      visibility: "hidden",
+    },
+  },
+});
+
 /** The group of controls for the selected shape. */
 export const group = style({
   display: "flex",
