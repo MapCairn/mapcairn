@@ -51,7 +51,6 @@ export function testChromeLayout(
     finePointer: true,
     panelEdge: null,
     publishSheetTop: () => {},
-    publishToolbarTop: () => {},
     ...overrides,
   };
 }

@@ -16,10 +16,11 @@ import {
   addSignatures,
   BOT_LOGIN,
   buildComment,
-  buildStatus,
+  buildCommitStatus,
   COMMENT_MARKER,
   evaluate,
   isAgreementComment,
+  isExemptBot,
   parseSignatures,
   requiredContributors,
   SIGNATURES_BRANCH,
@@ -93,12 +94,13 @@ function commentCanMatter(payload) {
 /**
  * @param {any} pull The pull request from the REST API.
  * @param {unknown} error
- * @returns {boolean} Whether this is a bot's pull request and the token was
- *   refused. GitHub gives Dependabot-triggered runs a read-only token even on
- *   `pull_request_target`, so there is nothing this run can write.
+ * @returns {boolean} Whether this is a listed bot's pull request and the token
+ *   was refused. GitHub gives Dependabot-triggered runs a read-only token even
+ *   on `pull_request_target`, so there is nothing this run can write. Any other
+ *   bot's refusal is a real failure.
  */
 function isReadOnlyBotRun(pull, error) {
-  return pull.user?.type === "Bot" && hasStatus(error, [403]);
+  return isExemptBot(pull.user) && hasStatus(error, [403]);
 }
 
 /**
@@ -233,6 +235,11 @@ async function branchExists(github, { owner, repo }) {
  * head commit and keeps the explanatory comment up to date. A comment on an
  * issue that is not a pull request is ignored.
  *
+ * A commit status belongs to the commit, so every open pull request whose head
+ * is the same commit shows it. When this pull request passes, each of those is
+ * checked too, and the status passes only when all of them do. A failure to
+ * list or check them sets `error`, never a pass.
+ *
  * A failure that stops the check sets the status to `error` (never a pass) and
  * is thrown again, so the workflow run fails. A failure to store a signature
  * does not change this pull request's result, because the comment is there, but
@@ -241,7 +248,7 @@ async function branchExists(github, { owner, repo }) {
  *
  * Repository administrators (including the owners of the organisation that
  * holds the repository) are exempt. Their permission is looked up once for each
- * distinct contributor who is not a bot, and a failed lookup only warns and
+ * distinct contributor who is not otherwise exempt, and a failed lookup only warns and
  * leaves that person required to agree.
  *
  * When a bot's pull request (Dependabot's) gets a read-only token, the run ends
@@ -300,15 +307,27 @@ export async function run({ github, context, core }) {
 }
 
 /**
- * @param {Environment} environment
- * @param {any} pull The pull request from the REST API.
- * @returns {Promise<import("./cla.mjs").Evaluation>}
+ * What evaluating any pull request of the repository needs besides the pull
+ * request itself.
+ * @typedef {{
+ *   github: any,
+ *   core: Environment["core"],
+ *   target: { owner: string, repo: string },
+ *   ownerId: number | undefined,
+ *   signatures: import("./cla.mjs").Signature[],
+ * }} Setting
  */
-async function check({ github, context, core }, pull) {
-  const { owner, repo } = context.repo;
-  const target = { owner, repo };
 
-  const [commits, comments, signed] = await Promise.all([
+/**
+ * Reads a pull request's commits and comments, asks GitHub which of its
+ * contributors are administrators, and evaluates it.
+ * @param {Setting} setting
+ * @param {any} pull The pull request from the REST API (`pulls.get`, which
+ *   carries the commit count).
+ * @returns {Promise<{ evaluation: import("./cla.mjs").Evaluation, comments: any[] }>}
+ */
+async function assess({ github, core, target, ownerId, signatures }, pull) {
+  const [commits, comments] = await Promise.all([
     github.paginate(github.rest.pulls.listCommits, {
       ...target,
       pull_number: pull.number,
@@ -319,11 +338,10 @@ async function check({ github, context, core }, pull) {
       issue_number: pull.number,
       per_page: 100,
     }),
-    readSignatures(github, target),
   ]);
 
   const { required } = requiredContributors({
-    ownerLogin: owner,
+    ownerId,
     pullAuthor: pull.user,
     commits,
   });
@@ -335,15 +353,73 @@ async function check({ github, context, core }, pull) {
   });
 
   const evaluation = evaluate({
-    ownerLogin: owner,
+    ownerId,
     exemptLogins,
     pullAuthor: pull.user,
     commits,
     commitTotal: pull.commits,
     comments,
-    signatures: signed.list,
+    signatures,
     pullRequest: pull.number,
   });
+  return { evaluation, comments };
+}
+
+/**
+ * Finds the other open pull requests whose head is this pull request's head
+ * commit, checks each, and returns the numbers of those that do not pass, in
+ * order. One that closed or moved to another commit since the list was read is
+ * left out. Any failed call is thrown, so the caller never writes a pass on an
+ * incomplete answer.
+ * @param {Setting} setting
+ * @param {any} pull
+ * @returns {Promise<number[]>}
+ */
+async function waitingPullsForHead(setting, pull) {
+  const { github, target } = setting;
+  const open = await github.paginate(github.rest.pulls.list, {
+    ...target,
+    state: "open",
+    per_page: 100,
+  });
+  const sharing = open.filter(
+    (item) => item.number !== pull.number && item.head?.sha === pull.head.sha,
+  );
+  const waiting = await Promise.all(
+    sharing.map(async (item) => {
+      const { data: other } = await github.rest.pulls.get({
+        ...target,
+        pull_number: item.number,
+      });
+      if (other.state !== "open" || other.head?.sha !== pull.head.sha) {
+        return undefined;
+      }
+      const { evaluation } = await assess(setting, other);
+      return evaluation.agreed ? undefined : other.number;
+    }),
+  );
+  return waiting.filter((number) => number !== undefined).sort((a, b) => a - b);
+}
+
+/**
+ * @param {Environment} environment
+ * @param {any} pull The pull request from the REST API.
+ * @returns {Promise<import("./cla.mjs").Evaluation>}
+ */
+async function check({ github, context, core }, pull) {
+  const { owner, repo } = context.repo;
+  const target = { owner, repo };
+
+  const signed = await readSignatures(github, target);
+  /** @type {Setting} */
+  const setting = {
+    github,
+    core,
+    target,
+    ownerId: context.payload.repository?.owner?.id,
+    signatures: signed.list,
+  };
+  const { evaluation, comments } = await assess(setting, pull);
 
   if (evaluation.newSignatures.length > 0) {
     try {
@@ -371,13 +447,19 @@ async function check({ github, context, core }, pull) {
     return evaluation;
   }
 
+  // Only a pass can be overturned by another pull request, so the others are
+  // checked only then.
+  const waitingPulls = evaluation.agreed
+    ? await waitingPullsForHead(setting, pull)
+    : [];
+
   const repository = context.payload.repository;
   const claUrl = `${repository?.html_url ?? `https://github.com/${owner}/${repo}`}/blob/${repository?.default_branch ?? "main"}/CLA.md`;
   await setStatus(
     github,
     target,
     pull.head.sha,
-    buildStatus(evaluation),
+    buildCommitStatus(evaluation, waitingPulls),
     claUrl,
   );
 
@@ -387,7 +469,7 @@ async function check({ github, context, core }, pull) {
       target,
       pull.number,
       comments,
-      buildComment(evaluation, { claUrl }),
+      buildComment(evaluation, { claUrl, waitingPulls }),
       evaluation.agreed,
     );
   } catch (error) {

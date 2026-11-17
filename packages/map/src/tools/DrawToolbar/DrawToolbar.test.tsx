@@ -59,7 +59,6 @@ const layout: ChromeLayoutValue = {
   finePointer: true,
   panelEdge: null,
   publishSheetTop: () => undefined,
-  publishToolbarTop: vi.fn(),
 };
 
 async function renderToolbar(services = createFakeServices()) {
@@ -106,11 +105,6 @@ describe("DrawToolbar", () => {
     expect(
       screen.getByRole("radiogroup", { name: "Shape to draw" }),
     ).toBeInTheDocument();
-  });
-
-  it("publishes its top edge so the slots below it ride above", async () => {
-    await renderToolbar();
-    expect(layout.publishToolbarTop).toHaveBeenCalled();
   });
 
   it("changes what is drawn from the shape switch", async () => {

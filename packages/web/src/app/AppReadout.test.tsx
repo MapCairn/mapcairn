@@ -31,7 +31,6 @@ function renderReadout(layout: Partial<ChromeLayoutValue>) {
     finePointer: true,
     panelEdge: null,
     publishSheetTop: () => {},
-    publishToolbarTop: () => {},
     ...layout,
   };
   render(
