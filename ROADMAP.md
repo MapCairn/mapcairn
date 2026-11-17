@@ -1,6 +1,6 @@
 # Roadmap
 
-_Last reviewed: 2026-11-17. Reviewed every year, and sooner when a decision below changes._
+_Last reviewed: 2026-11-16. Reviewed every year, and sooner when a decision below changes._
 
 This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
 

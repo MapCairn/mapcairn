@@ -80,12 +80,12 @@ A host that renders only in the browser needs no nonce. Its scripts are all file
 
 What the function adds, by definition:
 
-- A raster basemap's tile origin, in `img-src` and `connect-src`. A hybrid basemap's tile origin the same way, and its label style's origin in `connect-src`.
-- A vector basemap's style origin, in `connect-src`.
+- A raster basemap's tile origin, in `img-src` and `connect-src`. A hybrid basemap's tile origin and its label style's origin the same way.
+- A vector basemap's style origin, in `img-src` and `connect-src`, as the reference host's policy has `https://tiles.openfreemap.org` (`securityHeaders.ts`, `builtInBasemaps.test.ts`).
 - A feed or query layer's feed origin and its detail origins, in `connect-src`.
 - A tile layer's tile origin in `img-src` and `connect-src`, and the origin of its `identify` request in `connect-src`.
 
-A definition names only the first host a request goes to, and a host's adapters are not definitions at all, so two kinds of origin are yours to pass in `connectOrigins`:
+A definition names only the first host a request goes to, and a host's adapters are not definitions at all, so two kinds of origin are yours to pass in `connectOrigins`. Each must be a bare `https` origin (no path, wildcard or trailing slash), and the function throws on anything else, on a definition URL that is not `https` or has a placeholder in its host, and on a script source holding a semicolon, comma or space:
 
 - The hosts a vector style requests for its sprites, glyphs and tile sets. Read the style and its tile sets for them, as [`extending.md`](extending.md) says.
 - The origin of each adapter: place search, suggestions and routing. In the reference host these are written in the adapters' own code (`NominatimSearchProvider.ts`, `PhotonSuggestionProvider.ts`, `ValhallaRoutingProvider.ts`), not in a definition.
