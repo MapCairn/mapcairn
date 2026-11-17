@@ -72,7 +72,8 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Dit lyk of jy aflyn is. Kyk na jou verbinding en probeer weer.",
   "error.search.rate-limited":
     "Te veel soektogte in 'n kort tyd. Wag 'n oomblik en probeer weer.",
-  "error.search.failed": "Die soektog het nie gewerk nie. Probeer netnou weer.",
+  "error.search.failed":
+    "Die soektog het nie gewerk nie. Probeer oor 'n oomblik weer.",
   "error.location.denied":
     "Toegang tot jou ligging is geblokkeer. Laat dit toe in jou blaaier se instellings, of soek eerder 'n plek.",
   "error.location.unavailable":
@@ -111,7 +112,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Geen beelde vir {when} gevind nie. Probeer 'n ander een.",
   "describe.tilesUnavailable": "Kon nie laai nie. Kyk na jou verbinding.",
   "describe.tilesSlow":
-    "Wag nog vir beelde. Die verskaffer is dalk stadig of antwoord nie.",
+    "Wag nog op beelde. Die verskaffer is dalk stadig of antwoord nie.",
   // Announcements
   "announce.layerLoaded": "{name}: {count} op die kaart gewys.",
   "announce.layerStatus": "{name}: {status}",
@@ -187,7 +188,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "announce.surfaceOpened": "{name} oopgemaak",
   "announce.surfaceClosed": "{name} toegemaak",
   "announce.tileError":
-    "Party dele van die kaart kon nie laai nie. Kyk na jou verbinding.",
+    "Sommige dele van die kaart kon nie laai nie. Kyk na jou verbinding.",
   "announce.offline": "Jy is aflyn. Dele van die kaart laai dalk nie.",
   "announce.addressFound": "Adres gevind: {address}",
   "announce.addressNotFound": "Geen adres hier gevind nie",
@@ -210,13 +211,13 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "announce.timeMoved": "Tyd geskuif na {time}, die naaste beskikbare.",
   // Drawing
   "draw.hint.point":
-    "Tik op die kaart om 'n punt te plaas, of gebruik Plaas punt in kaartmiddel.",
+    "Tik op die kaart om 'n punt te plaas, of gebruik Plaas punt in die kaartmiddel.",
   "draw.hint.line":
-    "Tik op die kaart om punte by te voeg, dan Voltooi. Of gebruik Plaas punt in kaartmiddel.",
+    "Tik op die kaart om punte by te voeg, dan Voltooi. Of gebruik Plaas punt in die kaartmiddel.",
   "draw.hint.polygon":
-    "Tik op die kaart om hoeke by te voeg, dan Voltooi. Of gebruik Plaas punt in kaartmiddel.",
+    "Tik op die kaart om hoeke by te voeg, dan Voltooi. Of gebruik Plaas punt in die kaartmiddel.",
   "draw.hint.circle":
-    "Tik op die middelpunt en dan op 'n tweede punt vir die radius. Of gebruik Plaas punt in kaartmiddel.",
+    "Tik op die middelpunt en dan op 'n tweede punt vir die radius. Of gebruik Plaas punt in die kaartmiddel.",
   "draw.issue.too-few-vertices":
     "Nog nie genoeg punte nie. 'n Lyn het twee punte nodig en 'n veelhoek drie.",
   "draw.issue.self-intersecting":
@@ -307,26 +308,26 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   // Components: chrome, host, ui, panels and the app shell
   "chrome.endStack.label": "Kaartgereedskap",
   "chrome.endStack.resetBearing": "Draai kaart terug na noord",
-  "chrome.endStack.controls": "Kaartkontroles",
+  "chrome.endStack.controls": "Kaartbeheer",
   "chrome.endStack.mapOptions": "Kaartopsies",
   "chrome.endStack.measure": "Meet afstand en oppervlakte",
   "chrome.endStack.directions": "Aanwysings",
   "chrome.endStack.draw": "Teken vorms",
   "chrome.endStack.locate": "Vind my",
   "chrome.endStack.settings": "Instellings",
-  "chrome.endStack.zoomControls": "Zoemkontroles",
+  "chrome.endStack.zoomControls": "Zoembeheer",
   "chrome.endStack.zoomIn": "Zoem in",
   "chrome.endStack.zoomOut": "Zoem uit",
   "chrome.attribution.label": "Kaarterkennings",
   "chrome.readout.label": "Kaartskaal",
   "chrome.readout.zoomShort": "z {level}",
-  "chrome.readout.zoomSpoken": "Zoem {level}",
-  "chrome.readout.zoomSpokenAfterPosition": ", Zoem {level}",
+  "chrome.readout.zoomSpoken": "Zoemvlak {level}",
+  "chrome.readout.zoomSpokenAfterPosition": ", Zoemvlak {level}",
   "chrome.sheet.resize": "Verander paneelgrootte",
   "chrome.sheet.close": "Maak toe",
   "host.map.label": "Kaart",
   "host.map.roleDescription": "kaart",
-  "ui.skipToMap": "Spring na kaart",
+  "ui.skipToMap": "Spring na die kaart",
   "ui.dismiss": "Maak toe",
   "panels.basemap.title": "Basiskaart",
   "panels.basemap.groupLabel": "Basiskaart",
@@ -357,7 +358,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "panels.help.title": "Hulp",
   "panels.help.tourHeading": "Toer",
   "panels.help.tourDescription":
-    "'n Paar kort stappe wat die vernaamste kontroles wys deur hulle te gebruik.",
+    "'n Paar kort stappe wat die vernaamste beheerknoppies wys deur hulle te gebruik.",
   "panels.help.tourStart": "Begin die toer",
   "panels.help.searchHeading": "Soek",
   "panels.help.searchDescription":
@@ -368,7 +369,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "panels.help.accessibilityDescription":
     "MapCairn mik om aan WCAG 2.2 vlak AA te voldoen. Elke aksie wat 'n gebaar gebruik, soos 'n lang druk of 'n sleep, het ook 'n knoppie of 'n sleutelbordkortpad.",
   "panels.pin.title": "Speld",
-  "panels.pin.drop": "Plaas speld in kaartmiddel",
+  "panels.pin.drop": "Plaas speld in die kaartmiddel",
   "panels.pin.note": "Daar is 'n speld op die kaart.",
   "panels.export.title": "Stoor prent",
   "panels.export.description":
@@ -463,7 +464,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layers.interval.range": "{low} tot {high}{unit}",
   // Tools: shared
   "tools.done": "Klaar",
-  "tools.addPointAtCentre": "Plaas punt in kaartmiddel",
+  "tools.addPointAtCentre": "Plaas punt in die kaartmiddel",
   "tools.tryAgain": "Probeer weer",
   // Tools: measure
   "tools.measure.region": "Meting",
@@ -474,7 +475,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "tools.measure.undo": "Ontdoen laaste punt",
   "tools.measure.clear": "Vee punte uit",
   "tools.measure.hint":
-    "Tik op die kaart om punte by te voeg, of gebruik Plaas punt in kaartmiddel.",
+    "Tik op die kaart om punte by te voeg, of gebruik Plaas punt in die kaartmiddel.",
   // Tools: draw
   "tools.draw.region": "Tekening",
   "tools.draw.toolbar": "Teken",
@@ -487,12 +488,12 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "tools.draw.selectedPoint": "{label}, punt {index} van {total}",
   "tools.draw.previousPoint": "Vorige punt",
   "tools.draw.nextPoint": "Volgende punt",
-  "tools.draw.insertPoint": "Plaas punt ná hierdie een in kaartmiddel",
+  "tools.draw.insertPoint": "Plaas punt ná hierdie een in die kaartmiddel",
   "tools.draw.removePoint": "Verwyder punt",
   "tools.draw.smallerRadius": "Kleiner radius",
   "tools.draw.largerRadius": "Groter radius",
-  "tools.draw.radiusToCentre": "Stel radius tot kaartmiddel",
-  "tools.draw.movePoint": "Skuif punt na kaartmiddel",
+  "tools.draw.radiusToCentre": "Stel radius tot by die kaartmiddel",
+  "tools.draw.movePoint": "Skuif punt na die kaartmiddel",
   "tools.draw.cancelShape": "Kanselleer vorm",
   "tools.draw.deleteShape": "Vee vorm uit",
   "tools.draw.undo": "Ontdoen",
@@ -567,12 +568,12 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Niks word gestuur voordat jy vra nie. Kry roete stuur die stoppe en die manier van reis na die roetediens. 'n Reistydgebied stuur die eerste stop.",
   "tools.directions.stops": "Stoppe",
   "tools.directions.stopsHint":
-    "Tik op die kaart om 'n stop by te voeg, of gebruik Plaas stop in kaartmiddel.",
+    "Tik op die kaart om 'n stop by te voeg, of gebruik Plaas stop in die kaartmiddel.",
   "tools.directions.stopPrefix": "Stop {letter}:",
   "tools.directions.moveUp": "Skuif stop {letter} op",
   "tools.directions.moveDown": "Skuif stop {letter} af",
   "tools.directions.remove": "Verwyder stop {letter}",
-  "tools.directions.addAtCentre": "Plaas stop in kaartmiddel",
+  "tools.directions.addAtCentre": "Plaas stop in die kaartmiddel",
   "tools.directions.addPin": "Voeg geplaasde speld by",
   "tools.directions.droppedPin": "Geplaasde speld",
   "tools.directions.full":
@@ -804,7 +805,8 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "keyHelp.map.zoom": "Zoem in of uit",
   "keyHelp.map.north": "Draai die kaart weer na noord",
   "keyHelp.map.pin": "Plaas 'n speld in die middel van die kaart",
-  "keyHelp.map.identify": "Lys die items in die middel van die kaart",
+  "keyHelp.map.identify":
+    "Wys 'n lys van die items in die middel van die kaart",
   "keyHelp.map.escape": "Maak die oop paneel toe",
   "keyHelp.draw.addPoint":
     "Terwyl jy teken: plaas 'n punt in die kaartmiddel, of skuif die gekose punt daarheen",
