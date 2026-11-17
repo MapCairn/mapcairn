@@ -11,7 +11,6 @@ import {
   formatTemplate,
   isControlEnabled,
   isFeedLayer,
-  isIdentifiable,
   type LayerControlDefinition,
   type LayerFeature,
   loadsFeatures,
@@ -32,6 +31,7 @@ import { SegmentedControl } from "../ui/SegmentedControl";
 import { Slider } from "../ui/Slider";
 import { Switch } from "../ui/Switch";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
+import { answersTap } from "./answersTap";
 import { DateTimeControl } from "./DateTimeControl";
 import { FeatureGlyph } from "./FeatureGlyph";
 import { LayerKey } from "./LayerKey";
@@ -407,7 +407,7 @@ export function LayerItem({
             label={t("layers.keyFor", { name: resolve(definition.name) })}
             testId={`layer-legend-${definition.id}`}
           />
-          {isIdentifiable(definition) ? (
+          {answersTap(layer) ? (
             <p
               className={styles.muted}
               data-testid={`layer-identify-hint-${definition.id}`}

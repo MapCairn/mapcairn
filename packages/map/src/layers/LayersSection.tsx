@@ -9,7 +9,6 @@ import {
   type FormatterRegistry,
   formatTemplate,
   hasCard,
-  isIdentifiable,
   type LayerFeature,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
@@ -31,6 +30,7 @@ import {
 } from "../panels/Section";
 import { useMessages, usePreferences, useResolveText } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
+import { answersTap } from "./answersTap";
 import { CatalogueStatus } from "./CatalogueStatus";
 import { hidesSection } from "./catalogueView";
 import { FeatureCard } from "./FeatureCard";
@@ -107,11 +107,9 @@ function enabledIds(layers: readonly DataLayerState[]): string[] {
     .map((layer) => layer.definition.id);
 }
 
-/** How many layers that are on answer a tap, to compare with the cap on one tap. */
+/** How many layers answer a tap, to compare with the cap on one tap. */
 function identifiableOn(layers: readonly DataLayerState[]): number {
-  return layers.filter(
-    (layer) => layer.enabled && isIdentifiable(layer.definition),
-  ).length;
+  return layers.filter(answersTap).length;
 }
 
 /** Layers grouped by their definitions' `group`, in the order groups first appear. */

@@ -136,10 +136,12 @@ test.describe("identify at a tap", () => {
       const line = page.getByTestId("identify-status");
       await expect(line).toHaveCount(0);
       await page.clock.runFor(IDENTIFY_FEEDBACK_MS + TIMER_SLACK_MS);
-      await expect(line).toHaveText("Looking up what is here");
-      expect(await mapPage.announcements()).not.toContain(
+      // The line is a status region, which is how a screen reader hears the wait.
+      await expect(line.getByRole("status")).toHaveText(
         "Looking up what is here",
       );
+      // The result then goes through the announcer, which the wait did not use.
+      expect(await mapPage.announcements()).toEqual([]);
       await service.release();
       await expect(page.getByTestId("feature-card-heading")).toHaveText(
         "Gauge 4",

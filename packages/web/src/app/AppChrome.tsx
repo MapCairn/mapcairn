@@ -152,7 +152,9 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
             onOpenShapes={app.openShapes}
           />
         ) : null}
-        {lookingUp ? <IdentifyStatus /> : null}
+        {lookingUp ? (
+          <IdentifyStatus onCancel={app.layers.cancelIdentify} />
+        ) : null}
         {showBanners ? <MapBanners app={app} /> : null}
       </div>
     ) : null;

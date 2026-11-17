@@ -448,16 +448,112 @@ describe("App waiting status line", () => {
     return { services, release };
   }
 
-  it("shows after the delay and not before, and says nothing to a screen reader", async () => {
+  /** What the line's own status region says, which is how a screen reader hears the wait. */
+  const lineStatus = () =>
+    within(lookingUp() as HTMLElement).getByRole("status");
+
+  it("shows after the delay and not before, and says the wait once in its own status region", async () => {
     await holdAtTap();
     await advanceClock(IDENTIFY_FEEDBACK_MS - 1);
     expect(lookingUp()).toBeNull();
     await advanceClock(1);
-    expect(lookingUp()).toHaveTextContent(LINE);
-    expect(lookingUp()).not.toHaveAttribute("aria-live");
-    expect(lookingUp()?.closest('[role="status"], [role="alert"]')).toBeNull();
+    await settle();
+    expect(lineStatus()).toHaveTextContent(LINE);
+    // The result has not arrived, so the announcer has said nothing yet.
     await advanceClock(ANNOUNCER_SETTLE_MS - IDENTIFY_FEEDBACK_MS);
     expect(polite()).toBe("");
+    expect(lookingUp()).not.toBeNull();
+  });
+
+  it("still says the result when it arrives just after the line shows", async () => {
+    const { release } = await holdAtTap();
+    await advanceClock(IDENTIFY_FEEDBACK_MS + 1);
+    await settle();
+    expect(lineStatus()).toHaveTextContent(LINE);
+    release();
+    await settle();
+    expect(lookingUp()).toBeNull();
+    expect(
+      within(sheet()).getByRole("heading", { name: "Gauge 4" }),
+    ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["just after the line shows", 1],
+    ["much later", ANNOUNCER_SETTLE_MS],
+  ])("still says a list's result when it arrives %s", async (_, wait) => {
+    const services = await renderApp([SAMPLE_IDENTIFY_LAYER, RAIN]);
+    services.fakes.layerSource.setIdentified(FLOOD, [samplePoint("a")]);
+    services.fakes.layerSource.setIdentified("sample-rain", [samplePoint("b")]);
+    const releaseFlood = services.fakes.layerSource.holdIdentify(FLOOD);
+    act(() => adapter(services).simulateClick(PLACE));
+    await settle();
+    await advanceClock(IDENTIFY_FEEDBACK_MS + wait);
+    expect(lookingUp()).not.toBeNull();
+    releaseFlood();
+    await settle();
+    await advanceClock(ANNOUNCER_SETTLE_MS);
+    expect(polite()).toBe("2 features here. Choose one from the list.");
+  });
+
+  it("says that a layer did not answer when the held request fails, after the line has shown", async () => {
+    const services = await renderApp([SAMPLE_IDENTIFY_LAYER]);
+    services.fakes.layerSource.failIdentify(FLOOD, "network");
+    const release = services.fakes.layerSource.holdIdentify(FLOOD);
+    act(() => adapter(services).simulateClick(PLACE));
+    await settle();
+    await advanceClock(IDENTIFY_FEEDBACK_MS + 1);
+    expect(lookingUp()).not.toBeNull();
+    release();
+    await settle();
+    await advanceClock(ANNOUNCER_SETTLE_MS);
+    expect(lookingUp()).toBeNull();
+    expect(screen.getByTestId("live-region-assertive")).toHaveTextContent(
+      "Sample flood depth did not answer.",
+    );
+  });
+
+  it("keeps the line, without restarting its delay, when a second tap replaces the lookup", async () => {
+    const { services } = await holdAtTap();
+    await advanceClock(IDENTIFY_FEEDBACK_MS);
+    expect(lookingUp()).not.toBeNull();
+    act(() => adapter(services).simulateClick({ lat: -33.8, lng: 18.5 }));
+    await settle();
+    expect(services.fakes.layerSource.identifyRequests).toHaveLength(2);
+    expect(lookingUp()).not.toBeNull();
+    await advanceClock(1);
+    expect(lookingUp()).not.toBeNull();
+  });
+
+  it("ends the lookup and the line from the line's own dismiss button", async () => {
+    const { services, release } = await holdAtTap();
+    await advanceClock(IDENTIFY_FEEDBACK_MS);
+    fireEvent.click(
+      within(lookingUp() as HTMLElement).getByRole("button", {
+        name: "Dismiss",
+      }),
+    );
+    await settle();
+    expect(lookingUp()).toBeNull();
+    expect(
+      services.fakes.layerSource.identifyRequests[0]?.signal?.aborted,
+    ).toBe(true);
+    release();
+    await settle();
+    expect(screen.queryByTestId("feature-card")).toBeNull();
+  });
+
+  it.each([
+    ["measuring", "Measure distance and area"],
+    ["drawing", "Draw shapes"],
+    ["directions", "Directions"],
+  ])("goes when %s opens during the wait", async (_, name) => {
+    await holdAtTap();
+    await advanceClock(IDENTIFY_FEEDBACK_MS);
+    expect(lookingUp()).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name }));
+    await settle();
+    expect(lookingUp()).toBeNull();
   });
 
   it("never shows when the answer comes within the delay", async () => {

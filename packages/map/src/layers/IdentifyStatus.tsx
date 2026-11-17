@@ -1,38 +1,44 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { Hourglass } from "lucide-react";
-import { useId } from "react";
 import { useMessages } from "../services";
-import { Icon } from "../ui/Icon";
-import { Surface } from "../ui/Surface";
-import * as styles from "./IdentifyStatus.css";
+import { StatusMessage } from "../ui/StatusMessage";
+import { IDENTIFY_TIMEOUT_MS } from "./identifyRun";
+
+/**
+ * Longer than a lookup can run, so the line's own countdown never ends one:
+ * the lookup times out first. `StatusMessage` dismisses an info message by
+ * itself after this long.
+ */
+const NEVER_BEFORE_TIMEOUT_MS = IDENTIFY_TIMEOUT_MS + 1_000;
+
+/** Props for {@link IdentifyStatus}. */
+export interface IdentifyStatusProps {
+  /** Ends the lookup, as Escape does. Called from the line's dismiss button. */
+  readonly onCancel: () => void;
+}
 
 /**
  * The line a host shows in the bottom-centre slot while a tap's lookup is
  * taking time ("Looking up what is here"): show it when
- * `useIdentifyFeedback(layers.identifying)` is true.
+ * `useIdentifyFeedback(layers.identifying)` is true, and pass
+ * `layers.cancelIdentify` as `onCancel`.
  *
- * @remarks It is not a live region, on purpose. The lookup's result is said
- *   once when it arrives, and a message after the delay would be coalesced
- *   with it, so a screen reader hears nothing during the wait. It is a
- *   region named by its own words, so the page's content stays inside a
- *   landmark. Escape ends the lookup, and the line with it, so it has no
- *   dismiss button.
+ * @remarks It is a `StatusMessage`, so it says itself once, politely, when it
+ *   appears at the delay, and the page's content stays inside a live region.
+ *   The lookup's result is said separately when it arrives, through the
+ *   announcer with `keep`, so the two never replace each other. Dismissing the
+ *   line ends the lookup, the same as Escape.
  */
-export function IdentifyStatus() {
+export function IdentifyStatus({ onCancel }: IdentifyStatusProps) {
   const { t } = useMessages();
-  const textId = useId();
   return (
-    <Surface
-      as="section"
-      variant="floating"
-      radius="control"
-      className={styles.line}
-      aria-labelledby={textId}
+    <StatusMessage
+      variant="info"
       data-testid="identify-status"
+      autoDismissMs={NEVER_BEFORE_TIMEOUT_MS}
+      onDismiss={onCancel}
     >
-      <Icon icon={Hourglass} className={styles.icon} />
-      <span id={textId}>{t("layers.identify.lookingUp", {})}</span>
-    </Surface>
+      {t("layers.identify.lookingUp", {})}
+    </StatusMessage>
   );
 }

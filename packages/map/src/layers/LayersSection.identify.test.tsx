@@ -8,13 +8,20 @@ import {
   SAMPLE_FEED_LAYER,
   SAMPLE_IDENTIFY_LAYER,
   SAMPLE_TILE_LAYER,
+  tileUrl,
 } from "@mapcairn/core";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../services";
 import { LiveRegionProvider } from "../ui/LiveRegion";
 import { LayersSection } from "./LayersSection";
-import { MAX_IDENTIFY_LAYERS, useDataLayers } from "./useDataLayers";
+import {
+  type DataLayers,
+  MAX_IDENTIFY_LAYERS,
+  useDataLayers,
+} from "./useDataLayers";
+
+const NOW = Date.UTC(2026, 10, 9, 12);
 
 const HINT = "Tap the map to see details for this layer.";
 const CAP = `Only the first ${MAX_IDENTIFY_LAYERS} layers are asked on one tap.`;
@@ -32,16 +39,35 @@ function setup(definitions: readonly LayerDefinition[]) {
   const services = createFakeServices({
     layers: new FakeLayerCatalogue(definitions),
   });
+  const handle: { current: DataLayers | null } = { current: null };
   function Harness() {
-    const layers = useDataLayers();
+    const layers = useDataLayers({ now: () => NOW });
+    handle.current = layers;
     return <LayersSection layers={layers} />;
   }
-  return render(
+  const view = render(
     <ServicesProvider services={services}>
       <LiveRegionProvider>
         <Harness />
       </LiveRegionProvider>
     </ServicesProvider>,
+  );
+  return { ...view, layers: () => handle.current as DataLayers };
+}
+
+/** Reports that none of an identifiable layer's tiles loaded, as the map does. */
+function reportNoImagery(
+  layers: DataLayers,
+  definition: IdentifiableLayerDefinition,
+) {
+  const state = layers.layers.find(
+    (entry) => entry.definition.id === definition.id,
+  );
+  act(() =>
+    layers.reportTilesUnavailable(
+      definition.id,
+      tileUrl(definition, state?.controls ?? {}, NOW),
+    ),
   );
 }
 
@@ -79,6 +105,38 @@ describe("LayersSection identify lines", () => {
     turnOn(last.id, last.name as string);
     expect(screen.getByText(CAP)).toBeVisible();
     turnOn(last.id, last.name as string);
+    expect(screen.queryByText(CAP)).toBeNull();
+  });
+
+  it("drops the line for a layer with no imagery, which a tap does not ask, and brings it back with the imagery", () => {
+    const { layers } = setup([SAMPLE_IDENTIFY_LAYER]);
+    turnOn(SAMPLE_IDENTIFY_LAYER.id, "Sample flood depth");
+    expect(screen.getByText(HINT)).toBeVisible();
+    reportNoImagery(layers(), SAMPLE_IDENTIFY_LAYER);
+    expect(screen.queryByText(HINT)).toBeNull();
+    act(() =>
+      layers().reportTilesRecovered(
+        SAMPLE_IDENTIFY_LAYER.id,
+        tileUrl(
+          SAMPLE_IDENTIFY_LAYER,
+          layers().layers.find(
+            (entry) => entry.definition.id === SAMPLE_IDENTIFY_LAYER.id,
+          )?.controls ?? {},
+          NOW,
+        ),
+      ),
+    );
+    expect(screen.getByText(HINT)).toBeVisible();
+  });
+
+  it("does not count a layer with no imagery towards the cap", () => {
+    const definitions = identifiable(MAX_IDENTIFY_LAYERS + 1);
+    const { layers } = setup(definitions);
+    for (const layer of definitions) {
+      turnOn(layer.id, layer.name as string);
+    }
+    expect(screen.getByText(CAP)).toBeVisible();
+    reportNoImagery(layers(), definitions[0] as IdentifiableLayerDefinition);
     expect(screen.queryByText(CAP)).toBeNull();
   });
 
