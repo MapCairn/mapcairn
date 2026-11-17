@@ -4,6 +4,6 @@ import { expect, test } from "./fixtures";
 
 // Seed for planning and generating tests (the `playwright-tests` skill). Generated tests start from here; keep it minimal.
 test("seed", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/map");
   await expect(page).toHaveTitle(/mapcairn/i);
 });

@@ -15,7 +15,7 @@ Example: a change moves the layer key. Shoot the map with the key open at 390x84
 
 1. Install the browsers once if they are missing: `npm run playwright:install -w @mapcairn/web`.
 2. Pick a port nobody uses, not 5173 or 4173 (say 5190), and check that nothing listens on it: `Get-NetTCPConnection -LocalPort 5190 -State Listen` on Windows (an error means none), `lsof -nP -iTCP:5190 -sTCP:LISTEN` elsewhere. Another agent may be running a server, so never reuse a port that is taken.
-3. Run `npm run dev -w @mapcairn/web -- --port 5190 --strictPort` in the background, so it fails instead of moving to another port. Wait for its ready line, then run the listener check again and write down the PID it shows: the port was free, so that process is yours. Load `http://localhost:5190/` once and let it finish: the first load compiles the app and shows an unstyled page. Development does not apply the production headers; the e2e suite covers those.
+3. Run `npm run dev -w @mapcairn/web -- --port 5190 --strictPort` in the background, so it fails instead of moving to another port. Wait for its ready line, then run the listener check again and write down the PID it shows: the port was free, so that process is yours. Load `http://localhost:5190/map` once and let it finish (the map is the playground at `/map`; `/` is the product page): the first load compiles the app and shows an unstyled page. Development does not apply the production headers; the e2e suite covers those.
 4. The map fetches real tiles. If the network is blocked and the map stays blank, say so and judge only the interface around it.
 
 ## 2. Take the screenshots
@@ -29,13 +29,13 @@ Save every image under `.tmp-visual/` (ignored by git) in a name that says size,
 | Desktop | 1440x900 |
 
 - Default basemap: all three sizes in both themes (six images).
-- At least one other basemap: Streets, plus Dark, at phone and desktop in the theme where it matters. A basemap is chosen with `&basemap=<id>` in the address hash, for example `http://localhost:5190/#map=10.00/-33.92000/18.42000&basemap=osm`. The ids the site offers are in `HOST_BASEMAP_IDS` in `packages/web/src/basemaps/hostBasemaps.ts`.
+- At least one other basemap: Streets, plus Dark, at phone and desktop in the theme where it matters. A basemap is chosen with `&basemap=<id>` in the address hash, for example `http://localhost:5190/map#map=10.00/-33.92000/18.42000&basemap=osm`. The ids the site offers are in `HOST_BASEMAP_IDS` in `packages/web/src/basemaps/hostBasemaps.ts`.
 - Put the app in the state the change affects first (open the panel, turn the layer on, start the tool), and show that state, not only the bare map.
 
 If your tool has Playwright browser tools, use them to set the window size and colour scheme, open the address, wait for the map to finish loading and save a screenshot to a named file. Otherwise use the Playwright CLI from the repository root for each combination:
 
 ```bash
-npx --no-install playwright screenshot --viewport-size=390,844 --color-scheme=dark --wait-for-selector='[data-zoom][aria-busy="false"]' --wait-for-timeout=6000 "http://localhost:5190/#map=10.00/-33.92000/18.42000&basemap=bright" .tmp-visual/phone-dark-bright.png
+npx --no-install playwright screenshot --viewport-size=390,844 --color-scheme=dark --wait-for-selector='[data-zoom][aria-busy="false"]' --wait-for-timeout=6000 "http://localhost:5190/map#map=10.00/-33.92000/18.42000&basemap=bright" .tmp-visual/phone-dark-bright.png
 ```
 
 The map is ready when `[data-zoom][aria-busy="false"]` matches; the extra 6 seconds lets the credits, which open for the first five seconds, close. The flag covers the style and the basemap's tiles only, so with a data layer on it can match while that layer's tiles or feed are still arriving: keep the wait, raise it for a slow provider, and look at the image to see that the layer has drawn (a feed layer's row in the Layers section says "Updated" once it has). Screenshot them open too if the change touches them. If a state needs clicks, use a short script in `.tmp-visual/` (git ignores it) and run it with `node .tmp-visual/shot.mjs` from the repository root. Change the size, theme and address for each combination:
@@ -49,7 +49,7 @@ const context = await browser.newContext({
   colorScheme: "dark",
 });
 const page = await context.newPage();
-await page.goto("http://localhost:5190/#map=10.00/-33.92000/18.42000&basemap=bright");
+await page.goto("http://localhost:5190/map#map=10.00/-33.92000/18.42000&basemap=bright");
 await page.locator('[data-zoom][aria-busy="false"]').waitFor();
 // Click or type here to reach the state the change affects.
 await page.screenshot({ path: ".tmp-visual/phone-dark-state.png" });

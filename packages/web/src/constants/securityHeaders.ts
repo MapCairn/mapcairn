@@ -9,9 +9,11 @@
  * @param options - `development` relaxes `style-src` and `connect-src` for
  *   the Vite dev server, which injects <style> tags and a hot-reload socket.
  *   Production never sets it.
- * @remarks The `sha256-` source allows the static inline theme script
- *   (`app/themeBootstrap.ts`, rendered by `root.tsx`);
- *   `app/themeBootstrap.test.ts` recomputes the hash. The nonce covers the
+ * @remarks The two `sha256-` sources allow the two static inline scripts:
+ *   the theme script (`app/themeBootstrap.ts`, rendered by `root.tsx` on
+ *   every page) and the old map link redirect (`app/mapLinkRedirect.ts`,
+ *   rendered by the product page at `/`); `app/inlineScripts.test.ts`
+ *   recomputes both hashes. The nonce covers the
  *   streaming and hydration scripts React injects during SSR, whose content
  *   changes per request: `entry.server.tsx` makes one with
  *   {@link generateNonce} and passes it both here and to
@@ -28,6 +30,7 @@ export function buildContentSecurityPolicy(
   const scriptSources = [
     "'self'",
     "'sha256-c5em0OTHDd1mxlXhF2gI8uCcsNZlG3ayVbKhZMRlRKc='",
+    "'sha256-xinGG9O15McRwOM4SbD4NWvCznIrfr7EAlYRxYk+kgQ='",
     ...(nonce ? [`'nonce-${nonce}'`] : []),
     "https://static.cloudflareinsights.com",
   ];

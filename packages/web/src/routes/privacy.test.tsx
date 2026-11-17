@@ -46,12 +46,15 @@ describe("privacy route meta", () => {
     });
 
     const jsonLdTag = tags?.find((tag) => "script:ld+json" in tag) as
-      | { "script:ld+json": Record<string, unknown> }
+      | { "script:ld+json": { "@graph": Record<string, unknown>[] } }
       | undefined;
-    expect(jsonLdTag?.["script:ld+json"]).toMatchObject({
-      name: "Privacy policy | MapCairn",
-      url: "https://mapcairn.timothybrits.co.za/privacy",
-    });
+    expect(jsonLdTag?.["script:ld+json"]["@graph"]).toContainEqual(
+      expect.objectContaining({
+        "@type": "WebPage",
+        name: "Privacy policy | MapCairn",
+        url: "https://mapcairn.timothybrits.co.za/privacy",
+      }),
+    );
   });
 
   it("still carries the site-wide Open Graph tags shared with every route", () => {

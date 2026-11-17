@@ -133,7 +133,7 @@ describe("PrivacyPage in the active language", () => {
     );
     expect(
       view.getByRole("link", { name: "Terug na die kaart" }),
-    ).toHaveAttribute("href", "/");
+    ).toHaveAttribute("href", "/map");
     expect(view.getByText("mapcairn:theme")).toBeInTheDocument();
     expect(view.getByText("mapcairn:tourSeen")).toBeInTheDocument();
   });

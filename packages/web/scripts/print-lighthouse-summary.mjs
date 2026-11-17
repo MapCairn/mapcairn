@@ -36,26 +36,33 @@ function readReports(directory) {
     .sort((a, b) => a.fetchTime.localeCompare(b.fetchTime));
 }
 
+/** The path of a run's page, such as `/` or `/map`, so runs of several pages can be told apart. */
+function pagePath(report) {
+  return new URL(report.requestedUrl).pathname;
+}
+
 function buildSummary(runs) {
   const lines = ["## Lighthouse report", ""];
-  lines.push(`URL: ${runs[0].requestedUrl}`);
-  lines.push("");
-  lines.push(`| Run | ${CATEGORY_IDS.join(" | ")} |`);
-  lines.push(`| --- | ${CATEGORY_IDS.map(() => "---").join(" | ")} |`);
+  lines.push(`| Run | Page | ${CATEGORY_IDS.join(" | ")} |`);
+  lines.push(`| --- | --- | ${CATEGORY_IDS.map(() => "---").join(" | ")} |`);
   for (const [index, report] of runs.entries()) {
     const scores = CATEGORY_IDS.map((id) =>
       formatScore(report.categories[id]?.score),
     );
-    lines.push(`| ${index + 1} | ${scores.join(" | ")} |`);
+    lines.push(
+      `| ${index + 1} | ${pagePath(report)} | ${scores.join(" | ")} |`,
+    );
   }
   lines.push("");
-  lines.push(`| Run | ${AUDIT_IDS.join(" | ")} |`);
-  lines.push(`| --- | ${AUDIT_IDS.map(() => "---").join(" | ")} |`);
+  lines.push(`| Run | Page | ${AUDIT_IDS.join(" | ")} |`);
+  lines.push(`| --- | --- | ${AUDIT_IDS.map(() => "---").join(" | ")} |`);
   for (const [index, report] of runs.entries()) {
     const values = AUDIT_IDS.map(
       (id) => report.audits[id]?.displayValue ?? "n/a",
     );
-    lines.push(`| ${index + 1} | ${values.join(" | ")} |`);
+    lines.push(
+      `| ${index + 1} | ${pagePath(report)} | ${values.join(" | ")} |`,
+    );
   }
   return lines.join("\n");
 }

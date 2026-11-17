@@ -500,14 +500,14 @@ const cases: readonly Case[] = [
   {
     rule: "service-singleton",
     name: "createServices at module scope",
-    file: "packages/web/src/routes/home.tsx",
+    file: "packages/web/src/routes/map.tsx",
     bad: `import { createServices } from "../composition/createServices";\nexport const services = createServices();`,
     good: `import { createServices } from "../composition/createServices";\nexport const make = () => createServices();\nexport function build() {\n  return createServices();\n}`,
   },
   {
     rule: "service-singleton",
     name: "createServices in an arrow at module scope",
-    file: "packages/web/src/routes/home.tsx",
+    file: "packages/web/src/routes/map.tsx",
     bad: `const services = createServices({ overrides: {} });`,
     good: `const make = () =>\n  createServices({ overrides: {} });`,
   },
@@ -633,7 +633,7 @@ describe("harmony rule scoping", () => {
   it("does not flag a createServices declaration or a call inside a function", () => {
     const code = `export function createServices() {\n  return {};\n}\nexport function useIt() {\n  return createServices();\n}`;
     expect(
-      scanSource("packages/web/src/routes/home.tsx", code).filter(
+      scanSource("packages/web/src/routes/map.tsx", code).filter(
         (v: { rule: string }) => v.rule === "service-singleton",
       ),
     ).toEqual([]);

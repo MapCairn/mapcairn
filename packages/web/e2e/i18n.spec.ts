@@ -29,7 +29,7 @@ test.describe("with Afrikaans chosen", () => {
         ? route.abort()
         : route.fallback(),
     );
-    await page.goto("/");
+    await page.goto("/map");
     await expect(page.locator("html")).toHaveAttribute("lang", "af");
   });
 
@@ -200,7 +200,7 @@ test.describe("the error page", () => {
       await page
         .getByRole("link", { name: AF_CATALOGUE["app.error.notFound.link"] })
         .click();
-      await expect(page).toHaveURL(/\/$/);
+      await expect(page).toHaveURL(/\/map$/);
     });
 
     for (const colorScheme of ["light", "dark"] as const) {

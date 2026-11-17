@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy } from "../constants/securityHeaders";
+import { MAP_LINK_REDIRECT_SCRIPT } from "./mapLinkRedirect";
 import { THEME_BOOTSTRAP_SCRIPT } from "./themeBootstrap";
 
 /** The CSP source for an inline script: `'sha256-<base64 digest>'`. */
@@ -23,15 +24,24 @@ const headersFile = readFileSync(
   "utf8",
 );
 
-describe("the theme bootstrap script's CSP hash", () => {
-  const expected = cspHash(THEME_BOOTSTRAP_SCRIPT);
+/*
+ * The site has two inline scripts: the theme bootstrap every page runs in its
+ * head, and the product page's redirect for old map links. Each is allowed by
+ * its own hash and nothing else inline is, so a change to either script fails
+ * here until its hash is updated in both files.
+ */
+describe("the inline scripts' CSP hashes", () => {
+  const expected = [
+    cspHash(THEME_BOOTSTRAP_SCRIPT),
+    cspHash(MAP_LINK_REDIRECT_SCRIPT),
+  ];
 
-  it("is the only script hash the policy built in securityHeaders.ts allows", () => {
-    expect(hashesIn(buildContentSecurityPolicy())).toEqual([expected]);
-    expect(hashesIn(buildContentSecurityPolicy("nonce"))).toEqual([expected]);
+  it("are the only script hashes the policy built in securityHeaders.ts allows", () => {
+    expect(hashesIn(buildContentSecurityPolicy())).toEqual(expected);
+    expect(hashesIn(buildContentSecurityPolicy("nonce"))).toEqual(expected);
   });
 
-  it("is the only script hash in public/_headers", () => {
-    expect(hashesIn(headersFile)).toEqual([expected]);
+  it("are the only script hashes in public/_headers", () => {
+    expect(hashesIn(headersFile)).toEqual(expected);
   });
 });

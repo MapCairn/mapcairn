@@ -420,6 +420,11 @@ export const typeScale = {
   body: { size: "0.9375rem", lineHeight: "1.45", tracking: "0em" },
   large: { size: "1.0625rem", lineHeight: "1.4", tracking: "-0.005em" },
   title: { size: "1.375rem", lineHeight: "1.25", tracking: "-0.015em" },
+  /**
+   * The one display size, for the heading of a full page that is not the map
+   * (the reference host's product page). The map's chrome never uses it.
+   */
+  display: { size: "2.5rem", lineHeight: "1.1", tracking: "-0.025em" },
 } as const;
 
 /** Font weights. Nothing else is declared in `@font-face`. */
@@ -432,6 +437,13 @@ export const fontWeight = { regular: "400", semibold: "600" } as const;
  */
 export const fontFamily =
   '"IBM Plex Sans Variable", "IBM Plex Sans Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+/**
+ * The stack for code samples only: the system's own monospaced faces, so no
+ * second web font is downloaded. Interface text never uses it.
+ */
+export const fontFamilyMono =
+  'ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
 
 /** Interactive sizes and the icon system. */
 export const size = {

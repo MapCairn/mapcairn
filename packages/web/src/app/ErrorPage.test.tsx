@@ -48,7 +48,7 @@ describe("ErrorPage", () => {
       screen.getByRole("link", {
         name: EN_GB_CATALOGUE["app.error.notFound.link"],
       }),
-    ).toHaveAttribute("href", "/");
+    ).toHaveAttribute("href", "/map");
   });
 
   it("says something went wrong and offers Reload", () => {

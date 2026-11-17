@@ -9,7 +9,7 @@
 
 ## Try the playground
 
-The playground at [mapcairn.timothybrits.co.za](https://mapcairn.timothybrits.co.za) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here.
+The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here.
 
 The playground is the SDK's showcase and test bed (`packages/web`). What a team adopts is the SDK.
 
@@ -49,7 +49,11 @@ function MapScreen() {
   const basemaps = useBasemaps();
   return (
     <MapView
-      initialView={{ center: { lat: -33.92, lng: 18.42 }, zoom: 11, bearing: 0 }}
+      initialView={{
+        center: { lat: -33.92, lng: 18.42 },
+        zoom: 11,
+        bearing: 0,
+      }}
       basemap={basemaps.resolve(basemaps.defaultId)}
       chrome={(background) => <Chrome background={background} />}
     />

@@ -4,6 +4,7 @@ import type { MessageKey } from "@mapcairn/core";
 import { Button } from "@mapcairn/map";
 import { RotateCw } from "lucide-react";
 import { useNavigate } from "react-router";
+import { PLAYGROUND_PATH } from "../constants/siteConfig";
 import * as styles from "./ErrorPage.css";
 import { useErrorPageMessages } from "./useErrorPageMessages";
 
@@ -62,7 +63,7 @@ export function ErrorPage({ kind }: ErrorPageProps) {
         <h1 className={styles.title}>{t(title, {})}</h1>
         <p className={styles.message}>{t(message, {})}</p>
         {kind === "not-found" ? (
-          <a href="/" className={styles.link}>
+          <a href={PLAYGROUND_PATH} className={styles.link}>
             {t("app.error.notFound.link", {})}
           </a>
         ) : (

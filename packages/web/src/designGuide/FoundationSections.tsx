@@ -136,6 +136,7 @@ export function ContrastSection() {
 
 /** Sample copy for the type scale, written the way the app writes. */
 const TYPE_SAMPLES: Record<keyof typeof typeScale, string> = {
+  display: "Map applications for the public",
   title: "Cape Town, Western Cape",
   large: "Drop a pin at the map centre",
   body: "Search places, compare basemaps and measure distances or areas.",

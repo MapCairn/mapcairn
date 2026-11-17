@@ -190,11 +190,11 @@ describe("PrivacyPage", () => {
     expect(link).toHaveAccessibleName(/opens in a new tab/);
   });
 
-  it("links back to the map", () => {
+  it("links back to the map at /map", () => {
     render(<PrivacyPage />);
 
     expect(
       screen.getByRole("link", { name: "Back to the map" }),
-    ).toHaveAttribute("href", "/");
+    ).toHaveAttribute("href", "/map");
   });
 });

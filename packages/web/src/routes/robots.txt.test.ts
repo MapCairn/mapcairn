@@ -16,4 +16,12 @@ describe("/robots.txt route", () => {
     expect(body).toContain("Allow: /");
     expect(body).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);
   });
+
+  it("welcomes search and AI crawlers in a comment and blocks nothing", async () => {
+    const body = await loader().text();
+
+    expect(body).toMatch(/^# .*open source/m);
+    expect(body).toMatch(/^# .*AI crawlers are welcome/m);
+    expect(body).not.toMatch(/^Disallow:/m);
+  });
 });

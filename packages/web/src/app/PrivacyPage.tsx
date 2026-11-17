@@ -3,8 +3,9 @@
 import { type MessageKey, THEME_STORAGE_KEY } from "@mapcairn/core";
 import { useOptionalMessages, VisuallyHidden } from "@mapcairn/map";
 import type { ReactNode } from "react";
-import { SITE_URL } from "../constants/siteConfig";
+import { PLAYGROUND_PATH, SITE_URL } from "../constants/siteConfig";
 import { MessageParts } from "../i18n/MessageParts";
+import { DOCUMENT_SCROLL } from "./documentScroll";
 import * as styles from "./PrivacyPage.css";
 
 /**
@@ -78,7 +79,7 @@ export function PrivacyPage() {
   const { t } = messages;
   const newTab = t("layers.card.opensInNewTab", {});
   return (
-    <div className={styles.scroller}>
+    <div className={styles.scroller} {...DOCUMENT_SCROLL}>
       <main className={styles.page} data-testid="privacy-page">
         <h1 className={styles.heading}>{t("privacy.title", {})}</h1>
         <p className={styles.updated}>
@@ -178,7 +179,7 @@ export function PrivacyPage() {
           }}
         />
 
-        <a className={styles.link} href="/">
+        <a className={styles.link} href={PLAYGROUND_PATH}>
           {t("privacy.back", {})}
         </a>
       </main>

@@ -8,9 +8,11 @@
  * the text it excuses.
  *
  * Everything a visitor can see in the host app is in the catalogue, the
- * privacy page included. The four design guide entries stay: that guide is
- * built only in development and test builds, so no visitor sees it, and the
- * only other entry is the product name in the hidden page heading.
+ * privacy page included, except the product page at `/`, which is English
+ * only by decision. The four design guide entries stay: that guide is built
+ * only in development and test builds, so no visitor sees it. The other
+ * entries are the product page's two files and the product name in the map
+ * page's hidden heading.
  *
  * @type {ReadonlyArray<{ file: string, text?: string, reason: string }>}
  */
@@ -36,9 +38,19 @@ export const COPY_ALLOWLIST = [
       "The developer design guide exists only in development and test builds and is not shown to visitors; see #271.",
   },
   {
-    file: "packages/web/src/routes/home.tsx",
+    file: "packages/web/src/routes/map.tsx",
     text: "MapCairn",
     reason:
       "The product name in the visually hidden page heading, spelt the same in every language.",
+  },
+  {
+    file: "packages/web/src/product/ProductPage.tsx",
+    reason:
+      "Developer-facing product page, English only; Afrikaans later is one small pull request.",
+  },
+  {
+    file: "packages/web/src/product/SurveyArt.tsx",
+    reason:
+      "Developer-facing product page, English only; Afrikaans later is one small pull request.",
   },
 ];

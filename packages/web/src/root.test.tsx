@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  createFakeServices,
-  createLanguageCatalogue,
-  FakeMessageCatalogue,
-  THEME_COLOR_META,
-} from "@mapcairn/core";
-import { useServices } from "@mapcairn/map";
+import { THEME_COLOR_META } from "@mapcairn/core";
+import { useOptionalServices } from "@mapcairn/map";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -24,12 +19,6 @@ vi.mock("react-router", async (importOriginal) => {
     ScrollRestoration: () => null,
   };
 });
-
-const fakeServices = createFakeServices();
-const createServices = vi.fn(() => fakeServices);
-vi.mock("./composition/createServices", () => ({
-  createServices: () => createServices(),
-}));
 
 const reportCaughtError = vi.fn();
 vi.mock("./composition/errorReporting", () => ({
@@ -95,18 +84,9 @@ describe("root links", () => {
     );
   });
 
-  it("preconnects to the default vector basemap's tile host only", () => {
+  it("opens no connection to another host on every page: the map route does that for itself", () => {
     const preconnects = allLinks().filter((link) => link.rel === "preconnect");
-    expect(preconnects.map((link) => link.href)).toEqual([
-      "https://tiles.openfreemap.org",
-    ]);
-  });
-
-  it("makes the tile host preconnect a CORS one, as MapLibre fetches with CORS", () => {
-    const preconnects = allLinks().filter((link) => link.rel === "preconnect");
-    expect(preconnects).toEqual([
-      expect.objectContaining({ crossOrigin: "anonymous" }),
-    ]);
+    expect(preconnects).toEqual([]);
   });
 
   it("leaves the canonical link to each route and stylesheets to the bundler", () => {
@@ -117,10 +97,10 @@ describe("root links", () => {
 });
 
 describe("root meta", () => {
-  it("sets the title, description and a viewport that allows zoom", () => {
+  it("sets the site's own title, description and a viewport that allows zoom, for a page with none of its own", () => {
     const tags = meta({} as never);
 
-    expect(tags).toContainEqual({ title: "MapCairn | Interactive map" });
+    expect(tags).toContainEqual({ title: "MapCairn" });
     expect(tags).toContainEqual(
       expect.objectContaining({ name: "description" }),
     );
@@ -140,7 +120,7 @@ describe("root meta", () => {
     expect(tags).toContainEqual({ property: "og:locale", content: "en_GB" });
     expect(tags).toContainEqual({
       property: "og:image",
-      content: "https://mapcairn.timothybrits.co.za/og-image.png",
+      content: "https://mapcairn.timothybrits.co.za/og-sdk.png",
     });
     expect(tags).toContainEqual({
       name: "twitter:card",
@@ -188,12 +168,11 @@ describe("root Root", () => {
     return createElement(
       "p",
       null,
-      useServices() === fakeServices ? "services ready" : "wrong services",
+      useOptionalServices() === null ? "no services" : "services",
     );
   }
 
-  it("provides the services, built once, to the matched route", () => {
-    createServices.mockClear();
+  it("renders the matched route with no services, announcer or tooltips of its own", () => {
     const Stub = createRoutesStub([
       {
         path: "/",
@@ -202,12 +181,10 @@ describe("root Root", () => {
       },
     ]);
 
-    const { rerender } = render(createElement(Stub, { initialEntries: ["/"] }));
-    rerender(createElement(Stub, { initialEntries: ["/"] }));
+    render(createElement(Stub, { initialEntries: ["/"] }));
 
-    expect(screen.getByText("services ready")).toBeInTheDocument();
-    expect(createServices).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("live-region-polite")).toBeInTheDocument();
+    expect(screen.getByText("no services")).toBeInTheDocument();
+    expect(screen.queryByTestId("live-region-polite")).toBeNull();
   });
 });
 
@@ -216,43 +193,36 @@ describe("root document language", () => {
     document.documentElement.removeAttribute("lang");
   });
 
-  const stub = () =>
-    createRoutesStub([
+  it("puts a page in one language back to it, whatever the pre-paint script set", async () => {
+    document.documentElement.lang = "af";
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: Root,
+        children: [
+          {
+            index: true,
+            Component: () => null,
+            handle: { language: "en-GB" },
+          },
+        ],
+      },
+    ]);
+    render(createElement(Stub, { initialEntries: ["/"] }));
+    await waitFor(() => expect(document.documentElement.lang).toBe("en-GB"));
+  });
+
+  it("leaves lang alone for a page that names no language", () => {
+    document.documentElement.lang = "af";
+    const Stub = createRoutesStub([
       {
         path: "/",
         Component: Root,
         children: [{ index: true, Component: () => null }],
       },
     ]);
-
-  it("sets lang on the document to the language in use", () => {
-    createServices.mockReturnValueOnce(
-      createFakeServices({
-        messages: new FakeMessageCatalogue({ language: "en-GB" }),
-      }),
-    );
-    const Stub = stub();
     render(createElement(Stub, { initialEntries: ["/"] }));
-    expect(document.documentElement.lang).toBe("en-GB");
-  });
-
-  it("follows the language when the person's choice loads", async () => {
-    const services = createFakeServices({
-      messages: new FakeMessageCatalogue({ language: "en-GB" }),
-      languages: createLanguageCatalogue(
-        [
-          { tag: "en-GB", label: "English" },
-          { tag: "af", label: "Afrikaans" },
-        ],
-        "en-GB",
-        (tag) => Promise.resolve(new FakeMessageCatalogue({ language: tag })),
-      ),
-    });
-    services.fakes.settings.set({ language: "af" });
-    createServices.mockReturnValueOnce(services);
-    const Stub = stub();
-    render(createElement(Stub, { initialEntries: ["/"] }));
-    await waitFor(() => expect(document.documentElement.lang).toBe("af"));
+    expect(document.documentElement.lang).toBe("af");
   });
 });
 
@@ -357,7 +327,7 @@ describe("root ErrorBoundary", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to the map" })).toHaveAttribute(
       "href",
-      "/",
+      "/map",
     );
     expect(logged).not.toHaveBeenCalled();
     expect(reportCaughtError).not.toHaveBeenCalled();

@@ -9,6 +9,13 @@ import {
   type PageTitleHandle,
   PRIVACY_TITLE,
 } from "../i18n/pageTitle";
+import {
+  breadcrumbNode,
+  HOME_CRUMB,
+  jsonLdGraph,
+  webPageNode,
+  websiteNode,
+} from "../structuredData";
 
 /** This route's own meta description, distinct from the root route's site-wide one. */
 const PRIVACY_POLICY_DESCRIPTION =
@@ -19,9 +26,9 @@ const PRIVACY_URL = `${SITE_URL}/privacy`;
 
 /**
  * React Router route module export: the `/privacy` route's `<title>`/`<meta>`
- * tags, via the same `buildPageMeta` the root route uses, so this page's
- * Open Graph, Twitter and JSON-LD tags describe itself rather than inheriting
- * the root route's. The server always renders the English title; the browser
+ * tags, via the same `buildPageMeta` every route uses, so this page's Open
+ * Graph, Twitter and JSON-LD tags (a `WebPage` and the trail back to the
+ * product page) describe itself rather than inheriting the root route's. The server always renders the English title; the browser
  * shows it in the visitor's language through `handle` (see `DocumentTitle`).
  * The description and the other tags are read by crawlers and link previews,
  * not shown in the app, so they stay English.
@@ -31,6 +38,19 @@ export const meta: MetaFunction = () =>
     title: englishTitle(PRIVACY_TITLE),
     description: PRIVACY_POLICY_DESCRIPTION,
     url: PRIVACY_URL,
+    image: "map",
+    structuredData: jsonLdGraph([
+      websiteNode(),
+      webPageNode(
+        englishTitle(PRIVACY_TITLE),
+        PRIVACY_POLICY_DESCRIPTION,
+        PRIVACY_URL,
+      ),
+      breadcrumbNode([
+        HOME_CRUMB,
+        { name: "Privacy policy", url: PRIVACY_URL },
+      ]),
+    ]),
   });
 
 /** React Router route module export: the catalogue key of this page's tab title. */

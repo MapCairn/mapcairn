@@ -148,7 +148,7 @@ test.describe("map background before the app runs", () => {
       page,
     }) => {
       await page.emulateMedia({ colorScheme });
-      await page.goto("/");
+      await page.goto("/map");
       const placeholder = page.getByTestId("map-placeholder");
       await expect(placeholder).toBeVisible();
       expect(

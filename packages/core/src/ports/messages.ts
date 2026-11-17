@@ -714,7 +714,9 @@ export type MessageKey =
   | "privacy.back"
   | "host.about.heading"
   | "host.about.text"
-  | "host.about.link";
+  | "host.about.link"
+  | "host.about.product"
+  | "host.map.summary";
 
 /**
  * Text a definition shows a person: a {@link MessageKey}, looked up in the

@@ -452,7 +452,7 @@ test.describe("basemaps", () => {
       });
     });
     const tile = page.waitForResponse(RASTER_TILE_PATTERN);
-    const response = await page.goto(`/#basemap=${RASTER_BASEMAP_ID}`);
+    const response = await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
     // The preview must send the policy, or this test would prove nothing.
     const policy = (await response?.allHeaders())?.["content-security-policy"];
     expect(policy).toContain("tile.openstreetmap.org");
@@ -487,7 +487,7 @@ test.describe("basemaps", () => {
         );
       } as typeof getContext;
     });
-    await page.goto("/");
+    await page.goto("/map");
 
     const message = page.getByTestId("webgl-unavailable");
     await expect(message).toContainText(
@@ -741,7 +741,7 @@ test.describe("basemaps", () => {
           })
         : route.fulfill({ status: 503, body: "" });
     });
-    await page.goto(`/#basemap=${RASTER_BASEMAP_ID}`);
+    await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
     const banner = page.getByTestId("tile-error");
     await expect(banner).toContainText(
       "Some of the map could not load. Check your connection.",

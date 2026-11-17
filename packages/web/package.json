@@ -18,7 +18,8 @@
     "a11y": "playwright test --grep @a11y",
     "test:e2e:ui": "playwright test --ui",
     "playwright:install": "playwright install --with-deps chromium webkit",
-    "generate:og-image": "tsx scripts/generateOgImage.ts"
+    "generate:og-image": "tsx scripts/generateOgImage.ts",
+    "generate:og-sdk": "tsx scripts/generateSdkOgImage.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { SITE_URL } from "../constants/siteConfig";
+import { PLAYGROUND_PATH, SITE_URL } from "../constants/siteConfig";
 import { staticTextResponse } from "./staticTextResponse";
 
 /**
- * Every page this site wants indexed, kept in step with `routes.ts` by
- * hand; there are only two routes today, so an abstraction deriving this
- * from the route config would add indirection with nothing to reuse it.
+ * Every page this site wants indexed, kept in step with `routes.ts` by hand
+ * and checked against it by a test. There is no `lastmod`: nothing records
+ * when a page last changed, and a guessed date would be wrong.
  */
 const SITEMAP_XML_BODY = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -14,6 +14,11 @@ const SITEMAP_XML_BODY = `<?xml version="1.0" encoding="UTF-8"?>
     <loc>${SITE_URL}/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}${PLAYGROUND_PATH}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>${SITE_URL}/privacy</loc>

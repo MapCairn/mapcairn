@@ -25,9 +25,28 @@ function isWebAddress(href: string): boolean {
 }
 
 /**
- * A host's About block in Help: a heading, a line of text and one link. The
- * link is drawn only when its address is an absolute http or https one;
- * otherwise Help shows the heading and text without it.
+ * Whether `href` is a path on the host's own site (`/about`), the other kind of
+ * address the About block's own-page link may take. A browser reads `//` and
+ * `/\` as the start of another site's address, so neither counts.
+ */
+function isSitePath(href: string): boolean {
+  return /^\/(?![/\\])/.test(href);
+}
+
+/** A link in the About block: where it goes and what it is called. */
+export interface HelpAboutLink {
+  /** The host must supply a trusted address, as with its other links. */
+  readonly href: string;
+  /** A name that says where the link goes, not "click here". */
+  readonly label: string;
+}
+
+/**
+ * A host's About block in Help: a heading, a line of text, one link out and,
+ * optionally, a link to the host's own page about the site. The link out is
+ * drawn only when its address is an absolute http or https one, and the
+ * own-page link only when it is that or a path on the site; otherwise Help
+ * shows the block without it.
  */
 export interface HelpAbout {
   /** The block's heading, in the host's words. */
@@ -35,12 +54,13 @@ export interface HelpAbout {
   /** What the host wants to say about the site, as plain text. */
   readonly text: string;
   /** A link out, opened in a new tab and announced as doing so. */
-  readonly link: {
-    /** The host must supply a trusted http or https address, as with its other links. */
-    readonly href: string;
-    /** A name that says where the link goes, not "click here". */
-    readonly label: string;
-  };
+  readonly link: HelpAboutLink;
+  /**
+   * A link to the host's own page about the site (a product or home page),
+   * shown before the link out and opened in the same tab, like the privacy
+   * policy link in Settings.
+   */
+  readonly homeLink?: HelpAboutLink;
 }
 
 /** Props for {@link HelpSection}. */
@@ -148,6 +168,15 @@ export function HelpSection({
         <div className={subsection} data-testid="help-about">
           <Subheading level={subLevel}>{about.heading}</Subheading>
           <p className={prose}>{about.text}</p>
+          {about.homeLink &&
+          (isSitePath(about.homeLink.href) ||
+            isWebAddress(about.homeLink.href)) ? (
+            <p className={prose}>
+              <a className={link} href={about.homeLink.href}>
+                {about.homeLink.label}
+              </a>
+            </p>
+          ) : null}
           {isWebAddress(about.link.href) ? (
             <p className={prose}>
               <a
