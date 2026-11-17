@@ -33,7 +33,7 @@ const user = (login: string, id: number, type = "User"): User => ({
   id,
   type,
 });
-const owner = user("mooship", 1);
+const owner = user("example-owner", 1);
 const ada = user("ada", 2);
 const grace = user("grace", 3);
 const dependabot = user("dependabot[bot]", 49699333, "Bot");
@@ -49,7 +49,7 @@ const comment = (
   created = "2026-11-10T08:00:00Z",
 ) => ({
   id,
-  html_url: `https://github.com/mooship/karta/pull/7#issuecomment-${id}`,
+  html_url: `https://github.com/example-owner/example/pull/7#issuecomment-${id}`,
   created_at: created,
   user: author,
   body,
@@ -355,7 +355,7 @@ function makeWorld(init: World = {}) {
   return { github, core, calls, state, logs };
 }
 
-const repo = { owner: "mooship", repo: "karta" };
+const repo = { owner: "example-owner", repo: "example" };
 /** The repository as the event payload describes it, with its owner's id. */
 const repository = { owner: { login: owner.login, id: owner.id } };
 const pullRequestEvent = {
@@ -410,8 +410,8 @@ describe("run: pull request opened", () => {
     await run({ ...world, context: pullRequestEvent });
 
     expect(statuses(world)[0]?.params).toMatchObject({
-      owner: "mooship",
-      repo: "karta",
+      owner: "example-owner",
+      repo: "example",
       sha: HEAD,
       state: "failure",
       context: "CLA",
@@ -471,8 +471,8 @@ describe("run: repository administrators", () => {
     expect(named(world.calls, "issues.createComment")).toEqual([]);
     expect(named(world.calls, "git.createRef")).toEqual([]);
     expect(permissionCalls(world)[0]?.params).toEqual({
-      owner: "mooship",
-      repo: "karta",
+      owner: "example-owner",
+      repo: "example",
       username: "ada",
     });
   });
@@ -591,7 +591,7 @@ describe("run: repository administrators", () => {
 });
 
 describe("findAdministrators", () => {
-  const target = { owner: "mooship", repo: "karta" };
+  const target = { owner: "example-owner", repo: "example" };
   const fake = (levels: Record<string, string | Error>) => ({
     rest: {
       repos: {
@@ -1279,8 +1279,8 @@ describe("run: other open pull requests with the same head commit", () => {
     await run({ ...world, context: pullRequestEvent });
     expect(lastState(world)).toBe("success");
     expect(listCalls(world)[0]?.params).toMatchObject({
-      owner: "mooship",
-      repo: "karta",
+      owner: "example-owner",
+      repo: "example",
       state: "open",
       per_page: 100,
     });
