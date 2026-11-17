@@ -30,7 +30,11 @@ function fileSection(heading: string): string {
   return collapse(policyFile.slice(start, end === -1 ? undefined : end));
 }
 
-/** The text of the rendered page, collapsed. */
+/**
+ * The text of the rendered page, collapsed. With no services above it the page
+ * reads the English catalogue, so this compares the English text, the only
+ * language `PRIVACY.md` is written in.
+ */
 function pageText(): string {
   return collapse(render(<PrivacyPage />).container.textContent ?? "");
 }

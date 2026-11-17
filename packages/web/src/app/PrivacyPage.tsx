@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { THEME_STORAGE_KEY } from "@mapcairn/core";
-import { VisuallyHidden } from "@mapcairn/map";
+import { type MessageKey, THEME_STORAGE_KEY } from "@mapcairn/core";
+import { useOptionalMessages, VisuallyHidden } from "@mapcairn/map";
+import type { ReactNode } from "react";
 import { SITE_URL } from "../constants/siteConfig";
+import { MessageParts } from "../i18n/MessageParts";
 import * as styles from "./PrivacyPage.css";
 
 /**
@@ -11,187 +13,173 @@ import * as styles from "./PrivacyPage.css";
  */
 export const LAST_UPDATED = "2026-11-16";
 
-/** The page's title, shared with the route's `<title>` so the two cannot drift apart. */
-export const PRIVACY_POLICY_TITLE = "Privacy policy";
+/** The browser storage the policy names, which no translation changes. */
+const LOCAL_STORAGE = "localStorage";
+
+/** The key the first-visit tour's answer is kept under. */
+const TOUR_KEY = "mapcairn:tourSeen";
+
+/** What every other setting's key starts with. */
+const KEY_PREFIX = "mapcairn:";
+
+/** The two hosts the analytics script and its reports use. */
+const ANALYTICS_SCRIPT_HOST = "static.cloudflareinsights.com";
+const ANALYTICS_BEACON_HOST = "cloudflareinsights.com";
+
+/** The address of the site's public issue tracker. */
+const ISSUES_URL = "https://github.com/MapCairn/mapcairn/issues";
+
+/** Where the host's own privacy policy lives. */
+const HOST_POLICY_URL = "https://www.cloudflare.com/privacypolicy/";
+
+/** The address people write to about privacy. */
+const CONTACT_EMAIL = "mapcairn@timothybrits.co.za";
+
+/** A technical name or address, shown as code and never translated. */
+function code(text: string): ReactNode {
+  return <code>{text}</code>;
+}
+
+/** One section of the policy: a heading and a paragraph, both from the catalogue. */
+function PolicySection({
+  heading,
+  body,
+  parts = {},
+}: {
+  readonly heading: MessageKey;
+  readonly body: MessageKey;
+  readonly parts?: Readonly<Record<string, ReactNode>>;
+}) {
+  const messages = useOptionalMessages();
+  return (
+    <>
+      <h2 className={styles.sectionTitle}>{messages.t(heading, {})}</h2>
+      <p className={styles.body}>
+        <MessageParts messages={messages} messageKey={body} parts={parts} />
+      </p>
+    </>
+  );
+}
 
 /**
- * The site's privacy policy.
- * @remarks Reads `THEME_STORAGE_KEY` from `@mapcairn/core`, which the settings store and the pre-paint theme script also use, so this
- *   copy cannot drift from the key the app really uses. The content must stay
- *   in step with the root `PRIVACY.md`, which mirrors it for readers of the
- *   repository.
+ * The site's privacy policy, in the language in use.
+ * @remarks Every word comes from the message catalogue (`privacy.*` keys), in
+ *   English and Afrikaans. A placeholder in a paragraph stands for a link or a
+ *   `<code>` span the page supplies, so the markup stays here and a translator
+ *   moves it with the sentence. Reads `THEME_STORAGE_KEY` from
+ *   `@mapcairn/core`, which the settings store and the pre-paint theme script
+ *   also use, so this copy cannot drift from the key the app really uses. The
+ *   English text must stay in step with the root `PRIVACY.md`, which mirrors it
+ *   for readers of the repository; that file is English only, and the
+ *   Afrikaans page says the same in the visitor's language.
  */
 export function PrivacyPage() {
+  const messages = useOptionalMessages();
+  const { t } = messages;
+  const newTab = t("layers.card.opensInNewTab", {});
   return (
     <div className={styles.scroller}>
       <main className={styles.page} data-testid="privacy-page">
-        <h1 className={styles.heading}>{PRIVACY_POLICY_TITLE}</h1>
-        <p className={styles.updated}>Last updated: {LAST_UPDATED}</p>
-
-        <p className={styles.body}>
-          MapCairn has no user accounts, no forms and no server-side database of
-          visitor data. The site stores or sends only the following.
+        <h1 className={styles.heading}>{t("privacy.title", {})}</h1>
+        <p className={styles.updated}>
+          {t("privacy.updated", { date: LAST_UPDATED })}
         </p>
 
-        <h2 className={styles.sectionTitle}>Cookies</h2>
-        <p className={styles.body}>
-          The site sets no cookies. Your settings are kept in local storage on
-          your device instead, as described below.
-        </p>
+        <p className={styles.body}>{t("privacy.intro", {})}</p>
 
-        <h2 className={styles.sectionTitle}>Local storage</h2>
-        <p className={styles.body}>
-          Your browser's <code>localStorage</code> keeps your settings: your
-          light or dark theme (under the key <code>{THEME_STORAGE_KEY}</code>),
-          your units, which language you chose, whether the zoom buttons show,
-          whether Save data is on, whether the map is flat or a globe, your
-          chosen basemap, where the map was last left, and whether you have
-          answered the first-visit tour (a version number under{" "}
-          <code>mapcairn:tourSeen</code>). The other keys start with{" "}
-          <code>mapcairn:</code>. The tour itself sends nothing; a layer you
-          turn on during it loads from its provider as described below. These
-          stay on your device and are never sent to a server. Where your browser
-          reports a data saver or a very slow connection, the page reads that
-          locally to choose the default for Save data. Nothing about it is sent
-          anywhere.
-        </p>
+        <PolicySection
+          heading="privacy.cookies.heading"
+          body="privacy.cookies.body"
+        />
 
-        <h2 className={styles.sectionTitle}>Analytics</h2>
-        <p className={styles.body}>
-          This site uses Cloudflare Web Analytics for aggregate page-view
-          counts. It is cookieless, does not fingerprint visitors, does not
-          track you across sites and stores no personal data. Requests are made
-          to <code>static.cloudflareinsights.com</code> and{" "}
-          <code>cloudflareinsights.com</code>.
-        </p>
+        <PolicySection
+          heading="privacy.storage.heading"
+          body="privacy.storage.body"
+          parts={{
+            localStorage: code(LOCAL_STORAGE),
+            themeKey: code(THEME_STORAGE_KEY),
+            tourKey: code(TOUR_KEY),
+            keyPrefix: code(KEY_PREFIX),
+          }}
+        />
 
-        <h2 className={styles.sectionTitle}>Error reporting</h2>
-        <p className={styles.body}>
-          If the app hits an unexpected error in your browser, it sends a short
-          diagnostic report to this site's own server, where it is written to
-          Cloudflare's operational logs so the fault can be fixed. The report
-          holds the error message, a stack trace, the page's address without its
-          query or the part after # (for example <code>{SITE_URL}/</code>), and
-          whether it was an uncaught error or a rejected promise. It never
-          includes the map's position or yours. No cookies, personal data or
-          persistent identifiers are attached to the report, and it is not
-          stored in any database. One page load sends at most five reports, and
-          the same error only once.
-        </p>
+        <PolicySection
+          heading="privacy.analytics.heading"
+          body="privacy.analytics.body"
+          parts={{
+            scriptHost: code(ANALYTICS_SCRIPT_HOST),
+            beaconHost: code(ANALYTICS_BEACON_HOST),
+          }}
+        />
 
-        <h2 className={styles.sectionTitle}>Hosting logs</h2>
-        <p className={styles.body}>
-          Cloudflare, as host, may log standard request metadata (IP address,
-          user agent, timestamp) as part of normal operation. See{" "}
-          <a
-            className={styles.link}
-            href="https://www.cloudflare.com/privacypolicy/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Cloudflare's own privacy policy
-            <VisuallyHidden> (opens in a new tab)</VisuallyHidden>
-          </a>
-          .
-        </p>
+        <PolicySection
+          heading="privacy.errors.heading"
+          body="privacy.errors.body"
+          parts={{ exampleUrl: code(`${SITE_URL}/`) }}
+        />
 
-        <h2 className={styles.sectionTitle}>Map tiles and location search</h2>
-        <p className={styles.body}>
-          The basemap tile providers, OpenFreeMap and, when you choose the
-          Streets basemap, the OpenStreetMap Foundation, may log tile requests,
-          including your IP address, as part of serving the map. This is
-          standard for any web map. Your browser makes those requests itself:
-          they carry your IP address, its usual request headers (such as its
-          user agent) and this site's address as the referrer, and nothing this
-          site has stored about you. Tiles are requested for the part of the map
-          on screen, so the basemap's provider, and the provider of any tile
-          layer you turn on, can tell roughly which area you are looking at, and
-          after Locate me roughly where you are. When you search (by pressing
-          Enter or the Search button), your query is sent to OpenStreetMap's
-          Nominatim geocoding service, which may likewise log the query and your
-          IP address. As you type, the text so far is also sent to Photon, a
-          search-as-you-type geocoding service that komoot runs on OpenStreetMap
-          data, to suggest places. A request goes out each time you pause after
-          typing at least three characters, so one search can send several
-          partial versions of it, and Photon may log them with your IP address.
-          Your browser sends no cookies and no referrer with these requests.
-          Picking a suggestion sends nothing more, and if suggestions stop
-          working, Enter and the Search button still search through Nominatim. A
-          search that is only a pair of coordinates is read in your browser and
-          is not sent to the geocoder; showing the place requests map tiles for
-          that area, as any move of the map does. If an assistant in your
-          browser uses this site's search or measuring tools (through WebMCP),
-          the place names it gives are sent to Nominatim in the same way, and a
-          pair of coordinates is again read in your browser.
-        </p>
+        <PolicySection
+          heading="privacy.hosting.heading"
+          body="privacy.hosting.body"
+          parts={{
+            link: (
+              <a
+                className={styles.link}
+                href={HOST_POLICY_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {t("privacy.hosting.link", {})}
+                <VisuallyHidden> {newTab}</VisuallyHidden>
+              </a>
+            ),
+          }}
+        />
 
-        <h2 className={styles.sectionTitle}>Data layers</h2>
-        <p className={styles.body}>
-          Every data layer is off until you turn it on, and nothing is requested
-          before that. Turning a layer on, changing its controls or pressing Try
-          again sends a request from your browser straight to that layer's
-          provider, which may log it with your IP address: the US Geological
-          Survey (USGS) for earthquakes, NASA's Global Imagery Browse Services
-          for its imagery layers (satellite imagery, rainfall, fire hotspots,
-          where people live, Earth at night and sea temperature), the Global
-          Disaster Alert and Coordination System (GDACS) for fire, flood,
-          tropical cyclone, volcano and drought alerts, and Copernicus (the
-          Global Flood Awareness System) for the flood hazard map, and the
-          jsDelivr content delivery network for the country boundaries. Show
-          affected area sends one more request to GDACS for that event only.
-          Tile layers request images for the part of the map you are looking at,
-          so the provider can tell roughly where you are looking. Nothing passes
-          through this site, and nothing is stored beyond the page you have
-          open. The layers you turn on are written into the page address so a
-          link can be shared; they are not sent anywhere else. Opening a link
-          that has layers turned on requests those layers straight away, because
-          the link turns them on.
-        </p>
+        <PolicySection
+          heading="privacy.tiles.heading"
+          body="privacy.tiles.body"
+        />
 
-        <h2 className={styles.sectionTitle}>Pin addresses</h2>
-        <p className={styles.body}>
-          Dropping a pin sends nothing. A pin's address is looked up only when
-          you press Look up address on the pin. That sends the pin's position,
-          rounded to about 11 m, to OpenStreetMap's Nominatim service, which may
-          log it with your IP address.
-        </p>
+        <PolicySection
+          heading="privacy.layers.heading"
+          body="privacy.layers.body"
+        />
 
-        <h2 className={styles.sectionTitle}>Routes and travel-time areas</h2>
-        <p className={styles.body}>
-          When you ask for a route or a travel-time area, the request goes to
-          the public Valhalla routing service at valhalla1.openstreetmap.de, run
-          by the FOSSGIS community and built on OpenStreetMap data. It sends the
-          route's coordinates (its stops, or the origin of a travel-time area)
-          and the travel mode, and the server may log them with your IP address.
-          Nothing is sent before you ask. MapCairn stores nothing about the
-          request, and the results are not saved or put in the page address.
-        </p>
+        <PolicySection
+          heading="privacy.pins.heading"
+          body="privacy.pins.body"
+        />
 
-        <h2 className={styles.sectionTitle}>Your location</h2>
-        <p className={styles.body}>
-          The Locate me button asks your browser for your position only when you
-          press it. The position is used to show where you are on the map. It is
-          not sent to this site and is not stored.
-        </p>
+        <PolicySection
+          heading="privacy.routes.heading"
+          body="privacy.routes.body"
+        />
 
-        <h2 className={styles.sectionTitle}>Contact</h2>
-        <p className={styles.body}>
-          For a question or concern about privacy, write to{" "}
-          <a className={styles.link} href="mailto:mapcairn@timothybrits.co.za">
-            mapcairn@timothybrits.co.za
-          </a>
-          , or open an issue on{" "}
-          <a
-            className={styles.link}
-            href="https://github.com/MapCairn/mapcairn/issues"
-          >
-            GitHub
-          </a>
-          .
-        </p>
+        <PolicySection
+          heading="privacy.location.heading"
+          body="privacy.location.body"
+        />
+
+        <PolicySection
+          heading="privacy.contact.heading"
+          body="privacy.contact.body"
+          parts={{
+            email: (
+              <a className={styles.link} href={`mailto:${CONTACT_EMAIL}`}>
+                {CONTACT_EMAIL}
+              </a>
+            ),
+            issues: (
+              <a className={styles.link} href={ISSUES_URL}>
+                {t("privacy.contact.issuesLink", {})}
+              </a>
+            ),
+          }}
+        />
 
         <a className={styles.link} href="/">
-          Back to the map
+          {t("privacy.back", {})}
         </a>
       </main>
     </div>

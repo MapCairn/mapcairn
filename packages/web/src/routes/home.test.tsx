@@ -4,7 +4,13 @@ import { createFakeServices } from "@mapcairn/core";
 import { ServicesProvider } from "@mapcairn/map";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import HomeRoute, { links } from "./home";
+import HomeRoute, { handle, links } from "./home";
+
+describe("home route title", () => {
+  it("names the catalogue key its tab title follows the language through", () => {
+    expect(handle).toEqual({ titleKey: "host.title.map", brand: "first" });
+  });
+});
 
 describe("home route links", () => {
   it("sets a canonical link to the site root", () => {
