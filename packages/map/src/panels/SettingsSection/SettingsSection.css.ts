@@ -19,3 +19,23 @@ export const fieldLabel = style({
   lineHeight: tokens.type.small.lineHeight,
   letterSpacing: tokens.type.small.tracking,
 });
+
+/** The failed language load: the words, then Try again, wrapping as the room needs. */
+export const languageStatus = style({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: tokens.space.xs,
+  margin: 0,
+  fontSize: tokens.type.small.size,
+  lineHeight: tokens.type.small.lineHeight,
+  letterSpacing: tokens.type.small.tracking,
+});
+
+/** The words of the failure, in the danger colour beside their icon. */
+export const languageStatusError = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: tokens.space.xxs,
+  color: tokens.color.danger,
+});

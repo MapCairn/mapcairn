@@ -232,6 +232,8 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "common.itemCount": ["count"],
   "settings.language.label": [],
   "settings.language.auto": [],
+  "settings.language.loadFailed": ["language"],
+  "settings.language.tryAgain": [],
   // Components: chrome, host, ui, panels and the app shell
   "chrome.endStack.label": [],
   "chrome.endStack.resetBearing": [],

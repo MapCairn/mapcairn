@@ -34,7 +34,11 @@ import {
   useEffect,
   useSyncExternalStore,
 } from "react";
-import { ActiveMessagesContext } from "./activeMessages";
+import {
+  ActiveMessagesContext,
+  type LanguageLoad,
+  LanguageLoadContext,
+} from "./activeMessages";
 import { ENGLISH_MESSAGES } from "./englishMessages";
 import { useOptionalServices, useServices } from "./ServicesProvider";
 
@@ -143,6 +147,17 @@ export function useOptionalMessages(): MessageCatalogue {
  */
 export function useLanguages(): LanguageCatalogue | undefined {
   return useServices().languages;
+}
+
+/**
+ * Whether the messages for the language the person chose have failed to load,
+ * and a way to try again, or `undefined` when the host offers no languages. The
+ * interface stays in the language it was in until a load succeeds, so a status
+ * built from this reads in that language. {@link LanguageLoad.retry} also works
+ * when the setting has not changed, which a failed load otherwise waits for.
+ */
+export function useLanguageLoad(): LanguageLoad | undefined {
+  return useContext(LanguageLoadContext) ?? undefined;
 }
 
 /**

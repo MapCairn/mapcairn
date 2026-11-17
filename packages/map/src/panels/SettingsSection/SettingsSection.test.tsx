@@ -7,6 +7,7 @@ import {
   FakeMessageCatalogue,
   type LanguageOption,
   MemorySettingsStore,
+  type MessageCatalogue,
   type Settings,
 } from "@mapcairn/core";
 import {
@@ -17,7 +18,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import {
@@ -33,6 +34,7 @@ interface Options {
   readonly initial?: Partial<Settings>;
   readonly props?: SettingsSectionProps;
   readonly languages?: readonly LanguageOption[];
+  readonly load?: (tag: string) => MessageCatalogue | Promise<MessageCatalogue>;
 }
 
 function renderSettings({
@@ -42,6 +44,7 @@ function renderSettings({
   initial,
   props,
   languages,
+  load = (tag) => new FakeMessageCatalogue({ language: tag }),
 }: Options = {}) {
   const settings = new MemorySettingsStore({ persistent, initial });
   const preferences = new FakeDevicePreferences({ finePointer, saveData });
@@ -49,11 +52,7 @@ function renderSettings({
     settings,
     preferences,
     languages: languages
-      ? createLanguageCatalogue(
-          languages,
-          "en-GB",
-          (tag) => new FakeMessageCatalogue({ language: tag }),
-        )
+      ? createLanguageCatalogue(languages, "en-GB", load)
       : undefined,
   });
   const view = render(
@@ -213,6 +212,180 @@ describe("language", () => {
         "settings.language.auto",
       ]),
     );
+  });
+});
+
+describe("a failed language load", () => {
+  const OFFLINE = () => Promise.reject(new Error("offline"));
+  const failedLoad = (state: { offline: boolean }) => (tag: string) =>
+    tag === "af" && state.offline
+      ? OFFLINE()
+      : new FakeMessageCatalogue({
+          language: tag,
+          overrides: tag === "af" ? { "settings.title": "Instellings" } : {},
+        });
+
+  const renderFailed = async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const state = { offline: true };
+    const view = renderSettings({
+      languages: TWO_LANGUAGES,
+      initial: { language: "af" },
+      load: failedLoad(state),
+    });
+    await act(async () => {});
+    return { ...view, state };
+  };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("shows no status when nothing has failed", () => {
+    renderSettings({ languages: TWO_LANGUAGES });
+    expect(screen.queryByTestId("language-status")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("says which language failed, in the language on screen, with a Try again button", async () => {
+    await renderFailed();
+    expect(screen.getByTestId("language-status")).toHaveTextContent(
+      "Afrikaans could not be loaded.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Settings" })).toBeVisible();
+  });
+
+  it("shows the language the interface is in as selected, not the one that failed", async () => {
+    await renderFailed();
+    expect(screen.getByTestId("language-option-en-GB")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByTestId("language-option-af")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  it("announces the failure once, politely", async () => {
+    await renderFailed();
+    expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+      "Afrikaans could not be loaded.",
+    );
+    expect(screen.getByTestId("live-region-assertive")).toBeEmptyDOMElement();
+  });
+
+  it("is not a live region itself, so nothing is read twice", async () => {
+    await renderFailed();
+    expect(screen.getByTestId("language-status")).not.toHaveAttribute("role");
+    expect(screen.getByTestId("language-status")).not.toHaveAttribute(
+      "aria-live",
+    );
+  });
+
+  it("retries with the button, swaps the language in and removes the status", async () => {
+    const { state } = await renderFailed();
+    state.offline = false;
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    });
+    expect(screen.queryByTestId("language-status")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Instellings" })).toBeVisible();
+    expect(screen.getByTestId("language-option-af")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("keeps the status and the button when the retry fails too", async () => {
+    await renderFailed();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    });
+    expect(screen.getByTestId("language-status")).toHaveTextContent(
+      "Afrikaans could not be loaded.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).not.toHaveAttribute("aria-busy", "true");
+  });
+
+  it("moves focus to the selected language when a retry from the button succeeds", async () => {
+    const { state } = await renderFailed();
+    state.offline = false;
+    const retry = screen.getByRole("button", { name: "Try again" });
+    retry.focus();
+    await act(async () => {
+      fireEvent.click(retry);
+    });
+    expect(screen.getByTestId("language-option-af")).toHaveFocus();
+  });
+
+  it("leaves focus alone when the person had moved on before the language loaded", async () => {
+    const { state } = await renderFailed();
+    state.offline = false;
+    screen.getByTestId("theme-option-light").focus();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    });
+    expect(screen.getByTestId("theme-option-light")).toHaveFocus();
+  });
+
+  it("marks the button busy while the retry is under way, and keeps focus on it", async () => {
+    let finish!: (catalogue: MessageCatalogue) => void;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let first = true;
+    renderSettings({
+      languages: TWO_LANGUAGES,
+      initial: { language: "af" },
+      load: (tag) => {
+        if (tag !== "af") {
+          return new FakeMessageCatalogue({ language: tag });
+        }
+        if (first) {
+          first = false;
+          return OFFLINE();
+        }
+        return new Promise<MessageCatalogue>((resolve) => {
+          finish = resolve;
+        });
+      },
+    });
+    await act(async () => {});
+    const retry = screen.getByRole("button", { name: "Try again" });
+    retry.focus();
+    fireEvent.click(retry);
+    expect(retry).toHaveAttribute("aria-busy", "true");
+    expect(retry).toHaveFocus();
+    await act(async () => {
+      finish(new FakeMessageCatalogue({ language: "af" }));
+    });
+    expect(screen.queryByTestId("language-status")).toBeNull();
+  });
+
+  it("retries when the person chooses the language that failed again", async () => {
+    const { state, settings } = await renderFailed();
+    state.offline = false;
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("language-option-af"));
+    });
+    expect(settings.get().language).toBe("af");
+    expect(screen.queryByTestId("language-status")).toBeNull();
+    expect(screen.getByTestId("language-option-af")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("goes when the person chooses Automatic and the browser resolves to a language already on screen", async () => {
+    await renderFailed();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("language-option-auto"));
+    });
+    expect(screen.queryByTestId("language-status")).toBeNull();
   });
 });
 

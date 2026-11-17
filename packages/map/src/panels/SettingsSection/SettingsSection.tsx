@@ -2,7 +2,6 @@
 // Copyright MapCairn contributors
 import {
   announceProjection,
-  type LanguageOption,
   type MapProjection,
   type MessageCatalogue,
   type ThemeChoice,
@@ -35,6 +34,7 @@ import {
   prose,
   subsection,
 } from "../Section/Section.css";
+import { LanguageField } from "./LanguageField";
 import { field, fieldLabel } from "./SettingsSection.css";
 
 function themeOptions(
@@ -65,19 +65,6 @@ function projectionOptions(
   ];
 }
 
-/** The value of the "follow the browser" choice, which no language tag can equal. */
-const AUTOMATIC = "auto";
-
-function languageOptions(
-  t: MessageCatalogue["t"],
-  languages: readonly LanguageOption[],
-): readonly { value: string; label: string; lang?: string }[] {
-  return [
-    { value: AUTOMATIC, label: t("settings.language.auto", {}) },
-    ...languages.map(({ tag, label }) => ({ value: tag, label, lang: tag })),
-  ];
-}
-
 /**
  * The default privacy statement. It names no provider, because the SDK does not
  * know which services a host uses; a host replaces it with one that does.
@@ -103,7 +90,7 @@ export interface SettingsSectionProps {
 
 /**
  * The settings: theme, units, map shape (flat or globe), language (only when
- * the host offers more than one), zoom buttons and Save data, a note when changes
+ * the host offers more than one; see {@link LanguageField}), zoom buttons and Save data, a note when changes
  * will not be remembered, and a short privacy statement (the host's, or
  * {@link DEFAULT_PRIVACY_NOTE}) with a link to the policy.
  * @remarks The zoom switch shows the stored choice, or the device default
@@ -125,15 +112,11 @@ export function SettingsSection({
   const saveData = useSaveData();
   const announce = useAnnounce();
   const { t } = useMessages();
-  const offered = useLanguages()?.languages ?? [];
-  const chosenLanguage = offered.some(({ tag }) => tag === settings.language)
-    ? settings.language
-    : null;
+  const offersLanguages = (useLanguages()?.languages.length ?? 0) > 1;
   const subLevel = nextHeadingLevel(headingLevel);
   const themeLabel = t("settings.theme.label", {});
   const unitsLabel = t("settings.units.label", {});
   const mapShapeLabel = t("settings.mapShape.label", {});
-  const languageLabel = t("settings.language.label", {});
   return (
     <Section
       title={t("settings.title", {})}
@@ -180,22 +163,7 @@ export function SettingsSection({
           data-testid="projection-option"
         />
       </div>
-      {offered.length > 1 ? (
-        <div className={field}>
-          <p className={fieldLabel} aria-hidden="true">
-            {languageLabel}
-          </p>
-          <SegmentedControl
-            label={languageLabel}
-            options={languageOptions(t, offered)}
-            value={chosenLanguage ?? AUTOMATIC}
-            onValueChange={(next) =>
-              update({ language: next === AUTOMATIC ? null : next })
-            }
-            data-testid="language-option"
-          />
-        </div>
-      ) : null}
+      {offersLanguages ? <LanguageField /> : null}
       <Switch
         label={t("settings.zoomButtons.label", {})}
         description={t("settings.zoomButtons.description", {})}

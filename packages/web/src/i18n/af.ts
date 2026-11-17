@@ -304,6 +304,8 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "common.itemCount": "{count} item|{count} items",
   "settings.language.label": "Taal",
   "settings.language.auto": "Outomaties",
+  "settings.language.loadFailed": "{language} kon nie gelaai word nie.",
+  "settings.language.tryAgain": "Probeer weer",
   // Components: chrome, host, ui, panels and the app shell
   "chrome.endStack.label": "Kaartgereedskap",
   "chrome.endStack.resetBearing": "Draai kaart terug na noord",
