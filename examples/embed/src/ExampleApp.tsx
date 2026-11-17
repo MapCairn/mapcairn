@@ -41,12 +41,12 @@ import { useModelContextTool } from "@mapcairn/react";
 import { type ReactNode, useState } from "react";
 import { CAIRNS_LAYER } from "./cairnsLayer";
 import { createExampleServices } from "./exampleServices";
+import { showResult } from "./showResult";
 
 const MAP_ID = "example-map";
 const SHEET_ID = "example-sheet";
-const RESULT_ZOOM = 14;
 const PRIVACY_NOTE =
-  "This example runs on the SDK's scripted fakes and sends nothing to any service.";
+  "This example runs on the SDK's scripted fakes. Search looks only at a short list of invented places held in the page, and nothing is sent to any service.";
 const INITIAL_VIEW: ViewState = {
   center: { lat: 57.05, lng: -3.65 },
   zoom: 11,
@@ -185,8 +185,10 @@ function ChromeSlots({ state, background }: ExampleChromeProps) {
   const toggle = (sheet: Exclude<OpenSheet, null>) => {
     setOpen((current) => (current === sheet ? null : sheet));
   };
-  const showResult = (result: SearchResult) => {
-    map.adapter?.setView({ center: result.centre, zoom: RESULT_ZOOM });
+  const showPick = (result: SearchResult) => {
+    if (map.adapter) {
+      showResult(map.adapter, result);
+    }
   };
   const closeMeasure = () => {
     measure.clear();
@@ -197,7 +199,7 @@ function ChromeSlots({ state, background }: ExampleChromeProps) {
     <MapChrome
       background={background}
       modal={modal}
-      topStart={<SearchPill onSelect={showResult} />}
+      topStart={<SearchPill onSelect={showPick} />}
       endStack={
         <EndStack
           bearing={map.view.bearing}

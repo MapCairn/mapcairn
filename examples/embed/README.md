@@ -1,6 +1,6 @@
 # `@mapcairn/example-embed`
 
-A one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. It runs on the SDK's fakes, so it requests nothing and loads no map engine. [`docs/guides/extending.md`](../../docs/guides/extending.md) says what it proves and what an app of your own provides.
+A one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. It runs on the SDK's fakes, so it requests nothing and loads no map engine. Its search runs over a few invented places held in memory. [`docs/guides/extending.md`](../../docs/guides/extending.md) says what it proves and what an app of your own provides.
 
 ```bash
 npm run dev -w @mapcairn/example-embed
@@ -19,6 +19,19 @@ The example's layers come from a runtime layer catalogue, built by `createExampl
 | `src/mapServerLayers.ts`    | The sample mapper: server metadata to layer definitions. Read [Supply layers at runtime](../../docs/guides/extending.md#supply-layers-at-runtime) for what it maps.                         |
 
 One of the four sample layers, `survey-notes`, has no text field to title a feature with, so the catalogue skips it and the example logs the reason to the console, one line with the path of each problem.
+
+## Search
+
+The example supplies a search provider and a suggestion provider of its own, so the search pill, its suggestions and the move to a result work with no service. They are written as a host would write them for a plain JSON place service, and they run against a local `fetch` that answers from memory.
+
+| File                      | What it holds                                                                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/placeSearch.ts`      | `PlaceSearchProvider` and `PlaceSuggestionProvider`: the request, the mapping of an item to a `SearchResult`, and the errors the ports allow. Also the local `fetch`. |
+| `src/samplePlaces.ts`     | Five invented places, two with an extent. They name nothing real.                                                                                                     |
+| `src/showResult.ts`       | Moves the map to a picked result: fits its extent when it has one, otherwise centres on its point.                                                                    |
+| `src/placeSearch.test.ts` | Runs the SDK's `runSearchProviderContract` and `runSuggestionProviderContract` against the providers, through `@mapcairn/core/contracts`.                             |
+
+[Write a search provider](../../docs/guides/extending.md#write-a-search-provider) explains each part and what to tell visitors. The example does not mount the pin card, so nothing on its page calls `reverse`; the contract suite and the tests cover it.
 
 ## Content Security Policy
 
