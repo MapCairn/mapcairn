@@ -41,7 +41,7 @@ The pre-commit hook runs Biome, dependency-cruiser, the harmony scanner, the lic
 
 The interface text is a catalogue of keys, with British English as the source. The [translation guide](docs/guides/translate-the-sdk.md) says how to add a language to the reference site (a catalogue file, an entry in the offered languages, and the checks that keep its placeholders right). A translation is reviewed by someone who speaks the language fluently before it ships, a machine translation is only ever a draft, and the pull request names the reviewer. Translators are credited in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
-Nothing in the repository is translated: Markdown files such as `README.md`, `PRIVACY.md` and the guides stay in English only, and a translated copy of one (a `PRIVACY.af.md`, say) is not added. Only text that shows in the host app is translated, as catalogue text in English and in each language the site offers, and that includes the privacy page.
+Nothing in the repository is translated: Markdown files such as `README.md`, `PRIVACY.md` and the guides stay in English only, and a translated copy of one (a `PRIVACY.af.md`, say) is not added. Only text that shows in the host app is translated, as catalogue text in English and in each language the site offers, and that includes the privacy page. The one exception is the product page at `/`, which is in British English only: it is developer-facing, closer to documentation than to interface, so its text is written in its own code (`packages/web/src/product/productContent.ts`) and listed in `scripts/copy-check/allowlist.mjs`. Adding Afrikaans to it later is one small pull request.
 
 ## Conventions
 

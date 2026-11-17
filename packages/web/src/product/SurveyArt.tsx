@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { formatDistance, formatNumber } from "@mapcairn/core";
 import { STONES } from "../app/cairnStones";
 import { CONTOUR_VIEW_BOX, CONTOURS, SUMMIT } from "./contours";
 import * as styles from "./SurveyArt.css";
@@ -44,10 +45,20 @@ function gridNumber(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-/** The length of the measured line in kilometres, one decimal, as the map's readout would show it. */
-function measuredKm(): string {
+/** The page's one language, for the figures the art writes. */
+const LANGUAGE = "en-GB";
+
+/** Metres in a kilometre, for the scale. */
+const METRES_PER_KM = 1000;
+
+/** The length of the measured line, written as the playground's measure readout writes it. */
+function measuredLength(): string {
   const units = Math.hypot(SUMMIT.x - PIN.x, SUMMIT.y - PIN.y);
-  return `${(units / UNITS_PER_KM).toFixed(1)} km`;
+  return formatDistance(
+    (units / UNITS_PER_KM) * METRES_PER_KM,
+    "metric",
+    LANGUAGE,
+  );
 }
 
 /** The grid lines inside the frame. */
@@ -118,7 +129,7 @@ function Cairn() {
         ))}
       </g>
       <text className={styles.label} x={SUMMIT.x + 22} y={SUMMIT.y - 6}>
-        {SUMMIT.metres.toLocaleString("en-GB")}
+        {formatNumber(SUMMIT.metres, LANGUAGE)}
       </text>
     </g>
   );
@@ -153,7 +164,7 @@ function Measure() {
         y2={SUMMIT.y}
       />
       <text className={styles.measureLabel} x={midX + 10} y={midY + 22}>
-        {measuredKm()}
+        {measuredLength()}
       </text>
     </g>
   );
@@ -211,7 +222,7 @@ function ScaleBar() {
         y={-8}
         textAnchor="middle"
       >
-        1 km
+        {formatDistance(METRES_PER_KM, "metric", LANGUAGE)}
       </text>
     </g>
   );

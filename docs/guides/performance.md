@@ -56,6 +56,10 @@ One test fix came out of the work: the basemap outage end-to-end test checked th
 
 That is where this plan stops. What is left is the engine itself, the first view's tiles and glyphs, and byte savings the audit overstates. A real gain would need a different design: for example, showing the tour card before the map has loaded, which plan 0004 rules out, or a lighter engine, which is out of scope.
 
+## The product page
+
+Since the map moved to `/map`, Lighthouse CI audits both `/`, the product page, and `/map` (`packages/web/lighthouserc.json`), with the same assertions for each, and the summary names the page of every run. The figures above are the map's. The product page loads no map code and no tiles, opens no connection to another host (the tile host's preconnect is on the map's route only) and draws its artwork as inline SVG, so its cost is the shared stylesheets, the fonts and React's hydration of a static page.
+
 ## Language weight
 
 A language other than the host's default is its own module, imported when a visitor first uses it, so no visitor downloads text for a language they do not use (`LanguageCatalogue.load` may return a promise; the reference host's `packages/web/src/i18n/hostLanguages.ts` imports `i18n/af.ts` this way). The default language is in the main bundle and loads synchronously. While another language loads, the interface keeps showing the previous one, so a slow connection never shows blank text. On the reference site the Afrikaans catalogue builds to its own chunk of about 40 KB, 12 KB gzipped (`af-<hash>.js` in the `npm run build` output, measured when it was added), and no other chunk holds its text. Nothing in the repository measures the bundle's size yet, so this is a shape the code holds to and not a checked budget.

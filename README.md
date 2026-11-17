@@ -14,7 +14,7 @@
 - **Your services behind ports.** The interface never imports MapLibre or an adapter, and reaches a browser service only through a port. Search, search suggestions, routing, storage, geolocation, the clipboard and the rest are small interfaces, each with a fake and a shared contract suite, so you can test the whole interface without WebGL and replace any service without touching the interface.
 - **A design system you can trust.** Typed tokens only, light and dark, contrast calculations tested in CI, and one accent. A style scanner rejects raw colours, off-scale spacing and unnamed controls.
 - **Pure, tested logic.** Geometry, measurement, formatting, URL state and the surface state machine are plain functions with no DOM, covered by unit tests with 95 percent coverage floors, and the parsers that read untrusted text by property-based tests.
-- **Server-renderable.** The reference host runs on Cloudflare Workers under a strict Content Security Policy with no inline script except one hashed one.
+- **Server-renderable.** The reference host runs on Cloudflare Workers under a strict Content Security Policy with no inline script except two hashed ones.
 
 What it is not: a hosted service, a dataset or a GIS analysis engine. MapLibre GL JS is the only map engine. The interface text is British English by default and can be translated or replaced through a message catalogue; the reference site offers English and Afrikaans.
 
@@ -57,7 +57,7 @@ Feeds, polygons and lines with patterns, heatmaps, vector tiles and queries for 
 
 [`@mapcairn/geolint`](packages/geolint/README.md) is separate from those four: a GeoJSON linter (a `geolint` command and a library) that is Apache-2.0, imports nothing else in this repository and is not built on the map ports.
 
-`packages/web` is the reference host: a complete map built from those four packages, running at [mapcairn.timothybrits.co.za](https://mapcairn.timothybrits.co.za). It shows what the SDK composes and is what the tests run against; it is a demonstration, not the product.
+`packages/web` is the reference host: a complete map built from those four packages, running as the playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map), with a page about the SDK at [mapcairn.timothybrits.co.za](https://mapcairn.timothybrits.co.za). It shows what the SDK composes and is what the tests run against; it is a demonstration, not the product.
 
 ## Status
 

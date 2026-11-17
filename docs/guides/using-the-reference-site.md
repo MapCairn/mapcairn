@@ -2,6 +2,14 @@
 
 What the reference host offers for choosing a language, finding its source code, searching, saving the map, reading the layer key, turning layers off and drawing, and how each works from the keyboard and a pointer.
 
+## The pages
+
+The site has three pages. `/` is the product page: what the SDK is, who it is for, the embedding example, what works today and what does not yet, the licence and the questions developers ask first. It is server-rendered, in British English only, and loads no map code. `/map` is the playground, the map this guide describes. `/privacy` is the privacy policy.
+
+The playground was at `/` until the product page took its place. A link shared before then keeps the map's state after `#` (`/#map=11.00/-33.92000/18.42000`), which the server never sees, so the product page reads it in the browser before it paints and, when the part after `#` holds map state, opens `/map` with the same state instead. A plain `/` and the page's own anchors (`/#questions`) stay on the product page. From the playground, Help's About block has a link back to the product page.
+
+For search engines and language models the site serves `sitemap.xml`, `robots.txt`, `llms.txt` (product first, playground second), `llms-full.txt` (that file with the product page's whole text) and `index.md` (the product page as Markdown), all built from the pages' own content.
+
 ## Search by place name or coordinates
 
 As you type, the search box suggests places once you pause after three or more characters. Choose one with the arrow keys and Enter, or tap it, and the map goes straight to it. The suggestions come from the Photon service, so the text you have typed so far is sent there as you type; the privacy page says so. A screen reader hears how many suggestions there are. If the service is unavailable, the box says so once and stops suggesting for a while.
@@ -22,7 +30,7 @@ The page renders in English and switches as soon as the app starts, so a visitor
 
 ## Find the source code and licence
 
-The site is open source software under the AGPL-3.0. Open Settings and scroll to the end of Help: the About block says so and has a link, "View the source code and licence on GitHub", to the public repository. The link opens in a new tab, and nothing is requested from GitHub until you follow it. The privacy policy link is in Settings above Help, and the map's credits button, at the bottom of the map, lists the credits. The block is the reference site's own; an SDK host passes its own text and link, or none, as the `about` prop of `SheetContent`, described in [Extend the SDK](extending.md).
+The site is open source software under the AGPL-3.0. Open Settings and scroll to the end of Help: the About block says so and has two links: "About MapCairn, the SDK behind this map", which opens the product page at `/` in the same tab, and "View the source code and licence on GitHub", to the public repository. The GitHub link opens in a new tab, and nothing is requested from GitHub until you follow it. The privacy policy link is in Settings above Help, and the map's credits button, at the bottom of the map, lists the credits. The block is the reference site's own; an SDK host passes its own text and link, or none, as the `about` prop of `SheetContent`, described in [Extend the SDK](extending.md).
 
 ## Save an image and choose between features
 

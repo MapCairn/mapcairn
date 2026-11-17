@@ -62,11 +62,19 @@ function Text({ line }: { readonly line: Line }) {
 function Actions() {
   return (
     <div className={styles.actions}>
-      <a className={styles.primaryAction} href={GITHUB_ACTION.href}>
+      <a
+        className={styles.primaryAction}
+        href={GITHUB_ACTION.href}
+        data-testid="action-github"
+      >
         <Icon icon={CodeXml} />
         {GITHUB_ACTION.text}
       </a>
-      <a className={styles.secondaryAction} href={PLAYGROUND_ACTION.href}>
+      <a
+        className={styles.secondaryAction}
+        href={PLAYGROUND_ACTION.href}
+        data-testid="action-playground"
+      >
         <Icon icon={Compass} />
         {PLAYGROUND_ACTION.text}
       </a>
@@ -215,12 +223,20 @@ function ProductHeader() {
       <nav aria-label="Main">
         <ul className={styles.nav}>
           <li>
-            <a className={styles.navLink} href={PLAYGROUND_PATH}>
+            <a
+              className={styles.navLink}
+              href={PLAYGROUND_PATH}
+              data-testid="nav-playground"
+            >
               Playground
             </a>
           </li>
           <li>
-            <a className={styles.navLink} href={SOURCE_REPOSITORY_URL}>
+            <a
+              className={styles.navLink}
+              href={SOURCE_REPOSITORY_URL}
+              data-testid="nav-github"
+            >
               GitHub
             </a>
           </li>

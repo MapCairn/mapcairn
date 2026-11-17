@@ -35,6 +35,8 @@ export const scroller = style({
   backgroundColor: tokens.color.pageBackground,
   color: tokens.color.text,
   fontVariantNumeric: "tabular-nums",
+  // A long word breaks rather than widen the page, at 320 px and 200 percent text.
+  overflowWrap: "break-word",
 });
 
 /** The column every block of the page sits in. */
@@ -214,9 +216,8 @@ export const secondaryAction = style({
 
 /** The legend of facts: term and value pairs, ruled like a map's legend box. */
 export const facts = style({
-  display: "grid",
-  gridTemplateColumns: "minmax(0, max-content) minmax(0, 1fr)",
-  columnGap: tokens.space.md,
+  display: "flex",
+  flexDirection: "column",
   margin: 0,
   paddingBlockStart: tokens.space.sm,
   borderBlockStart: `1px solid ${tokens.color.hairline}`,
@@ -225,19 +226,30 @@ export const facts = style({
   letterSpacing: tokens.type.small.tracking,
 });
 
-/** One row of the legend: its term and value sit in the legend's own grid. */
+/** The width of the legend's terms, in the legend's own type so it grows with the text. */
+const TERM_WIDTH = "7em";
+
+/**
+ * One row of the legend: the term in a fixed column and its value beside it.
+ * When the value has no room beside the term (large text on a phone), it
+ * wraps below it.
+ */
 export const factRow = style({
-  display: "contents",
+  display: "flex",
+  flexWrap: "wrap",
+  columnGap: tokens.space.md,
 });
 
 /** A term in the legend. */
 export const factTerm = style({
+  flex: `0 0 ${TERM_WIDTH}`,
   color: tokens.color.textMuted,
   paddingBlock: tokens.space.xxs,
 });
 
 /** A value in the legend. */
 export const factValue = style({
+  flex: `1 1 ${TERM_WIDTH}`,
   margin: 0,
   paddingBlock: tokens.space.xxs,
 });
@@ -333,6 +345,9 @@ export const description = style({
 /** A link in running text. */
 export const link = style({
   color: tokens.color.accent,
+  // Padding on an inline link grows the box it is hit in, not the line, so
+  // even a link in a list or a legend is a 24 px target (WCAG 2.5.8).
+  paddingBlock: tokens.space.xxs,
   textDecorationThickness: "1px",
   textUnderlineOffset: "0.2em",
   borderRadius: tokens.radius.inner,

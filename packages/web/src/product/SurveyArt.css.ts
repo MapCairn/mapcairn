@@ -112,6 +112,8 @@ const appear = keyframes({
 
 /** The pin, which drops into place once when the page opens. */
 export const pin = style({
+  transformBox: "fill-box",
+  transformOrigin: "center",
   animationName: drop,
   animationDuration: tokens.motion.duration.slow,
   animationTimingFunction: tokens.motion.easing,
