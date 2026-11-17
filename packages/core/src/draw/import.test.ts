@@ -13,6 +13,7 @@ import {
   parseShapeFile,
   type ShapeImport,
   shapeInputBounds,
+  suggestWktAxisOrder,
 } from "./import";
 import type { DrawShapeInput } from "./reducer";
 import type { DrawShape } from "./types";
@@ -1180,5 +1181,57 @@ describe("shapeInputBounds", () => {
 
   it("is undefined with nothing to hold", () => {
     expect(shapeInputBounds([])).toBeUndefined();
+  });
+});
+
+describe("suggestWktAxisOrder", () => {
+  it("suggests latitude first when the first position is outside the world as longitude first but fits the other way", () => {
+    expect(suggestWktAxisOrder("POINT (-33.9 151.2)", "lng-lat")).toBe(
+      "lat-lng",
+    );
+  });
+
+  it("suggests longitude first for a file read latitude first that only fits that way", () => {
+    expect(suggestWktAxisOrder("POINT (151.2 -33.9)", "lat-lng")).toBe(
+      "lng-lat",
+    );
+  });
+
+  it("finds the first position of a polygon, a multi geometry, an EWKT geometry and a CSV cell", () => {
+    expect(
+      suggestWktAxisOrder("POLYGON ((-33.9 151.2, -33.8 151.3))", "lng-lat"),
+    ).toBe("lat-lng");
+    expect(
+      suggestWktAxisOrder("MULTIPOINT ((-33.9 151.2), (1 2))", "lng-lat"),
+    ).toBe("lat-lng");
+    expect(
+      suggestWktAxisOrder("SRID=4326;POINT Z (-33.9 151.2 5)", "lng-lat"),
+    ).toBe("lat-lng");
+    expect(
+      suggestWktAxisOrder('id,wkt\n1,"POINT (-33.9 151.2)"', "lng-lat"),
+    ).toBe("lat-lng");
+  });
+
+  it("says nothing when the first position fits the order in use, or fits neither order", () => {
+    expect(suggestWktAxisOrder("POINT (2 48)", "lng-lat")).toBeNull();
+    expect(suggestWktAxisOrder("POINT (200 300)", "lng-lat")).toBeNull();
+    expect(suggestWktAxisOrder("POINT (-33.9 151.2)", "lat-lng")).toBeNull();
+  });
+
+  it("says nothing for text with no position, an empty geometry or GeoJSON", () => {
+    expect(suggestWktAxisOrder("POINT EMPTY", "lng-lat")).toBeNull();
+    expect(suggestWktAxisOrder("", "lng-lat")).toBeNull();
+    expect(
+      suggestWktAxisOrder(
+        '{"type":"Point","coordinates":[-33.9,151.2]}',
+        "lng-lat",
+      ),
+    ).toBeNull();
+  });
+
+  it("reads signs and exponents", () => {
+    expect(suggestWktAxisOrder("POINT (-3.39e1 +1.512E2)", "lng-lat")).toBe(
+      "lat-lng",
+    );
   });
 });

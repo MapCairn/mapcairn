@@ -289,6 +289,10 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "draw.import.imported": "{count} shape imported.|{count} shapes imported.",
   "draw.import.holesLeftOut":
     "Holes in {count} polygon were left out.|Holes in {count} polygons were left out.",
+  "draw.import.axisHint.lat-lng":
+    "No shapes imported. The first position is outside the world as longitude, latitude, but it fits as latitude, longitude.",
+  "draw.import.axisHint.lng-lat":
+    "No shapes imported. The first position is outside the world as latitude, longitude, but it fits as longitude, latitude.",
   "common.itemCount": "{count} item|{count} items",
   "settings.language.label": "Language",
   "settings.language.auto": "Automatic",
@@ -330,6 +334,11 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "panels.shapes.deleteAll": "Delete all shapes",
   "panels.shapes.importHeading": "Import",
   "panels.shapes.import": "Import GeoJSON, CSV or WKT",
+  "panels.shapes.axisOrderLabel": "WKT coordinate order",
+  "panels.shapes.axisOrder.lng-lat": "Longitude, latitude (default)",
+  "panels.shapes.axisOrder.lat-lng": "Latitude, longitude",
+  "panels.shapes.axisReread.lat-lng": "Read as latitude, longitude",
+  "panels.shapes.axisReread.lng-lat": "Read as longitude, latitude",
   "panels.shapes.exportHeading": "Export",
   "panels.shapes.downloadGeoJson": "Download GeoJSON",
   "panels.shapes.downloadCsv": "Download CSV",

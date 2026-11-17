@@ -231,9 +231,100 @@ describe("ShapesSection", () => {
     expect(fit).not.toHaveBeenCalled();
   });
 
+  it("offers the WKT coordinate order with the import, longitude first until changed", () => {
+    renderSection();
+    const order = screen.getByRole("combobox", {
+      name: "WKT coordinate order",
+    });
+    expect(order).toHaveValue("lng-lat");
+    expect(
+      within(order)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Longitude, latitude (default)", "Latitude, longitude"]);
+  });
+
+  it("reads a latitude-first WKT file once Latitude, longitude is chosen, and keeps the choice for the next file", async () => {
+    const services = renderSection();
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "WKT coordinate order" }),
+      { target: { value: "lat-lng" } },
+    );
+    for (const name of ["a.wkt", "b.wkt"]) {
+      fireEvent.click(screen.getByTestId("shapes-import"));
+      await act(async () => {
+        services.fakes.fileOpener.choose({ name, text: "POINT (-33.9 151.2)" });
+      });
+    }
+    expect(drawApi.shapes.map((shape) => shape.vertices)).toEqual([
+      [p(151.2, -33.9)],
+      [p(151.2, -33.9)],
+    ]);
+    expect(
+      screen.getByRole("combobox", { name: "WKT coordinate order" }),
+    ).toHaveValue("lat-lng");
+  });
+
+  it("says when a file only fits the other order, imports nothing and offers to read it that way", async () => {
+    const services = renderSection();
+    fireEvent.click(screen.getByTestId("shapes-import"));
+    await act(async () => {
+      services.fakes.fileOpener.choose({
+        name: "a.wkt",
+        text: "POINT (-33.9 151.2)",
+      });
+    });
+    expect(drawApi.shapes).toEqual([]);
+    expect(screen.getByTestId("shapes-import-feedback")).toHaveTextContent(
+      "The first position is outside the world as longitude, latitude, but it fits as latitude, longitude.",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "No shapes imported. The first position is outside the world",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Read as latitude, longitude" }),
+    );
+    expect(drawApi.shapes.map((shape) => shape.vertices)).toEqual([
+      [p(151.2, -33.9)],
+    ]);
+    expect(
+      screen.getByRole("combobox", { name: "WKT coordinate order" }),
+    ).toHaveValue("lat-lng");
+    expect(screen.getByTestId("shapes-import-feedback")).toHaveTextContent(
+      "1 shape imported.",
+    );
+    expect(
+      screen.queryByRole("button", { name: /^Read as/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the chosen order and reads nothing when no file was offered", () => {
+    renderSection();
+    let bounds: unknown;
+    act(() => {
+      bounds = drawApi.rereadImport("lat-lng");
+    });
+    expect(bounds).toBeNull();
+    expect(drawApi.wktAxisOrder).toBe("lat-lng");
+    expect(drawApi.shapes).toEqual([]);
+  });
+
+  it("offers no other order for a file that fits the order in use", async () => {
+    const services = renderSection();
+    fireEvent.click(screen.getByTestId("shapes-import"));
+    await act(async () => {
+      services.fakes.fileOpener.choose({ name: "a.wkt", text: "POINT (2 48)" });
+    });
+    expect(screen.queryByRole("button", { name: /^Read as/ })).toBeNull();
+    expect(drawApi.shapes).toHaveLength(1);
+  });
+
   it("has no Import control when the host offers no file opener", () => {
     renderSection(createFakeServices({ fileOpener: undefined }));
     expect(screen.queryByRole("heading", { name: "Import" })).toBeNull();
+    expect(
+      screen.queryByRole("combobox", { name: "WKT coordinate order" }),
+    ).toBeNull();
     expect(screen.queryByTestId("shapes-import")).toBeNull();
     expect(screen.getByTestId("shapes-export-csv")).toBeInTheDocument();
   });
@@ -285,6 +376,9 @@ describe("ShapesSection message catalogue", () => {
       expect.arrayContaining([
         "panels.shapes.importHeading",
         "panels.shapes.import",
+        "panels.shapes.axisOrderLabel",
+        "panels.shapes.axisOrder.lng-lat",
+        "panels.shapes.axisOrder.lat-lng",
       ]),
     );
   });

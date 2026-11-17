@@ -816,6 +816,46 @@ export function parseShapeFile(
   };
 }
 
+const NUMBER = String.raw`[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?`;
+
+/** The first two numbers after the opening bracket of a WKT geometry, which may be wrapped in more brackets. */
+const FIRST_WKT_POSITION = new RegExp(
+  String.raw`\(\s*(?:\(\s*)*(${NUMBER})\s+(${NUMBER})`,
+);
+
+/** Whether a longitude and a latitude are both inside the world. */
+function insideWorld(lng: number, lat: number): boolean {
+  return Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
+/**
+ * The other order of the two, when the first position in WKT text lies outside
+ * the world in the order given but inside it in the other, which is the sign of
+ * a file written the other way round. Null for GeoJSON, text with no position,
+ * a first position that fits the order given, and one that fits neither.
+ *
+ * @param order The order the text is being read in.
+ */
+export function suggestWktAxisOrder(
+  text: string,
+  order: WktAxisOrder,
+): WktAxisOrder | null {
+  if (text.trimStart().startsWith("{")) {
+    return null;
+  }
+  const found = FIRST_WKT_POSITION.exec(text);
+  if (!found) {
+    return null;
+  }
+  const first = Number(found[1]);
+  const second = Number(found[2]);
+  const [lng, lat] = order === "lng-lat" ? [first, second] : [second, first];
+  if (insideWorld(lng, lat) || !insideWorld(lat, lng)) {
+    return null;
+  }
+  return order === "lng-lat" ? "lat-lng" : "lng-lat";
+}
+
 /**
  * The box that holds every shape in `inputs`: each vertex, and the whole
  * of a circle's outline, taking the short way across the antimeridian (so
