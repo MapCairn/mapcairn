@@ -680,6 +680,35 @@ export type MessageKey =
   | "host.notes.privacy"
   | "host.notes.pinLookup"
   | "host.notes.routing"
+  | "host.title.map"
+  | "privacy.title"
+  | "privacy.updated"
+  | "privacy.intro"
+  | "privacy.cookies.heading"
+  | "privacy.cookies.body"
+  | "privacy.storage.heading"
+  | "privacy.storage.body"
+  | "privacy.analytics.heading"
+  | "privacy.analytics.body"
+  | "privacy.errors.heading"
+  | "privacy.errors.body"
+  | "privacy.hosting.heading"
+  | "privacy.hosting.body"
+  | "privacy.hosting.link"
+  | "privacy.tiles.heading"
+  | "privacy.tiles.body"
+  | "privacy.layers.heading"
+  | "privacy.layers.body"
+  | "privacy.pins.heading"
+  | "privacy.pins.body"
+  | "privacy.routes.heading"
+  | "privacy.routes.body"
+  | "privacy.location.heading"
+  | "privacy.location.body"
+  | "privacy.contact.heading"
+  | "privacy.contact.body"
+  | "privacy.contact.issuesLink"
+  | "privacy.back"
   | "host.about.heading"
   | "host.about.text"
   | "host.about.link";
@@ -1085,6 +1114,24 @@ interface MessageParamOverrides {
   readonly "host.map.keyInstruction": {
     readonly keys: string;
     readonly description: string;
+  };
+  // The privacy page: a placeholder stands for an element the page supplies
+  readonly "privacy.updated": { readonly date: string };
+  readonly "privacy.storage.body": {
+    readonly localStorage: string;
+    readonly themeKey: string;
+    readonly tourKey: string;
+    readonly keyPrefix: string;
+  };
+  readonly "privacy.analytics.body": {
+    readonly scriptHost: string;
+    readonly beaconHost: string;
+  };
+  readonly "privacy.errors.body": { readonly exampleUrl: string };
+  readonly "privacy.hosting.body": { readonly link: string };
+  readonly "privacy.contact.body": {
+    readonly email: string;
+    readonly issues: string;
   };
 }
 

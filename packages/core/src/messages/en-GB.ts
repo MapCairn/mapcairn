@@ -813,6 +813,47 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
     "Sends the pin's position, to about 11 m, to OpenStreetMap's Nominatim service.",
   "host.notes.routing":
     "Nothing is sent until you ask. Get route sends the stops and the way of travelling, and a travel time area sends the first stop, with your IP address, to the Valhalla routing service run by FOSSGIS. It uses OpenStreetMap data.",
+  "host.title.map": "Interactive map",
+  "privacy.title": "Privacy policy",
+  "privacy.updated": "Last updated: {date}",
+  "privacy.intro":
+    "MapCairn has no user accounts, no forms and no server-side database of visitor data. The site stores or sends only the following.",
+  "privacy.cookies.heading": "Cookies",
+  "privacy.cookies.body":
+    "The site sets no cookies. Your settings are kept in local storage on your device instead, as described below.",
+  "privacy.storage.heading": "Local storage",
+  "privacy.storage.body":
+    "Your browser's {localStorage} keeps your settings: your light or dark theme (under the key {themeKey}), your units, which language you chose, whether the zoom buttons show, whether Save data is on, whether the map is flat or a globe, your chosen basemap, where the map was last left, and whether you have answered the first-visit tour (a version number under {tourKey}). The other keys start with {keyPrefix}. The tour itself sends nothing; a layer you turn on during it loads from its provider as described below. These stay on your device and are never sent to a server. Where your browser reports a data saver or a very slow connection, the page reads that locally to choose the default for Save data. Nothing about it is sent anywhere.",
+  "privacy.analytics.heading": "Analytics",
+  "privacy.analytics.body":
+    "This site uses Cloudflare Web Analytics for aggregate page-view counts. It is cookieless, does not fingerprint visitors, does not track you across sites and stores no personal data. Requests are made to {scriptHost} and {beaconHost}.",
+  "privacy.errors.heading": "Error reporting",
+  "privacy.errors.body":
+    "If the app hits an unexpected error in your browser, it sends a short diagnostic report to this site's own server, where it is written to Cloudflare's operational logs so the fault can be fixed. The report holds the error message, a stack trace, the page's address without its query or the part after # (for example {exampleUrl}), and whether it was an uncaught error or a rejected promise. It never includes the map's position or yours. No cookies, personal data or persistent identifiers are attached to the report, and it is not stored in any database. One page load sends at most five reports, and the same error only once.",
+  "privacy.hosting.heading": "Hosting logs",
+  "privacy.hosting.body":
+    "Cloudflare, as host, may log standard request metadata (IP address, user agent, timestamp) as part of normal operation. See {link}.",
+  "privacy.hosting.link": "Cloudflare's own privacy policy",
+  "privacy.tiles.heading": "Map tiles and location search",
+  "privacy.tiles.body":
+    "The basemap tile providers, OpenFreeMap and, when you choose the Streets basemap, the OpenStreetMap Foundation, may log tile requests, including your IP address, as part of serving the map. This is standard for any web map. Your browser makes those requests itself: they carry your IP address, its usual request headers (such as its user agent) and this site's address as the referrer, and nothing this site has stored about you. Tiles are requested for the part of the map on screen, so the basemap's provider, and the provider of any tile layer you turn on, can tell roughly which area you are looking at, and after Locate me roughly where you are. When you search (by pressing Enter or the Search button), your query is sent to OpenStreetMap's Nominatim geocoding service, which may likewise log the query and your IP address. As you type, the text so far is also sent to Photon, a search-as-you-type geocoding service that komoot runs on OpenStreetMap data, to suggest places. A request goes out each time you pause after typing at least three characters, so one search can send several partial versions of it, and Photon may log them with your IP address. Your browser sends no cookies and no referrer with these requests. Picking a suggestion sends nothing more, and if suggestions stop working, Enter and the Search button still search through Nominatim. A search that is only a pair of coordinates is read in your browser and is not sent to the geocoder; showing the place requests map tiles for that area, as any move of the map does. If an assistant in your browser uses this site's search or measuring tools (through WebMCP), the place names it gives are sent to Nominatim in the same way, and a pair of coordinates is again read in your browser.",
+  "privacy.layers.heading": "Data layers",
+  "privacy.layers.body":
+    "Every data layer is off until you turn it on, and nothing is requested before that. Turning a layer on, changing its controls or pressing Try again sends a request from your browser straight to that layer's provider, which may log it with your IP address: the US Geological Survey (USGS) for earthquakes, NASA's Global Imagery Browse Services for its imagery layers (satellite imagery, rainfall, fire hotspots, where people live, Earth at night and sea temperature), the Global Disaster Alert and Coordination System (GDACS) for fire, flood, tropical cyclone, volcano and drought alerts, and Copernicus (the Global Flood Awareness System) for the flood hazard map, and the jsDelivr content delivery network for the country boundaries. Show affected area sends one more request to GDACS for that event only. Tile layers request images for the part of the map you are looking at, so the provider can tell roughly where you are looking. Nothing passes through this site, and nothing is stored beyond the page you have open. The layers you turn on are written into the page address so a link can be shared; they are not sent anywhere else. Opening a link that has layers turned on requests those layers straight away, because the link turns them on.",
+  "privacy.pins.heading": "Pin addresses",
+  "privacy.pins.body":
+    "Dropping a pin sends nothing. A pin's address is looked up only when you press Look up address on the pin. That sends the pin's position, rounded to about 11 m, to OpenStreetMap's Nominatim service, which may log it with your IP address.",
+  "privacy.routes.heading": "Routes and travel-time areas",
+  "privacy.routes.body":
+    "When you ask for a route or a travel-time area, the request goes to the public Valhalla routing service at valhalla1.openstreetmap.de, run by the FOSSGIS community and built on OpenStreetMap data. It sends the route's coordinates (its stops, or the origin of a travel-time area) and the travel mode, and the server may log them with your IP address. Nothing is sent before you ask. MapCairn stores nothing about the request, and the results are not saved or put in the page address.",
+  "privacy.location.heading": "Your location",
+  "privacy.location.body":
+    "The Locate me button asks your browser for your position only when you press it. The position is used to show where you are on the map. It is not sent to this site and is not stored.",
+  "privacy.contact.heading": "Contact",
+  "privacy.contact.body":
+    "For a question or concern about privacy, write to {email}, or open an issue on {issues}.",
+  "privacy.contact.issuesLink": "GitHub",
+  "privacy.back": "Back to the map",
   "host.about.heading": "About",
   "host.about.text":
     "This site is open source software, released under the AGPL-3.0 licence.",

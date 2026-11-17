@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import { links, meta } from "./privacy";
+import { handle, links, meta } from "./privacy";
+
+describe("privacy route title", () => {
+  it("names the catalogue key its tab title follows the language through", () => {
+    expect(handle).toEqual({ titleKey: "privacy.title", brand: "last" });
+  });
+});
 
 describe("privacy route links", () => {
   it("sets a canonical link to /privacy", () => {

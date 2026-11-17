@@ -2,7 +2,12 @@
 // Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { EN_GB_CATALOGUE } from "@mapcairn/core";
+import {
+  createFakeServices,
+  createMessageCatalogue,
+  EN_GB_CATALOGUE,
+} from "@mapcairn/core";
+import { ServicesProvider } from "@mapcairn/map";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PrivacyPage } from "../app/PrivacyPage";
@@ -24,6 +29,17 @@ const policy = collapse(
   readFileSync(resolve(__dirname, "../../../../PRIVACY.md"), "utf8"),
 );
 const page = collapse(render(<PrivacyPage />).container.textContent ?? "");
+const afPage = collapse(
+  render(
+    <ServicesProvider
+      services={createFakeServices({
+        messages: createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE),
+      })}
+    >
+      <PrivacyPage />
+    </ServicesProvider>,
+  ).container.textContent ?? "",
+);
 
 /**
  * Facts the in-app notes state that the privacy page and `PRIVACY.md` must
@@ -82,8 +98,17 @@ describe("the host's privacy notes", () => {
     },
   );
 
-  it("state the same facts in Afrikaans", () => {
+  it("state the same facts in Afrikaans, and so does the Afrikaans privacy page", () => {
     const [privacy, pinLookup] = AF_NOTES;
+    for (const pattern of [
+      /Nominatim/,
+      /Photon[\s\S]*komoot|komoot[\s\S]*Photon/,
+      /koekies/,
+      /11 m/,
+      /koördinaat/,
+    ]) {
+      expect(afPage).toMatch(pattern);
+    }
     expect(privacy).toMatch(/Nominatim/);
     expect(privacy).toMatch(/Photon[\s\S]*komoot|komoot[\s\S]*Photon/);
     expect(privacy).toMatch(/koekies/);
