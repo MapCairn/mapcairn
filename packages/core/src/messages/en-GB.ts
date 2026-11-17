@@ -854,4 +854,8 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
     "For a question or concern about privacy, write to {email}, or open an issue on {issues}.",
   "privacy.contact.issuesLink": "GitHub",
   "privacy.back": "Back to the map",
+  "host.about.heading": "About",
+  "host.about.text":
+    "This site is open source software, released under the AGPL-3.0 licence.",
+  "host.about.link": "View the source code and licence on GitHub",
 };

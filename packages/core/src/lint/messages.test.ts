@@ -705,6 +705,9 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "privacy.contact.body": ["email", "issues"],
   "privacy.contact.issuesLink": [],
   "privacy.back": [],
+  "host.about.heading": [],
+  "host.about.text": [],
+  "host.about.link": [],
 };
 
 /** Every `{name}` placeholder used in `value`, deduplicated. */

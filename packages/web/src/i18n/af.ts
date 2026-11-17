@@ -871,4 +871,8 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Vir 'n vraag of bekommernis oor privaatheid, skryf aan {email}, of maak 'n kwessie oop op {issues}.",
   "privacy.contact.issuesLink": "GitHub",
   "privacy.back": "Terug na die kaart",
+  "host.about.heading": "Oor",
+  "host.about.text":
+    "Hierdie webwerf is oopbronsagteware wat onder die AGPL-3.0-lisensie vrygestel word.",
+  "host.about.link": "Kyk na die bronkode en lisensie op GitHub",
 };

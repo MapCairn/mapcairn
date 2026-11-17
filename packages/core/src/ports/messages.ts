@@ -708,7 +708,10 @@ export type MessageKey =
   | "privacy.contact.heading"
   | "privacy.contact.body"
   | "privacy.contact.issuesLink"
-  | "privacy.back";
+  | "privacy.back"
+  | "host.about.heading"
+  | "host.about.text"
+  | "host.about.link";
 
 /**
  * Text a definition shows a person: a {@link MessageKey}, looked up in the
