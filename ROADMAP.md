@@ -1,6 +1,6 @@
 # Roadmap
 
-_Last reviewed: 2026-11-16. Reviewed every year, and sooner when a decision below changes._
+_Last reviewed: 2026-11-17. Reviewed every year, and sooner when a decision below changes._
 
 This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
 
@@ -32,7 +32,7 @@ Two tracks share the list. **SDK** is the goal in "Direction": what a team needs
 6. **Site, #175.** A command palette.
 7. **SDK, #220.** A host can theme the SDK, with contrast checked.
 8. **Site, #183.** Clustering for dense point layers.
-9. **SDK, #230 and #221.** The guide to the Content Security Policy a host needs, and the guide to serving the bundle from a Windows web server and server-rendered pages.
+9. **SDK, #221.** The guide to serving the bundle from a Windows web server and server-rendered pages.
 10. **Site, #71 and #213.** Finish the map key, and stop the credits popover jumping.
 11. **SDK, #232 and #184.** Two small guides: open service standards, and a custom search provider.
 12. **Site, #229.** Say once when the device is offline.
