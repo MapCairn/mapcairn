@@ -13,7 +13,7 @@ Example: issue #43 asks for a MapLibre adapter as an optional SDK package. It cr
 
 1. Do the preflight in `pick-up-issue` section 0 and read the issue with all its comments, judging each by who wrote it (`pick-up-issue` section 1).
 2. If the change touches one package and decides no public API, stop and tell the person the issue is enough. If it needs a maintainer decision listed in `AGENTS.md` ("Ask the maintainer first"), the plan may state the question but not settle it.
-3. Find the tracking issue. If there is none, file one with the `create-issue` skill. Either way it carries the `plan` label.
+3. Find the tracking issue. If there is none, file one with the `create-issue` skill. Either way it carries the `plan` label and a milestone. A plan large enough to be an outcome a release note could carry is proposed as a new milestone in `ROADMAP.md`, ranked last in its section; the order is the maintainer's call.
 4. Choose the next number: one more than the highest ever used. Finished plans are deleted, so also look in history: `git fetch <origin-or-upstream>`, then `git log <origin-or-upstream>/main --name-only --format= -- docs/plans`, the open pull requests (`gh pr list --repo MapCairn/mapcairn --state open --limit 200 --json files --jq '.[].files[].path | select(startswith("docs/plans/"))'`) and the numbers in the tracking issues. File name `NNNN-short-name.md`.
 
 ## 2. Investigate
