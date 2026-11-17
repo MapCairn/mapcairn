@@ -296,6 +296,8 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "common.itemCount": "{count} item|{count} items",
   "settings.language.label": "Language",
   "settings.language.auto": "Automatic",
+  "settings.language.loadFailed": "{language} could not be loaded.",
+  "settings.language.tryAgain": "Try again",
   // Components: chrome, host, ui, panels and the app shell
   "chrome.endStack.label": "Map tools",
   "chrome.endStack.resetBearing": "Reset bearing to north",

@@ -11,6 +11,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -20,6 +21,25 @@ import {
 export const ActiveMessagesContext = createContext<MessageCatalogue | null>(
   null,
 );
+
+/** What {@link useLanguageLoad} returns. */
+export interface LanguageLoad {
+  /**
+   * The tag whose messages could not be loaded, while the interface is still in
+   * the language before it, or null when no load has failed.
+   */
+  readonly failed: string | null;
+  /** Whether a load of {@link LanguageLoad.failed} is under way again. */
+  readonly retrying: boolean;
+  /** Loads the failed language again. It does nothing when none has failed. */
+  readonly retry: () => void;
+}
+
+/**
+ * The state of the language load, or null outside {@link ActiveMessagesProvider}
+ * and for a host with no `Services.languages`.
+ */
+export const LanguageLoadContext = createContext<LanguageLoad | null>(null);
 
 /** Subscribes to a store whose server snapshot is its client one, as the other hooks do. */
 function useStoreValue<T>(
@@ -89,7 +109,8 @@ function isPending(
  *   previous catalogue and warns, and the language is requested again the
  *   next time the setting or the browser's languages resolve, even to the
  *   same tag; a load that is in flight or has succeeded is not repeated.
- *   {@link ServicesProvider} mounts it.
+ *   `LanguageLoadContext` says which language failed and offers a retry that
+ *   asks for it again whatever the setting is. {@link ServicesProvider} mounts it.
  */
 export function ActiveMessagesProvider({
   services,
@@ -115,6 +136,8 @@ export function ActiveMessagesProvider({
   ).languages;
   const [active, setActive] = useState<MessageCatalogue>(messages);
   const requested = useRef<LanguageRequest>(undefined);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
 
   const tag =
     languages === undefined
@@ -126,34 +149,29 @@ export function ActiveMessagesProvider({
           languages.defaultLanguage,
         );
 
-  useEffect(() => {
-    if (languages === undefined || tag === undefined) {
-      return;
-    }
-    if (tag === messages.language) {
-      requested.current = undefined;
-      setActive(messages);
-      return;
-    }
-    const inputs = { tag, messages, languages, choice, browserLanguages };
-    if (answers(requested.current, inputs)) {
-      return;
-    }
+  const startLoad = useCallback((inputs: Omit<LanguageRequest, "failed">) => {
+    const { tag: wanted, languages: offered } = inputs;
     const request = { ...inputs, failed: false };
     requested.current = request;
+    setFailed((previous) => (previous === wanted ? previous : null));
+    setPending(wanted);
     const succeed = (catalogue: MessageCatalogue) => {
       if (requested.current === request) {
         setActive(catalogue);
+        setFailed(null);
+        setPending(null);
       }
     };
     const fail = (error: unknown) => {
       if (requested.current === request) {
         requested.current = { ...request, failed: true };
+        setFailed(wanted);
+        setPending(null);
       }
-      console.warn(`Could not load the "${tag}" language.`, error);
+      console.warn(`Could not load the "${wanted}" language.`, error);
     };
     try {
-      const loaded = languages.load(tag);
+      const loaded = offered.load(wanted);
       if (isPending(loaded)) {
         loaded.then(succeed, fail);
       } else {
@@ -162,13 +180,45 @@ export function ActiveMessagesProvider({
     } catch (error) {
       fail(error);
     }
-  }, [languages, messages, tag, choice, browserLanguages]);
+  }, []);
+
+  useEffect(() => {
+    if (languages === undefined || tag === undefined) {
+      return;
+    }
+    if (tag === messages.language) {
+      requested.current = undefined;
+      setActive(messages);
+      setFailed(null);
+      setPending(null);
+      return;
+    }
+    const inputs = { tag, messages, languages, choice, browserLanguages };
+    if (!answers(requested.current, inputs)) {
+      startLoad(inputs);
+    }
+  }, [languages, messages, tag, choice, browserLanguages, startLoad]);
+
+  const retry = useCallback(() => {
+    const last = requested.current;
+    if (last?.failed) {
+      startLoad(last);
+    }
+  }, [startLoad]);
+  const load = useMemo(
+    () => ({ failed, retrying: failed !== null && pending === failed, retry }),
+    [failed, pending, retry],
+  );
 
   return (
     <ActiveMessagesContext.Provider
       value={languages === undefined ? messages : active}
     >
-      {children}
+      <LanguageLoadContext.Provider
+        value={languages === undefined ? null : load}
+      >
+        {children}
+      </LanguageLoadContext.Provider>
     </ActiveMessagesContext.Provider>
   );
 }
