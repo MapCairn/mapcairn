@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  type LanguageCatalogue,
   type MessageCatalogue,
   resolveLanguage,
   type Services,
@@ -10,6 +11,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -25,6 +27,40 @@ function useStoreValue<T>(
   get: () => T,
 ): T {
   return useSyncExternalStore(subscribe, get, get);
+}
+
+/**
+ * The load in flight, or the last one to finish, for one language, with the
+ * inputs it was made under. A failed one is tried again only once the setting
+ * or the browser's languages have changed, so a failure never loops.
+ */
+interface LanguageRequest {
+  readonly tag: string;
+  readonly messages: MessageCatalogue;
+  readonly languages: LanguageCatalogue;
+  readonly choice: string | null;
+  readonly browserLanguages: readonly string[];
+  readonly failed: boolean;
+}
+
+/** Whether `request` already answers for `next`, so no load is needed. */
+function answers(
+  request: LanguageRequest | undefined,
+  next: Omit<LanguageRequest, "failed">,
+): boolean {
+  if (
+    request === undefined ||
+    request.tag !== next.tag ||
+    request.messages !== next.messages ||
+    request.languages !== next.languages
+  ) {
+    return false;
+  }
+  return (
+    !request.failed ||
+    (request.choice === next.choice &&
+      request.browserLanguages === next.browserLanguages)
+  );
 }
 
 /** Whether a load returned a promise rather than a ready catalogue. */
@@ -44,8 +80,10 @@ function isPending(
  *   render until a load finishes, uses `Services.messages` or the last
  *   catalogue that loaded, so the first client render matches the server's
  *   and a slow load never blanks the text. A load that finishes after
- *   another language was asked for is dropped, and one that fails keeps the
- *   previous catalogue and warns. {@link ServicesProvider} mounts it.
+ *   another language was asked for is dropped. One that fails keeps the
+ *   previous catalogue and warns, and the language is requested again the
+ *   next time the setting or the browser's languages resolve, even to the
+ *   same tag; a load that is in flight or has succeeded is not repeated. {@link ServicesProvider} mounts it.
  */
 export function ActiveMessagesProvider({
   services,
@@ -70,6 +108,7 @@ export function ActiveMessagesProvider({
     preferences.get(),
   ).languages;
   const [active, setActive] = useState<MessageCatalogue>(messages);
+  const requested = useRef<LanguageRequest>(undefined);
 
   const tag =
     languages === undefined
@@ -86,31 +125,38 @@ export function ActiveMessagesProvider({
       return;
     }
     if (tag === messages.language) {
+      requested.current = undefined;
       setActive(messages);
       return;
     }
-    let superseded = false;
+    const inputs = { tag, messages, languages, choice, browserLanguages };
+    if (answers(requested.current, inputs)) {
+      return;
+    }
+    const request = { ...inputs, failed: false };
+    requested.current = request;
+    const succeed = (catalogue: MessageCatalogue) => {
+      if (requested.current === request) {
+        setActive(catalogue);
+      }
+    };
     const fail = (error: unknown) => {
+      if (requested.current === request) {
+        requested.current = { ...request, failed: true };
+      }
       console.warn(`Could not load the "${tag}" language.`, error);
     };
     try {
       const loaded = languages.load(tag);
       if (isPending(loaded)) {
-        loaded.then((catalogue) => {
-          if (!superseded) {
-            setActive(catalogue);
-          }
-        }, fail);
+        loaded.then(succeed, fail);
       } else {
-        setActive(loaded);
+        succeed(loaded);
       }
     } catch (error) {
       fail(error);
     }
-    return () => {
-      superseded = true;
-    };
-  }, [languages, messages, tag]);
+  }, [languages, messages, tag, choice, browserLanguages]);
 
   return (
     <ActiveMessagesContext.Provider
