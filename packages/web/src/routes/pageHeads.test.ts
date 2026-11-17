@@ -151,9 +151,11 @@ describe("the product page's structured data", () => {
     expect(questions).toEqual(faqEntries());
   });
 
-  it("claims no organisation, rating or offer", () => {
+  it("claims no organisation, rating, offer, other profile or npm package", () => {
     const text = JSON.stringify(nodes);
-    expect(text).not.toMatch(/Organization|AggregateRating|Review|Offer/);
+    expect(text).not.toMatch(
+      /Organization|AggregateRating|Review|Offer|sameAs|npm/i,
+    );
   });
 
   it("links the page's text as Markdown", () => {
