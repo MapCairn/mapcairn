@@ -214,6 +214,8 @@ describe("the product page stands on its own", () => {
       );
     }
     for (const [number, phrase] of [
+      ["43", "adapter as an optional package"],
+      ["44", "pages without React"],
       ["192", "PMTiles"],
       ["227", "GPX and KML"],
       ["45", "behind a login"],
@@ -308,6 +310,16 @@ describe("the product page stands on its own", () => {
 });
 
 describe("the embedding example", () => {
+  it("is the README's example, character for character", () => {
+    const readme = readFileSync(
+      path.resolve(__dirname, "../../../../README.md"),
+      "utf8",
+    );
+    const section = readme.slice(readme.indexOf("## Embed a map"));
+    const block = /```tsx\n([\s\S]*?)\n```/.exec(section)?.[1];
+    expect(block).toBe(EMBED_EXAMPLE_CODE);
+  });
+
   it("builds the same providers in the same order as the example app", () => {
     const order = (source: string) =>
       [

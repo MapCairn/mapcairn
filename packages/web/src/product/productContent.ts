@@ -207,7 +207,7 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "An app wraps the map in a services provider and gives it the services it uses. This is a whole app, and the same code is compiled and rendered by the project's tests:",
+          "This is a whole app, the README's example. It mounts the map with the SDK's interface around it and a search box at the top, and the same code is compiled and rendered by the project's tests:",
         ],
       },
       {
@@ -220,31 +220,27 @@ export const SECTIONS: readonly Section[] = [
         kind: "terms",
         items: [
           {
-            term: [{ code: "createFakeServices()" }],
+            term: [{ code: "ServicesProvider" }],
             description: [
-              "The services: search, storage, the map adapter and the rest. These are the SDK's fakes, which request nothing; a real app passes its own adapters, such as one over MapLibre GL JS.",
-            ],
-          },
-          {
-            term: [
-              { code: "ServicesProvider" },
-              ", ",
+              "Holds the services: search, storage, the map adapter and the rest. ",
+              { code: "createFakeServices()" },
+              " gives the SDK's in-memory fakes, which request nothing and draw no map tiles; a real app passes its own adapters, such as one over MapLibre GL JS. ",
               { code: "LiveRegionProvider" },
-              ", ",
+              " and ",
               { code: "TooltipProvider" },
-            ],
-            description: [
-              "The providers: the services for every component below, the one announcer for screen readers, and tooltips.",
+              " add the one announcer for screen readers and the tooltips.",
             ],
           },
           {
             term: [{ code: "MapView" }],
             description: [
-              "The map region, with keyboard control and focus, which drives the engine through the map adapter. The search box, controls, sheet and credits go in its ",
-              { code: "chrome" },
-              ", laid out by ",
-              { code: "MapChrome" },
-              ".",
+              "The map region, with keyboard control and focus, which drives the engine through the map adapter.",
+            ],
+          },
+          {
+            term: [{ code: "MapChrome" }],
+            description: [
+              "Lays out everything over the map in named slots, here the search box at the top start. The controls, the sheet and the credits go in the other slots.",
             ],
           },
         ],
@@ -317,7 +313,7 @@ export const SECTIONS: readonly Section[] = [
     further: [
       {
         text: "The packages, in the README",
-        href: `${repoFile("README.md")}#what-is-in-the-box`,
+        href: `${repoFile("README.md")}#packages`,
       },
     ],
   },
@@ -382,7 +378,7 @@ export const SECTIONS: readonly Section[] = [
         kind: "list",
         items: [
           [
-            "Nothing is requested until a person asks, except the search suggestions a host may turn on, which send the text typed so far.",
+            "Apart from the basemap, nothing is requested until a person asks: a layer loads when it is turned on, a search when it is submitted. The exception is search suggestions, which a host may turn on and which send the text typed so far.",
           ],
           [
             "No accounts and no tracking. Settings stay on the device, in local storage.",
@@ -480,6 +476,18 @@ export const SECTIONS: readonly Section[] = [
             {
               text: "Packages published to npm, with versioned releases",
               href: FIRST_RELEASE_ISSUE_URL,
+            },
+          ],
+          [
+            {
+              text: "The MapLibre adapter as an optional package",
+              href: issue(43),
+            },
+          ],
+          [
+            {
+              text: "A mount function for pages that do not use React",
+              href: issue(44),
             },
           ],
           [

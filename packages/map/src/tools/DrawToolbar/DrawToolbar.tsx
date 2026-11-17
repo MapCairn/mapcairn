@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { type KeyboardEvent, useCallback, useEffect, useRef } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
+import { useScrollEdges } from "../../chrome/useScrollEdges";
 import { useToolbarEdge } from "../../chrome/useToolbarEdge";
 import { useFormatMessage, useMessages } from "../../services";
 import { Button } from "../../ui/Button";
@@ -209,6 +210,8 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
   const { t } = useMessages();
   const registerShapes = useFocusTarget("draw-shapes");
   useToolbarEdge(rootRef);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  useScrollEdges(scrollerRef);
 
   // Coming back from the sheet, focus is put on the Shapes button before this
   // runs, and the toolbar leaves it there.
@@ -281,90 +284,96 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
         data-testid="draw-toolbar"
         onKeyDown={toolbarKeys}
       >
-        <div className={styles.modesRow}>
-          <SegmentedControl
-            className={styles.modes}
-            label={t("tools.draw.shapeToDraw", {})}
-            options={modeOptions(t)}
-            value={mode}
-            onValueChange={(next) => draw.setMode(next as DrawKind)}
-            data-testid="draw-mode"
-          />
-        </div>
-        <p className={styles.readout}>
-          <span className={styles.status} data-testid="draw-status">
-            {draw.status}
-          </span>
-          {draw.measure ? (
-            <span className={styles.measure} data-testid="draw-measure">
-              <VisuallyHidden>, </VisuallyHidden>
-              {draw.measure}
-            </span>
-          ) : null}
-        </p>
-        {draw.issueMessage ? (
-          <p className={styles.issue} data-testid="draw-issue">
-            <Icon icon={TriangleAlert} />
-            <span>{draw.issueMessage}</span>
-          </p>
-        ) : null}
-        <div className={styles.actionsRow}>
-          <div className={styles.actions}>
-            <IconButton
-              label={addLabel}
-              icon={Crosshair}
-              data-testid="draw-add-point"
-              onClick={draw.placeAtCentre}
-            />
-            <IconButton
-              label={t("tools.draw.undo", {})}
-              icon={Undo2}
-              mirrorInRtl
-              disabled={!draw.canUndo}
-              data-testid="draw-undo"
-              onClick={draw.undo}
-            />
-            <IconButton
-              label={t("tools.draw.redo", {})}
-              icon={Redo2}
-              mirrorInRtl
-              disabled={!draw.canRedo}
-              data-testid="draw-redo"
-              onClick={draw.redo}
-            />
-            <IconButton
-              label={removeLabel}
-              icon={drawing ? X : Trash2}
-              disabled={!drawing && selected === null}
-              data-testid="draw-remove"
-              onClick={drawing ? draw.cancel : draw.deleteSelected}
-            />
-            <IconButton
-              label={t("tools.draw.shapesAndExport", {})}
-              icon={Shapes}
-              data-focus-target="draw-shapes"
-              data-testid="draw-shapes"
-              onClick={onOpenShapes}
+        <div
+          ref={scrollerRef}
+          className={styles.scroller}
+          data-testid="draw-toolbar-scroll"
+        >
+          <div className={styles.modesRow}>
+            <SegmentedControl
+              className={styles.modes}
+              label={t("tools.draw.shapeToDraw", {})}
+              options={modeOptions(t)}
+              value={mode}
+              onValueChange={(next) => draw.setMode(next as DrawKind)}
+              data-testid="draw-mode"
             />
           </div>
-          <Button
-            icon={Check}
-            data-testid="draw-done"
-            onClick={drawing ? draw.finish : onDone}
-          >
-            <span className={styles.primaryLabel} data-reserve={otherLabel}>
-              {primaryLabel}
+          <p className={styles.readout}>
+            <span className={styles.status} data-testid="draw-status">
+              {draw.status}
             </span>
-          </Button>
+            {draw.measure ? (
+              <span className={styles.measure} data-testid="draw-measure">
+                <VisuallyHidden>, </VisuallyHidden>
+                {draw.measure}
+              </span>
+            ) : null}
+          </p>
+          {draw.issueMessage ? (
+            <p className={styles.issue} data-testid="draw-issue">
+              <Icon icon={TriangleAlert} />
+              <span>{draw.issueMessage}</span>
+            </p>
+          ) : null}
+          <div className={styles.actionsRow}>
+            <div className={styles.actions}>
+              <IconButton
+                label={addLabel}
+                icon={Crosshair}
+                data-testid="draw-add-point"
+                onClick={draw.placeAtCentre}
+              />
+              <IconButton
+                label={t("tools.draw.undo", {})}
+                icon={Undo2}
+                mirrorInRtl
+                disabled={!draw.canUndo}
+                data-testid="draw-undo"
+                onClick={draw.undo}
+              />
+              <IconButton
+                label={t("tools.draw.redo", {})}
+                icon={Redo2}
+                mirrorInRtl
+                disabled={!draw.canRedo}
+                data-testid="draw-redo"
+                onClick={draw.redo}
+              />
+              <IconButton
+                label={removeLabel}
+                icon={drawing ? X : Trash2}
+                disabled={!drawing && selected === null}
+                data-testid="draw-remove"
+                onClick={drawing ? draw.cancel : draw.deleteSelected}
+              />
+              <IconButton
+                label={t("tools.draw.shapesAndExport", {})}
+                icon={Shapes}
+                data-focus-target="draw-shapes"
+                data-testid="draw-shapes"
+                onClick={onOpenShapes}
+              />
+            </div>
+            <Button
+              icon={Check}
+              data-testid="draw-done"
+              onClick={drawing ? draw.finish : onDone}
+            >
+              <span className={styles.primaryLabel} data-reserve={otherLabel}>
+                {primaryLabel}
+              </span>
+            </Button>
+          </div>
+          {selected && selected.kind !== "point" && !drawing ? (
+            <SelectedGroup draw={draw} shape={selected} />
+          ) : null}
+          <p className={styles.hint}>
+            {selected && !drawing
+              ? t("tools.draw.selectedHint", {})
+              : format(hintFor(mode))}
+          </p>
         </div>
-        {selected && selected.kind !== "point" && !drawing ? (
-          <SelectedGroup draw={draw} shape={selected} />
-        ) : null}
-        <p className={styles.hint}>
-          {selected && !drawing
-            ? t("tools.draw.selectedHint", {})
-            : format(hintFor(mode))}
-        </p>
       </Surface>
     </section>
   );

@@ -1,6 +1,6 @@
 # Capability matrix
 
-_Last reviewed: 2026-11-14. Review it whenever a row below changes status, and at least with each yearly review of [`ROADMAP.md`](../../ROADMAP.md)._
+_Last reviewed: 2026-11-17. Review it whenever a row below changes status, and at least with each yearly review of [`ROADMAP.md`](../../ROADMAP.md)._
 
 The project's aim is an SDK with everything a team needs to build an industry-grade GIS application ([`ROADMAP.md`](../../ROADMAP.md), "Direction"). This page lists what such an application needs, as neutral capability areas, and says what MapCairn has, partly has or lacks, with the code or issue that shows it. It is the basis for the order of the SDK work.
 
@@ -28,10 +28,10 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | Worked recipes for OGC API Features, WMS and WMTS endpoints                        | has     | `docs/guides/serving-layers.md`, checked in `packages/core/src/layers/openStandards.test.ts`                                      | none                                   |
 | Tiles read from a single-file archive                                              | lacks   | none                                                                                                                              | [#192]                                 |
 | Newer vector tile encodings                                                        | lacks   | none                                                                                                                              | [#197]                                 |
-| Layers supplied at runtime, per user, validated one at a time                      | has     | `createRuntimeLayerCatalogue` and `partitionDefinitions` (steps closed as #94 to #99)                                             | [#46], all its steps merged            |
+| Layers supplied at runtime, per user, validated one at a time                      | has     | `createRuntimeLayerCatalogue` and `partitionDefinitions` (steps closed as #94 to #99)                                             | none (#46 closed)                      |
 | Hosts that sit behind a login                                                      | lacks   | the reference site calls only public providers, so there is no way for a host to attach credentials or react to a refused request | [#45]                                  |
 | One place for tile and layer request limits, retry, priority and a host hook       | partial | each load is cancelled when replaced, and a slow tile layer says so (`useDataLayers`, #159 closed)                                | [#195]                                 |
-| Importing drawn shapes from GeoJSON, WKT and CSV files                             | has     | `parseShapeFile` in `packages/core/src/draw/import.ts`                                                                            | none                                   |
+| Importing drawn shapes from GeoJSON, WKT and CSV files                             | has     | `parseShapeFile` in `packages/core/src/draw/import.ts`, with the WKT axis order chosen by `wktAxisOrder` (#84 closed)             | none                                   |
 | Importing drawn shapes from GPX and KML files                                      | lacks   | none                                                                                                                              | [#227]                                 |
 | Binary vector files (zipped vector sets, GeoPackage, FlatGeobuf) and raster files  | lacks   | none                                                                                                                              | none, see "Gaps left without an issue" |
 | Reading a service's capabilities document to list its layers                       | lacks   | a definition is written by the host                                                                                               | none, see "Gaps left without an issue" |
@@ -163,17 +163,17 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Embedding and server-rendered pages
 
-| Capability                                                                                        | Status  | Evidence                                                                                 | Tracked by         |
-| ------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------- | ------------------ |
-| React components built from four packages, with an example app that uses only public entry points | has     | `examples/embed`, `docs/guides/extending.md`                                             | none               |
-| The map engine adapter as an optional package                                                     | lacks   | the adapter is in `packages/web`                                                         | [#43], after [#24] |
-| A script and stylesheet with a mount function for pages without React                             | lacks   | none                                                                                     | [#44]              |
-| A guide for serving the bundle from a Windows web server and server-rendered pages                | lacks   | none                                                                                     | [#221]             |
-| The Content Security Policy a host needs                                                          | lacks   | the reference site's own is in `packages/web/public/_headers`                            | [#230]             |
-| Making the SDK easy to drop into existing server-rendered applications                            | lacks   | the tracker for the items above                                                          | [#51]              |
-| The interface text and language chosen by the host                                                | partial | A message catalogue and language setting; the site offers English and Afrikaans          | [#231]             |
-| An agent that can drive the map through a tool catalogue                                          | partial | the reference host registers a few tools (`packages/web/src/webmcp`); the SDK ships none | [#56]              |
-| Hosts plugging in their own analytics                                                             | lacks   | none                                                                                     | [#75]              |
+| Capability                                                                                        | Status  | Evidence                                                                                                                                 | Tracked by         |
+| ------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| React components built from four packages, with an example app that uses only public entry points | has     | `examples/embed`, `docs/guides/extending.md`                                                                                             | none               |
+| The map engine adapter as an optional package                                                     | lacks   | the adapter is in `packages/web`                                                                                                         | [#43], after [#24] |
+| A script and stylesheet with a mount function for pages without React                             | lacks   | none                                                                                                                                     | [#44]              |
+| A guide for serving the bundle from a Windows web server and server-rendered pages                | lacks   | none                                                                                                                                     | [#221]             |
+| The Content Security Policy a host needs                                                          | has     | `docs/guides/content-security-policy.md`, `buildContentSecurityPolicy` in `examples/embed/src/contentSecurityPolicy.ts`                  | none (#230 closed) |
+| Making the SDK easy to drop into existing server-rendered applications                            | lacks   | the tracker for the items above                                                                                                          | [#51]              |
+| The interface text and language chosen by the host                                                | partial | A message catalogue and language setting; the site offers English and Afrikaans, shows a failed language load with a retry (#280 closed) | [#231]             |
+| An agent that can drive the map through a tool catalogue                                          | partial | the reference host registers a few tools (`packages/web/src/webmcp`); the SDK ships none                                                 | [#56]              |
+| Hosts plugging in their own analytics                                                             | lacks   | none                                                                                                                                     | [#75]              |
 
 ## Server-side rendering
 
@@ -194,14 +194,14 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Security and privacy
 
-| Capability                                                     | Status           | Evidence                                                                    | Tracked by           |
-| -------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------- | -------------------- |
-| No accounts and no tracking beyond cookieless page views       | has, by decision | `PRIVACY.md`, `ROADMAP.md`                                                  | none                 |
-| Untrusted text read in bounded, linear time                    | has              | the WKT, shape file, coordinate and link readers, with property-based tests | none                 |
-| A strict Content Security Policy on the reference site         | has              | `packages/web/public/_headers`                                              | for hosts: [#230]    |
-| A check that every SDK dependency allows commercial use        | lacks            | the licence header check only                                               | [#198]               |
-| Reporting channel and assurance case                           | has              | `SECURITY.md`, `docs/assurance-case.md`                                     | OpenSSF silver: [#4] |
-| Optional host analytics that keep the reference site untouched | lacks            | none                                                                        | [#75]                |
+| Capability                                                     | Status           | Evidence                                                                                  | Tracked by           |
+| -------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------- | -------------------- |
+| No accounts and no tracking beyond cookieless page views       | has, by decision | `PRIVACY.md`, `ROADMAP.md`                                                                | none                 |
+| Untrusted text read in bounded, linear time                    | has              | the WKT, shape file, coordinate and link readers, with property-based tests               | none                 |
+| A strict Content Security Policy on the reference site         | has              | `packages/web/public/_headers`                                                            | none                 |
+| A check that every SDK dependency allows commercial use        | has              | `scripts/sdkLicences.mjs` and `scripts/sdkLicences.allowlist.json`, run by `npm run lint` | none (#198 closed)   |
+| Reporting channel and assurance case                           | has              | `SECURITY.md`, `docs/assurance-case.md`                                                   | OpenSSF silver: [#4] |
+| Optional host analytics that keep the reference site untouched | lacks            | none                                                                                      | [#75]                |
 
 ## Developer experience
 
@@ -220,7 +220,6 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 **Now: finish what is half built and open the way in**
 
 - [#1]: until the packages can be installed with API documentation, nothing else reaches a team.
-- [#198]: a small lint check that protects the promise that every SDK package allows commercial use.
 - [#117] to [#119], [#121], [#122] (the rest of [#49]): the selection port and hook are built and nothing in the interface uses them yet.
 - [#126] and [#127] (the rest of [#47]): the identify core, the tap and the `I` key are built; the Layers section line, the status line and the end-to-end identify layer are not, and the guide is written.
 - [#146]: accessibility is the project's main claim, and the announcements have had automated checks only.
@@ -228,7 +227,7 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 **Next: what makes the SDK usable in another team's stack**
 
 - [#24] then [#43]: the engine adapter in its own package, so a host can embed without copying `packages/web`.
-- [#44], then [#45], [#221] and [#230]: a mount function for pages without React, hosts behind a login (which the serving guide's login part needs), and the guides that make it work in a server-rendered stack under a strict policy.
+- [#44], then [#45] and [#221]: a mount function for pages without React, hosts behind a login (which the serving guide's login part needs), and the guide for a Windows web server and server-rendered pages. The Content Security Policy guide is written.
 - [#220]: host theming with contrast checks, so the chrome can match another team's look.
 - [#192], [#194], [#195], [#193], [#183]: the performance track for large data, from tile archives and a tile budget to clustering and cards for vector features.
 - [#62], [#176], [#71]: the layer controls a person expects (filters, order and opacity, the key over the map).
@@ -284,7 +283,6 @@ A gap is filed only when it is real, small enough to pick up (or says it needs a
 [#43]: https://github.com/MapCairn/mapcairn/issues/43
 [#44]: https://github.com/MapCairn/mapcairn/issues/44
 [#45]: https://github.com/MapCairn/mapcairn/issues/45
-[#46]: https://github.com/MapCairn/mapcairn/issues/46
 [#47]: https://github.com/MapCairn/mapcairn/issues/47
 [#48]: https://github.com/MapCairn/mapcairn/issues/48
 [#49]: https://github.com/MapCairn/mapcairn/issues/49
@@ -321,7 +319,6 @@ A gap is filed only when it is real, small enough to pick up (or says it needs a
 [#195]: https://github.com/MapCairn/mapcairn/issues/195
 [#196]: https://github.com/MapCairn/mapcairn/issues/196
 [#197]: https://github.com/MapCairn/mapcairn/issues/197
-[#198]: https://github.com/MapCairn/mapcairn/issues/198
 [#199]: https://github.com/MapCairn/mapcairn/issues/199
 [#220]: https://github.com/MapCairn/mapcairn/issues/220
 [#221]: https://github.com/MapCairn/mapcairn/issues/221
@@ -333,5 +330,4 @@ A gap is filed only when it is real, small enough to pick up (or says it needs a
 [#227]: https://github.com/MapCairn/mapcairn/issues/227
 [#228]: https://github.com/MapCairn/mapcairn/issues/228
 [#229]: https://github.com/MapCairn/mapcairn/issues/229
-[#230]: https://github.com/MapCairn/mapcairn/issues/230
 [#231]: https://github.com/MapCairn/mapcairn/issues/231
