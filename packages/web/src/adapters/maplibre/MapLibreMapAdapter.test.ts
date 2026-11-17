@@ -4255,15 +4255,17 @@ describe("MapLibreMapAdapter data layers", () => {
 
       it("paints a render map until it reports idle, because a tile that 404s asks for no frame", async () => {
         const { adapter } = await readyForRender();
+        vi.useFakeTimers();
         FakeMapLibreMap.settleOnRepaint = true;
-        await adapter.toImage({ view: { bounds: BOX } });
+        // The export waits on the nudge's timer, so the clock steps while it waits.
+        const image = adapter.toImage({ view: { bounds: BOX } });
+        await vi.advanceTimersByTimeAsync(TILE_SETTLE_NUDGE_MS * 4);
+        await image;
         const render = renderMap();
         // The nudge woke the map, and the exporter's own repaint copied it.
         const repaints = render.callsOf("triggerRepaint").length;
         expect(repaints).toBeGreaterThanOrEqual(2);
-        await new Promise((resolve) =>
-          setTimeout(resolve, TILE_SETTLE_NUDGE_MS * 2),
-        );
+        vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 2);
         expect(render.callsOf("triggerRepaint")).toHaveLength(repaints);
       });
 
@@ -4274,13 +4276,14 @@ describe("MapLibreMapAdapter data layers", () => {
         map.fire("style.load");
         FakeMapLibreMap.autoLoad = true;
         FakeMapLibreMap.holdIdle = true;
-        await expect(patient.toImage({ pixelRatio: 1 })).rejects.toMatchObject({
-          kind: "timed-out",
-        });
+        vi.useFakeTimers();
+        const refused = expect(
+          patient.toImage({ pixelRatio: 1 }),
+        ).rejects.toMatchObject({ kind: "timed-out" });
+        await vi.advanceTimersByTimeAsync(20);
+        await refused;
         const render = latestMap();
-        await new Promise((resolve) =>
-          setTimeout(resolve, TILE_SETTLE_NUDGE_MS * 2),
-        );
+        vi.advanceTimersByTime(TILE_SETTLE_NUDGE_MS * 2);
         expect(render.callsOf("triggerRepaint")).toHaveLength(0);
       });
 
