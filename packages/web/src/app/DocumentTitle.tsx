@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { useMessages } from "@mapcairn/map";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMatches } from "react-router";
 import { composeTitle, pageTitleHandle } from "../i18n/pageTitle";
 
@@ -10,17 +10,23 @@ import { composeTitle, pageTitleHandle } from "../i18n/pageTitle";
  * server renders the English title from each route's `meta`; once the app
  * runs, this sets `document.title` from the catalogue text of the page name
  * the route's `handle` gives (`PageTitleHandle`). A page whose route has no
- * such handle keeps the title it has. It renders nothing.
+ * such handle gets back the title the document had when this first mounted,
+ * which is the server's English one, so it never keeps the previous page's
+ * title. It renders nothing.
  */
 export function DocumentTitle() {
   const messages = useMessages();
   const handle = pageTitleHandle(useMatches());
   const key = handle?.titleKey;
   const brand = handle?.brand;
+  const initialTitle = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (key !== undefined && brand !== undefined) {
-      document.title = composeTitle(messages.t(key, {}), brand);
+    initialTitle.current ??= document.title;
+    if (key === undefined || brand === undefined) {
+      document.title = initialTitle.current;
+      return;
     }
+    document.title = composeTitle(messages.t(key, {}), brand);
   }, [messages, key, brand]);
   return null;
 }

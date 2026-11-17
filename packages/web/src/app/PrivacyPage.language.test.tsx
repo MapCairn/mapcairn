@@ -93,6 +93,24 @@ describe("PrivacyPage in the active language", () => {
     expect(container.textContent).not.toMatch(/The site sets no cookies/);
   });
 
+  it("uses the reviewed terms", () => {
+    const text = renderIn(AFRIKAANS).textContent ?? "";
+
+    for (const term of [
+      "Webanalise",
+      "onopgevange fout",
+      "verworpe belofte",
+      "op die toer by jou eerste besoek gereageer het",
+      "wanneer jy op die speld Soek adres op druk",
+      "Wanneer jy 'n laag aanskakel",
+      "as die verwyser",
+      "jsDelivr-CDN",
+    ]) {
+      expect(text, term).toContain(term);
+    }
+    expect(text).not.toMatch(/onopgevangde|verwerpte|verwysingsadres/);
+  });
+
   it("keeps the links, their targets and the code spans in Afrikaans", () => {
     const container = renderIn(AFRIKAANS);
     const view = within(container);

@@ -8,8 +8,8 @@ import {
   FakeMessageCatalogue,
 } from "@mapcairn/core";
 import { ServicesProvider } from "@mapcairn/map";
-import { render, waitFor } from "@testing-library/react";
-import { createRoutesStub } from "react-router";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { createRoutesStub, Link, Outlet } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AF_CATALOGUE } from "../i18n/af";
 import { MAP_TITLE, PRIVACY_TITLE } from "../i18n/pageTitle";
@@ -70,6 +70,38 @@ describe("DocumentTitle", () => {
     renderOn(createFakeServices({ messages: AFRIKAANS }));
 
     expect(document.title).toBe("Server title");
+  });
+
+  it("goes back to the title it first found when navigation reaches a page that names none", async () => {
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: () => (
+          <ServicesProvider
+            services={createFakeServices({ messages: AFRIKAANS })}
+          >
+            <DocumentTitle />
+            <Link to="/privacy">privacy</Link>
+            <Link to="/missing">missing</Link>
+            <Outlet />
+          </ServicesProvider>
+        ),
+        children: [
+          { path: "privacy", handle: PRIVACY_TITLE, Component: () => null },
+          { path: "missing", Component: () => null },
+        ],
+      },
+    ]);
+    render(<Stub initialEntries={["/"]} />);
+    expect(document.title).toBe("Server title");
+
+    fireEvent.click(screen.getByRole("link", { name: "privacy" }));
+    await waitFor(() =>
+      expect(document.title).toBe("Privaatheidsbeleid | MapCairn"),
+    );
+
+    fireEvent.click(screen.getByRole("link", { name: "missing" }));
+    await waitFor(() => expect(document.title).toBe("Server title"));
   });
 
   it("follows the language when the person's choice loads", async () => {

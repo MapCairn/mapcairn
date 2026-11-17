@@ -66,7 +66,7 @@ function isPageTitleHandle(handle: unknown): handle is PageTitleHandle {
 
 /**
  * The title handle of the deepest route in `matches` that has one, or
- * `undefined` when none does, so a page with no handle keeps its title.
+ * `undefined` when none does,and then `DocumentTitle` leaves the page with the English title the server rendered.
  */
 export function pageTitleHandle(
   matches: ReadonlyArray<{ readonly handle?: unknown }>,
