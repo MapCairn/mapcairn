@@ -3,6 +3,7 @@
 import { tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 import { scrollFade } from "../../chrome/scrollFade.css";
+import { TOOLBAR_MAX_SCREEN_SHARE_CSS } from "./toolbarCap";
 
 /** The outer box, measured for the edge it publishes. The slot places it. */
 export const root = style({
@@ -33,7 +34,7 @@ const roomForRestOfChrome = [
  * over the map and the controls above it. The floor keeps one row of controls
  * showing whatever the screen.
  */
-const maxBlockSize = `max(calc(${tokens.size.control} + ${tokens.space.xs} * 2), min(50dvh, calc(100dvh - (${roomForRestOfChrome}))))`;
+const maxBlockSize = `max(calc(${tokens.size.control} + ${tokens.space.xs} * 2), min(${TOOLBAR_MAX_SCREEN_SHARE_CSS}, calc(100dvh - (${roomForRestOfChrome}))))`;
 
 /**
  * The toolbar surface. It holds the cap and the shadow; the controls scroll in

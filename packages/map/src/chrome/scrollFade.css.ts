@@ -18,7 +18,9 @@ function fade(start: boolean, end: boolean): string {
  * more content behind it, so a control cut off there reads as "scroll for
  * more" and not as the end of the group. `useScrollEdges` sets
  * `data-scroll-more` on the container. The fade is a mask, so it takes no room
- * and the controls under it stay clickable. Put it on a scroller inside the
+ * and the controls under it stay clickable. Where forced colours are active
+ * the mask is removed, so every edge is at full strength, and the browser's
+ * own focus ring and borders show as they are. Put it on a scroller inside the
  * element that carries the shadow, which a mask would cut away.
  */
 export const scrollFade = style({
@@ -36,6 +38,17 @@ export const scrollFade = style({
     '&[data-scroll-more="both"]': {
       WebkitMaskImage: fade(true, true),
       maskImage: fade(true, true),
+    },
+  },
+  "@media": {
+    // High contrast wants every edge at full strength, not faded away.
+    "(forced-colors: active)": {
+      selectors: {
+        "&[data-scroll-more]": {
+          WebkitMaskImage: "none",
+          maskImage: "none",
+        },
+      },
     },
   },
 });
