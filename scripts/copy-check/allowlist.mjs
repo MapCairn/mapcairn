@@ -7,17 +7,14 @@
  * entry (one that matches nothing) fails the test, so the list cannot outlive
  * the text it excuses.
  *
- * The privacy page and the four design guide entries are temporary: they stay
- * until the text is translated or moved into the catalogue, tracked in #271.
+ * Everything a visitor can see in the host app is in the catalogue, the
+ * privacy page included. The four design guide entries stay: that guide is
+ * built only in development and test builds, so no visitor sees it, and the
+ * only other entry is the product name in the hidden page heading.
  *
  * @type {ReadonlyArray<{ file: string, text?: string, reason: string }>}
  */
 export const COPY_ALLOWLIST = [
-  {
-    file: "packages/web/src/app/PrivacyPage.tsx",
-    reason:
-      "The privacy page is a legal text kept in English and mirrored by PRIVACY.md; translating it is tracked in #271.",
-  },
   {
     file: "packages/web/src/designGuide/ComponentSections.tsx",
     reason:

@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { LinksFunction, MetaFunction } from "react-router";
-import { PRIVACY_POLICY_TITLE, PrivacyPage } from "../app/PrivacyPage";
+import { PrivacyPage } from "../app/PrivacyPage";
 import { buildPageMeta } from "../buildPageMeta";
 import { SITE_URL } from "../constants/siteConfig";
+import {
+  englishTitle,
+  type PageTitleHandle,
+  PRIVACY_TITLE,
+} from "../i18n/pageTitle";
 
 /** This route's own meta description, distinct from the root route's site-wide one. */
 const PRIVACY_POLICY_DESCRIPTION =
@@ -16,14 +21,20 @@ const PRIVACY_URL = `${SITE_URL}/privacy`;
  * React Router route module export: the `/privacy` route's `<title>`/`<meta>`
  * tags, via the same `buildPageMeta` the root route uses, so this page's
  * Open Graph, Twitter and JSON-LD tags describe itself rather than inheriting
- * the root route's.
+ * the root route's. The server always renders the English title; the browser
+ * shows it in the visitor's language through `handle` (see `DocumentTitle`).
+ * The description and the other tags are read by crawlers and link previews,
+ * not shown in the app, so they stay English.
  */
 export const meta: MetaFunction = () =>
   buildPageMeta({
-    title: `${PRIVACY_POLICY_TITLE} | MapCairn`,
+    title: englishTitle(PRIVACY_TITLE),
     description: PRIVACY_POLICY_DESCRIPTION,
     url: PRIVACY_URL,
   });
+
+/** React Router route module export: the catalogue key of this page's tab title. */
+export const handle: PageTitleHandle = PRIVACY_TITLE;
 
 /** React Router route module export: the `/privacy` route's canonical `<link>`. */
 export const links: LinksFunction = () => [
