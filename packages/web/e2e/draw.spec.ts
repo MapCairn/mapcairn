@@ -147,6 +147,75 @@ for (const language of ["en", "af"] as const) {
   });
 }
 
+/**
+ * The toolbar and the bottom slots above it must not move when the primary
+ * button changes from Done to Finish at the first point (#295): the longer
+ * label gets its room from the start, on a phone, a small phone and a tablet.
+ */
+const LABEL_CHANGES_CASES = [
+  { name: "a phone", width: 390, height: 844 },
+  { name: "a small phone", width: 320, height: 568 },
+  { name: "a tablet", width: 820, height: 1180 },
+] as const;
+
+/** The position of each shape switch option that these tests draw with. */
+const SHAPE_OPTION = { Line: 1, Polygon: 2 } as const;
+
+for (const language of ["en", "af"] as const) {
+  test.describe(`draw primary button (${language})`, () => {
+    test.use({
+      reducedMotion: "reduce",
+      fastCredits: true,
+      language: language === "af" ? "af" : null,
+    });
+
+    for (const { name, width, height } of LABEL_CHANGES_CASES) {
+      for (const shape of ["Polygon", "Line"] as const) {
+        test(`keeps the toolbar and the bottom slots still when Done becomes Finish on ${name} drawing a ${shape.toLowerCase()}`, async ({
+          page,
+          mapPage,
+        }) => {
+          await page.setViewportSize({ width, height });
+          await mapPage.goto(START);
+          await collapseCredits(mapPage);
+          await mapPage.startDrawing();
+          await mapPage.drawToolbar
+            .getByTestId("draw-mode")
+            .getByRole("radio")
+            .nth(SHAPE_OPTION[shape])
+            .click();
+          const map = await mapPage.mapSize();
+          const first: [number, number] = [map.width * 0.3, map.height * 0.3];
+          const second: [number, number] = [map.width * 0.5, map.height * 0.3];
+          const third: [number, number] = [map.width * 0.4, map.height * 0.2];
+          const layout = async () => {
+            await waitForStableLayout(page);
+            const boxes = await Promise.all(
+              [
+                mapPage.drawToolbar,
+                page.locator('[data-chrome="bottom-end"]'),
+              ].map((locator) => locator.boundingBox()),
+            );
+            return boxes.map((box) => [box?.y, box?.height]);
+          };
+
+          const idleLabel = (await mapPage.drawPrimary.textContent()) ?? "";
+          const idle = await layout();
+
+          await mapPage.tapMap(first);
+          await expect(mapPage.drawUndo).toBeEnabled();
+          await expect(mapPage.drawPrimary).not.toHaveText(idleLabel);
+          expect(await layout()).toEqual(idle);
+
+          await mapPage.tapMap(second, third);
+          await expect(mapPage.drawMeasure).toBeVisible();
+          expect(await layout()).toEqual(idle);
+        });
+      }
+    }
+  });
+}
+
 test.describe("draw", () => {
   test.use({ reducedMotion: "reduce" });
 

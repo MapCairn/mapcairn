@@ -185,6 +185,15 @@ describe("DrawToolbar", () => {
       expect(onDone).toHaveBeenCalledTimes(1);
     });
 
+    it("reserves the room of the other label, so the button keeps its width when the label changes", async () => {
+      await renderToolbar();
+      const reserved = () =>
+        screen.getByTestId("draw-done").querySelector("[data-reserve]");
+      expect(reserved()).toHaveAttribute("data-reserve", "Finish");
+      draw(...TRIANGLE);
+      expect(reserved()).toHaveAttribute("data-reserve", "Done");
+    });
+
     it("is one button for Cancel and Delete, disabled until there is a shape", async () => {
       await renderToolbar();
       const remove = screen.getByTestId("draw-remove");
