@@ -1,6 +1,6 @@
 # Roadmap
 
-_Last reviewed: 2026-11-16. Reviewed every year, and sooner when a decision below changes._
+_Last reviewed: 2026-11-17. Reviewed every year, and sooner when a decision below changes._
 
 This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
 
@@ -51,7 +51,7 @@ Then, roughly in this order:
 
 - **Small additions:** #222 (UTM and MGRS), #225 (snapping), #226 (buffer and merge), #227 (GPX and KML), #62 (richer filters), #48 (the interface for image export) and #178 (printing), #182 (a timeline), #181 and #180 (box and lasso selection, elevation profile), #228 (save a layer's features), #84 (WKT axis order), #259 (geolint, a GeoJSON linter that is its own Apache-2.0 package).
 - **Research and plans, each to be decided after its measurement or plan:** #223 (coordinate systems), #224 (terrain), #177 (tilt and the shared link), #185 (deck.gl), #196 (storing tiles on the device), #197 (MapLibre Tile), #186, #187 and #188 (host-side search, nearby queries and short links), #53 (server rendering), #56 and #75 (an agent tool catalogue and an analytics sink).
-- **Whenever there is room (quality and process):** #261 (geolint speed), #25 (thin the app hook), #214, #218 and #149 (test stability and shard balance), #215, #217 and #246 (documents, CI security and the proof of the severity gate), #247 (what components may read from the browser directly), #146 (a screen reader check, which needs a person with a screen reader), #4 (the OpenSSF silver badge) and the agent and skill upkeep in #82, #93 and #108.
+- **Whenever there is room (quality and process):** #261 (geolint speed), #25 (thin the app hook), #214 and #149 (test stability and shard balance), #215, #217 and #246 (documents, CI security and the proof of the severity gate), #247 (what components may read from the browser directly), #146 (a screen reader check, which needs a person with a screen reader), #4 (the OpenSSF silver badge) and the agent and skill upkeep in #82, #93 and #108.
 - **Trackers, not ranked:** #47, #49 and #51 (their steps are ranked above).
 
 ## Intentions
