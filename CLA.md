@@ -54,6 +54,6 @@ A pull request is not merged until the comment is there. The `CLA` check on the 
 
 ## Changes
 
-- **1.3:** the GeoJSON linter moved to its own repository, so the section that set the terms for that package's licence is removed and no longer applies to this repository. Sections 1 to 6 and the agreement sentence are unchanged. People who agreed to an earlier version have agreed to these terms and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
+- **1.3:** removed a section that no longer applies to the Project. Sections 1 to 6 and the agreement sentence are unchanged. People who agreed to an earlier version have agreed to these terms and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
 - **1.1:** the Project was renamed from Karta to MapCairn, and the agreement sentence now names MapCairn. The terms are unchanged. People who agreed to version 1.0, with the sentence that named Karta, have agreed to these terms for the same Project and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
 - **1.0:** the first version.
