@@ -1,6 +1,6 @@
 # Extending MapCairn
 
-Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, layers supplied at runtime, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md). The Content Security Policy a host page needs is in [`content-security-policy.md`](content-security-policy.md).
+Short how-tos for embedding the SDK in an app of your own and for adding to the SDK and its reference host: a basemap, a data layer of each kind, layers supplied at runtime, a search provider, a routing provider and an adapter. The architecture behind them is in [`ARCHITECTURE.md`](../../ARCHITECTURE.md), and the design rules in [`DESIGN.md`](../../DESIGN.md). The Content Security Policy a host page needs is in [`content-security-policy.md`](content-security-policy.md).
 
 For translating the interface or offering a choice of languages, see the [translation guide](translate-the-sdk.md).
 
@@ -8,7 +8,7 @@ For translating the interface or offering a choice of languages, see the [transl
 
 `examples/embed` is a one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. Run it with `npm run dev -w @mapcairn/example-embed` (add `-- --port <port>` to pick a port).
 
-It runs on the SDK's fakes (`createFakeServices()`), so it requests nothing and loads no map engine, and the map region shows only its background colour under the real chrome: the search pill, the end stack, the sheet with its basemap, pin, layers and settings sections, the measure toolbar, the scale bar and the credits, with the zoom level under the scale bar in the side panel layout (`MapReadout` leaves it out in the sheet layout unless `showZoom` is set). It adds one layer of its own (`src/cairnsLayer.ts`), answered from memory, three more that a sample mapper makes from a made-up server's layer metadata (see [Supply layers at runtime](#supply-layers-at-runtime)), a `ThemeSource` that writes the chosen theme onto the page, the fakes' `MemoryFeatureSelection`, which it passes through `useFeatureSelection` and `SelectionProvider` (nothing reads the selected set yet), a WebMCP tool through `useModelContextTool`, and the SDK's built-in basemaps as they are, which name no preview image (the files belong to the host that serves them), so its picker shows a plain swatch for each.
+It runs on the SDK's fakes (`createFakeServices()`), so it requests nothing and loads no map engine, and the map region shows only its background colour under the real chrome: the search pill, the end stack, the sheet with its basemap, pin, layers and settings sections, the measure toolbar, the scale bar and the credits, with the zoom level under the scale bar in the side panel layout (`MapReadout` leaves it out in the sheet layout unless `showZoom` is set). It adds one layer of its own (`src/cairnsLayer.ts`), answered from memory, a search provider and a suggestion provider of its own over a few invented places held in memory (see [Write a search provider](#write-a-search-provider)), three more that a sample mapper makes from a made-up server's layer metadata (see [Supply layers at runtime](#supply-layers-at-runtime)), a `ThemeSource` that writes the chosen theme onto the page, the fakes' `MemoryFeatureSelection`, which it passes through `useFeatureSelection` and `SelectionProvider` (nothing reads the selected set yet), a WebMCP tool through `useModelContextTool`, and the SDK's built-in basemaps as they are, which name no preview image (the files belong to the host that serves them), so its picker shows a plain swatch for each.
 
 What it proves, on every pull request: `npm run typecheck` and `npm run build` fail if an entry point stops exporting what an app needs or the vanilla-extract step breaks, its Vitest test mounts the app and uses it, dependency-cruiser refuses an import from `examples/` into a file inside a package, into the reference host or by a relative path, and any import of an example from a package, and a test in `packages/core/src/lint/manifests.test.ts` checks that each SDK package declares every package its source imports, exports only its entry points, takes React as a peer and declares `vitest` as an optional peer of core for the contract suites, which the hoisted workspace would otherwise hide.
 
@@ -402,6 +402,146 @@ The Directions tool appears only when `services.routing` exists, and the SDK shi
 4. Allow its origin in `connect-src` in `packages/web/public/_headers` and `constants/securityHeaders.ts`, name the service on the privacy page and in `PRIVACY.md` and `ATTRIBUTIONS.md`, and pass its credit and a note about what a request sends to the Directions panel (`ROUTING_CREDITS` and `ROUTING_NOTE` in `packages/web/src/constants/routingCredits.ts`).
 
 Leave `routing` out and the Directions button, panel and overlays are never mounted, so a host without a service carries no dead controls.
+
+## Write a search provider
+
+The search pill, the address lookup on the pin card and the map's move to a result all work on two ports from `@mapcairn/core`, and the SDK ships no adapter for a named service, because a service's terms must not travel inside an SDK package. A host writes its own, over a geocoder it runs or is allowed to use, or over an index it owns. `examples/embed` does this over a few invented places held in memory: `src/placeSearch.ts` holds the two providers, `src/samplePlaces.ts` the data and `src/placeSearch.test.ts` the contract suites. It requests nothing, because its `fetch` is a local function that answers from that list, and the providers run their real request, mapping and error code against it.
+
+### The two ports
+
+`SearchProvider` is required (`Services.search`) and has two methods:
+
+- `search(query, { bias, limit, signal })` resolves a `SearchResult[]`, best match first, empty when nothing matches.
+- `reverse(position, { signal })` resolves the `SearchResult` at a position, or `null` when there is none.
+
+`SuggestionProvider` is optional (`Services.suggestions`) and has one, `suggest(query, { limit, signal })`, which resolves `SearchResult[]` for text the person has only partly typed. It is a port of its own because a service that suits a submitted search often forbids a request on every keystroke. Leave it out and the pill keeps submit-only search; see [Add search suggestions](#add-search-suggestions). A provider that has nothing to suggest resolves `[]`, and the pill then lists nothing and still searches on Enter.
+
+Every `SearchResult` has these fields (`packages/core/src/ports/search.ts`):
+
+| Field            | Meaning                                                                                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | A string that names the place in this answer. The pill uses it as the option's key, so two results in one answer must not share one.               |
+| `label`          | The place's short name, which the pill shows and puts in the box when the person picks it.                                                         |
+| `secondaryLabel` | Optional. What helps tell places of one name apart, such as the parish or town.                                                                    |
+| `centre`         | `{ lat, lng }`, in degrees. Required.                                                                                                              |
+| `bounds`         | Optional `{ south, west, north, east }`. When present, a host that follows the reference site fits the map to it instead of centring on the point. |
+
+Moving the map is the host's job, not the provider's or the pill's: the pill calls its `onSelect` prop with the picked result. The reference host fits `bounds` when there are some and otherwise centres at a fixed zoom (`flyTo` in `packages/web/src/app/useMapApp.ts`), and the example does the same in `src/showResult.ts`. A host that only reads `centre` still works, but frames a glen or a lake as a point.
+
+### What the pill and the provider each do
+
+The pill (`useSearch` in `packages/map/src/tools/SearchPill`) searches only when the person submits, for at least two characters after trimming. It answers a typed coordinate pair itself, without the provider, and aborts the request before a new one starts, so a provider never needs to track which answer is current. It passes `bias` only when the host gives `SearchPill` a `getBias` function, so a provider can ignore `bias` and a host that sends it must say so in its privacy text.
+
+The provider owns what is particular to its service: building the request, mapping the answer, and keeping to the service's usage limits (such as a minimum time between requests), since every caller shares them. For a blank query it resolves `[]` or rejects with a `SearchError`; the contract accepts either, and resolving `[]` without a request is simpler and sends nothing.
+
+### Errors and cancellation
+
+Reject only with these two, and do not let a raw `TypeError` or `SyntaxError` escape:
+
+- `SearchError`, with a `kind`: `offline` (the request could not be made because the device has no connection), `rate-limited` (the service answered HTTP 429, or its equivalent) or `failed` (anything else, including a bad status, a body that is not what the service documents and a timeout). The pill shows a message for each kind and a Retry button, and treats any other error as `failed`.
+- `PortAbortError`, when the `AbortSignal` fires. The pill ignores it: an aborted request never changes what is shown or reaches the live region.
+
+To honour the signal, throw `PortAbortError` at the start if `signal.aborted` is already true, pass the signal to `fetch`, and turn the `AbortError` that `fetch` rejects with (or any failure after `signal.aborted` became true) into `PortAbortError`. `getJson` in the example's `placeSearch.ts` does all three, and tells `offline` from `failed` with `navigator.onLine`, as the reference adapters do.
+
+### Map an answer to results
+
+Keep the mapping in small functions that take the service's raw item and return a `SearchResult` or `null`, and drop an item that has no usable position instead of failing the whole answer.
+
+A service that returns a GeoJSON `FeatureCollection`, as several open geocoders do, puts the point in `geometry.coordinates` as `[longitude, latitude]` and, when it has one, the extent in `bbox` as `[west, south, east, north]` (RFC 7946). Some services use a different order for their own extent field, so read the service's documentation and test with a recorded answer.
+
+```ts
+import type { Bounds, SearchResult } from "@mapcairn/core";
+
+interface GeocoderFeature {
+  readonly geometry?: { readonly coordinates?: readonly number[] };
+  readonly bbox?: readonly number[];
+  readonly properties?: {
+    readonly id?: string;
+    readonly name?: string;
+    readonly region?: string;
+  };
+}
+
+function toBounds(bbox: readonly number[] | undefined): Bounds | undefined {
+  if (bbox?.length !== 4) {
+    return undefined;
+  }
+  const [west, south, east, north] = bbox as [number, number, number, number];
+  return { south, west, north, east };
+}
+
+function toResult(feature: GeocoderFeature): SearchResult | null {
+  const [lng, lat] = feature.geometry?.coordinates ?? [];
+  const { id, name, region } = feature.properties ?? {};
+  if (
+    typeof id !== "string" ||
+    typeof name !== "string" ||
+    typeof lng !== "number" ||
+    typeof lat !== "number"
+  ) {
+    return null;
+  }
+  const bounds = toBounds(feature.bbox);
+  return {
+    id,
+    label: name,
+    ...(region ? { secondaryLabel: region } : {}),
+    centre: { lat, lng },
+    ...(bounds ? { bounds } : {}),
+  };
+}
+```
+
+A plain JSON endpoint is the same job with that endpoint's names. The example's service sends `{ results: [{ id, name, area, lat, lon, box }] }`, with `box` as `[south, west, north, east]`, and `toSearchResult` in `src/placeSearch.ts` maps one item. Check each field's type before you use it, since the body comes from outside your code.
+
+### Test it with the contract suite
+
+The SDK's contract suites check what the ports promise: the shape of a result, an empty array for no match, each `SearchError` kind, `PortAbortError` before and during a request, and `null` from `reverse` when there is no place. Run them against your adapter with the network scripted, as `NominatimSearchProvider.test.ts` and the example's `placeSearch.test.ts` do:
+
+```ts
+import {
+  runSearchProviderContract,
+  runSuggestionProviderContract,
+} from "@mapcairn/core/contracts";
+
+runSearchProviderContract("MySearchProvider", () => {
+  const scripted = scriptedFetch(); // your test double for the service
+  return {
+    provider: new MySearchProvider({ fetch: scripted.fetch }),
+    controls: {
+      willReturn: (results) => scripted.answerWith(results),
+      willFail: (kind) => scripted.failWith(kind), // "offline", "rate-limited" or "failed"
+      hold: () => scripted.holdUntilAborted(),
+    },
+  };
+});
+```
+
+`create` is called for each test, so every test gets a fresh provider. `willReturn` makes every later `search` return those results and `reverse` return the first, or `null` for an empty list; `hold` keeps the next request pending until its signal aborts, so the double must reject with an `AbortError` when `init.signal` fires. `runSuggestionProviderContract` takes the same controls. The suites import `vitest`, which `@mapcairn/core` declares as an optional peer, so the host installs it with its tests. The contract does not check your mapping of a real answer, so also test it with recorded answers from the service, a bad item, a body that is not JSON and an HTTP error.
+
+### Register it
+
+Pass the provider in the `Services` the app is built from. A host that builds its own `Services` sets `search` and, if it has one, `suggestions`; the example starts from the fakes and replaces the two parts:
+
+```ts
+const services = createFakeServices({
+  search: new MySearchProvider(),
+  suggestions: new MySuggestionProvider(),
+});
+```
+
+`ServicesProvider` takes the result as `services`, and nothing else in the app names the provider. If the service is on another origin, allow it in the page's `connect-src` (see the [Content Security Policy guide](content-security-policy.md)).
+
+### Tell visitors what is sent
+
+A search provider sends data to whatever its service is, so the host's privacy text must say so plainly. By default these requests are sent:
+
+- A submitted search sends the query text to the service, and with it whatever the browser always sends, such as the visitor's IP address and user agent. With a `SuggestionProvider`, the text typed so far is sent as the person types, which is more than a submitted search sends, so the text must say that too.
+- The address lookup on the pin card sends the pin's position, rounded to four decimal places (about 11 m) by `roundForLookup`, and only when the person asks for it.
+- A `bias` box is sent only if the host gives `SearchPill` a `getBias` function and the provider passes it on, and it shows roughly which area the person is looking at.
+- The visitor's language is sent only if the adapter sends it (see the [translation guide](translate-the-sdk.md)).
+
+The words are the host's. `PinCard` takes a `lookupNote` for the line under "Look up address", `SheetContent` and `SettingsSection` take a `privacyNote` for Settings, and the defaults name no service because the SDK does not know which one a host uses. The reference host fills them from `host.notes.pinLookup` and `host.notes.privacy` in its catalogues and mirrors the text in [`PRIVACY.md`](../../PRIVACY.md); that file describes the reference site only.
 
 ## Add search suggestions
 

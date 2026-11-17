@@ -90,16 +90,16 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Search and geocoding
 
-| Capability                                                    | Status  | Evidence                                                                                                                                                               | Tracked by                             |
-| ------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Place search through a replaceable provider                   | has     | `SearchProvider`, the Nominatim adapter in `packages/web/src/adapters/search`                                                                                          | none                                   |
-| Suggestions as you type, only when a host supplies a provider | has     | `SuggestionProvider`, `PhotonSuggestionProvider`                                                                                                                       | none                                   |
-| Coordinates typed into search                                 | has     | `coordinateSearchResult`                                                                                                                                               | UTM and MGRS: [#222]                   |
-| Reverse lookup of a place                                     | has     | `useReverseAddress`, the pin card                                                                                                                                      | none                                   |
-| A guide to plugging in a custom provider                      | partial | the ports are documented in `ARCHITECTURE.md`, and `docs/guides/extending.md` has sections for routing, search suggestions and adapters but none for a search provider | [#184]                                 |
-| Search over a host-owned index                                | lacks   | none                                                                                                                                                                   | [#186]                                 |
-| One palette for layers, places, shapes and tools              | lacks   | none                                                                                                                                                                   | [#175]                                 |
-| Bulk geocoding of address lists                               | lacks   | a browser SDK with no server                                                                                                                                           | none, see "Gaps left without an issue" |
+| Capability                                                    | Status | Evidence                                                                                                                 | Tracked by                             |
+| ------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| Place search through a replaceable provider                   | has    | `SearchProvider`, the Nominatim adapter in `packages/web/src/adapters/search`                                            | none                                   |
+| Suggestions as you type, only when a host supplies a provider | has    | `SuggestionProvider`, `PhotonSuggestionProvider`                                                                         | none                                   |
+| Coordinates typed into search                                 | has    | `coordinateSearchResult`                                                                                                 | UTM and MGRS: [#222]                   |
+| Reverse lookup of a place                                     | has    | `useReverseAddress`, the pin card                                                                                        | none                                   |
+| A guide to plugging in a custom provider                      | has    | `docs/guides/extending.md` (routing, search, search suggestions, adapters), a custom search provider in `examples/embed` | none                                   |
+| Search over a host-owned index                                | lacks  | none                                                                                                                     | [#186]                                 |
+| One palette for layers, places, shapes and tools              | lacks  | none                                                                                                                     | [#175]                                 |
+| Bulk geocoding of address lists                               | lacks  | a browser SDK with no server                                                                                             | none, see "Gaps left without an issue" |
 
 ## Routing and network analysis
 
@@ -232,7 +232,6 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 - [#220]: host theming with contrast checks, so the chrome can match another team's look.
 - [#192], [#194], [#195], [#193], [#183]: the performance track for large data, from tile archives and a tile budget to clustering and cards for vector features.
 - [#62], [#176], [#71]: the layer controls a person expects (filters, order and opacity, the key over the map).
-- [#184]: a small guide that shows how to use what exists (a custom search provider).
 - [#48], [#178]: image export beyond the screen, and printing.
 - [#222], [#225], [#226], [#227]: small, dependency-free additions that fill obvious gaps in measuring, drawing and import.
 - [#229]: small, and it improves every failure message.
@@ -312,7 +311,6 @@ A gap is filed only when it is real, small enough to pick up (or says it needs a
 [#181]: https://github.com/MapCairn/mapcairn/issues/181
 [#182]: https://github.com/MapCairn/mapcairn/issues/182
 [#183]: https://github.com/MapCairn/mapcairn/issues/183
-[#184]: https://github.com/MapCairn/mapcairn/issues/184
 [#185]: https://github.com/MapCairn/mapcairn/issues/185
 [#186]: https://github.com/MapCairn/mapcairn/issues/186
 [#187]: https://github.com/MapCairn/mapcairn/issues/187
