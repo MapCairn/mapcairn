@@ -1,9 +1,0 @@
-[
-  { "path": "/features/0/geometry/coordinates", "severity": "info" },
-  { "path": "/features/1/geometry/coordinates", "severity": "info" },
-  { "path": "/features/2/geometry/coordinates", "severity": "info" },
-  {
-    "path": "/features/3/geometry/geometries/1/coordinates",
-    "severity": "info"
-  }
-]

@@ -25,9 +25,8 @@
  * - `peerDependencies` and `devDependencies` of the SDK packages are listed and
  *   never fail: a peer is the host's own choice, and a dev dependency is not
  *   shipped.
- * - `packages/web`, `examples/embed` and `packages/geolint` are not held to the
- *   rule. The host may use other licences, and geolint is a separate package.
- *   The output says so.
+ * - `packages/web` and `examples/embed` are not held to the rule. The host
+ *   and the example may use other licences. The output says so.
  * - The SDK packages themselves are workspace links in the lockfile. They are
  *   followed but not judged, because their licence is the repository's.
  *
@@ -57,11 +56,7 @@ export const SDK_PACKAGE_PATHS = [
   "packages/theme",
 ];
 /** Workspaces the rule leaves out, named in the output. */
-export const EXEMPT_PATHS = [
-  "packages/web",
-  "examples/embed",
-  "packages/geolint",
-];
+export const EXEMPT_PATHS = ["packages/web", "examples/embed"];
 /** The file a person edits to allow a licence or a package, as written in messages. */
 export const ALLOWLIST_FILE = "scripts/sdkLicences.allowlist.json";
 /** What a package with no usable licence field is reported as. */
@@ -331,7 +326,7 @@ export function describeFailure({ name, version, licence, requiredBy }) {
  */
 export function reportLines(report) {
   const lines = [
-    `sdk licences: not checked, by design: ${EXEMPT_PATHS.join(", ")} (the host and geolint may use other licences)`,
+    `sdk licences: not checked, by design: ${EXEMPT_PATHS.join(", ")} (the host and the example may use other licences)`,
   ];
   for (const [label, names] of Object.entries(report.peers)) {
     if (names.length > 0) {
