@@ -8,11 +8,14 @@ import {
   AGREEMENT_SENTENCE,
   addSignatures,
   buildComment,
+  buildCommitStatus,
   buildStatus,
   CLA_VERSION,
   COMMENT_MARKER,
+  EXEMPT_BOTS,
   evaluate,
   isAgreementComment,
+  isExemptBot,
   parseSignatures,
   serialiseSignatures,
 } from "../../../../scripts/cla/cla.mjs";
@@ -68,7 +71,7 @@ const signature = (login: string, id: number) => ({
 
 const evaluateWith = (overrides: Record<string, unknown> = {}) =>
   evaluate({
-    ownerLogin: "mooship",
+    ownerId: owner.id,
     pullAuthor: ada,
     commits: [commit(ada)],
     commitTotal: 1,
@@ -308,12 +311,102 @@ describe("who needs to agree", () => {
     expect(result.agreed).toBe(true);
   });
 
-  it("exempts bots such as Dependabot and GitHub Actions", () => {
+  it("does not exempt an account that holds the owner's login under another id", () => {
+    const renamed = user("mooship", 999);
+    const result = evaluateWith({
+      pullAuthor: renamed,
+      commits: [commit(renamed)],
+    });
+    expect(result.required.map((r: User) => r.id)).toEqual([999]);
+    expect(result.agreed).toBe(false);
+  });
+
+  it("exempts nobody as the owner when the owner's id is unknown", () => {
+    const result = evaluateWith({
+      ownerId: undefined,
+      pullAuthor: owner,
+      commits: [commit(owner)],
+    });
+    expect(result.required.map((r: User) => r.login)).toEqual(["mooship"]);
+  });
+
+  it("exempts Dependabot, matched by its account id", () => {
     const dependabot = user("dependabot[bot]", 49699333, "Bot");
-    const actions = user("github-actions[bot]", 41898282, "Bot");
     const result = evaluateWith({
       pullAuthor: dependabot,
-      commits: [commit(dependabot), commit(actions)],
+      commits: [commit(dependabot), commit(dependabot)],
+      commitTotal: 2,
+    });
+    expect(result.required).toEqual([]);
+    expect(result.agreed).toBe(true);
+  });
+
+  it("exempts each listed bot by id, whatever login or type the API reports", () => {
+    for (const listed of EXEMPT_BOTS) {
+      const account = user(`renamed-${listed.login}`, listed.id, "User");
+      expect(isExemptBot(account)).toBe(true);
+      const result = evaluateWith({
+        pullAuthor: account,
+        commits: [commit(account)],
+      });
+      expect(result.required).toEqual([]);
+    }
+  });
+
+  it("lists only Dependabot, by the id GitHub reports for it", () => {
+    expect(EXEMPT_BOTS).toEqual([{ login: "dependabot[bot]", id: 49699333 }]);
+    expect(Object.isFrozen(EXEMPT_BOTS)).toBe(true);
+  });
+
+  it("does not exempt an arbitrary account of type Bot", () => {
+    const appBot = user("someones-app[bot]", 123456789, "Bot");
+    expect(isExemptBot(appBot)).toBe(false);
+    const result = evaluateWith({
+      pullAuthor: appBot,
+      commits: [commit(appBot)],
+    });
+    expect(result.required.map((r: User) => r.login)).toEqual([
+      "someones-app[bot]",
+    ]);
+    expect(result.agreed).toBe(false);
+  });
+
+  it("does not exempt GitHub Actions, which opens no pull requests here", () => {
+    const actions = user("github-actions[bot]", 41898282, "Bot");
+    const result = evaluateWith({
+      pullAuthor: ada,
+      commits: [commit(ada), commit(actions)],
+      commitTotal: 2,
+      comments: [comment(ada, AGREEMENT_SENTENCE)],
+    });
+    expect(result.missing.map((r: User) => r.login)).toEqual([
+      "github-actions[bot]",
+    ]);
+    expect(result.agreed).toBe(false);
+  });
+
+  it("does not exempt a bot-typed commit author that uses Dependabot's login under another id", () => {
+    const impostor = user("dependabot[bot]", 777, "Bot");
+    const result = evaluateWith({
+      commits: [commit(ada), commit(impostor)],
+      commitTotal: 2,
+      comments: [comment(ada, AGREEMENT_SENTENCE)],
+    });
+    expect(result.missing.map((r: User) => r.id)).toEqual([777]);
+    expect(result.agreed).toBe(false);
+  });
+
+  it("treats an account with no id as not a listed bot", () => {
+    expect(isExemptBot({ login: "dependabot[bot]", type: "Bot" })).toBe(false);
+    expect(isExemptBot(null)).toBe(false);
+    expect(isExemptBot(undefined)).toBe(false);
+  });
+
+  it("still exempts a Dependabot commit on a pull request someone else opened", () => {
+    const dependabot = user("dependabot[bot]", 49699333, "Bot");
+    const result = evaluateWith({
+      pullAuthor: owner,
+      commits: [commit(dependabot), commit(owner)],
       commitTotal: 2,
     });
     expect(result.required).toEqual([]);
@@ -749,6 +842,47 @@ describe("the CLA status", () => {
   });
 });
 
+describe("the status of a commit shared by several pull requests", () => {
+  const agreed = () =>
+    evaluateWith({ comments: [comment(ada, AGREEMENT_SENTENCE)] });
+
+  it("succeeds when this pull request has agreed and no other is waiting", () => {
+    expect(buildCommitStatus(agreed(), [])).toEqual(buildStatus(agreed()));
+    expect(buildCommitStatus(agreed())).toEqual({
+      state: "success",
+      description: "All contributors have agreed to the CLA",
+    });
+  });
+
+  it("fails, naming the other pull request, when one with the same head is waiting", () => {
+    expect(buildCommitStatus(agreed(), [12])).toEqual({
+      state: "failure",
+      description:
+        "Waiting for the CLA on pull request #12, which has the same head commit",
+    });
+  });
+
+  it("names every other pull request that is waiting", () => {
+    expect(buildCommitStatus(agreed(), [12, 15]).description).toBe(
+      "Waiting for the CLA on pull requests #12, #15, which have the same head commit",
+    );
+  });
+
+  it("gives this pull request's own reason when it has not agreed", () => {
+    expect(buildCommitStatus(evaluateWith(), [12])).toEqual(
+      buildStatus(evaluateWith()),
+    );
+  });
+
+  it("stays within GitHub's 140 character limit", () => {
+    const many = Array.from({ length: 40 }, (_, i) => 10000 + i);
+    const status = buildCommitStatus(agreed(), many);
+    expect(status.state).toBe("failure");
+    expect(status.description.length).toBeLessThanOrEqual(140);
+    expect(status.description.endsWith("...")).toBe(true);
+  });
+});
+
 describe("the explanatory comment", () => {
   const pending = () => evaluateWith();
   const done = () =>
@@ -827,6 +961,23 @@ describe("the explanatory comment", () => {
     expect(text).toContain("`ada`, `grace`");
     expect(text).not.toContain(`> ${AGREEMENT_SENTENCE}`);
     expect(text).not.toMatch(/@\w/);
+  });
+
+  it("does not call the check green while another pull request for the commit is waiting", () => {
+    const text = buildComment(done(), {
+      claUrl: CLA_URL,
+      waitingPulls: [12, 15],
+    });
+    expect(text).toMatch(/have agreed/);
+    expect(text).not.toMatch(/is green/);
+    expect(text).toContain("#12, #15");
+    expect(isAgreementComment(text)).toBe(false);
+  });
+
+  it("calls the check green when no other pull request is waiting", () => {
+    expect(buildComment(done(), { claUrl: CLA_URL, waitingPulls: [] })).toMatch(
+      /is green/,
+    );
   });
 
   it("changes from waiting to agreed when the missing person agrees", () => {

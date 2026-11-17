@@ -70,7 +70,21 @@ const signature = (login: string, id: number) => ({
   claVersion: "1.0",
 });
 
+/** Another open pull request, beside number 7, that the fake knows about. */
+interface OtherPull {
+  number: number;
+  user: User;
+  /** Its head commit; the head of pull request 7 when left out. */
+  headSha?: string;
+  commits?: Array<ReturnType<typeof commit>>;
+  comments?: Array<ReturnType<typeof comment>>;
+  /** What reading it on its own reports; the list always says "open". */
+  stateOnRead?: string;
+}
+
 interface World {
+  /** Open pull requests other than number 7. */
+  otherPulls?: OtherPull[];
   /** The pull request author; null models a deleted account. */
   pullAuthor?: User | null;
   commits?: Array<ReturnType<typeof commit>>;
@@ -140,9 +154,37 @@ function makeWorld(init: World = {}) {
   const stored = (body: string) =>
     init.crlf ? body.replace(/\r?\n/g, "\r\n") : body;
 
+  const others = init.otherPulls ?? [];
+  const other = (params: Params, key: "pull_number" | "issue_number") =>
+    others.find((item) => item.number === params[key]);
+
   const pulls = {
+    list: async (params: Params) => {
+      enter("pulls.list", params);
+      const open = [
+        { number: 7, state: "open", head: { sha: HEAD } },
+        ...others.map((item) => ({
+          number: item.number,
+          state: "open",
+          head: { sha: item.headSha ?? HEAD },
+        })),
+      ];
+      return page(open, params);
+    },
     get: async (params: Params) => {
       enter("pulls.get", params);
+      const found = other(params, "pull_number");
+      if (found) {
+        return {
+          data: {
+            number: found.number,
+            state: found.stateOnRead ?? "open",
+            user: found.user,
+            head: { sha: found.headSha ?? HEAD },
+            commits: (found.commits ?? [commit(found.user)]).length,
+          },
+        };
+      }
       const shas = init.headShas ?? [HEAD];
       const sha = shas[Math.min(state.reads, shas.length - 1)];
       state.reads += 1;
@@ -158,12 +200,20 @@ function makeWorld(init: World = {}) {
     },
     listCommits: async (params: Params) => {
       enter("pulls.listCommits", params);
+      const found = other(params, "pull_number");
+      if (found) {
+        return page(found.commits ?? [commit(found.user)], params);
+      }
       return page(init.commits ?? [commit(ada)], params);
     },
   };
   const issues = {
     listComments: async (params: Params) => {
       enter("issues.listComments", params);
+      const found = other(params, "issue_number");
+      if (found) {
+        return page(found.comments ?? [], params);
+      }
       return page(state.comments, params);
     },
     createComment: async (params: Params) => {
@@ -306,10 +356,12 @@ function makeWorld(init: World = {}) {
 }
 
 const repo = { owner: "mooship", repo: "karta" };
+/** The repository as the event payload describes it, with its owner's id. */
+const repository = { owner: { login: owner.login, id: owner.id } };
 const pullRequestEvent = {
   eventName: "pull_request_target",
   repo,
-  payload: { action: "opened", pull_request: { number: 7 } },
+  payload: { action: "opened", pull_request: { number: 7 }, repository },
 };
 const commentEvent = ({
   isPull = true,
@@ -326,6 +378,7 @@ const commentEvent = ({
   repo,
   payload: {
     action: "created",
+    repository,
     issue: {
       number: 7,
       user: issueAuthor,
@@ -482,21 +535,39 @@ describe("run: repository administrators", () => {
     expect(world.logs.failed).toEqual([]);
   });
 
-  it("does not look up bots", async () => {
+  it("does not look up a listed bot", async () => {
     const world = makeWorld({
       pullAuthor: dependabot,
-      commits: [commit(dependabot), commit(bot)],
+      commits: [commit(dependabot), commit(dependabot)],
     });
     await run({ ...world, context: pullRequestEvent });
     expect(lastState(world)).toBe("success");
     expect(permissionCalls(world)).toEqual([]);
   });
 
-  it("still exempts the owner's login without a lookup", async () => {
+  it("needs an agreement from a bot that is not on the list", async () => {
+    const appBot = user("someones-app[bot]", 123456789, "Bot");
+    const world = makeWorld({ pullAuthor: appBot, commits: [commit(appBot)] });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("failure");
+    expect(String(statuses(world)[0]?.params.description)).toContain(
+      "someones-app[bot]",
+    );
+  });
+
+  it("still exempts the owner without a lookup, matched by the owner's id", async () => {
     const world = makeWorld({ pullAuthor: owner, commits: [commit(owner)] });
     await run({ ...world, context: pullRequestEvent });
     expect(lastState(world)).toBe("success");
     expect(permissionCalls(world)).toEqual([]);
+  });
+
+  it("does not exempt an account that took the owner's login, with another id", async () => {
+    const taken = user(owner.login, 999);
+    const world = makeWorld({ pullAuthor: taken, commits: [commit(taken)] });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("failure");
+    expect(permissionCalls(world)).toHaveLength(1);
   });
 
   it("looks each distinct login up once, whatever its case", async () => {
@@ -1040,6 +1111,19 @@ describe("run: Dependabot and a read-only token", () => {
     expect(world.logs.notices).toEqual([]);
   });
 
+  it("treats a 403 on the pull request of a bot that is not on the list as a real failure", async () => {
+    const appBot = user("someones-app[bot]", 123456789, "Bot");
+    const world = makeWorld({
+      pullAuthor: appBot,
+      commits: [commit(appBot)],
+      failOn: readOnly,
+    });
+    await expect(run({ ...world, context: pullRequestEvent })).rejects.toThrow(
+      "HTTP 403",
+    );
+    expect(world.logs.notices).toEqual([]);
+  });
+
   it("treats other failures on a bot's pull request as real failures", async () => {
     const world = makeWorld({
       pullAuthor: dependabot,
@@ -1145,6 +1229,179 @@ describe("run: the status", () => {
     });
     await run({ ...world, context: pullRequestEvent });
     expect(lastState(world)).toBe("success");
+  });
+});
+
+describe("run: other open pull requests with the same head commit", () => {
+  const OTHER_HEAD = "otherhead000000000000000000000000000000";
+  const agreed = { comments: [agreement(ada, 10)] };
+  const listCalls = (world: WorldHandle) => named(world.calls, "pulls.list");
+
+  it("fails the commit, naming the other pull request, when it has not agreed", async () => {
+    const world = makeWorld({
+      ...agreed,
+      otherPulls: [{ number: 8, user: grace }],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(statuses(world)).toHaveLength(1);
+    expect(statuses(world)[0]?.params).toMatchObject({
+      sha: HEAD,
+      state: "failure",
+    });
+    expect(String(statuses(world)[0]?.params.description)).toContain("#8");
+    expectNoSuccess(world);
+  });
+
+  it("fails the commit when a different base gives the other pull request an unagreed commit", async () => {
+    const world = makeWorld({
+      ...agreed,
+      otherPulls: [
+        {
+          number: 8,
+          user: ada,
+          commits: [commit(ada), commit(grace)],
+          comments: [agreement(ada, 20)],
+        },
+      ],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("failure");
+    expect(String(statuses(world)[0]?.params.description)).toContain("#8");
+  });
+
+  it("passes when every open pull request for the commit has agreed", async () => {
+    const world = makeWorld({
+      ...agreed,
+      otherPulls: [
+        { number: 8, user: grace, comments: [agreement(grace, 20)] },
+      ],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("success");
+    expect(listCalls(world)[0]?.params).toMatchObject({
+      owner: "mooship",
+      repo: "karta",
+      state: "open",
+      per_page: 100,
+    });
+    expect(
+      named(world.calls, "pulls.listCommits").map((c) => c.params.pull_number),
+    ).toEqual([7, 8]);
+  });
+
+  it("reads the other pull request's own comments, not this one's", async () => {
+    const world = makeWorld({
+      comments: [agreement(ada, 10), agreement(grace, 11)],
+      otherPulls: [{ number: 8, user: grace }],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("failure");
+  });
+
+  it("ignores open pull requests whose head is another commit", async () => {
+    const world = makeWorld({
+      ...agreed,
+      otherPulls: [{ number: 8, user: grace, headSha: OTHER_HEAD }],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("success");
+    expect(
+      named(world.calls, "pulls.listCommits").map((c) => c.params.pull_number),
+    ).toEqual([7]);
+  });
+
+  it("ignores a pull request that closed after the list was read", async () => {
+    const world = makeWorld({
+      ...agreed,
+      otherPulls: [{ number: 8, user: grace, stateOnRead: "closed" }],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("success");
+  });
+
+  it("ignores a pull request whose head moved after the list was read", async () => {
+    const world = makeWorld({
+      ...agreed,
+      otherPulls: [{ number: 8, user: grace }],
+    });
+    const getOther = world.github.rest.pulls.get;
+    world.github.rest.pulls.get = async (params: Params) => {
+      const answer = await getOther(params);
+      if (params.pull_number === 8) {
+        return {
+          data: { ...answer.data, head: { sha: OTHER_HEAD } },
+        } as typeof answer;
+      }
+      return answer;
+    };
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("success");
+  });
+
+  it("finds a waiting pull request on the second page of open pull requests", async () => {
+    const unrelated = Array.from({ length: 100 }, (_, i) => ({
+      number: 100 + i,
+      user: grace,
+      headSha: OTHER_HEAD,
+    }));
+    const world = makeWorld({
+      ...agreed,
+      otherPulls: [...unrelated, { number: 300, user: grace }],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    expect(lastState(world)).toBe("failure");
+    expect(String(statuses(world)[0]?.params.description)).toContain("#300");
+    expect(listCalls(world).map((c) => c.params.page)).toEqual([1, 2]);
+  });
+
+  it("sets an error, never a pass, when the open pull requests cannot be listed", async () => {
+    const world = makeWorld({
+      ...agreed,
+      failOn: { "pulls.list": { status: 500 } },
+    });
+    await expect(run({ ...world, context: pullRequestEvent })).rejects.toThrow(
+      "HTTP 500",
+    );
+    expect(lastState(world)).toBe("error");
+    expectNoSuccess(world);
+  });
+
+  it("sets an error, never a pass, when another pull request cannot be checked", async () => {
+    const world = makeWorld({
+      ...agreed,
+      otherPulls: [{ number: 8, user: grace }],
+    });
+    const listCommits = world.github.rest.pulls.listCommits;
+    world.github.rest.pulls.listCommits = async (params: Params) => {
+      if (params.pull_number === 8) {
+        throw Object.assign(new Error("HTTP 502"), { status: 502 });
+      }
+      return listCommits(params);
+    };
+    await expect(run({ ...world, context: pullRequestEvent })).rejects.toThrow(
+      "HTTP 502",
+    );
+    expect(lastState(world)).toBe("error");
+    expectNoSuccess(world);
+  });
+
+  it("keeps this pull request's own reason when it has not agreed itself", async () => {
+    const world = makeWorld({ otherPulls: [{ number: 8, user: grace }] });
+    await run({ ...world, context: pullRequestEvent });
+    expect(statuses(world)[0]?.params.description).toBe(
+      "Waiting for the CLA from: ada",
+    );
+  });
+
+  it("tells this pull request which other one is holding the check back", async () => {
+    const world = makeWorld({
+      comments: [botComment(`${COMMENT_MARKER}\nold text`), agreement(ada, 10)],
+      otherPulls: [{ number: 8, user: grace }],
+    });
+    await run({ ...world, context: pullRequestEvent });
+    const updates = named(world.calls, "issues.updateComment");
+    expect(String(updates[0]?.params.body)).toContain("#8");
+    expect(String(updates[0]?.params.body)).not.toMatch(/is green/);
   });
 });
 
