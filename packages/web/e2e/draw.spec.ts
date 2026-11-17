@@ -5,6 +5,7 @@ import type { Locator } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { copiedText, scriptClipboard } from "./support/services";
+import { collapseCredits, waitForStableLayout } from "./support/states";
 
 /** Paris, at a zoom where a few hundred pixels is a few hundred metres. */
 const START = "#map=15.00/48.85660/2.35220";
@@ -73,6 +74,77 @@ async function outline(mapPage: MapPage): Promise<string> {
       .last()
       .getAttribute("points")) ?? ""
   );
+}
+
+/**
+ * The toolbar and the bottom slots above it must not move when the first
+ * measure appears (#288): the readout row reserves a line for the status and
+ * one for the measures from the start, so the measure never adds height, in
+ * either language, on the smallest screen and with enlarged text.
+ */
+const MEASURE_APPEARS_CASES = [
+  { name: "a phone", width: 390, height: 844, fontSize: null },
+  { name: "a small phone", width: 320, height: 568, fontSize: null },
+  {
+    name: "a phone with text at 150 percent",
+    width: 390,
+    height: 844,
+    fontSize: "150%",
+  },
+] as const;
+
+for (const language of ["en", "af"] as const) {
+  test.describe(`draw readout (${language})`, () => {
+    test.use({
+      reducedMotion: "reduce",
+      fastCredits: true,
+      language: language === "af" ? "af" : null,
+    });
+
+    for (const { name, width, height, fontSize } of MEASURE_APPEARS_CASES) {
+      test(`keeps the toolbar and the bottom slots still when the first measure appears on ${name}`, async ({
+        page,
+        mapPage,
+      }) => {
+        await page.setViewportSize({ width, height });
+        await mapPage.goto(START);
+        await collapseCredits(mapPage);
+        if (fontSize !== null) {
+          await page.evaluate((size) => {
+            document.documentElement.style.fontSize = size;
+          }, fontSize);
+        }
+        await mapPage.startDrawing();
+        const map = await mapPage.mapSize();
+        const first: [number, number] = [map.width * 0.3, map.height * 0.3];
+        const second: [number, number] = [map.width * 0.5, map.height * 0.3];
+        const third: [number, number] = [map.width * 0.4, map.height * 0.2];
+        const layout = async () => {
+          await waitForStableLayout(page);
+          const boxes = await Promise.all(
+            [
+              mapPage.drawToolbar,
+              page.locator('[data-chrome="bottom-end"]'),
+            ].map((locator) => locator.boundingBox()),
+          );
+          return boxes.map((box) => [box?.y, box?.height]);
+        };
+
+        await mapPage.tapMap(first);
+        await expect(mapPage.drawUndo).toBeEnabled();
+        await expect(mapPage.drawMeasure).toHaveCount(0);
+        const withoutMeasure = await layout();
+
+        await mapPage.tapMap(second);
+        await expect(mapPage.drawMeasure).toBeVisible();
+        expect(await layout()).toEqual(withoutMeasure);
+
+        await mapPage.tapMap(third);
+        await expect(mapPage.drawMeasure).toContainText("·");
+        expect(await layout()).toEqual(withoutMeasure);
+      });
+    }
+  });
 }
 
 test.describe("draw", () => {
