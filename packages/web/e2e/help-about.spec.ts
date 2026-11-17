@@ -66,7 +66,8 @@ test.describe("the About block in Help", () => {
   test("makes no request to GitHub", async ({ page, mapPage }) => {
     const requests: string[] = [];
     page.on("request", (request) => {
-      if (new URL(request.url()).hostname.endsWith("github.com")) {
+      const { hostname } = new URL(request.url());
+      if (hostname === "github.com" || hostname.endsWith(".github.com")) {
         requests.push(request.url());
       }
     });
