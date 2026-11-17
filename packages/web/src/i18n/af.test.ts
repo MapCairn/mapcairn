@@ -183,6 +183,21 @@ describe("the Afrikaans catalogue", () => {
     expect(AF_CATALOGUE["duration.short.hour"]).toBe("{count} uur");
   });
 
+  it("uses one term for each concept, not the variants it once had", () => {
+    const variants: Array<[RegExp, string]> = [
+      [/soekkassie/i, "soekbalk, for the search box"],
+      [/roeteringsdiens/i, "roetediens, for the routing service"],
+      [/vervoerwyse/i, "manier van reis, for the way of travelling"],
+      [/ongeveer/i, "sowat, for about"],
+      [/kaarteël/i, "kaartteël, for a map tile"],
+      [/\bwel eël/i, "teël, for a tile"],
+    ];
+    for (const [pattern, use] of variants) {
+      const found = KEYS.filter((key) => pattern.test(AF_CATALOGUE[key]));
+      expect(found, `use ${use}`).toEqual([]);
+    }
+  });
+
   it("keeps UTC wherever the English says a time is in UTC", () => {
     const dropped = KEYS.filter(
       (key) =>

@@ -412,7 +412,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "app.tour.welcome.text":
     "Data soos aardbewings en brande word eers geteken wanneer jy die laag aanskakel. Hierdie toer van drie stappe wys hoe.",
   "app.tour.welcome.announcement":
-    "Nuut by MapCairn? 'n Toer van drie stappe volg ná die soekkassie, met Begin die toer en Slaan oor.",
+    "Nuut by MapCairn? 'n Toer van drie stappe volg ná die soekbalk, met Begin die toer en Slaan oor.",
   "app.tour.ending.heading": "Toer klaar",
   "app.tour.ending.text": "Hulp, in Instellings, kan dit weer begin.",
   // Short durations
@@ -558,7 +558,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "tools.tour.skip": "Slaan oor",
   "tools.tour.next": "Verder",
   "tools.tour.finish": "Klaar",
-  "tools.tour.skipTour": "Stop toer",
+  "tools.tour.skipTour": "Slaan toer oor",
   "tools.tour.close": "Maak toe",
   "tools.tour.stepAnnouncement": "{progress}, {heading}. {text}",
   "tools.tour.finished": "Toer klaar.",
@@ -772,7 +772,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layer.gdacs.key.1": "Groen waarskuwing",
   "layer.gdacs.key.2": "Oranje waarskuwing",
   "layer.gdacs.key.3": "Rooi waarskuwing",
-  "layer.gdacs.key.4": "Geen waarskuwing",
+  "layer.gdacs.key.4": "Geen waarskuwingsvlak",
   "layer.gdacs.card.link": "Verslag op GDACS",
   "layer.gdacs.sort.newest": "Nuutste",
   "layer.gdacs.sort.alert": "Hoogste waarskuwing",
@@ -819,9 +819,9 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Gaan terug: los 'n punt, kanselleer die vorm en maak dan die tekening toe",
   "host.map.keyInstruction": "{keys}: {description}.",
   "host.notes.privacy":
-    "MapCairn het geen rekeninge nie, stel geen koekies nie en tel bladsybesoeke sonder om jou te volg. Kaarteëls kom van die kaartverskaffer wat jy kies. Terwyl jy in die soekbalk tik, word die teks tot nou toe gestuur na die Photon-diens, wat komoot bedryf, om plekke voor te stel. As jy Enter of Soek druk, word jou soekvraag na OpenStreetMap se Nominatim-diens gestuur, en Soek adres op 'n speld stuur die speld se ligging, tot op ongeveer 11 m, ook na Nominatim. Niks word na een van die dienste gestuur voordat jy in die soekbalk tik of 'n adres opvra nie, en 'n paar koördinate wat jy in die soekbalk tik, word nie na hulle gestuur nie, al laai die kaart wel eëls vir daardie gebied om die plek te wys, soos by enige kaartbeweging. 'n Datalaag kontak sy verskaffer net solank dit aan is. Jou instellings bly op hierdie toestel.",
+    "MapCairn het geen rekeninge nie, stel geen koekies nie en tel bladsybesoeke sonder om jou te volg. Kaartteëls kom van die kaartverskaffer wat jy kies. Terwyl jy in die soekbalk tik, word die teks tot nou toe gestuur na die Photon-diens, wat komoot bedryf, om plekke voor te stel. As jy Enter of Soek druk, word jou soekvraag na OpenStreetMap se Nominatim-diens gestuur, en Soek adres op 'n speld stuur die speld se ligging, tot op sowat 11 m, ook na Nominatim. Niks word na een van die dienste gestuur voordat jy in die soekbalk tik of 'n adres opvra nie, en 'n paar koördinate wat jy in die soekbalk tik, word nie na hulle gestuur nie, al laai die kaart wel teëls vir daardie gebied om die plek te wys, soos by enige kaartbeweging. 'n Datalaag kontak sy verskaffer net solank dit aan is. Jou instellings bly op hierdie toestel.",
   "host.notes.pinLookup":
-    "Stuur die speld se ligging, tot op ongeveer 11 m, na OpenStreetMap se Nominatim-diens.",
+    "Stuur die speld se ligging, tot op sowat 11 m, na OpenStreetMap se Nominatim-diens.",
   "host.notes.routing":
-    "Niks word gestuur voordat jy dit vra nie. Kry roete stuur die stoppe en die vervoerwyse, en 'n reistydgebied stuur die eerste stop, saam met jou IP-adres, na die Valhalla-roeteringsdiens wat FOSSGIS bedryf. Dit gebruik OpenStreetMap-data.",
+    "Niks word gestuur voordat jy dit vra nie. Kry roete stuur die stoppe en die manier van reis, en 'n reistydgebied stuur die eerste stop, saam met jou IP-adres, na die Valhalla-roetediens wat FOSSGIS bedryf. Dit gebruik OpenStreetMap-data.",
 };
