@@ -367,9 +367,6 @@ describe("MapChrome layout", () => {
     expect(cssVar(chromeVars.bottomLift)).toBe(
       `${expected.bottomEndTranslateY}px`,
     );
-    expect(cssVar(chromeVars.bottomCentreLift)).toBe(
-      `${expected.bottomEndTranslateY}px`,
-    );
     expect(root()).toHaveAttribute("data-hide-bottom", "false");
     // The end stack now stops above the lifted bottom row.
     expect(surfaceValue.endStackMaxHeight).toBe(
@@ -432,21 +429,6 @@ describe("MapChrome layout", () => {
     expect(slot("tour")).toHaveAttribute("data-crowded", "false");
   });
 
-  it("hides the tour card while a tall measure toolbar lifts the bottom row to it, and shows it again", () => {
-    mount({ tour: <div>tour</div> });
-    resize(390, 800, 190);
-    act(() => {
-      layoutValue.publishToolbarTop(300);
-    });
-    expect(slot("tour")).toHaveAttribute("data-crowded", "true");
-    expect(surfaceValue.tourHidden).toBe(true);
-    act(() => {
-      layoutValue.publishToolbarTop(null);
-    });
-    expect(slot("tour")).toHaveAttribute("data-crowded", "false");
-    expect(surfaceValue.tourHidden).toBe(false);
-  });
-
   it("hides the tour card while something tall in bottom-centre lifts the bottom row to it, and shows it again", () => {
     mount({ tour: <div>tour</div> });
     resize(390, 800, 190);
@@ -473,28 +455,36 @@ describe("MapChrome layout", () => {
     expect(surfaceValue.tourHidden).toBe(false);
   });
 
-  it("lifts the start and end slots above the measure toolbar, but not the toolbar", () => {
+  it("raises the start and end slots above the bottom-centre slot by its own height, in the observer's callback, and not the slot itself", () => {
     mount();
     resize(390, 800);
+    expect(cssVar(chromeVars.bottomRaise)).toBe("0px");
+    // The slot's own height and the gap the row keeps to the bottom edge.
+    place("bottom-centre", 800 - 12 - 88, 88);
     act(() => {
-      layoutValue.publishToolbarTop(700);
+      observers.trigger();
     });
-    expect(cssVar(chromeVars.bottomLift)).toBe(`${700 - 12 - (800 - 12)}px`);
-    expect(cssVar(chromeVars.bottomCentreLift)).toBe("0px");
-    act(() => {
-      layoutValue.publishToolbarTop(null);
-    });
+    expect(cssVar(chromeVars.bottomRaise)).toBe(`${-(88 + 12)}px`);
+    // The sheet's lift is a separate variable, so the slots slide with the
+    // sheet and not with the toolbar.
     expect(cssVar(chromeVars.bottomLift)).toBe("0px");
+    place("bottom-centre", 800 - 12, 0);
+    act(() => {
+      observers.trigger();
+    });
+    expect(cssVar(chromeVars.bottomRaise)).toBe("0px");
   });
 
-  it("treats anything shown in bottom-centre as an obstruction", () => {
+  it("treats anything shown in bottom-centre as an obstruction for the room it leaves", () => {
     mount();
     resize(390, 800);
     place("bottom-centre", 800 - 12 - 40, 40);
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.bottomLift)).toBe(`${800 - 12 - 40 - 12 - 788}px`);
+    expect(cssVar(chromeVars.bottomRaise)).toBe(`${-(40 + 12)}px`);
+    // The end stack stops a gap above the raised row.
+    expect(surfaceValue.endStackMaxHeight).toBe(744 - 52 - 12 - 72);
   });
 
   it("moves bottom-start clear of the side panel", () => {
@@ -526,9 +516,9 @@ describe("MapChrome layout", () => {
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.bottomLift)).not.toBe("0px");
+    expect(cssVar(chromeVars.bottomRaise)).not.toBe("0px");
     rerenderChrome({ bottomCentre: undefined });
-    expect(cssVar(chromeVars.bottomLift)).toBe("0px");
+    expect(cssVar(chromeVars.bottomRaise)).toBe("0px");
   });
 
   it("keeps each slot's ref stable across renders", () => {
@@ -651,7 +641,7 @@ describe("MapChrome map key slot", () => {
     place("bottom-centre", 700, 88);
     placeKey(60, 688);
     act(() => {
-      layoutValue.publishToolbarTop(700);
+      observers.trigger();
     });
     const lift = 700 - 12 - (800 - 12);
     // Target bottom: the lifted scale bar's top (744 + lift) a gap above.
@@ -663,14 +653,16 @@ describe("MapChrome map key slot", () => {
     resize(320, 568);
     placeKey(60, 500);
     // A tall toolbar lifts the bottom row to 150, leaving 10 px under the pill.
+    place("bottom-centre", 150, 406);
     act(() => {
-      layoutValue.publishToolbarTop(150);
+      observers.trigger();
     });
     expect(cssVar(chromeVars.mapKeyRoom)).toBe("48px");
     expect(slot("map-key")).toHaveAttribute("data-crowded", "true");
     expect(slot("map-key")).toHaveAttribute("inert");
+    place("bottom-centre", 556, 0);
     act(() => {
-      layoutValue.publishToolbarTop(null);
+      observers.trigger();
     });
     expect(slot("map-key")).toHaveAttribute("data-crowded", "false");
     expect(slot("map-key")).not.toHaveAttribute("inert");

@@ -10,7 +10,6 @@ describe("useChromeLayout", () => {
     const { result } = renderHook(() => useChromeLayout());
     expect(result.current.layout).toBe("sheet");
     expect(() => result.current.publishSheetTop(10)).not.toThrow();
-    expect(() => result.current.publishToolbarTop(null)).not.toThrow();
   });
 
   it("returns the provided value", () => {
@@ -21,7 +20,6 @@ describe("useChromeLayout", () => {
       finePointer: false,
       panelEdge: 412,
       publishSheetTop,
-      publishToolbarTop: vi.fn(),
     };
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ChromeLayoutProvider value={value}>{children}</ChromeLayoutProvider>

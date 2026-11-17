@@ -34,12 +34,20 @@ export const chromeVars = {
    * stack rather than under it: from the gap below the top-start slot.
    */
   bottomEndBesideRoom: "--chrome-bottom-end-beside-room",
-  /** Vertical shift of the bottom-start and bottom-end slots (zero or negative). */
+  /**
+   * Vertical shift of the bottom slots from the sheet alone (zero or
+   * negative). It is a `transform`, so it slides with the sheet.
+   */
   bottomLift: "--chrome-bottom-lift",
+  /**
+   * How much further the bottom-start and bottom-end slots rise to clear the
+   * bottom-centre slot (zero or negative). It is the `translate` property,
+   * which no transition covers, and `MapChrome` sets it in the observer
+   * callback that sees the slot change size, so it lands in the same frame.
+   */
+  bottomRaise: "--chrome-bottom-raise",
   /** Horizontal shift of the bottom-start slot (zero or positive). */
   bottomStartX: "--chrome-bottom-start-x",
-  /** Vertical shift of the bottom-centre slot, from the sheet alone (zero or negative). */
-  bottomCentreLift: "--chrome-bottom-centre-lift",
   /**
    * The tallest the map key may be before it scrolls: the room between the
    * search pill (or the tour card, while it shows) and the lifted bottom row.

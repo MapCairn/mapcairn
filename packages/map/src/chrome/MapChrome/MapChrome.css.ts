@@ -144,11 +144,20 @@ const hidden = {
 
 const whenHidden = `${root}[data-hide-bottom="true"] &`;
 
+/**
+ * The bottom row's rise above the bottom-centre slot. It is the `translate`
+ * property, which the slots' transitions do not list, so it follows the
+ * slot's height in the frame the slot changes, while `transform` slides with
+ * the sheet.
+ */
+const raise = `0 ${chromeVar(chromeVars.bottomRaise, "0px")}`;
+
 /** Scale and coordinates. Rides above the sheet and moves right of the panel. */
 export const bottomStart = style({
   ...bottomBase,
   gridArea: "start",
   justifySelf: "start",
+  translate: raise,
   transform: `translate(${shiftX}, ${chromeVar(chromeVars.bottomLift, "0px")})`,
   selectors: {
     [whenHidden]: hidden,
@@ -170,11 +179,11 @@ export const bottomCentre = style({
   gridColumn: "1 / -1",
   justifySelf: "center",
   maxWidth: `calc(100% - ${shiftX})`,
-  transform: `translate(calc(${shiftX} / 2), ${chromeVar(chromeVars.bottomCentreLift, "0px")})`,
+  transform: `translate(calc(${shiftX} / 2), ${chromeVar(chromeVars.bottomLift, "0px")})`,
   selectors: {
     [whenHidden]: hidden,
     '[dir="rtl"] &': {
-      transform: `translate(calc(${shiftX} / -2), ${chromeVar(chromeVars.bottomCentreLift, "0px")})`,
+      transform: `translate(calc(${shiftX} / -2), ${chromeVar(chromeVars.bottomLift, "0px")})`,
     },
   },
 });
@@ -242,6 +251,7 @@ export const bottomEnd = style({
   ...bottomBase,
   gridArea: "end-bottom",
   justifySelf: "end",
+  translate: raise,
   transform: `translateY(${chromeVar(chromeVars.bottomLift, "0px")})`,
   selectors: { [whenHidden]: hidden },
 });
