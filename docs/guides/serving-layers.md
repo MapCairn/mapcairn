@@ -50,7 +50,7 @@ The page keeps every response, a query response as well as a feed, for at least 
 
 ## Services that speak open standards
 
-A team's own services often speak OGC API Features, WMS or WMTS. The existing layer kinds can request all three, with the definition written by hand: MapCairn never reads a service's capabilities document, so the host copies the layer name, style, format and tile matrix set out of it. The examples use invented hosts under `example.org`. The tests in `packages/core/src/layers/openStandards.test.ts` validate each definition with `validateLayerDefinition`, build the request the engine or the query would send, and compare it to the shape the standard defines. They also fail if a URL below stops matching the test.
+A team's own services often speak OGC API Features, WMS or WMTS. The existing layer kinds can request all three, with the definition written by hand: MapCairn never reads a service's capabilities document, so the host copies the layer name, style, format and tile matrix set out of it. The examples use invented hosts under `example.org`. The tests in `packages/core/src/layers/openStandards.test.ts` validate each definition with `validateLayerDefinition`, build the request the engine or the query would send, and compare it to the shape the standard defines. They also fail if a URL, tile size, zoom limit, feature cap or field map shown below stops matching the test.
 
 Three limits hold for all three:
 
@@ -60,7 +60,7 @@ Three limits hold for all three:
 
 ### OGC API Features
 
-An items resource that takes a `bbox` and a `limit` is a `query` source.
+An items resource that takes a `bbox` and a `limit` is a `query` source. The `f=json` in the URL below is a convention some servers use to pick the format, not part of the standard (see "Format" below), so remove it if your service rejects unknown parameters.
 
 ```ts
 import type { FeedLayerDefinition, PointStyle } from "@mapcairn/core";
@@ -99,10 +99,10 @@ For a view over Cape Town the request is `.../items?f=json&bbox=18.2,-34.1,18.7,
 
 What does not work:
 
-- **Paging.** A `next` link is not followed. The layer keeps the first `maxFeatures` of one response and says to zoom in. A service that caps `limit` below `maxFeatures + 1` sends a shorter page and the layer cannot tell that more exist, so set `maxFeatures` below the service's own maximum.
+- **Paging.** A `next` link is not followed. The layer keeps the first `maxFeatures` of one response and says to zoom in. A service that caps `limit` below `maxFeatures + 1` may send a shorter page, and the layer then cannot tell that more exist, or may refuse the request (a strict service can answer HTTP 400 for a `limit` above its declared maximum). Set `maxFeatures` at least one below the service's maximum `limit`.
 - **The antimeridian and the poles.** The box is kept within -180 to 180 and -85 to 85 degrees, so it never wraps the antimeridian, though the standard allows it to.
-- **Other coordinate systems.** Geometry in a `crs` other than CRS84 is not requested. A position beyond 180 or 90 degrees is dropped.
-- **Format.** The request sets no `Accept` header. A service that answers HTML or another format by default needs a parameter such as `f=json` if it has one. The answer must be JSON.
+- **Other coordinate systems.** Geometry in a `crs` other than CRS84 is not requested. A feature with any position beyond 180 or 90 degrees is skipped whole.
+- **Format.** The request sets no `Accept` header. The recipe's `f=json` is not part of OGC API Features Part 1, which negotiates the format on `Accept`; some servers use it as a convention. Remove it if the service rejects unknown parameters. A service that answers HTML or another format by default and has no such parameter cannot be used without a proxy. The answer must be JSON.
 
 ### WMS
 
@@ -136,11 +136,11 @@ const roads: IdentifiableLayerDefinition = {
 
 The engine fills `{bbox-epsg-3857}` with `minx,miny,maxx,maxy` in metres for each tile, so every tile is one `GetMap` for a square picture of that box. `WIDTH` and `HEIGHT` must equal `tileSize`. For a tap, `{bbox}` is a small square of `2 × tolerance + 1` pixels centred on the tap, `{width}` and `{height}` are its size, and `{x}` and `{y}` are the tolerance, so `I` and `J` name the middle pixel. See [identify features on a raster layer](extending.md#identify-features-on-a-raster-layer) for the placeholders.
 
-- **Versions.** WMS 1.3.0 names the system `CRS` and the pixel `I` and `J`. WMS 1.1.1 names them `SRS`, `X` and `Y`, and both validate. In both, EPSG:3857 is easting first, so the box is in the order the engine writes it.
+- **Versions.** WMS 1.3.0 names the system `CRS` and the pixel `I` and `J`. WMS 1.1.1 names them `SRS`, `X` and `Y`, and both validate. In both, EPSG:3857 is easting first, so the box is in the order the engine writes it. Older services sometimes advertise Web Mercator as EPSG:900913 or EPSG:3785. The SDK does not read the system's text, so a host can write the code its service lists, provided it is the same Web Mercator projection.
 - **Coordinate systems.** Ask for EPSG:3857. WMS 1.3.0 puts latitude first for EPSG:4326, and the engine does not send a box in degrees, so a service that offers no EPSG:3857 is not supported.
 - **Cost.** A WMS draws each tile on demand, so size `tileSize` and a cache in front of the server to the traffic. A `tileSize` of 512 needs about a quarter as many requests as 256, with `WIDTH` and `HEIGHT` set to match.
 - **What a tap answers.** The answer must be JSON. Set `INFO_FORMAT` to a JSON or GeoJSON format the server offers. XML, GML, HTML and plain text, which are the usual defaults, are not read. A server that offers none needs a small proxy that answers in JSON.
-- **Coordinates in the answer.** The decoder expects WGS 84 degrees. A server that answers in EPSG:3857 metres has its features dropped, because a position beyond 180 or 90 is refused.
+- **Coordinates in the answer.** The decoder expects WGS 84 degrees. A server that answers in EPSG:3857 metres has its features dropped, because a feature with any position beyond 180 or 90 is skipped whole.
 - **The encoded box.** `{bbox}` is written with its commas as `%2C`, which a server decodes as any query string. A server that does not decode it is not supported.
 
 ### WMTS
@@ -203,7 +203,5 @@ What a person sees while a runtime catalogue works: the Layers section says "Loa
 Each change is announced once, as one message, in this order: the layers turned off, the layers in the address that are not available, the skipped count, then "Layers updated: 1 added, 1 removed." (a part that is zero is left out, and the first list is not an update). "Loading layers" is announced only while a layer named in the address is waiting. A failed load or a failed refresh is its own assertive message. The reference site is unaffected, because its static catalogue is ready on the first render, so it shows none of this.
 
 ## What the tests cover
-
-The worked definitions for OGC API Features, WMS and WMTS are checked in `packages/core/src/layers/openStandards.test.ts`, which validates each one and compares the request it builds to the standard's shape.
 
 The loop test in `packages/web/src/layers/layers.test.ts` checks the reference host's own definitions: the schema, the production Content Security Policy, `ATTRIBUTIONS.md` and a recorded fixture. It does not see a host's definitions. Validate a host's definitions in the host and test its own fixtures. A host can reuse `validateLayerDefinition` and `assertValidDefinitions`, both exported from `@mapcairn/core`, to check its definitions against its own decoders and formatters. The content security policy check is the host's own: the loop test builds the policy from the reference host's `buildContentSecurityPolicy`, so a host needs its own test that its policy lists the origins its definitions request.

@@ -25,7 +25,9 @@ import {
  * The worked layer definitions in `docs/guides/serving-layers.md`, one for each
  * open standard a team's services usually speak, with the request each would
  * make compared to the shape the standard defines. The hosts are invented and
- * sit under a reserved domain.
+ * sit under a reserved domain. `engineFills` re-implements MapLibre's documented
+ * substitution of `{z}`, `{x}`, `{y}` and `{bbox-epsg-3857}`, so these tests
+ * show that a template is left for the engine, not that the engine fills it.
  */
 
 const GUIDE = readFileSync(
@@ -163,6 +165,30 @@ describe("the worked definitions", () => {
   ])("the guide shows %s", (url) => {
     expect(GUIDE).toContain(url);
   });
+
+  it("the guide shows the sizes, limits, fields and example request the prose quotes", () => {
+    const view = queryWindow({
+      west: 18.3,
+      south: -34.0,
+      east: 18.6,
+      north: -33.8,
+    });
+    const example = new URL(feedUrl(ogcParks, {}, NOW, view)).searchParams;
+    for (const line of [
+      "maxFeatures: 500,",
+      'fields: { id: "id", title: "properties.name" },',
+      "tileSize: 256,",
+      "maxzoom: 18,",
+      "maxzoom: 19,",
+      `\`.../items?f=json&bbox=${example.get("bbox")}&limit=${example.get("limit")}\``,
+    ]) {
+      expect(GUIDE).toContain(line);
+    }
+    expect(example.get("limit")).toBe("501");
+    expect(wmsRoads.source.maxzoom).toBe(18);
+    expect(wmtsImagery.source.maxzoom).toBe(19);
+    expect(wmsRoads.identify.tolerance).toBeUndefined();
+  });
 });
 
 describe("OGC API Features", () => {
@@ -252,7 +278,7 @@ describe("WMS", () => {
     expect(maxy).toBeCloseTo(WEB_MERCATOR_HALF_WORLD - 2 * side, 3);
   });
 
-  it("accepts the WMS 1.1.1 spelling, which names the system SRS", () => {
+  it("documents the WMS 1.1.1 spelling (SRS), which the validator does not inspect", () => {
     const url = WMS_MAP_URL.replace("VERSION=1.3.0", "VERSION=1.1.1").replace(
       "CRS=",
       "SRS=",
@@ -331,7 +357,7 @@ describe("WMS", () => {
     });
   });
 
-  it("accepts the WMS 1.1.1 spelling of the pixel, X and Y", () => {
+  it("documents the WMS 1.1.1 spelling of the pixel (X and Y), which the validator does not inspect", () => {
     const definition = JSON.parse(JSON.stringify(wmsRoads)) as Json;
     (definition.identify as Json).url = WMS_INFO_URL.replace(
       "VERSION=1.3.0",
@@ -348,7 +374,9 @@ describe("WMS", () => {
       "maps.example.org",
       "{width}.example.org",
     );
-    expect(validateLayerDefinition(definition, options)).not.toEqual([]);
+    expect(validateLayerDefinition(definition, options)).toEqual([
+      "identify.url: the scheme, host and port must be fixed text, with no placeholder",
+    ]);
   });
 });
 
@@ -374,7 +402,7 @@ describe("WMTS", () => {
     expect(query.get("FORMAT")).toBe("image/jpeg");
   });
 
-  it("allows text before the zoom level, for a matrix named like EPSG:3857:3", () => {
+  it("documents text before the zoom level, as in EPSG:3857:{z}, which is fixed text to the validator", () => {
     const url = WMTS_KVP_URL.replace(
       "TILEMATRIX={z}",
       "TILEMATRIX=EPSG:3857:{z}",
