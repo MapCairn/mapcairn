@@ -117,7 +117,7 @@ export const actions = style({
 /**
  * The primary button's label. Its other state's label (`data-reserve`) is
  * laid out as an invisible, zero-height line beneath it, so the button is as
- * wide as the longer of the two in both states, in any language or text size.
+ * wide as the longer of the two in both states, whatever the language.
  */
 export const primaryLabel = style({
   display: "inline-flex",

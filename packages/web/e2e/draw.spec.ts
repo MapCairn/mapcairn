@@ -150,13 +150,28 @@ for (const language of ["en", "af"] as const) {
 /**
  * The toolbar and the bottom slots above it must not move when the primary
  * button changes from Done to Finish at the first point (#295): the longer
- * label gets its room from the start, on a phone, a small phone and a tablet.
+ * label gets its room from the start, on a phone, a small phone, a tablet and
+ * a phone with text at 150 percent. The room is reserved by an invisible copy
+ * of the other label, so the button's accessible name and text must stay the
+ * one visible label.
  */
 const LABEL_CHANGES_CASES = [
-  { name: "a phone", width: 390, height: 844 },
-  { name: "a small phone", width: 320, height: 568 },
-  { name: "a tablet", width: 820, height: 1180 },
+  { name: "a phone", width: 390, height: 844, fontSize: null },
+  { name: "a small phone", width: 320, height: 568, fontSize: null },
+  { name: "a tablet", width: 820, height: 1180, fontSize: null },
+  {
+    name: "a phone with text at 150 percent",
+    width: 390,
+    height: 844,
+    fontSize: "150%",
+  },
 ] as const;
+
+/** The primary button's labels, idle first and then while a shape is drawn. */
+const PRIMARY_LABELS = {
+  en: { idle: "Done", drawing: "Finish" },
+  af: { idle: "Klaar", drawing: "Voltooi" },
+} as const;
 
 /** The position of each shape switch option that these tests draw with. */
 const SHAPE_OPTION = { Line: 1, Polygon: 2 } as const;
@@ -169,7 +184,7 @@ for (const language of ["en", "af"] as const) {
       language: language === "af" ? "af" : null,
     });
 
-    for (const { name, width, height } of LABEL_CHANGES_CASES) {
+    for (const { name, width, height, fontSize } of LABEL_CHANGES_CASES) {
       for (const shape of ["Polygon", "Line"] as const) {
         test(`keeps the toolbar and the bottom slots still when Done becomes Finish on ${name} drawing a ${shape.toLowerCase()}`, async ({
           page,
@@ -178,6 +193,11 @@ for (const language of ["en", "af"] as const) {
           await page.setViewportSize({ width, height });
           await mapPage.goto(START);
           await collapseCredits(mapPage);
+          if (fontSize !== null) {
+            await page.evaluate((size) => {
+              document.documentElement.style.fontSize = size;
+            }, fontSize);
+          }
           await mapPage.startDrawing();
           await mapPage.drawToolbar
             .getByTestId("draw-mode")
@@ -199,12 +219,24 @@ for (const language of ["en", "af"] as const) {
             return boxes.map((box) => [box?.y, box?.height]);
           };
 
-          const idleLabel = (await mapPage.drawPrimary.textContent()) ?? "";
+          const labels = PRIMARY_LABELS[language];
+          const named = (label: string) =>
+            mapPage.drawToolbar.getByRole("button", {
+              name: label,
+              exact: true,
+            });
+          const expectOnlyLabel = async (shown: string, hidden: string) => {
+            await expect(named(shown)).toHaveCount(1);
+            await expect(named(hidden)).toHaveCount(0);
+            expect(await mapPage.drawPrimary.textContent()).toBe(shown);
+          };
+
+          await expectOnlyLabel(labels.idle, labels.drawing);
           const idle = await layout();
 
           await mapPage.tapMap(first);
           await expect(mapPage.drawUndo).toBeEnabled();
-          await expect(mapPage.drawPrimary).not.toHaveText(idleLabel);
+          await expectOnlyLabel(labels.drawing, labels.idle);
           expect(await layout()).toEqual(idle);
 
           await mapPage.tapMap(second, third);
