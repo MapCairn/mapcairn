@@ -192,8 +192,8 @@ describe("mounting and accessibility", () => {
     const describedBy = region.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
     const help = document.getElementById(describedBy as string);
-    expect(help?.textContent).toMatch(/Arrow keys: pan the map\./);
-    expect(help?.textContent).toMatch(/Plus or minus: zoom in or out\./);
+    expect(help?.textContent).toMatch(/Arrow keys: Pan the map\./);
+    expect(help?.textContent).toMatch(/Plus or minus: Zoom in or out\./);
   });
 
   it("includes rotation and pointing north in the instructions", async () => {
@@ -201,8 +201,8 @@ describe("mounting and accessibility", () => {
     const help = document.getElementById(
       host().getAttribute("aria-describedby") as string,
     )?.textContent;
-    expect(help).toMatch(/Shift with left or right arrow: rotate the map./);
-    expect(help).toMatch(/Home or 0: point the map north again./);
+    expect(help).toMatch(/Shift with left or right arrow: Rotate the map\./);
+    expect(help).toMatch(/Home or 0: Point the map north again\./);
   });
 
   it("writes the instructions from the catalogue, keys and plain host lines alike", async () => {
@@ -221,8 +221,27 @@ describe("mounting and accessibility", () => {
     const help = document.getElementById(
       host().getAttribute("aria-describedby") as string,
     )?.textContent;
-    expect(help).toContain("Pyltoetse - skuif die kaart.");
-    expect(help).toContain("Space - host extra.");
+    expect(help).toContain("Pyltoetse - Skuif die kaart.");
+    expect(help).toContain("Space - Host extra.");
+  });
+
+  it("keeps the case of a description that a language capitalises mid-sentence", async () => {
+    const { host } = await setup(
+      {},
+      createFakeServices({
+        messages: new FakeMessageCatalogue({
+          language: "de",
+          overrides: {
+            "keyHelp.map.pan": "Die Karte verschieben",
+            "host.map.keyInstruction": "{keys}: {description}.",
+          },
+        }),
+      }),
+    );
+    const help = document.getElementById(
+      host().getAttribute("aria-describedby") as string,
+    )?.textContent;
+    expect(help).toContain("Arrow keys: Die Karte verschieben.");
   });
 
   it("mounts the adapter into a child element with the initial view, basemap, motion preference and Save data", async () => {

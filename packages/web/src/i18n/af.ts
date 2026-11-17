@@ -36,6 +36,8 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "settings.notSaved": "Veranderinge word nie op hierdie toestel onthou nie.",
   "settings.privacy.heading": "Privaatheid",
   "settings.privacy.link": "Lees die privaatheidsbeleid",
+  "settings.privacy.default":
+    "Die privaatheidsbeleid sê wat elke diens wat hierdie kaart gebruik, ontvang.",
   // Common joins
   "common.followedBy": "{first} {second}",
   "common.commaJoined": "{first}, {second}",
