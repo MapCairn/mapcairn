@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const renderToReadableStreamMock = vi.fn(
   async (_element: unknown, _options: unknown) =>
@@ -45,7 +45,19 @@ async function handleOnce() {
   return { response, headerNonce, renderOptions, serverRouterElement };
 }
 
+/**
+ * Allowance for the first, cold import of `./entry.server`. That import loads
+ * React's server renderer and React Router, which took over 5 s once on a
+ * loaded machine, so it is paid once here rather than inside the first test,
+ * which would otherwise time out at the 5 s default.
+ */
+const COLD_IMPORT_TIMEOUT_MS = 30_000;
+
 describe("entry.server handleRequest", () => {
+  beforeAll(async () => {
+    await import("./entry.server");
+  }, COLD_IMPORT_TIMEOUT_MS);
+
   beforeEach(() => {
     renderToReadableStreamMock.mockClear();
   });
