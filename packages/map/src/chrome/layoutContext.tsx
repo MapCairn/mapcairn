@@ -18,8 +18,6 @@ export interface ChromeLayoutValue {
    * container) so the bottom slots can ride above it. Pass null when closed.
    */
   publishSheetTop(px: number | null): void;
-  /** The measure toolbar publishes its top edge the same way. Pass null when hidden. */
-  publishToolbarTop(px: number | null): void;
 }
 
 /** Used outside a `MapChrome`, for example in unit tests of a single component. */
@@ -29,7 +27,6 @@ const defaultValue: ChromeLayoutValue = {
   finePointer: true,
   panelEdge: null,
   publishSheetTop() {},
-  publishToolbarTop() {},
 };
 
 const ChromeLayoutContext = createContext<ChromeLayoutValue>(defaultValue);

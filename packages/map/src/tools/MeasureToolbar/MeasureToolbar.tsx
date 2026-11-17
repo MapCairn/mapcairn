@@ -2,7 +2,6 @@
 // Copyright MapCairn contributors
 import { Crosshair, Trash2, Undo2 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useToolbarEdge } from "../../chrome/useToolbarEdge";
 import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
@@ -29,9 +28,8 @@ export interface MeasureToolbarProps {
  * places it.
  *
  * On mount focus moves to its first button, because the person has just
- * chosen Measure and the next thing to do is here. The toolbar publishes its
- * top edge with `useToolbarEdge` so the slots below it ride above, and
- * publishes `null` when it unmounts.
+ * chosen Measure and the next thing to do is here. The bottom-centre slot it
+ * sits in is what the slots below it ride above.
  * @remarks The total is plain text. It is read out by the announcer after the
  *   points settle (see `useMeasure`), not by a live region of its own.
  *   The controls are all reachable with Tab rather than a single roving tab
@@ -57,8 +55,6 @@ export function MeasureToolbar({
   useEffect(() => {
     rootRef.current?.querySelector("button")?.focus();
   }, []);
-
-  useToolbarEdge(rootRef);
 
   return (
     <section
