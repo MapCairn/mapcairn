@@ -559,7 +559,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "tools.tour.skip": "Slaan oor",
   "tools.tour.next": "Verder",
   "tools.tour.finish": "Klaar",
-  "tools.tour.skipTour": "Slaan toer oor",
+  "tools.tour.skipTour": "Slaan oor",
   "tools.tour.close": "Maak toe",
   "tools.tour.stepAnnouncement": "{progress}, {heading}. {text}",
   "tools.tour.finished": "Toer klaar.",
