@@ -32,8 +32,6 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
     "Item and items are Afrikaans words with the same plural form.",
   "chrome.readout.zoomShort": "The symbol z for the zoom level.",
   "duration.short.day": "The unit symbol d.",
-  "duration.short.hour":
-    "Unit symbol; Afrikaans wording to be confirmed in the #231 review.",
   "duration.short.minute":
     "The unit abbreviation min is the same in Afrikaans.",
   "directions.stop": "Stop is the Afrikaans word too.",
@@ -165,6 +163,49 @@ describe("the Afrikaans catalogue", () => {
       });
     },
   );
+
+  it("calls the map key a legende, and leaves sleutel for keyboard keys", () => {
+    const mapKeyKeys: MessageKey[] = [
+      "layers.key.title",
+      "layers.key.toggle",
+      "layers.key.chip",
+      "layers.key.scrolling",
+      "layers.key.nameKey",
+      "layers.keyFor",
+    ];
+    for (const key of mapKeyKeys) {
+      expect(AF_CATALOGUE[key], key).toMatch(/[Ll]egende?s?\b/);
+      expect(AF_CATALOGUE[key], key).not.toMatch(/sleutel/i);
+    }
+    expect(AF_CATALOGUE["layers.key.title"]).toBe("Kaartlegende");
+    expect(AF_CATALOGUE["layers.key.showing"]).toBe("Wys tans {time}");
+    expect(AF_CATALOGUE["layers.time.status"]).toMatch(/^Wys tans \{slot\}\./);
+    expect(AF_CATALOGUE["duration.short.hour"]).toBe("{count} uur");
+  });
+
+  it("uses one term for each concept, not the variants it once had", () => {
+    const variants: Array<[RegExp, string]> = [
+      [/soekkassie/i, "soekbalk, for the search box"],
+      [/roeteringsdiens/i, "roetediens, for the routing service"],
+      [/vervoerwyse/i, "manier van reis, for the way of travelling"],
+      [/ongeveer/i, "sowat, for about"],
+      [/kaarteël/i, "kaartteël, for a map tile"],
+      [/\bwel eël/i, "teël, for a tile"],
+      [/kontrole/i, "beheer, for controls"],
+      [/netnou/i, "oor 'n oomblik, for in a moment"],
+      [/nog vir beelde/i, "nog op beelde, for waiting for imagery"],
+      [/\b(in|na) kaartmiddel/i, "the article: in die kaartmiddel"],
+      [/\btot kaartmiddel/i, "tot by die kaartmiddel"],
+      [/\bParty dele/, "Sommige dele"],
+      [/\bZoem \{level\}/, "Zoemvlak {level}"],
+      [/Spring na kaart/, "Spring na die kaart"],
+      [/\bLys die/, "Wys 'n lys van die"],
+    ];
+    for (const [pattern, use] of variants) {
+      const found = KEYS.filter((key) => pattern.test(AF_CATALOGUE[key]));
+      expect(found, `use ${use}`).toEqual([]);
+    }
+  });
 
   it("keeps UTC wherever the English says a time is in UTC", () => {
     const dropped = KEYS.filter(

@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { EN_GB_CATALOGUE } from "@mapcairn/core";
+import type { Page } from "@playwright/test";
 import { AF_CATALOGUE } from "../src/i18n/af";
 import { expect, test } from "./fixtures";
 import { MapPage } from "./pages/MapPage";
+import { axeViolations } from "./support/a11y";
+import { waitForStableLayout } from "./support/states";
 
 /*
  * The reference site in Afrikaans. The layout collision and accessibility
@@ -93,4 +96,76 @@ test("the Language setting switches to Afrikaans and back, and is remembered", a
     .click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en-GB");
   await expect(english.settingsHeading).toBeVisible();
+});
+
+test.describe("when the Afrikaans messages fail to load", () => {
+  const AFRIKAANS_CHUNK = "**/assets/js/af-*.js";
+
+  /** Fails the first request for the Afrikaans module and lets later ones through. */
+  async function failAfrikaansOnce(page: Page): Promise<void> {
+    let failures = 0;
+    await page.route(AFRIKAANS_CHUNK, (route) => {
+      if (failures === 0) {
+        failures += 1;
+        return route.abort("failed");
+      }
+      return route.continue();
+    });
+  }
+
+  async function chooseAfrikaans(page: Page) {
+    const english = new MapPage(page, EN_GB_CATALOGUE);
+    await english.goto();
+    await english.openSettings();
+    const languages = page.getByRole("radiogroup", { name: "Language" });
+    await languages.getByRole("radio", { name: "Afrikaans" }).click();
+    return { english, languages };
+  }
+
+  test("says so in English, keeps English on screen and retries with Try again", async ({
+    page,
+  }) => {
+    await failAfrikaansOnce(page);
+    const { english, languages } = await chooseAfrikaans(page);
+    const status = page.getByTestId("language-status");
+    await expect(status).toHaveText("Afrikaans could not be loaded.Try again");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en-GB");
+    await expect(english.settingsHeading).toBeVisible();
+    await expect(
+      languages.getByRole("radio", { name: "English" }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    await status.getByRole("button", { name: "Try again" }).click();
+    await expect(page.locator("html")).toHaveAttribute("lang", "af");
+    await expect(new MapPage(page, AF_CATALOGUE).settingsHeading).toBeVisible();
+    await expect(status).toBeHidden();
+  });
+
+  test("retries from the keyboard", async ({ page }) => {
+    await failAfrikaansOnce(page);
+    await chooseAfrikaans(page);
+    const retry = page
+      .getByTestId("language-status")
+      .getByRole("button", { name: "Try again" });
+    await retry.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("html")).toHaveAttribute("lang", "af");
+    await expect(page.getByRole("radio", { name: "Afrikaans" })).toBeFocused();
+  });
+
+  test("announces the failure once, politely", async ({ page }) => {
+    await failAfrikaansOnce(page);
+    await chooseAfrikaans(page);
+    await expect(page.getByTestId("live-region-polite")).toHaveText(
+      "Afrikaans could not be loaded.",
+    );
+  });
+
+  test("passes axe with the failure showing @a11y", async ({ page }) => {
+    await failAfrikaansOnce(page);
+    await chooseAfrikaans(page);
+    await expect(page.getByTestId("language-status")).toBeVisible();
+    await waitForStableLayout(page);
+    expect(await axeViolations(page)).toEqual([]);
+  });
 });
