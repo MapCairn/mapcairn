@@ -49,9 +49,25 @@ const SOURCES: ReadonlyArray<readonly [string, () => Promise<string>]> = [
   ["/llms-full.txt", () => fullLoader().text()],
 ];
 
+/** A link into the repository past its front page: a README section, a folder or the contributing page. */
+const REPOSITORY_DEEP_LINK =
+  /github\.com\/MapCairn\/mapcairn(#(documentation|licence)\b|\/tree\/|\/contribute\b)/i;
+
+/** How many times a text links the repository's front page. */
+function frontPageLinks(text: string): number {
+  return (
+    text.match(/https:\/\/github\.com\/MapCairn\/mapcairn(?![\w/#.-])/g)
+      ?.length ?? 0
+  );
+}
+
 describe.each(SOURCES)("%s", (_name, read) => {
   it("links to no issue, pull request or milestone, and cites none by number", async () => {
     expect(await read()).not.toMatch(TRACKER);
+  });
+
+  it("links into the repository no further than its front page", async () => {
+    expect(await read()).not.toMatch(REPOSITORY_DEEP_LINK);
   });
 
   it("says nothing about npm and nothing about commercial terms", async () => {
@@ -62,6 +78,38 @@ describe.each(SOURCES)("%s", (_name, read) => {
 
   it("holds no fact that is true only for a while", async () => {
     expect(await read()).not.toMatch(VOLATILE);
+  });
+});
+
+describe("links to the repository's front page", () => {
+  it.each([
+    ["the page: the hero's button and the footer's Source code", pageText, 2],
+    ["/index.md: the hero's button", () => markdownLoader().text(), 1],
+    ["/llms.txt: Source code", () => llmsLoader().text(), 1],
+    [
+      "/llms-full.txt: its own Source code and the page's button",
+      () => fullLoader().text(),
+      2,
+    ],
+  ] as const)("%s", async (_name, read, count) => {
+    expect(frontPageLinks(await read())).toBe(count);
+  });
+
+  it("counts a front-page link but not a raw file or a deeper page", () => {
+    expect(
+      frontPageLinks(
+        "[a](https://github.com/MapCairn/mapcairn) https://github.com/MapCairn/mapcairn/tree/main https://raw.githubusercontent.com/MapCairn/mapcairn/main/README.md",
+      ),
+    ).toBe(1);
+  });
+
+  it.each([
+    "https://github.com/MapCairn/mapcairn#documentation",
+    "https://github.com/MapCairn/mapcairn#licence",
+    "https://github.com/MapCairn/mapcairn/tree/main/examples/embed",
+    "https://github.com/MapCairn/mapcairn/contribute",
+  ])("refuses the deep link %s", (text) => {
+    expect(text).toMatch(REPOSITORY_DEEP_LINK);
   });
 });
 
@@ -79,9 +127,8 @@ describe("the tracker pattern", () => {
 
   it.each([
     "/map#map=11.00/-33.92000/18.42000",
-    "https://github.com/MapCairn/mapcairn#documentation",
+    "https://github.com/MapCairn/mapcairn",
     "&#39;",
-    "https://github.com/MapCairn/mapcairn/contribute",
   ])("leaves %s alone", (text) => {
     expect(text).not.toMatch(TRACKER);
   });

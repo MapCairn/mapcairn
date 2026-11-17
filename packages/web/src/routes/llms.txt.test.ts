@@ -37,7 +37,7 @@ function expectResolves(target: string): void {
     }
   }
   expect(target, "a link outside the site and the repository").toMatch(
-    /^https:\/\/github\.com\/MapCairn\/mapcairn(#(documentation|licence)|\/(contribute|tree\/main\/[\w/.-]+))?$/,
+    /^https:\/\/github\.com\/MapCairn\/mapcairn$/,
   );
 }
 
@@ -84,6 +84,11 @@ describe("/llms.txt", () => {
     for (const target of targets) {
       expectResolves(target);
     }
+  });
+
+  it("links to each target once", async () => {
+    const targets = linkTargets(await loader().text());
+    expect(new Set(targets).size).toBe(targets.length);
   });
 });
 

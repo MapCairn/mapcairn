@@ -12,7 +12,7 @@ import { EMBED_EXAMPLE_CODE } from "./productContent";
 
 const REPO = "https://github.com/MapCairn/mapcairn";
 
-/** The README on `main`, whose "Documentation" heading GitHub anchors as `#documentation`. */
+/** The README, whose embedding example the page shows. */
 const README = readFileSync(
   path.resolve(__dirname, "../../../../README.md"),
   "utf8",
@@ -43,7 +43,7 @@ describe("the product page stands on its own", () => {
     );
   });
 
-  it("has one clear order: embed, what you get, see it working, fit, questions, then follow and help", () => {
+  it("has one clear order: embed, what you get, see it working, fit, then questions", () => {
     renderPage();
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
@@ -53,7 +53,6 @@ describe("the product page stands on its own", () => {
       "See it working",
       "When it fits, and when it does not",
       "Questions",
-      "Follow the project and help",
     ]);
   });
 
@@ -90,51 +89,50 @@ describe("the product page stands on its own", () => {
     expect(code.textContent).toBe(EMBED_EXAMPLE_CODE);
   });
 
-  it("offers the two actions only in the hero and the closing block, View on GitHub first", () => {
+  it("offers the two actions once, in the hero, View on GitHub first", () => {
     renderPage();
     const main = screen.getByRole("main");
-    const github = within(main).getAllByRole("link", {
-      name: "View on GitHub",
-    });
-    const playground = within(main).getAllByRole("link", {
-      name: "Try the playground",
-    });
-    expect(github).toHaveLength(2);
-    expect(playground).toHaveLength(2);
-    for (const link of github) {
-      expect(link).toHaveAttribute("href", REPO);
-    }
-    for (const link of playground) {
-      expect(link).toHaveAttribute("href", "/map");
-    }
+    expect(
+      within(main).getByRole("link", { name: "View on GitHub" }),
+    ).toHaveAttribute("href", REPO);
+    expect(
+      within(main).getByRole("link", { name: "Try the playground" }),
+    ).toHaveAttribute("href", "/map");
     expect(within(main).getAllByRole("link")[0]).toHaveAccessibleName(
       "View on GitHub",
     );
-    const closing = section("Follow the project and help");
-    expect(
-      within(closing).getByRole("link", { name: "View on GitHub" }),
-    ).toBeInTheDocument();
-    expect(
-      within(closing).getByRole("link", { name: "Try the playground" }),
-    ).toBeInTheDocument();
   });
 
-  it("keeps Playground and GitHub in the header, and both in the footer", () => {
+  it("links to the repository from exactly two places: the hero's button and the footer's Source code", () => {
+    renderPage();
+    const github = screen
+      .getAllByRole("link")
+      .filter((link) =>
+        (link.getAttribute("href") ?? "").startsWith("https://github.com/"),
+      );
+    expect(github.map((link) => link.textContent)).toEqual([
+      "View on GitHub",
+      "Source code",
+    ]);
+    for (const link of github) {
+      expect(link).toHaveAttribute("href", REPO);
+    }
+    const [hero, footer] = github;
+    expect(screen.getByRole("main")).toContainElement(hero ?? null);
+    expect(screen.getByRole("contentinfo")).toContainElement(footer ?? null);
+  });
+
+  it("keeps only Playground in the header", () => {
     renderPage();
     const header = screen.getByRole("banner");
     expect(
-      within(header).getByRole("link", { name: "Playground" }),
-    ).toHaveAttribute("href", "/map");
-    expect(
-      within(header).getByRole("link", { name: "GitHub" }),
-    ).toHaveAttribute("href", REPO);
-    const footer = screen.getByRole("contentinfo");
-    expect(
-      within(footer).getByRole("link", { name: "Try the playground" }),
-    ).toHaveAttribute("href", "/map");
-    expect(
-      within(footer).getByRole("link", { name: "Source code on GitHub" }),
-    ).toHaveAttribute("href", REPO);
+      within(header)
+        .getAllByRole("link")
+        .map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([
+      ["MapCairn", "/"],
+      ["Playground", "/map"],
+    ]);
   });
 
   it("opens the playground through links its own hash parser reads as a view", () => {
@@ -152,15 +150,12 @@ describe("the product page stands on its own", () => {
     }
   });
 
-  it("says what MapCairn is not, and points to the documentation for what is current", () => {
+  it("says what MapCairn is not", () => {
     renderPage();
     const fit = section("When it fits, and when it does not");
     expect(fit).toHaveTextContent(
       "a hosted service, a dataset or a GIS analysis engine",
     );
-    expect(
-      within(fit).getByRole("link", { name: /in the documentation$/ }),
-    ).toHaveAttribute("href", `${REPO}#documentation`);
   });
 
   it("states the licence as open source under the AGPL-3.0", () => {
@@ -181,30 +176,21 @@ describe("the product page stands on its own", () => {
       within(footer)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual([
-      "Source code on GitHub",
-      "Try the playground",
-      "Documentation",
-      "Privacy policy",
-      "Licence and credits",
-    ]);
+    ).toEqual(["Source code", "Try the playground", "Privacy policy"]);
   });
 
-  it("links to no Markdown file: documentation and contributing use GitHub's own pages", () => {
+  it("links only to the repository's front page or to this site: no Markdown file, folder, section or contributing page", () => {
     renderPage();
     const hrefs = screen
       .getAllByRole("link")
       .map((link) => link.getAttribute("href") ?? "");
     for (const href of hrefs) {
+      expect(href === REPO || /^[/#]/.test(href), href).toBe(true);
       expect(href).not.toMatch(/\.md(#.*)?$/);
-      expect(href).not.toMatch(/\/(blob|raw)\//);
-      expect(href).not.toContain("raw.githubusercontent.com");
+      expect(href).not.toMatch(
+        /#(documentation|licence)$|\/tree\/|\/contribute/,
+      );
     }
-    expect(hrefs).toContain(`${REPO}#documentation`);
-    expect(hrefs).toContain(`${REPO}/contribute`);
-    // The anchors the page uses exist on the repository's front page.
-    expect(README).toMatch(/^## Documentation$/m);
-    expect(README).toMatch(/^## Licence$/m);
   });
 
   it("asks nothing of a third party: no image, frame, script source or stylesheet from elsewhere", () => {

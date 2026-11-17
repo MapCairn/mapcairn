@@ -369,8 +369,8 @@ export const detail = style({
   color: tokens.color.text,
 });
 
-/** The links that go further, at the foot of a section. */
-export const further = style({
+/** The deep links into the playground, one to a line. */
+export const deepLinks = style({
   display: "flex",
   flexDirection: "column",
   margin: 0,
@@ -388,9 +388,6 @@ export const blockLink = style([
     minHeight: tokens.size.minTarget,
   },
 ]);
-
-/** The deep links into the playground. */
-export const deepLinks = style([further]);
 
 /** The compass before each deep link. */
 export const linkIcon = style({

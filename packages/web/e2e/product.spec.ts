@@ -162,31 +162,35 @@ test.describe("the product page", () => {
     const playground = await product.heroPlayground.boundingBox();
     expect(github?.height).toBeGreaterThanOrEqual(44);
     expect(playground?.height).toBe(github?.height);
+  });
+
+  test("links to the repository from the hero's button and the footer's Source code only", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    const repository = page.locator('a[href^="https://github.com/"]');
+    await expect(repository).toHaveCount(2);
+    await expect(product.header.locator('a[href^="https://"]')).toHaveCount(0);
     await expect(
-      product.closing.getByRole("link", { name: "View on GitHub" }),
-    ).toBeVisible();
+      product.footer.getByRole("link", { name: "Source code" }),
+    ).toHaveAttribute("href", "https://github.com/MapCairn/mapcairn");
   });
 
   for (const viewport of VIEWPORTS) {
-    test(`keeps Playground and GitHub in the header at ${viewport.width}px`, async ({
+    test(`keeps Playground in the header at ${viewport.width}px`, async ({
       page,
     }) => {
       await page.setViewportSize(viewport);
       const product = new ProductPage(page);
       await product.goto();
       await expect(product.headerPlayground).toBeInViewport();
-      await expect(product.headerGitHub).toBeInViewport();
     });
   }
 
   for (const [where, find] of [
     ["the header", (p: ProductPage) => p.headerPlayground],
     ["the hero", (p: ProductPage) => p.heroPlayground],
-    [
-      "the closing actions",
-      (p: ProductPage) =>
-        p.closing.getByRole("link", { name: "Try the playground" }),
-    ],
     [
       "the footer",
       (p: ProductPage) =>

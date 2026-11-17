@@ -16,13 +16,12 @@ import embedExampleSource from "./embedExample.tsx?raw";
  * Evergreen by design: it describes what the SDK is and how it is built, not
  * counts, versions, dates, plans or what is in progress, so a change to the SDK
  * normally needs nothing here. What is current lives in the repository's
- * documentation, which the page links to.
+ * documentation.
  *
- * Links: GitHub's own pages (the repository, its documentation and licence
- * sections and its contributing page), this site and the page's own anchors.
- * Never a Markdown file, an issue, a pull request or a milestone. A
- * documentation site (#199 in the repository) will replace the documentation
- * link when it exists.
+ * Links: the repository from exactly two places, the hero's View on GitHub and
+ * the footer's Source code, and otherwise only this site's own pages. Never a
+ * Markdown file, an issue, a pull request or a milestone, and no second way to
+ * the repository: the big button is enough.
  */
 
 /** A link inside a block of text. Paths starting with `/` are on this site. */
@@ -60,29 +59,14 @@ export type Block =
       readonly code: string;
     }
   | { readonly kind: "details"; readonly items: readonly Disclosure[] }
-  | { readonly kind: "actions" }
   | { readonly kind: "deepLinks"; readonly links: readonly InlineLink[] };
 
-/** A section of the page: an h2, its blocks, and the links that go further. */
+/** A section of the page: an h2 and its blocks. */
 export interface Section {
   readonly id: string;
   readonly heading: string;
   readonly blocks: readonly Block[];
-  /** Where to read more, as plain links with descriptive names. */
-  readonly further: readonly InlineLink[];
 }
-
-/** The repository's front page at its documentation section, where GitHub shows the README's table of guides. */
-export const DOCUMENTATION_URL = `${SOURCE_REPOSITORY_URL}#documentation`;
-
-/** GitHub's own page on how to contribute to the repository. */
-export const CONTRIBUTE_URL = `${SOURCE_REPOSITORY_URL}/contribute`;
-
-/** The README's licence section on the repository's front page, which also says where the credits are. */
-export const LICENCE_URL = `${SOURCE_REPOSITORY_URL}#licence`;
-
-/** The example app's folder on GitHub. */
-const EXAMPLE_URL = `${SOURCE_REPOSITORY_URL}/tree/main/examples/embed`;
 
 /**
  * The playground opened over a place, through the same address the playground
@@ -233,10 +217,6 @@ export const SECTIONS: readonly Section[] = [
         ],
       },
     ],
-    further: [
-      { text: "The example app on GitHub", href: EXAMPLE_URL },
-      { text: "The documentation on GitHub", href: DOCUMENTATION_URL },
-    ],
   },
   {
     id: "what-you-get",
@@ -300,7 +280,6 @@ export const SECTIONS: readonly Section[] = [
         ],
       },
     ],
-    further: [],
   },
   {
     id: "see-it-working",
@@ -314,7 +293,6 @@ export const SECTIONS: readonly Section[] = [
       },
       { kind: "deepLinks", links: DEEP_LINKS },
     ],
-    further: [],
   },
   {
     id: "fit",
@@ -338,12 +316,6 @@ export const SECTIONS: readonly Section[] = [
           ["a hosted service, a dataset or a GIS analysis engine;"],
           ["a wrapper for map engines other than MapLibre GL JS."],
         ],
-      },
-    ],
-    further: [
-      {
-        text: "What MapCairn has and lacks today, in the documentation",
-        href: DOCUMENTATION_URL,
       },
     ],
   },
@@ -425,20 +397,5 @@ export const SECTIONS: readonly Section[] = [
         ],
       },
     ],
-    further: [],
-  },
-  {
-    id: "follow-and-help",
-    heading: "Follow the project and help",
-    blocks: [
-      {
-        kind: "paragraph",
-        text: [
-          "MapCairn is developed in the open. Star the repository to follow it, report a bug or suggest an idea, or send a change.",
-        ],
-      },
-      { kind: "actions" },
-    ],
-    further: [{ text: "How to contribute", href: CONTRIBUTE_URL }],
   },
 ];

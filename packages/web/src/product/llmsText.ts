@@ -28,7 +28,7 @@ const SUMMARY =
 /** What MapCairn is, what it is not, and how to use it today, in plain words. */
 const DETAILS = `It gives a team a complete map interface, open data layers defined as data, measuring and drawing tools, and a design system, with every service behind a small interface (a port) that a host implements with its own adapter. It is not a hosted service, a dataset or a GIS analysis engine, and MapLibre GL JS is its only map engine.
 
-It is used from its source on GitHub (${SOURCE_REPOSITORY_URL}): clone the repository and build it, or start from the example app in \`examples/embed\`.`;
+It is used from its source on GitHub (linked below): clone the repository and build it, or start from the example app in \`examples/embed\`.`;
 
 /** The playground's description, the same words its page renders for crawlers. */
 const PLAYGROUND_SUMMARY = EN_GB_CATALOGUE["host.map.summary"];
@@ -104,8 +104,7 @@ ${docs}
 ## Policies and source
 
 - [Privacy policy](${SITE_URL}/privacy): what the reference site stores and sends, and to whom.
-- [Source code](${SOURCE_REPOSITORY_URL}): the repository.
-- [Licence](${rawFile("LICENSE")}): AGPL-3.0.
+- [Source code](${SOURCE_REPOSITORY_URL}): the repository, open source under the AGPL-3.0.
 
 ## Optional
 

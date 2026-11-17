@@ -17,11 +17,9 @@ export class ProductPage {
   readonly footer: Locator;
   readonly skipLink: Locator;
   readonly headerPlayground: Locator;
-  readonly headerGitHub: Locator;
   readonly heroGitHub: Locator;
   readonly heroPlayground: Locator;
   readonly code: Locator;
-  readonly closing: Locator;
 
   constructor(readonly page: Page) {
     this.headline = page.getByRole("heading", {
@@ -35,17 +33,11 @@ export class ProductPage {
     this.headerPlayground = this.header.getByRole("link", {
       name: "Playground",
     });
-    this.headerGitHub = this.header.getByRole("link", { name: "GitHub" });
-    this.heroGitHub = this.main
-      .getByRole("link", { name: "View on GitHub" })
-      .first();
-    this.heroPlayground = this.main
-      .getByRole("link", { name: "Try the playground" })
-      .first();
-    this.code = page.getByRole("region", { name: "Embedding example" });
-    this.closing = page.getByRole("region", {
-      name: "Follow the project and help",
+    this.heroGitHub = this.main.getByRole("link", { name: "View on GitHub" });
+    this.heroPlayground = this.main.getByRole("link", {
+      name: "Try the playground",
     });
+    this.code = page.getByRole("region", { name: "Embedding example" });
   }
 
   /** Opens the product page, with an optional hash, and waits for its h1. */

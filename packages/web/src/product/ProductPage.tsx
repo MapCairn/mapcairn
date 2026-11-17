@@ -15,13 +15,11 @@ import * as styles from "./ProductPage.css";
 import {
   type Block,
   type Disclosure,
-  DOCUMENTATION_URL,
   GITHUB_ACTION,
   HEADLINE,
   HERO_NOTE,
   type Inline,
   LEDE,
-  LICENCE_URL,
   type Line,
   PLAYGROUND_ACTION,
   SECTIONS,
@@ -146,8 +144,6 @@ function BlockView({
       );
     case "details":
       return <Disclosures items={block.items} />;
-    case "actions":
-      return <Actions />;
     case "deepLinks":
       return (
         <ul className={styles.deepLinks} data-testid="playground-deep-links">
@@ -164,7 +160,7 @@ function BlockView({
   }
 }
 
-/** One section: its heading, its blocks and where to read more. */
+/** One section: its heading and its blocks. */
 function SectionView({ section }: { readonly section: Section }) {
   const headingId = `${section.id}-heading`;
   return (
@@ -185,22 +181,14 @@ function SectionView({ section }: { readonly section: Section }) {
           sectionId={section.id}
         />
       ))}
-      {section.further.length > 0 ? (
-        <ul className={styles.further}>
-          {section.further.map((link) => (
-            <li key={link.href}>
-              <a className={styles.blockLink} href={link.href}>
-                {link.text}
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </section>
   );
 }
 
-/** The header: the brand, then the playground and the source, at every width. */
+/**
+ * The header: the brand, then the playground at every width. The repository
+ * is not linked here: the hero's View on GitHub and the footer already do.
+ */
 function ProductHeader() {
   return (
     <header className={styles.header}>
@@ -216,15 +204,6 @@ function ProductHeader() {
               data-testid="nav-playground"
             >
               Playground
-            </a>
-          </li>
-          <li>
-            <a
-              className={styles.navLink}
-              href={SOURCE_REPOSITORY_URL}
-              data-testid="nav-github"
-            >
-              GitHub
             </a>
           </li>
         </ul>
@@ -254,7 +233,7 @@ function Hero() {
   );
 }
 
-/** The footer: where the project is made, the licence and the links again. */
+/** The footer: where the project is made, the licence, the source, the playground and the privacy policy. */
 function ProductFooter() {
   return (
     <footer className={styles.footer}>
@@ -268,8 +247,12 @@ function ProductFooter() {
       <nav aria-label="Footer">
         <ul className={styles.footerLinks}>
           <li>
-            <a className={styles.footerLink} href={SOURCE_REPOSITORY_URL}>
-              Source code on GitHub
+            <a
+              className={styles.footerLink}
+              href={SOURCE_REPOSITORY_URL}
+              data-testid="footer-source"
+            >
+              Source code
             </a>
           </li>
           <li>
@@ -278,18 +261,8 @@ function ProductFooter() {
             </a>
           </li>
           <li>
-            <a className={styles.footerLink} href={DOCUMENTATION_URL}>
-              Documentation
-            </a>
-          </li>
-          <li>
             <a className={styles.footerLink} href="/privacy">
               Privacy policy
-            </a>
-          </li>
-          <li>
-            <a className={styles.footerLink} href={LICENCE_URL}>
-              Licence and credits
             </a>
           </li>
         </ul>
@@ -300,15 +273,16 @@ function ProductFooter() {
 
 /**
  * The product page at `/`: the pitch and the two actions, the embedding
- * example, what you get, the playground, when it fits, the questions and the
- * way to follow and help, with View on GitHub as the first action and the
- * playground one link away from anywhere on the page.
+ * example, what you get, the playground, when it fits and the questions, with
+ * View on GitHub as the first action and the playground one link away from
+ * anywhere on the page.
  *
  * @remarks Server-rendered and static: it loads no services and no map code,
  *   and its own markup requests nothing from another site (in production the
- *   host adds its cookieless page-view counter, as on every page); every link
- *   is a plain anchor to GitHub's own pages, this site or the page's own
- *   anchors, never a Markdown file, an issue, a pull request or a milestone.
+ *   host adds its cookieless page-view counter, as on every page). It links
+ *   to the repository from exactly two places, the hero's View on GitHub and
+ *   the footer's Source code, and otherwise only to this site: never a
+ *   Markdown file, an issue, a pull request or a milestone.
  *   Its first element is the inline script that sends an old map link
  *   (`/#map=...`) on to the playground before the page paints. It is English
  *   only, by decision, so it sets `lang="en-GB"` on its own root whatever

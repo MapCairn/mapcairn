@@ -63,20 +63,14 @@ function block(item: Block): string {
             `### ${summary}\n\n${detail.map(lineToMarkdown).join("\n\n")}`,
         )
         .join("\n\n");
-    case "actions":
-      return ACTIONS;
     case "deepLinks":
       return linkList(item.links);
   }
 }
 
-/** One section as Markdown: its heading, its blocks and where to read more. */
-function section({ heading, blocks, further }: Section): string {
-  const parts = [`## ${heading}`, ...blocks.map(block)];
-  if (further.length > 0) {
-    parts.push(linkList(further));
-  }
-  return parts.join("\n\n");
+/** One section as Markdown: its heading and its blocks. */
+function section({ heading, blocks }: Section): string {
+  return [`## ${heading}`, ...blocks.map(block)].join("\n\n");
 }
 
 /**
