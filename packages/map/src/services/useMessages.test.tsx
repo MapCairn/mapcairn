@@ -254,6 +254,59 @@ describe("useMessages with a language catalogue", () => {
     expect(await screen.findByText("af:Instellings")).toBeTruthy();
   });
 
+  it("does not retry a failed load when the browser reports the same languages in a new array", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const load = vi.fn((tag: string) =>
+      tag === "af" ? Promise.reject(new Error("offline")) : ENGLISH,
+    );
+    const services = createFakeServices({
+      messages: ENGLISH,
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "af", label: "Afrikaans" },
+        ],
+        "en-GB",
+        load,
+      ),
+    });
+    services.fakes.settings.set({ language: null });
+    let current = { ...services.fakes.preferences.get(), languages: ["af"] };
+    const listeners = new Set<(value: typeof current) => void>();
+    render(
+      <ServicesProvider
+        services={{
+          ...services,
+          preferences: {
+            get: () => current,
+            subscribe: (listener) => {
+              listeners.add(listener);
+              return () => listeners.delete(listener);
+            },
+          },
+        }}
+      >
+        <Probe />
+      </ServicesProvider>,
+    );
+    await act(async () => {});
+    expect(load).toHaveBeenCalledTimes(1);
+    current = { ...current, languages: ["af"] };
+    await act(async () => {
+      for (const listener of listeners) {
+        listener(current);
+      }
+    });
+    expect(load).toHaveBeenCalledTimes(1);
+    current = { ...current, languages: ["af", "en"] };
+    await act(async () => {
+      for (const listener of listeners) {
+        listener(current);
+      }
+    });
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it("does not load again for a re-render with the same language", () => {
     const load = vi.fn((tag: string) => (tag === "af" ? AFRIKAANS : ENGLISH));
     setup({ load });

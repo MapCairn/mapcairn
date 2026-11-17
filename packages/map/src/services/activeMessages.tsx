@@ -43,6 +43,11 @@ interface LanguageRequest {
   readonly failed: boolean;
 }
 
+/** Whether two language lists hold the same tags in the same order. */
+function sameTags(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((tag, index) => tag === b[index]);
+}
+
 /** Whether `request` already answers for `next`, so no load is needed. */
 function answers(
   request: LanguageRequest | undefined,
@@ -59,7 +64,7 @@ function answers(
   return (
     !request.failed ||
     (request.choice === next.choice &&
-      request.browserLanguages === next.browserLanguages)
+      sameTags(request.browserLanguages, next.browserLanguages))
   );
 }
 
@@ -83,7 +88,8 @@ function isPending(
  *   another language was asked for is dropped. One that fails keeps the
  *   previous catalogue and warns, and the language is requested again the
  *   next time the setting or the browser's languages resolve, even to the
- *   same tag; a load that is in flight or has succeeded is not repeated. {@link ServicesProvider} mounts it.
+ *   same tag; a load that is in flight or has succeeded is not repeated.
+ *   {@link ServicesProvider} mounts it.
  */
 export function ActiveMessagesProvider({
   services,
