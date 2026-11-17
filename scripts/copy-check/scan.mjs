@@ -11,16 +11,17 @@
  * literals), and reports text that holds a letter. Numbers, punctuation,
  * icon names, class names, token names, URLs and test ids are not reported,
  * because none of them is written as a text node or in a copy attribute.
+ *
+ * What it does not detect, each with a fixture in `hardcodedCopy.test.ts`:
+ * copy built by string concatenation, in an array or in a spread object, copy
+ * held in a variable and passed to an attribute, and props of SDK components
+ * that carry copy (`label`, `tooltip`). It reads only `.tsx` files, so copy in
+ * a `.ts` string table is not scanned.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  findJsxTags,
-  parseTagAt,
-  skipBalanced,
-  stripComments,
-} from "../harmony/lex.mjs";
+import { findJsxTags, parseTagAt, stripComments } from "../harmony/lex.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,6 +36,8 @@ export const COPY_ATTRIBUTES = new Set([
   "title",
   "placeholder",
   "alt",
+  "aria-valuetext",
+  "aria-placeholder",
 ]);
 
 /**
@@ -97,6 +100,87 @@ function skipQuoted(expr, start) {
 }
 
 /**
+ * Whether the `<` at `i` opens a JSX element or fragment rather than being a
+ * comparison or a type argument: it follows an operator, not a name or `)`.
+ * @param {string} expr
+ * @param {number} i
+ * @returns {boolean}
+ */
+function startsElement(expr, i) {
+  if (!/[A-Za-z>]/.test(expr[i + 1] ?? "")) {
+    return false;
+  }
+  let p = i - 1;
+  while (p >= 0 && /\s/.test(expr[p])) {
+    p -= 1;
+  }
+  return p < 0 || !/[\w)\]]/.test(expr[p]);
+}
+
+/**
+ * Index just after the `{ ... }` group that starts at `start`, skipping
+ * strings, templates and JSX elements, whose text may hold a bare apostrophe.
+ * @param {string} expr
+ * @param {number} start
+ * @returns {number}
+ */
+function skipContainer(expr, start) {
+  let depth = 0;
+  let i = start;
+  while (i < expr.length) {
+    const c = expr[i];
+    if (c === "<" && startsElement(expr, i)) {
+      i = skipElement(expr, i);
+    } else if (c === '"' || c === "'" || c === "`") {
+      i = skipQuoted(expr, i);
+    } else {
+      depth += c === "{" ? 1 : 0;
+      depth -= c === "}" ? 1 : 0;
+      i += 1;
+      if (depth === 0) {
+        return i;
+      }
+    }
+  }
+  return expr.length;
+}
+
+/**
+ * Index just after the JSX element that starts at `start`, so text such as an
+ * apostrophe inside it is not read as a quote.
+ * @param {string} expr
+ * @param {number} start
+ * @returns {number}
+ */
+function skipElement(expr, start) {
+  const opening = parseTagAt(expr, start);
+  const fragment = expr.startsWith("<>", start);
+  if (!(opening || fragment)) {
+    return start + 1;
+  }
+  if (opening?.selfClosing) {
+    return opening.end;
+  }
+  let depth = 1;
+  let i = opening ? opening.end : start + 2;
+  while (i < expr.length && depth > 0) {
+    if (expr.startsWith("</", i)) {
+      depth -= 1;
+      i = expr.indexOf(">", i) + 1 || expr.length;
+    } else if (expr[i] === "<" && /[A-Za-z>]/.test(expr[i + 1] ?? "")) {
+      const inner = parseTagAt(expr, i);
+      depth += inner?.selfClosing ? 0 : 1;
+      i = inner ? inner.end : i + 2;
+    } else if (expr[i] === "{") {
+      i = skipContainer(expr, i);
+    } else {
+      i += 1;
+    }
+  }
+  return i;
+}
+
+/**
  * Length of the operator that separates branches at `i`, or 0 when there is
  * none: `&&`, `||`, `??`, `?` and `:` (but not the `?.` of optional chaining).
  * @param {string} expr
@@ -123,6 +207,10 @@ function branches(expr) {
   let i = 0;
   while (i < expr.length) {
     const c = expr[i];
+    if (c === "<" && startsElement(expr, i)) {
+      i = skipElement(expr, i);
+      continue;
+    }
     if (c === '"' || c === "'" || c === "`") {
       i = skipQuoted(expr, i);
       continue;
@@ -215,7 +303,7 @@ export function findHardcodedCopy(source) {
 
   /** Reads a `{...}` child: a bare literal or its branches count as copy. */
   const readContainer = (start) => {
-    const end = skipBalanced(code, start);
+    const end = skipContainer(code, start);
     for (const text of literalCopyIn(code.slice(start + 1, end - 1))) {
       addText(text, start);
     }
@@ -258,7 +346,7 @@ export function findHardcodedCopy(source) {
     const opening = code.slice(tag.start, tag.end);
     for (const match of opening.matchAll(/=\s*\{/g)) {
       const open = tag.start + (match.index ?? 0) + match[0].length - 1;
-      scanCode(open + 1, skipBalanced(code, open) - 1);
+      scanCode(open + 1, skipContainer(code, open) - 1);
     }
     return tag.selfClosing ? tag.end : readChildren(tag.end);
   };
@@ -292,13 +380,13 @@ export function findHardcodedCopy(source) {
 }
 
 /**
- * The files that make up the interface: React source under `packages/map` and
- * `packages/web`, without tests, stories, browser specs and examples.
+ * The files that make up the interface: every `.tsx` file under
+ * `packages/map/src` and `packages/web/src`, without tests and stories. The
+ * browser specs (`packages/web/e2e`) and `examples/` lie outside those folders.
  * @param {string} [root]
  * @returns {string[]} Repository relative paths with forward slashes.
  */
 export function listCopyFiles(root = REPO_ROOT) {
-  const skip = new Set(["node_modules", "build", "dist", "coverage", "e2e"]);
   /** @type {string[]} */
   const out = [];
   const walk = (dir) => {
@@ -307,9 +395,7 @@ export function listCopyFiles(root = REPO_ROOT) {
     })) {
       const rel = `${dir}/${entry.name}`;
       if (entry.isDirectory()) {
-        if (!skip.has(entry.name)) {
-          walk(rel);
-        }
+        walk(rel);
       } else if (
         entry.name.endsWith(".tsx") &&
         !/\.(test|spec|stories)\.tsx$/.test(entry.name)

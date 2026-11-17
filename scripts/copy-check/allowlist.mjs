@@ -7,6 +7,9 @@
  * entry (one that matches nothing) fails the test, so the list cannot outlive
  * the text it excuses.
  *
+ * The privacy page and the four design guide entries are temporary: they stay
+ * until the text is translated or moved into the catalogue, tracked in #271.
+ *
  * @type {ReadonlyArray<{ file: string, text?: string, reason: string }>}
  */
 export const COPY_ALLOWLIST = [

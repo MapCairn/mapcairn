@@ -32,7 +32,8 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
     "Item and items are Afrikaans words with the same plural form.",
   "chrome.readout.zoomShort": "The symbol z for the zoom level.",
   "duration.short.day": "The unit symbol d.",
-  "duration.short.hour": "The unit symbol h.",
+  "duration.short.hour":
+    "Unit symbol; Afrikaans wording to be confirmed in the #231 review.",
   "duration.short.minute":
     "The unit abbreviation min is the same in Afrikaans.",
   "directions.stop": "Stop is the Afrikaans word too.",
@@ -53,8 +54,23 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
 };
 
 /**
- * The keys whose Afrikaans value is a copy of the English one and which are
- * not in `allowed`.
+ * Whether any plural form of `afrikaans` is a copy of the same form of
+ * `english`, ignoring case and surrounding space.
+ */
+function hasCopiedForm(english: string, afrikaans: string): boolean {
+  const afForms = afrikaans.split("|");
+  return english
+    .split("|")
+    .some(
+      (form, index) =>
+        form.trim().toLowerCase() ===
+        (afForms[index] ?? "").trim().toLowerCase(),
+    );
+}
+
+/**
+ * The keys whose Afrikaans value has a form that is a copy of the English one
+ * and which are not in `allowed`.
  */
 function leftInEnglish(
   english: Record<string, string>,
@@ -62,13 +78,26 @@ function leftInEnglish(
   allowed: Record<string, string | undefined>,
 ): string[] {
   return Object.keys(english).filter(
-    (key) => english[key] === afrikaans[key] && allowed[key] === undefined,
+    (key) =>
+      hasCopiedForm(english[key] ?? "", afrikaans[key] ?? "") &&
+      allowed[key] === undefined,
   );
 }
 
 describe("the check for Afrikaans left as English", () => {
   it("names a copied value that is not allowed", () => {
     expect(leftInEnglish({ a: "Close" }, { a: "Close" }, {})).toEqual(["a"]);
+  });
+
+  it("names a plural with one form left as English", () => {
+    const english = { a: "{count} file|{count} files" };
+    expect(
+      leftInEnglish(english, { a: "{count} lêer|{count} files" }, {}),
+    ).toEqual(["a"]);
+  });
+
+  it("ignores case and surrounding space when it compares", () => {
+    expect(leftInEnglish({ a: "Close" }, { a: " close " }, {})).toEqual(["a"]);
   });
 
   it("passes a translated value and an allowed copy", () => {
@@ -89,9 +118,13 @@ describe("the Afrikaans catalogue", () => {
   it("allows only keys that are still the same, each with a reason", () => {
     for (const [key, reason] of Object.entries(SAME_AS_ENGLISH)) {
       expect(reason?.trim().length, key).toBeGreaterThan(0);
-      expect(AF_CATALOGUE[key as MessageKey], key).toBe(
-        EN_GB_CATALOGUE[key as MessageKey],
-      );
+      expect(
+        hasCopiedForm(
+          EN_GB_CATALOGUE[key as MessageKey],
+          AF_CATALOGUE[key as MessageKey],
+        ),
+        key,
+      ).toBe(true);
     }
   });
 

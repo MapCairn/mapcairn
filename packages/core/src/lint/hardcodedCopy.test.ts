@@ -58,6 +58,13 @@ describe("the hardcoded copy scanner", () => {
     ["a literal in an expression", '<i title={"Zoom"} />', ["Zoom"]],
     ["a conditional attribute", '<i title={on ? "On" : t("k")} />', ["On"]],
     ["a template with words", "<i title={`Zoom ${n}`} />", ["Zoom"]],
+    ["aria-valuetext", '<i aria-valuetext="Half full" />', ["Half full"]],
+    ["aria-placeholder", '<i aria-placeholder="Type here" />', ["Type here"]],
+    [
+      "a literal after an element with an apostrophe",
+      '<p>{ok ? <i>Don\'t</i> : "Fallback"}</p>',
+      ["Fallback", "Don't"],
+    ],
     [
       "text nested in a container",
       "<ul>{xs.map((x) => <li>Item</li>)}</ul>",
@@ -85,7 +92,17 @@ describe("the hardcoded copy scanner", () => {
       '<p>{mode === "draw" ? t("a", {}) : null}</p>',
     ],
     ["a prop that is not copy", '<Button label="Close" />'],
+    ["a tooltip prop", '<Hint tooltip="Zoom in" />'],
   ])("passes %s", (_name, jsx) => {
+    expect(textsIn(jsx)).toEqual([]);
+  });
+
+  it.each([
+    ["string concatenation", '<i title={"Zoom " + "in"} />'],
+    ["an array of literals", '<i title={["Zoom", "in"].join(" ")} />'],
+    ["a spread object", '<i {...{ title: "Zoom in" }} />'],
+    ["a literal held in a variable", "<i title={label} />"],
+  ])("does not detect %s (a known limit)", (_name, jsx) => {
     expect(textsIn(jsx)).toEqual([]);
   });
 
