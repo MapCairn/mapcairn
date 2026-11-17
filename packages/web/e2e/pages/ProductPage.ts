@@ -21,7 +21,6 @@ export class ProductPage {
   readonly heroGitHub: Locator;
   readonly heroPlayground: Locator;
   readonly code: Locator;
-  readonly deepLinks: Locator;
   readonly closing: Locator;
 
   constructor(readonly page: Page) {
@@ -44,9 +43,6 @@ export class ProductPage {
       .getByRole("link", { name: "Try the playground" })
       .first();
     this.code = page.getByRole("region", { name: "Embedding example" });
-    this.deepLinks = page
-      .getByTestId("playground-deep-links")
-      .getByRole("link");
     this.closing = page.getByRole("region", {
       name: "Follow the project and help",
     });

@@ -15,7 +15,7 @@ import {
 } from "./productContent";
 
 /** An address as an absolute URL: a path on this site gets the site's origin. */
-export function absoluteUrl(href: string): string {
+function absoluteUrl(href: string): string {
   return href.startsWith("/") ? `${SITE_URL}${href}` : href;
 }
 
@@ -31,7 +31,7 @@ function inline(run: Inline): string {
 }
 
 /** A line of runs as Markdown. */
-export function lineToMarkdown(line: Line): string {
+function lineToMarkdown(line: Line): string {
   return line.map(inline).join("");
 }
 

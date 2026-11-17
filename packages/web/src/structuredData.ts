@@ -18,7 +18,7 @@ import {
 export type JsonLdNode = Readonly<Record<string, unknown>>;
 
 /** The SPDX identifier of the licence, and its canonical page. */
-export const LICENCE_ID = "AGPL-3.0-only";
+const LICENCE_ID = "AGPL-3.0-only";
 const LICENCE_URL = `https://spdx.org/licenses/${LICENCE_ID}.html`;
 
 const WEBSITE_ID = `${SITE_URL}/#website`;
