@@ -598,6 +598,9 @@ for (const viewport of MAP_KEY_VIEWPORTS) {
  */
 const WIDEST_COORDINATES_VIEW = "#map=11/-33.92/-118.42";
 
+/** The cursor coordinates at {@link WIDEST_COORDINATES_VIEW}, at their longest. */
+const WIDEST_COORDINATES_TEXT = "-33.92000, -118.42000";
+
 /** What the cursor coordinates look like once the pointer is over the map. */
 const COORDINATES_PATTERN = /-?\d+\.\d{5}, -?\d+\.\d{5}/;
 
@@ -617,34 +620,94 @@ const HOVER_TIMEOUT_MS = 10_000;
  * row, whose credits popover rises over the pointer when the coordinates make
  * the readout taller; a pointer under it would leave the map and clear the
  * coordinates. Returns null when every point of the screen is covered.
+ *
+ * "Map on every side" means one pointer step (the distance the pointer travels
+ * before it lands), so a narrow channel counts.
+ *
+ * A point where the readout grows to hold the widest coordinates is left out.
+ * The readout is only as wide as the scale bar until the pointer is on the map,
+ * and a pointer resting where the coordinates then appear is under them, which
+ * takes it off the map and clears them again, so the readout flickers between
+ * the scale and the position and the test reads whichever it caught. The open
+ * map key is wider in Afrikaans, so at 320 px the free map nearest the anchor
+ * is beside the readout (the panels of the other states lift the readout into
+ * the middle of the screen). The grown readout is measured from the scale bar's
+ * font and padding, with the room it needs to grow by its own height.
  */
 async function findFreeMapPoint(
   page: Page,
 ): Promise<{ x: number; y: number } | null> {
-  return page.evaluate(() => {
-    const STEP = 20;
-    const ANCHOR_HEIGHT_RATIO = 0.3;
-    const centreX = document.documentElement.clientWidth / 2;
-    const centreY = document.documentElement.clientHeight * ANCHOR_HEIGHT_RATIO;
-    let best: { x: number; y: number } | null = null;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (let y = STEP; y < document.documentElement.clientHeight; y += STEP) {
-      for (let x = STEP; x < centreX * 2; x += STEP) {
-        const distance = Math.hypot(x - centreX, y - centreY);
-        const isMap = (dx: number, dy: number) =>
-          document.elementFromPoint(x + dx, y + dy) instanceof
-          HTMLCanvasElement;
-        const surrounded = [-STEP, 0, STEP].every((dy) =>
-          [-STEP, 0, STEP].every((dx) => isMap(dx, dy)),
-        );
-        if (surrounded && distance < bestDistance) {
-          best = { x, y };
-          bestDistance = distance;
+  return page.evaluate(
+    ({ stepPx, widestCoordinates }) => {
+      const ANCHOR_HEIGHT_RATIO = 0.3;
+      const readoutBox = (() => {
+        const readout = document.querySelector('[data-testid="map-readout"]');
+        const scale = readout?.querySelector('[data-chrome="scale-bar"]');
+        if (!(readout && scale)) {
+          return null;
+        }
+        const box = readout.getBoundingClientRect();
+        const style = getComputedStyle(scale);
+        const probe = document.createElement("span");
+        probe.style.font = style.font;
+        probe.style.fontWeight = "400";
+        probe.style.fontVariantNumeric = "tabular-nums";
+        probe.style.position = "absolute";
+        probe.style.whiteSpace = "pre";
+        probe.textContent = widestCoordinates;
+        document.body.append(probe);
+        const grownWidth =
+          probe.getBoundingClientRect().width +
+          Number.parseFloat(style.paddingLeft) +
+          Number.parseFloat(style.paddingRight);
+        probe.remove();
+        return {
+          left: Math.min(box.left, box.right - grownWidth),
+          right: Math.max(box.right, box.left + grownWidth),
+          top: box.top - box.height,
+          bottom: box.bottom,
+        };
+      })();
+      const underReadout = (x: number, y: number) =>
+        readoutBox !== null &&
+        x >= readoutBox.left - stepPx &&
+        x <= readoutBox.right + stepPx &&
+        y >= readoutBox.top - stepPx &&
+        y <= readoutBox.bottom + stepPx;
+      const centreX = document.documentElement.clientWidth / 2;
+      const centreY =
+        document.documentElement.clientHeight * ANCHOR_HEIGHT_RATIO;
+      let best: { x: number; y: number } | null = null;
+      let bestDistance = Number.POSITIVE_INFINITY;
+      for (
+        let y = stepPx;
+        y < document.documentElement.clientHeight;
+        y += stepPx
+      ) {
+        for (let x = stepPx; x < centreX * 2; x += stepPx) {
+          const distance = Math.hypot(x - centreX, y - centreY);
+          if (underReadout(x, y) || distance >= bestDistance) {
+            continue;
+          }
+          const isMap = (dx: number, dy: number) =>
+            document.elementFromPoint(x + dx, y + dy) instanceof
+            HTMLCanvasElement;
+          const surrounded = [-stepPx, 0, stepPx].every((dy) =>
+            [-stepPx, 0, stepPx].every((dx) => isMap(dx, dy)),
+          );
+          if (surrounded) {
+            best = { x, y };
+            bestDistance = distance;
+          }
         }
       }
-    }
-    return best;
-  });
+      return best;
+    },
+    {
+      stepPx: STEP_BEFORE_HOVER_PX,
+      widestCoordinates: WIDEST_COORDINATES_TEXT,
+    },
+  );
 }
 
 /**
