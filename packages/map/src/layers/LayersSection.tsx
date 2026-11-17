@@ -30,6 +30,7 @@ import {
 } from "../panels/Section";
 import { useMessages, usePreferences, useResolveText } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
+import { answersTap } from "./answersTap";
 import { CatalogueStatus } from "./CatalogueStatus";
 import { hidesSection } from "./catalogueView";
 import { FeatureCard } from "./FeatureCard";
@@ -39,7 +40,11 @@ import * as styles from "./Layers.css";
 import { featureBounds, featurePosition } from "./mapFeatures";
 import { coveredPadding, revealOffset } from "./reveal";
 import { TurnOffAll, TurnOffGroup } from "./TurnOffActions";
-import type { DataLayerState, DataLayers } from "./useDataLayers";
+import {
+  type DataLayerState,
+  type DataLayers,
+  MAX_IDENTIFY_LAYERS,
+} from "./useDataLayers";
 
 /** The closest "Show on map" zooms out to: far enough to see the region. */
 export const SHOW_ON_MAP_MIN_ZOOM = 5;
@@ -100,6 +105,11 @@ function enabledIds(layers: readonly DataLayerState[]): string[] {
   return layers
     .filter((layer) => layer.enabled)
     .map((layer) => layer.definition.id);
+}
+
+/** How many layers answer a tap, to compare with the cap on one tap. */
+function identifiableOn(layers: readonly DataLayerState[]): number {
+  return layers.filter(answersTap).length;
 }
 
 /** Layers grouped by their definitions' `group`, in the order groups first appear. */
@@ -324,6 +334,11 @@ export function LayersSection({
       />
       {showTurnOffAll && layers.layers.length > 0 ? (
         <TurnOffAll layers={layers} ids={enabledIds(layers.layers)} />
+      ) : null}
+      {identifiableOn(layers.layers) > MAX_IDENTIFY_LAYERS ? (
+        <p className={styles.muted} data-testid="layers-identify-cap">
+          {t("layers.identify.cap", { count: MAX_IDENTIFY_LAYERS })}
+        </p>
       ) : null}
       <div className={styles.groups}>
         {byGroup(layers.layers).map(([group, items]) => (

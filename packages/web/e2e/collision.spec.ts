@@ -5,9 +5,14 @@ import { CHROME_GAP_PX } from "../../map/src/chrome/chromeSpacing";
 import { endStackMinHeightForZoom } from "../../map/src/chrome/EndStack/endStackHeight";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
+import { IDENTIFY_FLOOD, mockIdentifyData } from "./support/kindLayers";
 import { mockLayerProviders } from "./support/layers";
 import { inspectChromeLayout } from "./support/layout";
-import { scriptSearch, seedStoredSettings } from "./support/services";
+import {
+  scriptLayers,
+  scriptSearch,
+  seedStoredSettings,
+} from "./support/services";
 import {
   advanceTourTo,
   CHROME_STATES,
@@ -20,6 +25,7 @@ import {
   viewportDetails,
   waitForStableLayout,
 } from "./support/states";
+import { IDENTIFY_FEEDBACK_MS, TIMER_SLACK_MS } from "./support/timers";
 
 // Reduced motion so the sheet and the slots land at once; the layout itself
 // is the same with motion on.
@@ -1176,3 +1182,54 @@ test.describe("tour card with the map key", () => {
     );
   }
 });
+
+/*
+ * The "Looking up what is here" line shares the bottom-centre slot with the
+ * toolbars and banners. A tap's lookup is held until the line shows, then the
+ * layout is read alone and with the credits popover open, in both themes at
+ * every size of the matrix: the line must overlap, hide and leave nothing.
+ */
+for (const viewport of MATRIX_VIEWPORTS) {
+  test(
+    `the waiting line collides with nothing at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage }) => {
+      await scriptLayers(page, [IDENTIFY_FLOOD]);
+      const service = await mockIdentifyData(page);
+      service.set("flood", "hold");
+      await page.setViewportSize(viewport);
+      await mapPage.goto(
+        "#layers=kind-identify-flood&map=7.00/30.00000/31.00000",
+      );
+      await collapseCredits(mapPage);
+      await mapPage.host.click();
+      await expect.poll(() => service.queries.length).toBe(1);
+      await page.clock.runFor(IDENTIFY_FEEDBACK_MS + TIMER_SLACK_MS);
+      const line = page.getByTestId("identify-status");
+      await expect(line).toBeVisible();
+
+      for (const colorScheme of ["light", "dark"] as const) {
+        await page.emulateMedia({ colorScheme });
+        await expect(page.locator("html")).toHaveAttribute(
+          "data-theme",
+          colorScheme,
+        );
+        for (const credits of ["collapsed", "open"] as const) {
+          await test.step(`${colorScheme}, credits ${credits}`, async () => {
+            const open = (await mapPage.creditsRegion.isVisible()) === true;
+            if ((credits === "open") !== open) {
+              await mapPage.creditsButton.click();
+            }
+            await waitForStableLayout(page);
+            const report = await inspectChromeLayout(page);
+            const context = JSON.stringify(report.boxes);
+            expect(report.overlaps, context).toEqual([]);
+            expect(report.outside, context).toEqual([]);
+            expect(report.obscured, context).toEqual([]);
+            await expect(line).toBeVisible();
+          });
+        }
+      }
+    },
+  );
+}

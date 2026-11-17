@@ -298,3 +298,140 @@ export async function mockKindData(page: Page): Promise<KindRequests> {
   });
   return requests;
 }
+
+const IDENTIFY_ORIGIN = "https://tiles.openfreemap.org/identify";
+
+/**
+ * Raster layers that answer a tap, for the identify specs. Each asks
+ * `{origin}/{key}/query` for a point and draws `{origin}/{key}/{z}/{x}/{y}.png`;
+ * `mockIdentifyData` answers both. Their definitions differ only in name and
+ * key, so a tap that finds something in both opens a list.
+ */
+function identifyLayer(
+  key: string,
+  name: string,
+  attribution: string,
+): LayerDefinition {
+  return {
+    ...base,
+    id: `kind-identify-${key}`,
+    name,
+    description: `${name}, asked for at a tap.`,
+    attribution: [{ text: attribution }],
+    source: {
+      kind: "tiles",
+      tiles: `${IDENTIFY_ORIGIN}/${key}/{z}/{x}/{y}.png`,
+      tileSize: 256,
+      maxzoom: 12,
+    },
+    identify: {
+      url: `${IDENTIFY_ORIGIN}/${key}/query?lng={lng}&lat={lat}`,
+      decoder: "geojson",
+      fields: { id: "id", title: "properties.name", depth: "properties.depth" },
+      card: { title: "{title}", lines: ["Depth {depth|number} m"] },
+    },
+  };
+}
+
+/** A flood depth overlay that answers a tap. */
+export const IDENTIFY_FLOOD = identifyLayer(
+  "flood",
+  "Sample flood depth",
+  "Sample flood provider",
+);
+
+/** A second overlay that answers a tap, so one tap can ask two layers. */
+export const IDENTIFY_RAIN = identifyLayer(
+  "rain",
+  "Sample rainfall",
+  "Sample rain provider",
+);
+
+/** What a sample identify service does with a request. */
+export type IdentifyMode = "found" | "nothing" | "error" | "hold";
+
+/** The identify specs' view of the sample service. */
+export interface IdentifyService {
+  /** The identify requests made, in order, as full URLs. */
+  readonly queries: string[];
+  /** Sets what the layer with this key (`flood` or `rain`) does next. It answers nothing until set. */
+  set(key: string, mode: IdentifyMode): void;
+  /**
+   * Answers every held request with one feature, as if the provider had been
+   * slow and then answered. A request the page has since aborted is skipped.
+   */
+  release(): Promise<void>;
+}
+
+const TRANSPARENT_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  "base64",
+);
+
+/**
+ * Answers the sample identify layers' tiles with a transparent picture and
+ * their queries as scripted by {@link IdentifyService.set}: `found` is one
+ * feature with no geometry, as a server sends for raster pixel values (so the
+ * app places it at the tap), `nothing` an empty collection, `error` a 500 and
+ * `hold` an answer that waits for {@link IdentifyService.release}. A layer
+ * with no mode set finds nothing.
+ */
+export async function mockIdentifyData(page: Page): Promise<IdentifyService> {
+  const modes = new Map<string, IdentifyMode>();
+  const held: (() => Promise<void>)[] = [];
+  const names: Record<string, string> = {
+    flood: "Gauge 4",
+    rain: "Rain gauge 7",
+  };
+  const found = (key: string) =>
+    collection([
+      {
+        type: "Feature",
+        id: `${key}-1`,
+        properties: { name: names[key], depth: 1.5 },
+        geometry: null,
+      },
+    ]);
+  const service: IdentifyService = {
+    queries: [],
+    set: (key, mode) => {
+      modes.set(key, mode);
+    },
+    release: async () => {
+      await Promise.all(held.splice(0).map((answer) => answer()));
+    },
+  };
+  await page.route(/tiles\.openfreemap\.org\/identify\//, (route) => {
+    const url = route.request().url();
+    const key = new URL(url).pathname.split("/")[2] ?? "";
+    if (!url.includes("/query?")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "image/png",
+        headers: { "access-control-allow-origin": "*" },
+        body: TRANSPARENT_PNG,
+      });
+    }
+    service.queries.push(url);
+    const respond = (answer: IdentifyMode) =>
+      answer === "error"
+        ? route.fulfill({
+            status: 500,
+            headers: { "access-control-allow-origin": "*" },
+            body: "",
+          })
+        : route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            headers: { "access-control-allow-origin": "*" },
+            body: answer === "found" ? found(key) : collection([]),
+          });
+    const mode = modes.get(key) ?? "nothing";
+    if (mode === "hold") {
+      held.push(() => respond("found").catch(() => undefined));
+      return;
+    }
+    return respond(mode);
+  });
+  return service;
+}

@@ -31,6 +31,7 @@ import { SegmentedControl } from "../ui/SegmentedControl";
 import { Slider } from "../ui/Slider";
 import { Switch } from "../ui/Switch";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
+import { answersTap } from "./answersTap";
 import { DateTimeControl } from "./DateTimeControl";
 import { FeatureGlyph } from "./FeatureGlyph";
 import { LayerKey } from "./LayerKey";
@@ -406,6 +407,14 @@ export function LayerItem({
             label={t("layers.keyFor", { name: resolve(definition.name) })}
             testId={`layer-legend-${definition.id}`}
           />
+          {answersTap(layer) ? (
+            <p
+              className={styles.muted}
+              data-testid={`layer-identify-hint-${definition.id}`}
+            >
+              {t("layers.identify.hint", {})}
+            </p>
+          ) : null}
           {definition.disclaimer ? (
             <p className={styles.disclaimer}>
               <Icon icon={TriangleAlert} />
