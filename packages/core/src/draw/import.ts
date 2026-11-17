@@ -818,10 +818,41 @@ export function parseShapeFile(
 
 const NUMBER = String.raw`[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?`;
 
-/** The first two numbers after the opening bracket of a WKT geometry, which may be wrapped in more brackets. */
-const FIRST_WKT_POSITION = new RegExp(
-  String.raw`\(\s*(?:\(\s*)*(${NUMBER})\s+(${NUMBER})`,
-);
+/**
+ * How much of the start of a text {@link suggestWktAxisOrder} looks at: 4,096
+ * characters, enough for the first geometry's opening and a few lines of
+ * leading text, and a bound on the work however large the file is.
+ */
+export const MAX_AXIS_SCAN_CHARACTERS = 4_096;
+
+/** Two numbers one after the other, read from exactly where the search is set to start. */
+const POSITION_AT = new RegExp(`(${NUMBER})\\s+(${NUMBER})`, "y");
+
+/**
+ * The first two numbers after an opening bracket, which may be followed by
+ * more brackets and white space. One pass: each stretch of brackets and white
+ * space is skipped once, and a stretch that is not followed by two numbers is
+ * not entered again from inside, so the work is linear in `text`.
+ */
+function firstWktPosition(text: string): [string, string] | null {
+  let from = 0;
+  for (;;) {
+    const open = text.indexOf("(", from);
+    if (open < 0) {
+      return null;
+    }
+    let next = open + 1;
+    while (next < text.length && /[\s(]/.test(text.charAt(next))) {
+      next += 1;
+    }
+    POSITION_AT.lastIndex = next;
+    const found = POSITION_AT.exec(text);
+    if (found) {
+      return [found[1] as string, found[2] as string];
+    }
+    from = next;
+  }
+}
 
 /** Whether a longitude and a latitude are both inside the world. */
 function insideWorld(lng: number, lat: number): boolean {
@@ -834,21 +865,29 @@ function insideWorld(lng: number, lat: number): boolean {
  * a file written the other way round. Null for GeoJSON, text with no position,
  * a first position that fits the order given, and one that fits neither.
  *
+ * @remarks Only the first {@link MAX_AXIS_SCAN_CHARACTERS} characters are
+ *   read, and text over {@link MAX_IMPORT_BYTES} gets no suggestion, since
+ *   {@link parseShapeFile} would refuse it. The scan is one pass with no
+ *   recursion, so the depth limit does not apply to it.
  * @param order The order the text is being read in.
  */
 export function suggestWktAxisOrder(
   text: string,
   order: WktAxisOrder,
 ): WktAxisOrder | null {
-  if (text.trimStart().startsWith("{")) {
+  if (text.length > MAX_IMPORT_BYTES) {
     return null;
   }
-  const found = FIRST_WKT_POSITION.exec(text);
+  const start = text.slice(0, MAX_AXIS_SCAN_CHARACTERS);
+  if (start.trimStart().startsWith("{")) {
+    return null;
+  }
+  const found = firstWktPosition(start);
   if (!found) {
     return null;
   }
-  const first = Number(found[1]);
-  const second = Number(found[2]);
+  const first = Number(found[0]);
+  const second = Number(found[1]);
   const [lng, lat] = order === "lng-lat" ? [first, second] : [second, first];
   if (insideWorld(lng, lat) || !insideWorld(lat, lng)) {
     return null;

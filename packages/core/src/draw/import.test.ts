@@ -5,6 +5,7 @@ import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { formatMessage } from "../messages/formatMessage";
 import { shapesToCsv, shapesToGeoJson, shapesToWkt } from "./export";
 import {
+  MAX_AXIS_SCAN_CHARACTERS,
   MAX_IMPORT_BYTES,
   MAX_IMPORT_DEPTH,
   MAX_IMPORT_POINTS,
@@ -1227,6 +1228,29 @@ describe("suggestWktAxisOrder", () => {
         "lng-lat",
       ),
     ).toBeNull();
+  });
+
+  it("stays fast and suggests nothing for text that is only brackets and spaces", () => {
+    const inputs = [
+      "(".repeat(200_000),
+      "( ".repeat(100_000),
+      `${"(".repeat(50_000)}${" ".repeat(150_000)}`,
+    ];
+    const started = performance.now();
+    for (const input of inputs) {
+      expect(suggestWktAxisOrder(input, "lng-lat")).toBeNull();
+    }
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
+  it("looks only at the start of the text, so a position far into a large file is not searched for", () => {
+    const far = `${" ".repeat(MAX_AXIS_SCAN_CHARACTERS)}POINT (-33.9 151.2)`;
+    expect(suggestWktAxisOrder(far, "lng-lat")).toBeNull();
+  });
+
+  it("makes no suggestion for text longer than an import accepts", () => {
+    const text = `POINT (-33.9 151.2)${" ".repeat(MAX_IMPORT_BYTES)}`;
+    expect(suggestWktAxisOrder(text, "lng-lat")).toBeNull();
   });
 
   it("reads signs and exponents", () => {
