@@ -194,6 +194,119 @@ describe("useMessages with a language catalogue", () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
+  it("retries a failed load when the language is resolved again, and ends in the chosen language", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let offline = true;
+    const load = vi.fn((tag: string) => {
+      if (tag !== "af") {
+        return ENGLISH;
+      }
+      return offline
+        ? Promise.reject(new Error("offline"))
+        : Promise.resolve(AFRIKAANS);
+    });
+    setup({ load, languages: ["af"] });
+    await act(async () => {});
+    choose("en");
+    choose("af");
+    await act(async () => {});
+    expect(text()).toBe("en-GB:Settings");
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(2);
+    offline = false;
+    choose("follow");
+    expect(await screen.findByText("af:Instellings")).toBeTruthy();
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(3);
+  });
+
+  it("retries a load that failed with the same tag when the choice changes, and stays put when the retry fails too", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const load = vi.fn((tag: string) =>
+      tag === "af" ? Promise.reject(new Error("offline")) : ENGLISH,
+    );
+    setup({ load, language: "af", languages: ["af"] });
+    await act(async () => {});
+    expect(load).toHaveBeenCalledTimes(1);
+    choose("follow");
+    await act(async () => {});
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(text()).toBe("en-GB:Settings");
+    expect(warn).toHaveBeenCalledTimes(2);
+    await act(async () => {});
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it("swaps the language in when a retry for the same tag succeeds", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let offline = true;
+    const load = (tag: string) => {
+      if (tag !== "af") {
+        return ENGLISH;
+      }
+      return offline
+        ? Promise.reject(new Error("offline"))
+        : Promise.resolve(AFRIKAANS);
+    };
+    setup({ load, language: "af", languages: ["af"] });
+    await act(async () => {});
+    expect(text()).toBe("en-GB:Settings");
+    offline = false;
+    choose("follow");
+    expect(await screen.findByText("af:Instellings")).toBeTruthy();
+  });
+
+  it("does not retry a failed load when the browser reports the same languages in a new array", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const load = vi.fn((tag: string) =>
+      tag === "af" ? Promise.reject(new Error("offline")) : ENGLISH,
+    );
+    const services = createFakeServices({
+      messages: ENGLISH,
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "af", label: "Afrikaans" },
+        ],
+        "en-GB",
+        load,
+      ),
+    });
+    services.fakes.settings.set({ language: null });
+    let current = { ...services.fakes.preferences.get(), languages: ["af"] };
+    const listeners = new Set<(value: typeof current) => void>();
+    render(
+      <ServicesProvider
+        services={{
+          ...services,
+          preferences: {
+            get: () => current,
+            subscribe: (listener) => {
+              listeners.add(listener);
+              return () => listeners.delete(listener);
+            },
+          },
+        }}
+      >
+        <Probe />
+      </ServicesProvider>,
+    );
+    await act(async () => {});
+    expect(load).toHaveBeenCalledTimes(1);
+    current = { ...current, languages: ["af"] };
+    await act(async () => {
+      for (const listener of listeners) {
+        listener(current);
+      }
+    });
+    expect(load).toHaveBeenCalledTimes(1);
+    current = { ...current, languages: ["af", "en"] };
+    await act(async () => {
+      for (const listener of listeners) {
+        listener(current);
+      }
+    });
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it("does not load again for a re-render with the same language", () => {
     const load = vi.fn((tag: string) => (tag === "af" ? AFRIKAANS : ENGLISH));
     setup({ load });
