@@ -4,6 +4,7 @@ import { Icon, SkipLink } from "@mapcairn/map";
 import { ChevronDown, CodeXml, Compass, Heart } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
+import { DOCUMENT_SCROLL } from "../app/documentScroll";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
 import {
   PLAYGROUND_PATH,
@@ -22,7 +23,6 @@ import {
   LEDE,
   LICENCE_URL,
   type Line,
-  MILESTONES_URL,
   PLAYGROUND_ACTION,
   SECTIONS,
   type Section,
@@ -283,11 +283,6 @@ function ProductFooter() {
             </a>
           </li>
           <li>
-            <a className={styles.footerLink} href={MILESTONES_URL}>
-              Roadmap
-            </a>
-          </li>
-          <li>
             <a className={styles.footerLink} href="/privacy">
               Privacy policy
             </a>
@@ -309,17 +304,24 @@ function ProductFooter() {
  * way to follow and help, with View on GitHub as the first action and the
  * playground one link away from anywhere on the page.
  *
- * @remarks Server-rendered and static: it loads no map code and requests
- *   nothing from a third party; every link is a plain anchor to GitHub's own
- *   pages, this site or the page's own anchors, never straight to a Markdown
- *   file. Its first element is the inline script that sends an old map link
+ * @remarks Server-rendered and static: it loads no services and no map code,
+ *   and its own markup requests nothing from another site (in production the
+ *   host adds its cookieless page-view counter, as on every page); every link
+ *   is a plain anchor to GitHub's own pages, this site or the page's own
+ *   anchors, never a Markdown file, an issue, a pull request or a milestone.
+ *   Its first element is the inline script that sends an old map link
  *   (`/#map=...`) on to the playground before the page paints. It is English
  *   only, by decision, so it sets `lang="en-GB"` on its own root whatever
  *   language the playground is in.
  */
 export function ProductPage() {
   return (
-    <div className={styles.scroller} lang="en-GB" data-testid="product-page">
+    <div
+      className={styles.scroller}
+      lang="en-GB"
+      data-testid="product-page"
+      {...DOCUMENT_SCROLL}
+    >
       <script
         // biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed string allowed by its CSP hash; see MAP_LINK_REDIRECT_SCRIPT.
         dangerouslySetInnerHTML={{ __html: MAP_LINK_REDIRECT_SCRIPT }}

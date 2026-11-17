@@ -9,6 +9,15 @@
  */
 export const SITE_URL = "https://mapcairn.timothybrits.co.za";
 
+/**
+ * What the site is, in a sentence or two, for search results and link
+ * previews: the product page's description, and the site's own for a page
+ * with none (an error page). Kept here, away from the product page's content,
+ * so every page can use it without loading that content.
+ */
+export const PRODUCT_DESCRIPTION =
+  "An open-source SDK for accessible, privacy-respecting map applications on MapLibre GL JS and React: a complete map interface, open data layers as data, measuring and drawing tools, and a design system. AGPL-3.0.";
+
 /** The path of the product page, the site's front page. */
 export const PRODUCT_PATH = "/";
 

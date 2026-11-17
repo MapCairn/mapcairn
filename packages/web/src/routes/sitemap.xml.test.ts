@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
+import { routePaths } from "../routePaths";
 import routes from "../routes";
 import { loader } from "./sitemap.xml";
 
@@ -25,9 +26,7 @@ describe("/sitemap.xml route", () => {
 
   it("lists only pages the route table has, and no date it cannot know", async () => {
     const body = await loader().text();
-    const paths = new Set(
-      routes.map((entry) => (entry.index ? "" : (entry.path ?? ""))),
-    );
+    const paths = new Set(routePaths(routes));
     for (const [, path] of body.matchAll(/<loc>[^<]+?\/([^/<]*)<\/loc>/g)) {
       expect(paths.has(path ?? "")).toBe(true);
     }

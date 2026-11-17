@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
-import { PLAYGROUND_TOOLS } from "../product/llmsText";
 import { productMarkdown } from "../product/productMarkdown";
+import { routePaths } from "../routePaths";
 import routes from "../routes";
 import { loader } from "./llms.txt";
 import { loader as fullLoader } from "./llms-full.txt";
@@ -20,9 +20,7 @@ function linkTargets(text: string): string[] {
 }
 
 /** The route paths the site serves, `""` for the index. */
-const ROUTE_PATHS = new Set(
-  routes.map((entry) => (entry.index ? "" : (entry.path ?? ""))),
-);
+const ROUTE_PATHS = new Set(routePaths(routes));
 
 /** Checks a link points at a page the site serves or a file the repository has. */
 function expectResolves(target: string): void {
@@ -39,7 +37,7 @@ function expectResolves(target: string): void {
     }
   }
   expect(target, "a link outside the site and the repository").toMatch(
-    /^https:\/\/github\.com\/MapCairn\/mapcairn(#(documentation|licence)|\/(issues(\/\d+)?|contribute|milestones|tree\/main\/[\w/.-]+))?$/,
+    /^https:\/\/github\.com\/MapCairn\/mapcairn(#(documentation|licence)|\/(contribute|tree\/main\/[\w/.-]+))?$/,
   );
 }
 
@@ -85,21 +83,6 @@ describe("/llms.txt", () => {
     expect(targets.length).toBeGreaterThan(10);
     for (const target of targets) {
       expectResolves(target);
-    }
-  });
-
-  it("names exactly the WebMCP tools the playground registers", async () => {
-    const source = readFileSync(
-      path.join(__dirname, "../webmcp/useMapModelContextTools.ts"),
-      "utf8",
-    );
-    const registered = [...source.matchAll(/^\s+name: "([a-z-]+)",$/gm)].map(
-      (match) => match[1],
-    );
-    expect(PLAYGROUND_TOOLS).toEqual(registered);
-    const text = await loader().text();
-    for (const tool of registered) {
-      expect(text).toContain(`\`${tool}\``);
     }
   });
 });

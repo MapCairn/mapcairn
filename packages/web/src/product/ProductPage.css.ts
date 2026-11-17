@@ -27,7 +27,7 @@ const CODE_HEIGHT = "26rem";
 const ART_WIDTH = "30rem";
 
 /** The widest the page gets. */
-const PAGE_WIDTH = "72rem";
+const PAGE_WIDTH = "60rem";
 
 /** The space between sections: two of the largest steps. */
 const SECTION_SPACE = `calc(${tokens.space.xl} * 2)`;

@@ -2,14 +2,10 @@
 // Copyright MapCairn contributors
 import type { LinksFunction, MetaFunction } from "react-router";
 import { buildPageMeta } from "../buildPageMeta";
-import { SITE_URL } from "../constants/siteConfig";
+import { PRODUCT_DESCRIPTION, SITE_URL } from "../constants/siteConfig";
 import type { PageLanguageHandle } from "../i18n/pageLanguage";
 import { ProductPage } from "../product/ProductPage";
-import {
-  faqEntries,
-  PRODUCT_DESCRIPTION,
-  PRODUCT_TITLE,
-} from "../product/productContent";
+import { faqEntries, PRODUCT_TITLE } from "../product/productContent";
 import {
   faqNode,
   jsonLdGraph,

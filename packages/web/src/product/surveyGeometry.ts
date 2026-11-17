@@ -140,7 +140,7 @@ export const SPOT_HEIGHT = {
 } as const;
 
 /** The dropped pin: its tip is the point it marks. */
-export const PIN_TIP: Point = { x: 232, y: 318 };
+export const PIN_TIP: Point = { x: 240, y: 310 };
 
 /** The pin's outline, drawn with its tip at the origin. */
 export const PIN_PATH =
@@ -256,7 +256,7 @@ export const NORTH_HALVES = {
 
 /** The scale bar: one kilometre on {@link UNITS_PER_KM}, in alternate quarters, with its two ends labelled. */
 export const SCALE_BAR = (() => {
-  const origin = { x: 24, y: SHEET.height - 30 };
+  const origin = { x: 96, y: SHEET.height - 30 };
   const quarter = UNITS_PER_KM / 4;
   return {
     origin,
@@ -277,22 +277,32 @@ export const SCALE_BAR = (() => {
   } as const;
 })();
 
+/** The clear space kept round the marks a narrow crop must show. */
+const CROP_MARGIN = 12;
+
 /**
  * How the art is cropped on a narrow screen, so its labels stay legible: the
- * same drawing at {@link NARROW_CROP.zoom} times the width of its frame,
- * centred on the measured line's middle, in a frame of
- * {@link NARROW_CROP.aspect}. Nothing is redrawn, so every relation holds.
- * `box` is the part of the view box that shows; `marginInlineStart` and
- * `marginBlockStart` are the offsets, as shares of the frame's width, that
- * put the focus in the frame's middle.
+ * same drawing, enlarged by {@link NARROW_CROP.zoom}, round the marks that
+ * tell the story (the pin, the measured line and its length, the cairn and
+ * its height, and the scale bar the length is read against), in a frame of
+ * {@link NARROW_CROP.aspect}. The zoom is the largest that keeps all of them
+ * in the frame. Nothing is redrawn, so every relation holds. `box` is the
+ * part of the view box that shows; `marginInlineStart` and `marginBlockStart`
+ * are the offsets, as shares of the frame's width, that put it in the frame.
  */
 export const NARROW_CROP = (() => {
-  const zoom = 2;
-  const aspect = 16 / 9;
-  const focus = {
-    x: (MEASURE.from.x + MEASURE.to.x) / 2,
-    y: (MEASURE.from.y + MEASURE.to.y) / 2,
-  };
+  const aspect = 4 / 3;
+  const { pin, cairn, spotHeight, measureLabel, scaleBar } = markBoxes();
+  const kept = [pin, cairn, spotHeight, measureLabel, scaleBar];
+  const left = Math.min(...kept.map((box) => box.left)) - CROP_MARGIN;
+  const right = Math.max(...kept.map((box) => box.right)) + CROP_MARGIN;
+  const top = Math.min(...kept.map((box) => box.top)) - CROP_MARGIN;
+  const bottom = Math.max(...kept.map((box) => box.bottom)) + CROP_MARGIN;
+  const zoom = Math.min(
+    VIEW_BOX.width / (right - left),
+    VIEW_BOX.width / ((bottom - top) * aspect),
+  );
+  const focus = { x: (left + right) / 2, y: (top + bottom) / 2 };
   const shownWidth = VIEW_BOX.width / zoom;
   const shownHeight = shownWidth / aspect;
   const fx = (focus.x - VIEW_BOX.x) / VIEW_BOX.width;

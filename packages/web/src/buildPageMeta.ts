@@ -10,8 +10,9 @@ import type { JsonLdNode } from "./structuredData";
 
 /**
  * The link preview images, each 1200 by 630 and drawn by the project itself
- * (`scripts/generateOgImage.ts`): the SDK's card for the product page and the
- * map's card for the playground and the pages around it.
+ * (`scripts/generateSdkOgImage.ts` draws the SDK's card for the product page,
+ * and `scripts/generateOgImage.ts` the map's card for the playground and the
+ * pages around it).
  */
 export const PREVIEW_IMAGES = {
   product: {

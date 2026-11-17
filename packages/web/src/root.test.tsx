@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  createFakeServices,
-  createLanguageCatalogue,
-  FakeMessageCatalogue,
-  THEME_COLOR_META,
-} from "@mapcairn/core";
-import { useServices } from "@mapcairn/map";
+import { THEME_COLOR_META } from "@mapcairn/core";
+import { useOptionalServices } from "@mapcairn/map";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -24,12 +19,6 @@ vi.mock("react-router", async (importOriginal) => {
     ScrollRestoration: () => null,
   };
 });
-
-const fakeServices = createFakeServices();
-const createServices = vi.fn(() => fakeServices);
-vi.mock("./composition/createServices", () => ({
-  createServices: () => createServices(),
-}));
 
 const reportCaughtError = vi.fn();
 vi.mock("./composition/errorReporting", () => ({
@@ -179,12 +168,11 @@ describe("root Root", () => {
     return createElement(
       "p",
       null,
-      useServices() === fakeServices ? "services ready" : "wrong services",
+      useOptionalServices() === null ? "no services" : "services",
     );
   }
 
-  it("provides the services, built once, to the matched route", () => {
-    createServices.mockClear();
+  it("renders the matched route with no services, announcer or tooltips of its own", () => {
     const Stub = createRoutesStub([
       {
         path: "/",
@@ -193,12 +181,10 @@ describe("root Root", () => {
       },
     ]);
 
-    const { rerender } = render(createElement(Stub, { initialEntries: ["/"] }));
-    rerender(createElement(Stub, { initialEntries: ["/"] }));
+    render(createElement(Stub, { initialEntries: ["/"] }));
 
-    expect(screen.getByText("services ready")).toBeInTheDocument();
-    expect(createServices).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("live-region-polite")).toBeInTheDocument();
+    expect(screen.getByText("no services")).toBeInTheDocument();
+    expect(screen.queryByTestId("live-region-polite")).toBeNull();
   });
 });
 
@@ -207,50 +193,8 @@ describe("root document language", () => {
     document.documentElement.removeAttribute("lang");
   });
 
-  const stub = () =>
-    createRoutesStub([
-      {
-        path: "/",
-        Component: Root,
-        children: [{ index: true, Component: () => null }],
-      },
-    ]);
-
-  it("sets lang on the document to the language in use", () => {
-    createServices.mockReturnValueOnce(
-      createFakeServices({
-        messages: new FakeMessageCatalogue({ language: "en-GB" }),
-      }),
-    );
-    const Stub = stub();
-    render(createElement(Stub, { initialEntries: ["/"] }));
-    expect(document.documentElement.lang).toBe("en-GB");
-  });
-
-  it("follows the language when the person's choice loads", async () => {
-    const services = createFakeServices({
-      messages: new FakeMessageCatalogue({ language: "en-GB" }),
-      languages: createLanguageCatalogue(
-        [
-          { tag: "en-GB", label: "English" },
-          { tag: "af", label: "Afrikaans" },
-        ],
-        "en-GB",
-        (tag) => Promise.resolve(new FakeMessageCatalogue({ language: tag })),
-      ),
-    });
-    services.fakes.settings.set({ language: "af" });
-    createServices.mockReturnValueOnce(services);
-    const Stub = stub();
-    render(createElement(Stub, { initialEntries: ["/"] }));
-    await waitFor(() => expect(document.documentElement.lang).toBe("af"));
-  });
-
-  it("keeps a page in one language when its route says so, whatever the interface speaks", async () => {
-    const services = createFakeServices({
-      messages: new FakeMessageCatalogue({ language: "af" }),
-    });
-    createServices.mockReturnValueOnce(services);
+  it("puts a page in one language back to it, whatever the pre-paint script set", async () => {
+    document.documentElement.lang = "af";
     const Stub = createRoutesStub([
       {
         path: "/",
@@ -266,6 +210,19 @@ describe("root document language", () => {
     ]);
     render(createElement(Stub, { initialEntries: ["/"] }));
     await waitFor(() => expect(document.documentElement.lang).toBe("en-GB"));
+  });
+
+  it("leaves lang alone for a page that names no language", () => {
+    document.documentElement.lang = "af";
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: Root,
+        children: [{ index: true, Component: () => null }],
+      },
+    ]);
+    render(createElement(Stub, { initialEntries: ["/"] }));
+    expect(document.documentElement.lang).toBe("af");
   });
 });
 

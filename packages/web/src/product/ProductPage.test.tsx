@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { parseUrlHash } from "@mapcairn/core";
+import { parseUrlHash, serialiseUrlHash } from "@mapcairn/core";
 import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -11,12 +11,6 @@ import { ProductPage } from "./ProductPage";
 import { EMBED_EXAMPLE_CODE } from "./productContent";
 
 const REPO = "https://github.com/MapCairn/mapcairn";
-
-/** The capability matrix, which says what MapCairn has, partly has or lacks. */
-const MATRIX = readFileSync(
-  path.resolve(__dirname, "../../../../docs/guides/capability-matrix.md"),
-  "utf8",
-);
 
 /** The README on `main`, whose "Documentation" heading GitHub anchors as `#documentation`. */
 const README = readFileSync(
@@ -73,20 +67,9 @@ describe("the product page stands on its own", () => {
       expect(summary?.textContent?.length).toBeLessThan(45);
       expect(item.querySelector("p")?.textContent?.length).toBeGreaterThan(60);
     }
-    const text = section("What you get").textContent ?? "";
-    for (const claim of [
-      "WCAG 2.2 AA",
-      "arrow keys pan",
-      "nothing is requested until a person asks",
-      "contract suite",
-      "contrast of every token pair",
-      "GeoJSON, CSV and WKT",
-    ]) {
-      expect(text).toContain(claim);
-    }
   });
 
-  it("names the four packages, one line each, one tap away", () => {
+  it("names the SDK's packages, one line each, one tap away", () => {
     renderPage();
     const embed = section("Embed a map");
     for (const name of [
@@ -154,86 +137,60 @@ describe("the product page stands on its own", () => {
     ).toHaveAttribute("href", REPO);
   });
 
-  it("says what to try in the playground, and opens it in real states through the links it shares", () => {
+  it("opens the playground through links its own hash parser reads as a view", () => {
     renderPage();
-    expect(section("See it working")).toHaveTextContent(
-      "Search for a place or a pair of coordinates",
-    );
     const deepLinks = within(screen.getByTestId("playground-deep-links"))
       .getAllByRole("link")
-      .map((link) => ({
-        name: link.textContent,
-        href: link.getAttribute("href") ?? "",
-      }));
-    expect(deepLinks.map((link) => link.name)).toEqual([
-      "Open the playground over Cape Town",
-      "Open the playground on the Dark basemap",
-      "Open the playground with the past day's earthquakes turned on",
-    ]);
-    for (const { href } of deepLinks) {
+      .map((link) => link.getAttribute("href") ?? "");
+    expect(deepLinks.length).toBeGreaterThan(0);
+    for (const href of deepLinks) {
       expect(href.startsWith("/map#")).toBe(true);
+      // The address round-trips through the app's own reader and writer.
+      const state = parseUrlHash(href.slice(href.indexOf("#")));
+      expect(state.view).toBeDefined();
+      expect(`/map${serialiseUrlHash(state)}`).toBe(href);
     }
-    const [capeTown, dark, earthquakes] = deepLinks.map(({ href }) =>
-      parseUrlHash(href.slice(href.indexOf("#"))),
-    );
-    expect(capeTown?.view?.center).toEqual({ lat: -33.92, lng: 18.42 });
-    expect(dark?.basemapId).toBe("dark");
-    expect(earthquakes?.layers?.enabled).toEqual(["earthquakes"]);
   });
 
-  it("says nothing about npm, either way", () => {
-    const html = renderToStaticMarkup(<ProductPage />);
-    expect(html).not.toMatch(/npm/i);
-  });
-
-  it("says when it does not fit only with open issues the capability matrix agrees with", () => {
+  it("says what MapCairn is not, and points to the documentation for what is current", () => {
     renderPage();
     const fit = section("When it fits, and when it does not");
-    const issueLinks = within(fit)
-      .getAllByRole("link")
-      .filter((link) => /\/issues\/\d+$/.test(link.getAttribute("href") ?? ""));
-    expect(issueLinks.length).toBeGreaterThan(0);
-    for (const link of issueLinks) {
-      const number = (link.getAttribute("href") ?? "").split("/").at(-1);
-      const row = MATRIX.split("\n").find(
-        (line) => line.startsWith("|") && line.includes(`[#${number}]`),
-      );
-      expect(row, `#${number}`).toMatch(/\|\s*(lacks|partial)\s*\|/);
-    }
     expect(fit).toHaveTextContent(
       "a hosted service, a dataset or a GIS analysis engine",
     );
+    expect(
+      within(fit).getByRole("link", { name: /in the documentation$/ }),
+    ).toHaveAttribute("href", `${REPO}#documentation`);
   });
 
-  it("states the licence as open source under the AGPL-3.0, and never commercial terms", () => {
+  it("states the licence as open source under the AGPL-3.0", () => {
     const { container } = renderPage();
-    const text = container.textContent ?? "";
-    expect(text).toContain("Open source under the AGPL-3.0");
-    expect(text).not.toMatch(/commercial/i);
+    expect(container.textContent).toContain("Open source under the AGPL-3.0");
   });
 
-  it("ends with a quiet line that says where it is made, and names no person", () => {
+  it("ends with a quiet line that says where it is made, then the licence and its links, and nothing else", () => {
     renderPage();
     const footer = screen.getByRole("contentinfo");
-    expect(footer).toHaveTextContent("Built with love in South Africa.");
+    const lines = [...footer.querySelectorAll("p")].map((p) => p.textContent);
+    expect(lines).toEqual([
+      "Built with love in South Africa.",
+      "MapCairn is open source under the AGPL-3.0.",
+    ]);
     expect(footer.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
-    expect(footer).not.toHaveTextContent(/timothy|brits/i);
-    for (const name of [
+    expect(
+      within(footer)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual([
       "Source code on GitHub",
       "Try the playground",
       "Documentation",
-      "Roadmap",
       "Privacy policy",
       "Licence and credits",
-    ]) {
-      expect(within(footer).getByRole("link", { name })).toBeInTheDocument();
-    }
-    expect(
-      within(footer).getByRole("link", { name: "Roadmap" }),
-    ).toHaveAttribute("href", `${REPO}/milestones`);
+    ]);
   });
 
-  it("links to no Markdown file: documentation, the roadmap, issues and contributing use GitHub's own pages", () => {
+  it("links to no Markdown file: documentation and contributing use GitHub's own pages", () => {
     renderPage();
     const hrefs = screen
       .getAllByRole("link")
@@ -244,8 +201,6 @@ describe("the product page stands on its own", () => {
       expect(href).not.toContain("raw.githubusercontent.com");
     }
     expect(hrefs).toContain(`${REPO}#documentation`);
-    expect(hrefs).toContain(`${REPO}/milestones`);
-    expect(hrefs).toContain(`${REPO}/issues`);
     expect(hrefs).toContain(`${REPO}/contribute`);
     // The anchors the page uses exist on the repository's front page.
     expect(README).toMatch(/^## Documentation$/m);

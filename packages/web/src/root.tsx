@@ -3,13 +3,7 @@
 import "./fonts/fonts.css";
 import "./global.css";
 import { THEME_COLOR_META } from "@mapcairn/core";
-import {
-  LiveRegionProvider,
-  ServicesProvider,
-  TooltipProvider,
-  useMessages,
-} from "@mapcairn/map";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -22,17 +16,14 @@ import {
   useMatches,
   useRouteError,
 } from "react-router";
-import { DocumentTitle } from "./app/DocumentTitle";
 import { ErrorPage } from "./app/ErrorPage";
 import { THEME_BOOTSTRAP_SCRIPT } from "./app/themeBootstrap";
 import { buildPageMeta } from "./buildPageMeta";
-import { createServices } from "./composition/createServices";
 import { reportCaughtError } from "./composition/errorReporting";
 import { BRAND_COLOUR } from "./constants/brandColour";
-import { SITE_URL } from "./constants/siteConfig";
+import { PRODUCT_DESCRIPTION, SITE_URL } from "./constants/siteConfig";
 import { fontPreloadLinks } from "./fonts/fontPreload";
 import { fixedPageLanguage } from "./i18n/pageLanguage";
-import { PRODUCT_DESCRIPTION } from "./product/productContent";
 import { jsonLdGraph, websiteNode } from "./structuredData";
 
 /**
@@ -131,44 +122,33 @@ export function Layout({ children }: { readonly children: ReactNode }) {
 
 /**
  * Keeps `<html lang>` on the language the interface speaks. The pre-paint
- * script sets it from the stored choice before first paint; this covers the
- * browser's own languages and a choice made later. A page in one language
- * only (the English product page, through its route's `handle`) keeps that
- * language instead.
+ * script may set it from the stored choice before first paint; a page in one
+ * language only (the English product page, through its route's `handle`)
+ * puts its own language back. A page that follows the interface's language
+ * is kept in step by the app layout (`routes/app.tsx`) instead.
  */
-function DocumentLanguage() {
-  const { language } = useMessages();
+function FixedDocumentLanguage() {
   const fixed = fixedPageLanguage(useMatches());
   useEffect(() => {
-    document.documentElement.lang = fixed ?? language;
-  }, [fixed, language]);
+    if (fixed !== undefined) {
+      document.documentElement.lang = fixed;
+    }
+  }, [fixed]);
   return null;
 }
 
 /**
- * React Router route module export: the root route. Builds the services once
- * per app instance (once per request on the server, once in the browser) and
- * mounts the app-wide providers: services, the one announcer and tooltips. It
- * also keeps the document's `lang` and the tab's title in step with the active
- * language.
- *
- * @remarks `createServices` is safe on the server: adapters touch no browser
- *   API until used. Their values differ between server and browser (stored
- *   settings, device preferences), so nothing rendered from them is in the
- *   server HTML; the map route mounts the map after hydration.
+ * React Router route module export: the root route. It renders the matched
+ * route and nothing else, so a page that needs no services (the product page)
+ * loads none of them: the services, the announcer and tooltips belong to the
+ * app layout around the playground and the privacy page (`routes/app.tsx`).
  */
 export default function Root() {
-  const [services] = useState(() => createServices());
   return (
-    <ServicesProvider services={services}>
-      <DocumentLanguage />
-      <DocumentTitle />
-      <LiveRegionProvider>
-        <TooltipProvider>
-          <Outlet />
-        </TooltipProvider>
-      </LiveRegionProvider>
-    </ServicesProvider>
+    <>
+      <FixedDocumentLanguage />
+      <Outlet />
+    </>
   );
 }
 

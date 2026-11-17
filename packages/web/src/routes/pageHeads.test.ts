@@ -5,6 +5,7 @@ import path from "node:path";
 import type { LinksFunction, MetaDescriptor, MetaFunction } from "react-router";
 import { describe, expect, it } from "vitest";
 import { SITE_URL } from "../constants/siteConfig";
+import { OFFERED_LANGUAGE_TAGS } from "../i18n/hostLanguages";
 import { faqEntries } from "../product/productContent";
 import * as mapRoute from "./map";
 import * as privacyRoute from "./privacy";
@@ -180,7 +181,7 @@ describe("the playground's structured data", () => {
       operatingSystem: "Any",
       browserRequirements: "Requires JavaScript and WebGL.",
       isAccessibleForFree: true,
-      inLanguage: ["en-GB", "af"],
+      inLanguage: [...OFFERED_LANGUAGE_TAGS],
     });
   });
 

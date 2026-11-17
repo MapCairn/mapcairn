@@ -36,6 +36,24 @@ globalStyle("html, body", {
   },
 });
 
+/**
+ * A full page that is not the map (the product page, the privacy policy)
+ * carries this attribute on its scrolling container. The document then
+ * scrolls as any web page does, so Space, Page Down and the arrow keys scroll
+ * it from the first key press, with nothing focused. A browser without `:has()`
+ * keeps the fixed document, and the container scrolls itself as before.
+ */
+export const DOCUMENT_SCROLL_ATTRIBUTE = "data-document-scroll";
+
+const SCROLLING_DOCUMENT = `:root:has([${DOCUMENT_SCROLL_ATTRIBUTE}])`;
+
+globalStyle(`${SCROLLING_DOCUMENT}, ${SCROLLING_DOCUMENT} body`, {
+  position: "static",
+  height: "auto",
+  overflow: "visible",
+  overscrollBehavior: "auto",
+});
+
 globalStyle("html", {
   colorScheme: "light",
   backgroundColor: tokens.color.pageBackground,

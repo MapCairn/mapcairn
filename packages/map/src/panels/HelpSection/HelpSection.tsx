@@ -26,11 +26,11 @@ function isWebAddress(href: string): boolean {
 
 /**
  * Whether `href` is a path on the host's own site (`/about`), the other kind of
- * address the About block's own-page link may take. A `//` address is another
- * site, so it does not count.
+ * address the About block's own-page link may take. A browser reads `//` and
+ * `/\` as the start of another site's address, so neither counts.
  */
 function isSitePath(href: string): boolean {
-  return href.startsWith("/") && !href.startsWith("//");
+  return /^\/(?![/\\])/.test(href);
 }
 
 /** A link in the About block: where it goes and what it is called. */

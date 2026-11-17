@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures";
 import { PRODUCT_HEADLINE, ProductPage } from "./pages/ProductPage";
 import {
@@ -44,6 +47,16 @@ test.describe("the product page", () => {
       requests.filter((url) => /maplibre/i.test(url)),
       "map engine requests",
     ).toEqual([]);
+    // The app layout (the services, every adapter and layer definition) and
+    // the map route are their own chunks and stylesheets; none of them loads.
+    // The browser holds only the routes it has found so far, so read the
+    // build's own manifest, which `npm run start` served.
+    const appFiles = appLayoutFiles();
+    expect(appFiles.length).toBeGreaterThan(2);
+    const paths = requests.map((url) => new URL(url).pathname);
+    for (const file of appFiles) {
+      expect(paths, file).not.toContain(file);
+    }
     await expect(page.getByTestId("map-host")).toHaveCount(0);
     await expect(page.locator('link[rel="preconnect"]')).toHaveCount(0);
   });
@@ -192,52 +205,23 @@ test.describe("the product page", () => {
     });
   }
 
-  test("opens the playground over Cape Town", async ({ page, mapPage }) => {
-    const product = new ProductPage(page);
-    await product.goto();
-    await page
-      .getByRole("link", { name: "Open the playground over Cape Town" })
-      .click();
-    await mapPage.waitForMap();
-    const view = await mapPage.hashView();
-    expect(view?.lat).toBeCloseTo(-33.92, 1);
-    expect(view?.lng).toBeCloseTo(18.42, 1);
-  });
-
-  test("opens the playground on the Dark basemap", async ({
-    page,
-    mapPage,
-  }) => {
-    const product = new ProductPage(page);
-    await product.goto();
-    await page
-      .getByRole("link", { name: "Open the playground on the Dark basemap" })
-      .click();
-    await mapPage.waitForMap();
-    await mapPage.openMapOptions();
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: /^Dark/ }),
-    ).toBeChecked();
-  });
-
-  test("opens the playground with the earthquakes layer on", async ({
-    page,
-    mapPage,
-  }) => {
-    const product = new ProductPage(page);
-    await product.goto();
-    await page
-      .getByRole("link", {
-        name: "Open the playground with the past day's earthquakes turned on",
-      })
-      .click();
-    await mapPage.waitForMap();
-    await expect(page).toHaveURL(/layers=earthquakes/);
-    await mapPage.openMapOptions();
-    await expect(
-      page.getByRole("switch", { name: /^Earthquakes/ }),
-    ).toBeChecked();
-  });
+  for (const [name, lat, lng] of [
+    ["Open the playground over Cape Town", -33.92, 18.42],
+    ["Open the playground over the whole world", 20, 0],
+  ] as const) {
+    test(`follows "${name}" to a working map over that place`, async ({
+      page,
+      mapPage,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      await page.getByRole("link", { name }).click();
+      await mapPage.waitForMap();
+      const view = await mapPage.hashView();
+      expect(view?.lat).toBeCloseTo(lat, 1);
+      expect(view?.lng).toBeCloseTo(lng, 1);
+    });
+  }
 
   test("lets the keyboard reach and scroll the code example", async ({
     page,
@@ -405,6 +389,26 @@ test.describe("the product page", () => {
     });
   });
 
+  for (const [name, path, key] of [
+    ["the product page", "/", "PageDown"],
+    ["the product page", "/", "Space"],
+    ["the product page", "/", "ArrowDown"],
+    ["the privacy page", "/privacy", "PageDown"],
+  ] as const) {
+    test(`scrolls ${name} with ${key} straight after it loads`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 600 });
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      const before = await page.evaluate(() => window.scrollY);
+      await page.keyboard.press(key);
+      await expect
+        .poll(() => page.evaluate(() => window.scrollY))
+        .toBeGreaterThan(before);
+    });
+  }
+
   test("skips to the main content from the first Tab", async ({ page }) => {
     const product = new ProductPage(page);
     await product.goto();
@@ -501,6 +505,35 @@ test.describe("the product page @a11y", () => {
     expect(await findLongMotion(page)).toEqual([]);
   });
 });
+
+/**
+ * The app layout's and the map route's own chunks and stylesheets (not those the
+ * product page shares with them), from the
+ * build's route manifest: the files that hold the services, every adapter and
+ * layer definition, and the map.
+ */
+function appLayoutFiles(): string[] {
+  const assets = fileURLToPath(
+    new URL("../build/client/assets", import.meta.url),
+  );
+  const manifestFile = readdirSync(assets).find((name) =>
+    name.startsWith("manifest-"),
+  );
+  const source = readFileSync(join(assets, manifestFile ?? ""), "utf8");
+  const manifest = JSON.parse(
+    source.slice(source.indexOf("=") + 1).replace(/;\s*$/, ""),
+  ) as { routes: Record<string, { module: string; css?: string[] }> };
+  const files = (ids: readonly string[]) =>
+    ids.flatMap((id) => [
+      manifest.routes[id]?.module ?? "",
+      ...(manifest.routes[id]?.css ?? []),
+    ]);
+  // A stylesheet the product page shares (the tokens) is not the app's own.
+  const shared = new Set(files(["root", "routes/product"]));
+  return files(["routes/app", "routes/map"]).filter(
+    (file) => !shared.has(file),
+  );
+}
 
 /** A hash as a literal piece of a regular expression. */
 function literally(text: string): string {

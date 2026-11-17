@@ -21,19 +21,6 @@ function rawFile(path: string): string {
   return `${SOURCE_REPOSITORY_URL.replace("https://github.com/", "https://raw.githubusercontent.com/")}/main/${path}`;
 }
 
-/**
- * The WebMCP tools the playground registers when the browser offers
- * `document.modelContext`, in the order `useMapModelContextTools` registers
- * them. A test reads that file and keeps this list equal to it.
- */
-export const PLAYGROUND_TOOLS: readonly string[] = [
-  "search-map-location",
-  "set-map-basemap",
-  "set-app-theme",
-  "measure-distance",
-  "measure-area",
-];
-
 /** The one-sentence summary. */
 const SUMMARY =
   "MapCairn is an open-source SDK, under the AGPL-3.0, for building accessible, privacy-respecting map applications on MapLibre GL JS and React.";
@@ -88,7 +75,11 @@ const DOCUMENTS: readonly (readonly [string, string, string])[] = [
     "DESIGN.md",
     "tokens, layout slots and accessibility contracts",
   ],
-  ["Roadmap", "ROADMAP.md", "what is planned, and what is not"],
+  [
+    "Roadmap",
+    "ROADMAP.md",
+    "where the project is going, and what it will not do",
+  ],
 ];
 
 /** The links of `/llms.txt`, by section. */
@@ -104,7 +95,7 @@ function linkSections(): string {
 ## Playground
 
 - [Map playground](${SITE_URL}${PLAYGROUND_PATH}): ${PLAYGROUND_SUMMARY} A link can carry the view, the basemap and the layers in the part after #, for example ${SITE_URL}${PLAYGROUND_PATH}#map=11.00/-33.92000/18.42000.
-- WebMCP: in a browser that offers \`document.modelContext\`, the playground registers ${PLAYGROUND_TOOLS.length} tools for an agent in that browser: ${PLAYGROUND_TOOLS.map((name) => `\`${name}\``).join(", ")}. A place name given to one is sent to the search service, as the privacy policy says; a pair of coordinates is read in the browser.
+- WebMCP: in a browser that offers \`document.modelContext\`, the playground registers tools an agent in that browser can call to work the map, such as searching for a place or measuring. A place name given to one is sent to the search service, as the privacy policy says.
 
 ## Docs
 
@@ -113,7 +104,7 @@ ${docs}
 ## Policies and source
 
 - [Privacy policy](${SITE_URL}/privacy): what the reference site stores and sends, and to whom.
-- [Source code](${SOURCE_REPOSITORY_URL}): the repository, issues and pull requests.
+- [Source code](${SOURCE_REPOSITORY_URL}): the repository.
 - [Licence](${rawFile("LICENSE")}): AGPL-3.0.
 
 ## Optional

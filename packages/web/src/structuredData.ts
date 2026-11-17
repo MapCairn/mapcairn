@@ -5,6 +5,7 @@ import {
   SITE_URL,
   SOURCE_REPOSITORY_URL,
 } from "./constants/siteConfig";
+import { OFFERED_LANGUAGE_TAGS } from "./i18n/hostLanguages";
 
 /*
  * The schema.org structured data each page carries, as JSON-LD. Every field
@@ -63,7 +64,7 @@ export function playgroundNode(description: string): JsonLdNode {
     browserRequirements: "Requires JavaScript and WebGL.",
     isAccessibleForFree: true,
     license: LICENCE_URL,
-    inLanguage: ["en-GB", "af"],
+    inLanguage: [...OFFERED_LANGUAGE_TAGS],
     isPartOf: { "@id": WEBSITE_ID },
     isBasedOn: { "@id": SOFTWARE_ID },
   };

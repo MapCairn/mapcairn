@@ -58,7 +58,7 @@ That is where this plan stops. What is left is the engine itself, the first view
 
 ## The product page
 
-Since the map moved to `/map`, Lighthouse CI audits both `/`, the product page, and `/map` (`packages/web/lighthouserc.json`), with the same assertions for each, and the summary names the page of every run. The figures above are the map's. The product page loads no map code and no tiles, opens no connection to another host (the tile host's preconnect is on the map's route only) and draws its artwork as inline SVG, so its cost is the shared stylesheets, the fonts and React's hydration of a static page.
+Since the map moved to `/map`, Lighthouse CI audits both `/`, the product page, and `/map` (`packages/web/lighthouserc.json`), with the same assertions for each, and the summary names the page of every run. The figures above are the map's. The product page sits outside the app layout, so it builds no services and loads no adapter, layer definition, engine code or engine styles; it opens no connection to another host of its own (the tile host's preconnect is on the map's route only; in production the host's cookieless page-view counter loads on every page) and draws its artwork as inline SVG, so its cost is the shared stylesheets, the fonts and React's hydration of a static page. Moving the services off `/` and marking the map package's style modules as its only side effects took the product page from 870 KB of JavaScript and 72 KB of CSS (uncompressed, as built) to 510 KB and 27 KB.
 
 ## Language weight
 

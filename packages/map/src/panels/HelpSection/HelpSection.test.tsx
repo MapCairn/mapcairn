@@ -245,6 +245,7 @@ describe("the host's About block", () => {
     it.each([
       ["a javascript: address", "javascript:alert(1)"],
       ["an address on another site with no scheme", "//example.org/"],
+      ["a backslash the browser reads as a second slash", "/\\example.org/x"],
       ["a relative address that is not a path", "about"],
       ["an empty address", ""],
     ])("is left out for %s", (_name, href) => {

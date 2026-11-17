@@ -6,6 +6,7 @@ import {
   designGuideRoutes,
   isDesignGuideEnabled,
 } from "./designGuideRoutes";
+import { routePaths } from "./routePaths";
 
 describe("isDesignGuideEnabled", () => {
   it("is on for the dev server and the e2e build", () => {
@@ -47,11 +48,11 @@ describe("the route table", () => {
   });
 
   /** Loads `routes.ts` afresh under a build mode. */
-  async function routePathsIn(mode: string): Promise<(string | undefined)[]> {
+  async function routePathsIn(mode: string): Promise<string[]> {
     vi.stubEnv("MODE", mode);
     vi.resetModules();
     const { default: routes } = await import("./routes");
-    return routes.map((entry) => entry.path);
+    return routePaths(routes);
   }
 
   it("has no /design route in a production build", async () => {

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { serialiseUrlHash } from "@mapcairn/core";
 import {
   PLAYGROUND_PATH,
   SOURCE_REPOSITORY_URL,
@@ -12,13 +11,18 @@ import embedExampleSource from "./embedExample.tsx?raw";
  * twin (`/index.md`), `/llms-full.txt` and the FAQ structured data are all
  * rendered from this module, so none of them can say something the others do
  * not. The page is developer-facing and English only (see
- * `scripts/copy-check/allowlist.mjs`); every claim here is checked against the
- * code and the documents named in the pull request that added it.
+ * `scripts/copy-check/allowlist.mjs`).
  *
- * Links: the page sends people to GitHub's own pages (the repository, its
- * documentation section, issues, contributing and milestones) and to its own
- * anchors, never straight to a Markdown file. A documentation site (#199)
- * will replace the documentation link when it exists.
+ * Evergreen by design: it describes what the SDK is and how it is built, not
+ * counts, versions, dates, plans or what is in progress, so a change to the SDK
+ * normally needs nothing here. What is current lives in the repository's
+ * documentation, which the page links to.
+ *
+ * Links: GitHub's own pages (the repository, its documentation and licence
+ * sections and its contributing page), this site and the page's own anchors.
+ * Never a Markdown file, an issue, a pull request or a milestone. A
+ * documentation site (#199 in the repository) will replace the documentation
+ * link when it exists.
  */
 
 /** A link inside a block of text. Paths starting with `/` are on this site. */
@@ -71,12 +75,6 @@ export interface Section {
 /** The repository's front page at its documentation section, where GitHub shows the README's table of guides. */
 export const DOCUMENTATION_URL = `${SOURCE_REPOSITORY_URL}#documentation`;
 
-/** The repository's milestones: the roadmap, in order. */
-export const MILESTONES_URL = `${SOURCE_REPOSITORY_URL}/milestones`;
-
-/** The repository's open issues. */
-export const ISSUES_URL = `${SOURCE_REPOSITORY_URL}/issues`;
-
 /** GitHub's own page on how to contribute to the repository. */
 export const CONTRIBUTE_URL = `${SOURCE_REPOSITORY_URL}/contribute`;
 
@@ -86,15 +84,22 @@ export const LICENCE_URL = `${SOURCE_REPOSITORY_URL}#licence`;
 /** The example app's folder on GitHub. */
 const EXAMPLE_URL = `${SOURCE_REPOSITORY_URL}/tree/main/examples/embed`;
 
-/** An issue in the repository, on GitHub. */
-function issue(number: number): string {
-  return `${SOURCE_REPOSITORY_URL}/issues/${number}`;
-}
-
-/** The playground opened in a state a shared link can carry. */
-function playgroundAt(state: Parameters<typeof serialiseUrlHash>[0]): string {
-  return `${PLAYGROUND_PATH}${serialiseUrlHash(state)}`;
-}
+/**
+ * The playground opened over a place, through the same address the playground
+ * writes when a view is shared (`#map=zoom/latitude/longitude`). A test reads
+ * each back with the app's own hash parser. Views only: a place does not go
+ * away, where a basemap or a layer might.
+ */
+export const DEEP_LINKS: readonly InlineLink[] = [
+  {
+    text: "Open the playground over Cape Town",
+    href: `${PLAYGROUND_PATH}#map=11.00/-33.92000/18.42000`,
+  },
+  {
+    text: "Open the playground over the whole world",
+    href: `${PLAYGROUND_PATH}#map=1.50/20.00000/0.00000`,
+  },
+];
 
 /** The primary action, wherever the page offers it. */
 export const GITHUB_ACTION: InlineLink = {
@@ -111,10 +116,6 @@ export const PLAYGROUND_ACTION: InlineLink = {
 /** The page title, for the tab, search results and link previews. */
 export const PRODUCT_TITLE =
   "MapCairn | Open-source SDK for accessible map applications";
-
-/** The meta description, for search results and link previews. */
-export const PRODUCT_DESCRIPTION =
-  "An open-source SDK for accessible, privacy-respecting map applications on MapLibre GL JS and React: a complete map interface, open data layers as data, measuring and drawing tools, and a design system. AGPL-3.0.";
 
 /** The page's one h1: the pitch in one sentence. */
 export const HEADLINE =
@@ -210,7 +211,7 @@ export const SECTIONS: readonly Section[] = [
             ],
           },
           {
-            summary: "The four packages",
+            summary: "The packages",
             detail: [
               [
                 { code: "@mapcairn/core" },
@@ -257,7 +258,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "A finished map interface",
             detail: [
               [
-                "Search by place or coordinates, with optional suggestions as you type; measuring; drawing and editing shapes with GeoJSON, CSV and WKT import and export; directions through a routing provider you supply; a layers panel with keys and feature cards; saving the map as an image; and links that carry the view, the basemap, the layers and drawn shapes.",
+                "Search by place or by coordinates, measuring, drawing and editing shapes with import and export, directions through a routing provider you supply, a layers panel with keys and feature cards, saving the map as an image, and links that carry what is on the map.",
               ],
             ],
           },
@@ -265,7 +266,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "Open data layers written as data",
             detail: [
               [
-                "A layer is one definition: a feed, raster or vector tiles, a heatmap, or a query for what is in view. The SDK draws it, builds its key, card and list, keeps words beside every colour, and validates the definition.",
+                "A layer is one definition: a feed, tiles, a heatmap or a query for what is in view. The SDK draws it, builds its key, card and list, keeps words beside every colour, and validates the definition.",
               ],
             ],
           },
@@ -273,7 +274,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "Accessible by default",
             detail: [
               [
-                "WCAG 2.2 AA is the target in the light and the dark theme. Every gesture has a keyboard or single-tap equivalent: the arrow keys pan, plus and minus zoom, and P drops a pin. Announcements go through one live region, and automated accessibility checks run on every pull request at widths from 320 pixels.",
+                "WCAG 2.2 AA is the target in the light and the dark theme. Every gesture has a keyboard or single-tap equivalent, announcements go through one live region, and automated accessibility checks run on every pull request.",
               ],
             ],
           },
@@ -289,7 +290,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "Every service behind a port",
             detail: [
               [
-                "The interface never imports MapLibre or an adapter. Search, routing, storage, geolocation, the clipboard, layers and the map engine are small interfaces, each with an in-memory fake and a shared contract suite, so the whole interface can be tested without WebGL or a network. Geometry, measurement and URL state are plain functions held to 95 percent test coverage.",
+                "The interface never imports MapLibre or an adapter. Search, routing, storage, layers, the map engine and the rest are small interfaces, each with an in-memory fake and a shared contract suite, so the whole interface can be tested without WebGL or a network, and any service replaced without touching it.",
               ],
             ],
           },
@@ -297,7 +298,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "A design system with checked contrast",
             detail: [
               [
-                "Typed tokens only, light and dark themes, one accent, IBM Plex Sans and Lucide icons. The contrast of every token pair is calculated in a test, and a style scanner rejects raw colours, off-scale spacing and unnamed controls.",
+                "Typed tokens only, light and dark themes and one accent. The contrast of every token pair is calculated in a test, and a style scanner rejects raw colours, off-scale spacing and unnamed controls.",
               ],
             ],
           },
@@ -313,35 +314,10 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "The playground is the reference site, built from these packages. Search for a place or a pair of coordinates, measure and draw, switch the basemap, turn on a data layer, or set the language to Afrikaans in Settings.",
+          "The playground is the reference site, built from these packages. Search for a place or a pair of coordinates, measure and draw, switch the basemap, turn on a data layer, or change the language in Settings.",
         ],
       },
-      {
-        kind: "deepLinks",
-        links: [
-          {
-            text: "Open the playground over Cape Town",
-            href: playgroundAt({
-              view: {
-                center: { lat: -33.92, lng: 18.42 },
-                zoom: 11,
-                bearing: 0,
-              },
-            }),
-          },
-          {
-            text: "Open the playground on the Dark basemap",
-            href: playgroundAt({ basemapId: "dark" }),
-          },
-          {
-            text: "Open the playground with the past day's earthquakes turned on",
-            href: playgroundAt({
-              view: { center: { lat: 20, lng: 0 }, zoom: 1.5, bearing: 0 },
-              layers: { enabled: ["earthquakes"], controls: {} },
-            }),
-          },
-        ],
-      },
+      { kind: "deepLinks", links: DEEP_LINKS },
     ],
     further: [],
   },
@@ -360,28 +336,18 @@ export const SECTIONS: readonly Section[] = [
           ["wants to test its map interface against fakes, without WebGL."],
         ],
       },
-      { kind: "subheading", text: "It is not, or not yet" },
+      { kind: "subheading", text: "It is not" },
       {
         kind: "list",
         items: [
           ["a hosted service, a dataset or a GIS analysis engine;"],
-          ["for a map engine other than MapLibre GL JS;"],
-          [
-            { text: "for pages without React", href: issue(44) },
-            ", or ",
-            { text: "for layers behind a login", href: issue(45) },
-            " (both open);",
-          ],
-          [
-            { text: "in any language a host chooses", href: issue(231) },
-            ": in progress, with English and Afrikaans on the reference site.",
-          ],
+          ["a wrapper for map engines other than MapLibre GL JS."],
         ],
       },
     ],
     further: [
       {
-        text: "What MapCairn has, partly has and lacks, in the documentation",
+        text: "What MapCairn has and lacks today, in the documentation",
         href: DOCUMENTATION_URL,
       },
     ],
@@ -394,7 +360,7 @@ export const SECTIONS: readonly Section[] = [
         kind: "details",
         items: [
           {
-            summary: "How do I use it today?",
+            summary: "How do I use it?",
             detail: [
               [
                 "From its source on GitHub: clone the repository and build it, or start from the example app in ",
@@ -404,10 +370,26 @@ export const SECTIONS: readonly Section[] = [
             ],
           },
           {
+            summary: "Is it ready for production?",
+            detail: [
+              [
+                "The reference site runs on it in production, and every change passes the project's unit, browser and accessibility tests before it is merged. What it has and lacks today is in the documentation on GitHub.",
+              ],
+            ],
+          },
+          {
+            summary: "Is it accessible?",
+            detail: [
+              [
+                "WCAG 2.2 AA is the target in both themes. Every gesture has a keyboard or single-tap equivalent, the map itself can be panned and zoomed from the keyboard, and announcements go through one live region. Automated accessibility checks run on every pull request.",
+              ],
+            ],
+          },
+          {
             summary: "Which frameworks does it work with?",
             detail: [
               [
-                "React 19, with a bundler that runs vanilla-extract, such as Vite with its vanilla-extract plugin. The map engine is MapLibre GL JS, reached through an adapter.",
+                "React, with a bundler that runs vanilla-extract, such as Vite with its vanilla-extract plugin. The map engine is MapLibre GL JS, reached through an adapter.",
               ],
             ],
           },
@@ -439,7 +421,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "What does it send to third parties?",
             detail: [
               [
-                "The SDK sends nothing by itself: requests come from the adapters a host supplies, and only when a person asks. The reference site's browser contacts the map tile providers, the search and routing services when you use them, and a layer's provider when you turn it on, as ",
+                "The SDK sends nothing by itself: requests come from the adapters a host supplies, and only when a person asks. The reference site counts page views with Cloudflare Web Analytics, which is cookieless, and its browser contacts the map tile providers, the search and routing services when you use them, and a layer's provider when you turn it on, as ",
                 { text: "its privacy policy", href: "/privacy" },
                 " lists.",
               ],
@@ -457,15 +439,11 @@ export const SECTIONS: readonly Section[] = [
       {
         kind: "paragraph",
         text: [
-          "MapCairn is developed in the open. Star the repository to follow it, open an issue for a bug or an idea, or send a change.",
+          "MapCairn is developed in the open. Star the repository to follow it, report a bug or suggest an idea, or send a change.",
         ],
       },
       { kind: "actions" },
     ],
-    further: [
-      { text: "Open issues", href: ISSUES_URL },
-      { text: "How to contribute", href: CONTRIBUTE_URL },
-      { text: "The roadmap, as milestones", href: MILESTONES_URL },
-    ],
+    further: [{ text: "How to contribute", href: CONTRIBUTE_URL }],
   },
 ];

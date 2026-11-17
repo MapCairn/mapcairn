@@ -283,10 +283,23 @@ export const CONTOURS: readonly ContourLevel[] = ${JSON.stringify(contours, null
 export const SUMMIT = { x: ${summit.x}, y: ${summit.y}, metres: ${metres} } as const;
 `;
 
-const target = fileURLToPath(
-  new URL("../packages/web/src/product/contours.ts", import.meta.url),
-);
-writeFileSync(target, output);
-console.log(
-  `Wrote ${target}: ${contours.length} levels, ${output.length} bytes`,
-);
+// `--json` prints the data instead of writing the file, so a test can keep the
+// committed file equal to what this script makes.
+if (process.argv.includes("--json")) {
+  console.log(
+    JSON.stringify({
+      contours,
+      summit: { x: summit.x, y: summit.y, metres },
+      interval: INTERVAL_METRES,
+      index: INDEX_METRES,
+    }),
+  );
+} else {
+  const target = fileURLToPath(
+    new URL("../packages/web/src/product/contours.ts", import.meta.url),
+  );
+  writeFileSync(target, output);
+  console.log(
+    `Wrote ${target}: ${contours.length} levels, ${output.length} bytes`,
+  );
+}

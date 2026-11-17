@@ -15,6 +15,8 @@ export default defineConfig({
       include: ["packages/*/src/**"],
       exclude: [
         "**/*.test.{ts,tsx}",
+        // Snapshots of rendered markup are test data, not code to cover.
+        "**/*.snap.html",
         "**/vite-env.d.ts",
         "packages/web/src/entry.client.tsx",
         "packages/web/src/entry.server.tsx",

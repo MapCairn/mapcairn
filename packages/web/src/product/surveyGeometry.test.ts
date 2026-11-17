@@ -222,14 +222,15 @@ describe("the survey sheet's geometry", () => {
     expect(rem * 16).toBe(LABEL_SIZE);
   });
 
-  it("keeps the pin, the line, its label and the cairn in the narrow-screen crop", () => {
+  it("keeps the pin, the line, its label, the cairn and the scale bar in the narrow-screen crop", () => {
     const { box, zoom, aspect } = NARROW_CROP;
-    const { pin, cairn, measureLabel, spotHeight } = markBoxes();
+    const { pin, cairn, measureLabel, spotHeight, scaleBar } = markBoxes();
     for (const [name, mark] of Object.entries({
       pin,
       cairn,
       measureLabel,
       spotHeight,
+      scaleBar,
     })) {
       expect(mark.left, name).toBeGreaterThanOrEqual(box.left);
       expect(mark.right, name).toBeLessThanOrEqual(box.right);
