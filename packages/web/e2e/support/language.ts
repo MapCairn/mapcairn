@@ -33,7 +33,7 @@ function escapeForPattern(text: string): string {
 /**
  * A pattern matching any form of a catalogue value, whole, with each
  * placeholder named in `numbers` as a whole number and every other
- * placeholder as any text, so a locator can find a name such as "Map key, 2
+ * placeholder as any text, so a locator can find a name such as "Key, 2
  * layers" in any language.
  */
 export function namePattern(

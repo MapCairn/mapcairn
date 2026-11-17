@@ -633,7 +633,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layers.turnOff.doneGroup": "{count} in {group} afgeskakel.",
   "layers.turnOff.undoGroup": "Ontdoen, skakel {count} in {group} weer aan",
   "layers.key.title": "Kaartsleutel",
-  "layers.key.toggle": "Kaartsleutel, {count} laag|Kaartsleutel, {count} lae",
+  "layers.key.toggle": "Sleutel, {count} laag|Sleutel, {count} lae",
   "layers.key.chip": "Sleutel, {count} laag|Sleutel, {count} lae",
   "layers.key.scrolling": "Laagsleutels",
   "layers.key.showing": "Wys {time}",

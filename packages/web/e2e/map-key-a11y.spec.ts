@@ -49,8 +49,18 @@ test.describe("the map key @a11y", () => {
           expect(controls.unnamed, state).toEqual([]);
           expect(controls.tooSmall, state).toEqual([]);
           expect(controls.under44, state).not.toContainEqual(
-            expect.stringMatching(/Map key, \d+ layers?/),
+            expect.stringMatching(/Key, \d+ layers?/),
           );
+          if (!expanded) {
+            const visible = (
+              (await mapPage.mapKeyToggle.textContent()) ?? ""
+            ).trim();
+            expect(visible, "the chip shows words").not.toBe("");
+            const name = await mapPage.mapKeyToggle.evaluate(
+              (button) => button.getAttribute("aria-label") ?? "",
+            );
+            expect(name.startsWith(visible), "label in name").toBe(true);
+          }
           const toggle = await mapPage.mapKeyToggle.boundingBox();
           expect(toggle?.width ?? 0, state).toBeGreaterThanOrEqual(44);
           expect(toggle?.height ?? 0, state).toBeGreaterThanOrEqual(44);
