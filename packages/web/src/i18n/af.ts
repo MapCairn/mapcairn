@@ -623,6 +623,11 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layers.status.loadFailedNetwork": "Kon nie laai nie. Kyk na jou verbinding.",
   "layers.status.loadFailedInvalid":
     "Kon nie laai nie: die verskaffer het iets onverwags gestuur.",
+  "layers.identify.hint":
+    "Tik op die kaart om besonderhede vir hierdie laag te sien.",
+  "layers.identify.cap":
+    "Slegs die eerste {count} lae word met een tik nagevra.",
+  "layers.identify.lookingUp": "Soek tans wat hier is",
   "layers.list.summary": "Lys van {count} op die kaart",
   "layers.list.sortBy": "Sorteer volgens",
   "layers.list.showOnMap": "wys op kaart",
@@ -809,8 +814,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "keyHelp.map.zoom": "Zoem in of uit",
   "keyHelp.map.north": "Draai die kaart weer na noord",
   "keyHelp.map.pin": "Plaas 'n speld in die middel van die kaart",
-  "keyHelp.map.identify":
-    "Wys 'n lys van die items in die middel van die kaart",
+  "keyHelp.map.identify": "Wys wat in die middel van die kaart is",
   "keyHelp.map.escape": "Maak die oop paneel toe",
   "keyHelp.draw.addPoint":
     "Terwyl jy teken: plaas 'n punt in die kaartmiddel, of skuif die gekose punt daarheen",

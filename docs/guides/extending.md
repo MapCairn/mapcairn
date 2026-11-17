@@ -291,7 +291,9 @@ const floodDepth: IdentifiableLayerDefinition = {
 export default floodDepth;
 ```
 
-The `card` sits inside `identify`, not on the layer, and its `lines` list is required, though it may be empty. Check a definition with `validateLayerDefinition` from `@mapcairn/core`. Its problems name the path, such as `identify.fields.id`.
+The `card` sits inside `identify`, not on the layer, and its `lines` list is required, though it may be empty. Check a definition with `validateLayerDefinition(definition, { decoders: createDecoderRegistry(), formatters: createFormatterRegistry() })` from `@mapcairn/core`, passing the registries your host uses. It returns a list of problems, empty when the definition is valid, and each names its path, such as `identify.fields.id`. A layer a catalogue loads goes through the same check, and is skipped with its problems when it fails.
+
+While a layer with an `identify` block is on and showing imagery, its Layers section entry says "Tap the map to see details for this layer." after its legend, and the section adds "Only the first 4 layers are asked on one tap." when more than 4 such layers are on. The section cannot know where a tap will land or whether your host calls `identifyAt`, so it says this for every such layer, including one whose `bounds` miss the tapped place. If a tap takes longer than 400 ms to answer, a "Looking up what is here" line shows at the bottom of the map until the answer comes, or until Escape or the line's Dismiss button ends the lookup. The line says itself to a screen reader once when it appears, and the result is said once when it arrives. A host that builds its own chrome shows that line with `useIdentifyFeedback(layers.identifying)` and `<IdentifyStatus onCancel={layers.cancelIdentify} />` from `@mapcairn/map`, and calls `identifyAt` from its map click and its `I` key (`packages/web/src/app/useMapApp.ts` is the reference).
 
 ### Placeholders
 
