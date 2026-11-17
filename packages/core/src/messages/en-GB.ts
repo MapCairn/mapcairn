@@ -36,6 +36,8 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "settings.notSaved": "Changes will not be remembered on this device.",
   "settings.privacy.heading": "Privacy",
   "settings.privacy.link": "Read the privacy policy",
+  "settings.privacy.default":
+    "The privacy policy says what each service this map uses receives.",
   // Common joins
   "common.followedBy": "{first} {second}",
   "common.commaJoined": "{first}, {second}",

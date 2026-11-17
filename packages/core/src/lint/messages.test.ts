@@ -32,6 +32,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "settings.notSaved": [],
   "settings.privacy.heading": [],
   "settings.privacy.link": [],
+  "settings.privacy.default": [],
   // Common joins
   "common.followedBy": ["first", "second"],
   "common.commaJoined": ["first", "second"],

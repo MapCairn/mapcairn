@@ -3,6 +3,7 @@
 import {
   createFakeServices,
   createLanguageCatalogue,
+  EN_GB_CATALOGUE,
   FakeDevicePreferences,
   FakeMessageCatalogue,
   type LanguageOption,
@@ -21,11 +22,9 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
-import {
-  DEFAULT_PRIVACY_NOTE,
-  SettingsSection,
-  type SettingsSectionProps,
-} from "./SettingsSection";
+import { SettingsSection, type SettingsSectionProps } from "./SettingsSection";
+
+const DEFAULT_PRIVACY_NOTE = EN_GB_CATALOGUE["settings.privacy.default"];
 
 interface Options {
   readonly finePointer?: boolean;
@@ -34,6 +33,7 @@ interface Options {
   readonly initial?: Partial<Settings>;
   readonly props?: SettingsSectionProps;
   readonly languages?: readonly LanguageOption[];
+  readonly messages?: FakeMessageCatalogue;
   readonly browserLanguages?: readonly string[];
   readonly load?: (tag: string) => MessageCatalogue | Promise<MessageCatalogue>;
 }
@@ -45,6 +45,7 @@ function renderSettings({
   initial,
   props,
   languages,
+  messages,
   browserLanguages = [],
   load = (tag) => new FakeMessageCatalogue({ language: tag }),
 }: Options = {}) {
@@ -57,6 +58,7 @@ function renderSettings({
   const services = createFakeServices({
     settings,
     preferences,
+    ...(messages ? { messages } : {}),
     languages: languages
       ? createLanguageCatalogue(languages, "en-GB", load)
       : undefined,
@@ -621,6 +623,21 @@ describe("privacy", () => {
     );
   });
 
+  it("looks the default note up in the active catalogue", () => {
+    renderSettings({
+      messages: new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "settings.privacy.default": "Die beleid sê wat gestuur word.",
+        },
+      }),
+    });
+    expect(screen.getByTestId("settings-privacy-note")).toHaveTextContent(
+      "Die beleid sê wat gestuur word.",
+    );
+    expect(screen.queryByText(DEFAULT_PRIVACY_NOTE)).toBeNull();
+  });
+
   it("shows the host's own note in place of the default", () => {
     renderSettings({
       props: {
@@ -646,6 +663,19 @@ describe("privacy", () => {
     expect(
       screen.getByRole("link", { name: "Read the privacy policy" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows no statement when the host passes null, not the default", () => {
+    renderSettings({ props: { privacyNote: null } });
+    expect(screen.getByTestId("settings-privacy-note")).toBeEmptyDOMElement();
+    expect(screen.queryByText(DEFAULT_PRIVACY_NOTE)).toBeNull();
+  });
+
+  it("shows the default when the host passes undefined", () => {
+    renderSettings({ props: { privacyNote: undefined } });
+    expect(screen.getByTestId("settings-privacy-note")).toHaveTextContent(
+      DEFAULT_PRIVACY_NOTE,
+    );
   });
 
   it("keeps the policy link under a host's note", () => {
