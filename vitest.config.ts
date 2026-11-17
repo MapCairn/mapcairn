@@ -26,13 +26,6 @@ export default defineConfig({
           functions: 95,
           lines: 95,
         },
-        // geolint is held to the same floor as the SDK packages.
-        "packages/geolint/**": {
-          statements: 95,
-          branches: 95,
-          functions: 95,
-          lines: 95,
-        },
         // The host sits a little lower on branches because its layout and
         // touch-gesture code is also covered by Playwright, not only by jsdom.
         // Set below the measured figures (about 97.5, 93.8, 97.6 and 97.6) so

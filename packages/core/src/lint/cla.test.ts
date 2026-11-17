@@ -96,16 +96,18 @@ describe("the CLA text", () => {
     expect(claText).toContain(`Version ${CLA_VERSION}`);
   });
 
-  it("is version 1.2, which still names the project MapCairn and adds a section for geolint", () => {
-    expect(CLA_VERSION).toBe("1.2");
-    expect(claText).toContain("## 7. Packages with their own licence");
+  it("is version 1.3, which still names the project MapCairn and has no section for a package with its own licence", () => {
+    expect(CLA_VERSION).toBe("1.3");
+    expect(claText).not.toContain("## 7.");
+    expect(claText).toContain("- **1.3:**");
     expect(AGREEMENT_SENTENCE.endsWith("contributions to MapCairn.")).toBe(
       true,
     );
   });
 
-  it("says that people who agreed to version 1.0 stay covered", () => {
+  it("says that people who agreed to an earlier version stay covered", () => {
     expect(claText).toContain("agreed to version 1.0");
+    expect(claText).toContain("agreed to an earlier version");
     expect(claText).toContain("do not need to comment again");
     expect(claText).toContain("Karta");
   });

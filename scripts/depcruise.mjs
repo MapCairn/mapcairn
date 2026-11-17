@@ -15,7 +15,7 @@ const examples = readdirSync("examples", { withFileTypes: true })
 
 /** Every directory cruised; each must yield at least one module. */
 const roots = [
-  ...["core", "geolint", "map", "react", "theme", "web"].map(
+  ...["core", "map", "react", "theme", "web"].map(
     (name) => `packages/${name}/src`,
   ),
   ...examples,

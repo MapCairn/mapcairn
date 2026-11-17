@@ -391,47 +391,6 @@
       }
     },
     {
-      // The geolint engine must run in a browser or a Worker as well as in Node,
-      // so it may not use a Node global. dependency-cruiser stops a Node import;
-      // this stops a global, which TypeScript allows because the package's
-      // tsconfig loads the Node types for the command. The root list is kept,
-      // because an override replaces the options and does not merge them.
-      "includes": ["packages/geolint/src/engine/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedGlobals": {
-              "level": "error",
-              "options": {
-                "deniedGlobals": {
-                  "localStorage": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook.",
-                  "sessionStorage": "Persistent storage belongs in packages/web/src/adapters behind the SettingsStore port. Use the useSettings hook.",
-                  "matchMedia": "Media queries belong in an adapter (ThemeSource or DevicePreferences). Use the matching hook.",
-                  "fetch": "Network access belongs in packages/web/src/adapters behind a port such as SearchProvider.",
-                  "location": "URL state belongs in the UrlState adapter. Use the useUrlState hook.",
-                  "history": "URL state belongs in the UrlState adapter. Use the useUrlState hook.",
-                  "Buffer": "The geolint engine must run in a browser or a Worker as well as in Node. Use Uint8Array and TextDecoder, or put the Node code in packages/geolint/src/node.",
-                  "process": "The geolint engine must run in a browser or a Worker as well as in Node. Take what it needs as an argument, or put the Node code in packages/geolint/src/node.",
-                  "__dirname": "The geolint engine must run in a browser or a Worker as well as in Node. Use import.meta.url, or put the Node code in packages/geolint/src/node.",
-                  "__filename": "The geolint engine must run in a browser or a Worker as well as in Node. Use import.meta.url, or put the Node code in packages/geolint/src/node.",
-                  "require": "The geolint engine must run in a browser or a Worker as well as in Node. Use an ES module import.",
-                  "setImmediate": "The geolint engine must run in a browser or a Worker as well as in Node. Use queueMicrotask or setTimeout."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": ["packages/geolint/src/engine/**/*.test.ts"],
-      "linter": {
-        "rules": {
-          "style": { "noRestrictedGlobals": "off" }
-        }
-      }
-    },
-    {
       // The Playwright rules match any call named describe or test, so they
       // run on the browser specs only.
       "includes": ["packages/web/e2e/**"],

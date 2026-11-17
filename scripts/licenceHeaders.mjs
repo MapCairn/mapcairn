@@ -7,10 +7,8 @@
  *   node scripts/licenceHeaders.mjs           fails and lists files with no header
  *   node scripts/licenceHeaders.mjs --write   adds the header where it is missing
  *
- * The repository is AGPL-3.0-only, except `packages/geolint`, which is
- * Apache-2.0. A file must carry the identifier for the place it is in, so an
- * AGPL header inside `packages/geolint` fails, and so does an Apache header
- * anywhere else. A shebang stays on the first line, with the header after it.
+ * The repository is AGPL-3.0-only, so a header that names any other licence
+ * fails. A shebang stays on the first line, with the header after it.
  * Adding is safe to repeat: a file that already has the right identifier is
  * left alone.
  */
@@ -18,11 +16,9 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_IDENTIFIER = "AGPL-3.0-only";
-/** Directories whose files carry a licence other than the repository's. */
-const PACKAGE_LICENCES = [
-  { prefix: "packages/geolint/", identifier: "Apache-2.0" },
-];
+const IDENTIFIER = "AGPL-3.0-only";
+/** The two header lines every source file starts with, after any shebang. */
+export const HEADER = `// SPDX-License-Identifier: ${IDENTIFIER}\n// Copyright MapCairn contributors\n`;
 const SOURCE_FILE = /\.(?:ts|tsx|mjs|cjs)$/;
 const IDENTIFIER_LINE = /SPDX-License-Identifier: (\S+)\s*$/;
 /** A line that names some identifier, however it is written (`Apache-2.0 OR MIT` included). */
@@ -31,36 +27,14 @@ const ANY_IDENTIFIER_LINE = /SPDX-License-Identifier:/;
 const HEADER_WINDOW_LINES = 5;
 
 /**
- * The licence identifier a file must carry.
- *
- * @param {string} path Repository-relative path with forward slashes.
- * @returns {string} An SPDX identifier.
- */
-export function expectedIdentifier(path) {
-  const match = PACKAGE_LICENCES.find((entry) => path.startsWith(entry.prefix));
-  return match ? match.identifier : DEFAULT_IDENTIFIER;
-}
-
-/**
- * The two header lines for a file.
- *
- * @param {string} path
- * @returns {string}
- */
-export function headerFor(path) {
-  return `// SPDX-License-Identifier: ${expectedIdentifier(path)}\n// Copyright MapCairn contributors\n`;
-}
-
-/**
- * Whether the first lines of the text carry the identifier the path requires.
+ * Whether the first lines of the text carry the AGPL-3.0-only identifier.
  * A different identifier does not count.
  *
  * @param {string} text
- * @param {string} path
  * @returns {boolean}
  */
-export function hasHeader(text, path) {
-  return declaredIdentifier(text) === expectedIdentifier(path);
+export function hasHeader(text) {
+  return declaredIdentifier(text) === IDENTIFIER;
 }
 
 /**
@@ -97,16 +71,14 @@ export function namesAnIdentifier(text) {
  * that names a different licence is not rewritten here: the check reports it.
  *
  * @param {string} text
- * @param {string} path
  * @returns {string}
  */
-export function withHeader(text, path) {
-  const header = headerFor(path);
+export function withHeader(text) {
   if (!text.startsWith("#!")) {
-    return `${header}${text}`;
+    return `${HEADER}${text}`;
   }
   const end = text.indexOf("\n") + 1;
-  return `${text.slice(0, end)}${header}${text.slice(end)}`;
+  return `${text.slice(0, end)}${HEADER}${text.slice(end)}`;
 }
 
 /** Every tracked source file, relative to the repository root. */
@@ -126,7 +98,7 @@ function sourceFiles() {
 function main() {
   const write = process.argv.includes("--write");
   const missing = sourceFiles().filter(
-    (path) => !hasHeader(readFileSync(path, "utf8"), path),
+    (path) => !hasHeader(readFileSync(path, "utf8")),
   );
 
   if (write) {
@@ -134,7 +106,7 @@ function main() {
       (path) => !namesAnIdentifier(readFileSync(path, "utf8")),
     );
     for (const path of unlicensed) {
-      writeFileSync(path, withHeader(readFileSync(path, "utf8"), path));
+      writeFileSync(path, withHeader(readFileSync(path, "utf8")));
     }
     console.log(`licence headers: added to ${unlicensed.length} files`);
     const wrong = missing.length - unlicensed.length;
@@ -146,7 +118,7 @@ function main() {
     }
   } else if (missing.length > 0) {
     console.error(
-      `licence headers: ${missing.length} files have no header, or the wrong one for their package. Run "npm run licence:write" to add a missing one.\n${missing.join("\n")}`,
+      `licence headers: ${missing.length} files have no AGPL-3.0-only header. Run "npm run licence:write" to add a missing one.\n${missing.join("\n")}`,
     );
     process.exit(1);
   } else {
