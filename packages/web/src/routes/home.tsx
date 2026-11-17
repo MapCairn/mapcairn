@@ -13,6 +13,10 @@ import { ClientOnly } from "../app/ClientOnly";
 import { MAP_REGION_ID } from "../app/initialView";
 import { mapPlaceholder } from "../app/shell.css";
 import { SITE_URL } from "../constants/siteConfig";
+import { MAP_TITLE, type PageTitleHandle } from "../i18n/pageTitle";
+
+/** React Router route module export: the catalogue key of the map page's tab title. */
+export const handle: PageTitleHandle = MAP_TITLE;
 
 /** React Router route module export: the `/` route's canonical `<link>`. */
 export const links: LinksFunction = () => [

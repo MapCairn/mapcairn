@@ -21,6 +21,7 @@ import {
   ScrollRestoration,
   useRouteError,
 } from "react-router";
+import { DocumentTitle } from "./app/DocumentTitle";
 import { ErrorPage } from "./app/ErrorPage";
 import { THEME_BOOTSTRAP_SCRIPT } from "./app/themeBootstrap";
 import { buildPageMeta } from "./buildPageMeta";
@@ -29,14 +30,19 @@ import { reportCaughtError } from "./composition/errorReporting";
 import { BRAND_COLOUR } from "./constants/brandColour";
 import { SITE_URL } from "./constants/siteConfig";
 import { fontPreloadLinks } from "./fonts/fontPreload";
+import { englishTitle, MAP_TITLE } from "./i18n/pageTitle";
 
 /**
  * React Router route module export: the page title and meta tags, including
  * the viewport, Open Graph, Twitter card and JSON-LD, from `buildPageMeta`.
+ * The server renders the English title and the browser shows it in the
+ * visitor's language (see `DocumentTitle`); the description and the other tags
+ * are read by crawlers and link previews, not shown in the app, so they stay
+ * English.
  */
 export const meta: MetaFunction = () =>
   buildPageMeta({
-    title: "MapCairn | Interactive map",
+    title: englishTitle(MAP_TITLE),
     description:
       "Explore an interactive map. Search places, compare basemaps and measure distances or areas.",
     url: SITE_URL,
@@ -143,7 +149,8 @@ function DocumentLanguage() {
  * React Router route module export: the root route. Builds the services once
  * per app instance (once per request on the server, once in the browser) and
  * mounts the app-wide providers: services, the one announcer and tooltips. It
- * also keeps the document's `lang` in step with the active language.
+ * also keeps the document's `lang` and the tab's title in step with the active
+ * language.
  *
  * @remarks `createServices` is safe on the server: adapters touch no browser
  *   API until used. Their values differ between server and browser (stored
@@ -155,6 +162,7 @@ export default function Root() {
   return (
     <ServicesProvider services={services}>
       <DocumentLanguage />
+      <DocumentTitle />
       <LiveRegionProvider>
         <TooltipProvider>
           <Outlet />

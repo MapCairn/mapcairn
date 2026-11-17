@@ -145,6 +145,13 @@ describe("the interface source", () => {
     expect(unlisted).toEqual([]);
   });
 
+  it("scans the privacy page, which has no allow-list entry because its text is in the catalogue", () => {
+    expect(files()).toContain("packages/web/src/app/PrivacyPage.tsx");
+    expect(allowList.map((entry) => entry.file)).not.toContain(
+      "packages/web/src/app/PrivacyPage.tsx",
+    );
+  });
+
   it("gives every allow-list entry a reason and a text it still excuses", () => {
     for (const entry of allowList) {
       expect(entry.reason.trim().length, entry.file).toBeGreaterThan(0);

@@ -3,7 +3,7 @@
 import { THEME_STORAGE_KEY } from "@mapcairn/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { PRIVACY_POLICY_TITLE, PrivacyPage } from "./PrivacyPage";
+import { PrivacyPage } from "./PrivacyPage";
 
 describe("PrivacyPage", () => {
   it("renders the page heading in a main landmark", () => {
@@ -11,7 +11,7 @@ describe("PrivacyPage", () => {
 
     expect(
       within(screen.getByRole("main")).getByRole("heading", {
-        name: PRIVACY_POLICY_TITLE,
+        name: "Privacy policy",
         level: 1,
       }),
     ).toBeInTheDocument();
