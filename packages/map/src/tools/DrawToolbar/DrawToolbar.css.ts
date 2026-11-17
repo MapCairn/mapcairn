@@ -71,9 +71,15 @@ globalStyle(`${modes} [role="radio"]`, {
   gap: tokens.space.xxs,
 });
 
-/** The shape's name, then its measures. Figures keep their width as they change. */
+/**
+ * The shape's name, then its measures. Figures keep their width as they
+ * change. The row is as tall as the measures' line from the start, so the
+ * toolbar, and the bottom slots that ride above it, do not move when the
+ * first measure appears.
+ */
 export const readout = style({
   margin: 0,
+  minBlockSize: `calc(${tokens.type.large.size} * ${tokens.type.large.lineHeight})`,
   "@media": {
     "(max-height: 520px) and (min-width: 640px)": { gridColumn: 1, gridRow: 2 },
   },

@@ -132,6 +132,24 @@ test.describe("draw", () => {
       .toContainEqual(expect.stringMatching(/^Polygon 1 finished\. Area /));
   });
 
+  test("keeps the toolbar the same height when the first measure appears", async ({
+    mapPage,
+  }) => {
+    await mapPage.goto(START);
+    await mapPage.startDrawing();
+    const taps = await triangleTaps(mapPage);
+    await mapPage.tapMap(taps[0] as [number, number]);
+    await expect(mapPage.drawStatus).toHaveText("Polygon 1, 1 point");
+    await expect(mapPage.drawMeasure).toHaveCount(0);
+    const before = await mapPage.drawToolbar.boundingBox();
+
+    await mapPage.tapMap(taps[1] as [number, number]);
+    await expect(mapPage.drawMeasure).toBeVisible();
+    const after = await mapPage.drawToolbar.boundingBox();
+
+    expect(after?.height).toBe(before?.height);
+  });
+
   test("draws a polygon with the keyboard alone", async ({ page, mapPage }) => {
     await mapPage.goto(START);
     await mapPage.startDrawing();
