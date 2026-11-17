@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   checkRoadmap,
   parseIssueStates,
+  parseMilestoneStates,
   readIssueStates,
+  readMilestoneStates,
   runRoadmapCheck,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/roadmap-check.mjs";
@@ -12,7 +14,7 @@ import {
 /** A roadmap with a Priorities section, built from the three lists. */
 function roadmap(now: string[], next: string[], later: string[]): string {
   const list = (items: string[]) =>
-    items.map((item, index) => `${index + 1}. ${item}`).join("\n");
+    items.map((text, index) => `${index + 1}. ${text}`).join("\n");
   return [
     "# Roadmap",
     "## Direction",
@@ -32,6 +34,12 @@ function roadmap(now: string[], next: string[], later: string[]): string {
 
 const open = (...numbers: number[]) =>
   new Map<number, string>(numbers.map((n) => [n, "OPEN"]));
+
+const MILESTONE_URL = "https://github.com/MapCairn/mapcairn/milestone";
+
+/** A roadmap item that links a GitHub milestone, as `ROADMAP.md` does. */
+const item = (milestone: number) =>
+  `**SDK, [Milestone ${milestone}](${MILESTONE_URL}/${milestone}).** An outcome.`;
 
 describe("checkRoadmap", () => {
   it("accepts a list whose issues all exist and are open", () => {
@@ -80,13 +88,12 @@ describe("checkRoadmap", () => {
       errors: [],
       warnings: [],
     });
-    const six = roadmap(
-      ["#1", "#2", "#3", "#4", "#5", "#6"],
-      ["#7"],
-      ["#8"],
-    ).replaceAll("\n", "\r\n");
-    expect(checkRoadmap(six, null).errors).toEqual([
-      "Now has 6 items, at most 5 are allowed",
+    const four = roadmap(["#1", "#2", "#3", "#4"], ["#5"], ["#6"]).replaceAll(
+      "\n",
+      "\r\n",
+    );
+    expect(checkRoadmap(four, null).errors).toEqual([
+      "Now has 4 items, at most 3 are allowed",
     ]);
   });
 
@@ -110,15 +117,35 @@ describe("checkRoadmap", () => {
     expect(errors).toEqual(["#1 is listed more than once"]);
   });
 
-  it("reports more than five numbered items under Now", () => {
-    const text = roadmap(["#1", "#2", "#3", "#4", "#5", "#6"], ["#7"], ["#8"]);
-    const { errors } = checkRoadmap(text, open(1, 2, 3, 4, 5, 6, 7, 8));
-    expect(errors).toEqual(["Now has 6 items, at most 5 are allowed"]);
+  it("reports more than three numbered items under Now", () => {
+    const text = roadmap(["#1", "#2", "#3", "#4"], ["#5"], ["#6"]);
+    const { errors } = checkRoadmap(text, open(1, 2, 3, 4, 5, 6));
+    expect(errors).toEqual(["Now has 4 items, at most 3 are allowed"]);
   });
 
-  it("accepts exactly five items under Now", () => {
-    const text = roadmap(["#1", "#2", "#3", "#4", "#5"], ["#6"], ["#7"]);
-    expect(checkRoadmap(text, open(1, 2, 3, 4, 5, 6, 7)).errors).toEqual([]);
+  it("accepts exactly three items under Now", () => {
+    const text = roadmap(["#1", "#2", "#3"], ["#4"], ["#5"]);
+    expect(checkRoadmap(text, open(1, 2, 3, 4, 5)).errors).toEqual([]);
+  });
+
+  it("reports more than six numbered items under Next", () => {
+    const text = roadmap(
+      ["#1"],
+      ["#2", "#3", "#4", "#5", "#6", "#7", "#8"],
+      ["#9"],
+    );
+    const { errors } = checkRoadmap(text, open(1, 2, 3, 4, 5, 6, 7, 8, 9));
+    expect(errors).toEqual(["Next has 7 items, at most 6 are allowed"]);
+  });
+
+  it("accepts exactly six items under Next, and any number under Later", () => {
+    const text = roadmap(
+      ["#1"],
+      ["#2", "#3", "#4", "#5", "#6", "#7"],
+      ["#8", "#9", "#10", "#11", "#12", "#13", "#14"],
+    );
+    const numbers = Array.from({ length: 14 }, (_, index) => index + 1);
+    expect(checkRoadmap(text, open(...numbers)).errors).toEqual([]);
   });
 
   it("counts items, not issue numbers, so one item may name several issues", () => {
@@ -180,6 +207,72 @@ describe("checkRoadmap", () => {
   });
 });
 
+describe("checkRoadmap milestones", () => {
+  const text = roadmap([item(1)], [item(2)], [item(3)]);
+  const milestones = (...entries: Array<[number, string]>) =>
+    new Map<number, string>(entries);
+
+  it("accepts items whose linked milestones all exist and are open", () => {
+    const states = milestones([1, "OPEN"], [2, "OPEN"], [3, "OPEN"]);
+    expect(checkRoadmap(text, null, states)).toEqual({
+      errors: [],
+      warnings: [],
+    });
+  });
+
+  it("reports a linked milestone that does not exist", () => {
+    const states = milestones([1, "OPEN"], [3, "OPEN"]);
+    expect(checkRoadmap(text, null, states).errors).toEqual([
+      "milestone 2 does not exist",
+    ]);
+  });
+
+  it("warns, and does not fail, for a closed milestone", () => {
+    const states = milestones([1, "OPEN"], [2, "CLOSED"], [3, "OPEN"]);
+    expect(checkRoadmap(text, null, states)).toEqual({
+      errors: [],
+      warnings: ["warning: milestone 2 is closed, remove it"],
+    });
+  });
+
+  it("reports a milestone listed more than once", () => {
+    const repeated = roadmap([item(1)], [item(1)], [item(3)]);
+    const states = milestones([1, "OPEN"], [3, "OPEN"]);
+    expect(checkRoadmap(repeated, null, states).errors).toEqual([
+      "milestone 1 is listed more than once",
+    ]);
+  });
+
+  it("skips the existence check when the milestones were not read", () => {
+    expect(checkRoadmap(text, null, null)).toEqual({
+      errors: [],
+      warnings: [],
+    });
+  });
+
+  it("reads a milestone link only inside the three lists", () => {
+    const outside = text.replace(
+      "Mentions #999 outside the list.",
+      `See ${MILESTONE_URL}/99.`,
+    );
+    const states = milestones([1, "OPEN"], [2, "OPEN"], [3, "OPEN"]);
+    expect(checkRoadmap(outside, null, states).errors).toEqual([]);
+  });
+
+  it("still checks a tracker issue linked beside a milestone", () => {
+    const withTracker = roadmap(
+      [`${item(1)} Tracker #7.`],
+      [item(2)],
+      [item(3)],
+    );
+    const states = milestones([1, "OPEN"], [2, "OPEN"], [3, "OPEN"]);
+    expect(checkRoadmap(withTracker, open(7, 8), states).errors).toEqual([]);
+    expect(checkRoadmap(withTracker, open(6, 8), states).errors).toEqual([
+      "#7 does not exist",
+    ]);
+  });
+});
+
 describe("parseIssueStates", () => {
   it("maps each issue number to its upper-case state", () => {
     const json = JSON.stringify([
@@ -238,15 +331,67 @@ describe("readIssueStates", () => {
   });
 });
 
-describe("runRoadmapCheck", () => {
-  const text = roadmap(["#1"], ["#2"], ["#3"]);
+describe("parseMilestoneStates", () => {
+  it("maps each milestone number to its upper-case state", () => {
+    const json = JSON.stringify([
+      { number: 1, state: "open", title: "A" },
+      { number: 2, state: "closed", title: "B" },
+    ]);
+    expect(parseMilestoneStates(json)).toEqual(
+      new Map([
+        [1, "OPEN"],
+        [2, "CLOSED"],
+      ]),
+    );
+  });
 
-  function run(roadmapText: string, states: Map<number, string> | null) {
+  it("returns null for output that is not a list of milestones, or an empty list", () => {
+    expect(parseMilestoneStates("not json")).toBeNull();
+    expect(parseMilestoneStates('{"message":"rate limit"}')).toBeNull();
+    expect(parseMilestoneStates('[{"number":"x"}]')).toBeNull();
+    expect(parseMilestoneStates("[]")).toBeNull();
+  });
+});
+
+describe("readMilestoneStates", () => {
+  const output = JSON.stringify([{ number: 4, state: "open" }]);
+
+  it("reads every milestone of the project in one read-only call", () => {
+    const calls: string[][] = [];
+    const states = readMilestoneStates((args: string[]) => {
+      calls.push(args);
+      return { status: 0, stdout: output };
+    });
+    expect(states).toEqual(new Map([[4, "OPEN"]]));
+    expect(calls).toEqual([
+      ["api", "repos/MapCairn/mapcairn/milestones?state=all&per_page=100"],
+    ]);
+  });
+
+  it("returns null when gh fails, is missing or prints something unusable", () => {
+    expect(readMilestoneStates(() => ({ status: 1, stdout: "" }))).toBeNull();
+    expect(
+      readMilestoneStates(() => ({ status: null, stdout: "" })),
+    ).toBeNull();
+    expect(readMilestoneStates(() => ({ status: 0, stdout: "[]" }))).toBeNull();
+  });
+});
+
+describe("runRoadmapCheck", () => {
+  const text = roadmap(["#1", item(11)], ["#2"], ["#3"]);
+  const milestoneStates = new Map([[11, "OPEN"]]);
+
+  function run(
+    roadmapText: string,
+    states: Map<number, string> | null,
+    milestones: Map<number, string> | null = milestoneStates,
+  ) {
     const out: string[] = [];
     const err: string[] = [];
     const code = runRoadmapCheck({
       roadmapText,
       states,
+      milestones,
       log: (line: string) => out.push(line),
       error: (line: string) => err.push(line),
     });
@@ -255,6 +400,21 @@ describe("runRoadmapCheck", () => {
 
   it("exits 0 and prints nothing for a clean list", () => {
     expect(run(text, open(1, 2, 3))).toEqual({ code: 0, out: [], err: [] });
+  });
+
+  it("prints each missing milestone as an error and exits 1", () => {
+    const result = run(text, open(1, 2, 3), new Map([[12, "OPEN"]]));
+    expect(result.code).toBe(1);
+    expect(result.err).toEqual(["roadmap check: milestone 11 does not exist"]);
+  });
+
+  it("says once that the milestones were not checked", () => {
+    const result = run(text, open(1, 2, 3), null);
+    expect(result.code).toBe(0);
+    expect(result.out).toHaveLength(1);
+    expect(result.out[0]).toMatch(
+      /^roadmap check: .*milestones were not checked/,
+    );
   });
 
   it("prints a warning with the same prefix as errors and still exits 0", () => {

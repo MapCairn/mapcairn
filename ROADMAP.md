@@ -10,49 +10,31 @@ MapCairn aims to give a team everything it needs to build an industry-grade GIS 
 
 ## Priorities
 
-The order the work is done in, as issue numbers with the reason for each position. The issue holds the current state; this list holds the order only, so it does not repeat status. A position is a plan, not a promise.
+The order the work is done in, as GitHub milestones. A milestone is an outcome a person can name and a release note could carry. Everything smaller stays in [GitHub Issues](https://github.com/MapCairn/mapcairn/issues), grouped by its milestone, and is not listed here, so this list does not change when an issue is filed or closed and does not repeat status. A position is a plan, not a promise.
 
-Two tracks share the list. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most five items, and every second item in Now and Next is a Site item, so the site keeps improving while the SDK grows. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md), says what each item adds. `npm run roadmap:check`, which `npm run lint` runs, fails on an issue number that does not exist or is listed twice, on more than five items in Now and on a missing section, and warns about a closed issue: move or remove it, and update "Last reviewed" when you do.
+Each item gives the track, the milestone, the outcome and, where one exists, the tracker issue that defines it. **SDK** is the goal in "Direction": what a team needs to build an application on MapCairn. **Site** is what visitors to the reference site see. Now holds at most three milestones and Next at most six; Later holds milestones only and has no cap. The order was set on 2026-11-14 by weighing three things: finish what is half built, open the way for other teams to embed the map early, and do the work that touches every component (language support) while the code base is young. The capability matrix, [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md), says what each milestone adds.
+
+A milestone leaves this list in the pull request that closes its last issue. A new issue takes a milestone when one fits; only a new milestone is proposed for this list, ranked last in its section until the maintainer moves it. Quality, process and test-stability work sits in the [Maintenance](https://github.com/MapCairn/mapcairn/milestone/14) milestone, which is never ranked. `npm run roadmap:check`, which `npm run lint` runs, fails on a linked milestone or issue that does not exist or is listed twice, on more than three items in Now or six in Next and on a missing section, and warns about a closed one: remove it, and update "Last reviewed" when you do.
 
 ### Now
 
-1. **SDK, #231.** Review the Afrikaans catalogue with a fluent speaker, then close the issue. The catalogue is offered as a draft.
-2. **Site, #117, #118 and #119.** Highlight selected features, the Selection panel and select mode. The selection port and hook are built, and nothing in the interface uses them yet.
-3. **SDK, #24 and then #43.** The engine adapter in its own package. It is the first step for a team that wants to embed the map without copying the reference host.
-4. **Site, #126 and #127.** Identify on raster layers: the Layers section line, the status line and the Playwright identify layer are left. The core, the tap, the key press and the guide are built.
-5. **SDK, #198.** A small check that every SDK dependency allows commercial use, in place before packages are published.
+1. **SDK, [Language support](https://github.com/MapCairn/mapcairn/milestone/4) ([#231](https://github.com/MapCairn/mapcairn/issues/231)).** Any language can be offered by a host, with English and Afrikaans on the reference site. The Afrikaans catalogue is offered as a draft until a fluent speaker has reviewed it.
+2. **Site, [Selection](https://github.com/MapCairn/mapcairn/milestone/5) ([#49](https://github.com/MapCairn/mapcairn/issues/49)).** Visitors can select several features on the map and work with the selection.
+3. **SDK, [Embeddable SDK](https://github.com/MapCairn/mapcairn/milestone/6) ([#51](https://github.com/MapCairn/mapcairn/issues/51)).** A team can embed the map in its own application without copying the reference host.
 
 ### Next
 
-1. **SDK, #44.** A mount function and a prebuilt bundle for pages without React, the main path for existing server-rendered applications.
-2. **Site, #176.** Order and opacity for every layer.
-3. **SDK, #45.** Hosts that sit behind a login.
-4. **Site, #121 and #122.** Finish selection: the features inside a drawn shape, and dropping references when a layer leaves.
-5. **SDK, #195.** One place for tile and layer requests (limits, retry, a hook for credentials and headers).
-6. **Site, #175.** A command palette.
-7. **SDK, #220.** A host can theme the SDK, with contrast checked.
-8. **Site, #183.** Clustering for dense point layers.
-9. **SDK, #221.** The guide to serving the bundle from a Windows web server and server-rendered pages.
-10. **Site, #71 and #213.** Finish the map key, and stop the credits popover jumping.
-11. **SDK, #232 and #184.** Two small guides: open service standards, and a custom search provider.
-12. **Site, #229.** Say once when the device is offline.
-13. **SDK, #192, #194 and #193.** The large-data track: tile archives, a tile budget, and cards for vector features.
-14. **Site, #179.** A side panel with a feature's full details.
+1. **Site, [Identify on raster layers](https://github.com/MapCairn/mapcairn/milestone/7) ([#47](https://github.com/MapCairn/mapcairn/issues/47)).** Visitors can ask a raster layer what is at a point.
+2. **SDK, [First release](https://github.com/MapCairn/mapcairn/milestone/8) ([#1](https://github.com/MapCairn/mapcairn/issues/1)).** The four SDK packages are versioned, documented and published, once the project has its own domain names.
+3. **Site, [Layer controls](https://github.com/MapCairn/mapcairn/milestone/9).** Visitors can order, filter, cluster and explore layers and their features.
 
 ### Later
 
-After the project has its own domain names, in this order:
-
-1. **SDK, #199.** The documentation site.
-2. **SDK, #174.** Component documentation.
-3. **SDK, #1.** Versioning, GitHub releases and npm, with API documentation. The dependency check in Now is already in place by then.
-
-Then, roughly in this order:
-
-- **Small additions:** #222 (UTM and MGRS), #225 (snapping), #226 (buffer and merge), #227 (GPX and KML), #62 (richer filters), #48 (the interface for image export) and #178 (printing), #182 (a timeline), #181 and #180 (box and lasso selection, elevation profile), #228 (save a layer's features), #84 (WKT axis order), #259 (geolint, a GeoJSON linter that is its own Apache-2.0 package).
-- **Research and plans, each to be decided after its measurement or plan:** #223 (coordinate systems), #224 (terrain), #177 (tilt and the shared link), #185 (deck.gl), #196 (storing tiles on the device), #197 (MapLibre Tile), #186, #187 and #188 (host-side search, nearby queries and short links), #53 (server rendering), #56 and #75 (an agent tool catalogue and an analytics sink).
-- **Whenever there is room (quality and process):** #261 (geolint speed), #25 (thin the app hook), #214 and #149 (test stability and shard balance), #215, #217 and #246 (documents, CI security and the proof of the severity gate), #247 (what components may read from the browser directly), #146 (a screen reader check, which needs a person with a screen reader), #4 (the OpenSSF silver badge), the agent and skill upkeep in #82, #93 and #108, and #274 (a test that fails on interface text written inline and on Afrikaans left as English).
-- **Trackers, not ranked:** #47, #49 and #51 (their steps are ranked above).
+- **SDK, [Large data](https://github.com/MapCairn/mapcairn/milestone/10).** The map stays fast on very large layers, with tile archives and measured tile budgets.
+- **SDK, [Drawing, styling and geometry](https://github.com/MapCairn/mapcairn/milestone/3).** Draw and edit tools, area and line styling, new layer kinds and geometry helpers.
+- **Site, [Output and printing](https://github.com/MapCairn/mapcairn/milestone/11).** Visitors can export the map as an image and print it.
+- **SDK, [Host-side services](https://github.com/MapCairn/mapcairn/milestone/12).** A host can add its own search, nearby queries, short links, agent tools and analytics.
+- **Site, [Terrain and view](https://github.com/MapCairn/mapcairn/milestone/13).** The map can show terrain and carry its tilt in the shared link.
 
 ## Intentions
 
