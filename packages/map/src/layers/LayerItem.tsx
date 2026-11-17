@@ -11,6 +11,7 @@ import {
   formatTemplate,
   isControlEnabled,
   isFeedLayer,
+  isIdentifiable,
   type LayerControlDefinition,
   type LayerFeature,
   loadsFeatures,
@@ -406,6 +407,14 @@ export function LayerItem({
             label={t("layers.keyFor", { name: resolve(definition.name) })}
             testId={`layer-legend-${definition.id}`}
           />
+          {isIdentifiable(definition) ? (
+            <p
+              className={styles.muted}
+              data-testid={`layer-identify-hint-${definition.id}`}
+            >
+              {t("layers.identify.hint", {})}
+            </p>
+          ) : null}
           {definition.disclaimer ? (
             <p className={styles.disclaimer}>
               <Icon icon={TriangleAlert} />

@@ -13,6 +13,7 @@ import {
   samplePoint,
 } from "@mapcairn/core";
 import {
+  IDENTIFY_FEEDBACK_MS,
   LiveRegionProvider,
   ServicesProvider,
   TooltipProvider,
@@ -429,5 +430,102 @@ describe("App cancelling an identify", () => {
     release();
     await settle();
     expect(screen.queryByTestId("feature-card")).toBeNull();
+  });
+});
+
+describe("App waiting status line", () => {
+  const LINE = "Looking up what is here";
+  const lookingUp = () => screen.queryByTestId("identify-status");
+
+  async function holdAtTap() {
+    const services = await renderApp([SAMPLE_IDENTIFY_LAYER]);
+    services.fakes.layerSource.setIdentified(FLOOD, [
+      samplePoint("a", { title: "Gauge 4" }),
+    ]);
+    const release = services.fakes.layerSource.holdIdentify(FLOOD);
+    act(() => adapter(services).simulateClick(PLACE));
+    await settle();
+    return { services, release };
+  }
+
+  it("shows after the delay and not before, and says nothing to a screen reader", async () => {
+    await holdAtTap();
+    await advanceClock(IDENTIFY_FEEDBACK_MS - 1);
+    expect(lookingUp()).toBeNull();
+    await advanceClock(1);
+    expect(lookingUp()).toHaveTextContent(LINE);
+    expect(lookingUp()).not.toHaveAttribute("aria-live");
+    expect(lookingUp()?.closest('[role="status"], [role="alert"]')).toBeNull();
+    await advanceClock(ANNOUNCER_SETTLE_MS - IDENTIFY_FEEDBACK_MS);
+    expect(polite()).toBe("");
+  });
+
+  it("never shows when the answer comes within the delay", async () => {
+    const { release } = await holdAtTap();
+    await advanceClock(IDENTIFY_FEEDBACK_MS - 1);
+    release();
+    await settle();
+    await advanceClock(IDENTIFY_FEEDBACK_MS * 2);
+    expect(lookingUp()).toBeNull();
+  });
+
+  it("goes when the result arrives, which is then said once", async () => {
+    const { release } = await holdAtTap();
+    await advanceClock(IDENTIFY_FEEDBACK_MS);
+    expect(lookingUp()).not.toBeNull();
+    release();
+    await settle();
+    expect(lookingUp()).toBeNull();
+    expect(
+      within(sheet()).getByRole("heading", { name: "Gauge 4" }),
+    ).toBeInTheDocument();
+  });
+
+  it("goes when Escape cancels the lookup, and the lookup says nothing", async () => {
+    const { release } = await holdAtTap();
+    await advanceClock(IDENTIFY_FEEDBACK_MS);
+    fireEvent.keyDown(region(), { key: "Escape" });
+    await settle();
+    expect(lookingUp()).toBeNull();
+    release();
+    await settle();
+    await advanceClock(ANNOUNCER_SETTLE_MS);
+    expect(polite()).toBe("");
+  });
+
+  it("goes when a tap on a drawn feature opens its card instead", async () => {
+    const services = await renderApp(
+      [SAMPLE_FEED_LAYER, SAMPLE_IDENTIFY_LAYER],
+      (source) => {
+        source.setFeatures("sample-points", [
+          samplePoint("a", { title: "Alpha" }),
+        ]);
+      },
+    );
+    services.fakes.layerSource.holdIdentify(FLOOD);
+    act(() => adapter(services).simulateClick(PLACE));
+    await settle();
+    await advanceClock(IDENTIFY_FEEDBACK_MS);
+    expect(lookingUp()).not.toBeNull();
+    act(() => adapter(services).simulateFeatureTap("sample-points", "a"));
+    await settle();
+    expect(lookingUp()).toBeNull();
+  });
+
+  it("shows for the I key too", async () => {
+    const services = await renderApp([SAMPLE_IDENTIFY_LAYER]);
+    services.fakes.layerSource.holdIdentify(FLOOD);
+    fireEvent.keyDown(region(), { key: "i" });
+    await settle();
+    await advanceClock(IDENTIFY_FEEDBACK_MS);
+    expect(lookingUp()).toHaveTextContent(LINE);
+  });
+
+  it("does not show when no layer can be asked", async () => {
+    const services = await renderApp([SAMPLE_FEED_LAYER]);
+    act(() => adapter(services).simulateClick(PLACE));
+    await settle();
+    await advanceClock(IDENTIFY_FEEDBACK_MS * 2);
+    expect(lookingUp()).toBeNull();
   });
 });

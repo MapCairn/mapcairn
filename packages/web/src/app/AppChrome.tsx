@@ -7,6 +7,7 @@ import {
   DrawToolbar,
   EndStack,
   FocusRegistryProvider,
+  IdentifyStatus,
   MapChrome,
   type MapContextValue,
   MapKey,
@@ -17,6 +18,7 @@ import {
   SheetContent,
   useFocusReturn,
   useFormatMessage,
+  useIdentifyFeedback,
   useMap,
   useMessages,
   useSettings,
@@ -132,8 +134,9 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
   };
 
   const showBanners = hasBanners(app, map);
+  const lookingUp = useIdentifyFeedback(app.layers.identifying);
   const centre =
-    app.measuring || app.drawing || showBanners ? (
+    app.measuring || app.drawing || lookingUp || showBanners ? (
       <div className={bottomCentre}>
         {app.measuring ? (
           <MeasureToolbar
@@ -149,6 +152,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
             onOpenShapes={app.openShapes}
           />
         ) : null}
+        {lookingUp ? <IdentifyStatus /> : null}
         {showBanners ? <MapBanners app={app} /> : null}
       </div>
     ) : null;
