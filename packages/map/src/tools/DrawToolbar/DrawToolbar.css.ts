@@ -72,22 +72,21 @@ globalStyle(`${modes} [role="radio"]`, {
 });
 
 /**
- * The shape's name, then its measures. Figures keep their width as they
- * change. The row is as tall as the measures' line from the start, so the
+ * The shape's name, with its measures on the line below. Figures keep their
+ * width as they change. The two lines are reserved from the start, so the
  * toolbar, and the bottom slots that ride above it, do not move when the
- * first measure appears.
+ * first measure appears, however wide the text is (a measure that cannot
+ * wrap beside the name would otherwise drop to a second line of its own).
  */
 export const readout = style({
   margin: 0,
-  minBlockSize: `calc(${tokens.type.large.size} * ${tokens.type.large.lineHeight})`,
+  minBlockSize: `calc(${tokens.type.small.size} * ${tokens.type.small.lineHeight} + ${tokens.type.large.size} * ${tokens.type.large.lineHeight})`,
   "@media": {
     "(max-height: 520px) and (min-width: 640px)": { gridColumn: 1, gridRow: 2 },
   },
   paddingInline: tokens.space.xs,
   display: "flex",
-  flexWrap: "wrap",
-  alignItems: "baseline",
-  columnGap: tokens.space.xs,
+  flexDirection: "column",
   fontVariantNumeric: "tabular-nums",
 });
 
