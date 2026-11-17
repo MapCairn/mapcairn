@@ -8,7 +8,7 @@ import {
 } from "@mapcairn/core";
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useMessages, useSettings } from "./hooks";
+import { useLanguageLoad, useMessages, useSettings } from "./hooks";
 import { ServicesProvider } from "./ServicesProvider";
 
 const ENGLISH = new FakeMessageCatalogue({ language: "en-GB" });
@@ -36,8 +36,17 @@ function defer(): Deferred {
 function Probe() {
   const messages = useMessages();
   const { update } = useSettings();
+  const load = useLanguageLoad();
   return (
     <>
+      <p data-testid="load">
+        {load === undefined
+          ? "none"
+          : `${load.failed ?? "ok"}${load.retrying ? " retrying" : ""}`}
+      </p>
+      <button type="button" onClick={() => load?.retry()}>
+        retry
+      </button>
       <p data-testid="text">
         {messages.language}:{messages.t("settings.title", {})}
       </p>
@@ -93,6 +102,7 @@ function setup({
 }
 
 const text = () => screen.getByTestId("text").textContent;
+const loadState = () => screen.getByTestId("load").textContent;
 const choose = (name: string) =>
   act(() => {
     screen.getByRole("button", { name }).click();
@@ -313,5 +323,121 @@ describe("useMessages with a language catalogue", () => {
     choose("af");
     choose("af");
     expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(1);
+  });
+});
+
+describe("useLanguageLoad", () => {
+  const failingThenWorking = () => {
+    let offline = true;
+    const load = vi.fn((tag: string) => {
+      if (tag !== "af") {
+        return ENGLISH;
+      }
+      return offline
+        ? Promise.reject(new Error("offline"))
+        : Promise.resolve(AFRIKAANS);
+    });
+    return {
+      load,
+      recover: () => {
+        offline = false;
+      },
+    };
+  };
+
+  it("is undefined for a host with no languages", () => {
+    setup({ withCatalogue: false });
+    expect(loadState()).toBe("none");
+  });
+
+  it("reports no failure when nothing has failed", async () => {
+    setup();
+    choose("af");
+    await act(async () => {});
+    expect(loadState()).toBe("ok");
+  });
+
+  it("names the language whose load failed while the previous one stays on screen", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    setup({ load: failingThenWorking().load, language: "af" });
+    await act(async () => {});
+    expect(loadState()).toBe("af");
+    expect(text()).toBe("en-GB:Settings");
+  });
+
+  it("names a language whose load throws", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    setup({
+      load: (tag) => {
+        if (tag === "af") {
+          throw new Error("no messages");
+        }
+        return ENGLISH;
+      },
+    });
+    choose("af");
+    expect(loadState()).toBe("af");
+  });
+
+  it("retries the load, swaps the language in and clears the failure", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { load, recover } = failingThenWorking();
+    setup({ load, language: "af" });
+    await act(async () => {});
+    recover();
+    choose("retry");
+    expect(loadState()).toBe("af retrying");
+    await act(async () => {});
+    expect(loadState()).toBe("ok");
+    expect(text()).toBe("af:Instellings");
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(2);
+  });
+
+  it("keeps the failure when the retry fails too", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { load } = failingThenWorking();
+    setup({ load, language: "af" });
+    await act(async () => {});
+    choose("retry");
+    await act(async () => {});
+    expect(loadState()).toBe("af");
+    expect(text()).toBe("en-GB:Settings");
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(2);
+  });
+
+  it("clears the failure when the person chooses another language", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    setup({ load: failingThenWorking().load, language: "af" });
+    await act(async () => {});
+    choose("en");
+    expect(loadState()).toBe("ok");
+  });
+
+  it("retries the latest request, not a stale one, after the setting changed during the failure", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { load, recover } = failingThenWorking();
+    setup({ load, language: "af", languages: [] });
+    await act(async () => {});
+    choose("follow");
+    await act(async () => {});
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(1);
+    choose("af");
+    await act(async () => {});
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(2);
+    recover();
+    choose("retry");
+    await act(async () => {});
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(3);
+    expect(loadState()).toBe("ok");
+    expect(text()).toBe("af:Instellings");
+  });
+
+  it("does nothing when asked to retry with no failure", async () => {
+    const load = vi.fn(() => ENGLISH);
+    setup({ load });
+    choose("retry");
+    await act(async () => {});
+    expect(load).not.toHaveBeenCalled();
+    expect(loadState()).toBe("ok");
   });
 });

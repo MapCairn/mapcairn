@@ -237,6 +237,8 @@ export type MessageKey =
   | "common.itemCount"
   | "settings.language.label"
   | "settings.language.auto"
+  | "settings.language.loadFailed"
+  | "settings.language.tryAgain"
   // Components: chrome, host, ui, panels and the app shell
   | "chrome.endStack.label"
   | "chrome.endStack.resetBearing"
@@ -928,6 +930,7 @@ interface MessageParamOverrides {
   readonly "draw.import.holesLeftOut": { readonly count: number };
   /** `{count}`, consumed by {@link MessageCatalogue.plural}. */
   readonly "common.itemCount": { readonly count: number };
+  readonly "settings.language.loadFailed": { readonly language: string };
   // Components: chrome, host, ui, panels and the app shell
   readonly "chrome.readout.zoomShort": { readonly level: string };
   readonly "chrome.readout.zoomSpoken": { readonly level: string };
