@@ -93,9 +93,14 @@ async function setTextSize(page: Page, size: string): Promise<void> {
   }, size);
 }
 
+/**
+ * `grows` is whether larger text makes the toolbar taller. On a small phone
+ * it is already at its cap (half the screen, with the controls scrolling
+ * inside), so only the phone proves a toolbar that changes height.
+ */
 const VIEWPORTS = [
-  { name: "a phone", width: 390, height: 844 },
-  { name: "a small phone", width: 320, height: 568 },
+  { name: "a phone", width: 390, height: 844, grows: true },
+  { name: "a small phone", width: 320, height: 568, grows: false },
 ] as const;
 
 /** The languages and motion settings the frames are recorded in. With motion, the sheet's lift slides, and the toolbar's must not. */
@@ -113,7 +118,7 @@ for (const { language, motion } of SETTINGS) {
       language: language === "af" ? "af" : null,
     });
 
-    for (const { name, width, height } of VIEWPORTS) {
+    for (const { name, width, height, grows } of VIEWPORTS) {
       test(`no frame has a bottom slot over the toolbar as it opens, gets its first point and measure, and changes text size on ${name}`, async ({
         page,
         mapPage,
@@ -146,9 +151,11 @@ for (const { language, motion } of SETTINGS) {
         ).toEqual([]);
         // The text size must really change the toolbar's height, or the
         // frames above prove nothing about a toolbar that changes height.
-        expect(
-          (await mapPage.drawToolbar.boundingBox())?.height,
-        ).toBeGreaterThan(heightBefore ?? Number.POSITIVE_INFINITY);
+        if (grows) {
+          expect(
+            (await mapPage.drawToolbar.boundingBox())?.height,
+          ).toBeGreaterThan(heightBefore ?? Number.POSITIVE_INFINITY);
+        }
         expect(
           await overlapsDuring(mapPage, () => setTextSize(page, "100%")),
           "as the text shrinks",
