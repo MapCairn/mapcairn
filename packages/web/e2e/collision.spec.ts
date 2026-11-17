@@ -819,6 +819,149 @@ for (const viewport of WIDE_READOUT_VIEWPORTS) {
   );
 }
 
+/** A narrow desktop window, where the popover and the readout share width. */
+const SHARED_WIDTH_VIEWPORT = { width: 390, height: 844 } as const;
+
+/**
+ * The popover's top edge on every frame while `action` runs and the layout
+ * settles after it.
+ */
+async function recordCreditsTops(
+  mapPage: MapPage,
+  action: () => Promise<void>,
+): Promise<number[]> {
+  const page = mapPage.page;
+  await mapPage.creditsRegion.evaluate((region) => {
+    const tops: number[] = [];
+    let running = true;
+    const sample = () => {
+      tops.push(region.getBoundingClientRect().top);
+      if (running) {
+        requestAnimationFrame(sample);
+      }
+    };
+    requestAnimationFrame(sample);
+    Object.assign(window, {
+      stopCreditsRecording: () => {
+        running = false;
+        return tops;
+      },
+    });
+  });
+  await action();
+  await waitForStableLayout(page);
+  return page.evaluate(() =>
+    (
+      window as unknown as { stopCreditsRecording: () => number[] }
+    ).stopCreditsRecording(),
+  );
+}
+
+/** A difference smaller than this, in pixels, is not a move. */
+const SAME_POSITION_PX = 0.5;
+
+/**
+ * The whole move from the first frame to the last, and how many frames showed
+ * the popover somewhere between the two (none when it jumps).
+ */
+function creditsMoves(tops: readonly number[]): {
+  total: number;
+  between: number;
+} {
+  const first = tops.at(0);
+  const last = tops.at(-1);
+  if (first === undefined || last === undefined) {
+    throw new Error("The popover was not sampled on any frame.");
+  }
+  const low = Math.min(first, last) + SAME_POSITION_PX;
+  const high = Math.max(first, last) - SAME_POSITION_PX;
+  return {
+    total: Math.abs(last - first),
+    between: tops.filter((top) => top > low && top < high).length,
+  };
+}
+
+/**
+ * Opens the credits at {@link SHARED_WIDTH_VIEWPORT}, then moves the pointer
+ * onto the map, where the cursor coordinates appear, and back onto the credits
+ * button, where they go. Returns how the popover moved each way.
+ */
+async function movePointerOnAndOffMap(
+  page: Page,
+  mapPage: MapPage,
+): Promise<{
+  entering: ReturnType<typeof creditsMoves>;
+  leaving: ReturnType<typeof creditsMoves>;
+}> {
+  await seedStoredSettings(page, { units: "imperial" });
+  await page.setViewportSize(SHARED_WIDTH_VIEWPORT);
+  await scriptSearch(page);
+  await mapPage.goto(WIDEST_COORDINATES_VIEW);
+
+  await collapseCredits(mapPage);
+  await mapPage.creditsButton.click();
+  await expect(mapPage.creditsRegion).toBeVisible();
+  await waitForStableLayout(page);
+
+  const entering = creditsMoves(
+    await recordCreditsTops(mapPage, () => hoverFreeMap(mapPage)),
+  );
+  const leaving = creditsMoves(
+    await recordCreditsTops(mapPage, async () => {
+      await mapPage.creditsButton.hover();
+      await expect(page.getByTestId("map-readout")).not.toContainText(
+        COORDINATES_PATTERN,
+      );
+    }),
+  );
+  return { entering, leaving };
+}
+
+/*
+ * Where the popover and the readout share width, the cursor coordinates change
+ * the readout's height as the pointer enters or leaves the map, and the popover
+ * rises or sinks with it. With motion allowed it does so over several frames
+ * rather than at once: some frame shows it part of the way, in both
+ * directions. With reduced motion it follows at once, as before.
+ */
+test.describe("credits popover offset", () => {
+  test.describe("with motion allowed", () => {
+    test.use({ reducedMotion: "no-preference" });
+
+    test(`moves smoothly when the cursor coordinates appear and go at ${SHARED_WIDTH_VIEWPORT.width}x${SHARED_WIDTH_VIEWPORT.height}`, async ({
+      page,
+      mapPage,
+      isMobile,
+    }) => {
+      test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+      const { entering, leaving } = await movePointerOnAndOffMap(page, mapPage);
+      for (const [name, moves] of [
+        ["pointer enters the map", entering],
+        ["pointer leaves the map", leaving],
+      ] as const) {
+        expect(moves.total, name).toBeGreaterThan(0);
+        expect(moves.between, name).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  test(`follows the readout at once with reduced motion at ${SHARED_WIDTH_VIEWPORT.width}x${SHARED_WIDTH_VIEWPORT.height}`, async ({
+    page,
+    mapPage,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+    const { entering, leaving } = await movePointerOnAndOffMap(page, mapPage);
+    for (const [name, moves] of [
+      ["pointer enters the map", entering],
+      ["pointer leaves the map", leaving],
+    ] as const) {
+      expect(moves.total, name).toBeGreaterThan(0);
+      expect(moves.between, name).toBe(0);
+    }
+  });
+});
+
 /** The narrowest window that has the side panel layout. */
 const NARROWEST_PANEL_VIEWPORT = { width: 768, height: 700 } as const;
 
