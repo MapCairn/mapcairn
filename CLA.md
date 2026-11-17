@@ -6,7 +6,7 @@ MapCairn is licensed under [AGPL-3.0](LICENSE), and its author may also agree ot
 
 ## Definitions
 
-- **Project** means MapCairn (called Karta before version 1.1), the software in the repository at https://github.com/MapCairn/mapcairn.
+- **Project** means MapCairn, the software in the repository at https://github.com/MapCairn/mapcairn.
 - **Owner** means Timothy Brits, the owner of the Project, and anyone the Owner transfers the Project to.
 - **Contribution** means any work you submit to the Project, for example through a pull request, issue, patch or comment, that you have not marked "Not a contribution" in writing.
 - **You** means the person submitting the Contribution. If you submit it for an employer or another organisation, "You" also means that organisation, and you confirm you have its authority to agree to these terms.
@@ -54,7 +54,6 @@ A pull request is not merged until the comment is there. The `CLA` check on the 
 
 ## Changes
 
-- **1.3:** the GeoJSON linter moved to its own repository, so section 7, which set the terms for that package's licence, is removed and no longer applies to this repository. Sections 1 to 6 and the agreement sentence are unchanged. People who agreed to an earlier version have agreed to these terms and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
-- **1.2:** added section 7, for a package in the Project that had its own licence. Sections 1 to 6 and the agreement sentence were unchanged, and people who agreed to version 1.0 or 1.1 did not need to comment again.
-- **1.1:** the Project was renamed from Karta to MapCairn, and the agreement sentence now names MapCairn. The terms are unchanged. People who agreed to version 1.0, with the sentence that named Karta, have agreed to these terms for the same Project and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
+- **1.3:** removed a section that no longer applies to the Project. Sections 1 to 6 and the agreement sentence are unchanged. People who agreed to an earlier version have agreed to these terms and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
+- **1.1:** the agreement sentence now names MapCairn. The terms are unchanged. People who agreed to version 1.0 have agreed to these terms for the same Project and do not need to comment again. The signatures file records the version each person agreed to, and those entries are kept as they are.
 - **1.0:** the first version.

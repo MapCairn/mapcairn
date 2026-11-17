@@ -184,8 +184,6 @@ npm run dev
 | [`@mapcairn/react`](packages/react/README.md) | Generic React hooks                                                                                           |
 | [`@mapcairn/theme`](packages/theme/README.md) | The typed design tokens and their contrast calculations                                                       |
 
-The GeoJSON linter `geolint` is a separate project, at [MapCairn/geolint](https://github.com/MapCairn/geolint).
-
 `packages/web` is the playground, called the reference host in the rest of the documentation.
 
 ## Documentation

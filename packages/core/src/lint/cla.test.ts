@@ -24,7 +24,7 @@ const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../..",
 );
-const CLA_URL = "https://github.com/mooship/karta/blob/main/CLA.md";
+const CLA_URL = "https://github.com/example-owner/example/blob/main/CLA.md";
 
 interface User {
   login: string;
@@ -37,7 +37,7 @@ const user = (login: string, id: number, type = "User"): User => ({
   id,
   type,
 });
-const owner = user("mooship", 1);
+const owner = user("example-owner", 1);
 const ada = user("ada", 2);
 const grace = user("grace", 3);
 
@@ -54,7 +54,7 @@ const comment = (
   createdAt = "2026-11-10T08:00:00Z",
 ) => ({
   id,
-  html_url: `https://github.com/mooship/karta/pull/7#issuecomment-${id}`,
+  html_url: `https://github.com/example-owner/example/pull/7#issuecomment-${id}`,
   created_at: createdAt,
   user: author,
   body,
@@ -112,7 +112,6 @@ describe("the CLA text", () => {
     expect(claText).toContain("agreed to version 1.0");
     expect(claText).toContain("agreed to an earlier version");
     expect(claText).toContain("do not need to comment again");
-    expect(claText).toContain("Karta");
   });
 });
 
@@ -305,14 +304,14 @@ describe("who needs to agree", () => {
   it("exempts the repository owner in any case", () => {
     const result = evaluateWith({
       pullAuthor: owner,
-      commits: [commit({ ...owner, login: "MooShip" })],
+      commits: [commit({ ...owner, login: "Example-Owner" })],
     });
     expect(result.required).toEqual([]);
     expect(result.agreed).toBe(true);
   });
 
   it("does not exempt an account that holds the owner's login under another id", () => {
-    const renamed = user("mooship", 999);
+    const renamed = user("example-owner", 999);
     const result = evaluateWith({
       pullAuthor: renamed,
       commits: [commit(renamed)],
@@ -327,7 +326,9 @@ describe("who needs to agree", () => {
       pullAuthor: owner,
       commits: [commit(owner)],
     });
-    expect(result.required.map((r: User) => r.login)).toEqual(["mooship"]);
+    expect(result.required.map((r: User) => r.login)).toEqual([
+      "example-owner",
+    ]);
   });
 
   it("exempts Dependabot, matched by its account id", () => {
@@ -575,7 +576,8 @@ describe("who has agreed", () => {
         id: 2,
         signedAt: "2026-11-10T09:30:00.000Z",
         pullRequest: 7,
-        commentUrl: "https://github.com/mooship/karta/pull/7#issuecomment-55",
+        commentUrl:
+          "https://github.com/example-owner/example/pull/7#issuecomment-55",
         claVersion: CLA_VERSION,
       },
     ]);
@@ -672,8 +674,8 @@ describe("who has agreed", () => {
     expect(addSignatures([earlier], result.newSignatures)).toEqual([earlier]);
   });
 
-  it("does not take the version 1.0 sentence, which names Karta, as a new agreement", () => {
-    const earlierSentence = AGREEMENT_SENTENCE.replace("MapCairn", "Karta");
+  it("does not take an earlier sentence that names another project as a new agreement", () => {
+    const earlierSentence = AGREEMENT_SENTENCE.replace("MapCairn", "Other");
     expect(earlierSentence).not.toBe(AGREEMENT_SENTENCE);
     expect(isAgreementComment(earlierSentence)).toBe(false);
     const result = evaluateWith({ comments: [comment(ada, earlierSentence)] });
