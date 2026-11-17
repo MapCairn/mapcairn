@@ -4,12 +4,12 @@ Which layer kind to serve from your own server, and what each costs it. A layer 
 
 ## Choose the shape of the data
 
-| Server gives               | Layer source   | Fits                                                                                                | Cards and list                                                     | What it costs                                                                    |
-| -------------------------- | -------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| XYZ or WMTS image tiles    | `tiles`        | A dense drawing, such as a forecast field or imagery                                                | No, a tile is a picture; an identify endpoint gives a tap its card | One request a tile, cheapest to cache                                            |
-| Vector tiles (MVT)         | `vector-tiles` | Linework and areas where a tile generator exists                                                    | No, the features stay in the tiles                                 | A tileset to build and regenerate, one request a tile                            |
-| GeoJSON for a bounding box | `query`        | A layer of features too large to send whole, and small enough to show at once                       | Yes                                                                | One request for each new area looked at, geometry as JSON                        |
-| One GeoJSON file           | `feed`         | A small layer served as one whole file, of any freshness, such as country outlines or an alert list | Yes                                                                | One request when the layer is turned on, then reused while the response is fresh |
+| Server gives                 | Layer source   | Fits                                                                                                | Cards and list                                                     | What it costs                                                                    |
+| ---------------------------- | -------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| XYZ, WMTS or WMS image tiles | `tiles`        | A dense drawing, such as a forecast field or imagery                                                | No, a tile is a picture; an identify endpoint gives a tap its card | One request a tile, cheapest to cache                                            |
+| Vector tiles (MVT)           | `vector-tiles` | Linework and areas where a tile generator exists                                                    | No, the features stay in the tiles                                 | A tileset to build and regenerate, one request a tile                            |
+| GeoJSON for a bounding box   | `query`        | A layer of features too large to send whole, and small enough to show at once                       | Yes                                                                | One request for each new area looked at, geometry as JSON                        |
+| One GeoJSON file             | `feed`         | A small layer served as one whole file, of any freshness, such as country outlines or an alert list | Yes                                                                | One request when the layer is turned on, then reused while the response is fresh |
 
 The first question is how much geometry there is. A tile layer or a vector tile layer suits a layer whose geometry is far more than a screen can hold, however few features it has. A query layer suits a layer with many features, up to the 5000 a query may show at once, where each feature should be something to tap, with a card and a list. If the whole layer is small enough to send in one file, a feed is simpler than either.
 
@@ -47,6 +47,138 @@ A `query` source is a GeoJSON endpoint that takes a box and a limit. The definit
 A `feed` source is a URL to a whole GeoJSON file. It suits a small layer of any freshness, from country outlines to earthquakes and alerts, with `Cache-Control` setting how stale the data may be: the reference host's earthquake feed sends a `max-age` of a minute. Layers split from one file share a request. Send `Cache-Control`, and for a large file send compressed.
 
 The page keeps every response, a query response as well as a feed, for at least the server's `max-age`. A feed definition may also set `cacheSeconds` (at most 3600), a minimum retention for a provider that sends no `max-age`; when both are present the longer applies. A query definition cannot set it. Nothing is kept beyond the page.
+
+## Services that speak open standards
+
+A team's own services often speak OGC API Features, WMS or WMTS. The existing layer kinds can request all three, with the definition written by hand: MapCairn never reads a service's capabilities document, so the host copies the layer name, style, format and tile matrix set out of it. The examples use invented hosts under `example.org`. The tests in `packages/core/src/layers/openStandards.test.ts` validate each definition with `validateLayerDefinition`, build the request the engine or the query would send, and compare it to the shape the standard defines. They also fail if a URL, tile size, zoom limit, feature cap or field map shown below stops matching the test.
+
+Three limits hold for all three:
+
+- **Coordinate systems.** The engine asks tile layers in Web Mercator (EPSG:3857) only, and a query layer asks in WGS 84 longitude and latitude. A service that can serve nothing but another system, such as a national grid, is not supported.
+- **Cross-origin access.** The standards do not ask a server to send `Access-Control-Allow-Origin`, so check that the service does, on errors as well as answers (see "What the server should do" below).
+- **Content Security Policy.** The host page must allow each origin: a tile service in `img-src` and `connect-src`, and a feature or identify service in `connect-src`. See the [Content Security Policy guide](content-security-policy.md).
+
+### OGC API Features
+
+An items resource that takes a `bbox` and a `limit` is a `query` source. The `f=json` in the URL below is a convention some servers use to pick the format, not part of the standard (see "Format" below), so remove it if your service rejects unknown parameters.
+
+```ts
+import type { FeedLayerDefinition, PointStyle } from "@mapcairn/core";
+
+const parks: FeedLayerDefinition<PointStyle> = {
+  id: "example-ogc-parks",
+  name: "Parks",
+  description: "Example parks from a feature service, asked for by view.",
+  group: "Places",
+  dataCost: "a few KB per screen",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [],
+  source: {
+    kind: "query",
+    url: "https://features.example.org/collections/parks/items?f=json&bbox={west},{south},{east},{north}&limit={limit}",
+    decoder: "geojson",
+    fields: { id: "id", title: "properties.name" },
+    maxFeatures: 500,
+    minzoom: 9,
+  },
+  style: { colour: { kind: "fixed", colour: "bluish-green", label: "Park" } },
+  card: { title: "{title}", lines: [] },
+  list: {
+    secondary: "{title}",
+    sorts: [{ id: "name", label: "Name", field: "title", direction: "asc" }],
+  },
+  emptyText: "No parks in view.",
+};
+```
+
+For a view over Cape Town the request is `.../items?f=json&bbox=18.2,-34.1,18.7,-33.7&limit=501`. What the standard defines and what the query sends line up:
+
+- `bbox` is `minimum longitude, minimum latitude, maximum longitude, maximum latitude` in CRS84, which is the order of `{west},{south},{east},{north}`. The query sends no `bbox-crs`, so the service's default applies.
+- `limit` is `maxFeatures` plus one, so a service that honours it lets the layer tell that more exist.
+- The answer is a GeoJSON feature collection. The decoder reads `features` and ignores `numberMatched`, `numberReturned` and `links`.
+
+What does not work:
+
+- **Paging.** A `next` link is not followed. The layer keeps the first `maxFeatures` of one response and says to zoom in. A service that caps `limit` below `maxFeatures + 1` may send a shorter page, and the layer then cannot tell that more exist, or may refuse the request (a strict service can answer HTTP 400 for a `limit` above its declared maximum). Set `maxFeatures` at least one below the service's maximum `limit`.
+- **The antimeridian and the poles.** The box is kept within -180 to 180 and -85 to 85 degrees, so it never wraps the antimeridian, though the standard allows it to.
+- **Other coordinate systems.** Geometry in a `crs` other than CRS84 is not requested. A feature with any position beyond 180 or 90 degrees is skipped whole.
+- **Format.** The request sets no `Accept` header. The recipe's `f=json` is not part of OGC API Features Part 1, which negotiates the format on `Accept`; some servers use it as a convention. Remove it if the service rejects unknown parameters. A service that answers HTML or another format by default and has no such parameter cannot be used without a proxy. The answer must be JSON.
+
+### WMS
+
+A WMS draws a map image for a box, so it is a `tiles` source with `{bbox-epsg-3857}`, and its `GetFeatureInfo` is the layer's `identify` block.
+
+```ts
+import type { IdentifiableLayerDefinition } from "@mapcairn/core";
+
+const roads: IdentifiableLayerDefinition = {
+  id: "example-wms-roads",
+  name: "Roads",
+  description: "Example road map drawn by a WMS, with the road at a tap.",
+  group: "Places",
+  dataCost: "about 100 KB per screen",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [],
+  source: {
+    kind: "tiles",
+    tiles: "https://maps.example.org/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=roads&STYLES=&FORMAT=image/png&TRANSPARENT=true&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}",
+    tileSize: 256,
+    maxzoom: 18,
+  },
+  identify: {
+    url: "https://maps.example.org/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo&LAYERS=roads&QUERY_LAYERS=roads&STYLES=&CRS=EPSG:3857&BBOX={bbox}&WIDTH={width}&HEIGHT={height}&I={x}&J={y}&INFO_FORMAT=application/json&FEATURE_COUNT=10",
+    decoder: "geojson",
+    fields: { id: "id", title: "properties.name" },
+    card: { title: "{title}", lines: [] },
+  },
+};
+```
+
+The engine fills `{bbox-epsg-3857}` with `minx,miny,maxx,maxy` in metres for each tile, so every tile is one `GetMap` for a square picture of that box. `WIDTH` and `HEIGHT` must equal `tileSize`. For a tap, `{bbox}` is a small square of `2 × tolerance + 1` pixels centred on the tap, `{width}` and `{height}` are its size, and `{x}` and `{y}` are the tolerance, so `I` and `J` name the middle pixel. See [identify features on a raster layer](extending.md#identify-features-on-a-raster-layer) for the placeholders.
+
+- **Versions.** WMS 1.3.0 names the system `CRS` and the pixel `I` and `J`. WMS 1.1.1 names them `SRS`, `X` and `Y`, and both validate. In both, EPSG:3857 is easting first, so the box is in the order the engine writes it. Older services sometimes advertise Web Mercator as EPSG:900913 or EPSG:3785. The SDK does not read the system's text, so a host can write the code its service lists, provided it is the same Web Mercator projection.
+- **Coordinate systems.** Ask for EPSG:3857. WMS 1.3.0 puts latitude first for EPSG:4326, and the engine does not send a box in degrees, so a service that offers no EPSG:3857 is not supported.
+- **Cost.** A WMS draws each tile on demand, so size `tileSize` and a cache in front of the server to the traffic. A `tileSize` of 512 needs about a quarter as many requests as 256, with `WIDTH` and `HEIGHT` set to match.
+- **What a tap answers.** The answer must be JSON. Set `INFO_FORMAT` to a JSON or GeoJSON format the server offers. XML, GML, HTML and plain text, which are the usual defaults, are not read. A server that offers none needs a small proxy that answers in JSON.
+- **Coordinates in the answer.** The decoder expects WGS 84 degrees. A server that answers in EPSG:3857 metres has its features dropped, because a feature with any position beyond 180 or 90 is skipped whole.
+- **The encoded box.** `{bbox}` is written with its commas as `%2C`, which a server decodes as any query string. A server that does not decode it is not supported.
+
+### WMTS
+
+A WMTS tile matrix set that is the XYZ grid is a `tiles` source, whichever form the service offers.
+
+```ts
+import type { LayerDefinition } from "@mapcairn/core";
+
+const imagery: LayerDefinition = {
+  id: "example-wmts-imagery",
+  name: "Imagery",
+  description: "Example imagery from a WMTS tile service.",
+  group: "Imagery",
+  dataCost: "about 300 KB per screen",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [],
+  source: {
+    kind: "tiles",
+    tiles: "https://tiles.example.org/wmts/imagery/default/WebMercatorQuad/{z}/{y}/{x}.jpg",
+    tileSize: 256,
+    maxzoom: 19,
+  },
+};
+```
+
+This is the RESTful form. Its tile template ends `{TileMatrix}/{TileRow}/{TileCol}`, which is `{z}/{y}/{x}`: the row comes before the column. A service that offers only the key-value form uses the same three placeholders:
+
+```
+https://tiles.example.org/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=imagery&STYLE=default&TILEMATRIXSET=WebMercatorQuad&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg
+```
+
+What does not work:
+
+- **Other tile matrix sets.** The engine asks for tile `z/x/y` of the Web Mercator grid, with the origin at the top left and row 0 at the top. That is the `WebMercatorQuad` set, also published as `GoogleMapsCompatible`. A grid in another system, with another origin or with a tile size that is not 256 or 512, is not supported. Set `tileSize` to the set's tile width.
+- **Matrix names.** `{z}` is the level as a plain number. A matrix named with text before the number, such as `EPSG:3857:3`, works as `EPSG:3857:{z}`. A name with zero padding or any other pattern does not.
+- **Limits.** The service's tile limits per matrix are not read. Set `maxzoom` to the deepest matrix and `bounds` to the box the service holds.
+- **Dimensions.** A fixed style or time is fixed text in the URL, and one a person chooses is a control whose id is a placeholder, as for any tile layer.
 
 ## What the server should do
 
