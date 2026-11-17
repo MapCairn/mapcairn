@@ -78,13 +78,6 @@ function languageOptions(
   ];
 }
 
-/**
- * The default privacy statement. It names no provider, because the SDK does not
- * know which services a host uses; a host replaces it with one that does.
- */
-export const DEFAULT_PRIVACY_NOTE =
-  "The privacy policy says what each service this map uses receives.";
-
 /** Props for {@link SettingsSection}. */
 export interface SettingsSectionProps {
   /** The heading level. Defaults to 3, below the sheet's h2 title. */
@@ -93,7 +86,8 @@ export interface SettingsSectionProps {
   readonly privacyHref?: string;
   /**
    * The host's privacy statement, shown under the Privacy heading. Defaults to
-   * {@link DEFAULT_PRIVACY_NOTE}. A host names its own providers here and says
+   * the catalogue's `settings.privacy.default`, which names no provider because
+   * the SDK does not know which services a host uses. A host names its own providers here and says
    * what it sends to each. Phrasing content only: it sits inside a paragraph.
    */
   readonly privacyNote?: ReactNode;
@@ -105,7 +99,7 @@ export interface SettingsSectionProps {
  * The settings: theme, units, map shape (flat or globe), language (only when
  * the host offers more than one), zoom buttons and Save data, a note when changes
  * will not be remembered, and a short privacy statement (the host's, or
- * {@link DEFAULT_PRIVACY_NOTE}) with a link to the policy.
+ * the catalogue's `settings.privacy.default`) with a link to the policy.
  * @remarks The zoom switch shows the stored choice, or the device default
  *   (on with a mouse, off on touch) while nothing is stored. Toggling it stores
  *   an explicit boolean, so a person who turns it on keeps it on everywhere.
@@ -116,7 +110,7 @@ export interface SettingsSectionProps {
 export function SettingsSection({
   headingLevel = 3,
   privacyHref = "/privacy",
-  privacyNote = DEFAULT_PRIVACY_NOTE,
+  privacyNote,
   headingRef,
 }: SettingsSectionProps) {
   const { choice, setChoice } = useTheme();
@@ -221,7 +215,7 @@ export function SettingsSection({
           {t("settings.privacy.heading", {})}
         </Subheading>
         <p className={prose} data-testid="settings-privacy-note">
-          {privacyNote}
+          {privacyNote ?? t("settings.privacy.default", {})}
         </p>
         <p className={prose}>
           <a className={link} href={privacyHref}>

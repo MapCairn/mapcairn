@@ -116,15 +116,11 @@ export interface MapViewProps {
   readonly testId?: string;
 }
 
-/** `text` with its first letter in lower case for `language`, to follow a colon. */
-function lowerFirst(text: string, language: string): string {
-  return `${text.charAt(0).toLocaleLowerCase(language)}${text.slice(1)}`;
-}
-
 /**
  * The hidden keyboard instructions, as plain sentences in the catalogue's
- * language: each line is "keys: description." with the description's first
- * letter in lower case.
+ * language: each line is "description (keys)." by default, with the catalogue's
+ * own wording for where the description and the keys fall, so no language has
+ * to change the case of a description.
  */
 function keyboardInstructions(
   messages: MessageCatalogue,
@@ -134,10 +130,7 @@ function keyboardInstructions(
     .map(({ keys, description }) =>
       messages.t("host.map.keyInstruction", {
         keys: resolveText(messages, keys),
-        description: lowerFirst(
-          resolveText(messages, description),
-          messages.language,
-        ),
+        description: resolveText(messages, description),
       }),
     )
     .join(" ");

@@ -36,6 +36,7 @@ export type MessageKey =
   | "settings.notSaved"
   | "settings.privacy.heading"
   | "settings.privacy.link"
+  | "settings.privacy.default"
   // Common joins
   | "common.followedBy"
   | "common.commaJoined"

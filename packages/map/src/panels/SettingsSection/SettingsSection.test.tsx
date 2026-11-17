@@ -3,6 +3,7 @@
 import {
   createFakeServices,
   createLanguageCatalogue,
+  EN_GB_CATALOGUE,
   FakeDevicePreferences,
   FakeMessageCatalogue,
   type LanguageOption,
@@ -20,11 +21,9 @@ import {
 import { describe, expect, it } from "vitest";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
-import {
-  DEFAULT_PRIVACY_NOTE,
-  SettingsSection,
-  type SettingsSectionProps,
-} from "./SettingsSection";
+import { SettingsSection, type SettingsSectionProps } from "./SettingsSection";
+
+const DEFAULT_PRIVACY_NOTE = EN_GB_CATALOGUE["settings.privacy.default"];
 
 interface Options {
   readonly finePointer?: boolean;
@@ -33,6 +32,7 @@ interface Options {
   readonly initial?: Partial<Settings>;
   readonly props?: SettingsSectionProps;
   readonly languages?: readonly LanguageOption[];
+  readonly messages?: FakeMessageCatalogue;
 }
 
 function renderSettings({
@@ -42,12 +42,14 @@ function renderSettings({
   initial,
   props,
   languages,
+  messages,
 }: Options = {}) {
   const settings = new MemorySettingsStore({ persistent, initial });
   const preferences = new FakeDevicePreferences({ finePointer, saveData });
   const services = createFakeServices({
     settings,
     preferences,
+    ...(messages ? { messages } : {}),
     languages: languages
       ? createLanguageCatalogue(
           languages,
@@ -418,6 +420,21 @@ describe("privacy", () => {
     expect(DEFAULT_PRIVACY_NOTE).not.toMatch(
       /Nominatim|OpenStreetMap|MapCairn/,
     );
+  });
+
+  it("looks the default note up in the active catalogue", () => {
+    renderSettings({
+      messages: new FakeMessageCatalogue({
+        language: "af",
+        overrides: {
+          "settings.privacy.default": "Die beleid sê wat gestuur word.",
+        },
+      }),
+    });
+    expect(screen.getByTestId("settings-privacy-note")).toHaveTextContent(
+      "Die beleid sê wat gestuur word.",
+    );
+    expect(screen.queryByText(DEFAULT_PRIVACY_NOTE)).toBeNull();
   });
 
   it("shows the host's own note in place of the default", () => {
