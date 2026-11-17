@@ -13,6 +13,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import {
   createPlacesFetch,
+  jsonResponse,
   PLACES_ENDPOINT,
   PlaceSearchProvider,
   PlaceSuggestionProvider,
@@ -38,13 +39,6 @@ function toItem(result: SearchResult) {
       ? { box: [bounds.south, bounds.west, bounds.north, bounds.east] }
       : {}),
   };
-}
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
 }
 
 /** A scripted `fetch` that rejects the way the real one does when aborted. */

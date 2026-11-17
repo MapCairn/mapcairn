@@ -215,7 +215,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 
 ## Proposed order for the SDK track
 
-This is a proposal, not a promise. It orders the open issues by what unlocks the most for a team that wants to adopt the SDK, and by how little each costs. The ranked list in [`ROADMAP.md`](../../ROADMAP.md) is a separate step and may differ. An item that needs a decision from the maintainer, a plan or research is marked as such.
+This is a proposal, not a promise. It orders the open issues by what unlocks the most for a team that wants to adopt the SDK, and by how little each costs. The ranked milestones in [`ROADMAP.md`](../../ROADMAP.md) are a separate step and may differ. An item that needs a decision from the maintainer, a plan or research is marked as such.
 
 **Now: finish what is half built and open the way in**
 

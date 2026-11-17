@@ -1,0 +1,22 @@
+{
+  "licences": {
+    "MIT": "Permissive.",
+    "MIT-0": "Permissive, with no attribution condition.",
+    "BSD-2-Clause": "Permissive.",
+    "BSD-3-Clause": "Permissive.",
+    "Apache-2.0": "Permissive, with a patent grant.",
+    "ISC": "Permissive, equivalent to MIT.",
+    "0BSD": "Permissive, with no attribution condition.",
+    "Unlicense": "Public domain dedication.",
+    "CC0-1.0": "Public domain dedication.",
+    "Zlib": "Permissive.",
+    "BlueOak-1.0.0": "Permissive.",
+    "EDL-1.0": "The Eclipse Distribution License has the wording of BSD-3-Clause. It is allowed on its own and as one side of an OR; the Eclipse Public License (EPL) is not on this list."
+  },
+  "packages": {
+    "splaytree-ts": {
+      "licence": "BDS-3-Clause",
+      "reason": "The package.json field has a typo. The LICENSE file in the package is the BSD 3-Clause text."
+    }
+  }
+}

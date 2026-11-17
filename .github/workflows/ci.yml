@@ -34,8 +34,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
         env:
-          # The roadmap check reads issue states with `gh`, which needs a token
-          # even for a public repository. Without one it skips that part.
+          # The roadmap check reads issue states and milestones with `gh`, which
+          # needs a token even for a public repository. Without one it skips
+          # those parts.
           GH_TOKEN: ${{ github.token }}
       - name: Check the pull request text and commit messages for forbidden names
         if: github.event_name == 'pull_request'

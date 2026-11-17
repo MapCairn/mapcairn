@@ -107,9 +107,7 @@ test.describe("the map key", () => {
       "aria-expanded",
       "false",
     );
-    await expect(mapPage.mapKeyToggle).toHaveAccessibleName(
-      "Map key, 2 layers",
-    );
+    await expect(mapPage.mapKeyToggle).toHaveAccessibleName("Key, 2 layers");
     await expect(mapPage.mapKeyToggle).toContainText("Key, 2 layers");
     await expect(mapPage.mapKeyToggle).toBeFocused();
     await expect(page.getByTestId("map-key-earthquakes")).toHaveCount(0);
@@ -142,9 +140,7 @@ test.describe("the map key", () => {
         mapPage.mapKeyToggle,
         `${viewport.width}x${viewport.height}`,
       ).toHaveAttribute("aria-expanded", expanded);
-      await expect(mapPage.mapKeyToggle).toHaveAccessibleName(
-        "Map key, 2 layers",
-      );
+      await expect(mapPage.mapKeyToggle).toHaveAccessibleName("Key, 2 layers");
     }
   });
 

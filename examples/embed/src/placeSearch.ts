@@ -33,8 +33,8 @@ export interface PlaceItem {
   readonly id?: string;
   readonly name?: string;
   readonly area?: string;
-  readonly lat?: number;
-  readonly lon?: number;
+  readonly lat: number;
+  readonly lon: number;
   readonly box?: readonly number[];
 }
 
@@ -264,7 +264,8 @@ export class PlaceSuggestionProvider implements SuggestionProvider {
   }
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
+/** A JSON `Response` with the given body and status. */
+export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -290,8 +291,7 @@ function nearestPlace(
   let bestDistance = NEAREST_RADIUS_DEGREES ** 2;
   for (const place of places) {
     const distance =
-      ((place.lat ?? 0) - position.lat) ** 2 +
-      ((place.lon ?? 0) - position.lng) ** 2;
+      (place.lat - position.lat) ** 2 + (place.lon - position.lng) ** 2;
     if (distance <= bestDistance) {
       best = place;
       bestDistance = distance;

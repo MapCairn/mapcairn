@@ -95,6 +95,8 @@ MapCairn is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/
 
 The one exception is [`packages/geolint`](packages/geolint), a GeoJSON linter, which is licensed under [Apache-2.0](packages/geolint/LICENSE). It is a command line tool and a library meant for unrestricted use in other toolchains, so it carries a permissive licence. It imports nothing from the rest of the repository, and everything else stays AGPL-3.0.
 
+The SDK packages depend only on permissively licensed packages (MIT, BSD, Apache-2.0, ISC and similar), and `npm run lint` fails when a new production dependency of one has any other licence.
+
 There is no commercial licence on offer yet, but the author is open to discussing other terms for closed-source use. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
 
 See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.
