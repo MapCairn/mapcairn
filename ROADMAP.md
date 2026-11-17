@@ -19,7 +19,7 @@ Two tracks share the list. **SDK** is the goal in "Direction": what a team needs
 1. **SDK, #231.** Review the Afrikaans catalogue with a fluent speaker, then close the issue. The catalogue is offered as a draft.
 2. **Site, #117, #118 and #119.** Highlight selected features, the Selection panel and select mode. The selection port and hook are built, and nothing in the interface uses them yet.
 3. **SDK, #24 and then #43.** The engine adapter in its own package. It is the first step for a team that wants to embed the map without copying the reference host.
-4. **Site, #126 and #127.** Identify on raster layers: the tap, the key press and the guide. The core is built.
+4. **Site, #126 and #127.** Identify on raster layers: the Layers section line, the status line and the Playwright identify layer are left. The core, the tap, the key press and the guide are built.
 
 ### Next
 
@@ -31,7 +31,7 @@ Two tracks share the list. **SDK** is the goal in "Direction": what a team needs
 6. **Site, #175.** A command palette.
 7. **SDK, #220.** A host can theme the SDK, with contrast checked.
 8. **Site, #183.** Clustering for dense point layers.
-9. **SDK, #230 and #221.** The guide to the Content Security Policy a host needs, and the guide to serving the bundle from a Windows web server and server-rendered pages.
+9. **SDK, #221.** The guide to serving the bundle from a Windows web server and server-rendered pages.
 10. **Site, #71 and #213.** Finish the map key, and stop the credits popover jumping.
 11. **SDK, #232 and #184.** Two small guides: open service standards, and a custom search provider.
 12. **Site, #229.** Say once when the device is offline.
@@ -50,7 +50,7 @@ Then, roughly in this order:
 
 - **Small additions:** #222 (UTM and MGRS), #225 (snapping), #226 (buffer and merge), #227 (GPX and KML), #62 (richer filters), #48 (the interface for image export) and #178 (printing), #182 (a timeline), #181 and #180 (box and lasso selection, elevation profile), #228 (save a layer's features), #84 (WKT axis order), #259 (geolint, a GeoJSON linter that is its own Apache-2.0 package).
 - **Research and plans, each to be decided after its measurement or plan:** #223 (coordinate systems), #224 (terrain), #177 (tilt and the shared link), #185 (deck.gl), #196 (storing tiles on the device), #197 (MapLibre Tile), #186, #187 and #188 (host-side search, nearby queries and short links), #53 (server rendering), #56 and #75 (an agent tool catalogue and an analytics sink).
-- **Whenever there is room (quality and process):** #261 (geolint speed), #25 (thin the app hook), #214 and #149 (test stability and shard balance), #215, #217 and #246 (documents, CI security and the proof of the severity gate), #247 (what components may read from the browser directly), #146 (a screen reader check, which needs a person with a screen reader), #4 (the OpenSSF silver badge) and the agent and skill upkeep in #82, #93 and #108.
+- **Whenever there is room (quality and process):** #261 (geolint speed), #25 (thin the app hook), #214 and #149 (test stability and shard balance), #215, #217 and #246 (documents, CI security and the proof of the severity gate), #247 (what components may read from the browser directly), #146 (a screen reader check, which needs a person with a screen reader), #4 (the OpenSSF silver badge), the agent and skill upkeep in #82, #93 and #108, and #274 (a test that fails on interface text written inline and on Afrikaans left as English).
 - **Trackers, not ranked:** #47, #49 and #51 (their steps are ranked above).
 
 ## Intentions

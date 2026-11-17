@@ -541,3 +541,29 @@ function parseTag(code, start, name, lineOf) {
   }
   return undefined;
 }
+
+/**
+ * Parses the JSX opening tag that starts at `start`, for a caller that already
+ * knows the position is inside JSX (for example among an element's children),
+ * where {@link findJsxTags} cannot tell a tag from a comparison.
+ * @param {string} code Comment-stripped source.
+ * @param {number} start Offset of `<`.
+ * @returns {JsxTag | undefined}
+ */
+export function parseTagAt(code, start) {
+  const match = /^<([A-Za-z][A-Za-z0-9_.:-]*)/.exec(
+    code.slice(start, start + 80),
+  );
+  if (!match) {
+    return undefined;
+  }
+  return parseTag(code, start, match[1], (index) => {
+    let line = 1;
+    for (let k = 0; k < index; k += 1) {
+      if (code[k] === "\n") {
+        line += 1;
+      }
+    }
+    return line;
+  });
+}
