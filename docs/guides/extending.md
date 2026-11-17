@@ -245,6 +245,101 @@ export default parks;
 
 Tile origins go in `connect-src` and `img-src`, as for raster tiles.
 
+## Identify features on a raster layer
+
+A raster tile layer is a picture, so the tiles themselves have no features. To give a tap a card, add an `identify` block to the layer's definition. It names an `https` URL that answers, in JSON, what is at one point. The browser asks only when someone taps the plain map, or presses `I` for the centre of the map, and only while the layer is on. Hover, movement and a layer that is off send nothing.
+
+```ts
+import type { IdentifiableLayerDefinition } from "@mapcairn/core";
+
+const floodDepth: IdentifiableLayerDefinition = {
+  id: "example-flood",
+  name: "Flood depth",
+  description: "Example modelled flood depth, with the depth at a tap.",
+  group: "Imagery",
+  dataCost: "about 200 KB per screen",
+  attribution: [{ text: "Example provider", url: "https://example.org/" }],
+  controls: [
+    {
+      kind: "segmented",
+      id: "period",
+      label: "Return period",
+      options: [
+        { value: "20", label: "1 in 20 years" },
+        { value: "100", label: "1 in 100 years" },
+      ],
+      default: "20",
+    },
+  ],
+  source: {
+    kind: "tiles",
+    tiles: "https://tiles.example.org/flood/{period}/{z}/{y}/{x}.png",
+    tileSize: 256,
+    maxzoom: 12,
+  },
+  identify: {
+    url: "https://api.example.org/identify/{period}?lng={lng}&lat={lat}&bbox={bbox}&width={width}&height={height}&i={x}&j={y}&zoom={zoom}",
+    tolerance: 12,
+    decoder: "geojson",
+    fields: { id: "id", title: "properties.name", depth: "properties.depth" },
+    card: { title: "{title}", lines: ["{depth} m deep"] },
+  },
+};
+
+export default floodDepth;
+```
+
+The `card` sits inside `identify`, not on the layer, and its `lines` list is required, though it may be empty. Check a definition with `validateLayerDefinition` from `@mapcairn/core`. Its problems name the path, such as `identify.fields.id`.
+
+### Placeholders
+
+The URL is filled for each tap. Every value is encoded, so a comma goes out as `%2C`, and the server decodes it like any query string.
+
+| Placeholder           | Value                                                                                     |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| `{lng}`, `{lat}`      | The tapped place in WGS 84 degrees, to six decimal places.                                |
+| `{bbox}`              | The box as `minx,miny,maxx,maxy` in EPSG:3857 metres, around the tap.                     |
+| `{width}`, `{height}` | The box's size in pixels, which is 2 × tolerance + 1.                                     |
+| `{x}`, `{y}`          | The tapped pixel's position in the box, which is the tolerance, so the middle of the box. |
+| `{zoom}`              | The map's zoom level, to three decimal places.                                            |
+| A control's id        | The layer's control value, as in its tile URL. `{period}` above.                          |
+
+The URL must use `{lng}` and `{lat}`, or all of `{bbox}`, `{width}`, `{height}`, `{x}` and `{y}`. The scheme, host and port must be fixed text, with no placeholder in them. A control or derived variable may not be named `lng`, `lat`, `bbox`, `width`, `height`, `x`, `y` or `zoom`.
+
+`tolerance` is a whole number of pixels from 1 to 20, and the default is 12. The box is a square of 2 × tolerance + 1 pixels at the map's zoom, centred on the tap. For a tap at 0, 0 at zoom 10 with the default tolerance, the request is:
+
+```
+https://api.example.org/identify/20?lng=0&lat=0&bbox=-1910.926%2C-1910.926%2C1910.926%2C1910.926&width=25&height=25&i=12&j=12&zoom=10
+```
+
+The box is neither clamped nor shifted at the edges of the world. A tap's longitude is wrapped to -180 up to 180 first, so a tap at 179.9999 gives a box that runs past the edge of the world. Near a pole, `{bbox}` is centred on latitude 85.0511, the limit of Web Mercator, while `{lat}` keeps the tapped latitude. The server decides what to answer for either, and an answer with nothing in it is read as nothing found.
+
+### What the answer may hold
+
+The answer must be JSON of under 1 MiB, and it is read in one of two shapes:
+
+- **GeoJSON**, with `decoder: "geojson"`. It has a `features` list, and each feature's `fields` are read by dotted path. Coordinates are `[longitude, latitude]` in WGS 84 degrees. A position beyond 180 in longitude or 90 in latitude is dropped, so a server that answers in its own coordinate system reads as nothing found. A position inside those limits but in another unit would be drawn in the wrong place, so the server must answer in WGS 84. A feature with a missing or `null` geometry, as a server sends for a raster pixel value, is placed at the tap. A document with no `features` list is no features.
+- **A JSON list**, with `records` naming its dotted path, such as `results`. Each item becomes the properties of a feature at the tap, so a field reads `properties.name`. A path that is not a list is no features.
+
+Without `records`, a decoder other than the built-in `geojson` gets the answer as it came. XML or GML, HTML, plain text (the default `GetFeatureInfo` formats on some servers), JSONP and a POST are not read. A server that cannot send JSON needs a small proxy that asks it and answers in JSON.
+
+### Ids
+
+`id` and `title` are required fields. Map `fields.id` to an attribute the service keeps stable, such as its own identifier. A feature with a missing, `null` or empty id takes its position in the answer. That is unique within one answer but can differ from one tap to the next, so it is not a stable id, and a host should avoid relying on it.
+
+### Limits
+
+A tap asks at most 4 tile layers that are on and cover the tapped place, in catalogue order. Any further layers are not asked, and the message says how many were, for example "Asked 4 of 6 layers.". Each request has 8 seconds to answer, and a layer that does not answer in time is named in the message. A layer shows at most 20 features from one answer, and the rest are dropped.
+
+One feature opens its card. Several open a list to choose from. Nothing found says "Nothing found here.", and a layer that did not answer is named in the same message.
+
+### Requests and the page
+
+The request is a `GET` over `https` with no cookies and no referrer, in CORS mode. Its answer is not cached, whatever its `Cache-Control`, because a tap's URL never repeats.
+
+- **Content Security Policy.** The request is a `fetch`, so the host page's `connect-src` must list the identify origin. When it is the same origin as the layer's tiles, that origin is already in `connect-src` and `img-src` and nothing more is needed. A separate API origin goes in the host's policy, as the [Content Security Policy guide](content-security-policy.md) describes.
+- **CORS.** The identify endpoint must send `Access-Control-Allow-Origin` for the host's origin. A server that sends it for its tiles may not send it for an identify endpoint, and the browser then refuses the answer, which the layer reports as "did not answer".
+
 ## Ask only for what is in view
 
 For a dataset too large to fetch whole, use a `query` source in place of a `feed`. The layer asks for the features inside the current view, after the map has been still for a moment, and asks again only when the view leaves the area it last asked for. It draws at most `maxFeatures`, says "Showing the first N. Zoom in to see more." when there are more, and below `minzoom` asks for nothing and says "Zoom in to level 9 or closer to load this layer.", naming the normalised zoom level the map readout shows. The URL must use `{west}`, `{south}`, `{east}` and `{north}`, and may use `{limit}`, which is `maxFeatures` plus one so the response shows that more exist.
