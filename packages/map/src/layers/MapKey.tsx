@@ -60,7 +60,7 @@ function GlyphStrip({ blocks }: { readonly blocks: readonly MapKeyBlock[] }) {
  * @remarks Put it in `MapChrome`'s `mapKey` slot, which keeps it clear of the
  *   other floating elements and caps its height. The minimised state is held
  *   in memory, so it lasts for the visit but not a reload. The button's name
- *   is "Map key, 3 layers" open and minimised, and `aria-expanded` says which.
+ *   is "Key, 3 layers" open and minimised, and `aria-expanded` says which.
  */
 export function MapKey({ layers, defaultMinimised }: MapKeyProps) {
   const headingId = useId();

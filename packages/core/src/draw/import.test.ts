@@ -5,6 +5,7 @@ import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { formatMessage } from "../messages/formatMessage";
 import { shapesToCsv, shapesToGeoJson, shapesToWkt } from "./export";
 import {
+  MAX_AXIS_SCAN_CHARACTERS,
   MAX_IMPORT_BYTES,
   MAX_IMPORT_DEPTH,
   MAX_IMPORT_POINTS,
@@ -13,6 +14,7 @@ import {
   parseShapeFile,
   type ShapeImport,
   shapeInputBounds,
+  suggestWktAxisOrder,
 } from "./import";
 import type { DrawShapeInput } from "./reducer";
 import type { DrawShape } from "./types";
@@ -1180,5 +1182,122 @@ describe("shapeInputBounds", () => {
 
   it("is undefined with nothing to hold", () => {
     expect(shapeInputBounds([])).toBeUndefined();
+  });
+});
+
+describe("suggestWktAxisOrder", () => {
+  it("suggests latitude first when the first position is outside the world as longitude first but fits the other way", () => {
+    expect(suggestWktAxisOrder("POINT (-33.9 151.2)", "lng-lat")).toBe(
+      "lat-lng",
+    );
+  });
+
+  it("suggests longitude first for a file read latitude first that only fits that way", () => {
+    expect(suggestWktAxisOrder("POINT (151.2 -33.9)", "lat-lng")).toBe(
+      "lng-lat",
+    );
+  });
+
+  it("finds the first position of a polygon, a multi geometry, an EWKT geometry and a CSV cell", () => {
+    expect(
+      suggestWktAxisOrder("POLYGON ((-33.9 151.2, -33.8 151.3))", "lng-lat"),
+    ).toBe("lat-lng");
+    expect(
+      suggestWktAxisOrder("MULTIPOINT ((-33.9 151.2), (1 2))", "lng-lat"),
+    ).toBe("lat-lng");
+    expect(
+      suggestWktAxisOrder("SRID=4326;POINT Z (-33.9 151.2 5)", "lng-lat"),
+    ).toBe("lat-lng");
+    expect(
+      suggestWktAxisOrder('id,wkt\n1,"POINT (-33.9 151.2)"', "lng-lat"),
+    ).toBe("lat-lng");
+  });
+
+  it("says nothing when the first position fits the order in use, or fits neither order", () => {
+    expect(suggestWktAxisOrder("POINT (2 48)", "lng-lat")).toBeNull();
+    expect(suggestWktAxisOrder("POINT (200 300)", "lng-lat")).toBeNull();
+    expect(suggestWktAxisOrder("POINT (-33.9 151.2)", "lat-lng")).toBeNull();
+  });
+
+  it("says nothing for text with no position, an empty geometry or GeoJSON", () => {
+    expect(suggestWktAxisOrder("POINT EMPTY", "lng-lat")).toBeNull();
+    expect(suggestWktAxisOrder("", "lng-lat")).toBeNull();
+    expect(
+      suggestWktAxisOrder(
+        '{"type":"Point","coordinates":[-33.9,151.2]}',
+        "lng-lat",
+      ),
+    ).toBeNull();
+  });
+
+  it("stays fast on large text of brackets and spaces, by reading only its start", () => {
+    const inputs = [
+      "(".repeat(200_000),
+      "( ".repeat(100_000),
+      `${"(".repeat(50_000)}${" ".repeat(150_000)}`,
+    ];
+    const started = performance.now();
+    for (const input of inputs) {
+      expect(suggestWktAxisOrder(input, "lng-lat")).toBeNull();
+    }
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
+  it("finds nothing in time in the worst text of exactly the size it reads", () => {
+    const keywords = "POINT(".repeat(MAX_AXIS_SCAN_CHARACTERS / 6);
+    const inputs = [
+      "(".repeat(MAX_AXIS_SCAN_CHARACTERS),
+      "( ".repeat(MAX_AXIS_SCAN_CHARACTERS / 2),
+      `POINT${" ".repeat(MAX_AXIS_SCAN_CHARACTERS - 6)}(`,
+      keywords.padEnd(MAX_AXIS_SCAN_CHARACTERS, " "),
+      "POINT (".repeat(MAX_AXIS_SCAN_CHARACTERS / 7),
+    ];
+    const started = performance.now();
+    for (const input of inputs) {
+      expect(suggestWktAxisOrder(input, "lng-lat")).toBeNull();
+    }
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
+  it("makes no suggestion for a parenthesised pair that is not WKT", () => {
+    expect(
+      suggestWktAxisOrder("name,notes\nSite (-33.9 151.2),visited", "lng-lat"),
+    ).toBeNull();
+    expect(suggestWktAxisOrder("Site (-33.9 151.2)", "lng-lat")).toBeNull();
+    expect(suggestWktAxisOrder("ENDPOINT (-33.9 151.2)", "lng-lat")).toBeNull();
+  });
+
+  it("reads a geometry type in any case, with a dimension letter, inside a collection and after an EWKT prefix", () => {
+    expect(suggestWktAxisOrder("point (-33.9 151.2)", "lng-lat")).toBe(
+      "lat-lng",
+    );
+    expect(suggestWktAxisOrder("POINT ZM(-33.9 151.2 1 2)", "lng-lat")).toBe(
+      "lat-lng",
+    );
+    expect(
+      suggestWktAxisOrder(
+        "GEOMETRYCOLLECTION (POINT (-33.9 151.2))",
+        "lng-lat",
+      ),
+    ).toBe("lat-lng");
+    expect(
+      suggestWktAxisOrder("SRID=4326;POINT (-33.9 151.2)", "lng-lat"),
+    ).toBe("lat-lng");
+  });
+
+  it("looks only at the start of the text, so a position far into a large file is not searched for", () => {
+    const far = `${" ".repeat(MAX_AXIS_SCAN_CHARACTERS)}POINT (-33.9 151.2)`;
+    expect(suggestWktAxisOrder(far, "lng-lat")).toBeNull();
+  });
+
+  it("makes no suggestion for text longer than an import accepts", () => {
+    const text = `POINT (-33.9 151.2)${" ".repeat(MAX_IMPORT_BYTES)}`;
+    expect(suggestWktAxisOrder(text, "lng-lat")).toBeNull();
+  });
+
+  it("reads signs and exponents", () => {
+    expect(suggestWktAxisOrder("POINT (-3.39e1 +1.512E2)", "lng-lat")).toBe(
+      "lat-lng",
+    );
   });
 });

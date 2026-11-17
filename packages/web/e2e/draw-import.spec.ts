@@ -22,6 +22,13 @@ const FAR_AWAY = "#map=10.00/-33.92000/18.42000";
 const GEOJSON_RESULT =
   "4 shapes imported. 1 skipped: 1 with edges that cross. Holes in 1 polygon were left out.";
 
+/** A WKT file in Sydney that writes latitude first, so read longitude first its position is outside the world. */
+const LATITUDE_FIRST_FILE = {
+  name: "sydney.wkt",
+  mimeType: "text/plain",
+  buffer: Buffer.from("POINT (-33.8688 151.2093)"),
+};
+
 /** Presses the Import button and answers the picker with `files`. */
 async function importFrom(
   page: Page,
@@ -149,6 +156,59 @@ test.describe("draw import", () => {
     ]);
   });
 
+  test("reads a latitude-first WKT file once Latitude, longitude is chosen", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(FAR_AWAY);
+    await mapPage.mapOptionsButton.click();
+    await expect(mapPage.shapesSection).toBeVisible();
+    await page
+      .getByRole("combobox", { name: "WKT coordinate order" })
+      .selectOption({ label: "Latitude, longitude" });
+    await importFrom(page, LATITUDE_FIRST_FILE);
+
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      "1 shape imported.",
+    );
+    await expect(mapPage.drawShapes).toHaveCount(1);
+    await expect.poll(() => page.url()).toMatch(/#map=[\d.]+\/-33\.[0-8]/);
+  });
+
+  test("offers to read a file the other way when its first position fits only that order", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto(FAR_AWAY);
+    await mapPage.mapOptionsButton.click();
+    await expect(mapPage.shapesSection).toBeVisible();
+    await importFrom(page, LATITUDE_FIRST_FILE);
+
+    await expect(page.getByTestId("shapes-import-feedback")).toContainText(
+      "outside the world as longitude, latitude, but it fits as latitude, longitude.",
+    );
+    await expect(mapPage.assertiveAnnouncer).toContainText(
+      "No shapes imported.",
+    );
+    await expect(mapPage.drawShapes).toHaveCount(0);
+
+    const reread = page.getByRole("button", {
+      name: "Read as latitude, longitude",
+    });
+    await reread.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
+      "1 shape imported.",
+    );
+    await expect(mapPage.politeAnnouncer).toContainText("1 shape imported.");
+    await expect(mapPage.drawShapes).toHaveCount(1);
+    const order = page.getByRole("combobox", { name: "WKT coordinate order" });
+    await expect(order).toHaveValue("lat-lng");
+    // The pressed button is gone, and focus moved to the control it set.
+    await expect(reread).toHaveCount(0);
+    await expect(order).toBeFocused();
+  });
+
   test("refuses a file that is not shapes, in words, and adds nothing", async ({
     page,
     mapPage,
@@ -185,6 +245,23 @@ test.describe("draw import accessibility", () => {
       await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
         GEOJSON_RESULT,
       );
+      expect(await axeViolations(page)).toEqual([]);
+      const controls = await inspectControls(page);
+      expect(controls.unnamed).toEqual([]);
+      expect(controls.tooSmall).toEqual([]);
+      expect(controls.positiveTabindex).toEqual([]);
+    });
+    test(`the Shapes section with the axis order offer passes axe in ${colorScheme} @a11y`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto();
+      await mapPage.mapOptionsButton.click();
+      await importFrom(page, LATITUDE_FIRST_FILE);
+      await expect(
+        page.getByRole("button", { name: "Read as latitude, longitude" }),
+      ).toBeVisible();
       expect(await axeViolations(page)).toEqual([]);
       const controls = await inspectControls(page);
       expect(controls.unnamed).toEqual([]);

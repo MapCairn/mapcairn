@@ -37,7 +37,7 @@ describe("ExampleApp", () => {
     expect(screen.getByRole("button", { name: "Map credits" })).toBeTruthy();
   });
 
-  it("finds a place through the scripted search", async () => {
+  it("finds an invented place through the example's own search provider", async () => {
     render(<ExampleApp />);
 
     fireEvent.change(
@@ -47,7 +47,32 @@ describe("ExampleApp", () => {
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
     expect(
-      await screen.findByRole("option", { name: /Example cairn/ }),
+      await screen.findByRole("option", { name: /Cairn Hollow/ }),
+    ).toBeTruthy();
+  });
+
+  it("says when its search finds nothing", async () => {
+    render(<ExampleApp />);
+
+    fireEvent.change(
+      await screen.findByRole("combobox", { name: "Search places" }),
+      { target: { value: "Nowhere" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+    expect(await screen.findByText(/No results/)).toBeTruthy();
+  });
+
+  it("suggests places as the text is typed, from its own suggestion provider", async () => {
+    render(<ExampleApp />);
+
+    fireEvent.change(
+      await screen.findByRole("combobox", { name: "Search places" }),
+      { target: { value: "Ben" } },
+    );
+
+    expect(
+      await screen.findByRole("option", { name: /Ben Placeholder/ }),
     ).toBeTruthy();
   });
 
@@ -133,7 +158,7 @@ describe("ExampleApp", () => {
     const note = await screen.findByTestId("settings-privacy-note");
 
     expect(note.textContent).toBe(
-      "This example runs on the SDK's scripted fakes and sends nothing to any service.",
+      "This example runs on the SDK's scripted fakes. Search looks only at a short list of invented places held in the page, and nothing is sent to any service.",
     );
     expect(document.body.textContent).not.toMatch(/Nominatim/);
   });

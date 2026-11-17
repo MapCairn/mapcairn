@@ -13,6 +13,7 @@ import {
   type DrawShape,
   type DrawState,
   decodeShapes,
+  describeAxisSuggestion,
   describeShapeImport,
   distanceMetres,
   draftOf,
@@ -44,9 +45,11 @@ import {
   shapesToCsv,
   shapesToGeoJsonText,
   shapesToWkt,
+  suggestWktAxisOrder,
   type UnitSystem,
   unsharableShapes,
   validateShape,
+  type WktAxisOrder,
 } from "@mapcairn/core";
 import { useLatestRef } from "@mapcairn/react";
 import {
@@ -102,6 +105,12 @@ const LINK_LIMIT_NOTE = message("tools.draw.linkLimitNote", {
 export interface DrawFeedback {
   readonly kind: "success" | "error";
   readonly text: string;
+  /**
+   * Set on an import that read nothing because the file fits only this
+   * other WKT axis order: the order that {@link UseDraw.rereadImport} reads
+   * the same file in.
+   */
+  readonly readAs?: WktAxisOrder;
 }
 
 /** Options for {@link useDraw}. */
@@ -196,6 +205,17 @@ export interface UseDraw {
    *   null when it added none, including when the host has no file opener.
    */
   readonly importFile: () => Promise<Bounds | null>;
+  /** The order of the two numbers in a WKT position that an import reads: longitude first until changed. Kept for the session only. */
+  readonly wktAxisOrder: WktAxisOrder;
+  /** Chooses the order by hand. An offer to read the last file the other way, and the file it kept, are dropped. */
+  readonly setWktAxisOrder: (order: WktAxisOrder) => void;
+  /**
+   * Reads the file whose import offered {@link DrawFeedback.readAs} again in
+   * `order`, and keeps `order` as the WKT axis order.
+   * @returns The box holding the shapes it added, as {@link UseDraw.importFile}
+   *   does, or null when it added none or there is no such file.
+   */
+  readonly rereadImport: (order: WktAxisOrder) => Bounds | null;
 }
 
 /** A drag in progress: which handle it began on and which vertex it moves now. */
@@ -364,6 +384,9 @@ export function useDraw({
   );
   const fileOpener = useFileOpener();
   const importAbort = useRef<AbortController | null>(null);
+  const [wktAxisOrder, setWktAxisOrder] = useState<WktAxisOrder>("lng-lat");
+  const wktAxisOrderRef = useLatestRef(wktAxisOrder);
+  const offeredText = useRef<string | null>(null);
   const session = useRef<DragSession | null>(null);
   const dragCount = useRef(0);
 
@@ -399,6 +422,7 @@ export function useDraw({
     setFeedback(null);
     if (lastEvent?.type !== "imported") {
       setImportFeedback(null);
+      offeredText.current = null;
     }
   }, [shapes]);
 
@@ -739,13 +763,77 @@ export function useDraw({
   }, [clipboard, report, stateRef, url]);
 
   const reportImport = useCallback(
-    (kind: DrawFeedback["kind"], said: Message) => {
-      setImportFeedback({ kind, text: formatRef.current(said) });
+    (kind: DrawFeedback["kind"], said: Message, readAs?: WktAxisOrder) => {
+      setImportFeedback({
+        kind,
+        text: formatRef.current(said),
+        ...(readAs ? { readAs } : {}),
+      });
       announceRef.current(said, {
         priority: kind === "error" ? "assertive" : "polite",
       });
     },
     [announceRef, formatRef],
+  );
+
+  /** Adds what the text holds, read in `order`, or says why not; the box of the shapes it added. */
+  const importText = useCallback(
+    (text: string, order: WktAxisOrder): Bounds | null => {
+      const suggested = suggestWktAxisOrder(text, order);
+      if (suggested) {
+        offeredText.current = text;
+        reportImport("error", describeAxisSuggestion(suggested), suggested);
+        return null;
+      }
+      offeredText.current = null;
+      const result = parseShapeFile(text, { wktAxisOrder: order });
+      const words = describeShapeImport(result);
+      if (!result.ok || result.shapes.length === 0) {
+        reportImport("error", words);
+        return null;
+      }
+      if (
+        stateRef.current.shapes.length + result.shapes.length >
+        MAX_DRAWING_SHAPES
+      ) {
+        reportImport(
+          "error",
+          describeShapeImport({ ok: false, refusal: "drawing-full" }),
+        );
+        return null;
+      }
+      const total =
+        exportableShapes(stateRef.current.shapes).length + result.shapes.length;
+      dispatch({ type: "import", shapes: result.shapes });
+      reportImport(
+        "success",
+        total > MAX_SHARE_SHAPES
+          ? message("common.followedBy", {
+              first: words,
+              second: LINK_LIMIT_NOTE,
+            })
+          : words,
+      );
+      return shapeInputBounds(result.shapes) ?? null;
+    },
+    [reportImport, stateRef],
+  );
+
+  /** A choice made by hand: the offer to read a file the other way no longer applies, so it and the file it kept are dropped. */
+  const chooseWktAxisOrder = useCallback((order: WktAxisOrder) => {
+    setWktAxisOrder(order);
+    offeredText.current = null;
+    setImportFeedback((current) => (current?.readAs ? null : current));
+  }, []);
+
+  const rereadImport = useCallback(
+    (order: WktAxisOrder): Bounds | null => {
+      setWktAxisOrder(order);
+      return offeredText.current === null
+        ? null
+        : importText(offeredText.current, order);
+    },
+    [importText],
   );
 
   const importFile = useCallback(async (): Promise<Bounds | null> => {
@@ -766,40 +854,13 @@ export function useDraw({
     } catch (error) {
       const kind = error instanceof FileOpenError ? error.kind : "unreadable";
       if (kind !== "cancelled") {
+        offeredText.current = null;
         reportImport("error", FILE_OPEN_MESSAGES[kind]);
       }
       return null;
     }
-    const result = parseShapeFile(text);
-    const words = describeShapeImport(result);
-    if (!result.ok || result.shapes.length === 0) {
-      reportImport("error", words);
-      return null;
-    }
-    if (
-      stateRef.current.shapes.length + result.shapes.length >
-      MAX_DRAWING_SHAPES
-    ) {
-      reportImport(
-        "error",
-        describeShapeImport({ ok: false, refusal: "drawing-full" }),
-      );
-      return null;
-    }
-    const total =
-      exportableShapes(stateRef.current.shapes).length + result.shapes.length;
-    dispatch({ type: "import", shapes: result.shapes });
-    reportImport(
-      "success",
-      total > MAX_SHARE_SHAPES
-        ? message("common.followedBy", {
-            first: words,
-            second: LINK_LIMIT_NOTE,
-          })
-        : words,
-    );
-    return shapeInputBounds(result.shapes) ?? null;
-  }, [fileOpener, reportImport, stateRef]);
+    return importText(text, wktAxisOrderRef.current);
+  }, [fileOpener, importText, reportImport, wktAxisOrderRef]);
 
   const handles = useMemo(
     () => (active ? editHandlesFor(shapes, selection, projection) : []),
@@ -860,5 +921,8 @@ export function useDraw({
     exportWkt,
     copyLink,
     importFile,
+    wktAxisOrder,
+    setWktAxisOrder: chooseWktAxisOrder,
+    rereadImport,
   };
 }

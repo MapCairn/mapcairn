@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { SUPPORTED_WKT_SRID } from "../geometry/wkt";
+import { SUPPORTED_WKT_SRID, type WktAxisOrder } from "../geometry/wkt";
 import {
   appendMessages,
   joinMessages,
@@ -348,6 +348,19 @@ function describeSkip(reason: ShapeImportSkip, count: number): Message {
         srid: String(SUPPORTED_WKT_SRID),
       });
   }
+}
+
+const AXIS_SUGGESTIONS = {
+  "lat-lng": message("draw.import.axisHint.lat-lng", {}),
+  "lng-lat": message("draw.import.axisHint.lng-lat", {}),
+} as const satisfies Readonly<Record<WktAxisOrder, Message>>;
+
+/**
+ * What to say when a WKT file imported nothing because its first position
+ * fits only the other axis order. `suggested` is that other order.
+ */
+export function describeAxisSuggestion(suggested: WktAxisOrder): Message {
+  return AXIS_SUGGESTIONS[suggested];
 }
 
 /** The order skipped shapes are listed in. */
