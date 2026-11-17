@@ -610,6 +610,9 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layers.status.loadFailedNetwork": "Could not load. Check your connection.",
   "layers.status.loadFailedInvalid":
     "Could not load: the provider sent something unexpected.",
+  "layers.identify.hint": "Tap the map to see details for this layer.",
+  "layers.identify.cap": "Only the first {count} layers are asked on one tap.",
+  "layers.identify.lookingUp": "Looking up what is here",
   "layers.list.summary": "List of {count} on the map",
   "layers.list.sortBy": "Sort by",
   "layers.list.showOnMap": "show on map",
@@ -793,7 +796,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "keyHelp.map.zoom": "Zoom in or out",
   "keyHelp.map.north": "Point the map north again",
   "keyHelp.map.pin": "Drop a pin at the centre of the map",
-  "keyHelp.map.identify": "List the features at the centre of the map",
+  "keyHelp.map.identify": "Show what is at the centre of the map",
   "keyHelp.map.escape": "Close the open panel",
   "keyHelp.draw.addPoint":
     "While drawing, add a point at the map centre, or move the selected point there",

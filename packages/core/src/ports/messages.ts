@@ -511,6 +511,9 @@ export type MessageKey =
   | "layers.status.updatedEmpty"
   | "layers.status.loadFailedNetwork"
   | "layers.status.loadFailedInvalid"
+  | "layers.identify.hint"
+  | "layers.identify.cap"
+  | "layers.identify.lookingUp"
   | "layers.list.summary"
   | "layers.list.sortBy"
   | "layers.list.showOnMap"
@@ -1084,6 +1087,7 @@ interface MessageParamOverrides {
     readonly time: string;
     readonly text: string;
   };
+  readonly "layers.identify.cap": { readonly count: number };
   readonly "layers.list.summary": { readonly count: number };
   readonly "layers.list.showAll": { readonly count: number };
   readonly "layers.choices.heading": { readonly count: number };

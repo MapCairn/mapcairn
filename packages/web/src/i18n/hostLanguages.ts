@@ -27,7 +27,8 @@ export const OFFERED_LANGUAGE_TAGS: readonly string[] = OFFERED_LANGUAGES.map(
   ({ tag }) => tag,
 );
 
-const ENGLISH = createMessageCatalogue(
+/** The default language's messages, already in the bundle. */
+export const ENGLISH = createMessageCatalogue(
   DEFAULT_LANGUAGE,
   EN_GB_CATALOGUE,
   EN_GB_CATALOGUE,

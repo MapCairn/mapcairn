@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  createMessageCatalogue,
-  EN_GB_CATALOGUE,
-  type MessageKey,
-} from "@mapcairn/core";
-import { Button, useOptionalServices } from "@mapcairn/map";
+import type { MessageKey } from "@mapcairn/core";
+import { Button } from "@mapcairn/map";
 import { RotateCw } from "lucide-react";
 import { useNavigate } from "react-router";
 import * as styles from "./ErrorPage.css";
+import { useErrorPageMessages } from "./useErrorPageMessages";
 
 /** What went wrong, in the words the page shows. */
 export type ErrorPageKind = "not-found" | "unexpected";
@@ -28,16 +25,6 @@ const COPY: Readonly<
     message: "app.error.unexpected.message",
   },
 };
-
-/**
- * What the page says when the boundary renders outside the services, which is
- * the usual case: the boundary replaces the root route that supplies them.
- */
-const ENGLISH = createMessageCatalogue(
-  "en-GB",
-  EN_GB_CATALOGUE,
-  EN_GB_CATALOGUE,
-);
 
 /**
  * Returns a function that reloads the page. React Router's `navigate(0)` is
@@ -60,13 +47,14 @@ export interface ErrorPageProps {
  * happened and what to do, never the raw error. "Page not found" links back
  * to the map; anything else offers a Reload button.
  *
- * @remarks It reads the host's catalogue when there are services above it and
- *   English otherwise, so it never depends on the services that may have
- *   failed.
+ * @remarks The boundary replaces the root route that supplies the services,
+ *   so the page never reads them. It speaks the visitor's stored language
+ *   (else the browser's), English until that has loaded and whenever it
+ *   cannot, as {@link useErrorPageMessages} describes.
  */
 export function ErrorPage({ kind }: ErrorPageProps) {
   const reload = useReloadPage();
-  const { t } = useOptionalServices()?.messages ?? ENGLISH;
+  const { t } = useErrorPageMessages();
   const { title, message } = COPY[kind];
   return (
     <main className={styles.page} data-testid="error-page">
