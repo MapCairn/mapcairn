@@ -298,6 +298,76 @@ describe("ShapesSection", () => {
     ).not.toBeInTheDocument();
   });
 
+  async function showHint(services: FakeServices) {
+    fireEvent.click(screen.getByTestId("shapes-import"));
+    await act(async () => {
+      services.fakes.fileOpener.choose({
+        name: "a.wkt",
+        text: "POINT (-33.9 151.2)",
+      });
+    });
+  }
+
+  it("moves focus to the order select when the re-read button goes, so focus is not lost", async () => {
+    const services = renderSection();
+    await showHint(services);
+    const button = screen.getByRole("button", {
+      name: "Read as latitude, longitude",
+    });
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    fireEvent.click(button);
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toBe(
+      screen.getByRole("combobox", { name: "WKT coordinate order" }),
+    );
+  });
+
+  it("drops the hint and its button when the order is changed by hand, and forgets the file", async () => {
+    const services = renderSection();
+    await showHint(services);
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "WKT coordinate order" }),
+      { target: { value: "lat-lng" } },
+    );
+    expect(screen.queryByTestId("shapes-import-feedback")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Read as/ })).toBeNull();
+    let bounds: unknown;
+    act(() => {
+      bounds = drawApi.rereadImport("lat-lng");
+    });
+    expect(bounds).toBeNull();
+    expect(drawApi.shapes).toEqual([]);
+  });
+
+  it("forgets the offered file once the shapes change", async () => {
+    const services = renderSection();
+    await showHint(services);
+    finishTriangle();
+    expect(screen.queryByRole("button", { name: /^Read as/ })).toBeNull();
+    const before = drawApi.shapes.length;
+    act(() => {
+      drawApi.rereadImport("lat-lng");
+    });
+    expect(drawApi.shapes).toHaveLength(before);
+  });
+
+  it("forgets the offered file when the next file cannot be opened", async () => {
+    const services = renderSection();
+    await showHint(services);
+    services.fakes.fileOpener.failWith("unsupported");
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("shapes-import"));
+    });
+    expect(screen.queryByRole("button", { name: /^Read as/ })).toBeNull();
+    let bounds: unknown;
+    act(() => {
+      bounds = drawApi.rereadImport("lat-lng");
+    });
+    expect(bounds).toBeNull();
+    expect(drawApi.shapes).toEqual([]);
+  });
+
   it("keeps the chosen order and reads nothing when no file was offered", () => {
     renderSection();
     let bounds: unknown;

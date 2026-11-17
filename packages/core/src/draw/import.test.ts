@@ -1230,7 +1230,7 @@ describe("suggestWktAxisOrder", () => {
     ).toBeNull();
   });
 
-  it("stays fast and suggests nothing for text that is only brackets and spaces", () => {
+  it("stays fast on large text of brackets and spaces, by reading only its start", () => {
     const inputs = [
       "(".repeat(200_000),
       "( ".repeat(100_000),
@@ -1241,6 +1241,48 @@ describe("suggestWktAxisOrder", () => {
       expect(suggestWktAxisOrder(input, "lng-lat")).toBeNull();
     }
     expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
+  it("finds nothing in time in the worst text of exactly the size it reads", () => {
+    const keywords = "POINT(".repeat(MAX_AXIS_SCAN_CHARACTERS / 6);
+    const inputs = [
+      "(".repeat(MAX_AXIS_SCAN_CHARACTERS),
+      "( ".repeat(MAX_AXIS_SCAN_CHARACTERS / 2),
+      `POINT${" ".repeat(MAX_AXIS_SCAN_CHARACTERS - 6)}(`,
+      keywords.padEnd(MAX_AXIS_SCAN_CHARACTERS, " "),
+      "POINT (".repeat(MAX_AXIS_SCAN_CHARACTERS / 7),
+    ];
+    const started = performance.now();
+    for (const input of inputs) {
+      expect(suggestWktAxisOrder(input, "lng-lat")).toBeNull();
+    }
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
+  it("makes no suggestion for a parenthesised pair that is not WKT", () => {
+    expect(
+      suggestWktAxisOrder("name,notes\nSite (-33.9 151.2),visited", "lng-lat"),
+    ).toBeNull();
+    expect(suggestWktAxisOrder("Site (-33.9 151.2)", "lng-lat")).toBeNull();
+    expect(suggestWktAxisOrder("ENDPOINT (-33.9 151.2)", "lng-lat")).toBeNull();
+  });
+
+  it("reads a geometry type in any case, with a dimension letter, inside a collection and after an EWKT prefix", () => {
+    expect(suggestWktAxisOrder("point (-33.9 151.2)", "lng-lat")).toBe(
+      "lat-lng",
+    );
+    expect(suggestWktAxisOrder("POINT ZM(-33.9 151.2 1 2)", "lng-lat")).toBe(
+      "lat-lng",
+    );
+    expect(
+      suggestWktAxisOrder(
+        "GEOMETRYCOLLECTION (POINT (-33.9 151.2))",
+        "lng-lat",
+      ),
+    ).toBe("lat-lng");
+    expect(
+      suggestWktAxisOrder("SRID=4326;POINT (-33.9 151.2)", "lng-lat"),
+    ).toBe("lat-lng");
   });
 
   it("looks only at the start of the text, so a position far into a large file is not searched for", () => {

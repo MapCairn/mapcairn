@@ -192,17 +192,21 @@ test.describe("draw import", () => {
     );
     await expect(mapPage.drawShapes).toHaveCount(0);
 
-    await page
-      .getByRole("button", { name: "Read as latitude, longitude" })
-      .click();
+    const reread = page.getByRole("button", {
+      name: "Read as latitude, longitude",
+    });
+    await reread.focus();
+    await page.keyboard.press("Enter");
     await expect(page.getByTestId("shapes-import-feedback")).toHaveText(
       "1 shape imported.",
     );
     await expect(mapPage.politeAnnouncer).toContainText("1 shape imported.");
     await expect(mapPage.drawShapes).toHaveCount(1);
-    await expect(
-      page.getByRole("combobox", { name: "WKT coordinate order" }),
-    ).toHaveValue("lat-lng");
+    const order = page.getByRole("combobox", { name: "WKT coordinate order" });
+    await expect(order).toHaveValue("lat-lng");
+    // The pressed button is gone, and focus moved to the control it set.
+    await expect(reread).toHaveCount(0);
+    await expect(order).toBeFocused();
   });
 
   test("refuses a file that is not shapes, in words, and adds nothing", async ({

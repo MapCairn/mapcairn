@@ -16,7 +16,7 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { type Ref, useContext } from "react";
+import { type Ref, useContext, useRef } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { MapContext } from "../../host";
 import { dateInput, field } from "../../layers/Layers.css";
@@ -108,6 +108,7 @@ export function ShapesSection({
   const fitToImport = useFitToImport();
   const canImport = useFileOpener() !== undefined;
   const readAs = importFeedback?.readAs;
+  const orderRef = useRef<HTMLSelectElement>(null);
   const importFile = () => {
     // Called straight from the press, so the browser shows the picker.
     void draw.importFile().then((bounds) => {
@@ -117,6 +118,8 @@ export function ShapesSection({
     });
   };
   const reread = (order: WktAxisOrder) => {
+    // The button that was pressed goes with the offer, so focus moves to the control it set.
+    orderRef.current?.focus();
     const bounds = draw.rereadImport(order);
     if (bounds) {
       fitToImport(bounds);
@@ -185,6 +188,7 @@ export function ShapesSection({
           <label className={field}>
             {t("panels.shapes.axisOrderLabel", {})}
             <select
+              ref={orderRef}
               className={dateInput}
               value={draw.wktAxisOrder}
               data-testid="shapes-axis-order"

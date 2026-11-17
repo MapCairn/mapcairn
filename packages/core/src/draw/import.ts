@@ -829,19 +829,29 @@ export const MAX_AXIS_SCAN_CHARACTERS = 4_096;
 const POSITION_AT = new RegExp(`(${NUMBER})\\s+(${NUMBER})`, "y");
 
 /**
- * The first two numbers after an opening bracket, which may be followed by
- * more brackets and white space. One pass: each stretch of brackets and white
- * space is skipped once, and a stretch that is not followed by two numbers is
- * not entered again from inside, so the work is linear in `text`.
+ * A WKT geometry type, with an optional dimension letter, up to its opening
+ * bracket. Written so that no two parts can match the same characters, which
+ * keeps the search linear.
+ */
+const GEOMETRY_OPEN =
+  /\b(?:POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)\s*(?:[ZM]{1,2}\s*)?\(/gi;
+
+/**
+ * The first two numbers after the opening bracket of a geometry type, which
+ * may be followed by more brackets and white space; text such as `Site (1 2)`
+ * has no geometry type and so is not a position. Numbers are read as `-33.9`
+ * or `-3.39e1`, not as `.5`. Each match of the pattern ends at a bracket and
+ * the search goes on from there, so each character is read a fixed number of
+ * times and the work is linear in `text`.
  */
 function firstWktPosition(text: string): [string, string] | null {
-  let from = 0;
-  for (;;) {
-    const open = text.indexOf("(", from);
-    if (open < 0) {
-      return null;
-    }
-    let next = open + 1;
+  GEOMETRY_OPEN.lastIndex = 0;
+  for (
+    let open = GEOMETRY_OPEN.exec(text);
+    open !== null;
+    open = GEOMETRY_OPEN.exec(text)
+  ) {
+    let next = GEOMETRY_OPEN.lastIndex;
     while (next < text.length && /[\s(]/.test(text.charAt(next))) {
       next += 1;
     }
@@ -850,8 +860,8 @@ function firstWktPosition(text: string): [string, string] | null {
     if (found) {
       return [found[1] as string, found[2] as string];
     }
-    from = next;
   }
+  return null;
 }
 
 /** Whether a longitude and a latitude are both inside the world. */
@@ -862,8 +872,11 @@ function insideWorld(lng: number, lat: number): boolean {
 /**
  * The other order of the two, when the first position in WKT text lies outside
  * the world in the order given but inside it in the other, which is the sign of
- * a file written the other way round. Null for GeoJSON, text with no position,
- * a first position that fits the order given, and one that fits neither.
+ * a file written the other way round. The position is the first one after a
+ * WKT geometry type (`POINT`, `POLYGON`, `GEOMETRYCOLLECTION` and so on, in any
+ * case), so a bracketed pair in other text is not mistaken for one. Null for
+ * GeoJSON, text with no such position, a first position that fits the order
+ * given, and one that fits neither.
  *
  * @remarks Only the first {@link MAX_AXIS_SCAN_CHARACTERS} characters are
  *   read, and text over {@link MAX_IMPORT_BYTES} gets no suggestion, since

@@ -207,6 +207,7 @@ export interface UseDraw {
   readonly importFile: () => Promise<Bounds | null>;
   /** The order of the two numbers in a WKT position that an import reads: longitude first until changed. Kept for the session only. */
   readonly wktAxisOrder: WktAxisOrder;
+  /** Chooses the order by hand. An offer to read the last file the other way, and the file it kept, are dropped. */
   readonly setWktAxisOrder: (order: WktAxisOrder) => void;
   /**
    * Reads the file whose import offered {@link DrawFeedback.readAs} again in
@@ -421,6 +422,7 @@ export function useDraw({
     setFeedback(null);
     if (lastEvent?.type !== "imported") {
       setImportFeedback(null);
+      offeredText.current = null;
     }
   }, [shapes]);
 
@@ -817,6 +819,13 @@ export function useDraw({
     [reportImport, stateRef],
   );
 
+  /** A choice made by hand: the offer to read a file the other way no longer applies, so it and the file it kept are dropped. */
+  const chooseWktAxisOrder = useCallback((order: WktAxisOrder) => {
+    setWktAxisOrder(order);
+    offeredText.current = null;
+    setImportFeedback((current) => (current?.readAs ? null : current));
+  }, []);
+
   const rereadImport = useCallback(
     (order: WktAxisOrder): Bounds | null => {
       setWktAxisOrder(order);
@@ -845,6 +854,7 @@ export function useDraw({
     } catch (error) {
       const kind = error instanceof FileOpenError ? error.kind : "unreadable";
       if (kind !== "cancelled") {
+        offeredText.current = null;
         reportImport("error", FILE_OPEN_MESSAGES[kind]);
       }
       return null;
@@ -912,7 +922,7 @@ export function useDraw({
     copyLink,
     importFile,
     wktAxisOrder,
-    setWktAxisOrder,
+    setWktAxisOrder: chooseWktAxisOrder,
     rereadImport,
   };
 }
