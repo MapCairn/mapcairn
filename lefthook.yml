@@ -9,6 +9,8 @@ pre-commit:
       run: npm run lint:harmony
     licence:
       run: npm run licence
+    licence-sdk:
+      run: npm run licence:sdk
     agents:
       run: npm run agents:check
     names:
