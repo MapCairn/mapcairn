@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -654,7 +655,9 @@ describe("symbolic links in the sources", () => {
       skill("name: beta\ndescription: B."),
     );
     symlinkSync(outside, path.join(root, ".claude/skills"), "junction");
-    expect(() => plannedFiles(root)).toThrow(/resolves outside/);
+    expect(() => plannedFiles(root)).toThrow(
+      /\.claude\/skills: is a symbolic link/,
+    );
   });
 
   it("refuses a link in a generated folder, so the check never reads through it", () => {
@@ -666,6 +669,37 @@ describe("symbolic links in the sources", () => {
     expect(() => findDrift(root, plannedFiles(root))).toThrow(
       /\.agents\/skills\/stale\.txt: is a symbolic link/,
     );
+  });
+
+  it("refuses a generated folder that is itself a link, and writes nothing through it", () => {
+    mkdirSync(path.join(root, ".agents"), { recursive: true });
+    symlinkSync(outside, path.join(root, ".agents/skills"), "junction");
+    expect(() => findDrift(root, plannedFiles(root))).toThrow(
+      /\.agents\/skills: is a symbolic link/,
+    );
+    expect(() => writePlan(root, plannedFiles(root))).toThrow(
+      /\.agents\/skills: is a symbolic link/,
+    );
+    expect(readdirSync(outside)).toEqual(["secret.txt"]);
+  });
+
+  it("refuses a link in the parent of a generated folder, and writes nothing through it", () => {
+    symlinkSync(outside, path.join(root, ".codex"), "junction");
+    expect(() => findDrift(root, plannedFiles(root))).toThrow(
+      /\.codex: is a symbolic link/,
+    );
+    expect(() => writePlan(root, plannedFiles(root))).toThrow(
+      /\.codex: is a symbolic link/,
+    );
+    expect(readdirSync(outside)).toEqual(["secret.txt"]);
+  });
+
+  it("refuses a linked parent of a generated file when it has no folder listing to refuse", () => {
+    symlinkSync(outside, path.join(root, ".opencode"), "junction");
+    expect(() =>
+      writePlan(root, new Map([[".opencode/agents/x.md", "x"]])),
+    ).toThrow(/\.opencode: is a symbolic link/);
+    expect(readdirSync(outside)).toEqual(["secret.txt"]);
   });
 
   it("refuses a linked skills-lock.json", () => {

@@ -100,6 +100,28 @@ describe("cleanText", () => {
   });
 });
 
+describe("code that holds a comment opener", () => {
+  it("keeps the text but counts each code span or fence that holds an opener, because GitHub may render it as a comment", () => {
+    expect(inspectText("see `<!-- x` here").codeWithOpener).toBe(1);
+    expect(
+      inspectText("a\n```\n<!-- x\n```\nb `<!-- y` c").codeWithOpener,
+    ).toBe(2);
+    expect(inspectText("see `<!-- x` here").text).toBe("see `<!-- x` here");
+  });
+
+  it("counts none for code without an opener or an opener outside code", () => {
+    expect(inspectText("`a` ```\nb\n```").codeWithOpener).toBe(0);
+    expect(inspectText("a <!-- x -->").codeWithOpener).toBe(0);
+  });
+
+  it("flags it on the item line without printing the code", () => {
+    const line = formatItem("someone", "NONE", "`<!-- secret`", null);
+    expect(line).toContain("1 code span or fence holding a comment opener");
+    expect(line).toContain('"`<!-- secret`"');
+    expect(line).not.toContain("hidden content removed");
+  });
+});
+
 describe("inspectText", () => {
   it("counts the characters of every comment and definition it removes", () => {
     expect(inspectText("a<!-- xy -->b").hiddenCharacters).toBe(11);

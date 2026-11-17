@@ -12,7 +12,6 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -57,8 +56,39 @@ export const OWNED_DIRECTORIES = [
  * @returns {import("node:fs").Dirent[]}
  */
 function entriesOf(root, directory) {
-  const base = path.join(root, directory);
+  const base = checkedPath(root, directory);
   return existsSync(base) ? readdirSync(base, { withFileTypes: true }) : [];
+}
+
+/**
+ * The absolute path of `relative` under `root`, after checking that no part of
+ * it that exists is a symbolic link. Every part below `root` is a real folder
+ * or file, so the path cannot lead outside the repository; a linked folder or
+ * parent would otherwise let a read, write or removal reach outside it.
+ *
+ * @param {string} root
+ * @param {string} relative
+ * @returns {string}
+ */
+function checkedPath(root, relative) {
+  let current = root;
+  let walked = "";
+  for (const part of relative.split("/")) {
+    current = path.join(current, part);
+    walked = walked ? `${walked}/${part}` : part;
+    let stats;
+    try {
+      stats = lstatSync(current);
+    } catch {
+      break;
+    }
+    if (stats.isSymbolicLink()) {
+      throw new Error(
+        `${printable(walked)}: is a symbolic link; use a real folder, because the sync copies and never links`,
+      );
+    }
+  }
+  return path.join(root, relative);
 }
 
 /**
@@ -109,30 +139,15 @@ function refuseLink(entry, relative) {
 }
 
 /**
- * Reads a source file, refusing a symbolic link and any file whose real path
- * is not inside `sourceDirectory` of the repository (a linked parent folder
- * would otherwise lead outside it).
+ * Reads a file under `root`, refusing a symbolic link at any part of its path.
  *
  * @param {string} root
  * @param {string} file Relative to `root`.
- * @param {string} sourceDirectory Relative to `root`.
  * @param {BufferEncoding} [encoding] Omit for a `Buffer`.
  * @returns {Buffer | string}
  */
-function readSource(root, file, sourceDirectory, encoding) {
-  const absolute = path.join(root, file);
-  if (lstatSync(absolute).isSymbolicLink()) {
-    throw new Error(
-      `${printable(file)}: is a symbolic link; the sync copies and never links`,
-    );
-  }
-  const allowed = path.join(realpathSync(root), sourceDirectory) + path.sep;
-  if (!realpathSync(absolute).startsWith(allowed)) {
-    throw new Error(
-      `${printable(file)}: resolves outside ${sourceDirectory || "the repository"}`,
-    );
-  }
-  return readFileSync(absolute, encoding);
+function readSource(root, file, encoding) {
+  return readFileSync(checkedPath(root, file), encoding);
 }
 
 /**
@@ -148,7 +163,7 @@ function vendoredSkills(root) {
     return new Set();
   }
   const { skills = {} } = JSON.parse(
-    String(readSource(root, "skills-lock.json", "", "utf8")),
+    String(readSource(root, "skills-lock.json", "utf8")),
   );
   return new Set(Object.keys(skills));
 }
@@ -206,7 +221,7 @@ export function skillProblems(root) {
       if (!existsSync(path.join(root, where, "SKILL.md"))) {
         return [`${printable(where)}: SKILL.md is missing`];
       }
-      const text = readSource(root, `${where}/SKILL.md`, SKILLS_SOURCE, "utf8");
+      const text = readSource(root, `${where}/SKILL.md`, "utf8");
       return checkSkill(entry.name, String(text)).map(
         (problem) => `${printable(where)}/SKILL.md: ${printable(problem)}`,
       );
@@ -230,7 +245,7 @@ export function plannedFiles(root) {
   for (const folder of skillFolders(root)) {
     for (const file of filesUnder(root, `${SKILLS_SOURCE}/${folder}`)) {
       const target = file.replace(SKILLS_SOURCE, ".agents/skills");
-      plan.set(target, readSource(root, file, SKILLS_SOURCE));
+      plan.set(target, readSource(root, file));
     }
   }
   const agentFiles = entriesOf(root, AGENTS_SOURCE)
@@ -241,12 +256,7 @@ export function plannedFiles(root) {
     .map((entry) => entry.name)
     .sort();
   for (const filename of agentFiles) {
-    const text = readSource(
-      root,
-      `${AGENTS_SOURCE}/${filename}`,
-      AGENTS_SOURCE,
-      "utf8",
-    );
+    const text = readSource(root, `${AGENTS_SOURCE}/${filename}`, "utf8");
     const agent = parseAgent(filename, String(text));
     for (const { directory, extension, render } of AGENT_TARGETS) {
       plan.set(`${directory}/${agent.name}${extension}`, render(agent));
@@ -282,7 +292,7 @@ export function findDrift(root, plan) {
   const missing = [];
   const changed = [];
   for (const [file, wanted] of plan) {
-    const absolute = path.join(root, file);
+    const absolute = checkedPath(root, file);
     if (!existsSync(absolute)) {
       missing.push(file);
     } else if (!matches(absolute, wanted)) {
@@ -307,16 +317,17 @@ export function findDrift(root, plan) {
  * @param {string} file
  */
 function removeFile(root, file) {
-  rmSync(path.join(root, file));
+  rmSync(checkedPath(root, file));
   const owned = OWNED_DIRECTORIES.find((directory) =>
     file.startsWith(`${directory}/`),
   );
   for (
     let directory = path.posix.dirname(file);
-    directory !== owned && readdirSync(path.join(root, directory)).length === 0;
+    directory !== owned &&
+    readdirSync(checkedPath(root, directory)).length === 0;
     directory = path.posix.dirname(directory)
   ) {
-    rmSync(path.join(root, directory), { recursive: true });
+    rmSync(checkedPath(root, directory), { recursive: true });
   }
 }
 
@@ -333,7 +344,7 @@ export function writePlan(root, plan) {
     removeFile(root, file);
   }
   for (const file of [...missing, ...changed]) {
-    const absolute = path.join(root, file);
+    const absolute = checkedPath(root, file);
     mkdirSync(path.dirname(absolute), { recursive: true });
     writeFileSync(absolute, plan.get(file) ?? "");
   }

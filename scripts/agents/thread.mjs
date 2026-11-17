@@ -103,11 +103,12 @@ function codeSpanEnd(text, start, length) {
  * (`--!>`, `<!-->`) are not taken as ends, so the larger reading stays hidden.
  *
  * @param {string} text
- * @returns {{ text: string, hidden: number }}
+ * @returns {{ text: string, hidden: number, codeWithOpener: number }} The kept text, the characters dropped, and how many kept code spans or fences hold a comment opener.
  */
 function removeHidden(text) {
   let kept = "";
   let hidden = 0;
+  let codeWithOpener = 0;
   let position = 0;
   const drop = (end) => {
     hidden += Array.from(text.slice(position, end)).length;
@@ -117,12 +118,18 @@ function removeHidden(text) {
     kept += text.slice(position, end);
     position = end;
   };
+  const keepCode = (end) => {
+    if (text.slice(position, end).includes(COMMENT_OPEN)) {
+      codeWithOpener += 1;
+    }
+    keep(end);
+  };
   while (position < text.length) {
     const atLineStart = position === 0 || text[position - 1] === "\n";
     FENCE_OPEN.lastIndex = position;
     const fence = atLineStart ? FENCE_OPEN.exec(text) : null;
     if (fence) {
-      keep(fenceEnd(text, position, fence));
+      keepCode(fenceEnd(text, position, fence));
       continue;
     }
     LINK_DEFINITION.lastIndex = position;
@@ -139,12 +146,16 @@ function removeHidden(text) {
     if (text[position] === "`") {
       const length = /^`+/.exec(text.slice(position))?.[0].length ?? 1;
       const end = codeSpanEnd(text, position, length);
-      keep(end === -1 ? position + length : end);
+      if (end === -1) {
+        keep(position + length);
+      } else {
+        keepCode(end);
+      }
       continue;
     }
     keep(position + 1);
   }
-  return { text: kept, hidden };
+  return { text: kept, hidden, codeWithOpener };
 }
 
 /**
@@ -168,21 +179,24 @@ function startsParagraph(text, position) {
  * comments, including an unclosed one that hides the rest of the body, and
  * link definitions), and invisible or text-reordering characters, so what an
  * agent reads is what a person sees. Code spans and fenced blocks show their
- * text, so they are left alone.
+ * text, so they are left alone; but GitHub may render one inside an HTML block
+ * differently, so each that holds a comment opener is counted for a flag.
  *
  * @param {string} text
- * @returns {{ text: string, hiddenCharacters: number }} The cleaned text and how many characters of comment or link definition were removed.
+ * @returns {{ text: string, hiddenCharacters: number, codeWithOpener: number }} The cleaned text, how many characters of comment or link definition were removed, and how many code spans or fences hold a comment opener.
  */
 export function inspectText(text) {
   let current = text;
   let hiddenCharacters = 0;
+  let codeWithOpener = 0;
   for (;;) {
-    const { text: next, hidden } = removeHidden(current);
-    if (hidden === 0) {
+    const pass = removeHidden(current);
+    codeWithOpener = Math.max(codeWithOpener, pass.codeWithOpener);
+    if (pass.hidden === 0) {
       break;
     }
-    hiddenCharacters += hidden;
-    current = next;
+    hiddenCharacters += pass.hidden;
+    current = pass.text;
   }
   const visible = Array.from(current)
     .filter((character) => {
@@ -190,7 +204,7 @@ export function inspectText(text) {
       return !HIDDEN_RANGES.some(([from, to]) => point >= from && point <= to);
     })
     .join("");
-  return { text: visible, hiddenCharacters };
+  return { text: visible, hiddenCharacters, codeWithOpener };
 }
 
 /**
@@ -229,12 +243,16 @@ export function token(value) {
  */
 export function formatItem(login, association, body, people) {
   const label = people?.has(login.toLowerCase()) ? "project" : "outside";
-  const { text, hiddenCharacters } = inspectText(body ?? "");
-  const flag =
+  const { text, hiddenCharacters, codeWithOpener } = inspectText(body ?? "");
+  const flags = [
     hiddenCharacters > 0
       ? ` [hidden content removed: ${hiddenCharacters} characters of HTML comment or link definition not rendered by GitHub; the thread holds text a person reading it cannot see]`
-      : "";
-  return `${label} ${token(login)} (${token(association)}): ${JSON.stringify(text)}${flag}`;
+      : "",
+    codeWithOpener > 0
+      ? ` [${codeWithOpener} code span or fence holding a comment opener is shown as written; GitHub may render it as a hidden comment, so a person may not see it]`
+      : "",
+  ];
+  return `${label} ${token(login)} (${token(association)}): ${JSON.stringify(text)}${flags.join("")}`;
 }
 
 /**
