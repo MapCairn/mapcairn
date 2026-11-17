@@ -8,9 +8,11 @@
  */
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -69,8 +71,68 @@ function entriesOf(root, directory) {
 function filesUnder(root, directory) {
   return entriesOf(root, directory).flatMap((entry) => {
     const relative = `${directory}/${entry.name}`;
+    refuseLink(entry, relative);
     return entry.isDirectory() ? filesUnder(root, relative) : [relative];
   });
+}
+
+/**
+ * A path made safe to print: control characters, line and paragraph
+ * separators and bidirectional controls become `\uXXXX` escapes, so a file name
+ * from a pull request cannot start a second line of output or reorder it.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function printable(text) {
+  return text.replace(
+    /[\p{Cc}\u2028\u2029\u202a-\u202e\u2066-\u2069]/gu,
+    (character) =>
+      `\\u${(character.codePointAt(0) ?? 0).toString(16).padStart(4, "0")}`,
+  );
+}
+
+/**
+ * Throws when an entry is a symbolic link. The sync copies and never links, and
+ * following a link could read a file from outside the repository into the
+ * generated copies.
+ *
+ * @param {import("node:fs").Dirent} entry
+ * @param {string} relative The entry's path relative to the root, named in the error.
+ */
+function refuseLink(entry, relative) {
+  if (entry.isSymbolicLink()) {
+    throw new Error(
+      `${printable(relative)}: is a symbolic link; use a real file or folder, because the sync copies and never links`,
+    );
+  }
+}
+
+/**
+ * Reads a source file, refusing a symbolic link and any file whose real path
+ * is not inside `sourceDirectory` of the repository (a linked parent folder
+ * would otherwise lead outside it).
+ *
+ * @param {string} root
+ * @param {string} file Relative to `root`.
+ * @param {string} sourceDirectory Relative to `root`.
+ * @param {BufferEncoding} [encoding] Omit for a `Buffer`.
+ * @returns {Buffer | string}
+ */
+function readSource(root, file, sourceDirectory, encoding) {
+  const absolute = path.join(root, file);
+  if (lstatSync(absolute).isSymbolicLink()) {
+    throw new Error(
+      `${printable(file)}: is a symbolic link; the sync copies and never links`,
+    );
+  }
+  const allowed = path.join(realpathSync(root), sourceDirectory) + path.sep;
+  if (!realpathSync(absolute).startsWith(allowed)) {
+    throw new Error(
+      `${printable(file)}: resolves outside ${sourceDirectory || "the repository"}`,
+    );
+  }
+  return readFileSync(absolute, encoding);
 }
 
 /**
@@ -85,7 +147,9 @@ function vendoredSkills(root) {
   if (!existsSync(lock)) {
     return new Set();
   }
-  const { skills = {} } = JSON.parse(readFileSync(lock, "utf8"));
+  const { skills = {} } = JSON.parse(
+    String(readSource(root, "skills-lock.json", "", "utf8")),
+  );
   return new Set(Object.keys(skills));
 }
 
@@ -131,19 +195,24 @@ export function skillProblems(root) {
     const where = `${SKILLS_SOURCE}/${entry.name}`;
     if (entry.isSymbolicLink()) {
       return [
-        `${where}: is a symbolic link; use a real folder, because the sync copies and never links`,
+        `${printable(where)}: is a symbolic link; use a real folder, because the sync copies and never links`,
       ];
     }
     if (!entry.isDirectory()) {
       return [];
     }
-    const file = path.join(root, where, "SKILL.md");
-    if (!existsSync(file)) {
-      return [`${where}: SKILL.md is missing`];
+    try {
+      filesUnder(root, where);
+      if (!existsSync(path.join(root, where, "SKILL.md"))) {
+        return [`${printable(where)}: SKILL.md is missing`];
+      }
+      const text = readSource(root, `${where}/SKILL.md`, SKILLS_SOURCE, "utf8");
+      return checkSkill(entry.name, String(text)).map(
+        (problem) => `${printable(where)}/SKILL.md: ${printable(problem)}`,
+      );
+    } catch (error) {
+      return [error instanceof Error ? error.message : String(error)];
     }
-    return checkSkill(entry.name, readFileSync(file, "utf8")).map(
-      (problem) => `${where}/SKILL.md: ${problem}`,
-    );
   });
 }
 
@@ -161,16 +230,24 @@ export function plannedFiles(root) {
   for (const folder of skillFolders(root)) {
     for (const file of filesUnder(root, `${SKILLS_SOURCE}/${folder}`)) {
       const target = file.replace(SKILLS_SOURCE, ".agents/skills");
-      plan.set(target, readFileSync(path.join(root, file)));
+      plan.set(target, readSource(root, file, SKILLS_SOURCE));
     }
   }
   const agentFiles = entriesOf(root, AGENTS_SOURCE)
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .filter((entry) => {
+      refuseLink(entry, `${AGENTS_SOURCE}/${entry.name}`);
+      return entry.isFile() && entry.name.endsWith(".md");
+    })
     .map((entry) => entry.name)
     .sort();
   for (const filename of agentFiles) {
-    const text = readFileSync(path.join(root, AGENTS_SOURCE, filename), "utf8");
-    const agent = parseAgent(filename, text);
+    const text = readSource(
+      root,
+      `${AGENTS_SOURCE}/${filename}`,
+      AGENTS_SOURCE,
+      "utf8",
+    );
+    const agent = parseAgent(filename, String(text));
     for (const { directory, extension, render } of AGENT_TARGETS) {
       plan.set(`${directory}/${agent.name}${extension}`, render(agent));
     }

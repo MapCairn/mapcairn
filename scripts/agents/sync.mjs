@@ -16,7 +16,13 @@
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { findDrift, plannedFiles, skillProblems, writePlan } from "./plan.mjs";
+import {
+  findDrift,
+  plannedFiles,
+  printable,
+  skillProblems,
+  writePlan,
+} from "./plan.mjs";
 
 /** The repository root, taken from this file so the working directory cannot change it. */
 const root = path.resolve(
@@ -60,9 +66,9 @@ if (!check) {
 } else {
   const { missing, changed, extra } = findDrift(root, plan);
   const stale = [
-    ...missing.map((file) => `missing  ${file}`),
-    ...changed.map((file) => `changed  ${file}`),
-    ...extra.map((file) => `extra    ${file}`),
+    ...missing.map((file) => `missing  ${printable(file)}`),
+    ...changed.map((file) => `changed  ${printable(file)}`),
+    ...extra.map((file) => `extra    ${printable(file)}`),
   ];
   if (stale.length > 0) {
     console.error(
