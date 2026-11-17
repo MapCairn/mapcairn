@@ -413,6 +413,25 @@ describe("useLanguageLoad", () => {
     expect(loadState()).toBe("ok");
   });
 
+  it("retries the latest request, not a stale one, after the setting changed during the failure", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { load, recover } = failingThenWorking();
+    setup({ load, language: "af", languages: [] });
+    await act(async () => {});
+    choose("follow");
+    await act(async () => {});
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(1);
+    choose("af");
+    await act(async () => {});
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(2);
+    recover();
+    choose("retry");
+    await act(async () => {});
+    expect(load.mock.calls.filter(([tag]) => tag === "af")).toHaveLength(3);
+    expect(loadState()).toBe("ok");
+    expect(text()).toBe("af:Instellings");
+  });
+
   it("does nothing when asked to retry with no failure", async () => {
     const load = vi.fn(() => ENGLISH);
     setup({ load });

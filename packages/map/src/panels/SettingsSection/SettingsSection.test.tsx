@@ -34,6 +34,7 @@ interface Options {
   readonly initial?: Partial<Settings>;
   readonly props?: SettingsSectionProps;
   readonly languages?: readonly LanguageOption[];
+  readonly browserLanguages?: readonly string[];
   readonly load?: (tag: string) => MessageCatalogue | Promise<MessageCatalogue>;
 }
 
@@ -44,10 +45,15 @@ function renderSettings({
   initial,
   props,
   languages,
+  browserLanguages = [],
   load = (tag) => new FakeMessageCatalogue({ language: tag }),
 }: Options = {}) {
   const settings = new MemorySettingsStore({ persistent, initial });
-  const preferences = new FakeDevicePreferences({ finePointer, saveData });
+  const preferences = new FakeDevicePreferences({
+    finePointer,
+    saveData,
+    languages: browserLanguages,
+  });
   const services = createFakeServices({
     settings,
     preferences,
@@ -368,6 +374,28 @@ describe("a failed language load", () => {
 
   it("retries when the person chooses the language that failed again", async () => {
     const { state, settings } = await renderFailed();
+    state.offline = false;
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("language-option-af"));
+    });
+    expect(settings.get().language).toBe("af");
+    expect(screen.queryByTestId("language-status")).toBeNull();
+    expect(screen.getByTestId("language-option-af")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("stores Afrikaans and retries when it failed through Automatic and the person picks it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const state = { offline: true };
+    const { settings } = renderSettings({
+      languages: TWO_LANGUAGES,
+      browserLanguages: ["af"],
+      load: failedLoad(state),
+    });
+    await act(async () => {});
+    expect(screen.getByTestId("language-status")).toBeInTheDocument();
     state.offline = false;
     await act(async () => {
       fireEvent.click(screen.getByTestId("language-option-af"));

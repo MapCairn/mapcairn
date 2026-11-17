@@ -117,7 +117,7 @@ export function LanguageField() {
   }, [failedLabel, announce]);
 
   const choose = (next: string) => {
-    if (next === failedTag) {
+    if (next === failedTag && settings.language === next) {
       languageLoad?.retry();
       return;
     }
