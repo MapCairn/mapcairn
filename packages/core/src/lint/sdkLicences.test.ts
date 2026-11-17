@@ -97,6 +97,14 @@ function pkg(license: string | undefined, extra: Entry = {}): Entry {
 }
 
 describe("isLicenceAllowed", () => {
+  it("accepts lower-case operators", () => {
+    expect(isLicenceAllowed("gpl-3.0-only or mit", ALLOWED)).toBe(true);
+    expect(isLicenceAllowed("mit and gpl-3.0-only", ALLOWED)).toBe(false);
+    expect(isLicenceAllowed("apache-2.0 with llvm-exception", ALLOWED)).toBe(
+      true,
+    );
+  });
+
   it("accepts a listed identifier regardless of case", () => {
     expect(isLicenceAllowed("MIT", ALLOWED)).toBe(true);
     expect(isLicenceAllowed("apache-2.0", ALLOWED)).toBe(true);
@@ -150,6 +158,8 @@ describe("isLicenceAllowed", () => {
       "AND MIT",
       "MIT WITH",
       "()",
+      "MIT MIT",
+      "MIT OR ISC GPL-3.0-only",
     ]) {
       expect(isLicenceAllowed(text, ALLOWED)).toBe(false);
     }
@@ -331,6 +341,52 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toHaveLength(1);
+    expect(report.checked).toBe(3);
+  });
+
+  it("follows the peer dependencies of a transitive package", () => {
+    const report: Report = checkSdkLicences(
+      fixture(
+        { a: "1.0.0" },
+        {
+          "node_modules/a": pkg("MIT", { peerDependencies: { p: "^1" } }),
+          "node_modules/p": pkg("GPL-3.0-only"),
+        },
+      ),
+    );
+    expect(report.failures.map((f) => f.name)).toEqual(["p"]);
+    expect(report.checked).toBe(2);
+  });
+
+  it("skips an optional peer and a peer the lockfile does not hold", () => {
+    const report: Report = checkSdkLicences(
+      fixture(
+        { a: "1.0.0" },
+        {
+          "node_modules/a": pkg("MIT", {
+            peerDependencies: { p: "^1", q: "^1" },
+            peerDependenciesMeta: { p: { optional: true } },
+          }),
+          "node_modules/p": pkg("GPL-3.0-only"),
+        },
+      ),
+    );
+    expect(report.failures).toEqual([]);
+    expect(report.checked).toBe(1);
+  });
+
+  it("walks a link to a workspace that is not an SDK package", () => {
+    const report: Report = checkSdkLicences(
+      fixture(
+        { host: "1.0.0" },
+        {
+          "node_modules/host": { resolved: "packages/web", link: true },
+          "packages/web": { name: "host", dependencies: { c: "1.0.0" } },
+          "node_modules/c": pkg("GPL-3.0-only"),
+        },
+      ),
+    );
+    expect(report.failures.map((f) => f.name)).toEqual(["c"]);
   });
 });
 
@@ -367,6 +423,7 @@ describe("reportLines", () => {
     expect(text).toContain("CC-BY-NC-4.0");
     expect(text).toContain("@mapcairn/map");
     expect(text).toContain(ALLOWLIST_FILE);
+    expect(text).toContain("ask the maintainer");
   });
 });
 
@@ -421,6 +478,14 @@ describe("scripts/sdkLicences.mjs, run as a command", () => {
     expect(result.stderr).toContain("a@1.2.3");
     expect(result.stderr).toContain("CC-BY-NC-4.0");
     expect(result.stderr).toContain(ALLOWLIST_FILE);
+  });
+
+  it("exits 1 with a message when --root has no value", () => {
+    const result = spawnSync(process.execPath, [SCRIPT, "--root"], {
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("could not run");
   });
 
   it("exits 1, not 0, when the files cannot be read", () => {

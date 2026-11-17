@@ -17,8 +17,10 @@
  * and each package's licence).
  *
  * What is checked, and what is not:
- * - `dependencies` and `optionalDependencies`, followed down the whole tree,
- *   fail when the licence is not allowed. An optional dependency that the
+ * - `dependencies`, `optionalDependencies` and, for every package that is not
+ *   an SDK package, its required `peerDependencies` that the lockfile holds
+ *   (npm installs them, so they ship), followed down the whole tree, fail when
+ *   the licence is not allowed. An optional dependency that the
  *   lockfile does not hold (it is for another platform) is skipped.
  * - `peerDependencies` and `devDependencies` of the SDK packages are listed and
  *   never fail: a peer is the host's own choice, and a dev dependency is not
@@ -233,7 +235,7 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
     if (entry.link) {
       const target = packages[entry.resolved];
       if (target !== undefined && !SDK_PACKAGE_PATHS.includes(entry.resolved)) {
-        walk(entry.resolved, target, requiredBy);
+        walk(entry.resolved, target, requiredBy, true);
       }
       return;
     }
@@ -252,19 +254,39 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
         requiredBy,
       });
     }
-    walk(key, entry, requiredBy);
+    walk(key, entry, requiredBy, true);
   };
 
-  /** @param {string} from @param {Record<string, any>} source @param {string} requiredBy */
-  const walk = (from, source, requiredBy) => {
+  /**
+   * Visits what `source` needs. `followPeers` is false only for an SDK
+   * package's own manifest, whose peers are the host's choice; for any other
+   * package npm installs its required peers, so they ship and are judged.
+   *
+   * @param {string} from @param {Record<string, any>} source
+   * @param {string} requiredBy @param {boolean} followPeers
+   */
+  const walk = (from, source, requiredBy, followPeers) => {
     const optional = Object.keys(source.optionalDependencies ?? {});
-    const names = [...Object.keys(source.dependencies ?? {}), ...optional];
+    const optionalPeers = Object.entries(source.peerDependenciesMeta ?? {})
+      .filter(([, meta]) => meta?.optional)
+      .map(([name]) => name);
+    const peerNames = followPeers
+      ? Object.keys(source.peerDependencies ?? {}).filter(
+          (name) => !optionalPeers.includes(name),
+        )
+      : [];
+    const names = [
+      ...Object.keys(source.dependencies ?? {}),
+      ...optional,
+      ...peerNames,
+    ];
     for (const name of names) {
       const key = resolveKey(packages, from, name);
       if (key !== undefined) {
         visit(key, requiredBy);
       } else if (
         !optional.includes(name) &&
+        !peerNames.includes(name) &&
         !absent.has(`${requiredBy}/${name}`)
       ) {
         absent.add(`${requiredBy}/${name}`);
@@ -283,7 +305,7 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
     const label = manifest.name ?? path;
     peers[label] = Object.keys(manifest.peerDependencies ?? {});
     dev[label] = Object.keys(manifest.devDependencies ?? {});
-    walk(path, manifest, label);
+    walk(path, manifest, label, false);
   }
 
   const checked = [...seen].filter((key) => !packages[key].link).length;
@@ -298,7 +320,7 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
  * @returns {string}
  */
 export function describeFailure({ name, version, licence, requiredBy }) {
-  return `${name}@${version} (needed by ${requiredBy}) is licensed ${licence}, which is not on the allowlist. If it allows commercial use and carries no terms of its own, add it to "packages" in ${ALLOWLIST_FILE} with the reason; otherwise remove or replace the dependency.`;
+  return `${name}@${version} (needed by ${requiredBy}) is licensed ${licence}, which is not on the allowlist. If it allows commercial use and carries no terms of its own, ask the maintainer to add it to "packages" in ${ALLOWLIST_FILE} with the reason; otherwise remove or replace the dependency.`;
 }
 
 /**
@@ -358,13 +380,16 @@ export function checkCheckout(root) {
 
 /** Prints the report and sets the exit code. */
 function main() {
-  const rootFlag = process.argv.indexOf("--root");
-  const root =
-    rootFlag === -1
-      ? fileURLToPath(new URL("..", import.meta.url))
-      : resolve(process.argv[rootFlag + 1]);
   let report;
   try {
+    const rootFlag = process.argv.indexOf("--root");
+    if (rootFlag !== -1 && process.argv[rootFlag + 1] === undefined) {
+      throw new Error("--root needs a directory");
+    }
+    const root =
+      rootFlag === -1
+        ? fileURLToPath(new URL("..", import.meta.url))
+        : resolve(process.argv[rootFlag + 1]);
     report = checkCheckout(root);
   } catch (error) {
     console.error(`sdk licences: the check could not run: ${error.message}`);
