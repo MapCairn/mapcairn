@@ -1,6 +1,6 @@
 # Roadmap
 
-_Last reviewed: 2026-11-16. Reviewed every year, and sooner when a decision below changes._
+_Last reviewed: 2026-11-17. Reviewed every year, and sooner when a decision below changes._
 
 This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
 
@@ -20,7 +20,6 @@ Two tracks share the list. **SDK** is the goal in "Direction": what a team needs
 2. **Site, #117, #118 and #119.** Highlight selected features, the Selection panel and select mode. The selection port and hook are built, and nothing in the interface uses them yet.
 3. **SDK, #24 and then #43.** The engine adapter in its own package. It is the first step for a team that wants to embed the map without copying the reference host.
 4. **Site, #126 and #127.** Identify on raster layers: the tap, the key press and the guide. The core is built.
-5. **SDK, #198.** A small check that every SDK dependency allows commercial use, in place before packages are published.
 
 ### Next
 
