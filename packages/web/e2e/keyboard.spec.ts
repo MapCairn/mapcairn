@@ -145,7 +145,7 @@ test.describe("keyboard map controls", () => {
     await expectHashView(mapPage, (view) => view.bearing === 15);
     await expect(mapPage.compassButton).toBeVisible();
     await expect(mapPage.region).toHaveAccessibleDescription(
-      /Shift with left or right arrow: rotate the map./,
+      /Rotate the map \(Shift with left or right arrow\)\./,
     );
   });
 });

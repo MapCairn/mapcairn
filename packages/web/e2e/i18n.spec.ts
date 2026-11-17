@@ -49,6 +49,15 @@ test.describe("with Afrikaans chosen", () => {
     ).toBeVisible();
   });
 
+  test("the map region describes its keyboard controls in Afrikaans", async ({
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await expect(mapPage.region).toHaveAccessibleDescription(
+      /Skuif die kaart \(Pyltjies\)\..*Plaas 'n speld in die middel van die kaart \(P\)\./,
+    );
+  });
+
   test("shows the host's privacy note in Afrikaans", async ({ mapPage }) => {
     await mapPage.goto();
     await mapPage.openSettings();
