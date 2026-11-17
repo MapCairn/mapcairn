@@ -804,7 +804,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "keyHelp.draw.undo": "Undo; add Shift to redo",
   "keyHelp.draw.escape":
     "Step back: leave a point, cancel the shape, then close drawing",
-  "host.map.keyInstruction": "{description} ({keys}).",
+  "host.map.keyInstruction": "{keys}: {description}.",
   "host.notes.privacy":
     "MapCairn has no accounts, sets no cookies and counts page views without tracking you. Map tiles come from the map provider you choose. As you type in search, the text so far is sent to the Photon service, run by komoot, to suggest places. Pressing Enter or Search sends your query to OpenStreetMap's Nominatim service, and Look up address on a pin sends the pin's position, to about 11 m, to Nominatim too. Nothing is sent to either service until you type in search or ask for an address, and a pair of coordinates typed in search is not sent to them, though showing the place loads map tiles for that area, as any move of the map does. A data layer contacts its provider only while it is on. Your settings stay on this device.",
   "host.notes.pinLookup":

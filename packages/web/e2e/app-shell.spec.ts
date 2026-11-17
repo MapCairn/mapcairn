@@ -66,7 +66,7 @@ test.describe("app shell", () => {
     await mapPage.goto();
 
     await expect(mapPage.region).toHaveAccessibleDescription(
-      /Pan the map \(Arrow keys\)\..*Drop a pin at the centre of the map \(P\)\..*Close the open panel \(Escape\)\./,
+      /Arrow keys: Pan the map\..*P: Drop a pin at the centre of the map\..*Escape: Close the open panel\./,
     );
   });
 

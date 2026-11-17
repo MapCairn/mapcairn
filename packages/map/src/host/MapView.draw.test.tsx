@@ -92,8 +92,8 @@ describe("MapView key help", () => {
     });
     const helpId = host.getAttribute("aria-describedby") ?? "";
     const text = document.getElementById(helpId)?.textContent ?? "";
-    expect(text).toContain("Pan the map (Arrow keys).");
-    expect(text).toContain("Finish the shape (Enter).");
+    expect(text).toContain("Arrow keys: Pan the map.");
+    expect(text).toContain("Enter: Finish the shape.");
   });
 
   it("keeps the map's help when the extra list is empty", async () => {

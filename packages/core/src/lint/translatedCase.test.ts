@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 const PACKAGES = path.resolve(__dirname, "../../..");
 const SOURCE_FILE = /\.tsx?$/;
 const TEST_FILE = /\.(test|spec|stories)\.tsx?$/;
+// Matches comments and strings too, on purpose: a mention of these is a sign
+// that someone is about to re-case text.
 const LANGUAGE_CASE_CHANGE = /toLocale(Lower|Upper)Case|lowerFirst|upperFirst/;
 
 /** Every non-test source file under `packages/<name>/src`. */
@@ -36,7 +38,9 @@ function sourceFiles(): string[] {
 
 describe("translated text", () => {
   it("is never re-cased in code, because a language decides where a capital belongs", () => {
-    const offenders = sourceFiles()
+    const files = sourceFiles();
+    expect(files.length).toBeGreaterThan(0);
+    const offenders = files
       .filter((file) => LANGUAGE_CASE_CHANGE.test(readFileSync(file, "utf8")))
       .map((file) => path.relative(PACKAGES, file));
     expect(offenders).toEqual([]);

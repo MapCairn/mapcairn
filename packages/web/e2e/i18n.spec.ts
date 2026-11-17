@@ -54,7 +54,7 @@ test.describe("with Afrikaans chosen", () => {
   }) => {
     await mapPage.goto();
     await expect(mapPage.region).toHaveAccessibleDescription(
-      /Skuif die kaart \(Pyltjies\)\..*Plaas 'n speld in die middel van die kaart \(P\)\./,
+      /Pyltjies: Skuif die kaart\..*P: Plaas 'n speld in die middel van die kaart\./,
     );
   });
 

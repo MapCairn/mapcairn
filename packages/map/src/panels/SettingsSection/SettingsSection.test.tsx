@@ -464,6 +464,19 @@ describe("privacy", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows no statement when the host passes null, not the default", () => {
+    renderSettings({ props: { privacyNote: null } });
+    expect(screen.getByTestId("settings-privacy-note")).toBeEmptyDOMElement();
+    expect(screen.queryByText(DEFAULT_PRIVACY_NOTE)).toBeNull();
+  });
+
+  it("shows the default when the host passes undefined", () => {
+    renderSettings({ props: { privacyNote: undefined } });
+    expect(screen.getByTestId("settings-privacy-note")).toHaveTextContent(
+      DEFAULT_PRIVACY_NOTE,
+    );
+  });
+
   it("keeps the policy link under a host's note", () => {
     renderSettings({ props: { privacyNote: "Host note." } });
     expect(

@@ -192,8 +192,8 @@ describe("mounting and accessibility", () => {
     const describedBy = region.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
     const help = document.getElementById(describedBy as string);
-    expect(help?.textContent).toMatch(/Pan the map \(Arrow keys\)\./);
-    expect(help?.textContent).toMatch(/Zoom in or out \(Plus or minus\)\./);
+    expect(help?.textContent).toMatch(/Arrow keys: Pan the map\./);
+    expect(help?.textContent).toMatch(/Plus or minus: Zoom in or out\./);
   });
 
   it("includes rotation and pointing north in the instructions", async () => {
@@ -201,8 +201,8 @@ describe("mounting and accessibility", () => {
     const help = document.getElementById(
       host().getAttribute("aria-describedby") as string,
     )?.textContent;
-    expect(help).toMatch(/Rotate the map \(Shift with left or right arrow\)\./);
-    expect(help).toMatch(/Point the map north again \(Home or 0\)\./);
+    expect(help).toMatch(/Shift with left or right arrow: Rotate the map\./);
+    expect(help).toMatch(/Home or 0: Point the map north again\./);
   });
 
   it("writes the instructions from the catalogue, keys and plain host lines alike", async () => {
@@ -213,7 +213,7 @@ describe("mounting and accessibility", () => {
           overrides: {
             "keyHelp.keys.arrowKeys": "Pyltoetse",
             "keyHelp.map.pan": "Skuif die kaart",
-            "host.map.keyInstruction": "{description} - {keys}.",
+            "host.map.keyInstruction": "{keys} - {description}.",
           },
         }),
       }),
@@ -221,8 +221,8 @@ describe("mounting and accessibility", () => {
     const help = document.getElementById(
       host().getAttribute("aria-describedby") as string,
     )?.textContent;
-    expect(help).toContain("Skuif die kaart - Pyltoetse.");
-    expect(help).toContain("Host extra - Space.");
+    expect(help).toContain("Pyltoetse - Skuif die kaart.");
+    expect(help).toContain("Space - Host extra.");
   });
 
   it("keeps the case of a description that a language capitalises mid-sentence", async () => {
@@ -233,7 +233,7 @@ describe("mounting and accessibility", () => {
           language: "de",
           overrides: {
             "keyHelp.map.pan": "Die Karte verschieben",
-            "host.map.keyInstruction": "{description} mit {keys}.",
+            "host.map.keyInstruction": "{keys}: {description}.",
           },
         }),
       }),
@@ -241,7 +241,7 @@ describe("mounting and accessibility", () => {
     const help = document.getElementById(
       host().getAttribute("aria-describedby") as string,
     )?.textContent;
-    expect(help).toContain("Die Karte verschieben mit Arrow keys.");
+    expect(help).toContain("Arrow keys: Die Karte verschieben.");
   });
 
   it("mounts the adapter into a child element with the initial view, basemap, motion preference and Save data", async () => {

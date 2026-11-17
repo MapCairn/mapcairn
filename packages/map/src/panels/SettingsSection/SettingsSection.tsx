@@ -87,8 +87,9 @@ export interface SettingsSectionProps {
   /**
    * The host's privacy statement, shown under the Privacy heading. Defaults to
    * the catalogue's `settings.privacy.default`, which names no provider because
-   * the SDK does not know which services a host uses. A host names its own providers here and says
-   * what it sends to each. Phrasing content only: it sits inside a paragraph.
+   * the SDK does not know which services a host uses. A host names its own
+   * providers here and says what it sends to each. `null` or an empty string
+   * shows no statement. Phrasing content only: it sits inside a paragraph.
    */
   readonly privacyNote?: ReactNode;
   /** Receives the heading, so the sheet can focus it. */
@@ -124,6 +125,8 @@ export function SettingsSection({
     ? settings.language
     : null;
   const subLevel = nextHeadingLevel(headingLevel);
+  const privacyStatement =
+    privacyNote === undefined ? t("settings.privacy.default", {}) : privacyNote;
   const themeLabel = t("settings.theme.label", {});
   const unitsLabel = t("settings.units.label", {});
   const mapShapeLabel = t("settings.mapShape.label", {});
@@ -215,7 +218,7 @@ export function SettingsSection({
           {t("settings.privacy.heading", {})}
         </Subheading>
         <p className={prose} data-testid="settings-privacy-note">
-          {privacyNote ?? t("settings.privacy.default", {})}
+          {privacyStatement}
         </p>
         <p className={prose}>
           <a className={link} href={privacyHref}>

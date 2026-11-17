@@ -95,7 +95,9 @@ export interface MapViewProps {
   readonly onKeyCommand?: (event: KeyboardEvent<HTMLElement>) => boolean;
   /**
    * Extra lines for the hidden keyboard instructions, after the map's own,
-   * for the keys a tool adds while it is open.
+   * for the keys a tool adds while it is open. Descriptions are used as
+   * written, so write each as a complete sentence without a trailing full
+   * stop.
    */
   readonly keyHelp?: readonly MapKeyHelpEntry[];
   /** Defaults to `grab`. */
@@ -118,9 +120,8 @@ export interface MapViewProps {
 
 /**
  * The hidden keyboard instructions, as plain sentences in the catalogue's
- * language: each line is "description (keys)." by default, with the catalogue's
- * own wording for where the description and the keys fall, so no language has
- * to change the case of a description.
+ * language: each line is "keys: description." by default. The description is
+ * used exactly as the catalogue wrote it, so no code changes its case.
  */
 function keyboardInstructions(
   messages: MessageCatalogue,
