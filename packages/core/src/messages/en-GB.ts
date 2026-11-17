@@ -811,4 +811,8 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
     "Sends the pin's position, to about 11 m, to OpenStreetMap's Nominatim service.",
   "host.notes.routing":
     "Nothing is sent until you ask. Get route sends the stops and the way of travelling, and a travel time area sends the first stop, with your IP address, to the Valhalla routing service run by FOSSGIS. It uses OpenStreetMap data.",
+  "host.about.heading": "About",
+  "host.about.text":
+    "This site is open source software, released under the AGPL-3.0 licence.",
+  "host.about.link": "View the source code and licence on GitHub",
 };

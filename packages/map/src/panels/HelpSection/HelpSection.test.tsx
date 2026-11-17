@@ -145,6 +145,54 @@ describe("HelpSection", () => {
   });
 });
 
+describe("the host's About block", () => {
+  const about = {
+    heading: "About this map",
+    text: "Open source, released under a licence.",
+    link: { href: "https://example.org/source", label: "Read the source" },
+  };
+
+  function renderAbout(props: { about?: typeof about } = {}) {
+    const services = createFakeServices();
+    return render(
+      <ServicesProvider services={services}>
+        <HelpSection {...props} />
+      </ServicesProvider>,
+    );
+  }
+
+  it("shows the host's heading, text and a link that opens in a new tab", () => {
+    renderAbout({ about });
+    const block = within(screen.getByTestId("help-about"));
+    expect(
+      block.getByRole("heading", { name: "About this map", level: 4 }),
+    ).toBeInTheDocument();
+    expect(block.getByText(about.text)).toBeInTheDocument();
+    const link = block.getByRole("link", {
+      name: "Read the source (opens in a new tab)",
+    });
+    expect(link).toHaveAttribute("href", about.link.href);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("sits below the other Help sections", () => {
+    renderAbout({ about });
+    const region = screen.getByTestId("sheet-section-help");
+    const headings = within(region)
+      .getAllByRole("heading", { level: 4 })
+      .map((heading) => heading.textContent);
+    expect(headings.at(-1)).toBe("About this map");
+    expect(headings).toContain("Accessibility");
+  });
+
+  it("shows nothing when the host passes none", () => {
+    renderAbout();
+    expect(screen.queryByTestId("help-about")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+});
+
 describe("message catalogue", () => {
   it("asks for its text and headings by key", () => {
     const { services } = renderHelp({ onStartTour: () => undefined });

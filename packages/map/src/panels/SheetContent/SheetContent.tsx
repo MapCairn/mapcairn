@@ -8,7 +8,7 @@ import { useMessages, usePreferences } from "../../services";
 import { drawingForImage, type UseDraw } from "../../tools/DrawToolbar";
 import { BasemapPicker } from "../BasemapPicker";
 import { ExportSection } from "../ExportSection";
-import { HelpSection } from "../HelpSection";
+import { type HelpAbout, HelpSection } from "../HelpSection";
 import { PinSection } from "../PinSection";
 import { Section } from "../Section";
 import { SettingsSection } from "../SettingsSection";
@@ -60,6 +60,8 @@ export interface SheetContentProps {
   readonly privacyNote?: ReactNode;
   /** Starts the first-visit tour from Help. Without it Help offers no tour. */
   readonly onStartTour?: () => void;
+  /** The host's About block for Help. Without it Help has none. */
+  readonly about?: HelpAbout;
 }
 
 /**
@@ -84,6 +86,7 @@ export function SheetContent({
   privacyHref,
   privacyNote,
   onStartTour,
+  about,
 }: SheetContentProps) {
   const { reducedMotion } = usePreferences();
   const { t } = useMessages();
@@ -122,6 +125,7 @@ export function SheetContent({
         <HelpSection
           headingRef={headingRef("help")}
           onStartTour={onStartTour}
+          about={about}
         />
       </div>
     );

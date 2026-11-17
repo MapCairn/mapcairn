@@ -262,6 +262,32 @@ describe("SheetContent pin, settings and help", () => {
     renderContent({ props: { section: "help" } });
     expect(screen.getByText("Rotate the map")).toBeInTheDocument();
   });
+
+  it("passes the host's About block to Help", () => {
+    renderContent({
+      props: {
+        section: "help",
+        about: {
+          heading: "About this map",
+          text: "Open source.",
+          link: {
+            href: "https://example.org/source",
+            label: "Read the source",
+          },
+        },
+      },
+    });
+    expect(
+      within(screen.getByTestId("help-about")).getByRole("link", {
+        name: /Read the source/,
+      }),
+    ).toHaveAttribute("href", "https://example.org/source");
+  });
+
+  it("shows no About block when the host passes none", () => {
+    renderContent({ props: { section: "help" } });
+    expect(screen.queryByTestId("help-about")).toBeNull();
+  });
 });
 
 describe("SheetContent section focus", () => {
