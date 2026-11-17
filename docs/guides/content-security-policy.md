@@ -21,7 +21,7 @@ Besides the policy itself the host sends `X-Frame-Options: DENY`, `X-Content-Typ
 Three kinds of source, each for a reason:
 
 - `'self'`, for the app's own scripts, which the build emits as files.
-- One exact `sha256-` hash, for the single inline script the host runs: the theme bootstrap, which sets the theme before the page hydrates so it does not flash (`root.tsx`, source in `src/app/themeBootstrap.ts`). Its hash is written into both copies of the policy, and a test recomputes it whenever the script's source changes (`securityHeaders.ts`). Any other inline script needs its own hash or a nonce; production permits no `'unsafe-inline'`.
+- One exact `sha256-` hash, for the single inline script the host runs: the theme bootstrap, which sets the theme before the page hydrates so it does not flash (`root.tsx`, source in `src/app/themeBootstrap.ts`). Its hash is written into both copies of the policy, and a test recomputes it from the script's source and fails when either copy is stale (`themeBootstrap.test.ts`). Any other inline script needs its own hash or a nonce; production permits no `'unsafe-inline'`.
 - The script origin of any third-party script the host chooses to run. The reference host allows only its analytics beacon's script origin; a host without analytics has no entry for a third-party script.
 
 In development the policy is relaxed in `style-src` and `connect-src` by the `development` option of `buildContentSecurityPolicy`, because the Vite dev server injects its own styles and opens a hot-reload socket. Production never sets it (`securityHeaders.ts`).
@@ -76,17 +76,28 @@ A host that renders only in the browser needs no nonce. Its scripts are all file
 
 ## Building the policy from your definitions
 
-Work from what the host offers, in this order:
+`examples/embed/src/contentSecurityPolicy.ts` builds the header from the basemaps and layers a host offers, and `contentSecurityPolicy.test.ts` beside it shows what each kind of definition adds. `buildContentSecurityPolicy({ basemaps, layers, connectOrigins, scriptSources })` returns the policy string. It reads each origin from the definition with the SDK's own functions (`feedUrl`, `tileUrl` and `identifyUrl` from `@mapcairn/core`), so a definition that is added to the host's list adds its origins, and an origin nothing asks for never reaches the policy. The reference host does not use it: its policy is the string in `securityHeaders.ts`, and its loop test checks the definitions against that string.
 
-1. Start from the shape above: `default-src 'self'`, the closing set, and `'self'` in every list.
-2. Add the hash or nonce your inline scripts need.
-3. For each basemap: its tile origin in `img-src` and `connect-src`, and every host its style requests in `connect-src`.
-4. For each layer: its tile origin in `img-src` and `connect-src`, and its feed, detail and identify origins in `connect-src`.
-5. For each adapter: its origin in `connect-src`.
-6. Keep the policy in the two places it is served from, and keep them in step with a test, as the reference host does (`securityHeaders.ts`).
+What the function adds, by definition:
 
-Then test it. The reference host's loop test checks its own definitions against its own policy (`layers.test.ts`); a host's check is the host's own, and a host needs a test that its policy lists the origins its definitions request ([`serving-layers.md`](serving-layers.md)). Last, load the page with the browser console open: a policy that misses an origin says so there, with the directive to add it to.
+- A raster basemap's tile origin, in `img-src` and `connect-src`. A hybrid basemap's tile origin and its label style's origin the same way.
+- A vector basemap's style origin, in `img-src` and `connect-src`, as the reference host's policy has `https://tiles.openfreemap.org` (`securityHeaders.ts`, `builtInBasemaps.test.ts`).
+- A feed or query layer's feed origin and its detail origins, in `connect-src`.
+- A tile layer's tile origin in `img-src` and `connect-src`, and the origin of its `identify` request in `connect-src`.
+
+A definition names only the first host a request goes to, and a host's adapters are not definitions at all, so two kinds of origin are yours to pass in `connectOrigins`. Each must be a bare `https` origin (no path, wildcard or trailing slash), and the function throws on anything else, on a definition URL that is not `https` or has a placeholder in its host, and on a script source holding a semicolon, comma or space:
+
+- The hosts a vector style requests for its sprites, glyphs and tile sets. Read the style and its tile sets for them, as [`extending.md`](extending.md) says.
+- The origin of each adapter: place search, suggestions and routing. In the reference host these are written in the adapters' own code (`NominatimSearchProvider.ts`, `PhotonSuggestionProvider.ts`, `ValhallaRoutingProvider.ts`), not in a definition.
+
+The rest is fixed in the function, as the sections above describe it: `default-src 'self'`, `'self'` in every list, no inline style, the worker from `'self' blob:` and the closing set. Whatever inline scripts your page runs go in `scriptSources` as a hash or a nonce, and the function adds no analytics or other third-party origin on its own.
+
+Offer only what the page uses: the policy follows the list you pass. The SDK's `BASEMAPS` includes a basemap served from `tiles.versatiles.org`, and the reference host's policy leaves that origin out because the host does not offer that basemap (`securityHeaders.test.ts`).
+
+Two limits. If the policy is served from more than one place, as the reference host's is (`_headers` and the Worker), keep the copies in step with a test, as it does (`securityHeaders.test.ts`). And the function takes the definitions as they are at the time it is called, so a catalogue that loads layers at runtime ([`serving-layers.md`](serving-layers.md)) needs the policy built after the layers are known, or the layers' origins listed ahead of time.
+
+Then test it. The reference host's loop test checks its own definitions against its own policy (`layers.test.ts`); a host needs its own test that its policy lists the origins its definitions request ([`serving-layers.md`](serving-layers.md)), and building the policy from the same definitions, as above, is one way to make that test hold by construction. Last, load the page with the browser console open: a policy that misses an origin says so there, with the directive to add it to.
 
 ## What this guide does not say
 
-It was written from the repository's own files, named beside each claim above, and from the engine's source for the engine's internal behaviour it names: the `data:` and `blob:` image loads, the blob worker, and the fetching done inside the worker, glyph ranges included. The sentences about what breaks when a directive is missing were reasoned from the adapter's code and the tests, not checked in a browser. No page was loaded under a policy while writing it, and none of the origin lists is reproduced here: read your own policy from your own files.
+It was written from the repository's own files, named beside each claim above, and from the engine's source for the engine's internal behaviour it names: the `data:` and `blob:` image loads, the blob worker, and the fetching done inside the worker, glyph ranges included. The sentences about what breaks when a directive is missing were reasoned from the adapter's code and the tests, not checked in a browser. No page was loaded under a policy while writing it, and none of the origin lists is reproduced here: read your own policy from your own files. The function in `examples/embed` is covered by unit tests on the strings it builds; a page was not loaded under its output.

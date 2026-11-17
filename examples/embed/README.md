@@ -19,3 +19,7 @@ The example's layers come from a runtime layer catalogue, built by `createExampl
 | `src/mapServerLayers.ts`    | The sample mapper: server metadata to layer definitions. Read [Supply layers at runtime](../../docs/guides/extending.md#supply-layers-at-runtime) for what it maps.                         |
 
 One of the four sample layers, `survey-notes`, has no text field to title a feature with, so the catalogue skips it and the example logs the reason to the console, one line with the path of each problem.
+
+## Content Security Policy
+
+`src/contentSecurityPolicy.ts` builds a strict Content-Security-Policy header from the basemaps and layers a host offers, reading each origin from the definitions with `@mapcairn/core`. The example page does not send it, because the example requests nothing. [`docs/guides/content-security-policy.md`](../../docs/guides/content-security-policy.md) says what it adds and what a host passes in itself.

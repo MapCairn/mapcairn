@@ -32,7 +32,7 @@ Two tracks share the list. **SDK** is the goal in "Direction": what a team needs
 6. **Site, #175.** A command palette.
 7. **SDK, #220.** A host can theme the SDK, with contrast checked.
 8. **Site, #183.** Clustering for dense point layers.
-9. **SDK, #230 and #221.** The guide to the Content Security Policy a host needs, and the guide to serving the bundle from a Windows web server and server-rendered pages.
+9. **SDK, #221.** The guide to serving the bundle from a Windows web server and server-rendered pages.
 10. **Site, #71 and #213.** Finish the map key, and stop the credits popover jumping.
 11. **SDK, #232 and #184.** Two small guides: open service standards, and a custom search provider.
 12. **Site, #229.** Say once when the device is offline.
