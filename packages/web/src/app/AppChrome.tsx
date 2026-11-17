@@ -32,6 +32,7 @@ import { ROUTING_CREDITS } from "../constants/routingCredits";
 import { AppReadout } from "./AppReadout";
 import { AppTour } from "./AppTour";
 import { Brand } from "./Brand";
+import { helpAbout } from "./helpAbout";
 import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
 import { bottomCentre } from "./MapBanners.css";
@@ -251,6 +252,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
               onShowOnMap={app.revealMap}
               onStartTour={app.startTour}
               privacyNote={messages.t("host.notes.privacy", {})}
+              about={helpAbout(messages)}
               imageCredits={creditsLine(app.basemap, app.layers.credits)}
               pinCard={
                 app.pin ? (

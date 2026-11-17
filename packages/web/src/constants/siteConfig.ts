@@ -9,6 +9,9 @@
  */
 export const SITE_URL = "https://mapcairn.timothybrits.co.za";
 
+/** The public repository that holds the site's source code, linked from Help. */
+export const SOURCE_REPOSITORY_URL = "https://github.com/MapCairn/mapcairn";
+
 /**
  * The hostname the site had before its name changed. It stays attached to the
  * Worker, which redirects pages on it to {@link SITE_URL}, so the address that
