@@ -117,9 +117,8 @@ afterEach(() => {
 
 const region = () => screen.queryByRole("region", { name: "Map key" });
 
-/** The one button, named the same open and minimised: "Map key, 2 layers". */
-const toggle = () =>
-  screen.getByRole("button", { name: /^Map key, \d+ layers?$/ });
+/** The one button, named the same open and minimised: "Key, 2 layers". */
+const toggle = () => screen.getByRole("button", { name: /^Key, \d+ layers?$/ });
 
 describe("MapKey copy", () => {
   it("asks the catalogue by key, with the layer count as a plural parameter", () => {
@@ -127,17 +126,14 @@ describe("MapKey copy", () => {
       language: "af",
       overrides: {
         "layers.key.title": "Kaartsleutel",
-        "layers.key.toggle":
-          "Kaartsleutel, {count} laag|Kaartsleutel, {count} lae",
+        "layers.key.toggle": "Sleutel, {count} laag|Sleutel, {count} lae",
         "layers.key.nameKey": "{name}-sleutel",
       },
     });
     const { turnOn } = setup({ messages });
     turnOn(SAMPLE_FEED_LAYER.id, SAMPLE_ALERT_LAYER.id);
     expect(screen.getByRole("region", { name: "Kaartsleutel" })).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Kaartsleutel, 2 lae" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sleutel, 2 lae" })).toBeTruthy();
     expect(
       screen.getByRole("list", { name: `${SAMPLE_FEED_LAYER.name}-sleutel` }),
     ).toBeTruthy();
@@ -209,7 +205,7 @@ describe("MapKey", () => {
       const { turnOn } = setup();
       turnOn(SAMPLE_FEED_LAYER.id, SAMPLE_ALERT_LAYER.id);
       const button = toggle();
-      expect(button).toHaveAccessibleName("Map key, 2 layers");
+      expect(button).toHaveAccessibleName("Key, 2 layers");
       expect(button).toHaveAttribute("aria-expanded", "true");
       expect(button).toHaveAttribute(
         "aria-controls",
@@ -220,7 +216,7 @@ describe("MapKey", () => {
       fireEvent.click(button);
 
       expect(toggle()).toBe(button);
-      expect(button).toHaveAccessibleName("Map key, 2 layers");
+      expect(button).toHaveAccessibleName("Key, 2 layers");
       expect(button).toHaveAttribute("aria-expanded", "false");
       expect(button).toHaveTextContent("Key, 2 layers");
       expect(button).toHaveFocus();
@@ -248,15 +244,23 @@ describe("MapKey", () => {
         SAMPLE_HEATMAP_LAYER.id,
         TIMED_LAYER.id,
       );
-      const chip = screen.getByRole("button", { name: "Map key, 4 layers" });
+      const chip = screen.getByRole("button", { name: "Key, 4 layers" });
       // Three glyphs and the chevron.
       expect(chip.querySelectorAll("svg[aria-hidden='true']").length).toBe(4);
+    });
+
+    it("names the button so that it starts with the words the chip shows", () => {
+      const { turnOn } = setup({ props: { defaultMinimised: true } });
+      turnOn(SAMPLE_FEED_LAYER.id, SAMPLE_ALERT_LAYER.id);
+      const visible = toggle().textContent ?? "";
+      expect(visible).not.toBe("");
+      expect(toggle()).toHaveAccessibleName(new RegExp(`^${visible}`));
     });
 
     it("counts one layer in the singular", () => {
       const { turnOn } = setup({ props: { defaultMinimised: true } });
       turnOn(SAMPLE_FEED_LAYER.id);
-      expect(toggle()).toHaveAccessibleName("Map key, 1 layer");
+      expect(toggle()).toHaveAccessibleName("Key, 1 layer");
       expect(toggle()).toHaveTextContent("Key, 1 layer");
     });
 

@@ -120,7 +120,7 @@ export class MapPage {
   readonly undoTurnOffButton: Locator;
   /** The map key: the region named "Map key" over the map, with a block for each layer that has a key. */
   readonly mapKey: Locator;
-  /** The one button that minimises the map key and brings it back, named "Map key, 2 layers" in both states. */
+  /** The one button that minimises the map key and brings it back, named "Key, 2 layers" in both states. */
   readonly mapKeyToggle: Locator;
   /** The map key's slot in the chrome, which is there whether or not a key shows. */
   readonly mapKeySlot: Locator;
