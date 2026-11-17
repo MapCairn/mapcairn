@@ -25,7 +25,7 @@ The areas were drawn up from the public documentation of commercial and open-sou
 | Only the features in view, from a bounding box query, with a cap                   | has     | `QuerySource` (`maxFeatures` 1 to 5000)                                                                                           | none                                   |
 | Raster tiles, including a WMS through a box template                               | has     | `TileSource` (`{z}/{x}/{y}` and `{bbox-epsg-3857}`), `docs/guides/serving-layers.md`                                              | none                                   |
 | Vector tiles styled by source layer                                                | has     | `VectorTileSource`, `docs/guides/extending.md`                                                                                    | none                                   |
-| Worked recipes for OGC API Features, WMS and WMTS endpoints                        | partial | the templates should cover the three, but nothing has tested them and no guide shows them                                         | [#232]                                 |
+| Worked recipes for OGC API Features, WMS and WMTS endpoints                        | has     | `docs/guides/serving-layers.md`, checked in `packages/core/src/layers/openStandards.test.ts`                                      | none                                   |
 | Tiles read from a single-file archive                                              | lacks   | none                                                                                                                              | [#192]                                 |
 | Newer vector tile encodings                                                        | lacks   | none                                                                                                                              | [#197]                                 |
 | Layers supplied at runtime, per user, validated one at a time                      | has     | `createRuntimeLayerCatalogue` and `partitionDefinitions` (steps closed as #94 to #99)                                             | [#46], all its steps merged            |
@@ -232,7 +232,6 @@ This is a proposal, not a promise. It orders the open issues by what unlocks the
 - [#220]: host theming with contrast checks, so the chrome can match another team's look.
 - [#192], [#194], [#195], [#193], [#183]: the performance track for large data, from tile archives and a tile budget to clustering and cards for vector features.
 - [#62], [#176], [#71]: the layer controls a person expects (filters, order and opacity, the key over the map).
-- [#232]: a small guide that shows how to use what exists (open service standards).
 - [#48], [#178]: image export beyond the screen, and printing.
 - [#222], [#225], [#226], [#227]: small, dependency-free additions that fill obvious gaps in measuring, drawing and import.
 - [#229]: small, and it improves every failure message.
@@ -267,7 +266,7 @@ These come from [`ROADMAP.md`](../../ROADMAP.md) ("Non-goals") and [`README.md`]
 A gap is filed only when it is real, small enough to pick up (or says it needs a plan) and not a duplicate. These were left, with the reason, and can be filed when someone needs one.
 
 - **Binary vector files and raster files** (zipped vector sets, GeoPackage, FlatGeobuf, GeoTIFF). Each needs a reader library, which is a decision about a runtime dependency, and several are large. Wait for a named need, then start with a plan.
-- **Reading a service's capabilities document.** A definition is data a host writes on purpose, so the service's own list adds a parser and a trust question for little gain. [#232] will show how to write the definitions by hand.
+- **Reading a service's capabilities document.** A definition is data a host writes on purpose, so the service's own list adds a parser and a trust question for little gain. `docs/guides/serving-layers.md` shows how to write the definitions by hand for OGC API Features, WMS and WMTS.
 - **Custom image icons for points.** The design contract is that colour is never the only signal and that a style names a palette slot, never a value. An image icon would need its own rules for contrast and for a text alternative, so it needs a design decision first.
 - **Bearing and angle measurement.** Low demand, and a small addition to the measure tool once someone asks.
 - **Write-back of edits to a service.** It needs a port with a write method, and no host has asked. [#45] comes first.
@@ -336,4 +335,3 @@ A gap is filed only when it is real, small enough to pick up (or says it needs a
 [#229]: https://github.com/MapCairn/mapcairn/issues/229
 [#230]: https://github.com/MapCairn/mapcairn/issues/230
 [#231]: https://github.com/MapCairn/mapcairn/issues/231
-[#232]: https://github.com/MapCairn/mapcairn/issues/232
