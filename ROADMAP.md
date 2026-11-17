@@ -34,7 +34,7 @@ Two tracks share the list. **SDK** is the goal in "Direction": what a team needs
 8. **Site, #183.** Clustering for dense point layers.
 9. **SDK, #221.** The guide to serving the bundle from a Windows web server and server-rendered pages.
 10. **Site, #71 and #213.** Finish the map key, and stop the credits popover jumping.
-11. **SDK, #232 and #184.** Two small guides: open service standards, and a custom search provider.
+11. **SDK, #232.** A small guide to open service standards.
 12. **Site, #229.** Say once when the device is offline.
 13. **SDK, #192, #194 and #193.** The large-data track: tile archives, a tile budget, and cards for vector features.
 14. **Site, #179.** A side panel with a feature's full details.

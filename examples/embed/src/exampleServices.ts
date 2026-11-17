@@ -15,6 +15,12 @@ import {
 import { CAIRN_FEATURES, CAIRNS_LAYER } from "./cairnsLayer";
 import { mapServerLayers } from "./mapServerLayers";
 import {
+  createPlacesFetch,
+  PlaceSearchProvider,
+  PlaceSuggestionProvider,
+} from "./placeSearch";
+import { SAMPLE_PLACES } from "./samplePlaces";
+import {
   SAMPLE_SERVER_FEATURES,
   SAMPLE_SERVER_LAYERS,
 } from "./sampleServerLayers";
@@ -75,30 +81,28 @@ export function createExampleCatalogue(
 
 /**
  * The services the example runs on: the SDK's fakes, so nothing is requested
- * and no map engine is loaded, with a few scripted answers, the layers of
- * {@link createExampleCatalogue} and a theme source that reaches the page. Its
+ * and no map engine is loaded, with the layers of {@link createExampleCatalogue},
+ * a theme source that reaches the page, and a search provider and a suggestion
+ * provider of its own (`placeSearch.ts`) over a few invented places held in
+ * memory. They run their real request and mapping code against a local
+ * `fetch`, so the search pill, suggestions and fly-to work with no service. Its
  * store of selected features is the `MemoryFeatureSelection` that
  * `createFakeServices` builds; the reference site supplies none. It offers the
  * SDK's built-in basemaps as they are: they name no preview image, so the
  * picker shows each one's plain swatch.
  */
 export function createExampleServices(): Services {
+  const placesFetch = createPlacesFetch(SAMPLE_PLACES);
   const services = createFakeServices({
     theme: new PageThemeSource(),
     layers: createExampleCatalogue(logSkippedLayers),
     routing: undefined,
+    search: new PlaceSearchProvider({ fetch: placesFetch }),
+    suggestions: new PlaceSuggestionProvider({ fetch: placesFetch }),
   });
   services.fakes.layerSource.setFeatures(CAIRNS_LAYER.id, CAIRN_FEATURES);
   for (const [id, features] of Object.entries(SAMPLE_SERVER_FEATURES)) {
     services.fakes.layerSource.setFeatures(id, features);
   }
-  services.fakes.search.setDefaultResults([
-    {
-      id: "example-cairn",
-      label: "Example cairn",
-      secondaryLabel: "A scripted search result",
-      centre: { lat: 57.05, lng: -3.65 },
-    },
-  ]);
   return services;
 }
