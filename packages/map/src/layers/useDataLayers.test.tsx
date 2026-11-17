@@ -18,23 +18,37 @@ import {
 } from "@mapcairn/core";
 import { act, renderHook, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../services";
 import { LiveRegionProvider } from "../ui/LiveRegion";
-import { CLEAR_MS, THROTTLE_MS } from "../ui/LiveRegion/announcer";
 import { type UseDataLayersOptions, useDataLayers } from "./useDataLayers";
 
 const NOW = Date.UTC(2026, 10, 9, 12);
+/**
+ * Fake time stepped past the announcer's windows, long enough for every queued
+ * message to be spoken. The clock is faked, so this costs no real time.
+ */
+const ANNOUNCER_SETTLE_MS = 5_000;
 const polite = () => screen.getByTestId("live-region-polite").textContent;
 const assertive = () => screen.getByTestId("live-region-assertive").textContent;
 /** Lets the announcer's throttle and clear timers run out, so a message that should not come has had its chance. */
 const settleAnnouncer = () =>
-  act(
-    () =>
-      new Promise<void>((done) =>
-        setTimeout(done, THROTTLE_MS + CLEAR_MS + 50),
-      ),
-  );
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(ANNOUNCER_SETTLE_MS);
+  });
+/**
+ * Fakes the clock the announcer spaces its messages with, before the hook
+ * mounts, so the test steps past those windows with `settleAnnouncer`. Testing
+ * Library's `waitFor` never times out on a faked clock, so a test that uses this
+ * waits with `settleAnnouncer` instead.
+ */
+function fakeAnnouncerClock() {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function setup(
   options: UseDataLayersOptions = {},
@@ -638,16 +652,14 @@ describe("useDataLayers", () => {
     });
 
     it("announces the zoom a vector tile layer needs", async () => {
+      fakeAnnouncerClock();
       const { result } = vector();
       act(() => result.current.setEnabled(districts, true));
       act(() => result.current.setView(AREA, 19));
       // The layer's own "is on" goes first and is kept, so this waits its turn.
-      await waitFor(
-        () =>
-          expect(polite()).toBe(
-            "Sample districts: zoom out below level 18 to see this layer.",
-          ),
-        { timeout: THROTTLE_MS * 4 },
+      await settleAnnouncer();
+      expect(polite()).toBe(
+        "Sample districts: zoom out below level 18 to see this layer.",
       );
     });
 
@@ -889,6 +901,7 @@ describe("useDataLayers", () => {
   });
 
   describe("tile layers with no imagery", () => {
+    beforeEach(fakeAnnouncerClock);
     const IMAGERY_TILES = "https://tiles.test/2026-11-08/{z}/{y}/{x}.jpg";
     const PLAIN_LAYER: LayerDefinition = {
       ...SAMPLE_TILE_LAYER,
@@ -911,10 +924,9 @@ describe("useDataLayers", () => {
       expect(layer(result, "sample-imagery").status).toEqual({
         kind: "tiles-unavailable",
       });
-      await waitFor(() =>
-        expect(polite()).toBe(
-          "Sample imagery: No imagery was found for 8 November 2026. Try another.",
-        ),
+      await settleAnnouncer();
+      expect(polite()).toBe(
+        "Sample imagery: No imagery was found for 8 November 2026. Try another.",
       );
       expect(assertive()).toBe("");
     });
@@ -928,10 +940,9 @@ describe("useDataLayers", () => {
           "https://tiles.test/rain/2026-11-09T06%3A00%3A00Z/{z}/{y}/{x}.png",
         ),
       );
-      await waitFor(() =>
-        expect(polite()).toBe(
-          "Sample rain: No imagery was found for 06:00 UTC on 9 November 2026. Try another.",
-        ),
+      await settleAnnouncer();
+      expect(polite()).toBe(
+        "Sample rain: No imagery was found for 06:00 UTC on 9 November 2026. Try another.",
       );
     });
 
@@ -947,10 +958,9 @@ describe("useDataLayers", () => {
       expect(layer(result, "sample-plain").status.kind).toBe(
         "tiles-unavailable",
       );
-      await waitFor(() =>
-        expect(polite()).toBe(
-          "Sample plain: Could not load. Check your connection.",
-        ),
+      await settleAnnouncer();
+      expect(polite()).toBe(
+        "Sample plain: Could not load. Check your connection.",
       );
     });
 
@@ -987,9 +997,11 @@ describe("useDataLayers", () => {
           ),
         );
       report();
-      await waitFor(() => expect(polite()).toContain("No imagery"));
+      await settleAnnouncer();
+      expect(polite()).toContain("No imagery");
       act(() => result.current.setEnabled("sample-points", true));
-      await waitFor(() => expect(polite()).not.toContain("No imagery"));
+      await settleAnnouncer();
+      expect(polite()).not.toContain("No imagery");
       report();
       await settleAnnouncer();
       expect(polite()).not.toContain("No imagery");
@@ -1015,10 +1027,8 @@ describe("useDataLayers", () => {
       act(() =>
         result.current.reportTilesUnavailable("sample-imagery", IMAGERY_TILES),
       );
-      await waitFor(() =>
-        expect(layer(result, "sample-imagery").status.kind).toBe(
-          "tiles-unavailable",
-        ),
+      expect(layer(result, "sample-imagery").status.kind).toBe(
+        "tiles-unavailable",
       );
     });
 
@@ -1034,7 +1044,8 @@ describe("useDataLayers", () => {
       act(() =>
         result.current.reportTilesUnavailable("sample-imagery", IMAGERY_TILES),
       );
-      await waitFor(() => expect(polite()).toContain("No imagery"));
+      await settleAnnouncer();
+      expect(polite()).toContain("No imagery");
     });
 
     describe("once a tile loads", () => {
@@ -1050,16 +1061,17 @@ describe("useDataLayers", () => {
         const { result } = withTime();
         act(() => result.current.setEnabled("sample-imagery", true));
         reportNoImagery(result);
-        await waitFor(() => expect(polite()).toContain("No imagery"));
+        await settleAnnouncer();
+        expect(polite()).toContain("No imagery");
         act(() =>
           result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES),
         );
         expect(layer(result, "sample-imagery").status).toEqual({ kind: "on" });
-        await waitFor(() =>
-          expect(polite()).toBe("Sample imagery: imagery is showing again."),
-        );
+        await settleAnnouncer();
+        expect(polite()).toBe("Sample imagery: imagery is showing again.");
         act(() => result.current.setEnabled("sample-points", true));
-        await waitFor(() => expect(polite()).not.toContain("showing again"));
+        await settleAnnouncer();
+        expect(polite()).not.toContain("showing again");
         act(() =>
           result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES),
         );
@@ -1139,7 +1151,8 @@ describe("useDataLayers", () => {
         expect(layer(result, "sample-imagery").status.kind).toBe(
           "tiles-unavailable",
         );
-        await waitFor(() => expect(polite()).toContain("No imagery"));
+        await settleAnnouncer();
+        expect(polite()).toContain("No imagery");
         act(() =>
           result.current.reportTilesRecovered("sample-imagery", IMAGERY_TILES),
         );

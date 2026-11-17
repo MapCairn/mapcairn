@@ -48,11 +48,20 @@ async function settle(): Promise<void> {
   });
 }
 
+/** Steps the fake clock, so the announcer's throttle and clear timers fire without a real wait. */
+async function advanceClock(ms: number): Promise<void> {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+}
+
 /** Mounts the app with these layers on, as a returning visitor, in the stub the Reload action needs. */
 async function renderApp(
   definitions: readonly LayerDefinition[],
   script: (source: FakeServices["fakes"]["layerSource"]) => void = () => {},
 ) {
+  // Faked before the app mounts, so every announcement it makes is on the fake clock.
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
   const services: FakeServices = createFakeServices({
     layers: new FakeLayerCatalogue(definitions),
   });
@@ -127,15 +136,16 @@ describe("App identify at a tap", () => {
         within(sheet()).getByTestId("feature-choices-heading"),
       ).toHaveTextContent("2 features here"),
     );
-    await vi.waitFor(() =>
-      expect(polite()).toBe("2 features here. Choose one from the list."),
-    );
+    await advanceClock(ANNOUNCER_SETTLE_MS);
+    expect(polite()).toBe("2 features here. Choose one from the list.");
   });
 
   it("says nothing was found and leaves the sheet closed", async () => {
     const services = await renderApp([SAMPLE_IDENTIFY_LAYER]);
     act(() => adapter(services).simulateClick(PLACE));
-    await vi.waitFor(() => expect(polite()).toBe("Nothing found here."));
+    await settle();
+    await advanceClock(ANNOUNCER_SETTLE_MS);
+    expect(polite()).toBe("Nothing found here.");
     expect(sheet()).toHaveAttribute("data-state", "closed");
   });
 
@@ -216,7 +226,9 @@ describe("App identify with the I key", () => {
     await settle();
     expect(polite()).toBe("");
     release();
-    await vi.waitFor(() => expect(polite()).toBe("Nothing found here."));
+    await settle();
+    await advanceClock(ANNOUNCER_SETTLE_MS);
+    expect(polite()).toBe("Nothing found here.");
   });
 
   it.each([
@@ -229,22 +241,16 @@ describe("App identify with the I key", () => {
       const services = await renderApp([SAMPLE_IDENTIFY_LAYER]);
       fireEvent.click(screen.getByRole("button", { name }));
       fireEvent.keyDown(region(), { key: "i" });
-      await vi.waitFor(() =>
-        expect(polite()).toBe("No features at the centre of the map."),
-      );
+      await settle();
+      await advanceClock(ANNOUNCER_SETTLE_MS);
+      expect(polite()).toBe("No features at the centre of the map.");
       expect(services.fakes.layerSource.identifyRequests).toEqual([]);
     },
   );
 
   it("keeps what the key says when another message follows it inside the announcer's window", async () => {
-    // The announcer spaces its messages by timers and reads the clock, so both
-    // are faked from before the app mounts and stepped by hand: a real wait
-    // would stretch with the load on the machine.
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
-    const advance = (ms: number) =>
-      act(async () => {
-        await vi.advanceTimersByTimeAsync(ms);
-      });
+    // The announcer spaces its messages by timers and reads the clock; renderApp
+    // fakes both before mount, and this test steps them by hand.
     const services = await renderApp([SAMPLE_FEED_LAYER]);
     const heard: string[] = [];
     const region_ = screen.getByTestId("live-region-polite");
@@ -260,7 +266,7 @@ describe("App identify with the I key", () => {
     });
     // Let what mounting said go out, so the pin's message is the one that opens
     // the window.
-    await advance(ANNOUNCER_SETTLE_MS);
+    await advanceClock(ANNOUNCER_SETTLE_MS);
     heard.length = 0;
     // The pin's message opens the window, the key's waits in it, and the second
     // pin's (a different place, so not a repeat) would replace it if it were not kept.
@@ -270,7 +276,7 @@ describe("App identify with the I key", () => {
       adapter(services).setView({ center: { lat: 10, lng: 20 }, zoom: 6 }),
     );
     fireEvent.keyDown(region(), { key: "p" });
-    await advance(ANNOUNCER_SETTLE_MS);
+    await advanceClock(ANNOUNCER_SETTLE_MS);
     expect(heard).toHaveLength(3);
     expect(heard).toContain("No features at the centre of the map.");
   });
@@ -278,9 +284,9 @@ describe("App identify with the I key", () => {
   it("still says nothing is at the centre when no layer answers a tap", async () => {
     await renderApp([SAMPLE_FEED_LAYER]);
     fireEvent.keyDown(region(), { key: "i" });
-    await vi.waitFor(() =>
-      expect(polite()).toBe("No features at the centre of the map."),
-    );
+    await settle();
+    await advanceClock(ANNOUNCER_SETTLE_MS);
+    expect(polite()).toBe("No features at the centre of the map.");
   });
 });
 
