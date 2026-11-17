@@ -316,7 +316,13 @@ test.describe("the product page", () => {
                   x2.baseVal.value === crossCentre.x)
               );
             }),
-            northTip: north ? north.getPointAtLength(0) : null,
+            // A DOMPoint does not survive the trip out of the page, so copy its numbers.
+            northTip: north
+              ? {
+                  x: north.getPointAtLength(0).x,
+                  y: north.getPointAtLength(0).y,
+                }
+              : null,
             northBox: northBox
               ? { x: northBox.x, y: northBox.y, height: northBox.height }
               : null,
@@ -363,6 +369,41 @@ test.describe("the product page", () => {
       });
     }
   }
+
+  test.describe("with motion on", () => {
+    test.use({ reducedMotion: "no-preference" });
+
+    test("lands the pin with its tip on the measured line once it has dropped", async ({
+      page,
+    }) => {
+      const product = new ProductPage(page);
+      await product.goto();
+      const art = page.getByTestId("survey-art");
+      await art.evaluate(() =>
+        Promise.all(document.getAnimations().map((motion) => motion.finished)),
+      );
+      const offset = await art.evaluate((svg) => {
+        const tip = svg.querySelector<SVGGraphicsElement>(
+          '[data-anchor="pin-tip"]',
+        );
+        const line = svg.querySelector<SVGLineElement>(
+          '[data-anchor="measure-line"]',
+        );
+        const at = (element: SVGGraphicsElement | null, x: number, y: number) =>
+          new DOMPoint(x, y).matrixTransform(
+            element?.getScreenCTM() ?? undefined,
+          );
+        const a = at(tip, 0, 0);
+        const b = at(
+          line,
+          line?.x1.baseVal.value ?? Number.NaN,
+          line?.y1.baseVal.value ?? Number.NaN,
+        );
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      });
+      expect(offset).toBeLessThan(0.01);
+    });
+  });
 
   test("skips to the main content from the first Tab", async ({ page }) => {
     const product = new ProductPage(page);

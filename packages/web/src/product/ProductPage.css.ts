@@ -23,6 +23,9 @@ const MEASURE = "40rem";
 /** The tallest the code example gets before it scrolls inside its own box. */
 const CODE_HEIGHT = "26rem";
 
+/** The widest the art gets, so it stays beside the words rather than taking over. */
+const ART_WIDTH = "30rem";
+
 /** The widest the page gets. */
 const PAGE_WIDTH = "72rem";
 
@@ -147,7 +150,7 @@ export const heroText = style({
 /** The hero's art: quiet, and only as wide as it needs to be. */
 export const heroArt = style({
   minWidth: 0,
-  maxWidth: MEASURE,
+  maxWidth: ART_WIDTH,
 });
 
 /** The page's one h1, at the display size on a wide screen and smaller on a phone. */
