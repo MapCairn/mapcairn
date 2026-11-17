@@ -474,6 +474,20 @@ describe("Attribution settling", () => {
     expect(region).not.toHaveAttribute("data-settled");
   });
 
+  it("never settles with reduced motion, so its offset has no transition", () => {
+    const services = createFakeServices();
+    services.fakes.preferences.set({ reducedMotion: true });
+    renderChrome(<Attribution basemap={BASEMAP} />, {
+      map: SETTLED,
+      services,
+    });
+    const region = open();
+    act(() => {
+      vi.advanceTimersByTime(FRAME_MS);
+    });
+    expect(region).not.toHaveAttribute("data-settled");
+  });
+
   it("does not settle if it closes within the frame", () => {
     renderChrome(<Attribution basemap={BASEMAP} />, { map: SETTLED });
     const region = open();

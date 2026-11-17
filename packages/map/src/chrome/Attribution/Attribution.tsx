@@ -199,7 +199,9 @@ export function Attribution({
   const rootRef = useRef<HTMLDivElement>(null);
   const regionRef = useRef<HTMLElement>(null);
   const clearOfReadout = useClearOfReadout(regionRef, open, placement);
-  const settled = useSettled(open);
+  // With reduced motion the offset is never given a transition: even a
+  // near-zero one shows the old position for a frame or two before the new one.
+  const settled = useSettled(open && !reducedMotion);
   const openedOnView = useRef(view);
   const introShown = useRef(false);
   // A credit the basemap already gives, such as OpenStreetMap's, is listed
