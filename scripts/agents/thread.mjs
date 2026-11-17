@@ -45,6 +45,8 @@ const DEFINITION_LINE =
   " {0,3}\\[(?!\\^)[^\\]\\n]+\\]:[ \\t]*(?:<[^<>\\n]*>|[^\\s<]\\S*)(?:[ \\t]+(?:\"[^\"\\n]*\"|'[^'\\n]*'|\\([^()\\n]*\\)))?[ \\t]*";
 /** A definition line, which GitHub does not render. */
 const LINK_DEFINITION = new RegExp(`^${DEFINITION_LINE}(?:\\n|$)`, "my");
+/** A line that starts like a definition (`[label]: text`), whether or not the rest parses as one: CommonMark allows escapes and a title over several lines that the strict form does not. */
+const DEFINITION_START = /^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*\S/my;
 /** A line after which a definition can start a paragraph: the start, a blank line, a heading or another definition. */
 const BEFORE_DEFINITION = new RegExp(
   `^(?:[ \\t]*|[ \\t]{0,3}#{1,6}(?:[ \\t].*)?|${DEFINITION_LINE})$`,
@@ -145,12 +147,13 @@ function hiddenMarkupEnd(text, position) {
  * definitions.
  *
  * @param {string} text Text with `\n` line endings only.
- * @returns {{ text: string, hidden: number, codeWithOpener: number }} The kept text, the characters dropped, and how many kept code spans or fences hold an opener of hidden markup.
+ * @returns {{ text: string, hidden: number, codeWithOpener: number, maybeDefinitions: number }} The kept text, the characters dropped, how many kept code spans or fences hold an opener of hidden markup, and how many kept lines start like a link definition that did not parse as one.
  */
 function removeHidden(text) {
   let kept = "";
   let hidden = 0;
   let codeWithOpener = 0;
+  let maybeDefinitions = 0;
   let position = 0;
   const drop = (end) => {
     hidden += Array.from(text.slice(position, end)).length;
@@ -180,6 +183,14 @@ function removeHidden(text) {
       drop(position + definition[0].length);
       continue;
     }
+    DEFINITION_START.lastIndex = position;
+    if (
+      atLineStart &&
+      DEFINITION_START.test(text) &&
+      startsParagraph(text, position)
+    ) {
+      maybeDefinitions += 1;
+    }
     const markupEnd = hiddenMarkupEnd(text, position);
     if (markupEnd !== -1) {
       drop(markupEnd);
@@ -197,7 +208,7 @@ function removeHidden(text) {
     }
     keep(position + 1);
   }
-  return { text: kept, hidden, codeWithOpener };
+  return { text: kept, hidden, codeWithOpener, maybeDefinitions };
 }
 
 /**
@@ -225,15 +236,17 @@ function startsParagraph(text, position) {
  * differently, so each that holds an opener of hidden markup is counted for a flag.
  *
  * @param {string} text
- * @returns {{ text: string, hiddenCharacters: number, codeWithOpener: number }} The cleaned text, how many characters of hidden markup or link definition were removed, and how many code spans or fences hold a comment opener.
+ * @returns {{ text: string, hiddenCharacters: number, codeWithOpener: number, maybeDefinitions: number }} The cleaned text, how many characters of hidden markup or link definition were removed, how many code spans or fences hold an opener of hidden markup, and how many lines start like a link definition that did not parse as one (kept, but GitHub may hide them).
  */
 export function inspectText(text) {
   let current = text.replace(/\r\n?/g, "\n");
   let hiddenCharacters = 0;
   let codeWithOpener = 0;
+  let maybeDefinitions = 0;
   for (;;) {
     const pass = removeHidden(current);
     codeWithOpener = Math.max(codeWithOpener, pass.codeWithOpener);
+    maybeDefinitions = Math.max(maybeDefinitions, pass.maybeDefinitions);
     if (pass.hidden === 0) {
       break;
     }
@@ -246,7 +259,7 @@ export function inspectText(text) {
       return !HIDDEN_RANGES.some(([from, to]) => point >= from && point <= to);
     })
     .join("");
-  return { text: visible, hiddenCharacters, codeWithOpener };
+  return { text: visible, hiddenCharacters, codeWithOpener, maybeDefinitions };
 }
 
 /**
@@ -285,13 +298,17 @@ export function token(value) {
  */
 export function formatItem(login, association, body, people) {
   const label = people?.has(login.toLowerCase()) ? "project" : "outside";
-  const { text, hiddenCharacters, codeWithOpener } = inspectText(body ?? "");
+  const { text, hiddenCharacters, codeWithOpener, maybeDefinitions } =
+    inspectText(body ?? "");
   const flags = [
     hiddenCharacters > 0
       ? ` [hidden content removed: ${hiddenCharacters} characters of hidden markup (a comment, declaration, script or style block) or link definition not rendered by GitHub; the thread holds text a person reading it cannot see]`
       : "",
     codeWithOpener > 0
       ? ` [${codeWithOpener} code span or fence holding an opener of hidden markup is shown as written; GitHub may render it as hidden, so a person may not see it]`
+      : "",
+    maybeDefinitions > 0
+      ? ` [${maybeDefinitions} line that starts like a link definition is shown as written; GitHub may render it hidden, so a person may not see it]`
       : "",
   ];
   return `${label} ${token(login)} (${token(association)}): ${JSON.stringify(text)}${flags.join("")}`;

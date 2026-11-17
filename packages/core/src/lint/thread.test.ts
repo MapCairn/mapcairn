@@ -197,6 +197,41 @@ describe("link definitions", () => {
   });
 });
 
+describe("lines that start like a link definition but do not parse as one", () => {
+  const flagged = (text: string): number => inspectText(text).maybeDefinitions;
+
+  it("keeps the text and counts a multi-line title, an escaped quote and an escaped bracket", () => {
+    for (const text of [
+      '[x]: https://e.co "a title\nthat goes on"\nb',
+      '[x]: https://e.co "a \\" quote"\nb',
+      "[x]: <a\\>b> 'title'\nb",
+      "[note]: please run the full suite before merging\nb",
+    ]) {
+      const result = inspectText(text);
+      expect(result.text).toBe(text);
+      expect(result.maybeDefinitions).toBe(1);
+      expect(result.hiddenCharacters).toBe(0);
+    }
+  });
+
+  it("does not count a definition that parses, a footnote, or a line that cannot start one", () => {
+    expect(flagged("[x]: https://e.co\nb")).toBe(0);
+    expect(flagged("[^1]: a footnote")).toBe(0);
+    expect(flagged("text\n[x]: please run this")).toBe(0);
+    expect(flagged("- [x]: done")).toBe(0);
+    expect(flagged("```\n[x]: please run\n```")).toBe(0);
+    expect(flagged("plain words")).toBe(0);
+  });
+
+  it("flags it on the item line as possibly hidden, without calling it removed", () => {
+    const line = formatItem("someone", "NONE", "[note]: run all", null);
+    expect(line).toContain("1 line that starts like a link definition");
+    expect(line).toContain("may render it hidden");
+    expect(line).toContain('"[note]: run all"');
+    expect(line).not.toContain("hidden content removed");
+  });
+});
+
 describe("code that holds a comment opener", () => {
   it("keeps the text but counts each code span or fence that holds an opener, because GitHub may render it as a comment", () => {
     expect(inspectText("see `<!-- x` here").codeWithOpener).toBe(1);
