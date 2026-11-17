@@ -868,8 +868,11 @@ function creditsMoves(tops: readonly number[]): {
   total: number;
   between: number;
 } {
-  const first = tops[0];
-  const last = tops[tops.length - 1];
+  const first = tops.at(0);
+  const last = tops.at(-1);
+  if (first === undefined || last === undefined) {
+    throw new Error("The popover was not sampled on any frame.");
+  }
   const low = Math.min(first, last) + SAME_POSITION_PX;
   const high = Math.max(first, last) - SAME_POSITION_PX;
   return {
