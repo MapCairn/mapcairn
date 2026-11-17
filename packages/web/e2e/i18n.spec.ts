@@ -178,3 +178,78 @@ test.describe("when the Afrikaans messages fail to load", () => {
     expect(await axeViolations(page)).toEqual([]);
   });
 });
+
+test.describe("the error page", () => {
+  const MISSING_PAGE = "/this-route-does-not-exist";
+
+  /** The page's heading, in the language of `text`. */
+  function notFoundHeading(page: Page, text: typeof AF_CATALOGUE) {
+    return page.getByRole("heading", {
+      level: 1,
+      name: text["app.error.notFound.title"],
+    });
+  }
+
+  test.describe("with Afrikaans chosen", () => {
+    test.use({ language: "af" });
+
+    test("speaks Afrikaans and links back to the map", async ({ page }) => {
+      await page.goto(MISSING_PAGE);
+      await expect(notFoundHeading(page, AF_CATALOGUE)).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("lang", "af");
+      await page
+        .getByRole("link", { name: AF_CATALOGUE["app.error.notFound.link"] })
+        .click();
+      await expect(page).toHaveURL(/\/$/);
+    });
+
+    for (const colorScheme of ["light", "dark"] as const) {
+      test(`passes axe in Afrikaans in ${colorScheme} @a11y`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme });
+        await page.goto(MISSING_PAGE);
+        await expect(notFoundHeading(page, AF_CATALOGUE)).toBeVisible();
+        expect(await axeViolations(page)).toEqual([]);
+      });
+    }
+  });
+
+  test.describe("with Automatic and an Afrikaans browser", () => {
+    test.use({ locale: "af-ZA" });
+
+    test("speaks Afrikaans", async ({ page }) => {
+      await page.goto(MISSING_PAGE);
+      await expect(notFoundHeading(page, AF_CATALOGUE)).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("lang", "af");
+    });
+  });
+
+  test.describe("with English chosen", () => {
+    test.use({ language: "en-GB" });
+
+    for (const colorScheme of ["light", "dark"] as const) {
+      test(`passes axe in English in ${colorScheme} @a11y`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme });
+        await page.goto(MISSING_PAGE);
+        await expect(notFoundHeading(page, EN_GB_CATALOGUE)).toBeVisible();
+        expect(await axeViolations(page)).toEqual([]);
+      });
+    }
+  });
+
+  test.describe("with Afrikaans chosen but not loadable", () => {
+    test.use({ language: "af" });
+
+    test("stays in English", async ({ page }) => {
+      await page.route("**/assets/js/af-*.js", (route) =>
+        route.abort("failed"),
+      );
+      await page.goto(MISSING_PAGE);
+      await expect(notFoundHeading(page, EN_GB_CATALOGUE)).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("lang", "en-GB");
+    });
+  });
+});
