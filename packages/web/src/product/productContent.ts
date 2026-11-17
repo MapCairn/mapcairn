@@ -228,11 +228,6 @@ export const SECTIONS: readonly Section[] = [
                 { code: "@mapcairn/theme" },
                 ": the typed design tokens and their contrast calculations.",
               ],
-              [
-                "Beside them, ",
-                { code: "@mapcairn/geolint" },
-                " is a GeoJSON linter under Apache-2.0, independent of the rest.",
-              ],
             ],
           },
         ],
@@ -413,7 +408,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "How is it licensed?",
             detail: [
               [
-                "The SDK is AGPL-3.0: if you ship it in a product, or let people use a modified version over a network, you publish the corresponding source under the same licence. The GeoJSON linter is Apache-2.0, and the SDK's own dependencies are permissively licensed.",
+                "The SDK is AGPL-3.0: if you ship it in a product, or let people use a modified version over a network, you publish the corresponding source under the same licence. The SDK's own dependencies are permissively licensed.",
               ],
             ],
           },
