@@ -298,9 +298,9 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "draw.import.holesLeftOut":
     "Gate in {count} veelhoek is uitgelaat.|Gate in {count} veelhoeke is uitgelaat.",
   "draw.import.axisHint.lat-lng":
-    "Geen vorms ingevoer nie. Die eerste posisie is buite die wêreld as lengtegraad, breedtegraad, maar dit pas as breedtegraad, lengtegraad.",
+    "Geen vorms ingevoer nie. Die eerste posisie lê buite die wêreld as lengtegraad, breedtegraad, maar dit pas as breedtegraad, lengtegraad.",
   "draw.import.axisHint.lng-lat":
-    "Geen vorms ingevoer nie. Die eerste posisie is buite die wêreld as breedtegraad, lengtegraad, maar dit pas as lengtegraad, breedtegraad.",
+    "Geen vorms ingevoer nie. Die eerste posisie lê buite die wêreld as breedtegraad, lengtegraad, maar dit pas as lengtegraad, breedtegraad.",
   "common.itemCount": "{count} item|{count} items",
   "settings.language.label": "Taal",
   "settings.language.auto": "Outomaties",
@@ -417,7 +417,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "app.tour.ending.text": "Hulp, in Instellings, kan dit weer begin.",
   // Short durations
   "duration.short.day": "{count} d",
-  "duration.short.hour": "{count} h",
+  "duration.short.hour": "{count} uur",
   "duration.short.minute": "{count} min",
   "duration.short.underMinute": "Minder as 1 min",
   // Travel modes and stops
@@ -609,7 +609,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "layers.theFeature": "die item",
   "layers.tryAgain": "Probeer weer",
   "layers.usesCost": "Gebruik {cost}.",
-  "layers.keyFor": "Sleutel vir {name}",
+  "layers.keyFor": "Legende vir {name}",
   "layers.status.loading": "Laai tans",
   "layers.status.updated": "Opgedateer {time}, {count} gewys",
   "layers.status.updatedCapped":
@@ -641,16 +641,16 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Ontdoen, skakel {count} laag weer aan|Ontdoen, skakel {count} lae weer aan",
   "layers.turnOff.doneGroup": "{count} in {group} afgeskakel.",
   "layers.turnOff.undoGroup": "Ontdoen, skakel {count} in {group} weer aan",
-  "layers.key.title": "Kaartsleutel",
-  "layers.key.toggle": "Sleutel, {count} laag|Sleutel, {count} lae",
-  "layers.key.chip": "Sleutel, {count} laag|Sleutel, {count} lae",
-  "layers.key.scrolling": "Laagsleutels",
-  "layers.key.showing": "Wys {time}",
-  "layers.key.nameKey": "Sleutel vir {name}",
+  "layers.key.title": "Kaartlegende",
+  "layers.key.toggle": "Legende, {count} laag|Legende, {count} lae",
+  "layers.key.chip": "Legende, {count} laag|Legende, {count} lae",
+  "layers.key.scrolling": "Laaglegendes",
+  "layers.key.showing": "Wys tans {time}",
+  "layers.key.nameKey": "Legende vir {name}",
   "layers.time.date": "Datum (UTC)",
   "layers.time.time": "Tyd (UTC)",
   "layers.time.status":
-    "Wys {slot}. Nuutste beskikbaar: {newest}. Nuwer tye is dalk nog nie uit nie, so jy kan hulle nie kies nie.",
+    "Wys tans {slot}. Nuutste beskikbaar: {newest}. Nuwer tye is dalk nog nie uit nie, so jy kan hulle nie kies nie.",
   // Definition text: layer and basemap fields, keyboard help
   "layer.cyclones.name": "Tropiese siklone",
   "layer.cyclones.description":

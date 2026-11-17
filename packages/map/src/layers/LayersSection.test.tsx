@@ -145,7 +145,7 @@ describe("LayersSection", () => {
       overrides: {
         "layers.title": "Lae",
         "layers.status.updated": "Opgedateer {time}, {count} gewys",
-        "layers.keyFor": "Sleutel vir {name}",
+        "layers.keyFor": "Legende vir {name}",
       },
     });
     const { source } = setup(SAMPLE_LAYERS, undefined, messages);
@@ -158,7 +158,7 @@ describe("LayersSection", () => {
       ).toHaveTextContent(/Opgedateer \d\d:\d\d, 2 gewys/),
     );
     expect(
-      screen.getByRole("list", { name: "Sleutel vir Sample points" }),
+      screen.getByRole("list", { name: "Legende vir Sample points" }),
     ).toBeInTheDocument();
     expect(
       messages.calls.find((call) => call.key === "layers.status.updated")
@@ -1039,7 +1039,7 @@ describe("LayersSection", () => {
         language: "af",
         overrides: {
           "layers.time.date": "Datum (UTC)",
-          "layers.time.status": "Wys {slot}. Nuutste: {newest}.",
+          "layers.time.status": "Wys tans {slot}. Nuutste: {newest}.",
         },
       });
       setup([SAMPLE_TIME_LAYER], undefined, messages);
@@ -1047,7 +1047,7 @@ describe("LayersSection", () => {
       const group = screen.getByRole("group", { name: "Time shown" });
       expect(within(group).getByLabelText("Datum (UTC)")).toBeTruthy();
       expect(group).toHaveTextContent(
-        "Wys 06:00 to 06:30 UTC on 9 November 2026. Nuutste: 06:00 UTC on 9 November 2026.",
+        "Wys tans 06:00 to 06:30 UTC on 9 November 2026. Nuutste: 06:00 UTC on 9 November 2026.",
       );
       expect(
         messages.calls.find((call) => call.key === "layers.time.status")
