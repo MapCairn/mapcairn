@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
+import { scrollFade } from "../../chrome/scrollFade.css";
 
 /** The outer box, measured for the edge it publishes. The slot places it. */
 export const root = style({
@@ -9,27 +10,77 @@ export const root = style({
   minWidth: 0,
 });
 
-/** The toolbar surface: rows of controls, a readout and a hint. */
+/**
+ * What the rest of the chrome needs on a screen with the toolbar open, in the
+ * same units it is drawn in, so it grows with the text size: the screen inset
+ * above and below, the search pill and one end stack button (a control each),
+ * the credits button, the three gaps between the rows (search, end stack,
+ * credits, toolbar) and the end stack's own padding. Whatever is left over is
+ * the most the toolbar can have while the end stack keeps room for one button.
+ */
+const roomForRestOfChrome = [
+  `2 * ${tokens.space.inset}`,
+  `2 * ${tokens.size.control}`,
+  tokens.size.minTarget,
+  `3 * ${tokens.space.sm}`,
+  `2 * ${tokens.space.xs}`,
+].join(" + ");
+
+/**
+ * The toolbar's height cap: half the screen, or less on a screen so short, or
+ * text so large, that the end stack would be left without room for a button.
+ * Beyond it the toolbar scrolls inside itself, so at large text it never grows
+ * over the map and the controls above it. The floor keeps one row of controls
+ * showing whatever the screen.
+ */
+const maxBlockSize = `max(calc(${tokens.size.control} + ${tokens.space.xs} * 2), min(50dvh, calc(100dvh - (${roomForRestOfChrome}))))`;
+
+/**
+ * The toolbar surface. It holds the cap and the shadow; the controls scroll in
+ * {@link scroller} inside it, because a fade mask on the surface would cut the
+ * shadow away.
+ */
 export const toolbar = style({
   display: "flex",
   flexDirection: "column",
-  gap: tokens.space.xs,
-  padding: tokens.space.xs,
+  maxBlockSize,
   fontFamily: tokens.type.family,
   fontSize: tokens.type.body.size,
   lineHeight: tokens.type.body.lineHeight,
   letterSpacing: tokens.type.body.tracking,
-  "@media": {
-    // A landscape phone has width to spare and little height, so the shape
-    // switch and its readout sit beside the buttons.
-    "(max-height: 520px) and (min-width: 640px)": {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) auto",
-      columnGap: tokens.space.sm,
-      alignItems: "center",
+});
+
+/**
+ * The toolbar's rows, scrolling inside the surface when the cap is reached.
+ * The scrollbar is hidden, as the end stack's is, and the fade at the end that
+ * has more tells a person to scroll.
+ */
+export const scroller = style([
+  scrollFade,
+  {
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.space.xs,
+    padding: tokens.space.xs,
+    minBlockSize: 0,
+    overflowY: "auto",
+    overscrollBehavior: "contain",
+    scrollbarWidth: "none",
+    selectors: {
+      "&::-webkit-scrollbar": { display: "none" },
+    },
+    "@media": {
+      // A landscape phone has width to spare and little height, so the shape
+      // switch and its readout sit beside the buttons.
+      "(max-height: 520px) and (min-width: 640px)": {
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) auto",
+        columnGap: tokens.space.sm,
+        alignItems: "center",
+      },
     },
   },
-});
+]);
 
 /** The shape switch row. On a landscape phone it takes the first column. */
 export const modesRow = style({
@@ -61,12 +112,16 @@ export const actionsRow = style({
 /** The mode switch takes the free width of its row. */
 export const modes = style({
   flex: "1 1 auto",
+  flexWrap: "wrap",
   minWidth: 0,
 });
 
-// Four options and their check mark have to fit a 320 px screen.
+// Four options and their check mark have to fit a 320 px screen. An option
+// never shrinks below its own word, so at a large text size, or in a longer
+// language, the row wraps onto a second line instead of the words overlapping.
 globalStyle(`${modes} [role="radio"]`, {
   flex: "1 1 auto",
+  minInlineSize: "min-content",
   paddingInline: tokens.space.xs,
   gap: tokens.space.xxs,
 });

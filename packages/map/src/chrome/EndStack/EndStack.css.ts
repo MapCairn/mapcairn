@@ -3,6 +3,7 @@
 import { tokens } from "@mapcairn/theme";
 import { globalStyle, style } from "@vanilla-extract/css";
 import { chromeVar, chromeVars } from "../MapChrome/chromeVars";
+import { scrollFade } from "../scrollFade.css";
 
 /**
  * The end stack: compass, main group and zoom group in a column with the
@@ -11,24 +12,28 @@ import { chromeVar, chromeVars } from "../MapChrome/chromeVars";
  * and shadows room inside the scroll container, which would otherwise clip
  * them. The scrollbar is hidden so it never narrows the 48 px targets or
  * sits over the map; wheel, touch and focus (which scrolls the focused
- * control into view) all still scroll it.
+ * control into view) all still scroll it. A fade (`scrollFade`) shows the end
+ * that has more behind it, which is what tells a person the column scrolls.
  */
-export const stack = style({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-end",
-  gap: tokens.space.sm,
-  boxSizing: "border-box",
-  maxHeight: chromeVar(chromeVars.endStackMaxHeight, "none"),
-  overflowY: "auto",
-  overscrollBehavior: "contain",
-  scrollbarWidth: "none",
-  padding: tokens.space.xs,
-  margin: `calc(-1 * ${tokens.space.xs})`,
-  selectors: {
-    "&::-webkit-scrollbar": { display: "none" },
+export const stack = style([
+  scrollFade,
+  {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: tokens.space.sm,
+    boxSizing: "border-box",
+    maxHeight: chromeVar(chromeVars.endStackMaxHeight, "none"),
+    overflowY: "auto",
+    overscrollBehavior: "contain",
+    scrollbarWidth: "none",
+    padding: tokens.space.xs,
+    margin: `calc(-1 * ${tokens.space.xs})`,
+    selectors: {
+      "&::-webkit-scrollbar": { display: "none" },
+    },
   },
-});
+]);
 
 /**
  * The skeleton's stack: the live stack's box with nothing to scroll, so it

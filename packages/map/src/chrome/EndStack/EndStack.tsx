@@ -17,6 +17,7 @@ import { useMessages, usePreferences, useSettings } from "../../services";
 import { ControlGroup, IconButton, Surface } from "../../ui";
 import { useFocusTarget } from "../focusRegistry";
 import { useChromeSurface } from "../MapChrome/chromeSurface";
+import { useScrollEdges } from "../useScrollEdges";
 import * as styles from "./EndStack.css";
 import { endStackMinHeightForZoom } from "./endStackHeight";
 
@@ -156,6 +157,7 @@ export function EndStack({
   useEffect(() => {
     rootRef.current?.style.setProperty("--chrome-bearing", `${bearing}deg`);
   }, [bearing]);
+  useScrollEdges(rootRef);
 
   return (
     <section
