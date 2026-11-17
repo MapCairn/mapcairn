@@ -146,6 +146,17 @@ describe("other markup that GitHub does not show", () => {
     expect(cleanText("a<script>x</scripture>y</script>b")).toBe("ab");
   });
 
+  it("fails closed when a Unicode space, which the HTML tokenizer does not treat as whitespace, follows the closing tag name", () => {
+    for (const code of [0x00a0, 0x3000, 0xfeff]) {
+      for (const tag of ["script", "style"]) {
+        const text = `a<${tag}>x</${tag}${String.fromCharCode(code)}>SECRET`;
+        const result = inspectText(text);
+        expect(result.text).toBe("a");
+        expect(result.hiddenCharacters).toBe(text.length - 1);
+      }
+    }
+  });
+
   it("fails closed on a closing tag with attributes, quotes or a slash, and flags it", () => {
     for (const text of [
       "a<script>x</script a='>SECRET'>b",

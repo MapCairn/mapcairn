@@ -24,8 +24,9 @@ const REPO = "MapCairn/mapcairn";
  * `open` and runs to the first `close` after it, or to the end of the text when
  * it is never closed. The odd comment closers (`--!>`, `<!-->`) are not ends, so
  * the larger reading stays hidden. A script or style block ends only at a bare
- * closing tag; a closing tag with attributes, quotes or a slash is not parsed
- * and runs to the end of the text (fail closed).
+ * closing tag, the tag name and then ASCII whitespace and `>`; any other
+ * continuation (attributes, quotes, a slash, a Unicode space) is not parsed and
+ * runs to the end of the text (fail closed).
  */
 const HIDDEN_MARKUP = [
   { open: /<!--/y, close: /--!?>/g },
@@ -34,9 +35,12 @@ const HIDDEN_MARKUP = [
   { open: /<\?/y, close: /\?>/g },
   {
     open: /<script(?=[\s>/]|$)/iy,
-    close: /<\/script(?:\s*>|[\s/"'][\s\S]*)/gi,
+    close: /<\/script(?:[\t\n\f\r ]*>|(?![a-z0-9-])[\s\S]*)/gi,
   },
-  { open: /<style(?=[\s>/]|$)/iy, close: /<\/style(?:\s*>|[\s/"'][\s\S]*)/gi },
+  {
+    open: /<style(?=[\s>/]|$)/iy,
+    close: /<\/style(?:[\t\n\f\r ]*>|(?![a-z0-9-])[\s\S]*)/gi,
+  },
 ];
 /** Any opener of `HIDDEN_MARKUP`, anywhere in a piece of text. */
 const ANY_OPENER = new RegExp(
