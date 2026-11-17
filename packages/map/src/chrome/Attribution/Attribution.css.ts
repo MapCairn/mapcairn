@@ -46,8 +46,10 @@ const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tok
  * sits a gap above the top of the whole bottom row, not just the button
  * (`bottomEndRise` is how far a taller neighbour, such as the readout with
  * the cursor coordinates, reaches above the button), so it never covers the
- * scale bar or the coordinates beside the button. With
- * `data-readout-clear="true"` (set when the popover starts a gap after the
+ * scale bar or the coordinates beside the button; the rise is a transform, so
+ * it slides when the readout's height changes (from `data-settled="true"`, with
+ * the base duration, which the tokens drop to near zero under
+ * `prefers-reduced-motion`). With `data-readout-clear="true"` (set when the popover starts a gap after the
  * readout's end edge, so the two share no width) it sits only a step above
  * the button, next to it, and the rise is left out.
  *
@@ -59,7 +61,8 @@ const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tok
 export const popover = style({
   ...surfaceBlurStyle,
   position: "absolute",
-  insetBlockEnd: `calc(100% + ${tokens.space.xs} + ${chromeVar(chromeVars.bottomEndRise, "0px")})`,
+  insetBlockEnd: `calc(100% + ${tokens.space.xs})`,
+  transform: `translateY(calc(-1 * ${chromeVar(chromeVars.bottomEndRise, "0px")}))`,
   insetInlineEnd: 0,
   zIndex: zLayer("chromeRaised"),
   boxSizing: "border-box",
@@ -81,16 +84,23 @@ export const popover = style({
   fontWeight: tokens.type.weight.regular,
   selectors: {
     "&[hidden]": { display: "none" },
-    // The fade after the credits' first showing. The duration token drops to
-    // near zero under prefers-reduced-motion, and the component skips the
-    // fade altogether when reduced motion is on.
+    "&:focus-visible": focusRing,
+    '&[data-readout-clear="true"]': {
+      transform: "none",
+    },
+    // The rise follows the readout's height, which changes as the cursor
+    // coordinates appear and go, so it slides rather than jumps. Only once the
+    // popover has been on screen for a frame, so opening never slides it.
+    '&[data-settled="true"]': {
+      transition: `transform ${tokens.motion.duration.base} ${tokens.motion.easing}`,
+    },
+    // The fade after the credits' first showing, after the rule above so that
+    // it wins. The duration token drops to near zero under
+    // prefers-reduced-motion, and the component skips the fade altogether when
+    // reduced motion is on.
     '&[data-closing="true"]': {
       opacity: 0,
       transition: `opacity ${tokens.motion.duration.base} ${tokens.motion.easing}`,
-    },
-    "&:focus-visible": focusRing,
-    '&[data-readout-clear="true"]': {
-      insetBlockEnd: `calc(100% + ${tokens.space.xs})`,
     },
     '&[data-placement="beside"]': {
       insetInlineEnd: besideOffset,
