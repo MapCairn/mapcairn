@@ -114,6 +114,29 @@ function useClearOfReadout(
   return clear;
 }
 
+/**
+ * Whether the open popover has been on screen for a frame. Its offset slides
+ * (see `Attribution.css`) only from then on, so the position it takes when it
+ * opens, which the first measurement may still change before it is painted, is
+ * never animated.
+ */
+function useSettled(open: boolean): boolean {
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setSettled(false);
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      setSettled(true);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [open]);
+  return settled;
+}
+
 const NO_CREDITS: readonly LayerAttribution[] = [];
 
 /** Props for {@link Attribution}. */
@@ -176,6 +199,9 @@ export function Attribution({
   const rootRef = useRef<HTMLDivElement>(null);
   const regionRef = useRef<HTMLElement>(null);
   const clearOfReadout = useClearOfReadout(regionRef, open, placement);
+  // With reduced motion the offset is never given a transition: even a
+  // near-zero one shows the old position for a frame or two before the new one.
+  const settled = useSettled(open && !reducedMotion);
   const openedOnView = useRef(view);
   const introShown = useRef(false);
   // A credit the basemap already gives, such as OpenStreetMap's, is listed
@@ -353,6 +379,7 @@ export function Attribution({
         data-chrome="attribution-popover"
         data-placement={placement}
         data-readout-clear={clearOfReadout ? "true" : undefined}
+        data-settled={settled ? "true" : undefined}
         data-closing={fading ? "true" : undefined}
         className={styles.popover}
       >

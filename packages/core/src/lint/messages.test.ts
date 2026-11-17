@@ -676,6 +676,9 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "host.notes.privacy": [],
   "host.notes.pinLookup": [],
   "host.notes.routing": [],
+  "host.about.heading": [],
+  "host.about.text": [],
+  "host.about.link": [],
 };
 
 /** Every `{name}` placeholder used in `value`, deduplicated. */
