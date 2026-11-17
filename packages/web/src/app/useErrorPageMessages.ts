@@ -1,27 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  createMessageCatalogue,
-  EN_GB_CATALOGUE,
-  type MessageCatalogue,
-} from "@mapcairn/core";
+import type { MessageCatalogue } from "@mapcairn/core";
 import { useEffect, useState } from "react";
 import { resolveDeviceLanguage } from "../composition/storedLanguage";
-import { DEFAULT_LANGUAGE, loadLanguage } from "../i18n/hostLanguages";
+import { ENGLISH, loadLanguage } from "../i18n/hostLanguages";
 
-/** What the page says until a language has loaded, and when none can. */
-const ENGLISH = createMessageCatalogue(
-  DEFAULT_LANGUAGE,
-  EN_GB_CATALOGUE,
-  EN_GB_CATALOGUE,
-);
-
-/** The messages for `tag`, or English when they cannot be loaded. */
-async function loadOrEnglish(tag: string): Promise<MessageCatalogue> {
+/**
+ * The messages for the language this device wants, or English when it cannot
+ * be worked out or loaded.
+ */
+async function loadWantedOrEnglish(): Promise<MessageCatalogue> {
   try {
-    return await loadLanguage(tag);
+    return await loadLanguage(resolveDeviceLanguage());
   } catch (error) {
-    console.warn(`Could not load the "${tag}" language.`, error);
+    console.warn("Could not load the visitor's language.", error);
     return ENGLISH;
   }
 }
@@ -35,14 +27,15 @@ async function loadOrEnglish(tag: string): Promise<MessageCatalogue> {
  * garbled stored value, or an Afrikaans load that fails, leaves English.
  *
  * @remarks Nothing here can throw into the boundary: the adapters that read
- *   storage and the browser never throw and a failed load is caught. It imports no
- *   services provider and no map code.
+ *   storage and the browser never throw, and resolving the language and
+ *   loading it are both caught. It imports no services provider and no map
+ *   code.
  */
 export function useErrorPageMessages(): MessageCatalogue {
   const [messages, setMessages] = useState<MessageCatalogue>(ENGLISH);
   useEffect(() => {
     let current = true;
-    void loadOrEnglish(resolveDeviceLanguage()).then((loaded) => {
+    void loadWantedOrEnglish().then((loaded) => {
       if (current) {
         setMessages(loaded);
         document.documentElement.lang = loaded.language;

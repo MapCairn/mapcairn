@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { MessageKey } from "@mapcairn/core";
-import { Button, useOptionalServices } from "@mapcairn/map";
+import { Button } from "@mapcairn/map";
 import { RotateCw } from "lucide-react";
 import { useNavigate } from "react-router";
 import * as styles from "./ErrorPage.css";
@@ -47,16 +47,14 @@ export interface ErrorPageProps {
  * happened and what to do, never the raw error. "Page not found" links back
  * to the map; anything else offers a Reload button.
  *
- * @remarks It reads the host's catalogue when there are services above it.
- *   Otherwise, which is the usual case because the boundary replaces the root
- *   route that supplies them, it speaks the visitor's stored language (else
- *   the browser's), English until that has loaded and whenever it cannot, as
- *   {@link useErrorPageMessages} describes.
+ * @remarks The boundary replaces the root route that supplies the services,
+ *   so the page never reads them. It speaks the visitor's stored language
+ *   (else the browser's), English until that has loaded and whenever it
+ *   cannot, as {@link useErrorPageMessages} describes.
  */
 export function ErrorPage({ kind }: ErrorPageProps) {
   const reload = useReloadPage();
-  const ownMessages = useErrorPageMessages();
-  const { t } = useOptionalServices()?.messages ?? ownMessages;
+  const { t } = useErrorPageMessages();
   const { title, message } = COPY[kind];
   return (
     <main className={styles.page} data-testid="error-page">
