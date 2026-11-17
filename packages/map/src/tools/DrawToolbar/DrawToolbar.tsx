@@ -25,7 +25,6 @@ import {
 import { type KeyboardEvent, useCallback, useEffect, useRef } from "react";
 import { useFocusTarget } from "../../chrome/focusRegistry";
 import { useScrollEdges } from "../../chrome/useScrollEdges";
-import { useToolbarEdge } from "../../chrome/useToolbarEdge";
 import { useFormatMessage, useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -188,10 +187,10 @@ function SelectedGroup({ draw, shape }: SelectedGroupProps) {
  * it is inside a landmark wherever the host places it.
  *
  * On mount focus moves to the chosen shape type, because the person has just
- * chosen Draw and the next thing to do is here. The toolbar publishes its top
- * edge with `useToolbarEdge` so the slots below it ride above, and registers
- * its Shapes button as a focus target, so closing the sheet over a drawing
- * puts focus back on it.
+ * chosen Draw and the next thing to do is here. The bottom-centre slot it sits
+ * in is what the slots below it ride above. The toolbar registers its Shapes
+ * button as a focus target, so closing the sheet over a drawing puts focus
+ * back on it.
  * @remarks Every pointer action has a button: Add point at map centre places a
  *   point (or moves the selected one), Previous and Next point select, the
  *   group moves, adds and removes points, and the circle group sets the
@@ -209,7 +208,6 @@ export function DrawToolbar({ draw, onDone, onOpenShapes }: DrawToolbarProps) {
   const format = useFormatMessage();
   const { t } = useMessages();
   const registerShapes = useFocusTarget("draw-shapes");
-  useToolbarEdge(rootRef);
   const scrollerRef = useRef<HTMLDivElement>(null);
   useScrollEdges(scrollerRef);
 

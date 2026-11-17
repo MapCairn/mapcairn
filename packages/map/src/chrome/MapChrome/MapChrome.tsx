@@ -90,6 +90,11 @@ interface Measurements {
   readonly bottomInset: number;
   /** Top of the bottom-centre slot before any lift, or null while it is empty. */
   readonly bottomCentreTop: number | null;
+  /**
+   * How far the bottom row must rise to clear the bottom-centre slot, from
+   * the slot's own height: zero or negative, and zero while it is empty.
+   */
+  readonly bottomRaise: number;
   /** Bottom edge of the tour card's slot, or null while it is empty. */
   readonly tourBottom: number | null;
   /** Bottom edge of the map key's slot before any lift, or null while it is empty. */
@@ -138,6 +143,7 @@ function measure(
     shown.length > 0
       ? Math.max(...shown.map((slot) => slot.top + slot.height))
       : restingBottom;
+  const bottomInset = Math.max(0, height - rowBottom);
   return {
     width,
     height,
@@ -148,9 +154,13 @@ function measure(
     bottomRowTop:
       shown.length > 0 ? Math.min(...shown.map((slot) => slot.top)) : rowBottom,
     bottomEndTop: bottomEnd && bottomEnd.height > 0 ? bottomEnd.top : rowBottom,
-    bottomInset: Math.max(0, height - rowBottom),
+    bottomInset,
     bottomCentreTop:
       bottomCentre && bottomCentre.height > 0 ? bottomCentre.top : null,
+    bottomRaise:
+      bottomCentre && bottomCentre.height > 0
+        ? -(bottomCentre.height + bottomInset)
+        : 0,
     tourBottom: tour && tour.height > 0 ? tour.top + tour.height : null,
     mapKeyBottom:
       mapKey && mapKey.height > 0 ? mapKey.top + mapKey.height : null,
@@ -213,11 +223,16 @@ function sameMeasurements(a: Measurements | null, b: Measurements): boolean {
  *   `ChromeLayoutProvider` the viewport and the pointer preference, and sets
  *   the {@link chromeVars} on the root with CSSOM: never a `style` attribute,
  *   because production CSP is `style-src 'self'`.
- * - The sheet publishes its top edge (`publishSheetTop`) and detent, the side
- *   panel its right edge, and the measure toolbar its top edge
- *   (`publishToolbarTop`). Anything else shown in bottom-centre counts as an
- *   obstruction too. `computeBottomSlotLayout` turns these into the lift and
- *   shift of the bottom slots, which hide at the full detent.
+ * - The sheet publishes its top edge (`publishSheetTop`) and detent, and the
+ *   side panel its right edge. Whatever is shown in bottom-centre, a toolbar
+ *   first, is an obstruction too, measured from its slot.
+ *   `computeBottomSlotLayout` turns these into the lift and shift of the
+ *   bottom slots, which hide at the full detent.
+ * - The bottom row rides above the sheet with a `transform`, which slides, and
+ *   above the bottom-centre slot with the separate `translate` property
+ *   (`bottomRaise`), which does not, and which the measuring observer sets in
+ *   its own callback. A toolbar that changes height therefore never has the
+ *   row over it, in any frame, with motion or without.
  * - Before the first measurement (and in server rendering) the layout is the
  *   bottom sheet, the narrow-screen default.
  */
@@ -240,7 +255,6 @@ export function MapChrome({
   const { finePointer } = usePreferences();
   const [measurements, setMeasurements] = useState<Measurements | null>(null);
   const [sheetTop, publishSheetTop] = useState<number | null>(null);
-  const [toolbarTop, publishToolbarTop] = useState<number | null>(null);
   const [sheetDetent, publishSheetDetent] = useState<SheetDetent | null>(null);
   const [panelEdge, publishPanelEdge] = useState<number | null>(null);
 
@@ -256,6 +270,11 @@ export function MapChrome({
     if (next.width === 0 && next.height === 0) {
       return;
     }
+    // Written here, in the observer's own callback, and not from the render
+    // that follows: the observer runs before the frame paints, so the bottom
+    // row rises with the slot it clears in the frame that slot changes size,
+    // where state set from here would be applied a frame later.
+    root.style.setProperty(chromeVars.bottomRaise, `${next.bottomRaise}px`);
     setMeasurements((current) =>
       sameMeasurements(current, next) ? current : next,
     );
@@ -365,9 +384,6 @@ export function MapChrome({
     measurements?.bottomCentreTop == null
       ? null
       : measurements.bottomCentreTop + sheetOnly.bottomStartTranslateY;
-  const obstructions = [toolbarTop, centreTop].filter(
-    (top): top is number => top !== null,
-  );
   const bottom = computeBottomSlotLayout({
     layout,
     viewportWidth: width,
@@ -375,8 +391,7 @@ export function MapChrome({
     sheetTopEdge: sheetTop,
     sheetDetent,
     panelRightEdge: panelEdge,
-    measureToolbarTop:
-      obstructions.length > 0 ? Math.min(...obstructions) : null,
+    measureToolbarTop: centreTop,
     inset,
   });
 
@@ -433,16 +448,14 @@ export function MapChrome({
     set(chromeVars.bottomEndRise, bottomEndRise);
     set(chromeVars.bottomEndRoom, bottomEndRoom);
     set(chromeVars.bottomEndBesideRoom, bottomEndBesideRoom);
-    set(chromeVars.bottomLift, bottom.bottomEndTranslateY);
+    set(chromeVars.bottomLift, sheetOnly.bottomStartTranslateY);
     set(chromeVars.bottomStartX, bottom.bottomStartTranslateX);
-    set(chromeVars.bottomCentreLift, sheetOnly.bottomStartTranslateY);
   }, [
     measurements,
     endStackMaxHeight,
     bottomEndRise,
     bottomEndRoom,
     bottomEndBesideRoom,
-    bottom.bottomEndTranslateY,
     bottom.bottomStartTranslateX,
     sheetOnly.bottomStartTranslateY,
   ]);
@@ -454,7 +467,6 @@ export function MapChrome({
       finePointer,
       panelEdge,
       publishSheetTop,
-      publishToolbarTop,
     }),
     [layout, viewport, finePointer, panelEdge],
   );

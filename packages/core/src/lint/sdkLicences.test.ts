@@ -400,7 +400,7 @@ describe("reportLines", () => {
     }).join("\n");
     expect(text).toContain("packages/web");
     expect(text).toContain("examples/embed");
-    expect(text).toContain("packages/geolint");
+    expect(text).toContain("(the host and the example may use other licences)");
     expect(text).toContain("3 production dependencies");
     expect(text).toContain("vitest");
   });

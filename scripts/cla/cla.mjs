@@ -22,10 +22,11 @@ export const AGREEMENT_SENTENCE =
  * The version of `CLA.md` that new signatures record. A signature recorded for
  * an earlier version stays valid and is never rewritten, because accounts are
  * matched by id whatever version they signed. Version 1.1 only renamed the
- * project from Karta to MapCairn, and version 1.2 only added a section for
- * `packages/geolint`, which is Apache-2.0.
+ * project from Karta to MapCairn, version 1.2 only added a section for a
+ * package with its own licence, and version 1.3 only removed that section when
+ * the package moved to its own repository.
  */
-export const CLA_VERSION = "1.2";
+export const CLA_VERSION = "1.3";
 
 /** Hidden marker that identifies the one explanatory comment the check owns. */
 export const COMMENT_MARKER = "<!-- cla-bot -->";

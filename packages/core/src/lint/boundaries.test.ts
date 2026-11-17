@@ -127,27 +127,6 @@ describe("dependency-cruiser boundaries", () => {
     "examples/demo/src/goodEntry.ts":
       'import { ServicesProvider } from "@mapcairn/map";\nexport const x = ServicesProvider;\n',
 
-    // geolint is independent of the rest of the repository, and its engine has no Node built-in.
-    "packages/geolint/src/engine/badPath.ts":
-      'import { helper } from "../../../core/src/format/helper";\nexport const x = helper;\n',
-    "packages/geolint/src/engine/badName.ts":
-      'import { ui } from "@mapcairn/map";\nexport const x = ui;\n',
-    "packages/geolint/src/engine/badUnresolvedName.ts":
-      'import { x } from "@mapcairn/not-installed";\nexport const y = x;\n',
-    "packages/geolint/src/engine/badExample.ts":
-      'import { ui } from "../../../../examples/demo/src/goodEntry";\nexport const x = ui;\n',
-    "packages/geolint/src/engine/badNode.ts":
-      'import { readFileSync } from "node:fs";\nexport const x = readFileSync;\n',
-    "packages/geolint/src/engine/badBareNode.ts":
-      'import { join } from "path";\nexport const x = join;\n',
-    "packages/geolint/src/engine/goodInside.ts":
-      'import { y } from "./goodSibling";\nexport const x = y;\n',
-    "packages/geolint/src/engine/goodSibling.ts": "export const y = 1;\n",
-    "packages/geolint/src/node/goodNode.ts":
-      'import { readFileSync } from "node:fs";\nexport const x = readFileSync;\n',
-    "packages/geolint/src/cli/goodNode.ts":
-      'import { join } from "node:path";\nexport const x = join;\n',
-
     // the SDK never depends on an example.
     "packages/map/src/ui/badExample.ts":
       'import { ui } from "../../../../examples/demo/src/badDeep";\nexport const x = ui;\n',
@@ -169,16 +148,6 @@ describe("dependency-cruiser boundaries", () => {
     symlinkSync(
       path.join(root, "packages/map"),
       path.join(root, "examples/demo/node_modules/@mapcairn/map"),
-      "junction",
-    );
-    // geolint reaches the map package by name through a link like an npm
-    // workspace makes, to prove the rule sees through it.
-    mkdirSync(path.join(root, "packages/geolint/node_modules/@mapcairn"), {
-      recursive: true,
-    });
-    symlinkSync(
-      path.join(root, "packages/map"),
-      path.join(root, "packages/geolint/node_modules/@mapcairn/map"),
       "junction",
     );
     const result = spawnSync(
@@ -264,30 +233,6 @@ describe("dependency-cruiser boundaries", () => {
       "examples/demo/src/badRelativeEntry.ts",
     ],
     ["packages-do-not-import-examples", "packages/map/src/ui/badExample.ts"],
-    [
-      "geolint-imports-no-workspace-package",
-      "packages/geolint/src/engine/badPath.ts",
-    ],
-    [
-      "geolint-imports-no-workspace-package",
-      "packages/geolint/src/engine/badName.ts",
-    ],
-    [
-      "geolint-imports-no-workspace-package",
-      "packages/geolint/src/engine/badExample.ts",
-    ],
-    [
-      "geolint-imports-no-workspace-package-unresolved",
-      "packages/geolint/src/engine/badUnresolvedName.ts",
-    ],
-    [
-      "geolint-engine-has-no-node-apis",
-      "packages/geolint/src/engine/badNode.ts",
-    ],
-    [
-      "geolint-engine-has-no-node-apis",
-      "packages/geolint/src/engine/badBareNode.ts",
-    ],
   ])("reports %s for %s", (rule, file) => {
     expect(findings).toContain(`${rule}: ${file}`);
   });
@@ -317,9 +262,6 @@ describe("dependency-cruiser boundaries", () => {
     "packages/map/src/ui/Switch/goodRadix.ts",
     "packages/map/src/ui/Tooltip/goodRadix.ts",
     "examples/demo/src/goodEntry.ts",
-    "packages/geolint/src/engine/goodInside.ts",
-    "packages/geolint/src/node/goodNode.ts",
-    "packages/geolint/src/cli/goodNode.ts",
   ])("accepts %s", (file) => {
     expect(findings.filter((f) => f.endsWith(file))).toEqual([]);
   });

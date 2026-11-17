@@ -12,4 +12,3 @@ Open plans:
 - [0007: Multi-feature selection](0007-multi-feature-selection.md), tracking issue [#49](https://github.com/MapCairn/mapcairn/issues/49).
 - [0008: Identify features on raster tile layers](0008-identify-raster-layers.md), tracking issue [#47](https://github.com/MapCairn/mapcairn/issues/47).
 - [0009: A message catalogue port, and English plus Afrikaans on the reference host](0009-i18n-message-catalogue.md), tracking issue [#231](https://github.com/MapCairn/mapcairn/issues/231).
-- [0010: geolint, a GeoJSON linter in its own Apache-2.0 package](0010-geolint.md), tracking issue [#259](https://github.com/MapCairn/mapcairn/issues/259).

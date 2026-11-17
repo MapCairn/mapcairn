@@ -8,10 +8,6 @@ import {
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  ChromeLayoutProvider,
-  type ChromeLayoutValue,
-} from "../../chrome/layoutContext";
 import { ServicesProvider } from "../../services";
 import { LiveRegionProvider } from "../../ui/LiveRegion";
 import { MeasureToolbar } from "./MeasureToolbar";
@@ -44,69 +40,27 @@ function Harness({
   );
 }
 
-function layout(
-  publishToolbarTop: (px: number | null) => void,
-  size = { width: 400, height: 800 },
-): ChromeLayoutValue {
-  return {
-    layout: "sheet",
-    viewport: size,
-    finePointer: true,
-    panelEdge: null,
-    publishSheetTop: () => undefined,
-    publishToolbarTop,
-  };
-}
-
 function renderToolbar(
   props: HarnessProps = {},
   services = createFakeServices(),
 ) {
-  const publish = vi.fn<(px: number | null) => void>();
-  const tree = (value: ChromeLayoutValue) => (
+  return render(
     <ServicesProvider services={services}>
       <LiveRegionProvider>
-        <ChromeLayoutProvider value={value}>
-          <Harness {...props} />
-        </ChromeLayoutProvider>
+        <Harness {...props} />
       </LiveRegionProvider>
-    </ServicesProvider>
+    </ServicesProvider>,
   );
-  const view = render(tree(layout(publish)));
-  return {
-    ...view,
-    publish,
-    rerenderWithLayout: (value: ChromeLayoutValue) =>
-      view.rerender(tree(value)),
-  };
-}
-
-let top = 480;
-let observerCallbacks: (() => void)[] = [];
-
-class FakeResizeObserver {
-  readonly disconnect = vi.fn();
-  readonly observe = vi.fn();
-  constructor(callback: () => void) {
-    observerCallbacks.push(callback);
-  }
 }
 
 describe("MeasureToolbar", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    top = 480;
-    observerCallbacks = [];
-    vi.stubGlobal("ResizeObserver", FakeResizeObserver);
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-      () => ({ top }) as DOMRect,
-    );
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -262,58 +216,8 @@ describe("MeasureToolbar", () => {
     });
   });
 
-  describe("publishing its top edge", () => {
-    it("publishes the top edge on mount", () => {
-      const { publish } = renderToolbar();
-      expect(publish).toHaveBeenCalledTimes(1);
-      expect(publish).toHaveBeenLastCalledWith(480);
-    });
-
-    it("publishes again when the toolbar changes size and its top moves", () => {
-      const { publish } = renderToolbar();
-      top = 412.4;
-      act(() => {
-        for (const callback of observerCallbacks) {
-          callback();
-        }
-      });
-      expect(publish).toHaveBeenCalledTimes(2);
-      expect(publish).toHaveBeenLastCalledWith(412);
-    });
-
-    it("does not publish an edge that has not moved", () => {
-      const { publish } = renderToolbar();
-      act(() => {
-        for (const callback of observerCallbacks) {
-          callback();
-        }
-      });
-      expect(publish).toHaveBeenCalledTimes(1);
-    });
-
-    it("re-measures when the chrome container is resized", () => {
-      const { publish, rerenderWithLayout } = renderToolbar();
-      top = 300;
-      rerenderWithLayout(layout(publish, { width: 400, height: 600 }));
-      expect(publish).toHaveBeenLastCalledWith(300);
-    });
-
-    it("publishes null when it unmounts, and stops observing", () => {
-      const { publish, unmount } = renderToolbar();
-      unmount();
-      expect(publish).toHaveBeenLastCalledWith(null);
-    });
-
-    it("publishes only once when ResizeObserver is unavailable", () => {
-      vi.stubGlobal("ResizeObserver", undefined);
-      const { publish, unmount } = renderToolbar();
-      expect(publish).toHaveBeenCalledTimes(1);
-      expect(publish).toHaveBeenLastCalledWith(480);
-      unmount();
-      expect(publish).toHaveBeenLastCalledWith(null);
-    });
-
-    it("works with the default layout outside a MapChrome", () => {
+  describe("outside a MapChrome", () => {
+    it("renders with the default layout", () => {
       render(
         <ServicesProvider services={createFakeServices()}>
           <LiveRegionProvider>
