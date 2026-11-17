@@ -1,6 +1,6 @@
 # Using the reference site
 
-What the reference host offers for choosing a language, searching, saving the map, reading the layer key, turning layers off and drawing, and how each works from the keyboard and a pointer.
+What the reference host offers for choosing a language, finding its source code, searching, saving the map, reading the layer key, turning layers off and drawing, and how each works from the keyboard and a pointer.
 
 ## Search by place name or coordinates
 
@@ -19,6 +19,10 @@ A comma is only ever a separator, never a decimal mark, and a negative sign (hyp
 The site speaks English (British) and Afrikaans. Settings has a Language control with Automatic, English and Afrikaans, each language named in its own language. Automatic, the default, follows the browser: Afrikaans when the browser lists Afrikaans (`af` or `af-ZA`) before any kind of English, English otherwise. The choice is kept on the device with the other settings and is never put in a shared link.
 
 The page renders in English and switches as soon as the app starts, so a visitor who chose Afrikaans can see English for a moment on a first load; the page's `lang` is set from the stored choice before the page paints, then follows the language in use. Afrikaans is loaded only when it is chosen. In Afrikaans the coordinates name east with O (oos), and the search box reads O as well as E. The privacy page and the credits stay in English; the notes in Settings, Directions and the pin card that say what each service receives are translated. The Afrikaans text is a draft until a fluent speaker has reviewed it.
+
+## Find the source code and licence
+
+The site is open source software under the AGPL-3.0. Open Settings and scroll to the end of Help: the About block says so and has a link, "View the source code and licence on GitHub", to the public repository. The link opens in a new tab, and nothing is requested from GitHub until you follow it. The privacy policy link is in Settings above Help, and the map's credits button, at the bottom of the map, lists the credits. The block is the reference site's own; an SDK host passes its own text and link, or none, as the `about` prop of `SheetContent`, described in [Extend the SDK](extending.md).
 
 ## Save an image and choose between features
 

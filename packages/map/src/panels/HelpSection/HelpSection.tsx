@@ -4,14 +4,44 @@ import { DRAW_KEY_HELP, MAP_KEY_HELP, resolveText } from "@mapcairn/core";
 import type { Ref } from "react";
 import { useMessages, usePreferences } from "../../services";
 import { Button } from "../../ui/Button";
+import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import {
   type HeadingLevel,
   nextHeadingLevel,
   Section,
   Subheading,
 } from "../Section";
-import { prose, subsection } from "../Section/Section.css";
+import { link, prose, subsection } from "../Section/Section.css";
 import { action, keys, shortcut, shortcuts } from "./HelpSection.css";
+
+/** Whether `href` is an absolute http or https address, the only kind the About link may point to. */
+function isWebAddress(href: string): boolean {
+  try {
+    const { protocol } = new URL(href);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A host's About block in Help: a heading, a line of text and one link. The
+ * link is drawn only when its address is an absolute http or https one;
+ * otherwise Help shows the heading and text without it.
+ */
+export interface HelpAbout {
+  /** The block's heading, in the host's words. */
+  readonly heading: string;
+  /** What the host wants to say about the site, as plain text. */
+  readonly text: string;
+  /** A link out, opened in a new tab and announced as doing so. */
+  readonly link: {
+    /** The host must supply a trusted http or https address, as with its other links. */
+    readonly href: string;
+    /** A name that says where the link goes, not "click here". */
+    readonly label: string;
+  };
+}
 
 /** Props for {@link HelpSection}. */
 export interface HelpSectionProps {
@@ -21,11 +51,17 @@ export interface HelpSectionProps {
   readonly headingRef?: Ref<HTMLHeadingElement>;
   /** Starts the first-visit tour. Without it Help offers no tour. */
   readonly onStartTour?: () => void;
+  /**
+   * The host's About block, shown below the other subsections. Without it Help
+   * has none. Its link address must be a trusted http or https one that the
+   * host supplies; any other address leaves the link out.
+   */
+  readonly about?: HelpAbout;
 }
 
 /**
- * Help: what the search box accepts, the keyboard shortcuts and a statement
- * of the accessibility target.
+ * Help: what the search box accepts, the keyboard shortcuts, a statement
+ * of the accessibility target and, when the host supplies one, its About block.
  * @remarks The Keyboard group is shown only when the primary pointer is fine
  *   (a mouse or trackpad), the signal this app uses for "has a keyboard". On a
  *   touch device it is left out entirely rather than replaced by a hint. A
@@ -36,6 +72,7 @@ export function HelpSection({
   headingLevel = 3,
   headingRef,
   onStartTour,
+  about,
 }: HelpSectionProps) {
   const { finePointer } = usePreferences();
   const messages = useMessages();
@@ -107,6 +144,28 @@ export function HelpSection({
         </Subheading>
         <p className={prose}>{t("panels.help.accessibilityDescription", {})}</p>
       </div>
+      {about ? (
+        <div className={subsection} data-testid="help-about">
+          <Subheading level={subLevel}>{about.heading}</Subheading>
+          <p className={prose}>{about.text}</p>
+          {isWebAddress(about.link.href) ? (
+            <p className={prose}>
+              <a
+                className={link}
+                href={about.link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {about.link.label}
+                <VisuallyHidden>
+                  {" "}
+                  {t("layers.card.opensInNewTab", {})}
+                </VisuallyHidden>
+              </a>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </Section>
   );
 }
