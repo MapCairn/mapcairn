@@ -140,13 +140,18 @@ describe("other markup that GitHub does not show", () => {
     expect(cleanText("a<style>SECRET</style>b")).toBe("ab");
   });
 
+  it("accepts attributes and a slash in the closing tag", () => {
+    expect(cleanText("a<script>SECRET</script foo='x'>b")).toBe("ab");
+    expect(cleanText("a<style>SECRET</style/>b")).toBe("ab");
+  });
+
   it("runs an unclosed one to the end of the text", () => {
     for (const open of [
       "<![CDATA[",
       "<!DOCTYPE",
       "<?x",
-      "<script>",
-      "<style>",
+      "<SCRIPT>",
+      "<Style>",
     ]) {
       expect(cleanText(`a${open} SECRET more`)).toBe("a");
     }

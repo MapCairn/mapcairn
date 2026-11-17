@@ -26,12 +26,12 @@ const REPO = "MapCairn/mapcairn";
  * the larger reading stays hidden.
  */
 const HIDDEN_MARKUP = [
-  { open: /<!--/y, close: /-->/g },
+  { open: /<!--/y, close: /--!?>/g },
   { open: /<!\[CDATA\[/y, close: /\]\]>/g },
   { open: /<![a-z]/iy, close: />/g },
   { open: /<\?/y, close: /\?>/g },
-  { open: /<script(?=[\s>/]|$)/iy, close: /<\/script\s*>/gi },
-  { open: /<style(?=[\s>/]|$)/iy, close: /<\/style\s*>/gi },
+  { open: /<script(?=[\s>/]|$)/iy, close: /<\/script(?:[\s/][^>]*)?>/gi },
+  { open: /<style(?=[\s>/]|$)/iy, close: /<\/style(?:[\s/][^>]*)?>/gi },
 ];
 /** Any opener of `HIDDEN_MARKUP`, anywhere in a piece of text. */
 const ANY_OPENER = new RegExp(
@@ -135,7 +135,10 @@ function hiddenMarkupEnd(text, position) {
       continue;
     }
     close.lastIndex = position + opening[0].length;
-    const closing = close.exec(text);
+    let closing = close.exec(text);
+    while (closing?.[0] === "--!>") {
+      closing = close.exec(text);
+    }
     return closing === null ? text.length : closing.index + closing[0].length;
   }
   return -1;
