@@ -34,7 +34,7 @@ import {
   within,
 } from "@testing-library/react";
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChromeLayoutProvider } from "../chrome/layoutContext";
 import {
   testChromeLayout,
@@ -104,6 +104,10 @@ function setup(
 const item = (id: string) => screen.getByTestId(`layer-${id}`);
 const toggle = (id: string, name: string) =>
   fireEvent.click(within(item(id)).getByRole("switch", { name }));
+
+afterEach(() => {
+  document.documentElement.removeAttribute("dir");
+});
 
 describe("LayersSection", () => {
   it("renders nothing when the host has no layers", () => {
@@ -807,6 +811,29 @@ describe("LayersSection", () => {
         maxZoom: 9,
         padding: { top: 0, right: 0, bottom: 0, left: 300 },
       });
+    });
+
+    it("shows a point clear of a right-to-left side panel", async () => {
+      document.documentElement.dir = "rtl";
+      const { adapter } = await withPoint(PANEL, [10, 20]);
+      const fit = vi.spyOn(adapter, "fitBounds");
+      fireEvent.click(screen.getByTestId("layer-list-row"));
+      expect(fit.mock.calls[0]?.[1]).toEqual({
+        maxZoom: SHOW_ON_MAP_MIN_ZOOM,
+        padding: { top: 0, right: 300, bottom: 0, left: 0 },
+      });
+    });
+
+    it("moves a tapped point clear of a right-to-left side panel", async () => {
+      document.documentElement.dir = "rtl";
+      const { adapter, layers } = await withPoint(
+        { ...PANEL, panelEdge: 500 },
+        [10, 20],
+      );
+      adapter.setView({ center: { lat: 20, lng: 10 }, zoom: 5 });
+      const pan = vi.spyOn(adapter, "panBy");
+      act(() => layers().select("sample-points", "a", { focus: true }));
+      await waitFor(() => expect(pan).toHaveBeenCalledWith(400 - 150, 0));
     });
 
     it("scrolls the card to the top of the sheet, smoothly", async () => {

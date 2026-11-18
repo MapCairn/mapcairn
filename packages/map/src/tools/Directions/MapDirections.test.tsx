@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { FakeMapAdapter, type RouteLeg } from "@mapcairn/core";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChromeLayoutProvider } from "../../chrome/layoutContext";
 import {
   testChromeLayout,
@@ -68,6 +68,10 @@ const AREA: AreaOutcome = {
   ],
   size: 1,
 };
+
+afterEach(() => {
+  document.documentElement.removeAttribute("dir");
+});
 
 function renderIn(ui: React.ReactNode, adapter = new FakeMapAdapter()) {
   const view = render(
@@ -135,6 +139,29 @@ describe("MapDirections", () => {
     expect(view.center.lng).toBeCloseTo((2.3522 + 2.4) / 2, 3);
   });
 
+  it("fits a route clear of the right-hand panel and left-hand controls", () => {
+    document.documentElement.dir = "rtl";
+    const adapter = new FakeMapAdapter();
+    const fit = vi.spyOn(adapter, "fitBounds");
+    render(
+      <ChromeLayoutProvider
+        value={testChromeLayout({
+          layout: "panel",
+          viewport: { width: 800, height: 600 },
+          panelEdge: 300,
+        })}
+      >
+        <MapContext.Provider value={testMapContext({ adapter })}>
+          <MapDirections result={ROUTE} />
+        </MapContext.Provider>
+      </ChromeLayoutProvider>,
+    );
+    expect(fit).toHaveBeenCalledWith(expect.anything(), {
+      maxZoom: FIT_MAX_ZOOM,
+      padding: { top: 88, right: 332, bottom: 32, left: 80 },
+    });
+  });
+
   it("does nothing before the map has mounted", () => {
     render(
       <ChromeLayoutProvider value={testChromeLayout()}>
@@ -173,6 +200,29 @@ describe("DirectionsOverlay", () => {
     // The free centre of an 800 px map with a half-height sheet over it.
     expect(Number(lines[0]?.getAttribute("y1"))).toBe(200);
     expect(Number(lines[1]?.getAttribute("x1"))).toBe(195);
+  });
+
+  it("draws the crosshair to the left of a right-to-left panel", () => {
+    document.documentElement.dir = "rtl";
+    render(
+      <ChromeLayoutProvider
+        value={testChromeLayout({
+          layout: "panel",
+          viewport: { width: 800, height: 600 },
+          panelEdge: 300,
+        })}
+      >
+        <MapContext.Provider value={testMapContext()}>
+          <svg aria-hidden="true">
+            <DirectionsOverlay stops={[]} showCrosshair />
+          </svg>
+        </MapContext.Provider>
+      </ChromeLayoutProvider>,
+    );
+    const lines = screen
+      .getByTestId("directions-crosshair")
+      .querySelectorAll("line");
+    expect(Number(lines[1]?.getAttribute("x1"))).toBe(250);
   });
 
   it("draws nothing before the map has mounted", () => {
