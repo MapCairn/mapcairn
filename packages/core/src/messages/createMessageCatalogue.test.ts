@@ -63,6 +63,9 @@ describe("createMessageCatalogue", () => {
     expect(catalogue.plural("common.itemCount", { count: 21 })).toBe(
       `${new Intl.NumberFormat("ru").format(21)} items`,
     );
+    expect(catalogue.plural("common.itemCount", { count: 1001 })).toBe(
+      `${new Intl.NumberFormat("ru").format(1001)} items`,
+    );
     warn.mockRestore();
   });
 
@@ -81,6 +84,9 @@ describe("createMessageCatalogue", () => {
 
     expect(catalogue.plural("common.itemCount", { count: 21 })).toBe(
       "21 предмет",
+    );
+    expect(catalogue.plural("common.itemCount", { count: 1001 })).toBe(
+      `${new Intl.NumberFormat("en-GB").format(1001)} предмет`,
     );
     warn.mockRestore();
   });
