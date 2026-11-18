@@ -7,6 +7,7 @@ import {
   isObject,
   isText,
   type Json,
+  layerTextSource,
   list,
   type Problems,
   type ValidationOptions,
@@ -224,7 +225,10 @@ function checkIntervals(
   } else if (!(min < max)) {
     problems.add("style.colour", "min must be below max");
   }
-  if (colour.unit !== undefined && typeof colour.unit !== "string") {
+  if (
+    colour.unit !== undefined &&
+    layerTextSource(colour.unit, true) === null
+  ) {
     problems.add("style.colour.unit", "must be text");
   }
   const ramp = list(colour.ramp);
@@ -250,10 +254,12 @@ function checkIntervals(
 
 /** Whether a label template shows the field the colour rule reads. */
 function labelNames(label: unknown, field: unknown): boolean {
+  if (!isObject(label)) {
+    return false;
+  }
+  const source = layerTextSource(label.template);
   return (
-    isObject(label) &&
-    typeof label.template === "string" &&
-    parseTemplate(label.template).some((item) => item.name === field)
+    source !== null && parseTemplate(source).some((item) => item.name === field)
   );
 }
 

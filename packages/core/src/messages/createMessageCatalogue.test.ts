@@ -46,6 +46,18 @@ describe("createMessageCatalogue", () => {
     ).toBe("af");
   });
 
+  it("carries host-defined layer template translations", () => {
+    const layerTemplates = { "sample.area": "Area {name}" };
+    const catalogue = createMessageCatalogue(
+      "af",
+      EN_GB_CATALOGUE,
+      EN_GB_CATALOGUE,
+      { layerTemplates },
+    );
+
+    expect(catalogue.layerTemplates).toBe(layerTemplates);
+  });
+
   it("warns with a message naming the language and the missing key", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const catalogue = createMessageCatalogue(

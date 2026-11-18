@@ -383,4 +383,33 @@ describe("toStyledShapes", () => {
     ).shapes;
     expect(shape?.label).toBeUndefined();
   });
+
+  it("translates a feed polygon label with its source field", () => {
+    const definition = {
+      ...SAMPLE_AREA_LAYER,
+      style: {
+        ...SAMPLE_AREA_LAYER.style,
+        label: {
+          template: {
+            key: "sample.area-label",
+            text: "Area {title}",
+          },
+          minzoom: 3,
+        },
+      },
+    };
+    const messages = new FakeMessageCatalogue({
+      layerTemplates: { "sample.area-label": "Zone {title}" },
+    });
+
+    const result = toStyledShapes(
+      definition,
+      [sampleArea("a", { title: "Paris", density: 250 })],
+      createFormatterRegistry(),
+      0,
+      messages,
+    );
+
+    expect(result.shapes[0]?.label).toBe("Zone Paris");
+  });
 });

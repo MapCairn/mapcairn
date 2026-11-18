@@ -119,6 +119,66 @@ describe("formatTemplate", () => {
     ).toBe("Magnitude 4.3, 10 km deep");
   });
 
+  it("uses a host translation while preserving and reordering source fields", () => {
+    const catalogue = new FakeMessageCatalogue({
+      layerTemplates: {
+        "example.magnitude": "{place}: magnitude {value|number}",
+      },
+    });
+    expect(
+      formatTemplate(
+        {
+          key: "example.magnitude",
+          text: "Magnitude {value|number} at {place}",
+        },
+        { place: "Alpha", value: 4.25 },
+        formatters,
+        { ...context, catalogue },
+      ),
+    ).toBe("Alpha: magnitude 4.3");
+  });
+
+  it("uses the source when a translation changes the fields or formatter", () => {
+    const template = {
+      key: "example.magnitude",
+      text: "{place}: magnitude {value|number}",
+    };
+    for (const translation of [
+      "{place}: magnitude",
+      "{place}: magnitude {value}",
+      "{place}: magnitude {value|number} {value|number}",
+    ]) {
+      const catalogue = new FakeMessageCatalogue({
+        layerTemplates: { "example.magnitude": translation },
+      });
+      expect(
+        formatTemplate(template, { place: "Alpha", value: 4.25 }, formatters, {
+          ...context,
+          catalogue,
+        }),
+      ).toBe("Alpha: magnitude 4.3");
+    }
+  });
+
+  it("uses the source when a translation is missing or inherited", () => {
+    const catalogue = new FakeMessageCatalogue({
+      layerTemplates: Object.create({
+        "example.magnitude": "Translated {value|number}",
+      }),
+    });
+    expect(
+      formatTemplate(
+        {
+          key: "example.magnitude",
+          text: "Magnitude {value|number}",
+        },
+        { value: 4.25 },
+        formatters,
+        { ...context, catalogue },
+      ),
+    ).toBe("Magnitude 4.3");
+  });
+
   it("writes a field with no formatter as text", () => {
     expect(
       formatTemplate(

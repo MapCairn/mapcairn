@@ -3,6 +3,12 @@
 import { formatDay, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
 
+/** Optional host-defined translations carried beside the typed messages. */
+export interface CreateMessageCatalogueOptions {
+  /** Translations for host-keyed layer templates, units and labels. */
+  readonly layerTemplates?: Readonly<Record<string, string>>;
+}
+
 /** Matches a `{name}` placeholder in a catalogue string. */
 const PLACEHOLDER = /\{(\w+)\}/g;
 
@@ -68,6 +74,7 @@ export function createMessageCatalogue(
   language: string,
   catalogue: Readonly<Partial<Record<MessageKey, string>>>,
   fallback: Readonly<Record<MessageKey, string>>,
+  options: CreateMessageCatalogueOptions = {},
 ): MessageCatalogue {
   const warned = new Set<MessageKey>();
 
@@ -87,6 +94,9 @@ export function createMessageCatalogue(
 
   return {
     language,
+    ...(options.layerTemplates
+      ? { layerTemplates: options.layerTemplates }
+      : {}),
     t(key, params) {
       return substitute(resolve(key), params, language);
     },

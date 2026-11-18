@@ -182,6 +182,25 @@ describe("evaluateShapeStyle", () => {
     );
   });
 
+  it("translates an interval unit from a host-defined key", () => {
+    const messages = new FakeMessageCatalogue({
+      layerTemplates: { "sample.density-unit": " per cell" },
+    });
+    const style: ShapeStyle = {
+      ...intervals,
+      colour: {
+        ...intervals.colour,
+        unit: { key: "sample.density-unit", text: " per km²" },
+      },
+    };
+
+    expect(shapeClasses(style, messages).map((look) => look.label)).toEqual([
+      "Up to 100 per cell",
+      "100 to 200 per cell",
+      "200 per cell and above",
+    ]);
+  });
+
   it("puts values outside an interval style's range in its first and last class", () => {
     expect(
       evaluateShapeStyle(intervals, { density: -50 }, catalogue).colour,

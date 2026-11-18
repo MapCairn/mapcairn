@@ -8,6 +8,7 @@ import {
   SAMPLE_LAYERS,
   SAMPLE_TILE_LAYER,
   SAMPLE_TIME_LAYER,
+  SAMPLE_VECTOR_LAYER,
 } from "../fakes/layerFixtures";
 import { createDecoderRegistry } from "./decoders";
 import { createFormatterRegistry } from "./formatters";
@@ -38,6 +39,52 @@ describe("validateLayerDefinition", () => {
     ]) {
       expect(problems(definition)).toEqual([]);
     }
+  });
+
+  it("validates the source fields of keyed card and list templates", () => {
+    const definition = copy(SAMPLE_FEED_LAYER);
+    const card = definition.card as Json;
+    card.title = { key: "sample.title", text: "{title}" };
+    card.lines = [{ key: "sample.value", text: "Value {value|number}" }];
+    const list = definition.list as Json;
+    list.secondary = {
+      key: "sample.secondary",
+      text: "At {time|relative}",
+    };
+    expect(problems(definition)).toEqual([]);
+    card.lines = [{ key: "sample.value", text: "Value {missing|number}" }];
+    expect(problems(definition)).toContain(
+      "card.lines[0]: {missing} is not a field",
+    );
+  });
+
+  it("rejects malformed keyed templates", () => {
+    for (const template of [
+      { key: "", text: "{title}" },
+      { key: 3, text: "{title}" },
+      { key: "sample.title", text: 3 },
+      { key: "sample.title" },
+    ]) {
+      const definition = copy(SAMPLE_FEED_LAYER);
+      (definition.card as Json).title = template;
+      expect(problems(definition)).toContain(
+        "card.title: must be non-empty text",
+      );
+    }
+  });
+
+  it("keeps vector-tile labels as one plain property name", () => {
+    const definition = copy(SAMPLE_VECTOR_LAYER);
+    const sourceLayer = (definition.sourceLayers as Json[])[0] as Json;
+    const style = sourceLayer.style as Json;
+    (style.label as Json).template = {
+      key: "sample.vector-label",
+      text: "{name}",
+    };
+
+    expect(problems(definition)).toContain(
+      "sourceLayers[0].style.label.template: must be a single tile property such as {name}",
+    );
   });
 
   it("rejects something that is not an object", () => {

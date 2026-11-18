@@ -4,7 +4,7 @@ How a host changes the words the interface shows, offers its visitors more than 
 
 ## How the text is organised
 
-- Every word the interface shows is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`).
+- Most interface text is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`). Layer feature templates use host-defined keys in `MessageCatalogue.layerTemplates` instead.
 - A string is plain text with `{name}` placeholders. A key used with `plural` carries two forms separated by `|`: the form for the plural category "one" first, the form for every other category second. Counts use `Intl.PluralRules` for the catalogue's language, and lists use `Intl.ListFormat`.
 - Numbers, dates and lists that go into a string are formatted by the catalogue for its own language, so a translation never has to format them. The coordinate hemisphere letters are keys too (`format.hemisphereNorth` and so on), so a language can write N, S, O and W.
 - "UTC" is part of fixed keys, so a time in UTC says so in every language.
@@ -50,7 +50,35 @@ The reference site's own setup is `packages/web/src/i18n/hostLanguages.ts`, with
 
 ## Translate definitions
 
-A basemap or layer definition's reader-facing text (a name, a description, a control label, an empty-state text) is either a plain string or a `MessageKey`. A plain string is shown as it is, so existing definitions keep working. A key is looked up in the active catalogue where the definition is shown. To translate your own definitions, give them keys of your own and supply those keys in your catalogues, or write a plain string and accept that it does not change with the language. Attribution, licence names and links are legal text and stay as they are.
+A basemap or layer definition's reader-facing text (a name, a description, a control label or an empty-state text) is either a plain string or a `MessageKey`. A plain string is shown as it is, so existing definitions keep working. A key is looked up in the active catalogue where the definition is shown. Attribution, licence names and links are legal text and stay as they are.
+
+## Translate layer templates
+
+Card titles and lines, list secondary lines, feed polygon and line labels, and range and interval units can use a host-defined key without adding it to `MessageKey`. Use a `LayerTemplate` object with the key and its source text:
+
+```ts
+const cardTitle = {
+  key: "events.magnitude",
+  text: "Magnitude {magnitude|number} at {place}",
+};
+```
+
+Add the key to `layerTemplates` when building the catalogue:
+
+```ts
+const messages = createMessageCatalogue(
+  "af",
+  AFRIKAANS_MESSAGES,
+  EN_GB_CATALOGUE,
+  {
+    layerTemplates: {
+      "events.magnitude": "{place}: sterkte {magnitude|number}",
+    },
+  },
+);
+```
+
+The source `text` supplies the fallback when the key is missing or its translation does not preserve the source's field and formatter placeholders, including repeated placeholders. A translation may reorder them. Plain strings remain literal and keep working as before; units include their own spacing, such as ` per km²`. A host with its own `MessageCatalogue` implementation can provide the same optional `layerTemplates` property. Vector-tile labels remain plain property names because the map engine reads them directly.
 
 ## Use a message-format library of your own
 

@@ -26,6 +26,7 @@ import {
   isObject,
   isText,
   type Json,
+  layerTextSource,
   list,
   MAX_RADIUS,
   OPTION_VALUE,
@@ -309,11 +310,13 @@ function cardNames(card: unknown, field: string): boolean {
   if (!isObject(card)) {
     return false;
   }
-  return [card.title, ...list(card.lines)].some(
-    (template) =>
-      typeof template === "string" &&
-      parseTemplate(template).some((placeholder) => placeholder.name === field),
-  );
+  return [card.title, ...list(card.lines)].some((template) => {
+    const source = layerTextSource(template);
+    return (
+      source !== null &&
+      parseTemplate(source).some((placeholder) => placeholder.name === field)
+    );
+  });
 }
 
 /** Checks size stops and returns the field they read, if any. */

@@ -98,7 +98,7 @@ The SDK does not depend on the playground's framework. The playground is a serve
 
 **A design system.** Typed tokens only, light and dark themes, one accent, IBM Plex Sans and Lucide icons. The contrast of every token pair is calculated in a test, and a style scanner rejects raw colours, off-scale spacing and unnamed controls.
 
-**Translation.** The interface's text is looked up by key in a message catalogue, so a host can translate or replace it. The SDK ships British English; a host can add languages, and Settings then offers a choice. The [translation guide](docs/guides/translate-the-sdk.md) covers it.
+**Translation.** The interface's text is looked up by key in a message catalogue, so a host can translate or replace it. A host can also translate keyed layer feature templates and unit suffixes while keeping their source text and fields. The SDK ships British English; a host can add languages, and Settings then offers a choice. The [translation guide](docs/guides/translate-the-sdk.md) covers both.
 
 **Server rendering.** The map host, chrome, sheet and readout are tested to render no style attributes on the server, so a server-rendered page can keep a Content Security Policy with no `unsafe-inline`. The playground renders its page and a placeholder of the chrome on the server and hydrates; the map itself is drawn in the browser. The [Content Security Policy guide](docs/guides/content-security-policy.md) lists what a host page needs.
 

@@ -13,6 +13,7 @@ import type {
   ShapeStyle,
 } from "./definition";
 import { toNumber } from "./numbers";
+import { resolveLayerTemplate } from "./template";
 
 /** Stroke width in pixels of a polygon's outline when the style names none. */
 export const DEFAULT_AREA_WIDTH = 1.5;
@@ -80,7 +81,10 @@ function intervalLabel(
   width: number,
   catalogue: MessageCatalogue,
 ): string {
-  const unit = colour.unit ?? "";
+  const unit =
+    colour.unit === undefined
+      ? ""
+      : resolveLayerTemplate(colour.unit, catalogue);
   const last = colour.ramp.length - 1;
   const figure = (value: number) =>
     formatNumber(value, catalogue.language, {
