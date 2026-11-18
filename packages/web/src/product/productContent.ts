@@ -101,14 +101,23 @@ export const PLAYGROUND_ACTION: InlineLink = {
 export const PRODUCT_TITLE =
   "MapCairn | Open-source SDK for accessible map applications";
 
-/** The page's one h1: the pitch in one sentence. */
+/** The page's one h1: what a team can build with MapCairn, and for whom. */
 export const HEADLINE =
-  "An open-source SDK for accessible, privacy-respecting map applications";
+  "Build accessible, privacy-respecting map applications for the public";
 
-/** The short paragraph under the h1. */
+/** The short paragraph under the h1: what MapCairn is, who it is for and what it gives them. */
 export const LEDE: Line = [
-  "The whole interface around a MapLibre map, open data layers written as data, and every service behind a small interface you can replace. For teams building maps for the public.",
+  "MapCairn is an open-source React SDK for teams building public-interest maps, such as open data and hazard maps. It gives you the whole interface around a MapLibre map, open data layers written as data, and every service behind a small interface you can replace.",
 ];
+
+/** The copy button's words beside a code example, and what it announces. */
+export const COPY_CODE = {
+  idle: "Copy code",
+  copied: "Copied",
+  failed: "Copy failed",
+  copiedMessage: "Code copied",
+  failedMessage: "Could not copy. Select the code and copy it manually.",
+} as const;
 
 /** The line under the hero's two buttons. */
 export const HERO_NOTE: Line = [

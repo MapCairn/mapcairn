@@ -32,6 +32,41 @@ const PAGE_WIDTH = "60rem";
 /** The space between sections: two of the largest steps. */
 const SECTION_SPACE = `calc(${tokens.space.xl} * 2)`;
 
+/*
+ * Interaction states. Hover shows only where a pointer can hover, so a touch
+ * screen never keeps a stuck hover after a tap; pressed shows everywhere. Each
+ * state is built from colour pairs the theme tests hold to AA in both themes
+ * (text or accent on the accent tint and the page, the accent contrast on the
+ * accent), so no state lowers contrast. Only transform animates, at the fast
+ * duration, which the theme sets to near zero under reduced motion. In forced
+ * colours tints and shadows are dropped, so a hover there also thickens or
+ * adds an underline.
+ */
+
+/** Where a pointer can hover. */
+const HOVER = "(hover: hover)";
+
+/** Where a pointer can hover and the system paints its own colours. */
+const HOVER_FORCED = "(hover: hover) and (forced-colors: active)";
+
+/** How far a pressed button or link shrinks: just enough to feel. */
+const PRESSED = "scale(0.98)";
+
+/** How a target eases into its pressed size and back. */
+const PRESS_TRANSITION = `transform ${tokens.motion.duration.fast} ${tokens.motion.easing}`;
+
+/** A hovered link's underline: twice its resting weight. */
+const HOVER_UNDERLINE = "2px";
+
+/** How far a hovered action rises, a hair, with the floating shadow under it. */
+const LIFT = "translateY(-1px)";
+
+/**
+ * Hover that leaves a focused element's ring alone, since the ring is partly
+ * a shadow, and gives way to the pressed state.
+ */
+const HOVER_NOT_FOCUSED = "&:hover:not(:focus-visible):not(:active)";
+
 /** The scrolling page: the document is fixed for the map, so this scrolls itself. */
 export const scroller = style({
   height: "100%",
@@ -80,9 +115,22 @@ export const brand = style({
   minHeight: tokens.size.minTarget,
   color: tokens.color.text,
   textDecoration: "none",
+  textUnderlineOffset: "0.25em",
   borderRadius: tokens.radius.inner,
+  transition: PRESS_TRANSITION,
   selectors: {
     "&:focus-visible": focusRing,
+    "&:active": { transform: PRESSED },
+  },
+  "@media": {
+    [HOVER]: {
+      selectors: {
+        "&:hover": {
+          textDecoration: "underline",
+          textDecorationThickness: HOVER_UNDERLINE,
+        },
+      },
+    },
   },
 });
 
@@ -96,7 +144,7 @@ export const nav = style({
   listStyle: "none",
 });
 
-/** One header link: a 44 px target with the text centred in it. */
+/** One header link: a 44 px target with the text centred in it, tinted under a pointer. */
 export const navLink = style({
   display: "inline-flex",
   alignItems: "center",
@@ -108,8 +156,23 @@ export const navLink = style({
   textDecoration: "underline",
   textDecorationThickness: "1px",
   textUnderlineOffset: "0.25em",
+  transition: PRESS_TRANSITION,
   selectors: {
     "&:focus-visible": focusRing,
+    "&:active": {
+      transform: PRESSED,
+      backgroundColor: tokens.color.accentTint,
+    },
+  },
+  "@media": {
+    [HOVER]: {
+      selectors: {
+        "&:hover": {
+          backgroundColor: tokens.color.accentTint,
+          textDecorationThickness: HOVER_UNDERLINE,
+        },
+      },
+    },
   },
 });
 
@@ -121,7 +184,12 @@ export const main = style({
   },
 });
 
-/** The hero: words first, then the art below them, or beside them on a wide screen. */
+/**
+ * The hero: words first, then the art below them, or beside them on a wide
+ * screen. On a wide screen it has more room above it, but never more below:
+ * its bottom padding and the first section's top add up to the same gap as
+ * between sections, at every width.
+ */
 export const hero = style({
   ...pageColumn,
   display: "grid",
@@ -133,7 +201,7 @@ export const hero = style({
     [WIDE]: {
       gridTemplateColumns: "minmax(0, 6fr) minmax(0, 5fr)",
       paddingInline: tokens.space.xl,
-      paddingBlock: SECTION_SPACE,
+      paddingBlockStart: SECTION_SPACE,
       columnGap: SECTION_SPACE,
     },
   },
@@ -182,7 +250,11 @@ export const actions = style({
   },
 });
 
-/** What both actions share: a 48 px target, the icon and the words centred. */
+/**
+ * What both actions share: a 48 px target, the icon and the words centred.
+ * Under a pointer an action rises a hair onto the floating shadow; pressed, it
+ * settles and shrinks a little.
+ */
 const action = {
   display: "inline-flex",
   alignItems: "center",
@@ -196,6 +268,26 @@ const action = {
   lineHeight: tokens.type.body.lineHeight,
   textDecoration: "none",
   textAlign: "center",
+  textUnderlineOffset: "0.25em",
+  transition: PRESS_TRANSITION,
+} as const;
+
+/** An action's pressed state: no lift and no shadow, a little smaller. */
+const actionPressed = { transform: PRESSED, boxShadow: "none" } as const;
+
+/** An action's hover: the lift and the shadow, unless focused, where the ring stays. */
+const actionHover = {
+  [HOVER_NOT_FOCUSED]: {
+    transform: LIFT,
+    boxShadow: tokens.shadow.floating,
+  },
+} as const;
+
+/** In forced colours the shadow is gone, so a hovered action is underlined. */
+const actionHoverForced = {
+  [HOVER_FORCED]: {
+    selectors: { "&:hover": { textDecoration: "underline" } },
+  },
 } as const;
 
 /** The primary action: View on GitHub. */
@@ -206,10 +298,15 @@ export const primaryAction = style({
   color: tokens.color.accentContrast,
   selectors: {
     "&:focus-visible": focusRing,
+    "&:active": actionPressed,
+  },
+  "@media": {
+    [HOVER]: { selectors: actionHover },
+    ...actionHoverForced,
   },
 });
 
-/** The secondary action: Try the playground. */
+/** The secondary action: Try the playground. Under a pointer it also takes the accent tint and edge. */
 export const secondaryAction = style({
   ...action,
   border: `1px solid ${tokens.color.controlBoundary}`,
@@ -217,6 +314,23 @@ export const secondaryAction = style({
   color: tokens.color.text,
   selectors: {
     "&:focus-visible": focusRing,
+    "&:active": {
+      ...actionPressed,
+      borderColor: tokens.color.accent,
+      backgroundColor: tokens.color.accentTint,
+    },
+  },
+  "@media": {
+    [HOVER]: {
+      selectors: {
+        ...actionHover,
+        "&:hover": {
+          borderColor: tokens.color.accent,
+          backgroundColor: tokens.color.accentTint,
+        },
+      },
+    },
+    ...actionHoverForced,
   },
 });
 
@@ -235,7 +349,6 @@ export const section = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
-  gap: tokens.space.md,
   scrollMarginBlockStart: tokens.space.md,
   "@media": {
     [WIDE]: {
@@ -266,10 +379,29 @@ export const paragraph = style({
 /** A subheading inside a section. */
 export const subheading = style({
   margin: 0,
-  paddingBlockStart: tokens.space.xs,
   fontSize: tokens.type.large.size,
   lineHeight: tokens.type.large.lineHeight,
   fontWeight: tokens.type.weight.semibold,
+});
+
+/*
+ * The rhythm inside a section: one medium step between blocks. A subheading
+ * groups with what it heads, so it has a larger step above it (unless it
+ * comes straight after the section's heading) and a small one below it.
+ * Margins, not a flex gap, because the gap would be the same on both sides;
+ * the section is a flex column, so they never collapse. The selectors outrank
+ * each block's own `margin: 0`.
+ */
+globalStyle(`${section} > :not(:first-child)`, {
+  marginBlockStart: tokens.space.md,
+});
+
+globalStyle(`${section} > :not(${sectionHeading}) + ${subheading}`, {
+  marginBlockStart: tokens.space.lg,
+});
+
+globalStyle(`${section} > ${subheading} + *`, {
+  marginBlockStart: tokens.space.xs,
 });
 
 /** A list, with the markers inside the column so nothing hangs past its edge. */
@@ -281,7 +413,7 @@ export const list = style({
   paddingInlineStart: tokens.space.lg,
 });
 
-/** A link in running text or a list. */
+/** A link in running text or a list: under a pointer its underline doubles, and pressed it takes the accent tint. */
 export const link = style({
   color: tokens.color.accent,
   // Padding on an inline link grows the box it is hit in, not the line, so
@@ -292,6 +424,14 @@ export const link = style({
   borderRadius: tokens.radius.inner,
   selectors: {
     "&:focus-visible": focusRing,
+    "&:active": { backgroundColor: tokens.color.accentTint },
+  },
+  "@media": {
+    [HOVER]: {
+      selectors: {
+        "&:hover": { textDecorationThickness: HOVER_UNDERLINE },
+      },
+    },
   },
 });
 
@@ -299,6 +439,60 @@ export const link = style({
 export const code = style({
   fontFamily: tokens.type.familyMono,
   overflowWrap: "anywhere",
+});
+
+/** The code example and its copy button, the button above the code at its end. */
+export const codeExample = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: tokens.space.xs,
+});
+
+/**
+ * The copy button: a quiet 44 px pill that reads like the secondary action,
+ * with the same hover and pressed states. Its words and icon say what the
+ * last copy did.
+ */
+export const copyButton = style({
+  ...action,
+  alignSelf: "end",
+  minHeight: tokens.size.minTarget,
+  paddingInline: tokens.space.md,
+  border: `1px solid ${tokens.color.controlBoundary}`,
+  backgroundColor: tokens.color.surfaceRaised,
+  color: tokens.color.text,
+  fontFamily: tokens.type.family,
+  cursor: "pointer",
+  selectors: {
+    "&:focus-visible": focusRing,
+    '&[data-state="copied"]': { borderColor: tokens.color.accent },
+    "&:active": {
+      ...actionPressed,
+      borderColor: tokens.color.accent,
+      backgroundColor: tokens.color.accentTint,
+    },
+  },
+  "@media": {
+    [HOVER]: {
+      selectors: {
+        ...actionHover,
+        "&:hover": {
+          borderColor: tokens.color.accent,
+          backgroundColor: tokens.color.accentTint,
+        },
+      },
+    },
+    ...actionHoverForced,
+  },
+});
+
+/** The copy button's icon: the accent once copied, the danger colour if the copy failed. */
+export const copyIcon = style({
+  flexShrink: 0,
+  selectors: {
+    [`${copyButton}[data-state="copied"] > &`]: { color: tokens.color.accent },
+    [`${copyButton}[data-state="failed"] > &`]: { color: tokens.color.danger },
+  },
 });
 
 /** The code example: its own scrolling, focusable region, so it never widens the page. */
@@ -348,7 +542,7 @@ export const disclosure = style({
   borderBlockEnd: `1px solid ${tokens.color.hairline}`,
 });
 
-/** A disclosure's one-line summary: a 44 px target with a chevron at its end. */
+/** A disclosure's one-line summary: a 44 px target with a chevron at its end, in the accent under a pointer. */
 export const summary = style({
   display: "flex",
   alignItems: "center",
@@ -362,7 +556,15 @@ export const summary = style({
   listStyle: "none",
   selectors: {
     "&:focus-visible": focusRing,
+    "&:active": { color: tokens.color.accent },
     "&::-webkit-details-marker": { display: "none" },
+  },
+  "@media": {
+    [HOVER]: {
+      selectors: {
+        "&:hover": { color: tokens.color.accent },
+      },
+    },
   },
 });
 
@@ -372,6 +574,14 @@ export const marker = style({
   color: tokens.color.textMuted,
   selectors: {
     "details[open] > summary > &": { transform: "rotate(180deg)" },
+    [`${summary}:active > &`]: { color: "inherit" },
+  },
+  "@media": {
+    [HOVER]: {
+      selectors: {
+        [`${summary}:hover > &`]: { color: "inherit" },
+      },
+    },
   },
 });
 
@@ -392,7 +602,7 @@ export const deepLinks = style({
   listStyle: "none",
 });
 
-/** A link on its own line: a full-size target. */
+/** A link on its own line: a full-size target, tinted under a pointer, that shrinks a little when pressed. */
 export const blockLink = style([
   link,
   {
@@ -400,6 +610,19 @@ export const blockLink = style([
     alignItems: "center",
     gap: tokens.space.xs,
     minHeight: tokens.size.minTarget,
+    paddingInline: tokens.space.xxs,
+    marginInline: `calc(-1 * ${tokens.space.xxs})`,
+    transition: PRESS_TRANSITION,
+    selectors: {
+      "&:active": { transform: PRESSED },
+    },
+    "@media": {
+      [HOVER]: {
+        selectors: {
+          "&:hover": { backgroundColor: tokens.color.accentTint },
+        },
+      },
+    },
   },
 ]);
 
@@ -436,13 +659,17 @@ export const footerLinks = style({
   listStyle: "none",
 });
 
-/** One footer link. */
+/** One footer link: a full-size target that shrinks a little when pressed. */
 export const footerLink = style([
   link,
   {
     display: "inline-flex",
     alignItems: "center",
     minHeight: tokens.size.minTarget,
+    transition: PRESS_TRANSITION,
+    selectors: {
+      "&:active": { transform: PRESSED },
+    },
   },
 ]);
 

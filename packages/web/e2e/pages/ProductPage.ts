@@ -2,9 +2,9 @@
 // Copyright MapCairn contributors
 import { expect, type Locator, type Page } from "@playwright/test";
 
-/** The product page's h1, which says what MapCairn is. */
+/** The product page's h1, which says what teams can build with MapCairn. */
 export const PRODUCT_HEADLINE =
-  "An open-source SDK for accessible, privacy-respecting map applications";
+  "Build accessible, privacy-respecting map applications for the public";
 
 /**
  * The product page at `/`, located by role and accessible name. It is English
@@ -20,6 +20,8 @@ export class ProductPage {
   readonly heroGitHub: Locator;
   readonly heroPlayground: Locator;
   readonly code: Locator;
+  /** The embedding example's copy button, before it has copied. */
+  readonly copyCode: Locator;
 
   constructor(readonly page: Page) {
     this.headline = page.getByRole("heading", {
@@ -38,6 +40,7 @@ export class ProductPage {
       name: "Try the playground",
     });
     this.code = page.getByRole("region", { name: "Embedding example" });
+    this.copyCode = this.main.getByRole("button", { name: "Copy code" });
   }
 
   /** Opens the product page, with an optional hash, and waits for its h1. */

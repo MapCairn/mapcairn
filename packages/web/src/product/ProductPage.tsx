@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { Icon, SkipLink } from "@mapcairn/map";
+import type { ClipboardPort } from "@mapcairn/core";
+import { Icon, LiveRegionProvider, SkipLink } from "@mapcairn/map";
 import { ChevronDown, CodeXml, Compass, Heart } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "../app/Brand";
@@ -11,6 +12,7 @@ import {
   PRODUCT_PATH,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
+import { CopyCodeButton } from "./CopyCodeButton";
 import { type CodeTokenKind, highlightCode } from "./highlightCode";
 import * as styles from "./ProductPage.css";
 import {
@@ -128,9 +130,11 @@ function Disclosures({ items }: { readonly items: readonly Disclosure[] }) {
 function BlockView({
   block,
   sectionId,
+  clipboard,
 }: {
   readonly block: Block;
   readonly sectionId: string;
+  readonly clipboard: ClipboardPort;
 }): ReactNode {
   switch (block.kind) {
     case "paragraph":
@@ -154,20 +158,24 @@ function BlockView({
     case "code":
       // A named region the keyboard can reach and scroll (WCAG 2.1.1). It stays a
       // pre, which keeps the code's whitespace, rather than becoming a section.
+      // The copy button sits above it, so the code stays selectable by hand.
       return (
-        // biome-ignore lint/a11y/useSemanticElements: a pre keeps the code's whitespace; a section would not
-        <pre
-          className={styles.codeBlock}
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must take focus to be scrolled from the keyboard
-          tabIndex={0}
-          role="region"
-          aria-label={block.label}
-          data-testid={`${sectionId}-code`}
-        >
-          <code>
-            <HighlightedCode source={block.code} />
-          </code>
-        </pre>
+        <div className={styles.codeExample}>
+          <CopyCodeButton code={block.code} clipboard={clipboard} />
+          {/* biome-ignore lint/a11y/useSemanticElements: a pre keeps the code's whitespace; a section would not */}
+          <pre
+            className={styles.codeBlock}
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must take focus to be scrolled from the keyboard
+            tabIndex={0}
+            role="region"
+            aria-label={block.label}
+            data-testid={`${sectionId}-code`}
+          >
+            <code>
+              <HighlightedCode source={block.code} />
+            </code>
+          </pre>
+        </div>
       );
     case "details":
       return <Disclosures items={block.items} />;
@@ -188,7 +196,13 @@ function BlockView({
 }
 
 /** One section: its heading and its blocks. */
-function SectionView({ section }: { readonly section: Section }) {
+function SectionView({
+  section,
+  clipboard,
+}: {
+  readonly section: Section;
+  readonly clipboard: ClipboardPort;
+}) {
   const headingId = `${section.id}-heading`;
   return (
     <section
@@ -206,6 +220,7 @@ function SectionView({ section }: { readonly section: Section }) {
           key={index}
           block={block}
           sectionId={section.id}
+          clipboard={clipboard}
         />
       ))}
     </section>
@@ -304,7 +319,8 @@ function ProductFooter() {
  * View on GitHub as the first action and the playground one link away from
  * anywhere on the page.
  *
- * @remarks Server-rendered and static: it loads no services and no map code,
+ * @remarks Server-rendered: it loads no map code and no service but the
+ *   clipboard it is given,
  *   and its own markup requests nothing from another site (in production the
  *   host adds its cookieless page-view counter, as on every page). It links
  *   to the repository from exactly two places, the hero's View on GitHub and
@@ -313,9 +329,15 @@ function ProductFooter() {
  *   Its first element is the inline script that sends an old map link
  *   (`/#map=...`) on to the playground before the page paints. It is English
  *   only, by decision, so it sets `lang="en-GB"` on its own root whatever
- *   language the playground is in.
+ *   language the playground is in. The clipboard serves the
+ *   embedding example's copy button, and the page mounts its own live regions
+ *   for that button's messages.
  */
-export function ProductPage() {
+export function ProductPage({
+  clipboard,
+}: {
+  readonly clipboard: ClipboardPort;
+}) {
   return (
     <div
       className={styles.scroller}
@@ -327,15 +349,21 @@ export function ProductPage() {
         // biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed string allowed by its CSP hash; see MAP_LINK_REDIRECT_SCRIPT.
         dangerouslySetInnerHTML={{ __html: MAP_LINK_REDIRECT_SCRIPT }}
       />
-      <SkipLink targetId={MAIN_ID}>Skip to content</SkipLink>
-      <ProductHeader />
-      <main id={MAIN_ID} tabIndex={-1} className={styles.main}>
-        <Hero />
-        {SECTIONS.map((section) => (
-          <SectionView key={section.id} section={section} />
-        ))}
-      </main>
-      <ProductFooter />
+      <LiveRegionProvider>
+        <SkipLink targetId={MAIN_ID}>Skip to content</SkipLink>
+        <ProductHeader />
+        <main id={MAIN_ID} tabIndex={-1} className={styles.main}>
+          <Hero />
+          {SECTIONS.map((section) => (
+            <SectionView
+              key={section.id}
+              section={section}
+              clipboard={clipboard}
+            />
+          ))}
+        </main>
+        <ProductFooter />
+      </LiveRegionProvider>
     </div>
   );
 }
