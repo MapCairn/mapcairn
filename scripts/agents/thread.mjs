@@ -65,9 +65,20 @@ const BEFORE_DEFINITION = new RegExp(
 );
 /** Text that can be printed bare: no space, quote or control character, so it cannot read as a second item. */
 const SAFE_TOKEN = /^[\w.@+/[\]-]+$/;
-/** Raw-text or metadata HTML blocks whose contents GitHub does not render literally. */
-const UNSUPPORTED_RAW_HTML =
-  /<(?:plaintext|textarea|title|noscript|template|xmp|iframe|noembed|noframes)(?=[\s>/]|$)|<[a-z][^<>\n]*[ \t]hidden(?=[ \t=/>])/iy;
+/** HTML elements whose contents GitHub does not render literally. */
+const UNSUPPORTED_RAW_HTML = new Set([
+  "plaintext",
+  "textarea",
+  "title",
+  "noscript",
+  "template",
+  "xmp",
+  "iframe",
+  "noembed",
+  "noframes",
+]);
+const HTML_WHITESPACE = /[\t\n\f\r ]/;
+const HTML_TAG_OPEN = /<([a-z][a-z0-9:-]*)/iy;
 /** GitHub GraphQL connections accept at most 100 review threads at once. */
 const REVIEW_THREAD_PAGE_SIZE = 100;
 /** Comments are requested in small pages to keep each nested connection bounded. */
@@ -232,6 +243,51 @@ function hasUnparsedDefinition(text, position) {
 }
 
 /**
+ * The end of unsupported HTML at `position`. Tags are scanned past quoted
+ * values, including across lines. An incomplete tag is ambiguous, so it hides
+ * the rest of the body.
+ *
+ * @param {string} text
+ * @param {number} position
+ * @returns {number}
+ */
+function unsupportedHtmlEnd(text, position) {
+  HTML_TAG_OPEN.lastIndex = position;
+  const opening = HTML_TAG_OPEN.exec(text);
+  if (opening === null) {
+    return -1;
+  }
+  const name = opening[1]?.toLowerCase() ?? "";
+  let quote = null;
+  let hidden = false;
+  let cursor = HTML_TAG_OPEN.lastIndex;
+  while (cursor < text.length) {
+    const character = text[cursor] ?? "";
+    if (quote !== null) {
+      if (character === quote) {
+        quote = null;
+      }
+      cursor += 1;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      return UNSUPPORTED_RAW_HTML.has(name) || hidden ? text.length : -1;
+    } else if (character === "<") {
+      return text.length;
+    } else if (
+      HTML_WHITESPACE.test(character) &&
+      /^hidden(?=[\t\n\f\r =/>])/i.test(text.slice(cursor + 1))
+    ) {
+      hidden = true;
+    }
+    cursor += 1;
+  }
+  return text.length;
+}
+
+/**
  * The end of markup to hide, including unsupported HTML that runs to the
  * rest of the body.
  *
@@ -240,10 +296,8 @@ function hasUnparsedDefinition(text, position) {
  * @returns {number}
  */
 function hiddenEnd(text, position) {
-  UNSUPPORTED_RAW_HTML.lastIndex = position;
-  return UNSUPPORTED_RAW_HTML.test(text)
-    ? text.length
-    : hiddenMarkupEnd(text, position);
+  const htmlEnd = unsupportedHtmlEnd(text, position);
+  return htmlEnd !== -1 ? htmlEnd : hiddenMarkupEnd(text, position);
 }
 
 /**
@@ -515,12 +569,14 @@ function graphQl(request, query, variables) {
  * Validates a GraphQL connection and returns its nodes and next cursor.
  *
  * @param {any} connection
+ * @param {(node: any) => boolean} [validNode]
  * @returns {{ nodes: any[], next: string | null } | null}
  */
-function readConnection(connection) {
+function readConnection(connection, validNode = () => true) {
   const pageInfo = connection?.pageInfo;
   if (
     !Array.isArray(connection?.nodes) ||
+    !connection.nodes.every(validNode) ||
     typeof pageInfo?.hasNextPage !== "boolean" ||
     (pageInfo.hasNextPage &&
       (typeof pageInfo.endCursor !== "string" || pageInfo.endCursor === ""))
@@ -534,6 +590,42 @@ function readConnection(connection) {
 }
 
 /**
+ * @param {any} comment
+ * @returns {boolean}
+ */
+function isCommentNode(comment) {
+  if (
+    comment === null ||
+    typeof comment !== "object" ||
+    typeof comment.body !== "string" ||
+    !Object.hasOwn(comment, "author")
+  ) {
+    return false;
+  }
+  return (
+    comment.author === null ||
+    (typeof comment.author === "object" &&
+      typeof comment.author.login === "string")
+  );
+}
+
+/**
+ * @param {any} thread
+ * @returns {boolean}
+ */
+function isThreadNode(thread) {
+  return (
+    thread !== null &&
+    typeof thread === "object" &&
+    typeof thread.id === "string" &&
+    thread.id !== "" &&
+    typeof thread.isResolved === "boolean" &&
+    typeof thread.path === "string" &&
+    readConnection(thread.comments, isCommentNode) !== null
+  );
+}
+
+/**
  * Fetches every comment for one unresolved review thread.
  *
  * @param {(args: string[]) => string | null} request
@@ -541,7 +633,7 @@ function readConnection(connection) {
  * @returns {any | null}
  */
 function readThreadComments(request, thread) {
-  let connection = readConnection(thread?.comments);
+  let connection = readConnection(thread?.comments, isCommentNode);
   if (connection === null) {
     return null;
   }
@@ -556,7 +648,7 @@ function readThreadComments(request, thread) {
       threadId: thread.id,
       after: connection.next,
     });
-    const next = readConnection(data?.node?.comments);
+    const next = readConnection(data?.node?.comments, isCommentNode);
     if (next === null) {
       return null;
     }
@@ -588,6 +680,7 @@ export function readUnresolvedReviewThreads(number, request = gh) {
     const data = graphQl(request, REVIEW_THREADS_QUERY, { number, after });
     const connection = readConnection(
       data?.repository?.pullRequest?.reviewThreads,
+      isThreadNode,
     );
     if (connection === null) {
       return null;

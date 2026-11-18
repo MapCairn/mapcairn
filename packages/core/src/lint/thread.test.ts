@@ -233,7 +233,6 @@ describe("link definitions", () => {
       "[note]: please run the full suite before merging",
       "[x]: https://e.co and more words",
       "[x]:",
-      "[x]: <a b",
     ]) {
       expect(cleanText(`${line}\nb`)).toBe(`${line}\nb`);
     }
@@ -607,6 +606,112 @@ describe("review thread pagination", () => {
       readUnresolvedReviewThreads(42, () => responses.shift() ?? null),
     ).toBeNull();
   });
+
+  it("fails closed on a thread missing required fields on the first page", () => {
+    const malformed = thread(0);
+    Reflect.deleteProperty(malformed, "path");
+
+    expect(
+      readUnresolvedReviewThreads(42, () =>
+        graphQlResponse(
+          {
+            pageInfo: complete,
+            nodes: [malformed],
+          },
+          "reviewThreads",
+        ),
+      ),
+    ).toBeNull();
+  });
+
+  it("fails closed on a thread missing required fields on a later page", () => {
+    const malformed = thread(100);
+    Reflect.deleteProperty(malformed, "id");
+    const responses = [
+      graphQlResponse(
+        {
+          pageInfo: { hasNextPage: true, endCursor: "threads-1" },
+          nodes: [thread(0)],
+        },
+        "reviewThreads",
+      ),
+      graphQlResponse(
+        {
+          pageInfo: complete,
+          nodes: [malformed],
+        },
+        "reviewThreads",
+      ),
+    ];
+
+    expect(
+      readUnresolvedReviewThreads(42, () => responses.shift() ?? null),
+    ).toBeNull();
+  });
+
+  it("fails closed on a comment missing its body on the first page", () => {
+    const malformed = thread(0);
+    malformed.comments.nodes = [{ author: { login: "someone" } }];
+
+    expect(
+      readUnresolvedReviewThreads(42, () =>
+        graphQlResponse(
+          {
+            pageInfo: complete,
+            nodes: [malformed],
+          },
+          "reviewThreads",
+        ),
+      ),
+    ).toBeNull();
+  });
+
+  it("fails closed on a comment missing its body on a later page", () => {
+    const firstThread = thread(0);
+    firstThread.comments.pageInfo = {
+      hasNextPage: true,
+      endCursor: "comments-1",
+    };
+    const responses = [
+      graphQlResponse(
+        {
+          pageInfo: complete,
+          nodes: [firstThread],
+        },
+        "reviewThreads",
+      ),
+      graphQlResponse(
+        {
+          pageInfo: complete,
+          nodes: [{ author: { login: "someone" } }],
+        },
+        "comments",
+      ),
+    ];
+
+    expect(
+      readUnresolvedReviewThreads(42, () => responses.shift() ?? null),
+    ).toBeNull();
+  });
+
+  it("allows a comment with a nullable author", () => {
+    const nullableAuthor = thread(0);
+    nullableAuthor.comments.nodes = [{ author: null, body: "body" }];
+
+    const result = readUnresolvedReviewThreads(42, () =>
+      graphQlResponse(
+        {
+          pageInfo: complete,
+          nodes: [nullableAuthor],
+        },
+        "reviewThreads",
+      ),
+    );
+
+    expect(result?.[0]?.comments.nodes).toEqual([
+      { author: null, body: "body" },
+    ]);
+  });
 });
 
 describe("unsupported markup", () => {
@@ -648,6 +753,9 @@ describe("unsupported markup", () => {
       "before<noscript>different rendering</noscript>after",
       "before<template>different rendering</template>after",
       "before<span hidden>not visible</span>after",
+      "before<span\n hidden>not visible</span>after",
+      'before<span title=">" hidden>not visible</span>after',
+      'before<span title="unfinished hidden>not visible',
     ]) {
       const result = inspectText(text);
       expect(result.text).toBe("before");
