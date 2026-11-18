@@ -386,6 +386,48 @@ test.describe("the product page", () => {
       ).toBe("underline");
     });
 
+    // Forced colours paint a Canvas backplate behind text, so an action
+    // that fills itself with another system colour hides its own label.
+    test("in forced colours every action's label sits on Canvas, at rest, hovered and pressed", async ({
+      page,
+      isMobile,
+    }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      const product = new ProductPage(page);
+      await product.goto();
+      const canvas = await page.evaluate(() => {
+        const probe = document.createElement("span");
+        probe.style.backgroundColor = "Canvas";
+        probe.style.forcedColorAdjust = "none";
+        document.body.append(probe);
+        const colour = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return colour;
+      });
+      const actions = [
+        product.heroGitHub,
+        product.heroPlayground,
+        product.copyCode,
+      ];
+      const readable = async (action: Locator) => {
+        const style = await interactionStyle(action);
+        expect(style.backgroundColor).toBe(canvas);
+        expect(style.color).not.toBe(canvas);
+      };
+      for (const action of actions) {
+        await readable(action);
+        if (isMobile) {
+          continue;
+        }
+        await action.hover();
+        await readable(action);
+        await page.mouse.down();
+        await readable(action);
+        await page.mouse.move(0, 0);
+        await page.mouse.up();
+      }
+    });
+
     test("a tap leaves no hover behind on a touch screen", async ({
       page,
       isMobile,

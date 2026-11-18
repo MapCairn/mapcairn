@@ -46,6 +46,9 @@ const SECTION_SPACE = `calc(${tokens.space.xl} * 2)`;
 /** Where a pointer can hover. */
 const HOVER = "(hover: hover)";
 
+/** Where the system paints its own colours. */
+const FORCED = "(forced-colors: active)";
+
 /** Where a pointer can hover and the system paints its own colours. */
 const HOVER_FORCED = "(hover: hover) and (forced-colors: active)";
 
@@ -303,6 +306,16 @@ export const primaryAction = style({
   "@media": {
     [HOVER]: { selectors: actionHover },
     ...actionHoverForced,
+    /*
+     * Forced colours paint a Canvas backplate behind text, so the accent fill
+     * (Highlight there) would hide the HighlightText label. The action becomes
+     * an outlined link on Canvas instead, in every state.
+     */
+    [FORCED]: {
+      borderColor: "LinkText",
+      backgroundColor: "Canvas",
+      color: "LinkText",
+    },
   },
 });
 
