@@ -178,4 +178,186 @@ describe("the catalogue:check command", () => {
     },
     TEST_TIMEOUT_MS,
   );
+
+  it(
+    "rejects a module export that is not a plain record, and reads a null-prototype one",
+    () => {
+      const module = join(folder, "shapes.mjs");
+      writeFileSync(
+        module,
+        [
+          'export const AS_MAP = new Map([["my.close", "Sluit"]]);',
+          "export const AS_DATE = new Date(0);",
+          'export const BARE = Object.assign(Object.create(null), { "my.close": "Sluit" });',
+          "",
+        ].join("\n"),
+      );
+      const english = join(folder, "close-english.json");
+      writeFileSync(english, JSON.stringify({ "my.close": "Close" }));
+      for (const name of ["AS_MAP", "AS_DATE"]) {
+        const { status, stderr } = run(
+          "af",
+          module,
+          name,
+          "--english",
+          english,
+        );
+        expect(status, name).toBe(1);
+        expect(stderr.trim()).toBe(
+          `${module} is not a plain object of messages.`,
+        );
+      }
+      const { status, stdout } = run(
+        "af",
+        module,
+        "BARE",
+        "--english",
+        english,
+      );
+      expect(status).toBe(0);
+      expect(stdout).toBe("af: 0 missing, 0 the same as English\n");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([
+    [
+      "an English export without an English file",
+      ["--english-export", "MissingExport"],
+      "--english-export needs --english.",
+    ],
+    [
+      "an export name for a JSON catalogue",
+      ["CATALOGUE"],
+      "{file} is JSON, so it has no export named CATALOGUE.",
+    ],
+    [
+      "an English export name for JSON English",
+      ["--english", "{file}", "--english-export", "EN"],
+      "{file} is JSON, so it has no export named EN.",
+    ],
+    [
+      "an extra argument",
+      ["CATALOGUE", "extra"],
+      "Unexpected argument: extra.",
+    ],
+    ["an unknown option", ["--colour"], "Unknown option '--colour'."],
+  ])(
+    "refuses %s rather than ignore it",
+    (_, extra, message) => {
+      const file = join(folder, "args.json");
+      writeFileSync(file, "{}");
+      const args = extra.map((arg) => arg.replace("{file}", file));
+      const { status, stderr } = run("af", file, ...args);
+      expect(status).toBe(2);
+      expect(stderr).toContain(message.replace("{file}", file));
+      expect(stderr).toContain("Usage: npm run catalogue:check");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "reads keys given with --not-plural as text, and --plural keys as plural",
+    () => {
+      const english = join(folder, "toggle-english.json");
+      writeFileSync(
+        english,
+        JSON.stringify({
+          toggle: "on|off",
+          power: "on|off",
+          files: "{count} file",
+        }),
+      );
+      const catalogue = join(folder, "toggle-af.json");
+      writeFileSync(
+        catalogue,
+        JSON.stringify({
+          toggle: "on|aan",
+          power: "on|aan",
+          files: "{count} lêers",
+        }),
+      );
+      const plain = run("af", catalogue, "--english", english);
+      expect(plain.stdout).toMatch(/^af: 0 missing, 2 the same as English\n/);
+      const listed = run(
+        "af",
+        catalogue,
+        "--english",
+        english,
+        "--not-plural",
+        "toggle",
+        "--not-plural",
+        "power",
+        "--plural",
+        "files",
+      );
+      expect(listed.status).toBe(0);
+      expect(listed.stdout).toBe("af: 0 missing, 0 the same as English\n");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "refuses a --plural or --not-plural key that is not needed or is given to both",
+    () => {
+      const english = join(folder, "plain-english.json");
+      writeFileSync(
+        english,
+        JSON.stringify({ close: "Close", files: "{count} file|{count} files" }),
+      );
+      const catalogue = join(folder, "plain-af.json");
+      writeFileSync(
+        catalogue,
+        JSON.stringify({ close: "Sluit", files: "{count} lêer|{count} lêers" }),
+      );
+      const { status, stderr } = run(
+        "af",
+        catalogue,
+        "--english",
+        english,
+        "--plural",
+        "files",
+        "--not-plural",
+        "close",
+        "--plural",
+        "gone",
+        "--not-plural",
+        "gone",
+      );
+      expect(status).toBe(2);
+      expect(stderr.trim().split("\n")).toEqual([
+        "--plural files is not needed.",
+        "--not-plural close is not needed.",
+        "gone is given to both --plural and --not-plural.",
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "refuses a misspelt --not-plural or --plural key, naming it, rather than report a passing check",
+    () => {
+      const english = join(folder, "toggle-only-english.json");
+      writeFileSync(english, JSON.stringify({ toggle: "on|off" }));
+      const catalogue = join(folder, "toggle-only-af.json");
+      writeFileSync(catalogue, JSON.stringify({ toggle: "aan|af" }));
+      const { status, stdout, stderr } = run(
+        "af",
+        catalogue,
+        "--english",
+        english,
+        "--not-plural",
+        "toggel",
+        "--plural",
+        "fiels",
+      );
+      expect(status).toBe(2);
+      expect(stdout).toBe("");
+      expect(stderr.trim().split("\n")).toEqual([
+        "--plural fiels is not a key in the English catalogue.",
+        "--not-plural toggel is not a key in the English catalogue.",
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
 });
