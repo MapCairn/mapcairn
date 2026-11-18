@@ -15,9 +15,11 @@
 // repeatable, pass keys to checkMessageCatalogue's `pluralKeys` and
 // `notPlural`. A relative path is read from the folder npm was run in.
 //
-// An argument the command would otherwise ignore, and a --plural or
-// --not-plural key that English does not have, is not needed or is given to
-// both, is refused with exit code 2. A file that is not a plain object whose values are all text
+// An argument the command would otherwise ignore (an extra argument, an
+// unknown option, an empty option value, a second --english or
+// --english-export, --english-export without --english, an export name for a
+// JSON file), and a --plural or --not-plural key that English does not have,
+// is not needed or is given to both, is refused with exit code 2. A file that is not a plain object whose values are all text
 // is refused with exit code 1. Otherwise it exits 0: the tests that call
 // `checkMessageCatalogue` are the gate, and some values are rightly the same
 // as English (a symbol, a name kept as published), which those tests allow
@@ -51,8 +53,8 @@ try {
   args = parseArgs({
     allowPositionals: true,
     options: {
-      english: { type: "string" },
-      "english-export": { type: "string" },
+      english: { type: "string", multiple: true, default: [] },
+      "english-export": { type: "string", multiple: true, default: [] },
       plural: { type: "string", multiple: true, default: [] },
       "not-plural": { type: "string", multiple: true, default: [] },
     },
@@ -60,7 +62,6 @@ try {
 } catch (error) {
   refuse(error.message);
 }
-const { values } = args;
 const [language, file, exportName, ...extra] = args.positionals;
 if (!language || !file) {
   refuse("A language and a file are needed.");
@@ -68,6 +69,28 @@ if (!language || !file) {
 if (extra.length > 0) {
   refuse(`Unexpected argument: ${extra.join(" ")}.`);
 }
+// Every option is read as a list, so that a repeat or an empty value is
+// refused here rather than one value silently replacing or skipping another.
+const OPTIONS = {
+  english: { needs: "a file", repeats: false },
+  "english-export": { needs: "an export name", repeats: false },
+  plural: { needs: "a key", repeats: true },
+  "not-plural": { needs: "a key", repeats: true },
+};
+for (const [option, { needs, repeats }] of Object.entries(OPTIONS)) {
+  const given = args.values[option];
+  if (given.some((value) => value === "")) {
+    refuse(`--${option} needs ${needs}.`);
+  }
+  if (given.length > 1 && !repeats) {
+    refuse(`--${option} is given more than once.`);
+  }
+}
+const values = {
+  ...args.values,
+  english: args.values.english[0],
+  "english-export": args.values["english-export"][0],
+};
 if (values["english-export"] !== undefined && values.english === undefined) {
   refuse("--english-export needs --english.");
 }
@@ -120,9 +143,10 @@ async function readCatalogue(source, wanted) {
 }
 
 const catalogue = await readCatalogue(file, exportName);
-const english = values.english
-  ? await readCatalogue(values.english, values["english-export"])
-  : EN_GB_CATALOGUE;
+const english =
+  values.english === undefined
+    ? EN_GB_CATALOGUE
+    : await readCatalogue(values.english, values["english-export"]);
 const problems = checkMessageCatalogue(language, catalogue, english, {
   pluralKeys: values.plural,
   notPlural: values["not-plural"],

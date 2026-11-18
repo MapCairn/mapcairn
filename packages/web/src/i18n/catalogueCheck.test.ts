@@ -242,6 +242,33 @@ describe("the catalogue:check command", () => {
       "Unexpected argument: extra.",
     ],
     ["an unknown option", ["--colour"], "Unknown option '--colour'."],
+    ["an empty English file", ["--english="], "--english needs a file."],
+    [
+      "an empty English file with an English export",
+      ["--english=", "--english-export", "EN"],
+      "--english needs a file.",
+    ],
+    [
+      "an empty English export",
+      ["--english", "{file}", "--english-export="],
+      "--english-export needs an export name.",
+    ],
+    [
+      "an empty --not-plural key",
+      ["--not-plural="],
+      "--not-plural needs a key.",
+    ],
+    ["an empty --plural key", ["--plural="], "--plural needs a key."],
+    [
+      "a repeated English file",
+      ["--english", "{file}", "--english", "{file}"],
+      "--english is given more than once.",
+    ],
+    [
+      "a repeated English export",
+      ["--english", "{file}", "--english-export", "A", "--english-export", "B"],
+      "--english-export is given more than once.",
+    ],
   ])(
     "refuses %s rather than ignore it",
     (_, extra, message) => {
