@@ -6,7 +6,7 @@ import {
   FakeMessageCatalogue,
 } from "@mapcairn/core";
 import { useServices } from "@mapcairn/map";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { createRoutesStub } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -142,5 +142,74 @@ describe("the app layout", () => {
     );
     await waitFor(() => expect(document.documentElement.lang).toBe("ar"));
     expect(document.documentElement.dir).toBe("rtl");
+  });
+
+  it("preserves the pre-paint language while its catalogue is loading", async () => {
+    let finish!: (messages: FakeMessageCatalogue) => void;
+    const loading = new Promise<FakeMessageCatalogue>((resolve) => {
+      finish = resolve;
+    });
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "ar", label: "Arabic" },
+        ],
+        "en-GB",
+        () => loading,
+      ),
+    });
+    services.fakes.settings.set({ language: "ar" });
+    document.documentElement.lang = "ar";
+    document.documentElement.dir = "rtl";
+    createServices.mockReturnValueOnce(services);
+    render(
+      createElement(
+        stub(() => null),
+        { initialEntries: ["/map"] },
+      ),
+    );
+
+    expect(document.documentElement.lang).toBe("ar");
+    expect(document.documentElement.dir).toBe("rtl");
+    await act(async () => finish(new FakeMessageCatalogue({ language: "ar" })));
+    expect(document.documentElement.lang).toBe("ar");
+    expect(document.documentElement.dir).toBe("rtl");
+  });
+
+  it("restores the active language when the pre-paint language fails to load", async () => {
+    let fail!: (error: Error) => void;
+    const loading = new Promise<FakeMessageCatalogue>((_, reject) => {
+      fail = reject;
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "ar", label: "Arabic" },
+        ],
+        "en-GB",
+        () => loading,
+      ),
+    });
+    services.fakes.settings.set({ language: "ar" });
+    document.documentElement.lang = "ar";
+    document.documentElement.dir = "rtl";
+    createServices.mockReturnValueOnce(services);
+    render(
+      createElement(
+        stub(() => null),
+        { initialEntries: ["/map"] },
+      ),
+    );
+
+    expect(document.documentElement.lang).toBe("ar");
+    await act(async () => fail(new Error("load failed")));
+    expect(document.documentElement.lang).toBe("en-GB");
+    expect(document.documentElement.dir).toBe("ltr");
+    warn.mockRestore();
   });
 });

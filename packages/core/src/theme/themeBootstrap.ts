@@ -19,7 +19,8 @@ import {
  * root element ({@link MAP_SHAPE_ATTRIBUTE}), so the map placeholder starts in
  * the colour of the space around a globe rather than the flat map's. When
  * given the languages the host offers, it also sets `lang` and `dir` on the
- * root element to the stored language if (and only if) it is one of them.
+ * root element to the stored language if (and only if) it is one of them and
+ * the current page does not declare a fixed language.
  *
  * @param offeredLanguages - The host's tags or language options. Without
  *   them the script leaves `lang` and `dir` as the server rendered them.
@@ -31,6 +32,7 @@ import {
  *   and the script never throws. It rewrites every `theme-color` tag, because
  *   a page may carry one per `prefers-color-scheme` media query and the
  *   browser uses the tag whose media matches the OS, not the chosen theme.
+ *   `data-fixed-language` on `<html>` tells it to leave `lang` and `dir` alone.
  *   The output is deterministic: the host hashes
  *   it for its content security policy. Whitespace is collapsed, nothing else.
  */
@@ -54,7 +56,7 @@ export function buildThemeBootstrapScript(
     offeredLanguages.length === 0
       ? ""
       : `
-try{var tag=JSON.parse(localStorage.getItem(${JSON.stringify(LANGUAGE_STORAGE_KEY)}));var i=${tags}.indexOf(tag);if(i>-1){root.lang=tag;root.dir=${directions}[i]}}catch(e){}`;
+try{if(!root.dataset.fixedLanguage){var tag=JSON.parse(localStorage.getItem(${JSON.stringify(LANGUAGE_STORAGE_KEY)}));var i=${tags}.indexOf(tag);if(i>-1){root.lang=tag;root.dir=${directions}[i]}}}catch(e){}`;
   const source = `(function(){
 var parse=${parseThemeChoice.toString()};
 var resolve=${resolveTheme.toString()};

@@ -58,6 +58,8 @@ function run(
     language?: string | null;
     /** The tags passed to the script builder. */
     offered?: readonly (string | LanguageOption)[];
+    /** Whether the page has its own fixed language. */
+    fixedLanguage?: boolean;
   } = {},
 ): Run {
   const result: Run = {
@@ -71,6 +73,7 @@ function run(
     queriedMedia: undefined,
   };
   const root = {
+    dataset: { fixedLanguage: options.fixedLanguage ? "true" : undefined },
     setAttribute(name: string, value: string) {
       result.attributes[name] = value;
     },
@@ -241,6 +244,16 @@ describe("buildThemeBootstrapScript", () => {
     });
     expect(result.lang).toBe("ar");
     expect(result.dir).toBe("rtl");
+  });
+
+  it("leaves a fixed page's language and direction alone", () => {
+    const result = run("light", "light", {
+      language: '"ar"',
+      offered: ["en-GB", "ar"],
+      fixedLanguage: true,
+    });
+    expect(result.lang).toBeUndefined();
+    expect(result.dir).toBeUndefined();
   });
 
   it("uses the host direction override in the precomputed script", () => {

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { languageDirection } from "@mapcairn/core";
+import { languageDirection, resolveLanguage } from "@mapcairn/core";
 import {
   LiveRegionProvider,
   ServicesProvider,
   TooltipProvider,
+  useLanguageLoad,
   useMessages,
+  usePreferences,
   useServices,
+  useSettings,
 } from "@mapcairn/map";
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router";
@@ -14,20 +17,39 @@ import { DocumentTitle } from "../app/DocumentTitle";
 import { createServices } from "../composition/createServices";
 
 /**
- * Keeps `<html lang dir>` on the language the interface speaks. The pre-paint
- * script sets it from the stored choice before first paint; this covers the
- * browser's own languages and a choice made later.
+ * Keeps `<html lang dir>` on the selected language. While its catalogue loads,
+ * the matching pre-paint language stays in place; a failed load returns to the
+ * active catalogue's language.
  */
 function DocumentLanguage() {
   const { language } = useMessages();
   const { languages } = useServices();
+  const { settings } = useSettings();
+  const { languages: browserLanguages } = usePreferences();
+  const failed = useLanguageLoad()?.failed;
+  const wanted =
+    languages === undefined
+      ? language
+      : resolveLanguage(
+          settings.language,
+          languages.languages.map(({ tag }) => tag),
+          browserLanguages,
+          languages.defaultLanguage,
+        );
   useEffect(() => {
+    if (
+      wanted !== language &&
+      document.documentElement.lang === wanted &&
+      failed !== wanted
+    ) {
+      return;
+    }
     document.documentElement.lang = language;
     document.documentElement.dir = languageDirection(
       language,
       languages?.languages,
     );
-  }, [language, languages]);
+  }, [language, languages, wanted, failed]);
   return null;
 }
 

@@ -80,17 +80,25 @@ export const links: LinksFunction = () => [
  * stylesheets so the first paint is in the right theme.
  *
  * @remarks The theme script sets `data-theme` and `color-scheme` on `<html>`,
- *   sets `lang` and `dir` there when the stored language is one the host offers, and
+ *   sets `lang` and `dir` there when the stored language is one the host offers
+ *   and the page has no fixed language, and
  *   rewrites a `theme-color` tag before React hydrates, so those two
  *   elements suppress the hydration warning for their own attributes.
  *   `<Scripts>` and `<ScrollRestoration>` take the CSP nonce from React
  *   Router's context, set by `entry.server.tsx`.
  */
 export function Layout({ children }: { readonly children: ReactNode }) {
+  const fixed = fixedPageLanguage(useMatches());
+  const language = fixed ?? DEFAULT_LANGUAGE;
+  const direction =
+    fixed === undefined
+      ? languageDirection(DEFAULT_LANGUAGE, OFFERED_LANGUAGES)
+      : languageDirection(fixed);
   return (
     <html
-      lang={DEFAULT_LANGUAGE}
-      dir={languageDirection(DEFAULT_LANGUAGE, OFFERED_LANGUAGES)}
+      lang={language}
+      dir={direction}
+      data-fixed-language={fixed === undefined ? undefined : "true"}
       suppressHydrationWarning
     >
       <head>
@@ -126,11 +134,10 @@ export function Layout({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * Keeps `<html lang dir>` on the language the interface speaks. The pre-paint
- * script may set it from the stored choice before first paint; a page in one
- * language only (the English product page, through its route's `handle`)
- * puts its own language back. A page that follows the interface's language
- * is kept in step by the app layout (`routes/app.tsx`) instead.
+ * Keeps `<html lang dir>` on a page's fixed language after client navigation.
+ * The server render and pre-paint script already preserve it on first load. A
+ * page that follows the interface's language is kept in step by the app
+ * layout (`routes/app.tsx`) instead.
  */
 function FixedDocumentLanguage() {
   const fixed = fixedPageLanguage(useMatches());

@@ -23,6 +23,20 @@ import { waitForStableLayout } from "./support/states";
  */
 test.use({ reducedMotion: "reduce" });
 
+test("the English product page stays English before app scripts run", async ({
+  page,
+}) => {
+  await page.addInitScript(storeLanguageBeforeLoad, storedLanguage("af"));
+  await page.route("**/*", (route) =>
+    route.request().resourceType() === "script"
+      ? route.abort()
+      : route.fallback(),
+  );
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en-GB");
+  await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
+});
+
 test("a stored sample right-to-left language is marked before app scripts run", async ({
   page,
 }) => {

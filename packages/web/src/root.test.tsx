@@ -5,7 +5,11 @@ import { useOptionalServices } from "@mapcairn/map";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createRoutesStub } from "react-router";
+import {
+  createMemoryRouter,
+  createRoutesStub,
+  RouterProvider,
+} from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { THEME_BOOTSTRAP_SCRIPT } from "./app/themeBootstrap";
 
@@ -130,10 +134,19 @@ describe("root meta", () => {
 });
 
 describe("root Layout", () => {
-  const markup = () =>
-    renderToStaticMarkup(
-      createElement(Layout, null, createElement("p", null, "app content")),
-    );
+  const markup = () => {
+    const router = createMemoryRouter([
+      {
+        path: "/",
+        element: createElement(
+          Layout,
+          null,
+          createElement("p", null, "app content"),
+        ),
+      },
+    ]);
+    return renderToStaticMarkup(createElement(RouterProvider, { router }));
+  };
 
   it("renders a British English document around its children", () => {
     expect(markup()).toContain('<html lang="en-GB" dir="ltr">');
