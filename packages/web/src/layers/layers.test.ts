@@ -25,7 +25,7 @@ import {
   tileUrl,
   validateLayerDefinition,
 } from "@mapcairn/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildContentSecurityPolicy } from "../constants/securityHeaders";
 import {
   createHostLayerCatalogue,
@@ -133,7 +133,30 @@ describe("the host's layer definitions", () => {
       (d) =>
         `${resolveText(english, d.group)}\u0000${resolveText(english, d.name)}`,
     );
-    expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b)));
+    const collator = new Intl.Collator("en-GB");
+    expect(keys).toEqual([...keys].sort(collator.compare));
+  });
+
+  it("keeps the English order whatever the runtime's default locale collates", async () => {
+    const expected = LAYER_DEFINITIONS.map((definition) => definition.id);
+    const original = String.prototype.localeCompare;
+    // A runtime whose default locale orders text the other way round.
+    vi.spyOn(String.prototype, "localeCompare").mockImplementation(function (
+      this: string,
+      that: string,
+      locales?: Intl.LocalesArgument,
+      options?: Intl.CollatorOptions,
+    ) {
+      const order = original.call(this, that, locales, options);
+      return locales === undefined ? -order : order;
+    });
+    try {
+      vi.resetModules();
+      const reloaded = await import("./index");
+      expect(reloaded.LAYER_DEFINITIONS.map((d) => d.id)).toEqual(expected);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("writes its own readable text as message keys the English catalogue holds", () => {
