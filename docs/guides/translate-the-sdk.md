@@ -49,6 +49,31 @@ const languages = createLanguageCatalogue(
 
 The reference site's language options are in `packages/web/src/i18n/offeredLanguageOptions.ts`, its loaders in `hostLanguages.ts`, and the Afrikaans catalogue in `af.ts`.
 
+## Check a catalogue
+
+`checkMessageCatalogue(language, catalogue, english, sameAsEnglish)` from `@mapcairn/core` checks a catalogue against the English one and returns a list of problems, each a `key` and a `problem`, in English key order and then unknown keys and unused allowances; an empty list means it passes. Run it in your own tests:
+
+```ts
+import { checkMessageCatalogue, EN_GB_CATALOGUE } from "@mapcairn/core";
+
+const SAME_AS_ENGLISH = { "basemap.bright.name": "A map style's name." };
+
+expect(
+  checkMessageCatalogue("fr", FR_CATALOGUE, EN_GB_CATALOGUE, SAME_AS_ENGLISH),
+).toEqual([]);
+```
+
+- `missing` and `unknown`: a key English has and the catalogue does not, or the other way round. A translation in progress can filter out `missing`.
+- `emptyForm`: the value, or one of its plural forms, is blank.
+- `placeholders`: a form's `{name}` placeholders differ from those of the English form of the same category, or of English's "other" form when English has no form of that category. A plain value counts as its own "other" form.
+- `pluralForms`: when either value has plural forms, the translation's forms are not exactly the categories `new Intl.PluralRules(language).resolvedOptions().pluralCategories` gives (a plain value counts as "other", and `one|other` as those two). A value that opens like keyed forms but cannot be read, or has more than two `|` forms, is reported too.
+- `copiedEnglish`: a form is the same as the English form it is compared with, ignoring case and surrounding space, and the key is not in `sameAsEnglish` with a reason. An allowance with a blank reason does not count.
+- `unusedAllowance`: a key in `sameAsEnglish` whose value no longer matches English, or that English does not have.
+
+Both catalogues are plain objects, so one loaded from JSON works as well as a module. Keys of your own, for your definitions, need their English in the object you pass as `english` (`{ ...EN_GB_CATALOGUE, ...MY_ENGLISH }`).
+
+To see what is left to translate, run `npm run catalogue:check -- <language> <file> [export]` in this repository. It prints how many keys the catalogue is missing and how many are the same as English, then lists each. The file is a JSON object of messages or a TypeScript or JavaScript module, read through tsx; `export` names the export that holds the messages and defaults to the module's only export, else its default export. A relative path is read from the folder npm was run in. The command does not know a test's `sameAsEnglish` list, so it lists those keys too, and it exits 0 once the catalogue is read: the test is the gate. The script is `packages/web/scripts/catalogueCheck.mjs`, and it uses only `checkMessageCatalogue` and `EN_GB_CATALOGUE`, so a host can copy it.
+
 ## Translate definitions
 
 A basemap or layer definition's reader-facing text (a name, a description, a control label, an empty-state text) is either a plain string or a `MessageKey`. A plain string is shown as it is, so existing definitions keep working. A key is looked up in the active catalogue where the definition is shown. To translate your own definitions, give them keys of your own and supply those keys in your catalogues, or write a plain string and accept that it does not change with the language. Attribution, licence names and links are legal text and stay as they are.
@@ -73,7 +98,7 @@ A key that your library does not know is yours to handle: the SDK may call `t` o
 
 1. Add `packages/web/src/i18n/<tag>.ts` exporting a `Record<MessageKey, string>` (or a `Partial` for work in progress), and a loader for the tag in `hostLanguages.ts`.
 2. Add the language to `OFFERED_LANGUAGE_OPTIONS` with its name in that language.
-3. Keep every placeholder the English text has, spelled the same, in each form. Supply the categories your language needs, even when the English value has only one form. `packages/core/src/lint/messages.test.ts` checks English placeholders and categories against `MessageParams`; the Afrikaans test (`packages/web/src/i18n/af.test.ts`) checks its current plain and two-form values against English. A new language needs its own category and placeholder checks. A complete `Record<MessageKey, string>` also makes `npm run typecheck` fail when a key is added without its translation. The Afrikaans test fails when a value, or any one plural form of it, is a copy of the English one (compared without case or surrounding space), unless its key is on a short list in that file with a reason beside it. `packages/core/src/lint/hardcodedCopy.test.ts` checks inline interface text in `.tsx` files under `packages/map/src` and `packages/web/src`; it does not check `.ts` string tables or props of SDK components, so look those up through the catalogue yourself. Its exceptions are in `scripts/copy-check/allowlist.mjs`.
+3. Keep every placeholder the English text has, spelled the same, in each form. Supply the categories your language needs, even when the English value has only one form. `packages/core/src/lint/messages.test.ts` checks English placeholders and categories against `MessageParams`; the Afrikaans test (`packages/web/src/i18n/af.test.ts`) runs `checkMessageCatalogue` (see "Check a catalogue" above) against English, with a short list of keys allowed to match English, each with a reason. Give a new language a test like it. A complete `Record<MessageKey, string>` also makes `npm run typecheck` fail when a key is added without its translation. `packages/core/src/lint/hardcodedCopy.test.ts` checks inline interface text in `.tsx` files under `packages/map/src` and `packages/web/src`; it does not check `.ts` string tables or props of SDK components, so look those up through the catalogue yourself. Its exceptions are in `scripts/copy-check/allowlist.mjs`.
 4. Keep an accessible name containing its visible label, which a translation keeps by using the same key for both.
 5. Run the layout and accessibility specs in the new language: add the language's catalogue to `e2e/support/language.ts` and a pair of projects like `af-chromium` and `af-mobile-chromium` in `playwright.config.ts`, which run the collision and accessibility specs with the `language` option set, and extend `e2e/i18n.spec.ts`. The page object finds the chrome by the names in the active catalogue. Translated text is often longer, so check that nothing collides or truncates.
 6. A person who speaks the language fluently reviews the catalogue before it ships. A machine translation is a draft, and the pull request says who reviewed it. Credit the translators in [`ATTRIBUTIONS.md`](../../ATTRIBUTIONS.md).
