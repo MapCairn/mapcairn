@@ -1,18 +1,18 @@
 # 0009: A message catalogue port, and English plus Afrikaans on the reference host
 
-Status: built. Tracking issue: #231. The Afrikaans catalogue is a draft that a fluent speaker still has to review; layer card templates and unit suffixes are not translatable yet.
+Status: built. Tracking issue: #231. The Afrikaans catalogue was offered as a draft and has since been reviewed and approved; layer card templates and unit suffixes are not translatable yet.
 
 ## Goal
 
-A host using the SDK can replace or translate every word the interface shows, without forking a component, and without the SDK carrying a translation library or anyone else's data. The reference site ships in English (`en-GB`, the default and the source language) and, once the Afrikaans catalogue is reviewed by a fluent speaker, in Afrikaans too. A visitor's choice is remembered on the device, as the other settings are, and defaults from the browser's language when it is one the host offers.
+A host using the SDK can replace or translate every word the interface shows, without forking a component, and without the SDK carrying a translation library or anyone else's data. The reference site ships in English (`en-GB`, the default and the source language) and Afrikaans. A visitor's choice is remembered on the device, as the other settings are, and defaults from the browser's language when it is one the host offers.
 
 ## Ground rules
 
 - No new runtime dependency in an SDK package (`AGENTS.md`, "Dependencies"; the issue, "Constraints"). The port is small and built on `Intl.PluralRules`, `Intl.ListFormat` and `Intl.NumberFormat`/`Intl.DateTimeFormat`, which every target runtime has.
 - English users must not pay for Afrikaans: only the active language's text is in the English-only bundle's cost; a second language is additional, on-demand weight, not shipped to someone who never asks for it (issue, "Constraints"). No automated check enforces a bundle-size budget in this repository today; the design keeps the cost small by shape (a dynamically-imported module per language), and a check that would catch a regression is not part of this plan.
-- British English stays the source language of the copy and of the documents (`AGENTS.md`, "About"); the catalogue's default values are what `AGENTS.md` calls "English only" today.
+- British English stays the source language of the copy and of the documents (`AGENTS.md`, "About"); the catalogue's default values are written in British English.
 - The source strings keep their accessibility contracts: a name that contains its visible label still does once both are looked up by key, and each outcome still gets exactly one announcement (`DESIGN.md`).
-- Translations are reviewed. The Afrikaans catalogue ships on the reference site only once the maintainer, a fluent speaker, has reviewed it; a machine-translated draft is never shipped unreviewed (issue).
+- Translations are reviewed. The original decision to review Afrikaans before release was changed on 2026-11-16: the reference site offered the draft first. The maintainer, a fluent speaker, reviewed and approved it on 2026-11-18 (#231).
 - Adding a dataset or a provider is a separate decision and is out of scope; this plan touches no basemap or layer provider. Sending the visitor's language to a search or routing provider is also out of scope and needs its own `PRIVACY.md` and provider-note change, decided by the maintainer when an adapter proposes it.
 - This plan decides the public API the ports and `Services` gain; `ARCHITECTURE.md` and `DESIGN.md` are updated with it, not after it.
 
@@ -95,7 +95,7 @@ Each step is one pull request and leaves `main` building and shippable.
 4. **The remaining components**, moved panel by panel (chrome, sheet, tools, pickers), each its own small pull request, following the pattern step 1 set.
 5. **Definition text.** `BasemapDefinition` and a layer definition's string fields accept `MessageKey | string`; the reference host's own definitions move to keys.
 6. **The language setting and switcher.** `Settings.language`, `resolveLanguage`, `LanguageCatalogue`, `useMessages()`'s lazy load, the `lang` attribute in the bootstrap script, and the switcher control in the Settings panel. Lands once enough of steps 1–5 are in that switching language visibly changes most of the interface.
-7. **The Afrikaans catalogue**, written (machine-translated draft allowed as a starting point, never shipped from it), reviewed by the maintainer, and wired as the reference host's second `LanguageCatalogue` entry, lazy-loaded.
+7. **The Afrikaans catalogue**, written as a draft, wired as the reference host's second `LanguageCatalogue` entry and lazy-loaded, then reviewed by the maintainer.
 8. **Right-to-left readiness.** The harmony scanner rule, the logical-properties pass over existing vanilla-extract files, and the mirrored-layout Playwright project.
 9. **The guide for hosts.** `docs/guides/translate-the-sdk.md`: how to add a language, how to wire a host's own message-format library behind the port, how definition text carries translations.
 
@@ -125,6 +125,8 @@ Splitting these into GitHub issues is the `split-plan` skill's job, once this pl
 ## Decided and open
 
 Decided, 2026-11-14 (the issue): the SDK supports any language with no new dependency; the reference host ships English and Afrikaans first; translations are reviewed before they ship; right-to-left is design-ready but not a shipped language yet.
+
+Changed, 2026-11-16 (#231): the Afrikaans draft was offered before review. The review was approved on 2026-11-18.
 
 Decided, this plan:
 
