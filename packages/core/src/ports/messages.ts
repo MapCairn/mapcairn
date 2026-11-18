@@ -1142,11 +1142,14 @@ interface MessageParamOverrides {
   };
 }
 
-/** The parameters every {@link MessageKey} takes, keyed by the key itself. */
+/**
+ * The parameters every {@link MessageKey} takes, keyed by the key itself.
+ * A key without a required count can accept one for another language's forms.
+ */
 export type MessageParams = {
-  readonly [K in MessageKey]: K extends keyof MessageParamOverrides
+  readonly [K in MessageKey]: (K extends keyof MessageParamOverrides
     ? MessageParamOverrides[K]
-    : Record<string, never>;
+    : object) & { readonly count?: number };
 };
 
 /**
@@ -1160,8 +1163,8 @@ export type MessageValue = string | number | Date | readonly string[];
  * The parameters a {@link Message} carries: those of the key, except that a
  * text placeholder may also hold another message, which is formatted first
  * (a distance inside "Total distance {distance}"), and a list of strings
- * may hold messages among its items. A key with no
- * placeholders takes none.
+ * may hold messages among its items. A key with no other placeholders can
+ * still take an optional count.
  */
 export type MessageArgs<P> =
   P extends Record<string, never>
@@ -1202,7 +1205,8 @@ export interface MessageCatalogue {
    */
   t<K extends MessageKey>(key: K, params: MessageParams[K]): string;
   /**
-   * As {@link t}, but first picks the plural form with `Intl.PluralRules`.
+   * As {@link t}, but first picks a form with `Intl.PluralRules` when the
+   * active value has plural forms. A plain value is formatted as with `t`.
    * `params` carries `count` plus the key's other parameters.
    */
   plural<K extends MessageKey>(

@@ -14,6 +14,11 @@ export interface MessageCatalogueFixture {
   readonly create: () => MessageCatalogue;
   /** A fresh instance missing `key`, so it falls back to English and warns. */
   readonly createMissingKey: (key: MessageKey) => MessageCatalogue;
+  /** A fresh instance with a scripted language and active values. */
+  readonly createWith: (
+    language: string,
+    values: Partial<Record<MessageKey, string>>,
+  ) => MessageCatalogue;
 }
 
 const [PLURAL_ONE, PLURAL_OTHER] =
@@ -67,6 +72,27 @@ export function runMessageCatalogueContract(
       );
       expect(catalogue.plural("common.itemCount", { count: 5 })).toBe(
         PLURAL_OTHER?.replace("{count}", "5"),
+      );
+    });
+
+    it("selects all Arabic plural categories and allows a plain active value", () => {
+      const catalogue = fixture.createWith("ar", {
+        "common.itemCount":
+          "zero{zero} one{one} two{two} few{few} many{many} other{other}",
+        "announce.searchResults": "single {count}",
+      });
+      for (const [count, form] of [
+        [0, "zero"],
+        [1, "one"],
+        [2, "two"],
+        [3, "few"],
+        [11, "many"],
+        [100, "other"],
+      ] as const) {
+        expect(catalogue.plural("common.itemCount", { count })).toBe(form);
+      }
+      expect(catalogue.plural("announce.searchResults", { count: 2 })).toBe(
+        `single ${new Intl.NumberFormat("ar").format(2)}`,
       );
     });
 

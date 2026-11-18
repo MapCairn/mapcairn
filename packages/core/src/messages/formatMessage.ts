@@ -7,7 +7,6 @@ import type {
   MessageKey,
   MessageParams,
 } from "../ports/messages";
-import { EN_GB_CATALOGUE } from "./en-GB";
 
 /** Builds a {@link Message}: a key and the parameters its placeholders need. */
 export function message<K extends MessageKey>(
@@ -32,8 +31,8 @@ function isMessage(value: unknown): value is Message {
  * Turns a {@link Message} into text with `catalogue`. A placeholder that holds
  * another message, or a list with messages among its items, is formatted
  * first, so a sentence can carry a distance, a travel mode or a layer's name
- * and the whole thing is in one language. A key whose English
- * value has plural forms (`|`) goes through `plural`, the rest through `t`.
+ * and the whole thing is in one language. A message with a count goes
+ * through `plural`, so the active catalogue chooses whether it has forms.
  */
 export function formatMessage(
   catalogue: MessageCatalogue,
@@ -47,7 +46,7 @@ export function formatMessage(
       Array.isArray(value) ? value.map(text) : text(value),
     ]),
   ) as MessageParams[MessageKey];
-  if (EN_GB_CATALOGUE[key].includes("|")) {
+  if ("count" in resolved && typeof resolved.count === "number") {
     return catalogue.plural(
       key,
       resolved as MessageParams[MessageKey] & { readonly count: number },

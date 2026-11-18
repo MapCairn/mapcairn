@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
 import { ProductPage } from "./ProductPage";
+import * as styles from "./ProductPage.css";
 import { EMBED_EXAMPLE_CODE } from "./productContent";
 
 const REPO = "https://github.com/MapCairn/mapcairn";
@@ -87,6 +88,19 @@ describe("the product page stands on its own", () => {
     expect(code.tagName).toBe("PRE");
     expect(code).toHaveAttribute("tabindex", "0");
     expect(code.textContent).toBe(EMBED_EXAMPLE_CODE);
+  });
+
+  it("highlights the example's syntax with classes, never an inline style", () => {
+    renderPage();
+    const code = screen.getByRole("region", { name: "Embedding example" });
+    const spans = [...code.querySelectorAll("span")];
+    const classOf = (text: string) =>
+      spans.find((span) => span.textContent === text)?.className;
+    expect(classOf("import")).toBe(styles.codeKeyword);
+    expect(classOf('"@mapcairn/core"')).toBe(styles.codeMuted);
+    expect(classOf("11")).toBe(styles.codeMuted);
+    expect(classOf("ServicesProvider")).toBe(styles.codeName);
+    expect(code.querySelector("[style]")).toBeNull();
   });
 
   it("offers the two actions once, in the hero, View on GitHub first", () => {

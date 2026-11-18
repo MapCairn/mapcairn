@@ -413,6 +413,45 @@ test.describe("the product page", () => {
     });
   }
 
+  for (const [name, path] of [
+    ["the product page", "/"],
+    ["the privacy page", "/privacy"],
+  ] as const) {
+    test(`scrolls ${name} with the mouse wheel`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 600 });
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await page.mouse.move(720, 300);
+      await page.mouse.wheel(0, 400);
+      await expect
+        .poll(() => page.evaluate(() => window.scrollY))
+        .toBeGreaterThan(0);
+    });
+  }
+
+  test("puts two of the largest spacing steps between sections on a wide screen", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    const gaps = await page.evaluate(() => {
+      const sections = [...document.querySelectorAll("main > section")];
+      return sections.slice(1).map((next, index) => {
+        const last = sections[index]?.lastElementChild;
+        const heading = next.querySelector("h2");
+        return (
+          (heading?.getBoundingClientRect().top ?? Number.NaN) -
+          (last?.getBoundingClientRect().bottom ?? Number.NaN)
+        );
+      });
+    });
+    expect(gaps.length).toBeGreaterThan(2);
+    for (const gap of gaps) {
+      // tokens.space.xl is 32 px.
+      expect(gap).toBeCloseTo(64, 0);
+    }
+  });
+
   test("skips to the main content from the first Tab", async ({ page }) => {
     const product = new ProductPage(page);
     await product.goto();

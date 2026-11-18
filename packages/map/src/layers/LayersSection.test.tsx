@@ -173,6 +173,30 @@ describe("LayersSection", () => {
     );
   });
 
+  it("uses active plural forms for count messages that are plain in English", async () => {
+    const messages = new FakeMessageCatalogue({
+      overrides: {
+        "layers.status.updated": "one{one shown} other{many shown}",
+        "layers.list.summary": "one{one listed} other{many listed}",
+        "layers.turnOff.count": "one{one on} other{many on}",
+        "layers.turnOff.group": "one{one in {group}} other{many in {group}}",
+      },
+    });
+    const { source } = setup(SAMPLE_LAYERS, undefined, messages);
+    source.setFeatures("sample-points", [samplePoint("a"), samplePoint("b")]);
+    toggle("sample-points", "Sample points");
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("layer-status-sample-points"),
+      ).toHaveTextContent(/^many shown$/);
+      expect(screen.getByText("many listed")).toBeInTheDocument();
+      expect(screen.getByText("one on")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "one in Samples" }),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("shows the status, controls and legend of a layer while it is on", async () => {
     const { source } = setup();
     source.setFeatures("sample-points", [samplePoint("a"), samplePoint("b")]);

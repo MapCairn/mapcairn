@@ -28,8 +28,7 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
   "draw.measure.radiusAndArea":
     "Radius is the Afrikaans word too; the rest is placeholders and a middle dot.",
   "draw.import.refusalWithDetail": "Only placeholders and a space.",
-  "common.itemCount":
-    "Item and items are Afrikaans words with the same plural form.",
+  "common.itemCount": "Item and items are spelled the same in both languages.",
   "chrome.readout.zoomShort": "The symbol z for the zoom level.",
   "duration.short.day": "The unit symbol d.",
   "duration.short.minute":

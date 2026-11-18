@@ -22,8 +22,8 @@ export interface FakeMessageCatalogueOptions {
    * Replaces specific keys' catalogue values. Scripting a value whose
    * placeholders do not match the key's real `MessageParams` entry (a
    * placeholder mismatch) is how a test exercises a translation that has
-   * drifted: the mismatched placeholder is left in the returned text, as it
-   * would be with any catalogue implementation.
+   * drifted: the mismatched placeholder is left in the returned text.
+   * Overrides may use category-keyed, two-form or plain values.
    */
   readonly overrides?: Partial<Record<MessageKey, string>>;
   /**
