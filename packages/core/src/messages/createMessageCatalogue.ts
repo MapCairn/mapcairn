@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { formatDay, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
+import { parsePluralForms } from "./pluralForms";
 
 /** Optional host-defined translations carried beside the typed messages. */
 export interface CreateMessageCatalogueOptions {
@@ -43,16 +44,19 @@ function substitute(
 }
 
 /**
- * Picks the plural form out of a `|`-separated catalogue string: the first
- * form for `Intl.PluralRules`'s "one" category, the second form for every
- * other category. A template with no `|` has one form, used regardless of
- * `count`.
+ * Selects a category-keyed form or a legacy `|` form. A plain template is
+ * used regardless of count.
  */
 function selectPluralForm(
   template: string,
   language: string,
   count: number,
 ): string {
+  const keyed = parsePluralForms(template);
+  if (keyed) {
+    const category = new Intl.PluralRules(language).select(count);
+    return keyed.get(category) ?? keyed.get("other") ?? template;
+  }
   const forms = template.split("|");
   if (forms.length === 1) {
     return template;

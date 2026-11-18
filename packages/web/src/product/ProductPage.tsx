@@ -11,6 +11,7 @@ import {
   PRODUCT_PATH,
   SOURCE_REPOSITORY_URL,
 } from "../constants/siteConfig";
+import { type CodeTokenKind, highlightCode } from "./highlightCode";
 import * as styles from "./ProductPage.css";
 import {
   type Block,
@@ -52,6 +53,30 @@ function Text({ line }: { readonly line: Line }) {
     // biome-ignore lint/suspicious/noArrayIndexKey: a fixed line of text
     <Run key={index} run={run} />
   ));
+}
+
+/** The class each kind of code token is drawn with. */
+const CODE_TOKEN_CLASS: Readonly<Record<CodeTokenKind, string>> = {
+  keyword: styles.codeKeyword,
+  string: styles.codeMuted,
+  number: styles.codeMuted,
+  comment: styles.codeMuted,
+  name: styles.codeName,
+};
+
+/** Code with its syntax highlighted by class; its text is the source exactly. */
+function HighlightedCode({ source }: { readonly source: string }) {
+  return highlightCode(source).map((run, index) =>
+    typeof run === "string" ? (
+      run
+    ) : (
+      // The runs of a fixed source never move, so their position is their identity.
+      // biome-ignore lint/suspicious/noArrayIndexKey: a fixed run of code
+      <span key={index} className={CODE_TOKEN_CLASS[run.kind]}>
+        {run.text}
+      </span>
+    ),
+  );
 }
 
 /** The two actions, the same size: View on GitHub first and filled, Try the playground beside it. */
@@ -139,7 +164,9 @@ function BlockView({
           aria-label={block.label}
           data-testid={`${sectionId}-code`}
         >
-          <code>{block.code}</code>
+          <code>
+            <HighlightedCode source={block.code} />
+          </code>
         </pre>
       );
     case "details":
@@ -293,6 +320,7 @@ export function ProductPage() {
     <div
       className={styles.scroller}
       lang="en-GB"
+      dir="ltr"
       data-testid="product-page"
       {...DOCUMENT_SCROLL}
     >

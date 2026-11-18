@@ -6,7 +6,7 @@ import {
   FakeMessageCatalogue,
 } from "@mapcairn/core";
 import { useServices } from "@mapcairn/map";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { createRoutesStub } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +33,7 @@ function stub(page: () => null | ReturnType<typeof createElement>) {
 describe("the app layout", () => {
   afterEach(() => {
     document.documentElement.removeAttribute("lang");
+    document.documentElement.removeAttribute("dir");
   });
 
   it("provides the services, built once, the announcer and tooltips to the pages inside it", () => {
@@ -91,5 +92,124 @@ describe("the app layout", () => {
       ),
     );
     await waitFor(() => expect(document.documentElement.lang).toBe("af"));
+  });
+
+  it("keeps direction in step with a loaded language and the host override", async () => {
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "ar", label: "Arabic", direction: "ltr" },
+        ],
+        "en-GB",
+        (tag) => Promise.resolve(new FakeMessageCatalogue({ language: tag })),
+      ),
+    });
+    document.documentElement.dir = "rtl";
+    services.fakes.settings.set({ language: "ar" });
+    createServices.mockReturnValueOnce(services);
+    render(
+      createElement(
+        stub(() => null),
+        { initialEntries: ["/map"] },
+      ),
+    );
+    await waitFor(() => expect(document.documentElement.lang).toBe("ar"));
+    expect(document.documentElement.dir).toBe("ltr");
+  });
+
+  it("uses right-to-left direction when a right-to-left language loads", async () => {
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "ar", label: "Arabic" },
+        ],
+        "en-GB",
+        (tag) => Promise.resolve(new FakeMessageCatalogue({ language: tag })),
+      ),
+    });
+    document.documentElement.dir = "ltr";
+    services.fakes.settings.set({ language: "ar" });
+    createServices.mockReturnValueOnce(services);
+    render(
+      createElement(
+        stub(() => null),
+        { initialEntries: ["/map"] },
+      ),
+    );
+    await waitFor(() => expect(document.documentElement.lang).toBe("ar"));
+    expect(document.documentElement.dir).toBe("rtl");
+  });
+
+  it("preserves the pre-paint language while its catalogue is loading", async () => {
+    let finish!: (messages: FakeMessageCatalogue) => void;
+    const loading = new Promise<FakeMessageCatalogue>((resolve) => {
+      finish = resolve;
+    });
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "ar", label: "Arabic" },
+        ],
+        "en-GB",
+        () => loading,
+      ),
+    });
+    services.fakes.settings.set({ language: "ar" });
+    document.documentElement.lang = "ar";
+    document.documentElement.dir = "rtl";
+    createServices.mockReturnValueOnce(services);
+    render(
+      createElement(
+        stub(() => null),
+        { initialEntries: ["/map"] },
+      ),
+    );
+
+    expect(document.documentElement.lang).toBe("ar");
+    expect(document.documentElement.dir).toBe("rtl");
+    await act(async () => finish(new FakeMessageCatalogue({ language: "ar" })));
+    expect(document.documentElement.lang).toBe("ar");
+    expect(document.documentElement.dir).toBe("rtl");
+  });
+
+  it("restores the active language when the pre-paint language fails to load", async () => {
+    let fail!: (error: Error) => void;
+    const loading = new Promise<FakeMessageCatalogue>((_, reject) => {
+      fail = reject;
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "ar", label: "Arabic" },
+        ],
+        "en-GB",
+        () => loading,
+      ),
+    });
+    services.fakes.settings.set({ language: "ar" });
+    document.documentElement.lang = "ar";
+    document.documentElement.dir = "rtl";
+    createServices.mockReturnValueOnce(services);
+    render(
+      createElement(
+        stub(() => null),
+        { initialEntries: ["/map"] },
+      ),
+    );
+
+    expect(document.documentElement.lang).toBe("ar");
+    await act(async () => fail(new Error("load failed")));
+    expect(document.documentElement.lang).toBe("en-GB");
+    expect(document.documentElement.dir).toBe("ltr");
+    warn.mockRestore();
   });
 });

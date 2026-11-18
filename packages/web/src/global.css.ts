@@ -54,6 +54,13 @@ globalStyle(`${SCROLLING_DOCUMENT}, ${SCROLLING_DOCUMENT} body`, {
   overscrollBehavior: "auto",
 });
 
+// The container is still a scroll container with nothing to scroll, and the
+// wheel reaches it first: its own `overscroll-behavior: contain` would stop the
+// wheel there instead of passing it on to the document.
+globalStyle(`${SCROLLING_DOCUMENT} [${DOCUMENT_SCROLL_ATTRIBUTE}]`, {
+  overscrollBehavior: "auto",
+});
+
 globalStyle("html", {
   colorScheme: "light",
   backgroundColor: tokens.color.pageBackground,

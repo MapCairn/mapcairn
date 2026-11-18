@@ -65,7 +65,7 @@ function statusText(
     case "loading":
       return t("layers.status.loading", {});
     case "ready":
-      return t(
+      return messages.plural(
         status.capped ? "layers.status.updatedCapped" : "layers.status.updated",
         {
           time: timeOfDay(status.updatedAt, language),
@@ -234,7 +234,7 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
       data-testid={`layer-list-${definition.id}`}
     >
       <summary className={styles.listSummary}>
-        {t("layers.list.summary", { count })}
+        {messages.plural("layers.list.summary", { count })}
       </summary>
       {definition.list.sorts.length > 1 ? (
         <SegmentedControl
@@ -291,7 +291,7 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
       </ul>
       {rows.length < layer.sorted.length ? (
         <Button variant="quiet" onClick={() => setShowAll(true)}>
-          {t("layers.list.showAll", { count })}
+          {messages.plural("layers.list.showAll", { count })}
         </Button>
       ) : null}
     </details>

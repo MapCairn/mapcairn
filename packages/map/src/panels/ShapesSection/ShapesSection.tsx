@@ -6,6 +6,7 @@ import {
   type MessageKey,
   type WktAxisOrder,
 } from "@mapcairn/core";
+import { useReadingDirection } from "@mapcairn/react";
 import {
   CircleCheck,
   Download,
@@ -75,13 +76,14 @@ function Feedback({
 function useFitToImport(): (bounds: Bounds) => void {
   const adapter = useContext(MapContext)?.adapter ?? null;
   const { layout, viewport, panelEdge } = useChromeLayout();
+  const direction = useReadingDirection();
   return (bounds) => {
     if (!adapter) {
       return;
     }
     adapter.fitBounds(bounds, {
       maxZoom: FIT_MAX_ZOOM,
-      padding: fitPadding({ layout, viewport, panelEdge }),
+      padding: fitPadding({ layout, viewport, panelEdge, direction }),
     });
   };
 }

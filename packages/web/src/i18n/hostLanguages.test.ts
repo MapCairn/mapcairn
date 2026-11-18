@@ -14,8 +14,8 @@ import {
 describe("the host's languages", () => {
   it("offers English, the default, then Afrikaans, each named in its own language", () => {
     expect(OFFERED_LANGUAGES).toEqual([
-      { tag: "en-GB", label: "English" },
-      { tag: "af", label: "Afrikaans" },
+      { tag: "en-GB", label: "English", direction: "ltr" },
+      { tag: "af", label: "Afrikaans", direction: "ltr" },
     ]);
     expect(OFFERED_LANGUAGE_TAGS).toEqual(["en-GB", "af"]);
     expect(HOST_LANGUAGE_CATALOGUE.defaultLanguage).toBe(DEFAULT_LANGUAGE);

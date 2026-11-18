@@ -5,7 +5,7 @@
 
 **MapCairn is an open-source React SDK for map applications that need to be accessible and private, with a finished interface.** It is built on MapLibre GL JS and is meant for teams building public-interest map applications, such as open data and hazard maps. It gives them the parts a map renderer leaves to them: the whole interface around the map, open data layers written as data, measuring and drawing tools, a design system, and small interfaces that keep every service replaceable and testable.
 
-**Status:** the SDK is usable from this repository, but the packages are not on npm yet. Publishing them is tracked in [#1](https://github.com/MapCairn/mapcairn/issues/1) (the First release milestone in [`ROADMAP.md`](ROADMAP.md)).
+**Status:** the SDK is usable from this repository, but the packages are not on npm yet. Publishing them is part of the First release milestone in [`ROADMAP.md`](ROADMAP.md).
 
 ## Try the playground
 
@@ -78,11 +78,11 @@ function Chrome({ background }: { readonly background: ReactNode }) {
 }
 ```
 
-`createFakeServices()` runs the interface on the SDK's in-memory fakes, so it requests nothing and draws no map tiles. A real map swaps in a `MapAdapter` over MapLibre GL JS: the playground's adapter is the reference today, and [#43](https://github.com/MapCairn/mapcairn/issues/43) tracks shipping it as an optional package.
+`createFakeServices()` runs the interface on the SDK's in-memory fakes, so it requests nothing and draws no map tiles. A real map swaps in a `MapAdapter` over MapLibre GL JS: the playground's adapter is the reference today, and it is not yet shipped as a package of its own.
 
 [`examples/embed`](examples/embed/README.md) is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test in `packages/core/src/lint/readme.test.ts` fails if this snippet uses an import, a component or a prop that the example does not. [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it (the vanilla-extract Vite plugin, base styles and the font).
 
-The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK should therefore render in any React 19 app whose bundler compiles vanilla-extract styles (the example uses its Vite plugin), though no other framework has been tried here. A prebuilt bundle for pages without React ([#44](https://github.com/MapCairn/mapcairn/issues/44)) and a guide for server-rendered pages ([#221](https://github.com/MapCairn/mapcairn/issues/221)) are open.
+The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK should therefore render in any React 19 app whose bundler compiles vanilla-extract styles (the example uses its Vite plugin), though no other framework has been tried here. There is no prebuilt bundle for pages without React yet, and no guide yet for serving the SDK bundle from a Windows web server or a server-rendered page.
 
 ## What the SDK adds to a map renderer
 
@@ -146,10 +146,10 @@ It is not the right choice today if you need:
 - a hosted service, a dataset or accounts. MapCairn is code: you choose each provider (tiles, search, routing) and its terms, and you host the app;
 - GIS analysis. MapCairn is not a GIS analysis engine: it measures, draws and has geometry helpers, but does no overlay analysis or geoprocessing;
 - a map engine other than MapLibre GL JS, or tilt, terrain and 3D buildings;
-- to `npm install` it, to mount it in a page without React, or to reach layers behind a login: [#1](https://github.com/MapCairn/mapcairn/issues/1), [#44](https://github.com/MapCairn/mapcairn/issues/44) and [#45](https://github.com/MapCairn/mapcairn/issues/45) are open;
-- your own colours and font with contrast checked ([#220](https://github.com/MapCairn/mapcairn/issues/220)), clustering of dense points ([#183](https://github.com/MapCairn/mapcairn/issues/183)) or offline use.
+- to `npm install` it, to mount it in a page without React, or to reach layers behind a login;
+- your own colours and font with contrast checked, clustering of dense points or offline use.
 
-A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](docs/guides/capability-matrix.md) lists what MapCairn has, partly has and lacks, with the issue for each gap.
+A map renderer on its own leaves every interface decision to you, which is the better choice when your interface has little in common with a map application. The [capability matrix](docs/guides/capability-matrix.md) lists what MapCairn has, partly has and lacks, with the issue for each gap that has one, and [`ROADMAP.md`](ROADMAP.md) says what comes next.
 
 ## Quick start
 
@@ -216,6 +216,6 @@ MapCairn is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/
 
 The SDK packages depend only on permissively licensed packages (MIT, BSD, Apache-2.0, ISC and similar), and `npm run lint` fails when a new production dependency of one has any other licence.
 
-There is no commercial licence on offer yet, but the author is open to discussing other terms for closed-source use. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
+The author welcomes conversations about other terms for closed-source use. A commercial licence is not on offer yet, and any that is agreed would go towards the continued development of MapCairn. Contact the author at [mapcairn@timothybrits.co.za](mailto:mapcairn@timothybrits.co.za).
 
 See [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md) for software and basemap credits and [`PRIVACY.md`](PRIVACY.md) for the privacy policy.

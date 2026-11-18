@@ -1,6 +1,6 @@
 # 0009: A message catalogue port, and English plus Afrikaans on the reference host
 
-Status: built. Tracking issue: #231. The Afrikaans catalogue was offered as a draft and has since been reviewed and approved; layer card templates and unit suffixes are not translatable yet.
+Status: built. Tracking issue: #231. The Afrikaans catalogue was offered as a draft and has since been reviewed and approved. Layer feature-template translations are tracked separately in [plan 0012](0012-layer-template-translation.md).
 
 ## Goal
 

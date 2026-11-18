@@ -10,10 +10,8 @@ import type { MessageKey } from "../ports/messages";
  * copy and from the strings core's announcement, description, unit and error
  * helpers used to return, so moving them to keys changes no visible text.
  *
- * A key used with `plural` carries two forms separated by `|`: the form for
- * `Intl.PluralRules`'s "one" category first, the form for every other
- * category second. English has only "one" and "other", so two forms are
- * enough.
+ * The English plural values use `|`: the "one" form first, then "other".
+ * Other catalogues may use category-keyed forms or a single plain value.
  */
 export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "settings.title": "Settings",
