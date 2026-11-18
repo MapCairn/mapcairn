@@ -56,6 +56,41 @@ describe("createMessageCatalogue", () => {
     );
   });
 
+  it("uses the fallback language's plural rules for a missing value", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const catalogue = createMessageCatalogue("ru", {}, EN_GB_CATALOGUE);
+
+    expect(catalogue.plural("common.itemCount", { count: 21 })).toBe(
+      `${new Intl.NumberFormat("ru").format(21)} items`,
+    );
+    expect(catalogue.plural("common.itemCount", { count: 1001 })).toBe(
+      `${new Intl.NumberFormat("ru").format(1001)} items`,
+    );
+    warn.mockRestore();
+  });
+
+  it("uses a host-supplied fallback language's plural rules", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const catalogue = createMessageCatalogue(
+      "en-GB",
+      {},
+      {
+        ...EN_GB_CATALOGUE,
+        "common.itemCount":
+          "one{{count} предмет} few{{count} предмета} many{{count} предметов} other{{count} предмета}",
+      },
+      { fallbackLanguage: "ru" },
+    );
+
+    expect(catalogue.plural("common.itemCount", { count: 21 })).toBe(
+      "21 предмет",
+    );
+    expect(catalogue.plural("common.itemCount", { count: 1001 })).toBe(
+      `${new Intl.NumberFormat("en-GB").format(1001)} предмет`,
+    );
+    warn.mockRestore();
+  });
+
   it("uses other for an absent category in an incomplete active value", () => {
     const catalogue = createMessageCatalogue(
       "ar",

@@ -4,10 +4,12 @@ import { formatDay, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
 import { pluralFormsOf } from "./pluralForms";
 
-/** Optional host-defined translations carried beside the typed messages. */
+/** Optional controls for host translations and the fallback record. */
 export interface CreateMessageCatalogueOptions {
   /** Translations for host-keyed layer templates, units and labels. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
+  /** BCP 47 tag of the fallback record's language. Defaults to `en-GB`. */
+  readonly fallbackLanguage?: string;
 }
 
 /** Matches a `{name}` placeholder in a catalogue string. */
@@ -64,9 +66,10 @@ function selectPluralForm(
 /**
  * Builds the dependency-free default {@link MessageCatalogue}: a plain
  * `Record<MessageKey, string>` of resolved text (partial, for a translation
- * in progress), formatted with `Intl.PluralRules` and `Intl.ListFormat`. A key missing from `catalogue`
- * falls back to `fallback`'s value, warning once per missing key for this
- * instance.
+ * in progress), formatted with `Intl.PluralRules` and `Intl.ListFormat`. A key
+ * missing from `catalogue` falls back to `fallback`'s value, using its
+ * language for plural selection and warning once per missing key for this
+ * instance. Substitutions continue to use the active `language`.
  */
 export function createMessageCatalogue(
   language: string,
@@ -75,19 +78,23 @@ export function createMessageCatalogue(
   options: CreateMessageCatalogueOptions = {},
 ): MessageCatalogue {
   const warned = new Set<MessageKey>();
+  const fallbackLanguage = options.fallbackLanguage ?? "en-GB";
 
-  function resolve(key: MessageKey): string {
+  function resolve(key: MessageKey): {
+    readonly template: string;
+    readonly language: string;
+  } {
     const value = catalogue[key];
     if (value !== undefined) {
-      return value;
+      return { template: value, language };
     }
     if (!warned.has(key)) {
       warned.add(key);
       console.warn(
-        `MessageCatalogue: "${language}" has no value for "${key}"; falling back to English.`,
+        `MessageCatalogue: "${language}" has no value for "${key}"; falling back to "${fallbackLanguage}".`,
       );
     }
-    return fallback[key];
+    return { template: fallback[key], language: fallbackLanguage };
   }
 
   return {
@@ -96,11 +103,16 @@ export function createMessageCatalogue(
       ? { layerTemplates: options.layerTemplates }
       : {}),
     t(key, params) {
-      return substitute(resolve(key), params, language);
+      return substitute(resolve(key).template, params, language);
     },
     plural(key, params) {
       const { count } = params;
-      const form = selectPluralForm(resolve(key), language, count);
+      const resolved = resolve(key);
+      const form = selectPluralForm(
+        resolved.template,
+        resolved.language,
+        count,
+      );
       return substitute(form, params, language);
     },
     list(items, type = "conjunction") {

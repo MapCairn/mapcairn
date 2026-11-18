@@ -1202,14 +1202,16 @@ export interface MessageCatalogue {
   readonly layerTemplates?: Readonly<Record<string, string>>;
   /**
    * Looks up a key, substitutes its parameters (written `{name}` in the
-   * string), and falls back to the English value with a single
-   * `console.warn` per missing key when the active catalogue lacks it.
+   * string), and falls back with a single `console.warn` per missing key
+   * when the active catalogue lacks it. The dependency-free default uses
+   * English unless its host supplies another fallback language.
    */
   t<K extends MessageKey>(key: K, params: MessageParams[K]): string;
   /**
    * As {@link t}, but first picks a form with `Intl.PluralRules` when the
-   * active value has plural forms. A plain value is formatted as with `t`.
-   * `params` carries `count` plus the key's other parameters.
+   * selected value has plural forms, using that value's language. A plain
+   * value is formatted as with `t`. `params` carries `count` plus the key's
+   * other parameters.
    */
   plural<K extends MessageKey>(
     key: K,
