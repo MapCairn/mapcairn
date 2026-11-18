@@ -7,6 +7,8 @@ import { FakeMessageCatalogue } from "./FakeMessageCatalogue";
 runMessageCatalogueContract("FakeMessageCatalogue", {
   create: () => new FakeMessageCatalogue(),
   createMissingKey: (key) => new FakeMessageCatalogue({ missingKeys: [key] }),
+  createWith: (language, overrides) =>
+    new FakeMessageCatalogue({ language, overrides }),
 });
 
 describe("FakeMessageCatalogue", () => {

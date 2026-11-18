@@ -184,7 +184,7 @@ export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
       >
         {messages.t("layers.turnOff.all", {})}
         <span className={styles.turnOffCount}>
-          {messages.t("layers.turnOff.count", { count: ids.length })}
+          {messages.plural("layers.turnOff.count", { count: ids.length })}
         </span>
       </Button>
     </ActionRow>
@@ -196,17 +196,17 @@ export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
  * run, its status and Undo take the row under the group's heading.
  */
 export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
-  const { t } = useMessages();
+  const { plural } = useMessages();
   const groupName = useResolveText()(group);
   const { turnedOff, turnOff } = layers;
   const undo =
     turnedOff?.group === group
       ? {
-          text: t("layers.turnOff.doneGroup", {
+          text: plural("layers.turnOff.doneGroup", {
             count: turnedOff.count,
             group: groupName,
           }),
-          label: t("layers.turnOff.undoGroup", {
+          label: plural("layers.turnOff.undoGroup", {
             count: turnedOff.count,
             group: groupName,
           }),
@@ -223,7 +223,10 @@ export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
           className={styles.groupTurnOff}
           onClick={() => turnOff(ids, { group })}
         >
-          {t("layers.turnOff.group", { count: ids.length, group: groupName })}
+          {plural("layers.turnOff.group", {
+            count: ids.length,
+            group: groupName,
+          })}
         </Button>
       ) : null}
     </ActionRow>
