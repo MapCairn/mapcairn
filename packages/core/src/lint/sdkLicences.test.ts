@@ -427,7 +427,17 @@ describe("reportLines", () => {
   });
 });
 
-describe("scripts/sdkLicences.mjs, run as a command", () => {
+/**
+ * These cases start Node as a subprocess. A loaded coverage run can make the
+ * short-lived command take longer than Vitest's five-second default. Bound the
+ * child and leave the test enough time for process startup and cleanup.
+ */
+const CHILD_TIMEOUT_MS = 30_000;
+const TEST_TIMEOUT_MS = 40_000;
+
+describe("scripts/sdkLicences.mjs, run as a command", {
+  timeout: TEST_TIMEOUT_MS,
+}, () => {
   let root: string;
 
   function put(file: string, value: unknown): void {
@@ -452,6 +462,7 @@ describe("scripts/sdkLicences.mjs, run as a command", () => {
   function run(...args: string[]) {
     return spawnSync(process.execPath, [SCRIPT, "--root", root, ...args], {
       encoding: "utf8",
+      timeout: CHILD_TIMEOUT_MS,
     });
   }
 
@@ -483,6 +494,7 @@ describe("scripts/sdkLicences.mjs, run as a command", () => {
   it("exits 1 with a message when --root has no value", () => {
     const result = spawnSync(process.execPath, [SCRIPT, "--root"], {
       encoding: "utf8",
+      timeout: CHILD_TIMEOUT_MS,
     });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("could not run");

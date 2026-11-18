@@ -22,7 +22,18 @@ const AGPL =
 const APACHE =
   "// SPDX-License-Identifier: Apache-2.0\n// Copyright MapCairn contributors\n";
 
-describe("scripts/licenceHeaders.mjs, run as a command", () => {
+/**
+ * These cases start Git and Node as subprocesses. Under coverage load, the
+ * short-lived commands can take longer than Vitest's five-second default even
+ * though they still complete. Bound each child and leave the test enough time
+ * for both process starts and cleanup.
+ */
+const CHILD_TIMEOUT_MS = 30_000;
+const TEST_TIMEOUT_MS = 40_000;
+
+describe("scripts/licenceHeaders.mjs, run as a command", {
+  timeout: TEST_TIMEOUT_MS,
+}, () => {
   let root: string;
 
   function put(file: string, text: string): void {
@@ -32,16 +43,23 @@ describe("scripts/licenceHeaders.mjs, run as a command", () => {
   }
 
   function run(...args: string[]) {
-    spawnSync("git", ["add", "-A"], { cwd: root });
+    spawnSync("git", ["add", "-A"], {
+      cwd: root,
+      timeout: CHILD_TIMEOUT_MS,
+    });
     return spawnSync(process.execPath, [SCRIPT, ...args], {
       cwd: root,
       encoding: "utf8",
+      timeout: CHILD_TIMEOUT_MS,
     });
   }
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), "mapcairn-licence-"));
-    spawnSync("git", ["init", "-q"], { cwd: root });
+    spawnSync("git", ["init", "-q"], {
+      cwd: root,
+      timeout: CHILD_TIMEOUT_MS,
+    });
   });
 
   afterEach(() => {
