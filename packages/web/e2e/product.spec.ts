@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { PRODUCT_HEADLINE, ProductPage } from "./pages/ProductPage";
 import {
@@ -245,6 +246,208 @@ test.describe("the product page", () => {
       .toBeGreaterThan(0);
   });
 
+  test.describe("copying the embedding example", () => {
+    test("copies the code shown, says Copied and then offers to copy again", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: true });
+      const product = new ProductPage(page);
+      await product.goto();
+      await expect.poll(() => copiedTexts(page)).toEqual([]);
+      await product.copyCode.click();
+      await expect(
+        product.main.getByRole("button", { name: "Copied" }),
+      ).toBeFocused();
+      await expect(page.getByTestId("live-region-polite")).toHaveText(
+        "Code copied",
+      );
+      const shown = await product.code.textContent();
+      await expect.poll(() => copiedTexts(page)).toEqual([shown]);
+      await expect(product.copyCode).toBeVisible({ timeout: 10_000 });
+    });
+
+    test("copies from the keyboard", async ({ page }) => {
+      await recordClipboard(page, { ok: true });
+      const product = new ProductPage(page);
+      await product.goto();
+      await product.copyCode.focus();
+      await page.keyboard.press("Enter");
+      await expect(
+        product.main.getByRole("button", { name: "Copied" }),
+      ).toBeFocused();
+      await expect.poll(async () => (await copiedTexts(page)).length).toBe(1);
+    });
+
+    test("says when the browser refuses, and how to copy by hand", async ({
+      page,
+    }) => {
+      await recordClipboard(page, { ok: false });
+      const product = new ProductPage(page);
+      await product.goto();
+      await product.copyCode.click();
+      await expect(
+        product.main.getByRole("button", { name: "Copy failed" }),
+      ).toBeFocused();
+      await expect(page.getByTestId("live-region-assertive")).toHaveText(
+        "Could not copy. Select the code and copy it manually.",
+      );
+      await expect.poll(() => copiedTexts(page)).toEqual([]);
+    });
+  });
+
+  test.describe("buttons and links answer the pointer", () => {
+    test("an action rises under a pointer and shrinks a little when pressed", async ({
+      page,
+      isMobile,
+    }) => {
+      test.skip(isMobile, "Hover needs a pointer that can hover.");
+      const product = new ProductPage(page);
+      await product.goto();
+      const resting = await interactionStyle(product.heroGitHub);
+      expect(resting.boxShadow).toBe("none");
+      expect(resting.transform).toBe("none");
+
+      await product.heroGitHub.hover();
+      // A transform settles a frame after the state changes, so poll for it.
+      await expect
+        .poll(
+          async () => (await interactionStyle(product.heroGitHub)).transform,
+        )
+        .toBe("matrix(1, 0, 0, 1, 0, -1)");
+      const hovered = await interactionStyle(product.heroGitHub);
+      expect(hovered.boxShadow).not.toBe("none");
+      // The colours stay the AA pair they were.
+      expect(hovered.color).toBe(resting.color);
+      expect(hovered.backgroundColor).toBe(resting.backgroundColor);
+
+      await page.mouse.down();
+      await expect
+        .poll(
+          async () => (await interactionStyle(product.heroGitHub)).transform,
+        )
+        .toBe("matrix(0.98, 0, 0, 0.98, 0, 0)");
+      expect((await interactionStyle(product.heroGitHub)).boxShadow).toBe(
+        "none",
+      );
+      await page.mouse.up();
+    });
+
+    test("the secondary action, the header link and the copy button take the accent tint under a pointer", async ({
+      page,
+      isMobile,
+    }) => {
+      test.skip(isMobile, "Hover needs a pointer that can hover.");
+      const product = new ProductPage(page);
+      await product.goto();
+      for (const target of [
+        product.heroPlayground,
+        product.headerPlayground,
+        product.copyCode,
+      ]) {
+        const resting = await interactionStyle(target);
+        await target.hover();
+        const hovered = await interactionStyle(target);
+        expect(hovered.backgroundColor).not.toBe(resting.backgroundColor);
+        await page.mouse.move(0, 0);
+      }
+    });
+
+    test("a link's underline thickens under a pointer", async ({
+      page,
+      isMobile,
+    }) => {
+      test.skip(isMobile, "Hover needs a pointer that can hover.");
+      const product = new ProductPage(page);
+      await product.goto();
+      const link = product.footer.getByRole("link", { name: "Source code" });
+      expect((await interactionStyle(link)).textDecorationThickness).toBe(
+        "1px",
+      );
+      await link.hover();
+      expect((await interactionStyle(link)).textDecorationThickness).toBe(
+        "2px",
+      );
+    });
+
+    test("in forced colours a hovered action is underlined, since its shadow is gone", async ({
+      page,
+      isMobile,
+    }) => {
+      test.skip(isMobile, "Hover needs a pointer that can hover.");
+      await page.emulateMedia({ forcedColors: "active" });
+      const product = new ProductPage(page);
+      await product.goto();
+      expect(
+        (await interactionStyle(product.heroGitHub)).textDecorationLine,
+      ).toBe("none");
+      await product.heroGitHub.hover();
+      expect(
+        (await interactionStyle(product.heroGitHub)).textDecorationLine,
+      ).toBe("underline");
+    });
+
+    // Forced colours paint a Canvas backplate behind text, so an action
+    // that fills itself with another system colour hides its own label.
+    test("in forced colours every action's label sits on Canvas, at rest, hovered and pressed", async ({
+      page,
+      isMobile,
+    }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      const product = new ProductPage(page);
+      await product.goto();
+      const canvas = await page.evaluate(() => {
+        const probe = document.createElement("span");
+        probe.style.backgroundColor = "Canvas";
+        probe.style.forcedColorAdjust = "none";
+        document.body.append(probe);
+        const colour = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return colour;
+      });
+      const actions = [
+        product.heroGitHub,
+        product.heroPlayground,
+        product.copyCode,
+      ];
+      const readable = async (action: Locator) => {
+        const style = await interactionStyle(action);
+        expect(style.backgroundColor).toBe(canvas);
+        expect(style.color).not.toBe(canvas);
+      };
+      for (const action of actions) {
+        await readable(action);
+        if (isMobile) {
+          continue;
+        }
+        await action.hover();
+        await readable(action);
+        await page.mouse.down();
+        await readable(action);
+        await page.mouse.move(0, 0);
+        await page.mouse.up();
+      }
+    });
+
+    test("a tap leaves no hover behind on a touch screen", async ({
+      page,
+      isMobile,
+    }) => {
+      test.skip(!isMobile, "Only a touch screen has no hover.");
+      await recordClipboard(page, { ok: true });
+      const product = new ProductPage(page);
+      await product.goto();
+      const resting = await interactionStyle(product.copyCode);
+      await product.copyCode.tap();
+      await expect(
+        product.main.getByRole("button", { name: "Copied" }),
+      ).toBeVisible();
+      const tapped = await interactionStyle(product.copyCode);
+      expect(tapped.backgroundColor).toBe(resting.backgroundColor);
+      expect(tapped.boxShadow).toBe("none");
+      expect(tapped.transform).toBe("none");
+    });
+  });
+
   for (const viewport of VIEWPORTS) {
     for (const colorScheme of ["light", "dark"] as const) {
       test(`draws the art's marks where they belong at ${viewport.width}px in ${colorScheme}`, async ({
@@ -452,6 +655,61 @@ test.describe("the product page", () => {
     }
   });
 
+  for (const viewport of VIEWPORTS) {
+    test(`leaves the same gap under the hero as between sections at ${viewport.width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const product = new ProductPage(page);
+      await product.goto();
+      const gaps = await page.evaluate(() => {
+        const top = (element: Element | null | undefined) =>
+          element?.getBoundingClientRect().top ?? Number.NaN;
+        const bottom = (element: Element | null | undefined) =>
+          element?.getBoundingClientRect().bottom ?? Number.NaN;
+        const main = document.querySelector("main");
+        const hero = main?.firstElementChild;
+        const sections = [...document.querySelectorAll("main > section")];
+        // The hero's content ends with whichever of its words and art is lower.
+        const heroEnd = Math.max(
+          ...[...(hero?.children ?? [])].map((child) => bottom(child)),
+        );
+        return {
+          underHero: top(sections[0]?.querySelector("h2")) - heroEnd,
+          betweenSections:
+            top(sections[1]?.querySelector("h2")) -
+            bottom(sections[0]?.lastElementChild),
+        };
+      });
+      expect(gaps.betweenSections).toBeCloseTo(64, 0);
+      expect(gaps.underHero).toBeCloseTo(gaps.betweenSections, 0);
+    });
+  }
+
+  test("puts each subheading closer to what it heads than to what comes before it", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    const subheadings = await page.evaluate(() =>
+      [...document.querySelectorAll("main > section > h3")].map((heading) => {
+        const box = heading.getBoundingClientRect();
+        const before = heading.previousElementSibling?.getBoundingClientRect();
+        const after = heading.nextElementSibling?.getBoundingClientRect();
+        return {
+          text: heading.textContent,
+          before: box.top - (before?.bottom ?? Number.NaN),
+          after: (after?.top ?? Number.NaN) - box.bottom,
+        };
+      }),
+    );
+    expect(subheadings.length).toBeGreaterThan(1);
+    for (const { text, before, after } of subheadings) {
+      expect(after, `${text}: gap after`).toBeGreaterThan(0);
+      expect(after, `${text}: closer to what follows`).toBeLessThan(before);
+    }
+  });
+
   test("skips to the main content from the first Tab", async ({ page }) => {
     const product = new ProductPage(page);
     await product.goto();
@@ -581,4 +839,62 @@ function appLayoutFiles(): string[] {
 /** A hash as a literal piece of a regular expression. */
 function literally(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+}
+
+/** Where the recording clipboard keeps what it was asked to copy. */
+const COPIED_KEY = "__productCopies";
+
+/**
+ * Replaces the browser's clipboard on the product page before it loads (the
+ * page has no test seam): it records each copy, or refuses as a browser does
+ * without permission, with the legacy fallback refused too.
+ */
+async function recordClipboard(
+  page: Page,
+  { ok }: { readonly ok: boolean },
+): Promise<void> {
+  await page.addInitScript(
+    ({ ok: succeed, key }) => {
+      const copies: string[] = [];
+      Object.defineProperty(window, key, { value: copies });
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            if (!succeed) {
+              throw new DOMException("Refused", "NotAllowedError");
+            }
+            copies.push(text);
+          },
+        },
+      });
+      if (!succeed) {
+        document.execCommand = () => false;
+      }
+    },
+    { ok, key: COPIED_KEY },
+  );
+}
+
+/** Everything the recording clipboard copied. */
+function copiedTexts(page: Page): Promise<string[]> {
+  return page.evaluate(
+    (key) => [...((window as unknown as Record<string, string[]>)[key] ?? [])],
+    COPIED_KEY,
+  );
+}
+
+/** The computed styles a hover or press changes. */
+function interactionStyle(target: Locator) {
+  return target.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      color: style.color,
+      backgroundColor: style.backgroundColor,
+      boxShadow: style.boxShadow,
+      transform: style.transform,
+      textDecorationLine: style.textDecorationLine,
+      textDecorationThickness: style.textDecorationThickness,
+    };
+  });
 }
