@@ -8,6 +8,8 @@ import { pluralFormsOf } from "./pluralForms";
 export interface CreateMessageCatalogueOptions {
   /** Translations for host-keyed layer templates, units and labels. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
+  /** BCP 47 tag of the fallback record's language. Defaults to `en-GB`. */
+  readonly fallbackLanguage?: string;
 }
 
 /** Matches a `{name}` placeholder in a catalogue string. */
@@ -75,19 +77,23 @@ export function createMessageCatalogue(
   options: CreateMessageCatalogueOptions = {},
 ): MessageCatalogue {
   const warned = new Set<MessageKey>();
+  const fallbackLanguage = options.fallbackLanguage ?? "en-GB";
 
-  function resolve(key: MessageKey): string {
+  function resolve(key: MessageKey): {
+    readonly template: string;
+    readonly language: string;
+  } {
     const value = catalogue[key];
     if (value !== undefined) {
-      return value;
+      return { template: value, language };
     }
     if (!warned.has(key)) {
       warned.add(key);
       console.warn(
-        `MessageCatalogue: "${language}" has no value for "${key}"; falling back to English.`,
+        `MessageCatalogue: "${language}" has no value for "${key}"; falling back to "${fallbackLanguage}".`,
       );
     }
-    return fallback[key];
+    return { template: fallback[key], language: fallbackLanguage };
   }
 
   return {
@@ -96,11 +102,16 @@ export function createMessageCatalogue(
       ? { layerTemplates: options.layerTemplates }
       : {}),
     t(key, params) {
-      return substitute(resolve(key), params, language);
+      return substitute(resolve(key).template, params, language);
     },
     plural(key, params) {
       const { count } = params;
-      const form = selectPluralForm(resolve(key), language, count);
+      const resolved = resolve(key);
+      const form = selectPluralForm(
+        resolved.template,
+        resolved.language,
+        count,
+      );
       return substitute(form, params, language);
     },
     list(items, type = "conjunction") {
