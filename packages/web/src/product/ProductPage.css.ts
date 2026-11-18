@@ -449,14 +449,13 @@ export const codeExample = style({
 });
 
 /**
- * The copy button: a quiet 44 px pill that reads like the secondary action,
+ * The copy button: a quiet 48 px pill that reads like the secondary action,
  * with the same hover and pressed states. Its words and icon say what the
  * last copy did.
  */
 export const copyButton = style({
   ...action,
   alignSelf: "end",
-  minHeight: tokens.size.minTarget,
   paddingInline: tokens.space.md,
   border: `1px solid ${tokens.color.controlBoundary}`,
   backgroundColor: tokens.color.surfaceRaised,
