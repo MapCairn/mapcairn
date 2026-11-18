@@ -6,6 +6,7 @@ import {
   type ControlValues,
   evaluatePointStyle,
   type FeedLayerDefinition,
+  type FeedShapeStyle,
   type FormatterRegistry,
   formatTemplate,
   type HeatmapLayerDefinition,
@@ -29,7 +30,6 @@ import {
   type PaletteSlot,
   type PointStyle,
   type ShapeAppearance,
-  type ShapeStyle,
   shapeAppearances,
   shapeEvaluator,
   tileUrl,
@@ -162,7 +162,7 @@ function toMapLook(look: ShapeAppearance): MapShapeLook {
  * evaluates for each feature: categories become cases with the other class
  * as the fallback, and steps and equal intervals become ascending minimums.
  */
-export function toLookRule(style: ShapeStyle): MapLookRule {
+export function toLookRule(style: FeedShapeStyle): MapLookRule {
   const classes = shapeAppearances(style).map(toMapLook);
   const at = (index: number) => classes[index] as MapShapeLook;
   const { colour } = style;
@@ -335,7 +335,7 @@ export function toVectorHeatmaps(
  * no style rule. Features of the geometry the style does not draw are skipped.
  */
 export function toStyledShapes(
-  definition: FeedLayerDefinition<ShapeStyle>,
+  definition: FeedLayerDefinition<FeedShapeStyle>,
   features: readonly LayerFeature[],
   formatters: FormatterRegistry,
   now: number,

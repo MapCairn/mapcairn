@@ -27,6 +27,8 @@ Everything is exported from `@mapcairn/core`, apart from the contract suites, wh
 
 `languageDirection` resolves a tag's reading direction, with an optional host override on `LanguageOption`; see the [translation guide](../../docs/guides/translate-the-sdk.md).
 
+Layer feature templates use plain strings by default; host-keyed templates can be supplied separately through `MessageCatalogue.layerTemplates`. A translation is used only when it preserves the source's field and formatter placeholders; missing entries fall back silently and invalid supplied translations warn before falling back. `ShapeIntervalColour.unit` and `RangeControlDefinition.unit` accept `LayerTemplate`, so TypeScript consumers that read these values resolve them with `resolveLayerTemplate`.
+
 The `spatial` directory name describes generic geographic measurement and carries no dataset assumptions.
 
 ## Usage

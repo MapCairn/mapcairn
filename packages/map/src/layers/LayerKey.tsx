@@ -56,7 +56,7 @@ export function LayerKey({
           className={stacked ? styles.legendEntryStacked : styles.legendEntry}
         >
           <LegendGlyph entry={entry} />
-          {entry.label}
+          <span className={styles.legendLabel}>{entry.label}</span>
         </li>
       ))}
     </ul>

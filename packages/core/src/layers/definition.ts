@@ -13,11 +13,12 @@
  *
  * Fields a person reads (names, descriptions, labels, costs, disclaimers and
  * empty text) are a `DefinitionText`: a `MessageKey` the active catalogue
- * translates, or a plain string shown as written. Card and list templates stay
- * plain strings, because their `{field}` placeholders are the definition's
- * own, not the catalogue's. Credits are legal text and are never translated.
+ * translates, or a plain string shown as written. Card, list and feed-shape
+ * label templates can use a host-defined key; their `{field}` placeholders
+ * remain the definition's own. Credits are legal text and are never translated.
  */
 import type { DefinitionText } from "../ports/messages";
+import type { LayerTemplate } from "./template";
 
 /** A credit line a provider asks for. */
 export interface LayerAttribution {
@@ -141,7 +142,7 @@ export interface RangeControlDefinition extends ControlBase {
   readonly step: number;
   readonly default: number;
   /** Appended to the shown value, such as ` px`. */
-  readonly unit?: string;
+  readonly unit?: LayerTemplate;
 }
 
 /** Every kind of control a layer can offer. */
@@ -385,7 +386,7 @@ export interface ShapeIntervalColour {
   /** One ordered palette colour per class, lowest first. Two to seven classes. */
   readonly ramp: readonly PaletteSlot[];
   /** Appended to the legend's numbers, such as ` people`. */
-  readonly unit?: string;
+  readonly unit?: LayerTemplate;
   /** Optional marks, one per class (lowest first), so each class has a second signal. */
   readonly patterns?: readonly FillPattern[];
   readonly dashes?: readonly LineDash[];
@@ -400,24 +401,25 @@ export type ShapeColour =
   | ShapeIntervalColour;
 
 /** Text drawn on each polygon or line, filled from the feature's fields. */
-export interface ShapeLabel {
+export interface ShapeLabel<T extends LayerTemplate = string> {
   /** A template such as `{name}` or `{name}: {population|number}`. */
-  readonly template: string;
+  readonly template: T;
   /** Labels appear from this normalised zoom, so a world view is not buried in text. */
   readonly minzoom?: number;
 }
 
 /**
- * How a feed's polygons or lines are drawn: a fill (or a stroke, for lines)
- * coloured by a rule, with outline width, hatching, dashing and labels. The
- * legend is derived from it.
+ * How polygons or lines are drawn: a fill (or a stroke, for lines) coloured
+ * by a rule, with outline width, hatching, dashing and labels. Its default
+ * label type remains a plain string; feed definitions that use keyed labels
+ * use {@link FeedShapeStyle}. The legend is derived from it.
  *
  * @remarks A style draws one geometry kind, so its legend and widths are
  *   unambiguous: `area` draws polygons and multipolygons, `line` draws lines
  *   and multilines. Features of the other kind are not drawn. A polygon's
  *   outline is the palette's ink, so the shape reads on any fill.
  */
-export interface ShapeStyle {
+export interface ShapeStyle<T extends LayerTemplate = string> {
   readonly kind: "shapes";
   readonly geometry: "area" | "line";
   readonly colour: ShapeColour;
@@ -430,8 +432,11 @@ export interface ShapeStyle {
   readonly width?: number;
   /** Dashing of the outline or line. Defaults to `solid`. A class's own `dash` wins. */
   readonly dash?: LineDash;
-  readonly label?: ShapeLabel;
+  readonly label?: ShapeLabel<T>;
 }
+
+/** A feed shape style whose label may use a host-keyed template. */
+export type FeedShapeStyle = ShapeStyle<LayerTemplate>;
 
 /** How a feed's points are drawn, and so what its legend says. */
 export interface PointStyle {
@@ -472,9 +477,9 @@ export interface ListSort {
 
 /** What a feature's card shows. Templates read decoded fields. */
 export interface CardSpec {
-  readonly title: string;
+  readonly title: LayerTemplate;
   /** One line each, such as `{depthKm|km} deep`. Lines whose fields are all missing are left out. */
-  readonly lines: readonly string[];
+  readonly lines: readonly LayerTemplate[];
   /** A link to the provider's page for the feature. */
   readonly link?: {
     readonly field: string;
@@ -485,7 +490,7 @@ export interface CardSpec {
 /** What each row of the list of loaded features shows. */
 export interface ListSpec {
   /** The row's second line. The first line is the card title. */
-  readonly secondary: string;
+  readonly secondary: LayerTemplate;
   /** The first is the default. */
   readonly sorts: readonly ListSort[];
 }
@@ -513,7 +518,7 @@ interface LayerDefinitionBase {
  * it, such as `FeedLayerDefinition<PointStyle>`.
  */
 export interface FeedLayerDefinition<
-  S extends PointStyle | ShapeStyle = PointStyle | ShapeStyle,
+  S extends PointStyle | FeedShapeStyle = PointStyle | FeedShapeStyle,
 > extends LayerDefinitionBase {
   readonly source: FeedSource | QuerySource;
   readonly style: S;
@@ -750,7 +755,7 @@ export function isQueryLayer(
 
 /** Whether a feed layer's style draws polygons and lines rather than points. */
 export function isShapeStyle(
-  style: PointStyle | ShapeStyle,
-): style is ShapeStyle {
+  style: PointStyle | FeedShapeStyle,
+): style is FeedShapeStyle {
   return "kind" in style && style.kind === "shapes";
 }

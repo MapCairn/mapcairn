@@ -248,6 +248,15 @@ export const legendEntry = style({
   alignItems: "center",
   gap: tokens.space.xxs,
   marginInlineEnd: tokens.space.sm,
+  minWidth: 0,
+  maxWidth: "100%",
+  overflowWrap: "anywhere",
+});
+
+/** A legend label that can wrap even when it contains an unbroken unit. */
+export const legendLabel = style({
+  minWidth: 0,
+  overflowWrap: "anywhere",
 });
 
 /**
@@ -256,9 +265,11 @@ export const legendEntry = style({
  */
 export const legendEntryStacked = style({
   display: "grid",
-  gridTemplateColumns: `calc(${tokens.space.xl} * 1.25) 1fr`,
+  gridTemplateColumns: `calc(${tokens.space.xl} * 1.25) minmax(0, 1fr)`,
   alignItems: "center",
   columnGap: tokens.space.xs,
+  minWidth: 0,
+  overflowWrap: "anywhere",
 });
 
 globalStyle(`${legendEntryStacked} > svg`, { justifySelf: "center" });
@@ -359,6 +370,7 @@ export const rowSecondary = style({
   color: tokens.color.textMuted,
   ...small,
   fontVariantNumeric: "tabular-nums",
+  overflowWrap: "anywhere",
 });
 
 /** The feature card. The sheet or panel provides the surface. */

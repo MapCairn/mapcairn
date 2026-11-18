@@ -18,6 +18,8 @@ export interface MessageCatalogueCall {
 export interface FakeMessageCatalogueOptions {
   /** Defaults to "en-GB". */
   readonly language?: string;
+  /** Host-defined layer template, unit and label translations. */
+  readonly layerTemplates?: Readonly<Record<string, string>>;
   /**
    * Replaces specific keys' catalogue values. Scripting a value whose
    * placeholders do not match the key's real `MessageParams` entry (a
@@ -48,9 +50,12 @@ export interface FakeMessageCatalogueOptions {
 export class FakeMessageCatalogue implements MessageCatalogue {
   readonly calls: MessageCatalogueCall[] = [];
 
+  readonly layerTemplates?: Readonly<Record<string, string>>;
+
   readonly #inner: MessageCatalogue;
 
   constructor(options: FakeMessageCatalogueOptions = {}) {
+    this.layerTemplates = options.layerTemplates;
     const language = options.language ?? "en-GB";
     const active: Partial<Record<MessageKey, string>> = {
       ...EN_GB_CATALOGUE,

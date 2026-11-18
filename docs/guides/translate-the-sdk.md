@@ -4,7 +4,7 @@ How a host changes the words the interface shows, offers its visitors more than 
 
 ## How the text is organised
 
-- Every word the interface shows is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`).
+- Most interface text is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`). Layer feature templates instead use a separate table of host-defined keys in `MessageCatalogue.layerTemplates`.
 - A string is plain text with `{name}` placeholders. A plural can use `one form|other form`, with "one" first and every other category second, or category-keyed forms such as `one{{count} item} few{{count} items} other{{count} items}`. Supply every category returned by `new Intl.PluralRules(language).resolvedOptions().pluralCategories`; languages with categories beyond "one" and "other" need keyed forms. Category forms may contain `{name}` placeholders but not nested forms or literal braces. Counts use `Intl.PluralRules` for the active catalogue's language, and lists use `Intl.ListFormat`.
 - Call `plural` with `count` for count-bearing text, even when the English value is plain: the active value may have forms. A plain active value is substituted as with `t`. `formatMessage` calls `plural` when its parameters include a numeric `count`; `MessageParams` permits an optional count even for a key without an English count placeholder. A direct `t` call does not select a form.
 - Numbers, dates and lists that go into a string are formatted by the catalogue for its own language, so a translation never has to format them. The coordinate hemisphere letters are keys too (`format.hemisphereNorth` and so on), so a language can write N, S, O and W.
@@ -48,7 +48,7 @@ const languages = createLanguageCatalogue(
 - Set `<html lang>` and `<html dir>` yourself on the server (the reference site renders its default language and direction) and keep them in step with the language in use on the client. The reference host does both in `packages/web/src/root.tsx` and the app layout `packages/web/src/routes/app.tsx`, and sets them before first paint from the stored tag with its inline theme script. Mark text in another language than the page's, such as a provider's own name, with `lang` on its element.
 - An error boundary that replaces the route supplying the services cannot read `Settings.language` from them. The reference host's error page (`packages/web/src/app/useErrorPageMessages.ts`) reads the stored choice and the browser's languages itself, through the same settings and device-preference adapters (so blocked storage or a garbled value gives English), resolves them with `resolveLanguage`, loads the matching messages with the same loader, and sets `<html lang>` and `<html dir>` to the language it ends up in. It renders English first, because a server-rendered error cannot read the device's storage and the first client render must match it, and switches after it has started. If the language fails to load it stays in English. It imports no services provider and no map code, so nothing in it can fail with the route it replaces.
 
-The reference site's language options are in `packages/web/src/i18n/offeredLanguageOptions.ts`, its loaders in `hostLanguages.ts`, and the Afrikaans catalogue in `af.ts`.
+The reference site's language options are in `packages/web/src/i18n/offeredLanguageOptions.ts`, its loaders in `hostLanguages.ts`, and its Afrikaans `MessageKey` catalogue in `af.ts`, imported on demand. Translating the reference host's Afrikaans layer-template wrappers is the unreviewed follow-up [#370](https://github.com/MapCairn/mapcairn/issues/370); the generic `LayerTemplate` API below is ready for hosts that provide reviewed translations.
 
 ## Check a catalogue
 
@@ -85,6 +85,32 @@ To see what is left to translate, run `npm run catalogue:check -- <language> <fi
 
 A basemap or layer definition's reader-facing text (a name, a description, a control label, an empty-state text) is a `DefinitionText`: a shipped `MessageKey` or a plain string. Only shipped `MessageKey` values are looked up in the active catalogue, where the definition is shown. Any other string, including a name of your own or a string that looks like a key, is shown as written and is not a catalogue key, so existing definitions keep working. To translate such a field, use a shipped `MessageKey`, or supply the plain text for the language when you build the definition. Attribution, licence names and links are legal text and stay as they are.
 
+## Translate layer templates
+
+Card titles and lines, list secondary lines, feed polygon and line labels, and range and interval units can use a host-defined key without adding it to `MessageKey`. Use a `LayerTemplate` object with the key and its source text:
+
+```ts
+const cardTitle = {
+  key: "events.magnitude",
+  text: "Magnitude {magnitude|number} at {place}",
+};
+```
+
+Pass the host's separate layer-template table when building the catalogue:
+
+```ts
+const messages = createMessageCatalogue(
+  "fr",
+  FR_MESSAGES,
+  EN_GB_CATALOGUE,
+  { layerTemplates: FR_LAYER_TEMPLATES },
+);
+```
+
+The source `text` supplies the fallback when the key is missing or its translation does not preserve the source's field and formatter placeholders, including repeated placeholders. Missing entries, plain-string templates and valid source-language templates use the source without a warning. A supplied blank or mismatched translation warns once per key per catalogue instance, then falls back; valid translations may reorder placeholders. Plain strings remain literal and keep working as before; units include their own spacing, such as ` per km²`. A host with its own `MessageCatalogue` implementation can provide the same optional `layerTemplates` property. Vector-tile labels remain plain property names because the map engine reads them directly.
+
+The `unit` fields on `ShapeIntervalColour` and `RangeControlDefinition` now accept `LayerTemplate`. TypeScript code that reads a unit from a definition must call `resolveLayerTemplate(unit, messages)` before rendering it, even when that definition uses a plain string.
+
 ## Use a message-format library of your own
 
 `MessageCatalogue` is an interface with `language`, `t`, `plural` and `list`. The default, `createMessageCatalogue`, needs no library, but a host that already uses a message-format library can implement the same three methods on top of it and pass that as `Services.messages` (or return it from `load`). The library lives in the host. An SDK package never depends on one, and a library you adapt has to allow commercial use. Its `plural` must also handle a value with no plural forms, just as `t` does.
@@ -103,7 +129,7 @@ A key that your library does not know is yours to handle: the SDK may call `t` o
 
 ## Add a language to the reference site
 
-1. Add `packages/web/src/i18n/<tag>.ts` exporting a `Record<MessageKey, string>` (or a `Partial` for work in progress), and a loader for the tag in `hostLanguages.ts`.
+1. Add `packages/web/src/i18n/<tag>.ts` exporting a `Record<MessageKey, string>` (or a `Partial` for work in progress), and a loader for the tag in `hostLanguages.ts`. If the host also supplies layer-template translations, keep them in a separate module and load both modules on demand, leaving the `MessageKey` module with its single catalogue export.
 2. Add the language to `OFFERED_LANGUAGE_OPTIONS` with its name in that language.
 3. Keep every placeholder the English text has, spelled the same, in each form. Supply the categories your language needs, even when the English value has only one form. `packages/core/src/lint/messages.test.ts` checks English placeholders and categories against `MessageParams`; the Afrikaans test (`packages/web/src/i18n/af.test.ts`) runs `checkMessageCatalogue` (see "Check a catalogue" above) against English, with a short list of keys allowed to match English, each with a reason. Give a new language a test like it. A complete `Record<MessageKey, string>` also makes `npm run typecheck` fail when a key is added without its translation. `packages/core/src/lint/hardcodedCopy.test.ts` checks inline interface text in `.tsx` files under `packages/map/src` and `packages/web/src`; it does not check `.ts` string tables or props of SDK components, so look those up through the catalogue yourself. Its exceptions are in `scripts/copy-check/allowlist.mjs`.
 4. Keep an accessible name containing its visible label, which a translation keeps by using the same key for both.

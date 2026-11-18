@@ -6,6 +6,7 @@ import {
   formatTemplate,
   hasCard,
   isFeedLayer,
+  type LayerTemplate,
   type MessageCatalogue,
 } from "@mapcairn/core";
 import { ArrowLeft, Crosshair, Layers, TriangleAlert, X } from "lucide-react";
@@ -81,7 +82,7 @@ export function FeatureCard({
   const feed = isFeedLayer(definition) ? definition : null;
   const detailSource = feed?.detail;
   const context = { now: layers.now(), catalogue: messages };
-  const fill = (template: string) =>
+  const fill = (template: LayerTemplate) =>
     formatTemplate(template, feature.fields, formatters, context);
   const title = fill(card.title) ?? resolve(definition.name);
   const lines = card.lines

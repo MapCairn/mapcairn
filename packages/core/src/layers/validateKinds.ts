@@ -6,6 +6,7 @@ import {
   checkUrl,
   isObject,
   type Json,
+  layerTextSource,
   list,
   Problems,
   type ValidationOptions,
@@ -48,7 +49,10 @@ export function checkRange(
   ) {
     problems.add(`${path}.default`, "must be a number between min and max");
   }
-  if (control.unit !== undefined && typeof control.unit !== "string") {
+  if (
+    control.unit !== undefined &&
+    layerTextSource(control.unit, true) === null
+  ) {
     problems.add(`${path}.unit`, "must be text");
   }
 }

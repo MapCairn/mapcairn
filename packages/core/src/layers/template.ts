@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { FieldValue } from "../ports/layers";
+import type { MessageCatalogue } from "../ports/messages";
 import type { FormatContext, FormatterRegistry } from "./formatters";
 
 /**
@@ -29,13 +30,87 @@ export interface TemplatePlaceholder {
   readonly formatter?: string;
 }
 
+/** A host-defined translation key and its source text for a layer template. */
+export interface KeyedLayerText {
+  readonly key: string;
+  readonly text: string;
+}
+
+/** A literal layer template or a host-keyed template with source text. */
+export type LayerTemplate = string | KeyedLayerText;
+
 const PLACEHOLDER = /\{([a-zA-Z0-9_-]+)(?:\|([a-zA-Z0-9_-]+))?\}/g;
+const warnedInvalidLayerTemplates = new WeakMap<
+  MessageCatalogue,
+  Set<string>
+>();
 
 /** Lists a template's placeholders, in order. */
 export function parseTemplate(template: string): TemplatePlaceholder[] {
   return [...template.matchAll(PLACEHOLDER)].map(([, name, formatter]) =>
     formatter ? { name: name as string, formatter } : { name: name as string },
   );
+}
+
+function placeholderSignature(template: string): string[] {
+  return parseTemplate(template)
+    .map(({ name, formatter }) => `${name}|${formatter ?? ""}`)
+    .sort();
+}
+
+function placeholdersMatch(source: string, translation: string): boolean {
+  const expected = placeholderSignature(source);
+  const actual = placeholderSignature(translation);
+  return (
+    expected.length === actual.length &&
+    expected.every((placeholder, index) => placeholder === actual[index])
+  );
+}
+
+function warnInvalidLayerTemplate(
+  catalogue: MessageCatalogue,
+  key: string,
+): void {
+  let warned = warnedInvalidLayerTemplates.get(catalogue);
+  if (!warned) {
+    warned = new Set();
+    warnedInvalidLayerTemplates.set(catalogue, warned);
+  }
+  if (warned.has(key)) {
+    return;
+  }
+  warned.add(key);
+  console.warn(
+    `MessageCatalogue: "${catalogue.language}" has an invalid layer template translation for "${key}"; falling back to source text.`,
+  );
+}
+
+/**
+ * Resolves host-keyed layer text. Missing entries and unchanged, non-blank
+ * source-language entries return the source without warning. A supplied blank
+ * or mismatched translation warns once per key and falls back to the source.
+ */
+export function resolveLayerTemplate(
+  template: LayerTemplate,
+  catalogue: MessageCatalogue,
+): string {
+  if (typeof template === "string") {
+    return template;
+  }
+  const translations = catalogue.layerTemplates;
+  if (!translations || !Object.hasOwn(translations, template.key)) {
+    return template.text;
+  }
+  const translation = translations[template.key];
+  if (
+    typeof translation !== "string" ||
+    translation.trim() === "" ||
+    !placeholdersMatch(template.text, translation)
+  ) {
+    warnInvalidLayerTemplate(catalogue, template.key);
+    return template.text;
+  }
+  return translation;
 }
 
 /**
@@ -73,14 +148,14 @@ export function fillUrlTemplate(
  * formatter writes the value as plain text.
  */
 export function formatTemplate(
-  template: string,
+  template: LayerTemplate,
   fields: Readonly<Record<string, FieldValue>>,
   formatters: FormatterRegistry,
   context: FormatContext,
 ): string | null {
   let placeholders = 0;
   let filled = 0;
-  const text = template.replace(
+  const text = resolveLayerTemplate(template, context.catalogue).replace(
     PLACEHOLDER,
     (_whole, name: string, formatterName?: string) => {
       placeholders += 1;

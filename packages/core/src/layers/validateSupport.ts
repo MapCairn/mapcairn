@@ -185,6 +185,27 @@ export function checkDecoder(
   }
 }
 
+/** Reads the source of a valid literal or keyed layer text value. */
+export function layerTextSource(
+  value: unknown,
+  allowEmpty = false,
+): string | null {
+  if (typeof value === "string") {
+    return allowEmpty || isText(value) ? value : null;
+  }
+  if (
+    !isObject(value) ||
+    !Object.hasOwn(value, "key") ||
+    !Object.hasOwn(value, "text") ||
+    !isText(value.key) ||
+    typeof value.text !== "string" ||
+    (!allowEmpty && !isText(value.text))
+  ) {
+    return null;
+  }
+  return value.text;
+}
+
 /** Checks a card or list template against the decoded fields and formatters. */
 export function checkTemplate(
   problems: Problems,
@@ -193,11 +214,12 @@ export function checkTemplate(
   fields: readonly string[],
   options: ValidationOptions,
 ): void {
-  if (!isText(template)) {
+  const source = layerTextSource(template);
+  if (source === null) {
     problems.add(path, "must be non-empty text");
     return;
   }
-  for (const { name, formatter } of parseTemplate(template)) {
+  for (const { name, formatter } of parseTemplate(source)) {
     if (!fields.includes(name)) {
       problems.add(path, `{${name}} is not a field`);
     }

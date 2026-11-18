@@ -16,6 +16,7 @@ import {
   loadsFeatures,
   type MessageCatalogue,
   resolveDateBound,
+  resolveLayerTemplate,
 } from "@mapcairn/core";
 import { Hourglass, RotateCw, TriangleAlert } from "lucide-react";
 import { useState } from "react";
@@ -97,6 +98,7 @@ function LayerControl({ layer, control, layers }: ControlProps) {
   const value = layer.controls[control.id] ?? "";
   const disabled = !isControlEnabled(control, layer.controls);
   const change = (next: string) => layers.setControl(id, control.id, next);
+  const messages = useMessages();
   const resolve = useResolveText();
   const testId = `layer-control-${id}-${control.id}`;
   switch (control.kind) {
@@ -173,7 +175,9 @@ function LayerControl({ layer, control, layers }: ControlProps) {
             max={control.max}
             step={control.step}
             value={Number(value)}
-            formatValue={(next) => `${next}${control.unit ?? ""}`}
+            formatValue={(next) =>
+              `${next}${control.unit === undefined ? "" : resolveLayerTemplate(control.unit, messages)}`
+            }
             onValueChange={(next) =>
               change(String(Math.round(next * 1000) / 1000))
             }

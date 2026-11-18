@@ -305,6 +305,72 @@ describe("LayersSection", () => {
     );
   });
 
+  it("keeps a long translated range unit visible and accessible", async () => {
+    const unit = ` ${"translatedunit".repeat(12)}`;
+    const messages = new FakeMessageCatalogue({
+      layerTemplates: { "sample.radius-unit": unit },
+    });
+    const definition = {
+      ...SAMPLE_HEATMAP_LAYER,
+      controls: SAMPLE_HEATMAP_LAYER.controls.map((control) =>
+        control.kind === "range" && control.id === "radius"
+          ? {
+              ...control,
+              unit: { key: "sample.radius-unit", text: " px" },
+            }
+          : control,
+      ),
+    };
+    const { source } = setup([definition], undefined, messages);
+    source.setFeatures("sample-heat", [samplePoint("a")]);
+    toggle("sample-heat", "Sample density");
+    const radius = await screen.findByTestId(
+      "layer-control-sample-heat-radius",
+    );
+    expect(radius).toHaveTextContent(`20${unit}`);
+    expect(within(radius).getByRole("slider")).toHaveAttribute(
+      "aria-valuetext",
+      `20${unit}`,
+    );
+  });
+
+  it("translates a card title, its lines and the matching list row", async () => {
+    const messages = new FakeMessageCatalogue({
+      layerTemplates: {
+        "sample.title": "Observation {title}",
+        "sample.value": "{value|number} units",
+        "sample.secondary": "Recorded value: {value|number}",
+      },
+    });
+    const definition = {
+      ...SAMPLE_FEED_LAYER,
+      card: {
+        ...SAMPLE_FEED_LAYER.card,
+        title: { key: "sample.title", text: "{title}" },
+        lines: [{ key: "sample.value", text: "Value {value|number}" }],
+      },
+      list: {
+        ...SAMPLE_FEED_LAYER.list,
+        secondary: {
+          key: "sample.secondary",
+          text: "Value {value|number}",
+        },
+      },
+    };
+    const { source } = setup([definition], undefined, messages);
+    source.setFeatures("sample-points", [
+      samplePoint("a", { title: "Alpha", value: 4.25 }),
+    ]);
+    toggle("sample-points", "Sample points");
+    const row = await screen.findByTestId("layer-list-row");
+    expect(row).toHaveTextContent("Observation Alpha");
+    expect(row).toHaveTextContent("Recorded value: 4.3");
+    fireEvent.click(row);
+    const card = screen.getByTestId("feature-card");
+    expect(card).toHaveTextContent("Observation Alpha");
+    expect(card).toHaveTextContent("4.3 units");
+  });
+
   it("shows a long list a page at a time", async () => {
     const { source } = setup();
     source.setFeatures(

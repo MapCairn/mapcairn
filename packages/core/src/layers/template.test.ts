@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { createFormatterRegistry } from "./formatters";
 import { readPath } from "./paths";
@@ -9,6 +9,7 @@ import {
   fillUrlTemplate,
   formatTemplate,
   parseTemplate,
+  resolveLayerTemplate,
 } from "./template";
 
 describe("readPath", () => {
@@ -117,6 +118,148 @@ describe("formatTemplate", () => {
         context,
       ),
     ).toBe("Magnitude 4.3, 10 km deep");
+  });
+
+  it("uses a host translation while preserving and reordering source fields", () => {
+    const catalogue = new FakeMessageCatalogue({
+      layerTemplates: {
+        "example.magnitude": "{place}: magnitude {value|number}",
+      },
+    });
+    expect(
+      formatTemplate(
+        {
+          key: "example.magnitude",
+          text: "Magnitude {value|number} at {place}",
+        },
+        { place: "Alpha", value: 4.25 },
+        formatters,
+        { ...context, catalogue },
+      ),
+    ).toBe("Alpha: magnitude 4.3");
+  });
+
+  it("uses the source when a translation changes the fields or formatter", () => {
+    const template = {
+      key: "example.magnitude",
+      text: "{place}: magnitude {value|number}",
+    };
+    for (const translation of [
+      "{place}: magnitude",
+      "{place}: magnitude {value}",
+      "{place}: magnitude {value|number} {value|number}",
+    ]) {
+      const catalogue = new FakeMessageCatalogue({
+        layerTemplates: { "example.magnitude": translation },
+      });
+      expect(
+        formatTemplate(template, { place: "Alpha", value: 4.25 }, formatters, {
+          ...context,
+          catalogue,
+        }),
+      ).toBe("Alpha: magnitude 4.3");
+    }
+  });
+
+  it.each([
+    ["blank", ""],
+    ["field", "Magnitude {place|number}"],
+    ["formatter", "Magnitude {value}"],
+  ])("warns once when a supplied %s translation is invalid", (_kind, text) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const template = {
+        key: "example.magnitude",
+        text: "Magnitude {value|number}",
+      };
+      const catalogue = new FakeMessageCatalogue({
+        language: "af",
+        layerTemplates: { "example.magnitude": text },
+      });
+
+      expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
+      expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledWith(
+        'MessageCatalogue: "af" has an invalid layer template translation for "example.magnitude"; falling back to source text.',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("warns and uses a whitespace-only source when its supplied translation is blank", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const template = { key: "example.unit", text: "  " };
+      const catalogue = new FakeMessageCatalogue({
+        language: "af",
+        layerTemplates: { "example.unit": " " },
+      });
+
+      expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("warns when a whitespace-only source is supplied as its translation", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const template = { key: "example.unit", text: "  " };
+      const catalogue = new FakeMessageCatalogue({
+        layerTemplates: { "example.unit": template.text },
+      });
+
+      expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not warn for a missing or source-language layer template", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const template = {
+        key: "example.magnitude",
+        text: "Magnitude {value|number}",
+      };
+      expect(resolveLayerTemplate(template, new FakeMessageCatalogue())).toBe(
+        template.text,
+      );
+      expect(
+        resolveLayerTemplate(
+          template,
+          new FakeMessageCatalogue({
+            layerTemplates: { "example.magnitude": template.text },
+          }),
+        ),
+      ).toBe(template.text);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("uses the source when a translation is missing or inherited", () => {
+    const catalogue = new FakeMessageCatalogue({
+      layerTemplates: Object.create({
+        "example.magnitude": "Translated {value|number}",
+      }),
+    });
+    expect(
+      formatTemplate(
+        {
+          key: "example.magnitude",
+          text: "Magnitude {value|number}",
+        },
+        { value: 4.25 },
+        formatters,
+        { ...context, catalogue },
+      ),
+    ).toBe("Magnitude 4.3");
   });
 
   it("writes a field with no formatter as text", () => {

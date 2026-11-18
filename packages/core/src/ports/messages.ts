@@ -1198,6 +1198,8 @@ export type Message<K extends MessageKey = MessageKey> = K extends MessageKey
 export interface MessageCatalogue {
   /** BCP 47 tag of the language this instance speaks, for example "en-GB" or "af". */
   readonly language: string;
+  /** Optional host translations for layer templates, units and labels. */
+  readonly layerTemplates?: Readonly<Record<string, string>>;
   /**
    * Looks up a key, substitutes its parameters (written `{name}` in the
    * string), and falls back to the English value with a single
