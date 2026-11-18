@@ -197,4 +197,9 @@ describe("README.md", () => {
     );
     expect(broken).toEqual([]);
   });
+
+  it("names no issue, so it stays true as issues close", () => {
+    const issueReferences = README.match(/\/issues\/\d+|(?<![\w/&])#\d+\b/g);
+    expect(issueReferences).toBeNull();
+  });
 });
