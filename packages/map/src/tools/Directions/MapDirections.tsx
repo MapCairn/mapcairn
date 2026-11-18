@@ -73,7 +73,7 @@ export function MapDirections({ result }: MapDirectionsProps) {
     };
   }, [adapter, result]);
 
-  // The fit runs once for each new result, not when the panel moves.
+  // The fit runs for each new result or direction, not when the panel moves.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the result is the trigger; the layout is read as it is then.
   useEffect(() => {
     if (!adapter || !result) {
@@ -89,7 +89,7 @@ export function MapDirections({ result }: MapDirectionsProps) {
       maxZoom: FIT_MAX_ZOOM,
       padding: fitPadding({ layout, viewport, panelEdge, direction }),
     });
-  }, [adapter, result]);
+  }, [adapter, result, direction]);
 
   return null;
 }

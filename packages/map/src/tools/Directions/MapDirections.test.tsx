@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { FakeMapAdapter, type RouteLeg } from "@mapcairn/core";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChromeLayoutProvider } from "../../chrome/layoutContext";
 import {
@@ -159,6 +159,39 @@ describe("MapDirections", () => {
     expect(fit).toHaveBeenCalledWith(expect.anything(), {
       maxZoom: FIT_MAX_ZOOM,
       padding: { top: 88, right: 332, bottom: 32, left: 80 },
+    });
+  });
+
+  it("refits a displayed route when the reading direction changes", async () => {
+    const adapter = new FakeMapAdapter();
+    const fit = vi.spyOn(adapter, "fitBounds");
+    render(
+      <ChromeLayoutProvider
+        value={testChromeLayout({
+          layout: "panel",
+          viewport: { width: 800, height: 600 },
+          panelEdge: 300,
+        })}
+      >
+        <MapContext.Provider value={testMapContext({ adapter })}>
+          <MapDirections result={ROUTE} />
+        </MapContext.Provider>
+      </ChromeLayoutProvider>,
+    );
+    expect(fit).toHaveBeenLastCalledWith(expect.anything(), {
+      maxZoom: FIT_MAX_ZOOM,
+      padding: { top: 88, right: 80, bottom: 32, left: 332 },
+    });
+
+    act(() => {
+      document.documentElement.dir = "rtl";
+    });
+
+    await waitFor(() => {
+      expect(fit).toHaveBeenLastCalledWith(expect.anything(), {
+        maxZoom: FIT_MAX_ZOOM,
+        padding: { top: 88, right: 332, bottom: 32, left: 80 },
+      });
     });
   });
 
