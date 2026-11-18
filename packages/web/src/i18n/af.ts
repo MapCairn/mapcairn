@@ -4,8 +4,7 @@ import type { MessageKey } from "@mapcairn/core";
 
 /**
  * The Afrikaans messages, one for every key, in the same order as
- * `EN_GB_CATALOGUE`. It is a draft until a fluent speaker has reviewed it
- * (`ATTRIBUTIONS.md`, "Translations").
+ * `EN_GB_CATALOGUE`. The review is credited in `ATTRIBUTIONS.md` ("Translations").
  *
  * @remarks The register is everyday Afrikaans with "jy" and "jou". One word
  *   stands for one idea throughout: Lae (layers), Basiskaart (basemap),

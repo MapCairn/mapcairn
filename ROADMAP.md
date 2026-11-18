@@ -18,7 +18,7 @@ A milestone leaves this list in the pull request that closes its last issue. A n
 
 ### Now
 
-1. **SDK, [Language support](https://github.com/MapCairn/mapcairn/milestone/4) ([#231](https://github.com/MapCairn/mapcairn/issues/231)).** Any language can be offered by a host, with English and Afrikaans on the reference site. The Afrikaans catalogue is offered as a draft until a fluent speaker has reviewed it.
+1. **SDK, [Language support](https://github.com/MapCairn/mapcairn/milestone/4) ([#316](https://github.com/MapCairn/mapcairn/issues/316)).** Any language can be offered by a host, with English and Afrikaans on the reference site.
 2. **Site, [Selection](https://github.com/MapCairn/mapcairn/milestone/5) ([#49](https://github.com/MapCairn/mapcairn/issues/49)).** Visitors can select several features on the map and work with the selection.
 3. **SDK, [Embeddable SDK](https://github.com/MapCairn/mapcairn/milestone/6) ([#51](https://github.com/MapCairn/mapcairn/issues/51)).** A team can embed the map in its own application without copying the reference host.
 
