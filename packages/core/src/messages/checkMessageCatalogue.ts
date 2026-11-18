@@ -20,8 +20,11 @@ import { parsePluralForms, pluralFormsOf } from "./pluralForms";
  *   surrounding space), and the key is not allowed to match English.
  * - `unusedAllowance`: an entry in `sameAsEnglish` with a blank reason, or
  *   for a key whose value is missing or does not match English, or that
- *   English does not have; or an entry in `notPlural` for a key English
- *   does not have, or for which neither value has forms.
+ *   English does not have; an entry in `pluralKeys` for a key English does
+ *   not have, or whose English value has forms; or an entry in `notPlural`
+ *   for a key English does not have, or for which neither value has forms.
+ * - `conflictingOptions`: a key in both `pluralKeys` and `notPlural`. It is
+ *   then read as if it were in neither.
  */
 export type MessageCatalogueProblemKind =
   | "missing"
@@ -30,7 +33,8 @@ export type MessageCatalogueProblemKind =
   | "placeholders"
   | "pluralForms"
   | "copiedEnglish"
-  | "unusedAllowance";
+  | "unusedAllowance"
+  | "conflictingOptions";
 
 /** One problem {@link checkMessageCatalogue} found, and the key it is in. */
 export interface MessageCatalogueProblem {
@@ -45,6 +49,12 @@ export interface MessageCatalogueCheckOptions {
    * published), each with the reason. Only its own properties count.
    */
   readonly sameAsEnglish?: Readonly<Partial<Record<string, string>>>;
+  /**
+   * Keys read with `plural` whose English value has no forms, so that a
+   * translation without forms is still checked as plural: a plain value
+   * must then be the language's only category, and must be readable.
+   */
+  readonly pluralKeys?: readonly string[];
   /**
    * Keys read only with `t` whose English value or translation reads like
    * plural forms (it has a `|`, say) but is text. Their values are checked
@@ -190,17 +200,19 @@ function ownValue(
  * own tests or a command line: every key is present and known, every form
  * keeps all the English placeholders, the plural forms are the categories
  * `Intl.PluralRules` gives for `language`, and no value is copied from
- * English. A key is plural when its English value or the translation has
- * forms (`one|other` or category-keyed, as {@link createMessageCatalogue}
- * reads them) and it is not in `options.notPlural`; any other value is
- * checked as text.
+ * English. A key is plural when it is in `options.pluralKeys`, or when its
+ * English value or the translation has forms (`one|other` or
+ * category-keyed, as {@link createMessageCatalogue} reads them) and it is
+ * not in `options.notPlural`; any other value is checked as text.
  *
- * @param options - Keys allowed to match English, and keys read only with
- *   `t` whose values only look plural. An entry in either that is not
- *   needed is reported, as is an allowance with a blank reason.
+ * @param options - Keys allowed to match English, plural keys whose English
+ *   value has no forms, and keys read only with `t` whose values only look
+ *   plural. An entry that is not needed is reported, as is an allowance
+ *   with a blank reason and a key in both key lists.
  * @returns Every problem found: those of each English key in English key
- *   order, then unknown keys, then unneeded `sameAsEnglish` entries, then
- *   unneeded `notPlural` entries. An empty list means the catalogue passes;
+ *   order, then unknown keys, then unneeded `sameAsEnglish`, `pluralKeys`
+ *   and `notPlural` entries in that order, then keys in both key lists.
+ *   An empty list means the catalogue passes;
  *   a translation in progress can leave out the `missing` problems. Keys
  *   are read only as a record's own properties.
  */
@@ -210,8 +222,12 @@ export function checkMessageCatalogue(
   english: Readonly<Record<string, string>>,
   options: MessageCatalogueCheckOptions = {},
 ): readonly MessageCatalogueProblem[] {
-  const { sameAsEnglish = {}, notPlural = [] } = options;
-  const textKeys = new Set(notPlural);
+  const { sameAsEnglish = {}, pluralKeys = [], notPlural = [] } = options;
+  const conflicting = pluralKeys.filter((key) => notPlural.includes(key));
+  const plainKeys = new Set(notPlural.filter((k) => !conflicting.includes(k)));
+  const listedPlural = new Set(
+    pluralKeys.filter((k) => !conflicting.includes(k)),
+  );
   const categories = new Intl.PluralRules(language).resolvedOptions()
     .pluralCategories;
   const problems: MessageCatalogueProblem[] = [];
@@ -227,7 +243,9 @@ export function checkMessageCatalogue(
       report(key, "missing");
       continue;
     }
-    const plural = !textKeys.has(key) && hasForms(englishValue, value);
+    const plural =
+      listedPlural.has(key) ||
+      (!plainKeys.has(key) && hasForms(englishValue, value));
     const read = plural ? formsByCategory : asText;
     const forms = read(value);
     const englishForms = read(englishValue);
@@ -257,14 +275,43 @@ export function checkMessageCatalogue(
       report(key, "unusedAllowance");
     }
   }
-  for (const key of textKeys) {
+  problems.push(
+    ...keyListProblems(catalogue, english, listedPlural, plainKeys),
+    ...[...new Set(conflicting)].map(
+      (key): MessageCatalogueProblem => ({
+        key,
+        problem: "conflictingOptions",
+      }),
+    ),
+  );
+  return problems;
+}
+
+/**
+ * The `pluralKeys` and `notPlural` entries that are not needed: for a key
+ * English does not have, a plural key whose English value already has
+ * forms, or a not-plural key for which neither value has forms.
+ */
+function keyListProblems(
+  catalogue: Readonly<Partial<Record<string, string>>>,
+  english: Readonly<Record<string, string>>,
+  listedPlural: ReadonlySet<string>,
+  plainKeys: ReadonlySet<string>,
+): MessageCatalogueProblem[] {
+  const unneeded = (key: string): MessageCatalogueProblem => ({
+    key,
+    problem: "unusedAllowance",
+  });
+  const plural = [...listedPlural].filter((key) => {
     const englishValue = ownValue(english, key);
-    if (
+    return englishValue === undefined || pluralFormsOf(englishValue);
+  });
+  const plain = [...plainKeys].filter((key) => {
+    const englishValue = ownValue(english, key);
+    return (
       englishValue === undefined ||
       !hasForms(englishValue, ownValue(catalogue, key))
-    ) {
-      report(key, "unusedAllowance");
-    }
-  }
-  return problems;
+    );
+  });
+  return [...plural, ...plain].map(unneeded);
 }

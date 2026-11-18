@@ -219,6 +219,65 @@ describe("checkMessageCatalogue", () => {
     ]);
   });
 
+  it("checks a key listed as plural even when neither value has forms", () => {
+    const english = { files: "{count} file", close: "Close" };
+    const options = { pluralKeys: ["files"] };
+    expect(
+      checkMessageCatalogue(
+        "ja",
+        { files: "othre{{count} files}", close: "閉じる" },
+        english,
+      ),
+    ).toEqual([]);
+    expect(
+      checkMessageCatalogue(
+        "ja",
+        { files: "othre{{count} files}", close: "閉じる" },
+        english,
+        options,
+      ),
+    ).toEqual([{ key: "files", problem: "pluralForms" }]);
+    expect(
+      checkMessageCatalogue(
+        "ja",
+        { files: "{count} 件", close: "閉じる" },
+        english,
+        options,
+      ),
+    ).toEqual([]);
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { files: "{count} lêers", close: "Sluit" },
+        english,
+        options,
+      ),
+    ).toEqual([{ key: "files", problem: "pluralForms" }]);
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { files: "{count} lêer|{count} lêers", close: "Sluit" },
+        english,
+        options,
+      ),
+    ).toEqual([]);
+  });
+
+  it("reports a plural-key entry that is not needed or contradicts notPlural", () => {
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { files: "{count} lêer|{count} lêers", close: "Sluit" },
+        { files: "{count} file|{count} files", close: "Close" },
+        { pluralKeys: ["files", "gone", "close"], notPlural: ["close"] },
+      ),
+    ).toEqual([
+      { key: "files", problem: "unusedAllowance" },
+      { key: "gone", problem: "unusedAllowance" },
+      { key: "close", problem: "conflictingOptions" },
+    ]);
+  });
+
   it("reports a plural value whose braces cannot be read", () => {
     const english = { files: "{count} file|{count} files" };
     for (const [language, value] of [
