@@ -11,7 +11,7 @@ export interface ChromeLayoutValue {
   readonly viewport: { readonly width: number; readonly height: number };
   /** The primary input is a fine pointer, so zoom buttons and keyboard help make sense by default. */
   readonly finePointer: boolean;
-  /** The open side panel's right edge, in px from the left of the container. Null in the sheet layout, or before the panel has measured. */
+  /** The distance from inline-start to the open panel's far edge, in px. Null in the sheet layout or before measurement. */
   readonly panelEdge: number | null;
   /**
    * The sheet publishes its current top edge (px from the top of the chrome

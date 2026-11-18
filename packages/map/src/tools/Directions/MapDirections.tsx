@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { type LayerGeometry, routeBounds } from "@mapcairn/core";
+import { useReadingDirection } from "@mapcairn/react";
 import { tokenValues } from "@mapcairn/theme";
 import { useEffect } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
@@ -35,6 +36,7 @@ export interface MapDirectionsProps {
 export function MapDirections({ result }: MapDirectionsProps) {
   const { adapter } = useMap();
   const { layout, viewport, panelEdge } = useChromeLayout();
+  const direction = useReadingDirection();
 
   useEffect(() => {
     if (!adapter || !result) {
@@ -85,7 +87,7 @@ export function MapDirections({ result }: MapDirectionsProps) {
     }
     adapter.fitBounds(bounds, {
       maxZoom: FIT_MAX_ZOOM,
-      padding: fitPadding({ layout, viewport, panelEdge }),
+      padding: fitPadding({ layout, viewport, panelEdge, direction }),
     });
   }, [adapter, result]);
 

@@ -6,6 +6,7 @@ import {
   type MapFitOptions,
   type SheetDetent,
 } from "@mapcairn/core";
+import type { ReadingDirection } from "@mapcairn/react";
 
 /**
  * The detent a bottom sheet rests at when a feature is shown, so its card and
@@ -22,8 +23,10 @@ export interface RevealGeometry {
   readonly layout: ChromeLayout;
   /** The size of the chrome container, which is the map's size. */
   readonly viewport: { readonly width: number; readonly height: number };
-  /** The open side panel's right edge, in pixels from the left, once it has published one. */
+  /** The distance from inline-start to the open panel's far edge, once measured. */
   readonly panelEdge: number | null;
+  /** The reading direction. Defaults to left to right. */
+  readonly direction?: ReadingDirection;
 }
 
 type Padding = NonNullable<MapFitOptions["padding"]>;
@@ -47,10 +50,15 @@ const FIT_CLEARANCE_END_PX = 80;
  *   map to look at.
  */
 export function coveredPadding(geometry: RevealGeometry): Padding | null {
-  const { layout, viewport, panelEdge } = geometry;
+  const { layout, viewport, panelEdge, direction = "ltr" } = geometry;
   const padding: Padding =
     layout === "panel"
-      ? { top: 0, right: 0, bottom: 0, left: panelEdge ?? 0 }
+      ? {
+          top: 0,
+          right: direction === "rtl" ? (panelEdge ?? 0) : 0,
+          bottom: 0,
+          left: direction === "ltr" ? (panelEdge ?? 0) : 0,
+        }
       : {
           top: 0,
           right: 0,
@@ -133,10 +141,13 @@ export function revealOffset(
  */
 export function fitPadding(geometry: RevealGeometry): Padding {
   const covered = coveredPadding(geometry);
+  const rtl = geometry.direction === "rtl";
   return {
     top: (covered?.top ?? 0) + FIT_CLEARANCE_TOP_PX,
-    right: (covered?.right ?? 0) + FIT_CLEARANCE_END_PX,
+    right:
+      (covered?.right ?? 0) + (rtl ? FIT_CLEARANCE_PX : FIT_CLEARANCE_END_PX),
     bottom: (covered?.bottom ?? 0) + FIT_CLEARANCE_PX,
-    left: (covered?.left ?? 0) + FIT_CLEARANCE_PX,
+    left:
+      (covered?.left ?? 0) + (rtl ? FIT_CLEARANCE_END_PX : FIT_CLEARANCE_PX),
   };
 }

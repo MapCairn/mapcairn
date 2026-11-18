@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { LanguageOption } from "../messages/languageCatalogue";
+import { languageDirection } from "../messages/languageDirection";
 import { parseThemeChoice, resolveTheme } from "./theme";
 import {
   LANGUAGE_STORAGE_KEY,
@@ -16,12 +18,12 @@ import {
  * theme never flashes light. It also marks a stored globe map shape on the
  * root element ({@link MAP_SHAPE_ATTRIBUTE}), so the map placeholder starts in
  * the colour of the space around a globe rather than the flat map's. When
- * given the tags the host offers, it also sets `lang` on the root element to
- * the stored language if (and only if) it is one of them, so assistive
- * technology and hyphenation get the right language before the app mounts.
+ * given the languages the host offers, it also sets `lang` and `dir` on the
+ * root element to the stored language if (and only if) it is one of them and
+ * the current page does not declare a fixed language.
  *
- * @param offeredLanguages - The language tags the host offers. Without them
- *   (or with none) the script leaves `lang` as the server rendered it.
+ * @param offeredLanguages - The host's tags or language options. Without
+ *   them the script leaves `lang` and `dir` as the server rendered them.
  *
  * @remarks The script embeds the real `parseThemeChoice` and `resolveTheme`
  *   through `Function.prototype.toString`, so it cannot drift from them, and
@@ -30,17 +32,31 @@ import {
  *   and the script never throws. It rewrites every `theme-color` tag, because
  *   a page may carry one per `prefers-color-scheme` media query and the
  *   browser uses the tag whose media matches the OS, not the chosen theme.
+ *   `data-fixed-language` on `<html>` tells it to leave `lang` and `dir` alone.
  *   The output is deterministic: the host hashes
  *   it for its content security policy. Whitespace is collapsed, nothing else.
  */
 export function buildThemeBootstrapScript(
-  offeredLanguages: readonly string[] = [],
+  offeredLanguages: readonly (string | LanguageOption)[] = [],
 ): string {
+  const options = offeredLanguages.map((entry) =>
+    typeof entry === "string" ? { tag: entry, label: entry } : entry,
+  );
+  const inlineData = (value: readonly string[]) =>
+    JSON.stringify(value).replace(
+      /[\s<\u2028\u2029]/g,
+      (character) =>
+        `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+    );
+  const tags = inlineData(options.map(({ tag }) => tag));
+  const directions = inlineData(
+    options.map(({ tag }) => languageDirection(tag, options)),
+  );
   const language =
     offeredLanguages.length === 0
       ? ""
       : `
-try{var tag=JSON.parse(localStorage.getItem(${JSON.stringify(LANGUAGE_STORAGE_KEY)}));if(${JSON.stringify(offeredLanguages)}.indexOf(tag)>-1)root.lang=tag}catch(e){}`;
+try{if(!root.dataset.fixedLanguage){var tag=JSON.parse(localStorage.getItem(${JSON.stringify(LANGUAGE_STORAGE_KEY)}));var i=${tags}.indexOf(tag);if(i>-1){root.lang=tag;root.dir=${directions}[i]}}}catch(e){}`;
   const source = `(function(){
 var parse=${parseThemeChoice.toString()};
 var resolve=${resolveTheme.toString()};

@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import "./fonts/fonts.css";
 import "./global.css";
-import { THEME_COLOR_META } from "@mapcairn/core";
+import { languageDirection, THEME_COLOR_META } from "@mapcairn/core";
 import { type ReactNode, useEffect } from "react";
 import {
   isRouteErrorResponse,
@@ -23,6 +23,7 @@ import { reportCaughtError } from "./composition/errorReporting";
 import { BRAND_COLOUR } from "./constants/brandColour";
 import { PRODUCT_DESCRIPTION, SITE_URL } from "./constants/siteConfig";
 import { fontPreloadLinks } from "./fonts/fontPreload";
+import { DEFAULT_LANGUAGE, OFFERED_LANGUAGES } from "./i18n/hostLanguages";
 import { fixedPageLanguage } from "./i18n/pageLanguage";
 import { jsonLdGraph, websiteNode } from "./structuredData";
 
@@ -79,15 +80,27 @@ export const links: LinksFunction = () => [
  * stylesheets so the first paint is in the right theme.
  *
  * @remarks The theme script sets `data-theme` and `color-scheme` on `<html>`,
- *   sets `lang` there when the stored language is one the host offers, and
+ *   sets `lang` and `dir` there when the stored language is one the host offers
+ *   and the page has no fixed language, and
  *   rewrites a `theme-color` tag before React hydrates, so those two
  *   elements suppress the hydration warning for their own attributes.
  *   `<Scripts>` and `<ScrollRestoration>` take the CSP nonce from React
  *   Router's context, set by `entry.server.tsx`.
  */
 export function Layout({ children }: { readonly children: ReactNode }) {
+  const fixed = fixedPageLanguage(useMatches());
+  const language = fixed ?? DEFAULT_LANGUAGE;
+  const direction =
+    fixed === undefined
+      ? languageDirection(DEFAULT_LANGUAGE, OFFERED_LANGUAGES)
+      : languageDirection(fixed);
   return (
-    <html lang="en-GB" suppressHydrationWarning>
+    <html
+      lang={language}
+      dir={direction}
+      data-fixed-language={fixed === undefined ? undefined : "true"}
+      suppressHydrationWarning
+    >
       <head>
         <meta charSet="utf-8" />
         <meta
@@ -121,17 +134,17 @@ export function Layout({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * Keeps `<html lang>` on the language the interface speaks. The pre-paint
- * script may set it from the stored choice before first paint; a page in one
- * language only (the English product page, through its route's `handle`)
- * puts its own language back. A page that follows the interface's language
- * is kept in step by the app layout (`routes/app.tsx`) instead.
+ * Keeps `<html lang dir>` on a page's fixed language after client navigation.
+ * The server render and pre-paint script already preserve it on first load. A
+ * page that follows the interface's language is kept in step by the app
+ * layout (`routes/app.tsx`) instead.
  */
 function FixedDocumentLanguage() {
   const fixed = fixedPageLanguage(useMatches());
   useEffect(() => {
     if (fixed !== undefined) {
       document.documentElement.lang = fixed;
+      document.documentElement.dir = languageDirection(fixed);
     }
   }, [fixed]);
   return null;

@@ -6,16 +6,29 @@ import { reactRouter } from "@react-router/dev/vite";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import react from "@vitejs/plugin-react";
 import { FontaineTransform } from "fontaine";
+import { tsImport } from "tsx/esm/api";
 import { defineConfig } from "vite";
+import { OFFERED_LANGUAGE_OPTIONS } from "./src/i18n/offeredLanguageOptions.ts";
 
-export default defineConfig(({ mode, command }) => {
+export default defineConfig(async ({ mode, command }) => {
   const isTest = mode === "test" || process.env.VITEST === "true";
   // The Worker entry imports the built server bundle, so the Cloudflare plugin
   // only applies to production builds. Dev serves the app with plain Vite SSR.
   const useCloudflare = command === "build";
+  const { languageDirection } = (await tsImport(
+    "@mapcairn/core",
+    import.meta.url,
+  )) as typeof import("@mapcairn/core");
 
   return {
     cacheDir: "node_modules/.vite",
+    define: {
+      __MAPCAIRN_HOST_LANGUAGE_DIRECTIONS__: JSON.stringify(
+        OFFERED_LANGUAGE_OPTIONS.map(({ tag }) =>
+          languageDirection(tag, OFFERED_LANGUAGE_OPTIONS),
+        ),
+      ),
+    },
     plugins: [
       // Must run before reactRouter()/cloudflare()/react(): .css.ts files
       // need to resolve to plain CSS before route/SSR transformation or the

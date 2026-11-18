@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
+import type { LanguageOption } from "../messages/languageCatalogue";
 import { parseThemeChoice, resolveTheme } from "./theme";
 import { buildThemeBootstrapScript } from "./themeBootstrap";
 import {
@@ -37,6 +38,7 @@ function makeMeta(): FakeMeta {
 interface Run {
   attributes: Record<string, string>;
   lang: string | undefined;
+  dir: string | undefined;
   colorScheme: string | undefined;
   metas: FakeMeta[];
   queriedSelector: string | undefined;
@@ -55,12 +57,15 @@ function run(
     /** What the language key holds. */
     language?: string | null;
     /** The tags passed to the script builder. */
-    offered?: readonly string[];
+    offered?: readonly (string | LanguageOption)[];
+    /** Whether the page has its own fixed language. */
+    fixedLanguage?: boolean;
   } = {},
 ): Run {
   const result: Run = {
     attributes: {},
     lang: undefined,
+    dir: undefined,
     colorScheme: undefined,
     metas: Array.from({ length: options.existingMetas ?? 0 }, makeMeta),
     queriedSelector: undefined,
@@ -68,11 +73,15 @@ function run(
     queriedMedia: undefined,
   };
   const root = {
+    dataset: { fixedLanguage: options.fixedLanguage ? "true" : undefined },
     setAttribute(name: string, value: string) {
       result.attributes[name] = value;
     },
     set lang(value: string) {
       result.lang = value;
+    },
+    set dir(value: string) {
+      result.dir = value;
     },
     style: {
       set colorScheme(value: string) {
@@ -96,7 +105,7 @@ function run(
       return makeMeta();
     },
   };
-  const sandbox: Record<string, unknown> = {};
+  const sandbox: Record<string, unknown> = { Intl: undefined };
   if (options.documentThrows) {
     Object.defineProperty(sandbox, "document", {
       get() {
@@ -228,11 +237,55 @@ describe("buildThemeBootstrapScript", () => {
     );
   });
 
+  it("sets right-to-left direction for a stored offered language before paint", () => {
+    const result = run("light", "light", {
+      language: '"ar"',
+      offered: ["en-GB", "ar"],
+    });
+    expect(result.lang).toBe("ar");
+    expect(result.dir).toBe("rtl");
+  });
+
+  it("leaves a fixed page's language and direction alone", () => {
+    const result = run("light", "light", {
+      language: '"ar"',
+      offered: ["en-GB", "ar"],
+      fixedLanguage: true,
+    });
+    expect(result.lang).toBeUndefined();
+    expect(result.dir).toBeUndefined();
+  });
+
+  it("uses the host direction override in the precomputed script", () => {
+    const result = run("light", "light", {
+      language: '"ar"',
+      offered: [{ tag: "ar", label: "Arabic", direction: "ltr" }],
+    });
+    expect(result.lang).toBe("ar");
+    expect(result.dir).toBe("ltr");
+  });
+
+  it("escapes offered tags safely in inline HTML without changing them", () => {
+    const tag = '</script> \u2028"<';
+    const script = buildThemeBootstrapScript([tag]);
+    expect(script.toLowerCase()).not.toContain("</script");
+    const result = run("light", "light", {
+      language: JSON.stringify(tag),
+      offered: [tag],
+    });
+    expect(result.lang).toBe(tag);
+    expect(result.dir).toBe("ltr");
+  });
+
   it("leaves lang alone for no stored language, an unoffered or invalid one, or no offered list", () => {
     const offered = ["en-GB", "af"];
     for (const language of [null, '"fr"', "af", "{", "null", '"AF"']) {
       expect(
         run("light", "light", { language, offered }).lang,
+        String(language),
+      ).toBeUndefined();
+      expect(
+        run("light", "light", { language, offered }).dir,
         String(language),
       ).toBeUndefined();
     }
