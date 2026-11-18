@@ -21,5 +21,7 @@ The map must fit a polygon in the part not covered by the panel.
    - expect: the country layer's list is available.
 2. Open the list and choose Australia.
    - expect: the Australia feature card is shown.
-3. Choose Show on map.
+3. Pan the map until the polygon lies partly under the side panel.
+   - expect: the polygon's outline overlaps the side panel.
+4. Choose Show on map.
    - expect: the polygon's outline is wholly to the left of the side panel.

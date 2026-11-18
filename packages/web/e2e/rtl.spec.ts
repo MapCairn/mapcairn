@@ -72,21 +72,60 @@ test.describe("right to left", () => {
     await expect(page.getByTestId("feature-card-heading")).toHaveText(
       "Australia",
     );
-    // 3. Show the polygon and check its outline against the panel.
-    await page.getByTestId("feature-card-show").click();
     const outline = page.getByTestId("selection-marker");
     await expect(outline).toBeVisible();
+    const clearOfPanel = async () => {
+      const polygon = await outline.boundingBox();
+      const panel = await mapPage.sheet.boundingBox();
+      return (
+        polygon !== null &&
+        panel !== null &&
+        polygon.x + polygon.width <= panel.x
+      );
+    };
+    await expect.poll(clearOfPanel).toBe(true);
+    // 3. Pan the polygon back under the panel.
+    await mapPage.focusMap();
+    await page.keyboard.press("ArrowLeft");
+    // Sample the outline itself, not just its bounding box.
     await expect
       .poll(async () => {
-        const polygon = await outline.boundingBox();
         const panel = await mapPage.sheet.boundingBox();
-        return (
-          polygon !== null &&
-          panel !== null &&
-          polygon.x + polygon.width <= panel.x
-        );
+        if (!panel) {
+          return false;
+        }
+        return outline
+          .locator("path")
+          .first()
+          .evaluate((path, bounds) => {
+            if (!(path instanceof SVGPathElement)) {
+              return false;
+            }
+            const matrix = path.getScreenCTM();
+            if (!matrix) {
+              return false;
+            }
+            const length = path.getTotalLength();
+            for (let distance = 0; distance <= length; distance += 1) {
+              const point = path
+                .getPointAtLength(distance)
+                .matrixTransform(matrix);
+              if (
+                point.x > bounds.x &&
+                point.x < bounds.x + bounds.width &&
+                point.y > bounds.y &&
+                point.y < bounds.y + bounds.height
+              ) {
+                return true;
+              }
+            }
+            return false;
+          }, panel);
       })
       .toBe(true);
+    // 4. Show the polygon and check its outline against the panel.
+    await page.getByTestId("feature-card-show").click();
+    await expect.poll(clearOfPanel).toBe(true);
   });
 
   test("the scale and zoom level stay clear of the open side panel", async ({
