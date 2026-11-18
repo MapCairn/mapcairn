@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { LayerDefinition } from "@mapcairn/core";
+import type {
+  FeedLayerDefinition,
+  FeedShapeStyle,
+  HeatmapLayerDefinition,
+  LayerDefinition,
+} from "@mapcairn/core";
 import type { Page } from "@playwright/test";
 
 /*
@@ -24,7 +29,7 @@ const base = {
 } as const;
 
 /** Two overlapping polygons, shaded by density with a pattern per class. */
-export const AREAS: LayerDefinition = {
+export const AREAS: FeedLayerDefinition<FeedShapeStyle> = {
   ...base,
   id: "kind-areas",
   name: "Sample areas",
@@ -60,6 +65,25 @@ export const AREAS: LayerDefinition = {
   emptyText: "No areas.",
 };
 
+/** A deliberately unbroken unit label that should wrap inside the legend. */
+export const LONG_UNIT = ` ${"measurements".repeat(20)}`;
+
+const areaColour = AREAS.style.colour;
+if (areaColour.kind !== "intervals") {
+  throw new Error("The sample area layer must use interval colours.");
+}
+
+/** The area sample with an unbroken unit label for layout regressions. */
+export const LONG_UNIT_AREAS: FeedLayerDefinition<FeedShapeStyle> = {
+  ...AREAS,
+  id: "kind-long-unit-areas",
+  name: "Long-unit areas",
+  style: {
+    ...AREAS.style,
+    colour: { ...areaColour, unit: LONG_UNIT },
+  },
+};
+
 /** One point inside both polygons, so a tap at the centre finds three features. */
 export const POINTS: LayerDefinition = {
   ...base,
@@ -82,7 +106,7 @@ export const POINTS: LayerDefinition = {
 };
 
 /** A heatmap with radius, intensity and opacity controls. */
-export const HEAT: LayerDefinition = {
+export const HEAT: HeatmapLayerDefinition = {
   ...base,
   id: "kind-heat",
   name: "Sample density",
@@ -123,6 +147,18 @@ export const HEAT: LayerDefinition = {
     words: ["Sparse", "Moderate", "Dense"],
   },
   emptyText: "No points.",
+};
+
+/** The heatmap sample with an unbroken range-control unit label. */
+export const LONG_UNIT_HEAT: HeatmapLayerDefinition = {
+  ...HEAT,
+  id: "kind-long-unit-heat",
+  name: "Long-unit density",
+  controls: HEAT.controls.map((control) =>
+    control.id === "radius" && control.kind === "range"
+      ? { ...control, unit: LONG_UNIT }
+      : control,
+  ),
 };
 
 /** A query layer that draws at most three features and starts at zoom 6. */

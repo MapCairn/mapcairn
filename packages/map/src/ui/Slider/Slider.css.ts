@@ -13,6 +13,7 @@ export const root = style({
 /** Label on the start side, value readout on the end side. */
 export const header = style({
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "baseline",
   justifyContent: "space-between",
   gap: tokens.space.md,
@@ -26,6 +27,8 @@ export const label = style({
   fontSize: tokens.type.body.size,
   lineHeight: tokens.type.body.lineHeight,
   letterSpacing: tokens.type.body.tracking,
+  minWidth: 0,
+  overflowWrap: "anywhere",
 });
 
 /** The visible value readout. */
@@ -37,6 +40,9 @@ export const value = style({
   lineHeight: tokens.type.body.lineHeight,
   letterSpacing: tokens.type.body.tracking,
   fontVariantNumeric: "tabular-nums",
+  minWidth: 0,
+  maxWidth: "100%",
+  overflowWrap: "anywhere",
 });
 
 /** The Radix slider root. As tall as the minimum target so the track can be tapped anywhere. */

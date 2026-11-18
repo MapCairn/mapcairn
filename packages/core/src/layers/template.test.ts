@@ -188,6 +188,37 @@ describe("formatTemplate", () => {
     }
   });
 
+  it("warns and uses a whitespace-only source when its supplied translation is blank", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const template = { key: "example.unit", text: "  " };
+      const catalogue = new FakeMessageCatalogue({
+        language: "af",
+        layerTemplates: { "example.unit": " " },
+      });
+
+      expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not warn when a whitespace-only template is deliberately unchanged", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const template = { key: "example.unit", text: "  " };
+      const catalogue = new FakeMessageCatalogue({
+        layerTemplates: { "example.unit": template.text },
+      });
+
+      expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("does not warn for a missing or source-language layer template", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

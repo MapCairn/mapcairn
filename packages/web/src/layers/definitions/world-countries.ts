@@ -79,10 +79,19 @@ const worldCountries: FeedLayerDefinition<ShapeStyle> = {
   },
   card: {
     title: "{title}",
-    lines: ["Population about {population|number}", "{continent}"],
+    lines: [
+      {
+        key: "world-countries.card.population",
+        text: "Population about {population|number}",
+      },
+      "{continent}",
+    ],
   },
   list: {
-    secondary: "About {population|number} people",
+    secondary: {
+      key: "world-countries.list.secondary",
+      text: "About {population|number} people",
+    },
     sorts: [
       {
         id: "name",

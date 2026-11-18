@@ -5,12 +5,12 @@ import { resolveText } from "../messages/resolveText";
 import type { FieldValue } from "../ports/layers";
 import type { MessageCatalogue } from "../ports/messages";
 import type {
+  FeedShapeStyle,
   FillPattern,
   LineDash,
   PaletteSlot,
   ShapeIntervalColour,
   ShapeMarks,
-  ShapeStyle,
 } from "./definition";
 import { toNumber } from "./numbers";
 import { resolveLayerTemplate } from "./template";
@@ -48,7 +48,7 @@ interface ShapeClass {
   readonly label: (catalogue: MessageCatalogue) => string;
 }
 
-function defaults(style: ShapeStyle, marks: ShapeMarks) {
+function defaults(style: FeedShapeStyle, marks: ShapeMarks) {
   return {
     pattern: marks.pattern ?? "solid",
     dash: marks.dash ?? style.dash ?? "solid",
@@ -61,7 +61,7 @@ function defaults(style: ShapeStyle, marks: ShapeMarks) {
 }
 
 function classOf(
-  style: ShapeStyle,
+  style: FeedShapeStyle,
   colour: PaletteSlot,
   label: string | ShapeClass["label"],
   marks: ShapeMarks,
@@ -101,7 +101,7 @@ function intervalLabel(
 }
 
 function intervalClasses(
-  style: ShapeStyle,
+  style: FeedShapeStyle,
   colour: ShapeIntervalColour,
 ): ShapeClass[] {
   const width = (colour.max - colour.min) / colour.ramp.length;
@@ -119,7 +119,7 @@ function intervalClasses(
   );
 }
 
-function classesOf(style: ShapeStyle): readonly ShapeClass[] {
+function classesOf(style: FeedShapeStyle): readonly ShapeClass[] {
   const { colour } = style;
   switch (colour.kind) {
     case "fixed":
@@ -146,7 +146,7 @@ function classesOf(style: ShapeStyle): readonly ShapeClass[] {
  * draws from.
  */
 export function shapeAppearances(
-  style: ShapeStyle,
+  style: FeedShapeStyle,
 ): readonly ShapeAppearance[] {
   return classesOf(style).map(({ appearance }) => appearance);
 }
@@ -159,7 +159,7 @@ export function shapeAppearances(
  * `catalogue`'s language.
  */
 export function shapeClasses(
-  style: ShapeStyle,
+  style: FeedShapeStyle,
   catalogue: MessageCatalogue,
 ): readonly ShapeLook[] {
   return classesOf(style).map(({ appearance, label }) => ({
@@ -179,7 +179,7 @@ export type ShapeEvaluator = (
  * the other class (categories) or the first class (steps and intervals).
  */
 export function shapeEvaluator(
-  style: ShapeStyle,
+  style: FeedShapeStyle,
   catalogue: MessageCatalogue,
 ): ShapeEvaluator {
   const { colour } = style;
@@ -222,7 +222,7 @@ export function shapeEvaluator(
 
 /** Works out one polygon's or line's look from a style and the feature's fields. */
 export function evaluateShapeStyle(
-  style: ShapeStyle,
+  style: FeedShapeStyle,
   fields: Readonly<Record<string, FieldValue>>,
   catalogue: MessageCatalogue,
 ): ShapeLook {

@@ -305,9 +305,10 @@ describe("LayersSection", () => {
     );
   });
 
-  it("translates a range control's visible and accessible unit", async () => {
+  it("keeps a long translated range unit visible and accessible", async () => {
+    const unit = ` ${"translatedunit".repeat(12)}`;
     const messages = new FakeMessageCatalogue({
-      layerTemplates: { "sample.radius-unit": " pixels" },
+      layerTemplates: { "sample.radius-unit": unit },
     });
     const definition = {
       ...SAMPLE_HEATMAP_LAYER,
@@ -326,10 +327,10 @@ describe("LayersSection", () => {
     const radius = await screen.findByTestId(
       "layer-control-sample-heat-radius",
     );
-    expect(radius).toHaveTextContent("20 pixels");
+    expect(radius).toHaveTextContent(`20${unit}`);
     expect(within(radius).getByRole("slider")).toHaveAttribute(
       "aria-valuetext",
-      "20 pixels",
+      `20${unit}`,
     );
   });
 

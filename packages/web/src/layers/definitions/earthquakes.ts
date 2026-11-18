@@ -109,14 +109,20 @@ const earthquakes: FeedLayerDefinition = {
   card: {
     title: "{place}",
     lines: [
-      "Magnitude {magnitude|number}",
-      "{depth|km} deep",
+      {
+        key: "earthquakes.card.magnitude",
+        text: "Magnitude {magnitude|number}",
+      },
+      { key: "earthquakes.card.depth", text: "{depth|km} deep" },
       "{time|date} ({time|relative})",
     ],
     link: { field: "url", label: "layer.earthquakes.card.link" },
   },
   list: {
-    secondary: "Magnitude {magnitude|number}, {time|relative}",
+    secondary: {
+      key: "earthquakes.list.secondary",
+      text: "Magnitude {magnitude|number}, {time|relative}",
+    },
     sorts: [
       {
         id: "newest",

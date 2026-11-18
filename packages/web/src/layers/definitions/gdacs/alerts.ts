@@ -74,13 +74,16 @@ export const GDACS_ALERTS: Omit<FeedLayerDefinition, OwnParts> = {
     lines: [
       "{severity}",
       "{country}",
-      "From {from|date}",
-      "Last updated {to|date}",
+      { key: "gdacs.card.from", text: "From {from|date}" },
+      { key: "gdacs.card.lastUpdated", text: "Last updated {to|date}" },
     ],
     link: { field: "report", label: "layer.gdacs.card.link" },
   },
   list: {
-    secondary: "{level} alert, {from|relative}",
+    secondary: {
+      key: "gdacs.list.secondary",
+      text: "{level} alert, {from|relative}",
+    },
     sorts: [
       {
         id: "newest",

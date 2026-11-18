@@ -4,6 +4,7 @@ import { resolveText } from "../messages/resolveText";
 import type { FieldValue } from "../ports/layers";
 import type { MessageCatalogue } from "../ports/messages";
 import {
+  type FeedShapeStyle,
   type FillPattern,
   type HeatmapSpec,
   isFeedLayer,
@@ -15,7 +16,6 @@ import {
   type MarkerShape,
   type PaletteSlot,
   type PointStyle,
-  type ShapeStyle,
 } from "./definition";
 import { stepFor, toNumber } from "./numbers";
 import { shapeClasses } from "./shapeStyle";
@@ -163,7 +163,7 @@ function heatmapLegend(
 }
 
 function shapeLegend(
-  style: ShapeStyle,
+  style: FeedShapeStyle,
   catalogue: MessageCatalogue,
 ): LegendEntry[] {
   return shapeClasses(style, catalogue).map((item) => ({

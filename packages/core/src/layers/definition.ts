@@ -401,32 +401,25 @@ export type ShapeColour =
   | ShapeIntervalColour;
 
 /** Text drawn on each polygon or line, filled from the feature's fields. */
-export interface ShapeLabel {
+export interface ShapeLabel<T extends LayerTemplate = string> {
   /** A template such as `{name}` or `{name}: {population|number}`. */
-  readonly template: LayerTemplate;
-  /** Labels appear from this normalised zoom, so a world view is not buried in text. */
-  readonly minzoom?: number;
-}
-
-/** A vector-tile label names a tile property and cannot contain translated text. */
-export interface VectorShapeLabel {
-  /** A single tile property, such as `{name}`. */
-  readonly template: string;
+  readonly template: T;
   /** Labels appear from this normalised zoom, so a world view is not buried in text. */
   readonly minzoom?: number;
 }
 
 /**
- * How a feed's polygons or lines are drawn: a fill (or a stroke, for lines)
- * coloured by a rule, with outline width, hatching, dashing and labels. The
- * legend is derived from it.
+ * How polygons or lines are drawn: a fill (or a stroke, for lines) coloured
+ * by a rule, with outline width, hatching, dashing and labels. Its default
+ * label type remains a plain string; feed definitions that use keyed labels
+ * use {@link FeedShapeStyle}. The legend is derived from it.
  *
  * @remarks A style draws one geometry kind, so its legend and widths are
  *   unambiguous: `area` draws polygons and multipolygons, `line` draws lines
  *   and multilines. Features of the other kind are not drawn. A polygon's
  *   outline is the palette's ink, so the shape reads on any fill.
  */
-export interface ShapeStyle {
+export interface ShapeStyle<T extends LayerTemplate = string> {
   readonly kind: "shapes";
   readonly geometry: "area" | "line";
   readonly colour: ShapeColour;
@@ -439,13 +432,11 @@ export interface ShapeStyle {
   readonly width?: number;
   /** Dashing of the outline or line. Defaults to `solid`. A class's own `dash` wins. */
   readonly dash?: LineDash;
-  readonly label?: ShapeLabel;
+  readonly label?: ShapeLabel<T>;
 }
 
-/** A vector-tile style whose label is a property read by the map engine. */
-export interface VectorShapeStyle extends ShapeStyle {
-  readonly label?: VectorShapeLabel;
-}
+/** A feed shape style whose label may use a host-keyed template. */
+export type FeedShapeStyle = ShapeStyle<LayerTemplate>;
 
 /** How a feed's points are drawn, and so what its legend says. */
 export interface PointStyle {
@@ -527,7 +518,7 @@ interface LayerDefinitionBase {
  * it, such as `FeedLayerDefinition<PointStyle>`.
  */
 export interface FeedLayerDefinition<
-  S extends PointStyle | ShapeStyle = PointStyle | ShapeStyle,
+  S extends PointStyle | FeedShapeStyle = PointStyle | FeedShapeStyle,
 > extends LayerDefinitionBase {
   readonly source: FeedSource | QuerySource;
   readonly style: S;
@@ -653,7 +644,7 @@ export interface VectorShapeLayer {
    * How it is drawn. The colour rule's `field` is a tile property, and a
    * label template may name only a single property, such as `{name}`.
    */
-  readonly style: VectorShapeStyle;
+  readonly style: ShapeStyle;
   /** Visible from and to these normalised zoom levels. */
   readonly minzoom?: number;
   readonly maxzoom?: number;
@@ -764,7 +755,7 @@ export function isQueryLayer(
 
 /** Whether a feed layer's style draws polygons and lines rather than points. */
 export function isShapeStyle(
-  style: PointStyle | ShapeStyle,
-): style is ShapeStyle {
+  style: PointStyle | FeedShapeStyle,
+): style is FeedShapeStyle {
   return "kind" in style && style.kind === "shapes";
 }

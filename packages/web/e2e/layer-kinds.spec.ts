@@ -6,6 +6,9 @@ import { axeViolations } from "./support/a11y";
 import {
   AREAS,
   HEAT,
+  LONG_UNIT,
+  LONG_UNIT_AREAS,
+  LONG_UNIT_HEAT,
   mockKindData,
   POINTS,
   QUERY,
@@ -21,6 +24,38 @@ import { settleFrames, TIMER_SLACK_MS, VIEW_SETTLE_MS } from "./support/timers";
  */
 
 const AT_CENTRE = "map=7.00/30.00000/31.00000";
+
+async function expectLegendToFit(
+  list: import("@playwright/test").Locator,
+): Promise<void> {
+  const metrics = await list.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      rows: Array.from(element.querySelectorAll("li")).map((row) => {
+        const rowBounds = row.getBoundingClientRect();
+        const label = row.querySelector("span");
+        return {
+          rightWithMargin:
+            rowBounds.right +
+            Number.parseFloat(getComputedStyle(row).marginInlineEnd || "0"),
+          listRight: bounds.right,
+          labelClientWidth: label?.clientWidth ?? 0,
+          labelScrollWidth: label?.scrollWidth ?? 0,
+        };
+      }),
+    };
+  });
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  expect(
+    metrics.rows.every(
+      (row) =>
+        row.rightWithMargin <= row.listRight + 1 &&
+        row.labelScrollWidth <= row.labelClientWidth,
+    ),
+  ).toBe(true);
+}
 
 test.describe("layer kinds", () => {
   test.use({ reducedMotion: "reduce" });
@@ -305,5 +340,74 @@ test.describe("layer kinds", () => {
     await mapPage.host.click();
     await expect(page.getByTestId("feature-choices")).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("long layer units", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test.beforeEach(async ({ page }) => {
+    await scriptLayers(page, [LONG_UNIT_AREAS, LONG_UNIT_HEAT]);
+  });
+
+  test("wraps long units inside both legend layouts and a range control", async ({
+    page,
+    mapPage,
+  }) => {
+    await mockKindData(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mapPage.goto(
+      `#layers=kind-long-unit-areas,kind-long-unit-heat&${AT_CENTRE}`,
+    );
+
+    await mapPage.mapKeyToggle.click();
+    const wrappedLegend = page.getByTestId("map-key-list-kind-long-unit-areas");
+    await expect(wrappedLegend).toBeVisible();
+    await expectLegendToFit(wrappedLegend);
+
+    await mapPage.openMapOptions();
+    const stackedLegend = page.getByTestId("layer-legend-kind-long-unit-areas");
+    await expect(stackedLegend).toBeVisible();
+    await expectLegendToFit(stackedLegend);
+
+    const rangeControl = page.getByTestId(
+      "layer-control-kind-long-unit-heat-radius",
+    );
+    const slider = rangeControl.getByRole("slider");
+    await expect(slider).toHaveAttribute("aria-valuetext", `20${LONG_UNIT}`);
+    const sliderMetrics = await rangeControl.evaluate((control) => {
+      const root = control.firstElementChild;
+      const header = root?.firstElementChild;
+      const value = header?.lastElementChild;
+      const rootBounds = root?.getBoundingClientRect();
+      const valueBounds = value?.getBoundingClientRect();
+      return {
+        clientWidth: control.clientWidth,
+        scrollWidth: control.scrollWidth,
+        valueClientWidth: value?.clientWidth ?? 0,
+        valueScrollWidth: value?.scrollWidth ?? 0,
+        valueRight: valueBounds?.right ?? Number.POSITIVE_INFINITY,
+        controlRight: control.getBoundingClientRect().right,
+        rootScrollWidth: root?.scrollWidth ?? Number.POSITIVE_INFINITY,
+        rootClientWidth: root?.clientWidth ?? 0,
+        rootRight: rootBounds?.right ?? Number.POSITIVE_INFINITY,
+        containerRight: control.getBoundingClientRect().right,
+      };
+    });
+    expect(sliderMetrics.scrollWidth).toBeLessThanOrEqual(
+      sliderMetrics.clientWidth,
+    );
+    expect(sliderMetrics.valueScrollWidth).toBeLessThanOrEqual(
+      sliderMetrics.valueClientWidth,
+    );
+    expect(sliderMetrics.rootScrollWidth).toBeLessThanOrEqual(
+      sliderMetrics.rootClientWidth,
+    );
+    expect(sliderMetrics.valueRight).toBeLessThanOrEqual(
+      sliderMetrics.controlRight + 1,
+    );
+    expect(sliderMetrics.rootRight).toBeLessThanOrEqual(
+      sliderMetrics.containerRight + 1,
+    );
   });
 });

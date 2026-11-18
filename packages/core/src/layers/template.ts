@@ -86,8 +86,9 @@ function warnInvalidLayerTemplate(
 }
 
 /**
- * Resolves host-keyed layer text when its translation preserves every source
- * field and formatter; otherwise, warns once per key and uses the source text.
+ * Resolves host-keyed layer text. Missing entries and exact source-language
+ * entries return the source without warning. A supplied blank or mismatched
+ * translation warns once per key and falls back to the source text.
  */
 export function resolveLayerTemplate(
   template: LayerTemplate,
@@ -103,7 +104,7 @@ export function resolveLayerTemplate(
   const translation = translations[template.key];
   if (
     typeof translation !== "string" ||
-    (template.text.trim() !== "" && translation.trim() === "") ||
+    (translation.trim() === "" && translation !== template.text) ||
     !placeholdersMatch(template.text, translation)
   ) {
     warnInvalidLayerTemplate(catalogue, template.key);
