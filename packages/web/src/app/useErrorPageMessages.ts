@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { MessageCatalogue } from "@mapcairn/core";
+import { languageDirection, type MessageCatalogue } from "@mapcairn/core";
 import { useEffect, useState } from "react";
 import { resolveDeviceLanguage } from "../composition/storedLanguage";
-import { ENGLISH, loadLanguage } from "../i18n/hostLanguages";
+import {
+  ENGLISH,
+  loadLanguage,
+  OFFERED_LANGUAGES,
+} from "../i18n/hostLanguages";
 
 /**
  * The messages for the language this device wants, or English when it cannot
@@ -39,6 +43,10 @@ export function useErrorPageMessages(): MessageCatalogue {
       if (current) {
         setMessages(loaded);
         document.documentElement.lang = loaded.language;
+        document.documentElement.dir = languageDirection(
+          loaded.language,
+          OFFERED_LANGUAGES,
+        );
       }
     });
     return () => {

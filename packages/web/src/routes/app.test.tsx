@@ -33,6 +33,7 @@ function stub(page: () => null | ReturnType<typeof createElement>) {
 describe("the app layout", () => {
   afterEach(() => {
     document.documentElement.removeAttribute("lang");
+    document.documentElement.removeAttribute("dir");
   });
 
   it("provides the services, built once, the announcer and tooltips to the pages inside it", () => {
@@ -91,5 +92,55 @@ describe("the app layout", () => {
       ),
     );
     await waitFor(() => expect(document.documentElement.lang).toBe("af"));
+  });
+
+  it("keeps direction in step with a loaded language and the host override", async () => {
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "ar", label: "Arabic", direction: "ltr" },
+        ],
+        "en-GB",
+        (tag) => Promise.resolve(new FakeMessageCatalogue({ language: tag })),
+      ),
+    });
+    document.documentElement.dir = "rtl";
+    services.fakes.settings.set({ language: "ar" });
+    createServices.mockReturnValueOnce(services);
+    render(
+      createElement(
+        stub(() => null),
+        { initialEntries: ["/map"] },
+      ),
+    );
+    await waitFor(() => expect(document.documentElement.lang).toBe("ar"));
+    expect(document.documentElement.dir).toBe("ltr");
+  });
+
+  it("uses right-to-left direction when a right-to-left language loads", async () => {
+    const services = createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "en-GB" }),
+      languages: createLanguageCatalogue(
+        [
+          { tag: "en-GB", label: "English" },
+          { tag: "ar", label: "Arabic" },
+        ],
+        "en-GB",
+        (tag) => Promise.resolve(new FakeMessageCatalogue({ language: tag })),
+      ),
+    });
+    document.documentElement.dir = "ltr";
+    services.fakes.settings.set({ language: "ar" });
+    createServices.mockReturnValueOnce(services);
+    render(
+      createElement(
+        stub(() => null),
+        { initialEntries: ["/map"] },
+      ),
+    );
+    await waitFor(() => expect(document.documentElement.lang).toBe("ar"));
+    expect(document.documentElement.dir).toBe("rtl");
   });
 });

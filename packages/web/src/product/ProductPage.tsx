@@ -293,6 +293,7 @@ export function ProductPage() {
     <div
       className={styles.scroller}
       lang="en-GB"
+      dir="ltr"
       data-testid="product-page"
       {...DOCUMENT_SCROLL}
     >

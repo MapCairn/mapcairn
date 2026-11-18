@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import "./fonts/fonts.css";
 import "./global.css";
-import { THEME_COLOR_META } from "@mapcairn/core";
+import { languageDirection, THEME_COLOR_META } from "@mapcairn/core";
 import { type ReactNode, useEffect } from "react";
 import {
   isRouteErrorResponse,
@@ -23,6 +23,7 @@ import { reportCaughtError } from "./composition/errorReporting";
 import { BRAND_COLOUR } from "./constants/brandColour";
 import { PRODUCT_DESCRIPTION, SITE_URL } from "./constants/siteConfig";
 import { fontPreloadLinks } from "./fonts/fontPreload";
+import { DEFAULT_LANGUAGE, OFFERED_LANGUAGES } from "./i18n/hostLanguages";
 import { fixedPageLanguage } from "./i18n/pageLanguage";
 import { jsonLdGraph, websiteNode } from "./structuredData";
 
@@ -79,7 +80,7 @@ export const links: LinksFunction = () => [
  * stylesheets so the first paint is in the right theme.
  *
  * @remarks The theme script sets `data-theme` and `color-scheme` on `<html>`,
- *   sets `lang` there when the stored language is one the host offers, and
+ *   sets `lang` and `dir` there when the stored language is one the host offers, and
  *   rewrites a `theme-color` tag before React hydrates, so those two
  *   elements suppress the hydration warning for their own attributes.
  *   `<Scripts>` and `<ScrollRestoration>` take the CSP nonce from React
@@ -87,7 +88,11 @@ export const links: LinksFunction = () => [
  */
 export function Layout({ children }: { readonly children: ReactNode }) {
   return (
-    <html lang="en-GB" suppressHydrationWarning>
+    <html
+      lang={DEFAULT_LANGUAGE}
+      dir={languageDirection(DEFAULT_LANGUAGE, OFFERED_LANGUAGES)}
+      suppressHydrationWarning
+    >
       <head>
         <meta charSet="utf-8" />
         <meta
@@ -121,7 +126,7 @@ export function Layout({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * Keeps `<html lang>` on the language the interface speaks. The pre-paint
+ * Keeps `<html lang dir>` on the language the interface speaks. The pre-paint
  * script may set it from the stored choice before first paint; a page in one
  * language only (the English product page, through its route's `handle`)
  * puts its own language back. A page that follows the interface's language
@@ -132,6 +137,7 @@ function FixedDocumentLanguage() {
   useEffect(() => {
     if (fixed !== undefined) {
       document.documentElement.lang = fixed;
+      document.documentElement.dir = languageDirection(fixed);
     }
   }, [fixed]);
   return null;

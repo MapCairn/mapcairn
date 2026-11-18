@@ -136,7 +136,7 @@ describe("root Layout", () => {
     );
 
   it("renders a British English document around its children", () => {
-    expect(markup()).toContain('<html lang="en-GB">');
+    expect(markup()).toContain('<html lang="en-GB" dir="ltr">');
     expect(markup()).toContain("app content");
   });
 
@@ -191,10 +191,12 @@ describe("root Root", () => {
 describe("root document language", () => {
   afterEach(() => {
     document.documentElement.removeAttribute("lang");
+    document.documentElement.removeAttribute("dir");
   });
 
   it("puts a page in one language back to it, whatever the pre-paint script set", async () => {
     document.documentElement.lang = "af";
+    document.documentElement.dir = "rtl";
     const Stub = createRoutesStub([
       {
         path: "/",
@@ -210,10 +212,12 @@ describe("root document language", () => {
     ]);
     render(createElement(Stub, { initialEntries: ["/"] }));
     await waitFor(() => expect(document.documentElement.lang).toBe("en-GB"));
+    expect(document.documentElement.dir).toBe("ltr");
   });
 
   it("leaves lang alone for a page that names no language", () => {
     document.documentElement.lang = "af";
+    document.documentElement.dir = "rtl";
     const Stub = createRoutesStub([
       {
         path: "/",
@@ -223,6 +227,7 @@ describe("root document language", () => {
     ]);
     render(createElement(Stub, { initialEntries: ["/"] }));
     expect(document.documentElement.lang).toBe("af");
+    expect(document.documentElement.dir).toBe("rtl");
   });
 });
 

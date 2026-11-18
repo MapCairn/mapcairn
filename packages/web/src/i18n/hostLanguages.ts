@@ -8,19 +8,25 @@ import {
   type LanguageOption,
   type MessageCatalogue,
 } from "@mapcairn/core";
+import {
+  DEFAULT_LANGUAGE,
+  OFFERED_LANGUAGE_OPTIONS,
+} from "./offeredLanguageOptions";
 
-/** The language the server renders and the one used when nothing else matches. */
-export const DEFAULT_LANGUAGE = "en-GB";
+export { DEFAULT_LANGUAGE } from "./offeredLanguageOptions";
+
+declare const __MAPCAIRN_HOST_LANGUAGE_DIRECTIONS__: readonly ("ltr" | "rtl")[];
 
 /**
  * The languages the reference host offers, in switcher order, each named in
  * its own language. The switcher shows only when more than one is listed,
  * and the pre-paint script sets `lang` only to a tag listed here.
  */
-export const OFFERED_LANGUAGES: readonly LanguageOption[] = [
-  { tag: DEFAULT_LANGUAGE, label: "English" },
-  { tag: "af", label: "Afrikaans" },
-];
+export const OFFERED_LANGUAGES: readonly LanguageOption[] =
+  OFFERED_LANGUAGE_OPTIONS.map((option, index) => ({
+    ...option,
+    direction: __MAPCAIRN_HOST_LANGUAGE_DIRECTIONS__[index] ?? "ltr",
+  }));
 
 /** The tags in {@link OFFERED_LANGUAGES}. */
 export const OFFERED_LANGUAGE_TAGS: readonly string[] = OFFERED_LANGUAGES.map(

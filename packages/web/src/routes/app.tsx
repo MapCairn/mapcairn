@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { languageDirection } from "@mapcairn/core";
 import {
   LiveRegionProvider,
   ServicesProvider,
   TooltipProvider,
   useMessages,
+  useServices,
 } from "@mapcairn/map";
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router";
@@ -12,15 +14,20 @@ import { DocumentTitle } from "../app/DocumentTitle";
 import { createServices } from "../composition/createServices";
 
 /**
- * Keeps `<html lang>` on the language the interface speaks. The pre-paint
+ * Keeps `<html lang dir>` on the language the interface speaks. The pre-paint
  * script sets it from the stored choice before first paint; this covers the
  * browser's own languages and a choice made later.
  */
 function DocumentLanguage() {
   const { language } = useMessages();
+  const { languages } = useServices();
   useEffect(() => {
     document.documentElement.lang = language;
-  }, [language]);
+    document.documentElement.dir = languageDirection(
+      language,
+      languages?.languages,
+    );
+  }, [language, languages]);
   return null;
 }
 
