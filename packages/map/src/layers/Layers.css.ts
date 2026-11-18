@@ -359,6 +359,7 @@ export const rowSecondary = style({
   color: tokens.color.textMuted,
   ...small,
   fontVariantNumeric: "tabular-nums",
+  overflowWrap: "anywhere",
 });
 
 /** The feature card. The sheet or panel provides the surface. */

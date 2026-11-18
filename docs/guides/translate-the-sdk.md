@@ -79,7 +79,7 @@ const messages = createMessageCatalogue(
 );
 ```
 
-The source `text` supplies the fallback when the key is missing or its translation does not preserve the source's field and formatter placeholders, including repeated placeholders. A translation may reorder them. Plain strings remain literal and keep working as before; units include their own spacing, such as ` per km²`. A host with its own `MessageCatalogue` implementation can provide the same optional `layerTemplates` property. Vector-tile labels remain plain property names because the map engine reads them directly.
+The source `text` supplies the fallback when the key is missing or its translation does not preserve the source's field and formatter placeholders, including repeated placeholders. Missing entries, plain-string templates and valid source-language templates use the source without a warning. A supplied blank or mismatched translation warns once per key per catalogue instance, then falls back; valid translations may reorder placeholders. Plain strings remain literal and keep working as before; units include their own spacing, such as ` per km²`. A host with its own `MessageCatalogue` implementation can provide the same optional `layerTemplates` property. Vector-tile labels remain plain property names because the map engine reads them directly.
 
 ## Use a message-format library of your own
 

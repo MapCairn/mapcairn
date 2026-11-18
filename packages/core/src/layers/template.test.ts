@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { createFormatterRegistry } from "./formatters";
 import { readPath } from "./paths";
@@ -9,6 +9,7 @@ import {
   fillUrlTemplate,
   formatTemplate,
   parseTemplate,
+  resolveLayerTemplate,
 } from "./template";
 
 describe("readPath", () => {
@@ -157,6 +158,57 @@ describe("formatTemplate", () => {
           catalogue,
         }),
       ).toBe("Alpha: magnitude 4.3");
+    }
+  });
+
+  it.each([
+    ["blank", ""],
+    ["field", "Magnitude {place|number}"],
+    ["formatter", "Magnitude {value}"],
+  ])("warns once when a supplied %s translation is invalid", (_kind, text) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const template = {
+        key: "example.magnitude",
+        text: "Magnitude {value|number}",
+      };
+      const catalogue = new FakeMessageCatalogue({
+        language: "af",
+        layerTemplates: { "example.magnitude": text },
+      });
+
+      expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
+      expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledWith(
+        'MessageCatalogue: "af" has an invalid layer template translation for "example.magnitude"; falling back to source text.',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not warn for a missing or source-language layer template", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const template = {
+        key: "example.magnitude",
+        text: "Magnitude {value|number}",
+      };
+      expect(resolveLayerTemplate(template, new FakeMessageCatalogue())).toBe(
+        template.text,
+      );
+      expect(
+        resolveLayerTemplate(
+          template,
+          new FakeMessageCatalogue({
+            layerTemplates: { "example.magnitude": template.text },
+          }),
+        ),
+      ).toBe(template.text);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
     }
   });
 

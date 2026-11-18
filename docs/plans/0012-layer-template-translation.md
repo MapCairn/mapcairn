@@ -1,6 +1,6 @@
 # 0012: Layer template translation
 
-Status: in progress. Tracking issue: #268.
+Status: done. Tracking issue: #268.
 
 ## Goal
 
@@ -44,14 +44,16 @@ words around the property name and the engine reads the property itself.
 ## Tests
 
 Start with failing behavior tests for reordered fields, fallback on missing or
-mismatched translations, validation of source fields, interval and range units,
-card and list text, and a feed polygon label. Retain the plain-string cases and
-verify that vector-tile labels still require one property.
+mismatched translations, one warning per invalid supplied key per catalogue
+instance, validation of source fields, interval and range units, card and list
+text, and a feed polygon label. Retain the plain-string cases and verify that
+vector-tile labels still require one property.
 
 ## Order of work
 
-1. Add the keyed template value and catalogue table in core; validate sources
-   and resolve translations for cards, lists, feed-shape labels and units.
+1. Add the keyed template value and catalogue table in core; validate sources,
+   warn once per invalid supplied key per catalogue instance, and resolve
+   translations for cards, lists, feed-shape labels and units.
    Wire the map components and drawing path to the active catalogue, with
    behavioral tests for each surface.
 
@@ -59,16 +61,18 @@ verify that vector-tile labels still require one property.
 
 Update `README.md`, `ARCHITECTURE.md`, `DESIGN.md`, the `extending` and
 `translate-the-sdk` guides, and the core and map package READMEs with the API,
-fallback rules and component contracts. Keep this plan in the open-plans list
-until the implementation is merged. `PRIVACY.md` does not need a change: no
-new request or data flow is introduced.
+fallback rules and component contracts. This plan's implementation and status
+are part of the same #268 pull request; remove it from the open-plans list in
+that pull request so the merged list reflects the completed work. `PRIVACY.md`
+does not need a change: no new request or data flow is introduced.
 
 ## Risks
 
 A translation that drops a field, changes a formatter or duplicates a
 placeholder could hide a value or alter its formatting. Comparing the complete
-placeholder pairs as a multiset and falling back to the source contains that
-risk. A host that omits an entry still gets the original definition text.
+placeholder pairs as a multiset, warning once for an invalid supplied value,
+and falling back to the source contains that risk. A host that omits an entry
+still gets the original definition text without a warning.
 
 ## Decided and open
 

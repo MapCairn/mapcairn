@@ -1,6 +1,6 @@
 # 0011: Any language, left to right and right to left
 
-Status: proposed. Tracking issue: #316.
+Status: in progress. Tracking issue: #316.
 
 ## Goal
 

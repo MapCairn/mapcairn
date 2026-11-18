@@ -40,6 +40,10 @@ export interface KeyedLayerText {
 export type LayerTemplate = string | KeyedLayerText;
 
 const PLACEHOLDER = /\{([a-zA-Z0-9_-]+)(?:\|([a-zA-Z0-9_-]+))?\}/g;
+const warnedInvalidLayerTemplates = new WeakMap<
+  MessageCatalogue,
+  Set<string>
+>();
 
 /** Lists a template's placeholders, in order. */
 export function parseTemplate(template: string): TemplatePlaceholder[] {
@@ -63,9 +67,27 @@ function placeholdersMatch(source: string, translation: string): boolean {
   );
 }
 
+function warnInvalidLayerTemplate(
+  catalogue: MessageCatalogue,
+  key: string,
+): void {
+  let warned = warnedInvalidLayerTemplates.get(catalogue);
+  if (!warned) {
+    warned = new Set();
+    warnedInvalidLayerTemplates.set(catalogue, warned);
+  }
+  if (warned.has(key)) {
+    return;
+  }
+  warned.add(key);
+  console.warn(
+    `MessageCatalogue: "${catalogue.language}" has an invalid layer template translation for "${key}"; falling back to source text.`,
+  );
+}
+
 /**
  * Resolves host-keyed layer text when its translation preserves every source
- * field and formatter; otherwise, uses the source text.
+ * field and formatter; otherwise, warns once per key and uses the source text.
  */
 export function resolveLayerTemplate(
   template: LayerTemplate,
@@ -75,15 +97,16 @@ export function resolveLayerTemplate(
     return template;
   }
   const translations = catalogue.layerTemplates;
-  const translation =
-    translations && Object.hasOwn(translations, template.key)
-      ? translations[template.key]
-      : undefined;
+  if (!translations || !Object.hasOwn(translations, template.key)) {
+    return template.text;
+  }
+  const translation = translations[template.key];
   if (
     typeof translation !== "string" ||
     (template.text.trim() !== "" && translation.trim() === "") ||
     !placeholdersMatch(template.text, translation)
   ) {
+    warnInvalidLayerTemplate(catalogue, template.key);
     return template.text;
   }
   return translation;
