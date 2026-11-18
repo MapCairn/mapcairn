@@ -88,6 +88,9 @@ test.describe("the privacy page in Afrikaans", () => {
       page.getByRole("heading", { level: 1, name: "Privaatheidsbeleid" }),
     ).toBeVisible();
 
+    await expect(
+      page.getByRole("link", { name: "Terug na die produkbladsy" }),
+    ).toHaveAttribute("href", "/");
     await page.getByRole("link", { name: "Terug na die kaart" }).click();
     await expect(page).toHaveURL(/\/map$/);
     await expect(page).toHaveTitle("MapCairn | Interaktiewe kaart");
