@@ -53,7 +53,7 @@ Several issues at once, or an agent beside you, means a separate worktree for ea
 3. Keep to the task. Anything unrelated that you notice becomes its own issue (`create-issue` skill). A delegated agent lists it under **Issues to file** in its report instead, and its caller files it.
 4. Tick the issue's task list as steps land: start from the current body (`gh issue view <n> --json body --jq .body > <file>`), change only the boxes, and save it with `gh issue edit <n> --body-file <file>`. Without triage rights, post the status as a comment or in the pull request description and leave ticking, closing and labels to the maintainer.
 5. A change that alters behaviour the documents describe updates them in the same pull request: `README.md` and package READMEs, `ARCHITECTURE.md`, `DESIGN.md`, `docs/guides/`, and `ROADMAP.md`, `ATTRIBUTIONS.md` or `PRIVACY.md` (the last together with `packages/web/src/app/PrivacyPage.tsx`). Note which ones in the pull request.
-6. Commit in small steps with Conventional Commits and no assistant attribution.
+6. Commit in small steps with Conventional Commits; a `Co-Authored-By` trailer naming an AI tool is allowed on a commit.
 
 ## 5. Checks
 
@@ -85,7 +85,7 @@ Checks: lint, typecheck, coverage and build, and targeted specs only, on your ow
 UI work: run the review-ui skill, then the visual-check skill, and describe what they found and what you saw in the pull request.
 Other work in flight on <module>: <issue or pull request>. Keep your change additive; when the project's main moves, merge it into your branch, resolve and `git push`, and avoid a force-push.
 Work only in your own worktree, never the main checkout. Poll CI with one-shot `gh pr checks`; start no `--watch` or other background watcher.
-No assistant attribution anywhere. Plain neutral voice on GitHub, no @mentions.
+No assistant attribution in pull requests, issues or comments. Plain neutral voice on GitHub, no @mentions.
 Stop every server, browser and wrangler instance you start and confirm with a port check. Keep your worktree until the pull request has merged.
 Wording: <the decision, in the exact words to write>. Use these words; do not paraphrase them.
 Claims: check every claim against <files>. Name the file you checked beside each factual claim in your pull request description. Write no number, limit or rule of thumb that is not in the code or in a source you cite. In a rule about people, name the role, for example "the person who opens the pull request".

@@ -95,7 +95,7 @@ Projects cover desktop Chromium, mobile Chromium (Pixel 7) and iPhone WebKit. We
 - Use British English in user-facing copy and docs, not code identifiers.
 - Write plain, specific prose. Avoid puffery, uppercase eyebrows and repetitive closing summaries. Use an em dash only where a person would naturally write one, such as a single aside or a sharp turn in a sentence. Do not use it as the default connector or more than once in a paragraph; a comma, colon, bracket or full stop usually reads better. Use sentence-case headings.
 - Use Conventional Commits: `<type>[optional scope][!]: <description>`. Explain breaking changes in the body or a `BREAKING CHANGE:` footer.
-- Do not add assistant attribution to commits, pull requests or issues: no `Co-Authored-By` trailer naming an AI tool and no "Generated with" line. When a squash merge would carry such a trailer from earlier commits, give the merge an explicit body.
+- Do not add assistant attribution to pull requests, issues or comments: no "Generated with" line and no attribution line naming an AI tool. A `Co-Authored-By` trailer naming an AI tool is allowed on a commit, and a squash merge may carry it.
 
 The style in one example is in `CONTRIBUTING.md` ("Code style").
 
@@ -197,7 +197,7 @@ Merging to `main` deploys the site automatically, so a pull request is never "ju
 - Weaken an assertion, or exclude code from coverage, to make a check pass.
 - Switch on a basemap, layer or provider id in code; add one as a definition or adapter instead.
 - Publish identifying or household-level data.
-- Add assistant attribution, or name the maintainer personally, a commercial product used as a comparison or any name on the maintainer's private list, in any file, commit message or post. The maintainer keeps the plain list; the repository holds only one-way hashes of it (`scripts/names-check.mjs`). `npm run lint`, the `commit-msg` hook and the CI pull request check refuse a listed name, and the checks print where it is, never the name. To add a name, ask the maintainer.
+- Add assistant attribution to a pull request, issue or comment, or name the maintainer personally, a commercial product used as a comparison or any name on the maintainer's private list, in any file, commit message or post. The maintainer keeps the plain list; the repository holds only one-way hashes of it (`scripts/names-check.mjs`). `npm run lint`, the `commit-msg` hook and the CI pull request check refuse a listed name, and the checks print where it is, never the name. To add a name, ask the maintainer.
 
 ## Documentation
 
