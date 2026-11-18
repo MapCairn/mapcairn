@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { EN_GB_CATALOGUE } from "../messages/en-GB";
+import { parsePluralForms } from "../messages/pluralForms";
 import type { MessageKey } from "../ports/messages";
 
 /**
@@ -721,6 +722,49 @@ function placeholdersIn(value: string): string[] {
   return [...new Set([...value.matchAll(/\{(\w+)\}/g)].map((m) => m[1] ?? ""))];
 }
 
+function missingPluralCategories(
+  language: string,
+  value: string,
+): readonly string[] {
+  const keyed = parsePluralForms(value);
+  if (!keyed && !value.includes("|")) {
+    return [];
+  }
+  const available =
+    keyed ??
+    new Map([
+      ["one", ""],
+      ["other", ""],
+    ]);
+  return new Intl.PluralRules(language)
+    .resolvedOptions()
+    .pluralCategories.filter((category) => !available.has(category))
+    .sort();
+}
+
+describe("the plural category check", () => {
+  it("reports the Arabic categories missing from a keyed value", () => {
+    expect(
+      missingPluralCategories("ar", "one{one} few{few} other{other}"),
+    ).toEqual(["many", "two", "zero"]);
+  });
+
+  it("reports categories that a two-form value cannot express", () => {
+    expect(missingPluralCategories("ru", "one|other")).toEqual(["few", "many"]);
+  });
+
+  it("accepts all the categories a language needs and a plain value", () => {
+    expect(
+      missingPluralCategories(
+        "ar",
+        "zero{zero} one{one} two{two} few{few} many{many} other{other}",
+      ),
+    ).toEqual([]);
+    expect(missingPluralCategories("ar", "plain {count}")).toEqual([]);
+    expect(missingPluralCategories("en-GB", "one|other")).toEqual([]);
+  });
+});
+
 describe("the English message catalogue", () => {
   it("has exactly the keys this test expects", () => {
     expect(Object.keys(EN_GB_CATALOGUE).sort()).toEqual(
@@ -733,9 +777,18 @@ describe("the English message catalogue", () => {
     (key) => {
       const value = EN_GB_CATALOGUE[key];
       expect(value.length).toBeGreaterThan(0);
-      const forms = value.split("|");
+      const keyed = parsePluralForms(value);
+      if (/^\s*(zero|one|two|few|many|other)\{/.test(value)) {
+        expect(keyed, key).toBeDefined();
+      }
+      const forms = keyed ? [...keyed.values()] : value.split("|");
+      if (!keyed && value.includes("|")) {
+        expect(forms, key).toHaveLength(2);
+      }
+      expect(missingPluralCategories("en-GB", value), key).toEqual([]);
       const expected = [...EXPECTED_PLACEHOLDERS[key]].sort();
       for (const form of forms) {
+        expect(form.trim().length, key).toBeGreaterThan(0);
         expect(placeholdersIn(form).sort()).toEqual(expected);
       }
     },
@@ -743,7 +796,10 @@ describe("the English message catalogue", () => {
 
   it("gives every key with plural forms a count to choose the form from", () => {
     for (const key of Object.keys(EXPECTED_PLACEHOLDERS) as MessageKey[]) {
-      if (EN_GB_CATALOGUE[key].includes("|")) {
+      if (
+        EN_GB_CATALOGUE[key].includes("|") ||
+        parsePluralForms(EN_GB_CATALOGUE[key])
+      ) {
         expect(EXPECTED_PLACEHOLDERS[key], key).toContain("count");
       }
     }
