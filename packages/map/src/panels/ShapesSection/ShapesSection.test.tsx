@@ -7,8 +7,12 @@ import {
   type LatLng,
 } from "@mapcairn/core";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { testMapContext } from "../../chrome/MapChrome/chromeTestHarness";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ChromeLayoutProvider } from "../../chrome/layoutContext";
+import {
+  testChromeLayout,
+  testMapContext,
+} from "../../chrome/MapChrome/chromeTestHarness";
 import { MapContext } from "../../host";
 import { FIT_MAX_ZOOM } from "../../layers/reveal";
 import { ServicesProvider } from "../../services";
@@ -20,6 +24,10 @@ const p = (lng: number, lat: number): LatLng => ({ lat, lng });
 const TRIANGLE = [p(2.35, 48.85), p(2.36, 48.85), p(2.35, 48.86)];
 
 let drawApi: UseDraw;
+
+afterEach(() => {
+  document.documentElement.removeAttribute("dir");
+});
 
 function Harness({ headingLevel }: { headingLevel?: 3 | 4 }) {
   const draw = useDraw({
@@ -215,6 +223,38 @@ describe("ShapesSection", () => {
       { south: 48.85, west: 2.35, north: 48.86, east: 2.36 },
       expect.objectContaining({ maxZoom: FIT_MAX_ZOOM }),
     );
+  });
+
+  it("fits imported shapes clear of a right-to-left side panel", async () => {
+    document.documentElement.dir = "rtl";
+    const adapter = new FakeMapAdapter();
+    const fit = vi.spyOn(adapter, "fitBounds");
+    const services = createFakeServices();
+    render(
+      <ServicesProvider services={services}>
+        <LiveRegionProvider>
+          <ChromeLayoutProvider
+            value={testChromeLayout({
+              layout: "panel",
+              viewport: { width: 800, height: 600 },
+              panelEdge: 300,
+            })}
+          >
+            <MapContext.Provider value={testMapContext({ adapter })}>
+              <Harness />
+            </MapContext.Provider>
+          </ChromeLayoutProvider>
+        </LiveRegionProvider>
+      </ServicesProvider>,
+    );
+    fireEvent.click(screen.getByTestId("shapes-import"));
+    await act(async () => {
+      services.fakes.fileOpener.choose(POINTS_FILE);
+    });
+    expect(fit).toHaveBeenCalledWith(expect.anything(), {
+      maxZoom: FIT_MAX_ZOOM,
+      padding: { top: 88, right: 332, bottom: 32, left: 80 },
+    });
   });
 
   it("shows why a file was refused, and fits nothing", async () => {
