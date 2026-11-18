@@ -70,7 +70,11 @@ const LIFT = "translateY(-1px)";
  */
 const HOVER_NOT_FOCUSED = "&:hover:not(:focus-visible):not(:active)";
 
-/** The scrolling page: the document is fixed for the map, so this scrolls itself. */
+/**
+ * The page's scrolling container. With `DOCUMENT_SCROLL` the document scrolls
+ * instead, as any web page does; in a browser without `:has()` the document
+ * stays fixed for the map and this container scrolls itself.
+ */
 export const scroller = style({
   height: "100%",
   overflowY: "auto",

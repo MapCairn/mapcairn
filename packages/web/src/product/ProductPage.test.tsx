@@ -2,7 +2,13 @@
 // Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { FakeClipboard, parseUrlHash, serialiseUrlHash } from "@mapcairn/core";
+import {
+  type ClipboardPort,
+  type ClipboardResult,
+  FakeClipboard,
+  parseUrlHash,
+  serialiseUrlHash,
+} from "@mapcairn/core";
 import {
   act,
   fireEvent,
@@ -40,7 +46,7 @@ const EXAMPLE_APP = readFileSync(
   "utf8",
 );
 
-function renderPage(clipboard = new FakeClipboard()) {
+function renderPage(clipboard: ClipboardPort = new FakeClipboard()) {
   return render(<ProductPage clipboard={clipboard} />);
 }
 
@@ -397,6 +403,60 @@ describe("copying the embedding example", () => {
       vi.advanceTimersByTime(COPIED_FEEDBACK_MS);
     });
     expect(copyButton()).toBeInTheDocument();
+  });
+
+  it("gives a second successful copy its own full time on Copied, even just before the first one ends", async () => {
+    vi.useFakeTimers();
+    renderPage();
+    fireEvent.click(copyButton());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
+    });
+    const copied = screen.getByRole("button", { name: "Copied" });
+    copied.focus();
+    fireEvent.click(copied);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
+    });
+    expect(screen.getByRole("button", { name: "Copied" })).toBe(copied);
+    expect(copied).not.toBeDisabled();
+    expect(document.activeElement).toBe(copied);
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(copyButton()).toBe(copied);
+  });
+
+  it("shows the outcome of the latest click when an earlier copy finishes after it", async () => {
+    const pending: ((result: ClipboardResult) => void)[] = [];
+    const clipboard: ClipboardPort = {
+      writeText: () =>
+        new Promise<ClipboardResult>((resolve) => {
+          pending.push(resolve);
+        }),
+    };
+    renderPage(clipboard);
+    const button = copyButton();
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(pending).toHaveLength(2);
+    await act(async () => {
+      pending[1]?.({ ok: true });
+    });
+    expect(
+      await screen.findByRole("button", { name: "Copied" }),
+    ).toBeInTheDocument();
+    await act(async () => {
+      pending[0]?.({ ok: false, reason: "denied" });
+    });
+    expect(screen.getByRole("button", { name: "Copied" })).toBe(button);
+    expect(liveRegions().assertive).toBeEmptyDOMElement();
   });
 
   it("reports a failure on the button and assertively, and leaves the code in place to select", async () => {
