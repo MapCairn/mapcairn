@@ -56,12 +56,24 @@ const DEFINITION_LINE =
 const LINK_DEFINITION = new RegExp(`^${DEFINITION_LINE}(?:\\n|$)`, "my");
 /** A line that starts like a definition (`[label]: text`), whether or not the rest parses as one: CommonMark allows escapes and a title over several lines that the strict form does not. */
 const DEFINITION_START = /^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*\S/my;
+/** A definition-like line in a list item or block quote, which the strict parser does not understand. */
+const CONTAINER_DEFINITION_START =
+  /^ {0,3}(?:(?:> ?)+(?:(?:[-+*]|\d{1,9}[.)])[ \t]+)?|(?:[-+*]|\d{1,9}[.)])[ \t]+(?:> ?)*)\[(?!\^)[^\]\n]+\]:[ \t]*\S/my;
 /** A line after which a definition can start a paragraph: the start, a blank line, a heading or another definition. */
 const BEFORE_DEFINITION = new RegExp(
   `^(?:[ \\t]*|[ \\t]{0,3}#{1,6}(?:[ \\t].*)?|${DEFINITION_LINE})$`,
 );
 /** Text that can be printed bare: no space, quote or control character, so it cannot read as a second item. */
 const SAFE_TOKEN = /^[\w.@+/[\]-]+$/;
+/** Raw-text or metadata HTML blocks whose contents GitHub does not render literally. */
+const UNSUPPORTED_RAW_HTML =
+  /<(?:plaintext|textarea|title|noscript|template|xmp|iframe|noembed|noframes)(?=[\s>/]|$)|<[a-z][^<>\n]*[ \t]hidden(?=[ \t=/>])/iy;
+/** GitHub GraphQL connections accept at most 100 review threads at once. */
+const REVIEW_THREAD_PAGE_SIZE = 100;
+/** Comments are requested in small pages to keep each nested connection bounded. */
+const COMMENT_PAGE_SIZE = 20;
+const REVIEW_THREADS_QUERY = `query($number:Int!,$after:String){repository(owner:"MapCairn",name:"mapcairn"){pullRequest(number:$number){reviewThreads(first:${REVIEW_THREAD_PAGE_SIZE},after:$after){pageInfo{hasNextPage endCursor}nodes{id isResolved path comments(first:${COMMENT_PAGE_SIZE}){pageInfo{hasNextPage endCursor}nodes{author{login} body}}}}}}}`;
+const THREAD_COMMENTS_QUERY = `query($threadId:ID!,$after:String){node(id:$threadId){... on PullRequestReviewThread{comments(first:${COMMENT_PAGE_SIZE},after:$after){pageInfo{hasNextPage endCursor}nodes{author{login} body}}}}}`;
 
 /** Code points that hide or reorder text: control characters other than tab, line feed and carriage return (the JSON line escapes those), soft hyphen, zero-width and bidirectional controls, separators, variation selectors, the byte order mark and Unicode tags. */
 const HIDDEN_RANGES = [
@@ -110,6 +122,52 @@ function fenceEnd(text, start, opening) {
 }
 
 /**
+ * The end of an indented code block. GitHub shows its markup literally.
+ *
+ * @param {string} text
+ * @param {number} start
+ * @returns {number}
+ */
+function indentedCodeEnd(text, start) {
+  let position = start;
+  while (position < text.length) {
+    const lineEnd = text.indexOf("\n", position);
+    const next = lineEnd === -1 ? text.length : lineEnd + 1;
+    const line = text.slice(position, lineEnd === -1 ? text.length : lineEnd);
+    if (line !== "" && !/^(?: {4}|\t)/.test(line)) {
+      break;
+    }
+    position = next;
+  }
+  return position;
+}
+
+/**
+ * The end of a fenced or indented code block at a line start.
+ *
+ * @param {string} text
+ * @param {number} position
+ * @returns {number | null}
+ */
+function codeBlockEnd(text, position) {
+  if (position !== 0 && text[position - 1] !== "\n") {
+    return null;
+  }
+  FENCE_OPEN.lastIndex = position;
+  const fence = FENCE_OPEN.exec(text);
+  if (fence !== null) {
+    return fenceEnd(text, position, fence);
+  }
+  if (
+    startsParagraph(text, position) &&
+    /^(?: {4}|\t)/.test(text.slice(position))
+  ) {
+    return indentedCodeEnd(text, position);
+  }
+  return null;
+}
+
+/**
  * Where the code span that opens at `start` ends, or -1 when its backtick run
  * is never closed by a run of the same length before the paragraph ends.
  *
@@ -154,12 +212,47 @@ function hiddenMarkupEnd(text, position) {
 }
 
 /**
+ * Whether a line starts with definition-like text the strict parser cannot
+ * safely classify.
+ *
+ * @param {string} text
+ * @param {number} position
+ * @returns {boolean}
+ */
+function hasUnparsedDefinition(text, position) {
+  if (position !== 0 && text[position - 1] !== "\n") {
+    return false;
+  }
+  DEFINITION_START.lastIndex = position;
+  if (DEFINITION_START.test(text) && startsParagraph(text, position)) {
+    return true;
+  }
+  CONTAINER_DEFINITION_START.lastIndex = position;
+  return CONTAINER_DEFINITION_START.test(text);
+}
+
+/**
+ * The end of markup to hide, including unsupported HTML that runs to the
+ * rest of the body.
+ *
+ * @param {string} text
+ * @param {number} position
+ * @returns {number}
+ */
+function hiddenEnd(text, position) {
+  UNSUPPORTED_RAW_HTML.lastIndex = position;
+  return UNSUPPORTED_RAW_HTML.test(text)
+    ? text.length
+    : hiddenMarkupEnd(text, position);
+}
+
+/**
  * One pass over the text: copies code (fenced blocks and code spans) as it is
  * and drops what GitHub does not show: the markup in `HIDDEN_MARKUP` and link
  * definitions.
  *
  * @param {string} text Text with `\n` line endings only.
- * @returns {{ text: string, hidden: number, codeWithOpener: number, maybeDefinitions: number }} The kept text, the characters dropped, how many kept code spans or fences hold an opener of hidden markup, and how many kept lines start like a link definition that did not parse as one.
+ * @returns {{ text: string, hidden: number, codeWithOpener: number, maybeDefinitions: number }} The kept text, the characters dropped, how many kept code spans or blocks hold an opener of hidden markup, and how many kept lines start like a link definition that did not parse as one.
  */
 function removeHidden(text) {
   let kept = "";
@@ -183,10 +276,9 @@ function removeHidden(text) {
   };
   while (position < text.length) {
     const atLineStart = position === 0 || text[position - 1] === "\n";
-    FENCE_OPEN.lastIndex = position;
-    const fence = atLineStart ? FENCE_OPEN.exec(text) : null;
-    if (fence) {
-      keepCode(fenceEnd(text, position, fence));
+    const blockEnd = codeBlockEnd(text, position);
+    if (blockEnd !== null) {
+      keepCode(blockEnd);
       continue;
     }
     LINK_DEFINITION.lastIndex = position;
@@ -195,15 +287,10 @@ function removeHidden(text) {
       drop(position + definition[0].length);
       continue;
     }
-    DEFINITION_START.lastIndex = position;
-    if (
-      atLineStart &&
-      DEFINITION_START.test(text) &&
-      startsParagraph(text, position)
-    ) {
+    if (hasUnparsedDefinition(text, position)) {
       maybeDefinitions += 1;
     }
-    const markupEnd = hiddenMarkupEnd(text, position);
+    const markupEnd = hiddenEnd(text, position);
     if (markupEnd !== -1) {
       drop(markupEnd);
       continue;
@@ -248,7 +335,7 @@ function startsParagraph(text, position) {
  * differently, so each that holds an opener of hidden markup is counted for a flag.
  *
  * @param {string} text
- * @returns {{ text: string, hiddenCharacters: number, codeWithOpener: number, maybeDefinitions: number }} The cleaned text, how many characters of hidden markup or link definition were removed, how many code spans or fences hold an opener of hidden markup, and how many lines start like a link definition that did not parse as one (kept, but GitHub may hide them).
+ * @returns {{ text: string, hiddenCharacters: number, codeWithOpener: number, maybeDefinitions: number, maybeNormalisation: number }} The cleaned text, how many characters of hidden markup or link definition were removed, how many code spans or blocks hold an opener of hidden markup, how many lines start like a link definition that did not parse as one (kept, but GitHub may hide them), and whether Unicode normalisation could change rendering.
  */
 export function inspectText(text) {
   let current = text.replace(/\r\n?/g, "\n");
@@ -265,13 +352,20 @@ export function inspectText(text) {
     hiddenCharacters += pass.hidden;
     current = pass.text;
   }
+  const maybeNormalisation = current.normalize("NFKC") !== current ? 1 : 0;
   const visible = Array.from(current)
     .filter((character) => {
       const point = character.codePointAt(0) ?? 0;
       return !HIDDEN_RANGES.some(([from, to]) => point >= from && point <= to);
     })
     .join("");
-  return { text: visible, hiddenCharacters, codeWithOpener, maybeDefinitions };
+  return {
+    text: visible,
+    hiddenCharacters,
+    codeWithOpener,
+    maybeDefinitions,
+    maybeNormalisation,
+  };
 }
 
 /**
@@ -310,17 +404,25 @@ export function token(value) {
  */
 export function formatItem(login, association, body, people) {
   const label = people?.has(login.toLowerCase()) ? "project" : "outside";
-  const { text, hiddenCharacters, codeWithOpener, maybeDefinitions } =
-    inspectText(body ?? "");
+  const {
+    text,
+    hiddenCharacters,
+    codeWithOpener,
+    maybeDefinitions,
+    maybeNormalisation,
+  } = inspectText(body ?? "");
   const flags = [
     hiddenCharacters > 0
-      ? ` [hidden content removed: ${hiddenCharacters} characters of hidden markup (a comment, declaration, script or style block) or link definition not rendered by GitHub; the thread holds text a person reading it cannot see]`
+      ? ` [hidden content removed: ${hiddenCharacters} characters of hidden or unsupported markup, or a link definition not rendered by GitHub; the thread holds text a person reading it cannot see]`
       : "",
     codeWithOpener > 0
       ? ` [${codeWithOpener} code span or fence holding an opener of hidden markup is shown as written; GitHub may render it as hidden, so a person may not see it]`
       : "",
     maybeDefinitions > 0
       ? ` [${maybeDefinitions} line that starts like a link definition is shown as written; GitHub may render it hidden, so a person may not see it]`
+      : "",
+    maybeNormalisation > 0
+      ? " [Unicode normalisation may change how the text is rendered, so it is shown as written only as a warning]"
       : "",
   ];
   return `${label} ${token(login)} (${token(association)}): ${JSON.stringify(text)}${flags.join("")}`;
@@ -373,6 +475,145 @@ function gh(args) {
     maxBuffer: 64 * 1024 * 1024,
   });
   return result.status === 0 ? result.stdout : null;
+}
+
+/**
+ * Runs one GraphQL query and rejects partial or malformed responses.
+ *
+ * @param {(args: string[]) => string | null} request
+ * @param {string} query
+ * @param {Record<string, string | number | undefined>} variables
+ * @returns {any | null}
+ */
+function graphQl(request, query, variables) {
+  const args = ["api", "graphql", "-f", `query=${query}`];
+  for (const [name, value] of Object.entries(variables)) {
+    if (value !== undefined) {
+      args.push(typeof value === "number" ? "-F" : "-f", `${name}=${value}`);
+    }
+  }
+  const output = request(args);
+  if (output === null) {
+    return null;
+  }
+  try {
+    const response = JSON.parse(output);
+    if (
+      response?.errors !== undefined ||
+      response?.data === null ||
+      response?.data === undefined
+    ) {
+      return null;
+    }
+    return response.data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validates a GraphQL connection and returns its nodes and next cursor.
+ *
+ * @param {any} connection
+ * @returns {{ nodes: any[], next: string | null } | null}
+ */
+function readConnection(connection) {
+  const pageInfo = connection?.pageInfo;
+  if (
+    !Array.isArray(connection?.nodes) ||
+    typeof pageInfo?.hasNextPage !== "boolean" ||
+    (pageInfo.hasNextPage &&
+      (typeof pageInfo.endCursor !== "string" || pageInfo.endCursor === ""))
+  ) {
+    return null;
+  }
+  return {
+    nodes: connection.nodes,
+    next: pageInfo.hasNextPage ? pageInfo.endCursor : null,
+  };
+}
+
+/**
+ * Fetches every comment for one unresolved review thread.
+ *
+ * @param {(args: string[]) => string | null} request
+ * @param {any} thread
+ * @returns {any | null}
+ */
+function readThreadComments(request, thread) {
+  let connection = readConnection(thread?.comments);
+  if (connection === null) {
+    return null;
+  }
+  const comments = [...connection.nodes];
+  const seen = new Set();
+  while (connection.next !== null) {
+    if (typeof thread.id !== "string" || seen.has(connection.next)) {
+      return null;
+    }
+    seen.add(connection.next);
+    const data = graphQl(request, THREAD_COMMENTS_QUERY, {
+      threadId: thread.id,
+      after: connection.next,
+    });
+    const next = readConnection(data?.node?.comments);
+    if (next === null) {
+      return null;
+    }
+    comments.push(...next.nodes);
+    connection = next;
+  }
+  return { ...thread, comments: { nodes: comments } };
+}
+
+/**
+ * Reads every unresolved review thread and all of its comments. A failed,
+ * malformed or truncated GraphQL connection is null, never a partial list.
+ *
+ * @param {number} number Pull request number.
+ * @param {(args: string[]) => string | null} [request] The GitHub CLI request function.
+ * @returns {any[] | null}
+ */
+export function readUnresolvedReviewThreads(number, request = gh) {
+  const threads = [];
+  const seen = new Set();
+  let after;
+  for (;;) {
+    if (after !== undefined && seen.has(after)) {
+      return null;
+    }
+    if (after !== undefined) {
+      seen.add(after);
+    }
+    const data = graphQl(request, REVIEW_THREADS_QUERY, { number, after });
+    const connection = readConnection(
+      data?.repository?.pullRequest?.reviewThreads,
+    );
+    if (connection === null) {
+      return null;
+    }
+    threads.push(...connection.nodes);
+    if (connection.next === null) {
+      break;
+    }
+    after = connection.next;
+  }
+
+  const unresolved = [];
+  for (const thread of threads) {
+    if (thread?.isResolved === true) {
+      continue;
+    }
+    if (thread?.isResolved !== false) {
+      return null;
+    }
+    const complete = readThreadComments(request, thread);
+    if (complete === null) {
+      return null;
+    }
+    unresolved.push(complete);
+  }
+  return unresolved;
 }
 
 /**
@@ -476,25 +717,15 @@ function printPullRequest(number, people) {
     listAll(`repos/${REPO}/pulls/${number}/comments`),
     (comment) => reviewCommentLine(people, comment),
   );
-  const threads = gh([
-    "api",
-    "graphql",
-    "-F",
-    `number=${number}`,
-    "-f",
-    `query=query($number:Int!){repository(owner:"MapCairn",name:"mapcairn"){pullRequest(number:$number){reviewThreads(first:100){nodes{isResolved path comments(first:20){nodes{author{login} body}}}}}}}`,
-    "--jq",
-    ".data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not)",
-  ]);
+  const threads = readUnresolvedReviewThreads(number);
   if (threads === null) {
     console.log(
-      "threads unavailable (the call failed): do not merge until the unresolved review threads are known",
+      "threads unavailable or incomplete (the call failed or a connection could not be completed): do not merge until every unresolved review thread and its comments are known",
     );
     return;
   }
-  for (const text of threads.split("\n").filter(Boolean)) {
-    const thread = JSON.parse(text);
-    for (const comment of thread.comments?.nodes ?? []) {
+  for (const thread of threads) {
+    for (const comment of thread.comments.nodes) {
       console.log(unresolvedThreadLine(people, thread.path, comment));
     }
   }
