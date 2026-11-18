@@ -4,7 +4,7 @@ import { formatDay, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
 import { pluralFormsOf } from "./pluralForms";
 
-/** Optional host-defined translations carried beside the typed messages. */
+/** Optional controls for host translations and the fallback record. */
 export interface CreateMessageCatalogueOptions {
   /** Translations for host-keyed layer templates, units and labels. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
@@ -66,9 +66,10 @@ function selectPluralForm(
 /**
  * Builds the dependency-free default {@link MessageCatalogue}: a plain
  * `Record<MessageKey, string>` of resolved text (partial, for a translation
- * in progress), formatted with `Intl.PluralRules` and `Intl.ListFormat`. A key missing from `catalogue`
- * falls back to `fallback`'s value, warning once per missing key for this
- * instance.
+ * in progress), formatted with `Intl.PluralRules` and `Intl.ListFormat`. A key
+ * missing from `catalogue` falls back to `fallback`'s value, using its
+ * language for plural selection and warning once per missing key for this
+ * instance. Substitutions continue to use the active `language`.
  */
 export function createMessageCatalogue(
   language: string,
