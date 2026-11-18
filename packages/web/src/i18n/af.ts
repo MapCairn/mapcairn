@@ -874,6 +874,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "privacy.contact.body":
     "Vir 'n vraag of bekommernis oor privaatheid, skryf aan {email}, of maak 'n kwessie oop op {issues}.",
   "privacy.contact.issuesLink": "GitHub",
+  "privacy.backToProduct": "Terug na die produkbladsy",
   "privacy.back": "Terug na die kaart",
   "host.about.heading": "Oor",
   "host.about.text":

@@ -856,6 +856,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "privacy.contact.body":
     "For a question or concern about privacy, write to {email}, or open an issue on {issues}.",
   "privacy.contact.issuesLink": "GitHub",
+  "privacy.backToProduct": "Back to the product page",
   "privacy.back": "Back to the map",
   "host.about.heading": "About",
   "host.about.text":

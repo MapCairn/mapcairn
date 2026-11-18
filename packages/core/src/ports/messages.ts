@@ -711,6 +711,7 @@ export type MessageKey =
   | "privacy.contact.heading"
   | "privacy.contact.body"
   | "privacy.contact.issuesLink"
+  | "privacy.backToProduct"
   | "privacy.back"
   | "host.about.heading"
   | "host.about.text"

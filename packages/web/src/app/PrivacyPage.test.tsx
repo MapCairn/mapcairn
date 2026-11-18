@@ -190,6 +190,19 @@ describe("PrivacyPage", () => {
     expect(link).toHaveAccessibleName(/opens in a new tab/);
   });
 
+  it("links back to the product page at / before the map link", () => {
+    render(<PrivacyPage />);
+
+    const product = screen.getByRole("link", {
+      name: "Back to the product page",
+    });
+    const map = screen.getByRole("link", { name: "Back to the map" });
+    expect(product).toHaveAttribute("href", "/");
+    expect(
+      product.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("links back to the map at /map", () => {
     render(<PrivacyPage />);
 

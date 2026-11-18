@@ -132,6 +132,9 @@ describe("PrivacyPage in the active language", () => {
       "https://github.com/MapCairn/mapcairn/issues",
     );
     expect(
+      view.getByRole("link", { name: "Terug na die produkbladsy" }),
+    ).toHaveAttribute("href", "/");
+    expect(
       view.getByRole("link", { name: "Terug na die kaart" }),
     ).toHaveAttribute("href", "/map");
     expect(view.getByText("mapcairn:theme")).toBeInTheDocument();

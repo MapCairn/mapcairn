@@ -707,6 +707,7 @@ const EXPECTED_PLACEHOLDERS: Record<MessageKey, readonly string[]> = {
   "privacy.contact.heading": [],
   "privacy.contact.body": ["email", "issues"],
   "privacy.contact.issuesLink": [],
+  "privacy.backToProduct": [],
   "privacy.back": [],
   "host.about.heading": [],
   "host.about.text": [],
