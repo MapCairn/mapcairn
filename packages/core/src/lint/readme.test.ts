@@ -11,7 +11,8 @@ import { describe, expect, it } from "vitest";
  * points, with the same components and props, and every relative link must
  * name a file or directory that exists. `examples/embed` is type-checked and
  * built against the SDK's public entry points on every pull request, so an
- * import it makes is one an outside app can make.
+ * import it makes is one an outside app can make. The README also names no
+ * issue or pull request, so it stays true as they close.
  */
 
 const REPO = path.resolve(
@@ -198,8 +199,11 @@ describe("README.md", () => {
     expect(broken).toEqual([]);
   });
 
-  it("names no issue, so it stays true as issues close", () => {
-    const issueReferences = README.match(/\/issues\/\d+|(?<![\w/&])#\d+\b/g);
-    expect(issueReferences).toBeNull();
+  it("names no issue or pull request, so it stays true as they close", () => {
+    const prose = README.replace(/^```[\s\S]*?^```/gm, "");
+    const references = prose.match(
+      /\/(?:issues|pull)\/\d+|(?<![\w/&])#\d+(?![\w-])/g,
+    );
+    expect(references).toBeNull();
   });
 });
