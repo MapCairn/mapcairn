@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { expect, test } from "./fixtures";
+import { mockLayerProviders } from "./support/layers";
 import { scriptSearch } from "./support/services";
 
 /**
@@ -46,6 +47,46 @@ test.describe("right to left", () => {
     }
     expect(panel.x + panel.width).toBeGreaterThan(width - 24);
     expect(zoomIn.x).toBeLessThan(24);
+  });
+
+  test("Show on map keeps a polygon clear of the right-hand panel", async ({
+    page,
+    mapPage,
+  }) => {
+    test.skip(
+      (page.viewportSize()?.width ?? 0) < 768,
+      "The side panel is a desktop layout.",
+    );
+    await mockLayerProviders(page);
+    // 1. Open the country layer and Map options.
+    await mapPage.goto("#layers=world-countries&map=2.00/0.00000/0.00000");
+    await mapPage.openMapOptions();
+    const list = page.getByTestId("layer-list-world-countries");
+    await expect(list).toBeVisible();
+    // 2. Choose Australia from the list.
+    await list.locator("summary").click();
+    await list
+      .getByTestId("layer-list-row")
+      .filter({ hasText: "Australia" })
+      .click();
+    await expect(page.getByTestId("feature-card-heading")).toHaveText(
+      "Australia",
+    );
+    // 3. Show the polygon and check its outline against the panel.
+    await page.getByTestId("feature-card-show").click();
+    const outline = page.getByTestId("selection-marker");
+    await expect(outline).toBeVisible();
+    await expect
+      .poll(async () => {
+        const polygon = await outline.boundingBox();
+        const panel = await mapPage.sheet.boundingBox();
+        return (
+          polygon !== null &&
+          panel !== null &&
+          polygon.x + polygon.width <= panel.x
+        );
+      })
+      .toBe(true);
   });
 
   test("the scale and zoom level stay clear of the open side panel", async ({

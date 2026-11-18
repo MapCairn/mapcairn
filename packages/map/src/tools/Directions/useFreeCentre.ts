@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type { LatLng, PixelPoint } from "@mapcairn/core";
+import { useReadingDirection } from "@mapcairn/react";
 import { useCallback } from "react";
 import { useChromeLayout } from "../../chrome/layoutContext";
 import { useMap } from "../../host";
@@ -26,10 +27,12 @@ export interface FreeCentre {
 export function useFreeCentre(): FreeCentre {
   const { adapter, view } = useMap();
   const { layout, viewport, panelEdge } = useChromeLayout();
+  const direction = useReadingDirection();
   const covered = freeCentre({
     layout,
     viewport,
     panelEdge,
+    direction,
   });
   const pixel = adapter ? (covered ?? adapter.project(view.center)) : null;
   const position = useCallback(

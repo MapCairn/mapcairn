@@ -31,6 +31,21 @@ describe("FIT_MAX_ZOOM", () => {
 });
 
 describe("fitPadding", () => {
+  it("mirrors the panel and end-stack clearance in right-to-left layouts", () => {
+    expect(fitPadding({ ...DESKTOP, direction: "rtl" })).toEqual({
+      top: 88,
+      right: 444,
+      bottom: 32,
+      left: 80,
+    });
+    expect(fitPadding({ ...PHONE, direction: "rtl" })).toEqual({
+      top: 88,
+      right: 32,
+      bottom: 454,
+      left: 80,
+    });
+  });
+
   it("keeps room for the search pill and the end stack beyond what the panel covers", () => {
     expect(
       fitPadding({
@@ -53,6 +68,15 @@ describe("fitPadding", () => {
 });
 
 describe("coveredPadding", () => {
+  it("puts the right-to-left side panel on the right", () => {
+    expect(coveredPadding({ ...DESKTOP, direction: "rtl" })).toEqual({
+      top: 0,
+      right: 412,
+      bottom: 0,
+      left: 0,
+    });
+  });
+
   it("keeps clear of the bottom sheet at the detent a reveal raises it to", () => {
     const heights = computeDetentHeights({
       viewportHeight: 844,
@@ -88,6 +112,13 @@ describe("coveredPadding", () => {
 });
 
 describe("freeCentre", () => {
+  it("centres in the free area to the left of a right-to-left panel", () => {
+    expect(freeCentre({ ...DESKTOP, direction: "rtl" })).toEqual({
+      x: (1280 - 412) / 2,
+      y: 360,
+    });
+  });
+
   it("is the middle of the map above the bottom sheet", () => {
     const heights = computeDetentHeights({
       viewportHeight: 844,
@@ -111,6 +142,12 @@ describe("freeCentre", () => {
 });
 
 describe("revealOffset", () => {
+  it("moves a point behind a right-to-left panel into the free area", () => {
+    expect(
+      revealOffset({ x: 1200, y: 360 }, { ...DESKTOP, direction: "rtl" }),
+    ).toEqual({ dx: 1200 - (1280 - 412) / 2, dy: 0 });
+  });
+
   it("leaves a point alone when it is clear of the sheet and the edges", () => {
     expect(revealOffset({ x: 195, y: 200 }, PHONE)).toBeNull();
   });

@@ -11,7 +11,7 @@ import {
   hasCard,
   type LayerFeature,
 } from "@mapcairn/core";
-import { useLatestRef } from "@mapcairn/react";
+import { useLatestRef, useReadingDirection } from "@mapcairn/react";
 import {
   type Ref,
   useCallback,
@@ -156,6 +156,7 @@ export function LayersSection({
   const { reducedMotion } = usePreferences();
   const reducedMotionRef = useLatestRef(reducedMotion);
   const { layout, viewport, panelEdge } = useChromeLayout();
+  const direction = useReadingDirection();
   const [cardRequest, setCardRequest] = useState(0);
   const { selected, choices } = layers;
   const choicesHeading = useRef<HTMLHeadingElement>(null);
@@ -208,6 +209,7 @@ export function LayersSection({
             layout,
             viewport,
             panelEdge,
+            direction,
           })
         : null;
     if (adapter && offset) {
@@ -222,6 +224,7 @@ export function LayersSection({
     layout,
     viewport,
     panelEdge,
+    direction,
     reducedMotionRef,
   ]);
 
@@ -251,6 +254,7 @@ export function LayersSection({
         layout,
         viewport,
         panelEdge,
+        direction,
       });
       adapter.fitBounds(bounds, {
         padding: {
@@ -266,6 +270,7 @@ export function LayersSection({
         layout,
         viewport,
         panelEdge,
+        direction,
       });
       if (padding) {
         // A fit with padding centres the point in what the sheet leaves free.
