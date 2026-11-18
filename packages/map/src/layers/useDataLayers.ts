@@ -40,7 +40,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { useServices } from "../services";
+import { useMessages, useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import { type CatalogueMessage, catalogueNotice } from "./catalogueNotice";
 import { type Link, type Reconciled, reconcile } from "./catalogueReconcile";
@@ -707,7 +707,11 @@ function sortable(value: FieldValue | undefined): number | string | null {
   return null;
 }
 
-function compare(a: FieldValue | undefined, b: FieldValue | undefined): number {
+function compare(
+  a: FieldValue | undefined,
+  b: FieldValue | undefined,
+  collator: Intl.Collator,
+): number {
   const left = sortable(a);
   const right = sortable(b);
   if (left === null || right === null) {
@@ -720,13 +724,14 @@ function compare(a: FieldValue | undefined, b: FieldValue | undefined): number {
   if (typeof left === "number" && typeof right === "number") {
     return left - right;
   }
-  return String(left).localeCompare(String(right));
+  return collator.compare(String(left), String(right));
 }
 
 function sortFeatures(
   definition: LayerDefinition,
   features: readonly LayerFeature[],
   sortId: string,
+  collator: Intl.Collator,
 ): readonly LayerFeature[] {
   if (!isFeedLayer(definition)) {
     return features;
@@ -738,7 +743,7 @@ function sortFeatures(
   }
   const direction = sort.direction === "desc" ? -1 : 1;
   return [...features].sort((a, b) => {
-    const order = compare(a.fields[sort.field], b.fields[sort.field]);
+    const order = compare(a.fields[sort.field], b.fields[sort.field], collator);
     // Missing values stay last whichever way the list runs.
     const missing =
       a.fields[sort.field] == null || b.fields[sort.field] == null;
@@ -770,6 +775,8 @@ function sortFeatures(
  */
 export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   const { layers: catalogue, layerSource } = useServices();
+  const { language } = useMessages();
+  const collator = useMemo(() => new Intl.Collator(language), [language]);
   const announce = useAnnounce();
   const now = useCallback(() => (options.now ?? Date.now)(), [options.now]);
   const catalogueState = useSyncExternalStore(
@@ -1479,10 +1486,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
           status: result.status,
           features: result.features,
           sortId,
-          sorted: sortFeatures(definition, result.features, sortId),
+          sorted: sortFeatures(definition, result.features, sortId, collator),
         };
       }),
-    [definitions, state],
+    [collator, definitions, state],
   );
 
   const selected = useMemo(() => {

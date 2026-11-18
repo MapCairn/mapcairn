@@ -2,7 +2,9 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  createLanguageCatalogue,
   FakeLayerCatalogue,
+  FakeMessageCatalogue,
   type FakeServices,
   type LayerDefinition,
   LayerError,
@@ -339,6 +341,47 @@ describe("useDataLayers", () => {
         samplePoint("a", { title: "Alpha" }),
       ];
       expect(await sorted(features)).toEqual(["a", "b", "none"]);
+    });
+
+    it("resorts text using the active catalogue when the language changes", async () => {
+      const english = new FakeMessageCatalogue({ language: "en-GB" });
+      const swedish = new FakeMessageCatalogue({ language: "sv" });
+      const services = createFakeServices({
+        layers: new FakeLayerCatalogue([sortable]),
+        messages: english,
+        languages: createLanguageCatalogue(
+          [
+            { tag: "en-GB", label: "English" },
+            { tag: "sv", label: "Swedish" },
+          ],
+          "en-GB",
+          () => swedish,
+        ),
+      });
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <ServicesProvider services={services}>
+          <LiveRegionProvider>{children}</LiveRegionProvider>
+        </ServicesProvider>
+      );
+      const { result } = renderHook(() => useDataLayers(), { wrapper });
+      services.fakes.layerSource.setFeatures("sample-points", [
+        samplePoint("z", { title: "Zebra" }),
+        samplePoint("a-umlaut", { title: "Älg" }),
+      ]);
+      act(() => result.current.setEnabled("sample-points", true));
+      await waitFor(() =>
+        expect(layer(result, "sample-points").sorted.map((f) => f.id)).toEqual([
+          "a-umlaut",
+          "z",
+        ]),
+      );
+      act(() => services.fakes.settings.set({ language: "sv" }));
+      await waitFor(() =>
+        expect(layer(result, "sample-points").sorted.map((f) => f.id)).toEqual([
+          "z",
+          "a-umlaut",
+        ]),
+      );
     });
 
     it("orders readable times as times, not as text, and keeps what has none last when descending", async () => {
