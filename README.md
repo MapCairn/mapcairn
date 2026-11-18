@@ -11,8 +11,6 @@
 
 The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here.
 
-The playground is the SDK's showcase and test bed (`packages/web`). What a team adopts is the SDK.
-
 ## Embed a map
 
 This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top:
