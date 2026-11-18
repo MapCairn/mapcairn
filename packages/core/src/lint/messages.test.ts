@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import { EN_GB_CATALOGUE } from "../messages/en-GB";
-import { parsePluralForms } from "../messages/pluralForms";
+import { parsePluralForms, pluralFormsOf } from "../messages/pluralForms";
 import type { MessageKey } from "../ports/messages";
 
 /**
@@ -726,16 +726,10 @@ function missingPluralCategories(
   language: string,
   value: string,
 ): readonly string[] {
-  const keyed = parsePluralForms(value);
-  if (!keyed && !value.includes("|")) {
+  const available = pluralFormsOf(value);
+  if (!available) {
     return [];
   }
-  const available =
-    keyed ??
-    new Map([
-      ["one", ""],
-      ["other", ""],
-    ]);
   return new Intl.PluralRules(language)
     .resolvedOptions()
     .pluralCategories.filter((category) => !available.has(category))
