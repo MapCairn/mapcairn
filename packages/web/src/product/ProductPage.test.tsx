@@ -2,14 +2,35 @@
 // Copyright MapCairn contributors
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { parseUrlHash, serialiseUrlHash } from "@mapcairn/core";
-import { render, screen, within } from "@testing-library/react";
+import {
+  type ClipboardPort,
+  type ClipboardResult,
+  FakeClipboard,
+  parseUrlHash,
+  serialiseUrlHash,
+} from "@mapcairn/core";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
+import { loader as markdownLoader } from "../routes/index.md";
+import { loader as fullLoader } from "../routes/llms-full.txt";
+import { COPIED_FEEDBACK_MS } from "./CopyCodeButton";
 import { ProductPage } from "./ProductPage";
 import * as styles from "./ProductPage.css";
-import { EMBED_EXAMPLE_CODE } from "./productContent";
+import {
+  EMBED_EXAMPLE_CODE,
+  HEADLINE,
+  LEDE,
+  lineToText,
+} from "./productContent";
 
 const REPO = "https://github.com/MapCairn/mapcairn";
 
@@ -25,8 +46,16 @@ const EXAMPLE_APP = readFileSync(
   "utf8",
 );
 
-function renderPage() {
-  return render(<ProductPage />);
+function renderPage(clipboard: ClipboardPort = new FakeClipboard()) {
+  return render(<ProductPage clipboard={clipboard} />);
+}
+
+/** The page's polite and assertive live regions. */
+function liveRegions() {
+  return {
+    polite: screen.getByTestId("live-region-polite"),
+    assertive: screen.getByTestId("live-region-assertive"),
+  };
 }
 
 /** A section by its heading. */
@@ -35,13 +64,29 @@ function section(name: string): HTMLElement {
 }
 
 describe("the product page stands on its own", () => {
-  it("has one h1 that says what MapCairn is", () => {
+  it("has one h1 that says what teams can build, and for whom", () => {
     renderPage();
     const headings = screen.getAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent(
-      "An open-source SDK for accessible, privacy-respecting map applications",
+      "Build accessible, privacy-respecting map applications for the public",
     );
+  });
+
+  it("says under the h1 what MapCairn is and which teams it is for", () => {
+    renderPage();
+    const lede = screen.getByRole("heading", { level: 1 })
+      .nextElementSibling as HTMLElement;
+    expect(lede.tagName).toBe("P");
+    expect(lede).toHaveTextContent(
+      "MapCairn is an open-source React SDK for teams building public-interest maps, such as open data and hazard maps.",
+    );
+  });
+
+  it("puts the same hero at the top of /index.md and in /llms-full.txt", async () => {
+    const hero = `# ${HEADLINE}\n\n${lineToText(LEDE)}\n`;
+    expect((await markdownLoader().text()).startsWith(hero)).toBe(true);
+    expect(await fullLoader().text()).toContain(hero);
   });
 
   it("has one clear order: embed, what you get, see it working, fit, then questions", () => {
@@ -208,7 +253,9 @@ describe("the product page stands on its own", () => {
   });
 
   it("asks nothing of a third party: no image, frame, script source or stylesheet from elsewhere", () => {
-    const html = renderToStaticMarkup(<ProductPage />);
+    const html = renderToStaticMarkup(
+      <ProductPage clipboard={new FakeClipboard()} />,
+    );
     expect(html).not.toMatch(/<(img|iframe|link|object|embed)\b/);
     expect(html).not.toMatch(/<script[^>]*\bsrc=/);
     expect(html).not.toMatch(/\ssrc="https?:/);
@@ -239,7 +286,9 @@ describe("the product page stands on its own", () => {
   });
 
   it("starts with the old map link redirect, exactly as its CSP hash allows", () => {
-    const html = renderToStaticMarkup(<ProductPage />);
+    const html = renderToStaticMarkup(
+      <ProductPage clipboard={new FakeClipboard()} />,
+    );
     expect(html).toContain(`<script>${MAP_LINK_REDIRECT_SCRIPT}</script>`);
     expect(html.indexOf("<script>")).toBeLessThan(html.indexOf("<a "));
   });
@@ -294,5 +343,162 @@ describe("the embedding example", () => {
       (match) => match[1],
     );
     expect(sources).toEqual(["@mapcairn/core", "@mapcairn/map", "react"]);
+  });
+});
+
+describe("copying the embedding example", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The copy button beside the example. */
+  function copyButton(): HTMLElement {
+    return within(
+      screen.getByRole("region", { name: "Embed a map" }),
+    ).getByRole("button", { name: "Copy code" });
+  }
+
+  it("writes nothing to the clipboard until the visitor asks", () => {
+    const clipboard = new FakeClipboard();
+    renderPage(clipboard);
+    expect(copyButton()).toHaveAttribute("type", "button");
+    expect(clipboard.attempts).toEqual([]);
+  });
+
+  it("copies the exact source shown, with none of the highlighting markup", async () => {
+    const clipboard = new FakeClipboard();
+    renderPage(clipboard);
+    fireEvent.click(copyButton());
+    await waitFor(() =>
+      expect(clipboard.written).toEqual([EMBED_EXAMPLE_CODE]),
+    );
+    const code = screen.getByRole("region", { name: "Embedding example" });
+    expect(clipboard.written[0]).toBe(code.textContent);
+  });
+
+  it("says Copied on the button and in the polite live region, and keeps focus on the button", async () => {
+    renderPage();
+    const button = copyButton();
+    button.focus();
+    fireEvent.click(button);
+    expect(
+      await screen.findByRole("button", { name: "Copied" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(liveRegions().polite).toHaveTextContent("Code copied"),
+    );
+    expect(liveRegions().assertive).toBeEmptyDOMElement();
+    expect(document.activeElement).toBe(button);
+  });
+
+  it("goes back to Copy code after a while, so the next copy is confirmed again", async () => {
+    vi.useFakeTimers();
+    renderPage();
+    fireEvent.click(copyButton());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(COPIED_FEEDBACK_MS);
+    });
+    expect(copyButton()).toBeInTheDocument();
+  });
+
+  it("gives a second successful copy its own full time on Copied, even just before the first one ends", async () => {
+    vi.useFakeTimers();
+    renderPage();
+    fireEvent.click(copyButton());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
+    });
+    const copied = screen.getByRole("button", { name: "Copied" });
+    copied.focus();
+    fireEvent.click(copied);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      vi.advanceTimersByTime(COPIED_FEEDBACK_MS - 100);
+    });
+    expect(screen.getByRole("button", { name: "Copied" })).toBe(copied);
+    expect(copied).not.toBeDisabled();
+    expect(document.activeElement).toBe(copied);
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(copyButton()).toBe(copied);
+  });
+
+  it("shows the outcome of the latest click when an earlier copy finishes after it", async () => {
+    const pending: ((result: ClipboardResult) => void)[] = [];
+    const clipboard: ClipboardPort = {
+      writeText: () =>
+        new Promise<ClipboardResult>((resolve) => {
+          pending.push(resolve);
+        }),
+    };
+    renderPage(clipboard);
+    const button = copyButton();
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(pending).toHaveLength(2);
+    await act(async () => {
+      pending[1]?.({ ok: true });
+    });
+    expect(
+      await screen.findByRole("button", { name: "Copied" }),
+    ).toBeInTheDocument();
+    await act(async () => {
+      pending[0]?.({ ok: false, reason: "denied" });
+    });
+    expect(screen.getByRole("button", { name: "Copied" })).toBe(button);
+    expect(liveRegions().assertive).toBeEmptyDOMElement();
+  });
+
+  it("reports a failure on the button and assertively, and leaves the code in place to select", async () => {
+    const clipboard = new FakeClipboard();
+    clipboard.failWith("denied");
+    renderPage(clipboard);
+    const button = copyButton();
+    button.focus();
+    fireEvent.click(button);
+    expect(
+      await screen.findByRole("button", { name: "Copy failed" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(liveRegions().assertive).toHaveTextContent(
+        "Could not copy. Select the code and copy it manually.",
+      ),
+    );
+    expect(document.activeElement).toBe(button);
+    const code = screen.getByRole("region", { name: "Embedding example" });
+    expect(code).toHaveAttribute("tabindex", "0");
+    expect(code.textContent).toBe(EMBED_EXAMPLE_CODE);
+  });
+
+  it("copies again after a failure once the clipboard works", async () => {
+    const clipboard = new FakeClipboard();
+    clipboard.failWith("unsupported");
+    renderPage(clipboard);
+    fireEvent.click(copyButton());
+    const failed = await screen.findByRole("button", { name: "Copy failed" });
+    clipboard.succeed();
+    fireEvent.click(failed);
+    expect(
+      await screen.findByRole("button", { name: "Copied" }),
+    ).toBeInTheDocument();
+    expect(clipboard.written).toEqual([EMBED_EXAMPLE_CODE]);
+  });
+
+  it("renders on the server with the button and no message", () => {
+    const html = renderToStaticMarkup(
+      <ProductPage clipboard={new FakeClipboard()} />,
+    );
+    expect(html).toContain(">Copy code</button>");
+    expect(html).not.toContain("Code copied");
   });
 });

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { useState } from "react";
 import type { LinksFunction, MetaFunction } from "react-router";
 import { buildPageMeta } from "../buildPageMeta";
+import { createProductClipboard } from "../composition/productClipboard";
 import { PRODUCT_DESCRIPTION, SITE_URL } from "../constants/siteConfig";
 import type { PageLanguageHandle } from "../i18n/pageLanguage";
 import { ProductPage } from "../product/ProductPage";
@@ -55,7 +57,11 @@ export const links: LinksFunction = () => [
  */
 export const handle: PageLanguageHandle = { language: "en-GB" };
 
-/** React Router route module export: the product page at `/`. */
+/**
+ * React Router route module export: the product page at `/`, with the
+ * browser clipboard for its copy button and no other service.
+ */
 export default function ProductRoute() {
-  return <ProductPage />;
+  const [clipboard] = useState(createProductClipboard);
+  return <ProductPage clipboard={clipboard} />;
 }

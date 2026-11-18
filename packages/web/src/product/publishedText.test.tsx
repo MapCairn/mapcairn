@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { FakeClipboard } from "@mapcairn/core";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { loader as markdownLoader } from "../routes/index.md";
@@ -27,7 +28,7 @@ const VOLATILE =
 
 /** Everything the rendered page says and links to, as one text. */
 function pageText(): string {
-  const { container } = render(<ProductPage />);
+  const { container } = render(<ProductPage clipboard={new FakeClipboard()} />);
   const hrefs = [...container.querySelectorAll("a")].map(
     (link) => link.getAttribute("href") ?? "",
   );
