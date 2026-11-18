@@ -208,9 +208,65 @@ describe("checkMessageCatalogue", () => {
         gone: "A key English no longer has.",
       }),
     ).toEqual([
-      { key: "close", problem: "unusedAllowance" },
       { key: "items", problem: "copiedEnglish" },
+      { key: "items", problem: "unusedAllowance" },
+      { key: "close", problem: "unusedAllowance" },
       { key: "gone", problem: "unusedAllowance" },
     ]);
+  });
+
+  it("reports an allowance with a blank reason even when the value is translated", () => {
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { close: "Sluit" },
+        { close: "Close" },
+        { close: " " },
+      ),
+    ).toEqual([{ key: "close", problem: "unusedAllowance" }]);
+  });
+
+  it("reports an allowance for a key the catalogue leaves out", () => {
+    expect(
+      checkMessageCatalogue("af", {}, { close: "Close" }, { close: "A word." }),
+    ).toEqual([
+      { key: "close", problem: "missing" },
+      { key: "close", problem: "unusedAllowance" },
+    ]);
+  });
+
+  it("reads only a catalogue's own keys, so a prototype name is a key like any other", () => {
+    const english = { constructor: "Close", toString: "Open" };
+    expect(checkMessageCatalogue("af", {}, english)).toEqual([
+      { key: "constructor", problem: "missing" },
+      { key: "toString", problem: "missing" },
+    ]);
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { constructor: "Sluit", toString: "Open" },
+        english,
+      ),
+    ).toEqual([{ key: "toString", problem: "copiedEnglish" }]);
+  });
+
+  it("does not take an allowance from an object's prototype", () => {
+    const inherited = Object.create({ close: "Inherited, not own." });
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { close: "Close" },
+        { close: "Close" },
+        inherited,
+      ),
+    ).toEqual([{ key: "close", problem: "copiedEnglish" }]);
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { constructor: "Close" },
+        { constructor: "Close" },
+        { constructor: "The same word." },
+      ),
+    ).toEqual([]);
   });
 });

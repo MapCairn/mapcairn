@@ -16,8 +16,9 @@ import { parsePluralForms, pluralFormsOf } from "./pluralForms";
  * - `copiedEnglish`: the value, or one of its forms, is the English form
  *   it is compared with for placeholders (without case or surrounding space),
  *   and the key is not allowed to match English.
- * - `unusedAllowance`: the key is allowed to match English but does not, or
- *   is not an English key.
+ * - `unusedAllowance`: an allowance in `sameAsEnglish` with a blank reason,
+ *   or for a key whose value is missing or does not match English, or that
+ *   English does not have.
  */
 export type MessageCatalogueProblemKind =
   | "missing"
@@ -110,6 +111,17 @@ function isCopied(forms: Forms, english: Forms): boolean {
 }
 
 /**
+ * The value `record` holds as its own property `key`, never one inherited
+ * from its prototype, so a key such as `constructor` reads like any other.
+ */
+function ownValue(
+  record: Readonly<Partial<Record<string, string>>>,
+  key: string,
+): string | undefined {
+  return Object.hasOwn(record, key) ? record[key] : undefined;
+}
+
+/**
  * Checks a host's message catalogue against the English one, for a host's
  * own tests or a command line: every key is present and known, each plural
  * form keeps the English placeholders, the plural forms are the categories
@@ -118,11 +130,14 @@ function isCopied(forms: Forms, english: Forms): boolean {
  * {@link createMessageCatalogue} reads them.
  *
  * @param sameAsEnglish - Keys whose value may match English (a symbol, a
- *   name kept as published), each with the reason. An allowance with a blank
- *   reason does not count.
- * @returns Every problem found, in English key order, then unknown keys and
- *   unused allowances. An empty list means the catalogue passes; a
- *   translation in progress can leave out the `missing` problems.
+ *   name kept as published), each with the reason. Only its own properties
+ *   count. An allowance with a blank reason does not allow a copy and is
+ *   reported, as is one whose value no longer matches English.
+ * @returns Every problem found: those of each English key in English key
+ *   order, then unknown keys, then unused allowances in `sameAsEnglish`
+ *   order. An empty list means the catalogue passes; a translation in
+ *   progress can leave out the `missing` problems. Keys are read only as a
+ *   record's own properties.
  */
 export function checkMessageCatalogue(
   language: string,
@@ -136,8 +151,11 @@ export function checkMessageCatalogue(
   const report = (key: string, problem: MessageCatalogueProblemKind) => {
     problems.push({ key, problem });
   };
+  const allowed = (key: string) =>
+    (ownValue(sameAsEnglish, key)?.trim() ?? "") !== "";
+  const copiedKeys = new Set<string>();
   for (const [key, englishValue] of Object.entries(english)) {
-    const value = catalogue[key];
+    const value = ownValue(catalogue, key);
     if (value === undefined) {
       report(key, "missing");
       continue;
@@ -153,13 +171,11 @@ export function checkMessageCatalogue(
     if (hasWrongPluralForms(value, englishValue, categories)) {
       report(key, "pluralForms");
     }
-    const copied = isCopied(forms, englishForms);
-    const allowed = (sameAsEnglish[key]?.trim() ?? "") !== "";
-    if (copied && !allowed) {
-      report(key, "copiedEnglish");
-    }
-    if (!copied && allowed) {
-      report(key, "unusedAllowance");
+    if (isCopied(forms, englishForms)) {
+      copiedKeys.add(key);
+      if (!allowed(key)) {
+        report(key, "copiedEnglish");
+      }
     }
   }
   for (const key of Object.keys(catalogue)) {
@@ -168,7 +184,7 @@ export function checkMessageCatalogue(
     }
   }
   for (const key of Object.keys(sameAsEnglish)) {
-    if (!Object.hasOwn(english, key)) {
+    if (!(allowed(key) && copiedKeys.has(key))) {
       report(key, "unusedAllowance");
     }
   }

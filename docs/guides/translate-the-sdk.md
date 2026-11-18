@@ -67,8 +67,10 @@ expect(
 - `emptyForm`: the value, or one of its plural forms, is blank.
 - `placeholders`: a form's `{name}` placeholders differ from those of the English form of the same category, or of English's "other" form when English has no form of that category. A plain value counts as its own "other" form.
 - `pluralForms`: when either value has plural forms, the translation's forms are not exactly the categories `new Intl.PluralRules(language).resolvedOptions().pluralCategories` gives (a plain value counts as "other", and `one|other` as those two). A value that opens like keyed forms but cannot be read, or has more than two `|` forms, is reported too.
-- `copiedEnglish`: a form is the same as the English form it is compared with, ignoring case and surrounding space, and the key is not in `sameAsEnglish` with a reason. An allowance with a blank reason does not count.
-- `unusedAllowance`: a key in `sameAsEnglish` whose value no longer matches English, or that English does not have.
+- `copiedEnglish`: a form is the same as the English form it is compared with, ignoring case and surrounding space, and the key has no entry of its own in `sameAsEnglish` with a reason that is not blank.
+- `unusedAllowance`: a key in `sameAsEnglish` whose reason is blank, whose value is missing or no longer matches English, or that English does not have.
+
+Only a catalogue's own keys are read, so a key such as `constructor` is checked like any other and nothing is inherited from the object's prototype.
 
 Both catalogues are plain objects, so one loaded from JSON works as well as a module. Keys of your own, for your definitions, need their English in the object you pass as `english` (`{ ...EN_GB_CATALOGUE, ...MY_ENGLISH }`).
 
