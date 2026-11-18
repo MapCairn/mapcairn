@@ -1286,7 +1286,50 @@ describe("run: other open pull requests with the same head commit", () => {
     });
     expect(
       named(world.calls, "pulls.listCommits").map((c) => c.params.pull_number),
-    ).toEqual([7, 8]);
+    ).toEqual([7, 8, 8]);
+  });
+
+  it("corrects a stale success when two runs for a shared head interleave", async () => {
+    const shared: OtherPull = {
+      number: 8,
+      user: grace,
+      commits: [commit(grace)],
+      comments: [agreement(grace, 20)],
+    };
+    const world = makeWorld({
+      comments: [botComment(`${COMMENT_MARKER}\nold text`), ...agreed.comments],
+      otherPulls: [shared],
+    });
+    const createStatus = world.github.rest.repos.createCommitStatus;
+    let interleaved = false;
+    world.github.rest.repos.createCommitStatus = async (params: Params) => {
+      if (params.state === "success" && !interleaved) {
+        interleaved = true;
+        shared.commits?.push(commit(user("heidi", 4)));
+        await run({
+          ...world,
+          context: {
+            ...pullRequestEvent,
+            payload: {
+              ...pullRequestEvent.payload,
+              pull_request: { number: 8 },
+            },
+          },
+        });
+      }
+      return createStatus(params);
+    };
+
+    await run({ ...world, context: pullRequestEvent });
+
+    expect(statuses(world).map((call) => call.params.state)).toEqual([
+      "failure",
+      "success",
+      "failure",
+    ]);
+    expect(lastState(world)).toBe("failure");
+    const updates = named(world.calls, "issues.updateComment");
+    expect(String(updates.at(-1)?.params.body)).toContain("#8");
   });
 
   it("reads the other pull request's own comments, not this one's", async () => {
