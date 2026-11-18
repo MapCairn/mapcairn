@@ -52,7 +52,7 @@ The reference site's language options are in `packages/web/src/i18n/offeredLangu
 
 ## Check a catalogue
 
-`checkMessageCatalogue(language, catalogue, english, sameAsEnglish)` from `@mapcairn/core` checks a catalogue against the English one and returns a list of problems, each a `key` and a `problem`, in English key order and then unknown keys and unused allowances; an empty list means it passes. Run it in your own tests:
+`checkMessageCatalogue(language, catalogue, english, options)` from `@mapcairn/core` checks a catalogue against the English one and returns a list of problems, each a `key` and a `problem`; an empty list means it passes. Run it in your own tests:
 
 ```ts
 import { checkMessageCatalogue, EN_GB_CATALOGUE } from "@mapcairn/core";
@@ -60,22 +60,25 @@ import { checkMessageCatalogue, EN_GB_CATALOGUE } from "@mapcairn/core";
 const SAME_AS_ENGLISH = { "basemap.bright.name": "A map style's name." };
 
 expect(
-  checkMessageCatalogue("fr", FR_CATALOGUE, EN_GB_CATALOGUE, SAME_AS_ENGLISH),
+  checkMessageCatalogue("fr", FR_CATALOGUE, EN_GB_CATALOGUE, {
+    sameAsEnglish: SAME_AS_ENGLISH,
+  }),
 ).toEqual([]);
 ```
 
+A key is plural when its English value or the translation has forms, `one|other` or category-keyed, read as `createMessageCatalogue` reads them. Any other value is checked as text. `plural` reads a `|` as a separator between forms, while `t` shows it as written, so the check cannot tell from the text alone how a key with a `|` is read. List each key that is read only with `t` and has a `|`, or text that looks like keyed forms, in `notPlural`, and its values are checked as text.
+
 - `missing` and `unknown`: a key English has and the catalogue does not, or the other way round. A translation in progress can filter out `missing`.
 - `emptyForm`: the value, or one of its plural forms, is blank.
-- `placeholders`: a form's `{name}` placeholders differ from those of the English form of the same category, or of English's "other" form when English has no form of that category. A plain value counts as its own "other" form.
-- `pluralForms`: when either value has plural forms, the translation's forms are not exactly the categories `new Intl.PluralRules(language).resolvedOptions().pluralCategories` gives (a plain value counts as "other", and `one|other` as those two). A value that opens like keyed forms but cannot be read, or has more than two `|` forms, is reported too.
-- `copiedEnglish`: a form is the same as the English form it is compared with, ignoring case and surrounding space, and the key has no entry of its own in `sameAsEnglish` with a reason that is not blank.
-- `unusedAllowance`: a key in `sameAsEnglish` whose reason is blank, whose value is missing or no longer matches English, or that English does not have.
+- `placeholders`: the value, or any one of its plural forms, does not have exactly the `{name}` placeholders that the English value has across all its forms. A plural category does not cover the same numbers in every language (Russian "one" also covers 21, for example), so a form cannot drop `{count}` because the English form of the same category does. Write the number in every form; where a host knows that leaving it out is right, it can filter that key's `placeholders` problem in its own test.
+- `pluralForms`: a plural key's forms are not exactly the categories `new Intl.PluralRules(language).resolvedOptions().pluralCategories` gives (a plain value counts as "other", and `one|other` as those two). A value that cannot be read is reported too: one that opens like keyed forms but does not parse, one with more than two `|` forms, and one with a brace that is not part of a `{name}` placeholder, such as `othre{{count} 件}`.
+- `copiedEnglish`: a form is the same as the English form of its category, or English's "other" form when English has no form of that category, ignoring case and surrounding space, and the key has no entry of its own in `sameAsEnglish` with a reason that is not blank.
+- `unusedAllowance`: an entry in `sameAsEnglish` whose reason is blank, whose value is missing or no longer matches English, or whose key English does not have; or an entry in `notPlural` whose key English does not have, or for which neither the English value nor the translation has forms.
 
-Only a catalogue's own keys are read, so a key such as `constructor` is checked like any other and nothing is inherited from the object's prototype.
+The problems come in English key order, then unknown keys, then unused `sameAsEnglish` entries and then unused `notPlural` entries. Only the catalogues' own keys are read, so a key such as `constructor` is checked like any other and nothing is inherited from an object's prototype.
 
-Both catalogues are plain objects, so one loaded from JSON works as well as a module. Keys of your own, for your definitions, need their English in the object you pass as `english` (`{ ...EN_GB_CATALOGUE, ...MY_ENGLISH }`).
-
-To see what is left to translate, run `npm run catalogue:check -- <language> <file> [export]` in this repository. It prints how many keys the catalogue is missing and how many are the same as English, then lists each. The file is a JSON object of messages or a TypeScript or JavaScript module, read through tsx; `export` names the export that holds the messages and defaults to the module's only export, else its default export. A relative path is read from the folder npm was run in. The command does not know a test's `sameAsEnglish` list, so it lists those keys too, and it exits 0 once the catalogue is read: the test is the gate. The script is `packages/web/scripts/catalogueCheck.mjs`, and it uses only `checkMessageCatalogue` and `EN_GB_CATALOGUE`, so a host can copy it.
+Both catalogues are plain objects, so one loaded from JSON works as well as a module. Pass as `english` the English your host shows: `EN_GB_CATALOGUE`, or your own English for the same keys if you replaced its wording. The keys are the SDK's `MessageKey` values. `resolveText` looks up only those, so a definition's text that is not one of them is shown as written, and a key of your own in a catalogue is never looked up for a definition.
+To see what is left to translate, run `npm run catalogue:check -- <language> <file> [export] [--english <file>] [--english-export <export>]` in this repository. It prints how many keys the catalogue is missing and how many are the same as English, then lists each. The file is a JSON object of messages or a TypeScript or JavaScript module, read through tsx; `export` names the export that holds the messages and defaults to the module's only export, else its default export. The English is `EN_GB_CATALOGUE` unless `--english` names a file of your own English, read the same way, with `--english-export` naming its export. A relative path is read from the folder npm was run in. A file that is not an object whose values are all text, such as a list, is refused with exit code 1. The command does not know a test's `sameAsEnglish` list, so it lists those keys too, and it exits 0 once the catalogues are read: the test is the gate. The script is `packages/web/scripts/catalogueCheck.mjs`, and it uses only `checkMessageCatalogue` and `EN_GB_CATALOGUE`, so a host can copy it.
 
 ## Translate definitions
 

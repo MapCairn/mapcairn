@@ -51,12 +51,9 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
 describe("the Afrikaans catalogue", () => {
   it("passes the catalogue check against English, with every allowance used", () => {
     expect(
-      checkMessageCatalogue(
-        "af",
-        AF_CATALOGUE,
-        EN_GB_CATALOGUE,
-        SAME_AS_ENGLISH,
-      ),
+      checkMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE, {
+        sameAsEnglish: SAME_AS_ENGLISH,
+      }),
     ).toEqual([]);
   });
 

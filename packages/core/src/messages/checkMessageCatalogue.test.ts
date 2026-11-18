@@ -21,20 +21,19 @@ const ALLOWED = { items: "Item is the Afrikaans word too." };
 
 describe("checkMessageCatalogue", () => {
   it("finds nothing wrong with a complete, translated catalogue", () => {
-    expect(checkMessageCatalogue("af", AFRIKAANS, ENGLISH, ALLOWED)).toEqual(
-      [],
-    );
+    expect(
+      checkMessageCatalogue("af", AFRIKAANS, ENGLISH, {
+        sameAsEnglish: ALLOWED,
+      }),
+    ).toEqual([]);
   });
 
   it("reports a key the catalogue leaves out and one English does not have", () => {
     const { close: _close, ...partial } = AFRIKAANS;
     expect(
-      checkMessageCatalogue(
-        "af",
-        { ...partial, extra: "Ekstra" },
-        ENGLISH,
-        ALLOWED,
-      ),
+      checkMessageCatalogue("af", { ...partial, extra: "Ekstra" }, ENGLISH, {
+        sameAsEnglish: ALLOWED,
+      }),
     ).toEqual([
       { key: "close", problem: "missing" },
       { key: "extra", problem: "unknown" },
@@ -52,7 +51,7 @@ describe("checkMessageCatalogue", () => {
           close: "Sluit {name}",
         },
         ENGLISH,
-        ALLOWED,
+        { sameAsEnglish: ALLOWED },
       ),
     ).toEqual([
       { key: "close", problem: "placeholders" },
@@ -61,22 +60,42 @@ describe("checkMessageCatalogue", () => {
     ]);
   });
 
-  it("compares a form's placeholders with the English form of its category", () => {
+  it("asks every form for every placeholder of the English value, whatever its category", () => {
+    const english = { files: "one{one file} other{{count} files}" };
     expect(
       checkMessageCatalogue(
-        "af",
-        { files: "one{een lêer} other{{count} lêers}" },
-        { files: "one{one file}" },
+        "ru",
+        {
+          files:
+            "one{{count} файл} few{{count} файла} many{{count} файлов} other{{count} файла}",
+        },
+        english,
+      ),
+    ).toEqual([]);
+    expect(
+      checkMessageCatalogue(
+        "ru",
+        {
+          files:
+            "one{файл} few{{count} файла} many{{count} файлов} other{{count} файла}",
+        },
+        english,
       ),
     ).toEqual([{ key: "files", problem: "placeholders" }]);
-    const english = { files: "one{one file} other{{count} files}" };
     expect(
       checkMessageCatalogue(
         "af",
         { files: "one{een lêer} other{{count} lêers}" },
         english,
       ),
-    ).toEqual([]);
+    ).toEqual([{ key: "files", problem: "placeholders" }]);
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { files: "one{{count} lêer} other{{count} lêers {name}}" },
+        english,
+      ),
+    ).toEqual([{ key: "files", problem: "placeholders" }]);
     expect(
       checkMessageCatalogue(
         "ru",
@@ -99,7 +118,7 @@ describe("checkMessageCatalogue", () => {
           items: "one{{count} item} few{{count} items} other{{count} items}",
         },
         ENGLISH,
-        ALLOWED,
+        { sameAsEnglish: ALLOWED },
       ),
     ).toEqual([
       { key: "files", problem: "pluralForms" },
@@ -131,6 +150,92 @@ describe("checkMessageCatalogue", () => {
     expect(
       checkMessageCatalogue("af", { found: "other{{count} gevind}" }, english),
     ).toEqual([{ key: "found", problem: "pluralForms" }]);
+    expect(
+      checkMessageCatalogue(
+        "ru",
+        { found: "{count} найдено|{count} найдено" },
+        english,
+      ),
+    ).toEqual([{ key: "found", problem: "pluralForms" }]);
+  });
+
+  it("reads a key listed as not plural as text, bars and all", () => {
+    const english = { toggle: "on|off", close: "Close" };
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { toggle: "aan en af", close: "Sluit" },
+        english,
+      ),
+    ).toEqual([{ key: "toggle", problem: "pluralForms" }]);
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { toggle: "aan en af", close: "Sluit" },
+        english,
+        { notPlural: ["toggle"] },
+      ),
+    ).toEqual([]);
+    expect(
+      checkMessageCatalogue(
+        "ru",
+        { toggle: "вкл|выкл", close: "Закрыть" },
+        english,
+        { notPlural: ["toggle"] },
+      ),
+    ).toEqual([]);
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { toggle: "on|off", close: "Sluit" },
+        english,
+        { notPlural: ["toggle"] },
+      ),
+    ).toEqual([{ key: "toggle", problem: "copiedEnglish" }]);
+    expect(
+      checkMessageCatalogue("ru", { label: "вкл|выкл" }, { label: "On, off" }),
+    ).toEqual([{ key: "label", problem: "pluralForms" }]);
+    expect(
+      checkMessageCatalogue(
+        "ru",
+        { label: "вкл|выкл" },
+        { label: "On, off" },
+        { notPlural: ["label"] },
+      ),
+    ).toEqual([]);
+  });
+
+  it("reports a not-plural entry that is not needed", () => {
+    expect(
+      checkMessageCatalogue(
+        "af",
+        { close: "Sluit" },
+        { close: "Close" },
+        { notPlural: ["close", "gone"] },
+      ),
+    ).toEqual([
+      { key: "close", problem: "unusedAllowance" },
+      { key: "gone", problem: "unusedAllowance" },
+    ]);
+  });
+
+  it("reports a plural value whose braces cannot be read", () => {
+    const english = { files: "{count} file|{count} files" };
+    for (const [language, value] of [
+      ["ja", "othre{{count} 件}"],
+      ["ja", "{count} 件}"],
+      ["ja", "{count 件"],
+      ["ja", "other{{count} 件"],
+      ["af", "{count} lêer|{count lêers"],
+    ] as const) {
+      expect(
+        checkMessageCatalogue(language, { files: value }, english),
+        value,
+      ).toContainEqual({ key: "files", problem: "pluralForms" });
+    }
+    expect(
+      checkMessageCatalogue("ja", { files: "other{{count} 件}" }, english),
+    ).toEqual([]);
   });
 
   it("accepts a plain value for a language with one plural category", () => {
@@ -167,7 +272,7 @@ describe("checkMessageCatalogue", () => {
         "af",
         { ...AFRIKAANS, close: " ", files: "{count} lêer|" },
         ENGLISH,
-        ALLOWED,
+        { sameAsEnglish: ALLOWED },
       ),
     ).toEqual([
       { key: "close", problem: "emptyForm" },
@@ -182,7 +287,7 @@ describe("checkMessageCatalogue", () => {
         "af",
         { ...AFRIKAANS, close: " close ", files: "{count} lêer|{count} files" },
         ENGLISH,
-        ALLOWED,
+        { sameAsEnglish: ALLOWED },
       ),
     ).toEqual([
       { key: "close", problem: "copiedEnglish" },
@@ -203,9 +308,11 @@ describe("checkMessageCatalogue", () => {
   it("counts an allowance only with a reason, and reports one no longer needed", () => {
     expect(
       checkMessageCatalogue("af", AFRIKAANS, ENGLISH, {
-        items: " ",
-        close: "Not needed any more.",
-        gone: "A key English no longer has.",
+        sameAsEnglish: {
+          items: " ",
+          close: "Not needed any more.",
+          gone: "A key English no longer has.",
+        },
       }),
     ).toEqual([
       { key: "items", problem: "copiedEnglish" },
@@ -221,14 +328,19 @@ describe("checkMessageCatalogue", () => {
         "af",
         { close: "Sluit" },
         { close: "Close" },
-        { close: " " },
+        { sameAsEnglish: { close: " " } },
       ),
     ).toEqual([{ key: "close", problem: "unusedAllowance" }]);
   });
 
   it("reports an allowance for a key the catalogue leaves out", () => {
     expect(
-      checkMessageCatalogue("af", {}, { close: "Close" }, { close: "A word." }),
+      checkMessageCatalogue(
+        "af",
+        {},
+        { close: "Close" },
+        { sameAsEnglish: { close: "A word." } },
+      ),
     ).toEqual([
       { key: "close", problem: "missing" },
       { key: "close", problem: "unusedAllowance" },
@@ -257,7 +369,7 @@ describe("checkMessageCatalogue", () => {
         "af",
         { close: "Close" },
         { close: "Close" },
-        inherited,
+        { sameAsEnglish: inherited },
       ),
     ).toEqual([{ key: "close", problem: "copiedEnglish" }]);
     expect(
@@ -265,7 +377,7 @@ describe("checkMessageCatalogue", () => {
         "af",
         { constructor: "Close" },
         { constructor: "Close" },
-        { constructor: "The same word." },
+        { sameAsEnglish: { constructor: "The same word." } },
       ),
     ).toEqual([]);
   });

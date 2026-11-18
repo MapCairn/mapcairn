@@ -8,17 +8,20 @@ import { parsePluralForms, pluralFormsOf } from "./pluralForms";
  * - `missing`: English has the key and the catalogue does not.
  * - `unknown`: the catalogue has a key English does not.
  * - `emptyForm`: the value, or one of its plural forms, is blank.
- * - `placeholders`: a form's `{name}` placeholders differ from those of the
- *   English form of the same plural category, or of English's "other" form
- *   when it has none (a plain value is its own "other" form).
- * - `pluralForms`: the value's plural forms are not the categories
- *   `Intl.PluralRules` gives for the language, or cannot be read.
- * - `copiedEnglish`: the value, or one of its forms, is the English form
- *   it is compared with for placeholders (without case or surrounding space),
- *   and the key is not allowed to match English.
- * - `unusedAllowance`: an allowance in `sameAsEnglish` with a blank reason,
- *   or for a key whose value is missing or does not match English, or that
- *   English does not have.
+ * - `placeholders`: the value, or one of its plural forms, does not have
+ *   exactly the `{name}` placeholders the English value has across all its
+ *   forms. A plural category does not cover the same numbers in every
+ *   language (Russian "one" also covers 21), so no form may leave one out.
+ * - `pluralForms`: the forms of a plural key's value are not the categories
+ *   `Intl.PluralRules` gives for the language, or its braces or bars cannot
+ *   be read.
+ * - `copiedEnglish`: the value, or one of its forms, is the English form of
+ *   the same category, or English's "other" form (without case or
+ *   surrounding space), and the key is not allowed to match English.
+ * - `unusedAllowance`: an entry in `sameAsEnglish` with a blank reason, or
+ *   for a key whose value is missing or does not match English, or that
+ *   English does not have; or an entry in `notPlural` for a key English
+ *   does not have, or for which neither value has forms.
  */
 export type MessageCatalogueProblemKind =
   | "missing"
@@ -35,24 +38,47 @@ export interface MessageCatalogueProblem {
   readonly problem: MessageCatalogueProblemKind;
 }
 
+/** What {@link checkMessageCatalogue} allows beyond its rules. */
+export interface MessageCatalogueCheckOptions {
+  /**
+   * Keys whose value may match English (a symbol, a name kept as
+   * published), each with the reason. Only its own properties count.
+   */
+  readonly sameAsEnglish?: Readonly<Partial<Record<string, string>>>;
+  /**
+   * Keys read only with `t` whose English value or translation reads like
+   * plural forms (it has a `|`, say) but is text. Their values are checked
+   * as text.
+   */
+  readonly notPlural?: readonly string[];
+}
+
 type Forms = ReadonlyMap<Intl.LDMLPluralRule, string>;
 
 /** A value that opens like category-keyed forms, readable or not. */
 const KEYED_START = /^\s*(zero|one|two|few|many|other)\{/;
 
-/** A value's forms by category; a plain value is its own "other" form. */
-function formsByCategory(value: string): Forms {
-  return (
-    pluralFormsOf(value) ??
-    new Map<Intl.LDMLPluralRule, string>([["other", value]])
-  );
+const PLACEHOLDER = /\{(\w+)\}/g;
+
+/** A value read as text: one "other" form, bars and braces included. */
+function asText(value: string): Forms {
+  return new Map<Intl.LDMLPluralRule, string>([["other", value]]);
 }
 
-/** The `{name}` placeholders in `form`, sorted, deduplicated and joined. */
-function placeholdersIn(form: string): string {
-  return [...new Set([...form.matchAll(/\{(\w+)\}/g)].map((m) => m[1]))]
-    .sort()
-    .join();
+/** A plural key's value by category; a plain value is its "other" form. */
+function formsByCategory(value: string): Forms {
+  return pluralFormsOf(value) ?? asText(value);
+}
+
+/** The `{name}` placeholders in `forms` together, sorted and joined. */
+function placeholdersIn(forms: Iterable<string>): string {
+  const names = new Set<string | undefined>();
+  for (const form of forms) {
+    for (const match of form.matchAll(PLACEHOLDER)) {
+      names.add(match[1]);
+    }
+  }
+  return [...names].sort().join();
 }
 
 /** A form as it is compared with English: no case, no surrounding space. */
@@ -64,43 +90,57 @@ function hasEmptyForm(forms: Forms): boolean {
   return [...forms.values()].some((form) => normalised(form) === "");
 }
 
-/**
- * The English form a translated form of `category` is compared with: the
- * same category, else English's "other" form.
- */
-function englishFormFor(english: Forms, category: Intl.LDMLPluralRule) {
-  return english.get(category) ?? english.get("other") ?? "";
-}
-
 function hasOtherPlaceholders(forms: Forms, english: Forms): boolean {
-  return [...forms].some(
-    ([category, form]) =>
-      placeholdersIn(form) !==
-      placeholdersIn(englishFormFor(english, category)),
+  const expected = placeholdersIn(english.values());
+  return [...forms.values()].some(
+    (form) => placeholdersIn([form]) !== expected,
   );
 }
 
 /**
- * Whether `value` fails to express exactly `categories`. A plain value
- * stands for "other", and is checked only when English has forms.
+ * Whether a plural key's `value` cannot be read as `createMessageCatalogue`
+ * means it: keyed forms it cannot parse, more than two `|` forms, or a
+ * brace that is not part of a `{name}` placeholder.
+ */
+function isUnreadable(value: string): boolean {
+  return (
+    !parsePluralForms(value) &&
+    (KEYED_START.test(value) ||
+      value.split("|").length > 2 ||
+      /[{}]/.test(value.replace(PLACEHOLDER, "")))
+  );
+}
+
+/**
+ * Whether a plural key's `value` fails to express exactly `categories`. A
+ * plain value stands for "other".
  */
 function hasWrongPluralForms(
   value: string,
-  english: string,
   categories: readonly Intl.LDMLPluralRule[],
 ): boolean {
-  if (
-    !parsePluralForms(value) &&
-    (KEYED_START.test(value) || value.split("|").length > 2)
-  ) {
+  if (isUnreadable(value)) {
     return true;
   }
   const own = pluralFormsOf(value);
-  if (!own && !pluralFormsOf(english)) {
-    return false;
-  }
   const expressed = own ? [...own.keys()] : ["other"];
   return expressed.sort().join() !== [...categories].sort().join();
+}
+
+/** Whether the English value or the translation has plural forms. */
+function hasForms(english: string, value: string | undefined): boolean {
+  return (
+    pluralFormsOf(english) !== undefined ||
+    (value !== undefined && pluralFormsOf(value) !== undefined)
+  );
+}
+
+/**
+ * The English form a translated form of `category` is compared with for a
+ * copy: the same category, else English's "other" form.
+ */
+function englishFormFor(english: Forms, category: Intl.LDMLPluralRule) {
+  return english.get(category) ?? english.get("other") ?? "";
 }
 
 function isCopied(forms: Forms, english: Forms): boolean {
@@ -108,6 +148,30 @@ function isCopied(forms: Forms, english: Forms): boolean {
     ([category, form]) =>
       normalised(form) === normalised(englishFormFor(english, category)),
   );
+}
+
+/**
+ * The problems with one key's `value` other than a copy, given whether the
+ * key is `plural`.
+ */
+function formProblems(
+  forms: Forms,
+  englishForms: Forms,
+  value: string,
+  plural: boolean,
+  categories: readonly Intl.LDMLPluralRule[],
+): MessageCatalogueProblemKind[] {
+  const found: MessageCatalogueProblemKind[] = [];
+  if (hasEmptyForm(forms)) {
+    found.push("emptyForm");
+  }
+  if (hasOtherPlaceholders(forms, englishForms)) {
+    found.push("placeholders");
+  }
+  if (plural && hasWrongPluralForms(value, categories)) {
+    found.push("pluralForms");
+  }
+  return found;
 }
 
 /**
@@ -123,28 +187,31 @@ function ownValue(
 
 /**
  * Checks a host's message catalogue against the English one, for a host's
- * own tests or a command line: every key is present and known, each plural
- * form keeps the English placeholders, the plural forms are the categories
+ * own tests or a command line: every key is present and known, every form
+ * keeps all the English placeholders, the plural forms are the categories
  * `Intl.PluralRules` gives for `language`, and no value is copied from
- * English. Values may be plain, `one|other` or category-keyed, as
- * {@link createMessageCatalogue} reads them.
+ * English. A key is plural when its English value or the translation has
+ * forms (`one|other` or category-keyed, as {@link createMessageCatalogue}
+ * reads them) and it is not in `options.notPlural`; any other value is
+ * checked as text.
  *
- * @param sameAsEnglish - Keys whose value may match English (a symbol, a
- *   name kept as published), each with the reason. Only its own properties
- *   count. An allowance with a blank reason does not allow a copy and is
- *   reported, as is one whose value no longer matches English.
+ * @param options - Keys allowed to match English, and keys read only with
+ *   `t` whose values only look plural. An entry in either that is not
+ *   needed is reported, as is an allowance with a blank reason.
  * @returns Every problem found: those of each English key in English key
- *   order, then unknown keys, then unused allowances in `sameAsEnglish`
- *   order. An empty list means the catalogue passes; a translation in
- *   progress can leave out the `missing` problems. Keys are read only as a
- *   record's own properties.
+ *   order, then unknown keys, then unneeded `sameAsEnglish` entries, then
+ *   unneeded `notPlural` entries. An empty list means the catalogue passes;
+ *   a translation in progress can leave out the `missing` problems. Keys
+ *   are read only as a record's own properties.
  */
 export function checkMessageCatalogue(
   language: string,
   catalogue: Readonly<Partial<Record<string, string>>>,
   english: Readonly<Record<string, string>>,
-  sameAsEnglish: Readonly<Partial<Record<string, string>>> = {},
+  options: MessageCatalogueCheckOptions = {},
 ): readonly MessageCatalogueProblem[] {
+  const { sameAsEnglish = {}, notPlural = [] } = options;
+  const textKeys = new Set(notPlural);
   const categories = new Intl.PluralRules(language).resolvedOptions()
     .pluralCategories;
   const problems: MessageCatalogueProblem[] = [];
@@ -160,16 +227,18 @@ export function checkMessageCatalogue(
       report(key, "missing");
       continue;
     }
-    const forms = formsByCategory(value);
-    const englishForms = formsByCategory(englishValue);
-    if (hasEmptyForm(forms)) {
-      report(key, "emptyForm");
-    }
-    if (hasOtherPlaceholders(forms, englishForms)) {
-      report(key, "placeholders");
-    }
-    if (hasWrongPluralForms(value, englishValue, categories)) {
-      report(key, "pluralForms");
+    const plural = !textKeys.has(key) && hasForms(englishValue, value);
+    const read = plural ? formsByCategory : asText;
+    const forms = read(value);
+    const englishForms = read(englishValue);
+    for (const problem of formProblems(
+      forms,
+      englishForms,
+      value,
+      plural,
+      categories,
+    )) {
+      report(key, problem);
     }
     if (isCopied(forms, englishForms)) {
       copiedKeys.add(key);
@@ -185,6 +254,15 @@ export function checkMessageCatalogue(
   }
   for (const key of Object.keys(sameAsEnglish)) {
     if (!(allowed(key) && copiedKeys.has(key))) {
+      report(key, "unusedAllowance");
+    }
+  }
+  for (const key of textKeys) {
+    const englishValue = ownValue(english, key);
+    if (
+      englishValue === undefined ||
+      !hasForms(englishValue, ownValue(catalogue, key))
+    ) {
       report(key, "unusedAllowance");
     }
   }
