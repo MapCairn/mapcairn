@@ -23,4 +23,16 @@ describe("parsePluralForms", () => {
   ])("rejects a plain or malformed value: %s", (value) => {
     expect(parsePluralForms(value)).toBeUndefined();
   });
+
+  it("handles long whitespace between forms and before malformed input", () => {
+    const whitespace = " ".repeat(100_000);
+    expect([
+      ...(parsePluralForms(`one{one}${whitespace}other{other}${whitespace}`) ??
+        []),
+    ]).toEqual([
+      ["one", "one"],
+      ["other", "other"],
+    ]);
+    expect(parsePluralForms(`one{one}${whitespace}invalid`)).toBeUndefined();
+  });
 });
