@@ -84,6 +84,7 @@ describe("ErrorPage language outside the services", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+    document.documentElement.removeAttribute("dir");
   });
 
   it("shows Afrikaans when Afrikaans is the stored choice", async () => {
@@ -166,6 +167,7 @@ describe("ErrorPage language outside the services", () => {
   it("falls back to English, and says so in lang, when the Afrikaans chunk fails", async () => {
     localStorage.setItem("mapcairn:language", JSON.stringify("af"));
     document.documentElement.lang = "af";
+    document.documentElement.dir = "rtl";
     vi.mocked(hostLanguages.loadLanguage).mockRejectedValueOnce(
       new Error("chunk missing"),
     );
@@ -178,6 +180,19 @@ describe("ErrorPage language outside the services", () => {
       screen.getByRole("heading", { name: "Something went wrong" }),
     ).toBeInTheDocument();
     expect(warn).toHaveBeenCalled();
+    expect(document.documentElement.dir).toBe("ltr");
+  });
+
+  it("sets the direction of the loaded language", async () => {
+    vi.mocked(hostLanguages.loadLanguage).mockResolvedValueOnce(
+      createMessageCatalogue("ar", EN_GB_CATALOGUE, EN_GB_CATALOGUE),
+    );
+    document.documentElement.dir = "ltr";
+    renderPage("unexpected");
+    await waitFor(() => {
+      expect(document.documentElement.lang).toBe("ar");
+      expect(document.documentElement.dir).toBe("rtl");
+    });
   });
 
   it("falls back to English when the load throws at once", async () => {

@@ -8,6 +8,8 @@ export interface LanguageOption {
   readonly tag: string;
   /** The language's name in that language (an endonym), for example `"Afrikaans"`. */
   readonly label: string;
+  /** Overrides the direction inferred from the tag when the host needs to. */
+  readonly direction?: "ltr" | "rtl";
 }
 
 /**

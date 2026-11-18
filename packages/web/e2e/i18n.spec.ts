@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { EN_GB_CATALOGUE } from "@mapcairn/core";
+import { createHash } from "node:crypto";
+import {
+  buildThemeBootstrapScript,
+  createLanguageCatalogue,
+  createMessageCatalogue,
+  EN_GB_CATALOGUE,
+} from "@mapcairn/core";
 import type { Page } from "@playwright/test";
 import { AF_CATALOGUE } from "../src/i18n/af";
 import { expect, test } from "./fixtures";
 import { MapPage } from "./pages/MapPage";
 import { axeViolations } from "./support/a11y";
+import { storedLanguage, storeLanguageBeforeLoad } from "./support/language";
 import { waitForStableLayout } from "./support/states";
 
 /*
@@ -15,6 +22,87 @@ import { waitForStableLayout } from "./support/states";
  * in, the chrome speaks it, and the choice in Settings sticks.
  */
 test.use({ reducedMotion: "reduce" });
+
+test("the English product page stays English before app scripts run", async ({
+  page,
+}) => {
+  await page.addInitScript(storeLanguageBeforeLoad, storedLanguage("af"));
+  await page.route("**/*", (route) =>
+    route.request().resourceType() === "script"
+      ? route.abort()
+      : route.fallback(),
+  );
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en-GB");
+  await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
+});
+
+test("a stored sample right-to-left language is marked before app scripts run", async ({
+  page,
+}) => {
+  // 1. Offer a sample catalogue and store its tag before loading the map.
+  const sample = createLanguageCatalogue(
+    [
+      { tag: "en-GB", label: "English" },
+      { tag: "ar", label: "Arabic" },
+    ],
+    "en-GB",
+    (tag) => createMessageCatalogue(tag, EN_GB_CATALOGUE, EN_GB_CATALOGUE),
+  );
+  expect((await sample.load("ar")).language).toBe("ar");
+  const bootstrap = buildThemeBootstrapScript(sample.languages);
+  const hash = createHash("sha256").update(bootstrap).digest("base64");
+  await page.addInitScript(storeLanguageBeforeLoad, storedLanguage("ar"));
+  await page.addInitScript(() => {
+    Object.defineProperty(Intl, "Locale", { value: undefined });
+  });
+  await page.addInitScript(() => {
+    const observer = new MutationObserver(() => {
+      if (document.body) {
+        Object.assign(window, {
+          __firstLanguage: document.documentElement.lang,
+          __firstDirection: document.documentElement.dir,
+        });
+        observer.disconnect();
+      }
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  });
+  await page.route("**/*", (route) =>
+    route.request().resourceType() === "script"
+      ? route.abort()
+      : route.fallback(),
+  );
+  await page.route("**/map", async (route) => {
+    const response = await route.fetch();
+    const html = await response.text();
+    expect(html).toMatch(/<script>\(function\(\)/);
+    const body = html.replace(
+      /<script>\(function\(\)[\s\S]*?<\/script>/,
+      `<script>${bootstrap}</script>`,
+    );
+    const headers = response.headers();
+    const policy = headers["content-security-policy"] ?? "";
+    expect(policy).toContain("script-src");
+    headers["content-security-policy"] = policy.replace(
+      "script-src ",
+      `script-src 'sha256-${hash}' `,
+    );
+    await route.fulfill({ response, headers, body });
+  });
+  await page.goto("/map");
+  expect(
+    await page.evaluate(() => {
+      const observed = window as Window & {
+        __firstLanguage?: string;
+        __firstDirection?: string;
+      };
+      return [observed.__firstLanguage, observed.__firstDirection];
+    }),
+  ).toEqual(["ar", "rtl"]);
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+});
 
 test.describe("with Afrikaans chosen", () => {
   test.use({ language: "af" });
