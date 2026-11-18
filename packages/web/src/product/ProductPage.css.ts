@@ -228,7 +228,7 @@ export const note = style({
   color: tokens.color.textMuted,
 });
 
-/** One section: a heading and a few blocks, in the reading column, with room around it. */
+/** One section: a heading and a few blocks, in the reading column, with room around it. Neighbours' padding adds up to two of the largest steps between them. */
 export const section = style({
   ...pageColumn,
   paddingBlock: tokens.space.xl,
@@ -240,7 +240,6 @@ export const section = style({
   "@media": {
     [WIDE]: {
       paddingInline: tokens.space.xl,
-      paddingBlock: SECTION_SPACE,
     },
   },
 });
@@ -320,6 +319,21 @@ export const codeBlock = style({
   selectors: {
     "&:focus-visible": focusRing,
   },
+});
+
+/** A keyword in the code example: the one accent. */
+export const codeKeyword = style({
+  color: tokens.color.accent,
+});
+
+/** A string, number or comment in the code example: quieter than the code around it. */
+export const codeMuted = style({
+  color: tokens.color.textMuted,
+});
+
+/** A component or type name in the code example: the heavier weight, not a second colour. */
+export const codeName = style({
+  fontWeight: tokens.type.weight.semibold,
 });
 
 /** A list of disclosures, ruled apart. */
