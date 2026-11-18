@@ -36,3 +36,27 @@ export function parsePluralForms(
   }
   return forms.size > 0 ? forms : undefined;
 }
+
+/**
+ * The plural forms of a catalogue value by category: its category-keyed
+ * forms, or the first two legacy `one|other` forms as "one" and "other", or
+ * `undefined` for a plain value.
+ */
+export function pluralFormsOf(
+  value: string,
+): ReadonlyMap<Intl.LDMLPluralRule, string> | undefined {
+  const keyed = parsePluralForms(value);
+  if (keyed) {
+    return keyed;
+  }
+  const bar = value.indexOf("|");
+  if (bar === -1) {
+    return undefined;
+  }
+  const rest = value.slice(bar + 1);
+  const nextBar = rest.indexOf("|");
+  return new Map<Intl.LDMLPluralRule, string>([
+    ["one", value.slice(0, bar)],
+    ["other", nextBar === -1 ? rest : rest.slice(0, nextBar)],
+  ]);
+}

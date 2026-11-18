@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { EN_GB_CATALOGUE, type MessageKey } from "@mapcairn/core";
+import {
+  checkMessageCatalogue,
+  EN_GB_CATALOGUE,
+  type MessageKey,
+} from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { AF_CATALOGUE } from "./af";
 
 const KEYS = Object.keys(EN_GB_CATALOGUE) as MessageKey[];
-
-/** Every `{name}` placeholder in `form`, sorted and deduplicated. */
-function placeholdersIn(form: string): string[] {
-  return [
-    ...new Set([...form.matchAll(/\{(\w+)\}/g)].map((m) => m[1] ?? "")),
-  ].sort();
-}
 
 /** The keys whose value is the same in both languages, and why that is right. */
 const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
@@ -51,95 +48,13 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
   "privacy.contact.issuesLink": "The name of a service, kept as published.",
 };
 
-/**
- * Whether any plural form of `afrikaans` is a copy of the same form of
- * `english`, ignoring case and surrounding space.
- */
-function hasCopiedForm(english: string, afrikaans: string): boolean {
-  const afForms = afrikaans.split("|");
-  return english
-    .split("|")
-    .some(
-      (form, index) =>
-        form.trim().toLowerCase() ===
-        (afForms[index] ?? "").trim().toLowerCase(),
-    );
-}
-
-/**
- * The keys whose Afrikaans value has a form that is a copy of the English one
- * and which are not in `allowed`.
- */
-function leftInEnglish(
-  english: Record<string, string>,
-  afrikaans: Record<string, string>,
-  allowed: Record<string, string | undefined>,
-): string[] {
-  return Object.keys(english).filter(
-    (key) =>
-      hasCopiedForm(english[key] ?? "", afrikaans[key] ?? "") &&
-      allowed[key] === undefined,
-  );
-}
-
-describe("the check for Afrikaans left as English", () => {
-  it("names a copied value that is not allowed", () => {
-    expect(leftInEnglish({ a: "Close" }, { a: "Close" }, {})).toEqual(["a"]);
-  });
-
-  it("names a plural with one form left as English", () => {
-    const english = { a: "{count} file|{count} files" };
-    expect(
-      leftInEnglish(english, { a: "{count} lêer|{count} files" }, {}),
-    ).toEqual(["a"]);
-  });
-
-  it("ignores case and surrounding space when it compares", () => {
-    expect(leftInEnglish({ a: "Close" }, { a: " close " }, {})).toEqual(["a"]);
-  });
-
-  it("passes a translated value and an allowed copy", () => {
-    expect(leftInEnglish({ a: "Close" }, { a: "Sluit" }, {})).toEqual([]);
-    expect(leftInEnglish({ a: "N" }, { a: "N" }, { a: "A letter." })).toEqual(
-      [],
-    );
-  });
-});
-
 describe("the Afrikaans catalogue", () => {
-  it("has no value left as the English text, except the allowed keys", () => {
+  it("passes the catalogue check against English, with every allowance used", () => {
     expect(
-      leftInEnglish(EN_GB_CATALOGUE, AF_CATALOGUE, SAME_AS_ENGLISH),
+      checkMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE, {
+        sameAsEnglish: SAME_AS_ENGLISH,
+      }),
     ).toEqual([]);
-  });
-
-  it("allows only keys that are still the same, each with a reason", () => {
-    for (const [key, reason] of Object.entries(SAME_AS_ENGLISH)) {
-      expect(reason?.trim().length, key).toBeGreaterThan(0);
-      expect(
-        hasCopiedForm(
-          EN_GB_CATALOGUE[key as MessageKey],
-          AF_CATALOGUE[key as MessageKey],
-        ),
-        key,
-      ).toBe(true);
-    }
-  });
-
-  it("has exactly the keys of the English catalogue", () => {
-    expect(Object.keys(AF_CATALOGUE).sort()).toEqual([...KEYS].sort());
-  });
-
-  it.each(KEYS)("%s has the English placeholders and plural forms", (key) => {
-    const english = EN_GB_CATALOGUE[key].split("|");
-    const afrikaans = AF_CATALOGUE[key].split("|");
-    expect(afrikaans).toHaveLength(english.length);
-    afrikaans.forEach((form, index) => {
-      expect(form.trim().length).toBeGreaterThan(0);
-      expect(placeholdersIn(form)).toEqual(
-        placeholdersIn(english[index] ?? ""),
-      );
-    });
   });
 
   it("speaks to the visitor as jy, never with the formal u", () => {

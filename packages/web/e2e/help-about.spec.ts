@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { SOURCE_REPOSITORY_URL } from "../src/constants/siteConfig";
 import { expect, test } from "./fixtures";
+import { PRODUCT_HEADLINE } from "./pages/ProductPage";
 import { axeViolations, inspectControls } from "./support/a11y";
 import { waitForStableLayout } from "./support/states";
 
@@ -86,7 +87,7 @@ test.describe("the About block in Help", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "An open-source SDK for accessible, privacy-respecting map applications",
+        name: PRODUCT_HEADLINE,
       }),
     ).toBeVisible();
   });

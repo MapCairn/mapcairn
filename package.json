@@ -28,6 +28,7 @@
     "agents:check": "node scripts/agents/sync.mjs --check",
     "roadmap:check": "node scripts/roadmap-check.mjs",
     "names:check": "node scripts/names-check.mjs files",
+    "catalogue:check": "npm run catalogue:check -w @mapcairn/web --",
     "format": "biome format --write .",
     "prepare": "lefthook install --force",
     "typecheck": "npm run typecheck --workspaces --if-present",

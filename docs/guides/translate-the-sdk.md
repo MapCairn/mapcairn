@@ -4,7 +4,7 @@ How a host changes the words the interface shows, offers its visitors more than 
 
 ## How the text is organised
 
-- Most interface text is a key in the shipped `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`). Layer feature templates instead use a separate table of host-defined keys in `MessageCatalogue.layerTemplates`.
+- Most interface text is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`). Layer feature templates instead use a separate table of host-defined keys in `MessageCatalogue.layerTemplates`.
 - A string is plain text with `{name}` placeholders. A plural can use `one form|other form`, with "one" first and every other category second, or category-keyed forms such as `one{{count} item} few{{count} items} other{{count} items}`. Supply every category returned by `new Intl.PluralRules(language).resolvedOptions().pluralCategories`; languages with categories beyond "one" and "other" need keyed forms. Category forms may contain `{name}` placeholders but not nested forms or literal braces. Counts use `Intl.PluralRules` for the active catalogue's language, and lists use `Intl.ListFormat`.
 - Call `plural` with `count` for count-bearing text, even when the English value is plain: the active value may have forms. A plain active value is substituted as with `t`. `formatMessage` calls `plural` when its parameters include a numeric `count`; `MessageParams` permits an optional count even for a key without an English count placeholder. A direct `t` call does not select a form.
 - Numbers, dates and lists that go into a string are formatted by the catalogue for its own language, so a translation never has to format them. The coordinate hemisphere letters are keys too (`format.hemisphereNorth` and so on), so a language can write N, S, O and W.
@@ -50,9 +50,40 @@ const languages = createLanguageCatalogue(
 
 The reference site's language options are in `packages/web/src/i18n/offeredLanguageOptions.ts`, its loaders in `hostLanguages.ts`, and its Afrikaans `MessageKey` catalogue in `af.ts`, imported on demand. Translating the reference host's Afrikaans layer-template wrappers is the unreviewed follow-up [#370](https://github.com/MapCairn/mapcairn/issues/370); the generic `LayerTemplate` API below is ready for hosts that provide reviewed translations.
 
+## Check a catalogue
+
+`checkMessageCatalogue(language, catalogue, english, options)` from `@mapcairn/core` checks a catalogue against the English one and returns a list of problems, each a `key` and a `problem`; an empty list means it passes. Run it in your own tests:
+
+```ts
+import { checkMessageCatalogue, EN_GB_CATALOGUE } from "@mapcairn/core";
+
+const SAME_AS_ENGLISH = { "basemap.bright.name": "A map style's name." };
+
+expect(
+  checkMessageCatalogue("fr", FR_CATALOGUE, EN_GB_CATALOGUE, {
+    sameAsEnglish: SAME_AS_ENGLISH,
+  }),
+).toEqual([]);
+```
+
+A key is plural when its English value or the translation has forms, `one|other` or category-keyed, read as `createMessageCatalogue` reads them. Any other value is checked as text. `plural` reads a `|` as a separator between forms, while `t` shows it as written, so the check cannot tell from the text alone how a key with a `|` is read. List each key that is read only with `t` and has a `|`, or text that looks like keyed forms, in `notPlural`, and its values are checked as text. List in `pluralKeys` each key that is read with `plural` while its English value has a single form, such as `{count} file` for a language with no plural, so that the translation is checked as plural even when it has no forms either; without it, a translation such as `othre{{count} files}` passes as text. A key cannot be in both lists.
+
+- `missing` and `unknown`: a key English has and the catalogue does not, or the other way round. A translation in progress can filter out `missing`.
+- `emptyForm`: the value, or one of its plural forms, is blank.
+- `placeholders`: the value, or any one of its plural forms, does not have exactly the `{name}` placeholders that the English value has across all its forms. A plural category does not cover the same numbers in every language (Russian "one" also covers 21, for example), so a form cannot drop `{count}` because the English form of the same category does. Write the number in every form; where a host knows that leaving it out is right, it can filter that key's `placeholders` problem in its own test.
+- `pluralForms`: a plural key's forms are not exactly the categories `new Intl.PluralRules(language).resolvedOptions().pluralCategories` gives (a plain value counts as "other", and `one|other` as those two). A value that cannot be read is reported too: one that opens like keyed forms but does not parse, one with more than two `|` forms, and one with a brace that is not part of a `{name}` placeholder, such as `othre{{count} 件}`.
+- `copiedEnglish`: a form is the same as the English form of its category, or English's "other" form when English has no form of that category, ignoring case and surrounding space, and the key has no entry of its own in `sameAsEnglish` with a reason that is not blank.
+- `unusedAllowance`: an entry in `sameAsEnglish` whose reason is blank, whose value is missing or no longer matches English, or whose key English does not have; an entry in `pluralKeys` whose key English does not have, or whose English value already has forms; or an entry in `notPlural` whose key English does not have, or for which neither the English value nor the translation has forms.
+- `conflictingOptions`: a key listed in both `pluralKeys` and `notPlural`. Neither list applies to it, so it is read as if it were in neither.
+
+The problems come in English key order, then unknown keys, then unused `sameAsEnglish`, `pluralKeys` and `notPlural` entries in that order, then keys in both lists. Only the catalogues' own keys are read, so a key such as `constructor` is checked like any other and nothing is inherited from an object's prototype.
+
+Both catalogues are plain objects, so one loaded from JSON works as well as a module. Pass as `english` the English your host shows: `EN_GB_CATALOGUE`, or your own English for the same keys if you replaced its wording. The keys are the SDK's `MessageKey` values. `resolveText` looks up only those, so a definition's text that is not one of them is shown as written, and a key of your own in a catalogue is never looked up for a definition.
+To see what is left to translate, run `npm run catalogue:check -- <language> <file> [export] [--english <file>] [--english-export <export>] [--plural <key>]... [--not-plural <key>]...` in this repository. It prints how many keys the catalogue is missing and how many are the same as English, then lists each. The file is a JSON object of messages or a TypeScript or JavaScript module, read through tsx; `export` names the export that holds the messages and defaults to the module's only export, else its default export. The English is `EN_GB_CATALOGUE` unless `--english` names a file of your own English, read the same way, with `--english-export` naming its export. `--plural` and `--not-plural` pass a key to `pluralKeys` and `notPlural`, and each can be given more than once. A relative path is read from the folder npm was run in. An argument the command would otherwise ignore (an extra argument, an unknown option, an empty option value such as `--english=`, a second `--english` or `--english-export`, `--english-export` without `--english`, or an export name for a JSON file) is refused with exit code 2, and so is a `--plural` or `--not-plural` key that English does not have (a misspelt key, named in the message), that is not needed, or that is given to both. A file that is not a plain object whose values are all text, such as a list or a `Map`, is refused with exit code 1; an object with a `null` prototype is read. The command does not know a test's `sameAsEnglish` list, so it lists those keys too, and it exits 0 once the catalogues are read: the test is the gate. The script is `packages/web/scripts/catalogueCheck.mjs`, and it uses only `checkMessageCatalogue` and `EN_GB_CATALOGUE`, so a host can copy it.
+
 ## Translate definitions
 
-A basemap or layer definition's reader-facing text (a name, a description, a control label or an empty-state text) is a `DefinitionText`: a shipped `MessageKey` or a plain string. Only shipped `MessageKey` values are looked up in the active catalogue. Other strings—including host-defined names or strings that merely look like keys—are shown as written; they do not become catalogue keys. To translate those fields, use a shipped `MessageKey` or supply the appropriate plain text when building the definition for that language. The host-keyed `LayerTemplate` table below is separate and applies only to template-backed layer text, not definition fields or control labels. Attribution, licence names and links are legal text and stay as they are.
+A basemap or layer definition's reader-facing text (a name, a description, a control label, an empty-state text) is a `DefinitionText`: a shipped `MessageKey` or a plain string. Only shipped `MessageKey` values are looked up in the active catalogue, where the definition is shown. Any other string, including a name of your own or a string that looks like a key, is shown as written and is not a catalogue key, so existing definitions keep working. To translate such a field, use a shipped `MessageKey`, or supply the plain text for the language when you build the definition. Attribution, licence names and links are legal text and stay as they are.
 
 ## Translate layer templates
 
@@ -65,18 +96,14 @@ const cardTitle = {
 };
 ```
 
-Add the key to `layerTemplates` when building the catalogue:
+Pass the host's separate layer-template table when building the catalogue:
 
 ```ts
 const messages = createMessageCatalogue(
-  "af",
-  AFRIKAANS_MESSAGES,
+  "fr",
+  FR_MESSAGES,
   EN_GB_CATALOGUE,
-  {
-    layerTemplates: {
-      "events.magnitude": "{place}: sterkte {magnitude|number}",
-    },
-  },
+  { layerTemplates: FR_LAYER_TEMPLATES },
 );
 ```
 
@@ -102,9 +129,9 @@ A key that your library does not know is yours to handle: the SDK may call `t` o
 
 ## Add a language to the reference site
 
-1. Add `packages/web/src/i18n/<tag>.ts` exporting a `Record<MessageKey, string>` (or a `Partial` for work in progress), and a loader for the tag in `hostLanguages.ts`. If the language also has host-keyed layer-template translations, keep them in a separate module and load both modules on demand, leaving the `MessageKey` module with its single catalogue export.
+1. Add `packages/web/src/i18n/<tag>.ts` exporting a `Record<MessageKey, string>` (or a `Partial` for work in progress), and a loader for the tag in `hostLanguages.ts`. If the host also supplies layer-template translations, keep them in a separate module and load both modules on demand, leaving the `MessageKey` module with its single catalogue export.
 2. Add the language to `OFFERED_LANGUAGE_OPTIONS` with its name in that language.
-3. Keep every placeholder the English text has, spelled the same, in each form. Supply the categories your language needs, even when the English value has only one form. `packages/core/src/lint/messages.test.ts` checks English placeholders and categories against `MessageParams`; the Afrikaans test (`packages/web/src/i18n/af.test.ts`) checks its current plain and two-form values against English. A new language needs its own category and placeholder checks. A complete `Record<MessageKey, string>` also makes `npm run typecheck` fail when a key is added without its translation. The Afrikaans test fails when a value, or any one plural form of it, is a copy of the English one (compared without case or surrounding space), unless its key is on a short list in that file with a reason beside it. `packages/core/src/lint/hardcodedCopy.test.ts` checks inline interface text in `.tsx` files under `packages/map/src` and `packages/web/src`; it does not check `.ts` string tables or props of SDK components, so look those up through the catalogue yourself. Its exceptions are in `scripts/copy-check/allowlist.mjs`.
+3. Keep every placeholder the English text has, spelled the same, in each form. Supply the categories your language needs, even when the English value has only one form. `packages/core/src/lint/messages.test.ts` checks English placeholders and categories against `MessageParams`; the Afrikaans test (`packages/web/src/i18n/af.test.ts`) runs `checkMessageCatalogue` (see "Check a catalogue" above) against English, with a short list of keys allowed to match English, each with a reason. Give a new language a test like it. A complete `Record<MessageKey, string>` also makes `npm run typecheck` fail when a key is added without its translation. `packages/core/src/lint/hardcodedCopy.test.ts` checks inline interface text in `.tsx` files under `packages/map/src` and `packages/web/src`; it does not check `.ts` string tables or props of SDK components, so look those up through the catalogue yourself. Its exceptions are in `scripts/copy-check/allowlist.mjs`.
 4. Keep an accessible name containing its visible label, which a translation keeps by using the same key for both.
 5. Run the layout and accessibility specs in the new language: add the language's catalogue to `e2e/support/language.ts` and a pair of projects like `af-chromium` and `af-mobile-chromium` in `playwright.config.ts`, which run the collision and accessibility specs with the `language` option set, and extend `e2e/i18n.spec.ts`. The page object finds the chrome by the names in the active catalogue. Translated text is often longer, so check that nothing collides or truncates.
 6. A person who speaks the language fluently reviews the catalogue before it ships. A machine translation is a draft, and the pull request says who reviewed it. Credit the translators in [`ATTRIBUTIONS.md`](../../ATTRIBUTIONS.md).

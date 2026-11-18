@@ -18,6 +18,7 @@
     "a11y": "playwright test --grep @a11y",
     "test:e2e:ui": "playwright test --ui",
     "playwright:install": "playwright install --with-deps chromium webkit",
+    "catalogue:check": "node --import tsx scripts/catalogueCheck.mjs",
     "generate:og-image": "tsx scripts/generateOgImage.ts",
     "generate:og-sdk": "tsx scripts/generateSdkOgImage.ts"
   },

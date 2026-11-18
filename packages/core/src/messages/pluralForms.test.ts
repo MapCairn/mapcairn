@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
-import { parsePluralForms } from "./pluralForms";
+import { parsePluralForms, pluralFormsOf } from "./pluralForms";
 
 describe("parsePluralForms", () => {
   it("reads keyed forms with placeholders, whitespace and adjacent categories", () => {
@@ -34,5 +34,19 @@ describe("parsePluralForms", () => {
       ["other", "other"],
     ]);
     expect(parsePluralForms(`one{one}${whitespace}invalid`)).toBeUndefined();
+  });
+});
+
+describe("pluralFormsOf", () => {
+  it("reads keyed forms, the first two bar forms, and no forms in a plain value", () => {
+    expect([...(pluralFormsOf("one{a} other{b}") ?? [])]).toEqual([
+      ["one", "a"],
+      ["other", "b"],
+    ]);
+    expect([...(pluralFormsOf("a|b|c") ?? [])]).toEqual([
+      ["one", "a"],
+      ["other", "b"],
+    ]);
+    expect(pluralFormsOf("plain {count}")).toBeUndefined();
   });
 });
