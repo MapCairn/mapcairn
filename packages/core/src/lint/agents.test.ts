@@ -710,7 +710,7 @@ describe("symbolic links in the sources", () => {
     expect(() => plannedFiles(root)).toThrow(/skills-lock\.json/);
   });
 
-  it("escapes control and bidirectional characters in a path it prints, so a file name cannot add a line", () => {
+  it("escapes control and bidirectional characters in a reported path", () => {
     expect(printable("a\nb\r\u2028\u202e\u0007c")).toBe(
       "a\\u000ab\\u000d\\u2028\\u202e\\u0007c",
     );
@@ -719,12 +719,25 @@ describe("symbolic links in the sources", () => {
     );
     symlinkSync(
       path.join(outside, "secret.txt"),
-      path.join(root, ".claude/skills/alpha/x\ny: forged"),
+      path.join(root, ".claude/skills/alpha/x\u202ey-forged"),
     );
     const message = skillProblems(root).join("\n");
     expect(message.split("\n")).toHaveLength(1);
-    expect(message).toContain("x\\u000ay: forged");
+    expect(message).toContain("x\\u202ey-forged");
   });
+
+  it.skipIf(process.platform === "win32")(
+    "escapes a newline in a reported path",
+    () => {
+      symlinkSync(
+        path.join(outside, "secret.txt"),
+        path.join(root, ".claude/skills/alpha/x\ny: forged"),
+      );
+      const message = skillProblems(root).join("\n");
+      expect(message.split("\n")).toHaveLength(1);
+      expect(message).toContain("x\\u000ay: forged");
+    },
+  );
 
   it("still plans an ordinary tree", () => {
     expect([...plannedFiles(root).keys()]).toContain(
