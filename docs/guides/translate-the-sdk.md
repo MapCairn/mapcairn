@@ -7,6 +7,7 @@ How a host changes the words the interface shows, offers its visitors more than 
 - Every word the interface shows is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`).
 - A string is plain text with `{name}` placeholders. A key used with `plural` carries two forms separated by `|`: the form for the plural category "one" first, the form for every other category second. Counts use `Intl.PluralRules` for the catalogue's language, and lists use `Intl.ListFormat`.
 - Numbers, dates and lists that go into a string are formatted by the catalogue for its own language, so a translation never has to format them. The coordinate hemisphere letters are keys too (`format.hemisphereNorth` and so on), so a language can write N, S, O and W.
+- Feature lists sort text using the active catalogue's language, and re-sort when that language changes.
 - "UTC" is part of fixed keys, so a time in UTC says so in every language.
 - Text that comes from functions in core (announcements, descriptions of shapes and measures, error messages) is a key plus parameters, formatted where it is shown, so a translation can change the word order of a whole sentence.
 
