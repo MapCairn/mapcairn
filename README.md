@@ -11,8 +11,6 @@
 
 The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here.
 
-The playground is the SDK's showcase and test bed (`packages/web`). What a team adopts is the SDK.
-
 ## Embed a map
 
 This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top:
@@ -100,7 +98,7 @@ The SDK does not depend on the playground's framework. The playground is a serve
 
 **A design system.** Typed tokens only, light and dark themes, one accent, IBM Plex Sans and Lucide icons. The contrast of every token pair is calculated in a test, and a style scanner rejects raw colours, off-scale spacing and unnamed controls.
 
-**Translation.** The interface's text is looked up by key in a message catalogue, so a host can translate or replace it. The SDK ships British English; a host can add languages, and Settings then offers a choice. The [translation guide](docs/guides/translate-the-sdk.md) covers it, and the playground's Afrikaans is a draft until a fluent speaker has reviewed it.
+**Translation.** The interface's text is looked up by key in a message catalogue, so a host can translate or replace it. The SDK ships British English; a host can add languages, and Settings then offers a choice. The [translation guide](docs/guides/translate-the-sdk.md) covers it.
 
 **Server rendering.** The map host, chrome, sheet and readout are tested to render no style attributes on the server, so a server-rendered page can keep a Content Security Policy with no `unsafe-inline`. The playground renders its page and a placeholder of the chrome on the server and hydrates; the map itself is drawn in the browser. The [Content Security Policy guide](docs/guides/content-security-policy.md) lists what a host page needs.
 
@@ -210,7 +208,7 @@ npm run dev
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for checks and conventions, [`GOVERNANCE.md`](GOVERNANCE.md) for who decides what, [`ROADMAP.md`](ROADMAP.md) for what is planned and what is not, [`SECURITY.md`](SECURITY.md) for private vulnerability reporting (with the [assurance case](docs/assurance-case.md)) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for community expectations.
 
-Everyone is welcome to use the coding agent they prefer, and the same rules in [`AGENTS.md`](AGENTS.md) apply to all of them. [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) lists what Claude Code, Codex, opencode, GitHub Copilot, Antigravity, Cursor and Qwen Code read, as checked against their documentation, how to start, and what has not been tried.
+Everyone is welcome to use the coding agent they prefer, and the same rules in [`AGENTS.md`](AGENTS.md) apply to all of them. [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md) lists what Claude Code, Codex, OpenCode, GitHub Copilot, Antigravity, Cursor and Qwen Code read, as checked against their documentation, how to start, and what has not been tried.
 
 ## Licence
 
