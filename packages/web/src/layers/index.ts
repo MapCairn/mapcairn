@@ -42,13 +42,16 @@ function sortKey(definition: LayerDefinition): string {
   return `${resolveText(ENGLISH, definition.group)}\u0000${resolveText(ENGLISH, definition.name)}`;
 }
 
+/** English collation, fixed so the server and the browser order layers alike. */
+const ENGLISH_ORDER = new Intl.Collator("en-GB");
+
 /**
  * The host's layers, ordered by group and then by name, as the English words
  * read. The order is fixed at start-up and does not follow the language.
  */
 export const LAYER_DEFINITIONS: readonly LayerDefinition[] = Object.values(
   modules,
-).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+).sort((a, b) => ENGLISH_ORDER.compare(sortKey(a), sortKey(b)));
 
 /**
  * The catalogue the composition root hands the ui. It validates every
