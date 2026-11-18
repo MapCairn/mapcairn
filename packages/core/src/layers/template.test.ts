@@ -204,7 +204,7 @@ describe("formatTemplate", () => {
     }
   });
 
-  it("does not warn when a whitespace-only template is deliberately unchanged", () => {
+  it("warns when a whitespace-only source is supplied as its translation", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const template = { key: "example.unit", text: "  " };
@@ -213,7 +213,7 @@ describe("formatTemplate", () => {
       });
 
       expect(resolveLayerTemplate(template, catalogue)).toBe(template.text);
-      expect(warn).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledOnce();
     } finally {
       warn.mockRestore();
     }
