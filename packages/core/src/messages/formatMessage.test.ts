@@ -35,6 +35,28 @@ describe("formatMessage", () => {
     ).toBe("3 results");
   });
 
+  it("uses active plural forms even when the English key is a single form", () => {
+    const catalogue = new FakeMessageCatalogue({
+      language: "ar",
+      overrides: {
+        "settings.title":
+          "zero{zero} one{one} two{two} few{few} many{many} other{other}",
+      },
+    });
+    expect(
+      formatMessage(catalogue, message("settings.title", { count: 2 })),
+    ).toBe("two");
+  });
+
+  it("uses a single active form for an English plural key", () => {
+    const catalogue = new FakeMessageCatalogue({
+      overrides: { "announce.searchResults": "Results: {count}" },
+    });
+    expect(
+      formatMessage(catalogue, message("announce.searchResults", { count: 2 })),
+    ).toBe("Results: 2");
+  });
+
   it("formats a message held in a placeholder first, then the outer one", () => {
     const catalogue = new FakeMessageCatalogue();
     const text = formatMessage(

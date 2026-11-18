@@ -337,7 +337,9 @@ export function LayersSection({
       ) : null}
       {identifiableOn(layers.layers) > MAX_IDENTIFY_LAYERS ? (
         <p className={styles.muted} data-testid="layers-identify-cap">
-          {t("layers.identify.cap", { count: MAX_IDENTIFY_LAYERS })}
+          {messages.plural("layers.identify.cap", {
+            count: MAX_IDENTIFY_LAYERS,
+          })}
         </p>
       ) : null}
       <div className={styles.groups}>

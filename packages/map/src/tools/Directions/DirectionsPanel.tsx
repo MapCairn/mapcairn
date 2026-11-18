@@ -466,7 +466,7 @@ export function DirectionsPanel({
               data-testid={`directions-area-${minutes}`}
               onClick={() => directions.requestArea(minutes)}
             >
-              {t("duration.short.minute", { count: minutes })}
+              {messages.plural("duration.short.minute", { count: minutes })}
             </Button>
           ))}
         </div>
