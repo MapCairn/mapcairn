@@ -4,7 +4,7 @@ How a host changes the words the interface shows, offers its visitors more than 
 
 ## How the text is organised
 
-- Most interface text is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`). Layer feature templates instead use host-defined keys in `MessageCatalogue.layerTemplates`.
+- Most interface text is a key in the shipped `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`). Layer feature templates instead use a separate table of host-defined keys in `MessageCatalogue.layerTemplates`.
 - A string is plain text with `{name}` placeholders. A plural can use `one form|other form`, with "one" first and every other category second, or category-keyed forms such as `one{{count} item} few{{count} items} other{{count} items}`. Supply every category returned by `new Intl.PluralRules(language).resolvedOptions().pluralCategories`; languages with categories beyond "one" and "other" need keyed forms. Category forms may contain `{name}` placeholders but not nested forms or literal braces. Counts use `Intl.PluralRules` for the active catalogue's language, and lists use `Intl.ListFormat`.
 - Call `plural` with `count` for count-bearing text, even when the English value is plain: the active value may have forms. A plain active value is substituted as with `t`. `formatMessage` calls `plural` when its parameters include a numeric `count`; `MessageParams` permits an optional count even for a key without an English count placeholder. A direct `t` call does not select a form.
 - Numbers, dates and lists that go into a string are formatted by the catalogue for its own language, so a translation never has to format them. The coordinate hemisphere letters are keys too (`format.hemisphereNorth` and so on), so a language can write N, S, O and W.
@@ -52,7 +52,7 @@ The reference site's language options are in `packages/web/src/i18n/offeredLangu
 
 ## Translate definitions
 
-A basemap or layer definition's reader-facing text (a name, a description, a control label or an empty-state text) is either a plain string or a `MessageKey`. A plain string is shown as it is, so existing definitions keep working. A key is looked up in the active catalogue where the definition is shown. Attribution, licence names and links are legal text and stay as they are.
+A basemap or layer definition's reader-facing text (a name, a description, a control label or an empty-state text) is a `DefinitionText`: a shipped `MessageKey` or a plain string. Only shipped `MessageKey` values are looked up in the active catalogue. Other strings—including host-defined names or strings that merely look like keys—are shown as written; they do not become catalogue keys. To translate those fields, use a shipped `MessageKey` or supply the appropriate plain text when building the definition for that language. The host-keyed `LayerTemplate` table below is separate and applies only to template-backed layer text, not definition fields or control labels. Attribution, licence names and links are legal text and stay as they are.
 
 ## Translate layer templates
 
