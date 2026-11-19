@@ -1460,6 +1460,127 @@ describe("LayersSection definition text", () => {
     );
   });
 
+  it("translates a host's own keyed text on every definition surface, with the source as fallback", async () => {
+    const hostText = (key: string, text: string) => ({ key, text });
+    const HOSTED: FeedLayerDefinition<PointStyle> = {
+      ...KEYED,
+      id: "hosted-alerts",
+      name: hostText("host.alerts.name", "Fire alerts"),
+      description: hostText("host.alerts.description", "Current wildfires."),
+      group: hostText("host.group", "Fires"),
+      dataCost: hostText("host.alerts.cost", "about 135 KB"),
+      disclaimer: hostText("host.alerts.disclaimer", "Automatic estimates."),
+      emptyText: hostText("host.alerts.empty", "No fire alerts now."),
+      controls: [
+        {
+          kind: "segmented",
+          id: "period",
+          label: hostText("host.period", "Period"),
+          options: [
+            { value: "day", label: hostText("host.period.day", "Day") },
+            { value: "week", label: hostText("host.period.week", "Week") },
+          ],
+          default: "day",
+        },
+      ],
+      style: {
+        colour: {
+          kind: "category",
+          field: "level",
+          categories: [
+            {
+              value: "Green",
+              label: hostText("host.level.green", "Green alert"),
+              colour: "bluish-green",
+              shape: "circle",
+            },
+          ],
+          other: {
+            label: hostText("host.level.other", "Other"),
+            colour: "sky-blue",
+          },
+        },
+      },
+    };
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      definitionTexts: {
+        "host.alerts.name": "Brandwaarskuwings",
+        "host.alerts.description": "Huidige veldbrande.",
+        "host.group": "Brande",
+        "host.alerts.disclaimer": "Outomatiese skattings.",
+        "host.alerts.cost": "ongeveer 135 KB",
+        "host.period": "Tydperk",
+        "host.period.day": "Dag",
+        "host.level.green": "Groen waarskuwing",
+      },
+    });
+    const { source, services } = setup([HOSTED], undefined, afrikaans);
+    act(() => services.fakes.preferences.set({ saveData: true }));
+    source.setFeatures("hosted-alerts", [
+      samplePoint("g", {
+        title: "Brand",
+        level: "Green",
+        from: "2026-11-06T21:00:00",
+      }),
+    ]);
+    expect(
+      screen.getByRole("heading", { name: "Brande", level: 4 }),
+    ).toBeInTheDocument();
+    expect(item("hosted-alerts")).toHaveTextContent("Huidige veldbrande.");
+    toggle("hosted-alerts", "Brandwaarskuwings");
+    const section = within(item("hosted-alerts"));
+    expect(
+      await section.findByRole("radiogroup", { name: "Tydperk" }),
+    ).toBeInTheDocument();
+    expect(section.getByRole("radio", { name: "Dag" })).toBeInTheDocument();
+    expect(section.getByRole("radio", { name: "Week" })).toBeInTheDocument();
+    expect(section.getByText("Outomatiese skattings.")).toBeInTheDocument();
+    expect(section.getByText("Groen waarskuwing")).toBeInTheDocument();
+    expect(section.getByText("Other")).toBeInTheDocument();
+    expect(section.getByText(/ongeveer 135 KB/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+        "Brandwaarskuwings",
+      ),
+    );
+  });
+
+  it("announces a tile layer with a host-keyed name in the active language", async () => {
+    const tiles = {
+      ...SAMPLE_TILE_LAYER,
+      id: "hosted-tiles",
+      name: { key: "host.tiles.name", text: "Imagery" },
+    };
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      definitionTexts: { "host.tiles.name": "Beeldmateriaal" },
+    });
+    setup([tiles], undefined, afrikaans);
+    toggle("hosted-tiles", "Beeldmateriaal");
+    await waitFor(() =>
+      expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+        "Beeldmateriaal is on.",
+      ),
+    );
+  });
+
+  it("groups layers that name their group with the same words under one heading", () => {
+    const sameGroup = (id: string, group: FeedLayerDefinition["group"]) => ({
+      ...SAMPLE_FEED_LAYER,
+      id,
+      name: id,
+      group,
+    });
+    setup([
+      sameGroup("one", { key: "host.group", text: "Hazards" }),
+      sameGroup("two", "Hazards"),
+    ]);
+    expect(
+      screen.getAllByRole("heading", { name: "Hazards", level: 4 }),
+    ).toHaveLength(1);
+  });
+
   it("looks the list's sort options, the card and its detail button up", async () => {
     const { source, layers } = setup([KEYED], undefined, scripted());
     source.setFeatures("keyed-alerts", [

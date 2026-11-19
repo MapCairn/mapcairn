@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { MapKeyEvent, MapKeyHelpEntry } from "../keyboard/keyboard";
+import type { MapKeyEvent, ShippedKeyHelpEntry } from "../keyboard/keyboard";
 import {
   type DrawAction,
   type DrawState,
@@ -30,7 +30,7 @@ export type DrawKeyCommand =
   | { readonly type: "placeAtCentre" };
 
 /** The keyboard shortcuts of the draw tool, in display order, as message keys. */
-export const DRAW_KEY_HELP: readonly MapKeyHelpEntry[] = [
+export const DRAW_KEY_HELP: readonly ShippedKeyHelpEntry[] = [
   { keys: "keyHelp.keys.space", description: "keyHelp.draw.addPoint" },
   { keys: "keyHelp.keys.enter", description: "keyHelp.draw.finish" },
   { keys: "keyHelp.keys.arrowKeys", description: "keyHelp.draw.nudge" },

@@ -9,6 +9,7 @@ import {
   boundsAroundPoint,
   clearPin,
   closeSurface,
+  type DefinitionText,
   dropPin,
   type FocusTarget,
   initialSurfaceState,
@@ -130,7 +131,7 @@ export interface MapApp {
    * draw, so the map did not change.
    */
   readonly basemapFailure: {
-    readonly name: string;
+    readonly name: DefinitionText;
     readonly unavailable: boolean;
     readonly stayed: boolean;
   } | null;

@@ -3,7 +3,7 @@
 import {
   type ControlValues,
   type LayerDefinition,
-  type Message,
+  type MessagePart,
   resolveControlValues,
   textOrMessage,
 } from "@mapcairn/core";
@@ -47,8 +47,8 @@ export interface ReconcileInputs {
 /** An enabled layer that left the list, by id and by the name it had. */
 export interface SwitchedOff {
   readonly id: string;
-  /** The layer's name as a placeholder value: plain text, or a message for a keyed name. */
-  readonly name: string | Message;
+  /** The layer's name as a placeholder value: plain text, a message for a keyed name, or a host text. */
+  readonly name: MessagePart;
 }
 
 /**

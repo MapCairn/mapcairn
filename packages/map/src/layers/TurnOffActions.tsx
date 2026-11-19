@@ -7,7 +7,7 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { useMessages, useResolveText } from "../services";
+import { useMessages } from "../services";
 import { Button } from "../ui/Button";
 import * as styles from "./Layers.css";
 import type { DataLayers } from "./useDataLayers";
@@ -22,8 +22,12 @@ export interface TurnOffAllProps {
 /** Props for {@link TurnOffGroup}. */
 export interface TurnOffGroupProps {
   readonly layers: DataLayers;
-  /** The group this action covers. */
+  /** The group's key, which does not change with the language: passed to `turnOff` to say which action asked. */
   readonly group: string;
+  /** Whether the Undo on offer belongs to this group, which the section works out from the layers it would turn back on. */
+  readonly holdsUndo: boolean;
+  /** The group's heading as the person reads it, for the button and the status. */
+  readonly heading: string;
   /** The layers it would turn off: those of the group that are on. */
   readonly ids: readonly string[];
 }
@@ -195,20 +199,25 @@ export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
  * "Turn off N in <group>", shown while the group has layers on. Once it has
  * run, its status and Undo take the row under the group's heading.
  */
-export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
+export function TurnOffGroup({
+  layers,
+  group,
+  heading,
+  ids,
+  holdsUndo,
+}: TurnOffGroupProps) {
   const { plural } = useMessages();
-  const groupName = useResolveText()(group);
   const { turnedOff, turnOff } = layers;
   const undo =
-    turnedOff?.group === group
+    turnedOff && holdsUndo
       ? {
           text: plural("layers.turnOff.doneGroup", {
             count: turnedOff.count,
-            group: groupName,
+            group: heading,
           }),
           label: plural("layers.turnOff.undoGroup", {
             count: turnedOff.count,
-            group: groupName,
+            group: heading,
           }),
         }
       : null;
@@ -225,7 +234,7 @@ export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
         >
           {plural("layers.turnOff.group", {
             count: ids.length,
-            group: groupName,
+            group: heading,
           })}
         </Button>
       ) : null}

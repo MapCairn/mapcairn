@@ -738,15 +738,27 @@ export type MessageKey =
   | "host.map.summary";
 
 /**
- * Text a definition shows a person: a {@link MessageKey}, looked up in the
- * active catalogue where the definition is rendered, or a plain string,
- * shown as written. A third-party definition keeps writing plain strings; the
- * reference host's own definitions use keys so they can be translated. Read
- * it with `resolveText`. It is a plain `string` at compile time, so a host's
- * definition needs no cast, and the runtime check against the English
- * catalogue decides what is a key.
+ * A host's own translatable definition text: a host-defined catalogue `key`
+ * and the `text` shown in the source language, which is also the fallback
+ * when the active catalogue has no translation for the key. The key is never
+ * a {@link MessageKey}; it is looked up in {@link MessageCatalogue.definitionTexts}.
  */
-export type DefinitionText = MessageKey | string;
+export interface HostText {
+  readonly key: string;
+  readonly text: string;
+}
+
+/**
+ * Text a definition shows a person: a {@link MessageKey}, looked up in the
+ * active catalogue where the definition is rendered; a {@link HostText}, a
+ * host's own key with its source text, translated from
+ * {@link MessageCatalogue.definitionTexts}; or a plain string, shown as
+ * written. A third-party definition keeps writing plain strings. Read it
+ * with `resolveText`. A plain string is never taken for a key, so a host opts
+ * text in by writing a `HostText`, and the runtime check against the English
+ * catalogue decides which strings are shipped keys.
+ */
+export type DefinitionText = MessageKey | string | HostText;
 
 /**
  * The parameters a key's placeholders need. A key with no placeholders maps
@@ -1194,9 +1206,9 @@ export type MessageArgs<P> =
     ? P
     : {
         readonly [Name in keyof P]: P[Name] extends string
-          ? P[Name] | Message
+          ? P[Name] | Message | HostText
           : P[Name] extends readonly string[]
-            ? readonly (string | Message)[]
+            ? readonly MessagePart[]
             : P[Name];
       };
 
@@ -1214,6 +1226,13 @@ export type Message<K extends MessageKey = MessageKey> = K extends MessageKey
   : never;
 
 /**
+ * Text that fills a string placeholder of a {@link Message}: plain text, a
+ * nested message, or a {@link HostText} that the one place that speaks the
+ * sentence translates. Use it for a definition's name in an announcement.
+ */
+export type MessagePart = string | Message | HostText;
+
+/**
  * Formats text for one language. The SDK's dependency-free default is
  * `createMessageCatalogue`; a host may wire a message-format library of its
  * own behind this same shape.
@@ -1223,6 +1242,12 @@ export interface MessageCatalogue {
   readonly language: string;
   /** Optional host translations for layer templates, units and labels. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
+  /**
+   * Optional translations of a host's own definition text, by the `key` of a
+   * {@link HostText}. An entry replaces that text's source; a key with no own
+   * entry, or a blank one, shows the source text.
+   */
+  readonly definitionTexts?: Readonly<Record<string, string>>;
   /**
    * An `Intl` numbering system, for example "latn", that numbers and dates
    * are written in instead of the language's own digits. Unset, they follow

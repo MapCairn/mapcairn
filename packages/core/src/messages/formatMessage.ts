@@ -7,6 +7,8 @@ import type {
   MessageKey,
   MessageParams,
 } from "../ports/messages";
+import { isHostText } from "./hostText";
+import { resolveText } from "./resolveText";
 
 /** Builds a {@link Message}: a key and the parameters its placeholders need. */
 export function message<K extends MessageKey>(
@@ -38,8 +40,12 @@ export function formatMessage(
   catalogue: MessageCatalogue,
   { key, params }: Message,
 ): string {
-  const text = (value: unknown): unknown =>
-    isMessage(value) ? formatMessage(catalogue, value) : value;
+  const text = (value: unknown): unknown => {
+    if (isMessage(value)) {
+      return formatMessage(catalogue, value);
+    }
+    return isHostText(value) ? resolveText(catalogue, value) : value;
+  };
   const resolved = Object.fromEntries(
     Object.entries(params).map(([name, value]) => [
       name,
