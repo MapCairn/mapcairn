@@ -77,6 +77,23 @@ export function formatLongitude(
 }
 
 /**
+ * The locale tag to give `Intl` for numbers and dates: the catalogue's
+ * language, with its `numberingSystem` as a `-u-nu-` extension when it has
+ * one. Calendars are not touched, so a language keeps its own (Thai years are
+ * Buddhist, Persian years are Solar Hijri). Plural selection and the `lang`
+ * attribute keep using the plain language.
+ */
+export function formatLocale(
+  catalogue: Pick<MessageCatalogue, "language" | "numberingSystem">,
+): string {
+  const { language, numberingSystem } = catalogue;
+  if (numberingSystem === undefined) {
+    return language;
+  }
+  return new Intl.Locale(language, { numberingSystem }).toString();
+}
+
+/**
  * Formats a number for display with the grouping and decimals of `language`.
  * The language is named explicitly so output never depends on the visitor's
  * settings; callers pass their message catalogue's `language`.

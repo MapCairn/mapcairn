@@ -1201,6 +1201,13 @@ export interface MessageCatalogue {
   /** Optional host translations for layer templates, units and labels. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
   /**
+   * An `Intl` numbering system, for example "latn", that numbers and dates
+   * are written in instead of the language's own digits. Unset, they follow
+   * the language's `Intl` defaults. Coordinates are always ASCII. Format with
+   * `formatLocale(catalogue)` rather than `language` to honour it.
+   */
+  readonly numberingSystem?: string;
+  /**
    * Looks up a key, substitutes its parameters (written `{name}` in the
    * string), and falls back with a single `console.warn` per missing key
    * when the active catalogue lacks it. The dependency-free default uses

@@ -18,6 +18,8 @@ export interface MessageCatalogueCall {
 export interface FakeMessageCatalogueOptions {
   /** Defaults to "en-GB". */
   readonly language?: string;
+  /** An `Intl` numbering system for numbers and days, such as "latn". */
+  readonly numberingSystem?: string;
   /** Host-defined layer template, unit and label translations. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
   /**
@@ -52,10 +54,13 @@ export class FakeMessageCatalogue implements MessageCatalogue {
 
   readonly layerTemplates?: Readonly<Record<string, string>>;
 
+  readonly numberingSystem?: string;
+
   readonly #inner: MessageCatalogue;
 
   constructor(options: FakeMessageCatalogueOptions = {}) {
     this.layerTemplates = options.layerTemplates;
+    this.numberingSystem = options.numberingSystem;
     const language = options.language ?? "en-GB";
     const active: Partial<Record<MessageKey, string>> = {
       ...EN_GB_CATALOGUE,
@@ -68,6 +73,9 @@ export class FakeMessageCatalogue implements MessageCatalogue {
       language,
       active as Record<MessageKey, string>,
       EN_GB_CATALOGUE,
+      options.numberingSystem === undefined
+        ? {}
+        : { numberingSystem: options.numberingSystem },
     );
   }
 

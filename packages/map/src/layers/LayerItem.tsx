@@ -7,6 +7,7 @@ import {
   describeZoomIn,
   describeZoomOut,
   type FormatterRegistry,
+  formatLocale,
   formatMessage,
   formatTemplate,
   isControlEnabled,
@@ -42,9 +43,9 @@ import type { DataLayerState, DataLayers, LayerStatus } from "./useDataLayers";
 /** How many rows the list shows before "Show all". */
 export const LIST_PAGE = 50;
 
-/** The time of day a layer last updated, written for `language`. */
-function timeOfDay(updatedAt: number, language: string): string {
-  return new Intl.DateTimeFormat(language, {
+/** The time of day a layer last updated, written for `locale`. */
+function timeOfDay(updatedAt: number, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(updatedAt);
@@ -60,7 +61,8 @@ function statusText(
   emptyText: string,
   messages: MessageCatalogue,
 ): string | null {
-  const { language, t } = messages;
+  const { t } = messages;
+  const locale = formatLocale(messages);
   switch (status.kind) {
     case "loading":
       return t("layers.status.loading", {});
@@ -68,7 +70,7 @@ function statusText(
       return messages.plural(
         status.capped ? "layers.status.updatedCapped" : "layers.status.updated",
         {
-          time: timeOfDay(status.updatedAt, language),
+          time: timeOfDay(status.updatedAt, locale),
           count: status.count,
         },
       );
@@ -78,7 +80,7 @@ function statusText(
       return formatMessage(messages, describeZoomOut(status.level));
     case "empty":
       return t("layers.status.updatedEmpty", {
-        time: timeOfDay(status.updatedAt, language),
+        time: timeOfDay(status.updatedAt, locale),
         text: emptyText,
       });
     default:

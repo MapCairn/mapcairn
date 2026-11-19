@@ -23,6 +23,36 @@ runMessageCatalogueContract("createMessageCatalogue", {
     createMessageCatalogue(language, values, EN_GB_CATALOGUE),
 });
 
+describe("createMessageCatalogue numbering", () => {
+  const catalogueFor = (numberingSystem?: string) =>
+    createMessageCatalogue(
+      "fa",
+      { "settings.notSaved": "{count} on {date}" } as never,
+      EN_GB_CATALOGUE,
+      numberingSystem === undefined ? {} : { numberingSystem },
+    );
+  const params = { count: 1234, date: new Date(Date.UTC(2026, 10, 11)) };
+
+  it("exposes the numbering system and keeps the language", () => {
+    const catalogue = catalogueFor("latn");
+    expect(catalogue.numberingSystem).toBe("latn");
+    expect(catalogue.language).toBe("fa");
+    expect(catalogueFor().numberingSystem).toBeUndefined();
+  });
+
+  it("uses the language's own digits by default", () => {
+    expect(catalogueFor().t("settings.notSaved", params as never)).toContain(
+      new Intl.NumberFormat("fa").format(1234),
+    );
+  });
+
+  it("writes Latin digits in numbers and days when asked", () => {
+    const text = catalogueFor("latn").t("settings.notSaved", params as never);
+    expect(text).toContain("1,234");
+    expect(text).not.toMatch(/[\u06F0-\u06F9]/u);
+  });
+});
+
 describe("createMessageCatalogue", () => {
   it.each([
     [0, "zero"],

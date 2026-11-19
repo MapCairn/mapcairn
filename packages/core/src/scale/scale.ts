@@ -25,7 +25,7 @@ export interface ScaleBarInput {
   /** The widest the bar may be, in CSS pixels. */
   readonly maxWidthPx: number;
   readonly units: UnitSystem;
-  /** The language the visible figure is written in, from the message catalogue. */
+  /** The locale the visible figure is written in: the message catalogue's `formatLocale`. */
   readonly language: string;
 }
 

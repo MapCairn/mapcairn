@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatNumber } from "../format/format";
+import { formatLocale, formatNumber } from "../format/format";
 import { resolveText } from "../messages/resolveText";
 import type { FieldValue } from "../ports/layers";
 import type { MessageCatalogue } from "../ports/messages";
@@ -87,7 +87,7 @@ function intervalLabel(
       : resolveLayerTemplate(colour.unit, catalogue);
   const last = colour.ramp.length - 1;
   const figure = (value: number) =>
-    formatNumber(value, catalogue.language, {
+    formatNumber(value, formatLocale(catalogue), {
       maximumFractionDigits: MAX_FRACTION_DIGITS,
     });
   const low = figure(colour.min + index * width);

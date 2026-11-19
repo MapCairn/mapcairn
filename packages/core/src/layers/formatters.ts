@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatNumber } from "../format/format";
+import { formatLocale, formatNumber } from "../format/format";
 import type { FieldValue } from "../ports/layers";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
 import { createNamedRegistry, type NamedRegistry } from "./registry";
@@ -96,7 +96,7 @@ function date(value: FieldValue, { catalogue }: FormatContext): string | null {
   if (time === null) {
     return null;
   }
-  const { language } = catalogue;
+  const language = formatLocale(catalogue);
   const day = new Intl.DateTimeFormat(language, {
     day: "numeric",
     month: "short",
@@ -115,7 +115,7 @@ function date(value: FieldValue, { catalogue }: FormatContext): string | null {
 }
 
 function formatFigure(value: number, { catalogue }: FormatContext): string {
-  return formatNumber(value, catalogue.language, {
+  return formatNumber(value, formatLocale(catalogue), {
     maximumFractionDigits: MAX_FRACTION_DIGITS,
   });
 }

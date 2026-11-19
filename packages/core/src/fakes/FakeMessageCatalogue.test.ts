@@ -43,4 +43,14 @@ describe("FakeMessageCatalogue", () => {
       new Intl.ListFormat("en-GB", { type: "conjunction" }).format(["A", "B"]),
     );
   });
+
+  it("carries a numbering system and formats numbers with it", () => {
+    const catalogue = new FakeMessageCatalogue({
+      language: "fa",
+      numberingSystem: "latn",
+      overrides: { "common.itemCount": "{count}" },
+    });
+    expect(catalogue.numberingSystem).toBe("latn");
+    expect(catalogue.t("common.itemCount", { count: 1234 })).toBe("1,234");
+  });
 });

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatDay, formatNumber } from "../format/format";
+import { formatDay, formatLocale, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
 import { pluralFormsOf } from "./pluralForms";
 
@@ -10,6 +10,12 @@ export interface CreateMessageCatalogueOptions {
   readonly layerTemplates?: Readonly<Record<string, string>>;
   /** BCP 47 tag of the fallback record's language. Defaults to `en-GB`. */
   readonly fallbackLanguage?: string;
+  /**
+   * An `Intl` numbering system such as "latn", to write numbers and days in
+   * instead of the language's own digits. Left out, they follow the
+   * language's `Intl` defaults.
+   */
+  readonly numberingSystem?: string;
 }
 
 /** Matches a `{name}` placeholder in a catalogue string. */
@@ -17,13 +23,15 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 
 /**
  * Substitutes every `{name}` placeholder in `template` from `params`. A
- * number, a `Date` and a list of strings are formatted for `language`; a
+ * number, a `Date` and a list of strings are formatted for `language` (a
+ * number and a day with `locale`, which adds the numbering system); a
  * placeholder with no value is left as written.
  */
 function substitute(
   template: string,
   params: Readonly<Record<string, unknown>>,
   language: string,
+  locale: string,
 ): string {
   return template.replace(PLACEHOLDER, (whole, name: string) => {
     const value = params[name];
@@ -31,10 +39,10 @@ function substitute(
       return whole;
     }
     if (typeof value === "number") {
-      return formatNumber(value, language);
+      return formatNumber(value, locale);
     }
     if (value instanceof Date) {
-      return formatDay(value, language);
+      return formatDay(value, locale);
     }
     if (Array.isArray(value)) {
       return new Intl.ListFormat(language, { type: "conjunction" }).format(
@@ -79,6 +87,8 @@ export function createMessageCatalogue(
 ): MessageCatalogue {
   const warned = new Set<MessageKey>();
   const fallbackLanguage = options.fallbackLanguage ?? "en-GB";
+  const { numberingSystem } = options;
+  const locale = formatLocale({ language, numberingSystem });
 
   function resolve(key: MessageKey): {
     readonly template: string;
@@ -99,11 +109,12 @@ export function createMessageCatalogue(
 
   return {
     language,
+    ...(numberingSystem === undefined ? {} : { numberingSystem }),
     ...(options.layerTemplates
       ? { layerTemplates: options.layerTemplates }
       : {}),
     t(key, params) {
-      return substitute(resolve(key).template, params, language);
+      return substitute(resolve(key).template, params, language, locale);
     },
     plural(key, params) {
       const { count } = params;
@@ -113,7 +124,7 @@ export function createMessageCatalogue(
         resolved.language,
         count,
       );
-      return substitute(form, params, language);
+      return substitute(form, params, language, locale);
     },
     list(items, type = "conjunction") {
       return new Intl.ListFormat(language, { type }).format(items);
