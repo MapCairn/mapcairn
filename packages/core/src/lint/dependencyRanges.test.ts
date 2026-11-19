@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -10,15 +10,16 @@ const REPO = path.resolve(
   "../../../..",
 );
 
-const MANIFESTS = [
-  "package.json",
-  "packages/core/package.json",
-  "packages/map/package.json",
-  "packages/react/package.json",
-  "packages/theme/package.json",
-  "packages/web/package.json",
-  "examples/embed/package.json",
-];
+/** The root manifest, then every package and example under it. */
+function manifestPaths(): string[] {
+  const workspaces = ["packages", "examples"].flatMap((folder) =>
+    readdirSync(path.join(REPO, folder), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `${folder}/${entry.name}/package.json`)
+      .filter((manifest) => existsSync(path.join(REPO, manifest))),
+  );
+  return ["package.json", ...workspaces];
+}
 
 const SECTIONS = [
   "dependencies",
@@ -45,7 +46,7 @@ interface Entry {
 
 /** Every third-party entry of every manifest; MapCairn's own packages are linked, not ranged. */
 function thirdPartyEntries(): Entry[] {
-  return MANIFESTS.flatMap((manifest) => {
+  return manifestPaths().flatMap((manifest) => {
     const parsed = JSON.parse(
       readFileSync(path.join(REPO, manifest), "utf8"),
     ) as Manifest;
@@ -58,22 +59,21 @@ function thirdPartyEntries(): Entry[] {
 }
 
 describe("third-party dependency ranges", () => {
-  it("reads every manifest", () => {
-    expect(thirdPartyEntries().length).toBeGreaterThan(50);
+  it("covers the root and every workspace manifest", () => {
+    expect(manifestPaths()).toEqual(
+      expect.arrayContaining([
+        "package.json",
+        "packages/core/package.json",
+        "examples/embed/package.json",
+      ]),
+    );
   });
 
   it("uses a caret range, except a prerelease, which stays an exact version", () => {
     const wrong = thirdPartyEntries()
       .filter(({ range }) =>
-        PRERELEASE.test(range) ? false : !range.startsWith("^"),
+        PRERELEASE.test(range) ? /^[\^~]/.test(range) : !range.startsWith("^"),
       )
-      .map(({ manifest, name, range }) => `${manifest}: ${name}@${range}`);
-    expect(wrong).toEqual([]);
-  });
-
-  it("pins a prerelease exactly, with no range operator", () => {
-    const wrong = thirdPartyEntries()
-      .filter(({ range }) => /^[\^~]/.test(range) && /-/.test(range))
       .map(({ manifest, name, range }) => `${manifest}: ${name}@${range}`);
     expect(wrong).toEqual([]);
   });
