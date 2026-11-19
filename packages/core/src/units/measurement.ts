@@ -144,8 +144,9 @@ export function readArea(
 
 /**
  * Formats a distance with a short unit, for example "850 m", "1.25 km",
- * "328 ft" or "1.25 mi". The number is grouped and its digits chosen for `locale` (`formatLocale(catalogue)`); the unit
- * symbols are the same in every language.
+ * "328 ft" or "1.25 mi". The number is grouped and its digits chosen for
+ * `locale` (`formatLocale(catalogue)`); the unit symbols are the same in
+ * every language.
  */
 export function formatDistance(
   metres: number,

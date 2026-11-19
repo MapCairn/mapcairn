@@ -133,13 +133,16 @@ export function runMessageCatalogueContract(
 
       it("ignores a malformed numbering system and warns once", () => {
         const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-        const catalogue = fixture.createWith("fa", values, "x");
-        expect(catalogue.numberingSystem).toBeUndefined();
-        expect(catalogue.t("announce.searchResults", params)).toMatch(
-          nativeDigits,
-        );
-        expect(warn).toHaveBeenCalledTimes(1);
-        warn.mockRestore();
+        try {
+          const catalogue = fixture.createWith("fa", values, "x");
+          expect(catalogue.numberingSystem).toBeUndefined();
+          expect(catalogue.t("announce.searchResults", params)).toMatch(
+            nativeDigits,
+          );
+          expect(warn).toHaveBeenCalledTimes(1);
+        } finally {
+          warn.mockRestore();
+        }
       });
     });
 

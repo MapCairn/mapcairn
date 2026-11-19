@@ -1153,9 +1153,10 @@ export type MessageParams = {
 };
 
 /**
- * What a placeholder can be filled with. A number is formatted with the
- * catalogue's language (grouping and decimal separator), a `Date` as a UTC
- * day in words, and a list of strings with `Intl.ListFormat`.
+ * What a placeholder can be filled with. A number is formatted for
+ * `formatLocale(catalogue)` (grouping, decimal separator and digits), a
+ * `Date` as a UTC day in words for the same locale, and a list of strings
+ * with `Intl.ListFormat` for the plain language.
  */
 export type MessageValue = string | number | Date | readonly string[];
 

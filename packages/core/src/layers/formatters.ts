@@ -96,14 +96,14 @@ function date(value: FieldValue, { catalogue }: FormatContext): string | null {
   if (time === null) {
     return null;
   }
-  const language = formatLocale(catalogue);
-  const day = new Intl.DateTimeFormat(language, {
+  const locale = formatLocale(catalogue);
+  const day = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
     timeZone: "UTC",
   }).format(time);
-  const clock = new Intl.DateTimeFormat(language, {
+  const clock = new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,

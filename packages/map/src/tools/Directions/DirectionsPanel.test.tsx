@@ -360,6 +360,21 @@ describe("figures in the catalogue's numbering system", () => {
     ["latn", false],
     [undefined, true],
   ])(
+    "writes the route total with %s digits as native: %s",
+    async (numberingSystem, isNative) => {
+      setup({}, withNumbering(numberingSystem));
+      addCentreStops(2);
+      click("Get route");
+      await flush();
+      const total = screen.getByTestId("directions-figures").textContent ?? "";
+      expect(native.test(total)).toBe(isNative);
+    },
+  );
+
+  it.each([
+    ["latn", false],
+    [undefined, true],
+  ])(
     "writes the area size with %s digits as native: %s",
     async (numberingSystem, isNative) => {
       setup({}, withNumbering(numberingSystem));

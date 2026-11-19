@@ -24,8 +24,8 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 
 /**
  * Substitutes every `{name}` placeholder in `template` from `params`. A
- * number, a `Date` and a list of strings are formatted for `language` (a
- * number and a day with `locale`, which adds the numbering system); a
+ * number and a `Date` are formatted for `locale`, the language with its
+ * numbering system; a list of strings is formatted for `language`. A
  * placeholder with no value is left as written.
  */
 function substitute(
