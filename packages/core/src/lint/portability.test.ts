@@ -13,6 +13,9 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/portability-check.mjs";
 
+/** A backslash, built here so no escape sequence has to be written out in the test cases. */
+const BACKSLASH = String.fromCharCode(92);
+
 const SCRIPT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../../scripts/portability-check.mjs",
@@ -27,13 +30,24 @@ describe("findProblems", () => {
     ["a Linux home path", "cat /home/someone/notes"],
     ["a Windows drive path", String.raw`copy C:\Work\file.txt`],
     ["a forward-slash drive path", "open C:/Users/x"],
+    [
+      "a drive path with the backslashes escaped for JSON",
+      `C:${BACKSLASH}${BACKSLASH}Users${BACKSLASH}${BACKSLASH}x`,
+    ],
     ["a path in /tmp", "write it to /tmp/out.json"],
+    ["a path in /tmp after an equals sign", "out=/tmp/result"],
+    ["a path in /tmp at the end of a line", "write it to /tmp"],
     ["lsof", "run lsof -nP -iTCP:5190"],
     ["pgrep", "pgrep -f vite"],
     ["pkill", "pkill node"],
     ["readlink -f", "readlink -f ."],
     ["date -d", "date -d yesterday"],
     ["sed -i", "sed -i s/a/b/ file"],
+    ["sed -i with extra spaces", "sed  -i s/a/b/ file"],
+    ["date -d with extra spaces", "date  -d yesterday"],
+    ["a single-quoted --jq program", "gh api repos/x/y --jq '.[].title'"],
+    ["/dev/null", "run it 2>/dev/null"],
+    ["a command substitution", "echo $(date)"],
     ["mktemp", "mktemp -d"],
     ["python3", "python3 script.py"],
   ])("reports %s", (_name, line) => {
@@ -81,6 +95,7 @@ describe("isChecked", () => {
     "CLAUDE.md",
     "CONTRIBUTING.md",
     "lefthook.yml",
+    "package.json",
   ])("checks %s", (file) => {
     expect(isChecked(file)).toBe(true);
   });
@@ -152,6 +167,20 @@ describe("scripts/portability-check.mjs in a small repository", () => {
       const result = check(root);
       expect(result.stderr).toBe("");
       expect(result.status).toBe(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("checks the whole repository when it is started from a folder inside it", () => {
+    const root = repository();
+    try {
+      mkdirSync(path.join(root, "docs"));
+      writeFileSync(path.join(root, "AGENTS.md"), "ok\ncd /Users/x\n");
+      git(root, "add", "-A");
+      const result = check(path.join(root, "docs"));
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("AGENTS.md:2: a macOS home path");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

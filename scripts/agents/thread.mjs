@@ -16,7 +16,7 @@
  * write access the list cannot be read, and every login is shown as outside.
  */
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { isEntryPoint } from "../entryPoint.mjs";
 
 const REPO = "MapCairn/mapcairn";
 /**
@@ -824,7 +824,7 @@ function printPullRequest(number, people) {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   const [kind, raw] = process.argv.slice(2);
   const number = Number(raw);
   if (

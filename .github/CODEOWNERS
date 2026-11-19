@@ -4,6 +4,7 @@
 # This only requests a review; the repository ruleset does not require a code
 # owner's approval.
 /ROADMAP.md @MapCairn/maintainers
+/CLA.md @MapCairn/maintainers
 /AGENTS.md @MapCairn/maintainers
 /CLAUDE.md @MapCairn/maintainers
 /.claude/ @MapCairn/maintainers
