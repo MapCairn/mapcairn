@@ -9,7 +9,7 @@
  *   node scripts/portability-check.mjs
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 /** The one file that has to spell out the patterns it looks for. */
@@ -24,12 +24,16 @@ const CHECKED_FILES = new Set([
   "lefthook.yml",
 ]);
 const TEXT_FILE = /\.(?:md|mjs|cjs|yml|yaml|json)$/;
+/** Shell and Python scripts under `scripts/` run on one system only; use Node. */
+const SYSTEM_SPECIFIC_SCRIPT = /^scripts\/.*\.(?:sh|ps1|cmd|bat|py)$/;
+/** Web addresses are removed from a line before it is read, so a URL segment such as `/home/` is not a path. */
+const URL_TEXT = /\bhttps?:\/\/\S+/g;
 
 /** A pattern and what is wrong with it. */
 const RULES = [
   { pattern: /\/Users\/\w/, message: "a macOS home path" },
   { pattern: /\/home\/\w/, message: "a Linux home path" },
-  { pattern: /\b[A-Za-z]:\\\w/, message: "a Windows drive path" },
+  { pattern: /(?<!\w)[A-Za-z]:[\\/]\w/, message: "a Windows drive path" },
   { pattern: /(?:^|[\s`"'(])\/tmp\//, message: "a path in /tmp" },
   { pattern: /\blsof\b/, message: "lsof (use scripts/agents/port.mjs)" },
   { pattern: /\bpgrep\b/, message: "pgrep" },
@@ -58,6 +62,17 @@ export function isChecked(path) {
 }
 
 /**
+ * Whether the tracked file is a shell, PowerShell, batch or Python script
+ * under `scripts/`.
+ *
+ * @param {string} path Repository-relative path with forward slashes.
+ * @returns {boolean}
+ */
+export function isSystemSpecificScript(path) {
+  return SYSTEM_SPECIFIC_SCRIPT.test(path);
+}
+
+/**
  * The non-portable text in a file, one entry for each line that holds any.
  *
  * @param {string} text
@@ -66,7 +81,8 @@ export function isChecked(path) {
 export function findProblems(text) {
   const problems = [];
   text.split(/\r?\n/).forEach((content, index) => {
-    const rule = RULES.find(({ pattern }) => pattern.test(content));
+    const visible = content.replace(URL_TEXT, "");
+    const rule = RULES.find(({ pattern }) => pattern.test(visible));
     if (rule !== undefined) {
       problems.push({ line: index + 1, message: rule.message });
     }
@@ -76,17 +92,17 @@ export function findProblems(text) {
 
 /** Reports every problem in the tracked files and exits 1 if there is one. */
 function main() {
-  const tracked = execFileSync("git", ["ls-files", "-z"], {
+  const files = execFileSync("git", ["ls-files", "-z"], {
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   })
     .split("\0")
-    .filter(isChecked);
-  const reports = tracked.flatMap((path) =>
-    findProblems(readFileSync(path, "utf8")).map(
-      ({ line, message }) => `${path}:${line}: ${message}`,
-    ),
-  );
+    .filter((path) => path !== "" && existsSync(path));
+  const tracked = files.filter(isChecked);
+  const scripts = files
+    .filter(isSystemSpecificScript)
+    .map((path) => `${path}: use a Node script (.mjs)`);
+  const reports = [...scripts, ...checkedReports(tracked)];
   if (reports.length > 0) {
     console.error(
       `portability: ${reports.length} problem(s)\n${reports.join("\n")}`,
@@ -95,6 +111,15 @@ function main() {
   }
   console.log(
     `portability: ${tracked.length} files checked, none non-portable`,
+  );
+}
+
+/** One report line for each problem in the files. */
+function checkedReports(tracked) {
+  return tracked.flatMap((path) =>
+    findProblems(readFileSync(path, "utf8")).map(
+      ({ line, message }) => `${path}:${line}: ${message}`,
+    ),
   );
 }
 

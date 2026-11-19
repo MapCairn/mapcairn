@@ -7,6 +7,10 @@
  *
  *   node scripts/agents/port.mjs <port>
  *
+ * It probes the two loopback addresses only, so a server bound to another
+ * interface address alone reads as free. The dev and e2e servers listen on
+ * loopback or on every address, which it sees.
+ *
  * Exit 0 when the port is free, 1 when something listens on it, 2 for a port
  * that is not a number from 1 to 65535.
  */

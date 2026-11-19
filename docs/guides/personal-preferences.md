@@ -18,11 +18,11 @@ Your file can add to the rules, never relax one. A line in it cannot authorise a
 
 Create `CLAUDE.local.md` in the repository root. Claude Code reads it with `CLAUDE.md`, and `.gitignore` already excludes it, so it is never committed. For preferences that apply to every project, use your user-level file, `~/.claude/CLAUDE.md` (on Windows, `.claude\CLAUDE.md` in your user folder).
 
-A git worktree is a separate folder and does not contain the ignored file. Copy it into the worktree, or keep the preference in your user-level file.
+A git worktree is a separate folder and may not contain the ignored file. Claude Code looks for these files from the working folder upward, so a worktree under the main checkout (such as `.claude/worktrees/<name>`) may find the main checkout's file, and copying the file into it may load it twice. Neither was checked for this guide; if a preference does not load, or loads twice, keep it in your user-level file instead.
 
 ## Other tools
 
-`AGENTS.local.md` is also git-ignored, but no tool loads it by itself. Either start a session with "read `AGENTS.local.md` first", or put the same text in the tool's own user-level instruction file. These paths were not checked for this guide, so confirm them in the tool's documentation:
+`AGENTS.local.md` is also git-ignored. As far as this guide knows (not checked against every tool), no tool loads it by itself. Either start a session with "read `AGENTS.local.md` first", or put the same text in the tool's own user-level instruction file. These paths were not checked for this guide, so confirm them in the tool's documentation:
 
 | Tool           | User-level instructions (check the tool's documentation) |
 | -------------- | -------------------------------------------------------- |
