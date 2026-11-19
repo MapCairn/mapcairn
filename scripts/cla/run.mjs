@@ -448,8 +448,10 @@ async function check({ github, context, core }, pull) {
   }
 
   // Only a pass can be overturned by another pull request, so the others are
-  // checked only then.
-  const waitingPulls = evaluation.agreed
+  // checked only then. After writing a pass, check them again: an overlapping
+  // run may have found a failure in the meantime and its status must stay
+  // newer than this pass.
+  let waitingPulls = evaluation.agreed
     ? await waitingPullsForHead(setting, pull)
     : [];
 
@@ -462,6 +464,18 @@ async function check({ github, context, core }, pull) {
     buildCommitStatus(evaluation, waitingPulls),
     claUrl,
   );
+  if (evaluation.agreed && waitingPulls.length === 0) {
+    waitingPulls = await waitingPullsForHead(setting, pull);
+    if (waitingPulls.length > 0) {
+      await setStatus(
+        github,
+        target,
+        pull.head.sha,
+        buildCommitStatus(evaluation, waitingPulls),
+        claUrl,
+      );
+    }
+  }
 
   try {
     await updateComment(
