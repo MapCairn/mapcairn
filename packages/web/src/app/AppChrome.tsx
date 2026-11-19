@@ -208,7 +208,13 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
           onZoomOut={() => zoomBy("out")}
         />
       }
-      bottomStart={<AppReadout units={settings.units} cursor={app.cursor} />}
+      bottomStart={
+        <AppReadout
+          units={settings.units}
+          cursor={app.cursor}
+          onCursorLeave={() => app.setCursor(null)}
+        />
+      }
       bottomEnd={
         <Attribution
           basemap={app.basemap}

@@ -630,8 +630,11 @@ describe("MapChrome map key slot", () => {
       surfaceValue.publishSheetDetent("peek");
     });
     expect(lift).toBeLessThan(0);
-    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${lift}px`);
-    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 + lift - 12 - 72}px`);
+    // The key rides the sheet with the bottom row's own lift, which slides;
+    // its base shift and room leave that lift out.
+    expect(cssVar(chromeVars.bottomLift)).toBe(`${lift}px`);
+    expect(cssVar(chromeVars.mapKeyLift)).toBe("0px");
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - 72}px`);
   });
 
   it("lifts it above a taller bottom row by the row's own position, not the row's lift twice", () => {
@@ -644,20 +647,29 @@ describe("MapChrome map key slot", () => {
       observers.trigger();
     });
     const lift = 700 - 12 - (800 - 12);
-    // Target bottom: the lifted scale bar's top (744 + lift) a gap above.
-    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 + lift - 12 - 688}px`);
+    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 - 12 - 688}px`);
+    expect(cssVar(chromeVars.bottomRaise)).toBe(`${lift}px`);
   });
 
   it("hides while there is no room for the chip, and returns when there is", () => {
     mount({ mapKey: <div>key</div> });
     resize(320, 568);
     placeKey(60, 500);
-    // A tall toolbar lifts the bottom row to 150, leaving 10 px under the pill.
+    // A tall toolbar raises the bottom row by its height and the bottom inset,
+    // -(406 + 12), from 512 to 94, leaving 94 - 12 - (60 + 12) = 10 px under
+    // the pill. The key's base room leaves the raise out; CSS adds it.
     place("bottom-centre", 150, 406);
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.mapKeyRoom)).toBe("48px");
+    expect(cssVar(chromeVars.bottomRaise)).toBe(`${-(406 + 12)}px`);
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${512 - 12 - (60 + 12)}px`);
+    // The render path lifts the row by the toolbar's top less the viewport
+    // height, 150 - 568, the same -(406 + 12): the rooms it sets and the
+    // key's crowding agree with the raise the observer wrote.
+    expect(cssVar(chromeVars.bottomEndBesideRoom)).toBe(
+      `${512 - (406 + 12) - 12 - 60}px`,
+    );
     expect(slot("map-key")).toHaveAttribute("data-crowded", "true");
     expect(slot("map-key")).toHaveAttribute("inert");
     place("bottom-centre", 556, 0);
@@ -681,6 +693,20 @@ describe("MapChrome map key slot", () => {
     expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (60 + 12)}px`);
   });
 
+  it("places the key again when the tour card is hidden without any slot changing size", () => {
+    const view = mount({ mapKey: <div>key</div>, tour: <div>tour</div> });
+    resize(390, 800, 190);
+    placeKey(60);
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (262 + 12)}px`);
+    // A modal hides the card by state alone; the slots keep their sizes, so
+    // no observer round follows.
+    view.rerenderChrome({ modal: true });
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (60 + 12)}px`);
+    expect(cssVar(chromeVars.mapKeyLift)).toBe("0px");
+    view.rerenderChrome({ modal: false });
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (262 + 12)}px`);
+  });
+
   it("measures again once a slot has left the page, because the key's resting place moves with the row", () => {
     const view = mount({ mapKey: <div>key</div> });
     resize(390, 800);
@@ -702,6 +728,37 @@ describe("MapChrome map key slot", () => {
     view.rerenderChrome({ bottomCentre: undefined });
 
     expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 - 12 - 732}px`);
+  });
+
+  it("tells the layers how far up from the bottom edge the shown key reaches", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    expect(layoutValue.mapKeyClearance).toBeNull();
+    placeKey(60);
+    // The key rests from 672 to 732, so its top is 800 - 672 above the bottom.
+    expect(layoutValue.mapKeyClearance).toBe(800 - 672);
+  });
+
+  it("tells the layers nothing about a key that has given way or is hidden at the full detent", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    placeKey(60);
+    act(() => {
+      layoutValue.publishSheetTop(12);
+      surfaceValue.publishSheetDetent("full");
+    });
+    expect(layoutValue.mapKeyClearance).toBeNull();
+    act(() => {
+      layoutValue.publishSheetTop(null);
+      surfaceValue.publishSheetDetent(null);
+    });
+    expect(layoutValue.mapKeyClearance).toBe(800 - 672);
+    place("bottom-centre", 150, 406);
+    act(() => {
+      observers.trigger();
+    });
+    expect(slot("map-key")).toHaveAttribute("data-crowded", "true");
+    expect(layoutValue.mapKeyClearance).toBeNull();
   });
 
   it("sets nothing while the slot has no size, as when no layer has a key", () => {

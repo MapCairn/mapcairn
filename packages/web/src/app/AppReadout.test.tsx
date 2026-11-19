@@ -6,25 +6,30 @@ import {
   type ChromeLayoutValue,
   type MapReadoutProps,
 } from "@mapcairn/map";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AppReadout } from "./AppReadout";
 
 /** Stands in for the SDK readout and reports the props the host gave it. */
 vi.mock("@mapcairn/map", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@mapcairn/map")>()),
-  MapReadout: ({ latlng, showZoom }: MapReadoutProps) => (
-    <div
+  MapReadout: ({ latlng, showZoom, onCursorLeave }: MapReadoutProps) => (
+    <button
+      type="button"
       data-testid="readout"
       data-latlng={latlng ? `${latlng.lat},${latlng.lng}` : "none"}
       data-show-zoom={String(showZoom)}
+      onClick={onCursorLeave}
     />
   ),
 }));
 
 const CURSOR: LatLng = { lat: 1, lng: 2 };
 
-function renderReadout(layout: Partial<ChromeLayoutValue>) {
+function renderReadout(
+  layout: Partial<ChromeLayoutValue>,
+  onCursorLeave?: () => void,
+) {
   const value: ChromeLayoutValue = {
     layout: "sheet",
     viewport: { width: 1280, height: 720 },
@@ -35,7 +40,11 @@ function renderReadout(layout: Partial<ChromeLayoutValue>) {
   };
   render(
     <ChromeLayoutProvider value={value}>
-      <AppReadout units="metric" cursor={CURSOR} />
+      <AppReadout
+        units="metric"
+        cursor={CURSOR}
+        onCursorLeave={onCursorLeave}
+      />
     </ChromeLayoutProvider>,
   );
   return screen.getByTestId("readout");
@@ -58,5 +67,11 @@ describe("AppReadout", () => {
     const readout = renderReadout({ finePointer: false, layout: "panel" });
     expect(readout).toHaveAttribute("data-latlng", "none");
     expect(readout).toHaveAttribute("data-show-zoom", "false");
+  });
+
+  it("passes on the host's way to clear the cursor once the pointer leaves the readout", () => {
+    const onCursorLeave = vi.fn();
+    fireEvent.click(renderReadout({}, onCursorLeave));
+    expect(onCursorLeave).toHaveBeenCalledOnce();
   });
 });

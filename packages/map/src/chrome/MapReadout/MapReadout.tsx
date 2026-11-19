@@ -10,6 +10,7 @@ import {
 } from "@mapcairn/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap } from "../../host";
+import { CURSOR_READOUT_CHROME, isMapHost } from "../../host/pointerTargets";
 import { useFormatMessage, useMessages, usePreferences } from "../../services";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { useChromeLayout } from "../layoutContext";
@@ -231,6 +232,13 @@ export interface MapReadoutProps
    * readout either way.
    */
   readonly showZoom?: boolean;
+  /**
+   * Called when the pointer leaves the readout for anything but the map. The
+   * map keeps the last position while the pointer moves from it onto the
+   * readout, so the coordinates stay put and can be copied; this is where the
+   * host clears them.
+   */
+  readonly onCursorLeave?: () => void;
 }
 
 /**
@@ -240,7 +248,12 @@ export interface MapReadoutProps
  * Reads the zoom with `useMap()` and the layout with `useChromeLayout()`, so
  * it must sit inside the map context and a `MapChrome`.
  */
-export function MapReadout({ units, latlng, showZoom }: MapReadoutProps) {
+export function MapReadout({
+  units,
+  latlng,
+  showZoom,
+  onCursorLeave,
+}: MapReadoutProps) {
   const { view } = useMap();
   const { layout } = useChromeLayout();
   const { t } = useMessages();
@@ -248,9 +261,14 @@ export function MapReadout({ units, latlng, showZoom }: MapReadoutProps) {
   return (
     <section
       aria-label={t("chrome.readout.label", {})}
-      data-chrome="map-readout"
+      data-chrome={CURSOR_READOUT_CHROME}
       data-testid="map-readout"
       className={styles.readout}
+      onPointerLeave={(event) => {
+        if (!isMapHost(event.relatedTarget)) {
+          onCursorLeave?.();
+        }
+      }}
     >
       <ScaleBar units={units} />
       <CursorCoordinates

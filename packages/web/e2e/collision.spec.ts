@@ -202,6 +202,57 @@ for (const viewport of MATRIX_VIEWPORTS) {
 }
 
 /*
+ * The credits popover with the draw toolbar at its half-screen cap and large
+ * text on the small phone (#319): it must not overlap anything, and where it
+ * rises under the search pill or the end stack it stops a gap below them
+ * (DESIGN.md, "Layout and slots").
+ */
+test("credits stay a gap clear of search and the capped draw toolbar with 150 percent text on a small phone", async ({
+  page,
+  mapPage,
+}) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await mockLayerProviders(page);
+  await mapPage.goto(KEYED_LAYERS);
+  await collapseCredits(mapPage);
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "150%";
+  });
+  await mapPage.startDrawing();
+  await mapPage.drawAddPoint.click();
+  await mapPage.focusMap();
+  await page.keyboard.press("ArrowRight");
+  await mapPage.drawAddPoint.click();
+  await mapPage.creditsButton.click();
+  await expect(mapPage.creditsRegion).toBeVisible();
+  await waitForStableLayout(page);
+
+  const report = await inspectChromeLayout(page);
+  const context = JSON.stringify(report.boxes);
+  expect(report.overlaps, context).toEqual([]);
+  expect(report.outside, context).toEqual([]);
+  expect(report.obscured, context).toEqual([]);
+
+  const popover = await mapPage.creditsRegion.boundingBox();
+  if (!popover) {
+    throw new Error("The credits popover has no box.");
+  }
+  for (const slot of ["top-start", "end-stack"]) {
+    const above = await page.locator(`[data-chrome="${slot}"]`).boundingBox();
+    if (
+      above &&
+      above.x < popover.x + popover.width &&
+      popover.x < above.x + above.width
+    ) {
+      expect(
+        popover.y - (above.y + above.height),
+        `space between ${slot} and the credits`,
+      ).toBeGreaterThanOrEqual(CHROME_GAP_PX - 0.5);
+    }
+  }
+});
+
+/*
  * The layout collision test (DESIGN.md, "Layout and slots"). For every
  * viewport, theme and chrome state, no two floating elements overlap,
  * none leaves the viewport (apart from the bottom sheet's documented
@@ -628,6 +679,101 @@ const HOVER_TRIP_MS = 1_000;
 
 /** How long {@link hoverFreeMap} keeps sending the pointer before it gives up. */
 const HOVER_TIMEOUT_MS = 10_000;
+
+/** Frames the coordinates are watched for under a resting pointer: about a second. */
+const RESTING_FRAMES = 60;
+
+/** Small moves made while resting, as a hand on a mouse makes them. */
+const RESTING_NUDGES = 6;
+
+test("cursor coordinates stay shown under a pointer resting where the readout grows", async ({
+  page,
+  mapPage,
+  isMobile,
+}) => {
+  test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await mapPage.goto(WIDEST_COORDINATES_VIEW);
+  await collapseCredits(mapPage);
+  const readout = page.getByTestId("map-readout");
+  const short = await readout.boundingBox();
+  // Grow the readout with the pointer well clear of it, to measure its
+  // grown footprint.
+  const map = await mapPage.mapSize();
+  await page.mouse.move(map.width / 2, map.height / 3);
+  await page.mouse.move(map.width / 2 + 1, map.height / 3 + 1);
+  await expect(readout).toContainText(COORDINATES_PATTERN);
+  const grown = await readout.boundingBox();
+  if (!(short && grown)) {
+    throw new Error("The readout has no box.");
+  }
+  // A point the grown readout covers and the short one leaves to the map.
+  const point = {
+    x: Math.floor(grown.x + grown.width) - REST_MARGIN_PX / 2,
+    y: Math.floor(grown.y + grown.height) - REST_MARGIN_PX / 2,
+  };
+  expect(point.x).toBeGreaterThan(short.x + short.width);
+
+  await page.mouse.move(
+    point.x - STEP_BEFORE_HOVER_PX,
+    point.y - map.height / 4,
+  );
+  await page.mouse.move(point.x, point.y, { steps: 3 });
+  const blanks: number[] = [];
+  for (let nudge = 0; nudge < RESTING_NUDGES; nudge += 1) {
+    await page.mouse.move(point.x + (nudge % 2), point.y);
+    blanks.push(
+      ...(await page.evaluate(async (frames) => {
+        const element = document.querySelector('[data-testid="map-readout"]');
+        const empty: number[] = [];
+        for (let frame = 0; frame < frames; frame += 1) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          if (!/-?\d+\.\d{5}, -?\d+\.\d{5}/.test(element?.textContent ?? "")) {
+            empty.push(frame);
+          }
+        }
+        return empty;
+      }, RESTING_FRAMES / RESTING_NUDGES)),
+    );
+  }
+  expect(blanks, "frames without coordinates").toEqual([]);
+});
+
+test("the cursor coordinates can be selected with the pointer that showed them", async ({
+  page,
+  mapPage,
+  isMobile,
+}) => {
+  test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await mapPage.goto(WIDEST_COORDINATES_VIEW);
+  await collapseCredits(mapPage);
+  const map = await mapPage.mapSize();
+  await page.mouse.move(map.width / 2, map.height / 2);
+  await page.mouse.move(map.width / 2 + 1, map.height / 2 + 1);
+  const coordinates = page
+    .locator('[data-chrome="cursor-coordinates"] span')
+    .first();
+  await expect(coordinates).toHaveText(COORDINATES_PATTERN);
+  const box = await coordinates.boundingBox();
+  if (!box) {
+    throw new Error("The coordinates have no box.");
+  }
+  const y = box.y + box.height / 2;
+  // From the map straight onto the text, then across it.
+  await page.mouse.move(box.x + 1, y, { steps: 5 });
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 1, y, { steps: 5 });
+  await page.mouse.up();
+  const selected = await page.evaluate(async () => {
+    for (let frame = 0; frame < 30; frame += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    return window.getSelection()?.toString() ?? "";
+  });
+  expect(selected).toMatch(/-?\d+\.\d{4}/);
+  await expect(coordinates).toHaveText(COORDINATES_PATTERN);
+});
 
 /**
  * Finds a part of the map canvas that nothing covers, with map on every side

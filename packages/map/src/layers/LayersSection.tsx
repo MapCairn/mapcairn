@@ -38,7 +38,7 @@ import { FeatureChoices } from "./FeatureChoices";
 import { LayerItem } from "./LayerItem";
 import * as styles from "./Layers.css";
 import { featureBounds, featurePosition } from "./mapFeatures";
-import { coveredPadding, revealOffset } from "./reveal";
+import { coveredPadding, fitPadding, revealOffset } from "./reveal";
 import { TurnOffAll, TurnOffGroup } from "./TurnOffActions";
 import {
   type DataLayerState,
@@ -51,9 +51,6 @@ export const SHOW_ON_MAP_MIN_ZOOM = 5;
 
 /** Half the side, in metres, of the box "Show on map" fits around a point. Small enough that the fit always ends at the zoom cap. */
 const SHOW_ON_MAP_RADIUS_METRES = 50;
-
-/** Space in pixels kept around a polygon or line that "Show on map" fits into view. */
-const SHOW_ON_MAP_MARGIN = 24;
 
 /** Whether a box has any width or height, so a single point is not fitted as a shape. */
 function hasExtent(bounds: Bounds): boolean {
@@ -155,7 +152,7 @@ export function LayersSection({
   const { focusPending, consumeFocus } = layers;
   const { reducedMotion } = usePreferences();
   const reducedMotionRef = useLatestRef(reducedMotion);
-  const { layout, viewport, panelEdge } = useChromeLayout();
+  const { layout, viewport, panelEdge, mapKeyClearance } = useChromeLayout();
   const direction = useReadingDirection();
   const [cardRequest, setCardRequest] = useState(0);
   const { selected, choices } = layers;
@@ -250,19 +247,14 @@ export function LayersSection({
     layers.select(layerId, feature.id);
     if (adapter && bounds && hasExtent(bounds)) {
       // A polygon or line is shown whole, clear of the sheet or side panel.
-      const covered = coveredPadding({
-        layout,
-        viewport,
-        panelEdge,
-        direction,
-      });
       adapter.fitBounds(bounds, {
-        padding: {
-          top: (covered?.top ?? 0) + SHOW_ON_MAP_MARGIN,
-          right: (covered?.right ?? 0) + SHOW_ON_MAP_MARGIN,
-          bottom: (covered?.bottom ?? 0) + SHOW_ON_MAP_MARGIN,
-          left: (covered?.left ?? 0) + SHOW_ON_MAP_MARGIN,
-        },
+        padding: fitPadding({
+          layout,
+          viewport,
+          panelEdge,
+          direction,
+          mapKeyClearance,
+        }),
       });
     } else if (adapter && position) {
       const zoom = Math.max(adapter.getView().zoom, SHOW_ON_MAP_MIN_ZOOM);

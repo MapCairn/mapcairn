@@ -14,6 +14,11 @@ export interface ChromeLayoutValue {
   /** The distance from inline-start to the open panel's far edge, in px. Null in the sheet layout or before measurement. */
   readonly panelEdge: number | null;
   /**
+   * Distance from the map's bottom edge to the top of the visible map key.
+   * Null while the key is absent or has given way.
+   */
+  readonly mapKeyClearance?: number | null;
+  /**
    * The sheet publishes its current top edge (px from the top of the chrome
    * container) so the bottom slots can ride above it. Pass null when closed.
    */
