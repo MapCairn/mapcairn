@@ -94,6 +94,7 @@ declare global {
   interface Window {
     __MAPCAIRN_TEST_SERVICES__?: unknown;
     __MAPCAIRN_TEST_CATALOGUE__?: unknown;
+    __MAPCAIRN_TEST_LANGUAGES__?: unknown;
     __mapcairnCatalogue?: LayerCatalogue;
     __mapcairnSearch?: SearchScript;
     __mapcairnClipboard?: { ok: boolean; written: string[] };

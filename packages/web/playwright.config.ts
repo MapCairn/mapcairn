@@ -36,6 +36,42 @@ const RTL_SPECS = /(basemap|keyboard|sheet|app-shell|rtl)\.spec\.ts$/;
 // language, so it runs in the default projects.
 const AFRIKAANS_SPECS = /(^|\/)(collision|a11y)\.spec\.ts$/;
 
+// The sample-language projects run one spec in each of three sample languages
+// that the test seam offers (see `SAMPLE_LANGUAGES` in e2e/support/language.ts):
+// accented English about 40 percent longer (`en-XA`), English embedded as
+// right-to-left text on a mirrored page (`en-XB`) and a small Arabic sample
+// (`ar`). The spec walks every chrome state at three viewports and checks two
+// placeholders, so the six projects run 30 tests.
+const SAMPLE_LANGUAGE_SPECS = /sample-languages\.spec\.ts$/;
+
+/**
+ * The desktop and mobile projects for one sample language, which run only the
+ * sample-language spec.
+ */
+function sampleLanguageProjects(prefix: string, language: string) {
+  return [
+    {
+      name: `${prefix}-chromium`,
+      testMatch: SAMPLE_LANGUAGE_SPECS,
+      use: {
+        ...devices["Desktop Chrome"],
+        language,
+        launchOptions: { executablePath },
+      },
+    },
+    {
+      name: `${prefix}-mobile-chromium`,
+      testMatch: SAMPLE_LANGUAGE_SPECS,
+      grepInvert: /@desktop-viewport/,
+      use: {
+        ...devices["Pixel 7"],
+        language,
+        launchOptions: { executablePath },
+      },
+    },
+  ];
+}
+
 /**
  * End-to-end and accessibility suites for the web host.
  *
@@ -122,6 +158,9 @@ export default defineConfig<MapCairnOptions>({
         launchOptions: { executablePath },
       },
     },
+    ...sampleLanguageProjects("expanded", "en-XA"),
+    ...sampleLanguageProjects("mirrored", "en-XB"),
+    ...sampleLanguageProjects("arabic", "ar"),
     {
       name: "webkit",
       testMatch: WEBKIT_SPECS,

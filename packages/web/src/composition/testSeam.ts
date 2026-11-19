@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  createLanguageCatalogue,
+  createMessageCatalogue,
   createRuntimeLayerCatalogue,
+  EN_GB_CATALOGUE,
+  type LanguageCatalogue,
+  type LanguageOption,
   type LayerCatalogue,
+  type MessageKey,
   type Services,
 } from "@mapcairn/core";
+import { HOST_LANGUAGE_CATALOGUE } from "../i18n/hostLanguages";
 import { LAYER_DECODERS, LAYER_FORMATTERS } from "../layers";
 
 /**
@@ -28,6 +35,13 @@ declare global {
      * `unknown` because it is outside input: it is checked before use.
      */
     __MAPCAIRN_TEST_CATALOGUE__?: unknown;
+    /**
+     * Sample languages (a list of {@link ScriptedLanguage}), plain data a
+     * Playwright `addInitScript` sets before the page loads, offered after the
+     * host's own. Typed `unknown` because it is outside input: it is checked
+     * before use.
+     */
+    __MAPCAIRN_TEST_LANGUAGES__?: unknown;
     /** The catalogue built from the script, so a test can call `refresh()` as a host would. */
     __mapcairnCatalogue?: LayerCatalogue;
   }
@@ -49,6 +63,15 @@ export type ScriptedLoad = readonly unknown[] | "fail" | "invalid";
 export interface ScriptedCatalogue {
   readonly steps: readonly ScriptedLoad[];
   readonly delayMs: number;
+}
+
+/**
+ * A sample language for a browser test: its option and its messages, as plain
+ * data so it can cross from the test into the page. A key it leaves out falls
+ * back to English.
+ */
+export interface ScriptedLanguage extends LanguageOption {
+  readonly messages: Readonly<Partial<Record<MessageKey, string>>>;
 }
 
 const SERVICE_KEYS = [
@@ -159,9 +182,67 @@ function scriptedCatalogue(): LayerCatalogue | undefined {
   return catalogue;
 }
 
+function isScriptedLanguage(value: unknown): value is ScriptedLanguage {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const { tag, label, direction, messages } = value as Record<string, unknown>;
+  return (
+    typeof tag === "string" &&
+    typeof label === "string" &&
+    (direction === undefined || direction === "ltr" || direction === "rtl") &&
+    typeof messages === "object" &&
+    messages !== null &&
+    !Array.isArray(messages)
+  );
+}
+
+/**
+ * The host's languages with the sample languages on
+ * `window.__MAPCAIRN_TEST_LANGUAGES__` added after them, or undefined when
+ * there is no usable sample. An entry that is malformed, or whose tag the host
+ * or an earlier entry already uses, is dropped on its own.
+ */
+function scriptedLanguages(): LanguageCatalogue | undefined {
+  const raw = window.__MAPCAIRN_TEST_LANGUAGES__;
+  if (!Array.isArray(raw)) {
+    return undefined;
+  }
+  const taken = new Set(
+    HOST_LANGUAGE_CATALOGUE.languages.map(({ tag }) => tag),
+  );
+  const samples = new Map<string, ScriptedLanguage>();
+  for (const entry of raw) {
+    if (isScriptedLanguage(entry) && !taken.has(entry.tag)) {
+      taken.add(entry.tag);
+      samples.set(entry.tag, entry);
+    }
+  }
+  if (samples.size === 0) {
+    return undefined;
+  }
+  const { defaultLanguage, load, languages } = HOST_LANGUAGE_CATALOGUE;
+  const options = [...samples.values()].map(({ tag, label, direction }) => ({
+    tag,
+    label,
+    ...(direction === undefined ? {} : { direction }),
+  }));
+  return createLanguageCatalogue(
+    [...languages, ...options],
+    defaultLanguage,
+    (tag) => {
+      const sample = samples.get(tag);
+      return sample === undefined
+        ? load(tag)
+        : createMessageCatalogue(tag, sample.messages, EN_GB_CATALOGUE);
+    },
+  );
+}
+
 /**
  * Reads the services a browser test put on `window.__MAPCAIRN_TEST_SERVICES__`,
- * and the layer catalogue it scripted on `window.__MAPCAIRN_TEST_CATALOGUE__`.
+ * the layer catalogue it scripted on `window.__MAPCAIRN_TEST_CATALOGUE__` and
+ * the sample languages it put on `window.__MAPCAIRN_TEST_LANGUAGES__`.
  *
  * @remarks Never call this directly. `createServices` reaches it only through
  *   `import.meta.env.MODE !== "production"`, which the build replaces with a
@@ -180,6 +261,10 @@ export function readTestOverrides(): Partial<Services> | undefined {
   const scripted = "layers" in accepted ? undefined : scriptedCatalogue();
   if (scripted) {
     accepted.layers = scripted;
+  }
+  const languages = scriptedLanguages();
+  if (languages) {
+    accepted.languages = languages;
   }
   const keys = Object.keys(accepted);
   if (keys.length === 0) {
