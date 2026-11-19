@@ -739,6 +739,32 @@ test.describe("the product page", () => {
   });
 });
 
+test.describe("script preloads", () => {
+  /** The document's text before and after its `</head>`. */
+  async function splitAtHead(
+    request: import("@playwright/test").APIRequestContext,
+    path: string,
+  ) {
+    const html = await (await request.get(path)).text();
+    const [head = "", body = ""] = html.split("</head>");
+    return { head, body };
+  }
+
+  test("the product page lists them after its content, the map and privacy pages in the head", async ({
+    request,
+  }) => {
+    const product = await splitAtHead(request, "/");
+    expect(product.head).not.toContain('rel="modulepreload"');
+    expect(product.body).toContain('rel="modulepreload"');
+
+    for (const path of ["/map", "/privacy"]) {
+      const page = await splitAtHead(request, path);
+      expect(page.head, path).toContain('rel="modulepreload"');
+      expect(page.body, path).not.toContain('rel="modulepreload"');
+    }
+  });
+});
+
 test.describe("the product page @a11y", () => {
   test.use({ reducedMotion: "reduce" });
 

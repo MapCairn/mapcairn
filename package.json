@@ -29,6 +29,7 @@
     "roadmap:check": "node scripts/roadmap-check.mjs",
     "names:check": "node scripts/names-check.mjs files",
     "portability:check": "node scripts/portability-check.mjs",
+    "port": "node scripts/agents/port.mjs",
     "catalogue:check": "npm run catalogue:check -w @mapcairn/web --",
     "format": "biome format --write .",
     "prepare": "lefthook install --force",
