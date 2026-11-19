@@ -24,6 +24,7 @@ import {
   newestInput,
   newestSharedInput,
   SDK_BUILD_ORDER,
+  sdkDependenciesOf,
   stampTime,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildSdk.mjs";
@@ -50,7 +51,32 @@ afterEach(() => {
 
 describe("SDK_BUILD_ORDER", () => {
   it("builds a package after the SDK packages it depends on", () => {
-    expect(SDK_BUILD_ORDER).toEqual(["core", "react", "theme"]);
+    expect(SDK_BUILD_ORDER).toEqual(["core", "react", "theme", "map"]);
+  });
+});
+
+describe("sdkDependenciesOf", () => {
+  it("names the SDK packages a manifest depends on, in build order", () => {
+    expect(
+      sdkDependenciesOf({
+        dependencies: {
+          "@mapcairn/theme": "^0.0.0",
+          "@mapcairn/core": "^0.0.0",
+          react: "^19.0.0",
+        },
+      }),
+    ).toEqual(["core", "theme"]);
+  });
+
+  it("is empty for a package that depends on none", () => {
+    expect(sdkDependenciesOf({})).toEqual([]);
+  });
+
+  it("gives map the three packages it builds against", () => {
+    const manifest = JSON.parse(
+      readFileSync(path.join(REPO, "packages/map/package.json"), "utf8"),
+    );
+    expect(sdkDependenciesOf(manifest)).toEqual(["core", "react", "theme"]);
   });
 });
 
@@ -140,6 +166,31 @@ describe("isStale", () => {
     expect(isStale(scratch)).toBe(true);
   });
 
+  it("is stale when an SDK package it depends on was built after it", () => {
+    write("package.json", 10);
+    write("src/a.ts", 10);
+    const future = Math.floor(Date.now() / SECOND) + 60;
+    write("dist/.built", future);
+    write("dependency/dist/.built", future + 30);
+    expect(isStale(scratch, [path.join(scratch, "dependency")])).toBe(true);
+  });
+
+  it("stays fresh when every SDK package it depends on was built before it", () => {
+    write("package.json", 10);
+    write("src/a.ts", 10);
+    const future = Math.floor(Date.now() / SECOND) + 60;
+    write("dist/.built", future);
+    write("dependency/dist/.built", future - 30);
+    expect(isStale(scratch, [path.join(scratch, "dependency")])).toBe(false);
+  });
+
+  it("is stale when a dependency has no finished build", () => {
+    write("package.json", 10);
+    write("src/a.ts", 10);
+    write("dist/.built", Math.floor(Date.now() / SECOND) + 60);
+    expect(isStale(scratch, [path.join(scratch, "dependency")])).toBe(true);
+  });
+
   it("stays fresh when only a test file is newer than the build", () => {
     write("package.json", 10);
     write("src/a.ts", 10);
@@ -174,7 +225,10 @@ describe("entryPointsOf", () => {
           types: "./dist/contracts.d.ts",
           default: "./dist/contracts.js",
         },
-        "./tokens.css": "./dist/tokens.css",
+        "./tokens.css": {
+          types: "./dist/tokens.css.d.ts",
+          default: "./dist/tokens.css",
+        },
       }),
     ).toEqual({
       index: "./src/index.ts",
@@ -191,9 +245,14 @@ describe("entryPointsOf", () => {
 
 describe("stylesheetOf", () => {
   it("finds the stylesheet export", () => {
-    expect(stylesheetOf({ "./tokens.css": "./dist/tokens.css" })).toBe(
-      "tokens",
-    );
+    expect(
+      stylesheetOf({
+        "./tokens.css": {
+          types: "./dist/tokens.css.d.ts",
+          default: "./dist/tokens.css",
+        },
+      }),
+    ).toBe("tokens");
   });
 
   it("is undefined when a package ships no stylesheet", () => {

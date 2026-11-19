@@ -48,7 +48,7 @@ function fencedBlocks(markdown: string, language: string): string[] {
 function namedImports(source: string): NamedImport[] {
   const found: NamedImport[] = [];
   for (const match of source.matchAll(
-    /^import\s+(type\s+)?([\s\S]*?)\s+from\s+"([^"]+)";/gm,
+    /^import\s+(type\s+)?([^;"]*?)\s+from\s+"([^"]+)";/gm,
   )) {
     const statementTypeOnly = match[1] !== undefined;
     const clause = (match[2] ?? "").trim();
@@ -162,6 +162,23 @@ describe("README.md", () => {
       )
       .map(({ specifier, imported }) => `${imported} from ${specifier}`);
     expect(missing).toEqual([]);
+  });
+
+  it("imports the two stylesheets as examples/embed does", () => {
+    const stylesheets = [
+      ...snippet.matchAll(/^import\s+"([^"]+\.css)";/gm),
+    ].map((match) => match[1]);
+    const main = readFileSync(
+      path.join(REPO, EXAMPLE_SOURCE, "main.tsx"),
+      "utf8",
+    );
+    expect(stylesheets).toEqual([
+      "@mapcairn/theme/tokens.css",
+      "@mapcairn/map/styles.css",
+    ]);
+    for (const stylesheet of stylesheets) {
+      expect(main).toContain(`import "${stylesheet}";`);
+    }
   });
 
   it("uses each SDK component with props the example also passes it", () => {

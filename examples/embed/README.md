@@ -2,6 +2,8 @@
 
 A one-page Vite and React app that uses the SDK the way an outside app does: it imports `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` and `@mapcairn/theme` by package name and nothing else from this repository. It runs on the SDK's fakes, so it requests nothing and loads no map engine. Its search runs over a few invented places held in memory. [`docs/guides/extending.md`](../../docs/guides/extending.md) says what it proves and what an app of your own provides.
 
+It builds against the packages' `dist` (each script builds them first with `npm run build:sdk`) and needs no vanilla-extract plugin: `src/main.tsx` imports `@mapcairn/theme/tokens.css` and `@mapcairn/map/styles.css`, and `src/page.css` is a plain stylesheet.
+
 ```bash
 npm run dev -w @mapcairn/example-embed
 npm test -w @mapcairn/example-embed

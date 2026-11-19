@@ -4,18 +4,37 @@
   "description": "Generic map rendering and UI components for MapCairn",
   "license": "AGPL-3.0-only",
   "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@mapcairn/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": {
+      "types": "./dist/styles.css.d.ts",
+      "default": "./dist/styles.css"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.built",
+    "src",
+    "!src/**/*.test.*",
+    "!src/**/*.snap.html"
+  ],
   "sideEffects": [
+    "**/*.css",
     "**/*.css.ts"
   ],
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "scripts": {
+    "build": "node ../../scripts/buildPackage.mjs",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit"
   },
   "dependencies": {
     "@mapcairn/core": "^0.0.0",
@@ -25,7 +44,6 @@
     "@radix-ui/react-switch": "^1.4.1",
     "@radix-ui/react-toggle-group": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
-    "@vanilla-extract/css": "^1.21.3",
     "@vanilla-extract/recipes": "^0.5.7",
     "lucide-react": "^1.72.0"
   },
@@ -38,6 +56,7 @@
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vanilla-extract/css": "^1.21.3",
     "@vanilla-extract/vite-plugin": "^5.2.6",
     "@vitejs/plugin-react": "^6.3.0",
     "happy-dom": "^21.0.4",

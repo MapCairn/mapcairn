@@ -38,11 +38,13 @@ const RADIX_WRAPPERS =
 const ENGINE_ADAPTERS = "^packages/web/src/adapters/maplibre/";
 
 /**
- * The files the SDK's `package.json` entry points resolve to. Workspace
- * imports resolve through the symlink to these real paths.
+ * The files the SDK's `package.json` entry points resolve to: the modules, and
+ * the two compiled stylesheets an app imports (`@mapcairn/theme/tokens.css`,
+ * `@mapcairn/map/styles.css`). Workspace imports resolve through the symlink
+ * to these real paths.
  */
 const SDK_ENTRY_POINTS =
-  "^packages/((core|map|react|theme)/src/index|core/src/contracts/index)\\.ts$";
+  "^packages/(((core|map|react|theme)/src/index|core/src/contracts/index)\\.ts|theme/dist/tokens\\.css|map/dist/styles\\.css)$";
 
 module.exports = {
   forbidden: [

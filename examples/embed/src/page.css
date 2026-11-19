@@ -1,0 +1,17 @@
+/* The page's base styles. MapChrome fills its container, so the page gives it
+   the whole viewport. The theme's colours and type come from `tokens`, which
+   `main.tsx` applies to the body: the custom property names in tokens.css are
+   generated, so a plain stylesheet does not name them. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}

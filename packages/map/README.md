@@ -22,18 +22,14 @@ The `MapChrome` slots, the sheet detents and the accessibility contract of each 
 
 ## Setup
 
-Component styles are written in [vanilla-extract](https://vanilla-extract.style/) (`*.css.ts` beside each component) and read the tokens from `@mapcairn/theme`. This package ships source with no build step, so a host must register `vanillaExtractPlugin()` from `@vanilla-extract/vite-plugin` in its Vite config, or `.css.ts` imports will not resolve.
+Component styles are written in [vanilla-extract](https://vanilla-extract.style/) (`*.css.ts` beside each component) and read the tokens from `@mapcairn/theme`. `npm run build:sdk` compiles them, against the built `theme`, into one stylesheet, `dist/styles.css`, beside the JavaScript and rolled-up declarations. An app imports that stylesheet and the token stylesheet, and needs no vanilla-extract plugin:
 
 ```ts
-// vite.config.ts
-import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
-
-export default defineConfig({
-  plugins: [vanillaExtractPlugin() /* , ...your other plugins */],
-});
+import "@mapcairn/theme/tokens.css";
+import "@mapcairn/map/styles.css";
 ```
 
-`@mapcairn/theme` carries its own token values, and its stylesheet reaches the page only through an import that is used (see `packages/web/src/global.css.ts`). `MapChrome` fills its container, so the host gives `html`, `body` and the element it renders into a height. The tokens name the IBM Plex Sans Variable font, which the host loads (for example from `@fontsource-variable/ibm-plex-sans`); without it the type falls back to the system font. The host also provides the engine styles for its map adapter; the MapLibre styles are in `packages/web/src/adapters/mapEngine.css.ts`. `examples/embed` is a minimal host that does all of this, described in [`docs/guides/extending.md`](../../docs/guides/extending.md).
+The JavaScript imports no CSS, so it renders on the server as plain modules, and `styles.css` holds the styles of every component. The source stays in the package behind the `@mapcairn/source` export condition, which this repository's Vite configs and `tsconfig.base.json` turn on; a host that resolves that condition registers `vanillaExtractPlugin()` itself, as `packages/web` does, and its token stylesheet then arrives through an import that is used (see `packages/web/src/global.css.ts`). [How the CSS ships](../../DESIGN.md#how-the-css-ships) says what is and is not settled about the generated custom property names. `MapChrome` fills its container, so the host gives `html`, `body` and the element it renders into a height. The tokens name the IBM Plex Sans Variable font, which the host loads (for example from `@fontsource-variable/ibm-plex-sans`); without it the type falls back to the system font. The host also provides the engine styles for its map adapter; the MapLibre styles are in `packages/web/src/adapters/mapEngine.css.ts`. `examples/embed` is a minimal host that does all of this, described in [`docs/guides/extending.md`](../../docs/guides/extending.md).
 
 ## Usage
 

@@ -372,7 +372,7 @@ export const SECTIONS: readonly Section[] = [
             summary: "Which frameworks does it work with?",
             detail: [
               [
-                "React, with a bundler that runs vanilla-extract, such as Vite with its vanilla-extract plugin. The map engine is MapLibre GL JS, reached through an adapter.",
+                "React, with any bundler that handles a CSS import: the styles are two compiled stylesheets, so no style plugin is needed. The map engine is MapLibre GL JS, reached through an adapter.",
               ],
             ],
           },

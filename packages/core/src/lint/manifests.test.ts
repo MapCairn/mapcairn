@@ -37,12 +37,18 @@ const TYPES_PACKAGES: Readonly<Record<string, string>> = {
 /** The custom export condition that points a build tool at source. */
 const SOURCE_CONDITION = "@mapcairn/source";
 
-/** Packages that build to `dist` in this step; `map` follows in its own. */
-const BUILT_PACKAGES = ["core", "react", "theme"] as const;
+/** Packages that build to `dist`: all four. */
+const BUILT_PACKAGES = ["core", "map", "react", "theme"] as const;
 
 /** The conditions an entry point of a built package carries, in order. */
 interface ConditionalExport {
   readonly [SOURCE_CONDITION]: string;
+  readonly types: string;
+  readonly default: string;
+}
+
+/** A stylesheet export: an empty declaration for TypeScript, then the file. */
+interface StylesheetExport {
   readonly types: string;
   readonly default: string;
 }
@@ -54,7 +60,7 @@ interface ConditionalExport {
 const BUILT_ENTRY_POINTS: Readonly<
   Record<
     (typeof BUILT_PACKAGES)[number],
-    Record<string, ConditionalExport | string>
+    Record<string, ConditionalExport | StylesheetExport>
   >
 > = {
   core: {
@@ -67,6 +73,17 @@ const BUILT_ENTRY_POINTS: Readonly<
       [SOURCE_CONDITION]: "./src/contracts/index.ts",
       types: "./dist/contracts.d.ts",
       default: "./dist/contracts.js",
+    },
+  },
+  map: {
+    ".": {
+      [SOURCE_CONDITION]: "./src/index.ts",
+      types: "./dist/index.d.ts",
+      default: "./dist/index.js",
+    },
+    "./styles.css": {
+      types: "./dist/styles.css.d.ts",
+      default: "./dist/styles.css",
     },
   },
   react: {
@@ -82,12 +99,26 @@ const BUILT_ENTRY_POINTS: Readonly<
       types: "./dist/index.d.ts",
       default: "./dist/index.js",
     },
-    "./tokens.css": "./dist/tokens.css",
+    "./tokens.css": {
+      types: "./dist/tokens.css.d.ts",
+      default: "./dist/tokens.css",
+    },
   },
 };
 
-/** The entry point of `map`, which still ships source until it is built. */
-const MAP_ENTRY_POINTS = { ".": "./src/index.ts" };
+/**
+ * What each package's `sideEffects` lets a bundler drop. The JavaScript is
+ * side-effect free; a stylesheet is not. `map` keeps its `.css.ts` pattern
+ * too, because a host that resolves the source condition compiles those files
+ * and their stylesheets must survive tree-shaking.
+ */
+const SIDE_EFFECTS: Readonly<Record<(typeof BUILT_PACKAGES)[number], unknown>> =
+  {
+    core: false,
+    map: ["**/*.css", "**/*.css.ts"],
+    react: false,
+    theme: ["**/*.css"],
+  };
 
 /** Workspaces that depend on the SDK packages, beside the SDK packages. */
 const INTERNAL_CONSUMERS = ["packages/web", "examples/embed"] as const;
@@ -102,6 +133,7 @@ interface Manifest {
   readonly sideEffects?: boolean | readonly string[];
   readonly publishConfig?: { readonly access?: string };
   readonly dependencies?: Readonly<Record<string, string>>;
+  readonly devDependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
   readonly peerDependenciesMeta?: Readonly<
     Record<string, { readonly optional?: boolean }>
@@ -169,10 +201,18 @@ describe("SDK package manifests", () => {
         ...Object.keys(manifest.dependencies ?? {}),
         ...Object.keys(manifest.peerDependencies ?? {}),
       ]);
+      // A `*.css.ts` file is compiled away in `dist`, so what it imports from
+      // vanilla-extract is a build-time dependency, kept in devDependencies.
+      const buildTime = Object.keys(manifest.devDependencies ?? {}).filter(
+        (dependency) => dependency.startsWith("@vanilla-extract/"),
+      );
       const missing = new Set<string>();
       for (const file of sourceFiles(name)) {
+        const allowed = file.endsWith(".css.ts")
+          ? new Set([...declared, ...buildTime])
+          : declared;
         for (const imported of importedPackages(file)) {
-          if (!declared.has(imported)) {
+          if (!allowed.has(imported)) {
             missing.add(`${imported} (imported by ${file})`);
           }
         }
@@ -187,7 +227,12 @@ describe("SDK package manifests", () => {
       const { exports } = manifestOf(name);
       expect(exports).toEqual(BUILT_ENTRY_POINTS[name]);
       for (const entry of Object.values(exports ?? {})) {
-        if (typeof entry === "string") {
+        if (
+          Object.hasOwn(entry as object, "default") &&
+          !Object.hasOwn(entry as object, SOURCE_CONDITION)
+        ) {
+          // A stylesheet: types, then default.
+          expect(Object.keys(entry as object)).toEqual(["types", "default"]);
           continue;
         }
         expect(Object.keys(entry as object)).toEqual([
@@ -198,10 +243,6 @@ describe("SDK package manifests", () => {
       }
     },
   );
-
-  it("@mapcairn/map exposes only its entry point", () => {
-    expect(manifestOf("map").exports).toEqual(MAP_ENTRY_POINTS);
-  });
 
   it.each(BUILT_PACKAGES)(
     "@mapcairn/%s ships dist and source, without tests, and declares its side effects",
@@ -215,9 +256,7 @@ describe("SDK package manifests", () => {
         "!src/**/*.snap.html",
         ...(name === "core" ? ["!src/propertyTesting/**"] : []),
       ]);
-      expect(manifest.sideEffects).toEqual(
-        name === "theme" ? ["**/*.css"] : false,
-      );
+      expect(manifest.sideEffects).toEqual(SIDE_EFFECTS[name]);
       expect(manifest.publishConfig).toEqual({ access: "public" });
       expect(manifest).not.toHaveProperty("main");
       expect(manifest.types).toBe("./dist/index.d.ts");

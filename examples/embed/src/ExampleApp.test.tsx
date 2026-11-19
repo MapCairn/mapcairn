@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { BASEMAPS } from "@mapcairn/core";
+import type { ModelContextToolDefinition } from "@mapcairn/react";
 import {
   act,
   cleanup,
@@ -132,11 +133,13 @@ describe("ExampleApp", () => {
 
   it("registers a WebMCP tool that turns the layer on", async () => {
     const tools = new Map<string, () => Promise<unknown>>();
-    document.modelContext = {
-      registerTool: async (tool) => {
-        tools.set(tool.name, () => tool.execute({}));
+    // The built declarations of `@mapcairn/react` do not add `modelContext` to
+    // `Document`, so the test sets it by name.
+    Reflect.set(document, "modelContext", {
+      registerTool: async (tool: ModelContextToolDefinition) => {
+        tools.set(tool.name, async () => tool.execute({}));
       },
-    };
+    });
     try {
       render(<ExampleApp />);
       await waitFor(() => expect(tools.has("show-cairns")).toBe(true));
@@ -147,7 +150,7 @@ describe("ExampleApp", () => {
       const layers = await screen.findByRole("region", { name: "Layers" });
       expect(await within(layers).findByText(/3 shown/)).toBeTruthy();
     } finally {
-      delete document.modelContext;
+      Reflect.deleteProperty(document, "modelContext");
     }
   });
 

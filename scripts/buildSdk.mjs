@@ -11,10 +11,11 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
  * The SDK packages that build to `dist`, in dependency order: a package comes
- * after every SDK package it depends on. `@mapcairn/map` joins the list when
- * it builds too, after `theme`, and then a rebuilt dependency must rebuild it.
+ * after every SDK package it depends on, and a rebuilt dependency rebuilds it
+ * (see `isStale`). `map` builds against the built `theme`, so its stylesheet
+ * names the same custom properties as `theme`'s `tokens.css`.
  */
-export const SDK_BUILD_ORDER = ["core", "react", "theme"];
+export const SDK_BUILD_ORDER = ["core", "react", "theme", "map"];
 
 /** Files that cannot change what a package builds. */
 const NOT_BUILD_INPUT = /\.(test\.[cm]?[jt]sx?|snap\.html)$/;
@@ -76,18 +77,39 @@ export function stampTime(folder) {
 }
 
 /**
- * Whether a package must be built: it has no finished build, or something it
- * is built from is newer than that build.
+ * The SDK packages a manifest depends on, in build order.
+ *
+ * @param {{ dependencies?: Record<string, string>, peerDependencies?: Record<string, string> }} manifest
+ * @returns {string[]} Folder names, such as `core`.
+ */
+export function sdkDependenciesOf(manifest) {
+  const declared = new Set(
+    Object.keys({ ...manifest.dependencies, ...manifest.peerDependencies }),
+  );
+  return SDK_BUILD_ORDER.filter((name) => declared.has(`@mapcairn/${name}`));
+}
+
+/**
+ * Whether a package must be built: it has no finished build, something it is
+ * built from is newer than that build, or an SDK package it depends on was
+ * built after it (a package's declarations and stylesheet follow its
+ * dependencies' `dist`).
  *
  * @param {string} folder The package folder.
+ * @param {string[]} [dependencyFolders] The folders of the SDK packages it
+ *   depends on.
  * @returns {boolean}
  */
-export function isStale(folder) {
+export function isStale(folder, dependencyFolders = []) {
   const stamp = stampTime(folder);
+  if (stamp === undefined) {
+    return true;
+  }
+  const dependencyStamps = dependencyFolders.map(stampTime);
   return (
-    stamp === undefined ||
     stamp < newestInput(folder) ||
-    stamp < newestSharedInput()
+    stamp < newestSharedInput() ||
+    dependencyStamps.some((built) => built === undefined || built > stamp)
   );
 }
 
@@ -102,10 +124,13 @@ export function buildSdk({ force = false } = {}) {
   const built = [];
   for (const name of SDK_BUILD_ORDER) {
     const folder = path.join(REPO, "packages", name);
-    if (force || isStale(folder)) {
-      const manifest = JSON.parse(
-        readFileSync(path.join(folder, "package.json"), "utf8"),
-      );
+    const manifest = JSON.parse(
+      readFileSync(path.join(folder, "package.json"), "utf8"),
+    );
+    const dependencyFolders = sdkDependenciesOf(manifest).map((dependency) =>
+      path.join(REPO, "packages", dependency),
+    );
+    if (force || isStale(folder, dependencyFolders)) {
       console.log(`Building ${manifest.name}`);
       const result = spawnSync(
         process.execPath,
