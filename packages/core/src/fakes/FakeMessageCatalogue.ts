@@ -29,6 +29,8 @@ export interface FakeMessageCatalogueOptions {
   readonly isolateParameters?: boolean;
   /** Host-defined layer template, unit and label translations. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
+  /** Host-defined definition text translations, by `HostText` key. */
+  readonly definitionTexts?: Readonly<Record<string, string>>;
   /**
    * Replaces specific keys' catalogue values. Scripting a value whose
    * placeholders do not match the key's real `MessageParams` entry (a
@@ -61,10 +63,13 @@ export class FakeMessageCatalogue implements MessageCatalogue {
 
   readonly layerTemplates?: Readonly<Record<string, string>>;
 
+  readonly definitionTexts?: Readonly<Record<string, string>>;
+
   readonly #inner: MessageCatalogue;
 
   constructor(options: FakeMessageCatalogueOptions = {}) {
     this.layerTemplates = options.layerTemplates;
+    this.definitionTexts = options.definitionTexts;
     const language = options.language ?? "en-GB";
     const active: Partial<Record<MessageKey, string>> = {
       ...EN_GB_CATALOGUE,

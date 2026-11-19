@@ -162,7 +162,7 @@ export function checkHeatmapSpec(
     );
   } else {
     words.forEach((word, index) => {
-      problems.text(word, `${path}.words[${index}]`);
+      problems.definitionText(word, `${path}.words[${index}]`);
     });
   }
 }
@@ -194,7 +194,7 @@ export function checkHeatmapLayer(
   controls: readonly Json[],
 ): void {
   checkHeatmapSpec(problems, definition.heatmap, "heatmap", fields, controls);
-  problems.text(definition.emptyText, "emptyText");
+  problems.definitionText(definition.emptyText, "emptyText");
 }
 
 /** Checks a vector tile layer: its source, zoom windows and source layers. */

@@ -10,6 +10,8 @@ import { pluralFormsOf } from "./pluralForms";
 export interface CreateMessageCatalogueOptions {
   /** Translations for host-keyed layer templates, units and labels. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
+  /** Translations for host-keyed definition text (`HostText`), by key. */
+  readonly definitionTexts?: Readonly<Record<string, string>>;
   /** BCP 47 tag of the fallback record's language. Defaults to `en-GB`. */
   readonly fallbackLanguage?: string;
   /**
@@ -167,6 +169,9 @@ export function createMessageCatalogue(
     ...(numberingSystem === undefined ? {} : { numberingSystem }),
     ...(options.layerTemplates
       ? { layerTemplates: options.layerTemplates }
+      : {}),
+    ...(options.definitionTexts
+      ? { definitionTexts: options.definitionTexts }
       : {}),
     t(key, params) {
       return substitute(

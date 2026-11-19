@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { BasemapDefinition, MapEngineError } from "@mapcairn/core";
+import type {
+  BasemapDefinition,
+  DefinitionText,
+  MapEngineError,
+} from "@mapcairn/core";
 import {
   useBasemapAvailability,
   useBasemaps,
@@ -13,8 +17,8 @@ import { useCallback, useRef, useState } from "react";
 export interface BasemapFailure {
   /** The id of the basemap that could not load. */
   readonly id: string;
-  /** The name of the basemap that could not load. */
-  readonly name: string;
+  /** The name of the basemap that could not load, as its definition writes it. */
+  readonly name: DefinitionText;
   /** The basemap the map kept drawing. */
   readonly kept: BasemapDefinition;
   /**

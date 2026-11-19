@@ -133,3 +133,34 @@ describe("formatMessage with a list that holds messages", () => {
     ).toContain("Aardbewings and Rain");
   });
 });
+
+describe("formatMessage with a host-keyed text", () => {
+  const rivers = { key: "host.layer.name", text: "Rivers" };
+
+  it("reads a host-keyed placeholder in the active language", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      definitionTexts: { "host.layer.name": "Riviere" },
+    });
+    const announcement = message("announce.layerOn", {
+      name: textOrMessage(rivers),
+    });
+    expect(formatMessage(afrikaans, announcement)).toContain("Riviere");
+    expect(formatMessage(new FakeMessageCatalogue(), announcement)).toContain(
+      "Rivers",
+    );
+  });
+
+  it("reads host-keyed texts inside a list placeholder", () => {
+    const catalogue = new FakeMessageCatalogue({
+      definitionTexts: { "host.layer.name": "Riviere" },
+    });
+    expect(
+      formatMessage(
+        catalogue,
+        message("announce.layersDidNotAnswer", {
+          names: [textOrMessage(rivers), "Rain"],
+        }),
+      ),
+    ).toContain("Riviere and Rain");
+  });
+});

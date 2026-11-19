@@ -6,6 +6,7 @@ import {
   boundsAroundPoint,
   cardOf,
   createFormatterRegistry,
+  type DefinitionText,
   type FormatterRegistry,
   formatTemplate,
   hasCard,
@@ -109,15 +110,56 @@ function identifiableOn(layers: readonly DataLayerState[]): number {
   return layers.filter(answersTap).length;
 }
 
-/** Layers grouped by their definitions' `group`, in the order groups first appear. */
-function byGroup(layers: readonly DataLayerState[]) {
+/** One heading of the Layers section: the words shown, a key for its element, and the layers under it. */
+interface LayerGroup {
+  readonly heading: string;
+  /** The id of the group's first layer: it does not change with the language or when a later layer joins, so the group's element is kept. */
+  readonly key: string;
+  readonly items: readonly DataLayerState[];
+}
+
+/**
+ * Layers grouped by the heading their definitions' `group` reads as in the
+ * active language, in the order groups first appear. Grouping by the words
+ * keeps one heading for layers that name the group with a key, a host text
+ * or plain text that read the same.
+ */
+function byGroup(
+  layers: readonly DataLayerState[],
+  resolve: (text: DefinitionText) => string,
+): LayerGroup[] {
   const groups = new Map<string, DataLayerState[]>();
   for (const layer of layers) {
-    const group = groups.get(layer.definition.group) ?? [];
+    const heading = resolve(layer.definition.group);
+    const group = groups.get(heading) ?? [];
     group.push(layer);
-    groups.set(layer.definition.group, group);
+    groups.set(heading, group);
   }
-  return [...groups];
+  return [...groups].map(([heading, items]) => ({
+    heading,
+    key: (items[0] as DataLayerState).definition.id,
+    items,
+  }));
+}
+
+/**
+ * The key of the group whose layers the turn-off Undo would bring back, or
+ * undefined for none (or for the action that covered every layer). The
+ * first group, in order, that holds any of the offer's layers, so the row
+ * stays put when a layer joins the group or the language merges or splits
+ * headings.
+ */
+function groupHoldingUndo(
+  groups: readonly LayerGroup[],
+  turnedOff: DataLayers["turnedOff"],
+): string | undefined {
+  if (turnedOff === null || turnedOff.group === null) {
+    return undefined;
+  }
+  const offered = new Set(turnedOff.ids);
+  return groups.find(({ items }) =>
+    items.some((layer) => offered.has(layer.definition.id)),
+  )?.key;
 }
 
 /**
@@ -145,6 +187,8 @@ export function LayersSection({
   const messages = useMessages();
   const { t } = messages;
   const resolve = useResolveText();
+  const groups = byGroup(layers.layers, resolve);
+  const undoGroupKey = groupHoldingUndo(groups, layers.turnedOff);
   // Read optionally, so the section also renders outside a map (a test, a guide).
   const adapter = useContext(MapContext)?.adapter ?? null;
   const announce = useAnnounce();
@@ -340,15 +384,17 @@ export function LayersSection({
         </p>
       ) : null}
       <div className={styles.groups}>
-        {byGroup(layers.layers).map(([group, items]) => (
-          <div key={group} className={styles.group}>
+        {groups.map(({ heading, key, items }) => (
+          <div key={key} className={styles.group}>
             <div className={styles.groupHeader}>
-              <Subheading level={groupLevel}>{resolve(group)}</Subheading>
+              <Subheading level={groupLevel}>{heading}</Subheading>
               {showTurnOffAll ? (
                 <TurnOffGroup
                   layers={layers}
-                  group={group}
+                  group={key}
+                  heading={heading}
                   ids={enabledIds(items)}
+                  holdsUndo={key === undoGroupKey}
                 />
               ) : null}
             </div>
