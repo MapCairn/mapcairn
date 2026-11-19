@@ -120,19 +120,22 @@ export const actions = style({
 });
 
 /**
- * The place search: the text field, then its button below it. The field takes
- * the panel's whole width, so a placeholder in a longer language has the most
- * room a field can have; a field beside the button left it 102 pixels on a
- * 320 pixel phone.
+ * The place search: the text field, then its button below it, as wide as its
+ * label like the panel's other buttons. The field takes the panel's whole
+ * width, so a longer placeholder has the most room a field can have; beside
+ * the button, even an icon-only one, it has too little room for a
+ * placeholder 40 percent longer than English on a 320 pixel phone.
  */
 export const searchRow = style({
   display: "flex",
   flexDirection: "column",
+  alignItems: "flex-start",
   gap: tokens.space.sm,
 });
 
 /** The text field of the place search. */
 export const searchInput = style({
+  alignSelf: "stretch",
   minWidth: 0,
   minHeight: tokens.size.control,
   boxSizing: "border-box",

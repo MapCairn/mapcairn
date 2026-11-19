@@ -502,8 +502,8 @@ function placeholderOverflow(field: Locator, text: string): Promise<number> {
     context.font = style.font;
     const room =
       input.clientWidth -
-      Number.parseFloat(style.paddingLeft) -
-      Number.parseFloat(style.paddingRight);
+      Number.parseFloat(style.paddingInlineStart) -
+      Number.parseFloat(style.paddingInlineEnd);
     return context.measureText(placeholder).width - room;
   }, text);
 }
