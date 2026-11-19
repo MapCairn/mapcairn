@@ -173,6 +173,29 @@ describe("LayersSection", () => {
     );
   });
 
+  it.each([
+    ["latn", false],
+    [undefined, true],
+  ])(
+    "writes the update time with the numbering system %s (native digits: %s)",
+    async (numberingSystem, isNative) => {
+      const messages = new FakeMessageCatalogue({
+        language: "fa",
+        numberingSystem,
+      });
+      const { source } = setup(SAMPLE_LAYERS, undefined, messages);
+      source.setFeatures("sample-points", [samplePoint("a")]);
+      toggle("sample-points", "Sample points");
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("layer-status-sample-points"),
+        ).toHaveTextContent(/Updated/),
+      );
+      const status = screen.getByTestId("layer-status-sample-points");
+      expect(/[\u06F0-\u06F9]/u.test(status.textContent ?? "")).toBe(isNative);
+    },
+  );
+
   it("uses active plural forms for count messages that are plain in English", async () => {
     const messages = new FakeMessageCatalogue({
       overrides: {

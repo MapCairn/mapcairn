@@ -121,6 +121,29 @@ describe("built-in formatters", () => {
     );
   });
 
+  describe("numbering system", () => {
+    const persian = (numberingSystem?: string) => ({
+      now: NOW,
+      catalogue: new FakeMessageCatalogue({ language: "fa", numberingSystem }),
+    });
+    const native = /[\u06F0-\u06F9]/u;
+
+    it.each([
+      ["number", 12_345.6],
+      ["km", 12],
+      ["date", Date.UTC(2026, 10, 8, 14, 5)],
+    ])("%s: native digits by default, Latin when asked", (name, value) => {
+      expect(format(name, value, persian())).toMatch(native);
+      expect(format(name, value, persian("latn"))).not.toMatch(native);
+    });
+
+    it("date: keeps the language's calendar", () => {
+      expect(
+        format("date", Date.UTC(2026, 10, 8, 14, 5), persian("latn")),
+      ).toMatch(/1405/);
+    });
+  });
+
   it("each returns null for a value it cannot read", () => {
     for (const name of ["relative", "number", "km", "date"]) {
       expect(format(name, "nonsense")).toBeNull();

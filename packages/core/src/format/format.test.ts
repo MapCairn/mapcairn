@@ -7,6 +7,7 @@ import {
   formatFixed,
   formatLatitude,
   formatLatLng,
+  formatLocale,
   formatLongitude,
   formatNumber,
   formatZoom,
@@ -148,5 +149,58 @@ describe("formatDay", () => {
     const day = new Date("2026-11-11T23:30:00Z");
     expect(formatDay(day, "en-GB")).toBe("11 November 2026");
     expect(formatDay(day, "de")).toBe("11. November 2026");
+  });
+});
+
+describe("numbering and calendars follow the language's Intl defaults", () => {
+  const day = new Date(Date.UTC(2026, 10, 11));
+
+  it("writes Persian numbers in native digits and keeps coordinates ASCII", () => {
+    expect(formatNumber(1234.5, "fa")).toBe(
+      new Intl.NumberFormat("fa").format(1234.5),
+    );
+    expect(formatNumber(12, "fa")).toMatch(/^\p{Nd}+$/u);
+    expect(formatNumber(12, "fa")).not.toBe("12");
+    expect(formatLatLng({ lat: 12.5, lng: 34.5 })).toBe("12.50000, 34.50000");
+  });
+
+  it("writes a Thai day in the Buddhist calendar", () => {
+    expect(formatDay(day, "th")).toContain("2569");
+  });
+});
+
+describe("formatLocale", () => {
+  it("is the language when no numbering system is set", () => {
+    expect(formatLocale({ language: "fa" })).toBe("fa");
+  });
+
+  it("adds the numbering system as a Unicode extension", () => {
+    expect(formatLocale({ language: "fa", numberingSystem: "latn" })).toBe(
+      "fa-u-nu-latn",
+    );
+  });
+
+  it("forces Latin digits in numbers and days", () => {
+    const locale = formatLocale({ language: "fa", numberingSystem: "latn" });
+    expect(formatNumber(1234.5, locale)).toBe("1,234.5");
+    expect(formatDay(new Date(Date.UTC(2026, 10, 11)), locale)).toMatch(
+      /^[^\p{Nd}]*[0-9]/u,
+    );
+    expect(formatDay(new Date(Date.UTC(2026, 10, 11)), locale)).not.toMatch(
+      /[\u06F0-\u06F9]/u,
+    );
+  });
+
+  it("keeps the language's own calendar", () => {
+    const locale = formatLocale({ language: "th", numberingSystem: "latn" });
+    expect(formatDay(new Date(Date.UTC(2026, 10, 11)), locale)).toContain(
+      "2569",
+    );
+  });
+
+  it("keeps a language that already has an extension", () => {
+    expect(
+      formatLocale({ language: "ar-u-ca-gregory", numberingSystem: "latn" }),
+    ).toBe("ar-u-ca-gregory-nu-latn");
   });
 });

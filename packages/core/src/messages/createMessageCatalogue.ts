@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatDay, formatNumber } from "../format/format";
+import { formatDay, formatLocale, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
 import { pluralFormsOf } from "./pluralForms";
 
@@ -10,6 +10,13 @@ export interface CreateMessageCatalogueOptions {
   readonly layerTemplates?: Readonly<Record<string, string>>;
   /** BCP 47 tag of the fallback record's language. Defaults to `en-GB`. */
   readonly fallbackLanguage?: string;
+  /**
+   * An `Intl` numbering system such as "latn", to write numbers and days in
+   * instead of the language's own digits. Left out, they follow the
+   * language's `Intl` defaults. A malformed value (it must be 3 to 8
+   * letters or digits, such as "latn") is ignored with one `console.warn`.
+   */
+  readonly numberingSystem?: string;
 }
 
 /** Matches a `{name}` placeholder in a catalogue string. */
@@ -17,13 +24,15 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 
 /**
  * Substitutes every `{name}` placeholder in `template` from `params`. A
- * number, a `Date` and a list of strings are formatted for `language`; a
+ * number and a `Date` are formatted for `locale`, the language with its
+ * numbering system; a list of strings is formatted for `language`. A
  * placeholder with no value is left as written.
  */
 function substitute(
   template: string,
   params: Readonly<Record<string, unknown>>,
   language: string,
+  locale: string,
 ): string {
   return template.replace(PLACEHOLDER, (whole, name: string) => {
     const value = params[name];
@@ -31,10 +40,10 @@ function substitute(
       return whole;
     }
     if (typeof value === "number") {
-      return formatNumber(value, language);
+      return formatNumber(value, locale);
     }
     if (value instanceof Date) {
-      return formatDay(value, language);
+      return formatDay(value, locale);
     }
     if (Array.isArray(value)) {
       return new Intl.ListFormat(language, { type: "conjunction" }).format(
@@ -64,6 +73,30 @@ function selectPluralForm(
 }
 
 /**
+ * `numberingSystem` when `Intl` accepts it for `language`; otherwise `undefined`,
+ * with one warning, so a malformed value (too short, say "x") cannot make every
+ * number throw. A well-formed system the runtime does not know is accepted by
+ * `Intl` and falls back to the language's own digits.
+ */
+function usableNumberingSystem(
+  language: string,
+  numberingSystem: string | undefined,
+): string | undefined {
+  if (numberingSystem === undefined) {
+    return undefined;
+  }
+  try {
+    new Intl.Locale(language, { numberingSystem });
+    return numberingSystem;
+  } catch {
+    console.warn(
+      `MessageCatalogue: "${numberingSystem}" is not a valid numbering system for "${language}"; using the language's own digits.`,
+    );
+    return undefined;
+  }
+}
+
+/**
  * Builds the dependency-free default {@link MessageCatalogue}: a plain
  * `Record<MessageKey, string>` of resolved text (partial, for a translation
  * in progress), formatted with `Intl.PluralRules` and `Intl.ListFormat`. A key
@@ -79,6 +112,11 @@ export function createMessageCatalogue(
 ): MessageCatalogue {
   const warned = new Set<MessageKey>();
   const fallbackLanguage = options.fallbackLanguage ?? "en-GB";
+  const numberingSystem = usableNumberingSystem(
+    language,
+    options.numberingSystem,
+  );
+  const locale = formatLocale({ language, numberingSystem });
 
   function resolve(key: MessageKey): {
     readonly template: string;
@@ -99,11 +137,12 @@ export function createMessageCatalogue(
 
   return {
     language,
+    ...(numberingSystem === undefined ? {} : { numberingSystem }),
     ...(options.layerTemplates
       ? { layerTemplates: options.layerTemplates }
       : {}),
     t(key, params) {
-      return substitute(resolve(key).template, params, language);
+      return substitute(resolve(key).template, params, language, locale);
     },
     plural(key, params) {
       const { count } = params;
@@ -113,7 +152,7 @@ export function createMessageCatalogue(
         resolved.language,
         count,
       );
-      return substitute(form, params, language);
+      return substitute(form, params, language, locale);
     },
     list(items, type = "conjunction") {
       return new Intl.ListFormat(language, { type }).format(items);

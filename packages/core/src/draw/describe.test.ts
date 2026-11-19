@@ -56,6 +56,29 @@ const POINT: DrawShape = {
 };
 const SHAPES = [SQUARE, LINE, CIRCLE, POINT];
 
+describe("formatShapeMeasure numbering", () => {
+  const persian = (numberingSystem?: string) =>
+    new FakeMessageCatalogue({ language: "fa", numberingSystem });
+
+  it("writes native digits by default", () => {
+    expect(formatShapeMeasure(LINE, "metric", persian())).toMatch(
+      /[\u06F0-\u06F9]/u,
+    );
+  });
+
+  it("writes Latin digits when the catalogue asks for them", () => {
+    expect(formatShapeMeasure(LINE, "metric", persian("latn"))).toMatch(
+      /^[\d.,٫٬]+ (m|km)$/,
+    );
+    expect(formatShapeMeasure(SQUARE, "metric", persian("latn"))).not.toMatch(
+      /[\u06F0-\u06F9]/u,
+    );
+    expect(formatShapeMeasure(CIRCLE, "metric", persian("latn"))).not.toMatch(
+      /[\u06F0-\u06F9]/u,
+    );
+  });
+});
+
 describe("formatShapeMeasure", () => {
   it("shows a polygon's area and perimeter in short units", () => {
     expect(formatShapeMeasure(SQUARE, "metric", messages)).toMatch(

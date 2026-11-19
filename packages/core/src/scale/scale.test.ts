@@ -16,7 +16,7 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 2.5,
       maxWidthPx: 100,
       units: "metric",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect({ ...bar, accessibleLabel: english(bar.accessibleLabel) }).toEqual({
       widthPx: 80,
@@ -45,7 +45,7 @@ describe("computeScaleBar (metric)", () => {
         metresPerPixel: metres / 100,
         maxWidthPx: 100,
         units: "metric",
-        language: "en-GB",
+        locale: "en-GB",
       });
       expect(bar.value).toBe(expected);
       expect(bar.unit).toBe("m");
@@ -59,7 +59,7 @@ describe("computeScaleBar (metric)", () => {
         metresPerPixel,
         maxWidthPx: 120,
         units: "metric",
-        language: "en-GB",
+        locale: "en-GB",
       });
       expect(bar.widthPx).toBeLessThanOrEqual(120);
       expect(bar.widthPx).toBeGreaterThan(0);
@@ -71,7 +71,7 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 25,
       maxWidthPx: 100,
       units: "metric",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect({ ...bar, accessibleLabel: english(bar.accessibleLabel) }).toEqual({
       widthPx: 80,
@@ -87,14 +87,14 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 10,
       maxWidthPx: 100,
       units: "metric",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect(english(km.accessibleLabel)).toBe("Scale: 1 kilometre");
     const m = computeScaleBar({
       metresPerPixel: 0.01,
       maxWidthPx: 100,
       units: "metric",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect(english(m.accessibleLabel)).toBe("Scale: 1 metre");
   });
@@ -104,7 +104,7 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 10_000,
       maxWidthPx: 100,
       units: "metric",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect(bar.label).toBe("1,000 km");
     expect(english(bar.accessibleLabel)).toBe("Scale: 1,000 kilometres");
@@ -115,7 +115,7 @@ describe("computeScaleBar (metric)", () => {
       metresPerPixel: 0.0093,
       maxWidthPx: 100,
       units: "metric",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect(bar.value).toBe(0.5);
     expect(bar.label).toBe("0.5 m");
@@ -129,7 +129,7 @@ describe("computeScaleBar (imperial)", () => {
       metresPerPixel: 2,
       maxWidthPx: 100,
       units: "imperial",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect(bar.unit).toBe("ft");
     expect(bar.value).toBe(500);
@@ -143,7 +143,7 @@ describe("computeScaleBar (imperial)", () => {
       metresPerPixel: 20,
       maxWidthPx: 100,
       units: "imperial",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect(one.unit).toBe("mi");
     expect(one.value).toBe(1);
@@ -153,7 +153,7 @@ describe("computeScaleBar (imperial)", () => {
       metresPerPixel: 200,
       maxWidthPx: 100,
       units: "imperial",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect(many.value).toBe(10);
     expect(english(many.accessibleLabel)).toBe("Scale: 10 miles");
@@ -164,7 +164,7 @@ describe("computeScaleBar (imperial)", () => {
       metresPerPixel: 0.005,
       maxWidthPx: 100,
       units: "imperial",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect(bar.value).toBe(1);
     expect(english(bar.accessibleLabel)).toBe("Scale: 1 foot");
@@ -183,7 +183,7 @@ describe("computeScaleBar (degenerate input)", () => {
         metresPerPixel,
         maxWidthPx: 100,
         units: "metric",
-        language: "en-GB",
+        locale: "en-GB",
       });
       expect(bar.widthPx).toBe(0);
       expect(bar.value).toBe(0);
@@ -193,7 +193,7 @@ describe("computeScaleBar (degenerate input)", () => {
       metresPerPixel: 1,
       maxWidthPx: 0,
       units: "imperial",
-      language: "en-GB",
+      locale: "en-GB",
     });
     expect({
       ...imperial,
@@ -214,7 +214,7 @@ describe("computeScaleBar in another language", () => {
       metresPerPixel: 1000,
       maxWidthPx: 1500,
       units: "metric",
-      language: "de",
+      locale: "de",
     });
     expect(bar.label).toBe("1.000 km");
     expect(bar.accessibleLabel).toEqual({

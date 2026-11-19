@@ -52,7 +52,7 @@ function expectedBar(adapter: FakeMapAdapter, units: "metric" | "imperial") {
     metresPerPixel: adapter.metresPerPixel(),
     maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
     units,
-    language: "en-GB",
+    locale: "en-GB",
   });
 }
 
@@ -88,9 +88,25 @@ describe("ScaleBar", () => {
         metresPerPixel: adapter.metresPerPixel(),
         maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
         units: "metric",
-        language: "de",
+        locale: "de",
       }).label,
     );
+  });
+
+  it.each([
+    ["Latin digits when the catalogue asks for them", "latn", false],
+    ["the language's own digits otherwise", undefined, true],
+  ])("writes the figure in %s", (_name, numberingSystem, native) => {
+    const adapter = adapterAtZoom(12);
+    renderChrome(<ScaleBar units="metric" />, {
+      map: testMapContext({ adapter, view: adapter.getView() }),
+      services: createFakeServices({
+        messages: new FakeMessageCatalogue({ language: "fa", numberingSystem }),
+      }),
+    });
+    const figure = screen.getByRole("img", { name: /.+/ }).textContent ?? "";
+    expect(/[\u06F0-\u06F9]/u.test(figure)).toBe(native);
+    expect(/[0-9]/u.test(figure)).toBe(!native);
   });
 
   it("uses imperial units when asked", () => {
@@ -324,6 +340,18 @@ describe("CursorCoordinates", () => {
     renderChrome(<CursorCoordinates latlng={latlng} zoom={12.46} />);
     const readout = screen.getByText(formatLatLng(latlng)).closest("p");
     expect(readout).toContainElement(screen.getByText("z 12.5"));
+  });
+
+  it("shows the zoom in Latin digits when the catalogue asks for them", () => {
+    renderChrome(<CursorCoordinates latlng={null} zoom={12.5} />, {
+      services: createFakeServices({
+        messages: new FakeMessageCatalogue({
+          language: "fa",
+          numberingSystem: "latn",
+        }),
+      }),
+    });
+    expect(screen.getByText("z 12.5")).toBeInTheDocument();
   });
 
   it("shows the zoom alone while there is no position", () => {

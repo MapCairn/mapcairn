@@ -7,6 +7,7 @@ import {
   formatDistance,
   formatDuration,
   formatLatLng,
+  formatLocale,
   type LatLng,
   MAX_DIRECTION_STOPS,
   message,
@@ -88,7 +89,8 @@ function ResultCard({
   units: UnitSystem;
 }) {
   const messages = useMessages();
-  const { language, t } = messages;
+  const { t } = messages;
+  const locale = formatLocale(messages);
   const format = useFormatMessage();
   const how = travelModeParticiple(result.mode);
   if (result.kind === "area") {
@@ -110,7 +112,7 @@ function ResultCard({
         <p>
           {before}
           <span data-testid="directions-area">
-            {formatArea(result.size, units, language)}
+            {formatArea(result.size, units, locale)}
           </span>
           {after}
         </p>
@@ -121,7 +123,7 @@ function ResultCard({
     <div className={styles.result} data-testid="directions-result">
       <p className={styles.figures} data-testid="directions-figures">
         {t("common.commaJoined", {
-          first: formatDistance(result.distance, units, language),
+          first: formatDistance(result.distance, units, locale),
           second: format(formatDuration(result.duration)),
         })}
       </p>
@@ -149,7 +151,7 @@ function ResultCard({
                 distance: formatDistance(
                   leg.properties.distance,
                   units,
-                  language,
+                  locale,
                 ),
                 duration: format(formatDuration(leg.properties.duration)),
               })}

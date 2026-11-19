@@ -7,8 +7,8 @@ import { FakeMessageCatalogue } from "./FakeMessageCatalogue";
 runMessageCatalogueContract("FakeMessageCatalogue", {
   create: () => new FakeMessageCatalogue(),
   createMissingKey: (key) => new FakeMessageCatalogue({ missingKeys: [key] }),
-  createWith: (language, overrides) =>
-    new FakeMessageCatalogue({ language, overrides }),
+  createWith: (language, overrides, numberingSystem) =>
+    new FakeMessageCatalogue({ language, overrides, numberingSystem }),
 });
 
 describe("FakeMessageCatalogue", () => {
@@ -42,5 +42,15 @@ describe("FakeMessageCatalogue", () => {
     expect(catalogue.list(["A", "B"])).toBe(
       new Intl.ListFormat("en-GB", { type: "conjunction" }).format(["A", "B"]),
     );
+  });
+
+  it("carries a numbering system and formats numbers with it", () => {
+    const catalogue = new FakeMessageCatalogue({
+      language: "fa",
+      numberingSystem: "latn",
+      overrides: { "common.itemCount": "{count}" },
+    });
+    expect(catalogue.numberingSystem).toBe("latn");
+    expect(catalogue.t("common.itemCount", { count: 1234 })).toBe("1,234");
   });
 });

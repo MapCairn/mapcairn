@@ -334,6 +334,59 @@ describe("getting a route", () => {
   });
 });
 
+describe("figures in the catalogue's numbering system", () => {
+  const withNumbering = (numberingSystem?: string) =>
+    createFakeServices({
+      messages: new FakeMessageCatalogue({ language: "fa", numberingSystem }),
+    });
+  const native = /[\u06F0-\u06F9]/u;
+
+  it.each([
+    ["latn", false],
+    [undefined, true],
+  ])(
+    "writes leg distances with %s digits as native: %s",
+    async (numberingSystem, isNative) => {
+      setup({}, withNumbering(numberingSystem));
+      addCentreStops(3);
+      click("Get route");
+      await flush();
+      const leg = screen.getAllByTestId("directions-leg")[0]?.textContent ?? "";
+      expect(native.test(leg)).toBe(isNative);
+    },
+  );
+
+  it.each([
+    ["latn", false],
+    [undefined, true],
+  ])(
+    "writes the route total with %s digits as native: %s",
+    async (numberingSystem, isNative) => {
+      setup({}, withNumbering(numberingSystem));
+      addCentreStops(2);
+      click("Get route");
+      await flush();
+      const total = screen.getByTestId("directions-figures").textContent ?? "";
+      expect(native.test(total)).toBe(isNative);
+    },
+  );
+
+  it.each([
+    ["latn", false],
+    [undefined, true],
+  ])(
+    "writes the area size with %s digits as native: %s",
+    async (numberingSystem, isNative) => {
+      setup({}, withNumbering(numberingSystem));
+      addCentreStops(1);
+      fireEvent.click(screen.getByTestId("directions-area-15"));
+      await flush();
+      const area = screen.getByTestId("directions-area").textContent ?? "";
+      expect(native.test(area)).toBe(isNative);
+    },
+  );
+});
+
 describe("a travel time area", () => {
   it("asks around the first stop and shows its size, with the chosen time pressed", async () => {
     const { services } = setup();

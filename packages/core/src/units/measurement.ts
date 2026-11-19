@@ -144,30 +144,31 @@ export function readArea(
 
 /**
  * Formats a distance with a short unit, for example "850 m", "1.25 km",
- * "328 ft" or "1.25 mi". The number is grouped for `language`; the unit
- * symbols are the same in every language.
+ * "328 ft" or "1.25 mi". The number is grouped and its digits chosen for
+ * `locale` (`formatLocale(catalogue)`); the unit symbols are the same in
+ * every language.
  */
 export function formatDistance(
   metres: number,
   units: UnitSystem,
-  language: string,
+  locale: string,
 ): string {
   const { value, unit } = readDistance(metres, units);
-  return `${formatNumber(value, language)} ${DISTANCE_UNIT_SYMBOL[unit]}`;
+  return `${formatNumber(value, locale)} ${DISTANCE_UNIT_SYMBOL[unit]}`;
 }
 
 /**
  * Formats an area with a short unit, for example "850 m²", "1.25 ha",
- * "2.5 km²", "1,076 ft²", "1 ac" or "1.93 mi²". The number is grouped for
- * `language`.
+ * "2.5 km²", "1,076 ft²", "1 ac" or "1.93 mi²". The number is grouped and its
+ * digits chosen for `locale` (`formatLocale(catalogue)`).
  */
 export function formatArea(
   squareMetres: number,
   units: UnitSystem,
-  language: string,
+  locale: string,
 ): string {
   const { value, unit } = readArea(squareMetres, units);
-  return `${formatNumber(value, language)} ${AREA_UNIT_SYMBOL[unit]}`;
+  return `${formatNumber(value, locale)} ${AREA_UNIT_SYMBOL[unit]}`;
 }
 
 /** A distance in a given unit as words, "1.25 kilometres": the unit's plural key with the count. */

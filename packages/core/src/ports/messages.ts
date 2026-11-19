@@ -1153,9 +1153,10 @@ export type MessageParams = {
 };
 
 /**
- * What a placeholder can be filled with. A number is formatted with the
- * catalogue's language (grouping and decimal separator), a `Date` as a UTC
- * day in words, and a list of strings with `Intl.ListFormat`.
+ * What a placeholder can be filled with. A number is formatted for
+ * `formatLocale(catalogue)` (grouping, decimal separator and digits), a
+ * `Date` as a UTC day in words for the same locale, and a list of strings
+ * with `Intl.ListFormat` for the plain language.
  */
 export type MessageValue = string | number | Date | readonly string[];
 
@@ -1200,6 +1201,13 @@ export interface MessageCatalogue {
   readonly language: string;
   /** Optional host translations for layer templates, units and labels. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
+  /**
+   * An `Intl` numbering system, for example "latn", that numbers and dates
+   * are written in instead of the language's own digits. Unset, they follow
+   * the language's `Intl` defaults. Coordinates are always ASCII. Format with
+   * `formatLocale(catalogue)` rather than `language` to honour it.
+   */
+  readonly numberingSystem?: string;
   /**
    * Looks up a key, substitutes its parameters (written `{name}` in the
    * string), and falls back with a single `console.warn` per missing key
