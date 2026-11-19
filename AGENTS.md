@@ -46,6 +46,7 @@ npm run check
 ```
 
 - `dev` runs `cf dev`, which starts the Vite SSR dev server (`react-router dev`) on port 5173. It runs in Node, not in the Workers runtime, and never touches Cloudflare.
+- `build:sdk` builds `core`, `react` and `theme` into `dist` (`ARCHITECTURE.md`, "Building the SDK packages"). The scripts that need `dist` run it first and it skips a package that is up to date. Run `npm run build:sdk` once before a single-file `vitest` run or a bare `playwright test`, which bypass those scripts.
 - `test` runs Vitest across `packages/*`. Run one file with `npx --no-install vitest run path/to/file.test.ts`. It includes a check that fails on interface text written inline in `packages/map` or `packages/web` and on an Afrikaans value left as English (`DESIGN.md`, "What the lint checks, and where"); a new component looks its copy up through the message catalogue.
 - `test:coverage` enforces 95% for statements, branches, functions and lines in `core`, `map`, `react` and `theme`. `packages/web` has a slightly lower branch floor: 95% for statements, functions and lines and 90% for branches, because its layout and touch-gesture code is also covered by Playwright. Aim for 100% behavioural coverage.
 - `typecheck` checks every workspace, including web route types and the Playwright project.

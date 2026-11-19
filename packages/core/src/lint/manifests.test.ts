@@ -34,15 +34,60 @@ const TYPES_PACKAGES: Readonly<Record<string, string>> = {
   geojson: "@types/geojson",
 };
 
-/** Every entry point each SDK package offers, and nothing else. */
-const ENTRY_POINTS: Readonly<
-  Record<(typeof SDK_PACKAGES)[number], Record<string, string>>
+/** The custom export condition that points a build tool at source. */
+const SOURCE_CONDITION = "@mapcairn/source";
+
+/** Packages that build to `dist` in this step; `map` follows in its own. */
+const BUILT_PACKAGES = ["core", "react", "theme"] as const;
+
+/** The conditions an entry point of a built package carries, in order. */
+interface ConditionalExport {
+  readonly [SOURCE_CONDITION]: string;
+  readonly types: string;
+  readonly default: string;
+}
+
+/**
+ * Every entry point each built SDK package offers, and nothing else. A
+ * stylesheet is a plain path, since it has no source form.
+ */
+const BUILT_ENTRY_POINTS: Readonly<
+  Record<
+    (typeof BUILT_PACKAGES)[number],
+    Record<string, ConditionalExport | string>
+  >
 > = {
-  core: { ".": "./src/index.ts", "./contracts": "./src/contracts/index.ts" },
-  map: { ".": "./src/index.ts" },
-  react: { ".": "./src/index.ts" },
-  theme: { ".": "./src/index.ts" },
+  core: {
+    ".": {
+      [SOURCE_CONDITION]: "./src/index.ts",
+      types: "./dist/index.d.ts",
+      default: "./dist/index.js",
+    },
+    "./contracts": {
+      [SOURCE_CONDITION]: "./src/contracts/index.ts",
+      types: "./dist/contracts.d.ts",
+      default: "./dist/contracts.js",
+    },
+  },
+  react: {
+    ".": {
+      [SOURCE_CONDITION]: "./src/index.ts",
+      types: "./dist/index.d.ts",
+      default: "./dist/index.js",
+    },
+  },
+  theme: {
+    ".": {
+      [SOURCE_CONDITION]: "./src/index.ts",
+      types: "./dist/index.d.ts",
+      default: "./dist/index.js",
+    },
+    "./tokens.css": "./dist/tokens.css",
+  },
 };
+
+/** The entry point of `map`, which still ships source until it is built. */
+const MAP_ENTRY_POINTS = { ".": "./src/index.ts" };
 
 /** Workspaces that depend on the SDK packages, beside the SDK packages. */
 const INTERNAL_CONSUMERS = ["packages/web", "examples/embed"] as const;
@@ -51,7 +96,11 @@ interface Manifest {
   readonly name: string;
   readonly version?: string;
   /** Without it, any file in the package can be imported by path. */
-  readonly exports?: Readonly<Record<string, string>>;
+  readonly exports?: Readonly<Record<string, unknown>>;
+  readonly types?: string;
+  readonly files?: readonly string[];
+  readonly sideEffects?: boolean | readonly string[];
+  readonly publishConfig?: { readonly access?: string };
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
   readonly peerDependenciesMeta?: Readonly<
@@ -132,10 +181,53 @@ describe("SDK package manifests", () => {
     },
   );
 
-  it.each(SDK_PACKAGES)(
-    "@mapcairn/%s exposes only its entry points",
+  it.each(BUILT_PACKAGES)(
+    "@mapcairn/%s exposes only its entry points, with source, types and default conditions",
     (name) => {
-      expect(manifestOf(name).exports).toEqual(ENTRY_POINTS[name]);
+      const { exports } = manifestOf(name);
+      expect(exports).toEqual(BUILT_ENTRY_POINTS[name]);
+      for (const entry of Object.values(exports ?? {})) {
+        if (typeof entry === "string") {
+          continue;
+        }
+        expect(Object.keys(entry as object)).toEqual([
+          SOURCE_CONDITION,
+          "types",
+          "default",
+        ]);
+      }
+    },
+  );
+
+  it("@mapcairn/map exposes only its entry point", () => {
+    expect(manifestOf("map").exports).toEqual(MAP_ENTRY_POINTS);
+  });
+
+  it.each(BUILT_PACKAGES)(
+    "@mapcairn/%s ships dist and source, without tests, and declares its side effects",
+    (name) => {
+      const manifest = manifestOf(name);
+      expect(manifest.files).toEqual([
+        "dist",
+        "!dist/.built",
+        "src",
+        "!src/**/*.test.*",
+        "!src/**/*.snap.html",
+        ...(name === "core" ? ["!src/propertyTesting/**"] : []),
+      ]);
+      expect(manifest.sideEffects).toEqual(
+        name === "theme" ? ["**/*.css"] : false,
+      );
+      expect(manifest.publishConfig).toEqual({ access: "public" });
+      expect(manifest).not.toHaveProperty("main");
+      expect(manifest.types).toBe("./dist/index.d.ts");
+    },
+  );
+
+  it.each(BUILT_PACKAGES)(
+    "@mapcairn/%s stays private until the first release",
+    (name) => {
+      expect(manifestOf(name)).toHaveProperty("private", true);
     },
   );
 

@@ -28,7 +28,7 @@ export const button = style({
 
 ## Using it in a host app
 
-This package ships source with no build step. A host registers `vanillaExtractPlugin()` from `@vanilla-extract/vite-plugin` in its Vite config. The package is side-effect free, so its token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does with `tokens` and `focusRing`.
+`npm run build:sdk` builds this package to `dist`: JavaScript, declarations and the compiled `tokens.css`. The source stays beside it, behind the `@mapcairn/source` export condition, which this repository's Vite configs and `tsconfig.base.json` turn on. A host that resolves that condition registers `vanillaExtractPlugin()` from `@vanilla-extract/vite-plugin` in its Vite config. The JavaScript is side-effect free (`sideEffects` names only `.css` files), so from source the token stylesheet reaches the page only through an import that is used, as `packages/web/src/global.css.ts` does with `tokens` and `focusRing`. A consumer of `dist` gets the tokens only by importing `@mapcairn/theme/tokens.css`.
 
 ## What doesn't belong here
 
