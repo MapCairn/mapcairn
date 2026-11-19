@@ -1308,13 +1308,19 @@ describe("connection notice", () => {
   const notice = () => screen.queryByTestId("connection-notice");
 
   /** An app with a layer on, with the clock held so the settle delay can be stepped past. */
-  async function offlineApp({ failing = false } = {}) {
+  async function offlineApp({
+    failing = false,
+    failure = "network",
+  }: {
+    failing?: boolean;
+    failure?: "network" | "invalid";
+  } = {}) {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const services = createFakeServices({
       layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
     });
     if (failing) {
-      services.fakes.layerSource.fail("sample-points", "network");
+      services.fakes.layerSource.fail("sample-points", failure);
     }
     services.fakes.url.write({
       layers: { enabled: ["sample-points"], controls: {} },
@@ -1390,6 +1396,17 @@ describe("connection notice", () => {
       requests,
     );
     expect(notice()).toBeNull();
+  });
+
+  it("offers no Try again for a layer that answered wrongly, which a connection would not fix", async () => {
+    const services = await offlineApp({ failing: true, failure: "invalid" });
+    go(services, false);
+    go(services, true);
+    const shown = screen.getByTestId("connection-notice");
+    expect(shown).toHaveTextContent("You are back online.");
+    expect(
+      within(shown).queryByRole("button", { name: "Try again" }),
+    ).toBeNull();
   });
 
   it("offers no Try again when nothing failed", async () => {

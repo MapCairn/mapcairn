@@ -89,7 +89,7 @@ export function MapBanners({ app, connection }: MapBannersProps) {
   }, [map.error]);
 
   const failedLayers = app.layers.layers.filter(
-    ({ status }) => status.kind === "error",
+    ({ status }) => status.kind === "error" && status.error === "network",
   );
   const retryEverything = () => {
     map.retry();

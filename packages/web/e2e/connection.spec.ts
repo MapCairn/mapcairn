@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { axeViolations } from "./support/a11y";
 import { mockLayerProviders } from "./support/layers";
@@ -32,6 +32,23 @@ async function failWhileOffline(page: Page): Promise<{ offline: boolean }> {
   return state;
 }
 
+/** Switches the connection and waits until the page itself reports the new state, so its event has been handled. */
+async function setConnection(
+  page: Page,
+  context: BrowserContext,
+  online: boolean,
+): Promise<void> {
+  await context.setOffline(!online);
+  await page.waitForFunction(
+    (expected) => navigator.onLine === expected,
+    online,
+  );
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+  );
+}
+
 /** Steps the page clock past the settle delay, so the notice for a change shows. */
 async function settle(page: Page): Promise<void> {
   await page.clock.runFor(CONNECTION_SETTLE_MS + TIMER_SLACK_MS);
@@ -50,7 +67,7 @@ test.describe("the connection notice", () => {
     await expect(notice).toHaveCount(0);
 
     state.offline = true;
-    await context.setOffline(true);
+    await setConnection(page, context, false);
     await expect(notice).toHaveCount(0);
     await settle(page);
     await expect(notice).toHaveText(
@@ -75,7 +92,7 @@ test.describe("the connection notice", () => {
     ).toEqual([]);
 
     state.offline = false;
-    await context.setOffline(false);
+    await setConnection(page, context, true);
     await settle(page);
     await expect(notice).toContainText("You are back online.");
     await expect(page.getByTestId(`layer-status-${LAYER}`)).toContainText(
@@ -97,12 +114,19 @@ test.describe("the connection notice", () => {
     await failWhileOffline(page);
     await mapPage.goto();
     await collapseCredits(mapPage);
-    await context.setOffline(true);
+    await setConnection(page, context, false);
     await page.clock.runFor(CONNECTION_SETTLE_MS - TIMER_SLACK_MS);
-    await context.setOffline(false);
+    await setConnection(page, context, true);
     await settle(page);
     await settle(page);
     await expect(page.getByTestId("connection-notice")).toHaveCount(0);
+
+    // The same helpers, for a drop that holds, do show it: the page did handle the events.
+    await setConnection(page, context, false);
+    await settle(page);
+    await expect(page.getByTestId("connection-notice")).toContainText(
+      "You are offline.",
+    );
   });
 
   test("leaves out the tile error while the notice is up", async ({
@@ -113,7 +137,7 @@ test.describe("the connection notice", () => {
     await failWhileOffline(page);
     await mapPage.goto();
     await collapseCredits(mapPage);
-    await context.setOffline(true);
+    await setConnection(page, context, false);
     await settle(page);
     await expect(page.getByTestId("connection-notice")).toBeVisible();
     await expect(page.getByTestId("tile-error")).toHaveCount(0);
@@ -152,13 +176,13 @@ test.describe("the connection notice, accessibility", () => {
       await collapseCredits(mapPage);
       const notice = page.getByTestId("connection-notice");
 
-      await context.setOffline(true);
+      await setConnection(page, context, false);
       await settle(page);
       await expect(notice).toBeVisible();
       await waitForStableLayout(page);
       expect(await axeViolations(page)).toEqual([]);
 
-      await context.setOffline(false);
+      await setConnection(page, context, true);
       await settle(page);
       await expect(notice).toContainText("You are back online.");
       await waitForStableLayout(page);
