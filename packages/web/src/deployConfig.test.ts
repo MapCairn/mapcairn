@@ -130,6 +130,13 @@ describe("cloudflare.config.ts", () => {
   });
 });
 
+/**
+ * What the host's scripts run first, so `dist` exists for everything that
+ * resolves the SDK packages outside Vite. `npm --prefix` works in every shell,
+ * where an environment variable or a `cd` would not.
+ */
+const BUILD_SDK_FIRST = "npm --prefix ../.. run build:sdk && ";
+
 describe("the web package's scripts", () => {
   const scripts = (
     JSON.parse(
@@ -137,9 +144,25 @@ describe("the web package's scripts", () => {
     ) as { scripts: Record<string, string> }
   ).scripts;
 
-  it("build and develop through cf", () => {
-    expect(scripts.dev).toBe("cf dev");
-    expect(scripts.build).toBe("cf build && node scripts/verifyNoTestSeam.mjs");
+  it("build and develop through cf, after the SDK packages are built", () => {
+    expect(scripts.dev).toBe(`${BUILD_SDK_FIRST}cf dev`);
+    expect(scripts.build).toBe(
+      `${BUILD_SDK_FIRST}cf build && node scripts/verifyNoTestSeam.mjs`,
+    );
+  });
+
+  it.each([
+    "dev",
+    "build",
+    "build:e2e",
+    "test",
+    "typecheck",
+    "test:e2e",
+    "e2e",
+    "a11y",
+    "catalogue:check",
+  ])("run %s only after the SDK packages are built", (name) => {
+    expect(scripts[name]).toMatch(/^npm --prefix \.\.\/\.\. run build:sdk && /);
   });
 
   it("deploy through cf, only after the output is built or checked to hold no test seam", () => {
@@ -169,7 +192,7 @@ describe("the web package's scripts", () => {
 
   it("build the end-to-end bundle in its own mode and check that it keeps the test seam", () => {
     expect(scripts["build:e2e"]).toBe(
-      "react-router build --mode e2e && node scripts/verifyNoTestSeam.mjs --expect-present",
+      `${BUILD_SDK_FIRST}react-router build --mode e2e && node scripts/verifyNoTestSeam.mjs --expect-present`,
     );
   });
 });

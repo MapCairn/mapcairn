@@ -3,12 +3,15 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
+  readFileSync,
   rmSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   entryPointsOf,
@@ -25,22 +28,22 @@ import {
 
 const SECOND = 1000;
 
-let folder = "";
+let scratch = "";
 
 /** Writes a file and sets its modified time to `seconds` after the epoch. */
 function write(relative: string, seconds: number): void {
-  const target = path.join(folder, relative);
+  const target = path.join(scratch, relative);
   mkdirSync(path.dirname(target), { recursive: true });
   writeFileSync(target, "x");
   utimesSync(target, seconds, seconds);
 }
 
 beforeEach(() => {
-  folder = mkdtempSync(path.join(tmpdir(), "mapcairn-build-sdk-"));
+  scratch = mkdtempSync(path.join(tmpdir(), "mapcairn-build-sdk-"));
 });
 
 afterEach(() => {
-  rmSync(folder, { recursive: true, force: true });
+  rmSync(scratch, { recursive: true, force: true });
 });
 
 describe("SDK_BUILD_ORDER", () => {
@@ -54,7 +57,7 @@ describe("newestInput", () => {
     write("package.json", 10);
     write("src/a.ts", 30);
     write("src/nested/b.tsx", 20);
-    expect(newestInput(folder)).toBe(30 * SECOND);
+    expect(newestInput(scratch)).toBe(30 * SECOND);
   });
 
   it("ignores test files and snapshots, which do not change the output", () => {
@@ -62,18 +65,18 @@ describe("newestInput", () => {
     write("src/a.ts", 20);
     write("src/a.test.ts", 90);
     write("src/a.snap.html", 95);
-    expect(newestInput(folder)).toBe(20 * SECOND);
+    expect(newestInput(scratch)).toBe(20 * SECOND);
   });
 });
 
 describe("stampTime", () => {
   it("is missing for a package that was never built", () => {
-    expect(stampTime(folder)).toBeUndefined();
+    expect(stampTime(scratch)).toBeUndefined();
   });
 
   it("is the time the build finished", () => {
     write("dist/.built", 40);
-    expect(stampTime(folder)).toBe(40 * SECOND);
+    expect(stampTime(scratch)).toBe(40 * SECOND);
   });
 });
 
@@ -131,5 +134,65 @@ describe("isExternal", () => {
     ["\0virtual:module", false],
   ])("treats %s as external: %s", (id, expected) => {
     expect(isExternal(id)).toBe(expected);
+  });
+});
+
+const REPO = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../..",
+);
+
+function scriptsOf(folder: string): Record<string, string> {
+  return (
+    JSON.parse(
+      readFileSync(path.join(REPO, folder, "package.json"), "utf8"),
+    ) as {
+      scripts: Record<string, string>;
+    }
+  ).scripts;
+}
+
+describe("the root scripts", () => {
+  const scripts = scriptsOf(".");
+
+  it.each(["typecheck", "test", "test:coverage"])(
+    "run %s after building the SDK packages",
+    (name) => {
+      expect(scripts[name]).toMatch(/^npm run build:sdk && /);
+    },
+  );
+
+  it("builds the SDK packages once, then only the host and the example", () => {
+    expect(scripts.build).toBe(
+      "npm run build:sdk && npm run build -w @mapcairn/web && npm run build -w @mapcairn/example-embed",
+    );
+    expect(scripts["build:sdk"]).toBe("node scripts/buildSdk.mjs");
+  });
+});
+
+describe("every package script", () => {
+  it("avoids environment-variable prefixes and node conditions, which fail in the Windows shell", () => {
+    const folders = [
+      ".",
+      ...["packages", "examples"].flatMap((parent) =>
+        readdirSync(path.join(REPO, parent)).map((name) =>
+          path.join(parent, name),
+        ),
+      ),
+    ].filter((folder) => {
+      try {
+        readFileSync(path.join(REPO, folder, "package.json"));
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    for (const folder of folders) {
+      for (const [name, command] of Object.entries(scriptsOf(folder))) {
+        expect(command, `${folder} ${name}`).not.toMatch(
+          /^\s*[A-Z_]+=|NODE_OPTIONS|--conditions/,
+        );
+      }
+    }
   });
 });
