@@ -33,6 +33,7 @@ import {
 } from "./productContent";
 
 const REPO = "https://github.com/MapCairn/mapcairn";
+const MASTODON = "https://en.osm.town/@mapcairn";
 
 /** The README, whose embedding example the page shows. */
 const README = readFileSync(
@@ -235,16 +236,33 @@ describe("the product page stands on its own", () => {
       within(footer)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Source code", "Try the playground", "Privacy policy"]);
+    ).toEqual([
+      "Source code",
+      "Mastodon",
+      "Try the playground",
+      "Privacy policy",
+    ]);
   });
 
-  it("links only to the repository's front page or to this site: no Markdown file, folder, section or contributing page", () => {
+  it("links the footer's Mastodon entry to the project profile with rel=me so the profile can verify the site", () => {
+    renderPage();
+    const link = within(screen.getByRole("contentinfo")).getByRole("link", {
+      name: "Mastodon",
+    });
+    expect(link).toHaveAttribute("href", "https://en.osm.town/@mapcairn");
+    expect(link).toHaveAttribute("rel", "me");
+  });
+
+  it("links only to the repository's front page, the Mastodon profile or this site: no Markdown file, folder, section or contributing page", () => {
     renderPage();
     const hrefs = screen
       .getAllByRole("link")
       .map((link) => link.getAttribute("href") ?? "");
     for (const href of hrefs) {
-      expect(href === REPO || /^[/#]/.test(href), href).toBe(true);
+      expect(
+        href === REPO || href === MASTODON || /^[/#]/.test(href),
+        href,
+      ).toBe(true);
       expect(href).not.toMatch(/\.md(#.*)?$/);
       expect(href).not.toMatch(
         /#(documentation|licence)$|\/tree\/|\/contribute/,
