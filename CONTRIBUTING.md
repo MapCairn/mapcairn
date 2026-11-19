@@ -53,6 +53,7 @@ Nothing in the repository is translated: Markdown files such as `README.md`, `PR
 - Use semantic HTML, keyboard navigation, visible focus states and WCAG 2.2 AA contrast in both themes. Every gesture needs a keyboard or single-tap equivalent.
 - Use British English in user-facing copy and docs. Keep prose plain and specific. Use an em dash only where it reads naturally, not as a habit.
 - Use the tokens in [`DESIGN.md`](DESIGN.md), not ad hoc colours, fonts or icons.
+- Use a web platform feature without a fallback once it is [Baseline widely available](https://web.dev/baseline) (in every major engine for at least 30 months). A newer feature needs a small fallback that detects the feature in code, or a different approach, and adds no polyfill dependency. The browser tests run Chromium, Chromium emulating a Pixel 7 and iPhone WebKit; Firefox is expected to work but is not covered by them. MapLibre needs WebGL, so a browser without it is not supported.
 - Use Conventional Commits for commit messages.
 
 ## Code style
