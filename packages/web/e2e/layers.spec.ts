@@ -3,6 +3,10 @@
 import { expect, test } from "./fixtures";
 import { axeViolations } from "./support/a11y";
 import { mockLayerProviders } from "./support/layers";
+import { SLOW_MAP_NAVIGATION_TIMEOUT_MS } from "./support/timers";
+
+/** The sequential all-layer regression guard is inherently longer than one layer case. */
+const LAYER_GUARD_TIMEOUT_MS = 90_000;
 
 /**
  * One generic spec over every data layer, found through the Layers section
@@ -17,8 +21,14 @@ test.describe("data layers", () => {
     page,
     mapPage,
   }) => {
+    // The generic regression guard loads the map, then enables every current
+    // layer in order. It took 18 to 23 seconds in repeated runs before this
+    // change, so keep both allowances local to this inherently slow case.
+    test.setTimeout(LAYER_GUARD_TIMEOUT_MS);
     const requests = await mockLayerProviders(page);
-    await mapPage.goto();
+    await mapPage.goto("", {
+      navigationTimeoutMs: SLOW_MAP_NAVIGATION_TIMEOUT_MS,
+    });
     await mapPage.openMapOptions();
     const section = page.getByTestId("sheet-section-layers");
     // Only the layer items themselves: control wrappers have test ids too.
