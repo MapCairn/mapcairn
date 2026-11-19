@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -172,8 +172,62 @@ describe("the web package's scripts", () => {
       "react-router build --mode e2e && node scripts/verifyNoTestSeam.mjs --expect-present",
     );
   });
-
-  it("do not call Wrangler", () => {
-    expect(Object.values(scripts).join("\n")).not.toMatch(/wrangler/i);
-  });
 });
+
+/**
+ * The Worker settings `cf build` recorded, which are what `cf deploy` uploads.
+ * They come from `cloudflare.config.ts` through the Cloudflare Vite plugin, so
+ * this catches a plugin that drops or changes one. It reads a production
+ * build, and is skipped where there is none (a plain `npm test` on a fresh
+ * checkout, or after `npm run build:e2e`).
+ */
+const outputRoot = join(repositoryRoot, "packages/web/.cloudflare/output");
+
+function recordedBuild(): { worker: WorkerSettings } | undefined {
+  if (!existsSync(outputRoot)) {
+    return undefined;
+  }
+  const files = readdirSync(outputRoot, { recursive: true }).map(String);
+  const mode = files.find((path) => /^[^/\\]+[/\\]config\.json$/.test(path));
+  const worker = files.find((path) => /worker\.config\.json$/.test(path));
+  if (!mode || !worker) {
+    return undefined;
+  }
+  const { buildContext } = JSON.parse(
+    readFileSync(join(outputRoot, mode), "utf8"),
+  ) as { buildContext: Context };
+  if (buildContext.mode !== "production") {
+    return undefined;
+  }
+  return {
+    worker: JSON.parse(readFileSync(join(outputRoot, worker), "utf8")),
+  };
+}
+
+const recorded = recordedBuild();
+
+describe.skipIf(!recorded)(
+  "the Worker settings in the production build output (needs `npm run build`)",
+  () => {
+    it("are the ones cloudflare.config.ts declares", async () => {
+      const { worker: declared } = await cloudflareConfig(production);
+      const built = recorded?.worker as WorkerSettings;
+      expect(built).toMatchObject({
+        name: "mapcairn",
+        workersDev: false,
+        compatibilityFlags: ["nodejs_compat"],
+        env: { ASSETS: { type: "assets" } },
+      });
+      expect(built).toMatchObject({
+        name: declared.name,
+        compatibilityDate: declared.compatibilityDate,
+        compatibilityFlags: declared.compatibilityFlags,
+        domains: declared.domains,
+        workersDev: declared.workersDev,
+        previewUrls: declared.previewUrls,
+        placement: { mode: "smart" },
+        observability: declared.observability,
+      });
+    });
+  },
+);

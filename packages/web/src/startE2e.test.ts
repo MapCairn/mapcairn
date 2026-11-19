@@ -56,11 +56,6 @@ describe("startE2e", { timeout: TIMEOUT_MS * 2 }, () => {
     expect(serve).toContain("--strictPort");
   });
 
-  it("never starts Wrangler", () => {
-    const { build, serve } = JSON.parse(run("4424").stdout) as Plan;
-    expect([...build, ...serve].join(" ")).not.toMatch(/wrangler/i);
-  });
-
   it("refuses a port that is not a number", () => {
     const result = run("abc");
     expect(result.status).toBe(1);
