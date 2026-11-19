@@ -201,7 +201,13 @@ for (const viewport of MATRIX_VIEWPORTS) {
   );
 }
 
-test("credits stay clear of search and the capped draw toolbar with 150 percent text on a small phone", async ({
+/*
+ * The credits popover with the draw toolbar at its half-screen cap and large
+ * text on the small phone (#319): it must not overlap anything, and where it
+ * rises under the search pill or the end stack it stops a gap below them
+ * (DESIGN.md, "Layout and slots").
+ */
+test("credits stay a gap clear of search and the capped draw toolbar with 150 percent text on a small phone", async ({
   page,
   mapPage,
 }) => {
@@ -226,6 +232,24 @@ test("credits stay clear of search and the capped draw toolbar with 150 percent 
   expect(report.overlaps, context).toEqual([]);
   expect(report.outside, context).toEqual([]);
   expect(report.obscured, context).toEqual([]);
+
+  const popover = await mapPage.creditsRegion.boundingBox();
+  if (!popover) {
+    throw new Error("The credits popover has no box.");
+  }
+  for (const slot of ["top-start", "end-stack"]) {
+    const above = await page.locator(`[data-chrome="${slot}"]`).boundingBox();
+    if (
+      above &&
+      above.x < popover.x + popover.width &&
+      popover.x < above.x + above.width
+    ) {
+      expect(
+        popover.y - (above.y + above.height),
+        `space between ${slot} and the credits`,
+      ).toBeGreaterThanOrEqual(CHROME_GAP_PX - 0.5);
+    }
+  }
 });
 
 /*
@@ -656,7 +680,13 @@ const HOVER_TRIP_MS = 1_000;
 /** How long {@link hoverFreeMap} keeps sending the pointer before it gives up. */
 const HOVER_TIMEOUT_MS = 10_000;
 
-test("cursor coordinates stay shown under a resting pointer where the readout grows", async ({
+/** Frames the coordinates are watched for under a resting pointer: about a second. */
+const RESTING_FRAMES = 60;
+
+/** Small moves made while resting, as a hand on a mouse makes them. */
+const RESTING_NUDGES = 6;
+
+test("cursor coordinates stay shown under a pointer resting where the readout grows", async ({
   page,
   mapPage,
   isMobile,
@@ -665,71 +695,48 @@ test("cursor coordinates stay shown under a resting pointer where the readout gr
   await page.setViewportSize({ width: 320, height: 568 });
   await mapPage.goto(WIDEST_COORDINATES_VIEW);
   await collapseCredits(mapPage);
-  const point = await page
-    .locator('[data-testid="map-readout"]')
-    .evaluate((readout) => {
-      const scale = readout.querySelector<HTMLElement>(
-        '[data-chrome="scale-bar"]',
-      );
-      if (!scale) {
-        throw new Error("The scale bar has no box.");
-      }
-      const box = scale.getBoundingClientRect();
-      const coordinates = document.createElement("span");
-      coordinates.textContent = "-33.92000, -118.42000";
-      coordinates.style.font = getComputedStyle(scale).font;
-      coordinates.style.padding = getComputedStyle(scale).padding;
-      coordinates.style.position = "absolute";
-      coordinates.style.whiteSpace = "pre";
-      document.body.append(coordinates);
-      const grown = coordinates.getBoundingClientRect();
-      coordinates.remove();
-      for (let y = Math.floor(box.bottom - 8); y >= box.top; y -= 2) {
-        for (
-          let x = Math.min(
-            Math.floor(box.left + grown.width - 1),
-            document.documentElement.clientWidth - 1,
-          );
-          x > box.right;
-          x -= 2
-        ) {
-          if (document.elementFromPoint(x, y) instanceof HTMLCanvasElement) {
-            return { x, y };
+  const readout = page.getByTestId("map-readout");
+  const short = await readout.boundingBox();
+  // Grow the readout with the pointer well clear of it, to measure its
+  // grown footprint.
+  const map = await mapPage.mapSize();
+  await page.mouse.move(map.width / 2, map.height / 3);
+  await page.mouse.move(map.width / 2 + 1, map.height / 3 + 1);
+  await expect(readout).toContainText(COORDINATES_PATTERN);
+  const grown = await readout.boundingBox();
+  if (!(short && grown)) {
+    throw new Error("The readout has no box.");
+  }
+  // A point the grown readout covers and the short one leaves to the map.
+  const point = {
+    x: Math.floor(grown.x + grown.width) - REST_MARGIN_PX / 2,
+    y: Math.floor(grown.y + grown.height) - REST_MARGIN_PX / 2,
+  };
+  expect(point.x).toBeGreaterThan(short.x + short.width);
+
+  await page.mouse.move(
+    point.x - STEP_BEFORE_HOVER_PX,
+    point.y - map.height / 4,
+  );
+  await page.mouse.move(point.x, point.y, { steps: 3 });
+  const blanks: number[] = [];
+  for (let nudge = 0; nudge < RESTING_NUDGES; nudge += 1) {
+    await page.mouse.move(point.x + (nudge % 2), point.y);
+    blanks.push(
+      ...(await page.evaluate(async (frames) => {
+        const element = document.querySelector('[data-testid="map-readout"]');
+        const empty: number[] = [];
+        for (let frame = 0; frame < frames; frame += 1) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          if (!/-?\d+\.\d{5}, -?\d+\.\d{5}/.test(element?.textContent ?? "")) {
+            empty.push(frame);
           }
         }
-      }
-      throw new Error("No part of the readout's grown footprint is map.");
-    });
-
-  await page.mouse.move(point.x - STEP_BEFORE_HOVER_PX, point.y);
-  await page.mouse.move(point.x, point.y, { steps: 3 });
-  await expect(page.getByTestId("map-readout")).toContainText(
-    COORDINATES_PATTERN,
-  );
-  const blanks = await page.evaluate(async () => {
-    const readout = document.querySelector('[data-testid="map-readout"]');
-    if (!readout) {
-      throw new Error("The map readout is missing.");
-    }
-    let frame = 0;
-    const empty: number[] = [];
-    await new Promise<void>((resolve) => {
-      const sample = () => {
-        frame += 1;
-        if (!/-?\d+\.\d{5}, -?\d+\.\d{5}/.test(readout.textContent ?? "")) {
-          empty.push(frame);
-        }
-        if (frame === 60) {
-          resolve();
-          return;
-        }
-        requestAnimationFrame(sample);
-      };
-      requestAnimationFrame(sample);
-    });
-    return empty;
-  });
-  expect(blanks).toEqual([]);
+        return empty;
+      }, RESTING_FRAMES / RESTING_NUDGES)),
+    );
+  }
+  expect(blanks, "frames without coordinates").toEqual([]);
 });
 
 /**

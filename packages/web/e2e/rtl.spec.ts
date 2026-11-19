@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { expect, test } from "./fixtures";
+import {
+  controlsOverFeature,
+  FIT_START,
+  FIT_VIEWPORTS,
+  showCountryOnMap,
+} from "./support/fit";
 import { mockLayerProviders } from "./support/layers";
 import { scriptSearch } from "./support/services";
 
@@ -86,9 +92,7 @@ test.describe("right to left", () => {
     await expect.poll(clearOfPanel).toBe(true);
     // 3. Pan the polygon back under the panel.
     await mapPage.focusMap();
-    for (let step = 0; step < 4; step += 1) {
-      await page.keyboard.press("ArrowLeft");
-    }
+    await page.keyboard.press("ArrowLeft");
     // Sample the outline itself, not just its bounding box.
     await expect
       .poll(async () => {
@@ -129,6 +133,20 @@ test.describe("right to left", () => {
     await page.getByTestId("feature-card-show").click();
     await expect.poll(clearOfPanel).toBe(true);
   });
+
+  for (const viewport of FIT_VIEWPORTS) {
+    test(`Show on map keeps a polygon clear of the mirrored end stack and map key at ${viewport.width} by ${viewport.height}`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.setViewportSize(viewport);
+      await mockLayerProviders(page);
+      await mapPage.goto(FIT_START);
+      await showCountryOnMap(page, mapPage, "Australia");
+      await expect(page.getByTestId("selection-marker")).toBeVisible();
+      await expect.poll(() => controlsOverFeature(page)).toEqual([]);
+    });
+  }
 
   test("the scale and zoom level stay clear of the open side panel", async ({
     page,

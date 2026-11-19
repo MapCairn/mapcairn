@@ -630,8 +630,9 @@ describe("MapChrome map key slot", () => {
       surfaceValue.publishSheetDetent("peek");
     });
     expect(lift).toBeLessThan(0);
-    // Sheet motion uses --chrome-bottom-lift; the immediate map-key
-    // measurement remains independent of that transition.
+    // The key rides the sheet with the bottom row's own lift, which slides;
+    // its base shift and room leave that lift out.
+    expect(cssVar(chromeVars.bottomLift)).toBe(`${lift}px`);
     expect(cssVar(chromeVars.mapKeyLift)).toBe("0px");
     expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - 72}px`);
   });
@@ -654,13 +655,15 @@ describe("MapChrome map key slot", () => {
     mount({ mapKey: <div>key</div> });
     resize(320, 568);
     placeKey(60, 500);
-    // A tall toolbar lifts the bottom row to 150, leaving 10 px under the pill.
+    // A tall toolbar raises the bottom row by its height and the bottom inset,
+    // -(406 + 12), from 512 to 94, leaving 94 - 12 - (60 + 12) = 10 px under
+    // the pill. The key's base room leaves the raise out; CSS adds it.
     place("bottom-centre", 150, 406);
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.mapKeyRoom)).toBe("428px");
-    expect(cssVar(chromeVars.bottomRaise)).toBe("-406px");
+    expect(cssVar(chromeVars.bottomRaise)).toBe(`${-(406 + 12)}px`);
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${512 - 12 - (60 + 12)}px`);
     expect(slot("map-key")).toHaveAttribute("data-crowded", "true");
     expect(slot("map-key")).toHaveAttribute("inert");
     place("bottom-centre", 556, 0);

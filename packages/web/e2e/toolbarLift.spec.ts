@@ -68,10 +68,14 @@ async function offFramesDuring(
       }
       barTopAtLastObserver = bar.top;
       frame += 1;
-      for (const slot of ["bottom-start", "bottom-end", "map-key"]) {
+      const rowTops: number[] = [];
+      for (const slot of ["bottom-start", "bottom-end"]) {
         const box = document
           .querySelector(`[data-chrome="${slot}"]`)
           ?.getBoundingClientRect();
+        if (box && box.height > 0) {
+          rowTops.push(box.top);
+        }
         if (
           box &&
           box.height > 0 &&
@@ -80,6 +84,25 @@ async function offFramesDuring(
         ) {
           gaps.push({ frame, slot, gap: bar.top - box.bottom });
         }
+      }
+      // The map key rests a gap above the lifted bottom row, so a key that
+      // trails the row is measured against the row, not the toolbar.
+      const key = document.querySelector<HTMLElement>(
+        '[data-chrome="map-key"]',
+      );
+      const keyBox = key?.getBoundingClientRect();
+      if (
+        key &&
+        keyBox &&
+        keyBox.height > 0 &&
+        key.dataset.crowded !== "true" &&
+        rowTops.length > 0
+      ) {
+        gaps.push({
+          frame,
+          slot: "map-key",
+          gap: Math.min(...rowTops) - keyBox.bottom,
+        });
       }
     };
     // Created after `MapChrome`'s own observer, so in a frame it is told of a
@@ -139,7 +162,6 @@ async function offFramesDuring(
       .at(-1)?.gap;
     const over = sample.gap < -GAP_TOLERANCE;
     const moved =
-      sample.slot !== "map-key" &&
       settledGap !== undefined &&
       Math.abs(sample.gap - settledGap) > GAP_TOLERANCE;
     return settledGap !== undefined && (over || moved)
@@ -187,6 +209,8 @@ for (const { language, motion } of SETTINGS) {
         await page.setViewportSize({ width, height });
         await mapPage.goto(`${START}&layers=earthquakes`);
         await collapseCredits(mapPage);
+        // The key must be on screen, or its frames prove nothing.
+        await expect(mapPage.mapKey).toBeVisible();
         const map = await mapPage.mapSize();
 
         expect
