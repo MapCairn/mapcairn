@@ -31,7 +31,7 @@ const bundleVanillaExtractIntoWorker = (): Plugin => ({
  * The map engine is loaded in the browser, when a map mounts, through dynamic
  * imports in the MapLibre adapter. The Worker's environment still follows those
  * imports and would bundle the engine, its worker script and its stylesheet,
- * about 2 MB that nothing runs on the server and that the client build already
+ * about 1.4 MB that nothing runs on the server and that the client build already
  * serves from the static assets. This answers them with an empty module in
  * that environment only.
  */

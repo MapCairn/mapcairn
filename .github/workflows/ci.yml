@@ -59,6 +59,9 @@ jobs:
           path: coverage/
           retention-days: 14
       - run: npm run build
+      # The coverage run above comes before the build, so the tests that read
+      # the build output skip there. Run them here, against it.
+      - run: npx --no-install vitest run packages/web/src/workerBundle.test.ts packages/web/src/deployConfig.test.ts
 
   # Its own job, so a registry outage or a package that publishes without a
   # signature cannot fail the required `build` check. Nothing depends on it.

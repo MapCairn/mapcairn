@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,14 @@ const bundleRoot = join(
   webRoot,
   ".cloudflare/output/v0/workers/default/bundle",
 );
+
+/**
+ * A ceiling for the whole bundle directory. The bundle is about 2.5 MB without
+ * the map engine and 3.9 MB with it, so this catches the engine returning
+ * under a chunk name that does not say "maplibre". Raise it on purpose, with a
+ * reason, when the server code grows.
+ */
+const MAX_BUNDLE_BYTES = 3_000_000;
 
 /**
  * The files the Cloudflare Vite plugin wrote for the Worker. The Worker only
@@ -24,6 +32,14 @@ describe.skipIf(!existsSync(bundleRoot))(
       const files = readdirSync(bundleRoot, { recursive: true }).map(String);
       expect(files).toContain("index.js");
       expect(files.filter((path) => /maplibre/i.test(path))).toEqual([]);
+    });
+
+    it("stays under the size ceiling", () => {
+      const bytes = readdirSync(bundleRoot, { recursive: true })
+        .map((path) => statSync(join(bundleRoot, String(path))))
+        .filter((entry) => entry.isFile())
+        .reduce((total, entry) => total + entry.size, 0);
+      expect(bytes).toBeLessThan(MAX_BUNDLE_BYTES);
     });
   },
 );
