@@ -182,6 +182,34 @@ test.describe("basemaps", () => {
     await expect(mapPage.dropPinButton).toBeFocused();
   });
 
+  test("arrow keys wrap from the first basemap to the last and back", async ({
+    page,
+    mapPage,
+    direction,
+    browserName,
+  }) => {
+    test.skip(
+      browserName === "webkit",
+      "WebKit does not wrap a radio group's arrow keys.",
+    );
+    await mapPage.goto();
+    await mapPage.openMapOptions();
+    const radios = mapPage.basemapPicker.getByRole("radio");
+    await expect(radios).toHaveCount(BASEMAP_COUNT);
+    const option = (index: number) =>
+      mapPage.basemapPicker
+        .getByTestId(`basemap-option-${OFFERED_BASEMAP_IDS[index]}`)
+        .getByRole("radio");
+    const forward = direction === "rtl" ? "ArrowLeft" : "ArrowRight";
+    const backward = direction === "rtl" ? "ArrowRight" : "ArrowLeft";
+    await radios.first().focus();
+
+    await page.keyboard.press(backward);
+    await expect(option(BASEMAP_COUNT - 1)).toBeChecked();
+    await page.keyboard.press(forward);
+    await expect(option(0)).toBeChecked();
+  });
+
   test("the picker lists the six basemaps in order, and Liberty and Fiord each load their own style and are kept in the link", async ({
     page,
     mapPage,
