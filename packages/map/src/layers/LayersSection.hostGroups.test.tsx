@@ -31,8 +31,9 @@ function Section() {
 }
 
 function setup(definitions: readonly LayerDefinition[]) {
+  const catalogue = new FakeLayerCatalogue(definitions);
   const services = createFakeServices({
-    layers: new FakeLayerCatalogue(definitions),
+    layers: catalogue,
     messages: ENGLISH,
     languages: createLanguageCatalogue(
       [
@@ -51,7 +52,7 @@ function setup(definitions: readonly LayerDefinition[]) {
       </LiveRegionProvider>
     </ServicesProvider>,
   );
-  return services;
+  return { services, catalogue };
 }
 
 const layer = (id: string, key: string, text: string): LayerDefinition => ({
@@ -68,7 +69,7 @@ const headings = () =>
 
 describe("LayersSection group identity", () => {
   it("merges groups whose keys translate to the same heading", async () => {
-    const services = setup([
+    const { services } = setup([
       layer("one", "host.group.rivers", "Rivers"),
       layer("two", "host.group.lakes", "Lakes"),
     ]);
@@ -84,7 +85,7 @@ describe("LayersSection group identity", () => {
   });
 
   it("keeps the Undo row of a turned-off group when the language changes", async () => {
-    const services = setup([
+    const { services } = setup([
       layer("one", "host.group.single", "Lakes"),
       layer("two", "host.group.single", "Lakes"),
       { ...SAMPLE_ALERT_LAYER, id: "other" },
@@ -104,5 +105,50 @@ describe("LayersSection group identity", () => {
         name: "Undo turning off 1 in Waterlae",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the Undo row and the group's layers when a layer joins the group", async () => {
+    const definitions = [
+      layer("one", "host.group.single", "Lakes"),
+      layer("two", "host.group.single", "Lakes"),
+    ];
+    const { catalogue } = setup(definitions);
+    fireEvent.click(
+      within(screen.getByTestId("layer-one")).getByRole("switch"),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Turn off 1 in Lakes" }),
+    );
+    const before = screen.getByTestId("layer-one");
+    await act(async () =>
+      catalogue.setLayers([
+        ...definitions,
+        layer("three", "host.group.single", "Lakes"),
+      ]),
+    );
+    expect(screen.getByTestId("layer-three")).toBeInTheDocument();
+    expect(screen.getByTestId("layer-one")).toBe(before);
+    expect(
+      screen.getByRole("button", { name: "Undo turning off 1 in Lakes" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the Undo row, once, when the language merges its group with another", async () => {
+    const { services } = setup([
+      layer("one", "host.group.rivers", "Rivers"),
+      layer("two", "host.group.lakes", "Lakes"),
+    ]);
+    fireEvent.click(
+      within(screen.getByTestId("layer-one")).getByRole("switch"),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Turn off 1 in Rivers" }),
+    );
+    const before = screen.getByTestId("layer-one");
+    await act(async () => services.fakes.settings.set({ language: "af" }));
+    expect(screen.getByTestId("layer-one")).toBe(before);
+    expect(
+      screen.getAllByRole("button", { name: "Undo turning off 1 in Water" }),
+    ).toHaveLength(1);
   });
 });

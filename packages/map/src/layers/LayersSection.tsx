@@ -110,10 +110,11 @@ function identifiableOn(layers: readonly DataLayerState[]): number {
   return layers.filter(answersTap).length;
 }
 
-/** One heading of the Layers section: the words shown, an identity that does not depend on the language, and the layers under it. */
+/** One heading of the Layers section: the words shown, a key for its element, and the layers under it. */
 interface LayerGroup {
   readonly heading: string;
-  readonly identity: string;
+  /** The id of the group's first layer: it does not change with the language or when a later layer joins, so the group's element is kept. */
+  readonly key: string;
   readonly items: readonly DataLayerState[];
 }
 
@@ -121,9 +122,7 @@ interface LayerGroup {
  * Layers grouped by the heading their definitions' `group` reads as in the
  * active language, in the order groups first appear. Grouping by the words
  * keeps one heading for layers that name the group with a key, a host text
- * or plain text that read the same. A group's identity is the sorted ids of
- * its layers, so the turn-off Undo still finds its group after the language
- * changes the heading.
+ * or plain text that read the same.
  */
 function byGroup(
   layers: readonly DataLayerState[],
@@ -138,12 +137,29 @@ function byGroup(
   }
   return [...groups].map(([heading, items]) => ({
     heading,
-    identity: items
-      .map((layer) => layer.definition.id)
-      .sort()
-      .join("\u0000"),
+    key: (items[0] as DataLayerState).definition.id,
     items,
   }));
+}
+
+/**
+ * The key of the group whose layers the turn-off Undo would bring back, or
+ * undefined for none (or for the action that covered every layer). The
+ * first group, in order, that holds any of the offer's layers, so the row
+ * stays put when a layer joins the group or the language merges or splits
+ * headings.
+ */
+function groupHoldingUndo(
+  groups: readonly LayerGroup[],
+  turnedOff: DataLayers["turnedOff"],
+): string | undefined {
+  if (turnedOff === null || turnedOff.group === null) {
+    return undefined;
+  }
+  const offered = new Set(turnedOff.ids);
+  return groups.find(({ items }) =>
+    items.some((layer) => offered.has(layer.definition.id)),
+  )?.key;
 }
 
 /**
@@ -171,6 +187,8 @@ export function LayersSection({
   const messages = useMessages();
   const { t } = messages;
   const resolve = useResolveText();
+  const groups = byGroup(layers.layers, resolve);
+  const undoGroupKey = groupHoldingUndo(groups, layers.turnedOff);
   // Read optionally, so the section also renders outside a map (a test, a guide).
   const adapter = useContext(MapContext)?.adapter ?? null;
   const announce = useAnnounce();
@@ -366,16 +384,17 @@ export function LayersSection({
         </p>
       ) : null}
       <div className={styles.groups}>
-        {byGroup(layers.layers, resolve).map(({ heading, identity, items }) => (
-          <div key={identity} className={styles.group}>
+        {groups.map(({ heading, key, items }) => (
+          <div key={key} className={styles.group}>
             <div className={styles.groupHeader}>
               <Subheading level={groupLevel}>{heading}</Subheading>
               {showTurnOffAll ? (
                 <TurnOffGroup
                   layers={layers}
-                  group={identity}
+                  group={key}
                   heading={heading}
                   ids={enabledIds(items)}
+                  holdsUndo={key === undoGroupKey}
                 />
               ) : null}
             </div>

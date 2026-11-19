@@ -51,7 +51,7 @@ layer's `sourceLayer` stay plain text.
 
 The Layers section groups layers by the heading their `group` reads as in the
 active language, so a key, a host text and plain text that read the same share
-one heading. `TurnOffGroup` shows that heading, but matches its Undo by a language-independent identity (the sorted ids of the group's layers), so changing the language while the Undo is offered keeps it. The SDK's own keyboard help
+one heading. `TurnOffGroup` shows that heading, but finds its Undo by the layers the Undo would turn back on (`TurnedOff.ids`), not by words, and keys each group's element by its first layer's id, so a language change or a layer joining the group while the Undo is offered keeps both the Undo and the group's state. The SDK's own keyboard help
 (`MAP_KEY_HELP`, `DRAW_KEY_HELP`) is typed as message keys only
 (`ShippedKeyHelpEntry`), while a host's extra `keyHelp` lines may be any
 `DefinitionText`.
@@ -108,8 +108,8 @@ A host that writes a `HostText` for an attribution would see it rejected by
 validation, which is intended. A translation that is blank would hide a name,
 so it falls back to the source with a warning. Grouping by resolved heading
 means two different keys that translate to the same heading share one, which
-is the reader's view of the list; the turn-off Undo matches a group by the
-ids of its layers, so a language change does not lose it. The widened `DefinitionText` type is a breaking change for SDK consumers, so the pull request is marked breaking and the translation guide carries a migration note. It breaks code that
+is the reader's view of the list; the turn-off Undo finds its group by the
+layers it would restore, so a language change or a new layer does not lose it. The widened `DefinitionText` type is a breaking change for SDK consumers, so the pull request is marked breaking and the translation guide carries a migration note. It breaks code that
 treated it as a string, such as a test that passed a definition's name to a
 string matcher; the shipped definitions are still strings and keys.
 

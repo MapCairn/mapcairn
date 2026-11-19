@@ -125,7 +125,9 @@ export type UndoHolder = "pointer" | "focus";
 export interface TurnedOff {
   /** How many layers Undo would turn back on: those of the batch that are still off and still in the catalogue. */
   readonly count: number;
-  /** The identity of the group whose action turned them off (the `group` the ui passed), or null when the action covered every layer. */
+  /** The ids Undo would turn back on, so the ui can find the group they belong to by its layers, whatever the language calls it. */
+  readonly ids: readonly string[];
+  /** The `group` the ui passed to `turnOff`, or null when the action covered every layer. */
   readonly group: string | null;
 }
 
@@ -178,9 +180,9 @@ export interface DataLayers {
    * is on. Each layer's open card, list of choices and affected area
    * close as they do for a single layer. It offers {@link DataLayers.turnedOff}
    * for {@link UNDO_TIMEOUT_MS}, replacing any earlier offer. `group` says
-   * which group's action asked, so the ui can show the Undo beside it: it is
-   * an identity the ui compares with {@link TurnedOff.group}, not words, so it
-   * must not change with the language.
+   * which group's action asked, so the ui can tell a group's action from the
+   * one for every layer; it is not words, and the ui finds the group to show
+   * the Undo beside by {@link TurnedOff.ids}.
    */
   turnOff(ids: readonly string[], options?: { readonly group?: string }): void;
   /** The batch Undo would turn back on, or null when none is on offer (none yet, used, replaced, expired or every layer of it already on again). */
@@ -1532,8 +1534,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   }, [layers, state.identified, state.choices]);
 
   const turnedOff = useMemo<TurnedOff | null>(() => {
-    const count = offer ? stillOff(offer, state.enabled, byId).length : 0;
-    return offer && count > 0 ? { count, group: offer.group } : null;
+    const ids = offer ? stillOff(offer, state.enabled, byId) : [];
+    return offer && ids.length > 0
+      ? { count: ids.length, ids, group: offer.group }
+      : null;
   }, [offer, state.enabled, byId]);
 
   const urlValue = useMemo<LayersUrlState>(() => {

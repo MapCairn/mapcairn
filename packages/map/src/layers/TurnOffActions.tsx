@@ -22,8 +22,10 @@ export interface TurnOffAllProps {
 /** Props for {@link TurnOffGroup}. */
 export interface TurnOffGroupProps {
   readonly layers: DataLayers;
-  /** The group's identity, which does not change with the language: what {@link DataLayers.turnedOff} names. */
+  /** The group's key, which does not change with the language: passed to `turnOff` to say which action asked. */
   readonly group: string;
+  /** Whether the Undo on offer belongs to this group, which the section works out from the layers it would turn back on. */
+  readonly holdsUndo: boolean;
   /** The group's heading as the person reads it, for the button and the status. */
   readonly heading: string;
   /** The layers it would turn off: those of the group that are on. */
@@ -202,11 +204,12 @@ export function TurnOffGroup({
   group,
   heading,
   ids,
+  holdsUndo,
 }: TurnOffGroupProps) {
   const { plural } = useMessages();
   const { turnedOff, turnOff } = layers;
   const undo =
-    turnedOff?.group === group
+    turnedOff && holdsUndo
       ? {
           text: plural("layers.turnOff.doneGroup", {
             count: turnedOff.count,
