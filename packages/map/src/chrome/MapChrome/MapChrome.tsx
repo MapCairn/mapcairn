@@ -103,7 +103,7 @@ interface Measurements {
   readonly tourBottom: number | null;
   /** Bottom edge of the map key's slot before any lift, or null while it is empty. */
   readonly mapKeyBottom: number | null;
-  /** Height of the map key's slot before it scrolls. */
+  /** Height of the map key's slot as laid out, within its room cap. */
   readonly mapKeyHeight: number;
 }
 
@@ -457,7 +457,10 @@ export function MapChrome({
       measurements.bottomRowTop + bottom.bottomEndTranslateY;
   const tourHidden = modal || tourCrowded;
   const keyTourEdge = keyTourBottom(tourHidden, measurements);
-  mapKeyTourBottomRef.current = keyTourEdge;
+  // The measuring observer reads the tour edge this render decided on.
+  useLayoutEffect(() => {
+    mapKeyTourBottomRef.current = keyTourEdge;
+  }, [keyTourEdge]);
   // The map key gives way to the tour card, which is there for a first visit
   // and is shown first, and hides when the room under the search pill is too
   // small for its chip.

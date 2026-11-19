@@ -14,11 +14,14 @@ const SETTLE_FRAMES = 12;
 /** The tolerance, in px, for two gaps to count as the same. */
 const GAP_TOLERANCE = 0.5;
 
-/** A frame in which a bottom slot was not where it rests above the toolbar. */
+/** A frame in which a bottom slot or the map key was not where it rests. */
 interface OffFrame {
   readonly frame: number;
   readonly slot: string;
-  /** The space between the slot's bottom and the toolbar's top; negative is an overlap. */
+  /**
+   * The space between the slot's bottom and the toolbar's top (for the map
+   * key, the bottom row's top); negative is an overlap.
+   */
   readonly gap: number;
   /** The space the slot rests at, which it has once the frames have settled. */
   readonly settledGap: number;
@@ -27,6 +30,7 @@ interface OffFrame {
 /**
  * Records, on every animation frame while `action` runs and for a few frames
  * after it, the space between each bottom slot and the draw toolbar, and
+ * between the map key (while it shows) and the bottom row it rests above, and
  * returns each frame whose space was an overlap or was not the one the slot
  * rests at (the last one recorded, once the frames have settled). A slot
  * that trails a toolbar that grows is over it (a negative space); one that
@@ -47,7 +51,20 @@ async function offFramesDuring(
     let frame = 0;
     const state = { running: true, gaps };
     const channel = new MessageChannel();
-    let barTopAtLastObserver: number | null = null;
+    let sizesAtLastObserver: string | null = null;
+    /** The toolbar's top and the heights the chrome measures, rounded. */
+    const sizes = (bar: DOMRect) =>
+      [
+        bar.top,
+        ...["bottom-start", "bottom-end", "map-key"].map(
+          (slot) =>
+            document
+              .querySelector(`[data-chrome="${slot}"]`)
+              ?.getBoundingClientRect().height ?? 0,
+        ),
+      ]
+        .map((value) => Math.round(value))
+        .join();
     const sample = (afterObservers: boolean) => {
       const toolbar = document.querySelector(
         `[role="toolbar"][aria-label="${toolbarLabel}"]`,
@@ -57,16 +74,14 @@ async function offFramesDuring(
       }
       const bar = toolbar.getBoundingClientRect();
       // Between observer rounds a sample is only valid while nothing has moved
-      // since the last one: a change made after the frame was drawn would
-      // force a layout that no observer has answered yet.
-      if (
-        !afterObservers &&
-        (barTopAtLastObserver === null ||
-          Math.abs(bar.top - barTopAtLastObserver) > 0.5)
-      ) {
+      // or changed size since the last one: a change made after the frame was
+      // drawn (the readout growing as the pointer enters the map, the text
+      // size) forces a layout that no observer has answered yet.
+      const now = sizes(bar);
+      if (!afterObservers && now !== sizesAtLastObserver) {
         return;
       }
-      barTopAtLastObserver = bar.top;
+      sizesAtLastObserver = now;
       frame += 1;
       const rowTops: number[] = [];
       for (const slot of ["bottom-start", "bottom-end"]) {

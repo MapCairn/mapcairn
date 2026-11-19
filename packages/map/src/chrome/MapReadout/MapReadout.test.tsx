@@ -10,7 +10,7 @@ import {
   formatMessage,
   type Message,
 } from "@mapcairn/core";
-import { act, fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -445,12 +445,24 @@ describe("MapReadout", () => {
     expect(screen.getByTestId("map-readout").querySelector("p")).toBeNull();
   });
 
-  it("clears the cursor after the pointer leaves the readout", () => {
+  it("clears the cursor when the pointer leaves the readout for anything but the map", () => {
     const onCursorLeave = vi.fn();
     renderReadout({ onCursorLeave });
     const readout = screen.getByTestId("map-readout");
     fireEvent.pointerOut(readout, { relatedTarget: document.body });
     expect(onCursorLeave).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the cursor when the pointer goes back from the readout to the map", () => {
+    const onCursorLeave = vi.fn();
+    renderReadout({ onCursorLeave });
+    // Rendered by React, as the map host is, so React reports it as the
+    // element the pointer went to.
+    render(<div data-map-host="" data-testid="map-host" />);
+    fireEvent.pointerOut(screen.getByTestId("map-readout"), {
+      relatedTarget: screen.getByTestId("map-host"),
+    });
+    expect(onCursorLeave).not.toHaveBeenCalled();
   });
 });
 

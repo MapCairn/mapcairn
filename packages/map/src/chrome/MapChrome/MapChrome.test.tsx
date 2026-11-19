@@ -710,6 +710,37 @@ describe("MapChrome map key slot", () => {
     expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 - 12 - 732}px`);
   });
 
+  it("tells the layers how far up from the bottom edge the shown key reaches", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    expect(layoutValue.mapKeyClearance).toBeNull();
+    placeKey(60);
+    // The key rests from 672 to 732, so its top is 800 - 672 above the bottom.
+    expect(layoutValue.mapKeyClearance).toBe(800 - 672);
+  });
+
+  it("tells the layers nothing about a key that has given way or is hidden at the full detent", () => {
+    mount({ mapKey: <div>key</div> });
+    resize(390, 800);
+    placeKey(60);
+    act(() => {
+      layoutValue.publishSheetTop(12);
+      surfaceValue.publishSheetDetent("full");
+    });
+    expect(layoutValue.mapKeyClearance).toBeNull();
+    act(() => {
+      layoutValue.publishSheetTop(null);
+      surfaceValue.publishSheetDetent(null);
+    });
+    expect(layoutValue.mapKeyClearance).toBe(800 - 672);
+    place("bottom-centre", 150, 406);
+    act(() => {
+      observers.trigger();
+    });
+    expect(slot("map-key")).toHaveAttribute("data-crowded", "true");
+    expect(layoutValue.mapKeyClearance).toBeNull();
+  });
+
   it("sets nothing while the slot has no size, as when no layer has a key", () => {
     mount({ mapKey: <div>key</div> });
     resize(390, 800);

@@ -66,13 +66,32 @@ describe("fitPadding", () => {
     ).toEqual({ top: 88, right: 80, bottom: 32, left: 32 });
   });
 
-  it("reserves the visible map key above the bottom edge", () => {
+  it("keeps a fitted result above the shown map key", () => {
     expect(fitPadding({ ...DESKTOP, mapKeyClearance: 240 })).toEqual({
       top: 88,
       right: 80,
       bottom: 272,
       left: 444,
     });
+  });
+});
+
+describe("fitPadding with a map key", () => {
+  it("leaves the key out where clearing it would leave too little map", () => {
+    // 720 - 88 at the top leaves 632; a key reaching 560 up would leave 40.
+    expect(fitPadding({ ...DESKTOP, mapKeyClearance: 560 })).toEqual(
+      fitPadding(DESKTOP),
+    );
+  });
+
+  it("keeps clear of the key while the map left is twice the reveal clearance", () => {
+    const clearance = 720 - 88 - 2 * REVEAL_CLEARANCE - 32;
+    expect(fitPadding({ ...DESKTOP, mapKeyClearance: clearance }).bottom).toBe(
+      clearance + 32,
+    );
+    expect(
+      fitPadding({ ...DESKTOP, mapKeyClearance: clearance + 1 }).bottom,
+    ).toBe(32);
   });
 });
 

@@ -46,7 +46,9 @@ const popoverStep = tokens.space.xs;
  * the popover sits above that row, so its top still stops a gap below the
  * slot above it.
  */
-function roomAboveStep(room: string): string {
+function roomAboveStep(
+  room: typeof chromeVars.bottomEndRoom | typeof chromeVars.bottomEndBesideRoom,
+): string {
   return `calc(${chromeVar(room, "100vh")} - ${popoverStep})`;
 }
 

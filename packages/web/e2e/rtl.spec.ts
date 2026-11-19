@@ -10,6 +10,9 @@ import {
 import { mockLayerProviders } from "./support/layers";
 import { scriptSearch } from "./support/services";
 
+/** Keyboard pan steps that take the fitted polygon back under the side panel. */
+const PAN_STEPS_UNDER_PANEL = 4;
+
 /**
  * The layout, mirrored. These specs need the `direction: "rtl"` option, so they
  * run in the `rtl-*` projects only; the rest of the subset those projects run
@@ -90,9 +93,13 @@ test.describe("right to left", () => {
       );
     };
     await expect.poll(clearOfPanel).toBe(true);
-    // 3. Pan the polygon back under the panel.
+    // 3. Pan the polygon back under the panel. The fit keeps it clear of the
+    // search pill, the end stack and the map key as well, so it sits smaller
+    // and further from the panel than one keyboard pan step.
     await mapPage.focusMap();
-    await page.keyboard.press("ArrowLeft");
+    for (let step = 0; step < PAN_STEPS_UNDER_PANEL; step += 1) {
+      await page.keyboard.press("ArrowLeft");
+    }
     // Sample the outline itself, not just its bounding box.
     await expect
       .poll(async () => {

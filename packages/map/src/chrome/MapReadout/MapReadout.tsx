@@ -228,8 +228,20 @@ export interface MapReadoutProps
    * readout either way.
    */
   readonly showZoom?: boolean;
-  /** Clears the stored cursor position once it leaves both the map and this readout. */
+  /**
+   * Called when the pointer leaves the readout for anything but the map. The
+   * map keeps the last position while the pointer moves from it onto the
+   * readout, so the coordinates stay put and can be copied; this is where the
+   * host clears them.
+   */
   readonly onCursorLeave?: () => void;
+}
+
+/** Whether the pointer went to the map, which reports positions itself. */
+function isMap(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element && target.closest("[data-map-host]") !== null
+  );
 }
 
 /**
@@ -256,12 +268,7 @@ export function MapReadout({
       data-testid="map-readout"
       className={styles.readout}
       onPointerLeave={(event) => {
-        if (
-          !(
-            event.relatedTarget instanceof Element &&
-            event.relatedTarget.closest("[data-map-host]")
-          )
-        ) {
+        if (!isMap(event.relatedTarget)) {
           onCursorLeave?.();
         }
       }}
