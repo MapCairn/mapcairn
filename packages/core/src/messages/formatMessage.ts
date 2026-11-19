@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type {
-  HostText,
   Message,
   MessageArgs,
   MessageCatalogue,
   MessageKey,
   MessageParams,
 } from "../ports/messages";
+import { isHostText } from "./hostText";
 import { resolveText } from "./resolveText";
 
 /** Builds a {@link Message}: a key and the parameters its placeholders need. */
@@ -26,16 +26,6 @@ function isMessage(value: unknown): value is Message {
     !Array.isArray(value) &&
     "key" in value &&
     "params" in value
-  );
-}
-
-function isHostText(value: unknown): value is HostText {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !isMessage(value) &&
-    "key" in value &&
-    "text" in value
   );
 }
 

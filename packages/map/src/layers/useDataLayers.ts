@@ -125,7 +125,7 @@ export type UndoHolder = "pointer" | "focus";
 export interface TurnedOff {
   /** How many layers Undo would turn back on: those of the batch that are still off and still in the catalogue. */
   readonly count: number;
-  /** The group whose action turned them off, or null when the action covered every layer. */
+  /** The identity of the group whose action turned them off (the `group` the ui passed), or null when the action covered every layer. */
   readonly group: string | null;
 }
 
@@ -178,7 +178,9 @@ export interface DataLayers {
    * is on. Each layer's open card, list of choices and affected area
    * close as they do for a single layer. It offers {@link DataLayers.turnedOff}
    * for {@link UNDO_TIMEOUT_MS}, replacing any earlier offer. `group` says
-   * which group's action asked, so the ui can show the Undo beside it.
+   * which group's action asked, so the ui can show the Undo beside it: it is
+   * an identity the ui compares with {@link TurnedOff.group}, not words, so it
+   * must not change with the language.
    */
   turnOff(ids: readonly string[], options?: { readonly group?: string }): void;
   /** The batch Undo would turn back on, or null when none is on offer (none yet, used, replaced, expired or every layer of it already on again). */

@@ -22,8 +22,10 @@ export interface TurnOffAllProps {
 /** Props for {@link TurnOffGroup}. */
 export interface TurnOffGroupProps {
   readonly layers: DataLayers;
-  /** The heading of the group this action covers, as the person reads it. */
+  /** The group's identity, which does not change with the language: what {@link DataLayers.turnedOff} names. */
   readonly group: string;
+  /** The group's heading as the person reads it, for the button and the status. */
+  readonly heading: string;
   /** The layers it would turn off: those of the group that are on. */
   readonly ids: readonly string[];
 }
@@ -195,7 +197,12 @@ export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
  * "Turn off N in <group>", shown while the group has layers on. Once it has
  * run, its status and Undo take the row under the group's heading.
  */
-export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
+export function TurnOffGroup({
+  layers,
+  group,
+  heading,
+  ids,
+}: TurnOffGroupProps) {
   const { plural } = useMessages();
   const { turnedOff, turnOff } = layers;
   const undo =
@@ -203,11 +210,11 @@ export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
       ? {
           text: plural("layers.turnOff.doneGroup", {
             count: turnedOff.count,
-            group,
+            group: heading,
           }),
           label: plural("layers.turnOff.undoGroup", {
             count: turnedOff.count,
-            group,
+            group: heading,
           }),
         }
       : null;
@@ -224,7 +231,7 @@ export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
         >
           {plural("layers.turnOff.group", {
             count: ids.length,
-            group,
+            group: heading,
           })}
         </Button>
       ) : null}

@@ -110,16 +110,25 @@ function identifiableOn(layers: readonly DataLayerState[]): number {
   return layers.filter(answersTap).length;
 }
 
+/** One heading of the Layers section: the words shown, an identity that does not depend on the language, and the layers under it. */
+interface LayerGroup {
+  readonly heading: string;
+  readonly identity: string;
+  readonly items: readonly DataLayerState[];
+}
+
 /**
  * Layers grouped by the heading their definitions' `group` reads as in the
  * active language, in the order groups first appear. Grouping by the words
  * keeps one heading for layers that name the group with a key, a host text
- * or plain text that read the same.
+ * or plain text that read the same. A group's identity is the sorted ids of
+ * its layers, so the turn-off Undo still finds its group after the language
+ * changes the heading.
  */
 function byGroup(
   layers: readonly DataLayerState[],
   resolve: (text: DefinitionText) => string,
-) {
+): LayerGroup[] {
   const groups = new Map<string, DataLayerState[]>();
   for (const layer of layers) {
     const heading = resolve(layer.definition.group);
@@ -127,7 +136,14 @@ function byGroup(
     group.push(layer);
     groups.set(heading, group);
   }
-  return [...groups];
+  return [...groups].map(([heading, items]) => ({
+    heading,
+    identity: items
+      .map((layer) => layer.definition.id)
+      .sort()
+      .join("\u0000"),
+    items,
+  }));
 }
 
 /**
@@ -350,14 +366,15 @@ export function LayersSection({
         </p>
       ) : null}
       <div className={styles.groups}>
-        {byGroup(layers.layers, resolve).map(([group, items]) => (
-          <div key={group} className={styles.group}>
+        {byGroup(layers.layers, resolve).map(({ heading, identity, items }) => (
+          <div key={identity} className={styles.group}>
             <div className={styles.groupHeader}>
-              <Subheading level={groupLevel}>{group}</Subheading>
+              <Subheading level={groupLevel}>{heading}</Subheading>
               {showTurnOffAll ? (
                 <TurnOffGroup
                   layers={layers}
-                  group={group}
+                  group={identity}
+                  heading={heading}
                   ids={enabledIds(items)}
                 />
               ) : null}

@@ -26,14 +26,14 @@ NASA data is openly shared; its data use guidance says NASA material may not be 
 
 ## Basemaps
 
-| Source                                         | Use                                                | Credit                                                                                                         |
-| ---------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [OpenFreeMap](https://openfreemap.org)         | Bright, Positron and Dark vector styles and tiles  | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors                                                      |
-| [OpenStreetMap](https://www.openstreetmap.org) | Streets raster tiles from `tile.openstreetmap.org` | © OpenStreetMap contributors, linked to [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright) |
+| Source                                         | Use                                                               | Credit                                                                                                         |
+| ---------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [OpenFreeMap](https://openfreemap.org)         | Bright, Liberty, Positron, Fiord and Dark vector styles and tiles | OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors                                                      |
+| [OpenStreetMap](https://www.openstreetmap.org) | Streets raster tiles from `tile.openstreetmap.org`                | © OpenStreetMap contributors, linked to [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright) |
 
 OpenStreetMap data is available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/). Use of the OpenStreetMap tile servers follows the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). The map displays the active provider's attribution, followed by MapLibre's.
 
-The reference site offers four basemaps: Bright, Positron, Streets and Dark, all from the SDK. The SDK in `packages/core` defines seven basemaps: Bright, Positron, Dark, Liberty and Fiord (OpenFreeMap), Streets, and Colorful (a pre-built style from [VersaTiles](https://versatiles.org)), which the site does not offer and does not load from. A host that offers Colorful carries VersaTiles' own credit terms, including the ESA WorldCover credit for its land cover tiles, which the SDK's definition holds.
+The reference site offers six basemaps: Bright, Liberty, Positron, Streets, Fiord and Dark, all from the SDK. The SDK in `packages/core` defines seven basemaps: Bright, Positron, Dark, Liberty and Fiord (OpenFreeMap), Streets, and Colorful (a pre-built style from [VersaTiles](https://versatiles.org)), which the site does not offer and does not load from. A host that offers Colorful carries VersaTiles' own credit terms, including the ESA WorldCover credit for its land cover tiles, which the SDK's definition holds.
 
 ### Basemap previews
 

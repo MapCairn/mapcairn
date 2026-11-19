@@ -102,6 +102,8 @@ const afrikaans = createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE, {
 
 `MessageCatalogue.definitionTexts` holds the translation by key; `createMessageCatalogue` accepts it in its fourth argument, and a catalogue of your own may provide the same optional property. A key with no own entry shows the source text without a warning, and a blank entry shows the source text with one warning. The same text is used for the visible words, the accessible names and the announcements that name the layer. Keys of `definitionTexts` and `layerTemplates` are separate, so a key can have a name and a template. Layers that write their `group` with the same words (a `HostText`, a key or plain text) share one heading. Attribution, licence names and links are legal text and stay as they are.
 
+Moving to this version: `DefinitionText` is wider than before, so code of your own that reads a definition's `name`, `group`, `label` or similar as a string must call `resolveText(catalogue, text)` (`useResolveText()` in a component) instead. A name that reaches an announcement is passed on with `textOrMessage(name)`, and the `announce*` name parameters, like the `{name}` placeholders of a `Message`, take a `MessagePart`: a string, a `Message` or a `HostText`. `MarkerStyle.label` is a `DefinitionText` and `BasemapFailure.name` in the reference host too, and `isMessageKey` accepts any `DefinitionText`. Definitions that use only strings and shipped keys need no change.
+
 ## Translate layer templates
 
 Card titles and lines, list secondary lines, feed polygon and line labels, and range and interval units can use a host-defined key without adding it to `MessageKey`. Use a `LayerTemplate` object with the key and its source text:

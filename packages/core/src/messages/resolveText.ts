@@ -9,6 +9,7 @@ import type {
   MessagePart,
 } from "../ports/messages";
 import { EN_GB_CATALOGUE } from "./en-GB";
+import { isHostText } from "./hostText";
 
 /**
  * Whether `text` is a key of the shipped catalogue. The check is against the
@@ -21,11 +22,6 @@ export function isMessageKey(text: DefinitionText): text is MessageKey {
 }
 
 const warnedBlankTexts = new WeakMap<MessageCatalogue, Set<string>>();
-
-/** Whether `text` is a {@link HostText}, a host's own key with source text. */
-export function isHostText(text: DefinitionText): text is HostText {
-  return typeof text === "object";
-}
 
 function warnBlankTranslation(catalogue: MessageCatalogue, key: string): void {
   const warned = warnedBlankTexts.get(catalogue) ?? new Set<string>();

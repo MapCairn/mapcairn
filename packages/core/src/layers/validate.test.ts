@@ -48,8 +48,23 @@ describe("validateLayerDefinition", () => {
     definition.group = { key: "sample.group", text: "Samples" };
     definition.dataCost = { key: "sample.cost", text: "about 30 KB" };
     definition.emptyText = { key: "sample.empty", text: "None." };
+    (definition.card as Json).link = {
+      field: "title",
+      label: { key: "sample.link", text: "Report" },
+    };
     definition.disclaimer = { key: "sample.disclaimer", text: "Indicative." };
     expect(problems(definition)).toEqual([]);
+    const identify = copy(SAMPLE_IDENTIFY_LAYER);
+    const identifyCard = (identify.identify as Json).card as Json;
+    identifyCard.link = {
+      field: "title",
+      label: { key: "sample.link", text: "Report" },
+    };
+    expect(problems(identify)).toEqual([]);
+    identifyCard.link = { field: "title", label: { key: "", text: "Report" } };
+    expect(problems(identify)).toContain(
+      "identify.card.link: must name a field and have a label",
+    );
   });
 
   it("rejects a host-keyed text with no key or no source text", () => {
@@ -58,14 +73,22 @@ describe("validateLayerDefinition", () => {
     definition.group = { key: "sample.group", text: " " };
     definition.description = { text: "Points." };
     definition.dataCost = { key: "sample.cost", text: 3 };
+    const shape =
+      "must be non-empty text, or an object with a non-empty key and text";
     expect(problems(definition)).toEqual(
       expect.arrayContaining([
-        "name: must be non-empty text",
-        "group: must be non-empty text",
-        "description: must be non-empty text",
-        "dataCost: must be non-empty text",
+        `name: ${shape}`,
+        `group: ${shape}`,
+        `description: ${shape}`,
+        `dataCost: ${shape}`,
       ]),
     );
+  });
+
+  it("ignores extra properties on a host-keyed text", () => {
+    const definition = copy(SAMPLE_FEED_LAYER);
+    definition.name = { key: "sample.name", text: "Sample", note: "later" };
+    expect(problems(definition)).toEqual([]);
   });
 
   it("keeps legal attribution text plain", () => {

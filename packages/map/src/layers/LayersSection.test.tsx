@@ -1508,12 +1508,14 @@ describe("LayersSection definition text", () => {
         "host.alerts.description": "Huidige veldbrande.",
         "host.group": "Brande",
         "host.alerts.disclaimer": "Outomatiese skattings.",
+        "host.alerts.cost": "ongeveer 135 KB",
         "host.period": "Tydperk",
         "host.period.day": "Dag",
         "host.level.green": "Groen waarskuwing",
       },
     });
-    const { source } = setup([HOSTED], undefined, afrikaans);
+    const { source, services } = setup([HOSTED], undefined, afrikaans);
+    act(() => services.fakes.preferences.set({ saveData: true }));
     source.setFeatures("hosted-alerts", [
       samplePoint("g", {
         title: "Brand",
@@ -1535,9 +1537,29 @@ describe("LayersSection definition text", () => {
     expect(section.getByText("Outomatiese skattings.")).toBeInTheDocument();
     expect(section.getByText("Groen waarskuwing")).toBeInTheDocument();
     expect(section.getByText("Other")).toBeInTheDocument();
+    expect(section.getByText(/ongeveer 135 KB/)).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
-        "Brandwaarskuwings:",
+        "Brandwaarskuwings",
+      ),
+    );
+  });
+
+  it("announces a tile layer with a host-keyed name in the active language", async () => {
+    const tiles = {
+      ...SAMPLE_TILE_LAYER,
+      id: "hosted-tiles",
+      name: { key: "host.tiles.name", text: "Imagery" },
+    };
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      definitionTexts: { "host.tiles.name": "Beeldmateriaal" },
+    });
+    setup([tiles], undefined, afrikaans);
+    toggle("hosted-tiles", "Beeldmateriaal");
+    await waitFor(() =>
+      expect(screen.getByTestId("live-region-polite")).toHaveTextContent(
+        "Beeldmateriaal is on.",
       ),
     );
   });

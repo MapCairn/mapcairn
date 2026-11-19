@@ -54,11 +54,36 @@ describe("resolveText with a host key", () => {
     expect(resolveText(other, source)).toBe("Rivers");
   });
 
-  it("does not read an inherited property as a translation", () => {
+  it("does not read an inherited property as a translation, and says nothing", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const catalogue = new FakeMessageCatalogue({ definitionTexts: {} });
     expect(resolveText(catalogue, { key: "toString", text: "Source" })).toBe(
       "Source",
     );
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("returns something that is not a text untouched", () => {
+    const catalogue = new FakeMessageCatalogue();
+    expect(resolveText(catalogue, null as never)).toBeNull();
+    const half = { key: "host.layer.name" };
+    expect(resolveText(catalogue, half as never)).toBe(half);
+  });
+
+  it("warns once for each blank key, and once for each catalogue", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const blank = { "host.a": "", "host.b": " " };
+    const first = new FakeMessageCatalogue({ definitionTexts: blank });
+    const second = new FakeMessageCatalogue({ definitionTexts: blank });
+    for (const catalogue of [first, second]) {
+      for (let pass = 0; pass < 2; pass += 1) {
+        resolveText(catalogue, { key: "host.a", text: "A" });
+        resolveText(catalogue, { key: "host.b", text: "B" });
+      }
+    }
+    expect(warn).toHaveBeenCalledTimes(4);
+    warn.mockRestore();
   });
 
   it("falls back and warns once when a supplied translation is blank", () => {
