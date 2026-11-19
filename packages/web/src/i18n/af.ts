@@ -690,9 +690,6 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Huidige droogtes wat GDACS gradeer volgens hul impak op mense.",
   "layer.drought-alerts.emptyText":
     "Geen droogtewaarskuwings op die oomblik nie.",
-  "layer.earth-at-night.name": "Die aarde snags",
-  "layer.earth-at-night.description":
-    "Die ligte van stede, paaie en skepe soos uit die ruimte gesien, as 'n wolkvrye prent van 2016. Die fynste detail is sowat 500 m.",
   "layer.earth-at-night.dataCost": "sowat 0,3 tot 1 MB per skerm",
   "layer.group.imagery": "Beelde",
   "layer.control.opacity": "Ondeursigtigheid",

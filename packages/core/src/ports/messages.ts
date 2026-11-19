@@ -571,8 +571,6 @@ export type MessageKey =
   | "layer.drought-alerts.name"
   | "layer.drought-alerts.description"
   | "layer.drought-alerts.emptyText"
-  | "layer.earth-at-night.name"
-  | "layer.earth-at-night.description"
   | "layer.earth-at-night.dataCost"
   | "layer.group.imagery"
   | "layer.control.opacity"

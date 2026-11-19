@@ -9,8 +9,11 @@ import type { TileLayerDefinition } from "@mapcairn/core";
  */
 const earthAtNight: TileLayerDefinition = {
   id: "earth-at-night",
-  name: "layer.earth-at-night.name",
-  description: "layer.earth-at-night.description",
+  name: { key: "layer.earth-at-night.name", text: "Earth at night" },
+  description: {
+    key: "layer.earth-at-night.description",
+    text: "The lights of cities, roads and ships seen from space, as a cloud-free picture from 2016. Detail stops at about 500 m.",
+  },
   group: "layer.group.imagery",
   dataCost: "layer.earth-at-night.dataCost",
   attribution: [

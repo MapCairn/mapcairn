@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { parseTemplate, resolveLayerTemplate } from "@mapcairn/core";
 import { describe, expect, it, vi } from "vitest";
+import { AF_DEFINITION_TEXTS } from "./afDefinitionTexts";
 import { AF_LAYER_TEMPLATES } from "./afLayerTemplates";
 import { loadLanguage } from "./hostLanguages";
 
@@ -35,7 +36,12 @@ function keyedTemplates(
   return found;
 }
 
-const SOURCES = keyedTemplates(Object.values(modules));
+/** A host text has the same shape as a template but is translated from `definitionTexts`. */
+const SOURCES = new Map(
+  [...keyedTemplates(Object.values(modules))].filter(
+    ([key]) => !Object.hasOwn(AF_DEFINITION_TEXTS, key),
+  ),
+);
 const signature = (template: string) =>
   parseTemplate(template)
     .map(({ name, formatter }) => `${name}|${formatter ?? ""}`)

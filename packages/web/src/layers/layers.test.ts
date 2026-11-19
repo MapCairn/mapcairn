@@ -123,6 +123,16 @@ function count(decode: () => readonly unknown[]): number {
   }
 }
 
+/** Whether `value` is a host text, `{ key, text }`, rather than a plain string or a shipped key. */
+function isHostText(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { key?: unknown }).key === "string" &&
+    typeof (value as { text?: unknown }).text === "string"
+  );
+}
+
 describe("the host's layer definitions", () => {
   it("has layers, with unique ids, in group then name order", () => {
     expect(LAYER_DEFINITIONS.length).toBeGreaterThan(0);
@@ -159,10 +169,13 @@ describe("the host's layer definitions", () => {
     }
   });
 
-  it("writes its own readable text as message keys the English catalogue holds", () => {
+  it("writes its own readable text as message keys the English catalogue holds, or as host text", () => {
     const strings = (value: unknown): string[] => {
       if (typeof value === "string") {
         return [value];
+      }
+      if (isHostText(value)) {
+        return [];
       }
       if (Array.isArray(value)) {
         return value.flatMap(strings);
@@ -179,8 +192,11 @@ describe("the host's layer definitions", () => {
       for (const text of dotted) {
         expect(isMessageKey(text), `${definition.id}: ${text}`).toBe(true);
       }
-      expect(isMessageKey(definition.name), definition.id).toBe(true);
-      expect(isMessageKey(definition.description), definition.id).toBe(true);
+      for (const text of [definition.name, definition.description]) {
+        expect(isMessageKey(text) || isHostText(text), definition.id).toBe(
+          true,
+        );
+      }
       expect(isMessageKey(definition.group), definition.id).toBe(true);
     }
   });
