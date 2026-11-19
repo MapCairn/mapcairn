@@ -44,8 +44,12 @@ const ENTRY_POINTS: Readonly<
   theme: { ".": "./src/index.ts" },
 };
 
+/** Workspaces that depend on the SDK packages, beside the SDK packages. */
+const INTERNAL_CONSUMERS = ["packages/web", "examples/embed"] as const;
+
 interface Manifest {
   readonly name: string;
+  readonly version?: string;
   /** Without it, any file in the package can be imported by path. */
   readonly exports?: Readonly<Record<string, string>>;
   readonly dependencies?: Readonly<Record<string, string>>;
@@ -59,6 +63,18 @@ function manifestOf(name: string): Manifest {
   return JSON.parse(
     readFileSync(path.join(REPO, "packages", name, "package.json"), "utf8"),
   ) as Manifest;
+}
+
+/** The manifest of a workspace folder, relative to the repository. */
+function manifestAt(folder: string): Manifest {
+  return JSON.parse(
+    readFileSync(path.join(REPO, folder, "package.json"), "utf8"),
+  ) as Manifest;
+}
+
+/** The range an internal dependency must carry for a given SDK version. */
+function expectedRange(version: string): string {
+  return version.includes("-") ? version : `^${version}`;
 }
 
 /** Every shipped source file of a package, relative to the repository. */
@@ -145,4 +161,30 @@ describe("SDK package manifests", () => {
       expect(manifest.dependencies ?? {}).not.toHaveProperty(name);
     }
   });
+
+  it("keeps the four SDK versions equal", () => {
+    const versions = SDK_PACKAGES.map((name) => manifestOf(name).version);
+    expect(new Set(versions).size).toBe(1);
+    expect(versions[0]).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it.each([
+    ...SDK_PACKAGES.map((name) => `packages/${name}`),
+    ...INTERNAL_CONSUMERS,
+  ])(
+    "%s depends on the SDK packages by version, never by file: path",
+    (folder) => {
+      const manifest = manifestAt(folder);
+      const version = manifestOf("core").version ?? "";
+      const internal = Object.entries({
+        ...manifest.dependencies,
+        ...manifest.peerDependencies,
+      }).filter(([name]) =>
+        SDK_PACKAGES.some((sdk) => name === `@mapcairn/${sdk}`),
+      );
+      for (const [name, range] of internal) {
+        expect(range, `${folder} ${name}`).toBe(expectedRange(version));
+      }
+    },
+  );
 });
