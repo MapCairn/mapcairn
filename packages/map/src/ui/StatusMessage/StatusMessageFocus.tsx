@@ -3,6 +3,7 @@
 import { useLatestRef } from "@mapcairn/react";
 import { createContext, type ReactNode, useCallback, useContext } from "react";
 
+/** A function that moves focus to a stable stop. */
 type FocusFallback = () => void;
 
 const StatusMessageFocusContext = createContext<FocusFallback | null>(null);
@@ -37,7 +38,11 @@ export function StatusMessageFocusProvider({
   );
 }
 
-/** The fallback focus function the nearest provider supplies, or null. */
+/**
+ * The fallback focus function the nearest {@link StatusMessageFocusProvider}
+ * supplies, or null without one. Internal to `StatusMessage`, which calls it
+ * when it goes away with focus inside it; the package index does not export it.
+ */
 export function useStatusMessageFocusFallback(): FocusFallback | null {
   return useContext(StatusMessageFocusContext);
 }
