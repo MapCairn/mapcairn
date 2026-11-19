@@ -2,6 +2,10 @@
 // Copyright MapCairn contributors
 import type { CoordinateWords, Hemispheres } from "../format/format";
 import type { LatLng } from "../ports/geometry";
+import {
+  normaliseCoordinateText,
+  withDecimalCommas,
+} from "./normaliseCoordinateText";
 
 /**
  * The longest text {@link parseCoordinates} reads. A coordinate pair in
@@ -181,7 +185,7 @@ function readNumber(
   }
   const decimal = end > wholeEnd + 1;
   const hasDigits = wholeEnd > from || decimal;
-  return hasDigits
+  return hasDigits && text[end] !== "."
     ? { value: Number(text.slice(from, end)), decimal, end }
     : null;
 }
@@ -432,6 +436,34 @@ function roundToCentimetre(degrees: number): number {
   return Math.round(degrees * ROUNDING_FACTOR) / ROUNDING_FACTOR + 0;
 }
 
+/** Reads a pair from text that is already in ASCII digits, signs and separators. */
+function readPair(text: string, words: Words): LatLng | null {
+  const tokens = tokenise(text, words);
+  if (tokens === null) {
+    return null;
+  }
+  const reader = new TokenReader(tokens);
+  reader.take("label");
+  const first = readPart(reader);
+  reader.take("separator");
+  const second = first === null ? null : readPart(reader);
+  if (first === null || second === null || !reader.atEnd) {
+    return null;
+  }
+  const position = orderParts(first, second);
+  if (
+    position === null ||
+    Math.abs(position.lat) > MAX_LATITUDE ||
+    Math.abs(position.lng) > MAX_LONGITUDE
+  ) {
+    return null;
+  }
+  return {
+    lat: roundToCentimetre(position.lat),
+    lng: roundToCentimetre(position.lng),
+  };
+}
+
 /**
  * Reads a pair of coordinates from text a person typed, or returns `null`
  * when the text is not one. It never guesses: text that is out of range,
@@ -458,11 +490,23 @@ function roundToCentimetre(degrees: number): number {
  * Every value must carry a mark that says it is a degree value: a decimal
  * point with digits after it, or a degree sign or the word degrees. A bare
  * whole number is not enough, so "12 34", "E1 6" and a postcode or house
- * number go on to the place search. A minus sign (hyphen, en dash or the
+ * number go on to the place search. A minus sign (hyphen, a dash or the
  * Unicode minus) starts a value only when it does not touch a number before
  * it, so "02-123" and "12-14" are not pairs.
  *
- * A comma is never a decimal mark. Latitude must be within 90 degrees and
+ * Other scripts and locales are read too: digits of any script, the Unicode
+ * minus and other dashes, Arabic and full-width separators and white space
+ * such as the narrow no-break space are rewritten as ASCII first, and
+ * bidirectional marks are dropped (see {@link normaliseCoordinateText}). A
+ * thousands separator is read as white space, since no coordinate has a
+ * digit group.
+ *
+ * A comma is a decimal mark in two layouts only, and only in text with no
+ * decimal point (see {@link withDecimalCommas}): values separated by a
+ * semicolon (`26,2041; 28,0473`), or by white space with a comma in every
+ * number and no other comma (`26,2041 28,0473`). A comma between digits is
+ * never a thousands separator, so `26,28` and `1,234` alone are not
+ * coordinates. Anywhere else a comma separates the two values. Latitude must be within 90 degrees and
  * longitude within 180. Text longer than {@link MAX_COORDINATE_TEXT_LENGTH}
  * is refused unread, and the rest is read in a single pass, so the cost
  * grows in step with the text and no hostile input can make it slow.
@@ -476,28 +520,11 @@ export function parseCoordinates(
   if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
     return null;
   }
-  const tokens = tokenise(text, wordsFor(hemispheres, words));
-  if (tokens === null) {
-    return null;
-  }
-  const reader = new TokenReader(tokens);
-  reader.take("label");
-  const first = readPart(reader);
-  reader.take("separator");
-  const second = first === null ? null : readPart(reader);
-  if (first === null || second === null || !reader.atEnd) {
-    return null;
-  }
-  const position = orderParts(first, second);
-  if (
-    position === null ||
-    Math.abs(position.lat) > MAX_LATITUDE ||
-    Math.abs(position.lng) > MAX_LONGITUDE
-  ) {
-    return null;
-  }
-  return {
-    lat: roundToCentimetre(position.lat),
-    lng: roundToCentimetre(position.lng),
-  };
+  const readWords = wordsFor(hemispheres, words);
+  const normalised = normaliseCoordinateText(text);
+  const withPoints = withDecimalCommas(normalised);
+  return (
+    readPair(normalised, readWords) ??
+    (withPoints === null ? null : readPair(withPoints, readWords))
+  );
 }
