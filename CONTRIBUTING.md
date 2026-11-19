@@ -83,7 +83,7 @@ export function clampZoom(zoom: number, min: number, max: number): number {
 
 ## Dependencies
 
-After changing a manifest, run a real `npm install` and include the root lockfile. Do not use `--package-lock-only` as the normal update procedure. Pin prerelease versions exactly.
+After changing a manifest, run a real `npm install` and include the root lockfile. Do not use `--package-lock-only` as the normal update procedure. Write ranges as carets and pin a prerelease exactly; `AGENTS.md` has the rule.
 
 Prove a lockfile change with one real `npm ci --ignore-scripts` under npm 11 in a disposable clone. Do not install into a working tree another person or agent is using. See [`AGENTS.md`](AGENTS.md) for more.
 

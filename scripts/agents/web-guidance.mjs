@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * Runs the guides of the pinned `modern-web-guidance` dev dependency the same
+ * Runs the guides of the `modern-web-guidance` dev dependency the same
  * way on macOS, Linux and Windows, for the `web-platform-guidance` skill.
  *
  *   node scripts/agents/web-guidance.mjs search "<query>"
