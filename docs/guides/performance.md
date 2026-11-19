@@ -1,6 +1,6 @@
 # Performance and Lighthouse
 
-What was measured on 2026-11-11, what was tried and what was left alone, so the same experiments are not repeated. Tracked in [#8](https://github.com/MapCairn/mapcairn/issues/8).
+What was measured on 2026-11-11, what was tried and what was left alone, so the same experiments are not repeated. Tracked in [#8](https://github.com/MapCairn/mapcairn/issues/8), then [#329](https://github.com/MapCairn/mapcairn/issues/329) for the product page and [#385](https://github.com/MapCairn/mapcairn/issues/385) for the map page.
 
 ## Ground rules
 
@@ -60,6 +60,27 @@ That is where this plan stops. What is left is the engine itself, the first view
 
 Since the map moved to `/map`, Lighthouse CI audits both `/`, the product page, and `/map` (`packages/web/lighthouserc.json`), with the same assertions for each, and the summary names the page of every run. The figures above are the map's. The product page sits outside the app layout, so it builds no services and loads no layer definition, engine code or engine styles, and no adapter but the small browser clipboard behind its copy button; it opens no connection to another host of its own (the tile host's preconnect is on the map's route only; in production the host's cookieless page-view counter loads on every page) and draws its artwork as inline SVG, so its cost is the shared stylesheets, the fonts and React's hydration of a static page. Moving the services off `/` and marking the map package's style modules as its only side effects took the product page from 870 KB of JavaScript and 72 KB of CSS (uncompressed, as built) to 510 KB and 27 KB.
 
+### Script preloads on the product page (2026-11-19)
+
+On the product page the mobile score was 90 (first contentful paint and largest contentful paint 2.7 s and 3.0 s, the same in CI and locally). React Router lists every script the page needs as a `modulepreload` link in the head, about twenty of them and 190 KB compressed, and in the audit they compete with the stylesheets and font for the first paint. The product page's route `handle` now sets `modulePreload: false`, and `entry.server.tsx` removes those links from the page it sends (`app/modulePreload.ts`). The scripts still load and the page still hydrates; they are discovered from the inline script at the end of the document instead of the head. The map page and the privacy page keep the links.
+
+Lighthouse 13.4.1, a production build served as CI serves it, mobile, 3 runs each (the DevTools-throttled "after" figures were taken through a local proxy that removed the links before the change was built):
+
+| Page, preset                    | Before (performance, FCP, LCP) | After                                    |
+| ------------------------------- | ------------------------------ | ---------------------------------------- |
+| `/` mobile, simulated           | 90, 90, 90; 2.7 s; 3.0 s       | 98, 99, 99; 1.4 to 1.7 s; 1.8 to 2.1 s   |
+| `/` mobile, DevTools throttling | 93, 93, 93; 2.6 s              | 98, 98, 98; 1.9 s                        |
+| `/` desktop                     | 100                            | 100                                      |
+| `/map` mobile, simulated        | 38, 66, 69; LCP 9.9 s          | 62, 70, 70; LCP 9.9 s (code not changed) |
+
+The trade: on the throttled phone profile the stylesheets finish about 0.65 s earlier, and the last script finishes about 1.4 s later (4.2 s to 5.6 s), because the scripts are no longer requested in parallel with the head. That suits a page that reads without script; the copy buttons and settings wait a little longer on a slow link. The same change is not made for `/map`: there the stripped run scored the same, and a map that hydrates later is a worse trade. The local server speaks HTTP/1.1, and Cloudflare's edge speaks HTTP/2 and HTTP/3 with its own prioritisation, so the field gain on the product page may be smaller than the lab figure; check the next CI run on `main` rather than assuming it.
+
+Also measured and not kept on `/` and `/map`: no font preload (no change, slightly worse), one merged stylesheet (within the spread), and marking the preloads `fetchpriority="low"` (one point).
+
+### The map page
+
+The same tools on `/map`: mobile 62 to 71 locally (the first run after a start is often lower) and 43 to 44 in CI, desktop 91, accessibility, best practices and SEO 100. The largest contentful paint is the tour card, which waits for the map's first `idle`, so about 25% of the score depends on the first view's tiles, sprite and 14 glyph ranges coming over the throttled link. Preloading the basemap style, a merged stylesheet and the font preload did not separate from run-to-run noise. What is left needs a decision on plan 0004's rule about the tour card (see "Decided not to do"), and is tracked in #385.
+
 ## Language weight
 
 A language other than the host's default is loaded when a visitor first uses it, so a visitor who never chooses it does not download its text (`LanguageCatalogue.load` may return a promise). The default language is in the main bundle and loads synchronously. While another language loads, the interface keeps showing the previous one, so a slow connection never shows blank text. The reference host's `hostLanguages.ts` imports `af.ts` and `afLayerTemplates.ts` only when Afrikaans is requested, so the layer-template wording shares that lazy-loading boundary. Nothing in the repository measures the bundle's size yet, so this is a loading boundary held to by the code, not a checked size budget.
@@ -71,4 +92,5 @@ A language other than the host's default is loaded when a visitor first uses it,
 - `modulepreload` the MapLibre chunk in the head. It competes with the first chunks for bandwidth before the first paint (see the comment in `vite.config.ts`).
 - Lazy-load the error page. It saves under 2 KB, and an error page that has to load more code can fail when the network has.
 - Split the sheet's panels into chunks loaded on first open. The saving is mainly bytes, which the audit overstates (finding 4), and opening a panel would then wait on the network.
+- Strip the script preloads on `/map`. The score did not move, and the map is the page, so its scripts should start with the head.
 - Raise the CI performance threshold. The scores stay far below 0.95, which the map's engine and tiles make out of reach without the tricks above.

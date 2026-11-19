@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { useState } from "react";
 import type { LinksFunction, MetaFunction } from "react-router";
+import type { ModulePreloadHandle } from "../app/modulePreload";
 import { buildPageMeta } from "../buildPageMeta";
 import { createProductClipboard } from "../composition/productClipboard";
 import { PRODUCT_DESCRIPTION, SITE_URL } from "../constants/siteConfig";
@@ -53,9 +54,14 @@ export const links: LinksFunction = () => [
 
 /**
  * React Router route module export: the page is English only, so the
- * document's language stays English whatever the playground was set to.
+ * document's language stays English whatever the playground was set to. It
+ * is readable before its scripts run, so they are not preloaded in the head,
+ * where they would delay the first paint.
  */
-export const handle: PageLanguageHandle = { language: "en-GB" };
+export const handle: PageLanguageHandle & ModulePreloadHandle = {
+  language: "en-GB",
+  modulePreload: false,
+};
 
 /**
  * React Router route module export: the product page at `/`, with the

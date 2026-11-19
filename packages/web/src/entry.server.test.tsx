@@ -6,7 +6,11 @@ const renderToReadableStreamMock = vi.fn(
   async (_element: unknown, _options: unknown) =>
     new ReadableStream<Uint8Array>({
       start(controller) {
-        controller.enqueue(new TextEncoder().encode("<html></html>"));
+        controller.enqueue(
+          new TextEncoder().encode(
+            '<html><head><link rel="modulepreload" href="/a.js"/></head></html>',
+          ),
+        );
         controller.close();
       },
     }),
@@ -23,13 +27,16 @@ vi.mock("react-dom/server", () => ({
  * option `renderToReadableStream` was called with, and the `nonce` prop on
  * the `<ServerRouter>` element passed to it.
  */
-async function handleOnce() {
+async function handleOnce(handle?: unknown) {
   const handleRequest = (await import("./entry.server")).default;
   const response = await handleRequest(
     new Request("https://mapcairn.timothybrits.co.za/"),
     200,
     new Headers(),
-    {} as never,
+    {
+      staticHandlerContext: { matches: [{ route: { id: "route" } }] },
+      routeModules: { route: { handle } },
+    } as never,
   );
 
   const headerNonce = response.headers
@@ -99,5 +106,17 @@ describe("entry.server handleRequest", () => {
     const second = await handleOnce();
 
     expect(first.headerNonce).not.toBe(second.headerNonce);
+  });
+
+  it("keeps the module preload links of a page that has not opted out", async () => {
+    const { response } = await handleOnce({ language: "en-GB" });
+
+    expect(await response.text()).toContain('rel="modulepreload"');
+  });
+
+  it("drops the module preload links of a page that opts out through its route handle", async () => {
+    const { response } = await handleOnce({ modulePreload: false });
+
+    expect(await response.text()).toBe("<html><head></head></html>");
   });
 });
