@@ -427,6 +427,61 @@ export const typeScale = {
   display: { size: "2.5rem", lineHeight: "1.1", tracking: "-0.025em" },
 } as const;
 
+/**
+ * Tracking and line height for text in a script that tracking or a tight line
+ * breaks. Letter spacing, positive or negative, cuts the joins of Arabic
+ * script and the conjuncts of the Indic scripts, and the tall marks of Indic,
+ * Thai and Khmer text collide at the Latin line heights. Tracking is zero and
+ * every step gets a line height of 1.5 or more. A host may set these tokens;
+ * Latin text never reads them.
+ */
+export const nonLatinType = {
+  tracking: "0em",
+  lineHeight: {
+    small: "1.6",
+    body: "1.6",
+    large: "1.6",
+    title: "1.5",
+    display: "1.5",
+  },
+} as const;
+
+/**
+ * The language subtags that take {@link nonLatinType}, matched with `:lang()`
+ * so a region or script subtag (`zh-Hans`) matches too. Latin, Cyrillic and
+ * Greek text keep the base scale.
+ */
+export const nonLatinLanguages = [
+  "ar",
+  "fa",
+  "ur",
+  "ps",
+  "he",
+  "hi",
+  "mr",
+  "ne",
+  "bn",
+  "as",
+  "gu",
+  "pa",
+  "or",
+  "ta",
+  "te",
+  "kn",
+  "ml",
+  "si",
+  "th",
+  "lo",
+  "km",
+  "my",
+  "am",
+  "ka",
+  "hy",
+  "ja",
+  "ko",
+  "zh",
+] as const;
+
 /** Font weights. Nothing else is declared in `@font-face`. */
 export const fontWeight = { regular: "400", semibold: "600" } as const;
 
