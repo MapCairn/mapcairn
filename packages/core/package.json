@@ -23,9 +23,11 @@
   },
   "files": [
     "dist",
+    "!dist/.built",
     "src",
     "!src/**/*.test.*",
-    "!src/**/*.snap.html"
+    "!src/**/*.snap.html",
+    "!src/propertyTesting/**"
   ],
   "sideEffects": false,
   "scripts": {

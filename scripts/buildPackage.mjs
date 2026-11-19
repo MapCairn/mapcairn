@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { isEntryPoint } from "./entryPoint.mjs";
@@ -109,7 +115,10 @@ async function buildJavaScript(folder, entries, stylesheet) {
         output: {
           preserveModules: true,
           preserveModulesRoot: "src",
-          entryFileNames: "[name].js",
+          // vanilla-extract's plugin compiles every `*.css.js` file it meets, so
+          // a built `tokens.css.js` would be compiled a second time in a host.
+          entryFileNames: (chunk) =>
+            `${chunk.name.replace(/\.css$/, ".styles")}.js`,
           assetFileNames: "[name][extname]",
         },
       },
@@ -217,6 +226,7 @@ async function rollUpDeclarations(folder, name, source, packageJsonFullPath) {
  * @param {string} folder The package folder.
  */
 export async function buildPackage(folder) {
+  const started = new Date();
   const manifestPath = path.join(folder, "package.json");
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   const entries = entryPointsOf(manifest.exports ?? {});
@@ -231,7 +241,12 @@ export async function buildPackage(folder) {
     await rollUpDeclarations(folder, name, source, manifestPath);
   }
   rmSync(path.join(dist, DECLARATION_FOLDER), { recursive: true, force: true });
-  writeFileSync(path.join(dist, STAMP_FILE), `${new Date().toISOString()}\n`);
+  // The stamp is empty, so two builds of the same sources pack to the same
+  // tarball, and carries the time the build started, so an edit made while
+  // it ran is newer than the stamp and builds again.
+  const stamp = path.join(dist, STAMP_FILE);
+  writeFileSync(stamp, "");
+  utimesSync(stamp, started, started);
 }
 
 if (isEntryPoint(import.meta.url)) {

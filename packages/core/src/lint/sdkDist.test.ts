@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -119,6 +119,21 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
     }
   });
 
+  it("has an empty build stamp that starts no later than the build output", () => {
+    const dist = path.join(folderOf(name), "dist");
+    const stamp = statSync(path.join(dist, ".built"));
+    expect(stamp.size).toBe(0);
+    expect(stamp.mtimeMs).toBeLessThanOrEqual(
+      statSync(path.join(dist, "index.js")).mtimeMs,
+    );
+  });
+
+  it("names no built file `*.css.js`, which a host's vanilla-extract plugin would compile again", () => {
+    expect(distFiles(name).filter((f) => /\.css\.[cm]?[jt]s$/.test(f))).toEqual(
+      [],
+    );
+  });
+
   it("ships no test file", () => {
     expect(distFiles(name).filter((file) => /\.test\./.test(file))).toEqual([]);
   });
@@ -143,5 +158,24 @@ describe("@mapcairn/theme dist", () => {
     for (const file of distFiles("theme").filter((f) => f.endsWith(".js"))) {
       expect(read("theme", file), file).not.toMatch(/@vanilla-extract\/css/);
     }
+  });
+});
+
+describe("@mapcairn/core contracts.d.ts", () => {
+  it("holds nothing that makes its copy of a declaration differ from the one in index.d.ts", () => {
+    // The two rolled-up files repeat the declarations they share, so a type
+    // is only assignable across them while it is purely structural.
+    const declarations = read("core", "contracts.d.ts");
+    const nominal = [
+      /#private/,
+      /\bprivate\s/,
+      /\bprotected\s/,
+      /\benum\s/,
+      /\bunique symbol\b/,
+    ].filter((pattern) => pattern.test(declarations));
+    expect(
+      nominal.map(String),
+      "contracts.d.ts repeats declarations that index.d.ts also holds, so a private or protected member, an enum or a unique symbol in one would make the two copies unassignable to each other. Keep the contract suites' signatures structural.",
+    ).toEqual([]);
   });
 });

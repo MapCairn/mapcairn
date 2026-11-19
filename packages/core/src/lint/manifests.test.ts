@@ -209,9 +209,11 @@ describe("SDK package manifests", () => {
       const manifest = manifestOf(name);
       expect(manifest.files).toEqual([
         "dist",
+        "!dist/.built",
         "src",
         "!src/**/*.test.*",
         "!src/**/*.snap.html",
+        ...(name === "core" ? ["!src/propertyTesting/**"] : []),
       ]);
       expect(manifest.sideEffects).toEqual(
         name === "theme" ? ["**/*.css"] : false,

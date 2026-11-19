@@ -22,6 +22,7 @@ import {
 import {
   isStale,
   newestInput,
+  newestSharedInput,
   SDK_BUILD_ORDER,
   stampTime,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
@@ -61,12 +62,50 @@ describe("newestInput", () => {
     expect(newestInput(scratch)).toBe(30 * SECOND);
   });
 
+  it("includes the package's tsconfig.json", () => {
+    write("package.json", 10);
+    write("src/a.ts", 20);
+    write("tsconfig.json", 70);
+    expect(newestInput(scratch)).toBe(70 * SECOND);
+  });
+
   it("ignores test files and snapshots, which do not change the output", () => {
     write("package.json", 10);
     write("src/a.ts", 20);
     write("src/a.test.ts", 90);
     write("src/a.snap.html", 95);
     expect(newestInput(scratch)).toBe(20 * SECOND);
+  });
+});
+
+describe("newestSharedInput", () => {
+  it("is the newest of the files every package build reads", () => {
+    for (const [file, seconds] of [
+      ["tsconfig.base.json", 10],
+      ["package-lock.json", 80],
+      ["scripts/buildSdk.mjs", 20],
+      ["scripts/buildPackage.mjs", 30],
+      ["scripts/entryPoint.mjs", 40],
+    ] as const) {
+      write(file, seconds);
+    }
+    expect(newestSharedInput(scratch)).toBe(80 * SECOND);
+  });
+
+  it("counts each of the five files", () => {
+    const files = [
+      "tsconfig.base.json",
+      "package-lock.json",
+      "scripts/buildSdk.mjs",
+      "scripts/buildPackage.mjs",
+      "scripts/entryPoint.mjs",
+    ];
+    for (const newest of files) {
+      for (const file of files) {
+        write(file, file === newest ? 99 : 5);
+      }
+      expect(newestSharedInput(scratch), newest).toBe(99 * SECOND);
+    }
   });
 });
 

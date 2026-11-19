@@ -18,6 +18,7 @@
   },
   "files": [
     "dist",
+    "!dist/.built",
     "src",
     "!src/**/*.test.*",
     "!src/**/*.snap.html"

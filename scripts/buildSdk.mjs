@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STAMP_FILE } from "./buildPackage.mjs";
@@ -19,9 +19,18 @@ export const SDK_BUILD_ORDER = ["core", "react", "theme"];
 /** Files that cannot change what a package builds. */
 const NOT_BUILD_INPUT = /\.(test\.[cm]?[jt]sx?|snap\.html)$/;
 
+/** Files at the repository root, and the build scripts, that every package build reads. */
+const SHARED_INPUTS = [
+  "tsconfig.base.json",
+  "package-lock.json",
+  "scripts/buildSdk.mjs",
+  "scripts/buildPackage.mjs",
+  "scripts/entryPoint.mjs",
+];
+
 /**
- * The time of the newest file the build reads: the package's sources and its
- * manifest, without tests.
+ * The time of the newest file a package build reads: its sources without
+ * tests, its manifest and its `tsconfig.json`.
  *
  * @param {string} folder The package folder.
  * @returns {number} Milliseconds since the epoch.
@@ -30,14 +39,29 @@ export function newestInput(folder) {
   const files = readdirSync(path.join(folder, "src"), { recursive: true })
     .map((file) => path.join(folder, "src", String(file)))
     .filter((file) => !NOT_BUILD_INPUT.test(file) && statSync(file).isFile());
+  const configs = ["package.json", "tsconfig.json"]
+    .map((name) => path.join(folder, name))
+    .filter((file) => existsSync(file));
   return Math.max(
-    statSync(path.join(folder, "package.json")).mtimeMs,
-    ...files.map((file) => statSync(file).mtimeMs),
+    ...[...configs, ...files].map((file) => statSync(file).mtimeMs),
   );
 }
 
 /**
- * When the package's last build finished.
+ * The time of the newest file every package build reads, whichever package.
+ *
+ * @param {string} [root] The repository root.
+ * @returns {number} Milliseconds since the epoch.
+ */
+export function newestSharedInput(root = REPO) {
+  return Math.max(
+    ...SHARED_INPUTS.map((file) => statSync(path.join(root, file)).mtimeMs),
+  );
+}
+
+/**
+ * When the package's last build started: the build sets the stamp's time to
+ * its start, so an edit made while it ran is newer and builds again.
  *
  * @param {string} folder The package folder.
  * @returns {number | undefined} Milliseconds since the epoch, or `undefined`
@@ -63,7 +87,7 @@ export function isStale(folder) {
   return (
     stamp === undefined ||
     stamp < newestInput(folder) ||
-    stamp < statSync(path.join(REPO, "scripts", "buildPackage.mjs")).mtimeMs
+    stamp < newestSharedInput()
   );
 }
 
