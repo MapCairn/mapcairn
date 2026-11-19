@@ -864,13 +864,12 @@ test.describe("basemaps", () => {
       await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
       const banner = page.getByTestId("tile-error");
       await expect(banner).toBeVisible({ timeout: 20_000 });
-      await mapPage.region.focus();
-      const retry = banner.getByRole("button", { name: "Retry" });
-      await retry.focus();
+      await mapPage.searchInput.focus();
+      await banner.getByRole("button", { name: "Retry" }).focus();
       tiles.heal();
       await page.keyboard.press("Enter");
       await expect(banner).toHaveCount(0, { timeout: 20_000 });
-      await expect(mapPage.region).toBeFocused();
+      await expect(mapPage.searchInput).toBeFocused();
     });
 
     test("returns focus to the control it came from after Dismiss, from the keyboard @a11y", async ({
@@ -884,10 +883,49 @@ test.describe("basemaps", () => {
       const search = mapPage.searchInput;
       await search.focus();
       await banner.getByRole("button", { name: "Dismiss" }).focus();
+      expect(await axeViolations(page)).toEqual([]);
       await page.keyboard.press("Enter");
       await expect(banner).toHaveCount(0);
       await expect(search).toBeFocused();
       expect(await axeViolations(page)).toEqual([]);
+    });
+
+    test("returns focus to the control before it after Dismiss, reached by walking the Tab order", async ({
+      page,
+      mapPage,
+      browserName,
+    }) => {
+      await failSomeTiles(page);
+      await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
+      const banner = page.getByTestId("tile-error");
+      await expect(banner).toBeVisible({ timeout: 20_000 });
+      await mapPage.searchInput.focus();
+      const insideBanner = () =>
+        banner.evaluate((node) => node.contains(document.activeElement));
+      const dismissFocused = () =>
+        page.evaluate(
+          () =>
+            document.activeElement?.getAttribute("aria-label") === "Dismiss",
+        );
+      const maxTabs = 80;
+      let before = await page.evaluateHandle(() => document.activeElement);
+      for (let i = 0; i < maxTabs && !(await insideBanner()); i += 1) {
+        before = await page.evaluateHandle(() => document.activeElement);
+        await page.keyboard.press(tabKey(browserName));
+      }
+      expect(await insideBanner()).toBe(true);
+      for (let i = 0; i < maxTabs && !(await dismissFocused()); i += 1) {
+        await page.keyboard.press(tabKey(browserName));
+      }
+      expect(await dismissFocused()).toBe(true);
+      await page.keyboard.press("Enter");
+      await expect(banner).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          (element) => document.activeElement === element,
+          before,
+        ),
+      ).toBe(true);
     });
 
     test("puts focus on the map when it did not come from a control", async ({

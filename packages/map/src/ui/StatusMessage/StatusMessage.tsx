@@ -71,7 +71,7 @@ export interface StatusMessageProps
  *
  * When the message goes away while focus is inside it (Dismiss, or an
  * action that ends the condition), focus returns to the element it came from,
- * or to the map region when that element is gone or focus came from the page,
+ * or to the map region when that element is gone, cannot take focus or focus came from the page,
  * so a keyboard person keeps their place. Focus is left alone if it was
  * elsewhere.
  *
@@ -110,10 +110,12 @@ export function StatusMessage({
       if (!focusInside.current) {
         return;
       }
-      const target = cameFrom.current?.isConnected
-        ? cameFrom.current
-        : document.querySelector<HTMLElement>(MAP_HOST_SELECTOR);
-      target?.focus();
+      const origin = cameFrom.current;
+      origin?.focus();
+      if (origin && document.activeElement === origin) {
+        return;
+      }
+      document.querySelector<HTMLElement>(MAP_HOST_SELECTOR)?.focus();
     },
     [],
   );
@@ -134,9 +136,12 @@ export function StatusMessage({
   }, [variant, paused, dismissRef]);
 
   const handleFocus = (event: FocusEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) {
-      cameFrom.current =
-        event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
+    // A window or tab switch blurs and refocuses with no related target, which
+    // must not forget the element focus really came from.
+    if (event.relatedTarget instanceof HTMLElement) {
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        cameFrom.current = event.relatedTarget;
+      }
     }
     focusInside.current = true;
     setFocused(true);

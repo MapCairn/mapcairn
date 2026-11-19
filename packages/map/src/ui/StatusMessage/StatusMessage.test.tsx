@@ -392,7 +392,9 @@ describe("StatusMessage without a services provider", () => {
 });
 
 describe("StatusMessage focus when it goes away", () => {
-  function Host({ shown }: { shown: boolean }) {
+  /** Shows the message until its Dismiss or its action is used, as a banner does. */
+  function Host() {
+    const [shown, setShown] = useState(true);
     return (
       <>
         <button type="button">Before</button>
@@ -402,8 +404,8 @@ describe("StatusMessage focus when it goes away", () => {
         {shown ? (
           <StatusMessage
             variant="error"
-            onDismiss={vi.fn()}
-            action={{ label: "Retry", onClick: vi.fn() }}
+            onDismiss={() => setShown(false)}
+            action={{ label: "Retry", onClick: () => setShown(false) }}
           >
             Failed
           </StatusMessage>
@@ -412,51 +414,69 @@ describe("StatusMessage focus when it goes away", () => {
     );
   }
 
-  it("returns focus to the element focus came from", () => {
-    const { rerender } = render(<Host shown />);
-    const before = screen.getByRole("button", { name: "Before" });
-    before.focus();
-    screen.getByRole("button", { name: "Retry" }).focus();
-    rerender(<Host shown={false} />);
-    expect(document.activeElement).toBe(before);
+  const button = (name: string) => screen.getByRole("button", { name });
+
+  it("returns focus to the element focus came from after Dismiss", () => {
+    render(<Host />);
+    button("Before").focus();
+    button("Dismiss").focus();
+    fireEvent.click(button("Dismiss"));
+    expect(document.activeElement).toBe(button("Before"));
+  });
+
+  it("returns focus to the element focus came from after an action ends it", () => {
+    render(<Host />);
+    button("Before").focus();
+    button("Retry").focus();
+    fireEvent.click(button("Retry"));
+    expect(document.activeElement).toBe(button("Before"));
   });
 
   it("falls back to the map when focus came from nowhere", () => {
-    const { rerender } = render(<Host shown />);
-    screen.getByRole("button", { name: "Dismiss" }).focus();
-    rerender(<Host shown={false} />);
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Map" }),
-    );
+    render(<Host />);
+    button("Dismiss").focus();
+    fireEvent.click(button("Dismiss"));
+    expect(document.activeElement).toBe(button("Map"));
   });
 
   it("falls back to the map when the element focus came from is gone", () => {
-    const { rerender } = render(<Host shown />);
+    render(<Host />);
     const outside = document.createElement("button");
     document.body.append(outside);
     outside.focus();
-    screen.getByRole("button", { name: "Dismiss" }).focus();
+    button("Dismiss").focus();
     outside.remove();
-    rerender(<Host shown={false} />);
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Map" }),
-    );
+    fireEvent.click(button("Dismiss"));
+    expect(document.activeElement).toBe(button("Map"));
+  });
+
+  it("falls back to the map when the element focus came from cannot take focus", () => {
+    render(<Host />);
+    const before = button("Before") as HTMLButtonElement;
+    before.focus();
+    button("Dismiss").focus();
+    before.disabled = true;
+    fireEvent.click(button("Dismiss"));
+    expect(document.activeElement).toBe(button("Map"));
+  });
+
+  it("remembers the real origin across a window switch", () => {
+    render(<Host />);
+    button("Before").focus();
+    const retry = button("Retry");
+    retry.focus();
+    // Switching away and back blurs and refocuses with no related element.
+    retry.blur();
+    retry.focus();
+    fireEvent.click(retry);
+    expect(document.activeElement).toBe(button("Before"));
   });
 
   it("leaves focus alone when it was not inside the message", () => {
-    const { rerender } = render(<Host shown />);
-    const before = screen.getByRole("button", { name: "Before" });
-    screen.getByRole("button", { name: "Retry" }).focus();
-    before.focus();
-    rerender(<Host shown={false} />);
-    expect(document.activeElement).toBe(before);
-  });
-
-  it("keeps focus where it is when an action leaves the message up", () => {
-    render(<Host shown />);
-    const retry = screen.getByRole("button", { name: "Retry" });
-    retry.focus();
-    fireEvent.click(retry);
-    expect(document.activeElement).toBe(retry);
+    render(<Host />);
+    button("Retry").focus();
+    button("Before").focus();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(document.activeElement).toBe(button("Before"));
   });
 });
