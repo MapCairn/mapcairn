@@ -27,6 +27,27 @@ const bundleVanillaExtractIntoWorker = (): Plugin => ({
   },
 });
 
+/**
+ * The map engine is loaded in the browser, when a map mounts, through dynamic
+ * imports in the MapLibre adapter. The Worker's environment still follows those
+ * imports and would bundle the engine, its worker script and its stylesheet,
+ * about 1.4 MB that nothing runs on the server and that the client build already
+ * serves from the static assets. This answers them with an empty module in
+ * that environment only.
+ */
+const keepBrowserEngineOutOfWorker = (): Plugin => {
+  const engineModule = /^maplibre-gl(?:\/|$)/;
+  const emptyModule = "\0mapcairn:browser-engine-stub";
+  return {
+    name: "mapcairn:keep-browser-engine-out-of-worker",
+    enforce: "pre",
+    applyToEnvironment: (environment) => environment.name === "ssr",
+    resolveId: (id) => (engineModule.test(id) ? emptyModule : undefined),
+    load: (id) =>
+      id === emptyModule ? "export default undefined;" : undefined,
+  };
+};
+
 export default defineConfig(async ({ mode, command, isPreview }) => {
   const isTest = mode === "test" || process.env.VITEST === "true";
   // The Worker entry imports the built server bundle, so the Cloudflare plugin
@@ -57,7 +78,9 @@ export default defineConfig(async ({ mode, command, isPreview }) => {
       // need to resolve to plain CSS before route/SSR transformation or the
       // JSX transform ever sees them.
       vanillaExtractPlugin(),
-      ...(useCloudflare ? [bundleVanillaExtractIntoWorker()] : []),
+      ...(useCloudflare
+        ? [bundleVanillaExtractIntoWorker(), keepBrowserEngineOutOfWorker()]
+        : []),
       ...(isTest
         ? [react()]
         : [
