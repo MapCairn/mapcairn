@@ -673,9 +673,6 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "layer.drought-alerts.description":
     "Current droughts that GDACS rates for their impact on people.",
   "layer.drought-alerts.emptyText": "No drought alerts right now.",
-  "layer.earth-at-night.name": "Earth at night",
-  "layer.earth-at-night.description":
-    "The lights of cities, roads and ships seen from space, as a cloud-free picture from 2016. Detail stops at about 500 m.",
   "layer.earth-at-night.dataCost": "about 0.3 to 1 MB per screen",
   "layer.group.imagery": "Imagery",
   "layer.control.opacity": "Opacity",

@@ -10,14 +10,30 @@ const modules = import.meta.glob<unknown>("../layers/definitions/**/*.ts", {
   import: "default",
 });
 
-/** Every `{ key, text }` template a definition carries, found wherever it sits. */
+/**
+ * The positions that hold a layer template: the property that holds the
+ * object, a dot and the template's own property. A `{ key, text }` anywhere
+ * else is host text, translated from `definitionTexts`.
+ */
+const TEMPLATE_POSITIONS: ReadonlySet<string> = new Set([
+  "card.title",
+  "card.lines",
+  "list.secondary",
+  "controls.unit",
+  "colour.unit",
+  "label.template",
+]);
+
+/** Every `{ key, text }` template a definition carries, found at a template position. */
 function keyedTemplates(
   value: unknown,
+  position = "",
+  holder = "",
   found: Map<string, string> = new Map(),
 ): Map<string, string> {
   if (Array.isArray(value)) {
     for (const item of value) {
-      keyedTemplates(item, found);
+      keyedTemplates(item, position, holder, found);
     }
     return found;
   }
@@ -26,11 +42,13 @@ function keyedTemplates(
   }
   const record = value as Record<string, unknown>;
   if (typeof record.key === "string" && typeof record.text === "string") {
-    found.set(record.key, record.text);
+    if (TEMPLATE_POSITIONS.has(position)) {
+      found.set(record.key, record.text);
+    }
     return found;
   }
-  for (const child of Object.values(record)) {
-    keyedTemplates(child, found);
+  for (const [property, child] of Object.entries(record)) {
+    keyedTemplates(child, `${holder}.${property}`, property, found);
   }
   return found;
 }
