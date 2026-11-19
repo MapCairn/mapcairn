@@ -7,6 +7,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -24,6 +25,9 @@ import {
 
 /** The shortest time a message that dismisses itself stays on screen. */
 export const MIN_AUTO_DISMISS_MS = 6000;
+
+/** The map region, where focus goes when the place it came from is gone. */
+const MAP_HOST_SELECTOR = "[data-map-host]";
 
 const icons: Record<StatusMessageVariant, IconComponent> = {
   info: Info,
@@ -65,6 +69,12 @@ export interface StatusMessageProps
  * for errors. The role sits on the text only, so a screen reader never reads
  * the Retry and Dismiss buttons as part of the message.
  *
+ * When the message goes away while focus is inside it (Dismiss, or an
+ * action that ends the condition), focus returns to the element it came from,
+ * or to the map region when that element is gone or focus came from the page,
+ * so a keyboard person keeps their place. Focus is left alone if it was
+ * elsewhere.
+ *
  * Errors stay until dismissed. Other messages dismiss themselves after the
  * delay, and the countdown pauses while the pointer is over the message or
  * focus is inside it, then resumes with the time left.
@@ -85,6 +95,8 @@ export function StatusMessage({
   const [ready, setReady] = useState(false);
   const paused = hovered || focused;
   const dismissRef = useLatestRef(onDismiss);
+  const focusInside = useRef(false);
+  const cameFrom = useRef<HTMLElement | null>(null);
   const remaining = useRef(Math.max(autoDismissMs, MIN_AUTO_DISMISS_MS));
 
   // A live region that already holds its text when inserted is often not
@@ -92,6 +104,19 @@ export function StatusMessage({
   useEffect(() => {
     setReady(true);
   }, []);
+
+  useLayoutEffect(
+    () => () => {
+      if (!focusInside.current) {
+        return;
+      }
+      const target = cameFrom.current?.isConnected
+        ? cameFrom.current
+        : document.querySelector<HTMLElement>(MAP_HOST_SELECTOR);
+      target?.focus();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (variant === "error" || paused) {
@@ -108,8 +133,18 @@ export function StatusMessage({
     };
   }, [variant, paused, dismissRef]);
 
+  const handleFocus = (event: FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      cameFrom.current =
+        event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
+    }
+    focusInside.current = true;
+    setFocused(true);
+  };
+
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget)) {
+      focusInside.current = false;
       setFocused(false);
     }
   };
@@ -123,7 +158,7 @@ export function StatusMessage({
       className={className ? `${classes} ${className}` : classes}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onFocus={() => setFocused(true)}
+      onFocus={handleFocus}
       onBlur={handleBlur}
     >
       <Icon icon={icons[variant]} className={statusIcon({ variant })} />
