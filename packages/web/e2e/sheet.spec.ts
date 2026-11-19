@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { expect, test } from "./fixtures";
+import { tabKey } from "./support/keys";
 import { waitForStableLayout } from "./support/states";
 
 test.describe("map options sheet on a phone", () => {
@@ -316,6 +317,7 @@ test.describe("map options panel on a desktop", () => {
     page,
     mapPage,
     isMobile,
+    browserName,
   }) => {
     await mapPage.goto();
     await mapPage.settingsButton.focus();
@@ -337,16 +339,16 @@ test.describe("map options panel on a desktop", () => {
     await expect(mapPage.sheet).toHaveAttribute("data-state", "closed");
 
     await mapPage.locateButton.focus();
-    await page.keyboard.press("Tab");
+    await page.keyboard.press(tabKey(browserName));
     await expect(mapPage.settingsButton).toBeFocused();
     // The zoom group follows Settings where it shows (a mouse); on a touch
     // device the map region is next.
     const next = isMobile ? mapPage.region : mapPage.zoomInButton;
-    await page.keyboard.press("Tab");
+    await page.keyboard.press(tabKey(browserName));
     await expect(next).toBeFocused();
-    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press(tabKey(browserName, true));
     await expect(mapPage.settingsButton).toBeFocused();
-    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press(tabKey(browserName, true));
     await expect(mapPage.locateButton).toBeFocused();
   });
 
