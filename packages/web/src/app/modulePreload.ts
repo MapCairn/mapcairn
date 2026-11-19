@@ -44,9 +44,13 @@ export function preloadsAtEnd(
  * the end of the body.
  */
 const MARKUP =
-  /<script\b[^>]*>|<link\b[^>]*\brel="modulepreload"[^>]*>|<\/body>/g;
+  /<script\b[^>]*>|<link\b[^>]*\brel="modulepreload"[^>]*>|<\/body>/gi;
 
-const SCRIPT_END = "</script>";
+/** The start of a script element tag, in any letter case. */
+const SCRIPT_START = /^<script/i;
+
+/** The end of a script element, in any letter case, as HTML reads it. */
+const SCRIPT_END = /<\/script\b[^>]*>/gi;
 
 /**
  * The longest unfinished tag held back between chunks. Real tags are far
@@ -92,12 +96,15 @@ export function movePreloadsToEnd(
 
     while (position < text.length) {
       if (inScript) {
-        const end = text.indexOf(SCRIPT_END, position);
-        if (end === -1) {
+        SCRIPT_END.lastIndex = position;
+        const end = SCRIPT_END.exec(text);
+        if (end === null) {
           return out + text.slice(position);
         }
-        out += text.slice(position, end + SCRIPT_END.length);
-        position = end + SCRIPT_END.length;
+        const stop = end.index + end[0].length;
+        out += text.slice(position, stop);
+        position = stop;
+
         inScript = false;
         continue;
       }
@@ -109,10 +116,10 @@ export function movePreloadsToEnd(
       }
       out += text.slice(position, found.index);
       position = found.index + found[0].length;
-      if (found[0].startsWith("<script")) {
+      if (SCRIPT_START.test(found[0])) {
         out += found[0];
         inScript = true;
-      } else if (found[0] === "</body>") {
+      } else if (found[0].toLowerCase() === "</body>") {
         out += moved.join("") + found[0];
         moved.length = 0;
       } else {

@@ -116,6 +116,13 @@ describe("movePreloadsToEnd", () => {
     expect(await run([html])).toBe(`<head></head><body>${script}${A}</body>`);
   });
 
+  it("reads tag names in any letter case", async () => {
+    const script = `<SCRIPT>var s = '${A}';</SCRIPT >`;
+    const html = `<head>${A}</head><BODY>${script}</BODY>`;
+
+    expect(await run([html])).toBe(`<head></head><BODY>${script}${A}</BODY>`);
+  });
+
   it("does not touch a link inside a script that spans chunks", async () => {
     const out = await run([
       `<head>${A}</head><body><script>var s = '`,
