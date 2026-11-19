@@ -324,20 +324,14 @@ describe("PhotonSuggestionProvider", () => {
       expect((error as SearchError).kind).toBe("failed");
     });
 
-    it("reports offline from navigator.onLine by default", async () => {
+    it('treats the device as online unless told otherwise, so a network failure is "failed"', async () => {
       const fetchMock = vi.fn().mockRejectedValue(new TypeError("boom"));
       const provider = new PhotonSuggestionProvider({
         fetch: fetchMock,
         minIntervalMs: 0,
       });
-      const onLine = vi.spyOn(navigator, "onLine", "get");
-      onLine.mockReturnValue(false);
-      const offline = await provider.suggest("x").catch((e: unknown) => e);
-      expect((offline as SearchError).kind).toBe("offline");
-      onLine.mockReturnValue(true);
-      const online = await provider.suggest("x").catch((e: unknown) => e);
-      expect((online as SearchError).kind).toBe("failed");
-      onLine.mockRestore();
+      const error = await provider.suggest("x").catch((e: unknown) => e);
+      expect((error as SearchError).kind).toBe("failed");
     });
 
     it("uses the global fetch when none is given", async () => {

@@ -185,6 +185,15 @@ export function usePreferences(): DevicePreferencesValue {
 }
 
 /**
+ * Whether the browser says the device has a connection, updating live. It is
+ * a hint: a device can report online with no route, and `true` where the host
+ * gives no signal.
+ */
+export function useOnline(): boolean {
+  return usePreferences().online !== false;
+}
+
+/**
  * Whether Save data mode is on: the person's own choice from Settings when
  * they made one, otherwise the device's signal (a data saver or a very slow
  * connection, where the browser reports one). Re-renders when either changes.

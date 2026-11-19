@@ -71,7 +71,8 @@ export interface PhotonSuggestionProviderOptions {
   readonly defaultLimit?: number;
   /**
    * Whether the browser believes it is online, used to tell "offline" from
-   * "failed" after a network error. Defaults to `navigator.onLine`.
+   * "failed" after a network error. The host passes its device
+   * preferences' `online` signal; defaults to always online.
    */
   readonly isOnline?: () => boolean;
   /** The least time between the starts of two requests. Defaults to 250. */
@@ -80,8 +81,8 @@ export interface PhotonSuggestionProviderOptions {
   readonly timeoutMs?: number;
 }
 
-function browserIsOnline(): boolean {
-  return typeof navigator === "undefined" || navigator.onLine !== false;
+function alwaysOnline(): boolean {
+  return true;
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -193,7 +194,7 @@ function toSearchResult(feature: PhotonFeature): SearchResult | null {
  *   without sending it.
  *
  *   Errors follow the port: a network failure is `SearchError("offline")` when
- *   `navigator.onLine` is false and `"failed"` otherwise, HTTP 429 is
+ *   `isOnline` says the device is offline and `"failed"` otherwise, HTTP 429 is
  *   `"rate-limited"`, a timeout, any other non-OK response, or a body that is
  *   not Photon's GeoJSON is `"failed"`, and an aborted signal is a
  *   {@link PortAbortError}. A blank query resolves to no suggestions without a
@@ -212,7 +213,7 @@ export class PhotonSuggestionProvider implements SuggestionProvider {
     this.#fetch = options.fetch ?? defaultFetch;
     this.#endpoint = options.endpoint ?? DEFAULT_ENDPOINT;
     this.#defaultLimit = options.defaultLimit ?? DEFAULT_LIMIT;
-    this.#isOnline = options.isOnline ?? browserIsOnline;
+    this.#isOnline = options.isOnline ?? alwaysOnline;
     this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.#spacer = new RequestSpacer(
       options.minIntervalMs ?? DEFAULT_MIN_INTERVAL_MS,

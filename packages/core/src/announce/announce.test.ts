@@ -29,6 +29,7 @@ import {
   announceLayerEmpty,
   announceLayerError,
   announceLayerLoaded,
+  announceLayerOffline,
   announceLayerOn,
   announceLayersTurnedBackOn,
   announceLayersTurnedOff,
@@ -443,6 +444,12 @@ describe("layer announcements", () => {
     );
     expect(english(announceLayerError("Earthquakes", "invalid"))).toBe(
       "Earthquakes could not load: the provider sent something unexpected. Try again later.",
+    );
+  });
+
+  it("says a layer did not load because the device is offline, without blaming the provider", () => {
+    expect(english(announceLayerOffline("Earthquakes"))).toBe(
+      "Earthquakes did not load because you are offline. Try again when you are back online.",
     );
   });
 

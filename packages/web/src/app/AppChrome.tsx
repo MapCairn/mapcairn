@@ -39,6 +39,7 @@ import { SHEET_ID } from "./initialView";
 import { hasBanners, MapBanners } from "./MapBanners";
 import { bottomCentre } from "./MapBanners.css";
 import { sheetTitle } from "./sheetTitle";
+import { useConnectionNotice } from "./useConnectionNotice";
 import type { MapApp } from "./useMapApp";
 import { useZoomAnnouncement } from "./useZoomAnnouncement";
 
@@ -133,7 +134,8 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
     }
   };
 
-  const showBanners = hasBanners(app, map);
+  const connection = useConnectionNotice();
+  const showBanners = hasBanners(app, map, connection);
   const lookingUp = useIdentifyFeedback(app.layers.identifying);
   const centre =
     app.measuring || app.drawing || lookingUp || showBanners ? (
@@ -155,7 +157,7 @@ function ChromeContent({ app, map, background }: ChromeContentProps) {
         {lookingUp ? (
           <IdentifyStatus onCancel={app.layers.cancelIdentify} />
         ) : null}
-        {showBanners ? <MapBanners app={app} /> : null}
+        {showBanners ? <MapBanners app={app} connection={connection} /> : null}
       </div>
     ) : null;
 
