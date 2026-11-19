@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { type RefObject, useLayoutEffect } from "react";
 import { CHROME_GAP_PX } from "../chromeSpacing";
 import { chromeVars } from "./chromeVars";
 
@@ -55,29 +54,22 @@ export function placeMapKey(
   };
 }
 
-/**
- * Writes the map key's height cap and shift onto the chrome root, and says
- * whether the key has too little room to show.
- *
- * @param placement - From {@link placeMapKey}, or null while the key has no size.
- * @returns True when the room is smaller than the key's chip.
- */
-export function useMapKeyPlacement(
-  rootRef: RefObject<HTMLElement | null>,
+/** Applies a key placement in the same frame as a chrome measurement. */
+export function applyMapKeyPlacement(
+  root: HTMLElement,
   placement: MapKeyPlacement | null,
-): boolean {
-  const room = placement?.room ?? null;
-  const shift = placement?.shift ?? null;
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root || room === null || shift === null) {
-      return;
-    }
-    // A key that has given way keeps the height of its chip, so its slot
-    // still measures and it can come back when the room does.
-    const cap = Math.max(MAP_KEY_MIN_ROOM_PX, room);
-    root.style.setProperty(chromeVars.mapKeyRoom, `${cap}px`);
-    root.style.setProperty(chromeVars.mapKeyLift, `${shift}px`);
-  }, [rootRef, room, shift]);
-  return room !== null && room < MAP_KEY_MIN_ROOM_PX;
+): void {
+  if (!placement) {
+    return;
+  }
+  // A key that has given way keeps the height of its chip, so its slot
+  // still measures and it can come back when the room does.
+  const cap = Math.max(MAP_KEY_MIN_ROOM_PX, placement.room);
+  root.style.setProperty(chromeVars.mapKeyRoom, `${cap}px`);
+  root.style.setProperty(chromeVars.mapKeyLift, `${placement.shift}px`);
+}
+
+/** Whether a placement leaves too little room for the key's chip. */
+export function isMapKeyCrowded(placement: MapKeyPlacement | null): boolean {
+  return placement !== null && placement.room < MAP_KEY_MIN_ROOM_PX;
 }

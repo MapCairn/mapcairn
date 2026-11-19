@@ -630,8 +630,10 @@ describe("MapChrome map key slot", () => {
       surfaceValue.publishSheetDetent("peek");
     });
     expect(lift).toBeLessThan(0);
-    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${lift}px`);
-    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 + lift - 12 - 72}px`);
+    // Sheet motion uses --chrome-bottom-lift; the immediate map-key
+    // measurement remains independent of that transition.
+    expect(cssVar(chromeVars.mapKeyLift)).toBe("0px");
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - 72}px`);
   });
 
   it("lifts it above a taller bottom row by the row's own position, not the row's lift twice", () => {
@@ -644,8 +646,8 @@ describe("MapChrome map key slot", () => {
       observers.trigger();
     });
     const lift = 700 - 12 - (800 - 12);
-    // Target bottom: the lifted scale bar's top (744 + lift) a gap above.
-    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 + lift - 12 - 688}px`);
+    expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 - 12 - 688}px`);
+    expect(cssVar(chromeVars.bottomRaise)).toBe(`${lift}px`);
   });
 
   it("hides while there is no room for the chip, and returns when there is", () => {
@@ -657,7 +659,8 @@ describe("MapChrome map key slot", () => {
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.mapKeyRoom)).toBe("48px");
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe("428px");
+    expect(cssVar(chromeVars.bottomRaise)).toBe("-406px");
     expect(slot("map-key")).toHaveAttribute("data-crowded", "true");
     expect(slot("map-key")).toHaveAttribute("inert");
     place("bottom-centre", 556, 0);

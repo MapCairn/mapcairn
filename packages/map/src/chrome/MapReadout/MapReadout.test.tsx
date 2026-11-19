@@ -10,7 +10,7 @@ import {
   formatMessage,
   type Message,
 } from "@mapcairn/core";
-import { act, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -443,6 +443,14 @@ describe("MapReadout", () => {
   it("shows no coordinates element with no position and no zoom", () => {
     renderReadout({ showZoom: false });
     expect(screen.getByTestId("map-readout").querySelector("p")).toBeNull();
+  });
+
+  it("clears the cursor after the pointer leaves the readout", () => {
+    const onCursorLeave = vi.fn();
+    renderReadout({ onCursorLeave });
+    const readout = screen.getByTestId("map-readout");
+    fireEvent.pointerOut(readout, { relatedTarget: document.body });
+    expect(onCursorLeave).toHaveBeenCalledOnce();
   });
 });
 

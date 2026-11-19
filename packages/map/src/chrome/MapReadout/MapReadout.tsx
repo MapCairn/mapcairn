@@ -228,6 +228,8 @@ export interface MapReadoutProps
    * readout either way.
    */
   readonly showZoom?: boolean;
+  /** Clears the stored cursor position once it leaves both the map and this readout. */
+  readonly onCursorLeave?: () => void;
 }
 
 /**
@@ -237,7 +239,12 @@ export interface MapReadoutProps
  * Reads the zoom with `useMap()` and the layout with `useChromeLayout()`, so
  * it must sit inside the map context and a `MapChrome`.
  */
-export function MapReadout({ units, latlng, showZoom }: MapReadoutProps) {
+export function MapReadout({
+  units,
+  latlng,
+  showZoom,
+  onCursorLeave,
+}: MapReadoutProps) {
   const { view } = useMap();
   const { layout } = useChromeLayout();
   const { t } = useMessages();
@@ -248,6 +255,16 @@ export function MapReadout({ units, latlng, showZoom }: MapReadoutProps) {
       data-chrome="map-readout"
       data-testid="map-readout"
       className={styles.readout}
+      onPointerLeave={(event) => {
+        if (
+          !(
+            event.relatedTarget instanceof Element &&
+            event.relatedTarget.closest("[data-map-host]")
+          )
+        ) {
+          onCursorLeave?.();
+        }
+      }}
     >
       <ScaleBar units={units} />
       <CursorCoordinates

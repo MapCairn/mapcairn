@@ -86,7 +86,9 @@ test.describe("right to left", () => {
     await expect.poll(clearOfPanel).toBe(true);
     // 3. Pan the polygon back under the panel.
     await mapPage.focusMap();
-    await page.keyboard.press("ArrowLeft");
+    for (let step = 0; step < 4; step += 1) {
+      await page.keyboard.press("ArrowLeft");
+    }
     // Sample the outline itself, not just its bounding box.
     await expect
       .poll(async () => {

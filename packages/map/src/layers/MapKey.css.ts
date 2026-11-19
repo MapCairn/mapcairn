@@ -19,7 +19,7 @@ export const panel = style({
   display: "flex",
   flexDirection: "column",
   maxWidth: `calc(${tokens.space.xl} * 10)`,
-  maxHeight: chromeVar(chromeVars.mapKeyRoom, "none"),
+  maxHeight: `calc(${chromeVar(chromeVars.mapKeyRoom, "100vh")} + ${chromeVar(chromeVars.bottomRaise, "0px")} + ${chromeVar(chromeVars.bottomLift, "0px")})`,
   fontFamily: tokens.type.family,
 });
 

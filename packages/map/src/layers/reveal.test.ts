@@ -65,6 +65,15 @@ describe("fitPadding", () => {
       }),
     ).toEqual({ top: 88, right: 80, bottom: 32, left: 32 });
   });
+
+  it("reserves the visible map key above the bottom edge", () => {
+    expect(fitPadding({ ...DESKTOP, mapKeyClearance: 240 })).toEqual({
+      top: 88,
+      right: 80,
+      bottom: 272,
+      left: 444,
+    });
+  });
 });
 
 describe("coveredPadding", () => {

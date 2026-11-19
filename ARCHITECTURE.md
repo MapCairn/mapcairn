@@ -151,6 +151,8 @@ MapLibre GL JS is the only map engine, and the ui never imports it. `MapView` ta
 
 ## Data layers
 
+Showing a layer feature on the map fits an extent clear of the sheet or side panel and of the floating search, end-stack and map-key surfaces. Point reveals use the same measured cover but keep enough surrounding map to show the point in context.
+
 A data layer is typed data: a `LayerDefinition` in `packages/web/src/layers/definitions/`, one file each, collected with `import.meta.glob`. Nothing in the code branches on a layer id, a provider or a response shape.
 
 - **Core** (`packages/core/src/layers`) holds the definition types and a hand-written schema check (`validateLayerDefinition`; core stays free of schema libraries), URL and card templates (`{window}`, `{time|relative}`; a tile URL leaves the engine's `{z}`, `{x}`, `{y}` and `{bbox-epsg-3857}` alone, while an identify URL fills `{x}` and `{y}` itself), host-keyed card, list, feed-shape label and unit templates (`LayerTemplate`), derived URL variables looked up from control values, filters, a decoder registry with the built-in `geojson` decoder (fields mapped by dotted path, so USGS and GDACS share it), a formatter registry (`relative`, `number`, `km`, `date`), style evaluation with a legend derived from the style, palette slot names, and `SharedResponseCache`, which reuses a response for its `max-age` (or the definition's `cacheSeconds`) and shares a request in flight, so layers split from one feed cost one request. It also holds the `LayerCatalogue` implementations and `partitionDefinitions` (see "Ports").

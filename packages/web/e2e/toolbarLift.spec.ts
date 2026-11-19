@@ -68,7 +68,7 @@ async function offFramesDuring(
       }
       barTopAtLastObserver = bar.top;
       frame += 1;
-      for (const slot of ["bottom-start", "bottom-end"]) {
+      for (const slot of ["bottom-start", "bottom-end", "map-key"]) {
         const box = document
           .querySelector(`[data-chrome="${slot}"]`)
           ?.getBoundingClientRect();
@@ -89,7 +89,7 @@ async function offFramesDuring(
     const watched = new Set<Element>();
     const watch = () => {
       const targets = document.querySelectorAll(
-        `[role="toolbar"][aria-label="${toolbarLabel}"], [data-chrome="bottom-centre"], [data-chrome="bottom-start"], [data-chrome="bottom-end"]`,
+        `[role="toolbar"][aria-label="${toolbarLabel}"], [data-chrome="bottom-centre"], [data-chrome="bottom-start"], [data-chrome="bottom-end"], [data-chrome="map-key"]`,
       );
       for (const target of targets) {
         if (!watched.has(target)) {
@@ -139,6 +139,7 @@ async function offFramesDuring(
       .at(-1)?.gap;
     const over = sample.gap < -GAP_TOLERANCE;
     const moved =
+      sample.slot !== "map-key" &&
       settledGap !== undefined &&
       Math.abs(sample.gap - settledGap) > GAP_TOLERANCE;
     return settledGap !== undefined && (over || moved)
@@ -184,7 +185,7 @@ for (const { language, motion } of SETTINGS) {
         mapPage,
       }) => {
         await page.setViewportSize({ width, height });
-        await mapPage.goto(START);
+        await mapPage.goto(`${START}&layers=earthquakes`);
         await collapseCredits(mapPage);
         const map = await mapPage.mapSize();
 
@@ -196,16 +197,14 @@ for (const { language, motion } of SETTINGS) {
           .toEqual([]);
         expect
           .soft(
-            await offFramesDuring(mapPage, () =>
-              mapPage.tapMap([map.width * 0.3, map.height * 0.3]),
-            ),
+            await offFramesDuring(mapPage, () => mapPage.drawAddPoint.click()),
             "at the first point",
           )
           .toEqual([]);
         expect
           .soft(
             await offFramesDuring(mapPage, () =>
-              mapPage.tapMap([map.width * 0.5, map.height * 0.3]),
+              mapPage.tapMap([map.width * 0.5, map.height * 0.2]),
             ),
             "at the first measure",
           )

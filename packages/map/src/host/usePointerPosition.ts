@@ -26,6 +26,14 @@ export interface UsePointerPosition {
   readonly onPointerLeave: (event: ReactPointerEvent) => void;
 }
 
+/** Whether a pointer entered the cursor readout while it grew under it. */
+function isReadout(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('[data-chrome="map-readout"]') !== null
+  );
+}
+
 /**
  * Reports the geographic position under a mouse or pen, at most once per
  * animation frame, for the cursor coordinates readout. Touch is ignored,
@@ -70,7 +78,7 @@ export function usePointerPosition(
         }
       },
       onPointerLeave: (event) => {
-        if (event.pointerType === "touch") {
+        if (event.pointerType === "touch" || isReadout(event.relatedTarget)) {
           return;
         }
         cancelAnimationFrame(frame.current);

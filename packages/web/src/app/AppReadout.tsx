@@ -8,6 +8,8 @@ export interface AppReadoutProps {
   readonly units: UnitSystem;
   /** The position under the pointer, or null when there is none. */
   readonly cursor: LatLng | null;
+  /** Clears the position once the pointer leaves the map and the readout. */
+  readonly onCursorLeave?: () => void;
 }
 
 /**
@@ -16,13 +18,14 @@ export interface AppReadoutProps {
  * coordinates but not the zoom, and a phone has neither: the readout stays as
  * short as the scale bar on a touch screen.
  */
-export function AppReadout({ units, cursor }: AppReadoutProps) {
+export function AppReadout({ units, cursor, onCursorLeave }: AppReadoutProps) {
   const { finePointer, layout } = useChromeLayout();
   return (
     <MapReadout
       units={units}
       latlng={finePointer ? cursor : null}
       showZoom={finePointer && layout === "panel"}
+      onCursorLeave={onCursorLeave}
     />
   );
 }

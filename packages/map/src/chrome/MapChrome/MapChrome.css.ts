@@ -234,10 +234,11 @@ export const mapKey = style({
   gridColumn: 1,
   justifySelf: "start",
   maxWidth: "100%",
-  transform: `translate(${shiftX}, ${chromeVar(chromeVars.mapKeyLift, "0px")})`,
+  translate: `0 calc(${chromeVar(chromeVars.mapKeyLift, "0px")} + ${chromeVar(chromeVars.bottomRaise, "0px")})`,
+  transform: `translate(${shiftX}, ${chromeVar(chromeVars.bottomLift, "0px")})`,
   selectors: {
     '[dir="rtl"] &': {
-      transform: `translate(calc(-1 * ${shiftX}), ${chromeVar(chromeVars.mapKeyLift, "0px")})`,
+      transform: `translate(calc(-1 * ${shiftX}), ${chromeVar(chromeVars.bottomLift, "0px")})`,
     },
     [whenHidden]: hidden,
     '&[data-crowded="true"]': hidden,

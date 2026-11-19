@@ -201,6 +201,33 @@ for (const viewport of MATRIX_VIEWPORTS) {
   );
 }
 
+test("credits stay clear of search and the capped draw toolbar with 150 percent text on a small phone", async ({
+  page,
+  mapPage,
+}) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await mockLayerProviders(page);
+  await mapPage.goto(KEYED_LAYERS);
+  await collapseCredits(mapPage);
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "150%";
+  });
+  await mapPage.startDrawing();
+  await mapPage.drawAddPoint.click();
+  await mapPage.focusMap();
+  await page.keyboard.press("ArrowRight");
+  await mapPage.drawAddPoint.click();
+  await mapPage.creditsButton.click();
+  await expect(mapPage.creditsRegion).toBeVisible();
+  await waitForStableLayout(page);
+
+  const report = await inspectChromeLayout(page);
+  const context = JSON.stringify(report.boxes);
+  expect(report.overlaps, context).toEqual([]);
+  expect(report.outside, context).toEqual([]);
+  expect(report.obscured, context).toEqual([]);
+});
+
 /*
  * The layout collision test (DESIGN.md, "Layout and slots"). For every
  * viewport, theme and chrome state, no two floating elements overlap,
@@ -628,6 +655,82 @@ const HOVER_TRIP_MS = 1_000;
 
 /** How long {@link hoverFreeMap} keeps sending the pointer before it gives up. */
 const HOVER_TIMEOUT_MS = 10_000;
+
+test("cursor coordinates stay shown under a resting pointer where the readout grows", async ({
+  page,
+  mapPage,
+  isMobile,
+}) => {
+  test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await mapPage.goto(WIDEST_COORDINATES_VIEW);
+  await collapseCredits(mapPage);
+  const point = await page
+    .locator('[data-testid="map-readout"]')
+    .evaluate((readout) => {
+      const scale = readout.querySelector<HTMLElement>(
+        '[data-chrome="scale-bar"]',
+      );
+      if (!scale) {
+        throw new Error("The scale bar has no box.");
+      }
+      const box = scale.getBoundingClientRect();
+      const coordinates = document.createElement("span");
+      coordinates.textContent = "-33.92000, -118.42000";
+      coordinates.style.font = getComputedStyle(scale).font;
+      coordinates.style.padding = getComputedStyle(scale).padding;
+      coordinates.style.position = "absolute";
+      coordinates.style.whiteSpace = "pre";
+      document.body.append(coordinates);
+      const grown = coordinates.getBoundingClientRect();
+      coordinates.remove();
+      for (let y = Math.floor(box.bottom - 8); y >= box.top; y -= 2) {
+        for (
+          let x = Math.min(
+            Math.floor(box.left + grown.width - 1),
+            document.documentElement.clientWidth - 1,
+          );
+          x > box.right;
+          x -= 2
+        ) {
+          if (document.elementFromPoint(x, y) instanceof HTMLCanvasElement) {
+            return { x, y };
+          }
+        }
+      }
+      throw new Error("No part of the readout's grown footprint is map.");
+    });
+
+  await page.mouse.move(point.x - STEP_BEFORE_HOVER_PX, point.y);
+  await page.mouse.move(point.x, point.y, { steps: 3 });
+  await expect(page.getByTestId("map-readout")).toContainText(
+    COORDINATES_PATTERN,
+  );
+  const blanks = await page.evaluate(async () => {
+    const readout = document.querySelector('[data-testid="map-readout"]');
+    if (!readout) {
+      throw new Error("The map readout is missing.");
+    }
+    let frame = 0;
+    const empty: number[] = [];
+    await new Promise<void>((resolve) => {
+      const sample = () => {
+        frame += 1;
+        if (!/-?\d+\.\d{5}, -?\d+\.\d{5}/.test(readout.textContent ?? "")) {
+          empty.push(frame);
+        }
+        if (frame === 60) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+    return empty;
+  });
+  expect(blanks).toEqual([]);
+});
 
 /**
  * Finds a part of the map canvas that nothing covers, with map on every side

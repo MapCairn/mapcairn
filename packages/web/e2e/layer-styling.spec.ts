@@ -92,6 +92,59 @@ test.describe("polygon styling", () => {
     expect(view?.lat ?? 0).toBeLessThan(-15);
   });
 
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+  ]) {
+    test(`Show on map keeps the fitted polygon clear of chrome at ${viewport.width}x${viewport.height}`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.setViewportSize(viewport);
+      await mockLayerProviders(page);
+      await mapPage.goto(
+        "#layers=world-countries,earthquakes&map=2.00/0.00000/0.00000",
+      );
+      await mapPage.openMapOptions();
+      const list = page.getByTestId("layer-list-world-countries");
+      await list.locator("summary").click();
+      await list
+        .getByTestId("layer-list-row")
+        .filter({ hasText: "Australia" })
+        .click();
+      await page.getByTestId("feature-card-show").click();
+      const polygon = page.getByTestId("selection-marker");
+      await expect(polygon).toBeVisible();
+      await expect
+        .poll(async () => {
+          const feature = await polygon.boundingBox();
+          if (!feature) {
+            return "not measured";
+          }
+          const controls = await Promise.all(
+            ['[data-chrome="end-stack"]', '[data-chrome="map-key"]'].map(
+              async (selector) => {
+                const control = page.locator(selector);
+                return (await control.isVisible())
+                  ? control.boundingBox()
+                  : null;
+              },
+            ),
+          );
+          const apart = controls.every(
+            (control) =>
+              control === null ||
+              feature.x + feature.width <= control.x ||
+              control.x + control.width <= feature.x ||
+              feature.y + feature.height <= control.y ||
+              control.y + control.height <= feature.y,
+          );
+          return apart ? "clear" : "covered";
+        })
+        .toBe("clear");
+    });
+  }
+
   test("passes axe with a styled layer on and its card open @a11y", async ({
     page,
     mapPage,

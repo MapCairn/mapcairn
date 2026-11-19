@@ -48,12 +48,9 @@ export const chromeVars = {
   bottomRaise: "--chrome-bottom-raise",
   /** Horizontal shift of the bottom-start slot (zero or positive). */
   bottomStartX: "--chrome-bottom-start-x",
-  /**
-   * The tallest the map key may be before it scrolls: the room between the
-   * search pill (or the tour card, while it shows) and the lifted bottom row.
-   */
+  /** Base room for the map key; the immediate toolbar raise is added in CSS. */
   mapKeyRoom: "--chrome-map-key-room",
-  /** Vertical shift of the map key from its resting place, to sit a gap above the lifted bottom row (zero or negative). */
+  /** Base shift of the map key; sheet and toolbar lifts are separate. */
   mapKeyLift: "--chrome-map-key-lift",
 } as const;
 

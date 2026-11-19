@@ -27,6 +27,8 @@ export interface RevealGeometry {
   readonly panelEdge: number | null;
   /** The reading direction. Defaults to left to right. */
   readonly direction?: ReadingDirection;
+  /** Bottom padding that keeps a fitted result above the visible map key. */
+  readonly mapKeyClearance?: number | null;
 }
 
 type Padding = NonNullable<MapFitOptions["padding"]>;
@@ -142,11 +144,15 @@ export function revealOffset(
 export function fitPadding(geometry: RevealGeometry): Padding {
   const covered = coveredPadding(geometry);
   const rtl = geometry.direction === "rtl";
+  const keyBottom =
+    geometry.mapKeyClearance == null
+      ? 0
+      : geometry.mapKeyClearance + FIT_CLEARANCE_PX;
   return {
     top: (covered?.top ?? 0) + FIT_CLEARANCE_TOP_PX,
     right:
       (covered?.right ?? 0) + (rtl ? FIT_CLEARANCE_PX : FIT_CLEARANCE_END_PX),
-    bottom: (covered?.bottom ?? 0) + FIT_CLEARANCE_PX,
+    bottom: Math.max((covered?.bottom ?? 0) + FIT_CLEARANCE_PX, keyBottom),
     left:
       (covered?.left ?? 0) + (rtl ? FIT_CLEARANCE_END_PX : FIT_CLEARANCE_PX),
   };
