@@ -35,6 +35,7 @@ test.describe("other pages", () => {
           'a[href="https://www.cloudflare.com/privacypolicy/"]',
         );
         const linked = inline.locator("..");
+        const contact = privacy.locator('a[href^="mailto:"]').locator("..");
 
         const pitch = async (paragraph: typeof plain) =>
           paragraph.evaluate((element) => {
@@ -74,6 +75,7 @@ test.describe("other pages", () => {
         const plainPitch = await pitch(plain);
         const linkedPitch = await pitch(linked);
         expect(linkedPitch).toBeLessThanOrEqual(plainPitch + 0.5);
+        expect(await pitch(contact)).toBeLessThanOrEqual(plainPitch + 0.5);
 
         const standaloneHeights = await privacy
           .locator(":scope > a")
@@ -86,7 +88,11 @@ test.describe("other pages", () => {
         await inline.focus();
         const focusIsVisible = await inline.evaluate((link) => {
           const style = getComputedStyle(link);
-          return style.outlineStyle !== "none" || style.boxShadow !== "none";
+          return (
+            style.outlineStyle === "solid" &&
+            Number.parseFloat(style.outlineWidth) > 0 &&
+            style.boxShadow !== "none"
+          );
         });
         expect(focusIsVisible).toBe(true);
       });
