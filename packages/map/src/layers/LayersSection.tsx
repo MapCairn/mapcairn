@@ -6,6 +6,7 @@ import {
   boundsAroundPoint,
   cardOf,
   createFormatterRegistry,
+  type DefinitionText,
   type FormatterRegistry,
   formatTemplate,
   hasCard,
@@ -109,13 +110,22 @@ function identifiableOn(layers: readonly DataLayerState[]): number {
   return layers.filter(answersTap).length;
 }
 
-/** Layers grouped by their definitions' `group`, in the order groups first appear. */
-function byGroup(layers: readonly DataLayerState[]) {
+/**
+ * Layers grouped by the heading their definitions' `group` reads as in the
+ * active language, in the order groups first appear. Grouping by the words
+ * keeps one heading for layers that name the group with a key, a host text
+ * or plain text that read the same.
+ */
+function byGroup(
+  layers: readonly DataLayerState[],
+  resolve: (text: DefinitionText) => string,
+) {
   const groups = new Map<string, DataLayerState[]>();
   for (const layer of layers) {
-    const group = groups.get(layer.definition.group) ?? [];
+    const heading = resolve(layer.definition.group);
+    const group = groups.get(heading) ?? [];
     group.push(layer);
-    groups.set(layer.definition.group, group);
+    groups.set(heading, group);
   }
   return [...groups];
 }
@@ -340,10 +350,10 @@ export function LayersSection({
         </p>
       ) : null}
       <div className={styles.groups}>
-        {byGroup(layers.layers).map(([group, items]) => (
+        {byGroup(layers.layers, resolve).map(([group, items]) => (
           <div key={group} className={styles.group}>
             <div className={styles.groupHeader}>
-              <Subheading level={groupLevel}>{resolve(group)}</Subheading>
+              <Subheading level={groupLevel}>{group}</Subheading>
               {showTurnOffAll ? (
                 <TurnOffGroup
                   layers={layers}

@@ -180,6 +180,22 @@ describe("createMessageCatalogue", () => {
     expect(catalogue.layerTemplates).toBe(layerTemplates);
   });
 
+  it("carries host-defined definition text translations, and none by default", () => {
+    const definitionTexts = { "host.layer.name": "Riviere" };
+    const catalogue = createMessageCatalogue(
+      "af",
+      EN_GB_CATALOGUE,
+      EN_GB_CATALOGUE,
+      { definitionTexts },
+    );
+
+    expect(catalogue.definitionTexts).toBe(definitionTexts);
+    expect(
+      createMessageCatalogue("af", EN_GB_CATALOGUE, EN_GB_CATALOGUE)
+        .definitionTexts,
+    ).toBeUndefined();
+  });
+
   it("warns with a message naming the language and the missing key", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const catalogue = createMessageCatalogue(

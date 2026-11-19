@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import type {
+  HostText,
   Message,
   MessageArgs,
   MessageCatalogue,
   MessageKey,
   MessageParams,
 } from "../ports/messages";
+import { resolveText } from "./resolveText";
 
 /** Builds a {@link Message}: a key and the parameters its placeholders need. */
 export function message<K extends MessageKey>(
@@ -27,6 +29,16 @@ function isMessage(value: unknown): value is Message {
   );
 }
 
+function isHostText(value: unknown): value is HostText {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !isMessage(value) &&
+    "key" in value &&
+    "text" in value
+  );
+}
+
 /**
  * Turns a {@link Message} into text with `catalogue`. A placeholder that holds
  * another message, or a list with messages among its items, is formatted
@@ -38,8 +50,12 @@ export function formatMessage(
   catalogue: MessageCatalogue,
   { key, params }: Message,
 ): string {
-  const text = (value: unknown): unknown =>
-    isMessage(value) ? formatMessage(catalogue, value) : value;
+  const text = (value: unknown): unknown => {
+    if (isMessage(value)) {
+      return formatMessage(catalogue, value);
+    }
+    return isHostText(value) ? resolveText(catalogue, value) : value;
+  };
   const resolved = Object.fromEntries(
     Object.entries(params).map(([name, value]) => [
       name,

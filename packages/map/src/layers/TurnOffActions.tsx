@@ -7,7 +7,7 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { useMessages, useResolveText } from "../services";
+import { useMessages } from "../services";
 import { Button } from "../ui/Button";
 import * as styles from "./Layers.css";
 import type { DataLayers } from "./useDataLayers";
@@ -22,7 +22,7 @@ export interface TurnOffAllProps {
 /** Props for {@link TurnOffGroup}. */
 export interface TurnOffGroupProps {
   readonly layers: DataLayers;
-  /** The group this action covers. */
+  /** The heading of the group this action covers, as the person reads it. */
   readonly group: string;
   /** The layers it would turn off: those of the group that are on. */
   readonly ids: readonly string[];
@@ -197,18 +197,17 @@ export function TurnOffAll({ layers, ids }: TurnOffAllProps) {
  */
 export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
   const { plural } = useMessages();
-  const groupName = useResolveText()(group);
   const { turnedOff, turnOff } = layers;
   const undo =
     turnedOff?.group === group
       ? {
           text: plural("layers.turnOff.doneGroup", {
             count: turnedOff.count,
-            group: groupName,
+            group,
           }),
           label: plural("layers.turnOff.undoGroup", {
             count: turnedOff.count,
-            group: groupName,
+            group,
           }),
         }
       : null;
@@ -225,7 +224,7 @@ export function TurnOffGroup({ layers, group, ids }: TurnOffGroupProps) {
         >
           {plural("layers.turnOff.group", {
             count: ids.length,
-            group: groupName,
+            group,
           })}
         </Button>
       ) : null}

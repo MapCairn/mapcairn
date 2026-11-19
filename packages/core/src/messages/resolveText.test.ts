@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { isMessageKey, resolveText, textOrMessage } from "./resolveText";
 
@@ -36,6 +36,60 @@ describe("resolveText", () => {
   });
 });
 
+describe("resolveText with a host key", () => {
+  const source = { key: "host.layer.name", text: "Rivers" };
+
+  it("uses the catalogue's translation of a host key", () => {
+    const catalogue = new FakeMessageCatalogue({
+      definitionTexts: { "host.layer.name": "Riviere" },
+    });
+    expect(resolveText(catalogue, source)).toBe("Riviere");
+  });
+
+  it("falls back to the source text when the host key has no translation", () => {
+    expect(resolveText(new FakeMessageCatalogue(), source)).toBe("Rivers");
+    const other = new FakeMessageCatalogue({
+      definitionTexts: { "host.other": "Ander" },
+    });
+    expect(resolveText(other, source)).toBe("Rivers");
+  });
+
+  it("does not read an inherited property as a translation", () => {
+    const catalogue = new FakeMessageCatalogue({ definitionTexts: {} });
+    expect(resolveText(catalogue, { key: "toString", text: "Source" })).toBe(
+      "Source",
+    );
+  });
+
+  it("falls back and warns once when a supplied translation is blank", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const catalogue = new FakeMessageCatalogue({
+      definitionTexts: { "host.layer.name": "  " },
+    });
+    expect(resolveText(catalogue, source)).toBe("Rivers");
+    expect(resolveText(catalogue, source)).toBe("Rivers");
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it("keeps a shipped key and a plain string working beside host keys", () => {
+    const catalogue = new FakeMessageCatalogue({
+      definitionTexts: { "settings.title": "Not used" },
+      overrides: { "settings.title": "Instellings" },
+    });
+    expect(resolveText(catalogue, "settings.title")).toBe("Instellings");
+    expect(resolveText(catalogue, "host.layer.name")).toBe("host.layer.name");
+  });
+
+  it("does not look a host key up through the typed catalogue", () => {
+    const catalogue = new FakeMessageCatalogue({
+      definitionTexts: { "host.layer.name": "Riviere" },
+    });
+    resolveText(catalogue, source);
+    expect(catalogue.calls).toEqual([]);
+  });
+});
+
 describe("textOrMessage", () => {
   it("turns a key into a message with no parameters, and leaves a plain string alone", () => {
     expect(textOrMessage("settings.title")).toEqual({
@@ -43,5 +97,10 @@ describe("textOrMessage", () => {
       params: {},
     });
     expect(textOrMessage("Earthquakes")).toBe("Earthquakes");
+  });
+
+  it("passes a host-keyed text through for the one place that speaks it", () => {
+    const hostText = { key: "host.layer.name", text: "Rivers" };
+    expect(textOrMessage(hostText)).toBe(hostText);
   });
 });

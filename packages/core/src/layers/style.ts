@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { resolveText } from "../messages/resolveText";
 import type { FieldValue } from "../ports/layers";
-import type { MessageCatalogue } from "../ports/messages";
+import type { DefinitionText, MessageCatalogue } from "../ports/messages";
 import {
   type FeedShapeStyle,
   type FillPattern,
@@ -30,10 +30,10 @@ export interface MarkerStyle {
   readonly shape: MarkerShape;
   /**
    * The words for the colour, such as `Orange alert`, for the list and card,
-   * as the definition writes them: a message key or a plain string, which
-   * `resolveText` turns into text in the active language.
+   * as the definition writes them: a message key, a host text or a plain
+   * string, which `resolveText` turns into text in the active language.
    */
-  readonly label: string;
+  readonly label: DefinitionText;
 }
 
 /** One line of a legend. */

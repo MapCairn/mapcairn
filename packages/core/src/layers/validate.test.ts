@@ -41,6 +41,43 @@ describe("validateLayerDefinition", () => {
     }
   });
 
+  it("accepts a host-keyed text wherever a definition writes reader-facing words", () => {
+    const definition = copy(SAMPLE_FEED_LAYER);
+    definition.name = { key: "sample.name", text: "Sample points" };
+    definition.description = { key: "sample.description", text: "Points." };
+    definition.group = { key: "sample.group", text: "Samples" };
+    definition.dataCost = { key: "sample.cost", text: "about 30 KB" };
+    definition.emptyText = { key: "sample.empty", text: "None." };
+    definition.disclaimer = { key: "sample.disclaimer", text: "Indicative." };
+    expect(problems(definition)).toEqual([]);
+  });
+
+  it("rejects a host-keyed text with no key or no source text", () => {
+    const definition = copy(SAMPLE_FEED_LAYER);
+    definition.name = { key: "", text: "Sample points" };
+    definition.group = { key: "sample.group", text: " " };
+    definition.description = { text: "Points." };
+    definition.dataCost = { key: "sample.cost", text: 3 };
+    expect(problems(definition)).toEqual(
+      expect.arrayContaining([
+        "name: must be non-empty text",
+        "group: must be non-empty text",
+        "description: must be non-empty text",
+        "dataCost: must be non-empty text",
+      ]),
+    );
+  });
+
+  it("keeps legal attribution text plain", () => {
+    const definition = copy(SAMPLE_FEED_LAYER);
+    definition.attribution = [
+      { text: { key: "sample.credit", text: "Credit" } },
+    ];
+    expect(problems(definition)).toContain(
+      "attribution[0].text: must be non-empty text",
+    );
+  });
+
   it("validates the source fields of keyed card and list templates", () => {
     const definition = copy(SAMPLE_FEED_LAYER);
     const card = definition.card as Json;

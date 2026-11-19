@@ -38,6 +38,20 @@ export function isText(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
 
+/**
+ * Whether a value is a definition's reader-facing words: non-empty text, or a
+ * host-keyed text with a non-empty key and non-empty source text.
+ */
+export function isDefinitionText(value: unknown): boolean {
+  return (
+    isText(value) ||
+    (isObject(value) &&
+      Object.keys(value).length === 2 &&
+      isText(value.key) &&
+      isText(value.text))
+  );
+}
+
 /** Whether a value is an `https` URL. */
 export function isHttpsUrl(value: unknown): boolean {
   return (
@@ -67,6 +81,13 @@ export class Problems {
 
   text(value: unknown, path: string): void {
     if (!isText(value)) {
+      this.add(path, "must be non-empty text");
+    }
+  }
+
+  /** Reports `value` unless it is a definition's words: text or a host-keyed text. */
+  definitionText(value: unknown, path: string): void {
+    if (!isDefinitionText(value)) {
       this.add(path, "must be non-empty text");
     }
   }

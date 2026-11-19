@@ -3,7 +3,7 @@
 import { formatLocale, formatNumber } from "../format/format";
 import { resolveText } from "../messages/resolveText";
 import type { FieldValue } from "../ports/layers";
-import type { MessageCatalogue } from "../ports/messages";
+import type { DefinitionText, MessageCatalogue } from "../ports/messages";
 import type {
   FeedShapeStyle,
   FillPattern,
@@ -63,15 +63,15 @@ function defaults(style: FeedShapeStyle, marks: ShapeMarks) {
 function classOf(
   style: FeedShapeStyle,
   colour: PaletteSlot,
-  label: string | ShapeClass["label"],
+  label: DefinitionText | ShapeClass["label"],
   marks: ShapeMarks,
 ): ShapeClass {
   return {
     appearance: { colour, ...defaults(style, marks) },
     label:
-      typeof label === "string"
-        ? (catalogue) => resolveText(catalogue, label)
-        : label,
+      typeof label === "function"
+        ? label
+        : (catalogue) => resolveText(catalogue, label),
   };
 }
 

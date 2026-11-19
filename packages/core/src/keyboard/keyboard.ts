@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { DefinitionText } from "../ports/messages";
+import type { DefinitionText, MessageKey } from "../ports/messages";
 
 /** What a key press on the focused map should do. */
 export type MapKeyAction =
@@ -95,15 +95,22 @@ export function mapKeyAction(event: MapKeyEvent): MapKeyAction | null {
 
 /**
  * One line of the keyboard help. Both parts are a `DefinitionText`: a message
- * key (the SDK's own lines) or a plain string (a host's own extra lines).
+ * key (the SDK's own lines), a host-keyed text or a plain string (a host's
+ * own extra lines).
  */
 export interface MapKeyHelpEntry {
   readonly keys: DefinitionText;
   readonly description: DefinitionText;
 }
 
+/** A line of the SDK's own keyboard help, written in message keys only. */
+export interface ShippedKeyHelpEntry extends MapKeyHelpEntry {
+  readonly keys: MessageKey;
+  readonly description: MessageKey;
+}
+
 /** The keyboard shortcuts of the map region, in display order, as message keys. */
-export const MAP_KEY_HELP: readonly MapKeyHelpEntry[] = [
+export const MAP_KEY_HELP: readonly ShippedKeyHelpEntry[] = [
   { keys: "keyHelp.keys.arrowKeys", description: "keyHelp.map.pan" },
   { keys: "keyHelp.keys.shiftUpDown", description: "keyHelp.map.panFurther" },
   { keys: "keyHelp.keys.shiftLeftRight", description: "keyHelp.map.rotate" },
