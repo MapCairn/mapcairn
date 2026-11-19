@@ -15,7 +15,8 @@ Issues are how MapCairn tracks work. They are public, so write plain project fac
    `gh issue list --repo MapCairn/mapcairn --state all --search "<key words>" --limit 20`
    (Always name the repository with `--repo MapCairn/mapcairn`: in a clone of a fork the default is the fork, which has no issues.)
    If one exists, comment on it with the new facts instead of filing another.
-4. Read `ROADMAP.md` if the idea might be something the project has said it will not do. Adding a dataset, a runtime dependency to an SDK package, or anything that changes `PRIVACY.md`, `SECURITY.md`, the licence or `CLA.md` is the maintainer's decision: say so in the issue and do not start the work.
+4. If the problem, the people it serves or what done looks like is not clear yet, or the idea bundles several outcomes, shape it first with the `shape-work` skill and file what it produces.
+5. Read `ROADMAP.md` if the idea might be something the project has said it will not do. Adding a dataset, a runtime dependency to an SDK package, or anything that changes `PRIVACY.md`, `SECURITY.md`, the licence or `CLA.md` is the maintainer's decision: say so in the issue and do not start the work.
 
 ## Choose the kind
 
