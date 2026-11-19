@@ -159,4 +159,23 @@ test.describe("measure", () => {
     await mapPage.measureAddPoint.click();
     await expect(mapPage.measureReadout).toHaveText(/(ft|mi)$/);
   });
+
+  test.describe("in Afrikaans", () => {
+    test.use({ language: "af" });
+
+    test("writes imperial symbols the Afrikaans way, in the readout and on the scale bar", async ({
+      page,
+      mapPage,
+    }) => {
+      await seedStoredSettings(page, { units: "imperial" });
+      await mapPage.goto(START);
+      await expect(mapPage.scaleBar).toHaveText(/^[\d.,\s]+ (ft|myl)$/);
+      await mapPage.startMeasuring();
+      await mapPage.measureAddPoint.click();
+      await mapPage.focusMap();
+      await page.keyboard.press("Shift+ArrowDown");
+      await mapPage.measureAddPoint.click();
+      await expect(mapPage.measureReadout).toHaveText(/^[\d.,\s]+ (ft|myl)$/);
+    });
+  });
 });

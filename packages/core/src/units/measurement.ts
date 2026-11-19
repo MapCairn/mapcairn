@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatNumber } from "../format/format";
 import { message } from "../messages/formatMessage";
-import type { Message, MessageKey } from "../ports/messages";
+import type { Message, MessageCatalogue, MessageKey } from "../ports/messages";
 import type { UnitSystem } from "../ports/settings";
 import {
   metresToFeet,
@@ -27,13 +26,13 @@ export interface MeasurementReading<Unit extends string> {
   readonly unit: Unit;
 }
 
-/** Short labels shown in the interface. */
-export const DISTANCE_UNIT_SYMBOL: Readonly<Record<DistanceUnit, string>> = {
-  m: "m",
-  km: "km",
-  ft: "ft",
-  mi: "mi",
-};
+/** The message key that holds the short symbol of a distance unit. */
+const DISTANCE_SYMBOL_KEY = {
+  m: "units.symbol.metre",
+  km: "units.symbol.kilometre",
+  ft: "units.symbol.foot",
+  mi: "units.symbol.mile",
+} as const satisfies Readonly<Record<DistanceUnit, MessageKey>>;
 
 /** The message key that names a distance unit in words, with the count it takes. */
 const DISTANCE_UNIT_KEY = {
@@ -43,14 +42,15 @@ const DISTANCE_UNIT_KEY = {
   mi: "units.mile",
 } as const satisfies Readonly<Record<DistanceUnit, MessageKey>>;
 
-const AREA_UNIT_SYMBOL: Readonly<Record<AreaUnit, string>> = {
-  m2: "m²",
-  ha: "ha",
-  km2: "km²",
-  ft2: "ft²",
-  ac: "ac",
-  mi2: "mi²",
-};
+/** The message key that holds the short symbol of an area unit. */
+const AREA_SYMBOL_KEY = {
+  m2: "units.symbol.squareMetre",
+  ha: "units.symbol.hectare",
+  km2: "units.symbol.squareKilometre",
+  ft2: "units.symbol.squareFoot",
+  ac: "units.symbol.acre",
+  mi2: "units.symbol.squareMile",
+} as const satisfies Readonly<Record<AreaUnit, MessageKey>>;
 
 const AREA_UNIT_KEY = {
   m2: "units.squareMetre",
@@ -143,32 +143,60 @@ export function readArea(
 }
 
 /**
+ * A figure and a unit symbol written as `catalogue` writes a reading: the
+ * `units.reading` pattern around the figure (grouped, with the digits of the
+ * catalogue's language) and the symbol under `symbolKey`.
+ */
+function writeReading(
+  catalogue: MessageCatalogue,
+  value: number,
+  symbolKey: MessageKey,
+): string {
+  return catalogue.t("units.reading", {
+    number: value,
+    symbol: catalogue.t(symbolKey, {}),
+  });
+}
+
+/**
  * Formats a distance with a short unit, for example "850 m", "1.25 km",
- * "328 ft" or "1.25 mi". The number is grouped and its digits chosen for
- * `locale` (`formatLocale(catalogue)`); the unit symbols are the same in
- * every language.
+ * "328 ft" or "1.25 mi", as `catalogue` writes it: its figure format, its
+ * `units.symbol.*` symbols and its `units.reading` order and spacing.
  */
 export function formatDistance(
   metres: number,
   units: UnitSystem,
-  locale: string,
+  catalogue: MessageCatalogue,
 ): string {
   const { value, unit } = readDistance(metres, units);
-  return `${formatNumber(value, locale)} ${DISTANCE_UNIT_SYMBOL[unit]}`;
+  return writeDistanceReading(catalogue, value, unit);
+}
+
+/**
+ * A distance figure in a known unit, written with the short symbol as
+ * {@link formatDistance} does. For a caller that has already chosen the unit,
+ * such as the scale bar.
+ */
+export function writeDistanceReading(
+  catalogue: MessageCatalogue,
+  value: number,
+  unit: DistanceUnit,
+): string {
+  return writeReading(catalogue, value, DISTANCE_SYMBOL_KEY[unit]);
 }
 
 /**
  * Formats an area with a short unit, for example "850 m²", "1.25 ha",
- * "2.5 km²", "1,076 ft²", "1 ac" or "1.93 mi²". The number is grouped and its
- * digits chosen for `locale` (`formatLocale(catalogue)`).
+ * "2.5 km²", "1,076 ft²", "1 ac" or "1.93 mi²", as `catalogue` writes it (see
+ * {@link formatDistance}).
  */
 export function formatArea(
   squareMetres: number,
   units: UnitSystem,
-  locale: string,
+  catalogue: MessageCatalogue,
 ): string {
   const { value, unit } = readArea(squareMetres, units);
-  return `${formatNumber(value, locale)} ${AREA_UNIT_SYMBOL[unit]}`;
+  return writeReading(catalogue, value, AREA_SYMBOL_KEY[unit]);
 }
 
 /** A distance in a given unit as words, "1.25 kilometres": the unit's plural key with the count. */

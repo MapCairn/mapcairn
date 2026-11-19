@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatLocale } from "../format/format";
 import { SUPPORTED_WKT_SRID, type WktAxisOrder } from "../geometry/wkt";
 import {
   appendMessages,
@@ -76,21 +75,20 @@ export function formatShapeMeasure(
   messages: MessageCatalogue,
 ): string {
   const { areaMetres, lengthMetres } = measureShape(shape);
-  const locale = formatLocale(messages);
   if (shape.kind === "circle") {
     return shape.radiusMetres === undefined || areaMetres === null
       ? ""
       : messages.t("draw.measure.radiusAndArea", {
-          radius: formatDistance(shape.radiusMetres, units, locale),
-          area: formatArea(areaMetres, units, locale),
+          radius: formatDistance(shape.radiusMetres, units, messages),
+          area: formatArea(areaMetres, units, messages),
         });
   }
   const parts: string[] = [];
   if (areaMetres !== null) {
-    parts.push(formatArea(areaMetres, units, locale));
+    parts.push(formatArea(areaMetres, units, messages));
   }
   if (lengthMetres !== null) {
-    parts.push(formatDistance(lengthMetres, units, locale));
+    parts.push(formatDistance(lengthMetres, units, messages));
   }
   const [first, second] = parts;
   if (first === undefined || second === undefined) {

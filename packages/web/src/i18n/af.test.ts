@@ -2,8 +2,12 @@
 // Copyright MapCairn contributors
 import {
   checkMessageCatalogue,
+  coordinateWordsFor,
+  createMessageCatalogue,
   EN_GB_CATALOGUE,
+  hemispheresFor,
   type MessageKey,
+  parseCoordinates,
 } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
 import { AF_CATALOGUE } from "./af";
@@ -18,6 +22,14 @@ const SAME_AS_ENGLISH: Partial<Record<MessageKey, string>> = {
   "format.hemisphereNorth": "The letter N is the same in Afrikaans.",
   "format.hemisphereSouth": "The letter S is the same in Afrikaans.",
   "format.hemisphereWest": "The letter W is the same in Afrikaans.",
+  "units.symbol.metre": "The symbol m is the same in Afrikaans.",
+  "units.symbol.kilometre": "The symbol km is the same in Afrikaans.",
+  "units.symbol.foot": "The symbol ft is the same in Afrikaans.",
+  "units.symbol.squareMetre": "The symbol m² is the same in Afrikaans.",
+  "units.symbol.hectare": "The symbol ha is the same in Afrikaans.",
+  "units.symbol.squareKilometre": "The symbol km² is the same in Afrikaans.",
+  "units.symbol.squareFoot": "The symbol ft² is the same in Afrikaans.",
+  "units.reading": "Only placeholders and a space.",
   "format.day": "Only a placeholder.",
   "format.utcTime": "A time and the UTC abbreviation, which stays as written.",
   "announce.layerStatus": "Only placeholders and a colon.",
@@ -129,6 +141,30 @@ describe("the Afrikaans catalogue", () => {
         !AF_CATALOGUE[key].includes("UTC"),
     );
     expect(dropped).toEqual([]);
+  });
+
+  it("writes the unit symbols short, with the figure first and a space between", () => {
+    expect(AF_CATALOGUE["units.reading"]).toBe("{number} {symbol}");
+    expect([
+      AF_CATALOGUE["units.symbol.mile"],
+      AF_CATALOGUE["units.symbol.acre"],
+      AF_CATALOGUE["units.symbol.squareMile"],
+    ]).toEqual(["myl", "akker", "myl²"]);
+  });
+
+  it("reads the Afrikaans words for the directions and the degree, minute and second", () => {
+    const words = coordinateWordsFor(
+      createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE),
+    );
+    expect(
+      parseCoordinates(
+        "26 graad 12 minuut 14.8 sekonde suid 28 grade 2 minute 50.3 sekondes oos",
+        hemispheresFor(
+          createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE),
+        ),
+        words,
+      ),
+    ).toEqual({ lat: -26.2041111, lng: 28.0473056 });
   });
 
   it("writes east as O, for oos, and keeps N, S and W", () => {

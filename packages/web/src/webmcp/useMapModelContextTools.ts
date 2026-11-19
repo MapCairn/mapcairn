@@ -7,7 +7,6 @@ import {
   EN_GB_CATALOGUE,
   formatArea,
   formatDistance,
-  formatLocale,
   type LatLng,
   measureLineDistance,
   measurePolygonArea,
@@ -77,12 +76,12 @@ function describeTotal(
     const kilometres = measureLineDistance(positions);
     return kilometres === null
       ? null
-      : formatDistance(kilometres * 1000, units, formatLocale(TOOL_MESSAGES));
+      : formatDistance(kilometres * 1000, units, TOOL_MESSAGES);
   }
   const squareMetres = measurePolygonArea(positions);
   return squareMetres === null
     ? null
-    : formatArea(squareMetres, units, formatLocale(TOOL_MESSAGES));
+    : formatArea(squareMetres, units, TOOL_MESSAGES);
 }
 
 /**

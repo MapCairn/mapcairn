@@ -39,6 +39,24 @@ describe("coordinateSearchResult", () => {
     ).toBeNull();
   });
 
+  it("reads the words of the catalogue's language", () => {
+    const afrikaans = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "format.wordSouth": "suid",
+        "format.wordEast": "oos",
+        "format.wordDegree": "graad grade",
+      },
+    });
+    expect(
+      coordinateSearchResult("26.2041 grade suid, 28.0473 graad oos", afrikaans)
+        ?.centre,
+    ).toEqual({ lat: -26.2041, lng: 28.0473 });
+    expect(
+      coordinateSearchResult("26.2041 suid, 28.0473 oos", messages),
+    ).toBeNull();
+  });
+
   it("has no bounds, so the map centres on the point", () => {
     expect(coordinateSearchResult("1.5 2.5", messages)).not.toHaveProperty(
       "bounds",

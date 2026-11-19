@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatNumber } from "../format/format";
 import { message } from "../messages/formatMessage";
-import type { Message } from "../ports/messages";
+import type { Message, MessageCatalogue } from "../ports/messages";
 import type { UnitSystem } from "../ports/settings";
 import {
   feetToMetres,
@@ -13,9 +12,9 @@ import {
   milesToMetres,
 } from "../units/conversions";
 import {
-  DISTANCE_UNIT_SYMBOL,
   type DistanceUnit,
   describeDistanceReading,
+  writeDistanceReading,
 } from "../units/measurement";
 
 /** What the scale bar needs to know. */
@@ -25,8 +24,8 @@ export interface ScaleBarInput {
   /** The widest the bar may be, in CSS pixels. */
   readonly maxWidthPx: number;
   readonly units: UnitSystem;
-  /** The locale the visible figure is written in: the message catalogue's `formatLocale`. */
-  readonly locale: string;
+  /** The catalogue the visible label is written with: its digits, symbols and order. */
+  readonly messages: MessageCatalogue;
 }
 
 /** A scale bar ready to draw and to read aloud. */
@@ -74,13 +73,13 @@ function buildScaleBar(
   value: number,
   unit: DistanceUnit,
   widthPx: number,
-  locale: string,
+  messages: MessageCatalogue,
 ): ScaleBar {
   return {
     widthPx,
     value,
     unit,
-    label: `${formatNumber(value, locale)} ${DISTANCE_UNIT_SYMBOL[unit]}`,
+    label: writeDistanceReading(messages, value, unit),
     accessibleLabel: message("scale.label", {
       distance: describeDistanceReading(value, unit),
     }),
@@ -96,10 +95,10 @@ function buildScaleBar(
  * width) it returns a zero-width bar instead of throwing.
  */
 export function computeScaleBar(input: ScaleBarInput): ScaleBar {
-  const { metresPerPixel, maxWidthPx, units, locale } = input;
+  const { metresPerPixel, maxWidthPx, units, messages } = input;
   const maxMetres = metresPerPixel * maxWidthPx;
   if (!Number.isFinite(maxMetres) || maxMetres <= 0) {
-    return buildScaleBar(0, units === "metric" ? "m" : "ft", 0, locale);
+    return buildScaleBar(0, units === "metric" ? "m" : "ft", 0, messages);
   }
 
   let unit: DistanceUnit;
@@ -116,5 +115,5 @@ export function computeScaleBar(input: ScaleBarInput): ScaleBar {
 
   const value = niceStep(maxInUnit);
   const widthPx = Math.min(maxWidthPx, toMetres(value, unit) / metresPerPixel);
-  return buildScaleBar(value, unit, widthPx, locale);
+  return buildScaleBar(value, unit, widthPx, messages);
 }

@@ -4,7 +4,6 @@ import {
   announceMeasureTotal,
   formatArea,
   formatDistance,
-  formatLocale,
   type LatLng,
   measureLineDistance,
   measurePolygonArea,
@@ -60,7 +59,7 @@ export interface UseMeasure {
 export function useMeasure(units: UnitSystem): UseMeasure {
   const announce = useAnnounce();
   const announceRef = useLatestRef(announce);
-  const locale = formatLocale(useMessages());
+  const messages = useMessages();
   const [mode, setModeState] = useState<MeasureMode>("distance");
   const [points, setPoints] = useState<readonly LatLng[]>([]);
 
@@ -76,8 +75,8 @@ export function useMeasure(units: UnitSystem): UseMeasure {
 
   const readout =
     mode === "distance"
-      ? formatDistance(total ?? 0, units, locale)
-      : formatArea(total ?? 0, units, locale);
+      ? formatDistance(total ?? 0, units, messages)
+      : formatArea(total ?? 0, units, messages);
 
   useEffect(() => {
     if (total === null) {

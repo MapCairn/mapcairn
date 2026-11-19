@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatDistance, formatNumber } from "@mapcairn/core";
+import {
+  createMessageCatalogue,
+  EN_GB_CATALOGUE,
+  formatDistance,
+  formatNumber,
+} from "@mapcairn/core";
 import { STONES } from "../app/cairnStones";
 import { CONTOUR_VIEW_BOX, SUMMIT } from "./contours";
 
@@ -45,6 +50,13 @@ export const VIEW_BOX = {
 
 /** The language the page's figures are written in. */
 export const LANGUAGE = "en-GB";
+
+/** The catalogue that writes the page's measured figures, in {@link LANGUAGE}. */
+const FIGURE_MESSAGES = createMessageCatalogue(
+  LANGUAGE,
+  EN_GB_CATALOGUE,
+  EN_GB_CATALOGUE,
+);
 
 /** The size of the art's labels, in view box units (the type scale's small step at the sheet's own scale). */
 export const LABEL_SIZE = 13;
@@ -185,7 +197,7 @@ const LABEL_MIDDLE_ABOVE_BASELINE = LABEL_SIZE * 0.375;
  * it by {@link LABEL_CLEARANCE}.
  */
 export const MEASURE_LABEL = (() => {
-  const text = formatDistance(MEASURE_METRES, "metric", LANGUAGE);
+  const text = formatDistance(MEASURE_METRES, "metric", FIGURE_MESSAGES);
   const dx = (MEASURE.to.x - MEASURE.from.x) / MEASURE_UNITS;
   const dy = (MEASURE.to.y - MEASURE.from.y) / MEASURE_UNITS;
   // One of the two unit normals points down the sheet; the label goes that way.
@@ -270,7 +282,7 @@ export const SCALE_BAR = (() => {
       { x: origin.x, text: "0" },
       {
         x: origin.x + UNITS_PER_KM,
-        text: formatDistance(METRES_PER_KM, "metric", LANGUAGE),
+        text: formatDistance(METRES_PER_KM, "metric", FIGURE_MESSAGES),
       },
     ],
     labelY: origin.y - 6,
