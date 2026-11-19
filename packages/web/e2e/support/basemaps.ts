@@ -28,15 +28,13 @@ export const DEFAULT_VECTOR_BASEMAP_NAME = "Bright";
 export const DEFAULT_VECTOR_BASEMAP_BACKGROUND = "rgb(248, 244, 240)";
 
 /**
- * Liberty, the default before Bright. The SDK defines it and the site does not
- * offer it, so a saved or linked "liberty" opens on the default. Its style
- * lists a shaded-relief layer to leave out in Save data mode, which no basemap
- * the site offers does, so the Save data specs reach it through a host that
- * offers the SDK's whole list (`scriptBasemaps`).
+ * Liberty, the default before Bright. Its style lists a shaded-relief layer to
+ * leave out in Save data mode. The Save data specs replace its style with a
+ * small one that holds such a layer (`save-data.spec.ts`).
  */
 export const LIBERTY_BASEMAP_ID = "liberty";
 
-/** Its name in the picker of a host that offers it. */
+/** Its name in the picker. */
 export const LIBERTY_BASEMAP_NAME = "Liberty";
 
 /** Another light vector basemap, for choosing one explicitly. */
@@ -54,8 +52,11 @@ export const REMOVED_MAPTOOLKIT_BASEMAP_ID = "maptoolkit-dark";
 /** VersaTiles Colorful, which the SDK defines and the site does not offer. */
 export const COLORFUL_BASEMAP_ID = "colorful";
 
-/** OpenFreeMap Fiord, which the SDK defines and the site does not offer. */
+/** OpenFreeMap Fiord, a dark basemap. */
 export const FIORD_BASEMAP_ID = "fiord";
+
+/** Its name in the picker. */
+export const FIORD_BASEMAP_NAME = "Fiord";
 
 /**
  * The ids of Topographic and Satellite, which the site no longer offers and
@@ -67,13 +68,11 @@ export const REMOVED_HOST_BASEMAP_IDS: readonly string[] = [
 ];
 
 /**
- * The basemaps the site does not offer: the SDK's that it leaves out, and the
- * two it removed. A saved or linked one opens on the default basemap.
+ * The basemaps the site does not offer: Colorful, which the SDK defines, and
+ * the two it removed. A saved or linked one opens on the default basemap.
  */
 export const UNOFFERED_BASEMAP_IDS: readonly string[] = [
-  LIBERTY_BASEMAP_ID,
   COLORFUL_BASEMAP_ID,
-  FIORD_BASEMAP_ID,
   ...REMOVED_HOST_BASEMAP_IDS,
 ];
 
@@ -83,8 +82,18 @@ export const DARK_BASEMAP_ID = "dark";
 /** Its name in the picker. */
 export const DARK_BASEMAP_NAME = "Dark";
 
+/** The id of every basemap the site's picker offers, in picker order. */
+export const OFFERED_BASEMAP_IDS: readonly string[] = [
+  DEFAULT_VECTOR_BASEMAP_ID,
+  LIBERTY_BASEMAP_ID,
+  OTHER_VECTOR_BASEMAP_ID,
+  RASTER_BASEMAP_ID,
+  FIORD_BASEMAP_ID,
+  DARK_BASEMAP_ID,
+];
+
 /** How many basemaps the site's picker offers. */
-export const BASEMAP_COUNT = 4;
+export const BASEMAP_COUNT = 6;
 
 /** The picker's columns. */
 export const BASEMAP_COLUMNS = 3;
@@ -92,6 +101,6 @@ export const BASEMAP_COLUMNS = 3;
 /** The picker's rows. */
 export const BASEMAP_ROWS = Math.ceil(BASEMAP_COUNT / BASEMAP_COLUMNS);
 
-/** How many tiles sit in the picker's last row: one, with four basemaps. */
+/** How many tiles sit in the picker's last row: a full row of three, with six basemaps. */
 export const BASEMAP_LAST_ROW_COUNT =
   BASEMAP_COUNT - BASEMAP_COLUMNS * (BASEMAP_ROWS - 1);

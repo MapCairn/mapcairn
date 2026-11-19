@@ -1476,9 +1476,9 @@ describe("WebMCP tools", () => {
           inputSchema: { properties: { basemap: { enum: string[] } } };
         }
       ).inputSchema.properties.basemap.enum,
-    ).toEqual(["bright", "positron", "osm", "dark"]);
-    expect(await call("set-map-basemap", { basemap: "fiord" })).toBe(
-      'Unknown basemap "fiord".',
+    ).toEqual(["bright", "liberty", "positron", "osm", "fiord", "dark"]);
+    expect(await call("set-map-basemap", { basemap: "colorful" })).toBe(
+      'Unknown basemap "colorful".',
     );
     for (const removed of ["satellite", "topographic"]) {
       expect(await call("set-map-basemap", { basemap: removed })).toBe(
@@ -1604,21 +1604,22 @@ describe("the reference host's basemaps", () => {
     return createFakeServices({ basemaps: HOST_BASEMAP_CATALOGUE });
   }
 
-  it("shows four basemaps in the picker, Bright first and checked", async () => {
+  it("shows six basemaps in the picker, Bright first and checked", async () => {
     await renderApp(hostServices());
     fireEvent.click(screen.getByRole("button", { name: "Map options" }));
     const names = within(screen.getByRole("radiogroup", { name: "Basemap" }))
       .getAllByRole("radio")
       .map((option) => option.closest("label")?.textContent?.trim());
-    expect(names).toEqual(["Bright", "Positron", "Streets", "Dark"]);
+    expect(names).toEqual([
+      "Bright",
+      "Liberty",
+      "Positron",
+      "Streets",
+      "Fiord",
+      "Dark",
+    ]);
     expect(radio("bright")).toBeChecked();
-    for (const absent of [
-      "liberty",
-      "colorful",
-      "fiord",
-      "satellite",
-      "topographic",
-    ]) {
+    for (const absent of ["colorful", "satellite", "topographic"]) {
       expect(
         screen.queryByTestId(`basemap-option-${absent}`),
         absent,
@@ -1626,14 +1627,8 @@ describe("the reference host's basemaps", () => {
     }
   });
 
-  it("opens a saved or linked Liberty, Colorful, Fiord, Satellite or Topographic on Bright, and leaves the saved value alone", async () => {
-    for (const id of [
-      "liberty",
-      "colorful",
-      "fiord",
-      "satellite",
-      "topographic",
-    ]) {
+  it("opens a saved or linked Colorful, Satellite or Topographic on Bright, and leaves the saved value alone", async () => {
+    for (const id of ["colorful", "satellite", "topographic"]) {
       for (const where of ["saved", "linked"] as const) {
         const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
         const services = hostServices();
@@ -1656,8 +1651,8 @@ describe("the reference host's basemaps", () => {
     }
   });
 
-  it("keeps a saved Streets or Dark", async () => {
-    for (const id of ["osm", "dark"]) {
+  it("keeps a saved Liberty, Streets, Fiord or Dark", async () => {
+    for (const id of ["liberty", "osm", "fiord", "dark"]) {
       const mount = vi.spyOn(FakeMapAdapter.prototype, "mount");
       const services = hostServices();
       services.fakes.settings.set({ basemapId: id });

@@ -400,10 +400,10 @@ export function refreshCatalogue(page: Page): Promise<void> {
 }
 
 /**
- * Makes the app offer these basemaps instead of the site's four, with the
- * first the default. The SDK's list holds three the site does not offer
- * (Liberty, Colorful and Fiord), so a spec that needs one passes the SDK's
- * `BASEMAPS`, which is plain data.
+ * Makes the app offer these basemaps instead of the site's six, with the
+ * first the default. The SDK's list holds one the site does not offer
+ * (Colorful), so a spec that needs it passes the SDK's `BASEMAPS`, which is
+ * plain data.
  *
  * @remarks The catalogue is rebuilt inside the page from the definitions,
  *   because its `get` and `resolve` are functions and cannot cross from the
@@ -418,7 +418,7 @@ export async function scriptBasemaps(
   page: Page,
   basemaps: readonly BasemapDefinition[],
 ): Promise<void> {
-  await page.route(/\/basemaps\/(?:liberty|colorful|fiord)\.jpg$/, (route) =>
+  await page.route(/\/basemaps\/colorful\.jpg$/, (route) =>
     route.fulfill({
       status: 200,
       contentType: "image/png",
