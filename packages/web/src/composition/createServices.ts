@@ -63,13 +63,16 @@ function definedEntries(
  *   Precedence, lowest first: real adapters, the test seam, `options.overrides`.
  */
 export function createServices(options: CreateServicesOptions = {}): Services {
+  // Read from the services in use, so a replaced `preferences` and the
+  // searches that name "offline" can never disagree.
+  const isOnline = () => services.preferences.get().online !== false;
   const real: Services = {
     // The adapter loads MapLibre lazily, so building one costs nothing
     // until it mounts.
     createMapAdapter: () =>
       createMapLibreMapAdapter({ workerCacheKey: WORKER_CACHE_KEY }),
-    search: new NominatimSearchProvider(),
-    suggestions: new PhotonSuggestionProvider(),
+    search: new NominatimSearchProvider({ isOnline }),
+    suggestions: new PhotonSuggestionProvider({ isOnline }),
     location: new BrowserLocationProvider(),
     settings: new LocalStorageSettingsStore(),
     clipboard: new BrowserClipboard(),
@@ -91,5 +94,10 @@ export function createServices(options: CreateServicesOptions = {}): Services {
   };
   const seam =
     import.meta.env.MODE !== "production" ? readTestOverrides() : undefined;
-  return { ...real, ...seam, ...definedEntries(options.overrides) };
+  const services: Services = {
+    ...real,
+    ...seam,
+    ...definedEntries(options.overrides),
+  };
+  return services;
 }

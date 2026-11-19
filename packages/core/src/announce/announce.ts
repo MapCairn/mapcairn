@@ -354,6 +354,11 @@ export function announceLayerEmpty(
   return message("announce.layerStatus", { name, status: emptyText });
 }
 
+/** A layer did not load because the device is offline, and what to do next. */
+export function announceLayerOffline(name: MessagePart): Message {
+  return message("announce.layerOffline", { name });
+}
+
 /** A layer could not load, and what to do next. */
 export function announceLayerError(
   name: MessagePart,
@@ -547,7 +552,11 @@ export function announceTileError(): Message {
   return message("announce.tileError", {});
 }
 
-/** Announced when the browser goes offline. */
+/**
+ * The words for the device going offline. The reference host shows them in
+ * its connection notice, a status message that is its own live region, so it
+ * is not also sent to the announcer; a host without one can announce it.
+ */
 export function announceOffline(): Message {
   return message("announce.offline", {});
 }

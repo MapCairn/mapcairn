@@ -150,6 +150,8 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "{name} kon nie laai nie. Kyk na jou verbinding en probeer weer.",
   "announce.layerInvalid":
     "{name} kon nie laai nie: die verskaffer het iets onverwags gestuur. Probeer later weer.",
+  "announce.layerOffline":
+    "{name} het nie gelaai nie omdat jy aflyn is. Probeer weer wanneer jy weer aanlyn is.",
   "announce.tilesRecovered": "{name}: die beelde wys weer.",
   "announce.imageSaved": "Kaartprent gestoor.",
   "announce.imageFailed":
@@ -418,6 +420,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "app.banner.basemapUnavailable": "{name} is nou nie beskikbaar nie.",
   "app.banner.retry": "Probeer weer",
   "app.banner.tryAgain": "Probeer weer",
+  "app.banner.online": "Jy is weer aanlyn.",
   "app.banner.usePreviousBasemap": "Gebruik vorige basiskaart",
   "app.webgl.title": "MapCairn het WebGL nodig om die kaart te teken.",
   "app.webgl.advice":
@@ -638,6 +641,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
     "Opgedateer {time}. Die eerste {count} word gewys. Zoem in om meer te sien.",
   "layers.status.updatedEmpty": "Opgedateer {time}. {text}",
   "layers.status.loadFailedNetwork": "Kon nie laai nie. Kyk na jou verbinding.",
+  "layers.status.loadFailedOffline": "Kon nie laai nie. Jy is aflyn.",
   "layers.status.loadFailedInvalid":
     "Kon nie laai nie: die verskaffer het iets onverwags gestuur.",
   "layers.identify.hint":

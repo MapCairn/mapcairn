@@ -270,6 +270,58 @@ describe("LayersSection", () => {
     );
   });
 
+  describe("when the device is offline", () => {
+    it("words a failure as being offline", async () => {
+      const { source, services } = setup();
+      services.fakes.preferences.set({ online: false });
+      source.fail("sample-points", "network");
+      toggle("sample-points", "Sample points");
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("layer-status-sample-points"),
+        ).toHaveTextContent("Could not load. You are offline."),
+      );
+      expect(
+        screen.queryByText("Could not load. Check your connection."),
+      ).toBeNull();
+      expect(screen.getByTestId("layer-retry-sample-points")).toBeVisible();
+    });
+
+    it("goes back to the plain wording once the connection returns, because the offline one would no longer be true", async () => {
+      const { source, services } = setup();
+      services.fakes.preferences.set({ online: false });
+      source.fail("sample-points", "network");
+      toggle("sample-points", "Sample points");
+      await screen.findByText("Could not load. You are offline.");
+      act(() => services.fakes.preferences.set({ online: true }));
+      expect(
+        screen.getByText("Could not load. Check your connection."),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the wording for a failure while the device says it is online", async () => {
+      const { source } = setup();
+      source.fail("sample-points", "network");
+      toggle("sample-points", "Sample points");
+      await screen.findByText("Could not load. Check your connection.");
+    });
+
+    it("does not start loads again when the connection flips", async () => {
+      const { source, services } = setup();
+      source.setFeatures("sample-points", [samplePoint("a")]);
+      toggle("sample-points", "Sample points");
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("layer-status-sample-points"),
+        ).toHaveTextContent(/1 shown/),
+      );
+      const requests = source.requests.length;
+      act(() => services.fakes.preferences.set({ online: false }));
+      act(() => services.fakes.preferences.set({ online: true }));
+      expect(source.requests).toHaveLength(requests);
+    });
+  });
+
   it("says when a feed is empty, in the layer's words", async () => {
     setup();
     toggle("sample-alerts", "Sample alerts");

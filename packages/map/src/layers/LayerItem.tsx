@@ -24,6 +24,7 @@ import { useState } from "react";
 import {
   useFormatMessage,
   useMessages,
+  useOnline,
   useResolveText,
   useSaveData,
 } from "../services";
@@ -54,6 +55,24 @@ function timeOfDay(updatedAt: number, locale: string): string {
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`;
+}
+
+/**
+ * The words for a failed load. A failure that happened offline says so only
+ * while the device is still offline: once the connection is back, "you are
+ * offline" would be untrue, so it reads as the plain network failure.
+ */
+function errorText(
+  status: Extract<LayerStatus, { kind: "error" }>,
+  online: boolean,
+  t: MessageCatalogue["t"],
+): string {
+  if (status.error === "invalid") {
+    return t("layers.status.loadFailedInvalid", {});
+  }
+  return status.offline === true && !online
+    ? t("layers.status.loadFailedOffline", {})
+    : t("layers.status.loadFailedNetwork", {});
 }
 
 /** The status line's words for a layer that is on. */
@@ -327,6 +346,7 @@ export function LayerItem({
   const { definition, enabled, status } = layer;
   // Only worth a line for someone who is saving data.
   const saveData = useSaveData();
+  const online = useOnline();
   const messages = useMessages();
   const resolve = useResolveText();
   const emptyText = loadsFeatures(definition)
@@ -391,9 +411,7 @@ export function LayerItem({
             >
               <span className={styles.statusError}>
                 <Icon icon={TriangleAlert} />
-                {status.error === "network"
-                  ? t("layers.status.loadFailedNetwork", {})
-                  : t("layers.status.loadFailedInvalid", {})}
+                {errorText(status, online, t)}
               </span>
               <Button
                 variant="secondary"
