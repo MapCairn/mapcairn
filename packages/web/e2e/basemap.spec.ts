@@ -13,8 +13,11 @@ import {
   DARK_BASEMAP_NAME,
   DEFAULT_VECTOR_BASEMAP_ID,
   DEFAULT_VECTOR_BASEMAP_NAME,
+  FIORD_BASEMAP_ID,
+  FIORD_BASEMAP_NAME,
   LIBERTY_BASEMAP_ID,
   LIBERTY_BASEMAP_NAME,
+  OFFERED_BASEMAP_IDS,
   OTHER_VECTOR_BASEMAP_ID,
   OTHER_VECTOR_BASEMAP_NAME,
   RASTER_BASEMAP_CREDIT,
@@ -146,26 +149,74 @@ test.describe("basemaps", () => {
     });
   }
 
-  test("arrow keys move through the basemaps in one tab stop", async ({
+  test("arrow keys move through the six basemaps in picker order, in one tab stop", async ({
     page,
     mapPage,
     direction,
   }) => {
     await mapPage.goto();
     await mapPage.openMapOptions();
-    await mapPage.basemapPicker
-      .getByRole("radio", { name: DEFAULT_VECTOR_BASEMAP_NAME })
-      .focus();
+    const radios = mapPage.basemapPicker.getByRole("radio");
+    await expect(radios).toHaveCount(BASEMAP_COUNT);
+    await radios.first().focus();
     // A radio group moves along the reading direction, so the key that goes
     // to the next tile points the other way on a right-to-left page.
-    await page.keyboard.press(direction === "rtl" ? "ArrowLeft" : "ArrowRight");
-    const next = mapPage.basemapPicker.getByRole("radio", {
-      name: OTHER_VECTOR_BASEMAP_NAME,
-    });
-    await expect(next).toBeChecked();
-    await expect(next).toBeFocused();
+    const forward = direction === "rtl" ? "ArrowLeft" : "ArrowRight";
+    const backward = direction === "rtl" ? "ArrowRight" : "ArrowLeft";
+    for (let index = 1; index < BASEMAP_COUNT; index += 1) {
+      await page.keyboard.press(forward);
+      const radio = mapPage.basemapPicker
+        .getByTestId(`basemap-option-${OFFERED_BASEMAP_IDS[index]}`)
+        .getByRole("radio");
+      await expect(radio).toBeChecked();
+      await expect(radio).toBeFocused();
+    }
+    // The way back from the last tile reaches the one before it.
+    await page.keyboard.press(backward);
+    await expect(
+      mapPage.basemapPicker
+        .getByTestId(`basemap-option-${OFFERED_BASEMAP_IDS[BASEMAP_COUNT - 2]}`)
+        .getByRole("radio"),
+    ).toBeChecked();
     await page.keyboard.press("Tab");
     await expect(mapPage.dropPinButton).toBeFocused();
+  });
+
+  test("the picker lists the six basemaps in order, and Liberty and Fiord each load their own style and are kept in the link", async ({
+    page,
+    mapPage,
+  }) => {
+    const styles: string[] = [];
+    page.on("request", (request) => {
+      const match = /\/styles\/(\w+)$/.exec(request.url());
+      if (match?.[1]) {
+        styles.push(match[1]);
+      }
+    });
+    await mapPage.goto(START);
+    await mapPage.openMapOptions();
+    const tiles = mapPage.basemapPicker.locator(
+      "[data-testid^='basemap-option-']",
+    );
+    await expect(tiles).toHaveCount(BASEMAP_COUNT);
+    expect(
+      await tiles.evaluateAll((nodes) =>
+        nodes.map((node) =>
+          node.getAttribute("data-testid")?.replace("basemap-option-", ""),
+        ),
+      ),
+    ).toEqual([...OFFERED_BASEMAP_IDS]);
+    for (const [id, name] of [
+      [LIBERTY_BASEMAP_ID, LIBERTY_BASEMAP_NAME],
+      [FIORD_BASEMAP_ID, FIORD_BASEMAP_NAME],
+    ] as const) {
+      await mapPage.chooseBasemap(name);
+      await expect.poll(() => mapPage.hashBasemap()).toBe(id);
+      expect(styles).toContain(id);
+      await expect
+        .poll(() => mapPage.announcements())
+        .toContain(`Basemap changed to ${name}`);
+    }
   });
 
   for (const unoffered of UNOFFERED_BASEMAP_IDS) {
@@ -192,29 +243,30 @@ test.describe("basemaps", () => {
     });
   }
 
-  test("a host that offers the SDK's whole list still opens a saved Liberty on Liberty", async ({
-    page,
-    mapPage,
-  }) => {
-    await scriptBasemaps(page, BASEMAPS);
-    await seedStoredSettings(page, { basemapId: LIBERTY_BASEMAP_ID });
-    const styles: string[] = [];
-    page.on("request", (request) => {
-      const match = /\/styles\/(\w+)$/.exec(request.url());
-      if (match?.[1]) {
-        styles.push(match[1]);
-      }
+  for (const [id, name] of [
+    [LIBERTY_BASEMAP_ID, LIBERTY_BASEMAP_NAME],
+    [FIORD_BASEMAP_ID, FIORD_BASEMAP_NAME],
+  ] as const) {
+    test(`a saved ${name} opens on ${name}`, async ({ page, mapPage }) => {
+      await seedStoredSettings(page, { basemapId: id });
+      const styles: string[] = [];
+      page.on("request", (request) => {
+        const match = /\/styles\/(\w+)$/.exec(request.url());
+        if (match?.[1]) {
+          styles.push(match[1]);
+        }
+      });
+      await mapPage.goto();
+      expect(styles).toEqual([id]);
+      await mapPage.openMapOptions();
+      await expect(mapPage.basemapPicker.getByRole("radio")).toHaveCount(
+        BASEMAP_COUNT,
+      );
+      await expect(
+        mapPage.basemapPicker.getByRole("radio", { name }),
+      ).toBeChecked();
     });
-    await mapPage.goto();
-    expect(styles).toEqual([LIBERTY_BASEMAP_ID]);
-    await mapPage.openMapOptions();
-    await expect(mapPage.basemapPicker.getByRole("radio")).toHaveCount(
-      BASEMAPS.length,
-    );
-    await expect(
-      mapPage.basemapPicker.getByRole("radio", { name: LIBERTY_BASEMAP_NAME }),
-    ).toBeChecked();
-  });
+  }
 
   test("a host that offers the SDK's whole list shows every basemap as a plain tile and requests no preview, because the SDK names none", async ({
     page,

@@ -21,8 +21,15 @@ import {
 const PUBLIC_DIRECTORY = join(__dirname, "../../public");
 
 describe("the reference host's basemaps", () => {
-  it("offers four basemaps, in this order", () => {
-    expect(HOST_BASEMAP_IDS).toEqual(["bright", "positron", "osm", "dark"]);
+  it("offers six basemaps, in this order", () => {
+    expect(HOST_BASEMAP_IDS).toEqual([
+      "bright",
+      "liberty",
+      "positron",
+      "osm",
+      "fiord",
+      "dark",
+    ]);
     expect(
       HOST_BASEMAP_CATALOGUE.basemaps.map((basemap) => basemap.id),
     ).toEqual([...HOST_BASEMAP_IDS]);
@@ -31,7 +38,7 @@ describe("the reference host's basemaps", () => {
       HOST_BASEMAP_CATALOGUE.basemaps.map((basemap) =>
         resolveText(english, basemap.name),
       ),
-    ).toEqual(["Bright", "Positron", "Streets", "Dark"]);
+    ).toEqual(["Bright", "Liberty", "Positron", "Streets", "Fiord", "Dark"]);
   });
 
   it("holds no basemap whose terms bar commercial use, in the host or the SDK", () => {
@@ -50,9 +57,7 @@ describe("the reference host's basemaps", () => {
     for (const id of [
       "satellite",
       "topographic",
-      "liberty",
       "colorful",
-      "fiord",
       "auto",
       "maptoolkit-dark",
       "",
@@ -77,8 +82,8 @@ describe("the reference host's basemaps", () => {
     }
   });
 
-  it("uses the SDK's definitions for Bright, Positron, Streets and Dark, with the host's preview added and nothing else changed", () => {
-    for (const id of ["bright", "positron", "osm", "dark"]) {
+  it("uses the SDK's definitions for all six, with the host's preview added and nothing else changed", () => {
+    for (const id of HOST_BASEMAP_IDS) {
       expect(getBasemap(id)?.thumbnail, id).toBeUndefined();
       expect(HOST_BASEMAP_CATALOGUE.get(id), id).toEqual({
         ...getBasemap(id),
@@ -118,13 +123,8 @@ describe("the reference host's basemaps", () => {
     ).toEqual(["osm", "bright"]);
   });
 
-  it("leaves the SDK's list with seven, so Liberty, Colorful and Fiord stay available to other hosts", () => {
+  it("leaves the SDK's list with seven, so Colorful, which the host does not offer, stays available to other hosts", () => {
     expect(BASEMAPS).toHaveLength(7);
-    for (const id of ["liberty", "colorful", "fiord"]) {
-      expect(
-        BASEMAPS.some((basemap) => basemap.id === id),
-        id,
-      ).toBe(true);
-    }
+    expect(BASEMAPS.some((basemap) => basemap.id === "colorful")).toBe(true);
   });
 });
