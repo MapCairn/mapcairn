@@ -193,7 +193,11 @@ describe("emitted CSS", () => {
         new RegExp(`--type-${step}-tracking[\\w-]*: var\\(`),
       );
     }
-    expect(css.indexOf(rule)).toBeGreaterThan(css.indexOf(":root {"));
+    const lastBaseDeclaration = css.lastIndexOf("--type-", css.indexOf(rule));
+    expect(css.indexOf(rule)).toBeGreaterThan(
+      css.lastIndexOf(":root {", css.indexOf(rule)),
+    );
+    expect(css.indexOf(rule)).toBeGreaterThan(lastBaseDeclaration);
   });
 
   it("leaves the font stack to the host, which sets type.family once", () => {

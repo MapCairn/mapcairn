@@ -448,20 +448,31 @@ export const nonLatinType = {
 
 /**
  * The language subtags that take {@link nonLatinType}, matched with `:lang()`
- * so a region or script subtag (`zh-Hans`) matches too. Latin, Cyrillic and
- * Greek text keep the base scale.
+ * so a region or script subtag (`zh-Hans`) matches too. The list is not
+ * exhaustive; a host adds rules for others. Custom properties inherit, so a
+ * Latin span inside a listed language keeps these values.
  */
 export const nonLatinLanguages = [
   "ar",
   "fa",
   "ur",
   "ps",
+  "sd",
+  "ug",
+  "ckb",
+  "ku",
+  "yi",
+  "ji",
+  "dv",
+  "syr",
   "he",
+  "iw",
   "hi",
   "mr",
   "ne",
   "bn",
   "as",
+  "sa",
   "gu",
   "pa",
   "or",
@@ -475,11 +486,19 @@ export const nonLatinLanguages = [
   "km",
   "my",
   "am",
+  "ti",
+  "bo",
+  "dz",
+  "mn",
+  "jv",
+  "ks",
   "ka",
   "hy",
   "ja",
   "ko",
   "zh",
+  "yue",
+  "cmn",
 ] as const;
 
 /** Font weights. Nothing else is declared in `@font-face`. */

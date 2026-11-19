@@ -7,8 +7,10 @@ import { ProductPage } from "./pages/ProductPage";
 /*
  * The type scale is script-aware: text in a language whose script breaks
  * under tracking or a tight line gets zero tracking and a line height of at
- * least 1.5, while Latin text keeps the base scale. The `lang` attribute goes on the heading itself for the privacy page, because the app owns `<html lang>` there. The product page's h1 is
- * the display step and the privacy page's h1 the title step.
+ * least 1.5, while Latin text keeps the base scale. The product page's h1 is
+ * the display step and the privacy page's h1 the title step. The `lang`
+ * attribute goes on the privacy heading itself, because the app owns
+ * `<html lang>` there.
  */
 
 /** The computed letter spacing in px and line height as a multiple of the font size. */
@@ -83,5 +85,22 @@ test.describe("script-aware type", () => {
     expect(heading.leading).toBeGreaterThanOrEqual(1.5);
     const body = await typeOf(product.main.getByRole("paragraph").first());
     expect(body.leading).toBeLessThan(1.5);
+  });
+
+  test("Latin text inside a non-Latin language keeps the looser values", async ({
+    page,
+  }) => {
+    const product = new ProductPage(page);
+    await product.goto();
+    await product.headline.evaluate((element) => {
+      element.setAttribute("lang", "ar");
+      const span = document.createElement("span");
+      span.setAttribute("lang", "en");
+      span.textContent = "MapCairn";
+      element.append(span);
+    });
+    const nested = await typeOf(product.headline.locator("span[lang=en]"));
+    expect(nested.tracking).toBeGreaterThanOrEqual(0);
+    expect(nested.leading).toBeGreaterThanOrEqual(1.5);
   });
 });
