@@ -44,7 +44,7 @@ Retrieve the guides that match the task, and the broader guide for the area when
 
 The guides use plain HTML, CSS and JavaScript and assume nothing about this project. Where a guide and these rules differ, these win:
 
-- **Tokens only.** Colours, spacing, sizes, durations and stacking come from the tokens in vanilla-extract `.css.ts` files, never from the guide's sample values (`DESIGN.md`, "Tokens"). The harmony scanner fails an arbitrary value.
+- **Tokens only.** Colours, spacing, sizes, durations and stacking come from the tokens in vanilla-extract `.css.ts` files, never from the guide's sample values (`DESIGN.md`, "Tokens"). The harmony scanner fails a colour literal and an off-scale radius, spacing, font size, weight or motion duration.
 - **Logical properties and `[dir="rtl"]`.** Write `marginInlineStart`, not `margin-left`, and do not use `:dir()`: the build rewrites it, so `DESIGN.md` says to use the attribute selector.
 - **Motion.** Only `transform` and `opacity` animate, at the token durations, and `prefers-reduced-motion` turns motion off.
 - **Copy.** Interface text comes from the message catalogue by key, not from a guide's sample strings.
@@ -52,7 +52,7 @@ The guides use plain HTML, CSS and JavaScript and assume nothing about this proj
 - **Server rendering.** Guard `window`, `document` and `HTMLElement` and start browser-only work in an effect. Give each component instance its own ids and anchor names (`useId()`). A newly shipped attribute that React's types do not know takes a typed spread or cast on the element, not a removal of the attribute.
 - **Content Security Policy.** The production policy allows no inline script or style and no script from a CDN, so a guide's inline snippet or hosted polyfill becomes code in the repository.
 - **Fallbacks and browser support.** The guides treat a feature that is Baseline widely available as safe without a fallback, and ask for the guide's fallback for anything newer. The repository states no other support policy, so follow that, keep a fallback small, feature-detected and free of new dependencies, and check the feature in WebKit as well as Chromium, because iPhone WebKit is one of the Playwright projects. A new runtime dependency is a maintainer decision (`AGENTS.md`, "Ask the maintainer first").
-- **Accessibility and boundaries.** Keep the keyboard route, visible focus and single-tap equivalent that `AGENTS.md` asks for, and keep browser APIs behind the layers `ARCHITECTURE.md` describes: `packages/core` imports no browser global, so a platform feature belongs in `packages/map` or behind a port.
+- **Accessibility and boundaries.** Keep the keyboard route, visible focus and single-tap equivalent that `AGENTS.md` asks for, and keep browser APIs behind the layers `ARCHITECTURE.md` describes. `packages/core` imports no browser global, and outside `packages/web/src/adapters` Biome denies the bare `fetch`, `matchMedia`, `localStorage`, `sessionStorage`, `location` and `history` (`DESIGN.md`, "What the lint checks, and where"), so a guide's sample that uses one goes behind a port or an adapter.
 
 ## 5. Check and report
 
