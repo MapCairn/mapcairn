@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   childEnvironment,
+  invocation,
   isAllowedCommand,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/agents/web-guidance.mjs";
@@ -50,6 +51,26 @@ describe("childEnvironment", () => {
     expect(child.PATH).toBe("/bin");
     expect(child.HOME).toBe("/home/someone");
     expect(parent).not.toHaveProperty("DISABLE_TELEMETRY");
+  });
+});
+
+describe("invocation", () => {
+  it("runs the packaged command line with node and the arguments given", () => {
+    const { file, args } = invocation(["search", "popover"], {});
+    expect(file).toBe(process.execPath);
+    const segments = args[0].split(path.sep);
+    expect(segments).toContain("modern-web-guidance");
+    expect(segments.at(-1)).toBe("modern-web.mjs");
+    expect(args.slice(1)).toEqual(["search", "popover"]);
+  });
+
+  it("switches usage reporting and file logging off, whatever the parent sets", () => {
+    const { env } = invocation(["list"], {
+      DISABLE_TELEMETRY: "0",
+      ENABLE_FILE_LOGGING: "true",
+    });
+    expect(env.DISABLE_TELEMETRY).toBe("1");
+    expect(env.ENABLE_FILE_LOGGING).toBe("false");
   });
 });
 

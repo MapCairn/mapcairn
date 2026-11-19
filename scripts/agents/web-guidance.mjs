@@ -40,13 +40,18 @@ export function isAllowedCommand(command) {
 
 /**
  * The environment for the packaged command line: the given one with usage
- * reporting switched off. The input is not changed.
+ * reporting and the package's optional log file (it appends search results to
+ * a file in the current folder) switched off. The input is not changed.
  *
  * @param {Record<string, string | undefined>} environment
  * @returns {Record<string, string | undefined>}
  */
 export function childEnvironment(environment) {
-  return { ...environment, DISABLE_TELEMETRY: "1" };
+  return {
+    ...environment,
+    DISABLE_TELEMETRY: "1",
+    ENABLE_FILE_LOGGING: "false",
+  };
 }
 
 /** The path of the packaged command line inside the installed dependency. */
@@ -55,6 +60,22 @@ function binaryPath() {
   const manifest = load.resolve(`${PACKAGE}/package.json`);
   const { bin } = load(manifest);
   return path.resolve(path.dirname(manifest), bin[PACKAGE]);
+}
+
+/**
+ * What to run for these arguments: node, the packaged command line first and
+ * then the arguments, and the environment with usage reporting off.
+ *
+ * @param {string[]} args
+ * @param {Record<string, string | undefined>} environment
+ * @returns {{ file: string, args: string[], env: Record<string, string | undefined> }}
+ */
+export function invocation(args, environment) {
+  return {
+    file: process.execPath,
+    args: [binaryPath(), ...args],
+    env: childEnvironment(environment),
+  };
 }
 
 /** Runs the command in the arguments and sets the exit code. */
@@ -67,9 +88,10 @@ function main() {
     process.exitCode = REFUSED_EXIT_CODE;
     return;
   }
-  const result = spawnSync(process.execPath, [binaryPath(), ...args], {
+  const run = invocation(args, process.env);
+  const result = spawnSync(run.file, run.args, {
     stdio: "inherit",
-    env: childEnvironment(process.env),
+    env: run.env,
   });
   process.exitCode = result.status ?? 1;
 }
