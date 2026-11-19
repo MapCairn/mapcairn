@@ -14,8 +14,8 @@ import {
 import {
   type DistanceUnit,
   describeDistanceReading,
-  writeDistanceReading,
 } from "../units/measurement";
+import { writeDistanceReading } from "../units/reading";
 
 /** What the scale bar needs to know. */
 export interface ScaleBarInput {

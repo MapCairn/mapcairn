@@ -423,7 +423,7 @@ describe("parseCoordinates with a language's words", () => {
     ).toEqual(JOHANNESBURG);
   });
 
-  it("gives a word two meanings to the first listed value, then the English one", () => {
+  it("takes the last listed meaning when a word is given two, and keeps the English one over both", () => {
     const twice = { ...WORDS, east: "oos wes", west: "wes" };
     expect(
       parseCoordinates("26.2041 suid, 28.0473 wes", HEMISPHERES, twice),
@@ -458,6 +458,43 @@ describe("parseCoordinates with a language's words", () => {
       parseCoordinates("26.2041 S, 28.0473 E", HEMISPHERES, hostile),
     ).toEqual(JOHANNESBURG);
     expect(({} as Record<string, unknown>).north).toBeUndefined();
+  });
+
+  it("reads the exact Afrikaans example from the guide", () => {
+    expect(
+      parseCoordinates(
+        "26.2041 grade suid, 28.0473 graad oos",
+        HEMISPHERES,
+        WORDS,
+      ),
+    ).toEqual({ lat: -26.2041, lng: 28.0473 });
+  });
+
+  it("matches a word however its accents are written", () => {
+    const composed = { ...WORDS, east: "oós", south: "súid" };
+    const decomposed = { ...WORDS, east: "oo\u0301s", south: "su\u0301id" };
+    for (const words of [composed, decomposed]) {
+      expect(
+        parseCoordinates(
+          "26.2041 su\u0301id, 28.0473 oo\u0301s",
+          HEMISPHERES,
+          words,
+        ),
+      ).toEqual(JOHANNESBURG);
+      expect(
+        parseCoordinates(
+          "26.2041 s\u00fAid, 28.0473 o\u00f3s",
+          HEMISPHERES,
+          words,
+        ),
+      ).toEqual(JOHANNESBURG);
+    }
+  });
+
+  it("does not read a stray combining mark as part of a number or sign", () => {
+    expect(
+      parseCoordinates("26.2041\u0301 S, 28.0473 E", HEMISPHERES, WORDS),
+    ).toBeNull();
   });
 
   it("stays in proportion to a long text of the language's words", () => {

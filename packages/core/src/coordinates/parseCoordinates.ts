@@ -72,13 +72,17 @@ type Words = ReadonlyMap<string, WordToken>;
 /** The English words as a map, so a word such as "constructor" finds nothing. */
 const ENGLISH_WORDS: Words = new Map(Object.entries(WORDS));
 
+/** A word as the lookup holds it: composed (NFC) and in lower case. */
+function wordKey(word: string): string {
+  return word.normalize("NFC").toLowerCase();
+}
+
 /** Each word in `value` (separated by white space), lowercased, with `token`. */
 function entriesFor(
   value: string,
   token: WordToken,
 ): readonly (readonly [string, WordToken])[] {
-  return value
-    .toLowerCase()
+  return wordKey(value)
     .split(/\s+/)
     .filter((word) => word !== "")
     .map((word) => [word, token]);
@@ -138,6 +142,11 @@ function isDigit(char: string | undefined): boolean {
 
 function isLetter(char: string | undefined): boolean {
   return char !== undefined && /^\p{L}$/u.test(char);
+}
+
+/** A letter or a combining mark, so a word written with a separate accent stays whole. */
+function isWordCharacter(char: string | undefined): boolean {
+  return char !== undefined && /^[\p{L}\p{M}]$/u.test(char);
 }
 
 /** Where a run of characters that satisfy `test` starting at `from` ends. */
@@ -236,8 +245,8 @@ function readCountedNumber(text: string, index: number): Read | null {
 }
 
 function readWord(text: string, index: number, words: Words): Read | null {
-  const end = runEnd(text, index, isLetter);
-  const token = words.get(text.slice(index, end).toLowerCase());
+  const end = runEnd(text, index, isWordCharacter);
+  const token = words.get(wordKey(text.slice(index, end)));
   return token === undefined ? null : { token, end };
 }
 

@@ -13,6 +13,7 @@ import {
   squareMetresToSquareKilometres,
   squareMetresToSquareMiles,
 } from "./conversions";
+import { AREA_SYMBOL_KEY, writeDistanceReading, writeReading } from "./reading";
 
 /** The units a distance can be shown in. */
 export type DistanceUnit = "m" | "km" | "ft" | "mi";
@@ -26,14 +27,6 @@ export interface MeasurementReading<Unit extends string> {
   readonly unit: Unit;
 }
 
-/** The message key that holds the short symbol of a distance unit. */
-const DISTANCE_SYMBOL_KEY = {
-  m: "units.symbol.metre",
-  km: "units.symbol.kilometre",
-  ft: "units.symbol.foot",
-  mi: "units.symbol.mile",
-} as const satisfies Readonly<Record<DistanceUnit, MessageKey>>;
-
 /** The message key that names a distance unit in words, with the count it takes. */
 const DISTANCE_UNIT_KEY = {
   m: "units.metre",
@@ -41,16 +34,6 @@ const DISTANCE_UNIT_KEY = {
   ft: "units.foot",
   mi: "units.mile",
 } as const satisfies Readonly<Record<DistanceUnit, MessageKey>>;
-
-/** The message key that holds the short symbol of an area unit. */
-const AREA_SYMBOL_KEY = {
-  m2: "units.symbol.squareMetre",
-  ha: "units.symbol.hectare",
-  km2: "units.symbol.squareKilometre",
-  ft2: "units.symbol.squareFoot",
-  ac: "units.symbol.acre",
-  mi2: "units.symbol.squareMile",
-} as const satisfies Readonly<Record<AreaUnit, MessageKey>>;
 
 const AREA_UNIT_KEY = {
   m2: "units.squareMetre",
@@ -143,22 +126,6 @@ export function readArea(
 }
 
 /**
- * A figure and a unit symbol written as `catalogue` writes a reading: the
- * `units.reading` pattern around the figure (grouped, with the digits of the
- * catalogue's language) and the symbol under `symbolKey`.
- */
-function writeReading(
-  catalogue: MessageCatalogue,
-  value: number,
-  symbolKey: MessageKey,
-): string {
-  return catalogue.t("units.reading", {
-    number: value,
-    symbol: catalogue.t(symbolKey, {}),
-  });
-}
-
-/**
  * Formats a distance with a short unit, for example "850 m", "1.25 km",
  * "328 ft" or "1.25 mi", as `catalogue` writes it: its figure format, its
  * `units.symbol.*` symbols and its `units.reading` order and spacing.
@@ -170,19 +137,6 @@ export function formatDistance(
 ): string {
   const { value, unit } = readDistance(metres, units);
   return writeDistanceReading(catalogue, value, unit);
-}
-
-/**
- * A distance figure in a known unit, written with the short symbol as
- * {@link formatDistance} does. For a caller that has already chosen the unit,
- * such as the scale bar.
- */
-export function writeDistanceReading(
-  catalogue: MessageCatalogue,
-  value: number,
-  unit: DistanceUnit,
-): string {
-  return writeReading(catalogue, value, DISTANCE_SYMBOL_KEY[unit]);
 }
 
 /**
