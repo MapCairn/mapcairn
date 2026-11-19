@@ -71,15 +71,22 @@ describe("DataLayerStore", () => {
     expect([...engine.sources.keys()]).toEqual(["mapcairn:area"]);
   });
 
-  it("never tells the host of a tile layer being set, as before the move, nor of removing one it never held", () => {
+  it("tells the host of a tile layer being set or drawn again with new tiles, but not of an opacity change or of removing one it never held", () => {
     const { engine, store, changed } = setup();
     store.setTiles("imagery", OVERLAY);
+    expect(changed).toHaveBeenCalledTimes(1);
     store.setTiles("imagery", { ...OVERLAY, opacity: 0.5 });
-    store.remove("missing");
-    expect(changed).not.toHaveBeenCalled();
+    expect(changed).toHaveBeenCalledTimes(1);
     expect(engine.getLayer("mapcairn:imagery:tiles")?.paint).toMatchObject({
       "raster-opacity": 0.5,
     });
+    store.setTiles("imagery", {
+      ...OVERLAY,
+      tiles: "https://t.test/b/{z}/{x}/{y}.png",
+    });
+    expect(changed).toHaveBeenCalledTimes(2);
+    store.remove("missing");
+    expect(changed).toHaveBeenCalledTimes(2);
   });
 
   it("registers a drawn tile source with the report it carried, and releases it on erase", () => {
@@ -95,7 +102,7 @@ describe("DataLayerStore", () => {
     );
     store.remove("imagery");
     expect(release).toHaveBeenCalledWith("mapcairn:imagery");
-    expect(changed).toHaveBeenCalledTimes(1);
+    expect(changed).toHaveBeenCalledTimes(2);
   });
 
   it("asks for the carried report before it releases the source it draws over", () => {
