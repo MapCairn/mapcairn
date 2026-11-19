@@ -7,7 +7,12 @@ import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import react from "@vitejs/plugin-react";
 import { FontaineTransform } from "fontaine";
 import { tsImport } from "tsx/esm/api";
-import { defineConfig, type Plugin } from "vite";
+import {
+  defaultClientConditions,
+  defaultServerConditions,
+  defineConfig,
+  type Plugin,
+} from "vite";
 import { OFFERED_LANGUAGE_OPTIONS } from "./src/i18n/offeredLanguageOptions.ts";
 
 /**
@@ -60,12 +65,21 @@ export default defineConfig(async ({ mode, command, isPreview }) => {
 
   return {
     cacheDir: "node_modules/.vite",
-    // Wrangler uploaded no source maps for this Worker, and `cf deploy`
-    // uploads every map in the Build Output, so the Worker's environment makes
-    // none. The client build keeps its own setting.
-    ...(useCloudflare
-      ? { environments: { ssr: { build: { sourcemap: false } } } }
-      : {}),
+    // Inside Vite the SDK packages resolve to their source, for hot reload and
+    // so tests run what is written. A set list replaces Vite's defaults, so
+    // they are spread back in.
+    resolve: { conditions: ["@mapcairn/source", ...defaultClientConditions] },
+    environments: {
+      ssr: {
+        resolve: {
+          conditions: ["@mapcairn/source", ...defaultServerConditions],
+        },
+        // Wrangler uploaded no source maps for this Worker, and `cf deploy`
+        // uploads every map in the Build Output, so the Worker's environment
+        // makes none. The client build keeps its own setting.
+        ...(useCloudflare ? { build: { sourcemap: false } } : {}),
+      },
+    },
     define: {
       __MAPCAIRN_HOST_LANGUAGE_DIRECTIONS__: JSON.stringify(
         OFFERED_LANGUAGE_OPTIONS.map(({ tag }) =>

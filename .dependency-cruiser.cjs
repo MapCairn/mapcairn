@@ -229,9 +229,17 @@ module.exports = {
     // maplibre-gl publishes only an `import` condition in its exports map,
     // so without it the bare specifier would not resolve and the
     // resolved-path rules (core purity, engine imports) could not see it.
+    // `@mapcairn/source` makes the SDK packages resolve to their source, which
+    // the layer rules and `SDK_ENTRY_POINTS` name, not to the built `dist`.
     enhancedResolveOptions: {
       exportsFields: ["exports"],
-      conditionNames: ["import", "require", "node", "default"],
+      conditionNames: [
+        "@mapcairn/source",
+        "import",
+        "require",
+        "node",
+        "default",
+      ],
     },
   },
 };
