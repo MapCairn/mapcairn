@@ -479,3 +479,56 @@ for (const colorScheme of ["light", "dark"] as const) {
     });
   }
 }
+
+/*
+ * A placeholder that does not fit its field ends in an ellipsis and loses its
+ * meaning, and a longer translation makes that worse. The place search is
+ * measured with its real placeholder and with one 40 percent longer,
+ * as a translation often is. The field's accessible name is the full text
+ * whatever the placeholder shows.
+ */
+const EXPANSION_FACTOR = 1.4;
+
+/** By how many pixels `text`, drawn as the field draws its placeholder, overflows the field. */
+function placeholderOverflow(field: Locator, text: string): Promise<number> {
+  return field.evaluate((element, placeholder) => {
+    const input = element as HTMLInputElement;
+    input.placeholder = placeholder;
+    const style = getComputedStyle(input);
+    const context = document.createElement("canvas").getContext("2d");
+    if (!context) {
+      throw new Error("No canvas context to measure the placeholder.");
+    }
+    context.font = style.font;
+    const room =
+      input.clientWidth -
+      Number.parseFloat(style.paddingInlineStart) -
+      Number.parseFloat(style.paddingInlineEnd);
+    return context.measureText(placeholder).width - room;
+  }, text);
+}
+
+for (const viewport of [
+  { width: 320, height: 568 },
+  { width: 844, height: 390 },
+  { width: 1280, height: 720 },
+] as const) {
+  test(
+    `the place search's placeholder fits at ${viewport.width}x${viewport.height}`,
+    viewportDetails(viewport),
+    async ({ page, mapPage, messages }) => {
+      await mockRoutingService(page);
+      await page.setViewportSize(viewport);
+      await mapPage.goto(START);
+      await openDirections(mapPage);
+      const field = page.getByTestId("directions-search-input");
+      await field.scrollIntoViewIfNeeded();
+      const text = messages["tools.directions.searchPlaceholder"];
+      const longer = text
+        .repeat(Math.ceil(EXPANSION_FACTOR))
+        .slice(0, Math.ceil(text.length * EXPANSION_FACTOR));
+      expect(await placeholderOverflow(field, text)).toBeLessThanOrEqual(1);
+      expect(await placeholderOverflow(field, longer)).toBeLessThanOrEqual(1);
+    },
+  );
+}
