@@ -156,7 +156,11 @@ describe("useDataLayers turnOff", () => {
     act(() => view.result.current.turnOff([FEED, IMAGERY, "no-such-layer"]));
     expect(enabledIds(view)).toEqual([]);
     expect(said()).toEqual(["1 layer turned off. Undo available"]);
-    expect(view.result.current.turnedOff).toEqual({ count: 1, group: null });
+    expect(view.result.current.turnedOff).toEqual({
+      count: 1,
+      ids: [IMAGERY],
+      group: null,
+    });
   });
 
   it("does nothing, and offers no Undo, when none of the layers is on", () => {
@@ -265,6 +269,7 @@ describe("useDataLayers turnOff", () => {
     );
     expect(view.result.current.turnedOff).toEqual({
       count: 2,
+      ids: [FEED, ALERTS],
       group: "Samples",
     });
   });
@@ -338,7 +343,11 @@ describe("useDataLayers undoTurnOff", () => {
     await withAllOn(view);
     act(() => view.result.current.turnOff([FEED, ALERTS]));
     act(() => view.result.current.setEnabled(IMAGERY, false));
-    expect(view.result.current.turnedOff).toEqual({ count: 2, group: null });
+    expect(view.result.current.turnedOff).toEqual({
+      count: 2,
+      ids: [FEED, ALERTS],
+      group: null,
+    });
     act(() => view.result.current.undoTurnOff());
     expect(enabledIds(view).sort()).toEqual([ALERTS, FEED].sort());
   });
@@ -348,7 +357,11 @@ describe("useDataLayers undoTurnOff", () => {
     await withAllOn(view);
     act(() => view.result.current.turnOff([FEED, ALERTS, IMAGERY]));
     act(() => view.result.current.setEnabled(ALERTS, true));
-    expect(view.result.current.turnedOff).toEqual({ count: 2, group: null });
+    expect(view.result.current.turnedOff).toEqual({
+      count: 2,
+      ids: [FEED, IMAGERY],
+      group: null,
+    });
     act(() => view.result.current.setEnabled(FEED, true));
     act(() => view.result.current.setEnabled(IMAGERY, true));
     expect(view.result.current.turnedOff).toBeNull();
@@ -406,7 +419,11 @@ describe("useDataLayers undoTurnOff", () => {
     await withAllOn(view);
     act(() => view.result.current.turnOff([FEED]));
     act(() => view.result.current.turnOff([ALERTS, IMAGERY]));
-    expect(view.result.current.turnedOff).toEqual({ count: 2, group: null });
+    expect(view.result.current.turnedOff).toEqual({
+      count: 2,
+      ids: [ALERTS, IMAGERY],
+      group: null,
+    });
     act(() => view.result.current.undoTurnOff());
     expect(enabledIds(view).sort()).toEqual([ALERTS, IMAGERY].sort());
   });

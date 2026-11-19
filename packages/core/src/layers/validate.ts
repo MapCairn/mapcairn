@@ -21,6 +21,7 @@ import {
   checkTemplate,
   checkUrl,
   ID,
+  isDefinitionText,
   isHttpsOrigin,
   isHttpsUrl,
   isObject,
@@ -74,7 +75,7 @@ function checkSegmented(problems: Problems, control: Json, path: string): void {
         "must be lowercase letters, digits, dots, underscores or hyphens",
       );
     }
-    problems.text(option.label, `${optionPath}.label`);
+    problems.definitionText(option.label, `${optionPath}.label`);
   });
   const values = controlValues(control) ?? [];
   problems.unique(values, (index) => `${path}.options[${index}].value`);
@@ -207,7 +208,7 @@ function checkControl(
   if (!isText(control.id) || !ID.test(control.id)) {
     problems.add(`${path}.id`, "must be lowercase letters, digits and hyphens");
   }
-  problems.text(control.label, `${path}.label`);
+  problems.definitionText(control.label, `${path}.label`);
   const check = Object.hasOwn(CONTROL_CHECKS, control.kind as string)
     ? CONTROL_CHECKS[control.kind as string]
     : undefined;
@@ -346,7 +347,7 @@ function checkSize(
     );
   }
   const labels = list(size.labels);
-  if (labels.length !== stops.length || !labels.every(isText)) {
+  if (labels.length !== stops.length || !labels.every(isDefinitionText)) {
     problems.add("style.size.labels", "must label every stop");
   }
   return size.field;
@@ -379,7 +380,7 @@ function checkSteps(
   steps.forEach((step, index) => {
     const path = `style.colour.steps[${index}]`;
     checkColourSlot(problems, step.colour, `${path}.colour`, "ordinal");
-    problems.text(step.label, `${path}.label`);
+    problems.definitionText(step.label, `${path}.label`);
   });
   const ascending = steps.every(
     (step, index) =>
@@ -412,7 +413,7 @@ function checkCategories(
   categories.forEach((category, index) => {
     const path = `style.colour.categories[${index}]`;
     checkColourSlot(problems, category.colour, `${path}.colour`, "categorical");
-    problems.text(category.label, `${path}.label`);
+    problems.definitionText(category.label, `${path}.label`);
     if (
       category.shape !== undefined &&
       !SHAPES.includes(category.shape as string)
@@ -427,7 +428,7 @@ function checkCategories(
     );
   }
   const other = isObject(colour.other) ? colour.other : {};
-  if (!isCategoricalSlot(other.colour) || !isText(other.label)) {
+  if (!isCategoricalSlot(other.colour) || !isDefinitionText(other.label)) {
     problems.add(
       "style.colour.other",
       "must have a label and a categorical colour",
@@ -473,7 +474,7 @@ function checkStyle(
   }
   if (colour.kind === "fixed") {
     checkColourSlot(problems, colour.colour, "style.colour.colour");
-    problems.text(colour.label, "style.colour.label");
+    problems.definitionText(colour.label, "style.colour.label");
   } else if (colour.kind === "steps") {
     checkSteps(problems, colour, context);
   } else if (colour.kind === "category") {
@@ -502,7 +503,7 @@ function checkSort(
   if (!isText(sort.id) || !ID.test(sort.id)) {
     problems.add(`${path}.id`, "must be lowercase letters, digits and hyphens");
   }
-  problems.text(sort.label, `${path}.label`);
+  problems.definitionText(sort.label, `${path}.label`);
   if (!fields.includes(sort.field as string)) {
     problems.add(`${path}.field`, "is not a field");
   }
@@ -558,8 +559,8 @@ function checkDetail(
   }
   checkDecoder(problems, detail.decoder, "detail.decoder", options);
   checkColourSlot(problems, detail.colour, "detail.colour");
-  problems.text(detail.label, "detail.label");
-  problems.text(detail.dataCost, "detail.dataCost");
+  problems.definitionText(detail.label, "detail.label");
+  problems.definitionText(detail.dataCost, "detail.dataCost");
 }
 
 /** Checks a feed or query source, and returns the decoded field names. */
@@ -614,7 +615,7 @@ function checkFeed(
   checkStyle(problems, definition, fields, options);
   checkCard(problems, definition.card, "card", fields, options);
   checkList(problems, definition.list, fields, options);
-  problems.text(definition.emptyText, "emptyText");
+  problems.definitionText(definition.emptyText, "emptyText");
   checkDetail(problems, definition.detail, fields, options);
 }
 
@@ -668,7 +669,7 @@ function checkTiles(
   ) {
     definition.legend.forEach((entry, index) => {
       const item = isObject(entry) ? entry : {};
-      problems.text(item.label, `legend[${index}].label`);
+      problems.definitionText(item.label, `legend[${index}].label`);
       checkColourSlot(problems, item.colour, `legend[${index}].colour`);
     });
   }
@@ -702,7 +703,7 @@ export function validateLayerDefinition(
     );
   }
   for (const key of ["name", "description", "group", "dataCost"]) {
-    problems.text(value[key], key);
+    problems.definitionText(value[key], key);
   }
   if (problems.list(value.attribution, "attribution")) {
     value.attribution.forEach((entry, index) => {
@@ -714,7 +715,7 @@ export function validateLayerDefinition(
     });
   }
   if (value.disclaimer !== undefined) {
-    problems.text(value.disclaimer, "disclaimer");
+    problems.definitionText(value.disclaimer, "disclaimer");
   }
   let controls: Json[] = [];
   if (problems.list(value.controls, "controls", true)) {

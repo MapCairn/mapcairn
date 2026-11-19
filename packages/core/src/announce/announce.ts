@@ -16,7 +16,7 @@ import type {
 } from "../ports/errors";
 import type { LatLng } from "../ports/geometry";
 import type { MapProjection } from "../ports/map";
-import type { Message } from "../ports/messages";
+import type { Message, MessagePart } from "../ports/messages";
 import type { TravelMode } from "../ports/routing";
 import type { UnitSystem } from "../ports/settings";
 import { describeDuration } from "../units/duration";
@@ -54,10 +54,7 @@ const PROJECTION_MESSAGES = {
 } as const satisfies Readonly<Record<MapProjection, Message>>;
 
 /** A feed layer loaded: "Earthquakes: 43 shown on the map." */
-export function announceLayerLoaded(
-  name: string | Message,
-  count: number,
-): Message {
+export function announceLayerLoaded(name: MessagePart, count: number): Message {
   return message("announce.layerLoaded", { name, count });
 }
 
@@ -90,7 +87,7 @@ export interface IdentifyReport {
   /** How many layers could have been asked: on, showing imagery, and covering the tapped place. */
   readonly available: number;
   /** The names of the layers that did not answer: they failed or timed out. */
-  readonly failed: readonly (string | Message)[];
+  readonly failed: readonly MessagePart[];
 }
 
 /** What to say about one tap, and how urgently. */
@@ -139,10 +136,7 @@ export function announceIdentified({
 }
 
 /** A query layer drew only the first of more features than it shows. */
-export function announceLayerCapped(
-  name: string | Message,
-  shown: number,
-): Message {
+export function announceLayerCapped(name: MessagePart, shown: number): Message {
   return message("announce.layerCapped", { name, shown });
 }
 
@@ -180,10 +174,7 @@ export function describeZoomOut(level: number): Message {
 }
 
 /** A layer is too far out to load, in the words of {@link describeZoomIn}. */
-export function announceLayerZoomIn(
-  name: string | Message,
-  level: number,
-): Message {
+export function announceLayerZoomIn(name: MessagePart, level: number): Message {
   return message("announce.layerZoomIn", {
     name,
     level: levelToZoomInTo(level),
@@ -192,7 +183,7 @@ export function announceLayerZoomIn(
 
 /** A layer is too far in to show, in the words of {@link describeZoomOut}. */
 export function announceLayerZoomOut(
-  name: string | Message,
+  name: MessagePart,
   level: number,
 ): Message {
   return message("announce.layerZoomOut", {
@@ -202,7 +193,7 @@ export function announceLayerZoomOut(
 }
 
 /** A tile layer was turned on. */
-export function announceLayerOn(name: string | Message): Message {
+export function announceLayerOn(name: MessagePart): Message {
   return message("announce.layerOn", { name });
 }
 
@@ -219,7 +210,7 @@ export function announceLayersTurnedBackOn(count: number): Message {
 /** What a change to the layer catalogue did, for {@link announceCatalogueChange}. */
 export interface CatalogueChange {
   /** The names of enabled layers the catalogue no longer holds, which were turned off. */
-  readonly turnedOff: readonly (string | Message)[];
+  readonly turnedOff: readonly MessagePart[];
   /** How many layers the link named that the catalogue does not have for this person. */
   readonly linkUnavailable: number;
   /** How many definitions the host supplied that were left out. Zero says nothing. */
@@ -257,9 +248,7 @@ export function describeLayersSkipped(count: number): Message {
   return message("describe.layersSkipped", { count });
 }
 
-function announceLayersUnavailable(
-  names: readonly (string | Message)[],
-): Message {
+function announceLayersUnavailable(names: readonly MessagePart[]): Message {
   const [only] = names;
   return only !== undefined && names.length === 1
     ? message("announce.layerUnavailable", { name: only })
@@ -359,15 +348,15 @@ export function announceSelectionFull(limit: number): Message {
 
 /** A feed layer loaded with nothing in it, in the layer's own words. */
 export function announceLayerEmpty(
-  name: string | Message,
-  emptyText: string | Message,
+  name: MessagePart,
+  emptyText: MessagePart,
 ): Message {
   return message("announce.layerStatus", { name, status: emptyText });
 }
 
 /** A layer could not load, and what to do next. */
 export function announceLayerError(
-  name: string | Message,
+  name: MessagePart,
   kind: "network" | "invalid",
 ): Message {
   return kind === "network"
@@ -388,7 +377,7 @@ export function describeTilesUnavailable(when: Message | null): Message {
 
 /** A tile layer's tiles all failed, in the words of {@link describeTilesUnavailable}. */
 export function announceTilesUnavailable(
-  name: string | Message,
+  name: MessagePart,
   when: Message | null,
 ): Message {
   return message("announce.layerStatus", {
@@ -407,7 +396,7 @@ export function describeTilesSlow(): Message {
 }
 
 /** A tile layer is still waiting for its first tile, in the words of {@link describeTilesSlow}. */
-export function announceTilesSlow(name: string | Message): Message {
+export function announceTilesSlow(name: MessagePart): Message {
   return message("announce.layerStatus", {
     name,
     status: describeTilesSlow(),
@@ -415,7 +404,7 @@ export function announceTilesSlow(name: string | Message): Message {
 }
 
 /** A tile layer that was slow or had found no tiles loaded one, so its status has gone. */
-export function announceTilesRecovered(name: string | Message): Message {
+export function announceTilesRecovered(name: MessagePart): Message {
   return message("announce.tilesRecovered", { name });
 }
 

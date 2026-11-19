@@ -150,6 +150,6 @@ describe("server rendering a catalogue", () => {
     expect(region()).toHaveTextContent("Loading layers");
     await act(async () => resolve(SAMPLE_LAYERS));
     expect(region()).not.toHaveTextContent("Loading layers");
-    expect(region()).toHaveTextContent(SAMPLE_FEED_LAYER.name);
+    expect(region()).toHaveTextContent("Sample points");
   });
 });

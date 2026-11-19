@@ -83,7 +83,26 @@ To see what is left to translate, run `npm run catalogue:check -- <language> <fi
 
 ## Translate definitions
 
-A basemap or layer definition's reader-facing text (a name, a description, a control label, an empty-state text) is a `DefinitionText`: a shipped `MessageKey` or a plain string. Only shipped `MessageKey` values are looked up in the active catalogue, where the definition is shown. Any other string, including a name of your own or a string that looks like a key, is shown as written and is not a catalogue key, so existing definitions keep working. To translate such a field, use a shipped `MessageKey`, or supply the plain text for the language when you build the definition. Attribution, licence names and links are legal text and stay as they are.
+A basemap or layer definition's reader-facing text (a name, a description, a control label, an empty-state text) is a `DefinitionText`: a shipped `MessageKey`, a `HostText` or a plain string. Only shipped `MessageKey` values are looked up in the typed catalogue, where the definition is shown. Any other string, including a name of your own or a string that looks like a key, is shown as written and is not a catalogue key, so existing definitions keep working. To translate a field of your own, write a `HostText`: an object with your own `key` and the source `text`, which is also the fallback.
+
+```ts
+const layer = {
+  // ...
+  name: { key: "host.rivers.name", text: "Rivers" },
+  group: { key: "host.group.water", text: "Water" },
+};
+
+const afrikaans = createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE, {
+  definitionTexts: {
+    "host.rivers.name": "Riviere",
+    "host.group.water": "Water",
+  },
+});
+```
+
+`MessageCatalogue.definitionTexts` holds the translation by key; `createMessageCatalogue` accepts it in its fourth argument, and a catalogue of your own may provide the same optional property. A key with no own entry shows the source text without a warning, and a blank entry shows the source text with one warning. The same text is used for the visible words, the accessible names and the announcements that name the layer. Keys of `definitionTexts` and `layerTemplates` are separate, so a key can have a name and a template. Layers that write their `group` with the same words (a `HostText`, a key or plain text) share one heading. Attribution, licence names and links are legal text and stay as they are.
+
+Moving to this version: `DefinitionText` is wider than before, so code of your own that reads a definition's `name`, `group`, `label` or similar as a string must call `resolveText(catalogue, text)` (`useResolveText()` in a component) instead. A name that reaches an announcement is passed on with `textOrMessage(name)`, and the `announce*` name parameters, like the `{name}` placeholders of a `Message`, take a `MessagePart`: a string, a `Message` or a `HostText`. `MarkerStyle.label` is a `DefinitionText` and `BasemapFailure.name` in the reference host too, and `isMessageKey` accepts any `DefinitionText`. Definitions that use only strings and shipped keys need no change.
 
 ## Translate layer templates
 

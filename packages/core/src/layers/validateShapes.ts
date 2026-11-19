@@ -4,8 +4,8 @@ import { parseTemplate } from "./template";
 import {
   checkColourSlot,
   checkTemplate,
+  isDefinitionText,
   isObject,
-  isText,
   type Json,
   layerTextSource,
   list,
@@ -126,7 +126,7 @@ function checkCategories(
   categories.forEach((category, index) => {
     const path = `style.colour.categories[${index}]`;
     checkColourSlot(problems, category.colour, `${path}.colour`, "categorical");
-    problems.text(category.label, `${path}.label`);
+    problems.definitionText(category.label, `${path}.label`);
     checkMarks(problems, category, path, geometry);
   });
   for (const key of ["value", "colour"]) {
@@ -142,7 +142,7 @@ function checkCategories(
     "style.colour.other.colour",
     "categorical",
   );
-  if (!isText(other.label) || !isObject(colour.other)) {
+  if (!isDefinitionText(other.label) || !isObject(colour.other)) {
     problems.add(
       "style.colour.other",
       "must have a label and a categorical colour",
@@ -166,7 +166,7 @@ function checkSteps(
   steps.forEach((step, index) => {
     const path = `style.colour.steps[${index}]`;
     checkColourSlot(problems, step.colour, `${path}.colour`, "ordinal");
-    problems.text(step.label, `${path}.label`);
+    problems.definitionText(step.label, `${path}.label`);
     checkMarks(problems, step, path, geometry);
   });
   const ascending = steps.every(
@@ -332,7 +332,7 @@ export function checkShapeStyle(
   switch (colour.kind) {
     case "fixed":
       checkColourSlot(problems, colour.colour, "style.colour.colour");
-      problems.text(colour.label, "style.colour.label");
+      problems.definitionText(colour.label, "style.colour.label");
       checkMarks(problems, colour, "style.colour", geometry);
       return;
     case "category":
