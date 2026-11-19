@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { parseColour } from "./contrast";
+import { isInSrgbGamut, parseColour } from "./contrast";
 import {
   type BackdropName,
   type ContrastPair,
@@ -65,7 +65,9 @@ export interface ContrastFinding {
 export type InvalidColourReason =
   | "unknown-role"
   | "unparseable"
-  | "translucent";
+  | "out-of-gamut"
+  | "translucent"
+  | "unreadable";
 
 /** A proposed colour that was not checked, so its pairs are missing from the findings. */
 export interface InvalidColour {
@@ -85,6 +87,14 @@ export interface ThemeContrastCheck {
 }
 
 const themeNames: readonly ThemeName[] = ["light", "dark"];
+
+/**
+ * Reads the own entries of a proposed object. A getter or a proxy trap that
+ * throws makes the whole object unreadable, which is reported, not thrown.
+ */
+function readEntries(proposed: unknown): [string, unknown][] {
+  return isRecord(proposed) ? Object.entries(proposed) : [];
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -120,6 +130,9 @@ function invalidReason(
   }
   try {
     const colour = parseColour(value);
+    if (!isInSrgbGamut(value)) {
+      return "out-of-gamut";
+    }
     return opaqueRoles.has(role) && colour.a < 1 ? "translucent" : null;
   } catch {
     return "unparseable";
@@ -136,10 +149,7 @@ function resolveTheme(theme: ThemeName, proposed: unknown): ResolvedTheme {
   const roles: ColourRoles = { ...themeValues[theme].colour };
   const invalidRoles = new Set<string>();
   const invalid: InvalidColour[] = [];
-  if (!isRecord(proposed)) {
-    return { roles, invalidRoles, invalid };
-  }
-  for (const [role, value] of Object.entries(proposed)) {
+  for (const [role, value] of readEntries(proposed)) {
     if (value === undefined) {
       continue;
     }
@@ -199,16 +209,25 @@ function findingsFor(
 export function checkThemeContrast(
   override: ThemeOverride,
 ): ThemeContrastCheck {
-  const colour = isRecord(override) ? override.colour : undefined;
   const findings: ContrastFinding[] = [];
   const invalid: InvalidColour[] = [];
   for (const theme of themeNames) {
-    const resolved = resolveTheme(
-      theme,
-      isRecord(colour) ? colour[theme] : undefined,
-    );
-    invalid.push(...resolved.invalid);
-    findings.push(...findingsFor(theme, resolved));
+    try {
+      const colour = isRecord(override) ? override.colour : undefined;
+      const resolved = resolveTheme(
+        theme,
+        isRecord(colour) ? colour[theme] : undefined,
+      );
+      invalid.push(...resolved.invalid);
+      findings.push(...findingsFor(theme, resolved));
+    } catch {
+      invalid.push({
+        theme,
+        role: "colour",
+        value: undefined,
+        reason: "unreadable",
+      });
+    }
   }
   return {
     passes: invalid.length === 0 && findings.every((finding) => finding.passes),

@@ -35,7 +35,12 @@ export interface ContrastPair {
   backdrops: readonly BackdropName[];
 }
 
-/** White and black bracket every map; the others are the light basemaps. */
+/**
+ * White and black bracket every map. The light map and the default basemap
+ * are named as well rather than assumed to fall between them: a surface's
+ * tint can make a mid-light backdrop the worst case for a colour that clears
+ * both extremes.
+ */
 const everyBackdrop: readonly BackdropName[] = [
   "white",
   "black",
@@ -102,6 +107,12 @@ export const contrastPairs: readonly ContrastPair[] = [
     backdrops: bareMapBackdrops,
   },
   opaquePair("focusRingInner", "focusRing", "non-text"),
+  // Full pages and text drawn straight on the map. Their backgrounds are not
+  // overridable, so a host's text and accent are held to the defaults.
+  opaquePair("text", "pageBackground", "text"),
+  opaquePair("textMuted", "pageBackground", "text"),
+  opaquePair("accent", "pageBackground", "text"),
+  opaquePair("text", "mapHalo", "text"),
 ];
 
 /**

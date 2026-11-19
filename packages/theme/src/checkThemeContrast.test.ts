@@ -220,4 +220,205 @@ describe("checkThemeContrast", () => {
       checkThemeContrast(override as unknown as ThemeOverride),
     ).not.toThrow();
   });
+
+  it("reads an rgb() percentage correctly, so white text on a light surface fails", () => {
+    const check = checkThemeContrast({
+      colour: { light: { text: "rgb(100% 100% 100%)" } },
+    });
+
+    const textOnSurface = check.findings.filter(
+      (f) =>
+        f.theme === "light" &&
+        f.foreground === "text" &&
+        f.background === "surface" &&
+        f.backdrop === "white",
+    );
+    expect(textOnSurface).toHaveLength(1);
+    expect(textOnSurface[0]?.ratio).toBeCloseTo(1, 1);
+    expect(textOnSurface[0]?.passes).toBe(false);
+  });
+
+  it.each([
+    "rgb(a b c)",
+    "rgba(0,0,0,x)",
+    "oklch(0.3 none 0)",
+    "oklch(0.3 0.1 0.5turn)",
+    `rgb(1,1,1${",1".repeat(50_000)})`,
+  ])("reports %.30s as unparseable and never as a NaN finding", (value) => {
+    const check = checkThemeContrast({ colour: { light: { text: value } } });
+
+    expect(check.invalid).toEqual([
+      { theme: "light", role: "text", value, reason: "unparseable" },
+    ]);
+    expect(check.findings.every((f) => Number.isFinite(f.ratio))).toBe(true);
+  });
+
+  it("reports an oklch() colour outside the sRGB gamut instead of measuring it clipped", () => {
+    const check = checkThemeContrast({
+      colour: { light: { accent: "oklch(0.9 0.3 255)" } },
+    });
+
+    expect(check.invalid).toEqual([
+      expect.objectContaining({
+        theme: "light",
+        role: "accent",
+        reason: "out-of-gamut",
+      }),
+    ]);
+  });
+
+  it("holds a host's text and accent to the page background and the map halo", () => {
+    const pairs = checkThemeContrast({}).findings.filter(
+      (f) => f.background === "pageBackground" || f.background === "mapHalo",
+    );
+
+    expect(
+      pairs.map((f) => `${f.theme} ${f.foreground} on ${f.background}`),
+    ).toEqual(
+      ["light", "dark"].flatMap((theme) => [
+        `${theme} text on pageBackground`,
+        `${theme} textMuted on pageBackground`,
+        `${theme} accent on pageBackground`,
+        `${theme} text on mapHalo`,
+      ]),
+    );
+  });
+
+  it("fails a text colour that clears every surface but not the page", () => {
+    const check = checkThemeContrast({
+      colour: {
+        light: {
+          surface: "#ffffff",
+          surfaceRaised: "#ffffff",
+          textMuted: "#707070",
+        },
+      },
+    });
+
+    const failing = check.findings.filter((f) => !f.passes);
+    expect(failing).toEqual([
+      expect.objectContaining({
+        theme: "light",
+        foreground: "textMuted",
+        background: "pageBackground",
+      }),
+    ]);
+  });
+
+  describe("at the thresholds", () => {
+    const ratioOf = (
+      override: ThemeOverride,
+      foreground: string,
+      background: string,
+    ) =>
+      checkThemeContrast(override).findings.find(
+        (f) =>
+          f.theme === "light" &&
+          f.foreground === foreground &&
+          f.background === background,
+      );
+
+    it("passes text at #767676 on white (4.54:1) and fails #777777 (4.48:1)", () => {
+      const pass = ratioOf(
+        { colour: { light: { accent: "#ffffff", accentContrast: "#767676" } } },
+        "accentContrast",
+        "accent",
+      );
+      const fail = ratioOf(
+        { colour: { light: { accent: "#ffffff", accentContrast: "#777777" } } },
+        "accentContrast",
+        "accent",
+      );
+
+      expect(pass?.ratio).toBeCloseTo(4.54, 2);
+      expect(pass?.required).toBe(4.5);
+      expect(pass?.passes).toBe(true);
+      expect(fail?.ratio).toBeCloseTo(4.48, 2);
+      expect(fail?.passes).toBe(false);
+    });
+
+    it("passes a non-text pair at #949494 on white (3.03:1) and fails #959595 (2.99:1)", () => {
+      const pass = ratioOf(
+        {
+          colour: {
+            light: { focusRing: "#ffffff", focusRingInner: "#949494" },
+          },
+        },
+        "focusRingInner",
+        "focusRing",
+      );
+      const fail = ratioOf(
+        {
+          colour: {
+            light: { focusRing: "#ffffff", focusRingInner: "#959595" },
+          },
+        },
+        "focusRingInner",
+        "focusRing",
+      );
+
+      expect(pass?.ratio).toBeCloseTo(3.03, 2);
+      expect(pass?.required).toBe(3);
+      expect(pass?.passes).toBe(true);
+      expect(fail?.ratio).toBeGreaterThan(2.99);
+      expect(fail?.ratio).toBeLessThan(3);
+      expect(fail?.passes).toBe(false);
+    });
+  });
+
+  describe("never throws on input that throws when read", () => {
+    const throwing = (): never => {
+      throw new Error("trap");
+    };
+
+    it.each([
+      [
+        "a getter for the colour set",
+        {
+          get colour() {
+            return throwing();
+          },
+        },
+      ],
+      [
+        "a getter for a theme",
+        {
+          colour: {
+            get light() {
+              return throwing();
+            },
+          },
+        },
+      ],
+      [
+        "a getter for a role",
+        {
+          colour: {
+            light: {
+              get text() {
+                return throwing();
+              },
+            },
+          },
+        },
+      ],
+      [
+        "a proxy that throws on ownKeys",
+        { colour: { light: new Proxy({}, { ownKeys: throwing }) } },
+      ],
+      [
+        "a revoked proxy",
+        (() => {
+          const revoked = Proxy.revocable({}, {});
+          revoked.revoke();
+          return { colour: { light: revoked.proxy } };
+        })(),
+      ],
+    ])("%s", (_name, override) => {
+      const check = checkThemeContrast(override as unknown as ThemeOverride);
+
+      expect(check.passes).toBe(false);
+      expect(check.invalid.map((i) => i.reason)).toContain("unreadable");
+    });
+  });
 });

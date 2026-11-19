@@ -25,17 +25,55 @@ const HEX_RE = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const RGB_RE = /^rgba?\(([^)]*)\)$/i;
 const OKLCH_RE = /^oklch\(([^)]*)\)$/i;
 
-/**
- * Parses a CSS alpha value written as a number (`0.5`) or a percentage
- * (`50%`), defaulting to opaque when it is absent.
- */
-function parseAlpha(value: string | undefined): number {
-  if (value === undefined || value === "") {
-    return 1;
+const NUMBER_RE = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
+const PERCENT_RE = /^([^%]+)%$/;
+const DEGREES_RE = /^([^d]+)deg$/i;
+/** `oklch()` chroma that a percentage of 100 stands for, per CSS Color 4. */
+const OKLCH_CHROMA_AT_100_PERCENT = 0.4;
+const MAX_CHANNEL = 255;
+
+function cannotParse(colour: string): Error {
+  return new Error(`Cannot parse colour: ${colour}`);
+}
+
+/** Reads a finite CSS number, or `undefined` when the text is not one. */
+function readNumber(text: string): number | undefined {
+  if (!NUMBER_RE.test(text)) {
+    return undefined;
   }
-  return value.endsWith("%")
-    ? Number.parseFloat(value) / 100
-    : Number.parseFloat(value);
+  const value = Number.parseFloat(text);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * Reads a number or a percentage as a fraction of `percentBasis`, then clamps
+ * it to `[min, max]` the way CSS does for out-of-range colour components.
+ * Returns `undefined` for anything else, including keywords such as `none`.
+ */
+function readComponent(
+  text: string,
+  percentBasis: number,
+  min: number,
+  max: number,
+): number | undefined {
+  const percent = PERCENT_RE.exec(text);
+  const value = percent ? readNumber(percent[1] ?? "") : readNumber(text);
+  if (value === undefined) {
+    return undefined;
+  }
+  const scaled = percent ? (value / 100) * percentBasis : value;
+  return Math.min(max, Math.max(min, scaled));
+}
+
+/** Reads an optional alpha: a number or percentage, clamped to 0 to 1. */
+function readAlpha(text: string | undefined): number | undefined {
+  return text === undefined ? 1 : readComponent(text, 1, 0, 1);
+}
+
+/** Reads a hue in degrees, with or without the `deg` unit. Other units are not supported. */
+function readHue(text: string): number | undefined {
+  const degrees = DEGREES_RE.exec(text);
+  return readNumber(degrees ? (degrees[1] ?? "") : text);
 }
 
 /** Splits the inside of a functional colour on commas, spaces and `/`. */
@@ -87,21 +125,24 @@ function readOklch(colour: string): {
   alpha: number;
 } {
   const match = OKLCH_RE.exec(colour.trim());
-  if (!match) {
-    throw new Error(`Cannot parse colour: ${colour}`);
+  const args = splitArguments(match?.[1] ?? "");
+  if (!match || (args.length !== 3 && args.length !== 4)) {
+    throw cannotParse(colour);
   }
-  const [rawL, rawC, rawH, rawAlpha] = splitArguments(match[1] ?? "");
-  if (rawL === undefined || rawC === undefined || rawH === undefined) {
-    throw new Error(`Cannot parse colour: ${colour}`);
+  const [rawL = "", rawC = "", rawH = "", rawAlpha] = args;
+  const lightness = readComponent(rawL, 1, 0, 1);
+  const chroma = readComponent(rawC, OKLCH_CHROMA_AT_100_PERCENT, 0, Infinity);
+  const hue = readHue(rawH);
+  const alpha = readAlpha(rawAlpha);
+  if (
+    lightness === undefined ||
+    chroma === undefined ||
+    hue === undefined ||
+    alpha === undefined
+  ) {
+    throw cannotParse(colour);
   }
-  return {
-    lightness: rawL.endsWith("%")
-      ? Number.parseFloat(rawL) / 100
-      : Number.parseFloat(rawL),
-    chroma: Number.parseFloat(rawC),
-    hue: Number.parseFloat(rawH),
-    alpha: parseAlpha(rawAlpha),
-  };
+  return { lightness, chroma, hue, alpha };
 }
 
 /**
@@ -123,7 +164,10 @@ export function isInSrgbGamut(colour: string): boolean {
 
 /**
  * Parses a hex, `rgb()`/`rgba()` or `oklch()` colour to gamma-encoded sRGB.
- * OKLCH colours that fall outside the gamut are clipped per channel; use
+ * Numbers and percentages are read strictly: each component must be a finite
+ * number or percentage, the argument count must be right, and an `oklch()`
+ * hue may be plain or in degrees (other angle units are refused). Components
+ * outside their range are clamped as CSS does. OKLCH colours that fall outside the gamut are clipped per channel; use
  * {@link isInSrgbGamut} to keep tokens from relying on that.
  * @throws When the string is not in a supported syntax.
  */
@@ -150,16 +194,23 @@ export function parseColour(colour: string): Rgba {
 
   const rgb = RGB_RE.exec(text);
   if (rgb) {
-    const [r, g, b, alpha] = splitArguments(rgb[1] ?? "");
-    if (r === undefined || g === undefined || b === undefined) {
-      throw new Error(`Cannot parse colour: ${colour}`);
+    const args = splitArguments(rgb[1] ?? "");
+    if (args.length !== 3 && args.length !== 4) {
+      throw cannotParse(colour);
     }
-    return {
-      r: Number.parseFloat(r),
-      g: Number.parseFloat(g),
-      b: Number.parseFloat(b),
-      a: parseAlpha(alpha),
-    };
+    const [r, g, b] = args
+      .slice(0, 3)
+      .map((arg) => readComponent(arg, MAX_CHANNEL, 0, MAX_CHANNEL));
+    const a = readAlpha(args[3]);
+    if (
+      r === undefined ||
+      g === undefined ||
+      b === undefined ||
+      a === undefined
+    ) {
+      throw cannotParse(colour);
+    }
+    return { r, g, b, a };
   }
 
   if (OKLCH_RE.test(text)) {
