@@ -106,6 +106,37 @@ describe("outcomeOfFailure", () => {
     });
   });
 
+  it("says a network failure while the device is offline is because of that, politely", () => {
+    expect(
+      inEnglish(
+        outcomeOfFailure(
+          SAMPLE_FEED_LAYER,
+          new LayerError("network"),
+          NOW,
+          true,
+        ),
+      ),
+    ).toEqual({
+      result: {
+        status: { kind: "error", error: "network", offline: true },
+        features: [],
+      },
+      spoken: {
+        state: "error",
+        message:
+          "Sample points did not load because you are offline. Try again when you are back online.",
+        priority: "polite",
+      },
+    });
+  });
+
+  it("keeps the wording for a response that was wrong, even offline", () => {
+    expect(
+      outcomeOfFailure(SAMPLE_FEED_LAYER, new LayerError("invalid"), NOW, true)
+        ?.result.status,
+    ).toEqual({ kind: "error", error: "invalid" });
+  });
+
   it("counts anything unexpected as an invalid response", () => {
     expect(
       outcomeOfFailure(SAMPLE_FEED_LAYER, new Error("boom"), NOW)?.result
@@ -169,6 +200,19 @@ describe("loadOutcome", () => {
       new AbortController().signal,
     );
     expect(failed?.result.status).toEqual({ kind: "error", error: "network" });
+
+    const offline = await loadOutcome(
+      fakes.layerSource,
+      wanted,
+      () => NOW,
+      new AbortController().signal,
+      () => true,
+    );
+    expect(offline?.result.status).toEqual({
+      kind: "error",
+      error: "network",
+      offline: true,
+    });
 
     const controller = new AbortController();
     const hold = fakes.layerSource.hold();

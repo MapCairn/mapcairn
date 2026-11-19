@@ -31,6 +31,7 @@ import {
   textOrMessage,
   tileUrl,
 } from "@mapcairn/core";
+import { useLatestRef } from "@mapcairn/react";
 import {
   useCallback,
   useEffect,
@@ -40,7 +41,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { useMessages, useServices } from "../services";
+import { useMessages, useOnline, useServices } from "../services";
 import { useAnnounce } from "../ui/LiveRegion";
 import { type CatalogueMessage, catalogueNotice } from "./catalogueNotice";
 import { type Link, type Reconciled, reconcile } from "./catalogueReconcile";
@@ -783,6 +784,10 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
   const collator = useMemo(() => new Intl.Collator(language), [language]);
   const announce = useAnnounce();
   const now = useCallback(() => (options.now ?? Date.now)(), [options.now]);
+  // Read when a load fails, not when it starts, and kept out of the load
+  // effect's dependencies so the connection coming and going starts no load.
+  const onlineRef = useLatestRef(useOnline());
+  const isOffline = useCallback(() => !onlineRef.current, [onlineRef]);
   const catalogueState = useSyncExternalStore(
     catalogue.subscribe,
     catalogue.getState,
@@ -902,26 +907,30 @@ export function useDataLayers(options: UseDataLayersOptions = {}): DataLayers {
       const controller = new AbortController();
       requests.current.set(id, { key, controller });
       setState((current) => withLoading(current, load));
-      void loadOutcome(layerSource, load, now, controller.signal).then(
-        (outcome) => {
-          // A load that was cancelled or replaced meanwhile is neither shown nor said.
-          if (!outcome || requests.current.get(id)?.controller !== controller) {
-            return;
-          }
-          requests.current.delete(id);
-          loadedKeys.current.set(id, key);
-          setState((current) => ({
-            ...current,
-            results: { ...current.results, [id]: outcome.result },
-          }));
-          reportLoad(
-            definition,
-            outcome.spoken,
-            announcedStates.current,
-            announce,
-          );
-        },
-      );
+      void loadOutcome(
+        layerSource,
+        load,
+        now,
+        controller.signal,
+        isOffline,
+      ).then((outcome) => {
+        // A load that was cancelled or replaced meanwhile is neither shown nor said.
+        if (!outcome || requests.current.get(id)?.controller !== controller) {
+          return;
+        }
+        requests.current.delete(id);
+        loadedKeys.current.set(id, key);
+        setState((current) => ({
+          ...current,
+          results: { ...current.results, [id]: outcome.result },
+        }));
+        reportLoad(
+          definition,
+          outcome.spoken,
+          announcedStates.current,
+          announce,
+        );
+      });
     };
 
     const plan = planLoads(wanted, requests.current, loadedKeys.current);

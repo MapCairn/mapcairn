@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { announceTileError, resolveText } from "@mapcairn/core";
+import {
+  announceOffline,
+  announceTileError,
+  resolveText,
+} from "@mapcairn/core";
 import {
   type MapContextValue,
   StatusMessage,
@@ -11,11 +15,13 @@ import {
 import { useEffect, useState } from "react";
 import { useReloadPage } from "./ErrorPage";
 import * as styles from "./MapBanners.css";
+import type { ConnectionNotice } from "./useConnectionNotice";
 import type { MapApp } from "./useMapApp";
 
 /** Props for {@link MapBanners}. */
 export interface MapBannersProps {
   readonly app: MapApp;
+  readonly connection: ConnectionNotice;
 }
 
 /**
@@ -25,8 +31,10 @@ export interface MapBannersProps {
 export function hasBanners(
   app: MapApp,
   map: Pick<MapContextValue, "tileError" | "error">,
+  connection: ConnectionNotice,
 ): boolean {
   return (
+    connection.notice !== null ||
     app.locate.state === "error" ||
     app.basemapFailure !== null ||
     map.tileError ||
@@ -40,7 +48,9 @@ function engineFailed(map: Pick<MapContextValue, "error">): boolean {
 }
 
 /**
- * The status banners in the bottom-centre slot: a tile error with Retry, a
+ * The status banners in the bottom-centre slot: the connection notice (the
+ * device went offline, or is back with one Try again for what failed), a
+ * tile error with Retry, a
  * location error, a basemap that could not load (the map keeps the previous
  * one, so it offers to go back to it rather than Reload, and dismissing it
  * goes back too, so the picker always matches the map), and a map that could
@@ -53,9 +63,11 @@ function engineFailed(map: Pick<MapContextValue, "error">): boolean {
  * @remarks Each banner is a `StatusMessage`, which is a live region itself
  *   (an alert for errors, a status for the notice). So nothing here is also
  *   sent to the announcer, and `useLocate` is told not to announce errors:
- *   every message is spoken once. Errors stay until dismissed.
+ *   every message is spoken once. Errors stay until dismissed. The connection
+ *   notice is a polite status that dismisses itself, and while it is up the
+ *   tile error is left out: both would say that the map could not load.
  */
-export function MapBanners({ app }: MapBannersProps) {
+export function MapBanners({ app, connection }: MapBannersProps) {
   const map = useMap();
   const format = useFormatMessage();
   const messages = useMessages();
@@ -76,6 +88,18 @@ export function MapBanners({ app }: MapBannersProps) {
     }
   }, [map.error]);
 
+  const failedLayers = app.layers.layers.filter(
+    ({ status }) => status.kind === "error",
+  );
+  const retryEverything = () => {
+    map.retry();
+    for (const { definition } of failedLayers) {
+      app.layers.retry(definition.id);
+    }
+    connection.dismiss();
+  };
+  const hasFailures = map.tileError || failedLayers.length > 0;
+
   const basemapMessage = app.basemapFailure?.unavailable
     ? t("app.banner.basemapUnavailable", {
         name: resolveText(messages, app.basemapFailure.name),
@@ -88,7 +112,28 @@ export function MapBanners({ app }: MapBannersProps) {
 
   return (
     <div className={styles.stack} data-testid="map-banners">
+      {connection.notice === null ? null : (
+        <StatusMessage
+          key={connection.notice}
+          variant="info"
+          data-testid="connection-notice"
+          action={
+            connection.notice === "online" && hasFailures
+              ? {
+                  label: t("app.banner.tryAgain", {}),
+                  onClick: retryEverything,
+                }
+              : undefined
+          }
+          onDismiss={connection.dismiss}
+        >
+          {connection.notice === "offline"
+            ? format(announceOffline())
+            : t("app.banner.online", {})}
+        </StatusMessage>
+      )}
       {map.tileError &&
+      connection.notice === null &&
       !tileErrorDismissed &&
       !app.basemapFailure?.unavailable ? (
         <StatusMessage

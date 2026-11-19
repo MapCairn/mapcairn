@@ -33,6 +33,7 @@ import { createRoutesStub } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { TOUR_VERSION } from "./app/tourVersion";
+import { CONNECTION_SETTLE_MS } from "./app/useConnectionNotice";
 import { LOCATE_MAX_FIT_RADIUS_METRES, LOCATE_ZOOM } from "./app/useMapApp";
 import { SAVE_VIEW_DELAY_MS } from "./app/useViewPersistence";
 import { HOST_BASEMAP_CATALOGUE } from "./basemaps/hostBasemaps";
@@ -1300,6 +1301,119 @@ describe("basemaps", () => {
     await settle();
     expect(setBasemap).toHaveBeenCalled();
     expect(screen.queryByTestId("tile-error")).toBeNull();
+  });
+});
+
+describe("connection notice", () => {
+  const notice = () => screen.queryByTestId("connection-notice");
+
+  /** An app with a layer on, with the clock held so the settle delay can be stepped past. */
+  async function offlineApp({ failing = false } = {}) {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const services = createFakeServices({
+      layers: new FakeLayerCatalogue(SAMPLE_LAYERS),
+    });
+    if (failing) {
+      services.fakes.layerSource.fail("sample-points", "network");
+    }
+    services.fakes.url.write({
+      layers: { enabled: ["sample-points"], controls: {} },
+    });
+    await renderApp(services);
+    return services;
+  }
+
+  /** The browser reports `online`, and the settle delay passes. */
+  function go(services: FakeServices, online: boolean) {
+    act(() => services.fakes.preferences.set({ online }));
+    act(() => {
+      vi.advanceTimersByTime(CONNECTION_SETTLE_MS);
+    });
+  }
+
+  it("says once, in a polite status with no action, that the device is offline, using the catalogue's key", async () => {
+    const services = await offlineApp();
+    expect(notice()).toBeNull();
+    act(() => services.fakes.preferences.set({ online: false }));
+    expect(notice()).toBeNull();
+    go(services, false);
+    const shown = screen.getByTestId("connection-notice");
+    expect(within(shown).getByRole("status")).toHaveTextContent(
+      "You are offline. Parts of the map may not load.",
+    );
+    expect(
+      within(shown).queryByRole("button", { name: "Try again" }),
+    ).toBeNull();
+    expect(services.fakes.messages.calls).toContainEqual({
+      key: "announce.offline",
+      params: {},
+    });
+    // The visible status is the one live region: nothing is sent to the announcer as well.
+    expect(polite()).not.toMatch(/offline/);
+    expect(assertive()).not.toMatch(/offline/);
+  });
+
+  it("leaves the tile error out while a notice is up, so one outcome is said once", async () => {
+    const services = await offlineApp();
+    go(services, false);
+    act(() => {
+      adapter(services).simulateTileError();
+    });
+    expect(screen.queryByTestId("tile-error")).toBeNull();
+    fireEvent.click(
+      within(screen.getByTestId("connection-notice")).getByRole("button", {
+        name: "Dismiss",
+      }),
+    );
+    expect(screen.getByTestId("tile-error")).toBeInTheDocument();
+  });
+
+  it("says the device is back, and offers one Try again for what failed while it was away", async () => {
+    const services = await offlineApp({ failing: true });
+    go(services, false);
+    act(() => {
+      adapter(services).simulateTileError();
+    });
+    await settle();
+    go(services, true);
+    const shown = screen.getByTestId("connection-notice");
+    expect(within(shown).getByRole("status")).toHaveTextContent(
+      "You are back online.",
+    );
+    services.fakes.layerSource.setFeatures("sample-points", [samplePoint("a")]);
+    const setBasemap = vi.spyOn(adapter(services), "setBasemap");
+    const requests = services.fakes.layerSource.requests.length;
+    fireEvent.click(within(shown).getByRole("button", { name: "Try again" }));
+    await settle();
+    expect(setBasemap).toHaveBeenCalled();
+    expect(services.fakes.layerSource.requests.length).toBeGreaterThan(
+      requests,
+    );
+    expect(notice()).toBeNull();
+  });
+
+  it("offers no Try again when nothing failed", async () => {
+    const services = await offlineApp();
+    go(services, false);
+    go(services, true);
+    const shown = screen.getByTestId("connection-notice");
+    expect(shown).toHaveTextContent("You are back online.");
+    expect(
+      within(shown).queryByRole("button", { name: "Try again" }),
+    ).toBeNull();
+  });
+
+  it("is never there for a connection that flickers", async () => {
+    const services = await offlineApp();
+    act(() => services.fakes.preferences.set({ online: false }));
+    act(() => {
+      vi.advanceTimersByTime(CONNECTION_SETTLE_MS - 1);
+    });
+    act(() => services.fakes.preferences.set({ online: true }));
+    act(() => {
+      vi.advanceTimersByTime(CONNECTION_SETTLE_MS * 2);
+    });
+    expect(notice()).toBeNull();
   });
 });
 

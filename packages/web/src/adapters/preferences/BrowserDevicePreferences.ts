@@ -22,6 +22,12 @@ export interface NetworkInformationLike {
   removeEventListener?(type: "change", listener: () => void): void;
 }
 
+/** The slice of `window` that reports `online` and `offline`. */
+export interface NetworkEventTarget {
+  addEventListener(type: "online" | "offline", listener: () => void): void;
+  removeEventListener(type: "online" | "offline", listener: () => void): void;
+}
+
 /** Options for {@link BrowserDevicePreferences}. */
 export interface BrowserDevicePreferencesOptions {
   /** Returns the window that answers `matchMedia`. Called on every access. Defaults to `window`. */
@@ -30,6 +36,10 @@ export interface BrowserDevicePreferencesOptions {
   readonly getConnection?: () => NetworkInformationLike | undefined;
   /** Returns the browser's languages, most preferred first. Called on every read. Defaults to `navigator.languages`. */
   readonly getLanguages?: () => readonly string[] | undefined;
+  /** Returns `navigator.onLine`, or undefined where there is no signal. Called on every read. Defaults to `navigator.onLine`. */
+  readonly getOnline?: () => boolean | undefined;
+  /** Returns the target of the `online` and `offline` events. Called when the first listener subscribes. Defaults to `window`. */
+  readonly getEvents?: () => NetworkEventTarget | undefined;
 }
 
 /** Connection types so slow that a person is treated as asking to save data. */
@@ -45,6 +55,16 @@ function defaultConnection(): NetworkInformationLike | undefined {
 /** `navigator.languages`, or undefined where there is no `navigator`. */
 function defaultLanguages(): readonly string[] | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.languages;
+}
+
+/** `navigator.onLine`, or undefined where there is no `navigator`. */
+function defaultOnline(): boolean | undefined {
+  return typeof navigator === "undefined" ? undefined : navigator.onLine;
+}
+
+/** `window`, which fires `online` and `offline`, or undefined where there is none. */
+function defaultEvents(): NetworkEventTarget | undefined {
+  return typeof window === "undefined" ? undefined : window;
 }
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -64,7 +84,10 @@ const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
  *   saver (`saveData`) or a `slow-2g` or `2g` effective connection, and off
  *   wherever there is no such information (iOS has none), so there the
  *   Settings switch is the only way to turn it on. The connection API is read
- *   locally and nothing about it is sent anywhere. `get()` returns the same object until a preference
+ *   locally and nothing about it is sent anywhere. `online` is
+ *   `navigator.onLine` (true where there is no signal), kept current by the
+ *   window's `online` and `offline` events; it is only the browser's own hint,
+ *   and no request is made to test it. `get()` returns the same object until a preference
  *   changes. While there are subscribers, live `change` listeners keep it
  *   current; with none, each `get()` reads the queries afresh, so a value is
  *   never stale. Listeners fall back to `addListener` on Safari before 14.
@@ -73,6 +96,8 @@ export class BrowserDevicePreferences implements DevicePreferences {
   readonly #getWindow: () => MediaQueryWindow | undefined;
   readonly #getConnection: () => NetworkInformationLike | undefined;
   readonly #getLanguages: () => readonly string[] | undefined;
+  readonly #getOnline: () => boolean | undefined;
+  readonly #getEvents: () => NetworkEventTarget | undefined;
   readonly #listeners = new Set<(value: DevicePreferencesValue) => void>();
   #value: DevicePreferencesValue;
   #stopObserving: (() => void) | undefined;
@@ -81,6 +106,8 @@ export class BrowserDevicePreferences implements DevicePreferences {
     this.#getWindow = options.getWindow ?? defaultMediaQueryWindow;
     this.#getConnection = options.getConnection ?? defaultConnection;
     this.#getLanguages = options.getLanguages ?? defaultLanguages;
+    this.#getOnline = options.getOnline ?? defaultOnline;
+    this.#getEvents = options.getEvents ?? defaultEvents;
     this.#value = Object.freeze(this.#read());
   }
 
@@ -119,7 +146,12 @@ export class BrowserDevicePreferences implements DevicePreferences {
     );
     const connection = this.#connection();
     connection?.addEventListener?.("change", onChange);
+    const events = this.#events();
+    events?.addEventListener("online", onChange);
+    events?.addEventListener("offline", onChange);
     this.#stopObserving = () => {
+      events?.removeEventListener("online", onChange);
+      events?.removeEventListener("offline", onChange);
       for (const stop of stops) {
         stop();
       }
@@ -133,6 +165,24 @@ export class BrowserDevicePreferences implements DevicePreferences {
       return this.#getConnection() ?? undefined;
     } catch {
       return undefined;
+    }
+  }
+
+  /** The target of the `online` and `offline` events, or undefined when there is none or reading it throws. */
+  #events(): NetworkEventTarget | undefined {
+    try {
+      return this.#getEvents();
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** `navigator.onLine`, treating no signal, or reading it throwing, as online. */
+  #online(): boolean {
+    try {
+      return this.#getOnline() !== false;
+    } catch {
+      return true;
     }
   }
 
@@ -156,6 +206,7 @@ export class BrowserDevicePreferences implements DevicePreferences {
         connection?.saveData === true ||
         SLOW_CONNECTIONS.has(connection?.effectiveType ?? ""),
       languages: this.#languages(),
+      online: this.#online(),
     };
   }
 
@@ -166,6 +217,7 @@ export class BrowserDevicePreferences implements DevicePreferences {
       next.reducedMotion === this.#value.reducedMotion &&
       next.finePointer === this.#value.finePointer &&
       next.saveData === this.#value.saveData &&
+      next.online === this.#value.online &&
       next.languages.join(",") === this.#value.languages.join(",")
     ) {
       return false;

@@ -38,6 +38,25 @@ export function runDevicePreferencesContract(
       expect(typeof value.saveData).toBe("boolean");
     });
 
+    it("reports whether the device is online, as a boolean or not at all", () => {
+      const { preferences } = create();
+      const { online } = preferences.get();
+      expect(online === undefined || typeof online === "boolean").toBe(true);
+    });
+
+    it("notifies subscribers once when the device goes offline and once when it returns", () => {
+      const { preferences, controls } = create();
+      controls.set({ online: true });
+      const seen: boolean[] = [];
+      preferences.subscribe((value) => seen.push(value.online !== false));
+      controls.set({ online: false });
+      expect(preferences.get().online).toBe(false);
+      controls.set({ online: false });
+      controls.set({ online: true });
+      expect(preferences.get().online).toBe(true);
+      expect(seen).toEqual([false, true]);
+    });
+
     it("reports the languages as a list of tags, empty when there are none", () => {
       const { preferences } = create();
       const { languages } = preferences.get();

@@ -63,12 +63,43 @@ class FakeConnection implements NetworkInformationLike {
   }
 }
 
+/** The window's `online` and `offline` events, and `navigator.onLine`, as a test drives them. */
+class FakeNetwork {
+  onLine = true;
+  readonly #listeners = new Map<string, Set<() => void>>();
+
+  addEventListener(type: string, listener: () => void): void {
+    const set = this.#listeners.get(type) ?? new Set();
+    set.add(listener);
+    this.#listeners.set(type, set);
+  }
+  removeEventListener(type: string, listener: () => void): void {
+    this.#listeners.get(type)?.delete(listener);
+  }
+  get listenerCount(): number {
+    return [...this.#listeners.values()].reduce(
+      (total, set) => total + set.size,
+      0,
+    );
+  }
+  /** Changes the state and fires the event the browser fires for it. */
+  set(onLine: boolean): void {
+    this.onLine = onLine;
+    for (const listener of [
+      ...(this.#listeners.get(onLine ? "online" : "offline") ?? []),
+    ]) {
+      listener();
+    }
+  }
+}
+
 function setup(languages: readonly string[] | null = ["af-ZA", "en"]) {
   const queries = {
     reducedMotion: new FakeMediaQuery(false),
     finePointer: new FakeMediaQuery(true),
   };
   const connection = new FakeConnection();
+  const network = new FakeNetwork();
   const window = {
     matchMedia: vi.fn((query: string) => {
       if (query === REDUCED_MOTION) {
@@ -84,16 +115,21 @@ function setup(languages: readonly string[] | null = ["af-ZA", "en"]) {
     getWindow: () => window,
     getConnection: () => connection,
     getLanguages: () => languages ?? undefined,
+    getOnline: () => network.onLine,
+    getEvents: () => network,
   });
-  return { queries, connection, window, preferences };
+  return { queries, connection, network, window, preferences };
 }
 
 runDevicePreferencesContract("BrowserDevicePreferences", () => {
-  const { queries, connection, preferences } = setup();
+  const { queries, connection, network, preferences } = setup();
   return {
     preferences,
     controls: {
       set(patch: Partial<DevicePreferencesValue>) {
+        if (patch.online !== undefined && network.onLine !== patch.online) {
+          network.set(patch.online);
+        }
         if (
           patch.saveData !== undefined &&
           connection.saveData !== patch.saveData
@@ -127,6 +163,7 @@ describe("BrowserDevicePreferences", () => {
       finePointer: true,
       saveData: false,
       languages: ["af-ZA", "en"],
+      online: true,
     });
     expect(window.matchMedia).toHaveBeenCalledWith(REDUCED_MOTION);
     expect(window.matchMedia).toHaveBeenCalledWith(FINE_POINTER);
@@ -241,6 +278,7 @@ describe("BrowserDevicePreferences", () => {
         finePointer: false,
         saveData: false,
         languages: [],
+        online: true,
       });
       expect(() => preferences.subscribe(() => undefined)()).not.toThrow();
     }
@@ -316,6 +354,62 @@ describe("BrowserDevicePreferences", () => {
         } else {
           Reflect.deleteProperty(navigator, "connection");
         }
+      }
+    });
+  });
+
+  describe("online", () => {
+    it("follows navigator.onLine, read afresh", () => {
+      const { network, preferences } = setup();
+      expect(preferences.get().online).toBe(true);
+      network.onLine = false;
+      expect(preferences.get().online).toBe(false);
+    });
+
+    it("notifies when the browser fires offline and online, and listens only while subscribed", () => {
+      const { network, preferences } = setup();
+      expect(network.listenerCount).toBe(0);
+      const seen: (boolean | undefined)[] = [];
+      const stop = preferences.subscribe((value) => seen.push(value.online));
+      expect(network.listenerCount).toBe(2);
+      network.set(false);
+      network.set(true);
+      expect(seen).toEqual([false, true]);
+      stop();
+      expect(network.listenerCount).toBe(0);
+    });
+
+    it("is online where there is no signal, and when reading it throws", () => {
+      for (const getOnline of [
+        () => undefined,
+        () => {
+          throw new Error("blocked");
+        },
+      ]) {
+        const preferences = new BrowserDevicePreferences({
+          getWindow: () => undefined,
+          getOnline,
+          getEvents: () => undefined,
+        });
+        expect(preferences.get().online).toBe(true);
+        expect(() => preferences.subscribe(() => undefined)()).not.toThrow();
+      }
+    });
+
+    it("reads navigator.onLine and the window's events by default", () => {
+      const onLine = vi.spyOn(navigator, "onLine", "get");
+      try {
+        onLine.mockReturnValue(false);
+        const preferences = new BrowserDevicePreferences();
+        const seen: (boolean | undefined)[] = [];
+        const stop = preferences.subscribe((value) => seen.push(value.online));
+        expect(preferences.get().online).toBe(false);
+        onLine.mockReturnValue(true);
+        window.dispatchEvent(new Event("online"));
+        expect(seen).toEqual([true]);
+        stop();
+      } finally {
+        onLine.mockRestore();
       }
     });
   });
