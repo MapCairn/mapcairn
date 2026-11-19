@@ -102,6 +102,25 @@ const afrikaans = createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE, {
 
 `MessageCatalogue.definitionTexts` holds the translation by key; `createMessageCatalogue` accepts it in its fourth argument, and a catalogue of your own may provide the same optional property. A key with no own entry shows the source text without a warning, and a blank entry shows the source text with one warning. The same text is used for the visible words, the accessible names and the announcements that name the layer. Keys of `definitionTexts` and `layerTemplates` are separate, so a key can have a name and a template. Layers that write their `group` with the same words (a `HostText`, a key or plain text) share one heading. Attribution, licence names and links are legal text and stay as they are.
 
+A missing entry is silent, so check your own keys before you ship. `checkDefinitionTexts(definitions, definitionTexts)` from `@mapcairn/core` lists the `HostText` keys in the definitions you pass (layers, basemaps, keyboard help lines, or any mix) and returns a problem for each key the language's `definitionTexts` lacks or holds blank. Each problem is a `key` and a `problem`, as with `checkMessageCatalogue`, and an empty list means every key is translated. Run it in your own tests, once for each language you offer:
+
+```ts
+import { checkDefinitionTexts } from "@mapcairn/core";
+
+const problems = checkDefinitionTexts(
+  [...HOST_LAYERS, ...HOST_BASEMAPS],
+  AF_DEFINITION_TEXTS,
+);
+
+expect(problems.filter(({ problem }) => problem !== "unused")).toEqual([]);
+```
+
+- `missing`: a definition uses the key and the record has no entry of its own for it, so the source text shows.
+- `blank`: the entry is blank or not text, so the source text shows and `resolveText` warns.
+- `unused`: the record has an entry that none of the definitions uses, such as one left over after a key was renamed. It is only meaningful when you pass every definition, so a test that checks one group of definitions leaves it out, as above.
+
+The problems come in the order the definitions first use each key, then the unused entries in the record's order. A plain string and a shipped `MessageKey` are not reported. A layer template (a card title or line, a list's second line, a range unit or a shape label) is not either: its keys belong to `layerTemplates`, which `createMessageCatalogue` checks for placeholders when it reads them. The check only reports. It does not throw and does not change how `resolveText` falls back. It reads every own property of the definitions, so it does not depend on a layer id, and a `HostText` written where validation forbids it (an attribution) is reported like any other.
+
 Moving to this version: `DefinitionText` is wider than before, so code of your own that reads a definition's `name`, `group`, `label` or similar as a string must call `resolveText(catalogue, text)` (`useResolveText()` in a component) instead. A name that reaches an announcement is passed on with `textOrMessage(name)`, and the `announce*` name parameters, like the `{name}` placeholders of a `Message`, take a `MessagePart`: a string, a `Message` or a `HostText`. `MarkerStyle.label` is a `DefinitionText` and `BasemapFailure.name` in the reference host too, and `isMessageKey` accepts any `DefinitionText`. Definitions that use only strings and shipped keys need no change.
 
 ## Translate layer templates
