@@ -106,6 +106,46 @@ test.describe("the connection notice", () => {
     await expect(notice).toHaveCount(0);
   });
 
+  test("returns focus to the control it came from after Try again and after Dismiss, from the keyboard", async ({
+    page,
+    context,
+    mapPage,
+  }) => {
+    const state = await failWhileOffline(page);
+    await mapPage.goto();
+    await collapseCredits(mapPage);
+    const notice = page.getByTestId("connection-notice");
+
+    state.offline = true;
+    await setConnection(page, context, false);
+    await settle(page);
+    await mapPage.openMapOptions();
+    await page.getByTestId(`layer-${LAYER}`).getByRole("switch").click();
+    await expect(page.getByTestId(`layer-status-${LAYER}`)).toContainText(
+      "Could not load. You are offline.",
+    );
+    state.offline = false;
+    await setConnection(page, context, true);
+    await settle(page);
+    await expect(notice).toContainText("You are back online.");
+
+    await mapPage.searchInput.focus();
+    await notice.getByRole("button", { name: "Try again" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(notice).toHaveCount(0);
+    await expect(mapPage.searchInput).toBeFocused();
+
+    state.offline = true;
+    await setConnection(page, context, false);
+    await settle(page);
+    await expect(notice).toContainText("You are offline");
+    await mapPage.searchInput.focus();
+    await notice.getByRole("button", { name: "Dismiss" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(notice).toHaveCount(0);
+    await expect(mapPage.searchInput).toBeFocused();
+  });
+
   test("says nothing for a connection that drops and returns within the settle delay", async ({
     page,
     context,

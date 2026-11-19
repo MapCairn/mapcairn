@@ -390,3 +390,93 @@ describe("StatusMessage without a services provider", () => {
     vi.useRealTimers();
   });
 });
+
+describe("StatusMessage focus when it goes away", () => {
+  /** Shows the message until its Dismiss or its action is used, as a banner does. */
+  function Host() {
+    const [shown, setShown] = useState(true);
+    return (
+      <>
+        <button type="button">Before</button>
+        <button type="button" data-map-host="">
+          Map
+        </button>
+        {shown ? (
+          <StatusMessage
+            variant="error"
+            onDismiss={() => setShown(false)}
+            action={{ label: "Retry", onClick: () => setShown(false) }}
+          >
+            Failed
+          </StatusMessage>
+        ) : null}
+      </>
+    );
+  }
+
+  const button = (name: string) => screen.getByRole("button", { name });
+
+  it("returns focus to the element focus came from after Dismiss", () => {
+    render(<Host />);
+    button("Before").focus();
+    button("Dismiss").focus();
+    fireEvent.click(button("Dismiss"));
+    expect(document.activeElement).toBe(button("Before"));
+  });
+
+  it("returns focus to the element focus came from after an action ends it", () => {
+    render(<Host />);
+    button("Before").focus();
+    button("Retry").focus();
+    fireEvent.click(button("Retry"));
+    expect(document.activeElement).toBe(button("Before"));
+  });
+
+  it("falls back to the map when focus came from nowhere", () => {
+    render(<Host />);
+    button("Dismiss").focus();
+    fireEvent.click(button("Dismiss"));
+    expect(document.activeElement).toBe(button("Map"));
+  });
+
+  it("falls back to the map when the element focus came from is gone", () => {
+    render(<Host />);
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    button("Dismiss").focus();
+    outside.remove();
+    fireEvent.click(button("Dismiss"));
+    expect(document.activeElement).toBe(button("Map"));
+  });
+
+  it("falls back to the map when the element focus came from cannot take focus", () => {
+    render(<Host />);
+    const before = button("Before") as HTMLButtonElement;
+    before.focus();
+    button("Dismiss").focus();
+    before.disabled = true;
+    fireEvent.click(button("Dismiss"));
+    expect(document.activeElement).toBe(button("Map"));
+  });
+
+  it("remembers the real origin across a window switch", () => {
+    render(<Host />);
+    button("Before").focus();
+    const retry = button("Retry");
+    retry.focus();
+    // Switching away and back blurs and refocuses with no related element.
+    retry.blur();
+    retry.focus();
+    fireEvent.click(retry);
+    expect(document.activeElement).toBe(button("Before"));
+  });
+
+  it("leaves focus alone when it was not inside the message", () => {
+    render(<Host />);
+    button("Retry").focus();
+    button("Before").focus();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(document.activeElement).toBe(button("Before"));
+  });
+});

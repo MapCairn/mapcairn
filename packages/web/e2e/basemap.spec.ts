@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { BASEMAPS, getBasemap } from "@mapcairn/core";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { axeViolations } from "./support/a11y";
@@ -831,5 +832,119 @@ test.describe("basemaps", () => {
     );
     await expect(banner.getByRole("button", { name: "Retry" })).toBeVisible();
     await expect(page.getByTestId("basemap-error")).toHaveCount(0);
+  });
+
+  test.describe("a tile-error banner that goes away", () => {
+    /** One tile loads and the rest fail, until `heal` is called. */
+    async function failSomeTiles(page: Page) {
+      let requests = 0;
+      let healed = false;
+      await page.route(RASTER_TILE_PATTERN, (route) => {
+        requests += 1;
+        return requests === 1 || healed
+          ? route.fulfill({
+              status: 200,
+              contentType: "image/png",
+              body: TRANSPARENT_PNG,
+            })
+          : route.fulfill({ status: 503, body: "" });
+      });
+      return {
+        heal: () => {
+          healed = true;
+        },
+      };
+    }
+
+    test("returns focus to the control it came from after Retry, from the keyboard", async ({
+      page,
+      mapPage,
+    }) => {
+      const tiles = await failSomeTiles(page);
+      await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
+      const banner = page.getByTestId("tile-error");
+      await expect(banner).toBeVisible({ timeout: 20_000 });
+      await mapPage.searchInput.focus();
+      await banner.getByRole("button", { name: "Retry" }).focus();
+      tiles.heal();
+      await page.keyboard.press("Enter");
+      await expect(banner).toHaveCount(0, { timeout: 20_000 });
+      await expect(mapPage.searchInput).toBeFocused();
+    });
+
+    test("returns focus to the control it came from after Dismiss, from the keyboard @a11y", async ({
+      page,
+      mapPage,
+    }) => {
+      await failSomeTiles(page);
+      await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
+      const banner = page.getByTestId("tile-error");
+      await expect(banner).toBeVisible({ timeout: 20_000 });
+      const search = mapPage.searchInput;
+      await search.focus();
+      await banner.getByRole("button", { name: "Dismiss" }).focus();
+      expect(await axeViolations(page)).toEqual([]);
+      await page.keyboard.press("Enter");
+      await expect(banner).toHaveCount(0);
+      await expect(search).toBeFocused();
+      expect(await axeViolations(page)).toEqual([]);
+    });
+
+    test("returns focus to the control before it after Dismiss, reached by walking the Tab order", async ({
+      page,
+      mapPage,
+      browserName,
+    }) => {
+      await failSomeTiles(page);
+      await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
+      const banner = page.getByTestId("tile-error");
+      await expect(banner).toBeVisible({ timeout: 20_000 });
+      await mapPage.searchInput.focus();
+      const insideBanner = () =>
+        banner.evaluate((node) => node.contains(document.activeElement));
+      const dismissFocused = () =>
+        page.evaluate(
+          () =>
+            document.activeElement?.getAttribute("aria-label") === "Dismiss",
+        );
+      const maxTabs = 80;
+      let before = await page.evaluateHandle(() => document.activeElement);
+      for (let i = 0; i < maxTabs && !(await insideBanner()); i += 1) {
+        before = await page.evaluateHandle(() => document.activeElement);
+        await page.keyboard.press(tabKey(browserName));
+      }
+      expect(await insideBanner()).toBe(true);
+      for (let i = 0; i < maxTabs && !(await dismissFocused()); i += 1) {
+        await page.keyboard.press(tabKey(browserName));
+      }
+      expect(await dismissFocused()).toBe(true);
+      await page.keyboard.press("Enter");
+      await expect(banner).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          (element) => document.activeElement === element,
+          before,
+        ),
+      ).toBe(true);
+    });
+
+    test("puts focus on the map when it did not come from a control", async ({
+      page,
+      mapPage,
+    }) => {
+      await failSomeTiles(page);
+      await page.goto(`/map#basemap=${RASTER_BASEMAP_ID}`);
+      const banner = page.getByTestId("tile-error");
+      await expect(banner).toBeVisible({ timeout: 20_000 });
+      await page.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      });
+      await banner.getByRole("button", { name: "Dismiss" }).focus();
+      await page.keyboard.press("Space");
+      await expect(banner).toHaveCount(0);
+      await expect(mapPage.region).toBeFocused();
+    });
   });
 });
