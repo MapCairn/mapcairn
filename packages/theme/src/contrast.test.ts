@@ -102,10 +102,44 @@ describe("parseColour", () => {
     "oklch(0.3 0.1 90rad)",
     "oklch(0.3 0.1 100grad)",
     "oklch(0.3 0.1)",
+    "rgb(1 / 2 3)",
+    "rgb(/1 2 3)",
+    "rgb(1,,2,3)",
+    "rgb(1,2,3,)",
+    "rgb(,1,2,3)",
+    "rgb(1 2,3)",
+    "rgb(1 2 3 4)",
+    "rgb(1 2 3 /)",
+    "rgb(1 2 3 / 0.5 0.5)",
+    "rgb(1, 2, 3 / 0.5)",
+    "rgb(10%,20,30)",
+    "rgb(10% 20% 30%, 0.5)",
+    "oklch(0.5,0.1,10)",
+    "oklch(0.5 0.1 10 / )",
+    "oklch(0.5 0.1 10 / 0.5 0.5)",
+    "tomato",
+    "hsl(0 0% 0%)",
+    "oklab(0.5 0.1 0.1)",
+    "color(srgb 1 1 1)",
     "oklch(0.3 0.1 90 / x)",
     "oklch(NaN 0 0)",
   ])("rejects %s", (colour) => {
     expect(() => parseColour(colour)).toThrow(/Cannot parse colour/);
+  });
+
+  it.each([
+    ["rgb(1 2 3 / 50%)", { r: 1, g: 2, b: 3, a: 0.5 }],
+    ["rgb(1 2 3/0.5)", { r: 1, g: 2, b: 3, a: 0.5 }],
+    ["rgba(1 2 3 / 0.5)", { r: 1, g: 2, b: 3, a: 0.5 }],
+    ["rgb(1, 2, 3, 0.5)", { r: 1, g: 2, b: 3, a: 0.5 }],
+    ["rgb( 1 ,2 , 3 )", { r: 1, g: 2, b: 3, a: 1 }],
+    ["rgb(10% 20 30)", { r: 25.5, g: 20, b: 30, a: 1 }],
+  ])("accepts %s", (colour, expected) => {
+    expect(parseColour(colour)).toEqual(expected);
+  });
+
+  it("accepts an oklch() alpha written without spaces around the slash", () => {
+    expect(parseColour("oklch(1 0 0/0.5)").a).toBe(0.5);
   });
 
   it("rejects colours it cannot parse", () => {

@@ -203,6 +203,13 @@ describe("checkThemeContrast", () => {
     ]);
   });
 
+  it("treats a colour set or a theme set to undefined as left out", () => {
+    const bare = checkThemeContrast({});
+
+    expect(checkThemeContrast({ colour: undefined })).toEqual(bare);
+    expect(checkThemeContrast({ colour: { light: undefined } })).toEqual(bare);
+  });
+
   it("treats a role set to undefined as left out", () => {
     expect(
       checkThemeContrast({ colour: { light: { text: undefined } } }),
@@ -420,5 +427,84 @@ describe("checkThemeContrast", () => {
       expect(check.passes).toBe(false);
       expect(check.invalid.map((i) => i.reason)).toContain("unreadable");
     });
+  });
+
+  describe("a wrong-shaped override is reported, never passed", () => {
+    class Override {
+      colour = {};
+    }
+
+    it.each([
+      ["null", null, "override", "malformed"],
+      ["undefined", undefined, "override", "malformed"],
+      ["a string", "x", "override", "malformed"],
+      ["an array", [], "override", "malformed"],
+      ["a Map", new Map(), "override", "malformed"],
+      ["a class instance", new Override(), "override", "malformed"],
+      [
+        "inherited properties",
+        Object.create({ colour: { light: { text: "#000" } } }),
+        "override",
+        "malformed",
+      ],
+      ["a colour set that is a string", { colour: "x" }, "colour", "malformed"],
+      ["a colour set that is null", { colour: null }, "colour", "malformed"],
+      ["a colour set that is an array", { colour: [] }, "colour", "malformed"],
+      ["a misspelt colour key", { colours: {} }, "colours", "unknown-key"],
+      [
+        "a miscased theme key",
+        { colour: { Light: {} } },
+        "Light",
+        "unknown-key",
+      ],
+    ])("%s", (_name, override, role, reason) => {
+      const check = checkThemeContrast(override as unknown as ThemeOverride);
+
+      expect(check.passes).toBe(false);
+      expect(check.invalid).toEqual([
+        expect.objectContaining({ theme: null, role, reason }),
+      ]);
+    });
+
+    it.each([
+      ["a string", "#fff"],
+      ["a number", 3],
+      ["null", null],
+      ["an array", []],
+    ])("reports a theme that is %s and skips its findings", (_name, light) => {
+      const check = checkThemeContrast({
+        colour: { light },
+      } as unknown as ThemeOverride);
+
+      expect(check.passes).toBe(false);
+      expect(check.invalid).toEqual([
+        { theme: "light", role: "colour", value: light, reason: "malformed" },
+      ]);
+      expect(check.findings.some((f) => f.theme === "light")).toBe(false);
+      expect(check.findings.some((f) => f.theme === "dark")).toBe(true);
+    });
+
+    it("accepts an object with no prototype", () => {
+      const light = Object.assign(Object.create(null), { text: "#111111" });
+
+      expect(checkThemeContrast({ colour: { light } }).invalid).toEqual([]);
+    });
+  });
+
+  it("measures a translucent foreground over what is under it", () => {
+    const check = checkThemeContrast({
+      colour: { light: { text: "rgba(0, 0, 0, 0.5)" } },
+    });
+    const ratio = (backdrop: string): number | undefined =>
+      check.findings.find(
+        (f) =>
+          f.theme === "light" &&
+          f.foreground === "text" &&
+          f.background === "surface" &&
+          f.backdrop === backdrop,
+      )?.ratio;
+
+    expect(ratio("white")).toBeCloseTo(3.98, 2);
+    expect(ratio("black")).toBeCloseTo(3.62, 2);
   });
 });

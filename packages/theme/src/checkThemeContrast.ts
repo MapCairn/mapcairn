@@ -67,11 +67,19 @@ export type InvalidColourReason =
   | "unparseable"
   | "out-of-gamut"
   | "translucent"
+  | "unknown-key"
+  | "malformed"
   | "unreadable";
 
 /** A proposed colour that was not checked, so its pairs are missing from the findings. */
 export interface InvalidColour {
-  theme: ThemeName;
+  /** The theme it was proposed for, or `null` when it concerns the whole override. */
+  theme: ThemeName | null;
+  /**
+   * The role, or the key or section that could not be used: `override` for
+   * an override that is not a plain object, `colour` for a section that is not
+   * (with `theme` set when it is one theme's section).
+   */
   role: string;
   /** The value as the host supplied it. */
   value: unknown;
@@ -88,16 +96,13 @@ export interface ThemeContrastCheck {
 
 const themeNames: readonly ThemeName[] = ["light", "dark"];
 
-/**
- * Reads the own entries of a proposed object. A getter or a proxy trap that
- * throws makes the whole object unreadable, which is reported, not thrown.
- */
-function readEntries(proposed: unknown): [string, unknown][] {
-  return isRecord(proposed) ? Object.entries(proposed) : [];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+/** A plain object: not null, an array, a map, a class instance or one that inherits. */
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 const overridable: Record<keyof ThemeColours, true> = {
@@ -145,11 +150,83 @@ interface ResolvedTheme {
   invalid: InvalidColour[];
 }
 
-function resolveTheme(theme: ThemeName, proposed: unknown): ResolvedTheme {
+/** What could be read of an override's shape before any colour is looked at. */
+interface ProposedThemes {
+  proposed: Partial<Record<ThemeName, Record<string, unknown>>>;
+  /** Themes whose section is not an object: nothing is checked for them. */
+  skipped: Set<ThemeName>;
+  invalid: InvalidColour[];
+}
+
+function isThemeName(key: string): key is ThemeName {
+  return themeNames.some((name) => name === key);
+}
+
+/**
+ * Reads the shape of an override from its own entries, reporting anything
+ * that is not an object, or a key that is not part of the shape. May throw
+ * when a getter or proxy trap throws.
+ */
+function readProposedThemes(override: unknown): ProposedThemes {
+  const result: ProposedThemes = {
+    proposed: {},
+    skipped: new Set(),
+    invalid: [],
+  };
+  const report = (
+    theme: ThemeName | null,
+    role: string,
+    value: unknown,
+    reason: InvalidColourReason,
+  ): void => {
+    result.invalid.push({ theme, role, value, reason });
+  };
+  if (!isPlainRecord(override)) {
+    report(null, "override", override, "malformed");
+    return result;
+  }
+  for (const [key, colour] of Object.entries(override)) {
+    if (key !== "colour") {
+      report(null, key, colour, "unknown-key");
+    } else if (colour !== undefined && !isPlainRecord(colour)) {
+      report(null, "colour", colour, "malformed");
+    } else {
+      readThemeSections(colour ?? {}, result, report);
+    }
+  }
+  return result;
+}
+
+function readThemeSections(
+  colour: Record<string, unknown>,
+  result: ProposedThemes,
+  report: (
+    theme: ThemeName | null,
+    role: string,
+    value: unknown,
+    reason: InvalidColourReason,
+  ) => void,
+): void {
+  for (const [key, section] of Object.entries(colour)) {
+    if (!isThemeName(key)) {
+      report(null, key, section, "unknown-key");
+    } else if (section !== undefined && !isPlainRecord(section)) {
+      report(key, "colour", section, "malformed");
+      result.skipped.add(key);
+    } else if (section !== undefined) {
+      result.proposed[key] = section;
+    }
+  }
+}
+
+function resolveTheme(
+  theme: ThemeName,
+  proposed: Record<string, unknown> | undefined,
+): ResolvedTheme {
   const roles: ColourRoles = { ...themeValues[theme].colour };
   const invalidRoles = new Set<string>();
   const invalid: InvalidColour[] = [];
-  for (const [role, value] of readEntries(proposed)) {
+  for (const [role, value] of Object.entries(proposed ?? {})) {
     if (value === undefined) {
       continue;
     }
@@ -211,27 +288,28 @@ export function checkThemeContrast(
 ): ThemeContrastCheck {
   const findings: ContrastFinding[] = [];
   const invalid: InvalidColour[] = [];
-  for (const theme of themeNames) {
-    try {
-      const colour = isRecord(override) ? override.colour : undefined;
-      const resolved = resolveTheme(
-        theme,
-        isRecord(colour) ? colour[theme] : undefined,
-      );
-      invalid.push(...resolved.invalid);
-      findings.push(...findingsFor(theme, resolved));
-    } catch {
-      invalid.push({
-        theme,
-        role: "colour",
-        value: undefined,
-        reason: "unreadable",
-      });
+  try {
+    const { proposed, skipped, invalid: shape } = readProposedThemes(override);
+    invalid.push(...shape);
+    for (const theme of themeNames.filter((name) => !skipped.has(name))) {
+      try {
+        const resolved = resolveTheme(theme, proposed[theme]);
+        invalid.push(...resolved.invalid);
+        findings.push(...findingsFor(theme, resolved));
+      } catch {
+        invalid.push(unreadable(theme));
+      }
     }
+  } catch {
+    invalid.push(unreadable(null));
   }
   return {
     passes: invalid.length === 0 && findings.every((finding) => finding.passes),
     findings,
     invalid,
   };
+}
+
+function unreadable(theme: ThemeName | null): InvalidColour {
+  return { theme, role: "colour", value: undefined, reason: "unreadable" };
 }
