@@ -2,6 +2,34 @@
 
 How a host changes the words the interface shows, offers its visitors more than one language, or wires a message-format library of its own, without forking a component. The design is in [plan 0009](../plans/0009-i18n-message-catalogue.md) and the ports are described in [`ARCHITECTURE.md`](../../ARCHITECTURE.md) ("The message catalogue" and "The language setting"). British English (`en-GB`) is the source language and the SDK's default.
 
+## What is supported
+
+A host can build its interface with the SDK in the language or languages it chooses, written left to right or right to left. The SDK supplies the mechanism and the host supplies the words.
+
+The SDK supplies:
+
+- a message catalogue, with placeholders, plural categories from `Intl.PluralRules`, and lists, numbers and days formatted for the catalogue's language and numbering system;
+- the reading direction from the language tag (or the host's override), a layout built from logical properties, and isolation of coordinates, numbers and names inside right-to-left text;
+- unit symbols and coordinate words as catalogue keys, and `parseCoordinates` reading digits, minus signs and separators of other scripts;
+- type tracking and line height that suit the scripts in `tokenValues.nonLatinLanguages`;
+- translatable layer templates and host-keyed definition text (`HostText`), with `checkMessageCatalogue` and `checkDefinitionTexts` for a host's own tests;
+- the pseudo-locale and sample checks described below, which run the interface in longer text and in right-to-left text.
+
+The host supplies:
+
+- its catalogue, and the `layerTemplates` and `definitionTexts` for its own layers and basemaps, in each language it offers;
+- `<html lang>` and `<html dir>`, kept in step with the language in use;
+- a font for any script that IBM Plex Sans does not cover.
+
+Shipped in this repository: English, which is the default, and Afrikaans for the reference site. The Arabic, `en-XA` and `en-XB` catalogues are test data, offered only to the end-to-end build, and the Arabic sample has not been reviewed by a person who speaks Arabic. No right-to-left language ships on the reference site.
+
+Not covered:
+
+- a language the host has not written: the SDK has no machine translation and falls back to English for a missing key;
+- non-Latin fonts, which the SDK does not ship;
+- sending the visitor's language to a search or routing provider (see "What a language does not change");
+- a translator-friendly file format: a catalogue is a plain object.
+
 ## How the text is organised
 
 - Most interface text is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`). Layer feature templates instead use a separate table of host-defined keys in `MessageCatalogue.layerTemplates`.
@@ -177,7 +205,7 @@ A key that your library does not know is yours to handle: the SDK may call `t` o
 
 ## Right-to-left languages
 
-No right-to-left language ships yet, but the interface is built to mirror: styles use logical properties (the harmony scanner fails a physical one), icons that point along the reading direction mirror, and the Playwright projects `rtl-chromium` and `rtl-mobile-chromium` run the basemap, keyboard, sheet and app-shell specs with `dir="rtl"`.
+No right-to-left language ships on the reference site, but a host can offer one, and the interface mirrors: styles use logical properties (the harmony scanner fails a physical one), icons that point along the reading direction mirror, and the Playwright projects `rtl-chromium` and `rtl-mobile-chromium` run the basemap, keyboard, sheet and app-shell specs with `dir="rtl"`.
 
 `languageDirection(tag, languages)` in core uses the tag's `Intl.Locale` text information, falling back to `ltr` when unavailable or invalid. A host may set `direction: "ltr"` or `"rtl"` on a `LanguageOption` to override it. The host sets `dir` alongside `lang` on `<html>`, including on its server-rendered default, and updates both when the active catalogue changes. The reference host resolves the offered directions in its Vite configuration and embeds them in the build. It passes those options to `buildThemeBootstrapScript`, so the pre-paint script does not need `Intl`. Recompute its CSP hash in both header files after changing the offered languages or the script.
 

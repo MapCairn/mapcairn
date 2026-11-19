@@ -316,7 +316,10 @@ export const SECTIONS: readonly Section[] = [
           [
             "shows open data that the browser fetches straight from its provider, only when asked;",
           ],
-          ["wants to test its map interface against fakes, without WebGL."],
+          ["wants to test its map interface against fakes, without WebGL;"],
+          [
+            "needs the interface in its own language, left to right or right to left, and can supply the words: interface text comes from a message catalogue the host provides, plurals, lists, numbers and units follow its language, and the layout mirrors.",
+          ],
         ],
       },
       { kind: "subheading", text: "It is not" },
@@ -324,6 +327,9 @@ export const SECTIONS: readonly Section[] = [
         kind: "list",
         items: [
           ["a hosted service, a dataset or a GIS analysis engine;"],
+          [
+            "a set of translations or fonts: the SDK ships British English, and the host supplies the words for any other language and a font for a script that IBM Plex Sans does not cover;",
+          ],
           ["a wrapper for map engines other than MapLibre GL JS."],
         ],
       },
