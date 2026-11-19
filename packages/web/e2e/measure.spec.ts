@@ -168,8 +168,8 @@ test.describe("measure", () => {
       mapPage,
     }) => {
       await seedStoredSettings(page, { units: "imperial" });
-      await mapPage.goto(START);
-      await expect(mapPage.scaleBar).toHaveText(/^[\d.,\s]+ (ft|myl)$/);
+      await mapPage.goto("#map=10.00/51.50000/-0.12000");
+      await expect(mapPage.scaleBar).toHaveText(/^[\d.,\s]+ myl$/);
       await mapPage.startMeasuring();
       await mapPage.measureAddPoint.click();
       await mapPage.focusMap();
