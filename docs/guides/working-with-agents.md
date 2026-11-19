@@ -138,6 +138,7 @@ No MCP configuration file is committed for any tool, because the skills do not u
 
 ## What has not been checked
 
+- `shape-work`, `design-solution` and `design-ux` were tried only by their author, in one session, on #62, plan 0014 and #229, as dry runs with nothing posted. The `architecture-reviewer` and `ux-reviewer` agents have not been run.
 - No skill has been run end to end in another tool. Codex, opencode, Cursor, Antigravity, Qwen Code and Copilot's command line were not installed where this was written, and Copilot in VS Code (1.146.0) was not exercised. If you try one, say what broke in a pull request or an issue.
 - The Playwright command-line workflow was run only on Windows with Playwright 1.65.0 and only as far as attaching to the paused seed, stepping it and reading a `snapshot`. Planning, generating and healing a real spec through it, and `resume` followed by a command, were not tried (`resume` ends the seed run).
 - Whether opencode, Copilot and Cursor deduplicate a skill present in both `.claude/skills` and `.agents/skills`.

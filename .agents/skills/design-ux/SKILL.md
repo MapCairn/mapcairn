@@ -82,6 +82,7 @@ One line per problem found, with the state or step it affects:
 
 Into the issue or plan: the flows, the state tables, the announcements, the copy table, and acceptance criteria for any state the issue lacked. Then:
 
+- `web-platform-guidance` before building a new control, for the native element and its fallback.
 - `playwright-tests` for the keyboard route, the failure states (the test seam scripts them) and the `@a11y` test.
 - After the code: `review-ui` on the files, `visual-check` on the screens.
 - A changed component contract updates its `DESIGN.md` row in the same pull request.
