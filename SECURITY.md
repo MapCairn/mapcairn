@@ -18,7 +18,7 @@ The security surface is small. [`docs/assurance-case.md`](docs/assurance-case.md
 - Weaknesses in the Content Security Policy or other response headers
   (`packages/web/public/_headers`)
 - Supply-chain issues in dependencies that actually reach the shipped bundle
-- Deployment or hosting misconfiguration (`wrangler.jsonc`)
+- Deployment or hosting misconfiguration (`packages/web/cloudflare.config.ts`)
 
 ## What you can expect
 
