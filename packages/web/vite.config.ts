@@ -7,14 +7,31 @@ import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import react from "@vitejs/plugin-react";
 import { FontaineTransform } from "fontaine";
 import { tsImport } from "tsx/esm/api";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { OFFERED_LANGUAGE_OPTIONS } from "./src/i18n/offeredLanguageOptions.ts";
 
-export default defineConfig(async ({ mode, command }) => {
+/**
+ * `@vanilla-extract/vite-plugin` marks its runtime packages external for the
+ * server build, which suits Node. The Cloudflare plugin builds that same
+ * environment for the Worker, where nothing outside the bundle can be
+ * imported and the plugin rejects `resolve.external`, so the Worker bundles
+ * them instead. The plugin offers no option to leave the list out, and a
+ * returned config can only add to it, so this clears the list in place.
+ */
+const bundleVanillaExtractIntoWorker = (): Plugin => ({
+  name: "mapcairn:bundle-vanilla-extract-into-worker",
+  configEnvironment(name, options) {
+    if (name === "ssr" && options.resolve) {
+      options.resolve.external = [];
+    }
+  },
+});
+
+export default defineConfig(async ({ mode, command, isPreview }) => {
   const isTest = mode === "test" || process.env.VITEST === "true";
   // The Worker entry imports the built server bundle, so the Cloudflare plugin
   // only applies to production builds. Dev serves the app with plain Vite SSR.
-  const useCloudflare = command === "build";
+  const useCloudflare = command === "build" || isPreview === true;
   const { languageDirection } = (await tsImport(
     "@mapcairn/core",
     import.meta.url,
@@ -22,6 +39,12 @@ export default defineConfig(async ({ mode, command }) => {
 
   return {
     cacheDir: "node_modules/.vite",
+    // Wrangler uploaded no source maps for this Worker, and `cf deploy`
+    // uploads every map in the Build Output, so the Worker's environment makes
+    // none. The client build keeps its own setting.
+    ...(useCloudflare
+      ? { environments: { ssr: { build: { sourcemap: false } } } }
+      : {}),
     define: {
       __MAPCAIRN_HOST_LANGUAGE_DIRECTIONS__: JSON.stringify(
         OFFERED_LANGUAGE_OPTIONS.map(({ tag }) =>
@@ -34,6 +57,7 @@ export default defineConfig(async ({ mode, command }) => {
       // need to resolve to plain CSS before route/SSR transformation or the
       // JSX transform ever sees them.
       vanillaExtractPlugin(),
+      ...(useCloudflare ? [bundleVanillaExtractIntoWorker()] : []),
       ...(isTest
         ? [react()]
         : [
@@ -117,10 +141,11 @@ export default defineConfig(async ({ mode, command }) => {
       },
     },
     test: {
-      // The worker imports the built server bundle; tests use a stand-in so
-      // they pass on a fresh checkout, before any build.
+      // The worker imports React Router's virtual server build; tests use a
+      // stand-in so they run without the React Router plugin, which test mode
+      // leaves out.
       alias: {
-        "../build/server/index.js": fileURLToPath(
+        "virtual:react-router/server-build": fileURLToPath(
           new URL("./workers/testServerBuild.ts", import.meta.url),
         ),
       },

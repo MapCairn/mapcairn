@@ -3,14 +3,15 @@
 // Proves the development-only code is absent from a production build: the
 // browser test seam and the living style guide at /design.
 //
-// Usage, from packages/web after `react-router build`:
+// Usage, from packages/web after `cf build`:
 //   node scripts/verifyNoTestSeam.mjs                   exits 1 if any marker is found
 //   node scripts/verifyNoTestSeam.mjs --expect-present  exits 1 unless every string of every group is found (for the e2e build)
 //
-// `--root <dir>` searches <dir>/build/client and <dir>/build/server instead of
-// this package, which is how its test runs it.
+// `--root <dir>` searches <dir>/.cloudflare/output instead of this package's,
+// which is how its test runs it.
 //
-// It searches build/client and build/server for each group's strings:
+// It searches the Build Output (.cloudflare/output: the Worker bundle and the
+// static assets, whatever the output version) for each group's strings:
 // - test seam: the marker in src/composition/testSeam.ts and the three window
 //   properties it reads (the services, the scripted layer catalogue and the
 //   sample languages);
@@ -26,7 +27,7 @@ const root =
   rootFlag === -1
     ? join(dirname(fileURLToPath(import.meta.url)), "..")
     : (process.argv[rootFlag + 1] ?? ".");
-const directories = ["build/client", "build/server"];
+const directories = [".cloudflare/output"];
 const groups = [
   {
     name: "test seam",

@@ -13,7 +13,7 @@ Improve the Lighthouse scores where the cause is real, and stop where the remain
 
 ## How it was measured
 
-Lighthouse 13.4.1 against the production build served as CI serves it (`npm run preview:e2e`), mobile (the CI preset) five runs and desktop three runs per state, medians with the range. The same tool against the production site, three runs each, with the analytics beacon blocked so audit runs are not counted as visits. The latest CI run on `main` (b97b21ce) for reference. The local machine is slower than Lighthouse's reference device, so local mobile figures are worse than CI's; compare states, not machines.
+Lighthouse 13.4.1 against the production build served as CI serves it (`npm run preview`), mobile (the CI preset) five runs and desktop three runs per state, medians with the range. The same tool against the production site, three runs each, with the analytics beacon blocked so audit runs are not counted as visits. The latest CI run on `main` (b97b21ce) for reference. The local machine is slower than Lighthouse's reference device, so local mobile figures are worse than CI's; compare states, not machines.
 
 ## Findings
 
@@ -30,7 +30,7 @@ Accessibility, best practices and SEO are 100 everywhere. 24 requests to the sit
 1. **LCP is the first-visit tour card, and the card waits for the map.** Lighthouse runs as a first visit, so the welcome card is the largest text. It appears once `MapContext.loading` is false (plan 0004: it must never show over `MapUnavailable`), and `loading` stays true until the engine's first `idle`, after the first view's tiles and glyphs. LCP therefore measures "the map has loaded". The gate stays.
 2. **MapLibre is most of the main-thread work.** `maplibre-gl.mjs` is 1.1 MB as MapLibre ships it, and its evaluation, style processing and first draws are about 70% of the start-up CPU time (TBT). The rest of the app's own start-up JavaScript is about 0.5 s on this machine unthrottled, most of it rendering the chrome.
 3. **The engine starts downloading late.** `import("maplibre-gl")` starts in the map's mount effect, which runs only after the whole app has rendered. The download and the app's first render run one after the other when they could overlap.
-4. **Byte counts in the audit are not what most visitors receive.** Wrangler's local server and, for the installed Chrome used here, Cloudflare's edge send script and style bodies uncompressed (`x-content-encoding-over-network`), while other clients receive zstd or Brotli (`react-vendor` is 219 KB raw and 71 KB as zstd). The audit therefore overstates transfer costs, and a change that only saves bytes looks larger in it than it is.
+4. **Byte counts in the audit are not what most visitors receive.** The local preview server and, for the installed Chrome used here, Cloudflare's edge send script and style bodies uncompressed (`x-content-encoding-over-network`), while other clients receive zstd or Brotli (`react-vendor` is 219 KB raw and 71 KB as zstd). The audit therefore overstates transfer costs, and a change that only saves bytes looks larger in it than it is.
 5. **Render-blocking CSS.** Four stylesheets block the first paint: the shared component sheet (60 KB raw, 7.7 KB compressed), root, home and the error page's sheet (under 1 KB, loaded because the root error boundary imports it). All but the last are needed to draw the server-rendered skeleton, and the production CSP forbids inlining them.
 6. **No layout shift.** CLS is 0 in every run; the server-rendered skeleton holds the chrome's boxes.
 

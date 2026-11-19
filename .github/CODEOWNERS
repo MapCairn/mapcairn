@@ -26,5 +26,5 @@
 /packages/core/src/lint/ @MapCairn/maintainers
 /biome.jsonc @MapCairn/maintainers
 /.dependency-cruiser.cjs @MapCairn/maintainers
-/wrangler*.jsonc @MapCairn/maintainers
+/packages/web/cloudflare.config.ts @MapCairn/maintainers
 /docs/guides/working-with-agents.md @MapCairn/maintainers

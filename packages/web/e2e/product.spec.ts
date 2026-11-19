@@ -840,13 +840,15 @@ test.describe("the product page @a11y", () => {
  * layer definition, and the map.
  */
 function appLayoutFiles(): string[] {
-  const assets = fileURLToPath(
-    new URL("../build/client/assets", import.meta.url),
+  // `cf build` writes the client assets under `.cloudflare/output`, in a
+  // folder named for the Build Output version, so find the manifest by name.
+  const output = fileURLToPath(
+    new URL("../.cloudflare/output", import.meta.url),
   );
-  const manifestFile = readdirSync(assets).find((name) =>
-    name.startsWith("manifest-"),
-  );
-  const source = readFileSync(join(assets, manifestFile ?? ""), "utf8");
+  const manifestFile = readdirSync(output, { recursive: true })
+    .map(String)
+    .find((path) => /(^|[\\/])assets[\\/]manifest-[^\\/]+\.js$/.test(path));
+  const source = readFileSync(join(output, manifestFile ?? ""), "utf8");
   const manifest = JSON.parse(
     source.slice(source.indexOf("=") + 1).replace(/;\s*$/, ""),
   ) as { routes: Record<string, { module: string; css?: string[] }> };

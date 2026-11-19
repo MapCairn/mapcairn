@@ -71,7 +71,7 @@ A change that announces something checks the `LiveRegion` row in `DESIGN.md` for
 
 1. Run your tool's simplify step on your diff if it has one; otherwise reread the diff for logic an existing helper already does, code or options nothing uses, functions with two jobs and comments that a better name would replace. Apply the fixes and re-run the checks they touched. If another agent started you, do not start sub-agents: run this step and the `land-pr` review checklist inline, and your caller runs the independent review.
 2. Read the changed text once for British English, plain prose and only natural em dashes (see `AGENTS.md`). `npm run lint` is the only automated check for documents, so this step is the rest of the check, for code changes too.
-3. Stop every dev server, wrangler instance and browser you started and check the ports are free, then push the branch and continue with the `land-pr` skill. If you stop here, hand off with the report in `AGENTS.md` ("Definition of done").
+3. Stop every dev server, preview server and browser you started and check the ports are free, then push the branch and continue with the `land-pr` skill. If you stop here, hand off with the report in `AGENTS.md` ("Definition of done").
 
 ## 7. Briefing an agent
 
@@ -86,7 +86,7 @@ UI work: run the review-ui skill, then the visual-check skill, and describe what
 Other work in flight on <module>: <issue or pull request>. Keep your change additive; when the project's main moves, merge it into your branch, resolve and `git push`, and avoid a force-push.
 Work only in your own worktree, never the main checkout. Poll CI with one-shot `gh pr checks`; start no `--watch` or other background watcher.
 No assistant attribution in pull requests, issues or comments. Plain neutral voice on GitHub, no @mentions.
-Stop every server, browser and wrangler instance you start and confirm with a port check. Keep your worktree until the pull request has merged.
+Stop every server, browser and preview instance you start and confirm with a port check. Keep your worktree until the pull request has merged.
 Wording: <the decision, in the exact words to write>. Use these words; do not paraphrase them.
 Claims: check every claim against <files>. Name the file you checked beside each factual claim in your pull request description. Write no number, limit or rule of thumb that is not in the code or in a source you cite. In a rule about people, name the role, for example "the person who opens the pull request".
 Before you open: run the self-review in `land-pr` section 1 and report that every claim matches the code, nothing planned is described as built, the issue's task list is ticked, or its status posted as a comment if you cannot edit the issue, the change stays within the issue and no figure is invented.

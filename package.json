@@ -17,6 +17,8 @@
   "scripts": {
     "dev": "npm run dev -w @mapcairn/web",
     "start": "npm run start -w @mapcairn/web",
+    "deploy": "npm run deploy -w @mapcairn/web",
+    "deploy:preview": "npm run deploy:preview -w @mapcairn/web",
     "build": "npm run build --workspaces --if-present",
     "lint": "biome check --error-on-warnings . && npm run depcruise && npm run lint:harmony && npm run licence && npm run licence:sdk && npm run agents:check && npm run roadmap:check && npm run names:check && npm run portability:check",
     "depcruise": "node scripts/depcruise.mjs",
@@ -42,7 +44,7 @@
     "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run e2e && npm run a11y"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.6",
+    "@biomejs/biome": "2.6.7",
     "@swc/core": "1.16.22",
     "@vitest/coverage-v8": "5.1.0",
     "dependency-cruiser": "18.7.2",
@@ -51,8 +53,7 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "typescript": "7.0.2",
-    "vitest": "5.1.0",
-    "wrangler": "4.158.0"
+    "vitest": "5.1.0"
   },
   "allowScripts": {
     "esbuild": true,

@@ -13,3 +13,4 @@ Open plans:
 - [0008: Identify features on raster tile layers](0008-identify-raster-layers.md), tracking issue [#47](https://github.com/MapCairn/mapcairn/issues/47).
 - [0011: Any language, left to right and right to left](0011-any-language-ltr-and-rtl.md), tracking issue [#316](https://github.com/MapCairn/mapcairn/issues/316).
 - [0013: Host-defined definition text](0013-host-definition-text.md), tracking issue [#368](https://github.com/MapCairn/mapcairn/issues/368).
+- [0014: Release the SDK packages on GitHub and npm](0014-sdk-release.md), tracking issue [#1](https://github.com/MapCairn/mapcairn/issues/1).
