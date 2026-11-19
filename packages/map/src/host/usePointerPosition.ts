@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { isCursorReadout } from "./pointerTargets";
 
 /** Options for {@link usePointerPosition}. */
 export interface UsePointerPositionOptions {
@@ -26,22 +27,15 @@ export interface UsePointerPosition {
   readonly onPointerLeave: (event: ReactPointerEvent) => void;
 }
 
-/** Whether the pointer went to the cursor readout, which may have grown under it. */
-function isReadout(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    target.closest('[data-chrome="map-readout"]') !== null
-  );
-}
-
 /**
  * Reports the geographic position under a mouse or pen, at most once per
  * animation frame, for the cursor coordinates readout. Touch is ignored,
  * because a finger has no hover position. Leaving the map reports null and
- * drops any pending frame, except onto the cursor readout (`data-chrome="map-readout"`):
+ * drops any pending frame, except onto the cursor readout (`MapReadout`):
  * the readout grows to hold the coordinates and can grow under a resting
- * pointer, so the last position stays and the readout clears it when the
- * pointer leaves it for anything but the map.
+ * pointer, so the last position stays. The host then clears it from
+ * `MapReadout`'s `onCursorLeave`; a host that shows the position in a
+ * readout of its own clears it when the pointer leaves that readout.
  */
 export function usePointerPosition(
   options: UsePointerPositionOptions,
@@ -81,7 +75,10 @@ export function usePointerPosition(
         }
       },
       onPointerLeave: (event) => {
-        if (event.pointerType === "touch" || isReadout(event.relatedTarget)) {
+        if (
+          event.pointerType === "touch" ||
+          isCursorReadout(event.relatedTarget)
+        ) {
           return;
         }
         cancelAnimationFrame(frame.current);

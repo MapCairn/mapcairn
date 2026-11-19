@@ -78,6 +78,10 @@ export interface MapViewProps {
   /**
    * The position under a mouse or pen, at most once per frame, or null when
    * it leaves the map. For the cursor coordinates readout; touch is ignored.
+   * Leaving the map for `MapReadout` reports nothing, so the coordinates stay
+   * put while the readout grows under the pointer: pass `MapReadout` an
+   * `onCursorLeave` that clears the position, or it stays shown after the
+   * pointer leaves the readout.
    */
   readonly onPointerMove?: (latlng: LatLng | null) => void;
   /** The P key, which drops a pin at the centre of the map. */

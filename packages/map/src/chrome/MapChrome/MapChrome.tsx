@@ -457,10 +457,16 @@ export function MapChrome({
       measurements.bottomRowTop + bottom.bottomEndTranslateY;
   const tourHidden = modal || tourCrowded;
   const keyTourEdge = keyTourBottom(tourHidden, measurements);
-  // The measuring observer reads the tour edge this render decided on.
+  // The measuring observer reads the tour edge this render decided on. A card
+  // hidden by state alone (a modal, or the row reaching it) resizes no slot,
+  // so no observer round follows: place the key again here.
   useLayoutEffect(() => {
+    if (mapKeyTourBottomRef.current === keyTourEdge) {
+      return;
+    }
     mapKeyTourBottomRef.current = keyTourEdge;
-  }, [keyTourEdge]);
+    update();
+  }, [keyTourEdge, update]);
   // The map key gives way to the tour card, which is there for a first visit
   // and is shown first, and hides when the room under the search pill is too
   // small for its chip.

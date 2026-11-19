@@ -664,6 +664,12 @@ describe("MapChrome map key slot", () => {
     });
     expect(cssVar(chromeVars.bottomRaise)).toBe(`${-(406 + 12)}px`);
     expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${512 - 12 - (60 + 12)}px`);
+    // The render path lifts the row by the toolbar's top less the viewport
+    // height, 150 - 568, the same -(406 + 12): the rooms it sets and the
+    // key's crowding agree with the raise the observer wrote.
+    expect(cssVar(chromeVars.bottomEndBesideRoom)).toBe(
+      `${512 - (406 + 12) - 12 - 60}px`,
+    );
     expect(slot("map-key")).toHaveAttribute("data-crowded", "true");
     expect(slot("map-key")).toHaveAttribute("inert");
     place("bottom-centre", 556, 0);
@@ -685,6 +691,20 @@ describe("MapChrome map key slot", () => {
       observers.trigger();
     });
     expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (60 + 12)}px`);
+  });
+
+  it("places the key again when the tour card is hidden without any slot changing size", () => {
+    const view = mount({ mapKey: <div>key</div>, tour: <div>tour</div> });
+    resize(390, 800, 190);
+    placeKey(60);
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (262 + 12)}px`);
+    // A modal hides the card by state alone; the slots keep their sizes, so
+    // no observer round follows.
+    view.rerenderChrome({ modal: true });
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (60 + 12)}px`);
+    expect(cssVar(chromeVars.mapKeyLift)).toBe("0px");
+    view.rerenderChrome({ modal: false });
+    expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${744 - 12 - (262 + 12)}px`);
   });
 
   it("measures again once a slot has left the page, because the key's resting place moves with the row", () => {

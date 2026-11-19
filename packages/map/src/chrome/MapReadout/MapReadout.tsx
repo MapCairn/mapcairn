@@ -9,6 +9,7 @@ import {
 } from "@mapcairn/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap } from "../../host";
+import { CURSOR_READOUT_CHROME, isMapHost } from "../../host/pointerTargets";
 import { useFormatMessage, useMessages, usePreferences } from "../../services";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { useChromeLayout } from "../layoutContext";
@@ -237,13 +238,6 @@ export interface MapReadoutProps
   readonly onCursorLeave?: () => void;
 }
 
-/** Whether the pointer went to the map, which reports positions itself. */
-function isMap(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element && target.closest("[data-map-host]") !== null
-  );
-}
-
 /**
  * The bottom-start readout: the scale bar with the cursor coordinates and
  * zoom level under it. One floating element, for the layout collision test,
@@ -264,11 +258,11 @@ export function MapReadout({
   return (
     <section
       aria-label={t("chrome.readout.label", {})}
-      data-chrome="map-readout"
+      data-chrome={CURSOR_READOUT_CHROME}
       data-testid="map-readout"
       className={styles.readout}
       onPointerLeave={(event) => {
-        if (!isMap(event.relatedTarget)) {
+        if (!isMapHost(event.relatedTarget)) {
           onCursorLeave?.();
         }
       }}

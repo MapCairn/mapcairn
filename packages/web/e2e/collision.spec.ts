@@ -739,6 +739,42 @@ test("cursor coordinates stay shown under a pointer resting where the readout gr
   expect(blanks, "frames without coordinates").toEqual([]);
 });
 
+test("the cursor coordinates can be selected with the pointer that showed them", async ({
+  page,
+  mapPage,
+  isMobile,
+}) => {
+  test.skip(isMobile, "The cursor coordinates need a fine pointer.");
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await mapPage.goto(WIDEST_COORDINATES_VIEW);
+  await collapseCredits(mapPage);
+  const map = await mapPage.mapSize();
+  await page.mouse.move(map.width / 2, map.height / 2);
+  await page.mouse.move(map.width / 2 + 1, map.height / 2 + 1);
+  const coordinates = page
+    .locator('[data-chrome="cursor-coordinates"] span')
+    .first();
+  await expect(coordinates).toHaveText(COORDINATES_PATTERN);
+  const box = await coordinates.boundingBox();
+  if (!box) {
+    throw new Error("The coordinates have no box.");
+  }
+  const y = box.y + box.height / 2;
+  // From the map straight onto the text, then across it.
+  await page.mouse.move(box.x + 1, y, { steps: 5 });
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 1, y, { steps: 5 });
+  await page.mouse.up();
+  const selected = await page.evaluate(async () => {
+    for (let frame = 0; frame < 30; frame += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    return window.getSelection()?.toString() ?? "";
+  });
+  expect(selected).toMatch(/-?\d+\.\d{4}/);
+  await expect(coordinates).toHaveText(COORDINATES_PATTERN);
+});
+
 /**
  * Finds a part of the map canvas that nothing covers, with map on every side
  * of it (a gap between two surfaces is too narrow to rest on): the one nearest
