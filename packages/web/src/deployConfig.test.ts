@@ -137,13 +137,34 @@ describe("the web package's scripts", () => {
     ) as { scripts: Record<string, string> }
   ).scripts;
 
-  it("build, develop and deploy through cf", () => {
+  it("build and develop through cf", () => {
     expect(scripts.dev).toBe("cf dev");
-    expect(scripts.build).toMatch(
-      /^cf build && node scripts\/verifyNoTestSeam\.mjs$/,
+    expect(scripts.build).toBe("cf build && node scripts/verifyNoTestSeam.mjs");
+  });
+
+  it("deploy through cf, only after the output is built or checked to hold no test seam", () => {
+    const guards = ["node scripts/verifyNoTestSeam.mjs", "npm run build"];
+    const deployScripts = Object.entries(scripts).filter(([name]) =>
+      name.startsWith("deploy"),
     );
-    expect(scripts.deploy).toBe("cf deploy --prebuilt --mode production");
-    expect(scripts["deploy:preview"]).toBe("cf previews deploy");
+    expect(deployScripts.map(([name]) => name)).toEqual([
+      "deploy",
+      "deploy:preview",
+    ]);
+    for (const [name, command] of deployScripts) {
+      const deployAt = command.indexOf("cf ");
+      expect(deployAt, name).toBeGreaterThan(0);
+      expect(
+        guards.some((guard) => command.slice(0, deployAt).includes(guard)),
+        `${name} must build or verify before it deploys`,
+      ).toBe(true);
+    }
+    expect(scripts.deploy).toBe(
+      "node scripts/verifyNoTestSeam.mjs && cf deploy --prebuilt --mode production",
+    );
+    expect(scripts["deploy:preview"]).toBe(
+      "npm run build && cf previews deploy",
+    );
   });
 
   it("build the end-to-end bundle in its own mode and check that it keeps the test seam", () => {
