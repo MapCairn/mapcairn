@@ -7,6 +7,7 @@ import {
 } from "./parseCoordinates";
 
 const JOHANNESBURG = { lat: -26.2041, lng: 28.0473 };
+const JOHANNESBURG_DECIMAL_SOUTH = { lat: -26.2041, lng: 28.0473 };
 const JOHANNESBURG_DMS = { lat: -26.2041111, lng: 28.0473056 };
 
 describe("parseCoordinates", () => {
@@ -192,6 +193,123 @@ describe("parseCoordinates", () => {
     });
   });
 
+  describe("digits, signs and separators from other scripts", () => {
+    it.each([
+      ["２６.２ ２８.０", { lat: 26.2, lng: 28 }],
+      ["٢٦.٢ ٢٨.٠", { lat: 26.2, lng: 28 }],
+      ["٢٦٫٢ ٢٨٫٠", { lat: 26.2, lng: 28 }],
+      ["۲۶.۲ ۲۸.۰", { lat: 26.2, lng: 28 }],
+      ["२६.२ २८.०", { lat: 26.2, lng: 28 }],
+      ["২৬.২ ২৮.০", { lat: 26.2, lng: 28 }],
+      ["๒๖.๒ ๒๘.๐", { lat: 26.2, lng: 28 }],
+      ["𝟐𝟔.𝟐 𝟐𝟖.𝟎", { lat: 26.2, lng: 28 }],
+      ["26.2 ٢٨.٠", { lat: 26.2, lng: 28 }],
+      ["\u221226.2, 28.0", { lat: -26.2, lng: 28 }],
+      ["\u200E\u221226.2\u200E 28.0", { lat: -26.2, lng: 28 }],
+      ["\u061C\u221226.2 28.0\u200F", { lat: -26.2, lng: 28 }],
+      ["\uFF0D26.2 28.0", { lat: -26.2, lng: 28 }],
+      ["\uFE6326.2 28.0", { lat: -26.2, lng: 28 }],
+      ["\u201026.2 \u201228.0", { lat: -26.2, lng: -28 }],
+      ["\uFF0B26.2 \uFF0B28.0", { lat: 26.2, lng: 28 }],
+      ["26.2\u060C 28.0", { lat: 26.2, lng: 28 }],
+      ["٢٦٫٢،٢٨٫٠", { lat: 26.2, lng: 28 }],
+      ["26.2\u061B 28.0", { lat: 26.2, lng: 28 }],
+      ["２６．２，２８．０", { lat: 26.2, lng: 28 }],
+      ["26.2\u202F28.0", { lat: 26.2, lng: 28 }],
+      ["26.2\u066C28.0", { lat: 26.2, lng: 28 }],
+      ["٢٦٫٢°\u00A0٢٨٫٠°", { lat: 26.2, lng: 28 }],
+    ])("reads %j", (text, expected) => {
+      expect(parseCoordinates(text)).toEqual(expected);
+    });
+
+    it("still refuses a minus sign that touches a number before it", () => {
+      expect(parseCoordinates("\u221226.2\u221228.1")).toBeNull();
+      expect(parseCoordinates("١٢\u2212١٤")).toBeNull();
+    });
+
+    it("reads every decimal digit of the Unicode digit sets", () => {
+      const digits = Array.from({ length: 0x10ffff }, (_, point) => point)
+        .filter((point) => /^\p{Nd}$/u.test(String.fromCodePoint(point)))
+        .map((point) => String.fromCodePoint(point));
+      const failures = digits.filter((digit, index) => {
+        const expected = index % 10;
+        return (
+          parseCoordinates(`${digit}.${digit} 1.5`)?.lat !==
+          Number(`${expected}.${expected}`)
+        );
+      });
+      expect(digits.length).toBeGreaterThan(600);
+      expect(failures).toEqual([]);
+    });
+  });
+
+  describe("decimal commas", () => {
+    it.each([
+      ["26,2; 28,3", { lat: 26.2, lng: 28.3 }],
+      ["-26,2041;28,0473", JOHANNESBURG],
+      ["26,2 28,3", { lat: 26.2, lng: 28.3 }],
+      ["1,5 2,5", { lat: 1.5, lng: 2.5 }],
+      ["1,234 5,678", { lat: 1.234, lng: 5.678 }],
+      ["-26,2041 28,0473", JOHANNESBURG],
+      ["26,2041° S 28,0473° E", JOHANNESBURG_DECIMAL_SOUTH],
+      ["26,5; 28.25", { lat: 26.5, lng: 28.25 }],
+      ["26°12,5' S; 28°2,5' E", { lat: -26.2083333, lng: 28.0416667 }],
+      ["٢٦٫٢ ٢٨٫٣", { lat: 26.2, lng: 28.3 }],
+      ["٢٦,٢ ٢٨,٣", { lat: 26.2, lng: 28.3 }],
+    ])("reads %j", (text, expected) => {
+      expect(parseCoordinates(text)).toEqual(expected);
+    });
+
+    it.each([
+      "26,28",
+      "1,234",
+      "26,5",
+      "26,5, 28,3",
+      "26,5 28.3",
+      "26,5 28",
+      "26.5 28,3",
+      "1,2,3 4,5",
+      "26,5;; 28,3",
+      "26,5; 28,3; 1,2",
+      "26,5,; 28,3",
+    ])("refuses %j", (text) => {
+      expect(parseCoordinates(text)).toBeNull();
+    });
+
+    it("keeps reading a comma between points as a separator", () => {
+      expect(parseCoordinates("26.5,28.3")).toEqual({ lat: 26.5, lng: 28.3 });
+    });
+  });
+
+  describe("hostile input in other scripts", () => {
+    it("stays linear on text made of one repeated unit", () => {
+      const unit = "٢,";
+      const text = unit.repeat(MAX_COORDINATE_TEXT_LENGTH / unit.length);
+      const started = performance.now();
+      for (let round = 0; round < 200; round += 1) {
+        parseCoordinates(text);
+        parseCoordinates(`${text}x`);
+      }
+      expect(performance.now() - started).toBeLessThan(1000);
+    });
+
+    it("refuses text over the cap even when it is all digits of another script", () => {
+      const text = "٢".repeat(MAX_COORDINATE_TEXT_LENGTH + 1);
+      expect(parseCoordinates(text)).toBeNull();
+    });
+
+    it("counts the cap in the text as given, not as normalised", () => {
+      const pair = `${"٢".repeat(55)}.٥ ٢٨.٠`;
+      expect(pair.length).toBeLessThan(MAX_COORDINATE_TEXT_LENGTH);
+      expect(parseCoordinates(`${pair}${" ".repeat(60)}`)).toBeNull();
+    });
+
+    it("refuses unpaired surrogates and unknown characters", () => {
+      expect(parseCoordinates("26.2 \uD800 28.0")).toBeNull();
+      expect(parseCoordinates("26.2 ☃ 28.0")).toBeNull();
+    });
+  });
+
   describe("what is not a coordinate pair", () => {
     it.each([
       "",
@@ -240,7 +358,6 @@ describe("parseCoordinates", () => {
       "0, -181",
       "91S 0E",
       "0N 181E",
-      "1,5 2,5",
       "1.2.3 4",
       "1..2 3",
       "- 26 28",

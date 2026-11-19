@@ -2,6 +2,10 @@
 // Copyright MapCairn contributors
 import type { Hemispheres } from "../format/format";
 import type { LatLng } from "../ports/geometry";
+import {
+  normaliseCoordinateText,
+  withDecimalCommas,
+} from "./normaliseCoordinateText";
 
 /**
  * The longest text {@link parseCoordinates} reads. A coordinate pair in
@@ -391,47 +395,9 @@ function roundToCentimetre(degrees: number): number {
   return Math.round(degrees * ROUNDING_FACTOR) / ROUNDING_FACTOR + 0;
 }
 
-/**
- * Reads a pair of coordinates from text a person typed, or returns `null`
- * when the text is not one. It never guesses: text that is out of range,
- * ambiguous, or has anything left over is refused, so a street number, a
- * postcode or a place name goes on to a place search.
- *
- * What it reads, with the latitude first unless the letters say otherwise:
- * - decimal degrees: `-26.2041, 28.0473`, `-26.2041 28.0473`, `26.2041° S, 28.0473° E`
- * - degrees, minutes and seconds: `26°12'14.8"S 28°02'50.3"E`, with the
- *   usual symbols or the words degrees, minutes and seconds, and decimal
- *   minutes when there are no seconds
- * - hemisphere letters (N, S, E, W or the words) before or after a value,
- *   in either order; a negative sign cannot be combined with a letter.
- *   Pass `hemispheres` (`hemispheresFor(catalogue)`) to read the letters of
- *   the language in use as well, so "26.20410° S, 28.04730° O" reads back in
- *   Afrikaans; N, S, E and W are always read
- * - one comma or semicolon between the two values, or white space alone
- * - a leading "coordinates" or "coords", so the label of a coordinate result
- *   reads back as the same place to about a metre
- *
- * Every value must carry a mark that says it is a degree value: a decimal
- * point with digits after it, or a degree sign or the word degrees. A bare
- * whole number is not enough, so "12 34", "E1 6" and a postcode or house
- * number go on to the place search. A minus sign (hyphen, en dash or the
- * Unicode minus) starts a value only when it does not touch a number before
- * it, so "02-123" and "12-14" are not pairs.
- *
- * A comma is never a decimal mark. Latitude must be within 90 degrees and
- * longitude within 180. Text longer than {@link MAX_COORDINATE_TEXT_LENGTH}
- * is refused unread, and the rest is read in a single pass, so the cost
- * grows in step with the text and no hostile input can make it slow.
- * @returns The position, rounded to seven decimals, or `null`.
- */
-export function parseCoordinates(
-  text: string,
-  hemispheres?: Hemispheres,
-): LatLng | null {
-  if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
-    return null;
-  }
-  const tokens = tokenise(text, wordsFor(hemispheres));
+/** Reads a pair from text that is already in ASCII digits, signs and separators. */
+function readPair(text: string, words: Words): LatLng | null {
+  const tokens = tokenise(text, words);
   if (tokens === null) {
     return null;
   }
@@ -455,4 +421,68 @@ export function parseCoordinates(
     lat: roundToCentimetre(position.lat),
     lng: roundToCentimetre(position.lng),
   };
+}
+
+/**
+ * Reads a pair of coordinates from text a person typed, or returns `null`
+ * when the text is not one. It never guesses: text that is out of range,
+ * ambiguous, or has anything left over is refused, so a street number, a
+ * postcode or a place name goes on to a place search.
+ *
+ * What it reads, with the latitude first unless the letters say otherwise:
+ * - decimal degrees: `-26.2041, 28.0473`, `-26.2041 28.0473`, `26.2041° S, 28.0473° E`
+ * - degrees, minutes and seconds: `26°12'14.8"S 28°02'50.3"E`, with the
+ *   usual symbols or the words degrees, minutes and seconds, and decimal
+ *   minutes when there are no seconds
+ * - hemisphere letters (N, S, E, W or the words) before or after a value,
+ *   in either order; a negative sign cannot be combined with a letter.
+ *   Pass `hemispheres` (`hemispheresFor(catalogue)`) to read the letters of
+ *   the language in use as well, so "26.20410° S, 28.04730° O" reads back in
+ *   Afrikaans; N, S, E and W are always read
+ * - one comma or semicolon between the two values, or white space alone
+ * - a leading "coordinates" or "coords", so the label of a coordinate result
+ *   reads back as the same place to about a metre
+ *
+ * Every value must carry a mark that says it is a degree value: a decimal
+ * point with digits after it, or a degree sign or the word degrees. A bare
+ * whole number is not enough, so "12 34", "E1 6" and a postcode or house
+ * number go on to the place search. A minus sign (hyphen, a dash or the
+ * Unicode minus) starts a value only when it does not touch a number before
+ * it, so "02-123" and "12-14" are not pairs.
+ *
+ * Other scripts and locales are read too. Digits of any script (the Unicode
+ * decimal digits, so Arabic-Indic, Devanagari, Bengali, full-width and the
+ * rest), the Unicode minus sign and the other dashes and full-width signs,
+ * the Arabic comma and semicolon and decimal separator, full-width
+ * punctuation and white space such as the narrow no-break space are
+ * rewritten as their ASCII forms first, and bidirectional marks are dropped.
+ * A thousands separator is read as white space, since no coordinate has a
+ * digit group.
+ *
+ * A comma is a decimal mark in two layouts only: values separated by a
+ * semicolon (`26,2041; 28,0473`), or separated by white space with a comma
+ * in every number and no other comma in the text (`26,2041 28,0473`). A
+ * comma between digits is never a thousands separator, so `26,28` and `1,234`
+ * alone are not coordinates, `26,5 28.3` mixes marks and is refused, and
+ * `26,5, 28,3` is refused because its commas could be either. Anywhere else
+ * a comma separates the two values, as before. Latitude must be within 90 degrees and
+ * longitude within 180. Text longer than {@link MAX_COORDINATE_TEXT_LENGTH}
+ * is refused unread, and the rest is read in a single pass, so the cost
+ * grows in step with the text and no hostile input can make it slow.
+ * @returns The position, rounded to seven decimals, or `null`.
+ */
+export function parseCoordinates(
+  text: string,
+  hemispheres?: Hemispheres,
+): LatLng | null {
+  if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
+    return null;
+  }
+  const words = wordsFor(hemispheres);
+  const normalised = normaliseCoordinateText(text);
+  const withPoints = withDecimalCommas(normalised);
+  return (
+    readPair(normalised, words) ??
+    (withPoints === null ? null : readPair(withPoints, words))
+  );
 }
