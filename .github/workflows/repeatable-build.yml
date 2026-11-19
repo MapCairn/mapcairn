@@ -40,17 +40,17 @@ jobs:
 
       - name: Hash the first build
         run: |
-          cd packages/web/build
+          cd packages/web/.cloudflare/output
           find . -type f -print0 | sort -z | xargs -0 sha256sum > "${RUNNER_TEMP}/first.sha256"
 
       - name: Second build from clean
         run: |
-          rm -rf packages/web/build
+          rm -rf packages/web/.cloudflare
           npm run build -w @mapcairn/web
 
       - name: Hash the second build
         run: |
-          cd packages/web/build
+          cd packages/web/.cloudflare/output
           find . -type f -print0 | sort -z | xargs -0 sha256sum > "${RUNNER_TEMP}/second.sha256"
 
       - name: Compare the two builds

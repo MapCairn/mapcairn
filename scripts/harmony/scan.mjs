@@ -24,7 +24,7 @@ const SKIP_DIRS = new Set([
   ".react-router",
   "test-results",
   "playwright-report",
-  ".wrangler",
+  ".cloudflare",
   "e2e",
   "scripts",
   "project.inlang",
