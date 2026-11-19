@@ -126,29 +126,119 @@ describe("checkDefinitionTexts", () => {
     ]);
   });
 
-  it("skips every property the layer types read as a template", () => {
-    const source = readFileSync(
-      new URL("../layers/definition.ts", import.meta.url),
-      "utf8",
-    );
-    const templateFields = new Set(
+  it("reads a host text in a property that merely shares a template's name", () => {
+    expect(
+      checkDefinitionTexts(
+        [
+          { title: { key: "t", text: "T" } },
+          { card: { lines: [{ key: "l", text: "L" }] }, unit: { key: "u" } },
+          { other: { unit: { key: "x", text: "X" } } },
+        ],
+        {},
+      ),
+    ).toEqual([
+      { key: "t", problem: "missing" },
+      { key: "x", problem: "missing" },
+    ]);
+  });
+
+  it("skips each template position, through lists", () => {
+    const template = { key: "tpl", text: "{a}" };
+    expect(
+      checkDefinitionTexts(
+        [
+          {
+            card: { title: template, lines: [template] },
+            list: { secondary: template },
+            controls: [{ unit: template }],
+            style: { colour: { unit: template }, label: { template } },
+          },
+        ],
+        {},
+      ),
+    ).toEqual([]);
+  });
+
+  it("treats null, a non-object and an undefined entry as missing", () => {
+    const used = [{ name: { key: "a", text: "A" } }];
+    expect(checkDefinitionTexts(used, null)).toEqual([
+      { key: "a", problem: "missing" },
+    ]);
+    expect(
+      checkDefinitionTexts(used, "x" as unknown as Record<string, string>),
+    ).toEqual([{ key: "a", problem: "missing" }]);
+    expect(checkDefinitionTexts(used, { a: undefined })).toEqual([
+      { key: "a", problem: "missing" },
+    ]);
+  });
+
+  it("reads a very long list", () => {
+    const many = Array.from({ length: 200_000 }, () => "text");
+    expect(
+      checkDefinitionTexts([many, { name: { key: "a", text: "A" } }], {
+        a: "A",
+      }),
+    ).toEqual([]);
+  });
+
+  describe("the template positions", () => {
+    const read = (file: string): string =>
+      readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    const fieldsTyped = (source: string, type: RegExp): string[] =>
       [
         ...source.matchAll(
-          /readonly (\w+)\??: (?:readonly )?(?:LayerTemplate|T)\b/g,
+          new RegExp(`readonly (\\w+)\\??: (?:readonly )?${type.source}`, "g"),
         ),
-      ].map((match) => match[1] as string),
-    );
-    expect([...templateFields].sort()).toEqual([
-      "lines",
-      "secondary",
-      "template",
-      "title",
-      "unit",
-    ]);
-    for (const field of templateFields) {
-      expect(
-        checkDefinitionTexts([{ [field]: { key: "t", text: "T" } }], {}),
-      ).toEqual([]);
-    }
+      ].map((match) => match[1] as string);
+
+    it("cover every property the layer types read as a template", () => {
+      const definition = read("layers/definition.ts");
+      expect(fieldsTyped(definition, /(?:LayerTemplate|T)\b/).sort()).toEqual([
+        "lines",
+        "secondary",
+        "template",
+        "title",
+        "unit",
+        "unit",
+      ]);
+      const skipped = [
+        ["card", "title"],
+        ["card", "lines"],
+        ["list", "secondary"],
+        ["controls", "unit"],
+        ["colour", "unit"],
+        ["label", "template"],
+      ];
+      for (const [owner, field] of skipped) {
+        expect(
+          checkDefinitionTexts(
+            [
+              {
+                [owner as string]: {
+                  [field as string]: { key: "t", text: "T" },
+                },
+              },
+            ],
+            {},
+          ),
+        ).toEqual([]);
+      }
+    });
+
+    it("do not collide with a field typed as definition text", () => {
+      const sources = [
+        "layers/definition.ts",
+        "layers/style.ts",
+        "keyboard/keyboard.ts",
+        "ports/basemap.ts",
+      ].map(read);
+      const names = sources.flatMap((source) =>
+        fieldsTyped(source, /DefinitionText\b/),
+      );
+      expect(names.length).toBeGreaterThan(10);
+      for (const clash of ["title", "lines", "secondary", "unit", "template"]) {
+        expect(names).not.toContain(clash);
+      }
+    });
   });
 });

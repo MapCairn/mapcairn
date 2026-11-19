@@ -108,8 +108,8 @@ A missing entry is silent, so check your own keys before you ship. `checkDefinit
 import { checkDefinitionTexts } from "@mapcairn/core";
 
 const problems = checkDefinitionTexts(
-  [...HOST_LAYERS, ...HOST_BASEMAPS],
-  AF_DEFINITION_TEXTS,
+  [...MY_LAYERS, ...MY_BASEMAPS],
+  MY_AFRIKAANS_DEFINITION_TEXTS,
 );
 
 expect(problems.filter(({ problem }) => problem !== "unused")).toEqual([]);
@@ -117,9 +117,9 @@ expect(problems.filter(({ problem }) => problem !== "unused")).toEqual([]);
 
 - `missing`: a definition uses the key and the record has no entry of its own for it, so the source text shows.
 - `blank`: the entry is blank or not text, so the source text shows and `resolveText` warns.
-- `unused`: the record has an entry that none of the definitions uses, such as one left over after a key was renamed. It is only meaningful when you pass every definition, so a test that checks one group of definitions leaves it out, as above.
+- `unused`: the record has an entry that none of the definitions uses, such as one left over after a key was renamed. It is always listed, and it is only meaningful when you pass every definition you ship. A test that passes only some of them filters it out, as the example does.
 
-The problems come in the order the definitions first use each key, then the unused entries in the record's order. A plain string and a shipped `MessageKey` are not reported. A layer template (a card title or line, a list's second line, a range unit or a shape label) is not either: its keys belong to `layerTemplates`, which `createMessageCatalogue` checks for placeholders when it reads them. The check only reports. It does not throw and does not change how `resolveText` falls back. It reads every own property of the definitions, so it does not depend on a layer id, and a `HostText` written where validation forbids it (an attribution) is reported like any other.
+The problems come in the order the definitions first use each key, then the unused entries in the record's order. A plain string and a shipped `MessageKey` are not reported. A layer template is not either: a card's `title` and `lines`, a list's `secondary`, a control's or colour's `unit` and a label's `template` are skipped by position, because their keys belong to `layerTemplates`. A `{ key, text }` object anywhere else is read as a `HostText`. The check only reports: it does not throw and does not change how `resolveText` falls back. It reads every own property of the definitions and the items of lists (not a `Map` or a `Set`), so it does not depend on a layer id.
 
 Moving to this version: `DefinitionText` is wider than before, so code of your own that reads a definition's `name`, `group`, `label` or similar as a string must call `resolveText(catalogue, text)` (`useResolveText()` in a component) instead. A name that reaches an announcement is passed on with `textOrMessage(name)`, and the `announce*` name parameters, like the `{name}` placeholders of a `Message`, take a `MessagePart`: a string, a `Message` or a `HostText`. `MarkerStyle.label` is a `DefinitionText` and `BasemapFailure.name` in the reference host too, and `isMessageKey` accepts any `DefinitionText`. Definitions that use only strings and shipped keys need no change.
 
