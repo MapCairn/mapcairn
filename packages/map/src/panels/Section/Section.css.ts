@@ -71,8 +71,11 @@ export const note = style({
 /** The icon at the start of a {@link note}, kept from shrinking. */
 export const noteIcon = style({ flexShrink: 0 });
 
-/** An inline link. Always underlined so it never relies on colour alone. */
+/** A standalone link: underlined, focused visibly and large enough to target. */
 export const link = style({
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: tokens.size.minTarget,
   color: tokens.color.accent,
   textDecoration: "underline",
   borderRadius: tokens.radius.inner,
