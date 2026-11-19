@@ -2,6 +2,34 @@
 
 How a host changes the words the interface shows, offers its visitors more than one language, or wires a message-format library of its own, without forking a component. The design is in [plan 0009](../plans/0009-i18n-message-catalogue.md) and the ports are described in [`ARCHITECTURE.md`](../../ARCHITECTURE.md) ("The message catalogue" and "The language setting"). British English (`en-GB`) is the source language and the SDK's default.
 
+## What is supported
+
+A host can build its interface with the SDK in the language or languages it chooses, written left to right or right to left. The SDK supplies the mechanism and the host supplies the words.
+
+The SDK supplies:
+
+- a message catalogue, with placeholders, plural categories from `Intl.PluralRules`, and lists, numbers and days formatted for the catalogue's language and numbering system;
+- the reading direction from the language tag (or the host's override), a layout built from logical properties, and isolation of coordinates, numbers and names inside right-to-left text;
+- unit symbols and coordinate words as catalogue keys, and `parseCoordinates` reading digits, minus signs and separators of other scripts;
+- type tracking and line height that suit the scripts in `tokenValues.nonLatinLanguages`;
+- translatable layer templates and host-keyed definition text (`HostText`), with `checkMessageCatalogue` and `checkDefinitionTexts` for a host's own tests;
+- the pseudo-locale and sample checks described below, which run the interface in longer text and in right-to-left text.
+
+The host supplies:
+
+- its catalogue, and the `layerTemplates` and `definitionTexts` for its own layers and basemaps, in each language it offers;
+- `<html lang>` and `<html dir>`, kept in step with the language in use;
+- a font for any script that IBM Plex Sans does not cover.
+
+Shipped in this repository: English, which is the default, and Afrikaans for the reference site. The Arabic, `en-XA` and `en-XB` catalogues are test data, offered only to the end-to-end build, and the Arabic sample has not been reviewed by a person who speaks Arabic. No right-to-left language ships on the reference site.
+
+Not covered:
+
+- a language the host has not written: the SDK has no machine translation and falls back to English for a missing key;
+- non-Latin fonts, which the SDK does not ship;
+- sending the visitor's language to a search or routing provider (see "What a language does not change");
+- a translator-friendly file format: a catalogue is a plain object.
+
 ## How the text is organised
 
 - Most interface text is a key in the `MessageKey` union in `packages/core/src/ports/messages.ts`, such as `settings.theme.label`. The English text for every key is in `EN_GB_CATALOGUE` (`packages/core/src/messages/en-GB.ts`). Layer feature templates instead use a separate table of host-defined keys in `MessageCatalogue.layerTemplates`.
@@ -78,7 +106,7 @@ A key is plural when its English value or the translation has forms, `one|other`
 
 The problems come in English key order, then unknown keys, then unused `sameAsEnglish`, `pluralKeys` and `notPlural` entries in that order, then keys in both lists. Only the catalogues' own keys are read, so a key such as `constructor` is checked like any other and nothing is inherited from an object's prototype.
 
-Both catalogues are plain objects, so one loaded from JSON works as well as a module. Pass as `english` the English your host shows: `EN_GB_CATALOGUE`, or your own English for the same keys if you replaced its wording. The keys are the SDK's `MessageKey` values. `resolveText` looks up only those, so a definition's text that is not one of them is shown as written, and a key of your own in a catalogue is never looked up for a definition.
+Both catalogues are plain objects, so one loaded from JSON works as well as a module. Pass as `english` the English your host shows: `EN_GB_CATALOGUE`, or your own English for the same keys if you replaced its wording. The keys are the SDK's `MessageKey` values. `resolveText` looks up those and the keys of a `HostText`, so a plain string, even one that looks like a key, is shown as written; a key of your own goes through `HostText` and `definitionTexts` (see "Translate definitions").
 To see what is left to translate, run `npm run catalogue:check -- <language> <file> [export] [--english <file>] [--english-export <export>] [--plural <key>]... [--not-plural <key>]...` in this repository. It prints how many keys the catalogue is missing and how many are the same as English, then lists each. The file is a JSON object of messages or a TypeScript or JavaScript module, read through tsx; `export` names the export that holds the messages and defaults to the module's only export, else its default export. The English is `EN_GB_CATALOGUE` unless `--english` names a file of your own English, read the same way, with `--english-export` naming its export. `--plural` and `--not-plural` pass a key to `pluralKeys` and `notPlural`, and each can be given more than once. A relative path is read from the folder npm was run in. An argument the command would otherwise ignore (an extra argument, an unknown option, an empty option value such as `--english=`, a second `--english` or `--english-export`, `--english-export` without `--english`, or an export name for a JSON file) is refused with exit code 2, and so is a `--plural` or `--not-plural` key that English does not have (a misspelt key, named in the message), that is not needed, or that is given to both. A file that is not a plain object whose values are all text, such as a list or a `Map`, is refused with exit code 1; an object with a `null` prototype is read. The command does not know a test's `sameAsEnglish` list, so it lists those keys too, and it exits 0 once the catalogues are read: the test is the gate. The script is `packages/web/scripts/catalogueCheck.mjs`, and it uses only `checkMessageCatalogue` and `EN_GB_CATALOGUE`, so a host can copy it.
 
 ## Translate definitions
@@ -177,7 +205,7 @@ A key that your library does not know is yours to handle: the SDK may call `t` o
 
 ## Right-to-left languages
 
-No right-to-left language ships yet, but the interface is built to mirror: styles use logical properties (the harmony scanner fails a physical one), icons that point along the reading direction mirror, and the Playwright projects `rtl-chromium` and `rtl-mobile-chromium` run the basemap, keyboard, sheet and app-shell specs with `dir="rtl"`.
+No right-to-left language ships on the reference site, but a host can offer one, and the interface mirrors: styles use logical properties (the harmony scanner fails a physical one), icons that point along the reading direction mirror, and the Playwright projects `rtl-chromium` and `rtl-mobile-chromium` run the basemap, keyboard, sheet and app-shell specs with `dir="rtl"`.
 
 `languageDirection(tag, languages)` in core uses the tag's `Intl.Locale` text information, falling back to `ltr` when unavailable or invalid. A host may set `direction: "ltr"` or `"rtl"` on a `LanguageOption` to override it. The host sets `dir` alongside `lang` on `<html>`, including on its server-rendered default, and updates both when the active catalogue changes. The reference host resolves the offered directions in its Vite configuration and embeds them in the build. It passes those options to `buildThemeBootstrapScript`, so the pre-paint script does not need `Intl`. Recompute its CSP hash in both header files after changing the offered languages or the script.
 
