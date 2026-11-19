@@ -109,6 +109,13 @@ describe("movePreloadsToEnd", () => {
     expect(await run([html])).toBe(`<head></head><body>${script}${A}</body>`);
   });
 
+  it("does not mistake a closing body tag written inside a script for the end of the body", async () => {
+    const script = `<script>var s = '</body>';</script>`;
+    const html = `<head>${A}</head><body>${script}</body>`;
+
+    expect(await run([html])).toBe(`<head></head><body>${script}${A}</body>`);
+  });
+
   it("does not touch a link inside a script that spans chunks", async () => {
     const out = await run([
       `<head>${A}</head><body><script>var s = '`,

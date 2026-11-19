@@ -9,7 +9,9 @@
  * for the first paint. A page that reads without script (the product page)
  * opts in: the same links, in the same order, follow the content, so the
  * stylesheets and font are fetched first and the script graph is still
- * flattened in one round.
+ * flattened in one round. The links wait for the closing body tag, which a
+ * streamed page sends last, so a page that streams deferred content would get
+ * them late.
  */
 export interface ModulePreloadHandle {
   readonly modulePreload: "end";
