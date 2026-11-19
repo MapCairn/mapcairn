@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import {
-  createMessageCatalogue,
-  EN_GB_CATALOGUE,
-  type Services,
-} from "@mapcairn/core";
+import type { Services } from "@mapcairn/core";
 // The engine style file has no exports. Importing it here, in the one module
 // every page that builds services loads, puts its rules in the page before
 // the engine mounts, and keeps it out of the ui, which may not import adapters.
@@ -24,7 +20,7 @@ import { BrowserThemeSource } from "../adapters/theme/BrowserThemeSource";
 import { BrowserUrlState } from "../adapters/url/BrowserUrlState";
 import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
 import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
-import { HOST_LANGUAGE_CATALOGUE } from "../i18n/hostLanguages";
+import { ENGLISH, HOST_LANGUAGE_CATALOGUE } from "../i18n/hostLanguages";
 import { createHostLayerCatalogue } from "../layers";
 import { readTestOverrides } from "./testSeam";
 
@@ -84,7 +80,7 @@ export function createServices(options: CreateServicesOptions = {}): Services {
     // The server renders the default language, and the browser's first render
     // matches it; `useMessages` then swaps in the language the person's
     // setting or browser resolves to, through `languages`.
-    messages: createMessageCatalogue("en-GB", EN_GB_CATALOGUE, EN_GB_CATALOGUE),
+    messages: ENGLISH,
     preferences: new BrowserDevicePreferences(),
     layers: createHostLayerCatalogue(),
     layerSource: new FetchLayerSource(),

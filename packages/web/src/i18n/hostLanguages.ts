@@ -6,6 +6,7 @@ import {
   EN_GB_CATALOGUE,
   type LanguageCatalogue,
   type LanguageOption,
+  languageDirection,
   type MessageCatalogue,
 } from "@mapcairn/core";
 import {
@@ -33,11 +34,21 @@ export const OFFERED_LANGUAGE_TAGS: readonly string[] = OFFERED_LANGUAGES.map(
   ({ tag }) => tag,
 );
 
+/**
+ * The reading direction of an offered language, from its option (or, without
+ * one, from the tag), for the catalogue to decide whether to isolate the text
+ * it substitutes into a sentence.
+ */
+function directionOf(tag: string): "ltr" | "rtl" {
+  return languageDirection(tag, OFFERED_LANGUAGE_OPTIONS);
+}
+
 /** The default language's messages, already in the bundle. */
 export const ENGLISH = createMessageCatalogue(
   DEFAULT_LANGUAGE,
   EN_GB_CATALOGUE,
   EN_GB_CATALOGUE,
+  { direction: directionOf(DEFAULT_LANGUAGE) },
 );
 
 /**
@@ -56,6 +67,7 @@ const LOADERS: Readonly<
     ]);
     return createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE, {
       layerTemplates: AF_LAYER_TEMPLATES,
+      direction: directionOf("af"),
     });
   },
 };

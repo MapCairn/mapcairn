@@ -108,13 +108,17 @@ describe("right to left", () => {
     expect(named?.querySelector("bdi")).not.toHaveAttribute("dir");
   });
 
-  it("isolates the route total, so a distance and a time keep their order", async () => {
+  it("isolates the distance and the time of the route total, not the sentence", async () => {
     setup();
     addCentreStops(2);
     click("Get route");
     await flush();
     const total = screen.getByTestId("directions-figures");
-    expect(total.querySelector("bdi")?.textContent).toBe(total.textContent);
+    const parts = [...total.querySelectorAll("bdi")].map(
+      (part) => part.textContent,
+    );
+    expect(parts).toHaveLength(2);
+    expect(total.textContent).toBe(parts.join(", "));
   });
 });
 

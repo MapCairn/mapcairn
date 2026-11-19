@@ -9,6 +9,8 @@ runMessageCatalogueContract("FakeMessageCatalogue", {
   createMissingKey: (key) => new FakeMessageCatalogue({ missingKeys: [key] }),
   createWith: (language, overrides, numberingSystem) =>
     new FakeMessageCatalogue({ language, overrides, numberingSystem }),
+  createIsolating: (language, options) =>
+    new FakeMessageCatalogue({ language, ...options }),
 });
 
 describe("FakeMessageCatalogue", () => {

@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { formatDay, formatLocale, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
-import { FIGURE_MESSAGE_KEYS, isolate } from "./isolate";
+import { isolate } from "./isolate";
 import { languageDirection } from "./languageDirection";
 import { pluralFormsOf } from "./pluralForms";
 
@@ -20,12 +20,21 @@ export interface CreateMessageCatalogueOptions {
    */
   readonly numberingSystem?: string;
   /**
+   * The reading direction of the language, for a host that sets it apart from
+   * what `Intl` infers from the tag (the `direction` of its `LanguageOption`).
+   * Left out, it comes from `languageDirection(language)`. It decides the
+   * default of `isolateParameters`.
+   */
+  readonly direction?: "ltr" | "rtl";
+  /**
    * Whether to wrap each text parameter, and each item of a list, in a Unicode
    * first-strong isolate, so a place name, a coordinate or a distance cannot
-   * reorder the sentence around it. Left out, it is on for a right-to-left
-   * language and off for a left-to-right one, which keeps every string plain.
-   * The marks are invisible and silent to a screen reader, and sit in the text
-   * a catalogue returns, so copy a value from its source, not from a message.
+   * reorder the sentence around it. `list` isolates its items too. Left out,
+   * it is on when `direction` (or, without it, the language) reads right to
+   * left and off otherwise, which keeps every string plain. The marks are
+   * invisible and sit in the text a catalogue returns, so copy a value from
+   * its source, not from a message, and strip them (U+2066 to U+2069) from the
+   * text before an exact-name assertion in a host's tests.
    */
   readonly isolateParameters?: boolean;
 }
@@ -132,7 +141,9 @@ export function createMessageCatalogue(
   );
   const locale = formatLocale({ language, numberingSystem });
   const isolating =
-    options.isolateParameters ?? languageDirection(language) === "rtl";
+    options.isolateParameters ??
+    (options.direction ?? languageDirection(language)) === "rtl";
+  const wrap = isolating ? isolate : (text: string) => text;
 
   function resolve(key: MessageKey): {
     readonly template: string;
@@ -163,7 +174,7 @@ export function createMessageCatalogue(
         params,
         language,
         locale,
-        isolating && !FIGURE_MESSAGE_KEYS.has(key),
+        isolating,
       );
     },
     plural(key, params) {
@@ -174,16 +185,10 @@ export function createMessageCatalogue(
         resolved.language,
         count,
       );
-      return substitute(
-        form,
-        params,
-        language,
-        locale,
-        isolating && !FIGURE_MESSAGE_KEYS.has(key),
-      );
+      return substitute(form, params, language, locale, isolating);
     },
     list(items, type = "conjunction") {
-      return new Intl.ListFormat(language, { type }).format(items);
+      return new Intl.ListFormat(language, { type }).format(items.map(wrap));
     },
   };
 }

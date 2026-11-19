@@ -42,7 +42,7 @@ import {
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
-import { Isolate } from "../../ui/Isolate";
+import { fillSlots, Isolate } from "../../ui/Isolate";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { MIN_SEARCH_LENGTH, useSearch } from "../SearchPill/useSearch";
@@ -78,9 +78,6 @@ export interface DirectionsPanelProps {
   readonly headingLevel?: 3 | 4;
 }
 
-/** Stands for a value in a sentence that is split around it, so the value can be an element of its own. */
-const SLOT = "{slot}";
-
 function ResultCard({
   result,
   units,
@@ -93,29 +90,35 @@ function ResultCard({
   const format = useFormatMessage();
   const how = travelModeParticiple(result.mode);
   if (result.kind === "area") {
-    const [before = "", after = ""] = t("tools.directions.reachesArea", {
-      area: SLOT,
-    }).split(SLOT);
     return (
       <div className={styles.result} data-testid="directions-result">
         <p className={styles.figures} data-testid="directions-figures">
-          <Isolate>
-            {format(
-              message("common.followedBy", {
-                first: message("duration.short.minute", {
-                  count: result.minutes,
-                }),
-                second: how,
-              }),
-            )}
-          </Isolate>
+          {fillSlots(
+            t("common.followedBy", {
+              first: "{minutes}",
+              second: format(how),
+            }),
+            {
+              minutes: (
+                <Isolate>
+                  {format(
+                    message("duration.short.minute", {
+                      count: result.minutes,
+                    }),
+                  )}
+                </Isolate>
+              ),
+            },
+          )}
         </p>
         <p>
-          {before}
-          <span data-testid="directions-area">
-            <Isolate>{formatArea(result.size, units, messages)}</Isolate>
-          </span>
-          {after}
+          {fillSlots(t("tools.directions.reachesArea", { area: "{area}" }), {
+            area: (
+              <span data-testid="directions-area">
+                <Isolate>{formatArea(result.size, units, messages)}</Isolate>
+              </span>
+            ),
+          })}
         </p>
       </div>
     );
@@ -123,12 +126,22 @@ function ResultCard({
   return (
     <div className={styles.result} data-testid="directions-result">
       <p className={styles.figures} data-testid="directions-figures">
-        <Isolate>
-          {t("common.commaJoined", {
-            first: formatDistance(result.distance, units, messages),
-            second: format(formatDuration(result.duration)),
-          })}
-        </Isolate>
+        {fillSlots(
+          t("common.commaJoined", {
+            first: "{distance}",
+            second: "{duration}",
+          }),
+          {
+            distance: (
+              <Isolate>
+                {formatDistance(result.distance, units, messages)}
+              </Isolate>
+            ),
+            duration: (
+              <Isolate>{format(formatDuration(result.duration))}</Isolate>
+            ),
+          },
+        )}
       </p>
       <p className={styles.hint}>
         {messages.plural("tools.directions.routeSummary", {
@@ -148,18 +161,26 @@ function ResultCard({
               key={index}
               data-testid="directions-leg"
             >
-              <Isolate>
-                {t("tools.directions.leg", {
+              {fillSlots(
+                t("tools.directions.leg", {
                   from: stopLetter(index),
                   to: stopLetter(index + 1),
-                  distance: formatDistance(
-                    leg.properties.distance,
-                    units,
-                    messages,
+                  distance: "{distance}",
+                  duration: "{duration}",
+                }),
+                {
+                  distance: (
+                    <Isolate>
+                      {formatDistance(leg.properties.distance, units, messages)}
+                    </Isolate>
                   ),
-                  duration: format(formatDuration(leg.properties.duration)),
-                })}
-              </Isolate>
+                  duration: (
+                    <Isolate>
+                      {format(formatDuration(leg.properties.duration))}
+                    </Isolate>
+                  ),
+                },
+              )}
             </li>
           ))}
         </ol>

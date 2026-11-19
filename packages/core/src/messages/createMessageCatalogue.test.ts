@@ -26,6 +26,8 @@ runMessageCatalogueContract("createMessageCatalogue", {
       EN_GB_CATALOGUE,
       numberingSystem === undefined ? {} : { numberingSystem },
     ),
+  createIsolating: (language, options) =>
+    createMessageCatalogue(language, EN_GB_CATALOGUE, EN_GB_CATALOGUE, options),
 });
 
 describe("createMessageCatalogue numbering", () => {
@@ -216,12 +218,6 @@ describe("createMessageCatalogue parameter isolation", () => {
 
   it("does not isolate numbers, which already follow their own digits", () => {
     expect(build("ar").plural("units.metre", { count: 5 })).not.toContain(FSI);
-  });
-
-  it("leaves the parts of a figure plain, so a number and its symbol are not split", () => {
-    expect(build("ar").t("units.reading", { number: 5, symbol: "m" })).toBe(
-      "5 m",
-    );
   });
 
   it("isolates each item of a list, then joins them", () => {
