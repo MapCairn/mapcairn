@@ -3,6 +3,7 @@
 import { createRequestHandler } from "react-router";
 import { SECURITY_HEADERS } from "../src/constants/securityHeaders";
 import { PREVIOUS_HOSTNAME, SITE_URL } from "../src/constants/siteConfig";
+import { describeServerError } from "../src/serverErrors";
 
 const requestHandler = createRequestHandler(
   () => import("../build/server/index.js"),
@@ -51,7 +52,7 @@ export default {
     try {
       return withSecurityHeaders(await requestHandler(request));
     } catch (error) {
-      console.error(error);
+      console.error(describeServerError(error));
       return withSecurityHeaders(
         new Response("Internal Server Error", { status: 500 }),
       );
