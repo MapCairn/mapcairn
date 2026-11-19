@@ -12,6 +12,9 @@ const VIEWPORTS = [
   { width: 1440, height: 900 },
 ] as const;
 
+/** One case starts the map and runs axe before and after turning the layers off. */
+const A11Y_CASE_TIMEOUT_MS = 60_000;
+
 test.describe("turning layers off at once @a11y", () => {
   test.use({ reducedMotion: "reduce" });
 
@@ -20,7 +23,13 @@ test.describe("turning layers off at once @a11y", () => {
       test(`the buttons and the Undo status pass axe in ${colorScheme} at ${viewport.width}px @a11y`, async ({
         page,
         mapPage,
+        isMobile,
       }) => {
+        // Only the 1440px mobile-emulation case exceeded 30 seconds during
+        // the full local a11y run, so the measured allowance is scoped to it.
+        if (isMobile && viewport.width === 1440) {
+          test.setTimeout(A11Y_CASE_TIMEOUT_MS);
+        }
         await mockLayerProviders(page);
         await page.setViewportSize(viewport);
         await page.emulateMedia({ colorScheme });

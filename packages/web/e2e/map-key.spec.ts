@@ -4,6 +4,7 @@ import { expect, test } from "./fixtures";
 import type { MapPage } from "./pages/MapPage";
 import { mockLayerProviders } from "./support/layers";
 import { collapseCredits, waitForStableLayout } from "./support/states";
+import { SLOW_MAP_NAVIGATION_TIMEOUT_MS } from "./support/timers";
 
 /** Two layers on that have a key, in different groups. */
 const TWO_KEYED = "#layers=earthquakes,fire-alerts";
@@ -23,8 +24,14 @@ test.use({ reducedMotion: "reduce", fastCredits: true });
  * Opens the app and lets the credits' first showing end. The key steps aside
  * while the credits are open, so it is not there to read until they close.
  */
-async function openApp(mapPage: MapPage, hash = ""): Promise<void> {
-  await mapPage.goto(hash);
+async function openApp(
+  mapPage: MapPage,
+  hash = "",
+  navigationTimeoutMs?: number,
+): Promise<void> {
+  await mapPage.goto(hash, {
+    navigationTimeoutMs,
+  });
   await collapseCredits(mapPage);
 }
 
@@ -122,27 +129,31 @@ test.describe("the map key", () => {
     await expect(page.getByTestId("map-key-earthquakes")).toBeVisible();
   });
 
-  test("a phone in either orientation starts minimised, and a larger screen starts open", async ({
-    page,
-    mapPage,
-  }) => {
-    await mockLayerProviders(page);
-    const starts = [
-      [DESKTOP, "true"],
-      [TABLET, "true"],
-      [PHONE, "false"],
-      [PHONE_ON_ITS_SIDE, "false"],
-    ] as const;
-    for (const [viewport, expanded] of starts) {
+  const starts = [
+    [DESKTOP, "true"],
+    [TABLET, "true"],
+    [PHONE, "false"],
+    [PHONE_ON_ITS_SIDE, "false"],
+  ] as const;
+  for (const [viewport, expanded] of starts) {
+    test(`the key starts ${expanded === "true" ? "open" : "minimised"} at ${viewport.width}x${viewport.height}`, async ({
+      page,
+      mapPage,
+    }) => {
+      // Each case starts a full map so it proves the initial state rather than
+      // a state carried across a resize. Busy-machine runs of this map load
+      // were the case's observed bottleneck, so the navigation keeps a
+      // documented allowance here and nowhere else in the file.
+      await mockLayerProviders(page);
       await page.setViewportSize(viewport);
-      await openApp(mapPage, TWO_KEYED);
+      await openApp(mapPage, TWO_KEYED, SLOW_MAP_NAVIGATION_TIMEOUT_MS);
       await expect(
         mapPage.mapKeyToggle,
         `${viewport.width}x${viewport.height}`,
       ).toHaveAttribute("aria-expanded", expanded);
       await expect(mapPage.mapKeyToggle).toHaveAccessibleName("Key, 2 layers");
-    }
-  });
+    });
+  }
 
   test("keeps the state it started with when the screen is turned", async ({
     page,

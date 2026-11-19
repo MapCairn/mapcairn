@@ -39,6 +39,13 @@ export const ANY_DEBOUNCE_MS = 1_000;
 export const TIMER_SLACK_MS = 200;
 
 /**
+ * Navigation allowance for a map case documented where it is used. These
+ * cases have hit Playwright's default during busy-machine runs, while the
+ * suite's default stays unchanged everywhere else.
+ */
+export const SLOW_MAP_NAVIGATION_TIMEOUT_MS = 60_000;
+
+/**
  * Waits for two animation frames in the page, so whatever a timer that just
  * came due set in motion has rendered before a spec checks that it did not
  * happen. Under an installed clock the frames still come, because the clock

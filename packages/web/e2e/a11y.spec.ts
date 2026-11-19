@@ -26,6 +26,9 @@ import {
 } from "./support/states";
 import { SUGGEST_DEBOUNCE_MS, TIMER_SLACK_MS } from "./support/timers";
 
+/** One matrix test runs nine axe and control audits, so even a split theme needs room under load. */
+const MATRIX_AUDIT_TIMEOUT_MS = 90_000;
+
 /*
  * Accessibility: axe with the WCAG 2.0, 2.1 and 2.2 A and AA tags plus best
  * practice, no rule disabled, over the same matrix as the collision test;
@@ -52,26 +55,27 @@ async function auditStates(mapPage: MapPage, label: string): Promise<void> {
 }
 
 test.describe("axe and control checks @a11y", () => {
-  test.setTimeout(120_000);
-
   for (const viewport of MATRIX_VIEWPORTS) {
-    test(
-      `passes at ${viewport.width}x${viewport.height} @a11y`,
-      viewportDetails(viewport),
-      async ({ page, mapPage }) => {
-        await page.setViewportSize(viewport);
-        await scriptSearch(page);
-        await mapPage.goto();
-        for (const colorScheme of ["light", "dark"] as const) {
+    for (const colorScheme of ["light", "dark"] as const) {
+      test(
+        `passes in ${colorScheme} at ${viewport.width}x${viewport.height} @a11y`,
+        viewportDetails(viewport),
+        async ({ page, mapPage }) => {
+          // A single theme walks nine states. Splitting the themes halves the
+          // work in one case while keeping every viewport, state and scan.
+          test.setTimeout(MATRIX_AUDIT_TIMEOUT_MS);
+          await page.setViewportSize(viewport);
+          await scriptSearch(page);
+          await mapPage.goto();
           await page.emulateMedia({ colorScheme });
           await expect(page.locator("html")).toHaveAttribute(
             "data-theme",
             colorScheme,
           );
           await auditStates(mapPage, colorScheme);
-        }
-      },
-    );
+        },
+      );
+    }
   }
 
   for (const path of ["/privacy", "/this-route-does-not-exist"]) {

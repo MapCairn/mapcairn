@@ -157,6 +157,10 @@ test.describe("map options sheet on a phone", () => {
     mapPage,
   }) => {
     await mapPage.openMapOptions();
+    // The open sheet publishes its edge through ResizeObserver. Starting from
+    // its settled box keeps the pointer coordinates from describing an
+    // intermediate layout on a busy machine.
+    await waitForStableLayout(page);
     const handle = await mapPage.sheetHandle.boundingBox();
     if (!handle) {
       throw new Error("The handle has no box.");
@@ -165,9 +169,11 @@ test.describe("map options sheet on a phone", () => {
     const y = handle.y + handle.height / 2;
     await page.mouse.move(x, y);
     await page.mouse.down();
+    await expect(mapPage.sheet).toHaveAttribute("data-dragging", "true");
     await page.mouse.move(x, y - 150, { steps: 6 });
     await page.mouse.move(x, y - 350, { steps: 6 });
     await page.mouse.up();
+    await expect(mapPage.sheet).not.toHaveAttribute("data-dragging", /.*/);
     await expect(mapPage.sheet).toHaveAttribute("data-detent", "full");
   });
 
