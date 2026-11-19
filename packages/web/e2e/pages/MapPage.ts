@@ -24,6 +24,15 @@ export interface HashView {
 /** A sheet detent, as `data-detent` reports it. */
 export type Detent = "peek" | "half" | "full";
 
+/** Overrides for one call to {@link MapPage.goto}. */
+export interface MapPageGotoOptions {
+  /**
+   * The Playwright navigation timeout for a case whose full map load was
+   * measured as inherently slow. Normal cases keep Playwright's default.
+   */
+  readonly navigationTimeoutMs?: number;
+}
+
 /**
  * The map page and its chrome, located by role and accessible name wherever
  * the app gives one, and by `data-testid` otherwise.
@@ -330,13 +339,15 @@ export class MapPage {
    * `#basemap=osm`) and waits until the first frame of the basemap has
    * loaded.
    */
-  async goto(hash = ""): Promise<void> {
+  async goto(hash = "", options: MapPageGotoOptions = {}): Promise<void> {
     // Going from one hash to another on the same page is not a page load, so
     // leave the app first: every goto starts the app from scratch.
     if (this.page.url().startsWith("http")) {
       await this.page.goto("about:blank");
     }
-    await this.page.goto(`/map${hash}`);
+    await this.page.goto(`/map${hash}`, {
+      timeout: options.navigationTimeoutMs,
+    });
     await this.waitForMap();
   }
 

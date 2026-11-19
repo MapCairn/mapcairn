@@ -133,8 +133,28 @@ export function inspectControls(page: Page): Promise<ControlReport> {
       const label = element.closest("label");
       const tiny = (rect: DOMRect) => rect.width <= 2 && rect.height <= 2;
       const box = tiny(own) && label ? label.getBoundingClientRect() : own;
+      const paragraph = element.closest("p");
+      const hasVisibleTextBeside = (container: HTMLElement) => {
+        const walker = document.createTreeWalker(
+          container,
+          NodeFilter.SHOW_TEXT,
+        );
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          if (!node.textContent?.trim() || element.contains(node)) {
+            continue;
+          }
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          if (!tiny(range.getBoundingClientRect())) {
+            return true;
+          }
+        }
+        return false;
+      };
       const inRunningText =
-        element.matches("a[href]") && element.closest("p") !== null;
+        element.matches("a[href]") &&
+        paragraph !== null &&
+        hasVisibleTextBeside(paragraph);
       return tiny(box) || inRunningText ? null : box;
     };
 
