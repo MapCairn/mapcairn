@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  coordinateWordsFor,
   formatFixed,
   formatLatitude,
   formatLongitude,
@@ -27,8 +28,8 @@ function coordinateId(position: LatLng): string {
  *
  * The label names the place in words, such as "Coordinates 26.20410° S,
  * 28.04730° E", using the app's coordinate formatters and the hemisphere
- * letters and wording of `messages`, and it reads the letters of that language
- * in the text too. It reads back through
+ * letters and wording of `messages`, and it reads the letters and words of
+ * that language in the text too. It reads back through
  * {@link parseCoordinates} as the same place to about a metre (the label keeps
  * five decimals), so the box can show it after the person picks it.
  */
@@ -37,7 +38,11 @@ export function coordinateSearchResult(
   messages: MessageCatalogue,
 ): SearchResult | null {
   const hemispheres = hemispheresFor(messages);
-  const position = parseCoordinates(text, hemispheres);
+  const position = parseCoordinates(
+    text,
+    hemispheres,
+    coordinateWordsFor(messages),
+  );
   if (position === null) {
     return null;
   }

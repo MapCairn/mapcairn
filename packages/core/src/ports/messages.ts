@@ -46,6 +46,13 @@ export type MessageKey =
   | "format.hemisphereSouth"
   | "format.hemisphereEast"
   | "format.hemisphereWest"
+  | "format.wordNorth"
+  | "format.wordSouth"
+  | "format.wordEast"
+  | "format.wordWest"
+  | "format.wordDegree"
+  | "format.wordMinute"
+  | "format.wordSecond"
   | "format.day"
   | "format.utcTime"
   | "format.utcRange"
@@ -62,6 +69,17 @@ export type MessageKey =
   | "units.squareFoot"
   | "units.acre"
   | "units.squareMile"
+  | "units.symbol.metre"
+  | "units.symbol.kilometre"
+  | "units.symbol.foot"
+  | "units.symbol.mile"
+  | "units.symbol.squareMetre"
+  | "units.symbol.hectare"
+  | "units.symbol.squareKilometre"
+  | "units.symbol.squareFoot"
+  | "units.symbol.acre"
+  | "units.symbol.squareMile"
+  | "units.reading"
   | "duration.day"
   | "duration.hour"
   | "duration.minute"
@@ -772,6 +790,10 @@ interface MessageParamOverrides {
   readonly "duration.day": { readonly count: number };
   readonly "duration.hour": { readonly count: number };
   readonly "duration.minute": { readonly count: number };
+  readonly "units.reading": {
+    readonly number: number;
+    readonly symbol: string;
+  };
   readonly "scale.label": { readonly distance: string };
   // Errors
   // Directions

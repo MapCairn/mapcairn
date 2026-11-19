@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { Hemispheres } from "../format/format";
+import type { CoordinateWords, Hemispheres } from "../format/format";
 import type { LatLng } from "../ports/geometry";
 
 /**
@@ -67,29 +67,65 @@ const WORDS: Readonly<Record<string, WordToken>> = {
   coordinates: { kind: "label" },
 };
 
-type Words = Readonly<Record<string, WordToken>>;
+type Words = ReadonlyMap<string, WordToken>;
+
+/** The English words as a map, so a word such as "constructor" finds nothing. */
+const ENGLISH_WORDS: Words = new Map(Object.entries(WORDS));
+
+/** A word as the lookup holds it: composed (NFC) and in lower case. */
+function wordKey(word: string): string {
+  return word.normalize("NFC").toLowerCase();
+}
+
+/** Each word in `value` (separated by white space), lowercased, with `token`. */
+function entriesFor(
+  value: string,
+  token: WordToken,
+): readonly (readonly [string, WordToken])[] {
+  return wordKey(value)
+    .split(/\s+/)
+    .filter((word) => word !== "")
+    .map((word) => [word, token]);
+}
 
 /**
  * The words the reader knows: the English ones always, plus the hemisphere
- * letters a language writes (such as "O" for east in Afrikaans). An English
- * word keeps its meaning if a language's letter would clash with it.
+ * letters and the whole words a language writes (such as "O" and "oos" for
+ * east in Afrikaans). An English word keeps its meaning if a language's word
+ * would clash with it.
  */
-function wordsFor(hemispheres: Hemispheres | undefined): Words {
-  if (hemispheres === undefined) {
-    return WORDS;
+function wordsFor(
+  hemispheres: Hemispheres | undefined,
+  words: CoordinateWords | undefined,
+): Words {
+  const north: WordToken = { kind: "hemisphere", axis: "lat", negative: false };
+  const south: WordToken = { kind: "hemisphere", axis: "lat", negative: true };
+  const east: WordToken = { kind: "hemisphere", axis: "lng", negative: false };
+  const west: WordToken = { kind: "hemisphere", axis: "lng", negative: true };
+  if (hemispheres === undefined && words === undefined) {
+    return ENGLISH_WORDS;
   }
-  const letters: readonly [string, WordToken][] = [
-    [hemispheres.north, { kind: "hemisphere", axis: "lat", negative: false }],
-    [hemispheres.south, { kind: "hemisphere", axis: "lat", negative: true }],
-    [hemispheres.east, { kind: "hemisphere", axis: "lng", negative: false }],
-    [hemispheres.west, { kind: "hemisphere", axis: "lng", negative: true }],
-  ];
-  return {
-    ...Object.fromEntries(
-      letters.map(([letter, token]) => [letter.toLowerCase(), token]),
-    ),
-    ...WORDS,
-  };
+  const entries: (readonly (readonly [string, WordToken])[])[] = [];
+  if (hemispheres !== undefined) {
+    entries.push(
+      entriesFor(hemispheres.north, north),
+      entriesFor(hemispheres.south, south),
+      entriesFor(hemispheres.east, east),
+      entriesFor(hemispheres.west, west),
+    );
+  }
+  if (words !== undefined) {
+    entries.push(
+      entriesFor(words.north, north),
+      entriesFor(words.south, south),
+      entriesFor(words.east, east),
+      entriesFor(words.west, west),
+      entriesFor(words.degree, { kind: "unit", unit: "degree" }),
+      entriesFor(words.minute, { kind: "unit", unit: "minute" }),
+      entriesFor(words.second, { kind: "unit", unit: "second" }),
+    );
+  }
+  return new Map([...entries.flat(), ...ENGLISH_WORDS]);
 }
 
 const DEGREE_SYMBOLS = "°º˚";
@@ -106,6 +142,11 @@ function isDigit(char: string | undefined): boolean {
 
 function isLetter(char: string | undefined): boolean {
   return char !== undefined && /^\p{L}$/u.test(char);
+}
+
+/** A letter or a combining mark, so a word written with a separate accent stays whole. */
+function isWordCharacter(char: string | undefined): boolean {
+  return char !== undefined && /^[\p{L}\p{M}]$/u.test(char);
 }
 
 /** Where a run of characters that satisfy `test` starting at `from` ends. */
@@ -204,8 +245,8 @@ function readCountedNumber(text: string, index: number): Read | null {
 }
 
 function readWord(text: string, index: number, words: Words): Read | null {
-  const end = runEnd(text, index, isLetter);
-  const token = words[text.slice(index, end).toLowerCase()];
+  const end = runEnd(text, index, isWordCharacter);
+  const token = words.get(wordKey(text.slice(index, end)));
   return token === undefined ? null : { token, end };
 }
 
@@ -406,7 +447,10 @@ function roundToCentimetre(degrees: number): number {
  *   in either order; a negative sign cannot be combined with a letter.
  *   Pass `hemispheres` (`hemispheresFor(catalogue)`) to read the letters of
  *   the language in use as well, so "26.20410° S, 28.04730° O" reads back in
- *   Afrikaans; N, S, E and W are always read
+ *   Afrikaans; N, S, E and W are always read. Pass `words`
+ *   (`coordinateWordsFor(catalogue)`) to read that language's whole words for
+ *   north, south, east, west, degree, minute and second too ("26.2041 suid,
+ *   28.0473 oos"); the English words are always read
  * - one comma or semicolon between the two values, or white space alone
  * - a leading "coordinates" or "coords", so the label of a coordinate result
  *   reads back as the same place to about a metre
@@ -427,11 +471,12 @@ function roundToCentimetre(degrees: number): number {
 export function parseCoordinates(
   text: string,
   hemispheres?: Hemispheres,
+  words?: CoordinateWords,
 ): LatLng | null {
   if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
     return null;
   }
-  const tokens = tokenise(text, wordsFor(hemispheres));
+  const tokens = tokenise(text, wordsFor(hemispheres, words));
   if (tokens === null) {
     return null;
   }

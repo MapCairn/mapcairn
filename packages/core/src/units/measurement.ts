@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatNumber } from "../format/format";
 import { message } from "../messages/formatMessage";
-import type { Message, MessageKey } from "../ports/messages";
+import type { Message, MessageCatalogue, MessageKey } from "../ports/messages";
 import type { UnitSystem } from "../ports/settings";
 import {
   metresToFeet,
@@ -14,6 +13,7 @@ import {
   squareMetresToSquareKilometres,
   squareMetresToSquareMiles,
 } from "./conversions";
+import { AREA_SYMBOL_KEY, writeDistanceReading, writeReading } from "./reading";
 
 /** The units a distance can be shown in. */
 export type DistanceUnit = "m" | "km" | "ft" | "mi";
@@ -27,14 +27,6 @@ export interface MeasurementReading<Unit extends string> {
   readonly unit: Unit;
 }
 
-/** Short labels shown in the interface. */
-export const DISTANCE_UNIT_SYMBOL: Readonly<Record<DistanceUnit, string>> = {
-  m: "m",
-  km: "km",
-  ft: "ft",
-  mi: "mi",
-};
-
 /** The message key that names a distance unit in words, with the count it takes. */
 const DISTANCE_UNIT_KEY = {
   m: "units.metre",
@@ -42,15 +34,6 @@ const DISTANCE_UNIT_KEY = {
   ft: "units.foot",
   mi: "units.mile",
 } as const satisfies Readonly<Record<DistanceUnit, MessageKey>>;
-
-const AREA_UNIT_SYMBOL: Readonly<Record<AreaUnit, string>> = {
-  m2: "m²",
-  ha: "ha",
-  km2: "km²",
-  ft2: "ft²",
-  ac: "ac",
-  mi2: "mi²",
-};
 
 const AREA_UNIT_KEY = {
   m2: "units.squareMetre",
@@ -144,31 +127,30 @@ export function readArea(
 
 /**
  * Formats a distance with a short unit, for example "850 m", "1.25 km",
- * "328 ft" or "1.25 mi". The number is grouped and its digits chosen for
- * `locale` (`formatLocale(catalogue)`); the unit symbols are the same in
- * every language.
+ * "328 ft" or "1.25 mi", as `catalogue` writes it: its figure format, its
+ * `units.symbol.*` symbols and its `units.reading` order and spacing.
  */
 export function formatDistance(
   metres: number,
   units: UnitSystem,
-  locale: string,
+  catalogue: MessageCatalogue,
 ): string {
   const { value, unit } = readDistance(metres, units);
-  return `${formatNumber(value, locale)} ${DISTANCE_UNIT_SYMBOL[unit]}`;
+  return writeDistanceReading(catalogue, value, unit);
 }
 
 /**
  * Formats an area with a short unit, for example "850 m²", "1.25 ha",
- * "2.5 km²", "1,076 ft²", "1 ac" or "1.93 mi²". The number is grouped and its
- * digits chosen for `locale` (`formatLocale(catalogue)`).
+ * "2.5 km²", "1,076 ft²", "1 ac" or "1.93 mi²", as `catalogue` writes it (see
+ * {@link formatDistance}).
  */
 export function formatArea(
   squareMetres: number,
   units: UnitSystem,
-  locale: string,
+  catalogue: MessageCatalogue,
 ): string {
   const { value, unit } = readArea(squareMetres, units);
-  return `${formatNumber(value, locale)} ${AREA_UNIT_SYMBOL[unit]}`;
+  return writeReading(catalogue, value, AREA_SYMBOL_KEY[unit]);
 }
 
 /** A distance in a given unit as words, "1.25 kilometres": the unit's plural key with the count. */

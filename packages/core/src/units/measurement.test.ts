@@ -14,75 +14,77 @@ import {
 } from "./index";
 
 /** The English text of a message, as the live region would say it. */
+const EN = new FakeMessageCatalogue();
+
 const english = (value: Message) =>
   formatMessage(new FakeMessageCatalogue(), value);
 
 describe("formatDistance (metric)", () => {
   it("shows whole metres under a kilometre", () => {
-    expect(formatDistance(850, "metric", "en-GB")).toBe("850 m");
-    expect(formatDistance(0, "metric", "en-GB")).toBe("0 m");
-    expect(formatDistance(849.6, "metric", "en-GB")).toBe("850 m");
+    expect(formatDistance(850, "metric", EN)).toBe("850 m");
+    expect(formatDistance(0, "metric", EN)).toBe("0 m");
+    expect(formatDistance(849.6, "metric", EN)).toBe("850 m");
   });
 
   it("switches to kilometres when the rounded metres reach 1,000", () => {
-    expect(formatDistance(999.4, "metric", "en-GB")).toBe("999 m");
-    expect(formatDistance(999.6, "metric", "en-GB")).toBe("1 km");
-    expect(formatDistance(1000, "metric", "en-GB")).toBe("1 km");
+    expect(formatDistance(999.4, "metric", EN)).toBe("999 m");
+    expect(formatDistance(999.6, "metric", EN)).toBe("1 km");
+    expect(formatDistance(1000, "metric", EN)).toBe("1 km");
   });
 
   it("keeps fewer decimals as the distance grows", () => {
-    expect(formatDistance(1250, "metric", "en-GB")).toBe("1.25 km");
-    expect(formatDistance(12_340, "metric", "en-GB")).toBe("12.3 km");
-    expect(formatDistance(123_456, "metric", "en-GB")).toBe("123 km");
-    expect(formatDistance(1_234_567, "metric", "en-GB")).toBe("1,235 km");
+    expect(formatDistance(1250, "metric", EN)).toBe("1.25 km");
+    expect(formatDistance(12_340, "metric", EN)).toBe("12.3 km");
+    expect(formatDistance(123_456, "metric", EN)).toBe("123 km");
+    expect(formatDistance(1_234_567, "metric", EN)).toBe("1,235 km");
   });
 });
 
 describe("formatDistance (imperial)", () => {
   it("shows whole feet under 0.1 miles", () => {
-    expect(formatDistance(100, "imperial", "en-GB")).toBe("328 ft");
-    expect(formatDistance(0, "imperial", "en-GB")).toBe("0 ft");
+    expect(formatDistance(100, "imperial", EN)).toBe("328 ft");
+    expect(formatDistance(0, "imperial", EN)).toBe("0 ft");
   });
 
   it("switches to miles at 0.1 miles", () => {
-    expect(formatDistance(160.9344, "imperial", "en-GB")).toBe("0.1 mi");
-    expect(formatDistance(1609.344, "imperial", "en-GB")).toBe("1 mi");
-    expect(formatDistance(2012, "imperial", "en-GB")).toBe("1.25 mi");
-    expect(formatDistance(32_187, "imperial", "en-GB")).toBe("20 mi");
+    expect(formatDistance(160.9344, "imperial", EN)).toBe("0.1 mi");
+    expect(formatDistance(1609.344, "imperial", EN)).toBe("1 mi");
+    expect(formatDistance(2012, "imperial", EN)).toBe("1.25 mi");
+    expect(formatDistance(32_187, "imperial", EN)).toBe("20 mi");
   });
 });
 
 describe("formatArea (metric)", () => {
   it("shows whole square metres under a hectare", () => {
-    expect(formatArea(850, "metric", "en-GB")).toBe("850 m²");
-    expect(formatArea(0, "metric", "en-GB")).toBe("0 m²");
+    expect(formatArea(850, "metric", EN)).toBe("850 m²");
+    expect(formatArea(0, "metric", EN)).toBe("0 m²");
   });
 
   it("switches to hectares when the rounded area reaches 10,000 m²", () => {
-    expect(formatArea(9999.4, "metric", "en-GB")).toBe("9,999 m²");
-    expect(formatArea(9999.6, "metric", "en-GB")).toBe("1 ha");
-    expect(formatArea(12_500, "metric", "en-GB")).toBe("1.25 ha");
-    expect(formatArea(500_000, "metric", "en-GB")).toBe("50 ha");
+    expect(formatArea(9999.4, "metric", EN)).toBe("9,999 m²");
+    expect(formatArea(9999.6, "metric", EN)).toBe("1 ha");
+    expect(formatArea(12_500, "metric", EN)).toBe("1.25 ha");
+    expect(formatArea(500_000, "metric", EN)).toBe("50 ha");
   });
 
   it("switches to square kilometres at one square kilometre", () => {
-    expect(formatArea(2_500_000, "metric", "en-GB")).toBe("2.5 km²");
-    expect(formatArea(250_000_000, "metric", "en-GB")).toBe("250 km²");
+    expect(formatArea(2_500_000, "metric", EN)).toBe("2.5 km²");
+    expect(formatArea(250_000_000, "metric", EN)).toBe("250 km²");
   });
 });
 
 describe("formatArea (imperial)", () => {
   it("shows square feet under 0.1 acres", () => {
-    expect(formatArea(100, "imperial", "en-GB")).toBe("1,076 ft²");
-    expect(formatArea(0, "imperial", "en-GB")).toBe("0 ft²");
+    expect(formatArea(100, "imperial", EN)).toBe("1,076 ft²");
+    expect(formatArea(0, "imperial", EN)).toBe("0 ft²");
   });
 
   it("switches to acres, then square miles", () => {
-    expect(formatArea(404.68564224, "imperial", "en-GB")).toBe("0.1 ac");
-    expect(formatArea(4046.8564224, "imperial", "en-GB")).toBe("1 ac");
-    expect(formatArea(40_468.564224, "imperial", "en-GB")).toBe("10 ac");
-    expect(formatArea(2_589_988.110336, "imperial", "en-GB")).toBe("1 mi²");
-    expect(formatArea(5_000_000, "imperial", "en-GB")).toBe("1.93 mi²");
+    expect(formatArea(404.68564224, "imperial", EN)).toBe("0.1 ac");
+    expect(formatArea(4046.8564224, "imperial", EN)).toBe("1 ac");
+    expect(formatArea(40_468.564224, "imperial", EN)).toBe("10 ac");
+    expect(formatArea(2_589_988.110336, "imperial", EN)).toBe("1 mi²");
+    expect(formatArea(5_000_000, "imperial", EN)).toBe("1.93 mi²");
   });
 });
 
@@ -159,7 +161,77 @@ describe("measurements in another language", () => {
   });
 
   it("groups and separates short figures for the language asked for", () => {
-    expect(formatDistance(1_234_567, "metric", "de")).toBe("1.235 km");
-    expect(formatArea(12_500, "metric", "de")).toBe("1,25 ha");
+    expect(
+      formatDistance(
+        1_234_567,
+        "metric",
+        new FakeMessageCatalogue({ language: "de" }),
+      ),
+    ).toBe("1.235 km");
+    expect(
+      formatArea(
+        12_500,
+        "metric",
+        new FakeMessageCatalogue({ language: "de" }),
+      ),
+    ).toBe("1,25 ha");
+  });
+});
+
+describe("unit symbols and the reading pattern", () => {
+  it("takes each distance symbol from the catalogue", () => {
+    const messages = new FakeMessageCatalogue({
+      overrides: {
+        "units.symbol.metre": "mtr",
+        "units.symbol.kilometre": "kmt",
+        "units.symbol.foot": "vt",
+        "units.symbol.mile": "myl",
+      },
+    });
+    expect(formatDistance(850, "metric", messages)).toBe("850 mtr");
+    expect(formatDistance(1250, "metric", messages)).toBe("1.25 kmt");
+    expect(formatDistance(100, "imperial", messages)).toBe("328 vt");
+    expect(formatDistance(2012, "imperial", messages)).toBe("1.25 myl");
+  });
+
+  it("takes each area symbol from the catalogue", () => {
+    const messages = new FakeMessageCatalogue({
+      overrides: {
+        "units.symbol.squareMetre": "m2",
+        "units.symbol.hectare": "hek",
+        "units.symbol.squareKilometre": "km2",
+        "units.symbol.squareFoot": "vt2",
+        "units.symbol.acre": "ak",
+        "units.symbol.squareMile": "myl2",
+      },
+    });
+    expect(formatArea(850, "metric", messages)).toBe("850 m2");
+    expect(formatArea(12_500, "metric", messages)).toBe("1.25 hek");
+    expect(formatArea(2_500_000, "metric", messages)).toBe("2.5 km2");
+    expect(formatArea(100, "imperial", messages)).toBe("1,076 vt2");
+    expect(formatArea(10_000, "imperial", messages)).toBe("2.47 ak");
+    expect(formatArea(5_000_000, "imperial", messages)).toBe("1.93 myl2");
+  });
+
+  it("lets a language put the symbol first, or close up to the figure", () => {
+    const symbolFirst = new FakeMessageCatalogue({
+      overrides: { "units.reading": "{symbol}\u00A0{number}" },
+    });
+    expect(formatDistance(1250, "metric", symbolFirst)).toBe("km\u00A01.25");
+    expect(formatArea(12_500, "metric", symbolFirst)).toBe("ha\u00A01.25");
+    const closeUp = new FakeMessageCatalogue({
+      overrides: { "units.reading": "{number}{symbol}" },
+    });
+    expect(formatDistance(850, "metric", closeUp)).toBe("850m");
+  });
+
+  it("writes the figure in the catalogue's digits and separators", () => {
+    const messages = new FakeMessageCatalogue({ language: "de" });
+    expect(formatDistance(1_234_567, "metric", messages)).toBe("1.235 km");
+  });
+
+  it("keeps English symbols and the figure-space-symbol order by default", () => {
+    expect(formatDistance(850, "metric", EN)).toBe("850 m");
+    expect(formatArea(850, "metric", EN)).toBe("850 m²");
   });
 });
