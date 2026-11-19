@@ -12,6 +12,8 @@ import {
   inset,
   motion,
   neutral,
+  nonLatinLanguages,
+  nonLatinType,
   radius,
   representativeBackdrops,
   size,
@@ -170,6 +172,26 @@ describe("scales", () => {
     expect(pixels).toEqual([13, 15, 17, 22, 40]);
     for (const step of Object.values(typeScale)) {
       expect(step.size).toMatch(/rem$/);
+    }
+  });
+
+  it("gives non-Latin text zero tracking and a line height of at least 1.5", () => {
+    expect(Number.parseFloat(nonLatinType.tracking)).toBe(0);
+    expect(Object.keys(nonLatinType.lineHeight)).toEqual(
+      Object.keys(typeScale),
+    );
+    for (const [step, lineHeight] of Object.entries(nonLatinType.lineHeight)) {
+      expect(Number(lineHeight), step).toBeGreaterThanOrEqual(1.5);
+      expect(Number(lineHeight), step).toBeGreaterThan(
+        Number(typeScale[step as keyof typeof typeScale].lineHeight),
+      );
+    }
+  });
+
+  it("lists each non-Latin language once and leaves out the Latin ones", () => {
+    expect(new Set(nonLatinLanguages).size).toBe(nonLatinLanguages.length);
+    for (const latin of ["en", "af", "fr", "de", "ru", "el"]) {
+      expect(nonLatinLanguages).not.toContain(latin);
     }
   });
 

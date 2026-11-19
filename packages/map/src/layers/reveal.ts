@@ -27,6 +27,11 @@ export interface RevealGeometry {
   readonly panelEdge: number | null;
   /** The reading direction. Defaults to left to right. */
   readonly direction?: ReadingDirection;
+  /**
+   * How far up from the map's bottom edge the shown map key reaches, in
+   * pixels, or null while no key shows. Only {@link fitPadding} reads it.
+   */
+  readonly mapKeyClearance?: number | null;
 }
 
 type Padding = NonNullable<MapFitOptions["padding"]>;
@@ -135,19 +140,42 @@ export function revealOffset(
 }
 
 /**
+ * The least map height a fit keeps between its top and bottom padding before
+ * it gives up keeping clear of the map key: room for a revealed point with
+ * {@link REVEAL_CLEARANCE} above and below it.
+ */
+const FIT_MIN_MAP_PX = 2 * REVEAL_CLEARANCE;
+
+/**
  * Fit padding that keeps a result clear of the sheet (at {@link REVEAL_DETENT})
  * or the side panel, and of the search pill and the end stack, so a route or
- * imported shapes are drawn where they can be seen.
+ * imported shapes are drawn where they can be seen. Given a
+ * `mapKeyClearance`, it also keeps the result above the map key, where that
+ * still leaves {@link FIT_MIN_MAP_PX} of map.
  */
 export function fitPadding(geometry: RevealGeometry): Padding {
   const covered = coveredPadding(geometry);
   const rtl = geometry.direction === "rtl";
+  const top = (covered?.top ?? 0) + FIT_CLEARANCE_TOP_PX;
+  const bottom = (covered?.bottom ?? 0) + FIT_CLEARANCE_PX;
   return {
-    top: (covered?.top ?? 0) + FIT_CLEARANCE_TOP_PX,
+    top,
     right:
       (covered?.right ?? 0) + (rtl ? FIT_CLEARANCE_PX : FIT_CLEARANCE_END_PX),
-    bottom: (covered?.bottom ?? 0) + FIT_CLEARANCE_PX,
+    bottom: Math.max(bottom, keyPadding(geometry, top)),
     left:
       (covered?.left ?? 0) + (rtl ? FIT_CLEARANCE_END_PX : FIT_CLEARANCE_PX),
   };
+}
+
+/**
+ * Bottom padding that keeps a result above the map key, or zero without a
+ * key or where it would leave less than {@link FIT_MIN_MAP_PX} under `top`.
+ */
+function keyPadding(geometry: RevealGeometry, top: number): number {
+  if (geometry.mapKeyClearance == null) {
+    return 0;
+  }
+  const bottom = geometry.mapKeyClearance + FIT_CLEARANCE_PX;
+  return geometry.viewport.height - top - bottom >= FIT_MIN_MAP_PX ? bottom : 0;
 }

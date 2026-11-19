@@ -1327,6 +1327,32 @@ describe("pointer position", () => {
     expect(frames.size).toBe(0);
   });
 
+  it("keeps the position when the pointer leaves the map for the cursor readout", async () => {
+    const onPointerMove = vi.fn();
+    const { host, adapter } = await setup({ onPointerMove });
+    // Rendered by React, as the chrome is, so React reports it as the
+    // element the pointer went to.
+    render(
+      <div data-chrome="map-readout">
+        <span data-testid="coordinates" />
+      </div>,
+    );
+    fireEvent.pointerMove(host(), {
+      pointerType: "mouse",
+      clientX: 20,
+      clientY: 30,
+    });
+    fireEvent.pointerLeave(host(), {
+      pointerType: "mouse",
+      relatedTarget: screen.getByTestId("coordinates"),
+    });
+    flushFrames();
+    expect(onPointerMove).toHaveBeenCalledTimes(1);
+    expect(onPointerMove).toHaveBeenLastCalledWith(
+      adapter().unproject({ x: 20, y: 30 }),
+    );
+  });
+
   it("ignores touch, and does nothing without a handler or an engine", async () => {
     const onPointerMove = vi.fn();
     const { host } = await setup({ onPointerMove });

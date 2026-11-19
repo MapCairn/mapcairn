@@ -38,11 +38,26 @@ export const onMapIcon = style({
 /** The end stack's width plus the gap after it: how far a beside popover moves inwards. */
 const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tokens.space.sm})`;
 
+/** The step the popover sits above the top of the bottom row. */
+const popoverStep = tokens.space.xs;
+
+/**
+ * A room `MapChrome` measured from the top of the bottom row, less the step
+ * the popover sits above that row, so its top still stops a gap below the
+ * slot above it.
+ */
+function roomAboveStep(
+  room: typeof chromeVars.bottomEndRoom | typeof chromeVars.bottomEndBesideRoom,
+): string {
+  return `calc(${chromeVar(room, "100vh")} - ${popoverStep})`;
+}
+
 /**
  * The credits popover. It grows upwards and inwards from the button, on the
  * `chromeRaised` layer. Its width is capped at the chrome width minus both
  * insets, and its height at the room `MapChrome` measures between the end
- * stack and the bottom row, so it never covers the end stack above it. It
+ * stack and the bottom row, less the step it sits above that row, so it stops
+ * a gap below the end stack above it. It
  * sits a gap above the top of the whole bottom row, not just the button
  * (`bottomEndRise` is how far a taller neighbour, such as the readout with
  * the cursor coordinates, reaches above the button), so it never covers the
@@ -61,14 +76,14 @@ const besideOffset = `calc(${chromeVar(chromeVars.endStackWidth, "0px")} + ${tok
 export const popover = style({
   ...surfaceBlurStyle,
   position: "absolute",
-  insetBlockEnd: `calc(100% + ${tokens.space.xs})`,
+  insetBlockEnd: `calc(100% + ${popoverStep})`,
   transform: `translateY(calc(-1 * ${chromeVar(chromeVars.bottomEndRise, "0px")}))`,
   insetInlineEnd: 0,
   zIndex: zLayer("chromeRaised"),
   boxSizing: "border-box",
   width: "max-content",
   maxWidth: `calc(${chromeVar(chromeVars.width, "100vw")} - 2 * ${tokens.space.inset})`,
-  maxHeight: chromeVar(chromeVars.bottomEndRoom, "none"),
+  maxHeight: roomAboveStep(chromeVars.bottomEndRoom),
   overflowY: "auto",
   overscrollBehavior: "contain",
   margin: 0,
@@ -105,7 +120,7 @@ export const popover = style({
     '&[data-placement="beside"]': {
       insetInlineEnd: besideOffset,
       maxWidth: `calc(${chromeVar(chromeVars.width, "100vw")} - 2 * ${tokens.space.inset} - ${besideOffset} - ${chromeVar(chromeVars.bottomStartX, "0px")})`,
-      maxHeight: chromeVar(chromeVars.bottomEndBesideRoom, "none"),
+      maxHeight: roomAboveStep(chromeVars.bottomEndBesideRoom),
     },
   },
 });

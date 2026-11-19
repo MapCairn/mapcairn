@@ -718,7 +718,7 @@ function listAll(path) {
   return out === null
     ? null
     : out
-        .split("\n")
+        .split(/\r?\n/)
         .filter(Boolean)
         .map((row) => JSON.parse(row));
 }
@@ -755,7 +755,7 @@ function writeAccessList() {
     ? null
     : new Set(
         out
-          .split("\n")
+          .split(/\r?\n/)
           .filter(Boolean)
           .map((login) => login.toLowerCase()),
       );

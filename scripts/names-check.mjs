@@ -410,7 +410,7 @@ function readRows(request, deps) {
   }
   try {
     return result.stdout
-      .split("\n")
+      .split(/\r?\n/)
       .filter((row) => row.trim() !== "")
       .map((row) => JSON.parse(row));
   } catch {

@@ -2,6 +2,12 @@
 // Copyright MapCairn contributors
 import { expect, test } from "./fixtures";
 import { axeViolations } from "./support/a11y";
+import {
+  controlsOverFeature,
+  FIT_START,
+  FIT_VIEWPORTS,
+  showCountryOnMap,
+} from "./support/fit";
 import { mockLayerProviders } from "./support/layers";
 
 /**
@@ -91,6 +97,20 @@ test.describe("polygon styling", () => {
     expect(view?.lng ?? 0).toBeGreaterThan(110);
     expect(view?.lat ?? 0).toBeLessThan(-15);
   });
+
+  for (const viewport of FIT_VIEWPORTS) {
+    test(`Show on map keeps the fitted polygon clear of the end stack and the map key at ${viewport.width} by ${viewport.height}`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.setViewportSize(viewport);
+      await mockLayerProviders(page);
+      await mapPage.goto(FIT_START);
+      await showCountryOnMap(page, mapPage, "Australia");
+      await expect(page.getByTestId("selection-marker")).toBeVisible();
+      await expect.poll(() => controlsOverFeature(page)).toEqual([]);
+    });
+  }
 
   test("passes axe with a styled layer on and its card open @a11y", async ({
     page,

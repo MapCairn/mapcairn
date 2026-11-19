@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { isCursorReadout } from "./pointerTargets";
 
 /** Options for {@link usePointerPosition}. */
 export interface UsePointerPositionOptions {
@@ -30,7 +31,11 @@ export interface UsePointerPosition {
  * Reports the geographic position under a mouse or pen, at most once per
  * animation frame, for the cursor coordinates readout. Touch is ignored,
  * because a finger has no hover position. Leaving the map reports null and
- * drops any pending frame.
+ * drops any pending frame, except onto the cursor readout (`MapReadout`):
+ * the readout grows to hold the coordinates and can grow under a resting
+ * pointer, so the last position stays. The host then clears it from
+ * `MapReadout`'s `onCursorLeave`; a host that shows the position in a
+ * readout of its own clears it when the pointer leaves that readout.
  */
 export function usePointerPosition(
   options: UsePointerPositionOptions,
@@ -70,7 +75,10 @@ export function usePointerPosition(
         }
       },
       onPointerLeave: (event) => {
-        if (event.pointerType === "touch") {
+        if (
+          event.pointerType === "touch" ||
+          isCursorReadout(event.relatedTarget)
+        ) {
           return;
         }
         cancelAnimationFrame(frame.current);

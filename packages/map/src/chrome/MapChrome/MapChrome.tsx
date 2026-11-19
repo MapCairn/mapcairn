@@ -23,7 +23,11 @@ import { ChromeLayoutProvider, type ChromeLayoutValue } from "../layoutContext";
 import { ChromeSurfaceContext, type ChromeSurfaceValue } from "./chromeSurface";
 import { chromeVars } from "./chromeVars";
 import * as styles from "./MapChrome.css";
-import { placeMapKey, useMapKeyPlacement } from "./useMapKeyPlacement";
+import {
+  applyMapKeyPlacement,
+  isMapKeyCrowded,
+  placeMapKey,
+} from "./mapKeyPlacement";
 
 /** Props for {@link MapChrome}. */
 export interface MapChromeProps {
@@ -99,6 +103,8 @@ interface Measurements {
   readonly tourBottom: number | null;
   /** Bottom edge of the map key's slot before any lift, or null while it is empty. */
   readonly mapKeyBottom: number | null;
+  /** Height of the map key's slot as laid out, within its room cap. */
+  readonly mapKeyHeight: number;
 }
 
 type SlotName =
@@ -164,6 +170,7 @@ function measure(
     tourBottom: tour && tour.height > 0 ? tour.top + tour.height : null,
     mapKeyBottom:
       mapKey && mapKey.height > 0 ? mapKey.top + mapKey.height : null,
+    mapKeyHeight: mapKey?.height ?? 0,
   };
 }
 
@@ -199,6 +206,42 @@ function sameMeasurements(a: Measurements | null, b: Measurements): boolean {
     a !== null &&
     (Object.keys(b) as (keyof Measurements)[]).every((key) => a[key] === b[key])
   );
+}
+
+/** How far a fitted feature must stay above the visible key at the bottom. */
+function clearanceAboveMapKey(
+  measurements: Measurements | null,
+  crowded: boolean,
+  placement: ReturnType<typeof placeMapKey>,
+): number | null {
+  if (
+    !measurements ||
+    measurements.mapKeyBottom === null ||
+    placement === null ||
+    crowded
+  ) {
+    return null;
+  }
+  const top =
+    measurements.mapKeyBottom - measurements.mapKeyHeight + placement.shift;
+  return measurements.height - top;
+}
+
+/** Places the key from a complete measurement, when one exists. */
+function mapKeyPlacementAt(
+  measurements: Measurements | null,
+  lift: number,
+  tourBottom: number | null,
+): ReturnType<typeof placeMapKey> {
+  return measurements ? placeMapKey(measurements, lift, tourBottom) : null;
+}
+
+/** The tour edge that competes with the key, when the tour is shown. */
+function keyTourBottom(
+  hidden: boolean,
+  measurements: Measurements | null,
+): number | null {
+  return hidden ? null : (measurements?.tourBottom ?? null);
 }
 
 /**
@@ -257,6 +300,7 @@ export function MapChrome({
   const [sheetTop, publishSheetTop] = useState<number | null>(null);
   const [sheetDetent, publishSheetDetent] = useState<SheetDetent | null>(null);
   const [panelEdge, publishPanelEdge] = useState<number | null>(null);
+  const mapKeyTourBottomRef = useRef<number | null>(null);
 
   const observerRef = useRef<ResizeObserver | null>(null);
   const update = useCallback(() => {
@@ -275,6 +319,10 @@ export function MapChrome({
     // row rises with the slot it clears in the frame that slot changes size,
     // where state set from here would be applied a frame later.
     root.style.setProperty(chromeVars.bottomRaise, `${next.bottomRaise}px`);
+    applyMapKeyPlacement(
+      root,
+      placeMapKey(next, 0, mapKeyTourBottomRef.current),
+    );
     setMeasurements((current) =>
       sameMeasurements(current, next) ? current : next,
     );
@@ -408,18 +456,33 @@ export function MapChrome({
     measurements.tourBottom + CHROME_GAP_PX >
       measurements.bottomRowTop + bottom.bottomEndTranslateY;
   const tourHidden = modal || tourCrowded;
+  const keyTourEdge = keyTourBottom(tourHidden, measurements);
+  // The measuring observer reads the tour edge this render decided on. A card
+  // hidden by state alone (a modal, or the row reaching it) resizes no slot,
+  // so no observer round follows: place the key again here.
+  useLayoutEffect(() => {
+    if (mapKeyTourBottomRef.current === keyTourEdge) {
+      return;
+    }
+    mapKeyTourBottomRef.current = keyTourEdge;
+    update();
+  }, [keyTourEdge, update]);
   // The map key gives way to the tour card, which is there for a first visit
   // and is shown first, and hides when the room under the search pill is too
   // small for its chip.
-  const mapKeyCrowded = useMapKeyPlacement(
-    rootRef,
-    measurements
-      ? placeMapKey(
-          measurements,
-          bottom.bottomEndTranslateY,
-          tourHidden ? null : measurements.tourBottom,
-        )
-      : null,
+  // MapChrome's measuring observer writes this placement synchronously, before
+  // paint. Do not repeat it from render, which would put an older placement
+  // back for one frame when another slot changes size.
+  const mapKeyLivePlacement = mapKeyPlacementAt(
+    measurements,
+    bottom.bottomEndTranslateY,
+    keyTourEdge,
+  );
+  const mapKeyCrowded = isMapKeyCrowded(mapKeyLivePlacement);
+  const mapKeyClearance = clearanceAboveMapKey(
+    measurements,
+    mapKeyCrowded,
+    mapKeyLivePlacement,
   );
   const endStackMaxHeight = room?.endStackMaxHeight ?? null;
   const bottomEndRise = room?.bottomEndRise ?? null;
@@ -466,9 +529,10 @@ export function MapChrome({
       viewport,
       finePointer,
       panelEdge,
+      mapKeyClearance,
       publishSheetTop,
     }),
-    [layout, viewport, finePointer, panelEdge],
+    [layout, viewport, finePointer, panelEdge, mapKeyClearance],
   );
   const surfaceValue = useMemo<ChromeSurfaceValue>(
     () => ({

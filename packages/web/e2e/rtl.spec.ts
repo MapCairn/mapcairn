@@ -1,8 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { expect, test } from "./fixtures";
+import {
+  controlsOverFeature,
+  FIT_START,
+  FIT_VIEWPORTS,
+  showCountryOnMap,
+} from "./support/fit";
 import { mockLayerProviders } from "./support/layers";
 import { scriptSearch } from "./support/services";
+
+/** Keyboard pan steps that take the fitted polygon back under the side panel. */
+const PAN_STEPS_UNDER_PANEL = 4;
 
 /**
  * The layout, mirrored. These specs need the `direction: "rtl"` option, so they
@@ -84,9 +93,13 @@ test.describe("right to left", () => {
       );
     };
     await expect.poll(clearOfPanel).toBe(true);
-    // 3. Pan the polygon back under the panel.
+    // 3. Pan the polygon back under the panel. The fit keeps it clear of the
+    // search pill, the end stack and the map key as well, so it sits smaller
+    // and further from the panel than one keyboard pan step.
     await mapPage.focusMap();
-    await page.keyboard.press("ArrowLeft");
+    for (let step = 0; step < PAN_STEPS_UNDER_PANEL; step += 1) {
+      await page.keyboard.press("ArrowLeft");
+    }
     // Sample the outline itself, not just its bounding box.
     await expect
       .poll(async () => {
@@ -127,6 +140,20 @@ test.describe("right to left", () => {
     await page.getByTestId("feature-card-show").click();
     await expect.poll(clearOfPanel).toBe(true);
   });
+
+  for (const viewport of FIT_VIEWPORTS) {
+    test(`Show on map keeps a polygon clear of the mirrored end stack and map key at ${viewport.width} by ${viewport.height}`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.setViewportSize(viewport);
+      await mockLayerProviders(page);
+      await mapPage.goto(FIT_START);
+      await showCountryOnMap(page, mapPage, "Australia");
+      await expect(page.getByTestId("selection-marker")).toBeVisible();
+      await expect.poll(() => controlsOverFeature(page)).toEqual([]);
+    });
+  }
 
   test("the scale and zoom level stay clear of the open side panel", async ({
     page,

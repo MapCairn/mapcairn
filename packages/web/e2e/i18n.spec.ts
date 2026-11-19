@@ -134,11 +134,11 @@ test.describe("with Afrikaans chosen", () => {
     const row = list
       .getByTestId("layer-list-row")
       .filter({ hasText: "France" });
-    await expect(row).toContainText(/Ongeveer .+ mense/);
+    await expect(row).toContainText(/Ongeveer .+ inwoners/);
     await row.click();
     await expect(page.getByTestId("feature-card-heading")).toHaveText("France");
     await expect(page.getByTestId("feature-card")).toContainText(
-      "Bevolking ongeveer",
+      "Bevolking: ongeveer",
     );
   });
 

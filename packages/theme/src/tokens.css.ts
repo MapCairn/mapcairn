@@ -19,6 +19,8 @@ import {
   forcedColors,
   inset,
   motion,
+  nonLatinLanguages,
+  nonLatinType,
   radius,
   size,
   space,
@@ -80,6 +82,16 @@ export const tokens = createThemeContract({
     large: { size: null, lineHeight: null, tracking: null },
     title: { size: null, lineHeight: null, tracking: null },
     display: { size: null, lineHeight: null, tracking: null },
+    nonLatin: {
+      tracking: null,
+      lineHeight: {
+        small: null,
+        body: null,
+        large: null,
+        title: null,
+        display: null,
+      },
+    },
   },
   size: {
     control: null,
@@ -105,6 +117,9 @@ export const tokens = createThemeContract({
     toast: null,
   },
 });
+
+/** The steps of the type scale, in size order. */
+const typeStepNames = Object.keys(typeScale) as (keyof typeof typeScale)[];
 
 /** The groups of the contract that change with the theme. */
 const themedContract = {
@@ -157,6 +172,7 @@ createGlobalTheme(":root", staticContract, {
     large: typeScale.large,
     title: typeScale.title,
     display: typeScale.display,
+    nonLatin: nonLatinType,
   },
   size,
   focus: { innerWidth: focusWidth.inner, outerWidth: focusWidth.outer },
@@ -167,6 +183,26 @@ createGlobalTheme(":root", staticContract, {
   },
   z: zIndex,
 });
+
+/**
+ * Text in a non-Latin language reads the script-aware tracking and line
+ * heights instead of the Latin scale. The variables are set on the element
+ * that carries the language, so a `lang` attribute on a single place name
+ * works as well as one on `<html>`, and a host changes the result by setting
+ * the `type.nonLatin` tokens. The rule follows the `:root` block so it wins at
+ * equal specificity.
+ */
+globalStyle(
+  nonLatinLanguages.map((language) => `:lang(${language})`).join(", "),
+  {
+    vars: Object.fromEntries(
+      typeStepNames.flatMap((step) => [
+        [tokens.type[step].lineHeight, tokens.type.nonLatin.lineHeight[step]],
+        [tokens.type[step].tracking, tokens.type.nonLatin.tracking],
+      ]),
+    ),
+  },
+);
 
 createGlobalTheme(LIGHT, themedContract, themedValues("light"));
 createGlobalTheme(DARK, themedContract, themedValues("dark"));
