@@ -93,7 +93,7 @@ function useMapHasKeyboardFocus(host: HTMLElement | null): boolean {
 export function ScaleBar({ units }: ScaleBarProps) {
   const { adapter, view, hostElement } = useMap();
   const { reducedMotion } = usePreferences();
-  const locale = formatLocale(useMessages());
+  const messages = useMessages();
   const format = useFormatMessage();
   const mapHasFocus = useMapHasKeyboardFocus(hostElement);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -112,9 +112,9 @@ export function ScaleBar({ units }: ScaleBarProps) {
       metresPerPixel: adapter.metresPerPixel(latitude),
       maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
       units,
-      locale,
+      messages,
     });
-  }, [adapter, latitude, zoom, units, locale]);
+  }, [adapter, latitude, zoom, units, messages]);
 
   const canFade = !reducedMotion && !mapHasFocus;
   const [idleAtZoom, setIdleAtZoom] = useState<number | null>(null);

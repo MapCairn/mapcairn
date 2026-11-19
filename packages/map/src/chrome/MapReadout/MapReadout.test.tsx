@@ -52,7 +52,7 @@ function expectedBar(adapter: FakeMapAdapter, units: "metric" | "imperial") {
     metresPerPixel: adapter.metresPerPixel(),
     maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
     units,
-    locale: "en-GB",
+    messages: new FakeMessageCatalogue(),
   });
 }
 
@@ -88,7 +88,7 @@ describe("ScaleBar", () => {
         metresPerPixel: adapter.metresPerPixel(),
         maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
         units: "metric",
-        locale: "de",
+        messages,
       }).label,
     );
   });

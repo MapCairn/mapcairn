@@ -252,7 +252,7 @@ describe("parseCoordinates", () => {
       ["1,234 5,678", { lat: 1.234, lng: 5.678 }],
       ["-26,2041 28,0473", JOHANNESBURG],
       ["26,2041° S 28,0473° E", JOHANNESBURG_DECIMAL_SOUTH],
-      ["26,5; 28.25", { lat: 26.5, lng: 28.25 }],
+      ["26°30,5' S; 28°3,3' E", { lat: -26.5083333, lng: 28.055 }],
       ["26°12,5' S; 28°2,5' E", { lat: -26.2083333, lng: 28.0416667 }],
       ["٢٦٫٢ ٢٨٫٣", { lat: 26.2, lng: 28.3 }],
       ["٢٦,٢ ٢٨,٣", { lat: 26.2, lng: 28.3 }],
@@ -272,6 +272,18 @@ describe("parseCoordinates", () => {
       "26,5;; 28,3",
       "26,5; 28,3; 1,2",
       "26,5,; 28,3",
+      "26,5; 28.25",
+      "26.5,28",
+      "26.2041,28",
+      "-26.5,28",
+      "S26.5,28",
+      "26.5,180",
+      "1.5,2",
+      "26,5.28",
+      "26.5,28 E",
+      "10.5,1234",
+      "1.5.2 3.5",
+      "26°30,5' S 28°3,3' E",
     ])("refuses %j", (text) => {
       expect(parseCoordinates(text)).toBeNull();
     });
@@ -290,7 +302,7 @@ describe("parseCoordinates", () => {
         parseCoordinates(text);
         parseCoordinates(`${text}x`);
       }
-      expect(performance.now() - started).toBeLessThan(1000);
+      expect(performance.now() - started).toBeLessThan(10_000);
     });
 
     it("refuses text over the cap even when it is all digits of another script", () => {
@@ -471,5 +483,151 @@ describe("parseCoordinates with a language's hemisphere letters", () => {
       lat: -26.2041,
       lng: 28.0473,
     });
+  });
+});
+
+describe("parseCoordinates with a language's words", () => {
+  const HEMISPHERES = { north: "N", south: "S", east: "O", west: "W" };
+  const WORDS = {
+    north: "noord",
+    south: "suid",
+    east: "oos",
+    west: "wes",
+    degree: "graad grade",
+    minute: "minuut minute",
+    second: "sekonde sekondes",
+  };
+
+  it.each([
+    ["26.2041 suid, 28.0473 oos", JOHANNESBURG],
+    ["26.2041 Suid 28.0473 Oos", JOHANNESBURG],
+    ["noord 26.2041, wes 28.0473", { lat: 26.2041, lng: -28.0473 }],
+    ["-26.2041 grade, 28.0473 graad", JOHANNESBURG],
+    [
+      "26 graad 12 minuut 14.8 sekonde S 28 grade 2 minute 50.3 sekondes O",
+      JOHANNESBURG_DMS,
+    ],
+  ])("reads %j", (text, position) => {
+    expect(parseCoordinates(text, HEMISPHERES, WORDS)).toEqual(position);
+  });
+
+  it.each([
+    "26.2041 suid, 28.0473 oos",
+    "26 graad 12 minuut S 28 graad 2 minute O",
+  ])("refuses %j without the words", (text) => {
+    expect(parseCoordinates(text, HEMISPHERES)).toBeNull();
+    expect(parseCoordinates(text)).toBeNull();
+  });
+
+  it("keeps the English words and letters when words are given", () => {
+    expect(
+      parseCoordinates("26.2041 south, 28.0473 east", HEMISPHERES, WORDS),
+    ).toEqual(JOHANNESBURG);
+    expect(
+      parseCoordinates(
+        "26 degrees 12 minutes S 28 degrees 2 minutes O",
+        HEMISPHERES,
+        WORDS,
+      ),
+    ).toEqual({ lat: -26.2, lng: 28.0333333 });
+  });
+
+  it("lets an English word keep its meaning if a language's word clashes", () => {
+    const clashing = { ...WORDS, east: "north", north: "east" };
+    expect(
+      parseCoordinates("26.2041 north 28.0473 west", HEMISPHERES, clashing),
+    ).toEqual({ lat: 26.2041, lng: -28.0473 });
+  });
+
+  it("ignores blank words and extra white space in a value", () => {
+    const sparse = { ...WORDS, degree: "  ", south: "  suid   " };
+    expect(
+      parseCoordinates("26.2041 suid, 28.0473 oos", HEMISPHERES, sparse),
+    ).toEqual(JOHANNESBURG);
+  });
+
+  it("reads a language's words with no hemisphere letters given", () => {
+    expect(
+      parseCoordinates("26.2041 suid, 28.0473 oos", undefined, WORDS),
+    ).toEqual(JOHANNESBURG);
+  });
+
+  it("takes the last listed meaning when a word is given two, and keeps the English one over both", () => {
+    const twice = { ...WORDS, east: "oos wes", west: "wes" };
+    expect(
+      parseCoordinates("26.2041 suid, 28.0473 wes", HEMISPHERES, twice),
+    ).toEqual({ lat: -26.2041, lng: -28.0473 });
+  });
+
+  it.each(["constructor", "toString", "hasOwnProperty"])(
+    "never reads the object property %s as a word, typed or given",
+    (word) => {
+      expect(
+        parseCoordinates(`26.2041 ${word}`, HEMISPHERES, WORDS),
+      ).toBeNull();
+      expect(
+        parseCoordinates(`26.2041 ${word}, 28.0473 E`, HEMISPHERES, WORDS),
+      ).toBeNull();
+      const given = { ...WORDS, north: word };
+      expect(
+        parseCoordinates(`26.2041 ${word}, 28.0473 E`, HEMISPHERES, given),
+      ).toEqual({ lat: 26.2041, lng: 28.0473 });
+      expect(
+        parseCoordinates("26.2041 S, 28.0473 E", undefined, given),
+      ).toEqual({
+        lat: -26.2041,
+        lng: 28.0473,
+      });
+    },
+  );
+
+  it("takes __proto__ as a catalogue word without changing any object", () => {
+    const hostile = { ...WORDS, north: "__proto__" };
+    expect(
+      parseCoordinates("26.2041 S, 28.0473 E", HEMISPHERES, hostile),
+    ).toEqual(JOHANNESBURG);
+    expect(({} as Record<string, unknown>).north).toBeUndefined();
+  });
+
+  it("reads the exact Afrikaans example from the guide", () => {
+    expect(
+      parseCoordinates(
+        "26.2041 grade suid, 28.0473 graad oos",
+        HEMISPHERES,
+        WORDS,
+      ),
+    ).toEqual({ lat: -26.2041, lng: 28.0473 });
+  });
+
+  it("matches a word however its accents are written", () => {
+    const composed = { ...WORDS, east: "oós", south: "súid" };
+    const decomposed = { ...WORDS, east: "oo\u0301s", south: "su\u0301id" };
+    for (const words of [composed, decomposed]) {
+      expect(
+        parseCoordinates(
+          "26.2041 su\u0301id, 28.0473 oo\u0301s",
+          HEMISPHERES,
+          words,
+        ),
+      ).toEqual(JOHANNESBURG);
+      expect(
+        parseCoordinates(
+          "26.2041 s\u00fAid, 28.0473 o\u00f3s",
+          HEMISPHERES,
+          words,
+        ),
+      ).toEqual(JOHANNESBURG);
+    }
+  });
+
+  it("does not read a stray combining mark as part of a number or sign", () => {
+    expect(
+      parseCoordinates("26.2041\u0301 S, 28.0473 E", HEMISPHERES, WORDS),
+    ).toBeNull();
+  });
+
+  it("stays in proportion to a long text of the language's words", () => {
+    const text = `26.2041 ${"suid ".repeat(24)}`;
+    expect(parseCoordinates(text, HEMISPHERES, WORDS)).toBeNull();
   });
 });

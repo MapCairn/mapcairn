@@ -46,6 +46,39 @@ export function hemispheresFor(catalogue: MessageCatalogue): Hemispheres {
   };
 }
 
+/**
+ * The whole words a language writes in a coordinate: the four directions and
+ * the degree, minute and second. Each value may list several words separated
+ * by white space, for example "graad grade", so a singular and a plural both read.
+ */
+export interface CoordinateWords {
+  readonly north: string;
+  readonly south: string;
+  readonly east: string;
+  readonly west: string;
+  readonly degree: string;
+  readonly minute: string;
+  readonly second: string;
+}
+
+/**
+ * The coordinate words of `catalogue`'s language, from its `format.word*`
+ * keys, for `parseCoordinates` to read in addition to its English ones.
+ */
+export function coordinateWordsFor(
+  catalogue: MessageCatalogue,
+): CoordinateWords {
+  return {
+    north: catalogue.t("format.wordNorth", {}),
+    south: catalogue.t("format.wordSouth", {}),
+    east: catalogue.t("format.wordEast", {}),
+    west: catalogue.t("format.wordWest", {}),
+    degree: catalogue.t("format.wordDegree", {}),
+    minute: catalogue.t("format.wordMinute", {}),
+    second: catalogue.t("format.wordSecond", {}),
+  };
+}
+
 function formatDegrees(
   value: number,
   positive: string,

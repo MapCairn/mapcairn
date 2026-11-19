@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import {
+  coordinateWordsFor,
   formatDay,
   formatFixed,
   formatLatitude,
@@ -104,6 +105,32 @@ describe("hemispheresFor", () => {
       "format.hemisphereSouth",
       "format.hemisphereWest",
     ]);
+  });
+});
+
+describe("coordinateWordsFor", () => {
+  it("reads the seven words from the catalogue's keys", () => {
+    const catalogue = new FakeMessageCatalogue({
+      language: "af",
+      overrides: {
+        "format.wordNorth": "noord",
+        "format.wordSouth": "suid",
+        "format.wordEast": "oos",
+        "format.wordWest": "wes",
+        "format.wordDegree": "graad grade",
+        "format.wordMinute": "minuut minute",
+        "format.wordSecond": "sekonde sekondes",
+      },
+    });
+    expect(coordinateWordsFor(catalogue)).toEqual({
+      north: "noord",
+      south: "suid",
+      east: "oos",
+      west: "wes",
+      degree: "graad grade",
+      minute: "minuut minute",
+      second: "sekonde sekondes",
+    });
   });
 });
 

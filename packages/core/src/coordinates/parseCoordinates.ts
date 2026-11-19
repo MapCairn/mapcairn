@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import type { Hemispheres } from "../format/format";
+import type { CoordinateWords, Hemispheres } from "../format/format";
 import type { LatLng } from "../ports/geometry";
 import {
   normaliseCoordinateText,
@@ -71,29 +71,65 @@ const WORDS: Readonly<Record<string, WordToken>> = {
   coordinates: { kind: "label" },
 };
 
-type Words = Readonly<Record<string, WordToken>>;
+type Words = ReadonlyMap<string, WordToken>;
+
+/** The English words as a map, so a word such as "constructor" finds nothing. */
+const ENGLISH_WORDS: Words = new Map(Object.entries(WORDS));
+
+/** A word as the lookup holds it: composed (NFC) and in lower case. */
+function wordKey(word: string): string {
+  return word.normalize("NFC").toLowerCase();
+}
+
+/** Each word in `value` (separated by white space), lowercased, with `token`. */
+function entriesFor(
+  value: string,
+  token: WordToken,
+): readonly (readonly [string, WordToken])[] {
+  return wordKey(value)
+    .split(/\s+/)
+    .filter((word) => word !== "")
+    .map((word) => [word, token]);
+}
 
 /**
  * The words the reader knows: the English ones always, plus the hemisphere
- * letters a language writes (such as "O" for east in Afrikaans). An English
- * word keeps its meaning if a language's letter would clash with it.
+ * letters and the whole words a language writes (such as "O" and "oos" for
+ * east in Afrikaans). An English word keeps its meaning if a language's word
+ * would clash with it.
  */
-function wordsFor(hemispheres: Hemispheres | undefined): Words {
-  if (hemispheres === undefined) {
-    return WORDS;
+function wordsFor(
+  hemispheres: Hemispheres | undefined,
+  words: CoordinateWords | undefined,
+): Words {
+  const north: WordToken = { kind: "hemisphere", axis: "lat", negative: false };
+  const south: WordToken = { kind: "hemisphere", axis: "lat", negative: true };
+  const east: WordToken = { kind: "hemisphere", axis: "lng", negative: false };
+  const west: WordToken = { kind: "hemisphere", axis: "lng", negative: true };
+  if (hemispheres === undefined && words === undefined) {
+    return ENGLISH_WORDS;
   }
-  const letters: readonly [string, WordToken][] = [
-    [hemispheres.north, { kind: "hemisphere", axis: "lat", negative: false }],
-    [hemispheres.south, { kind: "hemisphere", axis: "lat", negative: true }],
-    [hemispheres.east, { kind: "hemisphere", axis: "lng", negative: false }],
-    [hemispheres.west, { kind: "hemisphere", axis: "lng", negative: true }],
-  ];
-  return {
-    ...Object.fromEntries(
-      letters.map(([letter, token]) => [letter.toLowerCase(), token]),
-    ),
-    ...WORDS,
-  };
+  const entries: (readonly (readonly [string, WordToken])[])[] = [];
+  if (hemispheres !== undefined) {
+    entries.push(
+      entriesFor(hemispheres.north, north),
+      entriesFor(hemispheres.south, south),
+      entriesFor(hemispheres.east, east),
+      entriesFor(hemispheres.west, west),
+    );
+  }
+  if (words !== undefined) {
+    entries.push(
+      entriesFor(words.north, north),
+      entriesFor(words.south, south),
+      entriesFor(words.east, east),
+      entriesFor(words.west, west),
+      entriesFor(words.degree, { kind: "unit", unit: "degree" }),
+      entriesFor(words.minute, { kind: "unit", unit: "minute" }),
+      entriesFor(words.second, { kind: "unit", unit: "second" }),
+    );
+  }
+  return new Map([...entries.flat(), ...ENGLISH_WORDS]);
 }
 
 const DEGREE_SYMBOLS = "°º˚";
@@ -110,6 +146,11 @@ function isDigit(char: string | undefined): boolean {
 
 function isLetter(char: string | undefined): boolean {
   return char !== undefined && /^\p{L}$/u.test(char);
+}
+
+/** A letter or a combining mark, so a word written with a separate accent stays whole. */
+function isWordCharacter(char: string | undefined): boolean {
+  return char !== undefined && /^[\p{L}\p{M}]$/u.test(char);
 }
 
 /** Where a run of characters that satisfy `test` starting at `from` ends. */
@@ -144,7 +185,7 @@ function readNumber(
   }
   const decimal = end > wholeEnd + 1;
   const hasDigits = wholeEnd > from || decimal;
-  return hasDigits
+  return hasDigits && text[end] !== "."
     ? { value: Number(text.slice(from, end)), decimal, end }
     : null;
 }
@@ -208,8 +249,8 @@ function readCountedNumber(text: string, index: number): Read | null {
 }
 
 function readWord(text: string, index: number, words: Words): Read | null {
-  const end = runEnd(text, index, isLetter);
-  const token = words[text.slice(index, end).toLowerCase()];
+  const end = runEnd(text, index, isWordCharacter);
+  const token = words.get(wordKey(text.slice(index, end)));
   return token === undefined ? null : { token, end };
 }
 
@@ -438,7 +479,10 @@ function readPair(text: string, words: Words): LatLng | null {
  *   in either order; a negative sign cannot be combined with a letter.
  *   Pass `hemispheres` (`hemispheresFor(catalogue)`) to read the letters of
  *   the language in use as well, so "26.20410° S, 28.04730° O" reads back in
- *   Afrikaans; N, S, E and W are always read
+ *   Afrikaans; N, S, E and W are always read. Pass `words`
+ *   (`coordinateWordsFor(catalogue)`) to read that language's whole words for
+ *   north, south, east, west, degree, minute and second too ("26.2041 suid,
+ *   28.0473 oos"); the English words are always read
  * - one comma or semicolon between the two values, or white space alone
  * - a leading "coordinates" or "coords", so the label of a coordinate result
  *   reads back as the same place to about a metre
@@ -450,22 +494,19 @@ function readPair(text: string, words: Words): LatLng | null {
  * Unicode minus) starts a value only when it does not touch a number before
  * it, so "02-123" and "12-14" are not pairs.
  *
- * Other scripts and locales are read too. Digits of any script (the Unicode
- * decimal digits, so Arabic-Indic, Devanagari, Bengali, full-width and the
- * rest), the Unicode minus sign and the other dashes and full-width signs,
- * the Arabic comma and semicolon and decimal separator, full-width
- * punctuation and white space such as the narrow no-break space are
- * rewritten as their ASCII forms first, and bidirectional marks are dropped.
- * A thousands separator is read as white space, since no coordinate has a
+ * Other scripts and locales are read too: digits of any script, the Unicode
+ * minus and other dashes, Arabic and full-width separators and white space
+ * such as the narrow no-break space are rewritten as ASCII first, and
+ * bidirectional marks are dropped (see {@link normaliseCoordinateText}). A
+ * thousands separator is read as white space, since no coordinate has a
  * digit group.
  *
- * A comma is a decimal mark in two layouts only: values separated by a
- * semicolon (`26,2041; 28,0473`), or separated by white space with a comma
- * in every number and no other comma in the text (`26,2041 28,0473`). A
- * comma between digits is never a thousands separator, so `26,28` and `1,234`
- * alone are not coordinates, `26,5 28.3` mixes marks and is refused, and
- * `26,5, 28,3` is refused because its commas could be either. Anywhere else
- * a comma separates the two values, as before. Latitude must be within 90 degrees and
+ * A comma is a decimal mark in two layouts only, and only in text with no
+ * decimal point (see {@link withDecimalCommas}): values separated by a
+ * semicolon (`26,2041; 28,0473`), or by white space with a comma in every
+ * number and no other comma (`26,2041 28,0473`). A comma between digits is
+ * never a thousands separator, so `26,28` and `1,234` alone are not
+ * coordinates. Anywhere else a comma separates the two values. Latitude must be within 90 degrees and
  * longitude within 180. Text longer than {@link MAX_COORDINATE_TEXT_LENGTH}
  * is refused unread, and the rest is read in a single pass, so the cost
  * grows in step with the text and no hostile input can make it slow.
@@ -474,15 +515,16 @@ function readPair(text: string, words: Words): LatLng | null {
 export function parseCoordinates(
   text: string,
   hemispheres?: Hemispheres,
+  words?: CoordinateWords,
 ): LatLng | null {
   if (text.length > MAX_COORDINATE_TEXT_LENGTH) {
     return null;
   }
-  const words = wordsFor(hemispheres);
+  const readWords = wordsFor(hemispheres, words);
   const normalised = normaliseCoordinateText(text);
   const withPoints = withDecimalCommas(normalised);
   return (
-    readPair(normalised, words) ??
-    (withPoints === null ? null : readPair(withPoints, words))
+    readPair(normalised, readWords) ??
+    (withPoints === null ? null : readPair(withPoints, readWords))
   );
 }
