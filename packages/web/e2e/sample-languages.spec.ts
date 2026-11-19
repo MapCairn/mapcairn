@@ -130,9 +130,8 @@ for (const viewport of SAMPLE_VIEWPORTS) {
 
 /*
  * A field's placeholder must fit its box in every language, or it ends in an
- * ellipsis and loses its meaning. The Directions place search is cut off
- * already in English on a 320 pixel phone (#395), so its test is
- * marked `fixme` until that is fixed, and the search pill's is run.
+ * ellipsis and loses its meaning. This covers the search pill and the
+ * Directions place search.
  */
 for (const viewport of SAMPLE_VIEWPORTS) {
   test(
@@ -151,7 +150,6 @@ for (const viewport of SAMPLE_VIEWPORTS) {
     viewportDetails(viewport),
     async ({ page, mapPage, language }) => {
       test.skip(language === null, "Runs in the sample languages only.");
-      test.fixme(true, "#395");
       await page.setViewportSize(viewport);
       await scriptSearch(page);
       await mapPage.goto();
