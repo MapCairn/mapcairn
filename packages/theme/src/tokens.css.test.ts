@@ -10,7 +10,7 @@ import {
   surfaceBlurSupported,
   tokens,
 } from "./tokens.css";
-import { zLayerOrder } from "./tokenValues";
+import { nonLatinLanguages, typeScale, zLayerOrder } from "./tokenValues";
 import { zLayer } from "./zLayer";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -62,6 +62,18 @@ describe("token contract", () => {
     expect(surfaceBlurStyle.backdropFilter).toBe(tokens.effect.blur);
     expect(surfaceBlurStyle.WebkitBackdropFilter).toBe(tokens.effect.blur);
     expect(surfaceBlurSupported).toContain("-webkit-backdrop-filter");
+  });
+});
+
+describe("script-aware type tokens", () => {
+  it("offers a tracking and a line height for non-Latin scripts", () => {
+    expect(Object.keys(tokens.type.nonLatin)).toEqual([
+      "tracking",
+      "lineHeight",
+    ]);
+    expect(Object.keys(tokens.type.nonLatin.lineHeight)).toEqual(
+      Object.keys(typeScale),
+    );
   });
 });
 
@@ -164,5 +176,40 @@ describe("emitted CSS", () => {
     ]) {
       expect(block).toContain(`: ${systemColour};`);
     }
+  });
+
+  it("sets the type variables for every non-Latin language, after the base values", () => {
+    const rules = [...css.matchAll(/(:lang\([\w-]+\)(?:,\s*)?)+\s*\{[^}]*\}/g)];
+    expect(rules.length).toBe(1);
+    const rule = rules[0][0];
+    for (const language of nonLatinLanguages) {
+      expect(rule).toContain(`:lang(${language})`);
+    }
+    for (const step of Object.keys(typeScale)) {
+      expect(rule).toMatch(
+        new RegExp(`--type-${step}-lineHeight[\\w-]*: var\\(`),
+      );
+      expect(rule).toMatch(
+        new RegExp(`--type-${step}-tracking[\\w-]*: var\\(`),
+      );
+    }
+    const lastBaseDeclaration = css.lastIndexOf("--type-", css.indexOf(rule));
+    expect(css.indexOf(rule)).toBeGreaterThan(
+      css.lastIndexOf(":root {", css.indexOf(rule)),
+    );
+    expect(css.indexOf(rule)).toBeGreaterThan(lastBaseDeclaration);
+  });
+
+  it("leaves the font stack to the host, which sets type.family once", () => {
+    const rule =
+      css.match(/(:lang\([\w-]+\)(?:,\s*)?)+\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(rule).not.toMatch(/--type-family/);
+    expect(css.match(/--type-family__[\w-]*:/g)).toHaveLength(1);
+  });
+
+  it("leaves tracking neutral and loosens line height for non-Latin text", () => {
+    expect(css).toMatch(/--type-nonLatin-tracking[\w-]*: 0em/);
+    expect(css).toMatch(/--type-nonLatin-lineHeight-title[\w-]*: 1\.5/);
+    expect(css).toMatch(/--type-nonLatin-lineHeight-display[\w-]*: 1\.5/);
   });
 });
