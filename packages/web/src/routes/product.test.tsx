@@ -16,7 +16,7 @@ describe("product route", () => {
     expect(handle).toMatchObject({ language: "en-GB" });
   });
 
-  it("leaves the scripts out of the document head, so the stylesheets and font paint first", () => {
-    expect(handle).toMatchObject({ modulePreload: false });
+  it("asks for its script preloads to follow the content, so the stylesheets and font paint first", () => {
+    expect(handle).toMatchObject({ modulePreload: "end" });
   });
 });

@@ -62,24 +62,26 @@ Since the map moved to `/map`, Lighthouse CI audits both `/`, the product page, 
 
 ### Script preloads on the product page (2026-11-19)
 
-On the product page the mobile score was 90 (first contentful paint and largest contentful paint 2.7 s and 3.0 s, the same in CI and locally). React Router lists every script the page needs as a `modulepreload` link in the head, about twenty of them and 190 KB compressed, and in the audit they compete with the stylesheets and font for the first paint. The product page's route `handle` now sets `modulePreload: false`, and `entry.server.tsx` removes those links from the page it sends (`app/modulePreload.ts`). The scripts still load and the page still hydrates; they are discovered from the inline script at the end of the document instead of the head. The map page and the privacy page keep the links.
+On the product page the mobile score was 90 (first contentful paint 2.7 s, largest contentful paint 3.0 s, the same locally and in Lighthouse CI on `main`). React Router writes one `modulepreload` link for every script the page needs into the head, about twenty and 190 KB compressed, and they compete with the stylesheets and font for the first paint. The product page's route `handle` now sets `modulePreload: "end"`, and `entry.server.tsx` moves those links, in order, from the head to just before `</body>` (`app/modulePreload.ts`). The map and privacy pages keep theirs in the head.
 
-Lighthouse 13.4.1, a production build served as CI serves it, mobile, 3 runs each (the DevTools-throttled "after" figures were taken through a local proxy that removed the links before the change was built):
+Four variants were measured against a production build served as CI serves it. The first row is Lighthouse 13.4.1, mobile, simulated throttling, 3 runs. The rest are a real Chrome run through the DevTools protocol with the same throttling as Lighthouse's DevTools method (1.6 Mbps, 150 ms round trip, 4x CPU), 3 runs, the pages served uncached, over HTTP/1.1. "Hydrated" is the time at which the copy-code button gets its React props, so it is when the page first responds to a click.
 
-| Page, preset                    | Before (performance, FCP, LCP) | After                                    |
-| ------------------------------- | ------------------------------ | ---------------------------------------- |
-| `/` mobile, simulated           | 90, 90, 90; 2.7 s; 3.0 s       | 98, 99, 99; 1.4 to 1.7 s; 1.8 to 2.1 s   |
-| `/` mobile, DevTools throttling | 93, 93, 93; 2.6 s              | 98, 98, 98; 1.9 s                        |
-| `/` desktop                     | 100                            | 100                                      |
-| `/map` mobile, simulated        | 38, 66, 69; LCP 9.9 s          | 62, 70, 70; LCP 9.9 s (code not changed) |
+| Variant                               | Lighthouse performance | First paint  | Hydrated     | Last script done |
+| ------------------------------------- | ---------------------- | ------------ | ------------ | ---------------- |
+| Links in the head (before)            | 90, 90, 90             | 2.6 s        | 4.3 s        | 4.2 s            |
+| Links removed                         | 98 to 99               | 1.9 s        | 5.7 s        | 5.7 s            |
+| Only the entry and route scripts kept | not measured           | 2.0 to 2.3 s | 4.5 to 4.9 s | 4.4 to 4.8 s     |
+| Links moved to the end (kept)         | 90, 93, 93             | 1.9 s        | 4.0 to 4.1 s | 3.9 s            |
 
-The trade: on the throttled phone profile the stylesheets finish about 0.65 s earlier, and the last script finishes about 1.4 s later (4.2 s to 5.6 s), because the scripts are no longer requested in parallel with the head. That suits a page that reads without script; the copy buttons and settings wait a little longer on a slow link. The same change is not made for `/map`: there the stripped run scored the same, and a map that hydrates later is a worse trade. The local server speaks HTTP/1.1, and Cloudflare's edge speaks HTTP/2 and HTTP/3 with its own prioritisation, so the field gain on the product page may be smaller than the lab figure; check the next CI run on `main` rather than assuming it.
+Removing the links scored best in the audit but delayed hydration by 1.4 s, because the script graph was then discovered one level at a time; that is the trade the audit cannot see, and it was not kept. Moving them keeps the flattened script graph and lets the stylesheets and font go first: first paint is 0.7 s earlier and hydration is slightly earlier too, not later. The audit's own gain is smaller (90 to 93), because it counts the bytes requested before the first paint whatever their priority, so this change does not reach the 0.95 target on its own and #329 stays open. The 92 in Lighthouse CI on the first version of this change (links removed) is not the figure for the kept variant.
 
-Also measured and not kept on `/` and `/map`: no font preload (no change, slightly worse), one merged stylesheet (within the spread), and marking the preloads `fetchpriority="low"` (one point).
+The local server speaks HTTP/1.1, and Cloudflare's edge speaks HTTP/2 and HTTP/3 with its own prioritisation, so the field gain may be smaller than these figures; check the next Lighthouse CI run on `main` rather than assuming it.
+
+Also measured and not kept: no font preload (no change), one merged stylesheet (within the spread), and `fetchpriority="low"` on the preloads (one point).
 
 ### The map page
 
-The same tools on `/map`: mobile 62 to 71 locally (the first run after a start is often lower) and 43 to 44 in CI, desktop 91, accessibility, best practices and SEO 100. The largest contentful paint is the tour card, which waits for the map's first `idle`, so about 25% of the score depends on the first view's tiles, sprite and 14 glyph ranges coming over the throttled link. Preloading the basemap style, a merged stylesheet and the font preload did not separate from run-to-run noise. What is left needs a decision on plan 0004's rule about the tour card (see "Decided not to do"), and is tracked in #385.
+On `/map`: mobile 59 to 71 locally and 43 to 44 in CI, desktop 90 to 91, accessibility, best practices and SEO 100. The largest contentful paint is the tour card, which waits for the map's first `idle`, so about 25% of the score depends on the first view's tiles, sprite and 14 glyph ranges coming over the throttled link. Run to run, the same build moved from 59 to 69 on one machine under load (total blocking time 160 to 370 ms), and a build of `main` and a build of this branch requested identical files of identical sizes and scored inside that range, so a difference between them in CI is noise. Preloading the basemap style, a merged stylesheet, the font preload and removing the preloads did not separate from it. What is left needs a decision on plan 0004's rule about the tour card (see "Decided not to do"), and is tracked in #385.
 
 ## Language weight
 
@@ -92,5 +94,5 @@ A language other than the host's default is loaded when a visitor first uses it,
 - `modulepreload` the MapLibre chunk in the head. It competes with the first chunks for bandwidth before the first paint (see the comment in `vite.config.ts`).
 - Lazy-load the error page. It saves under 2 KB, and an error page that has to load more code can fail when the network has.
 - Split the sheet's panels into chunks loaded on first open. The saving is mainly bytes, which the audit overstates (finding 4), and opening a panel would then wait on the network.
-- Strip the script preloads on `/map`. The score did not move, and the map is the page, so its scripts should start with the head.
+- Move or remove the script preloads on `/map`. The score did not move, and the map is the page, so its scripts start with the head.
 - Raise the CI performance threshold. The scores stay far below 0.95, which the map's engine and tiles make out of reach without the tricks above.

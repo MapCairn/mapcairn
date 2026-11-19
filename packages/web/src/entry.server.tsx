@@ -3,11 +3,7 @@
 import { renderToReadableStream } from "react-dom/server";
 import type { EntryContext } from "react-router";
 import { ServerRouter } from "react-router";
-import {
-  type ModulePreloadHandle,
-  wantsModulePreload,
-  withoutModulePreloads,
-} from "./app/modulePreload";
+import { movePreloadsToEnd, preloadsAtEnd } from "./app/modulePreload";
 import {
   buildContentSecurityPolicy,
   generateNonce,
@@ -31,8 +27,8 @@ import {
  *   the same tree) and to its own streamed-data transfer script; none of
  *   which `renderToReadableStream`'s option alone would reach, since they're
  *   react-router's own components/injected scripts, not React's. A page whose
- *   route `handle` sets `modulePreload: false` is sent without React Router's
- *   `modulepreload` links (see {@link ModulePreloadHandle}).
+ *   route `handle` sets `modulePreload: "end"` is sent with React Router's
+ *   `modulepreload` links moved from the head to the end of the body.
  */
 export default async function handleRequest(
   request: Request,
@@ -67,11 +63,8 @@ export default async function handleRequest(
     ({ route }) => ({ handle: routerContext.routeModules[route.id]?.handle }),
   );
 
-  return new Response(
-    wantsModulePreload(matched) ? body : withoutModulePreloads(body),
-    {
-      headers: responseHeaders,
-      status: responseStatusCode,
-    },
-  );
+  return new Response(preloadsAtEnd(matched) ? movePreloadsToEnd(body) : body, {
+    headers: responseHeaders,
+    status: responseStatusCode,
+  });
 }

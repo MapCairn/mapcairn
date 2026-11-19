@@ -8,7 +8,7 @@ const renderToReadableStreamMock = vi.fn(
       start(controller) {
         controller.enqueue(
           new TextEncoder().encode(
-            '<html><head><link rel="modulepreload" href="/a.js"/></head></html>',
+            '<html><head><link rel="modulepreload" href="/a.js"/></head><body>x</body></html>',
           ),
         );
         controller.close();
@@ -108,15 +108,19 @@ describe("entry.server handleRequest", () => {
     expect(first.headerNonce).not.toBe(second.headerNonce);
   });
 
-  it("keeps the module preload links of a page that has not opted out", async () => {
+  it("keeps the module preload links in the head of a page that has not asked", async () => {
     const { response } = await handleOnce({ language: "en-GB" });
 
-    expect(await response.text()).toContain('rel="modulepreload"');
+    expect(await response.text()).toContain(
+      '<head><link rel="modulepreload" href="/a.js"/></head>',
+    );
   });
 
-  it("drops the module preload links of a page that opts out through its route handle", async () => {
-    const { response } = await handleOnce({ modulePreload: false });
+  it("moves the module preload links of a page that asks through its route handle to the end of its body", async () => {
+    const { response } = await handleOnce({ modulePreload: "end" });
 
-    expect(await response.text()).toBe("<html><head></head></html>");
+    expect(await response.text()).toBe(
+      '<html><head></head><body>x<link rel="modulepreload" href="/a.js"/></body></html>',
+    );
   });
 });

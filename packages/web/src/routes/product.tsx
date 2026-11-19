@@ -55,12 +55,12 @@ export const links: LinksFunction = () => [
 /**
  * React Router route module export: the page is English only, so the
  * document's language stays English whatever the playground was set to. It
- * is readable before its scripts run, so they are not preloaded in the head,
- * where they would delay the first paint.
+ * reads without script, so its script preloads follow the content instead of
+ * delaying the first paint from the head.
  */
 export const handle: PageLanguageHandle & ModulePreloadHandle = {
   language: "en-GB",
-  modulePreload: false,
+  modulePreload: "end",
 };
 
 /**
