@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap } from "../../host";
 import { CURSOR_READOUT_CHROME, isMapHost } from "../../host/pointerTargets";
 import { useFormatMessage, useMessages, usePreferences } from "../../services";
+import { Isolate } from "../../ui/Isolate";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { useChromeLayout } from "../layoutContext";
 import * as styles from "./MapReadout.css";
@@ -152,7 +153,9 @@ export function ScaleBar({ units }: ScaleBarProps) {
       data-idle={idle ? "true" : "false"}
       className={styles.scaleBar}
     >
-      <span>{bar.label}</span>
+      <span>
+        <Isolate>{bar.label}</Isolate>
+      </span>
       <div
         ref={trackRef}
         className={styles.track}
@@ -200,11 +203,15 @@ export function CursorCoordinates({ latlng, zoom }: CursorCoordinatesProps) {
     zoom === undefined ? "" : formatZoom(zoom, formatLocale(messages));
   return (
     <p data-chrome="cursor-coordinates" className={styles.coordinates}>
-      {latlng ? <span>{formatLatLng(latlng)}</span> : null}
+      {latlng ? (
+        <span>
+          <Isolate figure>{formatLatLng(latlng)}</Isolate>
+        </span>
+      ) : null}
       {zoom === undefined ? null : (
         <span data-testid="zoom-level" className={styles.zoomLevel}>
           <span aria-hidden="true" className={styles.unselectable}>
-            {t("chrome.readout.zoomShort", { level })}
+            <Isolate>{t("chrome.readout.zoomShort", { level })}</Isolate>
           </span>
           <VisuallyHidden>
             {t(

@@ -67,9 +67,12 @@ describe("formatShapeMeasure numbering", () => {
   });
 
   it("writes Latin digits when the catalogue asks for them", () => {
-    expect(formatShapeMeasure(LINE, "metric", persian("latn"))).toMatch(
-      /^[\d.,٫٬]+ (m|km)$/,
-    );
+    expect(
+      formatShapeMeasure(LINE, "metric", persian("latn")).replace(
+        /[\u2066-\u2069]/g,
+        "",
+      ),
+    ).toMatch(/^[\d.,٫٬]+ (m|km)$/);
     expect(formatShapeMeasure(SQUARE, "metric", persian("latn"))).not.toMatch(
       /[\u06F0-\u06F9]/u,
     );

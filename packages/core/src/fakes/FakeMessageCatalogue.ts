@@ -20,6 +20,13 @@ export interface FakeMessageCatalogueOptions {
   readonly language?: string;
   /** An `Intl` numbering system for numbers and days, such as "latn". */
   readonly numberingSystem?: string;
+  /**
+   * The language's reading direction, as `createMessageCatalogue`'s
+   * `direction` option: it decides whether text parameters are isolated.
+   */
+  readonly direction?: "ltr" | "rtl";
+  /** Forces parameter isolation on or off, as `createMessageCatalogue`'s option does. */
+  readonly isolateParameters?: boolean;
   /** Host-defined layer template, unit and label translations. */
   readonly layerTemplates?: Readonly<Record<string, string>>;
   /**
@@ -70,9 +77,17 @@ export class FakeMessageCatalogue implements MessageCatalogue {
       language,
       active as Record<MessageKey, string>,
       EN_GB_CATALOGUE,
-      options.numberingSystem === undefined
-        ? {}
-        : { numberingSystem: options.numberingSystem },
+      {
+        ...(options.numberingSystem === undefined
+          ? {}
+          : { numberingSystem: options.numberingSystem }),
+        ...(options.direction === undefined
+          ? {}
+          : { direction: options.direction }),
+        ...(options.isolateParameters === undefined
+          ? {}
+          : { isolateParameters: options.isolateParameters }),
+      },
     );
   }
 

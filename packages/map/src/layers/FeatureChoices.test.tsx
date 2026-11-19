@@ -53,4 +53,23 @@ describe("FeatureChoices definition text", () => {
     expect(rows[0]).toHaveTextContent("Brandwaarskuwings");
     expect(rows[1]).toHaveTextContent("Plain layer");
   });
+
+  it("isolates each feature title, so a name in another script keeps its order", () => {
+    const layers = { now: () => 0, select: vi.fn() } as unknown as DataLayers;
+    render(
+      <ServicesProvider services={createFakeServices()}>
+        <FeatureChoices
+          layers={layers}
+          choices={[choice("Plain layer")]}
+          formatters={createFormatterRegistry()}
+          headingLevel={4}
+        />
+      </ServicesProvider>,
+    );
+    const title = screen
+      .getByTestId("feature-choices-row")
+      .querySelector("bdi");
+    expect(title).not.toBeNull();
+    expect(title).not.toHaveAttribute("dir");
+  });
 });

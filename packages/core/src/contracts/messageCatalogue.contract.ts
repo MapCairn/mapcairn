@@ -23,6 +23,17 @@ export interface MessageCatalogueFixture {
     values: Partial<Record<MessageKey, string>>,
     numberingSystem?: string,
   ) => MessageCatalogue;
+  /**
+   * A fresh instance with its reading direction and, optionally, an explicit
+   * parameter isolation setting, as `createMessageCatalogue`'s options.
+   */
+  readonly createIsolating: (
+    language: string,
+    options: {
+      readonly direction?: "ltr" | "rtl";
+      readonly isolateParameters?: boolean;
+    },
+  ) => MessageCatalogue;
 }
 
 const [PLURAL_ONE, PLURAL_OTHER] =
@@ -159,6 +170,60 @@ export function runMessageCatalogueContract(
           items,
         ),
       );
+    });
+
+    describe("parameter isolation", () => {
+      const FSI = "\u2068";
+      const PDI = "\u2069";
+      const position = { position: "-26.2, 28.0" };
+      const sentence = (catalogue: MessageCatalogue) =>
+        catalogue.t("announce.pinDropped", position);
+
+      it("keeps a left-to-right language plain", () => {
+        const catalogue = fixture.createIsolating("en-GB", {});
+        expect(sentence(catalogue)).toBe("Pin dropped at -26.2, 28.0");
+        expect(catalogue.list(["a", "b"])).not.toContain(FSI);
+      });
+
+      it("isolates text parameters and list items in a right-to-left language", () => {
+        const catalogue = fixture.createIsolating("ar", {});
+        expect(sentence(catalogue)).toBe(
+          `Pin dropped at ${FSI}-26.2, 28.0${PDI}`,
+        );
+        expect(catalogue.list(["a", "b"]).split(FSI)).toHaveLength(3);
+      });
+
+      it("takes the direction a host gives over the tag's", () => {
+        expect(
+          sentence(fixture.createIsolating("en-GB", { direction: "rtl" })),
+        ).toContain(FSI);
+        expect(
+          sentence(fixture.createIsolating("ar", { direction: "ltr" })),
+        ).not.toContain(FSI);
+      });
+
+      it("lets isolateParameters override the direction, both ways", () => {
+        expect(
+          sentence(
+            fixture.createIsolating("en-GB", { isolateParameters: true }),
+          ),
+        ).toContain(FSI);
+        expect(
+          sentence(
+            fixture.createIsolating("ar", {
+              direction: "rtl",
+              isolateParameters: false,
+            }),
+          ),
+        ).not.toContain(FSI);
+      });
+
+      it("does not let a value end its own isolation", () => {
+        const text = fixture
+          .createIsolating("ar", {})
+          .t("announce.pinDropped", { position: `x${PDI} y` });
+        expect(text).toBe(`Pin dropped at ${FSI}x y${PDI}`);
+      });
     });
   });
 }
