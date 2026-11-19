@@ -12,11 +12,13 @@ import {
   Suspense,
   startTransition,
   use,
+  useRef,
   useState,
 } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../../services";
 import { StatusMessage } from "./StatusMessage";
+import { StatusMessageFocusProvider } from "./StatusMessageFocus";
 
 function render(ui: ReactElement, services = createFakeServices()) {
   const view = renderBare(
@@ -395,10 +397,11 @@ describe("StatusMessage focus when it goes away", () => {
   /** Shows the message until its Dismiss or its action is used, as a banner does. */
   function Host() {
     const [shown, setShown] = useState(true);
+    const mapRef = useRef<HTMLButtonElement>(null);
     return (
-      <>
+      <StatusMessageFocusProvider fallback={() => mapRef.current?.focus()}>
         <button type="button">Before</button>
-        <button type="button" data-map-host="">
+        <button type="button" ref={mapRef}>
           Map
         </button>
         {shown ? (
@@ -410,7 +413,7 @@ describe("StatusMessage focus when it goes away", () => {
             Failed
           </StatusMessage>
         ) : null}
-      </>
+      </StatusMessageFocusProvider>
     );
   }
 
@@ -478,5 +481,84 @@ describe("StatusMessage focus when it goes away", () => {
     button("Before").focus();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(document.activeElement).toBe(button("Before"));
+  });
+});
+
+describe("StatusMessage focus target", () => {
+  function Banner({ onDismiss }: { onDismiss: () => void }) {
+    return (
+      <StatusMessage variant="error" onDismiss={onDismiss}>
+        Failed
+      </StatusMessage>
+    );
+  }
+
+  /** A message that unmounts on Dismiss, the way a banner does. */
+  function Closing() {
+    const [shown, setShown] = useState(true);
+    return shown ? <Banner onDismiss={() => setShown(false)} /> : null;
+  }
+
+  it("ignores a data-map-host element when no target is supplied", () => {
+    render(
+      <>
+        <button type="button" data-map-host="">
+          Map
+        </button>
+        <Closing />
+      </>,
+    );
+    screen.getByRole("button", { name: "Dismiss" }).focus();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("goes to the nearest supplied target, and only to that one", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    render(
+      <>
+        <StatusMessageFocusProvider fallback={first}>
+          <button type="button">One</button>
+        </StatusMessageFocusProvider>
+        <StatusMessageFocusProvider fallback={second}>
+          <Closing />
+        </StatusMessageFocusProvider>
+      </>,
+    );
+    screen.getByRole("button", { name: "Dismiss" }).focus();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
+  });
+
+  it("does not use the target when focus returns to where it came from", () => {
+    const fallback = vi.fn();
+    render(
+      <StatusMessageFocusProvider fallback={fallback}>
+        <button type="button">Before</button>
+        <Closing />
+      </StatusMessageFocusProvider>,
+    );
+    screen.getByRole("button", { name: "Before" }).focus();
+    screen.getByRole("button", { name: "Dismiss" }).focus();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it("uses the latest target without re-subscribing", () => {
+    const early = vi.fn();
+    const late = vi.fn();
+    const tree = (fallback: () => void) => (
+      <StatusMessageFocusProvider fallback={fallback}>
+        <Closing />
+      </StatusMessageFocusProvider>
+    );
+    const view = render(tree(early));
+    view.rerender(tree(late));
+    screen.getByRole("button", { name: "Dismiss" }).focus();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(late).toHaveBeenCalledTimes(1);
+    expect(early).not.toHaveBeenCalled();
   });
 });
