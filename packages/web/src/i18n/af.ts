@@ -383,7 +383,7 @@ export const AF_CATALOGUE: Record<MessageKey, string> = {
   "panels.help.tourStart": "Begin die toer",
   "panels.help.searchHeading": "Soek",
   "panels.help.searchDescription":
-    "Tik 'n pleknaam of 'n koördinaatpaar, soos -26.2041, 28.0473 of 26.2041° S, 28.0473° O, en druk dan Enter of Soek. Skryf elke waarde met 'n desimale punt of 'n gradeteken. Koördinate word op hierdie toestel gelees en nie na die geokodeerder gestuur nie; die kaart laai dan kaartteëls vir daardie gebied, soos met enige skuif.",
+    "Tik 'n pleknaam of 'n koördinaatpaar, soos -26.2041, 28.0473 of 26.2041° S, 28.0473° O, en druk dan Enter of Soek. Skryf elke waarde met 'n desimale punt of 'n gradeteken. 'n Desimale komma werk ook as 'n kommapunt die waardes skei, of as spasies dit doen en elke getal 'n komma het. Koördinate word op hierdie toestel gelees en nie na die geokodeerder gestuur nie; die kaart laai dan kaartteëls vir daardie gebied, soos met enige skuif.",
   "panels.help.keyboardHeading": "Sleutelbord",
   "panels.help.drawingHeading": "Teken",
   "panels.help.accessibilityHeading": "Toeganklikheid",
