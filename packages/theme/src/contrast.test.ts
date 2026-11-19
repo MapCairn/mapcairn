@@ -6,12 +6,16 @@ import {
   contrastRatio,
   isInSrgbGamut,
   parseColour,
-  type Rgba,
   relativeLuminance,
   toHex,
 } from "./contrast";
 import {
-  type ColourRoles,
+  AA_NON_TEXT,
+  AA_TEXT,
+  contrastPairs,
+  measurePair,
+} from "./contrastPairs";
+import {
   colourRoleNames,
   representativeBackdrops,
   type ThemeName,
@@ -140,35 +144,9 @@ describe("toHex", () => {
  * fill compared with the map it sits on is meaningless; the outline beside it
  * carries the 3:1.
  */
-const AA_TEXT = 4.5;
-const AA_NON_TEXT = 3;
 const { white, black, lightMap, defaultBasemap } = representativeBackdrops;
-/**
- * White and black bracket every map. The default basemap (Bright), in both
- * themes, is checked by name as well, because a dark theme no longer implies
- * a dark map beneath the chrome.
- */
-const surfaceBackdrops = { white, black, defaultBasemap };
 const themeNames: ThemeName[] = ["light", "dark"];
 const colourSets = ["colour", "opaque", "contrastMore"] as const;
-
-/** Flattens a surface role over a backdrop so it can be compared. */
-function surfaceOver(
-  roles: ColourRoles,
-  role: "surface" | "surfaceRaised",
-  backdrop: string,
-): Rgba {
-  return compositeOver(roles[role], backdrop);
-}
-
-/** Contrast of an opaque role over an already composited surface. */
-function over(
-  roles: ColourRoles,
-  role: keyof ColourRoles,
-  under: Rgba,
-): number {
-  return contrastRatio(compositeOver(roles[role], under), under);
-}
 
 describe.each(themeNames)("%s theme tokens", (theme) => {
   const values = themeValues[theme];
@@ -200,80 +178,18 @@ describe.each(themeNames)("%s theme tokens", (theme) => {
   describe.each(colourSets)("%s set", (set) => {
     const roles = values[set];
 
-    describe.each(Object.entries(surfaceBackdrops))(
-      "surface over %s",
-      (_name, backdrop) => {
-        for (const surfaceRole of ["surface", "surfaceRaised"] as const) {
-          const under = surfaceOver(roles, surfaceRole, backdrop);
-
-          it(`${surfaceRole}: text and muted text reach ${AA_TEXT}:1`, () => {
-            expect(over(roles, "text", under)).toBeGreaterThanOrEqual(AA_TEXT);
-            expect(over(roles, "textMuted", under)).toBeGreaterThanOrEqual(
-              AA_TEXT,
-            );
-          });
-
-          it(`${surfaceRole}: accent text and danger text reach ${AA_TEXT}:1`, () => {
-            expect(over(roles, "accent", under)).toBeGreaterThanOrEqual(
-              AA_TEXT,
-            );
-            expect(over(roles, "danger", under)).toBeGreaterThanOrEqual(
-              AA_TEXT,
-            );
-          });
-
-          it(`${surfaceRole}: icons, control edges, selection and focus reach ${AA_NON_TEXT}:1`, () => {
-            expect(over(roles, "text", under)).toBeGreaterThanOrEqual(
-              AA_NON_TEXT,
-            );
-            expect(
-              over(roles, "controlBoundary", under),
-            ).toBeGreaterThanOrEqual(AA_NON_TEXT);
-            expect(over(roles, "accent", under)).toBeGreaterThanOrEqual(
-              AA_NON_TEXT,
-            );
-            expect(over(roles, "focusRing", under)).toBeGreaterThanOrEqual(
-              AA_NON_TEXT,
-            );
-          });
-        }
+    describe.each(contrastPairs)(
+      "$foreground on $background ($required:1)",
+      (pair) => {
+        const backdrops =
+          pair.backdrops.length === 0 ? [undefined] : pair.backdrops;
+        it.each(backdrops)("over %s", (backdrop) => {
+          expect(measurePair(roles, pair, backdrop)).toBeGreaterThanOrEqual(
+            pair.required,
+          );
+        });
       },
     );
-
-    it(`accent fill carries ${AA_TEXT}:1 text`, () => {
-      expect(
-        contrastRatio(roles.accentContrast, roles.accent),
-      ).toBeGreaterThanOrEqual(AA_TEXT);
-    });
-
-    it(`tinted panels keep ${AA_TEXT}:1 text`, () => {
-      const accentTint = parseColour(roles.accentTint);
-      const dangerTint = parseColour(roles.dangerTint);
-      expect(contrastRatio(roles.text, accentTint)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-      expect(contrastRatio(roles.accent, accentTint)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-      expect(contrastRatio(roles.text, dangerTint)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-      expect(contrastRatio(roles.danger, dangerTint)).toBeGreaterThanOrEqual(
-        AA_TEXT,
-      );
-    });
-
-    it("lets the focus ring show on the bare map and against its inner ring", () => {
-      for (const backdrop of [white, black]) {
-        expect(
-          contrastRatio(roles.focusRing, backdrop),
-          `ring on ${backdrop}`,
-        ).toBeGreaterThanOrEqual(AA_NON_TEXT);
-      }
-      expect(
-        contrastRatio(roles.focusRingInner, roles.focusRing),
-      ).toBeGreaterThanOrEqual(AA_NON_TEXT);
-    });
 
     it("keeps map overlays visible on light and dark basemaps", () => {
       for (const role of ["mapPin", "mapMeasureLine", "mapAccuracy"] as const) {

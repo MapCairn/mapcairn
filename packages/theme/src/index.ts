@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 export {
+  type ContrastFinding,
+  checkThemeContrast,
+  type InvalidColour,
+  type InvalidColourReason,
+  type ThemeColours,
+  type ThemeContrastCheck,
+  type ThemeOverride,
+} from "./checkThemeContrast";
+export {
   compositeOver,
   contrastRatio,
   parseColour,
