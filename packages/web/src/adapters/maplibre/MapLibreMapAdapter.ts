@@ -11,7 +11,6 @@ import type {
   MapEvents,
   MapFeature,
   MapFeatureHit,
-  MapFeatureTap,
   MapFitOptions,
   MapHeatmap,
   MapHostElement,
@@ -42,11 +41,9 @@ import {
 } from "@mapcairn/core";
 import type {
   AnimationOptions,
-  LayerSpecification,
   MapEventType,
   Map as MapLibreMap,
   MapOptions,
-  SourceSpecification,
   Subscription,
 } from "maplibre-gl";
 import { withCacheKey } from "../../constants/workerCacheKey";
@@ -58,13 +55,12 @@ import {
   omitSaveDataLayers,
   styleFor,
 } from "./basemapStyle";
+import { type DataLayer, ENGINE_ID_PREFIX } from "./dataLayerPlan";
 import {
-  basemapFont,
-  type DataLayer,
-  dataLayerEngineIds,
-  ENGINE_ID_PREFIX,
-  planDataLayer,
-} from "./dataLayerPlan";
+  DataLayerStore,
+  type TileLayerReport,
+  toPropertyBag,
+} from "./dataLayerStore";
 import { EditHandleController } from "./editHandles";
 import {
   MapImageExporter,
@@ -72,17 +68,6 @@ import {
   type RenderMap,
   type RenderMapRequest,
 } from "./imageExport";
-import {
-  MARKER_PIXEL_RATIO,
-  markerImage,
-  markerImageName,
-} from "./markerImages";
-import {
-  PATTERN_NAMES,
-  PATTERN_PIXEL_RATIO,
-  patternImage,
-  patternImageName,
-} from "./patternImages";
 import { positionOf } from "./positionOf";
 import { addDataLayerImages, coversBounds, dataLayerImages } from "./renderMap";
 
@@ -149,25 +134,6 @@ function pixelOf(map: MapLibreMap | undefined, latlng: LatLng): PixelPoint {
 function normaliseBearing(bearing: number): number {
   const normalised = ((bearing % 360) + 360) % 360;
   return normalised === 0 ? 0 : normalised;
-}
-
-/** Keeps only JSON primitives, so no engine object or geometry leaves the adapter. */
-function toPropertyBag(properties: unknown): Record<string, unknown> {
-  const bag: Record<string, unknown> = {};
-  if (typeof properties !== "object" || properties === null) {
-    return bag;
-  }
-  for (const [key, value] of Object.entries(properties)) {
-    if (
-      value === null ||
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
-      bag[key] = value;
-    }
-  }
-  return bag;
 }
 
 /** MapLibre tags errors from a tile or a source with these fields; style and worker failures carry neither. */
@@ -272,14 +238,6 @@ function idleBasemapTiles(): BasemapTiles {
 }
 
 /**
- * What a tile data layer has told the ui about its tiles so far: nothing, that
- * it is slow (`tileLayerSlow`), or that none came (`tileLayerUnavailable`),
- * which follows slow when the tile that held the layer up is answered with a
- * failure.
- */
-type TileLayerReport = "none" | "slow" | "unavailable";
-
-/**
  * Tile traffic of one tile data layer since its source was last drawn. The
  * engine fires no `error` for a tile the provider answers with a 404, and
  * fires nothing for one that never answers, so the layer is judged by what was
@@ -349,51 +307,6 @@ function decidesAvailability(
     return false;
   }
   return basemap?.source.kind !== "hybrid" || sourceId === IMAGERY_ID;
-}
-
-/** Lowest first: imagery, vector tiles, styled shapes, detail shapes, heatmaps, then points. */
-const DATA_KIND_ORDER: readonly DataLayer["kind"][] = [
-  "tiles",
-  "vector",
-  "styled",
-  "shapes",
-  "heatmap",
-  "features",
-];
-
-/** How far from a tap, in CSS pixels, a point still counts as tapped (a fingertip). */
-const TAP_TOLERANCE_PX = 16;
-
-/**
- * What the engine holds for one data layer: its source and style layers
- * (bottom first), and which of them a tap can land on. Kept so a layer is
- * erased and stacked without searching the style.
- */
-interface DrawnEngineLayers {
-  readonly source: string;
-  readonly layers: string[];
-  readonly points: readonly string[];
-  readonly lines: readonly string[];
-  readonly polygons: readonly string[];
-}
-
-function sameBounds(
-  a: MapTileOverlay["bounds"],
-  b: MapTileOverlay["bounds"],
-): boolean {
-  if (!(a && b)) {
-    return a === b;
-  }
-  return a.every((value, index) => value === b[index]);
-}
-
-function sameTiles(a: MapTileOverlay, b: MapTileOverlay): boolean {
-  return (
-    a.tiles === b.tiles &&
-    a.tileSize === b.tileSize &&
-    a.maxzoom === b.maxzoom &&
-    sameBounds(a.bounds, b.bounds)
-  );
 }
 
 function isElement(host: MapHostElement): host is MapHostElement & HTMLElement {
@@ -553,14 +466,33 @@ export class MapLibreMapAdapter implements MapAdapter {
   private lngLat: MapLibreModule["LngLat"] | undefined;
   private loadEmitted = false;
   private loading = false;
-  /** Data layers by id, in the order they were first set. */
-  private readonly dataLayers = new Map<string, DataLayer>();
+  /** The data layers the ui has set, and what the engine holds for them. */
+  private readonly dataLayers = new DataLayerStore({
+    readyMap: () => this.readyMap(),
+    changed: () => {
+      this.styleVersion += 1;
+    },
+    tileSources: {
+      carriedReport: (source, tiles) =>
+        carriedReport(this.tileTraffic.get(source), tiles),
+      register: (source, layerId, tiles, report) => {
+        this.tileTraffic.set(source, {
+          layerId,
+          tiles,
+          requested: 0,
+          aborted: 0,
+          loaded: 0,
+          report,
+        });
+      },
+      release: (source) => {
+        clearTimeout(this.tileTraffic.get(source)?.slowTimer);
+        this.tileTraffic.delete(source);
+      },
+    },
+  });
   /** True between a style's `style.load` and the next swap: only then can sources be added. */
   private styleReady = false;
-  /** What the engine holds for each data layer, by id. */
-  private readonly drawn = new Map<string, DrawnEngineLayers>();
-  /** The label font of the loaded style: undefined until read, null when it has none. */
-  private labelFontCache: readonly string[] | null | undefined;
 
   constructor(options: MapLibreMapAdapterOptions = {}) {
     this.workerFailureGraceMs =
@@ -999,23 +931,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   setTileLayer(id: string, overlay: MapTileOverlay): void {
-    const previous = this.dataLayers.get(id);
-    this.dataLayers.set(id, { kind: "tiles", overlay });
-    const map = this.readyMap();
-    const tilesId = dataLayerEngineIds(id).tiles;
-    if (
-      map &&
-      previous?.kind === "tiles" &&
-      sameTiles(previous.overlay, overlay) &&
-      map.getLayer(tilesId)
-    ) {
-      // Only the opacity changed: no tile is requested again.
-      map.setPaintProperty(tilesId, "raster-opacity", overlay.opacity);
-      return;
-    }
-    if (map) {
-      this.drawDataLayer(map, id);
-    }
+    this.dataLayers.setTiles(id, overlay);
   }
 
   setShapeLayer(id: string, shapes: MapShapes): void {
@@ -1035,7 +951,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   featuresAt(point: PixelPoint): readonly MapFeatureHit[] {
-    return this.hitsAt(point.x, point.y);
+    return this.dataLayers.hitsAt(point.x, point.y);
   }
 
   getBounds(): Bounds {
@@ -1062,14 +978,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   removeLayer(id: string): void {
-    if (!this.dataLayers.delete(id)) {
-      return;
-    }
-    this.styleVersion += 1;
-    const map = this.readyMap();
-    if (map) {
-      this.eraseDataLayer(map, id);
-    }
+    this.dataLayers.remove(id);
   }
 
   setEditHandles(handles: readonly MapEditHandle[]): void {
@@ -1077,12 +986,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   private setDataLayer(id: string, layer: DataLayer): void {
-    this.styleVersion += 1;
     this.dataLayers.set(id, layer);
-    const map = this.readyMap();
-    if (map) {
-      this.drawDataLayer(map, id);
-    }
   }
 
   /** Sets the chosen shape on the engine; a style that has not loaded gets it from its `style.load`. */
@@ -1095,205 +999,6 @@ export class MapLibreMapAdapter implements MapAdapter {
   /** The map, when its style can take sources and layers; otherwise undefined. */
   private readyMap(): MapLibreMap | undefined {
     return this.styleReady ? this.map : undefined;
-  }
-
-  private eraseDataLayer(map: MapLibreMap, id: string): void {
-    const drawn = this.drawn.get(id);
-    this.drawn.delete(id);
-    if (!drawn) {
-      return;
-    }
-    clearTimeout(this.tileTraffic.get(drawn.source)?.slowTimer);
-    this.tileTraffic.delete(drawn.source);
-    for (const layerId of drawn.layers) {
-      if (map.getLayer(layerId)) {
-        map.removeLayer(layerId);
-      }
-    }
-    if (map.getSource(drawn.source)) {
-      map.removeSource(drawn.source);
-    }
-  }
-
-  /** The labels' font stack for the loaded style, read once per style. */
-  private labelFont(map: MapLibreMap): readonly string[] | undefined {
-    if (this.labelFontCache === undefined) {
-      this.labelFontCache = basemapFont(map) ?? null;
-    }
-    return this.labelFontCache ?? undefined;
-  }
-
-  /** Adds the marker images a features layer needs and the style does not have yet. */
-  private ensureMarkerImages(
-    map: MapLibreMap,
-    features: readonly MapFeature[],
-  ): void {
-    for (const feature of features) {
-      const name = markerImageName(
-        feature.shape,
-        feature.colour,
-        feature.radius,
-      );
-      if (!map.hasImage(name)) {
-        map.addImage(
-          name,
-          markerImage(feature.shape, feature.colour, feature.radius),
-          { pixelRatio: MARKER_PIXEL_RATIO },
-        );
-      }
-    }
-  }
-
-  /** Adds the fill pattern images a style does not have yet; a style swap drops them. */
-  private ensurePatternImages(map: MapLibreMap): void {
-    for (const pattern of PATTERN_NAMES) {
-      const name = patternImageName(pattern);
-      if (!map.hasImage(name)) {
-        map.addImage(name, patternImage(pattern), {
-          pixelRatio: PATTERN_PIXEL_RATIO,
-        });
-      }
-    }
-  }
-
-  /** Draws one data layer afresh from what the adapter keeps, then restores the stacking order. */
-  private drawDataLayer(map: MapLibreMap, id: string, order = true): void {
-    const layer = this.dataLayers.get(id) as DataLayer;
-    const earlierTraffic = this.tileTraffic.get(dataLayerEngineIds(id).source);
-    this.eraseDataLayer(map, id);
-    if (layer.kind === "features") {
-      this.ensureMarkerImages(map, layer.features);
-    }
-    const plan = planDataLayer(id, layer, () => this.labelFont(map));
-    if (
-      plan.layers.some((engineLayer) => engineLayer.id.endsWith("-pattern"))
-    ) {
-      this.ensurePatternImages(map);
-    }
-    const source = dataLayerEngineIds(id).source;
-    // Tracked before the first engine call, so a failure part way is still erased next time.
-    const drawn: DrawnEngineLayers = {
-      source,
-      layers: [],
-      points: plan.points ?? [],
-      lines: plan.lines ?? [],
-      polygons: plan.polygons ?? [],
-    };
-    this.drawn.set(id, drawn);
-    if (layer.kind === "tiles") {
-      this.tileTraffic.set(source, {
-        layerId: id,
-        tiles: layer.overlay.tiles,
-        requested: 0,
-        aborted: 0,
-        loaded: 0,
-        report: carriedReport(earlierTraffic, layer.overlay.tiles),
-      });
-    }
-    map.addSource(source, plan.source as unknown as SourceSpecification);
-    for (const engineLayer of plan.layers) {
-      drawn.layers.push(engineLayer.id);
-      map.addLayer(engineLayer as unknown as LayerSpecification);
-    }
-    if (order) {
-      this.orderDataLayers(map);
-    }
-  }
-
-  /** Moves every data layer to the top, lowest kind first, keeping the order they were set in. */
-  private orderDataLayers(map: MapLibreMap): void {
-    for (const kind of DATA_KIND_ORDER) {
-      for (const [id, layer] of this.dataLayers) {
-        if (layer.kind !== kind) {
-          continue;
-        }
-        for (const layerId of this.drawn.get(id)?.layers ?? []) {
-          if (map.getLayer(layerId)) {
-            map.moveLayer(layerId);
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Draws every kept data layer again, then orders them once; a new style
-   * starts with none, so ordering after each one would move layers that are
-   * not back yet.
-   */
-  private restoreDataLayers(map: MapLibreMap): void {
-    for (const id of this.dataLayers.keys()) {
-      this.drawDataLayer(map, id, false);
-    }
-    this.orderDataLayers(map);
-  }
-
-  /** The drawn engine layers of one kind of tappable feature that the style has now. */
-  private tappable(
-    map: MapLibreMap,
-    kind: "points" | "lines" | "polygons",
-  ): string[] {
-    return [...this.drawn.values()]
-      .flatMap((drawn) => drawn[kind])
-      .filter((layerId) => map.getLayer(layerId) !== undefined);
-  }
-
-  /**
-   * Every tappable feature under a pixel, topmost first and once each: points
-   * and lines within a fingertip, then polygons exactly. A vector tile
-   * repeats a feature in each tile it crosses, so the same feature can come
-   * back more than once. Empty when the map is not ready to be queried.
-   */
-  private hitsAt(x: number, y: number): MapFeatureHit[] {
-    const map = this.readyMap();
-    if (!map) {
-      return [];
-    }
-    const reach = TAP_TOLERANCE_PX;
-    const box: [[number, number], [number, number]] = [
-      [x - reach, y - reach],
-      [x + reach, y + reach],
-    ];
-    const hits: MapFeatureHit[] = [];
-    const seen = new Set<string>();
-    try {
-      for (const [kind, geometry] of [
-        ["points", box],
-        ["lines", box],
-        ["polygons", [x, y] as [number, number]],
-      ] as const) {
-        const layers = this.tappable(map, kind);
-        if (layers.length === 0) {
-          continue;
-        }
-        for (const feature of map.queryRenderedFeatures(geometry, { layers })) {
-          const properties = toPropertyBag(feature.properties);
-          const layerId = properties["mapcairn:layer"];
-          const featureId = properties["mapcairn:id"];
-          const key = `${String(layerId)}\u0000${String(featureId)}`;
-          if (
-            typeof layerId === "string" &&
-            typeof featureId === "string" &&
-            !seen.has(key)
-          ) {
-            seen.add(key);
-            hits.push({ layerId, featureId });
-          }
-        }
-      }
-    } catch {
-      // Querying can throw while a style is still loading; nothing is tapped then.
-      return [];
-    }
-    return hits;
-  }
-
-  /** The tap the topmost of `hits` makes, or null when there are none. */
-  private featureTapOf(hits: readonly MapFeatureHit[]): MapFeatureTap | null {
-    const top = hits[0];
-    return top
-      ? { layerId: top.layerId, featureId: top.featureId, hits }
-      : null;
   }
 
   private createOptions(
@@ -1369,7 +1074,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       if (this.editHandles.dropsClick()) {
         return;
       }
-      const tap = this.featureTapOf(this.hitsAt(event.point.x, event.point.y));
+      const tap = this.dataLayers.tapAt(event.point.x, event.point.y);
       if (tap) {
         this.emitter.emit("featureTap", tap);
       }
@@ -1405,13 +1110,13 @@ export class MapLibreMapAdapter implements MapAdapter {
         this.pending.styleLoaded = true;
       }
       this.styleReady = true;
-      this.labelFontCache = undefined;
+      this.dataLayers.styleChanged();
       this.styleLoading = false;
       this.basemapSourceIds = ownSourceIds(map);
       this.updateLoading();
       this.settlePending("style.load");
       try {
-        this.restoreDataLayers(map);
+        this.dataLayers.restore(map);
       } catch (error) {
         // The basemap works without them; never let a data layer break a swap.
         console.error("Data layers could not be drawn again", error);
