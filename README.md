@@ -186,24 +186,25 @@ npm run dev
 
 ## Documentation
 
-| Document                                                                             | Covers                                                                                                     |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                 | Layers, ports and adapters, the map adapter, adding an adapter                                             |
-| [`DESIGN.md`](DESIGN.md)                                                             | Tokens, layout slots, accessibility contracts and the lint rules                                           |
-| [`docs/guides/extending.md`](docs/guides/extending.md)                               | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
-| [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)               | Another language, a choice of languages, translating definitions, your own message-format library          |
-| [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                     | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
-| [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md)   | The Content Security Policy a page hosting the SDK needs, and why                                          |
-| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md) | Using the playground: search, saving the map, choosing between features, drawing, import and export        |
-| [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md)               | What a GIS application needs, what MapCairn has, partly has or lacks, and the issue for each gap           |
-| [`docs/guides/performance.md`](docs/guides/performance.md)                           | What was measured for Lighthouse, what was tried and what was left alone                                   |
-| [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md)           | Using a coding agent on this repository: what each one reads and how to start                              |
-| [`docs/guides/personal-preferences.md`](docs/guides/personal-preferences.md)         | Keeping your own working style for a coding agent in a git-ignored file, not in the shared rules           |
-| [`docs/plans/`](docs/plans/README.md)                                                | Numbered plans for work not yet built                                                                      |
-| [`GOVERNANCE.md`](GOVERNANCE.md)                                                     | The maintainer role, how decisions are made, and what is not yet covered                                   |
-| [`ROADMAP.md`](ROADMAP.md)                                                           | What the project intends to do in the next twelve months, and what it will not do                          |
-| [`docs/assurance-case.md`](docs/assurance-case.md)                                   | Security requirements, trust boundaries, threat model and the evidence for each                            |
-| [`AGENTS.md`](AGENTS.md)                                                             | Working rules for people and AI changing the code                                                          |
+| Document                                                                                       | Covers                                                                                                     |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                           | Layers, ports and adapters, the map adapter, adding an adapter                                             |
+| [`DESIGN.md`](DESIGN.md)                                                                       | Tokens, layout slots, accessibility contracts and the lint rules                                           |
+| [`docs/guides/extending.md`](docs/guides/extending.md)                                         | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
+| [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)                         | Another language, a choice of languages, translating definitions, your own message-format library          |
+| [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                               | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |
+| [`docs/guides/content-security-policy.md`](docs/guides/content-security-policy.md)             | The Content Security Policy a page hosting the SDK needs, and why                                          |
+| [`docs/guides/using-the-reference-site.md`](docs/guides/using-the-reference-site.md)           | Using the playground: search, saving the map, choosing between features, drawing, import and export        |
+| [`docs/guides/capability-matrix.md`](docs/guides/capability-matrix.md)                         | What a GIS application needs, what MapCairn has, partly has or lacks, and the issue for each gap           |
+| [`docs/guides/performance.md`](docs/guides/performance.md)                                     | What was measured for Lighthouse, what was tried and what was left alone                                   |
+| [`docs/guides/using-mapcairn-under-the-agpl.md`](docs/guides/using-mapcairn-under-the-agpl.md) | What the AGPL asks of a team that builds on the SDK, what to publish and what the SDK leaves to you        |
+| [`docs/guides/working-with-agents.md`](docs/guides/working-with-agents.md)                     | Using a coding agent on this repository: what each one reads and how to start                              |
+| [`docs/guides/personal-preferences.md`](docs/guides/personal-preferences.md)                   | Keeping your own working style for a coding agent in a git-ignored file, not in the shared rules           |
+| [`docs/plans/`](docs/plans/README.md)                                                          | Numbered plans for work not yet built                                                                      |
+| [`GOVERNANCE.md`](GOVERNANCE.md)                                                               | The maintainer role, how decisions are made, and what is not yet covered                                   |
+| [`ROADMAP.md`](ROADMAP.md)                                                                     | What the project intends to do in the next twelve months, and what it will not do                          |
+| [`docs/assurance-case.md`](docs/assurance-case.md)                                             | Security requirements, trust boundaries, threat model and the evidence for each                            |
+| [`AGENTS.md`](AGENTS.md)                                                                       | Working rules for people and AI changing the code                                                          |
 
 ## Contributing, security and conduct
 
@@ -214,6 +215,8 @@ Everyone is welcome to use the coding agent they prefer, and the same rules in [
 ## Licence
 
 MapCairn is licensed under [AGPL-3.0](LICENSE), and each SDK package (`packages/core`, `packages/map`, `packages/react` and `packages/theme`) carries its own copy. If you ship the SDK in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence.
+
+[`docs/guides/using-mapcairn-under-the-agpl.md`](docs/guides/using-mapcairn-under-the-agpl.md) explains in plain terms what the licence asks of a team building on the SDK. It is not legal advice.
 
 The SDK packages depend only on permissively licensed packages (MIT, BSD, Apache-2.0, ISC and similar), and `npm run lint` fails when a new production dependency of one has any other licence.
 
