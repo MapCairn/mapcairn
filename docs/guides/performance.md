@@ -62,7 +62,7 @@ Since the map moved to `/map`, Lighthouse CI audits both `/`, the product page, 
 
 ## Language weight
 
-A language other than the host's default is loaded when a visitor first uses it, so a visitor who never chooses it does not download its text (`LanguageCatalogue.load` may return a promise). The default language is in the main bundle and loads synchronously. While another language loads, the interface keeps showing the previous one, so a slow connection never shows blank text. The reference host's `hostLanguages.ts` imports `af.ts` only when Afrikaans is requested; a future host template table can share that lazy-loading boundary. Nothing in the repository measures the bundle's size yet, so this is a loading boundary held to by the code, not a checked size budget.
+A language other than the host's default is loaded when a visitor first uses it, so a visitor who never chooses it does not download its text (`LanguageCatalogue.load` may return a promise). The default language is in the main bundle and loads synchronously. While another language loads, the interface keeps showing the previous one, so a slow connection never shows blank text. The reference host's `hostLanguages.ts` imports `af.ts` and `afLayerTemplates.ts` only when Afrikaans is requested, so the layer-template wording shares that lazy-loading boundary. Nothing in the repository measures the bundle's size yet, so this is a loading boundary held to by the code, not a checked size budget.
 
 ## Decided not to do
 
