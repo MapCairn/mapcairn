@@ -54,13 +54,10 @@ export class FakeMessageCatalogue implements MessageCatalogue {
 
   readonly layerTemplates?: Readonly<Record<string, string>>;
 
-  readonly numberingSystem?: string;
-
   readonly #inner: MessageCatalogue;
 
   constructor(options: FakeMessageCatalogueOptions = {}) {
     this.layerTemplates = options.layerTemplates;
-    this.numberingSystem = options.numberingSystem;
     const language = options.language ?? "en-GB";
     const active: Partial<Record<MessageKey, string>> = {
       ...EN_GB_CATALOGUE,
@@ -77,6 +74,10 @@ export class FakeMessageCatalogue implements MessageCatalogue {
         ? {}
         : { numberingSystem: options.numberingSystem },
     );
+  }
+
+  get numberingSystem(): string | undefined {
+    return this.#inner.numberingSystem;
   }
 
   get language(): string {

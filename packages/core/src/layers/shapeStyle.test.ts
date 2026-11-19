@@ -273,6 +273,17 @@ describe("shapeClasses", () => {
     ]);
   });
 
+  it("writes interval figures in the numbering system the catalogue asks for", () => {
+    const labels = (numberingSystem?: string) =>
+      shapeClasses(
+        intervals,
+        new FakeMessageCatalogue({ language: "fa", numberingSystem }),
+      ).map((item) => item.label);
+    expect(labels().join(" ")).toMatch(/[\u06F0-\u06F9]/u);
+    expect(labels("latn").join(" ")).not.toMatch(/[\u06F0-\u06F9]/u);
+    expect(labels("latn")[1]).toContain("100");
+  });
+
   it("applies interval dashes and widths per class", () => {
     const styled: ShapeStyle = {
       ...intervals,

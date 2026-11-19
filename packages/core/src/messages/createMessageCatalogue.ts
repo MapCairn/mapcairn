@@ -13,7 +13,8 @@ export interface CreateMessageCatalogueOptions {
   /**
    * An `Intl` numbering system such as "latn", to write numbers and days in
    * instead of the language's own digits. Left out, they follow the
-   * language's `Intl` defaults.
+   * language's `Intl` defaults. A malformed value (it must be 3 to 8
+   * letters or digits, such as "latn") is ignored with one `console.warn`.
    */
   readonly numberingSystem?: string;
 }
@@ -72,6 +73,30 @@ function selectPluralForm(
 }
 
 /**
+ * `numberingSystem` when `Intl` accepts it for `language`; otherwise `undefined`,
+ * with one warning, so a malformed value (too short, say "x") cannot make every
+ * number throw. A well-formed system the runtime does not know is accepted by
+ * `Intl` and falls back to the language's own digits.
+ */
+function usableNumberingSystem(
+  language: string,
+  numberingSystem: string | undefined,
+): string | undefined {
+  if (numberingSystem === undefined) {
+    return undefined;
+  }
+  try {
+    new Intl.Locale(language, { numberingSystem });
+    return numberingSystem;
+  } catch {
+    console.warn(
+      `MessageCatalogue: "${numberingSystem}" is not a valid numbering system for "${language}"; using the language's own digits.`,
+    );
+    return undefined;
+  }
+}
+
+/**
  * Builds the dependency-free default {@link MessageCatalogue}: a plain
  * `Record<MessageKey, string>` of resolved text (partial, for a translation
  * in progress), formatted with `Intl.PluralRules` and `Intl.ListFormat`. A key
@@ -87,7 +112,10 @@ export function createMessageCatalogue(
 ): MessageCatalogue {
   const warned = new Set<MessageKey>();
   const fallbackLanguage = options.fallbackLanguage ?? "en-GB";
-  const { numberingSystem } = options;
+  const numberingSystem = usableNumberingSystem(
+    language,
+    options.numberingSystem,
+  );
   const locale = formatLocale({ language, numberingSystem });
 
   function resolve(key: MessageKey): {

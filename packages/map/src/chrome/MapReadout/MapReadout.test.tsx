@@ -52,7 +52,7 @@ function expectedBar(adapter: FakeMapAdapter, units: "metric" | "imperial") {
     metresPerPixel: adapter.metresPerPixel(),
     maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
     units,
-    language: "en-GB",
+    locale: "en-GB",
   });
 }
 
@@ -88,31 +88,25 @@ describe("ScaleBar", () => {
         metresPerPixel: adapter.metresPerPixel(),
         maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
         units: "metric",
-        language: "de",
+        locale: "de",
       }).label,
     );
   });
 
-  it("writes the figure in the numbering system the catalogue asks for", () => {
+  it.each([
+    ["Latin digits when the catalogue asks for them", "latn", false],
+    ["the language's own digits otherwise", undefined, true],
+  ])("writes the figure in %s", (_name, numberingSystem, native) => {
     const adapter = adapterAtZoom(12);
-    const messages = new FakeMessageCatalogue({
-      language: "fa",
-      numberingSystem: "latn",
-    });
     renderChrome(<ScaleBar units="metric" />, {
       map: testMapContext({ adapter, view: adapter.getView() }),
-      services: createFakeServices({ messages }),
+      services: createFakeServices({
+        messages: new FakeMessageCatalogue({ language: "fa", numberingSystem }),
+      }),
     });
-    const bar = computeScaleBar({
-      metresPerPixel: adapter.metresPerPixel(),
-      maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
-      units: "metric",
-      language: "fa-u-nu-latn",
-    });
-    expect(bar.label).toMatch(/^[0-9,. ]+/);
-    expect(screen.getByRole("img", { name: /.+/ })).toHaveTextContent(
-      bar.label,
-    );
+    const figure = screen.getByRole("img", { name: /.+/ }).textContent ?? "";
+    expect(/[\u06F0-\u06F9]/u.test(figure)).toBe(native);
+    expect(/[0-9]/u.test(figure)).toBe(!native);
   });
 
   it("uses imperial units when asked", () => {

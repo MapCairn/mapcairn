@@ -26,7 +26,7 @@ export interface ScaleBarInput {
   readonly maxWidthPx: number;
   readonly units: UnitSystem;
   /** The locale the visible figure is written in: the message catalogue's `formatLocale`. */
-  readonly language: string;
+  readonly locale: string;
 }
 
 /** A scale bar ready to draw and to read aloud. */
@@ -74,13 +74,13 @@ function buildScaleBar(
   value: number,
   unit: DistanceUnit,
   widthPx: number,
-  language: string,
+  locale: string,
 ): ScaleBar {
   return {
     widthPx,
     value,
     unit,
-    label: `${formatNumber(value, language)} ${DISTANCE_UNIT_SYMBOL[unit]}`,
+    label: `${formatNumber(value, locale)} ${DISTANCE_UNIT_SYMBOL[unit]}`,
     accessibleLabel: message("scale.label", {
       distance: describeDistanceReading(value, unit),
     }),
@@ -96,10 +96,10 @@ function buildScaleBar(
  * width) it returns a zero-width bar instead of throwing.
  */
 export function computeScaleBar(input: ScaleBarInput): ScaleBar {
-  const { metresPerPixel, maxWidthPx, units, language } = input;
+  const { metresPerPixel, maxWidthPx, units, locale } = input;
   const maxMetres = metresPerPixel * maxWidthPx;
   if (!Number.isFinite(maxMetres) || maxMetres <= 0) {
-    return buildScaleBar(0, units === "metric" ? "m" : "ft", 0, language);
+    return buildScaleBar(0, units === "metric" ? "m" : "ft", 0, locale);
   }
 
   let unit: DistanceUnit;
@@ -116,5 +116,5 @@ export function computeScaleBar(input: ScaleBarInput): ScaleBar {
 
   const value = niceStep(maxInUnit);
   const widthPx = Math.min(maxWidthPx, toMetres(value, unit) / metresPerPixel);
-  return buildScaleBar(value, unit, widthPx, language);
+  return buildScaleBar(value, unit, widthPx, locale);
 }

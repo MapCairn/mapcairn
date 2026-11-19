@@ -19,8 +19,13 @@ runMessageCatalogueContract("createMessageCatalogue", {
     createMessageCatalogue("en-GB", EN_GB_CATALOGUE, EN_GB_CATALOGUE),
   createMissingKey: (key) =>
     createMessageCatalogue("en-GB", withoutKeys([key]), EN_GB_CATALOGUE),
-  createWith: (language, values) =>
-    createMessageCatalogue(language, values, EN_GB_CATALOGUE),
+  createWith: (language, values, numberingSystem) =>
+    createMessageCatalogue(
+      language,
+      values,
+      EN_GB_CATALOGUE,
+      numberingSystem === undefined ? {} : { numberingSystem },
+    ),
 });
 
 describe("createMessageCatalogue numbering", () => {

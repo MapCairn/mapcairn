@@ -111,7 +111,7 @@ export function ScaleBar({ units }: ScaleBarProps) {
       metresPerPixel: adapter.metresPerPixel(latitude),
       maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
       units,
-      language: locale,
+      locale,
     });
   }, [adapter, latitude, zoom, units, locale]);
 

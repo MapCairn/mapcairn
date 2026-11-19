@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import {
   createFakeServices,
+  FakeMessageCatalogue,
   type LatLng,
   type UnitSystem,
 } from "@mapcairn/core";
@@ -120,6 +121,26 @@ describe("useMeasure", () => {
       addAll(result, [ORIGIN]);
       expect(result.current.total).toBeNull();
       expect(result.current.readout).toBe("0 m");
+    });
+
+    it("writes the readout in Latin digits when the catalogue asks, and native digits otherwise", () => {
+      for (const [numberingSystem, native] of [
+        ["latn", false],
+        [undefined, true],
+      ] as const) {
+        const { result, unmount } = setup(
+          "metric",
+          createFakeServices({
+            messages: new FakeMessageCatalogue({
+              language: "fa",
+              numberingSystem,
+            }),
+          }),
+        );
+        addAll(result, [ORIGIN, ONE_DEGREE_EAST]);
+        expect(/[\u06F0-\u06F9]/u.test(result.current.readout)).toBe(native);
+        unmount();
+      }
     });
 
     it("measures metres along the geodesic", () => {
