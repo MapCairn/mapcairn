@@ -41,10 +41,7 @@ const AFRIKAANS_SPECS = /(^|\/)(collision|a11y)\.spec\.ts$/;
 // accented English about 40 percent longer (`en-XA`), English embedded as
 // right-to-left text on a mirrored page (`en-XB`) and a small Arabic sample
 // (`ar`). The spec walks every chrome state at three viewports and checks two
-// placeholders, in a collision test and an axe test, so the six projects run 45 tests. Playwright gives each shard
-// a contiguous run of the project list, so the three languages sit apart in
-// it (before, between and after the two default projects) to land in different
-// shards.
+// placeholders, in a collision test and an axe test, so the six projects run 45 tests.
 const SAMPLE_LANGUAGE_SPECS = /sample-languages\.spec\.ts$/;
 
 /**
@@ -52,8 +49,8 @@ const SAMPLE_LANGUAGE_SPECS = /sample-languages\.spec\.ts$/;
  * sample-language spec.
  */
 function sampleLanguageProjects(prefix: string, language: string) {
-  return [
-    {
+  return {
+    desktop: {
       name: `${prefix}-chromium`,
       testMatch: SAMPLE_LANGUAGE_SPECS,
       use: {
@@ -62,7 +59,7 @@ function sampleLanguageProjects(prefix: string, language: string) {
         launchOptions: { executablePath },
       },
     },
-    {
+    mobile: {
       name: `${prefix}-mobile-chromium`,
       testMatch: SAMPLE_LANGUAGE_SPECS,
       grepInvert: /@desktop-viewport/,
@@ -72,8 +69,12 @@ function sampleLanguageProjects(prefix: string, language: string) {
         launchOptions: { executablePath },
       },
     },
-  ];
+  };
 }
+
+const arabic = sampleLanguageProjects("arabic", "ar");
+const expanded = sampleLanguageProjects("expanded", "en-XA");
+const mirrored = sampleLanguageProjects("mirrored", "en-XB");
 
 /**
  * End-to-end and accessibility suites for the web host.
@@ -111,30 +112,34 @@ export default defineConfig<MapCairnOptions>({
     screenshot: "only-on-failure",
     testIdAttribute: "data-testid",
   },
+  // Playwright gives each shard a contiguous run of the project list, cut at
+  // equal test counts, but the tests do not cost the same: the layout and
+  // accessibility matrices (the Afrikaans, right-to-left and Pixel 7 projects)
+  // take about 3.6 seconds a test and the rest about 1. The order below, found
+  // from per-test times of CI runs on main, puts the costly projects at the
+  // ends of different shards so the four shards finish within about 10 percent
+  // of each other. When projects or specs change a lot, re-measure before
+  // reordering; any order runs every test exactly once.
   projects: [
-    ...sampleLanguageProjects("arabic", "ar"),
+    arabic.desktop,
+    expanded.mobile,
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
     },
-    ...sampleLanguageProjects("expanded", "en-XA"),
+    mirrored.mobile,
     {
-      name: "mobile-chromium",
-      // Desktop-sized viewports in the layout and accessibility matrices run
-      // on the desktop project only (DESKTOP_VIEWPORT_TAG in e2e/support/states.ts).
+      name: "af-mobile-chromium",
+      testMatch: AFRIKAANS_SPECS,
       grepInvert: /@desktop-viewport/,
-      use: { ...devices["Pixel 7"], launchOptions: { executablePath } },
-    },
-    ...sampleLanguageProjects("mirrored", "en-XB"),
-    {
-      name: "rtl-chromium",
-      testMatch: RTL_SPECS,
       use: {
-        ...devices["Desktop Chrome"],
-        direction: "rtl",
+        ...devices["Pixel 7"],
+        language: "af",
         launchOptions: { executablePath },
       },
     },
+    mirrored.desktop,
+    expanded.desktop,
     {
       name: "rtl-mobile-chromium",
       testMatch: RTL_SPECS,
@@ -146,20 +151,27 @@ export default defineConfig<MapCairnOptions>({
       },
     },
     {
-      name: "af-chromium",
-      testMatch: AFRIKAANS_SPECS,
+      name: "rtl-chromium",
+      testMatch: RTL_SPECS,
       use: {
         ...devices["Desktop Chrome"],
-        language: "af",
+        direction: "rtl",
         launchOptions: { executablePath },
       },
     },
     {
-      name: "af-mobile-chromium",
-      testMatch: AFRIKAANS_SPECS,
+      name: "mobile-chromium",
+      // Desktop-sized viewports in the layout and accessibility matrices run
+      // on the desktop project only (DESKTOP_VIEWPORT_TAG in e2e/support/states.ts).
       grepInvert: /@desktop-viewport/,
+      use: { ...devices["Pixel 7"], launchOptions: { executablePath } },
+    },
+    arabic.mobile,
+    {
+      name: "af-chromium",
+      testMatch: AFRIKAANS_SPECS,
       use: {
-        ...devices["Pixel 7"],
+        ...devices["Desktop Chrome"],
         language: "af",
         launchOptions: { executablePath },
       },
