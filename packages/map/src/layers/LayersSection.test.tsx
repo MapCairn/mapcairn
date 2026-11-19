@@ -294,6 +294,7 @@ describe("LayersSection", () => {
       expect.stringContaining("Alpha"),
     ]);
     expect(rows[0]).toHaveAccessibleName(/Beta.*show on map/);
+    expect(rows[0]?.querySelector("bdi")).toHaveTextContent("Beta");
     fireEvent.click(rows[1] as HTMLElement);
     expect(adapter.getView().center.lat).toBeCloseTo(20);
     expect(adapter.getView().zoom).toBe(5);

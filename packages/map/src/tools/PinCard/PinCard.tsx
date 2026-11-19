@@ -21,6 +21,7 @@ import { useClipboard, useMessages } from "../../services/hooks";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
+import { Isolate } from "../../ui/Isolate";
 import { useAnnounce } from "../../ui/LiveRegion";
 import * as styles from "./PinCard.css";
 import { useReverseAddress } from "./useReverseAddress";
@@ -155,7 +156,7 @@ export function PinCard({
         ) : null}
       </div>
       <p className={styles.coordinates} data-testid="pin-coordinates">
-        {coordinates}
+        <Isolate figure>{coordinates}</Isolate>
       </p>
       {address.status === "found" || address.status === "none" ? (
         <p
@@ -164,9 +165,11 @@ export function PinCard({
           className={styles.address}
           data-testid="pin-address"
         >
-          {address.status === "found"
-            ? address.text
-            : t("tools.pin.noAddress", {})}
+          {address.status === "found" ? (
+            <Isolate>{address.text}</Isolate>
+          ) : (
+            t("tools.pin.noAddress", {})
+          )}
         </p>
       ) : null}
       {address.status === "idle" ||

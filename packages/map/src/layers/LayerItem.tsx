@@ -29,6 +29,7 @@ import {
 } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
+import { Isolate } from "../ui/Isolate";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Slider } from "../ui/Slider";
 import { Switch } from "../ui/Switch";
@@ -278,9 +279,13 @@ function FeatureList({ layer, layers, formatters, onShow }: ListProps) {
                   maxRadius={8}
                 />
                 <span className={styles.rowText}>
-                  <span className={styles.rowTitle}>{title}</span>
+                  <span className={styles.rowTitle}>
+                    <Isolate>{title}</Isolate>
+                  </span>
                   {secondary ? (
-                    <span className={styles.rowSecondary}>{secondary}</span>
+                    <span className={styles.rowSecondary}>
+                      <Isolate>{secondary}</Isolate>
+                    </span>
                   ) : null}
                 </span>
                 <VisuallyHidden>

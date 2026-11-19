@@ -94,6 +94,30 @@ describe("an empty panel", () => {
   });
 });
 
+describe("right to left", () => {
+  it("keeps a coordinate stop left to right and a named stop in its own isolate", () => {
+    setup({ pin: PARIS });
+    click("Add stop at map centre");
+    const coordinates = screen
+      .getByTestId("directions-stop-row")
+      .querySelector("bdi");
+    expect(coordinates).toHaveAttribute("dir", "ltr");
+    expect(coordinates?.textContent).toMatch(/-?\d+\.\d{5}, -?\d+\.\d{5}/);
+    click("Add dropped pin");
+    const [, named] = screen.getAllByTestId("directions-stop-row");
+    expect(named?.querySelector("bdi")).not.toHaveAttribute("dir");
+  });
+
+  it("isolates the route total, so a distance and a time keep their order", async () => {
+    setup();
+    addCentreStops(2);
+    click("Get route");
+    await flush();
+    const total = screen.getByTestId("directions-figures");
+    expect(total.querySelector("bdi")?.textContent).toBe(total.textContent);
+  });
+});
+
 describe("adding stops", () => {
   it("adds a stop at the middle of the part of the map the sheet leaves free", () => {
     const { container } = setup();

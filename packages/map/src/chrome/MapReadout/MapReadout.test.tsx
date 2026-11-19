@@ -322,6 +322,34 @@ function spokenText(element: Element): string {
   return clone.textContent ?? "";
 }
 
+describe("bidirectional isolation", () => {
+  it("keeps the scale label in its own isolate", () => {
+    const adapter = adapterAtZoom(12);
+    renderChrome(<ScaleBar units="metric" />, {
+      map: testMapContext({ adapter, view: adapter.getView() }),
+    });
+    const bar = expectedBar(adapter, "metric");
+    const label = screen.getByText(bar.label);
+    expect(label.tagName).toBe("BDI");
+    expect(label).not.toHaveAttribute("dir");
+  });
+
+  it("keeps the coordinates left to right and out of machine translation", () => {
+    renderChrome(
+      <CursorCoordinates latlng={{ lat: -26.2041, lng: 28.0473 }} zoom={12} />,
+    );
+    const figure = screen.getByText("-26.20410, 28.04730");
+    expect(figure.tagName).toBe("BDI");
+    expect(figure).toHaveAttribute("dir", "ltr");
+    expect(figure).toHaveAttribute("translate", "no");
+  });
+
+  it("keeps the visible zoom label in its own isolate", () => {
+    renderChrome(<CursorCoordinates latlng={null} zoom={12} />);
+    expect(screen.getByText("z 12").tagName).toBe("BDI");
+  });
+});
+
 describe("CursorCoordinates", () => {
   const latlng = { lat: -26.2041, lng: 28.0473 };
 
@@ -351,7 +379,8 @@ describe("CursorCoordinates", () => {
         }),
       }),
     });
-    expect(screen.getByText("z 12.5")).toBeInTheDocument();
+    // A right-to-left catalogue isolates the figure inside the sentence.
+    expect(screen.getByText("z \u206812.5\u2069")).toBeInTheDocument();
   });
 
   it("shows the zoom alone while there is no position", () => {
@@ -364,7 +393,10 @@ describe("CursorCoordinates", () => {
 
   it("shows a z and the figure to sighted users and hides them from a screen reader", () => {
     renderChrome(<CursorCoordinates latlng={null} zoom={12.4} />);
-    expect(screen.getByText("z 12.4")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("z 12.4").closest("[aria-hidden]")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 
   it("reads and copies as one clean 'Zoom 12.4', apart from the coordinates", () => {

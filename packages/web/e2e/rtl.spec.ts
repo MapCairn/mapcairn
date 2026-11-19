@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { Locator } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import {
   controlsOverFeature,
@@ -192,5 +193,94 @@ test.describe("right to left", () => {
     await expect
       .poll(() => chevron.evaluate((svg) => getComputedStyle(svg).transform))
       .toBe("matrix(-1, 0, 0, 1, 0, 0)");
+  });
+
+  /**
+   * Whether the first number of a signed coordinate pair is drawn to the left
+   * of the second, as `-26.20410, 28.04730` is written, so the pair is read in
+   * visual order and not mirrored by the right-to-left paragraph.
+   */
+  async function readsLeftToRight(coordinates: Locator): Promise<boolean> {
+    return coordinates.evaluate((element) => {
+      const node = element.firstChild;
+      const text = node?.textContent ?? "";
+      const comma = text.indexOf(",");
+      if (!node || comma < 0) {
+        return false;
+      }
+      const left = (start: number, end: number) => {
+        const range = document.createRange();
+        range.setStart(node, start);
+        range.setEnd(node, end);
+        return range.getBoundingClientRect().left;
+      };
+      return left(0, comma) < left(comma + 2, text.length);
+    });
+  }
+
+  test("a pin's coordinates are isolated and read left to right", async ({
+    mapPage,
+  }) => {
+    await mapPage.goto("#map=10.00/-26.20000/28.04000");
+    const box = await mapPage.host.boundingBox();
+    if (!box) {
+      throw new Error("The map has no box.");
+    }
+    await mapPage.longPress(box.width / 2 + 60, box.height / 2 - 40);
+    await expect(mapPage.pinCard).toBeVisible();
+    const figure = mapPage.pinCoordinates.locator("bdi");
+    await expect(figure).toHaveAttribute("dir", "ltr");
+    await expect(figure).toHaveAttribute("translate", "no");
+    await expect(figure).toHaveCSS("direction", "ltr");
+    await expect(figure).toHaveCSS("unicode-bidi", "isolate");
+    expect(await readsLeftToRight(figure)).toBe(true);
+  });
+
+  test("the scale label and the cursor coordinates are isolated", async ({
+    page,
+    mapPage,
+    isMobile,
+  }) => {
+    await mapPage.goto("#map=11/-33.92/18.42");
+    const scale = page.locator('[data-chrome="scale-bar"] bdi').first();
+    await expect(scale).toHaveCSS("unicode-bidi", "isolate");
+    test.skip(
+      isMobile,
+      "The readout shows the pointer position on a fine pointer only.",
+    );
+    await page.mouse.move(600, 400);
+    await page.mouse.move(700, 450, { steps: 5 });
+    const figure = page.locator(
+      '[data-chrome="cursor-coordinates"] bdi[dir="ltr"]',
+    );
+    await expect(figure).toContainText(/-?\d+\.\d{5}, -?\d+\.\d{5}/);
+    await expect(figure).toHaveCSS("direction", "ltr");
+    expect(await readsLeftToRight(figure)).toBe(true);
+  });
+
+  test("a place name in another script is isolated in the search results", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptSearch(page, {
+      results: [
+        {
+          id: "cairo",
+          label: "القاهرة",
+          secondaryLabel: "Cairo Governorate, Egypt",
+          centre: { lat: 30.0444, lng: 31.2357 },
+        },
+      ],
+    });
+    await mapPage.goto();
+    await mapPage.search("cairo");
+    const option = mapPage.searchOptions.first();
+    await expect(option).toBeVisible();
+    const names = option.locator("bdi");
+    await expect(names).toHaveCount(2);
+    await expect(names.first()).toHaveText("القاهرة");
+    await expect(names.first()).toHaveCSS("unicode-bidi", "isolate");
+    await expect(names.first()).toHaveCSS("direction", "rtl");
+    await expect(names.nth(1)).toHaveCSS("direction", "ltr");
   });
 });

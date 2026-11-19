@@ -2,6 +2,8 @@
 // Copyright MapCairn contributors
 import { formatDay, formatLocale, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
+import { FIGURE_MESSAGE_KEYS, isolate } from "./isolate";
+import { languageDirection } from "./languageDirection";
 import { pluralFormsOf } from "./pluralForms";
 
 /** Optional controls for host translations and the fallback record. */
@@ -17,6 +19,15 @@ export interface CreateMessageCatalogueOptions {
    * letters or digits, such as "latn") is ignored with one `console.warn`.
    */
   readonly numberingSystem?: string;
+  /**
+   * Whether to wrap each text parameter, and each item of a list, in a Unicode
+   * first-strong isolate, so a place name, a coordinate or a distance cannot
+   * reorder the sentence around it. Left out, it is on for a right-to-left
+   * language and off for a left-to-right one, which keeps every string plain.
+   * The marks are invisible and silent to a screen reader, and sit in the text
+   * a catalogue returns, so copy a value from its source, not from a message.
+   */
+  readonly isolateParameters?: boolean;
 }
 
 /** Matches a `{name}` placeholder in a catalogue string. */
@@ -25,15 +36,18 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 /**
  * Substitutes every `{name}` placeholder in `template` from `params`. A
  * number and a `Date` are formatted for `locale`, the language with its
- * numbering system; a list of strings is formatted for `language`. A
- * placeholder with no value is left as written.
+ * numbering system; a list of strings is formatted for `language`. Text and
+ * list items are isolated when `isolating`. A placeholder with no value is
+ * left as written.
  */
 function substitute(
   template: string,
   params: Readonly<Record<string, unknown>>,
   language: string,
   locale: string,
+  isolating: boolean,
 ): string {
+  const wrap = isolating ? isolate : (text: string) => text;
   return template.replace(PLACEHOLDER, (whole, name: string) => {
     const value = params[name];
     if (value === undefined) {
@@ -47,10 +61,10 @@ function substitute(
     }
     if (Array.isArray(value)) {
       return new Intl.ListFormat(language, { type: "conjunction" }).format(
-        value,
+        value.map((item) => wrap(String(item))),
       );
     }
-    return String(value);
+    return wrap(String(value));
   });
 }
 
@@ -117,6 +131,8 @@ export function createMessageCatalogue(
     options.numberingSystem,
   );
   const locale = formatLocale({ language, numberingSystem });
+  const isolating =
+    options.isolateParameters ?? languageDirection(language) === "rtl";
 
   function resolve(key: MessageKey): {
     readonly template: string;
@@ -142,7 +158,13 @@ export function createMessageCatalogue(
       ? { layerTemplates: options.layerTemplates }
       : {}),
     t(key, params) {
-      return substitute(resolve(key).template, params, language, locale);
+      return substitute(
+        resolve(key).template,
+        params,
+        language,
+        locale,
+        isolating && !FIGURE_MESSAGE_KEYS.has(key),
+      );
     },
     plural(key, params) {
       const { count } = params;
@@ -152,7 +174,13 @@ export function createMessageCatalogue(
         resolved.language,
         count,
       );
-      return substitute(form, params, language, locale);
+      return substitute(
+        form,
+        params,
+        language,
+        locale,
+        isolating && !FIGURE_MESSAGE_KEYS.has(key),
+      );
     },
     list(items, type = "conjunction") {
       return new Intl.ListFormat(language, { type }).format(items);

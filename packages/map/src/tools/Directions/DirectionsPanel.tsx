@@ -42,6 +42,7 @@ import {
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
+import { Isolate } from "../../ui/Isolate";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { MIN_SEARCH_LENGTH, useSearch } from "../SearchPill/useSearch";
@@ -98,19 +99,21 @@ function ResultCard({
     return (
       <div className={styles.result} data-testid="directions-result">
         <p className={styles.figures} data-testid="directions-figures">
-          {format(
-            message("common.followedBy", {
-              first: message("duration.short.minute", {
-                count: result.minutes,
+          <Isolate>
+            {format(
+              message("common.followedBy", {
+                first: message("duration.short.minute", {
+                  count: result.minutes,
+                }),
+                second: how,
               }),
-              second: how,
-            }),
-          )}
+            )}
+          </Isolate>
         </p>
         <p>
           {before}
           <span data-testid="directions-area">
-            {formatArea(result.size, units, messages)}
+            <Isolate>{formatArea(result.size, units, messages)}</Isolate>
           </span>
           {after}
         </p>
@@ -120,10 +123,12 @@ function ResultCard({
   return (
     <div className={styles.result} data-testid="directions-result">
       <p className={styles.figures} data-testid="directions-figures">
-        {t("common.commaJoined", {
-          first: formatDistance(result.distance, units, messages),
-          second: format(formatDuration(result.duration)),
-        })}
+        <Isolate>
+          {t("common.commaJoined", {
+            first: formatDistance(result.distance, units, messages),
+            second: format(formatDuration(result.duration)),
+          })}
+        </Isolate>
       </p>
       <p className={styles.hint}>
         {messages.plural("tools.directions.routeSummary", {
@@ -143,16 +148,18 @@ function ResultCard({
               key={index}
               data-testid="directions-leg"
             >
-              {t("tools.directions.leg", {
-                from: stopLetter(index),
-                to: stopLetter(index + 1),
-                distance: formatDistance(
-                  leg.properties.distance,
-                  units,
-                  messages,
-                ),
-                duration: format(formatDuration(leg.properties.duration)),
-              })}
+              <Isolate>
+                {t("tools.directions.leg", {
+                  from: stopLetter(index),
+                  to: stopLetter(index + 1),
+                  distance: formatDistance(
+                    leg.properties.distance,
+                    units,
+                    messages,
+                  ),
+                  duration: format(formatDuration(leg.properties.duration)),
+                })}
+              </Isolate>
             </li>
           ))}
         </ol>
@@ -257,7 +264,11 @@ export function DirectionsPanel({
                     <VisuallyHidden>
                       {t("tools.directions.stopPrefix", { letter })}{" "}
                     </VisuallyHidden>
-                    {stop.label ?? formatLatLng(stop.position)}
+                    {stop.label === undefined ? (
+                      <Isolate figure>{formatLatLng(stop.position)}</Isolate>
+                    ) : (
+                      <Isolate>{stop.label}</Isolate>
+                    )}
                   </span>
                   <span className={styles.stopActions}>
                     <IconButton

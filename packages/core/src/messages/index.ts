@@ -4,6 +4,7 @@ export * from "./checkMessageCatalogue";
 export * from "./createMessageCatalogue";
 export * from "./en-GB";
 export * from "./formatMessage";
+export * from "./isolate";
 export * from "./languageCatalogue";
 export * from "./languageDirection";
 export * from "./resolveLanguage";

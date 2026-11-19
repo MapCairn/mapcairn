@@ -104,6 +104,14 @@ describe("PinCard", () => {
       expect(coordinates.tagName).toBe("P");
     });
 
+    it("isolates the coordinates so they keep their order in right-to-left text", () => {
+      setup();
+      const figure = screen.getByTestId("pin-coordinates").querySelector("bdi");
+      expect(figure?.textContent).toBe("-26.20410, 28.04730");
+      expect(figure).toHaveAttribute("dir", "ltr");
+      expect(figure).toHaveAttribute("translate", "no");
+    });
+
     it("has no inline styles", () => {
       const { container } = setup();
       expect(container.querySelectorAll("[style]")).toHaveLength(0);
@@ -316,6 +324,16 @@ describe("PinCard", () => {
         screen.queryByRole("button", { name: "Look up address" }),
       ).toBeNull();
       expect(screen.queryByTestId("pin-lookup-note")).toBeNull();
+    });
+
+    it("isolates the address, so a name in another script keeps its order", async () => {
+      const services = createFakeServices();
+      services.fakes.search.setReverseResult(ADDRESS);
+      render(tree(services));
+      await press();
+      expect(
+        screen.getByTestId("pin-address").querySelector("bdi")?.textContent,
+      ).toBe("1 Main Street, Johannesburg");
     });
 
     it("shows just the label when there is no secondary label", async () => {
