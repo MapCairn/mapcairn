@@ -13,6 +13,10 @@ describe("product route", () => {
   });
 
   it("keeps the document in English, whatever the playground speaks", () => {
-    expect(handle).toEqual({ language: "en-GB" });
+    expect(handle).toMatchObject({ language: "en-GB" });
+  });
+
+  it("asks for its script preloads to follow the content, so the stylesheets and font paint first", () => {
+    expect(handle).toMatchObject({ modulePreload: "end" });
   });
 });
