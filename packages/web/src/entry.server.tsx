@@ -8,7 +8,7 @@ import {
   buildContentSecurityPolicy,
   generateNonce,
 } from "./constants/securityHeaders";
-import { describeServerError, handleServerError } from "./serverErrors";
+import { handleServerError, logServerError } from "./serverErrors";
 
 /**
  * React Router's error hook for loader, action and routing errors. A missing
@@ -56,7 +56,7 @@ export default async function handleRequest(
       nonce,
       signal: request.signal,
       onError(error) {
-        console.error(describeServerError(error));
+        logServerError(error, request);
       },
     },
   );

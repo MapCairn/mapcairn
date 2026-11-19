@@ -154,4 +154,29 @@ describe("entry.server error logging", () => {
     expect(consoleError).toHaveBeenCalledExactlyOnceWith(error.stack);
     consoleError.mockRestore();
   });
+
+  it("logs no render error for a request the visitor has abandoned", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const controller = new AbortController();
+    controller.abort();
+    const handleRequest = (await import("./entry.server")).default;
+    await handleRequest(
+      new Request("https://mapcairn.timothybrits.co.za/", {
+        signal: controller.signal,
+      }),
+      200,
+      new Headers(),
+      { staticHandlerContext: { matches: [] }, routeModules: {} } as never,
+    );
+    const options = renderToReadableStreamMock.mock.calls.at(-1)?.[1] as {
+      onError(error: unknown): void;
+    };
+
+    options.onError(new Error("render failed"));
+
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
 });

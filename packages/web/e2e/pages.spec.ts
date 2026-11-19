@@ -21,28 +21,35 @@ test.describe("other pages", () => {
     await expect(page.getByTestId("map-host")).toBeVisible();
   });
 
-  for (const path of [
-    "/.env",
-    "/.git/config",
-    "/wp-admin",
-    "/wp-login.php",
-    "/debug",
-    "/phpinfo.php",
-  ]) {
-    test(`a scanner probe for ${path} gets a 404 and no file`, async ({
-      request,
-    }) => {
-      const response = await request.get(path);
-
-      expect(response.status()).toBe(404);
-      expect(await response.text()).not.toMatch(/DB_PASSWORD|\[core\]/);
+  // Request-only cases, so one project is enough.
+  test.describe("expected client errors", () => {
+    test.beforeEach(({ browserName: _browserName }, testInfo) => {
+      test.skip(testInfo.project.name !== "chromium", "request-only checks");
     });
-  }
 
-  test("a POST to the home page gets a 405", async ({ request }) => {
-    const response = await request.post("/");
+    for (const path of [
+      "/.env",
+      "/.git/config",
+      "/wp-admin",
+      "/wp-login.php",
+      "/debug",
+      "/phpinfo.php",
+    ]) {
+      test(`a scanner probe for ${path} gets a 404 and no file`, async ({
+        request,
+      }) => {
+        const response = await request.get(path);
 
-    expect(response.status()).toBe(405);
+        expect(response.status()).toBe(404);
+        expect(await response.text()).not.toMatch(/DB_PASSWORD|\[core\]/);
+      });
+    }
+
+    test("a POST to the home page gets a 405", async ({ request }) => {
+      const response = await request.post("/");
+
+      expect(response.status()).toBe(405);
+    });
   });
 
   for (const language of [null, "af"] as const) {

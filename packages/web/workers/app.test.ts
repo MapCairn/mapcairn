@@ -38,14 +38,15 @@ describe("worker fetch handler", () => {
     const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
-    requestHandlerMock.mockRejectedValueOnce(new Error("boom"));
+    const error = new Error("boom");
+    requestHandlerMock.mockRejectedValueOnce(error);
     const workerModule = await import("./app");
     const request = new Request("https://mapcairn.timothybrits.co.za/");
 
     const response = await workerModule.default.fetch(request);
 
     expect(response.status).toBe(500);
-    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(error.stack);
     consoleErrorSpy.mockRestore();
   });
 
@@ -88,7 +89,8 @@ describe("worker fetch handler", () => {
       "../src/constants/securityHeaders"
     );
     vi.spyOn(console, "error").mockImplementation(() => {});
-    requestHandlerMock.mockRejectedValueOnce(new Error("boom"));
+    const error = new Error("boom");
+    requestHandlerMock.mockRejectedValueOnce(error);
     const workerModule = await import("./app");
     const request = new Request("https://mapcairn.timothybrits.co.za/");
 

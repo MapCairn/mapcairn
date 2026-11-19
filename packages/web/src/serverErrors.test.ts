@@ -1,17 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import {
+  createRequestHandler,
+  type ServerBuild,
+  UNSAFE_ErrorResponseImpl,
+} from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { describeServerError, handleServerError } from "./serverErrors";
+import {
+  describeServerError,
+  handleServerError,
+  logServerError,
+} from "./serverErrors";
 
 /** What React Router passes for a path or method the app does not serve. */
 function errorResponse(status: number, statusText: string, error?: Error) {
-  return {
+  return new UNSAFE_ErrorResponseImpl(
     status,
     statusText,
-    data: `Error: ${statusText}`,
-    internal: true,
-    error,
-  };
+    error ?? `Error: ${statusText}`,
+    true,
+  );
 }
 
 describe("serverErrors", () => {
@@ -98,6 +106,23 @@ describe("serverErrors", () => {
       expect(consoleError).not.toHaveBeenCalled();
     });
 
+    it.each([
+      [400, "Bad Request"],
+      [401, "Unauthorized"],
+      [403, "Forbidden"],
+      [410, "Gone"],
+      [429, "Too Many Requests"],
+    ])(
+      "still logs a %i error response, which the app never throws on purpose",
+      (status, text) => {
+        handleServerError(errorResponse(status, text), { request });
+
+        expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+          `${status} ${text}`,
+        );
+      },
+    );
+
     it("logs a server error response as readable text", () => {
       handleServerError(errorResponse(500, "Server Error"), { request });
 
@@ -112,6 +137,20 @@ describe("serverErrors", () => {
       expect(consoleError).toHaveBeenCalledExactlyOnceWith(error.stack);
     });
 
+    it("logs a render error through logServerError unless the request was abandoned", () => {
+      const error = new Error("render failed");
+      const controller = new AbortController();
+
+      logServerError(error, request);
+      controller.abort();
+      logServerError(
+        error,
+        new Request(request, { signal: controller.signal }),
+      );
+
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith(error.stack);
+    });
+
     it("does not log when the visitor has already gone away", () => {
       const controller = new AbortController();
       controller.abort();
@@ -121,6 +160,76 @@ describe("serverErrors", () => {
       });
 
       expect(consoleError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("through React Router's request handler", () => {
+    const build = {
+      routes: {
+        root: {
+          id: "root",
+          path: "",
+          module: {},
+          parentId: undefined,
+        },
+        boom: {
+          id: "boom",
+          path: "boom",
+          parentId: "root",
+          module: {
+            loader: () => {
+              throw new Error("loader failed");
+            },
+          },
+        },
+      },
+      entry: {
+        module: {
+          default: async (_request: Request, status: number) =>
+            new Response("page", { status }),
+          handleError: handleServerError,
+        },
+      },
+      assets: { routes: {}, entry: {}, url: "", version: "" },
+      future: {},
+      ssr: true,
+      isSpaMode: false,
+      basename: "/",
+      publicPath: "/",
+      assetsBuildDirectory: "",
+      routeDiscovery: { mode: "lazy", manifestPath: "/__manifest" },
+    } as unknown as ServerBuild;
+    const handle = createRequestHandler(build, "production");
+
+    it("keeps an unknown path silent and answers 404", async () => {
+      const response = await handle(
+        new Request("https://mapcairn.timothybrits.co.za/.env"),
+      );
+
+      expect(response.status).toBe(404);
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+
+    it("keeps a wrong method silent and answers 405", async () => {
+      const response = await handle(
+        new Request("https://mapcairn.timothybrits.co.za/boom", {
+          method: "POST",
+        }),
+      );
+
+      expect(response.status).toBe(405);
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+
+    it("logs a loader that throws, with its stack", async () => {
+      const response = await handle(
+        new Request("https://mapcairn.timothybrits.co.za/boom?_data=boom"),
+      );
+
+      expect(response.status).toBe(500);
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+        expect.stringContaining("Error: loader failed"),
+      );
     });
   });
 });
