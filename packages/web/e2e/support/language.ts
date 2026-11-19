@@ -31,7 +31,7 @@ export interface SampleLanguage {
 
 /**
  * The sample languages the `language` option may name, by tag: accented and
- * expanded English (`en-XA`), English embedded as right-to-left text with the
+ * expanded English (`en-XA`), English isolated as right-to-left text with the
  * page mirrored (`en-XB`), and a small Arabic sample (`ar`). The page gets
  * them on `window.__MAPCAIRN_TEST_LANGUAGES__`, which the host's test seam
  * reads; they exist only in the browser tests and never ship.
@@ -96,6 +96,14 @@ function formsOf(template: string): string[] {
     : template.split("|");
 }
 
+/** Matches the bidirectional isolate marks (U+2066 to U+2069) the app puts around a substituted value whose direction differs from its sentence's. */
+const ISOLATES = "[\\u2066-\\u2069]*";
+
+/** `text` as a pattern that also matches it with isolate marks anywhere in it. */
+function tolerantOfIsolates(text: string): string {
+  return `${ISOLATES}${[...text].map(escapeForPattern).join(ISOLATES)}${ISOLATES}`;
+}
+
 /**
  * A pattern matching any form of a catalogue value, whole, with each
  * placeholder named in `numbers` as a whole number (in any script's digits)
@@ -112,13 +120,35 @@ export function namePattern(
       .map((part) => {
         const placeholder = /^\{(\w+)\}$/.exec(part)?.[1];
         if (placeholder === undefined) {
-          return escapeForPattern(part);
+          return tolerantOfIsolates(part);
         }
         return numbers.includes(placeholder) ? "\\p{Nd}+" : ".+";
       })
       .join(""),
   );
   return new RegExp(`^(?:${forms.join("|")})$`, "u");
+}
+
+/**
+ * A pattern matching a catalogue value with `values` filled in, as the app
+ * shows it, with or without the isolate marks the app puts around a
+ * substituted value, which a plain string would not match.
+ */
+export function filledPattern(
+  template: string,
+  values: Readonly<Record<string, string>>,
+): RegExp {
+  const source = template
+    .split(/(\{\w+\})/)
+    .map((part) => {
+      const name = /^\{(\w+)\}$/.exec(part)?.[1];
+      const value = name === undefined ? undefined : values[name];
+      return value === undefined
+        ? tolerantOfIsolates(part)
+        : `${ISOLATES}${tolerantOfIsolates(value)}${ISOLATES}`;
+    })
+    .join("");
+  return new RegExp(source, "u");
 }
 
 /** A pattern matching names that begin with `text`. */

@@ -2,6 +2,7 @@
 // Copyright MapCairn contributors
 import { checkMessageCatalogue, EN_GB_CATALOGUE } from "@mapcairn/core";
 import { describe, expect, it } from "vitest";
+import { ARABIC_SAMPLE } from "../e2e/support/arabicSample";
 import {
   accent,
   expandedPseudoCatalogue,
@@ -88,20 +89,32 @@ describe("the generated pseudo-locales", () => {
       "units.metre": "one{{count} metre} other{{count} metres}",
     };
     const mirrored = mirroredPseudoCatalogue(keyed)["units.metre"];
-    expect(mirrored).toBe("one{‫{count} metre‬} other{‫{count} metres‬}");
+    expect(mirrored).toBe("one{⁧{count} metre⁩} other{⁧{count} metres⁩}");
     expect(expandedPseudoCatalogue(keyed)["units.metre"]).toMatch(
       /^one\{\{count\} ɱéţŕé ƒîļļ\} other\{\{count\} ɱéţŕéš ƒîļļ\}$/,
     );
   });
 
-  it("wraps a mirrored form in right-to-left embedding", () => {
+  it("wraps a mirrored form in a right-to-left isolate", () => {
     expect(mirroredPseudoCatalogue()["layers.title"]).toBe(
-      `‫${EN_GB_CATALOGUE["layers.title"]}‬`,
+      `⁧${EN_GB_CATALOGUE["layers.title"]}⁩`,
     );
   });
 
   it("reads a value that is a category name as text", () => {
     const odd = { ...EN_GB_CATALOGUE, "layers.title": "other" };
-    expect(mirroredPseudoCatalogue(odd)["layers.title"]).toBe("‫other‬");
+    expect(mirroredPseudoCatalogue(odd)["layers.title"]).toBe("⁧other⁩");
+  });
+});
+
+describe("the Arabic sample", () => {
+  it("keeps the placeholders of English and the six plural categories of Arabic in its own keys", () => {
+    const own = Object.fromEntries(
+      Object.keys(ARABIC_SAMPLE).map((key) => [
+        key,
+        EN_GB_CATALOGUE[key as keyof typeof EN_GB_CATALOGUE],
+      ]),
+    ) as typeof EN_GB_CATALOGUE;
+    expect(checkMessageCatalogue("ar", ARABIC_SAMPLE, own)).toEqual([]);
   });
 });

@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+import type { MapPage } from "./pages/MapPage";
 import { axeViolations, inspectControls } from "./support/a11y";
 import { findClippedPlaceholders, findClippedText } from "./support/clipped";
+import { SAMPLE_LANGUAGES } from "./support/language";
 import { inspectChromeLayout } from "./support/layout";
 import { scriptSearch } from "./support/services";
 import {
@@ -18,9 +21,12 @@ import {
  * `support/language.ts`): expanded English (`en-XA`), mirrored English
  * (`en-XB`) and a small Arabic sample (`ar`). Their projects in
  * `playwright.config.ts` run only this spec. In every chrome state it checks
- * that no control collides, that no text is cut off, and the axe and control
- * audits, so a longer or right-to-left translation cannot hide a collision or
- * a clipped label. Each check is soft, so one run lists every finding. The default projects run in English and skip it.
+ * that no control collides and no text is cut off (run by `npm run e2e`), and
+ * the axe and control audits (tagged @a11y, run by `npm run a11y`), so a
+ * longer or right-to-left translation cannot hide a collision or a clipped
+ * label. It also checks that the page took the sample's language and
+ * direction. Each check is soft, so one run lists every finding. The default
+ * projects run in English and skip it.
  */
 test.use({ reducedMotion: "reduce", fastCredits: true });
 test.setTimeout(120_000);
@@ -61,20 +67,31 @@ test.describe("the cut-off checks", () => {
   });
 });
 
+/** Loads the map in the sample language and checks the page speaks it in its direction. */
+async function openInSampleLanguage(
+  page: Page,
+  mapPage: MapPage,
+  language: string | null,
+  viewport: { readonly width: number; readonly height: number },
+): Promise<void> {
+  const sample = SAMPLE_LANGUAGES[language ?? ""];
+  if (sample === undefined) {
+    test.skip(true, "Runs in the sample languages only.");
+    return;
+  }
+  await page.setViewportSize(viewport);
+  await scriptSearch(page);
+  await mapPage.goto();
+  await expect(page.locator("html")).toHaveAttribute("lang", sample.tag);
+  await expect(page.locator("html")).toHaveAttribute("dir", sample.direction);
+}
+
 for (const viewport of SAMPLE_VIEWPORTS) {
   test(
-    `the chrome holds in every state at ${viewport.width}x${viewport.height} @a11y`,
+    `the chrome never collides or cuts text at ${viewport.width}x${viewport.height}`,
     viewportDetails(viewport),
     async ({ page, mapPage, language }) => {
-      test.skip(language === null, "Runs in the sample languages only.");
-      await page.setViewportSize(viewport);
-      await scriptSearch(page);
-      await mapPage.goto();
-      await expect(page.locator("html")).toHaveAttribute(
-        "lang",
-        language ?? "",
-      );
-
+      await openInSampleLanguage(page, mapPage, language, viewport);
       for (const state of CHROME_STATES) {
         await test.step(state, async () => {
           await enterState(mapPage, state);
@@ -85,6 +102,21 @@ for (const viewport of SAMPLE_VIEWPORTS) {
           expect.soft(layout.outside, context).toEqual([]);
           expect.soft(layout.obscured, context).toEqual([]);
           expect.soft(await findClippedText(page)).toEqual([]);
+          await leaveState(mapPage, state);
+        });
+      }
+    },
+  );
+
+  test(
+    `passes axe and the control checks at ${viewport.width}x${viewport.height} @a11y`,
+    viewportDetails(viewport),
+    async ({ page, mapPage, language }) => {
+      await openInSampleLanguage(page, mapPage, language, viewport);
+      for (const state of CHROME_STATES) {
+        await test.step(state, async () => {
+          await enterState(mapPage, state);
+          await waitForStableLayout(page);
           expect.soft(await axeViolations(page)).toEqual([]);
           const controls = await inspectControls(page);
           expect.soft(controls.unnamed).toEqual([]);
@@ -104,7 +136,7 @@ for (const viewport of SAMPLE_VIEWPORTS) {
  */
 for (const viewport of SAMPLE_VIEWPORTS) {
   test(
-    `the search pill's placeholder fits at ${viewport.width}x${viewport.height} @a11y`,
+    `the search pill's placeholder fits at ${viewport.width}x${viewport.height}`,
     viewportDetails(viewport),
     async ({ page, mapPage, language }) => {
       test.skip(language === null, "Runs in the sample languages only.");
@@ -115,7 +147,7 @@ for (const viewport of SAMPLE_VIEWPORTS) {
   );
 
   test(
-    `the directions place search's placeholder fits at ${viewport.width}x${viewport.height} @a11y`,
+    `the directions place search's placeholder fits at ${viewport.width}x${viewport.height}`,
     viewportDetails(viewport),
     async ({ page, mapPage, language }) => {
       test.skip(language === null, "Runs in the sample languages only.");

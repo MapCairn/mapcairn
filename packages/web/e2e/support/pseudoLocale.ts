@@ -8,9 +8,9 @@ export type CatalogueText = Readonly<Record<MessageKey, string>>;
 /** How much longer than English the expanded pseudo-locale makes each form. */
 export const EXPANSION_RATIO = 0.4;
 
-/** Right-to-left embedding and pop directional formatting, which wrap a form of the mirrored pseudo-locale. */
-const RIGHT_TO_LEFT_EMBEDDING = "‫";
-const POP_DIRECTIONAL_FORMATTING = "‬";
+/** Right-to-left isolate and pop directional isolate, which wrap a form of the mirrored pseudo-locale. */
+const RIGHT_TO_LEFT_ISOLATE = "\u2067";
+const POP_DIRECTIONAL_ISOLATE = "\u2069";
 
 /**
  * Keys whose value is read back by the app or sized to a symbol, not shown as
@@ -87,9 +87,9 @@ function expandForm(form: string): string {
   return extra === 0 ? accented : accented + filler(extra);
 }
 
-/** One plural form, or a whole plain value, embedded as right-to-left text. */
+/** One plural form, or a whole plain value, isolated as right-to-left text. */
 function mirrorForm(form: string): string {
-  return `${RIGHT_TO_LEFT_EMBEDDING}${form}${POP_DIRECTIONAL_FORMATTING}`;
+  return `${RIGHT_TO_LEFT_ISOLATE}${form}${POP_DIRECTIONAL_ISOLATE}`;
 }
 
 /**
@@ -166,7 +166,7 @@ export function expandedPseudoCatalogue(
 }
 
 /**
- * English embedded as right-to-left text in every form, for a page whose
+ * English isolated as right-to-left text in every form, for a page whose
  * direction is right to left: left-to-right words and numbers inside
  * right-to-left text, the mix a real Arabic or Hebrew page has.
  */

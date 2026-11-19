@@ -4,7 +4,7 @@
 import type { MessageKey } from "@mapcairn/core";
 import { expect, type Page } from "@playwright/test";
 import type { MapPage } from "../pages/MapPage";
-import { namePattern } from "./language";
+import { filledPattern, namePattern } from "./language";
 
 /** The chrome states the collision and accessibility matrices walk through. */
 export const CHROME_STATES = [
@@ -174,7 +174,7 @@ export async function enterState(
       await addStop.click();
       await expect(
         mapPage.page.getByRole("button", {
-          name: m["tools.directions.remove"].replace("{letter}", "B"),
+          name: filledPattern(m["tools.directions.remove"], { letter: "B" }),
         }),
       ).toBeVisible();
       return;

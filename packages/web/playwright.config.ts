@@ -41,7 +41,10 @@ const AFRIKAANS_SPECS = /(^|\/)(collision|a11y)\.spec\.ts$/;
 // accented English about 40 percent longer (`en-XA`), English embedded as
 // right-to-left text on a mirrored page (`en-XB`) and a small Arabic sample
 // (`ar`). The spec walks every chrome state at three viewports and checks two
-// placeholders, so the six projects run 30 tests.
+// placeholders, so the six projects run 30 tests. Playwright gives each shard
+// a contiguous run of the project list, so the three languages sit apart in
+// it (before, between and after the two default projects) to land in different
+// shards.
 const SAMPLE_LANGUAGE_SPECS = /sample-languages\.spec\.ts$/;
 
 /**
@@ -109,10 +112,12 @@ export default defineConfig<MapCairnOptions>({
     testIdAttribute: "data-testid",
   },
   projects: [
+    ...sampleLanguageProjects("arabic", "ar"),
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
     },
+    ...sampleLanguageProjects("expanded", "en-XA"),
     {
       name: "mobile-chromium",
       // Desktop-sized viewports in the layout and accessibility matrices run
@@ -120,6 +125,7 @@ export default defineConfig<MapCairnOptions>({
       grepInvert: /@desktop-viewport/,
       use: { ...devices["Pixel 7"], launchOptions: { executablePath } },
     },
+    ...sampleLanguageProjects("mirrored", "en-XB"),
     {
       name: "rtl-chromium",
       testMatch: RTL_SPECS,
@@ -158,9 +164,6 @@ export default defineConfig<MapCairnOptions>({
         launchOptions: { executablePath },
       },
     },
-    ...sampleLanguageProjects("expanded", "en-XA"),
-    ...sampleLanguageProjects("mirrored", "en-XB"),
-    ...sampleLanguageProjects("arabic", "ar"),
     {
       name: "webkit",
       testMatch: WEBKIT_SPECS,
