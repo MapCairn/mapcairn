@@ -23,3 +23,7 @@ playwright/.cache/
 
 .playwright-mcp/
 .playwright-cli/
+
+# Personal agent instructions (docs/guides/personal-preferences.md)
+CLAUDE.local.md
+AGENTS.local.md

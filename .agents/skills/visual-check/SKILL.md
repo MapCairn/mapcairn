@@ -14,8 +14,8 @@ Example: a change moves the layer key. Shoot the map with the key open at 390x84
 ## 1. Start the app
 
 1. Install the browsers once if they are missing: `npm run playwright:install -w @mapcairn/web`.
-2. Pick a port nobody uses, not 5173 or 4173 (say 5190), and check that nothing listens on it: `Get-NetTCPConnection -LocalPort 5190 -State Listen` on Windows (an error means none), `lsof -nP -iTCP:5190 -sTCP:LISTEN` elsewhere. Another agent may be running a server, so never reuse a port that is taken.
-3. Run `npm run dev -w @mapcairn/web -- --port 5190 --strictPort` in the background, so it fails instead of moving to another port. Wait for its ready line, then run the listener check again and write down the PID it shows: the port was free, so that process is yours. Load `http://localhost:5190/map` once and let it finish (the map is the playground at `/map`; `/` is the product page): the first load compiles the app and shows an unstyled page. Development does not apply the production headers; the e2e suite covers those.
+2. Pick a port nobody uses, not 5173 or 4173 (say 5190), and check that nothing listens on it with `node scripts/agents/port.mjs 5190` (exit 0 means free, on every system). Another agent may be running a server, so never reuse a port that is taken.
+3. Run `npm run dev -w @mapcairn/web -- --port 5190 --strictPort` in the background, so it fails instead of moving to another port. Note how you can stop it later: the process id your tool reports when it starts a background process, or the tool's own stop or kill-task handle if it gives no id. Wait for its ready line, then run the port check again: it must now say the port is in use, and because the port was free before, that server is yours. Load `http://localhost:5190/map` once and let it finish (the map is the playground at `/map`; `/` is the product page): the first load compiles the app and shows an unstyled page. Development does not apply the production headers; the e2e suite covers those.
 4. The map fetches real tiles. If the network is blocked and the map stays blank, say so and judge only the interface around it.
 
 ## 2. Take the screenshots
@@ -35,10 +35,10 @@ Save every image under `.tmp-visual/` (ignored by git) in a name that says size,
 If your tool has Playwright browser tools, use them to set the window size and colour scheme, open the address, wait for the map to finish loading and save a screenshot to a named file. Otherwise use the Playwright CLI from the repository root for each combination:
 
 ```bash
-npx --no-install playwright screenshot --viewport-size=390,844 --color-scheme=dark --wait-for-selector='[data-zoom][aria-busy="false"]' --wait-for-timeout=6000 "http://localhost:5190/map#map=10.00/-33.92000/18.42000&basemap=bright" .tmp-visual/phone-dark-bright.png
+npx --no-install playwright screenshot --viewport-size=390,844 --color-scheme=dark "--wait-for-selector=[data-zoom][aria-busy=false]" --wait-for-timeout=6000 "http://localhost:5190/map#map=10.00/-33.92000/18.42000&basemap=bright" .tmp-visual/phone-dark-bright.png
 ```
 
-The map is ready when `[data-zoom][aria-busy="false"]` matches; the extra 6 seconds lets the credits, which open for the first five seconds, close. The flag covers the style and the basemap's tiles only, so with a data layer on it can match while that layer's tiles or feed are still arriving: keep the wait, raise it for a slow provider, and look at the image to see that the layer has drawn (a feed layer's row in the Layers section says "Updated" once it has). Screenshot them open too if the change touches them. If a state needs clicks, use a short script in `.tmp-visual/` (git ignores it) and run it with `node .tmp-visual/shot.mjs` from the repository root. Change the size, theme and address for each combination:
+The map is ready when `[data-zoom][aria-busy=false]` matches; the extra 6 seconds lets the credits, which open for the first five seconds, close. The flag covers the style and the basemap's tiles only, so with a data layer on it can match while that layer's tiles or feed are still arriving: keep the wait, raise it for a slow provider, and look at the image to see that the layer has drawn (a feed layer's row in the Layers section says "Updated" once it has). Screenshot them open too if the change touches them. If a state needs clicks, use a short script in `.tmp-visual/` (git ignores it) and run it with `node .tmp-visual/shot.mjs` from the repository root. Change the size, theme and address for each combination:
 
 ```js
 import { chromium } from "playwright";
@@ -50,7 +50,7 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 await page.goto("http://localhost:5190/map#map=10.00/-33.92000/18.42000&basemap=bright");
-await page.locator('[data-zoom][aria-busy="false"]').waitFor();
+await page.locator('[data-zoom][aria-busy=false]').waitFor();
 // Click or type here to reach the state the change affects.
 await page.screenshot({ path: ".tmp-visual/phone-dark-state.png" });
 await browser.close();
@@ -64,6 +64,6 @@ Look for: overlap or clipping (especially the bottom row at 390 wide), text or i
 
 ## 4. Clean up and report
 
-1. Stop the dev server and every browser you started, and nothing else. Kill only the process you recorded and its children (`taskkill /PID <pid> /T /F` on Windows, `kill <pid>` and its children elsewhere; `npm` leaves children behind), then re-run the listener check and confirm nothing listens on the port.
+1. Stop the dev server and every browser you started, and nothing else. Stop only the server you started. Use your tool's own stop or kill-task command; `npm` runs the server as a child, so the whole tree must end. Where you have a process id, `taskkill /PID <pid> /T /F` does it on Windows, and `kill <pid>` plus its children elsewhere. Then run `node scripts/agents/port.mjs 5190` and confirm it says the port is free.
 2. Check `git status` shows no image; `.tmp-visual/` must stay uncommitted.
 3. Report under **Seen** (the report in `AGENTS.md`, "Definition of done"): the sizes, themes and basemaps covered, what looked wrong and what you fixed, and what remains. Give the folder's absolute path in the report to your caller only, never in the pull request. An agent does not attach images (`gh` cannot upload them); the pull request describes in words what was seen, as `land-pr` section 1 says.

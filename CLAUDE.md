@@ -4,21 +4,15 @@
 
 The skills in `.claude/skills/` (`create-issue`, `plan-change`, `split-plan`, `pick-up-issue`, `land-pr`, `visual-check`, `review-ui`, `playwright-tests`) are the procedures behind `AGENTS.md`; load the one that matches the task before you start. The agents `implementer`, `fresh-eyes-reviewer` and `ui-verifier` in `.claude/agents/` run `sonnet` and follow those skills. Use them for the tasks they name. Other tools read generated copies of the rest (see `docs/guides/working-with-agents.md`), so after editing a skill or agent run `npm run agents:sync`.
 
-## Delegating to sub-agents
+## Models
 
-Use sub-agents. They keep this conversation small and let independent work run in parallel, so reach for them by default instead of doing everything in one thread: wide searches across many files, independent changes in separate packages, tests written alongside the code they cover, long verification runs, and a fresh-eyes review of a diff before it is merged (for example independent package changes, or a fresh-eyes review of a map or basemap change). Do a small, strictly sequential task yourself. The limits, the brief and the clean-up rules in `AGENTS.md` ("Sub-agents") apply, and agents started through a Workflow script count towards the limit on how many run at once.
+In Claude Code the tiers in `AGENTS.md` are `haiku` (small and fast), `sonnet` (default) and `opus` (most capable). Set the `model` parameter of an `Agent` call on purpose: leaving it out inherits the session's model.
 
-Set the `model` parameter explicitly on every `Agent` call and every `agent()` call inside a Workflow script; omitting it silently inherits the session's model. The tiers in `AGENTS.md` are, in Claude Code, `haiku` (small and fast), `sonnet` (default) and `opus` (most capable).
+`fable` is the model above them, so the rule in `AGENTS.md` on a model above the most capable tier applies to it: never start a `fable` agent or set `model: fable` without that authorisation. If you think a task needs it, say why and ask.
 
-`fable` is the model above them, so the rule in `AGENTS.md` on a model above the most capable tier applies to it: never start a `fable` agent, set `model: fable` or put it in a Workflow script without that authorisation. If you think a task needs it, say why and ask.
+## Personal preferences
 
-## Dynamic workflows (Workflow tool)
-
-Applies to all sessions, on any model. Dynamic workflows are a normal tool here, not something to avoid. Reach for the Workflow tool when a task has 3+ independent, parallelisable subtasks, or would benefit from a pipeline/judge panel.
-
-Opt-in rule: if `ultracode` isn't already on for the session (no `ultracode` keyword, toggle, or an explicit orchestration request), propose the workflow in one or two sentences (its rough shape and cost) and wait for my go-ahead before invoking it. If `ultracode` is on, invoke directly.
-
-Every `agent()` call inside a workflow script must set `model` explicitly, chosen from the tiers in "Delegating to sub-agents" above. `fable` is valid there only under the human authorisation described above. A Fable review, if genuinely warranted and authorised, runs after the workflow finishes as its own standalone `Agent` call, not as a workflow stage.
+Claude Code also reads `CLAUDE.local.md` (git-ignored) for your own working style. `docs/guides/personal-preferences.md` explains it.
 
 ## Editing the instruction files
 
