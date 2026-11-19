@@ -1,6 +1,6 @@
 # Roadmap
 
-_Last reviewed: 2026-11-17. Reviewed every year, and sooner when a decision below changes._
+_Last reviewed: 2026-11-19. Reviewed every year, and sooner when a decision below changes._
 
 This is what MapCairn intends to do over the next twelve months, and what it will not do. Everything under "Intentions" is a plan or an idea, not a promise and not a delivery date. Nothing in it is built unless a status says so. The project has one volunteer maintainer (see [`GOVERNANCE.md`](GOVERNANCE.md)), so the order can change and some items may not happen. The [open issues](https://github.com/MapCairn/mapcairn/issues) are the detailed plan and hold the current state of each item, and [`docs/plans/`](docs/plans/README.md) holds the written plans for large changes.
 
@@ -18,9 +18,8 @@ A milestone leaves this list in the pull request that closes its last issue. A n
 
 ### Now
 
-1. **SDK, [Language support](https://github.com/MapCairn/mapcairn/milestone/4) ([#316](https://github.com/MapCairn/mapcairn/issues/316)).** Any language can be offered by a host, with English and Afrikaans on the reference site.
-2. **Site, [Selection](https://github.com/MapCairn/mapcairn/milestone/5) ([#49](https://github.com/MapCairn/mapcairn/issues/49)).** Visitors can select several features on the map and work with the selection.
-3. **SDK, [Embeddable SDK](https://github.com/MapCairn/mapcairn/milestone/6) ([#51](https://github.com/MapCairn/mapcairn/issues/51)).** A team can embed the map in its own application without copying the reference host.
+1. **Site, [Selection](https://github.com/MapCairn/mapcairn/milestone/5) ([#49](https://github.com/MapCairn/mapcairn/issues/49)).** Visitors can select several features on the map and work with the selection.
+2. **SDK, [Embeddable SDK](https://github.com/MapCairn/mapcairn/milestone/6) ([#51](https://github.com/MapCairn/mapcairn/issues/51)).** A team can embed the map in its own application without copying the reference host.
 
 ### Next
 
