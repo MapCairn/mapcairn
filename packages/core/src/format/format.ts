@@ -77,26 +77,51 @@ export function formatLongitude(
 }
 
 /**
- * Formats a number for display with the grouping and decimals of `language`.
- * The language is named explicitly so output never depends on the visitor's
- * settings; callers pass their message catalogue's `language`.
+ * The locale tag to give `Intl` for numbers and dates: the catalogue's
+ * language, with its `numberingSystem` as a `-u-nu-` extension when it has
+ * one; a malformed system is ignored. Calendars are not touched, so a
+ * language keeps its own (Thai years are Buddhist, Persian years are Solar
+ * Hijri). Plural selection, lists and the `lang` attribute use the plain
+ * language.
+ */
+export function formatLocale(
+  catalogue: Pick<MessageCatalogue, "language" | "numberingSystem">,
+): string {
+  const { language, numberingSystem } = catalogue;
+  if (numberingSystem === undefined) {
+    return language;
+  }
+  try {
+    return new Intl.Locale(language, { numberingSystem }).toString();
+  } catch {
+    return language;
+  }
+}
+
+/**
+ * Formats a number for display with the grouping, decimals and digits of
+ * `locale`. The locale is named explicitly so output never depends on the
+ * visitor's settings; callers pass `formatLocale(catalogue)`.
  */
 export function formatNumber(
   value: number,
-  language: string,
+  locale: string,
   options?: Intl.NumberFormatOptions,
 ): string {
-  return new Intl.NumberFormat(language, options).format(value);
+  return new Intl.NumberFormat(locale, options).format(value);
 }
 
 /** Formats a zoom level with at most one decimal, for example "12" or "12.5". */
-export function formatZoom(zoom: number, language: string): string {
-  return formatNumber(zoom, language, { maximumFractionDigits: 1 });
+export function formatZoom(zoom: number, locale: string): string {
+  return formatNumber(zoom, locale, { maximumFractionDigits: 1 });
 }
 
-/** Words for the UTC day of `date`, for example "11 November 2026". */
-export function formatDay(date: Date, language: string): string {
-  return new Intl.DateTimeFormat(language, {
+/**
+ * Words for the UTC day of `date` in `locale` (`formatLocale(catalogue)`),
+ * for example "11 November 2026".
+ */
+export function formatDay(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: "UTC",
     day: "numeric",
     month: "long",

@@ -14,10 +14,14 @@ export interface MessageCatalogueFixture {
   readonly create: () => MessageCatalogue;
   /** A fresh instance missing `key`, so it falls back to English and warns. */
   readonly createMissingKey: (key: MessageKey) => MessageCatalogue;
-  /** A fresh instance with a scripted language and active values. */
+  /**
+   * A fresh instance with a scripted language and active values, and
+   * optionally an `Intl` numbering system for numbers and days.
+   */
   readonly createWith: (
     language: string,
     values: Partial<Record<MessageKey, string>>,
+    numberingSystem?: string,
   ) => MessageCatalogue;
 }
 
@@ -94,6 +98,52 @@ export function runMessageCatalogueContract(
       expect(catalogue.plural("announce.searchResults", { count: 2 })).toBe(
         `single ${new Intl.NumberFormat("ar").format(2)}`,
       );
+    });
+
+    describe("numbering system", () => {
+      const values = { "announce.searchResults": "{count} on {date}" };
+      const params = {
+        count: 1234.5,
+        date: new Date(Date.UTC(2026, 10, 11)),
+      } as never;
+      const nativeDigits = /[\u06F0-\u06F9]/u;
+
+      it("writes numbers and days in the language's own digits when none is set", () => {
+        const catalogue = fixture.createWith("fa", values);
+        expect(catalogue.numberingSystem).toBeUndefined();
+        expect(catalogue.t("announce.searchResults", params)).toMatch(
+          nativeDigits,
+        );
+      });
+
+      it("writes numbers and days in the numbering system when one is set", () => {
+        const catalogue = fixture.createWith("fa", values, "latn");
+        expect(catalogue.numberingSystem).toBe("latn");
+        expect(catalogue.language).toBe("fa");
+        const text = catalogue.t("announce.searchResults", params);
+        expect(text).toContain("1,234.5");
+        expect(text).not.toMatch(nativeDigits);
+        expect(
+          catalogue.plural("announce.searchResults", {
+            ...(params as object),
+            count: 2,
+          } as never),
+        ).not.toMatch(nativeDigits);
+      });
+
+      it("ignores a malformed numbering system and warns once", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        try {
+          const catalogue = fixture.createWith("fa", values, "x");
+          expect(catalogue.numberingSystem).toBeUndefined();
+          expect(catalogue.t("announce.searchResults", params)).toMatch(
+            nativeDigits,
+          );
+          expect(warn).toHaveBeenCalledTimes(1);
+        } finally {
+          warn.mockRestore();
+        }
+      });
     });
 
     it("joins a list the same way Intl.ListFormat does, for the instance's language", () => {

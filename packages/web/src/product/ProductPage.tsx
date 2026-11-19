@@ -8,6 +8,7 @@ import { Brand } from "../app/Brand";
 import { DOCUMENT_SCROLL } from "../app/documentScroll";
 import { MAP_LINK_REDIRECT_SCRIPT } from "../app/mapLinkRedirect";
 import {
+  MASTODON_PROFILE_URL,
   PLAYGROUND_PATH,
   PRODUCT_PATH,
   SOURCE_REPOSITORY_URL,
@@ -298,6 +299,16 @@ function ProductFooter() {
             </a>
           </li>
           <li>
+            <a
+              className={styles.footerLink}
+              href={MASTODON_PROFILE_URL}
+              rel="me"
+              data-testid="footer-mastodon"
+            >
+              Mastodon
+            </a>
+          </li>
+          <li>
             <a className={styles.footerLink} href={PLAYGROUND_PATH}>
               Try the playground
             </a>
@@ -324,7 +335,8 @@ function ProductFooter() {
  *   and its own markup requests nothing from another site (in production the
  *   host adds its cookieless page-view counter, as on every page). It links
  *   to the repository from exactly two places, the hero's View on GitHub and
- *   the footer's Source code, and otherwise only to this site: never a
+ *   the footer's Source code, the footer's Mastodon profile (`rel="me"`), and
+ *   otherwise only to this site: never a
  *   Markdown file, an issue, a pull request or a milestone.
  *   Its first element is the inline script that sends an old map link
  *   (`/#map=...`) on to the playground before the page paints. It is English

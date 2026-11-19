@@ -3,6 +3,7 @@
 import {
   computeScaleBar,
   formatLatLng,
+  formatLocale,
   formatZoom,
   type LatLng,
   type UnitSystem,
@@ -92,7 +93,7 @@ function useMapHasKeyboardFocus(host: HTMLElement | null): boolean {
 export function ScaleBar({ units }: ScaleBarProps) {
   const { adapter, view, hostElement } = useMap();
   const { reducedMotion } = usePreferences();
-  const { language } = useMessages();
+  const locale = formatLocale(useMessages());
   const format = useFormatMessage();
   const mapHasFocus = useMapHasKeyboardFocus(hostElement);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -111,9 +112,9 @@ export function ScaleBar({ units }: ScaleBarProps) {
       metresPerPixel: adapter.metresPerPixel(latitude),
       maxWidthPx: SCALE_BAR_MAX_WIDTH_PX,
       units,
-      language,
+      locale,
     });
-  }, [adapter, latitude, zoom, units, language]);
+  }, [adapter, latitude, zoom, units, locale]);
 
   const canFade = !reducedMotion && !mapHasFocus;
   const [idleAtZoom, setIdleAtZoom] = useState<number | null>(null);
@@ -190,11 +191,13 @@ export interface CursorCoordinatesProps {
  *   text read it once and in full, in the order the eye sees it.
  */
 export function CursorCoordinates({ latlng, zoom }: CursorCoordinatesProps) {
-  const { language, t } = useMessages();
+  const messages = useMessages();
+  const { t } = messages;
   if (!latlng && zoom === undefined) {
     return null;
   }
-  const level = zoom === undefined ? "" : formatZoom(zoom, language);
+  const level =
+    zoom === undefined ? "" : formatZoom(zoom, formatLocale(messages));
   return (
     <p data-chrome="cursor-coordinates" className={styles.coordinates}>
       {latlng ? <span>{formatLatLng(latlng)}</span> : null}
