@@ -27,7 +27,7 @@ import {
   applyMapKeyPlacement,
   isMapKeyCrowded,
   placeMapKey,
-} from "./useMapKeyPlacement";
+} from "./mapKeyPlacement";
 
 /** Props for {@link MapChrome}. */
 export interface MapChromeProps {

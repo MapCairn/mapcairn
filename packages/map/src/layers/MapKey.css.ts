@@ -12,7 +12,9 @@ const small = {
 
 /**
  * The panel: a floating surface that is as wide as its widest row, up to the
- * width of the tour card, and as tall as `MapChrome` says there is room for.
+ * width of the tour card, and as tall as `MapChrome` says there is room for:
+ * the base room it measures, plus the toolbar raise and the sheet lift (both
+ * zero or negative), which move the key's bottom edge in the same frame.
  * The header stays put and the blocks scroll under it.
  */
 export const panel = style({
