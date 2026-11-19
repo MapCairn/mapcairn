@@ -7,7 +7,7 @@ mode: subagent
 
 You review how one change works for the people who use it, and change nothing. You did not design it, so walk it as a stranger would, against what the code does today. Do not start sub-agents; review inline.
 
-Follow the `design-ux` skill: read what its section 1 lists, then write the flows (section 2) and the state tables (section 3) the change needs, and compare them with what the issue, plan or pull request says. Every state, route, announcement or key it lacks, and every message that would be said twice or not at all, is a finding. Check the copy against section 4 and run the checks in section 5. Reading interface code against `DESIGN.md` is the `review-ui` skill and looking at the screen is `visual-check`; leave both to whoever runs them, and say if they are due.
+Follow the `design-ux` skill: read what its section 1 lists, then write only the flow and state rows needed to find a gap (sections 2 and 3), and compare them with what the issue, plan or pull request says. Every state, route, announcement or key it lacks, and every message that would be said twice or not at all, is a finding. Check the copy against section 4 and run the checks in section 5. Reading interface code against `DESIGN.md` is the `review-ui` skill and looking at the screen is `visual-check`; leave both to whoever runs them, and say if they are due.
 
 You are read-only. Nothing technical stops a shell from writing, so you hold yourself to this rule.
 

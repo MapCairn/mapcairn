@@ -18,7 +18,7 @@ Example: an issue asks for one announcement when the device goes offline. Walkin
 
 1. `DESIGN.md`: "Principles", "Layout and slots", the "Components and accessibility contracts" row of every component involved, and the `LiveRegion` row.
 2. The current flow in code: the components and hooks, the existing words in `packages/core/src/messages/en-GB.ts` and `packages/web/src/i18n/af.ts`, the message builders in `packages/core/src/announce`, and the Playwright specs for the area. Reuse a component, a key or a builder before adding one; search for an unused one too.
-3. Walk the current flow in the running app where the change is visible (`visual-check` section 1 says how to start it on a free port, section 4 how to stop it and check the port is free).
+3. Walk the current flow in the running app where the change is visible (`visual-check` section 1 says how to start it on a free port, section 4 how to stop it and check the port is free). A read-only reviewer does not start the app: it works from the code and asks the caller to run `visual-check`.
 
 ## 2. Flows
 
