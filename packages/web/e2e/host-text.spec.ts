@@ -5,6 +5,7 @@ import { AF_DEFINITION_TEXTS } from "../src/i18n/afDefinitionTexts";
 import earthAtNight from "../src/layers/definitions/earth-at-night";
 import { expect, test } from "./fixtures";
 import { axeViolations, inspectControls } from "./support/a11y";
+import { filledPattern } from "./support/language";
 import { mockLayerProviders } from "./support/layers";
 import { waitForStableLayout } from "./support/states";
 
@@ -27,11 +28,18 @@ function hostTextOf(field: DefinitionText): HostText {
 
 const NAME = hostTextOf(earthAtNight.name);
 const DESCRIPTION = hostTextOf(earthAtNight.description as DefinitionText);
-/** The bidirectional isolate marks (U+2066 to U+2069) around a substituted name. */
-const ISOLATES = /[\u2066-\u2069]/g;
 
-const AFRIKAANS_NAME = AF_DEFINITION_TEXTS[NAME.key] as string;
-const AFRIKAANS_DESCRIPTION = AF_DEFINITION_TEXTS[DESCRIPTION.key] as string;
+/** The Afrikaans entry for a host key, or a failure when the table has none. */
+function afrikaansFor(key: string): string {
+  const text = AF_DEFINITION_TEXTS[key];
+  if (text === undefined) {
+    throw new Error(`No Afrikaans entry for ${key}.`);
+  }
+  return text;
+}
+
+const AFRIKAANS_NAME = afrikaansFor(NAME.key);
+const AFRIKAANS_DESCRIPTION = afrikaansFor(DESCRIPTION.key);
 
 test.describe("a host-keyed definition in Afrikaans", () => {
   test.use({ reducedMotion: "reduce", language: "af" });
@@ -115,12 +123,14 @@ test.describe("a host key with no entry in the language", () => {
     await toggle.focus();
     await page.keyboard.press("Space");
     await expect(toggle).toBeChecked();
-    // A right-to-left sentence isolates the name; the words are what counts.
-    const spoken = messages["announce.layerOn"].replace("{name}", NAME.text);
+    const opacity = messages["layer.control.opacity"];
+    await expect(item.getByRole("slider", { name: opacity })).toBeVisible();
+    // A right-to-left sentence isolates the name, so match around the marks.
+    const spoken = filledPattern(messages["announce.layerOn"], {
+      name: NAME.text,
+    });
     await expect
-      .poll(async () =>
-        (await mapPage.announcements()).join("\n").replace(ISOLATES, ""),
-      )
-      .toContain(spoken);
+      .poll(async () => (await mapPage.announcements()).join("\n"))
+      .toMatch(spoken);
   });
 });

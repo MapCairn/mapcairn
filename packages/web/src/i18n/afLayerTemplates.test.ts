@@ -2,7 +2,6 @@
 // Copyright MapCairn contributors
 import { parseTemplate, resolveLayerTemplate } from "@mapcairn/core";
 import { describe, expect, it, vi } from "vitest";
-import { AF_DEFINITION_TEXTS } from "./afDefinitionTexts";
 import { AF_LAYER_TEMPLATES } from "./afLayerTemplates";
 import { loadLanguage } from "./hostLanguages";
 
@@ -11,14 +10,30 @@ const modules = import.meta.glob<unknown>("../layers/definitions/**/*.ts", {
   import: "default",
 });
 
-/** Every `{ key, text }` template a definition carries, found wherever it sits. */
+/**
+ * The positions that hold a layer template: the property that holds the
+ * object, a dot and the template's own property. A `{ key, text }` anywhere
+ * else is host text, translated from `definitionTexts`.
+ */
+const TEMPLATE_POSITIONS: ReadonlySet<string> = new Set([
+  "card.title",
+  "card.lines",
+  "list.secondary",
+  "controls.unit",
+  "colour.unit",
+  "label.template",
+]);
+
+/** Every `{ key, text }` template a definition carries, found at a template position. */
 function keyedTemplates(
   value: unknown,
+  position = "",
+  holder = "",
   found: Map<string, string> = new Map(),
 ): Map<string, string> {
   if (Array.isArray(value)) {
     for (const item of value) {
-      keyedTemplates(item, found);
+      keyedTemplates(item, position, holder, found);
     }
     return found;
   }
@@ -27,21 +42,18 @@ function keyedTemplates(
   }
   const record = value as Record<string, unknown>;
   if (typeof record.key === "string" && typeof record.text === "string") {
-    found.set(record.key, record.text);
+    if (TEMPLATE_POSITIONS.has(position)) {
+      found.set(record.key, record.text);
+    }
     return found;
   }
-  for (const child of Object.values(record)) {
-    keyedTemplates(child, found);
+  for (const [property, child] of Object.entries(record)) {
+    keyedTemplates(child, `${holder}.${property}`, property, found);
   }
   return found;
 }
 
-/** A host text has the same shape as a template but is translated from `definitionTexts`. */
-const SOURCES = new Map(
-  [...keyedTemplates(Object.values(modules))].filter(
-    ([key]) => !Object.hasOwn(AF_DEFINITION_TEXTS, key),
-  ),
-);
+const SOURCES = keyedTemplates(Object.values(modules));
 const signature = (template: string) =>
   parseTemplate(template)
     .map(({ name, formatter }) => `${name}|${formatter ?? ""}`)
