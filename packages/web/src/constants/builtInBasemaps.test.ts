@@ -23,13 +23,10 @@ function sourceOrigins(basemap: BasemapDefinition): readonly string[] {
   }
 }
 
-// Fiord is the SDK's dark basemap that the site does not offer; Dark is the
-// site's. Each needs a swatch of its own for the picker's Save data tile.
-describe.each([
-  ["fiord", BUILT_IN_BASEMAP_CATALOGUE],
-  ["dark", HOST_BASEMAP_CATALOGUE],
-] as const)("%s in the picker", (id, catalogue) => {
-  const basemap = catalogue.resolve(id);
+// The site offers two dark basemaps, Fiord and Dark. Each needs a swatch of its
+// own for the picker's Save data tile.
+describe.each(["fiord", "dark"] as const)("%s in the picker", (id) => {
+  const basemap = HOST_BASEMAP_CATALOGUE.resolve(id);
 
   it("is the basemap named", () => {
     expect(basemap.id).toBe(id);
@@ -78,7 +75,7 @@ describe("the production CSP and the site's basemaps", () => {
     });
   }
 
-  it("allows exactly the origins the four basemaps need, and none for a basemap the site does not offer", () => {
+  it("allows exactly the origins the six basemaps need, and none for a basemap the site does not offer", () => {
     const origins = new Set(
       HOST_BASEMAP_CATALOGUE.basemaps.flatMap(sourceOrigins),
     );

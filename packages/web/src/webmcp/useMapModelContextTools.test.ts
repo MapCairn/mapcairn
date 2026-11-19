@@ -21,15 +21,16 @@ import {
 describe("basemapChoices", () => {
   it("offers the basemaps the site's picker offers, in its order, with no auto choice", () => {
     const choices = basemapChoices(HOST_BASEMAP_CATALOGUE);
-    expect(choices).toEqual(["bright", "positron", "osm", "dark"]);
-    expect(choices).not.toContain("auto");
-    for (const removed of [
+    expect(choices).toEqual([
+      "bright",
       "liberty",
-      "colorful",
+      "positron",
+      "osm",
       "fiord",
-      "satellite",
-      "topographic",
-    ]) {
+      "dark",
+    ]);
+    expect(choices).not.toContain("auto");
+    for (const removed of ["colorful", "satellite", "topographic"]) {
       expect(choices).not.toContain(removed);
     }
   });

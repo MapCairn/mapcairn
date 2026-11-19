@@ -373,7 +373,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "panels.help.tourStart": "Take the tour",
   "panels.help.searchHeading": "Search",
   "panels.help.searchDescription":
-    "Type a place name or a pair of coordinates, such as -26.2041, 28.0473 or 26.2041° S, 28.0473° E, then press Enter or Search. Write each value with a decimal point or a degree sign. Coordinates are read on this device and not sent to the geocoder; the map then loads map tiles for that area, as it does for any move.",
+    "Type a place name or a pair of coordinates, such as -26.2041, 28.0473 or 26.2041° S, 28.0473° E, then press Enter or Search. Write each value with a decimal point or a degree sign. A decimal comma also works when a semicolon separates the values, or when spaces do and every number has one. Coordinates are read on this device and not sent to the geocoder; the map then loads map tiles for that area, as it does for any move.",
   "panels.help.keyboardHeading": "Keyboard",
   "panels.help.drawingHeading": "Drawing",
   "panels.help.accessibilityHeading": "Accessibility",

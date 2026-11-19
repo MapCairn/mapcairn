@@ -13,7 +13,9 @@
  */
 export const BASEMAP_THUMBNAILS: Readonly<Record<string, string>> = {
   bright: "/basemaps/bright.jpg",
+  liberty: "/basemaps/liberty.jpg",
   positron: "/basemaps/positron.jpg",
   osm: "/basemaps/osm.jpg",
+  fiord: "/basemaps/fiord.jpg",
   dark: "/basemaps/dark.jpg",
 };

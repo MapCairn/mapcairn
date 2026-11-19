@@ -58,18 +58,20 @@ describe("createServices", () => {
     }
   });
 
-  it("offers the site's four basemaps, not the SDK's seven, with Bright the default", () => {
+  it("offers the site's six basemaps, not the SDK's seven, with Bright the default", () => {
     const { basemaps } = createServices();
     expect(basemaps).toBe(HOST_BASEMAP_CATALOGUE);
     expect(basemaps).not.toBe(BUILT_IN_BASEMAP_CATALOGUE);
     expect(basemaps?.basemaps.map((basemap) => basemap.id)).toEqual([
       "bright",
+      "liberty",
       "positron",
       "osm",
+      "fiord",
       "dark",
     ]);
-    expect(basemaps?.get("fiord")).toBeUndefined();
-    expect(basemaps?.resolve("fiord").id).toBe("bright");
+    expect(basemaps?.get("colorful")).toBeUndefined();
+    expect(basemaps?.resolve("colorful").id).toBe("bright");
     expect(basemaps?.defaultId).toBe("bright");
   });
 
