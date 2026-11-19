@@ -4,6 +4,7 @@ import {
   BUILT_IN_BASEMAP_CATALOGUE,
   createFakeServices,
   FakeClipboard,
+  FakeDevicePreferences,
   FakeFeatureQuery,
   FakeLayerCatalogue,
   FakeRoutingProvider,
@@ -131,6 +132,24 @@ describe("createServices", () => {
     const first = createMapAdapter();
     expect(first).toBeInstanceOf(MapLibreMapAdapter);
     expect(createMapAdapter()).not.toBe(first);
+  });
+
+  describe("the online signal", () => {
+    it("is the one source for search and suggestions, whichever preferences are in use", async () => {
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("boom"));
+      const preferences = new FakeDevicePreferences({ online: false });
+      const { search, suggestions } = createServices({
+        overrides: { preferences },
+      });
+      const kinds = async () =>
+        [
+          await search.search("x").catch((e: unknown) => e),
+          await suggestions?.suggest("x").catch((e: unknown) => e),
+        ].map((error) => (error as { kind: string }).kind);
+      expect(await kinds()).toEqual(["offline", "offline"]);
+      preferences.set({ online: true });
+      expect(await kinds()).toEqual(["failed", "failed"]);
+    });
   });
 
   describe("overrides", () => {

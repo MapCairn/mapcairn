@@ -5,6 +5,7 @@ import {
   announceLayerEmpty,
   announceLayerError,
   announceLayerLoaded,
+  announceLayerOffline,
   isQueryLayer,
   type LayerFeature,
   type LayerSource,
@@ -84,12 +85,15 @@ export function outcomeOfFeatures(
 /**
  * The outcome of a load that failed, or null when it was aborted, which says
  * nothing and changes nothing. A feed with nothing in it is `empty`, in the
- * layer's own words; anything else is an error.
+ * layer's own words; anything else is an error. A network failure while
+ * `offline` (the device's own signal at the moment of failure) is worded as
+ * that and said politely, since the connection notice has already said so.
  */
 export function outcomeOfFailure(
   definition: LoadableLayer,
   error: unknown,
   now: number,
+  offline = false,
 ): LoadOutcome | null {
   const kind = errorKind(error);
   if (kind === "aborted") {
@@ -108,6 +112,19 @@ export function outcomeOfFailure(
       },
     };
   }
+  if (kind === "network" && offline) {
+    return {
+      result: {
+        status: { kind: "error", error: kind, offline: true },
+        features: [],
+      },
+      spoken: {
+        state: "error",
+        message: announceLayerOffline(textOrMessage(definition.name)),
+        priority: "polite",
+      },
+    };
+  }
   return {
     result: { status: { kind: "error", error: kind }, features: [] },
     spoken: {
@@ -121,13 +138,15 @@ export function outcomeOfFailure(
 /**
  * Loads what a layer wants through the source and works out what the layer
  * then shows and says. Resolves to null when the load was cancelled, by its
- * own signal or because the source said it was aborted.
+ * own signal or because the source said it was aborted. `isOffline` is asked
+ * when a load fails, not before it, so a failure is worded by what was true then.
  */
 export function loadOutcome(
   source: LayerSource,
   load: WantedLoad,
   now: () => number,
   signal: AbortSignal,
+  isOffline: () => boolean = () => false,
 ): Promise<LoadOutcome | null> {
   const { definition, controls, area } = load;
   return source
@@ -141,6 +160,8 @@ export function loadOutcome(
     .then(
       (loaded) => outcomeOfFeatures(definition, loaded, now()),
       (error: unknown) =>
-        signal.aborted ? null : outcomeOfFailure(definition, error, now()),
+        signal.aborted
+          ? null
+          : outcomeOfFailure(definition, error, now(), isOffline()),
     );
 }

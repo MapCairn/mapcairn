@@ -144,6 +144,8 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
     "{name} could not load. Check your connection and try again.",
   "announce.layerInvalid":
     "{name} could not load: the provider sent something unexpected. Try again later.",
+  "announce.layerOffline":
+    "{name} did not load because you are offline. Try again when you are back online.",
   "announce.tilesRecovered": "{name}: imagery is showing again.",
   "announce.imageSaved": "Map image saved.",
   "announce.imageFailed": "The map image could not be saved. Try again.",
@@ -407,6 +409,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
   "app.banner.basemapUnavailable": "{name} is not available right now.",
   "app.banner.retry": "Retry",
   "app.banner.tryAgain": "Try again",
+  "app.banner.online": "You are back online.",
   "app.banner.usePreviousBasemap": "Use previous basemap",
   "app.webgl.title": "MapCairn needs WebGL to draw the map.",
   "app.webgl.advice":
@@ -624,6 +627,7 @@ export const EN_GB_CATALOGUE: Record<MessageKey, string> = {
     "Updated {time}. Showing the first {count}. Zoom in to see more.",
   "layers.status.updatedEmpty": "Updated {time}. {text}",
   "layers.status.loadFailedNetwork": "Could not load. Check your connection.",
+  "layers.status.loadFailedOffline": "Could not load. You are offline.",
   "layers.status.loadFailedInvalid":
     "Could not load: the provider sent something unexpected.",
   "layers.identify.hint": "Tap the map to see details for this layer.",

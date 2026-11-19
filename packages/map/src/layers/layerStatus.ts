@@ -29,7 +29,15 @@ export type LayerStatus =
     }
   | ZoomLimit
   | { readonly kind: "empty"; readonly updatedAt: number }
-  | { readonly kind: "error"; readonly error: "network" | "invalid" };
+  | {
+      readonly kind: "error";
+      readonly error: "network" | "invalid";
+      /**
+       * Set when the device said it was offline as the request failed, so
+       * the layer can word it as that while it still is. Absent otherwise.
+       */
+      readonly offline?: true;
+    };
 
 /**
  * The kind of a failed load or detail request, with anything that is not a

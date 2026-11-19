@@ -44,7 +44,8 @@ export interface NominatimSearchProviderOptions {
   readonly defaultLimit?: number;
   /**
    * Whether the browser believes it is online, used to tell "offline" from
-   * "failed" after a network error. Defaults to `navigator.onLine`.
+   * "failed" after a network error. The host passes its device
+   * preferences' `online` signal; defaults to always online.
    */
   readonly isOnline?: () => boolean;
   /**
@@ -58,8 +59,8 @@ export interface NominatimSearchProviderOptions {
 /** Nominatim's usage policy allows at most one request per second. */
 const DEFAULT_MIN_INTERVAL_MS = 1000;
 
-function browserIsOnline(): boolean {
-  return typeof navigator === "undefined" || navigator.onLine !== false;
+function alwaysOnline(): boolean {
+  return true;
 }
 
 function toBounds(
@@ -142,7 +143,7 @@ function toSearchResult(item: NominatimItem): SearchResult | null {
  *   that fires while a request is queued abandons it without sending it.
  *
  *   Errors follow the port: a network failure is `SearchError("offline")`
- *   when `navigator.onLine` is false and `"failed"` otherwise, HTTP 429 is
+ *   when `isOnline` says the device is offline and `"failed"` otherwise, HTTP 429 is
  *   `"rate-limited"`, any other non-OK response, or a body that is not what
  *   Nominatim documents, is `"failed"`, and an aborted signal is a
  *   {@link PortAbortError}. A blank query resolves to no results without a
@@ -164,7 +165,7 @@ export class NominatimSearchProvider implements SearchProvider {
     this.#endpoint = (options.endpoint ?? DEFAULT_ENDPOINT).replace(/\/$/, "");
     this.#countryCodes = options.countryCodes;
     this.#defaultLimit = options.defaultLimit ?? DEFAULT_LIMIT;
-    this.#isOnline = options.isOnline ?? browserIsOnline;
+    this.#isOnline = options.isOnline ?? alwaysOnline;
   }
 
   async search(

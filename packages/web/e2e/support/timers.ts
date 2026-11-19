@@ -20,6 +20,9 @@ export const SCALE_BAR_IDLE_MS = 2_000;
 /** `TILE_LAYER_SLOW_MS` in `packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts`. */
 export const TILE_LAYER_SLOW_MS = 10_000;
 
+/** `CONNECTION_SETTLE_MS` in `packages/web/src/app/useConnectionNotice.ts`. */
+export const CONNECTION_SETTLE_MS = 1_500;
+
 /** `IDENTIFY_FEEDBACK_MS` in `packages/map/src/layers/identifyFeedback.ts`. */
 export const IDENTIFY_FEEDBACK_MS = 400;
 

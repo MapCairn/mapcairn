@@ -10,6 +10,7 @@ import {
 import { describe, expect, it } from "vitest";
 import * as e2eTimers from "../e2e/support/timers";
 import { TILE_LAYER_SLOW_MS } from "./adapters/maplibre/MapLibreMapAdapter";
+import { CONNECTION_SETTLE_MS } from "./app/useConnectionNotice";
 
 describe("the browser tests' copies of the app's timers", () => {
   // The specs jump the page clock by these copies, because a spec cannot
@@ -17,6 +18,7 @@ describe("the browser tests' copies of the app's timers", () => {
   // absence check pass before the timer fired.
   it("match the constants in the app", () => {
     expect({
+      CONNECTION_SETTLE_MS: e2eTimers.CONNECTION_SETTLE_MS,
       IDENTIFY_FEEDBACK_MS: e2eTimers.IDENTIFY_FEEDBACK_MS,
       LONG_PRESS_DELAY_MS: e2eTimers.LONG_PRESS_DELAY_MS,
       VIEW_SETTLE_MS: e2eTimers.VIEW_SETTLE_MS,
@@ -24,6 +26,7 @@ describe("the browser tests' copies of the app's timers", () => {
       SUGGEST_DEBOUNCE_MS: e2eTimers.SUGGEST_DEBOUNCE_MS,
       TILE_LAYER_SLOW_MS: e2eTimers.TILE_LAYER_SLOW_MS,
     }).toEqual({
+      CONNECTION_SETTLE_MS,
       IDENTIFY_FEEDBACK_MS,
       LONG_PRESS_DELAY_MS,
       VIEW_SETTLE_MS,

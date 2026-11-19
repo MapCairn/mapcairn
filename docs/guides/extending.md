@@ -445,7 +445,7 @@ Reject only with these two, and do not let a raw `TypeError` or `SyntaxError` es
 - `SearchError`, with a `kind`: `offline` (the request could not be made because the device has no connection), `rate-limited` (the service answered HTTP 429, or its equivalent) or `failed` (anything else, including a bad status, a body that is not what the service documents and a timeout). The pill shows a message for each kind and a Retry button, and treats any other error as `failed`.
 - `PortAbortError`, when the `AbortSignal` fires. The pill ignores it: an aborted request never changes what is shown or reaches the live region.
 
-To honour the signal, throw `PortAbortError` at the start if `signal.aborted` is already true, pass the signal to `fetch`, and turn the `AbortError` that `fetch` rejects with (or any failure after `signal.aborted` became true) into `PortAbortError`. `getJson` in the example's `placeSearch.ts` does all three, and tells `offline` from `failed` with `navigator.onLine`, as the reference adapters do.
+To honour the signal, throw `PortAbortError` at the start if `signal.aborted` is already true, pass the signal to `fetch`, and turn the `AbortError` that `fetch` rejects with (or any failure after `signal.aborted` became true) into `PortAbortError`. `getJson` in the example's `placeSearch.ts` does all three, and tells `offline` from `failed` with `navigator.onLine`. The reference adapters take an `isOnline` function instead, which `createServices()` feeds from `DevicePreferences.online`, so there is one source of the signal.
 
 ### Map an answer to results
 

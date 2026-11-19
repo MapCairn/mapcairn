@@ -124,6 +124,7 @@ export type MessageKey =
   | "announce.layersTurnedBackOn"
   | "announce.layerLoadFailed"
   | "announce.layerInvalid"
+  | "announce.layerOffline"
   | "announce.tilesRecovered"
   | "announce.imageSaved"
   | "announce.imageFailed"
@@ -338,6 +339,7 @@ export type MessageKey =
   | "app.banner.basemapUnavailable"
   | "app.banner.retry"
   | "app.banner.tryAgain"
+  | "app.banner.online"
   | "app.banner.usePreviousBasemap"
   | "app.webgl.title"
   | "app.webgl.advice"
@@ -528,6 +530,7 @@ export type MessageKey =
   | "layers.status.updatedCapped"
   | "layers.status.updatedEmpty"
   | "layers.status.loadFailedNetwork"
+  | "layers.status.loadFailedOffline"
   | "layers.status.loadFailedInvalid"
   | "layers.identify.hint"
   | "layers.identify.cap"
@@ -838,6 +841,7 @@ interface MessageParamOverrides {
   readonly "announce.layersTurnedBackOn": { readonly count: number };
   readonly "announce.layerLoadFailed": { readonly name: string };
   readonly "announce.layerInvalid": { readonly name: string };
+  readonly "announce.layerOffline": { readonly name: string };
   readonly "announce.tilesRecovered": { readonly name: string };
   readonly "announce.featuresFound": { readonly count: number };
   readonly "announce.layersDidNotAnswer": { readonly names: readonly string[] };

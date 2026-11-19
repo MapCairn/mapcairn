@@ -19,6 +19,14 @@ export interface DevicePreferencesValue {
    * language setting follows them while the person has made no choice.
    */
   readonly languages: readonly string[];
+  /**
+   * Whether the browser says the device has a connection. A hint only: a
+   * device can report online with no route, and no request is made to check.
+   * Undefined, and so treated as online, where an adapter has no signal (the
+   * server, or a host that does not report it), so read it as
+   * `online !== false`.
+   */
+  readonly online?: boolean;
 }
 
 /**
