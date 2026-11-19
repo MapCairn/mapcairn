@@ -25,6 +25,7 @@ import {
   RASTER_BASEMAP_NAME,
   UNOFFERED_BASEMAP_IDS,
 } from "./support/basemaps";
+import { tabKey } from "./support/keys";
 import {
   MAPLIBRE_WORKER_PATTERN,
   MINIMAL_VECTOR_STYLE,
@@ -153,6 +154,7 @@ test.describe("basemaps", () => {
     page,
     mapPage,
     direction,
+    browserName,
   }) => {
     await mapPage.goto();
     await mapPage.openMapOptions();
@@ -178,7 +180,7 @@ test.describe("basemaps", () => {
         .getByTestId(`basemap-option-${OFFERED_BASEMAP_IDS[BASEMAP_COUNT - 2]}`)
         .getByRole("radio"),
     ).toBeChecked();
-    await page.keyboard.press("Tab");
+    await page.keyboard.press(tabKey(browserName));
     await expect(mapPage.dropPinButton).toBeFocused();
   });
 
