@@ -15,10 +15,11 @@ import {
 } from "@mapcairn/core";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../services";
+import { StatusMessage } from "../ui/StatusMessage";
 import { type MapContextValue, useMap } from "./MapContext";
 import { MapView, type MapViewProps } from "./MapView";
 
@@ -1636,5 +1637,39 @@ describe("message catalogue", () => {
         { key: "host.map.roleDescription", params: {} },
       ]),
     );
+  });
+});
+
+describe("MapView as the focus target of a status message", () => {
+  function Banner({ label }: { label: string }) {
+    const [shown, setShown] = useState(true);
+    return shown ? (
+      <StatusMessage variant="error" onDismiss={() => setShown(false)}>
+        {label}
+      </StatusMessage>
+    ) : null;
+  }
+
+  it("returns focus to its own map when a message in it goes away", async () => {
+    render(
+      <ServicesProvider services={createFakeServices()}>
+        <MapView initialView={VIEW} basemap={FAKE_RASTER_BASEMAP} testId="one">
+          <Banner label="First" />
+        </MapView>
+        <MapView initialView={VIEW} basemap={FAKE_RASTER_BASEMAP} testId="two">
+          <Banner label="Second" />
+        </MapView>
+      </ServicesProvider>,
+    );
+    await settle();
+    const dismiss = screen.getAllByRole("button", { name: "Dismiss" });
+    dismiss[1]?.focus();
+    fireEvent.click(dismiss[1] as HTMLElement);
+    expect(document.activeElement).toBe(screen.getByTestId("two"));
+    // Focus the first message from the page, not from the second map.
+    (document.activeElement as HTMLElement).blur();
+    dismiss[0]?.focus();
+    fireEvent.click(dismiss[0] as HTMLElement);
+    expect(document.activeElement).toBe(screen.getByTestId("one"));
   });
 });

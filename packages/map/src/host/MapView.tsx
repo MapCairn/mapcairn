@@ -23,6 +23,7 @@ import {
   useRef,
 } from "react";
 import { useMessages, usePreferences } from "../services";
+import { StatusMessageFocusProvider } from "../ui/StatusMessage";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { MapContext, type MapContextValue } from "./MapContext";
 import * as styles from "./MapView.css";
@@ -341,5 +342,11 @@ export function MapView({
 
   const content = chrome ? chrome(region) : region;
 
-  return <MapContext.Provider value={map}>{content}</MapContext.Provider>;
+  return (
+    <MapContext.Provider value={map}>
+      <StatusMessageFocusProvider fallback={map.focusMap}>
+        {content}
+      </StatusMessageFocusProvider>
+    </MapContext.Provider>
+  );
 }

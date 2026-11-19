@@ -22,12 +22,10 @@ import {
   statusIcon,
   statusMessage,
 } from "./StatusMessage.css";
+import { useStatusMessageFocusFallback } from "./StatusMessageFocus";
 
 /** The shortest time a message that dismisses itself stays on screen. */
 export const MIN_AUTO_DISMISS_MS = 6000;
-
-/** The map region, where focus goes when the place it came from is gone. */
-const MAP_HOST_SELECTOR = "[data-map-host]";
 
 const icons: Record<StatusMessageVariant, IconComponent> = {
   info: Info,
@@ -71,9 +69,10 @@ export interface StatusMessageProps
  *
  * When the message goes away while focus is inside it (Dismiss, or an
  * action that ends the condition), focus returns to the element it came from,
- * or to the map region when that element is gone, cannot take focus or focus came from the page,
- * so a keyboard person keeps their place. Focus is left alone if it was
- * elsewhere.
+ * or to the stop a `StatusMessageFocusProvider` supplies (`MapView` supplies
+ * its map region) when that element is gone, cannot take focus or focus came
+ * from the page, so a keyboard person keeps their place. Without a provider
+ * focus is left where it is. Focus is left alone if it was elsewhere.
  *
  * Errors stay until dismissed. Other messages dismiss themselves after the
  * delay, and the countdown pauses while the pointer is over the message or
@@ -96,6 +95,8 @@ export function StatusMessage({
   const paused = hovered || focused;
   const dismissRef = useLatestRef(onDismiss);
   const focusInside = useRef(false);
+  const focusFallback = useStatusMessageFocusFallback();
+  const focusFallbackRef = useLatestRef(focusFallback);
   const cameFrom = useRef<HTMLElement | null>(null);
   const remaining = useRef(Math.max(autoDismissMs, MIN_AUTO_DISMISS_MS));
 
@@ -115,9 +116,9 @@ export function StatusMessage({
       if (origin && document.activeElement === origin) {
         return;
       }
-      document.querySelector<HTMLElement>(MAP_HOST_SELECTOR)?.focus();
+      focusFallbackRef.current?.();
     },
-    [],
+    [focusFallbackRef],
   );
 
   useEffect(() => {
