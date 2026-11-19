@@ -14,6 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  changedLines,
   compareReports,
   generateReports,
   summariseMessages,
@@ -96,6 +97,23 @@ describe("compareReports", () => {
       new Map([["index", "a\nb\n"]]),
     ) as Comparison;
     expect(result.changed).toEqual([]);
+  });
+});
+
+describe("changedLines", () => {
+  it("shows the removed and the added lines", () => {
+    expect(changedLines("a\nb\nc\n", "a\nc\nd\n")).toEqual(["- b", "+ d"]);
+  });
+
+  it("is empty when only the line endings differ", () => {
+    expect(changedLines("a\r\nb\r\n", "a\nb\n")).toEqual([]);
+  });
+
+  it("stops at the limit and counts the rest", () => {
+    const many = Array.from({ length: 10 }, (_, i) => `line ${i}`).join("\n");
+    const result = changedLines("", many, 3) as string[];
+    expect(result).toHaveLength(4);
+    expect(result.at(-1)).toBe("... and 8 more lines");
   });
 });
 

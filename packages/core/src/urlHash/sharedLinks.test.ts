@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
+import { decodeShapes } from "../draw/share";
 import type { UrlStateValue } from "../ports/url";
 import { parseUrlHash, serialiseUrlHash } from "./index";
 
@@ -37,7 +38,13 @@ const SHARED_LINKS: ReadonlyArray<readonly [string, UrlStateValue]> = [
       },
     },
   ],
-  ["#shapes=gAbC.p_-9", { shapes: "gAbC.p_-9" }],
+  [
+    "#map=5/0/0&shapes=pg3v4Hvp2jO",
+    {
+      view: { center: { lat: 0, lng: 0 }, zoom: 5, bearing: 0 },
+      shapes: "pg3v4Hvp2jO",
+    },
+  ],
 ];
 
 describe("links people have already shared", () => {
@@ -52,4 +59,69 @@ describe("links people have already shared", () => {
       expect(parseUrlHash(serialiseUrlHash(read))).toEqual(read);
     },
   );
+});
+
+/**
+ * Output of `encodeShapes`, written once from the code as it stood and kept
+ * as literals, with what `decodeShapes` must still return for it. A change to
+ * the shape encoding that breaks one of these breaks links already shared.
+ */
+const SHARED_SHAPES: ReadonlyArray<readonly [string, string, unknown]> = [
+  [
+    "point",
+    "pg3v4Hvp2jO",
+    [{ kind: "point", vertices: [{ lat: 40.7128, lng: -74.006 }] }],
+  ],
+  [
+    "line",
+    "lggs6Jv9Yw-Bw-Bv-Bw-B",
+    [
+      {
+        kind: "line",
+        vertices: [
+          { lat: 51.5072, lng: -0.1276 },
+          { lat: 51.5172, lng: -0.1176 },
+          { lat: 51.5072, lng: -0.1076 },
+        ],
+      },
+    ],
+  ],
+  [
+    "polygon",
+    "g4pmqJotrOAw-Bw-Bnf",
+    [
+      {
+        kind: "polygon",
+        vertices: [
+          { lat: 48.8566, lng: 2.3522 },
+          { lat: 48.8566, lng: 2.3622 },
+          { lat: 48.8666, lng: 2.3572 },
+        ],
+      },
+    ],
+  ],
+  [
+    "circle",
+    "czr8H843gH8uB",
+    [
+      {
+        kind: "circle",
+        vertices: [{ lat: -1.2921, lng: 36.8219 }],
+        radiusMetres: 750,
+      },
+    ],
+  ],
+];
+
+describe("shapes in links people have already shared", () => {
+  it.each(SHARED_SHAPES)("still decodes a %s", (_kind, text, expected) => {
+    expect(decodeShapes(text)).toEqual(expected);
+  });
+
+  it("still decodes several shapes in one link", () => {
+    const text = SHARED_SHAPES.map(([, part]) => part).join(".");
+    expect(decodeShapes(text)).toEqual(
+      SHARED_SHAPES.flatMap(([, , shapes]) => shapes as unknown[]),
+    );
+  });
 });

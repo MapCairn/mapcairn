@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { entryPointsOf } from "./buildPackage.mjs";
+import { entryPointsOf, ROLLUP_COMPILER_OPTIONS } from "./buildPackage.mjs";
 import { SDK_BUILD_ORDER } from "./buildSdk.mjs";
 import { isEntryPoint } from "./entryPoint.mjs";
 
@@ -95,14 +95,7 @@ export async function generateReports(folder) {
           mainEntryPointFilePath: declaration,
           compiler: {
             overrideTsconfig: {
-              compilerOptions: {
-                target: "ES2022",
-                module: "ESNext",
-                moduleResolution: "Bundler",
-                skipLibCheck: true,
-                strict: true,
-                lib: ["ES2022", "DOM", "DOM.Iterable"],
-              },
+              compilerOptions: ROLLUP_COMPILER_OPTIONS,
             },
           },
           apiReport: {
@@ -228,6 +221,34 @@ export function summariseMessages(messages) {
   return counts;
 }
 
+/** The most changed lines `changedLines` returns, so a log stays short. */
+const MAX_CHANGED_LINES = 40;
+
+/**
+ * The lines that differ between two reports, as `-` for a line only in the
+ * committed report and `+` for one only in the new one. A line is matched by
+ * its text, so a moved line shows nothing; the report is sorted, so a real
+ * change shows. The list is cut at `limit` with a count of the rest.
+ *
+ * @param {string} committed
+ * @param {string} generated
+ * @param {number} [limit]
+ * @returns {string[]}
+ */
+export function changedLines(committed, generated, limit = MAX_CHANGED_LINES) {
+  const before = normalised(committed).split("\n");
+  const after = normalised(generated).split("\n");
+  const kept = new Set(before);
+  const present = new Set(after);
+  const lines = [
+    ...before.filter((line) => !present.has(line)).map((l) => `- ${l}`),
+    ...after.filter((line) => !kept.has(line)).map((l) => `+ ${l}`),
+  ];
+  return lines.length > limit
+    ? [...lines.slice(0, limit), `... and ${lines.length - limit} more lines`]
+    : lines;
+}
+
 /**
  * Prints the messages of one package and a count of each kind. In a GitHub
  * Actions run the counts also become one warning annotation, so they show on
@@ -287,7 +308,15 @@ export async function run(mode, verbose = false) {
     ]) {
       for (const file of files) {
         clean = false;
+        const target = path.join(folder, REPORT_FOLDER, file);
         console.error(`packages/${name}/${REPORT_FOLDER}/${file}: ${kind}.`);
+        if (files === changed) {
+          const lines = changedLines(
+            readFileSync(target, "utf8"),
+            reports.get(file.slice(0, -REPORT_SUFFIX.length)) ?? "",
+          );
+          console.error(lines.join("\n"));
+        }
       }
     }
   }

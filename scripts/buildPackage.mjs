@@ -18,6 +18,19 @@ export const SOURCE_CONDITION = "@mapcairn/source";
 /** The stamp `buildSdk.mjs` compares with the sources, written last. */
 export const STAMP_FILE = ".built";
 
+/**
+ * The compiler options API Extractor reads declarations with, for the rollup
+ * here and for the reports in `apiReports.mjs`.
+ */
+export const ROLLUP_COMPILER_OPTIONS = {
+  target: "ES2022",
+  module: "ESNext",
+  moduleResolution: "Bundler",
+  skipLibCheck: true,
+  strict: true,
+  lib: ["ES2022", "DOM", "DOM.Iterable"],
+};
+
 /** Where the compiler leaves declarations before they are rolled up. */
 const DECLARATION_FOLDER = ".declarations";
 
@@ -193,14 +206,7 @@ async function rollUpDeclarations(folder, name, source, packageJsonFullPath) {
       mainEntryPointFilePath: path.join("<projectFolder>", entry),
       compiler: {
         overrideTsconfig: {
-          compilerOptions: {
-            target: "ES2022",
-            module: "ESNext",
-            moduleResolution: "Bundler",
-            skipLibCheck: true,
-            strict: true,
-            lib: ["ES2022", "DOM", "DOM.Iterable"],
-          },
+          compilerOptions: ROLLUP_COMPILER_OPTIONS,
         },
       },
       apiReport: { enabled: false },
