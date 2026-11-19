@@ -9,6 +9,7 @@ import { X } from "lucide-react";
 import { type Ref, useId } from "react";
 import { useMessages } from "../services";
 import { IconButton } from "../ui/IconButton";
+import { Isolate } from "../ui/Isolate";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { FeatureGlyph } from "./FeatureGlyph";
 import { featureTitle } from "./featureTitle";
@@ -105,7 +106,9 @@ export function FeatureChoices({
                   />
                 ) : null}
                 <span className={styles.rowText}>
-                  <span className={styles.rowTitle}>{title}</span>
+                  <span className={styles.rowTitle}>
+                    <Isolate>{title}</Isolate>
+                  </span>
                   <span className={styles.rowSecondary}>
                     {resolveText(messages, definition.name)}
                   </span>

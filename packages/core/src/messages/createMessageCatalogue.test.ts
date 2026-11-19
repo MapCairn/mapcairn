@@ -26,6 +26,8 @@ runMessageCatalogueContract("createMessageCatalogue", {
       EN_GB_CATALOGUE,
       numberingSystem === undefined ? {} : { numberingSystem },
     ),
+  createIsolating: (language, options) =>
+    createMessageCatalogue(language, EN_GB_CATALOGUE, EN_GB_CATALOGUE, options),
 });
 
 describe("createMessageCatalogue numbering", () => {
@@ -193,5 +195,60 @@ describe("createMessageCatalogue", () => {
       expect.stringContaining("settings.title"),
     );
     warn.mockRestore();
+  });
+});
+
+describe("createMessageCatalogue parameter isolation", () => {
+  const FSI = "\u2068";
+  const PDI = "\u2069";
+  const build = (language: string, options?: { isolateParameters?: boolean }) =>
+    createMessageCatalogue(language, EN_GB_CATALOGUE, EN_GB_CATALOGUE, options);
+
+  it("leaves text parameters as they are in a left-to-right language", () => {
+    expect(
+      build("en-GB").t("announce.pinDropped", { position: "-26.2, 28.0" }),
+    ).toBe("Pin dropped at -26.2, 28.0");
+  });
+
+  it("isolates text parameters in a right-to-left language, so a name or a coordinate cannot reorder the sentence", () => {
+    expect(
+      build("ar").t("announce.pinDropped", { position: "-26.2, 28.0" }),
+    ).toBe(`Pin dropped at ${FSI}-26.2, 28.0${PDI}`);
+  });
+
+  it("does not isolate numbers, which already follow their own digits", () => {
+    expect(build("ar").plural("units.metre", { count: 5 })).not.toContain(FSI);
+  });
+
+  it("isolates each item of a list, then joins them", () => {
+    const text = build("ar").t("announce.layersDidNotAnswer", {
+      names: ["Rain", "Fire"],
+    });
+    expect(text.split(FSI).length - 1).toBe(2);
+    expect(text).toContain(`${FSI}Rain${PDI}`);
+  });
+
+  it("follows the option over the language's direction", () => {
+    expect(
+      build("en-GB", { isolateParameters: true }).t("announce.pinDropped", {
+        position: "x",
+      }),
+    ).toBe(`Pin dropped at ${FSI}x${PDI}`);
+    expect(
+      build("ar", { isolateParameters: false }).t("announce.pinDropped", {
+        position: "x",
+      }),
+    ).toBe("Pin dropped at x");
+  });
+
+  it("isolates in plural forms too", () => {
+    const records = {
+      ...EN_GB_CATALOGUE,
+      "units.metre": "{count} metre of {name}|{count} metres of {name}",
+    };
+    const catalogue = createMessageCatalogue("ar", records, records);
+    expect(
+      catalogue.plural("units.metre", { count: 2, name: "p" } as never),
+    ).toContain(`${FSI}p${PDI}`);
   });
 });

@@ -2,6 +2,8 @@
 // Copyright MapCairn contributors
 import { formatDay, formatLocale, formatNumber } from "../format/format";
 import type { MessageCatalogue, MessageKey } from "../ports/messages";
+import { isolate } from "./isolate";
+import { languageDirection } from "./languageDirection";
 import { pluralFormsOf } from "./pluralForms";
 
 /** Optional controls for host translations and the fallback record. */
@@ -17,6 +19,24 @@ export interface CreateMessageCatalogueOptions {
    * letters or digits, such as "latn") is ignored with one `console.warn`.
    */
   readonly numberingSystem?: string;
+  /**
+   * The reading direction of the language, for a host that sets it apart from
+   * what `Intl` infers from the tag (the `direction` of its `LanguageOption`).
+   * Left out, it comes from `languageDirection(language)`. It decides the
+   * default of `isolateParameters`.
+   */
+  readonly direction?: "ltr" | "rtl";
+  /**
+   * Whether to wrap each text parameter, and each item of a list, in a Unicode
+   * first-strong isolate, so a place name, a coordinate or a distance cannot
+   * reorder the sentence around it. `list` isolates its items too. Left out,
+   * it is on when `direction` (or, without it, the language) reads right to
+   * left and off otherwise, which keeps every string plain. The marks are
+   * invisible and sit in the text a catalogue returns, so copy a value from
+   * its source, not from a message, and strip them (U+2066 to U+2069) from the
+   * text before an exact-name assertion in a host's tests.
+   */
+  readonly isolateParameters?: boolean;
 }
 
 /** Matches a `{name}` placeholder in a catalogue string. */
@@ -25,15 +45,18 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 /**
  * Substitutes every `{name}` placeholder in `template` from `params`. A
  * number and a `Date` are formatted for `locale`, the language with its
- * numbering system; a list of strings is formatted for `language`. A
- * placeholder with no value is left as written.
+ * numbering system; a list of strings is formatted for `language`. Text and
+ * list items are isolated when `isolating`. A placeholder with no value is
+ * left as written.
  */
 function substitute(
   template: string,
   params: Readonly<Record<string, unknown>>,
   language: string,
   locale: string,
+  isolating: boolean,
 ): string {
+  const wrap = isolating ? isolate : (text: string) => text;
   return template.replace(PLACEHOLDER, (whole, name: string) => {
     const value = params[name];
     if (value === undefined) {
@@ -47,10 +70,10 @@ function substitute(
     }
     if (Array.isArray(value)) {
       return new Intl.ListFormat(language, { type: "conjunction" }).format(
-        value,
+        value.map((item) => wrap(String(item))),
       );
     }
-    return String(value);
+    return wrap(String(value));
   });
 }
 
@@ -117,6 +140,10 @@ export function createMessageCatalogue(
     options.numberingSystem,
   );
   const locale = formatLocale({ language, numberingSystem });
+  const isolating =
+    options.isolateParameters ??
+    (options.direction ?? languageDirection(language)) === "rtl";
+  const wrap = isolating ? isolate : (text: string) => text;
 
   function resolve(key: MessageKey): {
     readonly template: string;
@@ -142,7 +169,13 @@ export function createMessageCatalogue(
       ? { layerTemplates: options.layerTemplates }
       : {}),
     t(key, params) {
-      return substitute(resolve(key).template, params, language, locale);
+      return substitute(
+        resolve(key).template,
+        params,
+        language,
+        locale,
+        isolating,
+      );
     },
     plural(key, params) {
       const { count } = params;
@@ -152,10 +185,10 @@ export function createMessageCatalogue(
         resolved.language,
         count,
       );
-      return substitute(form, params, language, locale);
+      return substitute(form, params, language, locale, isolating);
     },
     list(items, type = "conjunction") {
-      return new Intl.ListFormat(language, { type }).format(items);
+      return new Intl.ListFormat(language, { type }).format(items.map(wrap));
     },
   };
 }

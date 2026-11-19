@@ -18,6 +18,7 @@ import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { IconButton } from "../../ui/IconButton";
+import { Isolate } from "../../ui/Isolate";
 import { Surface } from "../../ui/Surface";
 import * as styles from "./SearchPill.css";
 import { MIN_SEARCH_LENGTH, type SearchState, useSearch } from "./useSearch";
@@ -344,10 +345,12 @@ export function SearchPill({
               onClick={() => select(result)}
             >
               <span className={styles.optionText}>
-                <span className={styles.optionLabel}>{result.label}</span>
+                <span className={styles.optionLabel}>
+                  <Isolate>{result.label}</Isolate>
+                </span>
                 {result.secondaryLabel ? (
                   <span className={styles.optionSecondary}>
-                    {result.secondaryLabel}
+                    <Isolate>{result.secondaryLabel}</Isolate>
                   </span>
                 ) : null}
               </span>

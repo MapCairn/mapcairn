@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import type { Locator } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import {
   controlsOverFeature,
@@ -192,5 +193,114 @@ test.describe("right to left", () => {
     await expect
       .poll(() => chevron.evaluate((svg) => getComputedStyle(svg).transform))
       .toBe("matrix(-1, 0, 0, 1, 0, 0)");
+  });
+
+  /**
+   * Whether `first` is drawn to the left of `second`, both being words in one
+   * text node under `container`, which is how the pair is written in English
+   * (`12 Main Street` reads "12" first). In a right-to-left paragraph a run
+   * that is not isolated is reordered around its neighbours, so this fails.
+   */
+  async function drawnBefore(
+    container: Locator,
+    first: string,
+    second: string,
+  ): Promise<boolean> {
+    return container.evaluate(
+      (element, { a, b }) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const text = node.textContent ?? "";
+          const start = text.indexOf(a);
+          const after = text.indexOf(b, start + a.length);
+          if (start < 0 || after < 0) {
+            continue;
+          }
+          const left = (from: number, to: number) => {
+            const range = document.createRange();
+            range.setStart(node, from);
+            range.setEnd(node, to);
+            return range.getBoundingClientRect().left;
+          };
+          return left(start, start + a.length) < left(after, after + b.length);
+        }
+        throw new Error(`No text holds "${a}" then "${b}".`);
+      },
+      { a: first, b: second },
+    );
+  }
+
+  test("a pin's coordinates read latitude then longitude, left to right", async ({
+    mapPage,
+  }) => {
+    await mapPage.goto("#map=10.00/-26.20000/28.04000");
+    const box = await mapPage.host.boundingBox();
+    if (!box) {
+      throw new Error("The map has no box.");
+    }
+    await mapPage.longPress(box.width / 2 + 60, box.height / 2 - 40);
+    await expect(mapPage.pinCard).toBeVisible();
+    await expect(mapPage.pinCoordinates).toContainText(/-26\.\d{5}, 28\.\d{5}/);
+    expect(await drawnBefore(mapPage.pinCoordinates, "-26", "28.")).toBe(true);
+  });
+
+  test("the scale label reads its number before its unit", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto("#map=11/-33.92/18.42");
+    const scale = page.locator('[data-chrome="scale-bar"]');
+    await expect(scale).toContainText(/\d+ (m|km)/);
+    const text = (await scale.textContent()) ?? "";
+    const [number, unit] = text.trim().split(" ");
+    expect(await drawnBefore(scale, number ?? "", unit ?? "")).toBe(true);
+  });
+
+  test("the cursor coordinates read latitude then longitude", async ({
+    page,
+    mapPage,
+    isMobile,
+  }) => {
+    test.skip(
+      isMobile,
+      "The readout shows the pointer position on a fine pointer only.",
+    );
+    await mapPage.goto("#map=11/-33.92/18.42");
+    await page.mouse.move(600, 400);
+    await page.mouse.move(700, 450, { steps: 5 });
+    const coordinates = page.locator('[data-chrome="cursor-coordinates"]');
+    await expect(coordinates).toContainText(/-?\d+\.\d{5}, -?\d+\.\d{5}/);
+    const text = (await coordinates.textContent()) ?? "";
+    const [latitude, longitude] = text.split(/,\s*/);
+    expect(
+      await drawnBefore(
+        coordinates,
+        latitude ?? "",
+        (longitude ?? "").slice(0, 5),
+      ),
+    ).toBe(true);
+  });
+
+  test("a place name keeps its own order in the search results", async ({
+    page,
+    mapPage,
+  }) => {
+    await scriptSearch(page, {
+      results: [
+        {
+          id: "cairo",
+          label: "12 Main Street, Cairo",
+          secondaryLabel: "Cairo Governorate, Egypt",
+          centre: { lat: 30.0444, lng: 31.2357 },
+        },
+      ],
+    });
+    await mapPage.goto();
+    await mapPage.search("cairo");
+    const option = mapPage.searchOptions.first();
+    await expect(option).toBeVisible();
+    expect(await drawnBefore(option, "12", "Main")).toBe(true);
+    expect(await drawnBefore(option, "Main", "Cairo")).toBe(true);
+    expect(await drawnBefore(option, "Cairo Governorate", "Egypt")).toBe(true);
   });
 });

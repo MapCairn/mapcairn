@@ -6,6 +6,7 @@ export * from "./ControlGroup";
 export * from "./EmptyState";
 export * from "./Icon";
 export * from "./IconButton";
+export * from "./Isolate";
 export * from "./ListRow";
 export * from "./LiveRegion";
 export * from "./SegmentedControl";

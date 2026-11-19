@@ -204,6 +204,9 @@ describe("a list with identified features", () => {
     expect(screen.getByTestId("feature-card-heading")).toHaveTextContent(
       "Gauge 5",
     );
+    expect(
+      screen.getByTestId("feature-card-heading").querySelector("bdi"),
+    ).toHaveTextContent("Gauge 5");
     fireEvent.click(screen.getByTestId("feature-card-back"));
     expect(screen.getAllByTestId("feature-choices-row")).toHaveLength(2);
   });

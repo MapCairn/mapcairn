@@ -197,6 +197,9 @@ describe("MeasureToolbar", () => {
       act(() => measureApi.addPoint(ORIGIN));
       act(() => measureApi.addPoint(ONE_DEGREE_EAST));
       expect(screen.getByTestId("measure-readout").textContent).toBe("111 km");
+      expect(
+        screen.getByTestId("measure-readout").querySelector("bdi"),
+      ).toHaveTextContent("111 km");
     });
 
     it("shows the total in imperial units", () => {

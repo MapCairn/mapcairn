@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { useMessages } from "../../services";
 import { Button } from "../../ui/Button";
 import { IconButton } from "../../ui/IconButton";
+import { Isolate } from "../../ui/Isolate";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { Surface } from "../../ui/Surface";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
@@ -80,7 +81,9 @@ export function MeasureToolbar({
           />
           <p className={styles.readout}>
             <VisuallyHidden>{t("tools.measure.total", {})} </VisuallyHidden>
-            <span data-testid="measure-readout">{readout}</span>
+            <span data-testid="measure-readout">
+              <Isolate>{readout}</Isolate>
+            </span>
           </p>
         </div>
         <div className={styles.row}>

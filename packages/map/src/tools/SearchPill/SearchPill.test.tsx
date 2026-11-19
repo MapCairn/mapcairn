@@ -341,6 +341,21 @@ describe("SearchPill", () => {
     });
   });
 
+  describe("right to left", () => {
+    it("isolates each place name, so a name in another script keeps its order", async () => {
+      const view = setup();
+      view.services.fakes.search.setDefaultResults([CAPE_TOWN]);
+      input().focus();
+      await search("cap");
+      const [option] = options();
+      const names = option?.querySelectorAll("bdi") ?? [];
+      expect([...names].map((name) => name.textContent)).toEqual([
+        "Cape Town",
+        "Western Cape, South Africa",
+      ]);
+    });
+  });
+
   describe("keyboard", () => {
     async function withResults() {
       const view = setup();

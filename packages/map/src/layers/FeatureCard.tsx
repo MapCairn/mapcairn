@@ -15,6 +15,7 @@ import { useMessages, useResolveText } from "../services";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
+import { Isolate } from "../ui/Isolate";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { FeatureGlyph, featureClass } from "./FeatureGlyph";
 import * as styles from "./Layers.css";
@@ -110,7 +111,7 @@ export function FeatureCard({
           className={styles.cardHeading}
           data-testid="feature-card-heading"
         >
-          {title}
+          <Isolate>{title}</Isolate>
         </Heading>
         <IconButton
           label={t("layers.card.close", {})}
@@ -134,7 +135,7 @@ export function FeatureCard({
         // Lines come from the definition in a fixed order.
         // biome-ignore lint/suspicious/noArrayIndexKey: the template order never changes while the card is open.
         <p key={index} className={styles.cardLine}>
-          {line}
+          <Isolate>{line}</Isolate>
         </p>
       ))}
       {link && card.link ? (
