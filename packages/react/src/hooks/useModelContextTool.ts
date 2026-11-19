@@ -29,7 +29,14 @@ export interface ModelContextToolDefinition<TInput = unknown> {
   ) => Promise<ModelContextToolResult> | ModelContextToolResult;
 }
 
-interface ModelContextProvider {
+/**
+ * WebMCP's tool-registration entry point, the value of `document.modelContext`
+ * (Chrome origin trial, see https://webmachinelearning.github.io/webmcp/).
+ * @remarks The SDK does not add `modelContext` to the global `Document` type,
+ *   because a global augmentation does not survive the built declarations.
+ *   Type a stub or a read with this interface instead.
+ */
+export interface ModelContextProvider {
   registerTool: (
     tool: {
       name: string;
@@ -41,20 +48,21 @@ interface ModelContextProvider {
   ) => Promise<void>;
 }
 
-declare global {
-  interface Document {
-    /**
-     * WebMCP's tool-registration entry point (Chrome origin trial, see
-     * https://webmachinelearning.github.io/webmcp/). Undefined in browsers
-     * without WebMCP support, or when the `tools` Permissions-Policy denies it.
-     */
-    modelContext?: ModelContextProvider;
+/**
+ * The document's WebMCP entry point. It is undefined in browsers without
+ * WebMCP support, when the `tools` Permissions-Policy denies it, and in SSR.
+ */
+function modelContextOf(): ModelContextProvider | undefined {
+  if (typeof document === "undefined") {
+    return undefined;
   }
+  const provider: unknown = Reflect.get(document, "modelContext");
+  return provider ? (provider as ModelContextProvider) : undefined;
 }
 
 /** Whether the current document exposes the WebMCP `document.modelContext` API. */
 export function isModelContextSupported(): boolean {
-  return typeof document !== "undefined" && !!document.modelContext;
+  return modelContextOf() !== undefined;
 }
 
 /**
@@ -86,7 +94,7 @@ export function useModelContextTool<TInput = unknown>(
   // biome-ignore lint/correctness/useExhaustiveDependencies: definition?.name is a re-registration trigger; description/inputSchema are intentionally captured from this closure at registration time rather than kept live, so `definition` itself isn't a live dependency here; only `execute` is (via executeRef)
   useEffect(() => {
     const currentDefinition = definition;
-    const modelContext = document.modelContext;
+    const modelContext = modelContextOf();
     if (!currentDefinition || !modelContext) {
       return;
     }

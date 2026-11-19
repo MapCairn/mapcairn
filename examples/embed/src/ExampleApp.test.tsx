@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { BASEMAPS } from "@mapcairn/core";
-import type { ModelContextToolDefinition } from "@mapcairn/react";
+import type { ModelContextProvider } from "@mapcairn/react";
 import {
   act,
   cleanup,
@@ -133,12 +133,14 @@ describe("ExampleApp", () => {
 
   it("registers a WebMCP tool that turns the layer on", async () => {
     const tools = new Map<string, () => Promise<unknown>>();
-    // The built declarations of `@mapcairn/react` do not add `modelContext` to
-    // `Document`, so the test sets it by name.
-    Reflect.set(document, "modelContext", {
-      registerTool: async (tool: ModelContextToolDefinition) => {
+    const provider: ModelContextProvider = {
+      registerTool: async (tool) => {
         tools.set(tool.name, async () => tool.execute({}));
       },
+    };
+    Object.defineProperty(document, "modelContext", {
+      configurable: true,
+      value: provider,
     });
     try {
       render(<ExampleApp />);
