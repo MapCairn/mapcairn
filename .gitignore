@@ -5,6 +5,8 @@ dist
 packages/web/build/
 packages/web/.react-router/
 coverage
+.cloudflare
+# Left by checkouts from before the move from Wrangler to cf.
 .wrangler
 *.log
 .tmp-*

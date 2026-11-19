@@ -33,7 +33,7 @@ jobs:
           version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
-  # The suite runs on one worker per job: the `wrangler dev` server behind the
+  # The suite runs on one worker per job: the `vite preview` server behind the
   # tests crashes under parallel load (see workers in packages/web/playwright.config.ts).
   # Sharding gets the speed back by giving each shard its own runner and server.
   shard:

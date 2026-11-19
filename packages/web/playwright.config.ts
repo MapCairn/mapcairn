@@ -95,7 +95,7 @@ export default defineConfig<MapCairnOptions>({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // The `wrangler dev` preview server backing `webServer` below is a single
+  // The `vite preview` server backing `webServer` below is a single
   // local process, not Cloudflare's real distributed edge; running many
   // basemap-switching tests concurrently (each spinning up its own MapLibre
   // GL instance, which fetches its own worker script) has been observed to

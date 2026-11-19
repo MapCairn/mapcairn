@@ -5,7 +5,7 @@ import { SECURITY_HEADERS } from "../src/constants/securityHeaders";
 import { PREVIOUS_HOSTNAME, SITE_URL } from "../src/constants/siteConfig";
 
 const requestHandler = createRequestHandler(
-  () => import("../build/server/index.js"),
+  () => import("virtual:react-router/server-build"),
   import.meta.env?.MODE ?? "production",
 );
 
@@ -38,7 +38,7 @@ function redirectFromPreviousHostname(request: Request): Response | null {
  *   `entry.server.tsx`'s `onError` logs render errors, via `console.error`
  *   before this ever sees them. This only fires
  *   for a failure outside that render lifecycle entirely (e.g. the dynamic
- *   `import("../build/server/index.js")` itself failing), where an
+ *   `import("virtual:react-router/server-build")` itself failing), where an
  *   unhandled throw would otherwise surface as a bare Workers runtime
  *   exception instead of a logged error and a response.
  */

@@ -17,7 +17,7 @@ updates:
       # goes into the first group it matches, so these come before the catch-all.
       npm-critical:
         patterns:
-          - "wrangler"
+          - "cf"
           - "vite"
           - "react-router"
           - "zod"

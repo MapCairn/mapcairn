@@ -59,13 +59,13 @@ What is missing is a named, trusted second person with administrator access to t
 - A member of the `MapCairn` GitHub organisation with the Admin role on the `mapcairn` repository, so they can merge, triage, change the ruleset and publish advisories. They are not an organisation owner. Before the access is granted, the organisation's member privileges are checked so that members cannot delete or transfer repositories or change their visibility.
 - Once publishing starts, write access to the `mapcairn` packages on npm through a team.
 
-What a second person does not need is the Cloudflare account or the domain. The repository is the project: the code, the issues, the plans and the decisions are all in it, and the deployment is described by `wrangler.jsonc`. If the maintainer were unavailable, the second administrator could host the site themselves from the repository, on their own Cloudflare account and hostname.
+What a second person does not need is the Cloudflare account or the domain. The repository is the project: the code, the issues, the plans and the decisions are all in it, and the deployment is described by `packages/web/cloudflare.config.ts`. If the maintainer were unavailable, the second administrator could host the site themselves from the repository, on their own Cloudflare account and hostname.
 
 Credentials are never recorded in the repository. The access is granted to the person's own account and recorded here by role.
 
 ### What reduces the risk today
 
-The code, the plans and the decisions are public, the licence lets anyone fork and run it, the site has no database or accounts to migrate, and the deployment is a Cloudflare Worker described by `wrangler.jsonc` in the repository. A fork can be deployed from the repository alone.
+The code, the plans and the decisions are public, the licence lets anyone fork and run it, the site has no database or accounts to migrate, and the deployment is a Cloudflare Worker described by `packages/web/cloudflare.config.ts` in the repository. A fork can be deployed from the repository alone.
 
 ### How you can help
 

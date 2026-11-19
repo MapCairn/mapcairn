@@ -57,13 +57,20 @@ function caseRoot(): string {
   return root;
 }
 
+/**
+ * Where `cf build` puts the Worker's static assets (`assets`) and its bundle
+ * (`bundle`). The `v0` in the path is the Build Output version, which the
+ * script does not depend on.
+ */
+const WORKER_OUTPUT = ".cloudflare/output/v0/workers/default";
+
 /** Makes a fake package whose build output holds the given files. */
 function fakeBuild(files: Record<string, string>): string {
   const root = caseRoot();
-  mkdirSync(join(root, "build/client/assets"), { recursive: true });
-  mkdirSync(join(root, "build/server"), { recursive: true });
+  mkdirSync(join(root, WORKER_OUTPUT, "assets/assets"), { recursive: true });
+  mkdirSync(join(root, WORKER_OUTPUT, "bundle"), { recursive: true });
   for (const [path, content] of Object.entries(files)) {
-    writeFileSync(join(root, "build", path), content);
+    writeFileSync(join(root, WORKER_OUTPUT, path), content);
   }
   return root;
 }
@@ -92,8 +99,8 @@ const SEAM_NEEDLES = SEAM_NEEDLE_LIST.join(" ");
 describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
   it("passes for a build without the seam", () => {
     const root = fakeBuild({
-      "client/assets/app.js": "console.log('hello')",
-      "server/index.js": "export default {}",
+      "assets/assets/app.js": "console.log('hello')",
+      "bundle/index.js": "export default {}",
     });
     const result = run(root);
     expect(result.status).toBe(0);
@@ -102,8 +109,8 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("fails and names the file when the marker is in the client build", () => {
     const root = fakeBuild({
-      "client/assets/app.js": 'console.info("MAPCAIRN_TEST_SEAM_MARKER")',
-      "server/index.js": "export default {}",
+      "assets/assets/app.js": 'console.info("MAPCAIRN_TEST_SEAM_MARKER")',
+      "bundle/index.js": "export default {}",
     });
     const result = run(root);
     expect(result.status).toBe(1);
@@ -113,8 +120,8 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("fails when the window property is in the server build", () => {
     const root = fakeBuild({
-      "client/assets/app.js": "",
-      "server/index.js": "window.__MAPCAIRN_TEST_SERVICES__",
+      "assets/assets/app.js": "",
+      "bundle/index.js": "window.__MAPCAIRN_TEST_SERVICES__",
     });
     const result = run(root);
     expect(result.status).toBe(1);
@@ -139,7 +146,7 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
       languagesProperty as string,
       DESIGN_GUIDE_MARKER,
     ]) {
-      const root = fakeBuild({ "client/assets/app.js": marker });
+      const root = fakeBuild({ "assets/assets/app.js": marker });
       const result = run(root);
       expect(result.status, marker).toBe(1);
       expect(result.stderr).toContain(marker);
@@ -155,8 +162,8 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("fails when the design guide marker is in the server build", () => {
     const root = fakeBuild({
-      "client/assets/app.js": "",
-      "server/index.js": '"data-design-guide":"MAPCAIRN_DESIGN_GUIDE_MARKER"',
+      "assets/assets/app.js": "",
+      "bundle/index.js": '"data-design-guide":"MAPCAIRN_DESIGN_GUIDE_MARKER"',
     });
     const result = run(root);
     expect(result.status).toBe(1);
@@ -166,8 +173,8 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("with --expect-present, passes when the seam and the design guide are both there", () => {
     const root = fakeBuild({
-      "client/assets/app.js": SEAM_NEEDLES,
-      "client/assets/design.js": '"MAPCAIRN_DESIGN_GUIDE_MARKER"',
+      "assets/assets/app.js": SEAM_NEEDLES,
+      "assets/assets/design.js": '"MAPCAIRN_DESIGN_GUIDE_MARKER"',
     });
     const result = run(root, "--expect-present");
     expect(result.status).toBe(0);
@@ -178,10 +185,10 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
   it("with --expect-present, fails when any one needle of the seam is missing, and names it", () => {
     for (const missing of SEAM_NEEDLE_LIST) {
       const root = fakeBuild({
-        "client/assets/app.js": SEAM_NEEDLE_LIST.filter(
+        "assets/assets/app.js": SEAM_NEEDLE_LIST.filter(
           (needle) => needle !== missing,
         ).join(" "),
-        "client/assets/design.js": '"MAPCAIRN_DESIGN_GUIDE_MARKER"',
+        "assets/assets/design.js": '"MAPCAIRN_DESIGN_GUIDE_MARKER"',
       });
       const result = run(root, "--expect-present");
       expect(result.status, missing).toBe(1);
@@ -191,7 +198,7 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("with --expect-present, fails when the seam is missing", () => {
     const root = fakeBuild({
-      "client/assets/design.js": '"MAPCAIRN_DESIGN_GUIDE_MARKER"',
+      "assets/assets/design.js": '"MAPCAIRN_DESIGN_GUIDE_MARKER"',
     });
     const result = run(root, "--expect-present");
     expect(result.status).toBe(1);
@@ -200,7 +207,7 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
 
   it("with --expect-present, fails when the design guide is missing", () => {
     const root = fakeBuild({
-      "client/assets/app.js": SEAM_NEEDLES,
+      "assets/assets/app.js": SEAM_NEEDLES,
     });
     const result = run(root, "--expect-present");
     expect(result.status).toBe(1);
