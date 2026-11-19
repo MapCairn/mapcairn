@@ -369,6 +369,24 @@ describe("useFeatureSelection when a layer leaves the catalogue", () => {
     expect(saidOfSelection()).toEqual([]);
   });
 
+  it("drops nothing when a refresh fails and the catalogue keeps its last list", async () => {
+    const view = setup();
+    await view.load(FEED, "a");
+    act(() => view.selection().toggle(ref(FEED, "a")));
+    const held = view.store?.getState();
+    announce.mockClear();
+    act(() =>
+      view.catalogue.setState({
+        status: "ready",
+        layers: SAMPLE_LAYERS,
+        skipped: [],
+        refresh: "failed",
+      }),
+    );
+    expect(view.store?.getState()).toBe(held);
+    expect(saidOfSelection()).toEqual([]);
+  });
+
   it("drops nothing at mount, whatever the store holds for a layer the catalogue lacks", () => {
     const store = new MemoryFeatureSelection();
     store.add([ref("never-listed", "a"), ref(FEED, "b")]);
