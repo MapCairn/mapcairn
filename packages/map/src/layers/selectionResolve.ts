@@ -186,3 +186,17 @@ export function reconcileSnapshots(
   }
   return sameSnapshots(previous, next) ? previous : next;
 }
+
+/**
+ * The references whose layer was in the catalogue's list `before` and is not
+ * in it `now`: the layers that were removed. A reference to a layer that was
+ * never in `before` is kept, because nothing was removed for it; it is a
+ * reference a store held before the list was known, or hydrated afterwards.
+ */
+export function refsOfRemovedLayers(
+  refs: readonly FeatureRef[],
+  before: ReadonlySet<string>,
+  now: ReadonlySet<string>,
+): readonly FeatureRef[] {
+  return refs.filter((ref) => before.has(ref.layerId) && !now.has(ref.layerId));
+}

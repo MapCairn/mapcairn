@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  type CatalogueState,
   createFakeServices,
   createFormatterRegistry,
   FakeLayerCatalogue,
@@ -49,15 +50,21 @@ const saidMessages = () => announce.mock.calls.map(([message]) => message);
 interface SetupOptions {
   readonly store?: MemoryFeatureSelection | null;
   readonly definitions?: readonly LayerDefinition[];
+  /** The state the catalogue is in at the first render, when it is not ready with `definitions`. */
+  readonly catalogueState?: CatalogueState;
   readonly formatters?: FormatterRegistry;
 }
 
 function setup({
   store = new MemoryFeatureSelection(),
   definitions = SAMPLE_LAYERS,
+  catalogueState,
   formatters,
 }: SetupOptions = {}) {
   const catalogue = new FakeLayerCatalogue(definitions);
+  if (catalogueState) {
+    catalogue.setState(catalogueState);
+  }
   const services = createFakeServices({
     layers: catalogue,
     selection: store ?? undefined,
@@ -278,20 +285,175 @@ describe("useFeatureSelection when layers turn off", () => {
     await waitFor(() => expect(view.statusOf(FEED)).toBe("ready"));
     expect(view.selection().entries[0]?.status).toBe("shown");
   });
+});
 
-  it("keeps a reference as not shown when its layer leaves the catalogue", async () => {
+describe("useFeatureSelection when a layer leaves the catalogue", () => {
+  const without = (...ids: string[]) =>
+    SAMPLE_LAYERS.filter((layer) => !ids.includes(layer.id));
+  /** What the selection said, apart from what `useDataLayers` says about the layers. */
+  const saidOfSelection = () =>
+    saidMessages().filter((text) => /selected\.$/.test(text));
+
+  it("drops the references to the layer that left, once, in one message with the new total", async () => {
+    const view = setup();
+    await view.load(FEED, "a", "b");
+    await view.load(ALERTS, "c");
+    act(() =>
+      view.selection().add([ref(FEED, "a"), ref(FEED, "b"), ref(ALERTS, "c")]),
+    );
+    announce.mockClear();
+    act(() => view.catalogue.setLayers(without(FEED)));
+    expect(view.store?.getState()).toEqual([ref(ALERTS, "c")]);
+    expect(view.selection().entries.map((entry) => entry.ref)).toEqual([
+      ref(ALERTS, "c"),
+    ]);
+    expect(saidOfSelection()).toEqual(["2 features removed. 1 selected."]);
+  });
+
+  it("changes the store once for the whole drop", async () => {
+    const view = setup();
+    await view.load(FEED, "a", "b");
+    act(() => view.selection().add([ref(FEED, "a"), ref(FEED, "b")]));
+    const listener = vi.fn();
+    view.store?.subscribe(listener);
+    act(() => view.catalogue.setLayers(without(FEED)));
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops the references to a layer that was off when it left", async () => {
     const view = setup();
     await view.load(FEED, "a");
     act(() => view.selection().toggle(ref(FEED, "a")));
+    act(() => view.result.current.layers.setEnabled(FEED, false));
+    expect(view.store?.getState()).toEqual([ref(FEED, "a")]);
+    act(() => view.catalogue.setLayers(without(FEED)));
+    expect(view.store?.getState()).toEqual([]);
+  });
+
+  it("drops the references of several layers that leave together in one message", async () => {
+    const view = setup();
+    await view.load(FEED, "a");
+    await view.load(ALERTS, "b");
+    act(() => view.selection().add([ref(FEED, "a"), ref(ALERTS, "b")]));
+    announce.mockClear();
+    act(() => view.catalogue.setLayers(without(FEED, ALERTS)));
+    expect(view.store?.getState()).toEqual([]);
+    expect(saidOfSelection()).toEqual(["2 features removed. 0 selected."]);
+  });
+
+  it("says nothing of its own when the layer that left had no selected references", async () => {
+    const view = setup();
+    await view.load(FEED, "a");
+    act(() => view.selection().toggle(ref(FEED, "a")));
+    announce.mockClear();
+    act(() => view.catalogue.setLayers(without(ALERTS)));
+    expect(view.store?.getState()).toEqual([ref(FEED, "a")]);
+    expect(saidOfSelection()).toEqual([]);
+  });
+
+  it("drops nothing when a refresh brings the same layers, or a changed definition", async () => {
+    const view = setup();
+    await view.load(FEED, "a");
+    act(() => view.selection().toggle(ref(FEED, "a")));
+    const held = view.store?.getState();
+    announce.mockClear();
+    act(() => view.catalogue.setLayers([...SAMPLE_LAYERS]));
     act(() =>
       view.catalogue.setLayers(
-        SAMPLE_LAYERS.filter((layer) => layer.id !== FEED),
+        SAMPLE_LAYERS.map((layer) =>
+          layer.id === FEED ? { ...layer, name: "Changed" } : layer,
+        ),
       ),
     );
-    expect(view.store?.getState()).toEqual([ref(FEED, "a")]);
-    expect(view.selection().entries).toEqual([
-      { status: "not-shown", ref: ref(FEED, "a") },
+    expect(view.store?.getState()).toBe(held);
+    expect(saidOfSelection()).toEqual([]);
+  });
+
+  it("drops nothing when a refresh fails and the catalogue keeps its last list", async () => {
+    const view = setup();
+    await view.load(FEED, "a");
+    act(() => view.selection().toggle(ref(FEED, "a")));
+    const held = view.store?.getState();
+    announce.mockClear();
+    act(() =>
+      view.catalogue.setState({
+        status: "ready",
+        layers: SAMPLE_LAYERS,
+        skipped: [],
+        refresh: "failed",
+      }),
+    );
+    expect(view.store?.getState()).toBe(held);
+    expect(saidOfSelection()).toEqual([]);
+  });
+
+  it("drops nothing at mount, whatever the store holds for a layer the catalogue lacks", () => {
+    const store = new MemoryFeatureSelection();
+    store.add([ref("never-listed", "a"), ref(FEED, "b")]);
+    const view = setup({ store });
+    expect(store.getState()).toEqual([
+      ref("never-listed", "a"),
+      ref(FEED, "b"),
     ]);
+    expect(view.selection().entries).toHaveLength(2);
+    expect(announce).not.toHaveBeenCalled();
+  });
+
+  it("drops nothing while the catalogue is loading, nor when its first list arrives", () => {
+    const store = new MemoryFeatureSelection();
+    store.add([ref("never-listed", "a"), ref(FEED, "b")]);
+    const view = setup({ store, catalogueState: { status: "loading" } });
+    expect(store.getState()).toHaveLength(2);
+    act(() => view.catalogue.setLayers(without(FEED)));
+    expect(store.getState()).toEqual([
+      ref("never-listed", "a"),
+      ref(FEED, "b"),
+    ]);
+    expect(saidOfSelection()).toEqual([]);
+  });
+
+  it("drops a reference to a layer that leaves a later list, after a first load", () => {
+    const store = new MemoryFeatureSelection();
+    store.add([ref(FEED, "b")]);
+    const view = setup({ store, catalogueState: { status: "loading" } });
+    act(() => view.catalogue.setLayers(SAMPLE_LAYERS));
+    expect(store.getState()).toEqual([ref(FEED, "b")]);
+    act(() => view.catalogue.setLayers(without(FEED)));
+    expect(store.getState()).toEqual([]);
+  });
+
+  it("drops nothing when the catalogue goes back to loading or fails, and compares the next list with the last ready one", () => {
+    const store = new MemoryFeatureSelection();
+    store.add([ref(FEED, "a")]);
+    const view = setup({ store });
+    act(() => view.catalogue.setState({ status: "loading" }));
+    act(() => view.catalogue.setState({ status: "failed", reason: "network" }));
+    expect(store.getState()).toEqual([ref(FEED, "a")]);
+    act(() => view.catalogue.setLayers(SAMPLE_LAYERS));
+    expect(store.getState()).toEqual([ref(FEED, "a")]);
+    act(() => view.catalogue.setState({ status: "loading" }));
+    act(() => view.catalogue.setLayers(without(FEED)));
+    expect(store.getState()).toEqual([]);
+  });
+
+  it("drops nothing for a reference the store hydrates after the layer has left", () => {
+    const view = setup();
+    act(() => view.catalogue.setLayers(without(FEED)));
+    act(() => view.store?.replaceExternally([ref(FEED, "a")]));
+    expect(view.store?.getState()).toEqual([ref(FEED, "a")]);
+    expect(saidOfSelection()).toEqual([]);
+  });
+
+  it("drops the references again when the layer comes back and leaves a second time", async () => {
+    const view = setup();
+    await view.load(FEED, "a");
+    act(() => view.selection().toggle(ref(FEED, "a")));
+    act(() => view.catalogue.setLayers(without(FEED)));
+    expect(view.store?.getState()).toEqual([]);
+    act(() => view.catalogue.setLayers(SAMPLE_LAYERS));
+    act(() => view.store?.replaceExternally([ref(FEED, "a")]));
+    act(() => view.catalogue.setLayers(without(FEED)));
+    expect(view.store?.getState()).toEqual([]);
   });
 });
 
