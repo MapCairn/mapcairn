@@ -63,7 +63,7 @@ export interface TileSourceRegistry {
 export interface DataLayerStoreHost {
   /** The map, when its style can take sources and layers; otherwise undefined. */
   readyMap(): MapLibreMap | undefined;
-  /** A layer was set or removed, so a picture taken of the map earlier may be out of date. */
+  /** A layer was set, drawn again or removed, so a picture taken of the map earlier may be out of date. */
   changed(): void;
   /** Follows the tile layers that are drawn. */
   readonly tileSources: TileSourceRegistry;
@@ -159,7 +159,8 @@ export class DataLayerStore {
 
   /**
    * Keeps a tile layer and draws it afresh when the style is ready, unless
-   * only its opacity changed: then no tile is requested again.
+   * only its opacity changed: then no tile is requested again, and the host is
+   * not told, because the layer set a queued picture shows is the same.
    */
   setTiles(id: string, overlay: MapTileOverlay): void {
     const previous = this.layers.get(id);
@@ -176,6 +177,7 @@ export class DataLayerStore {
       map.setPaintProperty(tilesId, "raster-opacity", overlay.opacity);
       return;
     }
+    this.host.changed();
     if (map) {
       this.draw(map, id);
     }
