@@ -58,7 +58,7 @@ export function stampTime(folder) {
  * @param {string} folder The package folder.
  * @returns {boolean}
  */
-function isStale(folder) {
+export function isStale(folder) {
   const stamp = stampTime(folder);
   return (
     stamp === undefined ||

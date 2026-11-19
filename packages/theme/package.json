@@ -8,6 +8,7 @@
     "access": "public"
   },
   "type": "module",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "@mapcairn/source": "./src/index.ts",

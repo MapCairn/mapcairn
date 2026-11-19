@@ -20,6 +20,7 @@ import {
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildPackage.mjs";
 import {
+  isStale,
   newestInput,
   SDK_BUILD_ORDER,
   stampTime,
@@ -66,6 +67,46 @@ describe("newestInput", () => {
     write("src/a.test.ts", 90);
     write("src/a.snap.html", 95);
     expect(newestInput(scratch)).toBe(20 * SECOND);
+  });
+});
+
+describe("isStale", () => {
+  it("is stale for a package that was never built", () => {
+    write("package.json", 10);
+    write("src/a.ts", 10);
+    expect(isStale(scratch)).toBe(true);
+  });
+
+  it("is stale when a source file is newer than the build", () => {
+    write("package.json", 10);
+    write("src/a.ts", 50);
+    write("dist/.built", 40);
+    expect(isStale(scratch)).toBe(true);
+  });
+
+  it("is stale when the manifest is newer than the build", () => {
+    write("package.json", 50);
+    write("src/a.ts", 10);
+    write("dist/.built", 40);
+    expect(isStale(scratch)).toBe(true);
+  });
+
+  it("is stale when the build script is newer than the build", () => {
+    write("package.json", 10);
+    write("src/a.ts", 10);
+    // The build script is a real file with a recent time, so a stamp from the
+    // start of the epoch is older than it although the package's own files
+    // are older still.
+    write("dist/.built", 40);
+    expect(isStale(scratch)).toBe(true);
+  });
+
+  it("stays fresh when only a test file is newer than the build", () => {
+    write("package.json", 10);
+    write("src/a.ts", 10);
+    write("src/a.test.ts", 90);
+    write("dist/.built", Math.floor(Date.now() / SECOND) + 60);
+    expect(isStale(scratch)).toBe(false);
   });
 });
 

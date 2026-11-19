@@ -97,6 +97,7 @@ interface Manifest {
   readonly version?: string;
   /** Without it, any file in the package can be imported by path. */
   readonly exports?: Readonly<Record<string, unknown>>;
+  readonly types?: string;
   readonly files?: readonly string[];
   readonly sideEffects?: boolean | readonly string[];
   readonly publishConfig?: { readonly access?: string };
@@ -217,6 +218,7 @@ describe("SDK package manifests", () => {
       );
       expect(manifest.publishConfig).toEqual({ access: "public" });
       expect(manifest).not.toHaveProperty("main");
+      expect(manifest.types).toBe("./dist/index.d.ts");
     },
   );
 
