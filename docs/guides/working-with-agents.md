@@ -62,7 +62,7 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Look at the running app and follow the `visual-check` skill."
 - "Write the Playwright tests for issue 123 and follow the `playwright-tests` skill."
 
-Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer` or `ui-verifier`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tiers are named in `CLAUDE.md`; the generated agent files set no model.
+Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer` or `ui-verifier`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tier names are in `CLAUDE.md`; the generated agent files set no model.
 
 When you start an agent, copy the brief block from `pick-up-issue` ("Briefing an agent") so it carries the checks, the clean-up and the report. For a free or smaller model, which follows a brief literally and fills a gap with plausible text, also fill in the block's `Wording:`, `Claims:` and `Before you open:` lines. An agent that another agent started does not start sub-agents: it does the simplify step and the review checklist inline, and its caller runs the independent review. Full local `e2e` and `a11y` runs are for layout, engine and test-seam changes; for the rest the agent runs the specs that cover its change and CI runs the full suites.
 
@@ -76,13 +76,24 @@ When the project's `main` moves under an open pull request, merge it into the br
 
 `ROADMAP.md` ranks GitHub milestones under "Priorities", not issues. `create-issue` gives a new issue a milestone when one fits and proposes a new milestone for the list only when the work is an outcome a release note could carry, and `land-pr` removes a milestone from the list when its pull request closes the milestone's last issue and sets "Last reviewed" to today. An agent does not reorder the list: the order is the maintainer's call, so it reports a change it thinks the list needs as an issue to file. `npm run roadmap:check` (run by `npm run lint`) reads issue states with one `gh` call and milestones with another, and fails on a linked milestone or issue that does not exist, one listed twice, more than three items in Now, more than six in Next or a missing section; a closed one is only a warning. Where `gh` is missing, signed out, offline or rate limited it says what it did not check and still checks the rest.
 
+## Personal preferences
+
+How much you delegate, which models you prefer and similar working style are not project rules, and `AGENTS.md` and `CLAUDE.md` do not carry them. [Personal preferences](personal-preferences.md) says where to put yours (a git-ignored local file or your tool's user-level file) and shows an example.
+
+## Scripts and skills on every system
+
+Contributors use macOS, Linux and Windows, so the scripts, skills and agents are written to run on all three. Scripts are Node (`.mjs`) and run through `npm run` or `node scripts/<name>.mjs`, with no shell script. A skill gives the same steps on every system; to check that a port is free it runs `node scripts/agents/port.mjs <port>`, which exits 0 when the port is free. Where a step has no portable form, such as stopping a process tree, the skill names the command for each system. `npm run portability:check` (part of `npm run lint`) fails on an absolute home or drive path (`/Users/...`, `C:\...`), a path in a temporary folder, and a short list of commands that differ between systems (the list is `RULES` in `scripts/portability-check.mjs`) in `scripts/`, `.claude/`, the instruction files and the guides. Add a pattern to `RULES` when a new one bites.
+
+Only macOS has run this. The Windows and Linux behaviour of `port.mjs` and the shell lines in the skills was not run there.
+
 ## Names the project keeps out
 
 `npm run lint`, the `commit-msg` hook and the CI pull request check refuse a name the maintainer keeps only as a hash (`scripts/names-check.mjs`) and print where it is, never what it is, so delete the text at that location and do not try to find out what matched.
 
 ## Only in Claude Code
 
-- The Workflow tool and its opt-in rule, and the `fable` model rule, in `CLAUDE.md`.
+- The tier names (`haiku`, `sonnet`, `opus`), the `model` parameter of an `Agent` call and the `fable` model rule, in `CLAUDE.md`.
+- `CLAUDE.local.md`, the git-ignored file for your own preferences. Other tools use a user-level file or `AGENTS.local.md`; see [personal preferences](personal-preferences.md).
 - Tool limits on agents (their `tools` lists). A person's own permission and hook settings are specific to the tool they use; no rule depends on one, because each is written in `AGENTS.md`.
 
 ## Playwright tests
