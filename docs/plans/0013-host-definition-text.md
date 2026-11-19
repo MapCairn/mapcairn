@@ -51,7 +51,7 @@ layer's `sourceLayer` stay plain text.
 
 The Layers section groups layers by the heading their `group` reads as in the
 active language, so a key, a host text and plain text that read the same share
-one heading. `TurnOffGroup` receives that heading. The SDK's own keyboard help
+one heading. `TurnOffGroup` shows that heading, but matches its Undo by a language-independent identity (the sorted ids of the group's layers), so changing the language while the Undo is offered keeps it. The SDK's own keyboard help
 (`MAP_KEY_HELP`, `DRAW_KEY_HELP`) is typed as message keys only
 (`ShippedKeyHelpEntry`), while a host's extra `keyHelp` lines may be any
 `DefinitionText`.
@@ -95,9 +95,11 @@ plus a shared group heading.
 
 ## Documents to update
 
-Step 1: `ARCHITECTURE.md` ("Definition text"), `DESIGN.md` (`LayersSection`),
-`docs/guides/translate-the-sdk.md`, `docs/guides/extending.md` and the core
-and map package READMEs. `PRIVACY.md` needs no change: no request or data flow
+Step 1: `ARCHITECTURE.md` ("Definition text"),
+`docs/guides/translate-the-sdk.md` (with a migration note),
+`docs/guides/extending.md` and the core package README. `DESIGN.md` and the map
+README do not change: the accessibility contract of the Layers section is the
+same. `PRIVACY.md` needs no change: no request or data flow
 is added. Step 2 adds its helper to the translation guide.
 
 ## Risks
@@ -105,9 +107,9 @@ is added. Step 2 adds its helper to the translation guide.
 A host that writes a `HostText` for an attribution would see it rejected by
 validation, which is intended. A translation that is blank would hide a name,
 so it falls back to the source with a warning. Grouping by resolved heading
-changes the group identity from the raw definition value to its words; two
-different keys that translate to the same heading now share one, which is the
-reader's view of the list. The widened `DefinitionText` type breaks code that
+means two different keys that translate to the same heading share one, which
+is the reader's view of the list; the turn-off Undo matches a group by the
+ids of its layers, so a language change does not lose it. The widened `DefinitionText` type is a breaking change for SDK consumers, so the pull request is marked breaking and the translation guide carries a migration note. It breaks code that
 treated it as a string, such as a test that passed a definition's name to a
 string matcher; the shipped definitions are still strings and keys.
 
