@@ -85,6 +85,7 @@ const SEAM_NEEDLE_LIST = [
   TEST_SEAM_MARKER,
   "__MAPCAIRN_TEST_SERVICES__",
   "__MAPCAIRN_TEST_CATALOGUE__",
+  "__MAPCAIRN_TEST_LANGUAGES__",
 ];
 const SEAM_NEEDLES = SEAM_NEEDLE_LIST.join(" ");
 
@@ -128,11 +129,14 @@ describe("verifyNoTestSeam", { timeout: TEST_TIMEOUT_MS }, () => {
     const windowProperty = /__[A-Z]+_TEST_SERVICES__/.exec(seamSource)?.[0];
     const catalogueProperty = /__[A-Z]+_TEST_CATALOGUE__/.exec(seamSource)?.[0];
     expect(windowProperty).toBeDefined();
+    const languagesProperty = /__[A-Z]+_TEST_LANGUAGES__/.exec(seamSource)?.[0];
     expect(catalogueProperty).toBeDefined();
+    expect(languagesProperty).toBeDefined();
     for (const marker of [
       TEST_SEAM_MARKER,
       windowProperty as string,
       catalogueProperty as string,
+      languagesProperty as string,
       DESIGN_GUIDE_MARKER,
     ]) {
       const root = fakeBuild({ "client/assets/app.js": marker });

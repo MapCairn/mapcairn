@@ -5,6 +5,8 @@ import { MapPage } from "./pages/MapPage";
 import {
   type CatalogueText,
   catalogueText,
+  offerSampleLanguages,
+  SAMPLE_LANGUAGES,
   storedLanguage,
   storeLanguageBeforeLoad,
 } from "./support/language";
@@ -44,7 +46,9 @@ export interface MapCairnOptions {
    * null to leave the choice to the browser (English, in Playwright). The
    * `af-*` projects in `playwright.config.ts` set it to `"af"`, so the
    * layout and accessibility specs run in Afrikaans; the page object then
-   * finds the chrome by its Afrikaans names.
+   * finds the chrome by its Afrikaans names. A tag in `SAMPLE_LANGUAGES`
+   * (`en-XA`, `en-XB`, `ar`) is a sample language the page is offered through
+   * the test seam, and not a language the site ships.
    */
   readonly language: string | null;
 }
@@ -138,6 +142,10 @@ export const test = base.extend<MapCairnFixtures & MapCairnOptions>({
   page: async ({ page, fastCredits, firstVisit, direction, language }, use) => {
     if (direction === "rtl") {
       await page.addInitScript(setRightToLeft);
+    }
+    const sample = SAMPLE_LANGUAGES[language ?? ""];
+    if (sample !== undefined) {
+      await page.addInitScript(offerSampleLanguages, [sample]);
     }
     if (language !== null) {
       await page.addInitScript(

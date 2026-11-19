@@ -140,7 +140,12 @@ function IconButtonDemo() {
           <IconButton label="Locate me" icon={LocateFixed} busy />
         </State>
         <State label="Disabled">
-          <IconButton label="Undo last point" icon={Undo2} disabled />
+          <IconButton
+            label="Undo last point"
+            icon={Undo2}
+            mirrorInRtl
+            disabled
+          />
         </State>
         <State label="Compact">
           <IconButton label="Close" icon={X} size="compact" />

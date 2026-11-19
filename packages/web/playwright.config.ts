@@ -36,6 +36,45 @@ const RTL_SPECS = /(basemap|keyboard|sheet|app-shell|rtl)\.spec\.ts$/;
 // language, so it runs in the default projects.
 const AFRIKAANS_SPECS = /(^|\/)(collision|a11y)\.spec\.ts$/;
 
+// The sample-language projects run one spec in each of three sample languages
+// that the test seam offers (see `SAMPLE_LANGUAGES` in e2e/support/language.ts):
+// accented English about 40 percent longer (`en-XA`), English embedded as
+// right-to-left text on a mirrored page (`en-XB`) and a small Arabic sample
+// (`ar`). The spec walks every chrome state at three viewports and checks two
+// placeholders, in a collision test and an axe test, so the six projects run 45 tests. Playwright gives each shard
+// a contiguous run of the project list, so the three languages sit apart in
+// it (before, between and after the two default projects) to land in different
+// shards.
+const SAMPLE_LANGUAGE_SPECS = /sample-languages\.spec\.ts$/;
+
+/**
+ * The desktop and mobile projects for one sample language, which run only the
+ * sample-language spec.
+ */
+function sampleLanguageProjects(prefix: string, language: string) {
+  return [
+    {
+      name: `${prefix}-chromium`,
+      testMatch: SAMPLE_LANGUAGE_SPECS,
+      use: {
+        ...devices["Desktop Chrome"],
+        language,
+        launchOptions: { executablePath },
+      },
+    },
+    {
+      name: `${prefix}-mobile-chromium`,
+      testMatch: SAMPLE_LANGUAGE_SPECS,
+      grepInvert: /@desktop-viewport/,
+      use: {
+        ...devices["Pixel 7"],
+        language,
+        launchOptions: { executablePath },
+      },
+    },
+  ];
+}
+
 /**
  * End-to-end and accessibility suites for the web host.
  *
@@ -73,10 +112,12 @@ export default defineConfig<MapCairnOptions>({
     testIdAttribute: "data-testid",
   },
   projects: [
+    ...sampleLanguageProjects("arabic", "ar"),
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
     },
+    ...sampleLanguageProjects("expanded", "en-XA"),
     {
       name: "mobile-chromium",
       // Desktop-sized viewports in the layout and accessibility matrices run
@@ -84,6 +125,7 @@ export default defineConfig<MapCairnOptions>({
       grepInvert: /@desktop-viewport/,
       use: { ...devices["Pixel 7"], launchOptions: { executablePath } },
     },
+    ...sampleLanguageProjects("mirrored", "en-XB"),
     {
       name: "rtl-chromium",
       testMatch: RTL_SPECS,
