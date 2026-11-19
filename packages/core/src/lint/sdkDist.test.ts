@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -10,8 +11,8 @@ const REPO = path.resolve(
   "../../../..",
 );
 
-/** The packages that build to `dist` so far; `map` follows in its own step. */
-const BUILT_PACKAGES = ["core", "react", "theme"] as const;
+/** The packages that build to `dist`. */
+const BUILT_PACKAGES = ["core", "map", "react", "theme"] as const;
 
 interface Manifest {
   readonly dependencies?: Readonly<Record<string, string>>;
@@ -142,11 +143,22 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
     Object.values(manifestOf(name).exports).filter(
       (target): target is Record<string, string> => typeof target === "object",
     ),
-  )("loads its entry point in Node", async (target) => {
-    const loaded = await import(
-      pathToFileURL(path.join(folderOf(name), target.default)).href
+  )("loads its entry point in Node, with no export condition", (target) => {
+    // A separate process, so Vitest's own resolve conditions (which pick the
+    // source of the other SDK packages) do not decide what loads.
+    const entry = pathToFileURL(path.join(folderOf(name), target.default)).href;
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        `const loaded = await import(${JSON.stringify(entry)});
+         if (Object.keys(loaded).length === 0) { throw new Error("no exports"); }`,
+      ],
+      { cwd: REPO, encoding: "utf8" },
     );
-    expect(Object.keys(loaded).length).toBeGreaterThan(0);
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
   });
 });
 
@@ -157,6 +169,75 @@ describe("@mapcairn/theme dist", () => {
     expect(stylesheet).toMatch(/\[data-theme="dark"\]/);
     for (const file of distFiles("theme").filter((f) => f.endsWith(".js"))) {
       expect(read("theme", file), file).not.toMatch(/@vanilla-extract\/css/);
+    }
+  });
+});
+
+/** The custom properties a stylesheet sets, such as `--rogqo0r`. */
+function definedProperties(stylesheet: string): Set<string> {
+  return new Set(
+    [...stylesheet.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1] ?? ""),
+  );
+}
+
+/** The custom properties a stylesheet reads with `var(--name)`. */
+function usedProperties(stylesheet: string): Set<string> {
+  return new Set(
+    [...stylesheet.matchAll(/var\(\s*(--[\w-]+)/g)].map(
+      (match) => match[1] ?? "",
+    ),
+  );
+}
+
+describe("@mapcairn/map dist", () => {
+  const tokens = read("theme", "tokens.css");
+  const styles = read("map", "styles.css");
+
+  it("ships its component styles as a stylesheet the host imports", () => {
+    expect(styles.length).toBeGreaterThan(0);
+    for (const file of distFiles("map").filter((f) => f.endsWith(".js"))) {
+      expect(read("map", file), file).not.toMatch(
+        /import\s*["'][^"']*\.css["']/,
+      );
+    }
+  });
+
+  it("reads only custom properties that tokens.css or styles.css defines, or that its JavaScript sets", () => {
+    const defined = new Set([
+      ...definedProperties(tokens),
+      ...definedProperties(styles),
+    ]);
+    const script = distFiles("map")
+      .filter((file) => file.endsWith(".js"))
+      .map((file) => read("map", file))
+      .join("\n");
+    // A property a component sets on an element, such as the sheet's offset,
+    // is named as a string in its JavaScript and is not defined in any sheet.
+    const unresolved = [...usedProperties(styles)].filter(
+      (name) => !(defined.has(name) || script.includes(`"${name}"`)),
+    );
+    expect(unresolved).toEqual([]);
+  });
+
+  it("reads the token properties it is built against, not a second set", () => {
+    const fromTokens = [...usedProperties(styles)].filter((name) =>
+      definedProperties(tokens).has(name),
+    );
+    expect(fromTokens.length).toBeGreaterThan(0);
+  });
+
+  it("does not repeat the token blocks, which tokens.css holds once", () => {
+    const repeated = [...definedProperties(styles)].filter((name) =>
+      definedProperties(tokens).has(name),
+    );
+    expect(repeated).toEqual([]);
+  });
+
+  it("imports no style runtime but recipes, in code or declarations", () => {
+    for (const file of distFiles("map").filter((f) =>
+      /\.(js|d\.ts)$/.test(f),
+    )) {
+      expect(read("map", file), file).not.toMatch(/@vanilla-extract\/css/);
     }
   });
 });

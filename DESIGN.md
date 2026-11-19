@@ -4,6 +4,21 @@ The map is the hero and the chrome recedes. MapCairn is calm, neutral and precis
 
 Tokens live in `packages/theme/src/tokens.css.ts`. Components may only use tokens, so an off-scale value fails typecheck, and a lint test is the backstop for raw literals.
 
+### How the CSS ships
+
+The SDK ships compiled CSS, not `.css.ts` source, so an app that uses it needs no vanilla-extract plugin. `@mapcairn/theme` ships `tokens.css`, which holds every token's `:root` block and its dark-theme blocks once, and `@mapcairn/map` ships `styles.css`, the styles of every component. An app imports both, `tokens.css` first:
+
+```ts
+import "@mapcairn/theme/tokens.css";
+import "@mapcairn/map/styles.css";
+```
+
+The packages' JavaScript imports no CSS, so server rendering (Workers included) loads plain modules and the stylesheets are static assets that a strict Content Security Policy allows: nothing is inlined. `sideEffects` in each manifest names only `.css` files (and, for `map`, its `.css.ts` source), so a bundler keeps the stylesheet imports and drops unused JavaScript. `styles.css` holds the styles of every component, whether or not the app uses it.
+
+`map` is built against the built `theme`, never its source, so the custom property names in `styles.css` are the ones in `tokens.css`; a test in `packages/core/src/lint/sdkDist.test.ts` fails if either file reads a property that neither defines, or if `styles.css` repeats a token block. A repository build tool resolves the `@mapcairn/source` condition instead and compiles the source itself, as `packages/web` does.
+
+The token custom properties have generated names (`--rogqo0r`, say), which stay the same for a given build of the packages and may change between releases. A stylesheet written by hand should not name them. Whether they become public API, so that a host can theme the SDK by setting them, is the maintainer's decision and is not made yet (see the issues on theming and on the stability of the SDK's public surface); until it is, an app reads token values through `tokens` from `@mapcairn/theme`, as `examples/embed` does for its page colours.
+
 ## Living style guide
 
 `/design` renders every token and every primitive from the real code: colour roles with light and dark hex values and their contrast pairs, the type scale, spacing, radii, elevation, motion, z layers, the Lucide icons the app imports, each component in each state, and a font check that proves IBM Plex Sans is rendering. Open http://localhost:5173/design with `npm run dev`, or http://localhost:4173/design with `npm start` (the e2e build). The route exists only in development and in the `--mode e2e` build (`packages/web/src/designGuideRoutes.ts`); `npm run build` fails if the page's marker reaches the production bundle, and `e2e/design.spec.ts` covers it in the browser.

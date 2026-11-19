@@ -8,6 +8,8 @@
  * `embedExample.test.tsx` renders it, so the page cannot show code that does
  * not work.
  */
+import "@mapcairn/theme/tokens.css";
+import "@mapcairn/map/styles.css";
 import { createFakeServices } from "@mapcairn/core";
 import {
   FocusRegistryProvider,

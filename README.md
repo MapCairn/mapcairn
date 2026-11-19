@@ -16,6 +16,8 @@ The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrit
 This is a whole app. It mounts the map with the SDK's interface around it and a search box at the top:
 
 ```tsx
+import "@mapcairn/theme/tokens.css";
+import "@mapcairn/map/styles.css";
 import { createFakeServices } from "@mapcairn/core";
 import {
   FocusRegistryProvider,
@@ -80,9 +82,9 @@ function Chrome({ background }: { readonly background: ReactNode }) {
 
 `createFakeServices()` runs the interface on the SDK's in-memory fakes, so it requests nothing and draws no map tiles. A real map swaps in a `MapAdapter` over MapLibre GL JS: the playground's adapter is the reference today, and it is not yet shipped as a package of its own.
 
-[`examples/embed`](examples/embed/README.md) is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test in `packages/core/src/lint/readme.test.ts` fails if this snippet uses an import, a component or a prop that the example does not. [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it (the vanilla-extract Vite plugin, base styles and the font).
+[`examples/embed`](examples/embed/README.md) is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own, and a test in `packages/core/src/lint/readme.test.ts` fails if this snippet uses an import, a component or a prop that the example does not. [`docs/guides/extending.md`](docs/guides/extending.md) lists what an app provides around it (the two stylesheet imports, base styles and the font).
 
-The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK should therefore render in any React 19 app whose bundler compiles vanilla-extract styles (the example uses its Vite plugin), though no other framework has been tried here. There is no prebuilt bundle for pages without React yet, and no guide yet for serving the SDK bundle from a Windows web server or a server-rendered page.
+The SDK does not depend on the playground's framework. The playground is a server-rendered React 19 app on React Router, Vite and Cloudflare Workers, but the SDK packages import neither React Router nor MapLibre, the two that use React (`map` and `react`) take it as a peer, and `examples/embed` is a plain Vite and React app. The SDK's styles are compiled to two plain stylesheets, so it needs no vanilla-extract plugin and should render in any React 19 app whose bundler handles a CSS import, though no other framework has been tried here. There is no prebuilt bundle for pages without React yet, and no guide yet for serving the SDK bundle from a Windows web server or a server-rendered page.
 
 ## What the SDK adds to a map renderer
 

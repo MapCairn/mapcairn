@@ -32,10 +32,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@vanilla-extract/css": "^1.21.3"
-  },
   "devDependencies": {
+    "@vanilla-extract/css": "^1.21.3",
     "@vanilla-extract/integration": "^8.0.11",
     "@vanilla-extract/vite-plugin": "^5.2.6",
     "typescript": "^7.0.2",

@@ -76,6 +76,8 @@ Recommendation: ship compiled CSS, not `.css.ts` source.
 | Runtime dependencies | `@vanilla-extract/recipes` stays for `map`; `@vanilla-extract/css` leaves both packages' `dependencies` unless the rolled-up declarations name its types (step 4 checks) | Both stay                                                                                    |
 | Cost                 | The host loads all component CSS (84 kB before compression)                                                                                                              | Only the styles of components it imports                                                     |
 
+Step 4 checked the dependency question: neither package's built JavaScript nor rolled-up declarations name `@vanilla-extract/css`, so it moved to `devDependencies` of both; `@vanilla-extract/recipes` (a runtime dependency of `map`) requires it as a peer, which npm installs. Whether the generated custom property names are public API stays open (question 1 and the issues on theming).
+
 The JavaScript stays free of side effects; only the CSS files are marked as side effects. `theme`'s token stylesheet no longer arrives by importing `tokens`: the host imports `tokens.css` itself, which `DESIGN.md`, `docs/guides/extending.md`, the README quick start and the comment in `examples/embed/vite.config.ts` must then say.
 
 ### API documentation

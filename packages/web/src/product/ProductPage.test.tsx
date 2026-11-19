@@ -336,7 +336,9 @@ describe("the embedding example", () => {
   });
 
   it("starts at the first import, with no licence header or note", () => {
-    expect(EMBED_EXAMPLE_CODE.startsWith("import {")).toBe(true);
+    expect(
+      EMBED_EXAMPLE_CODE.startsWith('import "@mapcairn/theme/tokens.css";'),
+    ).toBe(true);
     expect(EMBED_EXAMPLE_CODE).not.toMatch(/SPDX|\/\*|\/\//);
   });
 
