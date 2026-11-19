@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { tokens } from "@mapcairn/theme";
+import { focusRing, tokens } from "@mapcairn/theme";
 import { style } from "@vanilla-extract/css";
 
 /** The scrolling page: the document is fixed for the map, so this scrolls itself. */
@@ -58,11 +58,20 @@ export const updated = style([
   },
 ]);
 
-/** A standalone link: a full-size target (WCAG 2.5.8), its text centred in it. */
-export const link = style({
-  display: "inline-flex",
-  alignItems: "center",
-  minHeight: tokens.size.minTarget,
+/** A link in running text, with no extra line box or target-size expansion. */
+export const inlineLink = style({
   color: tokens.color.accent,
   textUnderlineOffset: "0.2em",
+  borderRadius: tokens.radius.inner,
+  selectors: { "&:focus-visible": focusRing },
 });
+
+/** A standalone link: a full-size target (WCAG 2.5.8), its text centred in it. */
+export const link = style([
+  inlineLink,
+  {
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: tokens.size.minTarget,
+  },
+]);

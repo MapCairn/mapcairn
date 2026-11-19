@@ -133,8 +133,17 @@ export function inspectControls(page: Page): Promise<ControlReport> {
       const label = element.closest("label");
       const tiny = (rect: DOMRect) => rect.width <= 2 && rect.height <= 2;
       const box = tiny(own) && label ? label.getBoundingClientRect() : own;
+      const paragraph = element.closest("p");
       const inRunningText =
-        element.matches("a[href]") && element.closest("p") !== null;
+        element.matches("a[href]") &&
+        paragraph !== null &&
+        [...paragraph.childNodes].some(
+          (node) =>
+            node !== element &&
+            (node.nodeType === Node.TEXT_NODE ||
+              node.nodeType === Node.ELEMENT_NODE) &&
+            Boolean(node.textContent?.trim()),
+        );
       return tiny(box) || inRunningText ? null : box;
     };
 
