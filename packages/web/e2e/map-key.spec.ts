@@ -104,7 +104,7 @@ test.describe("the map key", () => {
   }) => {
     await mockLayerProviders(page);
     await page.setViewportSize(DESKTOP);
-    await openApp(mapPage, TWO_KEYED, SLOW_MAP_NAVIGATION_TIMEOUT_MS);
+    await openApp(mapPage, TWO_KEYED);
     await expect(mapPage.mapKeyToggle).toHaveAttribute("aria-expanded", "true");
 
     await mapPage.mapKeyToggle.focus();
@@ -142,10 +142,11 @@ test.describe("the map key", () => {
     }) => {
       // Each case starts a full map so it proves the initial state rather than
       // a state carried across a resize. Busy-machine runs of this map load
-      // were the case's observed bottleneck.
+      // were the case's observed bottleneck, so the navigation keeps a
+      // documented allowance here and nowhere else in the file.
       await mockLayerProviders(page);
       await page.setViewportSize(viewport);
-      await openApp(mapPage, TWO_KEYED);
+      await openApp(mapPage, TWO_KEYED, SLOW_MAP_NAVIGATION_TIMEOUT_MS);
       await expect(
         mapPage.mapKeyToggle,
         `${viewport.width}x${viewport.height}`,
