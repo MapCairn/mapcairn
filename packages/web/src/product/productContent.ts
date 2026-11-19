@@ -19,7 +19,8 @@ import embedExampleSource from "./embedExample.tsx?raw";
  * documentation.
  *
  * Links: the repository from exactly two places, the hero's View on GitHub and
- * the footer's Source code, and otherwise only this site's own pages. Never a
+ * the footer's Source code, the project's Mastodon profile from the footer (with
+ * `rel="me"`), and otherwise only this site's own pages. Never a
  * Markdown file, an issue, a pull request or a milestone, and no second way to
  * the repository: the big button is enough.
  */

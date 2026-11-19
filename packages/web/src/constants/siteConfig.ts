@@ -28,6 +28,12 @@ export const PLAYGROUND_PATH = "/map";
 export const SOURCE_REPOSITORY_URL = "https://github.com/MapCairn/mapcairn";
 
 /**
+ * The project's Mastodon profile. The product page's footer links to it with
+ * `rel="me"`, which lets Mastodon verify that the profile owns this site.
+ */
+export const MASTODON_PROFILE_URL = "https://en.osm.town/@mapcairn";
+
+/**
  * The hostname the site had before its name changed. It stays attached to the
  * Worker, which redirects pages on it to {@link SITE_URL}, so the address that
  * was shared widely keeps working.
