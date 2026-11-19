@@ -119,16 +119,20 @@ export const actions = style({
   gap: tokens.space.sm,
 });
 
-/** The place search: a text field and its button. */
+/**
+ * The place search: the text field, then its button below it. The field takes
+ * the panel's whole width, so a placeholder in a longer language has the most
+ * room a field can have; a field beside the button left it 102 pixels on a
+ * 320 pixel phone.
+ */
 export const searchRow = style({
   display: "flex",
+  flexDirection: "column",
   gap: tokens.space.sm,
-  alignItems: "stretch",
 });
 
 /** The text field of the place search. */
 export const searchInput = style({
-  flex: 1,
   minWidth: 0,
   minHeight: tokens.size.control,
   boxSizing: "border-box",
