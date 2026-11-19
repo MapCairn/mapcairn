@@ -27,7 +27,8 @@
     "src",
     "!src/**/*.test.*",
     "!src/**/*.snap.html",
-    "!src/propertyTesting/**"
+    "!src/propertyTesting/**",
+    "!src/layers/legacyDefinitions/**"
   ],
   "sideEffects": false,
   "scripts": {

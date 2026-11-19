@@ -192,6 +192,7 @@ npm run dev
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md)                                                 | Layers, ports and adapters, the map adapter, adding an adapter                                             |
 | [`DESIGN.md`](DESIGN.md)                                                             | Tokens, layout slots, accessibility contracts and the lint rules                                           |
+| [`docs/guides/public-api.md`](docs/guides/public-api.md)                             | What counts as the SDK's public API beyond its exports, the API reports and how a change is classed        |
 | [`docs/guides/extending.md`](docs/guides/extending.md)                               | Embedding the SDK, and adding a basemap, each kind of data layer, a search or routing provider, an adapter |
 | [`docs/guides/translate-the-sdk.md`](docs/guides/translate-the-sdk.md)               | Another language, a choice of languages, translating definitions, your own message-format library          |
 | [`docs/guides/serving-layers.md`](docs/guides/serving-layers.md)                     | Which layer kind to serve from your own server, what each costs, and OGC API Features, WMS and WMTS layers |

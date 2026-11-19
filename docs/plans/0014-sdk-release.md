@@ -84,7 +84,7 @@ The JavaScript stays free of side effects; only the CSS files are marked as side
 
 Recommendation: API Extractor, which the build needs for the declaration rollup anyway, and API Documenter (MIT, same project) for Markdown pages in the documentation site.
 
-- `ae-undocumented`, set to `warning`, lists every export without TSDoc; CI prints the warnings without failing.
+- `ae-undocumented`, set to `warning`, lists every export without TSDoc; CI prints the warnings without failing. Built in step 5 as `scripts/apiReports.mjs`, which runs API Extractor over each built `dist/<entry>.d.ts` with the options in code (the rollup in `scripts/buildPackage.mjs` has none in a file either), so there is no `api-extractor.json`. It prints counts for each package and no baseline; `docs/guides/public-api.md` has the rest.
 - The API report (`packages/<name>/api/<entry>.api.md`, committed) shows every public API change in the pull request diff, and the release script uses its change since the last tag to flag a likely breaking change.
 - Rejected: TypeDoc. Its output reads better, but it needs TypeScript 6 installed beside 7 as a peer, gives no declaration rollup and no API report, and would be a second tool for one job.
 

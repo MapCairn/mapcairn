@@ -1,0 +1,48 @@
+{
+  "id": "sample-query",
+  "name": "Sample query",
+  "description": "Points requested for the part of the map in view.",
+  "group": "Samples",
+  "dataCost": "a few KB per screen",
+  "attribution": [
+    {
+      "text": "Sample query provider"
+    }
+  ],
+  "controls": [],
+  "source": {
+    "kind": "query",
+    "url": "https://query.test/items?bbox={west},{south},{east},{north}&limit={limit}",
+    "decoder": "geojson",
+    "fields": {
+      "id": "id",
+      "title": "properties.name",
+      "value": "properties.value"
+    },
+    "maxFeatures": 3,
+    "minzoom": 4
+  },
+  "style": {
+    "colour": {
+      "kind": "fixed",
+      "colour": "blue",
+      "label": "Item"
+    }
+  },
+  "card": {
+    "title": "{title}",
+    "lines": ["Value {value|number}"]
+  },
+  "list": {
+    "secondary": "Value {value|number}",
+    "sorts": [
+      {
+        "id": "name",
+        "label": "Name",
+        "field": "title",
+        "direction": "asc"
+      }
+    ]
+  },
+  "emptyText": "Nothing in view."
+}

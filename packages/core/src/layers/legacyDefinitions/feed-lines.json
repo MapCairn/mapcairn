@@ -1,0 +1,67 @@
+{
+  "id": "sample-lines",
+  "name": "Sample lines",
+  "description": "Lines from a sample feed, drawn by kind.",
+  "group": "Samples",
+  "dataCost": "about 10 KB",
+  "attribution": [
+    {
+      "text": "Sample lines provider"
+    }
+  ],
+  "controls": [],
+  "source": {
+    "kind": "feed",
+    "url": "https://lines.test/routes.json",
+    "decoder": "geojson",
+    "fields": {
+      "id": "id",
+      "title": "properties.name",
+      "kind": "properties.kind"
+    }
+  },
+  "style": {
+    "kind": "shapes",
+    "geometry": "line",
+    "colour": {
+      "kind": "category",
+      "field": "kind",
+      "categories": [
+        {
+          "value": "main",
+          "label": "Main route",
+          "colour": "vermillion",
+          "width": 5
+        },
+        {
+          "value": "side",
+          "label": "Side route",
+          "colour": "blue",
+          "width": 3,
+          "dash": "dashed"
+        }
+      ],
+      "other": {
+        "label": "Other route",
+        "colour": "orange",
+        "dash": "dotted"
+      }
+    }
+  },
+  "card": {
+    "title": "{title}",
+    "lines": []
+  },
+  "list": {
+    "secondary": "{kind}",
+    "sorts": [
+      {
+        "id": "name",
+        "label": "Name",
+        "field": "title",
+        "direction": "asc"
+      }
+    ]
+  },
+  "emptyText": "No sample lines right now."
+}
