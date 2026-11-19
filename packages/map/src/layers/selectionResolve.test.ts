@@ -13,6 +13,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   reconcileSnapshots,
+  refsOfRemovedLayers,
   resolveSelection,
   type SelectionSnapshots,
   selectableRefs,
@@ -225,6 +226,29 @@ describe("selectableRefs", () => {
       ref(FEED, "a"),
       ref(ALERTS, "b"),
     ]);
+  });
+});
+
+describe("refsOfRemovedLayers", () => {
+  it("returns the references of layers the earlier list had and the later one lacks, in order", () => {
+    const refs = [ref(FEED, "a"), ref(ALERTS, "b"), ref(FEED, "c")];
+    expect(
+      refsOfRemovedLayers(refs, new Set([FEED, ALERTS]), new Set([ALERTS])),
+    ).toEqual([ref(FEED, "a"), ref(FEED, "c")]);
+  });
+
+  it("keeps the references of a layer the earlier list never had", () => {
+    const refs = [ref("unlisted", "a"), ref(FEED, "b")];
+    expect(refsOfRemovedLayers(refs, new Set([FEED]), new Set([FEED]))).toEqual(
+      [],
+    );
+    expect(refsOfRemovedLayers(refs, new Set([FEED]), new Set())).toEqual([
+      ref(FEED, "b"),
+    ]);
+  });
+
+  it("returns nothing when no reference is held", () => {
+    expect(refsOfRemovedLayers([], new Set([FEED]), new Set())).toEqual([]);
   });
 });
 

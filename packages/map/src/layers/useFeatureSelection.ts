@@ -28,6 +28,7 @@ import {
 } from "./selectionMessages";
 import {
   reconcileSnapshots,
+  refsOfRemovedLayers,
   resolveSelection,
   type SelectedEntry,
   type SelectionSnapshots,
@@ -100,9 +101,13 @@ export interface FeatureSelectionState {
  * @remarks A reference shows its layer's loaded feature, else a snapshot kept
  *   while it was loaded, but only while its layer is on and is a feed layer.
  *   Otherwise it is not shown, and it stays in the store and counts. Turning a
- *   layer off, or a layer leaving the catalogue, drops nothing and says nothing
- *   here: `useDataLayers` announces the turning off itself, and its Undo brings
- *   the references back. A change made outside (hydration, a failed save)
+ *   layer off drops nothing and says nothing here: `useDataLayers` announces
+ *   the turning off itself, and its Undo brings the references back. A layer
+ *   that a ready catalogue removes is different: it cannot come back by Undo,
+ *   so its references are dropped, once and in one message, when the removal
+ *   is seen. Nothing is dropped at mount, while the catalogue is loading or
+ *   has failed, for a layer the catalogue never listed, or for a reference a
+ *   store hydrates later. A change made outside (hydration, a failed save)
  *   updates `entries` and is not announced. Each message carries the new
  *   total, because the live region replaces a waiting message that is not
  *   kept with a later one when both arrive within `THROTTLE_MS` of the last
@@ -234,6 +239,29 @@ export function useFeatureSelection(
       ),
     [change],
   );
+
+  /**
+   * The ids of the list the catalogue last held while it was ready: none
+   * until its first ready list. Loading and failed states leave it as it was,
+   * so a later list is compared with the last one that was ready.
+   */
+  const listedLayerIds = useRef<ReadonlySet<string> | null>(null);
+  const catalogueReady = layers.catalogue.status === "ready";
+  useEffect(() => {
+    if (!hostStore || !catalogueReady) {
+      return;
+    }
+    const before = listedLayerIds.current;
+    const now = new Set(layerStates.map((layer) => layer.definition.id));
+    listedLayerIds.current = now;
+    if (!before) {
+      return;
+    }
+    const removed = refsOfRemovedLayers(hostStore.getState(), before, now);
+    if (removed.length > 0) {
+      remove(removed);
+    }
+  }, [hostStore, catalogueReady, layerStates, remove]);
 
   const toggle = useCallback(
     (ref: FeatureRef) => {
