@@ -8,6 +8,14 @@ import {
   buildContentSecurityPolicy,
   generateNonce,
 } from "./constants/securityHeaders";
+import { handleServerError, logServerError } from "./serverErrors";
+
+/**
+ * React Router's error hook for loader, action and routing errors. A missing
+ * page (404) or a method a route does not accept (405) is an expected answer
+ * and is not logged; any other error is logged as readable text.
+ */
+export const handleError = handleServerError;
 
 /**
  * React Router server entry point: streams the SSR response for a request
@@ -48,7 +56,7 @@ export default async function handleRequest(
       nonce,
       signal: request.signal,
       onError(error) {
-        console.error(error);
+        logServerError(error, request);
       },
     },
   );

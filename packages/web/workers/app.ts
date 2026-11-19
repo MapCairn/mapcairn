@@ -3,6 +3,7 @@
 import { createRequestHandler } from "react-router";
 import { SECURITY_HEADERS } from "../src/constants/securityHeaders";
 import { PREVIOUS_HOSTNAME, SITE_URL } from "../src/constants/siteConfig";
+import { describeServerError } from "../src/serverErrors";
 
 const requestHandler = createRequestHandler(
   () => import("../build/server/index.js"),
@@ -33,9 +34,9 @@ function redirectFromPreviousHostname(request: Request): Response | null {
  * server bundle. There are no Cloudflare bindings to thread through, so the
  * request is passed on with no `RouterContextProvider`.
  * @remarks The `try`/`catch` around `requestHandler` is a last-resort net,
- *   not the primary error path; React Router's request handler (its
- *   default `handleError`) logs loader and action errors, and
- *   `entry.server.tsx`'s `onError` logs render errors, via `console.error`
+ *   not the primary error path; the `handleError` in `entry.server.tsx`
+ *   logs loader and action errors, and its `onError` logs render errors,
+ *   via `console.error`
  *   before this ever sees them. This only fires
  *   for a failure outside that render lifecycle entirely (e.g. the dynamic
  *   `import("../build/server/index.js")` itself failing), where an
@@ -51,7 +52,7 @@ export default {
     try {
       return withSecurityHeaders(await requestHandler(request));
     } catch (error) {
-      console.error(error);
+      console.error(describeServerError(error));
       return withSecurityHeaders(
         new Response("Internal Server Error", { status: 500 }),
       );

@@ -52,6 +52,12 @@ function defaultWindow(): ErrorReportingWindow | undefined {
     : (window as unknown as ErrorReportingWindow);
 }
 
+/**
+ * What a browser reports for an error in a script from another origin: the
+ * message is blanked and there is no file, line or stack, so nobody can act on it.
+ */
+const OPAQUE_CROSS_ORIGIN_MESSAGE = /^Script error\.?$/;
+
 function truncate(value: string): string {
   return value.length > CLIENT_ERROR_REPORT_MAX_FIELD_LENGTH
     ? value.slice(0, CLIENT_ERROR_REPORT_MAX_FIELD_LENGTH)
@@ -68,8 +74,10 @@ function truncate(value: string): string {
  *   only: the hash holds the map view, which after Locate me is the user's
  *   position, and the query is never needed to find a fault. Each distinct
  *   error (message and stack) is sent once, and one reporter sends at most
- *   {@link MAX_REPORTS_PER_PAGE} reports, so the app keeps one per page load. Reporting never throws: a failure here must
- *   not become a second uncaught error that re-enters the listeners. Without
+ *   {@link MAX_REPORTS_PER_PAGE} reports, so the app keeps one per page load. A
+ *   bare "Script error." with no stack, which a browser gives for an error in
+ *   another origin's script, is dropped: it names no file or line. Reporting never throws: a failure here
+ *   must not become a second uncaught error that re-enters the listeners. Without
  *   a window (server rendering) it does nothing.
  */
 export class BeaconErrorReporter {
@@ -90,6 +98,9 @@ export class BeaconErrorReporter {
       }
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
+      if (stack === undefined && OPAQUE_CROSS_ORIGIN_MESSAGE.test(message)) {
+        return;
+      }
       const key = JSON.stringify([message, stack]);
       if (this.#sent.has(key) || this.#sent.size >= MAX_REPORTS_PER_PAGE) {
         return;

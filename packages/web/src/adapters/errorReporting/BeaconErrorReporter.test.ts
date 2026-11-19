@@ -199,8 +199,24 @@ describe("BeaconErrorReporter", () => {
     it("falls back to the event message when there is no error object", async () => {
       uninstall = new BeaconErrorReporter().install();
       const event = new Event("error") as ErrorEvent;
+      Object.defineProperty(event, "message", { value: "Resize loop" });
+      window.dispatchEvent(event);
+
+      const body = await readBeaconBody(sendBeacon.mock.calls[0]?.[1]);
+      expect(body.message).toBe("Resize loop");
+    });
+
+    it("drops a bare cross-origin Script error, which has no file, line or stack to act on", () => {
+      uninstall = new BeaconErrorReporter().install();
+      const event = new Event("error") as ErrorEvent;
       Object.defineProperty(event, "message", { value: "Script error." });
       window.dispatchEvent(event);
+
+      expect(sendBeacon).not.toHaveBeenCalled();
+    });
+
+    it("still reports a Script error that carries a stack", async () => {
+      new BeaconErrorReporter().report(new Error("Script error."), "error");
 
       const body = await readBeaconBody(sendBeacon.mock.calls[0]?.[1]);
       expect(body.message).toBe("Script error.");
