@@ -21,6 +21,84 @@ test.describe("other pages", () => {
     await expect(page.getByTestId("map-host")).toBeVisible();
   });
 
+  for (const language of [null, "af"] as const) {
+    test.describe(`privacy inline links in ${language ?? "English"}`, () => {
+      test.use({ language, viewport: { width: 390, height: 844 } });
+
+      test("keep line pitch, focus and standalone targets", async ({
+        page,
+      }) => {
+        await page.goto("/privacy");
+        const privacy = page.getByTestId("privacy-page");
+        const plain = privacy.locator(":scope > p").nth(1);
+        const inline = privacy.locator(
+          'a[href="https://www.cloudflare.com/privacypolicy/"]',
+        );
+        const linked = inline.locator("..");
+        const contact = privacy.locator('a[href^="mailto:"]').locator("..");
+
+        const pitch = async (paragraph: typeof plain) =>
+          paragraph.evaluate((element) => {
+            const text = document.createTreeWalker(
+              element,
+              NodeFilter.SHOW_TEXT,
+            );
+            const tops: number[] = [];
+            let node = text.nextNode();
+            while (node) {
+              const parent = node.parentElement;
+              const position = parent
+                ? getComputedStyle(parent).position
+                : "static";
+              if (position !== "absolute" && position !== "fixed") {
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                tops.push(
+                  ...[...range.getClientRects()]
+                    .filter((rect) => rect.width > 2 && rect.height > 2)
+                    .map((rect) => rect.top),
+                );
+              }
+              node = text.nextNode();
+            }
+            const lines = tops
+              .sort((a, b) => a - b)
+              .filter(
+                (top, index, values) =>
+                  index === 0 || top - (values[index - 1] ?? top) > 0.5,
+              );
+            const height = element.getBoundingClientRect().height;
+            return height / lines.length;
+          });
+
+        await expect(linked).toBeVisible();
+        const plainPitch = await pitch(plain);
+        const linkedPitch = await pitch(linked);
+        expect(linkedPitch).toBeLessThanOrEqual(plainPitch + 0.5);
+        expect(await pitch(contact)).toBeLessThanOrEqual(plainPitch + 0.5);
+
+        const standaloneHeights = await privacy
+          .locator(":scope > a")
+          .evaluateAll((links) =>
+            links.map((link) => link.getBoundingClientRect().height),
+          );
+        expect(standaloneHeights).toHaveLength(2);
+        expect(Math.min(...standaloneHeights)).toBeGreaterThanOrEqual(44);
+
+        await inline.focus();
+        const focusIsVisible = await inline.evaluate((link) => {
+          const style = getComputedStyle(link);
+          return (
+            style.outlineStyle === "solid" &&
+            Number.parseFloat(style.outlineWidth) > 0 &&
+            style.boxShadow !== "none"
+          );
+        });
+        expect(focusIsVisible).toBe(true);
+      });
+    });
+  }
+
   test("the privacy page has one heading, plain landmarks and no map", async ({
     page,
   }) => {

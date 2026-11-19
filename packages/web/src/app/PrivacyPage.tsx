@@ -129,7 +129,7 @@ export function PrivacyPage() {
           parts={{
             link: (
               <a
-                className={styles.link}
+                className={styles.inlineLink}
                 href={HOST_POLICY_URL}
                 target="_blank"
                 rel="noreferrer"
@@ -171,12 +171,12 @@ export function PrivacyPage() {
           body="privacy.contact.body"
           parts={{
             email: (
-              <a className={styles.link} href={`mailto:${CONTACT_EMAIL}`}>
+              <a className={styles.inlineLink} href={`mailto:${CONTACT_EMAIL}`}>
                 {CONTACT_EMAIL}
               </a>
             ),
             issues: (
-              <a className={styles.link} href={ISSUES_URL}>
+              <a className={styles.inlineLink} href={ISSUES_URL}>
                 {t("privacy.contact.issuesLink", {})}
               </a>
             ),
