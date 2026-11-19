@@ -3915,6 +3915,12 @@ describe("MapLibreMapAdapter data layers", () => {
 
     describe("at a requested size and view", () => {
       const BOX = { south: -26.3, west: 27.9, north: -26.1, east: 28.2 };
+      const OVERLAY = {
+        tiles: "https://tiles.example/first/{z}/{x}/{y}.png",
+        tileSize: 256 as const,
+        maxzoom: 9,
+        opacity: 1,
+      };
       const POINT = {
         id: "a",
         position: { lat: 10, lng: 20 },
@@ -4208,6 +4214,28 @@ describe("MapLibreMapAdapter data layers", () => {
           },
         ],
         [
+          "a tile layer is set",
+          (adapter: MapLibreMapAdapter) =>
+            adapter.setTileLayer("imagery", OVERLAY),
+        ],
+        [
+          "a tile layer is drawn again with new tiles",
+          (adapter: MapLibreMapAdapter) => {
+            adapter.setTileLayer("imagery", OVERLAY);
+            adapter.setTileLayer("imagery", {
+              ...OVERLAY,
+              tiles: "https://tiles.example/next/{z}/{x}/{y}.png",
+            });
+          },
+        ],
+        [
+          "a tile layer is removed",
+          (adapter: MapLibreMapAdapter) => {
+            adapter.setTileLayer("imagery", OVERLAY);
+            adapter.removeLayer("imagery");
+          },
+        ],
+        [
           "the projection changes",
           (adapter: MapLibreMapAdapter) => adapter.setProjection("globe"),
         ],
@@ -4239,6 +4267,21 @@ describe("MapLibreMapAdapter data layers", () => {
           expect(FakeMapLibreMap.instances).toHaveLength(2);
         },
       );
+
+      it("draws an export queued behind another when only a tile layer's opacity changed", async () => {
+        const { adapter } = await readyForRender();
+        adapter.setTileLayer("imagery", OVERLAY);
+        FakeMapLibreMap.holdIdle = true;
+        const first = adapter.toImage({ pixelRatio: 1 });
+        const second = adapter.toImage({ pixelRatio: 1 });
+        await vi.waitFor(() => {
+          expect(FakeMapLibreMap.instances).toHaveLength(2);
+        });
+        adapter.setTileLayer("imagery", { ...OVERLAY, opacity: 0.5 });
+        renderMap().fire("idle");
+        await expect(first).resolves.toBeInstanceOf(Blob);
+        await expect(second).resolves.toBeInstanceOf(Blob);
+      });
 
       it("draws an export queued behind another when nothing about the style changed", async () => {
         const { adapter } = await readyForRender();
