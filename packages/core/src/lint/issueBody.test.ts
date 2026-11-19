@@ -63,6 +63,7 @@ describe("parseArguments", () => {
     [["42"]],
     [["x", "out.md"]],
     [["42", "out.md", "--repo"]],
+    [["42", "out.md", "--repo", "--force"]],
     [["42", "out.md", "--repo", "a/b", "extra"]],
     [["42", "out.md", "extra"]],
     [["42", "out.md", "--unknown"]],

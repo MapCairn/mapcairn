@@ -10,7 +10,8 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { isEntryPoint } from "./entryPoint.mjs";
 
 /** The one file that has to spell out the patterns it looks for. */
 const SELF = "scripts/portability-check.mjs";
@@ -22,6 +23,7 @@ const CHECKED_FILES = new Set([
   "CLAUDE.md",
   "CONTRIBUTING.md",
   "lefthook.yml",
+  "package.json",
 ]);
 const TEXT_FILE = /\.(?:md|mjs|cjs|yml|yaml|json)$/;
 /** Shell and Python scripts under `scripts/` run on one system only; use Node. */
@@ -33,16 +35,23 @@ const URL_TEXT = /\bhttps?:\/\/\S+/g;
 const RULES = [
   { pattern: /\/Users\/\w/, message: "a macOS home path" },
   { pattern: /\/home\/\w/, message: "a Linux home path" },
-  { pattern: /(?<!\w)[A-Za-z]:[\\/]\w/, message: "a Windows drive path" },
-  { pattern: /(?:^|[\s`"'(])\/tmp\//, message: "a path in /tmp" },
+  { pattern: /(?<!\w)[A-Za-z]:[\\/]+\w/, message: "a Windows drive path" },
+  { pattern: /(?:^|[\s`"'(=])\/tmp\b/, message: "a path in /tmp" },
   { pattern: /\blsof\b/, message: "lsof (use scripts/agents/port.mjs)" },
   { pattern: /\bpgrep\b/, message: "pgrep" },
   { pattern: /\bpkill\b/, message: "pkill" },
   { pattern: /\breadlink -f\b/, message: "readlink -f (GNU only)" },
-  { pattern: /\bdate -d\b/, message: "date -d (GNU only)" },
-  { pattern: /\bsed -i\b/, message: "sed -i (differs between BSD and GNU)" },
+  { pattern: /\bdate\s+-d\b/, message: "date -d (GNU only)" },
+  { pattern: /\bsed\s+-i\b/, message: "sed -i (differs between BSD and GNU)" },
   { pattern: /\bmktemp\b/, message: "mktemp (flags differ by system)" },
   { pattern: /\bpython3\b/, message: "python3 (not a command on Windows)" },
+  {
+    pattern: /--jq\s+'/,
+    message:
+      "a single-quoted --jq program (cmd does not treat ' as a quote; use double quotes)",
+  },
+  { pattern: /\/dev\/null/, message: "/dev/null (not on Windows)" },
+  { pattern: /\$\(/, message: "a command substitution (bash and zsh only)" },
 ];
 
 /**
@@ -92,17 +101,21 @@ export function findProblems(text) {
 
 /** Reports every problem in the tracked files and exits 1 if there is one. */
 function main() {
+  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+    encoding: "utf8",
+  }).trim();
   const files = execFileSync("git", ["ls-files", "-z"], {
+    cwd: root,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   })
     .split("\0")
-    .filter((path) => path !== "" && existsSync(path));
+    .filter((file) => file !== "" && existsSync(join(root, file)));
   const tracked = files.filter(isChecked);
   const scripts = files
     .filter(isSystemSpecificScript)
     .map((path) => `${path}: use a Node script (.mjs)`);
-  const reports = [...scripts, ...checkedReports(tracked)];
+  const reports = [...scripts, ...checkedReports(root, tracked)];
   if (reports.length > 0) {
     console.error(
       `portability: ${reports.length} problem(s)\n${reports.join("\n")}`,
@@ -115,14 +128,14 @@ function main() {
 }
 
 /** One report line for each problem in the files. */
-function checkedReports(tracked) {
-  return tracked.flatMap((path) =>
-    findProblems(readFileSync(path, "utf8")).map(
-      ({ line, message }) => `${path}:${line}: ${message}`,
+function checkedReports(root, tracked) {
+  return tracked.flatMap((file) =>
+    findProblems(readFileSync(join(root, file), "utf8")).map(
+      ({ line, message }) => `${file}:${line}: ${message}`,
     ),
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   main();
 }

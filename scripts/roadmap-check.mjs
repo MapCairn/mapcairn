@@ -23,7 +23,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { isEntryPoint } from "./entryPoint.mjs";
 
 const REPO = "MapCairn/mapcairn";
 const MAX_ITEMS = new Map([
@@ -361,7 +361,7 @@ export function runRoadmapCheck({
   return result.errors.length > 0 ? 1 : 0;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   const runGh = (args) =>
     spawnSync("gh", args, {
       encoding: "utf8",

@@ -21,7 +21,7 @@
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isEntryPoint } from "../entryPoint.mjs";
 
 /** The read-only commands of the packaged command line. */
 const ALLOWED_COMMANDS = ["search", "list", "retrieve"];
@@ -96,6 +96,6 @@ function main() {
   process.exitCode = result.status ?? 1;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   main();
 }

@@ -17,7 +17,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { isEntryPoint } from "../entryPoint.mjs";
 
 const DEFAULT_REPO = "MapCairn/mapcairn";
 const MAX_BUFFER_BYTES = 16 * 1024 * 1024;
@@ -43,7 +43,8 @@ export function parseArguments(args) {
       request.force = true;
     } else if (
       options[index] === "--repo" &&
-      options[index + 1] !== undefined
+      options[index + 1] !== undefined &&
+      !options[index + 1].startsWith("--")
     ) {
       index += 1;
       request.repo = options[index];
@@ -115,6 +116,6 @@ export function main(args, run = gh, report = console.error) {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   process.exitCode = main(process.argv.slice(2));
 }

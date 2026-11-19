@@ -47,6 +47,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isEntryPoint } from "./entryPoint.mjs";
 
 /** The workspace folders held to the rule, relative to the repository root. */
 export const SDK_PACKAGE_PATHS = [
@@ -398,6 +399,6 @@ function main() {
   console.log(lines.join("\n"));
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   main();
 }

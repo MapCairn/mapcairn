@@ -15,7 +15,7 @@
  * that is not a number from 1 to 65535.
  */
 import net from "node:net";
-import { fileURLToPath } from "node:url";
+import { isEntryPoint } from "../entryPoint.mjs";
 
 /** Both loopback addresses, because a server may bind to either family. */
 const LOOPBACK_ADDRESSES = ["127.0.0.1", "::1"];
@@ -80,6 +80,6 @@ async function main() {
   process.exitCode = inUse ? 1 : 0;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   await main();
 }
