@@ -50,8 +50,13 @@ const LOADERS: Readonly<
 > = {
   [DEFAULT_LANGUAGE]: () => ENGLISH,
   af: async () => {
-    const { AF_CATALOGUE } = await import("./af");
-    return createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE);
+    const [{ AF_CATALOGUE }, { AF_LAYER_TEMPLATES }] = await Promise.all([
+      import("./af"),
+      import("./afLayerTemplates"),
+    ]);
+    return createMessageCatalogue("af", AF_CATALOGUE, EN_GB_CATALOGUE, {
+      layerTemplates: AF_LAYER_TEMPLATES,
+    });
   },
 };
 

@@ -13,6 +13,7 @@ import { expect, test } from "./fixtures";
 import { MapPage } from "./pages/MapPage";
 import { axeViolations } from "./support/a11y";
 import { storedLanguage, storeLanguageBeforeLoad } from "./support/language";
+import { mockLayerProviders } from "./support/layers";
 import { waitForStableLayout } from "./support/states";
 
 /*
@@ -119,6 +120,26 @@ test.describe("with Afrikaans chosen", () => {
     );
     await page.goto("/map");
     await expect(page.locator("html")).toHaveAttribute("lang", "af");
+  });
+
+  test("a country card and list row word their figures in Afrikaans, with the provider's name as published", async ({
+    page,
+    mapPage,
+  }) => {
+    await mockLayerProviders(page);
+    await mapPage.goto("#layers=world-countries&map=5.00/46.50000/2.50000");
+    await mapPage.openMapOptions();
+    const list = page.getByTestId("layer-list-world-countries");
+    await list.locator("summary").click();
+    const row = list
+      .getByTestId("layer-list-row")
+      .filter({ hasText: "France" });
+    await expect(row).toContainText(/Ongeveer .+ mense/);
+    await row.click();
+    await expect(page.getByTestId("feature-card-heading")).toHaveText("France");
+    await expect(page.getByTestId("feature-card")).toContainText(
+      "Bevolking ongeveer",
+    );
   });
 
   test("the chrome speaks Afrikaans", async ({ page, mapPage }) => {
