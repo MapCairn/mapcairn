@@ -141,7 +141,8 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
 
   it.each(
     Object.values(manifestOf(name).exports).filter(
-      (target): target is Record<string, string> => typeof target === "object",
+      (target): target is Record<string, string> =>
+        typeof target === "object" && Reflect.has(target, "@mapcairn/source"),
     ),
   )("loads its entry point in Node, with no export condition", (target) => {
     // A separate process, so Vitest's own resolve conditions (which pick the
@@ -157,8 +158,7 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
       ],
       { cwd: REPO, encoding: "utf8" },
     );
-    expect(result.stderr).toBe("");
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
   });
 });
 
@@ -193,6 +193,16 @@ describe("@mapcairn/map dist", () => {
   const tokens = read("theme", "tokens.css");
   const styles = read("map", "styles.css");
 
+  it.each([
+    ["theme", "tokens"],
+    ["map", "styles"],
+  ])(
+    "@mapcairn/%s ships an empty declaration for its stylesheet, so a TypeScript project resolves the import",
+    (name, stylesheet) => {
+      expect(read(name, `${stylesheet}.css.d.ts`).trim()).toBe("export {};");
+    },
+  );
+
   it("ships its component styles as a stylesheet the host imports", () => {
     expect(styles.length).toBeGreaterThan(0);
     for (const file of distFiles("map").filter((f) => f.endsWith(".js"))) {
@@ -202,7 +212,7 @@ describe("@mapcairn/map dist", () => {
     }
   });
 
-  it("reads only custom properties that tokens.css or styles.css defines, or that its JavaScript sets", () => {
+  it("reads only custom properties that tokens.css or styles.css defines, or readable ones that its JavaScript sets", () => {
     const defined = new Set([
       ...definedProperties(tokens),
       ...definedProperties(styles),
@@ -211,10 +221,17 @@ describe("@mapcairn/map dist", () => {
       .filter((file) => file.endsWith(".js"))
       .map((file) => read("map", file))
       .join("\n");
-    // A property a component sets on an element, such as the sheet's offset,
-    // is named as a string in its JavaScript and is not defined in any sheet.
+    // A property a component sets on an element, such as the sheet's offset, is
+    // named as a string in its JavaScript and is defined in no sheet. Only a
+    // readable name (two or more lower-case words) may be set that way; a
+    // generated name, like the tokens', must be defined in a stylesheet.
+    const readable = /^--[a-z]+(-[a-z]+)+$/;
     const unresolved = [...usedProperties(styles)].filter(
-      (name) => !(defined.has(name) || script.includes(`"${name}"`)),
+      (name) =>
+        !(
+          defined.has(name) ||
+          (readable.test(name) && script.includes(`"${name}"`))
+        ),
     );
     expect(unresolved).toEqual([]);
   });

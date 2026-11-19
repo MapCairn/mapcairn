@@ -37,6 +37,9 @@ export function entryPointsOf(exportsField) {
     }
     const source = Reflect.get(target, SOURCE_CONDITION);
     const built = Reflect.get(target, "default");
+    if (typeof built === "string" && built.endsWith(".css")) {
+      continue;
+    }
     if (typeof source !== "string" || typeof built !== "string") {
       throw new Error(`An export needs ${SOURCE_CONDITION} and default.`);
     }
@@ -46,17 +49,25 @@ export function entryPointsOf(exportsField) {
 }
 
 /**
- * The stylesheet a package ships: an export that is a plain path to a `.css`
- * file. Its presence is what makes the build compile `.css.ts` files.
+ * The stylesheet a package ships: an export whose `default` is a `.css` file,
+ * with a `types` condition pointing at an empty declaration so TypeScript
+ * accepts the import. Its presence is what makes the build compile `.css.ts`
+ * files.
  *
  * @param {Record<string, unknown>} exportsField The manifest `exports`.
  * @returns {string | undefined} The file name without its extension.
  */
 export function stylesheetOf(exportsField) {
-  const found = Object.values(exportsField).find(
-    (target) => typeof target === "string" && target.endsWith(".css"),
-  );
-  return typeof found === "string" ? path.basename(found, ".css") : undefined;
+  for (const target of Object.values(exportsField)) {
+    const built =
+      typeof target === "object" && target !== null
+        ? Reflect.get(target, "default")
+        : undefined;
+    if (typeof built === "string" && built.endsWith(".css")) {
+      return path.basename(built, ".css");
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -236,6 +247,11 @@ export async function buildPackage(folder) {
   mkdirSync(dist, { recursive: true });
 
   await buildJavaScript(folder, entries, stylesheet);
+  if (stylesheet !== undefined) {
+    // A stylesheet has no types, and a project that checks side-effect imports
+    // (`noUncheckedSideEffectImports`) fails on an import it cannot resolve.
+    writeFileSync(path.join(dist, `${stylesheet}.css.d.ts`), "export {};\n");
+  }
   emitDeclarations(folder);
   for (const [name, source] of Object.entries(entries)) {
     await rollUpDeclarations(folder, name, source, manifestPath);

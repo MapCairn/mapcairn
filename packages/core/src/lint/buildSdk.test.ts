@@ -225,7 +225,10 @@ describe("entryPointsOf", () => {
           types: "./dist/contracts.d.ts",
           default: "./dist/contracts.js",
         },
-        "./tokens.css": "./dist/tokens.css",
+        "./tokens.css": {
+          types: "./dist/tokens.css.d.ts",
+          default: "./dist/tokens.css",
+        },
       }),
     ).toEqual({
       index: "./src/index.ts",
@@ -242,9 +245,14 @@ describe("entryPointsOf", () => {
 
 describe("stylesheetOf", () => {
   it("finds the stylesheet export", () => {
-    expect(stylesheetOf({ "./tokens.css": "./dist/tokens.css" })).toBe(
-      "tokens",
-    );
+    expect(
+      stylesheetOf({
+        "./tokens.css": {
+          types: "./dist/tokens.css.d.ts",
+          default: "./dist/tokens.css",
+        },
+      }),
+    ).toBe("tokens");
   });
 
   it("is undefined when a package ships no stylesheet", () => {

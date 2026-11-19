@@ -15,7 +15,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./tokens.css": "./dist/tokens.css"
+    "./tokens.css": {
+      "types": "./dist/tokens.css.d.ts",
+      "default": "./dist/tokens.css"
+    }
   },
   "files": [
     "dist",

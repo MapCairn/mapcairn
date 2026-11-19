@@ -47,6 +47,12 @@ interface ConditionalExport {
   readonly default: string;
 }
 
+/** A stylesheet export: an empty declaration for TypeScript, then the file. */
+interface StylesheetExport {
+  readonly types: string;
+  readonly default: string;
+}
+
 /**
  * Every entry point each built SDK package offers, and nothing else. A
  * stylesheet is a plain path, since it has no source form.
@@ -54,7 +60,7 @@ interface ConditionalExport {
 const BUILT_ENTRY_POINTS: Readonly<
   Record<
     (typeof BUILT_PACKAGES)[number],
-    Record<string, ConditionalExport | string>
+    Record<string, ConditionalExport | StylesheetExport>
   >
 > = {
   core: {
@@ -75,7 +81,10 @@ const BUILT_ENTRY_POINTS: Readonly<
       types: "./dist/index.d.ts",
       default: "./dist/index.js",
     },
-    "./styles.css": "./dist/styles.css",
+    "./styles.css": {
+      types: "./dist/styles.css.d.ts",
+      default: "./dist/styles.css",
+    },
   },
   react: {
     ".": {
@@ -90,7 +99,10 @@ const BUILT_ENTRY_POINTS: Readonly<
       types: "./dist/index.d.ts",
       default: "./dist/index.js",
     },
-    "./tokens.css": "./dist/tokens.css",
+    "./tokens.css": {
+      types: "./dist/tokens.css.d.ts",
+      default: "./dist/tokens.css",
+    },
   },
 };
 
@@ -215,7 +227,12 @@ describe("SDK package manifests", () => {
       const { exports } = manifestOf(name);
       expect(exports).toEqual(BUILT_ENTRY_POINTS[name]);
       for (const entry of Object.values(exports ?? {})) {
-        if (typeof entry === "string") {
+        if (
+          Object.hasOwn(entry as object, "default") &&
+          !Object.hasOwn(entry as object, SOURCE_CONDITION)
+        ) {
+          // A stylesheet: types, then default.
+          expect(Object.keys(entry as object)).toEqual(["types", "default"]);
           continue;
         }
         expect(Object.keys(entry as object)).toEqual([
