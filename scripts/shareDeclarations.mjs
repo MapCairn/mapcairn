@@ -88,15 +88,18 @@ function rewriteImport(ts, declaration, checker, exported) {
     return undefined;
   }
   const clause = declaration.importClause;
+  if (clause?.name) {
+    throw new Error(
+      `${declaration.getSourceFile().fileName} has a default import, which the declaration sharing does not handle.`,
+    );
+  }
   const type = clause?.isTypeOnly ? "type " : "";
   const statements = [
     `import ${type}{ ${shared.join(", ")} } from ${JSON.stringify(MAIN_ENTRY_PLACEHOLDER)};`,
   ];
-  if (kept.length > 0 || clause?.name) {
-    const defaultName = clause?.name ? `${clause.name.text}, ` : "";
-    const rest = kept.length > 0 ? `{ ${kept.join(", ")} }` : "";
+  if (kept.length > 0) {
     statements.push(
-      `import ${type}${defaultName}${rest} from ${declaration.moduleSpecifier.getText()};`,
+      `import ${type}{ ${kept.join(", ")} } from ${declaration.moduleSpecifier.getText()};`,
     );
   }
   return statements.join("\n");
@@ -127,6 +130,11 @@ export function shareMainDeclarations(
     createRequire(import.meta.url).resolve("@microsoft/api-extractor"),
   );
   const ts = fromExtractor("typescript");
+  if (typeof ts.createProgram !== "function") {
+    throw new Error(
+      "API Extractor's copy of TypeScript has no script API (createProgram); it must be a 6.x release, which shareDeclarations.mjs needs to read the declarations.",
+    );
+  }
   const program = ts.createProgram({
     rootNames: [mainDeclaration, otherDeclaration],
     options: {

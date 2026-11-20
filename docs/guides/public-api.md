@@ -79,7 +79,7 @@ The `contracts` entry point shares its types with the main entry. Its declaratio
 
 ### What produces the reports
 
-The reports come from API Extractor, which reads the declarations with its own bundled TypeScript, while the build emits them with the repository's TypeScript 7. A new version of either can change every report, and the weekly dependency pull request that bumps them fails `api:check`. On that branch run `npm run api:update`, read the diff to see whether the change is real, and commit it. `.github/dependabot.yml` groups the two apart from the other npm updates, so this happens in one small pull request.
+The reports come from API Extractor, which reads the declarations with its own bundled TypeScript, while the build emits them with the repository's TypeScript 7. API Extractor's bundled TypeScript also reads the declarations in `scripts/shareDeclarations.mjs`, so a bump of it can change the built `contracts.d.ts` as well as the reports. A new version of either can change every report, and the weekly dependency pull request that bumps them fails `api:check`. On that branch run `npm run api:update`, read the diff to see whether the change is real, and commit it. `.github/dependabot.yml` groups the two apart from the other npm updates, so this happens in one small pull request.
 
 ### TSDoc warnings
 

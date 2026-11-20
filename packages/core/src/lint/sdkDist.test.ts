@@ -330,7 +330,7 @@ describe("@mapcairn/theme createThemeStylesheet", () => {
 /** The names a rolled-up declaration file declares at its top level. */
 function declaredNames(source: string): string[] {
   const pattern =
-    /^(?:export\s+)?declare\s+(?:abstract\s+)?(?:class|interface|type|function|const|enum)\s+([A-Za-z_$][\w$]*)/gm;
+    /^(?:export\s+)?declare\s+(?:abstract\s+)?(?:class|interface|type|function|const\s+enum|const|enum|namespace)\s+([A-Za-z_$][\w$]*)/gm;
   return [...source.matchAll(pattern)].map((match) => match[1] ?? "");
 }
 
@@ -347,6 +347,7 @@ describe("@mapcairn/core contracts.d.ts", () => {
     );
     expect(repeated, "contracts.d.ts declares these itself").toEqual([]);
     expect(specifiersOf(contracts)).toContain("@mapcairn/core");
+    expect(contracts).not.toContain("mapcairn-main-entry");
   });
 
   it("has an API report with no forgotten export, because it shares the main entry's types", () => {

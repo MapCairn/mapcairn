@@ -347,9 +347,6 @@ export type PortRegistry = {
 };
 
 // @public
-export type PortsAreExhaustive<Missing extends never = Exclude<keyof Services, PortName | (typeof DATA_SERVICE_NAMES)[number]>> = Missing;
-
-// @public
 export interface RoutingProviderControls {
     hold(): void;
     willFail(kind: ScriptedRoutingFailure): void;
