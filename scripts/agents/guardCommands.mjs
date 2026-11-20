@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * The rules `guardWrites.mjs` applies to a shell command run by a read-only
- * reviewer: which file commands it may run, where it may redirect output, and
+ * The second layer of the rules `guardWrites.mjs` applies to a shell command
+ * run by a read-only reviewer. The allowlist in `guardAllowlist.mjs` decides
+ * first; these rules run only on a command it allows, and can only add a
+ * refusal. They say which file commands a reviewer may run, where it may redirect output, and
  * which wrappers and programs the guard cannot read. `guardGit.mjs` and
  * `guardGh.mjs` hold the rules for `git` and `gh`. Each check returns the
  * reason a statement is blocked, or nothing. Reasons name the command and say

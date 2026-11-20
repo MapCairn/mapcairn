@@ -269,6 +269,27 @@ export function isInside(resolved, context, depth) {
 }
 
 /**
+ * Whether a path is the project folder itself (the folder that holds
+ * `.claude/worktrees`), with symbolic links followed.
+ *
+ * @param {Resolved | undefined} resolved
+ * @param {Context} context
+ * @returns {boolean}
+ */
+export function isProjectRoot(resolved, context) {
+  if (resolved === undefined) {
+    return false;
+  }
+  context.zoneKey ??= keyOf(context.zone, context);
+  const root = context.zoneKey.slice(0, -ZONE.length);
+  const key = keyOf(resolved, context);
+  return (
+    key.length === root.length &&
+    root.every((segment, index) => key[index] === segment)
+  );
+}
+
+/**
  * The comparable form of a path, with symbolic links followed.
  *
  * @param {Resolved} resolved

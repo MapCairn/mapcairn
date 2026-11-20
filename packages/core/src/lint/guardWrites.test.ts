@@ -14,6 +14,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  checkCommand,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/agents/guardCommands.mjs";
+import {
+  projectOf,
+  resolvePath,
+  show,
+  ZONE,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/agents/guardPaths.mjs";
+import {
   decide,
   READ_ONLY_AGENTS,
   runHook,
@@ -81,6 +92,34 @@ function edit(filePath: unknown, options: Options = {}): Decision {
 
 function bash(command: string, options: Options = {}): Decision {
   return call("Bash", { command }, options);
+}
+
+/**
+ * The second layer on its own: the shell rules in `guardCommands.mjs`, which
+ * run after the allowlist and can only add a refusal. The fixtures below were
+ * written for those rules, so they check its reasons; each refusal is also
+ * checked against the whole guard, which must refuse it too.
+ */
+function shell(command: string, options: Options = {}): Decision {
+  const place = options.place ?? LINUX;
+  const cwd = options.cwd ?? place.root;
+  const project = projectOf(place.root, cwd, place.platform);
+  const here = resolvePath(cwd, null, place.platform);
+  const reason = checkCommand(command, {
+    cwd: here === undefined ? null : show(here),
+    context: {
+      platform: place.platform,
+      realpath: options.realpath ?? ((p: string) => p),
+      tempDirs: options.tempDirs ?? ["/tmp"],
+      zone: { root: project.root, segments: [...project.segments, ...ZONE] },
+    },
+    depth: 0,
+  });
+  if (reason === undefined) {
+    return { allow: true };
+  }
+  expect(bash(command, options).allow, command).toBe(false);
+  return { allow: false, reason };
 }
 
 /** A worktree folder inside the project, as a person on that system writes it. */
@@ -339,7 +378,7 @@ describe("Edit, Write and NotebookEdit path check", () => {
   });
 });
 
-describe("Bash commands the reviewers may run", () => {
+describe("Bash commands the shell rules let through", () => {
   const w = ".claude/worktrees/review-12";
   it.each([
     "git status",
@@ -399,32 +438,34 @@ describe("Bash commands the reviewers may run", () => {
     "sh -c 'git status'",
     `cat > ${w}/h.mjs <<'EOF'\nrm -rf /\ngit push\nEOF`,
   ])("allows %s", (command) => {
-    expect(bash(command)).toEqual({ allow: true });
+    expect(shell(command)).toEqual({ allow: true });
   });
 
   it("allows the Windows forms of a worktree command", () => {
     const dir = worktree(WINDOWS);
-    expect(bash(`git -C "${dir}" status`, { place: WINDOWS }).allow).toBe(true);
-    expect(bash(`rm "${dir}\\t.ts"`, { place: WINDOWS }).allow).toBe(true);
-    expect(bash(`rm ${dir}\\t.ts`, { place: WINDOWS }).allow).toBe(true);
-    expect(bash(`echo x > "${dir}\\n.txt"`, { place: WINDOWS }).allow).toBe(
+    expect(shell(`git -C "${dir}" status`, { place: WINDOWS }).allow).toBe(
       true,
     );
-    expect(bash("echo x > nul", { place: WINDOWS }).allow).toBe(true);
+    expect(shell(`rm "${dir}\\t.ts"`, { place: WINDOWS }).allow).toBe(true);
+    expect(shell(`rm ${dir}\\t.ts`, { place: WINDOWS }).allow).toBe(true);
+    expect(shell(`echo x > "${dir}\\n.txt"`, { place: WINDOWS }).allow).toBe(
+      true,
+    );
+    expect(shell("echo x > nul", { place: WINDOWS }).allow).toBe(true);
     expect(
-      bash(`cd "${dir}" && git restore a.ts`, { place: WINDOWS }).allow,
+      shell(`cd "${dir}" && git restore a.ts`, { place: WINDOWS }).allow,
     ).toBe(true);
   });
 
   it("allows a worktree command when the session is already inside the worktree", () => {
     const cwd = worktree(LINUX);
-    expect(bash("git restore src/a.ts", { cwd }).allow).toBe(true);
-    expect(bash("npm ci --ignore-scripts", { cwd }).allow).toBe(true);
-    expect(bash("rm tmp.ts", { cwd }).allow).toBe(true);
+    expect(shell("git restore src/a.ts", { cwd }).allow).toBe(true);
+    expect(shell("npm ci --ignore-scripts", { cwd }).allow).toBe(true);
+    expect(shell("rm tmp.ts", { cwd }).allow).toBe(true);
   });
 });
 
-describe("Bash commands the reviewers may not run", () => {
+describe("Bash commands the shell rules refuse", () => {
   const w = ".claude/worktrees/review-12";
   it.each([
     ["git stash", /stash/],
@@ -484,7 +525,7 @@ describe("Bash commands the reviewers may not run", () => {
     ["git worktree prune", /worktree/],
     ["git frobnicate", /frobnicate/],
   ])("blocks %s", (command, reason) => {
-    const decision = bash(command);
+    const decision = shell(command);
     expect(decision.allow).toBe(false);
     expect(decision.reason).toMatch(reason);
   });
@@ -531,7 +572,7 @@ describe("Bash commands the reviewers may not run", () => {
     ["npm uninstall left-pad", /npm/],
     ["cd packages/core && npm install", /npm/],
   ])("blocks %s", (command, reason) => {
-    const decision = bash(command);
+    const decision = shell(command);
     expect(decision.allow).toBe(false);
     expect(decision.reason).toMatch(reason);
   });
@@ -556,27 +597,28 @@ describe("Bash commands the reviewers may not run", () => {
       /field|POST|write/i,
     ],
   ])("blocks %s", (command, reason) => {
-    const decision = bash(command);
+    const decision = shell(command);
     expect(decision.allow).toBe(false);
     expect(decision.reason).toMatch(reason);
   });
 
   it("blocks Windows forms outside a worktree", () => {
     expect(
-      bash("rm C:\\Users\\dev\\mapcairn\\AGENTS.md", { place: WINDOWS }).allow,
+      shell("rm C:\\Users\\dev\\mapcairn\\AGENTS.md", { place: WINDOWS }).allow,
     ).toBe(false);
     expect(
-      bash('echo x > "C:\\Users\\dev\\mapcairn\\AGENTS.md"', { place: WINDOWS })
-        .allow,
-    ).toBe(false);
-    expect(
-      bash('git -C "C:\\Users\\dev\\mapcairn" checkout main', {
+      shell('echo x > "C:\\Users\\dev\\mapcairn\\AGENTS.md"', {
         place: WINDOWS,
       }).allow,
     ).toBe(false);
-    expect(bash("git push", { place: WINDOWS }).allow).toBe(false);
     expect(
-      bash("rm D:\\x\\.claude\\worktrees\\a\\f", { place: WINDOWS }).allow,
+      shell('git -C "C:\\Users\\dev\\mapcairn" checkout main', {
+        place: WINDOWS,
+      }).allow,
+    ).toBe(false);
+    expect(shell("git push", { place: WINDOWS }).allow).toBe(false);
+    expect(
+      shell("rm D:\\x\\.claude\\worktrees\\a\\f", { place: WINDOWS }).allow,
     ).toBe(false);
   });
 
@@ -712,13 +754,16 @@ describe("the hook entry point", () => {
     expect(runHook(`\uFEFF${reviewer("git push")}`, env).code).toBe(2);
   });
 
-  it("does not fail on a reviewer's call with no tool input or working directory", () => {
+  it("refuses a reviewer's empty call without failing, and checks an edit with no working directory", () => {
     const missing = JSON.stringify({
       agent_type: "fresh-eyes-reviewer",
       tool_name: "Bash",
       tool_input: null,
     });
-    expect(runHook(missing, env).code).toBe(0);
+    const empty = runHook(missing, env);
+    expect(empty.code).toBe(2);
+    expect(empty.message).toMatch(/the command is empty/);
+    expect(empty.message).not.toMatch(/could not decide/);
     const editCall = JSON.stringify({
       agent_type: "fresh-eyes-reviewer",
       tool_name: "Edit",
@@ -820,7 +865,7 @@ describe("holes a review found", () => {
   ])(
     "reads a here-document delimiter as the shell does: %s",
     (_name, command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/rm/);
     },
@@ -829,17 +874,17 @@ describe("holes a review found", () => {
   it.each(["cat <<EOF\nrm -rf packages", "cat <<EOF", "cat <<'EOF'\nx\nEOF2"])(
     "blocks a command with a here-document that is never closed: %j",
     (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/here-document/);
     },
   );
 
   it("allows a closed here-document with an oddly quoted delimiter", () => {
-    expect(bash(`cat > ${w}/h.txt <<E"O"F\nrm -rf packages\nEOF`).allow).toBe(
+    expect(shell(`cat > ${w}/h.txt <<E"O"F\nrm -rf packages\nEOF`).allow).toBe(
       true,
     );
-    expect(bash(`cat > ${w}/h.txt <<"E F"\nrm -rf packages\nE F`).allow).toBe(
+    expect(shell(`cat > ${w}/h.txt <<"E F"\nrm -rf packages\nE F`).allow).toBe(
       true,
     );
   });
@@ -850,7 +895,7 @@ describe("holes a review found", () => {
     "echo x >| AGENTS.md",
     "echo x &>> AGENTS.md",
   ])("treats %s as a write", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it.each([
@@ -874,15 +919,15 @@ describe("holes a review found", () => {
     ["a shell with a script", `bash ${w}/x.sh`],
     ["a bare shell", "sh"],
   ])("does not run what it cannot read: %s", (_name, command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it("still reads the plain wrappers", () => {
-    expect(bash("env FOO=1 git status").allow).toBe(true);
-    expect(bash("timeout 5 git status").allow).toBe(true);
-    expect(bash("nice -n 5 git status").allow).toBe(true);
-    expect(bash("time git status").allow).toBe(true);
-    expect(bash("env FOO=1 rm -rf packages").allow).toBe(false);
+    expect(shell("env FOO=1 git status").allow).toBe(true);
+    expect(shell("timeout 5 git status").allow).toBe(true);
+    expect(shell("nice -n 5 git status").allow).toBe(true);
+    expect(shell("time git status").allow).toBe(true);
+    expect(shell("env FOO=1 rm -rf packages").allow).toBe(false);
   });
 
   it.each([
@@ -897,7 +942,7 @@ describe("holes a review found", () => {
     "awk 'BEGIN{system(\"rm x\")}'",
     "awk -f prog.awk README.md",
   ])("blocks a script that can write: %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it.each([
@@ -907,7 +952,7 @@ describe("holes a review found", () => {
     "sed -n '/exit/p;/we/d' AGENTS.md",
     "awk '{print $1}' AGENTS.md",
   ])("allows a script that only reads: %s", (command) => {
-    expect(bash(command).allow).toBe(true);
+    expect(shell(command).allow).toBe(true);
   });
 
   it.each([
@@ -919,12 +964,12 @@ describe("holes a review found", () => {
     "install -t packages .claude/worktrees/review-12/x",
     "cp -t",
   ])("reads the target of %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it("allows -t with a target inside the worktree", () => {
-    expect(bash(`cp -t ${w}/dir AGENTS.md`).allow).toBe(true);
-    expect(bash(`cp --target-directory=${w}/dir AGENTS.md`).allow).toBe(true);
+    expect(shell(`cp -t ${w}/dir AGENTS.md`).allow).toBe(true);
+    expect(shell(`cp --target-directory=${w}/dir AGENTS.md`).allow).toBe(true);
   });
 
   it.each([
@@ -936,11 +981,11 @@ describe("holes a review found", () => {
       `ln -s ${root}/packages ${w}/lnk2 && rm -rf ${w}/lnk2/`,
     ],
   ])("blocks %s", (_name, command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it("allows a link whose source is inside the worktree", () => {
-    expect(bash(`ln -s ${root}/${w}/a ${w}/lnk`).allow).toBe(true);
+    expect(shell(`ln -s ${root}/${w}/a ${w}/lnk`).allow).toBe(true);
   });
 
   it.each([
@@ -956,7 +1001,7 @@ describe("holes a review found", () => {
     "git -c alias.x='!rm -rf packages' x",
     "git --config-env=core.pager=X status",
   ])("blocks a way to point git elsewhere or run code: %s", (command) => {
-    expect(bash(command, inWorktree).allow).toBe(false);
+    expect(shell(command, inWorktree).allow).toBe(false);
   });
 
   it.each([
@@ -976,7 +1021,7 @@ describe("holes a review found", () => {
     "git fetch --tags origin",
     "git fetch -f origin",
   ])("blocks a read command that runs code or writes refs: %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it.each([
@@ -986,7 +1031,7 @@ describe("holes a review found", () => {
     "git fetch",
     "git log -c",
   ])("allows %s", (command) => {
-    expect(bash(command).allow).toBe(true);
+    expect(shell(command).allow).toBe(true);
   });
 
   it.each([
@@ -1004,7 +1049,7 @@ describe("holes a review found", () => {
   ])(
     "refuses to create or move a branch, even in a worktree: %s",
     (command) => {
-      expect(bash(command, inWorktree).allow).toBe(false);
+      expect(shell(command, inWorktree).allow).toBe(false);
     },
   );
 
@@ -1015,7 +1060,7 @@ describe("holes a review found", () => {
     "git checkout -- .",
     "git restore src/a.ts",
   ])("allows a detached checkout or a restore in a worktree: %s", (command) => {
-    expect(bash(command, inWorktree).allow).toBe(true);
+    expect(shell(command, inWorktree).allow).toBe(true);
   });
 
   it.each([
@@ -1033,7 +1078,7 @@ describe("holes a review found", () => {
     "gh alias list",
     "gh extension list",
   ])("blocks %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it.each([
@@ -1044,13 +1089,13 @@ describe("holes a review found", () => {
     "gh issue --repo MapCairn/mapcairn list",
     "gh api -X GET repos/a/b/pulls/12",
   ])("allows %s", (command) => {
-    expect(bash(command).allow).toBe(true);
+    expect(shell(command).allow).toBe(true);
   });
 
   describe("input that is made to be slow", () => {
     function timed(command: string): { decision: Decision; ms: number } {
       const start = performance.now();
-      const decision = bash(command);
+      const decision = shell(command);
       return { decision, ms: performance.now() - start };
     }
 
@@ -1109,8 +1154,8 @@ describe("holes a review found", () => {
       for (let level = 0; level < 12; level += 1) {
         command = `sh -c ${JSON.stringify(command)}`;
       }
-      expect(bash(command).allow).toBe(false);
-      expect(bash('sh -c "sh -c \\"git status\\""').allow).toBe(true);
+      expect(shell(command).allow).toBe(false);
+      expect(shell('sh -c "sh -c \\"git status\\""').allow).toBe(true);
     });
 
     it("refuses a file path with thousands of segments or a huge length", () => {
@@ -1144,7 +1189,7 @@ describe("Windows forms a review found", () => {
     ],
   ])("blocks %s from inside a worktree", (_name, file) => {
     expect(edit(file, { place: WINDOWS, cwd }).allow).toBe(false);
-    expect(bash(`rm "${file}"`, { place: WINDOWS, cwd }).allow).toBe(false);
+    expect(shell(`rm "${file}"`, { place: WINDOWS, cwd }).allow).toBe(false);
   });
 
   it("still allows a mixed-case path inside the worktree", () => {
@@ -1172,7 +1217,7 @@ describe("false blocks a review found", () => {
     "[ -f AGENTS.md ] && git status",
     "[[ -f AGENTS.md ]] && git status",
   ])("allows %s", (command) => {
-    expect(bash(command).allow).toBe(true);
+    expect(shell(command).allow).toBe(true);
   });
 
   it.each([
@@ -1187,7 +1232,7 @@ describe("false blocks a review found", () => {
     "awk '{print}; {print > \"x\"}' README.md",
     "awk -f prog.awk README.md",
   ])("blocks %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 });
 
@@ -1269,7 +1314,7 @@ describe("the session scratchpad", () => {
     `cd ${pad} && node probe.mjs`,
     `cd ${pad} && echo x > out.txt`,
   ])("lets a command write there: %s", (command) => {
-    expect(bash(command).allow).toBe(true);
+    expect(shell(command).allow).toBe(true);
   });
 
   it.each([
@@ -1280,7 +1325,7 @@ describe("the session scratchpad", () => {
     `echo x > ${pad}/.git/config`,
     `echo x > /tmp/claude-1000/p/s/other/x`,
   ])("still blocks %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it("does not let a reviewer write a git folder in a worktree either", () => {
@@ -1288,7 +1333,7 @@ describe("the session scratchpad", () => {
     expect(edit(`${LINUX.root}/${w}/sub/.git/config`).allow).toBe(false);
     expect(edit(`${LINUX.root}/${w}/.gitignore`).allow).toBe(true);
     expect(edit(`${LINUX.root}/${w}/.github/x.yml`).allow).toBe(true);
-    expect(bash(`echo x > ${w}/.git`).allow).toBe(false);
+    expect(shell(`echo x > ${w}/.git`).allow).toBe(false);
   });
 });
 
@@ -1308,7 +1353,7 @@ describe("hardening from the second review", () => {
     "bash -c -x 'rm -rf packages'",
     "bash -lc -e 'touch AGENTS.md'",
   ])("reads the command after the options that follow -c: %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it.each([
@@ -1317,12 +1362,12 @@ describe("hardening from the second review", () => {
     `mv -t${root}/packages ${w}/a`,
     "mv -t",
   ])("reads the target of %s", (command) => {
-    expect(bash(command, { cwd: `${root}/${w}` }).allow).toBe(false);
+    expect(shell(command, { cwd: `${root}/${w}` }).allow).toBe(false);
   });
 
   it("allows mv inside a worktree, with or without -t", () => {
-    expect(bash(`mv ${w}/a ${w}/b`).allow).toBe(true);
-    expect(bash(`mv -t ${w}/dir ${w}/a`).allow).toBe(true);
+    expect(shell(`mv ${w}/a ${w}/b`).allow).toBe(true);
+    expect(shell(`mv -t ${w}/dir ${w}/a`).allow).toBe(true);
   });
 
   it.each([
@@ -1332,11 +1377,11 @@ describe("hardening from the second review", () => {
     "to`echo`uch AGENTS.md",
     "`echo to`uch AGENTS.md",
   ])("refuses a program word the shell rewrites: %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it("allows a command substitution that stands alone", () => {
-    expect(bash("echo `git rev-parse HEAD`").allow).toBe(true);
+    expect(shell("echo `git rev-parse HEAD`").allow).toBe(true);
   });
 
   it.each([
@@ -1356,11 +1401,11 @@ describe("hardening from the second review", () => {
     "unbuffer rm -rf packages",
     "rlwrap rm -rf packages",
   ])("does not run %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it("reads the command in the other shells that the guard supports", () => {
-    expect(bash("ash -c 'git status'").allow).toBe(true);
+    expect(shell("ash -c 'git status'").allow).toBe(true);
   });
 
   it.each([
@@ -1368,7 +1413,7 @@ describe("hardening from the second review", () => {
     "git --exec-path=/tmp/x status",
     "git --exec-path /tmp/x status",
   ])("refuses %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it.each([
@@ -1392,7 +1437,7 @@ describe("hardening from the second review", () => {
   ])(
     "refuses an environment that changes what a command runs: %s",
     (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/variable|environment/);
     },
@@ -1406,7 +1451,7 @@ describe("hardening from the second review", () => {
     "declare -x HOME=y",
     "env PATH=x git log",
   ])("refuses a risky variable set by %s", (command) => {
-    const decision = bash(command);
+    const decision = shell(command);
     expect(decision.allow).toBe(false);
     expect(decision.reason).toMatch(/variable/);
   });
@@ -1441,7 +1486,7 @@ describe("hardening from the second review", () => {
     "printenv HOME",
     "env | grep -E '^(HOME|PATH)='",
   ])("allows %s", (command) => {
-    expect(bash(command).allow).toBe(true);
+    expect(shell(command).allow).toBe(true);
   });
 
   it.each([
@@ -1450,16 +1495,16 @@ describe("hardening from the second review", () => {
     "git --config-env=a=B status",
     "git -c core.pager=x log",
   ])("names the configuration rule for %s", (command) => {
-    const decision = bash(command);
+    const decision = shell(command);
     expect(decision.allow).toBe(false);
     expect(decision.reason).toMatch(/sets configuration/);
   });
 
   it("reads a here-document closed after tab stripping", () => {
     const body = "cat <<-EOF\n\tx\n\tEOF\n";
-    expect(bash(`${body}rm -rf packages`).reason).toMatch(/rm/);
-    expect(bash(`cat > ${w}/h.txt <<-EOF\n\tx\n\tEOF`).allow).toBe(true);
-    expect(bash("cat <<EOF\n\tx\n\tEOF\nrm packages").reason).toMatch(
+    expect(shell(`${body}rm -rf packages`).reason).toMatch(/rm/);
+    expect(shell(`cat > ${w}/h.txt <<-EOF\n\tx\n\tEOF`).allow).toBe(true);
+    expect(shell("cat <<EOF\n\tx\n\tEOF\nrm packages").reason).toMatch(
       /here-document/,
     );
   });
@@ -1474,16 +1519,16 @@ describe("hardening from the second review", () => {
   });
 
   it("blocks an unquoted here-document whose body runs a command", () => {
-    expect(bash("cat <<EOF\n$(rm -rf packages)\nEOF").allow).toBe(false);
-    expect(bash("cat <<EOF\n`rm -rf packages`\nEOF").allow).toBe(false);
-    expect(bash("cat <<'EOF'\n$(rm -rf packages)\nEOF").allow).toBe(true);
-    expect(bash("cat <<\\EOF\n$(rm -rf packages)\nEOF").allow).toBe(true);
-    expect(bash("cat <<EOF\nplain $HOME text\nEOF").allow).toBe(true);
+    expect(shell("cat <<EOF\n$(rm -rf packages)\nEOF").allow).toBe(false);
+    expect(shell("cat <<EOF\n`rm -rf packages`\nEOF").allow).toBe(false);
+    expect(shell("cat <<'EOF'\n$(rm -rf packages)\nEOF").allow).toBe(true);
+    expect(shell("cat <<\\EOF\n$(rm -rf packages)\nEOF").allow).toBe(true);
+    expect(shell("cat <<EOF\nplain $HOME text\nEOF").allow).toBe(true);
   });
 
   it("stops reading shells nested more than four deep", () => {
-    expect(bash(nest(4, "git status")).allow).toBe(true);
-    const decision = bash(nest(5, "git status"));
+    expect(shell(nest(4, "git status")).allow).toBe(true);
+    const decision = shell(nest(5, "git status"));
     expect(decision.allow).toBe(false);
     expect(decision.reason).toMatch(/nested/);
   });
@@ -1495,7 +1540,7 @@ describe("hardening from the second review", () => {
     "sed --expression 'w x' README.md",
     "sed -nf script.sed README.md",
   ])("reads the script of %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it.each([
@@ -1508,12 +1553,12 @@ describe("hardening from the second review", () => {
     "sed --line-length=5 -n p AGENTS.md",
     "sed -n -l 70 '1p' AGENTS.md",
   ])("allows %s", (command) => {
-    expect(bash(command).allow).toBe(true);
+    expect(shell(command).allow).toBe(true);
   });
 
   it("reads the script that follows a line-length option", () => {
-    expect(bash("sed -l 5 -n 'w x' README.md").allow).toBe(false);
-    expect(bash("sed --line-length=5 -n 'w x' README.md").allow).toBe(false);
+    expect(shell("sed -l 5 -n 'w x' README.md").allow).toBe(false);
+    expect(shell("sed --line-length=5 -n 'w x' README.md").allow).toBe(false);
   });
 
   it.each([
@@ -1521,7 +1566,7 @@ describe("hardening from the second review", () => {
     "sed -n 'bend;w x' AGENTS.md",
     "sed -n 'b end;w x' AGENTS.md",
   ])("still finds a write after a branch label: %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it.each([
@@ -1536,14 +1581,14 @@ describe("hardening from the second review", () => {
     `cd ${".claude/worktrees/review-12"} && npm install`,
     `cd ${".claude/worktrees/review-12"} && npm --prefix /x ci --ignore-scripts`,
   ])("refuses %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 
   it("allows an install without scripts in a worktree", () => {
     const wt = ".claude/worktrees/review-12";
-    expect(bash(`cd ${wt} && npm ci --ignore-scripts`).allow).toBe(true);
-    expect(bash(`cd ${wt} && npm install --ignore-scripts`).allow).toBe(true);
-    expect(bash(`cd ${wt} && npm run build`).allow).toBe(true);
+    expect(shell(`cd ${wt} && npm ci --ignore-scripts`).allow).toBe(true);
+    expect(shell(`cd ${wt} && npm install --ignore-scripts`).allow).toBe(true);
+    expect(shell(`cd ${wt} && npm run build`).allow).toBe(true);
   });
 
   it.each([
@@ -1555,7 +1600,7 @@ describe("hardening from the second review", () => {
     "scp a b",
     "rsync -a a b",
   ])("treats a remote or outside target as outside: %s", (command) => {
-    expect(bash(command).allow).toBe(false);
+    expect(shell(command).allow).toBe(false);
   });
 });
 
@@ -1574,7 +1619,7 @@ describe("hardening of the write guard (#534)", () => {
       "env HOME+=/x git status",
       "LESSKEYIN[0]=x git log",
     ])("names the variable in %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/the variable/);
     });
@@ -1587,7 +1632,7 @@ describe("hardening of the write guard (#534)", () => {
       "echo HOME=1",
       "LESSON=1 echo hi",
     ])("allows %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
   });
 
@@ -1599,7 +1644,7 @@ describe("hardening of the write guard (#534)", () => {
       "noglob nocorrect NODE_OPTIONS=--require=/x node a.js",
       "FOO=1 noglob PATH=/x git log",
     ])("reads the assignments after the modifier in %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/the variable/);
     });
@@ -1609,14 +1654,14 @@ describe("hardening of the write guard (#534)", () => {
       "coproc git status",
       "coproc NAME { git status; }",
     ])("refuses coproc: %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/coproc/);
     });
 
     it("still runs the program that follows a modifier through its rules", () => {
-      expect(bash("noglob git push").allow).toBe(false);
-      expect(bash("noglob git status").allow).toBe(true);
+      expect(shell("noglob git push").allow).toBe(false);
+      expect(shell("noglob git status").allow).toBe(true);
     });
   });
 
@@ -1653,7 +1698,7 @@ describe("hardening of the write guard (#534)", () => {
       "make PATH=/x all",
       "gmake NODE_OPTIONS=--require=/x all",
     ])("refuses %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/the variable/);
     });
@@ -1670,7 +1715,7 @@ describe("hardening of the write guard (#534)", () => {
       "grep -rn 'NODE_PATH=' scripts",
       "grep 'NPM_CONFIG_PREFIX=' .github",
     ])("allows %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
   });
 
@@ -1695,15 +1740,15 @@ describe("hardening of the write guard (#534)", () => {
       `scp a ${w}/b`,
       `cd ${w} && rsync -a a b`,
     ])("refuses %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/rsync|scp/);
       expect(decision.reason).toMatch(/cannot read/);
     });
 
     it("refuses them behind a wrapper", () => {
-      expect(bash(`env FOO=1 rsync -a a ${w}/b`).allow).toBe(false);
-      expect(bash(`timeout 5 scp a ${w}/b`).allow).toBe(false);
+      expect(shell(`env FOO=1 rsync -a a ${w}/b`).allow).toBe(false);
+      expect(shell(`timeout 5 scp a ${w}/b`).allow).toBe(false);
     });
   });
 
@@ -1716,7 +1761,7 @@ describe("hardening of the write guard (#534)", () => {
       "sh -- script.sh -c 'git push'",
       "sh -",
     ])("does not take -c after the script for the command: %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/without -c/);
     });
@@ -1734,7 +1779,7 @@ describe("hardening of the write guard (#534)", () => {
       "bash --unknown -c 'git status'",
       "bash -euo pipefail -c 'git status'",
     ])("refuses an option the guard cannot read: %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/option/);
     });
@@ -1745,7 +1790,7 @@ describe("hardening of the write guard (#534)", () => {
       "bash -ci 'git status'",
       "zsh -i -lc 'git status'",
     ])("refuses -i with -c, which reads start-up files: %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/interactive/);
     });
@@ -1762,12 +1807,12 @@ describe("hardening of the write guard (#534)", () => {
       "bash -c 'git status' name arg",
       "sh -c 'git log | head -5'",
     ])("allows %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
 
     it("still reads the command it runs", () => {
-      expect(bash("bash --norc -c 'git push'").allow).toBe(false);
-      expect(bash("bash -e -c 'rm -rf packages'").allow).toBe(false);
+      expect(shell("bash --norc -c 'git push'").allow).toBe(false);
+      expect(shell("bash -e -c 'rm -rf packages'").allow).toBe(false);
     });
   });
 
@@ -1778,7 +1823,7 @@ describe("hardening of the write guard (#534)", () => {
       `env a-b=1 git commit -m x`,
       `env X.Y=1 HOME=/x git status`,
     ])("reads the program after env words with odd names: %s", (command) => {
-      expect(bash(command).allow).toBe(false);
+      expect(shell(command).allow).toBe(false);
     });
 
     it.each([
@@ -1788,13 +1833,13 @@ describe("hardening of the write guard (#534)", () => {
       "env X.Y=1 git status",
       "env BASH_FUNC_git=x git status",
     ])("refuses an env setting that is not a plain name: %s", (command) => {
-      expect(bash(command).allow).toBe(false);
+      expect(shell(command).allow).toBe(false);
     });
 
     it("still reads env options and plain settings", () => {
-      expect(bash("env CI=1 NODE_ENV=test git status").allow).toBe(true);
-      expect(bash("env CI=1 git status").allow).toBe(true);
-      expect(bash("env -u X git status").allow).toBe(false);
+      expect(shell("env CI=1 NODE_ENV=test git status").allow).toBe(true);
+      expect(shell("env CI=1 git status").allow).toBe(true);
+      expect(shell("env -u X git status").allow).toBe(false);
     });
 
     it.each([
@@ -1812,7 +1857,7 @@ describe("hardening of the write guard (#534)", () => {
       "if [[ -n x ]] touch /x",
       "[[ -n x ]] touch /x",
     ])("refuses a form that hides a command: %s", (command) => {
-      expect(bash(command).allow).toBe(false);
+      expect(shell(command).allow).toBe(false);
     });
 
     it.each([
@@ -1821,7 +1866,7 @@ describe("hardening of the write guard (#534)", () => {
       "if [[ -n x ]]; then git status; fi",
       "[ -n x ] && git status",
     ])("allows %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
 
     it.each([
@@ -1832,13 +1877,13 @@ describe("hardening of the write guard (#534)", () => {
       "local a[$x]=1",
       "typeset a[b+c]=1",
     ])("refuses a subscript that is not a number: %s", (command) => {
-      expect(bash(command).allow).toBe(false);
+      expect(shell(command).allow).toBe(false);
     });
 
     it.each(["export a[0]=1", "declare a[12]=1", "CI[0]=1 git status"])(
       "allows a numeric subscript: %s",
       (command) => {
-        expect(bash(command).allow).toBe(true);
+        expect(shell(command).allow).toBe(true);
       },
     );
 
@@ -1850,11 +1895,11 @@ describe("hardening of the write guard (#534)", () => {
       "set -ek",
       "sh -c 'set -k; git status'",
     ])("refuses keyword mode: %s", (command) => {
-      expect(bash(command).allow).toBe(false);
+      expect(shell(command).allow).toBe(false);
     });
 
     it("allows set without keyword mode", () => {
-      expect(bash("set -e; git status").allow).toBe(true);
+      expect(shell("set -e; git status").allow).toBe(true);
     });
 
     it.each([
@@ -1868,7 +1913,7 @@ describe("hardening of the write guard (#534)", () => {
       "export GH_PAGER=x",
       "env GH_PAGER=x gh pr diff 1",
     ])("refuses %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/the variable/);
     });
@@ -1879,7 +1924,7 @@ describe("hardening of the write guard (#534)", () => {
       "grep -rn 'GH_TOKEN=' .github",
       "gh pr diff 558",
     ])("allows %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
 
     it.each([
@@ -1888,7 +1933,7 @@ describe("hardening of the write guard (#534)", () => {
       `fish -c "echo 'a\\\\' '; touch /x; echo 'b'"`,
       "fish --init-command=x -c true",
     ])("refuses fish, whose quoting differs from bash: %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/fish/);
     });
@@ -1902,7 +1947,7 @@ describe("hardening of the write guard (#534)", () => {
     ])(
       "refuses ANSI-C and locale quoting, which the guard cannot read: %s",
       (command) => {
-        const decision = bash(command);
+        const decision = shell(command);
         expect(decision.allow).toBe(false);
         expect(decision.reason).toMatch(/\$'/);
       },
@@ -1916,7 +1961,7 @@ describe("hardening of the write guard (#534)", () => {
       "printf '%s\\n' x",
       "echo \\$'x'",
     ])("allows a dollar that is not ANSI-C quoting: %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
 
     it.each([
@@ -1928,7 +1973,7 @@ describe("hardening of the write guard (#534)", () => {
     ])(
       "strips backslashes before it reads an assigning builtin: %s",
       (command) => {
-        const decision = bash(command);
+        const decision = shell(command);
         expect(decision.allow).toBe(false);
         expect(decision.reason).toMatch(/variable|subscript/);
       },
@@ -1941,12 +1986,12 @@ describe("hardening of the write guard (#534)", () => {
       "shopt -oq keyword",
       "shopt -so",
     ])("refuses keyword mode through shopt: %s", (command) => {
-      expect(bash(command).allow).toBe(false);
+      expect(shell(command).allow).toBe(false);
     });
 
     it("allows shopt options that are not keyword mode", () => {
-      expect(bash("shopt -s extglob").allow).toBe(true);
-      expect(bash("shopt extglob").allow).toBe(true);
+      expect(shell("shopt -s extglob").allow).toBe(true);
+      expect(shell("shopt extglob").allow).toBe(true);
     });
 
     it.each([
@@ -1959,12 +2004,12 @@ describe("hardening of the write guard (#534)", () => {
       "export -n GH_TOKEN",
       "export -n GH_TOKEN=x",
     ])("refuses to unset what gh reads, or a subscript: %s", (command) => {
-      expect(bash(command).allow).toBe(false);
+      expect(shell(command).allow).toBe(false);
     });
 
     it("allows unset of an ordinary name", () => {
-      expect(bash("unset FOO").allow).toBe(true);
-      expect(bash("export FOO=1").allow).toBe(true);
+      expect(shell("unset FOO").allow).toBe(true);
+      expect(shell("export FOO=1").allow).toBe(true);
     });
   });
 
@@ -1975,13 +2020,13 @@ describe("hardening of the write guard (#534)", () => {
       "echo a \\\n b",
       "git status \\\n && touch /x",
     ])("refuses a backslash-newline, which hides a quote: %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/backslash/);
     });
 
     it("allows a backslash-newline inside single quotes", () => {
-      expect(bash("echo 'a\\\nb'").allow).toBe(true);
+      expect(shell("echo 'a\\\nb'").allow).toBe(true);
     });
 
     it.each([
@@ -2006,7 +2051,7 @@ describe("hardening of the write guard (#534)", () => {
       "make BAR$z=2",
       "make {A,B}=1",
     ])("refuses a name that is not plain: %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/plain name|variable/);
     });
@@ -2029,7 +2074,7 @@ describe("hardening of the write guard (#534)", () => {
       "make build/out.o",
       "make -C packages/core test",
     ])("allows %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
 
     it.each([
@@ -2049,7 +2094,7 @@ describe("hardening of the write guard (#534)", () => {
     ])(
       "refuses a form that drops or shadows the GitHub token: %s",
       (command) => {
-        expect(bash(command).allow).toBe(false);
+        expect(shell(command).allow).toBe(false);
       },
     );
 
@@ -2064,7 +2109,7 @@ describe("hardening of the write guard (#534)", () => {
       'echo "$[1]"',
       'git commit -m "$(touch /x)"',
     ])("refuses a substitution inside double quotes: %s", (command) => {
-      const decision = bash(command);
+      const decision = shell(command);
       expect(decision.allow).toBe(false);
       expect(decision.reason).toMatch(/double quotes/);
     });
@@ -2078,7 +2123,7 @@ describe("hardening of the write guard (#534)", () => {
       'echo "cost: $"',
       'grep -rn "PATH=" .github',
     ])("allows %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
 
     it.each([
@@ -2091,7 +2136,7 @@ describe("hardening of the write guard (#534)", () => {
       "rg '[[' file",
       "git grep -n '}' abc123 -- .github",
     ])("allows a brace inside quotes, which is a word: %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
 
     it.each([
@@ -2102,12 +2147,12 @@ describe("hardening of the write guard (#534)", () => {
     ])(
       "still refuses a bare block end that is followed by words: %s",
       (command) => {
-        expect(bash(command).allow).toBe(false);
+        expect(shell(command).allow).toBe(false);
       },
     );
 
     it("keeps refusing ANSI-C quoting, so grep $'\\t' needs a literal tab", () => {
-      expect(bash("grep $'\\t' file").allow).toBe(false);
+      expect(shell("grep $'\\t' file").allow).toBe(false);
     });
   });
 
@@ -2121,25 +2166,25 @@ describe("hardening of the write guard (#534)", () => {
       "if { true '2'> /dev/null } touch /x",
       "if { true 2>/dev/null '3'<<'EOF' } touch /x\nEOF",
     ])("still sees the bare brace after a redirect: %s", (command) => {
-      expect(bash(command).allow).toBe(false);
+      expect(shell(command).allow).toBe(false);
     });
 
     it("reads a quoted digit before a redirect as an operand, not a descriptor", () => {
-      expect(bash("rm '2'>/dev/null").allow).toBe(false);
-      expect(bash("rm '2'> /dev/null").allow).toBe(false);
-      expect(bash("rm \\2>/dev/null").allow).toBe(false);
-      expect(bash("echo '2'>/dev/null").allow).toBe(true);
+      expect(shell("rm '2'>/dev/null").allow).toBe(false);
+      expect(shell("rm '2'> /dev/null").allow).toBe(false);
+      expect(shell("rm \\2>/dev/null").allow).toBe(false);
+      expect(shell("echo '2'>/dev/null").allow).toBe(true);
     });
 
     it("still reads an unquoted digit as a descriptor", () => {
-      expect(bash("git status 2>/dev/null").allow).toBe(true);
-      expect(bash("git status 2>&1").allow).toBe(true);
-      expect(bash("rm 2>/dev/null").allow).toBe(true);
+      expect(shell("git status 2>/dev/null").allow).toBe(true);
+      expect(shell("git status 2>&1").allow).toBe(true);
+      expect(shell("rm 2>/dev/null").allow).toBe(true);
     });
 
     it("does not carry a quoted flag past a here-document", () => {
-      expect(bash("cat <<'EOF'\nx\nEOF\nrg '}' file").allow).toBe(true);
-      expect(bash("rg '}' file <<'EOF'\nx\nEOF").allow).toBe(true);
+      expect(shell("cat <<'EOF'\nx\nEOF\nrg '}' file").allow).toBe(true);
+      expect(shell("rg '}' file <<'EOF'\nx\nEOF").allow).toBe(true);
     });
   });
 
@@ -2163,7 +2208,7 @@ describe("hardening of the write guard (#534)", () => {
       "ls -la scripts/agents | head",
       "cat scripts/agents/guardCommands.mjs | wc -l",
     ])("allows %s", (command) => {
-      expect(bash(command).allow).toBe(true);
+      expect(shell(command).allow).toBe(true);
     });
   });
 });
