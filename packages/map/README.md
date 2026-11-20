@@ -1,12 +1,149 @@
 # `@mapcairn/map`
 
-The map user interface of MapCairn: the chrome around the map, the sheet and its panels, the search, locate, measure, draw and directions tools, the first-visit tour, the accessible primitives and the `MapView` host. It is React with vanilla-extract styles, built on `@mapcairn/core`, `@mapcairn/react` and `@mapcairn/theme`. It has no dependency on `@mapcairn/web`.
+The map user interface of MapCairn, in React: the chrome around the map, the bottom sheet and its panels, the search, locate, measure, draw and directions tools, the first-visit tour, the accessible primitives and the `MapView` host. Use it to put a finished, accessible interface around a MapLibre map without building each control yourself.
 
-It never imports a map engine, an adapter or a browser service. Everything it needs comes from the `Services` bundle that `ServicesProvider` supplies, so the same components run against the real adapters in the host and against fakes in tests. See [`ARCHITECTURE.md`](../../ARCHITECTURE.md) and [`DESIGN.md`](../../DESIGN.md).
+It never imports a map engine, an adapter or a browser service. Everything it needs comes from the `Services` bundle that `ServicesProvider` supplies, so the same components run against real adapters in an app and against fakes in a test. It is built on [`@mapcairn/core`](https://github.com/MapCairn/mapcairn/tree/main/packages/core), [`@mapcairn/react`](https://github.com/MapCairn/mapcairn/tree/main/packages/react) and [`@mapcairn/theme`](https://github.com/MapCairn/mapcairn/tree/main/packages/theme).
 
-## Exports
+**Status:** not published to npm yet. The install commands below work from the first release; until then, use the packages from a clone of the [repository](https://github.com/MapCairn/mapcairn).
 
-Everything is exported from `@mapcairn/map`.
+## Install
+
+```bash
+npm install @mapcairn/map @mapcairn/core @mapcairn/theme
+pnpm add @mapcairn/map @mapcairn/core @mapcairn/theme
+yarn add @mapcairn/map @mapcairn/core @mapcairn/theme
+```
+
+The examples below import from `@mapcairn/core` and `@mapcairn/theme` too, so install them beside it. React and React DOM 19 are peer dependencies, and your app already has them.
+
+The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
+
+## Set up
+
+Import the two stylesheets once, in your entry module. The first holds the design tokens and the second the styles of every component. Both are plain CSS, so an app needs no vanilla-extract plugin.
+
+```tsx
+import "@mapcairn/theme/tokens.css";
+import "@mapcairn/map/styles.css";
+```
+
+The JavaScript imports no CSS, so the components render on the server as plain modules. A few things are yours to provide:
+
+- `MapChrome` fills its container, so give `html`, `body` and the element you render into a height.
+- The tokens name the IBM Plex Sans Variable font, which your app loads (for example from `@fontsource-variable/ibm-plex-sans`). Without it the type falls back to the system font.
+- The map engine and its styles. The package never imports one; your app supplies a `MapAdapter` over MapLibre GL JS in the `Services` bundle. The reference adapter is in the repository's `packages/web` and is not published as a package yet.
+
+The generated names of the CSS custom properties in `tokens.css` are private and can change in any release, so do not write your own stylesheet against them. [How the CSS ships](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md#how-the-css-ships) says what is and is not settled.
+
+## Usage
+
+Build the services once, wrap the tree, then render the map with its chrome. This is a whole app. It runs on the SDK's in-memory fakes, so it requests nothing and draws no map tiles; a real map swaps in a `MapAdapter`.
+
+```tsx
+import { createFakeServices } from "@mapcairn/core";
+import {
+  FocusRegistryProvider,
+  LiveRegionProvider,
+  MapChrome,
+  MapView,
+  SearchPill,
+  ServicesProvider,
+  TooltipProvider,
+  useBasemaps,
+  useMap,
+} from "@mapcairn/map";
+import { type ReactNode, useState } from "react";
+
+export function App() {
+  const [services] = useState(createFakeServices);
+  return (
+    <ServicesProvider services={services}>
+      <LiveRegionProvider>
+        <TooltipProvider>
+          <MapScreen />
+        </TooltipProvider>
+      </LiveRegionProvider>
+    </ServicesProvider>
+  );
+}
+
+function MapScreen() {
+  const basemaps = useBasemaps();
+  return (
+    <MapView
+      initialView={{
+        center: { lat: -33.92, lng: 18.42 },
+        zoom: 11,
+        bearing: 0,
+      }}
+      basemap={basemaps.resolve(basemaps.defaultId)}
+      chrome={(background) => <Chrome background={background} />}
+    />
+  );
+}
+
+function Chrome({ background }: { readonly background: ReactNode }) {
+  const map = useMap();
+  return (
+    <FocusRegistryProvider focusMap={map.focusMap}>
+      <MapChrome
+        background={background}
+        modal={false}
+        topStart={
+          <SearchPill
+            onSelect={(result) =>
+              map.adapter?.setView({ center: result.centre, zoom: 14 })
+            }
+          />
+        }
+      />
+    </FocusRegistryProvider>
+  );
+}
+```
+
+The repository's `examples/embed` is the full version of this app, with the end stack of controls, the sheet, the measure tool, layers and a search provider of its own. A test in the repository fails if this snippet uses an import, a component or a prop that the example does not. `LiveRegionProvider` is the one announcer: without it, announcements are dropped.
+
+## Loading the map in a chunk of its own
+
+`@mapcairn/map` is a whole interface, so an app that imports it in its entry module ships all of it with the first page. The example app on the fakes, which loads no map engine, builds to a single script large enough that Vite warns about its size. If the map is not the first thing a visitor needs, load it on demand. Put the code that imports `@mapcairn/map` in a module of its own (here `App.tsx`, which exports `App`, as above) and load it with a dynamic import:
+
+```tsx
+import "@mapcairn/theme/tokens.css";
+import "@mapcairn/map/styles.css";
+import { lazy, Suspense } from "react";
+import { createRoot } from "react-dom/client";
+
+const App = lazy(() =>
+  import("./App").then((module) => ({ default: module.App })),
+);
+
+const root = document.getElementById("root");
+if (root) {
+  createRoot(root).render(
+    <Suspense fallback={null}>
+      <App />
+    </Suspense>,
+  );
+}
+```
+
+A bundler that splits on dynamic imports, such as Vite, then writes `App.tsx` and everything only it imports, which is the whole interface, to a separate chunk that loads when the app mounts. Put the code that imports your map engine in the same module, so the engine loads with the map. Show something useful in the `Suspense` fallback, such as a placeholder with the page's height.
+
+## What it exports
+
+Everything comes from `@mapcairn/map`. In outline:
+
+- **Services:** `ServicesProvider` and a hook for each service.
+- **Map host:** `MapView`, which mounts the adapter and wires its events, and `useMap`.
+- **Chrome:** `MapChrome`, which owns the position of every control floating over the map, and the controls that fill its slots.
+- **Panels and layers:** the sheet content, the basemap picker, settings, the layers panel, feature cards and `useDataLayers`.
+- **Tools:** search, locate, measure, draw and directions, each as a component and a hook.
+- **Primitives:** buttons, chips, list rows, sliders, the live region and the other accessible building blocks, with the one `Icon` component.
+
+## Exports in detail
+
+The Source column names folders under `packages/map/src` in the repository.
 
 | Area       | Source         | What it holds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -18,39 +155,14 @@ Everything is exported from `@mapcairn/map`.
 | Tools      | `src/tools`    | `SearchPill` with `useSearch` and `useSuggestions` (places as the person types, only when the host supplies a suggestion provider), `useLocate`, `MeasureToolbar` with `useMeasure`, `DrawToolbar` with `useDraw` and `DrawMapBindings`, `DirectionsPanel` with `useDirections`, `MapDirections` and `DirectionsOverlay` (`useDirections` reports `available` only when the host has a routing provider, and a host shows the Directions button, `EndStack`'s `directions` prop, only then), `PinCard` with `useReverseAddress` (the host's `lookupNote` says what the lookup sends and to whom, with a neutral default), and `TourCard` with `useTour`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Primitives | `src/ui`       | `Button`, `Chip`, `ControlGroup`, `EmptyState`, `Icon` (the one way to draw a Lucide icon, with `mirrorInRtl` for one that points along the reading direction), `IconButton`, `ListRow`, `LiveRegionProvider` with `useAnnounce` (the one announcer), `SegmentedControl`, `SkipLink`, `Slider`, `StatusMessage` with `StatusMessageFocusProvider` (where focus goes when a message goes away and its origin cannot take it; `MapView` supplies the map region), `Surface`, `Switch`, `Tooltip` and `VisuallyHidden`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
-The `MapChrome` slots, the sheet detents and the accessibility contract of each component are in [`DESIGN.md`](../../DESIGN.md).
+The `MapChrome` slots, the sheet detents and the accessibility contract of each component are in [`DESIGN.md`](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md).
 
-## Setup
+The `MapChrome` slots, the sheet detents and the accessibility contract of each component are in [`DESIGN.md`](https://github.com/MapCairn/mapcairn/blob/main/DESIGN.md). For how map fits with the other packages, read [`ARCHITECTURE.md`](https://github.com/MapCairn/mapcairn/blob/main/ARCHITECTURE.md).
 
-Component styles are written in [vanilla-extract](https://vanilla-extract.style/) (`*.css.ts` beside each component) and read the tokens from `@mapcairn/theme`. `npm run build:sdk` compiles them, against the built `theme`, into one stylesheet, `dist/styles.css`, beside the JavaScript and rolled-up declarations. An app imports that stylesheet and the token stylesheet, and needs no vanilla-extract plugin:
+## Licence
 
-```ts
-import "@mapcairn/theme/tokens.css";
-import "@mapcairn/map/styles.css";
-```
+`@mapcairn/map` is licensed under AGPL-3.0-only, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/map/LICENSE) comes with the package. If you ship it in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to talk about other terms for closed-source use.
 
-The JavaScript imports no CSS, so it renders on the server as plain modules, and `styles.css` holds the styles of every component. The source stays in this repository behind the `@mapcairn/source` export condition, which this repository's Vite configs and `tsconfig.base.json` turn on (the published package holds `dist` only); a host that resolves that condition registers `vanillaExtractPlugin()` itself, as `packages/web` does, and its token stylesheet then arrives through an import that is used (see `packages/web/src/global.css.ts`). [How the CSS ships](../../DESIGN.md#how-the-css-ships) says what is and is not settled about the generated custom property names. `MapChrome` fills its container, so the host gives `html`, `body` and the element it renders into a height. The tokens name the IBM Plex Sans Variable font, which the host loads (for example from `@fontsource-variable/ibm-plex-sans`); without it the type falls back to the system font. The host also provides the engine styles for its map adapter; the MapLibre styles are in `packages/web/src/adapters/mapEngine.css.ts`. `examples/embed` is a minimal host that does all of this, described in [`docs/guides/extending.md`](../../docs/guides/extending.md).
+## Contributing and changes
 
-## Usage
-
-Build the services once, wrap the tree, then render the map with its chrome. `packages/web/src/App.tsx` and `packages/web/src/app/AppChrome.tsx` are the full reference.
-
-```tsx
-import { ServicesProvider, MapView, MapChrome } from "@mapcairn/map";
-
-<ServicesProvider services={services}>
-  <MapView
-    initialView={initialView}
-    basemap={basemap}
-    chrome={(map) => <MapChrome background={map} modal={false} />}
-  />
-</ServicesProvider>;
-```
-
-`services` comes from the host's composition root. In tests, use `createFakeServices()` from `@mapcairn/core`. The host also mounts `LiveRegionProvider` (the one announcer) and `TooltipProvider` above the map, as the reference host's app layout, `packages/web/src/routes/app.tsx`, does. Without a `LiveRegionProvider`, announcements are dropped, with a warning in development.
-
-## What doesn't belong here
-
-- A map engine or an adapter. Those live in `packages/web/src/adapters` behind a port from `@mapcairn/core`. Browser APIs that need a port, such as storage, network, URL state, media queries, geolocation and the clipboard, live there too.
-- App-specific copy, routes and headers. Those belong to the host.
-- Raw colours, sizes, z-index values or icon packages. Use the tokens and `Icon`.
+The source and the issue tracker are in the [repository](https://github.com/MapCairn/mapcairn); file a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Read [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) before you send a pull request. Changes between releases are listed in [`CHANGELOG.md`](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md).

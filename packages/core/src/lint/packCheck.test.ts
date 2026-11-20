@@ -15,6 +15,16 @@ function manifest(overrides: Record<string, unknown> = {}) {
     name: "@mapcairn/example",
     version: "0.0.0",
     license: "AGPL-3.0-only",
+    description: "An example package",
+    repository: {
+      type: "git",
+      url: "git+https://github.com/MapCairn/mapcairn.git",
+      directory: "packages/example",
+    },
+    homepage:
+      "https://github.com/MapCairn/mapcairn/tree/main/packages/example#readme",
+    bugs: { url: "https://github.com/MapCairn/mapcairn/issues" },
+    keywords: ["mapcairn", "map"],
     private: true,
     publishConfig: { access: "public" },
     types: "./dist/index.d.ts",
@@ -223,6 +233,69 @@ describe("the licence", () => {
       expect(problems(GOOD_FILES, { license }).join("\n")).toMatch(/license/);
     },
   );
+});
+
+describe("the metadata the npm page shows", () => {
+  const repository = (overrides: Record<string, unknown>) => ({
+    repository: {
+      type: "git",
+      url: "git+https://github.com/MapCairn/mapcairn.git",
+      directory: "packages/example",
+      ...overrides,
+    },
+  });
+
+  it("accepts the manifest as the packages have it", () => {
+    expect(problems(GOOD_FILES)).toEqual([]);
+  });
+
+  it.each([
+    ["no repository", { repository: undefined }, /repository/],
+    [
+      "a repository written as a string",
+      { repository: "github:MapCairn/mapcairn" },
+      /repository/,
+    ],
+    [
+      "another repository url",
+      repository({ url: "git+https://github.com/other/mapcairn.git" }),
+      /repository\.url/,
+    ],
+    [
+      "a url in another capitalisation",
+      repository({ url: "git+https://github.com/mapcairn/mapcairn.git" }),
+      /repository\.url/,
+    ],
+    [
+      "a url without git+",
+      repository({ url: "https://github.com/MapCairn/mapcairn.git" }),
+      /repository\.url/,
+    ],
+    [
+      "no directory",
+      repository({ directory: undefined }),
+      /repository\.directory/,
+    ],
+    [
+      "another directory",
+      repository({ directory: "packages/core" }),
+      /repository\.directory/,
+    ],
+    ["no homepage", { homepage: undefined }, /homepage/],
+    ["no bugs url", { bugs: undefined }, /bugs/],
+    [
+      "another bugs url",
+      { bugs: { url: "https://example.org/issues" } },
+      /bugs/,
+    ],
+    ["no description", { description: undefined }, /description/],
+    ["a blank description", { description: "  " }, /description/],
+    ["no keywords", { keywords: undefined }, /keywords/],
+    ["empty keywords", { keywords: [] }, /keywords/],
+    ["a keyword that is not text", { keywords: ["map", 3] }, /keywords/],
+  ])("fails on %s", (_label, overrides, pattern) => {
+    expect(problems(GOOD_FILES, overrides).join("\n")).toMatch(pattern);
+  });
 });
 
 describe("source maps", () => {

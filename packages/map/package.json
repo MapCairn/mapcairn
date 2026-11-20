@@ -3,6 +3,25 @@
   "version": "0.0.0",
   "description": "Generic map rendering and UI components for MapCairn",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MapCairn/mapcairn.git",
+    "directory": "packages/map"
+  },
+  "homepage": "https://github.com/MapCairn/mapcairn/tree/main/packages/map#readme",
+  "bugs": {
+    "url": "https://github.com/MapCairn/mapcairn/issues"
+  },
+  "keywords": [
+    "mapcairn",
+    "map",
+    "maplibre",
+    "react",
+    "accessibility",
+    "gis",
+    "open-data",
+    "sdk"
+  ],
   "private": true,
   "publishConfig": {
     "access": "public"
