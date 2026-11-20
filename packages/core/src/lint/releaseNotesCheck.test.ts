@@ -166,6 +166,7 @@ describe("checkChangelog", () => {
         "thanks @MapCairn/maintainers",
         "see @mapcairn/other",
         "see @mapcairn/map-extra",
+        "see @mapcairn/adapter-maplibre-extra",
         "ask @mapcairn",
       ]) {
         expect(messages(edited("The scale bar", bad)).join(" ")).toContain(
@@ -177,6 +178,8 @@ describe("checkChangelog", () => {
         "import from @mapcairn/theme/tokens.css",
         "@mapcairn/react and @mapcairn/core.",
         "import from @mapcairn/sdk/styles.css",
+        "the adapter, @mapcairn/adapter-maplibre, and its @mapcairn/adapter-maplibre/styles.css",
+        "import from @mapcairn/sdk/adapter-maplibre",
       ]) {
         expect(messages(edited("The scale bar", good))).toEqual([]);
       }

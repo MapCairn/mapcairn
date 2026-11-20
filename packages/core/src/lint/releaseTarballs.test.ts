@@ -25,6 +25,10 @@ import {
   sha256Of,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/tarballs.mjs";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 
 const folders: string[] = [];
 
@@ -71,6 +75,34 @@ describe("findTarballs", () => {
         "mapcairn-map-0.1.0.tgz",
       ]),
     ).toThrow(/more than one/);
+  });
+
+  it("keeps a package whose name holds a hyphen apart from the one that starts like it, over the whole release set", () => {
+    const list = [
+      "mapcairn-core-0.1.0.tgz",
+      "mapcairn-react-0.1.0.tgz",
+      "mapcairn-theme-0.1.0.tgz",
+      "mapcairn-map-0.1.0.tgz",
+      "mapcairn-adapter-maplibre-0.1.0.tgz",
+      "mapcairn-sdk-0.1.0.tgz",
+    ];
+    expect(findTarballs(list, SDK_PACKAGES)).toEqual({
+      core: "mapcairn-core-0.1.0.tgz",
+      react: "mapcairn-react-0.1.0.tgz",
+      theme: "mapcairn-theme-0.1.0.tgz",
+      map: "mapcairn-map-0.1.0.tgz",
+      "adapter-maplibre": "mapcairn-adapter-maplibre-0.1.0.tgz",
+      sdk: "mapcairn-sdk-0.1.0.tgz",
+    });
+    expect(() =>
+      findTarballs(
+        list.filter((file) => !file.includes("adapter")),
+        SDK_PACKAGES,
+      ),
+    ).toThrow(/adapter-maplibre/);
+    expect(() =>
+      findTarballs(["mapcairn-adapter-maplibre-0.1.0.tgz"], ["map"]),
+    ).toThrow(/map/);
   });
 
   it("does not take a longer package name for a shorter one", () => {

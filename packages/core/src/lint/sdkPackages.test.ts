@@ -144,7 +144,7 @@ describe("the umbrella package", () => {
 /** The names a shell `for` loop over the SDK packages walks, from each loop in a text. */
 function loopLists(text: string, variable: string): string[][] {
   return [
-    ...text.matchAll(new RegExp(`for ${variable} in ([a-z ]+); do`, "g")),
+    ...text.matchAll(new RegExp(`for ${variable} in ([a-z -]+); do`, "g")),
   ].map((match) => (match[1] ?? "").trim().split(/\s+/));
 }
 
@@ -179,7 +179,7 @@ describe("the workflows that name the SDK packages", () => {
 
   it("decide in ci.yml whether the pack check runs for a change to any SDK package folder", () => {
     const workflow = withoutComments(read(".github/workflows/ci.yml"));
-    const alternation = /\^\(packages\/\(([a-z|]+)\)\//.exec(workflow)?.[1];
+    const alternation = /\^\(packages\/\(([a-z|-]+)\)\//.exec(workflow)?.[1];
     expect(alternation?.split("|").sort()).toEqual([...LIST].sort());
   });
 });

@@ -17,6 +17,7 @@ const NAMES = [
   "@mapcairn/map",
   "@mapcairn/react",
   "@mapcairn/theme",
+  "@mapcairn/adapter-maplibre",
   "@mapcairn/sdk",
 ];
 
@@ -67,10 +68,10 @@ describe("buildReport", () => {
     const { text, blockers } = report();
     expect(text).toContain("Release readiness for v0.1.0-rc.1");
     expect(text).toContain(
-      "Versions: core, react, theme, map and sdk are all 0.1.0-rc.1; internal ranges match.",
+      "Versions: core, react, theme, map, adapter-maplibre and sdk are all 0.1.0-rc.1; internal ranges match.",
     );
     expect(text).toContain("Notes: CHANGELOG.md has a section for 0.1.0-rc.1");
-    expect(text).toContain("Tarballs: 5 packed, contents as expected");
+    expect(text).toContain("Tarballs: 6 packed, contents as expected");
     expect(text).toContain("core 212 kB");
     expect(text).toContain("none of the SDK packages is on npm yet");
     expect(text).toMatch(/Left for you: .*merge the Release pull request/);
@@ -107,17 +108,22 @@ describe("buildReport", () => {
     expect(report({ registry }).text).toContain("no provenance");
   });
 
-  it("names the umbrella as the one package to upload by hand when the four others are on npm", () => {
+  it("names the adapter and the umbrella as the two packages to upload by hand when the four others are on npm", () => {
     const registry = Object.fromEntries(
       NAMES.map((name) => [
         name,
-        name === "@mapcairn/sdk"
+        name === "@mapcairn/sdk" || name === "@mapcairn/adapter-maplibre"
           ? { exists: false }
           : { exists: true, latest: "0.1.0-rc.2", provenance: true },
       ]),
     );
     const { text, blockers } = report({ registry });
-    expect(text).toContain("not on npm yet: @mapcairn/sdk.");
+    expect(text).toContain(
+      "not on npm yet: @mapcairn/adapter-maplibre, @mapcairn/sdk.",
+    );
+    expect(text).toMatch(
+      /Left for you: .*two-factor authentication.*disallow tokens.*Re-run failed jobs.*link their trusted publishers when the next Release pull request is ready/,
+    );
     expect(text).toMatch(/Left for you: .*Re-run failed jobs/);
     expect(blockers).toEqual([]);
   });

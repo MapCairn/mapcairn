@@ -73,7 +73,7 @@ Options: 1. Diff the umbrella's API report against the four, rejected while the 
 3. **Type collisions.** The collisions computed from the four committed API reports equal the explicit tie-breaks in `packages/sdk/src/index.ts`. This catches a type-only collision the runtime check cannot see, and a stale tie-break.
 4. **Source holds only re-exports** (the boundary rule above).
 5. **`tsc`** fails with TS2308 on a collision with no tie-break.
-6. **Stylesheet.** `sdkDist.test.ts` checks that `dist/styles.css` holds exactly the two `@import` lines, tokens first.
+6. **Stylesheet.** `sdkDist.test.ts` checks that `dist/styles.css` holds exactly the two `@import` lines, tokens first (three from `rc.3`, with the engine's: `docs/plans/0016-adapter-maplibre-package.md`).
 
 ### Timing and slices
 
@@ -122,6 +122,8 @@ Each step is one pull request. `Part of #538` unless another issue is named.
 5. **`v0.1.0-rc.3`.** An agent opens the Release pull request with the `release` skill, and the maintainer works through the checklist below. The agent then runs the post-release check.
 
 ### rc.3 release checklist (the maintainer's steps)
+
+This list is for the umbrella alone. `rc.3` also adds the adapter package, so the checklist to follow is the one in `docs/plans/0016-adapter-maplibre-package.md` ("rc.3 checklist"), which replaces this one for the two new packages: six packages, the adapter uploaded first, the trusted publishers linked after the uploads.
 
 An agent lists these and waits. Values match `docs/guides/releasing.md` and maintainer steps 3 and 4 of `0014-sdk-release.md`.
 

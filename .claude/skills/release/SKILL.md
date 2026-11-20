@@ -1,6 +1,6 @@
 ---
 name: release
-description: "Prepare a release of the five MapCairn SDK packages (core, map, react, theme and the umbrella sdk) as a Release pull request, with the gh CLI and the scripts in scripts/release: plan the version, write the notes, apply them, check readiness, rehearse the release workflow, open the pull request with its report and go/no-go checklist, then watch the run after the maintainer merges and run the post-release check. Use when someone asks to cut, prepare, rehearse or check a release or a release candidate. It never publishes to npm and never approves anything."
+description: "Prepare a release of the six MapCairn SDK packages (core, react, theme, map, adapter-maplibre and the umbrella sdk) as a Release pull request, with the gh CLI and the scripts in scripts/release: plan the version, write the notes, apply them, check readiness, rehearse the release workflow, open the pull request with its report and go/no-go checklist, then watch the run after the maintainer merges and run the post-release check. Use when someone asks to cut, prepare, rehearse or check a release or a release candidate. It never publishes to npm and never approves anything."
 ---
 
 # Release the SDK packages
@@ -34,11 +34,11 @@ Write one text from the merged pull requests, to the style guide in `docs/guides
 
 ## 3. Apply
 
-`npm run release:apply -- <version> <notes-file>` (add `--dry-run` first to read the changes). It sets the five versions and every internal range, adds the section to `CHANGELOG.md` and runs a real install so the lockfile matches. Do not edit versions or ranges by hand.
+`npm run release:apply -- <version> <notes-file>` (add `--dry-run` first to read the changes). It sets the six versions and every internal range, adds the section to `CHANGELOG.md` and runs a real install so the lockfile matches. Do not edit versions or ranges by hand.
 
 The release commit and the pull request title are `chore(release): v<version>`. The `release` scope matters: `release:plan` leaves it out of the next release. The pull request carries the `release` label, which the workflow checks.
 
-`release:apply` does not remove `"private": true` from a manifest, and the step that built the workflow did not either. The `rc.1` Release pull request did it for the first four, together with each package README's `**Status:**` line, in the same pull request; a package that joins the release set later (the umbrella) has it removed in the pull request that registers it (`packages/core/src/lint/packageReadmes.test.ts` fails if only one changes). Until then `npm run release:check` reports the flag as expected at `0.0.0` and as a blocker for a prepared release.
+`release:apply` does not remove `"private": true` from a manifest, and the step that built the workflow did not either. The `rc.1` Release pull request did it for the first four, together with each package README's `**Status:**` line, in the same pull request; a package that joins the release set later (the umbrella, then the adapter) has it removed in the pull request that registers it (`packages/core/src/lint/packageReadmes.test.ts` fails if only one changes). Until then `npm run release:check` reports the flag as expected at `0.0.0` and as a blocker for a prepared release.
 
 ## 4. Check
 
@@ -57,7 +57,7 @@ Follow `land-pr`. The description holds: the notes as they will appear; the `rel
 - [ ] The tarball contents and sizes are as expected.
 - [ ] Nothing unexpected in the API report changes.
 - [ ] Then: merge, and approve the deployment of the `npm` environment in GitHub (the first publish of a version by hand is in the guide).
-- [ ] If the release adds a package npm does not have (`npm run release:check` lists it as not on npm yet): the `npm` job is red until that package has been uploaded by hand from its attested tarball and its trusted publisher linked (environment `npm`, workflow `release.yml`, allowed action `npm publish`, then require two-factor and disallow tokens), and when another package in the release pins it, the job refuses to publish that dependent until the upload is done. List the steps of "Adding a package to the release set" in `docs/guides/releasing.md` in the pull request, with the umbrella last and any package it pins before it.
+- [ ] If the release adds a package npm does not have (`npm run release:check` lists it as not on npm yet): the `npm` job is red until that package has been uploaded by hand from its attested tarball and the failed jobs are re-run (the package's Publishing access set to require two-factor authentication and disallow tokens; the trusted publisher, environment `npm`, workflow `release.yml`, allowed action `npm publish`, is linked later, when the next Release pull request is ready), and when another package in the release pins it, the job refuses to publish that dependent until the upload is done. List the steps of "Adding a package to the release set" in `docs/guides/releasing.md` in the pull request, with the umbrella last and any package it pins before it (in `0.1.0-rc.3` both the adapter and the umbrella are new: download all six tarballs, upload the adapter first, then the umbrella, set the two-factor, no-tokens setting on each, re-run the failed jobs, and link each trusted publisher only when the next Release pull request is ready; steps 4 to 6 of the guide fall within the run artifact's 14 days).
 
 Add `Part of #1`. Do not merge; merging a Release pull request is the maintainer's decision, and `AGENTS.md` says when anyone may merge.
 

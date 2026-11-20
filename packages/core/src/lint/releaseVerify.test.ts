@@ -25,6 +25,7 @@ const SDK_MANIFESTS = [
   "packages/map/package.json",
   "packages/react/package.json",
   "packages/theme/package.json",
+  "packages/adapter-maplibre/package.json",
   "packages/sdk/package.json",
 ];
 
@@ -285,6 +286,10 @@ describe("tarballVersionProblems", () => {
           name: "@mapcairn/theme",
           version: "0.1.0",
         },
+        "mapcairn-adapter-maplibre-0.1.0.tgz": {
+          name: "@mapcairn/adapter-maplibre",
+          version: "0.1.0",
+        },
         "mapcairn-sdk-0.1.0.tgz": { name: "@mapcairn/sdk", version: "0.1.0" },
       }),
     ).toEqual([]);
@@ -301,6 +306,7 @@ describe("tarballVersionProblems", () => {
       "other-0.1.0.tgz is not one of the SDK packages",
       "no tarball for @mapcairn/react",
       "no tarball for @mapcairn/theme",
+      "no tarball for @mapcairn/adapter-maplibre",
       "no tarball for @mapcairn/sdk",
     ]);
   });
@@ -311,6 +317,10 @@ describe("tarballVersionProblems", () => {
       "mapcairn-map-0.1.0.tgz": { name: "@mapcairn/map", version: "0.1.0" },
       "mapcairn-react-0.1.0.tgz": { name: "@mapcairn/react", version: "0.1.0" },
       "mapcairn-theme-0.1.0.tgz": { name: "@mapcairn/theme", version: "0.1.0" },
+      "mapcairn-adapter-maplibre-0.1.0.tgz": {
+        name: "@mapcairn/adapter-maplibre",
+        version: "0.1.0",
+      },
       "mapcairn-sdk-0.1.0.tgz": { name: "@mapcairn/sdk", version: "0.1.0" },
     };
     expect(

@@ -58,12 +58,16 @@ const FOUR_PACKAGE_STYLESHEETS =
  */
 const FOUR_PACKAGE_ENTRY_POINTS = `^packages/(${FOUR_PACKAGE_MODULES}|${FOUR_PACKAGE_STYLESHEETS})$`;
 
+/** The MapLibre adapter package's entry points: its module and its compiled stylesheet (`@mapcairn/adapter-maplibre`, `@mapcairn/adapter-maplibre/styles.css`). */
+const ADAPTER_ENTRY_POINTS =
+  "adapter-maplibre/src/index\\.ts|adapter-maplibre/dist/styles\\.css";
+
 /**
  * The umbrella package's own entry points (`@mapcairn/sdk`): one module for
  * the root and one for each subpath, and its compiled stylesheet.
  */
 const UMBRELLA_ENTRY_POINTS =
-  "sdk/src/(index|core|coreContracts|map|react|theme)\\.ts|sdk/dist/styles\\.css";
+  "sdk/src/(index|core|coreContracts|map|adapterMaplibre|react|theme)\\.ts|sdk/dist/styles\\.css";
 
 /** Everything an example app may import from `packages/`. */
 const SDK_ENTRY_POINTS = `^packages/(${FOUR_PACKAGE_MODULES}|${FOUR_PACKAGE_STYLESHEETS}|${UMBRELLA_ENTRY_POINTS})$`;
@@ -130,11 +134,26 @@ module.exports = {
       name: "umbrella-reexports-entry-points-only",
       severity: "error",
       comment:
-        "The umbrella package holds only re-exports of the four packages' entry points: no npm package, no file inside a package, no code of its own.",
+        "The umbrella package holds only re-exports of the four packages' and the MapLibre adapter's entry points: no npm package, no file inside a package, no code of its own.",
       from: { path: "^packages/sdk/src" },
       to: {
-        pathNot: [FOUR_PACKAGE_ENTRY_POINTS, "^packages/sdk/src/"],
+        pathNot: [
+          FOUR_PACKAGE_ENTRY_POINTS,
+          `^packages/(${ADAPTER_ENTRY_POINTS})$`,
+          "^packages/sdk/src/",
+        ],
       },
+    },
+    {
+      name: "umbrella-root-has-no-adapter",
+      severity: "error",
+      comment:
+        "Only the umbrella's adapter-maplibre subpath file may import the MapLibre adapter package. The root and the other subpaths stay free of the engine, so an app that does not import the subpath carries none. This rule sees direct imports of scripts only: it does not parse src/styles.css (an @import), and the drift tests in packages/core/src/lint/umbrella.test.ts catch a re-export of the adapter through another file.",
+      from: {
+        path: "^packages/sdk/src",
+        pathNot: "^packages/sdk/src/adapterMaplibre\\.ts$",
+      },
+      to: { path: "^packages/adapter-maplibre/" },
     },
     {
       name: "core-uses-only-pure-packages",

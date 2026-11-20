@@ -136,6 +136,11 @@ const BUILT_ENTRY_POINTS: Readonly<
       types: "./dist/map.d.ts",
       default: "./dist/map.js",
     },
+    "./adapter-maplibre": {
+      [SOURCE_CONDITION]: "./src/adapterMaplibre.ts",
+      types: "./dist/adapterMaplibre.d.ts",
+      default: "./dist/adapterMaplibre.js",
+    },
     "./react": {
       [SOURCE_CONDITION]: "./src/react.ts",
       types: "./dist/react.d.ts",

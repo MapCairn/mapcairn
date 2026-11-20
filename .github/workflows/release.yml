@@ -342,7 +342,7 @@ jobs:
         # here (no token), so this proves the tarball, the tag and the version
         # rules, and nothing about trusted publishing.
         run: |
-          for name in core react theme map sdk; do
+          for name in core react theme map adapter-maplibre sdk; do
             state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
             if [ "$state" = "published" ]; then
               echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
@@ -373,9 +373,10 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     # Every package waits up to about 10 minutes for the registry after its
-    # publish (CONFIRM_DELAYS_MS in verifyRelease.mjs), five packages in a row,
-    # plus setup.
-    timeout-minutes: 75
+    # publish (CONFIRM_DELAYS_MS in verifyRelease.mjs), plus the time of the
+    # registry reads and of the publish itself, six packages in a row, plus
+    # setup (releaseWorkflow.test.ts has the formula).
+    timeout-minutes: 90
     permissions:
       id-token: write # trusted publishing: npm exchanges this run's OIDC token for a short-lived credential, so no secret is stored
       contents: read # check out the repository
@@ -445,7 +446,7 @@ jobs:
         run: |
           first_uploads=()
           to_publish=()
-          for name in core react theme map sdk; do
+          for name in core react theme map adapter-maplibre sdk; do
             state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
             if [ "$state" = "published" ]; then
               echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
@@ -453,7 +454,7 @@ jobs:
             fi
             if [ "$state" = "new" ]; then
               first_uploads+=("@mapcairn/$name")
-              echo "::error::@mapcairn/$name is not on npm yet, so trusted publishing cannot publish it: a package gets its trusted publisher only after its first upload. Publish it by hand from the release's attested tarball, link its trusted publisher, then use Re-run failed jobs (docs/guides/releasing.md, A package npm does not have yet)."
+              echo "::error::@mapcairn/$name is not on npm yet, so trusted publishing cannot publish it: a package gets its trusted publisher only after its first upload. Publish it by hand from the release's attested tarball, signed in with two-factor authentication, set its package setting to require two-factor authentication and disallow tokens, then use Re-run failed jobs, and link its trusted publisher when the next Release pull request is ready (docs/guides/releasing.md, A package npm does not have yet)."
               continue
             fi
             to_publish+=("$name")

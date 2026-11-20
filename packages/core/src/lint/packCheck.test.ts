@@ -366,6 +366,45 @@ describe("files the build did not make", () => {
     ).toEqual([]);
   });
 
+  it("lets a module compiled from a stylesheet-only .css.ts file have no map when it holds nothing but the empty-css comment, because there is nothing to map", () => {
+    const files = [...GOOD_FILES, "dist/styles.styles.js"];
+    expect(
+      problems(files, {}, 1000, {
+        "dist/index.js.map": sourceMap(),
+        "dist/styles.styles.js":
+          "/* empty css                             */\n",
+      }),
+    ).toEqual([]);
+  });
+
+  it("still fails a styles module with code in it, an ordinary script and a missing file when they have no map", () => {
+    const withCode = problems([...GOOD_FILES, "dist/a.styles.js"], {}, 1000, {
+      "dist/index.js.map": sourceMap(),
+      "dist/a.styles.js": '/* empty css */\nvar x = "_abc";\n',
+    });
+    expect(withCode.join("\n")).toContain("dist/a.styles.js: no source map");
+    const ordinary = problems([...GOOD_FILES, "dist/secret.js"], {}, 1000, {
+      "dist/index.js.map": sourceMap(),
+      "dist/secret.js": "/* empty css */",
+    });
+    expect(ordinary.join("\n")).toContain("dist/secret.js: no source map");
+    for (const [name, text] of [
+      ["before", 'var x = "_abc";\n/* empty css */\n'],
+      ["samelinebefore", "var y = 1; /* empty css */\n"],
+      ["sameline", "/* empty css */ var z = 2;\n"],
+      ["notcomment", "// empty css\n"],
+    ]) {
+      const file = `dist/${name}.styles.js`;
+      const found = problems([...GOOD_FILES, file], {}, 1000, {
+        "dist/index.js.map": sourceMap(),
+        [file]: text,
+      });
+      expect(found.join("\n"), name).toContain(`${file}: no source map`);
+    }
+    const unreadable = problems([...GOOD_FILES, "dist/b.styles.js"]);
+    expect(unreadable.join("\n")).toContain("dist/b.styles.js: no source map");
+  });
+
   it("does not let an ordinary map have no sources", () => {
     expect(
       problems(GOOD_FILES, {}, 1000, {

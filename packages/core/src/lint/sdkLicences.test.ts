@@ -32,12 +32,18 @@ interface Report {
   readonly checked: number;
   readonly failures: readonly Failure[];
   readonly peers: Record<string, string[]>;
+  readonly judgedPeers: Record<string, string[]>;
   readonly dev: Record<string, string[]>;
 }
 
 type Entry = Record<string, unknown>;
 
-/** A lockfile with the five SDK packages, whose `core` depends on `deps`. */
+/**
+ * A lockfile with the six SDK packages, whose `core` depends on `deps`. The
+ * adapter depends on `core` and requires the `maplibre-gl` peer, which the
+ * umbrella repeats, as in the repository; `maplibre-gl` is MIT unless `entries`
+ * says otherwise.
+ */
 function fixture(
   coreDeps: Record<string, string>,
   entries: Record<string, Entry>,
@@ -53,23 +59,39 @@ function fixture(
       ...sdk("core"),
       dependencies: coreDeps,
       peerDependencies: { vitest: "^5" },
+      peerDependenciesMeta: { vitest: { optional: true } },
       devDependencies: { typescript: "7" },
+    },
+    "packages/adapter-maplibre": {
+      ...sdk("adapter-maplibre"),
+      dependencies: { "@mapcairn/core": "1.0.0" },
+      peerDependencies: { "maplibre-gl": "^6.18.0" },
     },
     "packages/map": {
       ...sdk("map"),
       dependencies: { "@mapcairn/core": "file:../core" },
+      peerDependencies: { react: "^19.0.0", "react-dom": "^19.0.0" },
     },
-    "packages/react": sdk("react"),
+    "packages/react": {
+      ...sdk("react"),
+      peerDependencies: { react: "^19.0.0" },
+    },
     "packages/theme": sdk("theme"),
     "packages/sdk": {
       ...sdk("sdk"),
       dependencies: {
+        "@mapcairn/adapter-maplibre": "1.0.0",
         "@mapcairn/core": "1.0.0",
         "@mapcairn/map": "1.0.0",
         "@mapcairn/react": "1.0.0",
         "@mapcairn/theme": "1.0.0",
       },
-      peerDependencies: { react: "^19.0.0" },
+      peerDependencies: {
+        "host-only": "^1.0.0",
+        "maplibre-gl": "^6.18.0",
+        react: "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
     },
   };
   const lockfile = {
@@ -79,9 +101,16 @@ function fixture(
       "packages/map": manifests["packages/map"],
       "packages/react": manifests["packages/react"],
       "packages/theme": manifests["packages/theme"],
+      "packages/adapter-maplibre": manifests["packages/adapter-maplibre"],
       "packages/sdk": manifests["packages/sdk"],
+      "node_modules/maplibre-gl": {
+        version: "6.18.0",
+        license: "BSD-3-Clause",
+      },
+      "node_modules/react": { version: "19.3.1", license: "MIT" },
+      "node_modules/react-dom": { version: "19.3.1", license: "MIT" },
       ...Object.fromEntries(
-        ["core", "map", "react", "theme"].map((name) => [
+        ["core", "map", "react", "theme", "adapter-maplibre"].map((name) => [
           `node_modules/@mapcairn/${name}`,
           { resolved: `packages/${name}`, link: true },
         ]),
@@ -191,7 +220,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBe(2);
+    expect(report.checked).toBe(5);
   });
 
   it("fails a disallowed licence, even deep in the tree, and names the SDK package that needs it", () => {
@@ -266,7 +295,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBe(2);
+    expect(report.checked).toBe(5);
   });
 
   it("falls back to a parent's node_modules from a nested package", () => {
@@ -324,22 +353,77 @@ describe("checkSdkLicences", () => {
       fixture({ a: "1.0.0" }, { "node_modules/a": pkg("MIT") }),
     );
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBe(1);
+    expect(report.checked).toBe(4);
   });
 
-  it("ignores peer and dev dependencies but lists them", () => {
+  it("ignores a peer that only a package no SDK package depends on requires, an optional peer and dev dependencies, but lists them", () => {
     const report: Report = checkSdkLicences(
       fixture(
         {},
         {
+          "node_modules/host-only": pkg("GPL-3.0-only"),
           "node_modules/vitest": pkg("GPL-3.0-only"),
           "node_modules/typescript": pkg("GPL-3.0-only"),
         },
       ),
     );
     expect(report.failures).toEqual([]);
+    expect(report.peers["@mapcairn/sdk"]).toEqual(["host-only"]);
     expect(report.peers["@mapcairn/core"]).toEqual(["vitest"]);
     expect(report.dev["@mapcairn/core"]).toEqual(["typescript"]);
+  });
+
+  it("judges the required peers of an SDK package another SDK package depends on, and their trees", () => {
+    const report: Report = checkSdkLicences(
+      fixture(
+        {},
+        {
+          "node_modules/maplibre-gl": pkg("BSD-3-Clause", {
+            dependencies: { "tile-tool": "1.0.0" },
+          }),
+          "node_modules/tile-tool": pkg("CC-BY-NC-4.0"),
+        },
+      ),
+    );
+    expect(report.failures).toEqual([
+      {
+        name: "tile-tool",
+        version: "1.2.3",
+        licence: "CC-BY-NC-4.0",
+        requiredBy: "@mapcairn/adapter-maplibre",
+      },
+    ]);
+    expect(report.judgedPeers["@mapcairn/adapter-maplibre"]).toEqual([
+      "maplibre-gl",
+    ]);
+    expect(report.peers["@mapcairn/adapter-maplibre"]).toEqual([]);
+  });
+
+  it("judges the react and react-dom peers of map and react, as the real lockfile has them", () => {
+    const report: Report = checkSdkLicences(
+      fixture({}, { "node_modules/react": pkg("GPL-3.0-only") }),
+    );
+    expect(report.failures.map((f) => [f.name, f.requiredBy])).toEqual([
+      ["react", "@mapcairn/map"],
+    ]);
+    expect(report.judgedPeers["@mapcairn/map"]).toEqual(["react", "react-dom"]);
+    expect(report.judgedPeers["@mapcairn/react"]).toEqual(["react"]);
+  });
+
+  it("fails a disallowed licence on the peer itself", () => {
+    const report: Report = checkSdkLicences(
+      fixture({}, { "node_modules/maplibre-gl": pkg("GPL-3.0-only") }),
+    );
+    expect(report.failures.map((f) => [f.name, f.requiredBy])).toEqual([
+      ["maplibre-gl", "@mapcairn/adapter-maplibre"],
+    ]);
+  });
+
+  it("leaves an optional peer of such a package unjudged", () => {
+    const input = fixture({}, { "node_modules/vitest": pkg("GPL-3.0-only") });
+    const report: Report = checkSdkLicences(input);
+    expect(report.failures).toEqual([]);
+    expect(report.judgedPeers["@mapcairn/core"]).toEqual([]);
   });
 
   it("visits a package once however many packages need it", () => {
@@ -354,7 +438,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toHaveLength(1);
-    expect(report.checked).toBe(3);
+    expect(report.checked).toBe(6);
   });
 
   it("follows the peer dependencies of a transitive package", () => {
@@ -368,7 +452,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures.map((f) => f.name)).toEqual(["p"]);
-    expect(report.checked).toBe(2);
+    expect(report.checked).toBe(5);
   });
 
   it("skips an optional peer and a peer the lockfile does not hold", () => {
@@ -385,7 +469,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBe(1);
+    expect(report.checked).toBe(4);
   });
 
   it("walks a link to a workspace that is not an SDK package", () => {
@@ -409,6 +493,7 @@ describe("reportLines", () => {
       checked: 3,
       failures: [],
       peers: { "@mapcairn/core": ["vitest"] },
+      judgedPeers: { "@mapcairn/adapter-maplibre": ["maplibre-gl"] },
       dev: { "@mapcairn/core": ["typescript"] },
     }).join("\n");
     expect(text).toContain("packages/web");
@@ -416,6 +501,9 @@ describe("reportLines", () => {
     expect(text).toContain("(the host and the example may use other licences)");
     expect(text).toContain("3 production dependencies");
     expect(text).toContain("vitest");
+    expect(text).toContain(
+      "@mapcairn/adapter-maplibre required peer dependencies, checked because another SDK package depends on it: maplibre-gl",
+    );
   });
 
   it("names the package, its licence and the file to edit for each failure", () => {
@@ -430,6 +518,7 @@ describe("reportLines", () => {
         },
       ],
       peers: {},
+      judgedPeers: {},
       dev: {},
     }).join("\n");
     expect(text).toContain("bad-pkg@2.0.0");
@@ -492,7 +581,7 @@ describe("scripts/sdkLicences.mjs, run as a command", {
     const result = run();
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("packages/web");
-    expect(result.stdout).toContain("1 production dependencies");
+    expect(result.stdout).toContain("4 production dependencies");
   });
 
   it("exits 1 and names the package, licence and file for a disallowed licence", () => {

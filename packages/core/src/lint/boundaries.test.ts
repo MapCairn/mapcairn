@@ -169,8 +169,15 @@ describe("dependency-cruiser boundaries", () => {
     // the umbrella package only re-exports the four packages' entry points,
     // and nothing in packages/ imports it.
     "packages/sdk/package.json":
-      '{ "name": "@mapcairn/sdk", "exports": { ".": "./src/index.ts" } }\n',
+      '{ "name": "@mapcairn/sdk", "exports": { ".": "./src/index.ts", "./adapter-maplibre": "./src/adapterMaplibre.ts" } }\n',
     "packages/sdk/src/index.ts": 'export * from "@mapcairn/map";\n',
+    // Only the subpath file may reach the MapLibre adapter package.
+    "packages/sdk/src/adapterMaplibre.ts":
+      'export * from "@mapcairn/adapter-maplibre";\n',
+    "packages/sdk/src/badRootAdapter.ts":
+      'export * from "@mapcairn/adapter-maplibre";\n',
+    "packages/sdk/src/badAdapterDeep.ts":
+      'export * from "../../adapter-maplibre/src/goodCore";\n',
     "packages/sdk/src/badNpm.ts": 'export * from "zod";\n',
     "packages/sdk/src/badDeep.ts": 'export * from "../../map/src/ui/index";\n',
     "packages/sdk/src/badCode.ts":
@@ -183,6 +190,8 @@ describe("dependency-cruiser boundaries", () => {
       'import { x } from "../../../sdk/src/index";\nexport const y = x;\n',
     "examples/demo/src/goodUmbrella.ts":
       'import { ServicesProvider } from "@mapcairn/sdk";\nexport const x = ServicesProvider;\n',
+    "examples/demo/src/goodUmbrellaAdapter.ts":
+      'import { createAdapter } from "@mapcairn/sdk/adapter-maplibre";\nexport const x = createAdapter;\n',
 
     // the SDK never depends on an example.
     "packages/map/src/ui/badExample.ts":
@@ -210,6 +219,7 @@ describe("dependency-cruiser boundaries", () => {
     for (const [consumer, target] of [
       ["examples/demo", "sdk"],
       ["packages/sdk", "map"],
+      ["packages/sdk", "adapter-maplibre"],
       ["packages/web", "adapter-maplibre"],
       ["packages/map", "adapter-maplibre"],
     ] as const) {
@@ -308,6 +318,12 @@ describe("dependency-cruiser boundaries", () => {
     ["umbrella-reexports-entry-points-only", "packages/sdk/src/badNpm.ts"],
     ["umbrella-reexports-entry-points-only", "packages/sdk/src/badDeep.ts"],
     ["umbrella-reexports-entry-points-only", "packages/sdk/src/badCode.ts"],
+    ["umbrella-root-has-no-adapter", "packages/sdk/src/badRootAdapter.ts"],
+    ["umbrella-root-has-no-adapter", "packages/sdk/src/badAdapterDeep.ts"],
+    [
+      "umbrella-reexports-entry-points-only",
+      "packages/sdk/src/badAdapterDeep.ts",
+    ],
     ["nothing-imports-the-umbrella", "packages/web/src/routes/badUmbrella.ts"],
     [
       "nothing-imports-the-umbrella",
@@ -385,7 +401,9 @@ describe("dependency-cruiser boundaries", () => {
     "packages/map/src/ui/Tooltip/goodRadix.ts",
     "examples/demo/src/goodEntry.ts",
     "examples/demo/src/goodUmbrella.ts",
+    "examples/demo/src/goodUmbrellaAdapter.ts",
     "packages/sdk/src/index.ts",
+    "packages/sdk/src/adapterMaplibre.ts",
   ])("accepts %s", (file) => {
     expect(findings.filter((f) => f.endsWith(file))).toEqual([]);
   });

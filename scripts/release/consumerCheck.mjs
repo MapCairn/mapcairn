@@ -2,14 +2,16 @@
 // Copyright MapCairn contributors
 /**
  * Proves the packed tarballs work for an app outside this repository: they
- * install, a plain Vite build resolves them and both stylesheets with no
+ * install, a plain Vite build resolves them and their stylesheets with no
  * vanilla-extract plugin, TypeScript resolves their types under `bundler`,
  * `node16` and `nodenext`, and the map chrome renders on a server. It does so
- * for an app that lists the four packages the umbrella re-exports, and again
+ * for an app that lists the packages the umbrella re-exports, and again
  * for an app that lists only the umbrella (`@mapcairn/sdk`), with its
  * declaration-merging case and a strict pnpm install, and for an app that
- * lists the umbrella and some of the four at one version, which must render
- * with one copy of each.
+ * lists the umbrella and some of the others at one version, which must render
+ * with one copy of each. The umbrella app also proves that the umbrella's root
+ * holds no map engine (its client, server and Worker builds never reach
+ * `maplibre-gl` or the adapter), and that its `adapter-maplibre` subpath does.
  *
  *   npm run consumer:check
  *
@@ -43,7 +45,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
-import { SDK_PACKAGES, UMBRELLA_PACKAGE } from "../sdkPackages.mjs";
+import {
+  SDK_PACKAGES,
+  SUBPATH_ONLY_PACKAGES,
+  UMBRELLA_PACKAGE,
+} from "../sdkPackages.mjs";
 import {
   bunSettings,
   bunSkipped,
@@ -81,6 +87,9 @@ export const LOCKED_TOOLS = [
   "typescript",
   "@types/react",
   "@types/react-dom",
+  // The adapter's required peer. A strict pnpm install refuses an app that
+  // lacks it, whether or not the app imports the adapter.
+  "maplibre-gl",
 ];
 
 /**
@@ -265,19 +274,33 @@ export function missingLandmarks(html, landmarks = LANDMARKS) {
 
 /**
  * The app's source as an app that lists only the umbrella would write it:
- * every import of the other SDK packages names the umbrella, the contracts
- * entry point is its subpath, the two stylesheets are the one it ships, and a
- * declaration merged into `core` is merged into the umbrella.
+ * every import of the other SDK packages names the umbrella (a subpath-only
+ * package, the adapter, its subpath), the contracts entry point is its
+ * subpath, the stylesheets are the one it ships, and a declaration merged into
+ * `core` is merged into the umbrella.
  *
  * @param {string} source The text of a `.ts`, `.tsx` or `.mjs` file of the app.
  * @returns {string}
  */
 export function umbrellaSource(source) {
-  const others = SDK_PACKAGES.filter((name) => name !== UMBRELLA_PACKAGE).join(
-    "|",
-  );
+  const others = SDK_PACKAGES.filter(
+    (name) =>
+      name !== UMBRELLA_PACKAGE && !SUBPATH_ONLY_PACKAGES.includes(name),
+  ).join("|");
+  const subpathOnly = SUBPATH_ONLY_PACKAGES.join("|");
   return source
     .replace(/^import "@mapcairn\/map\/styles\.css";\n/gm, "")
+    .replace(
+      new RegExp(
+        `^import "@mapcairn/(?:${subpathOnly})/styles\\.css";\\n`,
+        "gm",
+      ),
+      "",
+    )
+    .replace(
+      new RegExp(`"@mapcairn/(${subpathOnly})"`, "g"),
+      `"@mapcairn/${UMBRELLA_PACKAGE}/$1"`,
+    )
     .replace(
       /"@mapcairn\/theme\/tokens\.css"/g,
       `"@mapcairn/${UMBRELLA_PACKAGE}/styles.css"`,
@@ -350,10 +373,19 @@ export const SCRIPT_SET_PROPERTIES = [
  * `tokens.css` defines (the two sheets are built against the same names).
  *
  * @param {string} css The built stylesheet text, all files joined.
+ * @param {{ engine?: boolean }} [options] With `engine`, the sheet must also hold
+ *   the adapter's rule that fits the engine into the map region, as the
+ *   umbrella's stylesheet carries it (an app that imports the packages'
+ *   stylesheets by name does not need it from this check).
  * @returns {string[]}
  */
-export function stylesheetProblems(css) {
+export function stylesheetProblems(css, { engine = false } = {}) {
   const problems = [];
+  if (engine && !/\[data-map-host\]\s+\.maplibregl-map\b/.test(css)) {
+    problems.push(
+      "the built CSS has no engine rule from the adapter's styles.css",
+    );
+  }
   if (!/\[data-theme=["']?dark["']?\]/.test(css)) {
     problems.push("the built CSS has no dark theme block from tokens.css");
   }
@@ -438,6 +470,120 @@ export function layerProblems(css) {
   for (const property of ["padding", "border", "background"]) {
     if (!inLayer.includes(property)) {
       problems.push(`the primitives' layer holds no ${property} rule`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * The builds of the umbrella app that go through the umbrella's root only, and
+ * must hold no map engine: the client bundle, the server bundle and the
+ * Worker bundle (`bundleGraph.mjs` names them so).
+ */
+export const ENGINE_FREE_BUILDS = ["client", "server", "worker"];
+
+/**
+ * The controls: builds that go through the umbrella's `adapter-maplibre`
+ * subpath and must hold the engine, so that a detector that sees nothing is
+ * caught. The server bundle leaves the engine as an external import, so it has
+ * no control; the client and the Worker bundles hold it.
+ */
+export const ENGINE_CONTROL_BUILDS = [
+  "client via the subpath",
+  "worker via the subpath",
+];
+
+/** A module id, path or bare specifier, that is the map engine or the adapter package. */
+const ENGINE_MODULE = /(?:^|[\\/])(?:maplibre-gl|adapter-maplibre)(?:[\\/]|$)/;
+
+/**
+ * A module of the SDK packages the umbrella re-exports. The umbrella's own
+ * modules only re-export, so a bundle holds none of them and shows the
+ * packages' modules instead.
+ */
+const SDK_MODULE = /@mapcairn[\\/](?:core|map|react|theme)[\\/]/;
+
+/**
+ * The adapter's own stylesheet. The umbrella's `styles.css` imports it on
+ * purpose, and it holds no engine code, so it does not count.
+ */
+const ADAPTER_STYLESHEET = /adapter-maplibre[\\/].*\.css(?:\?.*)?$/;
+
+/**
+ * The ids among `ids` that are the map engine or the adapter package's code.
+ *
+ * @param {string[]} ids Module ids, resolved paths or external specifiers.
+ * @returns {string[]}
+ */
+export function engineModules(ids) {
+  return ids.filter(
+    (id) => ENGINE_MODULE.test(id) && !ADAPTER_STYLESHEET.test(id),
+  );
+}
+
+/**
+ * @typedef {object} BuildGraph
+ * @property {string} name Which build: one of the two lists above.
+ * @property {number} bytes The JavaScript the build emitted.
+ * @property {string[]} files The files it emitted.
+ * @property {string[]} ids Every module it bundled and every import it left external.
+ */
+
+/**
+ * What is wrong with the module graphs of the umbrella app's builds: a root
+ * build that reaches the engine or the adapter package or emits a file named
+ * for the engine, a root build that never reached the umbrella (an empty graph
+ * proves nothing), a control build that does not hold the engine (the detector
+ * is blind), and a build missing from the report.
+ *
+ * @param {BuildGraph[]} builds
+ * @returns {string[]}
+ */
+export function engineGraphProblems(builds) {
+  const problems = [];
+  const byName = new Map(builds.map((build) => [build.name, build]));
+  for (const name of [...ENGINE_FREE_BUILDS, ...ENGINE_CONTROL_BUILDS]) {
+    if (!byName.has(name)) {
+      problems.push(
+        `the ${name} build is missing from the module graph report`,
+      );
+    }
+  }
+  for (const name of ENGINE_FREE_BUILDS) {
+    const build = byName.get(name);
+    if (build === undefined) {
+      continue;
+    }
+    const reached = engineModules(build.ids);
+    if (reached.length > 0) {
+      problems.push(
+        `the ${name} build through the umbrella's root reaches the map engine: ${reached.slice(0, 3).join(", ")}`,
+      );
+    }
+    const named = build.files.filter((file) => /maplibre/i.test(file));
+    if (named.length > 0) {
+      problems.push(
+        `the ${name} build through the umbrella's root emitted ${named.join(", ")}`,
+      );
+    }
+    if (!build.ids.some((id) => SDK_MODULE.test(id))) {
+      problems.push(
+        `the ${name} build never reached the SDK's code, so its module graph proves nothing`,
+      );
+    }
+  }
+  for (const name of ENGINE_CONTROL_BUILDS) {
+    const build = byName.get(name);
+    if (build === undefined) {
+      continue;
+    }
+    const reached = engineModules(build.ids);
+    const holdsAdapter = reached.some((id) => /adapter-maplibre/.test(id));
+    const holdsEngine = reached.some((id) => /maplibre-gl/.test(id));
+    if (!(holdsAdapter && holdsEngine)) {
+      problems.push(
+        `the ${name} build does not hold the adapter and the engine, so the check cannot see them`,
+      );
     }
   }
   return problems;
@@ -830,9 +976,10 @@ function auditSignatures(app) {
  *
  * @param {string} app The installed app.
  * @param {string} [prefix] Put before each line of the report, to say which app it was.
+ * @param {{ engineStyles?: boolean }} [options] With `engineStyles`, the built CSS must hold the adapter's engine rule (the umbrella app, whose one stylesheet carries it).
  * @returns {string[]} One line for each check.
  */
-function checkApp(app, prefix = "") {
+function checkApp(app, prefix = "", { engineStyles = false } = {}) {
   /** @type {string[]} */
   const lines = [];
   const plain = renderPlain(app);
@@ -863,6 +1010,7 @@ function checkApp(app, prefix = "") {
   );
   const cssProblems = stylesheetProblems(
     builtCss(path.join(app, "dist", "client")),
+    { engine: engineStyles },
   );
   if (cssProblems.length > 0) {
     throw new Error(cssProblems.join("\n"));
@@ -873,7 +1021,7 @@ function checkApp(app, prefix = "") {
     throw new Error(layering.join("\n"));
   }
   lines.push(
-    "vite build with no plugins, both stylesheets built in: ok",
+    "vite build with no plugins, the stylesheets built in: ok",
     "the SDK's primitives sit in one layer, ranked above an app reset layer declared first: ok",
   );
 
@@ -900,6 +1048,32 @@ function checkApp(app, prefix = "") {
 }
 
 /**
+ * Proves the umbrella's root holds no map engine, from the module graphs of
+ * five builds of an app that lists only the umbrella (`bundleGraph.mjs`): its
+ * client, server and Worker bundles never reach `maplibre-gl` or the adapter,
+ * and the two control builds, which import the adapter through the umbrella's
+ * subpath, do.
+ *
+ * @param {string} app The installed umbrella app.
+ * @param {string} prefix Put before each line of the report.
+ * @returns {string[]} One line for each check, with the sizes it measured.
+ */
+function checkEngineFreeRoot(app, prefix) {
+  const builds = JSON.parse(
+    runNode("module graphs of the builds", ["bundleGraph.mjs"], app),
+  );
+  const problems = engineGraphProblems(builds);
+  if (problems.length > 0) {
+    throw new Error(problems.join("\n"));
+  }
+  const kilobytes = (name) =>
+    Math.round(builds.find((build) => build.name === name).bytes / 1000);
+  return [
+    `${prefix}the root's client, server and Worker bundles hold no map engine or adapter (${kilobytes("client")}, ${kilobytes("server")} and ${kilobytes("worker")} kB of JavaScript), and the adapter subpath brings it (${kilobytes("client via the subpath")} kB client, ${kilobytes("worker via the subpath")} kB Worker): ok`,
+  ];
+}
+
+/**
  * The manifest of an app that lists the given packages, from the tarballs or
  * from the registry.
  *
@@ -913,11 +1087,14 @@ function manifestListing({ packed, published, versions, direct }) {
 }
 
 /**
- * The checks for an app that lists only the umbrella: the four packages come
- * in through it alone, so this is what a reader of the README does. Its source
- * imports the umbrella (`umbrellaSource`), and the declaration merged into the
- * app's types is merged through it. It also installs with pnpm as strictly as
- * pnpm goes, where nothing but the umbrella is reachable from the app.
+ * The checks for an app that lists only the umbrella (and the map engine, its
+ * required peer): the other packages come in through it alone, so this is what
+ * a reader of the README does. Its source imports the umbrella
+ * (`umbrellaSource`; the adapter through the subpath, which the three type
+ * checks resolve), and the declaration merged into the app's types is merged
+ * through it. The root must hold no map engine (`checkEngineFreeRoot`). It also
+ * installs with pnpm as strictly as pnpm goes, where nothing but the umbrella
+ * and the engine is reachable from the app.
  *
  * @param {{ root: string, packed: Record<string, string>, published: string | null, versions: Record<string, string> }} input
  * @returns {string[]} One line for each check.
@@ -933,7 +1110,11 @@ function checkUmbrella({ root, packed, published, versions }) {
   const app = path.join(root, "umbrella");
   prepareApp(app, manifest, { umbrella: true });
   install(app, installFlags({ published }));
-  const lines = [`${prefix}npm install: ok`, ...checkApp(app, prefix)];
+  const lines = [
+    `${prefix}npm install: ok`,
+    ...checkApp(app, prefix, { engineStyles: true }),
+    ...checkEngineFreeRoot(app, prefix),
+  ];
   if (published !== null) {
     return [
       ...lines,
@@ -952,18 +1133,19 @@ function checkUmbrella({ root, packed, published, versions }) {
 }
 
 /**
- * The check for an app that lists the umbrella and also `core` and `map`
- * directly, at the umbrella's version, as the documents tell a host that
- * merges a declaration. It must install one copy of each package, so the
- * umbrella's `MapChrome` is the one from `@mapcairn/map` and a provider from
- * one renders a component from the other, and a service merged into `core`
- * must be visible through the umbrella's types.
+ * The check for an app that lists the umbrella and also `core`, `map` and the
+ * adapter directly, at the umbrella's version, as the documents tell a host
+ * that merges a declaration. It must install one copy of each package, so the
+ * umbrella's `MapChrome` is the one from `@mapcairn/map`, the adapter factory
+ * at the umbrella's subpath is the one from `@mapcairn/adapter-maplibre`, a
+ * provider from one renders a component from the other, and a service merged
+ * into `core` must be visible through the umbrella's types.
  *
  * @param {{ root: string, packed: Record<string, string>, published: string | null, versions: Record<string, string> }} input
  * @returns {string[]} One line for each check.
  */
 function checkMixed({ root, packed, published, versions }) {
-  const prefix = `umbrella with core and map listed too: `;
+  const prefix = `umbrella with core, map and adapter-maplibre listed too: `;
   const app = path.join(root, "mixed");
   mkdirSync(path.join(app, "src"), { recursive: true });
   cpSync(MIXED_FIXTURE, app, { recursive: true });
@@ -979,7 +1161,7 @@ function checkMixed({ root, packed, published, versions }) {
     packed,
     published,
     versions,
-    direct: [UMBRELLA_PACKAGE, "core", "map"],
+    direct: [UMBRELLA_PACKAGE, "core", "map", ...SUBPATH_ONLY_PACKAGES],
   });
   writeFileSync(
     path.join(app, "package.json"),
@@ -987,24 +1169,21 @@ function checkMixed({ root, packed, published, versions }) {
   );
   copyFileSync(path.join(REPO, ".npmrc"), path.join(app, ".npmrc"));
   install(app, installFlags({ published }));
-  const nested = path.join(
-    app,
-    "node_modules",
-    "@mapcairn",
-    UMBRELLA_PACKAGE,
-    "node_modules",
-  );
-  if (existsSync(nested)) {
-    throw new Error(
-      `The umbrella installed its own copies of ${readdirSync(nested).join(", ")}, so a host gets two of each.`,
-    );
+  const scope = path.join(app, "node_modules", "@mapcairn");
+  for (const installed of readdirSync(scope)) {
+    const nested = path.join(scope, installed, "node_modules");
+    if (existsSync(nested)) {
+      throw new Error(
+        `@mapcairn/${installed} installed its own copies of ${readdirSync(nested).join(", ")}, so a host gets two of each.`,
+      );
+    }
   }
   const answer = JSON.parse(runNode("mixed render", ["mixed.mjs"], app));
   const absent = missingLandmarks(answer.html, CHROME_LANDMARKS);
   if (absent.length > 0) {
     throw new Error(`The mixed render lacks: ${absent.join(", ")}`);
   }
-  if (!(answer.sameChrome && answer.sameServices)) {
+  if (!(answer.sameChrome && answer.sameServices && answer.sameAdapter)) {
     throw new Error(
       "The umbrella and the package it re-exports are two copies, not one.",
     );
@@ -1024,7 +1203,7 @@ function checkMixed({ root, packed, published, versions }) {
     app,
   );
   return [
-    `${prefix}one copy of each package, and a render across the two: ok`,
+    `${prefix}one copy of each package, the adapter factory the same function at both names, and a render across the two: ok`,
     `${prefix}a service merged into core is visible through the umbrella's types: ok`,
   ];
 }
