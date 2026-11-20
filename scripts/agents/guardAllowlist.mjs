@@ -486,11 +486,11 @@ function isInWorktree(raw, context) {
 }
 
 /**
- * The project scripts a reviewer may run, by path, with a check on their
- * arguments. They run only from the project folder, so the main checkout's
- * copy runs, never a pull request's copy in a worktree.
+ * The project scripts a reviewer may run, by their path in the project, with a
+ * check on their arguments. Only the project's own copy runs, never a pull
+ * request's copy in a worktree.
  *
- * @type {Record<string, (args: string[]) => string | undefined>}
+ * @type {Record<string, (args: string[], context: Context) => string | undefined>}
  */
 const SCRIPTS = {
   "scripts/agents/thread.mjs": (args) =>
@@ -511,8 +511,29 @@ const SCRIPTS = {
 };
 
 /**
- * `node <script> <args>`: no option before the script, and only a script on
- * the list.
+ * The listed script a word names, as its path in the project, when the word
+ * resolves to that script in the project folder itself: relative from the
+ * project folder, or by its absolute path from anywhere.
+ *
+ * @param {string} word
+ * @param {Walk} walk
+ * @returns {string | undefined}
+ */
+function projectScript(word, walk) {
+  const place = resolvePath(word, walk.cwd, walk.context.platform, true);
+  if (place === undefined) {
+    return undefined;
+  }
+  const name = place.segments.slice(-3).join("/");
+  const folder = { root: place.root, segments: place.segments.slice(0, -3) };
+  return Object.hasOwn(SCRIPTS, name) && isProjectRoot(folder, walk.context)
+    ? name
+    : undefined;
+}
+
+/**
+ * `node <script> <args>`: no option before the script, and only the project's
+ * own copy of a script on the list.
  *
  * @param {string[]} args
  * @param {Context} context
@@ -520,9 +541,10 @@ const SCRIPTS = {
  */
 function checkNode(args, context) {
   const [script, ...rest] = args;
-  const check = SCRIPTS[script ?? ""];
+  const name = projectScript(script ?? "", context.walk);
+  const check = name === undefined ? undefined : SCRIPTS[name];
   if (check === undefined) {
-    return `node runs only ${Object.keys(SCRIPTS).join(", ")}, with no option before the script`;
+    return `node runs only the project's own ${Object.keys(SCRIPTS).join(", ")}, with no option before the script`;
   }
   return check(rest, context);
 }
@@ -759,7 +781,7 @@ const ENTRIES = [
         : "npm is allowed only as npm ci --ignore-scripts",
   },
   { words: ["npx"], where: "worktree", testReviewer: true, check: checkVitest },
-  { words: ["node"], where: "project", check: checkNode },
+  { words: ["node"], where: "anywhere", check: checkNode },
   {
     words: ["grep"],
     where: "anywhere",

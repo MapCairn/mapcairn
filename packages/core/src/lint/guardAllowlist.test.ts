@@ -100,6 +100,8 @@ const FOR_EVERY_REVIEWER = [
   `node scripts/agents/docs-refs.mjs --ref ${SHA} docs/guides/working-with-agents.md AGENTS.md`,
   "node scripts/agents/docs-refs.mjs --ref FETCH_HEAD README.md",
   "node scripts/agents/port.mjs 5173",
+  "node ./scripts/agents/thread.mjs issue 561",
+  `node ${ROOT}/scripts/agents/thread.mjs pr 12`,
   "  git status  ",
 ];
 
@@ -267,7 +269,8 @@ const REFUSED: [string, string[]][] = [
       "node -r ./x scripts/agents/thread.mjs issue 1",
       "node --env-file=x scripts/agents/thread.mjs issue 1",
       "node scripts/agents/sync.mjs",
-      "node ./scripts/agents/thread.mjs issue 1",
+      "node /home/dev/other/scripts/agents/thread.mjs issue 1",
+      "node .claude/worktrees/review-12/scripts/agents/thread.mjs issue 1",
       "node scripts/agents/thread.mjs issue 1 extra",
       "node scripts/agents/thread.mjs issue abc",
       "node scripts/agents/thread.mjs issue 0",
@@ -570,6 +573,17 @@ describe("what the allowlist refuses", () => {
     expect(
       bash("node scripts/agents/port.mjs 1", "lean-reviewer", "").allow,
     ).toBe(false);
+  });
+
+  it("runs the project's own copy of a script from a worktree, never the worktree's", () => {
+    for (const agent of READ_ONLY_AGENTS as string[]) {
+      const own = `node ${ROOT}/scripts/agents/thread.mjs pr 12`;
+      expect(bash(own, agent, WORKTREE), agent).toEqual({ allow: true });
+      const theirs = `node ${WORKTREE}/scripts/agents/thread.mjs pr 12`;
+      expect(bash(theirs, agent, WORKTREE).allow, agent).toBe(false);
+      const relative = "node scripts/agents/thread.mjs pr 12";
+      expect(bash(relative, agent, WORKTREE).allow, agent).toBe(false);
+    }
   });
 });
 
