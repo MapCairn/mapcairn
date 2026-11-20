@@ -82,9 +82,6 @@ export const CONTRACT_LAYER: FeedLayerDefinition;
 export const CONTRACT_OTHER_IDENTIFY_LAYER: IdentifiableLayerDefinition;
 
 // @public
-export const CONTRACT_RESPONSE_LIMIT_BYTES = 2048;
-
-// @public
 export const CONTRACT_SELECTION_LIMIT = 3;
 
 // @public
@@ -208,8 +205,8 @@ export interface LayerSourceControls {
     holdIdentify(): () => void;
     respondToIdentifyWith(points: readonly ContractPoint[]): void;
     respondWith(points: readonly ContractPoint[]): void;
-    respondWithAnswerOfBytes(kind: "feed" | "detail", bytes: number): void;
     respondWithDetailLine(from: readonly [number, number], to: readonly [number, number]): void;
+    respondWithOversizeAnswer(kind: "feed" | "detail"): void;
 }
 
 // @public

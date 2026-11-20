@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
-  DEFAULT_MAX_RESPONSE_BYTES,
-  type DetailSource,
   type IdentifiableLayerDefinition,
   type IdentifyTarget,
   identifyUrl,
+  type LayerDefinition,
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_IDENTIFY_LAYER,
@@ -16,6 +15,7 @@ import {
 } from "@mapcairn/core/contracts";
 import { describe, expect, it, vi } from "vitest";
 import {
+  DEFAULT_MAX_RESPONSE_BYTES,
   FetchLayerSource,
   MAX_IDENTIFY_RESPONSE_BYTES,
 } from "./FetchLayerSource";
@@ -166,10 +166,16 @@ const failure = (kind: "network" | "invalid"): Reply =>
       }
     : async () => new Response("<html>not json</html>");
 
+/** The limit the contract subject lowers its source to, so an oversize answer stays small. */
+const CONTRACT_LIMIT_BYTES = 2048;
+
 runLayerSourceContract("FetchLayerSource", () => {
   const net = scriptedFetch();
   return {
-    source: new FetchLayerSource({ fetch: net.fetch }),
+    source: new FetchLayerSource({
+      fetch: net.fetch,
+      maxResponseBytes: CONTRACT_LIMIT_BYTES,
+    }),
     controls: {
       respondWith: (points) => {
         net.reply(pointsAnswer(points));
@@ -194,11 +200,11 @@ runLayerSourceContract("FetchLayerSource", () => {
           ]),
         );
       },
-      respondWithAnswerOfBytes: (kind, bytes) => {
+      respondWithOversizeAnswer: (kind) => {
         net.replyWith(async () =>
           streamedAnswerOfBytes(
             kind === "feed" ? contractPoint : contractLine,
-            bytes,
+            CONTRACT_LIMIT_BYTES + 1,
           ),
         );
       },
@@ -590,20 +596,14 @@ describe("FetchLayerSource, the size of a feed or detail answer", () => {
   const loadFeed = (
     net: ReturnType<typeof scriptedFetch>,
     maxResponseBytes?: number,
+    definition: LayerDefinition = SAMPLE_FEED_LAYER,
   ) =>
-    new FetchLayerSource({ fetch: net.fetch }).load({
-      definition:
-        maxResponseBytes === undefined
-          ? SAMPLE_FEED_LAYER
-          : {
-              ...SAMPLE_FEED_LAYER,
-              source: { ...SAMPLE_FEED_LAYER.source, maxResponseBytes },
-            },
-      controls: {},
-      now,
-    });
+    new FetchLayerSource({
+      fetch: net.fetch,
+      ...(maxResponseBytes === undefined ? {} : { maxResponseBytes }),
+    }).load({ definition, controls: {}, now });
 
-  it("reads a feed answer of exactly the default limit when the definition sets none", async () => {
+  it("reads a feed answer of exactly the default limit", async () => {
     const net = scriptedFetch();
     net.replyWith(async () =>
       streamedAnswerOfBytes(feedPoint, DEFAULT_MAX_RESPONSE_BYTES),
@@ -611,7 +611,15 @@ describe("FetchLayerSource, the size of a feed or detail answer", () => {
     await expect(loadFeed(net)).resolves.toHaveLength(1);
   });
 
-  it("stops reading a feed answer over the default limit that has no Content-Length", async () => {
+  it("refuses a feed answer one byte over the default limit", async () => {
+    const net = scriptedFetch();
+    net.replyWith(async () =>
+      streamedAnswerOfBytes(feedPoint, DEFAULT_MAX_RESPONSE_BYTES + 1),
+    );
+    await expect(loadFeed(net)).rejects.toMatchObject({ kind: "invalid" });
+  });
+
+  it("stops reading a feed answer over the limit that has no Content-Length", async () => {
     const net = scriptedFetch();
     let cancelled = false;
     let sent = 0;
@@ -633,12 +641,17 @@ describe("FetchLayerSource, the size of a feed or detail answer", () => {
     expect(sent).toBeLessThan(8);
   });
 
-  it("refuses a feed answer whose Content-Length is over the limit, unread", async () => {
+  it("refuses a feed answer whose Content-Length is over the limit without reading it", async () => {
     const net = scriptedFetch();
     let cancelled = false;
+    let pulls = 0;
     const body = new ReadableStream<Uint8Array>({
-      pull(controller) {
+      start(controller) {
         controller.enqueue(textEncoder.encode("{}"));
+      },
+      pull(controller) {
+        pulls += 1;
+        controller.close();
       },
       cancel() {
         cancelled = true;
@@ -653,9 +666,10 @@ describe("FetchLayerSource, the size of a feed or detail answer", () => {
     );
     await expect(loadFeed(net)).rejects.toMatchObject({ kind: "invalid" });
     expect(cancelled).toBe(true);
+    expect(pulls).toBe(0);
   });
 
-  it("applies the limit the definition sets, lower or higher than the default", async () => {
+  it("applies the limit its options set, lower or higher than the default", async () => {
     const lower = scriptedFetch();
     lower.replyWith(async () => streamedAnswerOfBytes(feedPoint, 4000));
     await expect(loadFeed(lower, 3999)).rejects.toMatchObject({
@@ -682,21 +696,53 @@ describe("FetchLayerSource, the size of a feed or detail answer", () => {
   it("does not keep a refused answer, so a later load asks again", async () => {
     const net = scriptedFetch();
     net.replyWith(async () => streamedAnswerOfBytes(feedPoint, 4000));
-    const source = new FetchLayerSource({ fetch: net.fetch });
-    const definition = {
-      ...SAMPLE_FEED_LAYER,
-      source: { ...SAMPLE_FEED_LAYER.source, maxResponseBytes: 3999 },
-    };
-    await expect(
-      source.load({ definition, controls: {}, now }),
-    ).rejects.toMatchObject({ kind: "invalid" });
-    await expect(
-      source.load({ definition, controls: {}, now }),
-    ).rejects.toMatchObject({ kind: "invalid" });
+    const source = new FetchLayerSource({
+      fetch: net.fetch,
+      maxResponseBytes: 3999,
+    });
+    const request = { definition: SAMPLE_FEED_LAYER, controls: {}, now };
+    await expect(source.load(request)).rejects.toMatchObject({
+      kind: "invalid",
+    });
+    await expect(source.load(request)).rejects.toMatchObject({
+      kind: "invalid",
+    });
     expect(net.urls).toHaveLength(2);
   });
 
-  it("applies the detail's own limit, and the default when it sets none", async () => {
+  it("treats two layers that share a URL alike, whichever asks first", async () => {
+    const sibling = { ...SAMPLE_FEED_LAYER, id: "sample-points-too" };
+    const refused = scriptedFetch();
+    refused.replyWith(async () => streamedAnswerOfBytes(feedPoint, 4000));
+    const small = new FetchLayerSource({
+      fetch: refused.fetch,
+      maxResponseBytes: 3999,
+    });
+    const request = (definition: LayerDefinition) => ({
+      definition,
+      controls: {},
+      now,
+    });
+    const settled = await Promise.allSettled([
+      small.load(request(SAMPLE_FEED_LAYER)),
+      small.load(request(sibling)),
+    ]);
+    expect(settled.map((result) => result.status)).toEqual([
+      "rejected",
+      "rejected",
+    ]);
+    const kept = scriptedFetch();
+    kept.reply(geojson([feedPoint]), { "cache-control": "max-age=60" });
+    const big = new FetchLayerSource({ fetch: kept.fetch });
+    const loaded = await Promise.all([
+      big.load(request(SAMPLE_FEED_LAYER)),
+      big.load(request(sibling)),
+    ]);
+    expect(loaded.map((features) => features.length)).toEqual([1, 1]);
+    expect(kept.urls).toHaveLength(1);
+  });
+
+  it("applies the same limit to a detail answer", async () => {
     const feature = {
       id: "a",
       geometry: { type: "Point" as const, coordinates: [0, 0] as const },
@@ -713,21 +759,17 @@ describe("FetchLayerSource, the size of a feed or detail answer", () => {
       },
       properties: {},
     };
-    const limited = {
-      ...SAMPLE_ALERT_LAYER,
-      detail: {
-        ...(SAMPLE_ALERT_LAYER.detail as DetailSource),
-        maxResponseBytes: 3999,
-      },
-    };
     const net = scriptedFetch();
     net.replyWith(async () => streamedAnswerOfBytes(line, 4000));
-    const source = new FetchLayerSource({ fetch: net.fetch });
+    const request = { definition: SAMPLE_ALERT_LAYER, feature };
     await expect(
-      source.loadDetail({ definition: limited, feature }),
+      new FetchLayerSource({
+        fetch: net.fetch,
+        maxResponseBytes: 3999,
+      }).loadDetail(request),
     ).rejects.toMatchObject({ kind: "invalid" });
     await expect(
-      source.loadDetail({ definition: SAMPLE_ALERT_LAYER, feature }),
+      new FetchLayerSource({ fetch: net.fetch }).loadDetail(request),
     ).resolves.toHaveLength(1);
   });
 });

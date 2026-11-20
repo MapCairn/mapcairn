@@ -17,7 +17,6 @@ export * from "./paths";
 export * from "./query";
 export * from "./registry";
 export * from "./responseCache";
-export * from "./responseLimit";
 export * from "./runtimeLayerCatalogue";
 export * from "./shapeStyle";
 export * from "./staticLayerCatalogue";

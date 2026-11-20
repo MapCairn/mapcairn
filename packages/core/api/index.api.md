@@ -722,9 +722,6 @@ export const DEFAULT_LINE_WIDTH = 2.5;
 export const DEFAULT_MARKER_RADIUS = 6;
 
 // @public
-export const DEFAULT_MAX_RESPONSE_BYTES: number;
-
-// @public
 export const DEFAULT_SELECTION_LIMIT = 200;
 
 // @public
@@ -839,16 +836,12 @@ export function describeZoomOut(level: number): Message;
 export function destinationPoint(from: LatLng, bearing: number, metres: number): LatLng;
 
 // @public
-export function detailResponseLimit(definition: LayerDefinition): number;
-
-// @public
 export interface DetailSource {
     readonly colour: PaletteSlot;
     readonly dataCost: DefinitionText;
     // (undocumented)
     readonly decoder: string;
     readonly label: DefinitionText;
-    readonly maxResponseBytes?: number;
     readonly origins: readonly string[];
     readonly urlField: string;
 }
@@ -1308,10 +1301,10 @@ export class FakeLayerSource implements LayerSource {
     loadDetail(request: LayerDetailRequest): Promise<readonly LayerFeature[]>;
     // (undocumented)
     readonly requests: RecordedLayerRequest<LayerLoadRequest>[];
-    setAnswerBytes(layerId: string, bytes: number): void;
     setDetail(layerId: string, shapes: readonly LayerFeature[]): void;
     setFeatures(layerId: string, features: readonly LayerFeature[]): void;
     setIdentified(layerId: string, features: readonly LayerFeature[]): void;
+    setOversizeAnswer(layerId: string, kind: "feed" | "detail"): void;
 }
 
 // @public
@@ -1689,9 +1682,6 @@ export interface FeedLayerDefinition<S extends PointStyle | FeedShapeStyle = Poi
 }
 
 // @public
-export function feedResponseLimit(definition: LayerDefinition): number;
-
-// @public
 export type FeedShapeStyle = ShapeStyle<LayerTemplate>;
 
 // @public
@@ -1704,7 +1694,6 @@ export interface FeedSource {
     readonly filter?: FeatureFilter;
     // (undocumented)
     readonly kind: "feed";
-    readonly maxResponseBytes?: number;
     readonly url: string;
 }
 
@@ -2928,9 +2917,6 @@ export const MAX_MERCATOR_LATITUDE = 85.05112877980659;
 export const MAX_MINUTES_AGO = 52596000;
 
 // @public
-export const MAX_RESPONSE_BYTES_CEILING: number;
-
-// @public
 export const MAX_SHARE_LENGTH = 2000;
 
 // @public
@@ -3344,7 +3330,6 @@ export interface QuerySource {
     // (undocumented)
     readonly kind: "query";
     readonly maxFeatures: number;
-    readonly maxResponseBytes?: number;
     readonly minzoom?: number;
     // (undocumented)
     readonly url: string;

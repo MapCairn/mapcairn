@@ -2,10 +2,6 @@
 // Copyright MapCairn contributors
 import { detailUrl, feedUrl } from "../layers/feed";
 import { identifyRequestUrl } from "../layers/identify";
-import {
-  detailResponseLimit,
-  feedResponseLimit,
-} from "../layers/responseLimit";
 import { LayerError } from "../ports/errors";
 import type {
   LayerDetailRequest,
@@ -46,11 +42,11 @@ export type RecordedLayerRequest<T> = T & { readonly url: string };
  * would have requested. A tap that cannot be turned into an `https` URL is
  * refused with `invalid` and not recorded, as a real source refuses it.
  *
- * `setAnswerBytes` says how many bytes the provider's answer to a load or a
- * detail load has, and the fake refuses one over the definition's
- * `maxResponseBytes` (or the default) with `invalid`, as a real source
- * does. An answer it was not given a size for is within every limit. The fake
- * applies no limit to an identify answer. A second `holdIdentify` for
+ * `setOversizeAnswer` makes the provider's answer to a load or to a detail
+ * load larger than the source's limit, so the fake refuses it with `invalid`
+ * as a real source does; the other kind of answer is not affected, so
+ * features can load while their detail is refused. The fake applies no limit
+ * to an identify answer. A second `holdIdentify` for
  * a layer replaces the first, and releasing the first leaves the second in
  * place.
  */
@@ -62,7 +58,7 @@ export class FakeLayerSource implements LayerSource {
   readonly #outcomes = new Map<string, Outcome>();
   readonly #identified = new Map<string, Outcome>();
   readonly #details = new Map<string, readonly LayerFeature[]>();
-  readonly #answerBytes = new Map<string, number>();
+  readonly #oversize = new Set<string>();
   readonly #heldIdentifies = new Map<string, Promise<void>>();
   #held: Promise<void> | null = null;
 
@@ -87,11 +83,12 @@ export class FakeLayerSource implements LayerSource {
   }
 
   /**
-   * Says that the answer to `load` and `loadDetail` for a layer has this
-   * many bytes, so a limit can be exercised without building the body.
+   * Makes the answer `load` (`"feed"`) or `loadDetail` (`"detail"`)
+   * reads for a layer larger than the source's limit, so it rejects with
+   * `invalid`.
    */
-  setAnswerBytes(layerId: string, bytes: number): void {
-    this.#answerBytes.set(layerId, bytes);
+  setOversizeAnswer(layerId: string, kind: "feed" | "detail"): void {
+    this.#oversize.add(`${kind}:${layerId}`);
   }
 
   /** Makes `loadDetail` for a layer return these shapes. */
@@ -136,8 +133,7 @@ export class FakeLayerSource implements LayerSource {
       url: feedUrl(definition, controls, now, area),
     });
     await this.#wait(signal, this.#held);
-    const limit = feedResponseLimit(definition);
-    this.#refuseOverLimit(definition.id, limit);
+    this.#refuseOversize("feed", definition.id);
     const outcome = this.#outcomes.get(definition.id);
     if (outcome?.kind === "failure") {
       throw new LayerError(outcome.error);
@@ -157,8 +153,7 @@ export class FakeLayerSource implements LayerSource {
     }
     this.detailRequests.push({ ...request, url });
     await this.#wait(request.signal, this.#held);
-    const limit = detailResponseLimit(request.definition);
-    this.#refuseOverLimit(request.definition.id, limit);
+    this.#refuseOversize("detail", request.definition.id);
     const shapes = this.#details.get(request.definition.id) ?? [];
     if (shapes.length === 0) {
       throw new LayerError("empty");
@@ -182,12 +177,9 @@ export class FakeLayerSource implements LayerSource {
     return outcome?.features ?? [];
   }
 
-  #refuseOverLimit(layerId: string, limit: number): void {
-    if ((this.#answerBytes.get(layerId) ?? 0) > limit) {
-      throw new LayerError(
-        "invalid",
-        `The response is larger than ${limit} bytes.`,
-      );
+  #refuseOversize(kind: "feed" | "detail", layerId: string): void {
+    if (this.#oversize.has(`${kind}:${layerId}`)) {
+      throw new LayerError("invalid", "The response is too large.");
     }
   }
 
