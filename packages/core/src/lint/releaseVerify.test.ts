@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   decideDispatch,
   decidePush,
+  distTagFor,
+  packageState,
   privateSdkManifests,
   ReleaseRefused,
   readRegistryState,
@@ -60,7 +62,7 @@ function releasePush(overrides: Partial<PushSources> = {}) {
     headSha: () => sources.head,
     manifestVersions: (ref: string) =>
       ref === "HEAD" ? sources.after : sources.before,
-    tagExists: (tag: string) => sources.tags.includes(tag),
+    tags: () => sources.tags,
     pullRequest: (number: number) =>
       number === 500 ? sources.pullRequest : null,
   };
@@ -202,7 +204,7 @@ describe("decideDispatch", () => {
         mode: "rehearse",
         version: "0.0.0",
         manifestVersions: () => manifests("0.0.0"),
-        tagExists: () => false,
+        tags: () => [],
       }),
     ).toMatchObject({ release: true, version: "0.0.0", prerelease: false });
   });
@@ -213,7 +215,7 @@ describe("decideDispatch", () => {
         mode: "rehearse",
         version: "0.1.0",
         manifestVersions: () => manifests("0.0.0"),
-        tagExists: () => false,
+        tags: () => [],
       }),
     ).toThrow(ReleaseRefused);
   });
@@ -224,7 +226,7 @@ describe("decideDispatch", () => {
         mode: "publish-existing",
         version: "0.1.0-rc.1",
         manifestVersions: () => manifests("0.1.0-rc.1"),
-        tagExists: (tag: string) => tag === "v0.1.0-rc.1",
+        tags: () => ["v0.1.0-rc.1"],
       }),
     ).toMatchObject({ release: true, version: "0.1.0-rc.1", prerelease: true });
     expect(() =>
@@ -232,7 +234,7 @@ describe("decideDispatch", () => {
         mode: "publish-existing",
         version: "0.1.0-rc.1",
         manifestVersions: () => manifests("0.1.0-rc.1"),
-        tagExists: () => false,
+        tags: () => [],
       }),
     ).toThrow(/no tag v0\.1\.0-rc\.1/);
   });
@@ -245,7 +247,7 @@ describe("decideDispatch", () => {
           mode: "rehearse",
           version,
           manifestVersions: () => manifests("0.0.0"),
-          tagExists: () => false,
+          tags: () => [],
         }),
       ).toThrow(/not a version/);
     },
@@ -257,7 +259,7 @@ describe("decideDispatch", () => {
         mode: "publish",
         version: "0.1.0",
         manifestVersions: () => manifests("0.1.0"),
-        tagExists: () => true,
+        tags: () => ["v0.1.0"],
       }),
     ).toThrow(/mode/);
   });
@@ -326,6 +328,118 @@ describe("tarballVersionProblems", () => {
       "no tarball for @mapcairn/react",
       "no tarball for @mapcairn/theme",
     ]);
+  });
+
+  it("requires exactly one tarball for each package, named mapcairn-<short>-<version>.tgz", () => {
+    const all = {
+      "mapcairn-core-0.1.0.tgz": { name: "@mapcairn/core", version: "0.1.0" },
+      "mapcairn-map-0.1.0.tgz": { name: "@mapcairn/map", version: "0.1.0" },
+      "mapcairn-react-0.1.0.tgz": { name: "@mapcairn/react", version: "0.1.0" },
+      "mapcairn-theme-0.1.0.tgz": { name: "@mapcairn/theme", version: "0.1.0" },
+    };
+    expect(
+      tarballVersionProblems("0.1.0", {
+        ...all,
+        "mapcairn-core-0.1.0 (1).tgz": {
+          name: "@mapcairn/core",
+          version: "0.1.0",
+        },
+      }),
+    ).toEqual([
+      "mapcairn-core-0.1.0 (1).tgz should be named mapcairn-core-0.1.0.tgz",
+      "more than one tarball for @mapcairn/core",
+    ]);
+    expect(
+      tarballVersionProblems("0.1.0", {
+        ...all,
+        "mapcairn-core-0.1.0.tgz": { name: "@mapcairn/map", version: "0.1.0" },
+        "mapcairn-map-0.1.0.tgz": { name: "@mapcairn/map", version: "0.1.0" },
+      }),
+    ).toContain(
+      "mapcairn-core-0.1.0.tgz should be named mapcairn-map-0.1.0.tgz",
+    );
+  });
+});
+
+describe("packageState", () => {
+  it("is published when the registry returns that version", () => {
+    expect(
+      packageState({ status: 0, stdout: "0.1.0\n", stderr: "" }, "0.1.0"),
+    ).toBe("published");
+  });
+
+  it("is missing on a not-found answer", () => {
+    expect(
+      packageState(
+        { status: 1, stdout: "", stderr: "npm error code E404" },
+        "0.1.0",
+      ),
+    ).toBe("missing");
+  });
+
+  it("throws, with the error text, on any other failure or an unexpected answer", () => {
+    expect(() =>
+      packageState(
+        { status: 1, stdout: "", stderr: "npm error code ECONNRESET" },
+        "0.1.0",
+      ),
+    ).toThrow(/ECONNRESET/);
+    expect(() =>
+      packageState({ status: 0, stdout: "0.2.0\n", stderr: "" }, "0.1.0"),
+    ).toThrow(/0\.2\.0/);
+    expect(() =>
+      packageState({ status: 0, stdout: "", stderr: "" }, "0.1.0"),
+    ).toThrow();
+  });
+});
+
+describe("distTagFor", () => {
+  it("puts a prerelease under next", () => {
+    expect(distTagFor("0.1.0-rc.2", ["v0.1.0-rc.1"])).toBe("next");
+  });
+
+  it("puts the newest stable release under latest", () => {
+    expect(distTagFor("0.2.0", ["v0.1.0", "v0.1.1-rc.1"])).toBe("latest");
+    expect(distTagFor("0.1.0", [])).toBe("latest");
+  });
+
+  it("never puts an older stable release under latest", () => {
+    expect(distTagFor("0.1.1", ["v0.1.0", "v0.2.0"])).toBe("previous");
+  });
+});
+
+describe("a release older than an existing tag", () => {
+  it("is refused on a push", () => {
+    const decision = decidePush(releasePush({ tags: ["v0.1.0", "v0.2.0"] }));
+    expect(decision.release).toBe(false);
+    expect(decision.reason).toMatch(/not newer than v0\.2\.0/);
+  });
+
+  it("is refused when it equals the highest tag's version before the prerelease", () => {
+    const decision = decidePush(releasePush({ tags: ["v0.1.0"] }));
+    expect(decision.release).toBe(false);
+  });
+
+  it("reports the dist-tag with the decision", () => {
+    expect(decidePush(releasePush())).toMatchObject({ distTag: "next" });
+  });
+
+  it("refuses a subject whose version has a leading zero", () => {
+    const decision = decidePush(
+      releasePush({ subject: "chore(release): v00.1.0 (#500)" }),
+    );
+    expect(decision.release).toBe(false);
+  });
+
+  it("gives a publish-existing run of an older stable release a dist-tag that is not latest", () => {
+    expect(
+      decideDispatch({
+        mode: "publish-existing",
+        version: "0.1.1",
+        manifestVersions: () => ({}),
+        tags: () => ["v0.1.1", "v0.2.0"],
+      }),
+    ).toMatchObject({ distTag: "previous" });
   });
 });
 

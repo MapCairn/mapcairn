@@ -38,7 +38,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { isolatedEnvironment, runNpm } from "./npm.mjs";
-import { PACKAGES } from "./packCheck.mjs";
+import { findTarballs, PACKAGES } from "./packCheck.mjs";
 import { SDK_NAMES } from "./workspaces.mjs";
 
 const REPO = path.resolve(
@@ -470,10 +470,10 @@ function auditSignatures(app) {
  * packing the repository's, skips the pnpm install, and audits the
  * signatures of what it installed.
  *
- * @param {{ published?: string | null }} [options]
+ * @param {{ published?: string | null, tarballs?: string | null }} [options] `tarballs` is a folder of the four packed tarballs to check, copied so the originals are untouched; without it the packages are packed here.
  * @returns {string[]} What was checked, and what was skipped and why.
  */
-export function runConsumerCheck({ published = null } = {}) {
+export function runConsumerCheck({ published = null, tarballs = null } = {}) {
   const report = [];
   const root = mkdtempSync(path.join(tmpdir(), "mapcairn-consumer-"));
   if (realpathSync(root).startsWith(realpathSync(REPO) + path.sep)) {
@@ -490,10 +490,22 @@ export function runConsumerCheck({ published = null } = {}) {
     /** @type {Record<string, unknown>} */
     let manifest;
     if (published === null) {
-      const tarballs = path.join(root, "tarballs");
-      mkdirSync(tarballs);
-      const packed = packTarballs(tarballs);
-      report.push(`packed ${Object.keys(packed).length} tarballs`);
+      const copies = path.join(root, "tarballs");
+      mkdirSync(copies);
+      /** @type {Record<string, string>} */
+      let packed;
+      if (tarballs === null) {
+        packed = packTarballs(copies);
+        report.push(`packed ${Object.keys(packed).length} tarballs`);
+      } else {
+        packed = findTarballs(readdirSync(tarballs));
+        for (const file of Object.values(packed)) {
+          copyFileSync(path.join(tarballs, file), path.join(copies, file));
+        }
+        report.push(
+          `using the ${Object.keys(packed).length} tarballs in the release folder`,
+        );
+      }
       manifest = consumerManifest({ tarballs: packed, versions });
     } else {
       manifest = publishedManifest({ version: published, versions });
@@ -608,7 +620,11 @@ export function runConsumerCheck({ published = null } = {}) {
 
 if (isEntryPoint(import.meta.url)) {
   try {
-    for (const line of runConsumerCheck()) {
+    const flag = process.argv.indexOf("--tarballs");
+    const folder = flag === -1 ? null : (process.argv[flag + 1] ?? null);
+    for (const line of runConsumerCheck({
+      tarballs: folder === null ? null : path.resolve(folder),
+    })) {
       console.log(line);
     }
   } catch (error) {

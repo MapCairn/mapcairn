@@ -9,6 +9,7 @@ import {
 import {
   auditProblems,
   parsePublishedArguments,
+  provenanceReport,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/verifyPublished.mjs";
 
@@ -64,10 +65,17 @@ describe("RELEASE_AGE_EXCLUSIONS", () => {
 
 describe("parsePublishedArguments", () => {
   it("takes one version", () => {
-    expect(parsePublishedArguments(["0.1.0"])).toEqual({ version: "0.1.0" });
+    expect(parsePublishedArguments(["0.1.0"])).toEqual({
+      version: "0.1.0",
+      requireProvenance: false,
+    });
     expect(parsePublishedArguments(["0.1.0-rc.2"])).toEqual({
       version: "0.1.0-rc.2",
+      requireProvenance: false,
     });
+    expect(
+      parsePublishedArguments(["0.1.0-rc.2", "--require-provenance"]),
+    ).toEqual({ version: "0.1.0-rc.2", requireProvenance: true });
   });
 
   it.each([
@@ -109,5 +117,56 @@ describe("auditProblems", () => {
     expect(
       auditProblems({ status: 0, stdout: "audited 0 packages\n", stderr: "" }),
     ).toEqual(["npm audit signatures verified no registry signatures"]);
+  });
+});
+
+describe("provenanceReport", () => {
+  const names = [
+    "@mapcairn/core",
+    "@mapcairn/react",
+    "@mapcairn/theme",
+    "@mapcairn/map",
+  ];
+  const answers = (provenance: boolean | null) =>
+    Object.fromEntries(
+      names.map((name) => [
+        name,
+        provenance === null
+          ? null
+          : { exists: true, latest: "0.1.0", provenance },
+      ]),
+    );
+
+  it("says plainly which packages have provenance and which do not, without failing by default", () => {
+    const report = provenanceReport(
+      {
+        ...answers(true),
+        "@mapcairn/map": { exists: true, provenance: false },
+      },
+      false,
+    );
+    expect(report.problems).toEqual([]);
+    expect(report.lines).toContain("@mapcairn/core: published with provenance");
+    expect(report.lines).toContain("@mapcairn/map: no provenance");
+  });
+
+  it("fails every package without provenance when it is required", () => {
+    const report = provenanceReport(answers(false), true);
+    expect(report.problems).toHaveLength(4);
+    expect(report.problems[0]).toMatch(/@mapcairn\/core has no provenance/);
+  });
+
+  it("passes when every package has it and it is required", () => {
+    expect(provenanceReport(answers(true), true).problems).toEqual([]);
+  });
+
+  it("fails, required or not, on a package the registry did not answer for or does not have", () => {
+    expect(provenanceReport(answers(null), false).problems).toHaveLength(4);
+    expect(
+      provenanceReport(
+        { ...answers(true), "@mapcairn/core": { exists: false } },
+        false,
+      ).problems,
+    ).toEqual(["@mapcairn/core is not on the registry"]);
   });
 });

@@ -166,8 +166,48 @@ describe("release.yml", () => {
     expect(lines.indexOf("attest-build-provenance")).toBeLessThan(
       lines.indexOf("gh release create"),
     );
-    expect(lines).toContain("--target");
     expect(lines).toContain("--notes-file");
+    expect(lines).toContain("--verify-tag");
+    expect(lines).not.toContain("--target");
+  });
+
+  it("creates the tag at the pushed commit through the API before the release, and accepts an existing tag only at that commit", () => {
+    const lines = job("github-release").join("\n");
+    expect(lines).toContain(
+      'gh api --method POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/v$VERSION" -f sha="$TARGET"',
+    );
+    expect(lines).toContain('[ "$existing" != "$TARGET" ]');
+    expect(lines.indexOf("git/refs")).toBeLessThan(
+      lines.indexOf("gh release create"),
+    );
+  });
+
+  it("packs the tarballs once and checks those very files, with the digests checked again before upload, attestation and staging", () => {
+    const verify = job("verify").join("\n");
+    const order = [
+      "scripts/release/tarballs.mjs pack release",
+      "packCheck.mjs --tarballs release",
+      "consumerCheck.mjs --tarballs release",
+      "sha256sum --check SHA256SUMS",
+      "actions/upload-artifact",
+    ].map((text) => verify.indexOf(text));
+    expect(order.every((index) => index > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(verify).not.toContain("npm pack");
+    expect(verify).not.toContain("npm run pack:check");
+    expect(verify).not.toContain("npm run consumer:check");
+    const release = job("github-release").join("\n");
+    expect(release.indexOf("sha256sum --check SHA256SUMS")).toBeGreaterThan(-1);
+    expect(release.indexOf("sha256sum --check SHA256SUMS")).toBeLessThan(
+      release.indexOf("attest-build-provenance"),
+    );
+  });
+
+  it("checks the version and name of the tarballs it downloads for publish-existing, and records their digests", () => {
+    const verify = job("verify").join("\n");
+    expect(verify).toMatch(
+      /Verify the attestation[\s\S]*?if: github\.event_name == 'workflow_dispatch' && inputs\.mode == 'publish-existing'[\s\S]*?verifyRelease\.mjs tarballs "\$VERSION" release\n\s+node scripts\/release\/tarballs\.mjs sums release/,
+    );
   });
 
   it("uses the explicit condition that keeps the npm job from being skipped with a skipped dependency", () => {

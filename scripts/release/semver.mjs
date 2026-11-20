@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 
-/** A version as the release scripts read it: `1.2.3` or `1.2.3-rc.4`. */
-const VERSION = /^(\d+)\.(\d+)\.(\d+)(?:-([a-z]+)\.(\d+))?$/;
+/**
+ * A version as the release scripts read it: `1.2.3` or `1.2.3-rc.4`. A number
+ * has no leading zero and at most nine digits, so none can overflow.
+ */
+const VERSION =
+  /^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})(?:-([a-z]+)\.(0|[1-9]\d{0,8}))?$/;
 
 /**
  * @typedef {object} Version

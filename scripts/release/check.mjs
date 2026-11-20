@@ -26,7 +26,7 @@ import {
 } from "./notesCheck.mjs";
 import { isNotFound, REGISTRY_READ_FLAGS, runNpm } from "./npm.mjs";
 import { packResults } from "./packCheck.mjs";
-import { git } from "./tools.mjs";
+import { git, REPOSITORY, run } from "./tools.mjs";
 import {
   readSdkState,
   readWorkspaceManifests,
@@ -62,6 +62,7 @@ const BYTES_PER_KB = 1000;
  * @property {Record<string, RegistryAnswer> | null} registry Null when the registry could not be read.
  * @property {boolean} signedIn Whether `npm whoami` succeeds here.
  * @property {boolean} tokenInEnvironment Whether an npm token variable is set.
+ * @property {{ state: "ok" | "missing" | "unprotected" | "unknown", detail?: string }} environment The `npm` environment on GitHub.
  */
 
 /** @param {string} name */
@@ -124,6 +125,7 @@ export function buildReport(facts) {
     tarballLines({ facts, line, blocker });
   }
   const registry = registryLines({ facts, line, blocker });
+  environmentLines({ facts, line, blocker });
   lines.push(...credentialLines({ facts, warnings }));
   line(
     "Trusted publishing",
@@ -302,6 +304,34 @@ function registryLines({ facts, line, blocker }) {
 /**
  * @param {object} input
  * @param {Facts} input.facts
+ * @param {(label: string, text: string) => void} input.line
+ * @param {(label: string, text: string) => void} input.blocker
+ */
+function environmentLines({ facts, line, blocker }) {
+  const { state, detail } = facts.environment;
+  if (state === "ok") {
+    line("npm environment", "exists, and deployments are limited to main.");
+  } else if (state === "missing") {
+    blocker(
+      "npm environment",
+      `does not exist. GitHub creates a missing environment with no protection when a workflow first names it, so create it with Selected branches: main before the first rehearsal (${GUIDE}, maintainer steps).`,
+    );
+  } else if (state === "unprotected") {
+    blocker(
+      "npm environment",
+      `is not limited to main (${detail ?? "its branch policy is not a single main entry"}). Set Deployment branches and tags to Selected branches and tags with main only (${GUIDE}).`,
+    );
+  } else {
+    line(
+      "npm environment",
+      "could not be checked (no network, no gh, or no permission); check Settings, Environments on GitHub.",
+    );
+  }
+}
+
+/**
+ * @param {object} input
+ * @param {Facts} input.facts
  * @param {string[]} input.warnings Receives each warning.
  * @returns {string[]} The report lines for the warnings.
  */
@@ -343,6 +373,55 @@ function leftForYou({ blockers, prepared, registry }) {
     return "merge the Release pull request, then approve the staged packages on npmjs.com.";
   }
   return "merge the Release pull request, then check on npmjs.com what was staged.";
+}
+
+/**
+ * Reads the answers of the GitHub API about the `npm` environment and its
+ * deployment branch policies.
+ *
+ * @param {{ ok: boolean, stdout: string, stderr: string }} environment The answer for the environment.
+ * @param {{ ok: boolean, stdout: string, stderr: string }} policies The answer for its branch policies.
+ * @returns {Facts["environment"]}
+ */
+export function parseEnvironment(environment, policies) {
+  if (!environment.ok) {
+    return /404|Not Found/.test(environment.stderr)
+      ? { state: "missing" }
+      : { state: "unknown" };
+  }
+  let data;
+  try {
+    data = JSON.parse(environment.stdout);
+  } catch {
+    return { state: "unknown" };
+  }
+  const policy = data.deployment_branch_policy;
+  if (policy === null || policy === undefined) {
+    return { state: "unprotected", detail: "it allows every branch" };
+  }
+  if (policy.custom_branch_policies !== true) {
+    return {
+      state: "unprotected",
+      detail: "it allows every protected branch, not main alone",
+    };
+  }
+  if (!policies.ok) {
+    return { state: "unknown" };
+  }
+  let list;
+  try {
+    list = JSON.parse(policies.stdout).branch_policies ?? [];
+  } catch {
+    return { state: "unknown" };
+  }
+  const onlyMain =
+    list.length === 1 && list[0].name === "main" && list[0].type === "branch";
+  return onlyMain
+    ? { state: "ok" }
+    : {
+        state: "unprotected",
+        detail: `its branch policies are ${list.map((/** @type {{ name: string }} */ entry) => entry.name).join(", ") || "empty"}`,
+      };
 }
 
 /**
@@ -422,6 +501,17 @@ function readFacts(root) {
       .filter(Boolean),
     tarballs: prepared ? packResults(root) : null,
     registry,
+    environment: parseEnvironment(
+      run("gh", ["api", `repos/${REPOSITORY}/environments/npm`], root),
+      run(
+        "gh",
+        [
+          "api",
+          `repos/${REPOSITORY}/environments/npm/deployment-branch-policies`,
+        ],
+        root,
+      ),
+    ),
     signedIn: runNpm(["whoami"], { cwd: root }).status === 0,
     tokenInEnvironment: ["NPM_TOKEN", "NODE_AUTH_TOKEN"].some(
       (name) => (process.env[name] ?? "") !== "",

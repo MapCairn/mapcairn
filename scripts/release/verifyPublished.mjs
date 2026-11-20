@@ -3,10 +3,16 @@
 /**
  * The post-release check: installs the published version of the four SDK
  * packages from the registry into a throwaway app outside the repository,
- * renders the chrome there, and verifies the registry signatures and the
- * provenance attestations with `npm audit signatures`.
+ * renders the chrome there, verifies the registry signatures and the
+ * provenance attestations of what was installed with `npm audit signatures`,
+ * and says for each package whether it was published with provenance.
  *
- *   npm run release:verify-published -- <version>
+ *   npm run release:verify-published -- <version> [--require-provenance]
+ *
+ * Without `--require-provenance` a package with no provenance is reported and
+ * does not fail the check, which is right for a release candidate that was
+ * published by hand. With it, a package without provenance fails the check:
+ * use it for every release published from the workflow.
  *
  * Run it after the maintainer has approved the staged packages. It only
  * reads the registry. The four SDK packages are exempted from the repository's
@@ -17,35 +23,97 @@
  * It needs a network and Node, and starts no server.
  */
 import { isEntryPoint } from "../entryPoint.mjs";
+import { parseRegistryAnswer } from "./check.mjs";
 import { auditProblems, runConsumerCheck } from "./consumerCheck.mjs";
+import { REGISTRY_READ_FLAGS, runNpm } from "./npm.mjs";
 import { parseVersion } from "./semver.mjs";
+import { SDK_NAMES } from "./workspaces.mjs";
 
 export { auditProblems };
 
+const USAGE =
+  "Usage: npm run release:verify-published -- <version> [--require-provenance], such as 0.1.0 or 0.1.0-rc.2 (no leading v).";
+
 /**
  * @param {string[]} argv The arguments after the script name.
- * @returns {{ version: string }}
- * @throws {Error} When the arguments are not one version.
+ * @returns {{ version: string, requireProvenance: boolean }}
+ * @throws {Error} When the arguments are not one version and the optional flag.
  */
 export function parsePublishedArguments(argv) {
-  const [version, ...rest] = argv;
-  if (
-    version === undefined ||
-    rest.length > 0 ||
-    parseVersion(version) === null
-  ) {
-    throw new Error(
-      "Usage: npm run release:verify-published -- <version>, such as 0.1.0 or 0.1.0-rc.2 (no leading v).",
-    );
+  const requireProvenance = argv.includes("--require-provenance");
+  const rest = argv.filter((argument) => argument !== "--require-provenance");
+  if (rest.length !== 1 || parseVersion(rest[0]) === null) {
+    throw new Error(USAGE);
   }
-  return { version };
+  return { version: rest[0], requireProvenance };
+}
+
+/**
+ * Says for each package whether the registry holds an attestation for the
+ * published version.
+ *
+ * @param {Record<string, { exists: boolean, provenance?: boolean } | null>} answers What the registry said about each package, null where it gave no usable answer.
+ * @param {boolean} requireProvenance Whether a package without provenance is a problem.
+ * @returns {{ lines: string[], problems: string[] }}
+ */
+export function provenanceReport(answers, requireProvenance) {
+  /** @type {string[]} */
+  const lines = [];
+  /** @type {string[]} */
+  const problems = [];
+  for (const name of SDK_NAMES) {
+    const answer = answers[name] ?? null;
+    if (answer === null) {
+      problems.push(`${name} could not be read from the registry`);
+    } else if (!answer.exists) {
+      problems.push(`${name} is not on the registry`);
+    } else if (answer.provenance === true) {
+      lines.push(`${name}: published with provenance`);
+    } else {
+      lines.push(`${name}: no provenance`);
+      if (requireProvenance) {
+        problems.push(`${name} has no provenance, and it is required`);
+      }
+    }
+  }
+  return { lines, problems };
+}
+
+/**
+ * Reads the registry's answer for each package at one version.
+ *
+ * @param {string} version
+ */
+function readAnswers(version) {
+  return Object.fromEntries(
+    SDK_NAMES.map((name) => [
+      name,
+      parseRegistryAnswer(
+        runNpm([
+          "view",
+          `${name}@${version}`,
+          "--json",
+          ...REGISTRY_READ_FLAGS,
+        ]),
+      ),
+    ]),
+  );
 }
 
 if (isEntryPoint(import.meta.url)) {
   try {
-    const { version } = parsePublishedArguments(process.argv.slice(2));
+    const { version, requireProvenance } = parsePublishedArguments(
+      process.argv.slice(2),
+    );
     for (const line of runConsumerCheck({ published: version })) {
       console.log(line);
+    }
+    const report = provenanceReport(readAnswers(version), requireProvenance);
+    for (const line of report.lines) {
+      console.log(line);
+    }
+    if (report.problems.length > 0) {
+      throw new Error(report.problems.join("\n"));
     }
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

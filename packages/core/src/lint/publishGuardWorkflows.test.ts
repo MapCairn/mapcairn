@@ -262,9 +262,45 @@ describe("release.yml", () => {
       'npm stage publish "release/mapcairn-$name-$VERSION.tgz"',
     );
     expect(job).toContain("--dry-run");
-    expect(job).toMatch(/PRERELEASE" = "true" \]; then\n\s+tag=next/);
+    expect(job).toContain('--tag "$DIST_TAG"');
+    expect(job).toContain("needs.verify.outputs.dist-tag");
     expect(job).toMatch(
       /MODE" = "rehearse" \]; then\n\s+flags\+=\(--dry-run\)/,
+    );
+  });
+
+  it("skips a package already on npm only in a real run, and stops on any registry error", () => {
+    const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
+    expect(job).toContain(
+      'state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"',
+    );
+    expect(job).toContain(
+      '[ "$state" = "published" ] && [ "$MODE" != "rehearse" ]',
+    );
+    expect(job).not.toContain("|| true");
+  });
+
+  it("stages nothing while a manifest is private, and says so", () => {
+    const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
+    expect(job).toMatch(
+      /name: Say why nothing is staged[\s\S]*?if: needs\.verify\.outputs\.private == 'true'/,
+    );
+    expect(job).toMatch(
+      /name: Stage the packages\n\s+if: needs\.verify\.outputs\.private != 'true'/,
+    );
+  });
+
+  it("checks the digests before it stages, installs the pinned npm without scripts, and has its own group for the version", () => {
+    const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
+    expect(job.indexOf("sha256sum --check SHA256SUMS")).toBeGreaterThan(-1);
+    expect(job.indexOf("sha256sum --check SHA256SUMS")).toBeLessThan(
+      job.indexOf("npm stage publish"),
+    );
+    expect(job).toContain(
+      'npm install --global --ignore-scripts "npm@$wanted"',
+    );
+    expect(job).toMatch(
+      /concurrency:\n\s+group: release-npm-\$\{\{ needs\.verify\.outputs\.version \}\}\n\s+cancel-in-progress: false/,
     );
   });
 

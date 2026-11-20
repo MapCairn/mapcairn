@@ -25,7 +25,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { isNotFound, REGISTRY_READ_FLAGS, runNpm } from "./npm.mjs";
-import { isPrerelease, parseVersion } from "./semver.mjs";
+import {
+  compareVersions,
+  isPrerelease,
+  parseVersion,
+  releaseTags,
+} from "./semver.mjs";
 import { git, REPOSITORY, run } from "./tools.mjs";
 import { SDK_NAMES } from "./workspaces.mjs";
 
@@ -41,8 +46,7 @@ export const SDK_MANIFEST_FILES = SDK_NAMES.map(
 );
 
 /** The subject of a Release pull request's squash commit. */
-const RELEASE_SUBJECT =
-  /^chore\(release\): v(\d+\.\d+\.\d+(?:-[a-z]+\.\d+)?) \(#(\d+)\)$/;
+const RELEASE_SUBJECT = /^chore\(release\): v(\S+) \(#([1-9]\d{0,9})\)$/;
 
 /** The modes a dispatched run takes. */
 const MODES = ["rehearse", "publish-existing"];
@@ -55,6 +59,7 @@ export class ReleaseRefused extends Error {}
  * @property {boolean} release Whether the later jobs have work.
  * @property {string | null} version
  * @property {boolean} prerelease
+ * @property {string} distTag The npm dist-tag the version is staged under.
  * @property {string} reason One sentence for the run's log.
  */
 
@@ -63,20 +68,50 @@ export class ReleaseRefused extends Error {}
  * @returns {Decision}
  */
 function skip(reason) {
-  return { release: false, version: null, prerelease: false, reason };
+  return {
+    release: false,
+    version: null,
+    prerelease: false,
+    distTag: "",
+    reason,
+  };
+}
+
+/**
+ * The dist-tag a version is staged under: `next` for a prerelease, `latest`
+ * for a release that is the newest, and `previous` for a release that is older
+ * than one already tagged, so an old release never takes `latest` back.
+ *
+ * @param {string} version
+ * @param {string[]} tagNames The existing `v*` tags.
+ * @returns {string}
+ */
+export function distTagFor(version, tagNames) {
+  const parsed = parseVersion(version);
+  if (parsed === null || isPrerelease(parsed)) {
+    return "next";
+  }
+  const newerStable = releaseTags(tagNames).some(
+    (entry) =>
+      !isPrerelease(entry.version) &&
+      compareVersions(entry.version, parsed) > 0,
+  );
+  return newerStable ? "previous" : "latest";
 }
 
 /**
  * @param {string} version
  * @param {string} reason
+ * @param {string[]} tagNames The existing `v*` tags.
  * @returns {Decision}
  */
-function proceed(version, reason) {
+function proceed(version, reason, tagNames) {
   const parsed = parseVersion(version);
   return {
     release: true,
     version,
     prerelease: parsed !== null && isPrerelease(parsed),
+    distTag: distTagFor(version, tagNames),
     reason,
   };
 }
@@ -90,7 +125,7 @@ function proceed(version, reason) {
  * @param {() => string} sources.headSubject The subject of the commit that was pushed.
  * @param {() => string} sources.headSha
  * @param {(ref: string) => Record<string, string | null>} sources.manifestVersions The version in each SDK manifest at `HEAD` or `HEAD^`, null where it cannot be read.
- * @param {(tag: string) => boolean} sources.tagExists
+ * @param {() => string[]} sources.tags The names of the existing `v*` tags.
  * @param {(number: number) => { merged: boolean, base: string, mergeCommit: string | null, labels: string[] } | null} sources.pullRequest
  * @returns {Decision}
  */
@@ -102,6 +137,12 @@ export function decidePush(sources) {
     );
   }
   const [, version, numberText] = subject;
+  const parsed = parseVersion(version);
+  if (parsed === null) {
+    return skip(
+      `the subject's version ${JSON.stringify(version)} is not a version`,
+    );
+  }
   const number = Number(numberText);
 
   const after = sources.manifestVersions("HEAD");
@@ -116,8 +157,17 @@ export function decidePush(sources) {
   }
 
   const tag = `v${version}`;
-  if (sources.tagExists(tag)) {
+  const tagNames = sources.tags();
+  if (tagNames.includes(tag)) {
     return skip(`the tag ${tag} already exists`);
+  }
+  const newer = releaseTags(tagNames)
+    .filter((entry) => compareVersions(entry.version, parsed) > 0)
+    .at(-1);
+  if (newer !== undefined) {
+    return skip(
+      `${version} is not newer than ${newer.tag}, which is already tagged`,
+    );
   }
 
   const pullRequest = sources.pullRequest(number);
@@ -138,6 +188,7 @@ export function decidePush(sources) {
   return proceed(
     version,
     `pull request #${number} is a merged Release pull request for ${version}`,
+    tagNames,
   );
 }
 
@@ -149,11 +200,11 @@ export function decidePush(sources) {
  * @param {string} input.mode `rehearse` or `publish-existing`.
  * @param {string} input.version The `version` input.
  * @param {() => Record<string, string | null>} input.manifestVersions The version in each SDK manifest on the commit being run.
- * @param {(tag: string) => boolean} input.tagExists
+ * @param {() => string[]} input.tags The names of the existing `v*` tags.
  * @returns {Decision}
  * @throws {ReleaseRefused}
  */
-export function decideDispatch({ mode, version, manifestVersions, tagExists }) {
+export function decideDispatch({ mode, version, manifestVersions, tags }) {
   if (parseVersion(version) === null) {
     throw new ReleaseRefused(
       `${JSON.stringify(version)} is not a version such as 0.1.0 or 0.1.0-rc.1.`,
@@ -165,12 +216,13 @@ export function decideDispatch({ mode, version, manifestVersions, tagExists }) {
     );
   }
   if (mode === "publish-existing") {
-    if (!tagExists(`v${version}`)) {
+    if (!tags().includes(`v${version}`)) {
       throw new ReleaseRefused(`There is no tag v${version} to publish from.`);
     }
     return proceed(
       version,
       `publishing the existing release v${version} to npm`,
+      tags(),
     );
   }
   const found = manifestVersions();
@@ -182,7 +234,7 @@ export function decideDispatch({ mode, version, manifestVersions, tagExists }) {
       `A rehearsal of ${version} needs every SDK manifest on main to carry it; ${different.join(", ")} does not.`,
     );
   }
-  return proceed(version, `rehearsing ${version} on main`);
+  return proceed(version, `rehearsing ${version} on main`, tags());
 }
 
 /**
@@ -244,23 +296,58 @@ export function privateSdkManifests(texts) {
 export function tarballVersionProblems(version, manifests) {
   /** @type {string[]} */
   const problems = [];
-  const seen = new Set();
+  /** @type {Map<string, number>} */
+  const counts = new Map();
   for (const [file, manifest] of Object.entries(manifests)) {
     if (!SDK_NAMES.includes(manifest.name)) {
       problems.push(`${file} is not one of the four SDK packages`);
       continue;
     }
-    seen.add(manifest.name);
+    counts.set(manifest.name, (counts.get(manifest.name) ?? 0) + 1);
+    const expected = `mapcairn-${manifest.name.replace("@mapcairn/", "")}-${version}.tgz`;
+    if (file !== expected) {
+      problems.push(`${file} should be named ${expected}`);
+    }
     if (manifest.version !== version) {
       problems.push(
         `${file} holds ${manifest.name} ${manifest.version}, not ${version}`,
       );
     }
   }
-  for (const name of SDK_NAMES.filter((entry) => !seen.has(entry))) {
+  for (const [name, count] of counts) {
+    if (count > 1) {
+      problems.push(`more than one tarball for ${name}`);
+    }
+  }
+  for (const name of SDK_NAMES.filter((entry) => !counts.has(entry))) {
     problems.push(`no tarball for ${name}`);
   }
   return problems;
+}
+
+/**
+ * What the registry says about one version of one package, for the staging
+ * loop: published (skip it), missing (stage it), or an error (stop).
+ *
+ * @param {{ status: number | null, stdout: string, stderr: string }} result The result of `npm view <name>@<version> version`.
+ * @param {string} version
+ * @returns {"published" | "missing"}
+ * @throws {Error} On any other answer, with npm's error text.
+ */
+export function packageState(result, version) {
+  if (result.status === 0) {
+    const found = result.stdout.trim();
+    if (found === version) {
+      return "published";
+    }
+    throw new Error(
+      `The registry answered ${JSON.stringify(found)} when asked for version ${version}.`,
+    );
+  }
+  if (isNotFound(result.stderr)) {
+    return "missing";
+  }
+  throw new Error(`Could not ask the registry:\n${result.stderr.trim()}`);
 }
 
 /**
@@ -297,9 +384,11 @@ function privateAtHead() {
   );
 }
 
-/** @param {string} tag */
-function tagExistsLocally(tag) {
-  return git(["tag", "--list", tag], ROOT).stdout.trim() === tag;
+/** @returns {string[]} The names of the `v*` tags in this clone. */
+function tagsLocally() {
+  return git(["tag", "--list", "v*"], ROOT)
+    .stdout.split(/\r?\n/)
+    .filter(Boolean);
 }
 
 /**
@@ -372,7 +461,7 @@ function decideFromEnvironment() {
         git(["log", "-1", "--format=%s", "HEAD"], ROOT).stdout.trim(),
       headSha: () => git(["rev-parse", "HEAD"], ROOT).stdout.trim(),
       manifestVersions: versionsAt,
-      tagExists: tagExistsLocally,
+      tags: tagsLocally,
       pullRequest: readPullRequest,
     });
   } else if (EVENT_NAME === "workflow_dispatch") {
@@ -380,7 +469,7 @@ function decideFromEnvironment() {
       mode: MODE,
       version: VERSION_INPUT,
       manifestVersions: () => versionsAt("HEAD"),
-      tagExists: tagExistsLocally,
+      tags: tagsLocally,
     });
   } else {
     throw new ReleaseRefused(`The event ${EVENT_NAME} does not release.`);
@@ -410,9 +499,40 @@ function decideFromEnvironment() {
     release: String(decision.release),
     version: decision.version ?? "",
     prerelease: String(decision.prerelease),
+    "dist-tag": decision.distTag,
     "on-npm": String(onNpm),
     private: String(decision.release && privateAtHead().length > 0),
   });
+}
+
+/**
+ * Prints `published` or `missing` for one package version, and fails on
+ * any other answer, so the staging loop never treats an error as "not there".
+ *
+ * @param {string} name An SDK package name.
+ * @param {string} version
+ */
+function printPackageState(name, version) {
+  if (!SDK_NAMES.includes(name)) {
+    throw new ReleaseRefused(`${JSON.stringify(name)} is not an SDK package.`);
+  }
+  if (parseVersion(version) === null) {
+    throw new ReleaseRefused(`${JSON.stringify(version)} is not a version.`);
+  }
+  const result = runNpm(
+    ["view", `${name}@${version}`, "version", ...REGISTRY_READ_FLAGS],
+    { cwd: ROOT },
+  );
+  console.log(
+    packageState(
+      {
+        status: result.status,
+        stdout: result.stdout ?? "",
+        stderr: result.stderr ?? "",
+      },
+      version,
+    ),
+  );
 }
 
 /** Checks the tarballs in a folder against a version. */
@@ -443,9 +563,11 @@ if (isEntryPoint(import.meta.url)) {
       decideFromEnvironment();
     } else if (command === "tarballs" && rest.length === 2) {
       checkTarballs(rest[0], rest[1]);
+    } else if (command === "package-state" && rest.length === 2) {
+      printPackageState(rest[0], rest[1]);
     } else {
       console.error(
-        "Usage: node scripts/release/verifyRelease.mjs decide | tarballs <version> <folder>",
+        "Usage: node scripts/release/verifyRelease.mjs decide | tarballs <version> <folder> | package-state <name> <version>",
       );
       process.exitCode = 2;
     }

@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildReport,
+  parseEnvironment,
   parseRegistryAnswer,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/check.mjs";
@@ -43,6 +44,7 @@ function ready(overrides: Facts = {}): Facts {
     ),
     signedIn: false,
     tokenInEnvironment: false,
+    environment: { state: "ok" },
     ...overrides,
   };
 }
@@ -282,5 +284,115 @@ describe("parseRegistryAnswer", () => {
     expect(
       parseRegistryAnswer({ status: 0, stdout: "not json", stderr: "" }),
     ).toBeNull();
+  });
+});
+
+describe("the npm environment in the report", () => {
+  it("is a line, and no blocker, when deployments are limited to main", () => {
+    const { text, blockers } = report();
+    expect(text).toContain(
+      "npm environment: exists, and deployments are limited to main",
+    );
+    expect(blockers).toEqual([]);
+  });
+
+  it("blocks on a missing environment, and says to create it before the first rehearsal", () => {
+    const { text, blockers } = report({ environment: { state: "missing" } });
+    expect(text).toContain("before the first rehearsal");
+    expect(blockers.join("\n")).toContain("npm environment");
+  });
+
+  it("blocks on an environment that is not limited to main", () => {
+    const { blockers } = report({
+      environment: { state: "unprotected", detail: "it allows every branch" },
+    });
+    expect(blockers.join("\n")).toContain("it allows every branch");
+  });
+
+  it("says it could not check, without blocking", () => {
+    const { text, blockers } = report({ environment: { state: "unknown" } });
+    expect(text).toContain("could not be checked");
+    expect(blockers).toEqual([]);
+  });
+});
+
+describe("parseEnvironment", () => {
+  const ok = (value: unknown) => ({
+    ok: true,
+    stdout: JSON.stringify(value),
+    stderr: "",
+  });
+  const environment = ok({
+    name: "npm",
+    deployment_branch_policy: {
+      custom_branch_policies: true,
+      protected_branches: false,
+    },
+  });
+
+  it("is ok for exactly one branch policy, main", () => {
+    expect(
+      parseEnvironment(
+        environment,
+        ok({ branch_policies: [{ name: "main", type: "branch" }] }),
+      ),
+    ).toEqual({ state: "ok" });
+  });
+
+  it.each([
+    [
+      [
+        { name: "main", type: "branch" },
+        { name: "dev", type: "branch" },
+      ],
+    ],
+    [[{ name: "v*", type: "tag" }]],
+    [[{ name: "main*", type: "branch" }]],
+    [[]],
+  ])("is unprotected for the policies %j", (policies) => {
+    expect(
+      parseEnvironment(environment, ok({ branch_policies: policies })).state,
+    ).toBe("unprotected");
+  });
+
+  it("is unprotected when every branch may deploy or only protected branches", () => {
+    expect(
+      parseEnvironment(ok({ deployment_branch_policy: null }), ok({})).state,
+    ).toBe("unprotected");
+    expect(
+      parseEnvironment(
+        ok({
+          deployment_branch_policy: {
+            custom_branch_policies: false,
+            protected_branches: true,
+          },
+        }),
+        ok({}),
+      ).state,
+    ).toBe("unprotected");
+  });
+
+  it("is missing on a not-found answer and unknown on any other failure", () => {
+    expect(
+      parseEnvironment(
+        { ok: false, stdout: "", stderr: "gh: Not Found (HTTP 404)" },
+        ok({}),
+      ).state,
+    ).toBe("missing");
+    expect(
+      parseEnvironment({ ok: false, stdout: "", stderr: "HTTP 403" }, ok({}))
+        .state,
+    ).toBe("unknown");
+    expect(
+      parseEnvironment(environment, {
+        ok: false,
+        stdout: "",
+        stderr: "timeout",
+      }).state,
+    ).toBe("unknown");
+    expect(
+      parseEnvironment({ ok: true, stdout: "not json", stderr: "" }, ok({}))
+        .state,
+    ).toBe("unknown");
   });
 });

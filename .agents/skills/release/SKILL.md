@@ -18,9 +18,11 @@ description: "Prepare a release of the four MapCairn SDK packages (core, map, re
 
 ## 0. Preflight
 
+
 1. `gh auth status` succeeds and `gh repo view MapCairn/mapcairn --json viewerPermission --jq .viewerPermission` is `WRITE`, `MAINTAIN` or `ADMIN`. Otherwise stop: a release is prepared by someone with write access.
 2. This machine must hold no npm credential. `npm whoami` must fail, and no npm token variable may be set. If either is not so, stop and tell the person, because the approval step depends on it (`docs/guides/releasing.md`, "The maintainer's setup").
 3. Read `AGENTS.md` and `docs/guides/releasing.md`. Open the Release pull request from a fresh `main`: `git fetch origin`, then a new worktree from `origin/main` (`pick-up-issue` section 2). The plan reads the history of the checkout it runs in, so a branch that is behind `main` leaves changes out. Use `npm ci --ignore-scripts` in the worktree and run `npm run lint` before each commit.
+4. The `npm` environment must exist on GitHub with deployments limited to `main` before the first rehearsal, because GitHub creates a missing environment with no protection when a workflow names it. `npm run release:check` reads it and reports a problem as a blocker; if it does, stop and tell the maintainer.
 
 ## 1. Plan
 
@@ -44,7 +46,7 @@ The release commit and the pull request title are `chore(release): v<version>`. 
 
 ## 5. Rehearse
 
-Push the branch, then start a rehearsal on `main`: `gh workflow run release.yml --ref main -f version=<version> -f mode=rehearse`. A rehearsal runs on `main`, and its first check is that every SDK manifest on `main` carries the version you give it. So before the Release pull request merges, a rehearsal can only test the version `main` has now, which proves the workflow and not this release. Say so in the pull request; do not imply otherwise. Poll with one-shot `gh run list --workflow release.yml --limit 3` and `gh run view <id>`, never a watcher. A rehearsal tags and releases nothing, and its `npm` job does a dry run of the staging (or says it stages nothing while a manifest is still private).
+Push the branch, then start a rehearsal on `main`: `gh workflow run release.yml --ref main -f version=<version> -f mode=rehearse`. A rehearsal runs on `main`, and its first check is that every SDK manifest on `main` carries the version you give it. So before the Release pull request merges, a rehearsal can only test the version `main` has now, which proves the workflow and not this release. Say so in the pull request; do not imply otherwise. Poll with one-shot `gh run list --workflow release.yml --limit 3` and `gh run view <id>`, never a watcher. A rehearsal tags and releases nothing, and its `npm` job does a dry run of the staging (npm reads the registry and tries the OIDC exchange, but stages nothing and does not prove the trusted publisher is linked) (or says it stages nothing while a manifest is still private).
 
 ## 6. Open the pull request
 
@@ -60,9 +62,9 @@ Add `Part of #1`. Do not merge; merging a Release pull request is the maintainer
 
 ## 7. After the merge
 
-Do this only when the maintainer says it merged. The push to `main` starts the workflow: `gh run list --workflow release.yml --limit 3`, then `gh run view <id>`. Check that `verify` passed, that the GitHub Release `v<version>` has the four tarballs and the notes, that `gh attestation verify <tarball> --repo MapCairn/mapcairn` passes for one, and what the `npm` job did (skipped with a notice while the packages are not on npm yet, or staged). Then give the maintainer the remaining human steps (`docs/guides/releasing.md`) and wait. Do not approve, publish or dispatch anything to speed it up.
+Do this only when the maintainer says it merged. The push to `main` starts the workflow: `gh run list --workflow release.yml --limit 3`, then `gh run view <id>`. Check that `verify` passed, that the GitHub Release `v<version>` has the four tarballs and the notes, that `gh attestation verify` passes for one tarball with the full flags in `docs/guides/releasing.md` (`--signer-workflow`, `--source-ref refs/heads/main`, `--source-digest <tag commit>`, `--deny-self-hosted-runners`) and `node scripts/release/verifyRelease.mjs tarballs <version> <folder>` passes, and what the `npm` job did (skipped with a notice while the packages are not on npm yet, or staged). Then give the maintainer the remaining human steps (`docs/guides/releasing.md`) and wait. Do not approve, publish or dispatch anything to speed it up.
 
-When the maintainer says the packages are approved and public, run `npm run release:verify-published -- <version>`. It installs that version from the registry into a throwaway app outside the repository, renders the chrome and runs `npm audit signatures`. It exempts only the four `@mapcairn` packages from the repository's seven-day minimum release age, because a version published a moment ago would otherwise not install; say so in your report. Report whether the provenance survived staging. A stable release is followed by the follow-up pull request in the plan (step 15), as its own issue.
+When the maintainer says the packages are approved and public, run `npm run release:verify-published -- <version>` (add `--require-provenance` for a release published from the workflow; the hand-published `rc.1` has none). It installs that version from the registry into a throwaway app outside the repository, renders the chrome, runs `npm audit signatures` and says for each package whether it has provenance. It exempts only the four `@mapcairn` packages from the repository's seven-day minimum release age, because a version published a moment ago would otherwise not install; say so in your report. Report whether the provenance survived staging. A stable release is followed by the follow-up pull request in the plan (step 15), as its own issue.
 
 ## 8. Report
 
