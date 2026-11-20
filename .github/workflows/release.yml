@@ -367,7 +367,9 @@ jobs:
       group: release-npm-${{ needs.verify.outputs.version }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Four packages, each waiting up to about 10 minutes for the registry
+    # after its publish (CONFIRM_DELAYS_MS in verifyRelease.mjs), plus setup.
+    timeout-minutes: 60
     permissions:
       id-token: write # trusted publishing: npm exchanges this run's OIDC token for a short-lived credential, so no secret is stored
       contents: read # check out the repository

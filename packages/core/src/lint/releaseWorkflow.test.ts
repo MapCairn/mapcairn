@@ -9,6 +9,10 @@ import {
   RELEASE_WORKFLOW,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/publishGuard.mjs";
+import {
+  CONFIRM_DELAYS_MS,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/release/verifyRelease.mjs";
 
 const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -53,6 +57,18 @@ function permissionsOf(name: string): string[] {
 }
 
 describe("release.yml", () => {
+  it("gives the npm job room to wait out the registry for each of the four packages", () => {
+    const line = job("npm").find((entry) =>
+      /^ {4}timeout-minutes:/.test(entry),
+    );
+    const minutes = Number(line?.split(":")[1]);
+    const waitMinutes =
+      CONFIRM_DELAYS_MS.reduce((sum: number, ms: number) => sum + ms, 0) /
+      60_000;
+    const setupMinutes = 10;
+    expect(minutes).toBeGreaterThanOrEqual(4 * waitMinutes + setupMinutes);
+  });
+
   it("has the jobs the trusted publisher record and the plan name, and a check job between verify and the release", () => {
     expect([...RANGES.keys()]).toEqual([
       "verify",

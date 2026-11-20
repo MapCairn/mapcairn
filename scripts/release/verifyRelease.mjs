@@ -23,6 +23,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { appendFileSync, readdirSync } from "node:fs";
+import https from "node:https";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
@@ -51,12 +52,43 @@ export const SDK_MANIFEST_FILES = SDK_NAMES.map(
 const RELEASE_SUBJECT = /^chore\(release\): v(\S+) \(#([1-9]\d{0,9})\)$/;
 
 /**
- * How often `confirm-published` reads the registry after an upload, and how
- * long it waits between reads: the registry can answer not found for a moment
- * after it accepted a version.
+ * How long `confirm-published` waits between two reads of the registry after
+ * an upload: the registry can answer not found for minutes after it accepted a
+ * version (core showed about 2 minutes after its publish in the first run from
+ * CI, and 3 minutes or more has been seen). The delay doubles from 5 seconds
+ * up to a ceiling of `CONFIRM_MAX_DELAY_MS` on each wait, until the waits add
+ * up to `CONFIRM_WINDOW_MS`. There is one read before the first wait and one
+ * after the last, so the reads number one more than the delays. The release
+ * workflow's `npm` job timeout must leave room for four packages at this
+ * window (`releaseWorkflow.test.ts` checks it).
  */
-export const CONFIRM_ATTEMPTS = 8;
-export const CONFIRM_DELAY_MS = 5000;
+export const CONFIRM_MAX_DELAY_MS = 60_000;
+const CONFIRM_FIRST_DELAY_MS = 5000;
+const CONFIRM_WINDOW_MS = 10 * 60_000;
+
+/** @returns {number[]} The waits between reads, in milliseconds. */
+function confirmDelays() {
+  const delays = [];
+  let total = 0;
+  let next = CONFIRM_FIRST_DELAY_MS;
+  while (total < CONFIRM_WINDOW_MS) {
+    delays.push(next);
+    total += next;
+    next = Math.min(next * 2, CONFIRM_MAX_DELAY_MS);
+  }
+  return delays;
+}
+
+export const CONFIRM_DELAYS_MS = confirmDelays();
+
+/** The registry that `confirm-published` reads a version's own document from. */
+const REGISTRY_URL = "https://registry.npmjs.org";
+
+/**
+ * What the registry said to a read, in the shape of a finished `npm view`.
+ *
+ * @typedef {{ status: number | null, stdout: string, stderr: string }} RegistryAnswer
+ */
 
 /** The modes a dispatched run takes. */
 const MODES = ["rehearse", "publish-existing"];
@@ -370,30 +402,93 @@ export function packageState(result, version) {
 
 /**
  * Reads the registry until a version that was just published appears, so a
- * publish that npm reported as done is never taken on trust. A not-found
- * answer is read again, up to `CONFIRM_ATTEMPTS` times; any other answer
- * stops at once.
+ * publish that npm reported as done is never taken on trust. Each read asks
+ * twice: for the packument and for the version's own document, which can show
+ * a new version sooner than a cached packument. Either one showing the version
+ * is enough. A not-found answer from both is read again after the next wait in
+ * `CONFIRM_DELAYS_MS`; any other answer stops at once.
  *
  * @param {object} input
  * @param {string} input.name An SDK package name.
  * @param {string} input.version
- * @param {() => { status: number | null, stdout: string, stderr: string }} input.view Runs `npm view <name>@<version> version`.
+ * @param {() => RegistryAnswer | Promise<RegistryAnswer>} input.view Runs `npm view <name>@<version> version`.
+ * @param {() => RegistryAnswer | Promise<RegistryAnswer>} input.viewVersion Reads the version's own document, `/<name>/<version>`.
  * @param {(milliseconds: number) => Promise<void>} input.wait Waits between two reads.
  * @returns {Promise<void>}
  * @throws {Error} When the version does not appear, or the registry answers anything else.
  */
-export async function confirmPublished({ name, version, view, wait }) {
-  for (let attempt = 1; attempt <= CONFIRM_ATTEMPTS; attempt += 1) {
-    if (packageState(view(), version) === "published") {
+export async function confirmPublished({
+  name,
+  version,
+  view,
+  viewVersion,
+  wait,
+}) {
+  for (const delay of [...CONFIRM_DELAYS_MS, null]) {
+    const answers = [packageState(await view(), version)];
+    answers.push(packageState(await viewVersion(), version));
+    if (answers.includes("published")) {
       return;
     }
-    if (attempt < CONFIRM_ATTEMPTS) {
-      await wait(CONFIRM_DELAY_MS);
+    if (delay !== null) {
+      await wait(delay);
     }
   }
   throw new Error(
-    `${name}@${version} did not appear on the registry after ${CONFIRM_ATTEMPTS} reads. Check npm before you re-run the failed jobs.`,
+    `${name}@${version} did not appear on the registry after ${CONFIRM_DELAYS_MS.length + 1} reads. Check npm before you re-run the failed jobs.`,
   );
+}
+
+/**
+ * Reads a version's own document from the registry, as `npm view` answers:
+ * a found version has status 0 and its number on stdout, a missing one carries
+ * `E404` on stderr, and anything else is an error.
+ *
+ * @param {string} name An SDK package name.
+ * @param {string} version
+ * @param {typeof https.get} [get] The HTTP getter, replaced in tests.
+ * @returns {Promise<RegistryAnswer>}
+ */
+export function readVersionDocument(name, version, get = https.get) {
+  const url = `${REGISTRY_URL}/${name.replaceAll("/", "%2f")}/${version}`;
+  const failed = (stderr) => ({ status: 1, stdout: "", stderr });
+  return new Promise((resolve) => {
+    const request = get(
+      url,
+      { headers: { accept: "application/json" }, timeout: 30_000 },
+      (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("error", (error) =>
+          resolve(failed(`Could not read ${url}: ${error.message}`)),
+        );
+        response.on("end", () => {
+          if (response.statusCode === 404) {
+            resolve(failed(`npm error code E404 (${url})`));
+            return;
+          }
+          if (response.statusCode !== 200) {
+            resolve(failed(`${url} answered ${response.statusCode}`));
+            return;
+          }
+          try {
+            const document = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+            resolve({
+              status: 0,
+              stdout: String(document.version ?? ""),
+              stderr: "",
+            });
+          } catch (error) {
+            resolve(failed(`Could not read ${url}: ${error.message}`));
+          }
+        });
+      },
+    );
+    request.on("timeout", () => request.destroy(new Error("timed out")));
+    request.on("error", (error) =>
+      resolve(failed(`Could not read ${url}: ${error.message}`)),
+    );
+  });
 }
 
 /**
@@ -608,6 +703,7 @@ async function confirmFromRegistry(name, version) {
         stderr: result.stderr ?? "",
       };
     },
+    viewVersion: () => readVersionDocument(name, version),
     wait: (milliseconds) =>
       new Promise((resolve) => setTimeout(resolve, milliseconds)),
   });
