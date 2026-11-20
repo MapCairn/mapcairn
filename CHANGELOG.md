@@ -30,7 +30,7 @@ This is the first release of the four MapCairn SDK packages: `@mapcairn/core`, `
 
 #### @mapcairn/theme
 
-**Your own colours, with the contrast checked.** `checkThemeContrast` takes a proposed colour override for the 14 interface roles and reports how it measures against WCAG 2.2 AA over the worst-case map backdrops. `createThemeStylesheet` turns an override into a stylesheet scoped to a selector you own, or refuses a theme that falls below AA. High-contrast and forced-colours modes keep the SDK's own values. ([#463](https://github.com/MapCairn/mapcairn/pull/463), [#477](https://github.com/MapCairn/mapcairn/pull/477))
+**Your own colours, with the contrast checked.** `checkThemeContrast` takes a proposed colour override for the 14 interface roles and reports how it measures against WCAG 2.2 AA over the worst-case map backdrops. `createThemeStylesheet` turns an override into a stylesheet scoped to a selector you own, or refuses a theme that falls below AA. High-contrast and forced-colours modes keep the SDK's own values. Tooltips, which are drawn outside the page tree, take the colours of your scope too. ([#463](https://github.com/MapCairn/mapcairn/pull/463), [#477](https://github.com/MapCairn/mapcairn/pull/477), [#519](https://github.com/MapCairn/mapcairn/pull/519))
 
 #### @mapcairn/react
 
@@ -45,3 +45,5 @@ This is the first release of the four MapCairn SDK packages: `@mapcairn/core`, `
 **Offline, said once.** `DevicePreferences` reports whether the device is online, and the reference site says so once when it is not, without making a request to find out. ([#447](https://github.com/MapCairn/mapcairn/pull/447))
 
 **Type that suits the script.** Letter spacing and line height adjust for non-Latin scripts. ([#380](https://github.com/MapCairn/mapcairn/pull/380))
+
+**One set of types across entry points.** A type you import from `@mapcairn/core` and one you import from `@mapcairn/core/contracts` is the same declaration, so code that names a type from both sees one. ([#522](https://github.com/MapCairn/mapcairn/pull/522))
