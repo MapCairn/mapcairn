@@ -14,7 +14,11 @@ import {
 /** How long a still press must last to count as a long-press, in milliseconds. */
 export const LONG_PRESS_DELAY_MS = 500;
 
-/** How far, in CSS pixels, the pointer may wander before the press is cancelled. */
+/**
+ * How far, in CSS pixels, the pointer may wander before the press is cancelled.
+ *
+ * @internal
+ */
 export const LONG_PRESS_TOLERANCE_PX = 10;
 
 /** Where a long-press (or right-click) happened. */

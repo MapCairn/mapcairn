@@ -14,8 +14,9 @@ export { blur_2 as blur }
 // @public
 export function checkThemeContrast(override: ThemeOverride): ThemeContrastCheck;
 
-// Warning: (ae-forgotten-export) The symbol "ColourInput" needs to be exported by the entry point index.d.ts
-//
+// @public
+export type ColourInput = string | Rgba;
+
 // @public
 export function compositeOver(foreground: ColourInput, backdrop: ColourInput): Rgba;
 
@@ -315,10 +316,13 @@ export namespace tokenValues {
     }
 }
 
-// Warning: (ae-forgotten-export) The symbol "ZLayerName" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function zLayer(name: ZLayerName): string;
+
+// Warning: (ae-forgotten-export) The symbol "zIndex" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type ZLayerName = keyof typeof zIndex;
 
 // (No @packageDocumentation comment for this package)
 

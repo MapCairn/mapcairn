@@ -6,11 +6,15 @@ import { distanceMetres } from "./geo";
 import { MAX_CIRCLE_RADIUS_METRES, shapeLabel, validateShape } from "./shape";
 import type { DrawIssue, DrawKind, DrawSelection, DrawShape } from "./types";
 
-/** How many undo steps are kept. Older ones are dropped. */
+/**
+ * How many undo steps are kept. Older ones are dropped.
+ *
+ * @internal
+ */
 export const DRAW_HISTORY_LIMIT = 100;
 
 /** The shortest radius a circle can be given by a tap, in metres. */
-export const MIN_CIRCLE_RADIUS_METRES = 0.5;
+const MIN_CIRCLE_RADIUS_METRES = 0.5;
 
 /**
  * What the last action did, for the interface to announce. Every action that
@@ -62,7 +66,7 @@ export interface DrawShapeInput {
 }
 
 /** One undo step: the shapes and the selection as they were. */
-interface HistoryEntry {
+export interface HistoryEntry {
   readonly shapes: readonly DrawShape[];
   readonly selection: DrawSelection | null;
 }
@@ -227,7 +231,7 @@ function findShape(state: DrawState, shapeId: string): DrawShape | undefined {
  * What names a new shape: the catalogue in use, or the shipped English when
  * there is none.
  */
-type Labeller = Pick<MessageCatalogue, "t"> | undefined;
+export type Labeller = Pick<MessageCatalogue, "t"> | undefined;
 
 function startShape(state: DrawState, at: LatLng, labels: Labeller): DrawState {
   const kind = state.mode;

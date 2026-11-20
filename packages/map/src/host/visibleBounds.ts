@@ -12,6 +12,8 @@ import {
  * a rotated map is covered too. Read it when needed (for example when a
  * search is submitted) rather than on every frame.
  * @returns `undefined` before the map is mounted or while the host has no size.
+ *
+ * @internal
  */
 export function visibleBounds(
   adapter: Pick<MapAdapter, "unproject"> | null,

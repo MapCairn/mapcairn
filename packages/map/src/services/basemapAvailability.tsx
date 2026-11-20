@@ -11,7 +11,11 @@ import {
   useState,
 } from "react";
 
-/** How long a basemap stays marked unavailable before it is offered normally again. */
+/**
+ * How long a basemap stays marked unavailable before it is offered normally again.
+ *
+ * @internal
+ */
 export const UNAVAILABLE_FOR_MS = 5 * 60 * 1000;
 
 /** What {@link useBasemapAvailability} returns. */

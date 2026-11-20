@@ -17,7 +17,11 @@ import { VisuallyHidden } from "../../ui/VisuallyHidden";
 import { useChromeLayout } from "../layoutContext";
 import * as styles from "./MapReadout.css";
 
-/** The widest the scale bar may be, in CSS pixels. */
+/**
+ * The widest the scale bar may be, in CSS pixels.
+ *
+ * @internal
+ */
 export const SCALE_BAR_MAX_WIDTH_PX = 96;
 
 /** How long the scale bar stays after the zoom last changed before it fades. */

@@ -43,6 +43,8 @@ const PALETTE: Readonly<Record<string, string>> = tokenValues.dataPalette;
  * The hex value of a palette slot. Definitions name slots, `@mapcairn/theme`
  * holds the values, and the definition schema only accepts slots that exist,
  * so a missing value is a wiring bug.
+ *
+ * @internal
  */
 export function paletteColour(slot: PaletteSlot): string {
   const colour = PALETTE[slot];
@@ -97,6 +99,8 @@ function thin(positions: readonly LatLng[], limit: number): LatLng[] {
  * The rings and lines of a polygon or line feature, thinned so an outline
  * drawn from them over the map stays cheap to redraw while the map moves. A
  * point has none.
+ *
+ * @internal
  */
 export function featureOutlines(feature: LayerFeature): FeatureOutline[] {
   const { geometry } = feature;
@@ -127,7 +131,11 @@ export function featureOutlines(feature: LayerFeature): FeatureOutline[] {
   }
 }
 
-/** The box around a feature's geometry, or null when it has no coordinates. */
+/**
+ * The box around a feature's geometry, or null when it has no coordinates.
+ *
+ * @internal
+ */
 export function featureBounds(feature: LayerFeature): Bounds | null {
   const positions = positionsOf(feature.geometry);
   return boundsOfPoints(positions) ?? null;
@@ -136,6 +144,8 @@ export function featureBounds(feature: LayerFeature): Bounds | null {
 /**
  * Where a feature is: a point's own position, and for a polygon or line the
  * centre of its box. Null when the geometry has no coordinates.
+ *
+ * @internal
  */
 export function featurePosition(feature: LayerFeature): LatLng | null {
   const bounds = featureBounds(feature);
@@ -161,6 +171,8 @@ function toMapLook(look: ShapeAppearance): MapShapeLook {
  * Turns a shape style's colour rule into the rule a vector tile engine
  * evaluates for each feature: categories become cases with the other class
  * as the fallback, and steps and equal intervals become ascending minimums.
+ *
+ * @internal
  */
 export function toLookRule(style: FeedShapeStyle): MapLookRule {
   const classes = shapeAppearances(style).map(toMapLook);
@@ -219,6 +231,8 @@ function toMapSource(
  * The vector tile layer for the polygon and line source layers of a
  * definition, with each rule, window and label worked out. Heatmap source
  * layers are drawn separately (see {@link toVectorHeatmaps}).
+ *
+ * @internal
  */
 export function toMapVector(
   definition: VectorTileLayerDefinition,
@@ -273,7 +287,11 @@ function heatmapStyle(
   };
 }
 
-/** A heatmap of a feed or query layer's points, weighted by its weight field. */
+/**
+ * A heatmap of a feed or query layer's points, weighted by its weight field.
+ *
+ * @internal
+ */
 export function toMapHeatmap(
   definition: HeatmapLayerDefinition,
   features: readonly LayerFeature[],
@@ -301,7 +319,11 @@ export function toMapHeatmap(
   };
 }
 
-/** One heatmap for each heatmap source layer of a vector tile definition, in order. */
+/**
+ * One heatmap for each heatmap source layer of a vector tile definition, in order.
+ *
+ * @internal
+ */
 export function toVectorHeatmaps(
   definition: VectorTileLayerDefinition,
   controls: ControlValues,
@@ -333,6 +355,8 @@ export function toVectorHeatmaps(
  * Works out how each polygon or line of a feed layer is drawn, with its label
  * text, so the map adapter gets plain colours, widths and patterns and needs
  * no style rule. Features of the geometry the style does not draw are skipped.
+ *
+ * @internal
  */
 export function toStyledShapes(
   definition: FeedLayerDefinition<FeedShapeStyle>,
@@ -385,6 +409,8 @@ export function toStyledShapes(
 /**
  * Works out how each point of a feed layer is drawn, so the map adapter gets
  * plain colours, sizes and shapes and needs no style rule.
+ *
+ * @internal
  */
 export function toMapFeatures(
   style: PointStyle,

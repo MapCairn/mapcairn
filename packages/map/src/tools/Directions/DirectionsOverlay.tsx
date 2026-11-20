@@ -7,7 +7,7 @@ import * as styles from "./Directions.css";
 import { useFreeCentre } from "./useFreeCentre";
 
 /** Radius of a stop's disc, in pixels. */
-export const STOP_DISC_RADIUS_PX = 12;
+const STOP_DISC_RADIUS_PX = 12;
 
 /** Props for {@link DirectionsOverlay}. */
 export interface DirectionsOverlayProps {

@@ -3,28 +3,36 @@
 /** The heights the bottom sheet rests at. */
 export type SheetDetent = "peek" | "half" | "full";
 
-/** Every detent, from the smallest to the largest. */
+/**
+ * Every detent, from the smallest to the largest.
+ *
+ * @internal
+ */
 export const SHEET_DETENTS: readonly SheetDetent[] = ["peek", "half", "full"];
 
 /** Visible height in pixels of each detent. */
 export type DetentHeights = Readonly<Record<SheetDetent, number>>;
 
 /** Gap kept between the full-height sheet and the top of the viewport. */
-export const SHEET_TOP_INSET = 12;
+const SHEET_TOP_INSET = 12;
 
 const PEEK_FRACTION = 0.25;
 const PEEK_MIN = 160;
 const PEEK_MAX = 220;
 const HALF_FRACTION = 0.5;
 
-/** Speed in px/s above which a release counts as a fling. */
+/**
+ * Speed in px/s above which a release counts as a fling.
+ *
+ * @internal
+ */
 export const SHEET_FLING_VELOCITY = 600;
 
 /** How far ahead, in seconds, a release's momentum is projected. */
-export const SHEET_MOMENTUM_SECONDS = 0.15;
+const SHEET_MOMENTUM_SECONDS = 0.15;
 
 /** The furthest, in pixels, the sheet may be dragged past its extremes. */
-export const RUBBER_BAND_LIMIT = 48;
+const RUBBER_BAND_LIMIT = 48;
 
 const RUBBER_BAND_STIFFNESS = 0.55;
 

@@ -19,19 +19,19 @@ import { roundPixel, toSvgPoints, usePlacement } from "./geometry";
 import * as styles from "./overlays.css";
 
 /** Radius of a point shape's marker, in pixels. */
-export const DRAW_POINT_RADIUS_PX = 7;
+const DRAW_POINT_RADIUS_PX = 7;
 
 /** Radius of a vertex handle, in pixels. The press reaches further than this. */
-export const DRAW_VERTEX_RADIUS_PX = 7;
+const DRAW_VERTEX_RADIUS_PX = 7;
 
 /** Radius of the selected vertex's handle, in pixels, so it stands apart by size as well as fill. */
-export const DRAW_SELECTED_VERTEX_RADIUS_PX = 10;
+const DRAW_SELECTED_VERTEX_RADIUS_PX = 10;
 
 /** Radius of a midpoint handle, in pixels. */
-export const DRAW_MIDPOINT_RADIUS_PX = 4;
+const DRAW_MIDPOINT_RADIUS_PX = 4;
 
 /** Half the side of a circle's radius handle, in pixels. */
-export const DRAW_RADIUS_HANDLE_HALF_PX = 7;
+const DRAW_RADIUS_HANDLE_HALF_PX = 7;
 
 /** How many positions the preview ring of a circle being drawn has. */
 const PREVIEW_RING_STEPS = 48;

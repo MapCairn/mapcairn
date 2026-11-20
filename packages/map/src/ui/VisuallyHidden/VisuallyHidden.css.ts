@@ -5,6 +5,8 @@ import { style } from "@vanilla-extract/css";
 /**
  * Hides content visually while keeping it available to assistive technology.
  * The clip pattern, not `display: none`, so screen readers still read it.
+ *
+ * @internal
  */
 export const visuallyHidden = style({
   position: "absolute",

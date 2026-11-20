@@ -25,7 +25,7 @@ import {
 import { useStatusMessageFocusFallback } from "./StatusMessageFocus";
 
 /** The shortest time a message that dismisses itself stays on screen. */
-export const MIN_AUTO_DISMISS_MS = 6000;
+const MIN_AUTO_DISMISS_MS = 6000;
 
 const icons: Record<StatusMessageVariant, IconComponent> = {
   info: Info,

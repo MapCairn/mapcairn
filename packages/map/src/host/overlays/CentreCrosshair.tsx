@@ -5,7 +5,7 @@ import { roundPixel } from "./geometry";
 import * as styles from "./overlays.css";
 
 /** Half the length of each crosshair arm, in pixels. */
-export const CROSSHAIR_ARM_PX = 10;
+const CROSSHAIR_ARM_PX = 10;
 
 /** Props for {@link CentreCrosshair}. */
 export interface CentreCrosshairProps {

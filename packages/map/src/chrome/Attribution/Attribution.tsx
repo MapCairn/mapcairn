@@ -27,10 +27,16 @@ import * as styles from "./Attribution.css";
 /**
  * How long the credits stay on screen by themselves once the map has
  * started, if the person does nothing with the map first.
+ *
+ * @internal
  */
 export const ATTRIBUTION_INTRO_MS = 5000;
 
-/** How long the credits take to fade out after their first showing. */
+/**
+ * How long the credits take to fade out after their first showing.
+ *
+ * @internal
+ */
 export const ATTRIBUTION_FADE_MS = 200;
 
 /**

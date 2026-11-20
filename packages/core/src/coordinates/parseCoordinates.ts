@@ -12,6 +12,8 @@ import {
  * degrees, minutes and seconds with every unit spelt out is about 80
  * characters, so anything longer is not one. The limit also keeps the work
  * for hostile input bounded.
+ *
+ * @internal
  */
 export const MAX_COORDINATE_TEXT_LENGTH = 120;
 

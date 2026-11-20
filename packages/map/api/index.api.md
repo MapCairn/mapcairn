@@ -149,7 +149,7 @@ export interface AnnounceOptions {
 // @public
 export type AnnouncePriority = "polite" | "assertive";
 
-// @public
+// @internal
 export const AREA_LAYER_ID = ":area";
 
 // @public
@@ -169,10 +169,10 @@ export interface AreaOutcome {
 // @public
 export function Attribution(input: AttributionProps): JSX.Element;
 
-// @public
+// @internal
 export const ATTRIBUTION_FADE_MS = 200;
 
-// @public
+// @internal
 export const ATTRIBUTION_INTRO_MS = 5000;
 
 // @public
@@ -311,12 +311,6 @@ export interface ControlGroupProps extends Omit<HTMLAttributes<HTMLElement>, "ar
 }
 
 // @public
-export const CROSSHAIR_ARM_PX = 10;
-
-// @public
-export const CSV_FILENAME = "mapcairn-shapes.csv";
-
-// @public
 export function CursorCoordinates(input: CursorCoordinatesProps): JSX.Element | null;
 
 // @public
@@ -399,9 +393,6 @@ export interface DataLayerState {
 }
 
 // @public
-export const DETAIL_LAYER_ID = ":detail";
-
-// @public
 export interface DetailState {
     // (undocumented)
     readonly featureId: string;
@@ -458,23 +449,8 @@ export type DirectionsState = {
     readonly kind: DirectionsFailure;
 };
 
-// @public
+// @internal
 export const DRAW_ANNOUNCE_DELAY_MS = 800;
-
-// @public
-export const DRAW_MIDPOINT_RADIUS_PX = 4;
-
-// @public
-export const DRAW_POINT_RADIUS_PX = 7;
-
-// @public
-export const DRAW_RADIUS_HANDLE_HALF_PX = 7;
-
-// @public
-export const DRAW_SELECTED_VERTEX_RADIUS_PX = 10;
-
-// @public
-export const DRAW_VERTEX_RADIUS_PX = 7;
 
 // @public
 export interface DrawFeedback {
@@ -485,7 +461,7 @@ export interface DrawFeedback {
     readonly text: string;
 }
 
-// @public
+// @internal
 export function drawingForImage(shapes: readonly DrawShape[]): MapImageDrawing | undefined;
 
 // @public
@@ -626,7 +602,7 @@ export interface ExportSectionProps {
     readonly headingRef?: Ref<HTMLHeadingElement>;
 }
 
-// @public
+// @internal
 export function featureBounds(feature: LayerFeature): Bounds | null;
 
 // @public
@@ -654,10 +630,10 @@ export interface FeatureOutline {
     readonly points: readonly LatLng[];
 }
 
-// @public
+// @internal
 export function featureOutlines(feature: LayerFeature): FeatureOutline[];
 
-// @public
+// @internal
 export function featurePosition(feature: LayerFeature): LatLng | null;
 
 // @public
@@ -672,7 +648,7 @@ export interface FeatureSelectionState {
     toggle(ref: FeatureRef): void;
 }
 
-// @public
+// @internal
 export function fillSlots(text: string, slots: Readonly<Record<string, ReactNode>>): ReactNode;
 
 // @public
@@ -693,9 +669,6 @@ export interface FreeCentre {
     readonly pixel: PixelPoint | null;
     readonly position: () => LatLng | null;
 }
-
-// @public
-export const GEOJSON_FILENAME = "mapcairn-shapes.geojson";
 
 // @public
 export type HeadingLevel = 2 | 3 | 4 | 5 | 6;
@@ -873,9 +846,6 @@ export type LayerStatus = {
 };
 
 // @public
-export const LIST_PAGE = 50;
-
-// @public
 export function ListRow(input: ListRowProps): JSX.Element;
 
 // @public
@@ -901,17 +871,9 @@ export interface LiveRegionProviderProps {
 export type LocateState = "idle" | "locating" | "found" | "error";
 
 // @public
-export const LOCATING_MESSAGE: {
-    readonly key: "tools.locate.locating";
-    readonly params: {
-        readonly count?: number;
-    };
-};
-
-// @public
 export const LONG_PRESS_DELAY_MS = 500;
 
-// @public
+// @internal
 export const LONG_PRESS_TOLERANCE_PX = 10;
 
 // @public
@@ -1080,10 +1042,10 @@ export const MAX_IDENTIFY_LAYERS = 4;
 // @public
 export const MAX_OUTLINE_POINTS = 400;
 
-// @public
+// @internal
 export const MEASURE_ANNOUNCE_DELAY_MS = 800;
 
-// @public
+// @internal
 export const MEASURE_VERTEX_RADIUS_PX = 5;
 
 // @public
@@ -1111,28 +1073,25 @@ export interface MeasureToolbarProps {
     readonly onDone: () => void;
 }
 
-// @public
+// @internal
 export const MIN_ACCURACY_RADIUS_PX = 8;
 
-// @public
-export const MIN_AUTO_DISMISS_MS = 6000;
-
-// @public
+// @internal
 export const MIN_SEARCH_LENGTH = 2;
 
 // @public
 export const MIN_SUGGEST_LENGTH = 3;
 
-// @public
+// @internal
 export function nextHeadingLevel(level: HeadingLevel): HeadingLevel;
 
 // @public
 export type OverlayMap = Pick<MapAdapter, "project" | "isVisible">;
 
-// @public
+// @internal
 export function overlayPlacement(map: OverlayMap, view: Pick<ViewState, "center" | "zoom">, projection: MapProjection): MapPlacement;
 
-// @public
+// @internal
 export function paletteColour(slot: PaletteSlot): string;
 
 // @public
@@ -1179,10 +1138,10 @@ export interface ReverseAddress {
     readonly state: AddressState;
 }
 
-// @public
+// @internal
 export const ROUTE_CASING_LAYER_ID = ":route-casing";
 
-// @public
+// @internal
 export const ROUTE_LAYER_ID = ":route";
 
 // @public
@@ -1200,7 +1159,7 @@ export interface RouteOutcome {
 // @public
 export const SCALE_BAR_IDLE_MS = 2000;
 
-// @public
+// @internal
 export const SCALE_BAR_MAX_WIDTH_PX = 96;
 
 // @public
@@ -1212,7 +1171,7 @@ export interface ScaleBarProps {
     readonly units: UnitSystem;
 }
 
-// @public
+// @internal
 export function screenRadiusForMetres(metres: number, metresPerPixel: number, minimum?: number): number;
 
 // @public
@@ -1342,9 +1301,6 @@ export interface SettingsSectionProps {
 }
 
 // @public
-export const SHAPE_PICK_TOLERANCE_PX = 12;
-
-// @public
 export function ShapesSection(input: ShapesSectionProps): JSX.Element;
 
 // @public
@@ -1398,7 +1354,7 @@ export interface SheetProps {
     readonly title: string;
 }
 
-// @public
+// @internal
 export const SHOW_ON_MAP_MIN_ZOOM = 5;
 
 // @public
@@ -1469,9 +1425,6 @@ export interface StatusMessageProps extends Omit<HTMLAttributes<HTMLDivElement>,
 export type StatusMessageVariant = "info" | "success" | "error";
 
 // @public
-export const STOP_DISC_RADIUS_PX = 12;
-
-// @public
 export function Subheading(input: SubheadingProps): JSX.Element;
 
 // @public
@@ -1514,16 +1467,16 @@ export interface SwitchProps {
     readonly onCheckedChange: (checked: boolean) => void;
 }
 
-// @public
+// @internal
 export function toLookRule(style: FeedShapeStyle): MapLookRule;
 
-// @public
+// @internal
 export function toMapFeatures(style: PointStyle, features: readonly LayerFeature[]): MapFeature[];
 
-// @public
+// @internal
 export function toMapHeatmap(definition: HeatmapLayerDefinition, features: readonly LayerFeature[], controls: ControlValues): MapHeatmap;
 
-// @public
+// @internal
 export function toMapVector(definition: VectorTileLayerDefinition, controls: ControlValues, now: number): MapVectorTiles;
 
 // @public
@@ -1546,7 +1499,7 @@ export interface TooltipProviderProps {
     readonly skipDelayDuration?: number;
 }
 
-// @public
+// @internal
 export function toStyledShapes(definition: FeedLayerDefinition<FeedShapeStyle>, features: readonly LayerFeature[], formatters: FormatterRegistry, now: number, catalogue: MessageCatalogue): MapStyledShapes;
 
 // @public
@@ -1580,7 +1533,7 @@ export interface TourStep {
     readonly text: DefinitionText;
 }
 
-// @public
+// @internal
 export function toVectorHeatmaps(definition: VectorTileLayerDefinition, controls: ControlValues, now: number): MapHeatmap[];
 
 // @public
@@ -1590,7 +1543,7 @@ export interface TurnedOff {
     readonly ids: readonly string[];
 }
 
-// @public
+// @internal
 export const UNAVAILABLE_FOR_MS: number;
 
 // @public
@@ -1968,22 +1921,19 @@ export function useUrlState(): UrlState;
 // @public
 export const VIEW_SETTLE_MS = 400;
 
-// @public
+// @internal
 export function visibleBounds(adapter: Pick<MapAdapter, "unproject"> | null, host: Pick<MapHostElement, "getBoundingClientRect"> | null): Bounds | undefined;
 
 // @public
 export function VisuallyHidden(input: VisuallyHiddenProps): JSX.Element;
 
-// @public
+// @internal
 export const visuallyHidden: string;
 
 // @public
 export interface VisuallyHiddenProps extends HTMLAttributes<HTMLElement> {
     readonly as?: ElementType;
 }
-
-// @public
-export const WKT_FILENAME = "mapcairn-shapes.wkt";
 
 // (No @packageDocumentation comment for this package)
 

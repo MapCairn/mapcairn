@@ -67,9 +67,11 @@ The maintainer has adopted this tag policy. Without a tag, every export in a rep
 
 - `@public` (the default, so it is not written): covered by the rules on this page.
 - `@beta`: exported so a host can try it; named in the release notes. Under `0.x` a minor release may break anything, so `@beta` is advisory until `1.0.0`. A host should not depend on a `@beta` export in a library of its own.
-- `@internal`: exported only because another SDK package or the reference host needs it, and not supported. An export that gains `@internal` is a likely breaking change (a host may use it today); one that is `@internal` from the start never breaks anyone. A name used only inside one package is not exported at all.
+- `@internal`: in the entry point only because a barrel (`export *`) or another SDK package reaches it, and not supported: a tuning constant, an engine layer id or a helper that turns the SDK's data into engine input. An export that gains `@internal` is a likely breaking change (a host may use it today); one that is `@internal` from the start never breaks anyone. A name used only inside one package and its own file is not exported at all.
 
-Nothing in the packages carries a tag today, so every export in the first reports is public by default. A full audit of the public exports (`core`, `map`, `react` and `theme`) is required before `0.1.0`, and tagging `@internal` and hiding the forgotten exports is part of it; see the export audit issue. A new tag appears in the report diff, which is how a reviewer sees that an export was narrowed.
+Without a tag an export is public. A light sweep of the four packages before `0.1.0` (see the export audit issue) hid the names that nothing outside their own file used and tagged the clearly internal ones `@internal`: pixel and timing constants, engine layer ids, and the helpers that build engine input in `map`. It is not an export-by-export audit: anything plausibly part of the supported surface stays public and untagged, and the rest of the review happens as the API evolves under the report check. A new tag appears in the report diff, which is how a reviewer sees that an export was narrowed.
+
+Two kinds of `ae-forgotten-export` warning remain. In `core` the `contracts` entry point names types that only the main entry exports (the rollup of `contracts` carries its own non-exported copies of them), and `MessageParams` names the unexported `MessageParamOverrides`. In `theme`, `ZLayerName` names `zIndex`, which is exported only inside the `tokenValues` namespace. None stops a host from calling the API; the first needs a decision on how the `contracts` entry shares its types with the main entry.
 
 ### What produces the reports
 
@@ -88,7 +90,7 @@ CI prints each warning in a group and a count for each package as one annotation
 ## Decisions on record
 
 - **Tags.** The release tag policy above is adopted as written.
-- **Export audit.** A full audit of the public exports is required before `0.1.0`, not a light sweep (see the export audit issue).
+- **Export audit.** The maintainer decided on 2026-11-20 on a light sweep of the public exports before `0.1.0`, not a full audit (see the export audit issue). The first pass is described under Release tags.
 - **Not public.** `data-testid` values (for the project's own tests, may change) and `peerDependencies` ranges (may change in a minor release while on `0.x`). The `data-*` hooks that `styles.css` selects on stay undecided.
 - **Branch up to date.** Turning on the ruleset's "require branches to be up to date" is a maintainer step for later, once the release work settles. It is nothing for an agent to do; until then, two pull requests that both change a report can turn `build` red on `main` when the second merges.
 

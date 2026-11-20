@@ -43,7 +43,7 @@ import * as styles from "./Layers.css";
 import type { DataLayerState, DataLayers, LayerStatus } from "./useDataLayers";
 
 /** How many rows the list shows before "Show all". */
-export const LIST_PAGE = 50;
+const LIST_PAGE = 50;
 
 /** The time of day a layer last updated, written for `locale`. */
 function timeOfDay(updatedAt: number, locale: string): string {
