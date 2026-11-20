@@ -115,6 +115,7 @@ describe("cache scope in the workflows", () => {
       "verify",
       "check",
       "github-release",
+      "rehearse",
       "npm",
     ]);
     for (const job of release) {

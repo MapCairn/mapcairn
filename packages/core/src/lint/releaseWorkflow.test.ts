@@ -58,8 +58,15 @@ describe("release.yml", () => {
       "verify",
       "check",
       "github-release",
+      "rehearse",
       "npm",
     ]);
+  });
+
+  it("names each run by its mode and version, so an approval cannot be mistaken for a rehearsal", () => {
+    expect(CLEAN).toMatch(
+      /^run-name: Release \$\{\{ inputs\.mode \|\| 'publish' \}\} \$\{\{ inputs\.version \|\| github\.sha \}\}$/m,
+    );
   });
 
   it("runs on a push to main that changes the changelog, and on a dispatch that defaults to a rehearsal", () => {
@@ -99,6 +106,7 @@ describe("release.yml", () => {
       "attestations: write",
     ]);
     expect(permissionsOf("npm")).toEqual(["id-token: write", "contents: read"]);
+    expect(permissionsOf("rehearse")).toEqual(["contents: read"]);
     expect(job("check").join("\n")).toMatch(/^ {4}permissions: \{\}$/m);
     const writes = TEXT.split("\n").filter((line) =>
       /^\s+[\w-]+: write\b/.test(line),
@@ -220,6 +228,7 @@ describe("release.yml", () => {
   it("compares what github-release and npm download with the recorded digests, and with exactly the four tarballs, before attesting or staging", () => {
     for (const [name, after] of [
       ["github-release", "attest-build-provenance"],
+      ["rehearse", "package-state"],
       ["npm", "package-state"],
     ] as const) {
       const lines = job(name).join("\n");
@@ -237,7 +246,7 @@ describe("release.yml", () => {
     expect(job("github-release").join("\n")).toContain(
       'tarballs.mjs check-release release "$DIGESTS" "$NOTES_DIGEST"',
     );
-    for (const name of ["check", "github-release", "npm"]) {
+    for (const name of ["check", "github-release", "rehearse", "npm"]) {
       expect(job(name).join("\n"), name).toContain(
         "NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}",
       );
@@ -260,7 +269,7 @@ describe("release.yml", () => {
   });
 
   it("downloads the artifact by its name in every job that uses it", () => {
-    for (const name of ["check", "github-release", "npm"]) {
+    for (const name of ["check", "github-release", "rehearse", "npm"]) {
       expect(job(name).join("\n"), name).toMatch(
         /actions\/download-artifact@[0-9a-f]{40}\s*\n\s+with:\n\s+name: release-files\n\s+path: release/,
       );
@@ -282,9 +291,8 @@ describe("release.yml", () => {
     expect(condition).toContain(
       `contains(fromJSON('["success","skipped"]'), needs.github-release.result)`,
     );
-    expect(condition).toContain(
-      "needs.verify.outputs.on-npm == 'true' || inputs.mode == 'rehearse'",
-    );
+    expect(condition).toContain("needs.verify.outputs.on-npm == 'true'");
+    expect(condition).toContain("inputs.mode != 'rehearse'");
   });
 
   it("verifies a download before it is published again", () => {

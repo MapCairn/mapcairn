@@ -186,15 +186,20 @@ describe("least privilege", () => {
   });
 });
 
-/** The lines of the `npm` job of a workflow, or none. */
-function npmJobLines(text: string): string[] {
+/** The lines of one job of a workflow, without comments, or none. */
+function jobLinesOf(text: string, name: string): string[] {
   const clean = withoutComments(text);
   const range = (
     jobRanges(clean) as Map<string, { start: number; end: number }>
-  ).get(NPM_JOB);
+  ).get(name);
   return range === undefined
     ? []
     : clean.split("\n").slice(range.start - 1, range.end);
+}
+
+/** The lines of the `npm` job of a workflow, or none. */
+function npmJobLines(text: string): string[] {
+  return jobLinesOf(text, NPM_JOB);
 }
 
 /** The job's own `if:` (four spaces in), with the lines of a folded condition below it. */
@@ -267,16 +272,14 @@ describe("release.yml", () => {
     expect(npmJobProblems(readFileSync(file, "utf8"))).toEqual([]);
   });
 
-  it("publishes the release's own tarballs in the npm job, by absolute path, under the dist-tag the verify job decided and with provenance, and a dry run for a rehearsal", () => {
+  it("publishes the release's own tarballs in the npm job, by absolute path, with no scripts, under the dist-tag the verify job decided and with provenance", () => {
     const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
     expect(job).toContain(
-      'npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --tag "$DIST_TAG" --provenance "${flags[@]}"',
+      'npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --ignore-scripts --tag "$DIST_TAG" --provenance',
     );
-    expect(job).toContain("--dry-run");
     expect(job).toContain("needs.verify.outputs.dist-tag");
-    expect(job).toMatch(
-      /MODE" = "rehearse" \]; then\n\s+flags\+=\(--dry-run\)/,
-    );
+    expect(job).not.toContain("--dry-run");
+    expect(job).not.toContain("MODE");
   });
 
   it("holds no token, no staging, no dist-tag change and no access flag", () => {
@@ -296,7 +299,22 @@ describe("release.yml", () => {
     }
   });
 
-  it("skips a package already on npm with a notice, in a rehearsal too, and stops on any registry error", () => {
+  it("runs only for a real publish whose checks passed: the check and verify results, the main branch and not a rehearsal", () => {
+    const condition = jobCondition(npmJobLines(readFileSync(file, "utf8")));
+    for (const required of [
+      "needs.check.result == 'success'",
+      "needs.verify.result == 'success'",
+      "needs.verify.outputs.release == 'true'",
+      "needs.verify.outputs.on-npm == 'true'",
+      "inputs.mode != 'rehearse'",
+      "refs/heads/main",
+    ]) {
+      expect(condition, required).toContain(required);
+    }
+    expect(condition).not.toContain("|| inputs.mode == 'rehearse'");
+  });
+
+  it("skips a package already on npm with a notice, and stops on any registry error", () => {
     const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
     expect(job).toContain(
       'state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"',
@@ -307,14 +325,13 @@ describe("release.yml", () => {
     expect(job).toContain(
       "::notice::@mapcairn/$name@$VERSION is already on npm",
     );
-    expect(job).not.toContain('[ "$MODE" != "rehearse" ]');
     expect(job).not.toContain("|| true");
   });
 
-  it("reads the registry back after each real publish, and not after a dry run", () => {
+  it("reads the registry back after each publish", () => {
     const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
     expect(job).toMatch(
-      /npm publish [^\n]*\n\s+if \[ "\$MODE" = "rehearse" \]; then\n\s+continue\n\s+fi\n\s+node scripts\/release\/verifyRelease\.mjs confirm-published "@mapcairn\/\$name" "\$VERSION"/,
+      /npm publish [^\n]*\n\s+node scripts\/release\/verifyRelease\.mjs confirm-published "@mapcairn\/\$name" "\$VERSION"/,
     );
   });
 
@@ -346,6 +363,33 @@ describe("release.yml", () => {
     expect(job).toMatch(
       /concurrency:\n\s+group: release-npm-\$\{\{ needs\.verify\.outputs\.version \}\}\n\s+cancel-in-progress: false/,
     );
+    expect(job).not.toContain("and are exactly the four tarballs");
+  });
+
+  it("puts the dry run of a rehearsal in a job with no environment and no OIDC token, so only a real publish ever waits for an approval", () => {
+    const job = jobLinesOf(readFileSync(file, "utf8"), "rehearse").join("\n");
+    expect(job).not.toBe("");
+    expect(job).not.toMatch(/^ {4}environment:/m);
+    expect(job).not.toContain("id-token");
+    expect(job).toMatch(/permissions:\n\s+contents: read\s*\n/);
+    const condition = jobCondition(
+      jobLinesOf(readFileSync(file, "utf8"), "rehearse"),
+    );
+    for (const required of [
+      "inputs.mode == 'rehearse'",
+      "needs.check.result == 'success'",
+      "needs.verify.result == 'success'",
+      "refs/heads/main",
+    ]) {
+      expect(condition, required).toContain(required);
+    }
+    const publishes = job
+      .split("\n")
+      .filter((line) => /npm publish/.test(line));
+    expect(publishes).toHaveLength(1);
+    expect(publishes[0]).toContain("--dry-run");
+    expect(job).not.toContain("confirm-published");
+    expect(job).not.toContain("NODE_AUTH_TOKEN");
   });
 
   it("accepts the plan's job, with a condition folded over several lines or on one", () => {
@@ -483,11 +527,13 @@ function runPublishStep(input: {
         'if [ -e "$FOLDER/publish-fails/$name" ]; then echo "npm error code E403" >&2; exit 1; fi',
       ].join("\n"),
     );
+    const rehearsal = input.mode === "rehearse";
     const script = stepScript(
-      npmJobLines(readFileSync(path.join(REPO, RELEASE_WORKFLOW), "utf8")).join(
-        "\n",
-      ),
-      "Publish the packages",
+      jobLinesOf(
+        readFileSync(path.join(REPO, RELEASE_WORKFLOW), "utf8"),
+        rehearsal ? "rehearse" : NPM_JOB,
+      ).join("\n"),
+      rehearsal ? "Dry-run the publishing" : "Publish the packages",
     );
     const result = spawnSync("bash", ["-eo", "pipefail", "-c", script], {
       cwd: folder,
@@ -499,7 +545,6 @@ function runPublishStep(input: {
         GITHUB_WORKSPACE: folder,
         VERSION: input.version ?? "0.1.0-rc.2",
         DIST_TAG: input.distTag ?? "next",
-        MODE: input.mode,
       },
     });
     const calls = existsSync(log)
@@ -538,7 +583,7 @@ describe.skipIf(process.platform === "win32")(
       expect(run.status).toBe(0);
       expect(actions(run)).toEqual(
         ["core", "react", "theme", "map"].flatMap((name) => [
-          `npm publish ${tarball(name)} --tag next --provenance`,
+          `npm publish ${tarball(name)} --ignore-scripts --tag next --provenance`,
           `node scripts/release/verifyRelease.mjs confirm-published @mapcairn/${name} 0.1.0-rc.2`,
         ]),
       );
@@ -556,8 +601,8 @@ describe.skipIf(process.platform === "win32")(
       });
       expect(run.status).toBe(0);
       expect(actions(run).filter((call) => call.startsWith("npm "))).toEqual([
-        `npm publish ${tarball("theme")} --tag next --provenance`,
-        `npm publish ${tarball("map")} --tag next --provenance`,
+        `npm publish ${tarball("theme")} --ignore-scripts --tag next --provenance`,
+        `npm publish ${tarball("map")} --ignore-scripts --tag next --provenance`,
       ]);
       expect(run.stdout).toContain(
         "::notice::@mapcairn/core@0.1.0-rc.2 is already on npm",
@@ -588,7 +633,7 @@ describe.skipIf(process.platform === "win32")(
       });
       expect(run.status).not.toBe(0);
       expect(actions(run).filter((call) => call.startsWith("npm "))).toEqual([
-        `npm publish ${tarball("core")} --tag next --provenance`,
+        `npm publish ${tarball("core")} --ignore-scripts --tag next --provenance`,
       ]);
     });
 
@@ -621,7 +666,7 @@ describe.skipIf(process.platform === "win32")(
       expect(actions(run)).toEqual(
         ["core", "react", "theme", "map"].map(
           (name) =>
-            `npm publish ${tarball(name)} --tag next --provenance --dry-run`,
+            `npm publish ${tarball(name)} --ignore-scripts --tag next --provenance --dry-run`,
         ),
       );
     });

@@ -264,7 +264,10 @@
       "yarn npm publish *": "deny",
       "bun publish": "deny",
       "bun publish *": "deny",
-      "gh api *pending_deployments*": "deny"
+      "gh api *pending_deployments*": "deny",
+      "gh api *approveDeployments*": "deny",
+      "gh workflow run *publish-existing*": "deny",
+      "gh api *publish-existing*": "deny"
     }
   }
 }

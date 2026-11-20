@@ -86,7 +86,10 @@
       "Shell(bun:* publish*)",
       "Shell(bunx:* publish*)",
       "Shell(corepack:* publish*)",
-      "Shell(gh:api*pending_deployments*)"
+      "Shell(gh:api*pending_deployments*)",
+      "Shell(gh:api*approveDeployments*)",
+      "Shell(gh:workflow*publish-existing*)",
+      "Shell(gh:api*publish-existing*)"
     ]
   }
 }

@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildReport,
+  parseAdminBypass,
   parseEnvironment,
   parseRegistryAnswer,
   parseReviewers,
@@ -47,6 +48,7 @@ function ready(overrides: Facts = {}): Facts {
     tokenInEnvironment: false,
     environment: { state: "ok" },
     reviewers: "present",
+    adminBypass: false,
     ...overrides,
   };
 }
@@ -380,6 +382,68 @@ describe("the npm environment's required reviewers in the report", () => {
   });
 });
 
+describe("the reviewer rule when a merge would publish", () => {
+  const onNpm = Object.fromEntries(
+    NAMES.map((name) => [
+      name,
+      { exists: true, latest: "0.1.0-rc.1", provenance: false },
+    ]),
+  );
+
+  it("blocks when nobody has to approve and all four packages are on npm, because a merge then publishes", () => {
+    const { text, blockers } = report({ reviewers: "none", registry: onNpm });
+    expect(blockers.join("\n")).toContain("no required reviewer");
+    expect(blockers.join("\n")).toContain(
+      "publishes without a second approval",
+    );
+    expect(text).toMatch(/Left for you: Fix the problems above first\./);
+  });
+
+  it("stays a warning when the answer is unknown, even with all four on npm", () => {
+    const { blockers, text } = report({
+      reviewers: "unknown",
+      registry: onNpm,
+    });
+    expect(blockers).toEqual([]);
+    expect(text).toContain("Could not check whether");
+  });
+
+  it("does not block while the first publish is by hand, since the npm job publishes nothing", () => {
+    expect(report({ reviewers: "none" }).blockers).toEqual([]);
+  });
+});
+
+describe("admins who can bypass the npm environment", () => {
+  it("warns, and says what it means, when admins can bypass", () => {
+    const { text, warnings, blockers } = report({ adminBypass: true });
+    expect(text).toMatch(
+      /Left for you: .*Warning: .*administrators can bypass/,
+    );
+    expect(warnings.join("\n")).toContain("administrators can bypass");
+    expect(blockers).toEqual([]);
+  });
+
+  it("says nothing when they cannot, or when it could not be read", () => {
+    expect(report({ adminBypass: false }).warnings).toEqual([]);
+    expect(report({ adminBypass: null }).warnings).toEqual([]);
+  });
+});
+
+describe("parseAdminBypass", () => {
+  it("reads can_admins_bypass, and is null when the answer cannot be read", () => {
+    const ok = (value: unknown) => ({
+      ok: true,
+      stdout: JSON.stringify(value),
+      stderr: "",
+    });
+    expect(parseAdminBypass(ok({ can_admins_bypass: true }))).toBe(true);
+    expect(parseAdminBypass(ok({ can_admins_bypass: false }))).toBe(false);
+    expect(parseAdminBypass(ok({}))).toBeNull();
+    expect(parseAdminBypass({ ok: false, stdout: "", stderr: "x" })).toBeNull();
+    expect(parseAdminBypass({ ok: true, stdout: "no", stderr: "" })).toBeNull();
+  });
+});
+
 describe("parseReviewers", () => {
   const ok = (value: unknown) => ({
     ok: true,
@@ -408,6 +472,11 @@ describe("parseReviewers", () => {
     [[]],
   ])("is none for the rules %j", (rules) => {
     expect(parseReviewers(ok({ protection_rules: rules }))).toBe("none");
+  });
+
+  it("is unknown, and does not throw, when the rules are not a list", () => {
+    expect(parseReviewers(ok({ protection_rules: "none" }))).toBe("unknown");
+    expect(parseReviewers(ok({ protection_rules: { a: 1 } }))).toBe("unknown");
   });
 
   it("is none when the answer has no rules at all", () => {

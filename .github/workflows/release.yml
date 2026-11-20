@@ -1,5 +1,12 @@
 name: Release
 
+# A run is named by its mode and version, so that an approval in the list of
+# pending deployments is read as a publish. Only a real publish ever waits for
+# one: the dry run of a rehearsal is in the `rehearse` job, which has no
+# environment and no OIDC token. The mode is a constrained choice and `decide`
+# validates the version; the name is display only.
+run-name: Release ${{ inputs.mode || 'publish' }} ${{ inputs.version || github.sha }}
+
 # Releases the four SDK packages (plan 0014, docs/guides/releasing.md). One
 # workflow, four jobs, and one environment (`npm`). npm's trusted-publisher
 # record names this file and that environment, so neither is renamed without
@@ -268,18 +275,93 @@ jobs:
           fi
           gh release create "v$VERSION" release/*.tgz --verify-tag --title "v$VERSION" --notes-file release/notes.md "${flags[@]}"
 
+  rehearse:
+    name: rehearse
+    needs: [verify, check]
+    # The dry run of a rehearsal. No environment and no id-token: nothing here
+    # can wait for an approval or publish, so the only deployment a reviewer is
+    # ever asked to approve is a real publish.
+    if: >-
+      github.ref == 'refs/heads/main'
+      && needs.verify.result == 'success' && needs.verify.outputs.release == 'true'
+      && needs.check.result == 'success'
+      && inputs.mode == 'rehearse'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read # check out the repository
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: release
+      - name: Check the files are the ones that were packed, and hold the four tarballs of this version
+        env:
+          DIGESTS: ${{ needs.verify.outputs.digests }}
+          NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          node scripts/release/tarballs.mjs check release "$DIGESTS" "$NOTES_DIGEST"
+          node scripts/release/verifyRelease.mjs tarballs "$VERSION" release
+
+      - name: Use an npm that supports trusted publishing
+        shell: bash
+        # Trusted publishing needs npm 11.5.1 or later. The version installed
+        # when the runner's npm is older is the one the repository's
+        # packageManager field pins.
+        run: | # zizmor: ignore[adhoc-packages]
+          required=11.5.1
+          current="$(npm --version)"
+          if [ "$(printf '%s\n%s\n' "$required" "$current" | sort -V | head -n 1)" != "$required" ]; then
+            wanted="$(node -p "require('./package.json').packageManager.replace('npm@', '')")"
+            npm install --global --ignore-scripts "npm@$wanted"
+          fi
+          npm --version
+
+      - name: Say why nothing is dry-run while the packages are private
+        if: needs.verify.outputs.private == 'true'
+        run: echo "::notice::An SDK manifest still sets private, so npm would skip it. Nothing is dry-run; the rc.1 Release pull request removes private."
+      - name: Dry-run the publishing
+        if: needs.verify.outputs.private != 'true'
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          DIST_TAG: ${{ needs.verify.outputs.dist-tag }}
+        shell: bash
+        # The same loop as the `npm` job, with --dry-run and no read-back. A
+        # package whose version is on npm is skipped with a notice. npm tries
+        # no OIDC exchange here (no token), so this proves the tarball, the
+        # tag and the version rules, and nothing about trusted publishing.
+        run: |
+          for name in core react theme map; do
+            state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
+            if [ "$state" = "published" ]; then
+              echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
+              continue
+            fi
+            npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --ignore-scripts --tag "$DIST_TAG" --provenance --dry-run
+          done
+
   npm:
     name: npm
     needs: [verify, check, github-release]
     # A job whose needs include a skipped job is skipped too, unless the
     # condition says otherwise: here a skipped github-release is fine, since a
-    # rehearsal and a publish-existing run never create a release.
+    # publish-existing run never creates a release.
     if: >-
       !cancelled() && github.ref == 'refs/heads/main'
       && needs.verify.result == 'success' && needs.verify.outputs.release == 'true'
       && needs.check.result == 'success'
       && contains(fromJSON('["success","skipped"]'), needs.github-release.result)
-      && (needs.verify.outputs.on-npm == 'true' || inputs.mode == 'rehearse')
+      && needs.verify.outputs.on-npm == 'true'
+      && inputs.mode != 'rehearse'
     environment: npm
     concurrency:
       group: release-npm-${{ needs.verify.outputs.version }}
@@ -302,7 +384,7 @@ jobs:
         with:
           name: release-files
           path: release
-      - name: Check the files are the ones that were packed, and are exactly the four tarballs
+      - name: Check the files are the ones that were packed, and hold the four tarballs of this version
         env:
           DIGESTS: ${{ needs.verify.outputs.digests }}
           NOTES_DIGEST: ${{ needs.verify.outputs.notes-digest }}
@@ -333,32 +415,24 @@ jobs:
         env:
           VERSION: ${{ needs.verify.outputs.version }}
           DIST_TAG: ${{ needs.verify.outputs.dist-tag }}
-          MODE: ${{ inputs.mode }}
         shell: bash
         # No token and no registry-url: npm exchanges this job's OIDC token
         # for a short-lived credential, and records provenance. --provenance
         # is explicit so that a publish that could not get provenance fails
         # before the upload, which cannot be undone. A package whose version
-        # is on npm is skipped with a notice, in a rehearsal too; one that is
-        # not found is published (a dry run in a rehearsal); any other
-        # registry answer stops the job. After each real publish the registry
-        # is read back, and the job fails if the version does not appear. A
-        # re-run of the failed jobs after a partial publish therefore skips
-        # what is on npm and publishes the rest (docs/guides/releasing.md).
+        # is on npm is skipped with a notice; one that is not found is
+        # published; any other registry answer stops the job. After each
+        # publish the registry is read back, and the job fails if the version
+        # does not appear. A re-run of the failed jobs after a partial publish
+        # therefore skips what is on npm and publishes the rest
+        # (docs/guides/releasing.md).
         run: |
-          flags=()
-          if [ "$MODE" = "rehearse" ]; then
-            flags+=(--dry-run)
-          fi
           for name in core react theme map; do
             state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
             if [ "$state" = "published" ]; then
               echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
               continue
             fi
-            npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --tag "$DIST_TAG" --provenance "${flags[@]}"
-            if [ "$MODE" = "rehearse" ]; then
-              continue
-            fi
+            npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --ignore-scripts --tag "$DIST_TAG" --provenance
             node scripts/release/verifyRelease.mjs confirm-published "@mapcairn/$name" "$VERSION"
           done

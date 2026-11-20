@@ -130,6 +130,11 @@ describe("forbiddenInShellText", () => {
       "gh api repos/MapCairn/mapcairn/actions/runs/1/pending_deployments -X POST",
       "pending_deployments",
     ],
+    [
+      "approving a deployment through GraphQL",
+      "gh api graphql -f query='mutation { approveDeployments(input: {}) { clientMutationId } }'",
+      "approveDeployments",
+    ],
   ])("finds %s", (_name, line, command) => {
     expect(inShell(line)).toContain(command);
   });
@@ -405,6 +410,28 @@ describe("scanSources", () => {
       { file: ".github/workflows/release.yml", line: 10, command: "stage" },
       { file: ".github/workflows/release.yml", line: 13, command: "publish" },
     ]);
+  });
+
+  it("allows only a dry run in the rehearse job of release.yml", () => {
+    const workflow = [
+      "jobs:",
+      "  rehearse:",
+      "    steps:",
+      "      - run: npm publish ./core.tgz --provenance --dry-run",
+      "      - run: npm publish ./core.tgz --provenance",
+      "      - run: npm stage publish ./core.tgz --dry-run",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/release.yml", workflow)).toEqual([
+      { file: ".github/workflows/release.yml", line: 5, command: "publish" },
+      { file: ".github/workflows/release.yml", line: 6, command: "stage" },
+    ]);
+    expect(
+      scan(
+        ".github/workflows/ci.yml",
+        workflow.replace("rehearse", "rehearse"),
+      ),
+    ).toHaveLength(3);
   });
 
   it("allows nothing in release.yml when it has no npm job", () => {

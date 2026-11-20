@@ -67,6 +67,7 @@ const BYTES_PER_KB = 1000;
  * @property {boolean} tokenInEnvironment Whether an npm token variable is set.
  * @property {{ state: "ok" | "missing" | "unprotected" | "unknown", detail?: string }} environment The `npm` environment on GitHub.
  * @property {"present" | "none" | "unknown"} reviewers Whether the `npm` environment requires a reviewer to approve a deployment.
+ * @property {boolean | null} adminBypass Whether repository administrators can bypass the environment's protection rules, null when it could not be read.
  */
 
 /** @param {string} name */
@@ -130,7 +131,7 @@ export function buildReport(facts) {
   }
   const registry = registryLines({ facts, line, blocker });
   environmentLines({ facts, line, blocker });
-  reviewerLines({ facts, line });
+  reviewerLines({ facts, registry, line, blocker });
   lines.push(...credentialLines({ facts, warnings }));
   line(
     "Trusted publishing",
@@ -140,7 +141,7 @@ export function buildReport(facts) {
     "Left for you",
     [
       leftForYou({ blockers, prepared, registry }),
-      ...reviewerWarning({ facts, warnings }),
+      ...reviewerWarning({ facts, registry, warnings }),
     ].join(" "),
   );
   return { lines, blockers, warnings };
@@ -343,13 +344,20 @@ function environmentLines({ facts, line, blocker }) {
 /**
  * @param {object} input
  * @param {Facts} input.facts
+ * @param {"unknown" | "none" | "all"} input.registry What the registry holds.
  * @param {(label: string, text: string) => void} input.line
+ * @param {(label: string, text: string) => void} input.blocker
  */
-function reviewerLines({ facts, line }) {
+function reviewerLines({ facts, registry, line, blocker }) {
   if (facts.reviewers === "present") {
     line(
       "npm environment reviewers",
       "a required reviewer approves each deployment.",
+    );
+  } else if (facts.reviewers === "none" && registry === "all") {
+    blocker(
+      "npm environment reviewers",
+      `no required reviewer, and all four packages are on npm, so a merge of a Release pull request publishes without a second approval. Add a required reviewer to the npm environment first (${GUIDE}, maintainer steps).`,
     );
   } else if (facts.reviewers === "none") {
     line("npm environment reviewers", "none: nobody approves a deployment.");
@@ -359,30 +367,47 @@ function reviewerLines({ facts, line }) {
       "could not be checked (no network, no gh, or no permission); check Settings, Environments on GitHub.",
     );
   }
+  if (facts.adminBypass === true) {
+    line("npm environment admin bypass", ADMIN_BYPASS_TEXT);
+  }
 }
 
+/** What it means that administrators can bypass the `npm` environment's protection rules. */
+const ADMIN_BYPASS_TEXT =
+  "repository administrators can bypass its protection rules (can_admins_bypass), so the reviewer gate does not hold against an administrator's session, including an agent working with that session. Turning it off closes that for administrators too.";
+
 /**
- * The sentence for "Left for you" when nobody has to approve the deployment
- * of the `npm` job, which is then the only thing between a merge and a publish.
+ * The sentences for "Left for you" about the reviewer rule and administrator
+ * bypass. Nobody to approve is a blocker, and so a sentence of its own, only
+ * when a merge would publish; otherwise it is a warning.
  *
  * @param {object} input
  * @param {Facts} input.facts
- * @param {string[]} input.warnings Receives the warning.
- * @returns {string[]} The sentence, or none.
+ * @param {"unknown" | "none" | "all"} input.registry What the registry holds.
+ * @param {string[]} input.warnings Receives each warning.
+ * @returns {string[]} The sentences, or none.
  */
-function reviewerWarning({ facts, warnings }) {
-  if (facts.reviewers === "present") {
-    return [];
-  }
+function reviewerWarning({ facts, registry, warnings }) {
+  /** @type {string[]} */
+  const sentences = [];
   if (facts.reviewers === "unknown") {
-    return [
+    sentences.push(
       `Could not check whether the npm environment has a required reviewer; check Settings, Environments on GitHub (${GUIDE}).`,
-    ];
+    );
+  } else if (facts.reviewers === "none" && registry !== "all") {
+    const text =
+      "the npm environment has no required reviewer: a merge of a Release pull request publishes without a second approval.";
+    warnings.push(text);
+    sentences.push(
+      `Warning: ${text} Add a required reviewer first (${GUIDE}).`,
+    );
   }
-  const text =
-    "the npm environment has no required reviewer: a merge of a Release pull request publishes without a second approval.";
-  warnings.push(text);
-  return [`Warning: ${text} Add a required reviewer first (${GUIDE}).`];
+  if (facts.adminBypass === true) {
+    const text = `the npm environment's ${ADMIN_BYPASS_TEXT}`;
+    warnings.push(text);
+    sentences.push(`Warning: ${text}`);
+  }
+  return sentences;
 }
 
 /**
@@ -394,7 +419,7 @@ function reviewerWarning({ facts, warnings }) {
 function credentialLines({ facts, warnings }) {
   /** @type {string[]} */
   const before = [];
-  const advice = `It does not weaken the release, whose approval is the npm environment's required reviewer on GitHub and not npm's two-factor; an agent still never uses it (plan 0014, "Keeping agents from publishing"), and ${GUIDE} says how to remove it.`;
+  const advice = `A session is a separate path around the GitHub gate: a hand upload never meets the npm environment's reviewer. Only the per-package two-factor setting on the registry (with tokens disallowed) and the agents' deny lists hold it back (plan 0014, "Keeping agents from publishing"). Sign out after a hand upload (${GUIDE}).`;
   if (facts.signedIn) {
     const text = `npm is signed in on this machine. ${advice}`;
     warnings.push(text);
@@ -497,6 +522,9 @@ export function parseReviewers(environment) {
   } catch {
     return "unknown";
   }
+  if (!Array.isArray(rules)) {
+    return "unknown";
+  }
   const named = rules.some(
     (/** @type {{ type?: string, reviewers?: unknown[] }} */ rule) =>
       rule.type === "required_reviewers" &&
@@ -504,6 +532,25 @@ export function parseReviewers(environment) {
       rule.reviewers.length > 0,
   );
   return named ? "present" : "none";
+}
+
+/**
+ * Reads whether repository administrators can bypass the `npm` environment's
+ * protection rules, from the GitHub API's answer for the environment.
+ *
+ * @param {{ ok: boolean, stdout: string, stderr: string }} environment The answer for the environment.
+ * @returns {boolean | null} Null when the answer cannot be read or does not say.
+ */
+export function parseAdminBypass(environment) {
+  if (!environment.ok) {
+    return null;
+  }
+  try {
+    const value = JSON.parse(environment.stdout).can_admins_bypass;
+    return typeof value === "boolean" ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -601,6 +648,7 @@ function readFacts(root) {
       ),
     ),
     reviewers: parseReviewers(environment),
+    adminBypass: parseAdminBypass(environment),
     signedIn: runNpm(["whoami"], { cwd: root }).status === 0,
     tokenInEnvironment: ["NPM_TOKEN", "NODE_AUTH_TOKEN"].some(
       (name) => (process.env[name] ?? "") !== "",
