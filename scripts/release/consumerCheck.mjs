@@ -33,6 +33,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
+import {
+  bunSettings,
+  bunSkipped,
+  corepackCliPath,
+  YARN_VERSION,
+  yarnManifest,
+  yarnSettings,
+  yarnSkipped,
+} from "./consumerLegs.mjs";
 import { isolatedEnvironment, runNpm } from "./npm.mjs";
 import { PACKAGES } from "./packCheck.mjs";
 
@@ -390,6 +399,151 @@ function pnpmAvailable(app) {
 }
 
 /**
+ * Builds the app as a Worker with plain Vite, runs it on workerd (the
+ * Workers runtime the host is published on, through the Miniflare the
+ * repository already installs) and checks the page it answers with. Node never
+ * renders it, so the packages' `workerd` and `browser` conditions are what
+ * resolve, and `renderToReadableStream` is what renders.
+ *
+ * @param {string} app The installed app.
+ * @returns {string} The line for the report.
+ */
+function checkWorkerd(app) {
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  runNode(
+    "vite build (Worker)",
+    [
+      vite,
+      "build",
+      "--config",
+      "vite.worker.config.ts",
+      "--ssr",
+      "src/entryWorker.tsx",
+      "--outDir",
+      "dist/worker",
+    ],
+    app,
+  );
+  const answer = runNode(
+    "run the Worker on workerd",
+    [
+      path.join(REPO, "scripts", "release", "workerdRun.mjs"),
+      path.join(app, "dist", "worker", "entryWorker.js"),
+    ],
+    app,
+  );
+  const page = JSON.parse(answer);
+  if (page.runtime !== "Cloudflare-Workers") {
+    throw new Error(`The Worker did not run on workerd: ${page.runtime}`);
+  }
+  const absent = missingLandmarks(page.html);
+  if (absent.length > 0) {
+    throw new Error(
+      `The Worker's page lacks: ${absent.join(", ")}\n${page.html.slice(0, EXCERPT)}`,
+    );
+  }
+  return "server render of the chrome on workerd, from a Worker bundle built with no plugins: ok";
+}
+
+/**
+ * Installs with Yarn Berry (the `node-modules` linker) through corepack,
+ * pinned to one version, then renders in plain Node and builds with plain
+ * Vite. corepack fetches Yarn once into its own cache; nothing is installed
+ * on the machine.
+ *
+ * @param {string} app The folder to install into.
+ * @param {Record<string, unknown>} manifest The consumer manifest.
+ * @returns {string} The line for the report.
+ */
+function checkYarn(app, manifest) {
+  const corepack = corepackCliPath();
+  if (corepack === undefined) {
+    return yarnSkipped();
+  }
+  writeFileSync(
+    path.join(app, "package.json"),
+    `${JSON.stringify(yarnManifest(manifest), null, 2)}\n`,
+  );
+  writeFileSync(path.join(app, ".yarnrc.yml"), yarnSettings());
+  const result = spawnSync(
+    process.execPath,
+    [corepack, `yarn@${YARN_VERSION}`, "install"],
+    {
+      cwd: app,
+      encoding: "utf8",
+      env: {
+        ...isolatedEnvironment(),
+        COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+        COREPACK_ENABLE_AUTO_PIN: "0",
+      },
+      maxBuffer: MAX_OUTPUT,
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(`yarn install failed:\n${result.stdout}\n${result.stderr}`);
+  }
+  const missing = missingLandmarks(renderPlain(app).html, CHROME_LANDMARKS);
+  if (missing.length > 0) {
+    throw new Error(`yarn render lacks: ${missing.join(", ")}`);
+  }
+  const vite = path.join(app, "node_modules", "vite", "bin", "vite.js");
+  runNode(
+    "vite build after yarn",
+    [vite, "build", "--outDir", "dist/client"],
+    app,
+  );
+  const problems = stylesheetProblems(
+    builtCss(path.join(app, "dist", "client")),
+  );
+  if (problems.length > 0) {
+    throw new Error(problems.join("\n"));
+  }
+  return `Yarn ${YARN_VERSION} (node-modules linker) install, plain Node render and Vite build: ok`;
+}
+
+/**
+ * Installs with Bun, when Bun is already on the path, and renders in plain
+ * Node's place: `bun` runs the same script. Bun is never installed for this.
+ *
+ * @param {string} app The folder to install into.
+ * @returns {string} The line for the report.
+ */
+function checkBun(app) {
+  const version = spawnSync("bun", ["--version"], { encoding: "utf8" });
+  if (version.error !== undefined || version.status !== 0) {
+    return bunSkipped();
+  }
+  writeFileSync(path.join(app, "bunfig.toml"), bunSettings());
+  const run = (args) =>
+    spawnSync("bun", args, {
+      cwd: app,
+      encoding: "utf8",
+      env: isolatedEnvironment(),
+      maxBuffer: MAX_OUTPUT,
+    });
+  const installed = run(["install", "--ignore-scripts"]);
+  if (installed.status !== 0) {
+    throw new Error(
+      `bun install failed:\n${installed.stdout}\n${installed.stderr}`,
+    );
+  }
+  const rendered = run(["plain.mjs"]);
+  if (rendered.status !== 0) {
+    throw new Error(
+      `bun render failed:\n${rendered.stdout}\n${rendered.stderr}`,
+    );
+  }
+  const missing = missingLandmarks(
+    JSON.parse(rendered.stdout).html,
+    CHROME_LANDMARKS,
+  );
+  if (missing.length > 0) {
+    throw new Error(`bun render lacks: ${missing.join(", ")}`);
+  }
+  return `Bun ${version.stdout.trim()} install and render: ok`;
+}
+
+/**
  * Runs every check and returns one line for each.
  *
  * @returns {string[]} What was checked, and what was skipped and why.
@@ -478,6 +632,8 @@ export function runConsumerCheck() {
     }
     report.push("server render of the chrome from the bundle: ok");
 
+    report.push(checkWorkerd(app));
+
     const legacy = path.join(root, "legacy");
     prepareApp(legacy, manifest);
     install(legacy, ["--legacy-peer-deps"]);
@@ -499,6 +655,14 @@ export function runConsumerCheck() {
     } else {
       report.push(pnpmSkipped());
     }
+
+    const yarn = path.join(root, "yarn");
+    prepareApp(yarn, manifest);
+    report.push(checkYarn(yarn, manifest));
+
+    const bun = path.join(root, "bun");
+    prepareApp(bun, manifest);
+    report.push(checkBun(bun));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
