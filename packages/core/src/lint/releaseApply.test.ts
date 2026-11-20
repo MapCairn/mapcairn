@@ -30,6 +30,10 @@ import {
   setReleaseInManifest,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/workspaces.mjs";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 
 const APPLY_SCRIPT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -47,7 +51,7 @@ Thank you to \`octo\`.
 
 const CHANGELOG = "# Changelog\n\nWhat changed in each release.\n";
 
-const SDK = ["core", "map", "react", "theme"];
+const SDK: string[] = SDK_PACKAGES;
 const folders: string[] = [];
 
 afterEach(() => {

@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { SDK_PACKAGES } from "./apiChanges.mjs";
+import { SDK_PACKAGES } from "../sdkPackages.mjs";
 import { internalRange, parseVersion } from "./semver.mjs";
 
 /** The scope the SDK packages are published under. */

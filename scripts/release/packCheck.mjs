@@ -15,6 +15,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
+import { SDK_PACKAGES } from "../sdkPackages.mjs";
 import { runNpm } from "./npm.mjs";
 
 const REPO = path.resolve(
@@ -23,7 +24,7 @@ const REPO = path.resolve(
 );
 
 /** The packages that are packed, in release order. */
-export const PACKAGES = ["core", "react", "theme", "map"];
+export const PACKAGES = SDK_PACKAGES;
 
 /**
  * The most a tarball may weigh, in bytes of the packed `.tgz`. Set at about

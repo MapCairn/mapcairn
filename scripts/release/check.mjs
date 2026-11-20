@@ -18,6 +18,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
+import { SDK_PACKAGES } from "../sdkPackages.mjs";
 import { extractNotes } from "./changelog.mjs";
 import {
   checkChangelog,
@@ -175,7 +176,7 @@ function versionLines({ sdk, line, blocker }) {
   }
   line(
     "Versions",
-    `core, map, react and theme are all ${sdk.version}; internal ranges match.`,
+    `${SDK_PACKAGES.slice(0, -1).join(", ")} and ${SDK_PACKAGES.at(-1)} are all ${sdk.version}; internal ranges match.`,
   );
 }
 

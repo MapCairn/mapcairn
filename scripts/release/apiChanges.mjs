@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-
-/** The SDK packages that are released together, in release order. */
-export const SDK_PACKAGES = ["core", "react", "theme", "map"];
+import { SDK_PACKAGES } from "../sdkPackages.mjs";
 
 /**
  * @typedef {object} ReportEntry

@@ -24,13 +24,17 @@ import {
   entryPointsOf,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/buildPackage.mjs";
+import {
+  SDK_PACKAGES,
+  // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
+} from "../../../../scripts/sdkPackages.mjs";
 
 const REPO = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../..",
 );
 
-const BUILT_PACKAGES = ["core", "map", "react", "theme"] as const;
+const BUILT_PACKAGES: readonly string[] = SDK_PACKAGES;
 
 interface Comparison {
   readonly missing: string[];
