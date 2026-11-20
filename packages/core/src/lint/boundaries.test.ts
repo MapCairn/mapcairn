@@ -98,8 +98,47 @@ describe("dependency-cruiser boundaries", () => {
       'import "maplibre-gl-draw";\nexport const x = 1;\n',
     "packages/map/src/ui/badMaplibrePlugin.ts":
       'import { x } from "@maplibre/maplibre-gl-geocoder";\nexport const y = x;\n',
-    "packages/web/src/adapters/maplibre/goodMaplibre.ts":
+    "packages/adapter-maplibre/src/goodMaplibre.ts":
       'import { Map } from "maplibre-gl";\nimport "maplibre-gl/dist/maplibre-gl.css";\nexport const x = Map;\nexport const load = () => import("maplibre-gl");\n',
+    // In the host, only the one worker file may import the engine.
+    "packages/web/src/adapters/maplibre/workerUrl.ts":
+      'export const load = () => import("maplibre-gl");\n',
+    "packages/web/src/adapters/maplibre/badEngine.ts":
+      'import { Map } from "maplibre-gl";\nexport const x = Map;\n',
+
+    // the MapLibre adapter package: the host imports it from the composition
+    // root only, and nothing but core and theme may sit under it or over it.
+    "packages/adapter-maplibre/package.json":
+      '{ "name": "@mapcairn/adapter-maplibre", "exports": { ".": "./src/index.ts" } }\n',
+    // The same imports by package name, as the host and the ui write them.
+    "packages/web/src/routes/badAdapterPackageByName.ts":
+      'import { createAdapter } from "@mapcairn/adapter-maplibre";\nexport const x = createAdapter;\n',
+    "packages/web/src/composition/goodAdapterPackageByName.ts":
+      'import { createAdapter } from "@mapcairn/adapter-maplibre";\nexport const x = createAdapter;\n',
+    "packages/map/src/ui/badAdapterPackageByName.ts":
+      'import { createAdapter } from "@mapcairn/adapter-maplibre";\nexport const x = createAdapter;\n',
+    "packages/adapter-maplibre/src/index.ts":
+      "export const createAdapter = () => 1;\n",
+    "packages/adapter-maplibre/src/goodCore.ts":
+      'import { helper } from "../../core/src/format/helper";\nexport const x = helper;\n',
+    "packages/adapter-maplibre/src/badMap.ts":
+      'import { ui } from "../../map/src/ui/index";\nexport const x = ui;\n',
+    "packages/adapter-maplibre/src/badHost.ts":
+      'import { clipboard } from "../../web/src/adapters/clipboard/BrowserClipboard";\nexport const x = clipboard;\n',
+    "packages/web/src/composition/goodAdapterPackage.ts":
+      'import { createAdapter } from "../../../adapter-maplibre/src/index";\nexport const x = createAdapter;\n',
+    "packages/web/src/routes/badAdapterPackage.ts":
+      'import { createAdapter } from "../../../adapter-maplibre/src/index";\nexport const x = createAdapter;\n',
+    "packages/web/src/adapters/maplibre/badAdapterPackage.ts":
+      'import { createAdapter } from "../../../../adapter-maplibre/src/index";\nexport const x = createAdapter;\n',
+    "packages/core/src/bad/importsAdapterPackage.ts":
+      'import { createAdapter } from "../../../adapter-maplibre/src/index";\nexport const x = createAdapter;\n',
+    "packages/react/src/badAdapterPackage.ts":
+      'import { createAdapter } from "../../adapter-maplibre/src/index";\nexport const x = createAdapter;\n',
+    "packages/theme/src/badAdapterPackage.ts":
+      'import { createAdapter } from "../../adapter-maplibre/src/index";\nexport const x = createAdapter;\n',
+    "packages/map/src/ui/badAdapterPackage.ts":
+      'import { createAdapter } from "../../../adapter-maplibre/src/index";\nexport const x = createAdapter;\n',
 
     // one icon package.
     "packages/map/src/ui/badIcons.ts":
@@ -171,6 +210,8 @@ describe("dependency-cruiser boundaries", () => {
     for (const [consumer, target] of [
       ["examples/demo", "sdk"],
       ["packages/sdk", "map"],
+      ["packages/web", "adapter-maplibre"],
+      ["packages/map", "adapter-maplibre"],
     ] as const) {
       mkdirSync(path.join(root, consumer, "node_modules/@mapcairn"), {
         recursive: true,
@@ -275,6 +316,41 @@ describe("dependency-cruiser boundaries", () => {
     ["nothing-imports-the-umbrella", "packages/map/src/ui/badUmbrella.ts"],
     ["core-is-dependency-free", "packages/core/src/bad/importsUmbrella.ts"],
     ["map-has-no-web-dependency", "packages/map/src/ui/badUmbrella.ts"],
+    [
+      "core-is-dependency-free",
+      "packages/core/src/bad/importsAdapterPackage.ts",
+    ],
+    ["react-is-dependency-free", "packages/react/src/badAdapterPackage.ts"],
+    ["theme-is-dependency-free", "packages/theme/src/badAdapterPackage.ts"],
+    ["map-has-no-web-dependency", "packages/map/src/ui/badAdapterPackage.ts"],
+    [
+      "adapter-package-imported-by-composition-only",
+      "packages/web/src/routes/badAdapterPackage.ts",
+    ],
+    [
+      "adapter-package-imported-by-composition-only",
+      "packages/web/src/adapters/maplibre/badAdapterPackage.ts",
+    ],
+    [
+      "adapter-package-imported-by-composition-only",
+      "packages/web/src/routes/badAdapterPackageByName.ts",
+    ],
+    [
+      "map-has-no-web-dependency",
+      "packages/map/src/ui/badAdapterPackageByName.ts",
+    ],
+    [
+      "adapter-package-uses-core-and-theme-only",
+      "packages/adapter-maplibre/src/badMap.ts",
+    ],
+    [
+      "adapter-package-uses-core-and-theme-only",
+      "packages/adapter-maplibre/src/badHost.ts",
+    ],
+    [
+      "map-engine-libraries-only-in-engine-adapters",
+      "packages/web/src/adapters/maplibre/badEngine.ts",
+    ],
   ])("reports %s for %s", (rule, file) => {
     expect(findings).toContain(`${rule}: ${file}`);
   });
@@ -299,7 +375,11 @@ describe("dependency-cruiser boundaries", () => {
     "packages/core/src/good/importsTurf.ts",
     "packages/core/src/ports/goodType.ts",
     "packages/web/src/composition/goodRoot.ts",
-    "packages/web/src/adapters/maplibre/goodMaplibre.ts",
+    "packages/adapter-maplibre/src/goodMaplibre.ts",
+    "packages/adapter-maplibre/src/goodCore.ts",
+    "packages/web/src/adapters/maplibre/workerUrl.ts",
+    "packages/web/src/composition/goodAdapterPackage.ts",
+    "packages/web/src/composition/goodAdapterPackageByName.ts",
     "packages/map/src/ui/goodLucide.ts",
     "packages/map/src/ui/Switch/goodRadix.ts",
     "packages/map/src/ui/Tooltip/goodRadix.ts",

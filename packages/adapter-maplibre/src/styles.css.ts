@@ -3,8 +3,10 @@
 /**
  * The one engine style file: the only place `.maplibregl-*` selectors may
  * appear, and one of the two places raw z-index values may (the other is the
- * tokens file). It exports nothing. The composition root imports it for its
- * side effects, once, so the rules are in the page before the engine mounts.
+ * tokens file). It exports nothing. `MapLibreMapAdapter.ts` imports it for its
+ * side effects, so the rules are in the page before the engine mounts: a host
+ * that resolves the package's source gets them from its own vanilla-extract
+ * plugin, and any other host from `styles.css`.
  *
  * Every rule is prefixed with `[data-map-host]`, the attribute `MapView` puts
  * on the map region. The MapLibre adapter loads the engine stylesheet later

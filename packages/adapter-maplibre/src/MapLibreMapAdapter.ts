@@ -54,10 +54,17 @@ import { OverlayPlacement } from "./overlayPlacement";
 import type { PendingLoad } from "./pendingLoad";
 import { positionOf } from "./positionOf";
 import { RenderMapOpener } from "./renderMapOpener";
+// The engine styles have no exports. They are imported here, in the module the
+// factory is in, and not in the entry module: `index.ts` is not listed in
+// `sideEffects`, so a host's bundler drops its own imports, and the styles
+// would be lost. This module keeps its import because the host uses the
+// factory. Importing them also puts them in the package's `styles.css`
+// (`@mapcairn/adapter-maplibre/styles.css`).
+import "./styles.css";
 
 export { TILE_LAYER_SLOW_MS } from "./tileLayerTraffic";
 
-/** Options for {@link MapLibreMapAdapter}. */
+/** Options for {@link createMapLibreMapAdapter}. */
 export interface MapLibreMapAdapterOptions {
   /**
    * Resolves to the URL of the engine's worker script, as the host serves
@@ -760,7 +767,11 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 }
 
-/** Builds a fresh MapLibre adapter. The composition root's adapter factory. */
+/**
+ * Builds a fresh MapLibre adapter, one for each map. It makes no request: the
+ * engine, its stylesheet and the worker load when the first map mounts. A host
+ * passes it as the `Services` map factory.
+ */
 export function createMapLibreMapAdapter(
   options: MapLibreMapAdapterOptions,
 ): MapAdapter {

@@ -9,7 +9,7 @@ How to put a MapCairn map in a page that a Windows web server serves, including 
 Two things a page needs are not built yet:
 
 - There is no prebuilt bundle and no `mountMap` function for a page without React ([#44](https://github.com/MapCairn/mapcairn/issues/44)). A page builds a small entry of its own that imports the SDK packages and calls React's `createRoot`, as [`examples/embed`](../../examples/embed/README.md) does.
-- There is no packaged map adapter ([#43](https://github.com/MapCairn/mapcairn/issues/43)). A real map needs a `MapAdapter` over MapLibre GL JS, which `packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts` is the reference for. `examples/embed` runs on the SDK's fakes and draws no map.
+- There is no packaged map adapter ([#43](https://github.com/MapCairn/mapcairn/issues/43)). A real map needs a `MapAdapter` over MapLibre GL JS, which `packages/adapter-maplibre/src/MapLibreMapAdapter.ts` is the reference for. `examples/embed` runs on the SDK's fakes and draws no map.
 
 What the SDK packages ship, from their manifests:
 
@@ -36,7 +36,7 @@ if (container) {
 }
 ```
 
-`MapApp` is your component. It holds what `extending.md` says an app provides: `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, `FocusRegistryProvider` around `MapChrome`, and services of your own in place of `createFakeServices()` (the [README](../../README.md#embed-a-map) has the setup). The map adapter you write also loads the engine's stylesheet: the reference adapter imports `maplibre-gl/dist/maplibre-gl.css` beside the engine and has styles of its own in `packages/web/src/adapters/mapEngine.css.ts`, which `extending.md` names as the reference. Use `createRoot`, not `hydrateRoot`: the server sends an empty element, so there is nothing to hydrate.
+`MapApp` is your component. It holds what `extending.md` says an app provides: `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, `FocusRegistryProvider` around `MapChrome`, and services of your own in place of `createFakeServices()` (the [README](../../README.md#embed-a-map) has the setup). The map adapter you write also loads the engine's stylesheet: the reference adapter imports `maplibre-gl/dist/maplibre-gl.css` beside the engine and has styles of its own in `packages/adapter-maplibre/src/styles.css.ts`, which `extending.md` names as the reference. Use `createRoot`, not `hydrateRoot`: the server sends an empty element, so there is nothing to hydrate.
 
 ### What the build emits
 

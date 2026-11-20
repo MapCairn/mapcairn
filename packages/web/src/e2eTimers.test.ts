@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { TILE_LAYER_SLOW_MS } from "@mapcairn/adapter-maplibre";
 import {
   IDENTIFY_FEEDBACK_MS,
   LONG_PRESS_DELAY_MS,
@@ -9,7 +10,6 @@ import {
 } from "@mapcairn/map";
 import { describe, expect, it } from "vitest";
 import * as e2eTimers from "../e2e/support/timers";
-import { TILE_LAYER_SLOW_MS } from "./adapters/maplibre/MapLibreMapAdapter";
 import { CONNECTION_SETTLE_MS } from "./app/useConnectionNotice";
 
 describe("the browser tests' copies of the app's timers", () => {

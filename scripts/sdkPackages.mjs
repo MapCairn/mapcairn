@@ -27,10 +27,11 @@ export const UMBRELLA_PACKAGE = "sdk";
  * Packages that are built, cruised and given API reports like the SDK packages
  * but are private and not in the release set yet. They come after every SDK
  * package, because they depend on them. A package moves from here into
- * `SDK_PACKAGES` when it joins the release. None at present: the umbrella,
- * `sdk`, joined it in the release after `0.1.0-rc.2`.
+ * `SDK_PACKAGES` when it joins the release. At present: the MapLibre adapter,
+ * which the release after `0.1.0-rc.2` is to publish with the umbrella (the
+ * umbrella, `sdk`, joined it in that release).
  */
-export const UNRELEASED_SDK_PACKAGES = Object.freeze([]);
+export const UNRELEASED_SDK_PACKAGES = Object.freeze(["adapter-maplibre"]);
 
 /** Every package that builds to `dist`, in build order: the release set, then the unreleased ones. */
 export const BUILT_SDK_PACKAGES = Object.freeze([

@@ -1505,6 +1505,17 @@ describe("Map shape", () => {
     expect(setBasemap).not.toHaveBeenCalled();
   });
 
+  it.each(["flat", "globe"] as const)(
+    "carries the two attributes the engine styles select on, data-map-host and a data-projection equal to the %s setting",
+    async (projection) => {
+      const services = createFakeServices();
+      services.fakes.settings.set({ projection });
+      const { host } = await setup({}, services);
+      expect(host()).toHaveAttribute("data-map-host", "");
+      expect(host()).toHaveAttribute("data-projection", projection);
+    },
+  );
+
   it("marks the host with the shape from its first render, before any engine, so a globe's space is painted at once", () => {
     for (const projection of ["globe", "flat"] as const) {
       const services = createFakeServices();

@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { createMapLibreMapAdapter } from "@mapcairn/adapter-maplibre";
 import type { Services } from "@mapcairn/core";
-// The engine style file has no exports. Importing it here, in the one module
-// every page that builds services loads, puts its rules in the page before
-// the engine mounts, and keeps it out of the ui, which may not import adapters.
-import "../adapters/mapEngine.css";
 import { BrowserClipboard } from "../adapters/clipboard/BrowserClipboard";
 import { BrowserFileOpener } from "../adapters/files/BrowserFileOpener";
 import { BrowserFileSaver } from "../adapters/files/BrowserFileSaver";
 import { FetchLayerSource } from "../adapters/layers/FetchLayerSource";
 import { BrowserLocationProvider } from "../adapters/location/BrowserLocationProvider";
-import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { loadWorkerUrl } from "../adapters/maplibre/workerUrl";
 import { BrowserDevicePreferences } from "../adapters/preferences/BrowserDevicePreferences";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import {
+  BASEMAPS,
   type BasemapDefinition,
   FAKE_HYBRID_BASEMAP,
   FAKE_RASTER_BASEMAP,
   FAKE_VECTOR_BASEMAP,
   toEngineZoom,
 } from "@mapcairn/core";
+import fc from "fast-check";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { describe, expect, it } from "vitest";
 import {
@@ -259,5 +261,60 @@ describe("applyZoomLimits", () => {
       `max:${toEngineZoom(12)}`,
       `min:${toEngineZoom(2)}`,
     ]);
+  });
+});
+
+/**
+ * Nothing switches on a basemap's id: a basemap is data, and the adapter reads
+ * its source, zoom limits and layer lists. So two basemaps that differ only in
+ * `id` must be drawn the same way, whatever the id is.
+ */
+describe("a basemap's id", () => {
+  const FAKES: readonly BasemapDefinition[] = [
+    FAKE_RASTER_BASEMAP,
+    FAKE_VECTOR_BASEMAP,
+    FAKE_HYBRID_BASEMAP,
+  ].map((basemap) => ({ ...basemap, saveDataOmitLayers: ["relief", "roads"] }));
+  const anyBasemap = fc.constantFrom(...FAKES);
+  // The ids the site's own basemaps use are tried as well as random text,
+  // because a branch on one of them is what a random string would not find.
+  const anyId = fc.oneof(
+    fc.string(),
+    fc.constantFrom(...BASEMAPS.map((basemap) => basemap.id)),
+  );
+
+  it("does not change the style styleFor gives", () => {
+    fc.assert(
+      fc.property(anyBasemap, anyId, (basemap, id) => {
+        expect(styleFor({ ...basemap, id })).toEqual(styleFor(basemap));
+      }),
+    );
+  });
+
+  it("does not change what composeHybrid does to a style", () => {
+    fc.assert(
+      fc.property(anyBasemap, anyId, (basemap, id) => {
+        const original = labelStyle();
+        const renamed = labelStyle();
+        composeHybrid(original.asMap(), basemap);
+        composeHybrid(renamed.asMap(), { ...basemap, id });
+        expect(renamed.calls).toEqual(original.calls);
+        expect(ids(renamed)).toEqual(ids(original));
+        expect([...renamed.sources]).toEqual([...original.sources]);
+      }),
+    );
+  });
+
+  it("does not change what omitSaveDataLayers removes", () => {
+    fc.assert(
+      fc.property(anyBasemap, anyId, fc.boolean(), (basemap, id, saveData) => {
+        const original = labelStyle();
+        const renamed = labelStyle();
+        omitSaveDataLayers(original.asMap(), basemap, saveData);
+        omitSaveDataLayers(renamed.asMap(), { ...basemap, id }, saveData);
+        expect(ids(renamed)).toEqual(ids(original));
+        expect([...renamed.sources]).toEqual([...original.sources]);
+      }),
+    );
   });
 });

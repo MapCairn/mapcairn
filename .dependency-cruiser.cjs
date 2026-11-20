@@ -6,7 +6,8 @@
  */
 /**
  * npm packages that render a map or ship a map engine, plugin or type
- * declarations. Only `packages/web/src/adapters/maplibre` may import them.
+ * declarations. Only the MapLibre adapter package, and the host's one worker
+ * file, may import them.
  * Matches the resolved path, so it also covers CSS files such as
  * `maplibre-gl/dist/maplibre-gl.css`, dynamic `import()` and `import type`.
  */
@@ -34,8 +35,12 @@ const CORE_ALLOWED_PACKAGES = "(^|/)node_modules/(@turf|@types/geojson)(/|$)";
 const RADIX_WRAPPERS =
   "^packages/map/src/ui/(Switch|Slider|SegmentedControl|Tooltip)/";
 
-/** The engine adapter, the only place an engine library may be imported. */
-const ENGINE_ADAPTERS = "^packages/web/src/adapters/maplibre/";
+/**
+ * The places an engine library may be imported: the MapLibre adapter package,
+ * and the one host file that builds the engine's worker URL.
+ */
+const ENGINE_ADAPTERS =
+  "^packages/(adapter-maplibre/src/|web/src/adapters/maplibre/workerUrl\\.ts$)";
 
 /** The code entry points of the four packages: the modules their `exports` point at under the source condition. */
 const FOUR_PACKAGE_MODULES =
@@ -70,29 +75,48 @@ module.exports = {
       severity: "error",
       comment: "Core must not depend on rendering, hooks or the host.",
       from: { path: "^packages/core/src" },
-      to: { path: "^packages/(map|react|theme|web|sdk)/src" },
+      to: { path: "^packages/(map|react|theme|web|sdk|adapter-maplibre)/src" },
     },
     {
       name: "react-is-dependency-free",
       severity: "error",
       comment: "Generic React hooks must not depend on map or host concerns.",
       from: { path: "^packages/react/src" },
-      to: { path: "^packages/(core|map|theme|web|sdk)/src" },
+      to: { path: "^packages/(core|map|theme|web|sdk|adapter-maplibre)/src" },
     },
     {
       name: "theme-is-dependency-free",
       severity: "error",
       comment: "The token contract must remain independent of its consumers.",
       from: { path: "^packages/theme/src" },
-      to: { path: "^packages/(core|map|react|web|sdk)/src" },
+      to: { path: "^packages/(core|map|react|web|sdk|adapter-maplibre)/src" },
     },
     {
       name: "map-has-no-web-dependency",
       severity: "error",
       comment:
-        "Map components receive configuration rather than import the host or the umbrella package.",
+        "Map components receive configuration rather than import the host, the umbrella package or the MapLibre adapter package.",
       from: { path: "^packages/map/src" },
-      to: { path: "^packages/(web|sdk)/src" },
+      to: { path: "^packages/(web|sdk|adapter-maplibre)/src" },
+    },
+    {
+      name: "adapter-package-imported-by-composition-only",
+      severity: "error",
+      comment:
+        "Inside the host, only the composition root may import the MapLibre adapter package (@mapcairn/adapter-maplibre). The host's other adapter files import the engine, not the package. adapters-are-imported-by-composition-only is left as it is, because it would refuse the package's own imports between its files.",
+      from: {
+        path: "^packages/web/",
+        pathNot: "^packages/web/src/composition/",
+      },
+      to: { path: "^packages/adapter-maplibre/" },
+    },
+    {
+      name: "adapter-package-uses-core-and-theme-only",
+      severity: "error",
+      comment:
+        "The MapLibre adapter package implements a port from core and draws with tokens from theme. It may not import the ui, the generic hooks, the umbrella or the host.",
+      from: { path: "^packages/adapter-maplibre/src" },
+      to: { path: "^packages/(map|react|web|sdk)/" },
     },
     {
       name: "nothing-imports-the-umbrella",
@@ -196,7 +220,7 @@ module.exports = {
       name: "map-engine-libraries-only-in-engine-adapters",
       severity: "error",
       comment:
-        "MapLibre, its plugins, styles and types may be imported only from packages/web/src/adapters/maplibre. The ui and the host never see an engine.",
+        "MapLibre, its plugins, styles and types may be imported only from packages/adapter-maplibre and the host's workerUrl.ts. The ui and the rest of the host never see an engine.",
       from: { path: "^packages/", pathNot: ENGINE_ADAPTERS },
       to: { path: ENGINE_PACKAGES },
     },

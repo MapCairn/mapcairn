@@ -1,0 +1,72 @@
+{
+  "name": "@mapcairn/adapter-maplibre",
+  "version": "0.1.0-rc.2",
+  "private": true,
+  "description": "The MapLibre GL JS map adapter for MapCairn, and the styles that fit the engine into the map region",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MapCairn/mapcairn.git",
+    "directory": "packages/adapter-maplibre"
+  },
+  "homepage": "https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre#readme",
+  "bugs": {
+    "url": "https://github.com/MapCairn/mapcairn/issues"
+  },
+  "keywords": [
+    "mapcairn",
+    "map",
+    "maplibre",
+    "adapter",
+    "accessibility",
+    "gis",
+    "open-data",
+    "sdk"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@mapcairn/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": {
+      "types": "./dist/styles.css.d.ts",
+      "default": "./dist/styles.css"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.built"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "**/*.css.ts"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/buildPackage.mjs",
+    "test": "vitest run",
+    "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit"
+  },
+  "dependencies": {
+    "@mapcairn/core": "0.1.0-rc.2",
+    "@mapcairn/theme": "0.1.0-rc.2"
+  },
+  "peerDependencies": {
+    "maplibre-gl": "^6.18.0"
+  },
+  "devDependencies": {
+    "@vanilla-extract/css": "^1.21.3",
+    "@vanilla-extract/vite-plugin": "^5.2.6",
+    "fast-check": "^4.10.2",
+    "happy-dom": "^21.0.4",
+    "maplibre-gl": "^6.18.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

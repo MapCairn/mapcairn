@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { createMapLibreMapAdapter } from "@mapcairn/adapter-maplibre";
 import {
   BUILT_IN_BASEMAP_CATALOGUE,
   createFakeServices,
@@ -21,7 +22,6 @@ import {
 } from "@mapcairn/core/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BrowserFileOpener } from "../adapters/files/BrowserFileOpener";
-import { createMapLibreMapAdapter } from "../adapters/maplibre/MapLibreMapAdapter";
 import { ValhallaRoutingProvider } from "../adapters/routing/ValhallaRoutingProvider";
 import { PhotonSuggestionProvider } from "../adapters/search/PhotonSuggestionProvider";
 import { HOST_BASEMAP_CATALOGUE } from "../basemaps/hostBasemaps";
@@ -29,7 +29,7 @@ import { WORKER_CACHE_KEY } from "../constants/workerCacheKey";
 import { LAYER_DEFINITIONS } from "../layers";
 import { createServices } from "./createServices";
 
-vi.mock("../adapters/maplibre/MapLibreMapAdapter", () => ({
+vi.mock("@mapcairn/adapter-maplibre", () => ({
   createMapLibreMapAdapter: vi.fn(() => ({})),
 }));
 vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url", () => ({

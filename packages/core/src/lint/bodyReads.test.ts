@@ -427,12 +427,12 @@ const EXEMPT: readonly Exemption[] = [
       "It hands back the text of the chosen file, which the line above read after the size check.",
   },
   {
-    file: "packages/web/src/adapters/maplibre/dataLayerPlan.ts",
+    file: "packages/adapter-maplibre/src/dataLayerPlan.ts",
     line: "text,",
     reason: "A label field of a map layer, not a body.",
   },
   {
-    file: "packages/web/src/adapters/maplibre/shapeLayers.ts",
+    file: "packages/adapter-maplibre/src/shapeLayers.ts",
     line: "options.text,",
     reason:
       "A label option of a map layer, not a body: the adapters are scanned for any use of the name.",
@@ -495,7 +495,9 @@ function sourceFiles(): string[] {
 
 /** Whether `text` is also a property name here, so any use of it is a finding. */
 function isStrict(file: string): boolean {
-  return file.includes("/adapters/");
+  return (
+    file.includes("/adapters/") || file.startsWith("packages/adapter-maplibre/")
+  );
 }
 
 function scanFile(file: string): { read: BodyRead; text: string }[] {
@@ -602,6 +604,7 @@ describe("the source trees' body reads", () => {
         "packages/web/src/adapters/routing/ValhallaRoutingProvider.ts",
         "packages/web/src/adapters/layers/FetchLayerSource.ts",
         "packages/web/src/adapters/shared/readJson.ts",
+        "packages/adapter-maplibre/src/MapLibreMapAdapter.ts",
         "packages/core/src/ports/search.ts",
         "packages/map/src/index.ts",
         "examples/embed/src/placeSearch.ts",
