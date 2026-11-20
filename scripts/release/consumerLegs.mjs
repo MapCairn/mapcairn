@@ -26,7 +26,9 @@ export const BUN_MINIMUM_RELEASE_AGE = 7 * 24 * 60 * 60;
 
 /**
  * Yarn's settings for the throwaway app: real `node_modules` (what most
- * projects use), no lifecycle scripts, no telemetry, and the same seven-day
+ * projects use), no lifecycle scripts, no telemetry, a lockfile that may be
+ * created (the app has none, and Yarn's hardened mode on a pull request
+ * forbids that), and the same seven-day
  * minimum release age as the repository's `.npmrc`.
  *
  * @returns {string} The text of `.yarnrc.yml`.
@@ -35,6 +37,8 @@ export function yarnSettings() {
   return [
     "nodeLinker: node-modules",
     "enableScripts: false",
+    "enableImmutableInstalls: false",
+    "enableHardenedMode: false",
     "enableTelemetry: false",
     'npmMinimalAgeGate: "7d"',
     "",

@@ -67,6 +67,8 @@ describe("yarn", () => {
     expect(settings).toContain("nodeLinker: node-modules");
     expect(settings).toContain("enableScripts: false");
     expect(settings).toContain("enableTelemetry: false");
+    expect(settings).toContain("enableImmutableInstalls: false");
+    expect(settings).toContain("enableHardenedMode: false");
     expect(settings).toContain('npmMinimalAgeGate: "7d"');
   });
 
