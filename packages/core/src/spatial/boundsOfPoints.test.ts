@@ -66,4 +66,51 @@ describe("boundsOfPoints", () => {
     ).toEqual({ south: 1, west: 2, north: 1, east: 2 });
     expect(boundsOfPoints([{ lat: Number.NaN, lng: 1 }])).toBeUndefined();
   });
+
+  it("gives the same width for every tie between equal widest gaps", () => {
+    const points = [0, 90, 180, 270].map((lng) => ({ lat: 0, lng }));
+    const widths = [0, 45, 90, 135].map((turn) => {
+      const bounds = boundsOfPoints(
+        points.map(({ lat, lng }) => ({ lat, lng: lng + turn })),
+      );
+      return (bounds?.east ?? 0) - (bounds?.west ?? 0);
+    });
+    expect(widths).toEqual([270, 270, 270, 270]);
+  });
+
+  it("boxes two points exactly half the globe apart as half the globe", () => {
+    const bounds = boundsOfPoints([
+      { lat: 0, lng: 0 },
+      { lat: 0, lng: 180 },
+    ]);
+    expect((bounds?.east ?? 0) - (bounds?.west ?? 0)).toBe(180);
+    const shifted = boundsOfPoints([
+      { lat: 0, lng: 90 },
+      { lat: 0, lng: -90 },
+    ]);
+    expect((shifted?.east ?? 0) - (shifted?.west ?? 0)).toBe(180);
+  });
+
+  it("keeps a narrow box across the antimeridian at non-integer longitudes", () => {
+    const bounds = boundsOfPoints([
+      { lat: 0, lng: 179.9 },
+      { lat: 0, lng: -179.9 },
+    ]);
+    expect(bounds?.west).toBe(179.9);
+    expect((bounds?.east ?? 0) - (bounds?.west ?? 0)).toBeCloseTo(0.2, 9);
+  });
+
+  it("gives the same box for longitudes a whole turn apart, and for a repeated point", () => {
+    const spot = { lat: 5, lng: 179.7 };
+    const expected = { south: 5, west: 179.7, north: 5, east: 179.7 };
+    for (const turns of [-2, -1, 0, 1, 2]) {
+      const bounds = boundsOfPoints([
+        { lat: spot.lat, lng: spot.lng + 360 * turns },
+        spot,
+      ]);
+      expect(bounds?.south).toBe(expected.south);
+      expect(bounds?.west).toBeCloseTo(expected.west, 9);
+      expect(bounds?.east).toBeCloseTo(expected.east, 9);
+    }
+  });
 });

@@ -13,6 +13,8 @@ import { measureLineDistance } from "./measurement";
 /** The widest a generated set reaches either side of its centre, so a set is under half the world wide and its short way is unambiguous. */
 const MAX_OFFSET_DEGREES = 60;
 const MAX_LATITUDE_DEGREES = 60;
+/** How far two longitudes may differ and still be the same place, as `GAP_EPSILON` in `boundsOfPaths`. */
+const LONGITUDE_TOLERANCE_DEGREES = 1e-9;
 const MIN_POINTS = 2;
 const MAX_POINTS = 8;
 
@@ -56,39 +58,62 @@ describe("boundsOfPoints, wherever a set of points sits on the globe", () => {
     });
   });
 
+  /** The same checks the property makes, so a counterexample can be kept as a fixed case. */
+  function expectShiftKeepsTheFit(
+    spread: readonly LatLng[],
+    centre: number,
+  ): void {
+    const reference = placeAt(0, spread);
+    const shifted = placeAt(centre, spread);
+    const referenceBounds = boundsOfPoints(reference);
+    const shiftedBounds = boundsOfPoints(shifted);
+    if (!referenceBounds || !shiftedBounds) {
+      throw new Error("A finite set has bounds.");
+    }
+    const width = (bounds: { west: number; east: number }) =>
+      bounds.east - bounds.west;
+    expect(width(shiftedBounds)).toBeCloseTo(width(referenceBounds), 9);
+
+    const line = (points: LatLng[]) =>
+      measureLineDistance(points.map(({ lng, lat }) => [lng, lat]));
+    expect(line(shifted)).toBeCloseTo(line(reference) as number, 6);
+
+    adapter.fitBounds(referenceBounds, { animate: false });
+    const referenceView = adapter.getView();
+    adapter.fitBounds(shiftedBounds, { animate: false });
+    const shiftedView = adapter.getView();
+    expect(shiftedView.zoom).toBeCloseTo(referenceView.zoom, 9);
+    expect(shiftedView.center.lng).toBeGreaterThanOrEqual(-180);
+    expect(shiftedView.center.lng).toBeLessThan(180);
+    // Compare round the circle: 180 less a rounding error and -180 are one place.
+    expect(
+      Math.abs(
+        wrapLongitude(
+          shiftedView.center.lng - (referenceView.center.lng + centre),
+        ),
+      ),
+    ).toBeLessThan(LONGITUDE_TOLERANCE_DEGREES);
+  }
+
   it("keeps the width, the distances and the fit when the set is shifted across the antimeridian", () => {
     fc.assert(
       fc.property(offsets, centres, (spread, centre) => {
-        const reference = placeAt(0, spread);
-        const shifted = placeAt(centre, spread);
-        const referenceBounds = boundsOfPoints(reference);
-        const shiftedBounds = boundsOfPoints(shifted);
-        if (!referenceBounds || !shiftedBounds) {
-          throw new Error("A finite set has bounds.");
-        }
-        const width = (bounds: { west: number; east: number }) =>
-          bounds.east - bounds.west;
-        expect(width(shiftedBounds)).toBeCloseTo(width(referenceBounds), 9);
-
-        const line = (points: LatLng[]) =>
-          measureLineDistance(points.map(({ lng, lat }) => [lng, lat]));
-        expect(line(shifted)).toBeCloseTo(line(reference) as number, 6);
-
-        adapter.fitBounds(referenceBounds, { animate: false });
-        const referenceView = adapter.getView();
-        adapter.fitBounds(shiftedBounds, { animate: false });
-        const shiftedView = adapter.getView();
-        expect(shiftedView.zoom).toBeCloseTo(referenceView.zoom, 9);
-        expect(shiftedView.center.lng).toBeGreaterThanOrEqual(-180);
-        expect(shiftedView.center.lng).toBeLessThan(180);
-        expect(
-          Math.abs(
-            shiftedView.center.lng -
-              wrapLongitude(referenceView.center.lng + centre),
-          ),
-        ).toBeLessThan(1e-9);
+        expectShiftKeepsTheFit(spread, centre);
       }),
       PROPERTY_PARAMETERS,
+    );
+  });
+
+  it("keeps the fit when the middle of the box lands within rounding of the antimeridian", () => {
+    // A set 120 wide, centred 150 east: its middle is 180 on one side and
+    // 180 less a rounding error on the other, which wrap to opposite ends.
+    expectShiftKeepsTheFit(
+      [
+        { lat: -59.99999999999993, lng: -3e-323 },
+        { lat: 6.4e-323, lng: 59.9999999999999 },
+        { lat: 0, lng: -9.80335238116569e-20 },
+      ],
+      150.00000000000003,
     );
   });
 
