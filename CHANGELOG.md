@@ -4,6 +4,16 @@ What changed in each release of the four SDK packages: `@mapcairn/core`, `@mapca
 
 Each entry says what you can now do and what to change when you upgrade, grouped by what it means for someone using the SDK. The same text is the body of the GitHub Release. The style guide is in `docs/guides/releasing.md`.
 
+## 0.1.0-rc.2 (2026-11-20)
+
+### What is new
+
+This release candidate has the same code as `0.1.0-rc.1`: nothing in `@mapcairn/core`, `@mapcairn/map`, `@mapcairn/react` or `@mapcairn/theme` has changed. What is new is how it reaches you. `0.1.0-rc.1` was published by hand. This one is published by the project's own release workflow from the same commit it was built on, and the tarballs on the GitHub Release are the files that go to the registry. ([#436](https://github.com/MapCairn/mapcairn/issues/436))
+
+If you already use `0.1.0-rc.1`, there is nothing to change and nothing to gain in how the packages behave. If you would rather install what the workflow published, add `@next` to the package names as before.
+
+The API is still settling, so a breaking change can land before `0.1.0`, and the changelog will list each one.
+
 ## 0.1.0-rc.1 (2026-11-20)
 
 ### What is new

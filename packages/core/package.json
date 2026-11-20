@@ -1,6 +1,6 @@
 {
   "name": "@mapcairn/core",
-  "version": "0.1.0-rc.1",
+  "version": "0.1.0-rc.2",
   "description": "Domain-agnostic ports, pure logic and basemap definitions for MapCairn",
   "license": "AGPL-3.0-only",
   "repository": {
