@@ -8,6 +8,7 @@ import {
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_IDENTIFY_LAYER,
+  SAMPLE_QUERY_LAYER,
 } from "@mapcairn/core";
 import {
   CONTRACT_IDENTIFY_LAYER,
@@ -240,6 +241,96 @@ describe("FetchLayerSource", () => {
       referrerPolicy: "no-referrer",
       mode: "cors",
     });
+  });
+
+  it("asks once for each side of the antimeridian and keeps a feature both sides hold once", async () => {
+    const net = scriptedFetch();
+    net.replyWith(async () => {
+      const east = net.urls.at(-1)?.includes("bbox=177");
+      return new Response(
+        JSON.stringify(
+          geojson(
+            east ? [point("a"), point("edge")] : [point("edge"), point("b")],
+          ),
+        ),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+    const source = new FetchLayerSource({ fetch: net.fetch });
+    const features = await source.load({
+      definition: SAMPLE_QUERY_LAYER,
+      controls: {},
+      now,
+      area: { west: 177, south: -19, east: 183, north: -15 },
+    });
+    expect(net.urls).toEqual([
+      "https://query.test/items?bbox=177,-19,180,-15&limit=4",
+      "https://query.test/items?bbox=-180,-19,-177,-15&limit=4",
+    ]);
+    expect(features.map((feature) => feature.id).sort()).toEqual([
+      "a",
+      "b",
+      "edge",
+    ]);
+  });
+
+  it("fails the load when either side of the antimeridian fails", async () => {
+    const net = scriptedFetch();
+    net.replyWith(async () =>
+      net.urls.length === 1
+        ? new Response(JSON.stringify(geojson([point("a")])))
+        : new Response("gone", { status: 500 }),
+    );
+    const source = new FetchLayerSource({ fetch: net.fetch });
+    await expect(
+      source.load({
+        definition: SAMPLE_QUERY_LAYER,
+        controls: {},
+        now,
+        area: { west: 177, south: -19, east: 183, north: -15 },
+      }),
+    ).rejects.toMatchObject({ kind: "network" });
+  });
+
+  it("stops the other request when one side of the antimeridian fails, and shows no partial result", async () => {
+    const net = scriptedFetch();
+    net.replyWith(async () =>
+      net.urls.length === 1
+        ? new Response("gone", { status: 500 })
+        : new Response(JSON.stringify(geojson([point("a")]))),
+    );
+    net.hold("bbox=-180");
+    const source = new FetchLayerSource({ fetch: net.fetch });
+    await expect(
+      source.load({
+        definition: SAMPLE_QUERY_LAYER,
+        controls: {},
+        now,
+        area: { west: 177, south: -19, east: 183, north: -15 },
+      }),
+    ).rejects.toMatchObject({ kind: "network" });
+    expect(net.inits[1]?.signal?.aborted).toBe(true);
+  });
+
+  it("still honours the caller's signal for both sides", async () => {
+    const net = scriptedFetch();
+    net.reply(geojson([point("a")]));
+    net.hold();
+    const controller = new AbortController();
+    const source = new FetchLayerSource({ fetch: net.fetch });
+    const load = source.load({
+      definition: SAMPLE_QUERY_LAYER,
+      controls: {},
+      now,
+      area: { west: 177, south: -19, east: 183, north: -15 },
+      signal: controller.signal,
+    });
+    controller.abort();
+    await expect(load).rejects.toMatchObject({ kind: "aborted" });
+    expect(net.inits.map((init) => init?.signal?.aborted)).toEqual([
+      true,
+      true,
+    ]);
   });
 
   it("treats an error status as a network failure", async () => {

@@ -6,6 +6,7 @@ import {
   SAMPLE_AREA_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_LINE_LAYER,
+  SAMPLE_QUERY_LAYER,
   SAMPLE_TILE_LAYER,
   samplePoint,
 } from "../fakes/layerFixtures";
@@ -15,7 +16,14 @@ import {
   type Decoder,
   geojsonDecoder,
 } from "./decoders";
-import { decodeDetail, decodeFeed, detailUrl, feedUrl, tileUrl } from "./feed";
+import {
+  decodeDetail,
+  decodeFeed,
+  decodeFeeds,
+  detailUrl,
+  feedUrl,
+  tileUrl,
+} from "./feed";
 import { matchesFilter } from "./filter";
 
 const NOW = Date.UTC(2026, 10, 9, 8, 30);
@@ -351,5 +359,98 @@ describe("URLs", () => {
         detailUrl(SAMPLE_FEED_LAYER, withArea("https://alerts.test/g")),
       ).toBeNull();
     });
+  });
+});
+
+describe("decodeFeeds", () => {
+  const registry = createDecoderRegistry();
+  const answer = (...ids: string[]) => ({
+    type: "FeatureCollection",
+    features: ids.map((id) => point(id, { title: id })),
+  });
+  const idsOf = (features: readonly { id: string }[]) =>
+    features.map((feature) => feature.id);
+
+  it("decodes one response as decodeFeed does", () => {
+    expect(decodeFeeds(SAMPLE_QUERY_LAYER, [answer("a")], registry)).toEqual(
+      decodeFeed(SAMPLE_QUERY_LAYER, answer("a"), registry),
+    );
+  });
+
+  it("joins the responses in order and keeps a feature both hold once", () => {
+    expect(
+      idsOf(
+        decodeFeeds(
+          SAMPLE_QUERY_LAYER,
+          [answer("a", "b"), answer("b", "c")],
+          registry,
+        ),
+      ),
+    ).toEqual(["a", "b", "c"]);
+  });
+
+  it("keeps features with no id of their own from different responses, each under its own id", () => {
+    const noId = (lng: number) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [lng, 1] },
+      properties: { name: "x" },
+    });
+    const kept = decodeFeeds(
+      SAMPLE_QUERY_LAYER,
+      [
+        { type: "FeatureCollection", features: [noId(179.5)] },
+        { type: "FeatureCollection", features: [noId(-179.5)] },
+      ],
+      registry,
+    );
+    expect(kept).toHaveLength(2);
+    expect(new Set(kept.map((feature) => feature.id)).size).toBe(2);
+    expect(kept.map((feature) => feature.fields.id)).toEqual(
+      kept.map((feature) => feature.id),
+    );
+  });
+
+  it("keeps two different features that share a provider id, the later under a new id", () => {
+    const at = (id: string, lng: number) => point(id, { title: id }, [lng, 1]);
+    const kept = decodeFeeds(
+      SAMPLE_QUERY_LAYER,
+      [
+        { type: "FeatureCollection", features: [at("a", 179.5)] },
+        { type: "FeatureCollection", features: [at("a", -179.5)] },
+      ],
+      registry,
+    );
+    expect(kept).toHaveLength(2);
+    expect(kept[0]?.id).toBe("a");
+    expect(kept[1]?.id).not.toBe("a");
+  });
+
+  it("is not stopped by one response with nothing in it", () => {
+    expect(
+      idsOf(decodeFeeds(SAMPLE_QUERY_LAYER, [answer(), answer("a")], registry)),
+    ).toEqual(["a"]);
+  });
+
+  it("is empty when no response holds a feature", () => {
+    expect(() =>
+      decodeFeeds(SAMPLE_QUERY_LAYER, [answer(), answer()], registry),
+    ).toThrow(expect.objectContaining({ kind: "empty" }));
+  });
+
+  it("refuses the whole when one response cannot be decoded", () => {
+    expect(() =>
+      decodeFeeds(SAMPLE_QUERY_LAYER, [answer("a"), "not json"], registry),
+    ).toThrow(expect.objectContaining({ kind: "invalid" }));
+  });
+
+  it("keeps one more than the layer's cap across the responses, so more can be told to exist", () => {
+    const { maxFeatures } = SAMPLE_QUERY_LAYER.source;
+    const kept = decodeFeeds(
+      SAMPLE_QUERY_LAYER,
+      [answer("a", "b"), answer("c", "d", "e")],
+      registry,
+    );
+    expect(kept).toHaveLength(maxFeatures + 1);
+    expect(idsOf(kept)).toEqual(["a", "b", "c", "d"]);
   });
 });

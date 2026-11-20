@@ -14,6 +14,7 @@ import {
   SAMPLE_ALERT_LAYER,
   SAMPLE_FEED_LAYER,
   SAMPLE_IDENTIFY_LAYER,
+  SAMPLE_QUERY_LAYER,
   samplePoint,
 } from "./layerFixtures";
 
@@ -90,6 +91,21 @@ describe("FakeLayerSource", () => {
     });
     expect(source.requests.map((request) => request.url)).toEqual([
       "https://sample.test/feed/all_hour.json",
+    ]);
+  });
+
+  it("records a request for each side of the antimeridian", async () => {
+    const source = new FakeLayerSource();
+    source.setFeatures(SAMPLE_QUERY_LAYER.id, [samplePoint("a")]);
+    await source.load({
+      definition: SAMPLE_QUERY_LAYER,
+      controls: {},
+      now,
+      area: { west: 177, south: -19, east: 183, north: -15 },
+    });
+    expect(source.requests.map((request) => request.url)).toEqual([
+      "https://query.test/items?bbox=177,-19,180,-15&limit=4",
+      "https://query.test/items?bbox=-180,-19,-177,-15&limit=4",
     ]);
   });
 

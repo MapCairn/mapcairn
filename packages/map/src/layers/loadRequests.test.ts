@@ -97,6 +97,25 @@ describe("wantedLoads", () => {
     expect(wanted?.key).toMatch(/^https:\/\/query\.test\/items\?bbox=.+#0$/);
   });
 
+  it("keys a window across the antimeridian by the request for each side of it", () => {
+    const view: QueryView = {
+      area: { west: 178, south: -18, east: 182, north: -16 },
+      zoom: 12,
+    };
+    const [wanted] = wantedLoads(
+      inputs({ enabled: [SAMPLE_QUERY_LAYER.id], view }),
+    );
+    expect(wanted?.area).toEqual({
+      west: 177,
+      south: -19,
+      east: 183,
+      north: -15,
+    });
+    expect(wanted?.key).toBe(
+      "https://query.test/items?bbox=177,-19,180,-15&limit=4 https://query.test/items?bbox=-180,-19,-177,-15&limit=4#0",
+    );
+  });
+
   it("keeps the window it had while the view stays inside it", () => {
     const window = { west: 2, south: 48.5, east: 2.8, north: 49.2 };
     const [wanted] = wantedLoads(
