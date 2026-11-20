@@ -21,15 +21,17 @@
  * folder. The scratchpad is not allowed on Windows, where its place is not
  * known. `guardPaths.mjs` reads paths in the forms of macOS,
  * Linux and Windows (backslashes, drive letters, Git Bash `/c/` paths, `\\?\`
- * prefixes, `.` and `..`, case-insensitive file systems, symbolic links), and
- * `guardCommands.mjs` holds the rules for shell commands.
+ * prefixes, `.` and `..`, case-insensitive file systems, symbolic links).
  *
- * It is a best-effort check of text, not a sandbox. It reads what a shell
- * command says (quotes, `&&`, `;`, `|`, command substitution, backticks, `sh -c`, `env` and
- * `timeout` wrappers, redirections), not what a program does. It cannot see
- * what an interpreter writes (`node -e`, `python -c`, a script), a command
- * assembled in a variable, or a path that a glob or `$VAR` expands; it blocks a
- * path that holds one rather than guess. Tools other than Claude Code do not
+ * A Bash command must first be on the default-deny allowlist in
+ * `guardAllowlist.mjs`: plain words with no shell syntax, matching one of the
+ * listed commands and its options. A command that is on it is then read by the
+ * older shell rules in `guardCommands.mjs`, which can only add a refusal.
+ *
+ * It is a tripwire, not a sandbox. The allowed commands run with the agent's
+ * own permissions, `git fetch` and `gh` reach the network, and the guard sees
+ * the command's text, not what a program does (Vitest, for `test-reviewer`,
+ * runs whatever the worktree's tests do). Tools other than Claude Code do not
  * run it. A fault in the guard never blocks the main session or another
  * agent: input it cannot read exits 0 with a warning, and only a failure while
  * deciding on a reviewer's own call blocks it. If the script is missing or
@@ -37,8 +39,10 @@
  * which the script cannot change. See "Keeping reviewers read-only" in
  * `docs/guides/working-with-agents.md`.
  */
+import { readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isEntryPoint } from "../entryPoint.mjs";
+import { checkAllowlist } from "./guardAllowlist.mjs";
 import { checkCommand } from "./guardCommands.mjs";
 import {
   canWrite,
@@ -114,6 +118,27 @@ function defaultTempDirs() {
   return [...new Set([tmpdir(), ...unix])];
 }
 
+/** A worktree's `.git` file is one short line; anything larger is not one. */
+const MAX_GIT_FILE_BYTES = 4096;
+
+/**
+ * Reads a small regular file as text, or gives nothing for a folder, a missing
+ * file, a large one or one that cannot be read.
+ *
+ * @param {string} file
+ * @returns {string | undefined}
+ */
+function readSmallText(file) {
+  try {
+    const stats = statSync(file);
+    return stats.isFile() && stats.size <= MAX_GIT_FILE_BYTES
+      ? readFileSync(file, "utf8")
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Decides on a write by a file tool.
  *
@@ -143,12 +168,14 @@ function decideFile(agent, raw, cwd, context) {
  */
 function decideCommand(agent, command, cwd, context) {
   const here = resolvePath(cwd, null, context.platform);
-  const walk = {
+  const walk = () => ({
     cwd: here === undefined ? null : show(here),
     context,
     depth: 0,
-  };
-  const reason = checkCommand(typeof command === "string" ? command : "", walk);
+  });
+  const text = typeof command === "string" ? command : "";
+  const reason =
+    checkAllowlist(text, agent, walk()) ?? checkCommand(text, walk());
   return reason === undefined ? { allow: true } : refuse(agent, reason);
 }
 
@@ -161,6 +188,7 @@ function decideCommand(agent, command, cwd, context) {
  * @param {import("./guardPaths.mjs").Platform} [options.platform] Defaults to this system.
  * @param {(p: string) => string} [options.realpath] Follows symbolic links.
  * @param {string[]} [options.tempDirs] The system's temporary folders.
+ * @param {(p: string) => string | undefined} [options.readText] Reads a worktree's `.git` file.
  * @returns {Decision}
  */
 export function decide(input, options = {}) {
@@ -186,6 +214,7 @@ export function decide(input, options = {}) {
     platform,
     realpath: options.realpath ?? realpathOfExisting,
     tempDirs: options.tempDirs ?? defaultTempDirs(),
+    readText: options.readText ?? readSmallText,
     zone: { root: project.root, segments: [...project.segments, ...ZONE] },
   };
   const toolInput = input.tool_input ?? {};

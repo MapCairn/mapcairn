@@ -20,7 +20,7 @@ Example: on #463 the contrast check flattened a translucent text colour over its
 2. `git fetch <origin-or-upstream> pull/<n>/head`, note the head SHA, and find the base with `git merge-base <origin-or-upstream>/main <head-sha>`.
 3. `git worktree add --detach .claude/worktrees/review-<n> <head-sha>`, then `npm ci --ignore-scripts` inside it. Never edit the branch, the main checkout or another worktree.
 4. List the diff with `git diff --stat <base> <head-sha>` and read large files (a long table row in `DESIGN.md`) by their added lines only (`git diff -U0 <base> <head-sha> -- <file>` shows the changed lines with no context; read the ones that start with `+` by eye), not whole. Sort the files into code (what ships), tests (`*.test.ts`, `*.test.tsx`, `packages/web/e2e/**`, fixtures and support) and documents.
-5. Run the changed and new tests once at the head and confirm they pass. Run Vitest from the package folder (`cd packages/<name>`, then `npx --no-install vitest run src/<file>`): from the repository root the config also loads `packages/web`, which needs the built SDK. A failure here is a finding of its own; stop the experiments until you know why.
+5. Run the changed and new tests once at the head and confirm they pass. Run Vitest from the package folder, as one command: `cd .claude/worktrees/review-<n>/packages/<name> && npx --no-install vitest run src/<file>`. From the repository root the config also loads `packages/web`, which needs the built SDK. That joined `cd` form is the only one the reviewer write guard accepts, and a subagent's working folder is reset between calls. A failure here is a finding of its own; stop the experiments until you know why.
 
 ## 2. Read the claims and the assertions
 
@@ -79,7 +79,7 @@ Look for each of these in the new and changed tests:
 
 When a test fails sometimes:
 
-1. Reproduce: run it alone, repeated (`--repeat-each=20 --retries=0` in Playwright; a loop of `vitest run <file>` in Vitest), then with others and under load (`--workers` raised). Note the rate and the first failing message.
+1. Reproduce: run it alone, repeated (in Vitest, the same `cd <worktree>/packages/<name> && npx --no-install vitest run <file>` call several times, one run per call, because the reviewer write guard refuses a shell loop; in Playwright `--repeat-each=20 --retries=0`, which is not on the guard's list, so the `test-reviewer` agent asks its caller to run it), then with others and under load (`--workers` raised). Note the rate and the first failing message.
 2. Classify: timing (a wait or a timer), order (shared or leaked state), environment (load, port, browser or system difference), or a real bug in the app that only shows sometimes.
 3. Fix the cause: pin the time, wait for the page's own state, isolate the state, give the run its own port, or fix the app. Never loosen the assertion, lengthen a timeout, add a retry or skip the test. A timeout that passes when the spec runs alone is a load flake (`pick-up-issue` section 5): say so, and leave the timeout alone.
 4. Show the fix with the same repeated run, and file what you cannot fix with `create-issue`.
