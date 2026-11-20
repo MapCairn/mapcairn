@@ -19,7 +19,8 @@
  * Each entry names the program and its subcommand, the options it accepts
  * (with a check on each value), the operands it accepts, where it may run
  * (anywhere, the project folder only, or inside a worktree under
- * `.claude/worktrees/<name>/`) and whether only `test-reviewer` may run it.
+ * `.claude/worktrees/<name>/` that git registered, see `isRegisteredWorktree`)
+ * and whether only `test-reviewer` may run it.
  * An option that is not listed is refused, so a new option of git, gh, grep or
  * rg that runs a program is refused until someone adds it on purpose.
  *
@@ -27,7 +28,13 @@
  * maintainer decides whether it joins the list. See "Keeping reviewers
  * read-only" in `docs/guides/working-with-agents.md`.
  */
-import { isInside, isProjectRoot, resolvePath, show } from "./guardPaths.mjs";
+import {
+  isInside,
+  isProjectRoot,
+  isRegisteredWorktree,
+  resolvePath,
+  show,
+} from "./guardPaths.mjs";
 
 /** Where the list lives, as the refusal names it. */
 export const ALLOWLIST_FILE = "scripts/agents/guardAllowlist.mjs";
@@ -227,6 +234,9 @@ const isOperand = (v) => v !== "" && !v.startsWith("-");
  *   that take a value, as `--name=value`, `--name value`, `-x value` or `-xvalue`.
  * @property {string} [bundle] Single-letter flags that may be written together (`-rn`).
  * @property {boolean} [numberFlag] Whether `-<number>` is a count (`git log -5`).
+ * @property {string[]} [inlineOnly] Options whose value is optional to the
+ *   program, so it is taken only inline (`--pretty=oneline`, `-U3`): read with
+ *   a separate word, `--pretty --textconv` would hide an option in the value.
  * @property {boolean} [dashes] Whether `--` ends the options and starts the paths.
  */
 
@@ -243,6 +253,39 @@ function inlineValue(arg) {
     return equals === -1 ? undefined : arg.slice(equals + 1);
   }
   return arg.length > 2 ? arg.slice(2) : undefined;
+}
+
+/**
+ * Reads the value of an option that takes one: inline, or the next word when
+ * the option allows it and that word is not another option.
+ *
+ * @param {string} name The command, for a refusal.
+ * @param {string} key The option.
+ * @param {string[]} args
+ * @param {number} index Where the option is.
+ * @param {OptionSpec} spec
+ * @returns {{ reason: string } | { key: string, value: string, used: number }}
+ */
+function readValue(name, key, args, index, spec) {
+  const inline = inlineValue(args[index] ?? "");
+  if (inline === undefined && (spec.inlineOnly ?? []).includes(key)) {
+    const form = key.startsWith("--") ? `${key}=` : key;
+    return {
+      reason: `${name} ${key} takes its value only in the same word (${form}<value>)`,
+    };
+  }
+  const value = inline ?? args[index + 1];
+  if (inline === undefined && value?.startsWith("-")) {
+    return {
+      reason: `${name} ${key} is followed by ${value}, which would be read as its value; write the value in the same word`,
+    };
+  }
+  const check = spec.values?.[key];
+  if (value === undefined || check === undefined || !check(value)) {
+    const shown = value === undefined ? "no value" : `the value ${value}`;
+    return { reason: `${name} ${key} with ${shown} is not on the list` };
+  }
+  return { key, value, used: inline === undefined ? 2 : 1 };
 }
 
 /**
@@ -264,16 +307,8 @@ function readOption(name, args, index, spec) {
   if (spec.numberFlag && /^-[1-9][0-9]{0,5}$/.test(arg)) {
     return { key: "-n", value: arg.slice(1), used: 1 };
   }
-  const check = spec.values?.[key];
-  if (check !== undefined) {
-    const inline = inlineValue(arg);
-    const value = inline ?? args[index + 1];
-    if (value === undefined || !check(value)) {
-      return {
-        reason: `${name} ${key} with ${value === undefined ? "no value" : `the value ${value}`} is not on the list`,
-      };
-    }
-    return { key, value, used: inline === undefined ? 2 : 1 };
+  if (spec.values?.[key] !== undefined) {
+    return readValue(name, key, args, index, spec);
   }
   const bundle = spec.bundle ?? "";
   if (!long && [...arg.slice(1)].every((letter) => bundle.includes(letter))) {
@@ -413,6 +448,9 @@ function checkGhApi(args) {
     : "gh api is allowed only as gh api 'repos/MapCairn/mapcairn/contents/<path>?ref=<sha>', with no options";
 }
 
+/** Git options whose value git treats as optional, so it must be inline. */
+const GIT_INLINE_ONLY = ["--format", "--pretty", "--unified", "-U"];
+
 /** Options that change only how `git log`, `show` and `diff` print. */
 const GIT_PRINT_FLAGS = [
   "--stat",
@@ -473,7 +511,9 @@ function isWorktreeFolder(raw, context) {
 }
 
 /**
- * Whether a path is inside a worktree (the worktree itself or below it).
+ * Whether a path is inside a worktree git registered for the project (the
+ * worktree itself or below it), and is not pathspec magic (`:/`, `:(top)`),
+ * which git reads from the top of the repository instead.
  *
  * @param {string} raw
  * @param {Context} context
@@ -482,7 +522,7 @@ function isWorktreeFolder(raw, context) {
 function isInWorktree(raw, context) {
   const { walk } = context;
   const place = resolvePath(raw, walk.cwd, walk.context.platform, true);
-  return isInside(place, walk.context, 1);
+  return !raw.startsWith(":") && isRegisteredWorktree(place, walk.context);
 }
 
 /**
@@ -608,7 +648,12 @@ const ENTRIES = [
     where: "anywhere",
     check: withOptions(
       "git show",
-      { flags: GIT_PRINT_FLAGS, values: GIT_PRINT_VALUES, dashes: true },
+      {
+        flags: GIT_PRINT_FLAGS,
+        values: GIT_PRINT_VALUES,
+        inlineOnly: GIT_INLINE_ONLY,
+        dashes: true,
+      },
       each("git show", isObject),
     ),
   },
@@ -641,6 +686,7 @@ const ENTRIES = [
           "-G": isText,
         },
         numberFlag: true,
+        inlineOnly: GIT_INLINE_ONLY,
         dashes: true,
       },
       each("git log", isRevision),
@@ -654,6 +700,7 @@ const ENTRIES = [
       {
         flags: [...GIT_PRINT_FLAGS, "--cached", "--staged", "--merge-base"],
         values: GIT_PRINT_VALUES,
+        inlineOnly: GIT_INLINE_ONLY,
         dashes: true,
       },
       each("git diff", isRevision),
@@ -884,7 +931,7 @@ function placeProblem(entry, walk) {
   if (entry.where === "project" && !isProjectRoot(here, walk.context)) {
     return `${entry.words.join(" ")} runs only from the project folder, so the project's own copy runs`;
   }
-  if (entry.where === "worktree" && !isInside(here, walk.context, 1)) {
+  if (entry.where === "worktree" && !isRegisteredWorktree(here, walk.context)) {
     return `${entry.words.join(" ")} runs only inside a worktree under .claude/worktrees/<name>/ (use cd <worktree> && ...)`;
   }
   return undefined;
@@ -925,7 +972,7 @@ function takeCd(lexemes, agent, walk) {
     walk.context.platform,
     true,
   );
-  if (place === undefined || !isInside(place, walk.context, 1)) {
+  if (place === undefined || !isRegisteredWorktree(place, walk.context)) {
     return {
       reason: `cd ${words[1]} is not a folder inside a worktree under .claude/worktrees/<name>/`,
     };

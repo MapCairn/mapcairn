@@ -45,6 +45,9 @@ export const ZONE = [".claude", "worktrees"];
  * @property {string[]} [tempDirs] The system's temporary folders, which can
  *   hold a session scratchpad (none on Windows, where its place is not known).
  * @property {string[][]} [tempKeys] `tempDirs` with links followed, remembered.
+ * @property {(p: string) => string | undefined} [readText] Reads a small text
+ *   file, or gives nothing when it cannot (missing, a folder). Used only to
+ *   read a worktree's `.git` file.
  */
 
 /**
@@ -286,6 +289,52 @@ export function isProjectRoot(resolved, context) {
   return (
     key.length === root.length &&
     root.every((segment, index) => key[index] === segment)
+  );
+}
+
+/**
+ * Whether a path is in a worktree that git registered for this project: the
+ * folder one level below `.claude/worktrees` holds a `.git` file (a gitfile,
+ * not a folder) whose `gitdir:` names a folder directly below the project's
+ * `.git/worktrees`. A reviewer cannot write a `.git` file (see `canWrite`), so
+ * a folder it made with `Write` is never one, and git run there would find the
+ * main repository instead.
+ *
+ * @param {Resolved | undefined} resolved
+ * @param {Context} context
+ * @returns {boolean}
+ */
+export function isRegisteredWorktree(resolved, context) {
+  if (
+    resolved === undefined ||
+    context.readText === undefined ||
+    !isInside(resolved, context, 1)
+  ) {
+    return false;
+  }
+  const real = followLinks(resolved, context);
+  const zone = followLinks(context.zone, context);
+  const tree = {
+    root: real.root,
+    segments: real.segments.slice(0, zone.segments.length + 1),
+  };
+  const text = context.readText(`${show(tree)}/.git`) ?? "";
+  const gitdir = /^gitdir: ([^\r\n]+)\r?\n?$/.exec(text)?.[1];
+  const target = resolvePath(gitdir, show(tree), context.platform);
+  if (target === undefined) {
+    return false;
+  }
+  const records = keyOf(
+    {
+      root: zone.root,
+      segments: [...zone.segments.slice(0, -ZONE.length), ".git", "worktrees"],
+    },
+    context,
+  );
+  const key = keyOf(target, context);
+  return (
+    key.length === records.length + 1 &&
+    records.every((segment, index) => key[index] === segment)
   );
 }
 

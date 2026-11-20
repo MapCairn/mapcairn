@@ -39,6 +39,7 @@
  * which the script cannot change. See "Keeping reviewers read-only" in
  * `docs/guides/working-with-agents.md`.
  */
+import { readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { checkAllowlist } from "./guardAllowlist.mjs";
@@ -117,6 +118,27 @@ function defaultTempDirs() {
   return [...new Set([tmpdir(), ...unix])];
 }
 
+/** A worktree's `.git` file is one short line; anything larger is not one. */
+const MAX_GIT_FILE_BYTES = 4096;
+
+/**
+ * Reads a small regular file as text, or gives nothing for a folder, a missing
+ * file, a large one or one that cannot be read.
+ *
+ * @param {string} file
+ * @returns {string | undefined}
+ */
+function readSmallText(file) {
+  try {
+    const stats = statSync(file);
+    return stats.isFile() && stats.size <= MAX_GIT_FILE_BYTES
+      ? readFileSync(file, "utf8")
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Decides on a write by a file tool.
  *
@@ -166,6 +188,7 @@ function decideCommand(agent, command, cwd, context) {
  * @param {import("./guardPaths.mjs").Platform} [options.platform] Defaults to this system.
  * @param {(p: string) => string} [options.realpath] Follows symbolic links.
  * @param {string[]} [options.tempDirs] The system's temporary folders.
+ * @param {(p: string) => string | undefined} [options.readText] Reads a worktree's `.git` file.
  * @returns {Decision}
  */
 export function decide(input, options = {}) {
@@ -191,6 +214,7 @@ export function decide(input, options = {}) {
     platform,
     realpath: options.realpath ?? realpathOfExisting,
     tempDirs: options.tempDirs ?? defaultTempDirs(),
+    readText: options.readText ?? readSmallText,
     zone: { root: project.root, segments: [...project.segments, ...ZONE] },
   };
   const toolInput = input.tool_input ?? {};

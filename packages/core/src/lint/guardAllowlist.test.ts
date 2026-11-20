@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -30,6 +38,26 @@ interface Decision {
   reason?: string;
 }
 
+/**
+ * The `.git` files on the fake disk: the registered worktree `review-12`, and
+ * folders that only look like one.
+ */
+const GIT_FILES: Record<string, string> = {
+  [`${WORKTREE}/.git`]: `gitdir: ${ROOT}/.git/worktrees/review-12\n`,
+  [`${ROOT}/.claude/worktrees/relative/.git`]:
+    "gitdir: ../../../.git/worktrees/relative\n",
+  [`${ROOT}/.claude/worktrees/elsewhere/.git`]:
+    "gitdir: /tmp/x/.git/worktrees/elsewhere\n",
+  [`${ROOT}/.claude/worktrees/sibling/.git`]:
+    "gitdir: /home/dev/othercairn/.git/worktrees/sibling\n",
+  [`${ROOT}/.claude/worktrees/deeper/.git`]: `gitdir: ${ROOT}/.git/worktrees/a/b\n`,
+  [`${ROOT}/.claude/worktrees/junk/.git`]: "not a gitfile\n",
+};
+
+function readText(file: string): string | undefined {
+  return GIT_FILES[file];
+}
+
 function bash(
   command: string,
   agent = "fresh-eyes-reviewer",
@@ -47,6 +75,7 @@ function bash(
       platform: "linux",
       realpath: (p: string) => p,
       tempDirs: ["/tmp"],
+      readText,
     },
   );
 }
@@ -565,6 +594,114 @@ describe("what the allowlist refuses", () => {
     expect(bash(command, "test-reviewer", cwd).allow).toBe(false);
   });
 
+  describe("a folder under .claude/worktrees that is not a registered worktree", () => {
+    const folders = [
+      ["a plain folder a reviewer wrote", "plain"],
+      ["a gitfile that points outside the project", "elsewhere"],
+      ["a gitfile that points at another project's records", "sibling"],
+      ["a gitfile that points below a worktree record", "deeper"],
+      ["a .git that is not a gitfile", "junk"],
+    ];
+    it.each(folders)("refuses the cd form in %s", (_name, folder) => {
+      const tree = `${ROOT}/.claude/worktrees/${folder}`;
+      for (const command of [
+        `cd ${tree} && git status`,
+        `cd ${tree} && git restore -- a.ts`,
+        `cd ${tree} && npm ci --ignore-scripts`,
+        `cd ${tree}/packages/core && npx --no-install vitest run src/a.test.ts`,
+      ]) {
+        expect(bash(command, "test-reviewer").allow, command).toBe(false);
+      }
+    });
+
+    it.each(folders)(
+      "refuses worktree commands run from %s",
+      (_name, folder) => {
+        const tree = `${ROOT}/.claude/worktrees/${folder}`;
+        for (const command of [
+          "git restore -- a.ts",
+          "npm ci --ignore-scripts",
+          "npx --no-install vitest run src/a.test.ts",
+        ]) {
+          expect(bash(command, "test-reviewer", tree).allow, command).toBe(
+            false,
+          );
+        }
+      },
+    );
+
+    it("reads the .git file on disk when no reader is given", () => {
+      const root = realpathSync(mkdtempSync(path.join(tmpdir(), "guard-")));
+      try {
+        const zone = path.join(root, ".claude", "worktrees");
+        mkdirSync(path.join(zone, "real"), { recursive: true });
+        mkdirSync(path.join(zone, "cloned", ".git"), { recursive: true });
+        writeFileSync(
+          path.join(zone, "real", ".git"),
+          `gitdir: ${path.join(root, ".git", "worktrees", "real")}\n`,
+        );
+        const run = (folder: string) =>
+          decide(
+            {
+              tool_name: "Bash",
+              tool_input: { command: "npm ci --ignore-scripts" },
+              cwd: path.join(zone, folder),
+              agent_type: "test-reviewer",
+            },
+            { projectDir: root },
+          ).allow;
+        expect(run("real")).toBe(true);
+        expect(run("cloned")).toBe(false);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+
+    it("accepts a gitfile with a relative gitdir into the project's records", () => {
+      const tree = `${ROOT}/.claude/worktrees/relative`;
+      expect(bash(`cd ${tree} && git status`, "test-reviewer").allow).toBe(
+        true,
+      );
+    });
+  });
+
+  it.each([
+    `git restore --source=${SHA} -- :/scripts/agents/guardAllowlist.mjs`,
+    "git restore -- ':(top)AGENTS.md'",
+    "git restore :/AGENTS.md",
+    "git restore -- ':!x'",
+  ])("refuses pathspec magic in git restore: %s", (rest) => {
+    expect(bash(`cd ${WORKTREE} && ${rest}`, "test-reviewer").allow).toBe(
+      false,
+    );
+  });
+
+  it.each([
+    "git show --pretty --textconv HEAD:x",
+    "git log --format --output=x",
+    "git log --pretty --ext-diff",
+    "git diff -U --ext-diff",
+    "git diff --unified --textconv",
+    "git diff --unified 3",
+    "git log -U 3",
+    "git log -n --output=x",
+    "git log --author --output=x",
+    "grep -e -x docs",
+    `gh pr view 12 ${REPO_OPTION} --json --web`,
+    "rg -g --pre=cat x .",
+  ])("refuses an option whose value is another option: %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it.each([
+    "git log --pretty=oneline",
+    "git diff --unified=3",
+    "git diff -U3",
+    "git log -n 5 --author dev",
+  ])("still takes %s", (command) => {
+    expect(bash(command)).toEqual({ allow: true });
+  });
+
   it("refuses a command that is too long", () => {
     expect(bash(`git log ${"a".repeat(5000)}`).allow).toBe(false);
   });
@@ -639,7 +776,17 @@ describe("the allowlist on Windows and macOS", () => {
         cwd: root,
         agent_type: agent,
       },
-      { projectDir: root, platform, realpath: (p: string) => p, tempDirs: [] },
+      {
+        projectDir: root,
+        platform,
+        realpath: (p: string) => p,
+        tempDirs: [],
+        // git writes the gitdir with forward slashes, in the project's own case.
+        readText: (file: string) =>
+          /review-12\/\.git$/i.test(file)
+            ? `gitdir: ${root.replaceAll("\\", "/")}/.git/worktrees/review-12\r\n`
+            : undefined,
+      },
     ).allow;
   }
 
