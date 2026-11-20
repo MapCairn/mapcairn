@@ -1,15 +1,37 @@
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-mark-dark.svg">
+    <img src="docs/brand/logo-mark-light.svg" alt="The MapCairn logo: a stack of four uneven stones" width="96" height="96">
+  </picture>
+</p>
+
 # MapCairn
 
+[![CI](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MapCairn/mapcairn/actions/workflows/ci.yml)
+[![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16543/badge)](https://www.bestpractices.dev/projects/16543)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MapCairn/mapcairn/badge)](https://scorecard.dev/viewer/?uri=github.com/MapCairn/mapcairn)
 
-**MapCairn is an open-source React SDK for map applications that need to be accessible and private, with a finished interface.** It is built on MapLibre GL JS and is meant for teams building public-interest map applications, such as open data and hazard maps. It gives them the parts a map renderer leaves to them: the whole interface around the map, open data layers written as data, measuring and drawing tools, a design system, and small interfaces that keep every service replaceable and testable.
+**MapCairn is an open-source React SDK for maps that serve the public.** It is for teams building public-interest map applications, such as open data and hazard maps, who would rather spend their time on the data than on the interface around it. MapCairn supplies that interface on top of MapLibre GL JS: search, measuring and drawing tools, a layers panel and a design system, built to be accessible and private. Open data layers are written as data, and every service the map talks to sits behind a small interface, so it can be replaced or faked in a test.
+
+This repository also holds the playground, a reference site built from the SDK's four packages.
+
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/playground-dark.png">
+    <img src="docs/images/playground-light.png" alt="The playground showing Africa with the earthquakes layer turned on and a straight line measured from the south of the continent to Kenya, about 4,000 kilometres, with the map credits open at the bottom right" width="100%">
+  </picture>
+</p>
+
+The playground in its light and dark themes, with the earthquakes layer on and a distance measured. Map data and tile credits are in [`ATTRIBUTIONS.md`](ATTRIBUTIONS.md).
 
 **Status:** the SDK is usable from this repository, but the packages are not on npm yet. Publishing them is part of the First release milestone in [`ROADMAP.md`](ROADMAP.md).
 
 ## Try the playground
 
-The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here.
+The playground at [mapcairn.timothybrits.co.za/map](https://mapcairn.timothybrits.co.za/map) is a complete map built from the SDK's four packages, and it is where the SDK is shown working and where its browser tests run. Search for a place, measure a distance or draw a shape, turn on an open data layer such as earthquakes or rainfall, switch the interface between English and Afrikaans in Settings, and open Help to find the About block that links back here. The recording below searches for a place, turns on the earthquakes layer and measures a distance.
+
+![A recording of the playground: a search box suggests places, the earthquakes layer is turned on in Map options, and a distance is measured across Africa](docs/images/playground-demo.gif)
 
 ## Embed a map
 
