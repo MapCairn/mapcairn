@@ -22,12 +22,20 @@ export const root = style({
  * The credits button sits on the same translucent chrome surface as the other
  * controls, so the icon reads over any basemap, over place names on a raster
  * map included. Hover keeps the surface and adds the hairline tint over it.
+ *
+ * The surface sits behind a doubled class selector: the `IconButton` recipe
+ * sets a transparent background, a radius and no shadow at one class of
+ * specificity, so which of the two won depended on the order the stylesheets
+ * loaded in. When the recipe won, the button lost its dark surface and showed
+ * a bare blur over a light map.
  */
 export const onMapIcon = style({
-  ...surfaceBlurStyle,
-  borderRadius: "50%",
-  boxShadow: tokens.shadow.floating,
   selectors: {
+    "&&": {
+      ...surfaceBlurStyle,
+      borderRadius: "50%",
+      boxShadow: tokens.shadow.floating,
+    },
     '&:hover:not([aria-disabled="true"])': {
       backgroundColor: tokens.color.surface,
       backgroundImage: `linear-gradient(${tokens.color.hairline}, ${tokens.color.hairline})`,
