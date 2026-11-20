@@ -641,9 +641,51 @@ describe("MapChrome layout", () => {
       expect(slot("tour")).toHaveAttribute("data-crowded", "false");
     });
 
-    it("counts a toolbar closer than a gap as sharing its width", () => {
-      desktopRow({ left: 1384 - 12 - 100 + 1, width: 100 });
-      expect(cssVar(chromeVars.bottomEndRaise)).toBe(`${-(150 + 12)}px`);
+    it.each([
+      { short: 11, lifts: true },
+      { short: 12, lifts: false },
+      { short: 13, lifts: false },
+    ])(
+      "a toolbar that ends $short px short of the credits, without touching them, lifts them: $lifts",
+      ({ short, lifts }) => {
+        desktopRow({ left: 1384 - short - 100, width: 100 });
+        expect(cssVar(chromeVars.bottomEndRaise)).toBe(
+          lifts ? `${-(150 + 12)}px` : "0px",
+        );
+      },
+    );
+
+    describe("right to left", () => {
+      /** A tablet row on a mirrored page, the readout at the right, with the side panel open. */
+      function mirroredRow(centre: { left: number; width: number }) {
+        mount();
+        root().style.direction = "rtl";
+        resize(1024, 768);
+        span("bottom-start", 900, 112);
+        span("bottom-end", 12, 44);
+        place("bottom-centre", 768 - 12 - 150, 150, centre.width);
+        span("bottom-centre", centre.left, centre.width);
+        act(() => {
+          observers.trigger();
+        });
+        // The panel at the right asks 372 px of the readout and half of that of
+        // the toolbar, both towards the left.
+        act(() => {
+          surfaceValue.publishPanelEdge(372);
+        });
+      }
+
+      it("lifts the readout when the mirrored shift brings the toolbar over it", () => {
+        // The readout is then at 528 to 640 and the toolbar at 414 to 544.
+        mirroredRow({ left: 600, width: 130 });
+        expect(cssVar(chromeVars.bottomStartRaise)).toBe(`${-(150 + 12)}px`);
+      });
+
+      it("leaves the readout where it rests when the mirrored shift keeps the toolbar clear", () => {
+        // The readout is then at 528 to 640 and the toolbar at 314 to 414.
+        mirroredRow({ left: 500, width: 100 });
+        expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
+      });
     });
 
     it("measures again when the side panel moves the readout under a toolbar that did not reach it", () => {
