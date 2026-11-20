@@ -986,7 +986,8 @@ describe("published text", () => {
     });
   });
 
-  describe("time on long lines", () => {
+  /** Generous, because a slow runner takes several times as long as a laptop. */
+  describe("time on long lines", { timeout: 60_000 }, () => {
     const UNITS = [
       " ",
       "`",
@@ -1029,31 +1030,55 @@ describe("published text", () => {
       "-",
       "a",
     ];
-    const LENGTH = 200_000;
-    const BOUND_MS = 1500;
     const HEAD = "## 0.1.0 (2026-12-01)\n\n### What is new\n\n";
+    /** The smaller size, and the larger one, four times as big. */
+    const SMALL = 25_000;
+    const LARGE = 4 * SMALL;
+    /** Linear work grows about 4 times from SMALL to LARGE, quadratic about 16. */
+    const MAX_GROWTH = 10;
+    /** Below this a timing is noise, so it is not divided into. */
+    const NOISE_MS = 20;
 
-    function seconds(text: string): number {
-      const started = Date.now();
-      checkChangelog(text);
-      return Date.now() - started;
+    function bestOfThree(text: string): number {
+      let best = Number.POSITIVE_INFINITY;
+      for (let run = 0; run < 3; run += 1) {
+        const started = performance.now();
+        checkChangelog(text);
+        best = Math.min(best, performance.now() - started);
+      }
+      return best;
     }
 
-    it.each(UNITS)("stays fast on a line of %j", (unit) => {
-      const run = unit.repeat(Math.ceil(LENGTH / unit.length));
-      expect(seconds(`${HEAD}${run}\n`)).toBeLessThan(BOUND_MS);
-      expect(seconds(`${HEAD}a ${run}!\n`)).toBeLessThan(BOUND_MS);
-      const lines = `${unit}\n`.repeat(Math.ceil(50_000 / (unit.length + 1)));
-      expect(seconds(`${HEAD}${lines}`)).toBeLessThan(BOUND_MS);
+    /**
+     * Fails when the time grows much faster than the size. It compares two
+     * sizes of the same shape instead of a fixed time, so a slow machine does
+     * not fail it.
+     */
+    function expectLinear(make: (size: number) => string): void {
+      const small = bestOfThree(make(SMALL));
+      const large = bestOfThree(make(LARGE));
+      expect(large / Math.max(small, NOISE_MS)).toBeLessThan(MAX_GROWTH);
+    }
+
+    it.each(UNITS)("scales linearly on a line of %j", (unit) => {
+      const repeated = (size: number) =>
+        unit.repeat(Math.ceil(size / unit.length));
+      expectLinear((size) => `${HEAD}${repeated(size)}\n`);
+      expectLinear((size) => `${HEAD}a ${repeated(size)}!\n`);
+      expectLinear(
+        (size) =>
+          `${HEAD}${`${unit}\n`.repeat(Math.ceil(size / (unit.length + 1)))}`,
+      );
     });
 
-    it("stays fast on many version headings, ATX and underlined", () => {
-      expect(
-        seconds(`${HEAD}${"## 0.1.0 (2026-12-01)\n".repeat(200_000)}`),
-      ).toBeLessThan(BOUND_MS);
-      expect(seconds(`${HEAD}${"x\n-\n".repeat(100_000)}`)).toBeLessThan(
-        BOUND_MS,
+    it("scales linearly on many ATX version headings", () => {
+      expectLinear(
+        (size) => `${HEAD}${"## 0.1.0 (2026-12-01)\n".repeat(size)}`,
       );
+    });
+
+    it("scales linearly on many underlined headings", () => {
+      expectLinear((size) => `${HEAD}${"x\n-\n".repeat(size / 2)}`);
     });
 
     it.each([
@@ -1062,10 +1087,8 @@ describe("published text", () => {
       ["http://", "*", "a"],
       ["www.", "~", "a"],
       ["", "a.", "!"],
-    ])("stays fast on %j then 100k of %j then %j", (start, unit, end) => {
-      expect(
-        seconds(`${HEAD}${start}${unit.repeat(100_000)}${end}\n`),
-      ).toBeLessThan(BOUND_MS);
+    ])("scales linearly on %j then a run of %j then %j", (start, unit, end) => {
+      expectLinear((size) => `${HEAD}${start}${unit.repeat(size)}${end}\n`);
     });
   });
 
