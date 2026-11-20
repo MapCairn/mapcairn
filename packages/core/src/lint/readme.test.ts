@@ -198,6 +198,10 @@ describe("README.md", () => {
     expect(section).toContain("docs/guides/content-security-policy.md");
     expect(section).toContain("docs/guides/extending.md#show-a-real-map");
     expect(section).toMatch(/makes no request until/);
+    expect(section).toContain("`SDK packages` job");
+    expect(section).toContain(
+      "other bundlers and browsers have not been tried",
+    );
     expect(section).not.toContain("not yet shipped");
   });
 

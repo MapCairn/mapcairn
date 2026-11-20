@@ -102,8 +102,10 @@ jobs:
   # should and work in an app outside this repository (`npm run pack:check` and
   # `npm run consumer:check`, plan 0014 step 6). It is not a required check: it
   # installs from the registry, so a registry outage must not block a merge.
-  # The release workflow's verify job requires it. `paths` filters a whole
-  # workflow, not a job, so the first step decides whether the rest run.
+  # The release workflow's `check` job installs nothing and so never draws the
+  # real map; running this check with Chromium is a go/no-go item of the
+  # `release` skill. `paths` filters a whole workflow, not a job, so the first
+  # step decides whether the rest run.
   sdk-packages:
     name: SDK packages
     # `edited` is in the triggers for the names check; a new title or
@@ -155,6 +157,11 @@ jobs:
       - name: Check what each tarball holds
         if: steps.changed.outputs.run == 'true'
         run: npm run pack:check
-      - name: Install the tarballs in an app outside the repository and render the chrome
+      # The repository's own Playwright, as the lockfile pins it. The leg that
+      # draws a real map fails, rather than skips, when this browser is missing.
+      - name: Install Chromium for the consumer check's real-map leg
+        if: steps.changed.outputs.run == 'true'
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Install the tarballs in an app outside the repository, render the chrome and draw a real map
         if: steps.changed.outputs.run == 'true'
         run: npm run consumer:check

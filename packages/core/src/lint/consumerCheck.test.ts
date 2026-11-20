@@ -569,3 +569,66 @@ describe("engineGraphProblems", () => {
     ).toEqual(expect.arrayContaining([expect.stringContaining("client")]));
   });
 });
+
+describe("the browser leg's app", () => {
+  const page = readFileSync(
+    path.join(REPO, "scripts/release/consumer-browser/main.tsx"),
+    "utf8",
+  );
+  const check = readFileSync(
+    path.join(REPO, "scripts/release/consumerCheck.mjs"),
+    "utf8",
+  );
+
+  it("lists only the umbrella among the MapCairn packages, with the engine and React as its peers", () => {
+    const manifest = consumerManifest({
+      tarballs: {
+        core: "core.tgz",
+        map: "map.tgz",
+        sdk: "sdk.tgz",
+        "adapter-maplibre": "adapter.tgz",
+      },
+      versions: {
+        react: "19.3.1",
+        "react-dom": "19.3.1",
+        "maplibre-gl": "6.18.0",
+        typescript: "7.0.2",
+        vite: "8.3.8",
+      },
+      direct: ["sdk"],
+    });
+    expect(Object.keys(manifest.dependencies).sort()).toEqual([
+      "@mapcairn/sdk",
+      "maplibre-gl",
+      "react",
+      "react-dom",
+    ]);
+  });
+
+  it("imports the interface from the umbrella's root and the adapter from its subpath, and no other package", () => {
+    expect(page).toContain('from "@mapcairn/sdk"');
+    expect(page).toContain('from "@mapcairn/sdk/adapter-maplibre"');
+    expect(page).toContain('import "@mapcairn/sdk/styles.css"');
+    expect(umbrellaLeftovers(page)).toEqual([]);
+  });
+
+  it("takes the worker from Vite's own worker URL import and gives the adapter no basemap until asked", () => {
+    expect(page).toContain("maplibre-gl-worker.mjs?worker&url");
+    expect(page).toContain("loadWorkerUrl");
+    expect(page).toMatch(/drawing \? \(\s*<MapView/);
+  });
+
+  it("is built with a Vite config that names no plugin", () => {
+    const config = readFileSync(
+      path.join(REPO, "scripts/release/consumer-browser/vite.config.ts"),
+      "utf8",
+    );
+    expect(config).not.toMatch(/plugins/);
+  });
+
+  it("runs inside the umbrella app, in packed and published mode alike", () => {
+    expect(check).toMatch(
+      /\.\.\.checkEngineFreeRoot\(app, prefix\),\s*\.\.\.checkRealMap\(app, prefix\)/,
+    );
+  });
+});
