@@ -450,7 +450,7 @@ export async function confirmPublished({
  * @returns {Promise<RegistryAnswer>}
  */
 export function readVersionDocument(name, version, get = https.get) {
-  const url = `${REGISTRY_URL}/${name.replace("/", "%2f")}/${version}`;
+  const url = `${REGISTRY_URL}/${name.replaceAll("/", "%2f")}/${version}`;
   const failed = (stderr) => ({ status: 1, stdout: "", stderr });
   return new Promise((resolve) => {
     const request = get(

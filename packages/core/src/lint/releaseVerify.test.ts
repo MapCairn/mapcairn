@@ -599,6 +599,12 @@ describe("readVersionDocument", () => {
     expect(urls).toEqual(["https://registry.npmjs.org/@mapcairn%2fcore/0.1.0"]);
   });
 
+  it("encodes every slash of a name, not only the first", async () => {
+    const { urls, get } = getter(200, JSON.stringify({ version: "1.0.0" }));
+    await readVersionDocument("@scope/a/b", "1.0.0", get);
+    expect(urls).toEqual(["https://registry.npmjs.org/@scope%2fa%2fb/1.0.0"]);
+  });
+
   it("gives an empty version for a 200 without one, so it is never taken for the published version", async () => {
     const { get } = getter(200, "{}");
     const answer = await readVersionDocument("@mapcairn/core", "0.1.0", get);
