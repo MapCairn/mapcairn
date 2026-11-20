@@ -1,0 +1,80 @@
+# Commands an agent never runs: publishing to npm and changing who may publish.
+# See docs/guides/working-with-agents.md and "Keeping agents from publishing"
+# in docs/plans/0014-sdk-release.md. Codex loads this file only when it trusts
+# this folder, and matches the start of a command, so a flag before the
+# command, a wrapper script or another spelling is not covered.
+
+prefix_rule(
+    pattern = ["npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npm publish",
+        "npm stage approve",
+        "npm dist-tag add @mapcairn/core@1.0.0 latest",
+    ],
+    not_match = [
+        "npm pack --dry-run",
+        "npm install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["npx", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npx npm publish",
+        "npx npm stage approve",
+        "npx npm dist-tag add @mapcairn/core@1.0.0 latest",
+    ],
+    not_match = [
+        "npx npm pack --dry-run",
+        "npx npm install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["npx", "-y", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npx -y npm publish",
+        "npx -y npm stage approve",
+        "npx -y npm dist-tag add @mapcairn/core@1.0.0 latest",
+    ],
+    not_match = [
+        "npx -y npm pack --dry-run",
+        "npx -y npm install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["npx", "--yes", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "npx --yes npm publish",
+        "npx --yes npm stage approve",
+        "npx --yes npm dist-tag add @mapcairn/core@1.0.0 latest",
+    ],
+    not_match = [
+        "npx --yes npm pack --dry-run",
+        "npx --yes npm install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["corepack", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "corepack npm publish",
+        "corepack npm stage approve",
+        "corepack npm dist-tag add @mapcairn/core@1.0.0 latest",
+    ],
+    not_match = [
+        "corepack npm pack --dry-run",
+        "corepack npm install",
+    ],
+)

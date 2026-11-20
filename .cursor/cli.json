@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "deny": [
+      "Shell(npm:publish*)",
+      "Shell(npm:stage*)",
+      "Shell(npm:login*)",
+      "Shell(npm:adduser*)",
+      "Shell(npm:add-user*)",
+      "Shell(npm:trust*)",
+      "Shell(npm:dist-tag*)",
+      "Shell(npm:dist-tags*)",
+      "Shell(npm:unpublish*)",
+      "Shell(npm:deprecate*)",
+      "Shell(npm:access*)",
+      "Shell(npm:owner*)",
+      "Shell(npm:author*)",
+      "Shell(npm:token*)",
+      "Shell(npm:team*)",
+      "Shell(gh:api*pending_deployments*)"
+    ]
+  }
+}
