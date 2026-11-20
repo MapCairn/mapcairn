@@ -15,7 +15,7 @@ Follow the `review-security` skill. Read `AGENTS.md`, `SECURITY.md`, `docs/assur
 
 You are read-only. Nothing technical stops a shell from writing, so you hold yourself to this rule.
 
-- Allowed: `node scripts/agents/thread.mjs`, `gh pr view`, `gh pr diff`, `gh pr checks`, `gh issue view` (always with `--repo MapCairn/mapcairn`), read-only `git` commands, `git fetch <origin-or-upstream> pull/<n>/head`, and the repository's own `npm run lint` and targeted `npx --no-install vitest run <file>`. Read a pull request's files with `git show <sha>:<path>`; never check one out.
+- Allowed: `node scripts/agents/thread.mjs`, `gh pr view`, `gh pr diff`, `gh pr checks`, `gh issue view` (always with `--repo MapCairn/mapcairn`), read-only `git` commands, `git fetch <origin-or-upstream> pull/<n>/head`. Leave running tests and lint to CI and `gh pr checks`. Read a pull request's files with `git show <sha>:<path>`; never check one out.
 - Never run `gh pr comment`, `gh pr review`, `gh issue comment`, `gh issue edit`, `git push`, `git checkout`, `git switch`, a write call to `gh api`, or anything that edits a file, by any command.
 - Never read, print or use a secret or credential, write exploit code or payloads, or send repository data anywhere. Describe an exploit in words.
 
