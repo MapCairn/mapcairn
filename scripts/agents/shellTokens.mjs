@@ -26,9 +26,14 @@
  * @property {string | null} word The word being read, if any.
  * @property {Token[]} tokens The statement being read.
  * @property {Token[][]} statements
- * @property {{ delimiter: string, strip: boolean }[]} pending Here-documents
+ * @property {{ delimiter: string, strip: boolean, quoted: boolean }[]} pending Here-documents
  *   whose bodies start after the next newline.
  * @property {boolean} unterminated Whether a here-document body had no end.
+ * @property {boolean} expands Whether an unquoted here-document body holds a
+ *   command substitution, which the shell would run.
+ * @property {boolean} glued Whether a backtick command substitution touches
+ *   the text around it, so it can build a word such as a program name.
+ * @property {boolean} inBacktick Whether the lexer is between two backticks.
  */
 
 /** Characters after a backslash that it escapes (otherwise it stays). */
@@ -77,8 +82,9 @@ function endStatement(lexer) {
  * @param {Lexer} lexer At the start of the next line.
  */
 function skipHeredocs(lexer) {
-  for (const { delimiter, strip } of lexer.pending) {
+  for (const { delimiter, strip, quoted } of lexer.pending) {
     let found = false;
+    const bodyStart = lexer.index;
     while (lexer.index < lexer.text.length) {
       const end = lexer.text.indexOf("\n", lexer.index);
       const stop = end === -1 ? lexer.text.length : end;
@@ -90,6 +96,8 @@ function skipHeredocs(lexer) {
       }
     }
     lexer.unterminated ||= !found;
+    const body = lexer.text.slice(bodyStart, lexer.index);
+    lexer.expands ||= !quoted && /\$\(|`/.test(body);
   }
   lexer.pending = [];
 }
@@ -188,6 +196,11 @@ function separator(lexer) {
   if (!SEPARATORS.has(peek(lexer))) {
     return false;
   }
+  if (peek(lexer) === "`") {
+    const touchesAfter = /[^\s;&|()<>]/.test(peek(lexer, 1));
+    lexer.glued ||= lexer.inBacktick ? touchesAfter : lexer.word !== null;
+    lexer.inBacktick = !lexer.inBacktick;
+  }
   endStatement(lexer);
   lexer.index += 1;
   return true;
@@ -195,17 +208,20 @@ function separator(lexer) {
 
 /**
  * Reads the word after `<<` the way the shell does: quotes and backslashes are
- * taken out wherever they are, and quoted text may hold spaces.
+ * taken out wherever they are, and quoted text may hold spaces. A quoted
+ * delimiter means the body is not expanded.
  *
  * @param {string} text
  * @param {number} start
- * @returns {{ delimiter: string, end: number }}
+ * @returns {{ delimiter: string, end: number, quoted: boolean }}
  */
 function readDelimiter(text, start) {
   let cursor = start;
   let delimiter = "";
+  let quoted = false;
   while (cursor < text.length && !/[\s;&|<>()]/.test(text.charAt(cursor))) {
     const char = text.charAt(cursor);
+    quoted ||= /["'\\]/.test(char);
     if (char === "\\") {
       delimiter += text.charAt(cursor + 1);
       cursor += 2;
@@ -219,7 +235,7 @@ function readDelimiter(text, start) {
       cursor += 1;
     }
   }
-  return { delimiter, end: Math.min(cursor, text.length) };
+  return { delimiter, end: Math.min(cursor, text.length), quoted };
 }
 
 /**
@@ -235,8 +251,8 @@ function heredocStart(lexer) {
   while (/[ \t]/.test(lexer.text.charAt(cursor))) {
     cursor += 1;
   }
-  const { delimiter, end } = readDelimiter(lexer.text, cursor);
-  lexer.pending.push({ delimiter, strip });
+  const { delimiter, end, quoted } = readDelimiter(lexer.text, cursor);
+  lexer.pending.push({ delimiter, strip, quoted });
   lexer.tokens.push({ type: "redirect", op: "<<" });
   lexer.index = end;
 }
@@ -307,9 +323,11 @@ const READERS = [
  * Splits a shell command into statements of words and redirections.
  *
  * @param {string} command
- * @returns {{ statements: Token[][], unterminated: boolean }} `unterminated`
- *   is true when a here-document has no closing line, so the text after it
- *   cannot be told apart from its body.
+ * @returns {{ statements: Token[][], unterminated: boolean, expands: boolean, glued: boolean }}
+ *   `unterminated` is true when a here-document has no closing line, so the
+ *   text after it cannot be told apart from its body. `expands` is true when
+ *   an unquoted here-document body holds a command substitution. `glued` is
+ *   true when a backtick substitution touches the text around it.
  */
 export function tokenize(command) {
   /** @type {Lexer} */
@@ -321,6 +339,9 @@ export function tokenize(command) {
     statements: [],
     pending: [],
     unterminated: false,
+    expands: false,
+    glued: false,
+    inBacktick: false,
   };
   while (lexer.index < lexer.text.length) {
     if (!READERS.some((reader) => reader(lexer))) {
@@ -332,5 +353,7 @@ export function tokenize(command) {
   return {
     statements: lexer.statements,
     unterminated: lexer.unterminated || lexer.pending.length > 0,
+    expands: lexer.expands,
+    glued: lexer.glued,
   };
 }

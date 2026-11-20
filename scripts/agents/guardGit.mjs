@@ -30,6 +30,7 @@ const GIT_READ = new Set([
   "blame",
   "grep",
   "merge-base",
+  "merge-tree",
   "describe",
   "show-ref",
   "for-each-ref",
@@ -111,6 +112,10 @@ function readGitOptions(args, walk) {
   let index = 0;
   while ((args[index] ?? "").startsWith("-")) {
     const option = args[index] ?? "";
+    if (/^--exec-path/.test(option)) {
+      const reason = `git ${option} changes where git finds its programs, so a reviewer may not use it`;
+      return { cwd, redirected, reason, sub: "", rest: [] };
+    }
     if (/^(-c|--config-env)/.test(option)) {
       const reason = `git ${option} sets configuration that can run a program or move the work tree, so a reviewer may not use it`;
       return { cwd, redirected, reason, sub: "", rest: [] };
@@ -124,8 +129,7 @@ function readGitOptions(args, walk) {
       );
       cwd = target === undefined ? null : show(target);
     }
-    const takesValue =
-      /^(-C|--namespace|--exec-path|--git-dir|--work-tree)$/.test(option);
+    const takesValue = /^(-C|--namespace|--git-dir|--work-tree)$/.test(option);
     redirected ||= /^--(git-dir|work-tree)/.test(option);
     index += takesValue ? 2 : 1;
   }

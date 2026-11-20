@@ -42,6 +42,9 @@ export const ZONE = [".claude", "worktrees"];
  * @property {Resolved} zone The worktrees folder of the project.
  * @property {string[]} [zoneKey] The zone with links followed, remembered by
  *   the first check so that later ones do not ask the file system again.
+ * @property {string[]} [tempDirs] The system's temporary folders, which can
+ *   hold a session scratchpad (none on Windows, where its place is not known).
+ * @property {string[][]} [tempKeys] `tempDirs` with links followed, remembered.
  */
 
 /**
@@ -259,17 +262,85 @@ function followLinks(place, context) {
  * @returns {boolean}
  */
 export function isInside(resolved, context, depth) {
+  return (
+    resolved !== undefined &&
+    insideKey(keyOf(resolved, context), context, depth)
+  );
+}
+
+/**
+ * The comparable form of a path, with symbolic links followed.
+ *
+ * @param {Resolved} resolved
+ * @param {Context} context
+ * @returns {string[]}
+ */
+function keyOf(resolved, context) {
+  return comparable(followLinks(resolved, context), context.platform);
+}
+
+/**
+ * @param {string[]} key
+ * @param {Context} context
+ * @param {number} depth
+ * @returns {boolean}
+ */
+function insideKey(key, context, depth) {
+  context.zoneKey ??= keyOf(context.zone, context);
+  const wanted = context.zoneKey;
+  return (
+    key.length >= wanted.length + depth &&
+    wanted.every((segment, index) => key[index] === segment)
+  );
+}
+
+/**
+ * Whether a path is a file inside a session scratchpad: a folder named
+ * `scratchpad` below a `claude-<digits>` folder that sits directly in the
+ * system's temporary folder. Not on Windows, where that place is not known.
+ *
+ * @param {string[]} key
+ * @param {Context} context
+ * @returns {boolean}
+ */
+function inScratchpad(key, context) {
+  if (context.platform === "win32") {
+    return false;
+  }
+  context.tempKeys ??= (context.tempDirs ?? []).flatMap((dir) => {
+    const place = resolvePath(dir, null, context.platform);
+    return place === undefined ? [] : [keyOf(place, context)];
+  });
+  return context.tempKeys.some((temp) => {
+    const claude = key[temp.length] ?? "";
+    const pad = key.indexOf("scratchpad", temp.length + 1);
+    return (
+      temp.every((segment, index) => key[index] === segment) &&
+      /^claude-\d+$/.test(claude) &&
+      pad !== -1 &&
+      key.length > pad + 1
+    );
+  });
+}
+
+/**
+ * Whether a reviewer may write the path: a file inside a worktree under
+ * `.claude/worktrees/` or inside the session scratchpad, and never inside a
+ * `.git` folder or file, which could point git at a configuration of its own.
+ *
+ * @param {Resolved | undefined} resolved
+ * @param {Context} context
+ * @returns {boolean}
+ */
+export function canWrite(resolved, context) {
   if (resolved === undefined) {
     return false;
   }
-  const { platform, zone } = context;
-  context.zoneKey ??= comparable(followLinks(zone, context), platform);
-  const wanted = context.zoneKey;
-  const actual = comparable(followLinks(resolved, context), platform);
-  return (
-    actual.length >= wanted.length + depth &&
-    wanted.every((segment, index) => actual[index] === segment)
-  );
+  const key = keyOf(resolved, context);
+  if (key.includes(".git")) {
+    return false;
+  }
+  return insideKey(key, context, 2) || inScratchpad(key, context);
 }
 
 /**

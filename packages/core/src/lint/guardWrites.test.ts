@@ -49,6 +49,7 @@ interface Options {
   cwd?: string;
   place?: Place;
   realpath?: (p: string) => string;
+  tempDirs?: string[];
 }
 
 function call(
@@ -69,6 +70,7 @@ function call(
       projectDir: place.root,
       platform: place.platform,
       realpath: options.realpath ?? ((p: string) => p),
+      tempDirs: options.tempDirs ?? ["/tmp"],
     },
   );
 }
@@ -1152,5 +1154,366 @@ describe("Windows forms a review found", () => {
         cwd,
       }).allow,
     ).toBe(true);
+  });
+});
+
+describe("false blocks a review found", () => {
+  it.each([
+    "awk 'NR>1 {print $1}' AGENTS.md",
+    "awk '$1 > 5' AGENTS.md",
+    "awk 'length > 80' AGENTS.md",
+    "awk '{print $1, $2}' AGENTS.md",
+    "awk -F'|' '{print $1}' AGENTS.md",
+    "awk '/a|b/ {n++} END {print n}' AGENTS.md",
+    "awk '{ if ($1 > 2) print \"big\" }' AGENTS.md",
+    "awk '{print \"a > b\"}' AGENTS.md",
+    "awk '{print ($1 > 5)}' AGENTS.md",
+    "git merge-tree --write-tree origin/main HEAD",
+    "[ -f AGENTS.md ] && git status",
+    "[[ -f AGENTS.md ]] && git status",
+  ])("allows %s", (command) => {
+    expect(bash(command).allow).toBe(true);
+  });
+
+  it.each([
+    "awk '{print > \"AGENTS.md\"}' README.md",
+    "awk '{print $1 >> \"AGENTS.md\"}' README.md",
+    "awk '{print | \"sh\"}' README.md",
+    'awk \'{printf "%s", $1 > "/dev/stderr"}\' README.md',
+    "awk '{print $1 > $2}' README.md",
+    "awk 'BEGIN{system(\"rm x\")}'",
+    "awk '{ \"date\" | getline d }'",
+    "awk 'BEGIN { getline x < \"/etc/hosts\" }'",
+    "awk '{print}; {print > \"x\"}' README.md",
+    "awk -f prog.awk README.md",
+  ])("blocks %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+});
+
+describe("the session scratchpad", () => {
+  const pad = "/tmp/claude-1000/-home-dev-mapcairn/0123-abc/scratchpad";
+  const macPad =
+    "/private/tmp/claude-501/-Users-dev-mapcairn/0123-abc/scratchpad";
+  const w = ".claude/worktrees/review-12";
+
+  it.each([`${pad}/probe.mjs`, `${pad}/a/b.txt`, `${pad}/a/../b.txt`])(
+    "lets a reviewer write %s",
+    (file) => {
+      expect(edit(file).allow).toBe(true);
+      expect(call("Write", { file_path: file }).allow).toBe(true);
+    },
+  );
+
+  it("works with the macOS temporary folder", () => {
+    const options = { place: MAC, tempDirs: ["/private/tmp"] };
+    expect(edit(`${macPad}/probe.mjs`, options).allow).toBe(true);
+    expect(edit(`${macPad}/../x`, options).allow).toBe(false);
+  });
+
+  it.each([
+    ["the scratchpad itself", pad],
+    ["a folder beside it", `${pad}/../other/x`],
+    ["a dot-dot out of it", `${pad}/../x`],
+    ["a dot-dot to the temporary folder", `${pad}/../../../../x`],
+    [
+      "a dot-dot to the project",
+      `${pad}/../../../../../home/dev/mapcairn/AGENTS.md`,
+    ],
+    [
+      "another folder of the session",
+      "/tmp/claude-1000/-home-dev-mapcairn/0123-abc/other/x",
+    ],
+    ["a folder named like it", `${pad}-old/x`],
+    ["no claude folder", "/tmp/scratchpad/x"],
+    ["a claude folder without a number", "/tmp/claude/p/s/scratchpad/x"],
+    [
+      "a claude folder that is not under the temporary folder",
+      "/tmp/x/claude-1000/p/s/scratchpad/f",
+    ],
+    [
+      "another temporary-looking folder",
+      "/var/other/claude-1000/p/s/scratchpad/f",
+    ],
+    ["a git folder inside it", `${pad}/repo/.git/config`],
+  ])("blocks %s", (_name, file) => {
+    expect(edit(file).allow).toBe(false);
+  });
+
+  it("leaves Windows blocked, because its scratchpad folder was not verified", () => {
+    const file =
+      "C:\\Users\\dev\\AppData\\Local\\Temp\\claude-1000\\p\\s\\scratchpad\\f";
+    expect(
+      edit(file, {
+        place: WINDOWS,
+        tempDirs: ["C:\\Users\\dev\\AppData\\Local\\Temp"],
+      }).allow,
+    ).toBe(false);
+  });
+
+  it("follows a symbolic link out of the scratchpad", () => {
+    const link = `${pad}/link`;
+    const realpath = (p: string) =>
+      p.startsWith(link) ? p.replace(link, "/etc") : p;
+    expect(edit(`${link}/hosts`, { realpath }).allow).toBe(false);
+    expect(edit(`${pad}/plain`, { realpath }).allow).toBe(true);
+  });
+
+  it.each([
+    `echo x > ${pad}/out.txt`,
+    `git diff > ${pad}/d.patch`,
+    `rm ${pad}/probe.mjs`,
+    `mkdir ${pad}/sub`,
+    `cp AGENTS.md ${pad}/copy.md`,
+    `cat > ${pad}/p.mjs <<'EOF'\nx\nEOF`,
+    `cd ${pad} && node probe.mjs`,
+    `cd ${pad} && echo x > out.txt`,
+  ])("lets a command write there: %s", (command) => {
+    expect(bash(command).allow).toBe(true);
+  });
+
+  it.each([
+    `echo x > ${pad}/../x`,
+    `rm -rf ${pad}`,
+    `rm -rf ${pad}/..`,
+    `cd ${pad} && echo x > ../x`,
+    `echo x > ${pad}/.git/config`,
+    `echo x > /tmp/claude-1000/p/s/other/x`,
+  ])("still blocks %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it("does not let a reviewer write a git folder in a worktree either", () => {
+    expect(edit(`${LINUX.root}/${w}/.git`).allow).toBe(false);
+    expect(edit(`${LINUX.root}/${w}/sub/.git/config`).allow).toBe(false);
+    expect(edit(`${LINUX.root}/${w}/.gitignore`).allow).toBe(true);
+    expect(edit(`${LINUX.root}/${w}/.github/x.yml`).allow).toBe(true);
+    expect(bash(`echo x > ${w}/.git`).allow).toBe(false);
+  });
+});
+
+describe("hardening from the second review", () => {
+  const w = ".claude/worktrees/review-12";
+  const root = LINUX.root;
+  const nest = (depth: number, command: string) => {
+    let text = command;
+    for (let level = 0; level < depth; level += 1) {
+      text = `sh -c ${JSON.stringify(text)}`;
+    }
+    return text;
+  };
+
+  it.each([
+    "sh -c -e 'touch /x'",
+    "bash -c -x 'rm -rf packages'",
+    "bash -lc -e 'touch AGENTS.md'",
+  ])("reads the command after the options that follow -c: %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it.each([
+    `mv --target-directory=/outside ${w}/a`,
+    `mv -t /outside ${w}/a`,
+    `mv -t${root}/packages ${w}/a`,
+    "mv -t",
+  ])("reads the target of %s", (command) => {
+    expect(bash(command, { cwd: `${root}/${w}` }).allow).toBe(false);
+  });
+
+  it("allows mv inside a worktree, with or without -t", () => {
+    expect(bash(`mv ${w}/a ${w}/b`).allow).toBe(true);
+    expect(bash(`mv -t ${w}/dir ${w}/a`).allow).toBe(true);
+  });
+
+  it.each([
+    "to\\uch AGENTS.md",
+    "r\\m -rf packages",
+    "/bin/r\\m -rf packages",
+    "to`echo`uch AGENTS.md",
+    "`echo to`uch AGENTS.md",
+  ])("refuses a program word the shell rewrites: %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it("allows a command substitution that stands alone", () => {
+    expect(bash("echo `git rev-parse HEAD`").allow).toBe(true);
+  });
+
+  it.each([
+    "fish -c 'rm -rf packages'",
+    "csh -c 'rm -rf packages'",
+    "tcsh -c 'rm -rf packages'",
+    "mksh -c 'rm -rf packages'",
+    "ash -c 'rm -rf packages'",
+    "fish -c 'git status; rm x'",
+    "taskset 1 rm -rf packages",
+    "arch -arm64 rm -rf packages",
+    "ssh host rm -rf packages",
+    "unshare -r rm -rf packages",
+    "chroot / rm -rf packages",
+    "nsenter -t 1 rm -rf packages",
+    "chrt 1 rm -rf packages",
+    "unbuffer rm -rf packages",
+    "rlwrap rm -rf packages",
+  ])("does not run %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it("reads the command in the other shells", () => {
+    expect(bash("fish -c 'git status'").allow).toBe(true);
+    expect(bash("ash -c 'git status'").allow).toBe(true);
+  });
+
+  it.each([
+    "git --exec-path status",
+    "git --exec-path=/tmp/x status",
+    "git --exec-path /tmp/x status",
+  ])("refuses %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it.each([
+    `HOME=${root}/${".claude/worktrees/review-12"}/h git status`,
+    "HOME=/x git status",
+    "XDG_CONFIG_HOME=/x git status",
+    "PATH=/x git status",
+    "PAGER='rm x' git log",
+    "EDITOR=x git status",
+    "VISUAL=x git status",
+    "LESS=x git log",
+    "LESSOPEN=x git log",
+    "LD_PRELOAD=/x git status",
+    "DYLD_INSERT_LIBRARIES=/x git status",
+    "NODE_OPTIONS=--require=/x node a.js",
+    "BASH_ENV=/x sh -c 'git status'",
+    "SSH_ASKPASS=/x git fetch",
+    "env HOME=/x git status",
+    "export HOME=/x; git status",
+    "declare -x PATH=/x; git status",
+  ])(
+    "refuses an environment that changes what a command runs: %s",
+    (command) => {
+      const decision = bash(command);
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toMatch(/variable|environment/);
+    },
+  );
+
+  it("refuses a risky variable name anywhere in a statement, and allows one that only starts with it", () => {
+    expect(bash("FOO=1 git status").allow).toBe(true);
+    expect(bash("echo HOME=1").allow).toBe(false);
+    expect(bash("echo HOMEWORK=1").allow).toBe(true);
+  });
+
+  it.each([
+    "git -c x=y status",
+    "git -ccore.x=y status",
+    "git --config-env=a=B status",
+    "git -c core.pager=x log",
+  ])("names the configuration rule for %s", (command) => {
+    const decision = bash(command);
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toMatch(/sets configuration/);
+  });
+
+  it("reads a here-document closed after tab stripping", () => {
+    const body = "cat <<-EOF\n\tx\n\tEOF\n";
+    expect(bash(`${body}rm -rf packages`).reason).toMatch(/rm/);
+    expect(bash(`cat > ${w}/h.txt <<-EOF\n\tx\n\tEOF`).allow).toBe(true);
+    expect(bash("cat <<EOF\n\tx\n\tEOF\nrm packages").reason).toMatch(
+      /here-document/,
+    );
+  });
+
+  it("blocks an unquoted here-document whose body runs a command", () => {
+    expect(bash("cat <<EOF\n$(rm -rf packages)\nEOF").allow).toBe(false);
+    expect(bash("cat <<EOF\n`rm -rf packages`\nEOF").allow).toBe(false);
+    expect(bash("cat <<'EOF'\n$(rm -rf packages)\nEOF").allow).toBe(true);
+    expect(bash("cat <<\\EOF\n$(rm -rf packages)\nEOF").allow).toBe(true);
+    expect(bash("cat <<EOF\nplain $HOME text\nEOF").allow).toBe(true);
+  });
+
+  it("stops reading shells nested more than four deep", () => {
+    expect(bash(nest(4, "git status")).allow).toBe(true);
+    const decision = bash(nest(5, "git status"));
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toMatch(/nested/);
+  });
+
+  it.each([
+    "sed -ne 'w AGENTS.md' README.md",
+    "sed -n -e '1,3p' -e 'w x' README.md",
+    "sed --expression='w x' README.md",
+    "sed --expression 'w x' README.md",
+    "sed -nf script.sed README.md",
+  ])("reads the script of %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it.each([
+    "sed -ne '1,3p' AGENTS.md",
+    "sed -n -e '1,3p' -e 's/a/b/' AGENTS.md",
+    "sed -n 'b end; p; :end' AGENTS.md",
+    "sed -n '/a/b;p' AGENTS.md",
+    "sed -n 'tx;p;:x' AGENTS.md",
+    "sed -l 5 -n 'p' AGENTS.md",
+    "sed --line-length=5 -n p AGENTS.md",
+    "sed -n -l 70 '1p' AGENTS.md",
+  ])("allows %s", (command) => {
+    expect(bash(command).allow).toBe(true);
+  });
+
+  it("reads the script that follows a line-length option", () => {
+    expect(bash("sed -l 5 -n 'w x' README.md").allow).toBe(false);
+    expect(bash("sed --line-length=5 -n 'w x' README.md").allow).toBe(false);
+  });
+
+  it.each([
+    "sed -n 'b;w x' AGENTS.md",
+    "sed -n 'bend;w x' AGENTS.md",
+    "sed -n 'b end;w x' AGENTS.md",
+  ])("still finds a write after a branch label: %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it.each([
+    "npm install -g left-pad",
+    "npm install --global left-pad",
+    "npm i --prefix /x",
+    "npm install --location=global x",
+    `cd ${".claude/worktrees/review-12"} && npm install -g x`,
+    `cd ${".claude/worktrees/review-12"} && npm install left-pad`,
+    `cd ${".claude/worktrees/review-12"} && npm add left-pad`,
+    `cd ${".claude/worktrees/review-12"} && npm ci`,
+    `cd ${".claude/worktrees/review-12"} && npm install`,
+    `cd ${".claude/worktrees/review-12"} && npm --prefix /x ci --ignore-scripts`,
+  ])("refuses %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it("allows an install without scripts in a worktree", () => {
+    const wt = ".claude/worktrees/review-12";
+    expect(bash(`cd ${wt} && npm ci --ignore-scripts`).allow).toBe(true);
+    expect(bash(`cd ${wt} && npm install --ignore-scripts`).allow).toBe(true);
+    expect(bash(`cd ${wt} && npm run build`).allow).toBe(true);
+  });
+
+  it.each([
+    `rsync -a ${".claude/worktrees/review-12"}/a host:/x`,
+    `rsync -a a host:${".claude/worktrees/review-12"}/b`,
+    `cd ${".claude/worktrees/review-12"} && rsync -a a host:dir`,
+    `cd ${".claude/worktrees/review-12"} && scp a host:dir`,
+    `cd ${".claude/worktrees/review-12"} && scp a user@host:`,
+    "scp a b",
+    "rsync -a a b",
+  ])("treats a remote or outside target as outside: %s", (command) => {
+    expect(bash(command).allow).toBe(false);
+  });
+
+  it("allows rsync and scp inside a worktree", () => {
+    const wt = ".claude/worktrees/review-12";
+    expect(bash(`rsync -a AGENTS.md ${wt}/copy.md`).allow).toBe(true);
+    expect(bash(`rsync -at AGENTS.md ${wt}/copy.md`).allow).toBe(true);
+    expect(bash(`scp AGENTS.md ${wt}/copy.md`).allow).toBe(true);
   });
 });

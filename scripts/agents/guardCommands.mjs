@@ -17,7 +17,7 @@
  */
 import { checkGh } from "./guardGh.mjs";
 import { checkGit } from "./guardGit.mjs";
-import { isInside, resolvePath, show } from "./guardPaths.mjs";
+import { canWrite, isInside, resolvePath, show } from "./guardPaths.mjs";
 import { awkProblem, sedProblem } from "./scriptChecks.mjs";
 import { tokenize } from "./shellTokens.mjs";
 
@@ -84,7 +84,10 @@ const WRITES_ALL = new Set([
 ]);
 
 /** Commands that write to the last path they are given, or to the `-t` folder. */
-const WRITES_LAST = new Set(["cp", "ln", "install", "rsync"]);
+const WRITES_LAST = new Set(["cp", "ln", "install", "rsync", "scp"]);
+
+/** Commands whose last word may be a `host:path` on another machine. */
+const REMOTE_TARGETS = new Set(["rsync", "scp"]);
 
 /** Programs that run another command in a way the guard cannot read. */
 const UNREADABLE = [
@@ -108,7 +111,51 @@ const UNREADABLE = [
   "ionice",
   "strace",
   "busybox",
+  "taskset",
+  "arch",
+  "ssh",
+  "unshare",
+  "chroot",
+  "nsenter",
+  "chrt",
+  "unbuffer",
+  "rlwrap",
 ];
+
+/** Shells that run the text after `-c` as a command. */
+const SHELLS = [
+  "sh",
+  "bash",
+  "zsh",
+  "dash",
+  "ksh",
+  "fish",
+  "csh",
+  "tcsh",
+  "mksh",
+  "ash",
+];
+
+/**
+ * Variables that change what a command runs or which files it reads, so a
+ * reviewer may not set them: git's, the home and config folders, the search
+ * path, pagers and editors, and the loader and startup-file variables.
+ */
+const RISKY_VARIABLE =
+  /^(GIT_\w*|HOME|XDG_\w*|PATH|PAGER|EDITOR|VISUAL|LESS\w*|LD_\w*|DYLD_\w*|NODE_OPTIONS|BASH_ENV|ENV|SSH_\w*)=/i;
+
+/** Package-manager commands that add a package when given a name. */
+const INSTALLS_PACKAGES = new Set([
+  "install",
+  "i",
+  "add",
+  "update",
+  "up",
+  "upgrade",
+]);
+
+/** Package-manager commands that run install scripts unless told not to. */
+const RUNS_SCRIPTS = new Set(["install", "i", "ci"]);
 
 /** Package-manager commands that change `node_modules` or a lockfile. */
 const PACKAGE_WRITES = new Set([
@@ -165,7 +212,10 @@ function checkPathWrites(program, targets, walk) {
   }
   for (const target of targets) {
     const place = resolvePath(target, walk.cwd, walk.context.platform, true);
-    if (isInside(place, walk.context, 2)) {
+    if (isRemote(program, target)) {
+      return `${program} would copy to ${target}, on another machine`;
+    }
+    if (canWrite(place, walk.context)) {
       continue;
     }
     return isInside(place, walk.context, 1)
@@ -173,6 +223,21 @@ function checkPathWrites(program, targets, walk) {
       : `${program} would write to ${target}, which is not a plain path inside .claude/worktrees/<name>/`;
   }
   return undefined;
+}
+
+/**
+ * Whether a target of `rsync` or `scp` is `host:path` or `user@host:path`.
+ *
+ * @param {string} program
+ * @param {string} target
+ * @returns {boolean}
+ */
+function isRemote(program, target) {
+  return (
+    REMOTE_TARGETS.has(program) &&
+    /^[^/\\:]+:/.test(target) &&
+    !/^[a-zA-Z]:[\\/]/.test(target)
+  );
 }
 
 /**
@@ -235,13 +300,21 @@ function pathTargets(program, args) {
   const positional = args.filter((arg, index) =>
     dashes === -1 ? !arg.startsWith("-") : index > dashes,
   );
+  if (program === "mv") {
+    const moved = targetDirectory(args);
+    const folder = moved.folder === undefined ? [] : [moved.folder];
+    return {
+      targets: [...positional, ...folder],
+      sources: [],
+      missing: moved.found && moved.folder === undefined,
+    };
+  }
   if (!WRITES_LAST.has(program)) {
     return { targets: positional, sources: [], missing: false };
   }
-  const directory =
-    program === "rsync"
-      ? { found: false, folder: undefined }
-      : targetDirectory(args);
+  const directory = REMOTE_TARGETS.has(program)
+    ? { found: false, folder: undefined }
+    : targetDirectory(args);
   if (directory.found) {
     const skip = directory.folder === undefined ? [] : [directory.folder];
     const sources = positional.filter((arg) => !skip.includes(arg));
@@ -289,7 +362,9 @@ function checkSed(args, walk) {
   const files = [];
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index] ?? "";
-    if (/^(-[nEsrzu]*e|--expression)$/.test(arg)) {
+    if (/^(-l|--line-length)$/.test(arg)) {
+      index += 1;
+    } else if (/^(-[nEsrzu]*e|--expression)$/.test(arg)) {
       scripts.push(args[index + 1] ?? "");
       index += 1;
     } else if (/^(-[a-zA-Z]*f|--file)/.test(arg)) {
@@ -354,11 +429,25 @@ function changeDirectory(args, walk) {
  * @returns {string | undefined}
  */
 function checkPackageManager(program, args, walk) {
-  const verb = args.find((arg) => !arg.startsWith("-")) ?? "";
+  if (args.some((arg) => /^(-g|--global|--prefix|--location)/.test(arg))) {
+    return `${program} with -g, --global, --prefix or --location installs outside the worktree`;
+  }
+  const at = args.findIndex((arg) => PACKAGE_WRITES.has(arg));
+  const verb = args[at] ?? "";
+  if (at === -1) {
+    return undefined;
+  }
   const here = resolvePath(walk.cwd, null, walk.context.platform);
-  return !PACKAGE_WRITES.has(verb) || isInside(here, walk.context, 1)
-    ? undefined
-    : `${program} ${verb} changes node_modules or the lockfile, so it may run only inside a worktree under .claude/worktrees/<name>/`;
+  if (!isInside(here, walk.context, 1)) {
+    return `${program} ${verb} changes node_modules or the lockfile, so it may run only inside a worktree under .claude/worktrees/<name>/`;
+  }
+  const named = args.slice(at + 1).some((arg) => !arg.startsWith("-"));
+  if (named && INSTALLS_PACKAGES.has(verb)) {
+    return `${program} ${verb} with a package name adds a dependency, which a reviewer may not do`;
+  }
+  return RUNS_SCRIPTS.has(verb) && !args.includes("--ignore-scripts")
+    ? `${program} ${verb} needs --ignore-scripts, because install scripts run code`
+    : undefined;
 }
 
 /**
@@ -386,10 +475,11 @@ function checkFind(args) {
  */
 function checkShell(program, args, walk) {
   const flag = args.findIndex((arg) => /^-[a-z]*c[a-z]*$/.test(arg));
+  const text = args.slice(flag + 1).find((arg) => !arg.startsWith("-"));
   if (flag === -1) {
     return `${program} without -c runs a script or reads commands the guard cannot see, so a reviewer may not use it`;
   }
-  return checkCommand(args[flag + 1] ?? "", { ...walk, depth: walk.depth + 1 });
+  return checkCommand(text ?? "", { ...walk, depth: walk.depth + 1 });
 }
 
 /**
@@ -417,7 +507,7 @@ for (const program of UNREADABLE) {
 for (const program of [...WRITES_ALL, ...WRITES_LAST]) {
   PROGRAMS.set(program, (args, walk) => checkFileCommand(program, args, walk));
 }
-for (const program of ["sh", "bash", "zsh", "dash", "ksh"]) {
+for (const program of SHELLS) {
   PROGRAMS.set(program, (args, walk) => checkShell(program, args, walk));
 }
 for (const program of ["npm", "pnpm", "yarn", "bun"]) {
@@ -574,9 +664,9 @@ function checkRedirect(op, target, walk) {
     return undefined;
   }
   const place = resolvePath(target, walk.cwd, walk.context.platform, true);
-  return isInside(place, walk.context, 2)
+  return canWrite(place, walk.context)
     ? undefined
-    : `the redirection ${op} ${target} would write outside .claude/worktrees/<name>/`;
+    : `the redirection ${op} ${target} would write outside .claude/worktrees/<name>/ and the session scratchpad`;
 }
 
 /**
@@ -613,11 +703,16 @@ function readRedirects(tokens, walk) {
  * variable, a glob, a brace list or a quoted escape that the shell expands.
  *
  * @param {string} word
+ * @param {import("./guardPaths.mjs").Platform} platform
  * @returns {string | undefined}
  */
-function builtProgramProblem(word) {
-  return /[$`{*?[]/.test(word)
-    ? `${word} is built by the shell (a variable, a glob or a brace list), so the program it runs cannot be read`
+function builtProgramProblem(word, platform) {
+  if (word === "[" || word === "[[") {
+    return undefined;
+  }
+  const windowsPath = platform === "win32" && /^[a-zA-Z]:\\/.test(word);
+  return /[$`{*?[]/.test(word) || (word.includes("\\") && !windowsPath)
+    ? `${word} is built or escaped by the shell (a variable, a glob, a brace list or a backslash), so the program it runs cannot be read`
     : undefined;
 }
 
@@ -633,15 +728,16 @@ function checkStatement(tokens, walk) {
   if (redirects.reason !== undefined) {
     return redirects.reason;
   }
-  if (redirects.words.some((text) => /^GIT_\w*=/i.test(text))) {
-    return "a GIT_ variable can point git at another repository or make it run a program, so a reviewer may not set one";
+  const risky = redirects.words.find((text) => RISKY_VARIABLE.test(text));
+  if (risky !== undefined) {
+    return `the variable ${risky.split("=")[0]} changes what a command runs or which files it reads (git's repository, the home folder, the search path, a pager, the loader), so a reviewer may not set it`;
   }
   const { rest, reason } = unwrap(redirects.words);
   const word = rest[0] ?? "";
   const program = programName(word);
   return (
     reason ??
-    builtProgramProblem(word) ??
+    builtProgramProblem(word, walk.context.platform) ??
     PROGRAMS.get(program)?.(rest.slice(1), walk, program)
   );
 }
@@ -660,9 +756,15 @@ export function checkCommand(command, walk) {
   if (command.length > MAX_COMMAND_LENGTH) {
     return `the command is too long to check (over ${MAX_COMMAND_LENGTH} characters)`;
   }
-  const { statements, unterminated } = tokenize(command);
+  const { statements, unterminated, expands, glued } = tokenize(command);
   if (unterminated) {
     return "a here-document is never closed, so what follows it cannot be told from its body";
+  }
+  if (expands) {
+    return "an unquoted here-document body holds a command substitution, which the shell runs; quote the delimiter ('EOF')";
+  }
+  if (glued) {
+    return "a backtick command substitution is joined to a word, which can build a program name the guard cannot read";
   }
   if (statements.length > MAX_STATEMENTS) {
     return `the command has too many statements to check (over ${MAX_STATEMENTS})`;

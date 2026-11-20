@@ -53,6 +53,25 @@ function skipLine(script, from) {
 }
 
 /**
+ * Where the label of `b`, `t` or `T` ends: at a semicolon, a closing brace or
+ * white space, as GNU `sed` reads it.
+ *
+ * @param {string} script
+ * @param {number} from
+ * @returns {number}
+ */
+function skipLabel(script, from) {
+  let end = from;
+  while (/[ \t]/.test(script.charAt(end))) {
+    end += 1;
+  }
+  while (end < script.length && !/[;}\s]/.test(script.charAt(end))) {
+    end += 1;
+  }
+  return end;
+}
+
+/**
  * Skips an address (a line number, `$`, a range, a `/regex/`) at the start of a
  * command.
  *
@@ -99,8 +118,10 @@ export function sedProblem(script) {
         return "an s flag w or e writes a file or runs a command";
       }
       index = end;
-    } else if (/[aicrR:btT]/.test(char)) {
+    } else if (/[aicrR:]/.test(char)) {
       index = skipLine(script, index + 1);
+    } else if (/[btT]/.test(char)) {
+      index = skipLabel(script, index + 1);
     } else {
       index += 1;
     }
@@ -109,8 +130,77 @@ export function sedProblem(script) {
 }
 
 /**
- * Finds what makes an `awk` program able to write: a program file, a
- * redirection, a pipe or `system`.
+ * Where an `awk` scan is: inside a `print` statement or not, and how deep in
+ * parentheses.
+ *
+ * @typedef {{ inPrint: boolean, depth: number }} AwkState
+ */
+
+/**
+ * @param {string} word
+ * @param {AwkState} state
+ * @returns {string | undefined}
+ */
+function awkWord(word, state) {
+  if (word === "system" || word === "getline") {
+    return `awk ${word} can run a command or read a file`;
+  }
+  if (word === "print" || word === "printf") {
+    state.inPrint = true;
+    state.depth = 0;
+  }
+  return undefined;
+}
+
+/**
+ * @param {string} char
+ * @param {AwkState} state
+ * @returns {string | undefined}
+ */
+function awkPunctuation(char, state) {
+  if (char === "(") {
+    state.depth += 1;
+  } else if (char === ")") {
+    state.depth -= 1;
+  } else if (state.inPrint && state.depth <= 0 && /[;}\n]/.test(char)) {
+    state.inPrint = false;
+  } else if (state.inPrint && state.depth <= 0 && /[>|]/.test(char)) {
+    return "an awk print with > or | writes a file or runs a command";
+  }
+  return undefined;
+}
+
+/**
+ * Finds `system`, `getline`, and a `>`, `>>` or `|` that ends a `print` or
+ * `printf` statement in an `awk` program. Comparisons elsewhere (`$1 > 5`)
+ * and text in strings or parentheses are left alone.
+ *
+ * @param {string} script
+ * @returns {string | undefined}
+ */
+function awkScriptProblem(script) {
+  /** @type {AwkState} */
+  const state = { inPrint: false, depth: 0 };
+  let index = 0;
+  while (index < script.length) {
+    const char = script.charAt(index);
+    const word = /^[A-Za-z_]\w*/.exec(script.slice(index, index + 32))?.[0];
+    const problem =
+      word === undefined ? awkPunctuation(char, state) : awkWord(word, state);
+    if (problem !== undefined) {
+      return problem;
+    }
+    index =
+      char === '"'
+        ? skipDelimited(script, index + 1, '"')
+        : index + (word?.length ?? 1);
+  }
+  return undefined;
+}
+
+/**
+ * Finds what makes an `awk` command able to write: a program file, or a
+ * program that redirects or pipes a `print`, or runs `system` or `getline`.
  *
  * @param {string[]} args The words after `awk`.
  * @returns {string | undefined}
@@ -131,7 +221,5 @@ export function awkProblem(args) {
       script = arg;
     }
   }
-  return /[>|]|system/.test(script ?? "")
-    ? "an awk program with >, | or system can write a file or run a command"
-    : undefined;
+  return awkScriptProblem(script ?? "");
 }

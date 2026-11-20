@@ -15,8 +15,11 @@
  * reason on standard error, which Claude Code shows to the agent.
  *
  * A reviewer may write a file only inside a worktree under
- * `.claude/worktrees/<name>/` of the project: the detached worktree it makes
- * for its own experiments. `guardPaths.mjs` reads paths in the forms of macOS,
+ * `.claude/worktrees/<name>/` of the project (the detached worktree it makes
+ * for its own experiments) or inside the session scratchpad (a `scratchpad`
+ * folder below `claude-<digits>` in the temporary folder), never in a `.git`
+ * folder. The scratchpad is not allowed on Windows, where its place is not
+ * known. `guardPaths.mjs` reads paths in the forms of macOS,
  * Linux and Windows (backslashes, drive letters, Git Bash `/c/` paths, `\\?\`
  * prefixes, `.` and `..`, case-insensitive file systems, symbolic links), and
  * `guardCommands.mjs` holds the rules for shell commands.
@@ -34,10 +37,11 @@
  * which the script cannot change. See "Keeping reviewers read-only" in
  * `docs/guides/working-with-agents.md`.
  */
+import { tmpdir } from "node:os";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { checkCommand } from "./guardCommands.mjs";
 import {
-  isInside,
+  canWrite,
   projectOf,
   realpathOfExisting,
   resolvePath,
@@ -85,7 +89,7 @@ const INSTEAD =
 function refuse(agent, what) {
   return {
     allow: false,
-    reason: `${agent} is a read-only reviewer: ${what}. It may write only inside a worktree it made under .claude/worktrees/<name>/. ${INSTEAD}`,
+    reason: `${agent} is a read-only reviewer: ${what}. It may write only inside a worktree it made under .claude/worktrees/<name>/ or the session scratchpad. ${INSTEAD}`,
   };
 }
 
@@ -99,6 +103,18 @@ function thisPlatform() {
 }
 
 /**
+ * The temporary folders that can hold a session scratchpad: the system's own,
+ * and the two Unix folders that macOS and Linux use for it, since the
+ * session scratchpad is made there whatever `TMPDIR` says.
+ *
+ * @returns {string[]}
+ */
+function defaultTempDirs() {
+  const unix = ["/", "/private/"].map((prefix) => `${prefix}tmp`);
+  return [...new Set([tmpdir(), ...unix])];
+}
+
+/**
  * Decides on a write by a file tool.
  *
  * @param {string} agent
@@ -109,7 +125,7 @@ function thisPlatform() {
  */
 function decideFile(agent, raw, cwd, context) {
   const place = resolvePath(raw, cwd, context.platform);
-  if (isInside(place, context, 2)) {
+  if (canWrite(place, context)) {
     return { allow: true };
   }
   const shown = typeof raw === "string" && raw !== "" ? raw : "a missing path";
@@ -127,7 +143,11 @@ function decideFile(agent, raw, cwd, context) {
  */
 function decideCommand(agent, command, cwd, context) {
   const here = resolvePath(cwd, null, context.platform);
-  const walk = { cwd: here === undefined ? null : show(here), context };
+  const walk = {
+    cwd: here === undefined ? null : show(here),
+    context,
+    depth: 0,
+  };
   const reason = checkCommand(typeof command === "string" ? command : "", walk);
   return reason === undefined ? { allow: true } : refuse(agent, reason);
 }
@@ -140,6 +160,7 @@ function decideCommand(agent, command, cwd, context) {
  * @param {string} [options.projectDir] The project folder (`CLAUDE_PROJECT_DIR`).
  * @param {import("./guardPaths.mjs").Platform} [options.platform] Defaults to this system.
  * @param {(p: string) => string} [options.realpath] Follows symbolic links.
+ * @param {string[]} [options.tempDirs] The system's temporary folders.
  * @returns {Decision}
  */
 export function decide(input, options = {}) {
@@ -164,6 +185,7 @@ export function decide(input, options = {}) {
   const context = {
     platform,
     realpath: options.realpath ?? realpathOfExisting,
+    tempDirs: options.tempDirs ?? defaultTempDirs(),
     zone: { root: project.root, segments: [...project.segments, ...ZONE] },
   };
   const toolInput = input.tool_input ?? {};
@@ -198,7 +220,7 @@ function isReviewerCall(input) {
  *
  * @param {string} raw The text on standard input.
  * @param {{ CLAUDE_PROJECT_DIR?: string }} [env]
- * @param {{ platform?: import("./guardPaths.mjs").Platform, realpath?: (p: string) => string }} [options]
+ * @param {{ platform?: import("./guardPaths.mjs").Platform, realpath?: (p: string) => string, tempDirs?: string[] }} [options]
  * @returns {{ code: 0 | 2, message?: string }}
  */
 export function runHook(raw, env = {}, options = {}) {
