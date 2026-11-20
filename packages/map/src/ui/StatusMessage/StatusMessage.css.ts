@@ -5,8 +5,8 @@ import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 
 /**
- * A toast or banner. The doubled `&&` selector lifts the error colours above
- * the surface's own background without relying on stylesheet order.
+ * A toast or banner. The error colours override the surface's own background
+ * and border, which sit in a lower cascade layer.
  */
 export const statusMessage = recipe({
   base: {
@@ -28,12 +28,8 @@ export const statusMessage = recipe({
       info: {},
       success: {},
       error: {
-        selectors: {
-          "&&": {
-            backgroundColor: tokens.color.dangerTint,
-            borderColor: tokens.color.danger,
-          },
-        },
+        backgroundColor: tokens.color.dangerTint,
+        borderColor: tokens.color.danger,
       },
     },
   },

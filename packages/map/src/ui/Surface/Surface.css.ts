@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { surfaceBlurStyle, tokens } from "@mapcairn/theme";
-import { recipe } from "@vanilla-extract/recipes";
+import { primitiveRecipe } from "../primitiveRecipe";
 
 /**
  * The translucent, blurred surface every piece of floating chrome sits on.
@@ -10,7 +10,7 @@ import { recipe } from "@vanilla-extract/recipes";
  * here branches on it. The border is transparent by default and painted by
  * the `chromeBorder` token where shape must stay visible.
  */
-export const surface = recipe({
+export const surface = primitiveRecipe({
   base: {
     ...surfaceBlurStyle,
     boxSizing: "border-box",
