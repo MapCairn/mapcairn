@@ -245,19 +245,10 @@ describe("SDK package manifests", () => {
   );
 
   it.each(BUILT_PACKAGES)(
-    "@mapcairn/%s ships dist and source, without tests, and declares its side effects",
+    "@mapcairn/%s ships dist only, without its build stamp, and declares its side effects",
     (name) => {
       const manifest = manifestOf(name);
-      expect(manifest.files).toEqual([
-        "dist",
-        "!dist/.built",
-        "src",
-        "!src/**/*.test.*",
-        "!src/**/*.snap.html",
-        ...(name === "core"
-          ? ["!src/propertyTesting/**", "!src/layers/legacyDefinitions/**"]
-          : []),
-      ]);
+      expect(manifest.files).toEqual(["dist", "!dist/.built"]);
       expect(manifest.sideEffects).toEqual(SIDE_EFFECTS[name]);
       expect(manifest.publishConfig).toEqual({ access: "public" });
       expect(manifest).not.toHaveProperty("main");

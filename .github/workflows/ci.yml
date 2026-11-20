@@ -90,3 +90,59 @@ jobs:
       # Checks the registry signature of every installed package and the
       # provenance attestation of those that have one.
       - run: npm audit signatures
+
+  # Packs the four SDK packages and proves the tarballs hold only what they
+  # should and work in an app outside this repository (`npm run pack:check` and
+  # `npm run consumer:check`, plan 0014 step 6). It is not a required check: it
+  # installs from the registry, so a registry outage must not block a merge.
+  # The release workflow's verify job will require it. `paths` filters a whole
+  # workflow, not a job, so the first step decides whether the rest run.
+  sdk-packages:
+    name: SDK packages
+    # `edited` is in the triggers for the names check; a new title or
+    # description changes nothing here, so the networked job does not run again.
+    if: github.event.action != 'edited'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Find out whether the SDK packages or the release scripts changed
+        id: changed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        # `shell: bash` turns on errexit and pipefail. The diff is assigned on
+        # its own line, so a failing `git diff` fails the step, and grep reads
+        # a here-string, so there is no pipe to close early (status 141).
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
+          if grep -Eq '^(packages/(core|map|react|theme)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|entryPoint\.mjs)|package(-lock)?\.json|tsconfig\.base\.json|\.npmrc|\.github/workflows/ci\.yml)' <<<"$changed"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No SDK package, release script or lockfile changed, so the pack and consumer checks are skipped."
+          fi
+      - if: steps.changed.outputs.run == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - if: steps.changed.outputs.run == 'true'
+        run: npm ci --ignore-scripts
+      - name: Check what each tarball holds
+        if: steps.changed.outputs.run == 'true'
+        run: npm run pack:check
+      - name: Install the tarballs in an app outside the repository and render the chrome
+        if: steps.changed.outputs.run == 'true'
+        run: npm run consumer:check
