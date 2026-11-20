@@ -33,8 +33,9 @@ export default defineConfig({
         },
         // The host sits a little lower on branches because its layout and
         // touch-gesture code is also covered by Playwright, not only by jsdom.
-        // Set below the measured figures (about 97.5, 93.8, 97.6 and 97.6) so
-        // ordinary changes do not trip it, and raised when the measure rises.
+        // Set below the measured figures so ordinary changes do not trip it,
+        // and raised when the measure rises. The MapLibre adapter has its own
+        // floor above, so these figures no longer include it.
         "packages/web/**": {
           statements: 95,
           branches: 90,

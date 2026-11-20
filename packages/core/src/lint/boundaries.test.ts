@@ -108,6 +108,15 @@ describe("dependency-cruiser boundaries", () => {
 
     // the MapLibre adapter package: the host imports it from the composition
     // root only, and nothing but core and theme may sit under it or over it.
+    "packages/adapter-maplibre/package.json":
+      '{ "name": "@mapcairn/adapter-maplibre", "exports": { ".": "./src/index.ts" } }\n',
+    // The same imports by package name, as the host and the ui write them.
+    "packages/web/src/routes/badAdapterPackageByName.ts":
+      'import { createAdapter } from "@mapcairn/adapter-maplibre";\nexport const x = createAdapter;\n',
+    "packages/web/src/composition/goodAdapterPackageByName.ts":
+      'import { createAdapter } from "@mapcairn/adapter-maplibre";\nexport const x = createAdapter;\n',
+    "packages/map/src/ui/badAdapterPackageByName.ts":
+      'import { createAdapter } from "@mapcairn/adapter-maplibre";\nexport const x = createAdapter;\n',
     "packages/adapter-maplibre/src/index.ts":
       "export const createAdapter = () => 1;\n",
     "packages/adapter-maplibre/src/goodCore.ts":
@@ -201,6 +210,8 @@ describe("dependency-cruiser boundaries", () => {
     for (const [consumer, target] of [
       ["examples/demo", "sdk"],
       ["packages/sdk", "map"],
+      ["packages/web", "adapter-maplibre"],
+      ["packages/map", "adapter-maplibre"],
     ] as const) {
       mkdirSync(path.join(root, consumer, "node_modules/@mapcairn"), {
         recursive: true,
@@ -321,6 +332,14 @@ describe("dependency-cruiser boundaries", () => {
       "packages/web/src/adapters/maplibre/badAdapterPackage.ts",
     ],
     [
+      "adapter-package-imported-by-composition-only",
+      "packages/web/src/routes/badAdapterPackageByName.ts",
+    ],
+    [
+      "map-has-no-web-dependency",
+      "packages/map/src/ui/badAdapterPackageByName.ts",
+    ],
+    [
       "adapter-package-uses-core-and-theme-only",
       "packages/adapter-maplibre/src/badMap.ts",
     ],
@@ -360,6 +379,7 @@ describe("dependency-cruiser boundaries", () => {
     "packages/adapter-maplibre/src/goodCore.ts",
     "packages/web/src/adapters/maplibre/workerUrl.ts",
     "packages/web/src/composition/goodAdapterPackage.ts",
+    "packages/web/src/composition/goodAdapterPackageByName.ts",
     "packages/map/src/ui/goodLucide.ts",
     "packages/map/src/ui/Switch/goodRadix.ts",
     "packages/map/src/ui/Tooltip/goodRadix.ts",

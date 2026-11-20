@@ -433,10 +433,7 @@
       }
     },
     {
-      "includes": [
-        "packages/web/src/adapters/**",
-        "packages/adapter-maplibre/src/**"
-      ],
+      "includes": ["packages/web/src/adapters/**"],
       "linter": {
         "rules": {
           "nursery": { "noJsRestrictedProperties": "off" },

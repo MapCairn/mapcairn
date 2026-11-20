@@ -55,11 +55,11 @@ import type { PendingLoad } from "./pendingLoad";
 import { positionOf } from "./positionOf";
 import { RenderMapOpener } from "./renderMapOpener";
 // The engine styles have no exports. They are imported here, in the module the
-// factory is in, and not in the entry module: a bundler treats the entry, which
-// only re-exports, as free of side effects and drops its imports when it
-// follows the re-export, which would leave a host that resolves the package's
-// source without the styles. Importing them also puts them in the package's
-// `styles.css` (`@mapcairn/adapter-maplibre/styles.css`).
+// factory is in, and not in the entry module: `index.ts` is not listed in
+// `sideEffects`, so a host's bundler drops its own imports, and the styles
+// would be lost. This module keeps its import because the host uses the
+// factory. Importing them also puts them in the package's `styles.css`
+// (`@mapcairn/adapter-maplibre/styles.css`).
 import "./styles.css";
 
 export { TILE_LAYER_SLOW_MS } from "./tileLayerTraffic";
