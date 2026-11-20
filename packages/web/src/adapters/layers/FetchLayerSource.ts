@@ -106,12 +106,42 @@ export class FetchLayerSource implements LayerSource {
       loadsFeatures(definition) && definition.source.kind === "feed"
         ? (definition.source.cacheSeconds ?? 0)
         : 0;
-    const raws = await Promise.all(
-      feedUrls(definition, controls, now, area).map((url) =>
-        this.#get(url, signal, cacheSeconds),
-      ),
+    const raws = await this.#getAll(
+      feedUrls(definition, controls, now, area),
+      signal,
+      cacheSeconds,
     );
     return decodeFeeds(definition, raws, this.#decoders);
+  }
+
+  /**
+   * Every URL's answer, asked at once. When one fails the rest are stopped
+   * and the whole fails, so a layer never shows half of what it asked for.
+   * The caller's `signal` stops them all.
+   */
+  async #getAll(
+    urls: readonly string[],
+    signal: AbortSignal | undefined,
+    minimumSeconds: number,
+  ): Promise<unknown[]> {
+    const group = new AbortController();
+    const stop = () => group.abort();
+    if (signal?.aborted) {
+      stop();
+    }
+    signal?.addEventListener("abort", stop, { once: true });
+    try {
+      return await Promise.all(
+        urls.map((url) =>
+          this.#get(url, group.signal, minimumSeconds).catch((error) => {
+            stop();
+            throw error;
+          }),
+        ),
+      );
+    } finally {
+      signal?.removeEventListener("abort", stop);
+    }
   }
 
   async loadDetail(

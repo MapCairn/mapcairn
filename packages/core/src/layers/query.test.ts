@@ -96,6 +96,24 @@ describe("queryWindow across the antimeridian", () => {
   });
 });
 
+describe("queryWindow at the edges of the world", () => {
+  it("gives the same window for a view that ends on 180 or starts on -180, whatever copy of the world it is reported on", () => {
+    const ends = { west: 170, south: 0, east: 180, north: 4 };
+    const starts = { west: -180, south: 0, east: -170, north: 4 };
+    for (const turns of [-720, -360, 0, 360, 720]) {
+      const shift = (view: typeof ends) => ({
+        ...view,
+        west: view.west + turns,
+        east: view.east + turns,
+      });
+      expect(queryWindow(shift(ends))).toEqual(queryWindow(ends));
+      expect(queryWindow(shift(starts))).toEqual(queryWindow(starts));
+    }
+    expect(queryBoxes(queryWindow(ends))).toHaveLength(1);
+    expect(queryBoxes(queryWindow(starts))).toHaveLength(1);
+  });
+});
+
 describe("queryBoxes", () => {
   it("gives a window inside the world as it is", () => {
     const window = { west: 10, south: 0, east: 20, north: 5 };

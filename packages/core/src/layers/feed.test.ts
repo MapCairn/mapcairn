@@ -389,6 +389,42 @@ describe("decodeFeeds", () => {
     ).toEqual(["a", "b", "c"]);
   });
 
+  it("keeps features with no id of their own from different responses, each under its own id", () => {
+    const noId = (lng: number) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [lng, 1] },
+      properties: { name: "x" },
+    });
+    const kept = decodeFeeds(
+      SAMPLE_QUERY_LAYER,
+      [
+        { type: "FeatureCollection", features: [noId(179.5)] },
+        { type: "FeatureCollection", features: [noId(-179.5)] },
+      ],
+      registry,
+    );
+    expect(kept).toHaveLength(2);
+    expect(new Set(kept.map((feature) => feature.id)).size).toBe(2);
+    expect(kept.map((feature) => feature.fields.id)).toEqual(
+      kept.map((feature) => feature.id),
+    );
+  });
+
+  it("keeps two different features that share a provider id, the later under a new id", () => {
+    const at = (id: string, lng: number) => point(id, { title: id }, [lng, 1]);
+    const kept = decodeFeeds(
+      SAMPLE_QUERY_LAYER,
+      [
+        { type: "FeatureCollection", features: [at("a", 179.5)] },
+        { type: "FeatureCollection", features: [at("a", -179.5)] },
+      ],
+      registry,
+    );
+    expect(kept).toHaveLength(2);
+    expect(kept[0]?.id).toBe("a");
+    expect(kept[1]?.id).not.toBe("a");
+  });
+
   it("is not stopped by one response with nothing in it", () => {
     expect(
       idsOf(decodeFeeds(SAMPLE_QUERY_LAYER, [answer(), answer("a")], registry)),

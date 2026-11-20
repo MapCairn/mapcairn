@@ -12,6 +12,7 @@ import {
   loadsFeatures,
 } from "./definition";
 import { matchesFilter } from "./filter";
+import { jsonEqual } from "./jsonEqual";
 import { queryBoxes } from "./query";
 import { fillUrlTemplate } from "./template";
 
@@ -84,11 +85,39 @@ function decodeOrNothing(
 }
 
 /**
+ * Joins decoded responses. A feature with the id and the geometry of one
+ * already kept is the same feature, seen from both boxes, and is dropped.
+ * A different feature that has the same id (a provider that reuses one, or
+ * the position a decoder gives a feature with no id of its own, which starts
+ * again in each response) is kept under a new id, so ids stay unique in the
+ * layer.
+ */
+function joinResponses(responses: readonly LayerFeature[][]): LayerFeature[] {
+  const kept = new Map<string, LayerFeature>();
+  responses.forEach((features, response) => {
+    for (const feature of features) {
+      const same = kept.get(feature.id);
+      if (same && jsonEqual(same.geometry, feature.geometry)) {
+        continue;
+      }
+      let id = feature.id;
+      for (let n = response; kept.has(id); n += 1) {
+        id = `${feature.id}#${n}`;
+      }
+      kept.set(id, { ...feature, id, fields: { ...feature.fields, id } });
+    }
+  });
+  return [...kept.values()];
+}
+
+/**
  * Decodes the responses to the requests `feedUrls` lists, as `decodeFeed`
- * does for one, and joins them. A feature that more than one response holds
- * (one on the antimeridian can be in the box on each side) is kept once, by
- * its id, in the order the responses came, and a query layer's cap applies to
- * the whole.
+ * does for one, and joins them in the order they came. A feature that more
+ * than one response holds (one on the antimeridian can be in the box on each
+ * side) is kept once, when its id and geometry are the same; a different
+ * feature with the same id is kept under a new id. Each response is capped
+ * at one more than a query layer's `maxFeatures` before they are joined, and
+ * the cap applies to the whole again.
  *
  * @throws `LayerError` `invalid` when any response cannot be decoded, and
  *   `empty` when no feature is left in any of them.
@@ -102,10 +131,9 @@ export function decodeFeeds(
   if (others.length === 0) {
     return decodeFeed(definition, only, decoders);
   }
-  const seen = new Set<string>();
-  const features = raws
-    .flatMap((raw) => decodeOrNothing(definition, raw, decoders))
-    .filter((feature) => !seen.has(feature.id) && seen.add(feature.id));
+  const features = joinResponses(
+    raws.map((raw) => decodeOrNothing(definition, raw, decoders)),
+  );
   if (features.length === 0) {
     throw new LayerError("empty");
   }
@@ -143,7 +171,8 @@ export function decodeDetail(
  * (see `queryWindow`), which fills its box and its limit.
  *
  * @throws when the `area` crosses the antimeridian, which takes two
- *   requests: use `feedUrls`.
+ *   requests: use `feedUrls`. It once gave one URL with the box clamped to
+ *   the edge of the world, which asked for the wrong area.
  */
 export function feedUrl(
   definition: LayerDefinition,
