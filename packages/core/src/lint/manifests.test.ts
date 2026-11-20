@@ -413,6 +413,21 @@ describe("SDK package manifests", () => {
     );
   });
 
+  it("the reference host declares every MapCairn package its source imports", () => {
+    const declared = new Set(
+      Object.keys(manifestAt("packages/web").dependencies ?? {}),
+    );
+    const missing = new Set<string>();
+    for (const file of sourceFiles("web")) {
+      for (const imported of importedPackages(file)) {
+        if (imported.startsWith("@mapcairn/") && !declared.has(imported)) {
+          missing.add(`${imported} (imported by ${file})`);
+        }
+      }
+    }
+    expect([...missing]).toEqual([]);
+  });
+
   it("keeps the SDK package versions equal", () => {
     const versions = BUILT_PACKAGES.map((name) => manifestOf(name).version);
     expect(new Set(versions).size).toBe(1);

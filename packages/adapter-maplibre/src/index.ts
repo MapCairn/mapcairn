@@ -9,11 +9,6 @@
  * @packageDocumentation
  */
 
-// The engine styles have no exports. Importing them here puts them in the
-// package's stylesheet (`@mapcairn/adapter-maplibre/styles.css`), and in the
-// page of a host that resolves the package's source.
-import "./styles.css";
-
 export type { MapLibreMapAdapterOptions } from "./MapLibreMapAdapter";
 export {
   createMapLibreMapAdapter,

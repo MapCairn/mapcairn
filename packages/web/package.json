@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@mapcairn/adapter-maplibre": "0.1.0-rc.2",
     "@mapcairn/core": "0.1.0-rc.2",
     "@mapcairn/map": "0.1.0-rc.2",
     "@mapcairn/react": "0.1.0-rc.2",
