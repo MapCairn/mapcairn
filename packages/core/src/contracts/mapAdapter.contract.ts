@@ -339,6 +339,25 @@ export function runMapAdapterContract(
       expect(southWest.y).toBeLessThanOrEqual(controls.hostSize.height + 1);
     });
 
+    it("fits a box across the antimeridian the short way", async () => {
+      const { adapter, controls } = await mounted();
+      // Fiji: 1.5 degrees wide across the line, not 358.5 degrees the long way.
+      const bounds = { south: -17.5, west: 179.2, north: -16.5, east: 180.7 };
+      adapter.fitBounds(bounds, { ...NO_ANIMATION, maxZoom: 12 });
+      await controls.settle();
+      const view = adapter.getView();
+      expect(view.zoom).toBeGreaterThan(5);
+      expect(view.center.lat).toBeCloseTo(-17, 1);
+      const centreGap = Math.abs(
+        ((view.center.lng - 179.95 + 540) % 360) - 180,
+      );
+      expect(centreGap).toBeLessThan(0.1);
+      const southWest = adapter.project({ lat: bounds.south, lng: 179.2 });
+      const northEast = adapter.project({ lat: bounds.north, lng: 180.7 });
+      expect(southWest.x).toBeGreaterThanOrEqual(-1);
+      expect(northEast.x).toBeLessThanOrEqual(controls.hostSize.width + 1);
+    });
+
     it("projects the view centre to the middle of the host", async () => {
       const { adapter, controls } = await mounted();
       const point = adapter.project(adapter.getView().center);

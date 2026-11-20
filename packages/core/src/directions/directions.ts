@@ -11,6 +11,7 @@ import type {
   RouteLeg,
   TravelMode,
 } from "../ports/routing";
+import { boundsOfPoints } from "../spatial/boundsOfPoints";
 
 /** One place a route passes through. */
 export interface DirectionStop {
@@ -115,39 +116,20 @@ export function describeStop(
   });
 }
 
-function extendBounds(
-  bounds: { south: number; west: number; north: number; east: number },
-  position: readonly number[],
-): void {
-  const lng = position[0];
-  const lat = position[1];
-  if (lng === undefined || lat === undefined) {
-    return;
-  }
-  bounds.south = Math.min(bounds.south, lat);
-  bounds.north = Math.max(bounds.north, lat);
-  bounds.west = Math.min(bounds.west, lng);
-  bounds.east = Math.max(bounds.east, lng);
-}
-
 /**
  * The smallest box that holds every line or ring of the features, or `null`
- * when they hold no position. Loops over the positions rather than spreading
- * them, so a route of any length is safe.
+ * when they hold no position. Takes the short way across the antimeridian, as
+ * {@link boundsOfPoints} does. Safe for a route of any length.
  */
 export function routeBounds(
   features: readonly (RouteLeg | ReachableAreaFeature)[],
 ): Bounds | null {
-  const bounds = {
-    south: Number.POSITIVE_INFINITY,
-    west: Number.POSITIVE_INFINITY,
-    north: Number.NEGATIVE_INFINITY,
-    east: Number.NEGATIVE_INFINITY,
-  };
-  let seen = false;
+  const positions: LatLng[] = [];
   const visit = (position: readonly number[]) => {
-    seen = true;
-    extendBounds(bounds, position);
+    const [lng, lat] = position;
+    if (lng !== undefined && lat !== undefined) {
+      positions.push({ lat, lng });
+    }
   };
   for (const { geometry } of features) {
     switch (geometry.type) {
@@ -162,7 +144,7 @@ export function routeBounds(
         break;
     }
   }
-  return seen ? bounds : null;
+  return boundsOfPoints(positions) ?? null;
 }
 
 /** The ground area of the reachable areas together, in square metres. */
