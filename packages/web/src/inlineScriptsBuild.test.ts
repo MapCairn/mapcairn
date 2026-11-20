@@ -107,6 +107,39 @@ function violations(html: string, policy: string): string[] {
   return [...unhashed, ...wrongNonces];
 }
 
+/** The nonces the page's scripts carry. */
+function nonces(html: string): string[] {
+  return scripts(html)
+    .map(({ attributes }) => attribute(attributes, "nonce"))
+    .filter((nonce): nonce is string => nonce !== undefined);
+}
+
+/** The nonces two renders of one page share; a fresh nonce per response leaves none. */
+function reusedNonces(first: string, second: string): string[] {
+  const earlier = new Set(nonces(first));
+  return nonces(second).filter((nonce) => earlier.has(nonce));
+}
+
+/**
+ * Everything wrong with a page and the policy it was sent with, so each check
+ * fails closed: a `<script` the reader above did not match (counted with a
+ * plain case-insensitive search, not parsed), an `unsafe-inline` source in
+ * `script-src`, and whatever {@link violations} reports.
+ */
+function problems(html: string, policy: string): string[] {
+  const found = (html.match(/<script/gi) ?? []).length;
+  const read = scripts(html).length;
+  const unreadable =
+    found === read ? [] : [`${found} \`<script\` found, ${read} read`];
+  const unsafe = scriptSources(policy)
+    .toLowerCase()
+    .split(/\s+/)
+    .includes("'unsafe-inline'")
+    ? ["script-src allows 'unsafe-inline'"]
+    : [];
+  return [...unreadable, ...unsafe, ...violations(html, policy)];
+}
+
 /** Set to `1` by the CI step that runs after the build, so a missing output fails. */
 const REQUIRE_BUILD_OUTPUT = "MAPCAIRN_REQUIRE_BUILD_OUTPUT";
 
@@ -193,6 +226,77 @@ describe("violations", () => {
   });
 });
 
+describe("problems", () => {
+  const script = "(function(){})()";
+  const policy = `default-src 'self'; script-src 'self' ${cspHash(script)} 'nonce-abc'; style-src 'self'`;
+
+  it("accepts a page whose scripts all parse and a policy without unsafe-inline", () => {
+    const html = `<script>${script}</script><script nonce="abc">x</script>`;
+    expect(problems(html, policy)).toEqual([]);
+  });
+
+  it("fails on a script the reader cannot parse, so it is not silently ignored", () => {
+    const unterminated = `<script>${script}</script><script>never closed`;
+    expect(problems(unterminated, policy)).toEqual([
+      "2 `<script` found, 1 read",
+    ]);
+    const glued = `<script>${script}</script><scripty>z</scripty><script/>`;
+    expect(problems(glued, policy)).toHaveLength(1);
+  });
+
+  it("fails on unsafe-inline in script-src, in any letter case", () => {
+    const html = `<script>${script}</script>`;
+    expect(
+      problems(html, `script-src 'self' 'unsafe-inline' ${cspHash(script)}`),
+    ).toEqual(["script-src allows 'unsafe-inline'"]);
+    expect(problems(html, "script-src 'UNSAFE-INLINE'")).toContain(
+      "script-src allows 'unsafe-inline'",
+    );
+  });
+
+  it("does not mind unsafe-inline outside script-src", () => {
+    expect(
+      problems(
+        `<script>${script}</script>`,
+        `${policy}; img-src 'unsafe-inline'`,
+      ),
+    ).toEqual([]);
+  });
+
+  it("includes what the policy would refuse", () => {
+    expect(problems("<script>q</script>", policy)).toEqual([cspHash("q")]);
+  });
+});
+
+describe("reusedNonces", () => {
+  it("is empty when two renders carry different nonces", () => {
+    expect(
+      reusedNonces(
+        '<script nonce="a">x</script>',
+        '<script nonce="b">x</script>',
+      ),
+    ).toEqual([]);
+  });
+
+  it("reports a nonce both renders carry, as a fixed nonce would", () => {
+    expect(
+      reusedNonces(
+        '<script nonce="a">x</script>',
+        '<script nonce="a">y</script>',
+      ),
+    ).toEqual(["a"]);
+  });
+
+  it("reports a nonce that stays the same in only one script", () => {
+    expect(
+      reusedNonces(
+        '<script nonce="a">x</script><script nonce="b">x</script>',
+        '<script nonce="c">x</script><script nonce="b">x</script>',
+      ),
+    ).toEqual(["b"]);
+  });
+});
+
 /**
  * Renders the built server bundle in Node and checks the policy it sends
  * against the scripts it renders. The theme script is made at run time from
@@ -236,13 +340,16 @@ describe.skipIf(
     });
 
     it.each(PAGES)(
-      "%s: carries %i hashed inline script(s), each allowed by the policy it is sent with and by public/_headers",
+      "%s: carries %i hashed inline script(s), each allowed by the policy it is sent with and by public/_headers, a fresh nonce per render and no unsafe-inline",
       async (page, count) => {
         const response = await render(page);
         const policy = response.headers.get("content-security-policy") ?? "";
         const html = await response.text();
+        const again = await (await render(page)).text();
         expect(hashedScripts(html)).toHaveLength(count);
-        expect(violations(html, policy)).toEqual([]);
+        expect(problems(html, policy)).toEqual([]);
+        expect(nonces(html).length).toBeGreaterThan(0);
+        expect(reusedNonces(html, again)).toEqual([]);
         expect(
           hashedScripts(html)
             .map(cspHash)
