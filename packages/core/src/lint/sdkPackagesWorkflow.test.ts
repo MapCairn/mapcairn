@@ -69,16 +69,67 @@ describe("the SDK packages job in ci.yml", () => {
     }
   });
 
-  it("always runs on a push, and on a pull request only for the files that change the tarballs", () => {
-    expect(job).toContain('"$EVENT_NAME" != "pull_request"');
-    for (const filter of [
-      "packages/(core|map|react|theme)/",
-      "scripts/(release/|buildPackage",
-      "package-lock",
-      "tsconfig\\.base",
-    ]) {
-      expect(job).toContain(filter);
-    }
+  it("does not run again when only the title or description is edited", () => {
+    expect(job).toContain("if: github.event.action != 'edited'");
+    expect(withoutComments(read(".github/workflows/ci.yml"))).toContain(
+      "types: [opened, synchronize, reopened, edited]",
+    );
+  });
+
+  describe("the step that decides whether to run", () => {
+    const script = job.slice(job.indexOf("changed="));
+    const filter = new RegExp(
+      /grep -Eq '(.+?)' <<</.exec(job)?.[1] ?? "no filter found",
+    );
+
+    it("always runs on a push", () => {
+      expect(job).toMatch(
+        /if \[ "\$EVENT_NAME" != "pull_request" \]; then\n\s+echo "run=true" >> "\$GITHUB_OUTPUT"\n\s+exit 0/,
+      );
+    });
+
+    it("reads the diff on its own line and greps a here-string, so a failing git or a closed pipe cannot pass it", () => {
+      expect(job).toContain(
+        'changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"',
+      );
+      expect(script).toContain('<<<"$changed"');
+      expect(job).not.toMatch(/git diff[^\n]*\|/);
+      expect(job).not.toMatch(/\|\s*grep/);
+    });
+
+    it.each([
+      "packages/core/src/index.ts",
+      "packages/map/package.json",
+      "packages/react/README.md",
+      "packages/theme/src/tokens.css.ts",
+      "scripts/release/packCheck.mjs",
+      "scripts/buildPackage.mjs",
+      "scripts/buildSdk.mjs",
+      "scripts/entryPoint.mjs",
+      "package.json",
+      "package-lock.json",
+      "tsconfig.base.json",
+      ".npmrc",
+      ".github/workflows/ci.yml",
+    ])("runs for a change to %s", (file) => {
+      expect(filter.test(file)).toBe(true);
+    });
+
+    it.each([
+      "packages/web/src/App.tsx",
+      "packages/web/package.json",
+      "examples/embed/src/main.tsx",
+      "docs/guides/public-api.md",
+      "scripts/names-check.mjs",
+      ".github/workflows/cla.yml",
+      "README.md",
+    ])("does not run for a change to %s", (file) => {
+      expect(filter.test(file)).toBe(false);
+    });
+  });
+
+  it("checks out the whole history, which the diff against the base needs", () => {
+    expect(job).toContain("fetch-depth: 0");
   });
 });
 

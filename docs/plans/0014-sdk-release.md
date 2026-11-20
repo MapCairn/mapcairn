@@ -76,7 +76,7 @@ Recommendation: ship compiled CSS, not `.css.ts` source.
 | Runtime dependencies | `@vanilla-extract/recipes` stays for `map`; `@vanilla-extract/css` leaves both packages' `dependencies` unless the rolled-up declarations name its types (step 4 checks) | Both stay                                                                                    |
 | Cost                 | The host loads all component CSS (84 kB before compression)                                                                                                              | Only the styles of components it imports                                                     |
 
-Step 4 checked the dependency question: neither package's built JavaScript nor rolled-up declarations name `@vanilla-extract/css`, so it moved to `devDependencies` of both; `@vanilla-extract/recipes` (a runtime dependency of `map`) declares it as a peer but does not load it at run time (checked with npm, `--legacy-peer-deps` and pnpm in strict mode); pnpm with strict peers and no automatic peer install refuses the install, so step 6 must cover that case. The maintainer has since decided the generated custom property names are not public API (`docs/guides/public-api.md`).
+Step 4 checked the dependency question: neither package's built JavaScript nor rolled-up declarations name `@vanilla-extract/css`, so it moved to `devDependencies` of both; `@vanilla-extract/recipes` (a runtime dependency of `map`) declares it as a peer but does not load it at run time (checked with npm, `--legacy-peer-deps` and pnpm in strict mode); pnpm with strict peers and no automatic peer install refuses the install. Step 6 ran that install and confirmed it, and the maintainer decided on 2026-11-20 that `map` declares `@vanilla-extract/css` as a regular dependency again (not a peer, which would push it onto every consumer), so the strict install passes. The maintainer has since decided the generated custom property names are not public API (`docs/guides/public-api.md`).
 
 The JavaScript stays free of side effects; only the CSS files are marked as side effects. `theme`'s token stylesheet no longer arrives by importing `tokens`: the host imports `tokens.css` itself, which `DESIGN.md`, `docs/guides/extending.md`, the README quick start and the comment in `examples/embed/vite.config.ts` must then say.
 
@@ -299,6 +299,7 @@ Decided:
 - One `CHANGELOG.md` for the set, not one per package (the issue suggested one per package before the set was versioned together). Each package README links to it.
 - No `workspace:` protocol (npm rejects it); caret internal ranges moved by the release script.
 - On 2026-11-20 (#429): the tarballs hold `dist` only, with no `src` (reviewed in the step 6 pull request).
+- On 2026-11-20 (#429), from the maintainer: `map` declares `@vanilla-extract/css` as a regular dependency, so a strict pnpm install satisfies the peer of `@vanilla-extract/recipes`.
 - No `publishConfig.provenance`: trusted publishing adds provenance by default, and the flag would make the hand publish fail.
 - Attested tarballs (`actions/attest-build-provenance`), because `publish-existing` must verify what it downloads.
 

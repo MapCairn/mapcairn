@@ -10,7 +10,7 @@
  * tarball, and works on a private package (npm packs one; only `publish`
  * refuses). `consumerCheck.mjs` packs the real tarballs.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
@@ -27,7 +27,7 @@ export const PACKAGES = ["core", "react", "theme", "map"];
 /**
  * The most a tarball may weigh, in bytes of the packed `.tgz`. Set at about
  * one and a half times what each measured on 2026-11-20 (core 692 kB, react
- * 18 kB, theme 41 kB, map 470 kB), so a bundled dependency or a stray data
+ * 18 kB, theme 56 kB after the contrast check landed, map 470 kB), so a bundled dependency or a stray data
  * file fails and ordinary growth does not. Raising one is a deliberate edit
  * in a pull request.
  *
@@ -36,7 +36,7 @@ export const PACKAGES = ["core", "react", "theme", "map"];
 export const SIZE_CEILINGS = {
   core: 1_000_000,
   react: 30_000,
-  theme: 60_000,
+  theme: 80_000,
   map: 700_000,
 };
 
@@ -117,6 +117,126 @@ export function exportTargetsOf(manifest) {
   return [...new Set(targets.map((target) => target.replace(/^\.\//, "")))];
 }
 
+/** The licence every SDK package declares. */
+export const EXPECTED_LICENCE = "AGPL-3.0-only";
+
+/**
+ * The map of a module compiled from a `*.css.ts` file. The plugin that
+ * compiles it records no source, so an empty list is what the build writes.
+ */
+const STYLES_MAP = /\.styles\.js\.map$/;
+
+/**
+ * Scripts the build writes with no source map: the entry points (which only
+ * re-export) are found through `exports`, and rolldown's helper module sits
+ * under `dist/_virtual`.
+ */
+const UNMAPPED_SCRIPT_FOLDER = "dist/_virtual/";
+
+/** A path that names a place on one machine: a rooted path, a drive or a URL. */
+const MACHINE_PATH = /^(?:[/\\]|[A-Za-z]:|[A-Za-z][A-Za-z0-9+.-]*:\/\/)/;
+
+/**
+ * What is wrong with a source map, and the files it names.
+ *
+ * @param {string} file The map's path in the tarball, such as `dist/a/b.js.map`.
+ * @param {string | undefined} text The map's text, `undefined` when unreadable.
+ * @returns {{ problems: string[], sources: string[] }} The sources are paths
+ *   relative to the package that resolve into its `src`.
+ */
+export function checkSourceMap(file, text) {
+  /** @type {string[]} */
+  const problems = [];
+  /** @type {string[]} */
+  const sources = [];
+  let map;
+  try {
+    map = JSON.parse(text ?? "");
+  } catch {
+    return { problems: [`${file}: not a readable source map`], sources };
+  }
+  const root = typeof map.sourceRoot === "string" ? map.sourceRoot : "";
+  const isArray = Array.isArray(map.sources);
+  if (!isArray || (map.sources.length === 0 && !STYLES_MAP.test(file))) {
+    problems.push(`${file}: has no sources`);
+  }
+  if (MACHINE_PATH.test(root)) {
+    problems.push(`${file}: sourceRoot "${root}" names a place on one machine`);
+  }
+  for (const source of Array.isArray(map.sources) ? map.sources : []) {
+    if (typeof source !== "string" || MACHINE_PATH.test(source)) {
+      problems.push(
+        `${file}: source ${JSON.stringify(source)} names a place on one machine`,
+      );
+      continue;
+    }
+    const resolved = path.posix.normalize(
+      path.posix.join(
+        path.posix.dirname(file),
+        root.replaceAll("\\", "/"),
+        source.replaceAll("\\", "/"),
+      ),
+    );
+    if (resolved.startsWith("src/") && !resolved.split("/").includes("..")) {
+      sources.push(resolved);
+    } else {
+      problems.push(
+        `${file}: source "${source}" resolves to ${resolved}, outside the package's src`,
+      );
+    }
+  }
+  return { problems, sources };
+}
+
+/**
+ * What is wrong with the files under `dist`, beyond their names: a script
+ * needs a readable source map that names files in `src` (an entry point and
+ * rolldown's helper module are the two exceptions), a map needs its script,
+ * and a declaration or stylesheet must be one an export names. A file
+ * a build did not make, such as a stray `dist/secret.js`, has none of these.
+ *
+ * @param {{
+ *   paths: string[],
+ *   targets: string[],
+ *   readFile: (file: string) => string | undefined,
+ *   sourceExists: (source: string) => boolean,
+ * }} input
+ * @returns {string[]}
+ */
+function buildProblems({ paths, targets, readFile, sourceExists }) {
+  /** @type {string[]} */
+  const problems = [];
+  const present = new Set(paths);
+  const named = new Set(targets);
+  for (const file of paths.filter((entry) => entry.startsWith("dist/"))) {
+    if (file.endsWith(".js") && !present.has(`${file}.map`)) {
+      if (named.has(file) || file.startsWith(UNMAPPED_SCRIPT_FOLDER)) {
+        continue;
+      }
+      problems.push(
+        `${file}: no source map, so nothing says what it was built from`,
+      );
+    } else if (file.endsWith(".js.map")) {
+      if (!present.has(file.slice(0, -".map".length))) {
+        problems.push(`${file}: a source map with no script`);
+        continue;
+      }
+      const checked = checkSourceMap(file, readFile(file));
+      problems.push(...checked.problems);
+      for (const source of checked.sources.filter(
+        (entry) => !sourceExists(entry),
+      )) {
+        problems.push(`${file}: source ${source} is not a file in the package`);
+      }
+    } else if (/\.(?:d\.ts|css)$/.test(file) && !named.has(file)) {
+      problems.push(
+        `${file}: not named by exports or types, so no build step is known to make it`,
+      );
+    }
+  }
+  return problems;
+}
+
 /**
  * Everything wrong with one package's tarball and manifest.
  *
@@ -124,10 +244,20 @@ export function exportTargetsOf(manifest) {
  *   manifest: Record<string, any>,
  *   listing: { size: number, files: { path: string }[] },
  *   ceiling: number,
- * }} input `listing` is one element of `npm pack --dry-run --json`.
+ *   readFile: (file: string) => string | undefined,
+ *   sourceExists: (source: string) => boolean,
+ * }} input `listing` is one element of `npm pack --dry-run --json`;
+ *   `readFile` reads a packed file by its path in the tarball and
+ *   `sourceExists` says whether a path relative to the package is a file.
  * @returns {string[]} One message for each problem, none when it is fine.
  */
-export function checkPackage({ manifest, listing, ceiling }) {
+export function checkPackage({
+  manifest,
+  listing,
+  ceiling,
+  readFile,
+  sourceExists,
+}) {
   /** @type {string[]} */
   const problems = [];
   const paths = listing.files.map((file) => file.path.replaceAll("\\", "/"));
@@ -138,13 +268,20 @@ export function checkPackage({ manifest, listing, ceiling }) {
     }
   }
   const present = new Set(paths);
-  for (const target of exportTargetsOf(manifest)) {
+  for (const required of ROOT_FILES) {
+    if (!present.has(required)) {
+      problems.push(`${required}: missing from the tarball`);
+    }
+  }
+  const targets = exportTargetsOf(manifest);
+  for (const target of targets) {
     if (!present.has(target)) {
       problems.push(
         `${target}: named by exports or types, but not in the tarball`,
       );
     }
   }
+  problems.push(...buildProblems({ paths, targets, readFile, sourceExists }));
   if (listing.size > ceiling) {
     problems.push(
       `size: ${listing.size} bytes is over the ceiling of ${ceiling}`,
@@ -157,6 +294,11 @@ export function checkPackage({ manifest, listing, ceiling }) {
   }
   if (manifest.publishConfig?.access !== "public") {
     problems.push('publishConfig: must set "access" to "public"');
+  }
+  if (manifest.license !== EXPECTED_LICENCE) {
+    problems.push(
+      `license: must be "${EXPECTED_LICENCE}", found ${JSON.stringify(manifest.license)}`,
+    );
   }
   if ("main" in manifest) {
     problems.push("main: the packages are ESM only and set no main field");
@@ -180,6 +322,15 @@ function listPackage(folder) {
   return JSON.parse(result.stdout)[0];
 }
 
+/** The text of a file, or `undefined` when it cannot be read. */
+function readIfPresent(file) {
+  try {
+    return readFileSync(file, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Checks every SDK package and prints one line for each.
  *
@@ -198,6 +349,8 @@ export function runPackCheck(root = REPO) {
       manifest,
       listing,
       ceiling: SIZE_CEILINGS[name] ?? 0,
+      readFile: (file) => readIfPresent(path.join(folder, file)),
+      sourceExists: (source) => existsSync(path.join(folder, source)),
     });
     const summary = `${manifest.name}: ${listing.files.length} files, ${listing.size} bytes packed, ${listing.unpackedSize} unpacked`;
     if (problems.length === 0) {

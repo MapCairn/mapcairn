@@ -34,18 +34,23 @@ export function npmCliPath(env = process.env, execPath = process.execPath) {
 }
 
 /**
- * The environment without the `npm_*` variables that `npm run` sets. A
- * child npm reads them as its configuration, so one that inherits the
- * repository's `npm_config_local_prefix` would work on the repository, not
- * on the folder it is run in.
+ * The environment without what could point a child at this repository: the
+ * `npm_*` variables that `npm run` sets (a child npm reads them as its
+ * configuration, so one that inherits `npm_config_local_prefix` would work on
+ * the repository, not on the folder it is run in) and `NODE_PATH` (a node
+ * child would resolve packages from it).
  *
  * @param {NodeJS.ProcessEnv} [env] The environment to filter.
  * @returns {NodeJS.ProcessEnv}
  */
-export function withoutNpmVariables(env = process.env) {
+export function isolatedEnvironment(env = process.env) {
   return Object.fromEntries(
     Object.entries(env).filter(
-      ([name]) => !name.toLowerCase().startsWith("npm_"),
+      ([name]) =>
+        !(
+          name.toLowerCase().startsWith("npm_") ||
+          name.toUpperCase() === "NODE_PATH"
+        ),
     ),
   );
 }
@@ -61,7 +66,7 @@ export function withoutNpmVariables(env = process.env) {
 export function runNpm(args, options = {}) {
   return spawnSync(process.execPath, [npmCliPath(), ...args], {
     encoding: "utf8",
-    env: withoutNpmVariables(),
+    env: isolatedEnvironment(),
     ...options,
   });
 }

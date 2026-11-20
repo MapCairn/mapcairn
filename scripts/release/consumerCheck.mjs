@@ -33,7 +33,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
-import { runNpm, withoutNpmVariables } from "./npm.mjs";
+import { isolatedEnvironment, runNpm } from "./npm.mjs";
 import { PACKAGES } from "./packCheck.mjs";
 
 const REPO = path.resolve(
@@ -88,22 +88,27 @@ export const LANDMARKS = [
   { name: "the attribution", pattern: /OpenStreetMap|Attribution/i },
 ];
 
-/**
- * Peer dependencies a strict pnpm install is known to lack. `@vanilla-extract/recipes`
- * (a dependency of `map`) names `@vanilla-extract/css` as a peer but never
- * loads it; whether `map` should depend on it is open (plan 0014, step 4).
- * Anything else missing fails the check.
- */
-export const KNOWN_UNMET_PEERS = ["@vanilla-extract/css"];
-
 /** Seven days, in the minutes pnpm counts a release age in. */
 const PNPM_MINIMUM_RELEASE_AGE = 7 * 24 * 60;
 
 /** The characters of a page a failure message shows. */
 const EXCERPT = 1500;
 
-/** What the bare `MapChrome` renders with every slot empty: its landmark. */
-export const CHROME_LANDMARKS = [LANDMARKS[0]];
+/**
+ * What the bare `MapChrome` and the providers around it render with every
+ * slot empty: the landmark and the two live regions the announcer holds.
+ */
+export const CHROME_LANDMARKS = [
+  LANDMARKS[0],
+  {
+    name: "the polite live region",
+    pattern: /role="status"[^>]*aria-live="polite"/,
+  },
+  {
+    name: "the assertive live region",
+    pattern: /role="alert"[^>]*aria-live="assertive"/,
+  },
+];
 
 /**
  * The locked version of a package in a root `package-lock.json`.
@@ -167,11 +172,33 @@ export function missingLandmarks(html, landmarks = LANDMARKS) {
 }
 
 /**
- * A custom property a script sets by name, such as the sheet's offset: two or
- * more lower-case words. The generated token names are not readable, and a
- * stylesheet must define every one it reads.
+ * The custom properties `styles.css` reads that a component sets from script
+ * (the sheet's offset, the chrome's measured boxes), so no stylesheet defines
+ * them. They were read from the built `styles.css`; a new one is added here
+ * when a component starts setting it. Every other name it reads is a generated
+ * token, which `tokens.css` must define.
  */
-const READABLE_PROPERTY = /^--[a-z]+(-[a-z]+)+$/;
+export const SCRIPT_SET_PROPERTIES = [
+  "--basemap-swatch",
+  "--chrome-bearing",
+  "--chrome-bottom-end-beside-room",
+  "--chrome-bottom-end-rise",
+  "--chrome-bottom-end-room",
+  "--chrome-bottom-lift",
+  "--chrome-bottom-raise",
+  "--chrome-bottom-start-x",
+  "--chrome-end-stack-max-height",
+  "--chrome-end-stack-width",
+  "--chrome-map-key-lift",
+  "--chrome-map-key-room",
+  "--chrome-top-start-bottom",
+  "--chrome-width",
+  "--scale-max",
+  "--scale-ratio",
+  "--sheet-full-height",
+  "--sheet-offset",
+  "--slider-fill",
+];
 
 /**
  * The problems in the stylesheet a client build made from the two imports:
@@ -197,7 +224,7 @@ export function stylesheetProblems(css) {
     problems.push("the built CSS has no component rule from styles.css");
   }
   for (const name of new Set(used)) {
-    if (!(defined.has(name) || READABLE_PROPERTY.test(name))) {
+    if (!(defined.has(name) || SCRIPT_SET_PROPERTIES.includes(name))) {
       problems.push(`the built CSS reads ${name}, which no sheet defines`);
     }
   }
@@ -217,7 +244,7 @@ function runNode(label, args, cwd) {
   const result = spawnSync(process.execPath, args, {
     cwd,
     encoding: "utf8",
-    env: withoutNpmVariables(),
+    env: isolatedEnvironment(),
     maxBuffer: MAX_OUTPUT,
   });
   if (result.status !== 0) {
@@ -311,18 +338,8 @@ export function pnpmSettings(overrides) {
 }
 
 /**
- * The peer dependencies pnpm reports as missing.
- *
- * @param {string} output What `pnpm install` printed.
- * @returns {string[]}
- */
-export function unmetPeers(output) {
-  return [...output.matchAll(/missing peer (\S+)/g)].map((match) => match[1]);
-}
-
-/**
- * Installs with pnpm as strictly as pnpm goes and renders with the result.
- * A missing peer that `KNOWN_UNMET_PEERS` lists is reported, not failed.
+ * Installs with pnpm as strictly as pnpm goes (a missing peer fails it) and
+ * renders with the result.
  *
  * @param {string} app The folder to install into.
  * @param {Record<string, string>} overrides The tarballs.
@@ -336,13 +353,6 @@ function checkPnpmStrict(app, overrides) {
   );
   const output = `${result.stdout}\n${result.stderr}`;
   if (result.status !== 0) {
-    const unmet = unmetPeers(output);
-    const unexpected = unmet.filter(
-      (peer) => !KNOWN_UNMET_PEERS.includes(peer),
-    );
-    if (unmet.length > 0 && unexpected.length === 0) {
-      return `pnpm with strict peer dependencies: known limitation, it stops at the missing peer ${unmet.join(", ")} (see docs/guides/public-api.md)`;
-    }
     throw new Error(`pnpm install failed:\n${output}`);
   }
   const missing = missingLandmarks(renderPlain(app).html, CHROME_LANDMARKS);
@@ -350,6 +360,20 @@ function checkPnpmStrict(app, overrides) {
     throw new Error(`pnpm render lacks: ${missing.join(", ")}`);
   }
   return "pnpm with strict peer dependencies and no automatic peers, and plain Node render: ok";
+}
+
+/**
+ * The line for a skipped pnpm install. On GitHub Actions it is a warning
+ * annotation, so a runner without pnpm shows up on the run's page; pnpm is
+ * not installed here, because an unpinned install would bypass the release age.
+ *
+ * @param {NodeJS.ProcessEnv} [env] The environment to read.
+ * @returns {string}
+ */
+export function pnpmSkipped(env = process.env) {
+  const message =
+    "the pnpm strict-peer install was skipped: pnpm is not available through `npm exec --no-install`";
+  return env.GITHUB_ACTIONS === "true" ? `::warning::${message}` : message;
 }
 
 /**
@@ -470,9 +494,7 @@ export function runConsumerCheck() {
       prepareApp(strict, manifest);
       report.push(checkPnpmStrict(strict, manifest.overrides));
     } else {
-      report.push(
-        "pnpm strict-peer install: skipped, pnpm is not available through `npm exec --no-install`",
-      );
+      report.push(pnpmSkipped());
     }
   } finally {
     rmSync(root, { recursive: true, force: true });

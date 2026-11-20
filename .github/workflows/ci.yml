@@ -99,6 +99,9 @@ jobs:
   # workflow, not a job, so the first step decides whether the rest run.
   sdk-packages:
     name: SDK packages
+    # `edited` is in the triggers for the names check; a new title or
+    # description changes nothing here, so the networked job does not run again.
+    if: github.event.action != 'edited'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -113,12 +116,17 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
-        # `shell: bash` turns on pipefail, so a failing `git diff` fails the step.
+        # `shell: bash` turns on errexit and pipefail. The diff is assigned on
+        # its own line, so a failing `git diff` fails the step, and grep reads
+        # a here-string, so there is no pipe to close early (status 141).
         shell: bash
         run: |
           if [ "$EVENT_NAME" != "pull_request" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "origin/$BASE_REF...HEAD" | grep -Eq '^(packages/(core|map|react|theme)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs)|package-lock\.json|tsconfig\.base\.json|\.npmrc|\.github/workflows/ci\.yml)'; then
+            exit 0
+          fi
+          changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
+          if grep -Eq '^(packages/(core|map|react|theme)/|scripts/(release/|buildPackage\.mjs|buildSdk\.mjs|entryPoint\.mjs)|package(-lock)?\.json|tsconfig\.base\.json|\.npmrc|\.github/workflows/ci\.yml)' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
