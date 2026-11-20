@@ -73,7 +73,7 @@ Options: 1. Diff the umbrella's API report against the four, rejected while the 
 3. **Type collisions.** The collisions computed from the four committed API reports equal the explicit tie-breaks in `packages/sdk/src/index.ts`. This catches a type-only collision the runtime check cannot see, and a stale tie-break.
 4. **Source holds only re-exports** (the boundary rule above).
 5. **`tsc`** fails with TS2308 on a collision with no tie-break.
-6. **Stylesheet.** `sdkDist.test.ts` checks that `dist/styles.css` holds exactly the two `@import` lines, tokens first.
+6. **Stylesheet.** `sdkDist.test.ts` checks that `dist/styles.css` holds exactly the two `@import` lines, tokens first (three from `rc.3`, with the engine's: `docs/plans/0016-adapter-maplibre-package.md`).
 
 ### Timing and slices
 

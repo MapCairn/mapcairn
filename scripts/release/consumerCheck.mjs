@@ -2,7 +2,7 @@
 // Copyright MapCairn contributors
 /**
  * Proves the packed tarballs work for an app outside this repository: they
- * install, a plain Vite build resolves them and both stylesheets with no
+ * install, a plain Vite build resolves them and their stylesheets with no
  * vanilla-extract plugin, TypeScript resolves their types under `bundler`,
  * `node16` and `nodenext`, and the map chrome renders on a server. It does so
  * for an app that lists the packages the umbrella re-exports, and again
@@ -1010,7 +1010,7 @@ function checkApp(app, prefix = "") {
     throw new Error(layering.join("\n"));
   }
   lines.push(
-    "vite build with no plugins, both stylesheets built in: ok",
+    "vite build with no plugins, the stylesheets built in: ok",
     "the SDK's primitives sit in one layer, ranked above an app reset layer declared first: ok",
   );
 

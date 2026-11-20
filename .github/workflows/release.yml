@@ -453,7 +453,7 @@ jobs:
             fi
             if [ "$state" = "new" ]; then
               first_uploads+=("@mapcairn/$name")
-              echo "::error::@mapcairn/$name is not on npm yet, so trusted publishing cannot publish it: a package gets its trusted publisher only after its first upload. Publish it by hand from the release's attested tarball, signed in with two-factor authentication, then use Re-run failed jobs, and link its trusted publisher when the next Release pull request is ready (docs/guides/releasing.md, A package npm does not have yet)."
+              echo "::error::@mapcairn/$name is not on npm yet, so trusted publishing cannot publish it: a package gets its trusted publisher only after its first upload. Publish it by hand from the release's attested tarball, signed in with two-factor authentication, set its package setting to require two-factor authentication and disallow tokens, then use Re-run failed jobs, and link its trusted publisher when the next Release pull request is ready (docs/guides/releasing.md, A package npm does not have yet)."
               continue
             fi
             to_publish+=("$name")

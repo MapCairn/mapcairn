@@ -714,6 +714,7 @@ describe.skipIf(process.platform === "win32")(
       expect(run.stdout).toContain("@mapcairn/theme is not on npm yet");
       expect(run.stdout).toContain("by hand");
       expect(run.stdout).toContain("two-factor authentication");
+      expect(run.stdout).toContain("disallow tokens");
       expect(run.stdout).toContain("Re-run failed jobs");
       expect(run.stdout).toContain(
         "link its trusted publisher when the next Release pull request is ready",

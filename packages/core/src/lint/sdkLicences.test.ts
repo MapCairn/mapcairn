@@ -357,7 +357,7 @@ describe("checkSdkLicences", () => {
       ),
     );
     expect(report.failures).toEqual([]);
-    expect(report.peers["@mapcairn/sdk"]).toEqual(["maplibre-gl", "react"]);
+    expect(report.peers["@mapcairn/sdk"]).toEqual(["react"]);
     expect(report.peers["@mapcairn/core"]).toEqual(["vitest"]);
     expect(report.dev["@mapcairn/core"]).toEqual(["typescript"]);
   });

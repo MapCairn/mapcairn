@@ -122,7 +122,7 @@ describe("buildReport", () => {
       "not on npm yet: @mapcairn/adapter-maplibre, @mapcairn/sdk.",
     );
     expect(text).toMatch(
-      /Left for you: .*two-factor.*Re-run failed jobs.*link their trusted publishers when the next Release pull request is ready/,
+      /Left for you: .*two-factor authentication.*disallow tokens.*Re-run failed jobs.*link their trusted publishers when the next Release pull request is ready/,
     );
     expect(text).toMatch(/Left for you: .*Re-run failed jobs/);
     expect(blockers).toEqual([]);

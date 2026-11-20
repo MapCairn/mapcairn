@@ -197,7 +197,7 @@ function licenceOf(entry) {
  * @typedef {object} LicenceReport
  * @property {number} checked Production packages whose licence was judged.
  * @property {Failure[]} failures
- * @property {Record<string, string[]>} peers Peer dependency names that are not judged, by SDK package.
+ * @property {Record<string, string[]>} peers Peer dependency names that are not judged, by SDK package. A peer that another SDK package requires and so judges (the umbrella's `maplibre-gl`, which the adapter requires) is left out.
  * @property {Record<string, string[]>} judgedPeers Required peer names that are judged because another SDK package depends on the package, by SDK package.
  * @property {Record<string, string[]>} dev Dev dependency names, by SDK package.
  */
@@ -323,10 +323,9 @@ export function checkSdkLicences({ lockfile, manifests, allowlist }) {
     walk(path, manifest, label, false);
   }
 
-  for (const [label, judged] of Object.entries(judgedPeers)) {
-    peers[label] = (peers[label] ?? []).filter(
-      (name) => !judged.includes(name),
-    );
+  const judgedNames = new Set(Object.values(judgedPeers).flat());
+  for (const label of Object.keys(peers)) {
+    peers[label] = peers[label].filter((name) => !judgedNames.has(name));
   }
 
   const checked = [...seen].filter((key) => !packages[key].link).length;

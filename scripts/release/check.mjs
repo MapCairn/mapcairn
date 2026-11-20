@@ -492,7 +492,7 @@ function leftForYou({ blockers, prepared, registry }) {
     return "merge the Release pull request, then publish the tarballs from the GitHub Release by hand, because none is on npm yet.";
   }
   if (registry === "some") {
-    return `merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the packages npm has and then fails naming the ones it does not. Upload those by hand from the GitHub Release with two-factor authentication, then use Re-run failed jobs, and link their trusted publishers when the next Release pull request is ready (${GUIDE}).`;
+    return `merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the packages npm has and then fails naming the ones it does not. Upload those by hand from the GitHub Release, signed in with two-factor authentication, set each one's package setting to require two-factor authentication and disallow tokens, then use Re-run failed jobs, and link their trusted publishers when the next Release pull request is ready (${GUIDE}).`;
   }
   if (registry === "all") {
     return "merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the packages.";
