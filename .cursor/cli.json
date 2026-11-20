@@ -89,7 +89,9 @@
       "Shell(gh:api*pending_deployments*)",
       "Shell(gh:api*approveDeployments*)",
       "Shell(gh:workflow*publish-existing*)",
-      "Shell(gh:api*publish-existing*)"
+      "Shell(gh:api*publish-existing*)",
+      "Shell(gh:api*dispatches*)",
+      "Shell(gh:api*/rerun*)"
     ]
   }
 }

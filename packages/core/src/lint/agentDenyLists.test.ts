@@ -103,6 +103,8 @@ const ALLOWED_COMMANDS = [
   "npm logout",
   "npm view @mapcairn/core version",
   "gh workflow run release.yml -f mode=rehearse",
+  "gh run rerun 123 --failed",
+  "gh run rerun 123",
   "gh pr merge 489 --squash",
   "gh api repos/MapCairn/mapcairn/pulls",
   "npx --no-install vitest run",
@@ -120,6 +122,9 @@ const RELEASE_GATE_COMMANDS = [
   "gh workflow run release.yml -f version=0.1.0 -f mode=publish-existing",
   "gh workflow run release.yml --ref main -f mode=publish-existing -f version=0.1.0",
   "gh api repos/MapCairn/mapcairn/actions/workflows/release.yml/dispatches -f inputs[mode]=publish-existing",
+  "gh api repos/MapCairn/mapcairn/actions/workflows/release.yml/dispatches --input inputs.json",
+  "gh api -X POST repos/MapCairn/mapcairn/actions/runs/1/rerun",
+  "gh api repos/MapCairn/mapcairn/actions/runs/1/rerun-failed-jobs -X POST",
 ];
 
 /**

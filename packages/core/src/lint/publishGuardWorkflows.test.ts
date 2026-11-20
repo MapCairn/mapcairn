@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import {
   jobRanges,
   NPM_JOB,
+  publishesOnlyDryRuns,
   RELEASE_WORKFLOW,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/publishGuard.mjs";
@@ -261,6 +262,19 @@ const PLAN_NPM_JOB = [
   "",
 ].join("\n");
 
+/** What neither job that runs `npm publish` may hold: a token, an access flag, a hard-coded tag, staging or a tag change. */
+const FORBIDDEN_IN_PUBLISH_JOBS = [
+  "NODE_AUTH_TOKEN",
+  "NPM_TOKEN",
+  "secrets.",
+  "registry-url",
+  "npm stage",
+  "npm dist-tag",
+  "--access",
+  "--tag latest",
+  "--tag next",
+];
+
 describe("release.yml", () => {
   const file = path.join(REPO, RELEASE_WORKFLOW);
 
@@ -284,17 +298,7 @@ describe("release.yml", () => {
 
   it("holds no token, no staging, no dist-tag change and no access flag", () => {
     const job = npmJobLines(readFileSync(file, "utf8")).join("\n");
-    for (const forbidden of [
-      "NODE_AUTH_TOKEN",
-      "NPM_TOKEN",
-      "secrets.",
-      "registry-url",
-      "npm stage",
-      "npm dist-tag",
-      "--access",
-      "--tag latest",
-      "--tag next",
-    ]) {
+    for (const forbidden of FORBIDDEN_IN_PUBLISH_JOBS) {
       expect(job, forbidden).not.toContain(forbidden);
     }
   });
@@ -311,7 +315,7 @@ describe("release.yml", () => {
     ]) {
       expect(condition, required).toContain(required);
     }
-    expect(condition).not.toContain("|| inputs.mode == 'rehearse'");
+    expect(condition).not.toContain("||");
   });
 
   it("skips a package already on npm with a notice, and stops on any registry error", () => {
@@ -369,8 +373,11 @@ describe("release.yml", () => {
   it("puts the dry run of a rehearsal in a job with no environment and no OIDC token, so only a real publish ever waits for an approval", () => {
     const job = jobLinesOf(readFileSync(file, "utf8"), "rehearse").join("\n");
     expect(job).not.toBe("");
-    expect(job).not.toMatch(/^ {4}environment:/m);
+    expect(job).not.toMatch(/\benvironment\s*:/);
     expect(job).not.toContain("id-token");
+    for (const forbidden of FORBIDDEN_IN_PUBLISH_JOBS) {
+      expect(job, forbidden).not.toContain(forbidden);
+    }
     expect(job).toMatch(/permissions:\n\s+contents: read\s*\n/);
     const condition = jobCondition(
       jobLinesOf(readFileSync(file, "utf8"), "rehearse"),
@@ -383,13 +390,13 @@ describe("release.yml", () => {
     ]) {
       expect(condition, required).toContain(required);
     }
+    expect(condition).not.toContain("||");
     const publishes = job
       .split("\n")
       .filter((line) => /npm publish/.test(line));
     expect(publishes).toHaveLength(1);
-    expect(publishes[0]).toContain("--dry-run");
+    expect(publishesOnlyDryRuns(publishes[0])).toBe(true);
     expect(job).not.toContain("confirm-published");
-    expect(job).not.toContain("NODE_AUTH_TOKEN");
   });
 
   it("accepts the plan's job, with a condition folded over several lines or on one", () => {

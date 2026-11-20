@@ -123,7 +123,7 @@ export const NPM_JOB = "npm";
 /**
  * The job that dry-runs the publishing for a rehearsal. It has no environment
  * and no OIDC token, so nothing waits for an approval because of it, and it
- * may run `npm publish` only with `--dry-run` on the same line.
+ * may run `npm publish` only as a dry run (`publishesOnlyDryRuns`).
  */
 export const REHEARSE_JOB = "rehearse";
 
@@ -378,6 +378,52 @@ export function forbiddenCommandAfterProgram(words) {
   return undefined;
 }
 
+/** What separates the commands of a shell line: a newline, `&&`, `||` and the single-character separators. */
+const SHELL_SEGMENTS = /\r?\n|&&|\|\||[;|&()`]/;
+
+/**
+ * Whether the text publishes, and every publish in it carries the exact word
+ * `--dry-run` after `publish` in its own command (split where the scanner
+ * splits). `--dry-run=...`, `--no-dry-run`, a longer word that starts with
+ * it, the word in another command or before `publish`, and a comment (the
+ * caller strips comments first) do not count.
+ *
+ * @param {string} text One logical line, without comments.
+ * @returns {boolean}
+ */
+export function publishesOnlyDryRuns(text) {
+  let publishes = 0;
+  let dryRuns = 0;
+  const joined = text.replace(/\\\r?\n/g, " ");
+  for (const segment of joined.split(SHELL_SEGMENTS)) {
+    const words = segment.split(WORD_SEPARATORS).filter(Boolean);
+    const cleaned = words.map(unquote);
+    words.forEach((word, index) => {
+      if (!isLauncher(word) && !isLauncher(cleaned[index])) {
+        return;
+      }
+      const after = cleaned.slice(index + 1).filter(Boolean);
+      if (forbiddenCommandAfterProgram(after) !== "publish") {
+        return;
+      }
+      publishes += 1;
+      const at = after.findIndex(
+        (later) =>
+          forbiddenCommandOf(later) === "publish" ||
+          exactForbiddenCommandOf(later) === "publish",
+      );
+      const options = at === -1 ? [] : after.slice(at + 1);
+      const negated = options.some((option) =>
+        /^--(?:no-dry-run|dry-run=)/.test(option),
+      );
+      if (options.includes("--dry-run") && !negated) {
+        dryRuns += 1;
+      }
+    });
+  }
+  return publishes > 0 && publishes === dryRuns;
+}
+
 /**
  * The forbidden commands in text that a shell would run: one or more lines,
  * split at the shell's separators.
@@ -388,7 +434,7 @@ export function forbiddenCommandAfterProgram(words) {
 export function forbiddenInShellText(text) {
   const found = [];
   const joined = text.replace(/\\\r?\n/g, " ");
-  for (const segment of joined.split(/\r?\n|&&|\|\||[;|&()`]/)) {
+  for (const segment of joined.split(SHELL_SEGMENTS)) {
     const words = segment.split(WORD_SEPARATORS).filter(Boolean);
     const cleaned = words.map(unquote);
     words.forEach((word, index) => {
@@ -1159,7 +1205,7 @@ function findingsInFile(file, text) {
 /**
  * Whether a finding in `release.yml` is a command the workflow may run: the
  * `npm` job may publish, and the `rehearse` job may publish with
- * `--dry-run` on the line.
+ * a `--dry-run` in the same command, as `publishesOnlyDryRuns` reads it.
  *
  * @param {string} file
  * @param {string} text
@@ -1182,9 +1228,13 @@ function isAllowedInPublishJob(file, text, finding) {
   if (within(NPM_JOB)) {
     return true;
   }
+  const logical = logicalLines(text).find(
+    (entry) => entry.line === finding.line,
+  );
   return (
     within(REHEARSE_JOB) &&
-    (text.split("\n")[finding.line - 1] ?? "").includes("--dry-run")
+    logical !== undefined &&
+    publishesOnlyDryRuns(logical.text)
   );
 }
 

@@ -225,7 +225,7 @@ describe("release.yml", () => {
     expect(check).not.toContain("upload-artifact");
   });
 
-  it("compares what github-release and npm download with the recorded digests, and with exactly the four tarballs, before attesting or staging", () => {
+  it("compares what github-release and npm download with the recorded digests, and with exactly the four tarballs, before attesting or publishing", () => {
     for (const [name, after] of [
       ["github-release", "attest-build-provenance"],
       ["rehearse", "package-state"],

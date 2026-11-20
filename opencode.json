@@ -267,7 +267,9 @@
       "gh api *pending_deployments*": "deny",
       "gh api *approveDeployments*": "deny",
       "gh workflow run *publish-existing*": "deny",
-      "gh api *publish-existing*": "deny"
+      "gh api *publish-existing*": "deny",
+      "gh api *dispatches*": "deny",
+      "gh api */rerun*": "deny"
     }
   }
 }

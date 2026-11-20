@@ -572,7 +572,7 @@ describe("privateSdkManifests", () => {
     ).toEqual(["packages/core/package.json"]);
   });
 
-  it("counts a manifest it cannot read as private, so nothing is staged on a guess", () => {
+  it("counts a manifest it cannot read as private, so nothing is published on a guess", () => {
     expect(
       privateSdkManifests({ "packages/core/package.json": "{ not json" }),
     ).toEqual(["packages/core/package.json"]);
