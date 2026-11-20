@@ -15,7 +15,6 @@ import type {
   MapHeatmap,
   MapHostElement,
   MapImageOptions,
-  MapImageView,
   MapMountOptions,
   MapMoveOptions,
   MapProjection,
@@ -27,174 +26,41 @@ import type {
   ViewState,
   VisibleMap,
 } from "@mapcairn/core";
-import {
-  clampZoom,
-  MAX_IMAGE_SIDE_PX,
-  MAX_MERCATOR_LATITUDE,
-  MapEngineError,
-  MapImageExportError,
-  type MapPlacement,
-  mapMetresPerPixel,
-  refuseBoxOnGlobe,
-  toEngineZoom,
-  toNormalisedZoom,
-} from "@mapcairn/core";
+import { MAX_MERCATOR_LATITUDE, MapEngineError } from "@mapcairn/core";
 import type {
-  AnimationOptions,
   MapEventType,
   Map as MapLibreMap,
-  MapOptions,
   Subscription,
 } from "maplibre-gl";
-import { withCacheKey } from "../../constants/workerCacheKey";
 import { Emitter } from "../shared/emitter";
+import { BasemapLoadState } from "./basemapLoadState";
 import {
   applyZoomLimits,
   composeHybrid,
-  IMAGERY_ID,
   omitSaveDataLayers,
   styleFor,
 } from "./basemapStyle";
-import { type DataLayer, ENGINE_ID_PREFIX } from "./dataLayerPlan";
-import {
-  DataLayerStore,
-  type TileLayerReport,
-  toPropertyBag,
-} from "./dataLayerStore";
+import { isBasemapSource } from "./basemapTiles";
+import { Camera, pixelOf, viewOfMap } from "./camera";
+import type { DataLayer } from "./dataLayerPlan";
+import { DataLayerStore, toPropertyBag } from "./dataLayerStore";
 import { EditHandleController } from "./editHandles";
-import {
-  MapImageExporter,
-  notMounted,
-  type RenderMap,
-  type RenderMapRequest,
-} from "./imageExport";
+import { isUserEvent } from "./engineErrors";
+import { loadEngine, type MapLibreModule } from "./engineLoader";
+import { engineMapOptions, neutraliseEngineAccessibility } from "./engineMap";
+import { FailureDetection } from "./failureDetection";
+import { MapImageExporter } from "./imageExport";
+import { OverlayPlacement } from "./overlayPlacement";
+import type { PendingLoad } from "./pendingLoad";
 import { positionOf } from "./positionOf";
-import { addDataLayerImages, coversBounds, dataLayerImages } from "./renderMap";
+import { RenderMapOpener } from "./renderMapOpener";
 
 export { dataLayerEngineIds } from "./dataLayerPlan";
+export { loadEngine } from "./engineLoader";
 export { IMAGE_TILES_WAIT_MS, IMAGE_WAIT_MS } from "./imageExport";
-
-type MapLibreModule = typeof import("maplibre-gl");
-
-let engineLoader: Promise<MapLibreModule> | undefined;
-
-/**
- * Loads `maplibre-gl` and its stylesheet once, and points MapLibre at its
- * bundled worker before any map exists.
- * @remarks MapLibre finds its worker from `import.meta.url`, which inside a
- *   bundle names the current chunk rather than the worker, so without
- *   `setWorkerUrl` the worker never starts and the map stays blank
- *   (maplibre/maplibre-gl-js#8002). Vite's `?worker&url` builds the worker as
- *   a self-contained same-origin asset, so the production CSP's
- *   `worker-src 'self'` covers it, including on iOS. The worker URL is
- *   imported dynamically too: the build groups every `maplibre-gl` module
- *   into one vendor chunk, so a static import of the URL would load the whole
- *   engine with this module. A rejected load is not cached, so a chunk that
- *   failed to download (for example offline) is fetched again on the next
- *   mount.
- * @remarks A worker script enforces the Content Security Policy of its own
- *   response, and the hashed worker file is cached as immutable, so a copy
- *   fetched before the policy changed would keep the old policy for a year.
- *   `workerCacheKey` is added to the worker URL so that a changed policy is a
- *   new address and every device fetches the worker again.
- * @param workerCacheKey - Names the policy the worker is served with; the
- *   worker URL is left as it is when this is absent.
- */
-export function loadEngine(workerCacheKey?: string): Promise<MapLibreModule> {
-  engineLoader ??= Promise.all([
-    import("maplibre-gl"),
-    import("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"),
-    import("maplibre-gl/dist/maplibre-gl.css"),
-  ])
-    .then(([maplibre, worker]) => {
-      maplibre.setWorkerUrl(
-        workerCacheKey === undefined
-          ? worker.default
-          : withCacheKey(worker.default, workerCacheKey),
-      );
-      return maplibre;
-    })
-    .catch((error: unknown) => {
-      engineLoader = undefined;
-      throw error;
-    });
-  return engineLoader;
-}
-
-/** Where a position is on `map`, in CSS pixels from its top left, or the origin when there is no map. */
-function pixelOf(map: MapLibreMap | undefined, latlng: LatLng): PixelPoint {
-  if (!map) {
-    return { x: 0, y: 0 };
-  }
-  const point = map.project([latlng.lng, latlng.lat]);
-  return { x: point.x, y: point.y };
-}
-
-/** Bearing in degrees clockwise, in the range [0, 360) and never -0. */
-function normaliseBearing(bearing: number): number {
-  const normalised = ((bearing % 360) + 360) % 360;
-  return normalised === 0 ? 0 : normalised;
-}
-
-/** MapLibre tags errors from a tile or a source with these fields; style and worker failures carry neither. */
-function isTileOrSourceError(event: object): boolean {
-  const { tile, sourceId } = event as { tile?: unknown; sourceId?: unknown };
-  return tile !== undefined || sourceId !== undefined;
-}
-
-/**
- * The message maplibre-gl (6.17) gives the `error` event it fires for any
- * `error` event of a web worker (`createActors` in `src/util/actor.ts`): a
- * worker script that never loaded, but also an uncaught exception inside a
- * running worker. The event has no type, tile or source of its own, so the
- * message is the only way to tell it from other source-less errors.
- */
-const WORKER_FAILED_MESSAGE = "Worker failed to load.";
-
-/** Whether an engine `error` event came from a web worker. */
-function isWorkerFailure(event: object): boolean {
-  const { error } = event as { error?: unknown };
-  return (
-    !isTileOrSourceError(event) &&
-    error instanceof Error &&
-    error.message.startsWith(WORKER_FAILED_MESSAGE)
-  );
-}
-
-/**
- * How long, after a worker error on a loaded map, the adapter waits for signs
- * that the engine still works before it reports `fatalError`.
- */
-export const WORKER_FAILURE_GRACE_MS = 5000;
-
-/**
- * How often, in milliseconds, the map is painted while a tile layer's tiles,
- * or the basemap's own, load, so that it reports `idle` (and the basemap is
- * seen to be in) once they are all in, or all missing.
- */
-export const TILE_SETTLE_NUDGE_MS = 250;
-
-/**
- * How long, in milliseconds, the map on screen keeps painting after the last
- * tile of a tile layer or the basemap was asked for. A tile the provider
- * answers with a 404 is seen to be in within a few frames, so painting for
- * longer only serves a tile that never answers, which keeps the engine from
- * going idle however often it is painted.
- */
-const TILE_SETTLE_GIVE_UP_MS = 30_000;
-
-/**
- * How long, in milliseconds, a tile data layer may have tiles asked for and
- * none loaded before the adapter reports it as slow (`tileLayerSlow`). It runs
- * from the first tile asked for and is not pushed back by later ones, so it
- * measures how long the layer has had nothing to show. It is a judgement, not a
- * measured figure: long enough that a provider that is merely slow to render
- * a tile is not flagged, and well inside {@link TILE_SETTLE_GIVE_UP_MS}, which
- * is counted from the last tile asked for and so never ends before this does.
- * The map keeps repainting until then, so a tile answered late with a 404 can
- * still turn the report into `tileLayerUnavailable`.
- */
-export const TILE_LAYER_SLOW_MS = 10_000;
+export { TILE_SETTLE_NUDGE_MS } from "./repaintUntilIdle";
+export { TILE_LAYER_SLOW_MS } from "./tileLayerTraffic";
+export { WORKER_FAILURE_GRACE_MS } from "./workerFailureCheck";
 
 /** Options for {@link MapLibreMapAdapter}. */
 export interface MapLibreMapAdapterOptions {
@@ -211,160 +77,31 @@ export interface MapLibreMapAdapterOptions {
   readonly tileLayerSlowMs?: number;
 }
 
-/** Whether a camera event came from the person (a gesture), not from code. */
-function isUserEvent(event: object): boolean {
-  return (event as { originalEvent?: unknown }).originalEvent !== undefined;
-}
-
-/** The id of the source a tile event is about, or undefined when the event is not about a tile. */
-function tileEventSource(event: object): string | undefined {
-  const { tile, sourceId } = event as { tile?: unknown; sourceId?: unknown };
-  return tile !== undefined && typeof sourceId === "string"
-    ? sourceId
-    : undefined;
-}
-
-/** Tile traffic of the basemap's own sources (see `MapLibreMapAdapter`). */
-interface BasemapTiles {
-  readonly basemap?: BasemapDefinition;
-  loaded: number;
-  failed: number;
-  reported: boolean;
-}
-
-/** Counters that blame no basemap, for before a style has loaded. */
-function idleBasemapTiles(): BasemapTiles {
-  return { loaded: 0, failed: 0, reported: false };
-}
-
-/**
- * Tile traffic of one tile data layer since its source was last drawn. The
- * engine fires no `error` for a tile the provider answers with a 404, and
- * fires nothing for one that never answers, so the layer is judged by what was
- * asked for and what arrived, not by failures.
- */
-interface TileLayerTraffic {
-  readonly layerId: string;
-  /** The tile template the source was drawn from. */
-  readonly tiles: string;
-  requested: number;
-  aborted: number;
-  loaded: number;
-  report: TileLayerReport;
-  /** The wait ({@link TILE_LAYER_SLOW_MS}) before the layer is reported slow, while one runs. */
-  slowTimer?: ReturnType<typeof setTimeout>;
-}
-
-/**
- * What a tile layer drawn again for `tiles` starts out as having reported: the
- * report of its earlier drawing if that loaded no tile, for the same tiles. The
- * report was made to the ui and its status is still showing, so the new
- * drawing's first tile has to end it.
- */
-function carriedReport(
-  earlier: TileLayerTraffic | undefined,
-  tiles: string,
-): TileLayerReport {
-  return earlier?.loaded === 0 && earlier.tiles === tiles
-    ? earlier.report
-    : "none";
-}
-
-/** Whether a tile layer has asked for a tile that has neither loaded nor been given up on. */
-function hasOutstandingTile({
-  requested,
-  aborted,
-  loaded,
-}: TileLayerTraffic): boolean {
-  return requested > aborted + loaded;
-}
-
-/**
- * Whether an engine source id belongs to the basemap's own style (or the
- * imagery a hybrid basemap adds) and not to a data layer or an overlay, whose
- * ids all start with {@link ENGINE_ID_PREFIX}.
- */
-function isBasemapSource(sourceId: unknown): sourceId is string {
-  return typeof sourceId === "string" && !sourceId.startsWith(ENGINE_ID_PREFIX);
-}
-
-/** The ids of the sources in the engine's loaded style that belong to the basemap. */
-function ownSourceIds(map: MapLibreMap): readonly string[] {
-  return Object.keys(map.getStyle().sources).filter(isBasemapSource);
-}
-
-/**
- * Whether an engine source's tiles decide if a basemap is available: any of
- * the basemap's own sources (never a data layer's), except that only the
- * imagery counts for a hybrid basemap, whose labels can load while the
- * imagery is down and would otherwise hide that it is.
- */
-function decidesAvailability(
-  basemap: BasemapDefinition | undefined,
-  sourceId: unknown,
-): boolean {
-  if (!isBasemapSource(sourceId)) {
-    return false;
-  }
-  return basemap?.source.kind !== "hybrid" || sourceId === IMAGERY_ID;
-}
-
 function isElement(host: MapHostElement): host is MapHostElement & HTMLElement {
   return typeof HTMLElement !== "undefined" && host instanceof HTMLElement;
-}
-
-/**
- * Removes MapLibre's own accessibility semantics so the ui's map host stays
- * the single focus stop and the single "Map" region.
- * @remarks MapLibre sets `role="region"`, `aria-label="Map"` and
- *   `tabindex="0"` on its `<canvas>` (not the canvas container) once, when the
- *   map is built. This removes all three and sets `aria-hidden="true"` on the
- *   canvas. Without a `tabindex` the canvas is not focusable, so clicking it
- *   focuses the host. MapLibre's keyboard handler listens on the canvas
- *   container, so it can only receive keys while focus is inside it.
- */
-function neutraliseEngineAccessibility(map: MapLibreMap): void {
-  const canvas = map.getCanvas();
-  canvas.removeAttribute("role");
-  canvas.removeAttribute("aria-label");
-  canvas.removeAttribute("tabindex");
-  canvas.setAttribute("aria-hidden", "true");
-}
-
-interface PendingLoad {
-  readonly settleOn: "load" | "style.load";
-  readonly resolve: () => void;
-  readonly reject: (error: MapEngineError) => void;
-  /**
-   * True once the style document of this load has been parsed
-   * (`style.load`). MapLibre fetches the sprite and glyphs only after that,
-   * so a source-less error from then on is not the style document's.
-   */
-  styleLoaded: boolean;
-}
-
-/** A running check of whether the engine survived a worker error. */
-interface WorkerCheck {
-  readonly timer: ReturnType<typeof setTimeout>;
-  readonly idle: Subscription;
 }
 
 /**
  * The {@link MapAdapter}, running `maplibre-gl` natively with MapLibre owning
  * every pointer and touch gesture. Vector basemaps load their style URL;
  * raster basemaps are drawn from an inline raster style.
- * @remarks The port speaks normalised (256 px tile) zoom, and MapLibre counts
+ * @remarks The class keeps the map and the lifecycle (`mount`, `destroy`, the
+ *   pending style load and `style.load`) and hands each other job to a module
+ *   it holds: the camera (`camera.ts`), data layers (`dataLayerStore.ts`), edit
+ *   handles (`editHandles.ts`), image export (`imageExport.ts` and
+ *   `renderMapOpener.ts`), the busy state (`basemapLoadState.ts`) and failure
+ *   detection (`failureDetection.ts`). Of these only the engine loader and the
+ *   type-only imports reach `maplibre-gl`.
+ *
+ *   The port speaks normalised (256 px tile) zoom, and MapLibre counts
  *   512 px tiles, so every zoom crossing the boundary goes through
- *   `toEngineZoom` and `toNormalisedZoom`. Pitch is locked at 0 because the
- *   app is a flat 2D map; rotation is supported. The adapter adds no controls,
+ *   `toEngineZoom` and `toNormalisedZoom`. The adapter adds no controls,
  *   markers or popups: the pin, measure line and other overlays are drawn by
  *   the ui from `project()`. Data layers (feed points, tile overlays, detail
  *   shapes) are the exception, because hundreds of points or a tiled image
  *   belong in the engine: each is kept by id, drawn as `mapcairn:<id>` sources
  *   and layers above the basemap (tiles, then shapes, then points), and drawn
  *   again after every `style.load`, because a full style swap drops them.
- *   Points are symbols whose images are rasterised in `markerImages.ts`, so
- *   squares and triangles carry meaning beside colour.
  *   `maplibre-gl` and its stylesheet are imported the first time `mount` runs.
  *
  *   In Save data mode each style that loads has the basemap's
@@ -374,42 +111,36 @@ interface WorkerCheck {
  *   waits for the current style to load, so after a failed swap the last good
  *   basemap would never be put back.
  *
- *   Engine `error` events are classified once:
- *   - a tile or source failure leaves the map working (`tileError`), except
- *     one of a raster tile data layer, which that layer reports itself as
- *     `tileLayerUnavailable` when the map settles (see
- *     `reportUnavailableTileLayers`), or as `tileLayerSlow` when it has
- *     waited {@link TILE_LAYER_SLOW_MS} with nothing loaded (see
- *     `watchForSlowTiles`);
- *   - a source-less error before the pending style document has loaded
- *     (`style.load`) means that document failed: it rejects the pending
- *     mount or swap, and a failed swap puts the last basemap that loaded
- *     back. A worker error also rejects a pending mount, which could never
- *     finish without its workers;
- *   - a worker error on a loaded map starts a grace check of
- *     `workerFailureGraceMs`: if the map goes idle meanwhile, or has
- *     everything loaded when it ends, the engine still works and the error
- *     is a `tileError`; otherwise it is a `fatalError`. MapLibre reports an
- *     uncaught exception inside a running worker with the same message as a
- *     worker that never started, so the message alone cannot tell them apart;
- *   - anything else, such as a missing sprite or glyph, is a `tileError`.
+ *   How engine `error` events are classified is described on
+ *   {@link FailureDetection}.
  */
 export class MapLibreMapAdapter implements MapAdapter {
   private readonly emitter = new Emitter<MapEvents>();
   /** The edit handles live here, not in the style, so a basemap swap keeps them. */
   private readonly editHandles = new EditHandleController({
-    placement: () => this.placement(),
+    placement: () => this.placements.of(),
     emitDrag: (drag) => this.emitter.emit("handleDrag", drag),
     emitHover: (id) => this.emitter.emit("handleHover", id),
   });
   private readonly imageExporter: MapImageExporter;
+  private readonly renderMaps: RenderMapOpener;
+  private readonly camera = new Camera({
+    map: () => this.map,
+    zoomLimits: () => ({ min: this.getMinZoom(), max: this.getMaxZoom() }),
+  });
+  private readonly placements = new OverlayPlacement({
+    map: () => this.map,
+    viewOf: (map) => this.viewOf(map),
+  });
+  private readonly failure: FailureDetection;
+  /** The data layers the ui has set, and what the engine holds for them. */
+  private readonly dataLayers: DataLayerStore;
+  private readonly loadState = new BasemapLoadState();
   /** Aborts when the adapter is destroyed, for an export that is waiting. */
   private readonly lifetime = new AbortController();
   /** Counts the changes to the basemap, data layers and projection, for an export that waited in the queue. */
   private styleVersion = 0;
-  private readonly workerFailureGraceMs: number;
   private readonly workerCacheKey: string | undefined;
-  private readonly tileLayerSlowMs: number;
   private map: MapLibreMap | undefined;
   private host: MapHostElement | undefined;
   private basemap: BasemapDefinition | undefined;
@@ -418,96 +149,59 @@ export class MapLibreMapAdapter implements MapAdapter {
   private mountView: ViewState | undefined;
   private subscriptions: Subscription[] = [];
   private pending: PendingLoad | undefined;
-
-  /**
-   * Tile traffic of the basemap's own sources since its style last loaded:
-   * the basemap that style belongs to (none between a swap being asked for
-   * and its style loading), how many tiles loaded and how many failed, and
-   * whether `basemapUnavailable` has been reported for it.
-   */
-  private basemapTiles: BasemapTiles = idleBasemapTiles();
-  /**
-   * Tile traffic of each tile data layer, by engine source id: counted from
-   * the moment its source is drawn, so a new template or a basemap swap
-   * starts it afresh.
-   */
-  private readonly tileTraffic = new Map<string, TileLayerTraffic>();
-  /** The interval that paints the map while tile layer tiles load (see `repaintUntilIdle`). */
-  private tileSettleNudge: ReturnType<typeof setInterval> | undefined;
-  /** The timer that ends that interval when no tile has been asked for for {@link TILE_SETTLE_GIVE_UP_MS}. */
-  private tileSettleGiveUp: ReturnType<typeof setTimeout> | undefined;
-  /** Whether the style, or the style of a requested basemap still arriving, is loading. */
-  private styleLoading = false;
-  /**
-   * The ids of the loaded style's own sources (the basemap's, and the imagery
-   * of a hybrid one), read from the engine when the style loads; `undefined`
-   * until then. Data layer sources are never here: a tile of one that never
-   * answers keeps the engine from going idle, and must not hold the map's busy
-   * state. Whether each is in is asked of the engine (`isSourceLoaded`), not
-   * inferred from events, because a tile the provider answers with a 404 fires
-   * none.
-   */
-  private basemapSourceIds: readonly string[] | undefined;
-  /**
-   * Whether the engine has gone idle since the style started loading. A style
-   * with no source of its own has nothing to ask, so it is in only once the
-   * engine says so.
-   */
-  private idleSinceStyle = false;
-  private workerCheck: WorkerCheck | undefined;
   private started = false;
   private destroyed = false;
-  private animationEnabled = true;
   /** Whether the basemap's `saveDataOmitLayers` are left out of its style. */
   private saveData = false;
-  /** The shape the ui chose. It wins over any projection a style asks for. */
-  private projection: MapProjection = "flat";
-  /** MapLibre's `LngLat`, kept from the engine load, for the occlusion test. */
-  private lngLat: MapLibreModule["LngLat"] | undefined;
   private loadEmitted = false;
-  private loading = false;
-  /** The data layers the ui has set, and what the engine holds for them. */
-  private readonly dataLayers = new DataLayerStore({
-    readyMap: () => this.readyMap(),
-    changed: () => {
-      this.styleVersion += 1;
-    },
-    tileSources: {
-      carriedReport: (source, tiles) =>
-        carriedReport(this.tileTraffic.get(source), tiles),
-      register: (source, layerId, tiles, report) => {
-        this.tileTraffic.set(source, {
-          layerId,
-          tiles,
-          requested: 0,
-          aborted: 0,
-          loaded: 0,
-          report,
-        });
-      },
-      release: (source) => {
-        clearTimeout(this.tileTraffic.get(source)?.slowTimer);
-        this.tileTraffic.delete(source);
-      },
-    },
-  });
   /** True between a style's `style.load` and the next swap: only then can sources be added. */
   private styleReady = false;
 
   constructor(options: MapLibreMapAdapterOptions = {}) {
-    this.workerFailureGraceMs =
-      options.workerFailureGraceMs ?? WORKER_FAILURE_GRACE_MS;
     this.workerCacheKey = options.workerCacheKey;
-    this.tileLayerSlowMs = options.tileLayerSlowMs ?? TILE_LAYER_SLOW_MS;
+    this.failure = new FailureDetection(
+      {
+        tileError: () => this.emitter.emit("tileError", undefined),
+        basemapUnavailable: (basemap) =>
+          this.emitter.emit("basemapUnavailable", basemap),
+        fatalError: (error) => this.emitter.emit("fatalError", error),
+        slow: (report) => this.emitter.emit("tileLayerSlow", report),
+        recovered: (report) => this.emitter.emit("tileLayerRecovered", report),
+        unavailable: (report) =>
+          this.emitter.emit("tileLayerUnavailable", report),
+      },
+      {
+        pendingLoad: () => this.pending,
+        failPending: (pending, error) => this.failPending(pending, error),
+      },
+      options,
+    );
+    this.dataLayers = new DataLayerStore({
+      readyMap: () => this.readyMap(),
+      changed: () => {
+        this.styleVersion += 1;
+      },
+      tileSources: this.failure.tileSources,
+    });
+    this.renderMaps = new RenderMapOpener(
+      {
+        sourceMap: () => (this.destroyed ? undefined : this.map),
+        projection: () => this.placements.projection,
+        zoomLimits: () => ({ min: this.getMinZoom(), max: this.getMaxZoom() }),
+        engineZoom: (zoom) => this.camera.engineZoom(zoom),
+        applyProjection: (map) => this.applyProjection(map),
+      },
+      this.workerCacheKey,
+    );
     this.imageExporter = new MapImageExporter(
       {
         mountedMap: () => (this.destroyed ? undefined : this.map),
         isSwapPending: () => this.pending !== undefined,
-        placement: (map) => this.placement(map),
+        placement: (map) => this.placements.of(map),
         visibleMap: () => this.visibleMap(),
         closed: () => this.lifetime.signal,
         styleVersion: () => this.styleVersion,
-        openRenderMap: (request) => this.openRenderMap(request),
+        openRenderMap: (request) => this.renderMaps.open(request),
       },
       options.imageTilesWaitMs,
     );
@@ -531,9 +225,9 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.host = host;
     this.basemap = basemap;
     this.mountView = view;
-    this.animationEnabled = !reducedMotion;
+    this.camera.setAnimationEnabled(!reducedMotion);
     this.saveData = options.saveData ?? false;
-    this.projection = options.projection ?? "flat";
+    this.placements.choose(options.projection ?? "flat");
 
     let maplibre: MapLibreModule;
     try {
@@ -547,11 +241,19 @@ export class MapLibreMapAdapter implements MapAdapter {
     if (this.destroyed) {
       return;
     }
-    this.lngLat = maplibre.LngLat;
+    this.placements.keepEngine(maplibre);
 
     let map: MapLibreMap;
     try {
-      map = new maplibre.Map(this.createOptions(host, view, reducedMotion));
+      map = new maplibre.Map(
+        engineMapOptions({
+          container: host,
+          basemap,
+          view,
+          engineZoom: this.camera.engineZoom(view.zoom),
+          reducedMotion,
+        }),
+      );
     } catch (error) {
       // MapLibre throws its exported GPUInitializationError when it cannot
       // create a WebGL2 context.
@@ -566,14 +268,14 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     this.map = map;
     neutraliseEngineAccessibility(map);
-    this.applyInertia();
+    this.camera.applyInertia();
 
     const loaded = new Promise<void>((resolve, reject) => {
       this.pending = { settleOn: "load", resolve, reject, styleLoaded: false };
     });
     this.subscribe(map);
     // The constructor already started the style fetch, before these listeners existed.
-    this.startStyleLoad();
+    this.loadState.startStyleLoad();
     this.updateLoading();
     try {
       await loaded;
@@ -607,76 +309,35 @@ export class MapLibreMapAdapter implements MapAdapter {
         this.mountView ?? { center: { lat: 0, lng: 0 }, zoom: 0, bearing: 0 }
       );
     }
-    const center = map.getCenter();
-    return {
-      center: positionOf(center),
-      zoom: toNormalisedZoom(map.getZoom()),
-      bearing: normaliseBearing(map.getBearing()),
-    };
+    return viewOfMap(map);
   }
 
   setView(view: Partial<ViewState>, options?: MapMoveOptions): void {
-    const camera: {
-      center?: [number, number];
-      zoom?: number;
-      bearing?: number;
-    } = {};
-    if (view.center) {
-      camera.center = [view.center.lng, view.center.lat];
-    }
-    if (view.zoom !== undefined) {
-      camera.zoom = this.engineZoom(view.zoom);
-    }
-    if (view.bearing !== undefined) {
-      camera.bearing = view.bearing;
-    }
-    this.moveCamera(camera, options);
+    this.camera.setView(view, options);
   }
 
   zoomIn(options?: MapMoveOptions): void {
-    this.map?.zoomIn(this.animation(options));
+    this.camera.zoomIn(options);
   }
 
   zoomOut(options?: MapMoveOptions): void {
-    this.map?.zoomOut(this.animation(options));
+    this.camera.zoomOut(options);
   }
 
   panBy(dx: number, dy: number, options?: MapMoveOptions): void {
-    this.map?.panBy([dx, dy], this.animation(options));
+    this.camera.panBy(dx, dy, options);
   }
 
   rotateBy(degrees: number, options?: MapMoveOptions): void {
-    const map = this.map;
-    if (!map) {
-      return;
-    }
-    this.moveCamera({ bearing: map.getBearing() + degrees }, options);
+    this.camera.rotateBy(degrees, options);
   }
 
   resetBearing(options?: MapMoveOptions): void {
-    this.moveCamera({ bearing: 0 }, options);
+    this.camera.resetBearing(options);
   }
 
   fitBounds(bounds: Bounds, options?: MapFitOptions): void {
-    const map = this.map;
-    if (!map) {
-      return;
-    }
-    map.fitBounds(
-      [
-        [bounds.west, bounds.south],
-        [bounds.east, bounds.north],
-      ],
-      {
-        ...(options?.padding ? { padding: { ...options.padding } } : {}),
-        ...(options?.maxZoom !== undefined
-          ? { maxZoom: this.engineZoom(options.maxZoom) }
-          : {}),
-        // Without this MapLibre fits north-up and drops the user's rotation.
-        bearing: map.getBearing(),
-        ...this.animation(options),
-      },
-    );
+    this.camera.fitBounds(bounds, options);
   }
 
   getMinZoom(): number {
@@ -696,26 +357,12 @@ export class MapLibreMapAdapter implements MapAdapter {
    * lies between the camera and it. A flat map hides nothing.
    */
   isVisible(latlng: LatLng): boolean {
-    return this.visibleOn(this.map, latlng);
-  }
-
-  /** The horizon test of {@link MapLibreMapAdapter.isVisible}, on any map the adapter made. */
-  private visibleOn(map: MapLibreMap | undefined, latlng: LatLng): boolean {
-    const LngLat = this.lngLat;
-    if (!map || !LngLat || this.projection === "flat") {
-      return true;
-    }
-    // `_camera.transform` is what MapLibre's own `Marker` asks. The public
-    // `map.transform` is gone from the 6.x typings, and no public call tests
-    // the horizon. The adapter contract suite covers it against the stand-in.
-    return !map._camera.transform.isLocationOccluded(
-      new LngLat(latlng.lng, latlng.lat),
-    );
+    return this.placements.isVisible(this.map, latlng);
   }
 
   setProjection(projection: MapProjection): void {
     this.styleVersion += 1;
-    this.projection = projection;
+    this.placements.choose(projection);
     this.applyProjection();
   }
 
@@ -728,27 +375,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   metresPerPixel(lat?: number): number {
-    const { center, zoom } = this.getView();
-    return mapMetresPerPixel(
-      this.projection,
-      lat ?? center.lat,
-      center.lat,
-      zoom,
-    );
-  }
-
-  /**
-   * How the ui places its overlay marks on `map` (the map on screen unless an
-   * export asks for its render map), so presses and the exported image agree
-   * with what it draws.
-   */
-  private placement(map = this.map): MapPlacement {
-    return {
-      projection: this.projection,
-      view: this.viewOf(map),
-      project: (position) => pixelOf(map, position),
-      isVisible: (position) => this.visibleOn(map, position),
-    };
+    return this.placements.metresPerPixel(this.getView(), lat);
   }
 
   /**
@@ -763,111 +390,6 @@ export class MapLibreMapAdapter implements MapAdapter {
       size: { width: clientWidth, height: clientHeight },
       view: this.getView(),
     };
-  }
-
-  /**
-   * Starts a map of its own from the style of the map on screen, so it draws
-   * the same basemap and data layers and requests nothing else, at the view
-   * and pixel ratio of a requested image. The map on screen is only read.
-   */
-  private async openRenderMap({
-    container,
-    pixelRatio,
-    view,
-  }: RenderMapRequest): Promise<RenderMap> {
-    refuseBoxOnGlobe(view, this.projection);
-    const maplibre = await loadEngine(this.workerCacheKey);
-    // The adapter can be destroyed while the engine loads.
-    const source = this.destroyed ? undefined : this.map;
-    if (!source) {
-      throw notMounted();
-    }
-    const images = dataLayerImages(source);
-    const map = new maplibre.Map({
-      container,
-      style: source.getStyle(),
-      ...this.renderCamera(view),
-      bearing: 0,
-      pitch: 0,
-      minZoom: toEngineZoom(this.getMinZoom()),
-      maxZoom: toEngineZoom(this.getMaxZoom()),
-      maxPitch: 0,
-      interactive: false,
-      attributionControl: false,
-      maplibreLogo: false,
-      // Nothing fades in, so the first full frame is the finished one.
-      fadeDuration: 0,
-      pixelRatio,
-      // The engine lowers the ratio of a canvas over this size, so it is
-      // the cap the port enforces, not MapLibre's smaller default.
-      maxCanvasSize: [MAX_IMAGE_SIDE_PX, MAX_IMAGE_SIDE_PX],
-    });
-    // The constructor keeps its default camera when it cannot fit the box,
-    // and MapLibre keeps the camera inside what the projection allows, so a
-    // box can come back cropped. Either would save the wrong place.
-    if ("bounds" in view && !coversBounds(map.getBounds(), view.bounds)) {
-      map.remove();
-      throw new MapImageExportError(
-        "invalid",
-        "The view cannot be framed at this size.",
-      );
-    }
-    // A style's own projection can differ from the app's, which wins; and
-    // `getStyle()` leaves out the images the data layers use.
-    map.on("style.load", () => {
-      this.applyProjection(map);
-      addDataLayerImages(map, images);
-    });
-    return { map, idle: this.untilSettled(map) };
-  }
-
-  /**
-   * Resolves when the render map reports `idle`. A tile that answers 404
-   * fires no event and asks for no frame, so a map over a sparse tile layer
-   * would never report it (see {@link TILE_SETTLE_NUDGE_MS}); it is painted
-   * every {@link TILE_SETTLE_NUDGE_MS} until it does, or until it is removed.
-   * This is the render map that exports an image; the live map's own nudge,
-   * started by a tile layer's or the basemap's tiles, is `repaintUntilIdle`.
-   */
-  private untilSettled(map: MapLibreMap): Promise<void> {
-    return new Promise((resolve) => {
-      const nudge = setInterval(() => {
-        map.triggerRepaint();
-      }, TILE_SETTLE_NUDGE_MS);
-      map.on("remove", () => clearInterval(nudge));
-      map.on("idle", () => {
-        clearInterval(nudge);
-        resolve();
-      });
-    });
-  }
-
-  /** The engine's camera options for a requested view, north-up. */
-  private renderCamera(view: MapImageView): Partial<MapOptions> {
-    if ("bounds" in view) {
-      const [bounds, fitBoundsOptions] = this.fitOf(view.bounds);
-      return { bounds, fitBoundsOptions };
-    }
-    return {
-      center: [view.center.lng, view.center.lat],
-      zoom: this.engineZoom(view.zoom),
-    };
-  }
-
-  /** A box and the options to fit it with, never past the basemap's deepest zoom. */
-  private fitOf({
-    west,
-    south,
-    east,
-    north,
-  }: Bounds): [[[number, number], [number, number]], { maxZoom: number }] {
-    return [
-      [
-        [west, south],
-        [east, north],
-      ],
-      { maxZoom: toEngineZoom(this.getMaxZoom()) },
-    ];
   }
 
   setBasemap(
@@ -896,11 +418,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   }
 
   setAnimationEnabled(enabled: boolean): void {
-    this.animationEnabled = enabled;
-    if (!enabled) {
-      this.map?.stop();
-    }
-    this.applyInertia();
+    this.camera.setAnimationEnabled(enabled);
   }
 
   setKeyboardEnabled(enabled: boolean): void {
@@ -991,51 +509,12 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   /** Sets the chosen shape on the engine; a style that has not loaded gets it from its `style.load`. */
   private applyProjection(map = this.readyMap()): void {
-    map?.setProjection({
-      type: this.projection === "globe" ? "globe" : "mercator",
-    });
+    this.placements.apply(map);
   }
 
   /** The map, when its style can take sources and layers; otherwise undefined. */
   private readyMap(): MapLibreMap | undefined {
     return this.styleReady ? this.map : undefined;
-  }
-
-  private createOptions(
-    host: HTMLElement,
-    view: ViewState,
-    reducedMotion: boolean,
-  ): MapOptions {
-    const basemap = this.basemap as BasemapDefinition;
-    return {
-      container: host,
-      style: styleFor(basemap),
-      center: [view.center.lng, view.center.lat],
-      zoom: this.engineZoom(view.zoom),
-      bearing: view.bearing,
-      pitch: 0,
-      minZoom: toEngineZoom(basemap.minZoom),
-      maxZoom: toEngineZoom(basemap.maxZoom),
-      maxPitch: 0,
-      attributionControl: false,
-      maplibreLogo: false,
-      // The ui implements the keys itself.
-      keyboard: false,
-      cooperativeGestures: false,
-      boxZoom: false,
-      dragPan: true,
-      dragRotate: true,
-      pitchWithRotate: false,
-      touchPitch: false,
-      touchZoomRotate: true,
-      scrollZoom: true,
-      doubleClickZoom: true,
-      // Constructor-only in MapLibre 6. `reduceMotion` turns off gesture
-      // inertia and wheel easing; it must always be passed explicitly because
-      // MapLibre stores it globally and the ui already folds in the OS setting.
-      reduceMotion: reducedMotion,
-      ...(reducedMotion ? { fadeDuration: 0 } : {}),
-    };
   }
 
   private subscribe(map: MapLibreMap): void {
@@ -1086,11 +565,11 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.emitter.emit("click", click);
     });
     listen("styledataloading", () => {
-      this.startStyleLoad();
+      this.loadState.startStyleLoad();
       this.updateLoading();
     });
     listen("style.load", () => {
-      this.basemapTiles = { ...idleBasemapTiles(), basemap: this.basemap };
+      this.failure.styleLoaded(this.basemap);
       // A style may ask for its own projection (VersaTiles Colorful asks for a
       // globe); the app's setting wins. See ARCHITECTURE.md.
       this.applyProjection(map);
@@ -1111,8 +590,7 @@ export class MapLibreMapAdapter implements MapAdapter {
       }
       this.styleReady = true;
       this.dataLayers.styleChanged();
-      this.styleLoading = false;
-      this.basemapSourceIds = ownSourceIds(map);
+      this.loadState.styleLoaded(map);
       this.updateLoading();
       this.settlePending("style.load");
       try {
@@ -1127,214 +605,33 @@ export class MapLibreMapAdapter implements MapAdapter {
       this.settlePending("load");
     });
     listen("idle", () => {
-      // An idle map has its style and every source in, data layers included.
-      this.styleLoading = false;
-      this.idleSinceStyle = true;
-      this.basemapSourceIds ??= ownSourceIds(map);
+      this.loadState.idle(map);
       this.updateLoading();
-      this.stopRepaintingUntilIdle();
-      this.reportUnavailableBasemap();
-      this.reportUnavailableTileLayers();
+      this.failure.settled();
     });
     listen("render", () => {
       // A tile answered with a 404 fires no source event, so a frame is when
       // the last of the basemap's tiles can be seen to be in.
-      if (this.loading) {
+      if (this.loadState.loading) {
         this.updateLoading();
       }
     });
     listen("sourcedata", (event) => {
       this.trackBasemapSource(event, map);
-      const sourceId = tileEventSource(event);
-      if (sourceId === undefined) {
-        return;
-      }
-      if (decidesAvailability(this.basemapTiles.basemap, sourceId)) {
-        this.basemapTiles.loaded += 1;
-      }
-      this.recordLoadedTile(sourceId);
+      this.failure.tileLoaded(event);
     });
     listen("sourcedataloading", (event) => {
       this.trackBasemapSource(event, map);
-      const traffic = this.countTileLayerTile(
-        tileEventSource(event),
-        "requested",
-      );
-      if (traffic) {
-        this.watchForSlowTiles(traffic);
-        this.repaintUntilIdle(map);
-      }
+      this.failure.tileRequested(event, map);
     });
     listen("sourcedataabort", (event) => {
       this.trackBasemapSource(event, map);
-      this.countTileLayerTile(tileEventSource(event), "aborted");
+      this.failure.tileAborted(event);
     });
-    // The classification is described on the class.
     listen("error", (event) => {
-      // Listening to "error" silences MapLibre's own console logging.
-      console.error("MapLibre basemap error", event.error);
-      if (isTileOrSourceError(event)) {
-        this.trackBasemapSource(event, map);
-        const { sourceId } = event as { sourceId?: unknown };
-        if (decidesAvailability(this.basemapTiles.basemap, sourceId)) {
-          this.basemapTiles.failed += 1;
-        }
-        // A tile layer is judged on its own, when the map settles.
-        if (typeof sourceId !== "string" || !this.tileTraffic.has(sourceId)) {
-          this.emitter.emit("tileError", undefined);
-        }
-        return;
-      }
-      const workerFailed = isWorkerFailure(event);
-      const pending = this.pending;
-      if (
-        pending &&
-        (!pending.styleLoaded || (workerFailed && pending.settleOn === "load"))
-      ) {
-        this.failPending(pending, event.error);
-        return;
-      }
-      if (workerFailed) {
-        this.checkEngineAfterWorkerError(map);
-        return;
-      }
-      this.emitter.emit("tileError", undefined);
+      this.trackBasemapSource(event, map);
+      this.failure.handleError(event, map);
     });
-  }
-
-  /**
-   * Reports `basemapUnavailable` once, when the map has settled with tiles
-   * of the basemap's own sources failed and none loaded. A basemap that has
-   * drawn any tile is not reported, however many tiles fail afterwards.
-   */
-  private reportUnavailableBasemap(): void {
-    const { basemap, loaded, failed, reported } = this.basemapTiles;
-    if (!basemap || reported || failed === 0 || loaded > 0) {
-      return;
-    }
-    this.basemapTiles.reported = true;
-    this.emitter.emit("basemapUnavailable", basemap);
-  }
-
-  /**
-   * Counts one tile of a tile data layer's source that was asked for or given
-   * up on; any other source is not counted.
-   * @returns The layer's traffic, or undefined when the source is not a tile
-   *   data layer's.
-   */
-  private countTileLayerTile(
-    sourceId: string | undefined,
-    count: "requested" | "aborted",
-  ): TileLayerTraffic | undefined {
-    const traffic =
-      sourceId === undefined ? undefined : this.tileTraffic.get(sourceId);
-    if (traffic) {
-      traffic[count] += 1;
-    }
-    return traffic;
-  }
-
-  /**
-   * Starts the wait of {@link TILE_LAYER_SLOW_MS} for a layer that has had a
-   * tile asked for, if it has none running and has nothing to show: no tile
-   * loaded and nothing reported yet. Later tiles asked for do not restart it.
-   * When it ends, the layer is reported slow if a tile is still outstanding;
-   * otherwise nothing is outstanding and the next tile asked for starts it again.
-   */
-  private watchForSlowTiles(traffic: TileLayerTraffic): void {
-    if (
-      traffic.slowTimer !== undefined ||
-      traffic.loaded > 0 ||
-      traffic.report !== "none"
-    ) {
-      return;
-    }
-    traffic.slowTimer = setTimeout(() => {
-      traffic.slowTimer = undefined;
-      if (!hasOutstandingTile(traffic)) {
-        return;
-      }
-      traffic.report = "slow";
-      this.emitter.emit("tileLayerSlow", {
-        layerId: traffic.layerId,
-        tiles: traffic.tiles,
-      });
-    }, this.tileLayerSlowMs);
-  }
-
-  /**
-   * Counts one tile that loaded for a tile data layer's source (any other
-   * source is not counted), and reports `tileLayerRecovered` if it is the
-   * first since the layer reported `tileLayerSlow` or `tileLayerUnavailable`.
-   * The recovery is decided from the counters before the tile is added to them.
-   */
-  private recordLoadedTile(sourceId: string): void {
-    const traffic = this.tileTraffic.get(sourceId);
-    if (!traffic) {
-      return;
-    }
-    const recovered = traffic.report !== "none" && traffic.loaded === 0;
-    traffic.loaded += 1;
-    clearTimeout(traffic.slowTimer);
-    traffic.slowTimer = undefined;
-    if (recovered) {
-      this.emitter.emit("tileLayerRecovered", {
-        layerId: traffic.layerId,
-        tiles: traffic.tiles,
-      });
-    }
-  }
-
-  /**
-   * Paints the map every {@link TILE_SETTLE_NUDGE_MS} until it next reports
-   * `idle`. A tile the provider answers with a 404 fires no event and asks
-   * for no new frame, so a map whose last tiles were such tiles is never
-   * painted again and never reports `idle`: the layer could not be judged,
-   * and the map would stay busy. One interval serves every tile layer and the
-   * basemap's own tiles. It stops at `idle`, and when the basemap is in and no
-   * tile layer has a tile outstanding. A tile that never answers keeps the
-   * engine from going idle however often the map is painted, and from
-   * counting as in, so it also stops {@link TILE_SETTLE_GIVE_UP_MS} after the
-   * last tile was asked for; a tile asked for later starts it again. The
-   * counters cannot tell a tile that never answers from a 404, so only time
-   * can.
-   */
-  private repaintUntilIdle(map: MapLibreMap): void {
-    this.tileSettleNudge ??= setInterval(() => {
-      map.triggerRepaint();
-    }, TILE_SETTLE_NUDGE_MS);
-    clearTimeout(this.tileSettleGiveUp);
-    this.tileSettleGiveUp = setTimeout(
-      () => this.stopRepaintingUntilIdle(),
-      TILE_SETTLE_GIVE_UP_MS,
-    );
-  }
-
-  private stopRepaintingUntilIdle(): void {
-    clearInterval(this.tileSettleNudge);
-    clearTimeout(this.tileSettleGiveUp);
-    this.tileSettleNudge = undefined;
-    this.tileSettleGiveUp = undefined;
-  }
-
-  /**
-   * Reports `tileLayerUnavailable` once for each tile data layer the map has
-   * settled on with tiles asked for and none loaded, including one already
-   * reported slow. A tile given up on (the view moved on) does not count as
-   * asked for, and a layer that has drawn any tile is not reported, however
-   * many fail afterwards.
-   */
-  private reportUnavailableTileLayers(): void {
-    for (const traffic of this.tileTraffic.values()) {
-      const { layerId, tiles, requested, aborted, loaded, report } = traffic;
-      if (report === "unavailable" || loaded > 0 || requested <= aborted) {
-        continue;
-      }
-      clearTimeout(traffic.slowTimer);
-      traffic.slowTimer = undefined;
-      traffic.report = "unavailable";
-      this.emitter.emit("tileLayerUnavailable", { layerId, tiles });
-    }
   }
 
   /** Sets a basemap's zoom limits and style on the engine. */
@@ -1344,9 +641,9 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.loadEmitted = false;
     this.styleReady = false;
     // The new style has nothing in yet.
-    this.startStyleLoad();
+    this.loadState.startStyleLoad();
     // Tiles from here on belong to no basemap until the new style has loaded.
-    this.basemapTiles = idleBasemapTiles();
+    this.failure.basemapSwapRequested();
     // A diffed swap fires no "style.load", so a swap could never settle.
     map.setStyle(styleFor(basemap), { diff: false });
     this.updateLoading();
@@ -1372,44 +669,6 @@ export class MapLibreMapAdapter implements MapAdapter {
     );
   }
 
-  /**
-   * Decides whether a worker error on a loaded map stopped the engine. One
-   * check runs at a time; a burst of errors is judged once.
-   */
-  private checkEngineAfterWorkerError(map: MapLibreMap): void {
-    if (this.workerCheck) {
-      return;
-    }
-    const finish = (stopped: boolean) => {
-      this.clearWorkerCheck();
-      if (stopped) {
-        this.emitter.emit(
-          "fatalError",
-          new MapEngineError(
-            "stopped",
-            "The map engine stopped working: its worker failed.",
-          ),
-        );
-      } else {
-        this.emitter.emit("tileError", undefined);
-      }
-    };
-    this.workerCheck = {
-      idle: map.on("idle", () => finish(false)),
-      timer: setTimeout(() => finish(!map.loaded()), this.workerFailureGraceMs),
-    };
-  }
-
-  private clearWorkerCheck(): void {
-    const check = this.workerCheck;
-    if (!check) {
-      return;
-    }
-    this.workerCheck = undefined;
-    clearTimeout(check.timer);
-    check.idle.unsubscribe();
-  }
-
   /** Plain property bags of every rendered feature at a pixel, for the click event. */
   private renderedProperties(x: number, y: number): Record<string, unknown>[] {
     try {
@@ -1430,44 +689,20 @@ export class MapLibreMapAdapter implements MapAdapter {
     this.emitter.emit("load", undefined);
   }
 
-  /** A style, or the style of a requested basemap, has started to load: nothing of it is in yet. */
-  private startStyleLoad(): void {
-    this.styleLoading = true;
-    this.basemapSourceIds = undefined;
-    this.idleSinceStyle = false;
-  }
-
   /**
    * Re-reads the busy state when a source event is about one of the basemap's
    * own sources; a data layer's sources are ignored. A basemap tile being
    * asked for also starts the repaint that lets a map whose last tiles were
-   * 404s see it is done (see `repaintUntilIdle`).
+   * 404s see it is done (see `RepaintUntilIdle`).
    */
   private trackBasemapSource(event: object, map: MapLibreMap): void {
     if (!isBasemapSource((event as { sourceId?: unknown }).sourceId)) {
       return;
     }
     this.updateLoading();
-    if (this.loading) {
-      this.repaintUntilIdle(map);
+    if (this.loadState.loading) {
+      this.failure.keepPainting(map);
     }
-  }
-
-  /**
-   * Whether the style is in and every one of its own sources says so. Asked of
-   * the engine each time, so an event that never comes (a 404) cannot leave it
-   * waiting.
-   */
-  private basemapIsIn(): boolean {
-    const map = this.map;
-    const ids = this.basemapSourceIds;
-    if (this.styleLoading || !map || !ids) {
-      return false;
-    }
-    if (ids.length === 0) {
-      return this.idleSinceStyle;
-    }
-    return ids.every((id) => !map.getSource(id) || map.isSourceLoaded(id));
   }
 
   /**
@@ -1477,28 +712,15 @@ export class MapLibreMapAdapter implements MapAdapter {
    * `load` waits for every source, data layers included.
    */
   private updateLoading(): void {
-    const loading = !this.basemapIsIn();
+    const loading = !this.loadState.isIn(this.map);
     if (!loading) {
       this.emitLoad();
       this.settlePending("load");
-      if (!this.tileLayerTilesOutstanding()) {
-        this.stopRepaintingUntilIdle();
-      }
+      this.failure.basemapIsIn();
     }
-    this.setLoading(loading);
-  }
-
-  /** Whether any tile layer has asked for a tile that has neither loaded nor been given up on. */
-  private tileLayerTilesOutstanding(): boolean {
-    return [...this.tileTraffic.values()].some(hasOutstandingTile);
-  }
-
-  private setLoading(loading: boolean): void {
-    if (this.loading === loading) {
-      return;
+    if (this.loadState.publish(loading)) {
+      this.emitter.emit("loading", loading);
     }
-    this.loading = loading;
-    this.emitter.emit("loading", loading);
   }
 
   /**
@@ -1521,11 +743,7 @@ export class MapLibreMapAdapter implements MapAdapter {
   private teardownMap(): void {
     this.styleReady = false;
     this.editHandles.reset();
-    this.clearWorkerCheck();
-    this.stopRepaintingUntilIdle();
-    for (const traffic of this.tileTraffic.values()) {
-      clearTimeout(traffic.slowTimer);
-    }
+    this.failure.reset();
     for (const subscription of this.subscriptions) {
       subscription.unsubscribe();
     }
@@ -1533,49 +751,6 @@ export class MapLibreMapAdapter implements MapAdapter {
     // `remove()` also releases the WebGL context through WEBGL_lose_context.
     this.map?.remove();
     this.map = undefined;
-  }
-
-  /**
-   * Pan inertia is the only gesture animation MapLibre 6 can change after
-   * construction: a pan speed limit of zero leaves nothing to coast.
-   */
-  private applyInertia(): void {
-    this.map?.dragPan.enable(
-      this.animationEnabled ? undefined : { maxSpeed: 0 },
-    );
-  }
-
-  private engineZoom(normalisedZoom: number): number {
-    return toEngineZoom(
-      clampZoom(normalisedZoom, this.getMinZoom(), this.getMaxZoom()),
-    );
-  }
-
-  private animation(options?: MapMoveOptions): AnimationOptions {
-    // `essential` stops MapLibre's global reduced-motion flag from overriding
-    // an animation the app has allowed.
-    return this.shouldAnimate(options)
-      ? { essential: true }
-      : { animate: false, duration: 0 };
-  }
-
-  private shouldAnimate(options?: MapMoveOptions): boolean {
-    return this.animationEnabled && options?.animate !== false;
-  }
-
-  private moveCamera(
-    camera: { center?: [number, number]; zoom?: number; bearing?: number },
-    options?: MapMoveOptions,
-  ): void {
-    const map = this.map;
-    if (!map) {
-      return;
-    }
-    if (this.shouldAnimate(options)) {
-      map.easeTo({ ...camera, essential: true });
-    } else {
-      map.jumpTo(camera);
-    }
   }
 }
 
