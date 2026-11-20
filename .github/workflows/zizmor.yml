@@ -12,6 +12,13 @@ name: Workflow security lint
 # - On main, and weekly (an advisory about an action already in use can appear at
 #   any time), the job uploads the results to code scanning for triage. In that mode
 #   the action does not fail the run on findings.
+#
+# Both jobs pin zizmor to the same exact version through the action's `version` input
+# (the action's default is `latest`, which let a new release fail the lint with no
+# change here). Dependabot raises the action's commit SHA but not this input, so raise
+# the version by hand, to a release at least seven days old, and keep the two jobs
+# equal. To run the same zizmor locally (the seven-day date is today minus seven days):
+#   uvx --exclude-newer <YYYY-MM-DD> zizmor@1.32.0 .github
 on:
   pull_request:
     paths:
@@ -45,6 +52,7 @@ jobs:
       - name: Run zizmor
         uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
         with:
+          version: 1.32.0
           advanced-security: false
           annotations: true
 
@@ -63,3 +71,5 @@ jobs:
 
       - name: Run zizmor
         uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          version: 1.32.0
