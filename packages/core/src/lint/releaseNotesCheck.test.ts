@@ -98,16 +98,21 @@ describe("checkChangelog", () => {
   });
 
   describe("commit prefixes", () => {
-    it.each(["feat:", "fix(core):", "chore!:", "- docs(map)!:", "* perf:"])(
-      "fails a line that starts with %s",
-      (start) => {
-        expect(
-          messages(edited("- The scale bar", `${start} The scale bar`)),
-        ).toContain(
-          "A line that starts like a commit subject (`feat:`, `fix:` and so on) reads as a commit log. Say what someone can now do.",
-        );
-      },
-    );
+    it.each([
+      "feat:",
+      "fix(core):",
+      "chore!:",
+      "- docs(map)!:",
+      "* perf:",
+      "1. fix:",
+      "12. feat(map)!:",
+    ])("fails a line that starts with %s", (start) => {
+      expect(
+        messages(edited("- The scale bar", `${start} The scale bar`)),
+      ).toContain(
+        "A line that starts like a commit subject (`feat:`, `fix:` and so on) reads as a commit log. Say what someone can now do.",
+      );
+    });
 
     it("passes the same words inside a sentence or a code block", () => {
       expect(messages(edited("The scale bar", "A fix: the scale bar"))).toEqual(
@@ -140,6 +145,34 @@ describe("checkChangelog", () => {
         "see @mapcairn/map and @mapcairn/core/contracts",
         "mail a@b.example",
         "`` @a `` and `b`",
+      ]) {
+        expect(messages(edited("The scale bar", good))).toEqual([]);
+      }
+    });
+
+    it("fails a handle after a code span that is never closed", () => {
+      for (const bad of ["`alice` and `@bob for the fix", "thanks `@bob"]) {
+        expect(messages(edited("The scale bar", bad)).join(" ")).toContain(
+          "notifies",
+        );
+      }
+    });
+
+    it("lets only the four SDK package names stand outside a code span", () => {
+      for (const bad of [
+        "thanks @MapCairn/maintainers",
+        "see @mapcairn/other",
+        "see @mapcairn/map-extra",
+        "ask @mapcairn",
+      ]) {
+        expect(messages(edited("The scale bar", bad)).join(" ")).toContain(
+          "notifies",
+        );
+      }
+      for (const good of [
+        "see `@MapCairn/maintainers`",
+        "import from @mapcairn/theme/tokens.css",
+        "@mapcairn/react and @mapcairn/core.",
       ]) {
         expect(messages(edited("The scale bar", good))).toEqual([]);
       }
@@ -181,6 +214,17 @@ describe("checkChangelog", () => {
       expect(
         messages(edited("The scale bar", `The scale bar ${emoji}`)),
       ).toContain("Emoji are not used in the notes.");
+    });
+
+    it("passes the check and cross marks, which are not emoji", () => {
+      expect(
+        messages(
+          edited(
+            "The scale bar",
+            "Works \u2713, not \u2717, and \u2605 or \u260E",
+          ),
+        ),
+      ).toEqual([]);
     });
 
     it("passes plain symbols that are not emoji", () => {

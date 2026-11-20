@@ -63,6 +63,7 @@ export const REVIEW_BY_HAND = [
  * @typedef {object} PlanSources
  * @property {() => string[]} tags All tag names.
  * @property {(tag: string | null) => Array<{ hash: string, subject: string, body: string }>} commits Squash-merged commits that touch the SDK packages since a tag, newest first.
+ * @property {() => Map<string, PullRequestInfo>} mergedPullRequests The merged pull requests into `main`, keyed by merge commit.
  * @property {(hash: string) => number | null} pullRequestOf The pull request a commit was merged from, for a squash merge whose subject has no `(#n)` tail.
  * @property {(number: number) => PullRequestInfo | null} pullRequest
  * @property {() => Set<string> | null} writeAccess Lower-case logins with write access, null when unreadable.
@@ -96,13 +97,10 @@ export function planRelease({ pre, sources }) {
   const since = lastStable?.tag ?? null;
   const commits = sources
     .commits(since)
-    .map((commit) => {
-      const parsed = parseCommit(commit.subject, commit.body);
-      return {
-        ...parsed,
-        pullRequest: parsed.pullRequest ?? sources.pullRequestOf(commit.hash),
-      };
-    })
+    .map((commit) => ({
+      ...parseCommit(commit.subject, commit.body),
+      hash: commit.hash,
+    }))
     .filter((commit) => commit.scope !== "release");
 
   const apiChanges =
@@ -132,16 +130,17 @@ export function planRelease({ pre, sources }) {
     );
   }
 
-  const pullRequests = commits.map((commit) => {
-    const info =
-      commit.pullRequest === null
-        ? null
-        : sources.pullRequest(commit.pullRequest);
-    if (commit.pullRequest !== null && info === null) {
+  const merged = sources.mergedPullRequests();
+  const resolved = commits.map((commit) => ({
+    commit,
+    info: resolvePullRequest(commit, sources, merged),
+  }));
+  const pullRequests = resolved.map(({ commit, info }) => {
+    if (info === null && commit.pullRequest !== null) {
       notices.push(`Could not read pull request #${commit.pullRequest}.`);
     }
     return {
-      number: commit.pullRequest,
+      number: info?.number ?? commit.pullRequest,
       title: info?.title ?? commit.subject,
       url: info?.url ?? null,
       author: info?.author?.login ?? null,
@@ -169,22 +168,53 @@ export function planRelease({ pre, sources }) {
       likelyBreaking: true,
       detail: `${entry.path} lost ${entry.deletedLines} line${entry.deletedLines === 1 ? "" : "s"}, so an entry may have been removed or edited.`,
     })),
-    contributorsToThank: contributorsToThank(commits, sources, notices),
+    contributorsToThank: contributorsToThank(
+      resolved.map(({ info }) => info),
+      sources,
+      notices,
+    ),
     reviewByHand: REVIEW_BY_HAND,
     notices,
   };
 }
 
 /**
+ * The pull request a commit came from. A squash merge made on GitHub is in the
+ * list of merged pull requests, keyed by its merge commit. Otherwise the number
+ * in the subject is read, and when that is not a pull request (it can be an
+ * issue), the pull request GitHub associates with the commit is looked up.
+ *
+ * @param {import("./versionRules.mjs").ParsedCommit & { hash: string }} commit
+ * @param {PlanSources} sources
+ * @param {Map<string, PullRequestInfo>} merged
+ * @returns {PullRequestInfo | null}
+ */
+function resolvePullRequest(commit, sources, merged) {
+  const listed = merged.get(commit.hash);
+  if (listed !== undefined) {
+    return listed;
+  }
+  const named =
+    commit.pullRequest === null
+      ? null
+      : sources.pullRequest(commit.pullRequest);
+  if (named !== null) {
+    return named;
+  }
+  const number = sources.pullRequestOf(commit.hash);
+  return number === null ? null : sources.pullRequest(number);
+}
+
+/**
  * The people to thank: authors of the merged pull requests who are not bots
  * and do not have write access, by their public login.
  *
- * @param {import("./versionRules.mjs").ParsedCommit[]} commits
+ * @param {Array<PullRequestInfo | null>} pullRequests
  * @param {PlanSources} sources
  * @param {string[]} notices
  * @returns {Array<{ login: string, pullRequests: number[] }>}
  */
-function contributorsToThank(commits, sources, notices) {
+function contributorsToThank(pullRequests, sources, notices) {
   const writers = sources.writeAccess();
   if (writers === null) {
     notices.push(
@@ -194,12 +224,10 @@ function contributorsToThank(commits, sources, notices) {
   }
   /** @type {Map<string, number[]>} */
   const byLogin = new Map();
-  for (const commit of commits) {
-    if (commit.pullRequest === null) {
-      continue;
-    }
-    const author = sources.pullRequest(commit.pullRequest)?.author ?? null;
+  for (const info of pullRequests) {
+    const author = info?.author ?? null;
     if (
+      info === null ||
       author === null ||
       isBotAccount(author) ||
       writers.has(author.login.toLowerCase())
@@ -208,19 +236,26 @@ function contributorsToThank(commits, sources, notices) {
     }
     byLogin.set(author.login, [
       ...(byLogin.get(author.login) ?? []),
-      commit.pullRequest,
+      info.number,
     ]);
   }
-  return [...byLogin].map(([login, pullRequests]) => ({ login, pullRequests }));
+  return [...byLogin].map(([login, numbers]) => ({
+    login,
+    pullRequests: numbers,
+  }));
 }
 
 /**
  * The sources the real script reads: git, `gh` and the working tree.
  *
  * @param {string} root The repository folder.
+ * @param {(args: string[]) => { ok: boolean, stdout: string }} [gh] Runs `gh`; a test supplies a fake.
  * @returns {PlanSources}
  */
-export function repositorySources(root) {
+export function repositorySources(
+  root,
+  gh = (/** @type {string[]} */ args) => run("gh", args, root),
+) {
   /** @type {Map<number, PullRequestInfo | null>} */
   const cache = new Map();
   return {
@@ -247,17 +282,14 @@ export function repositorySources(root) {
           return { hash, subject, body };
         });
     },
+    mergedPullRequests: () => readMergedPullRequests(gh),
     pullRequestOf: (hash) => {
-      const result = run(
-        "gh",
-        [
-          "api",
-          `repos/${REPOSITORY}/commits/${hash}/pulls`,
-          "--jq",
-          ".[0].number",
-        ],
-        root,
-      );
+      const result = gh([
+        "api",
+        `repos/${REPOSITORY}/commits/${hash}/pulls`,
+        "--jq",
+        ".[0].number",
+      ]);
       const number = Number(result.stdout.trim());
       return result.ok && Number.isInteger(number) && number > 0
         ? number
@@ -265,7 +297,7 @@ export function repositorySources(root) {
     },
     pullRequest: (number) => {
       if (!cache.has(number)) {
-        cache.set(number, readPullRequest(number, root));
+        cache.set(number, readPullRequest(number, gh));
       }
       return cache.get(number) ?? null;
     },
@@ -286,28 +318,12 @@ export function repositorySources(root) {
 }
 
 /**
- * @param {number} number
- * @param {string} root
- * @returns {PullRequestInfo | null}
+ * A pull request as `gh` prints it as JSON.
+ *
+ * @param {any} data
+ * @returns {PullRequestInfo}
  */
-function readPullRequest(number, root) {
-  const result = run(
-    "gh",
-    [
-      "pr",
-      "view",
-      String(number),
-      "--repo",
-      REPOSITORY,
-      "--json",
-      "number,title,url,author",
-    ],
-    root,
-  );
-  if (!result.ok) {
-    return null;
-  }
-  const data = JSON.parse(result.stdout);
+function toPullRequestInfo(data) {
   return {
     number: data.number,
     title: String(data.title ?? ""),
@@ -320,6 +336,63 @@ function readPullRequest(number, root) {
             isBot: data.author.is_bot === true,
           },
   };
+}
+
+/** How many merged pull requests one `gh pr list` asks for. */
+const MERGED_LIMIT = "1000";
+
+/**
+ * The merged pull requests into `main`, in one call, keyed by merge commit.
+ * A commit the list does not cover (a pull request older than the limit)
+ * falls back to a lookup of its own.
+ *
+ * @param {(args: string[]) => { ok: boolean, stdout: string }} gh
+ * @returns {Map<string, PullRequestInfo>}
+ */
+function readMergedPullRequests(gh) {
+  const result = gh([
+    "pr",
+    "list",
+    "--repo",
+    REPOSITORY,
+    "--state",
+    "merged",
+    "--base",
+    "main",
+    "--limit",
+    MERGED_LIMIT,
+    "--json",
+    "number,title,url,author,mergeCommit",
+  ]);
+  /** @type {Map<string, PullRequestInfo>} */
+  const merged = new Map();
+  if (!result.ok) {
+    return merged;
+  }
+  for (const data of JSON.parse(result.stdout)) {
+    if (typeof data.mergeCommit?.oid === "string") {
+      merged.set(data.mergeCommit.oid, toPullRequestInfo(data));
+    }
+  }
+  return merged;
+}
+
+/**
+ * @param {number} number
+ * @param {(args: string[]) => { ok: boolean, stdout: string }} gh
+ * @returns {PullRequestInfo | null}
+ */
+function readPullRequest(number, gh) {
+  const result = gh([
+    "pr",
+    "view",
+    String(number),
+    "--repo",
+    REPOSITORY,
+    "--json",
+    "number,title,url,author",
+  ]);
+  return result.ok ? toPullRequestInfo(JSON.parse(result.stdout)) : null;
 }
 
 /**

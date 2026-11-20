@@ -14,15 +14,14 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   applyRelease,
+  lockfileDrift,
   parseArguments,
   ReleaseError,
   realTools,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/apply.mjs";
 import {
-  nestedNpmEnvironment,
   npm,
-  npmInvocation,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/tools.mjs";
 import {
@@ -153,6 +152,9 @@ function fakeTools(
     stderr: string;
     dirty: string | null;
     touchLock: boolean;
+    lockAfter: string;
+    throws: string;
+    subjects: string[];
   }> = {},
 ) {
   const calls: string[] = [];
@@ -162,6 +164,15 @@ function fakeTools(
       dirtyFiles: () => (overrides.dirty === undefined ? "" : overrides.dirty),
       install: (root: string) => {
         calls.push(root);
+        if (overrides.throws !== undefined) {
+          throw new Error(overrides.throws);
+        }
+        if (overrides.lockAfter !== undefined) {
+          writeFileSync(
+            path.join(root, "package-lock.json"),
+            overrides.lockAfter,
+          );
+        }
         if (overrides.touchLock) {
           writeFileSync(
             path.join(root, "package-lock.json"),
@@ -171,6 +182,10 @@ function fakeTools(
         return { ok: overrides.ok ?? true, stderr: overrides.stderr ?? "" };
       },
       today: () => "2026-12-02",
+      subjectsFor: () =>
+        overrides.subjects === undefined
+          ? undefined
+          : () => overrides.subjects as string[],
     },
   };
 }
@@ -529,9 +544,79 @@ describe("applyRelease", () => {
     expect(() =>
       applyRelease({ root, version: "0.1.0", notes: NOTES, tools }),
     ).toThrow(
-      "npm install failed, so every file was put back as it was:\nnetwork down",
+      /npm install failed:\nnetwork down\nEvery file was put back as it was\. Run `npm ci --ignore-scripts`/,
     );
     expect(git(root, "status", "--porcelain")).toBe("");
+  });
+
+  it("puts every file back, and says to run npm ci, when the install throws", () => {
+    const root = repository();
+    const { tools } = fakeTools({ throws: "spawn failed", touchLock: true });
+    expect(() =>
+      applyRelease({ root, version: "0.1.0", notes: NOTES, tools }),
+    ).toThrow(
+      /spawn failed\nEvery file was put back as it was\. Run `npm ci --ignore-scripts`/,
+    );
+    expect(git(root, "status", "--porcelain")).toBe("");
+  });
+
+  it("lists lockfile paths that changed beyond the workspaces", () => {
+    const root = repository();
+    const lock = (core: string, leftPad: string) =>
+      `${JSON.stringify({ lockfileVersion: 3, packages: { "": {}, "packages/core": { version: core }, "node_modules/@mapcairn/core": { resolved: "packages/core", link: true }, "node_modules/left-pad": { version: leftPad } } }, null, 2)}\n`;
+    write(root, "package-lock.json", lock("0.0.0", "1.0.0"));
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "chore: lock");
+    const { tools } = fakeTools({ lockAfter: lock("0.1.0", "1.0.1") });
+    const result = applyRelease({
+      root,
+      version: "0.1.0",
+      notes: NOTES,
+      tools,
+    });
+    expect(result.lockfileDrift).toEqual(["node_modules/left-pad"]);
+  });
+
+  it("reports no drift when only the workspaces changed", () => {
+    const root = repository();
+    const lock = (core: string) =>
+      `${JSON.stringify({ lockfileVersion: 3, packages: { "packages/core": { version: core } } })}\n`;
+    write(root, "package-lock.json", lock("0.0.0"));
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "chore: lock");
+    const result = applyRelease({
+      root,
+      version: "0.1.0",
+      notes: NOTES,
+      tools: fakeTools({ lockAfter: lock("0.1.0") }).tools,
+    });
+    expect(result.lockfileDrift).toEqual([]);
+  });
+
+  it("reports a changed lockfile version, and ignores a lockfile it cannot read", () => {
+    expect(
+      lockfileDrift('{"lockfileVersion": 2}', '{"lockfileVersion": 3}', []),
+    ).toEqual(["lockfileVersion"]);
+    expect(lockfileDrift("not json", "{}", [])).toEqual([]);
+  });
+
+  it("fails notes that repeat a commit subject, as lint would later", () => {
+    const root = repository();
+    const { tools, calls } = fakeTools({
+      subjects: ["feat(map): add multi-select (#1)"],
+    });
+    expect(() =>
+      applyRelease({
+        root,
+        version: "0.1.0",
+        notes: "### What is new\n\n- Add multi-select\n",
+        tools,
+      }),
+    ).toThrow(/repeats a commit subject word for word/);
+    expect(calls).toEqual([]);
+    expect(() =>
+      applyRelease({ root, version: "0.1.0", notes: NOTES, tools }),
+    ).not.toThrow();
   });
 
   it("restores a missing lockfile situation without writing one", () => {
@@ -585,76 +670,21 @@ describe("parseArguments", () => {
 });
 
 describe("realTools", () => {
+  it("reads commit subjects only where the history is complete", () => {
+    const root = repository();
+    expect(typeof realTools.subjectsFor(root)).toBe("function");
+    const plain = mkdtempSync(path.join(tmpdir(), "mapcairn-nogit-"));
+    folders.push(plain);
+    expect(realTools.subjectsFor(plain)).toBeUndefined();
+  });
+
   it("gives today's date as YYYY-MM-DD", () => {
     expect(realTools.today()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
 
-describe("nestedNpmEnvironment", () => {
-  it("drops the settings the parent npm copied into the environment and keeps the rest", () => {
-    const env = nestedNpmEnvironment({
-      PATH: "/bin",
-      npm_config_allow_scripts: "workerd",
-      npm_config_local_prefix: "/elsewhere",
-      npm_package_name: "mapcairn",
-      npm_lifecycle_event: "release:apply",
-      npm_execpath: "/npm-cli.js",
-      npm_command: "run-script",
-      npm_config_registry: "https://registry.example.test/",
-      NPM_CONFIG_CACHE: "/cache",
-      CI: "true",
-    });
-    expect(env).toEqual({
-      PATH: "/bin",
-      npm_config_registry: "https://registry.example.test/",
-      NPM_CONFIG_CACHE: "/cache",
-      CI: "true",
-    });
-  });
-});
-
-describe("npmInvocation", () => {
-  it("runs the npm that started the script, through Node, with no shell", () => {
-    const folder = mkdtempSync(path.join(tmpdir(), "mapcairn-npm-"));
-    folders.push(folder);
-    write(folder, "npm-cli.js", "");
-    write(folder, "npx-cli.js", "");
-    const entry = path.join(folder, "npm-cli.js");
-    const npx = path.join(folder, "npx-cli.js");
-    expect(npmInvocation({ npm_execpath: entry }, "/node")).toEqual({
-      command: "/node",
-      prefix: [entry],
-    });
-    expect(npmInvocation({ npm_execpath: npx }, "/node")).toEqual({
-      command: "npm",
-      prefix: [],
-    });
-  });
-
-  it("looks beside Node when the script was not started by npm (or npx started it), and falls back to npm", () => {
-    const folder = mkdtempSync(path.join(tmpdir(), "mapcairn-node-"));
-    folders.push(folder);
-    const cli = path.join(folder, "node_modules", "npm", "bin", "npm-cli.js");
-    write(folder, "node_modules/npm/bin/npm-cli.js", "");
-    expect(npmInvocation({}, path.join(folder, "node"))).toEqual({
-      command: path.join(folder, "node"),
-      prefix: [cli],
-    });
-    expect(
-      npmInvocation(
-        { npm_execpath: path.join(folder, "missing.js") },
-        path.join(folder, "node"),
-      ).prefix,
-    ).toEqual([cli]);
-    const other = mkdtempSync(path.join(tmpdir(), "mapcairn-node-"));
-    folders.push(other);
-    expect(npmInvocation({}, path.join(other, "node"))).toEqual({
-      command: "npm",
-      prefix: [],
-    });
-  });
-
-  it("runs npm", () => {
+describe("npm", () => {
+  it("runs npm without a shell", () => {
     const result = npm(["--version"], tmpdir());
     expect(result.ok).toBe(true);
     expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);

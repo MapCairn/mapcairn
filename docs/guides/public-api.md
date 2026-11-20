@@ -100,6 +100,7 @@ CI prints each warning in a group and a count for each package as one annotation
 `npm run release:plan` (`scripts/release/plan.mjs`, described in `docs/guides/releasing.md`) reads the reports' change since the last tag and the commits' types, and flags each change below as a likely breaking change. It cannot see everything above, so a person reads the go/no-go list in the Release pull request.
 
 - a removed or changed line in a report, and a line that gained an `@internal` tag;
+- a required member added to an exported interface or abstract class a host implements (an optional member, or a member of an ordinary class, does not count; for an abstract class only a new abstract member does). Hosts implement the ports, so adding a required member to one breaks them;
 - an added member of an exported union or enum. API Extractor prints a short union on one line, so a new member shows as a changed line, and a long one on several lines; the script reads the members from the report text itself;
 - a change under `packages/core/src/urlHash/sharedLinks.test.ts` or `packages/core/src/layers/legacyDefinitions/` that removes or edits an entry (any removed line in the diff since the last tag). Adding an entry is not breaking.
 

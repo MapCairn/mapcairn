@@ -259,6 +259,26 @@ describe("nextVersion", () => {
     }
   });
 
+  it("warns in the reason when another prerelease word sorts before the last tag", () => {
+    const lower = nextVersion({
+      last: version("0.1.0-rc.2"),
+      commits: [],
+      apiBreaking: false,
+      pre: "beta",
+    });
+    expect(lower.version).toBe("0.1.0-beta.1");
+    expect(lower.reason).toContain("sorts before 0.1.0-rc.2");
+    expect(lower.reason).toContain("release:apply");
+    const higher = nextVersion({
+      last: version("0.1.0-beta.2"),
+      commits: [],
+      apiBreaking: false,
+      pre: "rc",
+    });
+    expect(higher.version).toBe("0.1.0-rc.1");
+    expect(higher.reason).not.toContain("sorts before");
+  });
+
   it("counts the next candidate with a prerelease identifier, and starts again for a new one", () => {
     expect(
       nextVersion({

@@ -19,7 +19,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../entryPoint.mjs";
 import { extractNotes, insertSection, scanLines } from "./changelog.mjs";
-import { checkChangelog } from "./notesCheck.mjs";
+import {
+  checkChangelog,
+  isShallowClone,
+  subjectsSincePreviousTag,
+} from "./notesCheck.mjs";
 import { compareVersions, parseVersion } from "./semver.mjs";
 import { git, npm } from "./tools.mjs";
 import {
@@ -46,6 +50,7 @@ export class ReleaseError extends Error {}
  * @property {(root: string) => string | null} dirtyFiles A summary of uncommitted changes, an empty string for a clean tree, null when git cannot say.
  * @property {(root: string) => { ok: boolean, stderr: string }} install Runs `npm install --ignore-scripts`.
  * @property {() => string} today `YYYY-MM-DD`.
+ * @property {(root: string) => ((version: string) => string[] | null) | undefined} [subjectsFor] The commit subjects between the tag before a version and that version, for the notes check; undefined when the history is not complete.
  */
 
 /** @type {ApplyTools} */
@@ -55,6 +60,8 @@ export const realTools = {
     return result.ok ? result.stdout.trim() : null;
   },
   install: (root) => npm(["install", "--ignore-scripts"], root),
+  subjectsFor: (root) =>
+    isShallowClone(root) === false ? subjectsSincePreviousTag(root) : undefined,
   today: () => {
     const now = new Date();
     const pad = (/** @type {number} */ number) =>
@@ -83,7 +90,7 @@ function startsWithVersionHeading(notes) {
  * @param {string | null} [input.date] `YYYY-MM-DD`, today by default.
  * @param {boolean} [input.dryRun]
  * @param {ApplyTools} [input.tools]
- * @returns {{ version: string, date: string, files: string[], dryRun: boolean }} The files written, or that would be.
+ * @returns {{ version: string, date: string, files: string[], dryRun: boolean, lockfileDrift?: string[] }} The files written, or that would be, and the lockfile paths that changed beyond the workspaces.
  * @throws {ReleaseError} When the release cannot be applied; nothing is left changed.
  */
 export function applyRelease({
@@ -143,7 +150,9 @@ export function applyRelease({
   }
   const heading = date ?? tools.today();
   const updatedChangelog = insertSection(changelog, version, heading, notes);
-  const findings = checkChangelog(updatedChangelog);
+  const findings = checkChangelog(updatedChangelog, {
+    subjectsFor: tools.subjectsFor?.(root),
+  });
   if (findings.length > 0) {
     throw new ReleaseError(
       `The notes fail the notes check:\n${findings
@@ -172,18 +181,74 @@ export function applyRelease({
       writeFileSync(lockPath, lock);
     }
   };
-  for (const entry of manifests) {
-    writeFileSync(path.join(root, entry.file), entry.text);
+  let installed = null;
+  try {
+    for (const entry of manifests) {
+      writeFileSync(path.join(root, entry.file), entry.text);
+    }
+    writeFileSync(changelogPath, updatedChangelog);
+    installed = tools.install(root);
+  } catch (error) {
+    restore();
+    throw new ReleaseError(
+      `${error instanceof Error ? error.message : String(error)}\n${PUT_BACK}`,
+    );
   }
-  writeFileSync(changelogPath, updatedChangelog);
-  const installed = tools.install(root);
   if (!installed.ok) {
     restore();
     throw new ReleaseError(
-      `npm install failed, so every file was put back as it was:\n${installed.stderr.trim()}`,
+      `npm install failed:\n${installed.stderr.trim()}\n${PUT_BACK}`,
     );
   }
-  return { version, date: heading, files, dryRun };
+  const drift =
+    lock === null
+      ? []
+      : lockfileDrift(
+          lock,
+          readFileSync(lockPath, "utf8"),
+          manifests.map((entry) => path.posix.dirname(entry.file)),
+        );
+  return { version, date: heading, files, dryRun, lockfileDrift: drift };
+}
+
+/** What to tell a person after every file has been put back. */
+const PUT_BACK =
+  "Every file was put back as it was. Run `npm ci --ignore-scripts` so node_modules matches the lockfile again.";
+
+/**
+ * The lockfile paths that changed beyond the workspaces' own entries and the
+ * links to them: the drift an install brings in besides the new versions, such
+ * as a dependency that moved within its range. A person reads it before
+ * committing.
+ *
+ * @param {string} before The lockfile before the install.
+ * @param {string} after The lockfile after.
+ * @param {string[]} workspaceFolders The folders of the workspaces whose manifest changed.
+ * @returns {string[]} Sorted; `lockfileVersion` when that changed.
+ */
+export function lockfileDrift(before, after, workspaceFolders) {
+  let old;
+  let current;
+  try {
+    old = JSON.parse(before);
+    current = JSON.parse(after);
+  } catch {
+    return [];
+  }
+  const oldPackages = old.packages ?? {};
+  const newPackages = current.packages ?? {};
+  const changed = [
+    ...new Set([...Object.keys(oldPackages), ...Object.keys(newPackages)]),
+  ].filter(
+    (key) =>
+      JSON.stringify(oldPackages[key]) !== JSON.stringify(newPackages[key]) &&
+      !workspaceFolders.includes(key) &&
+      !key.startsWith("node_modules/@mapcairn/"),
+  );
+  if (old.lockfileVersion !== current.lockfileVersion) {
+    changed.push("lockfileVersion");
+  }
+  return changed.sort();
 }
 
 /**
@@ -225,6 +290,9 @@ if (isEntryPoint(import.meta.url)) {
     console.error(parsed.error);
     process.exit(2);
   }
+  // An interrupt reaches npm as well as this script. Keeping this script alive
+  // lets it see npm stop and put the files back.
+  process.on("SIGINT", () => {});
   try {
     const notes = readFileSync(path.resolve(parsed.notesFile), "utf8");
     const result = applyRelease({
@@ -242,6 +310,11 @@ if (isEntryPoint(import.meta.url)) {
     }
     if (result.dryRun) {
       console.log("Dry run: nothing was written.");
+    }
+    if (result.lockfileDrift?.length) {
+      console.log(
+        `The lockfile also changed outside the workspaces. Read these before you commit:\n  ${result.lockfileDrift.join("\n  ")}`,
+      );
     }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

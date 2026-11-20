@@ -13,7 +13,7 @@ export const SDK_PACKAGES = ["core", "react", "theme", "map"];
 
 /**
  * @typedef {object} ApiChange
- * @property {"added" | "removed" | "changed" | "union-member-added" | "enum-member-added" | "gained-internal" | "gained-beta"} kind
+ * @property {"added" | "removed" | "changed" | "union-member-added" | "enum-member-added" | "gained-internal" | "gained-beta" | "required-member-added"} kind
  * @property {string} name
  * @property {boolean} likelyBreaking Whether `docs/guides/public-api.md` calls this a likely breaking change.
  * @property {string} detail One sentence about what changed.
@@ -36,7 +36,9 @@ function reportBody(report) {
 }
 
 /**
- * Splits a report into its exported entries. API Extractor separates the
+ * Splits a report into its exported entries. Blocks that share a name (the
+ * overloads of a function, declarations that merge) are joined into one entry.
+ * API Extractor separates the
  * top-level items with a blank line and prints an alias (`const x_2`) with a
  * following `export { x_2 as x }`, which names the entry.
  *
@@ -58,10 +60,14 @@ export function parseReport(report) {
     const alias = lines.map((line) => NAMED_EXPORT.exec(line)).find(Boolean);
     const declared = DECLARATION.exec(lines[0]);
     const name = alias?.[1] ?? declared?.[1] ?? lines[0].trim();
+    const earlier = entries.get(name);
     entries.set(name, {
       name,
-      lines: lines.map((line) => line.trimEnd()),
-      tags,
+      lines: [
+        ...(earlier?.lines ?? []),
+        ...lines.map((line) => line.trimEnd()),
+      ],
+      tags: [...(earlier?.tags ?? []), ...tags],
     });
   }
   return entries;
@@ -132,6 +138,52 @@ function missingFrom(from, against) {
   });
 }
 
+/** The header of a type whose implementers a host may write: an interface or an abstract class. */
+const IMPLEMENTED_TYPE =
+  /^export\s+(?:declare\s+)?(?:(abstract)\s+class|interface)\s/;
+/** The start of a member line, as opposed to the continuation of a long type. */
+const MEMBER_START =
+  /^(?:(?:readonly|static|abstract|protected|get|set)\s+)*(?:\[|["(<]|[\w$])/;
+/** A member that is optional: its name is followed by `?`. */
+const OPTIONAL_MEMBER =
+  /^(?:(?:readonly|static)\s+)*(?:\[[^\]]*\]|"[^"]*"|[\w$]+)\?\s*[:(<]/;
+
+/**
+ * The members, at the top level of an interface or abstract class, that a
+ * host implementing it must now provide: a line that is new and not optional,
+ * or for an abstract class a new abstract member.
+ *
+ * @param {string[]} beforeLines
+ * @param {string[]} afterLines
+ * @returns {string[]}
+ */
+function requiredMembersAdded(beforeLines, afterLines) {
+  const header = IMPLEMENTED_TYPE.exec(afterLines[0] ?? "");
+  if (header === null) {
+    return [];
+  }
+  const remaining = [...beforeLines];
+  const required = [];
+  let depth = 0;
+  for (const line of afterLines) {
+    const index = remaining.indexOf(line);
+    const text = line.trim();
+    if (index !== -1) {
+      remaining.splice(index, 1);
+    } else if (
+      depth === 1 &&
+      MEMBER_START.test(text) &&
+      !OPTIONAL_MEMBER.test(text) &&
+      (header[1] === undefined || /\babstract\b/.test(text.split(/[:(<]/)[0]))
+    ) {
+      required.push(text);
+    }
+    depth +=
+      (line.match(/\{/g) ?? []).length - (line.match(/\}/g) ?? []).length;
+  }
+  return required;
+}
+
 /**
  * A member line without its trailing comma: adding an enum member after the
  * last one adds a comma to the line before it, which is not a change to it.
@@ -185,6 +237,15 @@ function compareEntries(before, after) {
         name,
         likelyBreaking: true,
         detail: `${name} gained a member, so a host's exhaustive switch stops compiling.`,
+      };
+    }
+    const required = requiredMembersAdded(beforeLines, afterLines);
+    if (required.length > 0) {
+      return {
+        kind: "required-member-added",
+        name,
+        likelyBreaking: true,
+        detail: `${name} gained a required member (${required[0]}), so a host that implements it stops compiling.`,
       };
     }
     return {

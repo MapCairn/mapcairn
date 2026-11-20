@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { formatVersion } from "./semver.mjs";
+import { compareVersions, formatVersion, parseVersion } from "./semver.mjs";
 
 /** A Conventional Commit subject: type, optional scope, optional `!`, description. */
 const SUBJECT = /^([a-z]+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/;
@@ -136,13 +136,11 @@ export function nextVersion({ last, commits, apiBreaking, pre }) {
   }
   if (last.preId !== null) {
     const counter = last.preId === pre ? (last.preNumber ?? 0) + 1 : 1;
+    const version = withPre(last, pre, counter);
     return {
-      version: withPre(last, pre, counter),
+      version,
       bump: "prerelease",
-      reason:
-        pre === null
-          ? `The last tag is the prerelease ${formatVersion(last)}, so the next version is its release.`
-          : `The last tag is the prerelease ${formatVersion(last)}, so this is the next ${pre} of ${last.major}.${last.minor}.${last.patch}.`,
+      reason: prereleaseReason(last, pre, version),
     };
   }
   const asked = commits.flatMap((commit) => {
@@ -188,4 +186,22 @@ function reasonFor(bump, major, apiBreaking, commits) {
   return bump === "minor"
     ? "A commit adds a feature, so this is a minor bump."
     : "The commits since the last release add features or fixes, so this is a patch bump.";
+}
+
+/**
+ * @param {import("./semver.mjs").Version} last A prerelease.
+ * @param {string | null} pre
+ * @param {string} version The version chosen.
+ * @returns {string}
+ */
+function prereleaseReason(last, pre, version) {
+  if (pre === null) {
+    return `The last tag is the prerelease ${formatVersion(last)}, so the next version is its release.`;
+  }
+  const reason = `The last tag is the prerelease ${formatVersion(last)}, so this is the next ${pre} of ${last.major}.${last.minor}.${last.patch}.`;
+  const chosen = parseVersion(version);
+  if (chosen === null || compareVersions(chosen, last) >= 0) {
+    return reason;
+  }
+  return `${reason} Note: ${version} sorts before ${formatVersion(last)}, so \`release:apply\` refuses it. Use \`--pre ${last.preId}\` or none.`;
 }

@@ -33,14 +33,33 @@ function fakeSources(options: {
   commits?: FakeCommit[];
   pulls?: Record<number, Pull>;
   byHash?: Record<string, number>;
+  /** Pull requests in the merged list, by merge commit hash. */
+  merged?: Record<string, number>;
   writers?: string[] | null;
   before?: string;
   after?: string;
   deletions?: Array<{ path: string; deletedLines: number }>;
 }) {
   const seenTags: Array<string | null> = [];
+  const lookedUp: number[] = [];
+  const pullRequest = (number: number) => {
+    lookedUp.push(number);
+    const pull = options.pulls?.[number];
+    return pull === undefined
+      ? null
+      : {
+          number,
+          title: pull.title ?? `Pull request ${number}`,
+          url: `https://example.test/pull/${number}`,
+          author:
+            pull.author === undefined
+              ? { login: "someone", isBot: false }
+              : pull.author,
+        };
+  };
   return {
     seenTags,
+    lookedUp,
     sources: {
       tags: () => options.tags ?? [],
       commits: (tag: string | null) => {
@@ -52,20 +71,14 @@ function fakeSources(options: {
         }));
       },
       pullRequestOf: (hash: string) => options.byHash?.[hash] ?? null,
-      pullRequest: (number: number) => {
-        const pull = options.pulls?.[number];
-        return pull === undefined
-          ? null
-          : {
-              number,
-              title: pull.title ?? `Pull request ${number}`,
-              url: `https://example.test/pull/${number}`,
-              author:
-                pull.author === undefined
-                  ? { login: "someone", isBot: false }
-                  : pull.author,
-            };
-      },
+      mergedPullRequests: () =>
+        new Map(
+          Object.entries(options.merged ?? {}).flatMap(([hash, number]) => {
+            const info = pullRequest(number);
+            return info === null ? [] : [[hash, info] as const];
+          }),
+        ),
+      pullRequest,
       writeAccess: () =>
         options.writers === null ? null : new Set(options.writers ?? []),
       reports: (tag: string | null) => {
@@ -139,6 +152,51 @@ describe("planRelease", () => {
         type: "fix",
       }),
     ]);
+  });
+
+  it("reads a pull request from the merged list without a call for each commit", () => {
+    const { sources, lookedUp } = fakeSources({
+      tags: ["v0.1.0"],
+      commits: [{ subject: "fix: a (#999)", hash: "aaa" }],
+      pulls: {
+        12: { title: "From the list", author: { login: "octo", isBot: false } },
+      },
+      merged: { aaa: 12 },
+    });
+    const plan = planRelease({ pre: null, sources });
+    expect(plan.pullRequests[0]).toMatchObject({
+      number: 12,
+      title: "From the list",
+      author: "octo",
+    });
+    expect(plan.contributorsToThank).toEqual([
+      { login: "octo", pullRequests: [12] },
+    ]);
+    expect(lookedUp).toEqual([12]);
+  });
+
+  it("finds the pull request by commit when the number in the subject is an issue", () => {
+    const { sources } = fakeSources({
+      tags: ["v0.1.0"],
+      commits: [{ subject: "fix: a (#50)", hash: "bbb" }],
+      pulls: {
+        51: {
+          title: "The real pull request",
+          author: { login: "octo", isBot: false },
+        },
+      },
+      byHash: { bbb: 51 },
+    });
+    const plan = planRelease({ pre: null, sources });
+    expect(plan.pullRequests[0]).toMatchObject({
+      number: 51,
+      title: "The real pull request",
+      author: "octo",
+    });
+    expect(plan.contributorsToThank).toEqual([
+      { login: "octo", pullRequests: [51] },
+    ]);
+    expect(plan.notices.join(" ")).not.toContain("Could not read");
   });
 
   it("falls back to the commit subject and a notice when a pull request cannot be read", () => {
@@ -400,6 +458,93 @@ describe("repositorySources on a git repository", () => {
         .commits(null)
         .map((commit: { subject: string }) => commit.subject),
     ).toEqual(["fix(core): second (#2)", "feat(core): first (#1)"]);
+  });
+
+  it("asks gh once for the merged pull requests and keys them by merge commit", () => {
+    const calls: string[][] = [];
+    const gh = (args: string[]) => {
+      calls.push(args);
+      return {
+        ok: true,
+        stdout: JSON.stringify([
+          {
+            number: 7,
+            title: "Seven",
+            url: "u7",
+            author: { login: "octo", is_bot: false },
+            mergeCommit: { oid: "c7" },
+          },
+          {
+            number: 8,
+            title: "Eight",
+            url: "u8",
+            author: { login: "dependabot", is_bot: true },
+            mergeCommit: null,
+          },
+        ]),
+      };
+    };
+    const merged = repositorySources(repository(), gh).mergedPullRequests();
+    expect([...merged.keys()]).toEqual(["c7"]);
+    expect(merged.get("c7")).toEqual({
+      number: 7,
+      title: "Seven",
+      url: "u7",
+      author: { login: "octo", isBot: false },
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual(
+      expect.arrayContaining([
+        "pr",
+        "list",
+        "--state",
+        "merged",
+        "--base",
+        "main",
+        "--limit",
+        "1000",
+      ]),
+    );
+    expect(calls[0].join(" ")).toContain("number,title,url,author,mergeCommit");
+  });
+
+  it("gives an empty merged list when gh fails, so each commit is looked up on its own", () => {
+    const sources = repositorySources(repository(), () => ({
+      ok: false,
+      stdout: "",
+    }));
+    expect(sources.mergedPullRequests().size).toBe(0);
+    expect(sources.pullRequest(5)).toBeNull();
+    expect(sources.pullRequestOf("abc")).toBeNull();
+  });
+
+  it("reads one pull request, caching it, and the pull request of a commit", () => {
+    const calls: string[][] = [];
+    const gh = (args: string[]) => {
+      calls.push(args);
+      return args[0] === "api"
+        ? { ok: true, stdout: "51\n" }
+        : {
+            ok: true,
+            stdout: JSON.stringify({
+              number: 5,
+              title: "Five",
+              url: "u5",
+              author: { login: "octo" },
+            }),
+          };
+    };
+    const sources = repositorySources(repository(), gh);
+    expect(sources.pullRequest(5)).toEqual({
+      number: 5,
+      title: "Five",
+      url: "u5",
+      author: { login: "octo", isBot: false },
+    });
+    sources.pullRequest(5);
+    expect(calls.filter((call) => call[0] === "pr")).toHaveLength(1);
+    expect(sources.pullRequestOf("abc")).toBe(51);
+    expect(calls.at(-1)?.join(" ")).toContain("commits/abc/pulls");
   });
 
   it("reads reports at a tag and in the working tree", () => {

@@ -113,6 +113,83 @@ describe("diffReports", () => {
     expect(change).toMatchObject({ kind: "changed", likelyBreaking: false });
   });
 
+  describe("members a host must now provide", () => {
+    const port = "// @public\nexport interface Port {\n    open(): void;\n}";
+    const withLine = (line: string) =>
+      port.replace("    open(): void;", `    open(): void;\n    ${line}`);
+
+    it.each([
+      "close(): void;",
+      "label: string;",
+      "readonly size: number;",
+      "[key: string]: unknown;",
+    ])("calls a new required interface member likely breaking: %s", (line) => {
+      const [change] = changes([port], [withLine(line)]);
+      expect(change).toMatchObject({
+        kind: "required-member-added",
+        likelyBreaking: true,
+      });
+      expect(change.detail).toContain(line);
+    });
+
+    it.each(["close?(): void;", "label?: string;", "readonly size?: number;"])(
+      "does not call a new optional member breaking: %s",
+      (line) => {
+        expect(changes([port], [withLine(line)])[0]).toMatchObject({
+          kind: "changed",
+          likelyBreaking: false,
+        });
+      },
+    );
+
+    it("looks at the member, not at the lines of its type", () => {
+      const after = withLine("extra?: {\n        needed: string;\n    };");
+      expect(changes([port], [after])[0]).toMatchObject({
+        likelyBreaking: false,
+      });
+      const required = withLine("extra: {\n        needed: string;\n    };");
+      expect(changes([port], [required])[0]).toMatchObject({
+        kind: "required-member-added",
+      });
+    });
+
+    it("calls a new abstract member of an abstract class likely breaking, and a concrete one not", () => {
+      const base =
+        "// @public\nexport abstract class Base {\n    abstract run(): void;\n}";
+      const abstractMember = base.replace(
+        "    abstract run(): void;",
+        "    abstract run(): void;\n    protected abstract stop(): void;",
+      );
+      const concrete = base.replace(
+        "    abstract run(): void;",
+        "    abstract run(): void;\n    helper(): void;",
+      );
+      expect(changes([base], [abstractMember])[0]).toMatchObject({
+        kind: "required-member-added",
+        likelyBreaking: true,
+      });
+      expect(changes([base], [concrete])[0]).toMatchObject({
+        kind: "changed",
+        likelyBreaking: false,
+      });
+    });
+
+    it("does not call a new member of an ordinary class breaking", () => {
+      const store = "// @public\nexport class Store {\n    open(): void;\n}";
+      expect(
+        changes(
+          [store],
+          [
+            store.replace(
+              "    open(): void;",
+              "    open(): void;\n    close(): void;",
+            ),
+          ],
+        )[0],
+      ).toMatchObject({ likelyBreaking: false });
+    });
+  });
+
   it("calls a removed member of an interface likely breaking", () => {
     const [change] = changes(
       [options],
@@ -161,6 +238,20 @@ describe("diffReports", () => {
       kind: "enum-member-added",
       likelyBreaking: true,
     });
+  });
+
+  it("joins the blocks of one name, so removing an overload shows", () => {
+    const one = "// @public\nexport function parse(text: string): string;";
+    const two = "// @public\nexport function parse(text: number): number;";
+    expect(changes([one, two], [one, two])).toEqual([]);
+    const [change] = changes([one, two], [one]);
+    expect(change).toMatchObject({
+      kind: "changed",
+      name: "parse",
+      likelyBreaking: true,
+    });
+    expect(change.detail).toContain("text: number");
+    expect(parseReport(report(one, two)).get("parse")?.lines).toHaveLength(2);
   });
 
   it("calls a gained @internal tag likely breaking", () => {
