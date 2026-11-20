@@ -1399,10 +1399,50 @@ describe("hardening from the second review", () => {
     },
   );
 
-  it("refuses a risky variable name anywhere in a statement, and allows one that only starts with it", () => {
-    expect(bash("FOO=1 git status").allow).toBe(true);
-    expect(bash("echo HOME=1").allow).toBe(false);
-    expect(bash("echo HOMEWORK=1").allow).toBe(true);
+  it.each([
+    "export PAGER=x",
+    "typeset -x HOME=y",
+    "local HOME=y",
+    "readonly PATH=/x",
+    "declare -x HOME=y",
+    "env PATH=x git log",
+  ])("refuses a risky variable set by %s", (command) => {
+    const decision = bash(command);
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toMatch(/variable/);
+  });
+
+  it.each([
+    "grep -rn 'PATH=' .github scripts",
+    "grep -rn HOME= scripts docs",
+    "grep -rn 'XDG_CONFIG_HOME=' .",
+    "grep -rn 'GIT_DIR=' .",
+    "grep -rn 'LD_PRELOAD=' .",
+    "grep -rn 'NODE_OPTIONS=' .",
+    "grep -rn 'BASH_ENV=' .",
+    "grep -rn 'SSH_ASKPASS=' .",
+    "grep -rn 'PAGER=' .",
+    "grep -rn 'EDITOR=' .",
+    "grep -rn 'VISUAL=' .",
+    "grep -rn 'DYLD_INSERT_LIBRARIES=' .",
+    "rg 'LESS=' .",
+    "git grep -n 'PATH=' abc123 -- .github",
+    "git diff a b -- f | grep -n 'HOME='",
+    "echo HOME=1",
+    "printf 'HOME=%s\\n' x",
+    "LESSON=1 echo hi",
+    "CI=1 git status",
+    "NODE_ENV=test git status",
+    "TZ=UTC git log",
+    "HOMEPAGE=1 git status",
+    "PATHWAY=1 git status",
+    "XDGX=1 git status",
+    "ENVIRONMENT=prod git status",
+    "echo $HOME",
+    "printenv HOME",
+    "env | grep -E '^(HOME|PATH)='",
+  ])("allows %s", (command) => {
+    expect(bash(command).allow).toBe(true);
   });
 
   it.each([
@@ -1423,6 +1463,15 @@ describe("hardening from the second review", () => {
     expect(bash("cat <<EOF\n\tx\n\tEOF\nrm packages").reason).toMatch(
       /here-document/,
     );
+  });
+
+  it("matches the scratchpad's claude folder exactly", () => {
+    const pad = "/tmp/claude-1000/p/s/scratchpad";
+    expect(edit(`${pad}/f`).allow).toBe(true);
+    expect(edit("/tmp/claude-abc/p/s/scratchpad/f").allow).toBe(false);
+    expect(edit("/tmp/claude-/p/s/scratchpad/f").allow).toBe(false);
+    expect(edit("/tmp/claude-1000x/p/s/scratchpad/f").allow).toBe(false);
+    expect(edit("/tmp/xclaude-1000/p/s/scratchpad/f").allow).toBe(false);
   });
 
   it("blocks an unquoted here-document whose body runs a command", () => {

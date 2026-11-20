@@ -122,6 +122,15 @@ const UNREADABLE = [
   "rlwrap",
 ];
 
+/** Programs whose words are assignments to variables. */
+const ASSIGNERS = new Set([
+  "export",
+  "declare",
+  "typeset",
+  "local",
+  "readonly",
+]);
+
 /** Shells that run the text after `-c` as a command. */
 const SHELLS = [
   "sh",
@@ -142,7 +151,7 @@ const SHELLS = [
  * path, pagers and editors, and the loader and startup-file variables.
  */
 const RISKY_VARIABLE =
-  /^(GIT_\w*|HOME|XDG_\w*|PATH|PAGER|EDITOR|VISUAL|LESS\w*|LD_\w*|DYLD_\w*|NODE_OPTIONS|BASH_ENV|ENV|SSH_\w*)=/i;
+  /^(GIT_\w*|HOME|XDG_\w*|PATH|PAGER|EDITOR|VISUAL|LESS(OPEN|CLOSE|KEY|KEY_SYSTEM|CHARSET|CHARDEF|EDIT|HISTFILE|HISTSIZE|SECURE|ANSIENDCHARS|ANSIMIDCHARS|GLOBALTAGS|COLORING)?|LD_\w*|DYLD_\w*|NODE_OPTIONS|BASH_ENV|ENV|SSH_\w*)=/i;
 
 /** Package-manager commands that add a package when given a name. */
 const INSTALLS_PACKAGES = new Set([
@@ -728,11 +737,14 @@ function checkStatement(tokens, walk) {
   if (redirects.reason !== undefined) {
     return redirects.reason;
   }
-  const risky = redirects.words.find((text) => RISKY_VARIABLE.test(text));
+  const { rest, reason, assignments } = unwrap(redirects.words);
+  const assigned = ASSIGNERS.has(programName(rest[0] ?? ""))
+    ? [...assignments, ...rest.slice(1)]
+    : assignments;
+  const risky = assigned.find((text) => RISKY_VARIABLE.test(text));
   if (risky !== undefined) {
     return `the variable ${risky.split("=")[0]} changes what a command runs or which files it reads (git's repository, the home folder, the search path, a pager, the loader), so a reviewer may not set it`;
   }
-  const { rest, reason } = unwrap(redirects.words);
   const word = rest[0] ?? "";
   const program = programName(word);
   return (
