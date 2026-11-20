@@ -262,6 +262,22 @@ describe("diffReports", () => {
     });
   });
 
+  it("does not call the removal of an @internal export likely breaking", () => {
+    const internal = greet.replace("@public", "@internal");
+    expect(changes([internal], [])).toEqual([
+      expect.objectContaining({ kind: "removed", likelyBreaking: false }),
+    ]);
+  });
+
+  it("does not call a changed @internal export likely breaking", () => {
+    const internal = greet.replace("@public", "@internal");
+    const [change] = changes(
+      [internal],
+      [internal.replace("name: string", "name: number")],
+    );
+    expect(change).toMatchObject({ kind: "changed", likelyBreaking: false });
+  });
+
   it("notes a gained @beta tag without calling it breaking", () => {
     const [change] = changes([greet], [greet.replace("@public", "@beta")]);
     expect(change).toMatchObject({

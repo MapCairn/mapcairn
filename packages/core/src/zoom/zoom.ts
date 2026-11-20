@@ -19,6 +19,8 @@ export const MAX_MERCATOR_LATITUDE = 85.051_128_779_806_59;
  *   512 px tiles, so the same visual scale is one lower. A 256 px raster
  *   source in MapLibre still requests the tile level equal to the normalised
  *   zoom, so nothing else needs converting.
+ *
+ * @internal
  */
 export const ENGINE_ZOOM_OFFSET = -1;
 

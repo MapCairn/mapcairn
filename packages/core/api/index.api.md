@@ -226,6 +226,9 @@ export type AreaGeometry = {
 export type AreaUnit = "m2" | "ha" | "km2" | "ft2" | "ac" | "mi2";
 
 // @public
+export type AreaUnitMessageKey = "units.squareMetre" | "units.hectare" | "units.squareKilometre" | "units.squareFoot" | "units.acre" | "units.squareMile";
+
+// @public
 export function assertValidDefinitions<T extends readonly LayerDefinition[]>(definitions: T, options: ValidationOptions): T;
 
 // @public
@@ -439,7 +442,7 @@ export function chooseLayout(viewport: {
 // @public
 export type ChromeLayout = "sheet" | "panel";
 
-// @public
+// @internal
 export const CIRCLE_EXPORT_STEPS = 72;
 
 // @public
@@ -521,6 +524,16 @@ export function computeEndStackMaxHeight(input: {
 export function computeScaleBar(input: ScaleBarInput): ScaleBar;
 
 // @public
+export interface ControlBase {
+    readonly description?: DefinitionText;
+    // (undocumented)
+    readonly enabledWhen?: ControlCondition;
+    readonly id: string;
+    // (undocumented)
+    readonly label: DefinitionText;
+}
+
+// @public
 export interface ControlCondition {
     // (undocumented)
     readonly control: string;
@@ -561,10 +574,8 @@ export function createBasemapCatalogue(basemaps: readonly BasemapDefinition[], d
 // @public
 export function createDecoderRegistry(extra?: Readonly<Record<string, Decoder>>): DecoderRegistry;
 
-// Warning: (ae-forgotten-export) The symbol "Labeller" needs to be exported by the entry point index.d.ts
-//
 // @public
-export function createDrawReducer(labels?: Labeller): (state: DrawState, action: DrawAction) => DrawState;
+export function createDrawReducer(labels?: Pick<MessageCatalogue, "t">): (state: DrawState, action: DrawAction) => DrawState;
 
 // @public
 export function createFakeMapAdapterFactory(onCreate?: (adapter: FakeMapAdapter) => void): MapAdapterFactory;
@@ -611,8 +622,6 @@ export function cycleDetent(current: SheetDetent): SheetDetent;
 // @public
 export type DateBound = string | RelativeDate;
 
-// Warning: (ae-forgotten-export) The symbol "ControlBase" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface DateControlDefinition extends ControlBase {
     // (undocumented)
@@ -760,10 +769,8 @@ export interface DerivedVariable {
     readonly table: Readonly<Record<string, string>>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "AREA_UNIT_KEY" needs to be exported by the entry point index.d.ts
-//
 // @public
-export function describeArea(squareMetres: number, units: UnitSystem): Message<(typeof AREA_UNIT_KEY)[AreaUnit]>;
+export function describeArea(squareMetres: number, units: UnitSystem): Message<AreaUnitMessageKey>;
 
 // @public
 export function describeAxisSuggestion(suggested: WktAxisOrder): Message;
@@ -774,13 +781,11 @@ export function describeChosenTime(definition: LayerDefinition, values: ControlV
 // @public
 export function describeDay(day: string): Message<"format.day">;
 
-// Warning: (ae-forgotten-export) The symbol "DISTANCE_UNIT_KEY" needs to be exported by the entry point index.d.ts
-//
 // @public
-export function describeDistance(metres: number, units: UnitSystem): Message<(typeof DISTANCE_UNIT_KEY)[DistanceUnit]>;
+export function describeDistance(metres: number, units: UnitSystem): Message<DistanceUnitMessageKey>;
 
 // @public
-export function describeDistanceReading(value: number, unit: DistanceUnit): Message<(typeof DISTANCE_UNIT_KEY)[DistanceUnit]>;
+export function describeDistanceReading(value: number, unit: DistanceUnit): Message<DistanceUnitMessageKey>;
 
 // @public
 export function describeDuration(seconds: number): Message;
@@ -880,12 +885,15 @@ export function distanceMetres(from: LatLng, to: LatLng): number;
 export type DistanceUnit = "m" | "km" | "ft" | "mi";
 
 // @public
+export type DistanceUnitMessageKey = "units.metre" | "units.kilometre" | "units.foot" | "units.mile";
+
+// @public
 export function draftOf(state: DrawState): DrawShape | null;
 
 // @public
 export function dragHandle(gesture: HandleGesture, at: PixelPoint): HandleGesture;
 
-// @public
+// @internal
 export const DRAW_HISTORY_LIMIT = 100;
 
 // @public
@@ -925,10 +933,10 @@ export const DRAW_ISSUE_MESSAGES: {
 // @public
 export const DRAW_KEY_HELP: readonly ShippedKeyHelpEntry[];
 
-// @public
+// @internal
 export const DRAW_NUDGE_PX = 8;
 
-// @public
+// @internal
 export const DRAW_NUDGE_PX_LARGE = 32;
 
 // @public
@@ -1041,6 +1049,14 @@ export type DrawEvent = {
 };
 
 // @public
+export interface DrawHistoryEntry {
+    // (undocumented)
+    readonly selection: DrawSelection | null;
+    // (undocumented)
+    readonly shapes: readonly DrawShape[];
+}
+
+// @public
 export type DrawIssue = "too-few-vertices" | "self-intersecting" | "degenerate" | "radius-missing" | "radius-too-large";
 
 // @public
@@ -1127,15 +1143,13 @@ export interface DrawShapeInput {
 export interface DrawState {
     readonly coalesce: string | null;
     // (undocumented)
-    readonly future: readonly HistoryEntry[];
+    readonly future: readonly DrawHistoryEntry[];
     // (undocumented)
     readonly lastEvent: DrawEvent | null;
     readonly mode: DrawKind;
     readonly nextId: number;
-    // Warning: (ae-forgotten-export) The symbol "HistoryEntry" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    readonly past: readonly HistoryEntry[];
+    readonly past: readonly DrawHistoryEntry[];
     // (undocumented)
     readonly selection: DrawSelection | null;
     readonly serials: Readonly<Record<DrawKind, number>>;
@@ -1163,7 +1177,7 @@ export function encodeShapes(shapes: readonly DrawShape[]): string | null;
 // @public
 export const ENGINE_PLACEHOLDERS: readonly string[];
 
-// @public
+// @internal
 export const ENGINE_ZOOM_OFFSET = -1;
 
 // @public
@@ -1651,8 +1665,6 @@ export interface FeatureSelection {
     subscribe(listener: () => void): () => void;
 }
 
-// Warning: (ae-forgotten-export) The symbol "LayerDefinitionBase" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface FeedLayerDefinition<S extends PointStyle | FeedShapeStyle = PointStyle | FeedShapeStyle> extends LayerDefinitionBase {
     // (undocumented)
@@ -1870,13 +1882,13 @@ export function greatCirclePoints(from: LatLng, to: LatLng, maxStepRadians: numb
 // @public
 export function greatCircleStepRadians(radiusPixels: number, tolerancePixels?: number): number;
 
-// @public
+// @internal
 export const HANDLE_CLICK_TOLERANCE_PX: Readonly<Record<HandlePointer, number>>;
 
-// @public
+// @internal
 export const HANDLE_HIT_RADIUS_MOUSE_PX = 12;
 
-// @public
+// @internal
 export const HANDLE_HIT_RADIUS_TOUCH_PX = 22;
 
 // @public
@@ -2111,15 +2123,6 @@ export function isVectorTileLayer(definition: LayerDefinition): definition is Ve
 export function joinMessages(parts: readonly Message[], joiner?: MessageJoiner): Message | null;
 
 // @public
-export const KEY_PAN_STEP = 80;
-
-// @public
-export const KEY_PAN_STEP_LARGE = 240;
-
-// @public
-export const KEY_ROTATE_STEP = 15;
-
-// @public
 export interface KeyedLayerText {
     // (undocumented)
     readonly key: string;
@@ -2177,6 +2180,23 @@ export type LayerControlDefinition = SegmentedControlDefinition | SwitchControlD
 
 // @public
 export type LayerDefinition = FeedLayerDefinition | HeatmapLayerDefinition | TileLayerDefinition | VectorTileLayerDefinition;
+
+// @public
+export interface LayerDefinitionBase {
+    // (undocumented)
+    readonly attribution: readonly LayerAttribution[];
+    // (undocumented)
+    readonly controls: readonly LayerControlDefinition[];
+    readonly dataCost: DefinitionText;
+    readonly description: DefinitionText;
+    readonly disclaimer?: DefinitionText;
+    readonly group: DefinitionText;
+    readonly id: string;
+    // (undocumented)
+    readonly name: DefinitionText;
+    // (undocumented)
+    readonly variables?: readonly DerivedVariable[];
+}
 
 // @public
 export interface LayerDetailRequest {
@@ -2363,7 +2383,7 @@ export interface LocationWatchHandlers {
     onFix(fix: LocationFix): void;
 }
 
-// @public
+// @internal
 export const LOOKUP_DECIMAL_PLACES = 4;
 
 // @public
@@ -2847,10 +2867,10 @@ export const MAX_AXIS_SCAN_CHARACTERS = 4096;
 // @public
 export const MAX_CIRCLE_RADIUS_METRES = 10000000;
 
-// @public
+// @internal
 export const MAX_COLLECTION_DEPTH = 16;
 
-// @public
+// @internal
 export const MAX_COORDINATE_TEXT_LENGTH = 120;
 
 // @public
@@ -2877,7 +2897,7 @@ export const MAX_IMAGE_SIDE_PX = 8192;
 // @public
 export const MAX_IMPORT_BYTES = 1000000;
 
-// @public
+// @internal
 export const MAX_IMPORT_DEPTH = 32;
 
 // @public
@@ -2920,9 +2940,6 @@ export function measurePolygonArea(positions: readonly Position_2[]): number | n
 
 // @public
 export function measureShape(shape: DrawShape): ShapeMeasure;
-
-// @public
-export const MEMORY_URL_BASE = "https://mapcairn.example/";
 
 // @public
 export class MemoryFeatureSelection implements FeatureSelection {
@@ -3077,12 +3094,9 @@ export function metresToMiles(metres: number): number;
 export function milesToMetres(miles: number): number;
 
 // @public
-export const MIN_CIRCLE_RADIUS_METRES = 0.5;
-
-// @public
 export const MIN_IDENTIFY_TOLERANCE_PX = 1;
 
-// @public
+// @internal
 export const MINUTES_PER_DAY = 1440;
 
 // @public
@@ -3554,9 +3568,6 @@ export interface RoutingProvider {
 export type RoutingRequestKind = "route" | "area";
 
 // @public
-export const RUBBER_BAND_LIMIT = 48;
-
-// @public
 export function rubberBand(overshoot: number): number;
 
 // @public
@@ -3977,17 +3988,11 @@ export interface SharedResponseCacheOptions {
     readonly now: () => number;
 }
 
-// @public
+// @internal
 export const SHEET_DETENTS: readonly SheetDetent[];
 
-// @public
+// @internal
 export const SHEET_FLING_VELOCITY = 600;
-
-// @public
-export const SHEET_MOMENTUM_SECONDS = 0.15;
-
-// @public
-export const SHEET_TOP_INSET = 12;
 
 // @public
 export type SheetDetent = "peek" | "half" | "full";

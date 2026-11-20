@@ -40,7 +40,7 @@ const DEFAULT_FORMATTERS = createFormatterRegistry();
  * The map id of the affected area. Definition ids cannot contain a colon,
  * so it never meets a layer's own id.
  */
-export const DETAIL_LAYER_ID = ":detail";
+const DETAIL_LAYER_ID = ":detail";
 
 /** How long the map must stay still, in milliseconds, before layers that depend on its view are told it. */
 export const VIEW_SETTLE_MS = 400;

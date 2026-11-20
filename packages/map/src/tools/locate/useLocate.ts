@@ -16,7 +16,7 @@ import { useFormatMessage, useLocationProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";
 
 /** What is shown while a fix is being found, as a message to format. */
-export const LOCATING_MESSAGE = message("tools.locate.locating", {});
+const LOCATING_MESSAGE = message("tools.locate.locating", {});
 
 /** Where a locate request stands. */
 export type LocateState = "idle" | "locating" | "found" | "error";

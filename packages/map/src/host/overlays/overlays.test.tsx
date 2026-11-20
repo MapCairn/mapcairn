@@ -22,8 +22,8 @@ import {
   MeasureOverlay,
   MIN_ACCURACY_RADIUS_PX,
   PinMarker,
-  screenRadiusForMetres,
 } from ".";
+import { screenRadiusForMetres } from "./geometry";
 
 const VIEW: ViewState = { center: { lat: 10, lng: 20 }, zoom: 6, bearing: 0 };
 const A: LatLng = { lat: 10, lng: 20 };

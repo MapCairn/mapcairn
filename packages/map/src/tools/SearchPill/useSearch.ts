@@ -18,7 +18,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMessages, useSearchProvider } from "../../services/hooks";
 import { useAnnounce } from "../../ui/LiveRegion";
 
-/** The fewest characters (after trimming) that a submitted search needs. */
+/**
+ * The fewest characters (after trimming) that a submitted search needs.
+ *
+ * @internal
+ */
 export const MIN_SEARCH_LENGTH = 2;
 
 /** Where a search stands. Exactly one of these is true at a time. */

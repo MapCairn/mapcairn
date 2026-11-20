@@ -23,13 +23,13 @@ export interface MapKeyEvent {
 }
 
 /** Pixels moved by one arrow key press. */
-export const KEY_PAN_STEP = 80;
+const KEY_PAN_STEP = 80;
 
 /** Pixels moved by Shift with the up or down arrow. */
-export const KEY_PAN_STEP_LARGE = 240;
+const KEY_PAN_STEP_LARGE = 240;
 
 /** Degrees turned by Shift with left or right arrow. */
-export const KEY_ROTATE_STEP = 15;
+const KEY_ROTATE_STEP = 15;
 
 const ARROW_DIRECTIONS: Readonly<Record<string, { x: number; y: number }>> = {
   ArrowLeft: { x: -1, y: 0 },
