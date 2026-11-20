@@ -15,7 +15,7 @@ Use the files the person gave. For a pull request, take the changed documents fr
 
 ## 2. Run the mechanical check first
 
-Run `node scripts/agents/docs-refs.mjs <files>`. It prints each file or folder in backticks, relative link and `npm run` script that does not resolve, as `file:line - reference`. It cannot tell a typo from a path that is planned or lives in another tool's folder, so read each hit: a plan may name what it will add, and `docs/guides/working-with-agents.md` names folders other tools read. Then `npm run lint`, which checks formatting, the agent copies, the roadmap links and the names list. Report each real hit once and do not repeat the rest of the lint.
+Run `node scripts/agents/docs-refs.mjs <files>`. It prints each file or folder in backticks, relative link and `npm run` script that does not resolve, as `file:line - reference`. It cannot tell a typo from a path that is planned or lives in another tool's folder, so read each hit: a plan may name what it will add, `docs/guides/working-with-agents.md` names folders other tools read, and `docs/guides/public-api.md` names a stylesheet by its export name, `theme/tokens.css`. Then `npm run lint`, which checks formatting, the agent copies, the roadmap links and the names list. Report each real hit once and do not repeat the rest of the lint.
 
 ## 3. Verify every claim against its source
 
