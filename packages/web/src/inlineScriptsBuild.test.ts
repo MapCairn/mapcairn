@@ -51,12 +51,12 @@ function attribute(attributes: string, name: string): string | undefined {
 
 /** The `<script>` elements of a page: their attribute text and body. */
 function scripts(html: string): { attributes: string; body: string }[] {
-  return [...html.matchAll(/<script((?:\s[^>]*)?)>([\s\S]*?)<\/script>/g)].map(
-    ([, attributes, body]) => ({
-      attributes: attributes ?? "",
-      body: body ?? "",
-    }),
-  );
+  return [
+    ...html.matchAll(/<script((?:\s[^>]*)?)>([\s\S]*?)<\/script\s*>/gi),
+  ].map(([, attributes, body]) => ({
+    attributes: attributes ?? "",
+    body: body ?? "",
+  }));
 }
 
 /**
@@ -106,6 +106,33 @@ function violations(html: string, policy: string): string[] {
     .map((nonce) => `nonce-${nonce}`);
   return [...unhashed, ...wrongNonces];
 }
+
+/** Set to `1` by the CI step that runs after the build, so a missing output fails. */
+const REQUIRE_BUILD_OUTPUT = "MAPCAIRN_REQUIRE_BUILD_OUTPUT";
+
+/** Whether the build-output tests skip: the output is missing and not required. */
+function skipsWithoutBuild(
+  missing: boolean,
+  required: string | undefined,
+): boolean {
+  return missing && required !== "1";
+}
+
+describe("skipsWithoutBuild", () => {
+  it("skips when the output is missing and not required", () => {
+    expect(skipsWithoutBuild(true, undefined)).toBe(true);
+    expect(skipsWithoutBuild(true, "")).toBe(true);
+  });
+
+  it("does not skip when the output is missing and required, so the tests fail", () => {
+    expect(skipsWithoutBuild(true, "1")).toBe(false);
+  });
+
+  it("does not skip when the output exists", () => {
+    expect(skipsWithoutBuild(false, undefined)).toBe(false);
+    expect(skipsWithoutBuild(false, "1")).toBe(false);
+  });
+});
 
 describe("violations", () => {
   const script = "(function(){})()";
@@ -162,12 +189,15 @@ describe("violations", () => {
  * `Function.toString()` of core functions, so the bundler decides its text (it
  * may rename a function to `resolveTheme$1`); only the built bundle shows the
  * text the browser receives (issue #479). Skipped where there is no build
- * output (a plain `npm test` on a fresh checkout), but not in CI, where the
- * step runs after the build and a missing output means the path moved.
+ * output (a plain `npm test`, or the coverage run, which comes before the
+ * build), unless `MAPCAIRN_REQUIRE_BUILD_OUTPUT=1` is set, as the CI step after the
+ * build does: there a missing output means the path moved, and the test fails.
  */
 const buildMissing = !existsSync(chunkDirectory);
 
-describe.skipIf(buildMissing && !process.env.CI)(
+describe.skipIf(
+  skipsWithoutBuild(buildMissing, process.env[REQUIRE_BUILD_OUTPUT]),
+)(
   "the inline scripts in the built server bundle (needs `npm run build`)",
   () => {
     const headersFile = readFileSync(join(webRoot, "public/_headers"), "utf8");
