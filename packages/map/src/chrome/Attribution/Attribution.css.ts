@@ -27,7 +27,9 @@ export const root = style({
  * sets a transparent background, a radius and no shadow at one class of
  * specificity, so which of the two won depended on the order the stylesheets
  * loaded in. When the recipe won, the button lost its dark surface and showed
- * a bare blur over a light map.
+ * a bare blur over a light map. The recipe's hover tint and focus ring tie
+ * with the plain hover and focus rules, so those are doubled as well, and the
+ * focus ring (whose inner ring is a shadow) stays above the floating shadow.
  */
 export const onMapIcon = style({
   selectors: {
@@ -36,7 +38,8 @@ export const onMapIcon = style({
       borderRadius: "50%",
       boxShadow: tokens.shadow.floating,
     },
-    '&:hover:not([aria-disabled="true"])': {
+    "&&:focus-visible": focusRing,
+    '&&:hover:not([aria-disabled="true"])': {
       backgroundColor: tokens.color.surface,
       backgroundImage: `linear-gradient(${tokens.color.hairline}, ${tokens.color.hairline})`,
     },

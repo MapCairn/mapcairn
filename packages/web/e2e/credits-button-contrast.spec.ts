@@ -98,6 +98,57 @@ test.describe("credits button contrast @a11y", () => {
     expect(measured.alpha).toBeGreaterThan(0);
   });
 
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`hovering keeps the painted surface and a 3:1 glyph, ${colorScheme} theme`, async ({
+      page,
+      mapPage,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mapPage.goto();
+      await collapseCredits(mapPage);
+      await page.mouse.move(0, 0);
+      const resting = await measure(mapPage.creditsButton, "#ffffff");
+      await mapPage.creditsButton.hover();
+      const hovered = await measure(mapPage.creditsButton, "#ffffff");
+      expect(hovered.alpha).toBeGreaterThan(0);
+      expect(hovered.alpha).toBe(resting.alpha);
+      expect(hovered.surface).toBeCloseTo(resting.surface, 5);
+      expect(ratio(hovered.glyph, hovered.surface)).toBeGreaterThanOrEqual(
+        MIN_NON_TEXT_RATIO,
+      );
+    });
+  }
+
+  test("keyboard focus shows the two-tone ring in place of the floating shadow", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await collapseCredits(mapPage);
+    await page.mouse.move(0, 0);
+    const rest = await mapPage.creditsButton.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { shadow: style.boxShadow, outline: style.outlineStyle };
+    });
+    await page.keyboard.press("Shift");
+    await mapPage.creditsButton.focus();
+    await expect(mapPage.creditsButton).toBeFocused();
+    const focused = await mapPage.creditsButton.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        shadow: style.boxShadow,
+        outline: style.outlineStyle,
+        outlineWidth: Number.parseFloat(style.outlineWidth),
+      };
+    });
+    expect(rest.outline).toBe("none");
+    expect(focused.outline).toBe("solid");
+    expect(focused.outlineWidth).toBeGreaterThan(0);
+    // The inner ring is a zero-blur shadow; the floating shadow is not.
+    expect(focused.shadow).not.toBe(rest.shadow);
+    expect(focused.shadow).toMatch(/ 0px 0px 0px \d/);
+  });
+
   test("more contrast gives the button an opaque surface", async ({
     page,
     mapPage,
