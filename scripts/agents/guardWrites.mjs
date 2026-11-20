@@ -27,8 +27,11 @@
  * what an interpreter writes (`node -e`, `python -c`, a script), a command
  * assembled in a variable, or a path that a glob or `$VAR` expands; it blocks a
  * path that holds one rather than guess. Tools other than Claude Code do not
- * run it. If the script is missing, Claude Code reports a hook error and lets
- * the call go ahead. See "Keeping reviewers read-only" in
+ * run it. A fault in the guard never blocks the main session or another
+ * agent: input it cannot read exits 0 with a warning, and only a failure while
+ * deciding on a reviewer's own call blocks it. If the script is missing or
+ * times out, Claude Code reports a hook error and lets the call go ahead,
+ * which the script cannot change. See "Keeping reviewers read-only" in
  * `docs/guides/working-with-agents.md`.
  */
 import { isEntryPoint } from "../entryPoint.mjs";
@@ -170,33 +173,85 @@ export function decide(input, options = {}) {
 }
 
 /**
+ * Whether the hook input is a call by one of the guarded agents.
+ *
+ * @param {unknown} input
+ * @returns {input is Record<string, any>}
+ */
+function isReviewerCall(input) {
+  return (
+    typeof input === "object" &&
+    input !== null &&
+    typeof (/** @type {any} */ (input).agent_type) === "string" &&
+    READ_ONLY_AGENTS.includes(/** @type {any} */ (input).agent_type)
+  );
+}
+
+/**
+ * Runs the hook on its input text and says how Claude Code should be told.
+ *
+ * Only a call by a guarded agent can be blocked (exit code 2). Input that
+ * cannot be read, or that names no guarded agent, is let through with a
+ * warning, so a fault in the guard never stops the main session or the
+ * `implementer`. A fault while deciding on a guarded agent's call blocks it,
+ * because that is the caller the guard exists for.
+ *
+ * @param {string} raw The text on standard input.
+ * @param {{ CLAUDE_PROJECT_DIR?: string }} [env]
+ * @param {{ platform?: import("./guardPaths.mjs").Platform, realpath?: (p: string) => string }} [options]
+ * @returns {{ code: 0 | 2, message?: string }}
+ */
+export function runHook(raw, env = {}, options = {}) {
+  /** @type {unknown} */
+  let input;
+  try {
+    input = JSON.parse(raw.replace(/^\uFEFF/, ""));
+  } catch {
+    return {
+      code: 0,
+      message:
+        "guardWrites could not read the hook input, so it did not check this call.",
+    };
+  }
+  if (!isReviewerCall(input)) {
+    return { code: 0 };
+  }
+  try {
+    const decision = decide(input, {
+      projectDir: env.CLAUDE_PROJECT_DIR,
+      ...options,
+    });
+    return decision.allow ? { code: 0 } : { code: 2, message: decision.reason };
+  } catch (error) {
+    const why = error instanceof Error ? error.message : String(error);
+    return {
+      code: 2,
+      message: `guardWrites could not decide on this call by ${input.agent_type} (${why}), so it blocked the call. ${INSTEAD}`,
+    };
+  }
+}
+
+/**
  * Reads the hook input from standard input.
  *
  * @returns {Promise<string>}
  */
 async function readInput() {
   const chunks = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
+  try {
+    for await (const chunk of process.stdin) {
+      chunks.push(chunk);
+    }
+  } catch {
+    return "";
   }
   return Buffer.concat(chunks).toString("utf8");
 }
 
 if (isEntryPoint(import.meta.url)) {
-  let input;
-  try {
-    input = JSON.parse(await readInput());
-  } catch {
-    process.stderr.write(
-      "guardWrites could not read the hook input, so it blocked the call rather than let a write through.\n",
-    );
-    process.exit(2);
+  const { code, message } = runHook(await readInput(), process.env);
+  if (message !== undefined) {
+    process.stderr.write(`${message}\n`);
   }
-  const decision = decide(input, {
-    projectDir: process.env.CLAUDE_PROJECT_DIR,
-  });
-  if (!decision.allow) {
-    process.stderr.write(`${decision.reason}\n`);
-    process.exit(2);
-  }
+  process.exitCode = code;
 }

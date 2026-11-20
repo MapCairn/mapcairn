@@ -2,30 +2,51 @@
 // Copyright MapCairn contributors
 /**
  * The rules `guardWrites.mjs` applies to a shell command run by a read-only
- * reviewer: which `git`, `gh` and file commands it may run, and where it may
- * redirect output. Each check returns the reason a statement is blocked, or
- * nothing. Reasons name the command and say why, because a reviewer that is
- * blocked has to report it, not work around it.
+ * reviewer: which file commands it may run, where it may redirect output, and
+ * which wrappers and programs the guard cannot read. `guardGit.mjs` and
+ * `guardGh.mjs` hold the rules for `git` and `gh`. Each check returns the
+ * reason a statement is blocked, or nothing. Reasons name the command and say
+ * why, because a reviewer that is blocked has to report it, not work around it.
  *
  * A reviewer may run what only reads, and may change a worktree of its own
  * under `.claude/worktrees/<name>/`. Everything else that writes to the
- * repository, to the remote or to GitHub is blocked.
+ * repository, to the remote or to GitHub is blocked. What the guard cannot
+ * read it refuses: a program named by a variable, a glob or a brace list, a
+ * wrapper with options, a shell without `-c`, and a command longer than
+ * `MAX_COMMAND_LENGTH` or with more than `MAX_STATEMENTS` statements.
  */
+import { checkGh } from "./guardGh.mjs";
+import { checkGit } from "./guardGit.mjs";
 import { isInside, resolvePath, show } from "./guardPaths.mjs";
+import { awkProblem, sedProblem } from "./scriptChecks.mjs";
 import { tokenize } from "./shellTokens.mjs";
 
 /**
  * The state while a command is read: where the shell is after the `cd`
- * commands so far (`null` when that is not known), and the system.
+ * commands so far (`null` when that is not known), the system, and how many
+ * shells deep the command is.
  *
  * @typedef {object} Walk
  * @property {string | null} cwd
  * @property {import("./guardPaths.mjs").Context} context
+ * @property {number} depth
  */
 
 /**
  * @typedef {import("./shellTokens.mjs").Token} Token
  */
+
+/** A longer command is refused: it is not a command a reviewer needs. */
+export const MAX_COMMAND_LENGTH = 65536;
+
+/** A command with more statements is refused, for the same reason. */
+export const MAX_STATEMENTS = 500;
+
+/** A file command that names more paths than this is refused. */
+const MAX_TARGETS = 200;
+
+/** How many `sh -c` levels are read before the command is refused. */
+const MAX_SHELL_DEPTH = 4;
 
 /** Output a command may write to without touching a file. */
 const NULL_DEVICES = new Set(["/dev/" + "null", "/dev/stdout", "/dev/stderr"]);
@@ -46,70 +67,6 @@ const KEYWORDS = new Set([
   "done",
 ]);
 
-/** `git` commands that only read, and may be run anywhere. */
-const GIT_READ = new Set([
-  "status",
-  "log",
-  "diff",
-  "show",
-  "fetch",
-  "rev-parse",
-  "rev-list",
-  "ls-files",
-  "ls-tree",
-  "ls-remote",
-  "cat-file",
-  "blame",
-  "grep",
-  "merge-base",
-  "describe",
-  "show-ref",
-  "for-each-ref",
-  "name-rev",
-  "shortlog",
-  "diff-tree",
-  "diff-index",
-  "check-ignore",
-  "count-objects",
-  "range-diff",
-  "whatchanged",
-  "version",
-  "help",
-  "show-branch",
-  "cherry",
-  "verify-commit",
-  "verify-tag",
-]);
-
-/** `git` commands that write only to the working tree, so only in a worktree. */
-const GIT_IN_WORKTREE = new Set(["checkout", "switch", "restore", "clean"]);
-
-/** Why a `git` command is not allowed to a reviewer, by command. */
-const GIT_WHY = new Map([
-  [
-    "stash",
-    "git stash is shared by every worktree, so it can hide or restore someone else's work",
-  ],
-  ["commit", "git commit writes history"],
-  ["push", "git push changes the remote"],
-  ["pull", "git pull changes the branch and the working tree"],
-  ["merge", "git merge changes the branch"],
-  ["rebase", "git rebase rewrites history"],
-  ["cherry-pick", "git cherry-pick writes history"],
-  ["revert", "git revert writes history"],
-  ["reset", "git reset moves a branch or discards changes"],
-  ["add", "git add changes the index"],
-  ["rm", "git rm deletes files"],
-  ["mv", "git mv moves files"],
-  ["am", "git am writes history"],
-  ["apply", "git apply changes files"],
-]);
-
-const BRANCH_WHY = "git branch creates, moves or deletes a branch";
-const TAG_WHY = "git tag creates or deletes a tag";
-const REMOTE_WHY = "git remote changes the remotes";
-const CONFIG_WHY = "git config changes the configuration";
-
 /** Commands that write to every path they are given. */
 const WRITES_ALL = new Set([
   "rm",
@@ -126,8 +83,32 @@ const WRITES_ALL = new Set([
   "tee",
 ]);
 
-/** Commands that write to the last path they are given. */
+/** Commands that write to the last path they are given, or to the `-t` folder. */
 const WRITES_LAST = new Set(["cp", "ln", "install", "rsync"]);
+
+/** Programs that run another command in a way the guard cannot read. */
+const UNREADABLE = [
+  "xargs",
+  "eval",
+  "sudo",
+  "doas",
+  "su",
+  "pwsh",
+  "powershell",
+  "cmd",
+  "watch",
+  "script",
+  "flock",
+  "caffeinate",
+  "parallel",
+  "source",
+  ".",
+  "stdbuf",
+  "setsid",
+  "ionice",
+  "strace",
+  "busybox",
+];
 
 /** Package-manager commands that change `node_modules` or a lockfile. */
 const PACKAGE_WRITES = new Set([
@@ -151,9 +132,6 @@ const PACKAGE_WRITES = new Set([
   "rb",
 ]);
 
-/** `gh` words that read, as the second word of a command (`gh pr view`). */
-const GH_READ_VERBS = new Set(["view", "list", "diff", "checks", "status"]);
-
 /**
  * The name of a program as it is run, without folders or an extension.
  *
@@ -166,237 +144,11 @@ function programName(word) {
 }
 
 /**
- * Whether the shell is, after the commands so far, inside a worktree.
- *
- * @param {string | null} cwd
- * @param {Walk} walk
- * @returns {boolean}
- */
-function inWorktree(cwd, walk) {
-  const here = resolvePath(cwd, null, walk.context.platform);
-  return isInside(here, walk.context, 1);
-}
-
-/**
- * Reads the options before a `git` subcommand: `-C <folder>` moves the
- * working directory, `--git-dir` and `--work-tree` make it unknowable.
- *
- * @param {string[]} args
- * @param {Walk} walk
- * @returns {{ cwd: string | null, redirected: boolean, sub: string, rest: string[] }}
- */
-function readGitOptions(args, walk) {
-  let cwd = walk.cwd;
-  let redirected = false;
-  let index = 0;
-  while ((args[index] ?? "").startsWith("-")) {
-    const option = args[index] ?? "";
-    if (option === "-C") {
-      const target = resolvePath(
-        args[index + 1],
-        cwd,
-        walk.context.platform,
-        true,
-      );
-      cwd = target === undefined ? null : show(target);
-    }
-    const takesValue =
-      /^(-C|-c|--namespace|--exec-path|--git-dir|--work-tree)$/.test(option);
-    redirected ||= /^--(git-dir|work-tree)/.test(option);
-    index += takesValue ? 2 : 1;
-  }
-  return {
-    cwd,
-    redirected,
-    sub: args[index] ?? "",
-    rest: args.slice(index + 1),
-  };
-}
-
-/**
- * @param {string[]} rest
- * @returns {string | undefined}
- */
-function checkBranch(rest) {
-  const listing = rest.some((arg) =>
-    /^(--list|-l|--show-current|--contains|--merged|--no-merged|--points-at)$/.test(
-      arg,
-    ),
-  );
-  const writes = rest.some((arg) =>
-    /^(-[dDmMcCfu]|--delete|--move|--copy|--force|--set-upstream-to|--unset-upstream|--edit-description)/.test(
-      arg,
-    ),
-  );
-  const names = rest.some((arg) => !arg.startsWith("-"));
-  return !writes && (listing || !names) ? undefined : BRANCH_WHY;
-}
-
-/**
- * Decides on `git worktree`: a reviewer may list, and add a detached worktree
- * or remove one, under `.claude/worktrees/`.
- *
- * @param {string[]} args The words after `worktree`.
- * @param {Walk} walk
- * @param {string | null} cwd
- * @returns {string | undefined}
- */
-function checkWorktree(args, walk, cwd) {
-  const action = args[0] ?? "";
-  if (action === "list") {
-    return undefined;
-  }
-  if (action !== "add" && action !== "remove") {
-    return `git worktree ${action} is not allowed; a reviewer may only list, add --detach and remove worktrees`;
-  }
-  const options = args.slice(1).filter((arg) => arg.startsWith("-"));
-  const target = args.slice(1).find((arg) => !arg.startsWith("-"));
-  const place = resolvePath(target, cwd, walk.context.platform, true);
-  if (!isInside(place, walk.context, 1)) {
-    return `git worktree ${action} works only on a folder under .claude/worktrees/<name>/`;
-  }
-  if (action === "remove") {
-    return options.some((option) => /^(-f|--force)/.test(option))
-      ? "git worktree remove --force can discard a dirty worktree; stop and report its path instead"
-      : undefined;
-  }
-  if (options.some((option) => /^-[bB]/.test(option))) {
-    return "git worktree add -b creates a branch, which is shared state; use git worktree add --detach";
-  }
-  return options.includes("--detach")
-    ? undefined
-    : "git worktree add needs --detach, because a worktree on a branch changes the branch list";
-}
-
-/**
- * The checks for `git` commands that read or write depending on their words.
- *
- * @type {Map<string, (rest: string[]) => string | undefined>}
- */
-const GIT_CHECKS = new Map([
-  ["branch", checkBranch],
-  [
-    "tag",
-    (rest) =>
-      rest.some((arg) => /^(-l|--list)$/.test(arg)) ? undefined : TAG_WHY,
-  ],
-  [
-    "remote",
-    (rest) =>
-      rest.every((arg) => /^(-v|--verbose|show|get-url)$/.test(arg))
-        ? undefined
-        : REMOTE_WHY,
-  ],
-  [
-    "config",
-    (rest) =>
-      rest.some((arg) => /^(--get|--get-all|--get-regexp|--list|-l)$/.test(arg))
-        ? undefined
-        : CONFIG_WHY,
-  ],
-]);
-
-/**
- * Decides on a `git` command.
- *
- * @param {string[]} args The words after `git`.
- * @param {Walk} walk
- * @returns {string | undefined}
- */
-function checkGit(args, walk) {
-  const { cwd, redirected, sub, rest } = readGitOptions(args, walk);
-  if (rest.some((arg) => arg.startsWith("--output"))) {
-    return "git --output writes a file; read the diff from the output instead";
-  }
-  if (GIT_READ.has(sub)) {
-    return undefined;
-  }
-  if (GIT_IN_WORKTREE.has(sub)) {
-    return !redirected && inWorktree(cwd, walk)
-      ? undefined
-      : `git ${sub} changes the working tree, so it may run only inside a worktree under .claude/worktrees/<name>/ (use cd or git -C)`;
-  }
-  if (sub === "worktree") {
-    return checkWorktree(rest, walk, cwd);
-  }
-  const check = GIT_CHECKS.get(sub);
-  if (check !== undefined) {
-    return check(rest);
-  }
-  return (
-    GIT_WHY.get(sub) ??
-    `git ${sub} is not on the list of read-only git commands a reviewer may run`
-  );
-}
-
-/**
- * Decides on `gh api`, which reads unless it uses a method other than GET or
- * sends fields (which makes it a POST).
- *
- * @param {string[]} args The words after `api`.
- * @returns {string | undefined}
- */
-function checkGhApi(args) {
-  let method = "";
-  let fields = false;
-  args.forEach((arg, index) => {
-    const inline = /^(?:-X|--method)=?(.+)$/.exec(arg);
-    if (arg === "-X" || arg === "--method") {
-      method = args[index + 1] ?? "";
-    } else if (inline) {
-      method = inline[1] ?? "";
-    }
-    fields ||= /^(-[fF]|--field|--raw-field|--input)(=|$)|^-[fF]./.test(arg);
-  });
-  if (method !== "" && method.toUpperCase() !== "GET") {
-    return `gh api with the method ${method.toUpperCase()} writes to GitHub`;
-  }
-  return fields && method === ""
-    ? "gh api with a field or input sends a POST, which writes to GitHub; add -X GET to read"
-    : undefined;
-}
-
-/**
- * Decides on a `gh` command: a reviewer reads GitHub and never writes to it.
- *
- * @param {string[]} args The words after `gh`.
- * @returns {string | undefined}
- */
-function checkGh(args) {
-  const first = args[0] ?? "";
-  if (first.startsWith("-") && !/^(--version|--help|-h)$/.test(first)) {
-    return "put the gh command before its options, so it can be checked";
-  }
-  const [noun, verb = ""] = args.filter((arg) => !arg.startsWith("-"));
-  if (noun === undefined || noun === "search") {
-    return undefined;
-  }
-  if (noun === "api") {
-    return checkGhApi(args.slice(args.indexOf("api") + 1));
-  }
-  return GH_READ_VERBS.has(verb)
-    ? undefined
-    : `gh ${noun} ${verb} can change GitHub; a reviewer only reads (view, list, diff, checks, status)`;
-}
-
-/**
- * The paths a file command writes to.
- *
  * @param {string} program
- * @param {string[]} args
- * @returns {string[]}
+ * @returns {string}
  */
-function pathTargets(program, args) {
-  if (program === "dd") {
-    return args
-      .filter((arg) => arg.startsWith("of="))
-      .map((arg) => arg.slice(3));
-  }
-  const dashes = args.indexOf("--");
-  const positional = args.filter((arg, index) =>
-    dashes === -1 ? !arg.startsWith("-") : index > dashes,
-  );
-  return WRITES_LAST.has(program) ? positional.slice(-1) : positional;
+function unreadable(program) {
+  return `${program} runs a command the guard cannot read, so a reviewer may not use it`;
 }
 
 /**
@@ -408,6 +160,9 @@ function pathTargets(program, args) {
  * @returns {string | undefined}
  */
 function checkPathWrites(program, targets, walk) {
+  if (targets.length > MAX_TARGETS) {
+    return `${program} names too many paths to check (over ${MAX_TARGETS})`;
+  }
   for (const target of targets) {
     const place = resolvePath(target, walk.cwd, walk.context.platform, true);
     if (isInside(place, walk.context, 2)) {
@@ -421,29 +176,155 @@ function checkPathWrites(program, targets, walk) {
 }
 
 /**
- * Decides on an in-place edit by `sed` or `perl`: its files are the words that
- * are not options, after the script unless one is given with `-e` or `-f`.
+ * The folder named by `-t`, `-tDIR`, `--target-directory=DIR` or
+ * `--target-directory DIR`, in the words of a `cp`, `ln` or `install`.
+ *
+ * @param {string[]} args
+ * @returns {{ found: boolean, folder: string | undefined }}
+ */
+function targetDirectory(args) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? "";
+    const long = /^--target-directory(?:=(.*))?$/.exec(arg);
+    const short = /^-[a-zA-Z]*?t(.*)$/.exec(arg);
+    if (long) {
+      return { found: true, folder: long[1] ?? args[index + 1] };
+    }
+    if (short && !arg.startsWith("--")) {
+      return { found: true, folder: short[1] || args[index + 1] };
+    }
+  }
+  return { found: false, folder: undefined };
+}
+
+/**
+ * Decides on `ln`: a link inside a worktree must point inside it, because a
+ * later write through the link would land outside. A relative source is
+ * refused, because it is read from the link's folder, not the shell's.
+ *
+ * @param {string[]} sources
+ * @param {Walk} walk
+ * @returns {string | undefined}
+ */
+function checkLinkSources(sources, walk) {
+  for (const source of sources) {
+    const place = resolvePath(source, walk.cwd, walk.context.platform, true);
+    const absolute = /^([/\\]|[a-zA-Z]:)/.test(source);
+    if (!absolute || !isInside(place, walk.context, 1)) {
+      return `ln would link to ${source}, which is not an absolute path inside .claude/worktrees/<name>/; a write through the link would land outside`;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The paths a file command writes to, and the paths it links to.
+ *
+ * @param {string} program
+ * @param {string[]} args
+ * @returns {{ targets: string[], sources: string[], missing: boolean }}
+ */
+function pathTargets(program, args) {
+  if (program === "dd") {
+    const targets = args
+      .filter((arg) => arg.startsWith("of="))
+      .map((arg) => arg.slice(3));
+    return { targets, sources: [], missing: false };
+  }
+  const dashes = args.indexOf("--");
+  const positional = args.filter((arg, index) =>
+    dashes === -1 ? !arg.startsWith("-") : index > dashes,
+  );
+  if (!WRITES_LAST.has(program)) {
+    return { targets: positional, sources: [], missing: false };
+  }
+  const directory =
+    program === "rsync"
+      ? { found: false, folder: undefined }
+      : targetDirectory(args);
+  if (directory.found) {
+    const skip = directory.folder === undefined ? [] : [directory.folder];
+    const sources = positional.filter((arg) => !skip.includes(arg));
+    return { targets: skip, sources, missing: directory.folder === undefined };
+  }
+  return {
+    targets: positional.slice(-1),
+    sources: positional.slice(0, -1),
+    missing: false,
+  };
+}
+
+/**
+ * Decides on a command that writes to files: `rm`, `cp`, `ln`, `tee` and so on.
+ *
+ * @param {string} program
+ * @param {string[]} args
+ * @param {Walk} walk
+ * @returns {string | undefined}
+ */
+function checkFileCommand(program, args, walk) {
+  const { targets, sources, missing } = pathTargets(program, args);
+  if (missing) {
+    return `${program} -t without a folder cannot be checked`;
+  }
+  return (
+    checkPathWrites(program, targets, walk) ??
+    (program === "ln" ? checkLinkSources(sources, walk) : undefined)
+  );
+}
+
+/**
+ * Decides on `sed`: its script may not write or run a command, and an
+ * in-place edit may only change files inside a worktree. The files are the
+ * words that are not options, after the script unless one is given with `-e`.
  *
  * @param {string[]} args
  * @param {Walk} walk
  * @returns {string | undefined}
  */
-function checkInPlace(args, walk) {
+function checkSed(args, walk) {
+  /** @type {string[]} */
+  const scripts = [];
+  /** @type {string[]} */
+  const files = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? "";
+    if (/^(-[nEsrzu]*e|--expression)$/.test(arg)) {
+      scripts.push(args[index + 1] ?? "");
+      index += 1;
+    } else if (/^(-[a-zA-Z]*f|--file)/.test(arg)) {
+      return "sed with a script file cannot be read";
+    } else if (arg.startsWith("--expression=")) {
+      scripts.push(arg.slice("--expression=".length));
+    } else if (!arg.startsWith("-")) {
+      files.push(arg);
+    }
+  }
+  if (scripts.length === 0) {
+    scripts.push(files.shift() ?? "");
+  }
+  const problem = scripts.map(sedProblem).find((found) => found !== undefined);
   const inPlace = args.some(
     (arg) => /^-[a-zA-Z]*i/.test(arg) || arg.startsWith("--in-place"),
   );
-  if (!inPlace) {
-    return undefined;
-  }
-  const scripted = args.some((arg) =>
-    /^(-[a-zA-Z]*[ef]|--expression|--file)/.test(arg),
+  return (
+    problem ??
+    (inPlace ? checkPathWrites("an in-place edit", files, walk) : undefined)
   );
-  const words = args.filter((arg) => !arg.startsWith("-"));
-  return checkPathWrites(
-    "an in-place edit",
-    scripted ? words : words.slice(1),
-    walk,
-  );
+}
+
+/**
+ * Decides on `perl`: only an in-place edit is read, and a script is not, so
+ * `perl -e` is a known gap listed in the guide.
+ *
+ * @param {string[]} args
+ * @param {Walk} walk
+ * @returns {string | undefined}
+ */
+function checkPerl(args, walk) {
+  const inPlace = args.some((arg) => /^-[a-zA-Z]*i/.test(arg));
+  const files = args.filter((arg) => !arg.startsWith("-")).slice(1);
+  return inPlace ? checkPathWrites("an in-place edit", files, walk) : undefined;
 }
 
 /**
@@ -474,17 +355,10 @@ function changeDirectory(args, walk) {
  */
 function checkPackageManager(program, args, walk) {
   const verb = args.find((arg) => !arg.startsWith("-")) ?? "";
-  return !PACKAGE_WRITES.has(verb) || inWorktree(walk.cwd, walk)
+  const here = resolvePath(walk.cwd, null, walk.context.platform);
+  return !PACKAGE_WRITES.has(verb) || isInside(here, walk.context, 1)
     ? undefined
     : `${program} ${verb} changes node_modules or the lockfile, so it may run only inside a worktree under .claude/worktrees/<name>/`;
-}
-
-/**
- * @param {string} program
- * @returns {string}
- */
-function unreadable(program) {
-  return `${program} runs a command the guard cannot read, so a reviewer may not use it`;
 }
 
 /**
@@ -502,15 +376,20 @@ function checkFind(args) {
 }
 
 /**
- * Decides on a shell started with `-c`: its command is read as one of ours.
+ * Decides on a shell: only one started with `-c` can be read, and its command
+ * is read as one of ours, a level deeper.
  *
+ * @param {string} program
  * @param {string[]} args
  * @param {Walk} walk
  * @returns {string | undefined}
  */
-function checkShell(args, walk) {
+function checkShell(program, args, walk) {
   const flag = args.findIndex((arg) => /^-[a-z]*c[a-z]*$/.test(arg));
-  return flag === -1 ? undefined : checkCommand(args[flag + 1] ?? "", walk);
+  if (flag === -1) {
+    return `${program} without -c runs a script or reads commands the guard cannot see, so a reviewer may not use it`;
+  }
+  return checkCommand(args[flag + 1] ?? "", { ...walk, depth: walk.depth + 1 });
 }
 
 /**
@@ -524,38 +403,28 @@ const PROGRAMS = new Map([
   ["popd", (_args, walk) => changeDirectory([], walk)],
   ["git", checkGit],
   ["gh", (args) => checkGh(args)],
-  ["sed", checkInPlace],
-  ["perl", checkInPlace],
+  ["sed", checkSed],
+  ["perl", checkPerl],
+  ["awk", (args) => awkProblem(args)],
+  ["gawk", (args) => awkProblem(args)],
   ["find", (args) => checkFind(args)],
-  ["xargs", (_args, _walk, program) => unreadable(program)],
-  ["eval", (_args, _walk, program) => unreadable(program)],
-  ["sudo", (_args, _walk, program) => unreadable(program)],
-  ["pwsh", (_args, _walk, program) => unreadable(program)],
-  ["powershell", (_args, _walk, program) => unreadable(program)],
-  ["cmd", (_args, _walk, program) => unreadable(program)],
-  [
-    "dd",
-    (args, walk, program) =>
-      checkPathWrites(program, pathTargets(program, args), walk),
-  ],
+  ["dd", (args, walk, program) => checkFileCommand(program, args, walk)],
 ]);
 
+for (const program of UNREADABLE) {
+  PROGRAMS.set(program, (_args, _walk, name) => unreadable(name));
+}
 for (const program of [...WRITES_ALL, ...WRITES_LAST]) {
-  PROGRAMS.set(program, (args, walk) =>
-    checkPathWrites(program, pathTargets(program, args), walk),
-  );
+  PROGRAMS.set(program, (args, walk) => checkFileCommand(program, args, walk));
 }
 for (const program of ["sh", "bash", "zsh", "dash", "ksh"]) {
-  PROGRAMS.set(program, checkShell);
+  PROGRAMS.set(program, (args, walk) => checkShell(program, args, walk));
 }
 for (const program of ["npm", "pnpm", "yarn", "bun"]) {
   PROGRAMS.set(program, (args, walk) =>
     checkPackageManager(program, args, walk),
   );
 }
-
-/** Wrappers that run the next word as a command and take nothing else. */
-const PLAIN_WRAPPERS = new Set(["command", "builtin", "exec", "nohup", "time"]);
 
 /**
  * @param {string} word
@@ -566,82 +435,127 @@ function isAssignment(word) {
 }
 
 /**
- * Takes the options and assignments after `env` or `stdbuf`.
+ * What a wrapper leaves: where the wrapped command starts, the assignments it
+ * collected, or why it cannot be read.
  *
- * @param {string[]} words The words after the wrapper.
- * @returns {string[]}
+ * @typedef {{ next: number, assignments?: string[], reason?: string }} Unwrapped
  */
-function skipOptions(words) {
-  let rest = words;
-  while ((rest[0] ?? "").startsWith("-") || isAssignment(rest[0] ?? "")) {
-    rest = rest.slice(1);
-  }
-  return rest;
-}
 
 /**
- * Takes `-n <level>` or `-<level>` off the front, after `nice`.
+ * `command`, `builtin`, `exec`, `nohup` and `time`: read only when they have no
+ * option, because an option (`command -p`, `exec -a name`) changes what runs.
  *
  * @param {string[]} words
- * @returns {string[]}
+ * @param {number} at The word after the wrapper.
+ * @returns {Unwrapped}
  */
-function skipNice(words) {
-  if (words[0] === "-n") {
-    return words.slice(2);
-  }
-  return /^-\d+$/.test(words[0] ?? "") ? words.slice(1) : words;
+function plainWrapper(words, at) {
+  return (words[at] ?? "").startsWith("-")
+    ? {
+        next: at,
+        reason: `${programName(words[at - 1] ?? "")} with an option cannot be read`,
+      }
+    : { next: at };
 }
 
 /**
- * Takes the words that `nice` and `timeout` use off the front.
- *
- * @type {Record<string, (words: string[]) => string[]>}
- */
-const WRAPPERS = {
-  env: skipOptions,
-  stdbuf: skipOptions,
-  nice: skipNice,
-  timeout: (words) => {
-    let rest = words;
-    while ((rest[0] ?? "").startsWith("-")) {
-      rest = rest.slice(
-        /^(-s|-k|--signal|--kill-after)$/.test(rest[0] ?? "") ? 2 : 1,
-      );
-    }
-    return rest.slice(1);
-  },
-};
-
-/**
- * Takes one wrapper off the front of a statement, or returns nothing.
+ * `env`: assignments are collected; any option (`-u`, `-S`, `-i`) cannot be read.
  *
  * @param {string[]} words
- * @returns {string[] | undefined}
+ * @param {number} at
+ * @returns {Unwrapped}
  */
-function stripOnce(words) {
-  const first = words[0] ?? "";
-  const name = programName(first);
-  if (isAssignment(first) || KEYWORDS.has(first) || PLAIN_WRAPPERS.has(name)) {
-    return words.slice(1);
+function envWrapper(words, at) {
+  /** @type {string[]} */
+  const assignments = [];
+  let next = at;
+  while (isAssignment(words[next] ?? "")) {
+    assignments.push(words[next] ?? "");
+    next += 1;
   }
-  return Object.hasOwn(WRAPPERS, name)
-    ? WRAPPERS[name]?.(words.slice(1))
-    : undefined;
+  return (words[next] ?? "").startsWith("-")
+    ? { next, assignments, reason: "env with an option cannot be read" }
+    : { next, assignments };
 }
+
+/**
+ * `nice`: `-n <level>` and `-<level>` are read; any other option cannot be.
+ *
+ * @param {string[]} words
+ * @param {number} at
+ * @returns {Unwrapped}
+ */
+function niceWrapper(words, at) {
+  const first = words[at] ?? "";
+  if (first === "-n") {
+    return { next: at + 2 };
+  }
+  if (/^-\d+$/.test(first)) {
+    return { next: at + 1 };
+  }
+  return first.startsWith("-")
+    ? { next: at, reason: "nice with that option cannot be read" }
+    : { next: at };
+}
+
+/**
+ * `timeout`: its options, then the duration.
+ *
+ * @param {string[]} words
+ * @param {number} at
+ * @returns {Unwrapped}
+ */
+function timeoutWrapper(words, at) {
+  let next = at;
+  while ((words[next] ?? "").startsWith("-")) {
+    next += /^(-s|-k|--signal|--kill-after)$/.test(words[next] ?? "") ? 2 : 1;
+  }
+  return { next: next + 1 };
+}
+
+/** The wrappers that run the next command, by name. */
+const WRAPPERS = new Map([
+  ["command", plainWrapper],
+  ["builtin", plainWrapper],
+  ["exec", plainWrapper],
+  ["nohup", plainWrapper],
+  ["time", plainWrapper],
+  ["env", envWrapper],
+  ["nice", niceWrapper],
+  ["timeout", timeoutWrapper],
+]);
 
 /**
  * Takes the words that only wrap a command (`env`, `timeout`, a variable
- * assignment, a shell keyword) off the front of a statement.
+ * assignment, a shell keyword) off the front of a statement, and says why one
+ * cannot be read.
  *
  * @param {string[]} words
- * @returns {string[]}
+ * @returns {{ rest: string[], assignments: string[], reason?: string }}
  */
 function unwrap(words) {
-  let rest = words;
-  for (let next = stripOnce(rest); next !== undefined; next = stripOnce(rest)) {
-    rest = next;
+  /** @type {string[]} */
+  const assignments = [];
+  let at = 0;
+  for (;;) {
+    const first = words[at] ?? "";
+    const wrapper = WRAPPERS.get(programName(first));
+    if (isAssignment(first)) {
+      assignments.push(first);
+      at += 1;
+    } else if (KEYWORDS.has(first)) {
+      at += 1;
+    } else if (wrapper === undefined) {
+      return { rest: words.slice(at), assignments };
+    } else {
+      const result = wrapper(words, at + 1);
+      assignments.push(...(result.assignments ?? []));
+      if (result.reason !== undefined) {
+        return { rest: [], assignments, reason: result.reason };
+      }
+      at = result.next;
+    }
   }
-  return rest;
 }
 
 /**
@@ -695,6 +609,19 @@ function readRedirects(tokens, walk) {
 }
 
 /**
+ * Why the word that names the program cannot be trusted to be that program: a
+ * variable, a glob, a brace list or a quoted escape that the shell expands.
+ *
+ * @param {string} word
+ * @returns {string | undefined}
+ */
+function builtProgramProblem(word) {
+  return /[$`{*?[]/.test(word)
+    ? `${word} is built by the shell (a variable, a glob or a brace list), so the program it runs cannot be read`
+    : undefined;
+}
+
+/**
  * Decides on one statement of a shell command.
  *
  * @param {Token[]} tokens
@@ -706,9 +633,17 @@ function checkStatement(tokens, walk) {
   if (redirects.reason !== undefined) {
     return redirects.reason;
   }
-  const words = unwrap(redirects.words);
-  const program = programName(words[0] ?? "");
-  return PROGRAMS.get(program)?.(words.slice(1), walk, program);
+  if (redirects.words.some((text) => /^GIT_\w*=/i.test(text))) {
+    return "a GIT_ variable can point git at another repository or make it run a program, so a reviewer may not set one";
+  }
+  const { rest, reason } = unwrap(redirects.words);
+  const word = rest[0] ?? "";
+  const program = programName(word);
+  return (
+    reason ??
+    builtProgramProblem(word) ??
+    PROGRAMS.get(program)?.(rest.slice(1), walk, program)
+  );
 }
 
 /**
@@ -719,7 +654,20 @@ function checkStatement(tokens, walk) {
  * @returns {string | undefined} The reason it is blocked, or nothing.
  */
 export function checkCommand(command, walk) {
-  for (const statement of tokenize(command)) {
+  if (walk.depth > MAX_SHELL_DEPTH) {
+    return `shells are nested more than ${MAX_SHELL_DEPTH} deep, which the guard does not read`;
+  }
+  if (command.length > MAX_COMMAND_LENGTH) {
+    return `the command is too long to check (over ${MAX_COMMAND_LENGTH} characters)`;
+  }
+  const { statements, unterminated } = tokenize(command);
+  if (unterminated) {
+    return "a here-document is never closed, so what follows it cannot be told from its body";
+  }
+  if (statements.length > MAX_STATEMENTS) {
+    return `the command has too many statements to check (over ${MAX_STATEMENTS})`;
+  }
+  for (const statement of statements) {
     const reason = checkStatement(statement, walk);
     if (reason !== undefined) {
       return reason;

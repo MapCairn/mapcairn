@@ -28,6 +28,7 @@
  * @property {Token[][]} statements
  * @property {{ delimiter: string, strip: boolean }[]} pending Here-documents
  *   whose bodies start after the next newline.
+ * @property {boolean} unterminated Whether a here-document body had no end.
  */
 
 /** Characters after a backslash that it escapes (otherwise it stays). */
@@ -77,15 +78,18 @@ function endStatement(lexer) {
  */
 function skipHeredocs(lexer) {
   for (const { delimiter, strip } of lexer.pending) {
+    let found = false;
     while (lexer.index < lexer.text.length) {
       const end = lexer.text.indexOf("\n", lexer.index);
       const stop = end === -1 ? lexer.text.length : end;
       const line = lexer.text.slice(lexer.index, stop);
       lexer.index = end === -1 ? stop : stop + 1;
       if ((strip ? line.replace(/^\t+/, "") : line) === delimiter) {
+        found = true;
         break;
       }
     }
+    lexer.unterminated ||= !found;
   }
   lexer.pending = [];
 }
@@ -190,6 +194,35 @@ function separator(lexer) {
 }
 
 /**
+ * Reads the word after `<<` the way the shell does: quotes and backslashes are
+ * taken out wherever they are, and quoted text may hold spaces.
+ *
+ * @param {string} text
+ * @param {number} start
+ * @returns {{ delimiter: string, end: number }}
+ */
+function readDelimiter(text, start) {
+  let cursor = start;
+  let delimiter = "";
+  while (cursor < text.length && !/[\s;&|<>()]/.test(text.charAt(cursor))) {
+    const char = text.charAt(cursor);
+    if (char === "\\") {
+      delimiter += text.charAt(cursor + 1);
+      cursor += 2;
+    } else if (char === "'" || char === '"') {
+      const close = text.indexOf(char, cursor + 1);
+      const stop = close === -1 ? text.length : close;
+      delimiter += text.slice(cursor + 1, stop);
+      cursor = stop + 1;
+    } else {
+      delimiter += char;
+      cursor += 1;
+    }
+  }
+  return { delimiter, end: Math.min(cursor, text.length) };
+}
+
+/**
  * Reads `<<WORD`, `<<-WORD` or `<<'WORD'`: records the delimiter so that the
  * body is skipped after the next newline.
  *
@@ -202,18 +235,10 @@ function heredocStart(lexer) {
   while (/[ \t]/.test(lexer.text.charAt(cursor))) {
     cursor += 1;
   }
-  let delimiter = "";
-  while (
-    cursor < lexer.text.length &&
-    !/[\s;&|<>()]/.test(lexer.text.charAt(cursor))
-  ) {
-    delimiter += lexer.text.charAt(cursor);
-    cursor += 1;
-  }
-  const bare = delimiter.replace(/^["'\\]|["']$/g, "");
-  lexer.pending.push({ delimiter: bare, strip });
+  const { delimiter, end } = readDelimiter(lexer.text, cursor);
+  lexer.pending.push({ delimiter, strip });
   lexer.tokens.push({ type: "redirect", op: "<<" });
-  lexer.index = cursor;
+  lexer.index = end;
 }
 
 /**
@@ -224,6 +249,11 @@ function heredocStart(lexer) {
  */
 function redirectOperator(lexer, prefix) {
   const char = peek(lexer);
+  if (char === "<" && peek(lexer, 1) === ">") {
+    lexer.tokens.push({ type: "redirect", op: `${prefix}<>` });
+    lexer.index += 2;
+    return;
+  }
   let op = char;
   lexer.index += 1;
   while (peek(lexer) === char && op.length < 3) {
@@ -277,7 +307,9 @@ const READERS = [
  * Splits a shell command into statements of words and redirections.
  *
  * @param {string} command
- * @returns {Token[][]}
+ * @returns {{ statements: Token[][], unterminated: boolean }} `unterminated`
+ *   is true when a here-document has no closing line, so the text after it
+ *   cannot be told apart from its body.
  */
 export function tokenize(command) {
   /** @type {Lexer} */
@@ -288,6 +320,7 @@ export function tokenize(command) {
     tokens: [],
     statements: [],
     pending: [],
+    unterminated: false,
   };
   while (lexer.index < lexer.text.length) {
     if (!READERS.some((reader) => reader(lexer))) {
@@ -296,5 +329,8 @@ export function tokenize(command) {
     }
   }
   endStatement(lexer);
-  return lexer.statements;
+  return {
+    statements: lexer.statements,
+    unterminated: lexer.unterminated || lexer.pending.length > 0,
+  };
 }

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/agents/guardWrites.mjs"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/agents/guardWrites.mjs\""
           }
         ]
       }

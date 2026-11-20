@@ -274,7 +274,11 @@ describe("Claude Code, .claude/settings.json", () => {
         {
           matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash",
           hooks: [
-            { type: "command", command: "node scripts/agents/guardWrites.mjs" },
+            {
+              type: "command",
+              command:
+                'node "$CLAUDE_PROJECT_DIR/scripts/agents/guardWrites.mjs"',
+            },
           ],
         },
       ],

@@ -13,6 +13,12 @@
  */
 import { realpathSync } from "node:fs";
 
+/** A path longer than this is refused, so a hostile one cannot make the check slow. */
+const MAX_PATH_LENGTH = 4096;
+
+/** A path with more segments than this is refused, for the same reason. */
+const MAX_SEGMENTS = 256;
+
 /** The folder, under the project, that holds a reviewer's own worktrees. */
 export const ZONE = [".claude", "worktrees"];
 
@@ -34,6 +40,8 @@ export const ZONE = [".claude", "worktrees"];
  * @property {Platform} platform
  * @property {(p: string) => string} realpath Follows symbolic links.
  * @property {Resolved} zone The worktrees folder of the project.
+ * @property {string[]} [zoneKey] The zone with links followed, remembered by
+ *   the first check so that later ones do not ask the file system again.
  */
 
 /**
@@ -45,25 +53,34 @@ export const ZONE = [".claude", "worktrees"];
  * @returns {{ root: string | null, rest: string }}
  */
 export function splitRoot(raw, platform) {
-  const extended = /^[\\/]{2}[?.][\\/]/.test(raw);
-  let text = raw.replaceAll("\\", "/").replace(/^\/\/[?.]\//, "");
-  if (platform === "win32") {
-    text = text
-      .replace(/^\/cygdrive\/([a-z])(?=\/|$)/i, "$1:")
-      .replace(/^\/([a-z])(?=\/|$)/i, "$1:");
-    const drive = /^([a-z]):(\/|$)/i.exec(text);
-    if (drive) {
-      const letter = (drive[1] ?? "").toLowerCase();
-      return { root: `${letter}:`, rest: text.slice(drive[0].length) };
+  if (platform !== "win32") {
+    if (raw.startsWith("//")) {
+      return { root: "//", rest: raw.slice(2) };
     }
+    return raw.startsWith("/")
+      ? { root: "/", rest: raw.slice(1) }
+      : { root: null, rest: raw };
   }
-  if (!extended && text.startsWith("//")) {
-    return { root: "//", rest: text.slice(2) };
+  const extended = /^[\\/]{2}[?.][\\/]/.test(raw);
+  let text = raw.replaceAll("\\", "/");
+  text = extended ? text.slice(4) : text;
+  if (extended && /^unc\//i.test(text)) {
+    return { root: "//", rest: text.slice(4) };
   }
-  if (text.startsWith("/")) {
-    return { root: "/", rest: text.slice(1) };
+  text = text
+    .replace(/^\/cygdrive\/([a-z])(?=\/|$)/i, "$1:")
+    .replace(/^\/([a-z])(?=\/|$)/i, "$1:");
+  const drive = /^([a-z]):(\/|$)/i.exec(text);
+  if (drive) {
+    const letter = (drive[1] ?? "").toLowerCase();
+    return { root: `${letter}:`, rest: text.slice(drive[0].length) };
   }
-  return { root: null, rest: text };
+  if (extended || text.startsWith("//")) {
+    return { root: "//", rest: extended ? text : text.slice(2) };
+  }
+  return text.startsWith("/")
+    ? { root: "/", rest: text.slice(1) }
+    : { root: null, rest: text };
 }
 
 /**
@@ -123,19 +140,23 @@ export function show({ root, segments }) {
  * @returns {Resolved | undefined}
  */
 export function resolvePath(raw, cwd, platform, shell = false) {
-  if (typeof raw !== "string" || raw === "" || raw.includes("\0")) {
+  if (typeof raw !== "string" || raw === "" || raw.length > MAX_PATH_LENGTH) {
     return undefined;
   }
   const variable = /%[^%]+%/.test(raw);
   const unknown = shell
     ? expandsInShell(raw) || variable
     : /^~|\$/.test(raw) || variable;
-  if (unknown) {
+  if (unknown || raw.includes("\0") || isUnreadableWindowsPath(raw, platform)) {
     return undefined;
   }
   const { root, rest } = splitRoot(raw, platform);
+  const parts = rest.split("/");
+  if (parts.length > MAX_SEGMENTS) {
+    return undefined;
+  }
   if (root !== null) {
-    return { root, segments: collapse(rest.split("/")) };
+    return { root, segments: collapse(parts) };
   }
   const base = cwd === null ? undefined : splitRoot(cwd, platform);
   if (base === undefined || base.root === null) {
@@ -143,8 +164,37 @@ export function resolvePath(raw, cwd, platform, shell = false) {
   }
   return {
     root: base.root,
-    segments: collapse([...base.rest.split("/"), ...rest.split("/")]),
+    segments: collapse([...base.rest.split("/"), ...parts]),
   };
+}
+
+/**
+ * Whether a Windows path has a form this check does not read: a drive without
+ * a slash (`D:file` is relative to that drive's current folder), a short
+ * 8.3 name (`MAPCAI~1`), or a segment Windows reads differently from the text
+ * (a trailing dot or space, or a character a name cannot hold, such as a
+ * stream name after a colon).
+ *
+ * @param {string} raw
+ * @param {Platform} platform
+ * @returns {boolean}
+ */
+function isUnreadableWindowsPath(raw, platform) {
+  if (platform !== "win32") {
+    return false;
+  }
+  if (/^[a-z]:(?![\\/]|$)/i.test(raw)) {
+    return true;
+  }
+  const body = raw.replace(/^[\\/]{2}[?.][\\/]/, "").replace(/^[a-z]:/i, "");
+  return body
+    .split(/[\\/]/)
+    .some(
+      (segment) =>
+        segment !== "." &&
+        segment !== ".." &&
+        (/[<>:"|?*]|~\d/.test(segment) || /[. ]$/.test(segment)),
+    );
 }
 
 /**
@@ -213,7 +263,8 @@ export function isInside(resolved, context, depth) {
     return false;
   }
   const { platform, zone } = context;
-  const wanted = comparable(followLinks(zone, context), platform);
+  context.zoneKey ??= comparable(followLinks(zone, context), platform);
+  const wanted = context.zoneKey;
   const actual = comparable(followLinks(resolved, context), platform);
   return (
     actual.length >= wanted.length + depth &&
