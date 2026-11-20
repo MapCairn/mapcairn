@@ -26,6 +26,19 @@ const LYON: LatLng = { lat: 45.764, lng: 4.8357 };
 const MARSEILLE: LatLng = { lat: 43.2965, lng: 5.3698 };
 const NAIROBI: LatLng = { lat: -1.2921, lng: 36.8219 };
 
+/** A limit small enough that the oversize answer below stays a few kilobytes. */
+const SMALL_LIMIT = 4096;
+
+/** A body that stops with the error `onRead` makes, as a dropped connection does. */
+function brokenBodyResponse(onRead: () => Error, status = 200): Response {
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      controller.error(onRead());
+    },
+  });
+  return new Response(body, { status });
+}
+
 const SHAPE: string = routeParisLyon.trip.legs[0]?.shape ?? "";
 
 type Script =
@@ -154,13 +167,18 @@ function jsonOf(call: Call | undefined): unknown {
 }
 
 runRoutingProviderContract("ValhallaRoutingProvider", () => {
-  const { scripted, provider } = setup();
+  const { scripted, provider } = setup({ maxResponseBytes: SMALL_LIMIT });
   return {
     provider,
     controls: {
       willReturnRoute: (result) => scripted.setRoute(toTrip(result)),
       willReturnArea: (result) => scripted.setArea(toIsochrone(result)),
       willFail: (failure) => scripted.setScript({ kind: "fail", failure }),
+      respondWithOversizeAnswer: () => {
+        const oversize = { pad: "x".repeat(SMALL_LIMIT * 2) };
+        scripted.setRoute(oversize);
+        scripted.setArea(oversize);
+      },
       hold: () => scripted.setScript({ kind: "hold" }),
     },
   };
@@ -804,11 +822,11 @@ describe("ValhallaRoutingProvider errors", () => {
   });
 
   it("maps a body that fails to read, when it was not an abort, to network", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.reject(new TypeError("stream failed")),
-    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        brokenBodyResponse(() => new TypeError("stream failed")),
+      );
     const provider = new ValhallaRoutingProvider({
       fetch: fetchMock,
       minIntervalMs: 0,
@@ -816,6 +834,100 @@ describe("ValhallaRoutingProvider errors", () => {
     expect(
       await failureKind(provider.route({ stops: [PARIS, LYON], mode: "walk" })),
     ).toBe("network");
+  });
+});
+
+describe("ValhallaRoutingProvider response size", () => {
+  const oversize = (): Response =>
+    jsonResponse({ pad: "x".repeat(SMALL_LIMIT * 2) });
+
+  it("limits an answer to 2 MiB unless told otherwise", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(
+          new Response("{}", { headers: { "content-length": "2097153" } }),
+        ),
+      );
+    const provider = new ValhallaRoutingProvider({
+      fetch: fetchMock,
+      minIntervalMs: 0,
+    });
+    const error = await provider
+      .route({ stops: [PARIS, LYON], mode: "walk" })
+      .catch((reason: unknown) => reason);
+    expect((error as RoutingError).kind).toBe("invalid");
+    expect((error as RoutingError).message).toContain("2097152");
+  });
+
+  it("answers an answer that is exactly as large as the limit", async () => {
+    const text = JSON.stringify(routeParisLyon);
+    const { scripted, provider } = setup({ maxResponseBytes: text.length });
+    scripted.setRoute(routeParisLyon);
+    await expect(
+      provider.route({ stops: [PARIS, LYON], mode: "drive" }),
+    ).resolves.toBeDefined();
+  });
+
+  it("classifies a refusal by its status when the error body is over the limit", async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ pad: "x".repeat(SMALL_LIMIT * 2) }), {
+          status: 429,
+        }),
+      ),
+    );
+    const provider = new ValhallaRoutingProvider({
+      fetch: fetchMock,
+      minIntervalMs: 0,
+      maxResponseBytes: SMALL_LIMIT,
+    });
+    expect(
+      await failureKind(provider.route({ stops: [PARIS, LYON], mode: "walk" })),
+    ).toBe("rate-limited");
+  });
+
+  it("does not read an error body larger than the limit", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => {
+      const body = new ReadableStream<Uint8Array>({
+        pull() {
+          throw new Error("The body must not be read.");
+        },
+      });
+      return Promise.resolve(
+        new Response(body, {
+          status: 400,
+          headers: { "content-length": String(SMALL_LIMIT + 1) },
+        }),
+      );
+    });
+    const provider = new ValhallaRoutingProvider({
+      fetch: fetchMock,
+      minIntervalMs: 0,
+      maxResponseBytes: SMALL_LIMIT,
+    });
+    expect(
+      await failureKind(provider.route({ stops: [PARIS, LYON], mode: "walk" })),
+    ).toBe("invalid");
+  });
+
+  it("refuses an oversize answer as invalid, for a route and for an area", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(oversize()));
+    const provider = new ValhallaRoutingProvider({
+      fetch: fetchMock,
+      minIntervalMs: 0,
+      maxResponseBytes: SMALL_LIMIT,
+    });
+    expect(
+      await failureKind(provider.route({ stops: [PARIS, LYON], mode: "walk" })),
+    ).toBe("invalid");
+    expect(
+      await failureKind(
+        provider.reachableArea({ origin: NAIROBI, minutes: 5, mode: "walk" }),
+      ),
+    ).toBe("invalid");
   });
 });
 
@@ -882,14 +994,12 @@ describe("ValhallaRoutingProvider cancellation", () => {
 
   it("rejects as aborted when the signal fires while the body is read", async () => {
     const controller = new AbortController();
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      brokenBodyResponse(() => {
         controller.abort();
-        return Promise.reject(new DOMException("aborted", "AbortError"));
-      },
-    });
+        return new DOMException("aborted", "AbortError");
+      }),
+    );
     const provider = new ValhallaRoutingProvider({
       fetch: fetchMock,
       minIntervalMs: 0,
@@ -907,14 +1017,12 @@ describe("ValhallaRoutingProvider cancellation", () => {
 
   it("rejects as aborted when the signal fires while an error body is read", async () => {
     const controller = new AbortController();
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      brokenBodyResponse(() => {
         controller.abort();
-        return Promise.reject(new DOMException("aborted", "AbortError"));
-      },
-    });
+        return new DOMException("aborted", "AbortError");
+      }, 400),
+    );
     const provider = new ValhallaRoutingProvider({
       fetch: fetchMock,
       minIntervalMs: 0,

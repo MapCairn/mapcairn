@@ -11,6 +11,7 @@ import {
 } from "@mapcairn/core";
 import { defaultFetch, isAbortError, throwIfAborted } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
+import { type ResponseBodyError, readJsonWithin } from "../shared/readJson";
 
 const DEFAULT_ENDPOINT = "https://nominatim.openstreetmap.org";
 const DEFAULT_LIMIT = 6;
@@ -54,10 +55,22 @@ export interface NominatimSearchProviderOptions {
    * request per second.
    */
   readonly minIntervalMs?: number;
+  /**
+   * The most bytes of an answer that are read before the request fails as
+   * `"failed"`. Defaults to 256 KiB.
+   */
+  readonly maxResponseBytes?: number;
 }
 
 /** Nominatim's usage policy allows at most one request per second. */
 const DEFAULT_MIN_INTERVAL_MS = 1000;
+
+/**
+ * 256 KiB. A search answers with a short list of places (six by default,
+ * with no address details), so this is far past what the service means to
+ * send.
+ */
+const DEFAULT_MAX_RESPONSE_BYTES = 256 * 1024;
 
 function alwaysOnline(): boolean {
   return true;
@@ -145,7 +158,7 @@ function toSearchResult(item: NominatimItem): SearchResult | null {
  *   Errors follow the port: a network failure is `SearchError("offline")`
  *   when `isOnline` says the device is offline and `"failed"` otherwise, HTTP 429 is
  *   `"rate-limited"`, any other non-OK response, or a body that is not what
- *   Nominatim documents, is `"failed"`, and an aborted signal is a
+ *   Nominatim documents or is larger than `maxResponseBytes`, is `"failed"`, and an aborted signal is a
  *   {@link PortAbortError}. A blank query resolves to no results without a
  *   request.
  */
@@ -156,8 +169,11 @@ export class NominatimSearchProvider implements SearchProvider {
   readonly #defaultLimit: number;
   readonly #isOnline: () => boolean;
   readonly #spacer: RequestSpacer;
+  readonly #maxResponseBytes: number;
 
   constructor(options: NominatimSearchProviderOptions = {}) {
+    this.#maxResponseBytes =
+      options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
     this.#spacer = new RequestSpacer(
       options.minIntervalMs ?? DEFAULT_MIN_INTERVAL_MS,
     );
@@ -247,12 +263,12 @@ export class NominatimSearchProvider implements SearchProvider {
       );
     }
     try {
-      return await response.json();
+      return await readJsonWithin(response, this.#maxResponseBytes);
     } catch (error) {
-      if (signal?.aborted || isAbortError(error)) {
+      if (signal?.aborted) {
         throw new PortAbortError();
       }
-      throw new SearchError("failed");
+      throw new SearchError("failed", (error as ResponseBodyError).message);
     }
   }
 }

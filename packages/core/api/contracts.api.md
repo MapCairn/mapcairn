@@ -350,6 +350,7 @@ export type PortRegistry = {
 // @public
 export interface RoutingProviderControls {
     hold(): void;
+    respondWithOversizeAnswer(): void;
     willFail(kind: ScriptedRoutingFailure): void;
     willReturnArea(result: ReachableAreaResult): void;
     willReturnRoute(result: RouteResult): void;
@@ -423,6 +424,7 @@ export type ScriptedRoutingFailure = Exclude<RoutingErrorKind, "aborted" | "inva
 // @public
 export interface SearchProviderControls {
     hold(): void;
+    respondWithOversizeAnswer(): void;
     willFail(kind: SearchErrorKind): void;
     willReturn(results: readonly SearchResult[]): void;
 }
@@ -450,6 +452,7 @@ export interface SettingsStoreSubject {
 // @public
 export interface SuggestionProviderControls {
     hold(): void;
+    respondWithOversizeAnswer(): void;
     willFail(kind: SearchErrorKind): void;
     willReturn(results: readonly SearchResult[]): void;
 }

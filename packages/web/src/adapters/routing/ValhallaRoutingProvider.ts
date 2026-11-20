@@ -16,6 +16,7 @@ import {
 } from "@mapcairn/core";
 import { defaultFetch, isAbortError } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
+import { type ResponseBodyError, readJsonWithin } from "../shared/readJson";
 import { decodePolyline } from "./polyline";
 
 const DEFAULT_ENDPOINT = "https://valhalla1.openstreetmap.de";
@@ -65,7 +66,19 @@ export interface ValhallaRoutingProviderOptions {
    * alike. Defaults to 1000.
    */
   readonly minIntervalMs?: number;
+  /**
+   * The most bytes of an answer, or of an error body, that are read before
+   * the request fails as `invalid`. Defaults to 2 MiB.
+   */
+  readonly maxResponseBytes?: number;
 }
+
+/**
+ * 2 MiB. A route is an encoded polyline for each leg and an isochrone a
+ * handful of polygons, so even a long route with many stops is far under it.
+ * The recorded answers in `fixtures` are under a kilobyte.
+ */
+const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 function abortedError(): RoutingError {
   return new RoutingError("aborted", "The request was cancelled.");
@@ -291,7 +304,8 @@ function classifyRefusal(status: number, body: unknown): RoutingError {
  *     the costing model, is `unsupported`.
  *   - Any other 4xx is `invalid`.
  *
- *   A 200 whose body is not the documented shape is `invalid`, and an
+ *   A 200 whose body is not the documented shape, or is larger than
+ *   `maxResponseBytes`, is `invalid`, and an
  *   isochrone with no polygon features is `no-route`. A request is checked
  *   before anything is sent: fewer than two stops, a position off the globe
  *   or minutes that are not greater than zero are `invalid`, and a mode other
@@ -301,8 +315,11 @@ export class ValhallaRoutingProvider implements RoutingProvider {
   readonly #fetch: typeof fetch;
   readonly #endpoint: string;
   readonly #spacer: RequestSpacer;
+  readonly #maxResponseBytes: number;
 
   constructor(options: ValhallaRoutingProviderOptions = {}) {
+    this.#maxResponseBytes =
+      options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
     this.#fetch = options.fetch ?? defaultFetch;
     this.#endpoint = (options.endpoint ?? DEFAULT_ENDPOINT).replace(/\/$/, "");
     this.#spacer = new RequestSpacer(
@@ -390,18 +407,30 @@ export class ValhallaRoutingProvider implements RoutingProvider {
     }
     if (response.ok) {
       try {
-        return await response.json();
+        return await readJsonWithin(response, this.#maxResponseBytes);
       } catch (error) {
-        if (signal?.aborted || isAbortError(error)) {
-          throw abortedError();
-        }
-        if (error instanceof SyntaxError) {
-          throw invalidBody("the body is not JSON");
-        }
-        throw new RoutingError("network", "The response could not be read.");
+        throw this.#readFailure(error as ResponseBodyError, signal);
       }
     }
     throw await this.#refusal(response, signal);
+  }
+
+  /** The error for a success whose body could not be read. */
+  #readFailure(
+    error: ResponseBodyError,
+    signal: AbortSignal | undefined,
+  ): RoutingError {
+    if (signal?.aborted) {
+      return abortedError();
+    }
+    switch (error.reason) {
+      case "not-json":
+        return invalidBody("the body is not JSON");
+      case "too-large":
+        return new RoutingError("invalid", error.message);
+      case "unreadable":
+        return new RoutingError("network", error.message);
+    }
   }
 
   /** Builds the error for a response that is not OK. */
@@ -424,9 +453,9 @@ export class ValhallaRoutingProvider implements RoutingProvider {
     }
     let body: unknown;
     try {
-      body = await response.json();
-    } catch (error) {
-      if (signal?.aborted || isAbortError(error)) {
+      body = await readJsonWithin(response, this.#maxResponseBytes);
+    } catch {
+      if (signal?.aborted) {
         return abortedError();
       }
       body = undefined;

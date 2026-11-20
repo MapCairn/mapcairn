@@ -20,6 +20,13 @@ export interface SuggestionProviderControls {
   willFail(kind: SearchErrorKind): void;
   /** Keeps the next request pending until its signal aborts. */
   hold(): void;
+  /**
+   * Makes every later request read an answer larger than whatever limit the
+   * provider applies to the size of an answer. A provider is free to choose
+   * its limit (the subject can lower it so the answer stays small), and the
+   * suite requires only that the answer is refused.
+   */
+  respondWithOversizeAnswer(): void;
 }
 
 /** One suggestion provider under test, with its controls. */
@@ -107,6 +114,14 @@ export function runSuggestionProviderContract(
         expect((error as SearchError).kind).toBe(kind);
       });
     }
+
+    it("refuses an answer larger than the provider's limit as failed", async () => {
+      const { provider, controls } = create();
+      controls.respondWithOversizeAnswer();
+      const error = await provider.suggest("table").catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(SearchError);
+      expect((error as SearchError).kind).toBe("failed");
+    });
 
     it("rejects with PortAbortError when the signal is already aborted", async () => {
       const { provider, controls } = create();

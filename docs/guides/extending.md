@@ -447,7 +447,7 @@ No mapping helper was added to `@mapcairn/core`. The sample needs only `CATEGORI
 The Directions tool appears only when `services.routing` exists, and the SDK ships no provider. To offer directions, write one adapter and register it:
 
 1. Implement `RoutingProvider` from `@mapcairn/core` in `packages/web/src/adapters/routing`. `route({ stops, mode, signal })` returns one line feature for each leg with its distance in metres and time in seconds, and `reachableArea({ origin, minutes, mode, signal })` returns polygon features. Reject only with `RoutingError` (`network`, `invalid`, `no-route`, `rate-limited`, `aborted`, `unsupported`), and honour the `AbortSignal`. Keep to the service's usage limits inside the adapter, for example with `RequestSpacer` from `adapters/shared`, and send no cookies or referrer.
-2. Run `runRoutingProviderContract` against it with a scripted `fetch`, as `ValhallaRoutingProvider.test.ts` does, and add recorded sample responses as fixtures.
+2. Run `runRoutingProviderContract` against it with a scripted `fetch`, as `ValhallaRoutingProvider.test.ts` does, and add recorded sample responses as fixtures. Read every body, an error body included, through `readJsonWithin` with a limit that fits the service, and make the contract subject lower it so `respondWithOversizeAnswer()` stays small: an answer over the limit must fail as `invalid`.
 3. Register it as `routing` in `createServices()`. Nothing else in the app names it.
 4. Allow its origin in `connect-src` in `packages/web/public/_headers` and `constants/securityHeaders.ts`, name the service on the privacy page and in `PRIVACY.md` and `ATTRIBUTIONS.md`, and pass its credit and a note about what a request sends to the Directions panel (`ROUTING_CREDITS` and `ROUTING_NOTE` in `packages/web/src/constants/routingCredits.ts`).
 
@@ -557,17 +557,19 @@ import {
 runSearchProviderContract("MySearchProvider", () => {
   const scripted = scriptedFetch(); // your test double for the service
   return {
-    provider: new MySearchProvider({ fetch: scripted.fetch }),
+    // A small limit keeps the oversize answer below small.
+    provider: new MySearchProvider({ fetch: scripted.fetch, maxResponseBytes: 1024 }),
     controls: {
       willReturn: (results) => scripted.answerWith(results),
       willFail: (kind) => scripted.failWith(kind), // "offline", "rate-limited" or "failed"
+      respondWithOversizeAnswer: () => scripted.answerWithBytes(2048),
       hold: () => scripted.holdUntilAborted(),
     },
   };
 });
 ```
 
-`create` is called for each test, so every test gets a fresh provider. `willReturn` makes every later `search` return those results and `reverse` return the first, or `null` for an empty list; `hold` keeps the next request pending until its signal aborts, so the double must reject with an `AbortError` when `init.signal` fires. `runSuggestionProviderContract` takes the same controls. The suites import `vitest`, which `@mapcairn/core` declares as an optional peer, so the host installs it with its tests. The contract does not check your mapping of a real answer, so also test it with recorded answers from the service, a bad item, a body that is not JSON and an HTTP error.
+`create` is called for each test, so every test gets a fresh provider. `willReturn` makes every later `search` return those results and `reverse` return the first, or `null` for an empty list; `hold` keeps the next request pending until its signal aborts, so the double must reject with an `AbortError` when `init.signal` fires. `respondWithOversizeAnswer` makes every later request read an answer larger than the limit your provider puts on the size of an answer (lower the limit in the subject so the answer stays small), and the suite requires the request to fail as `failed`. `runSuggestionProviderContract` takes the same controls. Read the body through a bounded reader, as the reference adapters do with `readJsonWithin` in `adapters/shared`, so a service cannot make the page hold an answer of any size; `bodyReads.test.ts` fails when an adapter reads a body any other way. The suites import `vitest`, which `@mapcairn/core` declares as an optional peer, so the host installs it with its tests. The contract does not check your mapping of a real answer, so also test it with recorded answers from the service, a bad item, a body that is not JSON and an HTTP error.
 
 ### Register it
 

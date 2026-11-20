@@ -58,6 +58,42 @@ export interface PlaceProviderOptions {
    * "failed" after a network error. Defaults to `navigator.onLine`.
    */
   readonly isOnline?: () => boolean;
+  /**
+   * The most bytes of an answer that are read before the request fails as
+   * `"failed"`. Defaults to 64 KiB, far more than a short list of places.
+   */
+  readonly maxResponseBytes?: number;
+}
+
+const DEFAULT_MAX_RESPONSE_BYTES = 64 * 1024;
+
+/**
+ * Parses the body as JSON, refusing one larger than `maxBytes`. It stops
+ * reading at the first chunk that crosses the limit, so a service cannot make
+ * the page hold an answer of any size.
+ */
+async function readJsonWithin(
+  response: Response,
+  maxBytes: number,
+): Promise<unknown> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new SearchError("failed", "The answer has no body.");
+  }
+  const decoder = new TextDecoder();
+  let text = "";
+  let received = 0;
+  let chunk = await reader.read();
+  while (!chunk.done) {
+    received += chunk.value.byteLength;
+    if (received > maxBytes) {
+      await reader.cancel();
+      throw new SearchError("failed", "The answer is too large.");
+    }
+    text += decoder.decode(chunk.value, { stream: true });
+    chunk = await reader.read();
+  }
+  return JSON.parse(text + decoder.decode());
 }
 
 function browserIsOnline(): boolean {
@@ -162,12 +198,15 @@ async function getJson(
     throw new SearchError("failed", `Search failed: HTTP ${response.status}.`);
   }
   try {
-    return await response.json();
+    return await readJsonWithin(
+      response,
+      options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
+    );
   } catch (error) {
     if (signal?.aborted || isAbortError(error)) {
       throw new PortAbortError();
     }
-    throw new SearchError("failed");
+    throw error instanceof SearchError ? error : new SearchError("failed");
   }
 }
 

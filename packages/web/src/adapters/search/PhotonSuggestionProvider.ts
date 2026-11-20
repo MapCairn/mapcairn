@@ -11,6 +11,7 @@ import {
 } from "@mapcairn/core";
 import { defaultFetch, isAbortError, throwIfAborted } from "../shared/fetch";
 import { RequestSpacer } from "../shared/RequestSpacer";
+import { type ResponseBodyError, readJsonWithin } from "../shared/readJson";
 
 const DEFAULT_ENDPOINT = "https://photon.komoot.io/api/";
 const DEFAULT_LIMIT = 5;
@@ -79,7 +80,18 @@ export interface PhotonSuggestionProviderOptions {
   readonly minIntervalMs?: number;
   /** How long a request may take before it fails. Defaults to 4000. */
   readonly timeoutMs?: number;
+  /**
+   * The most bytes of an answer that are read before the request fails as
+   * `"failed"`. Defaults to 256 KiB.
+   */
+  readonly maxResponseBytes?: number;
 }
+
+/**
+ * 256 KiB. A suggestion request answers with a handful of features (five by
+ * default), so this is far past what the service means to send.
+ */
+const DEFAULT_MAX_RESPONSE_BYTES = 256 * 1024;
 
 function alwaysOnline(): boolean {
   return true;
@@ -196,7 +208,7 @@ function toSearchResult(feature: PhotonFeature): SearchResult | null {
  *   Errors follow the port: a network failure is `SearchError("offline")` when
  *   `isOnline` says the device is offline and `"failed"` otherwise, HTTP 429 is
  *   `"rate-limited"`, a timeout, any other non-OK response, or a body that is
- *   not Photon's GeoJSON is `"failed"`, and an aborted signal is a
+ *   not Photon's GeoJSON or is larger than `maxResponseBytes` is `"failed"`, and an aborted signal is a
  *   {@link PortAbortError}. A blank query resolves to no suggestions without a
  *   request. Features that are not a point with a name or a street are left
  *   out.
@@ -207,9 +219,12 @@ export class PhotonSuggestionProvider implements SuggestionProvider {
   readonly #defaultLimit: number;
   readonly #isOnline: () => boolean;
   readonly #timeoutMs: number;
+  readonly #maxResponseBytes: number;
   readonly #spacer: RequestSpacer;
 
   constructor(options: PhotonSuggestionProviderOptions = {}) {
+    this.#maxResponseBytes =
+      options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
     this.#fetch = options.fetch ?? defaultFetch;
     this.#endpoint = options.endpoint ?? DEFAULT_ENDPOINT;
     this.#defaultLimit = options.defaultLimit ?? DEFAULT_LIMIT;
@@ -273,6 +288,7 @@ export class PhotonSuggestionProvider implements SuggestionProvider {
     const failure = (
       error: unknown,
       kind: SearchErrorKind,
+      message?: string,
     ): SearchError | PortAbortError => {
       if (signal?.aborted) {
         return new PortAbortError();
@@ -283,7 +299,7 @@ export class PhotonSuggestionProvider implements SuggestionProvider {
       if (isAbortError(error)) {
         return new PortAbortError();
       }
-      return new SearchError(kind);
+      return new SearchError(kind, message);
     };
     try {
       let response: Response;
@@ -307,9 +323,9 @@ export class PhotonSuggestionProvider implements SuggestionProvider {
         );
       }
       try {
-        return await response.json();
+        return await readJsonWithin(response, this.#maxResponseBytes);
       } catch (error) {
-        throw failure(error, "failed");
+        throw failure(error, "failed", (error as ResponseBodyError).message);
       }
     } finally {
       clearTimeout(timer);

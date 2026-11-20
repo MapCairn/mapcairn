@@ -1,10 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { LayerError } from "@mapcairn/core";
 
-function tooLarge(maxBytes: number): LayerError {
-  return new LayerError(
-    "invalid",
+/**
+ * Why a body could not be read: it is over the limit (`too-large`), it stopped
+ * with an error before its end (`unreadable`, which includes a cancelled
+ * request, so a caller that holds a signal checks it first), or it is not
+ * JSON (`not-json`).
+ */
+export type ResponseBodyFailure = "too-large" | "unreadable" | "not-json";
+
+/**
+ * The only error {@link readJsonWithin} rejects with. It names no port: each
+ * adapter turns it into the error its own port reports.
+ */
+export class ResponseBodyError extends Error {
+  readonly reason: ResponseBodyFailure;
+
+  constructor(reason: ResponseBodyFailure, message: string) {
+    super(message);
+    this.name = "ResponseBodyError";
+    this.reason = reason;
+  }
+}
+
+function tooLarge(maxBytes: number): ResponseBodyError {
+  return new ResponseBodyError(
+    "too-large",
     `The response is larger than ${maxBytes} bytes.`,
   );
 }
@@ -35,15 +56,18 @@ async function readText(response: Response, maxBytes: number): Promise<string> {
 }
 
 /**
- * Reads a response as JSON, refusing one larger than `maxBytes`.
+ * Reads a response as JSON, refusing one larger than `maxBytes`. The only way
+ * an adapter reads a provider's body (`bodyReads.test.ts` holds them
+ * to it).
  *
  * @remarks The size is checked twice: against `Content-Length` when the
  *   server sends one, so an answer that says it is too large is never read,
  *   and again while reading, because the header can be missing or wrong (and
  *   describes the compressed size). Bytes are counted, not characters.
- * @throws `LayerError` `invalid` when the body is over the limit, cannot be
- *   read to its end (a cancelled request's body stops with an error, which
- *   the caller reads from its own signal), or is not JSON.
+ * @throws `ResponseBodyError`: `too-large` when the body is over the limit,
+ *   `unreadable` when it cannot be read to its end (a cancelled request's
+ *   body stops with an error, which the caller reads from its own signal),
+ *   `not-json` when it is not JSON.
  */
 export async function readJsonWithin(
   response: Response,
@@ -54,13 +78,13 @@ export async function readJsonWithin(
     throw tooLarge(maxBytes);
   }
   const text = await readText(response, maxBytes).catch((error: unknown) => {
-    throw error instanceof LayerError
+    throw error instanceof ResponseBodyError
       ? error
-      : new LayerError("invalid", "The response could not be read.");
+      : new ResponseBodyError("unreadable", "The response could not be read.");
   });
   try {
     return JSON.parse(text);
   } catch {
-    throw new LayerError("invalid", "The response is not JSON.");
+    throw new ResponseBodyError("not-json", "The response is not JSON.");
   }
 }

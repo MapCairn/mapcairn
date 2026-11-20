@@ -18,6 +18,7 @@ runSuggestionProviderContract(
       controls: {
         willReturn: (results) => provider.setDefaultResults(results),
         willFail: (kind) => provider.failWith(kind),
+        respondWithOversizeAnswer: () => provider.failWith("failed"),
         hold: () => {
           provider.holdNext();
         },
