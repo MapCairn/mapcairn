@@ -450,6 +450,11 @@ describe("scanSources", () => {
       "echo --dry-run && npm publish ./c.tgz",
     ],
     ["it before the command word", "npm --dry-run publish ./c.tgz"],
+    ["it as the package after --", "npm publish -- --dry-run"],
+    ["it inside a quoted package", 'npm publish "./c.tgz --dry-run"'],
+    ["it after an escaped space", "npm publish ./a.tgz x\\ --dry-run"],
+    ["it before a closing quote", "npm publish ./c.tgz --dry-run'"],
+    ["a quote left open", 'npm publish "./c.tgz --dry-run'],
     [
       "the option followed by a false value",
       "npm publish ./c.tgz --dry-run false",
@@ -458,10 +463,7 @@ describe("scanSources", () => {
       "the option followed by another word",
       "npm publish ./c.tgz --dry-run --tag next",
     ],
-    [
-      "the option negated before it, then a word",
-      "npm publish ./c.tgz --dry-run x",
-    ],
+    ["the option followed by a word", "npm publish ./c.tgz --dry-run x"],
   ])("does not take %s for a dry run in the rehearse job", (_name, command) => {
     const workflow = `jobs:\n  rehearse:\n    steps:\n      - run: ${command}\n`;
     expect(scan(".github/workflows/release.yml", workflow)).toEqual([
@@ -493,6 +495,19 @@ describe("scanSources", () => {
       ]);
     },
   );
+
+  it("does not take a dry run after a quoted line break that the YAML string has not decoded", () => {
+    const workflow = [
+      "jobs:",
+      "  rehearse:",
+      "    steps:",
+      '      - run: "npm publish ./b.tgz\\nnpm publish ./a.tgz --dry-run"',
+      "",
+    ].join("\n");
+    expect(
+      scan(".github/workflows/release.yml", workflow).length,
+    ).toBeGreaterThan(0);
+  });
 
   it("does not let a folded block hide a second publish after a dry run", () => {
     const workflow = [
