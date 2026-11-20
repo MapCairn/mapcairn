@@ -115,6 +115,22 @@ function place(name: string, top: number, height: number, width = 0) {
   });
 }
 
+/** Fakes where a slot sits across the chrome, from its left edge. */
+function span(name: string, left: number, width: number) {
+  const element = root().querySelector(`[data-chrome="${name}"]`);
+  if (!element) {
+    return;
+  }
+  Object.defineProperty(element, "offsetLeft", {
+    value: left,
+    configurable: true,
+  });
+  Object.defineProperty(element, "offsetWidth", {
+    value: width,
+    configurable: true,
+  });
+}
+
 /** Sizes the container, lays the slots out like a phone and reports a resize. */
 function resize(
   width: number,
@@ -458,13 +474,13 @@ describe("MapChrome layout", () => {
   it("raises the start and end slots above the bottom-centre slot by its own height, in the observer's callback, and not the slot itself", () => {
     mount();
     resize(390, 800);
-    expect(cssVar(chromeVars.bottomRaise)).toBe("0px");
+    expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
     // The slot's own height and the gap the row keeps to the bottom edge.
     place("bottom-centre", 800 - 12 - 88, 88);
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.bottomRaise)).toBe(`${-(88 + 12)}px`);
+    expect(cssVar(chromeVars.bottomStartRaise)).toBe(`${-(88 + 12)}px`);
     // The sheet's lift is a separate variable, so the slots slide with the
     // sheet and not with the toolbar.
     expect(cssVar(chromeVars.bottomLift)).toBe("0px");
@@ -472,7 +488,253 @@ describe("MapChrome layout", () => {
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.bottomRaise)).toBe("0px");
+    expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
+  });
+
+  describe("a slot the bottom-centre slot shares no width with", () => {
+    /** Lays out a desktop-sized row: readout at the start, credits at the end. */
+    function desktopRow(centre: { left: number; width: number }) {
+      mount();
+      resize(1440, 900);
+      span("bottom-start", 12, 112);
+      span("bottom-end", 1384, 44);
+      place("bottom-centre", 900 - 12 - 150, 150, centre.width);
+      span("bottom-centre", centre.left, centre.width);
+      act(() => {
+        observers.trigger();
+      });
+    }
+
+    it("holds still while a centred toolbar is nowhere near it", () => {
+      desktopRow({ left: 529, width: 382 });
+      expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
+      expect(cssVar(chromeVars.bottomEndRaise)).toBe("0px");
+      // Nothing is lifted, so the end stack keeps the room it had without the toolbar.
+      expect(surfaceValue.endStackMaxHeight).toBe(900 - 72 - (44 + 12) - 12);
+    });
+
+    it("rises over a toolbar that spans its width, by the toolbar's height and the gap", () => {
+      desktopRow({ left: 12, width: 1416 });
+      expect(cssVar(chromeVars.bottomStartRaise)).toBe(`${-(150 + 12)}px`);
+      expect(cssVar(chromeVars.bottomEndRaise)).toBe(`${-(150 + 12)}px`);
+    });
+
+    it("rises only the end slot for a toolbar that reaches the end and not the start", () => {
+      desktopRow({ left: 1000, width: 400 });
+      expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
+      expect(cssVar(chromeVars.bottomEndRaise)).toBe(`${-(150 + 12)}px`);
+    });
+
+    it("rises the map key alone for a toolbar that reaches the wider key and not the readout", () => {
+      mount({ mapKey: <div>key</div> });
+      resize(1440, 900);
+      span("bottom-start", 12, 112);
+      span("bottom-end", 1384, 44);
+      place("map-key", 600, 100);
+      span("map-key", 12, 154);
+      place("bottom-centre", 900 - 12 - 150, 150, 300);
+      span("bottom-centre", 177, 300);
+      act(() => {
+        observers.trigger();
+      });
+      expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
+      expect(cssVar(chromeVars.bottomEndRaise)).toBe("0px");
+      // The key stops a gap above the toolbar's top, from a gap above the row's top.
+      expect(cssVar(chromeVars.mapKeyRaise)).toBe(
+        `${900 - 12 - 150 - (900 - 12 - 44)}px`,
+      );
+    });
+
+    it("holds the map key still when the toolbar is clear of it", () => {
+      mount({ mapKey: <div>key</div> });
+      resize(1440, 900);
+      span("bottom-start", 12, 112);
+      place("map-key", 600, 100);
+      span("map-key", 12, 154);
+      place("bottom-centre", 900 - 12 - 150, 150, 300);
+      span("bottom-centre", 529, 300);
+      act(() => {
+        observers.trigger();
+      });
+      expect(cssVar(chromeVars.mapKeyRaise)).toBe("0px");
+    });
+
+    describe("the open credits popover", () => {
+      /** A desktop row with the credits popover in bottom-end, drawn at `popover`. */
+      function withPopover(
+        popover: { left: number; width: number } | null,
+        readout?: { top: number; height: number },
+      ) {
+        mount({
+          bottomEnd: (
+            <section
+              data-chrome="attribution-popover"
+              hidden={popover === null}
+            >
+              credits
+            </section>
+          ),
+        });
+        resize(1440, 900);
+        if (readout) {
+          place("bottom-start", readout.top, readout.height);
+        }
+        span("bottom-start", 12, 112);
+        span("bottom-end", 1384, 44);
+        place("bottom-centre", 900 - 12 - 150, 150, 465);
+        span("bottom-centre", 177, 465);
+        const element = root().querySelector<HTMLElement>(
+          '[data-chrome="attribution-popover"]',
+        );
+        if (element && popover) {
+          mockRect(element, { ...popover, top: 600, height: 120 });
+        }
+        act(() => {
+          observers.trigger();
+        });
+      }
+
+      it("rises over a toolbar it shares width with, though its button does not, in the observer's callback", () => {
+        // The toolbar spans 177 to 642; the popover starts at 590. The credits
+        // rest at 844 and the toolbar's top is at 738.
+        withPopover({ left: 590, width: 218 });
+        expect(cssVar(chromeVars.bottomEndRaise)).toBe("0px");
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe(
+          `${844 - (900 - 12 - 150)}px`,
+        );
+      });
+
+      it("takes the rise its transform already gives it over a taller readout off the extra rise, unless it clears the readout", () => {
+        // The readout is 44 px taller than the credits' slot, so the popover's
+        // transform already rises 44 px; the toolbar's top is 106 px above the credits.
+        withPopover({ left: 590, width: 218 }, { top: 800, height: 88 });
+        expect(cssVar(chromeVars.bottomEndRise)).toBe("44px");
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe(`${106 - 44}px`);
+      });
+
+      it("takes none off it when the popover clears the readout and so has no transform rise", () => {
+        withPopover({ left: 590, width: 218 }, { top: 800, height: 88 });
+        const element = root().querySelector<HTMLElement>(
+          '[data-chrome="attribution-popover"]',
+        );
+        if (!element) {
+          throw new Error("No popover");
+        }
+        element.dataset.readoutClear = "true";
+        act(() => {
+          observers.trigger();
+        });
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe("106px");
+      });
+
+      it("does not rise over a toolbar it shares no width with", () => {
+        withPopover({ left: 1100, width: 218 });
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe("0px");
+      });
+
+      it("does not rise while it is closed", () => {
+        withPopover(null);
+        expect(cssVar(chromeVars.popoverCentreRise)).toBe("0px");
+      });
+
+      it("measures again when it opens or moves beside the end stack, which resize nothing", async () => {
+        withPopover({ left: 1100, width: 218 });
+        const element = root().querySelector<HTMLElement>(
+          '[data-chrome="attribution-popover"]',
+        );
+        if (!element) {
+          throw new Error("No popover");
+        }
+        mockRect(element, { left: 590, top: 600, width: 218, height: 120 });
+        element.dataset.placement = "beside";
+        await vi.waitFor(() => {
+          expect(cssVar(chromeVars.popoverCentreRise)).toBe("106px");
+        });
+      });
+    });
+
+    it("hides the tour card under a toolbar that shares its width, and keeps it beside one that does not", () => {
+      mount({ tour: <div>tour</div> });
+      resize(844, 390, 247);
+      span("tour", 450, 320);
+      place("bottom-centre", 390 - 12 - 158, 158, 382);
+      span("bottom-centre", 231, 382);
+      act(() => {
+        observers.trigger();
+      });
+      expect(slot("tour")).toHaveAttribute("data-crowded", "true");
+      span("bottom-centre", 12, 200);
+      act(() => {
+        observers.trigger();
+      });
+      expect(slot("tour")).toHaveAttribute("data-crowded", "false");
+    });
+
+    it.each([
+      { short: 11, lifts: true },
+      { short: 12, lifts: false },
+      { short: 13, lifts: false },
+    ])(
+      "a toolbar that ends $short px short of the credits, without touching them, lifts them: $lifts",
+      ({ short, lifts }) => {
+        desktopRow({ left: 1384 - short - 100, width: 100 });
+        expect(cssVar(chromeVars.bottomEndRaise)).toBe(
+          lifts ? `${-(150 + 12)}px` : "0px",
+        );
+      },
+    );
+
+    describe("right to left", () => {
+      /** A tablet row on a mirrored page, the readout at the right, with the side panel open. */
+      function mirroredRow(centre: { left: number; width: number }) {
+        mount();
+        root().style.direction = "rtl";
+        resize(1024, 768);
+        span("bottom-start", 900, 112);
+        span("bottom-end", 12, 44);
+        place("bottom-centre", 768 - 12 - 150, 150, centre.width);
+        span("bottom-centre", centre.left, centre.width);
+        act(() => {
+          observers.trigger();
+        });
+        // The panel at the right asks 372 px of the readout and half of that of
+        // the toolbar, both towards the left.
+        act(() => {
+          surfaceValue.publishPanelEdge(372);
+        });
+      }
+
+      it("lifts the readout when the mirrored shift brings the toolbar over it", () => {
+        // The readout is then at 528 to 640 and the toolbar at 414 to 544.
+        mirroredRow({ left: 600, width: 130 });
+        expect(cssVar(chromeVars.bottomStartRaise)).toBe(`${-(150 + 12)}px`);
+      });
+
+      it("leaves the readout where it rests when the mirrored shift keeps the toolbar clear", () => {
+        // The readout is then at 528 to 640 and the toolbar at 314 to 414.
+        mirroredRow({ left: 500, width: 100 });
+        expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
+      });
+    });
+
+    it("measures again when the side panel moves the readout under a toolbar that did not reach it", () => {
+      mount();
+      resize(1024, 768);
+      span("bottom-start", 12, 112);
+      span("bottom-end", 968, 44);
+      place("bottom-centre", 768 - 12 - 150, 150, 200);
+      span("bottom-centre", 200, 200);
+      act(() => {
+        observers.trigger();
+      });
+      expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
+      // The panel asks the readout to move 372 px along, and the toolbar half of that.
+      act(() => {
+        surfaceValue.publishPanelEdge(372);
+      });
+      expect(cssVar(chromeVars.bottomStartRaise)).toBe(`${-(150 + 12)}px`);
+      expect(cssVar(chromeVars.bottomEndRaise)).toBe("0px");
+    });
   });
 
   it("treats anything shown in bottom-centre as an obstruction for the room it leaves", () => {
@@ -482,7 +744,7 @@ describe("MapChrome layout", () => {
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.bottomRaise)).toBe(`${-(40 + 12)}px`);
+    expect(cssVar(chromeVars.bottomStartRaise)).toBe(`${-(40 + 12)}px`);
     // The end stack stops a gap above the raised row.
     expect(surfaceValue.endStackMaxHeight).toBe(744 - 52 - 12 - 72);
   });
@@ -516,9 +778,9 @@ describe("MapChrome layout", () => {
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.bottomRaise)).not.toBe("0px");
+    expect(cssVar(chromeVars.bottomStartRaise)).not.toBe("0px");
     rerenderChrome({ bottomCentre: undefined });
-    expect(cssVar(chromeVars.bottomRaise)).toBe("0px");
+    expect(cssVar(chromeVars.bottomStartRaise)).toBe("0px");
   });
 
   it("keeps each slot's ref stable across renders", () => {
@@ -648,7 +910,7 @@ describe("MapChrome map key slot", () => {
     });
     const lift = 700 - 12 - (800 - 12);
     expect(cssVar(chromeVars.mapKeyLift)).toBe(`${744 - 12 - 688}px`);
-    expect(cssVar(chromeVars.bottomRaise)).toBe(`${lift}px`);
+    expect(cssVar(chromeVars.bottomStartRaise)).toBe(`${lift}px`);
   });
 
   it("hides while there is no room for the chip, and returns when there is", () => {
@@ -662,7 +924,7 @@ describe("MapChrome map key slot", () => {
     act(() => {
       observers.trigger();
     });
-    expect(cssVar(chromeVars.bottomRaise)).toBe(`${-(406 + 12)}px`);
+    expect(cssVar(chromeVars.bottomStartRaise)).toBe(`${-(406 + 12)}px`);
     expect(cssVar(chromeVars.mapKeyRoom)).toBe(`${512 - 12 - (60 + 12)}px`);
     // The render path lifts the row by the toolbar's top less the viewport
     // height, 150 - 568, the same -(406 + 12): the rooms it sets and the

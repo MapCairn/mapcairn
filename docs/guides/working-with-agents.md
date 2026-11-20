@@ -62,12 +62,14 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Open the pull request and follow the `land-pr` skill. Do not merge."
 - "Review pull request 130 with the `fresh-eyes-reviewer` role."
 - "Look at the running app and follow the `visual-check` skill."
+- "Review pull request 130 for security with the `security-reviewer` role."
+- "Check the documents in pull request 130 against the code and follow the `review-docs` skill."
 - "Write the Playwright tests for issue 123 and follow the `playwright-tests` skill."
 - "Shape issue 123 and follow the `shape-work` skill. Do not post on GitHub."
 - "Review the tests of pull request 130 and follow the `review-tests` skill."
 - "Ask what pull request 130 could do without and follow the `delete-first` skill."
 
-Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer`, `ui-verifier`, `architecture-reviewer`, `ux-reviewer`, `test-reviewer` or `lean-reviewer`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tier names are in `CLAUDE.md`; the generated agent files set no model.
+Where the tool has agent support, name the agent (`implementer`, `fresh-eyes-reviewer`, `ui-verifier`, `architecture-reviewer`, `ux-reviewer`, `test-reviewer`, `security-reviewer` or `lean-reviewer`) instead. Where it does not read the skill folder on its own, point it at `.agents/skills/<name>/SKILL.md`. The rules, including the limits on sub-agents and the model tiers by role, are in `AGENTS.md`. In Claude Code the tier names are in `CLAUDE.md`; the generated agent files set no model.
 
 When you start an agent, copy the brief block from `pick-up-issue` ("Briefing an agent") so it carries the checks, the clean-up and the report. For a free or smaller model, which follows a brief literally and fills a gap with plausible text, also fill in the block's `Wording:`, `Claims:` and `Before you open:` lines. An agent that another agent started does not start sub-agents: it does the simplify step and the review checklist inline, and its caller runs the independent review. Full local `e2e` and `a11y` runs are for layout, engine and test-seam changes; for the rest the agent runs the specs that cover its change and CI runs the full suites.
 
@@ -83,11 +85,15 @@ Three skills come before an issue is picked up. `shape-work` turns an idea or a 
 
 Two read-only agents review a design without having written it. `architecture-reviewer` runs the review in `design-solution` section 5 on a plan, design notes or a pull request, which is the non-author check `plan-change` asks for before a plan merges. In Claude Code it runs `opus`, the most capable tier, because `AGENTS.md` gives that tier to a design that decides a public API. `ux-reviewer` runs `design-ux` against an issue, plan or pull request and reports the missing states, routes and copy; it runs `sonnet`.
 
+`security-reviewer` runs the `review-security` skill on a pull request, a plan or a list of files: it threat-models the change and checks the Content-Security-Policy and its hashes, third-party origins, client error reporting and privacy, link and file parsing, markup injection, dependencies, GitHub Actions and release workflows, and prompt injection in what an agent reads. It reports each finding with its file, severity, an exploit scenario in words and a fix, writes no exploit code and never touches a secret. In Claude Code it runs `sonnet`; the skill says when to run it again on the most capable tier (a public API, a security boundary, the Content-Security-Policy, a workflow, or the release and publish path). It is read-only by instruction, like the other reviewers, and it never edits `SECURITY.md` or `PRIVACY.md`, which stay the maintainer's.
+
 ## Tests
 
 Two skills cover tests, beside `playwright-tests`, which writes and heals the browser specs. `design-tests` comes before the code: for each behaviour an issue or plan claims, it chooses the level (unit, property, contract suite, component, browser or build output), the fakes or the test seam, how timing is pinned without sleeping, and the wrong implementation each test would reject, and writes a test plan for the issue or the plan's "Tests" section. `review-tests` comes after: it reads each assertion for strength, runs the new tests against the code as it was before the change, and changes the code on purpose (a threshold, a branch, a factor, an ordering) in a scratch worktree to see whether a test fails. A change that survives is a finding, given with the case that would catch it. It also covers flakiness and the triage of a flaky test.
 
 The `test-reviewer` agent runs `review-tests` on a pull request. It is the one reviewer that edits files: only code in a scratch worktree under `.claude/worktrees/`, restored after each experiment and removed before it reports. In Claude Code it runs `sonnet`: once the skill names the mutations, applying them and reading the result is a well specified task, which is the default tier in `AGENTS.md`. The trials for #471 ran it on `sonnet`. Choose a more capable tier when the change is subtle, such as concurrency or a parser of hostile input.
+
+`review-docs` checks that a document is true, which the lint cannot: it reads each named command, file, export, token, route, setting and number against the code, and checks that nothing in `docs/plans/` is described as built. `node scripts/agents/docs-refs.mjs` lists the references that point at nothing. It has no agent of its own: the implementer runs it, and `fresh-eyes-reviewer` follows it for a pull request that changes documents.
 
 ## Keeping a change small
 

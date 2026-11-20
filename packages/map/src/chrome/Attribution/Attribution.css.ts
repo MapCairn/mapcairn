@@ -55,12 +55,12 @@ const popoverStep = tokens.space.xs;
 /**
  * A room `MapChrome` measured from the top of the bottom row, less the step
  * the popover sits above that row, so its top still stops a gap below the
- * slot above it.
+ * slot above it, and less the extra rise over a toolbar it shares width with.
  */
 function roomAboveStep(
   room: typeof chromeVars.bottomEndRoom | typeof chromeVars.bottomEndBesideRoom,
 ): string {
-  return `calc(${chromeVar(room, "100vh")} - ${popoverStep})`;
+  return `calc(${chromeVar(room, "100vh")} - ${popoverStep} - ${chromeVar(chromeVars.popoverCentreRise, "0px")})`;
 }
 
 /**
@@ -89,6 +89,12 @@ export const popover = style({
   position: "absolute",
   insetBlockEnd: `calc(100% + ${popoverStep})`,
   transform: `translateY(calc(-1 * ${chromeVar(chromeVars.bottomEndRise, "0px")}))`,
+  // The extra rise over a toolbar or message in the bottom-centre slot it shares
+  // width with. It is `translate`, which no transition covers, and `MapChrome`
+  // writes it in the observer callback that sees the slot change, so the popover
+  // is clear of the slot in that frame and never slides over it, unlike the
+  // readout's rise above, which is a `transform` that slides.
+  translate: `0 calc(-1 * ${chromeVar(chromeVars.popoverCentreRise, "0px")})`,
   insetInlineEnd: 0,
   zIndex: zLayer("chromeRaised"),
   boxSizing: "border-box",
