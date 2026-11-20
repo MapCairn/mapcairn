@@ -6,6 +6,8 @@ import type { Bounds, LatLng } from "../ports/geometry";
 
 const TURN = 360;
 const ANTIMERIDIAN = TURN / 2;
+/** Degrees below which two runs count as touching and a gap as closed, so rounding in a longitude cannot open a hairline gap. */
+const GAP_EPSILON = 1e-9;
 
 /** A run of longitude going east from `start` (in [-180, 180)) for `length` degrees. */
 interface Arc {
@@ -17,6 +19,17 @@ function isFinitePoint(point: LatLng): boolean {
   return Number.isFinite(point.lat) && Number.isFinite(point.lng);
 }
 
+/**
+ * The signed longitude step from one vertex to the next, the short way round.
+ * An edge of exactly half the globe has no short way, so it goes east, as
+ * `nearestLongitude` does for the drawing (`unwrapLongitudes`) and for
+ * `measureLineDistance`.
+ */
+function shortestStep(from: number, to: number): number {
+  const step = wrapLongitude(to - from);
+  return step === -ANTIMERIDIAN ? ANTIMERIDIAN : step;
+}
+
 /** The runs one path covers: each vertex, and each edge taken the short way round. */
 function arcsOfPath(path: readonly LatLng[]): Arc[] {
   const arcs: Arc[] = [];
@@ -26,7 +39,7 @@ function arcsOfPath(path: readonly LatLng[]): Arc[] {
     if (!next) {
       return;
     }
-    const step = wrapLongitude(next.lng - point.lng);
+    const step = shortestStep(point.lng, next.lng);
     const from = step >= 0 ? point.lng : next.lng;
     arcs.push({ start: wrapLongitude(from), length: Math.abs(step) });
   });
@@ -50,7 +63,7 @@ function mergeRuns(runs: readonly [number, number][]): [number, number][] {
   const merged: [number, number][] = [];
   for (const [start, end] of [...runs].sort((a, b) => a[0] - b[0])) {
     const last = merged.at(-1);
-    if (last && start <= last[1]) {
+    if (last && start <= last[1] + GAP_EPSILON) {
       last[1] = Math.max(last[1], end);
     } else {
       merged.push([start, end]);
@@ -79,7 +92,7 @@ function runOutsideWidestGap(merged: readonly [number, number][]): {
       run = { west: after[0], east: before[1] + TURN };
     }
   }
-  return gap > 0 ? run : { west: -ANTIMERIDIAN, east: ANTIMERIDIAN };
+  return gap > GAP_EPSILON ? run : { west: -ANTIMERIDIAN, east: ANTIMERIDIAN };
 }
 
 /**
@@ -98,7 +111,7 @@ function runOutsideWidestGap(merged: readonly [number, number][]): {
  *   -180 and an `east` of 180. Otherwise the box has the form of
  *   {@link boundsOfPoints}: `west` inside [-180, 180) and `east` not before it,
  *   past 180 across the antimeridian. An edge of exactly half the globe has
- *   no short way and is taken westward. Latitudes are clamped to valid
+ *   no short way and is taken eastward, as it is drawn and measured. Latitudes are clamped to valid
  *   coordinates, and an edge is a straight step in latitude.
  */
 export function boundsOfPaths(

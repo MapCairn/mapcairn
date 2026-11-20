@@ -89,10 +89,29 @@ describe("boundsOfPaths", () => {
     });
   });
 
-  it("takes an edge of exactly half the globe in one fixed direction", () => {
-    const bounds = boundsOfPaths([path([0, 0], [180, 0])]);
-    expect(bounds).toBeDefined();
-    expect((bounds?.east ?? 0) - (bounds?.west ?? 0)).toBe(180);
+  it("takes an edge of exactly half the globe eastward, as it is drawn and measured", () => {
+    const covered = { south: 0, north: 0 };
+    expect(boundsOfPaths([path([0, 0], [180, 0])])).toEqual({
+      ...covered,
+      west: 0,
+      east: 180,
+    });
+    expect(boundsOfPaths([path([180, 0], [0, 0])])).toEqual({
+      ...covered,
+      west: 180 - 360,
+      east: 0 + 0,
+    });
+  });
+
+  it("covers the whole circle for a wide ring with non-integer longitudes", () => {
+    expect(
+      boundsOfPaths([path([0.1, 0], [120.1, 0], [-119.9, 0], [0.1, 0])]),
+    ).toEqual({
+      south: 0,
+      west: -180,
+      north: 0,
+      east: 180,
+    });
   });
 
   it("covers a polygon around a pole with the whole circle of longitude", () => {
@@ -186,13 +205,74 @@ describe("boundsOfPaths, for any set of paths", () => {
             if (!next) {
               return;
             }
-            const step = wrapLongitude(next.lng - point.lng);
+            const turn = wrapLongitude(next.lng - point.lng);
+            const step = turn === -180 ? 180 : turn;
             for (let part = 1; part < 10; part += 1) {
               const lng = point.lng + (step * part) / 10;
               expect(insideRun(lng, bounds.west, bounds.east)).toBe(true);
             }
           });
         }
+      }),
+      PROPERTY_PARAMETERS,
+    );
+  });
+});
+
+const wholeDegrees = fc.array(
+  fc.array(fc.integer({ min: -180, max: 180 }), { minLength: 1, maxLength: 6 }),
+  { minLength: 1, maxLength: 3 },
+);
+
+/**
+ * The width a set of whole-degree paths must have, counted a different way:
+ * mark every whole degree a vertex or an edge reaches and every one-degree
+ * cell an edge covers (an edge of exactly half the globe goes eastward). The
+ * width is the circle less the longest run between two marked degrees that no
+ * edge covers.
+ */
+function expectedWidth(set: readonly (readonly number[])[]): number {
+  const degree = (lng: number) => (((lng + 180) % 360) + 360) % 360;
+  const reached = new Array<boolean>(360).fill(false);
+  const cellCovered = new Array<boolean>(360).fill(false);
+  for (const line of set) {
+    line.forEach((from, index) => {
+      reached[degree(from)] = true;
+      const to = line[index + 1];
+      if (to === undefined) {
+        return;
+      }
+      const turn = ((((to - from + 180) % 360) + 360) % 360) - 180;
+      const step = turn === -180 ? 180 : turn;
+      const start = step >= 0 ? from : to;
+      for (let offset = 0; offset < Math.abs(step); offset += 1) {
+        cellCovered[degree(start + offset)] = true;
+        reached[degree(start + offset + 1)] = true;
+      }
+    });
+  }
+  const marked = reached.flatMap((hit, at) => (hit ? [at] : []));
+  let widest = 0;
+  marked.forEach((at, index) => {
+    const next = marked[(index + 1) % marked.length] as number;
+    const distance = (next - at + 360) % 360 || 360;
+    const gap = distance === 1 && cellCovered[at] ? 0 : distance;
+    widest = Math.max(widest, gap);
+  });
+  return 360 - widest;
+}
+
+describe("boundsOfPaths, for whole-degree paths", () => {
+  it("is no wider than the edges and vertices need", () => {
+    fc.assert(
+      fc.property(wholeDegrees, (set) => {
+        const bounds = boundsOfPaths(
+          set.map((line) => line.map((lng) => ({ lat: 0, lng }))),
+        );
+        if (!bounds) {
+          throw new Error("A finite set has bounds.");
+        }
+        expect(bounds.east - bounds.west).toBe(expectedWidth(set));
       }),
       PROPERTY_PARAMETERS,
     );
