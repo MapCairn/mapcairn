@@ -26,7 +26,7 @@ Write one line for each acceptance criterion, each state from the states table, 
 
 ## 3. Choose the level
 
-Use the lowest level that can fail for the right reason, and one browser case per flow rather than per branch.
+Use the lowest level that can fail for the right reason, and one browser case per flow rather than per branch. Most changes use two or three levels; leave the others out.
 
 | Level        | Use it for                                                                                                    | Where and how                                                                                                                                                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,7 +41,7 @@ The component tests run in happy-dom, which has no layout, no real focus order a
 
 A build-output test runs in CI only where a step runs it. Before a test depends on CI or on a file another step writes, read the job in `.github/workflows/` and check the order: on #481 a rule keyed on `CI` failed the build job, because the coverage run, where `CI` is already set, comes before the build. Name the step that runs the test in the plan.
 
-A check that is itself the test (a release script leg, a lint script, a CI step) is unit-tested in its pure helpers, and its own failure path is shown once by hand: break its input, see the named failure, restore, and record it in the pull request, as #481 did with a renamed function in a copy of the built chunk. A leg that skips when its tool is missing is not a pass: say where a skip is a warning and where it must fail.
+A check that is itself the test (a release script leg, a lint script, a CI step) is unit-tested in its pure helpers with Vitest, and its own failure path is shown once by hand: break its input, see the named failure, restore, and record it in the pull request, as #481 did with a renamed function in a copy of the built chunk. A leg that skips when its tool is missing is not a pass: say where a skip is a warning and where it must fail. A check that starts a server or process stops it on failure too, and the plan names the port or process check that proves it.
 
 ## 4. Substitutes
 
@@ -66,7 +66,7 @@ For each test, write the wrong implementation it rejects. If you cannot name one
 - Source: where the same result could come from somewhere else (a registry copy instead of the packed tarball, a cached file, a default), check where it came from.
 - "Does nothing" cases are paired with a positive control through the same helpers, so a helper that never fires the event fails the pair (#447).
 - Accessibility: run `axeViolations` (`e2e/support/a11y.ts`) while the state under test is on screen, not after it has gone (#449). Name the keyboard route and the announcement each flow is tested for.
-- Hostile input, for anything that parses text from outside: empty, whitespace, wrong case, extra or missing arguments, out-of-range numbers, `NaN` and infinities, very long input, objects of the wrong shape or that throw when read. Valid input written every way the format allows (spaces or none, percentages, legacy and modern syntax) is hostile input too: #463 misread valid CSS.
+- Hostile input, for anything that parses text from outside: empty, whitespace, wrong case, extra or missing arguments, out-of-range numbers, `NaN` and infinities, very long input, objects of the wrong shape or that throw when read. Valid input written every way the format's specification allows (spaces or none, case, percentages, every unit, keywords, legacy and modern syntax) needs cases too, and so does invalid input the parser might accept rather than refuse: #463 misread valid CSS colours and accepted invalid ones.
 - A regular expression on input from outside runs in linear time, and HTML is parsed rather than matched by a hand-rolled tag pattern, which CodeQL flags as `js/bad-tag-filter` (#481).
 
 ## 7. The failing-first test
@@ -85,7 +85,7 @@ Fails first: `<file>` - "<test name>": <the assertion that fails today, and why>
 | Behaviour | Level | File | Substitutes and timing | Rejects |
 | --------- | ----- | ---- | ---------------------- | ------- |
 
-Runs in: <the CI job and step for each build-output or CI-dependent test, or "the usual unit and e2e jobs">.
+Runs in: <the job and step of `.github/workflows/` for each row; Vitest tests, `packages/core/src/lint` included, run in the `CI` workflow's coverage step, browser specs in `Playwright E2E`>.
 Not tested, and why: <each behaviour left out, or "none">.
 ```
 

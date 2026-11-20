@@ -35,7 +35,7 @@ Then read each new or changed test for these. The first three apply to any test;
 - **Negative only**: "nothing happens" with no positive control through the same helper, so a helper that never fires the event passes (#447).
 - **Wrong moment**: an accessibility scan or an assertion run after the state under test has gone (#449), or before an async step finished.
 - **Mock instead of result**: a call count or a `vi.mock` of the project's own module, where a fake and an observable result exist (`design-tests` section 4).
-- **Parser cases**: for code that reads text from outside, list the valid forms the format allows (spacing, case, legacy and modern syntax, units, percentages, optional parts) and the hostile ones (`design-tests` section 6), and name each form no case covers. On #463 the review found valid CSS colours the parser misread.
+- **Parser cases**: for code that reads text from outside, list from the format's own specification the valid forms it allows (spacing, case, legacy and modern syntax, every unit, percentages, keywords such as `none`, optional and clamped parts) and the invalid ones (`design-tests` section 6). Then run each form no case covers through the parser in a temporary test (section 4 says how) and report what it returns: a valid form misread, and an invalid form accepted, are both findings. On #463 this found `rgb()` channel percentages read as 0 to 100, hue units other than degrees ignored and `none` giving `NaN`.
 - **Hand-rolled HTML or tag patterns** in a test or a check: CodeQL flags them as `js/bad-tag-filter` (#481). Parse, or match case-insensitively with tolerant whitespace.
 
 ## 3. Without the change
