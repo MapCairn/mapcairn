@@ -280,6 +280,41 @@ describe("@mapcairn/map dist", () => {
   });
 });
 
+describe("@mapcairn/theme createThemeStylesheet", () => {
+  it("writes only custom property names that the published tokens.css declares", async () => {
+    const entry = pathToFileURL(
+      path.join(folderOf("theme"), "dist/index.js"),
+    ).href;
+    const { createThemeStylesheet } = (await import(entry)) as {
+      createThemeStylesheet: (
+        override: unknown,
+        options: { scope: string },
+      ) => { ok: boolean; css?: string };
+    };
+    const result = createThemeStylesheet(
+      {
+        colour: {
+          light: {
+            accent: "#0b5c3a",
+            accentTint: "#d9efe4",
+            surface: "#ffffffee",
+          },
+          dark: { accent: "#7fd9aa", accentTint: "#17382a" },
+        },
+      },
+      { scope: ".brand" },
+    );
+    const written = new Set(result.css?.match(/--[\w-]+(?=:)/g));
+    const declared = read("theme", "tokens.css");
+
+    expect(result.ok).toBe(true);
+    expect(written.size).toBeGreaterThan(0);
+    for (const name of written) {
+      expect(declared, name).toContain(`${name}:`);
+    }
+  });
+});
+
 describe("@mapcairn/core contracts.d.ts", () => {
   it("holds nothing that makes its copy of a declaration differ from the one in index.d.ts", () => {
     // The two rolled-up files repeat the declarations they share, so a type

@@ -1,8 +1,45 @@
 # `@mapcairn/react`
 
-Generic React hooks for MapCairn apps. No map-engine, domain-data or theme dependency, and no import of another MapCairn package.
+Generic React hooks for MapCairn apps. Use it when you want these hooks without the map interface; `@mapcairn/map` uses them too. It has no map engine, domain-data or theme dependency and imports no other MapCairn package.
 
-## Exports
+**Status:** not published to npm yet. The install commands below work from the first release; until then, use the packages from a clone of the [repository](https://github.com/MapCairn/mapcairn).
+
+## Install
+
+```bash
+npm install @mapcairn/react
+pnpm add @mapcairn/react
+yarn add @mapcairn/react
+```
+
+React 19 is a peer dependency, and your app already has it. The package is ESM only: it has no `main` field and no CommonJS build. A TypeScript project needs `moduleResolution` set to `node16`, `nodenext` or `bundler`; `node10` is not supported.
+
+## Usage
+
+Register a [WebMCP](https://webmachinelearning.github.io/webmcp/) tool for as long as a component is mounted:
+
+```tsx
+import { useModelContextTool } from "@mapcairn/react";
+
+export function ShowCairnsTool({ onShow }: { readonly onShow: () => void }) {
+  useModelContextTool({
+    name: "show-cairns",
+    description: "Turns on the Cairns layer.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    execute: () => {
+      onShow();
+      return { content: [{ type: "text", text: "The Cairns layer is on." }] };
+    },
+  });
+  return null;
+}
+```
+
+## What it exports
 
 | Hook or export                                                 | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -17,7 +54,10 @@ Notes:
 
 Theme and system-preference handling is not here. The theme choice is a `SettingsStore` and `ThemeSource` port in `@mapcairn/core`, read in the interface through `useTheme` in `@mapcairn/map`.
 
-## What doesn't belong here
+## Licence
 
-- A map engine, map rendering, or any dependency on `@mapcairn/map`, `@mapcairn/core` or `@mapcairn/theme`.
-- Domain data or app-specific values such as colours and storage keys.
+`@mapcairn/react` is licensed under AGPL-3.0-only, and the [licence text](https://github.com/MapCairn/mapcairn/blob/main/packages/react/LICENSE) comes with the package. If you ship it in a product, or let people use a modified version over a network, you must publish the corresponding source under the same licence. The SDK packages depend only on permissively licensed packages. The [licence section of the repository README](https://github.com/MapCairn/mapcairn#licence) says more, including how to talk about other terms for closed-source use.
+
+## Contributing and changes
+
+The source and the issue tracker are in the [repository](https://github.com/MapCairn/mapcairn); file a bug in the [issue tracker](https://github.com/MapCairn/mapcairn/issues). Read [`CONTRIBUTING.md`](https://github.com/MapCairn/mapcairn/blob/main/CONTRIBUTING.md) before you send a pull request. Changes between releases are listed in [`CHANGELOG.md`](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md).

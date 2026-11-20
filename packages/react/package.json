@@ -3,6 +3,22 @@
   "version": "0.0.0",
   "description": "Generic React hooks for MapCairn applications",
   "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MapCairn/mapcairn.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/MapCairn/mapcairn/tree/main/packages/react#readme",
+  "bugs": {
+    "url": "https://github.com/MapCairn/mapcairn/issues"
+  },
+  "keywords": [
+    "mapcairn",
+    "react",
+    "hooks",
+    "map",
+    "webmcp"
+  ],
   "private": true,
   "publishConfig": {
     "access": "public"

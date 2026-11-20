@@ -22,6 +22,13 @@ export type {
   PairKind,
   ThemeColourRole,
 } from "./contrastPairs";
+export {
+  createThemeStylesheet,
+  type ThemeStylesheet,
+  type ThemeStylesheetCreated,
+  type ThemeStylesheetOptions,
+  type ThemeStylesheetRefused,
+} from "./createThemeStylesheet";
 export { mapOverlayTokens } from "./mapOverlayTokens";
 export {
   blur,
