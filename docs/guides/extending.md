@@ -27,6 +27,45 @@ What an app of your own provides:
 - `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, and `FocusRegistryProvider` around `MapChrome`.
 - The services. Fakes are enough to see the interface; a real app writes an adapter for each port it needs. A map needs a `MapAdapter` over MapLibre GL JS with its engine styles: `packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts` and `packages/web/src/adapters/mapEngine.css.ts` are the reference, and `runMapAdapterContract` from `@mapcairn/core/contracts` checks yours against the port.
 
+## Theme the SDK with your own colours
+
+`createThemeStylesheet` in `@mapcairn/theme` makes the stylesheet that gives the SDK's interface your own colours, and refuses a theme that is below WCAG 2.2 AA. It covers the 14 interface colour roles (`surface`, `surfaceRaised`, `text`, `textMuted`, `accent`, `accentTint`, `accentContrast`, `hairline`, `controlBoundary`, `danger`, `dangerTint`, `scrim`, `focusRing`, `focusRingInner`), in light and dark. It does not change the font, the page background, the map overlay colours or the data palette.
+
+1. Put a wrapper with a class or an id that you own around the `MapView` and its chrome. The SDK adds no markup or attribute for this.
+2. Generate the stylesheet in your build, a script or a route, from the same installed `@mapcairn/theme` that provides `tokens.css`. The custom property names it writes are generated and private, so the two must come from one version:
+
+   ```ts
+   import { createThemeStylesheet } from "@mapcairn/theme";
+
+   const result = createThemeStylesheet(
+     {
+       colour: {
+         light: { accent: "#0b5c3a", accentTint: "#d9efe4" },
+         dark: { accent: "#7fd9aa", accentTint: "#17382a" },
+       },
+     },
+     { scope: ".brand" },
+   );
+   if (!result.ok) {
+     // result.findings holds every pair, with the ones that fail marked
+     // `passes: false`; result.invalid and result.invalidScope say what could
+     // not be used. There is no CSS to serve.
+     throw new Error("The theme is below WCAG 2.2 AA or unusable");
+   }
+   // Write result.css to a file your site serves, such as /brand-theme.css.
+   ```
+
+3. Serve the file from your own origin and link it after the SDK's stylesheets: `<link rel="stylesheet" href="/brand-theme.css">`. It is a plain stylesheet, so a policy with `style-src 'self'` accepts it (see [A content security policy for a host](content-security-policy.md#style-src)), it needs no nonce and it shows no flash.
+
+What to know:
+
+- The scope is `:root`, `#id` or `.class` with an ASCII name. Anything else, including a selector list, is refused. Two maps with different themes are two wrappers, two scopes and two calls.
+- The rules read `data-theme` on `<html>` (`light` or `dark`), or the system's colour scheme when it is not set. A `ThemeSource` of your own must set that attribute, as the one in `examples/embed` does.
+- The theme is skipped in high-contrast (`prefers-contrast: more`) and forced-colours modes, which keep the SDK's own values.
+- Where the surface is translucent, the stylesheet also sets an opaque surface for browsers without `backdrop-filter` and for reduced transparency, and sets the inner focus ring to it unless you chose one. The check covers those values.
+- A tooltip renders in a portal under `body`, so a `#id` or `.class` scope does not reach it and it keeps the SDK's colours. Use `:root` to theme the whole page, or accept the SDK's tooltip.
+- Each colour must be hex, `rgb()`/`rgba()` or `oklch()`, and is written back as hex. `checkThemeContrast` reports the same findings without producing CSS, for a test of your own.
+
 ## Add a basemap
 
 Defining a basemap in the SDK and offering it on a host are separate. `BASEMAPS` holds every basemap the SDK defines (seven today). The reference site does not offer them all: `packages/web/src/basemaps/hostBasemaps.ts` lists the ids it offers, in picker order (six today), and builds its catalogue from them. Defining a basemap does not put it on the site.

@@ -290,8 +290,8 @@ function refused(
  * Total: it never throws. A tooltip renders in a portal outside the scope, so
  * it keeps the SDK's colours in a `#id` or `.class` scope.
  *
- * @param override The colours to change, per theme.
- * @param options The scope to apply them in.
+ * @param override - The colours to change, per theme.
+ * @param options - The scope to apply them in.
  * @returns The stylesheet and the findings, or the reasons it was refused.
  */
 export function createThemeStylesheet(
