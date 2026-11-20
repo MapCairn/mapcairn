@@ -13,7 +13,7 @@ Improve the Lighthouse scores where the cause is real, and stop where the remain
 
 ## How it was measured
 
-Lighthouse 13.4.1 against the production build served as CI serves it (`npm run preview`), mobile (the CI preset) five runs and desktop three runs per state, medians with the range. The same tool against the production site, three runs each, with the analytics beacon blocked so audit runs are not counted as visits. The latest CI run on `main` (b97b21ce) for reference. The local machine is slower than Lighthouse's reference device, so local mobile figures are worse than CI's; compare states, not machines.
+Lighthouse 13.4.1 against the production build served as CI serves it (`npm run preview -w @mapcairn/web`), mobile (the CI preset) five runs and desktop three runs per state, medians with the range. The same tool against the production site, three runs each, with the analytics beacon blocked so audit runs are not counted as visits. The latest CI run on `main` (b97b21ce) for reference. The local machine is slower than Lighthouse's reference device, so local mobile figures are worse than CI's; compare states, not machines.
 
 ## Findings
 

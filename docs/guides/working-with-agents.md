@@ -62,6 +62,7 @@ Tell the agent the issue and the skill, in your own words. For example:
 - "Open the pull request and follow the `land-pr` skill. Do not merge."
 - "Review pull request 130 with the `fresh-eyes-reviewer` role."
 - "Look at the running app and follow the `visual-check` skill."
+- "Check the documents in pull request 130 against the code and follow the `review-docs` skill."
 - "Write the Playwright tests for issue 123 and follow the `playwright-tests` skill."
 - "Shape issue 123 and follow the `shape-work` skill. Do not post on GitHub."
 - "Review the tests of pull request 130 and follow the `review-tests` skill."
@@ -87,6 +88,8 @@ Two read-only agents review a design without having written it. `architecture-re
 Two skills cover tests, beside `playwright-tests`, which writes and heals the browser specs. `design-tests` comes before the code: for each behaviour an issue or plan claims, it chooses the level (unit, property, contract suite, component, browser or build output), the fakes or the test seam, how timing is pinned without sleeping, and the wrong implementation each test would reject, and writes a test plan for the issue or the plan's "Tests" section. `review-tests` comes after: it reads each assertion for strength, runs the new tests against the code as it was before the change, and changes the code on purpose (a threshold, a branch, a factor, an ordering) in a scratch worktree to see whether a test fails. A change that survives is a finding, given with the case that would catch it. It also covers flakiness and the triage of a flaky test.
 
 The `test-reviewer` agent runs `review-tests` on a pull request. It is the one reviewer that edits files: only code in a scratch worktree under `.claude/worktrees/`, restored after each experiment and removed before it reports. In Claude Code it runs `sonnet`: once the skill names the mutations, applying them and reading the result is a well specified task, which is the default tier in `AGENTS.md`. The trials for #471 ran it on `sonnet`. Choose a more capable tier when the change is subtle, such as concurrency or a parser of hostile input.
+
+`review-docs` checks that a document is true, which the lint cannot: it reads each named command, file, export, token, route, setting and number against the code, and checks that nothing in `docs/plans/` is described as built. `node scripts/agents/docs-refs.mjs` lists the references that point at nothing. It has no agent of its own: the implementer runs it, and `fresh-eyes-reviewer` follows it for a pull request that changes documents.
 
 ## The priority list
 
