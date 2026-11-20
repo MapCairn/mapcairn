@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
+import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
 import {
   CONFIRM_DELAYS_MS,
@@ -12,6 +13,7 @@ import {
   privateSdkManifests,
   ReleaseRefused,
   readRegistryState,
+  readVersionDocument,
   tarballVersionProblems,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/verifyRelease.mjs";
@@ -559,6 +561,74 @@ describe("confirmPublished", () => {
         wait: async () => {},
       }),
     ).rejects.toThrow(/answered "0\.0\.9"/);
+  });
+});
+
+describe("readVersionDocument", () => {
+  /** An HTTP getter that answers with a status and a body, and records the URL. */
+  function getter(statusCode: number, body: string) {
+    const urls: string[] = [];
+    const get = (
+      url: string,
+      _options: unknown,
+      onResponse: (response: EventEmitter) => void,
+    ) => {
+      urls.push(url);
+      const request = new EventEmitter();
+      const response = new EventEmitter() as EventEmitter & {
+        statusCode: number;
+      };
+      response.statusCode = statusCode;
+      queueMicrotask(() => {
+        onResponse(response);
+        response.emit("data", Buffer.from(body));
+        response.emit("end");
+      });
+      return request;
+    };
+    return { urls, get: get as never };
+  }
+
+  it("reads the scoped name in its %2f form and reports the version of a 200", async () => {
+    const { urls, get } = getter(200, JSON.stringify({ version: "0.1.0" }));
+    expect(await readVersionDocument("@mapcairn/core", "0.1.0", get)).toEqual({
+      status: 0,
+      stdout: "0.1.0",
+      stderr: "",
+    });
+    expect(urls).toEqual(["https://registry.npmjs.org/@mapcairn%2fcore/0.1.0"]);
+  });
+
+  it("gives an empty version for a 200 without one, so it is never taken for the published version", async () => {
+    const { get } = getter(200, "{}");
+    const answer = await readVersionDocument("@mapcairn/core", "0.1.0", get);
+    expect(answer.status).toBe(0);
+    expect(answer.stdout).toBe("");
+    expect(() => packageState(answer, "0.1.0")).toThrow(/answered ""/);
+  });
+
+  it("answers not found for a 404, in the form isNotFound reads", async () => {
+    const { get } = getter(404, '{"error":"Not found"}');
+    const answer = await readVersionDocument("@mapcairn/core", "0.1.0", get);
+    expect(answer.status).toBe(1);
+    expect(packageState(answer, "0.1.0")).toBe("missing");
+  });
+
+  it("treats a redirect, a server error and bad JSON as errors, never as not found", async () => {
+    for (const [status, body] of [
+      [301, ""],
+      [302, ""],
+      [500, "oops"],
+      [503, "oops"],
+      [200, "<html>"],
+    ] as const) {
+      const { get } = getter(status, body);
+      const answer = await readVersionDocument("@mapcairn/core", "0.1.0", get);
+      expect(answer.status, String(status)).toBe(1);
+      expect(() => packageState(answer, "0.1.0"), String(status)).toThrow(
+        /Could not ask the registry/,
+      );
+    }
   });
 });
 

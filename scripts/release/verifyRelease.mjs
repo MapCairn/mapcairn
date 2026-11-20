@@ -446,13 +446,14 @@ export async function confirmPublished({
  *
  * @param {string} name An SDK package name.
  * @param {string} version
+ * @param {typeof https.get} [get] The HTTP getter, replaced in tests.
  * @returns {Promise<RegistryAnswer>}
  */
-function readVersionDocument(name, version) {
+export function readVersionDocument(name, version, get = https.get) {
   const url = `${REGISTRY_URL}/${name.replace("/", "%2f")}/${version}`;
   const failed = (stderr) => ({ status: 1, stdout: "", stderr });
   return new Promise((resolve) => {
-    const request = https.get(
+    const request = get(
       url,
       { headers: { accept: "application/json" }, timeout: 30_000 },
       (response) => {
