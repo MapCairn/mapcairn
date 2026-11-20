@@ -9,10 +9,10 @@ import {
   decideDispatch,
   decidePush,
   distTagFor,
+  packagePublishState,
   packageState,
   privateSdkManifests,
   ReleaseRefused,
-  readRegistryState,
   readVersionDocument,
   tarballVersionProblems,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
@@ -269,39 +269,6 @@ describe("decideDispatch", () => {
   });
 });
 
-describe("readRegistryState", () => {
-  const found = { status: 0, stdout: "0.1.0-rc.1\n", stderr: "" };
-  const missing = {
-    status: 1,
-    stdout: "",
-    stderr: "npm error code E404\nnpm error 404 Not Found",
-  };
-
-  it("is on npm when every package is found", () => {
-    expect(readRegistryState(() => found)).toEqual({
-      onNpm: true,
-      missing: [],
-    });
-  });
-
-  it("names the packages the registry does not have", () => {
-    const state = readRegistryState((name: string) =>
-      name === "@mapcairn/theme" ? missing : found,
-    );
-    expect(state).toEqual({ onNpm: false, missing: ["@mapcairn/theme"] });
-  });
-
-  it("fails on an answer that is neither found nor not found, so an outage is not read as a first publish", () => {
-    expect(() =>
-      readRegistryState(() => ({
-        status: 1,
-        stdout: "",
-        stderr: "npm error code ECONNRESET",
-      })),
-    ).toThrow(/ECONNRESET/);
-  });
-});
-
 describe("tarballVersionProblems", () => {
   it("passes tarballs whose manifests carry the version", () => {
     expect(
@@ -394,6 +361,50 @@ describe("packageState", () => {
     expect(() =>
       packageState({ status: 0, stdout: "", stderr: "" }, "0.1.0"),
     ).toThrow();
+  });
+});
+
+describe("packagePublishState", () => {
+  const found = { status: 0, stdout: "0.1.0\n", stderr: "" };
+  const notFound = {
+    status: 1,
+    stdout: "",
+    stderr: "npm error code E404\nnpm error 404 Not Found",
+  };
+  const outage = {
+    status: 1,
+    stdout: "",
+    stderr: "npm error code ECONNRESET",
+  };
+  const neverRead = () => {
+    throw new Error("the package was read when it should not have been");
+  };
+
+  it("is published when the version is on npm, without a second read", () => {
+    expect(packagePublishState(found, "0.1.0", neverRead)).toBe("published");
+  });
+
+  it("is missing when the package is on npm and this version is not", () => {
+    expect(
+      packagePublishState(notFound, "0.1.0", () => ({
+        status: 0,
+        stdout: "0.0.9\n",
+        stderr: "",
+      })),
+    ).toBe("missing");
+  });
+
+  it("is new when npm has no such package at all", () => {
+    expect(packagePublishState(notFound, "0.1.0", () => notFound)).toBe("new");
+  });
+
+  it("fails on an answer that is neither found nor not found, so an outage is never read as a first publish", () => {
+    expect(() => packagePublishState(outage, "0.1.0", neverRead)).toThrow(
+      /ECONNRESET/,
+    );
+    expect(() => packagePublishState(notFound, "0.1.0", () => outage)).toThrow(
+      /ECONNRESET/,
+    );
   });
 });
 

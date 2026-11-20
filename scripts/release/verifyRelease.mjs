@@ -2,9 +2,9 @@
 // Copyright MapCairn contributors
 /**
  * Decides, for the `verify` job of `.github/workflows/release.yml`, whether a
- * run has something to release, and whether the four packages are already on
- * npm. The rules live here and not in the workflow so they have tests, and so
- * nothing from a pull request or an input is ever pasted into a shell line.
+ * run has something to release. The rules live here and not in the workflow so
+ * they have tests, and so nothing from a pull request or an input is ever
+ * pasted into a shell line.
  *
  *   node scripts/release/verifyRelease.mjs decide
  *   node scripts/release/verifyRelease.mjs tarballs <version> <folder>
@@ -15,7 +15,8 @@
  * `workflow_dispatch`), `MODE` and `VERSION_INPUT` (the dispatch inputs),
  * `GITHUB_SHA`, `GITHUB_OUTPUT` (where the job outputs go) and `GH_TOKEN`
  * (to read the pull request). It writes the outputs `release`, `version`,
- * `prerelease` and `on-npm`.
+ * `prerelease`, `dist-tag` and `private`. Whether a package is on npm is read
+ * per package, by the publishing loop, through `package-state`.
  *
  * Exit codes: 0 decided (a push that is not a release is a green run that
  * skips the later jobs), 1 a dispatched run was refused or something could
@@ -288,33 +289,6 @@ export function decideDispatch({ mode, version, manifestVersions, tags }) {
 }
 
 /**
- * Asks the registry whether each SDK package exists. A package the registry
- * says it does not have counts as missing; any other failure (a network error,
- * an outage) throws, so a first publish is never assumed from an error.
- *
- * @param {(name: string) => { status: number | null, stdout: string, stderr: string }} view Runs `npm view <name> version`.
- * @returns {{ onNpm: boolean, missing: string[] }}
- */
-export function readRegistryState(view) {
-  /** @type {string[]} */
-  const missing = [];
-  for (const name of SDK_NAMES) {
-    const result = view(name);
-    if (result.status === 0) {
-      continue;
-    }
-    if (isNotFound(result.stderr)) {
-      missing.push(name);
-      continue;
-    }
-    throw new Error(
-      `Could not ask the registry about ${name}:\n${result.stderr.trim()}`,
-    );
-  }
-  return { onNpm: missing.length === 0, missing };
-}
-
-/**
  * The SDK manifests that set `private`, which npm refuses to publish. A
  * manifest that cannot be read counts as private.
  *
@@ -396,6 +370,35 @@ export function packageState(result, version) {
   }
   if (isNotFound(result.stderr)) {
     return "missing";
+  }
+  throw new Error(`Could not ask the registry:\n${result.stderr.trim()}`);
+}
+
+/**
+ * What the registry says about one package for the publishing loop, which
+ * handles each package on its own: `published` (this version is on npm, so
+ * skip it), `missing` (the package is on npm and this version is not, so
+ * publish it) or `new` (npm has no such package, so trusted publishing cannot
+ * publish it: its first upload is by hand). The package is read only when the
+ * version is not found, and an answer that is neither found nor not found
+ * throws, so an outage is never taken for a first publish.
+ *
+ * @param {RegistryAnswer} versionResult The result of `npm view <name>@<version> version`.
+ * @param {string} version
+ * @param {() => RegistryAnswer} readPackage Runs `npm view <name> version`.
+ * @returns {"published" | "missing" | "new"}
+ * @throws {Error} On any other answer, with npm's error text.
+ */
+export function packagePublishState(versionResult, version, readPackage) {
+  if (packageState(versionResult, version) === "published") {
+    return "published";
+  }
+  const result = readPackage();
+  if (result.status === 0) {
+    return "missing";
+  }
+  if (isNotFound(result.stderr)) {
+    return "new";
   }
   throw new Error(`Could not ask the registry:\n${result.stderr.trim()}`);
 }
@@ -617,38 +620,36 @@ function decideFromEnvironment() {
   }
   console.log(decision.reason);
 
-  let onNpm = false;
-  if (decision.release) {
-    const state = readRegistryState((name) => {
-      const result = runNpm(["view", name, "version", ...REGISTRY_READ_FLAGS], {
-        cwd: ROOT,
-      });
-      return {
-        status: result.status,
-        stdout: result.stdout ?? "",
-        stderr: result.stderr ?? "",
-      };
-    });
-    onNpm = state.onNpm;
-    if (!onNpm) {
-      console.log(
-        `::notice::${state.missing.join(", ")} ${state.missing.length === 1 ? "is" : "are"} not on npm yet, so the npm job publishes nothing unless this is a rehearsal. The first upload is by hand (docs/guides/releasing.md).`,
-      );
-    }
-  }
   writeOutputs({
     release: String(decision.release),
     version: decision.version ?? "",
     prerelease: String(decision.prerelease),
     "dist-tag": decision.distTag,
-    "on-npm": String(onNpm),
     private: String(decision.release && privateAtHead().length > 0),
   });
 }
 
 /**
- * Prints `published` or `missing` for one package version, and fails on
- * any other answer, so the publishing loop never treats an error as "not there".
+ * Runs `npm view <spec> version` against the registry.
+ *
+ * @param {string} spec A package name, with a version when one is asked for.
+ * @returns {RegistryAnswer}
+ */
+function readFromNpm(spec) {
+  const result = runNpm(["view", spec, "version", ...REGISTRY_READ_FLAGS], {
+    cwd: ROOT,
+  });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  };
+}
+
+/**
+ * Prints `published`, `missing` or `new` for one package version
+ * (`packagePublishState`), and fails on any other answer, so the publishing
+ * loop never treats an error as "not there".
  *
  * @param {string} name An SDK package name.
  * @param {string} version
@@ -660,18 +661,9 @@ function printPackageState(name, version) {
   if (parseVersion(version) === null) {
     throw new ReleaseRefused(`${JSON.stringify(version)} is not a version.`);
   }
-  const result = runNpm(
-    ["view", `${name}@${version}`, "version", ...REGISTRY_READ_FLAGS],
-    { cwd: ROOT },
-  );
   console.log(
-    packageState(
-      {
-        status: result.status,
-        stdout: result.stdout ?? "",
-        stderr: result.stderr ?? "",
-      },
-      version,
+    packagePublishState(readFromNpm(`${name}@${version}`), version, () =>
+      readFromNpm(name),
     ),
   );
 }
@@ -692,17 +684,7 @@ async function confirmFromRegistry(name, version) {
   await confirmPublished({
     name,
     version,
-    view: () => {
-      const result = runNpm(
-        ["view", `${name}@${version}`, "version", ...REGISTRY_READ_FLAGS],
-        { cwd: ROOT },
-      );
-      return {
-        status: result.status,
-        stdout: result.stdout ?? "",
-        stderr: result.stderr ?? "",
-      };
-    },
+    view: () => readFromNpm(`${name}@${version}`),
     viewVersion: () => readVersionDocument(name, version),
     wait: (milliseconds) =>
       new Promise((resolve) => setTimeout(resolve, milliseconds)),

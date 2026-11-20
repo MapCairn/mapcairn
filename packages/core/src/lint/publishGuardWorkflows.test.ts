@@ -309,13 +309,15 @@ describe("release.yml", () => {
       "needs.check.result == 'success'",
       "needs.verify.result == 'success'",
       "needs.verify.outputs.release == 'true'",
-      "needs.verify.outputs.on-npm == 'true'",
       "inputs.mode != 'rehearse'",
       "refs/heads/main",
     ]) {
       expect(condition, required).toContain(required);
     }
     expect(condition).not.toContain("||");
+    // The registry is read per package in the publishing step (#539), so a
+    // package npm does not have yet never skips the whole set.
+    expect(condition).not.toContain("on-npm");
   });
 
   it("skips a package already on npm with a notice, and stops on any registry error", () => {
@@ -476,7 +478,7 @@ function runPublishStep(input: {
   mode: string;
   version?: string;
   distTag?: string;
-  /** Per package, what `package-state` prints: published, missing or error. */
+  /** Per package, what `package-state` prints: published, missing, new or error. */
   states: Record<string, string>;
   /** Packages whose publish command fails. */
   publishFails?: string[];
@@ -665,6 +667,80 @@ describe.skipIf(process.platform === "win32")(
       expect(run.status).not.toBe(0);
       const published = actions(run).filter((call) => call.startsWith("npm "));
       expect(published).toHaveLength(2);
+    });
+
+    it("publishes the packages npm has and then fails, naming the one it does not have and what to do, when one is new and three are on npm", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: { ...ALL_MISSING, theme: "new" },
+      });
+      expect(run.status).not.toBe(0);
+      expect(actions(run)).toEqual(
+        ["core", "react", "map"].flatMap((name) => [
+          `npm publish ${tarball(name)} --ignore-scripts --tag next --provenance`,
+          `node scripts/release/verifyRelease.mjs confirm-published @mapcairn/${name} 0.1.0-rc.2`,
+        ]),
+      );
+      expect(run.stdout).toContain("::error::");
+      expect(run.stdout).toContain("@mapcairn/theme is not on npm yet");
+      expect(run.stdout).toContain("by hand");
+      expect(run.stdout).toContain("trusted publisher");
+      expect(run.stdout).toContain("Re-run failed jobs");
+    });
+
+    it("fails and publishes nothing when one package is new and the other three are already on npm at this version", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: {
+          core: "published",
+          react: "published",
+          theme: "published",
+          map: "new",
+        },
+      });
+      expect(run.status).not.toBe(0);
+      expect(actions(run)).toEqual([]);
+      expect(run.stdout).toContain("@mapcairn/map is not on npm yet");
+    });
+
+    it("names every new package, publishes none of them, and fails when no package is on npm", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: { core: "new", react: "new", theme: "new", map: "new" },
+      });
+      expect(run.status).not.toBe(0);
+      expect(actions(run)).toEqual([]);
+      for (const name of ["core", "react", "theme", "map"]) {
+        expect(run.stdout).toContain(`@mapcairn/${name}`);
+      }
+    });
+
+    it("does not read a new package as a reason to skip the ones after it, and still stops at a registry error", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: { ...ALL_MISSING, core: "new", react: "error" },
+      });
+      expect(run.status).not.toBe(0);
+      expect(actions(run)).toEqual([]);
+      expect(run.stdout).not.toContain("is not on npm yet");
+    });
+
+    it("warns about a new package in a rehearsal, dry-runs the rest and does not fail, since nothing is published", () => {
+      const run = runPublishStep({
+        mode: "rehearse",
+        states: { ...ALL_MISSING, map: "new" },
+      });
+      expect(run.status).toBe(0);
+      expect(actions(run)).toEqual(
+        ["core", "react", "theme"].map(
+          (name) =>
+            `npm publish ${tarball(name)} --ignore-scripts --tag next --provenance --dry-run`,
+        ),
+      );
+      expect(run.stdout).toContain(
+        "::warning::@mapcairn/map is not on npm yet",
+      );
+      expect(run.stdout).toContain("by hand");
     });
 
     it("makes a rehearsal a dry run: it adds --dry-run and does not read the registry back", () => {
