@@ -34,6 +34,7 @@ import {
   shapeEvaluator,
   tileUrl,
   type VectorTileLayerDefinition,
+  wrapLongitude,
 } from "@mapcairn/core";
 import { tokenValues } from "@mapcairn/theme";
 
@@ -133,6 +134,7 @@ export function featureOutlines(feature: LayerFeature): FeatureOutline[] {
 
 /**
  * The box around a feature's geometry, or null when it has no coordinates.
+ * Across the antimeridian `east` passes 180 (see `boundsOfPoints`).
  *
  * @internal
  */
@@ -152,7 +154,7 @@ export function featurePosition(feature: LayerFeature): LatLng | null {
   return bounds
     ? {
         lat: (bounds.south + bounds.north) / 2,
-        lng: (bounds.west + bounds.east) / 2,
+        lng: wrapLongitude((bounds.west + bounds.east) / 2),
       }
     : null;
 }

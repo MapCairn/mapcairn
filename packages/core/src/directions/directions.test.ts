@@ -163,6 +163,26 @@ describe("route bounds", () => {
     expect(bounds?.north).toBeCloseTo(14.99995, 5);
   });
 
+  it("takes the short way across the antimeridian", () => {
+    const across: RouteLeg = {
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [179.5, -17],
+          [-179.5, -16.5],
+        ],
+      },
+      properties: { distance: 1, duration: 1 },
+    };
+    expect(routeBounds([across])).toEqual({
+      south: -17,
+      west: 179.5,
+      north: -16.5,
+      east: 180.5,
+    });
+  });
+
   it("is null when there is nothing to cover", () => {
     expect(routeBounds([])).toBeNull();
   });

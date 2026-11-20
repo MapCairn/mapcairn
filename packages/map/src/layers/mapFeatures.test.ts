@@ -62,6 +62,19 @@ describe("featurePosition", () => {
   });
 });
 
+describe("featurePosition across the antimeridian", () => {
+  it("puts a shape that straddles the line at its middle, with a longitude inside [-180, 180)", () => {
+    const line = sampleLine("l", {}, [179, -17], [-178, -18]);
+    expect(featureBounds(line)).toEqual({
+      south: -18,
+      west: 179,
+      north: -17,
+      east: 182,
+    });
+    expect(featurePosition(line)).toEqual({ lat: -17.5, lng: -179.5 });
+  });
+});
+
 describe("toMapFeatures", () => {
   it("draws each point with its style's colour, size and shape", () => {
     expect(
