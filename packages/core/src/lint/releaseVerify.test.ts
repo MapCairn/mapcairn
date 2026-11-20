@@ -2,8 +2,8 @@
 // Copyright MapCairn contributors
 import { describe, expect, it } from "vitest";
 import {
-  CONFIRM_ATTEMPTS,
-  CONFIRM_DELAY_MS,
+  CONFIRM_DELAYS_MS,
+  CONFIRM_MAX_DELAY_MS,
   confirmPublished,
   decideDispatch,
   decidePush,
@@ -398,80 +398,167 @@ describe("packageState", () => {
 describe("confirmPublished", () => {
   const found = { status: 0, stdout: "0.1.0\n", stderr: "" };
   const notFound = { status: 1, stdout: "", stderr: "npm error code E404" };
+  const reads = CONFIRM_DELAYS_MS.length + 1;
+
+  /** Both registry reads answer not found for the first `count` rounds, then found. */
+  function lagging(count: number) {
+    const counter = { round: 0 };
+    const answer = () => (counter.round <= count ? notFound : found);
+    return {
+      counter,
+      view: () => {
+        counter.round += 1;
+        return answer();
+      },
+      viewVersion: answer,
+    };
+  }
+
+  /** A `wait` that records how long it was asked to wait and never sleeps. */
+  function recorder() {
+    const waits: number[] = [];
+    return {
+      waits,
+      wait: async (ms: number) => {
+        waits.push(ms);
+      },
+    };
+  }
+
+  it("waits about ten minutes in total, with a growing delay under a ceiling on each wait", () => {
+    const total = CONFIRM_DELAYS_MS.reduce(
+      (sum: number, ms: number) => sum + ms,
+      0,
+    );
+    expect(total).toBeGreaterThanOrEqual(10 * 60_000);
+    expect(total).toBeLessThanOrEqual(11 * 60_000);
+    expect(Math.max(...CONFIRM_DELAYS_MS)).toBe(CONFIRM_MAX_DELAY_MS);
+    expect(CONFIRM_DELAYS_MS[0]).toBeLessThan(CONFIRM_MAX_DELAY_MS);
+    expect(CONFIRM_DELAYS_MS).toEqual(
+      [...CONFIRM_DELAYS_MS].sort((a: number, b: number) => a - b),
+    );
+  });
 
   it("returns at once when the registry already has the version, and waits for nothing", async () => {
-    const waits: number[] = [];
+    const { waits, wait } = recorder();
     await confirmPublished({
       name: "@mapcairn/core",
       version: "0.1.0",
       view: () => found,
-      wait: async (ms: number) => {
-        waits.push(ms);
-      },
+      viewVersion: () => found,
+      wait,
     });
     expect(waits).toEqual([]);
   });
 
-  it("reads again after a not-found answer, because the registry can lag a moment behind the upload", async () => {
-    const answers = [notFound, notFound, found];
-    const waits: number[] = [];
+  it("reads again after a not-found answer, because the registry can lag behind the upload", async () => {
+    const { waits, wait } = recorder();
+    const registry = lagging(2);
     await confirmPublished({
       name: "@mapcairn/core",
       version: "0.1.0",
-      view: () => answers.shift(),
-      wait: async (ms: number) => {
-        waits.push(ms);
-      },
+      ...registry,
+      wait,
     });
-    expect(answers).toEqual([]);
-    expect(waits).toEqual([CONFIRM_DELAY_MS, CONFIRM_DELAY_MS]);
+    expect(waits).toEqual(CONFIRM_DELAYS_MS.slice(0, 2));
   });
 
-  it("fails when the version never appears, naming the package and the version", async () => {
-    let reads = 0;
+  it("passes when the version appears on the last read, and fails with the existing message one read later", async () => {
+    const { waits, wait } = recorder();
+    const last = lagging(reads - 1);
+    await confirmPublished({
+      name: "@mapcairn/core",
+      version: "0.1.0",
+      ...last,
+      wait,
+    });
+    expect(waits).toEqual(CONFIRM_DELAYS_MS);
+
+    const late = lagging(reads);
     await expect(
       confirmPublished({
         name: "@mapcairn/core",
         version: "0.1.0",
-        view: () => {
-          reads += 1;
-          return notFound;
-        },
+        ...late,
         wait: async () => {},
       }),
-    ).rejects.toThrow(/@mapcairn\/core@0\.1\.0 did not appear/);
-    expect(reads).toBe(CONFIRM_ATTEMPTS);
+    ).rejects.toThrow(
+      `@mapcairn/core@0.1.0 did not appear on the registry after ${reads} reads. Check npm before you re-run the failed jobs.`,
+    );
+    expect(late.counter.round).toBe(reads);
   });
 
   it("does not wait after the last read", async () => {
-    const waits: number[] = [];
+    const { waits, wait } = recorder();
     await expect(
       confirmPublished({
         name: "@mapcairn/core",
         version: "0.1.0",
         view: () => notFound,
-        wait: async (ms: number) => {
-          waits.push(ms);
-        },
+        viewVersion: () => notFound,
+        wait,
       }),
     ).rejects.toThrow();
-    expect(waits).toHaveLength(CONFIRM_ATTEMPTS - 1);
+    expect(waits).toEqual(CONFIRM_DELAYS_MS);
   });
 
-  it("stops on any other registry error without reading again", async () => {
-    let reads = 0;
+  it("accepts the version when only its own URL shows it", async () => {
+    await confirmPublished({
+      name: "@mapcairn/core",
+      version: "0.1.0",
+      view: () => notFound,
+      viewVersion: () => found,
+      wait: async () => {},
+    });
+  });
+
+  it("accepts the version when only the packument shows it", async () => {
+    await confirmPublished({
+      name: "@mapcairn/core",
+      version: "0.1.0",
+      view: () => found,
+      viewVersion: () => notFound,
+      wait: async () => {},
+    });
+  });
+
+  it("stops on any other registry error from either read without reading again", async () => {
+    const reset = {
+      status: 1,
+      stdout: "",
+      stderr: "npm error code ECONNRESET",
+    };
+    for (const [view, viewVersion] of [
+      [reset, notFound],
+      [notFound, reset],
+    ]) {
+      let count = 0;
+      await expect(
+        confirmPublished({
+          name: "@mapcairn/core",
+          version: "0.1.0",
+          view: () => {
+            count += 1;
+            return view;
+          },
+          viewVersion: () => viewVersion,
+          wait: async () => {},
+        }),
+      ).rejects.toThrow(/ECONNRESET/);
+      expect(count).toBe(1);
+    }
+  });
+
+  it("does not take a different version's answer for the one just published", async () => {
     await expect(
       confirmPublished({
         name: "@mapcairn/core",
         version: "0.1.0",
-        view: () => {
-          reads += 1;
-          return { status: 1, stdout: "", stderr: "npm error code ECONNRESET" };
-        },
+        view: () => ({ status: 0, stdout: "0.0.9\n", stderr: "" }),
+        viewVersion: () => notFound,
         wait: async () => {},
       }),
-    ).rejects.toThrow(/ECONNRESET/);
-    expect(reads).toBe(1);
+    ).rejects.toThrow(/answered "0\.0\.9"/);
   });
 });
 
