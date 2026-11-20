@@ -9,6 +9,7 @@ import {
   DEPLOYMENT_APPROVAL_TEXT,
   FORBIDDEN_NAMES,
   FORBIDDEN_NPM_COMMANDS,
+  OTHER_PUBLISH_COMMANDS,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/publishGuard.mjs";
 
@@ -19,7 +20,7 @@ const REPO = path.resolve(
 
 const NAMES: string[] = FORBIDDEN_NAMES;
 const COMMANDS: string[] = FORBIDDEN_NPM_COMMANDS;
-const APPROVAL = `gh api *${DEPLOYMENT_APPROVAL_TEXT}*`;
+const OTHERS: string[][] = OTHER_PUBLISH_COMMANDS;
 
 /** Spawning git can be slow while coverage runs in parallel. */
 const CHILD_TIMEOUT_MS = 30_000;
@@ -38,15 +39,129 @@ function denyRules(file: string): string[] {
   return settings.permissions.deny;
 }
 
+/** Every way an agent might start a command that the lists have to stop. */
+function npmCommands(name: string, withNpx: boolean): string[] {
+  const direct = [
+    `npm ${name}`,
+    `npm ${name} @mapcairn/core --dry-run`,
+    `npm -w packages/core ${name}`,
+    `npm --workspace=core ${name} --tag next`,
+  ];
+  const throughNpx = [
+    `npx npm ${name}`,
+    `npx npm ${name} --tag next`,
+    `npx -y npm ${name} --tag next`,
+  ];
+  return withNpx ? [...direct, ...throughNpx] : direct;
+}
+
+/** Commands the lists must leave alone, so the release skill and the checks keep working. */
+const ALLOWED_COMMANDS = [
+  "npm pack --dry-run --json",
+  "npm install",
+  "npm ci --ignore-scripts",
+  "npm run build",
+  "npm whoami",
+  "npm logout",
+  "npm view @mapcairn/core version",
+  "gh workflow run release.yml -f mode=rehearse",
+  "gh pr merge 489 --squash",
+  "gh api repos/MapCairn/mapcairn/pulls",
+  "npx --no-install vitest run",
+  "pnpm install",
+];
+
+const APPROVAL_COMMAND = `gh api repos/MapCairn/mapcairn/actions/runs/1/${DEPLOYMENT_APPROVAL_TEXT} -X POST`;
+
+/**
+ * Whether a wildcard pattern matches a whole command. `*` matches any text.
+ * With `bareEnds`, a lone trailing ` *` also matches the command without
+ * arguments, as Claude Code's permission page says it does.
+ */
+function wildcardMatches(
+  pattern: string,
+  command: string,
+  bareEnds: boolean,
+): boolean {
+  const escapeText = (text: string) =>
+    text.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+  const lone = pattern.split("*").length === 2 && pattern.endsWith(" *");
+  const source =
+    bareEnds && lone
+      ? `${escapeText(pattern.slice(0, -2))}(?: .*)?`
+      : pattern.split("*").map(escapeText).join(".*");
+  return new RegExp(`^${source}$`).test(command);
+}
+
+/** Whether any rule of a list, taken as its inner pattern, matches the command. */
+function listDenies(
+  patterns: string[],
+  command: string,
+  bareEnds: boolean,
+): boolean {
+  return patterns.some((pattern) =>
+    wildcardMatches(pattern, command, bareEnds),
+  );
+}
+
+/** The patterns of `Tool(pattern)` rules for one tool name. */
+function innerPatterns(rules: string[], tool: string): string[] {
+  return rules
+    .filter((rule) => rule.startsWith(`${tool}(`) && rule.endsWith(")"))
+    .map((rule) => rule.slice(tool.length + 1, -1));
+}
+
+/** Whether a Cursor `Shell(base:arguments)` rule denies the command. */
+function cursorDenies(rules: string[], command: string): boolean {
+  const [base, ...rest] = command.split(" ");
+  return innerPatterns(rules, "Shell").some((pattern) => {
+    const [ruleBase, ruleArguments] = pattern.split(":");
+    return (
+      ruleBase === base &&
+      ruleArguments !== undefined &&
+      wildcardMatches(ruleArguments, rest.join(" "), false)
+    );
+  });
+}
+
+/** Whether a Codex `prefix_rule` with decision `forbidden` matches the start of the command. */
+function codexDenies(text: string, command: string): boolean {
+  const words = command.split(" ");
+  const patterns = [...text.matchAll(/pattern = (\[.*\]),/g)].map(
+    (match) => JSON.parse(match[1]) as (string | string[])[],
+  );
+  return patterns.some(
+    (pattern) =>
+      words.length >= pattern.length &&
+      pattern.every((element, index) =>
+        Array.isArray(element)
+          ? element.includes(words[index])
+          : element === words[index],
+      ),
+  );
+}
+
 describe("the commands an agent never runs", () => {
   it("name each command and every alias npm accepts for it", () => {
-    expect(COMMANDS).toHaveLength(11);
-    for (const alias of ["adduser", "add-user", "author", "dist-tags"]) {
+    expect(COMMANDS).toHaveLength(14);
+    for (const command of ["profile", "org", "undeprecate"]) {
+      expect(COMMANDS).toContain(command);
+    }
+    for (const alias of ["adduser", "add-user", "author", "dist-tags", "ogr"]) {
       expect(NAMES).toContain(alias);
     }
     for (const command of COMMANDS) {
       expect(NAMES).toContain(command);
     }
+  });
+
+  it("add the publish commands of the other package managers", () => {
+    expect(OTHERS).toEqual([
+      ["pnpm", "publish"],
+      ["yarn", "publish"],
+      ["yarn", "npm", "publish"],
+      ["bun", "publish"],
+    ]);
   });
 });
 
@@ -54,19 +169,44 @@ describe("Claude Code, .claude/settings.json", () => {
   const rules = denyRules(".claude/settings.json");
 
   it.each(["Bash", "PowerShell"])(
-    "denies every command in %s, with and without an option before it",
+    "denies every command in %s however it is started",
     (shell) => {
+      const patterns = innerPatterns(rules, shell);
       for (const name of NAMES) {
-        expect(rules).toContain(`${shell}(npm ${name} *)`);
-        expect(rules).toContain(`${shell}(npm * ${name} *)`);
+        for (const command of npmCommands(name, false)) {
+          expect(
+            listDenies(patterns, command, true),
+            `${shell}: ${command}`,
+          ).toBe(true);
+        }
       }
-      expect(rules).toContain(`${shell}(${APPROVAL})`);
+      expect(listDenies(patterns, APPROVAL_COMMAND, true)).toBe(true);
+      for (const words of OTHERS) {
+        expect(listDenies(patterns, words.join(" "), true)).toBe(true);
+        expect(
+          listDenies(patterns, `${words.join(" ")} --tag next`, true),
+        ).toBe(true);
+      }
     },
   );
 
-  it("denies the commands through npx", () => {
-    for (const command of COMMANDS) {
-      expect(rules).toContain(`Bash(npx * npm ${command} *)`);
+  it("denies the commands through npx in Bash", () => {
+    const patterns = innerPatterns(rules, "Bash");
+    for (const name of COMMANDS) {
+      for (const command of npmCommands(name, true)) {
+        expect(listDenies(patterns, command, true), command).toBe(true);
+      }
+    }
+  });
+
+  it("leaves the release skill's commands and the checks alone", () => {
+    for (const shell of ["Bash", "PowerShell"]) {
+      for (const command of ALLOWED_COMMANDS) {
+        expect(
+          listDenies(innerPatterns(rules, shell), command, true),
+          command,
+        ).toBe(false);
+      }
     }
   });
 
@@ -80,20 +220,27 @@ describe("Claude Code, .claude/settings.json", () => {
 
 describe("Qwen Code, .qwen/settings.json", () => {
   const rules = denyRules(".qwen/settings.json");
+  const patterns = innerPatterns(rules, "Bash");
 
-  it("denies every command, with and without arguments or an option before it", () => {
+  it("denies every command, without relying on how a trailing wildcard treats a bare command", () => {
     for (const name of NAMES) {
-      expect(rules).toContain(`Bash(npm ${name})`);
-      expect(rules).toContain(`Bash(npm ${name} *)`);
-      expect(rules).toContain(`Bash(npm * ${name} *)`);
+      for (const command of npmCommands(name, COMMANDS.includes(name))) {
+        expect(listDenies(patterns, command, false), command).toBe(true);
+      }
     }
-    for (const command of COMMANDS) {
-      expect(rules).toContain(`Bash(npx * npm ${command} *)`);
+    expect(listDenies(patterns, APPROVAL_COMMAND, false)).toBe(true);
+    for (const words of OTHERS) {
+      expect(listDenies(patterns, words.join(" "), false)).toBe(true);
+      expect(listDenies(patterns, `${words.join(" ")} --tag next`, false)).toBe(
+        true,
+      );
     }
-    expect(rules).toContain(`Bash(${APPROVAL})`);
   });
 
-  it("holds only a deny list", () => {
+  it("leaves the release skill's commands and the checks alone, and holds only a deny list", () => {
+    for (const command of ALLOWED_COMMANDS) {
+      expect(listDenies(patterns, command, false), command).toBe(false);
+    }
     expect(Object.keys(readJson(".qwen/settings.json"))).toEqual([
       "permissions",
     ]);
@@ -105,22 +252,27 @@ describe("opencode, opencode.json", () => {
     permission: { bash: Record<string, string> };
   };
   const bash = config.permission.bash;
+  const patterns = Object.keys(bash);
 
-  it("denies every command, bare, with arguments and with an option before it", () => {
+  it("denies every command, without relying on how a trailing wildcard treats a bare command", () => {
     for (const name of NAMES) {
-      for (const pattern of [
-        `npm ${name}`,
-        `npm ${name} *`,
-        `npm * ${name}`,
-        `npm * ${name} *`,
-      ]) {
-        expect(bash[pattern]).toBe("deny");
+      for (const command of npmCommands(name, COMMANDS.includes(name))) {
+        expect(listDenies(patterns, command, false), command).toBe(true);
       }
     }
-    for (const command of COMMANDS) {
-      expect(bash[`npx * npm ${command} *`]).toBe("deny");
+    expect(listDenies(patterns, APPROVAL_COMMAND, false)).toBe(true);
+    for (const words of OTHERS) {
+      expect(listDenies(patterns, words.join(" "), false)).toBe(true);
+      expect(listDenies(patterns, `${words.join(" ")} --tag next`, false)).toBe(
+        true,
+      );
     }
-    expect(bash[APPROVAL]).toBe("deny");
+  });
+
+  it("leaves the release skill's commands and the checks alone", () => {
+    for (const command of ALLOWED_COMMANDS) {
+      expect(listDenies(patterns, command, false), command).toBe(false);
+    }
   });
 
   it("denies and allows nothing else, so a person's own rules still apply", () => {
@@ -132,40 +284,55 @@ describe("opencode, opencode.json", () => {
 describe("Cursor command line, .cursor/cli.json", () => {
   const rules = denyRules(".cursor/cli.json");
 
-  it("denies every command and the deployment approval", () => {
+  it("denies every command, the other package managers and the deployment approval", () => {
     for (const name of NAMES) {
-      expect(rules).toContain(`Shell(npm:${name}*)`);
+      expect(cursorDenies(rules, `npm ${name} @mapcairn/core`)).toBe(true);
+      expect(cursorDenies(rules, `npm ${name}`)).toBe(true);
     }
-    expect(rules).toContain(`Shell(gh:api*${DEPLOYMENT_APPROVAL_TEXT}*)`);
+    for (const words of OTHERS) {
+      expect(cursorDenies(rules, words.join(" "))).toBe(true);
+    }
+    expect(cursorDenies(rules, APPROVAL_COMMAND)).toBe(true);
+  });
+
+  it("leaves the release skill's commands and the checks alone", () => {
+    for (const command of ALLOWED_COMMANDS) {
+      expect(cursorDenies(rules, command), command).toBe(false);
+    }
   });
 });
 
 describe("Codex, .codex/rules/publish-guard.rules", () => {
   const text = read(".codex/rules/publish-guard.rules");
-  const patterns = [...text.matchAll(/pattern = \[(.*)\],/g)].map(
-    (match) => match[1],
-  );
 
-  it("forbids every command after npm, and after npx and corepack", () => {
-    const programs = [
-      '"npm"',
-      '"npx", "npm"',
-      '"npx", "-y", "npm"',
-      '"npx", "--yes", "npm"',
-      '"corepack", "npm"',
-    ];
-    for (const program of programs) {
-      const pattern = patterns.find((candidate) =>
-        candidate.startsWith(`${program}, [`),
-      );
-      expect(pattern, program).toBeDefined();
-      for (const name of NAMES) {
-        expect(pattern).toContain(`"${name}"`);
+  it("forbids every command after npm, npx, npx -y, npx --yes and corepack", () => {
+    for (const name of NAMES) {
+      for (const program of [
+        "npm",
+        "npx npm",
+        "npx -y npm",
+        "npx --yes npm",
+        "corepack npm",
+      ]) {
+        expect(
+          codexDenies(text, `${program} ${name} @mapcairn/core`),
+          `${program} ${name}`,
+        ).toBe(true);
       }
+    }
+    for (const words of OTHERS) {
+      expect(codexDenies(text, `${words.join(" ")} --tag next`)).toBe(true);
+    }
+  });
+
+  it("leaves the release skill's commands and the checks alone", () => {
+    for (const command of ALLOWED_COMMANDS) {
+      expect(codexDenies(text, command), command).toBe(false);
     }
   });
 
   it("forbids, never prompts or allows", () => {
+    const patterns = [...text.matchAll(/pattern = \[/g)];
     const decisions = [...text.matchAll(/decision = "(\w+)"/g)].map(
       (match) => match[1],
     );

@@ -28,11 +28,15 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { isEntryPoint } from "../entryPoint.mjs";
 
-/** This file and its test: they have to spell out what they look for. */
+/**
+ * This file and its tests: they hold the commands as fixtures, which the scan
+ * of every script and test file would otherwise report. Nothing else is exempt.
+ */
 export const EXEMPT_FILES = new Set([
   "scripts/release/publishGuard.mjs",
   "packages/core/src/lint/publishGuard.test.ts",
   "packages/core/src/lint/publishGuardWorkflows.test.ts",
+  "packages/core/src/lint/agentDenyLists.test.ts",
 ]);
 
 /**
@@ -53,14 +57,33 @@ export const FORBIDDEN_NPM_COMMANDS = [
   "owner",
   "token",
   "team",
+  "profile",
+  "org",
+  "undeprecate",
 ];
 
-/** Other names npm accepts for a forbidden command, from `lib/utils/cmd-list.js` in npm 11. */
+/**
+ * Other names npm accepts for a forbidden command, from `lib/utils/cmd-list.js`
+ * in npm 11. That list has no `hook` command.
+ */
 export const NPM_ALIASES = {
   login: ["adduser", "add-user"],
   owner: ["author"],
   "dist-tag": ["dist-tags"],
+  org: ["ogr"],
 };
+
+/**
+ * Other package managers' commands that publish, as the program followed by
+ * the words that make the command. The deny lists carry these too; the guard
+ * already treats these programs as launchers.
+ */
+export const OTHER_PUBLISH_COMMANDS = [
+  ["pnpm", "publish"],
+  ["yarn", "publish"],
+  ["yarn", "npm", "publish"],
+  ["bun", "publish"],
+];
 
 /** The text the deny lists and the guard both match on for a GitHub deployment approval. */
 export const DEPLOYMENT_APPROVAL_TEXT = "pending_deployments";
@@ -178,6 +201,7 @@ const DISTINCTIVE_NAMES = new Set([
   "dist-tags",
   "adduser",
   "add-user",
+  "undeprecate",
 ]);
 
 /**
@@ -603,18 +627,85 @@ export function jobRanges(text) {
 }
 
 /**
- * Text with YAML comments removed (a `#` at the start of a line or after a
- * space), line by line so line numbers stay.
+ * A line without its comment: from a `#` that starts a word and is outside
+ * quotes, so `echo " #" && npm publish` keeps its command. An unclosed quote
+ * keeps the rest of the line, which can only add findings.
  *
- * @param {string} text
+ * @param {string} line
  * @returns {string}
  */
-function withoutYamlComments(text) {
-  return text
-    .split("\n")
-    .map((line) => line.replace(/(^|\s)#.*$/, "$1"))
-    .join("\n");
+export function stripShellComment(line) {
+  let quote = "";
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (quote !== "") {
+      if (char === "\\" && quote === '"') {
+        i += 1;
+      } else if (char === quote) {
+        quote = "";
+      }
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === "#" && (i === 0 || /\s/.test(line[i - 1]))) {
+      return line.slice(0, i);
+    }
+  }
+  return line;
 }
+
+/**
+ * The lines of a shell or YAML file as the shell or YAML reader joins them:
+ * a line that ends in a backslash continues on the next, and the lines of a
+ * folded block (`run: >`) become one line. Each result keeps the number of
+ * its first line, and comments are removed.
+ *
+ * @param {string} text
+ * @returns {{ line: number, text: string }[]}
+ */
+export function logicalLines(text) {
+  const lines = text.split(/\r?\n/);
+  const result = [];
+  let i = 0;
+  while (i < lines.length) {
+    const first = i + 1;
+    const indent = lines[i].search(/\S|$/);
+    let joined = stripShellComment(lines[i]);
+    i += 1;
+    if (/:\s*>[-+]?\s*$/.test(joined)) {
+      while (
+        i < lines.length &&
+        (lines[i].trim() === "" || lines[i].search(/\S|$/) > indent)
+      ) {
+        joined += ` ${stripShellComment(lines[i]).trim()}`;
+        i += 1;
+      }
+    }
+    while (/\\\s*$/.test(joined) && i < lines.length) {
+      joined = `${joined.replace(/\\\s*$/, "")} ${stripShellComment(lines[i])}`;
+      i += 1;
+    }
+    result.push({ line: first, text: joined });
+  }
+  return result;
+}
+
+/**
+ * The lines of a workflow that use an anchor (`&name`) or an alias
+ * (`*name`), which could run one job's steps under another job's name.
+ *
+ * @param {string} text
+ * @returns {number[]}
+ */
+export function yamlAnchorLines(text) {
+  const anchor = /(?:^|[:,[{]\s+|-\s+|[,[{])[&*][A-Za-z0-9_-]+/;
+  return logicalLines(text)
+    .filter((entry) => anchor.test(entry.text))
+    .map((entry) => entry.line);
+}
+
+/** A workflow step that uses an action that publishes to npm. */
+const PUBLISH_ACTION =
+  /\buses:\s*["']?[^\s"']*(?:npm-publish|publish-npm|npm_publish|changesets\/action|semantic-release)/i;
 
 /**
  * @typedef {object} Finding
@@ -656,13 +747,18 @@ function manifestScripts(text) {
   });
 }
 
-/** Files read as JavaScript (or Python, which writes strings and lists alike). */
+/**
+ * Files read as JavaScript (or Python, which writes strings and lists alike),
+ * wherever they are: a configuration file or a test can start a process too.
+ */
 const SCRIPT_FILE = /\.(?:mjs|cjs|js|jsx|ts|tsx|mts|cts|py)$/;
 /** Files read as shell lines. */
 const SHELL_FILE =
   /(?:\.(?:sh|bash|zsh|ps1|cmd|bat|mk)$|(?:^|\/)(?:Dockerfile[^/]*|Makefile[^/]*|justfile|Taskfile\.ya?ml|lefthook(?:-local)?\.ya?ml)$)/;
 /** Workflows and composite actions. */
 const WORKFLOW_FILE = /^\.github\/(?:workflows|actions)\/.*\.ya?ml$/;
+/** Folders of git and agent hooks, read as shell unless they hold JavaScript. */
+const HOOK_FOLDER = /^(?:\.husky|\.claude\/hooks)\//;
 /** Folders of scripts. */
 const SCRIPT_FOLDER = /^(?:scripts|(?:packages|examples)\/[^/]+\/scripts)\//;
 
@@ -680,6 +776,8 @@ export function isExecutable(file) {
     path.posix.basename(file) === "package.json" ||
     WORKFLOW_FILE.test(file) ||
     SHELL_FILE.test(file) ||
+    SCRIPT_FILE.test(file) ||
+    HOOK_FOLDER.test(file) ||
     SCRIPT_FOLDER.test(file)
   );
 }
@@ -698,29 +796,33 @@ function findingsInFile(file, text) {
       })),
     );
   }
-  if (WORKFLOW_FILE.test(file) || SHELL_FILE.test(file)) {
-    const clean = withoutYamlComments(text);
-    return clean.split("\n").flatMap((line, index) =>
-      forbiddenInShellText(line).map((command) => ({
-        command,
-        line: index + 1,
-      })),
-    );
-  }
   if (SCRIPT_FILE.test(file)) {
     return forbiddenInScript(text).map(({ command, index }) => ({
       command,
       line: lineOf(text, index),
     }));
   }
-  return withoutYamlComments(text)
-    .split("\n")
-    .flatMap((line, index) =>
-      forbiddenInShellText(line).map((command) => ({
-        command,
-        line: index + 1,
-      })),
-    );
+  const lines = logicalLines(text);
+  const commands = lines.flatMap((entry) =>
+    forbiddenInShellText(entry.text).map((command) => ({
+      command,
+      line: entry.line,
+    })),
+  );
+  if (!WORKFLOW_FILE.test(file)) {
+    return commands;
+  }
+  const actions = lines
+    .filter((entry) => PUBLISH_ACTION.test(entry.text))
+    .map((entry) => ({ command: "publish action", line: entry.line }));
+  const anchors =
+    file === RELEASE_WORKFLOW
+      ? yamlAnchorLines(text).map((line) => ({
+          command: "yaml anchor or alias",
+          line,
+        }))
+      : [];
+  return [...commands, ...actions, ...anchors];
 }
 
 /**

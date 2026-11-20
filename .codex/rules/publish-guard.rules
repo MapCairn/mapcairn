@@ -5,76 +5,109 @@
 # command, a wrapper script or another spelling is not covered.
 
 prefix_rule(
-    pattern = ["npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    pattern = ["npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
     decision = "forbidden",
     justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
     match = [
         "npm publish",
-        "npm stage approve",
-        "npm dist-tag add @mapcairn/core@1.0.0 latest",
     ],
     not_match = [
         "npm pack --dry-run",
-        "npm install",
     ],
 )
 
 prefix_rule(
-    pattern = ["npx", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    pattern = ["npx", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
     decision = "forbidden",
     justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
     match = [
         "npx npm publish",
-        "npx npm stage approve",
-        "npx npm dist-tag add @mapcairn/core@1.0.0 latest",
     ],
     not_match = [
         "npx npm pack --dry-run",
-        "npx npm install",
     ],
 )
 
 prefix_rule(
-    pattern = ["npx", "-y", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    pattern = ["npx", "-y", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
     decision = "forbidden",
     justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
     match = [
         "npx -y npm publish",
-        "npx -y npm stage approve",
-        "npx -y npm dist-tag add @mapcairn/core@1.0.0 latest",
     ],
     not_match = [
         "npx -y npm pack --dry-run",
-        "npx -y npm install",
     ],
 )
 
 prefix_rule(
-    pattern = ["npx", "--yes", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    pattern = ["npx", "--yes", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
     decision = "forbidden",
     justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
     match = [
         "npx --yes npm publish",
-        "npx --yes npm stage approve",
-        "npx --yes npm dist-tag add @mapcairn/core@1.0.0 latest",
     ],
     not_match = [
         "npx --yes npm pack --dry-run",
-        "npx --yes npm install",
     ],
 )
 
 prefix_rule(
-    pattern = ["corepack", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team"]],
+    pattern = ["corepack", "npm", ["publish","stage","login","adduser","add-user","trust","dist-tag","dist-tags","unpublish","deprecate","access","owner","author","token","team","profile","org","ogr","undeprecate"]],
     decision = "forbidden",
     justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
     match = [
         "corepack npm publish",
-        "corepack npm stage approve",
-        "corepack npm dist-tag add @mapcairn/core@1.0.0 latest",
     ],
     not_match = [
         "corepack npm pack --dry-run",
-        "corepack npm install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "pnpm publish",
+    ],
+    not_match = [
+        "pnpm install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["yarn", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "yarn publish",
+    ],
+    not_match = [
+        "yarn install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["yarn", "npm", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "yarn npm publish",
+    ],
+    not_match = [
+        "yarn install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "publish"],
+    decision = "forbidden",
+    justification = "Agents never publish to npm or change who may publish. The maintainer runs these commands.",
+    match = [
+        "bun publish",
+    ],
+    not_match = [
+        "bun install",
     ],
 )

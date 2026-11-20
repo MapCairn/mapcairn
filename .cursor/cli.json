@@ -16,6 +16,14 @@
       "Shell(npm:author*)",
       "Shell(npm:token*)",
       "Shell(npm:team*)",
+      "Shell(npm:profile*)",
+      "Shell(npm:org*)",
+      "Shell(npm:ogr*)",
+      "Shell(npm:undeprecate*)",
+      "Shell(pnpm:publish*)",
+      "Shell(yarn:publish*)",
+      "Shell(yarn:npm publish*)",
+      "Shell(bun:publish*)",
       "Shell(gh:api*pending_deployments*)"
     ]
   }

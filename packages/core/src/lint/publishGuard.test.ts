@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   describeFindings,
+  EXEMPT_FILES,
   FORBIDDEN_NPM_COMMANDS,
   forbiddenCommandOf,
   forbiddenInScript,
@@ -16,6 +23,7 @@ import {
   jobRanges,
   scanRepository,
   scanSources,
+  stripShellComment,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/publishGuard.mjs";
 
@@ -98,6 +106,21 @@ describe("forbiddenInShellText", () => {
     ["token", "npm token create", "token"],
     ["team", "npm team create mapcairn:agents", "team"],
     [
+      "profile, which can turn off two-factor",
+      "npm profile disable-2fa",
+      "profile",
+    ],
+    ["org", "npm org set mapcairn someone owner", "org"],
+    ["ogr, a typo npm accepts for org", "npm ogr ls mapcairn", "org"],
+    ["undeprecate", "npm undeprecate @mapcairn/core@1.0.0", "undeprecate"],
+    ["pnpm publish", "pnpm publish --no-git-checks", "publish"],
+    ["yarn publish", "yarn publish", "publish"],
+    ["bun publish", "bun publish", "publish"],
+    ["an env prefix", "CI=1 npm publish", "publish"],
+    ["tabs between the words", "npm\tpublish", "publish"],
+    ["npx with a latest tag", "npx npm@latest publish", "publish"],
+    ["a command after a quoted hash", 'echo " #" && npm publish', "publish"],
+    [
       "an option this check does not know",
       "npm --made-up-option value publish",
       "publish",
@@ -130,6 +153,7 @@ describe("forbiddenInShellText", () => {
     "npx --no-install vitest run",
     "echo publish the notes",
     "gh pr view 482",
+    "npm hook ls",
     "gh api repos/MapCairn/mapcairn/pulls",
     "gh workflow run release.yml -f mode=rehearse",
     "git push origin main",
@@ -251,6 +275,9 @@ describe("forbiddenCommandOf", () => {
       "owner",
       "token",
       "team",
+      "profile",
+      "org",
+      "undeprecate",
     ]);
   });
 });
@@ -407,7 +434,8 @@ describe("scanSources", () => {
     expect(isExecutable("lefthook.yml")).toBe(true);
     expect(isExecutable(".github/workflows/ci.yml")).toBe(true);
     expect(isExecutable("packages/web/package.json")).toBe(true);
-    expect(isExecutable("packages/web/src/app/App.tsx")).toBe(false);
+    expect(isExecutable("packages/web/src/app/App.tsx")).toBe(true);
+    expect(isExecutable("packages/web/public/robots.txt")).toBe(false);
     expect(isExecutable("docs/plans/0014-sdk-release.md")).toBe(false);
   });
 
@@ -417,6 +445,201 @@ describe("scanSources", () => {
     ]);
     expect(line).toContain("a.yml:3");
     expect(line).toContain("publish");
+  });
+});
+
+describe("lines that a shell or YAML reader joins", () => {
+  const scan = (file: string, text: string) =>
+    scanSources([{ path: file, text }]) as {
+      file: string;
+      line: number;
+      command: string;
+    }[];
+
+  it("finds a command split by a backslash in a run block, with the first line", () => {
+    const workflow = [
+      "jobs:",
+      "  a:",
+      "    steps:",
+      "      - run: |",
+      "          npm \\",
+      "            publish",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/ci.yml", workflow)).toEqual([
+      { file: ".github/workflows/ci.yml", line: 5, command: "publish" },
+    ]);
+  });
+
+  it("finds a command split by a backslash in a shell script and a Dockerfile", () => {
+    expect(scan("scripts/ship.sh", "npm \\\n  publish\n")).toHaveLength(1);
+    expect(scan("Dockerfile", "RUN npm \\\n    publish\n")).toHaveLength(1);
+  });
+
+  it("finds a command split across the lines of a folded block", () => {
+    const workflow = [
+      "jobs:",
+      "  a:",
+      "    steps:",
+      "      - run: >",
+      "          npm",
+      "          publish",
+      "      - run: npm ci",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/ci.yml", workflow)).toEqual([
+      { file: ".github/workflows/ci.yml", line: 4, command: "publish" },
+    ]);
+  });
+
+  it("finds it in a folded block with a stripping indicator", () => {
+    const workflow =
+      "jobs:\n  a:\n    steps:\n      - run: >-\n          npm stage\n          approve\n";
+    expect(scan(".github/workflows/ci.yml", workflow)).toHaveLength(1);
+  });
+
+  it("does not join across the end of a folded block", () => {
+    const workflow =
+      "jobs:\n  a:\n    steps:\n      - run: >\n          echo npm\n      - run: publish-notes\n";
+    expect(scan(".github/workflows/ci.yml", workflow)).toEqual([]);
+  });
+
+  it("keeps a hash inside quotes and removes a real comment", () => {
+    expect(stripShellComment('echo " #" && npm publish')).toBe(
+      'echo " #" && npm publish',
+    );
+    expect(stripShellComment("echo '#' # npm publish")).toBe("echo '#' ");
+    expect(stripShellComment("npm ci # npm publish")).toBe("npm ci ");
+    expect(stripShellComment("# npm publish")).toBe("");
+    expect(stripShellComment("echo a#b")).toBe("echo a#b");
+    expect(stripShellComment('echo "a \\" # b" # c')).toBe('echo "a \\" # b" ');
+  });
+
+  it("finds a command after a quoted hash in a workflow, a script, a Dockerfile and a Makefile", () => {
+    const line = 'echo " #" && npm publish';
+    expect(
+      scan(
+        ".github/workflows/ci.yml",
+        `jobs:\n  a:\n    steps:\n      - run: ${line}\n`,
+      ),
+    ).toHaveLength(1);
+    expect(scan("scripts/ship.sh", `${line}\n`)).toHaveLength(1);
+    expect(scan("Dockerfile", `RUN ${line}\n`)).toHaveLength(1);
+    expect(scan("Makefile", `ship:\n\t${line}\n`)).toHaveLength(1);
+  });
+});
+
+describe("what is read beyond scripts", () => {
+  const scan = (file: string, text: string) =>
+    scanSources([{ path: file, text }]) as {
+      file: string;
+      line: number;
+      command: string;
+    }[];
+
+  it("reads any script or configuration file in the repository", () => {
+    const source = 'run("npm", ["publish"]);\n';
+    for (const file of [
+      "packages/web/vite.config.ts",
+      "packages/core/src/anything.ts",
+      "packages/web/src/app/App.tsx",
+      "playwright.config.mts",
+      "tools/build.cjs",
+    ]) {
+      expect(scan(file, source), file).toHaveLength(1);
+    }
+  });
+
+  it("reads hook folders", () => {
+    expect(scan(".husky/pre-push", "npm publish\n")).toHaveLength(1);
+    expect(scan(".claude/hooks/after.sh", "npm publish\n")).toHaveLength(1);
+    expect(
+      scan(".claude/hooks/after.mjs", 'run("npm", ["publish"]);'),
+    ).toHaveLength(1);
+  });
+
+  it("fails on a publish action in any workflow", () => {
+    for (const action of [
+      "JS-DevTools/npm-publish@0123456789abcdef0123456789abcdef01234567",
+      "someone/publish-npm@v1",
+      "changesets/action@v1",
+      "cycjimmy/semantic-release-action@v4",
+    ]) {
+      const workflow = `jobs:\n  a:\n    steps:\n      - uses: ${action}\n`;
+      expect(scan(".github/workflows/ci.yml", workflow), action).toEqual([
+        {
+          file: ".github/workflows/ci.yml",
+          line: 4,
+          command: "publish action",
+        },
+      ]);
+    }
+    const harmless =
+      "jobs:\n  a:\n    steps:\n      - uses: actions/checkout@v5\n";
+    expect(scan(".github/workflows/ci.yml", harmless)).toEqual([]);
+  });
+
+  it("fails on a YAML anchor or alias in release.yml, and only there", () => {
+    const anchored = [
+      "jobs:",
+      "  verify: &steps",
+      "    steps:",
+      "      - run: npm ci",
+      "  npm:",
+      "    <<: *steps",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/release.yml", anchored)).toEqual([
+      {
+        file: ".github/workflows/release.yml",
+        line: 2,
+        command: "yaml anchor or alias",
+      },
+      {
+        file: ".github/workflows/release.yml",
+        line: 6,
+        command: "yaml anchor or alias",
+      },
+    ]);
+    expect(scan(".github/workflows/ci.yml", anchored)).toEqual([]);
+  });
+
+  it("does not take a glob or a shell operator in release.yml for an alias", () => {
+    const workflow = [
+      "jobs:",
+      "  npm:",
+      "    steps:",
+      "      - run: npm stage publish ./*.tgz && echo done",
+      "      - run: ls *.tgz",
+      "",
+    ].join("\n");
+    expect(scan(".github/workflows/release.yml", workflow)).toEqual([]);
+  });
+});
+
+describe("the guard itself", () => {
+  it("exempts only itself and the tests that hold the commands as fixtures", () => {
+    expect([...EXEMPT_FILES].sort()).toEqual([
+      "packages/core/src/lint/agentDenyLists.test.ts",
+      "packages/core/src/lint/publishGuard.test.ts",
+      "packages/core/src/lint/publishGuardWorkflows.test.ts",
+      "scripts/release/publishGuard.mjs",
+    ]);
+  });
+
+  it("starts one process only, git, with an argument array and no shell", () => {
+    const source = readFileSync(
+      path.join(REPO, "scripts/release/publishGuard.mjs"),
+      "utf8",
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    const calls = source.match(
+      /(?<![.\w])(?:exec|execSync|execFile|execFileSync|spawn|spawnSync|fork)\s*\(/g,
+    );
+    expect(calls).toEqual(["execFileSync("]);
+    expect(source).toMatch(/execFileSync\(\s*"git",\s*\[/);
+    expect(source).not.toMatch(/shell:\s*true/);
   });
 });
 
@@ -441,8 +664,7 @@ describe("the repository", () => {
     expect(describeFindings(findings)).toEqual([]);
   });
 
-  it("is run by npm run lint and by the pre-commit hook", async () => {
-    const { readFileSync } = await import("node:fs");
+  it("is run by npm run lint and by the pre-commit hook", () => {
     const manifest = JSON.parse(
       readFileSync(path.join(REPO, "package.json"), "utf8"),
     );
