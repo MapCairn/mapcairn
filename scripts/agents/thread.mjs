@@ -742,8 +742,12 @@ function printAll(name, items, show) {
   }
 }
 
-/** @returns {Set<string> | null} */
-function writeAccessList() {
+/**
+ * The logins with write access to the project, lower-cased.
+ *
+ * @returns {Set<string> | null} Null when the list cannot be read.
+ */
+export function writeAccessList() {
   const out = gh([
     "api",
     `repos/${REPO}/collaborators`,
