@@ -609,7 +609,7 @@ export class MapLibreMapAdapter implements MapAdapter {
     }
     const center = map.getCenter();
     return {
-      center: { lat: center.lat, lng: center.lng },
+      center: positionOf(center),
       zoom: toNormalisedZoom(map.getZoom()),
       bearing: normaliseBearing(map.getBearing()),
     };

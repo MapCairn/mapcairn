@@ -15,13 +15,6 @@ const MAX_OFFSET_DEGREES = 60;
 const MAX_LATITUDE_DEGREES = 60;
 const MIN_POINTS = 2;
 const MAX_POINTS = 8;
-const FULL_TURN = 360;
-
-/** How close two longitudes are, counting the turn of the globe. */
-function longitudeGap(a: number, b: number): number {
-  const gap = Math.abs(a - b) % FULL_TURN;
-  return Math.min(gap, FULL_TURN - gap);
-}
 
 const offsets = fc.array(
   fc.record({
@@ -86,10 +79,12 @@ describe("boundsOfPoints, wherever a set of points sits on the globe", () => {
         adapter.fitBounds(shiftedBounds, { animate: false });
         const shiftedView = adapter.getView();
         expect(shiftedView.zoom).toBeCloseTo(referenceView.zoom, 9);
+        expect(shiftedView.center.lng).toBeGreaterThanOrEqual(-180);
+        expect(shiftedView.center.lng).toBeLessThan(180);
         expect(
-          longitudeGap(
-            shiftedView.center.lng,
-            referenceView.center.lng + centre,
+          Math.abs(
+            shiftedView.center.lng -
+              wrapLongitude(referenceView.center.lng + centre),
           ),
         ).toBeLessThan(1e-9);
       }),

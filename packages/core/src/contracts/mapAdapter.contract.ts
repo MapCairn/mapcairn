@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { DrawnLayer } from "../fakes/FakeMapAdapter";
 import { readPngSize } from "../fakes/pngHeader";
+import { wrapLongitude } from "../globe/longitude";
 import { MAX_IMAGE_SIDE_PX } from "../imageExport/plan";
 import type { BasemapDefinition } from "../ports/basemap";
 import { MapEngineError, MapImageExportError } from "../ports/errors";
@@ -341,19 +342,22 @@ export function runMapAdapterContract(
 
     it("fits a box across the antimeridian the short way", async () => {
       const { adapter, controls } = await mounted();
-      // Fiji: 1.5 degrees wide across the line, not 358.5 degrees the long way.
-      const bounds = { south: -17.5, west: 179.2, north: -16.5, east: 180.7 };
+      // Fiji: 2.2 degrees wide across the line, not 357.8 degrees the long way. The middle, 180.3, is reported as -179.7.
+      const bounds = { south: -17.5, west: 179.2, north: -16.5, east: 181.4 };
       adapter.fitBounds(bounds, { ...NO_ANIMATION, maxZoom: 12 });
       await controls.settle();
       const view = adapter.getView();
       expect(view.zoom).toBeGreaterThan(5);
       expect(view.center.lat).toBeCloseTo(-17, 1);
-      const centreGap = Math.abs(
-        ((view.center.lng - 179.95 + 540) % 360) - 180,
-      );
-      expect(centreGap).toBeLessThan(0.1);
-      const southWest = adapter.project({ lat: bounds.south, lng: 179.2 });
-      const northEast = adapter.project({ lat: bounds.north, lng: 180.7 });
+      expect(view.center.lng).toBeCloseTo(-179.7, 1);
+      const southWest = adapter.project({
+        lat: bounds.south,
+        lng: wrapLongitude(179.2),
+      });
+      const northEast = adapter.project({
+        lat: bounds.north,
+        lng: wrapLongitude(181.4),
+      });
       expect(southWest.x).toBeGreaterThanOrEqual(-1);
       expect(northEast.x).toBeLessThanOrEqual(controls.hostSize.width + 1);
     });

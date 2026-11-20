@@ -318,7 +318,7 @@ export class FakeMapAdapter implements MapAdapter {
     this.setView({
       center: {
         lat: (bounds.south + bounds.north) / 2,
-        lng: (bounds.west + bounds.east) / 2,
+        lng: wrapLongitude((bounds.west + bounds.east) / 2),
       },
       zoom: Math.min(fitted, options.maxZoom ?? Number.POSITIVE_INFINITY),
     });
