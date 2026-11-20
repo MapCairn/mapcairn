@@ -23,7 +23,7 @@ import "@mapcairn/sdk/styles.css";
 import { MapChrome, ServicesProvider } from "@mapcairn/sdk";
 ```
 
-For a real map, add the adapter from its subpath. It needs the URL of the engine's worker, as the [adapter's README](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) explains:
+For a real map, add the adapter from its subpath. It needs the URL of the engine's worker, which a Vite app gets from `import("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url")`; the [adapter's README](https://github.com/MapCairn/mapcairn/tree/main/packages/adapter-maplibre) explains it, and [Show a real map](https://github.com/MapCairn/mapcairn/blob/main/docs/guides/extending.md#show-a-real-map) has the steps:
 
 ```ts
 import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";

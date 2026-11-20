@@ -6,10 +6,11 @@ How to put a MapCairn map in a page that a Windows web server serves, including 
 
 ## What exists today
 
-Two things a page needs are not built yet:
+One thing a page needs is not built yet:
 
 - There is no prebuilt bundle and no `mountMap` function for a page without React ([#44](https://github.com/MapCairn/mapcairn/issues/44)). A page builds a small entry of its own that imports the SDK packages and calls React's `createRoot`, as [`examples/embed`](../../examples/embed/README.md) does.
-- The map adapter, `@mapcairn/adapter-maplibre` ([#43](https://github.com/MapCairn/mapcairn/issues/43)), is in the release set from `0.1.0-rc.3` and is not on npm until that release is published. A real map needs it, with `maplibre-gl` and a URL for the engine's worker that your server serves (`packages/adapter-maplibre/README.md`). `examples/embed` runs on the SDK's fakes and draws no map.
+
+The map adapter is a package, `@mapcairn/adapter-maplibre`, also at `@mapcairn/sdk/adapter-maplibre`, and is not on npm until its release is published. A real map needs it, with `maplibre-gl` and a URL for the engine's worker that your server serves; [Show a real map](extending.md#show-a-real-map) has the steps. `examples/embed` runs on the SDK's fakes and draws no map.
 
 What the SDK packages ship, from their manifests:
 

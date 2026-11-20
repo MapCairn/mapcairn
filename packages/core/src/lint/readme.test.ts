@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -29,6 +40,57 @@ const REPO = path.resolve(
 );
 const README = readFileSync(path.join(REPO, "README.md"), "utf8");
 const EXAMPLE_SOURCE = "examples/embed/src";
+
+/** The TypeScript compiler's entry file, from the repository's own install. */
+const TSC = "node_modules/typescript/bin/tsc";
+
+/**
+ * Compiles a code block as an app outside the repository would, and returns
+ * the compiler's error lines (none when it type-checks). The block sits in a
+ * scratch folder whose `node_modules` is the repository's, so each `@mapcairn`
+ * import resolves through the package's own `exports`, to the source behind
+ * the `@mapcairn/source` condition. The scratch folder declares what a Vite
+ * app gets from `vite/client`: a `?worker&url` import and a plain CSS import.
+ *
+ * @param repo Absolute path of the repository root.
+ * @param source The TypeScript to compile, as one module.
+ */
+function typeCheckSnippet(repo: string, source: string): string[] {
+  const scratch = mkdtempSync(path.join(tmpdir(), "mapcairn-snippet-"));
+  try {
+    symlinkSync(
+      path.join(repo, "node_modules"),
+      path.join(scratch, "node_modules"),
+      "junction",
+    );
+    mkdirSync(path.join(scratch, "src"));
+    writeFileSync(path.join(scratch, "src", "snippet.ts"), source);
+    writeFileSync(
+      path.join(scratch, "src", "env.d.ts"),
+      'declare module "*?worker&url" {\n  const url: string;\n  export default url;\n}\ndeclare module "*.css";\n',
+    );
+    writeFileSync(
+      path.join(scratch, "tsconfig.json"),
+      JSON.stringify({
+        extends: path.join(repo, "tsconfig.base.json"),
+        compilerOptions: { noEmit: true, types: [], jsx: "react-jsx" },
+        files: ["src/snippet.ts", "src/env.d.ts"],
+      }),
+    );
+    try {
+      execFileSync(process.execPath, [path.join(repo, TSC), "-p", scratch], {
+        encoding: "utf8",
+        stdio: "pipe",
+      });
+      return [];
+    } catch (error) {
+      const { stdout } = error as { readonly stdout: string };
+      return stdout.split("\n").filter((line) => line.trim() !== "");
+    }
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
 
 /** The example's shipped source files, read as one list of texts. */
 function exampleSources(): string[] {
@@ -64,7 +126,9 @@ describe("README.md", () => {
     const install = fencedBlocks(README, "bash").filter((block) =>
       block.includes("@mapcairn/sdk"),
     );
-    expect(install).toEqual(["npm install @mapcairn/sdk@next\n"]);
+    expect(install).toEqual([
+      "npm install @mapcairn/sdk@next react react-dom maplibre-gl\n",
+    ]);
     const [short = ""] = fencedBlocks(README, "ts");
     expect(README.indexOf(short)).toBeLessThan(README.indexOf(snippet));
     expect(
@@ -96,7 +160,34 @@ describe("README.md", () => {
           specifier === "@mapcairn/sdk/adapter-maplibre",
       ),
     ).toBe(true);
+    expect(real).toContain(
+      "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url",
+    );
     expect(README).toContain("`maplibre-gl` is a required peer");
+  });
+
+  it("type-checks a snippet the way an outside app would, and reports a wrong option", () => {
+    expect(
+      typeCheckSnippet(
+        REPO,
+        'import { createMapLibreMapAdapter } from "@mapcairn/sdk/adapter-maplibre";\nexport const adapter = createMapLibreMapAdapter({ workerUrl: "/w.mjs" });\n',
+      ).join("\n"),
+    ).toContain("workerUrl");
+  });
+
+  it("shows a real-map block that type-checks as an outside app would write it", () => {
+    const real = fencedBlocks(README, "ts").find((block) =>
+      block.includes("@mapcairn/sdk/adapter-maplibre"),
+    );
+    expect(typeCheckSnippet(REPO, real ?? "")).toEqual([]);
+  });
+
+  it("says what the real map asks of a host: the other bundlers, the policy and the privacy default", () => {
+    const section = README.slice(README.indexOf("## Embed a map"));
+    expect(section).toContain("docs/guides/content-security-policy.md");
+    expect(section).toContain("docs/guides/extending.md#show-a-real-map");
+    expect(section).toMatch(/makes no request until/);
+    expect(section).not.toContain("not yet shipped");
   });
 
   it("imports the stylesheets as examples/embed does, or the one that stands for both", () => {
