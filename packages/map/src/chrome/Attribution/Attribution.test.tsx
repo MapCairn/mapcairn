@@ -47,6 +47,49 @@ function open(): HTMLElement {
   return screen.getByRole("region", { name: "Map credits" });
 }
 
+describe("Attribution placement after the room shrinks", () => {
+  let observers: ResizeObserverStub;
+
+  beforeEach(() => {
+    observers = stubResizeObserver();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("moves beside the end stack when the room above shrinks after it opened, as a toolbar's rise does", () => {
+    const { container } = renderChrome(<Attribution basemap={BASEMAP} />, {
+      map: SETTLED,
+    });
+    const region = container.querySelector<HTMLElement>(
+      '[data-chrome="attribution-popover"]',
+    );
+    if (!region) {
+      throw new Error("No credits region");
+    }
+    const size = { content: 140, visible: 140 };
+    Object.defineProperty(region, "scrollHeight", {
+      get: () => size.content,
+      configurable: true,
+    });
+    Object.defineProperty(region, "clientHeight", {
+      get: () => size.visible,
+      configurable: true,
+    });
+    expect(open()).toHaveAttribute("data-placement", "above");
+    expect(observers.isObserved(region)).toBe(true);
+
+    // MapChrome writes the popover's rise after the placement was decided, and
+    // the room, and so the box, shrinks.
+    size.visible = 80;
+    act(() => {
+      observers.trigger();
+    });
+    expect(region).toHaveAttribute("data-placement", "beside");
+  });
+});
+
 describe("Attribution", () => {
   it("draws its bare icon with the map halo, so it shows on a light map in a dark theme", () => {
     renderChrome(<Attribution basemap={BASEMAP} />, { map: SETTLED });

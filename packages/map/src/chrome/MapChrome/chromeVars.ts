@@ -27,6 +27,12 @@ export const chromeVars = {
    * shares no width with the readout (`data-readout-clear`).
    */
   bottomEndRise: "--chrome-bottom-end-rise",
+  /**
+   * How much further the credits popover rises, over what its `transform` rise
+   * already gives, to clear the bottom-centre slot it shares width with (zero or
+   * positive). It is the `translate` property, written in the observer callback.
+   */
+  popoverCentreRise: "--chrome-popover-centre-rise",
   /** Vertical room above the bottom row that stays clear of the end stack. */
   bottomEndRoom: "--chrome-bottom-end-room",
   /**
@@ -40,12 +46,20 @@ export const chromeVars = {
    */
   bottomLift: "--chrome-bottom-lift",
   /**
-   * How much further the bottom-start and bottom-end slots rise to clear the
-   * bottom-centre slot (zero or negative). It is the `translate` property,
-   * which no transition covers, and `MapChrome` sets it in the observer
-   * callback that sees the slot change size, so it lands in the same frame.
+   * How much further the bottom-start slot rises to clear the bottom-centre slot (zero or negative): zero
+   * while the two share no width. It is the `translate` property, which no
+   * transition covers, and `MapChrome` sets it in the observer callback that
+   * sees the slot change size, so it lands in the same frame.
    */
-  bottomRaise: "--chrome-bottom-raise",
+  bottomStartRaise: "--chrome-bottom-start-raise",
+  /**
+   * How much further the map key rises: to clear the bottom-centre slot where
+   * the key shares width with it (it can be wider than the readout it rests
+   * above), and never less than the readout's own rise. Zero or negative.
+   */
+  mapKeyRaise: "--chrome-map-key-raise",
+  /** The same for the bottom-end slot, which has its own: zero while it shares no width with the bottom-centre slot. */
+  bottomEndRaise: "--chrome-bottom-end-raise",
   /** Horizontal shift of the bottom-start slot (zero or positive). */
   bottomStartX: "--chrome-bottom-start-x",
   /** Base room for the map key; the immediate toolbar raise is added in CSS. */
