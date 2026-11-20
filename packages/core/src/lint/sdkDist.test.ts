@@ -271,7 +271,7 @@ describe("@mapcairn/map dist", () => {
     expect(repeated).toEqual([]);
   });
 
-  it("puts the primitive recipes in one cascade layer, declared before any block uses it", () => {
+  it("uses one cascade layer, whose name is declared before any block uses it (primitiveLayer.test.ts checks which classes sit in it)", () => {
     const names = new Set(
       [...styles.matchAll(/@layer\s+([\w-]+)/g)].map((match) => match[1]),
     );
@@ -281,8 +281,6 @@ describe("@mapcairn/map dist", () => {
     const firstBlock = styles.indexOf(`@layer ${layer} {`);
     expect(declaration).toBeGreaterThanOrEqual(0);
     expect(firstBlock).toBeGreaterThan(declaration);
-    const blocks = styles.split(`@layer ${layer} {`).length - 1;
-    expect(blocks).toBeGreaterThanOrEqual(5);
   });
 
   it("imports no style runtime but recipes, in code or declarations", () => {

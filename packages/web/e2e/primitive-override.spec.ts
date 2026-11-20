@@ -75,4 +75,35 @@ test.describe("a component's own style beats a primitive's recipe", () => {
     expect(background).not.toBe("rgba(0, 0, 0, 0)");
     expect(background).not.toBe("transparent");
   });
+
+  test("the host's default focus outline matches the one the recipes draw", async ({
+    page,
+    mapPage,
+  }) => {
+    await mapPage.goto();
+    await page.keyboard.press("Shift");
+    await page.evaluate(() => {
+      const plain = document.createElement("button");
+      plain.dataset.testid = "plain-focus-target";
+      plain.textContent = "Plain";
+      document.body.append(plain);
+    });
+    const outlineOf = async (target: Locator) => {
+      await target.focus();
+      await expect(target).toBeFocused();
+      return target.evaluate((element) => {
+        const computed = getComputedStyle(element);
+        return [
+          computed.outlineStyle,
+          computed.outlineWidth,
+          computed.outlineColor,
+          computed.outlineOffset,
+        ];
+      });
+    };
+    const recipe = await outlineOf(mapPage.settingsButton);
+    const host = await outlineOf(page.getByTestId("plain-focus-target"));
+    expect(recipe[0]).toBe("solid");
+    expect(host).toEqual(recipe);
+  });
 });

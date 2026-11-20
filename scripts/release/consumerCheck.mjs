@@ -234,6 +234,75 @@ export function stylesheetProblems(css) {
   return problems;
 }
 
+/** The layer the fixture's `reset.css` puts an app's base styles in. */
+export const RESET_LAYER = "reset";
+
+/**
+ * The text of a CSS block, from just after its opening brace to the matching
+ * closing one.
+ *
+ * @param {string} css The stylesheet text.
+ * @param {number} start The index just after the opening brace.
+ * @returns {string}
+ */
+function blockBody(css, start) {
+  let depth = 1;
+  let end = start;
+  while (end < css.length && depth > 0) {
+    if (css[end] === "{") {
+      depth += 1;
+    } else if (css[end] === "}") {
+      depth -= 1;
+    }
+    end += 1;
+  }
+  return css.slice(start, end);
+}
+
+/**
+ * The problems with how a client build layers an app's reset against the
+ * SDK's primitives. The app declares `@layer reset` before it imports the
+ * SDK's stylesheet; the built CSS must keep the reset layer ahead of the
+ * primitives' layer (a layer declared earlier ranks lower), and the
+ * primitives' layer must hold the padding, border and background rules the
+ * reset would otherwise clobber. A browser would settle which rule wins; this
+ * checks the order and the content that decide it, without one.
+ *
+ * @param {string} css The built stylesheet text, all files joined.
+ * @returns {string[]}
+ */
+export function layerProblems(css) {
+  const blocks = [...css.matchAll(/@layer\s+([\w-]+)\s*\{/g)];
+  const names = new Set(blocks.map((match) => match[1]));
+  const sdk = [...names].filter((name) => name !== RESET_LAYER);
+  if (!names.has(RESET_LAYER)) {
+    return [`the built CSS has no @layer ${RESET_LAYER} block from the app`];
+  }
+  if (sdk.length !== 1) {
+    return [
+      `the SDK's stylesheet should add one cascade layer, found ${sdk.length}`,
+    ];
+  }
+  const [primitives] = sdk;
+  const problems = [];
+  const firstUse = (name) => css.search(new RegExp(`@layer\\s+${name}\\b`));
+  if (firstUse(RESET_LAYER) > firstUse(primitives)) {
+    problems.push(
+      "the app's reset layer is declared after the primitives' layer",
+    );
+  }
+  const inLayer = blocks
+    .filter((match) => match[1] === primitives)
+    .map((match) => blockBody(css, match.index + match[0].length))
+    .join("\n");
+  for (const property of ["padding", "border", "background"]) {
+    if (!inLayer.includes(property)) {
+      problems.push(`the primitives' layer holds no ${property} rule`);
+    }
+  }
+  return problems;
+}
+
 /**
  * Runs a program with an argument array and no shell, and throws with its
  * output when it fails.
@@ -458,7 +527,15 @@ export function runConsumerCheck() {
     if (cssProblems.length > 0) {
       throw new Error(cssProblems.join("\n"));
     }
-    report.push("vite build with no plugins, both stylesheets built in: ok");
+    const clientCss = builtCss(path.join(app, "dist", "client"));
+    const layering = layerProblems(clientCss);
+    if (layering.length > 0) {
+      throw new Error(layering.join("\n"));
+    }
+    report.push(
+      "vite build with no plugins, both stylesheets built in: ok",
+      "the SDK's primitives sit in one layer, ranked above an app reset layer declared first: ok",
+    );
 
     const bundled = runNode(
       "render the built server bundle",

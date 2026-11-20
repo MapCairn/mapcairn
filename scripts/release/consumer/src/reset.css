@@ -1,0 +1,15 @@
+/* An app's base styles in a cascade layer of its own, declared before the SDK's
+   stylesheet is imported, so the SDK's primitives rank above them. */
+@layer reset;
+
+@layer reset {
+  button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  :focus-visible {
+    outline: none;
+  }
+}
