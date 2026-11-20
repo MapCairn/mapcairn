@@ -120,6 +120,27 @@ describe.each(BUILT_PACKAGES)("@mapcairn/%s dist", (name) => {
     }
   });
 
+  it("carries every global augmentation its source declares, since the roll-up drops them", () => {
+    // API Extractor rolls declarations up without `declare global`, so a
+    // consumer that reads only `dist` would lose the typing. A source that
+    // needs one must keep it out of the public declarations instead.
+    const source = path.join(folderOf(name), "src");
+    const augmenting = readdirSync(source, { recursive: true })
+      .map((file) => String(file).replaceAll("\\", "/"))
+      .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
+      .filter((file) =>
+        /\bdeclare global\b/.test(
+          readFileSync(path.join(source, file), "utf8"),
+        ),
+      );
+    const carried = distFiles(name)
+      .filter((file) => file.endsWith(".d.ts"))
+      .some((file) => /\bdeclare global\b/.test(read(name, file)));
+    expect(augmenting.length === 0 || carried, augmenting.join(", ")).toBe(
+      true,
+    );
+  });
+
   it("has an empty build stamp that starts no later than the build output", () => {
     const dist = path.join(folderOf(name), "dist");
     const stamp = statSync(path.join(dist, ".built"));
