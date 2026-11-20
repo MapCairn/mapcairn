@@ -307,7 +307,7 @@ describe("release.yml", () => {
     expect(condition).toContain(
       `contains(fromJSON('["success","skipped"]'), needs.github-release.result)`,
     );
-    expect(condition).toContain("needs.verify.outputs.on-npm == 'true'");
+    expect(condition).not.toContain("on-npm");
     expect(condition).toContain("inputs.mode != 'rehearse'");
   });
 

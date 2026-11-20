@@ -92,7 +92,6 @@ jobs:
       version: ${{ steps.decide.outputs.version }}
       prerelease: ${{ steps.decide.outputs.prerelease }}
       dist-tag: ${{ steps.decide.outputs.dist-tag }}
-      on-npm: ${{ steps.decide.outputs.on-npm }}
       private: ${{ steps.decide.outputs.private }}
       digests: ${{ steps.record.outputs.digests }}
       notes-digest: ${{ steps.record.outputs.notes-digest }}
@@ -336,14 +335,21 @@ jobs:
           DIST_TAG: ${{ needs.verify.outputs.dist-tag }}
         shell: bash
         # The same loop as the `npm` job, with --dry-run and no read-back. A
-        # package whose version is on npm is skipped with a notice. npm tries
-        # no OIDC exchange here (no token), so this proves the tarball, the
-        # tag and the version rules, and nothing about trusted publishing.
+        # package whose version is on npm is skipped with a notice. A package
+        # npm does not have at all is reported with a warning, which is where
+        # the real run would stop; it is not dry-run, and the rehearsal does
+        # not fail, so the rest is still proved. npm tries no OIDC exchange
+        # here (no token), so this proves the tarball, the tag and the version
+        # rules, and nothing about trusted publishing.
         run: |
           for name in core react theme map; do
             state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
             if [ "$state" = "published" ]; then
               echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
+              continue
+            fi
+            if [ "$state" = "new" ]; then
+              echo "::warning::@mapcairn/$name is not on npm yet. A real run publishes the other packages and then fails on this one: its first upload is by hand (docs/guides/releasing.md, A package npm does not have yet)."
               continue
             fi
             npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --ignore-scripts --tag "$DIST_TAG" --provenance --dry-run
@@ -360,7 +366,6 @@ jobs:
       && needs.verify.result == 'success' && needs.verify.outputs.release == 'true'
       && needs.check.result == 'success'
       && contains(fromJSON('["success","skipped"]'), needs.github-release.result)
-      && needs.verify.outputs.on-npm == 'true'
       && inputs.mode != 'rehearse'
     environment: npm
     concurrency:
@@ -422,19 +427,55 @@ jobs:
         # for a short-lived credential, and records provenance. --provenance
         # is explicit so that a publish that could not get provenance fails
         # before the upload, which cannot be undone. A package whose version
-        # is on npm is skipped with a notice; one that is not found is
-        # published; any other registry answer stops the job. After each
+        # is on npm is skipped with a notice; one whose version is not
+        # found is published; any other registry answer stops the job. After each
         # publish the registry is read back, and the job fails if the version
         # does not appear. A re-run of the failed jobs after a partial publish
         # therefore skips what is on npm and publishes the rest
-        # (docs/guides/releasing.md).
+        # (docs/guides/releasing.md). A package npm does not have at all
+        # cannot be published here, because a package gets its trusted
+        # publisher only after its first publish: it is left, the others are
+        # handled, and the job then fails naming it, so the run is red until
+        # the first upload is done by hand and the failed jobs are re-run. Every
+        # state is read before anything is published, and nothing is published
+        # when a package that is not on npm is a dependency of one that would be.
+        # The dependencies are read into a variable first, so that a read that
+        # fails stops the job instead of reading as no dependencies.
         run: |
+          first_uploads=()
+          to_publish=()
           for name in core react theme map; do
             state="$(node scripts/release/verifyRelease.mjs package-state "@mapcairn/$name" "$VERSION")"
             if [ "$state" = "published" ]; then
               echo "::notice::@mapcairn/$name@$VERSION is already on npm, so it is skipped."
               continue
             fi
+            if [ "$state" = "new" ]; then
+              first_uploads+=("@mapcairn/$name")
+              echo "::error::@mapcairn/$name is not on npm yet, so trusted publishing cannot publish it: a package gets its trusted publisher only after its first upload. Publish it by hand from the release's attested tarball, link its trusted publisher, then use Re-run failed jobs (docs/guides/releasing.md, A package npm does not have yet)."
+              continue
+            fi
+            to_publish+=("$name")
+          done
+          blocked=0
+          for name in "${to_publish[@]}"; do
+            dependencies="$(node scripts/release/verifyRelease.mjs dependencies "@mapcairn/$name" "$VERSION" release)"
+            for dependency in $dependencies; do
+              for package in "${first_uploads[@]}"; do
+                if [ "$dependency" = "$package" ]; then
+                  echo "::error::@mapcairn/$name depends on $package, which is not on npm yet, so publishing it now would leave a version nobody can install. Nothing was published. Upload $package by hand first, then use Re-run failed jobs (docs/guides/releasing.md, A package npm does not have yet)."
+                  blocked=1
+                fi
+              done
+            done
+          done
+          if [ "$blocked" = "1" ]; then
+            exit 1
+          fi
+          for name in "${to_publish[@]}"; do
             npm publish "$GITHUB_WORKSPACE/release/mapcairn-$name-$VERSION.tgz" --ignore-scripts --tag "$DIST_TAG" --provenance
             node scripts/release/verifyRelease.mjs confirm-published "@mapcairn/$name" "$VERSION"
           done
+          if [ "${#first_uploads[@]}" -gt 0 ]; then
+            exit 1
+          fi
