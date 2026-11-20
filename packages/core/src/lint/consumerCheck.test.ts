@@ -24,6 +24,8 @@ import {
   SCRIPT_SET_PROPERTIES,
   stylesheetProblems,
   TYPE_CHECKS,
+  umbrellaLeftovers,
+  umbrellaSource,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/release/consumerCheck.mjs";
 
@@ -89,6 +91,113 @@ describe("consumerManifest", () => {
 
   it("is an ES module project, as the node16 type check needs", () => {
     expect(manifest.type).toBe("module");
+  });
+});
+
+describe("consumerManifest for an app that names only some packages", () => {
+  const tarballs = {
+    core: "mapcairn-core-0.0.0.tgz",
+    map: "mapcairn-map-0.0.0.tgz",
+    sdk: "mapcairn-sdk-0.0.0.tgz",
+  };
+  const versions = { react: "19.3.1", typescript: "7.0.2", vite: "8.3.8" };
+
+  it("lists only the packages it is given as dependencies, and still overrides every one", () => {
+    const manifest = consumerManifest({ tarballs, versions, direct: ["sdk"] });
+    expect(Object.keys(manifest.dependencies).sort()).toEqual([
+      "@mapcairn/sdk",
+      "react",
+    ]);
+    expect(Object.keys(manifest.overrides).sort()).toEqual([
+      "@mapcairn/core",
+      "@mapcairn/map",
+      "@mapcairn/sdk",
+    ]);
+  });
+
+  it("lists every package when none is named, as the four-package app does", () => {
+    const manifest = consumerManifest({ tarballs, versions });
+    expect(Object.keys(manifest.dependencies)).toContain("@mapcairn/core");
+    expect(Object.keys(manifest.dependencies)).toContain("@mapcairn/sdk");
+  });
+
+  it("refuses a package that has no tarball", () => {
+    expect(() =>
+      consumerManifest({ tarballs, versions, direct: ["theme"] }),
+    ).toThrow(/theme/);
+  });
+});
+
+describe("umbrellaSource", () => {
+  it("points every import of the four packages at the umbrella, and nothing else", () => {
+    const source = [
+      'import { createFakeServices } from "@mapcairn/core";',
+      'import { MapChrome } from "@mapcairn/map";',
+      'import { useModelContextTool } from "@mapcairn/react";',
+      'import { tokens } from "@mapcairn/theme";',
+      'import { useState } from "react";',
+    ].join("\n");
+    expect(umbrellaSource(source)).toBe(
+      [
+        'import { createFakeServices } from "@mapcairn/sdk";',
+        'import { MapChrome } from "@mapcairn/sdk";',
+        'import { useModelContextTool } from "@mapcairn/sdk";',
+        'import { tokens } from "@mapcairn/sdk";',
+        'import { useState } from "react";',
+      ].join("\n"),
+    );
+  });
+
+  it("maps the contracts entry point to its subpath", () => {
+    expect(
+      umbrellaSource('import * as c from "@mapcairn/core/contracts";'),
+    ).toBe('import * as c from "@mapcairn/sdk/core/contracts";');
+  });
+
+  it("replaces the two stylesheet imports with the one the umbrella ships", () => {
+    expect(
+      umbrellaSource(
+        'import "./reset.css";\nimport "@mapcairn/theme/tokens.css";\nimport "@mapcairn/map/styles.css";\nimport { x } from "y";',
+      ),
+    ).toBe(
+      'import "./reset.css";\nimport "@mapcairn/sdk/styles.css";\nimport { x } from "y";',
+    );
+  });
+
+  it("augments the umbrella where the app augmented core", () => {
+    expect(umbrellaSource('declare module "@mapcairn/core" {')).toBe(
+      'declare module "@mapcairn/sdk" {',
+    );
+  });
+});
+
+describe("umbrellaLeftovers", () => {
+  it("is empty for source that umbrellaSource has rewritten", () => {
+    const source = [
+      'import "@mapcairn/theme/tokens.css";',
+      'import "@mapcairn/map/styles.css";',
+      'import { a } from "@mapcairn/core";',
+      'import * as c from "@mapcairn/core/contracts";',
+      'declare module "@mapcairn/core" {}',
+    ].join("\n");
+    expect(umbrellaLeftovers(umbrellaSource(source))).toEqual([]);
+  });
+
+  it("names an import of one of the four packages that the rewrite did not reach", () => {
+    expect(
+      umbrellaLeftovers(
+        umbrellaSource('import { x } from "@mapcairn/map/internal";'),
+      ),
+    ).toEqual(["@mapcairn/map/internal"]);
+    expect(umbrellaLeftovers("import { x } from '@mapcairn/react';")).toEqual([
+      "@mapcairn/react",
+    ]);
+  });
+
+  it("does not name the umbrella itself", () => {
+    expect(
+      umbrellaLeftovers('import { x } from "@mapcairn/sdk/core/contracts";'),
+    ).toEqual([]);
   });
 });
 

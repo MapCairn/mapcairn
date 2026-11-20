@@ -1,7 +1,6 @@
 {
   "name": "@mapcairn/sdk",
   "version": "0.1.0-rc.2",
-  "private": true,
   "description": "One install and one import for the MapCairn SDK: core, map, react and theme",
   "license": "AGPL-3.0-only",
   "repository": {

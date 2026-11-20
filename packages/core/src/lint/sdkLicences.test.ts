@@ -37,7 +37,7 @@ interface Report {
 
 type Entry = Record<string, unknown>;
 
-/** A lockfile with the four SDK packages, whose `core` depends on `deps`. */
+/** A lockfile with the five SDK packages, whose `core` depends on `deps`. */
 function fixture(
   coreDeps: Record<string, string>,
   entries: Record<string, Entry>,
@@ -61,6 +61,16 @@ function fixture(
     },
     "packages/react": sdk("react"),
     "packages/theme": sdk("theme"),
+    "packages/sdk": {
+      ...sdk("sdk"),
+      dependencies: {
+        "@mapcairn/core": "1.0.0",
+        "@mapcairn/map": "1.0.0",
+        "@mapcairn/react": "1.0.0",
+        "@mapcairn/theme": "1.0.0",
+      },
+      peerDependencies: { react: "^19.0.0" },
+    },
   };
   const lockfile = {
     packages: {
@@ -69,10 +79,13 @@ function fixture(
       "packages/map": manifests["packages/map"],
       "packages/react": manifests["packages/react"],
       "packages/theme": manifests["packages/theme"],
-      "node_modules/@mapcairn/core": {
-        resolved: "packages/core",
-        link: true,
-      },
+      "packages/sdk": manifests["packages/sdk"],
+      ...Object.fromEntries(
+        ["core", "map", "react", "theme"].map((name) => [
+          `node_modules/@mapcairn/${name}`,
+          { resolved: `packages/${name}`, link: true },
+        ]),
+      ),
       ...entries,
     },
   };

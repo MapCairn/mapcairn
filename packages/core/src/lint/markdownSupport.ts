@@ -113,3 +113,29 @@ export function relativeLinks(markdown: string): string[] {
     .filter((target) => !/^(https?:|mailto:|#)/.test(target))
     .map((target) => target.split("#")[0] ?? "");
 }
+
+/** The package an outside app installs to get every other `@mapcairn` package from one import. */
+const UMBRELLA = "@mapcairn/sdk";
+
+/**
+ * Whether a README may import `imported` from `specifier`, given the imports
+ * of `examples/embed`, which uses the four packages directly. The umbrella
+ * counts as the packages it re-exports: its root stands for any of the four,
+ * and `@mapcairn/sdk/<name>` for `@mapcairn/<name>`.
+ */
+export function isUsedByExample(
+  example: readonly NamedImport[],
+  specifier: string,
+  imported: string,
+): boolean {
+  const mirrored = specifier.startsWith(`${UMBRELLA}/`)
+    ? `@mapcairn/${specifier.slice(UMBRELLA.length + 1)}`
+    : specifier;
+  return example.some(
+    (known) =>
+      known.imported === imported &&
+      known.specifier !== UMBRELLA &&
+      (known.specifier === mirrored ||
+        (specifier === UMBRELLA && known.specifier.startsWith("@mapcairn/"))),
+  );
+}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * Packs the four SDK packages once, records the SHA-256 of each tarball (and
+ * Packs the SDK packages once, records the SHA-256 of each tarball (and
  * of the release notes) as a job output, and checks a folder against those
  * recorded digests later. The release workflow packs in `verify`, uploads at
  * once, and passes the digests to the later jobs as a job output, which a
@@ -178,7 +178,7 @@ export function checkFolder(
 }
 
 /**
- * Packs the four packages into a folder, once, without running scripts.
+ * Packs the SDK packages into a folder, once, without running scripts.
  *
  * @param {string} folder
  */
@@ -196,7 +196,7 @@ function packAll(folder) {
 }
 
 /**
- * Records the digests of the four tarballs, and of the notes when there are
+ * Records the digests of the tarballs, and of the notes when there are
  * any, as job outputs (or on the log when run by hand).
  *
  * @param {string} folder

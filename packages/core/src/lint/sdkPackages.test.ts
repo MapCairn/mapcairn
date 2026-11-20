@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   SDK_PACKAGES,
+  UMBRELLA_PACKAGE,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
 
@@ -77,6 +78,20 @@ describe("the list of SDK packages", () => {
         expect(LIST.indexOf(need), `${name} needs ${need}`).toBeLessThan(index);
       }
     }
+  });
+});
+
+describe("the umbrella package", () => {
+  it("is the last of the list and depends on every other SDK package", () => {
+    expect(LIST.at(-1)).toBe(UMBRELLA_PACKAGE);
+    const dependencies = Object.keys(
+      manifestOf(UMBRELLA_PACKAGE).dependencies ?? {},
+    ).sort();
+    expect(dependencies).toEqual(
+      LIST.filter((name) => name !== UMBRELLA_PACKAGE)
+        .map((name) => `@mapcairn/${name}`)
+        .sort(),
+    );
   });
 });
 

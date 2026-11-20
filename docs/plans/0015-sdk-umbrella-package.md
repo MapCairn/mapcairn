@@ -1,6 +1,6 @@
 # 0015: One umbrella package for the SDK
 
-Status: proposed. Tracking issue: [#538](https://github.com/MapCairn/mapcairn/issues/538).
+Status: in progress: slice 1 is merged, and slice 2 (the release set, the consumer check and the documents) is in review. Tracking issue: [#538](https://github.com/MapCairn/mapcairn/issues/538).
 
 ## Goal
 
@@ -115,7 +115,7 @@ Each step is one pull request. `Part of #538` unless another issue is named.
    4. Build: `sdk` last in `SDK_BUILD_ORDER`. `buildPackage.mjs` copies the stylesheet and must not treat a `.css` export with no `.css.ts` sources as a compiled stylesheet. Spike how API Extractor reports star re-exports, then `npm run api:update` and commit `packages/sdk/api/`.
    5. Boundaries: `.dependency-cruiser.cjs`, `scripts/depcruise.mjs`, `scripts/sdkLicences.mjs`.
    6. A real `npm install` for the new workspace with the lockfile, then `npm ci --ignore-scripts` in a disposable clone.
-4. **Slice 2, [#541](https://github.com/MapCairn/mapcairn/issues/541).** After steps 1 and 2 and the `rc.2` merge:
+4. **Slice 2, [#541](https://github.com/MapCairn/mapcairn/issues/541). In progress: its pull request is open.** After steps 1 and 2 and the `rc.2` merge:
    1. The failing tests: the five-package release tests, the `packCheck` ceiling and the consumer-check leg.
    2. `sdk` joins `SDK_PACKAGES`, `PACKAGES`, `SIZE_CEILINGS`, the `release.yml` loops, the `notesCheck` patterns, the `ci.yml` filter and the `check.mjs` sentence; `private` comes off.
    3. The documents under "Documents to update".
@@ -125,12 +125,13 @@ Each step is one pull request. `Part of #538` unless another issue is named.
 
 An agent lists these and waits. Values match `docs/guides/releasing.md` and maintainer steps 3 and 4 of `0014-sdk-release.md`.
 
-1. Merge the `rc.3` Release pull request with the squash subject the guide gives. The GitHub Release appears with five attested tarballs. The `npm` job stages the four packages that are on npm, with a notice that `@mapcairn/sdk` is skipped.
-2. Approve the four staged packages on npmjs.com with two-factor authentication (they publish under `next`).
-3. Publish `@mapcairn/sdk` by hand. Download `mapcairn-sdk-0.1.0-rc.3.tgz` from the GitHub Release, check it with `gh attestation verify <tarball> --repo MapCairn/mapcairn`, then, signed in with two-factor, run `npm publish <absolute path to the tarball> --access public --tag next`. This version has no provenance, as `rc.1` had none. Check that the other four are already on npm first, so the umbrella never names a missing package.
-4. Link the trusted publisher for `@mapcairn/sdk` (package settings → Trusted Publisher → GitHub Actions): organisation `MapCairn`, repository `mapcairn`, workflow `release.yml`, environment `npm`, allowed action `npm publish`. The link expires after 2 days unused, so make it when the `0.1.0` Release pull request is ready, not earlier.
-5. On the package's settings, set "Require two-factor authentication and disallow tokens".
-6. After `0.1.0`: move `next` to it for the umbrella too (`npm dist-tag`, the maintainer's step, as for the four).
+1. Merge the `rc.3` Release pull request with the squash subject the guide gives. The GitHub Release appears with five attested tarballs.
+2. Approve the deployment of the `npm` job. It publishes the four packages that are on npm, under `next` with provenance, then **fails red, naming `@mapcairn/sdk`**, which npm does not have yet. The run stays red until steps 3 to 5 are done. If the adapter package (#43) joins the same release and the umbrella pins it, nothing is refused (the new packages are not dependencies of a package the job publishes): the four publish and the job fails naming both. Upload the adapter first (it pins `core` at the new version, public by then) and then the umbrella. The tarballs come from the GitHub Release the same run created, so each upload follows that first red run and precedes the re-run. A new adapter in a release after `rc.3`, with the umbrella on npm and depending on it, is a known limitation: the job's refusal publishes nothing, so `core` and `map`, which the adapter pins, never reach npm at that version (tracked in #569, which narrows the refusal to the dependents of a new package).
+3. Publish `@mapcairn/sdk` by hand. Download all the tarballs of the release into one folder, check `mapcairn-sdk-0.1.0-rc.3.tgz` with `gh attestation verify <tarball> --repo MapCairn/mapcairn` (the guide has the full flags) and the folder with `node scripts/release/verifyRelease.mjs tarballs 0.1.0-rc.3 <folder>`, then, signed in with two-factor, run `npm publish <absolute path to the tarball> --access public --tag next`. This version has no provenance, as `rc.1` had none. Check that the other four are already on npm first, so the umbrella never names a missing package.
+4. On the package's settings, set "Require two-factor authentication and disallow tokens".
+5. Use "Re-run failed jobs" on the run: the `npm` job finds all five on npm and ends green. It needs no trusted publisher link, because it only skips packages already on npm. Then `npm run release:verify-published -- 0.1.0-rc.3 --no-provenance`.
+6. Link the trusted publisher for `@mapcairn/sdk` (package settings → Trusted Publisher → GitHub Actions): organisation `MapCairn`, repository `mapcairn`, workflow `release.yml`, environment `npm`, allowed action `npm publish`. The link expires after 2 days unused, so make it when the `0.1.0` Release pull request is ready, not earlier.
+7. After `0.1.0`: move `next` to it for the umbrella too (`npm dist-tag`, the maintainer's step, as for the four).
 
 ## Documents to update
 

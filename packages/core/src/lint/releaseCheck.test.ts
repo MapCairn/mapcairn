@@ -17,6 +17,7 @@ const NAMES = [
   "@mapcairn/map",
   "@mapcairn/react",
   "@mapcairn/theme",
+  "@mapcairn/sdk",
 ];
 
 type Facts = Record<string, unknown>;
@@ -66,12 +67,12 @@ describe("buildReport", () => {
     const { text, blockers } = report();
     expect(text).toContain("Release readiness for v0.1.0-rc.1");
     expect(text).toContain(
-      "Versions: core, react, theme and map are all 0.1.0-rc.1; internal ranges match.",
+      "Versions: core, react, theme, map and sdk are all 0.1.0-rc.1; internal ranges match.",
     );
     expect(text).toContain("Notes: CHANGELOG.md has a section for 0.1.0-rc.1");
-    expect(text).toContain("Tarballs: 4 packed, contents as expected");
+    expect(text).toContain("Tarballs: 5 packed, contents as expected");
     expect(text).toContain("core 212 kB");
-    expect(text).toContain("none of the four packages is on npm yet");
+    expect(text).toContain("none of the SDK packages is on npm yet");
     expect(text).toMatch(/Left for you: .*merge the Release pull request/);
     expect(text).toMatch(/Left for you: .*by hand/);
     expect(blockers).toEqual([]);
@@ -85,10 +86,10 @@ describe("buildReport", () => {
       ]),
     );
     const { text, blockers } = report({ registry });
-    expect(text).toContain("all four packages exist");
+    expect(text).toContain("all the SDK packages exist");
     expect(text).toContain("provenance");
     expect(text).toMatch(
-      /Left for you: merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the four packages\./,
+      /Left for you: merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the packages\./,
     );
     expect(text).not.toContain("npmjs.com");
     expect(text).not.toContain("staged");
@@ -104,6 +105,21 @@ describe("buildReport", () => {
       ]),
     );
     expect(report({ registry }).text).toContain("no provenance");
+  });
+
+  it("names the umbrella as the one package to upload by hand when the four others are on npm", () => {
+    const registry = Object.fromEntries(
+      NAMES.map((name) => [
+        name,
+        name === "@mapcairn/sdk"
+          ? { exists: false }
+          : { exists: true, latest: "0.1.0-rc.2", provenance: true },
+      ]),
+    );
+    const { text, blockers } = report({ registry });
+    expect(text).toContain("not on npm yet: @mapcairn/sdk.");
+    expect(text).toMatch(/Left for you: .*Re-run failed jobs/);
+    expect(blockers).toEqual([]);
   });
 
   it("reports the registry per package when only some are on npm, without blocking, and says what the run will do", () => {
@@ -131,7 +147,7 @@ describe("buildReport", () => {
     expect(text).not.toContain("by hand");
   });
 
-  it("blocks when the four versions differ and names them", () => {
+  it("blocks when the versions differ and names them", () => {
     const { text, blockers } = report({
       sdk: {
         versions: { ...versions("0.1.0-rc.1"), "@mapcairn/theme": "0.0.0" },
@@ -397,7 +413,7 @@ describe("the reviewer rule when a merge would publish", () => {
     ]),
   );
 
-  it("blocks when nobody has to approve and all four packages are on npm, because a merge then publishes", () => {
+  it("blocks when nobody has to approve and all the packages are on npm, because a merge then publishes", () => {
     const { text, blockers } = report({ reviewers: "none", registry: onNpm });
     expect(blockers.join("\n")).toContain("no required reviewer");
     expect(blockers.join("\n")).toContain(
@@ -406,7 +422,7 @@ describe("the reviewer rule when a merge would publish", () => {
     expect(text).toMatch(/Left for you: Fix the problems above first\./);
   });
 
-  it("stays a warning when the answer is unknown, even with all four on npm", () => {
+  it("stays a warning when the answer is unknown, even with every package on npm", () => {
     const { blockers, text } = report({
       reviewers: "unknown",
       registry: onNpm,

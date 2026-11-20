@@ -8,10 +8,15 @@ import {
   SDK_PACKAGES,
   // @ts-expect-error The scripts are dependency-free JavaScript with JSDoc types.
 } from "../../../../scripts/sdkPackages.mjs";
-import { fencedBlocks, namedImports, tagAttributes } from "./markdownSupport";
+import {
+  fencedBlocks,
+  isUsedByExample,
+  namedImports,
+  tagAttributes,
+} from "./markdownSupport";
 
 /**
- * Keeps the four package READMEs fit for the npm page, which shows each one
+ * Keeps the SDK package READMEs fit for the npm page, which shows each one
  * on its own, away from the repository. They install the package with npm,
  * pnpm and yarn side by side, hold one Status line that matches the
  * manifest (unpublished while private, a release candidate for an `-rc`
@@ -139,10 +144,7 @@ describe.each(SDK_PACKAGES)("the README of @mapcairn/%s", (name) => {
       .filter(({ specifier }) => specifier.startsWith("@mapcairn/"))
       .filter(
         ({ specifier, imported }) =>
-          !exampleImports.some(
-            (known) =>
-              known.specifier === specifier && known.imported === imported,
-          ),
+          !isUsedByExample(exampleImports, specifier, imported),
       )
       .map(({ specifier, imported }) => `${imported} from ${specifier}`);
     expect(unknown).toEqual([]);
@@ -250,6 +252,18 @@ describe("the stylesheet imports in the README of @mapcairn/map and @mapcairn/th
     expect(new Set(stylesheetsOf("theme"))).toEqual(
       new Set(["@mapcairn/theme/tokens.css"]),
     );
+  });
+});
+
+describe("the README of @mapcairn/sdk", () => {
+  const readme = readmeOf("sdk");
+
+  it("shows the one stylesheet import, ahead of the one import from the package", () => {
+    const [block = ""] = codeBlocks(readme);
+    expect(block.split("\n").slice(0, 2)).toEqual([
+      'import "@mapcairn/sdk/styles.css";',
+      expect.stringMatching(/^import \{ .* \} from "@mapcairn\/sdk";$/),
+    ]);
   });
 });
 

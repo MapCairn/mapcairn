@@ -592,6 +592,7 @@ const ALL_MISSING = {
   react: "missing",
   theme: "missing",
   map: "missing",
+  sdk: "missing",
 };
 
 /** What the loop ran, without the registry reads. */
@@ -608,11 +609,11 @@ describe.skipIf(process.platform === "win32")(
     const tarball = (name: string) =>
       `<workspace>/release/mapcairn-${name}-0.1.0-rc.2.tgz`;
 
-    it("publishes core, react, theme and map in that order, and reads each back before the next", () => {
+    it("publishes core, react, theme, map and sdk in that order, and reads each back before the next", () => {
       const run = runPublishStep({ mode: "publish", states: ALL_MISSING });
       expect(run.status).toBe(0);
       expect(actions(run)).toEqual(
-        ["core", "react", "theme", "map"].flatMap((name) => [
+        ["core", "react", "theme", "map", "sdk"].flatMap((name) => [
           `npm publish ${tarball(name)} --ignore-scripts --tag next --provenance`,
           `node scripts/release/verifyRelease.mjs confirm-published @mapcairn/${name} 0.1.0-rc.2`,
         ]),
@@ -627,12 +628,14 @@ describe.skipIf(process.platform === "win32")(
           react: "published",
           theme: "missing",
           map: "missing",
+          sdk: "missing",
         },
       });
       expect(run.status).toBe(0);
       expect(actions(run).filter((call) => call.startsWith("npm "))).toEqual([
         `npm publish ${tarball("theme")} --ignore-scripts --tag next --provenance`,
         `npm publish ${tarball("map")} --ignore-scripts --tag next --provenance`,
+        `npm publish ${tarball("sdk")} --ignore-scripts --tag next --provenance`,
       ]);
       expect(run.stdout).toContain(
         "::notice::@mapcairn/core@0.1.0-rc.2 is already on npm",
@@ -650,6 +653,7 @@ describe.skipIf(process.platform === "win32")(
           react: "published",
           theme: "published",
           map: "published",
+          sdk: "published",
         },
       });
       expect(run.status).toBe(0);
@@ -688,14 +692,14 @@ describe.skipIf(process.platform === "win32")(
       expect(published).toHaveLength(2);
     });
 
-    it("publishes the packages npm has and then fails, naming the one it does not have and what to do, when one is new and three are on npm", () => {
+    it("publishes the packages npm has and then fails, naming the one it does not have and what to do, when one is new and four are on npm", () => {
       const run = runPublishStep({
         mode: "publish",
         states: { ...ALL_MISSING, theme: "new" },
       });
       expect(run.status).not.toBe(0);
       expect(actions(run)).toEqual(
-        ["core", "react", "map"].flatMap((name) => [
+        ["core", "react", "map", "sdk"].flatMap((name) => [
           `npm publish ${tarball(name)} --ignore-scripts --tag next --provenance`,
           `node scripts/release/verifyRelease.mjs confirm-published @mapcairn/${name} 0.1.0-rc.2`,
         ]),
@@ -707,7 +711,7 @@ describe.skipIf(process.platform === "win32")(
       expect(run.stdout).toContain("Re-run failed jobs");
     });
 
-    it("fails and publishes nothing when one package is new and the other three are already on npm at this version", () => {
+    it("fails and publishes nothing when one package is new and the other four are already on npm at this version", () => {
       const run = runPublishStep({
         mode: "publish",
         states: {
@@ -715,6 +719,7 @@ describe.skipIf(process.platform === "win32")(
           react: "published",
           theme: "published",
           map: "new",
+          sdk: "published",
         },
       });
       expect(run.status).not.toBe(0);
@@ -725,11 +730,17 @@ describe.skipIf(process.platform === "win32")(
     it("names every new package, publishes none of them, and fails when no package is on npm", () => {
       const run = runPublishStep({
         mode: "publish",
-        states: { core: "new", react: "new", theme: "new", map: "new" },
+        states: {
+          core: "new",
+          react: "new",
+          theme: "new",
+          map: "new",
+          sdk: "new",
+        },
       });
       expect(run.status).not.toBe(0);
       expect(actions(run)).toEqual([]);
-      for (const name of ["core", "react", "theme", "map"]) {
+      for (const name of ["core", "react", "theme", "map", "sdk"]) {
         expect(run.stdout).toContain(`@mapcairn/${name}`);
       }
     });
@@ -750,7 +761,7 @@ describe.skipIf(process.platform === "win32")(
       });
       expect(run.status).toBe(0);
       expect(actions(run)).toEqual(
-        ["core", "react", "theme"].map(
+        ["core", "react", "theme", "sdk"].map(
           (name) =>
             `npm publish ${tarball(name)} --ignore-scripts --tag next --provenance --dry-run`,
         ),
@@ -769,6 +780,12 @@ describe.skipIf(process.platform === "win32")(
           react: ["@mapcairn/core"],
           theme: [],
           map: ["@mapcairn/core", "@mapcairn/react", "@mapcairn/theme"],
+          sdk: [
+            "@mapcairn/core",
+            "@mapcairn/map",
+            "@mapcairn/react",
+            "@mapcairn/theme",
+          ],
         },
       });
       expect(run.status).not.toBe(0);
@@ -778,6 +795,9 @@ describe.skipIf(process.platform === "win32")(
       );
       expect(run.stdout).toContain(
         "::error::@mapcairn/map depends on @mapcairn/core",
+      );
+      expect(run.stdout).toContain(
+        "::error::@mapcairn/sdk depends on @mapcairn/core",
       );
       expect(run.stdout).not.toContain("::error::@mapcairn/theme depends");
       expect(run.stdout).toContain("by hand");
@@ -793,15 +813,15 @@ describe.skipIf(process.platform === "win32")(
       expect(actions(run)).toEqual([]);
     });
 
-    it("publishes the others and then fails for a new leaf package that nothing depends on", () => {
+    it("publishes the four others and then fails for the umbrella when it is new, since nothing depends on it", () => {
       const run = runPublishStep({
         mode: "publish",
-        states: { ...ALL_MISSING, map: "new" },
+        states: { ...ALL_MISSING, sdk: "new" },
         dependencies: {
           core: [],
-          react: [],
-          theme: ["@mapcairn/core"],
-          map: ["@mapcairn/core", "@mapcairn/react"],
+          react: ["@mapcairn/core"],
+          theme: [],
+          map: ["@mapcairn/core", "@mapcairn/react", "@mapcairn/theme"],
         },
       });
       expect(run.status).not.toBe(0);
@@ -809,8 +829,48 @@ describe.skipIf(process.platform === "win32")(
         actions(run)
           .filter((call) => call.startsWith("npm "))
           .map((call) => call.split(" ")[2]),
-      ).toEqual([tarball("core"), tarball("react"), tarball("theme")]);
-      expect(run.stdout).toContain("@mapcairn/map is not on npm yet");
+      ).toEqual([
+        tarball("core"),
+        tarball("react"),
+        tarball("theme"),
+        tarball("map"),
+      ]);
+      expect(run.stdout).toContain("@mapcairn/sdk is not on npm yet");
+      expect(run.stdout).not.toContain("depends on");
+    });
+
+    it("publishes nothing and fails, naming the umbrella, when it is new and the four others are already on npm", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: {
+          core: "published",
+          react: "published",
+          theme: "published",
+          map: "published",
+          sdk: "new",
+        },
+      });
+      expect(run.status).not.toBe(0);
+      expect(actions(run)).toEqual([]);
+      expect(run.stdout).toContain("@mapcairn/sdk is not on npm yet");
+      expect(run.stdout).toContain("by hand");
+    });
+
+    it("refuses to publish the umbrella while a package it pins is new, and publishes nothing", () => {
+      const run = runPublishStep({
+        mode: "publish",
+        states: { ...ALL_MISSING, theme: "new", core: "published" },
+        dependencies: {
+          react: [],
+          map: ["@mapcairn/theme"],
+          sdk: ["@mapcairn/theme"],
+        },
+      });
+      expect(run.status).not.toBe(0);
+      expect(actions(run)).toEqual([]);
+      expect(run.stdout).toContain(
+        "::error::@mapcairn/sdk depends on @mapcairn/theme",
+      );
     });
 
     it("does not refuse when the dependents of a new package are already on npm at this version", () => {
@@ -821,11 +881,13 @@ describe.skipIf(process.platform === "win32")(
           react: "published",
           theme: "missing",
           map: "published",
+          sdk: "published",
         },
         dependencies: {
           react: ["@mapcairn/core"],
           theme: [],
           map: ["@mapcairn/core"],
+          sdk: ["@mapcairn/core"],
         },
       });
       expect(run.status).not.toBe(0);
@@ -849,7 +911,7 @@ describe.skipIf(process.platform === "win32")(
       const run = runPublishStep({ mode: "rehearse", states: ALL_MISSING });
       expect(run.status).toBe(0);
       expect(actions(run)).toEqual(
-        ["core", "react", "theme", "map"].map(
+        ["core", "react", "theme", "map", "sdk"].map(
           (name) =>
             `npm publish ${tarball(name)} --ignore-scripts --tag next --provenance --dry-run`,
         ),

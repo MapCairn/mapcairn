@@ -166,9 +166,9 @@ function sourceFiles(): string[] {
 describe("@mapcairn/sdk manifest", () => {
   const manifest = manifestAt(UMBRELLA);
 
-  it("is private until it joins the release set", () => {
+  it("is public, in the release set with the four packages", () => {
     expect(manifest.name).toBe("@mapcairn/sdk");
-    expect(manifest.private).toBe(true);
+    expect(manifest.private).toBeUndefined();
   });
 
   it("is at the version of the four packages", () => {
@@ -203,14 +203,14 @@ describe("@mapcairn/sdk manifest", () => {
     expect(manifest.sideEffects).toEqual(["**/*.css"]);
   });
 
-  it("has a README that says it is unpublished while it is private, and links the licence", () => {
+  it("has a README with one Status line, and links the licence", () => {
     const readme = read(`${UMBRELLA}/README.md`);
     expect(readme.split("\n")[0]).toBe("# `@mapcairn/sdk`");
     const status = readme
       .split("\n")
       .filter((line) => line.startsWith("**Status:**"));
     expect(status).toHaveLength(1);
-    expect(status[0]).toMatch(/not published to npm/i);
+    expect(status[0]).not.toMatch(/not published to npm/i);
     expect(readme).toContain(
       "https://github.com/MapCairn/mapcairn/blob/main/packages/sdk/LICENSE",
     );

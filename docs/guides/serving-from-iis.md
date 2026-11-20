@@ -11,7 +11,7 @@ Two things a page needs are not built yet:
 - There is no prebuilt bundle and no `mountMap` function for a page without React ([#44](https://github.com/MapCairn/mapcairn/issues/44)). A page builds a small entry of its own that imports the SDK packages and calls React's `createRoot`, as [`examples/embed`](../../examples/embed/README.md) does.
 - There is no packaged map adapter ([#43](https://github.com/MapCairn/mapcairn/issues/43)). A real map needs a `MapAdapter` over MapLibre GL JS, which `packages/web/src/adapters/maplibre/MapLibreMapAdapter.ts` is the reference for. `examples/embed` runs on the SDK's fakes and draws no map.
 
-What the four SDK packages ship, from their manifests:
+What the SDK packages ship, from their manifests:
 
 - ESM only: each sets `"type": "module"` and exports `dist` files. The `@mapcairn/source` condition in the exports points at TypeScript source and is for this repository's own tools; an app does not turn it on.
 - `@mapcairn/theme/tokens.css` and `@mapcairn/map/styles.css` are plain CSS files in the `exports` map. No vanilla-extract plugin is needed, and the JavaScript imports no CSS itself.

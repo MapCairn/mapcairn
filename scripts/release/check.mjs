@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * The release readiness report: where the four SDK packages stand, in plain
+ * The release readiness report: where the SDK packages stand, in plain
  * English, and the next step for a person. It reads only public data (`git`,
  * `npm pack --dry-run`, `npm view`, `npm whoami`) and changes nothing.
  *
@@ -163,14 +163,14 @@ function versionLines({ sdk, line, blocker }) {
       .join(", ");
     blocker(
       "Versions",
-      `the four SDK packages do not share one version (${found}). \`npm run release:apply\` sets all four together.`,
+      `the SDK packages do not share one version (${found}). \`npm run release:apply\` sets them together.`,
     );
     return;
   }
   if (sdk.rangeProblems.length > 0) {
     blocker(
       "Versions",
-      `all four are ${sdk.version}, but an internal range does not match: ${sdk.rangeProblems.join("; ")}`,
+      `all are ${sdk.version}, but an internal range does not match: ${sdk.rangeProblems.join("; ")}`,
     );
     return;
   }
@@ -190,7 +190,7 @@ function versionLines({ sdk, line, blocker }) {
 function privateLines({ facts, prepared, line, blocker }) {
   const names = facts.privatePackages.map(short).join(", ");
   if (facts.privatePackages.length === 0) {
-    line("Private flags", "none of the four packages is private.");
+    line("Private flags", "none of the SDK packages is private.");
     return;
   }
   if (prepared) {
@@ -294,7 +294,7 @@ function registryLines({ facts, line }) {
   if (present.length === 0) {
     line(
       "npm",
-      `none of the four packages is on npm yet, so the first upload is by hand (${GUIDE}, maintainer steps).`,
+      `none of the SDK packages is on npm yet, so the first upload is by hand (${GUIDE}, maintainer steps).`,
     );
     return "none";
   }
@@ -312,7 +312,7 @@ function registryLines({ facts, line }) {
       answer?.provenance === true ? "with provenance" : "no provenance";
     return `${short(name)} ${answer?.latest ?? "unknown"} (${provenance})`;
   }).join(", ");
-  line("npm", `all four packages exist; latest: ${latest}.`);
+  line("npm", `all the SDK packages exist; latest: ${latest}.`);
   return "all";
 }
 
@@ -489,13 +489,13 @@ function leftForYou({ blockers, prepared, registry }) {
     return "nothing yet. An agent runs the release skill: plan, notes, apply, then opens the Release pull request.";
   }
   if (registry === "none") {
-    return "merge the Release pull request, then publish the four tarballs from the GitHub Release by hand, because none is on npm yet.";
+    return "merge the Release pull request, then publish the tarballs from the GitHub Release by hand, because none is on npm yet.";
   }
   if (registry === "some") {
     return `merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the packages npm has and then fails naming the ones it does not. Upload those by hand from the GitHub Release, link their trusted publishers, then use Re-run failed jobs (${GUIDE}).`;
   }
   if (registry === "all") {
-    return "merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the four packages.";
+    return "merge the Release pull request, then approve the deployment of the npm environment in GitHub; the workflow publishes the packages.";
   }
   return "merge the Release pull request, then check on npmjs.com what was published.";
 }
@@ -659,7 +659,7 @@ export function parseRegistryAnswer(result) {
 
 /**
  * @param {string} root
- * @param {string | null} version The shared version, null when the four differ.
+ * @param {string | null} version The shared version, null when they differ.
  * @returns {Facts["changelog"]}
  */
 function readChangelog(root, version) {

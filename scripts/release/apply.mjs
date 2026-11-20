@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 /**
- * Applies a release to the working tree: sets the version of the four SDK
+ * Applies a release to the working tree: sets the version of the SDK
  * packages and every internal range that names them, puts the notes at the top
  * of `CHANGELOG.md` under `## <version> (<date>)`, and runs a real
  * `npm install --ignore-scripts` so the lockfile matches. It commits, tags and
@@ -118,7 +118,7 @@ export function applyRelease({
   const state = readSdkState(root);
   if (!state.consistent || state.version === null) {
     throw new ReleaseError(
-      "The four SDK packages do not share one version, so there is nothing safe to raise.",
+      "The SDK packages do not share one version, so there is nothing safe to raise.",
     );
   }
   const current = parseVersion(state.version);
