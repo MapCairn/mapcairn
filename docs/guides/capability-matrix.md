@@ -1,6 +1,6 @@
 # Capability matrix
 
-_Last reviewed: 2026-11-17. Review it whenever a row below changes status, and at least with each yearly review of [`ROADMAP.md`](../../ROADMAP.md)._
+_Last reviewed: 2026-11-20. Review it whenever a row below changes status, and at least with each yearly review of [`ROADMAP.md`](../../ROADMAP.md)._
 
 The project's aim is an SDK with everything a team needs to build an industry-grade GIS application ([`ROADMAP.md`](../../ROADMAP.md), "Direction"). This page lists what such an application needs, as neutral capability areas, and says what MapCairn has, partly has or lacks, with the code or issue that shows it. It is the basis for the order of the SDK work.
 

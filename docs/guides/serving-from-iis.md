@@ -21,9 +21,10 @@ What the four SDK packages ship, from their manifests:
 
 Any bundler that follows the `exports` map and handles a CSS import works; `examples/embed` uses Vite, and this guide covers only that. Build it once on a machine that has Node, and copy the output to the server. The server never needs Node.
 
-The entry file is the one place your page differs from `examples/embed/src/main.tsx`: it imports the two stylesheets, then mounts into an element the Razor page provides.
+The entry file below follows `examples/embed/src/main.tsx` in its imports and differs from it in where it mounts: into an element the Razor page provides, not `#root`. It leaves out the example's `page.css`, its `StrictMode` wrapper and the code that sets the body's font and colours from `tokens`; [`extending.md`](extending.md#embed-the-sdk-in-an-app-of-your-own) lists the base styles a page sets itself.
 
 ```tsx
+import "@fontsource-variable/ibm-plex-sans/wght.css";
 import "@mapcairn/theme/tokens.css";
 import "@mapcairn/map/styles.css";
 import { createRoot } from "react-dom/client";
@@ -35,11 +36,11 @@ if (container) {
 }
 ```
 
-`MapApp` is your component: the `ServicesProvider`, `MapView` and `MapChrome` setup from the [README](../../README.md#embed-a-map), with your own services in place of `createFakeServices()`. Use `createRoot`, not `hydrateRoot`: the server sends an empty element, so there is nothing to hydrate.
+`MapApp` is your component. It holds what `extending.md` says an app provides: `ServicesProvider`, `LiveRegionProvider` and `TooltipProvider` around `MapView`, `FocusRegistryProvider` around `MapChrome`, and services of your own in place of `createFakeServices()` (the [README](../../README.md#embed-a-map) has the setup). The map adapter you write also loads the engine's stylesheet: the reference adapter imports `maplibre-gl/dist/maplibre-gl.css` beside the engine and has styles of its own in `packages/web/src/adapters/mapEngine.css.ts`, which `extending.md` names as the reference. Use `createRoot`, not `hydrateRoot`: the server sends an empty element, so there is nothing to hydrate.
 
 ### What the build emits
 
-A production Vite 8.3.8 build of `examples/embed` wrote one HTML file and, under `assets`, one JavaScript file, one CSS file and six `.woff2` fonts, each with a hash in its name, such as `index-BQuCVsyb.js`. A scratch build of an entry that imports MapLibre GL JS 6.18.0 and its worker with `?worker&url`, as the reference host's adapter does, added the worker as another `.js` file under `assets`, and no `.wasm`. Source maps are written only if you turn them on. Fonts come from the font package the example imports, `@fontsource-variable/ibm-plex-sans`.
+A production Vite 8.3.8 build of `examples/embed` wrote one HTML file and, under `assets`, one JavaScript file, one CSS file and six `.woff2` fonts, each with a hash in its name, such as `index-BQuCVsyb.js`. The six fonts are the subsets of the one font package that the example imports; a build of your entry with the font import above emits the same kind of files. A scratch build of an entry that imports MapLibre GL JS 6.18.0 and its worker with `?worker&url`, as the reference host's adapter does, added the worker as another `.js` file under `assets`, and no `.wasm`. Source maps are written only if you turn them on. Fonts come from the font package the example imports, `@fontsource-variable/ibm-plex-sans`.
 
 The extensions to serve are therefore `.js`, `.css` and `.woff2`, and `.map` if you enable source maps. Glyphs, sprites and tiles are not built files: they come from the origins your basemaps and layers name, so they are served by those providers and need no IIS settings of yours.
 
@@ -47,7 +48,7 @@ The extensions to serve are therefore `.js`, `.css` and `.woff2`, and `.map` if 
 
 Vite writes absolute URLs from `/`. If the map lives in a sub-application or virtual directory, set Vite's `base` option, or pass `--base=/maps/` on the command line. A build with `--base=/maps/` wrote `/maps/assets/index-Cczki1Ig.js` into its HTML, and the same output with the default base wrote `/assets/...`.
 
-A Razor page needs the hashed file names. With `build.manifest` on, Vite writes a manifest file, named manifest with a json extension, in a folder called .vite inside the output folder. For `examples/embed`, the `index.html` entry in it holds `file` (the JavaScript), `css` (a list of stylesheets) and `assets` (the fonts the stylesheet loads). A build step or a small helper in your project reads those names and writes them into the page. The C# for that was not written or run here.
+A Razor page needs the hashed file names. With `build.manifest` on, Vite writes a manifest file, named `manifest.json`, in a `.vite` folder inside the output folder. For `examples/embed`, the `index.html` entry in it holds `file` (the JavaScript), `css` (a list of stylesheets) and `assets` (the fonts the stylesheet loads). A build step or a small helper in your project reads those names and writes them into the page. The C# for that was not written or run here.
 
 If you cannot read the manifest, serve fixed file names and revalidate them instead (see "Cache lifetimes").
 
@@ -65,32 +66,26 @@ IIS returns only the file types listed in `staticContent` ([`mimeMap`](https://l
 <configuration>
   <system.webServer>
     <staticContent>
+      <remove fileExtension=".js" />
       <mimeMap fileExtension=".js" mimeType="text/javascript" />
+      <remove fileExtension=".woff2" />
       <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
     </staticContent>
   </system.webServer>
 </configuration>
 ```
 
-Add `.css` as `text/css` and `.map` as `application/json` the same way if they are missing. A module script is refused by the browser when its `Content-Type` is not a JavaScript type, which is why `.js` matters most.
+Each `remove` comes before its `mimeMap`. Two entries for one extension make IIS reject the whole configuration file (general IIS knowledge, a "duplicate collection entry" error on a type a parent configuration already defines; the `mimeMap` page does not say this), and a `remove` for an extension that is not defined is, to the best of this guide's knowledge, harmless. That was not observed. Add `.css` as `text/css` and `.map` as `application/json` the same way if they are missing. A module script is refused by the browser when its `Content-Type` is not a JavaScript type, which is why `.js` matters most.
 
 ### Compression
 
-Static compression is controlled by [`urlCompression`](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/urlcompression/), where `doStaticCompression` defaults to true. The compression role service must be installed on the server ([`httpCompression`](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/httpcompression/) lists the steps). The server's default static types include `text/*` and `application/javascript`, so scripts and stylesheets served as `text/javascript` and `text/css` are covered without a change. That page's default list does not include `application/json`, so a JSON file you serve is not compressed unless you add it, and this guide does not edit `httpCompression`. A `web.config` for the site needs only:
-
-```xml
-<system.webServer>
-  <urlCompression doStaticCompression="true" doDynamicCompression="false" />
-</system.webServer>
-```
-
-The sample on the `urlCompression` page uses these two attributes with these values.
+Static compression is on by default: the [`urlCompression`](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/urlcompression/) page gives `doStaticCompression` a default of true, so the site needs no setting for it. The same page says dynamic compression, which `doDynamicCompression` controls, is on by default in IIS 7.5 and later (IIS 7.0 left it off because of processor use); turning it off would also stop compression of the Razor page itself, so this guide leaves it alone. The compression role service must be installed on the server ([`httpCompression`](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/httpcompression/) lists the steps). The server's default static types include `text/*` and `application/javascript`, so scripts and stylesheets served as `text/javascript` and `text/css` are covered without a change. That page's default list does not include `application/json`, so a JSON file you serve is not compressed unless you add it, and this guide does not edit `httpCompression`.
 
 ### Cache lifetimes
 
 A file with a hash in its name never changes, so it can be cached for a year; a page that names new hashes after each deploy then reaches people at once. Do not cache the Razor page itself this way.
 
-[`clientCache`](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/staticcontent/clientcache/) adds `Cache-Control: max-age=<n>` when `cacheControlMode` is `UseMaxAge`, and its `cacheControlMaxAge` takes a time span (its default, one day, is written `1.00:00:00`). Put it in a `web.config` inside the folder that holds the hashed files, so it does not reach anything else:
+[`clientCache`](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/staticcontent/clientcache/) adds `Cache-Control: max-age=<n>` when `cacheControlMode` is `UseMaxAge`, and its `cacheControlMaxAge` takes a time span (its default, one day, is written `1.00:00:00`). Put it in a `web.config` inside the folder that holds the hashed files, so it does not reach anything else. This sample is a whole file; the earlier and later XML samples are fragments to put inside the `system.webServer` element of a `web.config` you already have:
 
 ```xml
 <configuration>
@@ -102,7 +97,7 @@ A file with a hash in its name never changes, so it can be cached for a year; a 
 </configuration>
 ```
 
-The same page describes `cacheControlCustom` as custom cache control directives, which is where `immutable` would go. It does not say how the custom value combines with `max-age`, so request one file after you set it and read the header that comes back.
+The same page describes `cacheControlCustom` as custom cache control directives, which is where `immutable` would go. It does not say how the custom value combines with `max-age`, so request one file after you set it and read the header that comes back. The folder rule also covers the map's worker script if it sits in the same folder, and a year-long lifetime on that file has a side effect on the policy: see the worker point under "Content security policy".
 
 The reference host sends `Cache-Control: public, max-age=31536000, immutable` for its hashed `/assets/*` files (`packages/web/public/_headers`). If you serve fixed names instead, use `DisableCache`, which adds `Cache-Control: no-cache`; `setEtag` defaults to true, so the browser can revalidate with the ETag.
 
@@ -115,8 +110,9 @@ The reference host sends `Cache-Control: public, max-age=31536000, immutable` fo
 The [static files page](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/static-files) says an ASP.NET Core app hosted in IIS has every request, static files included, forwarded to the app by the ASP.NET Core Module, and that the IIS static file handler is not used. So the `mimeMap` and `clientCache` settings above do not decide how this app's files are served. The app does:
 
 - Put the build output in `wwwroot`, the default web root. The page names `MapStaticAssets` for .NET 9 or later and `UseStaticFiles` for .NET 8 or earlier as the calls that serve it.
-- Add a missing media type with a `FileExtensionContentTypeProvider` set as the `ContentTypeProvider` of `StaticFileOptions`. The page shows `provider.Mappings[".ext"] = "type"` and warns that the mappings are meant to be set once at startup.
-- Set `Cache-Control` for the hashed files in `OnPrepareResponse`. The page shows appending `Cache-Control` to the response headers there.
+- With `UseStaticFiles`, add a missing media type with a `FileExtensionContentTypeProvider` set as the `ContentTypeProvider` of the `StaticFileOptions` passed to `app.UseStaticFiles(new StaticFileOptions { ... })`. The page shows `provider.Mappings[".ext"] = "type"` and warns that the mappings are meant to be set once at startup.
+- With `UseStaticFiles`, set `Cache-Control` for the hashed files in the `OnPrepareResponse` option of the same `StaticFileOptions`. The page shows appending `Cache-Control` to the response headers there.
+- `MapStaticAssets` is a different call and takes neither option. The page says it works from metadata captured at build time for compression, caching and fingerprinting, and that the `ETag`, `Last-Modified` and `Content-Type` headers are set for the assets it knows, with an `immutable` directive for fingerprinted ones. This guide did not read how it treats a file your own Vite build puts in `wwwroot`, so check the response headers there.
 
 This guide does not say which ASP.NET Core version your project needs, or whether `MapStaticAssets` serves the font and worker files correctly.
 
@@ -198,7 +194,7 @@ In the page, with the hashed names from the manifest in place of the example one
 }
 ```
 
-Classic ASP.NET MVC follows the same shape, a view with a layout. This guide read no page about its view engine or its bundling, so it says nothing about either, and nothing about .NET script and style bundling: do not pass the SDK's built files through a bundler that minifies or reorders them again. Link them as they are.
+The layout page's own sample loads Bootstrap and jQuery from `ajax.aspnetcdn.com`; a policy of `default-src 'self'` blocks those, so a stock layout needs its own copies of them on your origin or an allowance for that origin in the policy. Classic ASP.NET MVC follows the same shape, a view with a layout. This guide read no page about its view engine or its bundling, so it says nothing about either, and nothing about .NET script and style bundling: do not pass the SDK's built files through a bundler that minifies or reorders them again. Link them as they are.
 
 ### Page styles
 
@@ -208,7 +204,7 @@ An existing site stylesheet is a risk. The SDK's primitives sit in a cascade lay
 
 ### Language and direction
 
-Set `lang` and `dir` on `<html>` in the Razor layout from the page's language, for example `<html lang="en-GB" dir="ltr">`, as the [translation guide](translate-the-sdk.md) says (the reference host renders its default on the server and keeps both in step on the client). If the page decides the language, add `data-fixed-language` to `<html>`: the theme bootstrap script then leaves `lang` and `dir` alone (`packages/core/src/theme/themeBootstrap.ts`).
+Set `lang` and `dir` on `<html>` in the Razor layout from the page's language, for example `<html lang="en-GB" dir="ltr">`, as the [translation guide](translate-the-sdk.md) says (the reference host renders its default on the server and keeps both in step on the client). `data-fixed-language` on `<html>` matters only if the theme bootstrap script is given a list of offered languages (`buildThemeBootstrapScript(offeredLanguages)`): that script then sets `lang` and `dir` from a stored choice unless the attribute is present. The call shown above passes none, so its script never touches `lang` or `dir` and the attribute changes nothing (`packages/core/src/theme/themeBootstrap.ts`).
 
 ### Layers, login and what stays on the server
 
@@ -231,6 +227,8 @@ MapLibre needs WebGL. When it is missing, an adapter rejects with a `MapEngineEr
 
 - Nothing ran on IIS, IIS Express, ASP.NET Core or classic ASP.NET. The `web.config` and Razor samples, the section lock behaviour, the effect of `cacheControlCustom` and the response headers were not observed.
 - No page loaded the real map, a layer endpoint or the policy. The mount function from [#44](https://github.com/MapCairn/mapcairn/issues/44) does not exist, so no page used it.
+- Mounting in a server-rendered view: keeping the container outside any region a partial postback replaces, and destroying the map when the page unloads. Nothing here covers either.
+- Range requests for a single-file tile archive ([#192](https://github.com/MapCairn/mapcairn/issues/192)), which the issue asks the guide to cover. #221 stays open for this and for the server trial.
 - Whether the `@import ... layer()` form fixes a framework's rules, and whether `immutable` can be sent from `clientCache`, are open until someone tries them on a server.
 
 When you try this on a server, record what failed and how you fixed it, and send it back as a change to this guide.
