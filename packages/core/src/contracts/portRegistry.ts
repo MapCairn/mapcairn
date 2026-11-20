@@ -102,9 +102,12 @@ type AssertNever<T extends never> = T;
 
 /**
  * Fails to compile when a `Services` key is neither in {@link PORT_NAMES} nor
- * in {@link DATA_SERVICE_NAMES}.
+ * in {@link DATA_SERVICE_NAMES}. Kept out of the exports: in a rolled-up
+ * declaration it would read the host's `Services`, so a host that adds a
+ * service by declaration merging would fail its own type check.
  */
-export type PortsAreExhaustive = AssertNever<
+// biome-ignore lint/correctness/noUnusedVariables: the alias is its own check, and is read by no code
+type PortsAreExhaustive = AssertNever<
   Exclude<keyof Services, PortName | (typeof DATA_SERVICE_NAMES)[number]>
 >;
 

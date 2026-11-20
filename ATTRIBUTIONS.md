@@ -50,11 +50,11 @@ The social preview images are the project's own: `packages/web/public/og-image.p
 
 ### README images
 
-The screenshots and the recording in `docs/images/` are captures of the live reference site, not renders of the SDK's own fixtures, and they show the credits the app shows. They show the Bright basemap (light) and the Dark basemap (dark) from OpenFreeMap, with the earthquakes layer on:
+The screenshots and the recording in `docs/images/` are captures of the live reference site, not renders of the SDK's own fixtures, and they show the credits the app shows. They show the Bright basemap (light) and the Dark basemap (dark) from OpenFreeMap, with the earthquakes layer on for the past week:
 
-| Image                                                                | Shows                                                      | Credit                                                                                                                                                                    |
-| -------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `playground-light.png`, `playground-dark.png`, `playground-demo.gif` | OpenFreeMap vector tiles and styles, the Earthquakes layer | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap, MapLibre, U.S. Geological Survey |
+| Image                                                                                            | Shows                                                      | Credit                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `playground-light.png`, `playground-dark.png`, `playground-demo.gif`, `playground-demo-dark.gif` | OpenFreeMap vector tiles and styles, the Earthquakes layer | © OpenMapTiles, Data from OpenStreetMap (© OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)), OpenFreeMap, MapLibre, U.S. Geological Survey |
 
 ## Place search
 

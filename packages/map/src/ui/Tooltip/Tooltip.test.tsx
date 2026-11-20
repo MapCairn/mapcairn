@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright MapCairn contributors
 import { createFakeServices } from "@mapcairn/core";
+import { tokens } from "@mapcairn/theme";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -152,6 +153,67 @@ describe("Tooltip", () => {
       trigger().focus();
     });
     expect(screen.getByRole("tooltip")).toBeTruthy();
+  });
+});
+
+/** The name of the custom property behind a colour token. */
+function propertyOf(reference: string): string {
+  return /^var\((--[\w-]+)\)$/.exec(reference)?.[1] ?? "";
+}
+
+describe("Tooltip inside a scoped host theme", () => {
+  const surface = propertyOf(tokens.color.surface);
+  const text = propertyOf(tokens.color.text);
+
+  /** The visible bubble: Radix marks it with the side it sits on. */
+  const bubble = () => {
+    const element = document.body.querySelector<HTMLElement>("[data-side]");
+    expect(element).not.toBeNull();
+    return element as HTMLElement;
+  };
+
+  /*
+   * jsdom does not inherit custom properties, so the host colours are set on
+   * the trigger itself; a browser inherits them from the scope.
+   */
+  function scoped() {
+    return setup(
+      <div data-testid="scope">
+        <Tooltip content="Shortcut: plus">
+          <button
+            type="button"
+            ref={(node) => {
+              node?.style.setProperty(surface, "#101820");
+              node?.style.setProperty(text, "#f2f4f6");
+            }}
+          >
+            Zoom in
+          </button>
+        </Tooltip>
+      </div>,
+    );
+  }
+
+  it("gives the portalled bubble the colours its trigger sees", () => {
+    scoped();
+    act(() => {
+      trigger().focus();
+    });
+    expect(screen.getByTestId("scope").contains(bubble())).toBe(false);
+    expect(bubble().style.getPropertyValue(surface)).toBe("#101820");
+    expect(bubble().style.getPropertyValue(text)).toBe("#f2f4f6");
+  });
+
+  it("sets nothing when the trigger sees no host colours", () => {
+    setup(
+      <Tooltip content="Shortcut: plus">
+        <button type="button">Zoom in</button>
+      </Tooltip>,
+    );
+    act(() => {
+      trigger().focus();
+    });
+    expect(bubble().style.getPropertyValue(surface)).toBe("");
   });
 });
 
