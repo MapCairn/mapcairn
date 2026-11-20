@@ -78,7 +78,7 @@ function nearestDetent(heights: DetentHeights, height: number): SheetDetent {
  * @param input.velocityPxPerSecond - Positive when the sheet is expanding.
  * @remarks A fast fling (faster than {@link SHEET_FLING_VELOCITY}) moves one
  *   detent from the nearest one, in the fling's direction. Anything slower
- *   projects {@link SHEET_MOMENTUM_SECONDS} of momentum and snaps to the
+ *   projects 0.15 seconds of momentum and snaps to the
  *   nearest detent to that point. Exact ties go to the smaller detent.
  */
 export function resolveSnap(input: {
@@ -134,7 +134,7 @@ export function cycleDetent(current: SheetDetent): SheetDetent {
 
 /**
  * Resistance for dragging past an extreme. Rises smoothly from 0, always
- * moves less than the finger and never reaches {@link RUBBER_BAND_LIMIT}.
+ * moves less than the finger and never reaches 48 pixels.
  * @param overshoot - Pixels past the extreme. Zero or less gives zero.
  */
 export function rubberBand(overshoot: number): number {

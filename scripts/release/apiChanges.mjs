@@ -204,6 +204,8 @@ function compareEntries(before, after) {
   const count = (/** @type {ReportEntry} */ entry, /** @type {string} */ tag) =>
     entry.tags.filter((line) => line.includes(tag)).length;
   const name = after.name;
+  // An export that was already @internal is unsupported, so changing it breaks no one.
+  const supported = count(before, "@internal") === 0;
   if (count(after, "@internal") > count(before, "@internal")) {
     return {
       kind: "gained-internal",
@@ -225,7 +227,7 @@ function compareEntries(before, after) {
       return {
         kind: "union-member-added",
         name,
-        likelyBreaking: true,
+        likelyBreaking: supported,
         detail: `${name} gained ${fresh.join(", ")}, so a host's exhaustive switch stops compiling.`,
       };
     }
@@ -235,7 +237,7 @@ function compareEntries(before, after) {
       return {
         kind: "enum-member-added",
         name,
-        likelyBreaking: true,
+        likelyBreaking: supported,
         detail: `${name} gained a member, so a host's exhaustive switch stops compiling.`,
       };
     }
@@ -244,7 +246,7 @@ function compareEntries(before, after) {
       return {
         kind: "required-member-added",
         name,
-        likelyBreaking: true,
+        likelyBreaking: supported,
         detail: `${name} gained a required member (${required[0]}), so a host that implements it stops compiling.`,
       };
     }
@@ -259,7 +261,7 @@ function compareEntries(before, after) {
     return {
       kind: "changed",
       name,
-      likelyBreaking: true,
+      likelyBreaking: supported,
       detail: `${name} changed or lost a line: ${removed[0].trim()}`,
     };
   }
@@ -307,7 +309,9 @@ export function diffReports(before, after) {
       changes.push({
         kind: "removed",
         name,
-        likelyBreaking: true,
+        likelyBreaking: !old
+          .get(name)
+          .tags.some((line) => line.includes("@internal")),
         detail: `${name} is no longer exported.`,
       });
     }

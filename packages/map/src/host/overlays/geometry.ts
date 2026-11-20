@@ -14,8 +14,6 @@ import { useMap } from "../MapContext";
  * @param minimum - The smallest radius returned, so a tiny circle stays visible.
  * @returns `minimum` when the resolution is not a positive number or the
  *   distance is negative or not finite.
- *
- * @internal
  */
 export function screenRadiusForMetres(
   metres: number,
@@ -31,11 +29,7 @@ export function screenRadiusForMetres(
 /** The part of the map port an overlay needs to place and hide its marks. */
 export type OverlayMap = Pick<MapAdapter, "project" | "isVisible">;
 
-/**
- * How overlays place marks on a map of `projection` showing `view`.
- *
- * @internal
- */
+/** How overlays place marks on a map of `projection` showing `view`. */
 export function overlayPlacement(
   map: OverlayMap,
   view: Pick<ViewState, "center" | "zoom">,

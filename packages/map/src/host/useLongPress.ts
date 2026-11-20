@@ -14,11 +14,7 @@ import {
 /** How long a still press must last to count as a long-press, in milliseconds. */
 export const LONG_PRESS_DELAY_MS = 500;
 
-/**
- * How far, in CSS pixels, the pointer may wander before the press is cancelled.
- *
- * @internal
- */
+/** How far, in CSS pixels, the pointer may wander before the press is cancelled. */
 export const LONG_PRESS_TOLERANCE_PX = 10;
 
 /** Where a long-press (or right-click) happened. */
@@ -67,7 +63,7 @@ interface Press {
 /**
  * Long-press on the map, implemented once with pointer events so it behaves
  * the same on every engine. A press fires after {@link LONG_PRESS_DELAY_MS}
- * unless the pointer moves more than {@link LONG_PRESS_TOLERANCE_PX}, a second
+ * unless the pointer moves more than 10 CSS pixels, a second
  * pointer joins (pinch), the pointer is released or cancelled, or the map
  * moves (`cancel`). Right-click fires it at once and suppresses the browser's
  * context menu.

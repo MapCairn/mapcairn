@@ -310,8 +310,8 @@ export namespace tokenValues {
         focusWidthContrastMore,
         spring,
         motion,
-        zIndex,
         ZLayerName,
+        zIndex,
         zLayerOrder
     }
 }
@@ -319,10 +319,8 @@ export namespace tokenValues {
 // @public
 export function zLayer(name: ZLayerName): string;
 
-// Warning: (ae-forgotten-export) The symbol "zIndex" needs to be exported by the entry point index.d.ts
-//
 // @public
-export type ZLayerName = keyof typeof zIndex;
+export type ZLayerName = "map" | "mapOverlay" | "chrome" | "chromeRaised" | "sheet" | "toolbar" | "popover" | "toast";
 
 // (No @packageDocumentation comment for this package)
 

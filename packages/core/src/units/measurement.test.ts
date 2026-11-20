@@ -5,8 +5,12 @@ import { FakeMessageCatalogue } from "../fakes/FakeMessageCatalogue";
 import { formatMessage } from "../messages/formatMessage";
 import type { Message } from "../ports/messages";
 import {
+  type AreaUnitMessageKey,
+  type DistanceUnit,
+  type DistanceUnitMessageKey,
   describeArea,
   describeDistance,
+  describeDistanceReading,
   formatArea,
   formatDistance,
   readArea,
@@ -233,5 +237,39 @@ describe("unit symbols and the reading pattern", () => {
   it("keeps English symbols and the figure-space-symbol order by default", () => {
     expect(formatDistance(850, "metric", EN)).toBe("850 m");
     expect(formatArea(850, "metric", EN)).toBe("850 m²");
+  });
+});
+
+describe("the unit message keys", () => {
+  it("are exactly the keys the unit tables hold, whichever way they drift", () => {
+    const distanceKeys: Record<DistanceUnitMessageKey, true> = {
+      "units.metre": true,
+      "units.kilometre": true,
+      "units.foot": true,
+      "units.mile": true,
+    };
+    const areaKeys: Record<AreaUnitMessageKey, true> = {
+      "units.squareMetre": true,
+      "units.hectare": true,
+      "units.squareKilometre": true,
+      "units.squareFoot": true,
+      "units.acre": true,
+      "units.squareMile": true,
+    };
+    const distanceUnits: DistanceUnit[] = ["m", "km", "ft", "mi"];
+    const areaUsed = [
+      describeArea(850, "metric"),
+      describeArea(12_500, "metric"),
+      describeArea(5_000_000, "metric"),
+      describeArea(50, "imperial"),
+      describeArea(20_000, "imperial"),
+      describeArea(5_000_000, "imperial"),
+    ].map((described) => described.key);
+    expect(
+      new Set(
+        distanceUnits.map((unit) => describeDistanceReading(1, unit).key),
+      ),
+    ).toEqual(new Set(Object.keys(distanceKeys)));
+    expect(new Set(areaUsed)).toEqual(new Set(Object.keys(areaKeys)));
   });
 });

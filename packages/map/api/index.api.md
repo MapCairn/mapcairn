@@ -62,7 +62,6 @@ import { MapFeature } from '@mapcairn/core';
 import { MapFeatureTap } from '@mapcairn/core';
 import { MapHandleDrag } from '@mapcairn/core';
 import { MapHeatmap } from '@mapcairn/core';
-import { MapHostElement } from '@mapcairn/core';
 import { MapImageDrawing } from '@mapcairn/core';
 import { MapKeyHelpEntry } from '@mapcairn/core';
 import { MapLookRule } from '@mapcairn/core';
@@ -873,9 +872,6 @@ export type LocateState = "idle" | "locating" | "found" | "error";
 // @public
 export const LONG_PRESS_DELAY_MS = 500;
 
-// @internal
-export const LONG_PRESS_TOLERANCE_PX = 10;
-
 // @public
 export function MapChrome(input: MapChromeProps): JSX.Element;
 
@@ -1089,9 +1085,6 @@ export function nextHeadingLevel(level: HeadingLevel): HeadingLevel;
 export type OverlayMap = Pick<MapAdapter, "project" | "isVisible">;
 
 // @internal
-export function overlayPlacement(map: OverlayMap, view: Pick<ViewState, "center" | "zoom">, projection: MapProjection): MapPlacement;
-
-// @internal
 export function paletteColour(slot: PaletteSlot): string;
 
 // @public
@@ -1170,9 +1163,6 @@ export interface ScaleBarProps {
     // (undocumented)
     readonly units: UnitSystem;
 }
-
-// @internal
-export function screenRadiusForMetres(metres: number, metresPerPixel: number, minimum?: number): number;
 
 // @public
 export function SearchPill(input: SearchPillProps): JSX.Element;
@@ -1920,9 +1910,6 @@ export function useUrlState(): UrlState;
 
 // @public
 export const VIEW_SETTLE_MS = 400;
-
-// @internal
-export function visibleBounds(adapter: Pick<MapAdapter, "unproject"> | null, host: Pick<MapHostElement, "getBoundingClientRect"> | null): Bounds | undefined;
 
 // @public
 export function VisuallyHidden(input: VisuallyHiddenProps): JSX.Element;

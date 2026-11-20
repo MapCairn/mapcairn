@@ -575,7 +575,7 @@ export function createBasemapCatalogue(basemaps: readonly BasemapDefinition[], d
 export function createDecoderRegistry(extra?: Readonly<Record<string, Decoder>>): DecoderRegistry;
 
 // @public
-export function createDrawReducer(labels?: Labeller): (state: DrawState, action: DrawAction) => DrawState;
+export function createDrawReducer(labels?: Pick<MessageCatalogue, "t">): (state: DrawState, action: DrawAction) => DrawState;
 
 // @public
 export function createFakeMapAdapterFactory(onCreate?: (adapter: FakeMapAdapter) => void): MapAdapterFactory;
@@ -1049,6 +1049,14 @@ export type DrawEvent = {
 };
 
 // @public
+export interface DrawHistoryEntry {
+    // (undocumented)
+    readonly selection: DrawSelection | null;
+    // (undocumented)
+    readonly shapes: readonly DrawShape[];
+}
+
+// @public
 export type DrawIssue = "too-few-vertices" | "self-intersecting" | "degenerate" | "radius-missing" | "radius-too-large";
 
 // @public
@@ -1135,13 +1143,13 @@ export interface DrawShapeInput {
 export interface DrawState {
     readonly coalesce: string | null;
     // (undocumented)
-    readonly future: readonly HistoryEntry[];
+    readonly future: readonly DrawHistoryEntry[];
     // (undocumented)
     readonly lastEvent: DrawEvent | null;
     readonly mode: DrawKind;
     readonly nextId: number;
     // (undocumented)
-    readonly past: readonly HistoryEntry[];
+    readonly past: readonly DrawHistoryEntry[];
     // (undocumented)
     readonly selection: DrawSelection | null;
     readonly serials: Readonly<Record<DrawKind, number>>;
@@ -1974,14 +1982,6 @@ export function hemispheresFor(catalogue: MessageCatalogue): Hemispheres;
 export function hintFor(kind: DrawKind): Message;
 
 // @public
-export interface HistoryEntry {
-    // (undocumented)
-    readonly selection: DrawSelection | null;
-    // (undocumented)
-    readonly shapes: readonly DrawShape[];
-}
-
-// @public
 export function hitTestHandle(handles: readonly ProjectedHandle[], at: PixelPoint, tolerancePx: number): ProjectedHandle | null;
 
 // @public
@@ -2132,9 +2132,6 @@ export interface KeyedLayerText {
 
 // @public
 export function kilometresToMetres(kilometres: number): number;
-
-// @public
-export type Labeller = Pick<MessageCatalogue, "t"> | undefined;
 
 // @public
 export const LANGUAGE_STORAGE_KEY = "mapcairn:language";

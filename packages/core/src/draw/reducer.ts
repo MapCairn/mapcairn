@@ -66,7 +66,7 @@ export interface DrawShapeInput {
 }
 
 /** One undo step: the shapes and the selection as they were. */
-export interface HistoryEntry {
+export interface DrawHistoryEntry {
   readonly shapes: readonly DrawShape[];
   readonly selection: DrawSelection | null;
 }
@@ -81,8 +81,8 @@ export interface DrawState {
   /** The kind of shape the next tap starts. */
   readonly mode: DrawKind;
   readonly selection: DrawSelection | null;
-  readonly past: readonly HistoryEntry[];
-  readonly future: readonly HistoryEntry[];
+  readonly past: readonly DrawHistoryEntry[];
+  readonly future: readonly DrawHistoryEntry[];
   /**
    * The key of the last coalescing edit. An edit with the same key joins the
    * undo step of the one before, so a drag, or a run of arrow key presses, is
@@ -231,7 +231,7 @@ function findShape(state: DrawState, shapeId: string): DrawShape | undefined {
  * What names a new shape: the catalogue in use, or the shipped English when
  * there is none.
  */
-export type Labeller = Pick<MessageCatalogue, "t"> | undefined;
+type Labeller = Pick<MessageCatalogue, "t"> | undefined;
 
 function startShape(state: DrawState, at: LatLng, labels: Labeller): DrawState {
   const kind = state.mode;
@@ -748,7 +748,7 @@ function reduceDraw(
  * called "Veelhoek 1" rather than "Polygon 1". Pure, as {@link drawReducer}.
  */
 export function createDrawReducer(
-  labels?: Labeller,
+  labels?: Pick<MessageCatalogue, "t">,
 ): (state: DrawState, action: DrawAction) => DrawState {
   return (state, action) => reduceDraw(state, action, labels);
 }
