@@ -4,7 +4,7 @@ The map user interface of MapCairn, in React: the chrome around the map, the bot
 
 It never imports a map engine, an adapter or a browser service. Everything it needs comes from the `Services` bundle that `ServicesProvider` supplies, so the same components run against real adapters in an app and against fakes in a test. It is built on [`@mapcairn/core`](https://github.com/MapCairn/mapcairn/tree/main/packages/core), [`@mapcairn/react`](https://github.com/MapCairn/mapcairn/tree/main/packages/react) and [`@mapcairn/theme`](https://github.com/MapCairn/mapcairn/tree/main/packages/theme).
 
-**Status:** not published to npm yet. The install commands below work from the first release; until then, use the packages from a clone of the [repository](https://github.com/MapCairn/mapcairn).
+**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
 
 ## Install
 

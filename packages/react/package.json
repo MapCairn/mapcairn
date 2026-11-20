@@ -1,6 +1,6 @@
 {
   "name": "@mapcairn/react",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "description": "Generic React hooks for MapCairn applications",
   "license": "AGPL-3.0-only",
   "repository": {
@@ -19,7 +19,6 @@
     "map",
     "webmcp"
   ],
-  "private": true,
   "publishConfig": {
     "access": "public"
   },

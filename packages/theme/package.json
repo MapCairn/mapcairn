@@ -1,6 +1,6 @@
 {
   "name": "@mapcairn/theme",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "description": "Typed vanilla-extract contract for MapCairn's design tokens",
   "license": "AGPL-3.0-only",
   "repository": {
@@ -20,7 +20,6 @@
     "css",
     "accessibility"
   ],
-  "private": true,
   "publishConfig": {
     "access": "public"
   },

@@ -2,7 +2,7 @@
 
 MapCairn's design tokens: typed references to CSS custom properties for colour, space, type, radius, shadow, motion and layering, with a light and a dark theme. Use it to style your own components so they match MapCairn's interface, or to check the contrast of a theme of your own. It is built with [vanilla-extract](https://vanilla-extract.style/) and has no dependency on another MapCairn package, a map engine or React.
 
-**Status:** not published to npm yet. The install commands below work from the first release; until then, use the packages from a clone of the [repository](https://github.com/MapCairn/mapcairn).
+**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
 
 ## Install
 

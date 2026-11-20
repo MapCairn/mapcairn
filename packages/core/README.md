@@ -4,7 +4,7 @@ The ports, pure logic and basemap definitions of MapCairn. Use it when you want 
 
 It has no dependency on another MapCairn package, React, a map engine or a browser global, and it never reads the clock. Its runtime dependencies are the `@turf` maths libraries and the GeoJSON types.
 
-**Status:** not published to npm yet. The install commands below work from the first release; until then, use the packages from a clone of the [repository](https://github.com/MapCairn/mapcairn).
+**Status:** a release candidate, for early adopters. The API is still settling, so a breaking change can land before `0.1.0`; the [changelog](https://github.com/MapCairn/mapcairn/blob/main/CHANGELOG.md) lists each one. Until `0.1.0`, add `@next` to the package name in the install commands below.
 
 ## Install
 
