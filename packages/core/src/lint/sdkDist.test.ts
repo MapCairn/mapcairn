@@ -15,8 +15,8 @@ const REPO = path.resolve(
   "../../../..",
 );
 
-/** The packages that build to `dist`. */
-const BUILT_PACKAGES: readonly string[] = SDK_PACKAGES;
+/** The packages that build to `dist`: the release set and the umbrella, which is private until it joins it. */
+const BUILT_PACKAGES: readonly string[] = [...SDK_PACKAGES, "sdk"];
 
 interface Manifest {
   readonly dependencies?: Readonly<Record<string, string>>;
@@ -292,6 +292,29 @@ describe("@mapcairn/map dist", () => {
       /\.(js|d\.ts)$/.test(f),
     )) {
       expect(read("map", file), file).not.toMatch(/@vanilla-extract\/css/);
+    }
+  });
+});
+
+describe("@mapcairn/sdk dist", () => {
+  it("ships a stylesheet that imports the tokens before the map's styles, and an empty declaration for it", () => {
+    expect(read("sdk", "styles.css")).toBe(
+      '@import "@mapcairn/theme/tokens.css";\n@import "@mapcairn/map/styles.css";\n',
+    );
+    expect(read("sdk", "styles.css.d.ts").trim()).toBe("export {};");
+  });
+
+  it("imports no stylesheet from its JavaScript, so it loads in plain Node", () => {
+    for (const file of distFiles("sdk").filter((f) => f.endsWith(".js"))) {
+      expect(read("sdk", file), file).not.toMatch(/\.css["']/);
+    }
+  });
+
+  it("keeps every export a star re-export of its package, never a copy of its declarations", () => {
+    for (const file of distFiles("sdk").filter((f) => f.endsWith(".d.ts"))) {
+      expect(read("sdk", file), file).not.toMatch(
+        /^export (declare )?(function|const|class|interface|type|enum) /m,
+      );
     }
   });
 });

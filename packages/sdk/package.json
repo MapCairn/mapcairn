@@ -1,0 +1,106 @@
+{
+  "name": "@mapcairn/sdk",
+  "version": "0.1.0-rc.2",
+  "private": true,
+  "description": "One install and one import for the MapCairn SDK: core, map, react and theme",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MapCairn/mapcairn.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/MapCairn/mapcairn/tree/main/packages/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/MapCairn/mapcairn/issues"
+  },
+  "keywords": [
+    "mapcairn",
+    "map",
+    "maplibre",
+    "react",
+    "accessibility",
+    "gis",
+    "open-data",
+    "sdk"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@mapcairn/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "@mapcairn/source": "./src/core.ts",
+      "types": "./dist/core.d.ts",
+      "default": "./dist/core.js"
+    },
+    "./core/contracts": {
+      "@mapcairn/source": "./src/coreContracts.ts",
+      "types": "./dist/coreContracts.d.ts",
+      "default": "./dist/coreContracts.js"
+    },
+    "./map": {
+      "@mapcairn/source": "./src/map.ts",
+      "types": "./dist/map.d.ts",
+      "default": "./dist/map.js"
+    },
+    "./react": {
+      "@mapcairn/source": "./src/react.ts",
+      "types": "./dist/react.d.ts",
+      "default": "./dist/react.js"
+    },
+    "./theme": {
+      "@mapcairn/source": "./src/theme.ts",
+      "types": "./dist/theme.d.ts",
+      "default": "./dist/theme.js"
+    },
+    "./styles.css": {
+      "types": "./dist/styles.css.d.ts",
+      "default": "./dist/styles.css"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.built"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/buildPackage.mjs",
+    "test": "vitest run",
+    "typecheck": "npm --prefix ../.. run build:sdk && tsc --noEmit"
+  },
+  "dependencies": {
+    "@mapcairn/core": "0.1.0-rc.2",
+    "@mapcairn/map": "0.1.0-rc.2",
+    "@mapcairn/react": "0.1.0-rc.2",
+    "@mapcairn/theme": "0.1.0-rc.2"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vitest": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vanilla-extract/vite-plugin": "^5.2.6",
+    "happy-dom": "^21.0.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

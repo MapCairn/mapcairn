@@ -34,7 +34,8 @@ const REPO = path.resolve(
   "../../../..",
 );
 
-const BUILT_PACKAGES: readonly string[] = SDK_PACKAGES;
+// The umbrella package builds and has reports although it is not in the release set yet.
+const BUILT_PACKAGES: readonly string[] = [...SDK_PACKAGES, "sdk"];
 
 interface Comparison {
   readonly missing: string[];
