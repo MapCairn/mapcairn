@@ -33,7 +33,7 @@ import { isInside, isProjectRoot, resolvePath, show } from "./guardPaths.mjs";
 export const ALLOWLIST_FILE = "scripts/agents/guardAllowlist.mjs";
 
 /** A longer command is refused: no command on the list needs it. */
-export const MAX_ALLOWED_LENGTH = 2000;
+const MAX_ALLOWED_LENGTH = 2000;
 
 /** The reviewer that may change a worktree of its own. */
 const TEST_REVIEWER = "test-reviewer";
@@ -318,7 +318,6 @@ function readOptions(name, args, spec) {
 
 /**
  * @typedef {object} Context
- * @property {string} agent
  * @property {Walk} walk Its `cwd` is the folder the command runs in.
  */
 
@@ -954,6 +953,6 @@ function allowlistProblem(command, agent, walk) {
   }
   return (
     placeProblem(entry, walk) ??
-    entry.check(words.slice(entry.words.length), { agent, walk })
+    entry.check(words.slice(entry.words.length), { walk })
   );
 }
